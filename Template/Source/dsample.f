@@ -24,7 +24,7 @@ c Local
 c
       double precision x(maxinvar),wgt,p(4*maxdim/3+14)
       double precision tdem, chi2, dum
-      integer ievent,kevent,nwrite,iter,nun
+      integer ievent,kevent,nwrite,iter,nun,luntmp
       integer jmax,i,j,ipole
       integer itmax_adjust
 c
@@ -79,6 +79,7 @@ c
 c     External
 c
       logical pass_point
+      integer NEXTUNOPEN
 c
 c     Data
 c
@@ -228,7 +229,7 @@ c     Call finalize dsig to write selproc file in subproc group mode
         dum=dsig(p,wgt,3)
         return
       endif
-      if (neventswritten .gt. -accur) then
+      if (neventswritten .gt. -accur .and. chi2 .lt. 10d0) then
          write(*,*) "We found enough events",neventswritten, -accur*1000*tmean
 c     Call finalize dsig to write selproc file in subproc group mode
          dum=dsig(p,wgt,3)
@@ -244,6 +245,14 @@ c
       write(25,*) ' '
  102  close(25)
 
+c     Delete the file "selproc.dat"
+      luntmp=NEXTUNOPEN()
+      open(unit=luntmp,file='selproc.dat',status='unknown',err=1020)
+      write(luntmp,*)' '
+ 1020 close(luntmp, status='DELETE')
+c   Call initialize dsig to renew selproc
+      dum=dsig(p,wgt,1)
+      
 c
 c     First few iterations will allow the grid to adjust
 c
@@ -1381,14 +1390,14 @@ c
 c     Local
 c
       integer i, j, k, knt, non_zero, nun
-      double precision vol,xnmin,xnmax,tot,xdum
+      double precision vol,xnmin,xnmax,tot,xdum,tmp1,chi2tmp
       double precision rc, dr, xo, xn, x(maxinvar), dum(ng)
       save vol,knt
       double precision  chi2
       save chi2, non_zero
       double precision wmax1,ddumb
       save wmax1
-      double precision twgt1,xchi2,xmean
+      double precision twgt1,xchi2,xmean,tmeant,tsigmat
       integer iavg,navg
       save twgt1,iavg,navg
 c
@@ -1917,8 +1926,24 @@ c               nun = n_unwgted()
 c               write(*,*) 'Estimated events',nun, accur
                call store_events
                nun = neventswritten
-               write(*,*) "Checking number of events",accur,nun
-               if (nun .gt. -accur)then   
+c               tmp1 = tmean / tsigma
+c               chi2tmp = (chi2/tmp1/tmp1-tsigma)/dble(cur_it-2)
+c     Calculate chi2 for last three events
+               tmeant = 0d0
+               tsigmat = 0d0
+               do i=cur_it-3,cur_it-1
+                  print *,'mean, sigma: ',i,ymean(i),ysigma(i)
+                  tmeant = tmeant+ymean(i)*ymean(i)**2/ysigma(i)**2
+                  tsigmat = tsigmat + ymean(i)**2/ ysigma(i)**2
+               enddo
+               tmeant = tmeant/tsigmat
+               chi2tmp = 0d0
+               do i = cur_it-3,cur_it-1
+                  chi2tmp = chi2tmp+(ymean(i)-tmeant)**2/ysigma(i)**2
+               enddo
+               chi2tmp = chi2tmp/2d0  !Since using only last 3, n-1=2
+               write(*,*) "Checking number of events",accur,nun,' chi2: ',chi2tmp
+               if (nun .gt. -accur .and. chi2tmp .lt. 10d0)then   
                   tmean = tmean / tsigma
                   if (cur_it .gt. 2) then
                      chi2 = (chi2/tmean/tmean-tsigma)/dble(cur_it-2)

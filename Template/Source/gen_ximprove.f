@@ -199,7 +199,7 @@ c            i=i-1   !This is for case w/ B.W. and optimization
          if (gridpack) then
             call write_gen_grid(err_goal,dble(ngran),i,nevents,gname,xlum,xtot,mfact,xsec)
          else
-            call write_gen(err_goal,i,nevents,gname,xlum,xtot,mfact,xsec)
+            call write_gen(err_goal,i,nevents,gname,xlum,xtot,mfact,xsec,xerr)
          endif
       endif
       stop
@@ -296,9 +296,7 @@ c         np = np + 3*npoints
          np = np +1
          if (np .gt. max_np) then
             if (fopened) then
-               write(26,15) 'rm -f run.$script >&/dev/null'
-               write(26,15) 'touch done.$script >&/dev/null'
-               close(26)
+               call close_bash_file(26)
             endif
             fopened=.true.
             call open_bash_file(26)
@@ -356,9 +354,7 @@ c         write(26,20) 'rm ftn26'
       endif
       enddo  !Loop over diagrams
       if (fopened) then
-         write(26,15) 'rm -f run.$script >&/dev/null'
-         write(26,15) 'touch done.$script >&/dev/null'
-         close(26)
+         call close_bash_file(26)
       endif
       fopened=.false.
  15   format(a)
@@ -470,6 +466,8 @@ c         write(lun,20) 'cp $k log.txt'
 c      endif
 c      write(lun,20) 'cd ../'
 c      write(lun,15) 'end'
+      write(lun,15) 'rm -f run.$script >&/dev/null'
+      write(lun,15) 'touch done.$script >&/dev/null'
  15   format(a)
  20   format(5x,a)
  25   format(10x,a)
@@ -478,7 +476,7 @@ c      write(lun,15) 'end'
 
 
 
-      subroutine write_gen(goal_lum,ng,jpoints,gn,xlum,xtot,mfact,xsec)
+      subroutine write_gen(goal_lum,ng,jpoints,gn,xlum,xtot,mfact,xsec,xerr)
 c*****************************************************************************
 c     Writes out scripts for achieving unweighted event goals
 c*****************************************************************************
@@ -501,13 +499,14 @@ c
 c     Arguments
 c
       double precision goal_lum, xlum(max_amps), xsec(max_amps),xtot
+      double precision xerr(max_amps)
       integer jpoints(max_amps), mfact(max_amps)
       integer ng, np
       character*(80) gn(max_amps)
 c
 c     Local
 c
-      integer i,j,k, io(max_amps), npoints, ip, nfiles,ifile,npfile
+      integer i,j,k,kk, io(max_amps), npoints, ip, nfiles,ifile,npfile
       double precision xt(max_amps),elimit
       double precision yerr,ysec,rerr
       logical fopened
@@ -550,6 +549,17 @@ c
       do while( xt(k) .gt. abs(elimit)) !elimit should be >0
          write(*,*) 'Improving ',k,gn(io(k)),xt(k)
          k=k+1
+      enddo
+      kk=k
+c     Check error for the rest of the channels
+      do while( kk .le. ng)
+         if (xerr(io(kk)).gt.10*xsec(io(kk))) then
+            write(*,*) 'Improving for error ',kk,gn(io(kk)),xt(kk),xsec(io(kk)),xerr(io(kk))
+            io(k)=io(kk)
+            xt(k)=xt(kk)
+            k=k+1
+         endif
+         kk=kk+1
       enddo
       k=k-1
       write(*,*) 'Number of diagrams to fix',k
@@ -610,9 +620,7 @@ c tjs
 c---
          if (npfile .gt. max_np .or. ifile.eq.0 .or. mjobs .gt. 1) then
             if (fopened) then
-               write(26,15) 'rm -f run.$script >& /dev/null'
-               write(26,15) 'touch done.$script >& /dev/null'
-               close(26)
+               call close_bash_file(26)
             endif
             fopened=.true.
             call open_bash_file(26)
@@ -718,9 +726,7 @@ c------
 
       enddo !(k  each channel)
       if (fopened) then
-        write(26,15) 'rm -f run.$script'
-        write(26,15) 'touch done.$script'
-        close(26)
+         call close_bash_file(26)
       endif
 c      write(26,15) 'end'
  15   format(a)
@@ -795,9 +801,7 @@ c      kl = 4321
             np = np+1
             if (np .gt. max_np) then
                if (fopened) then
-                  write(26,15) 'rm -f run.$script >& /dev/null'
-                  write(26,15) 'touch done.$script >& /dev/null'
-                  close(26)
+                  call close_bash_file(26)
                endif
                fopened=.true.
                call open_bash_file(26)
@@ -882,9 +886,7 @@ c
          close(27)
  91      cycle
       enddo
-      write(26,15) 'rm -f run.$script'
-      write(26,15) 'touch done.$script'
-      close(26)
+      call close_bash_file(26)
  15   format(a)
  20   format(5x,a)
  25   format(10x,a)
