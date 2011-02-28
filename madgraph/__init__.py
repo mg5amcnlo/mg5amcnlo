@@ -16,6 +16,9 @@ class MadGraph5Error(Exception):
     """Exception raised if an exception is find 
     Those Types of error will stop nicely in the cmd interface"""
 
+class InvalidCmd(MadGraph5Error):
+    """a class for the invalid syntax call"""
+
 import os
 
 #Look for basic file position MG5DIR and MG4DIR

@@ -87,12 +87,12 @@ class PhysicsObject(dict):
 
         return self[name]
 
-    def set(self, name, value):
+    def set(self, name, value, force=False):
         """Set the value of the property name. First check if value
         is a valid value for the considered property. Return True if the
         value has been correctly set, False otherwise."""
 
-        if not __debug__:
+        if not __debug__ or force:
             self[name] = value
             return True
 
@@ -665,6 +665,7 @@ class Model(PhysicsObject):
         self['ref_dict_to0'] = {}
         self['ref_dict_to1'] = {}
         self['got_majoranas'] = None
+        self['conserved_charge'] = set()
 
     def filter(self, name, value):
         """Filter for model property values"""
@@ -674,43 +675,45 @@ class Model(PhysicsObject):
                 raise self.PhysicsObjectError, \
                     "Object of type %s is not a string" % \
                                                             type(value)
-        if name == 'particles':
+        elif name == 'particles':
             if not isinstance(value, ParticleList):
                 raise self.PhysicsObjectError, \
                     "Object of type %s is not a ParticleList object" % \
                                                             type(value)
-        if name == 'interactions':
+        elif name == 'interactions':
             if not isinstance(value, InteractionList):
                 raise self.PhysicsObjectError, \
                     "Object of type %s is not a InteractionList object" % \
                                                             type(value)
-        if name == 'particle_dict':
+        elif name == 'particle_dict':
             if not isinstance(value, dict):
                 raise self.PhysicsObjectError, \
                     "Object of type %s is not a dictionary" % \
                                                         type(value)
-        if name == 'interaction_dict':
+        elif name == 'interaction_dict':
             if not isinstance(value, dict):
                 raise self.PhysicsObjectError, \
-                    "Object of type %s is not a dictionary" % \
-                                                        type(value)
+                    "Object of type %s is not a dictionary" % type(value)
 
-        if name == 'ref_dict_to0':
+        elif name == 'ref_dict_to0':
             if not isinstance(value, dict):
                 raise self.PhysicsObjectError, \
-                    "Object of type %s is not a dictionary" % \
-                                                        type(value)
-        if name == 'ref_dict_to1':
+                    "Object of type %s is not a dictionary" % type(value)
+                    
+        elif name == 'ref_dict_to1':
             if not isinstance(value, dict):
                 raise self.PhysicsObjectError, \
-                    "Object of type %s is not a dictionary" % \
-                                                        type(value)
+                    "Object of type %s is not a dictionary" % type(value)
 
-        if name == 'got_majoranas':
+        elif name == 'got_majoranas':
             if not (isinstance(value, bool) or value == None):
                 raise self.PhysicsObjectError, \
-                    "Object of type %s is not a boolean" % \
-                                                        type(value)
+                    "Object of type %s is not a boolean" % type(value)
+
+        elif name == 'conserved_charge':
+            if not (isinstance(value, set)):
+                raise self.PhysicsObjectError, \
+                    "Object of type %s is not a set" % type(value)
 
         return True
 
