@@ -323,7 +323,9 @@ C     Amplitude(s) for diagram number 6
       END
 """ % misc.get_pkg_info()
 
-        export_v4.write_matrix_element_v4_standalone(\
+        process_exporter = export_v4.ProcessExporterFortranSA()
+
+        process_exporter.write_matrix_element_v4(\
             writers.FortranWriter(self.give_pos('test')),
             self.mymatrixelement,
             self.myfortranmodel)
@@ -333,19 +335,21 @@ C     Amplitude(s) for diagram number 6
     def test_coeff_string(self):
         """Test the coeff string for JAMP lines"""
 
-        self.assertEqual(export_v4.coeff(1,
+        process_exporter = export_v4.ProcessExporterFortran()
+
+        self.assertEqual(process_exporter.coeff(1,
                                          fractions.Fraction(1),
                                          False, 0), '+')
 
-        self.assertEqual(export_v4.coeff(-1,
+        self.assertEqual(process_exporter.coeff(-1,
                                          fractions.Fraction(1),
                                          False, 0), '-')
 
-        self.assertEqual(export_v4.coeff(-1,
+        self.assertEqual(process_exporter.coeff(-1,
                                          fractions.Fraction(-3),
                                          False, 0), '+3*')
 
-        self.assertEqual(export_v4.coeff(-1,
+        self.assertEqual(process_exporter.coeff(-1,
                                          fractions.Fraction(3, 5),
                                          True, -2), '-1./15.*imag1*')
 
@@ -586,10 +590,12 @@ C     Amplitude(s) for diagram number 6
         
         self.assertEqual(maxflows, 2)
 
+        exporter = export_v4.ProcessExporterFortranMEGroup()
+
         # Test amp2 lines
         
         amp2_lines = \
-                 export_v4.get_amp2_lines(matrix_elements[0],
+                 exporter.get_amp2_lines(matrix_elements[0],
                                           subprocess_group.get('diagram_maps')[0])
         self.assertEqual(amp2_lines,
                          ['AMP2(1)=AMP2(1)+AMP(1)*dconjg(AMP(1))+AMP(2)*dconjg(AMP(2))',
@@ -599,7 +605,7 @@ C     Amplitude(s) for diagram number 6
         
         # Test configs.inc
 
-        export_v4.write_group_configs_file(\
+        exporter.write_configs_file(\
             writers.FortranWriter(self.give_pos('test')),
             subprocess_group,
             subprocess_group.get('diagrams_for_configs'))
@@ -631,7 +637,7 @@ C     Number of configs
 
         # Test config_subproc_map.inc
 
-        export_v4.write_config_subproc_map_file(\
+        exporter.write_config_subproc_map_file(\
             writers.FortranWriter(self.give_pos('test')),
             subprocess_group.get('diagrams_for_configs'))
 
@@ -646,7 +652,7 @@ C     Number of configs
 
         # Test coloramps.inc
         
-        export_v4.write_coloramps_group_file(\
+        exporter.write_coloramps_file(\
             writers.FortranWriter(self.give_pos('test')),
             subprocess_group.get('diagrams_for_configs'),
             maxflows,
@@ -681,7 +687,7 @@ C     Number of configs
         # Test processes.dat
 
         files.write_to_file(self.give_pos('test'),
-                            export_v4.write_processes_file,
+                            exporter.write_processes_file,
                             subprocess_group)
 
         goal_processes = """1       u u~ > u u~
@@ -693,7 +699,7 @@ mirror  none"""
 
         # Test mirrorprocs.inc
 
-        export_v4.write_mirrorprocs(\
+        exporter.write_mirrorprocs(\
             writers.FortranWriter(self.give_pos('test')),
             subprocess_group)
 
@@ -703,7 +709,7 @@ mirror  none"""
         self.assertFileContains('test', goal_mirror_inc)
 
         # Test auto_dsig,f
-        export_v4.write_auto_dsig_file(\
+        exporter.write_auto_dsig_file(\
             writers.FortranWriter(self.give_pos('test')),
             matrix_elements[0],
             "1")
@@ -818,7 +824,7 @@ C     Only run if IMODE is 0
         self.assertFileContains('test', goal_auto_dsig1)
 
         # Test super auto_dsig.f
-        export_v4.write_super_auto_dsig_file(\
+        exporter.write_super_auto_dsig_file(\
             writers.FortranWriter(self.give_pos('test')),
             subprocess_group)
 
@@ -1352,10 +1358,13 @@ C       Update summed weight and number of events
         subprocess_group = subproc_groups[0]
         matrix_elements = subprocess_group.get('matrix_elements')
 
+        # Exporter
+        exporter = export_v4.ProcessExporterFortranMEGroup()
+
         # Test amp2 lines
         
         amp2_lines = \
-                 export_v4.get_amp2_lines(matrix_elements[1],
+                 exporter.get_amp2_lines(matrix_elements[1],
                                           subprocess_group.get('diagram_maps')[1])
         #print '\n'.join(amp2_lines)
 
@@ -1371,7 +1380,7 @@ AMP2(12)=AMP2(12)+AMP(16)*dconjg(AMP(16))""")
         
         # Test configs.inc
 
-        export_v4.write_group_configs_file(\
+        exporter.write_configs_file(\
             writers.FortranWriter(self.give_pos('test')),
             subprocess_group,
             subprocess_group.get('diagrams_for_configs'))
@@ -1489,7 +1498,7 @@ C     Number of configs
 
         # Test config_subproc_map.inc
 
-        export_v4.write_config_subproc_map_file(\
+        exporter.write_config_subproc_map_file(\
             writers.FortranWriter(self.give_pos('test')),
             subprocess_group.get('diagrams_for_configs'))
 
@@ -1508,7 +1517,7 @@ C     Number of configs
         # Test processes.dat
 
         files.write_to_file(self.give_pos('test'),
-                            export_v4.write_processes_file,
+                            exporter.write_processes_file,
                             subprocess_group)
 
         #print open(self.give_pos('test')).read()
@@ -1846,9 +1855,11 @@ CALL IOVXXX(W(1,29),W(1,2),W(1,14),GG,AMP(41))
 # Amplitude(s) for diagram number 42
 CALL IOVXXX(W(1,33),W(1,2),W(1,12),GG,AMP(42))""")
 
+        exporter = export_v4.ProcessExporterFortranME()
+
         #print matrix_element.get('color_basis')
         # Test color matrix output
-        self.assertEqual("\n".join(export_v4.get_color_data_lines(matrix_element)),
+        self.assertEqual("\n".join(exporter.get_color_data_lines(matrix_element)),
                          """DATA Denom(1)/1/
 DATA (CF(i,  1),i=  1,  6) /   27,    9,    9,    3,    3,    9/
 C 1 T(2,1) T(3,4) T(5,6)
@@ -1869,7 +1880,7 @@ DATA (CF(i,  6),i=  1,  6) /    9,    3,    3,    9,    9,   27/
 C 1 T(2,6) T(3,4) T(5,1)""")
 
         # Test JAMP (color amplitude) output
-        self.assertEqual('\n'.join(export_v4.get_JAMP_lines(matrix_element)),
+        self.assertEqual('\n'.join(exporter.get_JAMP_lines(matrix_element)),
                          """JAMP(1)=+1./4.*(+1./9.*AMP(1)+1./9.*AMP(2)+1./3.*AMP(4)+1./3.*AMP(5)+1./3.*AMP(7)+1./3.*AMP(8)+1./9.*AMP(9)+1./9.*AMP(10)+AMP(14)-AMP(16)+AMP(17)+1./3.*AMP(19)+1./3.*AMP(20)+AMP(22)-AMP(23)+1./3.*AMP(27)+1./3.*AMP(28)+AMP(29)+AMP(31)+1./3.*AMP(33)+1./3.*AMP(34)+1./3.*AMP(35)+1./3.*AMP(36)+AMP(37)+1./9.*AMP(39)+1./9.*AMP(40))
 JAMP(2)=+1./4.*(-1./3.*AMP(1)-1./3.*AMP(2)-1./9.*AMP(4)-1./9.*AMP(5)-1./9.*AMP(7)-1./9.*AMP(8)-1./3.*AMP(9)-1./3.*AMP(10)-AMP(12)+AMP(13)-1./3.*AMP(17)-1./3.*AMP(18)-AMP(19)-AMP(25)+AMP(26)-AMP(27)-1./3.*AMP(29)-1./3.*AMP(30)-1./3.*AMP(31)-1./3.*AMP(32)-AMP(33)-AMP(35)-1./3.*AMP(37)-1./3.*AMP(38)-1./9.*AMP(41)-1./9.*AMP(42))
 JAMP(3)=+1./4.*(-AMP(4)+AMP(6)-AMP(7)-1./3.*AMP(9)-1./3.*AMP(10)-1./9.*AMP(11)-1./9.*AMP(12)-1./3.*AMP(14)-1./3.*AMP(15)-1./3.*AMP(17)-1./3.*AMP(18)-1./9.*AMP(19)-1./9.*AMP(20)-1./3.*AMP(21)-1./3.*AMP(22)-AMP(24)-AMP(26)-AMP(28)-1./3.*AMP(31)-1./3.*AMP(32)-1./9.*AMP(33)-1./9.*AMP(34)-AMP(36)-1./3.*AMP(39)-1./3.*AMP(40)-AMP(41))
@@ -1879,7 +1890,7 @@ JAMP(6)=+1./4.*(-1./3.*AMP(1)-1./3.*AMP(2)-AMP(5)-AMP(6)-AMP(8)-AMP(11)-AMP(13)-
 
         # Test configs file
         writer = writers.FortranWriter(self.give_pos('test'))
-        mapconfigs, s_and_t_channels = export_v4.write_configs_file(writer,
+        mapconfigs, s_and_t_channels = exporter.write_configs_file(writer,
                                                                  matrix_element)
 
         writer.close()
@@ -2259,7 +2270,7 @@ C     Number of configs
 
         # Test coloramps.inc output
         self.assertEqual("\n".join(\
-                       export_v4.get_icolamp_lines(mapconfigs,
+                       exporter.get_icolamp_lines(mapconfigs,
                                                    matrix_element, 1)),
                          """DATA(icolamp(i,1,1),i=1,6)/.true.,.true.,.false.,.true.,.false.,.true./
 DATA(icolamp(i,2,1),i=1,6)/.true.,.true.,.false.,.false.,.true.,.true./
@@ -2307,7 +2318,7 @@ DATA(icolamp(i,42,1),i=1,6)/.false.,.true.,.false.,.true.,.true.,.true./"""
 
         # Test leshouche.inc output
         writer = writers.FortranWriter(self.give_pos('leshouche'))
-        export_v4.write_leshouche_file(writer, matrix_element)
+        exporter.write_leshouche_file(writer, matrix_element)
         writer.close()
 
         self.assertFileContains('leshouche',
@@ -2330,7 +2341,7 @@ DATA(icolamp(i,42,1),i=1,6)/.false.,.true.,.false.,.true.,.true.,.true./"""
 
         # Test pdf output (for auto_dsig.f)
 
-        self.assertEqual(export_v4.get_pdf_lines(matrix_element, 2),
+        self.assertEqual(exporter.get_pdf_lines(matrix_element, 2),
                          """IF (ABS(LPP(1)) .GE. 1) THEN
 LP=SIGN(1,LPP(1))
 u1=PDG2PDF(ABS(LPP(1)),2*LP,XBK(1),DSQRT(Q2FACT(1)))
@@ -2346,7 +2357,7 @@ PD(IPROC)=PD(IPROC-1) + u1*ub2""")
 
         # Test mg.sym
         writer = writers.FortranWriter(self.give_pos('test'))
-        export_v4.write_mg_sym_file(writer, matrix_element)
+        exporter.write_mg_sym_file(writer, matrix_element)
         writer.close()
         
         self.assertFileContains('test',
@@ -2462,8 +2473,10 @@ CALL JVVXXX(W(1,1),W(1,4),GG,zero,zero,W(1,7))
 # Amplitude(s) for diagram number 4
 CALL VVVXXX(W(1,2),W(1,3),W(1,7),GG,AMP(6))""")
 
+        exporter = export_v4.ProcessExporterFortranME()
+
         # Test color matrix output
-        self.assertEqual("\n".join(export_v4.get_color_data_lines(\
+        self.assertEqual("\n".join(exporter.get_color_data_lines(\
                          matrix_element)),
                          """DATA Denom(1)/6/
 DATA (CF(i,  1),i=  1,  6) /   19,   -2,   -2,   -2,   -2,    4/
@@ -2485,7 +2498,7 @@ DATA (CF(i,  6),i=  1,  6) /    4,   -2,   -2,   -2,   -2,   19/
 C 1 Tr(1,4,3,2)""")
 
         # Test JAMP (color amplitude) output
-        self.assertEqual("\n".join(export_v4.get_JAMP_lines(matrix_element)),
+        self.assertEqual("\n".join(exporter.get_JAMP_lines(matrix_element)),
                          """JAMP(1)=+2*(+AMP(3)-AMP(1)+AMP(4)-AMP(6))
 JAMP(2)=+2*(+AMP(1)-AMP(2)-AMP(4)-AMP(5))
 JAMP(3)=+2*(-AMP(3)+AMP(2)+AMP(5)+AMP(6))
@@ -2495,7 +2508,7 @@ JAMP(6)=+2*(+AMP(3)-AMP(1)+AMP(4)-AMP(6))""")
 
         # Test amp2 lines        
         amp2_lines = \
-                 export_v4.get_amp2_lines(matrix_element)
+                 exporter.get_amp2_lines(matrix_element)
         self.assertEqual(amp2_lines,
                          ['AMP2(2)=AMP2(2)+AMP(4)*dconjg(AMP(4))',
                           'AMP2(3)=AMP2(3)+AMP(5)*dconjg(AMP(5))',
@@ -2503,7 +2516,7 @@ JAMP(6)=+2*(+AMP(3)-AMP(1)+AMP(4)-AMP(6))""")
         
         # Test configs file
         writer = writers.FortranWriter(self.give_pos('test'))
-        nconfig, s_and_t_channels = export_v4.write_configs_file(writer,
+        nconfig, s_and_t_channels = exporter.write_configs_file(writer,
                                      matrix_element)
         writer.close()
         self.assertFileContains('test',
@@ -2599,7 +2612,9 @@ CALL FVIXXX(W(1,4),W(1,1),GZN11,Mneu1,Wneu1,W(1,6))
 # Amplitude(s) for diagram number 2
 CALL IOVXXX(W(1,6),W(1,3),W(1,2),GZN11,AMP(2))""")
 
-        self.assertEqual(export_v4.get_JAMP_lines(matrix_element)[0],
+        exporter = export_v4.ProcessExporterFortranME()
+
+        self.assertEqual(exporter.get_JAMP_lines(matrix_element)[0],
                          "JAMP(1)=-AMP(1)-AMP(2)")
 
 
@@ -3638,9 +3653,11 @@ CALL VVVL2X(W(1,2),W(1,3),W(1,9),G2,AMP(10))
 CALL VVVL1X(W(1,2),W(1,3),W(1,10),G1,AMP(11))
 CALL VVVL2X(W(1,2),W(1,3),W(1,10),G2,AMP(12))""")
 
+        exporter = export_v4.ProcessExporterFortranME()
+
         # Test amp2 lines
         amp2_lines = \
-                 export_v4.get_amp2_lines(matrix_element)
+                 exporter.get_amp2_lines(matrix_element)
         self.assertEqual(amp2_lines,
                          ['AMP2(1)=AMP2(1)+AMP(1)*dconjg(AMP(1))+AMP(2)*dconjg(AMP(2))+AMP(3)*dconjg(AMP(3))+AMP(4)*dconjg(AMP(4))',
                           'AMP2(2)=AMP2(2)+AMP(5)*dconjg(AMP(5))+AMP(6)*dconjg(AMP(6))+AMP(7)*dconjg(AMP(7))+AMP(8)*dconjg(AMP(8))',
@@ -3648,7 +3665,7 @@ CALL VVVL2X(W(1,2),W(1,3),W(1,10),G2,AMP(12))""")
 
         # Test configs file
         writer = writers.FortranWriter(self.give_pos('test'))
-        nconfig, s_and_t_channels = export_v4.write_configs_file(writer,
+        nconfig, s_and_t_channels = exporter.write_configs_file(writer,
                                      matrix_element)
         writer.close()
 
@@ -3869,9 +3886,11 @@ CALL FFV5_0(W(1,8),W(1,15),W(1,3),GC_418,AMP(24))""".split('\n')
         for i in range(len(goal)):
             self.assertEqual(result[i], goal[i])
 
+        exporter = export_v4.ProcessExporterFortranME()
+
         # Test amp2 lines        
         amp2_lines = \
-                 export_v4.get_amp2_lines(matrix_element)
+                 exporter.get_amp2_lines(matrix_element)
         self.assertEqual(amp2_lines,
                          ['AMP2(1)=AMP2(1)+AMP(1)*dconjg(AMP(1))+AMP(2)*dconjg(AMP(2))+AMP(3)*dconjg(AMP(3))+AMP(4)*dconjg(AMP(4))',
                           'AMP2(2)=AMP2(2)+AMP(5)*dconjg(AMP(5))+AMP(6)*dconjg(AMP(6))+AMP(7)*dconjg(AMP(7))+AMP(8)*dconjg(AMP(8))',
@@ -4032,9 +4051,11 @@ CALL FFV1_0(W(1,2),W(1,9),W(1,5),GG,AMP(4))""".split('\n')
         for i in range(len(goal)):
             self.assertEqual(result[i], goal[i])
 
+        exporter = export_v4.ProcessExporterFortranME()
+
         # Test amp2 lines        
         amp2_lines = \
-                 export_v4.get_amp2_lines(matrix_element)
+                 exporter.get_amp2_lines(matrix_element)
         self.assertEqual(amp2_lines,
                          ['AMP2(1)=AMP2(1)+AMP(1)*dconjg(AMP(1))',
                           'AMP2(2)=AMP2(2)+AMP(2)*dconjg(AMP(2))',
@@ -4050,7 +4071,7 @@ CALL FFV1_0(W(1,2),W(1,9),W(1,5),GG,AMP(4))""".split('\n')
         myfortranmodel = helas_call_writers.FortranHelasCallWriter(mybasemodel)
 
         # Test configs file
-        nconfig, s_and_t_channels = export_v4.write_configs_file(writer,
+        nconfig, s_and_t_channels = exporter.write_configs_file(writer,
                                      matrix_element)
         writer.close()
 
@@ -4087,7 +4108,7 @@ C     Number of configs
 """)
 
         writer = writers.FortranWriter(self.give_pos('test'))
-        export_v4.write_props_file(writer, matrix_element,
+        exporter.write_props_file(writer, matrix_element,
                                    s_and_t_channels)
         writer.close()
         #print open(self.give_pos('test')).read()
@@ -4271,9 +4292,11 @@ CALL FFV1C1_0(W(1,9),W(1,2),W(1,5),GG,AMP(4))""".split('\n')
         for i in range(len(goal)):
             self.assertEqual(result[i], goal[i])
 
+        exporter = export_v4.ProcessExporterFortranME()
+
         # Test amp2 lines        
         amp2_lines = \
-                 export_v4.get_amp2_lines(matrix_element)
+                 exporter.get_amp2_lines(matrix_element)
         self.assertEqual(amp2_lines,
                          ['AMP2(1)=AMP2(1)+AMP(1)*dconjg(AMP(1))',
                           'AMP2(2)=AMP2(2)+AMP(2)*dconjg(AMP(2))',
@@ -4951,9 +4974,11 @@ C     Amplitude(s) for diagram number 6
 
         # Check all ingredients in file here
 
+        exporter = export_v4.ProcessExporterFortranME()
+
         self.assertEqual(me.get_nexternal_ninitial(), (10, 2))
         self.assertEqual(me.get_helicity_combinations(), 1024)
-        self.assertEqual(len(export_v4.get_helicity_lines(me).split("\n")), 1024)
+        self.assertEqual(len(exporter.get_helicity_lines(me).split("\n")), 1024)
         # This has been tested against v4
         self.assertEqual("\n".join(myfortranmodel.get_matrix_element_calls(me)),
                          """CALL VXXXXX(P(0,1),zero,NHEL(1),-1*IC(1),W(1,1))
@@ -5000,7 +5025,7 @@ CALL IOVXXX(W(1,25),W(1,23),W(1,2),GAL,AMP(7))
 CALL IOVXXX(W(1,26),W(1,23),W(1,2),GAL,AMP(8))""")
 
         writer = writers.FortranWriter(self.give_pos('test'))
-        export_v4.write_pmass_file(writer, me)
+        exporter.write_pmass_file(writer, me)
         writer.close()
         self.assertFileContains('test',"""      PMASS(1)=ZERO
       PMASS(2)=ZERO
@@ -5119,7 +5144,9 @@ CALL IOVXXX(W(1,26),W(1,23),W(1,2),GAL,AMP(8))""")
 
         # Check all ingredients in file here
 
-        #export_v4.generate_subprocess_directory_v4_standalone(me,
+        exporter = export_v4.ProcessExporterFortranME()
+
+        #exporter.generate_subprocess_directory_v4_standalone(me,
         #                                                      myfortranmodel)
 
         goal = """16 82 [0, 0, 0]
@@ -5161,7 +5188,7 @@ CALL IOVXXX(W(1,26),W(1,23),W(1,2),GAL,AMP(8))""")
 
         self.assertEqual(me.get_nexternal_ninitial(), (8, 2))
         self.assertEqual(me.get_helicity_combinations(), 256)
-        self.assertEqual(len(export_v4.get_helicity_lines(me).split("\n")), 256)
+        self.assertEqual(len(exporter.get_helicity_lines(me).split("\n")), 256)
         self.assertEqual("\n".join(myfortranmodel.get_matrix_element_calls(me)),
                          """CALL VXXXXX(P(0,1),zero,NHEL(1),-1*IC(1),W(1,1))
 CALL VXXXXX(P(0,2),zero,NHEL(2),-1*IC(2),W(1,2))
@@ -5484,7 +5511,7 @@ CALL VVVXXX(W(1,2),W(1,26),W(1,38),GG,AMP(215))
 CALL VVVXXX(W(1,2),W(1,26),W(1,39),GG,AMP(216))""")
 
         writer = writers.FortranWriter(self.give_pos('test'))
-        export_v4.write_pmass_file(writer, me)
+        exporter.write_pmass_file(writer, me)
         writer.close()
 
         self.assertFileContains('test',"""      PMASS(1)=ZERO
@@ -5813,7 +5840,9 @@ CALL FSICXX(W(1,13),W(1,4),MGVX350,Mneu1,Wneu1,W(1,14))
 # Amplitude(s) for diagram number 2
 CALL IOSXXX(W(1,14),W(1,2),W(1,12),MGVX350,AMP(2))""")
 
-        self.assertEqual(export_v4.get_JAMP_lines(me)[0],
+        exporter = export_v4.ProcessExporterFortranME()
+
+        self.assertEqual(exporter.get_JAMP_lines(me)[0],
                          "JAMP(1)=+AMP(1)-AMP(2)")
 
         # e- e+ > n1 n1 / z sl5-, n1 > e- sl2+, n1 > e+ sl2-
@@ -5864,7 +5893,7 @@ CALL FSICXX(W(1,13),W(1,4),MGVX350,Mneu1,Wneu1,W(1,14))
 # Amplitude(s) for diagram number 2
 CALL IOSXXX(W(1,14),W(1,2),W(1,12),MGVX350,AMP(2))""")
 
-        self.assertEqual(export_v4.get_JAMP_lines(me)[0],
+        self.assertEqual(exporter.get_JAMP_lines(me)[0],
                          "JAMP(1)=+AMP(1)-AMP(2)")
 
 
@@ -5947,7 +5976,7 @@ CALL IOSXXX(W(1,28),W(1,2),W(1,27),MGVX350,AMP(8))""")
 
         # Test amp2 lines        
         amp2_lines = \
-                 export_v4.get_amp2_lines(me)
+                 exporter.get_amp2_lines(me)
         self.assertEqual(amp2_lines,
                          ['AMP2(1)=AMP2(1)+AMP(1)*dconjg(AMP(1))',
                           'AMP2(2)=AMP2(2)+AMP(2)*dconjg(AMP(2))',
@@ -5959,13 +5988,13 @@ CALL IOSXXX(W(1,28),W(1,2),W(1,27),MGVX350,AMP(8))""")
                           'AMP2(8)=AMP2(8)+AMP(8)*dconjg(AMP(8))'])
         
         # Test jamp lines        
-        self.assertEqual(export_v4.get_JAMP_lines(me)[0],
+        self.assertEqual(exporter.get_JAMP_lines(me)[0],
                          "JAMP(1)=+AMP(1)+AMP(2)+AMP(3)+AMP(4)-AMP(5)-AMP(6)-AMP(7)-AMP(8)")
 
         writer = writers.FortranWriter(self.give_pos('test'))
 
         # Test configs file
-        mapconfigs, s_and_t_channels = export_v4.write_configs_file(writer,
+        mapconfigs, s_and_t_channels = exporter.write_configs_file(writer,
                                      me)
         writer.close()
         
@@ -6081,7 +6110,7 @@ C     Number of configs
         writer = writers.FortranWriter(self.give_pos('test'))
 
         # Test decayBW file
-        export_v4.write_decayBW_file(writer,
+        exporter.write_decayBW_file(writer,
                                      s_and_t_channels)
 
         writer.close()
@@ -6124,20 +6153,20 @@ C     Number of configs
 
         # Test dname.mg
         writer = writers.FortranWriter(self.give_pos('test'))
-        export_v4.write_dname_file(writer,
-                                   me.get('processes')[0].shell_string())
+        exporter.write_dname_file(writer,
+                                  "P"+me.get('processes')[0].shell_string())
         writer.close()
         self.assertFileContains('test', "DIRNAME=P0_emep_n1n1_n1_emsl2pa_n1_emsl2pa\n")
         # Test iproc.inc
         writer = writers.FortranWriter(self.give_pos('test'))
-        export_v4.write_iproc_file(writer, 0)
+        exporter.write_iproc_file(writer, 0)
         writer.close()
         self.assertFileContains('test', "      1\n")
         # Test maxamps.inc
         writer = writers.FortranWriter(self.give_pos('test'))
         # Extract ncolor
         ncolor = max(1, len(me.get('color_basis')))
-        export_v4.write_maxamps_file(writer,
+        exporter.write_maxamps_file(writer,
                                      len(me.get_all_amplitudes()),
                                      ncolor,
                                      len(me.get('processes')),
@@ -6150,7 +6179,7 @@ C     Number of configs
                                 "      PARAMETER (MAXPROC=1, MAXSPROC=1)\n")
         # Test mg.sym
         writer = writers.FortranWriter(self.give_pos('test'))
-        export_v4.write_mg_sym_file(writer, me)
+        exporter.write_mg_sym_file(writer, me)
         writer.close()
         self.assertFileContains('test', """      3
       2
@@ -6165,14 +6194,14 @@ C     Number of configs
         # Test ncombs.inc
         nexternal, ninitial = me.get_nexternal_ninitial()
         writer = writers.FortranWriter(self.give_pos('test'))
-        export_v4.write_ncombs_file(writer, nexternal)
+        exporter.write_ncombs_file(writer, nexternal)
         writer.close()
         self.assertFileContains('test',
                          """      INTEGER    N_MAX_CL
       PARAMETER (N_MAX_CL=512)\n""")
         # Test nexternal.inc
         writer = writers.FortranWriter(self.give_pos('test'))
-        export_v4.write_nexternal_file(writer, nexternal, ninitial)
+        exporter.write_nexternal_file(writer, nexternal, ninitial)
         writer.close()
         self.assertFileContains('test',
                          """      INTEGER    NEXTERNAL
@@ -6181,14 +6210,14 @@ C     Number of configs
       PARAMETER (NINCOMING=2)\n""")
         # Test ngraphs.inc
         writer = writers.FortranWriter(self.give_pos('test'))
-        export_v4.write_ngraphs_file(writer, len(mapconfigs))
+        exporter.write_ngraphs_file(writer, len(mapconfigs))
         writer.close()
         self.assertFileContains('test',
                          """      INTEGER    N_MAX_CG
       PARAMETER (N_MAX_CG=8)\n""")
         # Test props.inc
         writer = writers.FortranWriter(self.give_pos('test'))
-        export_v4.write_props_file(writer, me, s_and_t_channels)
+        exporter.write_props_file(writer, me, s_and_t_channels)
         writer.close()
         self.assertFileContains('test',
                          """      PMASS(-1,1)  = ZERO
@@ -6659,7 +6688,9 @@ CALL IOSXXX(W(1,15),W(1,2),W(1,19),GELN2P,AMP(9))""".split('\n')
         for i in range(max(len(result), len(goal))):
             self.assertEqual(result[i], goal[i])
 
-        self.assertEqual(export_v4.get_JAMP_lines(me)[0],
+        exporter = export_v4.ProcessExporterFortranME()
+
+        self.assertEqual(exporter.get_JAMP_lines(me)[0],
                          "JAMP(1)=+AMP(1)-AMP(2)-AMP(3)+AMP(4)-AMP(5)-AMP(6)+AMP(7)-AMP(8)-AMP(9)")
 
 
@@ -6751,7 +6782,9 @@ CALL IOSXXX(W(1,15),W(1,2),W(1,19),GELN2P,AMP(9))""".split('\n')
 
         self.assertEqual(len(me.get('color_basis')), 2)
 
-        self.assertEqual(export_v4.get_JAMP_lines(me),
+        exporter = export_v4.ProcessExporterFortranME()
+
+        self.assertEqual(exporter.get_JAMP_lines(me),
                          ["JAMP(1)=-AMP(1)-AMP(2)-AMP(3)-AMP(4)",
                          "JAMP(2)=+AMP(5)+AMP(6)+AMP(7)+AMP(8)"])
 
@@ -7102,8 +7135,10 @@ CALL FFV1_0(W(1,3),W(1,7),W(1,2),GGI,AMP(3))""".split('\n')
         myfortranmodel = helas_call_writers.FortranHelasCallWriter(mymodel)
         writer = writers.FortranWriter(self.give_pos('test'))
 
+        exporter = export_v4.ProcessExporterFortranME()
+
         # Test configs file
-        nconfig, s_and_t_channels = export_v4.write_configs_file(writer,
+        nconfig, s_and_t_channels = exporter.write_configs_file(writer,
                                                                  me)
         writer.close()
 
@@ -7203,7 +7238,7 @@ C     Number of configs
 """)
         # Test props.inc
         writer = writers.FortranWriter(self.give_pos('test'))
-        export_v4.write_props_file(writer, me, s_and_t_channels)
+        exporter.write_props_file(writer, me, s_and_t_channels)
         writer.close()
         self.assertFileContains('test',
 """      PMASS(-1,1)  = ABS(MT)
@@ -7447,8 +7482,10 @@ C     Number of configs
         myfortranmodel = helas_call_writers.FortranHelasCallWriter(mymodel)
         writer = writers.FortranWriter(self.give_pos('test'))
 
+        exporter = export_v4.ProcessExporterFortranME()
+
         # Test configs file
-        nconfig, s_and_t_channels = export_v4.write_configs_file(writer, me)
+        nconfig, s_and_t_channels = exporter.write_configs_file(writer, me)
         writer.close()
 
         self.assertFileContains('test',

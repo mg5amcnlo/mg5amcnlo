@@ -1381,6 +1381,7 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
     _curr_matrix_elements = helas_objects.HelasMultiProcess()
     _curr_fortran_model = None
     _curr_cpp_model = None
+    _curr_exporter = None
     _done_export = False
 
     # Variables to store state information
@@ -2492,7 +2493,7 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
 
     def do_output(self, line):
         """Initialize a new Template or reinitialize one"""
-        
+
         args = split_arg(line)
         # Check Argument validity
         self.check_output(args)
@@ -2518,17 +2519,25 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
         group_subprocesses = self._export_format == 'madevent' and \
                              self._options['group_subprocesses_output']
         # Make a Template Copy
-        if self._export_format.startswith('madevent'):
-            export_v4.copy_v4template(self._mgme_dir, self._export_dir,
-                                      not noclean, self._model_v4_path,
-                                      group_subprocesses)
-        elif self._export_format == 'standalone':
-            export_v4.copy_v4standalone(self._mgme_dir, self._export_dir,
-                                        not noclean)
+        if self._export_format == 'madevent':
+            if group_subprocesses:
+                self._curr_exporter = export_v4.ProcessExporterFortranMEGroup(\
+                                      self._mgme_dir, self._export_dir,
+                                      not noclean)
+            else:
+                self._curr_exporter = export_v4.ProcessExporterFortranME(\
+                                      self._mgme_dir, self._export_dir,
+                                      not noclean)
+        elif self._export_format in ['standalone', 'matrix']:
+            self._curr_exporter = export_v4.ProcessExporterFortranSA(\
+                                  self._mgme_dir, self._export_dir,not noclean)
         elif self._export_format == 'standalone_cpp':
             export_cpp.setup_cpp_standalone_dir(self._export_dir, self._curr_model)
         elif not os.path.isdir(self._export_dir):
             os.makedirs(self._export_dir)
+
+        if self._export_format in ['madevent', 'standalone']:
+            self._curr_exporter.copy_v4template()            
 
         # Reset _done_export, since we have new directory
         self._done_export = False
@@ -2598,7 +2607,7 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
         nojpeg = '-nojpeg' in args
 
         path = self._export_dir
-        if self._export_format in ['madevent', 'standalone', 'standalone_cpp']:
+        if self._export_format in ['standalone_cpp', 'madevent', 'standalone']:
             path = os.path.join(path, 'SubProcesses')
             
         if self._export_format == 'madevent':
@@ -2638,9 +2647,9 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
                 cpu_time1 = time.time()
                 for (group_number, me_group) in enumerate(subproc_groups):
                     calls = calls + \
-                         export_v4.generate_subprocess_group_directory_v4_madevent(\
+                         self._curr_exporter.generate_subprocess_directory_v4(\
                                 me_group, self._curr_fortran_model,
-                                group_number, path)
+                                group_number)
                     matrix_elements = \
                                  me_group.get('matrix_elements')
                     self._curr_matrix_elements.get('matrix_elements').\
@@ -2651,8 +2660,8 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
                 for me_number, me in \
                    enumerate(self._curr_matrix_elements.get('matrix_elements')):
                     calls = calls + \
-                            export_v4.generate_subprocess_directory_v4_madevent(\
-                                me, self._curr_fortran_model, me_number, path)
+                            self._curr_exporter.generate_subprocess_directory_v4(\
+                                me, self._curr_fortran_model, me_number)
 
                 cpu_time2 = time.time() - cpu_time1
 
@@ -2660,7 +2669,7 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
             card_path = os.path.join(path, os.path.pardir, 'SubProcesses', \
                                      'procdef_mg5.dat')
             if self._generate_info:
-                export_v4.write_procdef_mg5(card_path,
+                self._curr_exporter.write_procdef_mg5(card_path,
                                 self._curr_model['name'],
                                 self._generate_info)
                 try:
@@ -2671,8 +2680,8 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
         if self._export_format == 'standalone':
             for me in self._curr_matrix_elements.get('matrix_elements'):
                 calls = calls + \
-                        export_v4.generate_subprocess_directory_v4_standalone(\
-                            me, self._curr_fortran_model, path)
+                        self._curr_exporter.generate_subprocess_directory_v4(\
+                            me, self._curr_fortran_model)
             
         if self._export_format == 'matrix':
             cpu_time1 = time.time()
@@ -2683,7 +2692,7 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
                     logger.warning("Overwriting existing file %s" % filename)
                 else:
                     logger.info("Creating new file %s" % filename)
-                calls = calls + export_v4.write_matrix_element_v4_standalone(\
+                calls = calls + self._curr_exporter.write_matrix_element_v4(\
                     writers.FortranWriter(filename),\
                     me, self._curr_fortran_model)
             cpu_time2 = time.time() - cpu_time1
@@ -2746,9 +2755,8 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
         if self._model_v4_path:
             logger.info('Copy %s model files to directory %s' % \
                         (os.path.basename(self._model_v4_path), self._export_dir))
-            export_v4.export_model_files(self._model_v4_path, self._export_dir)
-            export_v4.export_helas(os.path.join(self._mgme_dir,'HELAS'),
-                                   self._export_dir)
+            self._curr_exporter.export_model_files(self._model_v4_path)
+            self._curr_exporter.export_helas(os.path.join(self._mgme_dir,'HELAS'))
         elif self._export_format in ['madevent', 'standalone']:
             logger.info('Export UFO model to MG4 format')
             # wanted_lorentz are the lorentz structures which are
@@ -2756,8 +2764,7 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
             # these processes
             wanted_lorentz = self._curr_matrix_elements.get_used_lorentz()
             wanted_couplings = self._curr_matrix_elements.get_used_couplings()
-            export_v4.convert_model_to_mg4(self._curr_model,
-                                           os.path.join(self._export_dir),
+            self._curr_exporter.convert_model_to_mg4(self._curr_model,
                                            wanted_lorentz,
                                            wanted_couplings)
         if self._export_format == 'standalone_cpp':
@@ -2773,19 +2780,14 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
                                             wanted_couplings)
             export_cpp.make_model_cpp(self._export_dir)
 
-        if self._export_format.startswith('madevent'):
-            os.system('touch %s/done' % os.path.join(self._export_dir,
-                                                     'SubProcesses'))        
-            export_v4.finalize_madevent_v4_directory(self._export_dir, makejpg,
-                                                     [self.history_header] + \
-                                                     self.history)
-        elif self._export_format == 'standalone':
-            export_v4.finalize_standalone_v4_directory(self._export_dir,
-                                                     [self.history_header] + \
-                                                     self.history)
+        if self._export_format in ['madevent', 'standalone']:
+            self._curr_exporter.finalize_v4_directory( \
+                                           [self.history_header] + \
+                                           self.history,
+                                           makejpg)
 
         logger.info('Output to directory ' + self._export_dir + ' done.')
-        if self._export_format.startswith('madevent'):
+        if self._export_format == 'madevent':
             logger.info('Please see ' + self._export_dir + '/README')
             logger.info('for information about how to generate events from this process.')
 
