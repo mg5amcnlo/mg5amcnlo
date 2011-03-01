@@ -47,7 +47,7 @@ if '__main__' == __name__:
         
     logging.basicConfig(level=logging.INFO)
 
-    my_proc_list = ['u u~ > u u~ / a h z', 'u u~ > u u~', 'g g > y y',' g g > g y', 'd d~ > d d~']
+    my_proc_list = ['u u~ > u u~ / a h z g', 'u u~ > y > u u~', 'g g > y y',' g g > g y', 'd d~> y > d d~']
     #my_proc_list = me_comparator.create_proc_list(['u', 'u~'], initial=2,
     #                                              final=2)
     #my_proc_list = me_comparator.create_proc_list_enhanced(
@@ -82,7 +82,7 @@ if '__main__' == __name__:
     # Run the actual comparison
     my_comp.run_comparison(my_proc_list,
                            model=['RS','RS_UFO','RS'],
-                           orders={'QED':4, 'QCD':4}, energy=2000)
+                           orders={'QED':4, 'QCD':4,'QTD':4}, energy=2000)
 
     # Do some cleanup
     #my_comp.cleanup()
