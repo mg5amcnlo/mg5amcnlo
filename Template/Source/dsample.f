@@ -245,14 +245,6 @@ c
       write(25,*) ' '
  102  close(25)
 
-c     Delete the file "selproc.dat"
-      luntmp=NEXTUNOPEN()
-      open(unit=luntmp,file='selproc.dat',status='unknown',err=1020)
-      write(luntmp,*)' '
- 1020 close(luntmp, status='DELETE')
-c   Call initialize dsig to renew selproc
-      dum=dsig(p,wgt,1)
-      
 c
 c     First few iterations will allow the grid to adjust
 c

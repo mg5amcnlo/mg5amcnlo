@@ -1298,27 +1298,8 @@ class ProcessExporterFortranME(ProcessExporterFortran):
         # Set proc_id
         replace_dict['proc_id'] = proc_id
         replace_dict['numproc'] = 1
-        if proc_id:
-            replace_dict['numproc'] = int(proc_id)
-            replace_dict['passcuts_begin'] = ""
-            replace_dict['passcuts_end'] = ""
-        else:
-            replace_dict['passcuts_begin'] = "IF (PASSCUTS(PP)) THEN"
-            replace_dict['passcuts_end'] = "ENDIF"
 
-        if proc_id:
-            # Set lines for subprocess group version
-            # Set define_iconfigs_lines
-            replace_dict['define_subdiag_lines'] = \
-                 """\nINTEGER SUBDIAG(MAXSPROC),IB(2)
-                 COMMON/TO_SUB_DIAG/SUBDIAG,IB"""    
-        else:
-            replace_dict['define_subdiag_lines'] = ""
-
-        # Extract pdf lines
-        pdf_lines = self.get_pdf_lines(matrix_element, ninitial, proc_id != "")
-        replace_dict['pdf_lines'] = pdf_lines
-
+        # Set dsig_line
         if ninitial == 1:
             # No conversion, since result of decay should be given in GeV
             dsig_line = "pd(IPROC)*dsiguu"
@@ -1327,6 +1308,29 @@ class ProcessExporterFortranME(ProcessExporterFortran):
             dsig_line = "pd(IPROC)*conv*dsiguu"
 
         replace_dict['dsig_line'] = dsig_line
+
+        # Extract pdf lines
+        pdf_lines = self.get_pdf_lines(matrix_element, ninitial, proc_id != "")
+        replace_dict['pdf_lines'] = pdf_lines
+
+        # Lines that differ between subprocess group and regular
+        if proc_id:
+            replace_dict['numproc'] = int(proc_id)
+            replace_dict['passcuts_begin'] = ""
+            replace_dict['passcuts_end'] = ""
+            replace_dict['unwgt_line'] = ""
+            # Set lines for subprocess group version
+            # Set define_iconfigs_lines
+            replace_dict['define_subdiag_lines'] = \
+                 """\nINTEGER SUBDIAG(MAXSPROC),IB(2)
+                 COMMON/TO_SUB_DIAG/SUBDIAG,IB"""    
+        else:
+            replace_dict['passcuts_begin'] = "IF (PASSCUTS(PP)) THEN"
+            replace_dict['passcuts_end'] = "ENDIF"
+            replace_dict['unwgt_line'] = \
+                             "CALL UNWGT(PP,%(dsig_line)s*WGT,%(numproc)d)" % \
+                             replace_dict
+            replace_dict['define_subdiag_lines'] = ""
 
         file = open(os.path.join(_file_path, \
                           'iolibs/template_files/auto_dsig_v4.inc')).read()
@@ -2089,7 +2093,7 @@ class ProcessExporterFortranMEGroup(ProcessExporterFortranME):
         call_dsig_proc_lines = []
         for iproc in range(len(matrix_elements)):
             call_dsig_proc_lines.append(\
-                "IF(IPROC.EQ.%(num)d) DSIG=DSIG%(num)d(P1,WGT,0) ! %(proc)s" % \
+                "IF(IPROC.EQ.%(num)d) DSIGPROC=DSIG%(num)d(P1,WGT,IMODE) ! %(proc)s" % \
                 {"num": iproc + 1,
                  "proc": matrix_elements[iproc].get('processes')[0].base_string()})
         replace_dict['call_dsig_proc_lines'] = "\n".join(call_dsig_proc_lines)

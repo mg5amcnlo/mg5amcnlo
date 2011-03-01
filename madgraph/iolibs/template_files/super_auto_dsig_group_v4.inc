@@ -10,7 +10,8 @@ c     FOR MULTIPLE PROCESSES IN PROCESS GROUP
 C     Input:
 C             pp    4 momentum of external particles
 C             wgt   weight from Monte Carlo
-C             imode 0 run, 1 init, 2 reweight, 3 finalize
+C             imode 0 run, 1 init, 2 reweight,
+C                   3 finalize, 4 only PDFs
 C     Output:
 C             Amplitude squared and summed
 C ****************************************************
@@ -31,16 +32,12 @@ C
 C   
 C LOCAL VARIABLES 
 C  
-      INTEGER I,J,K,LUN,IDUM,ICONF,IMIRROR,JC(NEXTERNAL)
+      INTEGER I,J,K,LUN,IDUM,ICONF,IMIRROR,NPROC
       DATA IDUM/0/
-      LOGICAL FIRST_TIME
-      DATA FIRST_TIME/.TRUE./
-      INTEGER NPROC,LIMEVTS
-      SAVE FIRST_TIME,NPROC,IDUM
+      SAVE NPROC,IDUM
       INTEGER SYMCONF(0:LMAXCONFIGS)
       SAVE SYMCONF
-    DOUBLE PRECISION SUMPROB,TOTWGT,R,XDUM
-      DOUBLE PRECISION P1(0:3,NEXTERNAL)
+      DOUBLE PRECISION SUMPROB,TOTWGT,R,XDUM
       INTEGER CONFSUB(MAXSPROC,LMAXCONFIGS)
       INCLUDE 'config_subproc_map.inc'            
       INTEGER PERMS(NEXTERNAL,LMAXCONFIGS)
@@ -62,20 +59,15 @@ C   NUMEVTS is vector of event calls for the subprocesses
 C  
 C EXTERNAL FUNCTIONS
 C  
-      LOGICAL PASSCUTS
       INTEGER NEXTUNOPEN
       REAL XRAN1
-      EXTERNAL PASSCUTS,NEXTUNOPEN,XRAN1
-%(dsig_def_line)s
+      DOUBLE PRECISION DSIGPROC
+      EXTERNAL NEXTUNOPEN,XRAN1,DSIGPROC
 C  
 C GLOBAL VARIABLES
 C  
       include 'coupl.inc'
       include 'run.inc'
-C   SUBDIAG is vector of diagram numbers for this config
-C   IB gives which beam is which (for mirror processes)
-      INTEGER SUBDIAG(MAXSPROC),IB(2)
-      COMMON/TO_SUB_DIAG/SUBDIAG,IB
 C   ICONFIG has this config number
       INTEGER MAPCONFIG(0:LMAXCONFIGS), ICONFIG
       COMMON/TO_MCONFIGS/MAPCONFIG, ICONFIG
@@ -88,7 +80,7 @@ C ----------
       DSIG=0D0
 
       IF(IMODE.EQ.1)THEN
-C     Read in symfact file and store used permutations in SYMCONF
+C       Set up process information from file symfact
         LUN=NEXTUNOPEN()
         OPEN(UNIT=LUN,FILE='../symfact.dat',STATUS='OLD',ERR=10)
         IPROC=1
@@ -102,135 +94,96 @@ C     Read in symfact file and store used permutations in SYMCONF
         ENDDO
         SYMCONF(0)=IPROC
         CLOSE(LUN)
-        WRITE(*,*)'Using configs with permutations:'
-        DO J=1,SYMCONF(0)
-          WRITE(*,'(I4,a,%(nexternal)dI3,a)') SYMCONF(J),'  (',(PERMS(I,SYMCONF(J)),I=1,NEXTERNAL),')'
-        ENDDO
-        GOTO 20
+        RETURN
  10     WRITE(*,*)'Error opening symfact.dat. No permutations will be used.'
-C     Read in weight file
- 20     LUN=NEXTUNOPEN()
-        OPEN(UNIT=LUN,FILE='selproc.dat',STATUS='OLD',ERR=30)
-        DO J=1,SYMCONF(0)
-          READ(LUN,'(%(nsprocs)dE16.8)') ((SELPROC(K,I,J),K=1,2),I=1,MAXSPROC)
-        ENDDO
-        CLOSE(LUN)
-        GOTO 40
- 30     WRITE(*,*)'Error opening selproc.dat. Set all weights equal.'
-C     Find number of contributing diagrams
-        NPROC=0
-        DO J=1,SYMCONF(0)
-          DO I=1,MAXSPROC
-            IF(CONFSUB(I,SYMCONF(J)).GT.0) THEN 
-              NPROC=NPROC+1
-              IF(MIRRORPROCS(I)) NPROC=NPROC+1
-            ENDIF
-          ENDDO
-        ENDDO
-C     Set SELPROC democratically
-        DO J=1,SYMCONF(0)
-          DO I=1,MAXSPROC
-            IF(CONFSUB(I,SYMCONF(J)).NE.0) THEN
-              SELPROC(1,I,J)=1d0/NPROC
-              IF(MIRRORPROCS(I)) SELPROC(2,I,J)=1d0/NPROC
-            ENDIF
-          ENDDO
-        ENDDO
- 40     WRITE(*,*) 'Initial selection weights:'
-        DO J=1,SYMCONF(0)
-          WRITE(*,'(%(nsprocs)dE12.4)')((SELPROC(K,I,J),K=1,2),I=1,MAXSPROC)
-        ENDDO
         RETURN
       ELSE IF(IMODE.EQ.2)THEN
-C     Reweight PROCSEL according to the actual weigths
+C     Output weights and number of events
         SUMPROB=0D0
-        TOTWGT=0D0
-c     Take into account only channels with at least LIMEVTS events
-        LIMEVTS=300
         DO J=1,SYMCONF(0)
           DO I=1,MAXSPROC
             DO K=1,2
-              IF(NUMEVTS(K,I,J).GE.LIMEVTS)THEN
-                TOTWGT=TOTWGT+SUMWGT(K,I,J)
-                SUMPROB=SUMPROB+SELPROC(K,I,J)
-              ENDIF
+              SUMPROB=SUMPROB+SUMWGT(K,I,J)
             ENDDO
           ENDDO
         ENDDO
-c     Update SELPROC
+        WRITE(*,*)'Relative summed weights:'
+        DO J=1,SYMCONF(0)
+          WRITE(*,'(%(nsprocs)dE12.4)')((SUMWGT(K,I,J)/SUMPROB,K=1,2),I=1,MAXSPROC)
+        ENDDO
+        SUMPROB=0D0
         DO J=1,SYMCONF(0)
           DO I=1,MAXSPROC
             DO K=1,2
-              IF(NUMEVTS(K,I,J).GE.LIMEVTS)THEN
-                SELPROC(K,I,J)=SUMWGT(K,I,J)/TOTWGT*SUMPROB
-              ENDIF
+              SUMPROB=SUMPROB+NUMEVTS(K,I,J)
             ENDDO
           ENDDO
         ENDDO
-C     Average selection for mirror processes if identical beams
-        IF(EBEAM(1).EQ.EBEAM(2) .AND. LPP(1).EQ.LPP(2))THEN
-           DO J=1,SYMCONF(0)
-              DO I=1,MAXSPROC
-                 IF(SELPROC(2,I,J).GT.0d0)THEN
-                    SELPROC(1,I,J)=0.5d0*(SELPROC(1,I,J)+SELPROC(2,I,J))
-                    SELPROC(2,I,J)=SELPROC(1,I,J)
-                 ENDIF
-              ENDDO
-           ENDDO
-        ENDIF
-        WRITE(*,*)'Selection weights after reweight:'
+        WRITE(*,*)'Relative number of events:'
         DO J=1,SYMCONF(0)
-          WRITE(*,'(%(nsprocs)dE12.4)')((SELPROC(K,I,J),K=1,2),I=1,MAXSPROC)
-        ENDDO
-        WRITE(*,*)'Summed weights:'
-        DO J=1,SYMCONF(0)
-          WRITE(*,'(%(nsprocs)dE12.4)')((SUMWGT(K,I,J),K=1,2),I=1,MAXSPROC)
+          WRITE(*,'(%(nsprocs)dE12.4)')((NUMEVTS(K,I,J)/SUMPROB,K=1,2),I=1,MAXSPROC)
         ENDDO
         WRITE(*,*)'Events:'
         DO J=1,SYMCONF(0)
           WRITE(*,'(%(nsprocs)dI12)')((NUMEVTS(K,I,J),K=1,2),I=1,MAXSPROC)
         ENDDO
-C       Reset weights and number of events if above LIMEVTS
+C       Reset weights and number of events
         DO J=1,SYMCONF(0)
           DO I=1,MAXSPROC
             DO K=1,2
-              IF(NUMEVTS(K,I,J).GE.LIMEVTS)THEN
-                NUMEVTS(K,I,J)=0
-                SUMWGT(K,I,J)=0d0
-              ENDIF
+              NUMEVTS(K,I,J)=0
+              SUMWGT(K,I,J)=0d0
             ENDDO
           ENDDO
         ENDDO
         RETURN
       ELSE IF(IMODE.EQ.3)THEN
-C     Write out weight file
-        LUN=NEXTUNOPEN()
-        OPEN(UNIT=LUN,FILE='selproc.dat',STATUS='UNKNOWN')
-        DO J=1,SYMCONF(0)
-          WRITE(LUN,'(%(nsprocs)dE16.8)') ((SELPROC(K,I,J),K=1,2),I=1,MAXSPROC)
-        ENDDO
-        CLOSE(LUN)
+C     No finalize needed
         RETURN
       ENDIF
 
 C   IMODE.EQ.0, regular run mode
 
-C   Select among the subprocesses based on SELPROC
+C     Select among the subprocesses based on PDF weight
+      SUMPROB=0D0
+      DO J=1,SYMCONF(0)
+         DO I=1,MAXSPROC
+            IF(CONFSUB(I,SYMCONF(J)).NE.0) THEN
+               DO K=1,2
+                  IF(K.EQ.1.OR.MIRRORPROCS(I))THEN
+C                 Calculate PDF weight for all subprocesses
+                     SELPROC(K,I,J)=DSIGPROC(PP,J,I,K,SYMCONF,CONFSUB,1d0,4)
+                     SUMPROB=SUMPROB+SELPROC(K,I,J)
+                     IF(K.EQ.2)THEN
+C                 Need to flip back x values
+                        XDUM=XBK(1)
+                        XBK(1)=XBK(2)
+                        XBK(2)=XDUM
+                     ENDIF
+                  ENDIF
+               ENDDO
+            endif
+         ENDDO
+       ENDDO
+
+C     Perform the selection
       IDUM=0
-      R=XRAN1(IDUM)
+      R=XRAN1(IDUM)*SUMPROB
       ICONF=0
       IPROC=0
-      SUMPROB=0D0
+      TOTWGT=0D0
       DO J=1,SYMCONF(0)
         DO I=1,MAXSPROC
           DO K=1,2
-            SUMPROB=SUMPROB+SELPROC(K,I,J)
-            IF(R.LT.SUMPROB)THEN
-              IPROC=I
-              ICONF=J
-              IMIRROR=K
-              GOTO 50
-            ENDIF
+            TOTWGT=TOTWGT+SELPROC(K,I,J)
+            IF(R.LT.TOTWGT)THEN
+C               Normalize SELPROC to selection probability
+                SELPROC(K,I,J)=SELPROC(K,I,J)/SUMPROB
+                IPROC=I
+                ICONF=J
+                IMIRROR=K
+                GOTO 50
+             ENDIF
           ENDDO
         ENDDO
       ENDDO
@@ -238,45 +191,103 @@ C   Select among the subprocesses based on SELPROC
 
       IF(IPROC.EQ.0) RETURN
 
-C   Set SUBDIAG and ICONFIG
+C     Update weigth w.r.t SELPROC
+      WGT=WGT/SELPROC(IMIRROR,IPROC,ICONF)
+
+C     Call DSIGPROC to calculate sigma for process
+      DSIG=DSIGPROC(PP,ICONF,IPROC,IMIRROR,SYMCONF,CONFSUB,WGT,IMODE)
+
+C     Call UNWGT to unweight and store events
+      CALL UNWGT(PP,DSIG*WGT,1)
+
+C     Update summed weight and number of events
+        SUMWGT(IMIRROR,IPROC,ICONF)=SUMWGT(IMIRROR,IPROC,ICONF)+DSIG*WGT
+        NUMEVTS(IMIRROR,IPROC,ICONF)=NUMEVTS(IMIRROR,IPROC,ICONF)+1
+
+      RETURN
+      END
+
+      FUNCTION DSIGPROC(PP,ICONF,IPROC,IMIRROR,SYMCONF,CONFSUB,WGT,IMODE)
+C     ****************************************************
+C     RETURNS DIFFERENTIAL CROSS SECTION 
+C     FOR A PROCESS
+C     Input:
+C     pp    4 momentum of external particles
+C     wgt   weight from Monte Carlo
+C     imode 0 run, 1 init, 2 reweight, 3 finalize
+C     Output:
+C     Amplitude squared and summed
+C     ****************************************************
+
+      IMPLICIT NONE
+      
+      INCLUDE 'genps.inc'
+      INCLUDE 'nexternal.inc'
+      INCLUDE 'maxamps.inc'
+      INCLUDE 'coupl.inc'
+      INCLUDE 'run.inc'
+C     
+C     ARGUMENTS 
+C     
+      DOUBLE PRECISION DSIGPROC
+      DOUBLE PRECISION PP(0:3,NEXTERNAL), WGT
+      INTEGER ICONF,IPROC,IMIRROR,IMODE
+      INTEGER SYMCONF(0:LMAXCONFIGS)
+      INTEGER CONFSUB(MAXSPROC,LMAXCONFIGS)
+C     
+C     GLOBAL VARIABLES
+C     
+C     SUBDIAG is vector of diagram numbers for this config
+C     IB gives which beam is which (for mirror processes)
+      INTEGER SUBDIAG(MAXSPROC),IB(2)
+      COMMON/TO_SUB_DIAG/SUBDIAG,IB
+C     ICONFIG has this config number
+      INTEGER MAPCONFIG(0:LMAXCONFIGS), ICONFIG
+      COMMON/TO_MCONFIGS/MAPCONFIG, ICONFIG
+C  
+C EXTERNAL FUNCTIONS
+C  
+%(dsig_def_line)s
+      LOGICAL PASSCUTS
+C     
+C     LOCAL VARIABLES 
+C     
+      DOUBLE PRECISION P1(0:3,NEXTERNAL),xdum
+      INTEGER I,J,K,JC(NEXTERNAL)
+      INTEGER PERMS(NEXTERNAL,LMAXCONFIGS)
+      INCLUDE 'symperms.inc'
+
       ICONFIG=SYMCONF(ICONF)
       DO I=1,MAXSPROC
         SUBDIAG(I) = CONFSUB(I,SYMCONF(ICONF))
       ENDDO
 
-C   Set momenta according to this permutation
+C     Set momenta according to this permutation
       CALL SWITCHMOM(PP,P1,PERMS(1,ICONFIG),JC,NEXTERNAL)
 
       IB(1)=1
       IB(2)=2
 
       IF(IMIRROR.EQ.2)THEN
-C     Flip momenta (rotate around x axis)
+C       Flip momenta (rotate around x axis)
         DO I=1,NEXTERNAL
           P1(2,I)=-P1(2,I)
           P1(3,I)=-P1(3,I)
         ENDDO
-C     Flip beam identity
+C       Flip beam identity
         IB(1)=2
         IB(2)=1
-C     Flip x values (to get boost right)
+C       Flip x values (to get boost right)
         XDUM=XBK(1)
         XBK(1)=XBK(2)
         XBK(2)=XDUM
       ENDIF
 
+      DSIGPROC=0D0
 
       IF (PASSCUTS(P1)) THEN
-C     Update weigth w.r.t SELPROC
-        WGT=WGT/SELPROC(IMIRROR,IPROC,ICONF)
-
 %(call_dsig_proc_lines)s
-
-C     Update summed weight and number of events
-        SUMWGT(IMIRROR,IPROC,ICONF)=SUMWGT(IMIRROR,IPROC,ICONF)+DSIG*WGT
-        NUMEVTS(IMIRROR,IPROC,ICONF)=NUMEVTS(IMIRROR,IPROC,ICONF)+1
-        
-
       ENDIF
       RETURN
       END
+
