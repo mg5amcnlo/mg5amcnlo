@@ -2614,8 +2614,8 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
 
             # Sort amplitudes according to number of diagrams,
             # to get most efficient multichannel output
-            self._curr_amps.sort(lambda a1, a2: len(a2.get('diagrams')) - \
-                                 len(a1.get('diagrams')))
+            self._curr_amps.sort(lambda a1, a2: a2.get_number_of_diagrams() - \
+                                 a1.get_number_of_diagrams())
 
             if group_subprocesses:
                 ndiags = 0

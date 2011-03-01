@@ -89,7 +89,6 @@ c     Get list of subprocesses
 c
       call get_subprocess(subname,ns)
 
-      print *,'Got subprocesses: ',ns
 c
 c     Create scratch file to hold events
 c
@@ -460,7 +459,6 @@ c  Begin Code
 c-----
        i = index(dir," ")
       dname = dir(1:i-1)// "/" // symfile
-      print *, 'dname: ',dname
       open(unit=35, file=dname ,status='old',err=59)
       do while (.true.)
          read(35,*,err=99,end=99) xi,j
