@@ -141,7 +141,6 @@ if status1:
 # 5. Remove the .bzr directory and the create_release.py file,
 #    take care of README files.
 
-print filepath
 try:
     shutil.rmtree(path.join(filepath, '.bzr'))
 except:

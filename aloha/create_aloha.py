@@ -571,8 +571,8 @@ class AbstractALOHAModel(dict):
         massless = None
         for particle in self.model.all_particles:
             if particle.spin == 5:
-                if massless is None and particle.mass == 'Zero':
-                    massless == True
+                if massless is None:
+                    massless = (particle.mass == 'Zero')
                 elif massless != (particle.mass == 'Zero'):
                     raise ALOHAERROR, 'All spin 2 should be massive or massless'
         return massless     

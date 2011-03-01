@@ -202,7 +202,7 @@ class MG4Runner(MERunner):
             logging.info("Running newprocess script")
             subprocess.call(os.path.join('bin', 'newprocess'),
                             cwd=dir_name,
-                            stdout=open('/dev/null', 'w'), stderr=subprocess.STDOUT)
+                            )#stdout=open('/dev/null', 'w'), stderr=subprocess.STDOUT)
 
             # Get the ME value
             for i, proc in enumerate(temp_proc_list):
