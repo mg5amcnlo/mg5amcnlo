@@ -944,7 +944,7 @@ class MultiProcess(base_objects.PhysicsObject):
                 amplitude = Amplitude({"process": process})
                 try:
                     result = amplitude.generate_diagrams()
-                except InvalidCmd:
+                except InvalidCmd as error:
                     failed_procs.append(tuple(sorted_legs))
                 else:
                     if amplitude.get('diagrams'):
@@ -955,7 +955,10 @@ class MultiProcess(base_objects.PhysicsObject):
 
         # Raise exception if there are no amplitudes for this process
         if not amplitudes:
-            raise MadGraph5Error, \
+            if len(failed_procs) == 1 and 'error' in locals():
+                raise error
+            else:
+                raise MadGraph5Error, \
             "No amplitudes generated from process %s. Please enter a valid process" % \
                   process_definition.nice_string()
         
