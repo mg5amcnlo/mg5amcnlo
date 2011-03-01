@@ -167,6 +167,8 @@ class UFOMG5Converter(object):
                         particle.set(key, value)
                 elif key == 'charge':
                     particle.set(key, float(value))
+                elif key in ['charge','width']:
+                    particle.set(key, str(value))
                 else:
                     particle.set(key, value)
             
