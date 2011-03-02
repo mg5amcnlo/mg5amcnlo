@@ -553,7 +553,7 @@ c
       kk=k
 c     Check error for the rest of the channels
       do while( kk .le. ng)
-         if (xerr(io(kk)).gt.10*xsec(io(kk))) then
+         if (xerr(io(kk)).gt.xsec(io(kk))) then
             write(*,*) 'Improving for error ',kk,gn(io(kk)),xt(kk),xsec(io(kk)),xerr(io(kk))
             io(k)=io(kk)
             xt(k)=xt(kk)
