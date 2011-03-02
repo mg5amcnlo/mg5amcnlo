@@ -1760,6 +1760,8 @@ class UFO_model_to_mg4(object):
         fsock.writelines("if(readlha) then\n")
         
         for param in self.params_indep:
+            if param.name == 'ZERO':
+                pass
             fsock.writelines("%s = %s\n" % (param.name,
                                             self.p_to_f.parse(param.expr)))
         
@@ -1885,7 +1887,7 @@ class UFO_model_to_mg4(object):
         fsock.writelines("""write(*,*)  ' Internal Params'
                             write(*,*)  ' ---------------------------------'
                             write(*,*)  ' '""")        
-        lines = [format(data.name) for data in self.params_indep]
+        lines = [format(data.name) for data in self.params_indep if data.name != 'ZERO']
         fsock.writelines('\n'.join(lines))
         fsock.writelines("""write(*,*)  ' Internal Params evaluated point by point'
                             write(*,*)  ' ----------------------------------------'
