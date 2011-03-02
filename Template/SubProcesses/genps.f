@@ -730,10 +730,10 @@ c
      &        m(itree(2,ibranch)),m(ibranch-1),p(0,itree(2,ibranch)),
      &        p(0,ibranch),jac)
 
-         if (jac .lt. 0d0) then
-            write(*,*) 'Failed gentcms',iconfig,ibranch
-         endif
-         if (jac .lt. 0d0) return          !Failed due to numerical precision
+c         if (jac .lt. 0d0) then
+c            write(*,*) 'Failed gentcms',iconfig,ibranch
+c         endif
+         if (jac .lt. 0d0) return          !Failed, probably due to negative x
 
          pswgt = pswgt/(4d0*dsqrt(lambda(s1,ma2,mb2)))
       enddo
@@ -976,8 +976,9 @@ c-----
       ysqr = lambda(x,u,v)*lambda(x,w,z)
       if (ysqr .ge. 0d0) then
          yr = dsqrt(ysqr)
-      else
-         print*,'Error in yminymax sqrt(-x)',lambda(x,u,v),lambda(x,w,z)
+c      else
+c        Probably a problem with negative x selection
+c         print*,'Error in yminymax sqrt(-x)',lambda(x,u,v),lambda(x,w,z)
       endif
       y1 = u+w -.5d0* ((x+u-v)*(x+w-z) - yr)/(x+tiny)
       y2 = u+w -.5d0* ((x+u-v)*(x+w-z) + yr)/(x+tiny)

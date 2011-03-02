@@ -224,8 +224,8 @@ c                  write(*,*) "Found match graph",mapconfig(j),mapconfig(k),diff
       close(lun)
       write(*,*) 'Found ',nmatch, ' matches. ',mapconfig(0)-nmatch,
      $     ' channels remain for integration.'
-      call write_bash(mapconfig,use_config,pwidth,icomp,iforest)
       call write_input(j)
+      call write_bash(mapconfig,use_config,pwidth,icomp,iforest)
       end
 
       logical function check_swap(ic)
@@ -343,7 +343,11 @@ c
       integer npoints
       character*20 param(maxpara),value(maxpara)
       integer npara, nreq
+c
+c     global
+c
       logical gridpack
+      common/to_gridpack/gridpack
 c-----
 c  Begin Code
 c-----
@@ -675,6 +679,11 @@ c     Arguments
 c
       integer lun
 c
+c     global
+c
+      logical gridpack
+      common/to_gridpack/gridpack
+c
 c     local
 c
       character*30 fname
@@ -696,7 +705,7 @@ c
       write(lun,25) 'mkdir $j'
       write(lun,20) 'fi'
       write(lun,20) 'cd $j'
-      write(lun,20) 'rm -f ftn25 ftn99'
+      write(lun,20) 'rm -f ftn25 ftn26 ftn99'
       write(lun,20) 'rm -f $k'
       write(lun,20) 'cat ../input_app.txt >& input_app.txt'
       write(lun,20) 'echo $i >> input_app.txt'
@@ -706,6 +715,7 @@ c
       else
          write(lun,20) 'time ../madevent > $k <input_app.txt'
          write(lun,20) 'rm -f ftn25 ftn99'
+         if(.not.gridpack) write(lun,20) 'rm -f ftn26'
          write(lun,20) 'cp $k log.txt'
       endif
       write(lun,20) 'cd ../'
