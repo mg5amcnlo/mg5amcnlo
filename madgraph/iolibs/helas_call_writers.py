@@ -386,6 +386,7 @@ class FortranHelasCallWriter(HelasCallWriter):
                 amp.get('number'))
         self.add_amplitude(key, call)
 
+        # Spin2 Helas Routine
         key = ((-2, 2, 5), '')
         call = lambda amp: \
                "CALL IOTXXX(W(1,%d),W(1,%d),W(1,%d),%s,%s,AMP(%d))" % \
@@ -408,6 +409,29 @@ class FortranHelasCallWriter(HelasCallWriter):
                 wf.get('width'),
                 wf.get('number'))
         self.add_wavefunction(key, call)
+        
+        key = ((3,3,3,5),'')
+        call = lambda amp: \
+               "CALL VVVTXX(W(1,%d),W(1,%d),W(1,%d),W(1,%d),%s,1d0,AMP(%d))" % \
+               (amp.get('mothers')[0].get('number'),
+                amp.get('mothers')[1].get('number'),
+                amp.get('mothers')[2].get('number'),
+                amp.get('mothers')[3].get('number'),
+                amp.get('coupling'),
+                amp.get('number'))
+        self.add_amplitude(key, call) 
+ 
+        key = ((3,3,5),'')
+        call = lambda amp: \
+               "CALL VVTXXX(W(1,%d),W(1,%d),W(1,%d),%s,%s,AMP(%d))" % \
+               (amp.get('mothers')[0].get('number'),
+                amp.get('mothers')[1].get('number'),
+                amp.get('mothers')[2].get('number'),
+                amp.get('coupling'),
+                amp.get('mothers')[0].get('mass'),
+                amp.get('number'))
+        self.add_amplitude(key, call)  
+        
 
     def get_wavefunction_call(self, wavefunction):
         """Return the function for writing the wavefunction

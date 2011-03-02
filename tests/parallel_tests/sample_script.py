@@ -47,7 +47,7 @@ if '__main__' == __name__:
         
     logging.basicConfig(level=logging.INFO)
 
-    my_proc_list = ['u u~ > u u~ / a h z g', 'u u~ > y > u u~', 'g g > y y',' g g > g y', 'd d~> y > d d~']
+    my_proc_list = ['g g > y y',' g g > g y','g g > y']
     #my_proc_list = me_comparator.create_proc_list(['u', 'u~'], initial=2,
     #                                              final=2)
     #my_proc_list = me_comparator.create_proc_list_enhanced(
