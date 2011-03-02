@@ -7,7 +7,7 @@ c
 c     Arguments
 c
       DOUBLE  PRECISION x,xmu
-      INTEGER IH,ipdg,ipart
+      INTEGER IH,ipdg
 C
 C     Include
 C
@@ -17,7 +17,7 @@ C
       integer mode,Irt,i,j
       double precision xlast(2),xmulast(2),pdflast(-7:7,2),q2max
       double precision epa_electron,epa_proton
-      integer ireuse
+      integer ipart,ireuse,iporg
       save xlast,xmulast,pdflast
       data xlast/2*0d0/
       data pdflast/30*0d0/
@@ -25,6 +25,7 @@ C
       ipart=ipdg
       if(iabs(ipart).eq.21) ipart=0
       if(iabs(ipart).eq.22) ipart=7
+      iporg=ipart
 
       ireuse = 0
       do i=1,2
@@ -51,8 +52,8 @@ c     If both x non-zero and not ireuse, then zero x
       endif
 
 c     Reuse previous result, if possible
-      if (ireuse.gt.0.and.pdflast(ipdg,ireuse).ne.0d0) then
-         pdg2pdf=pdflast(ipdg,ireuse)
+      if (ireuse.gt.0.and.pdflast(iporg,ireuse).ne.0d0) then
+         pdg2pdf=pdflast(iporg,ireuse)
          return 
       endif
 
@@ -66,7 +67,7 @@ c     Reuse previous result, if possible
          elseif(ih .eq. 2) then !from a proton without breaking
             pdg2pdf=epa_proton(x,q2max)
          endif 
-         pdflast(ipart,ireuse)=pdg2pdf
+         pdflast(iporg,ireuse)=pdg2pdf
          return
       endif
       
@@ -140,13 +141,12 @@ C
      $      ipart=sign(3-iabs(ipart),ipart)
 
          pdg2pdf=Ctq6Pdf(ipart,x,xmu)
-
       else
          call pftopdg(ih,x,xmu,pdflast(-7,ireuse))
-         pdg2pdf=pdflast(ipart,ireuse);
+         pdg2pdf=pdflast(iporg,ireuse)
       endif      
 
-      pdflast(ipart,ireuse)=pdg2pdf
+      pdflast(iporg,ireuse)=pdg2pdf
       return
       end
 
