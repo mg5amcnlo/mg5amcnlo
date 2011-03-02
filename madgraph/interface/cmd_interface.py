@@ -1271,16 +1271,17 @@ class CompleteForCmd(CheckValidForCmd):
             return self.list_completion(text, self._import_formats)
 
         # Directory continuation
-        if args[-1].endswith(os.path.sep):
+        if os.path.sep in args[-1] + text:
             if args[1].startswith('model'):
-                return self.path_completion(text,
-                                    os.path.join('.',*[a for a in args if \
-                                                      a.endswith(os.path.sep)]),
-                                    only_dirs = True)
+                # Directory continuation
+                return self.path_completion(text, os.path.join('.',*[a for a in args \
+                                                                    if a.endswith(os.path.sep)]),
+                                                only_dirs = True)
             else:
                 return self.path_completion(text,
                                     os.path.join('.',*[a for a in args if \
                                                       a.endswith(os.path.sep)]))
+
         # Model directory name if directory is not given
         if len(split_arg(line[0:begidx])) == 2:
             if args[1] == 'model':
