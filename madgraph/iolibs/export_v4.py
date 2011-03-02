@@ -1806,10 +1806,10 @@ class ProcessExporterFortranMEGroup(ProcessExporterFortranME):
         # Update values in run_config.inc
         run_config = \
                 open(os.path.join(self.dir_path, 'Source', 'run_config.inc')).read()
-        run_config = run_config.replace("min_events_channel = 1000",
-                                        "min_events_channel = 4000")
-        run_config = run_config.replace("min_events = 2000",
-                                        "min_events = 4000")
+        #run_config = run_config.replace("min_events_channel = 1000",
+        #                                "min_events_channel = 4000")
+        #run_config = run_config.replace("min_events = 2000",
+        #                                "min_events = 4000")
         run_config = run_config.replace("max_events = 2000",
                                         "max_events = 8000")
         run_config = run_config.replace("ChanPerJob=5",
