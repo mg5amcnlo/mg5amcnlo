@@ -498,7 +498,7 @@ c
 c      double precision spole(-max_branch:0),swidth(-max_branch:0)
       double precision jac,pswgt
       integer nbranch
-      double precision x(21)
+      double precision x(40) ! ja 3/2/11 21->40 after strange segfault
 c
 c     Local
 c
