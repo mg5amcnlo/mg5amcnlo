@@ -412,7 +412,7 @@ class FortranHelasCallWriter(HelasCallWriter):
         
         key = ((3,3,3,5),'')
         call = lambda amp: \
-               "CALL VVVTXX(W(1,%d),W(1,%d),W(1,%d),W(1,%d),%s,1d0,AMP(%d))" % \
+               "CALL VVVTXX(W(1,%d),W(1,%d),W(1,%d),W(1,%d),1d0,%s,AMP(%d))" % \
                (amp.get('mothers')[0].get('number'),
                 amp.get('mothers')[1].get('number'),
                 amp.get('mothers')[2].get('number'),
