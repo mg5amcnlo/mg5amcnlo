@@ -1035,44 +1035,43 @@ class CompleteForCmd(CheckValidForCmd):
     def path_completion(self, text, base_dir = None, only_dirs = False):
         """Propose completions of text to compose a valid path"""
 
-        prefix = ''
-                
         if base_dir is None:
             base_dir = os.getcwd()
             
-        if os.path.sep in text:    
-            if text.startswith('.'):
-                cur_path = text
-            else:
-                cur_path = os.path.join(base_dir, text) 
-                        
-            base_dir = os.path.normcase(os.path.dirname(cur_path))
-            text = os.path.basename(cur_path)
-            prefix = base_dir + os.path.sep
-            
-            
-        # search for directory
-        completion = [prefix + f + os.path.sep
+        prefix, text = os.path.split(text)
+        base_dir = os.path.join(base_dir, prefix)
+        if prefix:
+            prefix += os.path.sep
+        
+
+        if only_dirs:
+            completion = [prefix + f
                           for f in os.listdir(base_dir)
                           if f.startswith(text) and \
                           os.path.isdir(os.path.join(base_dir, f)) and \
                           (not f.startswith('.') or text.startswith('.'))
                           ]
-        
-        if not only_dirs:
-            # search for files
-            completion += [prefix + f
+        else:
+            completion = [ prefix + f
                           for f in os.listdir(base_dir)
                           if f.startswith(text) and \
                           os.path.isfile(os.path.join(base_dir, f)) and \
                           (not f.startswith('.') or text.startswith('.'))
                           ]
 
-        # add ./ and ../
+            completion = completion + \
+                         [prefix + f + os.path.sep
+                          for f in os.listdir(base_dir)
+                          if f.startswith(text) and \
+                          os.path.isdir(os.path.join(base_dir, f)) and \
+                          (not f.startswith('.') or text.startswith('.'))
+                          ]
+
         completion += [prefix + f for f in ['.'+os.path.sep, '..'+os.path.sep] if \
-                       f.startswith(text) if not prefix.startswith('.')]
-        
+                       f.startswith(text) and not prefix.startswith('.')]
+
         return completion
+  
 
     def model_completion(self, text, process):
         """ complete the line with model information """
@@ -1340,7 +1339,7 @@ class CompleteForCmd(CheckValidForCmd):
             return self.list_completion(text, self._import_formats)
 
         # Directory continuation
-        if args[-1].endswith(os.path.sep):
+        if os.path.sep in args[-1] + text:
             if args[1].startswith('model'):
                 model_list = self.path_completion(text,
                                     os.path.join('.',*[a for a in args if \
@@ -1356,7 +1355,7 @@ class CompleteForCmd(CheckValidForCmd):
                                                       a.endswith(os.path.sep)]))
 
         # restriction continuation (for UFO)
-        if args[1] == 'model' and ('-' in args[-1] or '-' in text):
+        if args[1] == 'model' and ('-' in args[-1] + text):
             # deal with - in 2.7 as in 2.6
             if sys.version_info[1] == 7:
                 prefix = '-'.join([part for part in text.split('-')[:-1]])+'-'
@@ -1380,7 +1379,6 @@ class CompleteForCmd(CheckValidForCmd):
             if all_name:
                 return all_name                  
                
-        
         # Model directory name if directory is not given
         if len(split_arg(line[0:begidx])) == 2:
             if args[1] == 'model':
@@ -1442,7 +1440,8 @@ class CompleteForCmd(CheckValidForCmd):
         
         # look for other restrict_file
         for name in os.listdir(os.path.join(base_dir, model_name)):
-            if name.startswith('restrict_') and not name.endswith('default.dat'):
+            if name.startswith('restrict_') and not name.endswith('default.dat') \
+                and name.endswith('.dat'):
                 tag = name[9:-4] #remove restrict and .dat
                 while model_name.endswith(os.path.sep):
                     model_name = model_name[:-1]
