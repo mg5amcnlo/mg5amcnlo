@@ -682,7 +682,7 @@ Spin2masslessPropagator = lambda mu, nu, alpha, beta: 1/2 *( Metric(mu, alpha)* 
 
 
 
-Spin2Propagator_o =  lambda mu, nu, alpha, beta, part: Spin2masslessPropagator(mu, nu, alpha, beta) + \
+Spin2Propagator =  lambda mu, nu, alpha, beta, part: Spin2masslessPropagator(mu, nu, alpha, beta) + \
                 -1/2 * OverMass2(part) * (Metric(mu,alpha)* P(nu, part) * P(beta, part) + \
                                 Metric(nu, beta) * P(mu, part) * P(alpha, part) + \
                                 Metric(mu, beta) * P(nu, part) * P(alpha, part) + \
@@ -691,7 +691,7 @@ Spin2Propagator_o =  lambda mu, nu, alpha, beta, part: Spin2masslessPropagator(m
                       (Metric(alpha,beta) + 2 * OverMass2(part) * P(alpha, part) * P(beta, part))
     
 
-Spin2Propagator =  lambda mu, nu, alpha, beta, part: 1/2 * Spin2Propagator_o(mu, nu, alpha, beta, part)
+#Spin2Propagator =  lambda mu, nu, alpha, beta, part: 1/2 * Spin2Propagator_o(mu, nu, alpha, beta, part)
 
 
 
