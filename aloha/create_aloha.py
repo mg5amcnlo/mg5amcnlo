@@ -91,6 +91,7 @@ class AbstractRoutineBuilder(object):
         self.outgoing = None
         self.lorentz_expr = lorentz.structure        
         self.routine_kernel = None
+        self.spin2_massless = False
         
     
     def compute_routine(self, mode, factorize=True):
@@ -685,7 +686,7 @@ def create_library():
         lib[('Spin2Prop',i)] = create( Spin2Propagator(_spin2_mult + i, \
                                              2 * _spin2_mult + i,'I2','I3', i) )
         lib[('Spin2PropMassless',i)] = create( Spin2masslessPropagator(
-                             _spin2_mult + i, 2 * _spin2_mult + i,'I2','I3', i))
+                             _spin2_mult + i, 2 * _spin2_mult + i,'I2','I3'))
     logger.info('writing Spin2 lib')         
     fsock = open(os.path.join(aloha_path, 'ALOHALib.pkl'),'wb')
     cPickle.dump(lib, fsock, -1)

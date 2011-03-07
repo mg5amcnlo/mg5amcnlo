@@ -226,12 +226,25 @@ class AddVariable(list):
                 varlen -= 1
             else:
                 i -= 1
+        
+        # check if more than one constant object
+        constant = 0
+
+        
+        for term in self[:]:
+            if term.vartype == 5: # ConstantObj
+                constant += term.prefactor * term.value
+                self.remove(term)
+        if constant != 0:
+            self.append(ConstantObject(constant))
                 
         # deal with one/zero length object
         if varlen == 1:
             return self.prefactor * self[0].simplify()
         elif varlen == 0: 
             return ConstantObject()
+        
+        
         
         return self
     
