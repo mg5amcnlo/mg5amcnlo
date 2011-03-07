@@ -23,7 +23,6 @@ import optparse
 import os
 import pydoc
 import re
-import signal
 import subprocess
 import sys
 import traceback
@@ -53,7 +52,7 @@ import madgraph.iolibs.misc as misc
 import madgraph.iolibs.save_load_object as save_load_object
 
 import madgraph.interface.tutorial_text as tutorial_text
-
+import madgraph.interface.launch_ext_program as launch_ext
 import madgraph.various.process_checks as process_checks
 
 import models as ufomodels
@@ -266,6 +265,9 @@ class CmdExtended(cmd.Cmd):
                 self.nice_user_error(error, line)
         except Exception as error:
             self.nice_error_handling(error, line)
+        except KeyboardInterrupt:
+            print 'stopping all operation'
+            print 'in order to quit mg5 please enter exit'
             
     def exec_cmd(self, line):
         """for third party call, call the line with pre and postfix treatment"""
@@ -376,33 +378,15 @@ class CmdExtended(cmd.Cmd):
         for option in options:
             text+='\t %s \n' % option      
         print text
-
-
+    
     def timed_input(self, question, default, timeout=None):
         """ a question with a maximal time to answer take default otherwise"""
-        class TimeOutError(Exception):
-            """Class for run-time error"""
-            pass
-        def handle_alarm(signum, frame): 
-            raise TimeOutError
-        if timeout is None:
+        
+        if not timeout:
             timeout = self.timeout
-        signal.signal(signal.SIGALRM, handle_alarm)
-        signal.alarm(timeout)
-        if timeout:
-            question += '[%ss to answer] ' % timeout
-        try:
-            result = raw_input(question)
-        except TimeOutError:
-            print default
-            return default
-        finally:
-            signal.alarm(0)
-        return result
-
-
-
-
+        
+        return misc.timed_input(question, default, timeout) 
+    
 
 #===============================================================================
 # Helper function
@@ -801,7 +785,73 @@ class CheckValidForCmd(object):
             if args[-1] != '-modelname':
                 args.remove('-modelname')
                 args.append('-modelname')
+                
+    def check_launch(self, args, options):
+        """check the validity of the line"""
+        # modify args in order to be MODE DIR
+        # mode being either standalone or madevent
         
+        if not( 0 <= int(options.cluster) <= 2):
+            return self.InvalidCmd, 'cluster mode should be between 0 and 2'
+        
+        if not args:
+            if self._done_export:
+                args.append(self._done_export[1])
+                args.append(self._done_export[0])
+                return
+            else:
+                self.help_launch()
+                return self.InvalidCmd, \
+                       'No generated output: Impossible to use default location'
+        
+        if len(args) != 1:
+            self.help_launch()
+            return self.InvalidCmd, 'Invalid Syntax: Too many argument'
+        
+        # search for a valid path
+        if os.path.sep in args[0] and os.path.isdir(path):
+            path = args[0]
+        elif os.path.isdir(os.path.join(MG5DIR,args[0])):
+            path = os.path.join(MG5DIR,args[0])
+        elif os.path.isdir(os.path.join(MG4DIR,args[0])):
+            path = os.path.join(MG4DIR,args[0])
+        elif os.path.isdir(path):
+            path = args[0]
+        else:    
+            raise self.InvalidCmd, '%s : Not a valid directory' % args[0]
+            
+        mode = self.find_output_type(path)
+        args[0] = mode
+        args.append(path)
+        
+    
+    def find_output_type(self, path):
+        """ identify the type of output of a given directory:
+        valid output: madevent/standalone/standalone_cpp"""
+        
+        card_path = os.path.join(path,'Cards')
+        bin_path = os.path.join(path,'bin')
+        subproc_path = os.path.join(path,'SubProcesses')
+        
+        if not os.path.isdir(card_path) or not os.path.isdir(subproc_path):
+            raise self.InvalidCmd, '%s : Not a valid directory' % path
+
+        if not os.path.isdir(bin_path):
+            return 'standalone_cpp'
+        elif os.path.isfile(os.path.join(bin_path,'generate_events')):
+            return 'madevent'
+        else:
+            return 'standalone'
+        
+        
+        
+        
+        
+    
+    
+            
+        
+
     def check_load(self, args):
         """ check the validity of the line"""
         
@@ -979,7 +1029,8 @@ class CompleteForCmd(CheckValidForCmd):
                             ]
         return completions
 
-    def path_completion(self, text, base_dir = None, only_dirs = False):
+    def path_completion(self, text, base_dir = None, only_dirs = False, 
+                                                                 relative=True):
         """Propose completions of text to compose a valid path"""
 
         if base_dir is None:
@@ -1008,7 +1059,8 @@ class CompleteForCmd(CheckValidForCmd):
                           (not f.startswith('.') or text.startswith('.'))
                           ]
 
-        completion += [f for f in ['.'+os.path.sep, '..'+os.path.sep] if \
+        if relative:
+            completion += [f for f in ['.'+os.path.sep, '..'+os.path.sep] if \
                        f.startswith(text)]
 
         return completion
@@ -1162,6 +1214,33 @@ class CompleteForCmd(CheckValidForCmd):
             opt = ['horizontal', 'external=', 'max_size=', 'add_gap=',
                                 'non_propagating', '--']
             return self.list_completion(text, opt)
+
+    def complete_launch(self, text, line, begidx, endidx):
+        """ complete the launch command"""
+
+        args = split_arg(line[0:begidx])
+
+        # Directory continuation
+        if args[-1].endswith(os.path.sep):
+            return self.path_completion(text,
+                                        os.path.join('.',*[a for a in args if a.endswith(os.path.sep)]),
+                                        only_dirs = True)
+        # Format
+        if len(args) == 1:
+            complete = self.path_completion(text, '.', only_dirs = True)
+            if MG5DIR != os.path.realpath('.'):
+                complete += self.path_completion(text, MG5DIR, only_dirs = True, 
+                                                                 relative=False)
+            if MG4DIR and MG4DIR != os.path.realpath('.'):
+                complete += self.path_completion(text, MG4DIR, only_dirs = True,
+                                                                 relative=False)
+            return complete
+
+        #option
+        if len(args) >= 2:
+            opt = ['--cluster=', '--name=', '-f']
+            return self.list_completion(text, opt)
+
 
     def complete_load(self, text, line, begidx, endidx):
         "Complete the load command"
@@ -2287,6 +2366,33 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
             self._export_dir = os.path.sep.join(path_split[:-2])
                 
     
+    def do_launch(self, line):
+        """Ask for editing the parameter and then 
+        Execute the code (madevent/standalone/...)
+        """
+        
+        args = split_arg(line)
+        # check argument validity and normalise argument
+        (options, args) = _launch_parser.parse_args(args)
+        self.check_launch(args, options)
+        options = options.__dict__
+        # args is now MODE PATH
+        
+        print args
+        if args[0].startswith('standalone'):
+            ext_program = launch_ext.SALauncher(args[1], self.timeout, **options)
+        elif args[0] == 'madevent':
+            ext_program = launch_ext.MELauncher(args[1], self.timeout, **options)            
+        else:
+            raise self.InvalidCmd , '%s cannot be run from MG5 interface' % args[0]
+        
+        
+        
+        ext_program.run()
+        
+        
+        
+    
     def do_load(self, line):
         """Load information from file"""
 
@@ -2419,7 +2525,7 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
         if nojpeg:
             options = '-nojpeg'
 
-        self.export(options)
+        self.export(options)        
 
     # Export a matrix element
     def export(self, line):
@@ -2743,7 +2849,18 @@ _draw_parser.add_option("", "--non_propagating", default=True, \
 _draw_parser.add_option("", "--add_gap", default=0, type='float', \
                           help="set the x-distance between external particles")  
 
-    
+# LAUNCH PROGRAM
+_launch_usage = "launch [DIRPATH] [options]\n" + \
+         "-- execute the madevent/standalone output present in DIRPATH\n" + \
+         "   By default DIRPATH is the latest created direcory \n" + \
+         "   Example: launch PROC_SM_1 --name=run2 \n"
+_launch_parser = optparse.OptionParser(usage=_launch_usage)
+_launch_parser.add_option("-f", "--force", default=False, action='store_true',
+                                help="Answer all questions by default")
+_launch_parser.add_option("-n", "--name", default='', type='str',
+                                help="Provide a name to the run (for madevent run)")
+_launch_parser.add_option("-c", "--cluster", default='0', type='str',
+                                help="Choose the cluster mode (0: single machine, 1: qsub cluster, 2: multi-core) (for madevent run)")
     
     
 #===============================================================================

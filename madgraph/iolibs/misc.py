@@ -17,6 +17,7 @@
 
 import os
 import re
+import signal
 import StringIO
 import time
 
@@ -96,3 +97,35 @@ def which(program):
                 return exe_file
 
     return None
+
+#===============================================================================
+# Ask a question with a maximum amount of time to answer
+#===============================================================================
+class TimeOutError(Exception):
+    """Class for run-time error"""
+         
+def timed_input(question, default, timeout=None, noerror=True):
+    """ a question with a maximal time to answer take default otherwise"""
+    
+    def handle_alarm(signum, frame): 
+            raise TimeOutError
+        
+    signal.signal(signal.SIGALRM, handle_alarm)
+    
+        
+    if timeout:
+        signal.alarm(timeout)
+        question += '[%ss to answer [%s]] ' % (timeout, str(default))    
+    try:
+        result = raw_input(question)
+    except TimeOutError:
+        if noerror:
+            print '\nuse %s' % default
+            return default
+        else:
+            signal.alarm(0)
+            raise
+    finally:
+        signal.alarm(0)
+    return result
+
