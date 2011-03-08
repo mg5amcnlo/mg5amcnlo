@@ -46,7 +46,7 @@ c
         stop
       endif
       if (btest(mlevel,3)) then
-        do i=1,ishft(1,nexternal+1)
+        do i=1,n_max_cl
           write(*,*) 'prop ',i,' in'
           do j=1,id_cl(i,0)
             write(*,*) '  graph ',id_cl(i,j)
@@ -54,7 +54,8 @@ c
         enddo
         write(*,*)'ok'
       endif
-      igscl(0)=0
+      igscl(0)=.false.
+      igraphs(0)=0
        
       RETURN
       END

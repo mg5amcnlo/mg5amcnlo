@@ -12,7 +12,7 @@
 
       integer jpart(7,-nexternal+3:2*nexternal-3),npart,ip,numproc
       double precision pb(0:4,-nexternal+3:2*nexternal-3)
-      double precision rscale,aqcd,aqed,targetamp(maxamps)
+      double precision rscale,aqcd,aqed,targetamp(maxflow)
       character*140 buff
 
       integer isym(nexternal,99), jsym

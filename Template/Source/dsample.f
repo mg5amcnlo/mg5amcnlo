@@ -225,14 +225,11 @@ c     unweighted events.
 c
       write(*,*) "Status",accur, cur_it, itmax
       if (accur .ge. 0d0 .or. cur_it .gt. itmax+3) then
-c     Call finalize dsig to write selproc file in subproc group mode
-        dum=dsig(p,wgt,3)
         return
       endif
+c     Check for neventswritten and chi2
       if (neventswritten .gt. -accur .and. chi2 .lt. 10d0) then
          write(*,*) "We found enough events",neventswritten, -accur*1000*tmean
-c     Call finalize dsig to write selproc file in subproc group mode
-         dum=dsig(p,wgt,3)
          return
       endif
       
@@ -371,8 +368,6 @@ c      do i=1,cur_it-1
          close(66)
 
       endif      
-c   Call finalize dsig to write selproc file in subproc group mode
-      dum=dsig(p,wgt,3)
 
       end
 
@@ -1920,7 +1915,7 @@ c               write(*,*) 'Estimated events',nun, accur
                nun = neventswritten
 c               tmp1 = tmean / tsigma
 c               chi2tmp = (chi2/tmp1/tmp1-tsigma)/dble(cur_it-2)
-c     Calculate chi2 for last three events
+c     Calculate chi2 for last three events (ja 03/11)
                tmeant = 0d0
                tsigmat = 0d0
                do i=cur_it-3,cur_it-1
@@ -1935,6 +1930,7 @@ c     Calculate chi2 for last three events
                enddo
                chi2tmp = chi2tmp/2d0  !Since using only last 3, n-1=2
                write(*,*) "Checking number of events",accur,nun,' chi2: ',chi2tmp
+c     Check nun and chi2 (ja 03/11)
                if (nun .gt. -accur .and. chi2tmp .lt. 10d0)then   
                   tmean = tmean / tsigma
                   if (cur_it .gt. 2) then

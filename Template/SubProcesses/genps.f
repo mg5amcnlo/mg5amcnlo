@@ -503,7 +503,8 @@ c
 c     Local
 c
       logical pass
-      integer ibranch,i,ns_channel,nt_channel,ix
+      integer ibranch,i,ns_channel,nt_channel,ix  !,nerr
+c      data nerr/0/
       double precision smin,smax,totmass,totmassin,xa2,xb2,wgt
       double precision costh,phi,tmin,tmax,t, stot
       double precision ma2,mb2,m12,mn2,s1
@@ -730,10 +731,12 @@ c
      &        m(itree(2,ibranch)),m(ibranch-1),p(0,itree(2,ibranch)),
      &        p(0,ibranch),jac)
 
-c         if (jac .lt. 0d0) then
-c            write(*,*) 'Failed gentcms',iconfig,ibranch
-c         endif
-         if (jac .lt. 0d0) return          !Failed, probably due to negative x
+         if (jac .lt. 0d0) then
+c            nerr=nerr+1
+c            if(nerr.le.5)
+c     $           write(*,*) 'Failed gentcms',iconfig,ibranch
+            return              !Failed, probably due to negative x
+         endif
 
          pswgt = pswgt/(4d0*dsqrt(lambda(s1,ma2,mb2)))
       enddo

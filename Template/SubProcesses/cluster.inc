@@ -3,16 +3,21 @@ c	Parameters used by cluster
 c*************************************************************************
       include 'ncombs.inc'
       include 'ngraphs.inc'
-c     parameters for clustering
+c     parameters for clustering:
+c     id_cl gives diagrams for propagators     
       integer id_cl(n_max_cl,0:n_max_cg)
       common/cl_map/id_cl
+c     resmap gives potential resonances for diagrams
       logical resmap(n_max_cl,n_max_cg)
       common/res_map/resmap
       double precision pt2ijcl(nexternal),zcl(nexternal),mt2ij(nexternal),mt2last
       double precision pcl(0:4,n_max_cl) ! 4 is mass**2
-      integer imocl(nexternal), idacl(nexternal,2), igscl(0:n_max_cg) 
+      integer imocl(nexternal), idacl(nexternal,2), igraphs(0:n_max_cg)
+      integer ipdgcl(n_max_cl,n_max_cg)
+      logical igscl(0:n_max_cg) 
       logical clustered
-      common/cl_val/pcl,pt2ijcl,zcl,mt2ij,mt2last,imocl,idacl,igscl,clustered
+      common/cl_val/pcl,pt2ijcl,zcl,mt2ij,mt2last,imocl,idacl,igraphs,ipdgcl,
+     &     igscl,clustered
 c     parameters for qcd jets
       double precision ptclus(nexternal)
       common/cl_jets/ptclus
