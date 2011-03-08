@@ -285,7 +285,8 @@ class AbstractRoutineBuilder(object):
         except IOError:
             cls.aloha_lib = create_library()
         else:
-            cls.aloha_lib = cPickle.load(fsock)
+            cls.aloha_lib = create_library()
+            #cls.aloha_lib = cPickle.load(fsock)
         
 
 class AbstractALOHAModel(dict):

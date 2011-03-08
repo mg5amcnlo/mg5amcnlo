@@ -346,7 +346,10 @@ class ALOHAWriterForFortran(WriteALOHA):
             type = self.particles[index - 1]
             energy_pos = self.type_to_size[type] -1
             sign = ''
-            if self.offshell == index and (type == 'V' or type == 'S'):
+            if self.offshell == index and type in ['V','S']:
+                sign = '-'
+                        
+            if type == 'F' and index % 2 and self.offshell != index:
                 sign = '-'
                 
             str_out += '%s(0) = %s dble(%s%d(%d))\n' % (mom, sign, type, index, energy_pos)
@@ -558,9 +561,11 @@ class ALOHAWriterForCPP(WriteALOHA):
             type = self.particles[index - 1]
             energy_pos = self.type_to_size[type] - 2
             sign = ''
-            if self.offshell == index and (type == 'V' or type == 'S'):
+            if self.offshell == index and type in ['V', 'S'] and self.offshell != index:
                 sign = '-'
-                
+            if type == 'F' and index % 2:
+                sign = '-'
+                   
             str_out += '%s[0] = %s%s%d[%d].real();\n' % (mom, sign, type, index, energy_pos)
             str_out += '%s[1] = %s%s%d[%d].real();\n' % (mom, sign, type, index, energy_pos + 1)
             str_out += '%s[2] = %s%s%d[%d].imag();\n' % (mom, sign, type, index, energy_pos + 1)
@@ -817,7 +822,7 @@ class ALOHAWriterForPython(WriteALOHA):
     def define_momenta(self):
         """Define the Header of the fortran file. This include
             - momentum conservation
-            -definition of the impulsion"""
+            - definition of the impulsion"""
             
         # Definition of the Momenta
         momenta = self.collected['momenta']
@@ -852,9 +857,12 @@ class ALOHAWriterForPython(WriteALOHA):
             type = self.particles[index - 1]
             energy_pos = self.type_to_size[type] -2
             sign = ''
-            if self.offshell == index and (type == 'V' or type == 'S'):
+            if self.offshell == index and type in ['V','S']:
                 sign = '-'
-            
+            if type == 'F' and index % 2 and self.offshell != index:
+                #print 'change', self.namestring, mom
+                sign = '-'
+
             str_out += '%s = [%scomplex(%s%d[%d]).real, \\\n' % (mom, sign, type, index, energy_pos)
             str_out += '        %s complex(%s%d[%d]).real, \\\n' % ( sign, type, index, energy_pos + 1)
             str_out += '        %s complex(%s%d[%d]).imag, \\\n' % ( sign, type, index, energy_pos + 1)
