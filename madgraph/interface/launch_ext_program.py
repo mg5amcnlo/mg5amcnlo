@@ -84,7 +84,9 @@ class ExtLauncher(object):
     
     def edit_file(self, path):
         """edit a file"""
-        subprocess.call([self.editor, path])
+
+        path = os.path.realpath(path)
+        subprocess.call([self.editor, path], cwd=os.getcwd())
         
     def ask(self, question, default):
         """ ask a question """
@@ -131,10 +133,11 @@ class MELauncher(ExtLauncher):
     
     cards = ['param_card.dat', 'run_card.dat']
 
-    def __init__(self, running_dir, timeout, **opt):
+    def __init__(self, running_dir, timeout, **option):
         """ initialize the StandAlone Version"""
-                
-        ExtLauncher.__init__(self, running_dir, './Cards', timeout)
+        
+        
+        ExtLauncher.__init__(self, running_dir, './Cards', timeout, **option)
         self.executable = os.path.join(running_dir, 'bin','generate_events')
 
         assert hasattr(self, 'cluster')
@@ -173,7 +176,8 @@ class MELauncher(ExtLauncher):
 
         dico = {'dir': self.card_dir, 'name': name }
 
-        cp('%(dir)s/%(name)s_card_default.dat' % dico,
+        if not os.path.exists('%(dir)s/%(name)s_card.dat' % dico):
+            cp('%(dir)s/%(name)s_card_default.dat' % dico,
                 '%(dir)s/%(name)s_card.dat' % dico)
     
           

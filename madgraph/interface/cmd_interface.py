@@ -809,7 +809,7 @@ class CheckValidForCmd(object):
             return self.InvalidCmd, 'Invalid Syntax: Too many argument'
         
         # search for a valid path
-        if os.path.sep in args[0] and os.path.isdir(path):
+        if os.path.sep in args[0] and os.path.isdir(args[0]):
             path = args[0]
         elif os.path.isdir(os.path.join(MG5DIR,args[0])):
             path = os.path.join(MG5DIR,args[0])
@@ -1035,16 +1035,22 @@ class CompleteForCmd(CheckValidForCmd):
 
         if base_dir is None:
             base_dir = os.getcwd()
+            
+        prefix, text = os.path.split(text)
+        base_dir = os.path.join(base_dir, prefix)
+        if prefix:
+            prefix += os.path.sep
+        
 
         if only_dirs:
-            completion = [f
+            completion = [prefix + f
                           for f in os.listdir(base_dir)
                           if f.startswith(text) and \
                           os.path.isdir(os.path.join(base_dir, f)) and \
                           (not f.startswith('.') or text.startswith('.'))
                           ]
         else:
-            completion = [f
+            completion = [ prefix + f
                           for f in os.listdir(base_dir)
                           if f.startswith(text) and \
                           os.path.isfile(os.path.join(base_dir, f)) and \
@@ -1052,7 +1058,7 @@ class CompleteForCmd(CheckValidForCmd):
                           ]
 
             completion = completion + \
-                         [f + os.path.sep
+                         [prefix + f + os.path.sep
                           for f in os.listdir(base_dir)
                           if f.startswith(text) and \
                           os.path.isdir(os.path.join(base_dir, f)) and \
@@ -1060,8 +1066,8 @@ class CompleteForCmd(CheckValidForCmd):
                           ]
 
         if relative:
-            completion += [f for f in ['.'+os.path.sep, '..'+os.path.sep] if \
-                       f.startswith(text)]
+            completion += [prefix + f for f in ['.'+os.path.sep, '..'+os.path.sep] if \
+                       f.startswith(text) and not prefix.startswith('.')]
 
         return completion
 
@@ -1344,16 +1350,17 @@ class CompleteForCmd(CheckValidForCmd):
             return self.list_completion(text, self._import_formats)
 
         # Directory continuation
-        if args[-1].endswith(os.path.sep):
+        if os.path.sep in args[-1] + text:
             if args[1].startswith('model'):
-                return self.path_completion(text,
-                                    os.path.join('.',*[a for a in args if \
-                                                      a.endswith(os.path.sep)]),
-                                    only_dirs = True)
+                # Directory continuation
+                return self.path_completion(text, os.path.join('.',*[a for a in args \
+                                                                    if a.endswith(os.path.sep)]),
+                                                only_dirs = True)
             else:
                 return self.path_completion(text,
                                     os.path.join('.',*[a for a in args if \
                                                       a.endswith(os.path.sep)]))
+
         # Model directory name if directory is not given
         if len(split_arg(line[0:begidx])) == 2:
             if args[1] == 'model':
@@ -2378,7 +2385,6 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
         options = options.__dict__
         # args is now MODE PATH
         
-        print args
         if args[0].startswith('standalone'):
             ext_program = launch_ext.SALauncher(args[1], self.timeout, **options)
         elif args[0] == 'madevent':
