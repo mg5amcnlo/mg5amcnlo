@@ -233,5 +233,22 @@ class MELauncher(ExtLauncher):
         elif mode == "2":
             nb_node = self.ask('How many core do you want to use?', '2')
             subprocess.call([self.executable, mode, nb_node, self.name], 
-                                                           cwd=self.running_dir)            
+                                                           cwd=self.running_dir)
+        
+        # Display the cross-section to the screen
+        path = os.path.join(self.running_dir, 'SubProcesses', '%s_results.dat' 
+                                                                    % self.name) 
+        fsock = open(path)
+        line = fsock.readline()
+        cross, error = line.split()[0:2]
+        
+        logger.info('The total cross-section is %s +- %s pb' % (cross, error))
+        logger.info('more information in %s' 
+                                 % os.path.join(self.running_dir, 'index.html'))
+        
+        
+        
+        
+        
+                    
             
