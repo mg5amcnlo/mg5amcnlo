@@ -4945,7 +4945,7 @@ C     Number of configs
         writer.close()
         self.assertFileContains('test',
                          """      INTEGER    N_MAX_CL
-      PARAMETER (N_MAX_CL=512)\n""")
+      PARAMETER (N_MAX_CL=256)\n""")
         # Test nexternal.inc
         writer = writers.FortranWriter(self.give_pos('test'))
         export_v4.write_nexternal_file(writer, me, fortran_model)
