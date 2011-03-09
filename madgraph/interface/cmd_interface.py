@@ -637,7 +637,8 @@ class CheckValidForCmd(object):
             raise self.InvalidCmd('\"define\" command requires symbols \"=\" at the second position')
         
         if not self._curr_model:
-            raise self.InvalidCmd("No particle list currently active, please import a model first")
+            logger.info('No model currently active. Try with the Standard Model')
+            self.do_import('model sm')
 
         if self._curr_model['particles'].find_name(args[0]):
             raise MadGraph5Error("label %s is a particle name in this model\n\
@@ -1422,6 +1423,9 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
                                                     amp.nice_string_processes()
                         logger.warning(warning)
 
+                # assign a unique id to all amplitude
+                self._curr_amps.assign_uid()
+
                 # Reset _done_export, since we have new process
                 self._done_export = False
 
@@ -1788,6 +1792,8 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
         # Generate processes
         myproc = diagram_generation.MultiProcess(myprocdef)
         self._curr_amps = myproc.get('amplitudes')
+        # assign a unique id to all amplitude
+        self._curr_amps.assign_uid()
         cpu_time2 = time.time()
 
         nprocs = len(self._curr_amps)

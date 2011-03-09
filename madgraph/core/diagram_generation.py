@@ -623,7 +623,14 @@ class AmplitudeList(base_objects.PhysicsObjectList):
         """Test if object obj is a valid Amplitude for the list."""
 
         return isinstance(obj, Amplitude)
-
+    
+    def assign_uid(self):
+        """ assign a unique identification to all process of the Amplitude 
+            present in the AmplitudeList"""
+        
+        for i, amp in enumerate(self):
+            amp['process'].set('uid', i)
+        
 #===============================================================================
 # DecayChainAmplitude
 #===============================================================================

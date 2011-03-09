@@ -1385,6 +1385,7 @@ class Process(PhysicsObject):
         self['model'] = Model()
         # Optional number to identify the process
         self['id'] = 0
+        self['uid'] = 0 # should be a uniq id number
         # Required s-channels are given as a list of id lists. Only
         # diagrams with all s-channels in any of the lists are
         # allowed. This enables generating e.g. Z/gamma as s-channel
@@ -1412,7 +1413,7 @@ class Process(PhysicsObject):
             if not isinstance(value, Model):
                 raise self.PhysicsObjectError, \
                         "%s is not a valid Model object" % str(value)
-        if name == 'id':
+        if name in ['id', 'uid']:
             if not isinstance(value, int):
                 raise self.PhysicsObjectError, \
                     "Process id %s is not an integer" % repr(value)
@@ -1687,13 +1688,13 @@ class Process(PhysicsObject):
             mystr = mystr + "_" + decay.shell_string(schannel,forbid)
 
         # Too long name are problematic so restrict them to a maximal of 80 char
-        if len(mystr) > 80:
+        if len(mystr) > 76:
             if schannel and forbid:
-                return self.shell_string(True, False)
+                return self.shell_string(True, False)+ '-%s' % self['uid']
             elif schannel:
-                return self.shell_string(False, False)
+                return self.shell_string(False, False)+'-%s' % self['uid']
             else:
-                return mystr[:76]+'-%s' % len(mystr)
+                return mystr[:76]+'-%s' % self['uid']
             
             
             
