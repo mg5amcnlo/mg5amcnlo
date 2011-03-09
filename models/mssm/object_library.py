@@ -10,7 +10,7 @@
 import cmath
 
 
-class FRBaseClass(object):
+class UFOBaseClass(object):
     """The class from which all FeynRules classes are derived."""
 
     require_args = []
@@ -62,7 +62,7 @@ all_particles = []
 
     
 
-class Particle(FRBaseClass):
+class Particle(UFOBaseClass):
     """A standard Particle"""
 
     require_args=['pdg_code', 'name', 'antiname', 'spin', 'color', 'mass', 'width', 'texname', 'antitexname', 'charge']
@@ -70,12 +70,12 @@ class Particle(FRBaseClass):
     require_args_all = ['pdg_code', 'name', 'antiname', 'spin', 'color', 'mass', 'width', 'texname', 'antitexname', 'charge', 'line', 'propagating', 'goldstoneboson']
 
     def __init__(self, pdg_code, name, antiname, spin, color, mass, width, texname,
-                 antitexname, line, charge , propagating=True, goldstoneboson=False, **options):
+                 antitexname, charge , line=None, propagating=True, goldstoneboson=False, **options):
 
         args= (pdg_code, name, antiname, spin, color, mass, width, texname,
                  antitexname, float(charge))
 
-        FRBaseClass.__init__(self, *args,  **options)
+        UFOBaseClass.__init__(self, *args,  **options)
 
         global all_particles
         all_particles.append(self)
@@ -99,7 +99,7 @@ class Particle(FRBaseClass):
         
         spin = self.spin
         color = self.color
-        
+
         #use default
         if spin == 1:
             return 'dashed'
@@ -113,11 +113,12 @@ class Particle(FRBaseClass):
         elif spin == 3:
             if color == 1:
                 return 'wavy'
-            
             else:
                 return 'curly'
         elif spin == 5:
             return 'double'
+        elif spin == -1:
+            return 'dotted'
         else:
             return 'dashed' # not supported yet
 
@@ -134,13 +135,13 @@ class Particle(FRBaseClass):
             newcolor = -self.color
                 
         return Particle(-self.pdg_code, self.antiname, self.name, self.spin, newcolor, self.mass, self.width,
-                        self.antitexname, self.texname, self.line, -self.charge, self.propagating, self.goldstoneboson, **outdic)
+                        self.antitexname, self.texname, -self.charge, self.line, self.propagating, self.goldstoneboson, **outdic)
 
 
 
 all_parameters = []
 
-class Parameter(FRBaseClass):
+class Parameter(UFOBaseClass):
 
     require_args=['name', 'nature', 'type', 'value', 'texname']
 
@@ -148,7 +149,7 @@ class Parameter(FRBaseClass):
 
         args = (name,nature,type,value,texname)
 
-        FRBaseClass.__init__(self, *args)
+        UFOBaseClass.__init__(self, *args)
 
         args=(name,nature,type,value,texname)
 
@@ -162,7 +163,7 @@ class Parameter(FRBaseClass):
 
 all_vertices = []
 
-class Vertex(FRBaseClass):
+class Vertex(UFOBaseClass):
 
     require_args=['name', 'particles', 'color', 'lorentz', 'couplings']
 
@@ -170,7 +171,7 @@ class Vertex(FRBaseClass):
  
         args = (name, particles, color, lorentz, couplings)
 
-        FRBaseClass.__init__(self, *args, **opt)
+        UFOBaseClass.__init__(self, *args, **opt)
 
         args=(particles,color,lorentz,couplings)
 
@@ -179,14 +180,14 @@ class Vertex(FRBaseClass):
 
 all_couplings = []
 
-class Coupling(FRBaseClass):
+class Coupling(UFOBaseClass):
 
     require_args=['name', 'value', 'order']
 
     def __init__(self, name, value, order, **opt):
 
         args =(name, value, order)	
-        FRBaseClass.__init__(self, *args, **opt)
+        UFOBaseClass.__init__(self, *args, **opt)
         global all_couplings
         all_couplings.append(self)
   
@@ -194,13 +195,13 @@ class Coupling(FRBaseClass):
 
 all_lorentz = []
 
-class Lorentz(FRBaseClass):
+class Lorentz(UFOBaseClass):
 
     require_args=['name','spins','structure']
     
     def __init__(self, name, spins, structure='external', **opt):
         args = (name, spins, structure)
-        FRBaseClass.__init__(self, *args, **opt)
+        UFOBaseClass.__init__(self, *args, **opt)
 
         global all_lorentz
         all_lorentz.append(self)
