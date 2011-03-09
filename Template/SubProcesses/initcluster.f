@@ -54,7 +54,6 @@ c
         enddo
         write(*,*)'ok'
       endif
-      igscl(0)=.false.
       igraphs(0)=0
        
       RETURN

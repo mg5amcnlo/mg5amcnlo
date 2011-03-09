@@ -429,18 +429,15 @@ c**************************************************************************
       include 'nexternal.inc'
       include 'cluster.inc'
 
-      integer nbw,ibwlist(nexternal)
-      logical foundbw, icgs(0:n_max_cg), icgsbk(0:n_max_cg)
-      integer i, ii, j, jj, il, idij
+      integer idij,nbw,ibwlist(nexternal),icgs(0:n_max_cg)
+      logical foundbw
+      integer i, ii, j, jj, il, igsbk(0:n_max_cg)
 
       findmt=.false.
 c     if first clustering, set possible graphs
-      if (.not.icgs(0)) then
-         do i=1,n_max_cg
-            icgs(i)=.false.
-         enddo
+      if (icgs(0).eq.0) then
+         ii=0
          do i=1,id_cl(idij,0)
-           icgs(id_cl(idij,i))=.true.
 c        check if we have constraint from onshell resonances
            foundbw=.true.
            do j=1,nbw
@@ -449,27 +446,37 @@ c        check if we have constraint from onshell resonances
              endif
              foundbw=.false.
  10        enddo
-           if(nbw.gt.0.and..not.foundbw) icgs(id_cl(idij,i))=.false.
-           if(icgs(id_cl(idij,i))) icgs(0)=.true.
+           if(nbw.eq.0.or.foundbw)then
+              ii=ii+1
+              icgs(ii)=id_cl(idij,i)
+           endif
          enddo
-         if (icgs(0))then
+         icgs(0)=ii
+         if (icgs(0).gt.0)then
            findmt=.true.
          endif
          return
       else
-c     copy icgs to icgsbk
-         do i=0,n_max_cg
-            icgsbk(i)=icgs(i)
-            icgs(i)=.false.
-         enddo
-c     look for common graph
-         do i=1,id_cl(idij,0)
-            if(icgsbk(id_cl(idij,i)))then
-               icgs(id_cl(idij,i))=.true.
-               icgs(0)=.true.
+c     Check for common graphs
+         j=1
+         ii=0
+         do i=1,icgs(0)
+            if(j.le.id_cl(idij,0).and.icgs(i).eq.id_cl(idij,j))then
+               ii=ii+1
+               icgs(ii)=id_cl(idij,j)
+               j=j+1
+            else if(j.le.id_cl(idij,0).and.icgs(i).gt.id_cl(idij,j)) then
+               do while(icgs(i).gt.id_cl(idij,j).and.j.le.id_cl(idij,0))
+                  j=j+1
+               enddo
+               if(j.le.id_cl(idij,0).and.icgs(i).eq.id_cl(idij,j))then
+                  ii=ii+1
+                  icgs(ii)=id_cl(idij,j)
+               endif
             endif
          enddo
-         findmt=icgs(0)
+         icgs(0)=ii
+         findmt=(icgs(0).gt.0)
          return
       endif
       end
@@ -490,8 +497,7 @@ c**************************************************************************
       include 'message.inc'
       real*8 p(0:3,nexternal), pcmsp(0:3), p1(0:3)
       real*8 pi(0:3), nr(0:3), pz(0:3)
-      integer i, j, k, n, idi, idj, idij
-      logical icgs(0:n_max_cg)
+      integer i, j, k, n, idi, idj, idij, icgs(0:n_max_cg)
       integer nleft, iwin, jwin, iwinp, imap(nexternal,2) 
       double precision nn2,ct,st
       double precision minpt2ij,pt2ij(n_max_cl),zij(n_max_cl)
@@ -543,16 +549,12 @@ c     fill combine table, first pass, determine all ptij
                if (btest(mlevel,4))
      $              write (*,*)'i = ',i,'(',idi,'), j = ',j,'(',idj,')'
 c     cluster only combinable legs (acc. to diagrams)
-               icgs(0)=.false.
+               icgs(0)=0
                idij=combid(idi,idj)
                pt2ij(idij)=1.0d37
                if (findmt(idij,icgs,nbw,ibwlist)) then
                   if (btest(mlevel,4)) then
-                     do k=1,n_max_cg
-                        if(icgs(k))then
-                           write(*,*)'icg(',k,') = ',icgs(k)
-                        endif
-                     enddo
+                     write(*,*)'diagrams: ',(icgs(k),k=1,icgs(0))
                   endif
                   if (j.ne.1.and.j.ne.2) then
 c     final state clustering                     
@@ -613,7 +615,7 @@ c     Take care of special 2 -> 1 case
          return
       endif
 c     initialize graph storage
-      igscl(0)=.false.
+      igraphs(0)=0
       nleft=nexternal
 c     cluster 
       do n=1,nexternal-2
@@ -628,9 +630,12 @@ c     combine winner
      &           ' -> ',minpt2ij,', z = ',zcl(n)
          endif
 c     Reset igscl with new mother
-         if (.not.findmt(imocl(n),igscl,nbw,ibwlist)) then
+         if (.not.findmt(imocl(n),igraphs,nbw,ibwlist)) then
             write(*,*) 'cluster.f: Error. Invalid combination.' 
             return
+         endif
+         if (btest(mlevel,4)) then
+            write(*,*)'diagrams: ',(igraphs(k),k=1,igraphs(0))
          endif
          if (iwin.lt.3) then
 c     is clustering
@@ -742,14 +747,6 @@ c            else
 c              pt2ijcl(n+1)=pt2ijcl(n)
 c            endif
 c           Pick out the found graphs
-            j=0
-            do i=1,n_max_cg
-               if(igscl(i))then
-                  j=j+1
-                  igraphs(j)=i
-               endif
-            enddo
-            igraphs(0)=j
 c            print *,'Clustering succeeded, found graph ',igscl(1)
             cluster=.true.
             clustered=.true.
@@ -769,21 +766,18 @@ c     determine all ptij
                      if (btest(mlevel,4))
      $                    write (*,*)'i = ',i,'(',idi,'), j = ',j,'(',idj,')'
 c     Reset diagram list icgs
-                     icgs(0)=igscl(0)
-                     do k=1,n_max_cg
-                        icgs(k)=igscl(k)
+                     do k=0,igraphs(0)
+                        icgs(k)=igraphs(k)
                      enddo
+                     if (btest(mlevel,4))
+     $                    write (*,*)'Reset diagrams to: ',(icgs(k),k=1,icgs(0))
 c     cluster only combinable legs (acc. to diagrams)
                      idij=combid(idi,idj)
 c                     write (*,*) 'RECALC !!! ',idij
                      pt2ij(idij)=1.0d37
                      if (findmt(idij,icgs,nbw,ibwlist)) then
                         if (btest(mlevel,4)) then
-                           do k=1,n_max_cg
-                              if(icgs(k))then
-                                 write(*,*)'icg(',k,') = ',icgs(k)
-                              endif
-                           enddo
+                           write(*,*)'diagrams: ',(icgs(k),k=1,icgs(0))
                        endif
                         if (j.ne.1.and.j.ne.2) then
 c     final state clustering                     

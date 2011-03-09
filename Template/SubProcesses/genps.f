@@ -576,6 +576,14 @@ c
       do ibranch = -1,-ns_channel,-1
          smin = (m(itree(1,ibranch))+m(itree(2,ibranch)))**2
          smax = (dsqrt(s(-nbranch))-totmass+sqrt(smin))**2
+c     Check for NAN - ja 3/11
+         if (smax/stot.eq.smax/stot+1d0) then
+            print *,'got NaN: ',smax/stot
+            jac = -2
+            return
+         endif
+
+
 c         write(*,*) ibranch,sqrt(smin),sqrt(smax)
 c
 c        Choose the appropriate s given our constraints smin,smax

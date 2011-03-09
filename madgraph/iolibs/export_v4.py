@@ -1633,9 +1633,9 @@ class ProcessExporterFortranME(ProcessExporterFortran):
     def write_ncombs_file(self, writer, nexternal):
         """Write the ncombs.inc file for MadEvent."""
 
-        # ncomb (used for clustering) is 2^(nexternal + 1)
+        # ncomb (used for clustering) is 2^nexternal
         file = "       integer    n_max_cl\n"
-        file = file + "parameter (n_max_cl=%d)" % (2 ** (nexternal + 1))
+        file = file + "parameter (n_max_cl=%d)" % (2 ** nexternal)
 
         # Write the file
         writer.writelines(file)
@@ -1814,6 +1814,8 @@ class ProcessExporterFortranMEGroup(ProcessExporterFortranME):
                                         "max_events = 8000")
         run_config = run_config.replace("ChanPerJob=5",
                                         "ChanPerJob=2")
+        run_config = run_config.replace("nhel_survey=1",
+                                        "nhel_survey=0")
         open(os.path.join(self.dir_path, 'Source', 'run_config.inc'), 'w').\
                                     write(run_config)
         # Update values in generate_events

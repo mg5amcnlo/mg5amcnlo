@@ -14,10 +14,9 @@ c     resmap gives potential resonances for diagrams
       double precision pcl(0:4,n_max_cl) ! 4 is mass**2
       integer imocl(nexternal), idacl(nexternal,2), igraphs(0:n_max_cg)
       integer ipdgcl(n_max_cl,n_max_cg)
-      logical igscl(0:n_max_cg) 
       logical clustered
       common/cl_val/pcl,pt2ijcl,zcl,mt2ij,mt2last,imocl,idacl,igraphs,ipdgcl,
-     &     igscl,clustered
+     &    clustered
 c     parameters for qcd jets
       double precision ptclus(nexternal)
       common/cl_jets/ptclus
