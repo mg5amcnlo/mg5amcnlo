@@ -70,7 +70,7 @@ class Particle(FRBaseClass):
     require_args_all = ['pdg_code', 'name', 'antiname', 'spin', 'color', 'mass', 'width', 'texname', 'antitexname', 'charge', 'line', 'propagating', 'goldstoneboson']
 
     def __init__(self, pdg_code, name, antiname, spin, color, mass, width, texname,
-                 antitexname, line, charge , propagating=True, goldstoneboson=False, **options):
+                 antitexname, charge , line=None, propagating=True, goldstoneboson=False, **options):
 
         args= (pdg_code, name, antiname, spin, color, mass, width, texname,
                  antitexname, float(charge))
@@ -84,12 +84,10 @@ class Particle(FRBaseClass):
         self.goldstoneboson= goldstoneboson
 
         self.selfconjugate = (name == antiname)
-        if 1: #not line:
+        if not line:
             self.line = self.find_line_type()
         else:
             self.line = line
-
-
 
 
     def find_line_type(self):
@@ -134,7 +132,7 @@ class Particle(FRBaseClass):
             newcolor = -self.color
                 
         return Particle(-self.pdg_code, self.antiname, self.name, self.spin, newcolor, self.mass, self.width,
-                        self.antitexname, self.texname, self.line, -self.charge, self.propagating, self.goldstoneboson, **outdic)
+                        self.antitexname, self.texname, -self.charge, self.line, self.propagating, self.goldstoneboson, **outdic)
 
 
 

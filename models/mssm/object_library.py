@@ -99,7 +99,7 @@ class Particle(UFOBaseClass):
         
         spin = self.spin
         color = self.color
-
+        
         #use default
         if spin == 1:
             return 'dashed'
@@ -113,6 +113,7 @@ class Particle(UFOBaseClass):
         elif spin == 3:
             if color == 1:
                 return 'wavy'
+            
             else:
                 return 'curly'
         elif spin == 5:
