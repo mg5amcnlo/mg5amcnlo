@@ -348,9 +348,6 @@ class ALOHAWriterForFortran(WriteALOHA):
             sign = ''
             if self.offshell == index and type in ['V','S']:
                 sign = '-'
-                        
-            if type == 'F' and index % 2 and self.offshell != index:
-                sign = '-'
                 
             str_out += '%s(0) = %s dble(%s%d(%d))\n' % (mom, sign, type, index, energy_pos)
             str_out += '%s(1) = %s dble(%s%d(%d))\n' % (mom, sign, type, index, energy_pos + 1)
@@ -562,8 +559,6 @@ class ALOHAWriterForCPP(WriteALOHA):
             energy_pos = self.type_to_size[type] - 2
             sign = ''
             if self.offshell == index and type in ['V', 'S'] and self.offshell != index:
-                sign = '-'
-            if type == 'F' and index % 2:
                 sign = '-'
                    
             str_out += '%s[0] = %s%s%d[%d].real();\n' % (mom, sign, type, index, energy_pos)
@@ -858,9 +853,6 @@ class ALOHAWriterForPython(WriteALOHA):
             energy_pos = self.type_to_size[type] -2
             sign = ''
             if self.offshell == index and type in ['V','S']:
-                sign = '-'
-            if type == 'F' and index % 2 and self.offshell != index:
-                #print 'change', self.namestring, mom
                 sign = '-'
 
             str_out += '%s = [%scomplex(%s%d[%d]).real, \\\n' % (mom, sign, type, index, energy_pos)
