@@ -82,11 +82,10 @@ class CmdExtended(cmd.Cmd):
                                                     'display multiparticles'],
         'generate': ['add process PROCESS','output [OUTPUT_TYPE] [PATH]','draw .'],
         'add process':['output [OUTPUT_TYPE] [PATH]', 'display processes'],
-        'output':['history PATH', 'exit'],
+        'output':['launch','history PATH', 'exit'],
         'display': ['generate PROCESS', 'add process PROCESS', 'output [OUTPUT_TYPE] [PATH]'],
         'draw': ['shell CMD'],
-        'export':['history PATH', 'exit'],
-        'import proc_v4' : ['exit'],
+        'import proc_v4' : ['launch','exit'],
         'tutorial': ['generate PROCESS', 'import model MODEL', 'help TOPIC']
     }
         
@@ -458,6 +457,10 @@ class HelpToCmd(object):
         logger.info("   example display particles e+.")
         logger.info("   For \"checks\", can specify only to see failed checks.")
 
+    def help_launch(self):
+        """help for launch command"""
+        _launch_parser.print_help()
+
     def help_tutorial(self):
         logger.info("syntax: tutorial [" + "|".join(self._tutorial_opts) + "]")
         logger.info("-- start/stop the tutorial mode")
@@ -790,7 +793,6 @@ class CheckValidForCmd(object):
         """check the validity of the line"""
         # modify args in order to be MODE DIR
         # mode being either standalone or madevent
-        
         if not( 0 <= int(options.cluster) <= 2):
             return self.InvalidCmd, 'cluster mode should be between 0 and 2'
         
@@ -801,8 +803,8 @@ class CheckValidForCmd(object):
                 return
             else:
                 self.help_launch()
-                return self.InvalidCmd, \
-                       'No generated output: Impossible to use default location'
+                raise self.InvalidCmd, \
+                       'Impossible to use default location: No output command runned'
         
         if len(args) != 1:
             self.help_launch()
@@ -813,12 +815,12 @@ class CheckValidForCmd(object):
             path = args[0]
         elif os.path.isdir(os.path.join(MG5DIR,args[0])):
             path = os.path.join(MG5DIR,args[0])
-        elif os.path.isdir(os.path.join(MG4DIR,args[0])):
+        elif  MG4DIR and os.path.isdir(os.path.join(MG4DIR,args[0])):
             path = os.path.join(MG4DIR,args[0])
-        elif os.path.isdir(path):
+        elif os.path.isdir(args[0]):
             path = args[0]
         else:    
-            raise self.InvalidCmd, '%s : Not a valid directory' % args[0]
+            raise self.InvalidCmd, '%s is not a valid directory' % args[0]
             
         mode = self.find_output_type(path)
         args[0] = mode
@@ -2716,10 +2718,11 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
                                                      self.history)
 
         logger.info('Output to directory ' + self._export_dir + ' done.')
-        if self._export_format == 'madevent':
-            logger.info('Please see ' + self._export_dir + '/README')
-            logger.info('for information about how to generate events from this process.')
-
+        #if self._export_format == 'madevent':
+        #    logger.info('Please see ' + self._export_dir + '/README')
+        #    logger.info('for information about how to generate events from this process.')
+        #    logger.info('for directly generating ')
+        
     def do_help(self, line):
         """ propose some usefull possible action """
         
@@ -2858,11 +2861,11 @@ _draw_parser.add_option("", "--add_gap", default=0, type='float', \
 # LAUNCH PROGRAM
 _launch_usage = "launch [DIRPATH] [options]\n" + \
          "-- execute the madevent/standalone output present in DIRPATH\n" + \
-         "   By default DIRPATH is the latest created direcory \n" + \
+         "   By default DIRPATH is the latest created directory \n" + \
          "   Example: launch PROC_SM_1 --name=run2 \n"
 _launch_parser = optparse.OptionParser(usage=_launch_usage)
 _launch_parser.add_option("-f", "--force", default=False, action='store_true',
-                                help="Answer all questions by default")
+                                help="Use the card present in the directory in order to launch the different program")
 _launch_parser.add_option("-n", "--name", default='', type='str',
                                 help="Provide a name to the run (for madevent run)")
 _launch_parser.add_option("-c", "--cluster", default='0', type='str',
