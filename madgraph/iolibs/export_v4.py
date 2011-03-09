@@ -733,9 +733,9 @@ def write_ncombs_file(writer, matrix_element, fortran_model):
     # Extract number of external particles
     (nexternal, ninitial) = matrix_element.get_nexternal_ninitial()
 
-    # ncomb (used for clustering) is 2^(nexternal + 1)
+    # ncomb (used for clustering) is 2^nexternal
     file = "       integer    n_max_cl\n"
-    file = file + "parameter (n_max_cl=%d)" % (2 ** (nexternal + 1))
+    file = file + "parameter (n_max_cl=%d)" % (2 ** nexternal)
 
     # Write the file
     writer.writelines(file)

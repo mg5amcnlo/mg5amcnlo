@@ -284,6 +284,81 @@ class ColorAmpTest(unittest.TestCase):
 
         self.assertEqual(col_dict, goal_dict)
 
+    def test_colorize_funny_model(self):
+        """Test the colorize function for uu~ > ggg"""
+
+        mypartlist = base_objects.ParticleList()
+        myinterlist = base_objects.InteractionList()
+        mymodel = base_objects.Model()
+
+        # A gluon
+        mypartlist.append(base_objects.Particle({'name':'g',
+                      'antiname':'g',
+                      'spin':3,
+                      'color':8,
+                      'mass':'zero',
+                      'width':'zero',
+                      'texname':'g',
+                      'antitexname':'g',
+                      'line':'curly',
+                      'charge':0.,
+                      'pdg_code':21,
+                      'propagating':True,
+                      'is_part':True,
+                      'self_antipart':True}))
+
+        # 3 gluon vertiex
+        myinterlist.append(base_objects.Interaction({
+                      'id': 1,
+                      'particles': base_objects.ParticleList(\
+                                            [mypartlist[0]] * 3),
+                      'color': [color.ColorString([color.f(0, 1, 2)]),
+                                color.ColorString([color.f(0, 2, 1)]),
+                                color.ColorString([color.f(1, 2, 0)])],
+                      'lorentz':['L1'],
+            'couplings':{(0, 0):'G', (2,0):'G'},
+                      'orders':{'QCD':1}}))
+
+        mymodel.set('particles', mypartlist)
+        mymodel.set('interactions', myinterlist)
+
+        myleglist = base_objects.LegList()
+
+        myleglist.append(base_objects.Leg({'id':21,
+                                         'state':False}))
+        myleglist.append(base_objects.Leg({'id':21,
+                                         'state':False}))
+
+        myleglist.extend([base_objects.Leg({'id':21,
+                                            'state':True})] * 2)
+
+        myprocess = base_objects.Process({'legs':myleglist,
+                                        'model':mymodel})
+
+        myamplitude = diagram_generation.Amplitude()
+
+        myamplitude.set('process', myprocess)
+
+        myamplitude.generate_diagrams()
+
+        my_col_basis = color_amp.ColorBasis()
+
+        # Check that only the color structures that are actually used are included
+        col_dict = my_col_basis.colorize(myamplitude['diagrams'][0],
+                                         mymodel)
+        goal_dict = {(0, 0): color.ColorString([color.f(-1000, 1, 2),
+                                               color.f(-1000, 3, 4)]),
+                     (0, 2): color.ColorString([color.f(-1000, 1, 2),
+                                               color.f(3, 4, -1000)]),
+                     (2, 0): color.ColorString([color.f(1, 2, -1000),
+                                               color.f(-1000, 3, 4)]),
+                     (2, 2):color.ColorString([color.f(1, 2, -1000),
+                                               color.f(3, 4, -1000)])}
+                     
+
+        self.assertEqual(col_dict, goal_dict)
+
+
     def test_color_basis_uux_aggg(self):
         """Test the color basis building for uu~ > aggg (3! elements)"""
 
@@ -402,6 +477,8 @@ class ColorAmpTest(unittest.TestCase):
                                                           [(8, 1, 1001, 2001)]),
                          goal_cs)
 
+    
+        
 
 class ColorSquareTest(unittest.TestCase):
     """Test class for the color_amp module"""
