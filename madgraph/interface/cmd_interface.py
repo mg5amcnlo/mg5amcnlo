@@ -17,7 +17,6 @@
 """
 
 import atexit
-import cmd
 import logging
 import optparse
 import os
@@ -51,6 +50,7 @@ import madgraph.iolibs.import_v4 as import_v4
 import madgraph.iolibs.misc as misc
 import madgraph.iolibs.save_load_object as save_load_object
 
+import madgraph.interface.extended_cmd as cmd
 import madgraph.interface.tutorial_text as tutorial_text
 import madgraph.interface.launch_ext_program as launch_ext
 import madgraph.various.process_checks as process_checks
@@ -68,13 +68,11 @@ logger_tuto = logging.getLogger('tutorial') # -> stdout include instruction in
 # CmdExtended
 #===============================================================================
 class CmdExtended(cmd.Cmd):
-    """Extension of the cmd.Cmd command line.
-    This extensions supports line breaking, history, comments,
-    internal call to cmdline,..."""
+    """Particularisation of the cmd command for MG5"""
 
     #suggested list of command
     next_possibility = {
-        'mg5_start': ['import model ModelName', 'import command PATH',
+        'start': ['import model ModelName', 'import command PATH',
                       'import proc_v4 PATH', 'tutorial'],
         'import model' : ['generate PROCESS','define MULTIPART PART1 PART2 ...', 
                                    'display particles', 'display interactions'],
@@ -88,13 +86,23 @@ class CmdExtended(cmd.Cmd):
         'import proc_v4' : ['launch','exit'],
         'tutorial': ['generate PROCESS', 'import model MODEL', 'help TOPIC']
     }
-        
+    
+    debug_output = 'MG5_debug'
+    error_debug = 'Please report this bug on https://bugs.launchpad.net/madgraph5\n'
+    error_debug += 'More information is found in \'%s\'.\n' 
+    error_debug += 'Please attach this file to your report.'
+    
+    keyboard_stop_msg = """stopping all operation
+            in order to quit mg5 please enter exit"""
+    
+    class InvalidCmd(MadGraph5Error):
+        pass
+    
     def __init__(self, *arg, **opt):
         """Init history and line continuation"""
         
         # If possible, build an info line with current version number 
         # and date, from the VERSION text file
-
         info = misc.get_pkg_info()
         info_line = ""
 
@@ -160,131 +168,8 @@ class CmdExtended(cmd.Cmd):
         "*                                                          *\n" + \
         "************************************************************")
 
-        self.log = True
-        self.history = []
-        self.save_line = ''
         cmd.Cmd.__init__(self, *arg, **opt)
-        self.__initpos = os.path.abspath(os.getcwd())
         
-    def precmd(self, line):
-        """ A suite of additional function needed for in the cmd
-        this implement history, line breaking, comment treatment,...
-        """
-        
-        if not line:
-            return line
-        line = line.lstrip()
-
-        # Update the history of this suite of command,
-        # except for useless commands (empty history and help calls)
-        if line != "history" and \
-            not line.startswith('help') and \
-            not line.startswith('#*'):
-            self.history.append(line)
-
-        # Check if we are continuing a line:
-        if self.save_line:
-            line = self.save_line + line 
-            self.save_line = ''
-        
-        # Check if the line is complete
-        if line.endswith('\\'):
-            self.save_line = line[:-1]
-            return '' # do nothing   
-        
-        # Remove comment
-        if '#' in line:
-            line = line.split('#')[0]
-
-        # Deal with line splitting
-        if ';' in line and not (line.startswith('!') or line.startswith('shell')):
-            for subline in line.split(';'):
-                stop = self.onecmd(subline)
-                stop = self.postcmd(stop, subline)
-            return ''
-        
-        # execute the line command
-        return line
-
-    def nice_error_handling(self, error, line):
-        """ """ 
-        # Make sure that we are at the initial position
-        os.chdir(self.__initpos)
-        # Create the debug files
-        self.log = False
-        cmd.Cmd.onecmd(self, 'history MG5_debug')
-        debug_file = open('MG5_debug', 'a')
-        traceback.print_exc(file=debug_file)
-        # Create a nice error output
-        if self.history and line == self.history[-1]:
-            error_text = 'Command \"%s\" interrupted with error:\n' % line
-        elif self.history:
-            error_text = 'Command \"%s\" interrupted in sub-command:\n' %line
-            error_text += '\"%s\" with error:\n' % self.history[-1]
-        else:
-            error_text = ''
-        error_text += '%s : %s\n' % (error.__class__.__name__, str(error).replace('\n','\n\t'))
-        error_text += 'Please report this bug on https://bugs.launchpad.net/madgraph5\n'
-        error_text += 'More information is found in \'%s\'.\n' % \
-                        os.path.realpath("MG5_debug")
-        error_text += 'Please attach this file to your report.'
-        logger_stderr.critical(error_text)
-        #stop the execution if on a non interactive mode
-        if self.use_rawinput == False:
-            sys.exit('Exit on error')
-        return False
-
-    def nice_user_error(self, error, line):
-        # Make sure that we are at the initial position
-        os.chdir(self.__initpos)
-        if line == self.history[-1]:
-            error_text = 'Command \"%s\" interrupted with error:\n' % line
-        else:
-            error_text = 'Command \"%s\" interrupted in sub-command:\n' %line
-            error_text += '\"%s\" with error:\n' % self.history[-1] 
-        error_text += '%s : %s' % (error.__class__.__name__, str(error).replace('\n','\n\t'))
-        logger_stderr.error(error_text)
-        #stop the execution if on a non interactive mode
-        if self.use_rawinput == False:
-            sys.exit()
-        # Remove failed command from history
-        self.history.pop()
-        return False
-
-    
-    def onecmd(self, line):
-        """catch all error and stop properly command accordingly"""
-        
-        try:
-            cmd.Cmd.onecmd(self, line)
-        except MadGraph5Error as error:
-            if __debug__:
-                self.nice_error_handling(error, line)
-            else:
-                self.nice_user_error(error, line)
-        except Exception as error:
-            self.nice_error_handling(error, line)
-        except KeyboardInterrupt:
-            print 'stopping all operation'
-            print 'in order to quit mg5 please enter exit'
-            
-    def exec_cmd(self, line):
-        """for third party call, call the line with pre and postfix treatment"""
-
-        logger.info(line)
-        line = self.precmd(line)
-        stop = cmd.Cmd.onecmd(self, line)
-        stop = self.postcmd(stop, line)
-        return stop      
-
-    def run_cmd(self, line):
-        """for third party call, call the line with pre and postfix treatment"""
-        
-        logger.info(line)
-        line = self.precmd(line)
-        stop = self.onecmd(line)
-        stop = self.postcmd(stop, line)
-        return stop 
     
     def postcmd(self,stop, line):
         """ finishing a command
@@ -315,69 +200,6 @@ class CmdExtended(cmd.Cmd):
             except:
                 pass
             
-
-
-    def emptyline(self):
-        """If empty line, do nothing. Default is repeat previous command."""
-        pass
-    
-    def default(self, line):
-        """Default action if line is not recognized"""
-
-        # Faulty command
-        logger.warning("Command \"%s\" not recognized, please try again" % \
-                                                                line.split()[0])
-    # Quit
-    def do_quit(self, line):
-        sys.exit(1)
-        
-    do_exit = do_quit
-
-    # Aliases
-    do_EOF = do_quit
-    do_exit = do_quit
-
-    def do_help(self, line):
-        """ propose some usefull possible action """
-        
-        cmd.Cmd.do_help(self,line)
-        
-        # if not basic help -> simple call is enough    
-        if line:
-            return
-
-        if len(self.history) == 0:
-            last_action_2 = last_action = 'mg5_start'
-        else:
-            last_action_2 = last_action = 'none'
-        
-        pos = 0
-        authorize = self.next_possibility.keys() 
-        while last_action_2  not in authorize and last_action not in authorize:
-            pos += 1
-            if pos > len(self.history):
-                last_action_2 = last_action = 'mg5_start'
-                break
-            
-            args = self.history[-1 * pos].split()
-            last_action = args[0]
-            if len(args)>1: 
-                last_action_2 = '%s %s' % (last_action, args[1])
-            else: 
-                last_action_2 = 'none'
-        
-        print 'Contextual Help'
-        print '==============='
-        if last_action_2 in authorize:
-            options = self.next_possibility[last_action_2]
-        elif last_action in authorize:
-            options = self.next_possibility[last_action]
-        
-        text = 'The following command(s) may be useful in order to continue.\n'
-        for option in options:
-            text+='\t %s \n' % option      
-        print text
-    
     def timed_input(self, question, default, timeout=None):
         """ a question with a maximal time to answer take default otherwise"""
         
@@ -1356,7 +1178,7 @@ class CompleteForCmd(CheckValidForCmd):
             if args[1].startswith('model'):
                 # Directory continuation
                 return self.path_completion(text, os.path.join('.',*[a for a in args \
-                                                                    if a.endswith(os.path.sep)]),
+                                                   if a.endswith(os.path.sep)]),
                                                 only_dirs = True)
             else:
                 return self.path_completion(text,
@@ -2308,7 +2130,7 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
         self.timeout, old_time_out = 20, self.timeout
         
         # Read the lines of the file and execute them
-        for line in CmdFile(filepath):
+        for line in cmd.CmdFile(filepath):
             #remove pointless spaces and \n
             line = line.replace('\n', '').strip()
             # execute the line
@@ -2803,38 +2625,7 @@ class MadGraphCmdShell(MadGraphCmd, CompleteForCmd, CheckValidForCmd):
             logging.info("running shell command: " + line)
             subprocess.call(line, shell=True)
 
-#===============================================================================
-# 
-#===============================================================================
-class CmdFile(file):
-    """ a class for command input file -in order to debug cmd \n problem"""
-    
-    def __init__(self, name, opt='rU'):
-        
-        file.__init__(self, name, opt)
-        self.text = file.read(self)
-        self.close()
-        self.lines = self.text.split('\n')
-    
-    def readline(self, *arg, **opt):
-        """readline method treating correctly a line whithout \n at the end
-           (add it)
-        """
-        if self.lines:
-            line = self.lines.pop(0)
-        else:
-            return ''
-        
-        if line.endswith('\n'):
-            return line
-        else:
-            return line + '\n'
-    
-    def __next__(self):
-        return self.lines.__next__()    
-    def __iter__(self):
-        return self.lines.__iter__()
-  
+
 #===============================================================================
 # Command Parser
 #=============================================================================== 

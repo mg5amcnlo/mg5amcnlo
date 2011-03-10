@@ -104,7 +104,7 @@ def which(program):
 class TimeOutError(Exception):
     """Class for run-time error"""
          
-def timed_input(question, default, timeout=None, noerror=True):
+def timed_input(question, default, timeout=None, noerror=True, fct=None):
     """ a question with a maximal time to answer take default otherwise"""
     
     def handle_alarm(signum, frame): 
@@ -112,12 +112,14 @@ def timed_input(question, default, timeout=None, noerror=True):
         
     signal.signal(signal.SIGALRM, handle_alarm)
     
+    if fct is None:
+        fct = raw_input
         
     if timeout:
         signal.alarm(timeout)
         question += '[%ss to answer [%s]] ' % (timeout, str(default))    
     try:
-        result = raw_input(question)
+        result = fct(question)
     except TimeOutError:
         if noerror:
             print '\nuse %s' % default

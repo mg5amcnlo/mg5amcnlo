@@ -17,7 +17,10 @@ import logging
 import os
 import subprocess
 
+
+import madgraph.iolibs.files as files
 import madgraph.iolibs.misc as misc
+import madgraph.interface.extended_cmd as cmd
 from madgraph import MG4DIR, MG5DIR, MadGraph5Error
 from madgraph.iolibs.files import cp
 
@@ -66,10 +69,7 @@ class ExtLauncher(object):
 
         self.prepare_run()        
         for card in self.cards:
-            answer = self.ask('Do you want to edit file: %s? [y/n]' % card, 'n') 
-            if answer == 'y':
-                path = os.path.join(self.card_dir, card)
-                self.edit_file(path)
+            self.treat_input_file(card, default = 'n')
 
         self.launch_program()
 
@@ -102,7 +102,44 @@ class ExtLauncher(object):
                 self.timeout=None # answer at least one question so wait...
                 return out
         else:
-            return default                        
+            return default
+        
+    def treat_input_file(self, filename, default=None, msg=''):
+        """ask to edit a file"""
+        
+        if msg == '' and filename == 'param_card.dat':
+            msg = \
+            """WARNING: If you edit this file don\'t forget to modify 
+            consistently the different parameters, especially 
+            the width of all particles.""" 
+        
+        fct = lambda q: cmd.raw_path_input(q, allow_arg=['y','n'])     
+                                    
+        if not self.force:
+            if msg:  print msg
+            question = 'Do you want to edit file: %(card)s? [y/n/path of the new %(card)s]' 
+            question = question % {'card':filename}
+            try:
+                ans =  misc.timed_input(question, default, timeout=self.timeout,
+                                        noerror=False, fct=fct)
+            except misc.TimeOutError:
+                # avoid to always wait a given time for the next answer
+                self.force = True
+            else:
+                self.timeout=None # answer at least one question so wait...
+        else:
+            ans = default
+ 
+        if ans == 'y':
+            path = os.path.join(self.card_dir, filename)
+            self.edit_file(path)
+        elif ans == 'n':
+            return
+        else:
+            path = os.path.join(self.card_dir, filename)
+            files.cp(ans, path)
+        
+        
         
                     
 class SALauncher(ExtLauncher):
@@ -138,7 +175,7 @@ class MELauncher(ExtLauncher):
         
         
         ExtLauncher.__init__(self, running_dir, './Cards', timeout, **option)
-        self.executable = os.path.join(running_dir, 'bin','generate_events')
+        self.executable = os.path.join('.', 'bin','generate_events')
 
         assert hasattr(self, 'cluster')
         assert hasattr(self, 'name')
@@ -225,6 +262,7 @@ class MELauncher(ExtLauncher):
         
         mode = str(self.cluster)
         if mode == "0":
+            print [self.executable, mode, self.name], self.running_dir
             subprocess.call([self.executable, mode, self.name], 
                                                            cwd=self.running_dir)
         elif mode == "1":
