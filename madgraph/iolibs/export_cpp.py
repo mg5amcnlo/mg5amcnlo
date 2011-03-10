@@ -1469,6 +1469,8 @@ class UFOModelConverterCPP(object):
                                                  p.depend))
             else:
                 for p in self.model['parameters'][key]:
+                    if p.name == 'ZERO':
+                        continue
                     self.params_indep.append(base_objects.ModelVariable(p.name,
                                                  self.p_to_cpp.parse(p.expr),
                                                  p.type,
