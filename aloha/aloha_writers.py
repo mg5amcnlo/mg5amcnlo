@@ -860,8 +860,8 @@ class ALOHAWriterForPython(WriteALOHA):
             if self.offshell == index and type in ['V','S']:
                 sign = '-'
             if type == 'F' and index % 2 and self.offshell != index:
-                #print 'change', self.namestring, mom
                 sign = '-'
+
 
             str_out += '%s = [%scomplex(%s%d[%d]).real, \\\n' % (mom, sign, type, index, energy_pos)
             str_out += '        %s complex(%s%d[%d]).real, \\\n' % ( sign, type, index, energy_pos + 1)

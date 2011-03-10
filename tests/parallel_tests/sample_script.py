@@ -46,11 +46,12 @@ if '__main__' == __name__:
     logging.getLogger('tutorial').setLevel(logging.ERROR)
         
     logging.basicConfig(level=logging.INFO)
-    my_proc_list = ['u u~ > g y', 'u~ u > g y', 'g u > u y', 'y > u u~']
-    #my_proc_list = ['y > u u~', 'u u~ > y g']
-    #my_proc_list = [' g g > g y', 'u u~ > u u~','g g > g g','u u~ > y > u u~' ]
-    #my_proc_list = me_comparator.create_proc_list(['u', 'u~'], initial=2,
+    my_proc_list = ['u u~ > g y', 'u~ u > g y', 'g u > u y', 'g u~ > u~ y','y u > g u']
+    my_proc_list += [' g g > g y', 'u u~ > u u~','g g > g g','u u~ > y > u u~' ]
+    #my_proc_list += me_comparator.create_proc_list(['u', 'u~','t','t~','g','y'], initial=2,
     #                                              final=2)
+    my_proc_list += me_comparator.create_proc_list(['u', 'u~','t','t~','g','y'], initial=1,
+                                                  final=2)
     #my_proc_list = me_comparator.create_proc_list_enhanced(
     #    ['u', 'u~', 'd', 'd~', 'g'],['six', 'six~'],['g'],
     #    initial=2, final_1=1, final_2 = 1)
