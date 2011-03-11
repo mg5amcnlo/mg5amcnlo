@@ -149,10 +149,26 @@ class AbstractRoutineBuilder(object):
     
     def define_simple_output(self):
         """ define a simple output for this AbstractRoutine """
-        
+    
         infostr = str(self.lorentz_expr)        
         return AbstractRoutine(self.expr, self.outgoing, self.spins, self.name, \
                                                                         infostr)
+        
+    def change_sign_for_outcoming_fermion(self):
+        """change the sign of P for outcoming fermion in order to 
+        correct the mismatch convention between HELAS and FR"""
+        
+        flip_sign = []
+        for i in range(1,len(self.spins),2):
+            if self.spins[i] == 2:
+                flip_sign.append(str(i))
+        
+        if not flip_sign:
+            return self.lorentz_expr
+        momentum_pattern = re.compile(r'P\((\d+),(%s)\)' % '|'.join(flip_sign))
+        lorentz_expr = momentum_pattern.sub(r'P(\1,\2, -1)', self.lorentz_expr)
+        return lorentz_expr
+        
         
     def compute_aloha_high_kernel(self, mode, factorize=True):
         """compute the abstract routine associate to this mode """
@@ -163,8 +179,9 @@ class AbstractRoutineBuilder(object):
         if not self.routine_kernel:
             AbstractRoutineBuilder.counter += 1
             logger.info('aloha creates %s routines' % self.name)
-            try:       
-                lorentz = eval(self.lorentz_expr)
+            try:
+                lorentz = self.change_sign_for_outcoming_fermion()       
+                lorentz = eval(lorentz)
             except NameError:
                 logger.error('unknow type in Lorentz Evaluation')
                 raise ALOHAERROR, 'unknow type in Lorentz Evaluation' 

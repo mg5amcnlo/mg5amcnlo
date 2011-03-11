@@ -348,9 +348,7 @@ class ALOHAWriterForFortran(WriteALOHA):
             sign = ''
             if self.offshell == index and type in ['V','S']:
                 sign = '-'
-            if type == 'F' and index % 2 and index != self.offshell:
-                sign = '-'
-                
+                            
             str_out += '%s(0) = %s dble(%s%d(%d))\n' % (mom, sign, type, index, energy_pos)
             str_out += '%s(1) = %s dble(%s%d(%d))\n' % (mom, sign, type, index, energy_pos + 1)
             str_out += '%s(2) = %s dimag(%s%d(%d))\n' % (mom, sign, type, index, energy_pos + 1)
@@ -560,7 +558,7 @@ class ALOHAWriterForCPP(WriteALOHA):
             type = self.particles[index - 1]
             energy_pos = self.type_to_size[type] - 2
             sign = ''
-            if self.offshell == index and type in ['V', 'S'] and self.offshell != index:
+            if self.offshell == index and type in ['V', 'S']:
                 sign = '-'
                    
             str_out += '%s[0] = %s%s%d[%d].real();\n' % (mom, sign, type, index, energy_pos)
@@ -855,8 +853,6 @@ class ALOHAWriterForPython(WriteALOHA):
             energy_pos = self.type_to_size[type] -2
             sign = ''
             if self.offshell == index and type in ['V','S']:
-                sign = '-'
-            if type == 'F' and index % 2 and index != self.offshell:
                 sign = '-'
 
             str_out += '%s = [%scomplex(%s%d[%d]).real, \\\n' % (mom, sign, type, index, energy_pos)
