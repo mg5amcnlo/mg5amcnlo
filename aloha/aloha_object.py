@@ -677,17 +677,17 @@ SpinorPropagator = lambda spin1, spin2, particle: complex(0,1) * (Gamma('mu', sp
 VectorPropagator = lambda l1, l2, part: complex(0,1) * (-1 * Metric(l1, l2) + OverMass2(part) * \
                                     Metric(l1,'I3')* P('I3', part) * P(l2, part))
 
-Spin2masslessPropagator = lambda mu, nu, alpha, beta: 1/2 *( Metric(mu, alpha)* Metric(nu, beta) +\
+Spin2masslessPropagator = lambda mu, nu, alpha, beta: complex(0,1/2)*( Metric(mu, alpha)* Metric(nu, beta) +\
                      Metric(mu, beta) * Metric(nu, alpha) - Metric(mu, nu) * Metric(alpha, beta))
 
 
 
 Spin2Propagator =  lambda mu, nu, alpha, beta, part: Spin2masslessPropagator(mu, nu, alpha, beta) + \
-                -1/2 * OverMass2(part) * (Metric(mu,alpha)* P(nu, part) * P(beta, part) + \
+                -complex(0, 1/2) * OverMass2(part) * (Metric(mu,alpha)* P(nu, part) * P(beta, part) + \
                                 Metric(nu, beta) * P(mu, part) * P(alpha, part) + \
                                 Metric(mu, beta) * P(nu, part) * P(alpha, part) + \
                                 Metric(nu, alpha) * P(mu, part) * P(beta , part) )+ \
-                1/6 * (Metric(mu,nu) + 2 * OverMass2(part) * P(mu, part) * P(nu, part)) * \
+                complex(0, 1/6) * (Metric(mu,nu) + 2 * OverMass2(part) * P(mu, part) * P(nu, part)) * \
                       (Metric(alpha,beta) + 2 * OverMass2(part) * P(alpha, part) * P(beta, part))
     
 
