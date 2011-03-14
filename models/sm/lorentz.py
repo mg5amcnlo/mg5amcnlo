@@ -1,6 +1,6 @@
-# This file was automatically created by FeynRules $Revision: 302 $
+# This file was automatically created by FeynRules $Revision: 327 $
 # Mathematica version: 7.0 for Mac OS X x86 (64-bit) (November 11, 2008)
-# Date: Tue 31 Aug 2010 16:54:46
+# Date: Tue 28 Dec 2010 23:25:59
 
 
 from object_library import all_lorentz, Lorentz
@@ -44,6 +44,10 @@ VVS1 = Lorentz(name = 'VVS1',
 VVV1 = Lorentz(name = 'VVV1',
                spins = [ 3, 3, 3 ],
                structure = 'P(3,1)*Metric(1,2) - P(3,2)*Metric(1,2) - P(2,1)*Metric(1,3) + P(2,3)*Metric(1,3) + P(1,2)*Metric(2,3) - P(1,3)*Metric(2,3)')
+
+SSSS1 = Lorentz(name = 'SSSS1',
+                spins = [ 1, 1, 1, 1 ],
+                structure = '1')
 
 VVSS1 = Lorentz(name = 'VVSS1',
                 spins = [ 3, 3, 1, 1 ],

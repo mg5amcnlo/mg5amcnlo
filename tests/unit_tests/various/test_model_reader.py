@@ -33,7 +33,8 @@ _file_path = os.path.split(os.path.dirname(os.path.realpath(__file__)))[0]
 class TestModelReader(unittest.TestCase):
     """Test class for the ModelReader object"""
 
-    base_model = import_ufo.import_model('sm')
+    sm_path = import_ufo.find_ufo_path('sm')
+    base_model = import_ufo.import_model(sm_path)
 
     def setUp(self):
         """Set up decay model"""

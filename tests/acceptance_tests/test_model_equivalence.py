@@ -75,7 +75,8 @@ class CompareMG4WithUFOModel(unittest.TestCase):
         """Test the UFO and MG4 SM model correspond to the same model """
         
         # import UFO model
-        ufo_model = import_ufo.import_model('sm')
+        sm_path = import_ufo.find_ufo_path('sm')
+        ufo_model = import_ufo.import_model(sm_path)
         ufo_model.pass_particles_name_in_mg_default()
         
         # import MG4 model
@@ -120,14 +121,15 @@ class CompareMG4WithUFOModel(unittest.TestCase):
             except ValueError:
                 mg4_vertices.append(pdg_code_mg4)
 
-        self.assertEqual(ufo_vertices, [])  
+        self.assertEqual(ufo_vertices, [[25,25,25,25]])  
         self.assertEqual(mg4_vertices, [])  
 
     def test_mssm_equivalence(self):
         """Test the UFO and MG4 MSSM model correspond to the same model """
         
         # import UFO model
-        ufo_model = import_ufo.import_model('mssm')
+        sm_path = import_ufo.find_ufo_path('mssm')
+        ufo_model = import_ufo.import_model(sm_path)
         #converter = import_ufo.UFOMG5Converter(model)
         #ufo_model = converter.load_model()
         ufo_model.pass_particles_name_in_mg_default()
@@ -190,7 +192,7 @@ class CompareMG4WithUFOModel(unittest.TestCase):
         comming from the UFO are the same """
         
         not_equiv = ['charge', 'mass','width',
-                        'texname','antitexname']
+                        'texname','antitexname','line']
         
         if abs(mg4_part['pdg_code']) != abs(ufo_part['pdg_code']):
             print '%s non equivalent particle' % mg4_part['name']
@@ -270,7 +272,8 @@ class TestModelCreation(unittest.TestCase, CheckFileCreate):
         
         picklefile = os.path.join(MG5DIR,'models','sm','model.pkl') 
         if not files.is_uptodate(picklefile):
-            model = import_ufo.import_model('sm')
+            sm_path = import_ufo.find_ufo_path('sm')
+            model = import_ufo.import_model(sm_path)
         else:
             model = save_load_object.load_from_file(picklefile)
             
@@ -298,8 +301,8 @@ class TestModelCreation(unittest.TestCase, CheckFileCreate):
                             stderr=subprocess.STDOUT, shell=True)
         
         
-        solutions ={'sqrt__aEW ': [0.086872153846781555], 'ymtau ': [1.7769999999999999], 'GC_5 ': [0.0, 1.2177], 'sqrt__sw2 ': [0.4714302554840723], 'sw__exp__2 ': [0.22224648578577769], 'GC_11 ': [0.0, 0.46190999999999999], 'GC_3 ': [-0.0, -0.30795], 'aEW ': [0.0075467711139788835], 'MZ__exp__2 ': [8315.2513440000002], 'MZ ': [91.188000000000002], 'WW ': [2.0476000000000001], 'GC_1 ': [-0.0, -0.10265000000000001], 'GC_9 ': [0.0, 0.33188000000000001], 'GC_7 ': [0.0, 0.57608999999999999], 'GC_10 ': [0.0, 0.21335999999999999], 'ee__exp__2 ': [0.094835522759998875], 'aEWM1 ': [132.50700000000001], 'gw ': [0.6532329303475799], 'ytau ': [0.010206617000654717], 'GC_8 ': [-0.0, -0.42670999999999998], 'GC_16 ': [0.0, 0.30795], 'GC_19 ': [0.0, 0.37035000000000001], 'MTA ': [1.7769999999999999], 'sqrt__aS ': [0.34351128074635334], 'MH ': [120.0], 'GC_23 ': [0.0, 67.544], 'aS ': [0.11799999999999999], 'ymb ': [4.2000000000000002], 'MZ__exp__4 ': [69143404.913893804], 'complexi ': [0.0, 1.0], 'G ': [1.2177157847767195], 'yb ': [0.024123686777011714], 'MW__exp__2 ': [6467.2159543705357], 'Gf ': [1.16639e-05], 'GC_21 ': [-0.0, -175.45], 'ee ': [0.30795376724436879], 'WZ ': [2.4414039999999999], 'v__exp__2 ': [60623.529110035903], 'v ': [246.21845810181637], 'WH ': [0.005753088], 'cw__exp__2 ': [0.77775351421422245], 'GC_6 ': [0.0, 1.4828], 'GC_15 ': [0.0, 0.082309999999999994], 'sw2 ': [0.22224648578577766], 'GC_2 ': [0.0, 0.20530000000000001], 'GC_24 ': [-0.0, -0.017058], 'MB ': [4.7000000000000002], 'WT ': [1.5083359999999999], 'GC_18 ': [0.0, 0.094836], 'GC_14 ': [-0.0, -0.027437], 'GC_4 ': [-1.2177, 0.0], 'MH__exp__2 ': [14400.0], 'ymt ': [164.5], 'G__exp__2 ': [1.4828317324943818], 'MT ': [174.30000000000001], 'GC_13 ': [0.0, 0.28804000000000002], 'lam ': [0.11876576810517747], 'GC_25 ': [-0.0, -0.66810999999999998], 'GC_12 ': [-0.0, -0.28804000000000002], 'sw ': [0.4714302554840723], 'gw__exp__2 ': [0.42671326129048615], 'GC_26 ': [-0.0, -0.0072172], 'g1 ': [0.34919219678733299], 'GC_22 ': [0.0, 52.532], 'MW ': [80.419002445756163], 'muH ': [84.852813742385706], 'GC_17 ': [-0.0, -0.35482000000000002], 'cw ': [0.88190334743339216], 'sqrt__2 ': [1.4142135623730951], 'GC_20 ': [0.0, 0.27432000000000001], 'yt ': [0.944844398766292]}
-
+        #solutions ={'sqrt__aEW ': [0.086872153846781555], 'ymtau ': [1.7769999999999999], 'GC_5 ': [0.0, 1.2177], 'sqrt__sw2 ': [0.4714302554840723], 'sw__exp__2 ': [0.22224648578577769], 'GC_11 ': [0.0, 0.46190999999999999], 'GC_3 ': [-0.0, -0.30795], 'aEW ': [0.0075467711139788835], 'MZ__exp__2 ': [8315.2513440000002], 'MZ ': [91.188000000000002], 'WW ': [2.0476000000000001], 'GC_1 ': [-0.0, -0.10265000000000001], 'GC_9 ': [0.0, 0.33188000000000001], 'GC_7 ': [0.0, 0.57608999999999999], 'GC_10 ': [0.0, 0.21335999999999999], 'ee__exp__2 ': [0.094835522759998875], 'aEWM1 ': [132.50700000000001], 'gw ': [0.6532329303475799], 'ytau ': [0.010206617000654717], 'GC_8 ': [-0.0, -0.42670999999999998], 'GC_16 ': [0.0, 0.30795], 'GC_19 ': [0.0, 0.37035000000000001], 'MTA ': [1.7769999999999999], 'sqrt__aS ': [0.34351128074635334], 'MH ': [120.0], 'GC_23 ': [0.0, 67.544], 'aS ': [0.11799999999999999], 'ymb ': [4.2000000000000002], 'MZ__exp__4 ': [69143404.913893804], 'complexi ': [0.0, 1.0], 'G ': [1.2177157847767195], 'yb ': [0.024123686777011714], 'MW__exp__2 ': [6467.2159543705357], 'Gf ': [1.16639e-05], 'GC_21 ': [-0.0, -175.45], 'ee ': [0.30795376724436879], 'WZ ': [2.4414039999999999], 'v__exp__2 ': [60623.529110035903], 'v ': [246.21845810181637], 'WH ': [0.005753088], 'cw__exp__2 ': [0.77775351421422245], 'GC_6 ': [0.0, 1.4828], 'GC_15 ': [0.0, 0.082309999999999994], 'sw2 ': [0.22224648578577766], 'GC_2 ': [0.0, 0.20530000000000001], 'GC_24 ': [-0.0, -0.017058], 'MB ': [4.7000000000000002], 'WT ': [1.5083359999999999], 'GC_18 ': [0.0, 0.094836], 'GC_14 ': [-0.0, -0.027437], 'GC_4 ': [-1.2177, 0.0], 'MH__exp__2 ': [14400.0], 'ymt ': [164.5], 'G__exp__2 ': [1.4828317324943818], 'MT ': [174.30000000000001], 'GC_13 ': [0.0, 0.28804000000000002], 'lam ': [0.11876576810517747], 'GC_25 ': [-0.0, -0.66810999999999998], 'GC_12 ': [-0.0, -0.28804000000000002], 'sw ': [0.4714302554840723], 'gw__exp__2 ': [0.42671326129048615], 'GC_26 ': [-0.0, -0.0072172], 'g1 ': [0.34919219678733299], 'GC_22 ': [0.0, 52.532], 'MW ': [80.419002445756163], 'muH ': [84.852813742385706], 'GC_17 ': [-0.0, -0.35482000000000002], 'cw ': [0.88190334743339216], 'sqrt__2 ': [1.4142135623730951], 'GC_20 ': [0.0, 0.27432000000000001], 'yt ': [0.944844398766292]}
+        solutions ={'ymtau ': [1.777], 'GC_5 ': [0.0, 1.2177], 'MZ ': [91.188], 'GC_27 ': [-0.0, -0.35482], 'ee__exp__2 ': [0.09483552275999887], 'aEWM1 ': [132.507], 'GC_29 ': [0.0, 0.37035], 'ytau ': [0.010206617000654717], 'conjg__CKM33 ': [1.0, -0.0], 'cw__exp__2 ': [0.7777535142142225], 'G ': [1.2177157847767195], 'Gf ': [1.16639e-05], 'GC_21 ': [0.0, 0.46191], 'ee ': [0.3079537672443688], 'WZ ': [2.441404], 'v__exp__2 ': [60623.5291100359], 'sw2 ': [0.22224648578577766], 'WT ': [1.508336], 'sqrt__sw2 ': [0.4714302554840723], 'GC_28 ': [0.0, 0.094836], 'GC_17 ': [0.0, 0.46191], 'ym ': [0.0], 'sw__exp__2 ': [0.2222464857857777], 'GC_3 ': [-0.0, -0.30795], 'WW ': [2.0476], 'gw ': [0.6532329303475799], 'MH ': [120.0], 'ymb ': [4.2], 'complexi ': [0.0, 1.0], 'GC_47 ': [0.0, 0.46191], 'GC_2 ': [0.0, 0.2053], 'cos__cabi ': [1.0], 'GC_51 ': [0.0, 0.46191], 'GC_26 ': [0.0, 0.30795], 'GC_30 ': [0.0, 0.27432], 'MW ': [80.41900244575616], 'cw ': [0.8819033474333922], 'yt ': [0.944844398766292], 'sqrt__aEW ': [0.08687215384678156], 'GC_1 ': [-0.0, -0.10265], 'CKM11 ': [1.0, 0.0], 'GC_12 ': [0.0, 0.46191], 'GC_25 ': [0.0, 0.08231], 'sqrt__aS ': [0.34351128074635334], 'GC_41 ': [-0.0, -0.0072172], 'GC_31 ': [-0.0, -175.45], 'aS ': [0.118], 'MW__exp__2 ': [6467.215954370536], 'MZ__exp__4 ': [69143404.9138938], 'yb ': [0.024123686777011714], 'WH ': [0.005753088], 'MH__exp__2 ': [14400.0], 'GC_13 ': [0.0, 0.46191], 'sw ': [0.4714302554840723], 'gw__exp__2 ': [0.42671326129048615], 'GC_40 ': [-0.0, -0.66811], 'GC_9 ': [0.0, 0.33188], 'cabi ': [0.0], 'GC_24 ': [-0.0, -0.027437], 'GC_32 ': [0.0, 52.532], 'muH ': [84.8528137423857], 'GC_7 ': [0.0, 0.57609], 'aEW ': [0.0075467711139788835], 'MZ__exp__2 ': [8315.251344], 'g1 ': [0.349192196787333], 'GC_10 ': [-0.0, -0.71259], 'GC_8 ': [-0.0, -0.42671], 'CKM33 ': [1.0, 0.0], 'MTA ': [1.777], 'GC_23 ': [0.0, 0.28804], 'conjg__CKM11 ': [1.0, -0.0], 'MT ': [174.3], 'GC_33 ': [0.0, 67.544], 'v ': [246.21845810181637], 'GC_6 ': [0.0, 1.4828], 'CKM22 ': [1.0, 0.0], 'GC_4 ': [-1.2177, 0.0], 'MB ': [4.7], 'ymt ': [164.5], 'GC_43 ': [0.0, 0.46191], 'G__exp__2 ': [1.4828317324943818], 'lam ': [0.11876576810517747], 'conjg__CKM22 ': [1.0, -0.0], 'GC_34 ': [-0.0, -0.017058], 'GC_11 ': [0.0, 0.21336], 'GC_22 ': [-0.0, -0.28804], 'sqrt__2 ': [1.4142135623730951]}
 
 
 
@@ -321,14 +324,12 @@ class TestModelCreation(unittest.TestCase, CheckFileCreate):
                     self.assertAlmostEqual(singlevalue, solutions[variable][i], \
                         msg='fail to be equal for param %s : %s != %s' % \
                             (variable, singlevalue, solutions[variable][i]))
-                #except:
-                #    print variable, singlevalue, solutions[variable][i]
+                #except Exception as error:
                 #    if i == 0:
                 #        solutions[variable] = [singlevalue]
                 #    else:
                 #        solutions[variable].append(singlevalue)
-
-        self.assertEqual(nb_value, 71)
+        self.assertEqual(nb_value, 87)
         
         
 
@@ -339,7 +340,7 @@ class TestModelCreation(unittest.TestCase, CheckFileCreate):
         alreadydefine = []
         for line in self.ReturnFile('intparam_definition.inc'):
             if 'ENDIF' in line:
-                self.assertEqual(len(alreadydefine), 29)
+                self.assertEqual(len(alreadydefine), 38)
                 
             if '=' not in line:
                 continue
@@ -350,11 +351,9 @@ class TestModelCreation(unittest.TestCase, CheckFileCreate):
             alreadydefine.append(new_def)
         alreadydefine = [name.lower() for name in alreadydefine]
         alreadydefine.sort()
-        solution= ['aew ', 'complexi ', 'cw ', 'cw__exp__2 ', 'dum0 ', 'dum1 ', 'ee ', 'ee__exp__2 ', 'g ', 'g1 ', 'g__exp__2 ', 'gal(1) ', 'gal(2) ', 'gw ', 'gw__exp__2 ', 'lam ', 'mh__exp__2 ', 'muh ', 'mw ', 'mw__exp__2 ', 'mz__exp__2 ', 'mz__exp__4 ', 'sqrt__2 ', 'sqrt__aew ', 'sqrt__as ', 'sqrt__sw2 ', 'sw ', 'sw2 ', 'sw__exp__2 ', 'v ', 'v__exp__2 ', 'yb ', 'yt ', 'ytau ']
-        self.assertEqual(len(alreadydefine), len(solution))
-        for i in range(len(alreadydefine)):
-            self.assertEqual(alreadydefine[i], solution[i])
-                                       
+        solution = ['aew ', 'cabi ', 'ckm11 ', 'ckm22 ', 'ckm33 ', 'complexi ', 'conjg__ckm11 ', 'conjg__ckm22 ', 'conjg__ckm33 ', 'cos__cabi ', 'cw ', 'cw__exp__2 ', 'dum0 ', 'dum1 ', 'ee ', 'ee__exp__2 ', 'g ', 'g1 ', 'g__exp__2 ', 'gal(1) ', 'gal(2) ', 'gw ', 'gw__exp__2 ', 'lam ', 'mh__exp__2 ', 'muh ', 'mw ', 'mw__exp__2 ', 'mz__exp__2 ', 'mz__exp__4 ', 'sqrt__2 ', 'sqrt__aew ', 'sqrt__as ', 'sqrt__sw2 ', 'sw ', 'sw2 ', 'sw__exp__2 ', 'v ', 'v__exp__2 ', 'yb ', 'ym ', 'yt ', 'ytau ']
+        self.assertEqual(alreadydefine, solution)
+        
 
 
       

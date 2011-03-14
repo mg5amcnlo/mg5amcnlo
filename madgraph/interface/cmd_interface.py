@@ -29,6 +29,7 @@ import sys
 import traceback
 import time
 
+
 # Optional Library (not present on all platform)
 try:
     import readline
@@ -207,6 +208,11 @@ class CmdExtended(cmd.Cmd):
         
         # execute the line command
         return line
+
+    def completenames(self, text, *ignored):
+        dotext = 'do_'+text
+        return [ '%s ' % a[3:] for a in self.get_names() if a.startswith(dotext)]
+
 
     def nice_error_handling(self, error, line):
         """ """ 
@@ -562,6 +568,13 @@ class HelpToCmd(object):
         logger.info("-- define a multiparticle")
         logger.info("   Example: define p = g u u~ c c~ d d~ s s~ b b~")
 
+    def help_restrict(self):
+        logger.info("syntax: restrict [model] param_card")
+        logger.info('   Suppress in the model all the interactions with zero')
+        logger.info('   couplings according to the param_card given in parameter.')
+        logger.info('   All zero parameter of the param_card are also suppress of')
+        logger.info('   the model.')
+        
     def help_history(self):
         logger.info("syntax: history [FILEPATH|clean|.] ")
         logger.info("   If FILEPATH is \'.\' and \'output\' is done,")
@@ -783,6 +796,11 @@ class CheckValidForCmd(object):
     
     def check_import(self, args):
         """check the validity of line"""
+ 
+        if '-modelname' in args:
+            if args[-1] != '-modelname':
+                args.remove('-modelname')
+                args.append('-modelname') 
         
         if not args or args[0] not in self._import_formats:
             self.help_import()
@@ -798,10 +816,7 @@ class CheckValidForCmd(object):
             raise self.InvalidCmd('PATH is mandatory in the current context\n' + \
                                   'Did you forget to run the \"output\" command')
                         
-        if '-modelname' in args:
-            if args[-1] != '-modelname':
-                args.remove('-modelname')
-                args.append('-modelname')
+
         
     def check_load(self, args):
         """ check the validity of the line"""
@@ -862,6 +877,32 @@ class CheckValidForCmd(object):
             text = 'No processes generated. Please generate a process first.'
             raise self.InvalidCmd(text)
 
+    def check_restrict(self,args):
+        """ check the format: restrict [model] param_card.dat"""
+        
+        if len(args) > 2:
+            self.help_restrict()
+            raise self.InvalidCmd, 'Wrong restrict format'
+        
+        if len(args) == 2:
+            if  args[0] != "model":
+                self.help_restrict()
+                raise self.InvalidCmd, 'Wrong restrict format'
+            else:
+                del args[0]
+        
+        if self._model_v4_path:
+            raise self.InvalidCmd, 'Operation not possible with v4 model. ' + \
+                            'Please use a UFO model as a starting point'
+                            
+        if self._restrict_file:
+            raise MadGraph5Error, 'This model is already restricted to the ' + \
+                        'card %s. In order to always keep track ' % self._restrict_file + \
+                        'of model modifications. We forbids multiple restrictions files.'
+
+        if not os.path.isfile(args[0]):
+            raise self.InvalidCmd, 'path \"%s\" is not a file' % args[0]
+            
     def get_default_path(self):
         """Set self._export_dir to the default (\'auto\') path"""
         
@@ -909,7 +950,12 @@ class CheckValidForCmdWeb(CheckValidForCmd):
         syntax: draw FILEPATH [option=value]
         """
         raise self.WebRestriction('direct call to draw is forbidden on the web')
-      
+    
+    def check_check(self, args):
+        """ Not authorize for the Web"""
+        
+        raise self.WebRestriction('Check call is forbidden on the web')
+    
     def check_history(self, args):
         """check the validity of line
         No Path authorize for the Web"""
@@ -978,7 +1024,14 @@ class CompleteForCmd(CheckValidForCmd):
                             for f in list
                             if f.startswith(text)
                             ]
-        return completions
+        
+        def put_space(name): 
+            if name.endswith(' '): 
+                return name
+            else:
+                return '%s ' % name 
+            
+        return [put_space(name) for name in completions] 
 
     def path_completion(self, text, base_dir = None, only_dirs = False):
         """Propose completions of text to compose a valid path"""
@@ -1019,6 +1072,7 @@ class CompleteForCmd(CheckValidForCmd):
                        f.startswith(text) and not prefix.startswith('.')]
 
         return completion
+  
 
     def model_completion(self, text, process):
         """ complete the line with model information """
@@ -1096,7 +1150,21 @@ class CompleteForCmd(CheckValidForCmd):
             couplings = [c + "=" for c in self._couplings] + ['@','$','/','>']
         return self.list_completion(text, self._particle_names + \
                                     self._multiparticles.keys() + couplings)
+    
+    def complete_restrict(self, text, line, begidx, endidx):
+        "Complete the restrict command"
+    
+        args = split_arg(line[0:begidx])
         
+        if len(args) == 1 and text == 'model'[:len(text)]:
+            return ['model ']
+        
+        # Directory continuation
+        return self.path_completion(text,
+                                        os.path.join('.',*[a for a in args if a.endswith(os.path.sep)]),
+                                        only_dirs = False)
+            
+          
     def complete_check(self, text, line, begidx, endidx):
         "Complete the add command"
 
@@ -1266,7 +1334,7 @@ class CompleteForCmd(CheckValidForCmd):
         "Complete the import command"
 
         args=split_arg(line[0:begidx])
-
+        
         # Format
         if len(args) == 1:
             return self.list_completion(text, self._import_formats)
@@ -1274,15 +1342,44 @@ class CompleteForCmd(CheckValidForCmd):
         # Directory continuation
         if os.path.sep in args[-1] + text:
             if args[1].startswith('model'):
-                # Directory continuation
-                return self.path_completion(text, os.path.join('.',*[a for a in args \
-                                                                    if a.endswith(os.path.sep)]),
-                                                only_dirs = True)
+                model_list = self.path_completion(text,
+                                    os.path.join('.',*[a for a in args if \
+                                                      a.endswith(os.path.sep)]),
+                                    only_dirs = True)
+                all_name = []
+                for model_name in model_list:
+                    all_name += self.find_restrict_card(model_name)
+                return all_name 
             else:
                 return self.path_completion(text,
                                     os.path.join('.',*[a for a in args if \
                                                       a.endswith(os.path.sep)]))
 
+        # restriction continuation (for UFO)
+        if args[1] == 'model' and ('-' in args[-1] + text):
+            # deal with - in 2.7 as in 2.6
+            if sys.version_info[1] == 7:
+                prefix = '-'.join([part for part in text.split('-')[:-1]])+'-'
+                args.append(prefix)
+                text = text.split('-')[-1]
+            #model name
+            path = args[-1][:-1] # remove the final - for the model name
+            # find the different possibilities
+            all_name = self.find_restrict_card(path, no_restrict=False)
+            all_name += self.find_restrict_card(path, no_restrict=False,
+                                        base_dir=os.path.join(MG5DIR,'models'))
+
+            # select the possibility according to the current line            
+            all_name = [name.split('-')[-1] for name in  all_name ]
+            all_name = [name+' ' for name in  all_name if name.startswith(text)
+                                                       and name.strip() != text]
+            # adapt output for python2.7 (due to different splitting)
+            if sys.version_info[1] == 7:
+                all_name = [prefix + name for name in  all_name ]
+                
+            if all_name:
+                return all_name                  
+               
         # Model directory name if directory is not given
         if len(split_arg(line[0:begidx])) == 2:
             if args[1] == 'model':
@@ -1295,22 +1392,64 @@ class CompleteForCmd(CheckValidForCmd):
             else:
                 return []
                 
-            return [mod_name(name) for name in \
-                    self.path_completion(text,
+            model_list = [mod_name(name) for name in \
+                                            self.path_completion(text,
                                             os.path.join(MG5DIR,'models'),
                                             only_dirs = True) \
-                       if file_cond(name)]
-                                
+                                            if file_cond(name)]
+            
+            if args[1] == 'model_v4':
+                return model_list
+            else:
+                # need to update the  list with the possible restriction
+                all_name = []
+                for model_name in model_list:
+                    all_name += self.find_restrict_card(model_name, 
+                                        base_dir=os.path.join(MG5DIR,'models'))
+                return all_name                
 
         # Options
         if len(args) > 2 and args[1].startswith('model') and args[-1][0] != '-':
                 return ['-modelname']
+            
         if len(args) > 3 and args[1].startswith('model') and args[-1][0] == '-':
-                return ['modelname']
+                if sys.version_info[1] == 6:
+                    return ['modelname']
+                else: 
+                    return ['-modelname']
+    
+    def find_restrict_card(self, model_name, base_dir='./', no_restrict=True):
+        """find the restriction file associate to a given model"""
 
-  
+        # check if the model_name should be keeped as a possibility
+        if no_restrict:
+            output = [model_name]
+        else:
+            output = []
+        
+        # check that the model is a valid model
+        if not os.path.exists(os.path.join(base_dir, model_name, 'couplings.py')):
+            # not valid UFO model
+            return output
+        
+        if model_name.endswith(os.path.sep):
+            model_name = model_name[:-1]
+        
+        # look for _default and treat this case
+        if os.path.exists(os.path.join(base_dir, model_name, 'restrict_default.dat')):
+            output.append('%s-full' % model_name)
+        
+        # look for other restrict_file
+        for name in os.listdir(os.path.join(base_dir, model_name)):
+            if name.startswith('restrict_') and not name.endswith('default.dat') \
+                and name.endswith('.dat'):
+                tag = name[9:-4] #remove restrict and .dat
+                while model_name.endswith(os.path.sep):
+                    model_name = model_name[:-1]
+                output.append('%s-%s' % (model_name, tag))
 
-
+        # return
+        return output
     
 #===============================================================================
 # MadGraphCmd
@@ -1350,6 +1489,7 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
     _export_format = 'madevent'
     _mgme_dir = MG4DIR
     _comparisons = None
+    _restrict_file = None
     
     def __init__(self, mgme_dir = '', *completekey, **stdin):
         """ add a tracker of the history """
@@ -1507,8 +1647,8 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
         elif args[0] == 'interactions' and len(args) == 1:
             text = "Current model contains %i interactions\n" % \
                     len(self._curr_model['interactions'])
-            for inter in self._curr_model['interactions']:
-                text += str(inter['id']) + ':'
+            for i, inter in enumerate(self._curr_model['interactions']):
+                text += str(i+1) + ':'
                 for part in inter['particles']:
                     if part['is_part']:
                         text += part['name']
@@ -2125,20 +2265,16 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
         
         if args[0].startswith('model'):
             self._model_v4_path = None
+            self._restrict_file = None
             if args[0].endswith('_v4'):
                 self._curr_model, self._model_v4_path = \
                                  import_v4.import_model(args[1], self._mgme_dir)
                 self._curr_fortran_model = \
                       helas_call_writers.FortranHelasCallWriter(\
-                                                             self._curr_model)
+                                                             self._curr_model)                
             else:
-                self._curr_model = import_ufo.import_model(args[1])
-                self._curr_fortran_model = \
-                      helas_call_writers.FortranUFOHelasCallWriter(\
-                                                             self._curr_model)
-                self._curr_cpp_model = \
-                      helas_call_writers.CPPUFOHelasCallWriter(\
-                                                             self._curr_model)
+                self.import_ufo_model(args[1])
+
             if '-modelname' not in args:
                 self._curr_model.pass_particles_name_in_mg_default()
 
@@ -2154,7 +2290,7 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
             if not os.path.isfile(args[1]):
                 raise MadGraph5Error("Path %s is not a valid pathname" % args[1])
             else:
-                # Check the status of export and try to use file position is no
+                # Check the status of export and try to use file position if no
                 #self._export dir are define
                 self.check_for_export_dir(args[1])
                 # Execute the card
@@ -2179,7 +2315,16 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
  
             #convert and excecute the card
             self.import_mg4_proc_card(proc_card)
-                                     
+    
+    def import_ufo_model(self, model_name):
+        """ import the UFO model """
+        
+        self._curr_model = import_ufo.import_model(model_name)
+        self._curr_fortran_model = \
+                helas_call_writers.FortranUFOHelasCallWriter(self._curr_model)
+        self._curr_cpp_model = \
+                helas_call_writers.CPPUFOHelasCallWriter(self._curr_model)
+                
     def process_model(self):
         """Set variables _particle_names and _couplings for tab
         completion, defined multiparticles"""
@@ -2416,9 +2561,11 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
         if self._export_format == 'madevent':
             export_v4.copy_v4template(self._mgme_dir, self._export_dir,
                                       not noclean)
+            export_v4.cp_model_restriction(self._restrict_file, self._export_dir)
         elif self._export_format == 'standalone':
             export_v4.copy_v4standalone(self._mgme_dir, self._export_dir,
                                         not noclean)
+            export_v4.cp_model_restriction(self._restrict_file, self._export_dir)
         elif self._export_format == 'standalone_cpp':
             export_cpp.setup_cpp_standalone_dir(self._export_dir, self._curr_model)
         elif not os.path.isdir(self._export_dir):
@@ -2621,6 +2768,20 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
             logger.info('Please see ' + self._export_dir + '/README')
             logger.info('for information about how to generate events from this process.')
 
+    def do_restrict(self, line):
+        """ from a param_card.dat remove all zero interactions 
+            and all zero external parameter."""
+        
+        args = split_arg(line)
+        # Check args validity
+        self.check_restrict(args)
+        
+        
+        self._curr_model = import_ufo.RestrictModel(self._curr_model)
+        self._curr_model.restrict_model(args[0])
+        self._restrict_file = args[0]
+        
+
     def do_help(self, line):
         """ propose some usefull possible action """
         
@@ -2765,6 +2926,7 @@ _draw_parser.add_option("", "--add_gap", default=0, type='float', \
 
 if __name__ == '__main__':
     
+    print 'pass here'
     run_option = sys.argv
     if len(run_option) > 1:
         # The first argument of sys.argv is the name of the program

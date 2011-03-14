@@ -263,7 +263,7 @@ class Particle(PhysicsObject):
             if not isinstance(value, str):
                 raise self.PhysicsObjectError, \
                     "Line type %s is not a string" % repr(value)
-            if value not in ['dashed', 'straight', 'wavy', 'curly', 'double']:
+            if value not in ['dashed', 'straight', 'wavy', 'curly', 'double','swavy','scurly']:
                 raise self.PhysicsObjectError, \
                    "Line type %s is unknown" % value
 
@@ -872,9 +872,11 @@ class Model(PhysicsObject):
 
             lhacode=' '.join(['%3s' % key for key in param.lhacode])
             if lhablock == 'DECAY':
-                return 'DECAY %s %e # %s' % (lhacode, param.value, param.name)
+                assert param.value.imag == 0
+                return 'DECAY %s %e # %s' % (lhacode, param.value.real, param.name)
             else:
-                return "  %s %e # %s" % (lhacode, param.value, param.name ) 
+                assert param.value.imag == 0 
+                return "  %s %e # %s" % (lhacode, param.value.real, param.name ) 
 
         if not self.get('parameters'):
             raise self.PhysicsObjectError,\
