@@ -165,6 +165,7 @@ class UFOMG5Converter(object):
         self.model = base_objects.Model()
         self.model.set('particles', self.particles)
         self.model.set('interactions', self.interactions)
+        self.conservecharge = set(['charge'])
         
         self.ufomodel = model
         
@@ -190,6 +191,7 @@ class UFOMG5Converter(object):
         for interaction_info in self.ufomodel.all_vertices:
             self.add_interaction(interaction_info)
         
+        self.model.set('conserved_charge', self.conservecharge)
         return self.model
         
     
@@ -230,6 +232,10 @@ class UFOMG5Converter(object):
                     particle.set(key, str(value))
                 else:
                     particle.set(key, value)
+            elif key not in ('GhostNumber','selfconjugate','goldstoneboson'):
+                # add charge -we will check later if those are conserve 
+                self.conservecharge.add(key)
+                particle.set(key,value, force=True)
             
         assert(12 == nb_property) #basic check that all the information is there         
         
@@ -239,7 +245,6 @@ class UFOMG5Converter(object):
             
         # Add the particles to the list
         self.particles.append(particle)
-
 
     def add_interaction(self, interaction_info):
         """add an interaction in the MG5 model. interaction_info is the 
@@ -283,6 +288,17 @@ class UFOMG5Converter(object):
                     # add to the interactions
                     self.interactions.append(interaction)
 
+        # check if this interaction conserve the charge defined
+        for charge in list(self.conservecharge): #duplicate to allow modification
+            total = 0
+            for part in interaction_info.particles:
+                try:
+                    total += getattr(part, charge)
+                except AttributeError:
+                    pass
+            if abs(total) > 1e-12:
+                logger.info('The model has interaction violating the charge: %s' % charge)
+                self.conservecharge.discard(charge)
     
     _pat_T = re.compile(r'T\((?P<first>\d*),(?P<second>\d*)\)')
     _pat_id = re.compile(r'Identity\((?P<first>\d*),(?P<second>\d*)\)')

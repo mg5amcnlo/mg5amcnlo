@@ -36,7 +36,7 @@ try:
 except:
     readline = None
     
-from madgraph import MG4DIR, MG5DIR, MadGraph5Error
+from madgraph import MG4DIR, MG5DIR, MadGraph5Error, InvalidCmd
 
 import madgraph.core.base_objects as base_objects
 import madgraph.core.diagram_generation as diagram_generation
@@ -605,9 +605,6 @@ class HelpToCmd(object):
 class CheckValidForCmd(object):
     """ The Series of help routine for the MadGraphCmd"""
     
-    class InvalidCmd(MadGraph5Error):
-        """a class for the invalid syntax call"""
-    
     class RWError(MadGraph5Error):
         """a class for read/write errors"""
     
@@ -618,10 +615,10 @@ class CheckValidForCmd(object):
     
         if len(args) < 2:
             self.help_add()
-            raise self.InvalidCmd('\"add\" requires two arguments')
+            raise InvalidCmd('\"add\" requires two arguments')
         
         if args[0] != 'process':
-            raise self.InvalidCmd('\"add\" requires the argument \"process\"')
+            raise InvalidCmd('\"add\" requires the argument \"process\"')
 
         if not self._curr_model:
             raise MadGraph5Error, \
@@ -637,17 +634,17 @@ class CheckValidForCmd(object):
         
         if len(args) < 2:
             self.help_define()
-            raise self.InvalidCmd('\"define\" command requires at least two arguments')
+            raise InvalidCmd('\"define\" command requires at least two arguments')
 
         if args[1] == '=':
             del args[1]
             if len(args) < 2:
                 self.help_define()
-                raise self.InvalidCmd('\"define\" command requires at least one particles name after \"=\"')
+                raise InvalidCmd('\"define\" command requires at least one particles name after \"=\"')
         
         if '=' in args:
             self.help_define()
-            raise self.InvalidCmd('\"define\" command requires symbols \"=\" at the second position')
+            raise InvalidCmd('\"define\" command requires symbols \"=\" at the second position')
         
         if not self._curr_model:
             logger.info('No model currently active. Try with the Standard Model')
@@ -664,15 +661,15 @@ class CheckValidForCmd(object):
             
         if len(args) < 1 or args[0] not in self._display_opts:
             self.help_display()
-            raise self.InvalidCmd
+            raise InvalidCmd
 
         if not self._curr_model:
-            raise self.InvalidCmd("No model currently active, please import a model!")
+            raise InvalidCmd("No model currently active, please import a model!")
 
         if args[0] in ['processes', 'diagrams'] and not self._curr_amps:
-            raise self.InvalidCmd("No process generated, please generate a process!")
+            raise InvalidCmd("No process generated, please generate a process!")
         if args[0] == 'checks' and not self._comparisons:
-            raise self.InvalidCmd("No check results to display.")
+            raise InvalidCmd("No check results to display.")
 
 
     def check_draw(self, args):
@@ -682,13 +679,13 @@ class CheckValidForCmd(object):
         
         if len(args) < 1:
             self.help_draw()
-            raise self.InvalidCmd('\"draw\" command requires a directory path')
+            raise InvalidCmd('\"draw\" command requires a directory path')
         
         if not self._curr_amps:
-            raise self.InvalidCmd("No process generated, please generate a process!")
+            raise InvalidCmd("No process generated, please generate a process!")
             
         if not os.path.isdir(args[0]):
-            raise self.InvalidCmd( "%s is not a valid directory for export file" % args[0])
+            raise InvalidCmd( "%s is not a valid directory for export file" % args[0])
             
     def check_check(self, args):
         """check the validity of args"""
@@ -698,12 +695,12 @@ class CheckValidForCmd(object):
             self.do_import('model sm')
 
         if self._model_v4_path:
-            raise self.InvalidCmd(\
+            raise InvalidCmd(\
                 "\"check\" not possible for v4 models")
 
         if len(args) < 2:
             self.help_check()
-            raise self.InvalidCmd("\"check\" requires an argument and a process.")
+            raise InvalidCmd("\"check\" requires an argument and a process.")
 
         param_card = None
         if os.path.isfile(args[1]):
@@ -711,7 +708,7 @@ class CheckValidForCmd(object):
 
         if args[0] not in self._check_opts:
             self.help_check()
-            raise self.InvalidCmd("\"check\" called with wrong argument")
+            raise InvalidCmd("\"check\" called with wrong argument")
         
         if any([',' in elem for elem in args]):
             raise MadGraph5Error('Decay chains not allowed in check')
@@ -729,7 +726,7 @@ class CheckValidForCmd(object):
 
         if len(args) < 1:
             self.help_generate()
-            raise self.InvalidCmd("\"generate\" requires a process.")
+            raise InvalidCmd("\"generate\" requires a process.")
 
         self.check_process_format(" ".join(args))
  
@@ -740,7 +737,7 @@ class CheckValidForCmd(object):
         
         #check balance of paranthesis
         if process.count('(') != process.count(')'):
-            raise self.InvalidCmd('Invalid Format, no balance between open and close parenthesis')
+            raise InvalidCmd('Invalid Format, no balance between open and close parenthesis')
         #remove parenthesis for fututre introspection
         process = process.replace('(',' ').replace(')',' ')
         
@@ -753,7 +750,7 @@ class CheckValidForCmd(object):
         
         # request that we have one or two > in the process
         if process.count('>') not in [1,2]:
-            raise self.InvalidCmd(
+            raise InvalidCmd(
                'wrong format for \"%s\" this part requires one or two symbols \'>\', %s found' 
                % (process, process.count('>')))
         
@@ -761,16 +758,16 @@ class CheckValidForCmd(object):
         particles_parts = process.split('>')
         for particles in particles_parts:
             if re.match(r'^\s*$', particles):
-                raise self.InvalidCmd(
+                raise InvalidCmd(
                 '\"%s\" is a wrong process format. Please try again' % process)  
         
         # '/' and '$' sould be used only after the process definition
         for particles in particles_parts[:-1]:
             if re.search('\D/', particles):
-                raise self.InvalidCmd(
+                raise InvalidCmd(
                 'wrong process format: restriction should be place after the final states')
             if re.search('\D\$', particles):
-                raise self.InvalidCmd(
+                raise InvalidCmd(
                 'wrong process format: restriction should be place after the final states')
         
     
@@ -780,19 +777,19 @@ class CheckValidForCmd(object):
         
         if len(args) > 1:
             self.help_history()
-            raise self.InvalidCmd('\"history\" command takes at most one argument')
+            raise InvalidCmd('\"history\" command takes at most one argument')
         
         if not len(args):
             return
         
         if args[0] =='.':
             if not self._export_dir:
-                raise self.InvalidCmd("No default directory is defined for \'.\' option")
+                raise InvalidCmd("No default directory is defined for \'.\' option")
         elif args[0] != 'clean':
                 dirpath = os.path.dirname(args[0])
                 if dirpath and not os.path.exists(dirpath) or \
                        os.path.isdir(args[0]):
-                    raise self.InvalidCmd("invalid path %s " % dirpath)
+                    raise InvalidCmd("invalid path %s " % dirpath)
     
     def check_import(self, args):
         """check the validity of line"""
@@ -804,16 +801,16 @@ class CheckValidForCmd(object):
         
         if not args or args[0] not in self._import_formats:
             self.help_import()
-            raise self.InvalidCmd('wrong \"import\" format')
+            raise InvalidCmd('wrong \"import\" format')
         
         if args[0].startswith('model') and len(args) != 2:
             if not (len(args) == 3 and args[-1] == '-modelname'):
                 self.help_import()
-                raise self.InvalidCmd('incorrect number of arguments')
+                raise InvalidCmd('incorrect number of arguments')
         
         if args[0] == 'proc_v4' and len(args) != 2 and not self._export_dir:
             self.help_import()
-            raise self.InvalidCmd('PATH is mandatory in the current context\n' + \
+            raise InvalidCmd('PATH is mandatory in the current context\n' + \
                                   'Did you forget to run the \"output\" command')
                         
 
@@ -823,21 +820,21 @@ class CheckValidForCmd(object):
         
         if len(args) != 2 or args[0] not in self._save_opts:
             self.help_load()
-            raise self.InvalidCmd('wrong \"load\" format')
+            raise InvalidCmd('wrong \"load\" format')
             
         
     def check_save(self, args):
         """ check the validity of the line"""
         if len(args) != 2 or args[0] not in self._save_opts:
             self.help_save()
-            raise self.InvalidCmd('wrong \"save\" format')
+            raise InvalidCmd('wrong \"save\" format')
     
     def check_output(self, args):
         """ check the validity of the line"""
         
         if not self._curr_model:
             text = 'No model found. Please import a model first and then retry.'
-            raise self.InvalidCmd(text)
+            raise InvalidCmd(text)
 
         if args and args[0] in self._export_formats:
             self._export_format = args.pop(0)
@@ -849,7 +846,7 @@ class CheckValidForCmd(object):
             text += " output for " + args[0] + ", you have to use a UFO model.\n"
             text += " Those model can be imported with mg5> import model NAME."
             logger.warning(text)
-            raise self.InvalidCmd('')
+            raise InvalidCmd('')
 
         if args and args[0][0] != '-':
             # This is a path
@@ -875,7 +872,7 @@ class CheckValidForCmd(object):
 
         if not self._curr_amps and self._export_format != "pythia8_model":
             text = 'No processes generated. Please generate a process first.'
-            raise self.InvalidCmd(text)
+            raise InvalidCmd(text)
 
     def check_restrict(self,args):
         """ check the format: restrict [model] param_card.dat"""
@@ -931,7 +928,7 @@ class CheckValidForCmd(object):
                 self._export_dir = auto_path(i) 
                 break
         if not self._export_dir:
-            raise self.InvalidCmd('Can\'t use auto path,' + \
+            raise InvalidCmd('Can\'t use auto path,' + \
                                   'more than 500 dirs already')    
             
         
@@ -1639,7 +1636,7 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
                 else:
                     particle = self._curr_model['particles'].find_name(arg)
                 if not particle:
-                    raise self.InvalidCmd, 'no particle %s in current model' % arg
+                    raise InvalidCmd, 'no particle %s in current model' % arg
 
                 print "Particle %s has the following properties:" % particle.get_name()
                 print str(particle)
@@ -1663,7 +1660,7 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
         elif args[0] == 'interactions':
             for arg in args[1:]:
                 if int(arg) > len(self._curr_model['interactions']):
-                    raise self.InvalidCmd, 'no interaction %s in current model' % arg
+                    raise InvalidCmd, 'no interaction %s in current model' % arg
                 if int(arg) == 0:
                     print 'Special interactions which identify two particles'
                 else:
@@ -1718,21 +1715,21 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
                 ufomodel = ufomodels.load_model(self._curr_model.get('name'))
                 print eval('ufomodel.couplings.%s.nice_string()'%args[1])
             except:
-                raise self.InvalidCmd, 'no couplings %s in current model' % args[1]
+                raise InvalidCmd, 'no couplings %s in current model' % args[1]
         
         elif args[0] == 'lorentz':
             if self._model_v4_path:
                 print 'No lorentz information available in V4 model'
                 return
             elif len(args) == 1: 
-                raise self.InvalidCmd,\
+                raise InvalidCmd,\
                      'display lorentz require an argument: the name of the lorentz structure.'
                 return
             try:
                 ufomodel = ufomodels.load_model(self._curr_model.get('name'))
                 print eval('ufomodel.lorentz.%s.nice_string()'%args[1])
             except:
-                raise self.InvalidCmd, 'no lorentz %s in current model' % args[1]
+                raise InvalidCmd, 'no lorentz %s in current model' % args[1]
             
         elif args[0] == 'checks':
             comparisons = self._comparisons[0]
@@ -1957,7 +1954,7 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
         if not line.count('>') in [1,2]:
             self.do_help('generate')
             print
-            raise self.InvalidCmd('Wrong use of \">\" special character.')
+            raise InvalidCmd('Wrong use of \">\" special character.')
         
 
         # Perform sanity modifications on the lines:
@@ -2524,13 +2521,13 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
                 if save_load_object.save_to_file(args[1], self._curr_model):
                     logger.info('Saved model to file %s' % args[1])
             else:
-                raise self.InvalidCmd('No model to save!')
+                raise InvalidCmd('No model to save!')
         elif args[0] == 'processes':
             if self._curr_amps:
                 if save_load_object.save_to_file(args[1], self._curr_amps):
                     logger.info('Saved processes to file %s' % args[1])
             else:
-                raise self.InvalidCmd('No processes to save!')
+                raise InvalidCmd('No processes to save!')
             
     def do_output(self, line):
         """Initialize a new Template or reinitialize one"""
