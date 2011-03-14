@@ -646,13 +646,19 @@ class AmplitudeList(base_objects.PhysicsObjectList):
 
         return isinstance(obj, Amplitude)
     
-    def assign_uid(self):
+    def assign_uid(self, start=0):
         """ assign a unique identification to all process of the Amplitude 
             present in the AmplitudeList"""
-        
-        for i, amp in enumerate(self):
-            amp['process'].set('uid', i)
-        
+
+        i = 0
+        for amp in self:
+            i += 1
+            if 'process' in amp.keys():
+                amp['process'].set('uid', i)
+            else:
+                i = amp['amplitudes'].assign_uid(i)
+        return i
+
 #===============================================================================
 # DecayChainAmplitude
 #===============================================================================

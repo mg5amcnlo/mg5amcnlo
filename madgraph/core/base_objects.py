@@ -1421,7 +1421,7 @@ class Process(PhysicsObject):
         if name in ['id', 'uid']:
             if not isinstance(value, int):
                 raise self.PhysicsObjectError, \
-                    "Process id %s is not an integer" % repr(value)
+                    "Process %s %s is not an integer" % (name, repr(value))
 
         if name == 'required_s_channels':
             if not isinstance(value, list):

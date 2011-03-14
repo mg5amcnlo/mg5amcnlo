@@ -25,7 +25,7 @@ import madgraph.interface.cmd_interface as Cmd
 _file_path = os.path.split(os.path.dirname(os.path.realpath(__file__)))[0]
 _pickle_path =os.path.join(_file_path, 'input_files')
 
-from madgraph import MG4DIR, MG5DIR, MadGraph5Error
+from madgraph import MG4DIR, MG5DIR, MadGraph5Error, InvalidCmd
 
 #===============================================================================
 # TestCmd
@@ -214,9 +214,9 @@ class TestCmdShell2(unittest.TestCase):
     def test_invalid_operations_for_add(self):
         """Test that errors are raised appropriately for add"""
 
-        self.assertRaises(Cmd.CmdExtended.InvalidCmd,
+        self.assertRaises(InvalidCmd,
                           self.do, 'add process')
-        self.assertRaises(Cmd.CmdExtended.InvalidCmd,
+        self.assertRaises(InvalidCmd,
                           self.do, 'add wrong wrong')
 
     def test_invalid_operations_for_generate(self):
@@ -236,7 +236,7 @@ class TestCmdShell2(unittest.TestCase):
     def test_invalid_operations_for_output(self):
         """Test that errors are raised appropriately for output"""
 
-        self.assertRaises(Cmd.CmdExtended.InvalidCmd,
+        self.assertRaises(InvalidCmd,
                           self.do, 'output')
         self.do("generate e+ e- > e+ e- / h")
 
