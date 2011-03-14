@@ -17,13 +17,11 @@
 """
 
 import atexit
-import cmd
 import logging
 import optparse
 import os
 import pydoc
 import re
-import signal
 import subprocess
 import sys
 import traceback
@@ -53,8 +51,9 @@ import madgraph.iolibs.import_v4 as import_v4
 import madgraph.iolibs.misc as misc
 import madgraph.iolibs.save_load_object as save_load_object
 
+import madgraph.interface.extended_cmd as cmd
 import madgraph.interface.tutorial_text as tutorial_text
-
+import madgraph.interface.launch_ext_program as launch_ext
 import madgraph.various.process_checks as process_checks
 
 import models as ufomodels
@@ -70,13 +69,11 @@ logger_tuto = logging.getLogger('tutorial') # -> stdout include instruction in
 # CmdExtended
 #===============================================================================
 class CmdExtended(cmd.Cmd):
-    """Extension of the cmd.Cmd command line.
-    This extensions supports line breaking, history, comments,
-    internal call to cmdline,..."""
+    """Particularisation of the cmd command for MG5"""
 
     #suggested list of command
     next_possibility = {
-        'mg5_start': ['import model ModelName', 'import command PATH',
+        'start': ['import model ModelName', 'import command PATH',
                       'import proc_v4 PATH', 'tutorial'],
         'import model' : ['generate PROCESS','define MULTIPART PART1 PART2 ...', 
                                    'display particles', 'display interactions'],
@@ -84,20 +81,29 @@ class CmdExtended(cmd.Cmd):
                                                     'display multiparticles'],
         'generate': ['add process PROCESS','output [OUTPUT_TYPE] [PATH]','draw .'],
         'add process':['output [OUTPUT_TYPE] [PATH]', 'display processes'],
-        'output':['history PATH', 'exit'],
+        'output':['launch','history PATH', 'exit'],
         'display': ['generate PROCESS', 'add process PROCESS', 'output [OUTPUT_TYPE] [PATH]'],
         'draw': ['shell CMD'],
-        'export':['history PATH', 'exit'],
-        'import proc_v4' : ['exit'],
+        'import proc_v4' : ['launch','exit'],
         'tutorial': ['generate PROCESS', 'import model MODEL', 'help TOPIC']
     }
-        
+    
+    debug_output = 'MG5_debug'
+    error_debug = 'Please report this bug on https://bugs.launchpad.net/madgraph5\n'
+    error_debug += 'More information is found in \'%s\'.\n' 
+    error_debug += 'Please attach this file to your report.'
+    
+    keyboard_stop_msg = """stopping all operation
+            in order to quit mg5 please enter exit"""
+    
+    class InvalidCmd(MadGraph5Error):
+        pass
+    
     def __init__(self, *arg, **opt):
         """Init history and line continuation"""
         
         # If possible, build an info line with current version number 
         # and date, from the VERSION text file
-
         info = misc.get_pkg_info()
         info_line = ""
 
@@ -163,133 +169,7 @@ class CmdExtended(cmd.Cmd):
         "*                                                          *\n" + \
         "************************************************************")
 
-        self.log = True
-        self.history = []
-        self.save_line = ''
         cmd.Cmd.__init__(self, *arg, **opt)
-        self.__initpos = os.path.abspath(os.getcwd())
-        
-    def precmd(self, line):
-        """ A suite of additional function needed for in the cmd
-        this implement history, line breaking, comment treatment,...
-        """
-        
-        if not line:
-            return line
-        line = line.lstrip()
-
-        # Update the history of this suite of command,
-        # except for useless commands (empty history and help calls)
-        if line != "history" and \
-            not line.startswith('help') and \
-            not line.startswith('#*'):
-            self.history.append(line)
-
-        # Check if we are continuing a line:
-        if self.save_line:
-            line = self.save_line + line 
-            self.save_line = ''
-        
-        # Check if the line is complete
-        if line.endswith('\\'):
-            self.save_line = line[:-1]
-            return '' # do nothing   
-        
-        # Remove comment
-        if '#' in line:
-            line = line.split('#')[0]
-
-        # Deal with line splitting
-        if ';' in line and not (line.startswith('!') or line.startswith('shell')):
-            for subline in line.split(';'):
-                stop = self.onecmd(subline)
-                stop = self.postcmd(stop, subline)
-            return ''
-        
-        # execute the line command
-        return line
-
-    def completenames(self, text, *ignored):
-        dotext = 'do_'+text
-        return [ '%s ' % a[3:] for a in self.get_names() if a.startswith(dotext)]
-
-
-    def nice_error_handling(self, error, line):
-        """ """ 
-        # Make sure that we are at the initial position
-        os.chdir(self.__initpos)
-        # Create the debug files
-        self.log = False
-        cmd.Cmd.onecmd(self, 'history MG5_debug')
-        debug_file = open('MG5_debug', 'a')
-        traceback.print_exc(file=debug_file)
-        # Create a nice error output
-        if self.history and line == self.history[-1]:
-            error_text = 'Command \"%s\" interrupted with error:\n' % line
-        elif self.history:
-            error_text = 'Command \"%s\" interrupted in sub-command:\n' %line
-            error_text += '\"%s\" with error:\n' % self.history[-1]
-        else:
-            error_text = ''
-        error_text += '%s : %s\n' % (error.__class__.__name__, str(error).replace('\n','\n\t'))
-        error_text += 'Please report this bug on https://bugs.launchpad.net/madgraph5\n'
-        error_text += 'More information is found in \'%s\'.\n' % \
-                        os.path.realpath("MG5_debug")
-        error_text += 'Please attach this file to your report.'
-        logger_stderr.critical(error_text)
-        #stop the execution if on a non interactive mode
-        if self.use_rawinput == False:
-            sys.exit('Exit on error')
-        return False
-
-    def nice_user_error(self, error, line):
-        # Make sure that we are at the initial position
-        os.chdir(self.__initpos)
-        if line == self.history[-1]:
-            error_text = 'Command \"%s\" interrupted with error:\n' % line
-        else:
-            error_text = 'Command \"%s\" interrupted in sub-command:\n' %line
-            error_text += '\"%s\" with error:\n' % self.history[-1] 
-        error_text += '%s : %s' % (error.__class__.__name__, str(error).replace('\n','\n\t'))
-        logger_stderr.error(error_text)
-        #stop the execution if on a non interactive mode
-        if self.use_rawinput == False:
-            sys.exit()
-        # Remove failed command from history
-        self.history.pop()
-        return False
-
-    
-    def onecmd(self, line):
-        """catch all error and stop properly command accordingly"""
-        
-        try:
-            cmd.Cmd.onecmd(self, line)
-        except MadGraph5Error as error:
-            if __debug__:
-                self.nice_error_handling(error, line)
-            else:
-                self.nice_user_error(error, line)
-        except Exception as error:
-            self.nice_error_handling(error, line)
-            
-    def exec_cmd(self, line):
-        """for third party call, call the line with pre and postfix treatment"""
-
-        logger.info(line)
-        line = self.precmd(line)
-        stop = cmd.Cmd.onecmd(self, line)
-        stop = self.postcmd(stop, line)
-        return stop      
-
-    def run_cmd(self, line):
-        """for third party call, call the line with pre and postfix treatment"""
-        
-        logger.info(line)
-        line = self.precmd(line)
-        stop = self.onecmd(line)
-        stop = self.postcmd(stop, line)
-        return stop 
     
     def postcmd(self,stop, line):
         """ finishing a command
@@ -320,95 +200,14 @@ class CmdExtended(cmd.Cmd):
             except:
                 pass
             
-
-
-    def emptyline(self):
-        """If empty line, do nothing. Default is repeat previous command."""
-        pass
-    
-    def default(self, line):
-        """Default action if line is not recognized"""
-
-        # Faulty command
-        logger.warning("Command \"%s\" not recognized, please try again" % \
-                                                                line.split()[0])
-    # Quit
-    def do_quit(self, line):
-        sys.exit(1)
-        
-    do_exit = do_quit
-
-    # Aliases
-    do_EOF = do_quit
-    do_exit = do_quit
-
-    def do_help(self, line):
-        """ propose some usefull possible action """
-        
-        cmd.Cmd.do_help(self,line)
-        
-        # if not basic help -> simple call is enough    
-        if line:
-            return
-
-        if len(self.history) == 0:
-            last_action_2 = last_action = 'mg5_start'
-        else:
-            last_action_2 = last_action = 'none'
-        
-        pos = 0
-        authorize = self.next_possibility.keys() 
-        while last_action_2  not in authorize and last_action not in authorize:
-            pos += 1
-            if pos > len(self.history):
-                last_action_2 = last_action = 'mg5_start'
-                break
-            
-            args = self.history[-1 * pos].split()
-            last_action = args[0]
-            if len(args)>1: 
-                last_action_2 = '%s %s' % (last_action, args[1])
-            else: 
-                last_action_2 = 'none'
-        
-        print 'Contextual Help'
-        print '==============='
-        if last_action_2 in authorize:
-            options = self.next_possibility[last_action_2]
-        elif last_action in authorize:
-            options = self.next_possibility[last_action]
-        
-        text = 'The following command(s) may be useful in order to continue.\n'
-        for option in options:
-            text+='\t %s \n' % option      
-        print text
-
-
     def timed_input(self, question, default, timeout=None):
         """ a question with a maximal time to answer take default otherwise"""
-        class TimeOutError(Exception):
-            """Class for run-time error"""
-            pass
-        def handle_alarm(signum, frame): 
-            raise TimeOutError
-        if timeout is None:
+        
+        if not timeout:
             timeout = self.timeout
-        signal.signal(signal.SIGALRM, handle_alarm)
-        signal.alarm(timeout)
-        if timeout:
-            question += '[%ss to answer] ' % timeout
-        try:
-            result = raw_input(question)
-        except TimeOutError:
-            print default
-            return default
-        finally:
-            signal.alarm(0)
-        return result
-
-
-
-
+        
+        return misc.timed_input(question, default, timeout) 
+    
 
 #===============================================================================
 # Helper function
@@ -479,6 +278,10 @@ class HelpToCmd(object):
         logger.info("   particles/interactions to receive more details information.")
         logger.info("   example display particles e+.")
         logger.info("   For \"checks\", can specify only to see failed checks.")
+
+    def help_launch(self):
+        """help for launch command"""
+        _launch_parser.print_help()
 
     def help_tutorial(self):
         logger.info("syntax: tutorial [" + "|".join(self._tutorial_opts) + "]")
@@ -813,7 +616,62 @@ class CheckValidForCmd(object):
             raise InvalidCmd('PATH is mandatory in the current context\n' + \
                                   'Did you forget to run the \"output\" command')
                         
+                
+    def check_launch(self, args, options):
+        """check the validity of the line"""
+        # modify args in order to be MODE DIR
+        # mode being either standalone or madevent
+        if not( 0 <= int(options.cluster) <= 2):
+            return self.InvalidCmd, 'cluster mode should be between 0 and 2'
+        
+        if not args:
+            if self._done_export:
+                args.append(self._done_export[1])
+                args.append(self._done_export[0])
+                return
+            else:
+                self.help_launch()
+                raise self.InvalidCmd, \
+                       'Impossible to use default location: No output command runned'
+        
+        if len(args) != 1:
+            self.help_launch()
+            return self.InvalidCmd, 'Invalid Syntax: Too many argument'
+        
+        # search for a valid path
+        if os.path.sep in args[0] and os.path.isdir(args[0]):
+            path = args[0]
+        elif os.path.isdir(os.path.join(MG5DIR,args[0])):
+            path = os.path.join(MG5DIR,args[0])
+        elif  MG4DIR and os.path.isdir(os.path.join(MG4DIR,args[0])):
+            path = os.path.join(MG4DIR,args[0])
+        elif os.path.isdir(args[0]):
+            path = args[0]
+        else:    
+            raise self.InvalidCmd, '%s is not a valid directory' % args[0]
+            
+        mode = self.find_output_type(path)
+        args[0] = mode
+        args.append(path)
+        
+    
+    def find_output_type(self, path):
+        """ identify the type of output of a given directory:
+        valid output: madevent/standalone/standalone_cpp"""
+        
+        card_path = os.path.join(path,'Cards')
+        bin_path = os.path.join(path,'bin')
+        subproc_path = os.path.join(path,'SubProcesses')
+        
+        if not os.path.isdir(card_path) or not os.path.isdir(subproc_path):
+            raise self.InvalidCmd, '%s : Not a valid directory' % path
 
+        if not os.path.isdir(bin_path):
+            return 'standalone_cpp'
+        elif os.path.isfile(os.path.join(bin_path,'generate_events')):
+            return 'madevent'
+        else:
+            return 'standalone'
         
     def check_load(self, args):
         """ check the validity of the line"""
@@ -1030,46 +888,6 @@ class CompleteForCmd(CheckValidForCmd):
             
         return [put_space(name) for name in completions] 
 
-    def path_completion(self, text, base_dir = None, only_dirs = False):
-        """Propose completions of text to compose a valid path"""
-
-        if base_dir is None:
-            base_dir = os.getcwd()
-            
-        prefix, text = os.path.split(text)
-        base_dir = os.path.join(base_dir, prefix)
-        if prefix:
-            prefix += os.path.sep
-        
-
-        if only_dirs:
-            completion = [prefix + f
-                          for f in os.listdir(base_dir)
-                          if f.startswith(text) and \
-                          os.path.isdir(os.path.join(base_dir, f)) and \
-                          (not f.startswith('.') or text.startswith('.'))
-                          ]
-        else:
-            completion = [ prefix + f
-                          for f in os.listdir(base_dir)
-                          if f.startswith(text) and \
-                          os.path.isfile(os.path.join(base_dir, f)) and \
-                          (not f.startswith('.') or text.startswith('.'))
-                          ]
-
-            completion = completion + \
-                         [prefix + f + os.path.sep
-                          for f in os.listdir(base_dir)
-                          if f.startswith(text) and \
-                          os.path.isdir(os.path.join(base_dir, f)) and \
-                          (not f.startswith('.') or text.startswith('.'))
-                          ]
-
-        completion += [prefix + f for f in ['.'+os.path.sep, '..'+os.path.sep] if \
-                       f.startswith(text) and not prefix.startswith('.')]
-
-        return completion
-  
 
     def model_completion(self, text, process):
         """ complete the line with model information """
@@ -1235,6 +1053,33 @@ class CompleteForCmd(CheckValidForCmd):
                                 'non_propagating', '--']
             return self.list_completion(text, opt)
 
+    def complete_launch(self, text, line, begidx, endidx):
+        """ complete the launch command"""
+
+        args = split_arg(line[0:begidx])
+
+        # Directory continuation
+        if args[-1].endswith(os.path.sep):
+            return self.path_completion(text,
+                                        os.path.join('.',*[a for a in args if a.endswith(os.path.sep)]),
+                                        only_dirs = True)
+        # Format
+        if len(args) == 1:
+            complete = self.path_completion(text, '.', only_dirs = True)
+            if MG5DIR != os.path.realpath('.'):
+                complete += self.path_completion(text, MG5DIR, only_dirs = True, 
+                                                                 relative=False)
+            if MG4DIR and MG4DIR != os.path.realpath('.'):
+                complete += self.path_completion(text, MG4DIR, only_dirs = True,
+                                                                 relative=False)
+            return complete
+
+        #option
+        if len(args) >= 2:
+            opt = ['--cluster=', '--name=', '-f']
+            return self.list_completion(text, opt)
+
+
     def complete_load(self, text, line, begidx, endidx):
         "Complete the load command"
 
@@ -1339,14 +1184,10 @@ class CompleteForCmd(CheckValidForCmd):
         # Directory continuation
         if os.path.sep in args[-1] + text:
             if args[1].startswith('model'):
-                model_list = self.path_completion(text,
-                                    os.path.join('.',*[a for a in args if \
-                                                      a.endswith(os.path.sep)]),
-                                    only_dirs = True)
-                all_name = []
-                for model_name in model_list:
-                    all_name += self.find_restrict_card(model_name)
-                return all_name 
+                # Directory continuation
+                return self.path_completion(text, os.path.join('.',*[a for a in args \
+                                                   if a.endswith(os.path.sep)]),
+                                                only_dirs = True)
             else:
                 return self.path_completion(text,
                                     os.path.join('.',*[a for a in args if \
@@ -2375,7 +2216,7 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
         self.timeout, old_time_out = 20, self.timeout
         
         # Read the lines of the file and execute them
-        for line in CmdFile(filepath):
+        for line in cmd.CmdFile(filepath):
             #remove pointless spaces and \n
             line = line.replace('\n', '').strip()
             # execute the line
@@ -2441,6 +2282,32 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
         if len(path_split) > 2 and path_split[-2] == 'Cards':
             self._export_dir = os.path.sep.join(path_split[:-2])
                 
+    
+    def do_launch(self, line):
+        """Ask for editing the parameter and then 
+        Execute the code (madevent/standalone/...)
+        """
+        
+        args = split_arg(line)
+        # check argument validity and normalise argument
+        (options, args) = _launch_parser.parse_args(args)
+        self.check_launch(args, options)
+        options = options.__dict__
+        # args is now MODE PATH
+        
+        if args[0].startswith('standalone'):
+            ext_program = launch_ext.SALauncher(args[1], self.timeout, **options)
+        elif args[0] == 'madevent':
+            ext_program = launch_ext.MELauncher(args[1], self.timeout, **options)            
+        else:
+            raise self.InvalidCmd , '%s cannot be run from MG5 interface' % args[0]
+        
+        
+        
+        ext_program.run()
+        
+        
+        
     
     def do_load(self, line):
         """Load information from file"""
@@ -2576,7 +2443,7 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
         if nojpeg:
             options = '-nojpeg'
 
-        self.export(options)
+        self.export(options)        
 
     # Export a matrix element
     def export(self, line):
@@ -2764,6 +2631,7 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
         if self._export_format == 'madevent':
             logger.info('Please see ' + self._export_dir + '/README')
             logger.info('for information about how to generate events from this process.')
+            logger.info('You can also use the launch command.')
 
     def do_restrict(self, line):
         """ from a param_card.dat remove all zero interactions 
@@ -2859,38 +2727,7 @@ class MadGraphCmdShell(MadGraphCmd, CompleteForCmd, CheckValidForCmd):
             logging.info("running shell command: " + line)
             subprocess.call(line, shell=True)
 
-#===============================================================================
-# 
-#===============================================================================
-class CmdFile(file):
-    """ a class for command input file -in order to debug cmd \n problem"""
-    
-    def __init__(self, name, opt='rU'):
-        
-        file.__init__(self, name, opt)
-        self.text = file.read(self)
-        self.close()
-        self.lines = self.text.split('\n')
-    
-    def readline(self, *arg, **opt):
-        """readline method treating correctly a line whithout \n at the end
-           (add it)
-        """
-        if self.lines:
-            line = self.lines.pop(0)
-        else:
-            return ''
-        
-        if line.endswith('\n'):
-            return line
-        else:
-            return line + '\n'
-    
-    def __next__(self):
-        return self.lines.__next__()    
-    def __iter__(self):
-        return self.lines.__iter__()
-  
+
 #===============================================================================
 # Command Parser
 #=============================================================================== 
@@ -2914,7 +2751,18 @@ _draw_parser.add_option("", "--non_propagating", default=True, \
 _draw_parser.add_option("", "--add_gap", default=0, type='float', \
                           help="set the x-distance between external particles")  
 
-    
+# LAUNCH PROGRAM
+_launch_usage = "launch [DIRPATH] [options]\n" + \
+         "-- execute the madevent/standalone output present in DIRPATH\n" + \
+         "   By default DIRPATH is the latest created directory \n" + \
+         "   Example: launch PROC_SM_1 --name=run2 \n"
+_launch_parser = optparse.OptionParser(usage=_launch_usage)
+_launch_parser.add_option("-f", "--force", default=False, action='store_true',
+                                help="Use the card present in the directory in order to launch the different program")
+_launch_parser.add_option("-n", "--name", default='', type='str',
+                                help="Provide a name to the run (for madevent run)")
+_launch_parser.add_option("-c", "--cluster", default='0', type='str',
+                                help="Choose the cluster mode (0: single machine, 1: qsub cluster, 2: multi-core) (for madevent run)")
     
     
 #===============================================================================

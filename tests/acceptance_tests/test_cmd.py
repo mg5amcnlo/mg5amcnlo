@@ -214,9 +214,9 @@ class TestCmdShell2(unittest.TestCase):
     def test_invalid_operations_for_add(self):
         """Test that errors are raised appropriately for add"""
 
-        self.assertRaises(Cmd.CheckValidForCmd.InvalidCmd,
+        self.assertRaises(Cmd.CmdExtended.InvalidCmd,
                           self.do, 'add process')
-        self.assertRaises(Cmd.CheckValidForCmd.InvalidCmd,
+        self.assertRaises(Cmd.CmdExtended.InvalidCmd,
                           self.do, 'add wrong wrong')
 
     def test_invalid_operations_for_generate(self):
@@ -236,7 +236,7 @@ class TestCmdShell2(unittest.TestCase):
     def test_invalid_operations_for_output(self):
         """Test that errors are raised appropriately for output"""
 
-        self.assertRaises(Cmd.CheckValidForCmd.InvalidCmd,
+        self.assertRaises(Cmd.CmdExtended.InvalidCmd,
                           self.do, 'output')
         self.do("generate e+ e- > e+ e- / h")
 
