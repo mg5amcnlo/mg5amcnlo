@@ -43,7 +43,7 @@ else:
  
     # charge history file
     try:
-        history_file = os.path.join(os.environ['HOME'], '.pythonhistory')
+        history_file = os.path.join(os.environ['HOME'], '.mg5history')
         readline.read_history_file(history_file)
     except:
         pass
@@ -123,6 +123,7 @@ else:
         cmd_interface.MadGraphCmdShell(mgme_dir = options.mgme_dir).cmdloop()
 
 try: 
+    readline.set_history_length(100)
     readline.write_history_file(history_file)
 except:
     pass

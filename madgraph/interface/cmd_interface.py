@@ -28,12 +28,6 @@ import traceback
 import time
 
 
-# Optional Library (not present on all platform)
-try:
-    import readline
-except:
-    readline = None
-    
 from madgraph import MG4DIR, MG5DIR, MadGraph5Error, InvalidCmd
 
 import madgraph.core.base_objects as base_objects
@@ -2702,18 +2696,6 @@ class MadGraphCmdShell(MadGraphCmd, CompleteForCmd, CheckValidForCmd):
 
         self.prompt = 'mg5>'
         
-        if readline:
-            readline.parse_and_bind("tab: complete")
-
-        # initialize command history if HOME exists
-        if os.environ.has_key('HOME') and readline:
-            history_file = os.path.join(os.environ['HOME'], '.mg5history')
-            try:
-                readline.read_history_file(history_file)
-            except IOError:
-                pass
-            atexit.register(readline.write_history_file, history_file)
-
         # By default, load the UFO Standard Model
         logger.info("Loading default model: sm")
         self.do_import('model sm')
