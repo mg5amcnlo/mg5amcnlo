@@ -44,6 +44,8 @@ c
       integer npara, nreq, ngran
       integer ij, kl, iseed
       logical Gridpack,gridrun
+      logical split_channels
+      common /to_split/split_channels
 
 c-----
 c  Begin Code
@@ -52,8 +54,9 @@ c-----
       call get_logical(npara,param,value," gridpack ",gridpack,.false.)
       if (.not. Gridpack) then
          write(*,'(a,a)')'Enter fractional accuracy (<1)',
-     &        ', or number events (>1) and max processes per job'
-         read(*,*) err_goal, max_np
+     &        ', or number events (>1), max processes per job',
+     &        ', and whether to split channels (T/F)'
+         read(*,*) err_goal, max_np, split_channels
          parallel = .false.
          if (err_goal .lt. 1) then
             write(*,'(a,f8.2,a)') 'Running for accuracy of ',
@@ -70,6 +73,7 @@ c-----
          endif
       else
          gen_events=.true.
+         split_channels=.false.
          call get_integer(npara,param,value," gevents "  ,nreq  ,2000   )
          err_goal = 1.2*nreq
          call get_integer(npara,param,value," gseed "  ,iseed  ,4321   )
@@ -514,7 +518,11 @@ c
       integer mjobs,ijob,jc
       character*150 fname
 
+      logical split_channels
+      common /to_split/split_channels
+
       data cjobs/"abcdefghijklmnopqrstuvwxyz"/
+
 c-----
 c  Begin Code
 c-----
@@ -600,7 +608,7 @@ c
             write(*,*) 'Error in gen_ximprove.f, too many events requested ',mjobs*maxeventsperjob
             mjobs=26
          endif
-         if (mjobs .lt. 1)  mjobs=1
+         if (mjobs .lt. 1 .or. .not. split_channels)  mjobs=1
 c
 c        write multijob.dat file for combine_runs.f 
 c

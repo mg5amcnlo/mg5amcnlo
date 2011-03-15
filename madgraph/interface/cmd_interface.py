@@ -2003,6 +2003,9 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
             #                           leg.get('state') == False,
             #                           myleglist)) == 1
 
+            if overall_orders and self._options['group_subprocesses_output']:
+                raise MadGraph5Error, \
+                      "For grouped subprocess output, orders should be specified for each process (no overall orders after @N)"                
 
             return \
                 base_objects.ProcessDefinition({'legs': myleglist,
