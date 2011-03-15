@@ -1549,6 +1549,7 @@ class ProcessTest(unittest.TestCase):
         decay3.set('decay_chains', base_objects.ProcessList([decay4]))
         decay4.set('decay_chains', base_objects.ProcessList([decay5]))
         decay5.set('decay_chains', base_objects.ProcessList([decay6]))
+        self.assertTrue(len(self.myprocess.shell_string()) < 70)
         self.assertEqual(goal_str, self.myprocess.shell_string())
         
 #===============================================================================

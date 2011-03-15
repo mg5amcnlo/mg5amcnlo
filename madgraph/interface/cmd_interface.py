@@ -1408,8 +1408,6 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
                                                     amp.nice_string_processes()
                         logger.warning(warning)
 
-                # assign a unique id to all amplitude
-                self._curr_amps.assign_uid()
 
                 # Reset _done_export, since we have new process
                 self._done_export = False
@@ -1777,8 +1775,6 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
         # Generate processes
         myproc = diagram_generation.MultiProcess(myprocdef)
         self._curr_amps = myproc.get('amplitudes')
-        # assign a unique id to all amplitude
-        self._curr_amps.assign_uid()
         cpu_time2 = time.time()
 
         nprocs = len(self._curr_amps)
@@ -2497,10 +2493,14 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
         path = self._export_dir
         if self._export_format in ['madevent', 'standalone', 'standalone_cpp']:
             path = os.path.join(path, 'SubProcesses')
-            
+        
         if self._export_format == 'madevent':
+            uid = 0 # assign a unique id number to all process
             for ime, me in \
                 enumerate(self._curr_matrix_elements.get('matrix_elements')):
+                for proc in me.get('processes'):
+                    uid += 1 # update the identification number
+                    proc.set('uid', uid) # assign it to the process
                 calls = calls + \
                         export_v4.generate_subprocess_directory_v4_madevent(\
                             me, self._curr_fortran_model, ime, path)

@@ -262,7 +262,6 @@ class MELauncher(ExtLauncher):
         
         mode = str(self.cluster)
         if mode == "0":
-            print [self.executable, mode, self.name], self.running_dir
             subprocess.call([self.executable, mode, self.name], 
                                                            cwd=self.running_dir)
         elif mode == "1":

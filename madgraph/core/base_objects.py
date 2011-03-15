@@ -1643,7 +1643,7 @@ class Process(PhysicsObject):
         # Remove last space
         return mystr[:-1]
 
-    def shell_string(self, schannel=True, forbid=True):
+    def shell_string(self, schannel=True, forbid=True, main=True):
         """Returns process as string with '~' -> 'x', '>' -> '_',
         '+' -> 'p' and '-' -> 'm', including process number,
         intermediate s-channels and forbidden particles"""
@@ -1690,16 +1690,16 @@ class Process(PhysicsObject):
         mystr = mystr.replace(' ', '')
 
         for decay in self.get('decay_chains'):
-            mystr = mystr + "_" + decay.shell_string(schannel,forbid)
+            mystr = mystr + "_" + decay.shell_string(schannel,forbid, main=False)
 
-        # Too long name are problematic so restrict them to a maximal of 80 char
-        if len(mystr) > 76:
+        # Too long name are problematic so restrict them to a maximal of 70 char
+        if len(mystr) > 64 and main:
             if schannel and forbid:
-                return self.shell_string(True, False)+ '-%s' % self['uid']
+                return self.shell_string(True, False, False)+ '-%s' % self['uid']
             elif schannel:
-                return self.shell_string(False, False)+'-%s' % self['uid']
+                return self.shell_string(False, False, False)+'-%s' % self['uid']
             else:
-                return mystr[:76]+'-%s' % self['uid']
+                return mystr[:64]+'-%s' % self['uid']
             
             
             
