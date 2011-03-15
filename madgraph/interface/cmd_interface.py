@@ -199,7 +199,9 @@ class CmdExtended(cmd.Cmd):
                 logger_tuto.info(getattr(tutorial_text, args[0]).replace('\n','\n\t'))
             except:
                 pass
-            
+        
+        return stop
+
     def timed_input(self, question, default, timeout=None):
         """ a question with a maximal time to answer take default otherwise"""
         

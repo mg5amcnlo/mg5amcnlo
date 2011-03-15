@@ -191,7 +191,9 @@ class Cmd(cmd.Cmd):
     # Quit
     def do_quit(self, line):
         """ exit the mainloop() """
-        return True 
+        print
+        return True
+ 
     # Aliases
     do_EOF = do_quit
     do_exit = do_quit
