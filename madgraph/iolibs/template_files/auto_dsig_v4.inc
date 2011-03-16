@@ -84,6 +84,9 @@ C   Only run if IMODE is 0
              DSIGUU=0D0
              DSIG%(proc_id)s=0D0
          ENDIF
-%(unwgt_line)s
+        IF(IMODE.EQ.0.AND.DSIG%(proc_id)s.GT.0D0)THEN
+C       Call UNWGT to unweight and store events
+           CALL UNWGT(PP,DSIG%(proc_id)s*WGT,%(numproc)d)
+        ENDIF
 %(passcuts_end)s
       END

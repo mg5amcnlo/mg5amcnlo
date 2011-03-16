@@ -1318,7 +1318,6 @@ class ProcessExporterFortranME(ProcessExporterFortran):
             replace_dict['numproc'] = int(proc_id)
             replace_dict['passcuts_begin'] = ""
             replace_dict['passcuts_end'] = ""
-            replace_dict['unwgt_line'] = ""
             # Set lines for subprocess group version
             # Set define_iconfigs_lines
             replace_dict['define_subdiag_lines'] = \
@@ -1327,9 +1326,6 @@ class ProcessExporterFortranME(ProcessExporterFortran):
         else:
             replace_dict['passcuts_begin'] = "IF (PASSCUTS(PP)) THEN"
             replace_dict['passcuts_end'] = "ENDIF"
-            replace_dict['unwgt_line'] = \
-                             "CALL UNWGT(PP,%(dsig_line)s*WGT,%(numproc)d)" % \
-                             replace_dict
             replace_dict['define_subdiag_lines'] = ""
 
         file = open(os.path.join(_file_path, \
