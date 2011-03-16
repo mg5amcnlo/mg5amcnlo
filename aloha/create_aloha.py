@@ -172,6 +172,7 @@ class AbstractRoutineBuilder(object):
         
     def compute_aloha_high_kernel(self, mode, factorize=True):
         """compute the abstract routine associate to this mode """
+        
         # reset tag for particles
         aloha_lib.USE_TAG=set()
         #multiply by the wave functions
@@ -243,6 +244,7 @@ class AbstractRoutineBuilder(object):
 
           
         #lorentz = lorentz.simplify()
+
         lorentz = lorentz.expand()
         if self.outgoing and self.spins[self.outgoing-1] == 5:
             if not self.aloha_lib:
@@ -252,13 +254,11 @@ class AbstractRoutineBuilder(object):
             else:
                 lorentz *= self.aloha_lib[('Spin2Prop', id)]
             aloha_lib.USE_TAG.add('OM%d' % id)
-            aloha_lib.USE_TAG.add('P%d' % id)
-            
-                    
+            aloha_lib.USE_TAG.add('P%d' % id)       
+        
         lorentz = lorentz.simplify()
         if factorize:
             lorentz = lorentz.factorize()
-        
         lorentz.tag = set(aloha_lib.USE_TAG)
         #raise
         return lorentz         

@@ -15,7 +15,7 @@ ve = Particle(pdg_code = 12,
               width = 'ZERO',
               texname = 've',
               antitexname = 've',
-             charge = 0,
+              charge = 0,
               LeptonNumber = 1,
               GhostNumber = 0)
 

@@ -58,6 +58,8 @@ precision_cut = 1e-14
 
 USE_TAG=set() #global to check which tag are used
 
+depth=-1
+
 #===============================================================================
 # FracVariable
 #=============================================================================== 
@@ -407,6 +409,8 @@ class AddVariable(list):
     def factorize(self):
         """ try to factorize as much as possible the expression """
 
+        #import aloha 
+        #aloha.depth += 1 #global variable for debug
         max, maxvar = self.count_term()
         maxvar = maxvar.__class__(maxvar.variable)
         if max <= 1:
@@ -414,6 +418,7 @@ class AddVariable(list):
             return self
         else:
             # split in MAXVAR * NEWADD + CONSTANT
+            #print " " * 4 * aloha.depth + "start fact", self
             newadd = AddVariable()
             constant = AddVariable()
             #fill NEWADD and CONSTANT
@@ -468,12 +473,18 @@ class AddVariable(list):
             if len(constant) == 1:
                 constant = constant[0]
             if len(newadd) == 1:
-                newadd = newadd[0]
-
+                newadd = newadd[0] 
+                        
             if constant:
                 constant = constant.factorize()
+                #aloha.depth -=1
+                #print ' ' * 4 * aloha.depth + 'return', AddVariable([newadd, constant])
                 return AddVariable([newadd, constant])
             else:
+                if constant.vartype == 5 and constant != 0:
+                    return AddVariable([newadd, constant])
+                #aloha.depth -=1
+                #print ' ' * 4 * aloha.depth + 'return:', newadd
                 return newadd
         
 #===============================================================================

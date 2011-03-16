@@ -47,12 +47,15 @@ if '__main__' == __name__:
         
     logging.basicConfig(level=logging.INFO)
     #my_proc_list = ['u u~ > g y $ g', 'u~ u > g y $ g ', 'y > u u~','Z >  u u~']
-    my_proc_list = ['z z > z z','z z > y > z z','z z > z z / y', 'z z > z z / a z h']
-    my_proc_list += [' g g > g y', 'u u~ > u u~','g g > g g','u u~ > y > u u~' ]
-    my_proc_list += me_comparator.create_proc_list(['u', 'u~','t','t~','g','y','z','a'], initial=2,
-                                                  final=2)
-    my_proc_list += me_comparator.create_proc_list(['u', 'u~','t','t~','g','y','z','a'], initial=1,
-                                                  final=2)
+#    my_proc_list = ['t t > t t', 't t~ > t t~', 't t~ > z z', 't z > t z', 't~ t~ > t~ t~', 't~ z > t~ z', 'g g > y y', 'g y > g y', 'y y > g g', 'y y > z z', 'y y > a a', 'y z > t t~', 'y z > y z', 'a y > a y',' z z > t t~', 'z z > y y', 'a a > y y']
+    #my_proc_list = ['t t~ > t t~','t t~ > y > t t~','t t~ > t t~ / y', 't t~ > t t~ / a z h g', 'y > t t~', 'y > t t~ g']
+    my_proc_list = ['t t~ > y > t t~','u u~ > y > u u~ g','y > t t~']
+    #my_proc_list = [ 't t~ > y > t t~','z z > y > t t~','t t~ > y > z z',' u u~ > y > t t~', 't t~ > y > u u~']
+    #my_proc_list += [' g g > g y', 'u u~ > u u~','g g > g g','u u~ > y > u u~' ]
+    #my_proc_list += me_comparator.create_proc_list(['u', 'u~','t','t~','g','y','z','a'], initial=2,
+    #                                              final=2)
+    #my_proc_list += me_comparator.create_proc_list(['u', 'u~','t','t~','g','y','z','a'], initial=1,
+    #                                              final=2)
     #my_proc_list = me_comparator.create_proc_list_enhanced(
     #    ['u', 'u~', 'd', 'd~', 'g'],['six', 'six~'],['g'],
     #    initial=2, final_1=1, final_2 = 1)
