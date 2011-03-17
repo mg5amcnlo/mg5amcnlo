@@ -543,7 +543,17 @@ class Metric(aloha_lib.LorentzObject):
                 return self.prefactor * self.representation
             except:
                 self.create_representation()
-                return self.prefactor * self.representation        
+                return self.prefactor * self.representation  
+            
+    def simplify(self):
+        """Return the Denominator in a abstract way"""
+        
+        if self.power == 2:
+            return aloha_lib.ConstantObject(4)
+        else:
+            return self
+         
+           
     
 #===============================================================================
 # Identity

@@ -258,7 +258,8 @@ class AddVariable(list):
         
         new = self[0].expand()
         for item in self[1:]:
-            new += item.expand()       
+            obj = item.expand()
+            new += obj      
         return new
         
     
@@ -623,7 +624,7 @@ class MultVariable(list):
         if obj in self:
             index = self.index(obj)
             self[index] = self[index].copy()
-            self[index].power += 1
+            self[index].power += obj.power
         else:
             obj.prefactor = 1
             list.append(self, obj)
@@ -690,8 +691,7 @@ class Variable(object):
     def copy(self):
         """provide an indenpedant copy of the object"""
         
-        new = Variable(self.prefactor, self.variable)
-        new.power = self.power
+        new = Variable(self.prefactor, self.variable, self.power)
         return new
         
     def simplify(self):
@@ -839,17 +839,15 @@ class ScalarVariable(Variable):
     """ A concrete symbolic scalar variable
     """
     
-    def __init__(self, variable_name, prefactor=1):
+    def __init__(self, variable_name, prefactor=1, power=1):
         """ initialization of the object with default value """
         
-        Variable.__init__(self, prefactor, variable_name)
+        Variable.__init__(self, prefactor, variable_name, power)
         
         
     def copy(self):
         """ Define a independant copy of the object"""
-        new = ScalarVariable(self.variable, self.prefactor) 
-                                                            
-        new.power = self.power
+        new = ScalarVariable(self.variable, self.prefactor, self.power) 
         return new
 
 #===============================================================================
@@ -955,7 +953,7 @@ class MultLorentz(MultVariable):
                 continue
         
             current = None
-        
+
         # Multiply all those current
         out = self.prefactor
         for fact in product_term:

@@ -243,7 +243,7 @@ class AbstractRoutineBuilder(object):
             lorentz *= complex(0,-1)
 
           
-        #lorentz = lorentz.simplify()
+        lorentz = lorentz.simplify()
 
         lorentz = lorentz.expand()
         if self.outgoing and self.spins[self.outgoing-1] == 5:
