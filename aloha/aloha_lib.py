@@ -1302,7 +1302,8 @@ class LorentzObjectRepresentation(dict):
                     index = obj.lorentz_ind.index(value)
                 except:
                     raise self.LorentzObjectRepresentationError("Invalid" + \
-                                "addition. Object doen't have the same indices")
+                    "addition. Object doen't have the same lorentz indices:" + \
+                                "%s != %s" % (self.lorentz_ind, obj.lorentz_ind))
                 else:
                     switch_order.append(index)
             for value in self.spin_ind:

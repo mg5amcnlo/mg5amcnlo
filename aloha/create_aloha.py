@@ -204,13 +204,19 @@ class AbstractRoutineBuilder(object):
                         id += _conjugate_gap
                     nb_spinor += 1
                     if nb_spinor %2:
-                        lorentz *= SpinorPropagator(id, 'I2', self.outgoing)
+                        lorentz *= SpinorPropagator(id, 'I2', id)
                     else:
-                        lorentz *= SpinorPropagator('I2', id, self.outgoing) 
+                        lorentz *= SpinorPropagator('I2', id, id) 
                 elif spin == 3 :
                     lorentz *= VectorPropagator(id, 'I2', id)
                 elif spin == 5 :
                     lorentz *= 1 # delayed evaluation (fastenize the code)
+                    if self.spin2_massless:
+                        lorentz *= Spin2masslessPropagator(_spin2_mult + id, \
+                                             2 * _spin2_mult + id,'I2','I3')
+                    else:
+                        lorentz *= Spin2Propagator(_spin2_mult + id, \
+                                             2 * _spin2_mult + id,'I2','I3', id)
                 else:
                     raise self.AbstractALOHAError(
                                 'The spin value %s is not supported yet' % spin)
@@ -246,7 +252,7 @@ class AbstractRoutineBuilder(object):
         lorentz = lorentz.simplify()
 
         lorentz = lorentz.expand()
-        if self.outgoing and self.spins[self.outgoing-1] == 5:
+        if False: #self.outgoing and self.spins[self.outgoing-1] == 5:
             if not self.aloha_lib:
                 AbstractRoutineBuilder.load_library()
             if self.spin2_massless:

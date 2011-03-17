@@ -1465,32 +1465,25 @@ class testLorentzObject(unittest.TestCase):
         solp11 = complex(0,2/3) * ( OverMass2(3)**2 * P(-1,3) **2 * P('I2',3) * P('I3',3)  * Spinor(-1,1) * Spinor(-1,2) ) 
         zero = p11e - solp11.expand().simplify().factorize()
         for ind in zero.listindices():
-            print solp11
-            print
-            print solp11.expand().get_rep(ind)
-            print 
-            print solp11.expand().get_rep(ind).simplify()
-            print
-            print solp11.expand().get_rep(ind).simplify().factorize()
             data = zero.get_rep(ind)
             self.assertAlmostEqual(eval(str( data )),0)
             
         # full
         full = p1 + p2 + p3 + p4 + p5 + p6 + p7 + p9 + p10 + p11
         fulle = full.expand()
-        solfull = complex(0,1/3) * ((OM(3) * P(-1, 3)**2 - 1) * (Metric('I2','I3') + 2 * OM(3) * P('I2',3)*P('I3',3)) * Spinor(-1,1) * Spinor(-1,2))  
+        solfull = complex(0,1/3) * ((OverMass2(3) * P(-1, 3)**2 - 1) * (Metric('I2','I3') + 2 * OverMass2(3) * P('I2',3)*P('I3',3)) * Spinor(-1,1) * Spinor(-1,2))  
         solfullbis = 2 * solp1 + solp3 + 4 * solp4 + solp9 +solp10 + solp11
         # first sanity
         zero = solfullbis.expand() - solfull.expand()
         for ind in zero.listindices():
             data = zero.get_rep(ind)
-            self.assertAlmostEqual(eval(str( data )),0)
+            self.assertAlmostEqual(eval(str( data )),0,6)
         
         
         zero = fulle - solfull.expand()
         for ind in zero.listindices():
             data = zero.get_rep(ind)
-            self.assertAlmostEqual(eval(str( data )),0)
+            self.assertAlmostEqual(eval(str( data )),0,6)
         
         
         
@@ -2616,30 +2609,29 @@ class test_aloha_creation(unittest.TestCase):
     def test_use_of_library_spin2(self):
         """ check that use the library or the usual definition is the same """
         
-        #FFT2 = self.Lorentz(name = 'FFT2',
-        #         spins = [2, 2, 5],
-        #structure="Metric(1003,2003)*ProjP(1,2)+Metric(1003,2003)*ProjM(1,2)"
-        #)
-        #abstract_FFT = create_aloha.AbstractRoutineBuilder(FFT2).compute_routine(3)
-        #expr = abstract_FFT.expr.numerator
-
-
+        
         Metric = aloha_obj.Metric
         P = aloha_obj.P
         OM = aloha_obj.OverMass2
         F = aloha_obj.Spinor
+        Identity = aloha_obj.Identity
         t = 3
         mu, nu, alpha, beta = 1003,2003,'I2','I3' 
-        print aloha_obj.Spin2Propagator(mu,nu,alpha,beta, t)
-        # Build the equivalent solution
-        sol = Metric(mu,nu) * aloha_obj.Spin2Propagator(mu,nu,alpha,beta, t) * F(-1,1) * F(-1,2)
-        sol = sol.simplify()
-        sol = sol.expand()
-        print sol.get_rep([0,1])
-        print 
-        print sol.get_rep([0,1]).simplify().factorize()
         
-        sol=sol.simplify().factorize()
+        # One Expand:
+        import time
+        start = time.time()
+        one_exp = Metric(mu,nu) * Identity(1,2)* aloha_obj.Spin2Propagator(mu,nu,alpha,beta, t)  * F(1,1) * F(2,2)
+        one_exp = one_exp.simplify().expand().simplify().factorize()
+        print 'one expand use', time.time()-start
+        # Separate Expand:
+        start = time.time()
+        two_exp = Metric(mu,nu) * Identity(1,2)  * F(1,1) * F(2,2)
+        two_exp = two_exp.simplify().expand().simplify()
+        two_exp = two_exp * aloha_obj.Spin2Propagator(mu,nu,alpha,beta, t).expand().simplify()
+        two_exp = two_exp.simplify().factorize()
+        print 'two expand use', time.time()-start
+        self.assertNotEqual(two_exp.lorentz_ind, one_exp.lorentz_ind)
 
         P1_0,P1_1,P1_2,P1_3 = 1000, 3, 4, 1000
         P2_0,P2_1,P2_2,P2_3 = 1000, 3, 6, -1000
@@ -2649,17 +2641,11 @@ class test_aloha_creation(unittest.TestCase):
         F2_1, F2_2, F2_3, F2_4  = 12, 44, 72, -45 
         OM1,OM2,OM3 = 0 , 0, 1.0 / 500**2
         M3 = 500
-
         
-        for ind in expr.listindices():
-            if ind == [0,0]:
-                continue
-            print ind
-            print 
-            print str(sol.get_rep(ind))
-            print
-            print str(expr.get_rep(ind))
-            self.assertEqual(eval(str(sol.get_rep(ind))), eval(str(expr.get_rep(ind))))
+        for ind in one_exp.listindices():
+            print ind 
+            ind2 = [ind[1],ind[0]]
+            self.assertEqual(eval(str(one_exp.get_rep(ind))), eval(str(two_exp.get_rep(ind2))))
         
         
         
@@ -2696,10 +2682,7 @@ class test_aloha_creation(unittest.TestCase):
         
         
         for ind in zero.listindices():
-            
-            print ind
-            print expr.numerator.get_rep(ind)
-            self.assertEqual(eval(str(zero.get_rep(ind))),0)
+            self.assertAlmostEqual(eval(str(zero.get_rep(ind))),0)
             
 
  
