@@ -818,7 +818,10 @@ C     Only run if IMODE is 0
         DSIGUU=0D0
         DSIG1=0D0
       ENDIF
-
+      IF(IMODE.EQ.0.AND.DSIG1.GT.0D0)THEN
+C       Call UNWGT to unweight and store events
+        CALL UNWGT(PP,DSIG1*WGT,1)
+      ENDIF
 
       END
 
@@ -1040,9 +1043,6 @@ C     Call DSIGPROC to calculate sigma for process
       DSIG=DSIGPROC(PP,ICONF,IPROC,IMIRROR,SYMCONF,CONFSUB,WGT,IMODE)
 
       IF(DSIG.GT.0D0)THEN
-C       Call UNWGT to unweight and store events
-        CALL UNWGT(PP,DSIG*WGT,1)
-
 C       Update summed weight and number of events
         SUMWGT(IMIRROR,IPROC,ICONF)=SUMWGT(IMIRROR,IPROC,ICONF)
      $   +DSIG*WGT
