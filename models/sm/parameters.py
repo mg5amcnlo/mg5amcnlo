@@ -1,6 +1,6 @@
-# This file was automatically created by FeynRules $Revision: 327 $
+# This file was automatically created by FeynRules $Revision: 535 $
 # Mathematica version: 7.0 for Mac OS X x86 (64-bit) (November 11, 2008)
-# Date: Tue 28 Dec 2010 23:25:59
+# Date: Fri 18 Mar 2011 18:40:51
 
 
 
@@ -9,6 +9,14 @@ from object_library import all_parameters, Parameter
 
 from function_library import complexconjugate, re, im, csc, sec, acsc, asec
 
+# This is a default parameter object representing 0.
+ZERO = Parameter(name = 'ZERO',
+                 nature = 'internal',
+                 type = 'real',
+                 value = '0.0',
+                 texname = '0')
+
+# User-defined parameters.
 cabi = Parameter(name = 'cabi',
                  nature = 'external',
                  type = 'real',
@@ -20,7 +28,7 @@ cabi = Parameter(name = 'cabi',
 aEWM1 = Parameter(name = 'aEWM1',
                   nature = 'external',
                   type = 'real',
-                  value = 132.5070,
+                  value = 127.9,
                   texname = '\\text{aEWM1}',
                   lhablock = 'SMINPUTS',
                   lhacode = [ 1 ])
@@ -36,7 +44,7 @@ Gf = Parameter(name = 'Gf',
 aS = Parameter(name = 'aS',
                nature = 'external',
                type = 'real',
-               value = 0.118,
+               value = 0.1172,
                texname = '\\text{aS}',
                lhablock = 'SMINPUTS',
                lhacode = [ 3 ])
@@ -52,7 +60,7 @@ ymc = Parameter(name = 'ymc',
 ymb = Parameter(name = 'ymb',
                 nature = 'external',
                 type = 'real',
-                value = 4.2,
+                value = 4.7,
                 texname = '\\text{ymb}',
                 lhablock = 'YUKAWA',
                 lhacode = [ 5 ])
