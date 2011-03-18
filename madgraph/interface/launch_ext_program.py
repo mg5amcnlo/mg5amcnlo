@@ -206,7 +206,7 @@ class MELauncher(ExtLauncher):
         # Assign a valid run name if not put in options
         if self.name == '':
             for i in range(1000):
-                path = os.path.join(self.running_dir, 'Events','run%s_banner.txt' % i)
+                path = os.path.join(self.running_dir, 'Events','run_%02i_banner.txt' % i)
                 if not os.path.exists(path):
                     self.name = 'run%s' % i
                     break
