@@ -54,15 +54,20 @@ class ExtLauncher(object):
         # let first try to use the prefer editor (if EDITOR is define)
         # if not define use the first define in a pre-define list
             
-        if os.environ['EDITOR']:
+        if os.environ.has_key('EDITOR') and misc.which(os.environ['EDITOR']):
             self.editor =  os.environ['EDITOR']
             return
+        
+        logger.info('INFO: You can choose your prefered editor by defining the shell variable EDITOR')
         
         possibility = ['vi', 'emacs', 'vim', 'gedit', 'nano']
         for editor in possibility:
             if misc.which(editor):
                 self.editor = editor
                 return
+        
+        logger.warning(
+         'No valid editor detected. Please configure the shell variable EDITOR')
             
     def run(self):
         """ execute the main code """
@@ -86,6 +91,7 @@ class ExtLauncher(object):
         """edit a file"""
 
         path = os.path.realpath(path)
+        print [self.editor, path], os.getcwd()
         subprocess.call([self.editor, path], cwd=os.getcwd())
         
     def ask(self, question, default):
