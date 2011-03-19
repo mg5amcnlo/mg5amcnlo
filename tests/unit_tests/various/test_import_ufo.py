@@ -48,13 +48,19 @@ class TestRestrictModel(unittest.TestCase):
         self.model.set_parameters_and_couplings(self.restrict_file)
          
         
-    def test_detect_zero_parameters(self):
+    def test_detect_special_parameters(self):
         """ check that detect zero parameters works"""        
         
         expected = set(['cabi', 'conjg__CKM13', 'conjg__CKM12', 'CKM21', 'conjg__CKM31', 'CKM23', 'WT', 'conjg__CKM32', 'ymc', 'ymb', 'Me', 'CKM32', 'CKM31', 'ym', 'CKM13', 'CKM12', 'yc', 'yb', 'ye', 'conjg__CKM21', 'conjg__CKM23', 'ys', 'MD', 'MC', 'MB', 'MM', 'yup', 'ydo', 'MU', 'MS', 'sin__cabi'])
-        result = set(self.model.detect_zero_parameters())
-
+        zero, one = self.model.detect_special_parameters()
+        result = set(zero)
         self.assertEqual(expected, result)
+        
+        expected = set(['CKM33', 'conjg__CKM11', 'conjg__CKM33', 'CKM22', 'CKM11', 'cos__cabi', 'conjg__CKM22'])
+        result = set(one)
+        self.assertEqual(expected, result)
+
+        
         
     def test_detect_identical_parameters(self):
         """ check that we detect correctly identical parameter """
@@ -145,7 +151,7 @@ class TestRestrictModel(unittest.TestCase):
         part_t = self.model.get_particle(6)
         # Check that we remove a mass correctly
         self.assertEqual(part_t['mass'], 'MT')
-        self.model.put_parameters_to_zero(['MT'])
+        self.model.fix_parameter_values(['MT'],[])
         self.assertEqual(part_t['mass'], 'ZERO')
         for dep,data in self.model['parameters'].items():
             for param in data:
@@ -159,16 +165,17 @@ class TestRestrictModel(unittest.TestCase):
         
         # Check that we remove a width correctly
         self.assertEqual(part_t['width'], 'WT')
-        self.model.put_parameters_to_zero(['WT'])
+        self.model.fix_parameter_values(['WT'],[])
         self.assertEqual(part_t['width'], 'ZERO')
         for dep,data in self.model['parameters'].items():
             for param in data:
                 self.assertNotEqual(param.name, 'WT')
 
         for pdg, particle in self.model['particle_dict'].items():
-            self.assertNotEqual(particle['width'], 'WT')        
+            self.assertNotEqual(particle['width'], 'WT')       
+             
         # Check that we can remove correctly other external parameter
-        self.model.put_parameters_to_zero(['ymb','yb'])
+        self.model.fix_parameter_values(['ymb','yb'],[])
         for dep,data in self.model['parameters'].items():
             for param in data:
                 self.assertFalse(param.name in  ['ymb'])

@@ -577,8 +577,8 @@ class RestrictModel(model_reader.ModelReader):
         self.remove_couplings(zero_couplings)
         
         # deal with parameters
-        zero_parameters = self.detect_zero_parameters()
-        self.put_parameters_to_zero(zero_parameters)
+        parameters = self.detect_special_parameters()
+        self.fix_parameter_values(*parameters)
         
         # deal with identical parameters
         iden_parameters = self.detect_identical_parameters()
@@ -597,14 +597,18 @@ class RestrictModel(model_reader.ModelReader):
         return zero_coupling
     
     
-    def detect_zero_parameters(self):
+    def detect_special_parameters(self):
         """ return the list of (name of) parameter which are zero """
         
         null_parameters = []
+        one_parameters = []
         for name, value in self['parameter_dict'].items():
             if value == 0 and name != 'ZERO':
                 null_parameters.append(name)
-        return null_parameters
+            elif value == 1:
+                one_parameters.append(name)
+                
+        return null_parameters, one_parameters
     
     def detect_identical_parameters(self):
         """ return the list of tuple of name of parameter with the same 
@@ -688,9 +692,11 @@ class RestrictModel(model_reader.ModelReader):
                 if coupling.name in zero_couplings:
                     data.remove(coupling)
         
-    def put_parameters_to_zero(self, zero_parameters):
+    def fix_parameter_values(self, zero_parameters, one_parameters):
         """ Remove all instance of the parameters in the model and replace it by 
         zero when needed."""
+
+        special_parameters = zero_parameters + one_parameters
         
         # treat specific cases for masses and width
         for particle in self['particles']:
@@ -705,52 +711,59 @@ class RestrictModel(model_reader.ModelReader):
                 particle['width'] = 'ZERO'            
         
         # check if the parameters is still usefull:
+        re_str = '|'.join(special_parameters)
+        re_pat = re.compile(r'''\b(%s)\b''' % re_str)
         used = set()
         # check in coupling
         for name, coupling_list in self['couplings'].items():
             for coupling in coupling_list:
-                for param in zero_parameters:
-                    if param in coupling.expr:
-                        used.add(param)
-                        
-        zero_param_info = {}
+                for use in  re_pat.findall(coupling.expr):
+                    used.add(use)  
+        
+        # simplify the regular expression
+        re_str = '|'.join([param for param in special_parameters 
+                                                          if param not in used])
+        re_pat = re.compile(r'''\b(%s)\b''' % re_str)
+        
+        param_info = {}
         # check in parameters
         for dep, param_list in self['parameters'].items():
             for tag, parameter in enumerate(param_list):
-                # update information concerning zero_parameters
-
-                if parameter.name in zero_parameters:
-                    zero_param_info[parameter.name]= {'dep': dep, 'tag': tag, 
+                # update information concerning zero/one parameters
+                if parameter.name in special_parameters:
+                    param_info[parameter.name]= {'dep': dep, 'tag': tag, 
                                                                'obj': parameter}
                     continue
+                                    
                 # Bypass all external parameter
                 if isinstance(parameter, base_objects.ParamCardVariable):
                     continue
 
-                # check the presence of zero parameter
-                for zero_param in zero_parameters:
-                    if zero_param in parameter.expr:
-                        used.add(zero_param)
+                # check the presence of zero/one parameter
+                for use in  re_pat.findall(parameter.expr):
+                    used.add(use)
 
         # modify the object for those which are still used
         for param in used:
-            data = self['parameters'][zero_param_info[param]['dep']]
-            data.remove(zero_param_info[param]['obj'])
-            tag = zero_param_info[param]['tag']
+            data = self['parameters'][param_info[param]['dep']]
+            data.remove(param_info[param]['obj'])
+            tag = param_info[param]['tag']
             data = self['parameters'][()]
-            data.insert(0, base_objects.ModelVariable(param, '0.0', 'real'))
-        
+            if param in zero_parameters:
+                data.insert(0, base_objects.ModelVariable(param, '0.0', 'real'))
+            else:
+                data.insert(0, base_objects.ModelVariable(param, '1.0', 'real'))
+                
         # remove completely useless parameters
-        for param in zero_parameters:
+        for param in special_parameters:
             #by pass parameter still in use
             if param in used:
-                logger_mod.info('put parameter to zero: %s' % param)
+                logger_mod.info('fix parameter value: %s' % param)
                 continue 
             logger_mod.info('remove parameters: %s' % param)
-            data = self['parameters'][zero_param_info[param]['dep']]
-            data.remove(zero_param_info[param]['obj'])
-            
-        
+            data = self['parameters'][param_info[param]['dep']]
+            data.remove(param_info[param]['obj'])
+                  
                 
                 
         

@@ -6391,7 +6391,7 @@ class UFO_model_to_mg4_Test(unittest.TestCase):
         
         #  internal params
         self.assertEqual(len(mg4_model.params_dep), 1)
-        self.assertEqual(len(mg4_model.params_indep), 38)
+        self.assertEqual(len(mg4_model.params_indep), 35)
         
         # couplings
         self.assertEqual(len(mg4_model.coups_dep), 3)
