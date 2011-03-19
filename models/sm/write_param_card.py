@@ -106,9 +106,9 @@ class ParamCardWriter(object):
         
         lhacode=' '.join(['%3s' % key for key in param.lhacode])
         if lhablock != 'DECAY':
-            text = """  %s %e # %s \n""" % (lhacode, param.value, param.name ) 
+            text = """  %s %e # %s \n""" % (lhacode, complex(param.value).real, param.name ) 
         else:
-            text = '''DECAY %s %e \n''' % (lhacode, param.value)
+            text = '''DECAY %s %e \n''' % (lhacode, complex(param.value).real)
         self.fsock.write(text) 
                     
 
