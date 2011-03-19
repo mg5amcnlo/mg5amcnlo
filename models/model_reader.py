@@ -193,7 +193,7 @@ class ModelReader(base_objects.Model):
                                          derived_parameters]))
 
         # Add "zero"
-        self.get('parameter_dict')['ZERO'] = 0.
+        self.get('parameter_dict')['ZERO'] = complex(0.)
 
         self.set('coupling_dict', dict([(coup.name, coup.value) \
                                         for coup in couplings]))

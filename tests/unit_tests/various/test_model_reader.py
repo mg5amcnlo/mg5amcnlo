@@ -52,6 +52,7 @@ class TestModelReader(unittest.TestCase):
             self.assertTrue(isinstance(value, complex)) 
             self.assertTrue(isinstance(self.model_reader.get('parameter_dict')[\
                 param.name], complex))
+
             
         for coupl in sum([self.base_model.get('couplings')[key] for key \
                               in self.base_model.get('couplings')], []):
