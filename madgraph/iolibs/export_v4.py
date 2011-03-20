@@ -32,7 +32,7 @@ import madgraph.iolibs.template_files as template_files
 import madgraph.iolibs.ufo_expression_parsers as parsers
 
 import aloha.create_aloha as create_aloha
-
+import models.write_param_card as param_writer
 from madgraph import MadGraph5Error, MG5DIR
 from madgraph.iolibs.files import cp, ln, mv
 _file_path = os.path.split(os.path.dirname(os.path.realpath(__file__)))[0] + '/'
@@ -1533,7 +1533,6 @@ class UFO_model_to_mg4(object):
        
         self.model = model
         self.model_name = model['name']
-        print dir(self.model)
         self.dir_path = output_path
         
         self.coups_dep = []    # (name, expression, type)
@@ -1975,24 +1974,9 @@ class UFO_model_to_mg4(object):
     def create_param_card(self):
         """ create the param_card.dat """
 
-        print type(self.model.write_param_card),self.model.write_param_card.__dict__
-        try:
-            self.model.write_param_card(
-                os.path.join(self.dir_path, 'param_card.dat'), 
-                self.params_ext, generic=True)
-        except:
-            #should be old UFO format. 
-            self.model.write_param_card(
-                os.path.join(self.dir_path, 'param_card.dat'),
-                self.params_ext)
-#    def search_type(self, expr):
-#        """return the type associate to the expression"""
-#        
-#        for param in self.model.all_parameters:
-#            if param.name == expr:
-#                return param.type
-#        
-#        return CompactifyExpression.search_type(self, expr)
+        out_path = os.path.join(self.dir_path, 'param_card.dat')
+        param_writer.ParamCardWriter(self.model, out_path)
+
   
  
 

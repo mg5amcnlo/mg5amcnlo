@@ -911,6 +911,7 @@ class Model(PhysicsObject):
     def load_default_name():
         """ load the default for name convention """
         
+        logger.info('Change particles name to pass to MG5 convention')    
         default = {}
         for line in open(os.path.join(MG5DIR, 'input', \
                                                  'particles_name_default.txt')):
