@@ -1931,7 +1931,7 @@ class UFO_model_to_mg4(object):
     
         def format(parameter):
             """return the line for the ident_card corresponding to this parameter"""
-            colum = [parameter.lhablock] + \
+            colum = [parameter.lhablock.lower()] + \
                     [str(value) for value in parameter.lhacode] + \
                     [parameter.name]
             return ' '.join(colum)+'\n'

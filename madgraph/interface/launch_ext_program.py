@@ -91,7 +91,6 @@ class ExtLauncher(object):
         """edit a file"""
 
         path = os.path.realpath(path)
-        print [self.editor, path], os.getcwd()
         subprocess.call([self.editor, path], cwd=os.getcwd())
         
     def ask(self, question, default):

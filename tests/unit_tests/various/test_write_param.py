@@ -93,8 +93,9 @@ class TestParamWritting(unittest.TestCase):
         p6 = base_objects.ParamCardVariable('p6', 1, 'second', [1])
         p7 = base_objects.ParamCardVariable('p7', 1, 'second', [1, 3])
         p8 = base_objects.ParamCardVariable('p8', 1, 'second', [2])
+        p9 = base_objects.ParamCardVariable('p9', 1, 'DECAY', [2])
 
-        result = [p1, p2, p3, p4, p5, p6, p7, p8]
+        result = [p1, p2, p3, p4, p5, p6, p7, p8, p9]
         start =result[:]
         for i in range(20):
             random.shuffle(start)

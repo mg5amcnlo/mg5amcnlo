@@ -13,6 +13,7 @@
 #
 ################################################################################
 import models.model_reader as model_reader
+import madgraph.core.base_objects as base_objects
 
 
 class ParamCardWriterError(Exception):
@@ -63,7 +64,10 @@ class ParamCardWriter(object):
         for key, params in self.model['parameters'].items():
             for param in params:
                 out[param.name] = param
-
+                
+        if 'ZERO' not in out.keys():
+            zero = base_objects.ModelVariable('ZERO', '0', 'real')
+            out['ZERO'] = zero
         return out
 
     
@@ -86,7 +90,13 @@ class ParamCardWriter(object):
     def order_param(obj1, obj2):
         """ order parameter of a given block """
         
-        if obj1.lhablock < obj2.lhablock:
+        if obj1.lhablock == obj2.lhablock:
+            pass
+        elif obj1.lhablock == 'DECAY':
+            return 1
+        elif obj2.lhablock == 'DECAY':
+            return -1
+        elif obj1.lhablock < obj2.lhablock:
             return -1
         elif obj1.lhablock != obj2.lhablock:
             return 1
@@ -125,7 +135,6 @@ class ParamCardWriter(object):
   
         # order the parameter in a smart way
         self.external.sort(self.order_param)
-        print '\n'.join([str((p.lhablock, p.lhacode, p.name)) for p in self.external])
         
         cur_lhablock = ''
         for param in self.external:
@@ -150,7 +159,7 @@ class ParamCardWriter(object):
         """\n###################################\n"""
          )
         if name!='DECAY':
-            self.fsock.write("""Block %s \n""" % name)
+            self.fsock.write("""Block %s \n""" % name.lower())
             
     def write_param(self, param, lhablock):
         """ write the line corresponding to a given parameter """
@@ -190,9 +199,11 @@ class ParamCardWriter(object):
         text += "## to external program such as Pythia.\n"
 
         for part, param in data:
-            param.info = '%s : %s' % (part["name"], param.value)
-            self.write_param(param, lhablock)
-
+            if self.model['parameter_dict'][param.name].imag:
+            	raise ParamCardWriterError, 'All Mass/Width Parameter should be real'
+            value = complex(self.model['parameter_dict'][param.name]).real
+            text += """%s %s %f # %s : %s \n""" %(prefix, part["pdg_code"], 
+                        value, part["name"], param.value)
         self.fsock.write(text)         
         
     
