@@ -139,6 +139,9 @@ x2__plus__ = Particle(pdg_code = 1000037,
                       antitexname = 'x2+',
                       charge = 1,
                       Y = 0,
+
+
+
                       GhostNumber = 0)
 
 x2__minus__ = x2__plus__.anti()

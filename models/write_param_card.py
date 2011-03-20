@@ -14,6 +14,10 @@
 ################################################################################
 import models.model_reader as model_reader
 
+
+class ParamCardWriterError(Exception):
+    """ a error class for this file """
+
 class ParamCardWriter(object):
     """ A class for writting an update param_card for a given model """
 
@@ -23,7 +27,7 @@ class ParamCardWriter(object):
     """######################################################################\n"""      
 
     sm_pdg = [1,2,3,4,5,6,11,12,13,13,14,15,16,21,22,23,24,25]
-    qnumber_str ="""   Block QNUMBERS %(pdg)d  # %(name)s 
+    qnumber_str ="""Block QNUMBERS %(pdg)d  # %(name)s 
         1 %(charge)d  # 3 times electric charge
         2 %(spin)d  # number of spin states (2S+1)
         3 %(color)d  # colour rep (1: singlet, 3: triplet, 8: octet)
@@ -48,8 +52,7 @@ class ParamCardWriter(object):
         self.define_not_dep_param()
     
         if filepath:
-            self.fsock = open(filepath, 'w')
-            self.fsock.write(self.header)
+            self.define_output_file(filepath)
             self.write_card()
     
     
@@ -89,14 +92,13 @@ class ParamCardWriter(object):
             return 1
         
         maxlen = min([len(obj1.lhacode), len(obj2.lhacode)])
-    
+
         for i in range(maxlen):
             if obj1.lhacode[i] < obj2.lhacode[i]:
                 return -1
-            elif obj1.lhacode[i] == obj2.lhacode[i]:
-                return 0
-            else:
+            elif obj1.lhacode[i] > obj2.lhacode[i]:
                 return 1
+            
         #identical up to the first finish
         if len(obj1.lhacode) > len(obj2.lhacode):
             return 1
@@ -105,8 +107,21 @@ class ParamCardWriter(object):
         else:
             return -1
 
-    def write_card(self):
+    def define_output_file(self, path, mode='w'):
+        """ initialize the file"""
+        
+        if isinstance(path, str):
+            self.fsock = open(path, mode)
+        else:
+            self.fsock = path # prebuild file/IOstring
+        
+        self.fsock.write(self.header)
+
+    def write_card(self, path=None):
         """schedular for writing a card"""
+  
+        if path:
+            self.define_input_file(path)
   
         # order the parameter in a smart way
         self.external.sort(self.order_param)
@@ -145,11 +160,14 @@ class ParamCardWriter(object):
         else:
             info = param.name
     
+        if param.value.imag != 0:
+            raise ParamCardWriterError, 'All External Parameter should be real'
+    
         lhacode=' '.join(['%3s' % key for key in param.lhacode])
         if lhablock != 'DECAY':
-            text = """  %s %e # %s \n""" % (lhacode, complex(param.value).real, info) 
+            text = """  %s %e # %s \n""" % (lhacode, param.value.real, info) 
         else:
-            text = '''DECAY %s %e \n''' % (lhacode, complex(param.value).real)
+            text = '''DECAY %s %e # %s \n''' % (lhacode, param.value.real, info)
         self.fsock.write(text)             
       
         
@@ -166,21 +184,26 @@ class ParamCardWriter(object):
             return
               
         text = "##  Not dependent paramater.\n"
-        text += "## Those values should be edited following analytical the \n"
+        text += "## Those values should be edited following the \n"
         text += "## analytical expression. MG5 ignore those values \n"
         text += "## but they are important for interfacing the output of MG5\n"
         text += "## to external program such as Pythia.\n"
 
         for part, param in data:
-            value = complex(self.model['parameter_dict'][param.name]).real
-            
-            text += """%s %s %f # %s : %s \n""" %(prefix, part["pdg_code"], 
-                        value, part["name"], param.value)
+            param.info = '%s : %s' % (part["name"], param.value)
+            self.write_param(param, lhablock)
+
         self.fsock.write(text)         
         
     
     def write_qnumber(self):
         """ write qnumber """
+        
+        def is_anti(logical):
+            if logical:
+                return 0
+            else:
+                return 1
         
         text="""#===========================================================\n"""
         text += """# QUANTUM NUMBERS OF NEW STATE(S) (NON SM PDG CODE)\n"""
@@ -192,9 +215,9 @@ class ParamCardWriter(object):
             text += self.qnumber_str % {'pdg': part["pdg_code"],
                                  'name': part["name"],
                                  'charge': 3 * part["charge"],
-                                 'spin': 2 * part["spin"] + 1,
+                                 'spin': part["spin"],
                                  'color': part["color"],
-                                 'antipart': part['self_antipart'] and 1 or 0}
+                                 'antipart': is_anti(part['self_antipart'])}
         
         self.fsock.write(text)
         
