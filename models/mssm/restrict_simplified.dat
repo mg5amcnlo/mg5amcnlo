@@ -333,192 +333,192 @@ Block HMIX
 # QUANTUM NUMBERS OF NEW STATE(S) (NON SM PDG CODE)
 #===========================================================
 
-   Block QNUMBERS 1000022  # n1 
+Block QNUMBERS 1000022  # n1 
         1 0  # 3 times electric charge
         2 6  # number of spin states (2S+1)
         3 1  # colour rep (1: singlet, 3: triplet, 8: octet)
         4 0  # Particle/Antiparticle distinction (0=own anti)
-   Block QNUMBERS 1000023  # n2 
+Block QNUMBERS 1000023  # n2 
         1 0  # 3 times electric charge
         2 6  # number of spin states (2S+1)
         3 1  # colour rep (1: singlet, 3: triplet, 8: octet)
         4 0  # Particle/Antiparticle distinction (0=own anti)
-   Block QNUMBERS 1000025  # n3 
+Block QNUMBERS 1000025  # n3 
         1 0  # 3 times electric charge
         2 6  # number of spin states (2S+1)
         3 1  # colour rep (1: singlet, 3: triplet, 8: octet)
         4 0  # Particle/Antiparticle distinction (0=own anti)
-   Block QNUMBERS 1000035  # n4 
+Block QNUMBERS 1000035  # n4 
         1 0  # 3 times electric charge
         2 6  # number of spin states (2S+1)
         3 1  # colour rep (1: singlet, 3: triplet, 8: octet)
         4 0  # Particle/Antiparticle distinction (0=own anti)
-   Block QNUMBERS 1000024  # x1+ 
+Block QNUMBERS 1000024  # x1+ 
         1 3  # 3 times electric charge
         2 6  # number of spin states (2S+1)
         3 1  # colour rep (1: singlet, 3: triplet, 8: octet)
         4 1  # Particle/Antiparticle distinction (0=own anti)
-   Block QNUMBERS 1000037  # x2+ 
+Block QNUMBERS 1000037  # x2+ 
         1 3  # 3 times electric charge
         2 6  # number of spin states (2S+1)
         3 1  # colour rep (1: singlet, 3: triplet, 8: octet)
         4 1  # Particle/Antiparticle distinction (0=own anti)
-   Block QNUMBERS 1000021  # go 
+Block QNUMBERS 1000021  # go 
         1 0  # 3 times electric charge
         2 6  # number of spin states (2S+1)
         3 8  # colour rep (1: singlet, 3: triplet, 8: octet)
         4 0  # Particle/Antiparticle distinction (0=own anti)
-   Block QNUMBERS 35  # h02 
+Block QNUMBERS 35  # h02 
         1 0  # 3 times electric charge
         2 3  # number of spin states (2S+1)
         3 1  # colour rep (1: singlet, 3: triplet, 8: octet)
         4 0  # Particle/Antiparticle distinction (0=own anti)
-   Block QNUMBERS 36  # A0 
+Block QNUMBERS 36  # A0 
         1 0  # 3 times electric charge
         2 3  # number of spin states (2S+1)
         3 1  # colour rep (1: singlet, 3: triplet, 8: octet)
         4 0  # Particle/Antiparticle distinction (0=own anti)
-   Block QNUMBERS 37  # H+ 
+Block QNUMBERS 37  # H+ 
         1 3  # 3 times electric charge
         2 3  # number of spin states (2S+1)
         3 1  # colour rep (1: singlet, 3: triplet, 8: octet)
         4 1  # Particle/Antiparticle distinction (0=own anti)
-   Block QNUMBERS 250  # G0 
+Block QNUMBERS 250  # G0 
         1 0  # 3 times electric charge
         2 3  # number of spin states (2S+1)
         3 1  # colour rep (1: singlet, 3: triplet, 8: octet)
         4 0  # Particle/Antiparticle distinction (0=own anti)
-   Block QNUMBERS 251  # G+ 
+Block QNUMBERS 251  # G+ 
         1 3  # 3 times electric charge
         2 3  # number of spin states (2S+1)
         3 1  # colour rep (1: singlet, 3: triplet, 8: octet)
         4 1  # Particle/Antiparticle distinction (0=own anti)
-   Block QNUMBERS 1000012  # sv1 
+Block QNUMBERS 1000012  # sv1 
         1 0  # 3 times electric charge
         2 3  # number of spin states (2S+1)
         3 1  # colour rep (1: singlet, 3: triplet, 8: octet)
         4 1  # Particle/Antiparticle distinction (0=own anti)
-   Block QNUMBERS 1000014  # sv2 
+Block QNUMBERS 1000014  # sv2 
         1 0  # 3 times electric charge
         2 3  # number of spin states (2S+1)
         3 1  # colour rep (1: singlet, 3: triplet, 8: octet)
         4 1  # Particle/Antiparticle distinction (0=own anti)
-   Block QNUMBERS 1000016  # sv3 
+Block QNUMBERS 1000016  # sv3 
         1 0  # 3 times electric charge
         2 3  # number of spin states (2S+1)
         3 1  # colour rep (1: singlet, 3: triplet, 8: octet)
         4 1  # Particle/Antiparticle distinction (0=own anti)
-   Block QNUMBERS 1000011  # sl1- 
+Block QNUMBERS 1000011  # sl1- 
         1 -3  # 3 times electric charge
         2 3  # number of spin states (2S+1)
         3 1  # colour rep (1: singlet, 3: triplet, 8: octet)
         4 1  # Particle/Antiparticle distinction (0=own anti)
-   Block QNUMBERS 1000013  # sl2- 
+Block QNUMBERS 1000013  # sl2- 
         1 -3  # 3 times electric charge
         2 3  # number of spin states (2S+1)
         3 1  # colour rep (1: singlet, 3: triplet, 8: octet)
         4 1  # Particle/Antiparticle distinction (0=own anti)
-   Block QNUMBERS 1000015  # sl3- 
+Block QNUMBERS 1000015  # sl3- 
         1 -3  # 3 times electric charge
         2 3  # number of spin states (2S+1)
         3 1  # colour rep (1: singlet, 3: triplet, 8: octet)
         4 1  # Particle/Antiparticle distinction (0=own anti)
-   Block QNUMBERS 2000011  # sl4- 
+Block QNUMBERS 2000011  # sl4- 
         1 -3  # 3 times electric charge
         2 3  # number of spin states (2S+1)
         3 1  # colour rep (1: singlet, 3: triplet, 8: octet)
         4 1  # Particle/Antiparticle distinction (0=own anti)
-   Block QNUMBERS 2000013  # sl5- 
+Block QNUMBERS 2000013  # sl5- 
         1 -3  # 3 times electric charge
         2 3  # number of spin states (2S+1)
         3 1  # colour rep (1: singlet, 3: triplet, 8: octet)
         4 1  # Particle/Antiparticle distinction (0=own anti)
-   Block QNUMBERS 2000015  # sl6- 
+Block QNUMBERS 2000015  # sl6- 
         1 -3  # 3 times electric charge
         2 3  # number of spin states (2S+1)
         3 1  # colour rep (1: singlet, 3: triplet, 8: octet)
         4 1  # Particle/Antiparticle distinction (0=own anti)
-   Block QNUMBERS 1000002  # su1 
+Block QNUMBERS 1000002  # su1 
         1 2  # 3 times electric charge
         2 3  # number of spin states (2S+1)
         3 3  # colour rep (1: singlet, 3: triplet, 8: octet)
         4 1  # Particle/Antiparticle distinction (0=own anti)
-   Block QNUMBERS 1000004  # su2 
+Block QNUMBERS 1000004  # su2 
         1 2  # 3 times electric charge
         2 3  # number of spin states (2S+1)
         3 3  # colour rep (1: singlet, 3: triplet, 8: octet)
         4 1  # Particle/Antiparticle distinction (0=own anti)
-   Block QNUMBERS 1000006  # su3 
+Block QNUMBERS 1000006  # su3 
         1 2  # 3 times electric charge
         2 3  # number of spin states (2S+1)
         3 3  # colour rep (1: singlet, 3: triplet, 8: octet)
         4 1  # Particle/Antiparticle distinction (0=own anti)
-   Block QNUMBERS 2000002  # su4 
+Block QNUMBERS 2000002  # su4 
         1 2  # 3 times electric charge
         2 3  # number of spin states (2S+1)
         3 3  # colour rep (1: singlet, 3: triplet, 8: octet)
         4 1  # Particle/Antiparticle distinction (0=own anti)
-   Block QNUMBERS 2000004  # su5 
+Block QNUMBERS 2000004  # su5 
         1 2  # 3 times electric charge
         2 3  # number of spin states (2S+1)
         3 3  # colour rep (1: singlet, 3: triplet, 8: octet)
         4 1  # Particle/Antiparticle distinction (0=own anti)
-   Block QNUMBERS 2000006  # su6 
+Block QNUMBERS 2000006  # su6 
         1 2  # 3 times electric charge
         2 3  # number of spin states (2S+1)
         3 3  # colour rep (1: singlet, 3: triplet, 8: octet)
         4 1  # Particle/Antiparticle distinction (0=own anti)
-   Block QNUMBERS 1000001  # sd1 
+Block QNUMBERS 1000001  # sd1 
         1 -1  # 3 times electric charge
         2 3  # number of spin states (2S+1)
         3 3  # colour rep (1: singlet, 3: triplet, 8: octet)
         4 1  # Particle/Antiparticle distinction (0=own anti)
-   Block QNUMBERS 1000003  # sd2 
+Block QNUMBERS 1000003  # sd2 
         1 -1  # 3 times electric charge
         2 3  # number of spin states (2S+1)
         3 3  # colour rep (1: singlet, 3: triplet, 8: octet)
         4 1  # Particle/Antiparticle distinction (0=own anti)
-   Block QNUMBERS 1000005  # sd3 
+Block QNUMBERS 1000005  # sd3 
         1 -1  # 3 times electric charge
         2 3  # number of spin states (2S+1)
         3 3  # colour rep (1: singlet, 3: triplet, 8: octet)
         4 1  # Particle/Antiparticle distinction (0=own anti)
-   Block QNUMBERS 2000001  # sd4 
+Block QNUMBERS 2000001  # sd4 
         1 -1  # 3 times electric charge
         2 3  # number of spin states (2S+1)
         3 3  # colour rep (1: singlet, 3: triplet, 8: octet)
         4 1  # Particle/Antiparticle distinction (0=own anti)
-   Block QNUMBERS 2000003  # sd5 
+Block QNUMBERS 2000003  # sd5 
         1 -1  # 3 times electric charge
         2 3  # number of spin states (2S+1)
         3 3  # colour rep (1: singlet, 3: triplet, 8: octet)
         4 1  # Particle/Antiparticle distinction (0=own anti)
-   Block QNUMBERS 2000005  # sd6 
+Block QNUMBERS 2000005  # sd6 
         1 -1  # 3 times electric charge
         2 3  # number of spin states (2S+1)
         3 3  # colour rep (1: singlet, 3: triplet, 8: octet)
         4 1  # Particle/Antiparticle distinction (0=own anti)
-   Block QNUMBERS 9000001  # ghG 
+Block QNUMBERS 9000001  # ghG 
         1 0  # 3 times electric charge
         2 -3  # number of spin states (2S+1)
         3 8  # colour rep (1: singlet, 3: triplet, 8: octet)
         4 1  # Particle/Antiparticle distinction (0=own anti)
-   Block QNUMBERS 9000002  # ghA 
+Block QNUMBERS 9000002  # ghA 
         1 0  # 3 times electric charge
         2 -3  # number of spin states (2S+1)
         3 1  # colour rep (1: singlet, 3: triplet, 8: octet)
         4 1  # Particle/Antiparticle distinction (0=own anti)
-   Block QNUMBERS 9000003  # ghZ 
+Block QNUMBERS 9000003  # ghZ 
         1 0  # 3 times electric charge
         2 -3  # number of spin states (2S+1)
         3 1  # colour rep (1: singlet, 3: triplet, 8: octet)
         4 1  # Particle/Antiparticle distinction (0=own anti)
-   Block QNUMBERS 9000004  # ghWp 
+Block QNUMBERS 9000004  # ghWp 
         1 3  # 3 times electric charge
         2 -3  # number of spin states (2S+1)
         3 1  # colour rep (1: singlet, 3: triplet, 8: octet)
         4 1  # Particle/Antiparticle distinction (0=own anti)
-   Block QNUMBERS 9000005  # ghWm 
+Block QNUMBERS 9000005  # ghWm 
         1 -3  # 3 times electric charge
         2 -3  # number of spin states (2S+1)
         3 1  # colour rep (1: singlet, 3: triplet, 8: octet)
