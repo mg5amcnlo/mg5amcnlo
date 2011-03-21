@@ -194,7 +194,7 @@ class ProcessExporterCPP(object):
         pass
     
     def __init__(self, matrix_elements, cpp_helas_call_writer, process_string = "",
-                 path = os.getcwd()):
+                 process_number = 0, path = os.getcwd()):
         """Initiate with matrix elements, helas call writer, process
         string, path. Generate the process .h and .cc files."""
 
@@ -216,17 +216,24 @@ class ProcessExporterCPP(object):
 
         self.processes = sum([me.get('processes') for \
                               me in self.matrix_elements], [])
+        self.processes.extend(sum([me.get_mirror_processes() for \
+                              me in self.matrix_elements], []))
+
+        self.nprocesses = len(self.matrix_elements)
+        if any([m.get('has_mirror_process') for m in self.matrix_elements]):
+            self.nprocesses = 2*len(self.matrix_elements)
 
         if process_string:
             self.process_string = process_string
         else:
             self.process_string = self.processes[0].base_string()
 
+        self.process_number = process_number
+
         self.process_name = self.get_process_name()
         self.process_class = "CPPProcess"
 
         self.path = path
-        self.process_number = self.processes[0].get('id')
         self.helas_call_writer = cpp_helas_call_writer
 
         if not isinstance(self.helas_call_writer, helas_call_writers.CPPUFOHelasCallWriter):
@@ -585,15 +592,62 @@ class ProcessExporterCPP(object):
                             self.get_helicity_matrix(self.matrix_elements[0])
 
             # Extract denominator
-            replace_dict['den_factors'] = \
-                     ",".join([str(me.get_denominator_factor()) for me in \
-                               self.matrix_elements])
-
+            den_factors = [str(me.get_denominator_factor()) for me in \
+                               self.matrix_elements]
+            if self.nprocesses != len(self.matrix_elements):
+                den_factors.extend(den_factors)
+            replace_dict['den_factors'] = ",".join(den_factors)
             replace_dict['get_matrix_t_lines'] = "\n".join(
                     ["t[%(iproc)d]=matrix_%(proc_name)s();" % \
                      {"iproc": i, "proc_name": \
                       me.get('processes')[0].shell_string().replace("0_", "")} \
                      for i, me in enumerate(self.matrix_elements)])
+
+            # Generate lines for mirror matrix element calculation
+            mirror_matrix_lines = ""
+
+            if any([m.get('has_mirror_process') for m in self.matrix_elements]):
+                mirror_matrix_lines += \
+"""             // Mirror initial state momenta for mirror process
+                double tmp[4];
+                tmp[0]=pME[0].e();
+                tmp[1]=pME[0].px();
+                tmp[2]=pME[0].py();
+                tmp[3]=pME[0].pz();
+                pME[0].e(pME[1].e());
+                pME[0].px(pME[1].px());
+                pME[0].py(pME[1].py());
+                pME[0].pz(pME[1].pz());
+                pME[1].e(tmp[0]);
+                pME[1].px(tmp[1]);
+                pME[1].py(tmp[2]);
+                pME[1].pz(tmp[3]);
+                // Calculate wavefunctions
+                calculate_wavefunctions(helicities[ihel]);
+                // Mirror back
+                tmp[0]=pME[0].e();
+                tmp[1]=pME[0].px();
+                tmp[2]=pME[0].py();
+                tmp[3]=pME[0].pz();
+                pME[0].e(pME[1].e());
+                pME[0].px(pME[1].px());
+                pME[0].py(pME[1].py());
+                pME[0].pz(pME[1].pz());
+                pME[1].e(tmp[0]);
+                pME[1].px(tmp[1]);
+                pME[1].py(tmp[2]);
+                pME[1].pz(tmp[3]);
+                // Calculate matrix elements
+                """
+                
+                mirror_matrix_lines += "\n".join(
+                    ["t[%(iproc)d]=matrix_%(proc_name)s();" % \
+                     {"iproc": i + len(self.matrix_elements), "proc_name": \
+                      me.get('processes')[0].shell_string().replace("0_", "")} \
+                     for i, me in enumerate(self.matrix_elements) if me.get('has_mirror_process')])
+                    
+            replace_dict['get_mirror_matrix_lines'] = mirror_matrix_lines
+
 
             file = \
                  read_template_file(\
@@ -741,6 +795,13 @@ class ProcessExporterCPP(object):
                                 process.get('legs')[1].get('id')) \
                                for process in me.get('processes')]]
 
+            # Add mirror processes, 
+            beam_processes.extend([(len(self.matrix_elements) + i, me) for (i, me) in \
+                              enumerate(self.matrix_elements) if beam_parts in \
+                              [(process.get('legs')[0].get('id'),
+                                process.get('legs')[1].get('id')) \
+                               for process in me.get_mirror_processes()]])
+
             # Now add matrix elements for the processes with the right factors
             res_lines.append("// Add matrix elements for processes with beams %s" % \
                              repr(beam_parts))
@@ -749,7 +810,11 @@ class ProcessExporterCPP(object):
                                         (i, len([proc for proc in \
                                          me.get('processes') if beam_parts == \
                                          (proc.get('legs')[0].get('id'),
-                                          proc.get('legs')[1].get('id'))])) \
+                                          proc.get('legs')[1].get('id')) or \
+                                         me.get('has_mirror_process') and \
+                                         beam_parts == \
+                                         (proc.get('legs')[1].get('id'),
+                                          proc.get('legs')[0].get('id'))])) \
                                         for (i, me) in beam_processes]).\
                               replace('*1', '')))
             res_lines.append("}")
@@ -852,7 +917,8 @@ class ProcessExporterCPP(object):
 # generate_process_files_pythia8
 #===============================================================================
 def generate_process_files_pythia8(multi_matrix_element, cpp_helas_call_writer,
-                                   process_string = "", path = os.getcwd()):
+                                   process_string = "",
+                                   process_number = 0, path = os.getcwd()):
 
     """Generate the .h and .cc files needed for Pythia 8, for the
     processes described by multi_matrix_element"""
@@ -860,6 +926,7 @@ def generate_process_files_pythia8(multi_matrix_element, cpp_helas_call_writer,
     process_exporter_pythia8 = ProcessExporterPythia8(multi_matrix_element,
                                                       cpp_helas_call_writer,
                                                       process_string,
+                                                      process_number,
                                                       path)
 
     process_exporter_pythia8.generate_process_files()
@@ -918,7 +985,8 @@ class ProcessExporterPythia8(ProcessExporterCPP):
 
         process = self.processes[0]
         replace_dict['process_code'] = 10000 + \
-                                       process.get('id')
+                                       100*process.get('id') + \
+                                       self.process_number
 
         replace_dict['inFlux'] = self.get_process_influx()
 
@@ -926,7 +994,7 @@ class ProcessExporterPythia8(ProcessExporterCPP):
         replace_dict['resonances'] = self.get_resonance_lines()
 
         replace_dict['nexternal'] = self.nexternal
-        replace_dict['nprocesses'] = len(self.matrix_elements)
+        replace_dict['nprocesses'] = self.nprocesses
         
         if self.single_helicities:
             replace_dict['all_sigma_kin_definitions'] = \
@@ -1185,8 +1253,17 @@ class ProcessExporterPythia8(ProcessExporterCPP):
                               [(process.get('legs')[0].get('id'),
                                 process.get('legs')[1].get('id')) \
                                for process in me.get('processes')]]
+            # Pick out all mirror processes for this beam pair
+            beam_mirror_processes = []
+            if beam_parts[0] != beam_parts[1]:
+                beam_mirror_processes = [(i, me) for (i, me) in \
+                              enumerate(self.matrix_elements) if beam_parts in \
+                              [(process.get('legs')[1].get('id'),
+                                process.get('legs')[0].get('id')) \
+                               for process in me.get('processes')]]
 
             final_id_list = []
+            final_mirror_id_list = []
             for (i, me) in beam_processes:
                 final_id_list.extend([tuple([l.get('id') for l in \
                                              proc.get('legs') if l.get('state')]) \
@@ -1194,9 +1271,23 @@ class ProcessExporterPythia8(ProcessExporterCPP):
                                       if beam_parts == \
                                       (proc.get('legs')[0].get('id'),
                                        proc.get('legs')[1].get('id'))])
+            for (i, me) in beam_mirror_processes:
+                final_mirror_id_list.extend([tuple([l.get('id') for l in \
+                                             proc.get('legs') if l.get('state')]) \
+                                      for proc in me.get_mirror_processes() \
+                                      if beam_parts == \
+                                      (proc.get('legs')[0].get('id'),
+                                       proc.get('legs')[1].get('id'))])
             final_id_list = set(final_id_list)
-            ncombs = len(final_id_list)
-            #for ids in final_id_list
+            final_mirror_id_list = set(final_mirror_id_list)
+
+            if final_id_list and final_mirror_id_list or \
+               not final_id_list and not final_mirror_id_list:
+                raise ProcessExporterCPPError,\
+                      "Missing processes, or both process and mirror process"
+
+
+            ncombs = len(final_id_list)+len(final_mirror_id_list)
 
             res_lines.append("// Pick one of the flavor combinations %s" % \
                              ", ".join([repr(ids) for ids in final_id_list]))
@@ -1216,11 +1307,34 @@ class ProcessExporterPythia8(ProcessExporterCPP):
                           "More than one process with identical " + \
                           "external particles is not supported"
 
-            res_lines.append("int flavors[%d][%d] = {%s};" % \
-                             (ncombs, self.nfinal,
-                              ",".join(str(id) for id in \
-                                       sum([list(ids) for ids in final_id_list],
-                                           []))))
+            for final_ids in final_mirror_id_list:
+                items = [(i, len([ p for p in me.get_mirror_processes() \
+                             if [l.get('id') for l in p.get('legs')] == \
+                             list(beam_parts) + list(final_ids)])) \
+                       for (i, me) in beam_mirror_processes]
+                me_weight.append("+".join(["matrix_element[%i]*%i" % \
+                                           (i+len(self.matrix_elements), l) for\
+                                           (i, l) in items if l > 0]).\
+                                 replace('*1', ''))
+                if any([l>1 for (i, l) in items]):
+                    raise ProcessExporterCPPError,\
+                          "More than one process with identical " + \
+                          "external particles is not supported"
+
+            if final_id_list:
+                res_lines.append("int flavors[%d][%d] = {%s};" % \
+                                 (ncombs, self.nfinal,
+                                  ",".join(str(id) for id in \
+                                           sum([list(ids) for ids in \
+                                                final_id_list],
+                                               []))))
+            elif final_mirror_id_list:
+                res_lines.append("int flavors[%d][%d] = {%s};" % \
+                                 (ncombs, self.nfinal,
+                                  ",".join(str(id) for id in \
+                                           sum([list(ids) for ids in \
+                                                final_mirror_id_list],
+                                               []))))
             res_lines.append("vector<double> probs;")
             res_lines.append("double sum = %s;" % "+".join(me_weight))
             for me in me_weight:
@@ -1269,6 +1383,57 @@ class ProcessExporterPythia8(ProcessExporterCPP):
                 # Else, build a color representation dictionnary
                 repr_dict = {}
                 legs = proc.get_legs_with_decays()
+                for l in legs:
+                    repr_dict[l.get('number')] = \
+                        proc.get('model').get_particle(l.get('id')).get_color()
+                # Get the list of color flows
+                color_flow_list = \
+                    me.get('color_basis').color_flow_decomposition(\
+                                                      repr_dict, self.ninitial)
+                # Select a color flow
+                ncolor = len(me.get('color_basis'))
+                res_lines.append("""vector<double> probs;
+                  double sum = %s;
+                  for(int i=0;i<ncolor[%i];i++)
+                  probs.push_back(jamp2[%i][i]/sum);
+                  int ic = rndmPtr->pick(probs);""" % \
+                                 ("+".join(["jamp2[%d][%d]" % (ime, i) for i \
+                                            in range(ncolor)]), ime, ime))
+
+                color_flows = []
+                for color_flow_dict in color_flow_list:
+                    color_flows.append([color_flow_dict[l.get('number')][i] % 500 \
+                                        for (l,i) in itertools.product(legs, [0,1])])
+
+                # Write out colors for the selected color flow
+                res_lines.append("static int col[%d][%d] = {%s};" % \
+                                 (ncolor, 2 * self.nexternal,
+                                  ",".join(str(i) for i in sum(color_flows, []))))
+
+                res_lines.append("setColAcol(%s);" % \
+                                 ",".join(["col[ic][%d]" % i for i in \
+                                          range(2 * self.nexternal)]))
+            res_lines.append('}')
+
+        # Same thing but for mirror processes
+        for ime, me in enumerate(self.matrix_elements):
+            if not me.get('has_mirror_process'):
+                continue
+            res_lines.append("else if(%s){" % \
+                                 "||".join(["&&".join(["id%d == %d" % \
+                                            (i+1, l.get('id')) for (i, l) in \
+                                            enumerate(p.get('legs'))])\
+                                           for p in me.get_mirror_processes()]))
+
+            proc = me.get('processes')[0]
+            if not me.get('color_basis'):
+                # If no color basis, just output trivial color flow
+                res_lines.append("setColAcol(%s);" % ",".join(["0"]*2*self.nfinal))
+            else:
+                # Else, build a color representation dictionnary
+                repr_dict = {}
+                legs = proc.get_legs_with_decays()
+                legs[0:2] = [legs[1],legs[0]]
                 for l in legs:
                     repr_dict[l.get('number')] = \
                         proc.get('model').get_particle(l.get('id')).get_color()

@@ -16,6 +16,7 @@ ntry=ntry+1;
 // Reset the matrix elements
 for(int i = 0; i < nprocesses; i++){
     matrix_element[i] = 0.;
+    t[i] = 0.;
 }
 
 // For now, call setupForME() here
@@ -31,6 +32,7 @@ if (sum_hel == 0 || ntry < 10){
     if (goodhel[ihel] || ntry < 2){
       calculate_wavefunctions(helicities[ihel]);
       %(get_matrix_t_lines)s
+%(get_mirror_matrix_lines)s
       double tsum = 0;
       for(int iproc = 0;iproc < nprocesses; iproc++){
          matrix_element[iproc]+=t[iproc];
@@ -57,6 +59,7 @@ else
     int ihel = igood[jhel];
     calculate_wavefunctions(helicities[ihel]);
     %(get_matrix_t_lines)s
+%(get_mirror_matrix_lines)s
     for(int iproc = 0;iproc < nprocesses; iproc++){
       matrix_element[iproc]+=t[iproc]*hwgt;
     }

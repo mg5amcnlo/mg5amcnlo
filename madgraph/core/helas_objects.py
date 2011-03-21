@@ -3298,6 +3298,21 @@ class HelasMatrixElement(base_objects.PhysicsObject):
                 self.get_all_wavefunctions() + self.get_all_amplitudes() \
                 if wa.get('interaction_id') != 0]
 
+    def get_mirror_processes(self):
+        """Return a list of processes with initial states interchanged
+        if has mirror processes"""
+
+        if not self.get('has_mirror_process'):
+            return []
+        processes = base_objects.ProcessList()
+        for proc in self.get('processes'):
+            legs = copy.copy(proc.get('legs'))
+            legs[0:2] = [legs[1],legs[0]]
+            process = copy.copy(proc)
+            process.set('legs', legs)
+            processes.append(process)
+        return processes
+
     @staticmethod
     def check_equal_decay_processes(decay1, decay2):
         """Check if two single-sided decay processes

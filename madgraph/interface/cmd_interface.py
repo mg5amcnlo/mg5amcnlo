@@ -2560,17 +2560,48 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
             """Helper function to generate the matrix elements before
             exporting"""
 
+            # Sort amplitudes according to number of diagrams,
+            # to get most efficient multichannel output
+            self._curr_amps.sort(lambda a1, a2: a2.get_number_of_diagrams() - \
+                                 a1.get_number_of_diagrams())
+
             cpu_time1 = time.time()
+            ndiags = 0
             if not self._curr_matrix_elements.get('matrix_elements'):
-                self._curr_matrix_elements = \
-                             helas_objects.HelasMultiProcess(\
-                                           self._curr_amps)
+                if self._options['group_subprocesses_output']:
+                    cpu_time1 = time.time()
+                    dc_amps = [amp for amp in self._curr_amps if isinstance(amp, \
+                                        diagram_generation.DecayChainAmplitude)]
+                    non_dc_amps = diagram_generation.AmplitudeList(\
+                             [amp for amp in self._curr_amps if not \
+                              isinstance(amp, \
+                                         diagram_generation.DecayChainAmplitude)])
+                    subproc_groups = group_subprocs.SubProcessGroupList()
+                    if non_dc_amps:
+                        subproc_groups.extend(\
+                                   group_subprocs.SubProcessGroup.group_amplitudes(\
+                                                                       non_dc_amps))
+                    for dc_amp in dc_amps:
+                        dc_subproc_group = \
+                                 group_subprocs.DecayChainSubProcessGroup.\
+                                                           group_amplitudes(dc_amp)
+                        subproc_groups.extend(\
+                                  dc_subproc_group.\
+                                        generate_helas_decay_chain_subproc_groups())
+
+                    for sp_group in subproc_groups:
+                        ndiags = ndiags + sum([len(m.get('diagrams')) for m in \
+                              sp_group.get('matrix_elements')])
+                    self._curr_matrix_elements = subproc_groups
+                else:
+                    self._curr_matrix_elements = \
+                                 helas_objects.HelasMultiProcess(\
+                                               self._curr_amps)
+                    ndiags = sum([len(me.get('diagrams')) for \
+                                  me in self._curr_matrix_elements.\
+                                  get('matrix_elements')])
+
             cpu_time2 = time.time()
-
-            ndiags = sum([len(me.get('diagrams')) for \
-                          me in self._curr_matrix_elements.\
-                          get('matrix_elements')])
-
             return ndiags, cpu_time2 - cpu_time1
 
         # Start of the actual routine
@@ -2596,14 +2627,7 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
                                     self._export_dir)
             return        
 
-        # Determine if we want to group subprocesses
-        group_subprocesses = self._export_format == 'madevent' and \
-                             self._options['group_subprocesses_output']
-        
-        if not group_subprocesses:
-            # Do not generate matrix elements, since this is done by the
-            # SubProcessGroup objects
-            ndiags, cpu_time = generate_matrix_elements(self)
+        ndiags, cpu_time = generate_matrix_elements(self)
 
         calls = 0
 
@@ -2613,60 +2637,26 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
         if self._export_format in ['standalone_cpp', 'madevent', 'standalone']:
             path = os.path.join(path, 'SubProcesses')
             
+        cpu_time1 = time.time()
+
+        # First treat madevent and pythia8 exports, where we need to
+        # distinguish between grouped and ungrouped subprocesses
+
+        # MadEvent
         if self._export_format == 'madevent':
-
-            # Sort amplitudes according to number of diagrams,
-            # to get most efficient multichannel output
-            self._curr_amps.sort(lambda a1, a2: a2.get_number_of_diagrams() - \
-                                 a1.get_number_of_diagrams())
-
-            if group_subprocesses:
-                ndiags = 0
-                cpu_time1 = time.time()
-                dc_amps = [amp for amp in self._curr_amps if isinstance(amp, \
-                                    diagram_generation.DecayChainAmplitude)]
-                non_dc_amps = diagram_generation.AmplitudeList(\
-                         [amp for amp in self._curr_amps if not \
-                          isinstance(amp, \
-                                     diagram_generation.DecayChainAmplitude)])
-                subproc_groups = group_subprocs.SubProcessGroupList()
-                if non_dc_amps:
-                    subproc_groups.extend(\
-                               group_subprocs.SubProcessGroup.group_amplitudes(\
-                                                                   non_dc_amps))
-                for dc_amp in dc_amps:
-                    dc_subproc_group = \
-                             group_subprocs.DecayChainSubProcessGroup.\
-                                                       group_amplitudes(dc_amp)
-                    subproc_groups.extend(\
-                              dc_subproc_group.\
-                                    generate_helas_decay_chain_subproc_groups())
-
-                cpu_time1 = time.time()
-                for sp_group in subproc_groups:
-                    ndiags = ndiags + sum([len(m.get('diagrams')) for m in \
-                          sp_group.get('matrix_elements')])
-                cpu_time = time.time() - cpu_time1
-                cpu_time1 = time.time()
-                for (group_number, me_group) in enumerate(subproc_groups):
+            if isinstance(self._curr_matrix_elements, group_subprocs.SubProcessGroupList):
+                for (group_number, me_group) in enumerate(self._curr_matrix_elements):
                     calls = calls + \
                          self._curr_exporter.generate_subprocess_directory_v4(\
                                 me_group, self._curr_fortran_model,
                                 group_number)
-                    matrix_elements = \
-                                 me_group.get('matrix_elements')
-                    self._curr_matrix_elements.get('matrix_elements').\
-                                                             extend(matrix_elements)
-                cpu_time2 = time.time() - cpu_time1
             else:
-                cpu_time1 = time.time()
                 for me_number, me in \
                    enumerate(self._curr_matrix_elements.get('matrix_elements')):
                     calls = calls + \
                             self._curr_exporter.generate_subprocess_directory_v4(\
                                 me, self._curr_fortran_model, me_number)
 
-                cpu_time2 = time.time() - cpu_time1
 
             # Write the procdef_mg5.dat file with process info
             card_path = os.path.join(path, os.path.pardir, 'SubProcesses', \
@@ -2680,15 +2670,35 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
                 except:
                     pass
                 
+        # Pythia 8
+        if self._export_format == 'pythia8':
+            if isinstance(self._curr_matrix_elements, group_subprocs.SubProcessGroupList):
+                for (group_number, me_group) in enumerate(self._curr_matrix_elements):
+                    export_cpp.generate_process_files_pythia8(\
+                            me_group.get('matrix_elements'), self._curr_cpp_model,
+                            process_string = me_group.get('name'),
+                            process_number = group_number, path = path)
+            else:
+                export_cpp.generate_process_files_pythia8(\
+                            self._curr_matrix_elements, self._curr_cpp_model,
+                            process_string = self._generate_info, path = path)
+                
+        # Pick out the matrix elements in a list
+        if isinstance(self._curr_matrix_elements, group_subprocs.SubProcessGroupList):
+            matrix_elements = sum([m.get('matrix_elements') for m in self._curr_matrix_elements], [])
+        else:
+            matrix_elements = self._curr_matrix_elements.get('matrix_elements')
+
+        # Fortran MadGraph Standalone
         if self._export_format == 'standalone':
-            for me in self._curr_matrix_elements.get('matrix_elements'):
+            for me in matrix_elements:
                 calls = calls + \
                         self._curr_exporter.generate_subprocess_directory_v4(\
                             me, self._curr_fortran_model)
-            
+
+        # Just the matrix.f files
         if self._export_format == 'matrix':
-            cpu_time1 = time.time()
-            for me in self._curr_matrix_elements.get('matrix_elements'):
+            for me in matrix_elements:
                 filename = os.path.join(path, 'matrix_' + \
                            me.get('processes')[0].shell_string() + ".f")
                 if os.path.isfile(filename):
@@ -2698,22 +2708,19 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
                 calls = calls + self._curr_exporter.write_matrix_element_v4(\
                     writers.FortranWriter(filename),\
                     me, self._curr_fortran_model)
-            cpu_time2 = time.time() - cpu_time1
 
-        if self._export_format == 'pythia8':
-            export_cpp.generate_process_files_pythia8(\
-                            self._curr_matrix_elements, self._curr_cpp_model,
-                            process_string = self._generate_info, path = path)
-                
+        # C++ standalone
         if self._export_format == 'standalone_cpp':
-            for me in self._curr_matrix_elements.get('matrix_elements'):
+            for me in matrix_elements:
                 export_cpp.generate_subprocess_directory_standalone_cpp(\
                               me, self._curr_cpp_model,
                               path = path)
                 
+        cpu_time2 = time.time() - cpu_time1
+
         logger.info(("Generated helas calls for %d subprocesses " + \
               "(%d diagrams) in %0.3f s") % \
-              (len(self._curr_matrix_elements.get('matrix_elements')),
+              (len(matrix_elements),
                ndiags, cpu_time))
 
         if calls:
@@ -2723,12 +2730,17 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
             else:
                 logger.info("Wrote files for %d helas calls" % \
                             (calls))
+                
         # Replace the amplitudes with the actual amplitudes from the
         # matrix elements, which allows proper diagram drawing also of
         # decay chain processes
         self._curr_amps = diagram_generation.AmplitudeList(\
                [me.get('base_amplitude') for me in \
-                self._curr_matrix_elements.get('matrix_elements')])
+                matrix_elements])
+        # Replace the matrix elements, so we have standard format for finalize
+        self._curr_matrix_elements = helas_objects.HelasMultiProcess(\
+            {'matrix_elements': \
+             helas_objects.HelasMatrixElementList(matrix_elements)})
 
         # Remember that we have done export
         self._done_export = (self._export_dir, self._export_format)

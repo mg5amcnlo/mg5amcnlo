@@ -396,8 +396,8 @@ void Sigma_sm_qqx_qqx::initProc()
 {
   // Instantiate the model class and set parameters that stay fixed during run
   pars = Parameters_sm::getInstance(); 
-  pars->setIndependentParameters(particleDataPtr, coupSMPtr); 
-  pars->setIndependentCouplings(particleDataPtr, coupSMPtr); 
+  pars->setIndependentParameters(particleDataPtr, couplingsPtr); 
+  pars->setIndependentCouplings(particleDataPtr, couplingsPtr); 
   // Set massive/massless matrix elements for c/b/mu/tau
   mcME = particleDataPtr->m0(4); 
   mbME = 0.; 
@@ -412,8 +412,8 @@ void Sigma_sm_qqx_qqx::initProc()
 void Sigma_sm_qqx_qqx::sigmaKin() 
 {
   // Set the parameters which change event by event
-  pars->setDependentParameters(particleDataPtr, coupSMPtr, alpS); 
-  pars->setDependentCouplings(particleDataPtr, coupSMPtr); 
+  pars->setDependentParameters(particleDataPtr, couplingsPtr, alpS); 
+  pars->setDependentCouplings(particleDataPtr, couplingsPtr); 
   // Reset color flows
   for(int i = 0; i < 2; i++ )
     jamp2[0][i] = 0.; 
@@ -440,6 +440,7 @@ void Sigma_sm_qqx_qqx::sigmaKin()
   for(int i = 0; i < nprocesses; i++ )
   {
     matrix_element[i] = 0.; 
+    t[i] = 0.; 
   }
 
   // For now, call setupForME() here
@@ -459,6 +460,7 @@ void Sigma_sm_qqx_qqx::sigmaKin()
       {
         calculate_wavefunctions(helicities[ihel]); 
         t[0] = matrix_uux_uux(); 
+
         double tsum = 0; 
         for(int iproc = 0; iproc < nprocesses; iproc++ )
         {
@@ -489,6 +491,7 @@ void Sigma_sm_qqx_qqx::sigmaKin()
       int ihel = igood[jhel]; 
       calculate_wavefunctions(helicities[ihel]); 
       t[0] = matrix_uux_uux(); 
+
       for(int iproc = 0; iproc < nprocesses; iproc++ )
       {
         matrix_element[iproc] += t[iproc] * hwgt; 
