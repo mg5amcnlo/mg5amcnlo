@@ -204,19 +204,31 @@ class AddVariable(list):
     def simplify(self, short=False):
         """ apply rule of simplification """
         
-        varlen = len(self)
         # deal with one length object
-        if varlen == 1:
+        if len(self) == 1:
             return self.prefactor * self[0].simplify()
         
         if short:
             return self
- 
+        
+        # check if more than one constant object
+        constant = 0        
+        # simplify complex number/Constant object
+        for term in self[:]:
+            if not hasattr(term, 'vartype'):
+                constant += term
+                self.remove(term)
+            elif term.vartype == 5:
+                constant += term.prefactor * term.value
+                self.remove(term)
+                
+
         # contract identical term and suppress null term
+        varlen = len(self)
         i = -1
         while i > -varlen:
             j = i - 1
-            while j >= -varlen:
+            while j >= -varlen:                
                 if self[i] == self[j]:
                     self[i].prefactor += self[j].prefactor
                     del self[j]
@@ -228,18 +240,11 @@ class AddVariable(list):
                 varlen -= 1
             else:
                 i -= 1
-        
-        # check if more than one constant object
-        constant = 0
-
-        
-        for term in self[:]:
-            if term.vartype == 5: # ConstantObj
-                constant += term.prefactor * term.value
-                self.remove(term)
-        if constant != 0:
-            self.append(ConstantObject(constant))
                 
+        if constant:
+            self.append(ConstantObject(constant))
+            varlen += 1
+             
         # deal with one/zero length object
         if varlen == 1:
             return self.prefactor * self[0].simplify()
@@ -534,7 +539,7 @@ class MultVariable(list):
         out *= self.prefactor
         return out
      
-    #Defining rule of Multiplication, Addition, Substraction    
+    #Defining rule of Multiplication    
     def __mul__(self, obj):
         """Define the multiplication with different object"""
         
@@ -542,7 +547,7 @@ class MultVariable(list):
             return self.__class__(self, self.prefactor * obj)
         
         elif not obj.vartype: # obj is a Variable
-            return NotImplemented
+            return NotImplemented # Use the one ov Variable
         
         elif obj.vartype == 2: # obj is a MultVariable
             new = self.__class__(self, self.prefactor)
@@ -1318,19 +1323,21 @@ class LorentzObjectRepresentation(dict):
         else:
             # no mapping needed (define switch as identity)
             switch = lambda ind : (ind)
-            
+   
+        assert tuple(self.lorentz_ind) == tuple(switch(obj.lorentz_ind)), '%s!=%s' % (self.lorentz_ind, switch(obj.lorentz_ind))
+
         # define an empty representation
-        new = LorentzObjectRepresentation({}, self.lorentz_ind, self.spin_ind)
+        new = LorentzObjectRepresentation({}, obj.lorentz_ind, self.spin_ind)
         
-        # loop over all indices and fullfill the new object           
+        # loop over all indices and fullfill the new object         
         if fact == 1:
             for ind in self.listindices():
-                value = self.get_rep(ind) + obj.get_rep(switch(ind))
+                value = obj.get_rep(ind) + self.get_rep(switch(ind))
                 new.set_rep(ind, value)
         else:
             for ind in self.listindices():
                 #permute index for the second object
-                value = self.get_rep(ind) + fact * obj.get_rep(switch(ind))
+                value = self.get_rep(switch(ind)) + fact * obj.get_rep(ind)
                 new.set_rep(ind, value)            
 
         return new
@@ -1350,7 +1357,7 @@ class LorentzObjectRepresentation(dict):
     def __mul__(self, obj):
         """multiplication performing directly the einstein/spin sommation.
         """
-
+        
         if not hasattr(obj, 'vartype') or not self.vartype or obj.vartype==5:
             out = LorentzObjectRepresentation({}, self.lorentz_ind, self.spin_ind)
             for ind in out.listindices():
@@ -1370,7 +1377,6 @@ class LorentzObjectRepresentation(dict):
                                                                 obj.lorentz_ind)
         s_ind, sum_s_ind = self.compare_indices(self.spin_ind, \
                                                                    obj.spin_ind)      
-              
         if not(sum_l_ind or sum_s_ind):
             # No contraction made a tensor product
             return self.tensor_product(obj)
@@ -1387,7 +1393,7 @@ class LorentzObjectRepresentation(dict):
             new_object.set_rep(indices, \
                                self.contraction(obj, sum_l_ind, sum_s_ind, \
                                                  dict_l_ind, dict_s_ind))
-
+        
         return new_object
 
     @staticmethod

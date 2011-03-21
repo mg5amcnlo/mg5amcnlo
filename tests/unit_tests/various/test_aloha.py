@@ -1922,7 +1922,7 @@ class TestLorentzObjectRepresentation(unittest.TestCase):
 
         #check global
         self.assertTrue(isinstance(sum, aloha_lib.LorentzObjectRepresentation))
-        self.assertEquals(sum.lorentz_ind, [1, 2])
+        self.assertEquals(sum.lorentz_ind, [2, 1])
         self.assertEqual(sum.spin_ind, [])
 #        tag = set(list(sum.tag))
 
@@ -1948,7 +1948,7 @@ class TestLorentzObjectRepresentation(unittest.TestCase):
             
         #check sum is unchanged
         self.assertTrue(isinstance(sum, aloha_lib.LorentzObjectRepresentation))
-        self.assertEquals(sum.lorentz_ind, [1, 2])
+        self.assertEquals(sum.lorentz_ind, [2, 1])
         self.assertEqual(sum.spin_ind, [])
 #        self.assertEqual(sum.tag, tag)
         for ind in sum.listindices():
@@ -2490,6 +2490,7 @@ class TestConstantObject(unittest.TestCase):
         p2 = aloha_obj.P(1,2) 
         add = p + p2   
 
+
 class TestSimplify(unittest.TestCase):
     """Check that the simplification works correctly"""        
 
@@ -2605,6 +2606,68 @@ class test_aloha_creation(unittest.TestCase):
             self.assertEqual(eval(str(expr.get_rep(ind))), -178727040j)
 #            
 #
+    def test_non_standard_format(self):
+        """ check non standard operation with contraction of ()*() """
+        
+        Metric = aloha_obj.Metric
+        P = aloha_obj.P
+        OM = aloha_obj.OverMass2
+        OverMass2 = OM
+        F = aloha_obj.Spinor
+        Identity = aloha_obj.Identity
+        
+        mu, nu, alpha, beta, part = 1,2,4,5,3
+        
+        
+        obj1a = 3*( Metric(mu, alpha)* Metric(nu, beta) )
+        
+        
+        
+        obj1b=        -5 * OverMass2(part) * (\
+                                Metric(mu, beta) * P(nu, part) * P(alpha, part) )
+
+        obj1 = obj1a + obj1b
+        
+        # check part by part
+        obj1a_rep = obj1a.simplify().expand().simplify()
+        assert obj1a_rep.lorentz_ind == [2,5,1,4] , "test not valid if condition not met"
+        self.assertEqual(str(obj1a_rep.get_rep([1,0,0,0])), '0')
+        
+        obj1b_rep = obj1b.simplify().expand().simplify()
+        assert obj1b_rep.lorentz_ind == [4,2,1,5] , "test not valid if condition not met"
+        self.assertEqual(str(obj1b_rep.get_rep([0,1,0,0])), '-5 * ( P3_0 * P3_1 * OM3 )')       
+        
+        #print obj1
+        obj1_rep = obj1.simplify().expand().simplify()
+        
+        assert obj1_rep.lorentz_ind == [4,2,1,5] , "test not valid if condition not met"
+        self.assertEqual(str(obj1_rep.get_rep([0,1,0,0])), '-5 * ( P3_0 * P3_1 * OM3 )')
+        
+    
+        
+        eta = Metric(1,2)
+        eta_rep = eta.expand()
+        
+        #print obj1_rep.lorentz_ind
+        #print obj1_rep
+        #print eta_rep
+        
+        final = obj1_rep * eta_rep
+        final = final.simplify()
+        
+        solution = obj1 * eta
+        solution_rep = solution.simplify().expand().simplify()
+        
+        P3_0,P3_1,P3_2,P3_3 = 2, 2, 5, 7
+        OM3 = 8
+        for ind in final.listindices():
+            val1 = eval(str(final.get_rep(ind)))
+            val2 = eval(str(solution_rep.get_rep(ind)))
+            self.assertAlmostEqual(val1, val2, msg='not equal data for ind: %s, %s != %s' % (ind, val1, val2))
+            
+        
+        
+        
 
     def test_use_of_library_spin2(self):
         """ check that use the library or the usual definition is the same """
@@ -2622,16 +2685,16 @@ class test_aloha_creation(unittest.TestCase):
         import time
         start = time.time()
         one_exp = Metric(mu,nu) * Identity(1,2)* aloha_obj.Spin2Propagator(mu,nu,alpha,beta, t)  * F(1,1) * F(2,2)
-        one_exp = one_exp.simplify().expand().simplify().factorize()
-        print 'one expand use', time.time()-start
+        one_exp = one_exp.simplify().expand().simplify()#.factorize()
+
         # Separate Expand:
         start = time.time()
         two_exp = Metric(mu,nu) * Identity(1,2)  * F(1,1) * F(2,2)
         two_exp = two_exp.simplify().expand().simplify()
+        
         two_exp = two_exp * aloha_obj.Spin2Propagator(mu,nu,alpha,beta, t).expand().simplify()
-        two_exp = two_exp.simplify().factorize()
-        print 'two expand use', time.time()-start
-        self.assertNotEqual(two_exp.lorentz_ind, one_exp.lorentz_ind)
+        two_exp = two_exp.simplify()#.factorize()
+        #self.assertEqual(two_exp.lorentz_ind, one_exp.lorentz_ind)
 
         P1_0,P1_1,P1_2,P1_3 = 1000, 3, 4, 1000
         P2_0,P2_1,P2_2,P2_3 = 1000, 3, 6, -1000
@@ -2643,9 +2706,9 @@ class test_aloha_creation(unittest.TestCase):
         M3 = 500
         
         for ind in one_exp.listindices():
-            print ind 
-            ind2 = [ind[1],ind[0]]
-            self.assertEqual(eval(str(one_exp.get_rep(ind))), eval(str(two_exp.get_rep(ind2))))
+            data = one_exp.get_rep(ind) - two_exp.get_rep(ind)
+            data.simplify()
+            self.assertAlmostEqual(eval(str(one_exp.get_rep(ind))), eval(str(two_exp.get_rep(ind))))
         
         
         
