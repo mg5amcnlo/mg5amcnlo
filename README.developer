@@ -28,7 +28,7 @@ Type "tutorial" for an interactive quick-start tutorial.
 To use with MadEvent:
 ---------------------
 Please run the script
-./bin/setup_madevent_template.py -d MG_ME_PATH
+./bin/setup_madevent_template.py
 
 To run using the MadEvent newprocess_mg5 script: 
 Copy the Template directory to a new directory, e.g. MyRunDir.
@@ -42,7 +42,6 @@ To run the test suite:
   A) the unit_tests:
       ./tests/test_manager.py [--verbose=1] [--logging=INFO]
   B) the acceptance tests:
-      Go to a recent MG_ME directory, setup MG5 in madgraph5/ and run:
       ./madgraph5/tests/test_manager.py -p A
   C) the parallel tests (warning - this will take a LOOONG time!):
       ./madgraph5/tests/test_manager.py -p P
