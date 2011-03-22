@@ -412,12 +412,12 @@ class ProcessExporterCPP(object):
 
         replace_dict['process_code'] = self.process_number
         replace_dict['nexternal'] = self.nexternal
-        replace_dict['nprocesses'] = len(self.matrix_elements)
+        replace_dict['nprocesses'] = self.nprocesses
 
         if self.single_helicities:
             replace_dict['all_sigma_kin_definitions'] = \
                           """// Calculate wavefunctions
-                          void calculate_wavefunctions(const int hel[]);
+                          void calculate_wavefunctions(const int perm[], const int hel[]);
                           static const int nwavefuncs = %d;
                           std::complex<double> w[nwavefuncs][18];""" % \
                                                     len(self.wavefunctions)
@@ -609,34 +609,13 @@ class ProcessExporterCPP(object):
             if any([m.get('has_mirror_process') for m in self.matrix_elements]):
                 mirror_matrix_lines += \
 """             // Mirror initial state momenta for mirror process
-                double tmp[4];
-                tmp[0]=pME[0].e();
-                tmp[1]=pME[0].px();
-                tmp[2]=pME[0].py();
-                tmp[3]=pME[0].pz();
-                pME[0].e(pME[1].e());
-                pME[0].px(pME[1].px());
-                pME[0].py(pME[1].py());
-                pME[0].pz(pME[1].pz());
-                pME[1].e(tmp[0]);
-                pME[1].px(tmp[1]);
-                pME[1].py(tmp[2]);
-                pME[1].pz(tmp[3]);
+                perm[0]=1;
+                perm[1]=0;
                 // Calculate wavefunctions
-                calculate_wavefunctions(helicities[ihel]);
+                calculate_wavefunctions(perm, helicities[ihel]);
                 // Mirror back
-                tmp[0]=pME[0].e();
-                tmp[1]=pME[0].px();
-                tmp[2]=pME[0].py();
-                tmp[3]=pME[0].pz();
-                pME[0].e(pME[1].e());
-                pME[0].px(pME[1].px());
-                pME[0].py(pME[1].py());
-                pME[0].pz(pME[1].pz());
-                pME[1].e(tmp[0]);
-                pME[1].px(tmp[1]);
-                pME[1].py(tmp[2]);
-                pME[1].pz(tmp[3]);
+                perm[0]=0;
+                perm[1]=1;
                 // Calculate matrix elements
                 """
                 
@@ -670,7 +649,7 @@ class ProcessExporterCPP(object):
         ret_lines = []
         if self.single_helicities:
             ret_lines.append(\
-                "void %s::calculate_wavefunctions(const int hel[]){" % \
+                "void %s::calculate_wavefunctions(const int perm[], const int hel[]){" % \
                 class_name)
             ret_lines.append("// Calculate wavefunctions for all processes")
             ret_lines.append(self.get_calculate_wavefunctions(\
@@ -999,7 +978,7 @@ class ProcessExporterPythia8(ProcessExporterCPP):
         if self.single_helicities:
             replace_dict['all_sigma_kin_definitions'] = \
                           """// Calculate wavefunctions
-                          void calculate_wavefunctions(const int hel[]);
+                          void calculate_wavefunctions(const int perm[], const int hel[]);
                           static const int nwavefuncs = %d;
                           std::complex<double> w[nwavefuncs][18];""" % \
                                                     len(self.wavefunctions)

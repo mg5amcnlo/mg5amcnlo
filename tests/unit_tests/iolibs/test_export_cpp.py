@@ -333,7 +333,7 @@ class Sigma_sm_qqx_qqx : public Sigma2Process
 
     // Private functions to calculate the matrix element for all subprocesses
     // Calculate wavefunctions
-    void calculate_wavefunctions(const int hel[]); 
+    void calculate_wavefunctions(const int perm[], const int hel[]); 
     static const int nwavefuncs = 10; 
     std::complex<double> w[nwavefuncs][18]; 
     double matrix_uux_uux(); 
@@ -443,6 +443,13 @@ void Sigma_sm_qqx_qqx::sigmaKin()
     t[i] = 0.; 
   }
 
+  // Define permutation
+  int perm[nexternal]; 
+  for(int i = 0; i < nexternal; i++ )
+  {
+    perm[i] = i; 
+  }
+
   // For now, call setupForME() here
   id1 = 2; 
   id2 = -2; 
@@ -458,7 +465,7 @@ void Sigma_sm_qqx_qqx::sigmaKin()
     {
       if (goodhel[ihel] || ntry < 2)
       {
-        calculate_wavefunctions(helicities[ihel]); 
+        calculate_wavefunctions(perm, helicities[ihel]); 
         t[0] = matrix_uux_uux(); 
 
         double tsum = 0; 
@@ -489,7 +496,7 @@ void Sigma_sm_qqx_qqx::sigmaKin()
         jhel = 0; 
       double hwgt = double(ngood)/double(sum_hel); 
       int ihel = igood[jhel]; 
-      calculate_wavefunctions(helicities[ihel]); 
+      calculate_wavefunctions(perm, helicities[ihel]); 
       t[0] = matrix_uux_uux(); 
 
       for(int iproc = 0; iproc < nprocesses; iproc++ )
@@ -588,7 +595,8 @@ double Sigma_sm_qqx_qqx::weightDecay(Event& process, int iResBeg, int iResEnd)
 //--------------------------------------------------------------------------
 // Evaluate |M|^2 for each subprocess
 
-void Sigma_sm_qqx_qqx::calculate_wavefunctions(const int hel[])
+void Sigma_sm_qqx_qqx::calculate_wavefunctions(const int perm[], const int
+    hel[])
 {
   // Calculate wavefunctions for all processes
   double p[nexternal][4]; 
@@ -604,10 +612,10 @@ void Sigma_sm_qqx_qqx::calculate_wavefunctions(const int hel[])
   }
 
   // Calculate all wavefunctions
-  ixxxxx(p[0], mME[0], hel[0], +1, w[0]); 
-  oxxxxx(p[1], mME[1], hel[1], -1, w[1]); 
-  oxxxxx(p[2], mME[2], hel[2], +1, w[2]); 
-  ixxxxx(p[3], mME[3], hel[3], -1, w[3]); 
+  ixxxxx(p[perm[0]], mME[0], hel[0], +1, w[0]); 
+  oxxxxx(p[perm[1]], mME[1], hel[1], -1, w[1]); 
+  oxxxxx(p[perm[2]], mME[2], hel[2], +1, w[2]); 
+  ixxxxx(p[perm[3]], mME[3], hel[3], -1, w[3]); 
   FFV1_3(w[0], w[1], pars->GC_10, pars->ZERO, pars->ZERO, w[4]); 
   FFV2_3(w[0], w[1], pars->GC_35, pars->MZ, pars->WZ, w[5]); 
   FFV5_3(w[0], w[1], pars->GC_47, pars->MZ, pars->WZ, w[6]); 
@@ -680,13 +688,13 @@ double Sigma_sm_qqx_qqx::matrix_uux_uux()
         self.assertFileContains('test.cc', goal_string)
 
     def test_write_cpp_go_process_cc_file(self):
-        """Test writing the .cc C++ standalone file for g g > go go"""
+        """Test writing the .cc C++ standalone file for u u~ > go go"""
 
         myleglist = base_objects.LegList()
 
-        myleglist.append(base_objects.Leg({'id':21,
+        myleglist.append(base_objects.Leg({'id':2,
                                          'state':False}))
-        myleglist.append(base_objects.Leg({'id':21,
+        myleglist.append(base_objects.Leg({'id':-2,
                                          'state':False}))
         myleglist.append(base_objects.Leg({'id':1000021,
                                          'state':True}))
@@ -699,10 +707,12 @@ double Sigma_sm_qqx_qqx::matrix_uux_uux()
         myamplitude = diagram_generation.Amplitude({'process': myproc})
 
         matrix_element = helas_objects.HelasMultiProcess(myamplitude)
+        matrix_element.get('matrix_elements')[0].set('has_mirror_process',
+                                                     True)
 
         goal_string = \
 """//==========================================================================
-// This file has been automatically generated for Pythia 8 by
+// This file has been automatically generated for C++ Standalone by
 // by MadGraph 5 v. %(version)s, %(date)s
 // By the MadGraph Development Team
 // Please visit us at https://launchpad.net/madgraph5
@@ -715,7 +725,7 @@ using namespace MG5_sm;
 
 //==========================================================================
 // Class member functions for calculating the matrix elements for
-// Process: g g > go go
+// Process: u u~ > go go
 
 //--------------------------------------------------------------------------
 // Initialize process.
@@ -734,7 +744,7 @@ void CPPProcess::initProc(string param_card_name)
   mME.push_back(pars->ZERO); 
   mME.push_back(pars->MGO); 
   mME.push_back(pars->MGO); 
-  jamp2[0] = new double[6]; 
+  jamp2[0] = new double[2]; 
 }
 
 //--------------------------------------------------------------------------
@@ -754,7 +764,7 @@ void CPPProcess::sigmaKin()
   }
 
   // Reset color flows
-  for(int i = 0; i < 6; i++ )
+  for(int i = 0; i < 2; i++ )
     jamp2[0][i] = 0.; 
 
   // Local variables and constants
@@ -771,7 +781,7 @@ void CPPProcess::sigmaKin()
       -1, -1, 1, 1, 1, 1, -1, -1, -1, 1, -1, -1, 1, 1, -1, 1, -1, 1, -1, 1, 1,
       1, 1, -1, -1, 1, 1, -1, 1, 1, 1, 1, -1, 1, 1, 1, 1};
   // Denominators: spins, colors and identical particles
-  const int denominators[nprocesses] = {512}; 
+  const int denominators[nprocesses] = {72, 72}; 
 
   ntry = ntry + 1; 
 
@@ -779,6 +789,12 @@ void CPPProcess::sigmaKin()
   for(int i = 0; i < nprocesses; i++ )
   {
     matrix_element[i] = 0.; 
+  }
+  // Define permutation
+  int perm[nexternal]; 
+  for(int i = 0; i < nexternal; i++ )
+  {
+    perm[i] = i; 
   }
 
   if (sum_hel == 0 || ntry < 10)
@@ -788,8 +804,18 @@ void CPPProcess::sigmaKin()
     {
       if (goodhel[ihel] || ntry < 2)
       {
-        calculate_wavefunctions(helicities[ihel]); 
-        t[0] = matrix_gg_gogo(); 
+        calculate_wavefunctions(perm, helicities[ihel]); 
+        t[0] = matrix_uux_gogo(); 
+        // Mirror initial state momenta for mirror process
+        perm[0] = 1; 
+        perm[1] = 0; 
+        // Calculate wavefunctions
+        calculate_wavefunctions(perm, helicities[ihel]); 
+        // Mirror back
+        perm[0] = 0; 
+        perm[1] = 1; 
+        // Calculate matrix elements
+        t[1] = matrix_uux_gogo(); 
         double tsum = 0; 
         for(int iproc = 0; iproc < nprocesses; iproc++ )
         {
@@ -818,8 +844,18 @@ void CPPProcess::sigmaKin()
         jhel = 0; 
       double hwgt = double(ngood)/double(sum_hel); 
       int ihel = igood[jhel]; 
-      calculate_wavefunctions(helicities[ihel]); 
-      t[0] = matrix_gg_gogo(); 
+      calculate_wavefunctions(perm, helicities[ihel]); 
+      t[0] = matrix_uux_gogo(); 
+      // Mirror initial state momenta for mirror process
+      perm[0] = 1; 
+      perm[1] = 0; 
+      // Calculate wavefunctions
+      calculate_wavefunctions(perm, helicities[ihel]); 
+      // Mirror back
+      perm[0] = 0; 
+      perm[1] = 1; 
+      // Calculate matrix elements
+      t[1] = matrix_uux_gogo(); 
       for(int iproc = 0; iproc < nprocesses; iproc++ )
       {
         matrix_element[iproc] += t[iproc] * hwgt; 
@@ -840,10 +876,15 @@ void CPPProcess::sigmaKin()
 double CPPProcess::sigmaHat() 
 {
   // Select between the different processes
-  if(id1 == 21 && id2 == 21)
+  if(id1 == 2 && id2 == -2)
   {
-    // Add matrix elements for processes with beams (21, 21)
+    // Add matrix elements for processes with beams (2, -2)
     return matrix_element[0]; 
+  }
+  else if(id1 == -2 && id2 == 2)
+  {
+    // Add matrix elements for processes with beams (-2, 2)
+    return matrix_element[1]; 
   }
   else
   {
@@ -858,47 +899,38 @@ double CPPProcess::sigmaHat()
 //--------------------------------------------------------------------------
 // Evaluate |M|^2 for each subprocess
 
-void CPPProcess::calculate_wavefunctions(const int hel[])
+void CPPProcess::calculate_wavefunctions(const int perm[], const int hel[])
 {
   // Calculate wavefunctions for all processes
   int i, j; 
 
   // Calculate all wavefunctions
-  vxxxxx(p[0], mME[0], hel[0], -1, w[0]); 
-  vxxxxx(p[1], mME[1], hel[1], -1, w[1]); 
-  oxxxxx(p[2], mME[2], hel[2], +1, w[2]); 
-  ixxxxx(p[3], mME[3], hel[3], -1, w[3]); 
-  FFV1_1(w[2], w[0], pars->GC_8, pars->MGO, pars->WGO, w[4]); 
-  FFV1_2(w[3], w[0], -pars->GC_8, pars->MGO, pars->WGO, w[5]); 
+  ixxxxx(p[perm[0]], mME[0], hel[0], +1, w[0]); 
+  oxxxxx(p[perm[1]], mME[1], hel[1], -1, w[1]); 
+  ixxxxx(p[perm[2]], mME[2], hel[2], -1, w[2]); 
+  oxxxxx(p[perm[3]], mME[3], hel[3], +1, w[3]); 
+  FFV1_3(w[0], w[1], pars->GC_10, pars->ZERO, pars->ZERO, w[4]); 
 
 
 }
-double CPPProcess::matrix_gg_gogo() 
+double CPPProcess::matrix_uux_gogo() 
 {
   int i, j; 
   // Local variables
-  const int ngraphs = 2; 
-  const int ncolor = 6; 
+  const int ngraphs = 1; 
+  const int ncolor = 2; 
   std::complex<double> ztemp; 
   std::complex<double> amp[ngraphs], jamp[ncolor]; 
   // The color matrix;
-  static const double denom[ncolor] = {6, 6, 6, 6, 6, 6}; 
-  static const double cf[ncolor][ncolor] = {19, -2, -2, -2, -2, 4, -2, 19, -2,
-      4, -2, -2, -2, -2, 19, -2, 4, -2, -2, 4, -2, 19, -2, -2, -2, -2, 4, -2,
-      19, -2, 4, -2, -2, -2, -2, 19};
+  static const double denom[ncolor] = {3, 3}; 
+  static const double cf[ncolor][ncolor] = {16, -2, -2, 16}; 
   // Calculate all amplitudes
   // Amplitude(s) for diagram number 1
-  FFV1_0(w[3], w[4], w[1], pars->GC_8, amp[0]); 
-  // Amplitude(s) for diagram number 2
-  FFV1_0(w[5], w[2], w[1], pars->GC_8, amp[1]); 
+  FFV1_0(w[2], w[3], w[4], pars->GC_8, amp[0]); 
 
   // Calculate color flows
-  jamp[0] = +2. * (-amp[1]); 
-  jamp[1] = +2. * (+amp[0]); 
-  jamp[2] = +2. * (-amp[0] + amp[1]); 
-  jamp[3] = +2. * (+amp[0]); 
-  jamp[4] = +2. * (-amp[0] + amp[1]); 
-  jamp[5] = +2. * (-amp[1]); 
+  jamp[0] = -std::complex<double> (0, 1) * amp[0]; 
+  jamp[1] = +std::complex<double> (0, 1) * amp[0]; 
 
   // Sum and square the color flows to get the matrix element
   double matrix = 0; 

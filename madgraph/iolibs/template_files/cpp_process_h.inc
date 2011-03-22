@@ -1,5 +1,5 @@
 //==========================================================================
-// This file has been automatically generated for Pythia 8
+// This file has been automatically generated for C++ Standalone by
 %(info_lines)s
 //==========================================================================
 
