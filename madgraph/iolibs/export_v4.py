@@ -1619,6 +1619,7 @@ class UFO_model_to_mg4(object):
         
         self.pass_parameter_to_case_insensitive()
         self.refactorize(wanted_couplings)
+        
         # write the files
         if full:
             self.write_all()
@@ -1763,7 +1764,7 @@ class UFO_model_to_mg4(object):
         
         real_parameters += [param.name for param in self.params_ext 
                             if param.type == 'real'and 
-                               param.lhablock not in ['MASS', 'DECAY']]
+                               is_valid(param.name)]
         
         fsock.writelines('double precision '+','.join(real_parameters)+'\n')
         fsock.writelines('common/params_R/ '+','.join(real_parameters)+'\n\n')
