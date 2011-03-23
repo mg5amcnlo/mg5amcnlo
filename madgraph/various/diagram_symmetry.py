@@ -259,6 +259,9 @@ def find_matrix_elements_for_configs(subproc_group):
     # Only include MEs with identical particles (otherwise no contribution)
     for iconf, diagram_list in \
                            enumerate(subproc_group.get('diagrams_for_configs')):
+        # Check if any diagrams contribute to config
+        if set(diagram_list) == set([0]):
+            continue
         # Add list of MEs with maximum ident factor contributing to this config
         max_ident = max([matrix_elements[i].get('identical_particle_factor') \
                          for i in range(n_mes) if diagram_list[i] > 0])

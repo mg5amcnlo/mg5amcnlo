@@ -320,7 +320,7 @@ c
       integer nsubproc          !Number of specific processes requested
       logical found
       integer ig
-      character*80 linkname(max_amps)
+      character*100 linkname(max_amps)
       integer sname(256)
       integer gname
 c
@@ -328,7 +328,7 @@ c     Local
 c
       integer i,j,k, io(max_amps), ik
       integer ntot, ip,jp
-      character*40 procname
+      character*100 procname
       character*4 cpref
       character*20 fnamel, fnamee
       double precision scale,xt(max_amps), teff
@@ -445,7 +445,7 @@ c
       if (sumproc) then
          nsubproc=0
          do i=1,ng
-            procname = linkname(io(i))(:40)
+            procname = linkname(io(i))(:100)
             gname=0
             read(procname(2:index(procname,'_')-1),*,err=20) gname
  20         found = .false.
@@ -523,7 +523,7 @@ c            write(16,65) '<tr><td align=right>',io(i),
      $           xlum(io(i))/scale,'</td></tr>'
 c            write(*,*) io(i),xmax(io(i))
             else
-                procname = linkname(io(i))(:40)
+                procname = linkname(io(i))(:100)
 cxx   tjs 3-20-2006  + cfax 12.05.2006
 c                ip = index(procname,'P')+2 !Strip off first P_
                 ip = index(procname,'P')+1 !Strip off first P

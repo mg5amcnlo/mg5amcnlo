@@ -87,7 +87,7 @@ C       Set up process information from file symfact
         SYMCONF(IPROC)=ICONFIG
         DO I=1,MAPCONFIG(0)
           READ(LUN,*) XDUM, ICONF
-          IF(ICONF.EQ.-ICONFIG)THEN
+          IF(ICONF.EQ.-MAPCONFIG(ICONFIG))THEN
             IPROC=IPROC+1
             SYMCONF(IPROC)=I
           ENDIF
@@ -262,7 +262,7 @@ C
       ENDDO
 
 C     Set momenta according to this permutation
-      CALL SWITCHMOM(PP,P1,PERMS(1,ICONFIG),JC,NEXTERNAL)
+      CALL SWITCHMOM(PP,P1,PERMS(1,MAPCONFIG(ICONFIG)),JC,NEXTERNAL)
 
       IB(1)=1
       IB(2)=2
