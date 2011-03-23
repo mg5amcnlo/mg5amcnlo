@@ -22,6 +22,7 @@ import logging
 import numbers
 import os
 import re
+import StringIO
 import madgraph.core.color_algebra as color
 from madgraph import MadGraph5Error, MG5DIR
 
@@ -870,47 +871,19 @@ class Model(PhysicsObject):
                 
     def write_param_card(self):
         """Write out the param_card, and return as string."""
-
-        def write_param(param, lhablock):
-
-            lhacode=' '.join(['%3s' % key for key in param.lhacode])
-            if lhablock == 'DECAY':
-                assert param.value.imag == 0
-                return 'DECAY %s %e # %s' % (lhacode, param.value.real, param.name)
-            else:
-                assert param.value.imag == 0 
-                return "  %s %e # %s" % (lhacode, param.value.real, param.name ) 
-
-        if not self.get('parameters'):
-            raise self.PhysicsObjectError,\
-                  "Attempt to write param_card from non-UFO model"
-
-        external_params = self.get('parameters')[('external',)]
-
-        # list all lhablock
-        all_lhablock = set([param.lhablock for param in external_params])
         
-        # sort lhablock alphabeticaly
-        all_lhablock = sorted(list(all_lhablock))
-        # place DECAY blocks last
-        all_lhablock.remove('DECAY')
-        all_lhablock.append('DECAY')
-
-        ret_list = ["# SLHA param_card for %s written by MadGraph 5" % \
-                    self.get('name')]
-        
-        for lhablock in all_lhablock:
-            if lhablock != 'DECAY':
-                ret_list.append("BLOCK %s" % lhablock)
-            ret_list.extend(sorted([write_param(param, lhablock) \
-                                    for param in external_params if \
-                                    param.lhablock == lhablock]))
-        return "\n".join(ret_list) + "\n"
+        import models.write_param_card as writter
+        out = StringIO.StringIO() # it's suppose to be written in a file
+        param = writter.ParamCardWriter(self)
+        param.define_output_file(out)
+        param.write_card()
+        return out.getvalue()
         
     @ staticmethod
     def load_default_name():
         """ load the default for name convention """
         
+        logger.info('Change particles name to pass to MG5 convention')    
         default = {}
         for line in open(os.path.join(MG5DIR, 'input', \
                                                  'particles_name_default.txt')):

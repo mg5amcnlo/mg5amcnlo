@@ -141,7 +141,7 @@ class ParamCardWriter(object):
         self.fsock.write(text)    
     
     sm_pdg = [1,2,3,4,5,6,11,12,13,13,14,15,16,21,22,23,24,25]
-    data="""   Block QNUMBERS %(pdg)d  # %(name)s 
+    data="""Block QNUMBERS %(pdg)d  # %(name)s 
         1 %(charge)d  # 3 times electric charge
         2 %(spin)d  # number of spin states (2S+1)
         3 %(color)d  # colour rep (1: singlet, 3: triplet, 8: octet)
@@ -162,7 +162,7 @@ class ParamCardWriter(object):
             text += self.data % {'pdg': part.pdg_code,
                                  'name': part.name,
                                  'charge': 3 * part.charge,
-                                 'spin': 3 * part.spin,
+                                 'spin': 2 * part.spin + 1,
                                  'color': part.color,
                                  'antipart': part.name != part.antiname and 1 or 0}
         

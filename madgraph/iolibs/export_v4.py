@@ -32,8 +32,7 @@ import madgraph.iolibs.template_files as template_files
 import madgraph.iolibs.ufo_expression_parsers as parsers
 
 import aloha.create_aloha as create_aloha
-
-import models.sm.write_param_card as write_param_card
+import models.write_param_card as param_writer
 from madgraph import MadGraph5Error, MG5DIR
 from madgraph.iolibs.files import cp, ln, mv
 _file_path = os.path.split(os.path.dirname(os.path.realpath(__file__)))[0] + '/'
@@ -1534,7 +1533,6 @@ class UFO_model_to_mg4(object):
        
         self.model = model
         self.model_name = model['name']
-        
         self.dir_path = output_path
         
         self.coups_dep = []    # (name, expression, type)
@@ -1669,6 +1667,7 @@ class UFO_model_to_mg4(object):
 
         # All the standard files
         self.copy_standard_file()
+
     ############################################################################
     ##  ROUTINE CREATING THE FILES  ############################################
     ############################################################################
@@ -1932,7 +1931,7 @@ class UFO_model_to_mg4(object):
     
         def format(parameter):
             """return the line for the ident_card corresponding to this parameter"""
-            colum = [parameter.lhablock] + \
+            colum = [parameter.lhablock.lower()] + \
                     [str(value) for value in parameter.lhacode] + \
                     [parameter.name]
             return ' '.join(colum)+'\n'
@@ -1974,19 +1973,10 @@ class UFO_model_to_mg4(object):
 
     def create_param_card(self):
         """ create the param_card.dat """
-        
-        write_param_card.ParamCardWriter(
-                os.path.join(self.dir_path, 'param_card.dat'),
-                self.params_ext)
 
-#    def search_type(self, expr):
-#        """return the type associate to the expression"""
-#        
-#        for param in self.model.all_parameters:
-#            if param.name == expr:
-#                return param.type
-#        
-#        return CompactifyExpression.search_type(self, expr)
+        out_path = os.path.join(self.dir_path, 'param_card.dat')
+        param_writer.ParamCardWriter(self.model, out_path)
+
   
  
 
