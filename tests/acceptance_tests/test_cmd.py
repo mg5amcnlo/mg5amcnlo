@@ -620,6 +620,82 @@ class TestCmdShell2(unittest.TestCase,
                                                     'P2_gg_qq',
                                                     'madevent')))
         
+    def test_madevent_subproc_group_symmetry(self):
+        """Check that symmetry.f gives right output"""
+
+        if os.path.isdir(self.out_dir):
+            shutil.rmdir(self.out_dir)
+
+        self.do('import model mssm')
+        self.do('define q = u d u~ d~')
+        self.do('set group_subprocesses_output True')
+        self.do('generate u u~ > g > go go, go > q q n1 / ur dr')
+        self.do('output %s ' % self.out_dir)
+        self.do('set group_subprocesses_output False')
+        devnull = open(os.devnull,'w')
+        # Check that all subprocess directories have been created
+        self.assertTrue(os.path.exists(os.path.join(self.out_dir,
+                                                    'SubProcesses',
+                                                    'P0_qq_gogo_go_qqn1_go_qqn1')))
+        # Check the contents of the symfact.dat file
+        self.assertEqual(open(os.path.join(self.out_dir,
+                                           'SubProcesses',
+                                           'P0_qq_gogo_go_qqn1_go_qqn1',
+                                           'symfact.dat')).read(),
+                         """ 1    1
+ 2    1
+ 3    1
+ 4    1
+ 5    -2
+ 6    1
+ 7    1
+ 8    1
+ 9    1
+ 10   1
+ 11   1
+ 12   1
+ 13   1
+ 14   1
+ 15   -12
+ 16   1
+""")
+
+        # Compile the Source directory
+        status = subprocess.call(['make'],
+                                 stdout=devnull, 
+                                 cwd=os.path.join(self.out_dir, 'Source'))
+        self.assertEqual(status, 0)
+
+        # Compile gensym
+        status = subprocess.call(['make', 'gensym'],
+                                 stdout=devnull, 
+                                 cwd=os.path.join(self.out_dir, 'SubProcesses',
+                                                  'P0_qq_gogo_go_qqn1_go_qqn1'))
+        # Run gensym
+        status = subprocess.call('./gensym', 
+                                 stdout=devnull,
+                                 cwd=os.path.join(self.out_dir, 'SubProcesses',
+                                                  'P0_qq_gogo_go_qqn1_go_qqn1'), shell=True)
+        self.assertEqual(status, 0)
+        # Check the new contents of the symfact.dat file
+        self.assertEqual(open(os.path.join(self.out_dir,
+                                           'SubProcesses',
+                                           'P0_qq_gogo_go_qqn1_go_qqn1',
+                                           'symfact.dat')).read(),
+                         """    1.030     1
+    2.030     1
+    3.030     1
+    4.030     1
+     5    -2
+    6.030     1
+    7.030     1
+    8.030     1
+   11.030     1
+   12.030     1
+    15   -12
+   16.030     1
+""")
+        
     def test_madevent_subproc_group_decay_chain(self):
         """Test decay chain output using the SubProcess group functionality"""
 

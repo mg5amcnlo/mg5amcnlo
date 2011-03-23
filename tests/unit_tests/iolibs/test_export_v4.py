@@ -39,7 +39,6 @@ import madgraph.core.diagram_generation as diagram_generation
 import madgraph.core.color_algebra as color
 import madgraph.various.diagram_symmetry as diagram_symmetry
 import madgraph.core.color_amp as color_amp
-import models.import_ufo as import_ufo
 import tests.unit_tests.core.test_helas_objects as test_helas_objects
 import tests.unit_tests.iolibs.test_file_writers as test_file_writers
 import tests.unit_tests.iolibs.test_helas_call_writers as \
@@ -930,7 +929,7 @@ C       Set up process information from file symfact
         SYMCONF(IPROC)=ICONFIG
         DO I=1,MAPCONFIG(0)
           READ(LUN,*) XDUM, ICONF
-          IF(ICONF.EQ.-ICONFIG)THEN
+          IF(ICONF.EQ.-MAPCONFIG(ICONFIG))THEN
             IPROC=IPROC+1
             SYMCONF(IPROC)=I
           ENDIF
@@ -1110,7 +1109,7 @@ C
       ENDDO
 
 C     Set momenta according to this permutation
-      CALL SWITCHMOM(PP,P1,PERMS(1,ICONFIG),JC,NEXTERNAL)
+      CALL SWITCHMOM(PP,P1,PERMS(1,MAPCONFIG(ICONFIG)),JC,NEXTERNAL)
 
       IB(1)=1
       IB(2)=2
@@ -1142,7 +1141,6 @@ C       Flip x values (to get boost right)
 
 """ % misc.get_pkg_info()
         
-
         #print open(self.give_pos('test')).read()
         self.assertFileContains('test', goal_super)
 
@@ -1551,7 +1549,7 @@ mirror  d~ d > d d~ g d d~ g"""
         self.assertFileContains('test', goal_processes)
 
     def test_export_group_multidiagram_decay_chains(self):
-        """Test export group_amplitudes for multidiagram decay chain."""
+        """Test export group_amplitudes for uu~>g>gogo, go>qqn1."""
 
         mypartlist = base_objects.ParticleList()
         myinterlist = base_objects.InteractionList()
@@ -1691,6 +1689,30 @@ mirror  d~ d > d d~ g d d~ g"""
         u = mymodel.get_particle(2)
         antiu = mymodel.get_particle(-2)
         
+        # Gluon couplings to quarks
+        myinterlist.append(base_objects.Interaction({
+                      'id': 1,
+                      'particles': base_objects.ParticleList(\
+                                            [antiu, \
+                                             u, \
+                                             g]),
+                      'color': [],
+                      'lorentz':['L1'],
+                      'couplings':{(0, 0):'GQQ'},
+                      'orders':{'QCD':1}}))
+
+        # Gluon couplings to gluino
+        myinterlist.append(base_objects.Interaction({
+                      'id': 2,
+                      'particles': base_objects.ParticleList(\
+                                            [go, \
+                                             go, \
+                                             g]),
+                      'color': [],
+                      'lorentz':['L1'],
+                      'couplings':{(0, 0):'GQQ'},
+                      'orders':{'QCD':1}}))
+
         # Gluino couplings to quarks
         myinterlist.append(base_objects.Interaction({
                       'id': 11,
@@ -1783,9 +1805,7 @@ mirror  d~ d > d d~ g d d~ g"""
 
         mymodel.set('interactions', myinterlist)
 
-        mymodel = import_ufo.import_model('mssm')
-
-        procs = [[1,-1,1000021,1000021]]
+        procs = [[2,-2,1000021,1000021]]
         decays = [[1000021,1,-1,1000022],[1000021,2,-2,1000022]]
         coreamplitudes = diagram_generation.AmplitudeList()
         decayamplitudes = diagram_generation.AmplitudeList()
@@ -1803,7 +1823,6 @@ mirror  d~ d > d d~ g d d~ g"""
 
             my_process = base_objects.Process({'legs':my_leglist,
                                                'model':mymodel,
-                                               'orders':{'QED':0},
                                                'required_s_channels':[[21]]})
             my_amplitude = diagram_generation.Amplitude(my_process)
             coreamplitudes.append(my_amplitude)
@@ -1818,8 +1837,8 @@ mirror  d~ d > d d~ g d d~ g"""
 
             my_process = base_objects.Process({'legs':my_leglist,
                                                'model':mymodel,
-                                               'is_decay_chain': True,
-                                               'forbidden_particles':[2000001,2000002]})
+                                               'is_decay_chain': True})
+                                               #'forbidden_particles':[2000001,2000002]})
             my_amplitude = diagram_generation.Amplitude(my_process)
             decayamplitudes.append(my_amplitude)
             decayprocs.append(my_process)
@@ -2027,85 +2046,6 @@ C     Diagram 16
 C     Number of configs
       DATA MAPCONFIG(0)/12/
 """)
-
-        # Find config symmetries and permutations
-        symmetry, perms, ident_perms = \
-                  diagram_symmetry.find_symmetry(subprocess_group)
-        self.assertEqual(symmetry,
-                         [1, 1, 1, 1, -2, 1, 1, 1, 1, 1, 1, 1, 1, 1, -12, 1])
-        self.assertEqual(perms, [[0, 1, 2, 3, 4, 5, 6, 7],
-                                 [0, 1, 2, 3, 4, 5, 6, 7],
-                                 [0, 1, 2, 3, 4, 5, 6, 7],
-                                 [0, 1, 2, 3, 4, 5, 6, 7],
-                                 [0, 1, 5, 6, 7, 2, 3, 4],
-                                 [0, 1, 2, 3, 4, 5, 6, 7],
-                                 [0, 1, 2, 3, 4, 5, 6, 7],
-                                 [0, 1, 2, 3, 4, 5, 6, 7],
-                                 [0, 1, 2, 3, 4, 5, 6, 7],
-                                 [0, 1, 2, 3, 4, 5, 6, 7],
-                                 [0, 1, 2, 3, 4, 5, 6, 7],
-                                 [0, 1, 2, 3, 4, 5, 6, 7],
-                                 [0, 1, 2, 3, 4, 5, 6, 7],
-                                 [0, 1, 2, 3, 4, 5, 6, 7],
-                                 [0, 1, 5, 6, 7, 2, 3, 4],
-                                 [0, 1, 2, 3, 4, 5, 6, 7]])
-        self.assertEqual(ident_perms, [[0, 1, 2, 3, 4, 5, 6, 7]])
-
-
-        filename = self.give_pos('test')
-
-        # Test symswap.inc
-        exporter.write_symswap_file(writers.FortranWriter(filename),
-                           ident_perms)
-        self.assertFileContains('test',
-"""      DATA (ISYM(I,1),I=1,NEXTERNAL)/1,2,3,4,5,6,7,8/
-      DATA NSYM/1/
-""")
-
-        # Test symfact.dat
-        exporter.write_symfact_file(writers.FortranWriter(filename),
-                           symmetry)
-        self.assertFileContains('test',
-""" 1    1
- 2    1
- 3    1
- 4    1
- 5    -2
- 6    1
- 7    1
- 8    1
- 9    1
- 10   1
- 11   1
- 12   1
- 13   1
- 14   1
- 15   -12
- 16   1
-""")
-
-        # Test symperms.inc
-        exporter.write_symperms_file(writers.FortranWriter(filename),
-                           perms)
-        self.assertFileContains('test',
-"""      DATA (PERMS(I,1),I=1,NEXTERNAL)/1,2,3,4,5,6,7,8/
-      DATA (PERMS(I,2),I=1,NEXTERNAL)/1,2,3,4,5,6,7,8/
-      DATA (PERMS(I,3),I=1,NEXTERNAL)/1,2,3,4,5,6,7,8/
-      DATA (PERMS(I,4),I=1,NEXTERNAL)/1,2,3,4,5,6,7,8/
-      DATA (PERMS(I,5),I=1,NEXTERNAL)/1,2,6,7,8,3,4,5/
-      DATA (PERMS(I,6),I=1,NEXTERNAL)/1,2,3,4,5,6,7,8/
-      DATA (PERMS(I,7),I=1,NEXTERNAL)/1,2,3,4,5,6,7,8/
-      DATA (PERMS(I,8),I=1,NEXTERNAL)/1,2,3,4,5,6,7,8/
-      DATA (PERMS(I,9),I=1,NEXTERNAL)/1,2,3,4,5,6,7,8/
-      DATA (PERMS(I,10),I=1,NEXTERNAL)/1,2,3,4,5,6,7,8/
-      DATA (PERMS(I,11),I=1,NEXTERNAL)/1,2,3,4,5,6,7,8/
-      DATA (PERMS(I,12),I=1,NEXTERNAL)/1,2,3,4,5,6,7,8/
-      DATA (PERMS(I,13),I=1,NEXTERNAL)/1,2,3,4,5,6,7,8/
-      DATA (PERMS(I,14),I=1,NEXTERNAL)/1,2,3,4,5,6,7,8/
-      DATA (PERMS(I,15),I=1,NEXTERNAL)/1,2,6,7,8,3,4,5/
-      DATA (PERMS(I,16),I=1,NEXTERNAL)/1,2,3,4,5,6,7,8/
-""")
-        #print open(self.give_pos('test')).read()
 
 #===============================================================================
 # FullHelasOutputTest

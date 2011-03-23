@@ -339,7 +339,7 @@ c
                call bw_increment_array(iarray,imax,ibase,gForceBW(-imax,i),done)
             enddo
          else
-            write(26,'(2i6)') mapconfig(i),-mapconfig(-use_config(i))
+            write(26,'(2i6)') mapconfig(i), use_config(i)
          endif
       enddo
       end
