@@ -1248,11 +1248,11 @@ class CompleteForCmd(CheckValidForCmd):
                 return ['-modelname']
             
         if len(args) > 3 and args[1].startswith('model') and args[-1][0] == '-':
-                if sys.version_info[1] == 6:
-                    return ['modelname']
-                else: 
-                    return ['-modelname']
-    
+           if GNU_SPLITTING:
+               return ['modelname']
+           else: 
+               return ['-modelname']
+            
     def find_restrict_card(self, model_name, base_dir='./', no_restrict=True):
         """find the restriction file associate to a given model"""
 
