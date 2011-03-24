@@ -833,46 +833,6 @@ MH = Parameter(name = 'MH',
                lhablock = 'MASS',
                lhacode = [ 37 ])
 
-Mve = Parameter(name = 'Mve',
-                nature = 'external',
-                type = 'real',
-                value = 0.,
-                texname = '\\text{Mve}',
-                lhablock = 'MASS',
-                lhacode = [ 12 ])
-
-Mvm = Parameter(name = 'Mvm',
-                nature = 'external',
-                type = 'real',
-                value = 0.,
-                texname = '\\text{Mvm}',
-                lhablock = 'MASS',
-                lhacode = [ 14 ])
-
-Mvt = Parameter(name = 'Mvt',
-                nature = 'external',
-                type = 'real',
-                value = 0.,
-                texname = '\\text{Mvt}',
-                lhablock = 'MASS',
-                lhacode = [ 16 ])
-
-Me = Parameter(name = 'Me',
-               nature = 'external',
-               type = 'real',
-               value = 0.,
-               texname = '\\text{Me}',
-               lhablock = 'MASS',
-               lhacode = [ 11 ])
-
-Mm = Parameter(name = 'Mm',
-               nature = 'external',
-               type = 'real',
-               value = 0.,
-               texname = '\\text{Mm}',
-               lhablock = 'MASS',
-               lhacode = [ 13 ])
-
 Mta = Parameter(name = 'Mta',
                 nature = 'external',
                 type = 'real',
@@ -881,22 +841,6 @@ Mta = Parameter(name = 'Mta',
                 lhablock = 'MASS',
                 lhacode = [ 15 ])
 
-MU = Parameter(name = 'MU',
-               nature = 'external',
-               type = 'real',
-               value = 0.,
-               texname = 'M',
-               lhablock = 'MASS',
-               lhacode = [ 2 ])
-
-MC = Parameter(name = 'MC',
-               nature = 'external',
-               type = 'real',
-               value = 0.,
-               texname = '\\text{MC}',
-               lhablock = 'MASS',
-               lhacode = [ 4 ])
-
 MT = Parameter(name = 'MT',
                nature = 'external',
                type = 'real',
@@ -904,22 +848,6 @@ MT = Parameter(name = 'MT',
                texname = '\\text{MT}',
                lhablock = 'MASS',
                lhacode = [ 6 ])
-
-MD = Parameter(name = 'MD',
-               nature = 'external',
-               type = 'real',
-               value = 0.,
-               texname = '\\text{MD}',
-               lhablock = 'MASS',
-               lhacode = [ 1 ])
-
-MS = Parameter(name = 'MS',
-               nature = 'external',
-               type = 'real',
-               value = 0.,
-               texname = '\\text{MS}',
-               lhablock = 'MASS',
-               lhacode = [ 3 ])
 
 MB = Parameter(name = 'MB',
                nature = 'external',
