@@ -41,7 +41,7 @@ import madgraph.core.diagram_generation as diagram_generation
 
 import madgraph.various.rambo as rambo
 
-from madgraph import MG5DIR, MadGraph5Error
+from madgraph import MG5DIR, MadGraph5Error, InvalidCmd
 
 import models.model_reader as model_reader
 import aloha.template_files.wavefunctions as wavefunctions
@@ -191,7 +191,9 @@ def run_multiprocs_no_crossings(function, multiprocess, stored_quantities,
                               multiprocess.get('is_decay_chain'),
                 'overall_orders': \
                               multiprocess.get('overall_orders')})
+            
             result = function(process, stored_quantities, *args)
+                        
             if result:
                 results.append(result)
                 
@@ -491,8 +493,14 @@ def check_process(process, stored_quantities, helas_writer, full_model, quick):
         newproc.set('legs', legs)
 
         # Generate the amplitude for this process
-        amplitude = diagram_generation.Amplitude(newproc)
-        if not amplitude.get('diagrams'):
+        try:
+            amplitude = diagram_generation.Amplitude(newproc)
+        except InvalidCmd:
+            result=False
+        else:
+            result = amplitude.get('diagrams')
+
+        if not result:
             # This process has no diagrams; go to next process
             logging.info("No diagrams for %s" % \
                          process.nice_string().replace('Process', 'process'))
@@ -917,7 +925,13 @@ def check_lorentz_process(process, stored_quantities, helas_writer, full_model):
     legs = process.get('legs')
     # Generate a process with these legs
     # Generate the amplitude for this process
-    amplitude = diagram_generation.Amplitude(process)
+    try:
+        amplitude = diagram_generation.Amplitude(process)
+    except InvalidCmd:
+        logging.info("No diagrams for %s" % \
+                         process.nice_string().replace('Process', 'process'))
+        return None
+    
     if not amplitude.get('diagrams'):
         # This process has no diagrams; go to next process
         logging.info("No diagrams for %s" % \

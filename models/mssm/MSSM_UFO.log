@@ -1,13 +1,13 @@
-# This file was automatically created by FeynRules $Revision: 364 $
-# Mathematica version: 7.0 for Linux x86 (32-bit) (February 18, 2009)
-# Date: Sat 4 Dec 2010 11:43:16
+# This file was automatically created by FeynRules $Revision: 510 $
+# Mathematica version: 7.0 for Linux x86 (64-bit) (February 18, 2009)
+# Date: Wed 2 Mar 2011 15:02:57
 
 
 # 
 # This is the logfile for the model MSSM
 
-# Authors: Benjamin Fuks, Neil D. Christensen
-# Model version: 1.1.9
+# Authors: Benjamin Fuks
+# Model version: 1.3.0
 # Checking the Lagrangians
    * All Lagrangians are ok.
 #
@@ -33,34 +33,36 @@
 # Parameter definitions
 #
 
-   * All parameters are ok.
+   * Parameter gp has no value. Default value 1 assigned.
+   * Parameter gw has no value. Default value 1 assigned.
 
 
 # Vertices
-   * Calling FeynmanRules for 10 Lagrangians.
-   * Number of classes vertices: 268
-   * Number of flavored vertices: 931
+   * Calling FeynmanRules for 1 Lagrangians.
+   * Number of classes vertices: 174
+   * Number of flavored vertices: 822
    * Saved vertices in InterfaceRun[ 1 ].
    * Checked QNumber conservation.
       - Quantum number GhostNumber conserved in all vertices.
       - Quantum number Q conserved in all vertices.
+      - Quantum number Y conserved in all vertices.
    * particles.py written.
    * parameters.py written.
 #
 # Vertex definitions
 #
 
-   * 931 vertices written.
+   * 822 vertices written.
    * vertices.py written.
 #
 # Lorentz structure definitions
 #
 
-   * 19 lorentz structures written.
+   * 17 lorentz structures written.
    * lorentz.py written.
 #
 # Coupling definitions
 #
 
-   * 1063 couplings written.
+   * 945 couplings written.
    * couplings.py written.

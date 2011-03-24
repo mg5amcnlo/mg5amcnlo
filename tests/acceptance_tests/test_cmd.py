@@ -27,7 +27,7 @@ import madgraph.interface.cmd_interface as Cmd
 _file_path = os.path.split(os.path.dirname(os.path.realpath(__file__)))[0]
 _pickle_path =os.path.join(_file_path, 'input_files')
 
-from madgraph import MG4DIR, MG5DIR, MadGraph5Error
+from madgraph import MG4DIR, MG5DIR, MadGraph5Error, InvalidCmd
 
 #===============================================================================
 # TestCmd
@@ -52,7 +52,7 @@ class TestCmdShell1(unittest.TestCase):
         
     def test_generate(self):
         """command 'generate' works"""
-    
+        
         self.do('load model %s' % self.join_path(_pickle_path, 'sm.pkl'))
         self.cmd._curr_model.pass_particles_name_in_mg_default()
         self.do('generate e+ e- > e+ e-')
@@ -87,7 +87,7 @@ class TestCmdShell1(unittest.TestCase):
 
     def test_draw(self):
         """ command 'draw' works """
-        
+
         self.do('load processes %s' % self.join_path(_pickle_path,'e+e-_e+e-.pkl'))
         self.do('draw .')
         self.assertTrue(os.path.exists('./diagrams_0_epem_epem.eps'))
@@ -132,7 +132,7 @@ class TestCmdShell2(unittest.TestCase,
 
         if os.path.isdir(self.out_dir):
             shutil.rmdir(self.out_dir)
-
+            
         self.do('load processes %s' % self.join_path(_pickle_path,'e+e-_e+e-.pkl'))
         self.do('output %s -nojpeg' % self.out_dir)
         self.assertTrue(os.path.exists(self.out_dir))
@@ -218,9 +218,9 @@ class TestCmdShell2(unittest.TestCase,
     def test_invalid_operations_for_add(self):
         """Test that errors are raised appropriately for add"""
 
-        self.assertRaises(Cmd.CheckValidForCmd.InvalidCmd,
+        self.assertRaises(InvalidCmd,
                           self.do, 'add process')
-        self.assertRaises(Cmd.CheckValidForCmd.InvalidCmd,
+        self.assertRaises(InvalidCmd,
                           self.do, 'add wrong wrong')
 
     def test_invalid_operations_for_generate(self):
@@ -240,7 +240,7 @@ class TestCmdShell2(unittest.TestCase,
     def test_invalid_operations_for_output(self):
         """Test that errors are raised appropriately for output"""
 
-        self.assertRaises(Cmd.CheckValidForCmd.InvalidCmd,
+        self.assertRaises(InvalidCmd,
                           self.do, 'output')
 
     def test_read_madgraph4_proc_card(self):
