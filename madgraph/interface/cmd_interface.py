@@ -27,8 +27,16 @@ import sys
 import traceback
 import time
 
+try:
+    import readline
+    GNU_SPLITTING = ('GNU' in readline.__doc__)
+except:
+    GNU_SPLITTING = True
+
+
 import madgraph
 from madgraph import MG4DIR, MG5DIR, MadGraph5Error
+
 
 import madgraph.core.base_objects as base_objects
 import madgraph.core.diagram_generation as diagram_generation
@@ -1239,8 +1247,8 @@ class CompleteForCmd(CheckValidForCmd):
 
         # restriction continuation (for UFO)
         if args[1] == 'model' and ('-' in args[-1] + text):
-            # deal with - in 2.7 as in 2.6
-            if sys.version_info[1] == 7:
+            # deal with - in readline splitting (different on some computer)
+            if not GNU_SPLITTING:
                 prefix = '-'.join([part for part in text.split('-')[:-1]])+'-'
                 args.append(prefix)
                 text = text.split('-')[-1]
@@ -1256,7 +1264,7 @@ class CompleteForCmd(CheckValidForCmd):
             all_name = [name+' ' for name in  all_name if name.startswith(text)
                                                        and name.strip() != text]
             # adapt output for python2.7 (due to different splitting)
-            if sys.version_info[1] == 7:
+            if not GNU_SPLITTING:
                 all_name = [prefix + name for name in  all_name ]
                 
             if all_name:
@@ -1295,11 +1303,11 @@ class CompleteForCmd(CheckValidForCmd):
                 return ['-modelname']
             
         if len(args) > 3 and args[1].startswith('model') and args[-1][0] == '-':
-                if sys.version_info[1] == 6:
-                    return ['modelname']
-                else: 
-                    return ['-modelname']
-    
+           if GNU_SPLITTING:
+               return ['modelname']
+           else: 
+               return ['-modelname']
+            
     def find_restrict_card(self, model_name, base_dir='./', no_restrict=True):
         """find the restriction file associate to a given model"""
 

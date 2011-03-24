@@ -119,6 +119,7 @@ class TestCmdShell2(unittest.TestCase,
         """ basic destruction after have run """
         if os.path.exists(self.out_dir):
             shutil.rmtree(self.out_dir)
+
     
     join_path = TestCmdShell1.join_path
 
