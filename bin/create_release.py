@@ -305,6 +305,17 @@ if a_test_results.errors or test_results.errors:
     os.remove(filename)
     exit()
 
+try:
+    status1 = subprocess.call(['gpg', '--armor', '--sign', '--detach-sig',
+                               filename])
+    if status1 == 0:
+        logging.info("gpg signature file " + filename + ".asc created")
+except:
+    logging.warning("Call to gpg to create signature file failed. " +\
+                    "Please install and run\n" + \
+                    "gpg --armor --sign --detach-sig " + filename)
+
+
 if not a_test_results.failures and not test_results.failures:
     logging.info("All good. Removing temporary %s directory." % filepath)
     shutil.rmtree(filepath)
