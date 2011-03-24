@@ -26,7 +26,11 @@ import subprocess
 import sys
 import traceback
 import time
-
+try:
+    import readline
+    GNU_SPLITTING = ('GNU' in readline.__doc__)
+except:
+    GNU_SPLITTING = True
 
 from madgraph import MG4DIR, MG5DIR, MadGraph5Error, InvalidCmd
 
@@ -1188,8 +1192,8 @@ class CompleteForCmd(CheckValidForCmd):
 
         # restriction continuation (for UFO)
         if args[1] == 'model' and ('-' in args[-1] + text):
-            # deal with - in 2.7 as in 2.6
-            if sys.version_info[1] == 7:
+            # deal with - in readline splitting (different on some computer)
+            if not GNU_SPLITTING:
                 prefix = '-'.join([part for part in text.split('-')[:-1]])+'-'
                 args.append(prefix)
                 text = text.split('-')[-1]
@@ -1205,7 +1209,7 @@ class CompleteForCmd(CheckValidForCmd):
             all_name = [name+' ' for name in  all_name if name.startswith(text)
                                                        and name.strip() != text]
             # adapt output for python2.7 (due to different splitting)
-            if sys.version_info[1] == 7:
+            if not GNU_SPLITTING:
                 all_name = [prefix + name for name in  all_name ]
                 
             if all_name:

@@ -36,15 +36,20 @@ except ImportError:
         print "For tab completion and history, install module readline."
 else:
     import rlcompleter
+
+    if 'r261:67515' in sys.version and  'GCC 4.2.1 (Apple Inc. build 5646)' in sys.version:
+        readline.parse_and_bind("bind ^I rl_complete")
+        readline.__doc__ = 'libedit'  
     
-    if hasattr(readline, '__doc__'):
+    elif hasattr(readline, '__doc__'):
         if 'libedit' not in readline.__doc__:
             readline.parse_and_bind("tab: complete")
         else:
             readline.parse_and_bind("bind ^I rl_complete")
     else:
+        readline.__doc__ = 'GNU'
         readline.parse_and_bind("tab: complete")
-    
+        
     # charge history file
     try:
         history_file = os.path.join(os.environ['HOME'], '.mg5history')
