@@ -818,7 +818,10 @@ C     Only run if IMODE is 0
         DSIGUU=0D0
         DSIG1=0D0
       ENDIF
-
+      IF(IMODE.EQ.0.AND.DSIG1.GT.0D0)THEN
+C       Call UNWGT to unweight and store events
+        CALL UNWGT(PP,DSIG1*WGT,1)
+      ENDIF
 
       END
 
@@ -926,7 +929,7 @@ C       Set up process information from file symfact
         SYMCONF(IPROC)=ICONFIG
         DO I=1,MAPCONFIG(0)
           READ(LUN,*) XDUM, ICONF
-          IF(ICONF.EQ.-ICONFIG)THEN
+          IF(ICONF.EQ.-MAPCONFIG(ICONFIG))THEN
             IPROC=IPROC+1
             SYMCONF(IPROC)=I
           ENDIF
@@ -1040,9 +1043,6 @@ C     Call DSIGPROC to calculate sigma for process
       DSIG=DSIGPROC(PP,ICONF,IPROC,IMIRROR,SYMCONF,CONFSUB,WGT,IMODE)
 
       IF(DSIG.GT.0D0)THEN
-C       Call UNWGT to unweight and store events
-        CALL UNWGT(PP,DSIG*WGT,1)
-
 C       Update summed weight and number of events
         SUMWGT(IMIRROR,IPROC,ICONF)=SUMWGT(IMIRROR,IPROC,ICONF)
      $   +DSIG*WGT
@@ -1109,7 +1109,7 @@ C
       ENDDO
 
 C     Set momenta according to this permutation
-      CALL SWITCHMOM(PP,P1,PERMS(1,ICONFIG),JC,NEXTERNAL)
+      CALL SWITCHMOM(PP,P1,PERMS(1,MAPCONFIG(ICONFIG)),JC,NEXTERNAL)
 
       IB(1)=1
       IB(2)=2
@@ -1141,7 +1141,6 @@ C       Flip x values (to get boost right)
 
 """ % misc.get_pkg_info()
         
-
         #print open(self.give_pos('test')).read()
         self.assertFileContains('test', goal_super)
 
@@ -1548,6 +1547,505 @@ mirror  u~ u > d d~ g d d~ g
 mirror  d~ d > d d~ g d d~ g"""
         
         self.assertFileContains('test', goal_processes)
+
+    def test_export_group_multidiagram_decay_chains(self):
+        """Test export group_amplitudes for uu~>g>gogo, go>qqn1."""
+
+        mypartlist = base_objects.ParticleList()
+        myinterlist = base_objects.InteractionList()
+        
+        # A gluon
+        mypartlist.append(base_objects.Particle({'name':'g',
+                      'antiname':'g',
+                      'spin':3,
+                      'color':8,
+                      'mass':'zero',
+                      'width':'zero',
+                      'texname':'g',
+                      'antitexname':'g',
+                      'line':'curly',
+                      'charge':0.,
+                      'pdg_code':21,
+                      'propagating':True,
+                      'is_part':True,
+                      'self_antipart':True}))
+        g = mypartlist[-1]
+
+        # A quark U and its antiparticle
+        mypartlist.append(base_objects.Particle({'name':'u',
+                      'antiname':'u~',
+                      'spin':2,
+                      'color':3,
+                      'mass':'zero',
+                      'width':'zero',
+                      'texname':'u',
+                      'antitexname':'\bar u',
+                      'line':'straight',
+                      'charge':2. / 3.,
+                      'pdg_code':2,
+                      'propagating':True,
+                      'is_part':True,
+                      'self_antipart':False}))
+        u = mypartlist[-1]
+        antiu = copy.copy(u)
+        antiu.set('is_part', False)
+
+        # A quark D and its antiparticle
+        mypartlist.append(base_objects.Particle({'name':'d',
+                      'antiname':'d~',
+                      'spin':2,
+                      'color':3,
+                      'mass':'zero',
+                      'width':'zero',
+                      'texname':'d',
+                      'antitexname':'\bar d',
+                      'line':'straight',
+                      'charge':-1. / 3.,
+                      'pdg_code':1,
+                      'propagating':True,
+                      'is_part':True,
+                      'self_antipart':False}))
+        d = mypartlist[-1]
+        antid = copy.copy(d)
+        antid.set('is_part', False)
+
+        # A gluino
+        mypartlist.append(base_objects.Particle({'name':'go',
+                      'antiname':'go',
+                      'spin':2,
+                      'color':8,
+                      'mass':'MGO',
+                      'width':'WGO',
+                      'texname':'g',
+                      'antitexname':'g',
+                      'line':'curly',
+                      'charge':0.,
+                      'pdg_code':1000021,
+                      'propagating':True,
+                      'is_part':True,
+                      'self_antipart':True}))
+        go = mypartlist[-1]
+
+        # A u squark
+        mypartlist.append(base_objects.Particle({'name':'ul',
+                      'antiname':'ul~',
+                      'spin':1,
+                      'color':3,
+                      'mass':'MUL',
+                      'width':'WUL',
+                      'texname':'u',
+                      'antitexname':'\bar u',
+                      'line':'straight',
+                      'charge':2. / 3.,
+                      'pdg_code':1000002,
+                      'propagating':True,
+                      'is_part':True,
+                      'self_antipart':False}))
+        ul = mypartlist[-1]
+        antiul = copy.copy(ul)
+        antiul.set('is_part', False)
+
+        # A quark D and its antiparticle
+        mypartlist.append(base_objects.Particle({'name':'dl',
+                      'antiname':'dl~',
+                      'spin':1,
+                      'color':3,
+                      'mass':'MDL',
+                      'width':'WDL',
+                      'texname':'d',
+                      'antitexname':'\bar d',
+                      'line':'straight',
+                      'charge':-1. / 3.,
+                      'pdg_code':1000001,
+                      'propagating':True,
+                      'is_part':True,
+                      'self_antipart':False}))
+        dl = mypartlist[-1]
+        antidl = copy.copy(dl)
+        antidl.set('is_part', False)
+
+        # A neutralino
+        mypartlist.append(base_objects.Particle({'name':'n1',
+                      'antiname':'n1',
+                      'spin':2,
+                      'color':1,
+                      'mass':'MN1',
+                      'width':'zero',
+                      'texname':'\gamma',
+                      'antitexname':'\gamma',
+                      'line':'wavy',
+                      'charge':0.,
+                      'pdg_code':1000022,
+                      'propagating':True,
+                      'is_part':True,
+                      'self_antipart':True}))
+        n1 = mypartlist[-1]
+
+        mymodel = base_objects.Model()
+        mymodel.set('particles', mypartlist)
+        g = mymodel.get_particle(21)
+        d = mymodel.get_particle(1)
+        antid = mymodel.get_particle(-1)
+        u = mymodel.get_particle(2)
+        antiu = mymodel.get_particle(-2)
+        
+        # Gluon couplings to quarks
+        myinterlist.append(base_objects.Interaction({
+                      'id': 1,
+                      'particles': base_objects.ParticleList(\
+                                            [antiu, \
+                                             u, \
+                                             g]),
+                      'color': [],
+                      'lorentz':['L1'],
+                      'couplings':{(0, 0):'GQQ'},
+                      'orders':{'QCD':1}}))
+
+        # Gluon couplings to gluino
+        myinterlist.append(base_objects.Interaction({
+                      'id': 2,
+                      'particles': base_objects.ParticleList(\
+                                            [go, \
+                                             go, \
+                                             g]),
+                      'color': [],
+                      'lorentz':['L1'],
+                      'couplings':{(0, 0):'GQQ'},
+                      'orders':{'QCD':1}}))
+
+        # Gluino couplings to quarks
+        myinterlist.append(base_objects.Interaction({
+                      'id': 11,
+                      'particles': base_objects.ParticleList(\
+                                            [go, \
+                                             u, \
+                                             antiul]),
+                      'color': [],
+                      'lorentz':['L1'],
+                      'couplings':{(0, 0):'GQQ'},
+                      'orders':{'QCD':1}}))
+
+        myinterlist.append(base_objects.Interaction({
+                      'id': 12,
+                      'particles': base_objects.ParticleList(\
+                                            [go, \
+                                             antiu, \
+                                             ul]),
+                      'color': [],
+                      'lorentz':['L1'],
+                      'couplings':{(0, 0):'GQQ'},
+                      'orders':{'QCD':1}}))
+
+        myinterlist.append(base_objects.Interaction({
+                      'id': 13,
+                      'particles': base_objects.ParticleList(\
+                                            [go, \
+                                             d, \
+                                             antidl]),
+                      'color': [],
+                      'lorentz':['L1'],
+                      'couplings':{(0, 0):'GQQ'},
+                      'orders':{'QCD':1}}))
+
+        myinterlist.append(base_objects.Interaction({
+                      'id': 14,
+                      'particles': base_objects.ParticleList(\
+                                            [go, \
+                                             antid, \
+                                             dl]),
+                      'color': [],
+                      'lorentz':['L1'],
+                      'couplings':{(0, 0):'GQQ'},
+                      'orders':{'QCD':1}}))
+
+        # Neutralino couplings to quarks
+        myinterlist.append(base_objects.Interaction({
+                      'id': 15,
+                      'particles': base_objects.ParticleList(\
+                                            [n1, \
+                                             u, \
+                                             antiul]),
+                      'color': [],
+                      'lorentz':['L1'],
+                      'couplings':{(0, 0):'GQQ'},
+                      'orders':{'QED':1}}))
+
+        myinterlist.append(base_objects.Interaction({
+                      'id': 16,
+                      'particles': base_objects.ParticleList(\
+                                            [n1, \
+                                             antiu, \
+                                             ul]),
+                      'color': [],
+                      'lorentz':['L1'],
+                      'couplings':{(0, 0):'GQQ'},
+                      'orders':{'QED':1}}))
+
+        myinterlist.append(base_objects.Interaction({
+                      'id': 17,
+                      'particles': base_objects.ParticleList(\
+                                            [n1, \
+                                             d, \
+                                             antidl]),
+                      'color': [],
+                      'lorentz':['L1'],
+                      'couplings':{(0, 0):'GQQ'},
+                      'orders':{'QED':1}}))
+
+        myinterlist.append(base_objects.Interaction({
+                      'id': 18,
+                      'particles': base_objects.ParticleList(\
+                                            [n1, \
+                                             antid, \
+                                             dl]),
+                      'color': [],
+                      'lorentz':['L1'],
+                      'couplings':{(0, 0):'GQQ'},
+                      'orders':{'QED':1}}))
+
+        mymodel.set('interactions', myinterlist)
+
+        procs = [[2,-2,1000021,1000021]]
+        decays = [[1000021,1,-1,1000022],[1000021,2,-2,1000022]]
+        coreamplitudes = diagram_generation.AmplitudeList()
+        decayamplitudes = diagram_generation.AmplitudeList()
+        decayprocs = base_objects.ProcessList()
+        proc_diags = [1]
+        decay_diags = [2,2]
+        
+        for iproc, proc in enumerate(procs):
+            # Define the multiprocess
+            my_leglist = base_objects.LegList([\
+                base_objects.Leg({'id': id, 'state': True}) for id in proc])
+
+            my_leglist[0].set('state', False)
+            my_leglist[1].set('state', False)
+
+            my_process = base_objects.Process({'legs':my_leglist,
+                                               'model':mymodel,
+                                               'required_s_channels':[[21]]})
+            my_amplitude = diagram_generation.Amplitude(my_process)
+            coreamplitudes.append(my_amplitude)
+            self.assertEqual(len(my_amplitude.get('diagrams')), proc_diags[iproc])
+
+        for iproc, proc in enumerate(decays):
+            # Define the multiprocess
+            my_leglist = base_objects.LegList([\
+                base_objects.Leg({'id': id, 'state': True}) for id in proc])
+
+            my_leglist[0].set('state', False)
+
+            my_process = base_objects.Process({'legs':my_leglist,
+                                               'model':mymodel,
+                                               'is_decay_chain': True})
+                                               #'forbidden_particles':[2000001,2000002]})
+            my_amplitude = diagram_generation.Amplitude(my_process)
+            decayamplitudes.append(my_amplitude)
+            decayprocs.append(my_process)
+            self.assertEqual(len(my_amplitude.get('diagrams')), decay_diags[iproc])
+
+        decays = diagram_generation.DecayChainAmplitudeList([\
+                         diagram_generation.DecayChainAmplitude({\
+                                            'amplitudes': decayamplitudes})])
+
+        decay_chains = diagram_generation.DecayChainAmplitude({\
+            'amplitudes': coreamplitudes,
+            'decay_chains': decays})
+
+        dc_subproc_group = group_subprocs.DecayChainSubProcessGroup.\
+                          group_amplitudes(decay_chains)
+
+        subproc_groups = \
+                       dc_subproc_group.generate_helas_decay_chain_subproc_groups()
+
+        self.assertEqual(len(subproc_groups), 1)
+
+        group_name = 'qq_gogo_go_qqn1_go_qqn1'
+        me_len = 3
+
+        subprocess_group = subproc_groups[0]
+        self.assertEqual(subprocess_group.get('name'),
+                         group_name)
+        self.assertEqual(len(subprocess_group.get('matrix_elements')), me_len)
+
+        # Exporter
+        exporter = export_v4.ProcessExporterFortranMEGroup()
+
+        # Test config_subproc_map.inc
+        exporter.write_config_subproc_map_file(\
+            writers.FortranWriter(self.give_pos('test')),
+            subprocess_group.get('diagrams_for_configs'))
+
+        self.assertFileContains('test',
+"""      DATA (CONFSUB(I,1),I=1,3)/1,0,0/
+      DATA (CONFSUB(I,2),I=1,3)/2,0,0/
+      DATA (CONFSUB(I,3),I=1,3)/0,1,0/
+      DATA (CONFSUB(I,4),I=1,3)/0,2,0/
+      DATA (CONFSUB(I,5),I=1,3)/3,0,0/
+      DATA (CONFSUB(I,6),I=1,3)/4,0,0/
+      DATA (CONFSUB(I,7),I=1,3)/0,3,0/
+      DATA (CONFSUB(I,8),I=1,3)/0,4,0/
+      DATA (CONFSUB(I,9),I=1,3)/0,0,1/
+      DATA (CONFSUB(I,10),I=1,3)/0,0,2/
+      DATA (CONFSUB(I,11),I=1,3)/0,0,3/
+      DATA (CONFSUB(I,12),I=1,3)/0,0,4/
+""")
+
+        # Test configs.inc
+
+        exporter.write_configs_file(\
+            writers.FortranWriter(self.give_pos('test')),
+            subprocess_group,
+            subprocess_group.get('diagrams_for_configs'))
+
+        self.assertFileContains('test',
+"""C     Diagram 1
+      DATA MAPCONFIG(1)/1/
+      DATA (IFOREST(I,-1,1),I=1,2)/5,3/
+      DATA SPROP(-1,1)/1000001/
+      DATA (IFOREST(I,-2,1),I=1,2)/4,-1/
+      DATA SPROP(-2,1)/1000021/
+      DATA (IFOREST(I,-3,1),I=1,2)/8,6/
+      DATA SPROP(-3,1)/1000001/
+      DATA (IFOREST(I,-4,1),I=1,2)/7,-3/
+      DATA SPROP(-4,1)/1000021/
+      DATA (IFOREST(I,-5,1),I=1,2)/-4,-2/
+      DATA SPROP(-5,1)/21/
+C     Diagram 2
+      DATA MAPCONFIG(2)/2/
+      DATA (IFOREST(I,-1,2),I=1,2)/5,3/
+      DATA SPROP(-1,2)/1000001/
+      DATA (IFOREST(I,-2,2),I=1,2)/4,-1/
+      DATA SPROP(-2,2)/1000021/
+      DATA (IFOREST(I,-3,2),I=1,2)/8,7/
+      DATA SPROP(-3,2)/-1000001/
+      DATA (IFOREST(I,-4,2),I=1,2)/-3,6/
+      DATA SPROP(-4,2)/1000021/
+      DATA (IFOREST(I,-5,2),I=1,2)/-4,-2/
+      DATA SPROP(-5,2)/21/
+C     Diagram 3
+      DATA MAPCONFIG(3)/3/
+      DATA (IFOREST(I,-1,3),I=1,2)/5,3/
+      DATA SPROP(-1,3)/1000001/
+      DATA (IFOREST(I,-2,3),I=1,2)/4,-1/
+      DATA SPROP(-2,3)/1000021/
+      DATA (IFOREST(I,-3,3),I=1,2)/8,6/
+      DATA SPROP(-3,3)/1000002/
+      DATA (IFOREST(I,-4,3),I=1,2)/7,-3/
+      DATA SPROP(-4,3)/1000021/
+      DATA (IFOREST(I,-5,3),I=1,2)/-4,-2/
+      DATA SPROP(-5,3)/21/
+C     Diagram 4
+      DATA MAPCONFIG(4)/4/
+      DATA (IFOREST(I,-1,4),I=1,2)/5,3/
+      DATA SPROP(-1,4)/1000001/
+      DATA (IFOREST(I,-2,4),I=1,2)/4,-1/
+      DATA SPROP(-2,4)/1000021/
+      DATA (IFOREST(I,-3,4),I=1,2)/8,7/
+      DATA SPROP(-3,4)/-1000002/
+      DATA (IFOREST(I,-4,4),I=1,2)/-3,6/
+      DATA SPROP(-4,4)/1000021/
+      DATA (IFOREST(I,-5,4),I=1,2)/-4,-2/
+      DATA SPROP(-5,4)/21/
+C     Diagram 5
+      DATA MAPCONFIG(5)/5/
+      DATA (IFOREST(I,-1,5),I=1,2)/5,4/
+      DATA SPROP(-1,5)/-1000001/
+      DATA (IFOREST(I,-2,5),I=1,2)/-1,3/
+      DATA SPROP(-2,5)/1000021/
+      DATA (IFOREST(I,-3,5),I=1,2)/8,6/
+      DATA SPROP(-3,5)/1000001/
+      DATA (IFOREST(I,-4,5),I=1,2)/7,-3/
+      DATA SPROP(-4,5)/1000021/
+      DATA (IFOREST(I,-5,5),I=1,2)/-4,-2/
+      DATA SPROP(-5,5)/21/
+C     Diagram 6
+      DATA MAPCONFIG(6)/6/
+      DATA (IFOREST(I,-1,6),I=1,2)/5,4/
+      DATA SPROP(-1,6)/-1000001/
+      DATA (IFOREST(I,-2,6),I=1,2)/-1,3/
+      DATA SPROP(-2,6)/1000021/
+      DATA (IFOREST(I,-3,6),I=1,2)/8,7/
+      DATA SPROP(-3,6)/-1000001/
+      DATA (IFOREST(I,-4,6),I=1,2)/-3,6/
+      DATA SPROP(-4,6)/1000021/
+      DATA (IFOREST(I,-5,6),I=1,2)/-4,-2/
+      DATA SPROP(-5,6)/21/
+C     Diagram 7
+      DATA MAPCONFIG(7)/7/
+      DATA (IFOREST(I,-1,7),I=1,2)/5,4/
+      DATA SPROP(-1,7)/-1000001/
+      DATA (IFOREST(I,-2,7),I=1,2)/-1,3/
+      DATA SPROP(-2,7)/1000021/
+      DATA (IFOREST(I,-3,7),I=1,2)/8,6/
+      DATA SPROP(-3,7)/1000002/
+      DATA (IFOREST(I,-4,7),I=1,2)/7,-3/
+      DATA SPROP(-4,7)/1000021/
+      DATA (IFOREST(I,-5,7),I=1,2)/-4,-2/
+      DATA SPROP(-5,7)/21/
+C     Diagram 8
+      DATA MAPCONFIG(8)/8/
+      DATA (IFOREST(I,-1,8),I=1,2)/5,4/
+      DATA SPROP(-1,8)/-1000001/
+      DATA (IFOREST(I,-2,8),I=1,2)/-1,3/
+      DATA SPROP(-2,8)/1000021/
+      DATA (IFOREST(I,-3,8),I=1,2)/8,7/
+      DATA SPROP(-3,8)/-1000002/
+      DATA (IFOREST(I,-4,8),I=1,2)/-3,6/
+      DATA SPROP(-4,8)/1000021/
+      DATA (IFOREST(I,-5,8),I=1,2)/-4,-2/
+      DATA SPROP(-5,8)/21/
+C     Diagram 11
+      DATA MAPCONFIG(9)/11/
+      DATA (IFOREST(I,-1,9),I=1,2)/5,3/
+      DATA SPROP(-1,9)/1000002/
+      DATA (IFOREST(I,-2,9),I=1,2)/4,-1/
+      DATA SPROP(-2,9)/1000021/
+      DATA (IFOREST(I,-3,9),I=1,2)/8,6/
+      DATA SPROP(-3,9)/1000002/
+      DATA (IFOREST(I,-4,9),I=1,2)/7,-3/
+      DATA SPROP(-4,9)/1000021/
+      DATA (IFOREST(I,-5,9),I=1,2)/-4,-2/
+      DATA SPROP(-5,9)/21/
+C     Diagram 12
+      DATA MAPCONFIG(10)/12/
+      DATA (IFOREST(I,-1,10),I=1,2)/5,3/
+      DATA SPROP(-1,10)/1000002/
+      DATA (IFOREST(I,-2,10),I=1,2)/4,-1/
+      DATA SPROP(-2,10)/1000021/
+      DATA (IFOREST(I,-3,10),I=1,2)/8,7/
+      DATA SPROP(-3,10)/-1000002/
+      DATA (IFOREST(I,-4,10),I=1,2)/-3,6/
+      DATA SPROP(-4,10)/1000021/
+      DATA (IFOREST(I,-5,10),I=1,2)/-4,-2/
+      DATA SPROP(-5,10)/21/
+C     Diagram 15
+      DATA MAPCONFIG(11)/15/
+      DATA (IFOREST(I,-1,11),I=1,2)/5,4/
+      DATA SPROP(-1,11)/-1000002/
+      DATA (IFOREST(I,-2,11),I=1,2)/-1,3/
+      DATA SPROP(-2,11)/1000021/
+      DATA (IFOREST(I,-3,11),I=1,2)/8,6/
+      DATA SPROP(-3,11)/1000002/
+      DATA (IFOREST(I,-4,11),I=1,2)/7,-3/
+      DATA SPROP(-4,11)/1000021/
+      DATA (IFOREST(I,-5,11),I=1,2)/-4,-2/
+      DATA SPROP(-5,11)/21/
+C     Diagram 16
+      DATA MAPCONFIG(12)/16/
+      DATA (IFOREST(I,-1,12),I=1,2)/5,4/
+      DATA SPROP(-1,12)/-1000002/
+      DATA (IFOREST(I,-2,12),I=1,2)/-1,3/
+      DATA SPROP(-2,12)/1000021/
+      DATA (IFOREST(I,-3,12),I=1,2)/8,7/
+      DATA SPROP(-3,12)/-1000002/
+      DATA (IFOREST(I,-4,12),I=1,2)/-3,6/
+      DATA SPROP(-4,12)/1000021/
+      DATA (IFOREST(I,-5,12),I=1,2)/-4,-2/
+      DATA SPROP(-5,12)/21/
+C     Number of configs
+      DATA MAPCONFIG(0)/12/
+""")
 
 #===============================================================================
 # FullHelasOutputTest

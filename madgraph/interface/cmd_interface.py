@@ -2558,11 +2558,11 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
                 self._curr_exporter = export_v4.ProcessExporterFortranME(\
                                       self._mgme_dir, self._export_dir,
                                       not noclean)
-            export_v4.cp_model_restriction(self._restrict_file, self._export_dir)
+            self._curr_exporter.cp_model_restriction(self._restrict_file)
         elif self._export_format in ['standalone', 'matrix']:
             self._curr_exporter = export_v4.ProcessExporterFortranSA(\
                                   self._mgme_dir, self._export_dir,not noclean)
-            export_v4.cp_model_restriction(self._restrict_file, self._export_dir)
+            self._curr_exporter.cp_model_restriction(self._restrict_file)
         elif self._export_format == 'standalone_cpp':
             export_cpp.setup_cpp_standalone_dir(self._export_dir, self._curr_model)
         elif not os.path.isdir(self._export_dir):

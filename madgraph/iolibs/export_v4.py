@@ -143,6 +143,30 @@ class ProcessExporterFortran(object):
         ff.write(text)
         ff.close()
 
+    #===============================================================================
+    # Copy the model restriction in the Model Directory
+    #===============================================================================
+    def cp_model_restriction(self, file_path):
+        """Copy the model restriction in the Model Directory."""
+
+        if not file_path:
+            return
+
+        assert os.path.isfile(file_path)
+        assert os.path.isdir(os.path.join(self.dir_path,'Source','MODEL'))
+
+        output_path = os.path.join(self.dir_path,'Source','MODEL','restrict_model.dat')
+
+        header="""#*********************************************************************
+    #  THIS FILE WAS USED TO RESTRICT THE ORIGINAL MODEL
+    #  PLEASE DON'T EDIT THIS FILE. HE IS IMPORTANT IN ORDER TO BE ABLE 
+    #  TO REPRODUCE THE RESULT IN THE FUTURE.
+    #*********************************************************************\n"""    
+        ff = open(output_path,'w')
+        ff.writelines(header)
+        ff.writelines(open(file_path).read())
+        ff.close()
+
     #===========================================================================
     # Create jpeg diagrams, html pages,proc_card_mg5.dat and madevent.tar.gz
     #===========================================================================
@@ -1923,7 +1947,7 @@ class ProcessExporterFortranMEGroup(ProcessExporterFortranME):
 
         filename = 'config_subproc_map.inc'
         self.write_config_subproc_map_file(writers.FortranWriter(filename),
-                                      subproc_diagrams_for_config)
+                                           subproc_diagrams_for_config)
 
         filename = 'configs.inc'
         nconfigs, s_and_t_channels = self.write_configs_file(\
@@ -2160,10 +2184,15 @@ class ProcessExporterFortranMEGroup(ProcessExporterFortranME):
         """Write the config_subproc_map.inc file for subprocess groups"""
 
         lines = []
-        for iconfig, config in enumerate(config_subproc_map):
+        # Output only configs that have some corresponding diagrams
+        iconfig = 0
+        for config in config_subproc_map:
+            if set(config) == set([0]):
+                continue
             lines.append("DATA (CONFSUB(i,%d),i=1,%d)/%s/" % \
                          (iconfig + 1, len(config),
                           ",".join([str(i) for i in config])))
+            iconfig += 1
         # Write the file
         writer.writelines(lines)
 
@@ -2180,17 +2209,22 @@ class ProcessExporterFortranMEGroup(ProcessExporterFortranME):
         matrix_elements = subproc_group.get('matrix_elements')
 
         diagrams = []
-        for config in diagrams_for_config:
+        config_numbers = []
+        for iconfig, config in enumerate(diagrams_for_config):
+            # Check if any diagrams correspond to this config
+            if set(config) == set([0]):
+                continue
             subproc, diag = [(i,d - 1) for (i,d) in enumerate(config) \
                              if d > 0][0]
             diagrams.append(matrix_elements[subproc].get('diagrams')[diag])
+            config_numbers.append(iconfig + 1)
 
         # Extract number of external particles
         (nexternal, ninitial) = subproc_group.get_nexternal_ninitial()
 
         return len(diagrams), \
                self.write_configs_file_from_diagrams(writer, diagrams,
-                                                range(1, len(diagrams) + 1),
+                                                config_numbers,
                                                 nexternal, ninitial)
 
     #===========================================================================
@@ -2668,39 +2702,4 @@ class UFO_model_to_mg4(object):
 
         out_path = os.path.join(self.dir_path, 'param_card.dat')
         param_writer.ParamCardWriter(self.model, out_path)
-
-  
- 
-#===============================================================================
-# Copy the model restriction in the Model Directory
-#===============================================================================
-def cp_model_restriction(file_path, dir_path):
-    """Copy the model restriction in the Model Directory."""
-    
-    if not file_path:
-        return
-
-    assert os.path.isfile(file_path)
-    assert os.path.isdir(os.path.join(dir_path,'Source','MODEL'))
-    
-    output_path = os.path.join(dir_path,'Source','MODEL','restrict_model.dat')
-    
-    header="""#*********************************************************************
-#  THIS FILE WAS USED TO RESTRICT THE ORIGINAL MODEL
-#  PLEASE DON'T EDIT THIS FILE. HE IS IMPORTANT IN ORDER TO BE ABLE 
-#  TO REPRODUCE THE RESULT IN THE FUTURE.
-#*********************************************************************\n"""    
-    ff = open(output_path,'w')
-    ff.writelines(header)
-    ff.writelines(open(file_path).read())
-    ff.close()
-    
-    
-    
-    
-    
-    
-    
-    
-
 

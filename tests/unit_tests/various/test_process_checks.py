@@ -68,7 +68,9 @@ class TestMatrixElementChecker(unittest.TestCase):
 
         full_model = model_reader.ModelReader(self.base_model)
         full_model.set_parameters_and_couplings()
-        p, w_rambo = process_checks.get_momenta(myproc, full_model)
+
+        evaluator = process_checks.MatrixElementEvaluator(full_model, None)
+        p, w_rambo = evaluator.get_momenta(myproc)
 
         # Check massless external momenta
         for mom in p[:-1]:
@@ -173,7 +175,7 @@ class TestMatrixElementChecker(unittest.TestCase):
         
         comparisons = process_checks.check_lorentz(myproc)
         nb_fail = process_checks.output_lorentz_inv(comparisons, 
-                                                            output='fail')
+                                                    output='fail')
         self.assertEqual(0, nb_fail)
         
         #check number of helicities/jamp
@@ -270,7 +272,8 @@ class TestLorentzInvariance(unittest.TestCase):
 
         full_model = model_reader.ModelReader(self.base_model)
         full_model.set_parameters_and_couplings()
-        p, w_rambo = process_checks.get_momenta(myproc, full_model)
+        evaluator = process_checks.MatrixElementEvaluator(full_model, None)
+        p, w_rambo = evaluator.get_momenta(myproc)
 
         def invariant_mass(p1, p2):
             #helping function to compute invariant mass
@@ -347,7 +350,9 @@ class TestLorentzInvariance(unittest.TestCase):
 
         full_model = model_reader.ModelReader(self.base_model)
         full_model.set_parameters_and_couplings()
-        p, w_rambo = process_checks.get_momenta(myproc, full_model)
+
+        evaluator = process_checks.MatrixElementEvaluator(full_model, None)
+        p, w_rambo = evaluator.get_momenta(myproc)
 
         def invariant_mass(p1, p2):
             #helping function to compute invariant mass
