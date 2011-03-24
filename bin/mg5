@@ -38,7 +38,7 @@ else:
     import rlcompleter
     
     if hasattr(readline, '__doc__'):
-        if 'GNU' in readline.__doc__:
+        if 'libedit' not in readline.__doc__:
             readline.parse_and_bind("tab: complete")
         else:
             readline.parse_and_bind("bind ^I rl_complete")
