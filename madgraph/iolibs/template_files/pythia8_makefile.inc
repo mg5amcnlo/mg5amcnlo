@@ -23,10 +23,10 @@ LIBDIRARCH=../lib/archive
 
 # Location of libraries to be built.
 ifeq ($(SHAREDLIBS),yes)
-  targets=$(LIBDIRARCH)/libSigma_%(model)s.a
-  targets+=$(LIBDIR)/libSigma_%(model)s.$(SHAREDSUFFIX)
+  targets=$(LIBDIRARCH)/libProcesses_%(model)s.a
+  targets+=$(LIBDIR)/libProcesses_%(model)s.$(SHAREDSUFFIX)
 else
-  targets=$(LIBDIRARCH)/libSigma_%(model)s.a
+  targets=$(LIBDIRARCH)/libProcesses_%(model)s.a
 endif
 
 all: $(targets) ../config.mk
@@ -72,11 +72,11 @@ $(TMPDIR)/archive/%%.d : $(SRCDIR)/%%.cc
 objects := $(patsubst $(SRCDIR)/%%.cc,$(TMPDIR)/%%.o,$(wildcard $(SRCDIR)/*.cc))
 objectsarch := $(patsubst $(SRCDIR)/%%.cc,$(TMPDIR)/archive/%%.o,$(wildcard $(SRCDIR)/*.cc))
 
-$(LIBDIR)/libSigma_%(model)s.$(SHAREDSUFFIX): $(objects)
+$(LIBDIR)/libProcesses_%(model)s.$(SHAREDSUFFIX): $(objects)
 	@mkdir -p $(LIBDIR)
 	$(CXX) $(LDFLAGSSHARED) -o $@ $(objects) $(LDFLAGLIBNAME),$(notdir $@)
 
-$(LIBDIRARCH)/libSigma_%(model)s.a: $(objectsarch)
+$(LIBDIRARCH)/libProcesses_%(model)s.a: $(objectsarch)
 	@mkdir -p $(LIBDIRARCH)
 	ar cru $@ $(objectsarch)
 

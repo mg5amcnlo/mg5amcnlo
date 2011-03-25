@@ -20,26 +20,18 @@ SRCDIR=.
 LIBDIR=../lib
 LIBDIRARCH=../lib/archive
 
-# Location of libraries to be built.
-ifeq ($(SHAREDLIBS),yes)
-  targets=$(LIBDIRARCH)/libSigma_%(model)s.a
-  targets+=$(LIBDIR)/libSigma_%(model)s.$(SHAREDSUFFIX)
-else
-  targets=$(LIBDIRARCH)/libSigma_%(model)s.a
-endif
-
 all: $(targets) ../config.mk
 
 config.mk: ../configure
 	cd ..; ./configure
 
 CPPFLAGS= -I$(INCDIR)
-LIBS=-L$(LIBDIRARCH) -lpythia8 -llhapdfdummy -lSigma_%(model)s
+LIBS=-L$(LIBDIRARCH) -lpythia8 -llhapdfdummy -lProcesses_%(model)s
 
 all: %(main_file)s
 
-%(main_file)s: %(main_file)s.o ../lib/archive/libSigma_%(model)s.a
+%(main_file)s: %(main_file)s.o ../lib/archive/libProcesses_%(model)s.a
 	g++ -o %(main_file)s %(main_file)s.o $(LIBS)
 
-$(LIBDIRARCH)/libSigma_%(model)s.a:
+$(LIBDIRARCH)/libProcesses_%(model)s.a: ../Processes_%(model)s/Makefile
 	cd ../Processes_%(model)s; make

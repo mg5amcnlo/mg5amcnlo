@@ -1633,8 +1633,8 @@ class UFOModelConverterCPP(object):
     aloha_template_h = 'cpp_hel_amps_h.inc'
     aloha_template_cc = 'cpp_hel_amps_cc.inc'
 
-    copy_include_files = ["read_slha.h"]
-    copy_cc_files = ["read_slha.cc"]
+    copy_include_files = []
+    copy_cc_files = []
 
     def __init__(self, model, output_path, wanted_lorentz = [],
                  wanted_couplings = []):
@@ -2090,20 +2090,32 @@ class UFOModelConverterPythia8(UFOModelConverterCPP):
                     else:
                         # This is a BSM parameter which is read from SLHA
                         if len(param.lhacode) == 1:
-                            expression = "if(!slhaPtr->getEntry<double>(\"%s\", %d, %s))\n" % \
+                            expression = "if(!slhaPtr->getEntry<double>(\"%s\", %d, %s)){\n" % \
                                          (param.lhablock.lower(),
                                           param.lhacode[0],
                                           param.name) + \
-                                          "%s = %e;" % (param.name,
-                                                        param.value)
+                                          ("cout << \"Warning, setting %s to %e\" << endl;\n" \
+                                          + "%s = %e;}") % (param.name, param.value,
+                                                           param.name, param.value)
                         elif len(param.lhacode) == 2:
-                            expression = "if(!slhaPtr->getEntry<double>(\"%s\", %d, %d, %s))\n" % \
+                            expression = "if(!slhaPtr->getEntry<double>(\"%s\", %d, %d, %s)){\n" % \
                                          (param.lhablock.lower(),
                                           param.lhacode[0],
                                           param.lhacode[1],
                                           param.name) + \
-                                          "%s = %e;" % (param.name,
-                                                        param.value)
+                                          ("cout << \"Warning, setting %s to %e\" << endl;\n" \
+                                          + "%s = %e;}") % (param.name, param.value,
+                                                           param.name, param.value)
+                        elif len(param.lhacode) == 3:
+                            expression = "if(!slhaPtr->getEntry<double>(\"%s\", %d, %d, %d, %s)){\n" % \
+                                         (param.lhablock.lower(),
+                                          param.lhacode[0],
+                                          param.lhacode[1],
+                                          param.lhacode[2],
+                                          param.name) + \
+                                          ("cout << \"Warning, setting %s to %e\" << endl;\n" \
+                                          + "%s = %e;}") % (param.name, param.value,
+                                                           param.name, param.value)
                         else:
                             raise MadGraph5Error("Only support for SLHA blocks with 1 or 2 indices")
                         self.params_indep.insert(0,
