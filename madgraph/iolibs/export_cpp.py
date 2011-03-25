@@ -183,6 +183,9 @@ class ProcessExporterCPP(object):
     C++ format."""
 
     # Static variables (for inheritance)
+    process_dir = '.'
+    include_dir = '.'
+    example_dir = '.'
     process_template_h = 'cpp_process_h.inc'
     process_template_cc = 'cpp_process_cc.inc'
     process_class_template = 'cpp_process_class.inc'
@@ -280,42 +283,31 @@ class ProcessExporterCPP(object):
         """Generate the .h and .cc files needed for C++, for the
         processes described by multi_matrix_element"""
 
-        cwd = os.getcwd()
-
-        os.chdir(self.path)
-
-        pathdir = os.getcwd()
-
-    def generate_process_files(self):
-
-        """Generate the .h and .cc files needed for Pythia 8, for the
-        processes described by multi_matrix_element"""
-
-        cwd = os.getcwd()
-
-        os.chdir(self.path)
-
-        pathdir = os.getcwd()
-
-        logger.info('Creating files %(process)s.h and %(process)s.cc in' % \
-                    {'process': self.process_class} +\
-                    ' directory %(dir)s' % {'dir': self.path})
-
         # Create the files
-        filename = '%s.h' % self.process_class
+        if not os.path.isdir(os.path.join(self.path, self.include_dir)):
+            os.makedirs(os.path.join(self.path, self.include_dir))
+        filename = os.path.join(self.path, self.include_dir,
+                                '%s.h' % self.process_class)
         self.write_process_h_file(writers.CPPWriter(filename))
 
-        filename = '%s.cc' % self.process_class
+        if not os.path.isdir(os.path.join(self.path, self.process_dir)):
+            os.makedirs(os.path.join(self.path, self.process_dir))
+        filename = os.path.join(self.path, self.process_dir,
+                                '%s.cc' % self.process_class)
         self.write_process_cc_file(writers.CPPWriter(filename))
 
-        os.chdir(cwd)
+        logger.info('Created files %(process)s.h and %(process)s.cc in' % \
+                    {'process': self.process_class} + \
+                    ' directory %(dir)s' % {'dir': os.path.split(filename)[0]})
+
+
 
     #===========================================================================
     # write_process_h_file
     #===========================================================================
     def write_process_h_file(self, writer):
         """Write the class definition (.h) file for the process"""
-
+        
         if not isinstance(writer, writers.CPPWriter):
             raise writers.CPPWriter.CPPWriterError(\
                 "writer not CPPWriter")
@@ -908,8 +900,13 @@ def generate_process_files_pythia8(multi_matrix_element, cpp_helas_call_writer,
                                                       process_number,
                                                       path)
 
+    # Set process directory
+    model = process_exporter_pythia8.model
+    process_exporter_pythia8.process_dir = \
+                   'Processes_%(model)s' % {'model': \
+                    model.get('name')}
     process_exporter_pythia8.generate_process_files()
-
+    process_exporter_pythia8.generate_example_files()    
 
 #===============================================================================
 # ProcessExporterPythia8
@@ -919,6 +916,8 @@ class ProcessExporterPythia8(ProcessExporterCPP):
     Pythia 8 format."""
 
     # Static variables (for inheritance)
+    include_dir = 'include'
+    example_dir = 'examples'
     process_template_h = 'pythia8_process_h.inc'
     process_template_cc = 'pythia8_process_cc.inc'
     process_class_template = 'pythia8_process_class.inc'
@@ -933,6 +932,69 @@ class ProcessExporterPythia8(ProcessExporterCPP):
         self.process_class = self.process_name
         
     # Methods for generation of process files for Pythia 8
+
+    def generate_example_files(self):
+        """Generate an example main file including the correct include
+        files and pointers to the processes generated."""
+
+        filepath = os.path.join(self.path, self.example_dir)
+        if not os.path.isdir(filepath):
+            os.makedirs(filepath)
+
+        replace_dict = {}
+
+        # Extract version number and date from VERSION file
+        info_lines = get_mg5_info_lines()
+        replace_dict['info_lines'] = info_lines
+
+        # Extract model name
+        replace_dict['model_name'] = self.model.get('name')
+
+        # Extract process file name
+        replace_dict['process_file_name'] = self.process_class
+
+        # Extract include line
+        replace_dict['include_line'] = \
+                        "#include \"%(process_file_name)s.h\"" % replace_dict
+        
+        # Extract setSigmaPtr line
+        replace_dict['sigma_pointer_line'] = \
+               "pythia.setSigmaPtr(new %(process_file_name)s());" % replace_dict
+
+        # Create the example main file
+        file = read_template_file('pythia8_main_example_cc.inc') % \
+                   replace_dict
+
+        main_file = 'main_%s_%s' % (self.model.get('name'),
+                                        self.process_string)
+        main_filename = os.path.join(filepath, main_file + '.cc')
+
+        # Write the file
+        writers.CPPWriter(main_filename).writelines(file)
+
+        replace_dict = {}
+
+        # Extract version number and date from VERSION file
+        replace_dict['info_lines'] = get_mg5_info_lines().replace("//", "#")
+
+        replace_dict['main_file'] = main_file
+
+        replace_dict['model'] = self.model.get('name')
+
+        # Create the makefile
+        file = read_template_file('pythia8_main_makefile.inc') % \
+               replace_dict
+
+        make_filename = os.path.join(filepath, 'Makefile_%s_%s' % \
+                                (self.model.get('name'), self.process_string))
+
+        # Write the file
+        open(make_filename, 'w').write(file)
+        
+        logger.info("Created files %s and %s in directory %s" \
+                    % (os.path.split(main_filename)[-1],
+                       os.path.split(make_filename)[-1],
+                       os.path.split(make_filename)[0]))
 
     #===========================================================================
     # Process export helper functions
@@ -1553,12 +1615,15 @@ class UFOModelConverterCPP(object):
                       ('SMINPUTS', (1,)): ('aEM',)}
 
     # Template files to use
+    include_dir = '.'
+    cc_file_dir = '.'
     param_template_h = 'cpp_model_parameters_h.inc'
     param_template_cc = 'cpp_model_parameters_cc.inc'
     aloha_template_h = 'cpp_hel_amps_h.inc'
     aloha_template_cc = 'cpp_hel_amps_cc.inc'
 
-    copy_files = ["read_slha.h", "read_slha.cc"]
+    copy_include_files = ["read_slha.h"]
+    copy_cc_files = ["read_slha.cc"]
 
     def __init__(self, model, output_path, wanted_lorentz = [],
                  wanted_couplings = []):
@@ -1676,9 +1741,14 @@ class UFOModelConverterCPP(object):
         """Generate the parameters_model.h and parameters_model.cc
         files, which have the parameters and couplings for the model."""
 
-        parameter_h_file = os.path.join(self.dir_path,
+        if not os.path.isdir(os.path.join(self.dir_path, self.include_dir)):
+            os.makedirs(os.path.join(self.dir_path, self.include_dir))
+        if not os.path.isdir(os.path.join(self.dir_path, self.cc_file_dir)):
+            os.makedirs(os.path.join(self.dir_path, self.cc_file_dir))
+
+        parameter_h_file = os.path.join(self.dir_path, self.include_dir,
                                     'Parameters_%s.h' % self.model.get('name'))
-        parameter_cc_file = os.path.join(self.dir_path,
+        parameter_cc_file = os.path.join(self.dir_path, self.cc_file_dir,
                                      'Parameters_%s.cc' % self.model.get('name'))
 
         replace_dict = {}
@@ -1727,10 +1797,15 @@ class UFOModelConverterCPP(object):
         writers.CPPWriter(parameter_cc_file).writelines(file_cc)
 
         # Copy additional needed files
-        for copy_file in self.copy_files:
+        for copy_file in self.copy_include_files:
             shutil.copy(os.path.join(_file_path, 'iolibs',
                                          'template_files',copy_file),
-                            self.dir_path)
+                        os.path.join(self.dir_path, self.include_dir))
+        # Copy additional needed files
+        for copy_file in self.copy_cc_files:
+            shutil.copy(os.path.join(_file_path, 'iolibs',
+                                         'template_files',copy_file),
+                        os.path.join(self.dir_path, self.cc_file_dir))
 
         logger.info("Created files %s and %s in directory %s" \
                     % (os.path.split(parameter_h_file)[-1],
@@ -1795,10 +1870,15 @@ class UFOModelConverterCPP(object):
     def write_aloha_routines(self):
         """Generate the hel_amps_model.h and hel_amps_model.cc files, which
         have the complete set of generalized Helas routines for the model"""
+        
+        if not os.path.isdir(os.path.join(self.dir_path, self.include_dir)):
+            os.makedirs(os.path.join(self.dir_path, self.include_dir))
+        if not os.path.isdir(os.path.join(self.dir_path, self.cc_file_dir)):
+            os.makedirs(os.path.join(self.dir_path, self.cc_file_dir))
 
-        model_h_file = os.path.join(self.dir_path,
+        model_h_file = os.path.join(self.dir_path, self.include_dir,
                                     'hel_amps_%s.h' % self.model.get('name'))
-        model_cc_file = os.path.join(self.dir_path,
+        model_cc_file = os.path.join(self.dir_path, self.cc_file_dir,
                                      'hel_amps_%s.cc' % self.model.get('name'))
 
         replace_dict = {}
@@ -1821,7 +1901,7 @@ class UFOModelConverterCPP(object):
             aloha_model.compute_all(save=False)
         for abstracthelas in dict(aloha_model).values():
             aloha_writer = aloha_writers.ALOHAWriterForCPP(abstracthelas,
-                                                        self.dir_path)
+                                                           self.dir_path)
             header = aloha_writer.define_header()
             template_h_files.append(self.write_function_declaration(\
                                          aloha_writer, header))
@@ -1898,11 +1978,13 @@ class UFOModelConverterCPP(object):
 # Routines to export/output UFO models in Pythia8 format
 #===============================================================================
 
-def convert_model_to_pythia8(model, output_dir):
+def convert_model_to_pythia8(model, pythia_dir):
     """Create a full valid Pythia 8 model from an MG5 model (coming from UFO)"""
 
     # create the model parameter files
-    model_builder = UFOModelConverterPythia8(model, output_dir)
+    model_builder = UFOModelConverterPythia8(model, pythia_dir)
+    model_builder.cc_file_dir = "Processes_" + model.get('name')
+
     model_builder.write_files()
     # Write makefile
     model_builder.write_makefile()
@@ -1917,7 +1999,7 @@ class UFOModelConverterPythia8(UFOModelConverterCPP):
     # Static variables (for inheritance)
     output_name = 'Pythia 8'
     namespace = 'Pythia8'
-
+    
     # Dictionaries for expression of MG5 SM parameters into Pythia 8
     slha_to_expr = {('SMINPUTS', (1,)): '1./csm->alphaEM(pow(pd->m0(23),2))',
                     ('SMINPUTS', (2,)): 'M_PI*csm->alphaEM(pow(pd->m0(23),2))*pow(pd->m0(23),2)/(sqrt(2.)*pow(pd->m0(24),2)*(pow(pd->m0(23),2)-pow(pd->m0(24),2)))',
@@ -1926,6 +2008,7 @@ class UFOModelConverterPythia8(UFOModelConverterCPP):
                     }
 
     # Template files to use
+    include_dir = 'include'
     param_template_h = 'pythia8_model_parameters_h.inc'
     param_template_cc = 'pythia8_model_parameters_cc.inc'
 
@@ -1997,9 +2080,9 @@ class UFOModelConverterPythia8(UFOModelConverterCPP):
                               " unknown in model export to Pythia 8"
 
     def write_makefile(self):
-        """Generate the Makefile_model file, which creates library files."""
+        """Generate the Makefile, which creates library files."""
 
-        makefilename = os.path.join(self.dir_path,
+        makefilename = os.path.join(self.dir_path, self.cc_file_dir,
                                     'Makefile')
 
         replace_dict = {}

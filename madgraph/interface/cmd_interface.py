@@ -494,10 +494,9 @@ class HelpToCmd(object):
         logger.info("   If mode is standalone_cpp, output the .h and .cc files")
         logger.info("     for the processes and model files in standalone C++")
         logger.info("     format in directory \"name\".")
-        logger.info("   If mode is pythia8, output the .h and .cc files for")
-        logger.info("     the processes and the model in Pythia 8 format in")
-        logger.info("     directory \"name\", which should be directly under")
-        logger.info("     a Pythia 8 main directory.")
+        logger.info("   If mode is pythia8, output all files needed to generate")
+        logger.info("     the processes using Pythia 8. Directory \"name\"")
+        logger.info("     should be a Pythia 8 main directory.")
         logger.info("   name: The name of the copy of Template.")
         logger.info("   If you put '.' instead of a name, your pwd will be used.")
         logger.info("   If you put 'auto', an automatic name PROC_XX_n will be created.")
@@ -856,7 +855,7 @@ class CheckValidForCmd(object):
         if args and args[0] in self._export_formats:
             self._export_format = args.pop(0)
 
-        if not self._curr_amps and self._export_format != "pythia8_model":
+        if not self._curr_amps:
             text = 'No processes generated. Please generate a process first.'
             raise self.InvalidCmd(text)
 
@@ -912,11 +911,6 @@ class CheckValidForCmd(object):
         elif self._export_format == 'standalone_cpp':
             name_dir = lambda i: 'PROC_SA_CPP_%s_%s' % \
                                     (self._curr_model['name'], i)
-            auto_path = lambda i: os.path.join(self.writing_dir,
-                                               name_dir(i))                
-        elif self._export_format == 'pythia8':
-            name_dir = lambda i: 'SigmaProcesses_%s' % \
-                                    (self._curr_model['name'])
             auto_path = lambda i: os.path.join(self.writing_dir,
                                                name_dir(i))                
         else:
@@ -2666,6 +2660,9 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
                 
         # Pythia 8
         if self._export_format == 'pythia8':
+            export_cpp.convert_model_to_pythia8(\
+                            self._curr_model, self._export_dir)
+            
             if isinstance(self._curr_matrix_elements, group_subprocs.SubProcessGroupList):
                 for (group_number, me_group) in enumerate(self._curr_matrix_elements):
                     export_cpp.generate_process_files_pythia8(\
@@ -2676,9 +2673,16 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
                 export_cpp.generate_process_files_pythia8(\
                             self._curr_matrix_elements, self._curr_cpp_model,
                             process_string = self._generate_info, path = path)
-            export_cpp.convert_model_to_pythia8(\
-                            self._curr_model, self._export_dir)
-            
+
+            logger.info("All necessary files for Pythia 8 generated.")
+            logger.info("Please go to %s/examples and run" % path)
+            logger.info("    make -f Makefile_%s_process_name" % \
+                        self._curr_model.get('name'))
+            logger.info("(with process_name replaced by process name).")
+            logger.info("You can then run ./main_%s_process_name to produce" % \
+                        self._curr_model.get('name'))
+            logger.info("events for the process.")
+
         # Pick out the matrix elements in a list
         if isinstance(self._curr_matrix_elements, group_subprocs.SubProcessGroupList):
             matrix_elements = sum([m.get('matrix_elements') for m in self._curr_matrix_elements], [])

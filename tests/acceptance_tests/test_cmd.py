@@ -117,6 +117,7 @@ class TestCmdShell2(unittest.TestCase,
         
     def tearDown(self):
         """ basic destruction after have run """
+        return
         if os.path.exists(self.out_dir):
             shutil.rmtree(self.out_dir)
     
@@ -803,23 +804,21 @@ P1_qq_wp_wp_epve
         os.mkdir(self.out_dir)        
 
         self.do('import model sm')
-        self.do('define p u u~ d d~')
-        self.do('define j u u~ d d~')
-        self.do('generate g p > w+ j')
-        self.do('add process p g > w+ j')
+        self.do('define p g u d u~ d~')
+        self.do('define j g u d u~ d~')
+        self.do('generate p p > w+ j')
         self.do('output pythia8 %s' % self.out_dir)
         # Check that the needed files are generated
-        files = ['Sigma_sm_gq_wpq.h', 'Sigma_sm_gq_wpq.cc',
-                 'hel_amps_sm.h', 'hel_amps_sm.cc',
-                 'Parameters_sm.h', 'Parameters_sm.cc',
-                 'Makefile']
-        nonfiles = ['Sigma_sm_qg_wpq.h', 'Sigma_sm_qg_wpq.cc']
+        files = ['include/Sigma_sm_gq_wpq.h', 'Processes_sm/Sigma_sm_gq_wpq.cc',
+                 'include/Sigma_sm_qq_wpg.h', 'Processes_sm/Sigma_sm_qq_wpg.cc',
+                 'include/hel_amps_sm.h', 'Processes_sm/hel_amps_sm.cc',
+                 'include/Parameters_sm.h',
+                 'Processes_sm/Parameters_sm.cc', 'Processes_sm/Makefile',
+                 'examples/main_sm_gq_wpq.cc', 'examples/main_sm_qq_wpg.cc',
+                 'examples/Makefile_sm_gq_wpq', 'examples/Makefile_sm_qq_wpg']
         for f in files:
             self.assertTrue(os.path.isfile(os.path.join(self.out_dir, f)), 
                             '%s file is not in directory' % f)
-        for f in nonfiles:
-            self.assertTrue(os.path.isfile(os.path.join(self.out_dir, f)), 
-                            '%s file should not be in directory' % f)
 
     def test_standalone_cpp_output(self):
         """Test the C++ standalone output"""
