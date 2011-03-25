@@ -21,50 +21,25 @@ c
 c
 c     Local
 c
-      integer iforest(2,-max_branch:-1,lmaxconfigs)
       integer mapconfig(0:lmaxconfigs)
-      integer sprop(-max_branch:-1,lmaxconfigs)
-      integer itree(2,-max_branch:-1)
-      integer imatch
       integer use_config(0:lmaxconfigs)
-      integer i,j, k, n, nsym
-      double precision diff
+      integer i,j
+      double precision xdum
       double precision pmass(-max_branch:-1,lmaxconfigs)   !Propagotor mass
       double precision pwidth(-max_branch:-1,lmaxconfigs)  !Propagotor width
       integer pow(-max_branch:-1,lmaxconfigs)
 c
-c     Local for generating amps
-c
-      double precision p(0:3,99), wgt, x(99), fx, xdum
-      double precision p1(0:3,99)
-      integer ninvar, ndim, iconfig, minconfig, maxconfig
-      integer ncall,itmax,nconfigs,ntry, ngraphs
-      integer ic(nexternal,maxswitch), jc(12),nswitch
-      double precision saveamp(maxamps)
-      integer nmatch, ibase
-      logical mtc, even
-
-c
 c     Global
 c
-      Double Precision amp2(maxamps), jamp2(0:maxflow)
-      common/to_amps/  amp2,       jamp2
       include 'coupl.inc'
-      
-c
-c     External
-c
-      logical pass_point
-      logical check_swap
-      external pass_point
-      external check_swap
-
-c      integer icomp
 c
 c     DATA
 c
+      integer iforest(2,-max_branch:-1,lmaxconfigs)
+      integer sprop(-max_branch:-1,lmaxconfigs)
       integer tprid(-max_branch:-1,lmaxconfigs)
       include 'configs.inc'
+      data use_config/0,lmaxconfigs*0/
 
 c-----
 c  Begin Code
@@ -97,8 +72,12 @@ c
 c     Start reading use_config from symfact.dat written by MG5
 c
       open(unit=25, file='symfact.dat', status='old')
+      i=0
       do j=1,mapconfig(0)
-         read(25,*) xdum, use_config(j)
+         do while(i.lt.mapconfig(j))
+            read(25,*) xdum, use_config(j)
+            i=int(xdum)
+         enddo
       enddo
       close(25)
 
@@ -360,7 +339,7 @@ c
                call bw_increment_array(iarray,imax,ibase,gForceBW(-imax,i),done)
             enddo
          else
-            write(26,'(2i6)') mapconfig(i),-mapconfig(-use_config(i))
+            write(26,'(2i6)') mapconfig(i), use_config(i)
          endif
       enddo
       end

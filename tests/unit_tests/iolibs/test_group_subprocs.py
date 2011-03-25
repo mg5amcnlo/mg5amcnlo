@@ -514,3 +514,4 @@ Decay groups:
         for igroup, group in enumerate(subproc_groups):
             self.assertEqual(group.get('name'),
                              group_names[igroup])
+

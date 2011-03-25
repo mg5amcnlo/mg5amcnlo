@@ -12,7 +12,11 @@
 # For more information, please visit: http://madgraph.phys.ucl.ac.be
 #
 ################################################################################
-"""Unit test library for the export Python format routines"""
+"""Several different checks for processes (and hence models):
+permutation tests, gauge invariance tests, lorentz invariance
+tests. Also class for evaluation of Python matrix elements,
+MatrixElementEvaluator."""
+
 from __future__ import division
 
 import array
@@ -53,53 +57,236 @@ from aloha.template_files.wavefunctions import \
 #===============================================================================
 
 logger = logging.getLogger('madgraph.various.process_checks')
-store_aloha = []
-
 
 #===============================================================================
-# Global helper function get_momenta
+# Helper class MatrixElementEvaluator
 #===============================================================================
-def get_momenta(process, model, energy = 1000.):
-    """Get a point in phase space for the external states in the given
-    process, with the CM energy given. The incoming particles are
-    assumed to be oriented along the z axis, with particle 1 along the
-    positive z axis."""
+class MatrixElementEvaluator(object):
+    """Class taking care of matrix element evaluation, storing
+    relevant quantities for speedup."""
 
-    if not (isinstance(process, base_objects.Process) and \
-            isinstance(model, model_reader.ModelReader) and \
-            isinstance(energy, float)):
-        raise rambo.RAMBOError, "Not correct type for arguments to get_momenta"
-
-    sorted_legs = sorted(process.get('legs'), lambda l1, l2:\
-                         l1.get('number') - l2.get('number'))
-
-    nincoming = len([leg for leg in sorted_legs if leg.get('state') == False])
-    nfinal = len(sorted_legs) - nincoming
-
-    # Find masses of particles
-    mass_strings = [model.get_particle(l.get('id')).get('mass') \
-                     for l in sorted_legs]
-    mass = [abs(model.get('parameter_dict')[m]) for m in mass_strings]
-
-    # Make sure energy is large enough for incoming and outgoing particles
-    energy = max(energy, sum(mass[:nincoming]) + 200.,
-                 sum(mass[nincoming:]) + 200.)
-
-    e2 = energy**2
-    m1 = mass[0]
-
-    p = []
-
-    masses = rambo.FortranList(nfinal)
-    for i in range(nfinal):
-        masses[i+1] = mass[nincoming + i]
-
-    if nincoming == 1:
-             
-        # Momenta for the incoming particle
-        p.append([m1, 0., 0., 0.])
+    def __init__(self, full_model, helas_writer, auth_skipping = False, reuse = True):
+        """Initialize object with stored_quantities, helas_writer,
+        model, etc.
+        auth_skipping = True means that any identical matrix element will be
+                        evaluated only once
+        reuse = True means that the matrix element corresponding to a
+                given process can be reused (turn off if you are using
+                different models for the same process)"""
+ 
+        self.stored_quantities = {}
+        self.helas_writer = helas_writer
+        self.full_model = full_model
+        self.auth_skipping = auth_skipping
+        self.reuse = reuse
+        self.store_aloha = []
         
-        p_rambo, w_rambo = rambo.RAMBO(nfinal, m1, masses)
+    #===============================================================================
+    # Helper function evaluate_matrix_element
+    #===============================================================================
+    def evaluate_matrix_element(self, matrix_element, p = None, full_model = None, 
+                                gauge_check = False, auth_skipping = None, output='m2'):
+        """Calculate the matrix element and evaluate it for a phase space point
+           output is either m2, amp, jamp
+        """
+
+        if full_model:
+            self.full_model = full_model
+
+        process = matrix_element.get('processes')[0]
+        model = process.get('model')
+
+        if "matrix_elements" not in self.stored_quantities:
+            self.stored_quantities['matrix_elements'] = []
+            matrix_methods = {}
+
+        if self.reuse and "Matrix_%s" % process.shell_string() in globals() and p:
+            # Evaluate the matrix element for the momenta p
+            matrix = eval("Matrix_%s()" % process.shell_string())
+            me_value = matrix.smatrix(p, self.full_model)
+            if output == "m2":
+                return matrix.smatrix(p, self.full_model), matrix.amp2
+            else:
+                m2 = matrix.smatrix(p, self.full_model)
+            return {'m2': m2, output:getattr(matrix, output)}
+
+        if (auth_skipping or self.auth_skipping) and matrix_element in \
+               self.stored_quantities['matrix_elements']:
+            # Exactly the same matrix element has been tested
+            logger.info("Skipping %s, " % process.nice_string() + \
+                        "identical matrix element already tested" \
+                        )
+            return None
+
+        self.stored_quantities['matrix_elements'].append(matrix_element)
+
+        # Create an empty color basis, and the list of raw
+        # colorize objects (before simplification) associated
+        # with amplitude
+        if "list_colorize" not in self.stored_quantities:
+            self.stored_quantities["list_colorize"] = []
+        if "list_color_basis" not in self.stored_quantities:
+            self.stored_quantities["list_color_basis"] = []
+        if "list_color_matrices" not in self.stored_quantities:
+            self.stored_quantities["list_color_matrices"] = []        
+
+        col_basis = color_amp.ColorBasis()
+        new_amp = matrix_element.get_base_amplitude()
+        matrix_element.set('base_amplitude', new_amp)
+        colorize_obj = col_basis.create_color_dict_list(new_amp)
+
+        try:
+            # If the color configuration of the ME has
+            # already been considered before, recycle
+            # the information
+            col_index = self.stored_quantities["list_colorize"].index(colorize_obj)
+        except ValueError:
+            # If not, create color basis and color
+            # matrix accordingly
+            self.stored_quantities['list_colorize'].append(colorize_obj)
+            col_basis.build()
+            self.stored_quantities['list_color_basis'].append(col_basis)
+            col_matrix = color_amp.ColorMatrix(col_basis)
+            self.stored_quantities['list_color_matrices'].append(col_matrix)
+            col_index = -1
+
+        # Set the color for the matrix element
+        matrix_element.set('color_basis',
+                           self.stored_quantities['list_color_basis'][col_index])
+        matrix_element.set('color_matrix',
+                           self.stored_quantities['list_color_matrices'][col_index])
+
+        # Create the needed aloha routines
+        if "used_lorentz" not in self.stored_quantities:
+            self.stored_quantities["used_lorentz"] = []
+
+        me_used_lorentz = set(matrix_element.get_used_lorentz())
+        me_used_lorentz = [lorentz for lorentz in me_used_lorentz \
+                               if lorentz not in self.store_aloha]
+
+        aloha_model = create_aloha.AbstractALOHAModel(model.get('name'))
+        aloha_model.compute_subset(me_used_lorentz)
+
+        # Write out the routines in Python
+        aloha_routines = []
+        for routine in aloha_model.values():
+            aloha_routines.append(routine.write(output_dir = None, 
+                                                mode='mg5',
+                                                language = 'Python'))
+        for routine in aloha_model.external_routines:
+            aloha_routines.append(
+                     open(aloha_model.locate_external(routine, 'Python')).read())
+
+
+        # Define the routines to be available globally
+        for routine in aloha_routines:
+            exec(routine, globals())
+
+        # Add the defined Aloha routines to used_lorentz
+        self.store_aloha.extend(me_used_lorentz)
+
+        # Export the matrix element to Python calls
+        exporter = export_python.ProcessExporterPython(matrix_element,
+                                                       self.helas_writer)
+        try:
+            matrix_methods = exporter.get_python_matrix_methods(\
+                gauge_check=gauge_check)
+        except helas_call_writers.HelasWriterError, error:
+            logger.info(error)
+            return None
+
+        if self.reuse:
+            # Define the routines (globally)
+            exec(matrix_methods[process.shell_string()], globals())
+        else:
+            # Define the routines (locally is enough)
+            exec(matrix_methods[process.shell_string()])
+
+        # Generate phase space point to use
+        if not p:
+            p, w_rambo = self.get_momenta(process)
+
+        # Evaluate the matrix element for the momenta p
+        exec("data = Matrix_%s()" % process.shell_string())
+        if output == "m2":
+            return data.smatrix(p, self.full_model), data.amp2
+        else:
+            m2 = data.smatrix(p, self.full_model)
+            return {'m2': m2, output:getattr(data, output)}
+    
+    #===============================================================================
+    # Helper function get_momenta
+    #===============================================================================
+    def get_momenta(self, process, energy = 1000.):
+        """Get a point in phase space for the external states in the given
+        process, with the CM energy given. The incoming particles are
+        assumed to be oriented along the z axis, with particle 1 along the
+        positive z axis."""
+
+        if not (isinstance(process, base_objects.Process) and \
+                isinstance(energy, float)):
+            raise rambo.RAMBOError, "Not correct type for arguments to get_momenta"
+
+        sorted_legs = sorted(process.get('legs'), lambda l1, l2:\
+                             l1.get('number') - l2.get('number'))
+
+        nincoming = len([leg for leg in sorted_legs if leg.get('state') == False])
+        nfinal = len(sorted_legs) - nincoming
+
+        # Find masses of particles
+        mass_strings = [self.full_model.get_particle(l.get('id')).get('mass') \
+                         for l in sorted_legs]
+        mass = [abs(self.full_model.get('parameter_dict')[m]) for m in mass_strings]
+
+        # Make sure energy is large enough for incoming and outgoing particles
+        energy = max(energy, sum(mass[:nincoming]) + 200.,
+                     sum(mass[nincoming:]) + 200.)
+
+        e2 = energy**2
+        m1 = mass[0]
+
+        p = []
+
+        masses = rambo.FortranList(nfinal)
+        for i in range(nfinal):
+            masses[i+1] = mass[nincoming + i]
+
+        if nincoming == 1:
+
+            # Momenta for the incoming particle
+            p.append([m1, 0., 0., 0.])
+
+            p_rambo, w_rambo = rambo.RAMBO(nfinal, m1, masses)
+
+            # Reorder momenta from px,py,pz,E to E,px,py,pz scheme
+            for i in range(1, nfinal+1):
+                momi = [p_rambo[(4,i)], p_rambo[(1,i)],
+                        p_rambo[(2,i)], p_rambo[(3,i)]]
+                p.append(momi)
+
+            return p, w_rambo
+
+        if nincoming != 2:
+            raise rambo.RAMBOError('Need 1 or 2 incoming particles')
+
+        if nfinal == 1:
+            energy = masses[0]
+
+        m2 = mass[1]
+
+        mom = math.sqrt((e2**2 - 2*e2*m1**2 + m1**4 - 2*e2*m2**2 - \
+                  2*m1**2*m2**2 + m2**4) / (4*e2))
+        e1 = math.sqrt(mom**2+m1**2)
+        e2 = math.sqrt(mom**2+m2**2)
+        # Set momenta for incoming particles
+        p.append([e1, 0., 0., mom])
+        p.append([e2, 0., 0., -mom])
+
+        if nfinal == 1:
+            p.append([energy, 0., 0., 0.])
+            return p, 1.
+
+        p_rambo, w_rambo = rambo.RAMBO(nfinal, energy, masses)
 
         # Reorder momenta from px,py,pz,E to E,px,py,pz scheme
         for i in range(1, nfinal+1):
@@ -108,36 +295,6 @@ def get_momenta(process, model, energy = 1000.):
             p.append(momi)
 
         return p, w_rambo
-
-    if nincoming != 2:
-        raise rambo.RAMBOError('Need 1 or 2 incoming particles')
-
-    if nfinal == 1:
-        energy = masses[0]
-        
-    m2 = mass[1]
-
-    mom = math.sqrt((e2**2 - 2*e2*m1**2 + m1**4 - 2*e2*m2**2 - \
-              2*m1**2*m2**2 + m2**4) / (4*e2))
-    e1 = math.sqrt(mom**2+m1**2)
-    e2 = math.sqrt(mom**2+m2**2)
-    # Set momenta for incoming particles
-    p.append([e1, 0., 0., mom])
-    p.append([e2, 0., 0., -mom])
-
-    if nfinal == 1:
-        p.append([energy, 0., 0., 0.])
-        return p, 1.
-
-    p_rambo, w_rambo = rambo.RAMBO(nfinal, energy, masses)
-
-    # Reorder momenta from px,py,pz,E to E,px,py,pz scheme
-    for i in range(1, nfinal+1):
-        momi = [p_rambo[(4,i)], p_rambo[(1,i)],
-                p_rambo[(2,i)], p_rambo[(3,i)]]
-        p.append(momi)
-
-    return p, w_rambo
 
 #===============================================================================
 # Global helper function run_multiprocs
@@ -227,134 +384,6 @@ def check_already_checked(is_ids, fs_ids, sorted_ids, process, model,
     return False
 
 #===============================================================================
-# Helper function evaluate_matrix_element
-#===============================================================================
-def evaluate_matrix_element(matrix_element, stored_quantities, helas_writer,
-                            full_model, p = None, gauge_check = False,
-                            auth_skipping = True, reuse = False, output='m2'):
-    """Calculate the matrix element and evaluate it for a phase space point
-       output is either m2, amp, jamp
-    """
-
-    process = matrix_element.get('processes')[0]
-    model = process.get('model')
-
-    if "matrix_elements" not in stored_quantities:
-        stored_quantities['matrix_elements'] = []
-        matrix_methods = {}
-
-    if reuse and "Matrix_%s" % process.shell_string() in globals() and p:
-        # Evaluate the matrix element for the momenta p
-        matrix = eval("Matrix_%s()" % process.shell_string())
-        me_value = matrix.smatrix(p, full_model)
-
-        return me_value, matrix.amp2        
-
-    if auth_skipping and matrix_element in \
-           stored_quantities['matrix_elements']:
-        # Exactly the same matrix element has been tested
-        logger.info("Skipping %s, " % process.nice_string() + \
-                    "identical matrix element already tested" \
-                    )
-        return None
-
-    stored_quantities['matrix_elements'].append(matrix_element)
-
-    # Create an empty color basis, and the list of raw
-    # colorize objects (before simplification) associated
-    # with amplitude
-    if "list_colorize" not in stored_quantities:
-        stored_quantities["list_colorize"] = []
-    if "list_color_basis" not in stored_quantities:
-        stored_quantities["list_color_basis"] = []
-    if "list_color_matrices" not in stored_quantities:
-        stored_quantities["list_color_matrices"] = []        
-    
-    col_basis = color_amp.ColorBasis()
-    new_amp = matrix_element.get_base_amplitude()
-    matrix_element.set('base_amplitude', new_amp)
-    colorize_obj = col_basis.create_color_dict_list(new_amp)
-
-    try:
-        # If the color configuration of the ME has
-        # already been considered before, recycle
-        # the information
-        col_index = stored_quantities["list_colorize"].index(colorize_obj)
-    except ValueError:
-        # If not, create color basis and color
-        # matrix accordingly
-        stored_quantities['list_colorize'].append(colorize_obj)
-        col_basis.build()
-        stored_quantities['list_color_basis'].append(col_basis)
-        col_matrix = color_amp.ColorMatrix(col_basis)
-        stored_quantities['list_color_matrices'].append(col_matrix)
-        col_index = -1
-
-    # Set the color for the matrix element
-    matrix_element.set('color_basis',
-                       stored_quantities['list_color_basis'][col_index])
-    matrix_element.set('color_matrix',
-                       stored_quantities['list_color_matrices'][col_index])
-
-    # Create the needed aloha routines
-    if "used_lorentz" not in stored_quantities:
-        stored_quantities["used_lorentz"] = []
-
-    me_used_lorentz = set(matrix_element.get_used_lorentz())
-    me_used_lorentz = [lorentz for lorentz in me_used_lorentz \
-                           if lorentz not in store_aloha]
-    
-    aloha_model = create_aloha.AbstractALOHAModel(model.get('name'))
-    aloha_model.compute_subset(me_used_lorentz)
-
-    # Write out the routines in Python
-    aloha_routines = []
-    for routine in aloha_model.values():
-        aloha_routines.append(routine.write(output_dir = None, 
-                                            mode='mg5',
-                                            language = 'Python'))
-    for routine in aloha_model.external_routines:
-        aloha_routines.append(
-                 open(aloha_model.locate_external(routine, 'Python')).read())
-            
-
-    # Define the routines to be available globally
-    for routine in aloha_routines:
-        exec(routine, globals())
-
-    # Add the defined Aloha routines to used_lorentz
-    store_aloha.extend(me_used_lorentz)
-
-    # Export the matrix element to Python calls
-    exporter = export_python.ProcessExporterPython(matrix_element,
-                                                   helas_writer)
-    try:
-        matrix_methods = exporter.get_python_matrix_methods(\
-            gauge_check=gauge_check)
-    except helas_call_writers.HelasWriterError, error:
-        logger.info(error)
-        return None
-
-    if reuse:
-        # Define the routines (globally)
-        exec(matrix_methods[process.shell_string()], globals())
-    else:
-        # Define the routines (locally is enough)
-        exec(matrix_methods[process.shell_string()])
-
-    # Generate phase space point to use
-    if not p:
-        p, w_rambo = get_momenta(process, full_model)
-
-    # Evaluate the matrix element for the momenta p
-    exec("data = Matrix_%s()" % process.shell_string())
-    if output == "m2":
-        return data.smatrix(p, full_model), data.amp2
-    else:
-        m2 = data.smatrix(p, full_model)
-        return {'m2': m2, output:getattr(data, output)}
-    
-#===============================================================================
 # check_processes
 #===============================================================================
 def check_processes(processes, param_card = None, quick = []):
@@ -375,18 +404,17 @@ def check_processes(processes, param_card = None, quick = []):
         full_model = model_reader.ModelReader(model)
         full_model.set_parameters_and_couplings(param_card)
         
-        stored_quantities = {}
-
+        # Initialize matrix element evaluation
+        evaluator = MatrixElementEvaluator(full_model, helas_writer,
+                                           auth_skipping = True, reuse = False)
         results = run_multiprocs_no_crossings(check_process,
                                               multiprocess,
-                                              stored_quantities,
-                                              helas_writer,
-                                              full_model,
+                                              evaluator,
                                               quick)
 
-        if "used_lorentz" not in stored_quantities:
-            stored_quantities["used_lorentz"] = []
-        return results, stored_quantities["used_lorentz"]
+        if "used_lorentz" not in evaluator.stored_quantities:
+            evaluator.stored_quantities["used_lorentz"] = []
+        return results, evaluator.stored_quantities["used_lorentz"]
 
     elif isinstance(processes, base_objects.Process):
         processes = base_objects.ProcessList([processes])
@@ -408,9 +436,12 @@ def check_processes(processes, param_card = None, quick = []):
     # Write the matrix element(s) in Python
     helas_writer = helas_call_writers.PythonUFOHelasCallWriter(model)
 
+    # Initialize matrix element evaluation
+    evaluator = MatrixElementEvaluator(full_model, helas_writer,
+                                       auth_skipping = True, reuse = False)
+
     # Keep track of tested processes, matrix elements, color and already
     # initiated Lorentz routines, to reuse as much as possible
-    stored_quantities = {}
     sorted_ids = []
     comparison_results = []
 
@@ -425,17 +456,16 @@ def check_processes(processes, param_card = None, quick = []):
                                  sorted_ids, process, model):
             continue
         # Get process result
-        res = check_process(process, stored_quantities,
-                            helas_writer, full_model, quick)
+        res = check_process(process, evaluator, quick)
         if res:
             comparison_results.append(res)
 
-    if "used_lorentz" not in stored_quantities:
-        stored_quantities["used_lorentz"] = []
-    return comparison_results, stored_quantities["used_lorentz"]
+    if "used_lorentz" not in evaluator.stored_quantities:
+        evaluator.stored_quantities["used_lorentz"] = []
+    return comparison_results, evaluator.stored_quantities["used_lorentz"]
 
 
-def check_process(process, stored_quantities, helas_writer, full_model, quick):
+def check_process(process, evaluator, quick):
     """Check the helas calls for a process by generating the process
     using all different permutations of the process legs (or, if
     quick, use a subset of permutations), and check that the matrix
@@ -500,7 +530,7 @@ def check_process(process, stored_quantities, helas_writer, full_model, quick):
 
         if order == range(1,len(legs) + 1):
             # Generate phase space point to use
-            p, w_rambo = get_momenta(process, full_model)
+            p, w_rambo = evaluator.get_momenta(process)
 
         # Generate the HelasMatrixElement for the process
         matrix_element = helas_objects.HelasMatrixElement(amplitude,
@@ -513,8 +543,7 @@ def check_process(process, stored_quantities, helas_writer, full_model, quick):
 
         process_matrix_elements.append(matrix_element)
 
-        res = evaluate_matrix_element(matrix_element, stored_quantities,
-                                      helas_writer, full_model, p)
+        res = evaluator.evaluate_matrix_element(matrix_element, p = p)
         if res == None:
             break
 
@@ -642,16 +671,20 @@ def check_gauge(processes, param_card = None):
         # Read a param_card and calculate couplings
         full_model = model_reader.ModelReader(model)
         full_model.set_parameters_and_couplings(param_card)
+
+        # Initialize matrix element evaluation
+        evaluator = MatrixElementEvaluator(full_model, helas_writer,
+                                           auth_skipping = True, reuse = False)
+
         # Set all widths to zero for gauge check
         for particle in full_model.get('particles'):
             if particle.get('width') != 'ZERO':
                 full_model.get('parameter_dict')[particle.get('width')] = 0.
-        stored_quantities = {}
+
         return run_multiprocs_no_crossings(check_gauge_process,
                                            multiprocess,
-                                           stored_quantities,
-                                           helas_writer,
-                                           full_model)
+                                           evaluator)
+
     elif isinstance(processes, base_objects.Process):
         processes = base_objects.ProcessList([processes])
     elif isinstance(processes, base_objects.ProcessList):
@@ -671,7 +704,10 @@ def check_gauge(processes, param_card = None):
     # Write the matrix element(s) in Python
     helas_writer = helas_call_writers.PythonUFOHelasCallWriter(model)
     
-    stored_quantities = {}
+    # Initialize matrix element evaluation
+    evaluator = MatrixElementEvaluator(full_model, helas_writer,
+                                       auth_skipping = True, reuse = False)
+
     comparison_results = []
 
     # For each process, make sure we have set up leg numbers:
@@ -685,15 +721,14 @@ def check_gauge(processes, param_card = None):
         #    continue
         
         # Get process result
-        result = check_gauge_process(process, stored_quantities,
-                                     helas_writer, full_model)
+        result = check_gauge_process(process, evaluator)
         if result:
             comparison_results.append(result)
             
     return comparison_results
 
 
-def check_gauge_process(process, stored_quantities, helas_writer, full_model):
+def check_gauge_process(process, evaluator):
     """Check gauge invariance for the process, unless it is already done."""
 
     model = process.get('model')
@@ -730,16 +765,14 @@ def check_gauge_process(process, stored_quantities, helas_writer, full_model):
     matrix_element = helas_objects.HelasMatrixElement(amplitude,
                                                       gen_color = False)
 
-    brsvalue = evaluate_matrix_element(matrix_element, stored_quantities,
-                                  helas_writer, full_model, gauge_check = True,
-                                  output='jamp')
+    brsvalue = evaluator.evaluate_matrix_element(matrix_element, gauge_check = True,
+                                                 output='jamp')
 
 
     matrix_element = helas_objects.HelasMatrixElement(amplitude,
                                                       gen_color = False)    
-    mvalue = evaluate_matrix_element(matrix_element, stored_quantities,
-                                  helas_writer, full_model, gauge_check = False,
-                                  output='jamp')
+    mvalue = evaluator.evaluate_matrix_element(matrix_element, gauge_check = False,
+                                               output='jamp')
     
     if mvalue and mvalue['m2']:
         return {'process':process.base_string(),'value':mvalue,'brs':brsvalue}
@@ -855,12 +888,14 @@ def check_lorentz(processes, param_card = None):
         for particle in full_model.get('particles'):
             if particle.get('width') != 'ZERO':
                 full_model.get('parameter_dict')[particle.get('width')] = 0.
-        stored_quantities = {}
+
+        # Initialize matrix element evaluation
+        evaluator = MatrixElementEvaluator(full_model, helas_writer,
+                                           auth_skipping = False, reuse = True)
+
         return run_multiprocs_no_crossings(check_lorentz_process,
                                            multiprocess,
-                                           stored_quantities,
-                                           helas_writer,
-                                           full_model)
+                                           evaluator)
     elif isinstance(processes, base_objects.Process):
         processes = base_objects.ProcessList([processes])
     elif isinstance(processes, base_objects.ProcessList):
@@ -880,7 +915,10 @@ def check_lorentz(processes, param_card = None):
     # Write the matrix element(s) in Python
     helas_writer = helas_call_writers.PythonUFOHelasCallWriter(model)
     
-    stored_quantities = {}
+    # Initialize matrix element evaluation
+    evaluator = MatrixElementEvaluator(full_model, helas_writer,
+                                       auth_skipping = False, reuse = True)
+
     comparison_results = []
 
     # For each process, make sure we have set up leg numbers:
@@ -894,15 +932,14 @@ def check_lorentz(processes, param_card = None):
         #    continue
         
         # Get process result
-        result = check_lorentz_process(process, stored_quantities,
-                                     helas_writer, full_model)
+        result = check_lorentz_process(process, evaluator)
         if result:
             comparison_results.append(result)
             
     return comparison_results
 
 
-def check_lorentz_process(process, stored_quantities, helas_writer, full_model):
+def check_lorentz_process(process, evaluator):
     """Check gauge invariance for the process, unless it is already done."""
 
     amp_results = []
@@ -925,14 +962,14 @@ def check_lorentz_process(process, stored_quantities, helas_writer, full_model):
         return None
 
     # Generate phase space point to use
-    p, w_rambo = get_momenta(process, full_model)
+    p, w_rambo = evaluator.get_momenta(process)
 
     # Generate the HelasMatrixElement for the process
     matrix_element = helas_objects.HelasMatrixElement(amplitude,
                                                       gen_color = True)
 
-    data = evaluate_matrix_element(matrix_element, stored_quantities,
-                                  helas_writer, full_model, p=p, output='jamp')
+    data = evaluator.evaluate_matrix_element(matrix_element, p=p, output='jamp',
+                                             auth_skipping = True)
 
     if data and data['m2']:
         results = [data]
@@ -941,10 +978,9 @@ def check_lorentz_process(process, stored_quantities, helas_writer, full_model):
     
     for boost in range(1,4):
         boost_p = boost_momenta(p, boost)
-        results.append(evaluate_matrix_element(matrix_element, 
-                                                   stored_quantities,
-                                  helas_writer, full_model, p=boost_p,
-                                  auth_skipping=False, output='jamp'))
+        results.append(evaluator.evaluate_matrix_element(matrix_element,
+                                                         p=boost_p,
+                                                         output='jamp'))
         
         
     return {'process': process.base_string(), 'results': results}
