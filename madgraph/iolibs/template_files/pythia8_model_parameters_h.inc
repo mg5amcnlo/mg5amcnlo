@@ -10,6 +10,7 @@
 
 #include "ParticleData.h"
 #include "StandardModel.h"
+#include "SusyLesHouches.h"
 
 using namespace std;
 
@@ -29,11 +30,11 @@ double zero, ZERO;
 %(dependent_couplings)s
 
 // Set parameters that are unchanged during the run
-void setIndependentParameters(ParticleData*& pd, Couplings*& csm);
+void setIndependentParameters(ParticleData*& pd, Couplings*& csm, SusyLesHouches*& slhaPtr);
 // Set couplings that are unchanged during the run
 void setIndependentCouplings();
 // Set parameters that are changed event by event
-void setDependentParameters(ParticleData*& pd, Couplings*& csm, double alpS);
+void setDependentParameters(ParticleData*& pd, Couplings*& csm, SusyLesHouches*& slhaPtr, double alpS);
 // Set couplings that are changed event by event
 void setDependentCouplings();
 

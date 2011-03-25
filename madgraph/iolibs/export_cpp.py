@@ -37,6 +37,7 @@ import madgraph.iolibs.template_files as template_files
 import madgraph.iolibs.ufo_expression_parsers as parsers
 from madgraph import MadGraph5Error, MG5DIR
 from madgraph.iolibs.files import cp, ln, mv
+import models.sm.write_param_card as write_param_card
 
 import aloha.create_aloha as create_aloha
 import aloha.aloha_writers as aloha_writers
@@ -941,6 +942,13 @@ class ProcessExporterPythia8(ProcessExporterCPP):
         if not os.path.isdir(filepath):
             os.makedirs(filepath)
 
+        # Write out param_card
+        param_card = "param_card_%s.dat" % self.model.get('name')
+
+        write_param_card.ParamCardWriter(
+                os.path.join(filepath, param_card),
+                self.model['parameters'][('external',)])        
+
         replace_dict = {}
 
         # Extract version number and date from VERSION file
@@ -961,9 +969,12 @@ class ProcessExporterPythia8(ProcessExporterCPP):
         replace_dict['sigma_pointer_line'] = \
                "pythia.setSigmaPtr(new %(process_file_name)s());" % replace_dict
 
+        # Extract setSigmaPtr line
+        replace_dict['param_card'] = param_card
+
         # Create the example main file
         file = read_template_file('pythia8_main_example_cc.inc') % \
-                   replace_dict
+               replace_dict
 
         main_file = 'main_%s_%s' % (self.model.get('name'),
                                         self.process_string)
@@ -1675,15 +1686,17 @@ class UFOModelConverterCPP(object):
             elif 'aS' in key:
                 for p in self.model['parameters'][key]:
                     self.params_dep.append(base_objects.ModelVariable(p.name,
-                                                 self.p_to_cpp.parse(p.expr),
-                                                 p.type,
-                                                 p.depend))
+                                              p.name + " = " + \
+                                              self.p_to_cpp.parse(p.expr) + ";",
+                                              p.type,
+                                              p.depend))
             else:
                 for p in self.model['parameters'][key]:
                     self.params_indep.append(base_objects.ModelVariable(p.name,
-                                                 self.p_to_cpp.parse(p.expr),
-                                                 p.type,
-                                                 p.depend))
+                                              p.name + " = " + \
+                                              self.p_to_cpp.parse(p.expr) + ";",
+                                              p.type,
+                                              p.depend))
 
         # For external parameters, want to read off the SLHA block code
         while params_ext:
@@ -1691,19 +1704,19 @@ class UFOModelConverterCPP(object):
             # Read value from the slha variable
             expression = ""
             if len(param.lhacode) == 1:
-                expression = "slha.get_block_entry(\"%s\", %d, %e);" % \
-                             (param.lhablock.lower(), param.lhacode[0],
-                              param.value)
+                expression = "%s = slha.get_block_entry(\"%s\", %d, %e);" % \
+                             (param.name, param.lhablock.lower(),
+                              param.lhacode[0], param.value)
             elif len(param.lhacode) == 2:
                 expression = "indices[0] = %d;\nindices[1] = %d;\n" % \
                              (param.lhacode[0], param.lhacode[1])
-                expression += "%s=slha.get_block_entry(\"%s\", indices, %e);" \
+                expression += "%s = slha.get_block_entry(\"%s\", indices, %e);" \
                               % (param.name, param.lhablock.lower(), param.value)
             else:
                 raise MadGraph5Error("Only support for SLHA blocks with 1 or 2 indices")
             self.params_indep.insert(0,
                                    base_objects.ModelVariable(param.name,
-                                                              expression,
+                                                   expression,
                                                               'real'))
             
     def prepare_couplings(self, wanted_couplings = []):
@@ -1733,7 +1746,7 @@ class UFOModelConverterCPP(object):
 
         # Convert coupling expressions from Python to C++
         for coup in self.coups_dep.values() + self.coups_indep:
-            coup.expr = self.p_to_cpp.parse(coup.expr)
+            coup.expr = coup.name + " = " + self.p_to_cpp.parse(coup.expr) + ";"
 
     # Routines for writing the parameter files
 
@@ -1838,10 +1851,7 @@ class UFOModelConverterCPP(object):
 
         res_strings = []
         for param in params:
-            if param.expr.find('\n') >= 0:
-                res_strings.append("%s;" % param.expr)
-            else:
-                res_strings.append("%s=%s;" % (param.name, param.expr))
+            res_strings.append("%s" % param.expr)
 
         # Correct width sign for Majorana particles (where the width
         # and mass need to have the same sign)        
@@ -2026,20 +2036,21 @@ class UFOModelConverterPythia8(UFOModelConverterCPP):
             elif 'aS' in key:
                 for p in self.model['parameters'][key]:
                     self.params_dep.append(base_objects.ModelVariable(p.name,
-                                                 self.p_to_cpp.parse(p.expr),
+                                                 p.name + " = " + \
+                                                 self.p_to_cpp.parse(p.expr) + ';',
                                                  p.type,
                                                  p.depend))
             else:
                 for p in self.model['parameters'][key]:
                     self.params_indep.append(base_objects.ModelVariable(p.name,
-                                                 self.p_to_cpp.parse(p.expr),
+                                                 p.name + " = " + \
+                                                 self.p_to_cpp.parse(p.expr) + ';',
                                                  p.type,
                                                  p.depend))
 
         # For external parameters, want to use the internal Pythia
         # parameters for SM params and masses and widths. For other
-        # parameters, want to read off the SLHA block code (TO BE
-        # IMPLEMENTED)
+        # parameters, want to read off the SLHA block code
         while params_ext:
             param = params_ext.pop(0)
             key = (param.lhablock, tuple(param.lhacode))
@@ -2047,37 +2058,58 @@ class UFOModelConverterPythia8(UFOModelConverterCPP):
                 # This value needs to be set event by event
                 self.params_dep.insert(0,
                                        base_objects.ModelVariable(param.name,
-                                                         self.slha_to_expr[key],
-                                                         'real'))
+                                                   param.name + ' = ' + \
+                                                   self.slha_to_expr[key] + ';',
+                                                   'real'))
             else:
                 try:
                     # This is an SM parameter defined above
                     self.params_indep.insert(0,
                                              base_objects.ModelVariable(param.name,
-                                                         self.slha_to_expr[key],
-                                                         'real'))
+                                                   param.name + ' = ' + \
+                                                   self.slha_to_expr[key] + ';',
+                                                   'real'))
                 except:
                     # For Yukawa couplings, masses and widths, insert
                     # the Pythia 8 value
                     if param.lhablock == 'YUKAWA':
-                        self.slha_to_expr[key] = 'pd->mRun(%i, 120.)' \
+                        self.slha_to_expr[key] = 'pd->mRun(%i, pd->m0(24))' \
                                                  % param.lhacode[0]
                     if param.lhablock == 'MASS':
                         self.slha_to_expr[key] = 'pd->m0(%i)' \
                                             % param.lhacode[0]
                     if param.lhablock == 'DECAY':
-                        self.slha_to_expr[key] = 'pd->mWidth(%i)' \
-                                            % param.lhacode[0]
+                        self.slha_to_expr[key] = \
+                                            'pd->mWidth(%i)' % param.lhacode[0]
                     if key in self.slha_to_expr:
                         self.params_indep.insert(0,\
-                                                 base_objects.ModelVariable(param.name,
-                                                          self.slha_to_expr[key],
-                                                          'real'))
+                                     base_objects.ModelVariable(param.name,
+                                     param.name + "=" + self.slha_to_expr[key] \
+                                                                + ';',
+                                                                'real'))
                     else:
-                        # Fix unknown parameters as soon as Pythia has fixed this
-                        raise MadGraph5Error, \
-                              "Parameter with key " + repr(key) + \
-                              " unknown in model export to Pythia 8"
+                        # This is a BSM parameter which is read from SLHA
+                        if len(param.lhacode) == 1:
+                            expression = "if(!slhaPtr->getEntry<double>(\"%s\", %d, %s))\n" % \
+                                         (param.lhablock.lower(),
+                                          param.lhacode[0],
+                                          param.name) + \
+                                          "%s = %e;" % (param.name,
+                                                        param.value)
+                        elif len(param.lhacode) == 2:
+                            expression = "if(!slhaPtr->getEntry<double>(\"%s\", %d, %d, %s))\n" % \
+                                         (param.lhablock.lower(),
+                                          param.lhacode[0],
+                                          param.lhacode[1],
+                                          param.name) + \
+                                          "%s = %e;" % (param.name,
+                                                        param.value)
+                        else:
+                            raise MadGraph5Error("Only support for SLHA blocks with 1 or 2 indices")
+                        self.params_indep.insert(0,
+                                               base_objects.ModelVariable(param.name,
+                                                                          expression,
+                                                                          'real'))
 
     def write_makefile(self):
         """Generate the Makefile, which creates library files."""

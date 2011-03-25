@@ -21,6 +21,9 @@ int main() {
   // Pythia generator.
   Pythia pythia;
 
+  // Read param_card file
+  pythia.readString("SLHA:file = %(param_card)s");
+
   // Provide process pointers to Pythia
   %(sigma_pointer_line)s
 
