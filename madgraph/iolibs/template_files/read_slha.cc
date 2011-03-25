@@ -123,7 +123,7 @@ double SLHAReader::get_block_entry(string block_name, int index,
 }
 
 
-double SLHAReader::set_block_entry(string block_name, vector<int> indices, 
+void SLHAReader::set_block_entry(string block_name, vector<int> indices, 
 				   double value)
 {
   if (_blocks.find(block_name) == _blocks.end()){
@@ -137,7 +137,7 @@ double SLHAReader::set_block_entry(string block_name, vector<int> indices,
      cout << "to " << _blocks[block_name].get_entry(indices) << endl;*/
 }
 
-double SLHAReader::set_block_entry(string block_name, int index, 
+void SLHAReader::set_block_entry(string block_name, int index, 
 				   double value)
 {
   vector<int> indices;

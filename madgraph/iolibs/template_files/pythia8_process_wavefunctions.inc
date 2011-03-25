@@ -1,5 +1,5 @@
 double p[nexternal][4];
-int i,j;
+int i;
  
 // Convert Pythia 4-vectors to double[]
 for(i=0;i < nexternal;i++){

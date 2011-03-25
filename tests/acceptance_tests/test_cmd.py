@@ -803,27 +803,16 @@ P1_qq_wp_wp_epve
         os.mkdir(self.out_dir)        
 
         self.do('import model sm')
-        self.do('output pythia8_model %s ' % self.out_dir)
-        # Check that the needed files are generated
-        files = ['hel_amps_sm.h', 'hel_amps_sm.cc',
-                 'Parameters_sm.h', 'Parameters_sm.cc']
-        for f in files:
-            self.assertTrue(os.path.isfile(os.path.join(self.out_dir, f)), 
-                            '%s file is not in directory' % f)
         self.do('define p u u~ d d~')
-        self.do('generate p p > e+ e-')
-        self.do('output pythia8 %s ' % self.out_dir)
-        # Check that the needed files are generated
-        files = ['Sigma_sm_qq_epem.h', 'Sigma_sm_qq_epem.cc']
-        for f in files:
-            self.assertTrue(os.path.isfile(os.path.join(self.out_dir, f)), 
-                            '%s file is not in directory' % f)
         self.do('define j u u~ d d~')
         self.do('generate g p > w+ j')
         self.do('add process p g > w+ j')
         self.do('output pythia8 %s' % self.out_dir)
         # Check that the needed files are generated
-        files = ['Sigma_sm_gq_wpq.h', 'Sigma_sm_gq_wpq.cc']
+        files = ['Sigma_sm_gq_wpq.h', 'Sigma_sm_gq_wpq.cc',
+                 'hel_amps_sm.h', 'hel_amps_sm.cc',
+                 'Parameters_sm.h', 'Parameters_sm.cc',
+                 'Makefile']
         nonfiles = ['Sigma_sm_qg_wpq.h', 'Sigma_sm_qg_wpq.cc']
         for f in files:
             self.assertTrue(os.path.isfile(os.path.join(self.out_dir, f)), 

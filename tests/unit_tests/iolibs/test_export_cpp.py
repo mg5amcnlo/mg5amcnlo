@@ -273,7 +273,7 @@ int id4Mass() const {return 4;}""")
         goal_string = \
 """//==========================================================================
 // This file has been automatically generated for Pythia 8
-// by MadGraph 5 v. %(version)s, %(date)s
+// MadGraph 5 v. %(version)s, %(date)s
 // By the MadGraph Development Team
 // Please visit us at https://launchpad.net/madgraph5
 //==========================================================================
@@ -371,7 +371,7 @@ class Sigma_sm_qqx_qqx : public Sigma2Process
         goal_string = \
 """//==========================================================================
 // This file has been automatically generated for Pythia 8 by
-// by MadGraph 5 v. %(version)s, %(date)s
+// MadGraph 5 v. %(version)s, %(date)s
 // By the MadGraph Development Team
 // Please visit us at https://launchpad.net/madgraph5
 //==========================================================================
@@ -397,7 +397,7 @@ void Sigma_sm_qqx_qqx::initProc()
   // Instantiate the model class and set parameters that stay fixed during run
   pars = Parameters_sm::getInstance(); 
   pars->setIndependentParameters(particleDataPtr, couplingsPtr); 
-  pars->setIndependentCouplings(particleDataPtr, couplingsPtr); 
+  pars->setIndependentCouplings(); 
   // Set massive/massless matrix elements for c/b/mu/tau
   mcME = particleDataPtr->m0(4); 
   mbME = 0.; 
@@ -413,7 +413,7 @@ void Sigma_sm_qqx_qqx::sigmaKin()
 {
   // Set the parameters which change event by event
   pars->setDependentParameters(particleDataPtr, couplingsPtr, alpS); 
-  pars->setDependentCouplings(particleDataPtr, couplingsPtr); 
+  pars->setDependentCouplings(); 
   // Reset color flows
   for(int i = 0; i < 2; i++ )
     jamp2[0][i] = 0.; 
@@ -424,13 +424,13 @@ void Sigma_sm_qqx_qqx::sigmaKin()
   static int ntry = 0, sum_hel = 0, ngood = 0; 
   static int igood[ncomb]; 
   static int jhel; 
-  std::complex<double> * * wfs; 
   double t[nprocesses]; 
   // Helicities for the process
-  static const int helicities[ncomb][nexternal] = {-1, -1, -1, -1, -1, -1, -1,
-      1, -1, -1, 1, -1, -1, -1, 1, 1, -1, 1, -1, -1, -1, 1, -1, 1, -1, 1, 1,
-      -1, -1, 1, 1, 1, 1, -1, -1, -1, 1, -1, -1, 1, 1, -1, 1, -1, 1, -1, 1, 1,
-      1, 1, -1, -1, 1, 1, -1, 1, 1, 1, 1, -1, 1, 1, 1, 1};
+  static const int helicities[ncomb][nexternal] = {{-1, -1, -1, -1}, {-1, -1,
+      -1, 1}, {-1, -1, 1, -1}, {-1, -1, 1, 1}, {-1, 1, -1, -1}, {-1, 1, -1, 1},
+      {-1, 1, 1, -1}, {-1, 1, 1, 1}, {1, -1, -1, -1}, {1, -1, -1, 1}, {1, -1,
+      1, -1}, {1, -1, 1, 1}, {1, 1, -1, -1}, {1, 1, -1, 1}, {1, 1, 1, -1}, {1,
+      1, 1, 1}};
   // Denominators: spins, colors and identical particles
   const int denominators[nprocesses] = {36}; 
 
@@ -544,7 +544,7 @@ void Sigma_sm_qqx_qqx::setIdColAcol()
   if(id1 == 4 && id2 == -4)
   {
     // Pick one of the flavor combinations (4, -4)
-    int flavors[1][2] = {4, -4}; 
+    int flavors[1][2] = {{4, -4}}; 
     vector<double> probs; 
     double sum = matrix_element[0]; 
     probs.push_back(matrix_element[0]/sum); 
@@ -555,7 +555,7 @@ void Sigma_sm_qqx_qqx::setIdColAcol()
   else if(id1 == 2 && id2 == -2)
   {
     // Pick one of the flavor combinations (2, -2)
-    int flavors[1][2] = {2, -2}; 
+    int flavors[1][2] = {{2, -2}}; 
     vector<double> probs; 
     double sum = matrix_element[0]; 
     probs.push_back(matrix_element[0]/sum); 
@@ -574,9 +574,10 @@ void Sigma_sm_qqx_qqx::setIdColAcol()
     for(int i = 0; i < ncolor[0]; i++ )
       probs.push_back(jamp2[0][i]/sum); 
     int ic = rndmPtr->pick(probs); 
-    static int col[2][8] = {1, 0, 0, 1, 2, 0, 0, 2, 2, 0, 0, 1, 2, 0, 0, 1}; 
-    setColAcol(col[ic][0], col[ic][1], col[ic][2], col[ic][3], col[ic][4],
-        col[ic][5], col[ic][6], col[ic][7]);
+    static int colors[2][8] = {{1, 0, 0, 1, 2, 0, 0, 2}, {2, 0, 0, 1, 2, 0, 0,
+        1}};
+    setColAcol(colors[ic][0], colors[ic][1], colors[ic][2], colors[ic][3],
+        colors[ic][4], colors[ic][5], colors[ic][6], colors[ic][7]);
   }
 }
 
@@ -600,7 +601,7 @@ void Sigma_sm_qqx_qqx::calculate_wavefunctions(const int perm[], const int
 {
   // Calculate wavefunctions for all processes
   double p[nexternal][4]; 
-  int i, j; 
+  int i; 
 
   // Convert Pythia 4-vectors to double[]
   for(i = 0; i < nexternal; i++ )
@@ -635,7 +636,7 @@ double Sigma_sm_qqx_qqx::matrix_uux_uux()
   std::complex<double> amp[ngraphs], jamp[ncolor]; 
   // The color matrix;
   static const double denom[ncolor] = {1, 1}; 
-  static const double cf[ncolor][ncolor] = {9, 3, 3, 9}; 
+  static const double cf[ncolor][ncolor] = {{9, 3}, {3, 9}}; 
   // Calculate all amplitudes
   // Amplitude(s) for diagram number 1
   FFV1_0(w[3], w[2], w[4], pars->GC_10, amp[0]); 
@@ -713,7 +714,7 @@ double Sigma_sm_qqx_qqx::matrix_uux_uux()
         goal_string = \
 """//==========================================================================
 // This file has been automatically generated for C++ Standalone by
-// by MadGraph 5 v. %(version)s, %(date)s
+// MadGraph 5 v. %(version)s, %(date)s
 // By the MadGraph Development Team
 // Please visit us at https://launchpad.net/madgraph5
 //==========================================================================
@@ -776,10 +777,11 @@ void CPPProcess::sigmaKin()
   std::complex<double> * * wfs; 
   double t[nprocesses]; 
   // Helicities for the process
-  static const int helicities[ncomb][nexternal] = {-1, -1, -1, -1, -1, -1, -1,
-      1, -1, -1, 1, -1, -1, -1, 1, 1, -1, 1, -1, -1, -1, 1, -1, 1, -1, 1, 1,
-      -1, -1, 1, 1, 1, 1, -1, -1, -1, 1, -1, -1, 1, 1, -1, 1, -1, 1, -1, 1, 1,
-      1, 1, -1, -1, 1, 1, -1, 1, 1, 1, 1, -1, 1, 1, 1, 1};
+  static const int helicities[ncomb][nexternal] = {{-1, -1, -1, -1}, {-1, -1,
+      -1, 1}, {-1, -1, 1, -1}, {-1, -1, 1, 1}, {-1, 1, -1, -1}, {-1, 1, -1, 1},
+      {-1, 1, 1, -1}, {-1, 1, 1, 1}, {1, -1, -1, -1}, {1, -1, -1, 1}, {1, -1,
+      1, -1}, {1, -1, 1, 1}, {1, 1, -1, -1}, {1, 1, -1, 1}, {1, 1, 1, -1}, {1,
+      1, 1, 1}};
   // Denominators: spins, colors and identical particles
   const int denominators[nprocesses] = {72, 72}; 
 
@@ -923,7 +925,7 @@ double CPPProcess::matrix_uux_gogo()
   std::complex<double> amp[ngraphs], jamp[ncolor]; 
   // The color matrix;
   static const double denom[ncolor] = {3, 3}; 
-  static const double cf[ncolor][ncolor] = {16, -2, -2, 16}; 
+  static const double cf[ncolor][ncolor] = {{16, -2}, {-2, 16}}; 
   // Calculate all amplitudes
   // Amplitude(s) for diagram number 1
   FFV1_0(w[2], w[3], w[4], pars->GC_8, amp[0]); 

@@ -31,11 +31,11 @@ double zero, ZERO;
 // Set parameters that are unchanged during the run
 void setIndependentParameters(ParticleData*& pd, Couplings*& csm);
 // Set couplings that are unchanged during the run
-void setIndependentCouplings(ParticleData*& pd, Couplings*& csm);
+void setIndependentCouplings();
 // Set parameters that are changed event by event
 void setDependentParameters(ParticleData*& pd, Couplings*& csm, double alpS);
 // Set couplings that are changed event by event
-void setDependentCouplings(ParticleData*& pd, Couplings*& csm);
+void setDependentCouplings();
 
 // Print parameters that are unchanged during the run
 void printIndependentParameters();

@@ -813,8 +813,8 @@ class ProcessExporterCPP(object):
         helicity_line_list = []
 
         for helicities in matrix_element.get_helicity_matrix():
-            helicity_line_list.append(",".join(['%d'] * len(helicities)) % \
-                                      tuple(helicities))
+            helicity_line_list.append("{"+",".join(['%d'] * len(helicities)) % \
+                                       tuple(helicities) + "}")
 
         return helicity_line + ",".join(helicity_line_list) + "};"
 
@@ -844,7 +844,7 @@ class ProcessExporterCPP(object):
                 num_list = matrix_element.get('color_matrix').\
                                             get_line_numerators(index, denominator)
 
-                matrix_strings.append("%s" % \
+                matrix_strings.append("{%s}" % \
                                      ",".join(["%d" % i for i in num_list]))
             matrix_string = "static const double cf[ncolor][ncolor] = {" + \
                             ",".join(matrix_strings) + "};"
@@ -1303,17 +1303,15 @@ class ProcessExporterPythia8(ProcessExporterCPP):
             if final_id_list:
                 res_lines.append("int flavors[%d][%d] = {%s};" % \
                                  (ncombs, self.nfinal,
-                                  ",".join(str(id) for id in \
-                                           sum([list(ids) for ids in \
-                                                final_id_list],
-                                               []))))
+                                  ",".join(["{" + ",".join([str(id) for id \
+                                            in ids]) + "}" for ids \
+                                            in final_id_list])))
             elif final_mirror_id_list:
                 res_lines.append("int flavors[%d][%d] = {%s};" % \
                                  (ncombs, self.nfinal,
-                                  ",".join(str(id) for id in \
-                                           sum([list(ids) for ids in \
-                                                final_mirror_id_list],
-                                               []))))
+                                  ",".join(["{" + ",".join([str(id) for id \
+                                            in ids]) + "}" for ids \
+                                            in final_mirror_id_list])))
             res_lines.append("vector<double> probs;")
             res_lines.append("double sum = %s;" % "+".join(me_weight))
             for me in me_weight:
@@ -1385,12 +1383,14 @@ class ProcessExporterPythia8(ProcessExporterCPP):
                                         for (l,i) in itertools.product(legs, [0,1])])
 
                 # Write out colors for the selected color flow
-                res_lines.append("static int col[%d][%d] = {%s};" % \
+                res_lines.append("static int colors[%d][%d] = {%s};" % \
                                  (ncolor, 2 * self.nexternal,
-                                  ",".join(str(i) for i in sum(color_flows, []))))
+                                  ",".join(["{" + ",".join([str(id) for id \
+                                            in flows]) + "}" for flows \
+                                            in color_flows])))
 
                 res_lines.append("setColAcol(%s);" % \
-                                 ",".join(["col[ic][%d]" % i for i in \
+                                 ",".join(["colors[ic][%d]" % i for i in \
                                           range(2 * self.nexternal)]))
             res_lines.append('}')
 
@@ -1436,12 +1436,14 @@ class ProcessExporterPythia8(ProcessExporterCPP):
                                         for (l,i) in itertools.product(legs, [0,1])])
 
                 # Write out colors for the selected color flow
-                res_lines.append("static int col[%d][%d] = {%s};" % \
+                res_lines.append("static int colors[%d][%d] = {%s};" % \
                                  (ncolor, 2 * self.nexternal,
-                                  ",".join(str(i) for i in sum(color_flows, []))))
+                                  ",".join(["{" + ",".join([str(id) for id \
+                                            in flows]) + "}" for flows \
+                                            in color_flows])))
 
                 res_lines.append("setColAcol(%s);" % \
-                                 ",".join(["col[ic][%d]" % i for i in \
+                                 ",".join(["colors[ic][%d]" % i for i in \
                                           range(2 * self.nexternal)]))
             res_lines.append('}')
 
@@ -1474,13 +1476,13 @@ def get_mg5_info_lines():
     info = misc.get_pkg_info()
     info_lines = ""
     if info and info.has_key('version') and  info.has_key('date'):
-        info_lines = "#  by MadGraph 5 v. %s, %s\n" % \
+        info_lines = "#  MadGraph 5 v. %s, %s\n" % \
                      (info['version'], info['date'])
         info_lines = info_lines + \
                      "#  By the MadGraph Development Team\n" + \
                      "#  Please visit us at https://launchpad.net/madgraph5"
     else:
-        info_lines = "#  by MadGraph 5\n" + \
+        info_lines = "#  MadGraph 5\n" + \
                      "#  By the MadGraph Development Team\n" + \
                      "#  Please visit us at https://launchpad.net/madgraph5"        
 
@@ -1514,7 +1516,7 @@ def coeff(ff_number, frac, is_imaginary, Nc_power, Nc_value=3):
     return res_str + '*'
 
 #===============================================================================
-# Routines to output UFO models in C++ format
+# Routines to export/output UFO models in C++ format
 #===============================================================================
 
 def convert_model_to_cpp(model, output_dir, wanted_lorentz = [],
@@ -1893,7 +1895,7 @@ class UFOModelConverterCPP(object):
         return line
 
 #===============================================================================
-# Routines to output UFO models in Pythia8 format
+# Routines to export/output UFO models in Pythia8 format
 #===============================================================================
 
 def convert_model_to_pythia8(model, output_dir):
@@ -1902,6 +1904,8 @@ def convert_model_to_pythia8(model, output_dir):
     # create the model parameter files
     model_builder = UFOModelConverterPythia8(model, output_dir)
     model_builder.write_files()
+    # Write makefile
+    model_builder.write_makefile()
 
 #===============================================================================
 # UFOModelConverterPythia8
@@ -1991,4 +1995,24 @@ class UFOModelConverterPythia8(UFOModelConverterCPP):
                         raise MadGraph5Error, \
                               "Parameter with key " + repr(key) + \
                               " unknown in model export to Pythia 8"
+
+    def write_makefile(self):
+        """Generate the Makefile_model file, which creates library files."""
+
+        makefilename = os.path.join(self.dir_path,
+                                    'Makefile')
+
+        replace_dict = {}
+
+        replace_dict['info_lines'] = get_mg5_info_lines().replace("//", "#")
+        replace_dict['model'] = self.model.get('name')
+
+        makefile = read_template_file('pythia8_makefile.inc') % replace_dict
+
+        # Write the files
+        open(makefilename, 'w').write(makefile)
+
+        logger.info("Created %s in directory %s" \
+                    % (os.path.split(makefilename)[-1],
+                       os.path.split(makefilename)[0]))
 
