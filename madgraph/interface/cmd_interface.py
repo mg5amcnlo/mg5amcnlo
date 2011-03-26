@@ -2388,7 +2388,9 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
         if args[0].startswith('standalone'):
             ext_program = launch_ext.SALauncher(args[1], self.timeout, **options)
         elif args[0] == 'madevent':
-            ext_program = launch_ext.MELauncher(args[1], self.timeout, **options)            
+            ext_program = launch_ext.MELauncher(args[1], self.timeout, **options)
+        elif args[0] == 'pythia8':
+            ext_program = launch_ext.Pythia8Launcher(args[1], self.timeout, **options)
         else:
             raise self.InvalidCmd , '%s cannot be run from MG5 interface' % args[0]
         
@@ -2722,6 +2724,8 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
             logger.info("You can then run ./main_%s_process_name to produce" % \
                         self._curr_model.get('name'))
             logger.info("events for the process.")
+            logger.info("Or run launch and select main_%s_process_name." % \
+                        self._curr_model.get('name'))
 
         # Pick out the matrix elements in a list
         if isinstance(self._curr_matrix_elements, group_subprocs.SubProcessGroupList):
@@ -2955,8 +2959,8 @@ _draw_parser.add_option("", "--add_gap", default=0, type='float', \
                           help="set the x-distance between external particles")  
 
 # LAUNCH PROGRAM
-_launch_usage = "launch [DIRPATH] [options]\n" + \
-         "-- execute the madevent/standalone output present in DIRPATH\n" + \
+_launch_usage = "launch [format] [DIRPATH] [options]\n" + \
+         "-- execute the madevent/standalone/standalone_cpp/pythia8 output present in DIRPATH\n" + \
          "   By default DIRPATH is the latest created directory \n" + \
          "   Example: launch PROC_SM_1 --name=run2 \n"
 _launch_parser = optparse.OptionParser(usage=_launch_usage)

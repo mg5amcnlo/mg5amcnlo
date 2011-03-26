@@ -13,9 +13,12 @@
 #
 ################################################################################
 
+import glob
 import logging
 import os
+import pydoc
 import subprocess
+import time
 
 
 import madgraph.iolibs.files as files
@@ -207,7 +210,7 @@ class MELauncher(ExtLauncher):
             for i in range(1000):
                 path = os.path.join(self.running_dir, 'Events','run_%02i_banner.txt' % i)
                 if not os.path.exists(path):
-                    self.name = 'run%s' % i
+                    self.name = 'run_%02i' % i
                     break
         
         if self.name == '':
@@ -287,7 +290,101 @@ class MELauncher(ExtLauncher):
         logger.info('The total cross-section is %s +- %s pb' % (cross, error))
         logger.info('more information in %s' 
                                  % os.path.join(self.running_dir, 'index.html'))
+                
+
+class Pythia8Launcher(ExtLauncher):
+    """A class to launch Pythia8 run"""
+    
+    cards = []
+
+    def __init__(self, running_dir, timeout, **option):
+        """ initialize launching Pythia 8"""
+
+        running_dir = os.path.join(running_dir, 'examples')
+        ExtLauncher.__init__(self, running_dir, '.', timeout, **option)
+
+    
+    def copy_default_card(self, name):
+
+        dico = {'dir': self.card_dir, 'name': name }
+
+        if not os.path.exists('%(dir)s/%(name)s_card.dat' % dico):
+            cp('%(dir)s/%(name)s_card_default.dat' % dico,
+                '%(dir)s/%(name)s_card.dat' % dico)
+    
+          
+    def prepare_run(self):
+        """ ask for pythia-pgs/delphes run """
         
+        # Find all main_model_process.cc files
+        date_file_list = []
+        for file in glob.glob(os.path.join(self.running_dir,'main_*_*.cc')):
+            # retrieves the stats for the current file as a tuple
+            # (mode, ino, dev, nlink, uid, gid, size, atime, mtime, ctime)
+            # the tuple element mtime at index 8 is the last-modified-date
+            stats = os.stat(file)
+            # create tuple (year yyyy, month(1-12), day(1-31), hour(0-23), minute(0-59), second(0-59),
+            # weekday(0-6, 0 is monday), Julian day(1-366), daylight flag(-1,0 or 1)) from seconds since epoch
+            # note:  this tuple can be sorted properly by date and time
+            lastmod_date = time.localtime(stats[8])
+            date_file_list.append((lastmod_date, os.path.split(file)[-1]))
+
+        if not date_file_list:
+            raise MadGraph5Error, 'No Pythia output found'
+        # Sort files according to date with newest first
+        date_file_list.sort()
+        date_file_list.reverse()
+        files = [d[1] for d in date_file_list]
+        
+        answer = ''
+        print date_file_list[0][1]
+        self.timeout = 10
+        while not answer in files:
+            answer = self.ask('Select a main file to run: [%s] ' % \
+                              ' '.join(files), files[0])
+            if not answer in files:
+                print answer + " not among files, please select again."
+
+        self.cards.append(answer)
+    
+        self.executable = self.cards[-1].replace(".cc","")
+
+        # Assign a valid run name if not put in options
+        if self.name == '':
+            for i in range(1000):
+                path = os.path.join(self.running_dir, '',
+                                    '%s_%02i.log' % (self.executable, i))
+                if not os.path.exists(path):
+                    self.name = '%s_%02i.log' % (self.executable, i)
+                    break
+        
+        if self.name == '':
+            raise MadGraph5Error, 'too many runs in this directory'
+
+    def launch_program(self):
+        """launch the main program"""
+
+        # Run make
+        print "Running make"
+        makefile = self.executable.replace("main_","Makefile_")
+        subprocess.call(['make', '-f', makefile], cwd=self.running_dir)        
+        makefile = self.executable.replace("main_","Makefile_")
+        subprocess.call(['make', '-f', makefile], cwd=self.running_dir)        
+        makefile = self.executable.replace("main_","Makefile_")
+        subprocess.call(['make', '-f', makefile], cwd=self.running_dir)        
+    
+        print "Running " + self.executable
+
+        output = open(os.path.join(self.running_dir, self.name), 'w')
+        subprocess.call([self.executable], stdout = output, stderr = output,
+                        cwd=self.running_dir)
+
+        # Display the cross-section to the screen
+        path = os.path.join(self.running_dir, self.name) 
+        pydoc.pager(open(path).read())
+
+        print "Output of the run is found at " + \
+              os.path.join(self.running_dir, self.name)
         
         
         
