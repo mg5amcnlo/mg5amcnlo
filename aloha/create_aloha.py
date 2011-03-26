@@ -583,7 +583,16 @@ class AbstractALOHAModel(dict):
             if particle.spin == 2 and particle.selfconjugate:
                 need = True
                 break
-        
+
+        if not need:
+            for interaction in self.model.all_vertices:
+                fermions = [p for p in interaction.particles if p.spin == 2]
+                for i in range(0, len(fermions), 2):
+                    if fermions[i].pdg_code * fermions[i+1].pdg_code > 0:
+                        # This is a fermion flow violating interaction
+                        need = True
+                        break
+
         # No majorana particles    
         if not need:
             return {}
