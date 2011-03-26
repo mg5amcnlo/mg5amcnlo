@@ -44,19 +44,21 @@ if '__main__' == __name__:
     logging.getLogger('madgraph').setLevel(logging.INFO)
     logging.getLogger('cmdprint').setLevel(logging.INFO)
     logging.getLogger('tutorial').setLevel(logging.ERROR)
-        
+    
+    
     logging.basicConfig(level=logging.INFO)
 #    my_proc_list = me_comparator.create_proc_list_enhanced(
 ##        ['w+', 'w-', 'z'],
 ##        initial=2, final_1=2)
-#    my_proc_list = ['e- x1+ > e- h1 x1+','e- x1+ > e- h2 x1+','e- x1+ > e- h3 x1+',
-#                    'e+ x1+ > e+ h1 x1+','e+ x1+ > e+ h2 x1+','e+ x1+ > e+ h3 x1+']
-    my_proc_list = ['el+ h2 > el+ w+ w-', 'w+ w- > ta1+ ta1-']
-    my_proc_list += ['u u~ > u u~ g']
-    my_proc_list += ['W+ W- > e+ e-','W+ W- > mu+ mu-','W+ e- > W+ e-','W+ mu- > W+ mu-','W+ sl1+ > W+ sl1+','W+ sl1+ > W+ sl4+']
+##    my_proc_list = ['e- x1+ > e- h1 x1+','e- x1+ > e- h2 x1+','e- x1+ > e- h3 x1+',
+##                    'e+ x1+ > e+ h1 x1+','e+ x1+ > e+ h2 x1+','e+ x1+ > e+ h3 x1+']
+    my_proc_list = ['e+ e- > e+ e-', 'w+ w- > e+ e-']
+#    my_proc_list = ['el+ h2 > el+ w+ w-', 'w+ w- > ta1+ ta1-']
+#    my_proc_list += ['u u~ > u u~ g']
+#    my_proc_list += ['W+ W- > e+ e-','W+ W- > mu+ mu-','W+ e- > W+ e-','W+ mu- > W+ mu-','W+ sl1+ > W+ sl1+','W+ sl1+ > W+ sl4+']
                    
-    my_proc_list += me_comparator.create_proc_list(['g', 'go'], initial=2,
-                                                  final=3)
+#    my_proc_list = me_comparator.create_proc_list(['e+', 'e-','u','u~','g','mu+','vm','vm~'], initial=2,
+#                                                  final=2)
     #my_proc_list = me_comparator.create_proc_list(['g', 'h', 'h3'], initial=2,
     #                                               final=4)
     
@@ -78,11 +80,11 @@ if '__main__' == __name__:
 
     # Create and setup a comparator
     my_comp = me_comparator.MEComparator()
-    my_comp.set_me_runners(my_mg5, my_mg5_ufo, my_mg4, my_mg5_cpp)
+    my_comp.set_me_runners(my_mg5, my_mg5_ufo)
 
     # Run the actual comparison
     my_comp.run_comparison(my_proc_list,
-                           model='mssm',
+                           model=['mssm','MSSM_UFO',],
                            orders={'QED':4, 'QCD':4}, energy=2000)
 
     # Do some cleanup

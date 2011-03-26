@@ -1692,6 +1692,8 @@ class UFOModelConverterCPP(object):
                                               p.depend))
             else:
                 for p in self.model['parameters'][key]:
+                    if p.name == 'ZERO':
+                        continue
                     self.params_indep.append(base_objects.ModelVariable(p.name,
                                               p.name + " = " + \
                                               self.p_to_cpp.parse(p.expr) + ";",
@@ -1703,15 +1705,16 @@ class UFOModelConverterCPP(object):
             param = params_ext.pop(0)
             # Read value from the slha variable
             expression = ""
+            assert param.value.imag == 0
             if len(param.lhacode) == 1:
                 expression = "%s = slha.get_block_entry(\"%s\", %d, %e);" % \
                              (param.name, param.lhablock.lower(),
-                              param.lhacode[0], param.value)
+                              param.lhacode[0], param.value.real)
             elif len(param.lhacode) == 2:
                 expression = "indices[0] = %d;\nindices[1] = %d;\n" % \
                              (param.lhacode[0], param.lhacode[1])
                 expression += "%s = slha.get_block_entry(\"%s\", indices, %e);" \
-                              % (param.name, param.lhablock.lower(), param.value)
+                              % (param.name, param.lhablock.lower(), param.value.real)
             else:
                 raise MadGraph5Error("Only support for SLHA blocks with 1 or 2 indices")
             self.params_indep.insert(0,
@@ -1764,6 +1767,33 @@ class UFOModelConverterCPP(object):
         parameter_cc_file = os.path.join(self.dir_path, self.cc_file_dir,
                                      'Parameters_%s.cc' % self.model.get('name'))
 
+        file_h, file_cc = self.generate_parameters_class_files()
+
+        # Write the files
+        writers.CPPWriter(parameter_h_file).writelines(file_h)
+        writers.CPPWriter(parameter_cc_file).writelines(file_cc)
+
+        # Copy additional needed files
+        for copy_file in self.copy_include_files:
+            shutil.copy(os.path.join(_file_path, 'iolibs',
+                                         'template_files',copy_file),
+                        os.path.join(self.dir_path, self.include_dir))
+        # Copy additional needed files
+        for copy_file in self.copy_cc_files:
+            shutil.copy(os.path.join(_file_path, 'iolibs',
+                                         'template_files',copy_file),
+                        os.path.join(self.dir_path, self.cc_file_dir))
+
+        logger.info("Created files %s and %s in directory" \
+                    % (os.path.split(parameter_h_file)[-1],
+                       os.path.split(parameter_cc_file)[-1]))
+        logger.info("%s and %s" % \
+                    (os.path.split(parameter_h_file)[0],
+                     os.path.split(parameter_cc_file)[0]))
+
+    def generate_parameters_class_files(self):
+        """Create the content of the Parameters_model.h and .cc files"""
+
         replace_dict = {}
 
         replace_dict['info_lines'] = get_mg5_info_lines()
@@ -1804,26 +1834,8 @@ class UFOModelConverterCPP(object):
                  replace_dict
         file_cc = read_template_file(self.param_template_cc) % \
                   replace_dict
-
-        # Write the files
-        writers.CPPWriter(parameter_h_file).writelines(file_h)
-        writers.CPPWriter(parameter_cc_file).writelines(file_cc)
-
-        # Copy additional needed files
-        for copy_file in self.copy_include_files:
-            shutil.copy(os.path.join(_file_path, 'iolibs',
-                                         'template_files',copy_file),
-                        os.path.join(self.dir_path, self.include_dir))
-        # Copy additional needed files
-        for copy_file in self.copy_cc_files:
-            shutil.copy(os.path.join(_file_path, 'iolibs',
-                                         'template_files',copy_file),
-                        os.path.join(self.dir_path, self.cc_file_dir))
-
-        logger.info("Created files %s and %s in directory %s" \
-                    % (os.path.split(parameter_h_file)[-1],
-                       os.path.split(parameter_cc_file)[-1],
-                       os.path.split(parameter_h_file)[0]))
+        
+        return file_h, file_cc
 
     def write_parameters(self, params):
         """Write out the definitions of parameters"""
@@ -1928,10 +1940,12 @@ class UFOModelConverterCPP(object):
         writers.CPPWriter(model_h_file).writelines(file_h)
         writers.CPPWriter(model_cc_file).writelines(file_cc)
 
-        logger.info("Created files %s and %s in directory %s" \
+        logger.info("Created files %s and %s in directory" \
                     % (os.path.split(model_h_file)[-1],
-                       os.path.split(model_cc_file)[-1],
-                       os.path.split(model_h_file)[0]))
+                       os.path.split(model_cc_file)[-1]))
+        logger.info("%s and %s" % \
+                    (os.path.split(model_h_file)[0],
+                     os.path.split(model_cc_file)[0]))
 
 
     def read_aloha_template_files(self, ext):
@@ -2095,8 +2109,8 @@ class UFOModelConverterPythia8(UFOModelConverterCPP):
                                           param.lhacode[0],
                                           param.name) + \
                                           ("cout << \"Warning, setting %s to %e\" << endl;\n" \
-                                          + "%s = %e;}") % (param.name, param.value,
-                                                           param.name, param.value)
+                                          + "%s = %e;}") % (param.name, param.value.real,
+                                                           param.name, param.value.real)
                         elif len(param.lhacode) == 2:
                             expression = "if(!slhaPtr->getEntry<double>(\"%s\", %d, %d, %s)){\n" % \
                                          (param.lhablock.lower(),
@@ -2104,8 +2118,8 @@ class UFOModelConverterPythia8(UFOModelConverterCPP):
                                           param.lhacode[1],
                                           param.name) + \
                                           ("cout << \"Warning, setting %s to %e\" << endl;\n" \
-                                          + "%s = %e;}") % (param.name, param.value,
-                                                           param.name, param.value)
+                                          + "%s = %e;}") % (param.name, param.value.real,
+                                                           param.name, param.value.real)
                         elif len(param.lhacode) == 3:
                             expression = "if(!slhaPtr->getEntry<double>(\"%s\", %d, %d, %d, %s)){\n" % \
                                          (param.lhablock.lower(),
@@ -2114,8 +2128,8 @@ class UFOModelConverterPythia8(UFOModelConverterCPP):
                                           param.lhacode[2],
                                           param.name) + \
                                           ("cout << \"Warning, setting %s to %e\" << endl;\n" \
-                                          + "%s = %e;}") % (param.name, param.value,
-                                                           param.name, param.value)
+                                          + "%s = %e;}") % (param.name, param.value.real,
+                                                           param.name, param.value.real)
                         else:
                             raise MadGraph5Error("Only support for SLHA blocks with 1 or 2 indices")
                         self.params_indep.insert(0,

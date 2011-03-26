@@ -22,8 +22,6 @@ public:
 
 static Parameters_%(model_name)s* getInstance();
 
-// Define "zero"
-double zero, ZERO;
 %(independent_parameters)s
 %(independent_couplings)s
 %(dependent_parameters)s

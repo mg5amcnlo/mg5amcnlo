@@ -33,7 +33,8 @@ _file_path = os.path.split(os.path.dirname(os.path.realpath(__file__)))[0]
 class TestModelReader(unittest.TestCase):
     """Test class for the ModelReader object"""
 
-    base_model = import_ufo.import_model('sm')
+    sm_path = import_ufo.find_ufo_path('sm')
+    base_model = import_ufo.import_model(sm_path)
 
     def setUp(self):
         """Set up decay model"""
@@ -51,6 +52,7 @@ class TestModelReader(unittest.TestCase):
             self.assertTrue(isinstance(value, complex)) 
             self.assertTrue(isinstance(self.model_reader.get('parameter_dict')[\
                 param.name], complex))
+
             
         for coupl in sum([self.base_model.get('couplings')[key] for key \
                               in self.base_model.get('couplings')], []):

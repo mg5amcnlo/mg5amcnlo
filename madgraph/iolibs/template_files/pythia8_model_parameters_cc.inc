@@ -21,9 +21,6 @@ namespace Pythia8 {
     }
 
     void Parameters_%(model_name)s::setIndependentParameters(ParticleData*& pd, Couplings*& csm, SusyLesHouches*& slhaPtr){
-	// First set "zero"
-	zero=0;
-	ZERO=0;
 	%(set_independent_parameters)s
     }
     void Parameters_%(model_name)s::setIndependentCouplings(){

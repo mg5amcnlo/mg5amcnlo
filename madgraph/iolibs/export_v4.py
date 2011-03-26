@@ -36,8 +36,7 @@ import madgraph.iolibs.ufo_expression_parsers as parsers
 import madgraph.various.diagram_symmetry as diagram_symmetry
 
 import aloha.create_aloha as create_aloha
-
-import models.sm.write_param_card as write_param_card
+import models.write_param_card as param_writer
 from madgraph import MadGraph5Error, MG5DIR
 from madgraph.iolibs.files import cp, ln, mv
 _file_path = os.path.split(os.path.dirname(os.path.realpath(__file__)))[0] + '/'
@@ -142,6 +141,30 @@ class ProcessExporterFortran(object):
                                             'multiparticle':''})
         ff = open(file_pos, 'w')
         ff.write(text)
+        ff.close()
+
+    #===============================================================================
+    # Copy the model restriction in the Model Directory
+    #===============================================================================
+    def cp_model_restriction(self, file_path):
+        """Copy the model restriction in the Model Directory."""
+
+        if not file_path:
+            return
+
+        assert os.path.isfile(file_path)
+        assert os.path.isdir(os.path.join(self.dir_path,'Source','MODEL'))
+
+        output_path = os.path.join(self.dir_path,'Source','MODEL','restrict_model.dat')
+
+        header="""#*********************************************************************
+    #  THIS FILE WAS USED TO RESTRICT THE ORIGINAL MODEL
+    #  PLEASE DON'T EDIT THIS FILE. HE IS IMPORTANT IN ORDER TO BE ABLE 
+    #  TO REPRODUCE THE RESULT IN THE FUTURE.
+    #*********************************************************************\n"""    
+        ff = open(output_path,'w')
+        ff.writelines(header)
+        ff.writelines(open(file_path).read())
         ff.close()
 
     #===========================================================================
@@ -2225,8 +2248,6 @@ class ProcessExporterFortranMEGroup(ProcessExporterFortranME):
 #===============================================================================
 # UFO_model_to_mg4
 #===============================================================================
-
-
 python_to_fortran = lambda x: parsers.UFOExpressionParserFortran().parse(x)
 
 class UFO_model_to_mg4(object):
@@ -2237,7 +2258,6 @@ class UFO_model_to_mg4(object):
        
         self.model = model
         self.model_name = model['name']
-        
         self.dir_path = output_path
         
         self.coups_dep = []    # (name, expression, type)
@@ -2318,14 +2338,16 @@ class UFO_model_to_mg4(object):
         index = self.params_dep.index('sqrt__aS')
         self.params_indep.insert(0, self.params_dep.pop(index))
         
-    def build(self, wanted_couplings = []):
+    def build(self, wanted_couplings = [], full=True):
         """modify the couplings to fit with MG4 convention and creates all the 
         different files"""
         
         self.pass_parameter_to_case_insensitive()
         self.refactorize(wanted_couplings)
+        
         # write the files
-        self.write_all()
+        if full:
+            self.write_all()
 
     def open(self, name, comment='c', format='default'):
         """ Open the file name in the correct directory and with a valid
@@ -2371,6 +2393,7 @@ class UFO_model_to_mg4(object):
 
         # All the standard files
         self.copy_standard_file()
+
     ############################################################################
     ##  ROUTINE CREATING THE FILES  ############################################
     ############################################################################
@@ -2466,7 +2489,7 @@ class UFO_model_to_mg4(object):
         
         real_parameters += [param.name for param in self.params_ext 
                             if param.type == 'real'and 
-                               param.lhablock not in ['MASS', 'DECAY']]
+                               is_valid(param.name)]
         
         fsock.writelines('double precision '+','.join(real_parameters)+'\n')
         fsock.writelines('common/params_R/ '+','.join(real_parameters)+'\n\n')
@@ -2490,6 +2513,8 @@ class UFO_model_to_mg4(object):
         fsock.writelines("if(readlha) then\n")
         
         for param in self.params_indep:
+            if param.name == 'ZERO':
+                continue
             fsock.writelines("%s = %s\n" % (param.name,
                                             self.p_to_f.parse(param.expr)))
         
@@ -2615,7 +2640,8 @@ class UFO_model_to_mg4(object):
         fsock.writelines("""write(*,*)  ' Internal Params'
                             write(*,*)  ' ---------------------------------'
                             write(*,*)  ' '""")        
-        lines = [format(data.name) for data in self.params_indep]
+        lines = [format(data.name) for data in self.params_indep 
+                                                         if data.name != 'ZERO']
         fsock.writelines('\n'.join(lines))
         fsock.writelines("""write(*,*)  ' Internal Params evaluated point by point'
                             write(*,*)  ' ----------------------------------------'
@@ -2631,7 +2657,7 @@ class UFO_model_to_mg4(object):
     
         def format(parameter):
             """return the line for the ident_card corresponding to this parameter"""
-            colum = [parameter.lhablock] + \
+            colum = [parameter.lhablock.lower()] + \
                     [str(value) for value in parameter.lhacode] + \
                     [parameter.name]
             return ' '.join(colum)+'\n'
@@ -2648,11 +2674,10 @@ class UFO_model_to_mg4(object):
         def format_line(parameter):
             """return the line for the ident_card corresponding to this 
             parameter"""
-
             template = \
             """ call LHA_get_real(npara,param,value,'%(name)s',%(name)s,%(value)s)""" \
                 % {'name': parameter.name,
-                               'value': self.p_to_f.parse(str(parameter.value))}
+                   'value': self.p_to_f.parse(str(parameter.value.real))}
         
             return template        
     
@@ -2674,29 +2699,7 @@ class UFO_model_to_mg4(object):
 
     def create_param_card(self):
         """ create the param_card.dat """
-        
-        write_param_card.ParamCardWriter(
-                os.path.join(self.dir_path, 'param_card.dat'),
-                self.params_ext)
 
-#    def search_type(self, expr):
-#        """return the type associate to the expression"""
-#        
-#        for param in self.model.all_parameters:
-#            if param.name == expr:
-#                return param.type
-#        
-#        return CompactifyExpression.search_type(self, expr)
-  
- 
-
-    
-    
-    
-    
-    
-    
-    
-    
-
+        out_path = os.path.join(self.dir_path, 'param_card.dat')
+        param_writer.ParamCardWriter(self.model, out_path)
 

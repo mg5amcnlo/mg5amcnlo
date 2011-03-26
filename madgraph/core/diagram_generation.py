@@ -25,7 +25,7 @@ import logging
 
 import madgraph.core.base_objects as base_objects
 
-from madgraph import MadGraph5Error
+from madgraph import MadGraph5Error, InvalidCmd
 logger = logging.getLogger('madgraph.diagram_generation')
 
 #===============================================================================
@@ -173,11 +173,11 @@ class Amplitude(base_objects.PhysicsObject):
                   
 
         res = base_objects.DiagramList()
-
         # First check that the number of fermions is even
         if len(filter(lambda leg: model.get('particle_dict')[\
                         leg.get('id')].is_fermion(), legs)) % 2 == 1:
             self['diagrams'] = res
+            raise InvalidCmd, 'The number of fermion is odd' 
             return res
 
         # Then check same number of incoming and outgoing fermions (if
@@ -186,8 +186,30 @@ class Amplitude(base_objects.PhysicsObject):
            len(filter(lambda leg: leg.is_incoming_fermion(model), legs)) != \
            len(filter(lambda leg: leg.is_outgoing_fermion(model), legs)):
             self['diagrams'] = res
+            raise InvalidCmd, 'The number of of incoming/outcoming fermions are different' 
             return res
+        
+        # Finally check that charge (conserve by all interactions) of the process
+        #is globally conserve for this process.
+        for charge in model.get('conserved_charge'):
+            total = 0
+            for leg in legs:
+                part = model.get('particle_dict')[leg.get('id')]
+                try:
+                    value = part.get(charge)
+                except AttributeError:
+                    value = 0
+                    
+                if (leg.get('id') != part['pdg_code']) != leg['state']:
+                    total -= value
+                else:
+                    total += value
 
+            if abs(total) > 1e-10:
+                self['diagrams'] = res
+                raise InvalidCmd, 'No %s conservation for this process ' % charge
+                return res
+                    
         logger.info("Trying %s " % process.nice_string().replace('Process', 'process'))
 
         # Give numbers to legs in process
@@ -631,7 +653,7 @@ class AmplitudeList(base_objects.PhysicsObjectList):
         """Test if object obj is a valid Amplitude for the list."""
 
         return isinstance(obj, Amplitude)
-
+    
 #===============================================================================
 # DecayChainAmplitude
 #===============================================================================
@@ -987,17 +1009,25 @@ class MultiProcess(base_objects.PhysicsObject):
                         pass
 
                 amplitude = Amplitude({"process": process})
-                if not amplitude.generate_diagrams():
-                    # Add process to failed_procs
+                
+                try:
+                    result = amplitude.generate_diagrams()
+                except InvalidCmd as error:
                     failed_procs.append(sorted_legs)
-                if amplitude.get('diagrams'):
-                    amplitudes.append(amplitude)
-                    if collect_mirror_procs:
-                        success_procs.append(fast_proc)
-
+                else:
+                    if amplitude.get('diagrams'):
+                        amplitudes.append(amplitude)
+                        if collect_mirror_procs:
+                            success_procs.append(fast_proc)
+                    elif not result:
+                        failed_procs.append(tuple(sorted_legs))
+ 
         # Raise exception if there are no amplitudes for this process
         if not amplitudes:
-            raise MadGraph5Error, \
+            if len(failed_procs) == 1 and 'error' in locals():
+                raise error
+            else:
+                raise MadGraph5Error, \
             "No amplitudes generated from process %s. Please enter a valid process" % \
                   process_definition.nice_string()
         
@@ -1161,14 +1191,18 @@ class MultiProcess(base_objects.PhysicsObject):
                         continue
 
                     amplitude = Amplitude({"process": process})
-                    if not amplitude.generate_diagrams():
-                        # Add process to failed_procs
+                    try:
+                        amplitude.generate_diagrams()
+                    except InvalidCmd:
                         failed_procs.append(tuple(sorted_legs))
+                    else:
+                        if amplitude.get('diagrams'):
+                            # We found a valid amplitude. Return this order number
+                            logger.setLevel(oldloglevel)
+                            return {coupling: max_order_now}
+                        else:
+                            failed_procs.append(tuple(sorted_legs))
 
-                    if amplitude.get('diagrams'):
-                        # We found a valid amplitude. Return this order number
-                        logger.setLevel(oldloglevel)
-                        return {coupling: max_order_now}
             # No processes found, increase max_order_now
             max_order_now += 1
             logger.setLevel(oldloglevel)
