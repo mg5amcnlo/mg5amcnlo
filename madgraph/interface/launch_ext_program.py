@@ -17,9 +17,9 @@ import glob
 import logging
 import os
 import pydoc
+import re
 import subprocess
 import time
-
 
 import madgraph.iolibs.files as files
 import madgraph.iolibs.misc as misc
@@ -343,7 +343,7 @@ class Pythia8Launcher(ExtLauncher):
             answer = self.ask('Select a main file to run: [%s] ' % \
                               ' '.join(files), files[0])
             if not answer in files:
-                print answer + " not among files, please select again."
+                print str(answer) + " not among files, please select again."
 
         self.cards.append(answer)
     
@@ -364,15 +364,40 @@ class Pythia8Launcher(ExtLauncher):
     def launch_program(self):
         """launch the main program"""
 
-        # Run make
-        print "Running make"
+        # Make pythia8
+        print "Running make for pythia8 directory"
+        status = subprocess.call(['make'], stdout = open(os.devnull, 'w'),
+                        stderr = open(os.devnull, 'w'),
+                        cwd=os.path.join(self.running_dir, os.path.pardir))
+        if status != 0:
+            raise MadGraph5Error, "make failed for pythia8 directory"
+        # Find all exported models
+        models = glob.glob(os.path.join(self.running_dir,os.path.pardir,
+                                        "Processes_*"))
+        models = [os.path.split(m)[-1].replace("Processes_","") for m in models]
+        # Extract model name from executable
+        models.sort(key=len)
+        models.reverse()
+        model_dir = ""
+        for model in models:
+            if self.executable.replace("main_", "").startswith(model):
+                model_dir = "Processes_%s" % model
+                break
+        if model_dir:
+            print "Running make in %s" % model_dir
+            status = subprocess.call(['make'], stdout = open(os.devnull, 'w'),
+                            stderr = open(os.devnull, 'w'),
+                            cwd=os.path.join(self.running_dir, os.path.pardir,
+                                             model_dir))
+            if status != 0:
+                raise MadGraph5Error, "make failed for %s directory" % model_dir
+        # Finally run make for executable
         makefile = self.executable.replace("main_","Makefile_")
-        subprocess.call(['make', '-f', makefile], cwd=self.running_dir)        
-        makefile = self.executable.replace("main_","Makefile_")
-        subprocess.call(['make', '-f', makefile], cwd=self.running_dir)        
-        makefile = self.executable.replace("main_","Makefile_")
-        subprocess.call(['make', '-f', makefile], cwd=self.running_dir)        
-    
+        print "Running make with %s" % makefile
+        status = subprocess.call(['make', '-f', makefile], cwd=self.running_dir)
+        if status != 0:
+            raise MadGraph5Error, "make failed for %s" % self.executable
+        
         print "Running " + self.executable
 
         output = open(os.path.join(self.running_dir, self.name), 'w')
@@ -384,7 +409,7 @@ class Pythia8Launcher(ExtLauncher):
         pydoc.pager(open(path).read())
 
         print "Output of the run is found at " + \
-              os.path.join(self.running_dir, self.name)
+              os.path.realpath(os.path.join(self.running_dir, self.name))
         
         
         
