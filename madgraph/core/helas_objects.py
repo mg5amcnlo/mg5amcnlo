@@ -3965,3 +3965,7 @@ class HelasMultiProcess(base_objects.PhysicsObject):
 
         return list(set(coupling_list))
     
+    def get_matrix_elements(self):
+        """Extract the list of matrix elements"""
+
+        return self.get('matrix_elements')

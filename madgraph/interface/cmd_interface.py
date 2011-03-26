@@ -674,11 +674,14 @@ class CheckValidForCmd(object):
         
         card_path = os.path.join(path,'Cards')
         bin_path = os.path.join(path,'bin')
+        include_path = os.path.join(path,'include')
         subproc_path = os.path.join(path,'SubProcesses')
         
         if not os.path.isdir(card_path) or not os.path.isdir(subproc_path):
             raise self.InvalidCmd, '%s : Not a valid directory' % path
 
+        if os.path.exists(os.path.join(include_path, 'Pythia.h')):
+            return 'pythia8'
         if not os.path.isdir(bin_path):
             return 'standalone_cpp'
         elif os.path.isfile(os.path.join(bin_path,'generate_events')):
@@ -726,6 +729,8 @@ class CheckValidForCmd(object):
         
         if args and args[0] in self._export_formats:
             self._export_format = args.pop(0)
+        else:
+            self._export_format = 'madevent'
 
         if not self._curr_amps:
             text = 'No processes generated. Please generate a process first.'
@@ -758,6 +763,12 @@ class CheckValidForCmd(object):
         if not self._export_dir:
             # No valid path
             self.get_default_path()
+
+        if self._done_export == (self._export_dir, self._export_format):
+            # We have already done export in this path
+            logger.info("Matrix elements already exported to directory %s" % \
+                                    self._export_dir)
+            return        
 
         if self._export_format in ['madevent', 'standalone'] \
                and not self._mgme_dir and \
@@ -1435,57 +1446,55 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
             # Reset Helas matrix elements
             self._curr_matrix_elements = helas_objects.HelasMultiProcess()
 
-            try:
-                if line.find(',') == -1:
-                    myprocdef = self.extract_process(line)
+            # Extract process from process definition
+            if ',' in line:
+                myprocdef, line = self.extract_decay_chain_process(line)
+            else:
+                myprocdef = self.extract_process(line)
+
+            # Check that we have something    
+            if not myprocdef:
+                raise MadGraph5Error("Empty or wrong format process, please try again.")
+                
+            cpu_time1 = time.time()
+
+            # Generate processes
+            collect_mirror_procs = \
+                                 self._options['group_subprocesses_output']
+            ignore_six_quark_processes = \
+                           self._options['ignore_six_quark_processes'] if \
+                           "ignore_six_quark_processes" in self._options \
+                           else []
+
+            myproc = diagram_generation.MultiProcess(myprocdef,
+                                          collect_mirror_procs =\
+                                          collect_mirror_procs,
+                                          ignore_six_quark_processes = \
+                                          ignore_six_quark_processes)
+
+            for amp in myproc.get('amplitudes'):
+                if amp not in self._curr_amps:
+                    self._curr_amps.append(amp)
                 else:
-                    myprocdef, line = self.extract_decay_chain_process(line)
-            except MadGraph5Error, error:
-                logger_stderr.warning("Empty or wrong format process :\n" + \
-                                     str(error))
-                return
-                
-            if myprocdef:
-
-                cpu_time1 = time.time()
-                
-                # Generate processes
-                collect_mirror_procs = \
-                                     self._options['group_subprocesses_output']
-                ignore_six_quark_processes = \
-                               self._options['ignore_six_quark_processes'] if \
-                               "ignore_six_quark_processes" in self._options \
-                               else []
-
-                myproc = diagram_generation.MultiProcess(myprocdef,
-                                              collect_mirror_procs =\
-                                              collect_mirror_procs,
-                                              ignore_six_quark_processes = \
-                                              ignore_six_quark_processes)
-                    
-                for amp in myproc.get('amplitudes'):
-                    if amp not in self._curr_amps:
-                        self._curr_amps.append(amp)
-                    else:
-                        warning = "Warning: Already in processes:\n%s" % \
-                                                    amp.nice_string_processes()
-                        logger.warning(warning)
+                    warning = "Warning: Already in processes:\n%s" % \
+                                                amp.nice_string_processes()
+                    logger.warning(warning)
 
 
-                # Reset _done_export, since we have new process
-                self._done_export = False
+            # Reset _done_export, since we have new process
+            self._done_export = False
 
-                cpu_time2 = time.time()
+            cpu_time2 = time.time()
 
-                nprocs = len(myproc.get('amplitudes'))
-                ndiags = sum([amp.get_number_of_diagrams() for \
-                                  amp in myproc.get('amplitudes')])
-                logger.info("%i processes with %i diagrams generated in %0.3f s" % \
-                      (nprocs, ndiags, (cpu_time2 - cpu_time1)))
-                ndiags = sum([amp.get_number_of_diagrams() for \
-                                  amp in self._curr_amps])
-                logger.info("Total: %i processes with %i diagrams" % \
-                      (len(self._curr_amps), ndiags))                
+            nprocs = len(myproc.get('amplitudes'))
+            ndiags = sum([amp.get_number_of_diagrams() for \
+                              amp in myproc.get('amplitudes')])
+            logger.info("%i processes with %i diagrams generated in %0.3f s" % \
+                  (nprocs, ndiags, (cpu_time2 - cpu_time1)))
+            ndiags = sum([amp.get_number_of_diagrams() for \
+                              amp in self._curr_amps])
+            logger.info("Total: %i processes with %i diagrams" % \
+                  (len(self._curr_amps), ndiags))                
   
     # Define a multiparticle label
     def do_define(self, line, log=True):
@@ -1814,48 +1823,21 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
     def do_generate(self, line):
         """Generate an amplitude for a given process"""
 
-        args = split_arg(line)
-
-        # Check args validity
-        self.check_generate(args)
-
+        # Reset amplitudes
+        self._curr_amps = diagram_generation.AmplitudeList()
         # Reset Helas matrix elements
-        self._curr_matrix_elements = helas_objects.HelasMultiProcess()
+        self._curr_matrix_elements = None
         self._generate_info = line
         # Reset _done_export, since we have new process
         self._done_export = False
+        # Also reset _export_format and _export_dir
+        self._export_format = None
 
-        # Extract process from process definition
-        if ',' in line:
-            myprocdef, line = self.extract_decay_chain_process(line)
-        else:
-            myprocdef = self.extract_process(line)
-            
-        # Check that we have something    
-        if not myprocdef:
-            raise MadGraph5Error("Empty or wrong format process, please try again.")
-
-        cpu_time1 = time.time()
-        # Generate processes
-        collect_mirror_procs = self._options['group_subprocesses_output']
-        ignore_six_quark_processes = \
-                            self._options['ignore_six_quark_processes'] if \
-                            "ignore_six_quark_processes" in self._options \
-                            else []
-
-        myproc = diagram_generation.MultiProcess(myprocdef,
-                                              collect_mirror_procs = \
-                                              collect_mirror_procs,
-                                              ignore_six_quark_processes = \
-                                              ignore_six_quark_processes)
-        self._curr_amps = myproc.get('amplitudes')
-        cpu_time2 = time.time()
-
-        nprocs = len(self._curr_amps)
-        ndiags = sum([amp.get_number_of_diagrams() for \
-                              amp in self._curr_amps])
-        logger.info("%i processes with %i diagrams generated in %0.3f s" % \
-                  (nprocs, ndiags, (cpu_time2 - cpu_time1)))
+        # Call add process
+        args = split_arg(line)
+        args.insert(0, 'process')
+        
+        self.do_add(" ".join(args))
     
     def extract_process(self, line, proc_number = 0, overall_orders = {}):
         """Extract a process definition from a string. Returns
@@ -2363,7 +2345,7 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
     def check_for_export_dir(self, filepath):
         """Check if the files is in a valid export directory and assign it to
         export path if if is"""
-        
+
         # keep previous if a previous one is defined
         if self._export_dir:
             return
@@ -2371,8 +2353,8 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
         path_split = filepath.split(os.path.sep)
         if len(path_split) > 2 and path_split[-2] == 'Cards':
             self._export_dir = os.path.sep.join(path_split[:-2])
-                
-    
+
+
     def do_launch(self, line):
         """Ask for editing the parameter and then 
         Execute the code (madevent/standalone/...)
@@ -2575,14 +2557,13 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
         self._done_export = False
 
         # Perform export and finalize right away
-        options = ''
-        if nojpeg:
-            options = '-nojpeg'
+        self.export(nojpeg)
 
-        self.export(options)        
+        # Reset _export_dir, so we don't overwrite by mistake later
+        self._export_dir = None
 
     # Export a matrix element
-    def export(self, line):
+    def export(self, nojpeg):
         """Export a generated amplitude to file"""
 
         def generate_matrix_elements(self):
@@ -2596,7 +2577,7 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
 
             cpu_time1 = time.time()
             ndiags = 0
-            if not self._curr_matrix_elements.get('matrix_elements'):
+            if not self._curr_matrix_elements.get_matrix_elements():
                 if self._options['group_subprocesses_output']:
                     cpu_time1 = time.time()
                     dc_amps = [amp for amp in self._curr_amps if isinstance(amp, \
@@ -2618,15 +2599,14 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
                                   dc_subproc_group.\
                                         generate_helas_decay_chain_subproc_groups())
 
-                    for sp_group in subproc_groups:
-                        ndiags = ndiags + sum([len(m.get('diagrams')) for m in \
-                              sp_group.get('matrix_elements')])
+                    ndiags = sum([len(m.get('diagrams')) for m in \
+                              subproc_groups.get_matrix_elements()])
                     self._curr_matrix_elements = subproc_groups
                     # assign a unique id number to all groups
                     uid = 0 
                     for group in subproc_groups:
+                        uid += 1 # update the identification number
                         for me in group.get('matrix_elements'):
-                            uid += 1 # update the identification number
                             me.get('processes')[0].set('uid', uid)
                 else:
                     self._curr_matrix_elements = \
@@ -2634,10 +2614,10 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
                                                self._curr_amps)
                     ndiags = sum([len(me.get('diagrams')) for \
                                   me in self._curr_matrix_elements.\
-                                  get('matrix_elements')])
+                                  get_matrix_elements()])
                     # assign a unique id number to all process
                     uid = 0 
-                    for me in self._curr_matrix_elements.get('matrix_elements'):
+                    for me in self._curr_matrix_elements.get_matrix_elements():
                         uid += 1 # update the identification number
                         me.get('processes')[0].set('uid', uid)
 
@@ -2646,22 +2626,9 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
 
         # Start of the actual routine
 
-        args = split_arg(line)
-        # Check the validity of the arguments and return the output path
-        if __debug__:
-            self.check_output(args)
-
-        if self._done_export == (self._export_dir, self._export_format):
-            # We have already done export in this path
-            logger.info("Matrix elements already exported to directory %s" % \
-                                    self._export_dir)
-            return        
-
         ndiags, cpu_time = generate_matrix_elements(self)
 
         calls = 0
-
-        nojpeg = '-nojpeg' in args
 
         path = self._export_dir
         if self._export_format in ['standalone_cpp', 'madevent', 'standalone']:
@@ -2682,7 +2649,7 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
                                 group_number)
             else:
                 for me_number, me in \
-                   enumerate(self._curr_matrix_elements.get('matrix_elements')):
+                   enumerate(self._curr_matrix_elements.get_matrix_elements()):
                     calls = calls + \
                             self._curr_exporter.generate_subprocess_directory_v4(\
                                 me, self._curr_fortran_model, me_number)
@@ -2728,10 +2695,8 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
                         self._curr_model.get('name'))
 
         # Pick out the matrix elements in a list
-        if isinstance(self._curr_matrix_elements, group_subprocs.SubProcessGroupList):
-            matrix_elements = sum([m.get('matrix_elements') for m in self._curr_matrix_elements], [])
-        else:
-            matrix_elements = self._curr_matrix_elements.get('matrix_elements')
+        matrix_elements = \
+                        self._curr_matrix_elements.get_matrix_elements()
 
         # Fortran MadGraph Standalone
         if self._export_format == 'standalone':
@@ -2781,35 +2746,21 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
         self._curr_amps = diagram_generation.AmplitudeList(\
                [me.get('base_amplitude') for me in \
                 matrix_elements])
-        # Replace the matrix elements, so we have standard format for finalize
-        self._curr_matrix_elements = helas_objects.HelasMultiProcess(\
-            {'matrix_elements': \
-             helas_objects.HelasMatrixElementList(matrix_elements)})
 
         # Remember that we have done export
         self._done_export = (self._export_dir, self._export_format)
 
         if self._export_format in ['madevent', 'standalone', 'standalone_cpp']:
             # Automatically run finalize
-            options = []
-            if nojpeg:
-                options = ['-nojpeg']
-                
-            self.finalize(options)
+            self.finalize(nojpeg)
             
         #reinitialize to empty the default output dir
         self._export_dir = None
     
-    def finalize(self, options):
+    def finalize(self, nojpeg):
         """Make the html output, write proc_card_mg5.dat and create
         madevent.tar.gz for a MadEvent directory"""
         
-        #look if the user ask to bypass the jpeg creation
-        if '-nojpeg' in options:
-            makejpg = False
-        else:
-            makejpg = True
-
         # For v4 models, copy the model/HELAS information.
         if self._model_v4_path:
             logger.info('Copy %s model files to directory %s' % \
@@ -2843,7 +2794,7 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
             self._curr_exporter.finalize_v4_directory( \
                                            [self.history_header] + \
                                            self.history,
-                                           makejpg)
+                                           not nojpeg)
 
         logger.info('Output to directory ' + self._export_dir + ' done.')
         if self._export_format == 'madevent':

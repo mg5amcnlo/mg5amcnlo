@@ -113,7 +113,7 @@ def setup_cpp_standalone_dir(dirpath, model):
 
     # Copy SubProcesses Makefile
     makefile = read_template_file('Makefile_sa_cpp_sp') % \
-                                           {'model': model.get('name')}
+                                    {'model': model.get('name').replace('-', '_')}
     open(os.path.join('SubProcesses', 'Makefile'), 'w').write(makefile)
 
     # Return to original PWD
@@ -217,6 +217,7 @@ class ProcessExporterCPP(object):
             raise MadGraph5Error("No matrix elements to export")
 
         self.model = self.matrix_elements[0].get('processes')[0].get('model')
+        self.model_name = self.model.get('name').replace('-', '_')
 
         self.processes = sum([me.get('processes') for \
                               me in self.matrix_elements], [])
@@ -321,7 +322,7 @@ class ProcessExporterCPP(object):
 
         # Extract model name
         replace_dict['model_name'] = \
-                         self.model.get('name')
+                         self.model_name
 
         # Extract process file name
         replace_dict['process_file_name'] = self.process_name
@@ -356,7 +357,7 @@ class ProcessExporterCPP(object):
         replace_dict['process_file_name'] = self.process_name
 
         # Extract model name
-        replace_dict['model_name'] = self.model.get('name')
+        replace_dict['model_name'] = self.model_name
                          
 
         # Extract class function definitions
@@ -379,7 +380,7 @@ class ProcessExporterCPP(object):
         replace_dict = {}
 
         # Extract model name
-        replace_dict['model_name'] = self.model.get('name')
+        replace_dict['model_name'] = self.model_name
 
         # Extract process info lines for all processes
         process_lines = "\n".join([self.get_process_info_lines(me) for me in \
@@ -398,7 +399,7 @@ class ProcessExporterCPP(object):
 
         # Extract process definition
         process_definition = "%s (%s)" % (self.process_string,
-                                          self.model.get('name'))
+                                          self.model_name)
         replace_dict['process_definition'] = process_definition
 
         process = self.processes[0]
@@ -443,7 +444,7 @@ class ProcessExporterCPP(object):
         replace_dict = {}
 
         # Extract model name
-        replace_dict['model_name'] = self.model.get('name')
+        replace_dict['model_name'] = self.model_name
 
         # Extract process info lines
         replace_dict['process_lines'] = \
@@ -507,7 +508,7 @@ class ProcessExporterCPP(object):
         if proc_number != 0:
             process_string = "%d_%s" % (proc_number, process_string)
 
-        process_string = "Sigma_%s_%s" % (self.model.get('name'),
+        process_string = "Sigma_%s_%s" % (self.model_name,
                                           process_string)
         return process_string
 
@@ -903,9 +904,11 @@ def generate_process_files_pythia8(multi_matrix_element, cpp_helas_call_writer,
 
     # Set process directory
     model = process_exporter_pythia8.model
+    model_name = process_exporter_pythia8.model_name
     process_exporter_pythia8.process_dir = \
                    'Processes_%(model)s' % {'model': \
-                    model.get('name')}
+                    model_name}
+    process_exporter_pythia8.include_dir = process_exporter_pythia8.process_dir
     process_exporter_pythia8.generate_process_files()
     process_exporter_pythia8.generate_example_files()    
 
@@ -917,7 +920,6 @@ class ProcessExporterPythia8(ProcessExporterCPP):
     Pythia 8 format."""
 
     # Static variables (for inheritance)
-    include_dir = 'include'
     example_dir = 'examples'
     process_template_h = 'pythia8_process_h.inc'
     process_template_cc = 'pythia8_process_cc.inc'
@@ -943,7 +945,7 @@ class ProcessExporterPythia8(ProcessExporterCPP):
             os.makedirs(filepath)
 
         # Write out param_card
-        param_card = "param_card_%s.dat" % self.model.get('name')
+        param_card = "param_card_%s.dat" % self.model_name
 
         write_param_card.ParamCardWriter(
                 os.path.join(filepath, param_card),
@@ -956,7 +958,7 @@ class ProcessExporterPythia8(ProcessExporterCPP):
         replace_dict['info_lines'] = info_lines
 
         # Extract model name
-        replace_dict['model_name'] = self.model.get('name')
+        replace_dict['model_name'] = self.model_name
 
         # Extract process file name
         replace_dict['process_file_name'] = self.process_class
@@ -976,7 +978,7 @@ class ProcessExporterPythia8(ProcessExporterCPP):
         file = read_template_file('pythia8_main_example_cc.inc') % \
                replace_dict
 
-        main_file = 'main_%s_%s' % (self.model.get('name'),
+        main_file = 'main_%s_%s' % (self.model_name,
                                         self.process_string)
         main_filename = os.path.join(filepath, main_file + '.cc')
 
@@ -990,14 +992,16 @@ class ProcessExporterPythia8(ProcessExporterCPP):
 
         replace_dict['main_file'] = main_file
 
-        replace_dict['model'] = self.model.get('name')
+        replace_dict['process_dir'] = self.process_dir
+
+        replace_dict['include_dir'] = self.include_dir
 
         # Create the makefile
         file = read_template_file('pythia8_main_makefile.inc') % \
                replace_dict
 
         make_filename = os.path.join(filepath, 'Makefile_%s_%s' % \
-                                (self.model.get('name'), self.process_string))
+                                (self.model_name, self.process_string))
 
         # Write the file
         open(make_filename, 'w').write(file)
@@ -1016,7 +1020,7 @@ class ProcessExporterPythia8(ProcessExporterCPP):
         replace_dict = {}
 
         # Extract model name
-        replace_dict['model_name'] = self.model.get('name')
+        replace_dict['model_name'] = self.model_name
 
         # Extract process info lines for all processes
         process_lines = "\n".join([self.get_process_info_lines(me) for me in \
@@ -1032,7 +1036,7 @@ class ProcessExporterPythia8(ProcessExporterCPP):
 
         # Extract process definition
         process_definition = "%s (%s)" % (self.process_string,
-                                          self.model.get('name'))
+                                          self.model_name)
         replace_dict['process_definition'] = process_definition
 
         process = self.processes[0]
@@ -1084,7 +1088,7 @@ class ProcessExporterPythia8(ProcessExporterCPP):
         replace_dict = {}
 
         # Extract model name
-        replace_dict['model_name'] = self.model.get('name')
+        replace_dict['model_name'] = self.model_name
 
         # Extract process info lines
         replace_dict['process_lines'] = \
@@ -1763,9 +1767,9 @@ class UFOModelConverterCPP(object):
             os.makedirs(os.path.join(self.dir_path, self.cc_file_dir))
 
         parameter_h_file = os.path.join(self.dir_path, self.include_dir,
-                                    'Parameters_%s.h' % self.model.get('name'))
+                                    'Parameters_%s.h' % self.model_name)
         parameter_cc_file = os.path.join(self.dir_path, self.cc_file_dir,
-                                     'Parameters_%s.cc' % self.model.get('name'))
+                                     'Parameters_%s.cc' % self.model_name)
 
         file_h, file_cc = self.generate_parameters_class_files()
 
@@ -1797,7 +1801,7 @@ class UFOModelConverterCPP(object):
         replace_dict = {}
 
         replace_dict['info_lines'] = get_mg5_info_lines()
-        replace_dict['model_name'] = self.model.get('name')
+        replace_dict['model_name'] = self.model_name
 
         replace_dict['independent_parameters'] = \
                                    "// Model parameters independent of aS\n" + \
@@ -1899,16 +1903,16 @@ class UFOModelConverterCPP(object):
             os.makedirs(os.path.join(self.dir_path, self.cc_file_dir))
 
         model_h_file = os.path.join(self.dir_path, self.include_dir,
-                                    'hel_amps_%s.h' % self.model.get('name'))
+                                    'hel_amps_%s.h' % self.model_name)
         model_cc_file = os.path.join(self.dir_path, self.cc_file_dir,
-                                     'hel_amps_%s.cc' % self.model.get('name'))
+                                     'hel_amps_%s.cc' % self.model_name)
 
         replace_dict = {}
 
         replace_dict['output_name'] = self.output_name
         replace_dict['info_lines'] = get_mg5_info_lines()
         replace_dict['namespace'] = self.namespace
-        replace_dict['model_name'] = self.model.get('name')
+        replace_dict['model_name'] = self.model_name
 
         # Read in the template .h and .cc files, stripped of compiler
         # commands and namespaces
@@ -1916,7 +1920,7 @@ class UFOModelConverterCPP(object):
         template_cc_files = self.read_aloha_template_files(ext = 'cc')
 
         aloha_model = create_aloha.AbstractALOHAModel(\
-                                         self.model.get('name'))
+                                         self.model_name)
         if self.wanted_lorentz:
             aloha_model.compute_subset(self.wanted_lorentz)
         else:
@@ -2007,7 +2011,8 @@ def convert_model_to_pythia8(model, pythia_dir):
 
     # create the model parameter files
     model_builder = UFOModelConverterPythia8(model, pythia_dir)
-    model_builder.cc_file_dir = "Processes_" + model.get('name')
+    model_builder.cc_file_dir = "Processes_" + model_builder.model_name
+    model_builder.include_dir = model_builder.cc_file_dir
 
     model_builder.write_files()
     # Write makefile
@@ -2032,7 +2037,6 @@ class UFOModelConverterPythia8(UFOModelConverterCPP):
                     }
 
     # Template files to use
-    include_dir = 'include'
     param_template_h = 'pythia8_model_parameters_h.inc'
     param_template_cc = 'pythia8_model_parameters_cc.inc'
 
@@ -2146,7 +2150,7 @@ class UFOModelConverterPythia8(UFOModelConverterCPP):
         replace_dict = {}
 
         replace_dict['info_lines'] = get_mg5_info_lines().replace("//", "#")
-        replace_dict['model'] = self.model.get('name')
+        replace_dict['model'] = self.model_name
 
         makefile = read_template_file('pythia8_makefile.inc') % replace_dict
 

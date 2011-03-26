@@ -384,6 +384,23 @@ class SubProcessGroupList(base_objects.PhysicsObjectList):
         """Test if object obj is a valid element."""
 
         return isinstance(obj, SubProcessGroup)
+
+    def get_matrix_elements(self):
+        """Extract the list of matrix elements"""
+        return helas_objects.HelasMatrixElementList(\
+            sum([group.get('matrix_elements') for group in self], []))
+
+    def get_used_lorentz(self):
+        """Return the list of ALOHA routines used in these matrix elements"""
+        
+        return helas_objects.HelasMultiProcess(
+            {'matrix_elements': self.get_matrix_elements()}).get_used_lorentz()
+    
+    def get_used_couplings(self):
+        """Return the list of ALOHA routines used in these matrix elements"""
+        
+        return helas_objects.HelasMultiProcess(
+            {'matrix_elements': self.get_matrix_elements()}).get_used_couplings()
     
 #===============================================================================
 # DecayChainSubProcessGroup
