@@ -645,7 +645,7 @@ class CheckValidForCmd(object):
             else:
                 self.help_launch()
                 raise self.InvalidCmd, \
-                       'Impossible to use default location: No output command runned'
+                       'No default location available, please specify location.'
         
         if len(args) != 1:
             self.help_launch()
@@ -677,17 +677,16 @@ class CheckValidForCmd(object):
         include_path = os.path.join(path,'include')
         subproc_path = os.path.join(path,'SubProcesses')
         
-        if not os.path.isdir(card_path) or not os.path.isdir(subproc_path):
-            raise self.InvalidCmd, '%s : Not a valid directory' % path
-
-        if os.path.exists(os.path.join(include_path, 'Pythia.h')):
+        if os.path.isfile(os.path.join(include_path, 'Pythia.h')):
             return 'pythia8'
         if not os.path.isdir(bin_path):
             return 'standalone_cpp'
         elif os.path.isfile(os.path.join(bin_path,'generate_events')):
             return 'madevent'
-        else:
+        elif os.path.isdir(card_path,'generate_events'):
             return 'standalone'
+
+        raise self.InvalidCmd, '%s : Not a valid directory' % path
         
     def check_load(self, args):
         """ check the validity of the line"""
@@ -2910,7 +2909,7 @@ _draw_parser.add_option("", "--add_gap", default=0, type='float', \
                           help="set the x-distance between external particles")  
 
 # LAUNCH PROGRAM
-_launch_usage = "launch [format] [DIRPATH] [options]\n" + \
+_launch_usage = "launch [DIRPATH] [options]\n" + \
          "-- execute the madevent/standalone/standalone_cpp/pythia8 output present in DIRPATH\n" + \
          "   By default DIRPATH is the latest created directory \n" + \
          "   Example: launch PROC_SM_1 --name=run2 \n"
