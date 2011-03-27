@@ -377,7 +377,7 @@ class Sigma_sm_qqx_qqx : public Sigma2Process
 //==========================================================================
 
 #include "Sigma_sm_qqx_qqx.h"
-#include "hel_amps_sm.h"
+#include "HelAmps_sm.h"
 
 using namespace Pythia8_sm; 
 
@@ -720,7 +720,7 @@ double Sigma_sm_qqx_qqx::matrix_uux_uux()
 //==========================================================================
 
 #include "CPPProcess.h"
-#include "hel_amps_sm.h"
+#include "HelAmps_sm.h"
 
 using namespace MG5_sm; 
 

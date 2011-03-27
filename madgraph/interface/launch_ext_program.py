@@ -315,6 +315,8 @@ class Pythia8Launcher(ExtLauncher):
           
     def prepare_run(self):
         """ ask for pythia-pgs/delphes run """
+
+        self.cards = []
         
         # Find all main_model_process.cc files
         date_file_list = []
@@ -361,16 +363,6 @@ class Pythia8Launcher(ExtLauncher):
         if self.name == '':
             raise MadGraph5Error, 'too many runs in this directory'
 
-    def launch_program(self):
-        """launch the main program"""
-
-        # Make pythia8
-        print "Running make for pythia8 directory"
-        status = subprocess.call(['make'], stdout = open(os.devnull, 'w'),
-                        stderr = open(os.devnull, 'w'),
-                        cwd=os.path.join(self.running_dir, os.path.pardir))
-        if status != 0:
-            raise MadGraph5Error, "make failed for pythia8 directory"
         # Find all exported models
         models = glob.glob(os.path.join(self.running_dir,os.path.pardir,
                                         "Processes_*"))
@@ -384,17 +376,35 @@ class Pythia8Launcher(ExtLauncher):
                 model_dir = "Processes_%s" % model
                 break
         if model_dir:
-            print "Running make in %s" % model_dir
+            self.model = model
+            self.model_dir = os.path.realpath(os.path.join(self.running_dir,
+                                                           os.path.pardir,
+                                                           model_dir))
+            self.cards.append("param_card_%s.dat" % model)
+        
+    def launch_program(self):
+        """launch the main program"""
+
+        # Make pythia8
+        print "Running make for pythia8 directory"
+        status = subprocess.call(['make'], stdout = open(os.devnull, 'w'),
+                        stderr = open(os.devnull, 'w'),
+                        cwd=os.path.join(self.running_dir, os.path.pardir))
+        if status != 0:
+            raise MadGraph5Error, "make failed for pythia8 directory"
+        if self.model_dir:
+            print "Running make in %s" % self.model_dir
             status = subprocess.call(['make'], stdout = open(os.devnull, 'w'),
                             stderr = open(os.devnull, 'w'),
-                            cwd=os.path.join(self.running_dir, os.path.pardir,
-                                             model_dir))
+                            cwd=self.model_dir)
             if status != 0:
-                raise MadGraph5Error, "make failed for %s directory" % model_dir
+                raise MadGraph5Error, "make failed for %s directory" % self.model_dir
         # Finally run make for executable
         makefile = self.executable.replace("main_","Makefile_")
         print "Running make with %s" % makefile
-        status = subprocess.call(['make', '-f', makefile], cwd=self.running_dir)
+        status = subprocess.call(['make', '-f', makefile],
+                                 stdout = open(os.devnull, 'w'),
+                                 cwd=self.running_dir)
         if status != 0:
             raise MadGraph5Error, "make failed for %s" % self.executable
         

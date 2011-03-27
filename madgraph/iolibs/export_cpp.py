@@ -37,7 +37,6 @@ import madgraph.iolibs.template_files as template_files
 import madgraph.iolibs.ufo_expression_parsers as parsers
 from madgraph import MadGraph5Error, MG5DIR
 from madgraph.iolibs.files import cp, ln, mv
-import models.sm.write_param_card as write_param_card
 
 import aloha.create_aloha as create_aloha
 import aloha.aloha_writers as aloha_writers
@@ -947,9 +946,9 @@ class ProcessExporterPythia8(ProcessExporterCPP):
         # Write out param_card
         param_card = "param_card_%s.dat" % self.model_name
 
-        write_param_card.ParamCardWriter(
-                os.path.join(filepath, param_card),
-                self.model['parameters'][('external',)])        
+        # Write param_card
+        open(os.path.join(filepath, param_card), 'w').write(\
+            self.model.write_param_card())
 
         replace_dict = {}
 
@@ -1903,9 +1902,9 @@ class UFOModelConverterCPP(object):
             os.makedirs(os.path.join(self.dir_path, self.cc_file_dir))
 
         model_h_file = os.path.join(self.dir_path, self.include_dir,
-                                    'hel_amps_%s.h' % self.model_name)
+                                    'HelAmps_%s.h' % self.model_name)
         model_cc_file = os.path.join(self.dir_path, self.cc_file_dir,
-                                     'hel_amps_%s.cc' % self.model_name)
+                                     'HelAmps_%s.cc' % self.model_name)
 
         replace_dict = {}
 

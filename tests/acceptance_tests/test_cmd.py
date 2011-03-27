@@ -887,7 +887,7 @@ P1_qq_wp_wp_epve
         # Check that the needed files are generated
         files = ['Processes_sm/Sigma_sm_gq_wpq.h', 'Processes_sm/Sigma_sm_gq_wpq.cc',
                  'Processes_sm/Sigma_sm_qq_wpg.h', 'Processes_sm/Sigma_sm_qq_wpg.cc',
-                 'Processes_sm/hel_amps_sm.h', 'Processes_sm/hel_amps_sm.cc',
+                 'Processes_sm/HelAmps_sm.h', 'Processes_sm/HelAmps_sm.cc',
                  'Processes_sm/Parameters_sm.h',
                  'Processes_sm/Parameters_sm.cc', 'Processes_sm/Makefile',
                  'examples/main_sm_gq_wpq.cc', 'examples/main_sm_qq_wpg.cc',
@@ -907,7 +907,7 @@ P1_qq_wp_wp_epve
         self.do('output standalone_cpp %s' % self.out_dir)
 
         # Check that all needed src files are generated
-        files = ['hel_amps_sm.h', 'hel_amps_sm.cc', 'Makefile',
+        files = ['HelAmps_sm.h', 'HelAmps_sm.cc', 'Makefile',
                  'Parameters_sm.h', 'Parameters_sm.cc',
                  'rambo.h', 'rambo.cc', 'read_slha.h', 'read_slha.cc']
 
