@@ -59,7 +59,7 @@ def find_ufo_path(model_name):
 
 def import_model(model_name):
     """ a practical and efficient way to import a model"""
-        
+    
     # check if this is a valid path or if this include restriction file       
     try:
         model_path = find_ufo_path(model_name)
@@ -69,13 +69,15 @@ def import_model(model_name):
         split = model_name.split('-')
         model_name = '-'.join([text for text in split[:-1]])
         model_path = find_ufo_path(model_name)
-            
-        restrict_file = os.path.join(model_path, 'restrict_%s.dat'% split[-1])
+        restrict_name = split[-1]
+         
+        restrict_file = os.path.join(model_path, 'restrict_%s.dat'% restrict_name)
         #if restriction is full, then we by pass restriction (avoid default)
         if split[-1] == 'full':
             restrict_file = None
     else:
         # Check if by default we need some restrictions
+        restrict_name = ""
         if os.path.exists(os.path.join(model_path,'restrict_default.dat')):
             restrict_file = os.path.join(model_path,'restrict_default.dat')
         else:
@@ -83,21 +85,17 @@ def import_model(model_name):
             
     #import the FULL model
     model = import_full_model(model_path) 
-
+    # restore the model name
+    if restrict_name:
+        model["name"] += '-' + restrict_name 
+    
     #restrict it if needed       
     if restrict_file:
-        # but doing this in silence
-        old_level = logger_mod.level
-        if old_level < 30:
-            logger_mod.setLevel(30) # WARNING
         
         # Modify the mother class of the object in order to allow restriction
         model = RestrictModel(model)
         model.restrict_model(restrict_file)
         
-        # put logger in normal mode
-        logger_mod.setLevel(old_level) 
-    
     return model
 
 def import_full_model(model_path):
@@ -253,11 +251,11 @@ class UFOMG5Converter(object):
         # Import particles content:
         particles = [self.model.get_particle(particle.pdg_code) \
                                     for particle in interaction_info.particles]
-
+      
         if None in particles:
             # Interaction with a ghost/goldstone
             return 
-            
+        
         particles = base_objects.ParticleList(particles)
         
         # Import Lorentz content:
@@ -578,19 +576,35 @@ class OrganizeModelExpression:
             
 class RestrictModel(model_reader.ModelReader):
     """ A class for restricting a model for a given param_card.
-    Two rules apply:
+    rules applied:
      - Vertex with zero couplings are throw away
-     - external parameter with zero input are changed into internal parameter."""
+     - external parameter with zero/one input are changed into internal parameter.
+     - identical coupling/mass/width are replace in the model by a unique one
+     """
      
+    del_coup = []
+
     def restrict_model(self, param_card):
         """apply the model restriction following param_card"""
         
         # compute the value of all parameters
         self.set_parameters_and_couplings(param_card)
-        
+        # associte to each couplings the associated vertex: def self.coupling_pos
+        self.locate_coupling()
         # deal with couplings
-        zero_couplings = self.detect_zero_couplings()
-        self.remove_couplings(zero_couplings)
+        zero_couplings, iden_couplings = self.detect_identical_couplings()
+
+        # remove the out-dated interactions
+        self.remove_interactions(zero_couplings)
+                
+        # replace in interactions identical couplings
+        for iden_coups in iden_couplings:
+            self.merge_iden_couplings(iden_coups)
+        
+        # remove zero couplings and other pointless couplings
+        self.del_coup += zero_couplings
+        self.remove_couplings(self.del_coup)
+        
         
         # deal with parameters
         parameters = self.detect_special_parameters()
@@ -599,18 +613,46 @@ class RestrictModel(model_reader.ModelReader):
         # deal with identical parameters
         iden_parameters = self.detect_identical_parameters()
         for iden_param in iden_parameters:
-            self.merge_identical_parameters(iden_param)
-        
+            self.merge_iden_parameters(iden_param)
 
-    def detect_zero_couplings(self):
+
+    def locate_coupling(self):
+        """ create a dict couplings_name -> vertex """
+        
+        self.coupling_pos = {}
+        for vertex in self['interactions']:
+            for key, coupling in vertex['couplings'].items():
+                if coupling in self.coupling_pos:
+                    if vertex not in self.coupling_pos[coupling]:
+                        self.coupling_pos[coupling].append(vertex)
+                else:
+                    self.coupling_pos[coupling] = [vertex]
+                    
+        return self.coupling_pos
+        
+    def detect_identical_couplings(self):
         """return a list with the name of all vanishing couplings"""
         
+        dict_value_coupling = {}
+        iden_key = set()
         zero_coupling = []
+        iden_coupling = []
         
         for name, value in self['coupling_dict'].items():
             if value == 0:
                 zero_coupling.append(name)
-        return zero_coupling
+                continue
+            
+            if value in dict_value_coupling:
+                iden_key.add(value)
+                dict_value_coupling[value].append(name)
+            else:
+                dict_value_coupling[value] = [name]
+        
+        for key in iden_key:
+            iden_coupling.append(dict_value_coupling[key])
+
+        return zero_coupling, iden_coupling
     
     
     def detect_special_parameters(self):
@@ -657,11 +699,34 @@ class RestrictModel(model_reader.ModelReader):
             output.append(block_value_to_var[key])
             
         return output
-            
-    def merge_identical_parameters(self, parameters):
+
+
+    def merge_iden_couplings(self, couplings):
+        """merge the identical couplings in the interactions"""
+
+        
+        logger_mod.debug(' Fuse the Following coupling (they have the same value): %s '% \
+                        ', '.join([obj for obj in couplings]))
+        
+        main = couplings[0]
+        self.del_coup += couplings[1:] # add the other coupl to the suppress list
+        
+        for coupling in couplings[1:]:
+            # check if param is linked to an interaction
+            if coupling not in self.coupling_pos:
+                continue
+            # replace the coupling, by checking all coupling of the interaction
+            vertices = self.coupling_pos[coupling]
+            for vertex in vertices:
+                for key, value in vertex['couplings'].items():
+                    if value == coupling:
+                        vertex['couplings'][key] = main
+
+         
+    def merge_iden_parameters(self, parameters):
         """ merge the identical parameters given in argument """
             
-        logger_mod.info('Parameters set to identical values: %s '% \
+        logger_mod.debug('Parameters set to identical values: %s '% \
                         ', '.join([obj.name for obj in parameters]))
         
         # Extract external parameters
@@ -673,39 +738,62 @@ class RestrictModel(model_reader.ModelReader):
                                      ', '.join([param.name for param in parameters])
                 expr = obj.name
                 continue
-            # delete the old parameters
-            external_parameters.remove(obj)
+            # delete the old parameters                
+            external_parameters.remove(obj)    
             # replace by the new one pointing of the first obj of the class
             new_param = base_objects.ModelVariable(obj.name, expr, 'real')
             self['parameters'][()].insert(0, new_param)
         
-    
-    def remove_couplings(self, zero_couplings):
+        # For Mass-Width, we need also to replace the mass-width in the particles
+        #This allows some optimization for multi-process.
+        if parameters[0].lhablock in ['MASS','DECAY']:
+            new_name = parameters[0].name
+            if parameters[0].lhablock == 'MASS':
+                arg = 'mass'
+            else:
+                arg = 'width'
+            change_name = [p.name for p in parameters[1:]]
+            [p.set(arg, new_name) for p in self['particle_dict'].values() 
+                                                       if p[arg] in change_name]
+            
+    def remove_interactions(self, zero_couplings):
         """ remove the interactions associated to couplings"""
         
-        # clean the interactions
-        for interaction in self['interactions'][:]:
-            modified = False
-            for key, coupling in interaction['couplings'].items()[:]:
-                if coupling in zero_couplings:
-                    modified = True
-                    del interaction['couplings'][key]
-                    
-            if modified: 
-                part_name = [part['name'] for part in interaction['particles']]
-                orders = ['%s=%s' % (order,value) 
-                               for order,value in interaction['orders'].items()]                    
-            if not interaction['couplings']:
-                logger_mod.info('remove interactions: %s at order: %s' % \
-                                (' '.join(part_name),', '.join(orders)))
-                self['interactions'].remove(interaction)
-            elif modified:
-                logger_mod.info('modify interactions: %s at order: %s' % \
-                                (' '.join(part_name),', '.join(orders)))                
+        mod = []
+        for coup in zero_couplings:
+            # some coupling might be not related to any interactions
+            if coup not in self.coupling_pos:
+                coup, self.coupling_pos.keys()
+                continue
+            for vertex in self.coupling_pos[coup]:
+                modify = False
+                for key, coupling in vertex['couplings'].items():
+                    if coupling in zero_couplings:
+                        modify=True
+                        del vertex['couplings'][key]
+                if modify:
+                    mod.append(vertex)
+
+        # print usefull log and clean the empty interaction
+        for vertex in mod:
+            part_name = [part['name'] for part in vertex['particles']]
+            orders = ['%s=%s' % (order,value) for order,value in vertex['orders'].items()]
+                                        
+            if not vertex['couplings']:
+                logger_mod.debug('remove interactions: %s at order: %s' % \
+                                        (' '.join(part_name),', '.join(orders)))
+                self['interactions'].remove(vertex)
+            else:
+                logger_mod.debug('modify interactions: %s at order: %s' % \
+                                (' '.join(part_name),', '.join(orders)))       
+        
+        return
+                
+    def remove_couplings(self, couplings):                
         #clean the coupling list:
         for name, data in self['couplings'].items():
             for coupling in data[:]:
-                if coupling.name in zero_couplings:
+                if coupling.name in couplings:
                     data.remove(coupling)
         
     def fix_parameter_values(self, zero_parameters, one_parameters):
@@ -774,9 +862,9 @@ class RestrictModel(model_reader.ModelReader):
         for param in special_parameters:
             #by pass parameter still in use
             if param in used:
-                logger_mod.info('fix parameter value: %s' % param)
+                logger_mod.debug('fix parameter value: %s' % param)
                 continue 
-            logger_mod.info('remove parameters: %s' % param)
+            logger_mod.debug('remove parameters: %s' % param)
             data = self['parameters'][param_info[param]['dep']]
             data.remove(param_info[param]['obj'])
                   

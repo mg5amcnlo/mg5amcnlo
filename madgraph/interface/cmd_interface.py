@@ -372,13 +372,6 @@ class HelpToCmd(object):
         logger.info("syntax: define multipart_name [=] part_name_list")
         logger.info("-- define a multiparticle")
         logger.info("   Example: define p = g u u~ c c~ d d~ s s~ b b~")
-
-    def help_restrict(self):
-        logger.info("syntax: restrict [model] param_card")
-        logger.info('   Suppress in the model all the interactions with zero')
-        logger.info('   couplings according to the param_card given in parameter.')
-        logger.info('   All zero parameter of the param_card are also suppress of')
-        logger.info('   the model.')
         
     def help_history(self):
         logger.info("syntax: history [FILEPATH|clean|.] ")
@@ -721,7 +714,12 @@ class CheckValidForCmd(object):
             if args[1] not in self._multiparticles.keys():
                 raise self.InvalidCmd('ignore_six_quark_processes needs ' + \
                                       'a multiparticle name as argument')
-            
+        
+        if args[0] in ['stdout_level']:
+            if args[1] not in ['DEBUG','INFO','WARNING','ERROR','CRITICAL']:
+                raise self.InvalidCmd('output_level needs ' + \
+                                      'a valid level')       
+        
     def check_output(self, args):
         """ check the validity of the line"""
         
@@ -1001,20 +999,6 @@ class CompleteForCmd(CheckValidForCmd):
             couplings = [c + "=" for c in self._couplings] + ['@','$','/','>']
         return self.list_completion(text, self._particle_names + \
                                     self._multiparticles.keys() + couplings)
-    
-    def complete_restrict(self, text, line, begidx, endidx):
-        "Complete the restrict command"
-    
-        args = split_arg(line[0:begidx])
-        
-        if len(args) == 1 and text == 'model'[:len(text)]:
-            return ['model ']
-        
-        # Directory continuation
-        return self.path_completion(text,
-                                        os.path.join('.',*[a for a in args if a.endswith(os.path.sep)]),
-                                        only_dirs = False)
-            
           
     def complete_check(self, text, line, begidx, endidx):
         "Complete the add command"
@@ -1206,8 +1190,11 @@ class CompleteForCmd(CheckValidForCmd):
             if args[1] in ['group_subprocesses_output']:
                 return self.list_completion(text, ['False', 'True'])
             
-            if args[1] in ['ignore_six_quark_processes']:
+            elif args[1] in ['ignore_six_quark_processes']:
                 return self.list_completion(text, self._multiparticles.keys())
+            
+            elif args[1] == 'stdout_level':
+                return self.list_completion(text, ['DEBUG','INFO','WARNING','ERROR','CRITICAL'])
         
     def complete_shell(self, text, line, begidx, endidx):
         """ add path for shell """
@@ -1360,7 +1347,8 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
     _export_formats = _v4_export_formats + ['standalone_cpp', 'pythia8',
                                             'pythia8_model']
     _set_options = ['group_subprocesses_output',
-                    'ignore_six_quark_processes']
+                    'ignore_six_quark_processes',
+                    'stdout_level']
     # Variables to store object information
     _curr_model = None  #base_objects.Model()
     _curr_amps = diagram_generation.AmplitudeList()
@@ -2516,11 +2504,17 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
                         ",".join([\
                             self._curr_model.get_particle(q).get('name') \
                             for q in self._options[args[0]]]))
-        if args[0] == 'group_subprocesses_output':
+            
+        elif args[0] == 'group_subprocesses_output':
             self._options[args[0]] = eval(args[1])
             logger.info('Set group_subprocesses_output to %s' % \
                         str(self._options[args[0]]))
-
+            
+        elif args[0] == "stdout_level":
+            logging.root.setLevel(eval('logging.' + args[1]))
+            logging.getLogger('madgraph').setLevel(eval('logging.' + args[1]))
+            logger.info('set output information to level: %s' % args[1])
+        
     def do_output(self, line):
         """Initialize a new Template or reinitialize one"""
 
@@ -2830,19 +2824,6 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
             logger.info('for information about how to generate events from this process.')
             logger.info('You can also use the launch command.')
 
-    def do_restrict(self, line):
-        """ from a param_card.dat remove all zero interactions 
-            and all zero external parameter."""
-        
-        args = split_arg(line)
-        # Check args validity
-        self.check_restrict(args)
-        
-        
-        self._curr_model = import_ufo.RestrictModel(self._curr_model)
-        self._curr_model.restrict_model(args[0])
-        self._restrict_file = args[0]
-        
 
     def do_help(self, line):
         """ propose some usefull possible action """

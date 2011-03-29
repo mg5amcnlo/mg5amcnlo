@@ -75,17 +75,39 @@ class ParamCardWriter(object):
         """define self.dep_mass and self.dep_width in case that they are 
         requested in the param_card.dat"""
         
-        give_m_info = lambda part: (part, self.param_dict[part["mass"]])
-        give_w_info = lambda part: (part, self.param_dict[part["width"]])
         all_particles = self.model['particles']
         
-        #create list of mass - width
-        self.dep_mass = [give_m_info(p) for p in all_particles 
-                          if p['pdg_code'] > 0 and p['mass'] not in self.external]
-        self.dep_width = [give_w_info(p) for p in all_particles 
-                          if p['pdg_code'] > 0 and p['width'] not in self.external]
-        
+        # 
+        self.dep_mass, self.dep_width = [] , []
+        self.duplicate_mass, self.duplicate_width =[], [] 
 
+        def_param = [] 
+        # one loop for the mass
+        for p in all_particles:
+            mass = self.param_dict[p["mass"]]
+            if mass in def_param:
+                self.duplicate_mass.append((p, mass))
+                continue
+            elif p["mass"] != 'ZERO':
+                def_param.append(mass)
+            if p['mass'] not in self.external:
+                self.dep_mass.append((p, mass))
+
+        # one loop for the width
+        def_param = [] 
+        for p in all_particles:
+            width = self.param_dict[p["width"]]
+            if width in def_param:
+                self.duplicate_width.append((p, width))
+                continue
+            else:
+                if p["width"] != 'ZERO':
+                    def_param.append(width)
+            if p['width'] not in self.external:
+                self.dep_width.append((p, width))
+
+        
+        
     @staticmethod
     def order_param(obj1, obj2):
         """ order parameter of a given block """
@@ -147,7 +169,7 @@ class ParamCardWriter(object):
                 self.write_block(cur_lhablock)
             #write the parameter
             self.write_param(param, cur_lhablock)
-        
+        self.write_dep_param_block(cur_lhablock)
         self.write_qnumber()
         
     def write_block(self, name):
@@ -184,27 +206,46 @@ class ParamCardWriter(object):
         """writing the requested LHA parameter"""
 
         if lhablock == 'MASS':
-           data = self.dep_mass
+           data = self.dep_mass 
            prefix = " "
         elif lhablock == 'DECAY':
             data = self.dep_width
             prefix = "DECAY "
         else:
             return
-              
-        text = "##  Not dependent paramater.\n"
-        text += "## Those values should be edited following the \n"
-        text += "## analytical expression. MG5 ignore those values \n"
-        text += "## but they are important for interfacing the output of MG5\n"
-        text += "## to external program such as Pythia.\n"
-
+        
+        text = ""
         for part, param in data:
             if self.model['parameter_dict'][param.name].imag:
             	raise ParamCardWriterError, 'All Mass/Width Parameter should be real'
             value = complex(self.model['parameter_dict'][param.name]).real
             text += """%s %s %f # %s : %s \n""" %(prefix, part["pdg_code"], 
-                        value, part["name"], param.value)
-        self.fsock.write(text)         
+                        value, part["name"], param.expr)  
+        
+        # Add duplicate parameter
+        if lhablock == 'MASS':
+           data = self.duplicate_mass 
+           name = 'mass'
+        elif lhablock == 'DECAY':
+            data = self.duplicate_width
+            name = 'width'
+    
+        for part, param in data:
+            if self.model['parameter_dict'][param.name].imag:
+                raise ParamCardWriterError, 'All Mass/Width Parameter should be real'
+            value = complex(self.model['parameter_dict'][param.name]).real
+            text += """%s %s %f # %s : %s \n""" %(prefix, part["pdg_code"], 
+                        value, part["name"], part[name])
+            
+        if not text:
+            return
+         
+        pretext = "##  Not dependent paramater.\n"
+        pretext += "## Those values should be edited following the \n"
+        pretext += "## analytical expression. MG5 ignore those values \n"
+        pretext += "## but they are important for interfacing the output of MG5\n"
+        pretext += "## to external program such as Pythia.\n"
+        self.fsock.write(pretext + text)                
         
     
     def write_qnumber(self):
@@ -216,10 +257,8 @@ class ParamCardWriter(object):
             else:
                 return 1
         
-        text="""#===========================================================\n"""
-        text += """# QUANTUM NUMBERS OF NEW STATE(S) (NON SM PDG CODE)\n"""
-        text += """#===========================================================\n\n"""
-        
+
+        text = "" 
         for part in self.model['particles']:
             if part["pdg_code"] in self.sm_pdg or part["pdg_code"] < 0:
                 continue
@@ -229,8 +268,13 @@ class ParamCardWriter(object):
                                  'spin': part["spin"],
                                  'color': part["color"],
                                  'antipart': is_anti(part['self_antipart'])}
+
+        if text:
+            pretext="""#===========================================================\n"""
+            pretext += """# QUANTUM NUMBERS OF NEW STATE(S) (NON SM PDG CODE)\n"""
+            pretext += """#===========================================================\n\n"""
         
-        self.fsock.write(text)
+            self.fsock.write(pretext + text)
         
         
             
