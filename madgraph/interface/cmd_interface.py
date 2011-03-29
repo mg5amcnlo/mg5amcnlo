@@ -766,31 +766,6 @@ class CheckValidForCmd(object):
 
         self._export_dir = os.path.realpath(self._export_dir)
 
-    def check_restrict(self,args):
-        """ check the format: restrict [model] param_card.dat"""
-        
-        if len(args) > 2:
-            self.help_restrict()
-            raise self.InvalidCmd, 'Wrong restrict format'
-        
-        if len(args) == 2:
-            if  args[0] != "model":
-                self.help_restrict()
-                raise self.InvalidCmd, 'Wrong restrict format'
-            else:
-                del args[0]
-        
-        if self._model_v4_path:
-            raise self.InvalidCmd, 'Operation not possible with v4 model. ' + \
-                            'Please use a UFO model as a starting point'
-                            
-        if self._restrict_file:
-            raise MadGraph5Error, 'This model is already restricted to the ' + \
-                        'card %s. In order to always keep track ' % self._restrict_file + \
-                        'of model modifications. We forbids multiple restrictions files.'
-
-        if not os.path.isfile(args[0]):
-            raise self.InvalidCmd, 'path \"%s\" is not a file' % args[0]
             
     def get_default_path(self):
         """Set self._export_dir to the default (\'auto\') path"""
@@ -1369,7 +1344,6 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
     _export_format = 'madevent'
     _mgme_dir = MG4DIR
     _comparisons = None
-    _restrict_file = None
     
     def __init__(self, mgme_dir = '', *completekey, **stdin):
         """ add a tracker of the history """
@@ -2171,7 +2145,6 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
             self._curr_amps = diagram_generation.AmplitudeList()
             self._curr_matrix_elements = helas_objects.HelasMultiProcess()
             # Import model
-            self._restrict_file = None
             if args[0].endswith('_v4'):
                 self._curr_model, self._model_v4_path = \
                                  import_v4.import_model(args[1], self._mgme_dir)
@@ -2552,11 +2525,9 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
                 self._curr_exporter = export_v4.ProcessExporterFortranME(\
                                       self._mgme_dir, self._export_dir,
                                       not noclean)
-            self._curr_exporter.cp_model_restriction(self._restrict_file)
         elif self._export_format in ['standalone', 'matrix']:
             self._curr_exporter = export_v4.ProcessExporterFortranSA(\
                                   self._mgme_dir, self._export_dir,not noclean)
-            self._curr_exporter.cp_model_restriction(self._restrict_file)
         elif self._export_format == 'standalone_cpp':
             export_cpp.setup_cpp_standalone_dir(self._export_dir, self._curr_model)
         elif not os.path.isdir(self._export_dir):
