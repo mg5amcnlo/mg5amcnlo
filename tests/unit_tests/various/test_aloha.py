@@ -1248,7 +1248,7 @@ class testLorentzObject(unittest.TestCase):
                                 * aloha_lib.ScalarVariable('P2_%s' % ind[0]))
             
     def test_spin2propagator(self):
-        """test the spin2 propagator"""
+        """Check that the two definition are coherent"""
         
         obj = aloha_obj
         t = 1
@@ -1275,7 +1275,7 @@ class testLorentzObject(unittest.TestCase):
             self.assertAlmostEqual(eval(str(data)), 0)    
  
     def test_spin2propagator2(self):
-        """test the spin2 propagator"""
+        """test the spin2 propagator is coherent with it's expanded expression"""
         
         Metric = aloha_obj.Metric
         P = aloha_obj.P
@@ -1312,7 +1312,7 @@ class testLorentzObject(unittest.TestCase):
             self.assertAlmostEqual(eval(str(zero.get_rep(ind))),0)    
 
     def test_spin2propagator3(self):
-        """test the spin2 propagator property"""
+        """test the spin2 propagator property (contraction gives zero)"""
         
         Metric = aloha_obj.Metric
         P = aloha_obj.P
@@ -1341,7 +1341,7 @@ class testLorentzObject(unittest.TestCase):
             self.assertAlmostEqual(eval(str(zero.get_rep(ind))),0) 
     
     def test_spin2propagator4(self):
-        """test the spin2 propagator is correctly contracted"""
+        """test the spin2 propagator is correctly contracted (even offshell)"""
         
         Metric = aloha_obj.Metric
         P = aloha_obj.P
@@ -1362,7 +1362,7 @@ class testLorentzObject(unittest.TestCase):
             self.assertAlmostEqual(eval(str( data )),0)
             
     def test_spin2propagator5(self):
-        """test the spin2 propagator is correctly contracted"""
+        """test the spin2 propagator is correctly contracted --part by part --"""
         
         Metric = aloha_obj.Metric
         P = aloha_obj.P
@@ -1601,7 +1601,65 @@ class TestLorentzObjectRepresentation(unittest.TestCase):
         repr4 = aloha_lib.LorentzObjectRepresentation(49, [], [])
         for ind in repr4.listindices():
             self.assertEquals(repr4.get_rep(ind), 49)
-            
+
+
+    def test_sum_with4ind(self):
+        """ check non standard operation with contraction of ()*() """
+        
+        Metric = aloha_obj.Metric
+        P = aloha_obj.P
+        OM = aloha_obj.OverMass2
+        OverMass2 = OM
+        F = aloha_obj.Spinor
+        Identity = aloha_obj.Identity
+        
+        mu, nu, alpha, beta, part = 1,2,4,5,3
+        
+        
+        obj1a = 3*( Metric(mu, alpha)* Metric(nu, beta) )
+        
+        
+        
+        obj1b=        -5 * OverMass2(part) * (\
+                                Metric(mu, beta) * P(nu, part) * P(alpha, part) )
+
+        obj1 = obj1a + obj1b
+        
+        # check part by part
+        obj1a_rep = obj1a.simplify().expand().simplify()
+        assert obj1a_rep.lorentz_ind == [2,5,1,4] , "test not valid if condition not met"
+        self.assertEqual(str(obj1a_rep.get_rep([1,0,0,0])), '0')
+        
+        obj1b_rep = obj1b.simplify().expand().simplify()
+        assert obj1b_rep.lorentz_ind == [4,2,1,5] , "test not valid if condition not met"
+        self.assertEqual(str(obj1b_rep.get_rep([0,1,0,0])), '-5 * ( P3_0 * P3_1 * OM3 )')       
+        
+        obj1_rep = obj1.simplify().expand().simplify()
+        
+        assert obj1_rep.lorentz_ind == [4,2,1,5] , "test not valid if condition not met"
+        self.assertEqual(str(obj1_rep.get_rep([0,1,0,0])), '-5 * ( P3_0 * P3_1 * OM3 )')
+        
+    
+        
+        eta = Metric(1,2)
+        eta_rep = eta.expand()
+        
+        final = obj1_rep * eta_rep
+        final = final.simplify()
+        
+        solution = obj1 * eta
+        solution_rep = solution.simplify().expand().simplify()
+        
+        P3_0,P3_1,P3_2,P3_3 = 2, 2, 5, 7
+        OM3 = 8
+        for ind in final.listindices():
+            val1 = eval(str(final.get_rep(ind)))
+            val2 = eval(str(solution_rep.get_rep(ind)))
+            self.assertAlmostEqual(val1, val2, msg='not equal data for ind: %s, %s != %s' % (ind, val1, val2))
+
+
+
+         
     def testsetrepresentation(self):
         """Check the way to set a representation"""
         
@@ -2606,64 +2664,7 @@ class test_aloha_creation(unittest.TestCase):
             self.assertEqual(eval(str(expr.get_rep(ind))), -178727040j)
 #            
 #
-    def test_non_standard_format(self):
-        """ check non standard operation with contraction of ()*() """
-        
-        Metric = aloha_obj.Metric
-        P = aloha_obj.P
-        OM = aloha_obj.OverMass2
-        OverMass2 = OM
-        F = aloha_obj.Spinor
-        Identity = aloha_obj.Identity
-        
-        mu, nu, alpha, beta, part = 1,2,4,5,3
-        
-        
-        obj1a = 3*( Metric(mu, alpha)* Metric(nu, beta) )
-        
-        
-        
-        obj1b=        -5 * OverMass2(part) * (\
-                                Metric(mu, beta) * P(nu, part) * P(alpha, part) )
-
-        obj1 = obj1a + obj1b
-        
-        # check part by part
-        obj1a_rep = obj1a.simplify().expand().simplify()
-        assert obj1a_rep.lorentz_ind == [2,5,1,4] , "test not valid if condition not met"
-        self.assertEqual(str(obj1a_rep.get_rep([1,0,0,0])), '0')
-        
-        obj1b_rep = obj1b.simplify().expand().simplify()
-        assert obj1b_rep.lorentz_ind == [4,2,1,5] , "test not valid if condition not met"
-        self.assertEqual(str(obj1b_rep.get_rep([0,1,0,0])), '-5 * ( P3_0 * P3_1 * OM3 )')       
-        
-        #print obj1
-        obj1_rep = obj1.simplify().expand().simplify()
-        
-        assert obj1_rep.lorentz_ind == [4,2,1,5] , "test not valid if condition not met"
-        self.assertEqual(str(obj1_rep.get_rep([0,1,0,0])), '-5 * ( P3_0 * P3_1 * OM3 )')
-        
-    
-        
-        eta = Metric(1,2)
-        eta_rep = eta.expand()
-        
-        #print obj1_rep.lorentz_ind
-        #print obj1_rep
-        #print eta_rep
-        
-        final = obj1_rep * eta_rep
-        final = final.simplify()
-        
-        solution = obj1 * eta
-        solution_rep = solution.simplify().expand().simplify()
-        
-        P3_0,P3_1,P3_2,P3_3 = 2, 2, 5, 7
-        OM3 = 8
-        for ind in final.listindices():
-            val1 = eval(str(final.get_rep(ind)))
-            val2 = eval(str(solution_rep.get_rep(ind)))
-            self.assertAlmostEqual(val1, val2, msg='not equal data for ind: %s, %s != %s' % (ind, val1, val2))
+ 
             
         
         
@@ -2746,9 +2747,7 @@ class test_aloha_creation(unittest.TestCase):
         
         for ind in zero.listindices():
             self.assertAlmostEqual(eval(str(zero.get_rep(ind))),0)
-            
-
- 
+             
 
     def test_aloha_FFV(self):
         """ test the FFV creation of vertex """

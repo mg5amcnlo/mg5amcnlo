@@ -13,6 +13,7 @@
 #
 ################################################################################
 from __future__ import division
+import cmath
 import copy
 import cPickle
 import glob
@@ -165,7 +166,7 @@ class AbstractRoutineBuilder(object):
         
         if not flip_sign:
             return self.lorentz_expr
-        momentum_pattern = re.compile(r'P\((\d+),(%s)\)' % '|'.join(flip_sign))
+        momentum_pattern = re.compile(r'P\(([\+\-\d]+),(%s)\)' % '|'.join(flip_sign))
         lorentz_expr = momentum_pattern.sub(r'P(\1,\2, -1)', self.lorentz_expr)
         return lorentz_expr
         
@@ -307,8 +308,8 @@ class AbstractRoutineBuilder(object):
         except IOError:
             cls.aloha_lib = create_library()
         else:
-            cls.aloha_lib = create_library()
-            #cls.aloha_lib = cPickle.load(fsock)
+            #cls.aloha_lib = create_library()
+            cls.aloha_lib = cPickle.load(fsock)
         
 
 class AbstractALOHAModel(dict):
