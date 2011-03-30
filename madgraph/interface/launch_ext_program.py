@@ -304,15 +304,6 @@ class Pythia8Launcher(ExtLauncher):
         ExtLauncher.__init__(self, running_dir, '.', timeout, **option)
 
     
-    def copy_default_card(self, name):
-
-        dico = {'dir': self.card_dir, 'name': name }
-
-        if not os.path.exists('%(dir)s/%(name)s_card.dat' % dico):
-            cp('%(dir)s/%(name)s_card_default.dat' % dico,
-                '%(dir)s/%(name)s_card.dat' % dico)
-    
-          
     def prepare_run(self):
         """ ask for pythia-pgs/delphes run """
 
@@ -339,8 +330,6 @@ class Pythia8Launcher(ExtLauncher):
         files = [d[1] for d in date_file_list]
         
         answer = ''
-        print date_file_list[0][1]
-        self.timeout = 10
         while not answer in files:
             answer = self.ask('Select a main file to run: [%s] ' % \
                               ' '.join(files), files[0])
