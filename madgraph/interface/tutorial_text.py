@@ -84,6 +84,7 @@ Additionally to the MG4 command (see MY_FIRST_MG5_RUN/README), you can also
 generate your events/compute the cross-section from this interface:
 Please Enter:
 mg5> launch MY_FIRST_MG5_RUN
+(you can interrupt the computation to continue the tutorial by pressing Ctrl-C)
 """
 
 launch = """This step ends the tutorial of the basic commands of MG5. You can

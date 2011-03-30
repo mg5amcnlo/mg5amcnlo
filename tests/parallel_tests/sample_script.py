@@ -80,11 +80,11 @@ if '__main__' == __name__:
 
     # Create and setup a comparator
     my_comp = me_comparator.MEComparator()
-    my_comp.set_me_runners(my_mg5, my_mg5_ufo)
+    my_comp.set_me_runners(my_mg4, my_mg5, my_mg5_ufo, my_mg5_cpp)
 
     # Run the actual comparison
     my_comp.run_comparison(my_proc_list,
-                           model=['mssm','MSSM_UFO',],
+                           model='mssm',
                            orders={'QED':4, 'QCD':4}, energy=2000)
 
     # Do some cleanup
