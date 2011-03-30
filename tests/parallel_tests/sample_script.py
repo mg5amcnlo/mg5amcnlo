@@ -49,12 +49,12 @@ if '__main__' == __name__:
     #my_proc_list = ['u u~ > g y $ g', 'u~ u > g y $ g ', 'y > u u~','Z >  u u~']
     #my_proc_list = ['t t > t t', 't t~ > t t~', 't t~ > z z', 't z > t z', 't~ t~ > t~ t~', 't~ z > t~ z', 'g g > y y', 'g y > g y', 'y y > g g', 'y y > z z', 'y y > a a', 'y z > t t~', 'y z > y z', 'a y > a y',' z z > t t~', 'z z > y y', 'a a > y y']
     #my_proc_list = ['t t~ > t t~','t t~ > y > t t~','t t~ > t t~ / y', 't t~ > t t~ / a z h g', 'y > t t~', 'y > t t~ g', 't t~ > t t~ / z h g','t t~ > t t~ / a h g','t t~ > t t~ / z a g', 't t~ > t t~ / h ', 't t~ > t t~ / z','t t~ > z > t t~']
-    #my_proc_list = ['t t~ > y > t t~','u u~ > y > u u~', 't t~ > t t~']
+    my_proc_list = ['t t~ > z > t t~','u u~ > z > u u~', 't t~ > t t~', 'u u > u u']
     #my_proc_list = [ 't t~ > y > t t~','z z > y > t t~','t t~ > y > z z',' u u~ > y > t t~', 't t~ > y > u u~']
     #my_proc_list = [' t t~ > t t~ y', 't t~ > t t~ g','g g > g g g','u u~ > y > u u~', 't t~ > y > t t~' ]
-    my_proc_list = me_comparator.create_proc_list(['u', 'u~','t','t~','g','y','a'], initial=2,
-                                                  final=2)
-    my_proc_list = [p+' /z' for p in my_proc_list]
+    #my_proc_list = me_comparator.create_proc_list(['u', 'u~','t','t~','g','y','a'], initial=2,
+    #                                              final=2)
+    #my_proc_list = [p+' /z' for p in my_proc_list]
 
     #my_proc_list += me_comparator.create_proc_list(['u', 'u~','t','t~','g','y','z','a'], initial=1,
     #                                              final=2)
@@ -80,17 +80,17 @@ if '__main__' == __name__:
     my_mg5_ufo.setup(mg5_path, mg4_path)
 
     # Create a MERunner object for C++
-    #my_mg5_cpp = me_comparator.MG5_CPP_Runner()
-    #my_mg5_cpp.setup(mg5_path, mg4_path)
+    my_mg5_cpp = me_comparator.MG5_CPP_Runner()
+    my_mg5_cpp.setup(mg5_path, mg4_path)
 
     # Create and setup a comparator
     my_comp = me_comparator.MEComparator()
-    my_comp.set_me_runners(my_mg5_ufo, my_mg4)
+    my_comp.set_me_runners(my_mg5, my_mg5_ufo, my_mg4, my_mg5_cpp)
 
     # Run the actual comparison
     my_comp.run_comparison(my_proc_list,
-                           model=['RS_UFO','RS'],
-                           orders={'QED':4, 'QCD':4,'QTD':4}, energy=2000)
+                           model='sm',
+                           orders={'QED':4, 'QCD':4}, energy=2000)
 
     # Do some cleanup
     #my_comp.cleanup()

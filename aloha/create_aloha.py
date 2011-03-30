@@ -166,7 +166,7 @@ class AbstractRoutineBuilder(object):
         
         if not flip_sign:
             return self.lorentz_expr
-        momentum_pattern = re.compile(r'P\(([\+\-\d]+),(%s)\)' % '|'.join(flip_sign))
+        momentum_pattern = re.compile(r'\bP\(([\+\-\d]+),(%s)\)' % '|'.join(flip_sign))
         lorentz_expr = momentum_pattern.sub(r'P(\1,\2, -1)', self.lorentz_expr)
         return lorentz_expr
         
