@@ -213,15 +213,15 @@ Block MASS
   1000002 5.611190e+02 # Msu1 
   1000004 5.611190e+02 # Msu2 
   1000006 3.996685e+02 # Msu3 
-  2000002 5.611190e+02 # Msu4 
+  2000002 5.492593e+02 # Msu4 
   2000004 5.492593e+02 # Msu5 
-  2000006 3.996685e+02 # Msu6 
+  2000006 5.857858e+02 # Msu6 
   1000001 5.684411e+02 # Msd1 
   1000003 5.684411e+02 # Msd2 
   1000005 5.130652e+02 # Msd3 
-  2000001 5.684411e+02 # Msd4 
-  2000003 5.684411e+02 # Msd5 
-  2000005 5.130652e+02 # Msd6 
+  2000001 5.452285e+02 # Msd4 
+  2000003 5.452285e+02 # Msd5 
+  2000005 5.437267e+02 # Msd6 
 ##  Not dependent paramater.
 ## Those values should be edited following analytical the 
 ## analytical expression. Some generator could simply ignore 
