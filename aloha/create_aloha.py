@@ -600,7 +600,7 @@ class AbstractALOHAModel(dict):
         conjugate_request = {}
         # Check each vertex if they are fermion and/or majorana
         for vertex in self.model.all_vertices:
-            for i in range(0, len(vertex.particles),2):
+            for i in range(0, len(vertex.particles), 2):
                 part1 = vertex.particles[i]
                 if part1.spin !=2:
                     # deal only with fermion
@@ -615,9 +615,9 @@ class AbstractALOHAModel(dict):
                 # No majorana => add the associate lorentz structure
                 for lorentz in vertex.lorentz:
                     try:
-                        conjugate_request[lorentz.name].add(i+1)
+                        conjugate_request[lorentz.name].add(i//2+1)
                     except:
-                        conjugate_request[lorentz.name] = set([i+1])
+                        conjugate_request[lorentz.name] = set([i//2+1])
         
         for elem in conjugate_request:
             conjugate_request[elem] = list(conjugate_request[elem])
