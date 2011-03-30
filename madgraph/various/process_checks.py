@@ -762,7 +762,13 @@ def check_gauge_process(process, evaluator):
     legs = process.get('legs')
     # Generate a process with these legs
     # Generate the amplitude for this process
-    amplitude = diagram_generation.Amplitude(process)
+    try:
+        amplitude = diagram_generation.Amplitude(process)
+    except InvalidCmd:
+        logging.info("No diagrams for %s" % \
+                         process.nice_string().replace('Process', 'process'))
+        return None    
+    
     if not amplitude.get('diagrams'):
         # This process has no diagrams; go to next process
         logging.info("No diagrams for %s" % \
