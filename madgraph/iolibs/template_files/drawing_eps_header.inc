@@ -30,7 +30,7 @@ Fdist div Fr mul def } def
 def /Fx2 exch def /Fy1 exch def /Fx1 exch def
 Fx2 Fx1 sub Fy2 Fy1 sub Fbasis /Fttype 1
 Ftype 2 mod 2 mul abs sub def Ftype 0 ge
-{/Fddist Fdist Fr div def /Fn Fddist round
+{/Fddist Fdist Fr div 2 div def /Fn Fddist round
 def Ftype 1 gt {/Fn Fn Fddist Fn sub Fsign
 add def} if} {/Fn Fdist Fr div 2 div round 2
 mul def} ifelse Fx1 Fy1 moveto 0 1 Fnopoints
@@ -70,18 +70,25 @@ add neg rlineto fill } def
 
 /Fphoton
 {{ Fx1 Fx2 Fx1 sub Fi mul Fnopoints div Fn
-div Fxt Fi 180 mul Fnopoints div Frmod sin
+div Fxt Fi 360 mul Fnopoints div Frmod sin
 mul Fttype mul 2 div add add Fy1 Fy2 Fy1 sub
-Fi mul Fnopoints div Fn div Fyt Fi 180 mul
+Fi mul Fnopoints div Fn div Fyt Fi 360 mul
 Fnopoints div Frmod sin mul Fttype mul 2 div
 add add } Fstraight } def
 
+/Fphotonr
+{{ Fx1 Fx2 Fx1 sub Fi mul Fnopoints div Fn
+div Fxt Fi 180 mul Fnopoints div Frmod sin
+mul Fttype mul 1 div add add Fy1 Fy2 Fy1 sub
+Fi mul Fnopoints div Fn div Fyt Fi 180 mul
+Fnopoints div Frmod sin mul Fttype mul 1 div
+add add } Fstraight } def
 
 /Fphotond
 {{ Fx1 Fx2 Fx1 sub Fi mul Fnopoints div Fn
-div Fxt Fi 180 mul Fnopoints div Frmod sin
+div Fxt Fi 360 mul Fnopoints div Frmod sin
 mul Fttype mul 2 div add add Fy1 Fy2 Fy1 sub
-Fi mul Fnopoints div Fn div Fyt Fi 180 mul
+Fi mul Fnopoints div Fn div Fyt Fi 360 mul
 Fnopoints div Frmod sin mul Fttype mul 2 div
 add add } Fstraight Fx1
 Fx2 add 2 div Fy1 Fy2 add 2 div Farrow} def
@@ -107,6 +114,17 @@ Fnopoints div Fn div Fyt 1 Fi 180 mul
 Fnopoints div cos sub mul Fttype mul Fyl Fi
 180 mul Fnopoints div sin mul add add add }
 Fstraight } def
+
+/Fgluonr
+{2 sub { Fx1 Fx2 Fx1 sub Fi mul Fnopoints div
+Fn div Fxt 0 Fi 120 mul Fnopoints div cos sub
+mul Fttype mul Fxl Fi 120 mul Fnopoints div
+sin mul add add add Fy1 Fy2 Fy1 sub Fi mul
+Fnopoints div Fn div Fyt 0 Fi 120 mul
+Fnopoints div cos sub mul Fttype mul Fyl Fi
+120 mul Fnopoints div sin mul add add add }
+Fstraight } def
+
 
 /Fgluonl
 {exch 2 sub exch { Fxc Fth cos Frr mul Fxt 1

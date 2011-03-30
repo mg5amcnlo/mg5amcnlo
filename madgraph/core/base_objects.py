@@ -22,6 +22,7 @@ import logging
 import numbers
 import os
 import re
+import StringIO
 import madgraph.core.color_algebra as color
 from madgraph import MadGraph5Error, MG5DIR
 
@@ -87,12 +88,12 @@ class PhysicsObject(dict):
 
         return self[name]
 
-    def set(self, name, value):
+    def set(self, name, value, force=False):
         """Set the value of the property name. First check if value
         is a valid value for the considered property. Return True if the
         value has been correctly set, False otherwise."""
 
-        if not __debug__:
+        if not __debug__ or force:
             self[name] = value
             return True
 
@@ -263,7 +264,7 @@ class Particle(PhysicsObject):
             if not isinstance(value, str):
                 raise self.PhysicsObjectError, \
                     "Line type %s is not a string" % repr(value)
-            if value not in ['dashed', 'straight', 'wavy', 'curly', 'double']:
+            if value not in ['dashed', 'straight', 'wavy', 'curly', 'double','swavy','scurly']:
                 raise self.PhysicsObjectError, \
                    "Line type %s is unknown" % value
 
@@ -665,6 +666,7 @@ class Model(PhysicsObject):
         self['ref_dict_to0'] = {}
         self['ref_dict_to1'] = {}
         self['got_majoranas'] = None
+        self['conserved_charge'] = set()
 
     def filter(self, name, value):
         """Filter for model property values"""
@@ -674,43 +676,45 @@ class Model(PhysicsObject):
                 raise self.PhysicsObjectError, \
                     "Object of type %s is not a string" % \
                                                             type(value)
-        if name == 'particles':
+        elif name == 'particles':
             if not isinstance(value, ParticleList):
                 raise self.PhysicsObjectError, \
                     "Object of type %s is not a ParticleList object" % \
                                                             type(value)
-        if name == 'interactions':
+        elif name == 'interactions':
             if not isinstance(value, InteractionList):
                 raise self.PhysicsObjectError, \
                     "Object of type %s is not a InteractionList object" % \
                                                             type(value)
-        if name == 'particle_dict':
+        elif name == 'particle_dict':
             if not isinstance(value, dict):
                 raise self.PhysicsObjectError, \
                     "Object of type %s is not a dictionary" % \
                                                         type(value)
-        if name == 'interaction_dict':
+        elif name == 'interaction_dict':
             if not isinstance(value, dict):
                 raise self.PhysicsObjectError, \
-                    "Object of type %s is not a dictionary" % \
-                                                        type(value)
+                    "Object of type %s is not a dictionary" % type(value)
 
-        if name == 'ref_dict_to0':
+        elif name == 'ref_dict_to0':
             if not isinstance(value, dict):
                 raise self.PhysicsObjectError, \
-                    "Object of type %s is not a dictionary" % \
-                                                        type(value)
-        if name == 'ref_dict_to1':
+                    "Object of type %s is not a dictionary" % type(value)
+                    
+        elif name == 'ref_dict_to1':
             if not isinstance(value, dict):
                 raise self.PhysicsObjectError, \
-                    "Object of type %s is not a dictionary" % \
-                                                        type(value)
+                    "Object of type %s is not a dictionary" % type(value)
 
-        if name == 'got_majoranas':
+        elif name == 'got_majoranas':
             if not (isinstance(value, bool) or value == None):
                 raise self.PhysicsObjectError, \
-                    "Object of type %s is not a boolean" % \
-                                                        type(value)
+                    "Object of type %s is not a boolean" % type(value)
+
+        elif name == 'conserved_charge':
+            if not (isinstance(value, set)):
+                raise self.PhysicsObjectError, \
+                    "Object of type %s is not a set" % type(value)
 
         return True
 
@@ -869,45 +873,19 @@ class Model(PhysicsObject):
                 
     def write_param_card(self):
         """Write out the param_card, and return as string."""
-
-        def write_param(param, lhablock):
-
-            lhacode=' '.join(['%3s' % key for key in param.lhacode])
-            if lhablock == 'DECAY':
-                return 'DECAY %s %e # %s' % (lhacode, param.value, param.name)
-            else:
-                return "  %s %e # %s" % (lhacode, param.value, param.name ) 
-
-        if not self.get('parameters'):
-            raise self.PhysicsObjectError,\
-                  "Attempt to write param_card from non-UFO model"
-
-        external_params = self.get('parameters')[('external',)]
-
-        # list all lhablock
-        all_lhablock = set([param.lhablock for param in external_params])
         
-        # sort lhablock alphabeticaly
-        all_lhablock = sorted(list(all_lhablock))
-        # place DECAY blocks last
-        all_lhablock.remove('DECAY')
-        all_lhablock.append('DECAY')
-
-        ret_list = ["# SLHA param_card for %s written by MadGraph 5" % \
-                    self.get('name')]
-        
-        for lhablock in all_lhablock:
-            if lhablock != 'DECAY':
-                ret_list.append("BLOCK %s" % lhablock)
-            ret_list.extend(sorted([write_param(param, lhablock) \
-                                    for param in external_params if \
-                                    param.lhablock == lhablock]))
-        return "\n".join(ret_list) + "\n"
+        import models.write_param_card as writter
+        out = StringIO.StringIO() # it's suppose to be written in a file
+        param = writter.ParamCardWriter(self)
+        param.define_output_file(out)
+        param.write_card()
+        return out.getvalue()
         
     @ staticmethod
     def load_default_name():
         """ load the default for name convention """
         
+        logger.info('Change particles name to pass to MG5 convention')    
         default = {}
         for line in open(os.path.join(MG5DIR, 'input', \
                                                  'particles_name_default.txt')):
@@ -1387,6 +1365,7 @@ class Process(PhysicsObject):
         self['model'] = Model()
         # Optional number to identify the process
         self['id'] = 0
+        self['uid'] = 0 # should be a uniq id number
         # Required s-channels are given as a list of id lists. Only
         # diagrams with all s-channels in any of the lists are
         # allowed. This enables generating e.g. Z/gamma as s-channel
@@ -1414,10 +1393,10 @@ class Process(PhysicsObject):
             if not isinstance(value, Model):
                 raise self.PhysicsObjectError, \
                         "%s is not a valid Model object" % str(value)
-        if name == 'id':
+        if name in ['id', 'uid']:
             if not isinstance(value, int):
                 raise self.PhysicsObjectError, \
-                    "Process id %s is not an integer" % repr(value)
+                    "Process %s %s is not an integer" % (name, repr(value))
 
         if name == 'required_s_channels':
             if not isinstance(value, list):
@@ -1639,7 +1618,7 @@ class Process(PhysicsObject):
         # Remove last space
         return mystr[:-1]
 
-    def shell_string(self):
+    def shell_string(self, schannel=True, forbid=True, main=True):
         """Returns process as string with '~' -> 'x', '>' -> '_',
         '+' -> 'p' and '-' -> 'm', including process number,
         intermediate s-channels and forbidden particles"""
@@ -1657,7 +1636,7 @@ class Process(PhysicsObject):
                 mystr = mystr + '_'
                 # Add required s-channels
                 if self['required_s_channels'] and \
-                       self['required_s_channels'][0]:
+                       self['required_s_channels'][0] and schannel:
                     mystr += "_or_".join(["".join([self['model'].\
                                        get('particle_dict')[req_id].get_name() \
                                                 for req_id in id_list]) \
@@ -1670,7 +1649,7 @@ class Process(PhysicsObject):
             prevleg = leg
 
         # Check for forbidden particles
-        if self['forbidden_particles']:
+        if self['forbidden_particles'] and forbid:
             mystr = mystr + '_no_'
             for forb_id in self['forbidden_particles']:
                 forbpart = self['model'].get('particle_dict')[forb_id]
@@ -1686,7 +1665,19 @@ class Process(PhysicsObject):
         mystr = mystr.replace(' ', '')
 
         for decay in self.get('decay_chains'):
-            mystr = mystr + "_" + decay.shell_string()
+            mystr = mystr + "_" + decay.shell_string(schannel,forbid, main=False)
+
+        # Too long name are problematic so restrict them to a maximal of 70 char
+        if len(mystr) > 64 and main:
+            if schannel and forbid:
+                return self.shell_string(True, False, False)+ '-%s' % self['uid']
+            elif schannel:
+                return self.shell_string(False, False, False)+'-%s' % self['uid']
+            else:
+                return mystr[:64]+'-%s' % self['uid']
+            
+            
+            
 
         return mystr
 

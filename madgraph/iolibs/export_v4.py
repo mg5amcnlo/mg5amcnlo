@@ -32,8 +32,7 @@ import madgraph.iolibs.template_files as template_files
 import madgraph.iolibs.ufo_expression_parsers as parsers
 
 import aloha.create_aloha as create_aloha
-
-import models.sm.write_param_card as write_param_card
+import models.write_param_card as param_writer
 from madgraph import MadGraph5Error, MG5DIR
 from madgraph.iolibs.files import cp, ln, mv
 _file_path = os.path.split(os.path.dirname(os.path.realpath(__file__)))[0] + '/'
@@ -125,7 +124,34 @@ def copy_v4standalone(mgme_dir, dir_path, clean):
         open(os.path.join(dir_path, 'SubProcesses', 'MGVersion.txt'), 'w').write(
                                                           MG_version['version'])
 
-      
+#===============================================================================
+# Copy the model restriction in the Model Directory
+#===============================================================================
+def cp_model_restriction(file_path, dir_path):
+    """Copy the model restriction in the Model Directory."""
+    
+    if not file_path:
+        return
+
+    assert os.path.isfile(file_path)
+    assert os.path.isdir(os.path.join(dir_path,'Source','MODEL'))
+    
+    output_path = os.path.join(dir_path,'Source','MODEL','restrict_model.dat')
+    
+    header="""#*********************************************************************
+#  THIS FILE WAS USED TO RESTRICT THE ORIGINAL MODEL
+#  PLEASE DON'T EDIT THIS FILE. HE IS IMPORTANT IN ORDER TO BE ABLE 
+#  TO REPRODUCE THE RESULT IN THE FUTURE.
+#*********************************************************************\n"""    
+    ff = open(output_path,'w')
+    ff.writelines(header)
+    ff.writelines(open(file_path).read())
+    ff.close()
+    
+                         
+                         
+    
+    
 #===============================================================================
 # Make the Helas and Model directories for Standalone directory
 #===============================================================================
@@ -733,9 +759,9 @@ def write_ncombs_file(writer, matrix_element, fortran_model):
     # Extract number of external particles
     (nexternal, ninitial) = matrix_element.get_nexternal_ninitial()
 
-    # ncomb (used for clustering) is 2^(nexternal + 1)
+    # ncomb (used for clustering) is 2^nexternal
     file = "       integer    n_max_cl\n"
-    file = file + "parameter (n_max_cl=%d)" % (2 ** (nexternal + 1))
+    file = file + "parameter (n_max_cl=%d)" % (2 ** nexternal)
 
     # Write the file
     writer.writelines(file)
@@ -1504,10 +1530,9 @@ class UFO_model_to_mg4(object):
     
     def __init__(self, model, output_path):
         """ initialization of the objects """
-        
+       
         self.model = model
         self.model_name = model['name']
-        
         self.dir_path = output_path
         
         self.coups_dep = []    # (name, expression, type)
@@ -1516,11 +1541,48 @@ class UFO_model_to_mg4(object):
         self.params_indep = [] # (name, expression, type)
         self.params_ext = []   # external parameter
         self.p_to_f = parsers.UFOExpressionParserFortran()
+    
+    def pass_parameter_to_case_insensitive(self):
+        """modify the parameter if some of them are identical up to the case"""
         
-    def build(self, wanted_couplings = []):
-        """modify the couplings to fit with MG4 convention and creates all the 
-        different files"""
-
+        lower_dict={}
+        duplicate = set()
+        keys = self.model['parameters'].keys()
+        for key in keys:
+            for param in self.model['parameters'][key]:
+                lower_name = param.name.lower()
+                try:
+                    lower_dict[lower_name].append(param)
+                except KeyError:
+                    lower_dict[lower_name] = [param]
+                else:
+                    duplicate.add(lower_name)
+        
+        if not duplicate:
+            return
+        
+        re_expr = r'''\b(%s)\b'''
+        to_change = []
+        change={}
+        for value in duplicate:
+            for i, var in enumerate(lower_dict[value][1:]):
+                to_change.append(var.name)
+                change[var.name] = '%s__%s' %( var.name.lower(), i+2)
+                var.name = '%s__%s' %( var.name.lower(), i+2)
+        
+        replace = lambda match_pattern: change[match_pattern.groups()[0]]
+        
+        rep_pattern = re.compile(re_expr % '|'.join(to_change))
+        for key in keys:
+            if key == ('external',):
+                continue
+            for param in self.model['parameters'][key]: 
+                param.expr = rep_pattern.sub(replace, param.expr)
+            
+        
+    def refactorize(self, wanted_couplings = []):    
+        """modify the couplings to fit with MG4 convention """
+            
         # Keep only separation in alphaS        
         keys = self.model['parameters'].keys()
         keys.sort(key=len)
@@ -1550,9 +1612,17 @@ class UFO_model_to_mg4(object):
         self.params_indep.insert(0, self.params_dep.pop(index))
         index = self.params_dep.index('sqrt__aS')
         self.params_indep.insert(0, self.params_dep.pop(index))
-
+        
+    def build(self, wanted_couplings = [], full=True):
+        """modify the couplings to fit with MG4 convention and creates all the 
+        different files"""
+        
+        self.pass_parameter_to_case_insensitive()
+        self.refactorize(wanted_couplings)
+        
         # write the files
-        self.write_all()
+        if full:
+            self.write_all()
 
     def open(self, name, comment='c', format='default'):
         """ Open the file name in the correct directory and with a valid
@@ -1598,6 +1668,7 @@ class UFO_model_to_mg4(object):
 
         # All the standard files
         self.copy_standard_file()
+
     ############################################################################
     ##  ROUTINE CREATING THE FILES  ############################################
     ############################################################################
@@ -1693,7 +1764,7 @@ class UFO_model_to_mg4(object):
         
         real_parameters += [param.name for param in self.params_ext 
                             if param.type == 'real'and 
-                               param.lhablock not in ['MASS', 'DECAY']]
+                               is_valid(param.name)]
         
         fsock.writelines('double precision '+','.join(real_parameters)+'\n')
         fsock.writelines('common/params_R/ '+','.join(real_parameters)+'\n\n')
@@ -1717,6 +1788,8 @@ class UFO_model_to_mg4(object):
         fsock.writelines("if(readlha) then\n")
         
         for param in self.params_indep:
+            if param.name == 'ZERO':
+                continue
             fsock.writelines("%s = %s\n" % (param.name,
                                             self.p_to_f.parse(param.expr)))
         
@@ -1798,6 +1871,9 @@ class UFO_model_to_mg4(object):
         fsock.writelines("""subroutine coup%s()
         
           implicit none
+          double precision PI
+          parameter  (PI=3.141592653589793d0)
+      
       
           include 'input.inc'
           include 'coupl.inc'
@@ -1839,7 +1915,8 @@ class UFO_model_to_mg4(object):
         fsock.writelines("""write(*,*)  ' Internal Params'
                             write(*,*)  ' ---------------------------------'
                             write(*,*)  ' '""")        
-        lines = [format(data.name) for data in self.params_indep]
+        lines = [format(data.name) for data in self.params_indep 
+                                                         if data.name != 'ZERO']
         fsock.writelines('\n'.join(lines))
         fsock.writelines("""write(*,*)  ' Internal Params evaluated point by point'
                             write(*,*)  ' ----------------------------------------'
@@ -1855,7 +1932,7 @@ class UFO_model_to_mg4(object):
     
         def format(parameter):
             """return the line for the ident_card corresponding to this parameter"""
-            colum = [parameter.lhablock] + \
+            colum = [parameter.lhablock.lower()] + \
                     [str(value) for value in parameter.lhacode] + \
                     [parameter.name]
             return ' '.join(colum)+'\n'
@@ -1872,11 +1949,10 @@ class UFO_model_to_mg4(object):
         def format_line(parameter):
             """return the line for the ident_card corresponding to this 
             parameter"""
-
             template = \
             """ call LHA_get_real(npara,param,value,'%(name)s',%(name)s,%(value)s)""" \
                 % {'name': parameter.name,
-                               'value': self.p_to_f.parse(str(parameter.value))}
+                   'value': self.p_to_f.parse(str(parameter.value.real))}
         
             return template        
     
@@ -1898,19 +1974,10 @@ class UFO_model_to_mg4(object):
 
     def create_param_card(self):
         """ create the param_card.dat """
-        
-        write_param_card.ParamCardWriter(
-                os.path.join(self.dir_path, 'param_card.dat'),
-                self.params_ext)
 
-#    def search_type(self, expr):
-#        """return the type associate to the expression"""
-#        
-#        for param in self.model.all_parameters:
-#            if param.name == expr:
-#                return param.type
-#        
-#        return CompactifyExpression.search_type(self, expr)
+        out_path = os.path.join(self.dir_path, 'param_card.dat')
+        param_writer.ParamCardWriter(self.model, out_path)
+
   
  
 
