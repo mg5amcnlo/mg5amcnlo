@@ -294,29 +294,31 @@ class HelpToCmd(object):
 
     def help_output(self):
         logger.info("syntax [" + "|".join(self._export_formats) + \
-                    "] [name|.|auto] [options]")
+                    "] [path|.|auto] [options]")
         logger.info("-- Output any generated process(es) to file.")
-        logger.info("   mode: Default mode is madevent. Default path is \'.\'.")
+        logger.info("   mode: Default mode is madevent. Default path is \'.\' or auto.")
         logger.info("   - If mode is madevent, create a MadEvent process directory.")
         logger.info("   - If mode is standalone, create a Standalone directory")
         logger.info("   - If mode is matrix, output the matrix.f files for all")
-        logger.info("     generated processes in directory \"name\".")
-        logger.info("   If mode is standalone_cpp, create a standalone C++")
-        logger.info("     directory named \"name\".")
-        logger.info("   If mode is pythia8, output all files needed to generate")
-        logger.info("     the processes using Pythia 8. Directory \"name\"")
+        logger.info("     generated processes in directory \"path\".")
+        logger.info("   - If mode is standalone_cpp, create a standalone C++")
+        logger.info("     directory in \"path\".")
+        logger.info("   - If mode is pythia8, output all files needed to generate")
+        logger.info("     the processes using Pythia 8. Directory \"path\"")
         logger.info("     should be a Pythia 8 main directory.")
-        logger.info("   name: The name of the copy of Template.")
-        logger.info("   If you put '.' instead of a name, your pwd will be used.")
-        logger.info("   If you put 'auto', an automatic name PROC_XX_n will be created.")
+        logger.info("   path: The path of the process directory.")
+        logger.info("     If you put '.' as path, your pwd will be used.")
+        logger.info("     If you put 'auto', an automatic directory PROC_XX_n will be created.")
         logger.info("   options:")
         logger.info("      -f: force cleaning of the directory if it already exists")
         logger.info("      -d: specify other MG/ME directory")
-        logger.info("      -noclean: no cleaning performed in \"name\"")
-        logger.info("      -nojpeg: no jpeg diagrams will be generated")
-        logger.info("   Example:")
+        logger.info("      -noclean: no cleaning performed in \"path\".")
+        logger.info("      -nojpeg: no jpeg diagrams will be generated.")
+        logger.info("      -name: the postfix of the main file in pythia8 mode.")
+        logger.info("   Examples:")
         logger.info("       output")
         logger.info("       output standalone MYRUN -f")
+        logger.info("       output pythia8 ../pythia8/ -name qcdprocs")
         
     def help_check(self):
 
@@ -2512,7 +2514,12 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
         noclean = '-noclean' in args
         force = '-f' in args 
         nojpeg = '-nojpeg' in args
-    
+        main_file_name = ""
+        try:
+            main_file_name = args[args.index('-name') + 1]
+        except:
+            pass
+            
         if self._done_export == (self._export_dir, self._export_format):
             logger.info('Matrix elements already exported to directory %s' % \
                         self._export_dir)
@@ -2556,13 +2563,13 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
         self._done_export = False
 
         # Perform export and finalize right away
-        self.export(nojpeg)
+        self.export(nojpeg, main_file_name)
 
         # Reset _export_dir, so we don't overwrite by mistake later
         self._export_dir = None
 
     # Export a matrix element
-    def export(self, nojpeg):
+    def export(self, nojpeg = False, main_file_name = ""):
         """Export a generated amplitude to file"""
 
         def generate_matrix_elements(self):
@@ -2668,30 +2675,37 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
                 
         # Pythia 8
         if self._export_format == 'pythia8':
-            export_cpp.convert_model_to_pythia8(\
+            # Output the model parameter and ALOHA files
+            model_name, model_path = export_cpp.convert_model_to_pythia8(\
                             self._curr_model, self._export_dir)
-            
+            # Output the process files
+            process_names = []
             if isinstance(self._curr_matrix_elements, group_subprocs.SubProcessGroupList):
                 for (group_number, me_group) in enumerate(self._curr_matrix_elements):
-                    export_cpp.generate_process_files_pythia8(\
+                    exporter = export_cpp.generate_process_files_pythia8(\
                             me_group.get('matrix_elements'), self._curr_cpp_model,
                             process_string = me_group.get('name'),
                             process_number = group_number, path = path)
+                    process_names.append(exporter.process_name)
             else:
-                export_cpp.generate_process_files_pythia8(\
+                exporter = export_cpp.generate_process_files_pythia8(\
                             self._curr_matrix_elements, self._curr_cpp_model,
                             process_string = self._generate_info, path = path)
-
+                process_names.append(exporter.process_file_name)
+            # Generate the main program file
+            filename, make_filename = \
+                      export_cpp.generate_example_file_pythia8(path,
+                                                               model_path,
+                                                               process_names,
+                                                               exporter,
+                                                               main_file_name)
             logger.info("All necessary files for Pythia 8 generated.")
             logger.info("Please go to %s/examples and run" % path)
-            logger.info("    make -f Makefile_%s_process_name" % \
-                        self._curr_model.get('name'))
+            logger.info("    make -f %s" % make_filename)
             logger.info("(with process_name replaced by process name).")
-            logger.info("You can then run ./main_%s_process_name to produce" % \
-                        self._curr_model.get('name'))
+            logger.info("You can then run ./%s to produce" % filename)
             logger.info("events for the process.")
-            logger.info("Or run launch and select main_%s_process_name." % \
-                        self._curr_model.get('name'))
+            logger.info("Or run launch and select %s." % filename)
 
         # Pick out the matrix elements in a list
         matrix_elements = \

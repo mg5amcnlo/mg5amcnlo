@@ -380,7 +380,8 @@ class Pythia8Launcher(ExtLauncher):
             self.model_dir = os.path.realpath(os.path.join(self.running_dir,
                                                            os.path.pardir,
                                                            model_dir))
-            self.cards.append("param_card_%s.dat" % model)
+            self.cards.append(os.path.join(self.model_dir,
+                                           "param_card_%s.dat" % model))
         
     def launch_program(self):
         """launch the main program"""

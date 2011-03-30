@@ -890,8 +890,7 @@ P1_qq_wp_wp_epve
                  'Processes_sm/HelAmps_sm.h', 'Processes_sm/HelAmps_sm.cc',
                  'Processes_sm/Parameters_sm.h',
                  'Processes_sm/Parameters_sm.cc', 'Processes_sm/Makefile',
-                 'examples/main_sm_gq_wpq.cc', 'examples/main_sm_qq_wpg.cc',
-                 'examples/Makefile_sm_gq_wpq', 'examples/Makefile_sm_qq_wpg']
+                 'examples/main_sm_1.cc', 'examples/Makefile_sm_1']
         for f in files:
             self.assertTrue(os.path.isfile(os.path.join(self.out_dir, f)), 
                             '%s file is not in directory' % f)

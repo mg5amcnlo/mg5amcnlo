@@ -104,7 +104,7 @@ def setup_cpp_standalone_dir(dirpath, model):
 
     # Copy src Makefile
     makefile = read_template_file('Makefile_sa_cpp_src') % \
-                                           {'model': model.get('name')}
+                                   {'model': model.get('name').replace('-','_')}
     open(os.path.join('src', 'Makefile'), 'w').write(makefile)
 
     # Copy SubProcesses files
@@ -185,7 +185,6 @@ class ProcessExporterCPP(object):
     # Static variables (for inheritance)
     process_dir = '.'
     include_dir = '.'
-    example_dir = '.'
     process_template_h = 'cpp_process_h.inc'
     process_template_cc = 'cpp_process_cc.inc'
     process_class_template = 'cpp_process_class.inc'
@@ -909,7 +908,7 @@ def generate_process_files_pythia8(multi_matrix_element, cpp_helas_call_writer,
                     model_name}
     process_exporter_pythia8.include_dir = process_exporter_pythia8.process_dir
     process_exporter_pythia8.generate_process_files()
-    process_exporter_pythia8.generate_example_files()    
+    return process_exporter_pythia8
 
 #===============================================================================
 # ProcessExporterPythia8
@@ -919,7 +918,6 @@ class ProcessExporterPythia8(ProcessExporterCPP):
     Pythia 8 format."""
 
     # Static variables (for inheritance)
-    example_dir = 'examples'
     process_template_h = 'pythia8_process_h.inc'
     process_template_cc = 'pythia8_process_cc.inc'
     process_class_template = 'pythia8_process_class.inc'
@@ -934,81 +932,6 @@ class ProcessExporterPythia8(ProcessExporterCPP):
         self.process_class = self.process_name
         
     # Methods for generation of process files for Pythia 8
-
-    def generate_example_files(self):
-        """Generate an example main file including the correct include
-        files and pointers to the processes generated."""
-
-        filepath = os.path.join(self.path, self.example_dir)
-        if not os.path.isdir(filepath):
-            os.makedirs(filepath)
-
-        # Write out param_card
-        param_card = "param_card_%s.dat" % self.model_name
-
-        # Write param_card
-        open(os.path.join(filepath, param_card), 'w').write(\
-            self.model.write_param_card())
-
-        replace_dict = {}
-
-        # Extract version number and date from VERSION file
-        info_lines = get_mg5_info_lines()
-        replace_dict['info_lines'] = info_lines
-
-        # Extract model name
-        replace_dict['model_name'] = self.model_name
-
-        # Extract process file name
-        replace_dict['process_file_name'] = self.process_class
-
-        # Extract include line
-        replace_dict['include_line'] = \
-                        "#include \"%(process_file_name)s.h\"" % replace_dict
-        
-        # Extract setSigmaPtr line
-        replace_dict['sigma_pointer_line'] = \
-               "pythia.setSigmaPtr(new %(process_file_name)s());" % replace_dict
-
-        # Extract setSigmaPtr line
-        replace_dict['param_card'] = param_card
-
-        # Create the example main file
-        file = read_template_file('pythia8_main_example_cc.inc') % \
-               replace_dict
-
-        main_file = 'main_%s_%s' % (self.model_name,
-                                        self.process_string)
-        main_filename = os.path.join(filepath, main_file + '.cc')
-
-        # Write the file
-        writers.CPPWriter(main_filename).writelines(file)
-
-        replace_dict = {}
-
-        # Extract version number and date from VERSION file
-        replace_dict['info_lines'] = get_mg5_info_lines().replace("//", "#")
-
-        replace_dict['main_file'] = main_file
-
-        replace_dict['process_dir'] = self.process_dir
-
-        replace_dict['include_dir'] = self.include_dir
-
-        # Create the makefile
-        file = read_template_file('pythia8_main_makefile.inc') % \
-               replace_dict
-
-        make_filename = os.path.join(filepath, 'Makefile_%s_%s' % \
-                                (self.model_name, self.process_string))
-
-        # Write the file
-        open(make_filename, 'w').write(file)
-        
-        logger.info("Created files %s and %s in directory %s" \
-                    % (os.path.split(main_filename)[-1],
-                       os.path.split(make_filename)[-1],
-                       os.path.split(make_filename)[0]))
 
     #===========================================================================
     # Process export helper functions
@@ -1644,7 +1567,7 @@ class UFOModelConverterCPP(object):
         """ initialization of the objects """
 
         self.model = model
-        self.model_name = model['name']
+        self.model_name = model['name'].replace('-','_')
 
         self.dir_path = output_path
 
@@ -2002,6 +1925,93 @@ class UFOModelConverterCPP(object):
         return line
 
 #===============================================================================
+# generate_example_file_pythia8
+#===============================================================================
+def generate_example_file_pythia8(path,
+                                   model_path,
+                                   process_names,
+                                   exporter,
+                                   main_file_name = "",
+                                   example_dir = "examples"):
+    """Generate the main_model_name.cc file and Makefile in the examples dir"""
+
+    filepath = os.path.join(path, example_dir)
+    if not os.path.isdir(filepath):
+        os.makedirs(filepath)
+
+    replace_dict = {}
+
+    # Extract version number and date from VERSION file
+    info_lines = get_mg5_info_lines()
+    replace_dict['info_lines'] = info_lines
+
+    # Extract model name
+    replace_dict['model_name'] = exporter.model_name
+
+    # Extract include line
+    replace_dict['include_lines'] = \
+                          "\n".join(["#include \"%s.h\"" % proc_name \
+                                     for proc_name in process_names])
+
+    # Extract setSigmaPtr line
+    replace_dict['sigma_pointer_lines'] = \
+           "\n".join(["pythia.setSigmaPtr(new %s());" % proc_name \
+                     for proc_name in process_names])
+
+    # Extract param_card path
+    replace_dict['param_card'] = os.path.join(os.path.pardir,model_path,
+                                              "param_card_%s.dat" % \
+                                              exporter.model_name)
+
+    # Create the example main file
+    file = read_template_file('pythia8_main_example_cc.inc') % \
+           replace_dict
+
+    if not main_file_name:
+        num = 1
+        while os.path.exists(os.path.join(filepath,
+                                    'main_%s_%i' % (exporter.model_name, num))):
+            num += 1
+        main_file_name = str(num)
+
+    main_file = 'main_%s_%s' % (exporter.model_name,
+                                main_file_name)
+
+    main_filename = os.path.join(filepath, main_file + '.cc')
+
+    # Write the file
+    writers.CPPWriter(main_filename).writelines(file)
+
+    replace_dict = {}
+
+    # Extract version number and date from VERSION file
+    replace_dict['info_lines'] = get_mg5_info_lines()
+
+    replace_dict['main_file'] = main_file
+
+    replace_dict['process_dir'] = model_path
+
+    replace_dict['include_dir'] = exporter.include_dir
+
+    # Create the makefile
+    file = read_template_file('pythia8_main_makefile.inc') % \
+           replace_dict
+
+    make_filename = os.path.join(filepath, 'Makefile_%s_%s' % \
+                            (exporter.model_name, main_file_name))
+
+    # Write the file
+    open(make_filename, 'w').write(file)
+
+    logger.info("Created files %s and %s in directory %s" \
+                % (os.path.split(main_filename)[-1],
+                   os.path.split(make_filename)[-1],
+                   os.path.split(make_filename)[0]))
+    return main_filename, make_filename
+
+    
+
+#===============================================================================
 # Routines to export/output UFO models in Pythia8 format
 #===============================================================================
 
@@ -2016,6 +2026,9 @@ def convert_model_to_pythia8(model, pythia_dir):
     model_builder.write_files()
     # Write makefile
     model_builder.write_makefile()
+    # Write param_card
+    model_builder.write_param_card()
+    return model_builder.model_name, model_builder.cc_file_dir
 
 #===============================================================================
 # UFOModelConverterPythia8
@@ -2148,7 +2161,7 @@ class UFOModelConverterPythia8(UFOModelConverterCPP):
 
         replace_dict = {}
 
-        replace_dict['info_lines'] = get_mg5_info_lines().replace("//", "#")
+        replace_dict['info_lines'] = get_mg5_info_lines()
         replace_dict['model'] = self.model_name
 
         makefile = read_template_file('pythia8_makefile.inc') % replace_dict
@@ -2160,3 +2173,15 @@ class UFOModelConverterPythia8(UFOModelConverterCPP):
                     % (os.path.split(makefilename)[-1],
                        os.path.split(makefilename)[0]))
 
+    def write_param_card(self):
+        """Generate the param_card for the model."""
+
+        paramcardname = os.path.join(self.dir_path, self.cc_file_dir,
+                                    'param_card_%s.dat' % self.model_name)
+        # Write out param_card
+        open(paramcardname, 'w').write(\
+            self.model.write_param_card())
+
+        logger.info("Created %s in directory %s" \
+                    % (os.path.split(paramcardname)[-1],
+                       os.path.split(paramcardname)[0]))

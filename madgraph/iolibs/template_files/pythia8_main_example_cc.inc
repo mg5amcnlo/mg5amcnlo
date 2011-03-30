@@ -5,7 +5,7 @@
 //==========================================================================
 
 #include "Pythia.h"
-%(include_line)s
+%(include_lines)s
 
 using namespace Pythia8; 
  
@@ -25,7 +25,7 @@ int main() {
   pythia.readString("SLHA:file = %(param_card)s");
 
   // Provide process pointers to Pythia
-  %(sigma_pointer_line)s
+  %(sigma_pointer_lines)s
 
   // Phase space cut on pThat.
   pythia.readString("PhaseSpace:pTHatMin = 20.");
