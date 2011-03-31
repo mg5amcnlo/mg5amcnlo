@@ -250,23 +250,24 @@ class HelpToCmd(object):
         logger.info("-- load information from file FILENAME")
 
     def help_import(self):
-        
         logger.info("syntax: import " + "|".join(self._import_formats) + \
               " FILENAME")
         logger.info("-- imports file(s) in various formats")
         logger.info("")
-        logger.info("   import model MODEL [-modelname]:")
+        logger.info("   import model MODEL[-RESTRICTION] [-modelname]:")
         logger.info("      Import a UFO model.")
         logger.info("      MODEL should be a valid UFO model name")
-        logger.info("      -modelname keeps the original")
-        logger.info("             particle names for the model")
+        logger.info("      Model restrictions are specified by MODEL-RESTRICTION")
+        logger.info("        with the file restrict_RESTRICTION.dat in the model dir.")
+        logger.info("        By default, restrict_default.dat is used.")
+        logger.info("        Specify model_name-full to get unrestricted model.")
+        logger.info("      -modelname keeps the original particle names for the model")
         logger.info("")
         logger.info("   import model_v4 MODEL [-modelname] :")
         logger.info("      Import an MG4 model.")
         logger.info("      Model should be the name of the model")
         logger.info("      or the path to theMG4 model directory")
-        logger.info("      -modelname keeps the original")
-        logger.info("             particle names for the model")
+        logger.info("      -modelname keeps the original particle names for the model")
         logger.info("")
         logger.info("   import proc_v4 [PATH] :"  )
         logger.info("      Execute MG5 based on a proc_card.dat in MG4 format.")
@@ -397,6 +398,7 @@ class HelpToCmd(object):
         logger.info("     of the quarks given in multi_part_label.")
         logger.info("     These processes give negligible contribution to the")
         logger.info("     cross section but have subprocesses/channels.")
+
     def help_shell(self):
         logger.info("syntax: shell CMD (or ! CMD)")
         logger.info("-- run the shell command CMD and catch output")

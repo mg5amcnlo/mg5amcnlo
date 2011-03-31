@@ -76,10 +76,6 @@ def import_model(model_name):
         #if restriction is full, then we by pass restriction (avoid default)
         if split[-1] == 'full':
             restrict_file = None
-        else:
-            logger.info('Restrict model %s with %s rule.' % (model_name, restrict_name))
-            if logger_mod.getEffectiveLevel() > 10:
-                logger.info('More information on the restriction available by running before this command \"set stdout_level DEBUG\"')    
     else:
         # Check if by default we need some restrictions
         restrict_name = ""
@@ -96,7 +92,10 @@ def import_model(model_name):
     
     #restrict it if needed       
     if restrict_file:
-        
+        logger.info('Restrict model %s with file %s.' % (model_name, restrict_file))
+        if logger_mod.getEffectiveLevel() > 10:
+            logger.info('Run \"set stdout_level DEBUG\" before import for more information.')
+            
         # Modify the mother class of the object in order to allow restriction
         model = RestrictModel(model)
         model.restrict_model(restrict_file)
