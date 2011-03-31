@@ -1,0 +1,76 @@
+<center><font size=+3>  SM calculator </font></center>
+
+<br>
+<br>
+<FORM METHOD="POST" ACTION="http://my_server_here/cgi-bin/NewProcess/web_sm_calc-pl" >
+
+<center> When ready <INPUT TYPE=SUBMIT VALUE="send"> the data to Standard Model Calculator.
+The output file will be stored in the directory proc_name_here/Cards/param_card.dat .
+</center>
+<INPUT TYPE=HIDDEN NAME=model     VALUE="sm"> 
+<INPUT TYPE=HIDDEN NAME=procname  VALUE="proc_name_here"> 
+<INPUT TYPE=HIDDEN NAME=callfrom  VALUE="webgeneration"> 
+<br>
+<br>
+<font color="#0000FF"> Widths are calculated automatically at LO.<br>
+&alpha<sub>S</sub>(mZ) and its evolution (LO or NLO) is fixed by the PDF choice.<br>
+Yukawa couplings are calculated from MSbar masses.
+<br>
+<br>
+<font color="#0000FF"> Fermion masses <br>
+<TABLE>
+<TR>
+  <TD> top     pole mass  </TD> <TD> <input type=text name=tmass value=174.3    size=10> GeV </TD></TR>
+  <TD> bottom  pole mass  </TD> <TD>  <input type=text name=bmass value=4.7     size=10> GeV </TD></TR>
+  <TD> tau     mass       </TD> <TD> <input type=text name=lmass value=1.777    size=10> GeV </TD></TR>
+</TR>
+</TABLE>
+<br>
+<font color="#0000FF">
+EW masses<br>
+<TABLE>
+<TR><font color="#000000">
+<TR><TD> Z mass       </TD> <TD> <input type=text name=zm    value=91.188   size=10> GeV </TD></TR>
+<TR><TD> W mass       </TD> <TD> <input type=text name=wm    value=80.419   size=10> GeV </TD></TR>
+<TR><TD> Higgs mass   </TD> <TD> <input type=text name=hmass value=120      size=10> GeV </TD></TR>
+</TABLE>
+
+<br>
+<font color="#0000FF">
+EW couplings<br>
+<TABLE>
+<TR><TD> Calculation scheme  </TD> <TD> <SELECT NAME=idef>
+<OPTION VALUE=0 > GF and mW calculated from alpha,sin &theta, mZ
+<OPTION VALUE=1 SELECTED> &alpha and sin &theta calculated from GF, mW, mZ
+<OPTION VALUE=2>  mW, mZ calculated from &alpha, sin &theta,GF
+</SELECT>
+<TR><TD> G<sub>F</sub>*10<SUP>5</SUP></TD> <TD> <input type=text name=hgf   value=1.16639 size=10>
+  GeV<SUP>-2</SUP> </TD></TR>
+<TR><TD> 1/&alpha<sub>EM</sub>       </TD> <TD> <input type=text name=hale   value=128.9   size=10> </TD></TR>
+<TR><TD> sin<sup>2</sup> &theta <sub>W</sub>  </TD> <TD> <input type=text name=hss   value=0.2312   size=10> </TD></TR>
+</TABLE>
+<br>
+  Yukawa couplings<BR>
+<font color="#000000"> Calculation scheme 
+<SELECT NAME=iyuk>
+<OPTION VALUE=0 SELECTED>  w/o evolution
+<OPTION VALUE=1 > w/ evolution up to mH
+  </SELECT>
+<TABLE>
+<TR>
+  <TD> top     MSbar mass  </TD> <TD> <input type=text name=mtms value=164.5    size=10> GeV </TD></TR>
+  <TD> bottom  MSbar mass  </TD> <TD> <input type=text name=mbms  value=4.2     size=10> GeV </TD></TR>
+</TR>
+</TABLE>
+<br>
+<font color="#0000FF">   CKM matrix (only Cabibbo angle). <BR>
+PLEASE NOTE: This matters only if the option CKM was on when the code was  generated.<BR>
+<TABLE>
+<TR>
+  <TD> V<sub>ud</sub> =V<sub>cs</sub>  = </TD> <TD> <input type=text name=vud value=0.9750    size=10> </TD></TR>
+</TR>
+</TABLE>
+</FORM> 
+
+
+

@@ -1,0 +1,118 @@
+#!/usr/bin/perl -w
+#------------------------------------------------------------
+# Simple script to chop out sub-processes  which have a small
+# impact on the cross section, in the grid pack.
+# This is meant to be run after the gridpack warming up run
+# and before packing it up.
+#
+# The script should be run from the main directory of madevent
+# and sits in the bin directory.
+#
+# This is still version 0, where no classes can be defined.
+# However, the result is a script, chop_procs sitting in 
+# SubProcesses, that can be edited by hand. 
+#
+# Author: Fabio Maltoni
+# Date: 10/4/08
+# Version: 0.1
+#
+# HISTORY
+# 
+# 0.2 Fix bug in writing subproc.mg
+#
+# 0.1 Added the possibility to list SubProc IDs
+#
+# 0.0 Original
+#
+#------------------------------------------------------------
+
+#------------------------------------------------------------
+# Auxiliary Ordering function
+#------------------------------------------------------------
+
+    sub OrderInc {
+     $all{$a} <=> $all{$b};
+    };
+
+#------------------------------------------------------------
+# Input the chopping value. Example : 0.01 = 1%
+#------------------------------------------------------------
+
+    print "input chopping off value (e.g., 0.01=1% ):\n";
+    $cutoff_lim=<STDIN>;
+
+#------------------------------------------------------------
+# Input the SubProcesses ids on which the script should run 
+#------------------------------------------------------------
+    
+    print "Input SubProcesses ids to process (space separated):\n";
+    @id_list=split('\s+',<STDIN>);
+    
+
+#------------------------------------------------------------
+# Parse the form, look for known variables
+#------------------------------------------------------------
+
+   
+    
+    chdir("SubProcesses");
+    open(SCRIPT,">chop_procs")  or die "Could not write chop_procs \n";
+     
+    foreach $id (@id_list) {
+    
+    print "\n\nNow processing SubProcesses with ID = $id\n";
+    
+    my @all_Pdirs = <P$id*>;
+    my $xsec = 0;
+    my $perc = 0;
+    %all = ();
+    %below = ();
+    
+    foreach $arg (@all_Pdirs) {
+    chdir("$arg");
+    open(RES,"<default_results.dat")  or die "Could not read default_results.dat\n";
+    my $buff;
+    my $number_read = read(RES,$buff,12);
+    print "$arg has xsec $buff\n";
+    $all{$arg} .= $buff;
+    $xsec = $xsec + $buff;
+    close(RES);
+    chdir("..");
+    };     	
+
+    print " total xsec for ID = $id : $xsec\n";
+    $cutoff=$cutoff_lim*$xsec;
+    print " cutoff for ID = $id : $cutoff \n";
+
+
+#   now I have to order them and find those procs with fall
+#   below xsec*cutoff.    
+
+    $i=0;
+    $integ[0]=0;
+    print "Processes in order FOR ID = $id:\n";
+    foreach $key (sort OrderInc (keys(%all))) {
+    $integ[$i+1] = $integ[$i] + $all{$key}; 	
+    if($integ[$i+1] < $cutoff) { 
+	$below{$key} .= $all{$key};
+	print "$integ[$i+1] : $all{$key} $key => below cutoff\n";}
+    else {
+	print "$integ[$i+1] : $all{$key} $key => above cutoff\n";}
+    $i =$i + 1;
+};
+#
+#  Now I move the corresponding procs out of the way
+#
+    print "The following SubProcess will be tagged to be removed:\n";
+    foreach $key (keys(%below)){
+	print "$key ";
+	print SCRIPT "mv $key XXX$key \# $below{$key}\n";
+#        system("mv $key XXX$key "); 
+    };
+#	print SCRIPT "ls -d P$id* >subproc.mg\n";
+#        system("ls -d P* >subproc.mg");  
+ }
+ print SCRIPT "ls -d P* >subproc.mg";  
+ close(SCRIPT);
+ system("chmod +x chop_procs");
+   

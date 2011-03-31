@@ -1,0 +1,13 @@
+This directory contains samples for all the cards which are used by
+MadGraph/MadEvent during the various stages of code operation.
+
+  Card: proc_card.dat        
+  Use : This is the process generation card which is used by
+        MadGraph to generate the code corresponding the user 
+        request. It can be used by all user's levels.
+        It now supports multi-processes to be requested at the same
+        time. In this case the events produced are in the right relative
+        ratio also for the different procs. Inclusive samples, like W+jets,
+        are produced starting from this option.
+
+

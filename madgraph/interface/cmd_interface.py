@@ -1,4 +1,4 @@
-##############################################################################
+################################################################################
 #
 # Copyright (c) 2009 The MadGraph Development team and Contributors
 #
@@ -26,13 +26,17 @@ import subprocess
 import sys
 import traceback
 import time
+
 try:
     import readline
     GNU_SPLITTING = ('GNU' in readline.__doc__)
 except:
     GNU_SPLITTING = True
 
-from madgraph import MG4DIR, MG5DIR, MadGraph5Error, InvalidCmd
+
+import madgraph
+from madgraph import MG4DIR, MG5DIR, MadGraph5Error
+
 
 import madgraph.core.base_objects as base_objects
 import madgraph.core.diagram_generation as diagram_generation
@@ -45,6 +49,7 @@ import madgraph.iolibs.export_v4 as export_v4
 import madgraph.iolibs.helas_call_writers as helas_call_writers
 import madgraph.iolibs.file_writers as writers
 import madgraph.iolibs.files as files
+import madgraph.iolibs.group_subprocs as group_subprocs
 import madgraph.iolibs.import_v4 as import_v4
 import madgraph.iolibs.misc as misc
 import madgraph.iolibs.save_load_object as save_load_object
@@ -94,8 +99,8 @@ class CmdExtended(cmd.Cmd):
     keyboard_stop_msg = """stopping all operation
             in order to quit mg5 please enter exit"""
     
-    class InvalidCmd(MadGraph5Error):
-        pass
+    # Define the Error
+    InvalidCmd = madgraph.InvalidCmd
     
     def __init__(self, *arg, **opt):
         """Init history and line continuation"""
@@ -245,23 +250,24 @@ class HelpToCmd(object):
         logger.info("-- load information from file FILENAME")
 
     def help_import(self):
-        
         logger.info("syntax: import " + "|".join(self._import_formats) + \
               " FILENAME")
         logger.info("-- imports file(s) in various formats")
         logger.info("")
-        logger.info("   import model MODEL [-modelname]:")
-        logger.info("      Import a UFO or MG4 model.")
+        logger.info("   import model MODEL[-RESTRICTION] [-modelname]:")
+        logger.info("      Import a UFO model.")
         logger.info("      MODEL should be a valid UFO model name")
-        logger.info("      -modelname keeps the original")
-        logger.info("             particle names for the model")
+        logger.info("      Model restrictions are specified by MODEL-RESTRICTION")
+        logger.info("        with the file restrict_RESTRICTION.dat in the model dir.")
+        logger.info("        By default, restrict_default.dat is used.")
+        logger.info("        Specify model_name-full to get unrestricted model.")
+        logger.info("      -modelname keeps the original particle names for the model")
         logger.info("")
         logger.info("   import model_v4 MODEL [-modelname] :")
         logger.info("      Import an MG4 model.")
         logger.info("      Model should be the name of the model")
         logger.info("      or the path to theMG4 model directory")
-        logger.info("      -modelname keeps the original")
-        logger.info("             particle names for the model")
+        logger.info("      -modelname keeps the original particle names for the model")
         logger.info("")
         logger.info("   import proc_v4 [PATH] :"  )
         logger.info("      Execute MG5 based on a proc_card.dat in MG4 format.")
@@ -289,30 +295,31 @@ class HelpToCmd(object):
 
     def help_output(self):
         logger.info("syntax [" + "|".join(self._export_formats) + \
-                    "] [name|.|auto] [options]")
+                    "] [path|.|auto] [options]")
         logger.info("-- Output any generated process(es) to file.")
-        logger.info("   mode: Default mode is madevent. Default path is \'.\'.")
+        logger.info("   mode: Default mode is madevent. Default path is \'.\' or auto.")
         logger.info("   - If mode is madevent, create a MadEvent process directory.")
         logger.info("   - If mode is standalone, create a Standalone directory")
         logger.info("   - If mode is matrix, output the matrix.f files for all")
-        logger.info("     generated processes in directory \"name\".")
-        logger.info("   If mode is standalone_cpp, create a standalone C++")
-        logger.info("     directory.")
-        logger.info("   If mode is pythia8, output the .h and .cc files for")
-        logger.info("     the processes in Pythia 8 format in directory \"name\".")
-        logger.info("   If mode is pythia8_model, output the .h and .cc files for")
-        logger.info("     for the model parameters and Aloha functions for the model.")
-        logger.info("   name: The name of the process directory.")
-        logger.info("   If you put '.' instead of a name, your pwd will be used.")
-        logger.info("   If you put 'auto', an automatic name PROC_XX_n will be created.")
+        logger.info("     generated processes in directory \"path\".")
+        logger.info("   - If mode is standalone_cpp, create a standalone C++")
+        logger.info("     directory in \"path\".")
+        logger.info("   - If mode is pythia8, output all files needed to generate")
+        logger.info("     the processes using Pythia 8. Directory \"path\"")
+        logger.info("     should be a Pythia 8 main directory (v. 8.150 or later).")
+        logger.info("   path: The path of the process directory.")
+        logger.info("     If you put '.' as path, your pwd will be used.")
+        logger.info("     If you put 'auto', an automatic directory PROC_XX_n will be created.")
         logger.info("   options:")
         logger.info("      -f: force cleaning of the directory if it already exists")
         logger.info("      -d: specify other MG/ME directory")
-        logger.info("      -noclean: no cleaning performed in \"name\"")
-        logger.info("      -nojpeg: no jpeg diagrams will be generated")
-        logger.info("   Example:")
+        logger.info("      -noclean: no cleaning performed in \"path\".")
+        logger.info("      -nojpeg: no jpeg diagrams will be generated.")
+        logger.info("      -name: the postfix of the main file in pythia8 mode.")
+        logger.info("   Examples:")
         logger.info("       output")
         logger.info("       output standalone MYRUN -f")
+        logger.info("       output pythia8 ../pythia8/ -name qcdprocs")
         
     def help_check(self):
 
@@ -367,13 +374,6 @@ class HelpToCmd(object):
         logger.info("syntax: define multipart_name [=] part_name_list")
         logger.info("-- define a multiparticle")
         logger.info("   Example: define p = g u u~ c c~ d d~ s s~ b b~")
-
-    def help_restrict(self):
-        logger.info("syntax: restrict [model] param_card")
-        logger.info('   Suppress in the model all the interactions with zero')
-        logger.info('   couplings according to the param_card given in parameter.')
-        logger.info('   All zero parameter of the param_card are also suppress of')
-        logger.info('   the model.')
         
     def help_history(self):
         logger.info("syntax: history [FILEPATH|clean|.] ")
@@ -384,6 +384,21 @@ class HelpToCmd(object):
 
     def help_draw(self):
         _draw_parser.print_help()
+
+    def help_set(self):
+        logger.info("syntax: set %s argument" % "|".join(self._set_options))
+        logger.info("-- set options for generation or output")
+        logger.info("   group_subprocesses_output True/False: ")
+        logger.info("     Smart grouping of subprocesses into directories,")
+        logger.info("     mirroring of initial states, and combination of")
+        logger.info("     integration channels.")
+        logger.info("     Example: p p > j j j w+ gives 5 directories and 184 channels")
+        logger.info("     (cf. 65 directories and 1048 channels for regular output)")
+        logger.info("   ignore_six_quark_processes multi_part_label")
+        logger.info("     (default none) ignore processes with at least 6 of any")
+        logger.info("     of the quarks given in multi_part_label.")
+        logger.info("     These processes give negligible contribution to the")
+        logger.info("     cross section but have subprocesses/channels.")
 
     def help_shell(self):
         logger.info("syntax: shell CMD (or ! CMD)")
@@ -415,10 +430,10 @@ class CheckValidForCmd(object):
     
         if len(args) < 2:
             self.help_add()
-            raise InvalidCmd('\"add\" requires two arguments')
+            raise self.InvalidCmd('\"add\" requires two arguments')
         
         if args[0] != 'process':
-            raise InvalidCmd('\"add\" requires the argument \"process\"')
+            raise self.InvalidCmd('\"add\" requires the argument \"process\"')
 
         if not self._curr_model:
             raise MadGraph5Error, \
@@ -434,17 +449,17 @@ class CheckValidForCmd(object):
         
         if len(args) < 2:
             self.help_define()
-            raise InvalidCmd('\"define\" command requires at least two arguments')
+            raise self.InvalidCmd('\"define\" command requires at least two arguments')
 
         if args[1] == '=':
             del args[1]
             if len(args) < 2:
                 self.help_define()
-                raise InvalidCmd('\"define\" command requires at least one particles name after \"=\"')
+                raise self.InvalidCmd('\"define\" command requires at least one particles name after \"=\"')
         
         if '=' in args:
             self.help_define()
-            raise InvalidCmd('\"define\" command requires symbols \"=\" at the second position')
+            raise self.InvalidCmd('\"define\" command requires symbols \"=\" at the second position')
         
         if not self._curr_model:
             logger.info('No model currently active. Try with the Standard Model')
@@ -461,15 +476,15 @@ class CheckValidForCmd(object):
             
         if len(args) < 1 or args[0] not in self._display_opts:
             self.help_display()
-            raise InvalidCmd
+            raise self.InvalidCmd
 
         if not self._curr_model:
-            raise InvalidCmd("No model currently active, please import a model!")
+            raise self.InvalidCmd("No model currently active, please import a model!")
 
         if args[0] in ['processes', 'diagrams'] and not self._curr_amps:
-            raise InvalidCmd("No process generated, please generate a process!")
+            raise self.InvalidCmd("No process generated, please generate a process!")
         if args[0] == 'checks' and not self._comparisons:
-            raise InvalidCmd("No check results to display.")
+            raise self.InvalidCmd("No check results to display.")
 
 
     def check_draw(self, args):
@@ -479,28 +494,27 @@ class CheckValidForCmd(object):
         
         if len(args) < 1:
             self.help_draw()
-            raise InvalidCmd('\"draw\" command requires a directory path')
+            raise self.InvalidCmd('\"draw\" command requires a directory path')
         
         if not self._curr_amps:
-            raise InvalidCmd("No process generated, please generate a process!")
+            raise self.InvalidCmd("No process generated, please generate a process!")
             
         if not os.path.isdir(args[0]):
-            raise InvalidCmd( "%s is not a valid directory for export file" % args[0])
+            raise self.InvalidCmd( "%s is not a valid directory for export file" % args[0])
             
     def check_check(self, args):
         """check the validity of args"""
         
         if  not self._curr_model:
-            logger.info('No model currently active. Try with the Standard Model')
-            self.do_import('model sm')
+            raise self.InvalidCmd("No model currently active, please import a model!")
 
         if self._model_v4_path:
-            raise InvalidCmd(\
+            raise self.InvalidCmd(\
                 "\"check\" not possible for v4 models")
 
         if len(args) < 2:
             self.help_check()
-            raise InvalidCmd("\"check\" requires an argument and a process.")
+            raise self.InvalidCmd("\"check\" requires an argument and a process.")
 
         param_card = None
         if os.path.isfile(args[1]):
@@ -508,7 +522,7 @@ class CheckValidForCmd(object):
 
         if args[0] not in self._check_opts:
             self.help_check()
-            raise InvalidCmd("\"check\" called with wrong argument")
+            raise self.InvalidCmd("\"check\" called with wrong argument")
         
         if any([',' in elem for elem in args]):
             raise MadGraph5Error('Decay chains not allowed in check')
@@ -521,12 +535,11 @@ class CheckValidForCmd(object):
         """check the validity of args"""
         
         if  not self._curr_model:
-            logger.info('No model currently active. Try with the Standard Model')
-            self.do_import('model sm')
+            raise self.InvalidCmd("No model currently active, please import a model!")
 
         if len(args) < 1:
             self.help_generate()
-            raise InvalidCmd("\"generate\" requires a process.")
+            raise self.InvalidCmd("\"generate\" requires a process.")
 
         self.check_process_format(" ".join(args))
  
@@ -537,7 +550,7 @@ class CheckValidForCmd(object):
         
         #check balance of paranthesis
         if process.count('(') != process.count(')'):
-            raise InvalidCmd('Invalid Format, no balance between open and close parenthesis')
+            raise self.InvalidCmd('Invalid Format, no balance between open and close parenthesis')
         #remove parenthesis for fututre introspection
         process = process.replace('(',' ').replace(')',' ')
         
@@ -550,7 +563,7 @@ class CheckValidForCmd(object):
         
         # request that we have one or two > in the process
         if process.count('>') not in [1,2]:
-            raise InvalidCmd(
+            raise self.InvalidCmd(
                'wrong format for \"%s\" this part requires one or two symbols \'>\', %s found' 
                % (process, process.count('>')))
         
@@ -558,16 +571,16 @@ class CheckValidForCmd(object):
         particles_parts = process.split('>')
         for particles in particles_parts:
             if re.match(r'^\s*$', particles):
-                raise InvalidCmd(
+                raise self.InvalidCmd(
                 '\"%s\" is a wrong process format. Please try again' % process)  
         
         # '/' and '$' sould be used only after the process definition
         for particles in particles_parts[:-1]:
             if re.search('\D/', particles):
-                raise InvalidCmd(
+                raise self.InvalidCmd(
                 'wrong process format: restriction should be place after the final states')
             if re.search('\D\$', particles):
-                raise InvalidCmd(
+                raise self.InvalidCmd(
                 'wrong process format: restriction should be place after the final states')
         
     
@@ -577,19 +590,19 @@ class CheckValidForCmd(object):
         
         if len(args) > 1:
             self.help_history()
-            raise InvalidCmd('\"history\" command takes at most one argument')
+            raise self.InvalidCmd('\"history\" command takes at most one argument')
         
         if not len(args):
             return
         
         if args[0] =='.':
             if not self._export_dir:
-                raise InvalidCmd("No default directory is defined for \'.\' option")
+                raise self.InvalidCmd("No default directory is defined for \'.\' option")
         elif args[0] != 'clean':
                 dirpath = os.path.dirname(args[0])
                 if dirpath and not os.path.exists(dirpath) or \
                        os.path.isdir(args[0]):
-                    raise InvalidCmd("invalid path %s " % dirpath)
+                    raise self.InvalidCmd("invalid path %s " % dirpath)
     
     def check_import(self, args):
         """check the validity of line"""
@@ -601,16 +614,16 @@ class CheckValidForCmd(object):
         
         if not args or args[0] not in self._import_formats:
             self.help_import()
-            raise InvalidCmd('wrong \"import\" format')
+            raise self.InvalidCmd('wrong \"import\" format')
         
         if args[0].startswith('model') and len(args) != 2:
             if not (len(args) == 3 and args[-1] == '-modelname'):
                 self.help_import()
-                raise InvalidCmd('incorrect number of arguments')
+                raise self.InvalidCmd('incorrect number of arguments')
         
         if args[0] == 'proc_v4' and len(args) != 2 and not self._export_dir:
             self.help_import()
-            raise InvalidCmd('PATH is mandatory in the current context\n' + \
+            raise self.InvalidCmd('PATH is mandatory in the current context\n' + \
                                   'Did you forget to run the \"output\" command')
                         
                 
@@ -623,13 +636,17 @@ class CheckValidForCmd(object):
         
         if not args:
             if self._done_export:
+                mode = self.find_output_type(self._done_export[0])
+                if mode != self._done_export[1]:
+                    raise self.InvalidCmd, \
+                          '%s not valid directory for launch' % self._done_export[0]
                 args.append(self._done_export[1])
                 args.append(self._done_export[0])
                 return
             else:
                 self.help_launch()
                 raise self.InvalidCmd, \
-                       'Impossible to use default location: No output command runned'
+                       'No default location available, please specify location.'
         
         if len(args) != 1:
             self.help_launch()
@@ -658,50 +675,86 @@ class CheckValidForCmd(object):
         
         card_path = os.path.join(path,'Cards')
         bin_path = os.path.join(path,'bin')
+        src_path = os.path.join(path,'src')
+        include_path = os.path.join(path,'include')
         subproc_path = os.path.join(path,'SubProcesses')
-        
-        if not os.path.isdir(card_path) or not os.path.isdir(subproc_path):
-            raise self.InvalidCmd, '%s : Not a valid directory' % path
 
-        if not os.path.isdir(bin_path):
+        if os.path.isfile(os.path.join(include_path, 'Pythia.h')):
+            return 'pythia8'
+        elif os.path.isdir(src_path):
             return 'standalone_cpp'
         elif os.path.isfile(os.path.join(bin_path,'generate_events')):
             return 'madevent'
-        else:
+        elif os.path.isdir(card_path):
             return 'standalone'
+
+        raise self.InvalidCmd, '%s : Not a valid directory' % path
         
     def check_load(self, args):
         """ check the validity of the line"""
         
         if len(args) != 2 or args[0] not in self._save_opts:
             self.help_load()
-            raise InvalidCmd('wrong \"load\" format')
+            raise self.InvalidCmd('wrong \"load\" format')
             
         
     def check_save(self, args):
         """ check the validity of the line"""
         if len(args) != 2 or args[0] not in self._save_opts:
             self.help_save()
-            raise InvalidCmd('wrong \"save\" format')
+            raise self.InvalidCmd('wrong \"save\" format')
     
+    def check_set(self, args):
+        """ check the validity of the line"""
+        
+        if len(args) < 2:
+            self.help_set()
+            raise self.InvalidCmd('set needs an option and an argument')
+
+        if args[0] not in self._set_options:
+            self.help_set()
+            raise self.InvalidCmd('Possible options for set are %s' % \
+                                  self._set_options)
+
+        if args[0] in ['group_subprocesses_output']:
+            if args[1] not in ['False', 'True']:
+                raise self.InvalidCmd('%s needs argument False or True' % \
+                                      args[0])
+        if args[0] in ['ignore_six_quark_processes']:
+            if args[1] not in self._multiparticles.keys():
+                raise self.InvalidCmd('ignore_six_quark_processes needs ' + \
+                                      'a multiparticle name as argument')
+        
+        if args[0] in ['stdout_level']:
+            if args[1] not in ['DEBUG','INFO','WARNING','ERROR','CRITICAL']:
+                raise self.InvalidCmd('output_level needs ' + \
+                                      'a valid level')       
+        
     def check_output(self, args):
         """ check the validity of the line"""
         
-        if not self._curr_model:
-            text = 'No model found. Please import a model first and then retry.'
-            raise InvalidCmd(text)
-
         if args and args[0] in self._export_formats:
             self._export_format = args.pop(0)
+        else:
+            self._export_format = 'madevent'
+
+        if not self._curr_amps:
+            text = 'No processes generated. Please generate a process first.'
+            raise self.InvalidCmd(text)
+
+        if not self._curr_model:
+            text = 'No model found. Please import a model first and then retry.'
+            raise self.InvalidCmd(text)
 
         if self._model_v4_path and \
-                             self._export_format not in self._v4_export_formats:
+               (self._export_format not in self._v4_export_formats or \
+                self._options['group_subprocesses_output']):
             text = " The Model imported (MG4 format) does not contain enough\n "
             text += " information for this type of output. In order to create\n"
             text += " output for " + args[0] + ", you have to use a UFO model.\n"
             text += " Those model can be imported with mg5> import model NAME."
             logger.warning(text)
-            raise InvalidCmd('')
+            raise self.InvalidCmd('')
 
         if args and args[0][0] != '-':
             # This is a path
@@ -717,48 +770,25 @@ class CheckValidForCmd(object):
             # No valid path
             self.get_default_path()
 
-        if self._export_format in ['madevent', 'standalone'] and \
-           not self._mgme_dir and \
-           os.path.realpath(self._export_dir) != os.path.realpath('.'):
+        if self._done_export == (self._export_dir, self._export_format):
+            # We have already done export in this path
+            logger.info("Matrix elements already exported to directory %s" % \
+                                    self._export_dir)
+            return        
+
+        if self._export_format in ['madevent', 'standalone'] \
+               and not self._mgme_dir and \
+               os.path.realpath(self._export_dir) != os.path.realpath('.'):
             raise MadGraph5Error, \
                   "To generate a new MG4 directory, you need a valid MG_ME path"
 
         self._export_dir = os.path.realpath(self._export_dir)
 
-        if not self._curr_amps and self._export_format != "pythia8_model":
-            text = 'No processes generated. Please generate a process first.'
-            raise InvalidCmd(text)
-
-    def check_restrict(self,args):
-        """ check the format: restrict [model] param_card.dat"""
-        
-        if len(args) > 2:
-            self.help_restrict()
-            raise self.InvalidCmd, 'Wrong restrict format'
-        
-        if len(args) == 2:
-            if  args[0] != "model":
-                self.help_restrict()
-                raise self.InvalidCmd, 'Wrong restrict format'
-            else:
-                del args[0]
-        
-        if self._model_v4_path:
-            raise self.InvalidCmd, 'Operation not possible with v4 model. ' + \
-                            'Please use a UFO model as a starting point'
-                            
-        if self._restrict_file:
-            raise MadGraph5Error, 'This model is already restricted to the ' + \
-                        'card %s. In order to always keep track ' % self._restrict_file + \
-                        'of model modifications. We forbids multiple restrictions files.'
-
-        if not os.path.isfile(args[0]):
-            raise self.InvalidCmd, 'path \"%s\" is not a file' % args[0]
             
     def get_default_path(self):
         """Set self._export_dir to the default (\'auto\') path"""
         
-        if self._export_format == 'madevent':
+        if self._export_format.startswith('madevent'):
             name_dir = lambda i: 'PROC_%s_%s' % \
                                     (self._curr_model['name'], i)
             auto_path = lambda i: os.path.join(self.writing_dir,
@@ -783,7 +813,7 @@ class CheckValidForCmd(object):
                 self._export_dir = auto_path(i) 
                 break
         if not self._export_dir:
-            raise InvalidCmd('Can\'t use auto path,' + \
+            raise self.InvalidCmd('Can\'t use auto path,' + \
                                   'more than 500 dirs already')    
             
         
@@ -962,20 +992,6 @@ class CompleteForCmd(CheckValidForCmd):
             couplings = [c + "=" for c in self._couplings] + ['@','$','/','>']
         return self.list_completion(text, self._particle_names + \
                                     self._multiparticles.keys() + couplings)
-    
-    def complete_restrict(self, text, line, begidx, endidx):
-        "Complete the restrict command"
-    
-        args = split_arg(line[0:begidx])
-        
-        if len(args) == 1 and text == 'model'[:len(text)]:
-            return ['model ']
-        
-        # Directory continuation
-        return self.path_completion(text,
-                                        os.path.join('.',*[a for a in args if a.endswith(os.path.sep)]),
-                                        only_dirs = False)
-            
           
     def complete_check(self, text, line, begidx, endidx):
         "Complete the add command"
@@ -1030,7 +1046,7 @@ class CompleteForCmd(CheckValidForCmd):
             return self.model_completion(text, line[begidx:])
 
     def complete_draw(self, text, line, begidx, endidx):
-        "Complete the import command"
+        "Complete the draw command"
 
         args = split_arg(line[0:begidx])
 
@@ -1154,6 +1170,25 @@ class CompleteForCmd(CheckValidForCmd):
             return self.list_completion(text, content)
 
 
+    def complete_set(self, text, line, begidx, endidx):
+        "Complete the set command"
+
+        args = split_arg(line[0:begidx])
+
+        # Format
+        if len(args) == 1:
+            return self.list_completion(text, self._set_options)
+
+        if len(args) == 2:
+            if args[1] in ['group_subprocesses_output']:
+                return self.list_completion(text, ['False', 'True'])
+            
+            elif args[1] in ['ignore_six_quark_processes']:
+                return self.list_completion(text, self._multiparticles.keys())
+            
+            elif args[1] == 'stdout_level':
+                return self.list_completion(text, ['DEBUG','INFO','WARNING','ERROR','CRITICAL'])
+        
     def complete_shell(self, text, line, begidx, endidx):
         """ add path for shell """
 
@@ -1301,21 +1336,23 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
     _tutorial_opts = ['start', 'stop']
     _check_opts = ['full', 'permutation', 'gauge', 'lorentz_invariance']
     _import_formats = ['model_v4', 'model', 'proc_v4', 'command']
-    _v4_export_formats = ['madevent', 'standalone','matrix'] 
-    _export_formats = _v4_export_formats + ['standalone_cpp',
-                                            'pythia8', 'pythia8_model']
-
-
+    _v4_export_formats = ['madevent', 'standalone', 'matrix'] 
+    _export_formats = _v4_export_formats + ['standalone_cpp', 'pythia8']
+    _set_options = ['group_subprocesses_output',
+                    'ignore_six_quark_processes',
+                    'stdout_level']
     # Variables to store object information
     _curr_model = None  #base_objects.Model()
     _curr_amps = diagram_generation.AmplitudeList()
     _curr_matrix_elements = helas_objects.HelasMultiProcess()
     _curr_fortran_model = None
     _curr_cpp_model = None
+    _curr_exporter = None
     _done_export = False
 
     # Variables to store state information
     _multiparticles = {}
+    _options = {}
     _generate_info = "" # store the first generated process
     _model_format = None
     _model_v4_path = None
@@ -1324,7 +1361,6 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
     _export_format = 'madevent'
     _mgme_dir = MG4DIR
     _comparisons = None
-    _restrict_file = None
     
     def __init__(self, mgme_dir = '', *completekey, **stdin):
         """ add a tracker of the history """
@@ -1380,46 +1416,55 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
             # Reset Helas matrix elements
             self._curr_matrix_elements = helas_objects.HelasMultiProcess()
 
-            try:
-                if line.find(',') == -1:
-                    myprocdef = self.extract_process(line)
+            # Extract process from process definition
+            if ',' in line:
+                myprocdef, line = self.extract_decay_chain_process(line)
+            else:
+                myprocdef = self.extract_process(line)
+
+            # Check that we have something    
+            if not myprocdef:
+                raise MadGraph5Error("Empty or wrong format process, please try again.")
+                
+            cpu_time1 = time.time()
+
+            # Generate processes
+            collect_mirror_procs = \
+                                 self._options['group_subprocesses_output']
+            ignore_six_quark_processes = \
+                           self._options['ignore_six_quark_processes'] if \
+                           "ignore_six_quark_processes" in self._options \
+                           else []
+
+            myproc = diagram_generation.MultiProcess(myprocdef,
+                                          collect_mirror_procs =\
+                                          collect_mirror_procs,
+                                          ignore_six_quark_processes = \
+                                          ignore_six_quark_processes)
+
+            for amp in myproc.get('amplitudes'):
+                if amp not in self._curr_amps:
+                    self._curr_amps.append(amp)
                 else:
-                    myprocdef, line = self.extract_decay_chain_process(line)
-            except MadGraph5Error, error:
-                logger_stderr.warning("Empty or wrong format process :\n" + \
-                                     str(error))
-                return
-                
-            if myprocdef:
-
-                cpu_time1 = time.time()
-                
-                # Generate processes
-                myproc = diagram_generation.MultiProcess(myprocdef)
-                    
-                for amp in myproc.get('amplitudes'):
-                    if amp not in self._curr_amps:
-                        self._curr_amps.append(amp)
-                    else:
-                        warning = "Warning: Already in processes:\n%s" % \
-                                                    amp.nice_string_processes()
-                        logger.warning(warning)
+                    warning = "Warning: Already in processes:\n%s" % \
+                                                amp.nice_string_processes()
+                    logger.warning(warning)
 
 
-                # Reset _done_export, since we have new process
-                self._done_export = False
+            # Reset _done_export, since we have new process
+            self._done_export = False
 
-                cpu_time2 = time.time()
+            cpu_time2 = time.time()
 
-                nprocs = len(myproc.get('amplitudes'))
-                ndiags = sum([amp.get_number_of_diagrams() for \
-                                  amp in myproc.get('amplitudes')])
-                logger.info("%i processes with %i diagrams generated in %0.3f s" % \
-                      (nprocs, ndiags, (cpu_time2 - cpu_time1)))
-                ndiags = sum([amp.get_number_of_diagrams() for \
-                                  amp in self._curr_amps])
-                logger.info("Total: %i processes with %i diagrams" % \
-                      (len(self._curr_amps), ndiags))                
+            nprocs = len(myproc.get('amplitudes'))
+            ndiags = sum([amp.get_number_of_diagrams() for \
+                              amp in myproc.get('amplitudes')])
+            logger.info("%i processes with %i diagrams generated in %0.3f s" % \
+                  (nprocs, ndiags, (cpu_time2 - cpu_time1)))
+            ndiags = sum([amp.get_number_of_diagrams() for \
+                              amp in self._curr_amps])
+            logger.info("Total: %i processes with %i diagrams" % \
+                  (len(self._curr_amps), ndiags))                
   
     # Define a multiparticle label
     def do_define(self, line, log=True):
@@ -1472,7 +1517,7 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
                 else:
                     particle = self._curr_model['particles'].find_name(arg)
                 if not particle:
-                    raise InvalidCmd, 'no particle %s in current model' % arg
+                    raise self.InvalidCmd, 'no particle %s in current model' % arg
 
                 print "Particle %s has the following properties:" % particle.get_name()
                 print str(particle)
@@ -1496,7 +1541,7 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
         elif args[0] == 'interactions':
             for arg in args[1:]:
                 if int(arg) > len(self._curr_model['interactions']):
-                    raise InvalidCmd, 'no interaction %s in current model' % arg
+                    raise self.InvalidCmd, 'no interaction %s in current model' % arg
                 if int(arg) == 0:
                     print 'Special interactions which identify two particles'
                 else:
@@ -1551,21 +1596,21 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
                 ufomodel = ufomodels.load_model(self._curr_model.get('name'))
                 print eval('ufomodel.couplings.%s.nice_string()'%args[1])
             except:
-                raise InvalidCmd, 'no couplings %s in current model' % args[1]
+                raise self.InvalidCmd, 'no couplings %s in current model' % args[1]
         
         elif args[0] == 'lorentz':
             if self._model_v4_path:
                 print 'No lorentz information available in V4 model'
                 return
             elif len(args) == 1: 
-                raise InvalidCmd,\
+                raise self.InvalidCmd,\
                      'display lorentz require an argument: the name of the lorentz structure.'
                 return
             try:
                 ufomodel = ufomodels.load_model(self._curr_model.get('name'))
                 print eval('ufomodel.lorentz.%s.nice_string()'%args[1])
             except:
-                raise InvalidCmd, 'no lorentz %s in current model' % args[1]
+                raise self.InvalidCmd, 'no lorentz %s in current model' % args[1]
             
         elif args[0] == 'checks':
             comparisons = self._comparisons[0]
@@ -1637,7 +1682,8 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
         self.check_draw(args)
         
         # Check if we plot a decay chain 
-        if ',' in self._generate_info and not self._done_export:
+        if any([isinstance(a, diagram_generation.DecayChainAmplitude) for \
+               a in self._curr_amps]) and not self._done_export:
             warn = 'WARNING: You try to draw decay chain diagrams without first running output.\n'
             warn += '\t  The decay processes will be drawn separately'
             logger.warning(warn)
@@ -1747,38 +1793,21 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
     def do_generate(self, line):
         """Generate an amplitude for a given process"""
 
-        args = split_arg(line)
-
-        # Check args validity
-        self.check_generate(args)
-
+        # Reset amplitudes
+        self._curr_amps = diagram_generation.AmplitudeList()
         # Reset Helas matrix elements
-        self._curr_matrix_elements = helas_objects.HelasMultiProcess()
+        self._curr_matrix_elements = None
         self._generate_info = line
         # Reset _done_export, since we have new process
         self._done_export = False
+        # Also reset _export_format and _export_dir
+        self._export_format = None
 
-        # Extract process from process definition
-        if ',' in line:
-            myprocdef, line = self.extract_decay_chain_process(line)
-        else:
-            myprocdef = self.extract_process(line)
-            
-        # Check that we have something    
-        if not myprocdef:
-            raise MadGraph5Error("Empty or wrong format process, please try again.")
-
-        cpu_time1 = time.time()
-        # Generate processes
-        myproc = diagram_generation.MultiProcess(myprocdef)
-        self._curr_amps = myproc.get('amplitudes')
-        cpu_time2 = time.time()
-
-        nprocs = len(self._curr_amps)
-        ndiags = sum([amp.get_number_of_diagrams() for \
-                              amp in self._curr_amps])
-        logger.info("%i processes with %i diagrams generated in %0.3f s" % \
-                  (nprocs, ndiags, (cpu_time2 - cpu_time1)))
+        # Call add process
+        args = split_arg(line)
+        args.insert(0, 'process')
+        
+        self.do_add(" ".join(args))
     
     def extract_process(self, line, proc_number = 0, overall_orders = {}):
         """Extract a process definition from a string. Returns
@@ -1788,7 +1817,7 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
         if not line.count('>') in [1,2]:
             self.do_help('generate')
             print
-            raise InvalidCmd('Wrong use of \">\" special character.')
+            raise self.InvalidCmd('Wrong use of \">\" special character.')
         
 
         # Perform sanity modifications on the lines:
@@ -1912,6 +1941,9 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
             #                           leg.get('state') == False,
             #                           myleglist)) == 1
 
+            if overall_orders and self._options['group_subprocesses_output']:
+                raise MadGraph5Error, \
+                      "For grouped subprocess output, orders should be specified for each process (no overall orders after @N)"                
 
             return \
                 base_objects.ProcessDefinition({'legs': myleglist,
@@ -2096,15 +2128,29 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
         
         if args[0].startswith('model'):
             self._model_v4_path = None
-            self._restrict_file = None
+            # Clear history, amplitudes and matrix elements when a model is imported
+            self.history = self.history[-1:]
+            self._curr_amps = diagram_generation.AmplitudeList()
+            self._curr_matrix_elements = helas_objects.HelasMultiProcess()
+            # Import model
             if args[0].endswith('_v4'):
                 self._curr_model, self._model_v4_path = \
                                  import_v4.import_model(args[1], self._mgme_dir)
                 self._curr_fortran_model = \
                       helas_call_writers.FortranHelasCallWriter(\
-                                                             self._curr_model)                
+                                                               self._curr_model)
+                # Automatically turn off subprocess grouping
+                self.do_set('group_subprocesses_output False')
             else:
-                self.import_ufo_model(args[1])
+                self._curr_model = import_ufo.import_model(args[1])
+                self._curr_fortran_model = \
+                      helas_call_writers.FortranUFOHelasCallWriter(\
+                                                               self._curr_model)
+                self._curr_cpp_model = \
+                      helas_call_writers.CPPUFOHelasCallWriter(\
+                                                               self._curr_model)
+                # Automatically turn on subprocess grouping
+                self.do_set('group_subprocesses_output True')
 
             if '-modelname' not in args:
                 self._curr_model.pass_particles_name_in_mg_default()
@@ -2158,7 +2204,7 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
                 
     def process_model(self):
         """Set variables _particle_names and _couplings for tab
-        completion, defined multiparticles"""
+        completion, define multiparticles"""
 
          # Set variables for autocomplete
         self._particle_names = [p.get('name') for p in self._curr_model.get('particles')] + \
@@ -2266,7 +2312,7 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
     def check_for_export_dir(self, filepath):
         """Check if the files is in a valid export directory and assign it to
         export path if if is"""
-        
+
         # keep previous if a previous one is defined
         if self._export_dir:
             return
@@ -2274,8 +2320,8 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
         path_split = filepath.split(os.path.sep)
         if len(path_split) > 2 and path_split[-2] == 'Cards':
             self._export_dir = os.path.sep.join(path_split[:-2])
-                
-    
+
+
     def do_launch(self, line):
         """Ask for editing the parameter and then 
         Execute the code (madevent/standalone/...)
@@ -2291,7 +2337,9 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
         if args[0].startswith('standalone'):
             ext_program = launch_ext.SALauncher(args[1], self.timeout, **options)
         elif args[0] == 'madevent':
-            ext_program = launch_ext.MELauncher(args[1], self.timeout, **options)            
+            ext_program = launch_ext.MELauncher(args[1], self.timeout, **options)
+        elif args[0] == 'pythia8':
+            ext_program = launch_ext.Pythia8Launcher(args[1], self.timeout, **options)
         else:
             raise self.InvalidCmd , '%s cannot be run from MG5 interface' % args[0]
         
@@ -2367,6 +2415,13 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
                 self._done_export = None
             else:
                 raise self.RWError('Could not load processes from file %s' % args[1])
+        if self._model_v4_path:
+            # Automatically turn off subprocess grouping
+            self.do_set('group_subprocesses_output False')
+        else:
+            # Automatically turn on subprocess grouping
+            self.do_set('group_subprocesses_output True')
+        
     
     def do_save(self, line):
         """Save information to file"""
@@ -2381,17 +2436,49 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
                 if save_load_object.save_to_file(args[1], self._curr_model):
                     logger.info('Saved model to file %s' % args[1])
             else:
-                raise InvalidCmd('No model to save!')
+                raise self.InvalidCmd('No model to save!')
         elif args[0] == 'processes':
             if self._curr_amps:
                 if save_load_object.save_to_file(args[1], self._curr_amps):
                     logger.info('Saved processes to file %s' % args[1])
             else:
-                raise InvalidCmd('No processes to save!')
+                raise self.InvalidCmd('No processes to save!')
+    
+    # Set an option
+    def do_set(self, line):
+        """Set an option, which will be default for coming generations/outputs
+        """
+
+        args = split_arg(line)
+        
+        # Check the validity of the arguments
+        self.check_set(args)
+
+        if args[0] == 'ignore_six_quark_processes':
+            self._options[args[0]] = list(set([abs(p) for p in \
+                                      self._multiparticles[args[1]]\
+                                      if self._curr_model.get_particle(p).\
+                                      is_fermion() and \
+                                      self._curr_model.get_particle(abs(p)).\
+                                      get('color') == 3]))
+            logger.info('Ignore processes with >= 6 quarks (%s)' % \
+                        ",".join([\
+                            self._curr_model.get_particle(q).get('name') \
+                            for q in self._options[args[0]]]))
             
+        elif args[0] == 'group_subprocesses_output':
+            self._options[args[0]] = eval(args[1])
+            logger.info('Set group_subprocesses_output to %s' % \
+                        str(self._options[args[0]]))
+            
+        elif args[0] == "stdout_level":
+            logging.root.setLevel(eval('logging.' + args[1]))
+            logging.getLogger('madgraph').setLevel(eval('logging.' + args[1]))
+            logger.info('set output information to level: %s' % args[1])
+        
     def do_output(self, line):
         """Initialize a new Template or reinitialize one"""
-        
+
         args = split_arg(line)
         # Check Argument validity
         self.check_output(args)
@@ -2399,7 +2486,12 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
         noclean = '-noclean' in args
         force = '-f' in args 
         nojpeg = '-nojpeg' in args
-    
+        main_file_name = ""
+        try:
+            main_file_name = args[args.index('-name') + 1]
+        except:
+            pass
+            
         if self._done_export == (self._export_dir, self._export_format):
             logger.info('Matrix elements already exported to directory %s' % \
                         self._export_dir)
@@ -2414,98 +2506,136 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
             if answer != 'y':
                 raise MadGraph5Error('Stopped by user request')
 
+        group_subprocesses = self._export_format == 'madevent' and \
+                             self._options['group_subprocesses_output']
         # Make a Template Copy
         if self._export_format == 'madevent':
-            export_v4.copy_v4template(self._mgme_dir, self._export_dir,
+            if group_subprocesses:
+                self._curr_exporter = export_v4.ProcessExporterFortranMEGroup(\
+                                      self._mgme_dir, self._export_dir,
                                       not noclean)
-            export_v4.cp_model_restriction(self._restrict_file, self._export_dir)
-        elif self._export_format == 'standalone':
-            export_v4.copy_v4standalone(self._mgme_dir, self._export_dir,
-                                        not noclean)
-            export_v4.cp_model_restriction(self._restrict_file, self._export_dir)
+            else:
+                self._curr_exporter = export_v4.ProcessExporterFortranME(\
+                                      self._mgme_dir, self._export_dir,
+                                      not noclean)
+        elif self._export_format in ['standalone', 'matrix']:
+            self._curr_exporter = export_v4.ProcessExporterFortranSA(\
+                                  self._mgme_dir, self._export_dir,not noclean)
         elif self._export_format == 'standalone_cpp':
             export_cpp.setup_cpp_standalone_dir(self._export_dir, self._curr_model)
         elif not os.path.isdir(self._export_dir):
             os.makedirs(self._export_dir)
 
+        if self._export_format in ['madevent', 'standalone']:
+            self._curr_exporter.copy_v4template()            
+
         # Reset _done_export, since we have new directory
         self._done_export = False
 
         # Perform export and finalize right away
-        options = ''
-        if nojpeg:
-            options = '-nojpeg'
+        self.export(nojpeg, main_file_name)
 
-        self.export(options)        
+        # Reset _export_dir, so we don't overwrite by mistake later
+        self._export_dir = None
 
     # Export a matrix element
-    def export(self, line):
+    def export(self, nojpeg = False, main_file_name = ""):
         """Export a generated amplitude to file"""
 
         def generate_matrix_elements(self):
             """Helper function to generate the matrix elements before
             exporting"""
 
+            # Sort amplitudes according to number of diagrams,
+            # to get most efficient multichannel output
+            self._curr_amps.sort(lambda a1, a2: a2.get_number_of_diagrams() - \
+                                 a1.get_number_of_diagrams())
+
             cpu_time1 = time.time()
-            if not self._curr_matrix_elements.get('matrix_elements'):
-                self._curr_matrix_elements = \
-                             helas_objects.HelasMultiProcess(\
-                                           self._curr_amps)
+            ndiags = 0
+            if not self._curr_matrix_elements.get_matrix_elements():
+                if self._options['group_subprocesses_output']:
+                    cpu_time1 = time.time()
+                    dc_amps = [amp for amp in self._curr_amps if isinstance(amp, \
+                                        diagram_generation.DecayChainAmplitude)]
+                    non_dc_amps = diagram_generation.AmplitudeList(\
+                             [amp for amp in self._curr_amps if not \
+                              isinstance(amp, \
+                                         diagram_generation.DecayChainAmplitude)])
+                    subproc_groups = group_subprocs.SubProcessGroupList()
+                    if non_dc_amps:
+                        subproc_groups.extend(\
+                                   group_subprocs.SubProcessGroup.group_amplitudes(\
+                                                                       non_dc_amps))
+                    for dc_amp in dc_amps:
+                        dc_subproc_group = \
+                                 group_subprocs.DecayChainSubProcessGroup.\
+                                                           group_amplitudes(dc_amp)
+                        subproc_groups.extend(\
+                                  dc_subproc_group.\
+                                        generate_helas_decay_chain_subproc_groups())
+
+                    ndiags = sum([len(m.get('diagrams')) for m in \
+                              subproc_groups.get_matrix_elements()])
+                    self._curr_matrix_elements = subproc_groups
+                    # assign a unique id number to all groups
+                    uid = 0 
+                    for group in subproc_groups:
+                        uid += 1 # update the identification number
+                        for me in group.get('matrix_elements'):
+                            me.get('processes')[0].set('uid', uid)
+                else:
+                    self._curr_matrix_elements = \
+                                 helas_objects.HelasMultiProcess(\
+                                               self._curr_amps)
+                    ndiags = sum([len(me.get('diagrams')) for \
+                                  me in self._curr_matrix_elements.\
+                                  get_matrix_elements()])
+                    # assign a unique id number to all process
+                    uid = 0 
+                    for me in self._curr_matrix_elements.get_matrix_elements():
+                        uid += 1 # update the identification number
+                        me.get('processes')[0].set('uid', uid)
+
             cpu_time2 = time.time()
-
-            ndiags = sum([len(me.get('diagrams')) for \
-                          me in self._curr_matrix_elements.\
-                          get('matrix_elements')])
-
             return ndiags, cpu_time2 - cpu_time1
 
         # Start of the actual routine
 
-        args = split_arg(line)
-        # Check the validity of the arguments and return the output path
-        if __debug__:
-            self.check_output(args)
-
-        if self._export_format == 'pythia8_model':
-            cpu_time1 = time.time()
-            export_cpp.convert_model_to_pythia8(\
-                            self._curr_model, self._export_dir)
-            cpu_time2 = time.time()
-            logger.info(("Exported UFO model to Pythia 8 format in %0.3f s") \
-                        % (cpu_time2 - cpu_time1))
-
-            return
-
-        if self._done_export == (self._export_dir, self._export_format):
-            # We have already done export in this path
-            logger.info("Matrix elements already exported to directory %s" % \
-                                    self._export_dir)
-            return        
-
         ndiags, cpu_time = generate_matrix_elements(self)
+
         calls = 0
 
-        nojpeg = '-nojpeg' in args
-
         path = self._export_dir
-        if self._export_format in ['madevent', 'standalone', 'standalone_cpp']:
+        if self._export_format in ['standalone_cpp', 'madevent', 'standalone']:
             path = os.path.join(path, 'SubProcesses')
-        
-        if self._export_format == 'madevent':
-            uid = 0 # assign a unique id number to all process
-            for ime, me in \
-                enumerate(self._curr_matrix_elements.get('matrix_elements')):
-                for proc in me.get('processes'):
-                    uid += 1 # update the identification number
-                    proc.set('uid', uid) # assign it to the process
-                calls = calls + \
-                        export_v4.generate_subprocess_directory_v4_madevent(\
-                            me, self._curr_fortran_model, ime, path)
             
+        cpu_time1 = time.time()
+
+        # First treat madevent and pythia8 exports, where we need to
+        # distinguish between grouped and ungrouped subprocesses
+
+        # MadEvent
+        if self._export_format == 'madevent':
+            if isinstance(self._curr_matrix_elements, group_subprocs.SubProcessGroupList):
+                for (group_number, me_group) in enumerate(self._curr_matrix_elements):
+                    calls = calls + \
+                         self._curr_exporter.generate_subprocess_directory_v4(\
+                                me_group, self._curr_fortran_model,
+                                group_number)
+            else:
+                for me_number, me in \
+                   enumerate(self._curr_matrix_elements.get_matrix_elements()):
+                    calls = calls + \
+                            self._curr_exporter.generate_subprocess_directory_v4(\
+                                me, self._curr_fortran_model, me_number)
+
+
+            # Write the procdef_mg5.dat file with process info
             card_path = os.path.join(path, os.path.pardir, 'SubProcesses', \
                                      'procdef_mg5.dat')
             if self._generate_info:
-                export_v4.write_procdef_mg5(card_path,
+                self._curr_exporter.write_procdef_mg5(card_path,
                                 self._curr_model['name'],
                                 self._generate_info)
                 try:
@@ -2513,81 +2643,112 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
                 except:
                     pass
                 
+        # Pythia 8
+        if self._export_format == 'pythia8':
+            # Output the model parameter and ALOHA files
+            model_name, model_path = export_cpp.convert_model_to_pythia8(\
+                            self._curr_model, self._export_dir)
+            # Output the process files
+            process_names = []
+            if isinstance(self._curr_matrix_elements, group_subprocs.SubProcessGroupList):
+                for (group_number, me_group) in enumerate(self._curr_matrix_elements):
+                    exporter = export_cpp.generate_process_files_pythia8(\
+                            me_group.get('matrix_elements'), self._curr_cpp_model,
+                            process_string = me_group.get('name'),
+                            process_number = group_number, path = path)
+                    process_names.append(exporter.process_name)
+            else:
+                exporter = export_cpp.generate_process_files_pythia8(\
+                            self._curr_matrix_elements, self._curr_cpp_model,
+                            process_string = self._generate_info, path = path)
+                process_names.append(exporter.process_file_name)
+
+            # Generate the main program file
+            filename, make_filename = \
+                      export_cpp.generate_example_file_pythia8(path,
+                                                               model_path,
+                                                               process_names,
+                                                               exporter,
+                                                               main_file_name)
+
+        # Pick out the matrix elements in a list
+        matrix_elements = \
+                        self._curr_matrix_elements.get_matrix_elements()
+
+        # Fortran MadGraph Standalone
         if self._export_format == 'standalone':
-            for me in self._curr_matrix_elements.get('matrix_elements'):
+            for me in matrix_elements:
                 calls = calls + \
-                        export_v4.generate_subprocess_directory_v4_standalone(\
-                            me, self._curr_fortran_model, path)
-            
+                        self._curr_exporter.generate_subprocess_directory_v4(\
+                            me, self._curr_fortran_model)
+
+        # Just the matrix.f files
         if self._export_format == 'matrix':
-            for me in self._curr_matrix_elements.get('matrix_elements'):
+            for me in matrix_elements:
                 filename = os.path.join(path, 'matrix_' + \
                            me.get('processes')[0].shell_string() + ".f")
                 if os.path.isfile(filename):
                     logger.warning("Overwriting existing file %s" % filename)
                 else:
                     logger.info("Creating new file %s" % filename)
-                calls = calls + export_v4.write_matrix_element_v4_standalone(\
+                calls = calls + self._curr_exporter.write_matrix_element_v4(\
                     writers.FortranWriter(filename),\
                     me, self._curr_fortran_model)
-                
-        if self._export_format == 'pythia8':
-            export_cpp.generate_process_files_pythia8(\
-                            self._curr_matrix_elements, self._curr_cpp_model,
-                            process_string = self._generate_info, path = path)
-                
+
+        # C++ standalone
         if self._export_format == 'standalone_cpp':
-            for me in self._curr_matrix_elements.get('matrix_elements'):
+            for me in matrix_elements:
                 export_cpp.generate_subprocess_directory_standalone_cpp(\
                               me, self._curr_cpp_model,
                               path = path)
                 
+        cpu_time2 = time.time() - cpu_time1
+
         logger.info(("Generated helas calls for %d subprocesses " + \
               "(%d diagrams) in %0.3f s") % \
-              (len(self._curr_matrix_elements.get('matrix_elements')),
+              (len(matrix_elements),
                ndiags, cpu_time))
 
         if calls:
-            logger.info("Wrote %d helas calls" % calls)
+            if "cpu_time2" in locals():
+                logger.info("Wrote files for %d helas calls in %0.3f s" % \
+                            (calls, cpu_time2))
+            else:
+                logger.info("Wrote files for %d helas calls" % \
+                            (calls))
+                
+        if self._export_format == 'pythia8':
+            logger.info("- All necessary files for Pythia 8 generated.")
+            logger.info("  Please go to %s/examples and run" % path)
+            logger.info("      make -f %s" % make_filename)
+            logger.info("  (with process_name replaced by process name).")
+            logger.info("  You can then run ./%s to produce events for the process" % \
+                        filename)
+            logger.info("- Or run launch and select %s.cc." % filename)
 
         # Replace the amplitudes with the actual amplitudes from the
         # matrix elements, which allows proper diagram drawing also of
         # decay chain processes
         self._curr_amps = diagram_generation.AmplitudeList(\
                [me.get('base_amplitude') for me in \
-                self._curr_matrix_elements.get('matrix_elements')])
+                matrix_elements])
 
         # Remember that we have done export
         self._done_export = (self._export_dir, self._export_format)
 
-        if self._export_format in ['madevent', 'standalone', 'standalone_cpp']:
-            # Automatically run finalize
-            options = []
-            if nojpeg:
-                options = ['-nojpeg']
-                
-            self.finalize(options)
+        # Automatically run finalize
+        self.finalize(nojpeg)
             
-        #reinitialize to empty the default output dir
-        self._export_dir = None
-    
-    def finalize(self, options):
+    def finalize(self, nojpeg):
         """Make the html output, write proc_card_mg5.dat and create
         madevent.tar.gz for a MadEvent directory"""
         
-        #look if the user ask to bypass the jpeg creation
-        if '-nojpeg' in options:
-            makejpg = False
-        else:
-            makejpg = True
-
         # For v4 models, copy the model/HELAS information.
         if self._model_v4_path:
             logger.info('Copy %s model files to directory %s' % \
                         (os.path.basename(self._model_v4_path), self._export_dir))
-            export_v4.export_model_files(self._model_v4_path, self._export_dir)
-            export_v4.export_helas(os.path.join(self._mgme_dir,'HELAS'),
-                                   self._export_dir)
+            self._curr_exporter.export_model_files(self._model_v4_path)
+            self._curr_exporter.export_helas(os.path.join(self._mgme_dir,'HELAS'))
         elif self._export_format in ['madevent', 'standalone']:
             logger.info('Export UFO model to MG4 format')
             # wanted_lorentz are the lorentz structures which are
@@ -2595,8 +2756,7 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
             # these processes
             wanted_lorentz = self._curr_matrix_elements.get_used_lorentz()
             wanted_couplings = self._curr_matrix_elements.get_used_couplings()
-            export_v4.convert_model_to_mg4(self._curr_model,
-                                           os.path.join(self._export_dir),
+            self._curr_exporter.convert_model_to_mg4(self._curr_model,
                                            wanted_lorentz,
                                            wanted_couplings)
         if self._export_format == 'standalone_cpp':
@@ -2612,37 +2772,21 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
                                             wanted_couplings)
             export_cpp.make_model_cpp(self._export_dir)
 
-        if self._export_format == 'madevent':
-            os.system('touch %s/done' % os.path.join(self._export_dir,
-                                                     'SubProcesses'))        
-            export_v4.finalize_madevent_v4_directory(self._export_dir, makejpg,
-                                                     [self.history_header] + \
-                                                     self.history)
-        elif self._export_format == 'standalone':
-            export_v4.make_v4standalone(self._export_dir)
-            export_v4.finalize_standalone_v4_directory(self._export_dir,
-                                                     [self.history_header] + \
-                                                     self.history)
+        if self._export_format in ['madevent', 'standalone']:
+            self._curr_exporter.finalize_v4_directory( \
+                                           [self.history_header] + \
+                                           self.history,
+                                           not nojpeg)
 
-        logger.info('Output to directory ' + self._export_dir + ' done.')
+        if self._export_format in ['madevent', 'standalone', 'standalone_cpp']:
+            logger.info('Output to directory ' + self._export_dir + ' done.')
         if self._export_format == 'madevent':
             logger.info('Please see ' + self._export_dir + '/README')
             logger.info('for information about how to generate events from this process.')
             logger.info('You can also use the launch command.')
 
-    def do_restrict(self, line):
-        """ from a param_card.dat remove all zero interactions 
-            and all zero external parameter."""
-        
-        args = split_arg(line)
-        # Check args validity
-        self.check_restrict(args)
-        
-        
-        self._curr_model = import_ufo.RestrictModel(self._curr_model)
-        self._curr_model.restrict_model(args[0])
-        self._restrict_file = args[0]
-        
+        #reinitialize to empty the default output dir
+        self._export_dir = None
 
     def do_help(self, line):
         """ propose some usefull possible action """
@@ -2700,6 +2844,7 @@ class MadGraphCmdShell(MadGraphCmd, CompleteForCmd, CheckValidForCmd):
         # By default, load the UFO Standard Model
         logger.info("Loading default model: sm")
         self.do_import('model sm')
+        self.history.append('import model sm')
 
 
     # Access to shell
@@ -2738,9 +2883,11 @@ _draw_parser.add_option("", "--add_gap", default=0, type='float', \
 
 # LAUNCH PROGRAM
 _launch_usage = "launch [DIRPATH] [options]\n" + \
-         "-- execute the madevent/standalone output present in DIRPATH\n" + \
+         "-- execute the madevent/standalone/standalone_cpp/pythia8 output present in DIRPATH\n" + \
          "   By default DIRPATH is the latest created directory \n" + \
-         "   Example: launch PROC_SM_1 --name=run2 \n"
+         "   (for pythia8, it should be the Pythia 8 main directory) \n" + \
+         "   Example: launch PROC_sm_1 --name=run2 \n" + \
+         "   Example: launch ../pythia8 \n"
 _launch_parser = optparse.OptionParser(usage=_launch_usage)
 _launch_parser.add_option("-f", "--force", default=False, action='store_true',
                                 help="Use the card present in the directory in order to launch the different program")

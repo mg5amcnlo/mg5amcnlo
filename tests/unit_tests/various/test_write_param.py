@@ -53,8 +53,6 @@ class TestParamWritting(unittest.TestCase):
     def test_define_not_dep_param(self):
         """Check that we found all mass-width which are not external."""
         
-        self.writter.define_not_dep_param()
-        
         for part, obj in self.writter.dep_mass:    
             self.assertTrue(isinstance(part, base_objects.Particle))
             self.assertTrue(isinstance(obj, base_objects.ModelVariable))
@@ -80,6 +78,11 @@ class TestParamWritting(unittest.TestCase):
             if part['pdg_code'] in checked_width:
                 checked_width.remove(part['pdg_code'])
         self.assertEqual(checked_width, [])
+        
+        # Check the duplicate mass-width
+        self.assertEqual(self.writter.duplicate_mass, [])
+        self.assertEqual(self.writter.duplicate_width, [])
+        
         
         
     def test_order_param(self):
@@ -221,8 +224,16 @@ class TestParamWrittingWithRestrict(unittest.TestCase):
         for part, obj in self.writter.dep_mass:
             if part['pdg_code'] in checked_mass:
                 checked_mass.remove(part['pdg_code'])
-        self.assertEqual(len(checked_mass), 1)
+        self.assertEqual(len(checked_mass), 2)
         self.assertTrue(checked_mass[0] in [23,25])
+        self.assertTrue(checked_mass[1] in [23,25])
+        
+        # Check that 23/25 are in a duplicate state
+        self.assertEqual(len(self.writter.duplicate_mass),1)
+        for part, obj in self.writter.duplicate_mass:
+            if part['pdg_code'] in checked_mass:
+                checked_mass.remove(part['pdg_code'])
+        self.assertEqual(len(checked_mass), 1)       
         
         if checked_mass[0] == 23:
             self.assertEqual(self.writter.param_dict['MH'].expr, 'MZ')
@@ -230,5 +241,80 @@ class TestParamWrittingWithRestrict(unittest.TestCase):
             self.assertEqual(self.writter.param_dict['MZ'].expr, 'MH')
         
         
+    def test_full_write(self):
+        """ test that we can write a file """ 
         
+        self.writter.write_card()
+        
+        goal = ['', 
+'###################################', 
+'## INFORMATION FOR MASS', 
+'###################################', 
+'Block mass ', 
+'    6 1.743000e+02 # MT ', 
+'   15 1.777000e+00 # MTA ', 
+'   23 9.118800e+01 # set of param :MZ, MH ', 
+'##  Not dependent paramater.', 
+'## Those values should be edited following the ', 
+'## analytical expression. MG5 ignore those values ', 
+'## but they are important for interfacing the output of MG5', 
+'## to external program such as Pythia.', 
+'  12 0.000000 # ve : 0.0 ', 
+'  14 0.000000 # vm : 0.0 ', 
+'  16 0.000000 # vt : 0.0 ', 
+'  11 0.000000 # e- : 0.0 ', 
+'  13 0.000000 # m- : 0.0 ', 
+'  2 0.000000 # u : 0.0 ', 
+'  4 0.000000 # c : 0.0 ', 
+'  1 0.000000 # d : 0.0 ', 
+'  3 0.000000 # s : 0.0 ', 
+'  5 0.000000 # b : 0.0 ', 
+'  22 0.000000 # a : 0.0 ', 
+'  24 80.419002 # w+ : cmath.sqrt(MZ__exp__2/2. + cmath.sqrt(MZ__exp__4/4. - (aEW*cmath.pi*MZ__exp__2)/(Gf*sqrt__2))) ', 
+'  21 0.000000 # g : 0.0 ', 
+'  25 91.188000 # h : MZ ', 
+'', 
+'###################################', 
+'## INFORMATION FOR SMINPUTS', 
+'###################################', 
+'Block sminputs ', 
+'    1 1.325070e+02 # aEWM1 ', 
+'    2 1.166390e-05 # Gf ', 
+'    3 1.180000e-01 # aS ', 
+'', 
+'###################################', 
+'## INFORMATION FOR YUKAWA', 
+'###################################', 
+'Block yukawa ', 
+'    6 1.645000e+02 # ymt ', 
+'   15 1.777000e+00 # ymtau ', 
+'', 
+'###################################', 
+'## INFORMATION FOR DECAY', 
+'###################################', 
+'DECAY  23 2.441404e+00 # set of param :WZ, WH ', 
+'DECAY  24 3.000000e+00 # WW ', 
+'##  Not dependent paramater.', 
+'## Those values should be edited following the ', 
+'## analytical expression. MG5 ignore those values ', 
+'## but they are important for interfacing the output of MG5', 
+'## to external program such as Pythia.', 
+'DECAY  12 0.000000 # ve : 0.0 ', 
+'DECAY  14 0.000000 # vm : 0.0 ', 
+'DECAY  16 0.000000 # vt : 0.0 ', 
+'DECAY  11 0.000000 # e- : 0.0 ', 
+'DECAY  13 0.000000 # m- : 0.0 ', 
+'DECAY  15 0.000000 # tt- : 0.0 ', 
+'DECAY  2 0.000000 # u : 0.0 ', 
+'DECAY  4 0.000000 # c : 0.0 ', 
+'DECAY  6 0.000000 # t : 0.0 ', 
+'DECAY  1 0.000000 # d : 0.0 ', 
+'DECAY  3 0.000000 # s : 0.0 ', 
+'DECAY  5 0.000000 # b : 0.0 ', 
+'DECAY  22 0.000000 # a : 0.0 ', 
+'DECAY  21 0.000000 # g : 0.0 ', 
+'DECAY  25 2.441404 # h : WZ ', 
+'']
+
+        self.assertEqual(self.content.getvalue().split('\n'), goal)
     

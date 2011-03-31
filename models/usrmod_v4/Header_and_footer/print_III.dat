@@ -1,0 +1,3 @@
+      write(6,*)
+      write(6,*) 'User Model Parameters:'
+      write(6,*) '----------------------'

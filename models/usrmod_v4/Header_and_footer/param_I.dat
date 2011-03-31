@@ -1,0 +1,55 @@
+#*********************************************************************
+#                        MadGraph/MadEvent                           *
+#                   http://madgraph.hep.uiuc.edu                     *
+#                                                                    *
+#                         param_card.dat                             *
+#                                                                    *
+#   Les Houches friendly file for the SM parameters of MadGraph      *
+#        Spectrum and decay widths produced by SMCalc                *
+#                                                                    *
+#  Please note the following IMPORTANT issues:                       *
+#                                                                    *
+# 0. REFRAIN from editing this file by hand! Some of the parame-     *
+#    ters are not independent                                        *
+#    (such as G_Fermi, alpha_em, sin(theta_W),MZ,MW) and serious     *
+#    problems might be encountered (such as violation of unitarity   *
+#    or gauge invariance).  Always use a calculator.                 *
+#                                                                    *
+# 1. alpha_S(MZ) has been used in the calculation of the parameters  *
+#    but, for consistency, it will be reset by madgraph to the       *
+#    value expected IF the pdfs for collisions with hadrons are      *
+#    used. This value is KEPT by madgraph when no pdf are used       *
+#    lpp(i)=0 .                                                      *
+#                                                                    *
+#  2. Values of the charm and bottom kinematic (pole) masses are     *
+#     those used in the matrix elements and phase space UNLESS they  *
+#     are set to ZERO from the start in the model (particles.dat)    *
+#     This happens, for example,  when using 5-flavor QCD where      *
+#     charm and bottom are treated as partons in the initial state   *
+#     and a zero mass might be hardwired in the model definition.    *
+#                                                                    *
+##********************************************************************
+Block MODSEL # Select Model
+     0   1   #  0 1 = SM
+Block SMINPUTS      # Standard Model inputs
+     1         1.27900000E+02   # alpha_em(MZ)(-1) SM MSbar
+     2         1.16600000E-05   # G_Fermi
+     3         1.18000000E-01   # alpha_s(MZ) SM MSbar
+     4         9.15445065E+01   # Z mass (as input parameter)
+Block MGYUKAWA     # Yukawa masses m/v=y/sqrt(2)
+#    PDG          YMASS
+     5         4.20000000E+00   # mbottom for the Yukawa  y_b
+     4         1.25000000E+00   # mcharm  for the Yukawa  y_c
+     6         1.74300000E+02   # mtop    for the Yukawa  y_t
+    15         1.77700000E+00   # mtau    for the Yukawa  y_ta
+Block MGCKM     # CKM elements for MadGraph
+     1   1     9.75000000E-01   # Vud for Cabibbo matrix
+Block MASS      #  Mass spectrum (kinematic masses)
+#       PDG       Mass
+         4     1.40000000E+00   # charm    pole mass
+         5     4.20000000E+00   # bottom   pole mass
+         6     1.74300000E+02   # top      pole mass
+        15     1.77700000E+00   # tau      mass
+        23     9.15445065E+01   # Z        mass
+        24     8.02673592E+01   # W        mass
+        25     1.20000000E+02   # H        mass

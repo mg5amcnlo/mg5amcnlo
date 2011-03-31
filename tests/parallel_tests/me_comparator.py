@@ -323,19 +323,16 @@ class MG5Runner(MG4Runner):
     def setup(self, mg5_path, mg4_path, temp_dir=None):
         """Wrapper for the mg4 setup, also initializing the mg5 path variable"""
 
-        super(MG5Runner, self).setup(mg4_path, temp_dir)
+        self.mg4_path = os.path.abspath(mg4_path)
 
-        if not os.path.isdir(mg5_path):
-            raise IOError, "Path %s is not valid" % str(mg5_path)
+        if not temp_dir:
+            i=0
+            while os.path.exists(os.path.join(mg4_path, 
+                                              "test_%s_%s" % (self.type, i))):
+                i += 1
+            temp_dir = "test_%s_%s" % (self.type, i)         
 
-        self.mg5_path = os.path.abspath(mg5_path)
-
-    def check_path(self, mg4_path):
-        """Check the path for necessary directories"""
-
-        if not os.path.isdir(os.path.join(mg4_path, "Template")) or \
-               not os.path.isdir(os.path.join(mg4_path, "HELAS")):
-            raise IOError, "Path %s is not a valid MG4 path" % str(mg4_path)
+        self.temp_dir_name = temp_dir
 
     def run(self, proc_list, model, orders={}, energy=1000):
         """Execute MG5 on the list of processes mentioned in proc_list, using
@@ -350,10 +347,10 @@ class MG5Runner(MG4Runner):
 
         dir_name = os.path.join(self.mg4_path, self.temp_dir_name)
 
-        self.fix_energy_in_check(dir_name, energy)
-
         # Create a proc_card.dat in the v5 format
-        proc_card_file = open(os.path.join(dir_name, 'Cards', 'proc_card_v5.dat'), 'w')
+        proc_card_location = os.path.join(self.mg4_path, 'proc_card_%s.dat' % \
+                                          self.temp_dir_name)
+        proc_card_file = open(proc_card_location, 'w')
         proc_card_file.write(self.format_mg5_proc_card(proc_list, model, orders))
         proc_card_file.close()
 
@@ -362,13 +359,18 @@ class MG5Runner(MG4Runner):
 
         # Run mg5
         logging.info("Running mg5")
-        proc_card = open(os.path.join(dir_name, 'Cards', 'proc_card_v5.dat'), 'r').read()
+        proc_card = open(proc_card_location, 'r').read()
         cmd = cmd_interface.MadGraphCmdShell()
         for line in proc_card.split('\n'):
             try:
                 cmd.run_cmd(line)
             except MadGraph5Error:
                 raise Exception
+
+        # Remove the temporary proc_card
+        os.remove(proc_card_location)
+        self.fix_energy_in_check(dir_name, energy)
+
         # Get the ME value
         for i, proc in enumerate(proc_list):
             self.res_list.append(self.get_me_value(proc, i))
@@ -395,12 +397,6 @@ class MG5_UFO_Runner(MG5Runner):
     name = 'UFO-ALOHA-MG5'
     type = 'ufo'
     
-    def check_path(self, mg4_path):
-        """Check the path for necessary directories"""
-
-        if not os.path.isdir(os.path.join(mg4_path, "Template")):
-            raise IOError, "Path %s is not a valid MG4 path" % str(mg4_path)
-
     def format_mg5_proc_card(self, proc_list, model, orders):
         """Create a proc_card.dat string following v5 conventions."""
 
@@ -416,7 +412,7 @@ class MG5_UFO_Runner(MG5Runner):
 
         return v5_string
 
-class MG5_CPP_Runner(MG4Runner):
+class MG5_CPP_Runner(MG5Runner):
     """Runner object for the MG5 C++ Standalone output."""
 
     mg5_path = ""
@@ -424,96 +420,6 @@ class MG5_CPP_Runner(MG4Runner):
     type='cpp'
     name = 'MG5-C++'
     compilator ='g++'
-
-    def setup(self, mg5_path, mg4_path, temp_dir=None):
-        """Setup routine: create a temporary C++ Standalone
-        directory. the temp_dir variable can be given to specify the
-        name of the process directory, otherwise a temporary one is
-        created."""
-
-        self.proc_list = []
-        self.res_list = []
-
-        self.setup_flag = False
-
-        if not os.path.isdir(mg4_path):
-            raise IOError, "Path %s is not valid" % str(mg4_path)
-
-        self.mg4_path = os.path.abspath(mg4_path)
-
-        if not os.path.isdir(mg5_path):
-            raise IOError, "Path %s is not valid" % str(mg5_path)
-
-        self.mg5_path = os.path.abspath(mg5_path)
-
-        if not temp_dir:
-            i=0
-            while os.path.exists(os.path.join(mg4_path, 
-                                              "test_%s_%s" % (self.type, i))):
-                i += 1
-            temp_dir = "test_%s_%s" % (self.type, i)         
-
-        if os.path.exists(os.path.join(mg4_path, temp_dir)):
-            raise IOError, "Path %s for test already exist" % \
-                                    str(os.path.join(mg4_path, temp_dir))
-
-        try:
-            os.mkdir(os.path.join(mg4_path, temp_dir))
-        except os.error as error:
-            raise IOError, error.strerror + " " + temp_dir
-
-        try:
-            os.mkdir(os.path.join(mg4_path, temp_dir, 'Cards'))
-        except os.error as error:
-            raise IOError, error.strerror + " " + temp_dir + '/Cards'
-
-        self.temp_dir_name = temp_dir
-
-        # Set the setup flag to true to tell other routines everything is OK
-        self.setup_flag = True
-
-        # print some info
-        logging.info("Temporary standalone C++ directory %s successfully created" % \
-                     temp_dir)
-
-    def run(self, proc_list, model, orders={}, energy=1000):
-        """Execute MG5 on the list of processes mentioned in proc_list, using
-        the specified model, the specified maximal coupling orders and a certain
-        energy for incoming particles (for decay, incoming particle is at rest).
-        """
-
-        self.proc_list = proc_list
-        self.model = model
-        self.orders = orders
-        self.energy = energy
-
-        dir_name = os.path.join(self.mg4_path, self.temp_dir_name)
-
-        # Create a proc_card.dat in the v5 format
-        proc_card_file = open(os.path.join(dir_name, 'Cards', 'proc_card_v5.dat'), 'w')
-        proc_card_file.write(self.format_mg5_proc_card(proc_list, model, orders))
-        proc_card_file.close()
-
-        logging.info("proc_card.dat file for %i processes successfully created in %s" % \
-                     (len(proc_list), os.path.join(dir_name, 'Cards')))
-
-        # Run mg5
-        logging.info("Running MG5 Standalone C++ output")
-        proc_card = open(os.path.join(dir_name, 'Cards', 'proc_card_v5.dat'), 'r').read()
-        cmd = cmd_interface.MadGraphCmdShell()
-        for line in proc_card.split('\n'):
-            try:
-                cmd.run_cmd(line)
-            except MadGraph5Error:
-                pass
-
-        self.fix_energy_in_check(dir_name, energy)
-
-        # Get the ME value
-        for i, proc in enumerate(proc_list):
-            self.res_list.append(self.get_me_value(proc, i))
-
-        return self.res_list
 
     def format_mg5_proc_card(self, proc_list, model, orders):
         """Create a proc_card.dat string following v5 conventions."""

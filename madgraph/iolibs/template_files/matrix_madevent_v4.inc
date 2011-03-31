@@ -1,4 +1,4 @@
-      SUBROUTINE SMATRIX(P,ANS)
+SUBROUTINE SMATRIX%(proc_id)s(P,ANS)
 C  
 %(info_lines)s
 C 
@@ -19,6 +19,10 @@ C
     Include 'maxamps.inc'
     INTEGER                 NCOMB         
     PARAMETER (             NCOMB=%(ncomb)d)
+    INTEGER    NGRAPHS
+    PARAMETER (NGRAPHS=%(ngraphs)d) 
+    INTEGER    NDIAGS
+    PARAMETER (NDIAGS=%(ndiags)d) 
     INTEGER    THEL
     PARAMETER (THEL=NCOMB)
 C  
@@ -29,40 +33,33 @@ C
 C LOCAL VARIABLES 
 C  
     INTEGER NHEL(NEXTERNAL,NCOMB),NTRY
-    REAL*8 T,MATRIX
-    INTEGER IHEL,IDEN
-    INTEGER IPROC,JC(NEXTERNAL), I
+    REAL*8 T,MATRIX%(proc_id)s
+    INTEGER I,IDEN
+    INTEGER IPROC,JC(NEXTERNAL),II
     LOGICAL GOODHEL(NCOMB)
-    INTEGER NGRAPHS
-    REAL*8 hwgt, xtot, xtry, xrej, xr, yfrac(0:ncomb)
-    INTEGER idum, ngood, igood(ncomb), jhel, j, jj
-    LOGICAL warned
-    REAL     xran1
-    EXTERNAL xran1
+    REAL*8 HWGT, XTOT, XTRY, XREJ, XR, YFRAC(0:NCOMB)
+    INTEGER IDUM, NGOOD, IGOOD(NCOMB), JHEL, J, JJ
+    REAL     XRAN1
+    EXTERNAL XRAN1
 C  
 C GLOBAL VARIABLES
 C  
-    Double Precision amp2(maxamps), jamp2(0:maxflow)
-    common/to_amps/  amp2,       jamp2
+    DOUBLE PRECISION AMP2(MAXAMPS), JAMP2(0:MAXFLOW)
+    COMMON/TO_AMPS/  AMP2,       JAMP2
     
-    character*79         hel_buff
-    common/to_helicity/  hel_buff
+    CHARACTER*79         HEL_BUFF
+    COMMON/TO_HELICITY/  HEL_BUFF
     
     REAL*8 POL(2)
-    common/to_polarization/ POL
+    COMMON/TO_POLARIZATION/ POL
     
-    integer          isum_hel
-    logical                    multi_channel
-    common/to_matrix/isum_hel, multi_channel
-    INTEGER MAPCONFIG(0:LMAXCONFIGS), ICONFIG
-    common/to_mconfigs/mapconfig, iconfig
+    INTEGER          ISUM_HEL
+    LOGICAL                    MULTI_CHANNEL
+    COMMON/TO_MATRIX/ISUM_HEL, MULTI_CHANNEL
+%(define_iconfigs_lines)s
     DATA NTRY,IDUM /0,-1/
-    DATA xtry, xrej, ngood /0,0,0/
-    DATA warned, isum_hel/.false.,0/
-    DATA multi_channel/.true./
-    SAVE yfrac, igood, jhel
-    DATA NGRAPHS /%(ngraphs)d/          
-    DATA jamp2(0) /%(ncolor)d/          
+    DATA XTRY, XREJ, NGOOD /0,0,0/
+    SAVE YFRAC, IGOOD, JHEL
     DATA GOODHEL/THEL*.FALSE./
 %(helicity_lines)s
 %(den_factor_line)s
@@ -70,36 +67,37 @@ C ----------
 C BEGIN CODE
 C ----------
     NTRY=NTRY+1
-    DO IHEL=1,NEXTERNAL
-       JC(IHEL) = +1
+    DO I=1,NEXTERNAL
+       JC(I) = +1
     ENDDO
      
     IF (multi_channel) THEN
-        DO IHEL=1,NGRAPHS
-            amp2(ihel)=0d0
+        DO I=1,NDIAGS
+            AMP2(I)=0D0
         ENDDO
-        DO IHEL=1,int(jamp2(0))
-            jamp2(ihel)=0d0
+        JAMP2(0)=%(ncolor)d
+        DO I=1,INT(JAMP2(0))
+            JAMP2(I)=0D0
         ENDDO
     ENDIF
     ANS = 0D0
-    write(hel_buff,'(16i5)') (0,i=1,nexternal)
+    WRITE(HEL_BUFF,'(16I5)') (0,I=1,NEXTERNAL)
     IF (ISUM_HEL .EQ. 0 .OR. NTRY .LT. 10) THEN
-        DO IHEL=1,NCOMB
-           IF (GOODHEL(IHEL) .OR. NTRY .LT. 2) THEN
-               T=MATRIX(P ,NHEL(1,IHEL),JC(1))            
+        DO I=1,NCOMB
+           IF (GOODHEL(I) .OR. NTRY .LT. 2) THEN
+               T=MATRIX%(proc_id)s(P ,NHEL(1,I),JC(1))            
              DO JJ=1,nincoming
-               IF(POL(JJ).NE.1d0.AND.NHEL(JJ,IHEL).EQ.INT(SIGN(1d0,POL(JJ)))) THEN
+               IF(POL(JJ).NE.1d0.AND.NHEL(JJ,I).EQ.INT(SIGN(1d0,POL(JJ)))) THEN
                  T=T*ABS(POL(JJ))
                ELSE IF(POL(JJ).NE.1d0)THEN
                  T=T*(2d0-ABS(POL(JJ)))
                ENDIF
              ENDDO
              ANS=ANS+T
-             IF (T .NE. 0D0 .AND. .NOT.    GOODHEL(IHEL)) THEN
-                 GOODHEL(IHEL)=.TRUE.
+             IF (T .NE. 0D0 .AND. .NOT.    GOODHEL(I)) THEN
+                 GOODHEL(I)=.TRUE.
                  NGOOD = NGOOD +1
-                 IGOOD(NGOOD) = IHEL
+                 IGOOD(NGOOD) = I
              ENDIF
            ENDIF
         ENDDO
@@ -110,10 +108,10 @@ C ----------
             JHEL=JHEL+1
             IF (JHEL .GT. NGOOD) JHEL=1
             HWGT = REAL(NGOOD)/REAL(ISUM_HEL)
-            IHEL = IGOOD(JHEL)
-            T=MATRIX(P ,NHEL(1,IHEL),JC(1))            
+            I = IGOOD(JHEL)
+            T=MATRIX%(proc_id)s(P ,NHEL(1,I),JC(1))            
             DO JJ=1,nincoming
-              IF(POL(JJ).NE.1d0.AND.NHEL(JJ,IHEL).EQ.INT(SIGN(1d0,POL(JJ)))) THEN
+              IF(POL(JJ).NE.1d0.AND.NHEL(JJ,I).EQ.INT(SIGN(1d0,POL(JJ)))) THEN
                 T=T*ABS(POL(JJ))
               ELSE IF(POL(JJ).NE.1d0)THEN
                 T=T*(2d0-ABS(POL(JJ)))
@@ -122,16 +120,16 @@ C ----------
             ANS=ANS+T*HWGT
         ENDDO
         IF (ISUM_HEL .EQ. 1) THEN
-            WRITE(HEL_BUFF,'(16i5)')(NHEL(i,IHEL),i=1,nexternal)
+            WRITE(HEL_BUFF,'(16i5)')(NHEL(II,I),II=1,NEXTERNAL)
         ENDIF
     ENDIF
     IF (MULTI_CHANNEL) THEN
         XTOT=0D0
-        DO IHEL=1,MAPCONFIG(0)
-            XTOT=XTOT+AMP2(MAPCONFIG(IHEL))
+        DO I=1,NDIAGS
+            XTOT=XTOT+AMP2(I)
         ENDDO
         IF (XTOT.NE.0D0) THEN
-            ANS=ANS*AMP2(MAPCONFIG(ICONFIG))/XTOT
+%(set_amp2_line)s
         ELSE
             ANS=0D0
         ENDIF
@@ -140,7 +138,7 @@ C ----------
     END
  
  
-REAL*8 FUNCTION MATRIX(P,NHEL,IC)
+REAL*8 FUNCTION MATRIX%(proc_id)s(P,NHEL,IC)
 C  
 %(info_lines)s
 C
@@ -153,12 +151,12 @@ C
 C  
 C CONSTANTS
 C  
-    INTEGER    NGRAPHS,    NEIGEN 
-    PARAMETER (NGRAPHS=%(ngraphs)d,NEIGEN=  1) 
+    INTEGER    NGRAPHS
+    PARAMETER (NGRAPHS=%(ngraphs)d) 
     include 'genps.inc'
     include 'nexternal.inc'
     include 'maxamps.inc'
-    INTEGER    NWAVEFUNCS     , NCOLOR
+    INTEGER    NWAVEFUNCS,     NCOLOR
     PARAMETER (NWAVEFUNCS=%(nwavefuncs)d, NCOLOR=%(ncolor)d) 
     REAL*8     ZERO
     PARAMETER (ZERO=0D0)
@@ -192,13 +190,13 @@ C BEGIN CODE
 C ----------
 %(helas_calls)s
 %(jamp_lines)s
-    MATRIX = 0.D0 
+    MATRIX%(proc_id)s = 0.D0 
     DO I = 1, NCOLOR
         ZTEMP = (0.D0,0.D0)
         DO J = 1, NCOLOR
             ZTEMP = ZTEMP + CF(J,I)*JAMP(J)
         ENDDO
-        MATRIX =MATRIX+ZTEMP*DCONJG(JAMP(I))/DENOM(I)   
+        MATRIX%(proc_id)s=MATRIX%(proc_id)s+ZTEMP*DCONJG(JAMP(I))/DENOM(I)   
     ENDDO
 %(amp2_lines)s
     Do I = 1, NCOLOR
