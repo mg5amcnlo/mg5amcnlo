@@ -401,12 +401,12 @@ class ColorOrderedAmplitudeTest(unittest.TestCase):
 
             
     def test_color_ordered_uux_uuxng(self):
-        """Test the number of color flows and diagram generated for uu~>uu~+ng with n up to 3
+        """Test the number of color flows and diagrams for uu~>uu~+ng
         """
         goal_ndiags = [[1, 1], [3, 2, 3, 2], [10, 5, 11, 4, 10, 5],[35, 16, 41, 10, 41, 10, 35, 16]]
         goal_nflows = [2, 4, 6, 8]
 
-        for ngluons in range(0, 4):
+        for ngluons in range(0, 3):
 
             myleglist = base_objects.LegList()
 
@@ -440,13 +440,13 @@ class ColorOrderedAmplitudeTest(unittest.TestCase):
                              goal_ndiags[ngluons][iflow])
 
     def test_color_ordered_uux_ddxng(self):
-        """Test the number of color flows and diagram generated for uu~>uu~+ng with n up to 3
+        """Test the number of color flows and diagrams for uu~>dd~+ng
         """
         goal_ndiags = [[1, 1], [3, 3, 2, 2], [10, 11, 10, 5, 4, 5],
                        [35, 41, 41, 35, 16, 10, 10, 16]]
         goal_nflows = [2, 4, 6, 8]
 
-        for ngluons in range(0, 4):
+        for ngluons in range(0, 3):
 
             myleglist = base_objects.LegList()
 
@@ -480,8 +480,7 @@ class ColorOrderedAmplitudeTest(unittest.TestCase):
                              goal_ndiags[ngluons][iflow])
 
     def test_color_ordered_uux_ddxssxngd(self):
-        """Test number of color flows and diagram for uu~>dd~ss~+ng with n up to 2
-        Note only checked up to 1 gluon.
+        """Test the number of color flows and diagrams for uu~>dd~ssx+ng
         """
         goal_ndiags = [[4, 4, 4, 4, 6, 4],
                        [16, 16, 14, 8, 14, 8, 16, 16, 16, 14, 14, 16,
@@ -494,7 +493,7 @@ class ColorOrderedAmplitudeTest(unittest.TestCase):
         goal_nflows = [6, 18, 36]
         #goal_nflows = []
         #goal_ndiags = []
-        for ngluons in range(0, 3):
+        for ngluons in range(0, 2):
 
             myleglist = base_objects.LegList()
 
@@ -520,11 +519,11 @@ class ColorOrderedAmplitudeTest(unittest.TestCase):
             self.myamplitude.set('process', myproc)
 
             self.myamplitude.setup_process()
-            for c in self.myamplitude.get('color_flows'):
-                print "color flow process: ",[(l.get('number'), l.get('id'),
-                                               l.get('color_ordering')) for \
-                                               l in c.get('process').get('legs')]
-                print c.nice_string()
+            #for c in self.myamplitude.get('color_flows'):
+            #    print "color flow process: ",[(l.get('number'), l.get('id'),
+            #                                   l.get('color_ordering')) for \
+            #                                   l in c.get('process').get('legs')]
+            #    print c.nice_string()
 
             #goal_nflows.append(len(self.myamplitude.get('color_flows')))
             self.assertEqual(len(self.myamplitude.get('color_flows')),
@@ -543,7 +542,7 @@ class ColorOrderedAmplitudeTest(unittest.TestCase):
             #print goal_ndiags
 
     def test_color_ordered_uux_uuxddxng(self):
-        """Test number of color flows and diagram for uu~>uu~dd~+ng with n up to 3
+        """Test number of color flows and diagrams for uu~>uu~dd~+ng
         """
         goal_ndiags = [[4, 4, 4, 6, 4, 4],
                        [16, 14, 16, 14, 14, 14, 8, 14, 16, 8, 16, 8,
@@ -557,7 +556,7 @@ class ColorOrderedAmplitudeTest(unittest.TestCase):
         #goal_nflows = []
         #goal_ndiags = []
 
-        for ngluons in range(0, 3):
+        for ngluons in range(0, 2):
 
             myleglist = base_objects.LegList()
 
@@ -644,7 +643,7 @@ class ColorOrderedAmplitudeTest(unittest.TestCase):
         goal_ndiags = [[4, 4], [14, 10, 14, 10], [50, 28, 56, 24, 50, 28]]
         goal_nflows = [2, 4, 6]
 
-        for ngluons in range(0, 3):
+        for ngluons in range(0, 2):
 
             myleglist = base_objects.LegList()
 
@@ -824,187 +823,6 @@ class ColorOrderedAmplitudeTest(unittest.TestCase):
             #print myamplitude.get('diagrams').nice_string()
 
             self.assertEqual(ndiags, goal_ndiags[ngluon])
-
-    def test_diagram_generation_ue_dve(self):
-        """Test the number of diagram generated for ue->dve (t channel)
-        """
-
-        mypartlist = base_objects.ParticleList();
-        myinterlist = base_objects.InteractionList();
-
-        # A quark U and its antiparticle
-        mypartlist.append(base_objects.Particle({'name':'u',
-                      'antiname':'u~',
-                      'spin':2,
-                      'color':3,
-                      'mass':'zero',
-                      'width':'zero',
-                      'texname':'u',
-                      'antitexname':'\bar u',
-                      'line':'straight',
-                      'charge':2. / 3.,
-                      'pdg_code':2,
-                      'propagating':True,
-                      'is_part':True,
-                      'self_antipart':False}))
-        u = mypartlist[len(mypartlist) - 1]
-        antiu = copy.copy(u)
-        antiu.set('is_part', False)
-
-        # A quark D and its antiparticle
-        mypartlist.append(base_objects.Particle({'name':'d',
-                      'antiname':'d~',
-                      'spin':2,
-                      'color':3,
-                      'mass':'zero',
-                      'width':'zero',
-                      'texname':'d',
-                      'antitexname':'\bar d',
-                      'line':'straight',
-                      'charge':-1. / 3.,
-                      'pdg_code':1,
-                      'propagating':True,
-                      'is_part':True,
-                      'self_antipart':False}))
-        d = mypartlist[len(mypartlist) - 1]
-        antid = copy.copy(d)
-        antid.set('is_part', False)
-
-        # A electron and positron
-        mypartlist.append(base_objects.Particle({'name':'e+',
-                      'antiname':'e-',
-                      'spin':2,
-                      'color':1,
-                      'mass':'zero',
-                      'width':'zero',
-                      'texname':'e^+',
-                      'antitexname':'e^-',
-                      'line':'straight',
-                      'charge':-1.,
-                      'pdg_code':11,
-                      'propagating':True,
-                      'is_part':True,
-                      'self_antipart':False}))
-
-        eminus = mypartlist[len(mypartlist) - 1]
-        eplus = copy.copy(eminus)
-        eplus.set('is_part', False)
-
-        # nu_e
-        mypartlist.append(base_objects.Particle({'name':'ve',
-                      'antiname':'ve~',
-                      'spin':2,
-                      'color':0,
-                      'mass':'zero',
-                      'width':'zero',
-                      'texname':'\nu_e',
-                      'antitexname':'\bar\nu_e',
-                      'line':'straight',
-                      'charge':0.,
-                      'pdg_code':12,
-                      'propagating':True,
-                      'is_part':True,
-                      'self_antipart':False}))
-        nue = mypartlist[len(mypartlist) - 1]
-        nuebar = copy.copy(nue)
-        nuebar.set('is_part', False)
-
-        # W
-        mypartlist.append(base_objects.Particle({'name':'w+',
-                      'antiname':'w-',
-                      'spin':3,
-                      'color':0,
-                      'mass':'WMASS',
-                      'width':'WWIDTH',
-                      'texname':'W^+',
-                      'antitexname':'W^-',
-                      'line':'wavy',
-                      'charge':1.,
-                      'pdg_code':24,
-                      'propagating':True,
-                      'is_part':True,
-                      'self_antipart':False}))
-
-        wplus = mypartlist[len(mypartlist) - 1]
-        wminus = copy.copy(wplus)
-        wminus.set('is_part', False)
-
-        # Coupling of u and d to W
-
-        myinterlist.append(base_objects.Interaction({
-                      'id': 8,
-                      'particles': base_objects.ParticleList(\
-                                            [antid, \
-                                             u, \
-                                             wminus]),
-                      'color': [],
-                      'lorentz':['L1'],
-                      'couplings':{(0, 0):'GQED'},
-                      'orders':{'QED':1}}))
-
-        # Coupling of d and u to W
-
-        myinterlist.append(base_objects.Interaction({
-                      'id': 9,
-                      'particles': base_objects.ParticleList(\
-                                            [antiu, \
-                                             d, \
-                                             wplus]),
-                      'color': [],
-                      'lorentz':['L1'],
-                      'couplings':{(0, 0):'GQED'},
-                      'orders':{'QED':1}}))
-
-        # Coupling of e- and nu_e to W
-
-        myinterlist.append(base_objects.Interaction({
-                      'id': 10,
-                      'particles': base_objects.ParticleList(\
-                                            [nuebar, \
-                                             eminus, \
-                                             wplus]),
-                      'color': [],
-                      'lorentz':['L1'],
-                      'couplings':{(0, 0):'GQED'},
-                      'orders':{'QED':1}}))
-
-        # Coupling of nu_e and e+ to W
-
-        myinterlist.append(base_objects.Interaction({
-                      'id': 11,
-                      'particles': base_objects.ParticleList(\
-                                            [eplus, \
-                                             nue, \
-                                             wminus]),
-                      'color': [],
-                      'lorentz':['L1'],
-                      'couplings':{(0, 0):'GQED'},
-                      'orders':{'QED':1}}))
-
-        mymodel = base_objects.Model()
-        mymodel.set('particles', mypartlist)
-        mymodel.set('interactions', myinterlist)
-
-        myleglist = base_objects.LegList()
-
-        myleglist.append(base_objects.Leg({'id':2,
-                                         'state':False}))
-        myleglist.append(base_objects.Leg({'id':11,
-                                         'state':False}))
-        myleglist.append(base_objects.Leg({'id':1,
-                                         'state':True}))
-        myleglist.append(base_objects.Leg({'id':12,
-                                         'state':True}))
-
-        myproc = base_objects.Process({'legs':myleglist,
-                                       'model':mymodel,
-                                       'orders':{'QCD':0}})
-
-        myamplitude = diagram_generation.Amplitude()
-        myamplitude.set('process', myproc)
-
-        self.assertEqual(len(myamplitude.get('diagrams')), 1)
-
 
 #===============================================================================
 # BGHelasMatrixElementTest
@@ -1307,14 +1125,14 @@ class BGHelasMatrixElementTest(unittest.TestCase):
             matrix_element = color_ordered_amplitudes.BGHelasMatrixElement(\
                 mycolorflow, gen_color=False, optimization=3)
 
-            print "\n".join(\
-                helas_call_writers.FortranUFOHelasCallWriter(self.mymodel).\
-                get_matrix_element_calls(matrix_element))
-            print "For ",ngluon," FS gluons, there are ",\
-                  len(matrix_element.get_all_amplitudes()),' amplitudes and ',\
-                  len(matrix_element.get_all_wavefunctions()),\
-                  ' wavefunctions for ', len(mycolorflow.get('diagrams')),\
-                  ' diagrams'
+            #print "\n".join(\
+            #    helas_call_writers.FortranUFOHelasCallWriter(self.mymodel).\
+            #    get_matrix_element_calls(matrix_element))
+            #print "For ",ngluon," FS gluons, there are ",\
+            #      len(matrix_element.get_all_amplitudes()),' amplitudes and ',\
+            #      len(matrix_element.get_all_wavefunctions()),\
+            #      ' wavefunctions for ', len(mycolorflow.get('diagrams')),\
+            #      ' diagrams'
 
             # Test that wavefunctions that have been combined are
             # not in any amplitudes
@@ -1341,10 +1159,10 @@ class BGHelasMatrixElementTest(unittest.TestCase):
                              goal_amplitudes[ngluon-2])
             
             # Test JAMP (color amplitude) output
-            print '\n'.join(export_v4.get_JAMP_lines(matrix_element))
+            #print '\n'.join(export_v4.get_JAMP_lines(matrix_element))
 
     def test_matrix_element_gluons_non_optimized(self):
-        """Test the matrix element for all-gluon amplitudes"""
+        """Test the matrix element for all-gluon (non-optimized)"""
 
         goal_amplitudes = [4, 15, 68]
         goal_wavefunctions = [6, 16, 30]
@@ -1372,14 +1190,14 @@ class BGHelasMatrixElementTest(unittest.TestCase):
             matrix_element = color_ordered_amplitudes.BGHelasMatrixElement(\
                 mycolorflow, gen_color=False, optimization=1)
 
-            print "\n".join(\
-                helas_call_writers.FortranUFOHelasCallWriter(self.mymodel).\
-                get_matrix_element_calls(matrix_element))
-            print "For ",ngluon," FS gluons, there are ",\
-                  len(matrix_element.get_all_amplitudes()),' amplitudes and ',\
-                  len(matrix_element.get_all_wavefunctions()),\
-                  ' wavefunctions for ', len(mycolorflow.get('diagrams')),\
-                  ' diagrams'
+            #print "\n".join(\
+            #    helas_call_writers.FortranUFOHelasCallWriter(self.mymodel).\
+            #    get_matrix_element_calls(matrix_element))
+            #print "For ",ngluon," FS gluons, there are ",\
+            #      len(matrix_element.get_all_amplitudes()),' amplitudes and ',\
+            #      len(matrix_element.get_all_wavefunctions()),\
+            #      ' wavefunctions for ', len(mycolorflow.get('diagrams')),\
+            #      ' diagrams'
 
             self.assertEqual(len(matrix_element.get_all_wavefunctions()),
                              goal_wavefunctions[ngluon-2])
@@ -1387,10 +1205,10 @@ class BGHelasMatrixElementTest(unittest.TestCase):
                              goal_amplitudes[ngluon-2])
             
             # Test JAMP (color amplitude) output
-            print '\n'.join(export_v4.get_JAMP_lines(matrix_element))
+            #print '\n'.join(export_v4.get_JAMP_lines(matrix_element))
 
     def test_matrix_element_photons(self):
-        """Test the matrix element for all-gluon amplitudes"""
+        """Test the matrix element for uu~>na"""
 
         goal_amplitudes = [2, 6, 12, 30, 60, 140]
         goal_wavefunctions = [6, 11, 32, 77, 190, 429]
@@ -1422,14 +1240,14 @@ class BGHelasMatrixElementTest(unittest.TestCase):
             matrix_element = color_ordered_amplitudes.BGHelasMatrixElement(\
                 mycolorflow, gen_color=False, optimization = 3)
 
-            print "\n".join(\
-                helas_call_writers.FortranUFOHelasCallWriter(self.mymodel).\
-                get_matrix_element_calls(matrix_element))
-            print "For ",nphoton," FS photons, there are ",\
-                  len(matrix_element.get_all_amplitudes()),' amplitudes and ',\
-                  len(matrix_element.get_all_wavefunctions()),\
-                  ' wavefunctions for ', len(mycolorflow.get('diagrams')),\
-                  ' diagrams'
+            #print "\n".join(\
+            #    helas_call_writers.FortranUFOHelasCallWriter(self.mymodel).\
+            #    get_matrix_element_calls(matrix_element))
+            #print "For ",nphoton," FS photons, there are ",\
+            #      len(matrix_element.get_all_amplitudes()),' amplitudes and ',\
+            #      len(matrix_element.get_all_wavefunctions()),\
+            #      ' wavefunctions for ', len(mycolorflow.get('diagrams')),\
+            #      ' diagrams'
 
             # Test that wavefunctions that have been combined are
             # not in any amplitudes
@@ -1459,13 +1277,13 @@ class BGHelasMatrixElementTest(unittest.TestCase):
             #print '\n'.join(export_v4.get_JAMP_lines(matrix_element))
 
     def test_matrix_element_photons_non_optimized(self):
-        """Test the matrix element for all-gluon amplitudes"""
+        """Test the matrix element for uu~>na (non-optimized)"""
 
         goal_amplitudes = [2, 6, 24, 120]
         goal_wavefunctions = [6, 11, 26, 57]
 
         # Test 2, 3, 4 and 5 photons in the final state
-        for nphoton in range(2,6):
+        for nphoton in range(2,5):
 
             # Create the amplitude
             myleglist = base_objects.LegList()
@@ -1491,14 +1309,14 @@ class BGHelasMatrixElementTest(unittest.TestCase):
             matrix_element = color_ordered_amplitudes.BGHelasMatrixElement(\
                 mycolorflow, gen_color=False, optimization = 1)
 
-            print "\n".join(\
-                helas_call_writers.FortranUFOHelasCallWriter(self.mymodel).\
-                get_matrix_element_calls(matrix_element))
-            print "For ",nphoton," FS photons, there are ",\
-                  len(matrix_element.get_all_amplitudes()),' amplitudes and ',\
-                  len(matrix_element.get_all_wavefunctions()),\
-                  ' wavefunctions for ', len(mycolorflow.get('diagrams')),\
-                  ' diagrams'
+            #print "\n".join(\
+            #    helas_call_writers.FortranUFOHelasCallWriter(self.mymodel).\
+            #    get_matrix_element_calls(matrix_element))
+            #print "For ",nphoton," FS photons, there are ",\
+            #      len(matrix_element.get_all_amplitudes()),' amplitudes and ',\
+            #      len(matrix_element.get_all_wavefunctions()),\
+            #      ' wavefunctions for ', len(mycolorflow.get('diagrams')),\
+            #      ' diagrams'
 
             self.assertEqual(len(matrix_element.get_all_wavefunctions()),
                              goal_wavefunctions[nphoton-2])
@@ -1506,18 +1324,18 @@ class BGHelasMatrixElementTest(unittest.TestCase):
                              goal_amplitudes[nphoton-2])
 
             # Test JAMP (color amplitude) output
-            print '\n'.join(export_v4.get_JAMP_lines(matrix_element))
+            #print '\n'.join(export_v4.get_JAMP_lines(matrix_element))
 
 
     def test_matrix_element_uux_nglue(self):
-        """Test the number of color flows and diagrams generated for uu~>gg
+        """Test color ordered matrix elements for uu~>ng
         """
 
         goal_amplitudes = [2, 7, 18, 45]
         goal_wavefunctions = [6, 10, 27, 56]
 
         # Test 2, 3, 4 and 5 gluons in the final state
-        for ngluon in range (2, 6):
+        for ngluon in range (2, 5):
 
             # Create the amplitude
             myleglist = base_objects.LegList([\
@@ -1538,9 +1356,9 @@ class BGHelasMatrixElementTest(unittest.TestCase):
             matrix_element = color_ordered_amplitudes.BGHelasMatrixElement(\
                 mycolorflow, gen_color=False, optimization = 3)
 
-            print "\n".join(\
-                helas_call_writers.FortranUFOHelasCallWriter(self.mymodel).\
-                get_matrix_element_calls(matrix_element))
+            #print "\n".join(\
+            #    helas_call_writers.FortranUFOHelasCallWriter(self.mymodel).\
+            #    get_matrix_element_calls(matrix_element))
 
             for d in matrix_element.get('diagrams'):
                 self.assertTrue(len(d.get('amplitudes')) > 0)
@@ -1564,11 +1382,11 @@ class BGHelasMatrixElementTest(unittest.TestCase):
                           []))
             self.assertTrue(all([num in mother_numbers for num in wf_numbers]))
 
-            print "For ",ngluon," FS gluons, there are ",\
-                  len(matrix_element.get_all_amplitudes()),' amplitudes and ',\
-                  len(matrix_element.get_all_wavefunctions()),\
-                  ' wavefunctions for ', len(mycolorflow.get('diagrams')),\
-                  ' diagrams'
+            #print "For ",ngluon," FS gluons, there are ",\
+            #      len(matrix_element.get_all_amplitudes()),' amplitudes and ',\
+            #      len(matrix_element.get_all_wavefunctions()),\
+            #      ' wavefunctions for ', len(mycolorflow.get('diagrams')),\
+            #      ' diagrams'
 
             self.assertEqual(len(matrix_element.get_all_amplitudes()),
                              goal_amplitudes[ngluon-2])
@@ -1579,7 +1397,7 @@ class BGHelasMatrixElementTest(unittest.TestCase):
             #print '\n'.join(export_v4.get_JAMP_lines(matrix_element))
 
     def test_matrix_element_uux_ddxng(self):
-        """Test color flow matrix element for uu~>dd~ng (no singlet)
+        """Test color flow matrix elements for uu~>dd~ng
         """
 
         goal_amplitudes = [[1, 1],[3,3,2,2],[8,8,9,4,2,5],
@@ -1591,7 +1409,7 @@ class BGHelasMatrixElementTest(unittest.TestCase):
         goal_nflows = [2, 4, 6, 8]
 
         # Test 2, 3, 4 and 5 gluons in the final state
-        for ngluon in range (0, 4):
+        for ngluon in range (0, 3):
 
             # Create the amplitude
             myleglist = base_objects.LegList([\
@@ -1615,11 +1433,11 @@ class BGHelasMatrixElementTest(unittest.TestCase):
                 matrix_element = color_ordered_amplitudes.BGHelasMatrixElement(\
                     mycolorflow, gen_color=False, optimization = 3)
 
-                print "\n".join(\
-                    helas_call_writers.FortranUFOHelasCallWriter(self.mymodel).\
-                    get_matrix_element_calls(matrix_element))
+                #print "\n".join(\
+                #    helas_call_writers.FortranUFOHelasCallWriter(self.mymodel).\
+                #    get_matrix_element_calls(matrix_element))
                 # Test JAMP (color amplitude) output
-                print '\n'.join(export_v4.get_JAMP_lines(matrix_element))
+                #print '\n'.join(export_v4.get_JAMP_lines(matrix_element))
 
                 for d in matrix_element.get('diagrams'):
                     self.assertTrue(len(d.get('amplitudes')) > 0)
@@ -1643,11 +1461,11 @@ class BGHelasMatrixElementTest(unittest.TestCase):
                               []))
                 self.assertTrue(all([num in mother_numbers for num in wf_numbers]))
 
-                print "For ",ngluon," FS gluons, ",iflow+1,"th flow, there are ",\
-                      len(matrix_element.get_all_amplitudes()),' amplitudes and ',\
-                      len(matrix_element.get_all_wavefunctions()),\
-                      ' wavefunctions for ', len(mycolorflow.get('diagrams')),\
-                      ' diagrams'
+                #print "For ",ngluon," FS gluons, ",iflow+1,"th flow, there are ",\
+                #      len(matrix_element.get_all_amplitudes()),' amplitudes and ',\
+                #      len(matrix_element.get_all_wavefunctions()),\
+                #      ' wavefunctions for ', len(mycolorflow.get('diagrams')),\
+                #      ' diagrams'
 
                 self.assertEqual(len(matrix_element.get_all_amplitudes()),
                                  goal_amplitudes[ngluon][iflow])
@@ -1668,7 +1486,7 @@ class BGHelasMatrixElementTest(unittest.TestCase):
         #goal_ndiags = []
         #goal_nflows = []
         # Test 0, 1, 2 and 3 gluons in the final state
-        for ngluon in range (0, 4):
+        for ngluon in range (0, 3):
 
             # Create the amplitude
             myleglist = base_objects.LegList([\
@@ -1697,18 +1515,18 @@ class BGHelasMatrixElementTest(unittest.TestCase):
                 matrix_element = color_ordered_amplitudes.BGHelasMatrixElement(\
                     mycolorflow, gen_color=False, optimization = 1)
 
-                print "\n".join(\
-                    helas_call_writers.FortranUFOHelasCallWriter(self.mymodel).\
-                    get_matrix_element_calls(matrix_element))
+                #print "\n".join(\
+                #    helas_call_writers.FortranUFOHelasCallWriter(self.mymodel).\
+                #    get_matrix_element_calls(matrix_element))
 
                 for d in matrix_element.get('diagrams'):
                     self.assertTrue(len(d.get('amplitudes')) > 0)
 
-                print "For ",ngluon," FS gluons, there are ",\
-                      len(matrix_element.get_all_amplitudes()),' amplitudes and ',\
-                      len(matrix_element.get_all_wavefunctions()),\
-                      ' wavefunctions for ', len(mycolorflow.get('diagrams')),\
-                      ' diagrams'
+                #print "For ",ngluon," FS gluons, there are ",\
+                #      len(matrix_element.get_all_amplitudes()),' amplitudes and ',\
+                #      len(matrix_element.get_all_wavefunctions()),\
+                #      ' wavefunctions for ', len(mycolorflow.get('diagrams')),\
+                #      ' diagrams'
 
                 #diags.append(len(mycolorflow.get('diagrams')))
                 #wfs.append(len(matrix_element.get_all_wavefunctions()))
@@ -1719,7 +1537,7 @@ class BGHelasMatrixElementTest(unittest.TestCase):
                                  goal_wavefunctions[ngluon][iflow])
 
                 # Test JAMP (color amplitude) output
-                print '\n'.join(export_v4.get_JAMP_lines(matrix_element))
+                #print '\n'.join(export_v4.get_JAMP_lines(matrix_element))
 
             #goal_wavefunctions.append(wfs)
             #goal_amplitudes.append(amps)
@@ -1754,7 +1572,7 @@ class BGHelasMatrixElementTest(unittest.TestCase):
         #goal_ndiags = []
         
         # Test 2, 3, 4 and 5 gluons in the final state
-        for ngluon in range (0, 3):
+        for ngluon in range (0, 2):
 
             # Create the amplitude
             myleglist = base_objects.LegList([\
@@ -1779,16 +1597,16 @@ class BGHelasMatrixElementTest(unittest.TestCase):
             #wfs=[]
             for iflow, mycolorflow in \
                 enumerate(self.myamplitude.get('color_flows')):
-                print mycolorflow.nice_string()
+                #print mycolorflow.nice_string()
                 
                 matrix_element = color_ordered_amplitudes.BGHelasMatrixElement(\
                     mycolorflow, gen_color=False, optimization = 3)
 
-                print "\n".join(\
-                    helas_call_writers.FortranUFOHelasCallWriter(self.mymodel).\
-                    get_matrix_element_calls(matrix_element))
+                #print "\n".join(\
+                #    helas_call_writers.FortranUFOHelasCallWriter(self.mymodel).\
+                #    get_matrix_element_calls(matrix_element))
                 # Test JAMP (color amplitude) output
-                print '\n'.join(export_v4.get_JAMP_lines(matrix_element))
+                #print '\n'.join(export_v4.get_JAMP_lines(matrix_element))
 
                 # Test that wavefunctions that have been combined are
                 # not in any amplitudes
@@ -1812,11 +1630,11 @@ class BGHelasMatrixElementTest(unittest.TestCase):
                 for d in matrix_element.get('diagrams'):
                     self.assertTrue(len(d.get('amplitudes')) > 0)
 
-                print "For ",ngluon," FS gluons, ",iflow+1,"th flow, there are ",\
-                      len(matrix_element.get_all_amplitudes()),' amplitudes and ',\
-                      len(matrix_element.get_all_wavefunctions()),\
-                      ' wavefunctions for ', len(mycolorflow.get('diagrams')),\
-                      ' diagrams'
+                #print "For ",ngluon," FS gluons, ",iflow+1,"th flow, there are ",\
+                #      len(matrix_element.get_all_amplitudes()),' amplitudes and ',\
+                #      len(matrix_element.get_all_wavefunctions()),\
+                #      ' wavefunctions for ', len(mycolorflow.get('diagrams')),\
+                #      ' diagrams'
                 #diags.append(len(mycolorflow.get('diagrams')))
                 #wfs.append(len(matrix_element.get_all_wavefunctions()))
                 #amps.append(len(matrix_element.get_all_amplitudes()))
