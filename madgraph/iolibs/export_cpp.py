@@ -894,6 +894,10 @@ def generate_process_files_pythia8(multi_matrix_element, cpp_helas_call_writer,
     """Generate the .h and .cc files needed for Pythia 8, for the
     processes described by multi_matrix_element"""
 
+    if not os.path.isfile(os.path.join(path, 'include', 'Pythia.h')):
+        raise MadGraph5Error('Directory %s not valid Pythia 8 main directory' % \
+                             pythia_dir)
+
     process_exporter_pythia8 = ProcessExporterPythia8(multi_matrix_element,
                                                       cpp_helas_call_writer,
                                                       process_string,
@@ -1935,6 +1939,10 @@ def generate_example_file_pythia8(path,
                                    example_dir = "examples"):
     """Generate the main_model_name.cc file and Makefile in the examples dir"""
 
+    if not os.path.isfile(os.path.join(path, 'include', 'Pythia.h')):
+        raise MadGraph5Error('Directory %s not valid Pythia 8 main directory' % \
+                             pythia_dir)
+
     filepath = os.path.join(path, example_dir)
     if not os.path.isdir(filepath):
         os.makedirs(filepath)
@@ -2007,7 +2015,7 @@ def generate_example_file_pythia8(path,
                 % (os.path.split(main_filename)[-1],
                    os.path.split(make_filename)[-1],
                    os.path.split(make_filename)[0]))
-    return main_filename, make_filename
+    return main_file, make_filename
 
     
 
@@ -2017,6 +2025,10 @@ def generate_example_file_pythia8(path,
 
 def convert_model_to_pythia8(model, pythia_dir):
     """Create a full valid Pythia 8 model from an MG5 model (coming from UFO)"""
+
+    if not os.path.isfile(os.path.join(pythia_dir, 'include', 'Pythia.h')):
+        raise MadGraph5Error('Directory %s not valid Pythia 8 main directory' % \
+                             pythia_dir)
 
     # create the model parameter files
     model_builder = UFOModelConverterPythia8(model, pythia_dir)

@@ -877,7 +877,11 @@ P1_qq_wp_wp_epve
         if os.path.isdir(self.out_dir):
             shutil.rmdir(self.out_dir)
 
-        os.mkdir(self.out_dir)        
+        # Create out_dir and out_dir/include
+        os.makedirs(os.path.join(self.out_dir,'include'))
+        # Touch the file Pythia.h, which is needed to verify that this is a Pythia dir
+        py_h_file = open(os.path.join(self.out_dir,'include','Pythia.h'), 'w')
+        py_h_file.close()
 
         self.do('import model sm')
         self.do('define p g u d u~ d~')

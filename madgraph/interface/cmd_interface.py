@@ -305,7 +305,7 @@ class HelpToCmd(object):
         logger.info("     directory in \"path\".")
         logger.info("   - If mode is pythia8, output all files needed to generate")
         logger.info("     the processes using Pythia 8. Directory \"path\"")
-        logger.info("     should be a Pythia 8 main directory.")
+        logger.info("     should be a Pythia 8 main directory (v. 8.150 or later).")
         logger.info("   path: The path of the process directory.")
         logger.info("     If you put '.' as path, your pwd will be used.")
         logger.info("     If you put 'auto', an automatic directory PROC_XX_n will be created.")
@@ -2692,6 +2692,7 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
                             self._curr_matrix_elements, self._curr_cpp_model,
                             process_string = self._generate_info, path = path)
                 process_names.append(exporter.process_file_name)
+
             # Generate the main program file
             filename, make_filename = \
                       export_cpp.generate_example_file_pythia8(path,
@@ -2699,13 +2700,6 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
                                                                process_names,
                                                                exporter,
                                                                main_file_name)
-            logger.info("All necessary files for Pythia 8 generated.")
-            logger.info("Please go to %s/examples and run" % path)
-            logger.info("    make -f %s" % make_filename)
-            logger.info("(with process_name replaced by process name).")
-            logger.info("You can then run ./%s to produce" % filename)
-            logger.info("events for the process.")
-            logger.info("Or run launch and select %s." % filename)
 
         # Pick out the matrix elements in a list
         matrix_elements = \
@@ -2753,6 +2747,15 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
                 logger.info("Wrote files for %d helas calls" % \
                             (calls))
                 
+        if self._export_format == 'pythia8':
+            logger.info("- All necessary files for Pythia 8 generated.")
+            logger.info("  Please go to %s/examples and run" % path)
+            logger.info("      make -f %s" % make_filename)
+            logger.info("  (with process_name replaced by process name).")
+            logger.info("  You can then run ./%s to produce events for the process" % \
+                        filename)
+            logger.info("- Or run launch and select %s.cc." % filename)
+
         # Replace the amplitudes with the actual amplitudes from the
         # matrix elements, which allows proper diagram drawing also of
         # decay chain processes
@@ -2763,13 +2766,9 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
         # Remember that we have done export
         self._done_export = (self._export_dir, self._export_format)
 
-        if self._export_format in ['madevent', 'standalone', 'standalone_cpp']:
-            # Automatically run finalize
-            self.finalize(nojpeg)
+        # Automatically run finalize
+        self.finalize(nojpeg)
             
-        #reinitialize to empty the default output dir
-        self._export_dir = None
-    
     def finalize(self, nojpeg):
         """Make the html output, write proc_card_mg5.dat and create
         madevent.tar.gz for a MadEvent directory"""
@@ -2809,12 +2808,16 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
                                            self.history,
                                            not nojpeg)
 
-        logger.info('Output to directory ' + self._export_dir + ' done.')
+        if self._export_format in ['madevent', 'standalone', 'standalone_cpp']:
+            logger.info('Output to directory ' + self._export_dir + ' done.')
         if self._export_format == 'madevent':
             logger.info('Please see ' + self._export_dir + '/README')
             logger.info('for information about how to generate events from this process.')
             logger.info('You can also use the launch command.')
 
+        #reinitialize to empty the default output dir
+        self._export_dir = None
+    
     def do_restrict(self, line):
         """ from a param_card.dat remove all zero interactions 
             and all zero external parameter."""
@@ -2926,7 +2929,9 @@ _draw_parser.add_option("", "--add_gap", default=0, type='float', \
 _launch_usage = "launch [DIRPATH] [options]\n" + \
          "-- execute the madevent/standalone/standalone_cpp/pythia8 output present in DIRPATH\n" + \
          "   By default DIRPATH is the latest created directory \n" + \
-         "   Example: launch PROC_SM_1 --name=run2 \n"
+         "   (for pythia8, it should be the Pythia 8 main directory) \n" + \
+         "   Example: launch PROC_sm_1 --name=run2 \n" + \
+         "   Example: launch ../pythia8 \n"
 _launch_parser = optparse.OptionParser(usage=_launch_usage)
 _launch_parser.add_option("-f", "--force", default=False, action='store_true',
                                 help="Use the card present in the directory in order to launch the different program")
