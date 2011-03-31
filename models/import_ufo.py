@@ -72,9 +72,14 @@ def import_model(model_name):
         restrict_name = split[-1]
          
         restrict_file = os.path.join(model_path, 'restrict_%s.dat'% restrict_name)
+        
         #if restriction is full, then we by pass restriction (avoid default)
         if split[-1] == 'full':
             restrict_file = None
+        else:
+            logger.info('Restrict model %s with %s rule.' % (model_name, restrict_name))
+            if logger_mod.getEffectiveLevel() > 10:
+                logger.info('More information on the restriction available by running before this command \"set stdout_level DEBUG\"')    
     else:
         # Check if by default we need some restrictions
         restrict_name = ""

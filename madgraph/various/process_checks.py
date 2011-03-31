@@ -208,7 +208,7 @@ class MatrixElementEvaluator(object):
 
         # Evaluate the matrix element for the momenta p
         exec("data = Matrix_%s()" % process.shell_string())
-        if output == "m2":
+        if output == "m2": 
             return data.smatrix(p, self.full_model), data.amp2
         else:
             m2 = data.smatrix(p, self.full_model)

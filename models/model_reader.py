@@ -172,7 +172,7 @@ class ModelReader(base_objects.Model):
         for particle in self.get('particles'):
             if particle.is_fermion() and particle.get('self_antipart') and \
                    particle.get('width').lower() != 'zero' and \
-                   eval(particle.get('mass')) < 0:
+                   eval(particle.get('mass')).real < 0:
                 exec("locals()[\'%(width)s\'] = -abs(%(width)s)" % \
                      {'width': particle.get('width')})
 

@@ -256,7 +256,7 @@ class HelpToCmd(object):
         logger.info("-- imports file(s) in various formats")
         logger.info("")
         logger.info("   import model MODEL [-modelname]:")
-        logger.info("      Import a UFO or MG4 model.")
+        logger.info("      Import a UFO model.")
         logger.info("      MODEL should be a valid UFO model name")
         logger.info("      -modelname keeps the original")
         logger.info("             particle names for the model")
@@ -2163,8 +2163,6 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
                                                                self._curr_model)
                 # Automatically turn on subprocess grouping
                 self.do_set('group_subprocesses_output True')
-                
-                self.import_ufo_model(args[1])
 
             if '-modelname' not in args:
                 self._curr_model.pass_particles_name_in_mg_default()
