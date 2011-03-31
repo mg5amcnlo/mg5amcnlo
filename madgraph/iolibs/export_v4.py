@@ -143,30 +143,6 @@ class ProcessExporterFortran(object):
         ff.write(text)
         ff.close()
 
-    #===============================================================================
-    # Copy the model restriction in the Model Directory
-    #===============================================================================
-    def cp_model_restriction(self, file_path):
-        """Copy the model restriction in the Model Directory."""
-
-        if not file_path:
-            return
-
-        assert os.path.isfile(file_path)
-        assert os.path.isdir(os.path.join(self.dir_path,'Source','MODEL'))
-
-        output_path = os.path.join(self.dir_path,'Source','MODEL','restrict_model.dat')
-
-        header="""#*********************************************************************
-    #  THIS FILE WAS USED TO RESTRICT THE ORIGINAL MODEL
-    #  PLEASE DON'T EDIT THIS FILE. HE IS IMPORTANT IN ORDER TO BE ABLE 
-    #  TO REPRODUCE THE RESULT IN THE FUTURE.
-    #*********************************************************************\n"""    
-        ff = open(output_path,'w')
-        ff.writelines(header)
-        ff.writelines(open(file_path).read())
-        ff.close()
-
     #===========================================================================
     # Create jpeg diagrams, html pages,proc_card_mg5.dat and madevent.tar.gz
     #===========================================================================

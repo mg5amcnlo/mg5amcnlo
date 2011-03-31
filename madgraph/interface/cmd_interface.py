@@ -250,23 +250,24 @@ class HelpToCmd(object):
         logger.info("-- load information from file FILENAME")
 
     def help_import(self):
-        
         logger.info("syntax: import " + "|".join(self._import_formats) + \
               " FILENAME")
         logger.info("-- imports file(s) in various formats")
         logger.info("")
-        logger.info("   import model MODEL [-modelname]:")
-        logger.info("      Import a UFO or MG4 model.")
+        logger.info("   import model MODEL[-RESTRICTION] [-modelname]:")
+        logger.info("      Import a UFO model.")
         logger.info("      MODEL should be a valid UFO model name")
-        logger.info("      -modelname keeps the original")
-        logger.info("             particle names for the model")
+        logger.info("      Model restrictions are specified by MODEL-RESTRICTION")
+        logger.info("        with the file restrict_RESTRICTION.dat in the model dir.")
+        logger.info("        By default, restrict_default.dat is used.")
+        logger.info("        Specify model_name-full to get unrestricted model.")
+        logger.info("      -modelname keeps the original particle names for the model")
         logger.info("")
         logger.info("   import model_v4 MODEL [-modelname] :")
         logger.info("      Import an MG4 model.")
         logger.info("      Model should be the name of the model")
         logger.info("      or the path to theMG4 model directory")
-        logger.info("      -modelname keeps the original")
-        logger.info("             particle names for the model")
+        logger.info("      -modelname keeps the original particle names for the model")
         logger.info("")
         logger.info("   import proc_v4 [PATH] :"  )
         logger.info("      Execute MG5 based on a proc_card.dat in MG4 format.")
@@ -372,13 +373,6 @@ class HelpToCmd(object):
         logger.info("syntax: define multipart_name [=] part_name_list")
         logger.info("-- define a multiparticle")
         logger.info("   Example: define p = g u u~ c c~ d d~ s s~ b b~")
-
-    def help_restrict(self):
-        logger.info("syntax: restrict [model] param_card")
-        logger.info('   Suppress in the model all the interactions with zero')
-        logger.info('   couplings according to the param_card given in parameter.')
-        logger.info('   All zero parameter of the param_card are also suppress of')
-        logger.info('   the model.')
         
     def help_history(self):
         logger.info("syntax: history [FILEPATH|clean|.] ")
@@ -404,6 +398,7 @@ class HelpToCmd(object):
         logger.info("     of the quarks given in multi_part_label.")
         logger.info("     These processes give negligible contribution to the")
         logger.info("     cross section but have subprocesses/channels.")
+
     def help_shell(self):
         logger.info("syntax: shell CMD (or ! CMD)")
         logger.info("-- run the shell command CMD and catch output")
@@ -721,7 +716,12 @@ class CheckValidForCmd(object):
             if args[1] not in self._multiparticles.keys():
                 raise self.InvalidCmd('ignore_six_quark_processes needs ' + \
                                       'a multiparticle name as argument')
-            
+        
+        if args[0] in ['stdout_level']:
+            if args[1] not in ['DEBUG','INFO','WARNING','ERROR','CRITICAL']:
+                raise self.InvalidCmd('output_level needs ' + \
+                                      'a valid level')       
+        
     def check_output(self, args):
         """ check the validity of the line"""
         
@@ -768,31 +768,6 @@ class CheckValidForCmd(object):
 
         self._export_dir = os.path.realpath(self._export_dir)
 
-    def check_restrict(self,args):
-        """ check the format: restrict [model] param_card.dat"""
-        
-        if len(args) > 2:
-            self.help_restrict()
-            raise self.InvalidCmd, 'Wrong restrict format'
-        
-        if len(args) == 2:
-            if  args[0] != "model":
-                self.help_restrict()
-                raise self.InvalidCmd, 'Wrong restrict format'
-            else:
-                del args[0]
-        
-        if self._model_v4_path:
-            raise self.InvalidCmd, 'Operation not possible with v4 model. ' + \
-                            'Please use a UFO model as a starting point'
-                            
-        if self._restrict_file:
-            raise MadGraph5Error, 'This model is already restricted to the ' + \
-                        'card %s. In order to always keep track ' % self._restrict_file + \
-                        'of model modifications. We forbids multiple restrictions files.'
-
-        if not os.path.isfile(args[0]):
-            raise self.InvalidCmd, 'path \"%s\" is not a file' % args[0]
             
     def get_default_path(self):
         """Set self._export_dir to the default (\'auto\') path"""
@@ -1001,20 +976,6 @@ class CompleteForCmd(CheckValidForCmd):
             couplings = [c + "=" for c in self._couplings] + ['@','$','/','>']
         return self.list_completion(text, self._particle_names + \
                                     self._multiparticles.keys() + couplings)
-    
-    def complete_restrict(self, text, line, begidx, endidx):
-        "Complete the restrict command"
-    
-        args = split_arg(line[0:begidx])
-        
-        if len(args) == 1 and text == 'model'[:len(text)]:
-            return ['model ']
-        
-        # Directory continuation
-        return self.path_completion(text,
-                                        os.path.join('.',*[a for a in args if a.endswith(os.path.sep)]),
-                                        only_dirs = False)
-            
           
     def complete_check(self, text, line, begidx, endidx):
         "Complete the add command"
@@ -1206,8 +1167,11 @@ class CompleteForCmd(CheckValidForCmd):
             if args[1] in ['group_subprocesses_output']:
                 return self.list_completion(text, ['False', 'True'])
             
-            if args[1] in ['ignore_six_quark_processes']:
+            elif args[1] in ['ignore_six_quark_processes']:
                 return self.list_completion(text, self._multiparticles.keys())
+            
+            elif args[1] == 'stdout_level':
+                return self.list_completion(text, ['DEBUG','INFO','WARNING','ERROR','CRITICAL'])
         
     def complete_shell(self, text, line, begidx, endidx):
         """ add path for shell """
@@ -1360,7 +1324,8 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
     _export_formats = _v4_export_formats + ['standalone_cpp', 'pythia8',
                                             'pythia8_model']
     _set_options = ['group_subprocesses_output',
-                    'ignore_six_quark_processes']
+                    'ignore_six_quark_processes',
+                    'stdout_level']
     # Variables to store object information
     _curr_model = None  #base_objects.Model()
     _curr_amps = diagram_generation.AmplitudeList()
@@ -1381,7 +1346,6 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
     _export_format = 'madevent'
     _mgme_dir = MG4DIR
     _comparisons = None
-    _restrict_file = None
     
     def __init__(self, mgme_dir = '', *completekey, **stdin):
         """ add a tracker of the history """
@@ -2183,7 +2147,6 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
             self._curr_amps = diagram_generation.AmplitudeList()
             self._curr_matrix_elements = helas_objects.HelasMultiProcess()
             # Import model
-            self._restrict_file = None
             if args[0].endswith('_v4'):
                 self._curr_model, self._model_v4_path = \
                                  import_v4.import_model(args[1], self._mgme_dir)
@@ -2202,8 +2165,6 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
                                                                self._curr_model)
                 # Automatically turn on subprocess grouping
                 self.do_set('group_subprocesses_output True')
-                
-                self.import_ufo_model(args[1])
 
             if '-modelname' not in args:
                 self._curr_model.pass_particles_name_in_mg_default()
@@ -2516,11 +2477,17 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
                         ",".join([\
                             self._curr_model.get_particle(q).get('name') \
                             for q in self._options[args[0]]]))
-        if args[0] == 'group_subprocesses_output':
+            
+        elif args[0] == 'group_subprocesses_output':
             self._options[args[0]] = eval(args[1])
             logger.info('Set group_subprocesses_output to %s' % \
                         str(self._options[args[0]]))
-
+            
+        elif args[0] == "stdout_level":
+            logging.root.setLevel(eval('logging.' + args[1]))
+            logging.getLogger('madgraph').setLevel(eval('logging.' + args[1]))
+            logger.info('set output information to level: %s' % args[1])
+        
     def do_output(self, line):
         """Initialize a new Template or reinitialize one"""
 
@@ -2558,11 +2525,9 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
                 self._curr_exporter = export_v4.ProcessExporterFortranME(\
                                       self._mgme_dir, self._export_dir,
                                       not noclean)
-            self._curr_exporter.cp_model_restriction(self._restrict_file)
         elif self._export_format in ['standalone', 'matrix']:
             self._curr_exporter = export_v4.ProcessExporterFortranSA(\
                                   self._mgme_dir, self._export_dir,not noclean)
-            self._curr_exporter.cp_model_restriction(self._restrict_file)
         elif self._export_format == 'standalone_cpp':
             export_cpp.setup_cpp_standalone_dir(self._export_dir, self._curr_model)
         elif not os.path.isdir(self._export_dir):
@@ -2830,19 +2795,6 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
             logger.info('for information about how to generate events from this process.')
             logger.info('You can also use the launch command.')
 
-    def do_restrict(self, line):
-        """ from a param_card.dat remove all zero interactions 
-            and all zero external parameter."""
-        
-        args = split_arg(line)
-        # Check args validity
-        self.check_restrict(args)
-        
-        
-        self._curr_model = import_ufo.RestrictModel(self._curr_model)
-        self._curr_model.restrict_model(args[0])
-        self._restrict_file = args[0]
-        
 
     def do_help(self, line):
         """ propose some usefull possible action """

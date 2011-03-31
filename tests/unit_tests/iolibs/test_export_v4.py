@@ -8167,11 +8167,13 @@ class UFO_model_to_mg4_Test(unittest.TestCase):
         
         #  internal params
         self.assertEqual(len(mg4_model.params_dep), 1)
-        self.assertEqual(len(mg4_model.params_indep), 36)
+        self.assertEqual(len(mg4_model.params_indep), 32)
         
         # couplings
         self.assertEqual(len(mg4_model.coups_dep), 3)
-        self.assertEqual(len(mg4_model.coups_indep), 73)
+        sol= ['GC_1', 'GC_2', 'GC_3', 'GC_5', 'GC_6', 'GC_7', 'GC_8', 'GC_13', 'GC_14', 'GC_15', 'GC_16', 'GC_17', 'GC_18', 'GC_19', 'GC_20', 'GC_21', 'GC_22', 'GC_23', 'GC_33', 'GC_34', 'GC_35', 'GC_36', 'GC_37', 'GC_38', 'GC_39', 'GC_40', 'GC_41', 'GC_42', 'GC_43', 'GC_44', 'GC_45', 'GC_46', 'GC_47', 'GC_48', 'GC_49', 'GC_50', 'GC_51', 'GC_52', 'GC_53', 'GC_54', 'GC_55', 'GC_56', 'GC_57', 'GC_58', 'GC_59', 'GC_60', 'GC_61', 'GC_62', 'GC_63', 'GC_64', 'GC_67', 'GC_68', 'GC_69', 'GC_72', 'GC_96', 'GC_97', 'GC_100', 'GC_101', 'GC_102', 'GC_103', 'GC_104', 'GC_135', 'GC_136']
+        
+        self.assertEqual(sol, [ p.name for p in mg4_model.coups_indep])
 
         
         # MG4 use G and not aS as it basic object for alphas related computation

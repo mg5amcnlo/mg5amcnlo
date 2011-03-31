@@ -292,6 +292,17 @@ class AbstractALOHAModel(dict):
     def __init__(self, model_name, write_dir=None):
         """ load the UFO model and init the dictionary """
         
+        # Extract the model name if combined with restriction
+        model_name_pattern = re.compile("^(?P<name>.+)-(?P<rest>[\w\d_]+)$")
+        model_name_re = model_name_pattern.match(model_name)
+        if model_name_re:
+            name = model_name_re.group('name')
+            rest = model_name_re.group("rest")
+            if rest == 'full' or \
+               os.path.isfile(os.path.join(root_path, "models", name,
+                                           "restrict_%s.dat" % rest)):
+                model_name = model_name_re.group("name")
+
         # load the UFO model
         python_pos = 'models.%s' % model_name 
         __import__(python_pos)
