@@ -96,13 +96,33 @@ class ExtLauncher(object):
         path = os.path.realpath(path)
         subprocess.call([self.editor, path], cwd=os.getcwd())
         
-    def ask(self, question, default):
+    def ask(self, question, default, choices=[], path_info=[]):
         """ ask a question """
         
+        assert type(path_info) == list
+        
         if not self.force:
+            # add choice info to the question
+            if choices + path_info:
+                question += ' ['
+                
+                for data in choices[:9] + path_info:
+                    if default == data:
+                        question += "\033[%dm%s\033[0m" % (4, data)
+                    else:
+                        question += "%s" % data
+                    question += ', '
+                if len(choices) > 9:
+                    question += ', ... , ' 
+                question = question[:-2]+']'
+                
+            if path_info:
+                fct = lambda q: cmd.raw_path_input(q, allow_arg=choices, default=default)
+            else:
+                fct = lambda q: cmd.smart_input(q, allow_arg=choices, default=default)
             try:
                 out =  misc.timed_input(question, default, timeout=self.timeout,
-                                        noerror=False)
+                                        noerror=False, fct=fct)
             except misc.TimeOutError:
                 # avoid to always wait a given time for the next answer
                 self.force = True
@@ -125,19 +145,13 @@ class ExtLauncher(object):
                                     
         if not self.force:
             if msg:  print msg
-            question = 'Do you want to edit file: %(card)s? [y/n/path of the new %(card)s]' 
-            question = question % {'card':filename}
-            try:
-                ans =  misc.timed_input(question, default, timeout=self.timeout,
-                                        noerror=False, fct=fct)
-            except misc.TimeOutError:
-                # avoid to always wait a given time for the next answer
-                self.force = True
-            else:
-                self.timeout=None # answer at least one question so wait...
+            question = 'Do you want to edit file: %(card)s?' % {'card':filename}
+            choices = ['y', 'n']
+            path_info = ['path of the new %(card)s' % {'card':os.path.basename(filename)}]
+            ans = self.ask(question, default, choices, path_info)
         else:
             ans = default
- 
+        
         if ans == 'y':
             path = os.path.join(self.card_dir, filename)
             self.edit_file(path)
@@ -146,9 +160,7 @@ class ExtLauncher(object):
         else:
             path = os.path.join(self.card_dir, filename)
             files.cp(ans, path)
-        
-        
-        
+                
                     
 class SALauncher(ExtLauncher):
     """ A class to launch a simple Standalone test """
@@ -233,22 +245,22 @@ class MELauncher(ExtLauncher):
         if not self.pythia or self.force:
             return
         
-        answer = self.ask('Do you want to run pythia? [y/n]','n')
+        answer = self.ask('Do you want to run pythia?','auto', ['y','n','auto'])
         if answer == 'y':
             self.copy_default_card('pythia')
             self.cards.append('pythia_card.dat')
-        else:
+        elif answer == 'n':
             path = os.path.join(self.card_dir, 'pythia_card.dat')
             try: os.remove(path)
             except OSError: pass
             return # no Need to ask for PGS
         
-        answer = self.ask('Do you want to run PGS? [y/n]','n')
+        answer = self.ask('Do you want to run PGS?','auto', ['y','n','auto'])
         if answer == 'y':
             self.copy_default_card('pgs')
             self.cards.append('pgs_card.dat')
             return # No Need to ask for Delphes
-        else:
+        elif answer == 'n':
             path = os.path.join(self.card_dir, 'pgs_card.dat')
             try: os.remove(path)
             except OSError: pass
@@ -256,11 +268,11 @@ class MELauncher(ExtLauncher):
         if not self.delphes:
             return
         
-        answer = self.ask('Do you want to run Delphes? [y/n]','n')
+        answer = self.ask('Do you want to run Delphes?','n', ['y','n','auto'])
         if answer == 'y':
             self.copy_default_card('delphes')
             self.cards.append('delphes_card.dat')
-        else:
+        elif answer == 'n':
             path = os.path.join(self.card_dir, 'delphes_card.dat')
             try: os.remove(path)
             except OSError: pass        
@@ -330,11 +342,7 @@ class Pythia8Launcher(ExtLauncher):
         files = [d[1] for d in date_file_list]
         
         answer = ''
-        while not answer in files:
-            answer = self.ask('Select a main file to run: [%s] ' % \
-                              ' '.join(files), files[0])
-            if not answer in files:
-                print str(answer) + " not among files, please select again."
+        answer = self.ask('Select a main file to run:', files[0], files)
 
         self.cards.append(answer)
     
