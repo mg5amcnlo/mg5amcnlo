@@ -37,7 +37,6 @@ To run the test suite:
   A) the unit_tests:
       ./tests/test_manager.py [--verbose=1] [--logging=INFO]
   B) the acceptance tests:
-      Go to a recent MG_ME directory, setup MG5 in madgraph5/ and run:
       ./madgraph5/tests/test_manager.py -p A
   C) the parallel tests (warning - this will take a LOOONG time!):
       ./madgraph5/tests/test_manager.py -p P

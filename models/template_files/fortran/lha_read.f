@@ -142,7 +142,7 @@ c
       
 
         ! read a line
-        read(ref_file,'(a132)',end=99,err=99) buffer
+        read(ref_file,'(a132)',end=98,err=98) buffer
         
         ! Seek a corresponding blockname
         call LHA_firststring(temp,buffer)
@@ -168,7 +168,7 @@ c
         end if
                      
       end do
-      close(ref_file)
+98    close(ref_file)
 99    return    
       end
 

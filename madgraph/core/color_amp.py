@@ -174,7 +174,9 @@ class ColorBasis(dict):
         # Update the result dict using the current vertex ColorString object
         # If more than one, create different entries
         inter_color = model.get_interaction(vertex['id'])['color']
-
+        inter_indices = [i for (i,j) in \
+                         model.get_interaction(vertex['id'])['couplings'].keys()]
+        
         # For colorless vertices, return a copy of res_dict
         # Where one 0 has been added to each color index chain key
         if not inter_color:
@@ -190,6 +192,11 @@ class ColorBasis(dict):
         new_res_dict = {}
         for i, col_str in \
                 enumerate(inter_color):
+            
+            # Ignore color string if it doesn't correspond to any coupling
+            if i not in inter_indices:
+                continue
+            
             # Build the new element
             mod_col_str = col_str.create_copy()
 

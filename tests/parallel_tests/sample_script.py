@@ -89,7 +89,7 @@ if '__main__' == __name__:
 
     # Run the actual comparison
     my_comp.run_comparison(my_proc_list,
-                           model=['RS_UFO','RS'],
+                           model=['RS_UFO_GF2','RS'],
                            orders={'QED':4, 'QCD':4, 'QTD':4}, energy=2000)
 
     # Do some cleanup

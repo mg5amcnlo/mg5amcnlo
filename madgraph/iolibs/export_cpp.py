@@ -1469,6 +1469,8 @@ class UFOModelConverterCPP(object):
                                                  p.depend))
             else:
                 for p in self.model['parameters'][key]:
+                    if p.name == 'ZERO':
+                        continue
                     self.params_indep.append(base_objects.ModelVariable(p.name,
                                                  self.p_to_cpp.parse(p.expr),
                                                  p.type,
@@ -1479,15 +1481,16 @@ class UFOModelConverterCPP(object):
             param = params_ext.pop(0)
             # Read value from the slha variable
             expression = ""
+            assert param.value.imag == 0
             if len(param.lhacode) == 1:
                 expression = "slha.get_block_entry(\"%s\", %d, %e);" % \
                              (param.lhablock.lower(), param.lhacode[0],
-                              param.value)
+                              param.value.real)
             elif len(param.lhacode) == 2:
                 expression = "indices[0] = %d;\nindices[1] = %d;\n" % \
                              (param.lhacode[0], param.lhacode[1])
                 expression += "%s=slha.get_block_entry(\"%s\", indices, %e);" \
-                              % (param.name, param.lhablock.lower(), param.value)
+                              % (param.name, param.lhablock.lower(), param.value.real)
             else:
                 raise MadGraph5Error("Only support for SLHA blocks with 1 or 2 indices")
             self.params_indep.insert(0,

@@ -28,17 +28,22 @@ import madgraph.iolibs.files as files
 import madgraph.iolibs.save_load_object as save_load_object
 from madgraph.core.color_algebra import *
 
+
 import aloha.create_aloha as create_aloha
 
 import models as ufomodels
-
+import models.model_reader as model_reader
 logger = logging.getLogger('models.import_ufo')
+logger_mod = logging.getLogger('madgraph.model')
 
-class UFOFormatError(Exception):
-    pass
+root_path = os.path.dirname(os.path.realpath( __file__ ))
+sys.path.append(root_path)
 
-def import_model(model_name):
-    """ a practical and efficient way to import one of those models """
+class UFOImportError(MadGraph5Error):
+    """ a error class for wrong import of UFO model""" 
+
+def find_ufo_path(model_name):
+    """ find the path to a model """
 
     # Check for a valid directory
     if model_name.startswith('./') and os.path.isdir(model_name):
@@ -48,7 +53,58 @@ def import_model(model_name):
     elif os.path.isdir(model_name):
         model_path = model_name
     else:
-        raise MadGraph5Error("Path %s is not a valid pathname" % model_name)
+        raise UFOImportError("Path %s is not a valid pathname" % model_name)
+
+    return model_path
+
+def import_model(model_name):
+    """ a practical and efficient way to import a model"""
+        
+    # check if this is a valid path or if this include restriction file       
+    try:
+        model_path = find_ufo_path(model_name)
+    except UFOImportError:
+        if '-' not in model_name:
+            raise
+        split = model_name.split('-')
+        model_name = '-'.join([text for text in split[:-1]])
+        model_path = find_ufo_path(model_name)
+            
+        restrict_file = os.path.join(model_path, 'restrict_%s.dat'% split[-1])
+        #if restriction is full, then we by pass restriction (avoid default)
+        if split[-1] == 'full':
+            restrict_file = None
+    else:
+        # Check if by default we need some restrictions
+        if os.path.exists(os.path.join(model_path,'restrict_default.dat')):
+            restrict_file = os.path.join(model_path,'restrict_default.dat')
+        else:
+            restrict_file = None
+            
+    #import the FULL model
+    model = import_full_model(model_path) 
+
+    #restrict it if needed       
+    if restrict_file:
+        # but doing this in silence
+        old_level = logger_mod.level
+        if old_level < 30:
+            logger_mod.setLevel(30) # WARNING
+        
+        # Modify the mother class of the object in order to allow restriction
+        model = RestrictModel(model)
+        model.restrict_model(restrict_file)
+        
+        # put logger in normal mode
+        logger_mod.setLevel(old_level) 
+    
+    return model
+
+def import_full_model(model_path):
+    """ a practical and efficient way to import one of those models 
+        (no restriction file use)"""
+
+    assert model_path == find_ufo_path(model_path)
             
     # Check the validity of the model
     files_list_prov = ['couplings.py','lorentz.py','parameters.py',
@@ -57,7 +113,7 @@ def import_model(model_name):
     for filename in files_list_prov:
         filepath = os.path.join(model_path, filename)
         if not os.path.isfile(filepath):
-            raise MadGraph5Error,  "%s directory is not a valid UFO model: \n %s is missing" % \
+            raise UFOImportError,  "%s directory is not a valid UFO model: \n %s is missing" % \
                                                          (model_path, filename)
         files_list.append(filepath)
         
@@ -66,22 +122,20 @@ def import_model(model_name):
         try:
             model = save_load_object.load_from_file( \
                                           os.path.join(model_path, 'model.pkl'))
-        except Exception:
+        except Exception, error:
+            print error
             logger.info('failed to load model from pickle file. Try importing UFO from File')
         else:
             return model
 
     # Load basic information
-    ufo_model = ufomodels.load_model(model_name)
+    ufo_model = ufomodels.load_model(model_path)
     ufo2mg5_converter = UFOMG5Converter(ufo_model)
     model = ufo2mg5_converter.load_model()
-    model.set('name', os.path.split(model_name)[-1])
- 
-    # Load Abstract Helas routine from Aloha
-    #abstract_model = create_aloha.AbstractALOHAModel(model_name)
-    #abstract_model.compute_all(save=False)
-    #model.set('lorentz', abstract_model)
     
+    if model_path[-1] == '/': model_path = model_path[:-1] #avoid empty name
+    model.set('name', os.path.split(model_path)[-1])
+ 
     # Load the Parameter/Coupling in a convinient format.
     parameters, couplings = OrganizeModelExpression(ufo_model).main()
     model.set('parameters', parameters)
@@ -91,6 +145,10 @@ def import_model(model_name):
     # save in a pickle files to fasten future usage
     save_load_object.save_to_file(os.path.join(model_path, 'model.pkl'), model) 
  
+    #if default and os.path.exists(os.path.join(model_path, 'restrict_default.dat')):
+    #    restrict_file = os.path.join(model_path, 'restrict_default.dat') 
+    #    model = import_ufo.RestrictModel(model)
+    #    model.restrict_model(restrict_file)
     return model
     
 
@@ -107,6 +165,7 @@ class UFOMG5Converter(object):
         self.model = base_objects.Model()
         self.model.set('particles', self.particles)
         self.model.set('interactions', self.interactions)
+        self.conservecharge = set(['charge'])
         
         self.ufomodel = model
         
@@ -132,6 +191,7 @@ class UFOMG5Converter(object):
         for interaction_info in self.ufomodel.all_vertices:
             self.add_interaction(interaction_info)
         
+        self.model.set('conserved_charge', self.conservecharge)
         return self.model
         
     
@@ -146,6 +206,7 @@ class UFOMG5Converter(object):
         # MG5 doesn't use ghost (use unitary gauges)
         if particle_info.spin < 0:
             return 
+        
         # MG5 doesn't use goldstone boson 
         if hasattr(particle_info, 'GoldstoneBoson'):
             if particle_info.GoldstoneBoson:
@@ -167,8 +228,14 @@ class UFOMG5Converter(object):
                         particle.set(key, value)
                 elif key == 'charge':
                     particle.set(key, float(value))
+                elif key in ['mass','width']:
+                    particle.set(key, str(value))
                 else:
                     particle.set(key, value)
+            elif key not in ('GhostNumber','selfconjugate','goldstoneboson'):
+                # add charge -we will check later if those are conserve 
+                self.conservecharge.add(key)
+                particle.set(key,value, force=True)
             
         assert(12 == nb_property) #basic check that all the information is there         
         
@@ -178,7 +245,6 @@ class UFOMG5Converter(object):
             
         # Add the particles to the list
         self.particles.append(particle)
-
 
     def add_interaction(self, interaction_info):
         """add an interaction in the MG5 model. interaction_info is the 
@@ -222,6 +288,17 @@ class UFOMG5Converter(object):
                     # add to the interactions
                     self.interactions.append(interaction)
 
+        # check if this interaction conserve the charge defined
+        for charge in list(self.conservecharge): #duplicate to allow modification
+            total = 0
+            for part in interaction_info.particles:
+                try:
+                    total += getattr(part, charge)
+                except AttributeError:
+                    pass
+            if abs(total) > 1e-12:
+                logger.info('The model has interaction violating the charge: %s' % charge)
+                self.conservecharge.discard(charge)
     
     _pat_T = re.compile(r'T\((?P<first>\d*),(?P<second>\d*)\)')
     _pat_id = re.compile(r'Identity\((?P<first>\d*),(?P<second>\d*)\)')
@@ -499,7 +576,219 @@ class OrganizeModelExpression:
         except:
             return 'complex'
             
+class RestrictModel(model_reader.ModelReader):
+    """ A class for restricting a model for a given param_card.
+    Two rules apply:
+     - Vertex with zero couplings are throw away
+     - external parameter with zero input are changed into internal parameter."""
+     
+    def restrict_model(self, param_card):
+        """apply the model restriction following param_card"""
+        
+        # compute the value of all parameters
+        self.set_parameters_and_couplings(param_card)
+        
+        # deal with couplings
+        zero_couplings = self.detect_zero_couplings()
+        self.remove_couplings(zero_couplings)
+        
+        # deal with parameters
+        parameters = self.detect_special_parameters()
+        self.fix_parameter_values(*parameters)
+        
+        # deal with identical parameters
+        iden_parameters = self.detect_identical_parameters()
+        for iden_param in iden_parameters:
+            self.merge_identical_parameters(iden_param)
+        
+
+    def detect_zero_couplings(self):
+        """return a list with the name of all vanishing couplings"""
+        
+        zero_coupling = []
+        
+        for name, value in self['coupling_dict'].items():
+            if value == 0:
+                zero_coupling.append(name)
+        return zero_coupling
+    
+    
+    def detect_special_parameters(self):
+        """ return the list of (name of) parameter which are zero """
+        
+        null_parameters = []
+        one_parameters = []
+        for name, value in self['parameter_dict'].items():
+            if value == 0 and name != 'ZERO':
+                null_parameters.append(name)
+            elif value == 1:
+                one_parameters.append(name)
+                
+        return null_parameters, one_parameters
+    
+    def detect_identical_parameters(self):
+        """ return the list of tuple of name of parameter with the same 
+        input value """
+
+        # Extract external parameters
+        external_parameters = self['parameters'][('external',)]
+        
+        # define usefull variable to detect identical input
+        block_value_to_var={} #(lhablok, value): list_of_var
+        mult_param = set([])       # key of the previous dict with more than one
+                              #parameter.
+                              
+        #detect identical parameter and remove the duplicate parameter
+        for param in external_parameters[:]:
+            value = self['parameter_dict'][param.name]
+            if value == 0:
+                continue
+            key = (param.lhablock, value) 
+            if key in block_value_to_var:
+                block_value_to_var[key].append(param)
+                mult_param.add(key)
+                #remove the duplicate parameter
+                #external_parameters.remove(param)
+            else: 
+                block_value_to_var[key] = [param]        
+        
+        output=[]  
+        for key in mult_param:
+            output.append(block_value_to_var[key])
             
+        return output
+            
+    def merge_identical_parameters(self, parameters):
+        """ merge the identical parameters given in argument """
+            
+        logger_mod.info('Parameters set to identical values: %s '% \
+                        ', '.join([obj.name for obj in parameters]))
+        
+        # Extract external parameters
+        external_parameters = self['parameters'][('external',)]
+        for i, obj in enumerate(parameters):
+            # Keeped intact the first one and store information
+            if i == 0:
+                obj.info = 'set of param :' + \
+                                     ', '.join([param.name for param in parameters])
+                expr = obj.name
+                continue
+            # delete the old parameters
+            external_parameters.remove(obj)
+            # replace by the new one pointing of the first obj of the class
+            new_param = base_objects.ModelVariable(obj.name, expr, 'real')
+            self['parameters'][()].insert(0, new_param)
+        
+    
+    def remove_couplings(self, zero_couplings):
+        """ remove the interactions associated to couplings"""
+        
+        # clean the interactions
+        for interaction in self['interactions'][:]:
+            modified = False
+            for key, coupling in interaction['couplings'].items()[:]:
+                if coupling in zero_couplings:
+                    modified = True
+                    del interaction['couplings'][key]
+                    
+            if modified: 
+                part_name = [part['name'] for part in interaction['particles']]
+                orders = ['%s=%s' % (order,value) 
+                               for order,value in interaction['orders'].items()]                    
+            if not interaction['couplings']:
+                logger_mod.info('remove interactions: %s at order: %s' % \
+                                (' '.join(part_name),', '.join(orders)))
+                self['interactions'].remove(interaction)
+            elif modified:
+                logger_mod.info('modify interactions: %s at order: %s' % \
+                                (' '.join(part_name),', '.join(orders)))                
+        #clean the coupling list:
+        for name, data in self['couplings'].items():
+            for coupling in data[:]:
+                if coupling.name in zero_couplings:
+                    data.remove(coupling)
+        
+    def fix_parameter_values(self, zero_parameters, one_parameters):
+        """ Remove all instance of the parameters in the model and replace it by 
+        zero when needed."""
+
+        special_parameters = zero_parameters + one_parameters
+        
+        # treat specific cases for masses and width
+        for particle in self['particles']:
+            if particle['mass'] in zero_parameters:
+                particle['mass'] = 'ZERO'
+            if particle['width'] in zero_parameters:
+                particle['width'] = 'ZERO'
+        for pdg, particle in self['particle_dict'].items():
+            if particle['mass'] in zero_parameters:
+                particle['mass'] = 'ZERO'
+            if particle['width'] in zero_parameters:
+                particle['width'] = 'ZERO'            
+        
+        # check if the parameters is still usefull:
+        re_str = '|'.join(special_parameters)
+        re_pat = re.compile(r'''\b(%s)\b''' % re_str)
+        used = set()
+        # check in coupling
+        for name, coupling_list in self['couplings'].items():
+            for coupling in coupling_list:
+                for use in  re_pat.findall(coupling.expr):
+                    used.add(use)  
+        
+        # simplify the regular expression
+        re_str = '|'.join([param for param in special_parameters 
+                                                          if param not in used])
+        re_pat = re.compile(r'''\b(%s)\b''' % re_str)
+        
+        param_info = {}
+        # check in parameters
+        for dep, param_list in self['parameters'].items():
+            for tag, parameter in enumerate(param_list):
+                # update information concerning zero/one parameters
+                if parameter.name in special_parameters:
+                    param_info[parameter.name]= {'dep': dep, 'tag': tag, 
+                                                               'obj': parameter}
+                    continue
+                                    
+                # Bypass all external parameter
+                if isinstance(parameter, base_objects.ParamCardVariable):
+                    continue
+
+                # check the presence of zero/one parameter
+                for use in  re_pat.findall(parameter.expr):
+                    used.add(use)
+
+        # modify the object for those which are still used
+        for param in used:
+            data = self['parameters'][param_info[param]['dep']]
+            data.remove(param_info[param]['obj'])
+            tag = param_info[param]['tag']
+            data = self['parameters'][()]
+            if param in zero_parameters:
+                data.insert(0, base_objects.ModelVariable(param, '0.0', 'real'))
+            else:
+                data.insert(0, base_objects.ModelVariable(param, '1.0', 'real'))
+                
+        # remove completely useless parameters
+        for param in special_parameters:
+            #by pass parameter still in use
+            if param in used:
+                logger_mod.info('fix parameter value: %s' % param)
+                continue 
+            logger_mod.info('remove parameters: %s' % param)
+            data = self['parameters'][param_info[param]['dep']]
+            data.remove(param_info[param]['obj'])
+                  
+                
+                
+        
+        
+        
+         
+      
+    
+      
         
         
     

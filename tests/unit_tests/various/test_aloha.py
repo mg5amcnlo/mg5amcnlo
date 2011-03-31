@@ -580,8 +580,6 @@ class TestAddVariable(unittest.TestCase):
 
 
     
-    
-    
 class TestMultVariable(unittest.TestCase):
 
     def setUp(self):
@@ -2662,13 +2660,7 @@ class test_aloha_creation(unittest.TestCase):
 
         for ind in expr.listindices():
             self.assertEqual(eval(str(expr.get_rep(ind))), -178727040j)
-#            
-#
- 
-            
-        
-        
-        
+
 
     def test_use_of_library_spin2(self):
         """ check that use the library or the usual definition is the same """
@@ -2710,11 +2702,7 @@ class test_aloha_creation(unittest.TestCase):
             data = one_exp.get_rep(ind) - two_exp.get_rep(ind)
             data.simplify()
             self.assertAlmostEqual(eval(str(one_exp.get_rep(ind))), eval(str(two_exp.get_rep(ind))))
-        
-        
-        
-        
-        
+                
     def test_aloha_FFT2(self):
         """ test the FFT2 creation of vertex"""
 
@@ -2748,6 +2736,7 @@ class test_aloha_creation(unittest.TestCase):
         for ind in zero.listindices():
             self.assertAlmostEqual(eval(str(zero.get_rep(ind))),0)
              
+
 
     def test_aloha_FFV(self):
         """ test the FFV creation of vertex """
@@ -2809,7 +2798,7 @@ class test_aloha_creation(unittest.TestCase):
         # Check that full identification symmetry works
         helas_suite = create_aloha.AbstractALOHAModel('sm')
         helas_suite.look_for_symmetries()
-        solution = {'VVS1': {2: 1}, 'SSS1': {2: 1, 3: 2}, 'VVSS1': {2: 1, 4: 3}, 'VVVV2': {2: 1, 4: 3}} 
+        solution = {'VVS1': {2: 1}, 'SSS1': {2: 1, 3: 2}, 'VVSS1': {2: 1, 4: 3}, 'VVVV2': {2: 1, 4: 3}, 'SSSS1': {2: 1, 3: 2, 4: 3}} 
         self.assertEqual(solution, helas_suite.symmetries)
         
     def test_has_symmetries(self):

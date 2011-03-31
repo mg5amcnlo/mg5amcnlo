@@ -40,7 +40,8 @@ class TestColorSextetModel(unittest.TestCase):
 
 
     def setUp(self):
-        self.base_model = import_ufo.import_model('sextet_diquarks')
+        m_path = import_ufo.find_ufo_path('sextet_diquarks')
+        self.base_model = import_ufo.import_model(m_path)
         self.full_model = model_reader.ModelReader(self.base_model)
         self.full_model.set_parameters_and_couplings()
     
@@ -323,7 +324,8 @@ class TestColorTripletModel(unittest.TestCase):
 
 
     def setUp(self):
-        self.base_model = import_ufo.import_model('triplet_diquarks')
+        m_path = import_ufo.find_ufo_path('triplet_diquarks')
+        self.base_model = import_ufo.import_model(m_path)
         self.full_model = model_reader.ModelReader(self.base_model)
         self.full_model.set_parameters_and_couplings()
         # Set top quark mass to 0 to compare with literature expression

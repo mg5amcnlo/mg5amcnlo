@@ -13,3 +13,8 @@ all_couplings = couplings.all_couplings
 all_lorentz = lorentz.all_lorentz
 all_parameters = parameters.all_parameters
 all_functions = function_library.all_functions
+
+
+__author__ = "Benjamin Fuks"
+__version__ = "1.3.0"
+__email__ = "fuks@cern.ch"

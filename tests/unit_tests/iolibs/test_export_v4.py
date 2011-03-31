@@ -4945,7 +4945,7 @@ C     Number of configs
         writer.close()
         self.assertFileContains('test',
                          """      INTEGER    N_MAX_CL
-      PARAMETER (N_MAX_CL=512)\n""")
+      PARAMETER (N_MAX_CL=256)\n""")
         # Test nexternal.inc
         writer = writers.FortranWriter(self.give_pos('test'))
         export_v4.write_nexternal_file(writer, me, fortran_model)
@@ -6391,11 +6391,11 @@ class UFO_model_to_mg4_Test(unittest.TestCase):
         
         #  internal params
         self.assertEqual(len(mg4_model.params_dep), 1)
-        self.assertEqual(len(mg4_model.params_indep), 29)
+        self.assertEqual(len(mg4_model.params_indep), 36)
         
         # couplings
         self.assertEqual(len(mg4_model.coups_dep), 3)
-        self.assertEqual(len(mg4_model.coups_indep), 23)
+        self.assertEqual(len(mg4_model.coups_indep), 73)
 
         
         # MG4 use G and not aS as it basic object for alphas related computation

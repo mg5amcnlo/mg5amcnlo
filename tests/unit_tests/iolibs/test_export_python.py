@@ -375,7 +375,8 @@ class IOExportPythonTest(unittest.TestCase):
         writing any files"""
 
         # Import the SM
-        model = import_ufo.import_model('sm')
+        sm_path = import_ufo.find_ufo_path('sm')
+        model = import_ufo.import_model(sm_path)
 
         myleglist = base_objects.LegList()
 

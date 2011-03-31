@@ -104,7 +104,8 @@ class ModelReader(base_objects.Model):
                               value))
                         parameter_dict['decay'][(pid,)].value = complex(value)
                     except KeyError:
-                        logger.warning('No decay parameter found for %d' % pid)
+                        pass
+                        #logger.warning('No decay parameter found for %d' % pid)
                     continue
                 # Look for blocks
                 block_match = re_block.match(line)
@@ -121,9 +122,8 @@ class ModelReader(base_objects.Model):
                         exec("locals()[\'%s\'] = %s" % (parameter_dict[block][(i1,i2)].name,
                                           value))
                         parameter_dict[block][(i1,i2)].value = float(value)
-
                     except KeyError:
-                        logger.warning('No parameter found for block %s index %d %d' %\
+                            logger.warning('No parameter found for block %s index %d %d' %\
                                        (block, i1, i2))
                     continue
                 # Look for single indices
@@ -136,7 +136,8 @@ class ModelReader(base_objects.Model):
                                           value))
                         parameter_dict[block][(i1,)].value = complex(value)
                     except KeyError:
-                        logger.warning('No parameter found for block %s index %d' %\
+                        if block not in  ['qnumbers','mass']:
+                            logger.warning('No parameter found for block %s index %d' %\
                                        (block, i1))
                     continue
         else:
@@ -193,7 +194,7 @@ class ModelReader(base_objects.Model):
                                          derived_parameters]))
 
         # Add "zero"
-        self.get('parameter_dict')['ZERO'] = 0.
+        self.get('parameter_dict')['ZERO'] = complex(0.)
 
         self.set('coupling_dict', dict([(coup.name, coup.value) \
                                         for coup in couplings]))
