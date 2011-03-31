@@ -112,7 +112,7 @@ class Amplitude(base_objects.PhysicsObject):
         """Returns a nicely formatted string of the amplitude process."""
         return self.get('process').nice_string(indent)
 
-    def generate_diagrams(self):
+    def generate_diagrams(self, returndiag=False):
         """Generate diagrams. Algorithm:
 
         1. Define interaction dictionaries:
@@ -177,16 +177,22 @@ class Amplitude(base_objects.PhysicsObject):
         # First check that the number of fermions is even
         if len(filter(lambda leg: model.get('particle_dict')[\
                         leg.get('id')].is_fermion(), legs)) % 2 == 1:
-            self['diagrams'] = res
-            return res
+            if not returndiag:
+                self['diagrams'] = res
+                return res
+            else:
+                return res, res
 
         # Then check same number of incoming and outgoing fermions (if
         # no Majorana particles in model)
         if not model.get('got_majoranas') and \
            len(filter(lambda leg: leg.is_incoming_fermion(model), legs)) != \
            len(filter(lambda leg: leg.is_outgoing_fermion(model), legs)):
-            self['diagrams'] = res
-            return res
+            if not returndiag:
+                self['diagrams'] = res
+                return res
+            else:
+                return res, res
 
         logger.info("Trying %s " % process.nice_string().replace('Process', 'process'))
 
@@ -200,11 +206,10 @@ class Amplitude(base_objects.PhysicsObject):
 
         # Copy leglist from process, so we can flip leg identities
         # without affecting the original process
-        leglist = base_objects.LegList(\
-                       [ copy.copy(leg) for leg in process.get('legs') ])
+        leglist = self.copy_leglist(process.get('legs'))
 
         for leg in leglist:
-
+            
             # For the first step, ensure the tag from_group 
             # is true for all legs
             leg.set('from_group', True)
@@ -250,11 +255,15 @@ class Amplitude(base_objects.PhysicsObject):
                                                   model.get('ref_dict_to0'),
                                                   is_decay_proc,
                                                   process.get('orders'))
-
+        
+        #In LoopAmplitude the function below is overloaded such that it
+        #converts back all DGLoopLegs to Legs. In the default tree-level
+        #diagram generation, this does nothing.
+        self.convert_dgleg_to_leg(reduced_leglist)
+         
         if reduced_leglist:
             for vertex_list in reduced_leglist:
-                res.append(base_objects.Diagram(
-                            {'vertices':base_objects.VertexList(vertex_list)}))
+                res.append(self.create_diagram(base_objects.VertexList(vertex_list)))
 
         # Record whether or not we failed generation before required
         # s-channel propagators are taken into account
@@ -305,14 +314,11 @@ class Amplitude(base_objects.PhysicsObject):
                                 for vertex in diagram.get('vertices')[:-1]]),
                        res))
 
-        # Set diagrams to res
-        self['diagrams'] = res
-
         # Trim down number of legs and vertices used to save memory
-        self.trim_diagrams()
+        self.trim_diagrams(res)
 
         # Set actual coupling orders for each diagram
-        for diagram in self['diagrams']:
+        for diagram in res:
             diagram.calculate_orders(model)
 
         if res:
@@ -320,8 +326,33 @@ class Amplitude(base_objects.PhysicsObject):
 
         # Sort process legs according to leg number
         self.get('process').get('legs').sort()
-        
-        return not failed_crossing
+
+        # Set diagrams to res if not asked to be returned
+        if not returndiag:
+           self['diagrams'] = res
+           return not failed_crossing
+        else:
+           return not failed_crossing, res
+
+    def create_diagram(self, vertexlist):
+        """ Return a Diagram created from the vertex list. This function can be
+            overloaded by daughter classes."""
+        return base_objects.Diagram({'vertices':vertexlist})
+
+    def convert_dgleg_to_leg(self, vertexdoublelist):
+        """ In LoopAmplitude, it converts back all DGLoopLegs into Legs.
+            In Amplitude, there is nothing to do. """
+
+        return True
+
+    def copy_leglist(self, legs):
+        """ Simply returns a copy of the leg list. This function is
+            overloaded in LoopAmplitude so that a DGLoopLeg list is returned.
+            The DGLoopLeg has some additional parameters only useful during
+            loop diagram generation"""
+
+        return base_objects.LegList(\
+                [ copy.copy(leg) for leg in legs ])
 
     def reduce_leglist(self, curr_leglist, max_multi_to1, ref_dict_to0,
                        is_decay_proc = False, coupling_orders = None):
@@ -605,7 +636,7 @@ class Amplitude(base_objects.PhysicsObject):
     def get_combined_legs(self, legs, leg_vert_ids, number, state):
         """Create a set of new legs from the info given. This can be
         overloaded by daughter classes."""
-
+        
         mylegs = [(base_objects.Leg({'id':leg_id,
                                     'number':number,
                                     'state':state,
@@ -621,13 +652,13 @@ class Amplitude(base_objects.PhysicsObject):
 
         return vert_ids
                           
-    def trim_diagrams(self):
+    def trim_diagrams(self, diaglist):
         """Reduce the number of legs and vertices used in memory."""
 
         legs = []
         vertices = []
 
-        for diagram in self.get('diagrams'):
+        for diagram in diaglist:
             for ivx, vertex in enumerate(diagram.get('vertices')):
                 for ileg, leg in enumerate(vertex.get('legs')):
                     leg.set('from_group', False)
@@ -897,8 +928,8 @@ class MultiProcess(base_objects.PhysicsObject):
 
         return ['process_definitions', 'amplitudes']
 
-    @staticmethod
-    def generate_multi_amplitudes(process_definition,
+    @classmethod
+    def generate_multi_amplitudes(cls,process_definition,
                                   collect_mirror_procs = False,
                                   ignore_six_quark_processes = []):
         """Generate amplitudes in a semi-efficient way.
@@ -988,6 +1019,8 @@ class MultiProcess(base_objects.PhysicsObject):
                                  process_definition.get('forbidden_particles'),
                               'is_decay_chain': \
                                  process_definition.get('is_decay_chain'),
+                              'perturbation_couplings': \
+                                 process_definition.get('perturbation_couplings'),
                               'overall_orders': \
                                  process_definition.get('overall_orders')})
 
@@ -1009,7 +1042,8 @@ class MultiProcess(base_objects.PhysicsObject):
                     except:
                         pass
 
-                amplitude = Amplitude({"process": process})
+                
+                amplitude = cls.get_amplitude_from_proc(process)
                 if not amplitude.generate_diagrams():
                     # Add process to failed_procs
                     failed_procs.append(sorted_legs)
@@ -1027,7 +1061,14 @@ class MultiProcess(base_objects.PhysicsObject):
 
         # Return the produced amplitudes
         return amplitudes
-            
+
+    @classmethod
+    def get_amplitude_from_proc(cls,proc):
+        """ Return the correct amplitude type according to the characteristics of
+            the process proc """
+        return Amplitude({"process": proc})
+
+
     @staticmethod
     def find_maximal_non_qcd_order(process_definition):
         """Find the maximal QCD order for this set of processes.

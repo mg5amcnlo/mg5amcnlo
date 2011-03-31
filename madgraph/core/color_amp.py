@@ -304,9 +304,10 @@ class ColorBasis(dict):
 
         if amplitude:
             self.create_color_dict_list(amplitude)
-
+            #print "color dict: ", self._list_color_dict
         for index, color_dict in enumerate(self._list_color_dict):
             self.update_color_basis(color_dict, index)
+            #print "self=",self
 
     def __init__(self, *args):
         """Initialize a new color basis object, either empty or filled (0
