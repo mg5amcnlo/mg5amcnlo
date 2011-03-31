@@ -58,6 +58,8 @@ precision_cut = 1e-14
 
 USE_TAG=set() #global to check which tag are used
 
+depth=-1
+
 #===============================================================================
 # FracVariable
 #=============================================================================== 
@@ -202,19 +204,31 @@ class AddVariable(list):
     def simplify(self, short=False):
         """ apply rule of simplification """
         
-        varlen = len(self)
         # deal with one length object
-        if varlen == 1:
+        if len(self) == 1:
             return self.prefactor * self[0].simplify()
         
         if short:
             return self
- 
+        
+        # check if more than one constant object
+        constant = 0        
+        # simplify complex number/Constant object
+        for term in self[:]:
+            if not hasattr(term, 'vartype'):
+                constant += term
+                self.remove(term)
+            elif term.vartype == 5:
+                constant += term.prefactor * term.value
+                self.remove(term)
+                
+
         # contract identical term and suppress null term
+        varlen = len(self)
         i = -1
         while i > -varlen:
             j = i - 1
-            while j >= -varlen:
+            while j >= -varlen:                
                 if self[i] == self[j]:
                     self[i].prefactor += self[j].prefactor
                     del self[j]
@@ -227,11 +241,17 @@ class AddVariable(list):
             else:
                 i -= 1
                 
+        if constant:
+            self.append(ConstantObject(constant))
+            varlen += 1
+             
         # deal with one/zero length object
         if varlen == 1:
             return self.prefactor * self[0].simplify()
         elif varlen == 0: 
             return ConstantObject()
+        
+        
         
         return self
     
@@ -243,7 +263,8 @@ class AddVariable(list):
         
         new = self[0].expand()
         for item in self[1:]:
-            new += item.expand()       
+            obj = item.expand()
+            new += obj      
         return new
         
     
@@ -394,6 +415,8 @@ class AddVariable(list):
     def factorize(self):
         """ try to factorize as much as possible the expression """
 
+        #import aloha 
+        #aloha.depth += 1 #global variable for debug
         max, maxvar = self.count_term()
         maxvar = maxvar.__class__(maxvar.variable)
         if max <= 1:
@@ -401,6 +424,7 @@ class AddVariable(list):
             return self
         else:
             # split in MAXVAR * NEWADD + CONSTANT
+            #print " " * 4 * aloha.depth + "start fact", self
             newadd = AddVariable()
             constant = AddVariable()
             #fill NEWADD and CONSTANT
@@ -455,12 +479,18 @@ class AddVariable(list):
             if len(constant) == 1:
                 constant = constant[0]
             if len(newadd) == 1:
-                newadd = newadd[0]
-
+                newadd = newadd[0] 
+                        
             if constant:
                 constant = constant.factorize()
+                #aloha.depth -=1
+                #print ' ' * 4 * aloha.depth + 'return', AddVariable([newadd, constant])
                 return AddVariable([newadd, constant])
             else:
+                if constant.vartype == 5 and constant != 0:
+                    return AddVariable([newadd, constant])
+                #aloha.depth -=1
+                #print ' ' * 4 * aloha.depth + 'return:', newadd
                 return newadd
         
 #===============================================================================
@@ -509,7 +539,7 @@ class MultVariable(list):
         out *= self.prefactor
         return out
      
-    #Defining rule of Multiplication, Addition, Substraction    
+    #Defining rule of Multiplication    
     def __mul__(self, obj):
         """Define the multiplication with different object"""
         
@@ -517,7 +547,7 @@ class MultVariable(list):
             return self.__class__(self, self.prefactor * obj)
         
         elif not obj.vartype: # obj is a Variable
-            return NotImplemented
+            return NotImplemented # Use the one ov Variable
         
         elif obj.vartype == 2: # obj is a MultVariable
             new = self.__class__(self, self.prefactor)
@@ -599,7 +629,7 @@ class MultVariable(list):
         if obj in self:
             index = self.index(obj)
             self[index] = self[index].copy()
-            self[index].power += 1
+            self[index].power += obj.power
         else:
             obj.prefactor = 1
             list.append(self, obj)
@@ -656,18 +686,17 @@ class Variable(object):
         """class for error in Variable object"""
         pass
     
-    def __init__(self, prefactor=1, variable='x'):
+    def __init__(self, prefactor=1, variable='x', power=1):
         """ [prefactor] * Variable ** [power]"""
 
         self.prefactor = prefactor
         self.variable = variable
-        self.power = 1
+        self.power = power
 
     def copy(self):
         """provide an indenpedant copy of the object"""
         
-        new = Variable(self.prefactor, self.variable)
-        new.power = self.power
+        new = Variable(self.prefactor, self.variable, self.power)
         return new
         
     def simplify(self):
@@ -734,19 +763,28 @@ class Variable(object):
         if not obj:
             return self
         
-        elif not obj.vartype: # obj is a Variable
+        try: 
+            type = obj.vartype
+        except: #float
+            new = self.add_class()
+            new.append(self.copy())
+            new.append(ConstantObject(obj))
+            return new
+            
+        
+        if not type: # obj is a Variable
             new = self.add_class()
             new.append(self.copy())
             new.append(obj.copy())
             return new
         
-        elif obj.vartype == 2: # obj is a MultVariable
+        elif type == 2: # obj is a MultVariable
             new = self.add_class()
             new.append(self.copy())
             new.append(self.mult_class(obj, obj.prefactor))
             return new           
         
-        elif obj.vartype == 1: # obj is an AddVariable
+        elif type == 1: # obj is an AddVariable
             new = self.add_class(obj, obj.prefactor)
             new.append(self.copy())
             return new
@@ -806,17 +844,15 @@ class ScalarVariable(Variable):
     """ A concrete symbolic scalar variable
     """
     
-    def __init__(self, variable_name, prefactor=1):
+    def __init__(self, variable_name, prefactor=1, power=1):
         """ initialization of the object with default value """
         
-        Variable.__init__(self, prefactor, variable_name)
+        Variable.__init__(self, prefactor, variable_name, power)
         
         
     def copy(self):
         """ Define a independant copy of the object"""
-        new = ScalarVariable(self.variable, self.prefactor) 
-                                                            
-        new.power = self.power
+        new = ScalarVariable(self.variable, self.prefactor, self.power) 
         return new
 
 #===============================================================================
@@ -922,7 +958,7 @@ class MultLorentz(MultVariable):
                 continue
         
             current = None
-        
+
         # Multiply all those current
         out = self.prefactor
         for fact in product_term:
@@ -1271,7 +1307,8 @@ class LorentzObjectRepresentation(dict):
                     index = obj.lorentz_ind.index(value)
                 except:
                     raise self.LorentzObjectRepresentationError("Invalid" + \
-                                "addition. Object doen't have the same indices")
+                    "addition. Object doen't have the same lorentz indices:" + \
+                                "%s != %s" % (self.lorentz_ind, obj.lorentz_ind))
                 else:
                     switch_order.append(index)
             for value in self.spin_ind:
@@ -1286,19 +1323,21 @@ class LorentzObjectRepresentation(dict):
         else:
             # no mapping needed (define switch as identity)
             switch = lambda ind : (ind)
-            
+   
+        assert tuple(self.lorentz_ind) == tuple(switch(obj.lorentz_ind)), '%s!=%s' % (self.lorentz_ind, switch(obj.lorentz_ind))
+
         # define an empty representation
-        new = LorentzObjectRepresentation({}, self.lorentz_ind, self.spin_ind)
+        new = LorentzObjectRepresentation({}, obj.lorentz_ind, self.spin_ind)
         
-        # loop over all indices and fullfill the new object           
+        # loop over all indices and fullfill the new object         
         if fact == 1:
             for ind in self.listindices():
-                value = self.get_rep(ind) + obj.get_rep(switch(ind))
+                value = obj.get_rep(ind) + self.get_rep(switch(ind))
                 new.set_rep(ind, value)
         else:
             for ind in self.listindices():
                 #permute index for the second object
-                value = self.get_rep(ind) + fact * obj.get_rep(switch(ind))
+                value = self.get_rep(switch(ind)) + fact * obj.get_rep(ind)
                 new.set_rep(ind, value)            
 
         return new
@@ -1318,8 +1357,8 @@ class LorentzObjectRepresentation(dict):
     def __mul__(self, obj):
         """multiplication performing directly the einstein/spin sommation.
         """
-
-        if not hasattr(obj, 'vartype') or not self.vartype:
+        
+        if not hasattr(obj, 'vartype') or not self.vartype or obj.vartype==5:
             out = LorentzObjectRepresentation({}, self.lorentz_ind, self.spin_ind)
             for ind in out.listindices():
                 out.set_rep(ind, obj * self.get_rep(ind))
@@ -1329,7 +1368,8 @@ class LorentzObjectRepresentation(dict):
             out /= obj.denominator
             return out
 
-        assert(obj.__class__ == LorentzObjectRepresentation)
+
+        assert(obj.__class__ == LorentzObjectRepresentation), '%s is not valid class for this operation' %type(obj)
         
         # compute information on the status of the index (which are contracted/
         #not contracted
@@ -1337,7 +1377,6 @@ class LorentzObjectRepresentation(dict):
                                                                 obj.lorentz_ind)
         s_ind, sum_s_ind = self.compare_indices(self.spin_ind, \
                                                                    obj.spin_ind)      
-              
         if not(sum_l_ind or sum_s_ind):
             # No contraction made a tensor product
             return self.tensor_product(obj)
@@ -1354,7 +1393,7 @@ class LorentzObjectRepresentation(dict):
             new_object.set_rep(indices, \
                                self.contraction(obj, sum_l_ind, sum_s_ind, \
                                                  dict_l_ind, dict_s_ind))
-
+        
         return new_object
 
     @staticmethod

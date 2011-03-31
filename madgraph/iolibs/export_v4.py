@@ -143,30 +143,6 @@ class ProcessExporterFortran(object):
         ff.write(text)
         ff.close()
 
-    #===============================================================================
-    # Copy the model restriction in the Model Directory
-    #===============================================================================
-    def cp_model_restriction(self, file_path):
-        """Copy the model restriction in the Model Directory."""
-
-        if not file_path:
-            return
-
-        assert os.path.isfile(file_path)
-        assert os.path.isdir(os.path.join(self.dir_path,'Source','MODEL'))
-
-        output_path = os.path.join(self.dir_path,'Source','MODEL','restrict_model.dat')
-
-        header="""#*********************************************************************
-    #  THIS FILE WAS USED TO RESTRICT THE ORIGINAL MODEL
-    #  PLEASE DON'T EDIT THIS FILE. HE IS IMPORTANT IN ORDER TO BE ABLE 
-    #  TO REPRODUCE THE RESULT IN THE FUTURE.
-    #*********************************************************************\n"""    
-        ff = open(output_path,'w')
-        ff.writelines(header)
-        ff.writelines(open(file_path).read())
-        ff.close()
-
     #===========================================================================
     # Create jpeg diagrams, html pages,proc_card_mg5.dat and madevent.tar.gz
     #===========================================================================
@@ -2344,7 +2320,7 @@ class UFO_model_to_mg4(object):
         
         self.pass_parameter_to_case_insensitive()
         self.refactorize(wanted_couplings)
-        
+
         # write the files
         if full:
             self.write_all()
@@ -2480,13 +2456,13 @@ class UFO_model_to_mg4(object):
         for particle in self.model.get('particles'):
             already_def.add(particle.get('mass').lower())
             already_def.add(particle.get('width').lower())
-        
+
         is_valid = lambda name: name!='G' and name.lower() not in already_def
         
         real_parameters = [param.name for param in self.params_dep + 
                             self.params_indep if param.type == 'real'
                             and is_valid(param.name)]
-        
+
         real_parameters += [param.name for param in self.params_ext 
                             if param.type == 'real'and 
                                is_valid(param.name)]

@@ -13,10 +13,13 @@
 #
 ################################################################################
 
+import glob
 import logging
 import os
+import pydoc
+import re
 import subprocess
-
+import time
 
 import madgraph.iolibs.files as files
 import madgraph.iolibs.misc as misc
@@ -93,13 +96,33 @@ class ExtLauncher(object):
         path = os.path.realpath(path)
         subprocess.call([self.editor, path], cwd=os.getcwd())
         
-    def ask(self, question, default):
+    def ask(self, question, default, choices=[], path_info=[]):
         """ ask a question """
         
+        assert type(path_info) == list
+        
         if not self.force:
+            # add choice info to the question
+            if choices + path_info:
+                question += ' ['
+                
+                for data in choices[:9] + path_info:
+                    if default == data:
+                        question += "\033[%dm%s\033[0m" % (4, data)
+                    else:
+                        question += "%s" % data
+                    question += ', '
+                if len(choices) > 9:
+                    question += ', ... , ' 
+                question = question[:-2]+']'
+                
+            if path_info:
+                fct = lambda q: cmd.raw_path_input(q, allow_arg=choices, default=default)
+            else:
+                fct = lambda q: cmd.smart_input(q, allow_arg=choices, default=default)
             try:
                 out =  misc.timed_input(question, default, timeout=self.timeout,
-                                        noerror=False)
+                                        noerror=False, fct=fct)
             except misc.TimeOutError:
                 # avoid to always wait a given time for the next answer
                 self.force = True
@@ -122,19 +145,13 @@ class ExtLauncher(object):
                                     
         if not self.force:
             if msg:  print msg
-            question = 'Do you want to edit file: %(card)s? [y/n/path of the new %(card)s]' 
-            question = question % {'card':filename}
-            try:
-                ans =  misc.timed_input(question, default, timeout=self.timeout,
-                                        noerror=False, fct=fct)
-            except misc.TimeOutError:
-                # avoid to always wait a given time for the next answer
-                self.force = True
-            else:
-                self.timeout=None # answer at least one question so wait...
+            question = 'Do you want to edit file: %(card)s?' % {'card':filename}
+            choices = ['y', 'n']
+            path_info = ['path of the new %(card)s' % {'card':os.path.basename(filename)}]
+            ans = self.ask(question, default, choices, path_info)
         else:
             ans = default
- 
+        
         if ans == 'y':
             path = os.path.join(self.card_dir, filename)
             self.edit_file(path)
@@ -143,9 +160,7 @@ class ExtLauncher(object):
         else:
             path = os.path.join(self.card_dir, filename)
             files.cp(ans, path)
-        
-        
-        
+                
                     
 class SALauncher(ExtLauncher):
     """ A class to launch a simple Standalone test """
@@ -207,7 +222,7 @@ class MELauncher(ExtLauncher):
             for i in range(1000):
                 path = os.path.join(self.running_dir, 'Events','run_%02i_banner.txt' % i)
                 if not os.path.exists(path):
-                    self.name = 'run%s' % i
+                    self.name = 'run_%02i' % i
                     break
         
         if self.name == '':
@@ -230,22 +245,22 @@ class MELauncher(ExtLauncher):
         if not self.pythia or self.force:
             return
         
-        answer = self.ask('Do you want to run pythia? [y/n]','n')
+        answer = self.ask('Do you want to run pythia?','auto', ['y','n','auto'])
         if answer == 'y':
             self.copy_default_card('pythia')
             self.cards.append('pythia_card.dat')
-        else:
+        elif answer == 'n':
             path = os.path.join(self.card_dir, 'pythia_card.dat')
             try: os.remove(path)
             except OSError: pass
             return # no Need to ask for PGS
         
-        answer = self.ask('Do you want to run PGS? [y/n]','n')
+        answer = self.ask('Do you want to run PGS?','auto', ['y','n','auto'])
         if answer == 'y':
             self.copy_default_card('pgs')
             self.cards.append('pgs_card.dat')
             return # No Need to ask for Delphes
-        else:
+        elif answer == 'n':
             path = os.path.join(self.card_dir, 'pgs_card.dat')
             try: os.remove(path)
             except OSError: pass
@@ -253,11 +268,11 @@ class MELauncher(ExtLauncher):
         if not self.delphes:
             return
         
-        answer = self.ask('Do you want to run Delphes? [y/n]','n')
+        answer = self.ask('Do you want to run Delphes?','n', ['y','n','auto'])
         if answer == 'y':
             self.copy_default_card('delphes')
             self.cards.append('delphes_card.dat')
-        else:
+        elif answer == 'n':
             path = os.path.join(self.card_dir, 'delphes_card.dat')
             try: os.remove(path)
             except OSError: pass        
@@ -287,7 +302,122 @@ class MELauncher(ExtLauncher):
         logger.info('The total cross-section is %s +- %s pb' % (cross, error))
         logger.info('more information in %s' 
                                  % os.path.join(self.running_dir, 'index.html'))
+                
+
+class Pythia8Launcher(ExtLauncher):
+    """A class to launch Pythia8 run"""
+    
+    cards = []
+
+    def __init__(self, running_dir, timeout, **option):
+        """ initialize launching Pythia 8"""
+
+        running_dir = os.path.join(running_dir, 'examples')
+        ExtLauncher.__init__(self, running_dir, '.', timeout, **option)
+
+    
+    def prepare_run(self):
+        """ ask for pythia-pgs/delphes run """
+
+        self.cards = []
         
+        # Find all main_model_process.cc files
+        date_file_list = []
+        for file in glob.glob(os.path.join(self.running_dir,'main_*_*.cc')):
+            # retrieves the stats for the current file as a tuple
+            # (mode, ino, dev, nlink, uid, gid, size, atime, mtime, ctime)
+            # the tuple element mtime at index 8 is the last-modified-date
+            stats = os.stat(file)
+            # create tuple (year yyyy, month(1-12), day(1-31), hour(0-23), minute(0-59), second(0-59),
+            # weekday(0-6, 0 is monday), Julian day(1-366), daylight flag(-1,0 or 1)) from seconds since epoch
+            # note:  this tuple can be sorted properly by date and time
+            lastmod_date = time.localtime(stats[8])
+            date_file_list.append((lastmod_date, os.path.split(file)[-1]))
+
+        if not date_file_list:
+            raise MadGraph5Error, 'No Pythia output found'
+        # Sort files according to date with newest first
+        date_file_list.sort()
+        date_file_list.reverse()
+        files = [d[1] for d in date_file_list]
+        
+        answer = ''
+        answer = self.ask('Select a main file to run:', files[0], files)
+
+        self.cards.append(answer)
+    
+        self.executable = self.cards[-1].replace(".cc","")
+
+        # Assign a valid run name if not put in options
+        if self.name == '':
+            for i in range(1000):
+                path = os.path.join(self.running_dir, '',
+                                    '%s_%02i.log' % (self.executable, i))
+                if not os.path.exists(path):
+                    self.name = '%s_%02i.log' % (self.executable, i)
+                    break
+        
+        if self.name == '':
+            raise MadGraph5Error, 'too many runs in this directory'
+
+        # Find all exported models
+        models = glob.glob(os.path.join(self.running_dir,os.path.pardir,
+                                        "Processes_*"))
+        models = [os.path.split(m)[-1].replace("Processes_","") for m in models]
+        # Extract model name from executable
+        models.sort(key=len)
+        models.reverse()
+        model_dir = ""
+        for model in models:
+            if self.executable.replace("main_", "").startswith(model):
+                model_dir = "Processes_%s" % model
+                break
+        if model_dir:
+            self.model = model
+            self.model_dir = os.path.realpath(os.path.join(self.running_dir,
+                                                           os.path.pardir,
+                                                           model_dir))
+            self.cards.append(os.path.join(self.model_dir,
+                                           "param_card_%s.dat" % model))
+        
+    def launch_program(self):
+        """launch the main program"""
+
+        # Make pythia8
+        print "Running make for pythia8 directory"
+        status = subprocess.call(['make'], stdout = open(os.devnull, 'w'),
+                        stderr = open(os.devnull, 'w'),
+                        cwd=os.path.join(self.running_dir, os.path.pardir))
+        if status != 0:
+            raise MadGraph5Error, "make failed for pythia8 directory"
+        if self.model_dir:
+            print "Running make in %s" % self.model_dir
+            status = subprocess.call(['make'], stdout = open(os.devnull, 'w'),
+                            stderr = open(os.devnull, 'w'),
+                            cwd=self.model_dir)
+            if status != 0:
+                raise MadGraph5Error, "make failed for %s directory" % self.model_dir
+        # Finally run make for executable
+        makefile = self.executable.replace("main_","Makefile_")
+        print "Running make with %s" % makefile
+        status = subprocess.call(['make', '-f', makefile],
+                                 stdout = open(os.devnull, 'w'),
+                                 cwd=self.running_dir)
+        if status != 0:
+            raise MadGraph5Error, "make failed for %s" % self.executable
+        
+        print "Running " + self.executable
+
+        output = open(os.path.join(self.running_dir, self.name), 'w')
+        subprocess.call([self.executable], stdout = output, stderr = output,
+                        cwd=self.running_dir)
+
+        # Display the cross-section to the screen
+        path = os.path.join(self.running_dir, self.name) 
+        pydoc.pager(open(path).read())
+
+        print "Output of the run is found at " + \
+              os.path.realpath(os.path.join(self.running_dir, self.name))
         
         
         

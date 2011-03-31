@@ -44,24 +44,29 @@ if '__main__' == __name__:
     logging.getLogger('madgraph').setLevel(logging.INFO)
     logging.getLogger('cmdprint').setLevel(logging.INFO)
     logging.getLogger('tutorial').setLevel(logging.ERROR)
-    
-    
+        
     logging.basicConfig(level=logging.INFO)
-#    my_proc_list = me_comparator.create_proc_list_enhanced(
-##        ['w+', 'w-', 'z'],
-##        initial=2, final_1=2)
-##    my_proc_list = ['e- x1+ > e- h1 x1+','e- x1+ > e- h2 x1+','e- x1+ > e- h3 x1+',
-##                    'e+ x1+ > e+ h1 x1+','e+ x1+ > e+ h2 x1+','e+ x1+ > e+ h3 x1+']
-    my_proc_list = ['e+ e- > e+ e-', 'w+ w- > e+ e-']
-#    my_proc_list = ['el+ h2 > el+ w+ w-', 'w+ w- > ta1+ ta1-']
-#    my_proc_list += ['u u~ > u u~ g']
-#    my_proc_list += ['W+ W- > e+ e-','W+ W- > mu+ mu-','W+ e- > W+ e-','W+ mu- > W+ mu-','W+ sl1+ > W+ sl1+','W+ sl1+ > W+ sl4+']
-                   
-#    my_proc_list = me_comparator.create_proc_list(['e+', 'e-','u','u~','g','mu+','vm','vm~'], initial=2,
-#                                                  final=2)
-    #my_proc_list = me_comparator.create_proc_list(['g', 'h', 'h3'], initial=2,
-    #                                               final=4)
-    
+    #my_proc_list = ['u u~ > g y $ g', 'u~ u > g y $ g ', 'y > u u~','Z >  u u~']
+    #my_proc_list = ['t t > t t', 't t~ > t t~', 't t~ > z z', 't z > t z', 't~ t~ > t~ t~', 't~ z > t~ z', 'g g > y y', 'g y > g y', 'y y > g g', 'y y > z z', 'y y > a a', 'y z > t t~', 'y z > y z', 'a y > a y',' z z > t t~', 'z z > y y', 'a a > y y']
+    my_proc_list = ['t t~ > t t~','e+ e- > e+ e-','w+ w- > w+ w-', 't t~ > t t~ / a z h g', 'y > t t~', 'y > t t~ g', 't t~ > t t~ / z h g','t t~ > t t~ / a h g','t t~ > t t~ / z a g', 't t~ > t t~ / h ', 't t~ > t t~ / z','t t~ > z > t t~']
+    #my_proc_list += ['t t~ > z > t t~','u u~ > z > u u~', 't t~ > t t~', 'u u > u u']
+    #my_proc_list = [ 't t~ > y > t t~','z z > y > t t~','t t~ > y > z z',' u u~ > y > t t~', 't t~ > y > u u~']
+    #my_proc_list = [' t t~ > t t~ y', 't t~ > t t~ g','g g > g g g','u u~ > y > u u~', 't t~ > y > t t~' ]
+    my_proc_list = me_comparator.create_proc_list(['u', 'u~','t','t~','g','y','a'], initial=2,
+                                                  final=2)
+    #my_proc_list = [p+' /z' for p in my_proc_list]
+
+    #my_proc_list += me_comparator.create_proc_list(['u', 'u~','t','t~','g','y','z','a'], initial=1,
+    #                                              final=2)
+    #my_proc_list = me_comparator.create_proc_list_enhanced(
+    #    ['u', 'u~', 'd', 'd~', 'g'],['six', 'six~'],['g'],
+    #    initial=2, final_1=1, final_2 = 1)
+
+    #my_proc_list += me_comparator.create_proc_list(['w+','w-','z','a','x1+','x1-','n1'], initial=2,
+    #                                              final=3)
+    #my_proc_list += me_comparator.create_proc_list(['g','u','u~','go','ul','ul~','ur','ur~'], initial=2,
+    #                                              final=3)
+
     # Create a MERunner object for MG4
     my_mg4 = me_comparator.MG4Runner()
     my_mg4.setup(mg4_path)
@@ -80,12 +85,12 @@ if '__main__' == __name__:
 
     # Create and setup a comparator
     my_comp = me_comparator.MEComparator()
-    my_comp.set_me_runners(my_mg5, my_mg5_ufo)
+    my_comp.set_me_runners(my_mg5_ufo, my_mg4)
 
     # Run the actual comparison
     my_comp.run_comparison(my_proc_list,
-                           model=['mssm','MSSM_UFO',],
-                           orders={'QED':4, 'QCD':4}, energy=2000)
+                           model=['RS_UFO_GF2','RS'],
+                           orders={'QED':4, 'QCD':4, 'QTD':4}, energy=2000)
 
     # Do some cleanup
     #my_comp.cleanup()

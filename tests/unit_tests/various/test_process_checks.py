@@ -323,7 +323,6 @@ class TestLorentzInvariance(unittest.TestCase):
         for i in range(len(invariant_mass_boost)):
             self.assertAlmostEqual(invariant_mass_boost[i], 
                                    invariant_mass_result[i])    
-    
 
     def test_boost_momenta_gluino(self):
         """check if the momenta are boosted correctly by checking invariant mass
