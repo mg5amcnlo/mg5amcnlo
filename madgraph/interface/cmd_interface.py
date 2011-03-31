@@ -39,6 +39,8 @@ from madgraph import MG4DIR, MG5DIR, MadGraph5Error
 
 import madgraph.core.base_objects as base_objects
 import madgraph.core.diagram_generation as diagram_generation
+import madgraph.loop.loop_diagram_generation as loop_diagram_generation
+import madgraph.loop.loop_base_objects as loop_base_objects
 import madgraph.core.drawing as draw_lib
 import madgraph.core.helas_objects as helas_objects
 
@@ -740,6 +742,11 @@ class CheckValidForCmd(object):
         #check balance of paranthesis
         if process.count('(') != process.count(')'):
             raise self.InvalidCmd('Invalid Format, no balance between open and close parenthesis')
+
+        #check balance of paranthesis
+        if process.count('[') != process.count(']'):
+            raise self.InvalidCmd('Invalid Format, no balance between open and close brackets defining loop particles')
+
         #remove parenthesis for fututre introspection
         process = process.replace('(',' ').replace(')',' ')
         
@@ -1471,12 +1478,25 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
                                "ignore_six_quark_processes" in self._options \
                                else []
 
-                myproc = diagram_generation.MultiProcess(myprocdef,
-                                              collect_mirror_procs =\
+
+                # Regenerate the interaction dictionary of the model.
+                # In principle we never need to generate diagrams with the R2 or UV
+                # interactions.
+                self._curr_model.actualize_dictionaries(False)
+
+                # Decide here wether one need an NLOMultiProcess or a MultiProcess
+                multiprocessclass=None
+                if myprocdef['perturbation_couplings']:
+                    multiprocessclass=loop_diagram_generation.LoopMultiProcess
+                else:
+                    multiprocessclass=diagram_generation.MultiProcess
+            
+                myproc = multiprocessclass(myprocdef,
+                                              collect_mirror_procs = \
                                               collect_mirror_procs,
                                               ignore_six_quark_processes = \
                                               ignore_six_quark_processes)
-                    
+
                 for amp in myproc.get('amplitudes'):
                     if amp not in self._curr_amps:
                         self._curr_amps.append(amp)
@@ -1856,11 +1876,24 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
                             "ignore_six_quark_processes" in self._options \
                             else []
 
-        myproc = diagram_generation.MultiProcess(myprocdef,
+        # Regenerate the interaction dictionary of the model.
+        # In principle we never need to generate diagrams with the R2 or UV
+        # interactions.
+        self._curr_model.actualize_dictionaries(False)
+
+        # Decide here wether one need an NLOMultiProcess or a MultiProcess
+        multiprocessclass=None
+        if myprocdef['perturbation_couplings']:
+            multiprocessclass=loop_diagram_generation.LoopMultiProcess
+        else:
+            multiprocessclass=diagram_generation.MultiProcess
+            
+        myproc = multiprocessclass(myprocdef,
                                               collect_mirror_procs = \
                                               collect_mirror_procs,
                                               ignore_six_quark_processes = \
                                               ignore_six_quark_processes)
+
         self._curr_amps = myproc.get('amplitudes')
         cpu_time2 = time.time()
 
@@ -1882,8 +1915,8 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
         
 
         # Perform sanity modifications on the lines:
-        # Add a space before and after any > , $ / |
-        space_before = re.compile(r"(?P<carac>\S)(?P<tag>[/\,\\$\\>|])(?P<carac2>\S)")
+        # Add a space before and after any > , $ / | [ ]
+        space_before = re.compile(r"(?P<carac>\S)(?P<tag>[\\[\\]/\,\\$\\>|])(?P<carac2>\S)")
         line = space_before.sub(r'\g<carac> \g<tag> \g<carac2>', line)       
         
         # Use regular expressions to extract s-channel propagators,
@@ -1898,14 +1931,40 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
             line = proc_number_re.group(1) + \
                    proc_number_re.group(3)
 
-        # Then take coupling orders (identified by "=")
-        order_pattern = re.compile("^(.+)\s+(\w+)\s*=\s*(\d+)\s*$")
-        order_re = order_pattern.match(line)
+        # Now check for squared orders, specified after the perturbation orders.
+        # If it turns out there is no perturbation order then we will use these orders
+        # for the regular orders.
+        squared_order_pattern = re.compile("^(.+)\s+(\w+)\s*=\s*(\d+)\s*$")
+        squared_order_re = squared_order_pattern.match(line)
+        squared_orders = {}
+        while squared_order_re:
+            squared_orders[squared_order_re.group(2)] = int(squared_order_re.group(3))
+            line = squared_order_re.group(1)
+            squared_order_re = squared_order_pattern.match(line)
+
+        # Now check for perturbation orders, specified in between squared brackets
+        perturbation_couplings_pattern = re.compile("^(.+)\s*\[\s*(.+)\s*\]\s*(.*)$")
+        perturbation_couplings_re = perturbation_couplings_pattern.match(line)
+        perturbation_couplings = ""
+        if perturbation_couplings_re:
+            perturbation_couplings = perturbation_couplings_re.group(2)
+            line = perturbation_couplings_re.group(1)+perturbation_couplings_re.group(3)
+
+        # Now if perturbation orders are defined, we will scan for the 
+        # amplitudes orders. If not we will use the squared orders above instead.
         orders = {}
-        while order_re:
-            orders[order_re.group(2)] = int(order_re.group(3))
-            line = order_re.group(1)
+        if perturbation_couplings == "":
+            for order in squared_orders:
+                orders[order]=squared_orders[order]
+            squared_orders={}
+        else:
+            # We take the coupling orders (identified by "=")
+            order_pattern = re.compile("^(.+)\s+(\w+)\s*=\s*(\d+)\s*$")
             order_re = order_pattern.match(line)
+            while order_re:
+                orders[order_re.group(2)] = int(order_re.group(3))
+                line = order_re.group(1)
+                order_re = order_pattern.match(line)
 
         if self._use_lower_part_names:
             # Particle names lowercase
@@ -1972,10 +2031,24 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
             else:
                 raise MadGraph5Error, \
                       "No particle %s in model" % part_name
-
+                                                
         if filter(lambda leg: leg.get('state') == True, myleglist):
             # We have a valid process
-
+            # Extract perturbation orders
+            perturbation_couplings_list = re.split(" ",perturbation_couplings)
+            if perturbation_couplings_list==['']:
+                perturbation_couplings_list=[]
+            if perturbation_couplings_list:
+                if not isinstance(self._curr_model,loop_base_objects.LoopModel):
+                    raise MadGraph5Error,\
+                      "The current model does not allow for NLO computations."
+                else:
+                    for pert_order in perturbation_couplings_list:
+                        if pert_order not in self._curr_model['perturbation_couplings']:
+                            raise MadGraph5Error,\
+                                "Perturbation order %s is not among" % pert_order + \
+                                " the perturbation orders allowed for by the NLO model."
+                                                        
             # Now extract restrictions
             forbidden_particle_ids = \
                               self.extract_particle_ids(forbidden_particles)
@@ -2008,10 +2081,12 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
                               'model': self._curr_model,
                               'id': proc_number,
                               'orders': orders,
+                              'squared_orders':squared_orders,
                               'forbidden_particles': forbidden_particle_ids,
                               'forbidden_s_channels': forbidden_schannel_ids,
                               'required_s_channels': required_schannel_ids,
-                              'overall_orders': overall_orders
+                              'overall_orders': overall_orders,
+                              'perturbation_couplings': perturbation_couplings_list
                               })
       #                       'is_decay_chain': decay_process\
 

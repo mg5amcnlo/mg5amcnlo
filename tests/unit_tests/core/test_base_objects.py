@@ -46,7 +46,8 @@ class ParticleTest(unittest.TestCase):
                       'pdg_code':6,
                       'propagating':True,
                       'is_part':True,
-                      'self_antipart':False}
+                      'self_antipart':False,
+                      'perturbation':[]}
 
         self.mypart = base_objects.Particle(self.mydict)
 
@@ -161,7 +162,8 @@ class ParticleTest(unittest.TestCase):
         goal = goal + "    \'line\': \'straight\',\n"
         goal = goal + "    \'propagating\': True,\n"
         goal = goal + "    \'is_part\': True,\n"
-        goal = goal + "    \'self_antipart\': False\n}"
+        goal = goal + "    \'self_antipart\': False,\n"        
+        goal = goal + "    \'perturbation\': []\n}"
 
         self.assertEqual(goal, str(self.mypart))
 
@@ -270,7 +272,8 @@ class InteractionTest(unittest.TestCase):
                                     (0, 1):'g01',
                                     (1, 0):'g10',
                                     (1, 1):'g11'},
-                       'orders':{'QCD':1, 'QED':1}}
+                       'orders':{'QCD':1, 'QED':1},
+                       'type':['base',()]}
 
         self.myinter = base_objects.Interaction(self.mydict)
 
@@ -281,7 +284,7 @@ class InteractionTest(unittest.TestCase):
 
         # First fill myinter2 it using set
         for prop in ['id', 'particles', 'color', 'lorentz', 'couplings',
-                     'orders']:
+                     'orders', 'type']:
             myinter2.set(prop, self.mydict[prop])
 
         # Check equality between Interaction objects
@@ -370,7 +373,8 @@ class InteractionTest(unittest.TestCase):
         goal = goal + "    \'lorentz\': [\'L1\', \'L2\'],\n"
         goal = goal + "    \'couplings\': %s,\n" % \
                                     repr(self.myinter['couplings'])
-        goal = goal + "    \'orders\': %s\n}" % repr(self.myinter['orders'])
+        goal = goal + "    \'orders\': %s,\n" % repr(self.myinter['orders'])   
+        goal = goal + "    \'type\': ['base', ()]\n}"
 
         self.assertEqual(goal, str(self.myinter))
 
@@ -901,7 +905,8 @@ class LegTest(unittest.TestCase):
         self.mydict = {'id':3,
                       'number':5,
                       'state':True,
-                      'from_group':False}
+                      'from_group':False,
+                      'loop_line':False}
 
         self.myleg = base_objects.Leg(self.mydict)
 
@@ -980,7 +985,8 @@ class LegTest(unittest.TestCase):
         goal = goal + "    \'id\': 3,\n"
         goal = goal + "    \'number\': 5,\n"
         goal = goal + "    \'state\': True,\n"
-        goal = goal + "    \'from_group\': False\n}"
+        goal = goal + "    \'from_group\': False,\n"
+        goal = goal + "    \'loop_line\': False\n}"
 
         self.assertEqual(goal, str(self.myleg))
 
@@ -1408,8 +1414,10 @@ class ProcessTest(unittest.TestCase):
                        'required_s_channels':[],
                        'forbidden_s_channels':[],
                        'forbidden_particles':[],
+                       'perturbation_couplings':[],
                        'is_decay_chain': False,
                        'decay_chains': base_objects.ProcessList(),
+                       'squared_orders': {},
                        'overall_orders': {}}
 
         self.myprocess = base_objects.Process(self.mydict)
@@ -1489,7 +1497,8 @@ class ProcessTest(unittest.TestCase):
         goal = goal + "    \'forbidden_s_channels\': [],\n"
         goal = goal + "    \'forbidden_particles\': [],\n"
         goal = goal + "    \'is_decay_chain\': False,\n"
-        goal = goal + "    \'decay_chains\': []\n}"
+        goal = goal + "    \'decay_chains\': [],\n"
+        goal = goal + "    \'perturbation_couplings\': []\n}"
 
         self.assertEqual(goal, str(self.myprocess))
 
@@ -1560,8 +1569,10 @@ class ProcessDefinitionTest(unittest.TestCase):
                        'required_s_channels':[],
                        'forbidden_s_channels':[],
                        'forbidden_particles':[],
+                       'perturbation_couplings':[],
                        'is_decay_chain': False,
                        'decay_chains': base_objects.ProcessList(),
+                       'squared_orders':{},
                        'overall_orders':{}}
 
         self.my_process_definition = base_objects.ProcessDefinition(self.mydict)
@@ -1640,7 +1651,8 @@ class ProcessDefinitionTest(unittest.TestCase):
         goal = goal + "    \'forbidden_s_channels\': [],\n"
         goal = goal + "    \'forbidden_particles\': [],\n"
         goal = goal + "    \'is_decay_chain\': False,\n"
-        goal = goal + "    \'decay_chains\': []\n}"
+        goal = goal + "    \'decay_chains\': [],\n"
+        goal = goal + "    \'perturbation_couplings\': []\n}"
         self.assertEqual(goal, str(self.my_process_definition))
 
 #===============================================================================
