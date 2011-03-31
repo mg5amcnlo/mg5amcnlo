@@ -586,11 +586,13 @@ class RestrictModel(model_reader.ModelReader):
      - identical coupling/mass/width are replace in the model by a unique one
      """
      
-    del_coup = []
-
+    def default_setup(self):
+        """define default value"""
+        self.del_coup = []
+        super(RestrictModel, self).default_setup()
+     
     def restrict_model(self, param_card):
         """apply the model restriction following param_card"""
-        
         # compute the value of all parameters
         self.set_parameters_and_couplings(param_card)
         # associte to each couplings the associated vertex: def self.coupling_pos
@@ -799,6 +801,7 @@ class RestrictModel(model_reader.ModelReader):
             for coupling in data[:]:
                 if coupling.name in couplings:
                     data.remove(coupling)
+                            
         
     def fix_parameter_values(self, zero_parameters, one_parameters):
         """ Remove all instance of the parameters in the model and replace it by 

@@ -159,6 +159,7 @@ class ModelReader(base_objects.Model):
         for key in keys:
             derived_parameters += self['parameters'][key]
 
+
         # Now calculate derived parameters
         for param in derived_parameters:
             exec("locals()[\'%s\'] = %s" % (param.name, param.expr))
@@ -178,7 +179,6 @@ class ModelReader(base_objects.Model):
 
         # Extract couplings
         couplings = sum(self['couplings'].values(), [])
-
         # Now calculate all couplings
         for coup in couplings:
             exec("locals()[\'%s\'] = %s" % (coup.name, coup.expr))
