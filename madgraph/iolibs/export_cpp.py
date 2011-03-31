@@ -2019,7 +2019,7 @@ def convert_model_to_pythia8(model, pythia_dir):
     """Create a full valid Pythia 8 model from an MG5 model (coming from UFO)"""
 
     if not os.path.isfile(os.path.join(pythia_dir, 'include', 'Pythia.h')):
-        logger.warning('Directory %s is no valud Pythia 8 main dir.' % pythia_dir)
+        logger.warning('Directory %s is not a valid Pythia 8 main dir.' % pythia_dir)
 
     # create the model parameter files
     model_builder = UFOModelConverterPythia8(model, pythia_dir)
