@@ -641,6 +641,10 @@ class CheckValidForCmd(object):
         
         if not args:
             if self._done_export:
+                mode = self.find_output_type(self._done_export[0])
+                if mode != self._done_export[1]:
+                    raise self.InvalidCmd, \
+                          '%s not valid directory for launch' % self._done_export[0]
                 args.append(self._done_export[1])
                 args.append(self._done_export[0])
                 return
