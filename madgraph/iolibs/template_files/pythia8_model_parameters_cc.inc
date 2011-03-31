@@ -20,19 +20,16 @@ namespace Pythia8 {
 	return instance;
     }
 
-    void Parameters_%(model_name)s::setIndependentParameters(ParticleData*& pd, CoupSM*& csm){
-	// First set "zero"
-	zero=0;
-	ZERO=0;
+    void Parameters_%(model_name)s::setIndependentParameters(ParticleData*& pd, Couplings*& csm, SusyLesHouches*& slhaPtr){
 	%(set_independent_parameters)s
     }
-    void Parameters_%(model_name)s::setIndependentCouplings(ParticleData*& pd, CoupSM*& csm){
+    void Parameters_%(model_name)s::setIndependentCouplings(){
 	%(set_independent_couplings)s
     }
-    void Parameters_%(model_name)s::setDependentParameters(ParticleData*& pd, CoupSM*& csm, double alpS){
+    void Parameters_%(model_name)s::setDependentParameters(ParticleData*& pd, Couplings*& csm, SusyLesHouches*& slhaPtr, double alpS){
 	%(set_dependent_parameters)s
     }
-    void Parameters_%(model_name)s::setDependentCouplings(ParticleData*& pd, CoupSM*&csm){
+    void Parameters_%(model_name)s::setDependentCouplings(){
 	%(set_dependent_couplings)s
     }
 

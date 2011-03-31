@@ -117,7 +117,6 @@ class TestCmdShell2(unittest.TestCase,
         
     def tearDown(self):
         """ basic destruction after have run """
-        return
         if os.path.exists(self.out_dir):
             shutil.rmtree(self.out_dir)
 
@@ -878,30 +877,24 @@ P1_qq_wp_wp_epve
         if os.path.isdir(self.out_dir):
             shutil.rmdir(self.out_dir)
 
-        os.mkdir(self.out_dir)        
+        # Create out_dir and out_dir/include
+        os.makedirs(os.path.join(self.out_dir,'include'))
+        # Touch the file Pythia.h, which is needed to verify that this is a Pythia dir
+        py_h_file = open(os.path.join(self.out_dir,'include','Pythia.h'), 'w')
+        py_h_file.close()
 
         self.do('import model sm')
-        self.do('output pythia8_model %s ' % self.out_dir)
-        # Check that the needed files are generated
-        files = ['hel_amps_sm.h', 'hel_amps_sm.cc',
-                 'Parameters_sm.h', 'Parameters_sm.cc']
-        for f in files:
-            self.assertTrue(os.path.isfile(os.path.join(self.out_dir, f)), 
-                            '%s file is not in directory' % f)
-        self.do('define p u u~ d d~')
-        self.do('generate p p > e+ e-')
-        self.do('output pythia8 %s ' % self.out_dir)
-        # Check that the needed files are generated
-        files = ['Sigma_sm_pp_epem.h', 'Sigma_sm_pp_epem.cc']
-        for f in files:
-            self.assertTrue(os.path.isfile(os.path.join(self.out_dir, f)), 
-                            '%s file is not in directory' % f)
-        self.do('define j u u~ d d~')
-        self.do('generate g p > w+ j')
-        self.do('add process p g > w+ j')
+        self.do('define p g u d u~ d~')
+        self.do('define j g u d u~ d~')
+        self.do('generate p p > w+ j')
         self.do('output pythia8 %s' % self.out_dir)
         # Check that the needed files are generated
-        files = ['Sigma_sm_gp_wpj.h', 'Sigma_sm_gp_wpj.cc']
+        files = ['Processes_sm/Sigma_sm_gq_wpq.h', 'Processes_sm/Sigma_sm_gq_wpq.cc',
+                 'Processes_sm/Sigma_sm_qq_wpg.h', 'Processes_sm/Sigma_sm_qq_wpg.cc',
+                 'Processes_sm/HelAmps_sm.h', 'Processes_sm/HelAmps_sm.cc',
+                 'Processes_sm/Parameters_sm.h',
+                 'Processes_sm/Parameters_sm.cc', 'Processes_sm/Makefile',
+                 'examples/main_sm_1.cc', 'examples/Makefile_sm_1']
         for f in files:
             self.assertTrue(os.path.isfile(os.path.join(self.out_dir, f)), 
                             '%s file is not in directory' % f)
@@ -917,7 +910,7 @@ P1_qq_wp_wp_epve
         self.do('output standalone_cpp %s' % self.out_dir)
 
         # Check that all needed src files are generated
-        files = ['hel_amps_sm.h', 'hel_amps_sm.cc', 'Makefile',
+        files = ['HelAmps_sm.h', 'HelAmps_sm.cc', 'Makefile',
                  'Parameters_sm.h', 'Parameters_sm.cc',
                  'rambo.h', 'rambo.cc', 'read_slha.h', 'read_slha.cc']
 

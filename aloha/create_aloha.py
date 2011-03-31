@@ -594,7 +594,16 @@ class AbstractALOHAModel(dict):
             if particle.spin == 2 and particle.selfconjugate:
                 need = True
                 break
-        
+
+        if not need:
+            for interaction in self.model.all_vertices:
+                fermions = [p for p in interaction.particles if p.spin == 2]
+                for i in range(0, len(fermions), 2):
+                    if fermions[i].pdg_code * fermions[i+1].pdg_code > 0:
+                        # This is a fermion flow violating interaction
+                        need = True
+                        break
+
         # No majorana particles    
         if not need:
             return {}
@@ -602,7 +611,7 @@ class AbstractALOHAModel(dict):
         conjugate_request = {}
         # Check each vertex if they are fermion and/or majorana
         for vertex in self.model.all_vertices:
-            for i in range(0, len(vertex.particles),2):
+            for i in range(0, len(vertex.particles), 2):
                 part1 = vertex.particles[i]
                 if part1.spin !=2:
                     # deal only with fermion
@@ -617,9 +626,9 @@ class AbstractALOHAModel(dict):
                 # No majorana => add the associate lorentz structure
                 for lorentz in vertex.lorentz:
                     try:
-                        conjugate_request[lorentz.name].add(i+1)
+                        conjugate_request[lorentz.name].add(i//2+1)
                     except:
-                        conjugate_request[lorentz.name] = set([i+1])
+                        conjugate_request[lorentz.name] = set([i//2+1])
         
         for elem in conjugate_request:
             conjugate_request[elem] = list(conjugate_request[elem])
