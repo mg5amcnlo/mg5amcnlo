@@ -680,12 +680,13 @@ class CheckValidForCmd(object):
         
         card_path = os.path.join(path,'Cards')
         bin_path = os.path.join(path,'bin')
+        src_path = os.path.join(path,'src')
         include_path = os.path.join(path,'include')
         subproc_path = os.path.join(path,'SubProcesses')
-        
+
         if os.path.isfile(os.path.join(include_path, 'Pythia.h')):
             return 'pythia8'
-        if not os.path.isdir(bin_path):
+        elif os.path.isdir(src_path):
             return 'standalone_cpp'
         elif os.path.isfile(os.path.join(bin_path,'generate_events')):
             return 'madevent'
