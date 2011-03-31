@@ -76,25 +76,24 @@ class TestDiagramSymmetry(unittest.TestCase):
         process = matrix_element.get('processes')[0]
         full_model = model_reader.ModelReader(self.base_model)
         full_model.set_parameters_and_couplings()
-        stored_quantities = {}
         helas_writer = helas_call_writers.PythonUFOHelasCallWriter(\
                                                                self.base_model)
 
+        evaluator = process_checks.MatrixElementEvaluator(full_model,
+                                                          helas_writer,
+                                                          auth_skipping = True,
+                                                          reuse = True)
         
-        p, w_rambo = process_checks.get_momenta(process, full_model)
-        me_value, amp2_org = process_checks.evaluate_matrix_element(\
-                                          matrix_element,stored_quantities,
-                                          helas_writer, full_model, p,
-                                          reuse = True)
+        p, w_rambo = evaluator.get_momenta(process)
+        me_value, amp2_org = evaluator.evaluate_matrix_element(\
+                                          matrix_element, p)
 
         for isym, (sym, perm) in enumerate(zip(symmetry, perms)):
             new_p = [p[i] for i in perm]
             if sym >= 0:
                 continue
-            me_value, amp2 = process_checks.evaluate_matrix_element(\
-                                              matrix_element,stored_quantities,
-                                              helas_writer, full_model, new_p,
-                                              reuse = True)
+            me_value, amp2 = evaluator.evaluate_matrix_element(matrix_element,
+                                                               new_p)
             self.assertAlmostEqual(amp2[isym], amp2_org[-sym-1])
         
 
@@ -133,16 +132,16 @@ class TestDiagramSymmetry(unittest.TestCase):
         process = matrix_element.get('processes')[0]
         full_model = model_reader.ModelReader(self.base_model)
         full_model.set_parameters_and_couplings()
-        stored_quantities = {}
         helas_writer = helas_call_writers.PythonUFOHelasCallWriter(\
                                                                self.base_model)
-
         
-        p, w_rambo = process_checks.get_momenta(process, full_model)
-        me_value, amp2_org = process_checks.evaluate_matrix_element(\
-                                          matrix_element,stored_quantities,
-                                          helas_writer, full_model, p,
-                                          reuse = True)
+        evaluator = process_checks.MatrixElementEvaluator(full_model,
+                                                          helas_writer,
+                                                          auth_skipping = True,
+                                                          reuse = True)
+        p, w_rambo = evaluator.get_momenta(process)
+        me_value, amp2_org = evaluator.evaluate_matrix_element(\
+                                                        matrix_element, p)
 
         for isym, (sym, perm) in enumerate(zip(symmetry, perms)):
             new_p = [p[i] for i in perm]
@@ -150,10 +149,8 @@ class TestDiagramSymmetry(unittest.TestCase):
                 continue
             iamp = subproc_group.get('diagram_maps')[1].index(isym+1)
             isymamp = subproc_group.get('diagram_maps')[1].index(-sym)
-            me_value, amp2 = process_checks.evaluate_matrix_element(\
-                                              matrix_element,stored_quantities,
-                                              helas_writer, full_model, new_p,
-                                              reuse = True)
+            me_value, amp2 = evaluator.evaluate_matrix_element(\
+                                              matrix_element, new_p)
             self.assertAlmostEqual(amp2[iamp], amp2_org[isymamp])
         
     def test_rotate_momenta(self):
@@ -181,25 +178,24 @@ class TestDiagramSymmetry(unittest.TestCase):
 
         full_model = model_reader.ModelReader(self.base_model)
         full_model.set_parameters_and_couplings()
-
-        p, w_rambo = process_checks.get_momenta(myproc, full_model)
-
-        stored_quantities = {}
         helas_writer = helas_call_writers.PythonUFOHelasCallWriter(\
                                                                self.base_model)
-        me_val, amp2 = process_checks.evaluate_matrix_element(\
-                                          matrix_element,stored_quantities,
-                                          helas_writer, full_model, p,
-                                          reuse = True)
+
+        evaluator = process_checks.MatrixElementEvaluator(full_model,
+                                                          helas_writer,
+                                                          auth_skipping = True,
+                                                          reuse = True)
+        p, w_rambo = evaluator.get_momenta(myproc)
+
+        me_val, amp2 = evaluator.evaluate_matrix_element(\
+                                          matrix_element,p)
         # Rotate momenta around x axis
         for mom in p:
             mom[2] = -mom[2]
             mom[3] = -mom[3]
 
-        new_me_val, new_amp2 = process_checks.evaluate_matrix_element(\
-                                          matrix_element,stored_quantities,
-                                          helas_writer, full_model, p,
-                                          reuse = True)
+        new_me_val, new_amp2 = evaluator.evaluate_matrix_element(\
+                                          matrix_element, p)
 
         self.assertAlmostEqual(me_val, new_me_val, 12)
 

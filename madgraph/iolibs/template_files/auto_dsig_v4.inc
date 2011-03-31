@@ -9,7 +9,8 @@ C     RETURNS DIFFERENTIAL CROSS SECTION
 C     Input:
 C             pp    4 momentum of external particles
 C             wgt   weight from Monte Carlo
-C             imode 0 run, 1 init, 2 finalize
+C             imode 0 run, 1 init, 2 reweight, 
+C                   3 finalize, 4 only PDFs
 C     Output:
 C             Amplitude squared and summed
 C ****************************************************
@@ -66,10 +67,14 @@ C ----------
       DSIG%(proc_id)s=0D0
 
 C   Only run if IMODE is 0
-      IF(IMODE.NE.0) RETURN
+      IF(IMODE.NE.0.AND.IMODE.NE.4) RETURN
 
 %(passcuts_begin)s
 %(pdf_lines)s
+         IF (IMODE.EQ.4)THEN
+            DSIG%(proc_id)s = PD(IPROC)
+            RETURN
+         ENDIF
          CALL SMATRIX%(proc_id)s(PP,DSIGUU)                                              
          DSIGUU=DSIGUU*REWGT(PP)
          IF (DSIGUU.LT.1D199) THEN
@@ -79,6 +84,9 @@ C   Only run if IMODE is 0
              DSIGUU=0D0
              DSIG%(proc_id)s=0D0
          ENDIF
-	 CALL UNWGT(PP,%(dsig_line)s*WGT,%(numproc)d)
+        IF(IMODE.EQ.0.AND.DSIG%(proc_id)s.GT.0D0)THEN
+C       Call UNWGT to unweight and store events
+           CALL UNWGT(PP,DSIG%(proc_id)s*WGT,%(numproc)d)
+        ENDIF
 %(passcuts_end)s
       END

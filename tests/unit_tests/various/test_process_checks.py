@@ -37,7 +37,10 @@ class TestMatrixElementChecker(unittest.TestCase):
 
 
     def setUp(self):
+        
         self.base_model = import_ufo.import_model('sm')
+        #sm_path = import_ufo.find_ufo_path('sm')
+        #self.base_model = import_ufo.import_model(sm_path)
     
     def test_get_momenta(self):
         """Test the get_momenta function"""
@@ -65,7 +68,9 @@ class TestMatrixElementChecker(unittest.TestCase):
 
         full_model = model_reader.ModelReader(self.base_model)
         full_model.set_parameters_and_couplings()
-        p, w_rambo = process_checks.get_momenta(myproc, full_model)
+
+        evaluator = process_checks.MatrixElementEvaluator(full_model, None)
+        p, w_rambo = evaluator.get_momenta(myproc)
 
         # Check massless external momenta
         for mom in p[:-1]:
@@ -170,7 +175,7 @@ class TestMatrixElementChecker(unittest.TestCase):
         
         comparisons = process_checks.check_lorentz(myproc)
         nb_fail = process_checks.output_lorentz_inv(comparisons, 
-                                                            output='fail')
+                                                    output='fail')
         self.assertEqual(0, nb_fail)
         
         #check number of helicities/jamp
@@ -196,7 +201,7 @@ class TestMatrixElementChecker(unittest.TestCase):
         """Test that check process fails for wrong color-Lorentz."""
 
         # Change 4g interaction so color and lorentz don't agree
-        gggg = self.base_model.get_interaction(3)
+        gggg = self.base_model.get_interaction(4)
         gggg.set('lorentz', ['VVVV1', 'VVVV4', 'VVVV3'])
 
         myleglist = base_objects.LegList()
@@ -237,7 +242,8 @@ class TestLorentzInvariance(unittest.TestCase):
     """Test class for the Lorentz Invariance and boost_momenta"""
     
     def setUp(self):
-        self.base_model = import_ufo.import_model('mssm')
+        sm_path = import_ufo.find_ufo_path('mssm')
+        self.base_model = import_ufo.import_model(sm_path)
         
     def test_boost_momenta(self):
         """check if the momenta are boosted correctly by checking invariant mass
@@ -266,7 +272,8 @@ class TestLorentzInvariance(unittest.TestCase):
 
         full_model = model_reader.ModelReader(self.base_model)
         full_model.set_parameters_and_couplings()
-        p, w_rambo = process_checks.get_momenta(myproc, full_model)
+        evaluator = process_checks.MatrixElementEvaluator(full_model, None)
+        p, w_rambo = evaluator.get_momenta(myproc)
 
         def invariant_mass(p1, p2):
             #helping function to compute invariant mass
@@ -343,7 +350,9 @@ class TestLorentzInvariance(unittest.TestCase):
 
         full_model = model_reader.ModelReader(self.base_model)
         full_model.set_parameters_and_couplings()
-        p, w_rambo = process_checks.get_momenta(myproc, full_model)
+
+        evaluator = process_checks.MatrixElementEvaluator(full_model, None)
+        p, w_rambo = evaluator.get_momenta(myproc)
 
         def invariant_mass(p1, p2):
             #helping function to compute invariant mass

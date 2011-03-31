@@ -159,8 +159,9 @@ c**************************************************************************
       include 'nexternal.inc'
       integer i, j
 
-      combid=min(i+j,ishft(1,nexternal+1)-2-i-j)
-      
+c      combid=min(i+j,ishft(1,nexternal+1)-2-i-j)
+      combid = i+j
+     
       return
       end
 
@@ -180,6 +181,7 @@ c**************************************************************************
       enddo
       id_cl(idij,0)=id_cl(idij,0)+1
       id_cl(idij,id_cl(idij,0))=ignum
+c      print *,'Adding graph ',ignum,' to prop ',idij
       return
       end
 
@@ -203,14 +205,16 @@ c**************************************************************************
 C $B$ IFOREST $B$ !this is a tag for MadWeight
       integer i, iforest(2,-max_branch:-1,lmaxconfigs)
       common/to_forest/iforest
+      integer sprop(-max_branch:-1,lmaxconfigs)
+      integer tprid(-max_branch:-1,lmaxconfigs)
+      common/to_sprop/sprop,tprid
 C $E$ IFOREST $E$ !this is a tag for MadWeight
       INTEGER    n_max_cl_cg
       PARAMETER (n_max_cl_cg=n_max_cl*n_max_cg)
       data resmap/n_max_cl_cg*.false./
  
 
-      Integer j, k, l, icmp, iupdown,inew(3:4),iold(3:4),itmp(3:4)
-      data iupdown/1/
+      Integer j, k, l, icmp(2)
 
       double precision ZERO
       parameter (ZERO=0d0)
@@ -229,37 +233,42 @@ C $E$ IFOREST $E$ !this is a tag for MadWeight
          first_time=.false.
       endif
 
+c      write(*,*) 'graph,level,iupdown: ',ignum,ipnum,iupdown
+
       filgrp=.false.
-C   First follow diagram tree down to last clustering. Then need to
-C   go back up, to allow for ISR from the other direction
-      if(iupdown.eq.1)then
+C   Follow diagram tree down to last clustering
       do i=1,ipnum
          do j=i+1,ipnum
-c            write(*,*)'at ids   (',ipids(i,1),',',ipids(i,2),'), (',
-c     &           ipids(j,1),',',ipids(j,2),')'
+c            write(*,*)'at ids   (',ipids(i,1,ipnum),',',ipids(i,2,ipnum),'), (',
+c     &           ipids(j,1,ipnum),',',ipids(j,2,ipnum),'), ',i,j
             do k=-nexternal+1,-1
                if ((iforest(1,k,ignum).eq.ipids(i,2,ipnum).and.
      &              iforest(2,k,ignum).eq.ipids(j,2,ipnum)).or.
      &             (iforest(2,k,ignum).eq.ipids(i,2,ipnum).and.
      &              iforest(1,k,ignum).eq.ipids(j,2,ipnum))) then
-                  icmp=combid(ipids(i,1,ipnum),ipids(j,1,ipnum))
-c                  write(*,*) 'add table entry for (',ipids(i,1),
-c     &                 ',',ipids(j,1),',',icmp,')' 
-                  call filprp(ignum,ipids(i,1,ipnum))
-                  call filprp(ignum,ipids(j,1,ipnum))
-                  call filprp(ignum,ipids(i,1,ipnum)+ipids(j,1,ipnum))
-                  call filprp(ignum,icmp)
-c                  print *,'Resonance ',k,' has number ',icmp,
-c     $               ipids(i,1,ipnum),ipids(j,1,ipnum)
+c                 Add the combined propagator
+                  icmp(1)=combid(ipids(i,1,ipnum),ipids(j,1,ipnum))
+c                 Add also the same propagator but from the other direction
+                  icmp(2)=ishft(1,nexternal)-1-icmp(1)
+c     Set pdg code for propagator
+                  do l=1,2
+                     ipdgcl(icmp(l),ignum)=sprop(k,ignum)
+                     if(ipdgcl(icmp(l),ignum).eq.0)
+     $                    ipdgcl(icmp(l),ignum)=tprid(k,ignum)
+c                  write(*,*) 'add table entry for (',ipids(i,1,ipnum),
+c     &                 ',',ipids(j,1,ipnum),',',icmp,')','pdg: ',
+c     $                 ipdgcl(icmp,ignum)
+                     call filprp(ignum,icmp(l))
 
 c               Insert graph in list of propagators
-                  if(pwidth(k,ignum).gt.ZERO) then
-c                    print *,'Adding resonance ',ignum,ipids(i,1,ipnum)+ipids(j,1,ipnum)
-                    resmap(ipids(i,1,ipnum)+ipids(j,1,ipnum),ignum)=.true.
-                  endif
+                     if(pwidth(k,ignum).gt.ZERO) then
+c                    write(*,*)'Adding resonance ',ignum,icmp
+                        resmap(icmp(l),ignum)=.true.
+                     endif
+                  enddo
 c     proceed w/ next table, since there is no possibility,
 c     to combine the same particle in another way in this graph
-                  ipids(i,1,ipnum-1)=ipids(i,1,ipnum)+ipids(j,1,ipnum)
+                  ipids(i,1,ipnum-1)=icmp(1)
                   ipids(i,2,ipnum-1)=k
                   ipids(i,3,ipnum-1)=i
                   ipids(i,4,ipnum-1)=j
@@ -277,55 +286,22 @@ c     to combine the same particle in another way in this graph
                      ipids(l,3,ipnum)=l+1
                      ipids(l,4,ipnum)=0
                   enddo
-                  if(ipnum.eq.2)then
-                    iupdown=-1
-                    ipids(i,1,ipnum)=ipids(6-i-j,1,ipnum)
-                  endif
 c                  do l=1,ipnum
-c                     write(*,*) 'new: ipids(',l,') = (',ipids(l,1),
-c     &                    ',',ipids(l,2),')'
+c                     write(*,*) 'new: ipids(',l,') = (',ipids(l,1,ipnum),
+c     &                    ',',ipids(l,2,ipnum),',',ipids(l,3,ipnum),',',ipids(l,4,ipnum),')',
+c     $                    ' pdg: ', ipdgcl(ipids(l,1,ipnum),ignum)
 c                  enddo
-                  filgrp=.true.
-                  return
+                  if(ipnum.eq.2)then
+c                 Done with this diagram
+                     return
+                  else
+                     filgrp=.true.
+                     return
+                  endif
                endif
             enddo
          enddo
       enddo
-      else
-C     Go back up, and look only at the daughters
-        do i=1,ipnum
-          if(ipids(i,4,ipnum).ne.0)then
-            do j=3,4
-              if(ipids(ipids(i,j,ipnum),2,ipnum+1).le.2)then
-                inew(j)=ipids(i,1,ipnum)+
-     $             ipids(ipids(i,7-j,ipnum),1,ipnum+1)
-                call filprp(ignum,inew(j))
-                iold(j)=ipids(ipids(i,j,ipnum),1,ipnum+1)
-                itmp(j)=ipids(i,j,ipnum)
-              endif
-            enddo
-C         Change to new particle number everywhere 
-            do j=3,4
-              if(ipids(ipids(i,j,ipnum),2,ipnum+1).le.2)then
-                k=ipnum+1
-                do while(ipids(itmp(j),1,k).eq.iold(j))
-                  ipids(itmp(j),1,k)=inew(j)
-                  itmp(j)=ipids(itmp(j),3,k)
-                  k=k+1
-                enddo
-              endif
-            enddo
-            ipnum=ipnum+1
-            if(ipnum.eq.nexternal)then
-              iupdown=1
-              filgrp=.false.
-            else
-              filgrp=.true.
-            endif
-            return
-          endif
-        enddo
-      endif
       return
       end
 
@@ -340,14 +316,17 @@ c**************************************************************************
       include 'nexternal.inc'
       include 'cluster.inc'
       include 'run.inc'
+      include 'maxamps.inc'
 C $B$ IFOREST $B$ !this is a tag for MadWeight
-      integer i, iforest(2,-max_branch:-1,lmaxconfigs)
-      common/to_forest/ iforest
       integer mapconfig(0:lmaxconfigs), this_config
       common/to_mconfigs/mapconfig, this_config
 C $E$ IFOREST $E$ !this is a tag for MadWeight
-      integer j, inpids, ipids(nexternal,4,2:nexternal)
+      integer i, j, inpids, ipids(nexternal,4,2:nexternal)
       integer start_config,end_config
+      integer idup(nexternal,maxproc,maxsproc)
+      integer mothup(2,nexternal)
+      integer icolup(2,nexternal,maxflow,maxsproc)
+      include 'leshouche.inc'
 
       logical filgrp
       external filgrp
@@ -365,10 +344,11 @@ C $E$ IFOREST $E$ !this is a tag for MadWeight
       do i=start_config,end_config
 c         write (*,*) ' at graph ',i
          do j=1,nexternal
-            ipids(j,1,nexternal)=ishft(1,j)
+            ipids(j,1,nexternal)=ishft(1,j-1)
             ipids(j,2,nexternal)=j
             ipids(j,3,nexternal)=0
             ipids(j,4,nexternal)=0
+            ipdgcl(ipids(j,1,nexternal),i)=idup(j,1,1)
          enddo
          inpids=nexternal
 c         print *,'Inserting graph ',i
@@ -418,7 +398,7 @@ c        print *,'No BW found'
       endif
 
       do i=1,nexternal
-        icl(i)=ishft(1,i)
+        icl(i)=ishft(1,i-1)
       enddo
       ibw=0
       do i=-1,-(nexternal-3),-1
@@ -449,71 +429,56 @@ c**************************************************************************
       include 'nexternal.inc'
       include 'cluster.inc'
 
-      integer nbw,ibwlist(nexternal)
-
-      integer i, ii, j, jj, il, idij, icgs(0:n_max_cg)
+      integer idij,nbw,ibwlist(nexternal),icgs(0:n_max_cg)
       logical foundbw
+      integer i, ii, j, jj, il, igsbk(0:n_max_cg)
 
       findmt=.false.
 c     if first clustering, set possible graphs
       if (icgs(0).eq.0) then
-         icgs(0)=id_cl(idij,0)
          ii=0
-         do i=1,icgs(0)
-           ii=ii+1
-           icgs(ii)=id_cl(idij,i)
+         do i=1,id_cl(idij,0)
 c        check if we have constraint from onshell resonances
            foundbw=.true.
            do j=1,nbw
-             if(resmap(ibwlist(j),icgs(ii)))then
+             if(resmap(ibwlist(j),id_cl(idij,i)))then
                cycle
              endif
              foundbw=.false.
  10        enddo
-           if(nbw.gt.0.and..not.foundbw) ii=ii-1
+           if(nbw.eq.0.or.foundbw)then
+              ii=ii+1
+              icgs(ii)=id_cl(idij,i)
+           endif
          enddo
          icgs(0)=ii
-c         write(*,*)'no graph yet -> ',icgs(0)
          if (icgs(0).gt.0)then
-c           print *,'Possible graphs: ',(icgs(i),i=1,icgs(0))
            findmt=.true.
          endif
          return
       else
-c     look for common graph
+c     Check for common graphs
+         j=1
+         ii=0
          do i=1,icgs(0)
-            do j=1,id_cl(idij,0)
-               if (id_cl(idij,j).eq.icgs(i)) goto 20
-            enddo
-         enddo
-c         write(*,*)'graphs but no match'
-         return
-c     accept combination, extract common graphs
- 20      il=0
-c         do i=1,icgs(0)
-c            write(*,*)'arrive w/ ',idij,' ',i,': ',icgs(i)
-c         enddo
-c         do i=1,id_cl(idij,0)
-c            write(*,*)'found ',i,': ',id_cl(idij,i)
-c         enddo
-         do i=1,icgs(0)
-            do j=1,id_cl(idij,0)
-               if (id_cl(idij,j).eq.icgs(i)) then
-                  il=il+1
-c                  write(*,*)'copy ',il,': ',icgs(i)
-                  icgs(il)=icgs(i)
-                  goto 30
+            if(j.le.id_cl(idij,0).and.icgs(i).eq.id_cl(idij,j))then
+               ii=ii+1
+               icgs(ii)=id_cl(idij,j)
+               j=j+1
+            else if(j.le.id_cl(idij,0).and.icgs(i).gt.id_cl(idij,j)) then
+               do while(icgs(i).gt.id_cl(idij,j).and.j.le.id_cl(idij,0))
+                  j=j+1
+               enddo
+               if(j.le.id_cl(idij,0).and.icgs(i).eq.id_cl(idij,j))then
+                  ii=ii+1
+                  icgs(ii)=id_cl(idij,j)
                endif
-            enddo
- 30         continue
+            endif
          enddo
-         icgs(0)=il
-c         write(*,*)'matching graphs -> ',icgs(0)
-         findmt=.true.
+         icgs(0)=ii
+         findmt=(icgs(0).gt.0)
          return
       endif
-
-      return
       end
 
 
@@ -543,10 +508,11 @@ c**************************************************************************
 
       data (pz(i),i=0,3)/1d0,0d0,0d0,1d0/
 
+      integer combid
       logical findmt
       external findmt
       double precision dj, pydj, djb, pyjb, dot, SumDot, zclus
-      external dj, pydj, djb, pyjb, dot, SumDot, zclus
+      external dj, pydj, djb, pyjb, dot, SumDot, zclus, combid
 
       if (btest(mlevel,1))
      $   write (*,*)'New event'
@@ -562,13 +528,14 @@ c     Check if any resonances are on the BW, store results in to_checkbw
 c     initialize index map
       do i=1,nexternal
          imap(i,1)=i
-         imap(i,2)=ishft(1,i)
+         imap(i,2)=ishft(1,i-1)
          mt2ij(i)=0
       enddo   
       mt2last=0
+      minpt2ij=1.0d37
       do i=1,nexternal
 c     initialize momenta
-         idi=ishft(1,i)
+         idi=ishft(1,i-1)
          do j=0,3
             pcl(j,idi)=p(j,i)
          enddo
@@ -578,18 +545,16 @@ c     never combine the two beams
          if (i.gt.2) then
 c     fill combine table, first pass, determine all ptij
             do j=1,i-1
-               idj=ishft(1,j)
+               idj=ishft(1,j-1)
                if (btest(mlevel,4))
      $              write (*,*)'i = ',i,'(',idi,'), j = ',j,'(',idj,')'
 c     cluster only combinable legs (acc. to diagrams)
                icgs(0)=0
-               idij=idi+idj
+               idij=combid(idi,idj)
                pt2ij(idij)=1.0d37
                if (findmt(idij,icgs,nbw,ibwlist)) then
                   if (btest(mlevel,4)) then
-                     do k=1,icgs(0)
-                        write(*,*)'icg(',k,') = ',icgs(k)
-                     enddo
+                     write(*,*)'diagrams: ',(icgs(k),k=1,icgs(0))
                   endif
                   if (j.ne.1.and.j.ne.2) then
 c     final state clustering                     
@@ -609,25 +574,16 @@ c     final state clustering
 c     initial state clustering, only if hadronic collision
 c     check whether 2->(n-1) process w/ cms energy > 0 remains
                      iwinp=imap(3-j,2);
-c                     do k=0,3
-c                        pcl(k,idij)=pcl(k,idj)-pcl(k,idi)
-cc                        pcmsp(k)=pcl(k,idij)+pcl(k,iwinp)
-c                     enddo
-c                     ecms2=pcmsp(0)**2-pcmsp(1)**2-
-c     $                    pcmsp(2)**2-pcmsp(3)**2
-c                     if (ecms2.gt.0.1d0.and.
-c                     if((lpp(j).ne.0)) then
-                      if(ickkw.eq.2.or.ktscheme.eq.2)then
+                     if(ickkw.eq.2.or.ktscheme.eq.2)then
                         pt2ij(idij)=pyjb(pcl(0,idi),
      $                    pcl(0,idj),pcl(0,iwinp),zij(idij))
-                      else
+                     else
                         pt2ij(idij)=djb(pcl(0,idi))
                         zij(idij)=zclus(pcl(0,idi),pcl(0,idj),pcl(0,iwinp))
-                      endif
+                     endif
 c     prefer clustering when outgoing in direction of incoming
-                        if(sign(1d0,pcl(3,idi)).ne.sign(1d0,pcl(3,idj)))
-     $                     pt2ij(idij)=pt2ij(idij)*(1d0+1d-6)
-c                     endif
+                     if(sign(1d0,pcl(3,idi)).ne.sign(1d0,pcl(3,idj)))
+     $                    pt2ij(idij)=pt2ij(idij)*(1d0+1d-6)
                   endif
                   if (btest(mlevel,4)) then
                      write(*,*)'         ',idi,'&',idj,' part ',iwinp,
@@ -636,6 +592,12 @@ c                     endif
                        write(*,*)'     cf. djb: ',djb(pcl(0,idi))
                      endif
                   endif
+c     Check if smallest pt2 ("winner")
+                  if (pt2ij(idij).lt.minpt2ij) then
+                     iwin=j
+                     jwin=i
+                     minpt2ij=pt2ij(idij)
+                  endif                 
                endif
             enddo
          endif
@@ -653,45 +615,27 @@ c     Take care of special 2 -> 1 case
          return
       endif
 c     initialize graph storage
-      igscl(0)=0
+      igraphs(0)=0
       nleft=nexternal
 c     cluster 
       do n=1,nexternal-2
-c     determine winner
-         minpt2ij=1.0d37
-         do i=3,nleft
-            do j=1,i-1
-               idij=imap(i,2)+imap(j,2)
-               icgs(0)=igscl(0)
-               do k=1,icgs(0)
-                  icgs(k)=igscl(k)
-               enddo
-               if (findmt(idij,icgs,nbw,ibwlist)) then 
-                  if (btest(mlevel,4)) then
-                     write(*,*)'check pt ',imap(i,2),'&',imap(j,2),' (',
-     $                    idij,') -> ',pt2ij(idij),' vs. ',minpt2ij
-                  endif
-                  if (pt2ij(idij).lt.minpt2ij) then
-                     iwin=j
-                     jwin=i
-                     minpt2ij=pt2ij(idij)
-                  endif
-               endif
-            enddo
-         enddo
 c     combine winner
          imocl(n)=imap(iwin,2)+imap(jwin,2)
          idacl(n,1)=imap(iwin,2)
          idacl(n,2)=imap(jwin,2)
          pt2ijcl(n)=minpt2ij
          zcl(n)=zij(imocl(n))
-         if (.not.findmt(imocl(n),igscl,nbw,ibwlist)) then
-            write(*,*) 'cluster.f: Error. Invalid combination.' 
-            return
-         endif
          if (btest(mlevel,2)) then
             write(*,*)'winner ',n,': ',idacl(n,1),'&',idacl(n,2),
      &           ' -> ',minpt2ij,', z = ',zcl(n)
+         endif
+c     Reset igscl with new mother
+         if (.not.findmt(imocl(n),igraphs,nbw,ibwlist)) then
+            write(*,*) 'cluster.f: Error. Invalid combination.' 
+            return
+         endif
+         if (btest(mlevel,4)) then
+            write(*,*)'diagrams: ',(igraphs(k),k=1,igraphs(0))
          endif
          if (iwin.lt.3) then
 c     is clustering
@@ -802,6 +746,7 @@ c            endif
 c            else
 c              pt2ijcl(n+1)=pt2ijcl(n)
 c            endif
+c           Pick out the found graphs
 c            print *,'Clustering succeeded, found graph ',igscl(1)
             cluster=.true.
             clustered=.true.
@@ -810,6 +755,7 @@ c            print *,'Clustering succeeded, found graph ',igscl(1)
 c     calculate new ptij
 c            write(*,*)'is case'
 c     recalculate all in is case due to rotation & boost
+         minpt2ij=1.0d37
             do i=1,nleft
                idi=imap(i,2)
 c     never combine the two beams
@@ -819,16 +765,19 @@ c     determine all ptij
                      idj=imap(j,2)
                      if (btest(mlevel,4))
      $                    write (*,*)'i = ',i,'(',idi,'), j = ',j,'(',idj,')'
+c     Reset diagram list icgs
+                     do k=0,igraphs(0)
+                        icgs(k)=igraphs(k)
+                     enddo
+                     if (btest(mlevel,4))
+     $                    write (*,*)'Reset diagrams to: ',(icgs(k),k=1,icgs(0))
 c     cluster only combinable legs (acc. to diagrams)
-                     icgs(0)=0
-                     idij=idi+idj
+                     idij=combid(idi,idj)
 c                     write (*,*) 'RECALC !!! ',idij
                      pt2ij(idij)=1.0d37
                      if (findmt(idij,icgs,nbw,ibwlist)) then
-                       if (btest(mlevel,4)) then
-                          do k=1,icgs(0)
-                             write(*,*)'icg(',k,') = ',icgs(k)
-                          enddo
+                        if (btest(mlevel,4)) then
+                           write(*,*)'diagrams: ',(icgs(k),k=1,icgs(0))
                        endif
                         if (j.ne.1.and.j.ne.2) then
 c     final state clustering                     
@@ -876,6 +825,12 @@ c                          endif
                              write(*,*)'     cf. djb: ',djb(pcl(0,idi))
                            endif
                         endif
+                        if (pt2ij(idij).lt.minpt2ij) then
+                           iwin=j
+                           jwin=i
+                           minpt2ij=pt2ij(idij)
+                        endif                 
+
                      endif
                   enddo
                endif

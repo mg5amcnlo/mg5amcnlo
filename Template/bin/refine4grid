@@ -80,7 +80,7 @@ if [[ -d SubProcesses ]]; then
 #	rm -f wait.ajob* >& /dev/null
 #	rm -f run.ajob* >& /dev/null
 #	rm -f done.ajob* >& /dev/null
-	echo $a $np | ../../bin/gen_ximprove >& gen_ximprove.log
+	echo $a $np F | ../../bin/gen_ximprove >& gen_ximprove.log
 
 	if [[ -e ajob1 ]]; then
 #	    make madevent > /dev/null

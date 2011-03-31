@@ -34,8 +34,8 @@ c
       integer icor(max_amps)
       integer nunwgt(max_amps)
       integer minit
-      character*80 fname, pname
-      character*80 linkname(max_amps)
+      character*100 fname, pname
+      character*120 linkname(max_amps)
       integer i,j,k,l
       double precision xtot,errtot,err_goal, xi
       double precision errtotc, errtotu
@@ -320,7 +320,7 @@ c
       integer nsubproc          !Number of specific processes requested
       logical found
       integer ig
-      character*80 linkname(max_amps)
+      character*120 linkname(max_amps)
       integer sname(256)
       integer gname
 c
@@ -328,7 +328,7 @@ c     Local
 c
       integer i,j,k, io(max_amps), ik
       integer ntot, ip,jp
-      character*40 procname
+      character*100 procname
       character*4 cpref
       character*20 fnamel, fnamee
       double precision scale,xt(max_amps), teff
@@ -369,9 +369,9 @@ c         write(*,*) j,xt(j),xsec(j)
 c      write(*,*) 'Number of channels',ng
       call sort2(xt,io,ng)
 
-c      do i=1,ng
-c         write(*,*) i,io(i),(xsec(1,io(i))+xsec(2,io(i)))/2d0
-c      enddo
+      do i=1,ng
+         write(*,*) i,io(i),xsec(io(i)), nevents(j)
+      enddo
 
       if (xtot .gt. 0d0) then
          teff = errtot*sqrt(real(ntot))/xtot
@@ -445,7 +445,7 @@ c
       if (sumproc) then
          nsubproc=0
          do i=1,ng
-            procname = linkname(io(i))(:40)
+            procname = linkname(io(i))(:100)
             gname=0
             read(procname(2:index(procname,'_')-1),*,err=20) gname
  20         found = .false.
@@ -523,7 +523,7 @@ c            write(16,65) '<tr><td align=right>',io(i),
      $           xlum(io(i))/scale,'</td></tr>'
 c            write(*,*) io(i),xmax(io(i))
             else
-                procname = linkname(io(i))(:40)
+                procname = linkname(io(i))(:100)
 cxx   tjs 3-20-2006  + cfax 12.05.2006
 c                ip = index(procname,'P')+2 !Strip off first P_
                 ip = index(procname,'P')+1 !Strip off first P
