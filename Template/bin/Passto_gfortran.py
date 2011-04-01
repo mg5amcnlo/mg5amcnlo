@@ -82,6 +82,12 @@ if "__main__"==__name__:
     value='1'
     if value == '1':
         directory=['Source','SubProcesses']
+        pypgs = os.path.join(os.path.pardir, 'pythia-pgs')
+        decay = os.path.join(os.path.pardir, 'DECAY')
+        madanalysis = os.path.join(os.path.pardir, 'MadAnalysis')
+        for d in [pypgs, decay, madanalysis]:
+            if os.path.isdir(d):
+                directory.append(d)
     else:
         directory=['..']
 

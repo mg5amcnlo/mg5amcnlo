@@ -81,7 +81,7 @@ if "__main__"==__name__:
 #                               ' 2: On the full MG_ME directory\n')
     value='1'
     if value == '1':
-        directory=['Source','SubProcesses']
+        directory=['Source','SubProcesses','../pythia-pgs','../DECAY']
     else:
         directory=['..']
 
