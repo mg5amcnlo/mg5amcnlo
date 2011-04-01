@@ -58,7 +58,7 @@ else
     echo "neither proc_card.dat or proc_card_mg5.dat" 
     echo "are present in directory Cards"
     echo "Prepare a card (see examples on the web) and"
-    echo "copy it there."
+    echo "copy it there, or run directly ../bin/mg5."
     exit
 fi
 
