@@ -55,7 +55,7 @@ sub writeHtmlProcessPage {
     @incard=<INCARD>;
     close (INCARD);
   } else {
-    open (INCARD,"Cards/proc_card.dat") || die "Error reading file proc_card.dat";
+    open (INCARD,"Cards/proc_card.dat") || exit;
     @incard=<INCARD>;
     close (INCARD);
   }

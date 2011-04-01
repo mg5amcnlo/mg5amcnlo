@@ -29,11 +29,13 @@ if [[ -d Events ]]; then
 # Now the version information
 # grab the info first
    mgme=`awk '/.*/{print $1}' ../MGMEVersion.txt`
-   model=`awk '/.*/{print $1}' ../Source/MODEL/ModelVersion.txt`
 # $B$version_info$E$  ! Tag for add info in MW_version. Don't edit this line
    echo "<MGVersion>">& version.txt
    echo "# MG    version    : $mgme"    >>version.txt
-   echo "# model version    : $model"    >>version.txt
+   if [[ -e ../Source/MODEL/ModelVersion.txt ]];then
+       model=`awk '/.*/{print $1}' ../Source/MODEL/ModelVersion.txt`
+       echo "# model version    : $model"    >>version.txt
+   fi
 # $B$ write_version $E$  ! Tag for add info in MW_version. Don't edit this line
    echo "</MGVersion>" >> version.txt 
    cat version.txt >> b.txt
