@@ -507,15 +507,10 @@ c
       write(lun,20) 'rm -f $k'
       write(lun,20) 'cat ../input_app.txt >& input_app.txt'
       write(lun,20) 'echo $i >> input_app.txt'
-      if (.false.) then
-         write(lun,20) 'cp ../../public.sh .'
-         write(lun,20) 'qsub -N $1$i public.sh'
-      else
-         write(lun,20) 'time ../madevent > $k <input_app.txt'
-         write(lun,20) 'rm -f ftn25 ftn99'
-         if(.not.gridpack) write(lun,20) 'rm -f ftn26'
-         write(lun,20) 'cp $k log.txt'
-      endif
+      write(lun,20) 'time ../madevent > $k <input_app.txt'
+      write(lun,20) 'rm -f ftn25 ftn99'
+      if(.not.gridpack) write(lun,20) 'rm -f ftn26'
+      write(lun,20) 'cp $k log.txt'
       write(lun,20) 'cd ../'
       write(lun,15) 'done'
       write(lun,15) 'rm -f run.$script'
