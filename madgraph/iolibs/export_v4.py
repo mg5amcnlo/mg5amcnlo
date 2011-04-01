@@ -2422,8 +2422,9 @@ class UFO_model_to_mg4(object):
         
         fsock.writelines('double precision '+','.join(masses)+'\n')
         fsock.writelines('common/masses/ '+','.join(masses)+'\n\n')
-        fsock.writelines('double precision '+','.join(widths)+'\n')
-        fsock.writelines('common/widths/ '+','.join(widths)+'\n\n')
+        if widths:
+            fsock.writelines('double precision '+','.join(widths)+'\n')
+            fsock.writelines('common/widths/ '+','.join(widths)+'\n\n')
         
         # Write the Couplings
         coupling_list = [coupl.name for coupl in self.coups_dep + self.coups_indep]       

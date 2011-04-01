@@ -2326,10 +2326,17 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
             ./input/mg5_configuration.txt. assign to default if not define """
             
         config = {'pythia8_path': './pythia8'}
+        
+        config_path = None
+        try:
+            config_file = open(os.path.join(os.environ['HOME'],'.mg5_config'))
+        except:
+            config_file = open(os.path.relpath(
+                          os.path.join(MG5DIR,'input','mg5_configuration.txt')))
+        
         # read the file and extract information
-        logger.info('load MG5 configuration from %s ' % 
-                           os.path.relpath(os.path.join(MG5DIR,'input','mg5_configuration.txt')))
-        for line in open(os.path.join(MG5DIR,'input','mg5_configuration.txt')):
+        logger.info('load MG5 configuration from %s ' % config_file.name)
+        for line in config_file:
             if '#' in line:
                 line = line.split('#',1)[0]
             line = line.replace('\n','').replace('\r\n','')
