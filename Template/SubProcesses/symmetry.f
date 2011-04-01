@@ -378,15 +378,15 @@ c
       double precision pmass(-max_branch:-1,lmaxconfigs)   !Propagator mass
       double precision pow(-max_branch:-1,lmaxconfigs)    !Not used, in props.inc
       double precision xmass(-max_branch:nexternal)
-c
-c     Global
-c
-      include 'coupl.inc'                     !Mass and width info
       include 'maxamps.inc'
       integer idup(nexternal,maxproc,maxsproc)
       integer mothup(2,nexternal)
       integer icolup(2,nexternal,maxflow,maxsproc)
       include 'leshouche.inc'
+c
+c     Global
+c
+      include 'coupl.inc'                     !Mass and width info
 
 c-----
 c  Begin Code

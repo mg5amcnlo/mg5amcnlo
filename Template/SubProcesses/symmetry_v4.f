@@ -225,7 +225,7 @@ c                  write(*,*) "Found match graph",mapconfig(j),mapconfig(k),diff
       write(*,*) 'Found ',nmatch, ' matches. ',mapconfig(0)-nmatch,
      $     ' channels remain for integration.'
       call write_input(j)
-      call write_bash(mapconfig,use_config,pwidth,icomp,iforest)
+      call write_bash(mapconfig,use_config,pwidth,icomp,iforest,sprop)
       end
 
       logical function check_swap(ic)
@@ -427,7 +427,8 @@ c-----
  15   format(a)
       end
 
-      subroutine write_bash(mapconfig,use_config, pwidth, jcomp,iforest)
+      subroutine write_bash(mapconfig,use_config, pwidth, jcomp,iforest,
+     $     sprop)
 c***************************************************************************
 c     Writes out bash commands to run integration over all of the various
 c     configurations, but only for "non-identical" configurations.
@@ -448,6 +449,7 @@ c
       integer mapconfig(0:lmaxconfigs),use_config(0:lmaxconfigs)
       double precision pwidth(-max_branch:-1,lmaxconfigs)  !Propagotor width
       integer iforest(2,-max_branch:-1,lmaxconfigs)
+      integer sprop(-max_branch:-1,lmaxconfigs)
       integer jcomp
 
 c
@@ -467,7 +469,8 @@ c-----
       ic = 0      
       do i=1,mapconfig(0)
          if (use_config(i) .gt. 0) then
-            call bw_conflict(i,iforest(1,-max_branch,i),lconflict)
+            call bw_conflict(i,iforest(1,-max_branch,i),lconflict,
+     $           sprop(-max_branch,i), gForceBW(-max_branch,i))
             nbw=0               !Look for B.W. resonances
             if (jcomp .eq. 0 .or. jcomp .eq. 1 .or. .true.) then
                do j=1,imax
@@ -540,7 +543,8 @@ c
 c        Need to write appropriate number of BW sets this is
 c        same thing as above for the bash file
 c
-            call bw_conflict(i,iforest(1,-max_branch,i),lconflict)
+            call bw_conflict(i,iforest(1,-max_branch,i),lconflict,
+     $           sprop(-max_branch,i), gForceBW(-max_branch,i))
             nbw=0               !Look for B.W. resonances
             if (jcomp .eq. 0 .or. jcomp .eq. 1 .or. .true.) then
                do j=1,imax
@@ -577,7 +581,7 @@ c
       end
 
 
-      subroutine BW_Conflict(iconfig,itree,lconflict)
+      subroutine BW_Conflict(iconfig,itree,lconflict,sprop,forcebw)
 c***************************************************************************
 c     Determines which BW conflict
 c***************************************************************************
@@ -595,15 +599,22 @@ c     Arguments
 c
       integer itree(2,-max_branch:-1),iconfig
       logical lconflict(-max_branch:nexternal)
-
+      integer sprop(-max_branch:-1)  ! Propagator id
+      logical forcebw(-max_branch:-1)  ! Forced BW
 c
 c     local
 c
       integer i,j
+      integer iden_part(-max_branch:-1)
       double precision pwidth(-max_branch:-1,lmaxconfigs)  !Propagator width
       double precision pmass(-max_branch:-1,lmaxconfigs)   !Propagator mass
       double precision pow(-max_branch:-1,lmaxconfigs)    !Not used, in props.inc
       double precision xmass(-max_branch:nexternal)
+      include 'maxamps.inc'
+      integer idup(nexternal,maxproc,maxsproc)
+      integer mothup(2,nexternal)
+      integer icolup(2,nexternal,maxflow,maxsproc)
+      include 'leshouche.inc'
 c
 c     Global
 c
@@ -628,7 +639,24 @@ c
       do while (i .lt. nexternal-2 .and. itree(1,-i) .ne. 1)
          xmass(-i) = xmass(itree(1,-i))+xmass(itree(2,-i))
          if (pwidth(-i,iconfig) .gt. 0d0) then
-            if (xmass(-i) .gt. pmass(-i,iconfig)) then  !Can't be on shell
+c     JA 3/31/11 Keep track of identical particles (i.e., radiation vertices)
+c     by tracing the particle identity from the external particle.
+            if(itree(1,-i).gt.0.and.
+     $           sprop(-i).eq.idup(itree(1,-i),1,1).or.
+     $         itree(2,-i).gt.0.and.
+     $           sprop(-i).eq.idup(itree(2,-i),1,1).or.
+     $         itree(1,-i).lt.0.and.(iden_part(itree(1,-i)).ne.0.and.
+     $           sprop(-i).eq.iden_part(itree(1,-i)) .or.
+     $         forcebw(itree(1,-i)).and.
+     $           sprop(-i).eq.sprop(itree(1,-i))).or.
+     $         itree(2,-i).lt.0.and.(iden_part(itree(2,-i)).ne.0.and.
+     $           sprop(-i).eq.iden_part(itree(2,-i)).or.
+     $         forcebw(itree(2,-i)).and.
+     $           sprop(-i).eq.sprop(itree(2,-i))))then
+               iden_part(-i) = sprop(-i)
+            endif
+            if (xmass(-i) .gt. pmass(-i,iconfig) .and.
+     $           iden_part(-i).eq.0) then !Can't be on shell, and not radiation
                lconflict(-i)=.true.
                write(*,*) "Found Conflict", iconfig,i,
      $              pmass(-i,iconfig),xmass(-i)
@@ -652,7 +680,7 @@ c     Only include BW props as conflicting
 c
       do j=i,1,-1
          if (lconflict(-j)) then 
-            if (pwidth(-j,iconfig) .le. 0) then 
+            if (pwidth(-j,iconfig) .le. 0 .or. iden_part(-j).gt.0) then 
                lconflict(-j) = .false.
                write(*,*) 'No conflict BW',iconfig,j
             else
