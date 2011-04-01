@@ -802,7 +802,13 @@ class CheckValidForCmd(object):
             name_dir = lambda i: 'PROC_SA_CPP_%s_%s' % \
                                     (self._curr_model['name'], i)
             auto_path = lambda i: os.path.join(self.writing_dir,
-                                               name_dir(i))                
+                                               name_dir(i))
+        elif self._export_format == 'pythia8':
+            if self.pythia8_path:
+                self._export_dir = self.pythia8_path
+            else:
+                self._export_dir = '.'
+            return
         else:
             self._export_dir = '.'
             return
@@ -1362,6 +1368,9 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
     _mgme_dir = MG4DIR
     _comparisons = None
     
+    # Configuration variable
+    pythia8_path = None
+    
     def __init__(self, mgme_dir = '', *completekey, **stdin):
         """ add a tracker of the history """
 
@@ -1391,6 +1400,9 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
             print "Not standard stdin, use input path"
             if input_path[-2] == 'Cards':
                 self._export_dir = os.path.sep.join(input_path[:-2])
+                
+        # Load the configuration file
+        self.set_configuration()
         
     # Add a process to the existing multiprocess definition
     # Generate a new amplitude
@@ -2308,7 +2320,41 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
         if removed_multiparticles:
             logger.info("Removed obsolete multiparticles %s" % \
                                          " / ".join(removed_multiparticles))
+    
+    def set_configuration(self):
+        """ assign all configuration variable from file 
+            ./input/mg5_configuration.txt. assign to default if not define """
             
+        config = {'pythia8_path': './pythia8'}
+        # read the file and extract information
+        logger.info('load MG5 configuration from %s ' % 
+                           os.path.relpath(os.path.join(MG5DIR,'input','mg5_configuration.txt')))
+        for line in open(os.path.join(MG5DIR,'input','mg5_configuration.txt')):
+            if '#' in line:
+                line = line.split('#',1)[0]
+            line = line.replace('\n','').replace('\r\n','')
+            try:
+                name, value = line.split('=')
+            except ValueError:
+                pass
+            else:
+                name = name.strip()
+                value = value.strip()
+                config[name] = value
+
+        # Treat each expected input
+        # 1: Pythia8_path
+        # try relative path
+        pythia8_dir = os.path.join(MG5DIR, config['pythia8_path'])
+        if not os.path.isfile(os.path.join(pythia8_dir, 'include', 'Pythia.h')):
+            if os.path.isfile(os.path.join(config['pythia8_path'], 'include', 'Pythia.h')):
+                pythia8_dir = config['pythia8_path']
+            else:
+                pythia8_dir = None
+        self.pythia8_path = pythia8_dir
+        
+        return config
+                
     def check_for_export_dir(self, filepath):
         """Check if the files is in a valid export directory and assign it to
         export path if if is"""

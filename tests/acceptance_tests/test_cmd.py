@@ -97,7 +97,14 @@ class TestCmdShell1(unittest.TestCase):
         self.do('draw .')
         self.assertTrue(os.path.exists('diagrams_0_gg_gg.eps'))
         os.remove('diagrams_0_gg_gg.eps')
+        
+    def test_config(self):
+        """check that configuration file is at default value"""
+        
+        config = self.cmd.set_configuration()
+        expected = {'pythia8_path': './pythia8'}
 
+        self.assertEqual(config, expected)
 
 class TestCmdShell2(unittest.TestCase,
                     test_file_writers.CheckFileCreate):

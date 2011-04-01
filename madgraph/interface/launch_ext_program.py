@@ -113,7 +113,7 @@ class ExtLauncher(object):
                         question += "%s" % data
                     question += ', '
                 if len(choices) > 9:
-                    question += ', ... , ' 
+                    question += '... , ' 
                 question = question[:-2]+']'
                 
             if path_info:
@@ -407,11 +407,13 @@ class Pythia8Launcher(ExtLauncher):
             raise MadGraph5Error, "make failed for %s" % self.executable
         
         print "Running " + self.executable
-
+        
         output = open(os.path.join(self.running_dir, self.name), 'w')
+        if not self.executable.startswith('./'):
+            self.executable = os.path.join(".", self.executable)
         subprocess.call([self.executable], stdout = output, stderr = output,
                         cwd=self.running_dir)
-
+        
         # Display the cross-section to the screen
         path = os.path.join(self.running_dir, self.name) 
         pydoc.pager(open(path).read())
