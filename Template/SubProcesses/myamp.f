@@ -255,6 +255,7 @@ c     Constants
 c     
       include 'genps.inc'
       include 'nexternal.inc'
+      include 'maxamps.inc'
       double precision   zero
       parameter (zero = 0d0)
 c
@@ -269,16 +270,28 @@ c
       double precision x1,x2,xk(nexternal)
       double precision dr,mtot,etot,stot,xqfact
       integer i, iconfig, l1, l2, j, nt, nbw
+      integer iden_part(-max_branch:-1)
 
       double precision pmass(-nexternal:0,lmaxconfigs)
       double precision pwidth(-nexternal:0,lmaxconfigs)
       integer pow(-nexternal:0,lmaxconfigs)
 
+      integer idup(nexternal,maxproc,maxsproc)
+      integer mothup(2,nexternal)
+      integer icolup(2,nexternal,maxflow,maxsproc)
+      include 'leshouche.inc'
+
+      logical gForceBW(-max_branch:-1,lmaxconfigs)  ! Forced BW
+      include 'decayBW.inc'
 c
 c     Global
 c
       integer iforest(2,-max_branch:-1,lmaxconfigs)
       common/to_forest/ iforest
+
+      integer sprop(-max_branch:-1,lmaxconfigs)
+      integer tprid(-max_branch:-1,lmaxconfigs)
+      common/to_sprop/sprop,tprid
 
       integer            mapconfig(0:lmaxconfigs), this_config
       common/to_mconfigs/mapconfig, this_config
@@ -333,8 +346,32 @@ c-JA 1/2009: Set grid also based on xqcut
          mtot=mtot+xm(i)         
       enddo
       tsgn    = +1d0
+c     Reset variables
       nbw = 0
+      do i=1,nexternal
+         iden_part(-i)=0
+         spole(i)=0
+         swidth(i)=0
+      enddo
       do i=-1,-(nexternal-3),-1              !Find all the propagotors
+c     JA 3/31/11 Keep track of identical particles (i.e., radiation vertices)
+c     by tracing the particle identity from the external particle.
+         if(iforest(1,i,iconfig).gt.0.and.
+     $        sprop(i,iconfig).eq.idup(iforest(1,i,iconfig),1,1).or.
+     $      iforest(2,i,iconfig).gt.0.and.
+     $        sprop(i,iconfig).eq.idup(iforest(2,i,iconfig),1,1).or.
+     $      iforest(1,i,iconfig).lt.0.and.
+     $        (iden_part(iforest(1,i,iconfig)).ne.0.and.
+     $        sprop(i,iconfig).eq.iden_part(iforest(1,i,iconfig)) .or.
+     $        gforcebw(iforest(1,i,iconfig),iconfig).and.
+     $        sprop(i,iconfig).eq.sprop(iforest(1,i,iconfig),iconfig)).or.
+     $      iforest(2,i,iconfig).lt.0.and.
+     $        (iden_part(iforest(2,i,iconfig)).ne.0.and.
+     $        sprop(i,iconfig).eq.iden_part(iforest(2,i,iconfig)).or.
+     $        gforcebw(iforest(2,i,iconfig),iconfig).and.
+     $        sprop(i,iconfig).eq.sprop(iforest(2,i,iconfig),iconfig)))then
+            iden_part(i) = sprop(i,iconfig)
+            endif
          if (iforest(1,i,iconfig) .eq. 1) tsgn=-1d0
          if (tsgn .eq. 1d0) then                         !s channel
             xm(i) = xm(iforest(1,i,iconfig))+xm(iforest(2,i,iconfig))
@@ -356,7 +393,7 @@ c-JA 1/2009: Set grid also based on xqcut
             endif
 c            write(*,*) 'iconfig,i',iconfig,i
 c            write(*,*) pwidth(i,iconfig),pmass(i,iconfig)
-            if (pwidth(i,iconfig) .gt. 0) nbw=nbw+1
+            if (pwidth(i,iconfig) .gt. 0 ) nbw=nbw+1
             if (pwidth(i,iconfig) .gt. 0 .and. lbw(nbw) .le. 1) then         !B.W.
 c               nbw = nbw +1
 
@@ -365,16 +402,15 @@ c               nbw = nbw +1
 c-----
 c tjs 11/2008 if require BW then force even if worried about energy
 c----
-                  if(pmass(i,iconfig).ge.xe(i) .or. lbw(nbw).eq.1) then
+                  if(pmass(i,iconfig).ge.xe(i).and.iden_part(i).eq.0
+     $                 .or. lbw(nbw).eq.1) then
                      write(*,*) 'Setting PDF BW',j,nbw,pmass(i,iconfig)
                      spole(j)=pmass(i,iconfig)*pmass(i,iconfig)/stot
                      swidth(j) = pwidth(i,iconfig)*pmass(i,iconfig)/stot
                      xm(i) = pmass(i,iconfig)
-                  else
-                     spole(j)=0d0
-                     swidth(j) = 0d0
                   endif
-               else
+                  continue
+               else if(iden_part(i).eq.0 .or. lbw(nbw).eq.1) then
                   write(*,*) 'Setting BW',i,nbw,pmass(i,iconfig)
                   spole(-i)=pmass(i,iconfig)*pmass(i,iconfig)/stot
                   swidth(-i) = pwidth(i,iconfig)*pmass(i,iconfig)/stot
@@ -383,61 +419,24 @@ c RF & TJS, should start from final state particle masses, not only at resonance
 c Therefore remove the next line.
 c                  xe(i) = max(xe(i),xm(i))
                endif
-            else                                  !1/x^pow
-c-JA 1/2009: Comment out this whole section, since it only sets (wrong) xm(i)
-c               if (xm(i) - pmass(i,iconfig) .le. 0d0) then !Can hit pole
-cc                  write(*,*) 'Setting new min',i,xm(i),pmass(i,iconfig)
-c                  l1 = iforest(1,i,iconfig)                  !need dr cut
-c                  l2 = iforest(2,i,iconfig)
-c                  if (l2 .lt. l1) then
-c                     j = l1
-c                     l1 = l2
-c                     l2 = j
-c                  endif
-c                  dr = 0
-cc-fax
-c                  if (l1 .gt. 0) 
-c     &  dr = max(r2min(l2,l1)*dabs(r2min(l2,l1)),0d0) !dr only for external
-cc                  write(*,*) 'using r2min',l2,l1,sqrt(dr)
-c                  dr = dr*.8d0                        !0.8 to hit peak hard
-c                  xo = 0.5d0*pmass(i,iconfig)**2      !0.5 to hit peak hard
-cc-fax
-c                  if (dr .gt. 0d0) 
-c     &            xo = max(xo,max(etmin(l2),0d0)*max(etmin(l1),0d0)*dr)
-cc                  write(*,*) 'Got dr',i,l1,l2,dr
-cc------
-cctjs 11/2008  if explicitly missing pole, don't want to include mass in xm
-cc-----
-c                 if (pwidth(i,iconfig) .le. 0) then
-cc                     write(*,*) "Including mass",i,pmass(i,iconfig)
-c                    xo = xo+pmass(i,iconfig)**2
-c                 else
-cc                     write(*,*) "Skipping mass", i,pmass(i,iconfig),sqrt(xo)
-c                 endif
-cc                  write(*,*) 'Setting xm',i,xm(i),sqrt(xo)
-c                  xm(i) = sqrt(xo)    !Reset xm to realistic minimum
-c                  xo = xo/stot
-cc                  xo = sqrt(pmass(i,iconfig)**2+ pmass(i,iconfig)**2)
-cc-fax
-cc                  xo = pmass(i,iconfig)+max(etmin,0d0)
-c               else
-c                  write(*,*) 'Using xm',i,xm(i)
-c                  xo = xm(i)**2/stot
-c               endif
-              xo = xm(i)**2/stot
-              a=pmass(i,iconfig)**2/stot
-c               call setgrid(-i,xo,a,pow(i,iconfig))
-c               write(*,*) 'Enter minimum for ',-i, xo
-c               read(*,*) xo
-
-
-               if (pwidth(i,iconfig) .eq. 0) call setgrid(-i,xo,a,1)
-               if (pwidth(i,iconfig) .gt. 0) then
-                  write(*,*) 'Using flat grid for BW',i,nbw,
-     $                 pmass(i,iconfig)
+c     JA 4/1/2011 Set grid in case there is no BW (radiation process)
+               if (swidth(-i) .eq. 0d0)then
+                  a=pmass(i,iconfig)**2/stot
+c              Ensure that xo > a
+                  xo = max(xm(i)**2/stot,a*1.01)
+                  call setgrid(-i,xo,a,1)
                endif
+            else                                  !1/x^pow
+              a=pmass(i,iconfig)**2/stot
+c     JA 4/1/2011 Ensure xo > a, always set grid
+              xo = max(xm(i)**2/stot,a*1.01)
+c              if (pwidth(i, iconfig) .eq. 0d0.or.iden_part(i).gt.0) then 
+                 call setgrid(-i,xo,a,1)
+c              else 
+c                 write(*,*) 'Using flat grid for BW',i,nbw,
+c     $                pmass(i,iconfig)
+c              endif
             endif
-c            xe(i) = max(xm(i),xe(i))               
             etot = etot+xe(i)
             mtot=mtot+max(xm(i),xm(i))
 c            write(*,*) 'New mtot',i,mtot,xm(i)
