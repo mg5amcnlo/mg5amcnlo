@@ -360,7 +360,7 @@ class ALOHAWriterForFortran(WriteALOHA):
             #Mom is in format OMX with X the number of the particle
             index = int(elem[2:])
             str_out += 'OM%d = 0d0\n' % (index)
-            str_out += 'if (M%d .ne. 0d0) OM%d' % (index, index) + '=1d0/dcmplx(M%d**2,-W%d*M%d)\n' % (index, index, index) 
+            str_out += 'if (M%d .ne. 0d0) OM%d' % (index, index) + '=1d0/M%d**2\n' % (index) 
         
         # Returning result
         return str_out
@@ -571,7 +571,7 @@ class ALOHAWriterForCPP(WriteALOHA):
             #Mom is in format OMX with X the number of the particle
             index = int(elem[2:])
             str_out += 'OM%d = 0;\n' % (index)
-            str_out += 'if (M%d != 0) OM%d' % (index, index) + '= 1./complex<double>(pow(M%d,2),-W%d*M%d);\n' % (index, index, index) 
+            str_out += 'if (M%d != 0) OM%d' % (index, index) + '= 1./pow(M%d,2);\n' % (index) 
         
         # Returning result
         return str_out
@@ -864,7 +864,7 @@ class ALOHAWriterForPython(WriteALOHA):
             #Mom is in format OMX with X the number of the particle
             index = int(elem[2:])
             str_out += 'OM%d = 0.0\n' % (index)
-            str_out += 'if (M%d): OM%d' % (index, index) + '=1.0/complex(M%d**2,-W%d*M%d)\n' % (index, index, index) 
+            str_out += 'if (M%d): OM%d' % (index, index) + '=1.0/M%d**2\n' % (index) 
         
         # Returning result
         return str_out    
