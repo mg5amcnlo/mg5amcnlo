@@ -8,6 +8,7 @@ c
 c     Constants
 c
       include 'genps.inc'
+      include 'maxconfigs.inc'
       include 'nexternal.inc'
       include '../../Source/run_config.inc'
       include 'maxamps.inc'
@@ -207,6 +208,7 @@ c
 c     Constants
 c
       include 'genps.inc'
+      include 'maxconfigs.inc'
       include 'nexternal.inc'
       include '../../Source/run_config.inc'
       integer    imax,   ibase
@@ -358,6 +360,7 @@ c
 c     Constants
 c
       include 'genps.inc'
+      include 'maxconfigs.inc'
       include 'nexternal.inc'
       double precision zero
       parameter       (zero=0d0)

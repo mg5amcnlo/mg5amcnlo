@@ -1129,7 +1129,7 @@ public:
 static Parameters_sm* getInstance();
 
 // Model parameters independent of aS
-double WH,WW,WZ,WT,MH,MZ,MB,MS,MD,MT,MC,MU,MTA,MM,Me,ymtau,ymt,ymb,ymc,Gf,aEWM1,cabi,ZERO,ye,ym,yup,ydo,ys,cos__cabi,sin__cabi,MZ__exp__2,MZ__exp__4,sqrt__2,MH__exp__2,aEW,MW,sqrt__aEW,ee,MW__exp__2,sw2,cw,sqrt__sw2,sw,g1,gw,v,v__exp__2,lam,yb,yc,yt,ytau,muH,ee__exp__2,gw__exp__2,cw__exp__2,sw__exp__2;
+double WH,WW,WZ,WT,WTA,MH,MZ,MB,MS,MD,MT,MC,MU,MTA,MM,Me,ymtau,ymt,ymb,ymc,Gf,aEWM1,cabi,ZERO,ye,ym,yup,ydo,ys,cos__cabi,sin__cabi,MZ__exp__2,MZ__exp__4,sqrt__2,MH__exp__2,aEW,MW,sqrt__aEW,ee,MW__exp__2,sw2,cw,sqrt__sw2,sw,g1,gw,v,v__exp__2,lam,yb,yc,yt,ytau,muH,ee__exp__2,gw__exp__2,cw__exp__2,sw__exp__2;
 std::complex<double> CKM11,CKM12,CKM13,CKM21,CKM22,CKM23,CKM31,CKM32,CKM33,complexi,conjg__CKM11,conjg__CKM12,conjg__CKM13,conjg__CKM21,conjg__CKM22,conjg__CKM23,conjg__CKM31,conjg__CKM32,conjg__CKM33;
 // Model parameters dependent on aS
 double aS,sqrt__aS,G,G__exp__2;
@@ -1195,6 +1195,7 @@ namespace Pythia8 {
 WW=pd->mWidth(24);
 WZ=pd->mWidth(23);
 WT=pd->mWidth(6);
+WTA=pd->mWidth(15);
 MH=pd->m0(25);
 MZ=pd->m0(23);
 MB=pd->m0(5);
@@ -1422,6 +1423,7 @@ GC_10 = complexi*G;
 cout << setw(20) << "WW " << "= " << setiosflags(ios::scientific) << setw(10) << WW << endl;
 cout << setw(20) << "WZ " << "= " << setiosflags(ios::scientific) << setw(10) << WZ << endl;
 cout << setw(20) << "WT " << "= " << setiosflags(ios::scientific) << setw(10) << WT << endl;
+cout << setw(20) << "WTA " << "= " << setiosflags(ios::scientific) << setw(10) << WTA << endl;
 cout << setw(20) << "MH " << "= " << setiosflags(ios::scientific) << setw(10) << MH << endl;
 cout << setw(20) << "MZ " << "= " << setiosflags(ios::scientific) << setw(10) << MZ << endl;
 cout << setw(20) << "MB " << "= " << setiosflags(ios::scientific) << setw(10) << MB << endl;

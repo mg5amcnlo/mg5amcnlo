@@ -345,6 +345,7 @@ c**************************************************
 
       include 'message.inc'
       include 'genps.inc'
+      include 'maxconfigs.inc'
       include 'nexternal.inc'
       include 'cluster.inc'
       include 'run.inc'
@@ -598,6 +599,7 @@ c**************************************************
 
       include 'message.inc'
       include 'genps.inc'
+      include 'maxconfigs.inc'
       include 'nexternal.inc'
       include 'cluster.inc'
       include 'run.inc'

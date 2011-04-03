@@ -2827,6 +2827,7 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
 
         if self._export_format in ['madevent', 'standalone']:
             self._curr_exporter.finalize_v4_directory( \
+                                           self._curr_matrix_elements,
                                            [self.history_header] + \
                                            self.history,
                                            not nojpeg)

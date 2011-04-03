@@ -50,6 +50,8 @@ parser.add_option("","--debug", action="store_true", default=False, dest='debug'
 if len(args) == 0:
     args = ''
 
+import subprocess
+
 # Check if optimize mode is (and should be) activated
 if __debug__ and not options.debug and \
     (not os.path.exists(os.path.join(root_path, 'bin','create_release.py')) or options.web):
@@ -58,8 +60,6 @@ if __debug__ and not options.debug and \
 
 import logging
 import logging.config
-import subprocess
-
 
 try: 
     import readline

@@ -10,9 +10,6 @@ c*************************************************************************
       parameter (ng = 96, maxdim = 25, maxinvar= 50 , maxconfigs=10)
 c      parameter (ng = 43, maxdim = 25, maxinvar= 57 , maxconfigs=20)
 
-      integer    lmaxconfigs
-      parameter (lmaxconfigs=4000)       !Used for iforest
-
       double precision  xgmin,     xgmax
       parameter        (xgmin=-1d0, xgmax=1d0)
 

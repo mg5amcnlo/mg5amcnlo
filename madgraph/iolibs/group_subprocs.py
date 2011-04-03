@@ -220,6 +220,11 @@ class SubProcessGroup(base_objects.PhysicsObject):
         return self.get('matrix_elements')[0].\
                get_nexternal_ninitial()
 
+    def get_num_configs(self):
+        """Get number of configs for this group"""
+
+        return len(self.get('mapping_diagrams'))
+
     def find_mapping_diagrams(self):
         """Find all unique diagrams for all processes in this
         process class, and the mapping of their diagrams unto this

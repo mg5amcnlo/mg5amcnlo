@@ -687,6 +687,7 @@ c
 c     Constants
 c
       include 'genps.inc'
+      include 'maxconfigs.inc'
 c
 c     Arguments
 c
@@ -1068,6 +1069,7 @@ c
 c     Constants
 c
       include 'genps.inc'
+      include 'maxconfigs.inc'
 c
 c     Arguments
 c
@@ -1231,6 +1233,7 @@ c
 c     Constants
 c
       include 'genps.inc'
+      include 'maxconfigs.inc'
 c
 c     Arguments
 c

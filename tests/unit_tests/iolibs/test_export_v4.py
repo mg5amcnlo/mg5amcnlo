@@ -862,6 +862,7 @@ C
 C     CONSTANTS
 C     
       INCLUDE 'genps.inc'
+      INCLUDE 'maxconfigs.inc'
       INCLUDE 'nexternal.inc'
       INCLUDE 'maxamps.inc'
       REAL*8     PI
@@ -1068,6 +1069,7 @@ C     ****************************************************
       IMPLICIT NONE
 
       INCLUDE 'genps.inc'
+      INCLUDE 'maxconfigs.inc'
       INCLUDE 'nexternal.inc'
       INCLUDE 'maxamps.inc'
       INCLUDE 'coupl.inc'

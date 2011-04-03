@@ -9,6 +9,7 @@ C
       double precision zero
       parameter       (ZERO = 0d0)
       include 'genps.inc'
+      include 'maxconfigs.inc'
       include 'nexternal.inc'
       INTEGER    ITMAX,   NCALL
 C

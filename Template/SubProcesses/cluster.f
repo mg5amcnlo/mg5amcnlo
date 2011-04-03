@@ -198,6 +198,7 @@ c            true if no errors
 c**************************************************************************
       implicit none
       include 'genps.inc'
+      include 'maxconfigs.inc'
       include 'nexternal.inc'
       include 'cluster.inc'
       include 'coupl.inc'
@@ -313,6 +314,7 @@ c            true if no errors
 c**************************************************************************
       implicit none
       include 'genps.inc'
+      include 'maxconfigs.inc'
       include 'nexternal.inc'
       include 'cluster.inc'
       include 'run.inc'
@@ -365,6 +367,7 @@ c      Checks if any resonances are on the BW for this configuration
 c**************************************************************************
       implicit none
       include 'genps.inc'
+      include 'maxconfigs.inc'
       include 'nexternal.inc'
 C $B$ NGRAPHS $E$ !this is a tag for MadWeight
 

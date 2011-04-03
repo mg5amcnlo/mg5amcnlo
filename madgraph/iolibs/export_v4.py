@@ -146,7 +146,7 @@ class ProcessExporterFortran(object):
     #===========================================================================
     # Create jpeg diagrams, html pages,proc_card_mg5.dat and madevent.tar.gz
     #===========================================================================
-    def finalize_v4_directory(self, history = "", makejpg = False):
+    def finalize_v4_directory(self, matrix_elements, history = "", makejpg = False):
         """Function to finalize v4 directory, for inheritance.
         """
         pass
@@ -185,6 +185,7 @@ class ProcessExporterFortran(object):
         ln(model_path + '/coupl.inc', self.dir_path + '/Source')
         ln(model_path + '/coupl.inc', self.dir_path + '/SubProcesses')
         ln(self.dir_path + '/Source/run.inc', self.dir_path + '/SubProcesses', log=False)
+        ln(self.dir_path + '/Source/maxconfigs.inc', self.dir_path + '/SubProcesses', log=False)
 
     #===========================================================================
     # export the helas routine
@@ -702,7 +703,7 @@ class ProcessExporterFortranSA(ProcessExporterFortran):
     #===========================================================================
     # Create proc_card_mg5.dat for Standalone directory
     #===========================================================================
-    def finalize_v4_directory(self, history, makejpg = False):
+    def finalize_v4_directory(self, matrix_elements, history, makejpg = False):
         """Finalize Standalone MG4 directory by generation proc_card_mg5.dat"""
 
         if not misc.which('g77'):
@@ -1059,6 +1060,7 @@ class ProcessExporterFortranME(ProcessExporterFortran):
                      'myamp.f',
                      'reweight.f',
                      'run.inc',
+                     'maxconfigs.inc',
                      'setcuts.f',
                      'setscales.f',
                      'sudakov.inc',
@@ -1091,14 +1093,17 @@ class ProcessExporterFortranME(ProcessExporterFortran):
             calls = 0
         return calls
 
-
-
-
-    def finalize_v4_directory(self, history, makejpg = False):
+    def finalize_v4_directory(self, matrix_elements, history, makejpg = False):
         """Finalize ME v4 directory by creating jpeg diagrams, html
         pages,proc_card_mg5.dat and madevent.tar.gz."""
 
-        os.system('touch %s/done' % os.path.join(self.dir_path,'SubProcesses'))   
+        # Write maxconfigs.inc based on max of ME's/subprocess groups
+        filename = os.path.join(self.dir_path,'Source','maxconfigs.inc')
+        self.write_maxconfigs_file(writers.FortranWriter(filename),
+                                   matrix_elements)
+        
+        # Touch "done" file
+        os.system('touch %s/done' % os.path.join(self.dir_path,'SubProcesses'))
 
         if not misc.which('g77'):
             logger.info('Change makefiles to use gfortran')
@@ -1345,6 +1350,26 @@ class ProcessExporterFortranME(ProcessExporterFortran):
                         (max(len(matrix_element.get('color_basis').keys()), 1),
                          len(mapconfigs)))
 
+
+        # Write the file
+        writer.writelines(lines)
+
+        return True
+
+    #===========================================================================
+    # write_maxconfigs_file
+    #===========================================================================
+    def write_maxconfigs_file(self, writer, matrix_elements):
+        """Write the maxconfigs.inc file for MadEvent"""
+
+        if isinstance(matrix_elements, helas_objects.HelasMultiProcess):
+            maxconfigs = max([me.get_num_configs() for me in \
+                              matrix_elements.get('matrix_elements')])
+        else:
+            maxconfigs = max([me.get_num_configs() for me in matrix_elements])
+
+        lines = "integer lmaxconfigs\n"
+        lines += "parameter(lmaxconfigs=%d)" % maxconfigs
 
         # Write the file
         writer.writelines(lines)
@@ -2023,6 +2048,7 @@ class ProcessExporterFortranMEGroup(ProcessExporterFortranME):
                      'myamp.f',
                      'reweight.f',
                      'run.inc',
+                     'maxconfigs.inc',
                      'setcuts.f',
                      'setscales.f',
                      'sudakov.inc',

@@ -15,6 +15,7 @@ C
 C CONSTANTS
 C  
     Include 'genps.inc'
+    Include 'maxconfigs.inc'
     Include 'nexternal.inc'
     Include 'maxamps.inc'
     INTEGER                 NCOMB         

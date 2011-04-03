@@ -465,6 +465,7 @@ c     to allow for grid preparation based on xqcut
 c**************************************************
       implicit none
       include 'genps.inc'
+      include 'maxconfigs.inc'
       include 'nexternal.inc'
       include 'cuts.inc'
 

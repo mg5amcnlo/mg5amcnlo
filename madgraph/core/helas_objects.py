@@ -3128,6 +3128,12 @@ class HelasMatrixElement(base_objects.PhysicsObject):
 
         return mothers
 
+    def get_num_configs(self):
+        """Get number of diagrams, which is always more than number of
+        configs"""
+
+        return len(self.get('diagrams'))    
+
     def get_number_of_wavefunctions(self):
         """Gives the total number of wavefunctions for this ME"""
 
