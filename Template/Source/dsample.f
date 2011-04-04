@@ -937,6 +937,7 @@ c     We'll use most for the peak, but save some for going down
 c
             ngu = ng *0.9
             ngd = ng-ngu
+
             do i=1,ngu-1
 c-------------------
 c     tjs 6/30/2009; tjs & ja 2/25/2011
@@ -1111,6 +1112,10 @@ c
       data ddum/maxdim*0d0/
       data icount/0/
       data it_warned/0/
+
+      integer            lastbin(maxdim)
+      common /to_lastbin/lastbin
+
 c-----
 c  Begin Code
 c-----
@@ -1177,6 +1182,10 @@ c            ddum(j) = tx(2,j)                 !Use last value
       im = ddum(j)
       ip = im + 1
       ij = Minvar(j,ipole)
+c------
+c     tjs 3/5/2011  save bin used to avoid looking up when storing wgt
+c------
+      lastbin(j) = ip
 c
 c     New method of choosing x from bins
 c
@@ -1191,10 +1200,11 @@ c
 c     Now we transform x if there is a B.W., S, or T  pole
 c
       if (ij .gt. 0) then
+c         write(*,*) "pole, width",ij,spole(ij),swidth(ij)
          if (swidth(ij) .gt. 0d0) then
-            y = x                             !Takes uniform y and returns
 c            write(*,*) 'Tranpole called',ij,swidth(ij)
-            call transpole(spole(ij),swidth(ij),y,x,wgt) !x on BW pole
+            y = x                             !Takes uniform y and returns
+            call transpole(spole(ij),swidth(ij),y,x,wgt) !x on BW pole or 1/x 
          endif
       endif
 c
@@ -1454,6 +1464,9 @@ c
       integer                   neventswritten
       common /to_eventswritten/ neventswritten
 
+      integer            lastbin(maxdim)
+      common /to_lastbin/lastbin
+
       data prb/maxprb*1d0/
       data fprb/maxfprb*1d0/
       data jpnt,jplace /1,1/
@@ -1528,7 +1541,12 @@ c            write(123,'(2i6,1e15.5)') 1,1,wgt
 c            write(123,'(5e15.9)') (fprb(i,jpnt,jplace),i=1,invar) 
 c            write(123,'(5e15.9)') (prb(i,jpnt,jplace),i=1,configs) 
             do j = 1, invar
-               i = int(xbin(point(j),j))+1
+c               i = int(xbin(point(j),j))+1    
+c--------------
+c     tjs 3/5/2011  use stored value for last bin
+c--------------
+               i = lastbin(j)
+c               write(*,*) 'bin choice',j,i,lastbin(j)
                if (i .gt. ng) then
                   print*,'error i>ng',i,j,ng,point(j)
                   i=ng

@@ -26,7 +26,7 @@ c
 c     Local
 c
       double precision z,zmin,zmax,xmin,xmax,ez
-      double precision pole1,width1,x
+      double precision pole1,width1,x,xc
       double precision a,b
 c-----
 c  Begin Code
@@ -67,7 +67,24 @@ c-----
             jac = jac *(zmax-zmin)*.5d0*(ez+4d0*width*width/ez)
 c            x = .5d0*(1d0-x)
          endif
-
+c-------
+c    tjs 3/5/2011  Perform 1/x transformation  using y=xo^(1-x)
+c-------
+      elseif(pole .eq. -15d0 .and. width .gt. 0d0) then !1/x   limit of width         
+c         if (x .lt. width) then      !No transformation below cutoff
+         xc = width
+         xc = 1d0/(1d0-log(width))
+         if (x .le. xc) then      !No transformation below cutoff
+            y=x*width/xc
+            jac = jac * width / xc
+         else
+            z = (x-xc)/(1d0-xc)
+            y=width**(1d0-z)
+            jac = jac * y * (-log(width))/(1d0-xc)
+c            write(*,*) "trans",x,y,z
+         endif
+c         write(*,*) 'Transpole called',x,y
+         return
       elseif(pole .ge. -2d0 .and. width .gt. 0d0) then !1/x^2   limit of width
          if (x .lt. width) then      !No transformation below cutoff
             y=x
@@ -163,7 +180,7 @@ c
 c     Local
 c
       double precision z,zmin,zmax,xmin,xmax,ez
-      double precision pole,width,y
+      double precision pole,width,y,xc
       double precision a,b
 c-----
 c  Begin Code
@@ -199,6 +216,20 @@ c-----
          else
             jac = jac *(width/cos(width*z))**2*(zmax-zmin)
          endif
+c-------
+c    tjs 3/5/2011  Perform 1/x transformation  using y=xo^(1-x)
+c-------
+      elseif(pole .eq. -15d0 .and. width .gt. 0d0) then !1/x   limit of width
+         xc = 1d0/(1d0-log(width))
+c         xc = width
+         if (y .le. width) then      !No transformation below cutoff
+            x = y*xc/width
+         else
+            z = 1d0-log(y)/log(width)
+            x = z*(1d0-xc) + xc
+c            write(*,*) "untrans",x,y,z
+         endif
+         return
       elseif(pole .gt. -1d0) then !1/sqrt((.5-x)^2+width^2)  t-channel
          if (y .gt. .5d0) then
             x=y
