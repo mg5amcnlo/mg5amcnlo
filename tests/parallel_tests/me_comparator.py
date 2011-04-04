@@ -200,7 +200,7 @@ class MG4Runner(MERunner):
 
             # Run the newprocess script
             logging.info("Running newprocess script")
-            subprocess.call(os.path.join('bin', 'newprocess'),
+            subprocess.call(os.path.join('.','bin', 'newprocess'),
                             cwd=dir_name,
                             )#stdout=open('/dev/null', 'w'), stderr=subprocess.STDOUT)
 

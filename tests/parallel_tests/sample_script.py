@@ -63,7 +63,7 @@ if '__main__' == __name__:
 
     #my_proc_list = [p for p in my_proc_list1 if p not in my_proc_list2]
     my_proc_list = ['a e+ > e+ y',' a e- > e- y',' a w+ > w+ y',' a w- > w- y',' a y > e+ e-',' a y > w+ w-',' e+ e- > a y',' e+ e- > y z',' e+ ve > w+ y',' e+ z > e+ y',' e+ w- > ve~ y',' e+ y > a e+',' e+ y > e+ z',' e+ y > ve~ w+',' e- ve~ > w- y',' e- z > e- y',' e- w+ > ve y',' e- y > a e-',' e- y > e- z',' e- y > ve w-',' h h > h h',' h h > y y',' h z > y z',' h w+ > w+ y',' h w- > w- y',' h y > h h',' h y > h y',' h y > z z',' h y > w+ w-',' ve w- > e- y',' ve y > e- w+',' ve~ w+ > e+ y',' ve~ y > e+ w-',' z z > h y',' w+ z > w+ y',' w- z > w- y',' y z > e+ e-',' y z > h z',' y z > w+ w-',' w+ w- > a y',' w+ w- > h y',' w+ w- > y z',' w+ y > a w+',' w+ y > e+ ve',' w+ y > h w+',' w+ y > w+ z',' w- y > a w-',' w- y > e- ve~',' w- y > h w-',' w- y > w- z',' y y > h h']
-    my_proc_list = ['u u~ >  u u~', 'e+ e- > e+ e-']
+    my_proc_list = ['u u~ >  u u~', 'e+ e- > e+ e-','a e+ > e+ y',' a e- > e- y']
     #my_proc_list1 = me_comparator.create_proc_list(['u', 'u~','t','t~','g','y','z','a'], initial=1,
     #                                              final=2)
     #my_proc_list = me_comparator.create_proc_list_enhanced(
@@ -93,7 +93,7 @@ if '__main__' == __name__:
 
     # Create and setup a comparator
     my_comp = me_comparator.MEComparator()
-    my_comp.set_me_runners(my_mg5_ufo, my_mg4, my_mg5_cpp)
+    my_comp.set_me_runners(my_mg5_ufo, my_mg4)
 
     # Run the actual comparison
     my_comp.run_comparison(my_proc_list,

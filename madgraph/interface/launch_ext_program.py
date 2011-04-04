@@ -160,6 +160,8 @@ class ExtLauncher(object):
         else:
             path = os.path.join(self.card_dir, filename)
             files.cp(ans, path)
+            
+   
                 
                     
 class SALauncher(ExtLauncher):
@@ -288,7 +290,14 @@ class MELauncher(ExtLauncher):
             subprocess.call([self.executable, mode, self.name, self.name], 
                                                            cwd=self.running_dir)
         elif mode == "2":
-            nb_node = self.ask('How many core do you want to use?', '2')
+            import multiprocessing
+            max_node = multiprocessing.cpu_count()
+            if max_node == 1:
+                logger.warning('Only one core is detected on your computer! Pass in single machine')
+                self.cluster = 0
+                self.launch_program()
+                return
+            nb_node = self.ask('How many core do you want to use?', max_node, range(max_node+1))
             subprocess.call([self.executable, mode, nb_node, self.name], 
                                                            cwd=self.running_dir)
         

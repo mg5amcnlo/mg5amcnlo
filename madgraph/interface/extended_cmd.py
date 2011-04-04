@@ -311,9 +311,9 @@ class SmartQuestion(cmd.Cmd):
         self.value = None
 
     def __init__(self,  allow_arg=[], default=None, *arg, **opt):
-        self.allow_arg = allow_arg
+        self.allow_arg = [str(a) for a in allow_arg]
         self.history_header = ''
-        self.default_value = default
+        self.default_value = str(default)
         cmd.Cmd.__init__(self, *arg, **opt)
 
     def completenames(self, text, *ignored):
