@@ -2321,19 +2321,21 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
             logger.info("Removed obsolete multiparticles %s" % \
                                          " / ".join(removed_multiparticles))
     
-    def set_configuration(self):
+    def set_configuration(self, config_path=None):
         """ assign all configuration variable from file 
             ./input/mg5_configuration.txt. assign to default if not define """
             
         config = {'pythia8_path': './pythia8'}
         
-        config_path = None
-        try:
-            config_file = open(os.path.join(os.environ['HOME'],'.mg5_config'))
-        except:
-            config_file = open(os.path.relpath(
+        if not config_path:
+            try:
+                config_file = open(os.path.join(os.environ['HOME'],'.mg5_config'))
+            except:
+                config_file = open(os.path.relpath(
                           os.path.join(MG5DIR,'input','mg5_configuration.txt')))
-        
+        else:
+            config_file = open(config_path)
+
         # read the file and extract information
         logger.info('load MG5 configuration from %s ' % config_file.name)
         for line in config_file:
