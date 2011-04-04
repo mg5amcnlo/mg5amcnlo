@@ -222,13 +222,15 @@ sub writeHtmlProcessPage {
       $eve="Events/".$i."_unweighted_events.lhe.gz";
       $roo="Events/".$i."_unweighted_events.root";
       $plo="Events/".$i."_plots.html";
+      $plopythia="Events/".$i."_plots_pythia.html";
+      $plopgs="Events/".$i."_plots_pgs.html";
+      $plodelphes="Events/".$i."_plots_delphes.html";
       $ban="Events/".$i."_banner.txt";
       $pythia="Events/".$i."_pythia_events.hep.gz";
       $pythiaroot="Events/".$i."_pythia_events.root";
       $pythialog="Events/".$i."_pythia.log";
       $pythialhe="Events/".$i."_pythia_events.lhe.gz";
       $pythialheroot="Events/".$i."_pythia_lhe_events.root";
-      $pythiaplots="Events/".$i."_pyplots.html";
       $pgs="Events/".$i."_pgs_events.lhco.gz";
       $pgslog="Events/".$i."_pgs.log";
       $pgsroot="Events/".$i."_pgs_events.root";
@@ -244,10 +246,12 @@ sub writeHtmlProcessPage {
       } elsif (-e "$res"){
          print PAGE "     <a href=\"../$res\">results</a>";
       }
-      if(-e "$plo") {print PAGE "     <a href=\"../$plo\">plots</a> ";}
       print PAGE "     <a href=\"../$ban\">banner</a> ";
       print PAGE "<BR> </TD>\n<TD><TABLE BORDER=2 width=\"100%\" align=\"center\" >";
-      if(-e "$eve") {print PAGE "    <TR align=\"center\"> <td> Parton-level </td><td><a href=\"../$eve\">LHE</a> ";}
+      if(-e "$eve") {
+	print PAGE "    <TR align=\"center\"> <td> Parton-level </td><td><a href=\"../$eve\">LHE</a> ";
+      if(-e "$plo") {print PAGE " <a href=\"../$plo\">plots</a>";}
+      }
       elsif ( -e "Online" ){
          print PAGE "<FORM ACTION=\"http://$server/cgi-bin/RunProcess/handle_runs-pl\"  ENCTYPE=\"multipart/form-data\" METHOD=\"POST\">";
          print PAGE "<INPUT TYPE=HIDDEN NAME=directory VALUE=\"$directory\"> \n";
@@ -270,9 +274,19 @@ sub writeHtmlProcessPage {
       if(-e "$pythiaroot") {print PAGE "     <a href=\"../$pythiaroot\">rootfile</a>";}
       if(-e "$pythialhe") {print PAGE "     <a href=\"../$pythialhe\">LHE</a>";}
       if(-e "$pythialheroot") {print PAGE "     <a href=\"../$pythialheroot\">rootfile (LHE)</a>";}
-      if(-e "$pythiaplots") {print PAGE "     <a href=\"../$pythiaplots\">plots</a> </td></tr>";} else {print PAGE "</td> </tr>";}
-      if(-e "$pgs") {print PAGE "  <TR align=\"center\">  <td>Reco. Objects.<br> (<a href=\"../$pgslog\">PGS</a>)</td><td><a href=\"../$pgs\">LHCO</a>";}
-      elsif(-e "$delphes") {print PAGE "  <TR align=\"center\">  <td>Reco. Objects.<br> (<a href=\"../$delpheslog\">Delphes</a>)</td><td><a href=\"../$delphes\">LHCO</a>";}
+      if(-e "$plopythia") {print PAGE "     <a href=\"../$plopythia\">plots</a> </td></tr>";} else {print PAGE "</td> </tr>";}
+      if(-e "$pgs") {
+	print PAGE "  <TR align=\"center\">  <td>Reco. Objects.<br> (<a href=\"../$pgslog\">PGS</a>)</td><td><a href=\"../$pgs\">LHCO</a>";
+	if(-e "$pgsroot") {print PAGE "     <a href=\"../$pgsroot\">rootfile</a>";}
+	if (-e "$plopgs") {print PAGE "     <a href=\"../$plopgs\">plots</a>";}
+	print PAGE " </td></tr>\n";
+      }
+      elsif(-e "$delphes") {
+	print PAGE "  <TR align=\"center\">  <td>Reco. Objects.<br> (<a href=\"../$delpheslog\">Delphes</a>)</td><td><a href=\"../$delphes\">LHCO</a>";
+	if(-e "$delphesroot") {print PAGE "     <a href=\"../$delphesroot\">rootfile</a>";}
+	if (-e "$plodelphes") {print PAGE "     <a href=\"../$plodelphes\">plots</a>";}
+	print PAGE " </td></tr>\n";
+      }
       else {
           if (-e "Online" && -e "$pythia") {
               print PAGE "  <TR align=\"center\">  <td>Reco. Objects.<br>(PGS/Delphes)</td> <td> ";
@@ -284,11 +298,6 @@ sub writeHtmlProcessPage {
               print PAGE "</FORM> \n";
           }
       }
-      if(-e "$pgsroot") {
-	  print PAGE "     <a href=\"../$pgsroot\">rootfile</a> </td></tr>";
-      }elsif(-e "$delphesroot") {
-	  print PAGE "     <a href=\"../$delphesroot\">rootfile</a> </td></tr>";
-      } else {print PAGE "</td> </tr>";}
       print PAGE "</table></TD>";
 #extract the information from the banner:
       open(INPUT , "$ban") or die "Could not read from file $ban \n";

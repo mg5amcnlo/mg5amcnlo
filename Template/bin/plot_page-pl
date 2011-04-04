@@ -42,8 +42,12 @@ until($listpos>$#incard){
       $model    = "";
   }      
 
+$extra = "";
+if ($#ARGV >= 1){
+  $extra = " at ".$ARGV[1]." level";
+}
 
-
+print $extra."\n";
    open(PAGE,"> plots.html") || die "Error creating diagrams.html";
    print PAGE "\<HTML\> \n";
    print PAGE "\<HEAD\> \n";
@@ -51,7 +55,7 @@ until($listpos>$#incard){
    print PAGE "\<\/HEAD\> \n";
    print PAGE "\<BODY\> \n";
    print PAGE "<CENTER>\n";
-   print PAGE "<H1 align=center> Plots for $interaction</H1>\n";
+   print PAGE "<H1 align=center> Plots for $interaction".$extra."</H1>\n";
    print PAGE "<p align=\"center\">";
    print PAGE "<table border=\"1\"  cellspacing=\"1\">";
    print PAGE "<tr  align=\"center\">";

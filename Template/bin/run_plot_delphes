@@ -1,6 +1,6 @@
 #!/bin/bash
 #
-#  This runs MadAnalysis on the unweighted_events.lhe
+#  This runs MadAnalysis on the delphes_events.lhco
 #
 #  Usage: run_plot run_name [madir [tddir]]
 #  where madir is the path to the MadAnalysis package
@@ -30,18 +30,17 @@ fi
 
 dirbin=$main/../bin
 
-if [[ $run != "" && -e ${run}_unweighted_events.lhe.gz ]];then
-    gunzip -c ${run}_unweighted_events.lhe.gz > unweighted_events.lhe
+if [[ $run != "" && -e ${run}_delphes_events.lhco.gz ]];then
+    gunzip -c ${run}_delphes_events.lhco.gz > delphes_events.lhco
 fi
 
-if [[ (-x $MAdir/plot_events) && (-e unweighted_events.lhe) && (-e ../Cards/plot_card.dat) ]]; then
+if [[ (-x $MAdir/plot_events) && (-e delphes_events.lhco) && (-e ../Cards/plot_card.dat) ]]; then
     echo "Creating Plots"
-    mkdir $run
-    cd $run
-    echo "../unweighted_events.lhe" > events.list
+    mkdir ${run}_delphes
+    cd ${run}_delphes
+    echo "../delphes_events.lhco" > events.list
     $dirbin/plot $MAdir $td > plot.log
     cd ..
-    $dirbin/plot_page-pl $run parton
-    mv plots.html ${run}_plots.html
+    $dirbin/plot_page-pl ${run}_delphes Delphes
+    mv plots.html ${run}_plots_delphes.html
 fi
-

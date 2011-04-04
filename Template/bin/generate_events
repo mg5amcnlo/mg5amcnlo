@@ -268,7 +268,8 @@ if [[ (-x $MAdir/plot_events) && (-e unweighted_events.lhe) && (-e ../Cards/plot
     echo "../unweighted_events.lhe" > events.list
     $dirbin/plot $MAdir $td > plot.log
     cd ..
-    $dirbin/plot_page-pl $t
+    $dirbin/plot_page-pl $t parton
+    mv -f plots.html ${t}_plots.html
 fi
 
 $dirbin/store $t
@@ -318,6 +319,19 @@ if [[ (-x $ERAdir/ExRootLHEFConverter) && (-e pythia_events.lhe) ]]; then
     $ERAdir/ExRootLHEFConverter pythia_events.lhe pythia_lhe_events.root
 fi
 
+if [[ (-x $MAdir/plot_events) && (-e pythia_events.lhe) && (-e ../Cards/plot_card.dat) ]]; then
+    echo "Creating Plots for Pythia"
+    echo "Creating Plots for Pythia" >& ../status
+    $dirbin/gen_crossxhtml-pl $t
+    mkdir ${t}_pythia
+    cd ${t}_pythia
+    echo "../pythia_events.lhe" > events.list
+    $dirbin/plot $MAdir $td > plot.log
+    cd ..
+    $dirbin/plot_page-pl ${t}_pythia Pythia
+    mv -f plots.html ${t}_plots_pythia.html
+fi
+
 # Compile pgs if not there
 if [[ !(-x $pgsdir/pgs) && (-d $pgsdir) && (-e ../Cards/pgs_card.dat) ]]; then
     pushd $pgsdir > /dev/null
@@ -346,6 +360,32 @@ if [[ (-x $ERAdir/ExRootLHCOlympicsConverter) && (-e pgs_events.lhco) ]]; then
     echo "Creating PGS Root File" >& ../status
     $dirbin/gen_crossxhtml-pl $t
     $ERAdir/ExRootLHCOlympicsConverter pgs_events.lhco pgs_events.root
+fi
+
+if [[ (-x $MAdir/plot_events) && (-e pgs_events.lhco) && (-e ../Cards/plot_card.dat) ]]; then
+    echo "Creating Plots for PGS"
+    echo "Creating Plots for PGS" >& ../status
+    $dirbin/gen_crossxhtml-pl $t
+    mkdir ${t}_pgs
+    cd ${t}_pgs
+    echo "../pgs_events.lhco" > events.list
+    $dirbin/plot $MAdir $td > plot.log
+    cd ..
+    $dirbin/plot_page-pl ${t}_pgs PGS
+    mv -f plots.html ${t}_plots_pgs.html
+fi
+
+if [[ (-x $MAdir/plot_events) && (-e delphes_events.lhco) && (-e ../Cards/plot_card.dat) ]]; then
+    echo "Creating Plots for Delphes"
+    echo "Creating Plots for Delphes" >& ../status
+    $dirbin/gen_crossxhtml-pl $t
+    mkdir ${t}_delphes
+    cd ${t}_delphes
+    echo "../delphes_events.lhco" > events.list
+    $dirbin/plot $MAdir $td > plot.log
+    cd ..
+    $dirbin/plot_page-pl ${t}_delphes Delphes
+    mv -f plots.html ${t}_plots_delphes.html
 fi
 
 cd ../
