@@ -2871,6 +2871,7 @@ class MadGraphCmdWeb(MadGraphCmd, CheckValidForCmdWeb):
     """The command line processor of MadGraph"""
  
     timeout = 1 # time authorize to answer question [0 is no time limit]
+    
     def __init__(self, *arg, **opt):
     
         if os.environ.has_key('_CONDOR_SCRATCH_DIR'):
@@ -2879,6 +2880,7 @@ class MadGraphCmdWeb(MadGraphCmd, CheckValidForCmdWeb):
         else:
             self.writing_dir = os.path.join(os.environ['MADGRAPH_DATA'],
                                os.environ['REMOTE_USER'])
+            
         
         #standard initialization
         MadGraphCmd.__init__(self, mgme_dir = '', *arg, **opt)
