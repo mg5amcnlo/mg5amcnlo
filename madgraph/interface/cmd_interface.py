@@ -864,7 +864,7 @@ class CheckValidForCmdWeb(CheckValidForCmd):
             raise self.WebRestriction('Path can\'t be specify on the web.')
 
         if len(args) >= 2 and args[0] == 'command':
-            if args[1] != './Cards/proc_card_mg5.dat': 
+            if args[1] != './Cards/proc_card_mg5.dat' and args[1] != 'proc_card.dat': 
                 raise self.WebRestriction('Path can\'t be specify on the web.')
         else:
             for arg in args:
