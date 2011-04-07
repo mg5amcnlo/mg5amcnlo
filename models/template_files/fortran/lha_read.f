@@ -124,7 +124,7 @@ c +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
       character*132 buff,buffer,curr_ref,curr_buff
       character*20 blockname,val,par,temp,first_ref,first_line
       logical fopened
-      integer ref_file/20/
+      integer ref_file
       logical islast,isnum,found
       character*20 temp_val
 
@@ -132,7 +132,7 @@ c +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 c     *********************************************************************
 c     Try to find a correspondance in ident_card
 c
-
+      ref_file = 20
       call LHA_open_file(ref_file,'ident_card.dat',fopened)
       if(.not. fopened) goto 99 ! If the file does not exist -> no matter, use default!
         
@@ -142,7 +142,7 @@ c
       
 
         ! read a line
-        read(ref_file,'(a132)',end=99,err=99) buffer
+        read(ref_file,'(a132)',end=98,err=98) buffer
         
         ! Seek a corresponding blockname
         call LHA_firststring(temp,buffer)
@@ -168,7 +168,7 @@ c
         end if
                      
       end do
-      close(ref_file)
+98    close(ref_file)
 99    return    
       end
 
@@ -248,7 +248,8 @@ c +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
                   param(npara)=ctemp
                   npara=npara+1
                   GL=0
-                  write (logfile,*) 'Parameter ',ctemp,' has been read with value ',val
+                  write (logfile,*) 'Parameter ',ctemp,
+     &                                  ' has been read with value ',val
              endif
 
          endif
@@ -365,7 +366,8 @@ c        write(*,*) 'read model file ',tempname
         exit
 30      tempname='../'//tempname
         if (i.eq.5)then
-           write(*,*) 'Warning: file ',filename,' not found in the parent directories!'
+           write(*,*) 'Warning: file ',filename,
+     &                           ' not found in the parent directories!'
            stop
         endif
       enddo

@@ -109,15 +109,16 @@ def find_symmetry(matrix_element):
                                'state': wf.get('leg_state')}) \
                        for wf in matrix_element.get_external_wavefunctions()]),
                      'model': base_model})
-    # Get phase space point
-    p, w_rambo = process_checks.get_momenta(equivalent_process, full_model)
-    
     # Writer for the Python matrix elements
     helas_writer = helas_call_writer.PythonUFOHelasCallWriter(base_model)
 
+    # Initialize matrix element evaluation
+    evaluator = process_checks.MatrixElementEvaluator(full_model, helas_writer)
+
+    # Get phase space point
+    p, w_rambo = evaluator.get_momenta(equivalent_process)
+    
     # Check matrix element value for all permutations
-    if not "stored_quantities" in globals():
-        globals()["stored_quantities"] = {}
     amp2start = []
     final_states = [l.get('id') for l in \
                     equivalent_process.get('legs')[ninitial:]]
@@ -132,23 +133,22 @@ def find_symmetry(matrix_element):
         ident_perms.append([0,1]+list(perm))
         nperm += 1
         new_p = p[:ninitial] + [p[i] for i in perm]
-        # Reset matrix_elements, otherwise won't run again
-        res = process_checks.evaluate_matrix_element(\
-                                              matrix_element,stored_quantities,
-                                              helas_writer, full_model, new_p,
-                                              reuse = True)
+        
+        res = evaluator.evaluate_matrix_element(matrix_element, new_p)
         if not res:
             break
         me_value, amp2 = res
         # Make a list with (8-pos value, magnitude) to easily compare
+        amp2sum = sum(amp2)
         amp2mag = []
         for a in amp2:
+            a = a*me_value/amp2sum
             if a > 0:
                 amp2mag.append(int(math.floor(math.log10(abs(a)))))
             else:
                 amp2mag.append(0)
-        
         amp2 = [(int(a*10**(8-am)), am) for (a, am) in zip(amp2, amp2mag)]
+
         if not perms:
             # This is the first iteration - initialize lists
             # Initiate symmetry with all 1:s
@@ -158,6 +158,7 @@ def find_symmetry(matrix_element):
             # Initialize list of permutations
             perms = [range(nexternal) for i in range(len(amp2))]
             continue
+            
         for i, val in enumerate(amp2):
             if val == (0,0):
                 # If amp2 is 0, just set symmetry to 0
@@ -259,6 +260,9 @@ def find_matrix_elements_for_configs(subproc_group):
     # Only include MEs with identical particles (otherwise no contribution)
     for iconf, diagram_list in \
                            enumerate(subproc_group.get('diagrams_for_configs')):
+        # Check if any diagrams contribute to config
+        if set(diagram_list) == set([0]):
+            continue
         # Add list of MEs with maximum ident factor contributing to this config
         max_ident = max([matrix_elements[i].get('identical_particle_factor') \
                          for i in range(n_mes) if diagram_list[i] > 0])

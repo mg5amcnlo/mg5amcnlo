@@ -7,21 +7,58 @@ c
 c     Arguments
 c
       DOUBLE  PRECISION x,xmu
-      INTEGER IH,ipdg,ipart
+      INTEGER IH,ipdg
 C
 C     Include
 C
       include 'pdf.inc'
 C      
       double precision Ctq3df,Ctq4Fn,Ctq5Pdf,Ctq6Pdf,Ctq5L
-      integer mode,Irt,ihlast
-      double precision xlast,xmulast,pdflast(-7:7),q2max
+      integer mode,Irt,i,j
+      double precision xlast(2),xmulast(2),pdflast(-7:7,2),q2max
       double precision epa_electron,epa_proton
-      save ihlast,xlast,xmulast,pdflast
+      integer ipart,ireuse,iporg
+      save xlast,xmulast,pdflast
+      data xlast/2*0d0/
+      data pdflast/30*0d0/
 
       ipart=ipdg
       if(iabs(ipart).eq.21) ipart=0
       if(iabs(ipart).eq.22) ipart=7
+      iporg=ipart
+
+      ireuse = 0
+      do i=1,2
+c     Check if result can be reused since any of last two calls
+         if (x.eq.xlast(i).and.xmu.eq.xmulast(i)) then
+            ireuse = i
+         endif
+      enddo
+
+c     If both x non-zero and not ireuse, then zero x
+      if (ireuse.eq.0.and.xlast(1).ne.0d0.and.xlast(2).ne.0d0)then
+         do i=1,2
+            xlast(i)=0d0
+            xmulast(i)=0d0
+            do j=-7,7
+               pdflast(j,i)=0d0
+            enddo
+         enddo
+         ireuse=1
+      else if(ireuse.eq.0.and.xlast(1).ne.0d0)then
+         ireuse=2
+      else if(ireuse.eq.0)then
+         ireuse=1
+      endif
+
+c     Reuse previous result, if possible
+      if (ireuse.gt.0.and.pdflast(iporg,ireuse).ne.0d0) then
+         pdg2pdf=pdflast(iporg,ireuse)
+         return 
+      endif
+
+      xlast(ireuse)=x
+      xmulast(ireuse)=xmu
 
       if(iabs(ipart).eq.7.and.ih.gt.1) then
          q2max=xmu*xmu
@@ -30,6 +67,7 @@ C
          elseif(ih .eq. 2) then !from a proton without breaking
             pdg2pdf=epa_proton(x,q2max)
          endif 
+         pdflast(iporg,ireuse)=pdg2pdf
          return
       endif
       
@@ -103,18 +141,12 @@ C
      $      ipart=sign(3-iabs(ipart),ipart)
 
          pdg2pdf=Ctq6Pdf(ipart,x,xmu)
-
       else
-        if(ih.eq.ihlast.and.x.eq.xlast.and.xmu.eq.xmulast)then
-          pdg2pdf=pdflast(ipart);
-        else
-          call pftopdg(ih,x,xmu,pdflast)
-          ihlast=ih
-          xlast=x
-          xmulast=xmu
-          pdg2pdf=pdflast(ipart);
-        endif
+         call pftopdg(ih,x,xmu,pdflast(-7,ireuse))
+         pdg2pdf=pdflast(iporg,ireuse)
       endif      
 
+      pdflast(iporg,ireuse)=pdg2pdf
+      return
       end
 

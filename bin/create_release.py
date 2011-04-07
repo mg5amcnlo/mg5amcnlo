@@ -80,7 +80,7 @@ if diff_result:
     if answer != 'y':
         exit()
 release_date = date.fromtimestamp(time.time())
-for line in file('VERSION'):
+for line in file(os.path.join(MG5DIR,'VERSION')):
     if 'version' in line:
         logging.info(line)
     if 'date' in line:
@@ -194,6 +194,17 @@ if a_test_results.errors or test_results.errors:
     logging.error("Removing %s and quitting..." % filename)
     os.remove(filename)
     exit()
+
+try:
+    status1 = subprocess.call(['gpg', '--armor', '--sign', '--detach-sig',
+                               filename])
+    if status1 == 0:
+        logging.info("gpg signature file " + filename + ".asc created")
+except:
+    logging.warning("Call to gpg to create signature file failed. " +\
+                    "Please install and run\n" + \
+                    "gpg --armor --sign --detach-sig " + filename)
+
 
 if not a_test_results.failures and not test_results.failures:
     logging.info("All good. Removing temporary %s directory." % filepath)

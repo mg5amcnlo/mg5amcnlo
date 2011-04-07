@@ -182,6 +182,7 @@ class UFOExpressionParser:
     def p_error(self, p):
         if p:
             logger.error("Syntax error at '%s'" % p.value)
+            raise MadGraph5Error
         else:
             logger.error("Syntax error at EOF")
         self.parsed_string = "Error"

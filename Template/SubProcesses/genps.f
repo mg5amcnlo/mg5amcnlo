@@ -498,12 +498,13 @@ c
 c      double precision spole(-max_branch:0),swidth(-max_branch:0)
       double precision jac,pswgt
       integer nbranch
-      double precision x(21)
+      double precision x(40) ! ja 3/2/11 21->40 after strange segfault
 c
 c     Local
 c
       logical pass
-      integer ibranch,i,ns_channel,nt_channel,ix
+      integer ibranch,i,ns_channel,nt_channel,ix  !,nerr
+c      data nerr/0/
       double precision smin,smax,totmass,totmassin,xa2,xb2,wgt
       double precision costh,phi,tmin,tmax,t, stot
       double precision ma2,mb2,m12,mn2,s1
@@ -575,6 +576,14 @@ c
       do ibranch = -1,-ns_channel,-1
          smin = (m(itree(1,ibranch))+m(itree(2,ibranch)))**2
          smax = (dsqrt(s(-nbranch))-totmass+sqrt(smin))**2
+c     Check for NAN - ja 3/11
+         if (smax/stot.eq.smax/stot+1d0) then
+            print *,'got NaN: ',smax/stot
+            jac = -2
+            return
+         endif
+
+
 c         write(*,*) ibranch,sqrt(smin),sqrt(smax)
 c
 c        Choose the appropriate s given our constraints smin,smax
@@ -731,9 +740,11 @@ c
      &        p(0,ibranch),jac)
 
          if (jac .lt. 0d0) then
-            write(*,*) 'Failed gentcms',iconfig,ibranch
+c            nerr=nerr+1
+c            if(nerr.le.5)
+c     $           write(*,*) 'Failed gentcms',iconfig,ibranch
+            return              !Failed, probably due to negative x
          endif
-         if (jac .lt. 0d0) return          !Failed due to numerical precision
 
          pswgt = pswgt/(4d0*dsqrt(lambda(s1,ma2,mb2)))
       enddo
@@ -976,8 +987,9 @@ c-----
       ysqr = lambda(x,u,v)*lambda(x,w,z)
       if (ysqr .ge. 0d0) then
          yr = dsqrt(ysqr)
-      else
-         print*,'Error in yminymax sqrt(-x)',lambda(x,u,v),lambda(x,w,z)
+c      else
+c        Probably a problem with negative x selection
+c         print*,'Error in yminymax sqrt(-x)',lambda(x,u,v),lambda(x,w,z)
       endif
       y1 = u+w -.5d0* ((x+u-v)*(x+w-z) - yr)/(x+tiny)
       y2 = u+w -.5d0* ((x+u-v)*(x+w-z) + yr)/(x+tiny)

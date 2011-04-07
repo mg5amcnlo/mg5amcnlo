@@ -20,7 +20,11 @@ currents.
 ColorOrderedAmplitude keeps track of all color flows, and
 ColorOrderedFlow performs the diagram generation. ColorOrderedLeg has
 extra needed flags. See documentation for the functions
-get_combined_legs and get_combined_vertices for the algorithm used to generate only color-ordered diagrams.
+get_combined_legs and get_combined_vertices for the algorithm used to
+generate only color-ordered diagrams.
+
+ColorOrderedModel adds color singlets coupling only to triplets for
+each color octet in the model.
 
 BGHelasMatrixElement generates the matrix element for a given color
 flow, by ensuring that all wavefunctions and amplitudes correspond to
@@ -127,11 +131,13 @@ class ColorOrderedAmplitude(diagram_generation.Amplitude):
         (specified by the coupling order singlet_QCD)"""
 
         process = self.get('process')
-        model = process.get('model')
         legs = base_objects.LegList([copy.copy(l) for l in \
                                      process.get('legs')])
 
-        process.set('model', ColorOrderedAmplitude.add_color_singlet(model))
+        if not isinstance(process.get('model'), ColorOrderedModel):
+            process.set('model', ColorOrderedModel(process.get('model')))
+
+        model = process.get('model')
         
         # Add color negative singlets to model corresponding to all
         # color octets, with only 3-3bar-8 interactions.
@@ -274,80 +280,6 @@ class ColorOrderedAmplitude(diagram_generation.Amplitude):
                     color_flows.append(flow)
 
         self.set('color_flows', color_flows)
-
-    @staticmethod
-    def add_color_singlet(model):
-        """Go through model and add color singlets for all color
-        octets, with couplings only to triplet pairs. These couplings
-        are multiplied by SFACT = sqrt(-1/6) = i/sqrt(6)."""
-
-        particles = copy.copy(model.get('particles'))
-        interactions = copy.copy(model.get('interactions'))
-        model = copy.copy(model)
-        # Pick out all color octets
-        octets = [p for p in particles if p.get('color') == 8]
-        # Create corresponding color singlets with new pdg codes
-        singlets = [copy.copy(o) for o in octets]
-        pdgs = [p.get('pdg_code') for p in particles]
-        free_pdgs = [i for i in \
-                     range(1,len(model.get('particles'))+len(singlets)+1) if \
-                     i not in pdgs]
-        octet_singlet_dict = {}
-        for i, singlet in enumerate(singlets):
-            singlet.set('color', 1)
-            singlet.set('pdg_code', free_pdgs[i])
-            octet_singlet_dict[octets[i].get('pdg_code')] = \
-                                                      singlet.get('pdg_code')
-            if not singlet.get('self_antipart'):
-                octet_singlet_dict[octets[i].get_anti_pdg_code()] = \
-                                                 singlet.get_anti_pdg_code()
-
-        particles.extend(singlets)
-        model.set('particles', particles)
-
-        # Now pick out all 8-3-3bar interactions
-        octet_interactions = [inter for inter in interactions if \
-                              sorted([p.get_color() for p in \
-                                      inter.get('particles') if \
-                                      p.get_color() != 1]) == [-3, 3, 8]]
-
-        # Create corresponding singlet interactions
-        singlet_interactions = [copy.copy(i) for i in octet_interactions]
-        max_inter_id = max([i.get('id') for i in interactions])
-        for inter in singlet_interactions:
-            # Set unique interaction id
-            max_inter_id += 1
-            inter.set('id', max_inter_id)
-            # Get particles and indices for triplet/antitriplet and octet
-            parts = copy.copy(inter.get('particles'))
-            colors = [p.get_color() for p in parts]
-            trip_ind = colors.index(3)
-            antitrip_ind = colors.index(-3)
-            oct_ind = colors.index(8)
-            # Replace octet with singlet in interaction
-            parts[oct_ind] = model.get_particle(\
-                             octet_singlet_dict[parts[oct_ind].get_pdg_code()])
-            inter.set('particles', parts)
-            # Set color string to T(3, 3bar)
-            col_str = color_algebra.ColorString([color_algebra.T(trip_ind,
-                                                                 antitrip_ind)])
-            inter.set('color', [col_str])
-            # Multiply couplings with -1/6 for singlet color factor
-            couplings = copy.copy(inter.get('couplings'))
-            for key in couplings.keys():
-                couplings[key] = 'SFACT*' + couplings[key]
-            inter.set('couplings', couplings)
-            # Set orders, replacing QCD with singlet_QCD
-            orders = copy.copy(inter.get('orders'))
-            assert 'QCD' in orders
-            del orders['QCD']
-            orders['singlet_QCD'] = 1
-            inter.set('orders', orders)
-
-        interactions.extend(singlet_interactions)
-
-        model.set('interactions', interactions)
-        return model
 
 #===============================================================================
 # ColorOrderedFlow
@@ -525,7 +457,7 @@ class ColorOrderedFlow(diagram_generation.Amplitude):
         return vert_ids
 
 #===============================================================================
-# AmplitudeList
+# ColorOrderedFlowList
 #===============================================================================
 class ColorOrderedFlowList(diagram_generation.AmplitudeList):
     """List of ColorOrderedFlow objects
@@ -535,6 +467,95 @@ class ColorOrderedFlowList(diagram_generation.AmplitudeList):
         """Test if object obj is a valid Amplitude for the list."""
 
         return isinstance(obj, ColorOrderedFlow)
+
+
+#===============================================================================
+# ColorOrderedModel
+#===============================================================================
+class ColorOrderedModel(base_objects.Model):
+    """When initiated with a Model, adds negative singlets for all octets."""
+    
+    # Customized constructor
+    def __init__(self, *arguments):
+        """Allow generating a HelasWavefunction from a Leg
+        """
+
+        super(ColorOrderedModel, self).__init__(*arguments)
+
+        if len(arguments) == 1 and isinstance(arguments[0], base_objects.Model) \
+               and not isinstance(arguments[0], ColorOrderedModel):
+            self.add_color_singlets()
+
+    def add_color_singlets(self):
+        """Go through model and add color singlets for all color
+        octets, with couplings only to triplet pairs. These couplings
+        are multiplied by SFACT = sqrt(-1/6) = i/sqrt(6)."""
+
+        particles = copy.copy(self.get('particles'))
+        interactions = copy.copy(self.get('interactions'))
+        # Pick out all color octets
+        octets = [p for p in particles if p.get('color') == 8]
+        # Create corresponding color singlets with new pdg codes
+        singlets = [copy.copy(o) for o in octets]
+        pdgs = [p.get('pdg_code') for p in particles]
+        free_pdgs = [i for i in \
+                     range(1,len(self.get('particles'))+len(singlets)+1) if \
+                     i not in pdgs]
+        octet_singlet_dict = {}
+        for i, singlet in enumerate(singlets):
+            singlet.set('color', 1)
+            singlet.set('pdg_code', free_pdgs[i])
+            octet_singlet_dict[octets[i].get('pdg_code')] = \
+                                                      singlet.get('pdg_code')
+            if not singlet.get('self_antipart'):
+                octet_singlet_dict[octets[i].get_anti_pdg_code()] = \
+                                                 singlet.get_anti_pdg_code()
+
+        particles.extend(singlets)
+        self.set('particles', particles)
+
+        # Now pick out all 8-3-3bar interactions
+        octet_interactions = [inter for inter in interactions if \
+                              sorted([p.get_color() for p in \
+                                      inter.get('particles') if \
+                                      p.get_color() != 1]) == [-3, 3, 8]]
+
+        # Create corresponding singlet interactions
+        singlet_interactions = [copy.copy(i) for i in octet_interactions]
+        max_inter_id = max([i.get('id') for i in interactions])
+        for inter in singlet_interactions:
+            # Set unique interaction id
+            max_inter_id += 1
+            inter.set('id', max_inter_id)
+            # Get particles and indices for triplet/antitriplet and octet
+            parts = copy.copy(inter.get('particles'))
+            colors = [p.get_color() for p in parts]
+            trip_ind = colors.index(3)
+            antitrip_ind = colors.index(-3)
+            oct_ind = colors.index(8)
+            # Replace octet with singlet in interaction
+            parts[oct_ind] = self.get_particle(\
+                             octet_singlet_dict[parts[oct_ind].get_pdg_code()])
+            inter.set('particles', parts)
+            # Set color string to T(3, 3bar)
+            col_str = color_algebra.ColorString([color_algebra.T(trip_ind,
+                                                                 antitrip_ind)])
+            inter.set('color', [col_str])
+            # Multiply couplings with -1/6 for singlet color factor
+            couplings = copy.copy(inter.get('couplings'))
+            for key in couplings.keys():
+                couplings[key] = 'SFACT*' + couplings[key]
+            inter.set('couplings', couplings)
+            # Set orders, replacing QCD with singlet_QCD
+            orders = copy.copy(inter.get('orders'))
+            assert 'QCD' in orders
+            del orders['QCD']
+            orders['singlet_QCD'] = 1
+            inter.set('orders', orders)
+
+        interactions.extend(singlet_interactions)
+        self.set('interactions', interactions)
+        return 
 
 #===============================================================================
 # COHelasWavefunction
@@ -837,8 +858,6 @@ class BGHelasMatrixElement(helas_objects.HelasMatrixElement):
         super(BGHelasMatrixElement, self).generate_helas_diagrams(amplitude,
                                                                   optimization,
                                                                   decay_ids)
-        print self.get('base_amplitude').nice_string()
-
         # Go through and change wavefunctions into COHelasWavefunction
         all_wavefunctions = self.get_all_wavefunctions()
         co_wavefunctions = helas_objects.HelasWavefunctionList(\
@@ -918,7 +937,6 @@ class BGHelasMatrixElement(helas_objects.HelasMatrixElement):
         idiag = 0
         while diagrams:
             idiag += 1
-            print "Diagram ", idiag
             # Pick out all diagrams with amplitudes with the same
             # external number mothers (i.e., same BG currents) the
             # same interaction id and the same coupling key.
@@ -1043,7 +1061,6 @@ class BGHelasMatrixElement(helas_objects.HelasMatrixElement):
         # Get the color string that we need to compare to
         comp_color_string = self.get_color_string(color_indices,
                                                   lastleg)
-        print "comp_color_string: ", comp_color_string
         # Prepare for extracting the color dict for this vertex using
         # ColorBasis.add_vertex
         base_diagram = base_objects.Diagram({"vertices": \
@@ -1062,21 +1079,16 @@ class BGHelasMatrixElement(helas_objects.HelasMatrixElement):
             if mother.get('color_string'):
                 color_string.product(mother.get('color_string'))
 
-        print "color_string: ", color_string
-        
         # Now simplify color string, and check if we have a
         # contribution corresponding to comp_color_string
         col_fact = color_algebra.ColorFactor([color_string])
         col_fact = col_fact.full_simplify()
-        print "col_fact: ", col_fact
         similar_strings = [cs for cs in col_fact if \
                            cs.to_canonical() == comp_color_string.to_canonical()]
-        print "similar_strings: ", similar_strings
         if not similar_strings:
             return False
         assert(len(similar_strings) == 1)
         arg.set('color_string', similar_strings[0])
-        print "newly set color_string: ", arg.get('color_string')
         # Set color and fermion factor once and for all
         arg.set_color_and_fermion_factor()
         return True
@@ -1118,8 +1130,6 @@ class BGHelasMatrixElement(helas_objects.HelasMatrixElement):
                     chain_types[co] = 2
                 else:
                     chain_types[co] = leg_color//3
-
-        print "color_chains now: ",color_chains,chain_types
 
         color_string = color_algebra.ColorString()
         # Insert last leg in appropriate place
@@ -1170,8 +1180,6 @@ class BGHelasMatrixElement(helas_objects.HelasMatrixElement):
                         leg_number_dict[(key, lastleg_order)] = \
                                                          lastleg.get('number')
 
-        print "color_chains now: ",color_chains,chain_types
-
         for key in color_chains:
             # Order entries according to color chain order (3bar,8,...,3)
             color_chains[key].sort()
@@ -1199,9 +1207,7 @@ class BGHelasMatrixElement(helas_objects.HelasMatrixElement):
         for cckey in color_chains.keys():
             if chain_types[cckey] == 2:
                 # Move triplet from first to next-to-last position
-                print "color_chain: ",color_chains[cckey]
                 color_chains[cckey].insert(-1,color_chains[cckey].pop(0))
-                print "color_chain after: ",color_chains[cckey]
                 # A 88...33bar chain is a T
                 color_string.append(color_algebra.T(*color_chains[cckey]))
             else:

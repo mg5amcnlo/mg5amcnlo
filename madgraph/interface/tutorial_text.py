@@ -26,6 +26,7 @@ The goal of this tutorial is to learn how to generate a process and to
 produce the output for MadEvent. In this part we will learn
 a) How to generate a process
 b) How to create output for MadEvent
+c) How to run the MadEvent output
 
 Let's start with the first point, how to generate a process:
 mg5>generate p p > t t~
@@ -77,9 +78,16 @@ mg5>output MY_FIRST_MG5_RUN
 output = """
 If you are following the tutorial, a directory MY_FIRST_MG5_RUN has
 been created which can be used in order to run MadEvent exactly as if
-it was coming from MG4, see MY_FIRST_MG5_RUN/README.
+it was coming from MG4.
 
-This step ends the tutorial of the basic commands of MG5. You can
+Additionally to the MG4 command (see MY_FIRST_MG5_RUN/README), you can also 
+generate your events/compute the cross-section from this interface:
+Please Enter:
+mg5> launch MY_FIRST_MG5_RUN
+(you can interrupt the computation to continue the tutorial by pressing Ctrl-C)
+"""
+
+launch = """This step ends the tutorial of the basic commands of MG5. You can
 always use the help to see the options available for different
 commands. For example, if you want to know all valid output formats,
 you can enter
@@ -92,11 +100,11 @@ mg5>exit
 
 But you can also continue the tutorial to learn some other useful
 commands:
-c) How to load a model
-d) How to define a multi-particle label 
-e) How to store a history of the commands in a session
-f) How to call shell commands from MG5
-g) How to draw the diagrams for your processes without generating
+d) How to load a model
+e) How to define a multi-particle label 
+f) How to store a history of the commands in a session
+g) How to call shell commands from MG5
+h) How to draw the diagrams for your processes without generating
    MadEvent output
 
 To import a model, write:

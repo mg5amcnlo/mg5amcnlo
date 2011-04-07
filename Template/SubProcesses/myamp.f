@@ -351,7 +351,7 @@ c-JA 1/2009: Set deltaR cuts here together with s_min cuts
               xm(i)=max(xm(i),
      &           sqrt(max(etmin(l2),0d0)*max(etmin(l1),0d0)*dr))
 c-JA 1/2009: Set grid also based on xqcut
-              xm(i)=max(xm(i),sqrt(max(xqcutij(l1,l2),0d0)))
+              xm(i)=max(xm(i),max(xqcutij(l1,l2),0d0))
               xe(i)=max(xe(i),xm(i))
             endif
 c            write(*,*) 'iconfig,i',iconfig,i

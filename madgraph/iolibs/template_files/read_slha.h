@@ -20,7 +20,7 @@ class SLHABlock
   private:
     string _name;
     map<vector<int>,double> _entries;
-    int _indices;
+    unsigned int _indices;
 };
 
 class SLHAReader
@@ -34,9 +34,9 @@ class SLHAReader
 			   double def_val = 0);
     double get_block_entry(string block_name, int index, 
 			   double def_val = 0);
-    double set_block_entry(string block_name, vector<int> indices, 
+    void set_block_entry(string block_name, vector<int> indices, 
 			   double value);
-    double set_block_entry(string block_name, int index, 
+    void set_block_entry(string block_name, int index, 
 			   double value);
   private:
     map<string, SLHABlock> _blocks;

@@ -21,11 +21,13 @@ import logging
 
 logger = logging.getLogger('test_cmd')
 
+import tests.unit_tests.iolibs.test_file_writers as test_file_writers
+
 import madgraph.interface.cmd_interface as Cmd
 _file_path = os.path.split(os.path.dirname(os.path.realpath(__file__)))[0]
 _pickle_path =os.path.join(_file_path, 'input_files')
 
-from madgraph import MG4DIR, MG5DIR, MadGraph5Error
+from madgraph import MG4DIR, MG5DIR, MadGraph5Error, InvalidCmd
 
 #===============================================================================
 # TestCmd
@@ -50,7 +52,7 @@ class TestCmdShell1(unittest.TestCase):
         
     def test_generate(self):
         """command 'generate' works"""
-    
+        
         self.do('load model %s' % self.join_path(_pickle_path, 'sm.pkl'))
         self.cmd._curr_model.pass_particles_name_in_mg_default()
         self.do('generate e+ e- > e+ e-')
@@ -85,7 +87,7 @@ class TestCmdShell1(unittest.TestCase):
 
     def test_draw(self):
         """ command 'draw' works """
-        
+
         self.do('load processes %s' % self.join_path(_pickle_path,'e+e-_e+e-.pkl'))
         self.do('draw .')
         self.assertTrue(os.path.exists('./diagrams_0_epem_epem.eps'))
@@ -97,7 +99,8 @@ class TestCmdShell1(unittest.TestCase):
         os.remove('diagrams_0_gg_gg.eps')
 
 
-class TestCmdShell2(unittest.TestCase):
+class TestCmdShell2(unittest.TestCase,
+                    test_file_writers.CheckFileCreate):
     """Test all command line related to MG_ME"""
 
     def setUp(self):
@@ -114,7 +117,9 @@ class TestCmdShell2(unittest.TestCase):
         
     def tearDown(self):
         """ basic destruction after have run """
-        pass
+        if os.path.exists(self.out_dir):
+            shutil.rmtree(self.out_dir)
+
     
     join_path = TestCmdShell1.join_path
 
@@ -128,7 +133,7 @@ class TestCmdShell2(unittest.TestCase):
 
         if os.path.isdir(self.out_dir):
             shutil.rmdir(self.out_dir)
-
+            
         self.do('load processes %s' % self.join_path(_pickle_path,'e+e-_e+e-.pkl'))
         self.do('output %s -nojpeg' % self.out_dir)
         self.assertTrue(os.path.exists(self.out_dir))
@@ -214,9 +219,9 @@ class TestCmdShell2(unittest.TestCase):
     def test_invalid_operations_for_add(self):
         """Test that errors are raised appropriately for add"""
 
-        self.assertRaises(Cmd.CheckValidForCmd.InvalidCmd,
+        self.assertRaises(InvalidCmd,
                           self.do, 'add process')
-        self.assertRaises(Cmd.CheckValidForCmd.InvalidCmd,
+        self.assertRaises(InvalidCmd,
                           self.do, 'add wrong wrong')
 
     def test_invalid_operations_for_generate(self):
@@ -236,7 +241,7 @@ class TestCmdShell2(unittest.TestCase):
     def test_invalid_operations_for_output(self):
         """Test that errors are raised appropriately for output"""
 
-        self.assertRaises(Cmd.CheckValidForCmd.InvalidCmd,
+        self.assertRaises(InvalidCmd,
                           self.do, 'output')
 
     def test_read_madgraph4_proc_card(self):
@@ -451,6 +456,70 @@ class TestCmdShell2(unittest.TestCase):
                                                     'P0_epem_epem',
                                                     'madevent')))
         
+    def test_madevent_decay_chain(self):
+        """Test decay chain output"""
+
+        if os.path.isdir(self.out_dir):
+            shutil.rmdir(self.out_dir)
+
+        self.do('import model sm')
+        self.do('define p = u d u~ d~')
+        self.do('set group_subprocesses_output False')
+        self.do('generate p p > w+, w+ > l+ vl @1')
+        self.do('output madevent %s ' % self.out_dir)
+        devnull = open(os.devnull,'w')
+        # Check that all subprocess directories have been created
+        self.assertTrue(os.path.exists(os.path.join(self.out_dir,
+                                                    'SubProcesses',
+                                                    'P1_dxu_wp_wp_epve')))
+        self.assertTrue(os.path.exists(os.path.join(self.out_dir,
+                                                    'SubProcesses',
+                                                    'P1_udx_wp_wp_epve')))
+        # Check that the Source directory compiles
+        status = subprocess.call(['make'],
+                                 stdout=devnull, 
+                                 cwd=os.path.join(self.out_dir, 'Source'))
+        self.assertEqual(status, 0)
+        self.assertTrue(os.path.exists(os.path.join(self.out_dir,
+                                               'lib', 'libdhelas3.a')))
+        self.assertTrue(os.path.exists(os.path.join(self.out_dir,
+                                               'lib', 'libmodel.a')))
+        self.assertTrue(os.path.exists(os.path.join(self.out_dir,
+                                               'lib', 'libgeneric.a')))
+        self.assertTrue(os.path.exists(os.path.join(self.out_dir,
+                                               'lib', 'libcernlib.a')))
+        self.assertTrue(os.path.exists(os.path.join(self.out_dir,
+                                               'lib', 'libdsample.a')))
+        self.assertTrue(os.path.exists(os.path.join(self.out_dir,
+                                               'lib', 'libpdf.a')))
+        # Check that gensym compiles
+        status = subprocess.call(['make', 'gensym'],
+                                 stdout=devnull, 
+                                 cwd=os.path.join(self.out_dir, 'SubProcesses',
+                                                  'P1_udx_wp_wp_epve'))
+        self.assertEqual(status, 0)
+        self.assertTrue(os.path.exists(os.path.join(self.out_dir,
+                                                    'SubProcesses',
+                                                    'P1_udx_wp_wp_epve',
+                                                    'gensym')))
+        # Check that gensym runs
+        status = subprocess.call('./gensym', 
+                                 stdout=devnull,
+                                 cwd=os.path.join(self.out_dir, 'SubProcesses',
+                                                  'P1_udx_wp_wp_epve'),
+                                 shell=True)
+        self.assertEqual(status, 0)
+        # Check that madevent compiles
+        status = subprocess.call(['make', 'madevent'],
+                                 stdout=devnull, 
+                                 cwd=os.path.join(self.out_dir, 'SubProcesses',
+                                                  'P1_udx_wp_wp_epve'))
+        self.assertEqual(status, 0)
+        self.assertTrue(os.path.exists(os.path.join(self.out_dir,
+                                                    'SubProcesses',
+                                                    'P1_udx_wp_wp_epve',
+                                                    'madevent')))
+        
     def test_madevent_subproc_group(self):
         """Test MadEvent output using the SubProcess group functionality"""
 
@@ -550,6 +619,160 @@ class TestCmdShell2(unittest.TestCase):
         self.assertTrue(os.path.exists(os.path.join(self.out_dir,
                                                     'SubProcesses',
                                                     'P2_gg_qq',
+                                                    'madevent')))
+        
+    def test_madevent_subproc_group_symmetry(self):
+        """Check that symmetry.f gives right output"""
+
+        if os.path.isdir(self.out_dir):
+            shutil.rmdir(self.out_dir)
+
+        self.do('import model mssm')
+        self.do('define q = u d u~ d~')
+        self.do('set group_subprocesses_output True')
+        self.do('generate u u~ > g > go go, go > q q n1 / ur dr')
+        self.do('output %s ' % self.out_dir)
+        self.do('set group_subprocesses_output False')
+        devnull = open(os.devnull,'w')
+        # Check that all subprocess directories have been created
+        self.assertTrue(os.path.exists(os.path.join(self.out_dir,
+                                                    'SubProcesses',
+                                                    'P0_qq_gogo_go_qqn1_go_qqn1')))
+        # Check the contents of the symfact.dat file
+        self.assertEqual(open(os.path.join(self.out_dir,
+                                           'SubProcesses',
+                                           'P0_qq_gogo_go_qqn1_go_qqn1',
+                                           'symfact.dat')).read(),
+                         """ 1    1
+ 2    1
+ 3    1
+ 4    1
+ 5    -2
+ 6    1
+ 7    1
+ 8    1
+ 9    1
+ 10   1
+ 11   1
+ 12   1
+ 13   1
+ 14   1
+ 15   -12
+ 16   1
+""")
+
+        # Compile the Source directory
+        status = subprocess.call(['make'],
+                                 stdout=devnull, 
+                                 cwd=os.path.join(self.out_dir, 'Source'))
+        self.assertEqual(status, 0)
+
+        # Compile gensym
+        status = subprocess.call(['make', 'gensym'],
+                                 stdout=devnull, 
+                                 cwd=os.path.join(self.out_dir, 'SubProcesses',
+                                                  'P0_qq_gogo_go_qqn1_go_qqn1'))
+        # Run gensym
+        status = subprocess.call('./gensym', 
+                                 stdout=devnull,
+                                 cwd=os.path.join(self.out_dir, 'SubProcesses',
+                                                  'P0_qq_gogo_go_qqn1_go_qqn1'), shell=True)
+        self.assertEqual(status, 0)
+        # Check the new contents of the symfact.dat file
+        self.assertEqual(open(os.path.join(self.out_dir,
+                                           'SubProcesses',
+                                           'P0_qq_gogo_go_qqn1_go_qqn1',
+                                           'symfact.dat')).read(),
+                         """    1.030     1
+    2.030     1
+    3.030     1
+    4.030     1
+     5    -2
+    6.030     1
+    7.030     1
+    8.030     1
+   11.030     1
+   12.030     1
+    15   -12
+   16.030     1
+""")
+        
+    def test_madevent_subproc_group_decay_chain(self):
+        """Test decay chain output using the SubProcess group functionality"""
+
+        if os.path.isdir(self.out_dir):
+            shutil.rmdir(self.out_dir)
+
+        self.do('import model sm')
+        self.do('define p = g u d u~ d~')
+        self.do('set group_subprocesses_output True')
+        self.do('generate p p > w+, w+ > l+ vl @1')
+        self.do('add process p p > w+ p, w+ > l+ vl @2')
+        self.do('output madevent %s -nojpeg' % self.out_dir)
+        self.do('set group_subprocesses_output False')
+        devnull = open(os.devnull,'w')
+        # Check that all subprocess directories have been created
+        self.assertTrue(os.path.exists(os.path.join(self.out_dir,
+                                                    'SubProcesses',
+                                                    'P2_gq_wpq_wp_epve')))
+        self.assertTrue(os.path.exists(os.path.join(self.out_dir,
+                                                    'SubProcesses',
+                                                    'P2_gq_wpq_wp_epve')))
+        self.assertTrue(os.path.exists(os.path.join(self.out_dir,
+                                                    'SubProcesses',
+                                                    'P2_qq_wpg_wp_epve')))
+        goal_subproc_mg = \
+"""P2_gq_wpq_wp_epve
+P2_qq_wpg_wp_epve
+P1_qq_wp_wp_epve
+"""
+        self.assertFileContains(os.path.join(self.out_dir,
+                                             'SubProcesses',
+                                             'subproc.mg'),
+                                goal_subproc_mg)
+        # Check that the Source directory compiles
+        status = subprocess.call(['make'],
+                                 stdout=devnull, 
+                                 cwd=os.path.join(self.out_dir, 'Source'))
+        self.assertEqual(status, 0)
+        self.assertTrue(os.path.exists(os.path.join(self.out_dir,
+                                               'lib', 'libdhelas3.a')))
+        self.assertTrue(os.path.exists(os.path.join(self.out_dir,
+                                               'lib', 'libmodel.a')))
+        self.assertTrue(os.path.exists(os.path.join(self.out_dir,
+                                               'lib', 'libgeneric.a')))
+        self.assertTrue(os.path.exists(os.path.join(self.out_dir,
+                                               'lib', 'libcernlib.a')))
+        self.assertTrue(os.path.exists(os.path.join(self.out_dir,
+                                               'lib', 'libdsample.a')))
+        self.assertTrue(os.path.exists(os.path.join(self.out_dir,
+                                               'lib', 'libpdf.a')))
+        # Check that gensym compiles
+        status = subprocess.call(['make', 'gensym'],
+                                 stdout=devnull, 
+                                 cwd=os.path.join(self.out_dir, 'SubProcesses',
+                                                  'P2_qq_wpg_wp_epve'))
+        self.assertEqual(status, 0)
+        self.assertTrue(os.path.exists(os.path.join(self.out_dir,
+                                                    'SubProcesses',
+                                                    'P2_qq_wpg_wp_epve',
+                                                    'gensym')))
+        # Check that gensym runs
+        status = subprocess.call('./gensym', 
+                                 stdout=devnull,
+                                 cwd=os.path.join(self.out_dir, 'SubProcesses',
+                                                  'P2_qq_wpg_wp_epve'),
+                                 shell=True)
+        self.assertEqual(status, 0)
+        # Check that madevent compiles
+        status = subprocess.call(['make', 'madevent'],
+                                 stdout=devnull, 
+                                 cwd=os.path.join(self.out_dir, 'SubProcesses',
+                                                  'P2_qq_wpg_wp_epve'))
+        self.assertEqual(status, 0)
+        self.assertTrue(os.path.exists(os.path.join(self.out_dir,
+                                                    'SubProcesses',
+                                                    'P2_qq_wpg_wp_epve',
                                                     'madevent')))
         
     def test_madevent_triplet_diquarks(self):
@@ -654,30 +877,24 @@ class TestCmdShell2(unittest.TestCase):
         if os.path.isdir(self.out_dir):
             shutil.rmdir(self.out_dir)
 
-        os.mkdir(self.out_dir)        
+        # Create out_dir and out_dir/include
+        os.makedirs(os.path.join(self.out_dir,'include'))
+        # Touch the file Pythia.h, which is needed to verify that this is a Pythia dir
+        py_h_file = open(os.path.join(self.out_dir,'include','Pythia.h'), 'w')
+        py_h_file.close()
 
         self.do('import model sm')
-        self.do('output pythia8_model %s ' % self.out_dir)
-        # Check that the needed files are generated
-        files = ['hel_amps_sm.h', 'hel_amps_sm.cc',
-                 'Parameters_sm.h', 'Parameters_sm.cc']
-        for f in files:
-            self.assertTrue(os.path.isfile(os.path.join(self.out_dir, f)), 
-                            '%s file is not in directory' % f)
-        self.do('define p u u~ d d~')
-        self.do('generate p p > e+ e-')
-        self.do('output pythia8 %s ' % self.out_dir)
-        # Check that the needed files are generated
-        files = ['Sigma_sm_pp_epem.h', 'Sigma_sm_pp_epem.cc']
-        for f in files:
-            self.assertTrue(os.path.isfile(os.path.join(self.out_dir, f)), 
-                            '%s file is not in directory' % f)
-        self.do('define j u u~ d d~')
-        self.do('generate g p > w+ j')
-        self.do('add process p g > w+ j')
+        self.do('define p g u d u~ d~')
+        self.do('define j g u d u~ d~')
+        self.do('generate p p > w+ j')
         self.do('output pythia8 %s' % self.out_dir)
         # Check that the needed files are generated
-        files = ['Sigma_sm_gp_wpj.h', 'Sigma_sm_gp_wpj.cc']
+        files = ['Processes_sm/Sigma_sm_gq_wpq.h', 'Processes_sm/Sigma_sm_gq_wpq.cc',
+                 'Processes_sm/Sigma_sm_qq_wpg.h', 'Processes_sm/Sigma_sm_qq_wpg.cc',
+                 'Processes_sm/HelAmps_sm.h', 'Processes_sm/HelAmps_sm.cc',
+                 'Processes_sm/Parameters_sm.h',
+                 'Processes_sm/Parameters_sm.cc', 'Processes_sm/Makefile',
+                 'examples/main_sm_1.cc', 'examples/Makefile_sm_1']
         for f in files:
             self.assertTrue(os.path.isfile(os.path.join(self.out_dir, f)), 
                             '%s file is not in directory' % f)
@@ -693,7 +910,7 @@ class TestCmdShell2(unittest.TestCase):
         self.do('output standalone_cpp %s' % self.out_dir)
 
         # Check that all needed src files are generated
-        files = ['hel_amps_sm.h', 'hel_amps_sm.cc', 'Makefile',
+        files = ['HelAmps_sm.h', 'HelAmps_sm.cc', 'Makefile',
                  'Parameters_sm.h', 'Parameters_sm.cc',
                  'rambo.h', 'rambo.cc', 'read_slha.h', 'read_slha.cc']
 

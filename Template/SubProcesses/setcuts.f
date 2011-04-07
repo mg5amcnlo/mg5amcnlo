@@ -108,6 +108,21 @@ c
             fixed_fac_scale=.true.
          endif
 c
+c     set ptj and s_min if xqcut and ktscheme = 1, to improve
+c     integration speed, and set drjj to 0.
+c
+        if(xqcut.gt.0.and.ktscheme.eq.1) then
+           if(ptj.ge.0d0) ptj=max(ptj, xqcut)
+        endif
+        if(xqcut.gt.0) then
+           if(mmjj.ge.0d0) mmjj=max(mmjj, xqcut)
+           if(drjj.gt.0d0) then
+              write(*,*) 'Warning! drjj > 0 with xqcut > 0, set to 0'
+              drjj = 0d0
+           endif
+        endif
+
+c
 c     check if I have to apply cuts on the particles
 c
       do i=nincoming+1,nexternal

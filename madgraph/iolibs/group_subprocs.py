@@ -246,7 +246,6 @@ class SubProcessGroup(base_objects.PhysicsObject):
             max_legs = min([max([len(v.get('legs')) for v in \
                                    d.get('vertices') if v.get('id') > 0]) \
                               for d in diagrams])
-            # For now, just use 3-vertices. Will need to fix in MadEvent
             diagram_maps[iamp] = []
             for diagram in diagrams:
                 # Only use diagrams with all vertices == min_legs
@@ -385,6 +384,23 @@ class SubProcessGroupList(base_objects.PhysicsObjectList):
         """Test if object obj is a valid element."""
 
         return isinstance(obj, SubProcessGroup)
+
+    def get_matrix_elements(self):
+        """Extract the list of matrix elements"""
+        return helas_objects.HelasMatrixElementList(\
+            sum([group.get('matrix_elements') for group in self], []))
+
+    def get_used_lorentz(self):
+        """Return the list of ALOHA routines used in these matrix elements"""
+        
+        return helas_objects.HelasMultiProcess(
+            {'matrix_elements': self.get_matrix_elements()}).get_used_lorentz()
+    
+    def get_used_couplings(self):
+        """Return the list of ALOHA routines used in these matrix elements"""
+        
+        return helas_objects.HelasMultiProcess(
+            {'matrix_elements': self.get_matrix_elements()}).get_used_couplings()
     
 #===============================================================================
 # DecayChainSubProcessGroup
@@ -484,7 +500,7 @@ class DecayChainSubProcessGroup(SubProcessGroup):
                               group.get('matrix_elements')[0].\
                                     get('processes')[0]))
             subproc_groups.append(group)
-
+        
         return subproc_groups
 
     def assign_group_to_decay_process(self, process):
@@ -508,7 +524,7 @@ class DecayChainSubProcessGroup(SubProcessGroup):
                                            for a in g.get('amplitudes')] \
                                    for g in group.get('core_groups')])]
 
-            assert decay_group
+            assert len(decay_group) == 1
             decay_group = decay_group[0]
 
             group_assignment, diagram_map, mapping_diagrams = \
@@ -521,24 +537,24 @@ class DecayChainSubProcessGroup(SubProcessGroup):
 
         # Now calculate the corresponding properties for process
 
-        # First determine group id
+        # Find core process group
         ids = [l.get('id') for l in process.get('legs')]
         core_group = [(i, group) for (i, group) in \
                       enumerate(self.get('core_groups')) \
                       if ids in [[l.get('id') for l in \
                                   a.get('process').get('legs')] \
                                  for a in group.get('amplitudes')]]
-        assert core_group
+        assert len(core_group) == 1
         
         core_group = core_group[0]
         # This is the first return argument - the chain of group indices
         group_assignment = (core_group[0],
                             tuple([g[0] for g in group_assignments]))
 
-        # Now get length of mapping diagrams
+        # Get (maximum) length of mapping diagrams
         org_mapping_diagrams = len(core_group[1].get('mapping_diagrams'))
 
-        # Now calculate the diagram map for this process
+        # Calculate the diagram map for this process
         proc_index = [[l.get('id') for l in a.get('process').get('legs')] \
                       for a in core_group[1].get('amplitudes')].index(ids)
         org_diagram_map = core_group[1].get('diagram_maps')[proc_index]

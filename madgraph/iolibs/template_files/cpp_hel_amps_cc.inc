@@ -3,7 +3,7 @@
 %(info_lines)s
 //==========================================================================
 
-#include "hel_amps_%(model_name)s.h"
+#include "HelAmps_%(model_name)s.h"
 
 namespace %(namespace)s_%(model_name)s {
 

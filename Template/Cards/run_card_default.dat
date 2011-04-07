@@ -63,7 +63,7 @@
  1        = ktscheme         ! for ickkw=1, 1 Durham kT, 2 Pythia pTE
  1        = alpsfact         ! scale factor for QCD emission vx
  F        = chcluster        ! cluster only according to channel diag
- F        = pdfwgt           ! for ickkw=1, perform pdf reweighting
+ T        = pdfwgt           ! for ickkw=1, perform pdf reweighting
 #*********************************************************************
 #                                                                    
 #**********************************
