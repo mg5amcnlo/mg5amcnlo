@@ -890,12 +890,40 @@ class CheckValidForCmdWeb(CheckValidForCmd):
         """ not authorize on web"""
         raise self.WebRestriction('\"save\" command not authorize online')
     
+
     def check_output(self, args):
         """ check the validity of the line"""
         
-        # In web mode, can only do forced, automatic madevent output
+        # first pass to the default
+        CheckValidForCmd.check_output(self, args)
+        
+        # The only valid argument in web mode for madevent is
+        if '-f' not in args:
+            args.append('-f')
+        
+        # Check that only '.' and 'auto' are valid
+        # Find the path
+        if len(args)>2:
+            raise self.WebRestriction, 'Too many argument for the output command'
+        elif len(args) > 1:
+            if '-f' == args[0]:
+                path = args[1]
+            else:
+                path = args[0]
+        else:
+            path = 'auto'
+        # And check if he is allow
+        if path not in ['.', 'auto']:
+                raise self.WebRestriction, 'You can not specify path in the web interface'
 
-        args[:] = ['madevent', 'auto', '-f']
+        # Check that we output madevent
+        if 'madevent' != self._export_format:
+                raise self.WebRestriction, 'only available output format is madevent (at current stage)'
+
+        # In web mode, can only do forced, automatic madevent output
+        CheckValidForCmd.check_output(self, args)
+        # The only valid argument in web mode for madevent is
+        args = ['madevent', 'auto', '-f']
 
 #===============================================================================
 # CompleteForCmd
