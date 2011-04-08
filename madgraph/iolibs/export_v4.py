@@ -1446,10 +1446,14 @@ class ProcessExporterFortranME(ProcessExporterFortran):
                     lines.append("data sprop(%d,%d)/%d/" % \
                                  (last_leg.get('number'), nconfigs,
                                   last_leg.get('id')))
+                    lines.append("data tprid(%d,%d)/0/" % \
+                                 (last_leg.get('number'), nconfigs))
                 elif vert in tchannels[:-1]:
                     lines.append("data tprid(%d,%d)/%d/" % \
                                  (last_leg.get('number'), nconfigs,
                                   abs(last_leg.get('id'))))
+                    lines.append("data sprop(%d,%d)/0/" % \
+                                 (last_leg.get('number'), nconfigs))
 
         # Write out number of configs
         lines.append("# Number of configs")
