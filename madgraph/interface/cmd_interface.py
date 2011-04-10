@@ -2916,7 +2916,15 @@ class MadGraphCmdWeb(MadGraphCmd, CheckValidForCmdWeb):
         
         #standard initialization
         MadGraphCmd.__init__(self, mgme_dir = '', *arg, **opt)
-
+    
+    def finalize(self, nojpeg):
+        """ Add the file Online for web generation""" 
+        
+        if self._model_v4_path:
+            fsock = open(os.path.join(self._model_v4_path, 'Online'))
+            fsock.write(misc.get_time_info())
+        
+        MadGraphCmd.finalize(self, nojpeg)    
 #===============================================================================
 # MadGraphCmd
 #===============================================================================
