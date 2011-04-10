@@ -1,6 +1,6 @@
-# This file was automatically created by FeynRules $Revision: 535 $
-# Mathematica version: 8.0 for Mac OS X x86 (64-bit) (November 6, 2010)
-# Date: Wed 23 Mar 2011 22:45:01
+# This file was automatically created by FeynRules $Revision: 457 $
+# Mathematica version: 7.0 for Mac OS X x86 (64-bit) (November 11, 2008)
+# Date: Wed 6 Apr 2011 11:50:59
 
 
 
@@ -9,18 +9,18 @@ from object_library import all_parameters, Parameter
 
 from function_library import complexconjugate, re, im, csc, sec, acsc, asec
 
-# This is a default parameter object representing 0.
-ZERO = Parameter(name = 'ZERO',
-                 nature = 'internal',
+cabi = Parameter(name = 'cabi',
+                 nature = 'external',
                  type = 'real',
-                 value = '0.0',
-                 texname = '0')
+                 value = 0.488,
+                 texname = '\\theta _c',
+                 lhablock = 'CKMBLOCK',
+                 lhacode = [ 1 ])
 
-# User-defined parameters.
 aEWM1 = Parameter(name = 'aEWM1',
                   nature = 'external',
                   type = 'real',
-                  value = 132.50698,
+                  value = 127.9,
                   texname = '\\text{aEWM1}',
                   lhablock = 'SMINPUTS',
                   lhacode = [ 1 ])
@@ -28,8 +28,8 @@ aEWM1 = Parameter(name = 'aEWM1',
 Gf = Parameter(name = 'Gf',
                nature = 'external',
                type = 'real',
-               value = 0.000011663900000000002,
-               texname = 'G_f',
+               value = 0.00001166,
+               texname = '\\text{Gf}',
                lhablock = 'SMINPUTS',
                lhacode = [ 2 ])
 
@@ -41,42 +41,18 @@ aS = Parameter(name = 'aS',
                lhablock = 'SMINPUTS',
                lhacode = [ 3 ])
 
-lamWS = Parameter(name = 'lamWS',
-                  nature = 'external',
-                  type = 'real',
-                  value = 0,
-                  texname = '\\text{lamWS}',
-                  lhablock = 'Wolfenstein',
-                  lhacode = [ 1 ])
-
-AWS = Parameter(name = 'AWS',
+ymc = Parameter(name = 'ymc',
                 nature = 'external',
                 type = 'real',
-                value = 0,
-                texname = '\\text{AWS}',
-                lhablock = 'Wolfenstein',
-                lhacode = [ 2 ])
-
-rhoWS = Parameter(name = 'rhoWS',
-                  nature = 'external',
-                  type = 'real',
-                  value = 0,
-                  texname = '\\text{rhoWS}',
-                  lhablock = 'Wolfenstein',
-                  lhacode = [ 3 ])
-
-etaWS = Parameter(name = 'etaWS',
-                  nature = 'external',
-                  type = 'real',
-                  value = 0,
-                  texname = '\\text{etaWS}',
-                  lhablock = 'Wolfenstein',
-                  lhacode = [ 4 ])
+                value = 1.42,
+                texname = '\\text{ymc}',
+                lhablock = 'YUKAWA',
+                lhacode = [ 4 ])
 
 ymb = Parameter(name = 'ymb',
                 nature = 'external',
                 type = 'real',
-                value = 4.7,
+                value = 4.2,
                 texname = '\\text{ymb}',
                 lhablock = 'YUKAWA',
                 lhacode = [ 5 ])
@@ -97,6 +73,22 @@ ymtau = Parameter(name = 'ymtau',
                   lhablock = 'YUKAWA',
                   lhacode = [ 15 ])
 
+LRS = Parameter(name = 'LRS',
+                nature = 'external',
+                type = 'real',
+                value = 4000,
+                texname = '\\text{LRS}',
+                lhablock = 'FRBlock',
+                lhacode = [ 1 ])
+
+sw2 = Parameter(name = 'sw2',
+                nature = 'external',
+                type = 'real',
+                value = 0.2312,
+                texname = '\\text{sw2}',
+                lhablock = 'FRBlock',
+                lhacode = [ 2 ])
+
 MTA = Parameter(name = 'MTA',
                 nature = 'external',
                 type = 'real',
@@ -105,10 +97,18 @@ MTA = Parameter(name = 'MTA',
                 lhablock = 'MASS',
                 lhacode = [ 15 ])
 
+MC = Parameter(name = 'MC',
+               nature = 'external',
+               type = 'real',
+               value = 1.42,
+               texname = '\\text{MC}',
+               lhablock = 'MASS',
+               lhacode = [ 4 ])
+
 MT = Parameter(name = 'MT',
                nature = 'external',
                type = 'real',
-               value = 172,
+               value = 174.3,
                texname = '\\text{MT}',
                lhablock = 'MASS',
                lhacode = [ 6 ])
@@ -116,7 +116,7 @@ MT = Parameter(name = 'MT',
 MB = Parameter(name = 'MB',
                nature = 'external',
                type = 'real',
-               value = 4.7,
+               value = 4.2,
                texname = '\\text{MB}',
                lhablock = 'MASS',
                lhacode = [ 5 ])
@@ -124,31 +124,39 @@ MB = Parameter(name = 'MB',
 MZ = Parameter(name = 'MZ',
                nature = 'external',
                type = 'real',
-               value = 91.188,
+               value = 91.5445065,
                texname = '\\text{MZ}',
                lhablock = 'MASS',
                lhacode = [ 23 ])
 
+MW = Parameter(name = 'MW',
+               nature = 'external',
+               type = 'real',
+               value = 80.2673592,
+               texname = '\\text{MW}',
+               lhablock = 'MASS',
+               lhacode = [ 24 ])
+
 MH = Parameter(name = 'MH',
                nature = 'external',
                type = 'real',
-               value = 120,
+               value = 100,
                texname = '\\text{MH}',
                lhablock = 'MASS',
                lhacode = [ 25 ])
 
-MP = Parameter(name = 'MP',
-               nature = 'external',
-               type = 'real',
-               value = 120,
-               texname = '\\text{MP}',
-               lhablock = 'MASS',
-               lhacode = [ 9000006 ])
+MGr = Parameter(name = 'MGr',
+                nature = 'external',
+                type = 'real',
+                value = 500,
+                texname = '\\text{MGr}',
+                lhablock = 'MASS',
+                lhacode = [ 9000006 ])
 
 WT = Parameter(name = 'WT',
                nature = 'external',
                type = 'real',
-               value = 1.4611,
+               value = 1.50833649,
                texname = '\\text{WT}',
                lhablock = 'DECAY',
                lhacode = [ 6 ])
@@ -156,7 +164,7 @@ WT = Parameter(name = 'WT',
 WZ = Parameter(name = 'WZ',
                nature = 'external',
                type = 'real',
-               value = 2.44140351,
+               value = 2.44639985,
                texname = '\\text{WZ}',
                lhablock = 'DECAY',
                lhacode = [ 23 ])
@@ -164,7 +172,7 @@ WZ = Parameter(name = 'WZ',
 WW = Parameter(name = 'WW',
                nature = 'external',
                type = 'real',
-               value = 2.04759951,
+               value = 2.0353557,
                texname = '\\text{WW}',
                lhablock = 'DECAY',
                lhacode = [ 24 ])
@@ -172,72 +180,10 @@ WW = Parameter(name = 'WW',
 WH = Parameter(name = 'WH',
                nature = 'external',
                type = 'real',
-               value = 0.00575308848,
+               value = 0.004276087,
                texname = '\\text{WH}',
                lhablock = 'DECAY',
                lhacode = [ 25 ])
-
-WH1 = Parameter(name = 'WH1',
-                nature = 'external',
-                type = 'real',
-                value = 0.00575308848,
-                texname = '\\text{WH1}',
-                lhablock = 'DECAY',
-                lhacode = [ 9000006 ])
-
-CKM11 = Parameter(name = 'CKM11',
-                  nature = 'internal',
-                  type = 'complex',
-                  value = '1 - lamWS**2/2.',
-                  texname = '\\text{CKM11}')
-
-CKM12 = Parameter(name = 'CKM12',
-                  nature = 'internal',
-                  type = 'complex',
-                  value = 'lamWS',
-                  texname = '\\text{CKM12}')
-
-CKM13 = Parameter(name = 'CKM13',
-                  nature = 'internal',
-                  type = 'complex',
-                  value = 'AWS*lamWS*(-(etaWS*complex(0,1)) + rhoWS)',
-                  texname = '\\text{CKM13}')
-
-CKM21 = Parameter(name = 'CKM21',
-                  nature = 'internal',
-                  type = 'complex',
-                  value = '-lamWS',
-                  texname = '\\text{CKM21}')
-
-CKM22 = Parameter(name = 'CKM22',
-                  nature = 'internal',
-                  type = 'complex',
-                  value = '1 - lamWS**2/2.',
-                  texname = '\\text{CKM22}')
-
-CKM23 = Parameter(name = 'CKM23',
-                  nature = 'internal',
-                  type = 'complex',
-                  value = 'AWS*lamWS**2',
-                  texname = '\\text{CKM23}')
-
-CKM31 = Parameter(name = 'CKM31',
-                  nature = 'internal',
-                  type = 'complex',
-                  value = 'AWS*lamWS**3*(1 - etaWS*complex(0,1) - rhoWS)',
-                  texname = '\\text{CKM31}')
-
-CKM32 = Parameter(name = 'CKM32',
-                  nature = 'internal',
-                  type = 'complex',
-                  value = '-(AWS*lamWS**2)',
-                  texname = '\\text{CKM32}')
-
-CKM33 = Parameter(name = 'CKM33',
-                  nature = 'internal',
-                  type = 'complex',
-                  value = '1',
-                  texname = '\\text{CKM33}')
 
 aEW = Parameter(name = 'aEW',
                 nature = 'internal',
@@ -245,17 +191,23 @@ aEW = Parameter(name = 'aEW',
                 value = '1/aEWM1',
                 texname = '\\text{aEW}')
 
+cw = Parameter(name = 'cw',
+               nature = 'internal',
+               type = 'real',
+               value = 'cmath.sqrt(1 - sw2)',
+               texname = 'c_w')
+
+sw = Parameter(name = 'sw',
+               nature = 'internal',
+               type = 'real',
+               value = 'cmath.sqrt(sw2)',
+               texname = 's_w')
+
 G = Parameter(name = 'G',
               nature = 'internal',
               type = 'real',
               value = '2*cmath.sqrt(aS)*cmath.sqrt(cmath.pi)',
               texname = 'G')
-
-ydo = Parameter(name = 'ydo',
-                nature = 'internal',
-                type = 'real',
-                value = '0',
-                texname = '\\text{ydo}')
 
 ye = Parameter(name = 'ye',
                nature = 'internal',
@@ -269,47 +221,89 @@ ym = Parameter(name = 'ym',
                value = '0',
                texname = '\\text{ym}')
 
+yu = Parameter(name = 'yu',
+               nature = 'internal',
+               type = 'real',
+               value = '0',
+               texname = '\\text{yu}')
+
+yd = Parameter(name = 'yd',
+               nature = 'internal',
+               type = 'real',
+               value = '0',
+               texname = '\\text{yd}')
+
 ys = Parameter(name = 'ys',
                nature = 'internal',
                type = 'real',
                value = '0',
                texname = '\\text{ys}')
 
-yup = Parameter(name = 'yup',
-                nature = 'internal',
-                type = 'real',
-                value = '0',
-                texname = '\\text{yup}')
+CKM11 = Parameter(name = 'CKM11',
+                  nature = 'internal',
+                  type = 'complex',
+                  value = '1',
+                  texname = '\\text{CKM11}')
 
-MW = Parameter(name = 'MW',
-               nature = 'internal',
-               type = 'real',
-               value = 'cmath.sqrt(MZ**2/2. + cmath.sqrt(MZ**4/4. - (aEW*cmath.pi*MZ**2)/(Gf*cmath.sqrt(2))))',
-               texname = 'M_W')
+CKM12 = Parameter(name = 'CKM12',
+                  nature = 'internal',
+                  type = 'complex',
+                  value = '0',
+                  texname = '\\text{CKM12}')
+
+CKM13 = Parameter(name = 'CKM13',
+                  nature = 'internal',
+                  type = 'complex',
+                  value = '0',
+                  texname = '\\text{CKM13}')
+
+CKM21 = Parameter(name = 'CKM21',
+                  nature = 'internal',
+                  type = 'complex',
+                  value = '0',
+                  texname = '\\text{CKM21}')
+
+CKM22 = Parameter(name = 'CKM22',
+                  nature = 'internal',
+                  type = 'complex',
+                  value = '1',
+                  texname = '\\text{CKM22}')
+
+CKM23 = Parameter(name = 'CKM23',
+                  nature = 'internal',
+                  type = 'complex',
+                  value = '0',
+                  texname = '\\text{CKM23}')
+
+CKM31 = Parameter(name = 'CKM31',
+                  nature = 'internal',
+                  type = 'complex',
+                  value = '0',
+                  texname = '\\text{CKM31}')
+
+CKM32 = Parameter(name = 'CKM32',
+                  nature = 'internal',
+                  type = 'complex',
+                  value = '0',
+                  texname = '\\text{CKM32}')
+
+CKM33 = Parameter(name = 'CKM33',
+                  nature = 'internal',
+                  type = 'complex',
+                  value = '1',
+                  texname = '\\text{CKM33}')
+
+kappa = Parameter(name = 'kappa',
+                  nature = 'internal',
+                  type = 'real',
+                  value = '2/LRS',
+                  texname = '\\kappa ')
 
 ee = Parameter(name = 'ee',
                nature = 'internal',
                type = 'real',
                value = '2*cmath.sqrt(aEW)*cmath.sqrt(cmath.pi)',
                texname = 'e')
-
-sw2 = Parameter(name = 'sw2',
-                nature = 'internal',
-                type = 'real',
-                value = '1 - MW**2/MZ**2',
-                texname = '\\text{sw2}')
-
-cw = Parameter(name = 'cw',
-               nature = 'internal',
-               type = 'real',
-               value = 'cmath.sqrt(1 - sw2)',
-               texname = 'c_w')
-
-sw = Parameter(name = 'sw',
-               nature = 'internal',
-               type = 'real',
-               value = 'cmath.sqrt(sw2)',
-               texname = 's_w')
 
 g1 = Parameter(name = 'g1',
                nature = 'internal',
@@ -329,35 +323,23 @@ v = Parameter(name = 'v',
               value = '(2*MW*sw)/ee',
               texname = 'v')
 
-AH = Parameter(name = 'AH',
-               nature = 'internal',
-               type = 'real',
-               value = '(47*ee**2*(1 - (2*MH**4)/(987.*MT**4) - (14*MH**2)/(705.*MT**2) + (213*MH**12)/(2.634632e7*MW**12) + (5*MH**10)/(119756.*MW**10) + (41*MH**8)/(180950.*MW**8) + (87*MH**6)/(65800.*MW**6) + (57*MH**4)/(6580.*MW**4) + (33*MH**2)/(470.*MW**2)))/(72.*cmath.pi**2*v)',
-               texname = 'A_H')
-
-GH = Parameter(name = 'GH',
-               nature = 'internal',
-               type = 'real',
-               value = '-(G**2*(1 + (13*MH**6)/(16800.*MT**6) + MH**4/(168.*MT**4) + (7*MH**2)/(120.*MT**2)))/(12.*cmath.pi**2*v)',
-               texname = 'G_H')
-
-Gphi = Parameter(name = 'Gphi',
-                 nature = 'internal',
-                 type = 'real',
-                 value = '-(G**2*(1 + MH**6/(560.*MT**6) + MH**4/(90.*MT**4) + MH**2/(12.*MT**2)))/(8.*cmath.pi**2*v)',
-                 texname = 'G_h')
-
 lam = Parameter(name = 'lam',
                 nature = 'internal',
                 type = 'real',
                 value = 'MH**2/(2.*v**2)',
-                texname = '\\text{lam}')
+                texname = '\\lambda ')
 
 yb = Parameter(name = 'yb',
                nature = 'internal',
                type = 'real',
                value = '(ymb*cmath.sqrt(2))/v',
                texname = '\\text{yb}')
+
+yc = Parameter(name = 'yc',
+               nature = 'internal',
+               type = 'real',
+               value = '(ymc*cmath.sqrt(2))/v',
+               texname = '\\text{yc}')
 
 yt = Parameter(name = 'yt',
                nature = 'internal',
@@ -375,5 +357,5 @@ muH = Parameter(name = 'muH',
                 nature = 'internal',
                 type = 'real',
                 value = 'cmath.sqrt(lam*v**2)',
-                texname = '\\mu')
+                texname = '\\mu ')
 

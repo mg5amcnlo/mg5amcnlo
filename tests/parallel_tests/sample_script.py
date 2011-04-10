@@ -52,29 +52,31 @@ if '__main__' == __name__:
     #my_proc_list += ['t t~ > z > t t~','u u~ > z > u u~', 't t~ > t t~', 'u u > u u']
     #my_proc_list = [ 't t~ > y > t t~','z z > y > t t~','t t~ > y > z z',' u u~ > y > t t~', 't t~ > y > u u~']
     #my_proc_list = [' t t~ > t t~ y', 't t~ > t t~ g','g g > g g g','u u~ > y > u u~', 't t~ > y > t t~' ]
-    my_proc_list2 = me_comparator.create_proc_list(['u', 'u~','g','a','e+','e-','h','ve','ve~','z','w+','w-','d','d~','y'], initial=2,
+    my_proc_list = me_comparator.create_proc_list(['u', 'u~','g','a','e+','e-','h','ve','ve~','z','w+','w-','d','d~','y'], initial=2,
                                                   final=2)
-    my_proc_list2 = [p for p in my_proc_list2 if p.count('y') < 2]
+
     #my_proc_list1 = me_comparator.create_proc_list(['t', 't~','g','a','ta+','ta-','h','vt','vt~','z','w+','w-','b','b~','y'], initial=2,
     #                                              final=2)
-    #fermion = ['s','s~','c','c~','b','b~','t','t~','mu-','mu+','ta-','ta+','vm','vm~','vt','vt~']
-    #boson = ['g','y','z','a','w+','w-','h']
+    #fermion = ['b','b~','t','t~','ta-','ta+','vt','vt~']
+    #final = ['g','a','h','z','w+','w-','y']
+    fermion=['b','b~','t','t~','c','c~','s','s~']
+    fermion2=['ta-','ta+','vt','vt~','mu-','mu+','vm','vm~']
+    boson = ['g','y','z','a','w+','w-']
 
-
-
-    #my_proc_list = [p for p in my_proc_list1 if p not in my_proc_list2]
-    my_proc_list = ['a e+ > e+ y',' a e- > e- y',' a w+ > w+ y',' a w- > w- y',' a y > e+ e-',' a y > w+ w-',' e+ e- > a y',' e+ e- > y z',' e+ ve > w+ y',' e+ z > e+ y',' e+ w- > ve~ y',' e+ y > a e+',' e+ y > e+ z',' e+ y > ve~ w+',' e- ve~ > w- y',' e- z > e- y',' e- w+ > ve y',' e- y > a e-',' e- y > e- z',' e- y > ve w-',' h h > h h',' h h > y y',' h z > y z',' h w+ > w+ y',' h w- > w- y',' h y > h h',' h y > h y',' h y > z z',' h y > w+ w-',' ve w- > e- y',' ve y > e- w+',' ve~ w+ > e+ y',' ve~ y > e+ w-',' z z > h y',' w+ z > w+ y',' w- z > w- y',' y z > e+ e-',' y z > h z',' y z > w+ w-',' w+ w- > a y',' w+ w- > h y',' w+ w- > y z',' w+ y > a w+',' w+ y > e+ ve',' w+ y > h w+',' w+ y > w+ z',' w- y > a w-',' w- y > e- ve~',' w- y > h w-',' w- y > w- z',' y y > h h']
-    #my_proc_list = ['u u~ >  u u~', 'e+ e- > e+ e-','a e+ > e+ y',' a e- > e- y']
-    #my_proc_list1 = me_comparator.create_proc_list(['u', 'u~','t','t~','g','y','z','a'], initial=1,
-    #                                              final=2)
-    #my_proc_list = me_comparator.create_proc_list_enhanced(
-    #    fermion, fermion, boson,
-    #    initial=2, final_1=2, final_2 = 1)
-
+    my_proc_list = me_comparator.create_proc_list_enhanced(
+        fermion, fermion, boson,
+        initial=2, final_1=2, final_2 = 1)
+    my_proc_list = [p+' / h' for p in my_proc_list]
+    #print len(my_proc_list)
+    #print my_proc_list
+    #
     #my_proc_list += me_comparator.create_proc_list(['w+','w-','z','a','x1+','x1-','n1'], initial=2,
     #                                              final=3)
     #my_proc_list += me_comparator.create_proc_list(['g','u','u~','go','ul','ul~','ur','ur~'], initial=2,
     #                                              final=3)
+    #my_proc_list = ['b b~ > h t t~','e+ e- > h ta+ ta-',' y h > ta+ ta-','e+ e- > h ta+ ta- $y','e+ e- > y > h ta+ ta-']
+#    my_proc_list = ['ta+ ta- > e+ ve w- / h', 'ta+ ta- > y > e+ ve w- / h','ta+ ta- > e+ ve w- / h y']
+#    my_proc_list = ['ta+ ta- > e+ ve w- / h e+ e- ve ve~ w+ w-', 'e+ ve > W+ y','t t~ > e+ ve w- / h e+ e- ve ve~ w+ w-']
 
     # Create a MERunner object for MG4
     my_mg4 = me_comparator.MG4Runner()
@@ -98,7 +100,7 @@ if '__main__' == __name__:
 
     # Run the actual comparison
     my_comp.run_comparison(my_proc_list,
-                           model='RS',
+                           model=['RS','RS'],
                            orders={'QED':4, 'QCD':4, 'QTD':4}, energy=2000)
 
     # Do some cleanup

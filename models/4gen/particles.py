@@ -1,6 +1,6 @@
 # This file was automatically created by FeynRules $Revision: 535 $
 # Mathematica version: 8.0 for Mac OS X x86 (64-bit) (November 6, 2010)
-# Date: Wed 23 Mar 2011 22:45:01
+# Date: Wed 23 Mar 2011 22:53:59
 
 
 from __future__ import division
@@ -142,6 +142,21 @@ t = Particle(pdg_code = 6,
 
 t__tilde__ = t.anti()
 
+tp = Particle(pdg_code = 8,
+              name = 'tp',
+              antiname = 'tp~',
+              spin = 2,
+              color = 3,
+              mass = Param.MTp,
+              width = Param.WTp,
+              texname = 'tp',
+              antitexname = 'tp',
+              charge = 2/3,
+              LeptonNumber = 0,
+              GhostNumber = 0)
+
+tp__tilde__ = tp.anti()
+
 d = Particle(pdg_code = 1,
              name = 'd',
              antiname = 'd~',
@@ -186,6 +201,21 @@ b = Particle(pdg_code = 5,
              GhostNumber = 0)
 
 b__tilde__ = b.anti()
+
+bp = Particle(pdg_code = 7,
+              name = 'bp',
+              antiname = 'bp~',
+              spin = 2,
+              color = 3,
+              mass = Param.MBp,
+              width = Param.WBp,
+              texname = 'bp',
+              antitexname = 'bp',
+              charge = -1/3,
+              LeptonNumber = 0,
+              GhostNumber = 0)
+
+bp__tilde__ = bp.anti()
 
 A = Particle(pdg_code = 22,
              name = 'A',
@@ -253,17 +283,4 @@ H = Particle(pdg_code = 25,
              charge = 0,
              LeptonNumber = 0,
              GhostNumber = 0)
-
-h1 = Particle(pdg_code = 9000006,
-              name = 'h1',
-              antiname = 'h1',
-              spin = 1,
-              color = 1,
-              mass = Param.MP,
-              width = Param.WH1,
-              texname = 'h1',
-              antitexname = 'h1',
-              charge = 0,
-              LeptonNumber = 0,
-              GhostNumber = 0)
 

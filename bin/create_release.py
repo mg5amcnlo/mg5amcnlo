@@ -55,7 +55,7 @@ root_path = path.split(path.dirname(path.realpath( __file__ )))[0]
 sys.path.append(root_path)
 
 import madgraph.iolibs.misc as misc
-from madgraph import MG4DIR, MG5DIR
+from madgraph import MG5DIR
 
 # Write out nice usage message if called with -h or --help
 usage = "usage: %prog [options] [FILE] "
@@ -163,13 +163,6 @@ reload(madgraph.iolibs)
 import madgraph.iolibs.misc
 reload(madgraph.iolibs.misc)
 
-## Need a __init__ file to run tests
-##if not os.path.exists(os.path.join(filepath,'__init__.py')):
-##    open(os.path.join(filepath,'__init__.py'), 'w').close()
-
-## For acceptance tests, make sure to use filepath as MG4DIR
-##madgraph.MG4DIR = os.path.realpath(filepath)
-#madgraph.MG5DIR = os.path.realpath(filepath)
 
 test_results = test_manager.run(package=os.path.join('tests',
                                                      'unit_tests'))

@@ -15,6 +15,6 @@ all_parameters = parameters.all_parameters
 all_functions = function_library.all_functions
 
 
-__author__ = "N. Christensen, C. Duhr"
-__version__ = "1.3"
-__email__ = "neil@pa.msu.edu, claude.duhr@uclouvain.be"
+__author__ = "C. Duhr"
+__version__ = "1.1"
+__email__ = "claude.duhr@durham.ac.uk"

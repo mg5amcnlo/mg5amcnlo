@@ -1,6 +1,6 @@
 # This file was automatically created by FeynRules $Revision: 535 $
 # Mathematica version: 8.0 for Mac OS X x86 (64-bit) (November 6, 2010)
-# Date: Wed 23 Mar 2011 22:45:01
+# Date: Wed 23 Mar 2011 22:58:09
 
 
 from __future__ import division
@@ -254,15 +254,54 @@ H = Particle(pdg_code = 25,
              LeptonNumber = 0,
              GhostNumber = 0)
 
-h1 = Particle(pdg_code = 9000006,
-              name = 'h1',
-              antiname = 'h1',
+S1 = Particle(pdg_code = 9000006,
+              name = 'S1',
+              antiname = 'S1',
               spin = 1,
               color = 1,
-              mass = Param.MP,
-              width = Param.WH1,
-              texname = 'h1',
-              antitexname = 'h1',
+              mass = Param.MSk,
+              width = Param.ZERO,
+              texname = 'S1',
+              antitexname = 'S1',
+              charge = 0,
+              LeptonNumber = 0,
+              GhostNumber = 0)
+
+S2 = Particle(pdg_code = 9000007,
+              name = 'S2',
+              antiname = 'S2',
+              spin = 1,
+              color = 1,
+              mass = Param.MSk,
+              width = Param.ZERO,
+              texname = 'S2',
+              antitexname = 'S2',
+              charge = 0,
+              LeptonNumber = 0,
+              GhostNumber = 0)
+
+S3 = Particle(pdg_code = 9000008,
+              name = 'S3',
+              antiname = 'S3',
+              spin = 1,
+              color = 1,
+              mass = Param.MSk,
+              width = Param.ZERO,
+              texname = 'S3',
+              antitexname = 'S3',
+              charge = 0,
+              LeptonNumber = 0,
+              GhostNumber = 0)
+
+S4 = Particle(pdg_code = 9000009,
+              name = 'S4',
+              antiname = 'S4',
+              spin = 1,
+              color = 1,
+              mass = Param.MSk,
+              width = Param.ZERO,
+              texname = 'S4',
+              antitexname = 'S4',
               charge = 0,
               LeptonNumber = 0,
               GhostNumber = 0)

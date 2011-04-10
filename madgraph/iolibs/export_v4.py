@@ -1042,8 +1042,6 @@ class ProcessExporterFortranME(ProcessExporterFortran):
                      matrix_element.get('processes')[0].nice_string())
         plot.draw()
 
-        # Generate jpgs -> pass in make_html
-        #os.system(os.path.join('..', '..', 'bin', 'gen_jpeg-pl'))
 
         linkfiles = ['addmothers.f',
                      'cluster.f',

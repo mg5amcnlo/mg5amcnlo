@@ -1,13 +1,13 @@
 # This file was automatically created by FeynRules $Revision: 535 $
 # Mathematica version: 8.0 for Mac OS X x86 (64-bit) (November 6, 2010)
-# Date: Wed 23 Mar 2011 22:44:50
+# Date: Wed 23 Mar 2011 22:53:52
 
 
 # 
-# This is the logfile for the model Higgs_Effective_Couplings
+# This is the logfile for the model 4th_Generation_Complex_CKM
 
-# Authors: N. Christensen, C. Duhr
-# Model version: 1.3
+# Authors: C. Duhr
+# Model version: 1.1
 # Checking the Lagrangians
    * All Lagrangians are ok.
 #
@@ -22,7 +22,6 @@
    * Assigned PDG number 9000003 to particle ghWp
    * Assigned PDG number 9000004 to particle ghWm
    * Assigned PDG number 9000005 to particle ghG
-   * Assigned PDG number 9000006 to particle h1
 
 
 # Compulsory PDG codes:
@@ -39,8 +38,8 @@
 
 # Vertices
    * Calling FeynmanRules for 1 Lagrangians.
-   * Number of classes vertices: 36
-   * Number of flavored vertices: 79
+   * Number of classes vertices: 29
+   * Number of flavored vertices: 94
    * Saved vertices in InterfaceRun[ 1 ].
    * Removing all ghosts and Goldstone bosons form the output.
    * Checked QNumber conservation.
@@ -53,17 +52,17 @@
 # Vertex definitions
 #
 
-   * 78 vertices written.
+   * 94 vertices written.
    * vertices.py written.
 #
 # Lorentz structure definitions
 #
 
-   * 22 lorentz structures written.
+   * 15 lorentz structures written.
    * lorentz.py written.
 #
 # Coupling definitions
 #
 
-   * 55 couplings written.
+   * 65 couplings written.
    * couplings.py written.
