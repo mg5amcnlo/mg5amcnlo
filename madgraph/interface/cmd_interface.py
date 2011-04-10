@@ -864,7 +864,7 @@ class CheckValidForCmdWeb(CheckValidForCmd):
             raise self.WebRestriction('Path can\'t be specify on the web.')
 
         if len(args) >= 2 and args[0] == 'command':
-            if args[1] != './Cards/proc_card_mg5.dat' and args[1] != 'proc_card.dat': 
+            if args[1] != './Cards/proc_card_mg5.dat': 
                 raise self.WebRestriction('Path can\'t be specify on the web.')
         else:
             for arg in args:
@@ -2400,10 +2400,14 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
         if self._export_dir:
             return
         
+        if os.path.exists(os.path.join(os.path.getcwd(), 'Cards')):    
+            self._export_dir = os.path.getcwd()
+            return
+    
         path_split = filepath.split(os.path.sep)
         if len(path_split) > 2 and path_split[-2] == 'Cards':
             self._export_dir = os.path.sep.join(path_split[:-2])
-
+            return
 
     def do_launch(self, line):
         """Ask for editing the parameter and then 
