@@ -143,8 +143,6 @@ class CmdExtended(cmd.Cmd):
         '#*                                                          *\n' + \
         '#*     run as ./bin/mg5  filename                           *\n' + \
         '#*                                                          *\n' + \
-        '#*     automaticaly generated the %(time)s%(fill)s*\n' + \
-        '#*                                                          *\n' + \
         '#************************************************************\n'
         
         if info_line:
@@ -858,18 +856,15 @@ class CheckValidForCmdWeb(CheckValidForCmd):
         """check the validity of line
         No Path authorize for the Web"""
         
-        CheckValidForCmd.check_import(self, args)
-        
-        if len(args) >= 2 and args[0] == 'proc_v4' and args[1] != '.':
-            raise self.WebRestriction('Path can\'t be specify on the web.')
+        if not args:
+            raise MadGraph5Error, 'import requires at least one option'
 
-        if len(args) >= 2 and args[0] == 'command':
-            if args[1] != './Cards/proc_card_mg5.dat': 
-                raise self.WebRestriction('Path can\'t be specify on the web.')
-        else:
-            for arg in args:
-                if '/' in arg:
-                    raise self.WebRestriction('Path can\'t be specify on the web.')
+        if args[0] == 'proc_v4':
+            args[:] = [args[0], './Cards/proc_card.dat']
+        elif args[0] == 'command':
+            args[:] = [args[0], './Cards/proc_card_mg5.dat']
+
+        CheckValidForCmd.check_import(self, args)
         
     def check_load(self, args):
         """ check the validity of the line
@@ -893,28 +888,12 @@ class CheckValidForCmdWeb(CheckValidForCmd):
 
     def check_output(self, args):
         """ check the validity of the line"""
+
         
         # first pass to the default
         CheckValidForCmd.check_output(self, args)
         
-        # The only valid argument in web mode for madevent is
-        if '-f' not in args:
-            args.append('-f')
-        
-        # Check that only '.' and 'auto' are valid
-        # Find the path
-        if len(args)>2:
-            raise self.WebRestriction, 'Too many argument for the output command'
-        elif len(args) > 1:
-            if '-f' == args[0]:
-                path = args[1]
-            else:
-                path = args[0]
-        else:
-            path = 'auto'
-        # And check if he is allow
-        if path not in ['.', 'auto']:
-                raise self.WebRestriction, 'You can not specify path in the web interface'
+        args[:] = [self._export_format, '.', '-f']
 
         # Check that we output madevent
         if 'madevent' != self._export_format:
@@ -922,8 +901,6 @@ class CheckValidForCmdWeb(CheckValidForCmd):
 
         # In web mode, can only do forced, automatic madevent output
         CheckValidForCmd.check_output(self, args)
-        # The only valid argument in web mode for madevent is
-        args = ['madevent', 'auto', '-f']
 
 #===============================================================================
 # CompleteForCmd
@@ -2221,10 +2198,7 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
             elif len(args) == 2:
                 proc_card = args[1]
                 # Check the status of export and try to use file position is no
-                #self._export dir are define
-                if os.path.isdir(args[1]):
-                    proc_card = os.path.join(proc_card, 'Cards', \
-                                                                'proc_card.dat')    
+                # self._export dir are define
                 self.check_for_export_dir(os.path.realpath(proc_card))
             else:
                 raise MadGraph5Error('No default directory in output')
@@ -2401,7 +2375,7 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
             return
         
         if os.path.exists(os.path.join(os.getcwd(), 'Cards')):    
-            self._export_dir = os.path.getcwd()
+            self._export_dir = os.getcwd()
             return
     
         path_split = filepath.split(os.path.sep)
@@ -2826,7 +2800,7 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
         # Automatically run finalize
         self.finalize(nojpeg)
             
-    def finalize(self, nojpeg):
+    def finalize(self, nojpeg, online = False):
         """Make the html output, write proc_card_mg5.dat and create
         madevent.tar.gz for a MadEvent directory"""
         
@@ -2864,7 +2838,8 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
                                            self._curr_matrix_elements,
                                            [self.history_header] + \
                                            self.history,
-                                           not nojpeg)
+                                           not nojpeg,
+                                           online)
 
         if self._export_format in ['madevent', 'standalone', 'standalone_cpp']:
             logger.info('Output to directory ' + self._export_dir + ' done.')
@@ -2918,13 +2893,9 @@ class MadGraphCmdWeb(MadGraphCmd, CheckValidForCmdWeb):
         MadGraphCmd.__init__(self, mgme_dir = '', *arg, **opt)
     
     def finalize(self, nojpeg):
-        """ Add the file Online for web generation""" 
+        """Finalize web generation""" 
         
-        if self._model_v4_path:
-            fsock = open(os.path.join(self._model_v4_path, 'Online'))
-            fsock.write(misc.get_time_info())
-        
-        MadGraphCmd.finalize(self, nojpeg)    
+        MadGraphCmd.finalize(self, nojpeg, online = True)
 #===============================================================================
 # MadGraphCmd
 #===============================================================================

@@ -148,7 +148,7 @@ class ProcessExporterFortran(object):
     #===========================================================================
     # Create jpeg diagrams, html pages,proc_card_mg5.dat and madevent.tar.gz
     #===========================================================================
-    def finalize_v4_directory(self, matrix_elements, history = "", makejpg = False):
+    def finalize_v4_directory(self, matrix_elements, history = "", makejpg = False, online = False):
         """Function to finalize v4 directory, for inheritance.
         """
         pass
@@ -705,7 +705,8 @@ class ProcessExporterFortranSA(ProcessExporterFortran):
     #===========================================================================
     # Create proc_card_mg5.dat for Standalone directory
     #===========================================================================
-    def finalize_v4_directory(self, matrix_elements, history, makejpg = False):
+    def finalize_v4_directory(self, matrix_elements, history, makejpg = False,
+                              online = False):
         """Finalize Standalone MG4 directory by generation proc_card_mg5.dat"""
 
         if not misc.which('g77'):
@@ -1097,7 +1098,8 @@ class ProcessExporterFortranME(ProcessExporterFortran):
             calls = 0
         return calls
 
-    def finalize_v4_directory(self, matrix_elements, history, makejpg = False):
+    def finalize_v4_directory(self, matrix_elements, history, makejpg = False,
+                              online = False):
         """Finalize ME v4 directory by creating jpeg diagrams, html
         pages,proc_card_mg5.dat and madevent.tar.gz."""
 
@@ -1161,6 +1163,10 @@ class ProcessExporterFortranME(ProcessExporterFortran):
                 os.remove('madevent.tar.gz')
             subprocess.call(['make'], stdout = devnull)
 
+
+        if online:
+            # Touch "Online" file
+            os.system('touch %s/Online' % self.dir_path)
 
         subprocess.call([os.path.join(old_pos, self.dir_path, 'bin', 'gen_cardhtml-pl')],
                         stdout = devnull)

@@ -18,10 +18,10 @@ dirbin=$main/bin
 # set dirbin = /home/tstelzer/bin/MG_ME
 # End Local versions 
 cd SubProcesses
-t=`find ./ -noleaf -maxdepth 2 -name "ajob*" |wc -l`
-r=`find ./ -noleaf -maxdepth 2 -name "run.ajob*" |wc -l`
-w=`find ./ -noleaf -maxdepth 2 -name "wait.ajob*" |wc -l`
-d=`find ./ -noleaf -maxdepth 2 -name "done.ajob*" |wc -l`
+t=`find ./ -maxdepth 2 -name "ajob*" |wc -l`
+r=`find ./ -maxdepth 2 -name "run.ajob*" |wc -l`
+w=`find ./ -maxdepth 2 -name "wait.ajob*" |wc -l`
+d=`find ./ -maxdepth 2 -name "done.ajob*" |wc -l`
 
 echo "waiting while finishing jobs on cluster"
 while [[  $d -lt $t  ]]; do    
@@ -30,10 +30,10 @@ while [[  $d -lt $t  ]]; do
     echo $w $r $d $t > ../status
     $dirbin/gen_crossxhtml-pl $1
     sleep 10
-    t=`find ./ -noleaf -maxdepth 2 -name "ajob*" |wc -l`
-    r=`find ./ -noleaf -maxdepth 2 -name "run.ajob*" |wc -l`
-    w=`find ./ -noleaf -maxdepth 2 -name "wait.ajob*" |wc -l`
-    d=`find ./ -noleaf -maxdepth 2 -name "done.ajob*" |wc -l`
+    t=`find ./ -maxdepth 2 -name "ajob*" |wc -l`
+    r=`find ./ -maxdepth 2 -name "run.ajob*" |wc -l`
+    w=`find ./ -maxdepth 2 -name "wait.ajob*" |wc -l`
+    d=`find ./ -maxdepth 2 -name "done.ajob*" |wc -l`
 done
 echo $w $r $d $t
 
