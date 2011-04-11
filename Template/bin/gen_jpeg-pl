@@ -43,7 +43,7 @@ while ( -e "matrix$imatrix.ps"){
   open PROCESS, "grep Process auto_dsig$imatrix.f |" or print "Error: can't do grep\n";
   $proc = <PROCESS>;
   if ($proc =~ /Process: (.+?)(\s\w+=\d+)*$/) { $proc = $1; }
-  print PAGE "<P>\<A HREF\=\"matrix$imatrix.ps\"\> Postscript Diagrams for $proc\<\/A\> \<BR\> \n";
+  print PAGE "<P>\<A HREF\=\"matrix$imatrix.ps\" id\=\"$imatrix\"\> Postscript Diagrams for $proc\<\/A\> \<BR\> \n";
   for($j=1;$j<$pages;$j++){
     print PAGE "\<IMG SRC=\"matrix$imatrix$j.jpg\" ALT=\"Page $j of $pages \" \> \<BR\> \n";
   }#end of for
