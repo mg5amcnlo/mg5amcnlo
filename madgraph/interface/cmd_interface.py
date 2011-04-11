@@ -2376,8 +2376,8 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
         if self._export_dir:
             return
         
-        if os.path.exists(os.path.join(os.path.getcwd(), 'Cards')):    
-            self._export_dir = os.path.getcwd()
+        if os.path.exists(os.path.join(os.getcwd(), 'Cards')):    
+            self._export_dir = os.getcwd()
             return
     
         path_split = filepath.split(os.path.sep)
