@@ -24,10 +24,35 @@ template_text= string.Template("""
 <HEAD> 
 <TITLE>Detail on the Generation</TITLE> 
 <META $meta ></HEAD> 
+
+<style type="text/css">
+
+table.processes { border-collapse: collapse;
+                  border: solid}
+
+.processes td {
+padding: 2 5 2 5;
+border: solid thin;
+}
+
+th{
+border-top: solid;
+border-bottom: solid;
+}
+
+.first td{
+border-top: solid;
+}
+
+
+
+
+</style>
+
 <BODY> 
     <P> <H2 ALIGN=CENTER> SubProcesses and Feynman diagrams </H2>
     
-    <TABLE BORDER=2 ALIGN=CENTER> 
+    <TABLE BORDER=2 ALIGN=CENTER class=processes> 
         <TR>
            <TH>Directory</TH> 
            <TH NOWRAP># Diagrams </TH>
@@ -38,17 +63,14 @@ template_text= string.Template("""
         $info_lines
     </TABLE><BR> 
     <CENTER> $nb_diag diagrams ($nb_gen_diag independent).</CENTER>
-
+    <br><br><br>
     <TABLE ALIGN=CENTER>
-    <TR> 
-        <TD ALIGN=CENTER> <A HREF="../proc_log.txt">proc_log.txt</A> </TD>
-        <TD> Log file from MadGraph code generation. </TD>
-    </TR>
+    $log
     <TR> 
         <TD ALIGN=CENTER> <A HREF="../Cards/proc_card_mg5.dat">proc_card_mg5.dat</A> </TD>
         <TD> Input file used for code generation.
     $model_info
-    </TABLE>
+    </TABLE><br><br><br>
  </BODY> 
 
 </HTML>""")
@@ -63,7 +85,8 @@ class make_info_html:
         
         self.define_meta()
         self.rep_rule['info_lines'] = self.define_info_tables()
-        self.rep_rule['model_info']= self.give_model_info() 
+        self.rep_rule['model_info']= self.give_model_info()
+        self.rep_rule['log'] = self.check_log() 
         self.write()
         
         
@@ -97,11 +120,11 @@ class make_info_html:
         """define the information table"""
         
         line_template = string.Template("""
-        <TR> <TD> $strprocessdir </TD> 
+        <TR class=$class> $first 
 <TD> $diag </TD> 
 <TD> $subproc </TD> 
 <TD> <A HREF="../SubProcesses/$processdir/diagrams.html#$id" >html</A> $postscript
-</TD><TD>
+</TD><TD class=$class>
 <SPAN style="white-space: nowrap;"> $subprocesslist</SPAN>
 </TD></TR>""")
         
@@ -116,15 +139,18 @@ class make_info_html:
         for proc in subproc:
             
             idnames = self.get_subprocesses_info(proc)
-            
-            
-            
+               
             for id in range(1,len(idnames)+1):
 
                 if id == 1:
-                    line_dict = {'strprocessdir': proc, 'processdir': proc}
+                    
+                    line_dict = {'processdir': proc,
+                                 'class': 'first'}
+                    line_dict['first']= '<TD class=$class rowspan=%s> %s </TD>' % (len(idnames), proc)
                 else:
-                    line_dict = {'strprocessdir': '', 'processdir': proc}
+                    line_dict = {'processdir': proc,
+                                 'class': 'second'}
+                    line_dict['first'] = ''
                 try:
                     names = idnames[id]
                 except:
@@ -135,8 +161,9 @@ class make_info_html:
                 line_dict['subproc'] = sum([len(data) for data in names])
                 self.rep_rule['nb_diag'] += line_dict['diag'] * line_dict['subproc']
                 self.rep_rule['nb_gen_diag'] += line_dict['diag']
-                line_dict['subprocesslist'] = ', <br>'.join([', '.join(info) for info in names])
+                line_dict['subprocesslist'] = ', <br>'.join([' </SPAN> , <SPAN style="white-space: nowrap;"> '.join(info) for info in names])
                 line_dict['postscript'] = self.check_postcript(proc, id)
+                
                 
             
                 text += line_template.substitute(line_dict)
@@ -172,6 +199,8 @@ class make_info_html:
             main = line[:8].strip()
             if main == 'mirror':
                 main = old_main
+                if line[8:].strip() == 'none':
+                    continue 
             else:
                 main = int(main)
                 old_main = main
@@ -208,7 +237,16 @@ class make_info_html:
                     (proc, id)
         else:
             return ''
-    
+
+    def check_log(self):
+        path = os.path.join(self.dir, 'proc_log.txt') 
+        if os.path.exists(path):
+            return """<TR> 
+        <TD ALIGN=CENTER> <A HREF="../proc_log.txt">proc_log.txt</A> </TD>
+        <TD> Log file from MadGraph code generation. </TD>
+        </TR>"""
+        else:
+            return ''
     def write(self):
         """write the info.html file"""
         
