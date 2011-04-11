@@ -598,9 +598,11 @@ C     Amplitude(s) for diagram number 6
                  exporter.get_amp2_lines(matrix_elements[0],
                                           subprocess_group.get('diagram_maps')[0])
         self.assertEqual(amp2_lines,
-                         ['AMP2(1)=AMP2(1)+AMP(1)*dconjg(AMP(1))+AMP(2)*dconjg(AMP(2))',
+                         ['AMP2(1)=AMP2(1)+AMP(1)*dconjg(AMP(1))',
+                          'AMP2(2)=AMP2(2)+AMP(2)*dconjg(AMP(2))',
                           'AMP2(3)=AMP2(3)+AMP(3)*dconjg(AMP(3))+AMP(4)*dconjg(AMP(4))+AMP(5)*dconjg(AMP(5))+AMP(6)*dconjg(AMP(6))',
-                          'AMP2(4)=AMP2(4)+AMP(7)*dconjg(AMP(7))+AMP(8)*dconjg(AMP(8))',
+                          'AMP2(4)=AMP2(4)+AMP(7)*dconjg(AMP(7))',
+                          'AMP2(5)=AMP2(5)+AMP(8)*dconjg(AMP(8))',
                           'AMP2(6)=AMP2(6)+AMP(9)*dconjg(AMP(9))+AMP(10)*dconjg(AMP(10))+AMP(11)*dconjg(AMP(11))+AMP(12)*dconjg(AMP(12))'])
         
         # Test configs.inc
@@ -618,22 +620,33 @@ C     Amplitude(s) for diagram number 6
 C     Diagram 2
       DATA MAPCONFIG(2)/2/
       DATA (IFOREST(I,-1,2),I=1,2)/4,3/
-      DATA SPROP(-1,2)/23/
+      DATA SPROP(-1,2)/22/
       DATA TPRID(-1,2)/0/
 C     Diagram 3
       DATA MAPCONFIG(3)/3/
-      DATA (IFOREST(I,-1,3),I=1,2)/1,3/
-      DATA TPRID(-1,3)/21/
-      DATA SPROP(-1,3)/0/
-      DATA (IFOREST(I,-2,3),I=1,2)/-1,4/
+      DATA (IFOREST(I,-1,3),I=1,2)/4,3/
+      DATA SPROP(-1,3)/23/
+      DATA TPRID(-1,3)/0/
 C     Diagram 4
       DATA MAPCONFIG(4)/4/
       DATA (IFOREST(I,-1,4),I=1,2)/1,3/
-      DATA TPRID(-1,4)/23/
+      DATA TPRID(-1,4)/21/
       DATA SPROP(-1,4)/0/
       DATA (IFOREST(I,-2,4),I=1,2)/-1,4/
+C     Diagram 5
+      DATA MAPCONFIG(5)/5/
+      DATA (IFOREST(I,-1,5),I=1,2)/1,3/
+      DATA TPRID(-1,5)/22/
+      DATA SPROP(-1,5)/0/
+      DATA (IFOREST(I,-2,5),I=1,2)/-1,4/
+C     Diagram 6
+      DATA MAPCONFIG(6)/6/
+      DATA (IFOREST(I,-1,6),I=1,2)/1,3/
+      DATA TPRID(-1,6)/23/
+      DATA SPROP(-1,6)/0/
+      DATA (IFOREST(I,-2,6),I=1,2)/-1,4/
 C     Number of configs
-      DATA MAPCONFIG(0)/4/
+      DATA MAPCONFIG(0)/6/
 """
         #print open(self.give_pos('test')).read()
 
@@ -646,9 +659,11 @@ C     Number of configs
             subprocess_group.get('diagrams_for_configs'))
 
         goal_confsub = """      DATA (CONFSUB(I,1),I=1,2)/1,1/
-      DATA (CONFSUB(I,2),I=1,2)/3,3/
-      DATA (CONFSUB(I,3),I=1,2)/4,0/
-      DATA (CONFSUB(I,4),I=1,2)/6,0/
+      DATA (CONFSUB(I,2),I=1,2)/2,2/
+      DATA (CONFSUB(I,3),I=1,2)/3,3/
+      DATA (CONFSUB(I,4),I=1,2)/4,0/
+      DATA (CONFSUB(I,5),I=1,2)/5,0/
+      DATA (CONFSUB(I,6),I=1,2)/6,0/
 """
         
         #print open(self.give_pos('test')).read()
@@ -664,13 +679,16 @@ C     Number of configs
 
         #print open(self.give_pos('test')).read()
         self.assertFileContains('test',
-"""      LOGICAL ICOLAMP(2,4,2)
+"""      LOGICAL ICOLAMP(2,6,2)
       DATA(ICOLAMP(I,1,1),I=1,2)/.TRUE.,.TRUE./
       DATA(ICOLAMP(I,2,1),I=1,2)/.TRUE.,.FALSE./
-      DATA(ICOLAMP(I,3,1),I=1,2)/.TRUE.,.TRUE./
-      DATA(ICOLAMP(I,4,1),I=1,2)/.FALSE.,.TRUE./
+      DATA(ICOLAMP(I,3,1),I=1,2)/.TRUE.,.FALSE./
+      DATA(ICOLAMP(I,4,1),I=1,2)/.TRUE.,.TRUE./
+      DATA(ICOLAMP(I,5,1),I=1,2)/.FALSE.,.TRUE./
+      DATA(ICOLAMP(I,6,1),I=1,2)/.FALSE.,.TRUE./
       DATA(ICOLAMP(I,1,2),I=1,2)/.TRUE.,.TRUE./
       DATA(ICOLAMP(I,2,2),I=1,2)/.TRUE.,.FALSE./
+      DATA(ICOLAMP(I,3,2),I=1,2)/.TRUE.,.FALSE./
 """)
 
         # Test find_matrix_elements_for_configs
@@ -682,9 +700,9 @@ C     Number of configs
         symmetry, perms, ident_perms = \
                   diagram_symmetry.find_symmetry(subprocess_group)
 
-        self.assertEqual(symmetry, [1,1,1,1])
+        self.assertEqual(symmetry, [1,1,1,1,1,1])
         self.assertEqual(perms,
-                         [[0,1,2,3],[0,1,2,3],[0,1,2,3],[0,1,2,3]])
+                         [[0,1,2,3],[0,1,2,3],[0,1,2,3],[0,1,2,3],[0,1,2,3],[0,1,2,3]])
         self.assertEqual(ident_perms,
                          [[0,1,2,3]])
 

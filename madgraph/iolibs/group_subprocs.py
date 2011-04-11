@@ -265,7 +265,9 @@ class SubProcessGroup(base_objects.PhysicsObject):
                                     (model.get_particle(l.get('id')).\
                                          get('mass'),
                                      model.get_particle(l.get('id')).\
-                                         get('width'))) \
+                                         get('width'),
+                                     model.get_particle(l.get('id')).\
+                                         get('color'))) \
                                for l in v.get('legs')] \
                               for v in diagram.get('vertices')]
                 try:

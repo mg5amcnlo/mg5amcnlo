@@ -121,10 +121,10 @@ class TestDiagramSymmetry(unittest.TestCase):
 
         symmetry, perms, ident_perms = diagram_symmetry.find_symmetry(subproc_group)
 
-        self.assertEqual(len([s for s in symmetry if s > 0]), 18)
+        self.assertEqual(len([s for s in symmetry if s > 0]), 26)
 
         self.assertEqual(symmetry,
-                         [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, -24, -25, 1, 1, -26, -27, 1, 1, -6, -7, -8, -9, -10, 1, 1, 1, 1])
+                         [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, -34, -35, -36, 1, 1, 1, -37, -38, -39, 1, 1, 1, -8, -9, -10, -11, -12, -13, -14, 1, 1, 1, 1, 1, 1])
 
         # Check that the momentum assignments work
         matrix_element = \
