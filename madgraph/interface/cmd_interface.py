@@ -143,8 +143,6 @@ class CmdExtended(cmd.Cmd):
         '#*                                                          *\n' + \
         '#*     run as ./bin/mg5  filename                           *\n' + \
         '#*                                                          *\n' + \
-        '#*     automaticaly generated the %(time)s%(fill)s*\n' + \
-        '#*                                                          *\n' + \
         '#************************************************************\n'
         
         if info_line:
