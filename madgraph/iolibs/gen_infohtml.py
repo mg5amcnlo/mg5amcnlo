@@ -70,7 +70,10 @@ border-top: solid;
         <TD ALIGN=CENTER> <A HREF="../Cards/proc_card_mg5.dat">proc_card_mg5.dat</A> </TD>
         <TD> Input file used for code generation.
     $model_info
-    </TABLE><br><br><br>
+    </TABLE><br>
+    <center>
+    <H3>Back to <A HREF="../index.html">Process main page</A></H3>
+    </center>
  </BODY> 
 
 </HTML>""")
