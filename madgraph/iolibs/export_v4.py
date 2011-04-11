@@ -1159,12 +1159,12 @@ class ProcessExporterFortranME(ProcessExporterFortran):
             subprocess.call(['make'], stdout = devnull)
 
 
-        subprocess.call([os.path.join(old_pos, self.dir_path, 'bin', 'gen_cardhtml-pl')],
-                        stdout = devnull)
-
         if online:
             # Touch "Online" file
             os.system('touch %s/Online' % self.dir_path)
+
+        subprocess.call([os.path.join(old_pos, self.dir_path, 'bin', 'gen_cardhtml-pl')],
+                        stdout = devnull)
 
         #return to the initial dir
         os.chdir(old_pos)               
