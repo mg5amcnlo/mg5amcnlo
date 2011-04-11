@@ -31,9 +31,11 @@ import madgraph.iolibs.files as files
 import madgraph.iolibs.group_subprocs as group_subprocs
 import madgraph.iolibs.misc as misc
 import madgraph.iolibs.file_writers as writers
+import madgraph.iolibs.gen_infohtml as gen_infohtml
 import madgraph.iolibs.template_files as template_files
 import madgraph.iolibs.ufo_expression_parsers as parsers
 import madgraph.various.diagram_symmetry as diagram_symmetry
+
 
 import aloha.create_aloha as create_aloha
 import models.write_param_card as param_writer
@@ -1083,11 +1085,13 @@ class ProcessExporterFortranME(ProcessExporterFortran):
         files.append_to_file(filename,
                              self.write_subproc,
                              subprocdir)
-        # Generate info page
-        os.system(os.path.join('..', 'bin', 'gen_infohtml-pl'))
 
         # Return to original dir
         os.chdir(cwd)
+
+        # Generate info page
+        gen_infohtml.make_info_html(self.dir_path)
+
 
         if not calls:
             calls = 0
@@ -1130,9 +1134,10 @@ class ProcessExporterFortranME(ProcessExporterFortran):
 
         subprocess.call([os.path.join(old_pos, self.dir_path, 'bin', 'gen_cardhtml-pl')], \
                                                                 stdout = devnull)
-        subprocess.call([os.path.join(old_pos, self.dir_path, 'bin', 'gen_infohtml-pl')], \
-                                                                stdout = devnull)
+
         os.chdir(os.path.pardir)
+
+        gen_infohtml.make_info_html(self.dir_path)
         subprocess.call([os.path.join(old_pos, self.dir_path, 'bin', 'gen_crossxhtml-pl')],
                         stdout = devnull)
         [mv(name, './HTML/') for name in os.listdir('.') if \
@@ -2071,9 +2076,10 @@ class ProcessExporterFortranMEGroup(ProcessExporterFortranME):
         files.append_to_file(filename,
                              self.write_subproc,
                              subprocdir)
+        
         # Generate info page
-        os.system(os.path.join('..', 'bin', 'gen_infohtml-pl'))
-
+        gen_infohtml.make_info_html(os.path.pardir)
+        
         # Return to original dir
         os.chdir(cwd)
 

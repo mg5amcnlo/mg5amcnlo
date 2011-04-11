@@ -2400,7 +2400,7 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
         if self._export_dir:
             return
         
-        if os.path.exists(os.path.join(os.path.getcwd(), 'Cards')):    
+        if os.path.exists(os.path.join(os.getcwd(), 'Cards')):    
             self._export_dir = os.path.getcwd()
             return
     
