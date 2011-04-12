@@ -206,8 +206,8 @@ c +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
       ! Try to open param-card file
       call LHA_open_file(iunit,param_name,fopened)
       if(.not.fopened) then
-         print *,'Error: Could not open file',param_name
-         print *,'Exiting'
+         write(*,*) 'Error: Could not open file',param_name
+         write(*,*) 'Exiting'
          stop
       endif
       
@@ -219,7 +219,7 @@ c +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
       
          read(iunit,'(a132)',end=99,err=99) buff
          
-         if(buff(1:1) .ne.'#') then ! Skip comments and empty lines
+         if(buff .ne. '' .and. buff(1:1) .ne.'#') then ! Skip comments and empty lines
 
              tag=buff(1:5)
              call LHA_case_trap(tag) ! Select decay/block tag
@@ -232,8 +232,8 @@ c +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
                  temp=buff(7:132)
                  call LHA_blockread(blockname,temp,par,val,found)
                  if(found) GL=1
-             else if ((tag .eq. 'qnumbers').or.(tag.eq.'')) then! if qnumbers or empty tag do nothing
-                 temp=buff(7:132)
+             else if ((tag .eq. 'qnumbers').or.(blockname.eq.'')) then! if qnumbers or empty tag do nothing
+                 blockname=''
              else ! If we are in valid block, try to get back a name/value pair
                  call LHA_blockread(blockname,buff,par,val,found)
                  if(found) GL=1
