@@ -1174,6 +1174,10 @@ class FeynmanDiagram:
         if level == self.max_level:
             ext_dist_up = 1
             ext_dist_down = 1
+            # Treat special 2 > 1 case
+            if len(vertex_at_level) == 1 and min ==0 and max == 1:
+                vertex_at_level[0].def_position(1, 0.5)
+                return []
         else:
             # else follow option
             ext_dist_up = self._ext_distance_up
