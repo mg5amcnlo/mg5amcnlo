@@ -318,7 +318,9 @@ class TestModelCreation(unittest.TestCase, CheckFileCreate):
             nb_value +=1
             for i, singlevalue in enumerate(value):
                 #try:
-                    self.assertAlmostEqual(singlevalue, solutions[variable][i], \
+                    self.assertAlmostEqual(singlevalue,
+                                           solutions[variable][i],
+                                           places=7,
                         msg='fail to be equal for param %s : %s != %s' % \
                             (variable, singlevalue, solutions[variable][i]))
                 #except Exception as error:
@@ -327,7 +329,7 @@ class TestModelCreation(unittest.TestCase, CheckFileCreate):
                 #        solutions[variable] = [singlevalue]
                 #    else:
                 #        solutions[variable].append(singlevalue)
-        self.assertEqual(nb_value, 127)
+        self.assertEqual(nb_value, 113)
         
         
 
@@ -338,7 +340,7 @@ class TestModelCreation(unittest.TestCase, CheckFileCreate):
         alreadydefine = []
         for line in self.ReturnFile('intparam_definition.inc'):
             if 'ENDIF' in line:
-                self.assertEqual(len(alreadydefine), 35)
+                self.assertEqual(len(alreadydefine), 31)
                 
             if '=' not in line:
                 continue
@@ -349,7 +351,7 @@ class TestModelCreation(unittest.TestCase, CheckFileCreate):
             alreadydefine.append(new_def)
         alreadydefine = [name.lower() for name in alreadydefine]
         alreadydefine.sort()
-        solution = ['aew ', 'ckm11 ', 'ckm22 ', 'ckm33 ', 'complexi ', 'conjg__ckm11 ', 'conjg__ckm22 ', 'conjg__ckm33 ', 'cw ', 'cw__exp__2 ', 'dum0 ', 'dum1 ', 'ee ', 'ee__exp__2 ', 'g ', 'g1 ', 'g__exp__2 ', 'gal(1) ', 'gal(2) ', 'gw ', 'gw__exp__2 ', 'lam ', 'mh__exp__2 ', 'muh ', 'mw ', 'mw__exp__2 ', 'mz__exp__2 ', 'mz__exp__4 ', 'sqrt__2 ', 'sqrt__aew ', 'sqrt__as ', 'sqrt__sw2 ', 'sw ', 'sw2 ', 'sw__exp__2 ', 'v ', 'v__exp__2 ', 'yb ', 'yt ', 'ytau ']
+        solution = ['aew ', 'ckm33 ', 'complexi ', 'conjg__ckm33 ', 'cw ', 'cw__exp__2 ', 'dum0 ', 'dum1 ', 'ee ', 'ee__exp__2 ', 'g ', 'g1 ', 'g__exp__2 ', 'gal(1) ', 'gal(2) ', 'gw ', 'gw__exp__2 ', 'lam ', 'mh__exp__2 ', 'muh ', 'mw ', 'mw__exp__2 ', 'mz__exp__2 ', 'mz__exp__4 ', 'sqrt__2 ', 'sqrt__aew ', 'sqrt__as ', 'sqrt__sw2 ', 'sw ', 'sw2 ', 'sw__exp__2 ', 'v ', 'v__exp__2 ', 'yb ', 'yt ', 'ytau ']
         self.assertEqual(alreadydefine, solution)
         
 

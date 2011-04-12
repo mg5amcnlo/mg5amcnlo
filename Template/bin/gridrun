@@ -1,0 +1,246 @@
+#!/bin/bash
+#
+#  This runs survey,refine,unweight_events, one after the other
+#  
+#   First we need to get into the main directory
+#
+#
+#  Usage: grid_run
+#
+
+if [[  ! -d ./bin  ]]; then
+    cd ../
+    if [[ ! -d ./bin ]]; then
+        echo "Error: it must be executed from the main, or bin directory"
+        exit
+    fi
+fi
+#
+#  Now let shell know where to find important executables
+#
+main=`pwd`
+dirbin=$main/bin
+pydir=$main/../pythia-pgs/src
+pgsdir=$pydir
+ERAdir=$main/../ExRootAnalysis
+MAdir=$main/../MadAnalysis
+webbin=$dirbin
+td=$main/../td
+web=0
+
+echo $$ >> myprocid
+
+#if ( "$1" == "" ) then
+#    echo 'Number of unweighted events. This is ingnored and read from run_card.dat ' 
+#    set a  = $< 
+#else
+#    set a = $1
+#endif
+
+#if [[  "$1" == ""  ]]; then
+#    echo 'Enter 1 for parallel 0 for serial run' 
+#     read p 
+#else
+#     p=$1
+#fi
+p=0
+n=MadEvent
+#if [[  $p -gt 0 ]]; then
+#   if [[  "$2" == ""  ]]; then
+#    echo 'Enter name for jobs on pbs queue'
+#       read n
+#   else
+#       n=$2
+#   fi
+#   if [[  "$3" == ""  ]]; then
+#       echo 'Enter run name'
+#       read t
+#   else
+#       t=$3
+#   fi
+#else
+#   if [[  "$2" == ""  ]]; then
+#      echo 'Enter run name'
+#      read t
+       t=GridRun
+#   else
+#      t=$2
+#   fi
+#fi
+#set t = TeV2
+if [[  "$4" -ne ""  ]]; then
+    web=1
+    webbin="$MADGRAPH_BASE/MG_ME/WebBin"
+    pydir="$webbin/pythia-pgs"
+    pgsdir=$pydir
+    ERAdir="$MADGRAPH_BASE/MG_ME/ExRootAnalysis"
+    MAdir="$MADGRAPH_BASE/MG_ME/MadAnalysis"
+    td="$MADGRAPH_BASE/MG_ME/td"
+    touch Online
+fi
+date
+a=`awk '/^[^#].*=.*gevents/{print $1}' Cards/grid_card.dat`
+echo Generating $a events
+
+echo 'restoring default data...'
+$dirbin/restore_data default
+echo '...default data restored.'
+#
+#  Check if run already exists. If so, store run w/ new name
+#  and remove old run before starting.
+#
+
+if [[  -e status  ]]; then
+  rm status
+fi
+if [[  -e error  ]]; then
+  rm error
+fi
+touch RunWeb
+#echo "Cleaning directories" > status
+#$dirbin/gen_crossxhtml-pl $t
+#$dirbin/clean
+touch survey
+#echo "Starting jobs" > status
+#$dirbin/gen_crossxhtml-pl $t
+#$dirbin/survey $p $n $t
+if [[  -e error  ]]; then
+  cat error
+  date
+  cp -f error status
+  rm survey
+  rm RunWeb
+  $dirbin/gen_crossxhtml-pl $t
+  $dirbin/gen_cardhtml-pl
+  exit
+fi
+mv survey refine
+#
+#  Changes for gen_grid_job don't need refine
+#
+$dirbin/refine4grid $a $p $n 1 $t
+mv refine refine2
+rm -f refine2
+#
+#  Now collect the events
+#
+echo "Combining Events" >& status
+echo "Combining Events" 
+$dirbin/gen_crossxhtml-pl $t
+pushd ./Source > /dev/null
+# make ../bin/combine_events
+popd > /dev/null
+pushd SubProcesses > /dev/null
+$dirbin/run_combine $p
+mv events.lhe ../Events/
+mv unweighted_events.lhe ../Events/
+popd > /dev/null
+#
+#  do the banner
+#
+cd ./Events
+echo "putting the banner"
+$dirbin/put_banner events.lhe
+$dirbin/put_banner unweighted_events.lhe
+
+#
+#  Create root file
+#
+
+
+if [[ (-x $ERAdir/ExRootLHEFConverter) && (-e unweighted_events.lhe) ]]; then
+    echo "Creating Root File" >& ../status
+    $dirbin/gen_crossxhtml-pl $t
+    $ERAdir/ExRootLHEFConverter unweighted_events.lhe unweighted_events.root
+fi
+
+#if ((-x $ERAdir/ExRootMain) && (-e unweighted_events.root) && (-e ../Cards/plot_card.dat)) then
+#    echo "Creating Root Plots" >& ../status
+#    $dirbin/gen_crossxhtml-pl $t
+#    mkdir $t
+#    cd $t
+#    echo "../unweighted_events.root" > events.list
+#    $dirbin/plot $ERAdir > plot.log
+#    cd ..
+#    $dirbin/plot_page-pl $t
+#endif
+if [[ (-x $MAdir/plot_events) && (-e unweighted_events.lhe) && (-e ../Cards/plot_card.dat) ]]; then
+    echo "Creating Plots" >& ../status
+    $dirbin/gen_crossxhtml-pl $t
+    mkdir $t
+    cd $t
+    echo "../unweighted_events.lhe" > events.list
+    $dirbin/plot $MAdir $td > plot.log
+    cd ..
+    $dirbin/plot_page-pl $t
+fi
+
+exit
+#
+#  Below is for Pythia runs...
+#
+$dirbin/store $t
+$dirbin/gen_crossxhtml-pl $t
+
+#
+#  Run Pythia and PGS on events
+#
+
+# Compile pythia if not there
+if [[ !(-x $pydir/pythia) && (-d $pydir) && (-e ../Cards/pythia_card.dat) ]]; then
+    pushd $pydir > /dev/null
+    echo "No pythia executable - running make"
+    make
+    popd > /dev/null
+fi
+
+if [[ (-x $pydir/pythia) && (-e ../Cards/pythia_card.dat) ]]; then
+    gunzip -c ${t}_unweighted_events.lhe.gz > unweighted_events.lhe
+    echo "Running Pythia" >& ../status
+    $dirbin/gen_crossxhtml-pl $t
+# shower and hadronize event through Pythia
+    echo "Running pythia..."
+#    qsub -v pydir=$pydir $dirbin/run_pythia >> ../running_jobs
+    $dirbin/run_pythia $pydir $p  
+fi
+
+if [[ (-x $pydir/hep2lhe) && (-e ../Cards/pythia_card.dat) && (-e pythia_events.hep) ]]; then
+    echo "Creating Pythia LHE File" >& ../status
+    $dirbin/gen_crossxhtml-pl $t
+    $dirbin/run_hep2lhe $pydir $p  
+fi
+
+if [[ (-x $ERAdir/ExRootLHEFConverter) && (-e pythia_events.lhe) ]]; then
+    echo "Creating Pythia LHE Root File" >& ../status
+    $dirbin/gen_crossxhtml-pl $t
+    $ERAdir/ExRootLHEFConverter pythia_events.lhe pythia_lhe_events.root
+fi
+
+# Compile pgs if not there
+if [[ !(-x $pgsdir/pgs) && (-d $pgsdir) && (-e ../Cards/pgs_card.dat) ]]; then
+    pushd $pgsdir > /dev/null
+    echo "No pgs executable - running make"
+    make
+    popd > /dev/null
+fi
+
+if [[ (-x $pgsdir/pgs) && (-e ../Cards/pgs_card.dat) ]]; then
+    echo "Running PGS" >& ../status
+    $dirbin/gen_crossxhtml-pl $t
+    # now pass the event to a detector simulator and reconstruct objects
+    echo "Running PGS..."
+#    qsub -v pgsdir=$pgsdir $dirbin/run_pgs >> ../running_jobs
+    $dirbin/run_pgs $pgsdir $p
+fi
+#
+
+if [[ (-x $ERAdir/ExRootLHCOlympicsConverter) && (-e pgs_events.lhco) ]]; then
+    echo "Creating PGS Root File" >& ../status
+    $dirbin/gen_crossxhtml-pl $t
+    $ERAdir/ExRootLHCOlympicsConverter pgs_events.lhco pgs_events.root
+fi
+
+cd ../
+echo " " >& status
+$dirbin/gen_cardhtml-pl
+date

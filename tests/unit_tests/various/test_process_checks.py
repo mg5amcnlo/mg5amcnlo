@@ -68,7 +68,9 @@ class TestMatrixElementChecker(unittest.TestCase):
 
         full_model = model_reader.ModelReader(self.base_model)
         full_model.set_parameters_and_couplings()
-        p, w_rambo = process_checks.get_momenta(myproc, full_model)
+
+        evaluator = process_checks.MatrixElementEvaluator(full_model, None)
+        p, w_rambo = evaluator.get_momenta(myproc)
 
         # Check massless external momenta
         for mom in p[:-1]:
@@ -95,7 +97,7 @@ class TestMatrixElementChecker(unittest.TestCase):
                 self.assertTrue(abs(mom[i]) > 0.)
 
     def test_comparison_for_process(self):
-        """Test the get_momenta function"""
+        """Test check process for e+ e- > a Z"""
 
         myleglist = base_objects.LegList()
 
@@ -145,7 +147,7 @@ class TestMatrixElementChecker(unittest.TestCase):
         self.assertEqual(0, nb_fail)        
         
     def test_comparison_for_multiprocess(self):
-        """Test the get_momenta function"""
+        """Test check process for multiprocess"""
 
         myleglist = base_objects.MultiLegList()
 
@@ -173,7 +175,7 @@ class TestMatrixElementChecker(unittest.TestCase):
         
         comparisons = process_checks.check_lorentz(myproc)
         nb_fail = process_checks.output_lorentz_inv(comparisons, 
-                                                            output='fail')
+                                                    output='fail')
         self.assertEqual(0, nb_fail)
         
         #check number of helicities/jamp
@@ -196,7 +198,7 @@ class TestMatrixElementChecker(unittest.TestCase):
                 self.assertEqual(0, nb_fail)
 
     def test_failed_process(self):
-        """Test the get_momenta function"""
+        """Test that check process fails for wrong color-Lorentz."""
 
         # Change 4g interaction so color and lorentz don't agree
         gggg = self.base_model.get_interaction(4)
@@ -270,7 +272,8 @@ class TestLorentzInvariance(unittest.TestCase):
 
         full_model = model_reader.ModelReader(self.base_model)
         full_model.set_parameters_and_couplings()
-        p, w_rambo = process_checks.get_momenta(myproc, full_model)
+        evaluator = process_checks.MatrixElementEvaluator(full_model, None)
+        p, w_rambo = evaluator.get_momenta(myproc)
 
         def invariant_mass(p1, p2):
             #helping function to compute invariant mass
@@ -320,7 +323,6 @@ class TestLorentzInvariance(unittest.TestCase):
         for i in range(len(invariant_mass_boost)):
             self.assertAlmostEqual(invariant_mass_boost[i], 
                                    invariant_mass_result[i])    
-    
 
     def test_boost_momenta_gluino(self):
         """check if the momenta are boosted correctly by checking invariant mass
@@ -347,7 +349,9 @@ class TestLorentzInvariance(unittest.TestCase):
 
         full_model = model_reader.ModelReader(self.base_model)
         full_model.set_parameters_and_couplings()
-        p, w_rambo = process_checks.get_momenta(myproc, full_model)
+
+        evaluator = process_checks.MatrixElementEvaluator(full_model, None)
+        p, w_rambo = evaluator.get_momenta(myproc)
 
         def invariant_mass(p1, p2):
             #helping function to compute invariant mass

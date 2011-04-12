@@ -1529,7 +1529,7 @@ class ProcessTest(unittest.TestCase):
     def test_long_shell_string(self):
         """Test Process nice_string representation"""
 
-        goal_str = '1_cc_ccc_c_cccc_c_cccc_c_cccc_c_cccc_c_cccc_c_cccc-4'
+        goal_str = '1_cc_ccc_c_cccc_c_cccc_c_cccc_c_cccc_c_cccc_c_cccc_4'
 
         decay = copy.copy(self.myprocess)
         decay.set('legs', copy.deepcopy(decay.get('legs')))

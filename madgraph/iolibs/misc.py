@@ -120,7 +120,7 @@ def timed_input(question, default, timeout=None, noerror=True, fct=None):
         
     if timeout:
         signal.alarm(timeout)
-        question += '[%ss to answer [%s]] ' % (timeout, str(default))    
+        question += '[%ss to answer] ' % (timeout)    
     try:
         result = fct(question)
     except TimeOutError:

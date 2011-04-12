@@ -1,0 +1,135 @@
+DETECTOR CARD      # DO NOT REMOVE THIS IS A TAG!
+
+# Detector extension, in pseudorapidity units
+CEN_max_tracker    2.5                // Maximum tracker coverage          
+CEN_max_calo_cen   3.2                // central calorimeter coverage
+CEN_max_calo_fwd   4.9                // forward calorimeter pseudorapidity coverage
+CEN_max_mu         2.7                // muon chambers pseudorapidity coverage
+  
+# Energy resolution for electron/photon
+# \sigma/E = C + N/E + S/\sqrt{E}, E in GeV
+ELG_Scen          0.10                // S term for central ECAL  #http://arxiv.org/pdf/physics/0608012v1
+ELG_Ncen          0.0                 // N term for central ECAL  #http://arxiv.org/pdf/physics/0608012v1
+ELG_Ccen          0.0017              // C term for central ECAL  #http://arxiv.org/pdf/physics/0608012v1
+ELG_Sfwd          0.30407             // S term for forward FCAL  #http://villaolmo.mib.infn.it/ICATPP9th_2005/Calorimetry/Schram.p.pdf
+ELG_Nfwd          1.1533              // N term for central FCAL  #http://villaolmo.mib.infn.it/ICATPP9th_2005/Calorimetry/Schram.p.pdf
+ELG_Cfwd          0.0313              // C term for forward FCAL  #http://villaolmo.mib.infn.it/ICATPP9th_2005/Calorimetry/Schram.p.pdf
+ELG_Szdc          0.70              // S term for ZDC
+ELG_Nzdc          0.0               // N term for ZDC
+ELG_Czdc          0.08              // C term for ZDC
+
+
+# Energy resolution for hadrons in ecal/hcal/hf
+# \sigma/E = C + N/E + S/\sqrt{E}, E in GeV
+HAD_Shcal         0.58               // S term for central HCAL    #http://arxiv.org/pdf/hep-ex/0004009v1
+HAD_Nhcal         1.7                // N term for central HCAL    #http://arxiv.org/pdf/hep-ex/0004009v1
+HAD_Chcal         0.025              // C term for central HCAL    #http://arxiv.org/pdf/hep-ex/0004009v1
+HAD_Shf           0.9681             // S term for FCAL            #http://villaolmo.mib.infn.it/ICATPP9th_2005/Calorimetry/Schram.p.pdf
+HAD_Nhf           0.                 // N term for FCAL            #http://villaolmo.mib.infn.it/ICATPP9th_2005/Calorimetry/Schram.p.pdf
+HAD_Chf           0.0524             // C term for FCAL            #http://villaolmo.mib.infn.it/ICATPP9th_2005/Calorimetry/Schram.p.pdf
+HAD_Szdc          1.38              // S term for ZDC
+HAD_Nzdc          0.                // N term for ZDC
+HAD_Czdc          0.13              // C term for ZDC
+
+# Time resolution for ZDC/RP220/RP420
+ZDC_T_resolution   0                // in s
+RP220_T_resolution 0                // in s
+RP420_T_resolution 0                // in s
+
+# Muon smearing
+MU_SmearPt        0.01		    // transverse momentum Pt in GeV
+
+# Tracking efficiencies
+TRACK_ptmin       0.9               // minimal pt needed to reach the calorimeter in GeV
+TRACK_eff          90               // efficiency associated to the tracking (%)
+
+# Calorimetric towers
+TOWER_number         38
+TOWER_eta_edges 0.0 0.10 0.20 0.30 0.40 0.50 0.60 0.70 0.80 0.90 1.00 1.10 1.20 1.30 1.40 1.50 1.60 1.70 1.80 1.90 2.0 2.10 2.20 2.30 2.40 2.50 2.60 2.80 3.00 3.20 3.30 3.50 3.70 3.90 4.10 4.30 4.50 4.70 4.90 
+## list of the edges of each tower in eta for eta>0 assuming a symmetric detector in eta<0
+### the list starts with the lower edge of the most central tower
+### the list ends with the higher edged of the most forward tower
+### there should be NTOWER+1 values
+TOWER_dphi  10 10 10 10 10 10 10 10 10 10 10 10 10 10 10 10 10 10 10 10 10 10 10 10 10 10 20 20 20 10 20 20 20 20 20 20 20 20
+### list of the tower size in phi (in degrees), assuming that all towers are similar in phi for a given eta value
+### the list starts with the phi-size of the most central tower (eta=0)
+### the list ends with the phi-size of the most forward tower
+### there should be NTOWER values
+##
+#
+
+# Thresholds for reconstructed objetcs, Pt in GeV
+PTCUT_elec       10.0
+PTCUT_muon       10.0
+PTCUT_jet        20.0
+PTCUT_gamma      10.0
+PTCUT_taujet     10.0
+
+# Thresholds for reconstructed objects in ZDC, E in GeV
+ZDC_gamma_E      20
+ZDC_n_E          50
+
+# Charged lepton isolation. Pt and Et in GeV
+ISOL_PT          2.0      //minimal pt of tracks for isolation criteria
+ISOL_Cone        0.5      //Cone  for isolation criteria
+ISOL_Calo_ET     1E99     //minimal tower transverse energy for isolation criteria. 1E99 means "off"
+ISOL_Calo_Cone   0.4      //Cone for calorimetric isolation
+ISOL_Calo_Grid   3        //Grid size (N x N) for calorimetric isolation
+
+# General jet variable
+JET_coneradius   0.7            // generic jet radius ; not for tau's !!!
+JET_jetalgo      1              // 1 for Cone algorithm, 2 for MidPoint algorithm, 3 for SIScone algorithm, 4 for kt algorithm
+JET_seed         1.0            // minimum seed to start jet reconstruction, in GeV
+JET_Eflow        0              // Perfect energy assumed in the tracker coverage
+
+# Tagging definition
+BTAG_b           50		// b-tag efficiency (%)
+BTAG_mistag_c    10		// mistagging (%)
+BTAG_mistag_l    1		// mistagging (%)
+
+# FLAGS
+FLAG_bfield      1                       // 1 to run the bfield propagation else 0
+FLAG_vfd         1                       // 1 to run the very forward detectors else 0
+FLAG_RP          1                       // 1 to run the very forward detectors else 0
+FLAG_trigger     1                       // 1 to run the trigger selection else 0
+FLAG_frog        0                       // 1 to run the FROG event display
+FLAG_lhco        0                       //1 to run the LHCO
+
+# In case BField propagation allowed
+TRACK_radius      115                   // radius of the BField coverage, in cm #chapter 1 you gave me
+TRACK_length      351                   // length of the BField coverage, in cm #also
+TRACK_bfield_x    0                     // X component of the BField, in T
+TRACK_bfield_y    0                     // Y component of the BField, in T
+TRACK_bfield_z    2.0                   // Z component of the BField, in T #also
+
+# Very forward detector extension, in pseudorapidity
+# if allowed (WARNING: not expected for ATLAS!)
+VFD_min_calo_vfd  5.2                   // very forward calorimeter (if any) like CASTOR
+VFD_max_calo_vfd  6.6
+VFD_min_zdc       8.3			// zero-degree neutral calorimeter
+VFD_s_zdc         140                   // distance of the Zero Degree Calorimeter, from the IP, in [m]
+
+RP_220_s          220                   // distance of the RP to the IP, in meters
+RP_220_x          0.002                 // distance of the RP to the beam, in meters
+RP_420_s          420                   // distance of the RP to the IP, in meters
+RP_420_x          0.004                 // distance of the RP to the beam, in meters
+RP_beam1Card      DELPHESDIR/data/LHCB1IR1.tfs
+RP_beam2Card      DELPHESDIR/data/LHCB2IR1.tfs
+RP_IP_name        IP1
+RP_offsetEl_x     0.097                 // horizontal separation between both beam, in meters
+RP_offsetEl_y     0                     // vertical separation between both beam, in meters
+RP_offsetEl_s     120                   // distance of beam separation point, from IP
+RP_cross_x        0                     // IP offset in horizontal plane, in micrometers
+RP_cross_y        +500                  // IP offset in vertical plane, in micrometers
+RP_cross_ang_x    142.5                 // half-crossing angle in horizontal plane, in microrad
+RP_cross_ang_y    0                     // half-crossing angle in vertical plane, in microrad
+
+
+# In case FROG event display allowed
+NEvents_Frog      100
+# Number of events to process
+NEvents           -1                    // -1 means 'all'
+
+# input PDG tables
+PdgTableFilename  DELPHESDIR/data/particle.tbl     // table with particle pid,mass,charge,...
+

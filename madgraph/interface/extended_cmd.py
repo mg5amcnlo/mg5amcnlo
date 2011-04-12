@@ -239,7 +239,8 @@ class Cmd(cmd.Cmd):
             text+='\t %s \n' % option      
         print text
 
-    def list_completion(self, text, list):
+    @staticmethod
+    def list_completion(text, list):
         """Propose completions of text in list"""
         if not text:
             completions = list
@@ -299,9 +300,9 @@ class Cmd(cmd.Cmd):
 
 
 #===============================================================================
-# Question in order to return a path with auto-completion
+# Question with auto-completion
 #===============================================================================
-class OneLinePathCompletion(cmd.Cmd):
+class SmartQuestion(cmd.Cmd):
     """ a class for answering a question with the path autocompletion"""
 
     def preloop(self):
@@ -309,31 +310,42 @@ class OneLinePathCompletion(cmd.Cmd):
         self.prompt = ''
         self.value = None
 
-    def __init__(self,  allow_arg=[],*arg, **opt):
-        self.allow_arg = allow_arg
+    def __init__(self,  allow_arg=[], default=None, *arg, **opt):
+        self.allow_arg = [str(a) for a in allow_arg]
         self.history_header = ''
+        self.default_value = str(default)
         cmd.Cmd.__init__(self, *arg, **opt)
 
     def completenames(self, text, *ignored):
         signal.alarm(0) # avoid timer if any
         try:
-            return Cmd.path_completion(text,'.', only_dirs = False)
+            return Cmd.list_completion(text, self.allow_arg)
         except Exception, error:
             print error
             
     def default(self, line):
         """Default action if line is not recognized"""
-        self.value = line
+
+        if line == '' and self.default_value is not None:
+            self.value = self.default_value
+        else:
+            self.value = line
+
+    def emptyline(self):
+        """If empty line, return default"""
+        
+        if self.default_value is not None:
+            self.value = self.default_value
 
     def postcmd(self, stop, line):
         
         try:    
-            if self.value in self.allow_arg or os.path.isfile(self.value):
+            if self.value in self.allow_arg:
                 return True
             else:
                 raise Exception
         except Exception:
-            print """not valid argument. Valid argument are file path or value in (%s).""" \
+            print """not valid argument. Valid argument are in (%s).""" \
                           % ','.join(self.allow_arg)
             print 'please retry'
             return False
@@ -343,11 +355,44 @@ class OneLinePathCompletion(cmd.Cmd):
         return self.value
     
 # a function helper
-def raw_path_input(input_text, allow_arg=[]):
+def smart_input(input_text, allow_arg=[], default=None):
     print input_text
-    obj = OneLinePathCompletion(allow_arg=allow_arg)
-    return os.path.relpath(obj.cmdloop())
-    
+    obj = SmartQuestion(allow_arg=allow_arg, default=default)
+    return obj.cmdloop()
+
+#===============================================================================
+# Question in order to return a path with auto-completion
+#===============================================================================
+class OneLinePathCompletion(SmartQuestion):
+    """ a class for answering a question with the path autocompletion"""
+
+
+    def completenames(self, text, *ignored):
+        signal.alarm(0) # avoid timer if any
+        
+        return SmartQuestion.completenames(self, text) + Cmd.path_completion(text,'.', only_dirs = False)
+            
+    def postcmd(self, stop, line):
+        
+        try:    
+            if self.value in self.allow_arg: 
+                return True
+            elif os.path.isfile(self.value):
+                return os.path.relpath(self.value)
+            else:
+                raise Exception
+        except Exception, error:
+            print """not valid argument. Valid argument are file path or value in (%s).""" \
+                          % ','.join(self.allow_arg)
+            print 'please retry'
+            return False
+            
+# a function helper
+def raw_path_input(input_text, allow_arg=[], default=None):
+    print input_text
+    obj = OneLinePathCompletion(allow_arg=allow_arg, default=default )
+    return obj.cmdloop()
+
 #===============================================================================
 # 
 #===============================================================================
