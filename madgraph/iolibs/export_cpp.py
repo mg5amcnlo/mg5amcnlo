@@ -104,7 +104,7 @@ def setup_cpp_standalone_dir(dirpath, model):
 
     # Copy src Makefile
     makefile = read_template_file('Makefile_sa_cpp_src') % \
-                                   {'model': model.get('name').replace('-','_')}
+                           {'model': ProcessExporterCPP.get_model_name(model.get('name'))}
     open(os.path.join('src', 'Makefile'), 'w').write(makefile)
 
     # Copy SubProcesses files
@@ -112,7 +112,7 @@ def setup_cpp_standalone_dir(dirpath, model):
 
     # Copy SubProcesses Makefile
     makefile = read_template_file('Makefile_sa_cpp_sp') % \
-                                    {'model': model.get('name').replace('-', '_')}
+                                    {'model': ProcessExporterCPP.get_model_name(model.get('name'))}
     open(os.path.join('SubProcesses', 'Makefile'), 'w').write(makefile)
 
     # Return to original PWD
@@ -215,7 +215,7 @@ class ProcessExporterCPP(object):
             raise MadGraph5Error("No matrix elements to export")
 
         self.model = self.matrix_elements[0].get('processes')[0].get('model')
-        self.model_name = self.model.get('name').replace('-', '_')
+        self.model_name = ProcessExporterCPP.get_model_name(self.model.get('name'))
 
         self.processes = sum([me.get('processes') for \
                               me in self.matrix_elements], [])
@@ -883,6 +883,14 @@ class ProcessExporterCPP(object):
             res_list.append(res)
 
         return "\n".join(res_list)
+
+    @staticmethod
+    def get_model_name(name):
+        """Replace - with _, + with _plus_ in a model name."""
+
+        name = name.replace('-', '_')
+        name = name.replace('+', '_plus_')
+        return name
 
 #===============================================================================
 # generate_process_files_pythia8
@@ -1567,7 +1575,7 @@ class UFOModelConverterCPP(object):
         """ initialization of the objects """
 
         self.model = model
-        self.model_name = model['name'].replace('-','_')
+        self.model_name = ProcessExporterCPP.get_model_name(model['name'])
 
         self.dir_path = output_path
 
@@ -1841,8 +1849,8 @@ class UFOModelConverterCPP(object):
         template_h_files = self.read_aloha_template_files(ext = 'h')
         template_cc_files = self.read_aloha_template_files(ext = 'cc')
 
-        aloha_model = create_aloha.AbstractALOHAModel(\
-                                         self.model_name)
+        aloha_model = create_aloha.AbstractALOHAModel(self.model.get('name'))
+        
         if self.wanted_lorentz:
             aloha_model.compute_subset(self.wanted_lorentz)
         else:
