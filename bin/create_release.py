@@ -189,6 +189,11 @@ if a_test_results.errors or test_results.errors:
     exit()
 
 try:
+    os.remove("%s.asc" % filename)
+except:
+    pass
+
+try:
     status1 = subprocess.call(['gpg', '--armor', '--sign', '--detach-sig',
                                filename])
     if status1 == 0:
