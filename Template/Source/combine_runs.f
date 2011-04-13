@@ -276,7 +276,7 @@ c     Local
 c
       character*150 fname
       integer jc
-      double precision P(0:3,maxexternal),xwgt
+      double precision P(0:4,maxexternal),xwgt
       integer n,ic(7,maxexternal),ievent
       double precision scale,aqcd,aqed
       character*140 buff
