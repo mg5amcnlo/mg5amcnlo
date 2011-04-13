@@ -862,7 +862,7 @@ C     ----------
             IF (T .NE. 0D0 .AND. .NOT. GOODHEL(IMIRROR,I)) THEN
               GOODHEL(IMIRROR,I)=.TRUE.
               NGOOD(IMIRROR) = NGOOD(IMIRROR) +1
-              IGOOD(IMIRROR,NGOOD) = I
+              IGOOD(IMIRROR,NGOOD(IMIRROR)) = I
             ENDIF
           ENDIF
         ENDDO
