@@ -907,6 +907,8 @@ class ProcessExporterFortranME(ProcessExporterFortran):
     """Class to take care of exporting a set of matrix elements to
     MadEvent format."""
 
+    matrix_file = "matrix_madevent_v4.inc"
+
     def copy_v4template(self):
         """Additional actions needed for setup of Template
         """
@@ -1273,7 +1275,7 @@ class ProcessExporterFortranME(ProcessExporterFortran):
         replace_dict['jamp_lines'] = '\n'.join(jamp_lines)
 
         file = open(os.path.join(_file_path, \
-                          'iolibs/template_files/matrix_madevent_v4.inc')).read()
+                          'iolibs/template_files/%s' % self.matrix_file)).read()
         file = file % replace_dict
 
         # Write the file
@@ -1826,6 +1828,8 @@ class ProcessExporterFortranME(ProcessExporterFortran):
 class ProcessExporterFortranMEGroup(ProcessExporterFortranME):
     """Class to take care of exporting a set of matrix elements to
     MadEvent subprocess group format."""
+
+    matrix_file = "matrix_madevent_group_v4.inc"
 
     #===========================================================================
     # copy the Template in a new directory.
