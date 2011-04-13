@@ -35,6 +35,7 @@ C LOCAL VARIABLES
 C  
         INTEGER NHEL(NEXTERNAL,NCOMB),NTRY(2)
         REAL*8 T,MATRIX%(proc_id)s
+        REAL*8 R,SUMHEL,TS(NCOMB)
         INTEGER I,IDEN
         INTEGER IPROC,JC(NEXTERNAL),II
         LOGICAL GOODHEL(2,NCOMB)
@@ -61,7 +62,7 @@ C
     LOGICAL                    MULTI_CHANNEL
     COMMON/TO_MATRIX/ISUM_HEL, MULTI_CHANNEL
 %(define_iconfigs_lines)s
-    DATA NTRY,IDUM /0,0,-1/
+    DATA NTRY,IDUM /0,0,0/
     DATA XTRY, XREJ, NGOOD /0,0,0,0/
     SAVE YFRAC, IGOOD, JHEL
     DATA GOODHEL/THEL*.FALSE./
@@ -86,6 +87,9 @@ C ----------
     ENDIF
     ANS = 0D0
     WRITE(HEL_BUFF,'(16I5)') (0,I=1,NEXTERNAL)
+    DO I=1,NCOMB
+       TS(I)=0d0
+    ENDDO
     IF (ISUM_HEL .EQ. 0 .OR. NTRY(IMIRROR) .LT. 10) THEN
       DO I=1,NCOMB
          IF (GOODHEL(IMIRROR,I) .OR. NTRY(IMIRROR) .LT. 2) THEN
@@ -98,6 +102,7 @@ C ----------
                ENDIF
              ENDDO
              ANS=ANS+T
+             TS(I)=T
              IF (T .NE. 0D0 .AND. .NOT. GOODHEL(IMIRROR,I)) THEN
                GOODHEL(IMIRROR,I)=.TRUE.
                NGOOD(IMIRROR) = NGOOD(IMIRROR) +1
@@ -122,10 +127,23 @@ C ----------
               ENDIF
             ENDDO
             ANS=ANS+T*HWGT
+            TS(I)=T*HWGT
         ENDDO
         IF (ISUM_HEL .EQ. 1) THEN
-            WRITE(HEL_BUFF,'(16i5)')(NHEL(II,I),II=1,NEXTERNAL)
+          WRITE(HEL_BUFF,'(16i5)')(NHEL(II,I),II=1,NEXTERNAL)
         ENDIF
+    ENDIF
+    IF (ISUM_HEL .NE. 1) THEN
+    R=XRAN1(IDUM)*ANS
+    SUMHEL=0d0
+    DO I=1,NCOMB
+       SUMHEL=SUMHEL+TS(I)
+       IF(R.LT.SUMHEL)THEN
+          WRITE(HEL_BUFF,'(16i5)')(NHEL(II,I),II=1,NEXTERNAL)
+          GOTO 10
+       ENDIF
+    ENDDO
+ 10 CONTINUE   
     ENDIF
     IF (MULTI_CHANNEL) THEN
         XTOT=0D0
