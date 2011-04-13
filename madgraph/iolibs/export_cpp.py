@@ -20,6 +20,7 @@ import fractions
 import glob
 import itertools
 import logging
+from math import fmod
 import os
 import re
 import shutil
@@ -240,7 +241,7 @@ class ProcessExporterCPP(object):
         self.helas_call_writer = cpp_helas_call_writer
 
         if not isinstance(self.helas_call_writer, helas_call_writers.CPPUFOHelasCallWriter):
-            raise ProcessExporterCPPError, \
+            raise self.ProcessExporterCPPError, \
                 "helas_call_writer not CPPUFOHelasCallWriter"
 
         self.nexternal, self.ninitial = \
@@ -1269,7 +1270,7 @@ class ProcessExporterPythia8(ProcessExporterCPP):
 
             if final_id_list and final_mirror_id_list or \
                not final_id_list and not final_mirror_id_list:
-                raise ProcessExporterCPPError,\
+                raise self.ProcessExporterCPPError,\
                       "Missing processes, or both process and mirror process"
 
 
@@ -1289,7 +1290,7 @@ class ProcessExporterPythia8(ProcessExporterCPP):
                                            (i, l) in items if l > 0]).\
                                  replace('*1', ''))
                 if any([l>1 for (i, l) in items]):
-                    raise ProcessExporterCPPError,\
+                    raise self.ProcessExporterCPPError,\
                           "More than one process with identical " + \
                           "external particles is not supported"
 
@@ -1303,7 +1304,7 @@ class ProcessExporterPythia8(ProcessExporterCPP):
                                            (i, l) in items if l > 0]).\
                                  replace('*1', ''))
                 if any([l>1 for (i, l) in items]):
-                    raise ProcessExporterCPPError,\
+                    raise self.ProcessExporterCPPError,\
                           "More than one process with identical " + \
                           "external particles is not supported"
 
@@ -1386,7 +1387,7 @@ class ProcessExporterPythia8(ProcessExporterCPP):
 
                 color_flows = []
                 for color_flow_dict in color_flow_list:
-                    color_flows.append([color_flow_dict[l.get('number')][i] % 500 \
+                    color_flows.append([int(fmod(color_flow_dict[l.get('number')][i], 500)) \
                                         for (l,i) in itertools.product(legs, [0,1])])
 
                 # Write out colors for the selected color flow
