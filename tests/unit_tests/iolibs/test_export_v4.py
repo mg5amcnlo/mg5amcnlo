@@ -1257,21 +1257,21 @@ C     ----------
       IF(IMODE.EQ.1)THEN
 C       Set up process information from file symfact
         LUN=NEXTUNOPEN()
-        OPEN(UNIT=LUN,FILE='../symfact.dat',STATUS='OLD',ERR=10)
         IPROC=1
         SYMCONF(IPROC)=ICONFIG
-        DO I=1,MAPCONFIG(0)
-          READ(LUN,*) XDUM, ICONF
+        OPEN(UNIT=LUN,FILE='../symfact.dat',STATUS='OLD',ERR=20)
+        DO WHILE(.TRUE.)
+          READ(LUN,*,ERR=10,END=10) XDUM, ICONF
           IF(ICONF.EQ.-MAPCONFIG(ICONFIG))THEN
             IPROC=IPROC+1
-            SYMCONF(IPROC)=I
+            SYMCONF(IPROC)=INT(XDUM)
           ENDIF
         ENDDO
-        SYMCONF(0)=IPROC
+ 10     SYMCONF(0)=IPROC
         CLOSE(LUN)
         RETURN
- 10     WRITE(*,*)'Error opening symfact.dat. No permutations will be
-     $    used.'
+ 20     SYMCONF(0)=IPROC
+        WRITE(*,*)'Error opening symfact.dat. No permutations used.'
         RETURN
       ELSE IF(IMODE.EQ.2)THEN
 C       Output weights and number of events
@@ -1475,7 +1475,11 @@ C       Flip x values (to get boost right)
 
 """ % misc.get_pkg_info()
         
+
         #print open(self.give_pos('test')).read()
+        #strings=open(self.give_pos('test')).read().split('\n')
+        #for i,s in enumerate(strings):
+        #    self.assertEqual(s,goal_super.split('\n')[i])
         self.assertFileContains('test', goal_super)
 
     def test_export_group_decay_chains(self):
