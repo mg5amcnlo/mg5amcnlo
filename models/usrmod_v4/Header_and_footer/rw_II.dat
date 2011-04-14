@@ -1,0 +1,6 @@
+       bn="decay"
+       call set_it(n,ivalue,value,name,6,bn,twidth,1.5083d0)
+       call set_it(n,ivalue,value,name,25,bn,hwidth,0.0037d0)
+       call set_it(n,ivalue,value,name,23,bn,zwidth,2.441d0)
+       call set_it(n,ivalue,value,name,24,bn,wwidth,2.0476d0)
+

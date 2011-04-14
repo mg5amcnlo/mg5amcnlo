@@ -104,7 +104,7 @@ def setup_cpp_standalone_dir(dirpath, model):
 
     # Copy src Makefile
     makefile = read_template_file('Makefile_sa_cpp_src') % \
-                                           {'model': model.get('name')}
+                                   {'model': model.get('name').replace('-','_')}
     open(os.path.join('src', 'Makefile'), 'w').write(makefile)
 
     # Copy SubProcesses files
@@ -112,7 +112,7 @@ def setup_cpp_standalone_dir(dirpath, model):
 
     # Copy SubProcesses Makefile
     makefile = read_template_file('Makefile_sa_cpp_sp') % \
-                                           {'model': model.get('name')}
+                                    {'model': model.get('name').replace('-', '_')}
     open(os.path.join('SubProcesses', 'Makefile'), 'w').write(makefile)
 
     # Return to original PWD
@@ -183,6 +183,8 @@ class ProcessExporterCPP(object):
     C++ format."""
 
     # Static variables (for inheritance)
+    process_dir = '.'
+    include_dir = '.'
     process_template_h = 'cpp_process_h.inc'
     process_template_cc = 'cpp_process_cc.inc'
     process_class_template = 'cpp_process_class.inc'
@@ -194,7 +196,7 @@ class ProcessExporterCPP(object):
         pass
     
     def __init__(self, matrix_elements, cpp_helas_call_writer, process_string = "",
-                 path = os.getcwd()):
+                 process_number = 0, path = os.getcwd()):
         """Initiate with matrix elements, helas call writer, process
         string, path. Generate the process .h and .cc files."""
 
@@ -213,20 +215,28 @@ class ProcessExporterCPP(object):
             raise MadGraph5Error("No matrix elements to export")
 
         self.model = self.matrix_elements[0].get('processes')[0].get('model')
+        self.model_name = self.model.get('name').replace('-', '_')
 
         self.processes = sum([me.get('processes') for \
                               me in self.matrix_elements], [])
+        self.processes.extend(sum([me.get_mirror_processes() for \
+                              me in self.matrix_elements], []))
+
+        self.nprocesses = len(self.matrix_elements)
+        if any([m.get('has_mirror_process') for m in self.matrix_elements]):
+            self.nprocesses = 2*len(self.matrix_elements)
 
         if process_string:
             self.process_string = process_string
         else:
             self.process_string = self.processes[0].base_string()
 
+        self.process_number = process_number
+
         self.process_name = self.get_process_name()
         self.process_class = "CPPProcess"
 
         self.path = path
-        self.process_number = self.processes[0].get('id')
         self.helas_call_writer = cpp_helas_call_writer
 
         if not isinstance(self.helas_call_writer, helas_call_writers.CPPUFOHelasCallWriter):
@@ -273,42 +283,31 @@ class ProcessExporterCPP(object):
         """Generate the .h and .cc files needed for C++, for the
         processes described by multi_matrix_element"""
 
-        cwd = os.getcwd()
-
-        os.chdir(self.path)
-
-        pathdir = os.getcwd()
-
-    def generate_process_files(self):
-
-        """Generate the .h and .cc files needed for Pythia 8, for the
-        processes described by multi_matrix_element"""
-
-        cwd = os.getcwd()
-
-        os.chdir(self.path)
-
-        pathdir = os.getcwd()
-
-        logger.info('Creating files %(process)s.h and %(process)s.cc in' % \
-                    {'process': self.process_class} +\
-                    ' directory %(dir)s' % {'dir': self.path})
-
         # Create the files
-        filename = '%s.h' % self.process_class
+        if not os.path.isdir(os.path.join(self.path, self.include_dir)):
+            os.makedirs(os.path.join(self.path, self.include_dir))
+        filename = os.path.join(self.path, self.include_dir,
+                                '%s.h' % self.process_class)
         self.write_process_h_file(writers.CPPWriter(filename))
 
-        filename = '%s.cc' % self.process_class
+        if not os.path.isdir(os.path.join(self.path, self.process_dir)):
+            os.makedirs(os.path.join(self.path, self.process_dir))
+        filename = os.path.join(self.path, self.process_dir,
+                                '%s.cc' % self.process_class)
         self.write_process_cc_file(writers.CPPWriter(filename))
 
-        os.chdir(cwd)
+        logger.info('Created files %(process)s.h and %(process)s.cc in' % \
+                    {'process': self.process_class} + \
+                    ' directory %(dir)s' % {'dir': os.path.split(filename)[0]})
+
+
 
     #===========================================================================
     # write_process_h_file
     #===========================================================================
     def write_process_h_file(self, writer):
         """Write the class definition (.h) file for the process"""
-
+        
         if not isinstance(writer, writers.CPPWriter):
             raise writers.CPPWriter.CPPWriterError(\
                 "writer not CPPWriter")
@@ -321,7 +320,7 @@ class ProcessExporterCPP(object):
 
         # Extract model name
         replace_dict['model_name'] = \
-                         self.model.get('name')
+                         self.model_name
 
         # Extract process file name
         replace_dict['process_file_name'] = self.process_name
@@ -356,7 +355,7 @@ class ProcessExporterCPP(object):
         replace_dict['process_file_name'] = self.process_name
 
         # Extract model name
-        replace_dict['model_name'] = self.model.get('name')
+        replace_dict['model_name'] = self.model_name
                          
 
         # Extract class function definitions
@@ -379,7 +378,7 @@ class ProcessExporterCPP(object):
         replace_dict = {}
 
         # Extract model name
-        replace_dict['model_name'] = self.model.get('name')
+        replace_dict['model_name'] = self.model_name
 
         # Extract process info lines for all processes
         process_lines = "\n".join([self.get_process_info_lines(me) for me in \
@@ -398,19 +397,19 @@ class ProcessExporterCPP(object):
 
         # Extract process definition
         process_definition = "%s (%s)" % (self.process_string,
-                                          self.model.get('name'))
+                                          self.model_name)
         replace_dict['process_definition'] = process_definition
 
         process = self.processes[0]
 
         replace_dict['process_code'] = self.process_number
         replace_dict['nexternal'] = self.nexternal
-        replace_dict['nprocesses'] = len(self.matrix_elements)
+        replace_dict['nprocesses'] = self.nprocesses
 
         if self.single_helicities:
             replace_dict['all_sigma_kin_definitions'] = \
                           """// Calculate wavefunctions
-                          void calculate_wavefunctions(const int hel[]);
+                          void calculate_wavefunctions(const int perm[], const int hel[]);
                           static const int nwavefuncs = %d;
                           std::complex<double> w[nwavefuncs][18];""" % \
                                                     len(self.wavefunctions)
@@ -443,7 +442,7 @@ class ProcessExporterCPP(object):
         replace_dict = {}
 
         # Extract model name
-        replace_dict['model_name'] = self.model.get('name')
+        replace_dict['model_name'] = self.model_name
 
         # Extract process info lines
         replace_dict['process_lines'] = \
@@ -507,7 +506,7 @@ class ProcessExporterCPP(object):
         if proc_number != 0:
             process_string = "%d_%s" % (proc_number, process_string)
 
-        process_string = "Sigma_%s_%s" % (self.model.get('name'),
+        process_string = "Sigma_%s_%s" % (self.model_name,
                                           process_string)
         return process_string
 
@@ -585,15 +584,41 @@ class ProcessExporterCPP(object):
                             self.get_helicity_matrix(self.matrix_elements[0])
 
             # Extract denominator
-            replace_dict['den_factors'] = \
-                     ",".join([str(me.get_denominator_factor()) for me in \
-                               self.matrix_elements])
-
+            den_factors = [str(me.get_denominator_factor()) for me in \
+                               self.matrix_elements]
+            if self.nprocesses != len(self.matrix_elements):
+                den_factors.extend(den_factors)
+            replace_dict['den_factors'] = ",".join(den_factors)
             replace_dict['get_matrix_t_lines'] = "\n".join(
                     ["t[%(iproc)d]=matrix_%(proc_name)s();" % \
                      {"iproc": i, "proc_name": \
                       me.get('processes')[0].shell_string().replace("0_", "")} \
                      for i, me in enumerate(self.matrix_elements)])
+
+            # Generate lines for mirror matrix element calculation
+            mirror_matrix_lines = ""
+
+            if any([m.get('has_mirror_process') for m in self.matrix_elements]):
+                mirror_matrix_lines += \
+"""             // Mirror initial state momenta for mirror process
+                perm[0]=1;
+                perm[1]=0;
+                // Calculate wavefunctions
+                calculate_wavefunctions(perm, helicities[ihel]);
+                // Mirror back
+                perm[0]=0;
+                perm[1]=1;
+                // Calculate matrix elements
+                """
+                
+                mirror_matrix_lines += "\n".join(
+                    ["t[%(iproc)d]=matrix_%(proc_name)s();" % \
+                     {"iproc": i + len(self.matrix_elements), "proc_name": \
+                      me.get('processes')[0].shell_string().replace("0_", "")} \
+                     for i, me in enumerate(self.matrix_elements) if me.get('has_mirror_process')])
+                    
+            replace_dict['get_mirror_matrix_lines'] = mirror_matrix_lines
+
 
             file = \
                  read_template_file(\
@@ -616,7 +641,7 @@ class ProcessExporterCPP(object):
         ret_lines = []
         if self.single_helicities:
             ret_lines.append(\
-                "void %s::calculate_wavefunctions(const int hel[]){" % \
+                "void %s::calculate_wavefunctions(const int perm[], const int hel[]){" % \
                 class_name)
             ret_lines.append("// Calculate wavefunctions for all processes")
             ret_lines.append(self.get_calculate_wavefunctions(\
@@ -741,6 +766,13 @@ class ProcessExporterCPP(object):
                                 process.get('legs')[1].get('id')) \
                                for process in me.get('processes')]]
 
+            # Add mirror processes, 
+            beam_processes.extend([(len(self.matrix_elements) + i, me) for (i, me) in \
+                              enumerate(self.matrix_elements) if beam_parts in \
+                              [(process.get('legs')[0].get('id'),
+                                process.get('legs')[1].get('id')) \
+                               for process in me.get_mirror_processes()]])
+
             # Now add matrix elements for the processes with the right factors
             res_lines.append("// Add matrix elements for processes with beams %s" % \
                              repr(beam_parts))
@@ -749,7 +781,11 @@ class ProcessExporterCPP(object):
                                         (i, len([proc for proc in \
                                          me.get('processes') if beam_parts == \
                                          (proc.get('legs')[0].get('id'),
-                                          proc.get('legs')[1].get('id'))])) \
+                                          proc.get('legs')[1].get('id')) or \
+                                         me.get('has_mirror_process') and \
+                                         beam_parts == \
+                                         (proc.get('legs')[1].get('id'),
+                                          proc.get('legs')[0].get('id'))])) \
                                         for (i, me) in beam_processes]).\
                               replace('*1', '')))
             res_lines.append("}")
@@ -769,8 +805,8 @@ class ProcessExporterCPP(object):
         helicity_line_list = []
 
         for helicities in matrix_element.get_helicity_matrix():
-            helicity_line_list.append(",".join(['%d'] * len(helicities)) % \
-                                      tuple(helicities))
+            helicity_line_list.append("{"+",".join(['%d'] * len(helicities)) % \
+                                       tuple(helicities) + "}")
 
         return helicity_line + ",".join(helicity_line_list) + "};"
 
@@ -800,7 +836,7 @@ class ProcessExporterCPP(object):
                 num_list = matrix_element.get('color_matrix').\
                                             get_line_numerators(index, denominator)
 
-                matrix_strings.append("%s" % \
+                matrix_strings.append("{%s}" % \
                                      ",".join(["%d" % i for i in num_list]))
             matrix_string = "static const double cf[ncolor][ncolor] = {" + \
                             ",".join(matrix_strings) + "};"
@@ -852,7 +888,8 @@ class ProcessExporterCPP(object):
 # generate_process_files_pythia8
 #===============================================================================
 def generate_process_files_pythia8(multi_matrix_element, cpp_helas_call_writer,
-                                   process_string = "", path = os.getcwd()):
+                                   process_string = "",
+                                   process_number = 0, path = os.getcwd()):
 
     """Generate the .h and .cc files needed for Pythia 8, for the
     processes described by multi_matrix_element"""
@@ -860,10 +897,18 @@ def generate_process_files_pythia8(multi_matrix_element, cpp_helas_call_writer,
     process_exporter_pythia8 = ProcessExporterPythia8(multi_matrix_element,
                                                       cpp_helas_call_writer,
                                                       process_string,
+                                                      process_number,
                                                       path)
 
+    # Set process directory
+    model = process_exporter_pythia8.model
+    model_name = process_exporter_pythia8.model_name
+    process_exporter_pythia8.process_dir = \
+                   'Processes_%(model)s' % {'model': \
+                    model_name}
+    process_exporter_pythia8.include_dir = process_exporter_pythia8.process_dir
     process_exporter_pythia8.generate_process_files()
-
+    return process_exporter_pythia8
 
 #===============================================================================
 # ProcessExporterPythia8
@@ -897,7 +942,7 @@ class ProcessExporterPythia8(ProcessExporterCPP):
         replace_dict = {}
 
         # Extract model name
-        replace_dict['model_name'] = self.model.get('name')
+        replace_dict['model_name'] = self.model_name
 
         # Extract process info lines for all processes
         process_lines = "\n".join([self.get_process_info_lines(me) for me in \
@@ -913,12 +958,13 @@ class ProcessExporterPythia8(ProcessExporterCPP):
 
         # Extract process definition
         process_definition = "%s (%s)" % (self.process_string,
-                                          self.model.get('name'))
+                                          self.model_name)
         replace_dict['process_definition'] = process_definition
 
         process = self.processes[0]
         replace_dict['process_code'] = 10000 + \
-                                       process.get('id')
+                                       100*process.get('id') + \
+                                       self.process_number
 
         replace_dict['inFlux'] = self.get_process_influx()
 
@@ -926,12 +972,12 @@ class ProcessExporterPythia8(ProcessExporterCPP):
         replace_dict['resonances'] = self.get_resonance_lines()
 
         replace_dict['nexternal'] = self.nexternal
-        replace_dict['nprocesses'] = len(self.matrix_elements)
+        replace_dict['nprocesses'] = self.nprocesses
         
         if self.single_helicities:
             replace_dict['all_sigma_kin_definitions'] = \
                           """// Calculate wavefunctions
-                          void calculate_wavefunctions(const int hel[]);
+                          void calculate_wavefunctions(const int perm[], const int hel[]);
                           static const int nwavefuncs = %d;
                           std::complex<double> w[nwavefuncs][18];""" % \
                                                     len(self.wavefunctions)
@@ -964,7 +1010,7 @@ class ProcessExporterPythia8(ProcessExporterCPP):
         replace_dict = {}
 
         # Extract model name
-        replace_dict['model_name'] = self.model.get('name')
+        replace_dict['model_name'] = self.model_name
 
         # Extract process info lines
         replace_dict['process_lines'] = \
@@ -1185,8 +1231,17 @@ class ProcessExporterPythia8(ProcessExporterCPP):
                               [(process.get('legs')[0].get('id'),
                                 process.get('legs')[1].get('id')) \
                                for process in me.get('processes')]]
+            # Pick out all mirror processes for this beam pair
+            beam_mirror_processes = []
+            if beam_parts[0] != beam_parts[1]:
+                beam_mirror_processes = [(i, me) for (i, me) in \
+                              enumerate(self.matrix_elements) if beam_parts in \
+                              [(process.get('legs')[1].get('id'),
+                                process.get('legs')[0].get('id')) \
+                               for process in me.get('processes')]]
 
             final_id_list = []
+            final_mirror_id_list = []
             for (i, me) in beam_processes:
                 final_id_list.extend([tuple([l.get('id') for l in \
                                              proc.get('legs') if l.get('state')]) \
@@ -1194,9 +1249,23 @@ class ProcessExporterPythia8(ProcessExporterCPP):
                                       if beam_parts == \
                                       (proc.get('legs')[0].get('id'),
                                        proc.get('legs')[1].get('id'))])
+            for (i, me) in beam_mirror_processes:
+                final_mirror_id_list.extend([tuple([l.get('id') for l in \
+                                             proc.get('legs') if l.get('state')]) \
+                                      for proc in me.get_mirror_processes() \
+                                      if beam_parts == \
+                                      (proc.get('legs')[0].get('id'),
+                                       proc.get('legs')[1].get('id'))])
             final_id_list = set(final_id_list)
-            ncombs = len(final_id_list)
-            #for ids in final_id_list
+            final_mirror_id_list = set(final_mirror_id_list)
+
+            if final_id_list and final_mirror_id_list or \
+               not final_id_list and not final_mirror_id_list:
+                raise ProcessExporterCPPError,\
+                      "Missing processes, or both process and mirror process"
+
+
+            ncombs = len(final_id_list)+len(final_mirror_id_list)
 
             res_lines.append("// Pick one of the flavor combinations %s" % \
                              ", ".join([repr(ids) for ids in final_id_list]))
@@ -1216,11 +1285,32 @@ class ProcessExporterPythia8(ProcessExporterCPP):
                           "More than one process with identical " + \
                           "external particles is not supported"
 
-            res_lines.append("int flavors[%d][%d] = {%s};" % \
-                             (ncombs, self.nfinal,
-                              ",".join(str(id) for id in \
-                                       sum([list(ids) for ids in final_id_list],
-                                           []))))
+            for final_ids in final_mirror_id_list:
+                items = [(i, len([ p for p in me.get_mirror_processes() \
+                             if [l.get('id') for l in p.get('legs')] == \
+                             list(beam_parts) + list(final_ids)])) \
+                       for (i, me) in beam_mirror_processes]
+                me_weight.append("+".join(["matrix_element[%i]*%i" % \
+                                           (i+len(self.matrix_elements), l) for\
+                                           (i, l) in items if l > 0]).\
+                                 replace('*1', ''))
+                if any([l>1 for (i, l) in items]):
+                    raise ProcessExporterCPPError,\
+                          "More than one process with identical " + \
+                          "external particles is not supported"
+
+            if final_id_list:
+                res_lines.append("int flavors[%d][%d] = {%s};" % \
+                                 (ncombs, self.nfinal,
+                                  ",".join(["{" + ",".join([str(id) for id \
+                                            in ids]) + "}" for ids \
+                                            in final_id_list])))
+            elif final_mirror_id_list:
+                res_lines.append("int flavors[%d][%d] = {%s};" % \
+                                 (ncombs, self.nfinal,
+                                  ",".join(["{" + ",".join([str(id) for id \
+                                            in ids]) + "}" for ids \
+                                            in final_mirror_id_list])))
             res_lines.append("vector<double> probs;")
             res_lines.append("double sum = %s;" % "+".join(me_weight))
             for me in me_weight:
@@ -1292,12 +1382,67 @@ class ProcessExporterPythia8(ProcessExporterCPP):
                                         for (l,i) in itertools.product(legs, [0,1])])
 
                 # Write out colors for the selected color flow
-                res_lines.append("static int col[%d][%d] = {%s};" % \
+                res_lines.append("static int colors[%d][%d] = {%s};" % \
                                  (ncolor, 2 * self.nexternal,
-                                  ",".join(str(i) for i in sum(color_flows, []))))
+                                  ",".join(["{" + ",".join([str(id) for id \
+                                            in flows]) + "}" for flows \
+                                            in color_flows])))
 
                 res_lines.append("setColAcol(%s);" % \
-                                 ",".join(["col[ic][%d]" % i for i in \
+                                 ",".join(["colors[ic][%d]" % i for i in \
+                                          range(2 * self.nexternal)]))
+            res_lines.append('}')
+
+        # Same thing but for mirror processes
+        for ime, me in enumerate(self.matrix_elements):
+            if not me.get('has_mirror_process'):
+                continue
+            res_lines.append("else if(%s){" % \
+                                 "||".join(["&&".join(["id%d == %d" % \
+                                            (i+1, l.get('id')) for (i, l) in \
+                                            enumerate(p.get('legs'))])\
+                                           for p in me.get_mirror_processes()]))
+
+            proc = me.get('processes')[0]
+            if not me.get('color_basis'):
+                # If no color basis, just output trivial color flow
+                res_lines.append("setColAcol(%s);" % ",".join(["0"]*2*self.nfinal))
+            else:
+                # Else, build a color representation dictionnary
+                repr_dict = {}
+                legs = proc.get_legs_with_decays()
+                legs[0:2] = [legs[1],legs[0]]
+                for l in legs:
+                    repr_dict[l.get('number')] = \
+                        proc.get('model').get_particle(l.get('id')).get_color()
+                # Get the list of color flows
+                color_flow_list = \
+                    me.get('color_basis').color_flow_decomposition(\
+                                                      repr_dict, self.ninitial)
+                # Select a color flow
+                ncolor = len(me.get('color_basis'))
+                res_lines.append("""vector<double> probs;
+                  double sum = %s;
+                  for(int i=0;i<ncolor[%i];i++)
+                  probs.push_back(jamp2[%i][i]/sum);
+                  int ic = rndmPtr->pick(probs);""" % \
+                                 ("+".join(["jamp2[%d][%d]" % (ime, i) for i \
+                                            in range(ncolor)]), ime, ime))
+
+                color_flows = []
+                for color_flow_dict in color_flow_list:
+                    color_flows.append([color_flow_dict[l.get('number')][i] % 500 \
+                                        for (l,i) in itertools.product(legs, [0,1])])
+
+                # Write out colors for the selected color flow
+                res_lines.append("static int colors[%d][%d] = {%s};" % \
+                                 (ncolor, 2 * self.nexternal,
+                                  ",".join(["{" + ",".join([str(id) for id \
+                                            in flows]) + "}" for flows \
+                                            in color_flows])))
+
+                res_lines.append("setColAcol(%s);" % \
+                                 ",".join(["colors[ic][%d]" % i for i in \
                                           range(2 * self.nexternal)]))
             res_lines.append('}')
 
@@ -1330,13 +1475,13 @@ def get_mg5_info_lines():
     info = misc.get_pkg_info()
     info_lines = ""
     if info and info.has_key('version') and  info.has_key('date'):
-        info_lines = "#  by MadGraph 5 v. %s, %s\n" % \
+        info_lines = "#  MadGraph 5 v. %s, %s\n" % \
                      (info['version'], info['date'])
         info_lines = info_lines + \
                      "#  By the MadGraph Development Team\n" + \
                      "#  Please visit us at https://launchpad.net/madgraph5"
     else:
-        info_lines = "#  by MadGraph 5\n" + \
+        info_lines = "#  MadGraph 5\n" + \
                      "#  By the MadGraph Development Team\n" + \
                      "#  Please visit us at https://launchpad.net/madgraph5"        
 
@@ -1370,7 +1515,7 @@ def coeff(ff_number, frac, is_imaginary, Nc_power, Nc_value=3):
     return res_str + '*'
 
 #===============================================================================
-# Routines to output UFO models in C++ format
+# Routines to export/output UFO models in C++ format
 #===============================================================================
 
 def convert_model_to_cpp(model, output_dir, wanted_lorentz = [],
@@ -1407,19 +1552,22 @@ class UFOModelConverterCPP(object):
                       ('SMINPUTS', (1,)): ('aEM',)}
 
     # Template files to use
+    include_dir = '.'
+    cc_file_dir = '.'
     param_template_h = 'cpp_model_parameters_h.inc'
     param_template_cc = 'cpp_model_parameters_cc.inc'
     aloha_template_h = 'cpp_hel_amps_h.inc'
     aloha_template_cc = 'cpp_hel_amps_cc.inc'
 
-    copy_files = ["read_slha.h", "read_slha.cc"]
+    copy_include_files = []
+    copy_cc_files = []
 
     def __init__(self, model, output_path, wanted_lorentz = [],
                  wanted_couplings = []):
         """ initialization of the objects """
 
         self.model = model
-        self.model_name = model['name']
+        self.model_name = model['name'].replace('-','_')
 
         self.dir_path = output_path
 
@@ -1464,17 +1612,19 @@ class UFOModelConverterCPP(object):
             elif 'aS' in key:
                 for p in self.model['parameters'][key]:
                     self.params_dep.append(base_objects.ModelVariable(p.name,
-                                                 self.p_to_cpp.parse(p.expr),
-                                                 p.type,
-                                                 p.depend))
+                                              p.name + " = " + \
+                                              self.p_to_cpp.parse(p.expr) + ";",
+                                              p.type,
+                                              p.depend))
             else:
                 for p in self.model['parameters'][key]:
                     if p.name == 'ZERO':
                         continue
                     self.params_indep.append(base_objects.ModelVariable(p.name,
-                                                 self.p_to_cpp.parse(p.expr),
-                                                 p.type,
-                                                 p.depend))
+                                              p.name + " = " + \
+                                              self.p_to_cpp.parse(p.expr) + ";",
+                                              p.type,
+                                              p.depend))
 
         # For external parameters, want to read off the SLHA block code
         while params_ext:
@@ -1483,19 +1633,19 @@ class UFOModelConverterCPP(object):
             expression = ""
             assert param.value.imag == 0
             if len(param.lhacode) == 1:
-                expression = "slha.get_block_entry(\"%s\", %d, %e);" % \
-                             (param.lhablock.lower(), param.lhacode[0],
-                              param.value.real)
+                expression = "%s = slha.get_block_entry(\"%s\", %d, %e);" % \
+                             (param.name, param.lhablock.lower(),
+                              param.lhacode[0], param.value.real)
             elif len(param.lhacode) == 2:
                 expression = "indices[0] = %d;\nindices[1] = %d;\n" % \
                              (param.lhacode[0], param.lhacode[1])
-                expression += "%s=slha.get_block_entry(\"%s\", indices, %e);" \
+                expression += "%s = slha.get_block_entry(\"%s\", indices, %e);" \
                               % (param.name, param.lhablock.lower(), param.value.real)
             else:
                 raise MadGraph5Error("Only support for SLHA blocks with 1 or 2 indices")
             self.params_indep.insert(0,
                                    base_objects.ModelVariable(param.name,
-                                                              expression,
+                                                   expression,
                                                               'real'))
             
     def prepare_couplings(self, wanted_couplings = []):
@@ -1525,7 +1675,7 @@ class UFOModelConverterCPP(object):
 
         # Convert coupling expressions from Python to C++
         for coup in self.coups_dep.values() + self.coups_indep:
-            coup.expr = self.p_to_cpp.parse(coup.expr)
+            coup.expr = coup.name + " = " + self.p_to_cpp.parse(coup.expr) + ";"
 
     # Routines for writing the parameter files
 
@@ -1533,15 +1683,47 @@ class UFOModelConverterCPP(object):
         """Generate the parameters_model.h and parameters_model.cc
         files, which have the parameters and couplings for the model."""
 
-        parameter_h_file = os.path.join(self.dir_path,
-                                    'Parameters_%s.h' % self.model.get('name'))
-        parameter_cc_file = os.path.join(self.dir_path,
-                                     'Parameters_%s.cc' % self.model.get('name'))
+        if not os.path.isdir(os.path.join(self.dir_path, self.include_dir)):
+            os.makedirs(os.path.join(self.dir_path, self.include_dir))
+        if not os.path.isdir(os.path.join(self.dir_path, self.cc_file_dir)):
+            os.makedirs(os.path.join(self.dir_path, self.cc_file_dir))
+
+        parameter_h_file = os.path.join(self.dir_path, self.include_dir,
+                                    'Parameters_%s.h' % self.model_name)
+        parameter_cc_file = os.path.join(self.dir_path, self.cc_file_dir,
+                                     'Parameters_%s.cc' % self.model_name)
+
+        file_h, file_cc = self.generate_parameters_class_files()
+
+        # Write the files
+        writers.CPPWriter(parameter_h_file).writelines(file_h)
+        writers.CPPWriter(parameter_cc_file).writelines(file_cc)
+
+        # Copy additional needed files
+        for copy_file in self.copy_include_files:
+            shutil.copy(os.path.join(_file_path, 'iolibs',
+                                         'template_files',copy_file),
+                        os.path.join(self.dir_path, self.include_dir))
+        # Copy additional needed files
+        for copy_file in self.copy_cc_files:
+            shutil.copy(os.path.join(_file_path, 'iolibs',
+                                         'template_files',copy_file),
+                        os.path.join(self.dir_path, self.cc_file_dir))
+
+        logger.info("Created files %s and %s in directory" \
+                    % (os.path.split(parameter_h_file)[-1],
+                       os.path.split(parameter_cc_file)[-1]))
+        logger.info("%s and %s" % \
+                    (os.path.split(parameter_h_file)[0],
+                     os.path.split(parameter_cc_file)[0]))
+
+    def generate_parameters_class_files(self):
+        """Create the content of the Parameters_model.h and .cc files"""
 
         replace_dict = {}
 
         replace_dict['info_lines'] = get_mg5_info_lines()
-        replace_dict['model_name'] = self.model.get('name')
+        replace_dict['model_name'] = self.model_name
 
         replace_dict['independent_parameters'] = \
                                    "// Model parameters independent of aS\n" + \
@@ -1578,21 +1760,8 @@ class UFOModelConverterCPP(object):
                  replace_dict
         file_cc = read_template_file(self.param_template_cc) % \
                   replace_dict
-
-        # Write the files
-        writers.CPPWriter(parameter_h_file).writelines(file_h)
-        writers.CPPWriter(parameter_cc_file).writelines(file_cc)
-
-        # Copy additional needed files
-        for copy_file in self.copy_files:
-            shutil.copy(os.path.join(_file_path, 'iolibs',
-                                         'template_files',copy_file),
-                            self.dir_path)
-
-        logger.info("Created files %s and %s in directory %s" \
-                    % (os.path.split(parameter_h_file)[-1],
-                       os.path.split(parameter_cc_file)[-1],
-                       os.path.split(parameter_h_file)[0]))
+        
+        return file_h, file_cc
 
     def write_parameters(self, params):
         """Write out the definitions of parameters"""
@@ -1620,10 +1789,7 @@ class UFOModelConverterCPP(object):
 
         res_strings = []
         for param in params:
-            if param.expr.find('\n') >= 0:
-                res_strings.append("%s;" % param.expr)
-            else:
-                res_strings.append("%s=%s;" % (param.name, param.expr))
+            res_strings.append("%s" % param.expr)
 
         # Correct width sign for Majorana particles (where the width
         # and mass need to have the same sign)        
@@ -1652,18 +1818,23 @@ class UFOModelConverterCPP(object):
     def write_aloha_routines(self):
         """Generate the hel_amps_model.h and hel_amps_model.cc files, which
         have the complete set of generalized Helas routines for the model"""
+        
+        if not os.path.isdir(os.path.join(self.dir_path, self.include_dir)):
+            os.makedirs(os.path.join(self.dir_path, self.include_dir))
+        if not os.path.isdir(os.path.join(self.dir_path, self.cc_file_dir)):
+            os.makedirs(os.path.join(self.dir_path, self.cc_file_dir))
 
-        model_h_file = os.path.join(self.dir_path,
-                                    'hel_amps_%s.h' % self.model.get('name'))
-        model_cc_file = os.path.join(self.dir_path,
-                                     'hel_amps_%s.cc' % self.model.get('name'))
+        model_h_file = os.path.join(self.dir_path, self.include_dir,
+                                    'HelAmps_%s.h' % self.model_name)
+        model_cc_file = os.path.join(self.dir_path, self.cc_file_dir,
+                                     'HelAmps_%s.cc' % self.model_name)
 
         replace_dict = {}
 
         replace_dict['output_name'] = self.output_name
         replace_dict['info_lines'] = get_mg5_info_lines()
         replace_dict['namespace'] = self.namespace
-        replace_dict['model_name'] = self.model.get('name')
+        replace_dict['model_name'] = self.model_name
 
         # Read in the template .h and .cc files, stripped of compiler
         # commands and namespaces
@@ -1671,14 +1842,14 @@ class UFOModelConverterCPP(object):
         template_cc_files = self.read_aloha_template_files(ext = 'cc')
 
         aloha_model = create_aloha.AbstractALOHAModel(\
-                                         self.model.get('name'))
+                                         self.model_name)
         if self.wanted_lorentz:
             aloha_model.compute_subset(self.wanted_lorentz)
         else:
             aloha_model.compute_all(save=False)
         for abstracthelas in dict(aloha_model).values():
             aloha_writer = aloha_writers.ALOHAWriterForCPP(abstracthelas,
-                                                        self.dir_path)
+                                                           self.dir_path)
             header = aloha_writer.define_header()
             template_h_files.append(self.write_function_declaration(\
                                          aloha_writer, header))
@@ -1695,10 +1866,12 @@ class UFOModelConverterCPP(object):
         writers.CPPWriter(model_h_file).writelines(file_h)
         writers.CPPWriter(model_cc_file).writelines(file_cc)
 
-        logger.info("Created files %s and %s in directory %s" \
+        logger.info("Created files %s and %s in directory" \
                     % (os.path.split(model_h_file)[-1],
-                       os.path.split(model_cc_file)[-1],
-                       os.path.split(model_h_file)[0]))
+                       os.path.split(model_cc_file)[-1]))
+        logger.info("%s and %s" % \
+                    (os.path.split(model_h_file)[0],
+                     os.path.split(model_cc_file)[0]))
 
 
     def read_aloha_template_files(self, ext):
@@ -1752,15 +1925,113 @@ class UFOModelConverterCPP(object):
         return line
 
 #===============================================================================
-# Routines to output UFO models in Pythia8 format
+# generate_example_file_pythia8
+#===============================================================================
+def generate_example_file_pythia8(path,
+                                   model_path,
+                                   process_names,
+                                   exporter,
+                                   main_file_name = "",
+                                   example_dir = "examples"):
+    """Generate the main_model_name.cc file and Makefile in the examples dir"""
+
+    filepath = os.path.join(path, example_dir)
+    if not os.path.isdir(filepath):
+        os.makedirs(filepath)
+
+    replace_dict = {}
+
+    # Extract version number and date from VERSION file
+    info_lines = get_mg5_info_lines()
+    replace_dict['info_lines'] = info_lines
+
+    # Extract model name
+    replace_dict['model_name'] = exporter.model_name
+
+    # Extract include line
+    replace_dict['include_lines'] = \
+                          "\n".join(["#include \"%s.h\"" % proc_name \
+                                     for proc_name in process_names])
+
+    # Extract setSigmaPtr line
+    replace_dict['sigma_pointer_lines'] = \
+           "\n".join(["pythia.setSigmaPtr(new %s());" % proc_name \
+                     for proc_name in process_names])
+
+    # Extract param_card path
+    replace_dict['param_card'] = os.path.join(os.path.pardir,model_path,
+                                              "param_card_%s.dat" % \
+                                              exporter.model_name)
+
+    # Create the example main file
+    file = read_template_file('pythia8_main_example_cc.inc') % \
+           replace_dict
+
+    if not main_file_name:
+        num = 1
+        while os.path.exists(os.path.join(filepath,
+                                    'main_%s_%i' % (exporter.model_name, num))):
+            num += 1
+        main_file_name = str(num)
+
+    main_file = 'main_%s_%s' % (exporter.model_name,
+                                main_file_name)
+
+    main_filename = os.path.join(filepath, main_file + '.cc')
+
+    # Write the file
+    writers.CPPWriter(main_filename).writelines(file)
+
+    replace_dict = {}
+
+    # Extract version number and date from VERSION file
+    replace_dict['info_lines'] = get_mg5_info_lines()
+
+    replace_dict['main_file'] = main_file
+
+    replace_dict['process_dir'] = model_path
+
+    replace_dict['include_dir'] = exporter.include_dir
+
+    # Create the makefile
+    file = read_template_file('pythia8_main_makefile.inc') % \
+           replace_dict
+
+    make_filename = os.path.join(filepath, 'Makefile_%s_%s' % \
+                            (exporter.model_name, main_file_name))
+
+    # Write the file
+    open(make_filename, 'w').write(file)
+
+    logger.info("Created files %s and %s in directory %s" \
+                % (os.path.split(main_filename)[-1],
+                   os.path.split(make_filename)[-1],
+                   os.path.split(make_filename)[0]))
+    return main_file, make_filename
+
+    
+
+#===============================================================================
+# Routines to export/output UFO models in Pythia8 format
 #===============================================================================
 
-def convert_model_to_pythia8(model, output_dir):
+def convert_model_to_pythia8(model, pythia_dir):
     """Create a full valid Pythia 8 model from an MG5 model (coming from UFO)"""
 
+    if not os.path.isfile(os.path.join(pythia_dir, 'include', 'Pythia.h')):
+        logger.warning('Directory %s is not a valid Pythia 8 main dir.' % pythia_dir)
+
     # create the model parameter files
-    model_builder = UFOModelConverterPythia8(model, output_dir)
+    model_builder = UFOModelConverterPythia8(model, pythia_dir)
+    model_builder.cc_file_dir = "Processes_" + model_builder.model_name
+    model_builder.include_dir = model_builder.cc_file_dir
+
     model_builder.write_files()
+    # Write makefile
+    model_builder.write_makefile()
+    # Write param_card
+    model_builder.write_param_card()
+    return model_builder.model_name, model_builder.cc_file_dir
 
 #===============================================================================
 # UFOModelConverterPythia8
@@ -1772,7 +2043,7 @@ class UFOModelConverterPythia8(UFOModelConverterCPP):
     # Static variables (for inheritance)
     output_name = 'Pythia 8'
     namespace = 'Pythia8'
-
+    
     # Dictionaries for expression of MG5 SM parameters into Pythia 8
     slha_to_expr = {('SMINPUTS', (1,)): '1./csm->alphaEM(pow(pd->m0(23),2))',
                     ('SMINPUTS', (2,)): 'M_PI*csm->alphaEM(pow(pd->m0(23),2))*pow(pd->m0(23),2)/(sqrt(2.)*pow(pd->m0(24),2)*(pow(pd->m0(23),2)-pow(pd->m0(24),2)))',
@@ -1798,20 +2069,21 @@ class UFOModelConverterPythia8(UFOModelConverterCPP):
             elif 'aS' in key:
                 for p in self.model['parameters'][key]:
                     self.params_dep.append(base_objects.ModelVariable(p.name,
-                                                 self.p_to_cpp.parse(p.expr),
+                                                 p.name + " = " + \
+                                                 self.p_to_cpp.parse(p.expr) + ';',
                                                  p.type,
                                                  p.depend))
             else:
                 for p in self.model['parameters'][key]:
                     self.params_indep.append(base_objects.ModelVariable(p.name,
-                                                 self.p_to_cpp.parse(p.expr),
+                                                 p.name + " = " + \
+                                                 self.p_to_cpp.parse(p.expr) + ';',
                                                  p.type,
                                                  p.depend))
 
         # For external parameters, want to use the internal Pythia
         # parameters for SM params and masses and widths. For other
-        # parameters, want to read off the SLHA block code (TO BE
-        # IMPLEMENTED)
+        # parameters, want to read off the SLHA block code
         while params_ext:
             param = params_ext.pop(0)
             key = (param.lhablock, tuple(param.lhacode))
@@ -1819,35 +2091,100 @@ class UFOModelConverterPythia8(UFOModelConverterCPP):
                 # This value needs to be set event by event
                 self.params_dep.insert(0,
                                        base_objects.ModelVariable(param.name,
-                                                         self.slha_to_expr[key],
-                                                         'real'))
+                                                   param.name + ' = ' + \
+                                                   self.slha_to_expr[key] + ';',
+                                                   'real'))
             else:
                 try:
                     # This is an SM parameter defined above
                     self.params_indep.insert(0,
                                              base_objects.ModelVariable(param.name,
-                                                         self.slha_to_expr[key],
-                                                         'real'))
+                                                   param.name + ' = ' + \
+                                                   self.slha_to_expr[key] + ';',
+                                                   'real'))
                 except:
                     # For Yukawa couplings, masses and widths, insert
                     # the Pythia 8 value
                     if param.lhablock == 'YUKAWA':
-                        self.slha_to_expr[key] = 'pd->mRun(%i, 120.)' \
+                        self.slha_to_expr[key] = 'pd->mRun(%i, pd->m0(24))' \
                                                  % param.lhacode[0]
                     if param.lhablock == 'MASS':
                         self.slha_to_expr[key] = 'pd->m0(%i)' \
                                             % param.lhacode[0]
                     if param.lhablock == 'DECAY':
-                        self.slha_to_expr[key] = 'pd->mWidth(%i)' \
-                                            % param.lhacode[0]
+                        self.slha_to_expr[key] = \
+                                            'pd->mWidth(%i)' % param.lhacode[0]
                     if key in self.slha_to_expr:
                         self.params_indep.insert(0,\
-                                                 base_objects.ModelVariable(param.name,
-                                                          self.slha_to_expr[key],
-                                                          'real'))
+                                     base_objects.ModelVariable(param.name,
+                                     param.name + "=" + self.slha_to_expr[key] \
+                                                                + ';',
+                                                                'real'))
                     else:
-                        # Fix unknown parameters as soon as Pythia has fixed this
-                        raise MadGraph5Error, \
-                              "Parameter with key " + repr(key) + \
-                              " unknown in model export to Pythia 8"
+                        # This is a BSM parameter which is read from SLHA
+                        if len(param.lhacode) == 1:
+                            expression = "if(!slhaPtr->getEntry<double>(\"%s\", %d, %s)){\n" % \
+                                         (param.lhablock.lower(),
+                                          param.lhacode[0],
+                                          param.name) + \
+                                          ("cout << \"Warning, setting %s to %e\" << endl;\n" \
+                                          + "%s = %e;}") % (param.name, param.value.real,
+                                                           param.name, param.value.real)
+                        elif len(param.lhacode) == 2:
+                            expression = "if(!slhaPtr->getEntry<double>(\"%s\", %d, %d, %s)){\n" % \
+                                         (param.lhablock.lower(),
+                                          param.lhacode[0],
+                                          param.lhacode[1],
+                                          param.name) + \
+                                          ("cout << \"Warning, setting %s to %e\" << endl;\n" \
+                                          + "%s = %e;}") % (param.name, param.value.real,
+                                                           param.name, param.value.real)
+                        elif len(param.lhacode) == 3:
+                            expression = "if(!slhaPtr->getEntry<double>(\"%s\", %d, %d, %d, %s)){\n" % \
+                                         (param.lhablock.lower(),
+                                          param.lhacode[0],
+                                          param.lhacode[1],
+                                          param.lhacode[2],
+                                          param.name) + \
+                                          ("cout << \"Warning, setting %s to %e\" << endl;\n" \
+                                          + "%s = %e;}") % (param.name, param.value.real,
+                                                           param.name, param.value.real)
+                        else:
+                            raise MadGraph5Error("Only support for SLHA blocks with 1 or 2 indices")
+                        self.params_indep.insert(0,
+                                               base_objects.ModelVariable(param.name,
+                                                                          expression,
+                                                                          'real'))
 
+    def write_makefile(self):
+        """Generate the Makefile, which creates library files."""
+
+        makefilename = os.path.join(self.dir_path, self.cc_file_dir,
+                                    'Makefile')
+
+        replace_dict = {}
+
+        replace_dict['info_lines'] = get_mg5_info_lines()
+        replace_dict['model'] = self.model_name
+
+        makefile = read_template_file('pythia8_makefile.inc') % replace_dict
+
+        # Write the files
+        open(makefilename, 'w').write(makefile)
+
+        logger.info("Created %s in directory %s" \
+                    % (os.path.split(makefilename)[-1],
+                       os.path.split(makefilename)[0]))
+
+    def write_param_card(self):
+        """Generate the param_card for the model."""
+
+        paramcardname = os.path.join(self.dir_path, self.cc_file_dir,
+                                    'param_card_%s.dat' % self.model_name)
+        # Write out param_card
+        open(paramcardname, 'w').write(\
+            self.model.write_param_card())
+
+        logger.info("Created %s in directory %s" \
+                    % (os.path.split(paramcardname)[-1],
+                       os.path.split(paramcardname)[0]))

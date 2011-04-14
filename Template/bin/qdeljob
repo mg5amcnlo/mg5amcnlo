@@ -1,0 +1,13 @@
+#!/usr/bin/perl
+
+    if (open jobline,"running_jobs"){
+	while ($jobid = <jobline>){
+	    system("qdel $jobid > /dev/null");
+	}
+	close (jobline);
+        system("rm -f running_jobs");
+    }
+    else {
+	print "Error executing qdel \n";
+    }
+

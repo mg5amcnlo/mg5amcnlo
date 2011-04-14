@@ -31,7 +31,17 @@ class TestVariable(unittest.TestCase):
         self.var2 = aloha_lib.Variable(3, 'var2')
         self.var3 = aloha_lib.Variable(11, 'var3')
         
+    
+    def test_power(self):
+        """check that the power is correctly update"""
         
+        
+        a = aloha_lib.ScalarVariable('P3_0')
+        b = a ** 2 * a **2
+
+        b = b.simplify()
+        self.assertEqual(b.power,4)
+    
     def testsumvarvar (self):
         """ test the sum of two Variable Object"""
         
@@ -86,7 +96,8 @@ class TestVariable(unittest.TestCase):
     def testsumvarint(self):
         """ test the sum of one Variable with an integer"""
 
-        self.assertRaises(AttributeError,aloha_lib.Variable.__add__, self.var1, 4)
+        sum = self.var1 + 4
+        self.assertEqual(sum.__class__, aloha_lib.AddVariable)
         return
     
     def testsumvaradd(self):
@@ -549,9 +560,25 @@ class TestAddVariable(unittest.TestCase):
                 for term in fact:
                     self.assertEqual(term.prefactor, 2)
                     self.assertEqual(term.power, 1)
+    
+    def test_factorization4(self):
+        """test the factorization with constant factor"""
         
-    
-    
+        P1_0 = aloha_lib.ScalarVariable('p1')
+        P1_1 = aloha_lib.ScalarVariable('p2')
+        P1_2 = aloha_lib.ScalarVariable('p3')
+        P1_3 = aloha_lib.ScalarVariable('p4')        
+        OM1  = aloha_lib.ScalarVariable('om1') 
+        
+        expr1 = ( -1j * ( P1_3 * P1_1 * OM1 ) + 1j * ( P1_0**2 * P1_3 * P1_1 * OM1**2 ) + -1j * ( P1_1**3 * P1_3 * OM1**2 ) + -1j * ( P1_2**2 * P1_3 * P1_1 * OM1**2 ) + -1j * ( P1_3**3 * P1_1 * OM1**2 ) )
+
+        p1, p2, p3, p4, om1 = 1,2,3,4,5
+        value = eval(str(expr1))
+        
+        expr1 = expr1.factorize()
+        self.assertEqual(eval(str(expr1)), value)
+
+
     
 class TestMultVariable(unittest.TestCase):
 
@@ -1217,7 +1244,246 @@ class testLorentzObject(unittest.TestCase):
             self.assertEqual(low_level.get_rep(ind).__class__, aloha_lib.MultVariable)
             self.assertEqual(low_level.get_rep(ind), aloha_lib.ScalarVariable('M3') 
                                 * aloha_lib.ScalarVariable('P2_%s' % ind[0]))
-                            
+            
+    def test_spin2propagator(self):
+        """Check that the two definition are coherent"""
+        
+        obj = aloha_obj
+        t = 1
+        mu, nu, rho, sigma = 1,2,3,4
+        propa = (obj.Metric(mu,rho) - obj.OverMass2(t) * obj.P(mu,t) *obj.P(rho,t) ) *\
+                (obj.Metric(nu,sigma) - obj.OverMass2(t) * obj.P(nu,t) *obj.P(sigma,t) )
+        propa = propa + \
+                (obj.Metric(mu,sigma) - obj.OverMass2(t) * obj.P(mu,t) *obj.P(sigma,t) ) *\
+                (obj.Metric(nu,rho) - obj.OverMass2(t) * obj.P(nu,t) *obj.P(rho,t) )
+        propa = propa - 2/3 * \
+                (obj.Metric(mu,nu) - obj.OverMass2(t) * obj.P(mu,t) *obj.P(nu,t) ) *\
+                (obj.Metric(rho,sigma) - obj.OverMass2(t) * obj.P(rho,t) *obj.P(sigma,t) )
+        
+        prop = aloha_obj.Spin2Propagator(mu,nu,rho,sigma, t)
+        zero = 1j * propa - 2 * prop
+        
+        
+        zero = zero.expand().simplify() 
+        
+        P1_0, P1_1, P1_2, P1_3 = 7,2,3,5
+        OM1 = 1/36
+        for ind in zero.listindices():
+            data = zero.get_rep(ind)
+            self.assertAlmostEqual(eval(str(data)), 0)    
+ 
+    def test_spin2propagator2(self):
+        """test the spin2 propagator is coherent with it's expanded expression"""
+        
+        Metric = aloha_obj.Metric
+        P = aloha_obj.P
+        OM = aloha_obj.OverMass2
+        
+        t = 1
+        mu, nu, alpha, beta = 1,2,3,4
+        
+        
+        propa = 1/2 *( Metric(mu, alpha)* Metric(nu, beta) +\
+                       Metric(mu, beta) * Metric(nu, alpha) - \
+                       Metric(mu, nu) * Metric(alpha, beta))
+        
+        propa = propa - 1/2 * OM(t) * \
+                  (Metric(mu,alpha)* P(nu, t) * P(beta, t) + \
+                   Metric(nu, beta) * P(mu, t) * P(alpha, t) + \
+                   Metric(mu, beta) * P(nu, t) * P(alpha, t) + \
+                   Metric(nu, alpha) * P(mu, t) * P(beta , t) )
+        
+        propa = propa + 1/6 * Metric(mu, nu) * Metric(alpha, beta)
+        propa = propa + 4/6 * OM(t) * OM(t) * P(mu,t) * P(nu, t) * P(alpha,t) * P(beta,t)
+        propa = propa + 2/6 * OM(t) * Metric(mu, nu) *  P(alpha,t) * P(beta,t)
+        propa = propa + 2/6 * OM(t) * Metric(alpha, beta) *  P(mu,t) * P(nu,t)     
+        
+             
+        zero = 1j*propa - aloha_obj.Spin2Propagator(mu,nu,alpha,beta, t)
+        
+        zero = zero.expand().simplify() 
+        
+        P1_0, P1_1, P1_2, P1_3 = 7,2,3,5
+        OM1 = 11
+        for ind in zero.listindices():
+            data = zero.get_rep(ind)
+            self.assertAlmostEqual(eval(str(zero.get_rep(ind))),0)    
+
+    def test_spin2propagator3(self):
+        """test the spin2 propagator property (contraction gives zero)"""
+        
+        Metric = aloha_obj.Metric
+        P = aloha_obj.P
+        OM = aloha_obj.OverMass2
+        t = 1
+        mu, nu, alpha, beta = 1,2,3,4
+        
+             
+        zero = P(mu,t) * aloha_obj.Spin2Propagator(mu,nu,alpha,beta, t)
+        
+        zero = zero.expand().simplify() 
+        
+        P1_0, P1_1, P1_2, P1_3 = 7,2,3,5
+        OM1 = 1/(P1_0 **2 - P1_1 **2 -P1_2 **2 -P1_3 **2)
+        for ind in zero.listindices():
+            data = zero.get_rep(ind)
+            self.assertAlmostEqual(eval(str(zero.get_rep(ind))),0)    
+        
+        zero = Metric(mu,nu) * aloha_obj.Spin2Propagator(mu,nu,alpha,beta, t)
+        zero = zero.expand().simplify() 
+        
+        P1_0, P1_1, P1_2, P1_3 = 7,2,3,5
+        OM1 = 1/(P1_0 **2 - P1_1 **2 -P1_2 **2 -P1_3 **2)
+        for ind in zero.listindices():
+            data = zero.get_rep(ind)
+            self.assertAlmostEqual(eval(str(zero.get_rep(ind))),0) 
+    
+    def test_spin2propagator4(self):
+        """test the spin2 propagator is correctly contracted (even offshell)"""
+        
+        Metric = aloha_obj.Metric
+        P = aloha_obj.P
+        OM = aloha_obj.OverMass2
+        t = 1
+        mu, nu, alpha, beta = 1,2,3,4
+        
+        aloha = Metric(mu,nu) * aloha_obj.Spin2Propagator(mu,nu,alpha,beta, t)
+        analytical = complex(0, 1/3) * (OM(t) * P(-1, t)**2 - 1) * (Metric(alpha, beta) + 2 * OM(t) * P(alpha,t)*P(beta,t))
+        
+        
+        zero = aloha.expand().simplify().factorize() - analytical.expand().simplify()
+
+        P1_0, P1_1, P1_2, P1_3 = 7,2,3,5
+        OM1 = 1/48#(P1_0 **2 - P1_1 **2 -P1_2 **2 -P1_3 **2)
+        for ind in zero.listindices():
+            data = zero.get_rep(ind)
+            self.assertAlmostEqual(eval(str( data )),0)
+            
+    def test_spin2propagator5(self):
+        """test the spin2 propagator is correctly contracted --part by part --"""
+        
+        Metric = aloha_obj.Metric
+        P = aloha_obj.P
+        OverMass2 = aloha_obj.OverMass2
+        Spinor = aloha_obj.Spinor
+        t = 1
+        mu, nu, alpha, beta = 1,2,3,4
+        P1_0,P1_1,P1_2,P1_3 = 1000, 3, 4, 1000
+        P2_0,P2_1,P2_2,P2_3 = 1000, 3, 6, -1000
+        P3_0,P3_1,P3_2,P3_3 = 2000, 2, 6, 9
+        
+        F1_1, F1_2, F1_3, F1_4  = -44.7213595499958, 62,34,23
+        F2_1, F2_2, F2_3, F2_4  = 12, 44, 72, -45 
+        OM1,OM2,OM3 = 0 , 0, 1.0 / 500**2
+        M3 = 500
+        
+
+        #part 1 
+        p1 = 0.5j * ( Metric(1003,'I2') * Metric(2003,'I3') * Metric(1003,2003) * Spinor(-1,1) * Spinor(-1,2))
+        p1e = p1.expand().simplify().factorize()
+        
+        solp1 = complex(0,1/2) * Metric('I2','I3') * Spinor(-1,1) * Spinor(-1,2)
+        zero = p1e - solp1.expand().simplify().factorize()
+        for ind in zero.listindices():
+            data = zero.get_rep(ind)
+            self.assertAlmostEqual(eval(str( data )),0)
+        
+        #part 2
+        p2 =   0.5j * ( Metric(1003,'I3') * Metric(2003,'I2') * Metric(1003,2003) * Spinor(-1,1) * Spinor(-1,2) )
+        p2e = p2.expand().simplify().factorize()
+        zero = p2e - solp1.expand().simplify().factorize()
+        for ind in zero.listindices():
+            data = zero.get_rep(ind)
+            self.assertAlmostEqual(eval(str( data )),0)
+        
+        # part 3 -and part 8
+        p3 = complex(0,-1/3) * ( Metric(1003,2003)**2 * Metric('I2','I3') * Spinor(-1,1) * Spinor(-1,2) )
+        p3e = p3.expand().simplify().factorize()
+        solp3 = complex(0,-4/3) * Metric('I2','I3') * Spinor(-1,1) * Spinor(-1,2)
+        zero = p3e - solp3.expand().simplify().factorize()
+        for ind in zero.listindices():
+            data = zero.get_rep(ind)
+            self.assertAlmostEqual(eval(str( data )),0)
+            
+        # part 4
+        p4 = -0.5j * ( Metric(1003,'I2') * P(2003,3) * P('I3',3) * OverMass2(3) * Metric(1003,2003) * Spinor(-1,1) * Spinor(-1,2) )
+        p4e = p4.expand().simplify().factorize()
+        solp4 = complex(0,-1/2) * OverMass2(3) * P('I2',3) * P('I3',3) * Spinor(-1,1) * Spinor(-1,2)
+        zero = p4e - solp4.expand().simplify().factorize()
+        for ind in zero.listindices():
+            data = zero.get_rep(ind)
+            self.assertAlmostEqual(eval(str( data )),0)
+        
+        # part 5
+        p5 = -0.5j * ( Metric(2003,'I3') * P(1003,3) * P('I2',3) * OverMass2(3) * Metric(1003,2003) * Spinor(-1,1) * Spinor(-1,2) )
+        p5e = p5.expand().simplify().factorize()
+        zero = p5e - solp4.expand().simplify().factorize()
+        for ind in zero.listindices():
+            data = zero.get_rep(ind)
+            self.assertAlmostEqual(eval(str( data )),0)   
+        
+        #part 6    
+        p6 = -0.5j * ( Metric(1003,'I3') * P(2003,3) * P('I2',3) * OverMass2(3) * Metric(1003,2003) * Spinor(-1,1) * Spinor(-1,2) )   
+        p6e = p6.expand().simplify().factorize()
+        zero = p6e - solp4.expand().simplify().factorize()
+        for ind in zero.listindices():
+            data = zero.get_rep(ind)
+            self.assertAlmostEqual(eval(str( data )),0) 
+        
+        #part 7
+        p7= -0.5j * ( Metric(2003,'I2') * P(1003,3) * P('I3',3) * OverMass2(3) * Metric(1003,2003) * Spinor(-1,1) * Spinor(-1,2) )
+        p7e = p7.expand().simplify().factorize()
+        zero = p7e - solp4.expand().simplify().factorize()
+        for ind in zero.listindices():
+            data = zero.get_rep(ind)
+            self.assertAlmostEqual(eval(str( data )),0) 
+        
+        # part 9
+        p9 = complex(0,1/3) * ( OverMass2(3) * P('I2',3) * P('I3',3) * Metric(1003,2003)**2 * Spinor(-1,1) * Spinor(-1,2) )
+        p9e = p9.expand().simplify().factorize()
+        solp9 = complex(0,4/3) * ( OverMass2(3) * P('I2',3) * P('I3',3) * Spinor(-1,1) * Spinor(-1,2) ) 
+        zero = p9e - solp9.expand().simplify().factorize()
+        for ind in zero.listindices():
+            data = zero.get_rep(ind)
+            self.assertAlmostEqual(eval(str( data )),0) 
+            
+        # part 10
+        p10 = complex(0,1/3) * ( OverMass2(3) * P(1003,3) * P(2003,3) * Metric('I2','I3') * Metric(1003,2003) * Spinor(-1,1) * Spinor(-1,2) )
+        p10e = p10.expand().simplify().factorize()
+        solp10 = complex(0,1/3) * ( OverMass2(3) * P(-1,3) **2 * Metric('I2','I3') * Spinor(-1,1) * Spinor(-1,2) ) 
+        zero = p10e - solp10.expand().simplify().factorize()
+        for ind in zero.listindices():
+            data = zero.get_rep(ind)
+            self.assertAlmostEqual(eval(str( data )),0) 
+        
+        
+        # part 11
+        p11 = complex(0,2/3) * ( OverMass2(3)**2 * P('I2',3) * P('I3',3) * P(1003,3) * P(2003,3) * Metric(1003,2003) * Spinor(-1,1) * Spinor(-1,2) )
+        p11e = p11.expand().simplify().factorize()
+        solp11 = complex(0,2/3) * ( OverMass2(3)**2 * P(-1,3) **2 * P('I2',3) * P('I3',3)  * Spinor(-1,1) * Spinor(-1,2) ) 
+        zero = p11e - solp11.expand().simplify().factorize()
+        for ind in zero.listindices():
+            data = zero.get_rep(ind)
+            self.assertAlmostEqual(eval(str( data )),0)
+            
+        # full
+        full = p1 + p2 + p3 + p4 + p5 + p6 + p7 + p9 + p10 + p11
+        fulle = full.expand()
+        solfull = complex(0,1/3) * ((OverMass2(3) * P(-1, 3)**2 - 1) * (Metric('I2','I3') + 2 * OverMass2(3) * P('I2',3)*P('I3',3)) * Spinor(-1,1) * Spinor(-1,2))  
+        solfullbis = 2 * solp1 + solp3 + 4 * solp4 + solp9 +solp10 + solp11
+        # first sanity
+        zero = solfullbis.expand() - solfull.expand()
+        for ind in zero.listindices():
+            data = zero.get_rep(ind)
+            self.assertAlmostEqual(eval(str( data )),0,6)
+        
+        
+        zero = fulle - solfull.expand()
+        for ind in zero.listindices():
+            data = zero.get_rep(ind)
+            self.assertAlmostEqual(eval(str( data )),0,6)
+        
+        
         
 class TestLorentzObjectRepresentation(unittest.TestCase):
     """Class to test the operation in the LorentzObjectRepresentation"""
@@ -1333,7 +1599,65 @@ class TestLorentzObjectRepresentation(unittest.TestCase):
         repr4 = aloha_lib.LorentzObjectRepresentation(49, [], [])
         for ind in repr4.listindices():
             self.assertEquals(repr4.get_rep(ind), 49)
-            
+
+
+    def test_sum_with4ind(self):
+        """ check non standard operation with contraction of ()*() """
+        
+        Metric = aloha_obj.Metric
+        P = aloha_obj.P
+        OM = aloha_obj.OverMass2
+        OverMass2 = OM
+        F = aloha_obj.Spinor
+        Identity = aloha_obj.Identity
+        
+        mu, nu, alpha, beta, part = 1,2,4,5,3
+        
+        
+        obj1a = 3*( Metric(mu, alpha)* Metric(nu, beta) )
+        
+        
+        
+        obj1b=        -5 * OverMass2(part) * (\
+                                Metric(mu, beta) * P(nu, part) * P(alpha, part) )
+
+        obj1 = obj1a + obj1b
+        
+        # check part by part
+        obj1a_rep = obj1a.simplify().expand().simplify()
+        assert obj1a_rep.lorentz_ind == [2,5,1,4] , "test not valid if condition not met"
+        self.assertEqual(str(obj1a_rep.get_rep([1,0,0,0])), '0')
+        
+        obj1b_rep = obj1b.simplify().expand().simplify()
+        assert obj1b_rep.lorentz_ind == [4,2,1,5] , "test not valid if condition not met"
+        self.assertEqual(str(obj1b_rep.get_rep([0,1,0,0])), '-5 * ( P3_0 * P3_1 * OM3 )')       
+        
+        obj1_rep = obj1.simplify().expand().simplify()
+        
+        assert obj1_rep.lorentz_ind == [4,2,1,5] , "test not valid if condition not met"
+        self.assertEqual(str(obj1_rep.get_rep([0,1,0,0])), '-5 * ( P3_0 * P3_1 * OM3 )')
+        
+    
+        
+        eta = Metric(1,2)
+        eta_rep = eta.expand()
+        
+        final = obj1_rep * eta_rep
+        final = final.simplify()
+        
+        solution = obj1 * eta
+        solution_rep = solution.simplify().expand().simplify()
+        
+        P3_0,P3_1,P3_2,P3_3 = 2, 2, 5, 7
+        OM3 = 8
+        for ind in final.listindices():
+            val1 = eval(str(final.get_rep(ind)))
+            val2 = eval(str(solution_rep.get_rep(ind)))
+            self.assertAlmostEqual(val1, val2, msg='not equal data for ind: %s, %s != %s' % (ind, val1, val2))
+
+
+
+         
     def testsetrepresentation(self):
         """Check the way to set a representation"""
         
@@ -1654,7 +1978,7 @@ class TestLorentzObjectRepresentation(unittest.TestCase):
 
         #check global
         self.assertTrue(isinstance(sum, aloha_lib.LorentzObjectRepresentation))
-        self.assertEquals(sum.lorentz_ind, [1, 2])
+        self.assertEquals(sum.lorentz_ind, [2, 1])
         self.assertEqual(sum.spin_ind, [])
 #        tag = set(list(sum.tag))
 
@@ -1680,7 +2004,7 @@ class TestLorentzObjectRepresentation(unittest.TestCase):
             
         #check sum is unchanged
         self.assertTrue(isinstance(sum, aloha_lib.LorentzObjectRepresentation))
-        self.assertEquals(sum.lorentz_ind, [1, 2])
+        self.assertEquals(sum.lorentz_ind, [2, 1])
         self.assertEqual(sum.spin_ind, [])
 #        self.assertEqual(sum.tag, tag)
         for ind in sum.listindices():
@@ -1712,6 +2036,9 @@ class TestLorentzObjectRepresentation(unittest.TestCase):
         self.assertRaises( \
             aloha_lib.LorentzObjectRepresentation.LorentzObjectRepresentationError, \
             aloha_lib.LorentzObjectRepresentation.__add__,self.p1nu,self.p2mu)
+        
+    
+        
 
 class TestSomeObjectProperty(unittest.TestCase):
     """Test that some property pass correctly for Object"""
@@ -1879,7 +2206,8 @@ class TestSomeObjectProperty(unittest.TestCase):
                              (zero.get_rep(ind), ind))  
 
 
-    def test_other(self):        
+    def test_other(self):
+        """ test that all object are defined"""        
         Gamma = aloha_obj.Gamma
         Gamma5 = aloha_obj.Gamma5
         Sigma = aloha_obj.Sigma
@@ -1887,8 +2215,20 @@ class TestSomeObjectProperty(unittest.TestCase):
         ProjP = aloha_obj.ProjP
         Identity = aloha_obj.Identity
         Metric = aloha_obj.Metric  
+    
+    def test_projector(self):
+        """test that projector are correctly define"""
         
-
+        ProjM = aloha_obj.ProjM
+        ProjP = aloha_obj.ProjP
+        Metric = aloha_obj.Metric
+        Id = aloha_obj.Identity 
+        
+        zero = Metric(1003,2003)*ProjM(2,1) + Metric(1003,2003)*ProjP(2,1)- Metric(1003,2003)*Id(2,1)
+        zero = zero.expand().simplify()
+        for ind in zero.listindices():
+            self.assertEqual(zero.get_rep(ind), 0, '%s != 0.0for %s' % \
+                             (zero.get_rep(ind), ind))  
     
         
     def testGammaAlgebraDefinition(self):
@@ -2008,8 +2348,24 @@ class TestSomeObjectProperty(unittest.TestCase):
         diff1 = diff1.simplify()
         for ind in diff1.listindices():
             self.assertEqual(diff1.get_rep(ind), 0, 'not zero %s for %s' 
-                             % (diff1.get_rep(ind),ind ))       
-
+                             % (diff1.get_rep(ind),ind ))
+            
+#    def test_Spin2Contraction(self): 
+#        """check spin2 contraction"""
+#        
+#        T = aloha_obj.Spin2
+#        metric = aloha_obj.Metric
+#        F = aloha_obj.Spinor
+#        Id = aloha_obj.Identity 
+#        
+##        obj = T(1,2,3) * metric(1,2) *F(1,1) * F(2,2) * Id(1,2)    
+ #       obj = obj.expand().simplify().factorize()
+ ##       print obj
+  #      obj = metric(1,2) * Id(1,2) * F(1,1) * F(2,2) * T(1,2,3)    
+  #      obj = obj.expand().simplify().factorize()
+  #      #self.assertEqual(str(obj), '')
+        
+        
     def test_parity_for_epsilon(self):
 
         # usefull shortcut
@@ -2190,6 +2546,7 @@ class TestConstantObject(unittest.TestCase):
         p2 = aloha_obj.P(1,2) 
         add = p + p2   
 
+
 class TestSimplify(unittest.TestCase):
     """Check that the simplification works correctly"""        
 
@@ -2303,8 +2660,84 @@ class test_aloha_creation(unittest.TestCase):
 
         for ind in expr.listindices():
             self.assertEqual(eval(str(expr.get_rep(ind))), -178727040j)
-#    
-#    
+
+
+    def test_use_of_library_spin2(self):
+        """ check that use the library or the usual definition is the same """
+        
+        
+        Metric = aloha_obj.Metric
+        P = aloha_obj.P
+        OM = aloha_obj.OverMass2
+        F = aloha_obj.Spinor
+        Identity = aloha_obj.Identity
+        t = 3
+        mu, nu, alpha, beta = 1003,2003,'I2','I3' 
+        
+        # One Expand:
+        import time
+        start = time.time()
+        one_exp = Metric(mu,nu) * Identity(1,2)* aloha_obj.Spin2Propagator(mu,nu,alpha,beta, t)  * F(1,1) * F(2,2)
+        one_exp = one_exp.simplify().expand().simplify()#.factorize()
+
+        # Separate Expand:
+        start = time.time()
+        two_exp = Metric(mu,nu) * Identity(1,2)  * F(1,1) * F(2,2)
+        two_exp = two_exp.simplify().expand().simplify()
+        
+        two_exp = two_exp * aloha_obj.Spin2Propagator(mu,nu,alpha,beta, t).expand().simplify()
+        two_exp = two_exp.simplify()#.factorize()
+        #self.assertEqual(two_exp.lorentz_ind, one_exp.lorentz_ind)
+
+        P1_0,P1_1,P1_2,P1_3 = 1000, 3, 4, 1000
+        P2_0,P2_1,P2_2,P2_3 = 1000, 3, 6, -1000
+        P3_0,P3_1,P3_2,P3_3 = 2000, 2, 6, 9
+        
+        F1_1, F1_2, F1_3, F1_4  = 1, 62,34,23
+        F2_1, F2_2, F2_3, F2_4  = 12, 44, 72, -45 
+        OM1,OM2,OM3 = 0 , 0, 1.0 / 500**2
+        M3 = 500
+        
+        for ind in one_exp.listindices():
+            data = one_exp.get_rep(ind) - two_exp.get_rep(ind)
+            data.simplify()
+            self.assertAlmostEqual(eval(str(one_exp.get_rep(ind))), eval(str(two_exp.get_rep(ind))))
+                
+    def test_aloha_FFT2(self):
+        """ test the FFT2 creation of vertex"""
+
+        FFT2 = self.Lorentz(name = 'FFT2',
+                 spins = [2, 2, 5],
+        structure="Metric(1003,2003)*ProjP(1,2)+Metric(1003,2003)*ProjM(1,2)"
+        )
+        abstract_FFT = create_aloha.AbstractRoutineBuilder(FFT2).compute_routine(3)
+        expr = abstract_FFT.expr
+        
+        Metric = aloha_obj.Metric
+        P = aloha_obj.P
+        OM = aloha_obj.OverMass2
+        F = aloha_obj.Spinor
+        result = complex(0,1/3) * (OM(3) * P(-1, 3)**2 - 1) * (Metric('I2','I3') + 2 * OM(3) * P('I2',3)*P('I3',3))
+        result = result * F(-2,1) * F(-2,2)
+        
+        zero = expr.numerator - result.expand()
+        zero = zero.simplify()
+        
+        P1_0,P1_1,P1_2,P1_3 = 1000, 3, 4, 1000
+        P2_0,P2_1,P2_2,P2_3 = 1000, 3, 6, -1000
+        P3_0,P3_1,P3_2,P3_3 = 2000, 2, 6, 9
+        
+        F1_1, F1_2, F1_3, F1_4  = -44.7213595499958, 62,34,23
+        F2_1, F2_2, F2_3, F2_4  = 12, 44, 72, -45 
+        OM1,OM2,OM3 = 0 , 0, 1.0 / 500**2
+        M3 = 500
+        
+        
+        for ind in zero.listindices():
+            self.assertAlmostEqual(eval(str(zero.get_rep(ind))),0)
+             
+
+
     def test_aloha_FFV(self):
         """ test the FFV creation of vertex """
         
@@ -2475,6 +2908,7 @@ class test_aloha_creation(unittest.TestCase):
         # Check expr are different
         self.assertNotEqual(str(amp.expr), str(conjg_amp.expr))
         self.assertNotEqual(amp.name, conjg_amp.name)
+        
         
     def test_aloha_expr_FFV2C1(self):
         """Test analytical expression for fermion clash routine"""

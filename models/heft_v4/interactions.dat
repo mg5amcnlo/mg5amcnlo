@@ -1,0 +1,136 @@
+#     interactions_sm_v1.0.dat
+#
+#       File which contains allowed interactions. Must be named
+#       interactions.dat and reside in the current directory for MadGraph
+#       to see it.
+#
+#       3-particle vertices are entered as follows:
+#
+#       particle1 particle2  particle3 coupling_name model (QCD,QFD,QED,BRS)
+#
+#       Note: The ordering of particles is very important.
+#       For FFV interactions, must use particles, not anti_particles.
+#
+
+#
+# QCD interactions
+#
+
+d d g GG QCD
+u u g GG QCD
+s s g GG QCD
+c c g GG QCD
+b b g GG QCD
+t t g GG QCD
+
+g g g  G QCD
+g g tn G QCD A
+
+
+#
+# QED interactions
+#
+
+d d a GAD QED
+u u a GAU QED
+s s a GAD QED
+c c a GAU QED
+b b a GAD QED
+t t a GAU QED
+
+e-  e-  a GAL QED
+mu- mu- a GAL QED
+ta- ta- a GAL QED
+
+
+#
+# QFD Interactions
+#
+
+# FFV (qqZ)
+d d z GZD QED
+u u z GZU QED
+s s z GZD QED
+c c z GZU QED
+b b z GZD QED
+t t z GZU QED
+
+# FFV (llZ)
+e-  e-  z GZL QED
+mu- mu- z GZL QED
+ta- ta- z GZL QED
+ve  ve  z GZN QED
+vm  vm  z GZN QED
+vt  vt  z GZN QED
+
+# FFV (qq'W) - diagonal CKM
+d u w- GWF QED
+s c w- GWF QED
+b t w- GWF QED
+u d w+ GWF QED
+c s w+ GWF QED
+t b w+ GWF QED
+
+# FFV (ll'W)
+ve  e-  w+ GWF QED
+vm  mu- w+ GWF QED
+vt  ta- w+ GWF QED
+e-  ve  w- GWF QED
+mu- vm  w- GWF QED
+ta- vt  w- GWF QED
+
+# FFS (Yukawa)
+ta- ta- h GHTAU QED
+b   b   h GHBOT QED
+t   t   h GHTOP QED
+#ta- ta- h3 GH3TAU QED
+#b   b   h3 GH3BOT QED
+#t   t   h3 GH3TOP QED
+                                                                                
+#
+# Boson 3-,4-pt
+#
+
+#   VVV
+w- w+ a  GWWA  QED
+w- w+ z  GWWZ  QED
+
+#   VVS
+w- w+ h  GWWH  QED
+z  z  h  GZZH  QED
+
+
+#   SSS
+h  h  h  GHHH  QED
+
+#   VVVV
+w- a  w+ a  GWWA  GWWA  QED QED
+w- z  w+ a  GWWZ  GWWA  QED QED
+w- z  w+ z  GWWZ  GWWZ  QED QED
+w- w+ w- w+ GWWZ  GWWA  QED QED
+
+#   VVSS
+w- w+ h  h  GWWHH DUM QED QED
+z  z  h  h  GZZHH DUM QED QED
+
+
+#
+# Higgs Effective interactions (one Higgs)
+#
+
+#   TTS
+tn tn h  GH  HIG A
+
+#   VVS H
+g g h    GH  HIG H
+g g h3   GA  HIG H
+
+a a h    Gphph HIW H
+
+
+#   VVVS
+g g g h  DUM1 GH4  QCD HIG
+g g g h3 DUM1 GA4  QCD HIG                                                                                                
+
+
+

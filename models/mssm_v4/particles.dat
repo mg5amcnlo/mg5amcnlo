@@ -1,0 +1,99 @@
+#This is a special data file which contains particles of the 
+#Standard Model. The format for entering new particles is.
+#
+#Particle codes taken from  http://pdg.lbl.gov/2000/montecarlorpp.pdf
+#Name anti_Name  Spin    Linetype Mass Width Color Label Model
+#xxx   xxxx      SFV      WSDC     str  str  STO    str  PDG code
+
+#
+# Quarks
+# 
+
+d       d~        F        S      ZERO  ZERO    T    d    1
+u       u~        F        S      ZERO  ZERO    T    u    2
+s       s~        F        S      ZERO  ZERO    T    s    3
+c       c~        F        S      ZERO  ZERO    T    c    4
+b       b~        F        S      BMASS ZERO    T    b    5
+t       t~        F        S      TMASS TWIDTH  T    t    6
+
+#
+# Squarks
+#
+
+dl      dl~       S        D      MDL   WDL     T    dl   1000001
+dr      dr~       S        D      MDR   WDR     T    dr   2000001
+ul      ul~       S        D      MUL   WUL     T    ul   1000002
+ur      ur~       S        D      MUR   WUR     T    ur   2000002
+sl      sl~       S        D      MSL   WSL     T    sl   1000003
+sr      sr~       S        D      MSR   WSR     T    sr   2000003
+cl      cl~       S        D      MCL   WCL     T    cl   1000004
+cr      cr~       S        D      MCR   WCR     T    cr   2000004
+b1      b1~       S        D      MB1   WB1     T    b1   1000005
+b2      b2~       S        D      MB2   WB2     T    b2   2000005
+t1      t1~       S        D      MT1   WT1     T    t1   1000006
+t2      t2~       S        D      MT2   WT2     T    t2   2000006
+
+#
+# Leptons
+#
+
+e-       e+       F        S      ZERO  ZERO    S    e    11
+mu-      mu+      F        S      ZERO  ZERO    S    mu   13
+ta-      ta+      F        S      LMASS ZERO    S    ta   15
+ve       ve~      F        S      ZERO  ZERO    S    ve   12 
+vm       vm~      F        S      ZERO  ZERO    S    vm   14 
+vt       vt~      F        S      ZERO  ZERO    S    vt   16 
+
+#
+# Sleptons
+#
+
+el-      el+      S        D      MEL   WEL     S    el   1000011
+er-      er+      S        D      MER   WER     S    er   2000011
+mul-     mul+     S        D      MML   WML     S    mul  1000013
+mur-     mur+     S        D      MMR   WMR     S    mur  2000013
+ta1-     ta1+     S        D      ML1   WL1     S    ta1  1000015
+ta2-     ta2+     S        D      ML2   WL2     S    ta2  2000015
+sve      sve~     S        D      MVE   WVE     S    ve   1000012
+svm      svm~     S        D      MVM   WVM     S    vm   1000014
+svt      svt~     S        D      MVT   WVT     S    vt   1000016
+
+#
+# Vector Bosons
+#
+
+g        g        V        C      ZERO  ZERO    O   _    21
+z        z        V        W      ZMASS ZWIDTH  S   Z    23
+a        a        V        W      ZERO  AWIDTH  S   A    22
+w-       w+       V        W      WMASS WWIDTH  S   W    -24
+
+#
+# Higgs
+#
+
+h1       h1       S        D      MH1    WH1    S    h    25
+h2       h2       S        D      MH2    WH2    S    H    35
+h3       h3       S        D      MH3    WH3    S    A    36
+h-       h+       S        D      MHC    WHC    S    hc   -37
+
+#
+# Inos
+#
+
+go       go       F        S      MGO    WGO    O    go   1000021
+n1       n1       F        S      MN1    WN1    S    N1   1000022
+n2       n2       F        S      MN2    WN2    S    N2   1000023
+n3       n3       F        S      MN3    WN3    S    N3   1000025
+n4       n4       F        S      MN4    WN4    S    N4   1000035
+x1-      x1+      F        S      MX1    WX1    S    X1   -1000024
+x2-      x2+      F        S      MX2    WX2    S    X2   -1000037
+
+#
+# Groups of particles to sum over. Note spaces are important
+# you can NOT have any spaces between particles to be summed over
+# The following line is a TAG and should not be modified:
+# MULTIPARTICLES
+
+P uu~dd~ss~cc~g
+J uu~dd~ss~cc~g
+L e+e-mu+mu-ta+ta-veve~

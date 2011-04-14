@@ -1,4 +1,4 @@
-class Matrix(object):
+class Matrix_%(process_string)s(object):
 
     def __init__(self):
         """define the object"""
@@ -26,6 +26,7 @@ class Matrix(object):
         # CONSTANTS
         #  
         nexternal = %(nexternal)d
+        ndiags = %(ndiags)d
         ncomb = %(ncomb)d
         #  
         # LOCAL VARIABLES 
@@ -35,6 +36,7 @@ class Matrix(object):
         # ----------
         # BEGIN CODE
         # ----------
+        self.amp2 = [0.] * ndiags
         ans = 0.
         for hel in helicities:
             t = self.matrix(p, hel, model)
@@ -76,6 +78,8 @@ class Matrix(object):
 
         jamp = [None] * ncolor
         %(jamp_lines)s
+
+        %(amp2_lines)s
 
         matrix = 0.
         for i in range(ncolor):

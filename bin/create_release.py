@@ -22,18 +22,6 @@ following actions:
 1. bzr branch the present directory to a new directory
    MadGraph5_vVERSION
 
-2. Copy the Template and HELAS directories, either from the present
-   directory or from a valid MG_ME directory in the path or given by the
-   -d flag, and remove the bin/newprocess file
-
-   *WARNING* Note that it is your responsibility to make sure this
-   Template is up-to-date!!
-
-
-3. Copy all v4 model directories from the present directory and/or
-   from an MG_ME directory as specified in point 2. to the models
-   directory (with names modelname_v4)
-
 4. Create the automatic documentation in the apidoc directory
 
 5. Remove the .bzr directory
@@ -92,7 +80,7 @@ if diff_result:
     if answer != 'y':
         exit()
 release_date = date.fromtimestamp(time.time())
-for line in file('VERSION'):
+for line in file(os.path.join(MG5DIR,'VERSION')):
     if 'version' in line:
         logging.info(line)
     if 'date' in line:
@@ -118,125 +106,27 @@ if status:
     logging.error("bzr branch failed. Script stopped")
     exit()
 
-# 2. Copy the Template either from the present directory or from a valid
-#    MG_ME directory in the path or given by the -d flag, and remove the
-#    bin/newprocess file
-
-devnull = os.open(os.devnull, os.O_RDWR)
-
-logging.info("Getting Template from cvs")
-status = subprocess.call(['cvs', 
-                          '-d',
-                          ':pserver:anonymous@cp3wks05.fynu.ucl.ac.be:/usr/local/CVS',
-                          'checkout', '-d', 'Template', 'MG_ME/Template'],
-                         stdout = devnull, stderr = devnull,
-                         cwd = filepath)
-if status:
-    logging.error("CVS checkout failed, exiting")
-    exit()
-
-if path.exists(path.join(filepath, 'Template', 'bin', 'newprocess')):
-    os.remove(path.join(filepath, 'Template', 'bin', 'newprocess'))
-if path.exists(path.join(filepath, 'Template', 'bin', 'newprocess_sa')):
-    os.remove(path.join(filepath, 'Template', 'bin', 'newprocess_sa'))
-if path.exists(path.join(filepath, 'Template', 'bin', 'newprocess_dip')):
-    os.remove(path.join(filepath, 'Template', 'bin', 'newprocess_dip'))
-if path.exists(path.join(filepath, 'Template', 'bin', 'newprocess_dip_qed')):
-    os.remove(path.join(filepath, 'Template', 'bin', 'newprocess_dip_qed'))
-
-# Remove CVS directories
-for i in range(6):
-    cvs_dirs = glob.glob(path.join(filepath,
-                                   path.join('Template', *(['*']*i)), 'CVS'))
-    if not cvs_dirs:
-        break
-    for cvs_dir in cvs_dirs:
-        shutil.rmtree(cvs_dir)
-
-logging.info("Getting HELAS from cvs")
-status = subprocess.call(['cvs', 
-                          '-d',
-                          ':pserver:anonymous@cp3wks05.fynu.ucl.ac.be:/usr/local/CVS',
-                          'checkout', '-d', 'HELAS', 'MG_ME/HELAS'],
-                         stdout = devnull, stderr = devnull,
-                         cwd = filepath)
-if status:
-    logging.error("CVS checkout failed, exiting")
-    exit()
-
-# Remove CVS directories
-for i in range(3):
-    cvs_dirs = glob.glob(path.join(filepath,
-                                   path.join('HELAS', *(['*']*i)), 'CVS'))
-    if not cvs_dirs:
-        break
-    for cvs_dir in cvs_dirs:
-        shutil.rmtree(cvs_dir)
-
-# 3. Copy all v4 model directories from the present directory and/or
-#    from an MG_ME directory as specified in point 2. to the models
-#    directory (with names modelname_v4)
-
-model_path = ""
-
-logging.info("Getting Models from cvs")
-status = subprocess.call(['cvs', 
-                          '-d',
-                          ':pserver:anonymous@cp3wks05.fynu.ucl.ac.be:/usr/local/CVS',
-                          'checkout', '-d', 'Models_new', 'MG_ME/Models'],
-                         stdout = devnull, stderr = devnull,
-                         cwd = filepath)
-if status:
-    logging.error("CVS checkout failed, exiting")
-    exit()
-
-model_path = os.path.join(filepath, "Models_new")
-
-logging.info("Copying v4 models from " + model_path + ":")
-nmodels = 0
-for mdir in [d for d in glob.glob(path.join(model_path, "*")) \
-             if path.isdir(d) and \
-             path.exists(path.join(d, "particles.dat"))]:
-    modelname = path.split(mdir)[-1]
-    new_m_path = path.join(filepath, 'models', modelname + "_v4")
-    shutil.copytree(mdir, new_m_path)
-    nmodels += 1
-    if path.exists(path.join(new_m_path, "model.pkl")):
-        os.remove(path.join(new_m_path, "model.pkl"))
-    # Remove CVS directories
-    for i in range(2):
-        cvs_dirs = glob.glob(path.join(path.join(new_m_path, *(['*']*i)),
-                                       'CVS'))
-        if not cvs_dirs:
-            break
-        for cvs_dir in cvs_dirs:
-            shutil.rmtree(cvs_dir)
-
-shutil.rmtree(os.path.join(filepath, "Models_new"))
-logging.info("Copied %d v4 models." % nmodels)
-
-# 4. Create the automatic documentation in the apidoc directory
+# 2. Create the automatic documentation in the apidoc directory
 
 try:
     status1 = subprocess.call(['epydoc', '--html', '-o', 'apidoc',
-                           'madgraph', 'aloha',
-                           os.path.join('models', '*.py')], cwd = filepath)
+                               'madgraph', 'aloha',
+                               os.path.join('models', '*.py')], cwd = filepath)
 except:
-    logging.error("Call to epydoc failed. " +\
-                  "Please check that it is properly installed.")
-    exit()
+    info.error("Error while trying to run epydoc. Do you have it installed?")
+    info.error("Execution cancelled.")
+    sys.exit()
 
 if status1:
     logging.error('Non-0 exit code %d from epydoc. Please check output.' % \
                  status)
     exit()
 
-# 5. Remove the .bzr directory and the create_release.py file,
+# 3. Remove the .bzr directory and the create_release.py file,
 #    take care of README files.
 
 shutil.rmtree(path.join(filepath, '.bzr'))
 os.remove(path.join(filepath, 'bin', 'create_release.py'))
-os.remove(path.join(filepath, 'bin', 'setup_madevent_template.py'))
 os.remove(path.join(filepath, 'README.developer'))
 shutil.move(path.join(filepath, 'README.release'), path.join(filepath, 'README'))
 
