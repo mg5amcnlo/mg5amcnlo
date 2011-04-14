@@ -122,11 +122,13 @@ if status1:
                  status)
     exit()
 
-# 3. Remove the .bzr directory and the create_release.py file,
+# 3. Remove the .bzr directory and clean bin directory file,
 #    take care of README files.
 
 shutil.rmtree(path.join(filepath, '.bzr'))
-os.remove(path.join(filepath, 'bin', 'create_release.py'))
+for data in path.join(filepath, 'bin'):
+    if data != 'mg5':
+        os.remove(path.join(filepath, 'bin', data))
 os.remove(path.join(filepath, 'README.developer'))
 shutil.move(path.join(filepath, 'README.release'), path.join(filepath, 'README'))
 

@@ -486,6 +486,7 @@ class AbstractALOHAModel(dict):
                 if lorentz.name not in self.external_routines:
                     self.external_routines.append(lorentz.name)
                 continue
+            
             builder = AbstractRoutineBuilder(lorentz)
             # add information for spin2mass
             if 5 in lorentz.spins and self.massless_spin2 is not None:
