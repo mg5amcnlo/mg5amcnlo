@@ -278,6 +278,23 @@ class ProcessExporterCPP(object):
                         wf.set('number', wf_number)
                         self.wavefunctions.append(wf)
 
+            # Also combine amplitudes
+            self.amplitudes = helas_objects.HelasAmplitudeList()
+            amp_number = 0
+            for me in self.matrix_elements:
+                for iamp, amp in enumerate(me.get_all_amplitudes()):
+                    try:
+                        old_amp = \
+                               self.amplitudes[self.amplitudes.index(amp)]
+                        amp.set('number', old_amp.get('number'))
+                    except ValueError:
+                        amp_number += 1
+                        amp.set('number', amp_number)
+                        self.amplitudes.append(amp)
+            diagram = helas_objects.HelasDiagram({'amplitudes': self.amplitudes})
+            self.amplitudes = helas_objects.HelasMatrixElement({\
+                'diagrams': helas_objects.HelasDiagramList([diagram])})
+
     # Methods for generation of process files for C++
 
     def generate_process_files(self):
@@ -412,8 +429,11 @@ class ProcessExporterCPP(object):
                           """// Calculate wavefunctions
                           void calculate_wavefunctions(const int perm[], const int hel[]);
                           static const int nwavefuncs = %d;
-                          std::complex<double> w[nwavefuncs][18];""" % \
-                                                    len(self.wavefunctions)
+                          std::complex<double> w[nwavefuncs][18];
+                          static const int namplitudes = %d;
+                          std::complex<double> amp[namplitudes];""" % \
+                          (len(self.wavefunctions),
+                           len(self.amplitudes.get_all_amplitudes()))
             replace_dict['all_matrix_definitions'] = \
                            "\n".join(["double matrix_%s();" % \
                                       me.get('processes')[0].shell_string().\
@@ -544,7 +564,7 @@ class ProcessExporterCPP(object):
         return ret_lines
         
 
-    def get_calculate_wavefunctions(self, wavefunctions):
+    def get_calculate_wavefunctions(self, wavefunctions, amplitudes):
         """Return the lines for optimized calculation of the
         wavefunctions for all subprocesses"""
 
@@ -555,6 +575,9 @@ class ProcessExporterCPP(object):
         replace_dict['wavefunction_calls'] = "\n".join(\
             self.helas_call_writer.get_wavefunction_calls(\
             helas_objects.HelasWavefunctionList(wavefunctions)))
+
+        replace_dict['amplitude_calls'] = "\n".join(\
+            self.helas_call_writer.get_amplitude_calls(amplitudes))
 
         file = read_template_file(self.process_wavefunction_template) % \
                 replace_dict
@@ -646,7 +669,7 @@ class ProcessExporterCPP(object):
                 class_name)
             ret_lines.append("// Calculate wavefunctions for all processes")
             ret_lines.append(self.get_calculate_wavefunctions(\
-                self.wavefunctions))
+                self.wavefunctions, self.amplitudes))
             ret_lines.append("}")
         else:
             ret_lines.extend([self.get_sigmaKin_single_process(i, me) \
@@ -703,6 +726,7 @@ class ProcessExporterCPP(object):
           matrix_element.get('processes')[0].shell_string().replace("0_", "")
         
 
+        # Wavefunction and amplitude calls
         if self.single_helicities:
             replace_dict['matrix_args'] = ""
             replace_dict['all_wavefunction_calls'] = "int i, j;"
@@ -711,8 +735,9 @@ class ProcessExporterCPP(object):
             wavefunctions = matrix_element.get_all_wavefunctions()
             replace_dict['all_wavefunction_calls'] = \
                          """const int nwavefuncs = %d;
-                         std::complex<double> w[nwavefuncs][18];\n""" % len(wavefunctions)+ \
-                         self.get_calculate_wavefunctions(wavefunctions)
+                         std::complex<double> w[nwavefuncs][18];
+                         """ % len(wavefunctions)+ \
+                         self.get_calculate_wavefunctions(wavefunctions, [])
 
         # Process name
         replace_dict['process_class_name'] = class_name
@@ -729,9 +754,6 @@ class ProcessExporterCPP(object):
         replace_dict['color_matrix_lines'] = \
                                      self.get_color_matrix_lines(matrix_element)
 
-        # The Helicity amplitude calls
-        replace_dict['amplitude_calls'] = "\n".join(\
-            self.helas_call_writer.get_amplitude_calls(matrix_element))
         replace_dict['jamp_lines'] = self.get_jamp_lines(color_amplitudes)
 
         file = read_template_file('cpp_process_matrix.inc') % \
@@ -988,8 +1010,11 @@ class ProcessExporterPythia8(ProcessExporterCPP):
                           """// Calculate wavefunctions
                           void calculate_wavefunctions(const int perm[], const int hel[]);
                           static const int nwavefuncs = %d;
-                          std::complex<double> w[nwavefuncs][18];""" % \
-                                                    len(self.wavefunctions)
+                          std::complex<double> w[nwavefuncs][18];
+                          static const int namplitudes = %d;
+                          std::complex<double> amp[namplitudes];""" % \
+                          (len(self.wavefunctions),
+                           len(self.amplitudes.get_all_amplitudes()))
             replace_dict['all_matrix_definitions'] = \
                            "\n".join(["double matrix_%s();" % \
                                       me.get('processes')[0].shell_string().\

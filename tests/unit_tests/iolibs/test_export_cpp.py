@@ -382,6 +382,8 @@ class Sigma_sm_qqx_qqx : public Sigma2Process
     void calculate_wavefunctions(const int perm[], const int hel[]); 
     static const int nwavefuncs = 10; 
     std::complex<double> w[nwavefuncs][18]; 
+    static const int namplitudes = 10; 
+    std::complex<double> amp[namplitudes]; 
     double matrix_uux_uux(); 
 
     // Constants for array limits
@@ -669,6 +671,19 @@ void Sigma_sm_qqx_qqx::calculate_wavefunctions(const int perm[], const int
   FFV2_3(w[0], w[2], pars->GC_35, pars->MZ, pars->WZ, w[8]); 
   FFV5_3(w[0], w[2], pars->GC_47, pars->MZ, pars->WZ, w[9]); 
 
+  // Calculate all amplitudes
+  // Amplitude(s) for diagram number 0
+  FFV1_0(w[3], w[2], w[4], pars->GC_10, amp[0]); 
+  FFV2_0(w[3], w[2], w[5], pars->GC_35, amp[1]); 
+  FFV5_0(w[3], w[2], w[5], pars->GC_47, amp[2]); 
+  FFV2_0(w[3], w[2], w[6], pars->GC_35, amp[3]); 
+  FFV5_0(w[3], w[2], w[6], pars->GC_47, amp[4]); 
+  FFV1_0(w[3], w[1], w[7], pars->GC_10, amp[5]); 
+  FFV2_0(w[3], w[1], w[8], pars->GC_35, amp[6]); 
+  FFV5_0(w[3], w[1], w[8], pars->GC_47, amp[7]); 
+  FFV2_0(w[3], w[1], w[9], pars->GC_35, amp[8]); 
+  FFV5_0(w[3], w[1], w[9], pars->GC_47, amp[9]); 
+
 
 }
 double Sigma_sm_qqx_qqx::matrix_uux_uux() 
@@ -678,25 +693,10 @@ double Sigma_sm_qqx_qqx::matrix_uux_uux()
   const int ngraphs = 10; 
   const int ncolor = 2; 
   std::complex<double> ztemp; 
-  std::complex<double> amp[ngraphs], jamp[ncolor]; 
+  std::complex<double> jamp[ncolor]; 
   // The color matrix;
   static const double denom[ncolor] = {1, 1}; 
   static const double cf[ncolor][ncolor] = {{9, 3}, {3, 9}}; 
-  // Calculate all amplitudes
-  // Amplitude(s) for diagram number 1
-  FFV1_0(w[3], w[2], w[4], pars->GC_10, amp[0]); 
-  // Amplitude(s) for diagram number 2
-  FFV2_0(w[3], w[2], w[5], pars->GC_35, amp[1]); 
-  FFV5_0(w[3], w[2], w[5], pars->GC_47, amp[2]); 
-  FFV2_0(w[3], w[2], w[6], pars->GC_35, amp[3]); 
-  FFV5_0(w[3], w[2], w[6], pars->GC_47, amp[4]); 
-  // Amplitude(s) for diagram number 3
-  FFV1_0(w[3], w[1], w[7], pars->GC_10, amp[5]); 
-  // Amplitude(s) for diagram number 4
-  FFV2_0(w[3], w[1], w[8], pars->GC_35, amp[6]); 
-  FFV5_0(w[3], w[1], w[8], pars->GC_47, amp[7]); 
-  FFV2_0(w[3], w[1], w[9], pars->GC_35, amp[8]); 
-  FFV5_0(w[3], w[1], w[9], pars->GC_47, amp[9]); 
 
   // Calculate color flows
   jamp[0] = +1./6. * amp[0] - amp[1] - amp[2] - amp[3] - amp[4] + 1./2. *
@@ -731,6 +731,7 @@ double Sigma_sm_qqx_qqx::matrix_uux_uux()
         exporter.write_process_cc_file(\
         writers.CPPWriter(self.give_pos('test.cc')))
 
+        #print open(self.give_pos('test.cc')).read()
         self.assertFileContains('test.cc', goal_string)
 
     def test_write_process_cc_file_uu_six(self):
@@ -983,6 +984,10 @@ void Sigma_sm_qq_six::calculate_wavefunctions(const int perm[], const int hel[])
   ixxxxx(p[perm[1]], mME[1], hel[1], +1, w[1]); 
   sxxxxx(p[perm[2]], +1, w[2]); 
 
+  // Calculate all amplitudes
+  // Amplitude(s) for diagram number 0
+  FFS1C1_0(w[1], w[0], w[2], pars->GC_24, amp[0]); 
+
 
 }
 double Sigma_sm_qq_six::matrix_uu_six() 
@@ -992,13 +997,10 @@ double Sigma_sm_qq_six::matrix_uu_six()
   const int ngraphs = 1; 
   const int ncolor = 1; 
   std::complex<double> ztemp; 
-  std::complex<double> amp[ngraphs], jamp[ncolor]; 
+  std::complex<double> jamp[ncolor]; 
   // The color matrix;
   static const double denom[ncolor] = {1}; 
   static const double cf[ncolor][ncolor] = {{6}}; 
-  // Calculate all amplitudes
-  // Amplitude(s) for diagram number 1
-  FFS1C1_0(w[1], w[0], w[2], pars->GC_24, amp[0]); 
 
   // Calculate color flows
   jamp[0] = -amp[0]; 
@@ -1255,6 +1257,9 @@ void CPPProcess::calculate_wavefunctions(const int perm[], const int hel[])
   oxxxxx(p[perm[3]], mME[3], hel[3], +1, w[3]); 
   FFV1_3(w[0], w[1], pars->GC_10, pars->ZERO, pars->ZERO, w[4]); 
 
+  // Calculate all amplitudes
+  // Amplitude(s) for diagram number 0
+  FFV1_0(w[2], w[3], w[4], pars->GC_8, amp[0]); 
 
 }
 double CPPProcess::matrix_uux_gogo() 
@@ -1264,13 +1269,10 @@ double CPPProcess::matrix_uux_gogo()
   const int ngraphs = 1; 
   const int ncolor = 2; 
   std::complex<double> ztemp; 
-  std::complex<double> amp[ngraphs], jamp[ncolor]; 
+  std::complex<double> jamp[ncolor]; 
   // The color matrix;
   static const double denom[ncolor] = {3, 3}; 
   static const double cf[ncolor][ncolor] = {{16, -2}, {-2, 16}}; 
-  // Calculate all amplitudes
-  // Amplitude(s) for diagram number 1
-  FFV1_0(w[2], w[3], w[4], pars->GC_8, amp[0]); 
 
   // Calculate color flows
   jamp[0] = -std::complex<double> (0, 1) * amp[0]; 
@@ -1303,6 +1305,7 @@ double CPPProcess::matrix_uux_gogo()
         exporter.write_process_cc_file(\
                   writers.CPPWriter(self.give_pos('test.cc')))
 
+        #print open(self.give_pos('test.cc')).read()
         self.assertFileContains('test.cc', goal_string)
 
 

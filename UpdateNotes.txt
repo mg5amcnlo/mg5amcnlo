@@ -1,0 +1,23 @@
+Update notes for MadGraph 5 (in reverse time order)
+
+1.0.1 (17/04/11): JA: Removed limit on number of external particles in MadEvent
+                  JA: Fixed MadEvent bugs for multiparton processes with conflicting
+                      decays and some array limits
+                  JA: Suppressed scary but irrelevant warnings for compiling 2->1 and
+                      1->2 processes in MadEvent
+                  JA: Speed up Pythia output
+
+1.0.0 (12/04/11): Official release of MadGraph 5. Some of the features:
+                  - Complete FeynRules compatibility through the UFO interface
+                  - Automatic writing of HELAS routines for any model in Fortran,
+                    C++ or Python through ALOHA
+                  - Matrix element output in Fortran, C++ or Python
+                  - Output formats: MadEvent, Pythia 8, Standalone (Fortran/C++)
+                  - Support for spin 0, 1/2, 1, 2 particles
+                  - Support for color 1, 3, 6, 8
+                  - Revamped MadEvent with improved subprocess directory 
+                    organization and vastly increased speed and stability
+                  - Unlimited length decay chains (still 10 external particle limit 
+                    in MadEvent)
+                  - Process checks for new model implementations
+                  - ...and much, much more (see "MadGraph 5: Going Beyond")
