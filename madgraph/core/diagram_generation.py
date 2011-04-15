@@ -170,6 +170,7 @@ class Amplitude(base_objects.PhysicsObject):
         if len(filter(lambda leg: model.get('particle_dict')[\
                         leg.get('id')].is_fermion(), legs)) % 2 == 1:
             self['diagrams'] = res
+   #         print "odd number of fermions"
             return res
 
         # Then check same number of incoming and outgoing fermions (if
@@ -178,6 +179,7 @@ class Amplitude(base_objects.PhysicsObject):
            len(filter(lambda leg: leg.is_incoming_fermion(model), legs)) != \
            len(filter(lambda leg: leg.is_outgoing_fermion(model), legs)):
             self['diagrams'] = res
+    #        print "no fermion flow conservation"
             return res
 
         logger.info("Trying %s " % process.nice_string().replace('Process', 'process'))

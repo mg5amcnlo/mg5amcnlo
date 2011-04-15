@@ -1,0 +1,22 @@
+# ----------------------------------------------------------------------------
+#
+# Makefile for PDF library
+# Apr. 25 2003
+#
+# ----------------------------------------------------------------------------
+
+
+F77           = gfortran
+FFLAGS        = -O
+LIBRARY       = ../libpdf.a
+LIBDIR        = ../../lib/
+PDF           = pdfwrap_lhapdf.o pdf_lhapdf.o pdg2pdf_lhapdf.o opendata.o
+
+.f.o: ; $(F77) $(FFLAGS) -c $*.f
+
+all: $(LIBDIR)libpdf.a
+
+$(LIBDIR)libpdf.a: $(PDF)
+	ar cru libpdf.a $(PDF) 
+	ranlib libpdf.a
+	mv libpdf.a  $(LIBDIR)

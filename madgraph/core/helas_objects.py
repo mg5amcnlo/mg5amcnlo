@@ -3884,6 +3884,7 @@ class HelasMultiProcess(base_objects.PhysicsObject):
                             list_color_basis.append(col_basis)
                             col_matrix = color_amp.ColorMatrix(col_basis)
                             list_color_matrices.append(col_matrix)
+    
                             col_index = -1
                             logger.info(\
                               "Processing color information for %s" % \

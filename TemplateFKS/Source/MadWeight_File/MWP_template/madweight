@@ -1,0 +1,6 @@
+#!/bin/bash
+pos=$(pwd)
+cd ../../../
+make
+cd $pos
+../../../comp_madweight

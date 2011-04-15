@@ -41,10 +41,12 @@ import madgraph.core.base_objects as base_objects
 import madgraph.core.diagram_generation as diagram_generation
 import madgraph.core.drawing as draw_lib
 import madgraph.core.helas_objects as helas_objects
+import madgraph.core.fks as fks
 
 import madgraph.iolibs.drawing_eps as draw
 import madgraph.iolibs.export_cpp as export_cpp
 import madgraph.iolibs.export_v4 as export_v4
+import madgraph.iolibs.export_fks as export_fks
 import madgraph.iolibs.helas_call_writers as helas_call_writers
 import madgraph.iolibs.file_writers as writers
 import madgraph.iolibs.files as files
@@ -860,6 +862,11 @@ class CheckValidForCmd(object):
         if not self._curr_amps and self._export_format != "pythia8_model":
             text = 'No processes generated. Please generate a process first.'
             raise self.InvalidCmd(text)
+    
+    def check_generateFKS(self, args):
+        """check the validity of args"""
+        pass
+
 
     def get_default_path(self):
         """Set self._export_dir to the default (\'auto\') path"""
@@ -961,6 +968,7 @@ class CheckValidForCmdWeb(CheckValidForCmd):
         # In web mode, can only do forced, automatic madevent output
 
         args[:] = ['madevent', 'auto', '-f']
+
 
 #===============================================================================
 # CompleteForCmd
@@ -1319,9 +1327,11 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
     _tutorial_opts = ['start', 'stop']
     _check_opts = ['full', 'permutation', 'gauge', 'lorentz_invariance']
     _import_formats = ['model_v4', 'model', 'proc_v4', 'command']
-    _v4_export_formats = ['madevent', 'standalone','matrix'] 
+    _v4_export_formats = ['madevent', 'standalone','matrix', 'fks'] 
+    _fks_export_formats = ['fks']
     _export_formats = _v4_export_formats + ['standalone_cpp',
-                                            'pythia8', 'pythia8_model']
+                                            'pythia8', 'pythia8_model'] +\
+                                    _fks_export_formats
 
 
     # Variables to store object information
@@ -1758,6 +1768,40 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
         diag_logger.setLevel(old_level)
 
         return
+    
+    def do_generateFKS(self,line):
+        """generate an amplitude with the FKS counterterms. Start with the real
+        emission process"""
+
+        args = split_arg(line)
+        self.check_generateFKS(args)
+
+        # Reset Helas matrix elements
+        self._curr_matrix_elements = helas_objects.HelasMultiProcess()
+        self._generate_info = line
+        # Reset _done_export, since we have new process
+        self._done_export = False
+
+        # Extract process from process definition
+        if ',' in line:
+            myprocdef, line = self.extract_decay_chain_process(line)
+        else:
+            myprocdef = self.extract_process(line)
+
+        cpu_time1 = time.time()
+        # Generate processes
+        myproc = fks.FKSMultiProcess(myprocdef)
+        self._curr_amps = myproc.get('amplitudes')
+        cpu_time2 = time.time()
+
+        nprocs = len(self._curr_amps)
+        ndiags = sum([amp.get_number_of_diagrams() for \
+                              amp in self._curr_amps])
+        logger.info("%i processes with %i diagrams generated in %0.3f s" % \
+                  (nprocs, ndiags, (cpu_time2 - cpu_time1)))
+
+        
+        
     
     # Generate a new amplitude
     def do_generate(self, line):
@@ -2408,6 +2452,10 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
                                         not noclean)
         elif self._export_format == 'standalone_cpp':
             export_cpp.setup_cpp_standalone_dir(self._export_dir, self._curr_model)
+        elif self._export_format =='fks':
+            print "EXPORTING IN MADFKS FORMAT"
+            export_fks.copy_fkstemplate(self._mgme_dir, self._export_dir,
+                                      not noclean)
         elif not os.path.isdir(self._export_dir):
             os.makedirs(self._export_dir)
 
@@ -2471,8 +2519,27 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
         nojpeg = '-nojpeg' in args
 
         path = self._export_dir
-        if self._export_format in ['madevent', 'standalone', 'standalone_cpp']:
+        if self._export_format in ['madevent', 'standalone', 'standalone_cpp',
+                                   'fks']:
             path = os.path.join(path, 'SubProcesses')
+
+        if self._export_format == 'fks':
+            for ime, me in \
+                enumerate(self._curr_matrix_elements.get('matrix_elements')):
+                calls = calls + \
+                        export_fks.generate_subprocess_directories_fks(\
+                            me, self._curr_fortran_model, ime, path)
+            
+            card_path = os.path.join(path, os.path.pardir, 'SubProcesses', \
+                                     'procdef_mg5.dat')
+            if self._generate_info:
+                export_fks.write_procdef_mg5(card_path, #
+                                self._curr_model['name'],
+                                self._generate_info)
+                try:
+                    cmd.Cmd.onecmd(self, 'history .')
+                except:
+                    pass
             
         if self._export_format == 'madevent':
             for ime, me in \
@@ -2539,7 +2606,7 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
         # Remember that we have done export
         self._done_export = (self._export_dir, self._export_format)
 
-        if self._export_format in ['madevent', 'standalone', 'standalone_cpp']:
+        if self._export_format in ['madevent', 'standalone', 'standalone_cpp', 'fks']:
             # Automatically run finalize
             options = []
             if nojpeg:
@@ -2567,7 +2634,8 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
             export_v4.export_model_files(self._model_v4_path, self._export_dir)
             export_v4.export_helas(os.path.join(self._mgme_dir,'HELAS'),
                                    self._export_dir)
-        elif self._export_format in ['madevent', 'standalone']:
+        elif self._export_format in ['madevent', 'standalone', 'fks']:
+            print "FINALIZE FKS"
             logger.info('Export UFO model to MG4 format')
             # wanted_lorentz are the lorentz structures which are
             # actually used in the wavefunctions and amplitudes in
@@ -2578,6 +2646,15 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
                                            os.path.join(self._export_dir),
                                            wanted_lorentz,
                                            wanted_couplings)
+#            if self._export_format == 'fks':
+#                print "FKS DIRS",self.fks_dirs
+#                for dir in self.fks_dirs:
+#                    print dir
+#                    os.system("cp %s %s "  % (\
+#                        os.path.join(self._export_dir, "SubProcesses/coupl.inc"), \
+#                        os.path.join(self._export_dir, "subProcesses/%s" % dir)\
+#                         ) )
+                         
         if self._export_format == 'standalone_cpp':
             logger.info('Export UFO model to C++ format')
             # wanted_lorentz are the lorentz structures which are
@@ -2597,6 +2674,12 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
             export_v4.finalize_madevent_v4_directory(self._export_dir, makejpg,
                                                      [self.history_header] + \
                                                      self.history)
+        elif self._export_format == 'fks':
+            os.system('touch %s/done' % os.path.join(self._export_dir,
+                                                     'SubProcesses'))        
+            export_fks.finalize_fks_directory(self._export_dir, makejpg,
+                                                     [self.history_header] + \
+                                                     self.history)        
         elif self._export_format == 'standalone':
             export_v4.make_v4standalone(self._export_dir)
             export_v4.finalize_standalone_v4_directory(self._export_dir,

@@ -1,0 +1,68 @@
+##########################################################################
+##									##
+##									##
+##				MadWeight				##
+##				*********				##
+##									##
+##	Autor:	 Olivier Mattelaer 					##
+##		 Pierre Artoisenet					##
+##									##
+##	date:	August 08						##
+##									##
+##########################################################################
+##########################################################################
+##									##
+##  rule to modify ./bin/put_banner file from ME template		##
+##									##
+##									##
+## TAG:									##
+##	add_obj								##
+##      add_compile							##
+##									##
+##########################################################################
+##
+##
+##########################################################################
+$B$ add_def $B$
+##************************************************************************
+
+Generic_MW=alfas_functions.o rw_events.o rw_routines.o kin_functions.o  setrun.o  run_printout.o transpole.o open_file.o dgauss.o getissud.o readgrid.o ran1.o
+
+##************************************************************************
+$E$ add_def $E$
+##########################################################################
+$B$ mod_all $B$
+##************************************************************************
+all: $(LIBDIR)libdhelas3.a $(LIBDIR)libdsample.a $(LIBDIR)libgeneric.a $(LIBDIR)libpdf.a  $(LIBDIR)libmodel.a $(LIBDIR)libcernlib.a $(LIBDIR)libgeneric_mw.a $(LIBDIR)libMWPS.a $(LIBDIR)libtools.a $(LIBDIR)libblocks.a $(LIBDIR)libTF.a
+
+##************************************************************************
+$E$ mod_all $E$
+##########################################################################
+##
+##
+##########################################################################
+$B$ add_compile $B$
+##************************************************************************
+$(LIBDIR)libgeneric_mw.a: $(Generic_MW) madweight_card.inc
+	ar cru libgeneric_mw.a $(Generic_MW)
+	ranlib libgeneric_mw.a
+	mv libgeneric_mw.a $(LIBDIR)
+
+$(LIBDIR)libMWPS.a: MadWeight_File/Phase_Space
+	cd MadWeight_File/Phase_Space ; make
+
+$(LIBDIR)libtools.a: MadWeight_File/Tools
+	cd MadWeight_File/Tools ; make
+
+
+$(LIBDIR)libblocks.a: MadWeight_File/Blocks
+	cd MadWeight_File/Blocks ; make
+
+
+$(LIBDIR)libTF.a: MadWeight_File/Transfer_Fct/transfer_functions_fct.f
+	cd MadWeight_File/Transfer_Fct ; make
+
+
+##************************************************************************
+$E$ add_compile $E$
+##########################################################################

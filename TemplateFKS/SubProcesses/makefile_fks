@@ -1,0 +1,104 @@
+F77   = gfortran
+CC    = g++
+#FFLAGS = -g -ffixed-line-length-132 -fno-automatic
+FFLAGS = -O -ffixed-line-length-132 -fno-automatic
+#FFLAGS = -g -pg -ffixed-line-length-132 -fno-automatic
+LIBDIR = ../../lib/
+BINDIR = ../../bin/
+
+FASTJET_CONFIG = fastjet-config
+CXXFLAGS += $(shell $(FASTJET_CONFIG) --cxxflags)
+FJLIBS += $(shell $(FASTJET_CONFIG) --libs --plugins ) -lstdc++
+#FJLIBS += $(shell $(FASTJET_CONFIG) --libs --plugins )
+#FJLIBS=
+
+
+#WH_PATH=/home/madgraph/data/MADFKS/BlackHat/greyhat
+#BHLIBS=$(shell $(WH_PATH)/bin/blackhat-config --libs) -lc -lstdc++
+
+#RCLIBS = -L/home/zanderi/readable/ee5jets/lib -leeto5j -lqcdloop -lff -liof90 -lmpf90
+
+# Change the commenting of the following three lines to inlude the NLOComp+CutTools virtual
+#NLOLIBS= -L./ -lNLOComp 
+#LINKLIBS =  -L../../lib/ -lcts -ldhelas3 -ldsample_fks -lmodel -lgeneric -lpdf
+#LIBS = $(LIBDIR)libcts.a $(LIBDIR)libdhelas3.a $(LIBDIR)libdsample_fks.a $(LIBDIR)libgeneric.a $(LIBDIR)libpdf.a $(LIBDIR)libmodel.a
+LINKLIBS =  -L../../lib/ -ldhelas3 -ldsample_fks -lmodel -lgeneric -lpdf
+LIBS = $(LIBDIR)libdhelas3.a $(LIBDIR)libdsample_fks.a $(LIBDIR)libgeneric.a $(LIBDIR)libpdf.a $(LIBDIR)libmodel.a
+NLOLIBS=
+
+# Files for all executables
+FILES= myamp.o auto_dsig.o genps_fks.o matrix.o setcuts.o cluster.o reweight.o initcluster.o setscales.o born.o sborn_sf.o $(patsubst %.f,%.o,$(wildcard b_sf_???.f)) fks_Sij.o trapfpe.o fastjetfortran_madfks.o ktclusdble.o fks_singular.o montecarlocounter.o
+
+# Files needed for vegas, mint & mintMC
+RUN= $(FILES) unwgt.o cuts.o add_write_info.o LesHouches.o madfks_dbook.o madfks_plot.o
+
+# Files for vegas
+VEGAS= $(RUN) driver_vegas.o vegas2.o
+
+# Files for mint
+MINT= $(RUN) mint-integrator2.o driver_mint.o
+
+# Files for mintMC
+MINTMC= $(RUN) mint-integrator2.o driver_mintMC.o write_event.o
+
+# Files for tests
+TEST= $(FILES) LesHouchesDummy.o cuts.o
+
+# Files for gensym
+SYM= $(FILES) LesHouchesDummy.o symmetry_fks_v3.o
+
+# Files for link_fks
+LINK= $(TEST) link_fks.o
+
+# Files for genint_fks
+INTEGRATE= genint_fks.o
+
+# Files for event reweighting
+REWEIGHT= LesHouches.o reweight_events.o born.o auto_dsig.o setscales.o
+
+%.o : %.f
+	$(F77) $(FFLAGS) -c $<
+%.o : %.for
+	$(F77) $(FFLAGS) -c $<
+%.o: %.c
+	$(CC) -g -c  $^
+%.o: %.cc
+	$(CC) -g -c  $(CXXFLAGS) $^
+
+genint_fks: $(INTEGRATE)
+	$(F77) $(FFLAGS) -o genint_fks $(INTEGRATE)
+
+link_fks: $(LINK)
+	$(F77) $(FFLAGS) -o link_fks $(LINK) $(LINKLIBS) $(FJLIBS)
+	rm fks_singular.o genps_fks.o
+
+gensym: $(SYM)
+	$(F77) $(FFLAGS) -o gensym $(SYM) $(LINKLIBS) $(FJLIBS)
+	rm fks_singular.o
+
+test_Sij: symmetry_fks_test_Sij.o $(TEST)
+	$(F77) $(FFLAGS) -o test_Sij symmetry_fks_test_Sij.o $(TEST) $(LINKLIBS) $(FJLIBS)
+
+test_ME: symmetry_fks_test_ME.o $(TEST)
+	$(F77) $(FFLAGS) -o test_ME symmetry_fks_test_ME.o $(TEST) $(LINKLIBS) $(FJLIBS)
+
+test_MC: symmetry_fks_test_MC.o $(TEST) 
+	$(F77) $(FFLAGS) -o test_MC symmetry_fks_test_MC.o $(TEST) $(LINKLIBS) $(FJLIBS)
+
+madevent_vegas: $(VEGAS)  makefile $(LIBS)
+#	$(F77) $(FFLAGS) -o madevent_vegas $(VEGAS) --static -lgfortran $(LINKLIBS) $(RCLIBS)
+#	$(F77) $(FFLAGS) -o madevent_vegas $(VEGAS) $(LINKLIBS) $(BHLIBS)
+	$(F77) $(FFLAGS) -o madevent_vegas $(VEGAS) $(NLOLIBS) $(LINKLIBS) $(FJLIBS)
+
+madevent_mint: $(MINT)  makefile $(LIBS)
+#	$(F77) $(FFLAGS) -o madevent_mint $(MINT) --static -lgfortran $(LINKLIBS) $(RCLIBS)
+#	$(F77) $(FFLAGS) -o madevent_mint $(MINT) $(LINKLIBS) $(BHLIBS)
+	$(F77) $(FFLAGS) -o madevent_mint $(MINT) $(NLOLIBS) $(LINKLIBS) $(FJLIBS)
+
+madevent_mintMC: $(MINTMC)  makefile $(LIBS)
+#	$(F77) $(FFLAGS) -o madevent_mintMC $(MINTMC) --static -lgfortran $(LINKLIBS) $(RCLIBS)
+#	$(F77) $(FFLAGS) -o madevent_mintMC $(MINTMC) $(LINKLIBS) $(BHLIBS)
+	$(F77) $(FFLAGS) -o madevent_mintMC $(MINTMC) $(NLOLIBS) $(LINKLIBS) $(FJLIBS)
+
+reweight_events: $(REWEIGHT) makefile $(LIBS)
+	$(F77) $(FFLAGS) -o reweight_events $(REWEIGHT) $(NLOLIBS) $(LINKLIBS)

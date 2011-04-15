@@ -43,6 +43,7 @@ class ColorBasis(dict):
     # Dictionary store the raw colorize information
     _list_color_dict = []
 
+
     class ColorBasisError(Exception):
         """Exception raised if an error occurs in the definition
         or the execution of a color basis object."""
@@ -71,7 +72,7 @@ class ColorBasis(dict):
                 num1 = diagram.get('vertices')[i + 1].get('legs')[0].get('number')
                 num2 = diagram.get('vertices')[i + 1].get('legs')[1].get('number')
 
-                # call the ad_vertex routine with a special replacement request
+                # call the add_vertex routine with a special replacement request
                 min_index, res_dict = self.add_vertex(vertex, diagram, model,
                             repl_dict, res_dict, min_index,
                             id0_rep=[num1, num2])
@@ -87,13 +88,20 @@ class ColorBasis(dict):
         # NORMAL VERTICES WITH ID != 0 -----------------------------------------
             min_index, res_dict = self.add_vertex(vertex, diagram, model,
                             repl_dict, res_dict, min_index)
+            
 
         # Return an empty list if all entries are empty
         if all([cs == color_algebra.ColorString() \
                         for cs in res_dict.values()]):
             res_dict = {}
+        
+        
 
+
+                    
         return res_dict
+
+    
 
     def add_vertex(self, vertex, diagram, model,
                    repl_dict, res_dict, min_index, id0_rep=[]):
@@ -304,16 +312,18 @@ class ColorBasis(dict):
 
         if amplitude:
             self.create_color_dict_list(amplitude)
+        
 
         for index, color_dict in enumerate(self._list_color_dict):
             self.update_color_basis(color_dict, index)
+            
 
     def __init__(self, *args):
         """Initialize a new color basis object, either empty or filled (0
         or 1 arguments). If one arguments is given, it's interpreted as 
         an amplitude."""
 
-        assert len(args) < 2, "Object ColorBasis must be initialized with 0 or 1 arguments"
+        assert len(args) < 3, "Object ColorBasis must be initialized with 0 or 1 arguments"
 
 
         dict.__init__(self)
