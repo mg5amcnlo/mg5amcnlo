@@ -1,0 +1,72 @@
+#!/usr/bin/perl -w
+
+if(open (INCARD,"../Cards/proc_card.dat")){
+@incard=<INCARD>;
+close (INCARD);
+# process
+$listpos = 0;
+until($listpos>$#incard){
+    if($incard[$listpos] =~ /^#(\s+)Begin(\s+)PROCESS/) {$ini=$listpos};
+    if($incard[$listpos] =~ /^#(\s+)End(\s+)PROCESS/)   {$end=$listpos};
+       $listpos = $listpos + 1;
+   }
+#
+      ($interaction, $junk)=split(/#/ , $incard[$ini+1]);
+      ($qcdOrder, $junk)   =split(/#/ , $incard[$ini+2]);
+      ($qedOrder, $junk)   =split(/#/ , $incard[$ini+3]);
+#model
+				  $listpos = 0;
+				  until($listpos>$#incard){
+    if($incard[$listpos] =~ /^#(\s+)Begin(\s+)MODEL/) {$ini=$listpos};
+    if($incard[$listpos] =~ /^#(\s+)End(\s+)MODEL/)   {$end=$listpos};
+       $listpos = $listpos + 1;
+   }
+#
+      ($model, $junk)   =split(/#/ , $incard[$ini+1]);
+
+			       chomp($interaction);
+			       chomp($qcdOrder);
+			       chomp($qedOrder);
+			       chomp($model);
+     }
+  else{
+      $interaction = "Unknown";
+      $qcdOrder = "";
+      $qedOrder = "";
+      $model    = "";
+  }      
+
+
+
+   open(PAGE,"> pyplots.html") || die "Error creating diagrams.html";
+   print PAGE "\<HTML\> \n";
+   print PAGE "\<HEAD\> \n";
+   print PAGE "\<TITLE\>Pythia Plots \<\/TITLE\> \n";
+   print PAGE "\<\/HEAD\> \n";
+   print PAGE "\<BODY\> \n";
+   print PAGE "<CENTER>\n";
+   print PAGE "<H1 align=center> Pythia plots for $interaction</H1>\n";
+   print PAGE "<p align=\"center\">";
+   print PAGE "<table border=\"1\"  cellspacing=\"1\">";
+   print PAGE "<tr  align=\"center\">";
+   print PAGE "<TD> Name </TD>";
+   print PAGE "<TD> Variable </TD>";
+   print PAGE "<TR align=center><td bgcolor=\"#00FFFF\">R(i,j)</td> <TD> distance in the (y,phi) plane</td>"; 
+   print PAGE "<TR align=center><td bgcolor=\"#00FFFF\">m(i,j)</td> <TD> invariant mass     </td> ";
+   print PAGE "<TR align=center><td bgcolor=\"#00FFFF\">pt(i) </td> <TD> transverse momentum</td> ";
+   print PAGE "<TR align=center><td bgcolor=\"#00FFFF\">y(i)  </td> <TD> rapidity in the lab</td> ";
+   print PAGE "</table><BR>";
+
+   foreach $f (<./$ARGV[0]/*.jpg>) { 
+     print PAGE "\<IMG SRC=\"$f\" BORDER\=1\> \<BR\> \n";
+     $feps=substr($f,0,-3)."eps";
+     ($junk, $fname)   =split("$ARGV[0]\/" , $feps);
+     print PAGE "\<A HREF\=\"$feps\"\>Download EPS $fname\</A\> \<BR\> \<BR\> \<BR\>\n"; 
+   }
+
+   
+   print PAGE "\<\/CENTER\>\n";
+   print PAGE "\<\/BODY\> \n";
+   print PAGE "\<\/HTML\> \n";
+   close(PAGE)
+

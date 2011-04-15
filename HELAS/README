@@ -1,0 +1,24 @@
+# ----------------------------------------------------------------------------
+#
+# DHELAS 3.1 library
+# Feb. 28, 2001
+# 
+# ----------------------------------------------------------------------------
+# 1 Jul 2003 : Fabio Maltoni
+#
+# "Fixed-width scheme" implemented.
+#
+# coupsm-ORIGINAL.F and coupl-ORIGINAL.inc 
+# are not to be included when HELAS is used with 
+# the 2003 version of MadEvent. 
+# ----------------------------------------------------------------------------
+# 3 Nov 2006 : Rikkert Frederix
+#
+# Several new couplings added for the Higgs Effective Theory.
+# Documentation available in the Doc directory.
+# ----------------------------------------------------------------------------
+# 30 May 2008 :  Rikkert Frederix
+#
+# Added the spin-2 routines by Hagiwara et al. arXiv 0805.2254 (hep-ph)
+#-----------------------------------------------------------------------------
+#

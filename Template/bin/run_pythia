@@ -1,0 +1,115 @@
+#!/bin/bash
+#
+#  This runs pythia on the unweighted_events.dat
+#
+#  Usage: run_pythia [pydir [para/serial [run_name]]]
+#  where pydir is the path to the pythia executable
+
+if [ "$1" != "" ]
+then
+  pydir=$1
+else
+  pydir=../../pythia-pgs/src
+fi
+
+p=$2
+run=$3
+main=`pwd`
+
+if [ "$4" != "" ]
+then
+  ERAdir=$4
+else
+  ERAdir=../../ExRootAnalysis
+fi
+
+if [ ! -e ../Cards/pythia_card.dat ]; then
+  echo "No pythia_card.dat found. Quitting..."
+  exit
+fi
+
+echo $$ >> ../myprocid
+
+if [ "$run" != "" ]; then
+  if [ ! -e ${run}_unweighted_events.lhe.gz ]; then
+    echo "No file  ${run}_unweighted_events.lhe.gz. Quitting..."
+    exit
+  fi
+  echo gunzip ${run}_unweighted_events.lhe.gz
+  gunzip -c ${run}_unweighted_events.lhe.gz > unweighted_events.lhe
+  echo Running Pythia
+fi
+
+# shower and hadronize event through Pythia
+
+echo " " >> ../Cards/pythia_card.dat
+echo "      LHAPATH=$pydir/PDFsets" >> ../Cards/pythia_card.dat
+export PDG_MASS_TBL=$pydir/mass_width_2004.mc
+rm -f pythia.log > /dev/null
+rm -f pythia.err > /dev/null
+rm -f pythia.out > /dev/null
+
+if [ "$p" = "1" ]; 
+then 
+echo '#!/bin/bash' > pythia.pbs
+echo "export PDG_MASS_TBL=$pydir/mass_width_2004.mc;cd $main;$pydir/pythia;touch pythia.out" >> pythia.pbs
+chmod u+x pythia.pbs
+qsub -N pythia_run -e pythia.err -o pythia.log -V -q madgraph pythia.pbs >> ../running_jobs
+while [ ! -e pythia.out ]
+do
+  sleep 5
+done
+rm -f pythia.pbs
+else
+$pydir/pythia >& pythia.log
+fi
+
+if [[ -e pythia.err ]];then
+  cat pythia.err
+fi
+
+if [ "$run" != "" ]; then
+  if [ -e pythia_events.hep ]; then
+    if [ -x $pydir/hep2lhe ]; then
+      echo "Creating Pythia LHE File" > ../status
+      echo "Creating Pythia LHE File"
+      ../bin/gen_crossxhtml-pl $run
+      ../bin/run_hep2lhe $pydir $p  
+    fi
+    if [[ -x $ERAdir/ExRootLHEFConverter && -e pythia_events.lhe ]]; then
+      echo "Creating Pythia LHE Root File" > ../status
+      echo "Creating Pythia LHE Root File"
+      ../bin/gen_crossxhtml-pl $run
+      $ERAdir/ExRootLHEFConverter pythia_events.lhe ${run}_pythia_lhe_events.root
+    fi
+    echo Storing files
+    echo Storing Pythia files > ../status
+    ../bin/gen_crossxhtml-pl $run
+    mv -f pythia_events.hep ${run}_pythia_events.hep
+    gzip -f ${run}_pythia_events.hep
+    mv -f pythia.log ${run}_pythia.log
+# pythia_card.dat
+   if [ -e ../Cards/pythia_card.dat ] ; then 
+      echo "<MGPythiaCard>" >>${run}_banner.txt
+      cat ../Cards/pythia_card.dat   >> ${run}_banner.txt
+      echo "</MGPythiaCard>" >>${run}_banner.txt
+   fi
+  fi
+  if [ -e events.tree ]; then
+    mv -f events.tree ${run}_events.tree
+    gzip -f ${run}_events.tree
+    mv -f xsecs.tree ${run}_xsecs.tree
+    mv -f beforeveto.tree ${run}_beforeveto.tree
+    gzip -f ${run}_beforeveto.tree
+  fi
+  if [ -e pythia_events.lhe ]; then
+    echo \<LesHouchesEvents version=\"1.0\"\> > temp.lhe
+    echo \<\!-- >> temp.lhe
+    cat ${run}_banner.txt >> temp.lhe
+    sed /'<LesHouchesEvents version=\"1.0\">'/s//'-->'/ pythia_events.lhe >> temp.lhe
+    rm -f pythia_events.lhe
+    mv -f temp.lhe ${run}_pythia_events.lhe
+    gzip -f ${run}_pythia_events.lhe
+  fi
+  rm -f unweighted_events.lhe  
+fi

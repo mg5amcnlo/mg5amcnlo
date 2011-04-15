@@ -1,0 +1,75 @@
+<html>
+<head>
+   <title>MadEvent MSSM param card calculator</title>
+</head>
+<body>
+<center><H2>MadEvent MSSM param card calculator</H2></center>
+
+<font size="+2">I.</font> Either: Upload a SUSY Les Houches file created by
+    your favourite <a href="http://kraml.web.cern.ch/kraml/comparison/">
+    spectrum generator</a> and run it through the
+    calculator to create a MadEvent compliable param_card:<br>
+<FORM METHOD="POST" 
+      ACTION="/cgi-bin/NewProcess/web_mssm_calc-pl"
+      ENCTYPE="multipart/form-data"    
+>
+<INPUT TYPE=HIDDEN NAME=procname VALUE="proc_name_here"> 
+<INPUT TYPE=HIDDEN NAME=callfrom  VALUE="calculate"> 
+<br>
+<table>
+<tr><td>SUSY Les Houches file: 
+<INPUT TYPE="FILE" NAME="LH.dat"> 
+</table>
+<br>
+Options:
+<table>
+<TR><TD> SM parameter calculation: </TD> <TD> <SELECT NAME=mcalc>
+<OPTION VALUE=0 SELECTED> Use &alpha, GF, mZ given in the LH file to
+		  calculate sin &theta, mW
+<OPTION VALUE=1> Ensure unitarity by extracting SM params from mixing matrices<sup>*</sup>
+</SELECT>
+</TD></TR>
+<TR><TD></TD><TD>
+<sup>*</sup>See <a href="http://arxiv.org/abs/hep-ph/0601063">hep-ph/0601063</a> for a discussion of unitarity.
+</TD></TR>
+<TR><TD> SUSY particle widths: </TD> <TD> <SELECT NAME=widths>
+<OPTION VALUE=0> Use zero width approximation
+<OPTION VALUE=1 SELECTED> Calculate widths at LO using SDECAY
+</SELECT>
+</TD></TR>
+</table>
+<p><INPUT TYPE=SUBMIT VALUE="Send"> to create a MadEvent param_card.dat</p>
+</FORM> 
+
+<hr>
+<font size="+2">II.</font> Or: Choose one of the 
+<a href="http://www.cpt.dur.ac.uk/~georg/sps/">SPS benchmark points</a>, or
+the file used for the <a href="http://arxiv.org/abs/hep-ph/0512260">comparison</a> of processes <a
+href="http://www.sherpa-mc.de/susy_comparison/susy_comparison.html">listed</a>
+by the CATPISS collaboration. <br>
+<FORM METHOD="POST" 
+ACTION="/cgi-bin/NewProcess/web_mssm_calc-pl"
+ENCTYPE="multipart/form-data">
+<INPUT TYPE=HIDDEN NAME=procname VALUE="proc_name_here"> 
+<INPUT TYPE=HIDDEN NAME=callfrom  VALUE="sps"> 
+<br>
+<table>
+<TR><TD> Choose a point: </TD> <TD> <SELECT NAME=LHfile>
+<OPTION VALUE="param_card-sps1a.dat" SELECTED>SPS point 1a
+<OPTION VALUE="param_card-sps1b.dat">SPS point 1b
+<OPTION VALUE="param_card-sps2.dat">SPS point 2
+<OPTION VALUE="param_card-sps3.dat">SPS point 3
+<OPTION VALUE="param_card-sps4.dat">SPS point 4
+<OPTION VALUE="param_card-sps5.dat">SPS point 5
+<OPTION VALUE="param_card-sps6.dat">SPS point 6
+<OPTION VALUE="param_card-sps7.dat">SPS point 7
+<OPTION VALUE="param_card-sps8.dat">SPS point 8
+<OPTION VALUE="param_card-sps9.dat">SPS point 9
+<OPTION VALUE="param_card-comparison.dat">Comparison point
+</SELECT>
+<INPUT TYPE=SUBMIT VALUE="OK">
+</TD></TR>
+</table>
+</FORM> 
+</body>
+</html>

@@ -36,7 +36,7 @@ class CheckFileCreate():
         """ Check the content of a file """
 
         current_value = open(self.give_pos(filename)).read()
-        self.assertEqual(current_value, solution)
+        self.assertEqual(current_value.split('\n'), solution.split('\n'))
 
     def give_pos(self, filename):
         """ take a name and a change it in order to have a valid path in the output directory """
@@ -78,7 +78,7 @@ class FortranWriterTest(unittest.TestCase, CheckFileCreate):
         lines.append("c = hej")
         lines.append(" Call hej")
         lines.append("# Test")
-        lines.append("else")
+        lines.append("20 else")
         lines.append("bah=2")
         lines.append(" endif")
         lines.append("test")
@@ -94,7 +94,7 @@ C       Test
         C = HEJ
         CALL HEJ
 C       Test
-      ELSE
+ 20   ELSE
         BAH=2
       ENDIF
       TEST\n"""

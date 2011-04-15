@@ -40,7 +40,8 @@ class TestColorSextetModel(unittest.TestCase):
 
 
     def setUp(self):
-        self.base_model = import_ufo.import_model('sextet_diquarks')
+        m_path = import_ufo.find_ufo_path('sextet_diquarks')
+        self.base_model = import_ufo.import_model(m_path)
         self.full_model = model_reader.ModelReader(self.base_model)
         self.full_model.set_parameters_and_couplings()
     
@@ -65,20 +66,20 @@ class TestColorSextetModel(unittest.TestCase):
         myproc = base_objects.Process({'legs':myleglist,
                                        'model':self.base_model})
 
-        p, w_rambo = process_checks.get_momenta(myproc, self.full_model)
         helas_writer = \
                    helas_call_writers.PythonUFOHelasCallWriter(self.base_model)
         
+        evaluator = process_checks.MatrixElementEvaluator(self.full_model,
+                                                          helas_writer,
+                                                          reuse = False)
+        
+        p, w_rambo = evaluator.get_momenta(myproc)
+
         amplitude = diagram_generation.Amplitude(myproc)
         matrix_element = helas_objects.HelasMatrixElement(amplitude)
 
-        stored_quantities = {}
-
-        mg5_me_value = process_checks.evaluate_matrix_element(matrix_element,
-                                                           stored_quantities,
-                                                           helas_writer,
-                                                           self.full_model,
-                                                           p)
+        mg5_me_value, amp2 = evaluator.evaluate_matrix_element(matrix_element,
+                                                               p)
 
         comparison_value = uu_Dg(p, 6, self.full_model)
 
@@ -132,20 +133,20 @@ class TestColorSextetModel(unittest.TestCase):
         myproc = base_objects.Process({'legs':myleglist,
                                        'model':self.base_model})
 
-        p, w_rambo = process_checks.get_momenta(myproc, self.full_model)
         helas_writer = \
                    helas_call_writers.PythonUFOHelasCallWriter(self.base_model)
         
+        evaluator = process_checks.MatrixElementEvaluator(self.full_model,
+                                                          helas_writer,
+                                                          reuse = False)
+        
+        p, w_rambo = evaluator.get_momenta(myproc)
+
         amplitude = diagram_generation.Amplitude(myproc)
         matrix_element = helas_objects.HelasMatrixElement(amplitude)
 
-        stored_quantities = {}
-
-        mg5_me_value = process_checks.evaluate_matrix_element(matrix_element,
-                                                           stored_quantities,
-                                                           helas_writer,
-                                                           self.full_model,
-                                                           p)
+        mg5_me_value, amp2 = evaluator.evaluate_matrix_element(matrix_element,
+                                                               p)
 
         comparison_value = gu_uxD(p, 6, self.full_model)
 
@@ -323,7 +324,8 @@ class TestColorTripletModel(unittest.TestCase):
 
 
     def setUp(self):
-        self.base_model = import_ufo.import_model('triplet_diquarks')
+        m_path = import_ufo.find_ufo_path('triplet_diquarks')
+        self.base_model = import_ufo.import_model(m_path)
         self.full_model = model_reader.ModelReader(self.base_model)
         self.full_model.set_parameters_and_couplings()
         # Set top quark mass to 0 to compare with literature expression
@@ -352,22 +354,22 @@ class TestColorTripletModel(unittest.TestCase):
         myproc = base_objects.Process({'legs':myleglist,
                                        'model':self.base_model})
 
-        p, w_rambo = process_checks.get_momenta(myproc, self.full_model)
         helas_writer = \
                    helas_call_writers.PythonUFOHelasCallWriter(self.base_model)
         
+        evaluator = process_checks.MatrixElementEvaluator(self.full_model,
+                                                          helas_writer,
+                                                          reuse = False)
+        
+        p, w_rambo = evaluator.get_momenta(myproc)
+
         amplitude = diagram_generation.Amplitude(myproc)
         matrix_element = helas_objects.HelasMatrixElement(amplitude)
 
-        stored_quantities = {}
-
         self.assertTrue(matrix_element.get('diagrams'))
 
-        mg5_me_value = process_checks.evaluate_matrix_element(matrix_element,
-                                                           stored_quantities,
-                                                           helas_writer,
-                                                           self.full_model,
-                                                           p)
+        mg5_me_value, amp2 = evaluator.evaluate_matrix_element(matrix_element,
+                                                               p)
 
         comparison_value = uu_Dg(p, 3, self.full_model)
 

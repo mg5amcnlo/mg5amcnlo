@@ -365,7 +365,7 @@ def read_interactions_v4(fsock, ref_part_list):
                                              '**2+' + \
                                               values[len(part_list) + 1] + \
                                               '**2)'})
-                elif myinter.get('lorentz')[0] == 'WWVV':
+                else: #if myinter.get('lorentz')[0] == 'WWVV':
                     # Need special treatment of v4 SM WWVV couplings since 
                     # MG5 can only have one coupling per Lorentz structure
                     myinter.set('couplings', {(0, 0):values[len(part_list)] + \
@@ -373,7 +373,7 @@ def read_interactions_v4(fsock, ref_part_list):
                                               values[len(part_list) + 1]})
                     #raise Interaction.PhysicsObjectError, \
                     #    "Only FR-style 4-vertices implemented."
-
+                
                 # SPECIAL TREATMENT OF COLOR
                 # g g sq sq (two different color structures, same Lorentz)
                 if spin_array == [3, 3, 1, 1] and colors == [-3, 3, 8, 8]:

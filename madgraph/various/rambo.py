@@ -61,8 +61,8 @@ def RAMBO(N,ET,XM):
     *                                                                     *
     *    A DEMOCRATIC MULTI-PARTICLE PHASE SPACE GENERATOR                *
     *    AUTHORS:  S.D. ELLIS,  R. KLEISS,  W.J. STIRLING                 *
-    *    THIS IS VERSION 1.0 -  WRITTEN BY O. MATTELAER                   *
     *    -- ADJUSTED BY HANS KUIJF, WEIGHTS ARE LOGARITHMIC (20-08-90)    *
+    *    THIS IS PY VERSION 1.0 -  WRITTEN BY O. MATTELAER                *
     *                                                                     *
     *    N  = NUMBER OF PARTICLES                                         *
     *    ET = TOTAL CENTRE-OF-MASS ENERGY                                 *

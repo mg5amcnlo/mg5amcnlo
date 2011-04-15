@@ -20,7 +20,8 @@ TestLoader = unittest.TestLoader
 
 class TestCase(unittest.TestCase):
     """Test Case with smarter self.assertraise in optimize mode"""
-  
+
+    maxDiff = None
     def assertRaises(self, error, *opt):
         """ smarter self.assertraise in optimize mode"""
         if not __debug__:

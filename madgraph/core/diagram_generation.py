@@ -18,13 +18,14 @@ chains, and MultiProcess allows generation of processes with
 multiparticle definitions.
 """
 
+import array
 import copy
 import itertools
 import logging
 
 import madgraph.core.base_objects as base_objects
 
-from madgraph import MadGraph5Error
+from madgraph import MadGraph5Error, InvalidCmd
 logger = logging.getLogger('madgraph.diagram_generation')
 
 #===============================================================================
@@ -41,6 +42,9 @@ class Amplitude(base_objects.PhysicsObject):
 
         self['process'] = base_objects.Process()
         self['diagrams'] = None
+        # has_mirror_process is True if the same process but with the
+        # two incoming particles interchanged has been generated
+        self['has_mirror_process'] = False
 
     def __init__(self, argument=None):
         """Allow initialization with Process"""
@@ -67,6 +71,10 @@ class Amplitude(base_objects.PhysicsObject):
             if not isinstance(value, base_objects.DiagramList):
                 raise self.PhysicsObjectError, \
                         "%s is not a valid DiagramList object" % str(value)
+        if name == 'has_mirror_process':
+            if not isinstance(value, bool):
+                raise self.PhysicsObjectError, \
+                        "%s is not a valid boolean" % str(value)
         return True
 
     def get(self, name):
@@ -83,7 +91,7 @@ class Amplitude(base_objects.PhysicsObject):
     def get_sorted_keys(self):
         """Return diagram property names as a nicely sorted list."""
 
-        return ['process', 'diagrams']
+        return ['process', 'diagrams', 'has_mirror_process']
 
     def get_number_of_diagrams(self):
         """Returns number of diagrams for this amplitude"""
@@ -165,11 +173,11 @@ class Amplitude(base_objects.PhysicsObject):
                   
 
         res = base_objects.DiagramList()
-
         # First check that the number of fermions is even
         if len(filter(lambda leg: model.get('particle_dict')[\
                         leg.get('id')].is_fermion(), legs)) % 2 == 1:
             self['diagrams'] = res
+            raise InvalidCmd, 'The number of fermion is odd' 
             return res
 
         # Then check same number of incoming and outgoing fermions (if
@@ -178,8 +186,30 @@ class Amplitude(base_objects.PhysicsObject):
            len(filter(lambda leg: leg.is_incoming_fermion(model), legs)) != \
            len(filter(lambda leg: leg.is_outgoing_fermion(model), legs)):
             self['diagrams'] = res
+            raise InvalidCmd, 'The number of of incoming/outcoming fermions are different' 
             return res
+        
+        # Finally check that charge (conserve by all interactions) of the process
+        #is globally conserve for this process.
+        for charge in model.get('conserved_charge'):
+            total = 0
+            for leg in legs:
+                part = model.get('particle_dict')[leg.get('id')]
+                try:
+                    value = part.get(charge)
+                except AttributeError:
+                    value = 0
+                    
+                if (leg.get('id') != part['pdg_code']) != leg['state']:
+                    total -= value
+                else:
+                    total += value
 
+            if abs(total) > 1e-10:
+                self['diagrams'] = res
+                raise InvalidCmd, 'No %s conservation for this process ' % charge
+                return res
+                    
         logger.info("Trying %s " % process.nice_string().replace('Process', 'process'))
 
         # Give numbers to legs in process
@@ -623,7 +653,7 @@ class AmplitudeList(base_objects.PhysicsObjectList):
         """Test if object obj is a valid Amplitude for the list."""
 
         return isinstance(obj, Amplitude)
-
+    
 #===============================================================================
 # DecayChainAmplitude
 #===============================================================================
@@ -638,14 +668,17 @@ class DecayChainAmplitude(Amplitude):
         self['amplitudes'] = AmplitudeList()
         self['decay_chains'] = DecayChainAmplitudeList()
 
-    def __init__(self, argument=None):
+    def __init__(self, argument = None, collect_mirror_procs = False,
+                 ignore_six_quark_processes = False):
         """Allow initialization with Process and with ProcessDefinition"""
 
         if isinstance(argument, base_objects.Process):
             super(DecayChainAmplitude, self).__init__()
             if isinstance(argument, base_objects.ProcessDefinition):
                 self['amplitudes'].extend(\
-                MultiProcess.generate_multi_amplitudes(argument))
+                MultiProcess.generate_multi_amplitudes(argument,
+                                                       collect_mirror_procs,
+                                                       ignore_six_quark_processes))
             else:
                 self['amplitudes'].append(Amplitude(argument))
                 # Clean decay chains from process, since we haven't
@@ -662,7 +695,8 @@ class DecayChainAmplitude(Amplitude):
                           "Decay chain process must have exactly one" + \
                           " incoming particle"
                 self['decay_chains'].append(\
-                    DecayChainAmplitude(process))
+                    DecayChainAmplitude(process, collect_mirror_procs,
+                                        ignore_six_quark_processes))
         elif argument != None:
             # call the mother routine
             super(DecayChainAmplitude, self).__init__(argument)
@@ -779,25 +813,38 @@ class MultiProcess(base_objects.PhysicsObject):
         # DecayChainAmplitudeList, depending on whether there are
         # decay chains in the process definitions or not.
         self['amplitudes'] = AmplitudeList()
+        # Flag for whether to combine IS mirror processes together
+        self['collect_mirror_procs'] = False
+        # List of quark flavors where we ignore processes with at
+        # least 6 quarks (three quark lines)
+        self['ignore_six_quark_processes'] = []
 
-    def __init__(self, argument=None):
+    def __init__(self, argument=None, collect_mirror_procs = False,
+                 ignore_six_quark_processes = []):
         """Allow initialization with ProcessDefinition or
         ProcessDefinitionList"""
 
         if isinstance(argument, base_objects.ProcessDefinition):
             super(MultiProcess, self).__init__()
             self['process_definitions'].append(argument)
-            self.get('amplitudes')
         elif isinstance(argument, base_objects.ProcessDefinitionList):
             super(MultiProcess, self).__init__()
             self['process_definitions'] = argument
-            self.get('amplitudes')
         elif argument != None:
             # call the mother routine
             super(MultiProcess, self).__init__(argument)
         else:
             # call the mother routine
             super(MultiProcess, self).__init__()
+
+        self['collect_mirror_procs'] = collect_mirror_procs
+        self['ignore_six_quark_processes'] = ignore_six_quark_processes
+        
+        if isinstance(argument, base_objects.ProcessDefinition) or \
+               isinstance(argument, base_objects.ProcessDefinitionList):
+            # Generate the diagrams
+            self.get('amplitudes')
+
 
     def filter(self, name, value):
         """Filter for valid process property values."""
@@ -807,10 +854,20 @@ class MultiProcess(base_objects.PhysicsObject):
                 raise self.PhysicsObjectError, \
                         "%s is not a valid ProcessDefinitionList object" % str(value)
 
-        if name == 'process':
-            if not isinstance(value, base_objects.ProcessList):
+        if name == 'amplitudes':
+            if not isinstance(value, diagram_generation.AmplitudeList):
                 raise self.PhysicsObjectError, \
-                        "%s is not a valid ProcessList object" % str(value)
+                        "%s is not a valid AmplitudeList object" % str(value)
+
+        if name == 'collect_mirror_procs':
+            if not isinstance(value, bool):
+                raise self.PhysicsObjectError, \
+                        "%s is not a valid boolean" % str(value)
+
+        if name == 'ignore_six_quark_processes':
+            if not isinstance(value, list):
+                raise self.PhysicsObjectError, \
+                        "%s is not a valid list" % str(value)
 
         return True
 
@@ -823,10 +880,14 @@ class MultiProcess(base_objects.PhysicsObject):
                     # This is a decay chain process
                     # Store amplitude(s) as DecayChainAmplitude
                     self['amplitudes'].append(\
-                        DecayChainAmplitude(process_def))
+                        DecayChainAmplitude(process_def,
+                                       self.get('collect_mirror_procs'),
+                                       self.get('ignore_six_quark_processes')))
                 else:
                     self['amplitudes'].extend(\
-                        MultiProcess.generate_multi_amplitudes(process_def))
+                       MultiProcess.generate_multi_amplitudes(process_def,
+                                       self.get('collect_mirror_procs'),
+                                       self.get('ignore_six_quark_processes')))
 
         return MultiProcess.__bases__[0].get(self, name) # call the mother routine
 
@@ -836,7 +897,9 @@ class MultiProcess(base_objects.PhysicsObject):
         return ['process_definitions', 'amplitudes']
 
     @staticmethod
-    def generate_multi_amplitudes(process_definition):
+    def generate_multi_amplitudes(process_definition,
+                                  collect_mirror_procs = False,
+                                  ignore_six_quark_processes = []):
         """Generate amplitudes in a semi-efficient way.
         Make use of crossing symmetry for processes that fail diagram
         generation, but not for processes that succeed diagram
@@ -858,13 +921,14 @@ class MultiProcess(base_objects.PhysicsObject):
         # failed_procs are processes that have already failed
         # based on crossing symmetry
         failed_procs = []
+        success_procs = []
         
         model = process_definition['model']
         
-        isids = [leg['ids'] for leg in \
-                 filter(lambda leg: leg['state'] == False, process_definition['legs'])]
-        fsids = [leg['ids'] for leg in \
-                 filter(lambda leg: leg['state'] == True, process_definition['legs'])]
+        isids = [leg['ids'] for leg in process_definition['legs'] \
+                 if leg['state'] == False]
+        fsids = [leg['ids'] for leg in process_definition['legs'] \
+                 if leg['state'] == True]
 
         # Generate all combinations for the initial state
         
@@ -895,6 +959,20 @@ class MultiProcess(base_objects.PhysicsObject):
                 
                 legs = base_objects.LegList(leg_list)
 
+                # Check for crossed processes
+                sorted_legs = tuple(sorted(legs.get_outgoing_id_list(model)))
+
+                # Check for six-quark processes
+                if ignore_six_quark_processes and \
+                       len([i for i in sorted_legs if abs(i) in \
+                            ignore_six_quark_processes]) >= 6:
+                    continue
+                    
+                # Check if crossed process has already failed,
+                # in that case don't check process
+                if sorted_legs in failed_procs:
+                    continue
+
                 # Setup process
                 process = base_objects.Process({\
                               'legs':legs,
@@ -912,23 +990,44 @@ class MultiProcess(base_objects.PhysicsObject):
                               'overall_orders': \
                                  process_definition.get('overall_orders')})
 
-                # Check for crossed processes
-                sorted_legs = sorted(legs.get_outgoing_id_list(model))
-                # Check if crossed process has already failed
-                # In that case don't check process
-                if tuple(sorted_legs) in failed_procs:
-                    continue
+                if collect_mirror_procs:
+                    # Check if mirrored process is already generated
+                    fast_proc = \
+                              array.array('i',[leg.get('id') for leg in legs])
+                    mirror_proc = \
+                              array.array('i', [fast_proc[1], fast_proc[0]] + \
+                                          list(fast_proc[2:]))
+                    try:
+                        mirror_amp = \
+                                   amplitudes[success_procs.index(mirror_proc)]
+                        mirror_amp.set('has_mirror_process', True)
+                        logger.info("Process %s added to mirror process %s" % \
+                                    (process.base_string(),
+                                     mirror_amp.get('process').base_string()))
+                        continue
+                    except:
+                        pass
 
                 amplitude = Amplitude({"process": process})
-                if not amplitude.generate_diagrams():
-                    # Add process to failed_procs
-                    failed_procs.append(tuple(sorted_legs))
-                if amplitude.get('diagrams'):
-                    amplitudes.append(amplitude)
-
+                
+                try:
+                    result = amplitude.generate_diagrams()
+                except InvalidCmd as error:
+                    failed_procs.append(sorted_legs)
+                else:
+                    if amplitude.get('diagrams'):
+                        amplitudes.append(amplitude)
+                        if collect_mirror_procs:
+                            success_procs.append(fast_proc)
+                    elif not result:
+                        failed_procs.append(tuple(sorted_legs))
+ 
         # Raise exception if there are no amplitudes for this process
         if not amplitudes:
-            raise MadGraph5Error, \
+            if len(failed_procs) == 1 and 'error' in locals():
+                raise error
+            else:
+                raise MadGraph5Error, \
             "No amplitudes generated from process %s. Please enter a valid process" % \
                   process_definition.nice_string()
         
@@ -1092,14 +1191,18 @@ class MultiProcess(base_objects.PhysicsObject):
                         continue
 
                     amplitude = Amplitude({"process": process})
-                    if not amplitude.generate_diagrams():
-                        # Add process to failed_procs
+                    try:
+                        amplitude.generate_diagrams()
+                    except InvalidCmd:
                         failed_procs.append(tuple(sorted_legs))
+                    else:
+                        if amplitude.get('diagrams'):
+                            # We found a valid amplitude. Return this order number
+                            logger.setLevel(oldloglevel)
+                            return {coupling: max_order_now}
+                        else:
+                            failed_procs.append(tuple(sorted_legs))
 
-                    if amplitude.get('diagrams'):
-                        # We found a valid amplitude. Return this order number
-                        logger.setLevel(oldloglevel)
-                        return {coupling: max_order_now}
             # No processes found, increase max_order_now
             max_order_now += 1
             logger.setLevel(oldloglevel)

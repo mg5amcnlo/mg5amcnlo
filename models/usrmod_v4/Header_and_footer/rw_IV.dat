@@ -1,0 +1,173 @@
+      return
+      end
+
+      
+      subroutine set_it(npara,ivalue,value,name,id,
+     &                  block_name,var,def_value)
+c----------------------------------------------------------------------------------
+c     finds the parameter value  in block_name and associate var to it.
+c     If it is not found a default is given.
+c----------------------------------------------------------------------------------
+      implicit none
+
+c
+c     parameters
+c
+      integer maxpara
+      parameter (maxpara=100)
+c
+c     arguments
+c
+      integer npara,ivalue(maxpara),id
+      character*20  block_name,name(maxpara)
+      real*8 var,def_value,value(maxpara)
+c
+c     local
+c
+      logical found
+      integer i
+c
+c     start
+c
+	  found=.false.
+      do i=1,npara
+         found = (id.eq.ivalue(i)).and.(name(i).eq.block_name)
+ 	               if(found) then
+         	var=value(i)
+            exit
+          endif	
+      enddo
+      
+      if (.not.found) then
+c         write (*,*) "Warning: parameter not found"
+c         write (*,*) "         setting it to default value ",def_value
+         var=def_value
+      endif
+      return
+
+      end
+      
+      
+      subroutine case_trap(string,length)
+c**********************************************************    
+c change string to lowercase if the input is not
+c**********************************************************
+      implicit none
+c
+c     ARGUMENT
+c      
+      character*(*) string
+      integer length
+c
+c     LOCAL
+c
+      integer i,k
+
+      do i=1,length
+         k=ichar(string(i:i))
+         if(k.ge.65.and.k.le.90) then  !upper case A-Z
+            k=ichar(string(i:i))+32   
+            string(i:i)=char(k)        
+         endif
+      enddo
+
+      return
+      end
+
+c********************************************************************
+           subroutine open_file_mdl(lun,filename,fopened)
+c***********************************************************************
+c     opens file input-card.dat in current directory or above
+c***********************************************************************
+      implicit none
+c
+c     Arguments
+c
+      integer lun
+      logical fopened
+      character*(*) filename
+      character*90  tempname
+      integer fine
+      integer dirup,i
+
+c-----
+c  Begin Code
+c-----
+c
+c     first check that we will end in the main directory
+c
+      tempname=filename
+      fine=index(tempname,' ')
+      if(fine.eq.0) fine=len(tempname)
+      tempname=tempname(1:fine)
+      open(unit=lun,file=tempname,status='old',ERR=10)
+      return
+c
+c         if I have to read a card
+c
+ 10   if(index(filename,"_card").gt.0) then
+         tempname='Cards/'//tempname
+      endif
+
+      fopened=.false.
+      do i=0,5
+         open(unit=lun,file=tempname,status='old',ERR=30)
+         fopened=.true.
+         write(*,*) 'read model file',tempname
+         exit
+ 30      tempname='../'//tempname
+         if (i.eq.5)then
+            write(*,*) 'Warning: file ',tempname,' is not correct'
+            stop
+         endif
+      enddo
+
+
+      return
+      end
+ 
+
+
+
+c********************************************************************
+      subroutine no_spaces(buff,nchars)
+c**********************************************************************
+c     Given buff a buffer of words separated by spaces
+c     returns it where all space are moved to the right
+c     returns also the length of the single word.
+c     maxlength is the length of the buffer
+c**********************************************************************
+      implicit none
+c
+c     Constants
+c
+      integer    maxline
+      parameter (maxline=20)
+      character*1 null
+      parameter  (null=' ')
+c
+c     Arguments
+c
+      character*(maxline) buff
+      integer nchars,maxlength
+c
+c     Local
+c
+      integer i,j
+      character*(maxline) temp
+c-----
+c  Begin Code
+c-----
+      nchars=0
+c      write (*,*) "buff=",buff(1:maxlength)
+      do i=1,maxline
+         if(buff(i:i).ne.null) then
+            nchars=nchars+1
+            temp(nchars:nchars)=buff(i:i)
+         endif
+c         write(*,*) i,":",buff(1:maxlength),":",temp(1:nchars),":"
+      enddo
+      buff=temp      
+      end
+
+      

@@ -1,0 +1,979 @@
+#
+#	File which contains allowed interactions. Must be named 
+#	interactions.dat and reside in the current directory for MadGraph
+#	to see it.
+#	
+#	3-particle vertices are entered as follows:
+#	
+#	particle1 particle2  particle3 coupling_name model (QCD,QED,BRS)
+#
+#	Note: The ordering of particles is very important. 
+#	For FFV interactions, must use particles, not anti_particles.
+#
+
+#
+# QCD FFV interactions
+#
+
+d d g GG QCD
+u u g GG QCD
+s s g GG QCD
+c c g GG QCD
+b b g GG QCD
+t t g GG QCD
+
+g g g G  QCD
+
+g g g g G G QCD QCD 
+
+#
+# QED FFV interactions
+#
+
+d d a GAD QED
+u u a GAU QED
+s s a GAD QED
+c c a GAU QED
+b b a GAD QED
+t t a GAU QED
+
+e-  e-  a GAL QED 
+mu- mu- a GAL QED
+ta- ta- a GAL QED
+
+#
+# QED FFV Interactions
+#
+
+# FFV (qqZ)
+
+d d z GZD QED
+u u z GZU QED
+s s z GZD QED
+c c z GZU QED
+b b z GZD QED
+t t z GZU QED
+
+# FFV (llZ)
+
+e-  e-  z GZL QED
+mu- mu- z GZL QED
+ta- ta- z GZL QED
+ve  ve  z GZN QED
+vm  vm  z GZN QED
+vt  vt  z GZN QED
+
+# FFV (qq'W) - diagonal CKM
+
+d u w- GWF QED
+s c w- GWF QED
+b t w- GWF QED
+u d w+ GWF QED
+c s w+ GWF QED
+t b w+ GWF QED
+
+# FFV (ll'W)
+
+ve  e-  w+ GWF QED
+vm  mu- w+ GWF QED
+vt  ta- w+ GWF QED
+e-  ve  w- GWF QED
+mu- vm  w- GWF QED
+ta- vt  w- GWF QED
+
+# FFV (gluinos)
+
+go go g GGI QCD
+
+# FFV (weak inos)
+
+n1  n1  z  GZN11 QED
+n1  n2  z  GZN12 QED
+n1  n3  z  GZN13 QED
+n1  n4  z  GZN14 QED
+n2  n2  z  GZN22 QED
+n2  n3  z  GZN23 QED
+n2  n4  z  GZN24 QED
+n3  n3  z  GZN33 QED
+n3  n4  z  GZN34 QED
+n4  n4  z  GZN44 QED
+
+x1- x1- a  GAX   QED
+x2- x2- a  GAX   QED
+x1- x1- z  GZX11 QED
+x1- x2- z  GZX12 QED
+x2- x1- z  GZX12 QED
+x2- x2- z  GZX22 QED
+
+n1  x1- w+ GWN1X1 QED
+x1- n1  w- GWX1N1 QED
+n1  x2- w+ GWN1X2 QED
+x2- n1  w- GWX2N1 QED
+n2  x1- w+ GWN2X1 QED
+x1- n2  w- GWX1N2 QED
+n2  x2- w+ GWN2X2 QED
+x2- n2  w- GWX2N2 QED
+n3  x1- w+ GWN3X1 QED
+x1- n3  w- GWX1N3 QED
+n3  x2- w+ GWN3X2 QED
+x2- n3  w- GWX2N3 QED
+n4  x1- w+ GWN4X1 QED
+x1- n4  w- GWX1N4 QED
+n4  x2- w+ GWN4X2 QED
+x2- n4  w- GWX2N4 QED
+
+#
+# FFS
+#
+
+# FFS (Yukawa)
+
+ta- ta- h1 GH1LL QED
+ta- ta- h2 GH2LL QED
+ta- ta- h3 GH3LL QED
+b   b   h1 GH1BB QED
+b   b   h2 GH2BB QED
+b   b   h3 GH3BB QED
+t   t   h1 GH1TT QED
+t   t   h2 GH2TT QED
+t   t   h3 GH3TT QED
+
+# FFS (Yukawa)
+
+b   t   h- GHMQ QED
+t   b   h+ GHPQ QED
+ta- vt  h- GHML QED
+vt  ta- h+ GHPL QED
+
+# FFS (gluinos)
+
+d  go dl  GQLGOM QCD
+go d  dl~ GQLGOP QCD
+d  go dr  GQRGOM QCD
+go d  dr~ GQRGOP QCD
+u  go ul  GQLGOM QCD
+go u  ul~ GQLGOP QCD
+u  go ur  GQRGOM QCD
+go u  ur~ GQRGOP QCD
+
+s  go sl  GQLGOM QCD
+go s  sl~ GQLGOP QCD
+s  go sr  GQRGOM QCD
+go s  sr~ GQRGOP QCD
+c  go cl  GQLGOM QCD
+go c  cl~ GQLGOP QCD
+c  go cr  GQRGOM QCD
+go c  cr~ GQRGOP QCD
+
+b  go b1  GB1GOM QCD
+go b  b1~ GB1GOP QCD
+b  go b2  GB2GOM QCD
+go b  b2~ GB2GOP QCD
+t  go t1  GT1GOM QCD
+go t  t1~ GT1GOP QCD
+t  go t2  GT2GOM QCD
+go t  t2~ GT2GOP QCD
+
+# FFS (Higgs and weak inos)
+
+x1- x1- h1 GH1X11 QED
+x1- x2- h1 GH1X12 QED
+x2- x1- h1 GH1X21 QED
+x2- x2- h1 GH1X22 QED
+
+x1- x1- h2 GH2X11 QED
+x1- x2- h2 GH2X12 QED
+x2- x1- h2 GH2X21 QED
+x2- x2- h2 GH2X22 QED
+
+x1- x1- h3 GH3X11 QED
+x1- x2- h3 GH3X12 QED
+x2- x1- h3 GH3X21 QED
+x2- x2- h3 GH3X22 QED
+
+n1 n1 h1 GH1N11 QED
+n1 n2 h1 GH1N12 QED
+n1 n3 h1 GH1N13 QED
+n1 n4 h1 GH1N14 QED
+n2 n2 h1 GH1N22 QED
+n2 n3 h1 GH1N23 QED
+n2 n4 h1 GH1N24 QED
+n3 n3 h1 GH1N33 QED
+n3 n4 h1 GH1N34 QED
+n4 n4 h1 GH1N44 QED
+
+n1 n1 h2 GH2N11 QED
+n1 n2 h2 GH2N12 QED
+n1 n3 h2 GH2N13 QED
+n1 n4 h2 GH2N14 QED
+n2 n2 h2 GH2N22 QED
+n2 n3 h2 GH2N23 QED
+n2 n4 h2 GH2N24 QED
+n3 n3 h2 GH2N33 QED
+n3 n4 h2 GH2N34 QED
+n4 n4 h2 GH2N44 QED
+
+n1 n1 h3 GH3N11 QED
+n1 n2 h3 GH3N12 QED
+n1 n3 h3 GH3N13 QED
+n1 n4 h3 GH3N14 QED
+n2 n2 h3 GH3N22 QED
+n2 n3 h3 GH3N23 QED
+n2 n4 h3 GH3N24 QED
+n3 n3 h3 GH3N33 QED
+n3 n4 h3 GH3N34 QED
+n4 n4 h3 GH3N44 QED
+
+n1 x1- h+ GHN1X1 QED
+n1 x2- h+ GHN1X2 QED
+n2 x1- h+ GHN2X1 QED
+n2 x2- h+ GHN2X2 QED
+n3 x1- h+ GHN3X1 QED
+n3 x2- h+ GHN3X2 QED
+n4 x1- h+ GHN4X1 QED
+n4 x2- h+ GHN4X2 QED
+
+x1- n1 h- GHX1N1 QED
+x2- n1 h- GHX2N1 QED
+x1- n2 h- GHX1N2 QED
+x2- n2 h- GHX2N2 QED
+x1- n3 h- GHX1N3 QED
+x2- n3 h- GHX2N3 QED
+x1- n4 h- GHX1N4 QED
+x2- n4 h- GHX2N4 QED
+
+# FFS (sfermions and weak inos)
+
+d   n1  dl   GDLN1M QED
+n1  d   dl~  GDLN1P QED
+d   n1  dr   GDRN1M QED
+n1  d   dr~  GDRN1P QED
+d   n2  dl   GDLN2M QED
+n2  d   dl~  GDLN2P QED
+d   n2  dr   GDRN2M QED
+n2  d   dr~  GDRN2P QED
+d   n3  dl   GDLN3M QED
+n3  d   dl~  GDLN3P QED
+d   n3  dr   GDRN3M QED
+n3  d   dr~  GDRN3P QED
+d   n4  dl   GDLN4M QED
+n4  d   dl~  GDLN4P QED
+d   n4  dr   GDRN4M QED
+n4  d   dr~  GDRN4P QED
+
+u   n1  ul   GULN1M QED
+n1  u   ul~  GULN1P QED
+u   n1  ur   GURN1M QED
+n1  u   ur~  GURN1P QED
+u   n2  ul   GULN2M QED
+n2  u   ul~  GULN2P QED
+u   n2  ur   GURN2M QED
+n2  u   ur~  GURN2P QED
+u   n3  ul   GULN3M QED
+n3  u   ul~  GULN3P QED
+u   n3  ur   GURN3M QED
+n3  u   ur~  GURN3P QED
+u   n4  ul   GULN4M QED
+n4  u   ul~  GULN4P QED
+u   n4  ur   GURN4M QED
+n4  u   ur~  GURN4P QED
+
+s   n1  sl   GDLN1M QED
+n1  s   sl~  GDLN1P QED
+s   n1  sr   GDRN1M QED
+n1  s   sr~  GDRN1P QED
+s   n2  sl   GDLN2M QED
+n2  s   sl~  GDLN2P QED
+s   n2  sr   GDRN2M QED
+n2  s   sr~  GDRN2P QED
+s   n3  sl   GDLN3M QED
+n3  s   sl~  GDLN3P QED
+s   n3  sr   GDRN3M QED
+n3  s   sr~  GDRN3P QED
+s   n4  sl   GDLN4M QED
+n4  s   sl~  GDLN4P QED
+s   n4  sr   GDRN4M QED
+n4  s   sr~  GDRN4P QED
+
+c   n1  cl   GULN1M QED
+n1  c   cl~  GULN1P QED
+c   n1  cr   GURN1M QED
+n1  c   cr~  GURN1P QED
+c   n2  cl   GULN2M QED
+n2  c   cl~  GULN2P QED
+c   n2  cr   GURN2M QED
+n2  c   cr~  GURN2P QED
+c   n3  cl   GULN3M QED
+n3  c   cl~  GULN3P QED
+c   n3  cr   GURN3M QED
+n3  c   cr~  GURN3P QED
+c   n4  cl   GULN4M QED
+n4  c   cl~  GULN4P QED
+c   n4  cr   GURN4M QED
+n4  c   cr~  GURN4P QED
+
+b   n1  b1   GB1N1M QED
+n1  b   b1~  GB1N1P QED
+b   n1  b2   GB2N1M QED
+n1  b   b2~  GB2N1P QED
+b   n2  b1   GB1N2M QED
+n2  b   b1~  GB1N2P QED
+b   n2  b2   GB2N2M QED
+n2  b   b2~  GB2N2P QED
+b   n3  b1   GB1N3M QED
+n3  b   b1~  GB1N3P QED
+b   n3  b2   GB2N3M QED
+n3  b   b2~  GB2N3P QED
+b   n4  b1   GB1N4M QED
+n4  b   b1~  GB1N4P QED
+b   n4  b2   GB2N4M QED
+n4  b   b2~  GB2N4P QED
+
+t   n1  t1   GT1N1M QED
+n1  t   t1~  GT1N1P QED
+t   n1  t2   GT2N1M QED
+n1  t   t2~  GT2N1P QED
+t   n2  t1   GT1N2M QED
+n2  t   t1~  GT1N2P QED
+t   n2  t2   GT2N2M QED
+n2  t   t2~  GT2N2P QED
+t   n3  t1   GT1N3M QED
+n3  t   t1~  GT1N3P QED
+t   n3  t2   GT2N3M QED
+n3  t   t2~  GT2N3P QED
+t   n4  t1   GT1N4M QED
+n4  t   t1~  GT1N4P QED
+t   n4  t2   GT2N4M QED
+n4  t   t2~  GT2N4P QED
+
+e-  n1  el-  GELN1M QED
+n1  e-  el+  GELN1P QED
+e-  n2  el-  GELN2M QED
+n2  e-  el+  GELN2P QED
+e-  n3  el-  GELN3M QED
+n3  e-  el+  GELN3P QED
+e-  n4  el-  GELN4M QED
+n4  e-  el+  GELN4P QED
+e-  n1  er-  GERN1M QED
+n1  e-  er+  GERN1P QED
+e-  n2  er-  GERN2M QED
+n2  e-  er+  GERN2P QED
+e-  n3  er-  GERN3M QED
+n3  e-  er+  GERN3P QED
+e-  n4  er-  GERN4M QED
+n4  e-  er+  GERN4P QED
+
+mu- n1  mul- GELN1M QED
+n1  mu- mul+ GELN1P QED
+mu- n2  mul- GELN2M QED
+n2  mu- mul+ GELN2P QED
+mu- n3  mul- GELN3M QED
+n3  mu- mul+ GELN3P QED
+mu- n4  mul- GELN4M QED
+n4  mu- mul+ GELN4P QED
+mu- n1  mur- GERN1M QED
+n1  mu- mur+ GERN1P QED
+mu- n2  mur- GERN2M QED
+n2  mu- mur+ GERN2P QED
+mu- n3  mur- GERN3M QED
+n3  mu- mur+ GERN3P QED
+mu- n4  mur- GERN4M QED
+n4  mu- mur+ GERN4P QED
+
+ta- n1  ta1- GL1N1M QED
+n1  ta- ta1+ GL1N1P QED
+ta- n2  ta1- GL1N2M QED
+n2  ta- ta1+ GL1N2P QED
+ta- n3  ta1- GL1N3M QED
+n3  ta- ta1+ GL1N3P QED
+ta- n4  ta1- GL1N4M QED
+n4  ta- ta1+ GL1N4P QED
+ta- n1  ta2- GL2N1M QED
+n1  ta- ta2+ GL2N1P QED
+ta- n2  ta2- GL2N2M QED
+n2  ta- ta2+ GL2N2P QED
+ta- n3  ta2- GL2N3M QED
+n3  ta- ta2+ GL2N3P QED
+ta- n4  ta2- GL2N4M QED
+n4  ta- ta2+ GL2N4P QED
+
+ve  n1  sve  GSVN1M QED
+n1  ve  sve~ GSVN1P QED
+ve  n2  sve  GSVN2M QED
+n2  ve  sve~ GSVN2P QED
+ve  n3  sve  GSVN3M QED
+n3  ve  sve~ GSVN3P QED
+ve  n4  sve  GSVN4M QED
+n4  ve  sve~ GSVN4P QED
+vm  n1  svm  GSVN1M QED
+n1  vm  svm~ GSVN1P QED
+vm  n2  svm  GSVN2M QED
+n2  vm  svm~ GSVN2P QED
+vm  n3  svm  GSVN3M QED
+n3  vm  svm~ GSVN3P QED
+vm  n4  svm  GSVN4M QED
+n4  vm  svm~ GSVN4P QED
+vt  n1  svt  GSVN1M QED
+n1  vt  svt~ GSVN1P QED
+vt  n2  svt  GSVN2M QED
+n2  vt  svt~ GSVN2P QED
+vt  n3  svt  GSVN3M QED
+n3  vt  svt~ GSVN3P QED
+vt  n4  svt  GSVN4M QED
+n4  vt  svt~ GSVN4P QED
+
+u   x1+ dl  GDLX1M QED
+x1+ u   dl~ GDLX1P QED
+u   x2+ dl  GDLX2M QED
+x2+ u   dl~ GDLX2P QED
+d   x1- ul  GULX1M QED
+x1- d   ul~ GULX1P QED
+d   x2- ul  GULX2M QED
+x2- d   ul~ GULX2P QED
+
+c   x1+ sl  GDLX1M QED
+x1+ c   sl~ GDLX1P QED
+c   x2+ sl  GDLX2M QED
+x2+ c   sl~ GDLX2P QED
+s   x1- cl  GULX1M QED
+x1- s   cl~ GULX1P QED
+s   x2- cl  GULX2M QED
+x2- s   cl~ GULX2P QED
+
+t   x1+ b1  GB1X1M QED
+x1+ t   b1~ GB1X1P QED
+t   x2+ b1  GB1X2M QED
+x2+ t   b1~ GB1X2P QED
+t   x1+ b2  GB2X1M QED
+x1+ t   b2~ GB2X1P QED
+t   x2+ b2  GB2X2M QED
+x2+ t   b2~ GB2X2P QED
+b   x1- t1  GT1X1M QED
+x1- b   t1~ GT1X1P QED
+b   x2- t1  GT1X2M QED
+x2- b   t1~ GT1X2P QED
+b   x1- t2  GT2X1M QED
+x1- b   t2~ GT2X1P QED
+b   x2- t2  GT2X2M QED
+x2- b   t2~ GT2X2P QED
+
+ve  x1+ el-  GELX1M QED
+x1+ ve  el+  GELX1P QED
+ve  x2+ el-  GELX2M QED
+x2+ ve  el+  GELX2P QED
+e-  x1- sve  GVEX1M QED
+x1- e-  sve~ GVEX1P QED
+e-  x2- sve  GVEX2M QED
+x2- e-  sve~ GVEX2P QED
+
+vm  x1+ mul- GELX1M QED
+x1+ vm  mul+ GELX1P QED
+vm  x2+ mul- GELX2M QED
+x2+ vm  mul+ GELX2P QED
+mu- x1- svm  GVEX1M QED
+x1- mu- svm~ GVEX1P QED
+mu- x2- svm  GVEX2M QED
+x2- mu- svm~ GVEX2P QED
+
+vt  x1+ ta1- GL1X1M QED
+x1+ vt  ta1+ GL1X1P QED
+vt  x2+ ta1- GL1X2M QED
+x2+ vt  ta1+ GL1X2P QED
+vt  x1+ ta2- GL2X1M QED
+x1+ vt  ta2+ GL2X1P QED
+vt  x2+ ta2- GL2X2M QED
+x2+ vt  ta2+ GL2X2P QED
+
+ta- x1- svt  GVTX1M QED
+x1- ta- svt~ GVTX1P QED
+ta- x2- svt  GVTX2M QED
+x2- ta- svt~ GVTX2P QED
+
+#
+# VVV
+#
+
+w- w+ a  GWWA   QED
+w- w+ z  GWWZ   QED
+
+#
+# VVS
+#
+
+w- w+ h1 GWWH1  QED
+w- w+ h2 GWWH2  QED
+z  z  h1 GZZH1  QED
+z  z  h2 GZZH2  QED
+
+#
+# VSS
+#
+
+# VSS QCD
+
+g dl dl~ GC QCD
+g dr dr~ GC QCD
+g ul ul~ GC QCD
+g ur ur~ GC QCD
+g sl sl~ GC QCD
+g sr sr~ GC QCD
+g cl cl~ GC QCD
+g cr cr~ GC QCD
+g b1 b1~ GC QCD
+g b2 b2~ GC QCD
+g t1 t1~ GC QCD
+g t2 t2~ GC QCD
+
+# VSS QED non-Higgs
+
+a  dl  dl~ GADLDL QED
+a  dr  dr~ GADLDL QED
+a  ul  ul~ GAULUL QED
+a  ur  ur~ GAULUL QED
+a  sl  sl~ GADLDL QED
+a  sr  sr~ GADLDL QED
+a  cl  cl~ GAULUL QED
+a  cr  cr~ GAULUL QED
+a  b1  b1~ GADLDL QED
+a  b2  b2~ GADLDL QED
+a  t1  t1~ GAULUL QED
+a  t2  t2~ GAULUL QED
+
+a  el-  el+  GAELEL QED
+a  er-  er+  GAELEL QED
+a  mul- mul+ GAELEL QED
+a  mur- mur+ GAELEL QED
+a  ta1- ta1+ GAELEL QED
+a  ta2- ta2+ GAELEL QED
+
+# VSS QED non-Higgs
+
+z  dl  dl~ GZDLDL QED
+z  dr  dr~ GZDRDR QED
+z  ul  ul~ GZULUL QED
+z  ur  ur~ GZURUR QED
+z  sl  sl~ GZDLDL QED
+z  sr  sr~ GZDRDR QED
+z  cl  cl~ GZULUL QED
+z  cr  cr~ GZURUR QED
+z  b1  b1~ GZB1B1 QED
+z  b1  b2~ GZB1B2 QED
+z  b2  b1~ GZB2B1 QED
+z  b2  b2~ GZB2B2 QED
+z  t1  t1~ GZT1T1 QED
+z  t1  t2~ GZT1T2 QED
+z  t2  t1~ GZT2T1 QED
+z  t2  t2~ GZT2T2 QED
+
+z  el-  el+  GZELEL QED
+z  er-  er+  GZERER QED
+z  mul- mul+ GZELEL QED
+z  mur- mur+ GZERER QED
+z  ta1- ta1+ GZL1L1 QED
+z  ta2- ta2+ GZL2L2 QED
+z  ta1- ta2+ GZL1L2 QED
+z  ta2- ta1+ GZL2L1 QED
+z  sve  sve~ GZSVSV QED
+z  svm  svm~ GZSVSV QED
+z  svt  svt~ GZSVSV QED
+
+w+ dl  ul~ GWQLQL QED
+w- ul  dl~ GWQLQL QED
+w+ sl  cl~ GWQLQL QED
+w- cl  sl~ GWQLQL QED
+w+ b1  t1~ GWB1T1 QED
+w- t1  b1~ GWT1B1 QED
+w+ b1  t2~ GWB1T2 QED
+w- t2  b1~ GWT2B1 QED
+w+ b2  t1~ GWB2T1 QED
+w- t1  b2~ GWT1B2 QED
+w+ b2  t2~ GWB2T2 QED
+w- t2  b2~ GWT2B2 QED
+
+w+ el-  sve~ GWELVE QED
+w- sve  el+  GWELVE QED
+w+ mul- svm~ GWELVE QED
+w- svm  mul+ GWELVE QED
+w+ ta1- svt~ GWL1VT QED
+w- svt  ta1+ GWL1VT QED
+w+ ta2- svt~ GWL2VT QED
+w- svt  ta2+ GWL2VT QED
+
+# VSS Higgs
+
+z  h3 h1 GZH1H3 QED
+z  h3 h2 GZH2H3 QED
+
+a  h- h+ GAHCHC QED
+z  h- h+ GZHCHC QED
+
+w+ h- h1 GWHCH1 QED
+w- h1 h+ GWH1HC QED
+w+ h- h2 GWHCH2 QED
+w- h2 h+ GWH2HC QED
+w+ h- h3 GWHCH3 QED
+w- h3 h+ GWH3HC QED
+
+#
+# SSS
+#
+
+# SSS Higgs-only
+
+h1 h1 h1 GH111 QED
+h1 h1 h2 GH112 QED
+h1 h2 h2 GH122 QED
+h2 h2 h2 GH222 QED
+h1 h3 h3 GH133 QED
+h2 h3 h3 GH233 QED
+
+h1 h- h+ GH1CC QED
+h2 h- h+ GH2CC QED
+
+# SSS Higgs-sfermion
+
+h1 dl dl~ GH1DLDL QED
+h1 dr dr~ GH1DRDR QED
+h1 ul ul~ GH1ULUL QED
+h1 ur ur~ GH1URUR QED
+h1 sl sl~ GH1DLDL QED
+h1 sr sr~ GH1DRDR QED
+h1 cl cl~ GH1ULUL QED
+h1 cr cr~ GH1URUR QED
+
+h2 dl dl~ GH2DLDL QED
+h2 dr dr~ GH2DRDR QED
+h2 ul ul~ GH2ULUL QED
+h2 ur ur~ GH2URUR QED
+h2 sl sl~ GH2DLDL QED
+h2 sr sr~ GH2DRDR QED
+h2 cl cl~ GH2ULUL QED
+h2 cr cr~ GH2URUR QED
+
+h1 b1 b1~ GH1B1B1 QED
+h1 b1 b2~ GH1B1B2 QED
+h1 b2 b1~ GH1B2B1 QED
+h1 b2 b2~ GH1B2B2 QED
+h2 b1 b1~ GH2B1B1 QED
+h2 b1 b2~ GH2B1B2 QED
+h2 b2 b1~ GH2B2B1 QED
+h2 b2 b2~ GH2B2B2 QED
+h3 b1 b1~ GH3B1B1 QED
+h3 b1 b2~ GH3B1B2 QED
+h3 b2 b1~ GH3B2B1 QED
+h3 b2 b2~ GH3B2B2 QED
+
+h1 t1 t1~ GH1T1T1 QED
+h1 t1 t2~ GH1T1T2 QED
+h1 t2 t1~ GH1T2T1 QED
+h1 t2 t2~ GH1T2T2 QED
+h2 t1 t1~ GH2T1T1 QED
+h2 t1 t2~ GH2T1T2 QED
+h2 t2 t1~ GH2T2T1 QED
+h2 t2 t2~ GH2T2T2 QED
+h3 t1 t1~ GH3T1T1 QED
+h3 t1 t2~ GH3T1T2 QED
+h3 t2 t1~ GH3T2T1 QED
+h3 t2 t2~ GH3T2T2 QED
+
+h- ul dl~ GHCULDL QED
+h+ dl ul~ GHCDLUL QED
+h- cl sl~ GHCULDL QED
+h+ sl cl~ GHCDLUL QED
+
+h- t1 b1~ GHCT1B1 QED
+h- t1 b2~ GHCT1B2 QED
+h- t2 b1~ GHCT2B1 QED
+h- t2 b2~ GHCT2B2 QED
+h+ b1 t1~ GHCB1T1 QED
+h+ b1 t2~ GHCB1T2 QED
+h+ b2 t1~ GHCB2T1 QED
+h+ b2 t2~ GHCB2T2 QED
+
+h1 el-  el+  GH1ELEL QED
+h1 er-  er+  GH1ERER QED
+h1 sve  sve~ GH1VEVE QED
+h1 mul- mul+ GH1ELEL QED
+h1 mur- mur+ GH1ERER QED
+h1 svm  svm~ GH1VEVE QED
+
+h2 el-  el+  GH2ELEL QED
+h2 er-  er+  GH2ERER QED
+h2 sve  sve~ GH2VEVE QED
+h2 mul- mul+ GH2ELEL QED
+h2 mur- mur+ GH2ERER QED
+h2 svm  svm~ GH2VEVE QED
+
+h1 ta1- ta1+ GH1L1L1 QED
+h1 ta1- ta2+ GH1L1L2 QED
+h1 ta2- ta1+ GH1L2L1 QED
+h1 ta2- ta2+ GH1L2L2 QED
+h2 ta1- ta1+ GH2L1L1 QED
+h2 ta1- ta2+ GH2L1L2 QED
+h2 ta2- ta1+ GH2L2L1 QED
+h2 ta2- ta2+ GH2L2L2 QED
+h3 ta1- ta1+ GH3L1L1 QED
+h3 ta1- ta2+ GH3L1L2 QED
+h3 ta2- ta1+ GH3L2L1 QED
+h3 ta2- ta2+ GH3L2L2 QED
+h1 svt  svt~ GH1VEVE QED
+h2 svt  svt~ GH2VEVE QED
+
+h- sve  el+  GHCVEEL QED
+h+ el-  sve~ GHCELVE QED
+h- svm  mul+ GHCVEEL QED
+h+ mul- svm~ GHCELVE QED
+
+h- svt  ta1+ GHCVTL1 QED
+h- svt  ta2+ GHCVTL2 QED
+h+ ta1- svt~ GHCL1VT QED
+h+ ta2- svt~ GHCL2VT QED
+
+#
+# VVVV
+#
+
+w- a  w+ a  GWWA  GWWA  QED QED
+w- z  w+ a  GWWZ  GWWA  QED QED
+w- z  w+ z  GWWZ  GWWZ  QED QED
+w- w+ w- w+ GWWZ  GWWA  QED QED
+
+#
+# VVSS
+#
+
+# VVSS QCD
+
+g  g  dl dl~ G2C DUM QCD QCD
+g  g  dr dr~ G2C DUM QCD QCD
+g  g  ul ul~ G2C DUM QCD QCD
+g  g  ur ur~ G2C DUM QCD QCD
+g  g  sl sl~ G2C DUM QCD QCD
+g  g  sr sr~ G2C DUM QCD QCD
+g  g  cl cl~ G2C DUM QCD QCD
+g  g  cr cr~ G2C DUM QCD QCD
+g  g  b1 b1~ G2C DUM QCD QCD
+g  g  b2 b2~ G2C DUM QCD QCD
+g  g  t1 t1~ G2C DUM QCD QCD
+g  g  t2 t2~ G2C DUM QCD QCD
+
+# VVSS mixed QCD-QED
+
+g  a  dl dl~ GGADLDL DUM QCD QED
+g  a  dr dr~ GGADLDL DUM QCD QED
+g  a  ul ul~ GGAULUL DUM QCD QED
+g  a  ur ur~ GGAULUL DUM QCD QED
+g  a  sl sl~ GGADLDL DUM QCD QED
+g  a  sr sr~ GGADLDL DUM QCD QED
+g  a  cl cl~ GGAULUL DUM QCD QED
+g  a  cr cr~ GGAULUL DUM QCD QED
+g  a  b1 b1~ GGADLDL DUM QCD QED
+g  a  b2 b2~ GGADLDL DUM QCD QED
+g  a  t1 t1~ GGAULUL DUM QCD QED
+g  a  t2 t2~ GGAULUL DUM QCD QED
+
+# VVSS mixed QCD-QED
+
+g  z  dl dl~ GGZDLDL DUM QCD QED
+g  z  dr dr~ GGZDRDR DUM QCD QED
+g  z  ul ul~ GGZULUL DUM QCD QED
+g  z  ur ur~ GGZURUR DUM QCD QED
+g  z  sl sl~ GGZDLDL DUM QCD QED
+g  z  sr sr~ GGZDRDR DUM QCD QED
+g  z  cl cl~ GGZULUL DUM QCD QED
+g  z  cr cr~ GGZURUR DUM QCD QED
+g  z  b1 b1~ GGZB1B1 DUM QCD QED
+g  z  b1 b2~ GGZB1B2 DUM QCD QED
+g  z  b2 b1~ GGZB2B1 DUM QCD QED
+g  z  b2 b2~ GGZB2B2 DUM QCD QED
+g  z  t1 t1~ GGZT1T1 DUM QCD QED
+g  z  t1 t2~ GGZT1T2 DUM QCD QED
+g  z  t2 t1~ GGZT2T1 DUM QCD QED
+g  z  t2 t2~ GGZT2T2 DUM QCD QED
+
+g  w- ul dl~ GGWULDL DUM QCD QED
+g  w+ dl ul~ GGWDLUL DUM QCD QED
+g  w- cl sl~ GGWULDL DUM QCD QED
+g  w+ sl cl~ GGWDLUL DUM QCD QED
+g  w- t1 b1~ GGWT1B1 DUM QCD QED
+g  w+ b1 t1~ GGWB1T1 DUM QCD QED
+g  w- t1 b2~ GGWT1B2 DUM QCD QED
+g  w+ b2 t1~ GGWB2T1 DUM QCD QED
+g  w- t2 b1~ GGWT2B1 DUM QCD QED
+g  w+ b1 t2~ GGWB1T2 DUM QCD QED
+g  w- t2 b2~ GGWT2B2 DUM QCD QED
+g  w+ b2 t2~ GGWB2T2 DUM QCD QED
+
+# VVSS QED
+
+a  a  dl   dl~  GAADLDL DUM QED QED
+a  a  dr   dr~  GAADLDL DUM QED QED
+a  a  ul   ul~  GAAULUL DUM QED QED
+a  a  ur   ur~  GAAULUL DUM QED QED
+a  a  sl   sl~  GAADLDL DUM QED QED
+a  a  sr   sr~  GAADLDL DUM QED QED
+a  a  cl   cl~  GAAULUL DUM QED QED
+a  a  cr   cr~  GAAULUL DUM QED QED
+a  a  b1   b1~  GAADLDL DUM QED QED
+a  a  b2   b2~  GAADLDL DUM QED QED
+a  a  t1   t1~  GAAULUL DUM QED QED
+a  a  t2   t2~  GAAULUL DUM QED QED
+
+a  a  el-  el+  GAAELEL DUM QED QED
+a  a  er-  er+  GAAELEL DUM QED QED
+a  a  mul- mul+ GAAELEL DUM QED QED
+a  a  mur- mur+ GAAELEL DUM QED QED
+a  a  ta1- ta1+ GAAELEL DUM QED QED
+a  a  ta2- ta2+ GAAELEL DUM QED QED
+
+# VVSS QED non-Higgs
+
+a  z  dl   dl~  GAZDLDL DUM QED QED
+a  z  dr   dr~  GAZDRDR DUM QED QED
+a  z  ul   ul~  GAZULUL DUM QED QED
+a  z  ur   ur~  GAZURUR DUM QED QED
+a  z  sl   sl~  GAZDLDL DUM QED QED
+a  z  sr   sr~  GAZDRDR DUM QED QED
+a  z  cl   cl~  GAZULUL DUM QED QED
+a  z  cr   cr~  GAZURUR DUM QED QED
+a  z  b1   b1~  GAZB1B1 DUM QED QED
+a  z  b1   b2~  GAZB1B2 DUM QED QED
+a  z  b2   b1~  GAZB2B1 DUM QED QED
+a  z  b2   b2~  GAZB2B2 DUM QED QED
+a  z  t1   t1~  GAZT1T1 DUM QED QED
+a  z  t1   t2~  GAZT1T2 DUM QED QED
+a  z  t2   t1~  GAZT2T1 DUM QED QED
+a  z  t2   t2~  GAZT2T2 DUM QED QED
+
+a  z  el-  el+  GAZELEL DUM QED QED
+a  z  er-  er+  GAZERER DUM QED QED
+a  z  mul- mul+ GAZELEL DUM QED QED
+a  z  mur- mur+ GAZERER DUM QED QED
+a  z  ta1- ta1+ GAZL1L1 DUM QED QED
+a  z  ta1- ta2+ GAZL1L2 DUM QED QED
+a  z  ta2- ta1+ GAZL2L1 DUM QED QED
+a  z  ta2- ta2+ GAZL2L2 DUM QED QED
+
+z  z  dl   dl~  GZZDLDL DUM QED QED
+z  z  dr   dr~  GZZDRDR DUM QED QED
+z  z  ul   ul~  GZZULUL DUM QED QED
+z  z  ur   ur~  GZZURUR DUM QED QED
+z  z  sl   sl~  GZZDLDL DUM QED QED
+z  z  sr   sr~  GZZDRDR DUM QED QED
+z  z  cl   cl~  GZZULUL DUM QED QED
+z  z  cr   cr~  GZZURUR DUM QED QED
+z  z  b1   b1~  GZZB1B1 DUM QED QED
+z  z  b1   b2~  GZZB1B2 DUM QED QED
+z  z  b2   b1~  GZZB2B1 DUM QED QED
+z  z  b2   b2~  GZZB2B2 DUM QED QED
+z  z  t1   t1~  GZZT1T1 DUM QED QED
+z  z  t1   t2~  GZZT1T2 DUM QED QED
+z  z  t2   t1~  GZZT2T1 DUM QED QED
+z  z  t2   t2~  GZZT2T2 DUM QED QED
+
+z  z  el-  el+  GZZELEL DUM QED QED
+z  z  er-  er+  GZZERER DUM QED QED
+z  z  mul- mul+ GZZELEL DUM QED QED
+z  z  mur- mur+ GZZERER DUM QED QED
+z  z  ta1- ta1+ GZZL1L1 DUM QED QED
+z  z  ta1- ta2+ GZZL1L2 DUM QED QED
+z  z  ta2- ta1+ GZZL2L1 DUM QED QED
+z  z  ta2- ta2+ GZZL2L2 DUM QED QED
+z  z  sve  sve~ GZZVEVE DUM QED QED
+z  z  svm  svm~ GZZVEVE DUM QED QED
+z  z  svt  svt~ GZZVEVE DUM QED QED
+
+w- a  ul   dl~  GWAULDL DUM QED QED
+w- z  ul   dl~  GWZULDL DUM QED QED
+a  w+ dl   ul~  GWADLUL DUM QED QED
+z  w+ dl   ul~  GWZDLUL DUM QED QED
+w- a  cl   sl~  GWAULDL DUM QED QED
+w- z  cl   sl~  GWZULDL DUM QED QED
+a  w+ sl   cl~  GWADLUL DUM QED QED
+z  w+ sl   cl~  GWZDLUL DUM QED QED
+w- a  t1   b1~  GWAT1B1 DUM QED QED
+w- z  t1   b1~  GWZT1B1 DUM QED QED
+a  w+ b1   t1~  GWAB1T1 DUM QED QED
+z  w+ b1   t1~  GWZB1T1 DUM QED QED
+w- a  t1   b2~  GWAT1B2 DUM QED QED
+w- z  t1   b2~  GWZT1B2 DUM QED QED
+a  w+ b2   t1~  GWAB2T1 DUM QED QED
+z  w+ b2   t1~  GWZB2T1 DUM QED QED
+w- a  t2   b1~  GWAT2B1 DUM QED QED
+w- z  t2   b1~  GWZT2B1 DUM QED QED
+a  w+ b1   t2~  GWAB1T2 DUM QED QED
+z  w+ b1   t2~  GWZB1T2 DUM QED QED
+w- a  t2   b2~  GWAT2B2 DUM QED QED
+w- z  t2   b2~  GWZT2B2 DUM QED QED
+a  w+ b2   t2~  GWAB2T2 DUM QED QED
+z  w+ b2   t2~  GWZB2T2 DUM QED QED
+
+w- a  sve  el+  GWAVEEL DUM QED QED
+w- z  sve  el+  GWZVEEL DUM QED QED
+a  w+ el-  sve~ GWAELVE DUM QED QED
+z  w+ el-  sve~ GWZELVE DUM QED QED
+w- a  svm  mul+ GWAVEEL DUM QED QED
+w- z  svm  mul+ GWZVEEL DUM QED QED
+a  w+ mul- svm~ GWAELVE DUM QED QED
+z  w+ mul- svm~ GWZELVE DUM QED QED
+w- a  svt  ta1+ GWAVTL1 DUM QED QED
+w- z  svt  ta1+ GWZVTL1 DUM QED QED
+a  w+ ta1- svt~ GWAL1VT DUM QED QED
+z  w+ ta1- svt~ GWZL1VT DUM QED QED
+w- a  svt  ta2+ GWAVTL2 DUM QED QED
+w- z  svt  ta2+ GWZVTL2 DUM QED QED
+a  w+ ta2- svt~ GWAL2VT DUM QED QED
+z  w+ ta2- svt~ GWZL2VT DUM QED QED
+
+w- w+ dl   dl~  GWWFLFL DUM QED QED
+w- w+ ul   ul~  GWWFLFL DUM QED QED
+w- w+ sl   sl~  GWWFLFL DUM QED QED
+w- w+ cl   cl~  GWWFLFL DUM QED QED
+w- w+ b1   b1~  GWWB1B1 DUM QED QED
+w- w+ b1   b2~  GWWB1B2 DUM QED QED
+w- w+ b2   b1~  GWWB2B1 DUM QED QED
+w- w+ b2   b2~  GWWB2B2 DUM QED QED
+w- w+ t1   t1~  GWWT1T1 DUM QED QED
+w- w+ t1   t2~  GWWT1T2 DUM QED QED
+w- w+ t2   t1~  GWWT2T1 DUM QED QED
+w- w+ t2   t2~  GWWT2T2 DUM QED QED
+
+w- w+ el-  el+  GWWFLFL DUM QED QED
+w- w+ mul- mul+ GWWFLFL DUM QED QED
+w- w+ ta1- ta1+ GWWL1L1 DUM QED QED
+w- w+ ta1- ta2+ GWWL1L2 DUM QED QED
+w- w+ ta2- ta1+ GWWL2L1 DUM QED QED
+w- w+ ta2- ta2+ GWWL2L2 DUM QED QED
+w- w+ sve  sve~ GWWFLFL DUM QED QED
+w- w+ svm  svm~ GWWFLFL DUM QED QED
+w- w+ svt  svt~ GWWFLFL DUM QED QED
+
+#
+# VVSS QED Higgs
+#
+
+z  z  h1 h1 GZZH1H1 DUM QED QED
+z  z  h2 h2 GZZH2H2 DUM QED QED
+z  z  h3 h3 GZZH3H3 DUM QED QED
+w- w+ h1 h1 GWWH1H1 DUM QED QED
+w- w+ h2 h2 GWWH2H2 DUM QED QED
+w- w+ h3 h3 GWWH3H3 DUM QED QED
+
+a  a  h- h+ GAAHCHC DUM QED QED
+a  z  h- h+ GAZHCHC DUM QED QED
+z  z  h- h+ GZZHCHC DUM QED QED
+w- w+ h- h+ GWWHCHC DUM QED QED
+
+w- a  h1 h+ GWAH1HC DUM QED QED
+w- a  h2 h+ GWAH2HC DUM QED QED
+w- a  h3 h+ GWAH3HC DUM QED QED
+w+ a  h- h1 GWAHCH1 DUM QED QED
+w+ a  h- h2 GWAHCH2 DUM QED QED
+w+ a  h- h3 GWAHCH3 DUM QED QED
+
+w- z  h1 h+ GWZH1HC DUM QED QED
+w- z  h2 h+ GWZH2HC DUM QED QED
+w- z  h3 h+ GWZH3HC DUM QED QED
+w+ z  h- h1 GWZHCH1 DUM QED QED
+w+ z  h- h2 GWZHCH2 DUM QED QED
+w+ z  h- h3 GWZHCH3 DUM QED QED

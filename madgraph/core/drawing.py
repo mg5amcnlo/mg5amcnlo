@@ -1174,6 +1174,10 @@ class FeynmanDiagram:
         if level == self.max_level:
             ext_dist_up = 1
             ext_dist_down = 1
+            # Treat special 2 > 1 case
+            if len(vertex_at_level) == 1 and min ==0 and max == 1:
+                vertex_at_level[0].def_position(1, 0.5)
+                return []
         else:
             # else follow option
             ext_dist_up = self._ext_distance_up
@@ -1809,8 +1813,11 @@ class DiagramDrawer(object):
         # Find the type line of the particle [straight, wavy, ...]
         line_type = line.get_info('line')
         # Call the routine associate to this type [self.draw_straight, ...]
-        getattr(self, 'draw_' + line_type)(line)
-
+        if hasattr(self, 'draw_' + line_type):
+            getattr(self, 'draw_' + line_type)(line)
+        else:
+            self.draw_straight(line)
+            
         # Finalize the line representation with adding the name of the particle
         name = line.get_name()
         self.associate_name(line, name)

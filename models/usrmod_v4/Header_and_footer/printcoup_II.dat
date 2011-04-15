@@ -1,0 +1,24 @@
+      write(1,20) 'gwwa ', gwwa
+      write(1,20) 'gwwz ', gwwz
+      write(1,20) 'gwwh ', gwwh
+      write(1,20) 'gzzh ', gzzh
+      write(1,20) 'ghhh ', ghhh
+      write(1,20) 'gwwhh ', gwwhh
+      write(1,20) 'gzzhh ', gzzhh
+      write(1,20) 'ghhhh ', ghhhh
+      write(1,11) 'gal ',gal(1),' ',gal(2)
+      write(1,11) 'gau ',gau(1),' ',gau(2)
+      write(1,11) 'gad ',gad(1),' ',gad(2)
+      write(1,11) 'gwf ',gwf(1),' ',gwf(2)
+      write(1,11) 'gzn ',gzn(1),' ',gzn(2)
+      write(1,11) 'gzl ',gzl(1),' ',gzl(2)
+      write(1,11) 'gzu ',gzu(1),' ',gzu(2)
+      write(1,11) 'gzd ',gzd(1),' ',gzd(2)
+      write(1,14) 'gHtop ',ghtop(1),' ',ghtop(2)
+      write(1,14) 'gHbot ',ghbot(1),' ',ghbot(2)
+      write(1,14) 'gHcha ',ghcha(1),' ',ghcha(2)
+      write(1,14) 'gHtau ',ghtau(1),' ',ghtau(2)
+      write(1,14) 'gg ',gg(1),' ',gg(2)
+
+      return
+      end

@@ -1,0 +1,54 @@
+#
+#      particles_0001_v1.dat
+#
+#This is a special data file which contains particles of the
+#Standard Model. The format for entering new particles is.
+#Particle codes taken from  http://pdg.lbl.gov /2000/ montecarlorpp.pdf
+#Name anti_Name  Spin    Linetype Mass Width Color Label Model
+#xxx   xxxx      SFV      WSDC     str  str  STO    str  PDG code
+
+#
+# Quarks
+#
+
+d       d~        F        S      ZERO  ZERO    T    d    1
+u       u~        F        S      ZERO  ZERO    T    u    2
+s       s~        F        S      ZERO  ZERO    T    s    3
+c       c~        F        S      ZERO  ZERO    T    c    4
+b       b~        F        S      BMASS ZERO    T    b    5
+t       t~        F        S      TMASS TWIDTH  T    t    6
+
+#
+# Leptons
+#
+
+e-       e+       F        S      ZERO  ZERO    S    e    11
+mu-      mu+      F        S      ZERO  ZERO    S    mu   13
+ta-      ta+      F        S      LMASS ZERO    S    ta   15
+ve       ve~      F        S      ZERO  ZERO    S    ve   12
+vm       vm~      F        S      ZERO  ZERO    S    vm   14
+vt       vt~      F        S      ZERO  ZERO    S    vt   16
+
+#
+# Bosons
+#
+
+g        g        V        C      ZERO  ZERO    O   _    21
+a        a        V        W      ZERO  AWIDTH  S   A    22
+z        z        V        W      ZMASS ZWIDTH  S   Z    23
+w-       w+       V        W      WMASS WWIDTH  S   W    -24
+h        h        S        D      HMASS HWIDTH  S   h    25
+
+#MODEL EXTENSION
+# END
+
+# Groups of particles to sum over. Note spaces are important
+# you can NOT have any spaces between particles to be summed over
+# The following line is a TAG and should not be modified:
+# MULTIPARTICLES
+P uu~dd~ss~cc~g
+J uu~dd~ss~cc~g
+L e+e-mu+mu-ta+ta-veve~
+
+
+
