@@ -1,5 +1,5 @@
 g77   = g77
-FFLAGS= -O -ffixed-line-length-132
+FFLAGS= -O -w -ffixed-line-length-132
 #FFLAGS = -g -ffixed-line-length-132
 LIBDIR = ../../lib/
 BINDIR = ../../bin/

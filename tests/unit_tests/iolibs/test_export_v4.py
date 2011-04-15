@@ -38,6 +38,7 @@ import madgraph.core.helas_objects as helas_objects
 import madgraph.core.diagram_generation as diagram_generation
 import madgraph.core.color_algebra as color
 import madgraph.various.diagram_symmetry as diagram_symmetry
+import madgraph.various.process_checks as process_checks
 import madgraph.core.color_amp as color_amp
 import tests.unit_tests.core.test_helas_objects as test_helas_objects
 import tests.unit_tests.iolibs.test_file_writers as test_file_writers
@@ -697,8 +698,10 @@ C     Number of configs
             diagram_symmetry.find_matrix_elements_for_configs(subprocess_group),
             ([], {}))
 
+        evaluator = process_checks.MatrixElementEvaluator(mymodel)
         symmetry, perms, ident_perms = \
-                  diagram_symmetry.find_symmetry(subprocess_group)
+                  diagram_symmetry.find_symmetry(subprocess_group,
+                                                 evaluator)
 
         self.assertEqual(symmetry, [1,1,1,1,1,1])
         self.assertEqual(perms,
@@ -1216,7 +1219,7 @@ C
       INCLUDE 'config_subproc_map.inc'
       INTEGER PERMS(NEXTERNAL,LMAXCONFIGS)
       INCLUDE 'symperms.inc'
-      LOGICAL MIRRORPROCS(LMAXCONFIGS)
+      LOGICAL MIRRORPROCS(MAXSPROC)
       INCLUDE 'mirrorprocs.inc'
 C     SELPROC is vector of selection weights for the subprocesses
 C     SUMWGT is vector of total weight for the subprocesses

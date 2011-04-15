@@ -35,6 +35,7 @@ import madgraph.iolibs.gen_infohtml as gen_infohtml
 import madgraph.iolibs.template_files as template_files
 import madgraph.iolibs.ufo_expression_parsers as parsers
 import madgraph.various.diagram_symmetry as diagram_symmetry
+import madgraph.various.process_checks as process_checks
 
 
 import aloha.create_aloha as create_aloha
@@ -56,6 +57,7 @@ class ProcessExporterFortran(object):
         self.mgme_dir = mgme_dir
         self.dir_path = dir_path
         self.clean = clean
+        self.model = None
 
     #===========================================================================
     # copy the Template in a new directory.
@@ -258,7 +260,7 @@ class ProcessExporterFortran(object):
         """Write the pmass.inc file for MG4"""
 
         model = matrix_element.get('processes')[0].get('model')
-
+        
         lines = []
         for wf in matrix_element.get_external_wavefunctions():
             mass = model.get('particle_dict')[wf.get('pdg_code')].get('mass')
@@ -728,7 +730,7 @@ class ProcessExporterFortranSA(ProcessExporterFortran):
     # generate_subprocess_directory_v4
     #===========================================================================
     def generate_subprocess_directory_v4(self, matrix_element,
-                                                    fortran_model):
+                                         fortran_model):
         """Generate the Pxxxxx directory for a subprocess in MG4 standalone,
         including the necessary matrix.f and nexternal.inc files"""
 
@@ -934,6 +936,9 @@ class ProcessExporterFortranME(ProcessExporterFortran):
 
         cwd = os.getcwd()
         path = os.path.join(self.dir_path, 'SubProcesses')
+
+        if not self.model:
+            self.model = matrix_element.get('processes')[0].get('model')
 
         try:
              os.chdir(path)
@@ -1878,6 +1883,11 @@ class ProcessExporterFortranMEGroup(ProcessExporterFortranME):
             raise base_objects.PhysicsObject.PhysicsObjectError,\
                   "subproc_group object not SubProcessGroup"
 
+        if not self.model:
+            self.model = subproc_group.get('matrix_elements')[0].\
+                         get('processes')[0].get('model')
+            self.evaluator = process_checks.MatrixElementEvaluator(self.model)
+
         cwd = os.getcwd()
         path = os.path.join(self.dir_path, 'SubProcesses')
 
@@ -2033,7 +2043,8 @@ class ProcessExporterFortranMEGroup(ProcessExporterFortranME):
 
         # Find config symmetries and permutations
         symmetry, perms, ident_perms = \
-                  diagram_symmetry.find_symmetry(subproc_group)
+                  diagram_symmetry.find_symmetry(subproc_group,
+                                                 self.evaluator)
 
         filename = 'symswap.inc'
         self.write_symswap_file(writers.FortranWriter(filename),

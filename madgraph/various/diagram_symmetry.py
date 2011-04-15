@@ -62,7 +62,7 @@ logger = logging.getLogger('madgraph.various.diagram_symmetry')
 # find_symmetry
 #===============================================================================
 
-def find_symmetry(matrix_element):
+def find_symmetry(matrix_element, evaluator):
     """Find symmetries between amplitudes by comparing the squared
     amplitudes for all permutations of identical particles.
     
@@ -75,7 +75,7 @@ def find_symmetry(matrix_element):
     symmetry list."""
 
     if isinstance(matrix_element, group_subprocs.SubProcessGroup):
-        return find_symmetry_subproc_group(matrix_element)
+        return find_symmetry_subproc_group(matrix_element, evaluator)
 
     (nexternal, ninitial) = matrix_element.get_nexternal_ninitial()
 
@@ -101,19 +101,12 @@ def find_symmetry(matrix_element):
 
     process = matrix_element.get('processes')[0]
     base_model = process.get('model')
-    full_model = model_reader.ModelReader(base_model)
-    full_model.set_parameters_and_couplings()
     equivalent_process = base_objects.Process({\
                      'legs': base_objects.LegList([base_objects.Leg({
                                'id': wf.get('pdg_code'),
                                'state': wf.get('leg_state')}) \
                        for wf in matrix_element.get_external_wavefunctions()]),
                      'model': base_model})
-    # Writer for the Python matrix elements
-    helas_writer = helas_call_writer.PythonUFOHelasCallWriter(base_model)
-
-    # Initialize matrix element evaluation
-    evaluator = process_checks.MatrixElementEvaluator(full_model, helas_writer)
 
     # Get phase space point
     p, w_rambo = evaluator.get_momenta(equivalent_process)
@@ -179,7 +172,7 @@ def find_symmetry(matrix_element):
 
     return (symmetry, perms, ident_perms)
 
-def find_symmetry_subproc_group(subproc_group):
+def find_symmetry_subproc_group(subproc_group, evaluator):
     """Find symmetries between the configs in the subprocess group.
     For each config, find all matrix elements with maximum identical
     particle factor. Then take minimal set of these matrix elements,
@@ -202,7 +195,8 @@ def find_symmetry_subproc_group(subproc_group):
         diagram_config_map = dict([(i,n) for i,n in \
                        enumerate(subproc_group.get('diagram_maps')[me_number]) \
                                    if n > 0])
-        symmetry, perms, ident_perms = find_symmetry(matrix_elements[me_number])
+        symmetry, perms, ident_perms = find_symmetry(matrix_elements[me_number],
+                                                     evaluator)
 
         # Go through symmetries and remove those for any diagrams
         # where this ME is not supposed to contribute

@@ -341,10 +341,8 @@ class TestModelCreation(unittest.TestCase, CheckFileCreate):
         for line in self.ReturnFile('intparam_definition.inc'):
             if 'ENDIF' in line:
                 self.assertEqual(len(alreadydefine), 31)
-                
             if '=' not in line:
                 continue
-            
             new_def = line.split('=')[0].lstrip()
             # Check that is the firsttime that this definition is done
             self.assertFalse(new_def in alreadydefine)

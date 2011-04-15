@@ -43,7 +43,7 @@ C
       INCLUDE 'config_subproc_map.inc'            
       INTEGER PERMS(NEXTERNAL,LMAXCONFIGS)
       INCLUDE 'symperms.inc'
-      LOGICAL MIRRORPROCS(LMAXCONFIGS)
+      LOGICAL MIRRORPROCS(MAXSPROC)
       INCLUDE 'mirrorprocs.inc'
 C   SELPROC is vector of selection weights for the subprocesses
 C   SUMWGT is vector of total weight for the subprocesses

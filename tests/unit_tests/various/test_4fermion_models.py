@@ -60,13 +60,10 @@ class Models4FermionTest(unittest.TestCase):
             myproc = base_objects.Process({'legs':myleglist,
                                            'model':base_model})
 
-            helas_writer = helas_call_writers.PythonUFOHelasCallWriter(\
-                                                                     base_model)
-        
-            evaluator = process_checks.MatrixElementEvaluator(full_model,
-                                                              helas_writer,
+            evaluator = process_checks.MatrixElementEvaluator(base_model,
                                                               reuse = False)
-
+            evaluator.full_model = full_model
+            
             if not p:
                 p, w_rambo = evaluator.get_momenta(myproc)
 

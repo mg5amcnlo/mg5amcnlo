@@ -43,6 +43,7 @@ class TestDiagramSymmetry(unittest.TestCase):
 
     def setUp(self):
         self.base_model = import_ufo.import_model('sm')
+        self.evaluator = process_checks.MatrixElementEvaluator(self.base_model)
     
     def test_find_symmetry_epem_aaa(self):
         """Test the find_symmetry function"""
@@ -68,19 +69,15 @@ class TestDiagramSymmetry(unittest.TestCase):
         matrix_element = helas_objects.HelasMatrixElement(myamplitude)
 
         symmetry, perms, ident_perms = \
-                                diagram_symmetry.find_symmetry(matrix_element)
+                                diagram_symmetry.find_symmetry(matrix_element,
+                                                               self.evaluator)
 
         self.assertEqual(symmetry, [6,-1,-1,-1,-1,-1])
 
         # Check that the momentum assignments work
         process = matrix_element.get('processes')[0]
-        full_model = model_reader.ModelReader(self.base_model)
-        full_model.set_parameters_and_couplings()
-        helas_writer = helas_call_writers.PythonUFOHelasCallWriter(\
-                                                               self.base_model)
 
-        evaluator = process_checks.MatrixElementEvaluator(full_model,
-                                                          helas_writer,
+        evaluator = process_checks.MatrixElementEvaluator(self.base_model,
                                                           auth_skipping = True,
                                                           reuse = True)
         
@@ -119,7 +116,8 @@ class TestDiagramSymmetry(unittest.TestCase):
         subproc_group = \
                   group_subprocs.SubProcessGroup.group_amplitudes(amplitudes)[0]
 
-        symmetry, perms, ident_perms = diagram_symmetry.find_symmetry(subproc_group)
+        symmetry, perms, ident_perms = diagram_symmetry.find_symmetry(\
+                                                subproc_group, self.evaluator)
 
         self.assertEqual(len([s for s in symmetry if s > 0]), 26)
 
@@ -130,13 +128,8 @@ class TestDiagramSymmetry(unittest.TestCase):
         matrix_element = \
                      subproc_group.get('matrix_elements')[1]
         process = matrix_element.get('processes')[0]
-        full_model = model_reader.ModelReader(self.base_model)
-        full_model.set_parameters_and_couplings()
-        helas_writer = helas_call_writers.PythonUFOHelasCallWriter(\
-                                                               self.base_model)
-        
-        evaluator = process_checks.MatrixElementEvaluator(full_model,
-                                                          helas_writer,
+
+        evaluator = process_checks.MatrixElementEvaluator(self.base_model,
                                                           auth_skipping = True,
                                                           reuse = True)
         p, w_rambo = evaluator.get_momenta(process)
@@ -176,13 +169,7 @@ class TestDiagramSymmetry(unittest.TestCase):
 
         matrix_element = helas_objects.HelasMatrixElement(myamp)
 
-        full_model = model_reader.ModelReader(self.base_model)
-        full_model.set_parameters_and_couplings()
-        helas_writer = helas_call_writers.PythonUFOHelasCallWriter(\
-                                                               self.base_model)
-
-        evaluator = process_checks.MatrixElementEvaluator(full_model,
-                                                          helas_writer,
+        evaluator = process_checks.MatrixElementEvaluator(self.base_model,
                                                           auth_skipping = True,
                                                           reuse = True)
         p, w_rambo = evaluator.get_momenta(myproc)

@@ -42,8 +42,6 @@ class TestColorSextetModel(unittest.TestCase):
     def setUp(self):
         m_path = import_ufo.find_ufo_path('sextet_diquarks')
         self.base_model = import_ufo.import_model(m_path)
-        self.full_model = model_reader.ModelReader(self.base_model)
-        self.full_model.set_parameters_and_couplings()
     
     def test_uu_to_six_g(self):
         """Test the process u u > six g against literature expression"""
@@ -66,11 +64,7 @@ class TestColorSextetModel(unittest.TestCase):
         myproc = base_objects.Process({'legs':myleglist,
                                        'model':self.base_model})
 
-        helas_writer = \
-                   helas_call_writers.PythonUFOHelasCallWriter(self.base_model)
-        
-        evaluator = process_checks.MatrixElementEvaluator(self.full_model,
-                                                          helas_writer,
+        evaluator = process_checks.MatrixElementEvaluator(self.base_model,
                                                           reuse = False)
         
         p, w_rambo = evaluator.get_momenta(myproc)
@@ -81,7 +75,7 @@ class TestColorSextetModel(unittest.TestCase):
         mg5_me_value, amp2 = evaluator.evaluate_matrix_element(matrix_element,
                                                                p)
 
-        comparison_value = uu_Dg(p, 6, self.full_model)
+        comparison_value = uu_Dg(p, 6, evaluator.full_model)
 
         self.assertAlmostEqual(mg5_me_value, comparison_value, 12)
 
@@ -133,11 +127,7 @@ class TestColorSextetModel(unittest.TestCase):
         myproc = base_objects.Process({'legs':myleglist,
                                        'model':self.base_model})
 
-        helas_writer = \
-                   helas_call_writers.PythonUFOHelasCallWriter(self.base_model)
-        
-        evaluator = process_checks.MatrixElementEvaluator(self.full_model,
-                                                          helas_writer,
+        evaluator = process_checks.MatrixElementEvaluator(self.base_model,
                                                           reuse = False)
         
         p, w_rambo = evaluator.get_momenta(myproc)
@@ -354,12 +344,9 @@ class TestColorTripletModel(unittest.TestCase):
         myproc = base_objects.Process({'legs':myleglist,
                                        'model':self.base_model})
 
-        helas_writer = \
-                   helas_call_writers.PythonUFOHelasCallWriter(self.base_model)
-        
-        evaluator = process_checks.MatrixElementEvaluator(self.full_model,
-                                                          helas_writer,
+        evaluator = process_checks.MatrixElementEvaluator(self.base_model,
                                                           reuse = False)
+        evaluator.full_model = self.full_model
         
         p, w_rambo = evaluator.get_momenta(myproc)
 
