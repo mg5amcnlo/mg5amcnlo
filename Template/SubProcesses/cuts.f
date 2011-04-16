@@ -358,7 +358,7 @@ c
          do j=i+1,nexternal
             if(debug)write (*,*) 'ptll(',i,',',j,')=',dsqrt(PtDot(p(0,i),p(0,j)))
             if(debug)write (*,*) dsqrt(ptll_min(j,i)),dsqrt(ptll_max(j,i))
-            if(ptll_min(j,i).gt.0.or.ptll_max(j,i).lt.1d5) then
+            if(ptll_min(j,i).gt.0.or.dsqrt(ptll_max(j,i)).lt.1d5) then
                tmp=PtDot(p(0,i),p(0,j))
                notgood=(tmp .lt. ptll_min(j,i).or.tmp.gt.ptll_max(j,i))
                if (notgood) then

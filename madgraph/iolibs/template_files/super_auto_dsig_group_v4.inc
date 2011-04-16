@@ -75,6 +75,7 @@ C   ICONFIG has this config number
 C     IPROC has the present process number
       INTEGER IPROC
       COMMON/TO_IPROC/IPROC
+      COMMON/TO_MIRROR/ IMIRROR
 C ----------
 C BEGIN CODE
 C ----------

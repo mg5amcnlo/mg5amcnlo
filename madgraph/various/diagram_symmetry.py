@@ -95,7 +95,7 @@ def find_symmetry(matrix_element):
                [range(nexternal)]*len(symmetry),\
                [range(nexternal)]
 
-    logging.info("Finding symmetric diagrams for process %s" % \
+    logger.info("Finding symmetric diagrams for process %s" % \
                  matrix_element.get('processes')[0].nice_string().\
                  replace("Process: ", ""))
 

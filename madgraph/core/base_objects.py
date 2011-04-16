@@ -747,7 +747,7 @@ class Model(PhysicsObject):
 
         return Model.__bases__[0].get(self, name) # call the mother routine
 
-    def set(self, name, value):
+    def set(self, name, value, force = False):
         """Special set for particles and interactions - need to
         regenerate dictionaries."""
 
@@ -768,7 +768,7 @@ class Model(PhysicsObject):
             self['ref_dict_to0'] = {}
             self['got_majoranas'] = None
 
-        result = Model.__bases__[0].set(self, name, value) # call the mother routine
+        result = Model.__bases__[0].set(self, name, value, force) # call the mother routine
 
         if name == 'particles':
             # Recreate particle_dict

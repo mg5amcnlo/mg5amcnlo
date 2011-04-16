@@ -1,6 +1,6 @@
-# This file was automatically created by FeynRules $Revision: 364 $
-# Mathematica version: 7.0 for Mac OS X x86 (64-bit) (November 11, 2008)
-# Date: Thu 18 Nov 2010 20:29:33
+# This file was automatically created by FeynRules $Revision: 535 $
+# Mathematica version: 8.0 for Mac OS X x86 (64-bit) (November 6, 2010)
+# Date: Wed 23 Mar 2011 22:45:01
 
 
 from object_library import all_lorentz, Lorentz
@@ -15,7 +15,7 @@ SSS1 = Lorentz(name = 'SSS1',
 
 FFS1 = Lorentz(name = 'FFS1',
                spins = [ 2, 2, 1 ],
-               structure = 'Identity(1,2)')
+               structure = 'Identity(2,1)')
 
 FFV1 = Lorentz(name = 'FFV1',
                spins = [ 2, 2, 3 ],

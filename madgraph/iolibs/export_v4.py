@@ -31,9 +31,11 @@ import madgraph.iolibs.files as files
 import madgraph.iolibs.group_subprocs as group_subprocs
 import madgraph.iolibs.misc as misc
 import madgraph.iolibs.file_writers as writers
+import madgraph.iolibs.gen_infohtml as gen_infohtml
 import madgraph.iolibs.template_files as template_files
 import madgraph.iolibs.ufo_expression_parsers as parsers
 import madgraph.various.diagram_symmetry as diagram_symmetry
+
 
 import aloha.create_aloha as create_aloha
 import models.write_param_card as param_writer
@@ -146,7 +148,7 @@ class ProcessExporterFortran(object):
     #===========================================================================
     # Create jpeg diagrams, html pages,proc_card_mg5.dat and madevent.tar.gz
     #===========================================================================
-    def finalize_v4_directory(self, matrix_elements, history = "", makejpg = False):
+    def finalize_v4_directory(self, matrix_elements, history = "", makejpg = False, online = False):
         """Function to finalize v4 directory, for inheritance.
         """
         pass
@@ -703,7 +705,8 @@ class ProcessExporterFortranSA(ProcessExporterFortran):
     #===========================================================================
     # Create proc_card_mg5.dat for Standalone directory
     #===========================================================================
-    def finalize_v4_directory(self, matrix_elements, history, makejpg = False):
+    def finalize_v4_directory(self, matrix_elements, history, makejpg = False,
+                              online = False):
         """Finalize Standalone MG4 directory by generation proc_card_mg5.dat"""
 
         if not misc.which('g77'):
@@ -904,6 +907,8 @@ class ProcessExporterFortranME(ProcessExporterFortran):
     """Class to take care of exporting a set of matrix elements to
     MadEvent format."""
 
+    matrix_file = "matrix_madevent_v4.inc"
+
     def copy_v4template(self):
         """Additional actions needed for setup of Template
         """
@@ -1042,8 +1047,6 @@ class ProcessExporterFortranME(ProcessExporterFortran):
                      matrix_element.get('processes')[0].nice_string())
         plot.draw()
 
-        # Generate jpgs -> pass in make_html
-        #os.system(os.path.join('..', '..', 'bin', 'gen_jpeg-pl'))
 
         linkfiles = ['addmothers.f',
                      'cluster.f',
@@ -1083,17 +1086,20 @@ class ProcessExporterFortranME(ProcessExporterFortran):
         files.append_to_file(filename,
                              self.write_subproc,
                              subprocdir)
-        # Generate info page
-        os.system(os.path.join('..', 'bin', 'gen_infohtml-pl'))
 
         # Return to original dir
         os.chdir(cwd)
+
+        # Generate info page
+        gen_infohtml.make_info_html(self.dir_path)
+
 
         if not calls:
             calls = 0
         return calls
 
-    def finalize_v4_directory(self, matrix_elements, history, makejpg = False):
+    def finalize_v4_directory(self, matrix_elements, history, makejpg = False,
+                              online = False):
         """Finalize ME v4 directory by creating jpeg diagrams, html
         pages,proc_card_mg5.dat and madevent.tar.gz."""
 
@@ -1130,9 +1136,10 @@ class ProcessExporterFortranME(ProcessExporterFortran):
 
         subprocess.call([os.path.join(old_pos, self.dir_path, 'bin', 'gen_cardhtml-pl')], \
                                                                 stdout = devnull)
-        subprocess.call([os.path.join(old_pos, self.dir_path, 'bin', 'gen_infohtml-pl')], \
-                                                                stdout = devnull)
+
         os.chdir(os.path.pardir)
+
+        gen_infohtml.make_info_html(self.dir_path)
         subprocess.call([os.path.join(old_pos, self.dir_path, 'bin', 'gen_crossxhtml-pl')],
                         stdout = devnull)
         [mv(name, './HTML/') for name in os.listdir('.') if \
@@ -1156,6 +1163,10 @@ class ProcessExporterFortranME(ProcessExporterFortran):
                 os.remove('madevent.tar.gz')
             subprocess.call(['make'], stdout = devnull)
 
+
+        if online:
+            # Touch "Online" file
+            os.system('touch %s/Online' % self.dir_path)
 
         subprocess.call([os.path.join(old_pos, self.dir_path, 'bin', 'gen_cardhtml-pl')],
                         stdout = devnull)
@@ -1264,7 +1275,7 @@ class ProcessExporterFortranME(ProcessExporterFortran):
         replace_dict['jamp_lines'] = '\n'.join(jamp_lines)
 
         file = open(os.path.join(_file_path, \
-                          'iolibs/template_files/matrix_madevent_v4.inc')).read()
+                          'iolibs/template_files/%s' % self.matrix_file)).read()
         file = file % replace_dict
 
         # Write the file
@@ -1818,6 +1829,8 @@ class ProcessExporterFortranMEGroup(ProcessExporterFortranME):
     """Class to take care of exporting a set of matrix elements to
     MadEvent subprocess group format."""
 
+    matrix_file = "matrix_madevent_group_v4.inc"
+
     #===========================================================================
     # copy the Template in a new directory.
     #===========================================================================
@@ -2075,9 +2088,10 @@ class ProcessExporterFortranMEGroup(ProcessExporterFortranME):
         files.append_to_file(filename,
                              self.write_subproc,
                              subprocdir)
+        
         # Generate info page
-        os.system(os.path.join('..', 'bin', 'gen_infohtml-pl'))
-
+        gen_infohtml.make_info_html(os.path.pardir)
+        
         # Return to original dir
         os.chdir(cwd)
 

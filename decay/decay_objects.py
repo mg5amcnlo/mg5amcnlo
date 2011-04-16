@@ -83,7 +83,7 @@ class DecayParticle(base_objects.Particle):
                   ]
 
 
-    def __init__(self, init_dict={}):
+    def __init__(self, init_dict={}, force=False):
         """Creates a new particle object. If a dictionary is given, tries to 
         use it to give values to properties.
         A repeated assignment is to avoid error of inconsistent pdg_code and
@@ -104,7 +104,7 @@ class DecayParticle(base_objects.Particle):
             pass
             
         for item in init_dict.keys():
-            self.set(item, init_dict[item])
+            self.set(item, init_dict[item], force)
 
     def default_setup(self):
         """Default values for all properties"""
@@ -118,7 +118,9 @@ class DecayParticle(base_objects.Particle):
 
         # The decay_vertexlist is a dictionary with vertex list as items and
         # final state particles and on shell condition as keys.
-        # decay_channels, decay_amplitudes are similar.
+        # decay_channels corresponds to one diagram for each channel, 
+        # while decay_amplitudes are a series of diagrams with the same
+        # initial and final states.
 
         self['decay_vertexlist'] = {}
         self['decay_channels'] = {}
@@ -1106,16 +1108,27 @@ class DecayParticleList(base_objects.ParticleList):
     """A class to store list of DecayParticle, Particle is also a valid
        element, but will automatically convert to DecayParticle"""
 
-    def append(self, object):
+    def __init__(self, init_list=None, force=False):
+        """Creates a new particle list object. If a list of physics 
+        object is given, add them."""
+
+        list.__init__(self)
+
+        if init_list is not None:
+            for object in init_list:
+                self.append(object, force)
+
+    def append(self, object, force=False):
         """Append DecayParticle, even if object is Particle"""
 
-        assert self.is_valid_element(object), \
-            "Object %s is not a valid object for the current list" %repr(object)
+        if not force:
+            assert self.is_valid_element(object), \
+                "Object %s is not a valid object for the current list" %repr(object)
 
         if isinstance(object, DecayParticle):
             list.append(self, object)
         else:
-            list.append(self, DecayParticle(object))
+            list.append(self, DecayParticle(object, force))
 
     def generate_dict(self):
         """Generate a dictionary from particle id to particle.
@@ -1152,7 +1165,7 @@ class DecayModel(base_objects.Model):
                    'decaywidth_list'
                   ]
 
-    def __init__(self, init_dict = {}):
+    def __init__(self, init_dict = {}, force=False):
         """Reset the particle_dict so that items in it is 
            of DecayParitcle type"""
 
@@ -1166,7 +1179,7 @@ class DecayModel(base_objects.Model):
         # can point to DecayParticle
         # Futhermore, the set of interactions can have correct particle_dict
         if 'particles' in init_dict.keys():
-            self.set('particles', init_dict['particles'])
+            self.set('particles', init_dict['particles'], force)
 
         self['particle_dict'] = {}
         self.get('particle_dict')
@@ -1174,7 +1187,7 @@ class DecayModel(base_objects.Model):
         # to Particle rather than DecayParticle.
         for item in init_dict.keys():
             if item != 'particles' and item != 'particle_dict':
-                self.set(item, init_dict[item])
+                self.set(item, init_dict[item], force)
 
         
     def default_setup(self):
@@ -1239,10 +1252,10 @@ class DecayModel(base_objects.Model):
         return True
             
         
-    def set(self, name, value):
+    def set(self, name, value, force=False):
         """Change the Particle into DecayParticle"""
         #Record the validity of set by mother routine
-        return_value = super(DecayModel, self).set(name, value)
+        return_value = super(DecayModel, self).set(name, value, force)
         #Reset the dictionaries
 
         if return_value:
@@ -1258,7 +1271,7 @@ class DecayModel(base_objects.Model):
                 self['decaywidth_list'] = {}
 
                 #Convert to DecayParticleList
-                self['particles'] = DecayParticleList(value)
+                self['particles'] = DecayParticleList(value, force)
                 #Generate new dictionaries with items are DecayParticle
                 self.get('particle_dict')
                 self.get('got_majoranas')
@@ -3041,6 +3054,7 @@ class Channel(base_objects.Diagram):
 
         return id_part_list
 
+    # OBSELETE
     def get_idpartlist(self):
         """ Get the position of identical particles in this channel.
             The format of id_part_list is a dictionary with the vertex
@@ -3377,22 +3391,24 @@ class Channel(base_objects.Diagram):
         else:
             M = abs(eval(ini_part.get('mass')))
             # The avg_E is lower by one more particle in the next-level.
-            avg_E = (M/(len(self.get_final_legs())+1))
+            avg_E = (M/(len(self.get_final_legs())+1.))
 
             # Go through each vertex and assign factors to apx_m
             # This will take all propagators into accounts.
             # Do not run the identical vertex
             for i, vert in enumerate(self['vertices'][:-1]):
                 # Assign the value if the leg is not inital leg.
-                # q is assumed as 0.5M
+                # q is assumed as 1M
                 if i != len(self.get('vertices'))-2: 
                     apx_m *= self.get_apx_fnrule(vert.get('legs')[-1].get('id'),
                                                  1*M, False, model, True)
+
                 # Assign the value to initial particle.
                 else:
                     apx_m *= self.get_apx_fnrule(vert.get('legs')[-1].get('id'),
                                                  M, True, model)
-                    
+
+
                 # Evaluate the coupling strength
                 apx_m *= sum([abs(eval(v)) ** 2 for key, v in \
                                   model.get('interaction_dict')[\
@@ -3402,6 +3418,7 @@ class Channel(base_objects.Diagram):
             for leg in self.get_final_legs():
                 apx_m *= self.get_apx_fnrule(leg.get('id'),
                                              avg_E, True, model)
+
         # For both on-shell and off-shell cases,
         # Correct the factor of spin/color sum of initial particle (average it)
         apx_m *= 1./(ini_part.get('spin'))
@@ -3610,7 +3627,7 @@ class Channel(base_objects.Diagram):
                 # Formula: ratio = width_of_this_leg * (M/m_leg)**(-1) *
                 #                  (2 * M * 8 * pi * (c_psarea* (M/8/pi)**2)) *
                 #                  1/(leg_mleg(mleg)/leg_mleg(0.5M) *
-                #                  Propagator of mleg(0.5M)
+                #                  Propagator of mleg(M)
                 ratio *= (1+ part.get('apx_decaywidth')*\
                               (M/abs(eval(part.get('mass')))) **(-1) *\
                               (c_psarea*(M **3/4/math.pi)) / \

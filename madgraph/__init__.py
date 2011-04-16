@@ -24,15 +24,4 @@ import os
 #Look for basic file position MG5DIR and MG4DIR
 MG5DIR = os.path.realpath(os.path.join(os.path.dirname(__file__),
                                                                 os.path.pardir))
-MG4DIR = None
-
-mg4_possibility = [os.getcwd(), MG5DIR,
-                   os.path.join(os.getcwd(), os.path.pardir),
-                   os.path.join(MG5DIR, os.path.pardir)]
-
-for position in mg4_possibility:
-    if os.path.isdir(os.path.join(position, 'Template')) and \
-           os.path.isdir(os.path.join(position, 'HELAS')):
-        MG4DIR = os.path.realpath(position)
-        break
-del mg4_possibility
+MG4DIR = MG5DIR

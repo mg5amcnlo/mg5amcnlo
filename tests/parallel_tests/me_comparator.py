@@ -645,6 +645,7 @@ class MEComparator(object):
         if filename:
             file = open(filename, 'w')
             file.write(res_str)
+            file.write(str(failed_proc_list))
             file.close()
 
     def get_non_zero_processes(self):
@@ -725,11 +726,13 @@ def create_proc_list_enhanced(init_part_list, final_part_list_1,
                 for fprod2 in itertools.product(final_part_list_2,
                                                 repeat=final_2):                
                     sorted_product = sorted(iprod) + sorted(fprod1 + fprod2)
+                    if  sorted_product not in proc_list:
+                        proc_list.append(sorted_product)
             else:
                 sorted_product = sorted(iprod) + sorted(fprod1)
 
-            if  sorted_product not in proc_list:
-                proc_list.append(sorted_product)
+                if  sorted_product not in proc_list:
+                    proc_list.append(sorted_product)
 
     for proc in proc_list:
         #check charge conservation
