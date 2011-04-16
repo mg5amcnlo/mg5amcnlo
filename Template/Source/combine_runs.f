@@ -124,16 +124,20 @@ c-----
                   write(dirname,'(a,i3,a)') 'G',k,'/'
                else if (k .lt. 10000) then
                   write(dirname,'(a,i4,a)') 'G',k,'/'
+               else if (k .lt. 100000) then
+                  write(dirname,'(a,i5,a)') 'G',k,'/'
                endif
             else               !Handle B.W.
                if (xi .lt. 10) then
-                  write(dirname,'(a,f5.3,a,a)') 'G',xi,'/'
+                  write(dirname,'(a,f6.4,a,a)') 'G',xi,'/'
                else if (xi .lt. 100) then
-                  write(dirname,'(a,f6.3,a,a)') 'G',xi,'/'
+                  write(dirname,'(a,f7.4,a,a)') 'G',xi,'/'
                else if (xi .lt. 1000) then
-                  write(dirname,'(a,f7.3,a,a)') 'G',xi,'/'
+                  write(dirname,'(a,f8.4,a,a)') 'G',xi,'/'
                else if (xi .lt. 10000) then
-                  write(dirname,'(a,f8.3,a,a)') 'G',xi,'/'
+                  write(dirname,'(a,f9.4,a,a)') 'G',xi,'/'
+               else if (xi .lt. 100000) then
+                  write(dirname,'(a,f10.4,a,a)') 'G',xi,'/'
                endif
             endif     
             ip = index(dirname,'/')
