@@ -31,8 +31,6 @@ c
       common /sample_status/result_file,where_file,nsteps
       integer           Minvar(maxdim,lmaxconfigs)
       common /to_invar/ Minvar
-      real*8          dsigtot(10)
-      common/to_dsig/ dsigtot
       integer ngroup
       common/to_group/ngroup
       data ngroup/0/
@@ -250,7 +248,7 @@ c
          lbw(0)=0
       else
          lbw(0)=1
-         jconfig=dconfig*1000.1
+         jconfig=dconfig*10000.1
          write(*,*) 'Using dconfig=',jconfig
          call DeCode(jconfig,lbw(1),3,nexternal)
          write(*,*) 'BW Setting ', (lbw(j),j=1,nexternal-2)

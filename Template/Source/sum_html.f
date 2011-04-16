@@ -84,8 +84,8 @@ c            write(*,*) i,'found ilen',ilen,fname(1:ilen+10)
             read(15,*,err=99,end=99) xi,j
             if (j .gt. 0) then
             i=i+1
-            if ( (xi-int(xi+.01)) .lt. 1d-5) then
-               k = int(xi+.01)
+            if ( (xi-int(xi+.001)) .lt. 1d-6) then
+               k = int(xi+.001)
             if (k .lt. 10) then
                write(fname,'(a,i1,a,a)') 'G',k,'/',rfile
                write(linkname(i),'(a,i1,a,a)') 'G',k,'/','log.txt'
@@ -98,20 +98,26 @@ c            write(*,*) i,'found ilen',ilen,fname(1:ilen+10)
             else if (k .lt. 10000) then
                write(fname,'(a,i4,a,a)') 'G',k,'/',rfile
                write(linkname(i),'(a,i4,a,a)') 'G',k,'/','log.txt'
+            else if (k .lt. 100000) then
+               write(fname,'(a,i5,a,a)') 'G',k,'/',rfile
+               write(linkname(i),'(a,i5,a,a)') 'G',k,'/','log.txt'
             endif
             else
             if (xi .lt. 10) then
-               write(fname,'(a,f5.3,a,a)') 'G',xi,'/',rfile
-               write(linkname(i),'(a,f5.3,a,a)') 'G',xi,'/','log.txt'
+               write(fname,'(a,f6.4,a,a)') 'G',xi,'/',rfile
+               write(linkname(i),'(a,f6.4,a,a)') 'G',xi,'/','log.txt'
             else if (xi .lt. 100) then
-               write(fname,'(a,f6.3,a,a)') 'G',xi,'/',rfile
-               write(linkname(i),'(a,f6.3,a,a)') 'G',xi,'/','log.txt'
+               write(fname,'(a,f7.4,a,a)') 'G',xi,'/',rfile
+               write(linkname(i),'(a,f7.4,a,a)') 'G',xi,'/','log.txt'
             else if (xi .lt. 1000) then
-               write(fname,'(a,f7.3,a,a)') 'G',xi,'/',rfile
-               write(linkname(i),'(a,f7.3,a,a)') 'G',xi,'/','log.txt'
+               write(fname,'(a,f8.4,a,a)') 'G',xi,'/',rfile
+               write(linkname(i),'(a,f8.4,a,a)') 'G',xi,'/','log.txt'
             else if (xi .lt. 10000) then
-               write(fname,'(a,f8.3,a,a)') 'G',xi,'/',rfile
-               write(linkname(i),'(a,f8.3,a,a)') 'G',xi,'/','log.txt'
+               write(fname,'(a,f9.4,a,a)') 'G',xi,'/',rfile
+               write(linkname(i),'(a,f9.4,a,a)') 'G',xi,'/','log.txt'
+            else if (xi .lt. 100000) then
+               write(fname,'(a,f10.4,a,a)') 'G',xi,'/',rfile
+               write(linkname(i),'(a,f10.4,a,a)') 'G',xi,'/','log.txt'
             endif
 c            write(*,*) 'log name ',fname
             endif
@@ -501,6 +507,9 @@ c
             else if (io(i) .lt. 10000) then
                write(fnamel,'(a,i4,a,a)') 'G',io(i),'/',logfile
                write(fnamee,'(a,i4,a,a)') 'G',io(i),'/',eventfile
+            else if (io(i) .lt. 100000) then
+               write(fnamel,'(a,i5,a,a)') 'G',io(i),'/',logfile
+               write(fnamee,'(a,i5,a,a)') 'G',io(i),'/',eventfile
             endif
             endif
 

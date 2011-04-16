@@ -705,18 +705,18 @@ class TestCmdShell2(unittest.TestCase,
                                            'SubProcesses',
                                            'P0_qq_gogo_go_qqn1_go_qqn1',
                                            'symfact.dat')).read(),
-                         """    1.030     1
-    2.030     1
-    3.030     1
-    4.030     1
+                         """    1.0030     1
+    2.0030     1
+    3.0030     1
+    4.0030     1
      5    -2
-    6.030     1
-    7.030     1
-    8.030     1
-   11.030     1
-   12.030     1
+    6.0030     1
+    7.0030     1
+    8.0030     1
+   11.0030     1
+   12.0030     1
     15   -12
-   16.030     1
+   16.0030     1
 """)
         
     def test_madevent_subproc_group_decay_chain(self):

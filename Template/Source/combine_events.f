@@ -13,8 +13,9 @@ c
       parameter (cmax_events=500000)
       integer    sfnum
       parameter (sfnum=17)   !Unit number for scratch file
+      include 'maxparticles.inc'
       integer    maxexternal
-      parameter (maxexternal=17)
+      parameter (maxexternal=2*max_particles-3)
       integer maxpara
       parameter (maxpara=1000)
 c     
@@ -473,16 +474,20 @@ c-----
                   write(dirname,'(a,i3,a)') 'G',k,'/'
                else if (k .lt. 10000) then
                   write(dirname,'(a,i4,a)') 'G',k,'/'
+               else if (k .lt. 100000) then
+                  write(dirname,'(a,i5,a)') 'G',k,'/'
                endif
             else               !Handle B.W.
                if (xi .lt. 10) then
-                  write(dirname,'(a,f5.3,a,a)') 'G',xi,'/'
+                  write(dirname,'(a,f6.4,a,a)') 'G',xi,'/'
                else if (xi .lt. 100) then
-                  write(dirname,'(a,f6.3,a,a)') 'G',xi,'/'
+                  write(dirname,'(a,f7.4,a,a)') 'G',xi,'/'
                else if (xi .lt. 1000) then
-                  write(dirname,'(a,f7.3,a,a)') 'G',xi,'/'
+                  write(dirname,'(a,f8.4,a,a)') 'G',xi,'/'
                else if (xi .lt. 10000) then
-                  write(dirname,'(a,f8.3,a,a)') 'G',xi,'/'
+                  write(dirname,'(a,f9.4,a,a)') 'G',xi,'/'
+               else if (xi .lt. 100000) then
+                  write(dirname,'(a,f10.4,a,a)') 'G',xi,'/'
                endif
             endif     
             ip = index(dirname,'/')
@@ -517,8 +522,9 @@ c
       parameter (sfnum=17)   !Unit number for scratch file
       character*(*) scaled_file
       parameter (scaled_file='events.lhe')
-      integer maxexternal
-      parameter (maxexternal=17)
+      include 'maxparticles.inc'
+      integer    maxexternal
+      parameter (maxexternal=2*max_particles-3)
       include 'run_config.inc'
       integer    max_read
       parameter (max_read = 2000000)

@@ -189,7 +189,9 @@ class ProcessExporterFortran(object):
         ln(model_path + '/coupl.inc', self.dir_path + '/Source')
         ln(model_path + '/coupl.inc', self.dir_path + '/SubProcesses')
         ln(self.dir_path + '/Source/run.inc', self.dir_path + '/SubProcesses', log=False)
+        ln(self.dir_path + '/Source/genps.inc', self.dir_path + '/SubProcesses', log=False)
         ln(self.dir_path + '/Source/maxconfigs.inc', self.dir_path + '/SubProcesses', log=False)
+        ln(self.dir_path + '/Source/maxparticles.inc', self.dir_path + '/SubProcesses', log=False)
 
     #===========================================================================
     # export the helas routine
@@ -1069,6 +1071,7 @@ class ProcessExporterFortranME(ProcessExporterFortran):
                      'reweight.f',
                      'run.inc',
                      'maxconfigs.inc',
+                     'maxparticles.inc',
                      'setcuts.f',
                      'setscales.f',
                      'sudakov.inc',
@@ -1112,6 +1115,11 @@ class ProcessExporterFortranME(ProcessExporterFortran):
         filename = os.path.join(self.dir_path,'Source','maxconfigs.inc')
         self.write_maxconfigs_file(writers.FortranWriter(filename),
                                    matrix_elements)
+        
+        # Write maxparticles.inc based on max of ME's/subprocess groups
+        filename = os.path.join(self.dir_path,'Source','maxparticles.inc')
+        self.write_maxparticles_file(writers.FortranWriter(filename),
+                                     matrix_elements)
         
         # Touch "done" file
         os.system('touch %s/done' % os.path.join(self.dir_path,'SubProcesses'))
@@ -1386,6 +1394,27 @@ class ProcessExporterFortranME(ProcessExporterFortran):
 
         lines = "integer lmaxconfigs\n"
         lines += "parameter(lmaxconfigs=%d)" % maxconfigs
+
+        # Write the file
+        writer.writelines(lines)
+
+        return True
+
+    #===========================================================================
+    # write_maxparticles_file
+    #===========================================================================
+    def write_maxparticles_file(self, writer, matrix_elements):
+        """Write the maxparticles.inc file for MadEvent"""
+
+        if isinstance(matrix_elements, helas_objects.HelasMultiProcess):
+            maxparticles = max([me.get_nexternal_ninitial()[0] for me in \
+                              matrix_elements.get('matrix_elements')])
+        else:
+            maxparticles = max([me.get_nexternal_ninitial()[0] \
+                              for me in matrix_elements])
+
+        lines = "integer max_particles\n"
+        lines += "parameter(max_particles=%d)" % maxparticles
 
         # Write the file
         writer.writelines(lines)
@@ -2077,6 +2106,7 @@ class ProcessExporterFortranMEGroup(ProcessExporterFortranME):
                      'reweight.f',
                      'run.inc',
                      'maxconfigs.inc',
+                     'maxparticles.inc',
                      'setcuts.f',
                      'setscales.f',
                      'sudakov.inc',

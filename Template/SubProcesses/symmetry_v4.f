@@ -99,10 +99,10 @@ c      if (icomp .gt. 3 .or. icomp .lt. 0) icomp=0
       call printout
       call run_printout
 c
-      ndim = 22
+      ndim = maxdim
       ncall = 10000
       itmax = 10
-      ninvar = 35
+      ninvar = maxinvar
       nconfigs = 1
       iconfig=1
       include 'props.inc'
@@ -169,8 +169,7 @@ c         write(*,*) 'mtc',mtc, (ic(i,1),i=1,nexternal)
          do j=3,nexternal
             ic(j,1)=ic(j,1)+2
          enddo
-         if (mtc) then
-             CALL SWITCHMOM(P,P1,IC(1,1),JC,NEXTERNAL)
+         CALL SWITCHMOM(P,P1,IC(1,1),JC,NEXTERNAL)
 c
 c     Now check if it is a valid swap to make
 c
@@ -216,7 +215,6 @@ c                  write(*,*) "Found match graph",mapconfig(j),mapconfig(k),diff
          else
             write(*,*) 'Bad swap', (ic(i,1),i=1,nexternal)
          endif   !Good Swap
-         endif   !Real Swap
          do j=3,nexternal
             ic(j,1)=ic(j,1)-2
          enddo
@@ -410,6 +408,10 @@ c-----
          write(fname(5:6),'(i2)') ic
       elseif (ic .lt. 1000) then
          write(fname(5:7),'(i3)') ic
+      elseif (ic .lt. 10000) then
+         write(fname(5:8),'(i4)') ic
+      elseif (ic .lt. 100000) then
+         write(fname(5:9),'(i5)') ic
       endif
       open (unit=lun, file = fname, status='unknown')
       write(lun,15) '#!/bin/bash'
@@ -513,15 +515,19 @@ c               write(*,*) 'mapping',ic,mapconfig(i)
                   write(26,'(i3$)') mapconfig(i)
                elseif (mapconfig(i) .lt. 10000) then
                   write(26,'(i4$)') mapconfig(i)
+               elseif (mapconfig(i) .lt. 100000) then
+                  write(26,'(i4$)') mapconfig(i)
                endif
                if (icode .eq. 0) then
 c                 write(26,'($a)') '.000'
                elseif (icode .lt. 10) then
-                  write(26,'(a,i1$)') '.00', icode
+                  write(26,'(a,i1$)') '.000', icode
                elseif (icode .lt. 100) then
-                  write(26,'(a,i2$)') '.0', icode
+                  write(26,'(a,i2$)') '.00', icode
                elseif (icode .lt. 1000) then
-                  write(26,'(a,i3$)') '.', icode
+                  write(26,'(a,i3$)') '.0', icode
+               elseif (icode .lt. 10000) then
+                  write(26,'(a,i4$)') '.', icode
                else
                   write(*,*) 'Error too many B.W. in symmetry.f',icode
                   stop
@@ -532,8 +538,8 @@ c                 write(26,'($a)') '.000'
          endif
       enddo
       call close_bash_file(26)
-      if (mapconfig(0) .gt. 9999) then
-         write(*,*) 'Only writing first 9999 jobs',mapconfig(0)
+      if (mapconfig(0) .gt. 99999) then
+         write(*,*) 'Only writing first 99999 jobs',mapconfig(0)
       endif
 c
 c     Now write out the symmetry factors for each graph
@@ -569,7 +575,7 @@ c
             do while (.not. done)
                call enCode(icode,iarray,ibase,imax)
                if (icode .gt. 0) then
-                  write(26,'(f9.3,i6)') mapconfig(i)+real(icode)/1000.,
+                  write(26,'(f10.4,i6)') mapconfig(i)+real(icode)/10000.,
      $                 use_config(i)
                else
                   write(26,'(2i6)') mapconfig(i),use_config(i)
@@ -632,6 +638,8 @@ c     Reset variables
 c      
       do i=1,nexternal
          xmass(i) = 0d0
+      enddo
+      do i=1,nexternal-1
          lconflict(-i) = .false.
       enddo
 c
@@ -644,19 +652,27 @@ c
          if (pwidth(-i,iconfig) .gt. 0d0) then
 c     JA 3/31/11 Keep track of identical particles (i.e., radiation vertices)
 c     by tracing the particle identity from the external particle.
-            if(itree(1,-i).gt.0.and.
-     $           sprop(-i).eq.idup(itree(1,-i),1,1).or.
-     $         itree(2,-i).gt.0.and.
-     $           sprop(-i).eq.idup(itree(2,-i),1,1).or.
-     $         itree(1,-i).lt.0.and.(iden_part(itree(1,-i)).ne.0.and.
+            if(itree(1,-i).gt.0) then
+               if(sprop(-i).eq.idup(itree(1,-i),1,1))
+     $              iden_part(-i) = sprop(-i)
+            endif
+            if(itree(2,-i).gt.0) then
+               if(sprop(-i).eq.idup(itree(2,-i),1,1))
+     $              iden_part(-i) = sprop(-i)
+            endif
+            if(itree(1,-i).lt.0) then
+               if(iden_part(itree(1,-i)).ne.0.and.
      $           sprop(-i).eq.iden_part(itree(1,-i)) .or.
      $         forcebw(itree(1,-i)).and.
-     $           sprop(-i).eq.sprop(itree(1,-i))).or.
-     $         itree(2,-i).lt.0.and.(iden_part(itree(2,-i)).ne.0.and.
+     $           sprop(-i).eq.sprop(itree(1,-i)))
+     $              iden_part(-i) = sprop(-i)
+            endif
+            if(itree(2,-i).lt.0) then
+               if(iden_part(itree(2,-i)).ne.0.and.
      $           sprop(-i).eq.iden_part(itree(2,-i)).or.
      $         forcebw(itree(2,-i)).and.
-     $           sprop(-i).eq.sprop(itree(2,-i))))then
-               iden_part(-i) = sprop(-i)
+     $           sprop(-i).eq.sprop(itree(2,-i)))
+     $              iden_part(-i) = sprop(-i)
             endif
             if (xmass(-i) .gt. pmass(-i,iconfig) .and.
      $           iden_part(-i).eq.0) then !Can't be on shell, and not radiation

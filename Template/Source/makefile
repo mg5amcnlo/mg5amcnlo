@@ -1,6 +1,6 @@
 g77   = g77
 FFLAGS= -O -ffixed-line-length-132
-#FFLAGS= -O 
+#FFLAGS= -g -ffixed-line-length-132 -fbounds-check
 LIBDIR= ../lib/
 BINDIR= ../bin/
 PDFDIR= ./PDF/

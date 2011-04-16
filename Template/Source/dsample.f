@@ -1755,7 +1755,7 @@ c                        endif
 c
 c              special routines to deal with xmin cutoff
 c
-               do while(grid(1,k,j) .le. 0d0 .and. k .lt. ng)
+               do while(grid(1,k,j) .le. 0d0 .and. k+1 .lt. ng)
                   k=k+1
                enddo
 

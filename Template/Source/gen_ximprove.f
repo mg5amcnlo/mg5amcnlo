@@ -120,16 +120,20 @@ c         write(*,*) ' with seed', iseed
                   write(fname,'(a,i3,a,a)') 'G',n,'/',rfile
                else if (n .lt. 10000) then
                   write(fname,'(a,i4,a,a)') 'G',n,'/',rfile
+               else if (n .lt. 100000) then
+                  write(fname,'(a,i5,a,a)') 'G',n,'/',rfile
                endif
             else
                if (xi .lt. 10) then
-                  write(fname,'(a,f5.3,a,a)') 'G',xi,'/',rfile
+                  write(fname,'(a,f6.4,a,a)') 'G',xi,'/',rfile
                else if (xi .lt. 100) then
-                  write(fname,'(a,f6.3,a,a)') 'G',xi,'/',rfile
+                  write(fname,'(a,f7.4,a,a)') 'G',xi,'/',rfile
                else if (xi .lt. 1000) then
-                  write(fname,'(a,f7.3,a,a)') 'G',xi,'/',rfile
+                  write(fname,'(a,f8.4,a,a)') 'G',xi,'/',rfile
                else if (xi .lt. 10000) then
-                  write(fname,'(a,f8.3,a,a)') 'G',xi,'/',rfile
+                  write(fname,'(a,f9.4,a,a)') 'G',xi,'/',rfile
+               else if (xi .lt. 100000) then
+                  write(fname,'(a,f10.4,a,a)') 'G',xi,'/',rfile
                endif
 c              write(*,*) 'log name ',fname
             endif
@@ -559,9 +563,10 @@ c
          k=k+1
       enddo
       kk=k
-c     Check error for the rest of the channels
+c     Check error for the rest of the channels - rerun if 
+c     bigger than channel xsec and bigger than 1% of largest channel
       do while( kk .le. ng)
-         if (xerr(io(kk)).gt.xsec(io(kk))) then
+         if (xerr(io(kk)).gt.max(xsec(io(kk)),0.01*xsec(io(1)))) then
             write(*,*) 'Improving for error ',kk,gn(io(kk)),xt(kk),xsec(io(kk)),xerr(io(kk))
             io(k)=io(kk)
             xt(k)=xt(kk)
