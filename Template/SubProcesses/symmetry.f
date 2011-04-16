@@ -164,7 +164,8 @@ c
 c     Local
 c
       character*30 fname
-      integer ic
+      integer ic, npos
+      character*10 formstr
 
       data ic/0/
 c-----
@@ -172,15 +173,10 @@ c  Begin Code
 c-----
       ic=ic+1
       fname='ajob'
-      if (ic .lt. 10) then
-         write(fname(5:5),'(i1)') ic
-      elseif (ic .lt. 100) then
-         write(fname(5:6),'(i2)') ic
-      elseif (ic .lt. 1000) then
-         write(fname(5:7),'(i3)') ic
-      elseif (ic .lt. 10000) then
-         write(fname(5:8),'(i4)') ic
-      endif
+c     Write ic with correct number of digits
+      npos=int(dlog10(dble(ic)))+1
+      write(formstr,'(a,i1,a)') '(I',npos,')'
+      write(fname(5:(5+npos-1)),formstr) ic
       open (unit=lun, file = fname, status='unknown')
       write(lun,15) '#!/bin/bash'
       write(lun,15) '#PBS -q ' // PBS_QUE
@@ -228,6 +224,9 @@ c
 c     local
 c
       integer i, j, nbw, ic, icode
+      integer ncode, nconf
+      double precision dconfig
+      character*10 formstr
       integer iarray(imax)
       logical lconflict(-max_branch:nexternal)
       logical done
@@ -239,6 +238,8 @@ c  Begin Code
 c-----
       call open_bash_file(26)
       ic = 0      
+c     ncode is number of digits needed for the code
+      ncode=int(dlog10(3d0)*(max_particles-4))+1
       do i=1,mapconfig(0)
          if (use_config(i) .gt. 0) then
             call bw_conflict(i,iforest(1,-max_branch,i),lconflict,
@@ -275,30 +276,17 @@ c            do j=1,2**nbw
                   ic = 1
                endif
 c               write(*,*) 'mapping',ic,mapconfig(i)
-               if (mapconfig(i) .lt. 10) then
-                  write(26,'(i1$)') mapconfig(i)
-               elseif (mapconfig(i) .lt. 100) then
-                  write(26,'(i2$)') mapconfig(i)
-               elseif (mapconfig(i) .lt. 1000) then
-                  write(26,'(i3$)') mapconfig(i)
-               elseif (mapconfig(i) .lt. 10000) then
-                  write(26,'(i4$)') mapconfig(i)
-               elseif (mapconfig(i) .lt. 100000) then
-                  write(26,'(i4$)') mapconfig(i)
-               endif
+               nconf=int(dlog10(dble(mapconfig(i))))+1
                if (icode .eq. 0) then
-c                 write(26,'($a)') '.000'
-               elseif (icode .lt. 10) then
-                  write(26,'(a,i1$)') '.000', icode
-               elseif (icode .lt. 100) then
-                  write(26,'(a,i2$)') '.00', icode
-               elseif (icode .lt. 1000) then
-                  write(26,'(a,i3$)') '.0', icode
-               elseif (icode .lt. 10000) then
-                  write(26,'(a,i4$)') '.', icode
+c                 Create format string based on number of digits
+                  write(formstr,'(a,i1,a)') '(I',nconf,'$)'
+                  write(26,formstr) mapconfig(i)
                else
-                  write(*,*) 'Error too many B.W. in symmetry.f',icode
-                  stop
+c                 Create format string based on number of digits
+                  dconfig=mapconfig(i)+icode*1d0/10**ncode
+                  write(formstr,'(a,i1,a,i1,a)') '(F',nconf+ncode+1,
+     $                 '.',ncode,'$)'
+                  write(26,formstr) dconfig
                endif
                write(26,'(a$)') ' '
                call bw_increment_array(iarray,imax,ibase,gForceBW(-imax,i),done)
@@ -343,8 +331,11 @@ c
             do while (.not. done)
                call enCode(icode,iarray,ibase,imax)
                if (icode .gt. 0) then
-                  write(26,'(f10.4,i6)') mapconfig(i)+real(icode)/10000.,
-     $                 use_config(i)
+                  nconf=int(dlog10(dble(mapconfig(i))))+1
+                  write(formstr,'(a,i1,a,i1,a)') '(F',nconf+ncode+1,
+     $                 '.',ncode,',i6)'
+                  dconfig=mapconfig(i)+icode*1d0/10**ncode
+                  write(26,formstr) dconfig,use_config(i)
                else
                   write(26,'(2i6)') mapconfig(i),use_config(i)
                endif

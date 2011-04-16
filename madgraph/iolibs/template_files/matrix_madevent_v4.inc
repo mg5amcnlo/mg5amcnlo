@@ -48,7 +48,7 @@ C
     DOUBLE PRECISION AMP2(MAXAMPS), JAMP2(0:MAXFLOW)
     COMMON/TO_AMPS/  AMP2,       JAMP2
     
-    CHARACTER*79         HEL_BUFF
+    CHARACTER*101         HEL_BUFF
     COMMON/TO_HELICITY/  HEL_BUFF
     
     REAL*8 POL(2)
@@ -82,7 +82,7 @@ C ----------
         ENDDO
     ENDIF
     ANS = 0D0
-    WRITE(HEL_BUFF,'(16I5)') (0,I=1,NEXTERNAL)
+    WRITE(HEL_BUFF,'(20I5)') (0,I=1,NEXTERNAL)
     IF (ISUM_HEL .EQ. 0 .OR. NTRY .LT. 10) THEN
         DO I=1,NCOMB
            IF (GOODHEL(I) .OR. NTRY .LT. 2) THEN
@@ -121,7 +121,7 @@ C ----------
             ANS=ANS+T*HWGT
         ENDDO
         IF (ISUM_HEL .EQ. 1) THEN
-            WRITE(HEL_BUFF,'(16i5)')(NHEL(II,I),II=1,NEXTERNAL)
+            WRITE(HEL_BUFF,'(20i5)')(NHEL(II,I),II=1,NEXTERNAL)
         ENDIF
     ENDIF
     IF (MULTI_CHANNEL) THEN

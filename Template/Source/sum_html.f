@@ -7,6 +7,7 @@ c*****************************************************************************
 c
 c     Constants
 c
+      include 'maxparticles.inc'
       character*(*) subfile
       parameter (subfile='subproc.mg')
       character*(*) symfile
@@ -14,7 +15,7 @@ c
       character*(*) rfile
       parameter (rfile='results.dat')
       integer   max_amps      , max_iter
-      parameter (max_amps=9999, max_iter=50)
+      parameter (max_amps=9999, max_iter=50)      
 c
 c     local
 c
@@ -44,6 +45,8 @@ c
       integer ntevents, ntw 
       integer ilen
       logical errex
+      integer ncode,npos
+      character*20 formstr
 
       logical sumproc
       common/to_sumproc/sumproc
@@ -70,6 +73,8 @@ c-----
       ntevents = 0
       ntw = 0
       i = 0
+c     ncode is number of digits needed for the bw coding
+      ncode=int(dlog10(3d0)*(max_particles-4))+1
       do while (.true.)
          if (sumproc) then
             j = 1
@@ -84,43 +89,21 @@ c            write(*,*) i,'found ilen',ilen,fname(1:ilen+10)
             read(15,*,err=99,end=99) xi,j
             if (j .gt. 0) then
             i=i+1
-            if ( (xi-int(xi+.001)) .lt. 1d-6) then
-               k = int(xi+.001)
-            if (k .lt. 10) then
-               write(fname,'(a,i1,a,a)') 'G',k,'/',rfile
-               write(linkname(i),'(a,i1,a,a)') 'G',k,'/','log.txt'
-            else if (k .lt. 100) then
-               write(fname,'(a,i2,a,a)') 'G',k,'/',rfile
-               write(linkname(i),'(a,i2,a,a)') 'G',k,'/','log.txt'
-            else if (k .lt. 1000) then
-               write(fname,'(a,i3,a,a)') 'G',k,'/',rfile
-               write(linkname(i),'(a,i3,a,a)') 'G',k,'/','log.txt'
-            else if (k .lt. 10000) then
-               write(fname,'(a,i4,a,a)') 'G',k,'/',rfile
-               write(linkname(i),'(a,i4,a,a)') 'G',k,'/','log.txt'
-            else if (k .lt. 100000) then
-               write(fname,'(a,i5,a,a)') 'G',k,'/',rfile
-               write(linkname(i),'(a,i5,a,a)') 'G',k,'/','log.txt'
-            endif
-            else
-            if (xi .lt. 10) then
-               write(fname,'(a,f6.4,a,a)') 'G',xi,'/',rfile
-               write(linkname(i),'(a,f6.4,a,a)') 'G',xi,'/','log.txt'
-            else if (xi .lt. 100) then
-               write(fname,'(a,f7.4,a,a)') 'G',xi,'/',rfile
-               write(linkname(i),'(a,f7.4,a,a)') 'G',xi,'/','log.txt'
-            else if (xi .lt. 1000) then
-               write(fname,'(a,f8.4,a,a)') 'G',xi,'/',rfile
-               write(linkname(i),'(a,f8.4,a,a)') 'G',xi,'/','log.txt'
-            else if (xi .lt. 10000) then
-               write(fname,'(a,f9.4,a,a)') 'G',xi,'/',rfile
-               write(linkname(i),'(a,f9.4,a,a)') 'G',xi,'/','log.txt'
-            else if (xi .lt. 100000) then
-               write(fname,'(a,f10.4,a,a)') 'G',xi,'/',rfile
-               write(linkname(i),'(a,f10.4,a,a)') 'G',xi,'/','log.txt'
+            k = int(xi*(1+10**-ncode))
+            npos=int(dlog10(dble(k)))+1
+            if ( (xi-k) .eq. 0) then
+c              Write with correct number of digits
+               write(formstr,'(a,i1,a)') '(a,i',npos,',a,a)'
+               write(fname, formstr) 'G',k,'/',rfile
+               write(linkname(i),formstr) 'G',k,'/','log.txt'
+            else               !Handle B.W.
+c              Write with correct number of digits
+               write(formstr,'(a,i1,a,i1,a)') '(a,f',npos+ncode+1,
+     $                 '.',ncode,',a,a)'
+               write(fname, formstr) 'G',xi,'/',rfile
+               write(linkname(i),formstr) 'G',xi,'/','log.txt'
             endif
 c            write(*,*) 'log name ',fname
-            endif
             endif
          endif
 

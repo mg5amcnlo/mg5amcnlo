@@ -411,7 +411,7 @@ C
       Double Precision amp2(maxamps), jamp2(0:maxflow)
       common/to_amps/  amp2,       jamp2
 
-      character*79       hel_buf
+      character*101       hel_buf
       common/to_helicity/hel_buf
 
       integer           mincfig, maxcfig
@@ -501,7 +501,7 @@ c
 
 c   Set helicities
 c      write(*,*) 'Getting helicity',hel_buf(1:50)
-      read(hel_buf,'(15i5)') (jpart(7,isym(i, jsym)),i=1,nexternal)
+      read(hel_buf,'(20i5)') (jpart(7,isym(i, jsym)),i=1,nexternal)
 c      write(*,*) 'ihel',jpart(7,1),jpart(7,2)
 
 c   Fix ordering of ptclus

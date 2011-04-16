@@ -17,6 +17,7 @@ c
       parameter (maxpara=1000)
 
       include 'run_config.inc'
+      include 'maxparticles.inc'
 c
 c     global
 c
@@ -46,6 +47,8 @@ c
       logical Gridpack,gridrun
       logical split_channels
       common /to_split/split_channels
+      integer ncode,npos
+      character*20 formstr
 
 c-----
 c  Begin Code
@@ -106,37 +109,25 @@ c         write(*,*) ' with seed', iseed
       errtotc=0d0
       xtot = 0d0
       i = 0
+c     ncode is number of digits needed for the bw coding
+      ncode=int(dlog10(3d0)*(max_particles-4))+1
       do while (.true.)
          read(15,*,err=99,end=99) xi,j
          if (j .gt. 0) then
             i = i+1
-            if ( (xi-int(xi+.01)) .lt. 1d-5) then
-               n = int(xi+.01)
-               if (n .lt. 10) then
-                  write(fname,'(a,i1,a,a)') 'G',n,'/',rfile
-               else if (n .lt. 100) then
-                  write(fname,'(a,i2,a,a)') 'G',n,'/',rfile
-               else if (n .lt. 1000) then
-                  write(fname,'(a,i3,a,a)') 'G',n,'/',rfile
-               else if (n .lt. 10000) then
-                  write(fname,'(a,i4,a,a)') 'G',n,'/',rfile
-               else if (n .lt. 100000) then
-                  write(fname,'(a,i5,a,a)') 'G',n,'/',rfile
-               endif
-            else
-               if (xi .lt. 10) then
-                  write(fname,'(a,f6.4,a,a)') 'G',xi,'/',rfile
-               else if (xi .lt. 100) then
-                  write(fname,'(a,f7.4,a,a)') 'G',xi,'/',rfile
-               else if (xi .lt. 1000) then
-                  write(fname,'(a,f8.4,a,a)') 'G',xi,'/',rfile
-               else if (xi .lt. 10000) then
-                  write(fname,'(a,f9.4,a,a)') 'G',xi,'/',rfile
-               else if (xi .lt. 100000) then
-                  write(fname,'(a,f10.4,a,a)') 'G',xi,'/',rfile
-               endif
-c              write(*,*) 'log name ',fname
+            k = int(xi*(1+10**-ncode))
+            npos=int(dlog10(dble(k)))+1
+            if ( (xi-k) .eq. 0) then
+c              Write with correct number of digits
+               write(formstr,'(a,i1,a)') '(a,i',npos,',a,a)'
+               write(fname, formstr) 'G',k,'/',rfile
+            else               !Handle B.W.
+c              Write with correct number of digits
+               write(formstr,'(a,i1,a,i1,a)') '(a,f',npos+ncode+1,
+     $                 '.',ncode,',a,a)'
+               write(fname, formstr) 'G',xi,'/',rfile
             endif
+c              write(*,*) 'log name ',fname
          endif
          if (j .gt. 0) then
             gname(i)=fname
@@ -390,7 +381,8 @@ c
 c     local
 c
       character*30 fname
-      integer ic
+      integer ic, npos
+      character*10 formstr
 
       data ic/0/
 c-----
@@ -398,20 +390,12 @@ c  Begin Code
 c-----
       ic=ic+1
       fname='ajob'
-      if (ic .lt. 10) then
-         write(fname(5:5),'(i1)') ic
-      elseif (ic .lt. 100) then
-         write(fname(5:6),'(i2)') ic
-      elseif (ic .lt. 1000) then
-         write(fname(5:7),'(i3)') ic
-      elseif (ic .lt. 10000) then
-         write(fname(5:8),'(i4)') ic
-      else
-         write(*,*) 'Error too many jobs in gen_ximprove',ic
-         stop
-      endif
-      write(*,*) 'Opening file ',fname
+c     Write ic with correct number of digits
+      npos=int(dlog10(dble(ic)))+1
+      write(formstr,'(a,i1,a)') '(I',npos,')'
+      write(fname(5:(5+npos-1)),formstr) ic
 
+      write(*,*) 'Opening file ',fname
       open (unit=26, file = fname, status='unknown')
       write(26,15) '#!/bin/bash'
       write(26,15) '#PBS -q ' // PBS_QUE
