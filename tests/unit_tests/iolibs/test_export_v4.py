@@ -4493,7 +4493,7 @@ CALL FFV5_0(W(1,8),W(1,15),W(1,3),GC_418,AMP(24))""".split('\n')
                                              g]),
                       'color': [color.ColorString([color.T(2, 1, 0)])],
                       'lorentz':['FFV1'],
-                      'couplings':{(0, 0):'GG'},
+                      'couplings':{(0, 0):['GG']},
                       'orders':{'QCD':1}}))
 
         myinterlist.append(base_objects.Interaction({
@@ -4504,7 +4504,7 @@ CALL FFV5_0(W(1,8),W(1,15),W(1,3),GC_418,AMP(24))""".split('\n')
                                              g]),
                       'color': [color.ColorString([color.T(2, 1, 0)])],
                       'lorentz':['FFV1'],
-                      'couplings':{(0, 0):'GG'},
+                      'couplings':{(0, 0):['GG']},
                       'orders':{'QCD':1}}))
 
         # Four fermion vertex
@@ -4518,7 +4518,7 @@ CALL FFV5_0(W(1,8),W(1,15),W(1,3),GC_418,AMP(24))""".split('\n')
                       'color': [color.ColorString([color.T(1, 0),
                                                    color.T(3, 2)])],
                       'lorentz':['FFFF1'],
-                      'couplings':{(0, 0):'GEFF'},
+                      'couplings':{(0, 0):['GEFF']},
                       'orders':{'NP':2}}))
 
         mybasemodel = base_objects.Model()
@@ -5608,8 +5608,8 @@ CALL IOVXXX(W(1,26),W(1,23),W(1,2),GAL,AMP(8))""")
                                              g,
                                              g]),
                       'color': [color.ColorString([color.f(0, 1, 2)]),
-                                color.ColorString([color.f(0, 1, 2)]),
-                                color.ColorString([color.f(0, 1, 2)])],
+                                color.ColorString([color.f(2, 1, 0)]),
+                                color.ColorString([color.f(1, 0, 2)])],
                       'lorentz':['gggg1', 'gggg2', 'gggg3'],
                       'couplings':{(0, 0):'GG', (1, 1):'GG', (2, 2):'GG'},
                       'orders':{'QCD':2}}))
@@ -7295,7 +7295,7 @@ CALL IOSXXX(W(1,15),W(1,2),W(1,19),GELN2P,AMP(9))""".split('\n')
                                               gen_color=True)
 
         self.assertEqual(sum([len(diagram.get('amplitudes')) for diagram in \
-                          me.get('diagrams')]), 8)
+                          me.get('diagrams')]), 2)
 
         for i, amp in enumerate(me.get_all_amplitudes()):
             self.assertEqual(amp.get('number'), i + 1)
@@ -7305,8 +7305,8 @@ CALL IOSXXX(W(1,15),W(1,2),W(1,19),GELN2P,AMP(9))""".split('\n')
         exporter = export_v4.ProcessExporterFortranME()
 
         self.assertEqual(exporter.get_JAMP_lines(me),
-                         ["JAMP(1)=-AMP(1)-AMP(2)-AMP(3)-AMP(4)",
-                         "JAMP(2)=+AMP(5)+AMP(6)+AMP(7)+AMP(8)"])
+                         ["JAMP(1)=-AMP(1)",
+                         "JAMP(2)=+AMP(2)"])
 
     def test_generate_helas_diagrams_gg_gogo(self):
         """Testing the v4 helas diagram generation g g > go go,
