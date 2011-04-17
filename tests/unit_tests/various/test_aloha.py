@@ -3144,7 +3144,7 @@ class TestAlohaWriter(unittest.TestCase):
         """ test that python writer works """
         
         solution ="""import wavefunctions
-def SSS1_1(S2, S3, C, M1, W1):
+def SSS1_1(S2, S3, COUP, M1, W1):
     S1 = wavefunctions.WaveFunction(size=3)
     S1[1] = S2[1]+S3[1]
     S1[2] = S2[2]+S3[2]
@@ -3153,12 +3153,14 @@ def SSS1_1(S2, S3, C, M1, W1):
             - complex(S1[2]).imag, \\
             - complex(S1[1]).imag]
     denom =1.0/(( (M1*( -M1+1j*W1))+( (P1[0]**2)-(P1[1]**2)-(P1[2]**2)-(P1[3]**2))))
-    S1[0]= C*denom*1j*(S3[0]*S2[0])
+    S1[0]= COUP*denom*1j*(S3[0]*S2[0])
     return S1
-def SSS1_2(S2, S3, C, M1, W1):
-    return SSS1_1(S2,S3,C,M1,W1)
-def SSS1_3(S2, S3, C, M1, W1):
-    return SSS1_1(S3,S2,C,M1,W1)"""
+    
+def SSS1_2(S2, S3, COUP, M1, W1):
+    return SSS1_1(S2,S3,COUP,M1,W1)
+def SSS1_3(S2, S3, COUP, M1, W1):
+    return SSS1_1(S3,S2,COUP,M1,W1)
+"""
         
         SSS = UFOLorentz(name = 'SSS1',
                  spins = [ 1, 1, 1 ],
@@ -3172,8 +3174,7 @@ def SSS1_3(S2, S3, C, M1, W1):
         
         split_solution = solution.split('\n')
         split_routine = routine.split('\n')
-        for i,line in enumerate(split_routine):
-            self.assertEqual(split_solution[i],line)
+        self.assertEqual(split_solution, split_routine)
         self.assertEqual(len(split_routine), len(split_solution))
         
         
@@ -3191,14 +3192,15 @@ def SSS1_3(S2, S3, C, M1, W1):
 
         
         solution = """import wavefunctions
-def FFV2C1_0(F1,F2,V3,C):
-    vertex = C*( (F1[3]*( (F2[0]*( -1j*V3[1]-V3[2]))+(F2[1]*( 1j*V3[0]+1j*V3[3]))))+(F1[2]*( (F2[0]*( 1j*V3[0]-1j*V3[3]))+(F2[1]*( -1j*V3[1]+V3[2])))))
-    return vertex""" 
+def FFV2C1_0(F1,F2,V3,COUP):
+    vertex = COUP*( (F1[3]*( (F2[0]*( -1j*V3[1]-V3[2]))+(F2[1]*( 1j*V3[0]+1j*V3[3]))))+(F1[2]*( (F2[0]*( 1j*V3[0]-1j*V3[3]))+(F2[1]*( -1j*V3[1]+V3[2])))))
+    return vertex
+    
+""" 
 
         split_solution = solution.split('\n')
         split_routine = routine.split('\n')
-        for i,line in enumerate(split_routine):
-            self.assertEqual(split_solution[i],line)
+        self.assertEqual(split_solution,split_routine)
         self.assertEqual(len(split_routine), len(split_solution))
             
             

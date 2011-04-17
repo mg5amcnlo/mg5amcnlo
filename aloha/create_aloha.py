@@ -74,10 +74,10 @@ class AbstractRoutine(object):
         """ write the content of the object """
         
         writer = getattr(aloha_writers, 'ALOHAWriterFor%s' % language)(self, output_dir)
-        writer.write(mode=mode)
+        text = writer.write(mode=mode)
         for grouped in self.combined:
-            writer.write_combined(grouped, mode=mode)
-        
+            text += writer.write_combined(grouped, mode=mode)
+        return text
 
 class AbstractRoutineBuilder(object):
     """ Launch the creation of the Helicity Routine"""

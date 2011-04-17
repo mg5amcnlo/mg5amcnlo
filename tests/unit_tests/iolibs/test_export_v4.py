@@ -8082,12 +8082,12 @@ class AlohaFortranWriterTest(unittest.TestCase):
 C     The process calculated in this file is: 
 C     Gamma(3,2,1)
 C     
-      SUBROUTINE FFV1_1(F2, V3, C, M1, W1, F1)
+      SUBROUTINE FFV1_1(F2, V3, COUP, M1, W1, F1)
       IMPLICIT NONE
       DOUBLE COMPLEX F1(6)
       DOUBLE COMPLEX F2(6)
       DOUBLE COMPLEX V3(6)
-      DOUBLE COMPLEX C
+      DOUBLE COMPLEX COUP
       DOUBLE COMPLEX DENOM
       DOUBLE PRECISION M1, W1
       DOUBLE PRECISION P1(0:3)
