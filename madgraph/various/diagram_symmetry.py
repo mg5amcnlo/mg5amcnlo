@@ -126,6 +126,7 @@ def find_symmetry(matrix_element, evaluator, max_time = 600):
            final_states:
             # Non-identical particles permutated
             continue
+        # Check if we need to cancel the check due to time limit
         if max_time and time.time() - start_time > max_time:
             logger.warning("Cancel diagram symmetry - time exceeded")
             break
