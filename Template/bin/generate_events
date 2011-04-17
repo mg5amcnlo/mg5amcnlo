@@ -201,7 +201,6 @@ if [[ $b != ".true." ]]; then
    mv survey refine
    $dirbin/gen_crossxhtml-pl $t
    $dirbin/refine $a $mode $n 5 $t
-   #$dirbin/refine 0.01 $mode $n
    mv refine refine2
    $dirbin/gen_crossxhtml-pl $t
    $dirbin/refine $a $mode $n 1 $t
