@@ -1824,6 +1824,9 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
         # Also reset _export_format and _export_dir
         self._export_format = None
 
+        # Remove previous generations from history
+        self.clean_history('generate', 'add process')
+
         # Call add process
         args = split_arg(line)
         args.insert(0, 'process')
@@ -2138,7 +2141,17 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
 
         if self.log:
             logger.info("History written to " + output_file.name)
-    
+
+    def clean_history(self,*arguments):
+        """Remove all commands in arguments from history"""
+
+        nline = 0
+        while nline < len(self.history) - 1:
+            if any([self.history[nline].startswith(arg) for arg in arguments]):
+                self.history.pop(nline)
+            else:
+                nline += 1
+
     # Import files
     def do_import(self, line):
         """Import files with external formats"""
@@ -2150,7 +2163,9 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
         if args[0].startswith('model'):
             self._model_v4_path = None
             # Clear history, amplitudes and matrix elements when a model is imported
-            self.history = self.history[-1:]
+            # Remove previous imports, generations and outputs from history
+            self.clean_history('import', 'generate', 'add process', 'output')
+            # Reset amplitudes and matrix elements
             self._curr_amps = diagram_generation.AmplitudeList()
             self._curr_matrix_elements = helas_objects.HelasMultiProcess()
             # Import model
@@ -2185,6 +2200,9 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
             process_checks.store_aloha = []
             
         elif args[0] == 'command':
+            # Remove previous imports, generations and outputs from history
+            self.clean_history('import', 'generate', 'add process', 'output')
+
             if not os.path.isfile(args[1]):
                 raise MadGraph5Error("Path %s is not a valid pathname" % args[1])
             else:
@@ -2196,6 +2214,9 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
         
         elif args[0] == 'proc_v4':
             
+            # Remove previous imports, generations and outputs from history
+            self.clean_history('import', 'generate', 'add process', 'output')
+
             if len(args) == 1 and self._export_dir:
                 proc_card = os.path.join(self._export_dir, 'Cards', \
                                                                 'proc_card.dat')
@@ -2560,6 +2581,9 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
         args = split_arg(line)
         # Check Argument validity
         self.check_output(args)
+
+        # Remove previous outputs from history
+        self.clean_history("output")
         
         noclean = '-noclean' in args
         force = '-f' in args 
