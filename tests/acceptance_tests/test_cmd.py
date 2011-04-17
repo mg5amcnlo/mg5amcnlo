@@ -102,7 +102,8 @@ class TestCmdShell1(unittest.TestCase):
         """check that configuration file is at default value"""
         
         config = self.cmd.set_configuration(MG5DIR+'/input/mg5_configuration.txt')
-        expected = {'pythia8_path': './pythia8'}
+        expected = {'pythia8_path': './pythia8',
+                    'symmetry_max_time': '600'}
 
         self.assertEqual(config, expected)
 
@@ -407,7 +408,7 @@ class TestCmdShell2(unittest.TestCase,
             shutil.rmdir(self.out_dir)
 
         self.do('import model sm')
-        self.do('set group_subprocesses_output False')
+        self.do('set group_subprocesses False')
         self.do('generate e+ e->e+ e-')
         self.do('output %s ' % self.out_dir)
         # Check that the needed ALOHA subroutines are generated
@@ -478,7 +479,7 @@ class TestCmdShell2(unittest.TestCase,
 
         self.do('import model sm')
         self.do('define p = u d u~ d~')
-        self.do('set group_subprocesses_output False')
+        self.do('set group_subprocesses False')
         self.do('generate p p > w+, w+ > l+ vl @1')
         self.do('output madevent %s ' % self.out_dir)
         devnull = open(os.devnull,'w')
@@ -542,10 +543,10 @@ class TestCmdShell2(unittest.TestCase,
 
         self.do('import model sm')
         self.do('define p = g u d u~ d~')
-        self.do('set group_subprocesses_output True')
+        self.do('set group_subprocesses True')
         self.do('generate g g > p p @2')
         self.do('output madevent %s ' % self.out_dir)
-        self.do('set group_subprocesses_output False')
+        self.do('set group_subprocesses False')
         devnull = open(os.devnull,'w')
         # Check that all subprocess directories have been created
         self.assertTrue(os.path.exists(os.path.join(self.out_dir,
@@ -564,9 +565,6 @@ class TestCmdShell2(unittest.TestCase,
         # Check that the run_config.inc file has been modified correctly
         run_config = open(os.path.join(self.out_dir, 'Source',
                                        'run_config.inc')).read()
-        self.assertTrue(run_config.find("min_events_channel = 4000"))
-        self.assertTrue(run_config.find("min_events = 4000"))
-        self.assertTrue(run_config.find("max_events = 8000"))
         self.assertTrue(run_config.find("ChanPerJob=2"))
         generate_events = open(os.path.join(self.out_dir, 'bin',
                                        'generate_events')).read()
@@ -651,10 +649,10 @@ class TestCmdShell2(unittest.TestCase,
 
         self.do('import model mssm')
         self.do('define q = u d u~ d~')
-        self.do('set group_subprocesses_output True')
+        self.do('set group_subprocesses True')
         self.do('generate u u~ > g > go go, go > q q n1 / ur dr')
         self.do('output %s ' % self.out_dir)
-        self.do('set group_subprocesses_output False')
+        self.do('set group_subprocesses False')
         devnull = open(os.devnull,'w')
         # Check that all subprocess directories have been created
         self.assertTrue(os.path.exists(os.path.join(self.out_dir,
@@ -727,11 +725,11 @@ class TestCmdShell2(unittest.TestCase,
 
         self.do('import model sm')
         self.do('define p = g u d u~ d~')
-        self.do('set group_subprocesses_output True')
+        self.do('set group_subprocesses True')
         self.do('generate p p > w+, w+ > l+ vl @1')
         self.do('add process p p > w+ p, w+ > l+ vl @2')
         self.do('output madevent %s -nojpeg' % self.out_dir)
-        self.do('set group_subprocesses_output False')
+        self.do('set group_subprocesses False')
         devnull = open(os.devnull,'w')
         # Check that all subprocess directories have been created
         self.assertTrue(os.path.exists(os.path.join(self.out_dir,
@@ -801,7 +799,7 @@ P1_qq_wp_wp_epve
         """Test MadEvent output of triplet diquarks"""
 
         self.do('import model triplet_diquarks')
-        self.do('set group_subprocesses_output False')
+        self.do('set group_subprocesses False')
         self.do('generate u t > trip~ > u t g')
         self.do('output %s ' % self.out_dir)
 
@@ -860,7 +858,7 @@ P1_qq_wp_wp_epve
 
         # Test sextet production
         self.do('import model sextet_diquarks')
-        self.do('set group_subprocesses_output False')
+        self.do('set group_subprocesses False')
         self.do('generate u u > six g')
         self.do('output %s ' % self.out_dir)
         

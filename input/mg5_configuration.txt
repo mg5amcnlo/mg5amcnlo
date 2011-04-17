@@ -21,3 +21,7 @@
 # Define the path to the pythia8 directory.
 # relative path start from mg5 directory
 pythia8_path = ./pythia8
+# symmetry_max_time
+# Set maximum time for trying to find symmetric diagrams for a single
+# matrix element
+symmetry_max_time= 600

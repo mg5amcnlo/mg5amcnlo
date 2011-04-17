@@ -52,12 +52,14 @@ class ProcessExporterFortran(object):
     """Class to take care of exporting a set of matrix elements to
     Fortran (v4) format."""
 
-    def __init__(self, mgme_dir = "", dir_path = "", clean = False):
+    def __init__(self, mgme_dir = "", dir_path = "", clean = False,
+                 symmetry_max_time = 600):
         """Initiate the ProcessExporterFortran with directory information"""
         self.mgme_dir = mgme_dir
         self.dir_path = dir_path
         self.clean = clean
         self.model = None
+        self.symmetry_max_time = symmetry_max_time
 
     #===========================================================================
     # copy the Template in a new directory.
@@ -1877,16 +1879,8 @@ class ProcessExporterFortranMEGroup(ProcessExporterFortranME):
         # Update values in run_config.inc
         run_config = \
                 open(os.path.join(self.dir_path, 'Source', 'run_config.inc')).read()
-        #run_config = run_config.replace("min_events_channel = 1000",
-        #                                "min_events_channel = 4000")
-        #run_config = run_config.replace("min_events = 2000",
-        #                                "min_events = 4000")
-        run_config = run_config.replace("max_events = 2000",
-                                        "max_events = 8000")
         run_config = run_config.replace("ChanPerJob=5",
                                         "ChanPerJob=2")
-        run_config = run_config.replace("nhel_survey=1",
-                                        "nhel_survey=0")
         open(os.path.join(self.dir_path, 'Source', 'run_config.inc'), 'w').\
                                     write(run_config)
         # Update values in generate_events
@@ -2073,7 +2067,8 @@ class ProcessExporterFortranMEGroup(ProcessExporterFortranME):
         # Find config symmetries and permutations
         symmetry, perms, ident_perms = \
                   diagram_symmetry.find_symmetry(subproc_group,
-                                                 self.evaluator)
+                                                 self.evaluator,
+                                                 self.symmetry_max_time)
 
         filename = 'symswap.inc'
         self.write_symswap_file(writers.FortranWriter(filename),

@@ -794,7 +794,7 @@ C
       DOUBLE PRECISION AMP2(MAXAMPS), JAMP2(0:MAXFLOW)
       COMMON/TO_AMPS/  AMP2,       JAMP2
 
-      CHARACTER*79         HEL_BUFF
+      CHARACTER*101         HEL_BUFF
       COMMON/TO_HELICITY/  HEL_BUFF
 
       INTEGER IMIRROR
@@ -849,7 +849,7 @@ C     ----------
         ENDDO
       ENDIF
       ANS = 0D0
-      WRITE(HEL_BUFF,'(16I5)') (0,I=1,NEXTERNAL)
+      WRITE(HEL_BUFF,'(20I5)') (0,I=1,NEXTERNAL)
       DO I=1,NCOMB
         TS(I)=0D0
       ENDDO
@@ -895,7 +895,7 @@ C     ----------
           TS(I)=T*HWGT
         ENDDO
         IF (ISUM_HEL .EQ. 1) THEN
-          WRITE(HEL_BUFF,'(16i5)')(NHEL(II,I),II=1,NEXTERNAL)
+          WRITE(HEL_BUFF,'(20i5)')(NHEL(II,I),II=1,NEXTERNAL)
         ENDIF
       ENDIF
       IF (ISUM_HEL .NE. 1) THEN
@@ -904,7 +904,7 @@ C     ----------
         DO I=1,NCOMB
           SUMHEL=SUMHEL+TS(I)
           IF(R.LT.SUMHEL)THEN
-            WRITE(HEL_BUFF,'(16i5)')(NHEL(II,I),II=1,NEXTERNAL)
+            WRITE(HEL_BUFF,'(20i5)')(NHEL(II,I),II=1,NEXTERNAL)
             GOTO 10
           ENDIF
         ENDDO

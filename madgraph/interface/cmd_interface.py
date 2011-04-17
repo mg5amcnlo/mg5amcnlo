@@ -386,7 +386,7 @@ class HelpToCmd(object):
     def help_set(self):
         logger.info("syntax: set %s argument" % "|".join(self._set_options))
         logger.info("-- set options for generation or output")
-        logger.info("   group_subprocesses_output True/False: ")
+        logger.info("   group_subprocesses True/False: ")
         logger.info("     Smart grouping of subprocesses into directories,")
         logger.info("     mirroring of initial states, and combination of")
         logger.info("     integration channels.")
@@ -397,7 +397,10 @@ class HelpToCmd(object):
         logger.info("     of the quarks given in multi_part_label.")
         logger.info("     These processes give negligible contribution to the")
         logger.info("     cross section but have subprocesses/channels.")
-
+        logger.info("   symmetry_max_time N")
+        logger.info("     (default 600) maximum time (in s) to find symmetric")
+        logger.info("     diagrams for each matrix element")
+        
     def help_shell(self):
         logger.info("syntax: shell CMD (or ! CMD)")
         logger.info("-- run the shell command CMD and catch output")
@@ -714,7 +717,7 @@ class CheckValidForCmd(object):
             raise self.InvalidCmd('Possible options for set are %s' % \
                                   self._set_options)
 
-        if args[0] in ['group_subprocesses_output']:
+        if args[0] in ['group_subprocesses']:
             if args[1] not in ['False', 'True']:
                 raise self.InvalidCmd('%s needs argument False or True' % \
                                       args[0])
@@ -746,7 +749,7 @@ class CheckValidForCmd(object):
 
         if self._model_v4_path and \
                (self._export_format not in self._v4_export_formats or \
-                self._options['group_subprocesses_output']):
+                self._options['group_subprocesses']):
             text = " The Model imported (MG4 format) does not contain enough\n "
             text += " information for this type of output. In order to create\n"
             text += " output for " + args[0] + ", you have to use a UFO model.\n"
@@ -1191,7 +1194,7 @@ class CompleteForCmd(CheckValidForCmd):
             return self.list_completion(text, self._set_options)
 
         if len(args) == 2:
-            if args[1] in ['group_subprocesses_output']:
+            if args[1] in ['group_subprocesses']:
                 return self.list_completion(text, ['False', 'True'])
             
             elif args[1] in ['ignore_six_quark_processes']:
@@ -1349,8 +1352,9 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
     _import_formats = ['model_v4', 'model', 'proc_v4', 'command']
     _v4_export_formats = ['madevent', 'standalone', 'matrix'] 
     _export_formats = _v4_export_formats + ['standalone_cpp', 'pythia8']
-    _set_options = ['group_subprocesses_output',
+    _set_options = ['group_subprocesses',
                     'ignore_six_quark_processes',
+                    'symmetry_max_time',
                     'stdout_level']
     # Variables to store object information
     _curr_model = None  #base_objects.Model()
@@ -1447,7 +1451,7 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
 
             # Generate processes
             collect_mirror_procs = \
-                                 self._options['group_subprocesses_output']
+                                 self._options['group_subprocesses']
             ignore_six_quark_processes = \
                            self._options['ignore_six_quark_processes'] if \
                            "ignore_six_quark_processes" in self._options \
@@ -1958,7 +1962,7 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
             #                           leg.get('state') == False,
             #                           myleglist)) == 1
 
-            if overall_orders and self._options['group_subprocesses_output']:
+            if overall_orders and self._options['group_subprocesses']:
                 raise MadGraph5Error, \
                       "For grouped subprocess output, orders should be specified for each process (no overall orders after @N)"                
 
@@ -2157,7 +2161,7 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
                       helas_call_writers.FortranHelasCallWriter(\
                                                                self._curr_model)
                 # Automatically turn off subprocess grouping
-                self.do_set('group_subprocesses_output False')
+                self.do_set('group_subprocesses False')
             else:
                 self._curr_model = import_ufo.import_model(args[1])
                 self._curr_fortran_model = \
@@ -2167,7 +2171,7 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
                       helas_call_writers.CPPUFOHelasCallWriter(\
                                                                self._curr_model)
                 # Automatically turn on subprocess grouping
-                self.do_set('group_subprocesses_output True')
+                self.do_set('group_subprocesses True')
 
             if '-modelname' not in args:
                 self._curr_model.pass_particles_name_in_mg_default()
@@ -2356,14 +2360,22 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
         # Treat each expected input
         # 1: Pythia8_path
         # try relative path
-        pythia8_dir = os.path.join(MG5DIR, config['pythia8_path'])
-        if not os.path.isfile(os.path.join(pythia8_dir, 'include', 'Pythia.h')):
-            if os.path.isfile(os.path.join(config['pythia8_path'], 'include', 'Pythia.h')):
-                pythia8_dir = config['pythia8_path']
+        for key in config:
+            if key == 'pythia8_path':
+                pythia8_dir = os.path.join(MG5DIR, config['pythia8_path'])
+                if not os.path.isfile(os.path.join(pythia8_dir, 'include', 'Pythia.h')):
+                    if os.path.isfile(os.path.join(config['pythia8_path'], 'include', 'Pythia.h')):
+                        pythia8_dir = config['pythia8_path']
+                    else:
+                        pythia8_dir = None
+                self.pythia8_path = pythia8_dir
             else:
-                pythia8_dir = None
-        self.pythia8_path = pythia8_dir
-        
+                # Default: try to set parameter
+                try:
+                    self.do_set("%s %s" % (key, config[key]))
+                except MadGraph5Error:
+                    logger.warning("Option %s from config file not understood" \
+                                   % key)
         return config
                 
     def check_for_export_dir(self, filepath):
@@ -2478,10 +2490,10 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
                 raise self.RWError('Could not load processes from file %s' % args[1])
         if self._model_v4_path:
             # Automatically turn off subprocess grouping
-            self.do_set('group_subprocesses_output False')
+            self.do_set('group_subprocesses False')
         else:
             # Automatically turn on subprocess grouping
-            self.do_set('group_subprocesses_output True')
+            self.do_set('group_subprocesses True')
         
     
     def do_save(self, line):
@@ -2527,9 +2539,14 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
                             self._curr_model.get_particle(q).get('name') \
                             for q in self._options[args[0]]]))
             
-        elif args[0] == 'group_subprocesses_output':
+        elif args[0] == 'group_subprocesses':
             self._options[args[0]] = eval(args[1])
-            logger.info('Set group_subprocesses_output to %s' % \
+            logger.info('Set group_subprocesses to %s' % \
+                        str(self._options[args[0]]))
+            
+        elif args[0] == 'symmetry_max_time':
+            self._options[args[0]] = int(args[1])
+            logger.info('Set symmetry_max_time to %s' % \
                         str(self._options[args[0]]))
             
         elif args[0] == "stdout_level":
@@ -2568,13 +2585,14 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
                 raise MadGraph5Error('Stopped by user request')
 
         group_subprocesses = self._export_format == 'madevent' and \
-                             self._options['group_subprocesses_output']
+                             self._options['group_subprocesses']
         # Make a Template Copy
         if self._export_format == 'madevent':
             if group_subprocesses:
                 self._curr_exporter = export_v4.ProcessExporterFortranMEGroup(\
                                       self._mgme_dir, self._export_dir,
-                                      not noclean)
+                                      not noclean,
+                                      self._options["symmetry_max_time"])
             else:
                 self._curr_exporter = export_v4.ProcessExporterFortranME(\
                                       self._mgme_dir, self._export_dir,
@@ -2615,7 +2633,7 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
             cpu_time1 = time.time()
             ndiags = 0
             if not self._curr_matrix_elements.get_matrix_elements():
-                if self._options['group_subprocesses_output']:
+                if self._options['group_subprocesses']:
                     cpu_time1 = time.time()
                     dc_amps = [amp for amp in self._curr_amps if isinstance(amp, \
                                         diagram_generation.DecayChainAmplitude)]

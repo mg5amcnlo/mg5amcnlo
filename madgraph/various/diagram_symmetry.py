@@ -26,6 +26,7 @@ import logging
 import math
 import os
 import re
+import time
 
 import aloha.aloha_writers as aloha_writers
 import aloha.create_aloha as create_aloha
@@ -62,7 +63,7 @@ logger = logging.getLogger('madgraph.various.diagram_symmetry')
 # find_symmetry
 #===============================================================================
 
-def find_symmetry(matrix_element, evaluator):
+def find_symmetry(matrix_element, evaluator, max_time = 600):
     """Find symmetries between amplitudes by comparing the squared
     amplitudes for all permutations of identical particles.
     
@@ -72,10 +73,11 @@ def find_symmetry(matrix_element, evaluator):
     list of the corresponding permutations needed, and list of all
     permutations of identical particles.
     For amp2s which are 0 (e.g. multiparticle vertices), return 0 in
-    symmetry list."""
+    symmetry list.
+    max_time > 0 gives a cutoff time for finding symmetries (in s)."""
 
     if isinstance(matrix_element, group_subprocs.SubProcessGroup):
-        return find_symmetry_subproc_group(matrix_element, evaluator)
+        return find_symmetry_subproc_group(matrix_element, evaluator, max_time)
 
     (nexternal, ninitial) = matrix_element.get_nexternal_ninitial()
 
@@ -118,11 +120,15 @@ def find_symmetry(matrix_element, evaluator):
     nperm = 0
     perms = []
     ident_perms = []
+    start_time = time.time()
     for perm in itertools.permutations(range(ninitial, nexternal)):
         if [equivalent_process.get('legs')[i].get('id') for i in perm] != \
            final_states:
             # Non-identical particles permutated
             continue
+        if max_time and time.time() - start_time > max_time:
+            logger.warning("Cancel diagram symmetry - time exceeded")
+            break
         ident_perms.append([0,1]+list(perm))
         nperm += 1
         new_p = p[:ninitial] + [p[i] for i in perm]
@@ -172,7 +178,7 @@ def find_symmetry(matrix_element, evaluator):
 
     return (symmetry, perms, ident_perms)
 
-def find_symmetry_subproc_group(subproc_group, evaluator):
+def find_symmetry_subproc_group(subproc_group, evaluator, max_time = 600):
     """Find symmetries between the configs in the subprocess group.
     For each config, find all matrix elements with maximum identical
     particle factor. Then take minimal set of these matrix elements,
@@ -196,7 +202,7 @@ def find_symmetry_subproc_group(subproc_group, evaluator):
                        enumerate(subproc_group.get('diagram_maps')[me_number]) \
                                    if n > 0])
         symmetry, perms, ident_perms = find_symmetry(matrix_elements[me_number],
-                                                     evaluator)
+                                                     evaluator, max_time)
 
         # Go through symmetries and remove those for any diagrams
         # where this ME is not supposed to contribute
