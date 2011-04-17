@@ -56,18 +56,28 @@ class AbstractRoutine(object):
         self.outgoing = outgoing
         self.infostr = infostr
         self.symmetries = []
+        self.combined = []
         
     def add_symmetry(self, outgoing):
         """ add an outgoing """
         
         if not outgoing in self.symmetries:
             self.symmetries.append(outgoing)
+    
+    def add_combine(self, lor_list):
+        """add a combine rule """
+        
+        if lor_list not in self.combined:
+            self.combined.append(lor_list)
         
     def write(self, output_dir, language='Fortran', mode='self'):
         """ write the content of the object """
-        return getattr(aloha_writers, 'ALOHAWriterFor%s' % language)(self, output_dir).write(mode=mode)
-
-
+        
+        writer = getattr(aloha_writers, 'ALOHAWriterFor%s' % language)(self, output_dir)
+        writer.write(mode=mode)
+        for grouped in self.combined:
+            writer.write_combined(grouped, mode=mode)
+        
 
 class AbstractRoutineBuilder(object):
     """ Launch the creation of the Helicity Routine"""
@@ -471,14 +481,16 @@ class AbstractALOHAModel(dict):
         # reorganize the data (in order to use optimization for a given lorentz
         #structure
         request = {}
-        for l_name, conjugate, outgoing in data:
-            try:
-                request[l_name][conjugate].append(outgoing)
-            except:
+        for list_l_name, conjugate, outgoing in data:
+            for l_name in list_l_name:
                 try:
-                    request[l_name][conjugate] = [outgoing]
+                    request[l_name][conjugate].append(outgoing)
                 except:
-                    request[l_name] = {conjugate: [outgoing]}
+                    try:
+                        request[l_name][conjugate] = [outgoing]
+                    except:
+                        request[l_name] = {conjugate: [outgoing]}
+                        
         # Loop on the structure to build exactly what is request
         for l_name in request:
             lorentz = eval('self.model.lorentz.%s' % l_name)
@@ -503,7 +515,12 @@ class AbstractALOHAModel(dict):
                     # Compute routines
                     self.compute_aloha(conjg_builder, symmetry=lorentz.name,
                                         routines=routines)
-            
+        
+        # Build mutiple lorentz call
+        for list_l_name, conjugate, outgoing in data:
+            if len(list_l_name) >1:
+                lorentzname = list_l_name[0]
+                self[(lorentzname, outgoing)].add_combine(list_l_name[1:])
                         
     def compute_aloha(self, builder, symmetry=None, routines=None):
         """ define all the AbstractRoutine linked to a given lorentz structure
@@ -690,7 +707,7 @@ def write_aloha_file_inc(aloha_dir,file_ext, comp_ext):
     aloha_files = []
     
     # Identify the valid files
-    alohafile_pattern = re.compile(r'''^[STFV]*[_C\d]*_\d%s''' % file_ext)
+    alohafile_pattern = re.compile(r'''^[STFV\d_]*[_C\d]*_\d%s''' % file_ext)
     for filename in os.listdir(aloha_dir):
         if os.path.isfile(os.path.join(aloha_dir, filename)):
             if alohafile_pattern.match(filename):

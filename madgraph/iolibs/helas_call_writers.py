@@ -577,7 +577,7 @@ class FortranHelasCallWriter(HelasCallWriter):
                     mother_letters = "WWWW"[:len(mother_letters)]
                 if lor_name[:4] == "WWVV":
                     mother_letters = "W3W3"[:len(mother_letters)]
-                addition = lor_name[4:]
+                lor_name = lor_name[4:]
 
             call = call + mother_letters
             call = call + lor_name
@@ -929,7 +929,7 @@ class FortranUFOHelasCallWriter(UFOHelasCallWriter):
             if argument.needs_hermitian_conjugate():
                 c_flag = "".join(['C%d' % i for i in \
                                   argument.get_conjugate_index()])
-            lorentz_name = '+'.join([str(l) for l in argument.get('lorentz')])
+            lorentz_name = '__'.join([str(l) for l in argument.get('lorentz')])
             call = 'CALL %s%s_%s' % (lorentz_name, c_flag, outgoing) 
 
             # Add the wave function
@@ -1237,7 +1237,7 @@ class PythonUFOHelasCallWriter(UFOHelasCallWriter):
                 call = 'w[%d] = '
             else:
                 call = 'amp[%d] = '
-            call += '%s%s_%s' % ('+'.join(argument.get('lorentz')), c_flag, outgoing) 
+            call += '%s%s_%s' % ('__'.join(argument.get('lorentz')), c_flag, outgoing) 
 
             # Add the wave function
             call = call + '('

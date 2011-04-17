@@ -406,7 +406,7 @@ class HelasWavefunction(base_objects.PhysicsObject):
                    particles[1].get_anti_pdg_code()\
                    and self.get('coupling')[0] != '-':
                 # We need a minus sign in front of the coupling
-                self.set('coupling', '-' + self.get('coupling'))
+                self.set('coupling', ['-' + c for c in self.get('coupling')])
 
     def set_octet_majorana_coupling_sign(self):
         """For octet Majorana fermions, need an extra minus sign in
@@ -418,7 +418,7 @@ class HelasWavefunction(base_objects.PhysicsObject):
                self.get_spin_state_number() == -2 and \
                self.get('self_antipart') and \
                [m.get('color') for m in self.get('mothers')] == [8, 8]:
-            self.set('coupling', '-' + self.get('coupling'))
+            self.set('coupling', ['-' + c for c in self.get('coupling')])
         
     def set_state_and_particle(self, model):
         """Set incoming/outgoing state according to mother states and
@@ -4014,7 +4014,7 @@ class HelasMultiProcess(base_objects.PhysicsObject):
         coupling_list = []
 
         for me in self.get('matrix_elements'):
-            coupling_list.extend(me.get_used_couplings())
+            coupling_list.extend([c for l in me.get_used_couplings() for c in l])
 
         return list(set(coupling_list))
     

@@ -1043,7 +1043,7 @@ class Sigma_sm_qqx_qqx : public Sigma2Process
     // Private functions to calculate the matrix element for all subprocesses
     // Calculate wavefunctions
     void calculate_wavefunctions(const int perm[], const int hel[]); 
-    static const int nwavefuncs = 10; 
+    static const int nwavefuncs = 8; 
     std::complex<double> w[nwavefuncs][18]; 
     double matrix_uux_uux(); 
 

@@ -597,11 +597,12 @@ C     Amplitude(s) for diagram number 6
         amp2_lines = \
                  exporter.get_amp2_lines(matrix_elements[0],
                                           subprocess_group.get('diagram_maps')[0])
+                 
         self.assertEqual(amp2_lines,
-                         ['AMP2(1)=AMP2(1)+AMP(1)*dconjg(AMP(1))+AMP(2)*dconjg(AMP(2))',
-                          'AMP2(3)=AMP2(3)+AMP(3)*dconjg(AMP(3))+AMP(4)*dconjg(AMP(4))+AMP(5)*dconjg(AMP(5))+AMP(6)*dconjg(AMP(6))',
-                          'AMP2(4)=AMP2(4)+AMP(7)*dconjg(AMP(7))+AMP(8)*dconjg(AMP(8))',
-                          'AMP2(6)=AMP2(6)+AMP(9)*dconjg(AMP(9))+AMP(10)*dconjg(AMP(10))+AMP(11)*dconjg(AMP(11))+AMP(12)*dconjg(AMP(12))'])
+                         ['AMP2(1)=AMP2(1)+AMP(1)*dconjg(AMP(1))+AMP(2)*dconjg(AMP(2))', 
+                          'AMP2(3)=AMP2(3)+AMP(3)*dconjg(AMP(3))', 
+                          'AMP2(4)=AMP2(4)+AMP(4)*dconjg(AMP(4))+AMP(5)*dconjg(AMP(5))',
+                          'AMP2(6)=AMP2(6)+AMP(6)*dconjg(AMP(6))'])
         
         # Test configs.inc
 
@@ -1390,14 +1391,14 @@ C       Flip x values (to get boost right)
         #print '\n'.join(amp2_lines)
 
         self.assertEqual('\n'.join(amp2_lines),
-"""AMP2(5)=AMP2(5)+AMP(9)*dconjg(AMP(9))
-AMP2(6)=AMP2(6)+AMP(10)*dconjg(AMP(10))
-AMP2(7)=AMP2(7)+AMP(11)*dconjg(AMP(11))
-AMP2(8)=AMP2(8)+AMP(12)*dconjg(AMP(12))
-AMP2(9)=AMP2(9)+AMP(13)*dconjg(AMP(13))
-AMP2(10)=AMP2(10)+AMP(14)*dconjg(AMP(14))
-AMP2(11)=AMP2(11)+AMP(15)*dconjg(AMP(15))
-AMP2(12)=AMP2(12)+AMP(16)*dconjg(AMP(16))""")
+"""AMP2(5)=AMP2(5)+AMP(5)*dconjg(AMP(5))
+AMP2(6)=AMP2(6)+AMP(6)*dconjg(AMP(6))
+AMP2(7)=AMP2(7)+AMP(7)*dconjg(AMP(7))
+AMP2(8)=AMP2(8)+AMP(8)*dconjg(AMP(8))
+AMP2(9)=AMP2(9)+AMP(9)*dconjg(AMP(9))
+AMP2(10)=AMP2(10)+AMP(10)*dconjg(AMP(10))
+AMP2(11)=AMP2(11)+AMP(11)*dconjg(AMP(11))
+AMP2(12)=AMP2(12)+AMP(12)*dconjg(AMP(12))""")
         
         # Test configs.inc
 
@@ -3316,13 +3317,13 @@ CALL IOSXXX(W(1,2),W(1,19),W(1,24),MGVX494,AMP(8))""")
 
         # Test get_used_lorentz
         # Wavefunctions
-        goal_lorentz_list = [('', (), 1), ('', (), 2), ('', (), 3),
-                             ('', (1,), 2),('', (), 3), ('', (1,), 1),
-                             ('', (), 2), ('', (), 3),('', (1,), 1),
-                             ('', (), 1), ('', (), 3),('', (1,), 2),
-                             ('', (), 3), ('', (), 3)]
+        goal_lorentz_list = [(('',), (), 1), (('',), (), 2), (('',), (), 3),
+                             (('',), (1,), 2),(('',), (), 3), (('',), (1,), 1),
+                             (('',), (), 2), (('',), (), 3),(('',), (1,), 1),
+                             (('',), (), 1), (('',), (), 3),(('',), (1,), 2),
+                             (('',), (), 3), (('',), (), 3)]
         # Amplitudes
-        goal_lorentz_list += [('', (), 0)] * 8
+        goal_lorentz_list += [(('',), (), 0)] * 8
         self.assertEqual(matrix_element.get_used_lorentz(),
                          goal_lorentz_list)
 
@@ -4145,8 +4146,7 @@ CALL VVVXXX(W(1,4),W(1,2),W(1,24),MGVX5,AMP(28))""")
         matrix_element = helas_objects.HelasMatrixElement(myamplitude, gen_color=False)
 
         myfortranmodel = helas_call_writers.FortranHelasCallWriter(mybasemodel)
-        self.assertEqual("\n".join(myfortranmodel.\
-                                   get_matrix_element_calls(matrix_element)),
+        self.assertEqual(myfortranmodel.get_matrix_element_calls(matrix_element),
                          """CALL VXXXXX(P(0,1),zero,NHEL(1),-1*IC(1),W(1,1))
 CALL VXXXXX(P(0,2),zero,NHEL(2),-1*IC(2),W(1,2))
 CALL VXXXXX(P(0,3),zero,NHEL(3),+1*IC(3),W(1,3))
@@ -4171,7 +4171,7 @@ CALL JVVL2X(W(1,1),W(1,4),G2,zero,zero,W(1,10))
 CALL VVVL1X(W(1,2),W(1,3),W(1,9),G1,AMP(9))
 CALL VVVL2X(W(1,2),W(1,3),W(1,9),G2,AMP(10))
 CALL VVVL1X(W(1,2),W(1,3),W(1,10),G1,AMP(11))
-CALL VVVL2X(W(1,2),W(1,3),W(1,10),G2,AMP(12))""")
+CALL VVVL2X(W(1,2),W(1,3),W(1,10),G2,AMP(12))""".split('\n'))
 
         exporter = export_v4.ProcessExporterFortranME()
 
@@ -4363,45 +4363,23 @@ CALL VXXXXX(P(0,3),MZ,NHEL(3),+1*IC(3),W(1,3))
 CALL IXXXXX(P(0,4),Mx1p,NHEL(4),-1*IC(4),W(1,4))
 CALL OXXXXX(P(0,5),Mx1p,NHEL(5),+1*IC(5),W(1,5))
 CALL VVV1_2(W(1,1),W(1,3),GC_214,MW, WW, W(1,6))
-CALL FFV2C1_2(W(1,4),W(1,2),GC_422,Mneu1, Wneu1, W(1,7))
-CALL FFV3C1_2(W(1,4),W(1,2),GC_628,Mneu1, Wneu1, W(1,8))
+CALL FFV2__FFV3C1_2(W(1,4),W(1,2),GC_422,GC_628,Mneu1, Wneu1, W(1,7))
 # Amplitude(s) for diagram number 1
-CALL FFV2_0(W(1,7),W(1,5),W(1,6),GC_422,AMP(1))
-CALL FFV3_0(W(1,7),W(1,5),W(1,6),GC_628,AMP(2))
-CALL FFV2_0(W(1,8),W(1,5),W(1,6),GC_422,AMP(3))
-CALL FFV3_0(W(1,8),W(1,5),W(1,6),GC_628,AMP(4))
-CALL FFV2_1(W(1,5),W(1,2),GC_422,Mneu1, Wneu1, W(1,9))
-CALL FFV3_1(W(1,5),W(1,2),GC_628,Mneu1, Wneu1, W(1,10))
+CALL FFV2__FFV3_0(W(1,7),W(1,5),W(1,6),GC_422,GC_628,AMP(1))
+CALL FFV2__FFV3_1(W(1,5),W(1,2),GC_422,GC_628,Mneu1, Wneu1, W(1,8))
 # Amplitude(s) for diagram number 2
-CALL FFV2C1_0(W(1,4),W(1,9),W(1,6),GC_422,AMP(5))
-CALL FFV3C1_0(W(1,4),W(1,9),W(1,6),GC_628,AMP(6))
-CALL FFV2C1_0(W(1,4),W(1,10),W(1,6),GC_422,AMP(7))
-CALL FFV3C1_0(W(1,4),W(1,10),W(1,6),GC_628,AMP(8))
-CALL FFV2C1_2(W(1,4),W(1,1),GC_422,Mneu1, Wneu1, W(1,11))
-CALL FFV3C1_2(W(1,4),W(1,1),GC_628,Mneu1, Wneu1, W(1,12))
-CALL VVV1_2(W(1,2),W(1,3),GC_214,MW, WW, W(1,13))
+CALL FFV2__FFV3C1_0(W(1,4),W(1,8),W(1,6),GC_422,GC_628,AMP(2))
+CALL FFV2__FFV3C1_2(W(1,4),W(1,1),GC_422,GC_628,Mneu1, Wneu1, W(1,9))
+CALL VVV1_2(W(1,2),W(1,3),GC_214,MW, WW, W(1,10))
 # Amplitude(s) for diagram number 3
-CALL FFV2_0(W(1,11),W(1,5),W(1,13),GC_422,AMP(9))
-CALL FFV3_0(W(1,11),W(1,5),W(1,13),GC_628,AMP(10))
-CALL FFV2_0(W(1,12),W(1,5),W(1,13),GC_422,AMP(11))
-CALL FFV3_0(W(1,12),W(1,5),W(1,13),GC_628,AMP(12))
+CALL FFV2__FFV3_0(W(1,9),W(1,5),W(1,10),GC_422,GC_628,AMP(3))
 # Amplitude(s) for diagram number 4
-CALL FFV5_0(W(1,11),W(1,9),W(1,3),GC_418,AMP(13))
-CALL FFV5_0(W(1,11),W(1,10),W(1,3),GC_418,AMP(14))
-CALL FFV5_0(W(1,12),W(1,9),W(1,3),GC_418,AMP(15))
-CALL FFV5_0(W(1,12),W(1,10),W(1,3),GC_418,AMP(16))
-CALL FFV2_1(W(1,5),W(1,1),GC_422,Mneu1, Wneu1, W(1,14))
-CALL FFV3_1(W(1,5),W(1,1),GC_628,Mneu1, Wneu1, W(1,15))
+CALL FFV5_0(W(1,9),W(1,8),W(1,3),GC_418,AMP(4))
+CALL FFV2__FFV3_1(W(1,5),W(1,1),GC_422,GC_628,Mneu1, Wneu1, W(1,11))
 # Amplitude(s) for diagram number 5
-CALL FFV2C1_0(W(1,4),W(1,14),W(1,13),GC_422,AMP(17))
-CALL FFV3C1_0(W(1,4),W(1,14),W(1,13),GC_628,AMP(18))
-CALL FFV2C1_0(W(1,4),W(1,15),W(1,13),GC_422,AMP(19))
-CALL FFV3C1_0(W(1,4),W(1,15),W(1,13),GC_628,AMP(20))
+CALL FFV2__FFV3C1_0(W(1,4),W(1,11),W(1,10),GC_422,GC_628,AMP(5))
 # Amplitude(s) for diagram number 6
-CALL FFV5_0(W(1,7),W(1,14),W(1,3),GC_418,AMP(21))
-CALL FFV5_0(W(1,8),W(1,14),W(1,3),GC_418,AMP(22))
-CALL FFV5_0(W(1,7),W(1,15),W(1,3),GC_418,AMP(23))
-CALL FFV5_0(W(1,8),W(1,15),W(1,3),GC_418,AMP(24))""".split('\n')
+CALL FFV5_0(W(1,7),W(1,11),W(1,3),GC_418,AMP(6))""".split('\n')
 
         for i in range(len(goal)):
             self.assertEqual(result[i], goal[i])
@@ -4412,12 +4390,12 @@ CALL FFV5_0(W(1,8),W(1,15),W(1,3),GC_418,AMP(24))""".split('\n')
         amp2_lines = \
                  exporter.get_amp2_lines(matrix_element)
         self.assertEqual(amp2_lines,
-                         ['AMP2(1)=AMP2(1)+AMP(1)*dconjg(AMP(1))+AMP(2)*dconjg(AMP(2))+AMP(3)*dconjg(AMP(3))+AMP(4)*dconjg(AMP(4))',
-                          'AMP2(2)=AMP2(2)+AMP(5)*dconjg(AMP(5))+AMP(6)*dconjg(AMP(6))+AMP(7)*dconjg(AMP(7))+AMP(8)*dconjg(AMP(8))',
-                          'AMP2(3)=AMP2(3)+AMP(9)*dconjg(AMP(9))+AMP(10)*dconjg(AMP(10))+AMP(11)*dconjg(AMP(11))+AMP(12)*dconjg(AMP(12))',
-                          'AMP2(4)=AMP2(4)+AMP(13)*dconjg(AMP(13))+AMP(14)*dconjg(AMP(14))+AMP(15)*dconjg(AMP(15))+AMP(16)*dconjg(AMP(16))',
-                          'AMP2(5)=AMP2(5)+AMP(17)*dconjg(AMP(17))+AMP(18)*dconjg(AMP(18))+AMP(19)*dconjg(AMP(19))+AMP(20)*dconjg(AMP(20))',
-                          'AMP2(6)=AMP2(6)+AMP(21)*dconjg(AMP(21))+AMP(22)*dconjg(AMP(22))+AMP(23)*dconjg(AMP(23))+AMP(24)*dconjg(AMP(24))'])
+                         ['AMP2(1)=AMP2(1)+AMP(1)*dconjg(AMP(1))',
+                          'AMP2(2)=AMP2(2)+AMP(2)*dconjg(AMP(2))',
+                          'AMP2(3)=AMP2(3)+AMP(3)*dconjg(AMP(3))',
+                          'AMP2(4)=AMP2(4)+AMP(4)*dconjg(AMP(4))',
+                          'AMP2(5)=AMP2(5)+AMP(5)*dconjg(AMP(5))',
+                          'AMP2(6)=AMP2(6)+AMP(6)*dconjg(AMP(6))'])
 
     def test_four_fermion_vertex_normal_fermion_flow(self):
         """Testing process u u > t t g with fermion flow (u~t)(u~t)
@@ -4493,7 +4471,7 @@ CALL FFV5_0(W(1,8),W(1,15),W(1,3),GC_418,AMP(24))""".split('\n')
                                              g]),
                       'color': [color.ColorString([color.T(2, 1, 0)])],
                       'lorentz':['FFV1'],
-                      'couplings':{(0, 0):['GG']},
+                      'couplings':{(0, 0):'GG'},
                       'orders':{'QCD':1}}))
 
         myinterlist.append(base_objects.Interaction({
@@ -4504,7 +4482,7 @@ CALL FFV5_0(W(1,8),W(1,15),W(1,3),GC_418,AMP(24))""".split('\n')
                                              g]),
                       'color': [color.ColorString([color.T(2, 1, 0)])],
                       'lorentz':['FFV1'],
-                      'couplings':{(0, 0):['GG']},
+                      'couplings':{(0, 0):'GG'},
                       'orders':{'QCD':1}}))
 
         # Four fermion vertex
@@ -4518,7 +4496,7 @@ CALL FFV5_0(W(1,8),W(1,15),W(1,3),GC_418,AMP(24))""".split('\n')
                       'color': [color.ColorString([color.T(1, 0),
                                                    color.T(3, 2)])],
                       'lorentz':['FFFF1'],
-                      'couplings':{(0, 0):['GEFF']},
+                      'couplings':{(0, 0):'GEFF'},
                       'orders':{'NP':2}}))
 
         mybasemodel = base_objects.Model()
@@ -4942,24 +4920,21 @@ CALL FFV1C1_0(W(1,9),W(1,2),W(1,5),GG,AMP(4))""".split('\n')
 
         result = helas_call_writers.FortranUFOHelasCallWriter(mybasemodel).\
                                    get_matrix_element_calls(matrix_element.get('core_processes')[0])
-        self.assertEqual("\n".join(result),
+        self.assertEqual(result,
                          """CALL OXXXXX(P(0,1),zero,NHEL(1),-1*IC(1),W(1,1))
 CALL IXXXXX(P(0,2),MT,NHEL(2),+1*IC(2),W(1,2))
 CALL VXXXXX(P(0,3),Mwp,NHEL(3),+1*IC(3),W(1,3))
 # Amplitude(s) for diagram number 1
-CALL FFS3_0(W(1,2),W(1,1),W(1,3),GC_108,AMP(1))
-CALL FFS4_0(W(1,2),W(1,1),W(1,3),GC_111,AMP(2))""")
+CALL FFS3__FFS4_0(W(1,2),W(1,1),W(1,3),GC_108,GC_111,AMP(1))""".split('\n'))
         result = helas_call_writers.FortranUFOHelasCallWriter(mybasemodel).\
                                    get_matrix_element_calls(matrix_element.get('decay_chains')[0].get('core_processes')[0])
-        self.assertEqual("\n".join(result),
+        self.assertEqual(result,
                          """CALL VXXXXX(P(0,1),Mwp,NHEL(1),-1*IC(1),W(1,1))
 CALL IXXXXX(P(0,2),zero,NHEL(2),-1*IC(2),W(1,2))
 CALL OXXXXX(P(0,3),MT,NHEL(3),+1*IC(3),W(1,3))
-CALL FFS3_3(W(1,2),W(1,3),GC_108,Mwp, Wwp, W(1,4))
-CALL FFS4_3(W(1,2),W(1,3),GC_111,Mwp, Wwp, W(1,5))
+CALL FFS3__FFS4_3(W(1,2),W(1,3),GC_108,GC_111,Mwp, Wwp, W(1,4))
 # Amplitude(s) for diagram number 1
-#
-#""")
+#""".split('\n'))
 
         matrix_elements = matrix_element.combine_decay_chain_processes()
 
@@ -4972,13 +4947,9 @@ CALL FFS4_3(W(1,2),W(1,3),GC_111,Mwp, Wwp, W(1,5))
 CALL IXXXXX(P(0,2),MT,NHEL(2),+1*IC(2),W(1,2))
 CALL IXXXXX(P(0,3),zero,NHEL(3),-1*IC(3),W(1,3))
 CALL OXXXXX(P(0,4),MT,NHEL(4),+1*IC(4),W(1,4))
-CALL FFS3_3(W(1,3),W(1,4),GC_108,Mwp, Wwp, W(1,5))
-CALL FFS4_3(W(1,3),W(1,4),GC_111,Mwp, Wwp, W(1,6))
+CALL FFS3__FFS4_3(W(1,3),W(1,4),GC_108,GC_111,Mwp, Wwp, W(1,5))
 # Amplitude(s) for diagram number 1
-CALL FFS3_0(W(1,2),W(1,1),W(1,5),GC_108,AMP(1))
-CALL FFS3_0(W(1,2),W(1,1),W(1,6),GC_108,AMP(2))
-CALL FFS4_0(W(1,2),W(1,1),W(1,5),GC_111,AMP(3))
-CALL FFS4_0(W(1,2),W(1,1),W(1,6),GC_111,AMP(4))""".split('\n')
+CALL FFS3__FFS4_0(W(1,2),W(1,1),W(1,5),GC_108,GC_111,AMP(1))""".split('\n')
 
         for i in range(len(goal)):
             self.assertEqual(result[i], goal[i])
@@ -5097,24 +5068,21 @@ CALL FFS4_0(W(1,2),W(1,1),W(1,6),GC_111,AMP(4))""".split('\n')
 
         result = helas_call_writers.FortranUFOHelasCallWriter(mybasemodel).\
                                    get_matrix_element_calls(matrix_element.get('core_processes')[0])
-        self.assertEqual("\n".join(result),
+        self.assertEqual(result,
                          """CALL OXXXXX(P(0,1),zero,NHEL(1),-1*IC(1),W(1,1))
 CALL IXXXXX(P(0,2),MT,NHEL(2),+1*IC(2),W(1,2))
 CALL SXXXXX(P(0,3),+1*IC(3),W(1,3))
 # Amplitude(s) for diagram number 1
-CALL FFS3C1_0(W(1,2),W(1,1),W(1,3),GC_108,AMP(1))
-CALL FFS4C1_0(W(1,2),W(1,1),W(1,3),GC_111,AMP(2))""")
+CALL FFS3__FFS4C1_0(W(1,2),W(1,1),W(1,3),GC_108,GC_111,AMP(1))""".split('\n'))
         result = helas_call_writers.FortranUFOHelasCallWriter(mybasemodel).\
                                    get_matrix_element_calls(matrix_element.get('decay_chains')[0].get('core_processes')[0])
-        self.assertEqual("\n".join(result),
+        self.assertEqual(result,
                          """CALL SXXXXX(P(0,1),-1*IC(1),W(1,1))
 CALL OXXXXX(P(0,2),zero,NHEL(2),+1*IC(2),W(1,2))
 CALL IXXXXX(P(0,3),MT,NHEL(3),-1*IC(3),W(1,3))
-CALL FFS3C1_3(W(1,3),W(1,2),GC_108,Msix1, Wsix1, W(1,4))
-CALL FFS4C1_3(W(1,3),W(1,2),GC_111,Msix1, Wsix1, W(1,5))
+CALL FFS3__FFS4C1_3(W(1,3),W(1,2),GC_108,GC_111,Msix1, Wsix1, W(1,4))
 # Amplitude(s) for diagram number 1
-#
-#""")
+#""".split('\n'))
 
         matrix_elements = matrix_element.combine_decay_chain_processes()
 
@@ -5127,16 +5095,12 @@ CALL FFS4C1_3(W(1,3),W(1,2),GC_111,Msix1, Wsix1, W(1,5))
 CALL IXXXXX(P(0,2),MT,NHEL(2),+1*IC(2),W(1,2))
 CALL OXXXXX(P(0,3),zero,NHEL(3),+1*IC(3),W(1,3))
 CALL IXXXXX(P(0,4),MT,NHEL(4),-1*IC(4),W(1,4))
-CALL FFS3C1_3(W(1,4),W(1,3),GC_108,Msix1, Wsix1, W(1,5))
-CALL FFS4C1_3(W(1,4),W(1,3),GC_111,Msix1, Wsix1, W(1,6))
+CALL FFS3__FFS4C1_3(W(1,4),W(1,3),GC_108,GC_111,Msix1, Wsix1, W(1,5))
 # Amplitude(s) for diagram number 1
-CALL FFS3C1_0(W(1,2),W(1,1),W(1,5),GC_108,AMP(1))
-CALL FFS3C1_0(W(1,2),W(1,1),W(1,6),GC_108,AMP(2))
-CALL FFS4C1_0(W(1,2),W(1,1),W(1,5),GC_111,AMP(3))
-CALL FFS4C1_0(W(1,2),W(1,1),W(1,6),GC_111,AMP(4))""".split('\n')
+CALL FFS3__FFS4C1_0(W(1,2),W(1,1),W(1,5),GC_108,GC_111,AMP(1))""".split('\n')
 
-        for i in range(len(goal)):
-            self.assertEqual(result[i], goal[i])
+        
+        self.assertEqual(result, goal)
 
     def test_export_matrix_element_v4_standalone(self):
         """Test the result of exporting a matrix element to file"""
