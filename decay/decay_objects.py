@@ -1165,7 +1165,7 @@ class DecayModel(base_objects.Model):
                    'decaywidth_list'
                   ]
 
-    def __init__(self, init_dict = {}, force=False):
+    def __init__(self, init_dict = {}, force=False, gen_abmodel=True):
         """Reset the particle_dict so that items in it is 
            of DecayParitcle type"""
 
@@ -1189,11 +1189,15 @@ class DecayModel(base_objects.Model):
             if item != 'particles' and item != 'particle_dict':
                 self.set(item, init_dict[item], force)
 
+        if gen_abmodel:
+            self.generate_abstract_model(force)
+
         
     def default_setup(self):
         """The particles is changed to ParticleList"""
         super(DecayModel, self).default_setup()
         self['particles'] = DecayParticleList()
+        self['ab_model'] = AbstractModel()
         # Other properties
         self['vertexlist_found'] = False
         self['max_vertexorder'] = 0
@@ -1313,11 +1317,22 @@ class DecayModel(base_objects.Model):
                                             for p in self.get('particles')], [])
                                       )
         return self['max_vertexorder']
+
+    def generate_abstract_model(self, force=False):
+        """ Generate the abstract particles in AbstractModel."""
+
+        #self.get('stable_particles')
+        # Add all particles, including stable ones 
+        # (could appear in final states)
+        self['ab_model'].setup_particles(self.get('particles'), force)
+
+        # Add interactions, except ones with all stable particles or ones
+        # with radiation process.
+        #self['ab_model'].setup_interactions(self.get('interactions'), force)
             
     def find_vertexlist(self):
         """ Check whether the interaction is able to decay from mother_part.
-            Set the '2_body_decay_vertexlist' and 
-            '3_body_decay_vertexlist' of the corresponding particles.
+            Set the 'decay_vertexlist' of the corresponding particles.
             Utilize in finding all the decay table of the whole model
         """
 
@@ -1352,8 +1367,8 @@ class DecayModel(base_objects.Model):
         for inter in self['interactions']:
             #Calculate the particle number and exclude partnum > 3
             partnum = len(inter['particles']) - 1
-            if partnum > 3:
-                continue
+            #if partnum > 3:
+            #    continue
             
             temp_legs = base_objects.LegList()
             total_mass = 0
@@ -2051,7 +2066,7 @@ class DecayModel(base_objects.Model):
                     # however.
 
     def find_decay_groups_general(self):
-        """Iteratively find decay groups, suitable to vertex in all orders
+        """Iteratively find decay groups, valid for vertices in all orders
            SM particle is defined as all MASSLESS particles.
            Algrorithm:
            1. Establish the reduced_interactions
@@ -3841,6 +3856,293 @@ class DecayAmplitudeList(diagram_generation.AmplitudeList):
 
         return mystr
 
+#===============================================================================
+# AbstractModel: A Model class in which objects are abstract
+#===============================================================================
+class AbstractModel(base_objects.Model):
+    """ Model in which particles are different only in Lorentz structure
+    and color. Interactions may be duplicated in order to generate amplitude
+    with the same Lorentz structure vertices or diagrams
+    """
+    sorted_keys = ['name', 'particles', 'parameters', 'interactions', 
+                   'couplings', 'lorentz',
+                   'real2ab_inter_dict'
+                  ]
+
+    def default_setup(self):
+        """The particles is changed to ParticleList"""
+
+        super(AbstractModel, self).default_setup()
+        # Other properties
+        self['particles'] = DecayParticleList()
+        self['abstract_particles_dict'] = {}
+        self['abstract_interactions_dict'] = {}
+        self['interaction_type_dict'] = {}
+        self.spin_text_dict = {1:'S', 2: 'F', 3:'V', 5:'T'}
+        
+
+    def get_sorted_keys(self):
+        return self.sorted_keys
+
+    def get_particle_type(self, part):
+        """ Return the tuple (spin, color) of the given particle."""
+
+        return (part['spin'], part['color'])
+
+    def get_interaction_type(self, inter):
+        """ Return the tuple (lorentz, particles_type) of the given interaction
+        Raise error if type is not in quick reference dictionary."""
+
+        new_key = (inter['lorentz'],
+                   sorted([self.get_particle_type(p) for p in inter['particles']], part_type_cmp))
+
+        # Check the quick reference dictionary.
+        # If the lorentz type has been imported, use the type
+        # provided by the dictionary
+        if inter['lorentz'] in self['interaction_type_dict'].keys():
+            return new_key
+
+
+
+    def add_ab_particle(self, part, force=False):
+        """ Functions to set new particle according to the given particle
+        spin and color information. This function will assign the correct
+        series number of new particle and change the abstract_particles."""
+
+        # Check argument type
+        if not force and not isinstance(part, base_objects.Particle):
+            raise self.PhysicsObjectError,\
+                "Argument must be a Particle object."
+        
+        # Setup new particle
+        ab_part = DecayParticle()
+        ab_part['spin'] = part.get('spin')
+        ab_part['color'] = part.get('color')
+
+        # Check the current abstract_particles
+        if self.get_particle_type(ab_part) in self['abstract_particles_dict'].keys():
+            # For existing type, record the series number
+            sn = len(self['abstract_particles_dict']\
+                         [self.get_particle_type(ab_part)])
+        else:
+            # Setup new type of abstract particle
+            self['abstract_particles_dict']\
+                [self.get_particle_type(ab_part)]= AbstractParticleList(\
+                ab_type=self.get_particle_type(ab_part) )
+            sn = 0
+            
+
+        # Set other properties: name = text(spin)+color
+        #                       pdg_code = 99000'spin''color'
+        #                       mass = M'spin''color'
+        ab_part['name']= \
+            self.spin_text_dict[part.get('spin')] +\
+            str(part.get('color')) +\
+            '_%02d' %sn
+        ab_part['antiname'] = ab_part.get('name')+'~'
+        ab_part['mass'] = 'M'+self.spin_text_dict[part.get('spin')] +\
+            str(part.get('color')) +\
+            '_%02d' %sn
+        ab_part['pdg_code'] = \
+            9900000 + 1000*ab_part.get('spin') + 100*ab_part.get('color')+sn
+            
+
+
+        # Append ab_part into self['particles'] and abstract_particles_dict
+        self['particles'].append(ab_part)
+        self['abstract_particles_dict'][self.get_particle_type(ab_part)].append(ab_part)
+
+
+    def add_ab_interaction(self, inter, force=False, key=None):
+        """ Functions to set new interaction according to the given interaction
+        particles and lorentz sturcture. This function will assign the correct
+        series number of new interaction, change the abstract_interactions.
+        Note: Add NEW type of interaction should use setup"""
+
+        # Check argument type
+        if not force and not isinstance(inter, base_objects.Interaction):
+            raise self.PhysicsObjectError,\
+                "Argument must be an Interaction object."
+        
+        # Setup new interaction
+        ab_inter = base_objects.Interaction()
+        if key:
+            ab_inter['particles'] = inter['particles']
+            ab_inter['color'] = inter['color']
+            ab_inter['lorentz'] = key[0]
+            ab_inter['lorentz'] = inter['couplings'] # Need to enlarge
+        else:
+            ab_inter['particles'] = inter['particles']
+            ab_inter['color'] = inter['color']
+            ab_inter['lorentz'] = key[0]
+            ab_inter['lorentz'] = inter['couplings'] # Need to enlarge
+
+        # Check the current abstract_interactions
+        if self.get_interaction_type(ab_inter) in \
+                self['abstract_interactions_dict'].keys():
+            # For existing type, record the series number
+            sn = len(self['abstract_interactions_dict']\
+                         [self.get_interactions_type(ab_inter)])
+        else:
+            # Raise error for new type of abstract interaction
+            raise self.PhysicsObjectError, \
+                "Adding new type of interaction, %s must be setted up by setup_interactions." % str(key)
+
+        # Set other properties: name = text(spin)+color
+        #                       pdg_code = 99000'spin''color'
+        #                       mass = M'spin''color'
+        ab_inter['id']= \
+            self.spin_text_dict[part.get('spin')] +\
+            str(part.get('color')) +\
+            '_%02d' %sn
+        ab_inter['couplings'] = ab_inter.get('name')+'~'
+            
+
+
+        # Append ab_part into self['particles'] and abstract_particles_dict
+        self['interactions'].append(ab_inter)
+        self['abstract_interactions_dict'][self.get_interaction_type(ab_inter)].append(ab_inter)
+
+        
+    def setup_particles(self, part_list, force=False):
+        """Add real particles into AbstractModel, 
+        convert into abstract particles"""
+
+        # Check argument type
+        if not force and not isinstance(part_list, base_objects.ParticleList):
+            raise self.PhysicsObjectError,\
+                "Argument must be a ParticleList."
+
+        # Call add_particle for each particle
+        for part in part_list:
+            self.setup_particle(part, force)
+
+    def setup_particle(self, part, force=False):
+        """Add real particle into AbstractModel, 
+        convert into abstract particle."""
+
+        # Check argument type
+        if not force and not isinstance(part, base_objects.Particle):
+            raise self.PhysicsObjectError,\
+                "Argument must be a Particle object."
+
+        if self.get_particle_type(part) \
+                not in self['abstract_particles_dict'].keys():            
+            # if not found in existing particle, create a new abstract particle
+            self.add_ab_particle(part, force)
+        
+
+    def setup_interactions(self, inter_list, force=False):
+        """Add real interactions into AbstractModel, 
+        convert into abstract interactions.
+        Find lorentz structures which is the union of all related ones."""
+
+        # Check argument type
+        if not force and not isinstance(inter_list, 
+                                        base_objects.InteractionList):
+            raise self.PhysicsObjectError,\
+                "Argument must be an InteractionList."
+
+        # Setup a temp keylist
+        keylist = []
+
+        # Add all interactions except for
+        # 1. radiation interaction, 2. interaction with all stable particles
+        for inter in inter_list:
+            # Check validity: remove stable particles
+            final_list = [p.get_pdg_code()\
+                              for p in inter['particles'] \
+                              if not p['is_stable'] ]
+            # Check validity: remove duplicate particles 
+            # i.e. those cannot decay through this interaction.
+            __duplicate__ = True
+            for pid in final_list:
+                if final_list.count(pid) == 1:
+                    __duplicate__ = False
+                    break
+
+            # Ignore all stable particle interaction (e.g. g g > g g) (len=0)
+            # and interaction with all duplicate particles
+            if len(final_list) == 0 or __duplicate__:
+                continue
+
+            # Check if this type is the subset of known lorentz type,
+            # or contain the known lorentz type.
+            # If so, union the two and continue search.
+            new_key = (inter['lorentz'],
+                       sorted([self.get_particle_type(p) for p in inter['particles']], part_type_cmp))
+            remove_list = []
+            for key in self['abstract_interactions_dict']:
+                # Check lorentz if the particles are in the same types
+                if key[1] == new_key[1]:
+                    # Stop if the exact key is already in key_list
+                    if key[0] == new_key[0]:
+                        break
+                    # Continue if no joit between the lorentz types.
+                    elif set(key[0]).isdisjoint(new_key[0]):
+                        continue
+                    # Stop if there is already a superset
+                    elif set(key[0]).issuperset(new_key[0]):
+                        new_key = key
+                        break
+                    else:
+                        # Setup new key
+                        union_type = sorted(set(key[0]).union(inter['lorentz']))
+                        new_key[0] =  union_type
+                        remove_list.append(key)
+
+            # Remove subset and add this interaction in 
+            # abstract_interactions_dict.
+            if remove_list:
+                # Use add_ab_interaction to get the correct format
+                self.add_ab_interaction(inter)
+
+                # Remove the subset key                    
+                for remove_key in remove_list:
+                    keylist.remove(remove_key)
+
+            # Set temporate interaction_type_dict
+            self['interaction_type_dict'][(inter['lorentz'], new_key[1])] = new_key
+                
+        # Update the quick reference dict
+        for key_base in self['interaction_type_dict'].keys():
+            for new_key in self['abstract_interactions_dict'].keys():
+                if new_key[1] == key_base[1] and \
+                        set(key_base[0]).issubset(new_key[0]):
+                    self['interaction_type_dict'][key_base] = new_key
+
+#===============================================================================
+# AbstractParticleList
+#===============================================================================
+class AbstractParticleList(base_objects.ParticleList):
+    """A ParticleList, with additional properties that stores the
+       abstract particle type."""
+
+
+    def __init__(self, init_list=None, ab_type=None):
+        super(AbstractParticleList, self).__init__(init_list)
+
+        # Additional attribute of abstract_type (spin, color)
+        if not ab_type:
+            self.abstract_type = (0,0)
+        elif isinstance(ab_type, tuple):
+            self.abstract_type = ab_type
+        else:
+            raise self.PhysicsObjectListError,\
+                "Abstract type should be a dictionary."
+
+#===============================================================================
+# AbstractParticleList
+#===============================================================================
+class AbstractInteractionList(base_objects.InteractionList):
+    """A InteractionList, with additional properties that stores the
+       abstract interaction type."""
+
+
+    def __init__(self, init_list=None):
+        super(AbstractParticleList, self).__init__(init_list)
+        # Additional attribute of abstract_type
+        self.abstract_type = (0,0)
 
 #===============================================================================
 # Helper function
@@ -3873,3 +4175,13 @@ def amplitudecmp_width(x, y):
     mycmp = cmp(x['apx_decaywidth'], y['apx_decaywidth'])
 
     return -mycmp
+
+def part_type_cmp(x, y):
+    """ Sort the abstract particle type."""
+    mycmp = cmp(x[0], y[0])
+
+    if mycmp == 0:
+        mycmp = cmp(x[1], y[1])
+
+    return mycmp
+
