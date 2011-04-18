@@ -2858,11 +2858,11 @@ class test_aloha_creation(unittest.TestCase):
         including clash routines """
         helas_suite = create_aloha.AbstractALOHAModel('mssm')
         
-        requested_routines=[('FFV1' , (), 0), 
-                            ('FFV1', (), 2),
-                            ('FFV1', (1,), 0),
-                            ('FFV2', (1,), 3),
-                            ('VVV1', (), 3)]
+        requested_routines=[(('FFV1',) , (), 0), 
+                            (('FFV1',), (), 2),
+                            (('FFV1',), (1,), 0),
+                            (('FFV2',), (1,), 3),
+                            (('VVV1',), (), 3)]
         
         helas_suite.compute_subset(requested_routines)        
         self.assertEqual(len(helas_suite), 5)
