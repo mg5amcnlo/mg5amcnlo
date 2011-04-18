@@ -595,7 +595,8 @@ class TestCmdShell2(unittest.TestCase,
                                                'lib', 'libdsample.a')))
         self.assertTrue(os.path.exists(os.path.join(self.out_dir,
                                                'lib', 'libpdf.a')))
-        # Check that combine_events, gen_ximprove, and combine_runs compile
+        # Check that combine_events, gen_ximprove, combine_runs and sum_html
+        # compile
         status = subprocess.call(['make', '../bin/combine_events'],
                                  stdout=devnull, 
                                  cwd=os.path.join(self.out_dir, 'Source'))
@@ -614,6 +615,12 @@ class TestCmdShell2(unittest.TestCase,
         self.assertEqual(status, 0)
         self.assertTrue(os.path.exists(os.path.join(self.out_dir,
                                                'bin', 'combine_runs')))
+        status = subprocess.call(['make', '../bin/sum_html'],
+                                 stdout=devnull, 
+                                 cwd=os.path.join(self.out_dir, 'Source'))
+        self.assertEqual(status, 0)
+        self.assertTrue(os.path.exists(os.path.join(self.out_dir,
+                                               'bin', 'sum_html')))
         # Check that gensym compiles
         status = subprocess.call(['make', 'gensym'],
                                  stdout=devnull, 
@@ -734,17 +741,17 @@ class TestCmdShell2(unittest.TestCase,
         # Check that all subprocess directories have been created
         self.assertTrue(os.path.exists(os.path.join(self.out_dir,
                                                     'SubProcesses',
-                                                    'P2_gq_wpq_wp_epve')))
+                                                    'P2_gq_wpq_wp_lvl')))
         self.assertTrue(os.path.exists(os.path.join(self.out_dir,
                                                     'SubProcesses',
-                                                    'P2_gq_wpq_wp_epve')))
+                                                    'P2_gq_wpq_wp_lvl')))
         self.assertTrue(os.path.exists(os.path.join(self.out_dir,
                                                     'SubProcesses',
-                                                    'P2_qq_wpg_wp_epve')))
+                                                    'P2_qq_wpg_wp_lvl')))
         goal_subproc_mg = \
-"""P2_gq_wpq_wp_epve
-P2_qq_wpg_wp_epve
-P1_qq_wp_wp_epve
+"""P2_gq_wpq_wp_lvl
+P2_qq_wpg_wp_lvl
+P1_qq_wp_wp_lvl
 """
         self.assertFileContains(os.path.join(self.out_dir,
                                              'SubProcesses',
@@ -771,28 +778,28 @@ P1_qq_wp_wp_epve
         status = subprocess.call(['make', 'gensym'],
                                  stdout=devnull, 
                                  cwd=os.path.join(self.out_dir, 'SubProcesses',
-                                                  'P2_qq_wpg_wp_epve'))
+                                                  'P2_qq_wpg_wp_lvl'))
         self.assertEqual(status, 0)
         self.assertTrue(os.path.exists(os.path.join(self.out_dir,
                                                     'SubProcesses',
-                                                    'P2_qq_wpg_wp_epve',
+                                                    'P2_qq_wpg_wp_lvl',
                                                     'gensym')))
         # Check that gensym runs
         status = subprocess.call('./gensym', 
                                  stdout=devnull,
                                  cwd=os.path.join(self.out_dir, 'SubProcesses',
-                                                  'P2_qq_wpg_wp_epve'),
+                                                  'P2_qq_wpg_wp_lvl'),
                                  shell=True)
         self.assertEqual(status, 0)
         # Check that madevent compiles
         status = subprocess.call(['make', 'madevent'],
                                  stdout=devnull, 
                                  cwd=os.path.join(self.out_dir, 'SubProcesses',
-                                                  'P2_qq_wpg_wp_epve'))
+                                                  'P2_qq_wpg_wp_lvl'))
         self.assertEqual(status, 0)
         self.assertTrue(os.path.exists(os.path.join(self.out_dir,
                                                     'SubProcesses',
-                                                    'P2_qq_wpg_wp_epve',
+                                                    'P2_qq_wpg_wp_lvl',
                                                     'madevent')))
         
     def test_madevent_triplet_diquarks(self):

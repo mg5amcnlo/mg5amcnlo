@@ -1940,7 +1940,6 @@ c     Calculate chi2 for last three events (ja 03/11)
                tmeant = 0d0
                tsigmat = 0d0
                do i=cur_it-3,cur_it-1
-                  print *,'mean, sigma: ',i,ymean(i),ysigma(i)
                   tmeant = tmeant+ymean(i)*ymean(i)**2/ysigma(i)**2
                   tsigmat = tsigmat + ymean(i)**2/ ysigma(i)**2
                enddo

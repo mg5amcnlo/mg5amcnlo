@@ -74,7 +74,7 @@ def find_symmetry(matrix_element, evaluator, max_time = 600):
     permutations of identical particles.
     For amp2s which are 0 (e.g. multiparticle vertices), return 0 in
     symmetry list.
-    max_time > 0 gives a cutoff time for finding symmetries (in s)."""
+    max_time gives a cutoff time for finding symmetries (in s)."""
 
     if isinstance(matrix_element, group_subprocs.SubProcessGroup):
         return find_symmetry_subproc_group(matrix_element, evaluator, max_time)
@@ -127,7 +127,7 @@ def find_symmetry(matrix_element, evaluator, max_time = 600):
             # Non-identical particles permutated
             continue
         # Check if we need to cancel the check due to time limit
-        if max_time and time.time() - start_time > max_time:
+        if not max_time or time.time() - start_time > max_time:
             logger.warning("Cancel diagram symmetry - time exceeded")
             break
         ident_perms.append([0,1]+list(perm))
