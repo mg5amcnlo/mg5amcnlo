@@ -520,6 +520,8 @@ class AbstractALOHAModel(dict):
         for list_l_name, conjugate, outgoing in data:
             if len(list_l_name) >1:
                 lorentzname = list_l_name[0]
+                for c in conjugate:
+                    lorentzname += 'C%s' % c
                 self[(lorentzname, outgoing)].add_combine(list_l_name[1:])
                         
     def compute_aloha(self, builder, symmetry=None, routines=None):

@@ -8104,10 +8104,9 @@ C
         abstract_M.write('/tmp','Fortran')
         
         self.assertTrue(os.path.exists('/tmp/FFV1_1.f'))
-        textfile = open('/tmp/FFV1_1.f','r')
+        textfile = open('/tmp/FFV1_1.f','r').read()
         split_sol = solution.split('\n')
-        for i in range(len(split_sol)):
-            self.assertEqual(split_sol[i]+'\n', textfile.readline())
+        self.assertEqual(split_sol, textfile.split('\n')[:len(split_sol)])
 
 
 class UFO_model_to_mg4_Test(unittest.TestCase):
