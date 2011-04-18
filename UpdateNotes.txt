@@ -2,7 +2,7 @@ Update notes for MadGraph 5 (in reverse time order)
 
 1.0.1 (19/04/11): JA: Removed hard limit on number of external particles in 
                       MadEvent, allowing for unlimited length decay chains there
-                      (up to 12 final state particles successfully tested)
+                      (up to 14 final state particles successfully integrated)
                   JA: Improved helicity selection and automatic full helicity 
                       sum if needed. Optimization of run parameters.
                   JA: Fixed MadEvent bugs for multiparton processes with 

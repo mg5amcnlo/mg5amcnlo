@@ -309,7 +309,7 @@ c
       integer nsubproc          !Number of specific processes requested
       logical found
       integer ig
-      character*(*) linkname(max_amps)
+      character*320 linkname(max_amps)
       integer sname(256)
       integer gname
 c
@@ -436,7 +436,6 @@ c
          do i=1,ng
             procname = linkname(io(i))(:300)
             gname=0
-            print *,'procname: ',procname
             read(procname(2:index(procname,'_')-1),*,err=20) gname
  20         found = .false.
             j = 0
