@@ -3889,12 +3889,20 @@ class AbstractModel(base_objects.Model):
 
         return (part['spin'], part['color'])
 
+    def get_particlelist_type(self, partlist):
+        """ Return a list of the type of the given particlelist.
+        Note: diffrent particle with the same type will be diffrentiate.
+        """
+
+        type_list = []
+
+        return (part['spin'], part['color'])
+
     def get_interaction_type(self, inter):
         """ Return the tuple (lorentz, particles_type) of the given interaction
         Raise error if type is not in quick reference dictionary."""
 
-        new_key = (inter['lorentz'],
-                   sorted([self.get_particle_type(p) for p in inter['particles']], part_type_cmp))
+        new_lorentz = inter['lorentz']
 
         # Check the quick reference dictionary.
         # If the lorentz type has been imported, use the type
