@@ -35,8 +35,8 @@ c
       integer icor(max_amps)
       integer nunwgt(max_amps)
       integer minit
-      character*100 fname, pname
-      character*120 linkname(max_amps)
+      character*300 fname, pname
+      character*320 linkname(max_amps)
       integer i,j,k,l
       double precision xtot,errtot,err_goal, xi
       double precision errtotc, errtotu
@@ -128,7 +128,7 @@ c
             ntw=ntw+nw(i)
 c            maxit = min(maxit,2)
             if (sumproc) then
-               write(*,'(a20,e15.5)') pname(2:ilen), xsec(i)
+               write(*,'(a,e15.5)') pname(2:ilen), xsec(i)
             else
                write(*,*) fname,i,xsec(i),mfact(i)
             endif
@@ -309,7 +309,7 @@ c
       integer nsubproc          !Number of specific processes requested
       logical found
       integer ig
-      character*120 linkname(max_amps)
+      character*(*) linkname(max_amps)
       integer sname(256)
       integer gname
 c
@@ -317,7 +317,7 @@ c     Local
 c
       integer i,j,k, io(max_amps), ik
       integer ntot, ip,jp
-      character*100 procname
+      character*300 procname
       character*4 cpref
       character*20 fnamel, fnamee
       double precision scale,xt(max_amps), teff
@@ -434,8 +434,9 @@ c
       if (sumproc) then
          nsubproc=0
          do i=1,ng
-            procname = linkname(io(i))(:100)
+            procname = linkname(io(i))(:300)
             gname=0
+            print *,'procname: ',procname
             read(procname(2:index(procname,'_')-1),*,err=20) gname
  20         found = .false.
             j = 0
@@ -477,25 +478,6 @@ c
 c     Create directory names using the linkname
 c
 c
-            if (.false.) then
-            if (io(i) .lt. 10) then
-               write(fnamel,'(a,i1,a,a)') 'G',io(i),'/',logfile
-               write(fnamee,'(a,i1,a,a)') 'G',io(i),'/',eventfile
-            else if (io(i) .lt. 100) then
-               write(fnamel,'(a,i2,a,a)') 'G',io(i),'/',logfile
-               write(fnamee,'(a,i2,a,a)') 'G',io(i),'/',eventfile
-            else if (io(i) .lt. 1000) then
-               write(fnamel,'(a,i3,a,a)') 'G',io(i),'/',logfile
-               write(fnamee,'(a,i3,a,a)') 'G',io(i),'/',eventfile
-            else if (io(i) .lt. 10000) then
-               write(fnamel,'(a,i4,a,a)') 'G',io(i),'/',logfile
-               write(fnamee,'(a,i4,a,a)') 'G',io(i),'/',eventfile
-            else if (io(i) .lt. 100000) then
-               write(fnamel,'(a,i5,a,a)') 'G',io(i),'/',logfile
-               write(fnamee,'(a,i5,a,a)') 'G',io(i),'/',eventfile
-            endif
-            endif
-
             ik = index(linkname(io(i)),'log.txt')-1
             fnamel = linkname(io(i))(1:ik) // logfile
             fnamee = linkname(io(i))(1:ik) // eventfile
@@ -515,7 +497,7 @@ c            write(16,65) '<tr><td align=right>',io(i),
      $           xlum(io(i))/scale,'</td></tr>'
 c            write(*,*) io(i),xmax(io(i))
             else
-                procname = linkname(io(i))(:100)
+                procname = linkname(io(i))(:300)
 cxx   tjs 3-20-2006  + cfax 12.05.2006
 c                ip = index(procname,'P')+2 !Strip off first P_
                 ip = index(procname,'P')+1 !Strip off first P

@@ -309,17 +309,6 @@ c            np = 3*npoints
 
          ip = index(gn(io(i)),'/')
          write(26,'(2a)') 'j=',gn(io(i))(1:ip-1)
-         if (.false.) then
-         if (io(i) .lt. 10) then
-            write(26,'(a,i1)') 'j=G',io(i)
-         elseif (io(i) .lt. 100) then
-            write(26,'(a,i2)') 'j=G',io(i)
-         elseif (io(i) .lt. 1000) then
-            write(26,'(a,i3)') 'j=G',io(i)
-         elseif (io(i) .lt. 10000) then
-            write(26,'(a,i4)') 'j=G',io(i)
-         endif
-         endif
 c
 c     Determine estimates for getting the desired accuracy
 c

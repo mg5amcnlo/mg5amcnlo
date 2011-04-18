@@ -14,9 +14,9 @@ c
 c     
 c     Local
 c
-      character*150 procname(maxsubprocesses)
-      character*150 channame(maxsubprocesses)
-      character*150 pathname
+      character*300 procname(maxsubprocesses)
+      character*300 channame(maxsubprocesses)
+      character*300 pathname
       integer iproc,nproc
       integer ichan,nchan
       integer jc
@@ -100,7 +100,7 @@ c
 c
 c     Local
 c
-      character*150 fname
+      character*300 fname
       character*50 dirname
       integer jc,ip
       double precision xi
@@ -160,8 +160,8 @@ c
 c
 c     Local
 c
-      character*150 fname
-      character*150 pathname
+      character*300 fname
+      character*300 pathname
       character*26 alphabet
       integer jc,i
       integer njobs
@@ -270,7 +270,7 @@ c
 c     
 c     Local
 c
-      character*150 fname
+      character*300 fname
       integer jc
       double precision P(0:4,maxexternal),xwgt
       integer n,ic(7,maxexternal),ievent
@@ -324,7 +324,7 @@ c
 c     
 c     Local
 c
-      character*150 fname
+      character*300 fname
       integer jc,i,j
       double precision x1,x2,x3,x4
 c-----
@@ -381,7 +381,7 @@ c
 c     
 c     Local
 c
-      character*150 fname
+      character*300 fname
       character*26 alphabet
       integer jc,i,j
 c-----
@@ -425,7 +425,7 @@ c
 c     
 c     Local
 c
-      character*150 fname
+      character*300 fname
       integer jc,i,j
       double precision x1,x2
       integer i3,i4

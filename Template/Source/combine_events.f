@@ -21,8 +21,8 @@ c
 c     
 c     Local
 c
-      character*100 subname(maxsubprocesses)
-      character*110 pathsubname(maxsubprocesses)         !needed for MadWeight
+      character*300 subname(maxsubprocesses)
+      character*310 pathsubname(maxsubprocesses)         !needed for MadWeight
       character*80 down_path                           !needed for MadWeight
       character*40 filename                         !needed for MadWeight
       character*4  card_number                         !needed for MadWeight
@@ -455,7 +455,7 @@ c     Local
 c
       integer i,j, k, ip
       double precision xi
-      character*150 dirname,dname,channame
+      character*300 dirname,dname,channame
       integer ncode,npos
       character*20 formstr
 c-----
@@ -537,7 +537,7 @@ c
       integer ievent,iseed
       logical done,found
       character*140 buff
-      character*150 fullname
+      character*300 fullname
 c
 c     Les Houches init block (for the <init> info)
 c
@@ -651,7 +651,7 @@ c
 c
 c     Arguments
 c
-      character*100 subname(maxsubprocesses)
+      character*300 subname(maxsubprocesses)
       integer ns
 c-----
 c  Begin Code

@@ -109,7 +109,7 @@ c
          endif
 c
 c     set ptj and s_min if xqcut and ktscheme = 1, to improve
-c     integration speed, and set drjj to 0.
+c     integration speed, and set drjj and drjl to 0.
 c
         if(xqcut.gt.0.and.ktscheme.eq.1) then
            if(ptj.ge.0d0) ptj=max(ptj, xqcut)
@@ -119,6 +119,10 @@ c
            if(drjj.gt.0d0) then
               write(*,*) 'Warning! drjj > 0 with xqcut > 0, set to 0'
               drjj = 0d0
+           endif
+           if(drjl.gt.0d0) then
+              write(*,*) 'Warning! drjl > 0 with xqcut > 0, set to 0'
+              drjl = 0d0
            endif
         endif
 
