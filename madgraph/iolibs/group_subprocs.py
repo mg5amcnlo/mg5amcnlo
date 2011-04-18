@@ -184,6 +184,12 @@ class SubProcessGroup(base_objects.PhysicsObject):
             if part.get('mass').lower() == 'zero' and part.get('color') != 1 \
                    and part.get('spin') == 2:
                 name += "q" # "j"
+            elif part.get('mass').lower() == 'zero' and part.get('color') == 1 \
+                   and part.get('spin') == 2:
+                if part.get('charge') == 0:
+                    name += "vl"
+                else:
+                    name += "l"
             else:
                 name += part.get_name().replace('~', 'x').\
                             replace('+', 'p').replace('-', 'm')

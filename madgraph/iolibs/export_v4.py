@@ -182,7 +182,7 @@ class ProcessExporterFortran(object):
         """Make the copy/symbolic links"""
         model_path = self.dir_path + '/Source/MODEL/'
         if os.path.exists(os.path.join(model_path, 'ident_card.dat')):
-            ln(model_path + '/ident_card.dat', self.dir_path + '/Cards', log=False)
+            mv(model_path + '/ident_card.dat', self.dir_path + '/Cards')
         if os.path.exists(os.path.join(model_path, 'particles.dat')):
             ln(model_path + '/particles.dat', self.dir_path + '/SubProcesses')
             ln(model_path + '/interactions.dat', self.dir_path + '/SubProcesses')
