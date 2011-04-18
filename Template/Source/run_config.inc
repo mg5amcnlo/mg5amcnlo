@@ -51,6 +51,6 @@ c
       double precision acc_wu
       parameter       (acc_wu = 0.01)   !Desired accuracy from warmup run
       integer      npoints_wu,        itmax_wu !warmup # points/iterations
-      parameter   (npoints_wu = 4000, itmax_wu = 8)
+      parameter   (npoints_wu = 2000, itmax_wu = 8)
       integer      min_gevents_wu
       parameter   (min_gevents_wu=1000)   !Minumum # unweighted events to generate from channel

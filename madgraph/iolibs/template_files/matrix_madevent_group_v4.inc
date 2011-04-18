@@ -25,7 +25,11 @@ C
     INTEGER    NDIAGS
     PARAMETER (NDIAGS=%(ndiags)d) 
     INTEGER    THEL
-    PARAMETER (THEL=2*MAXSPROC*NCOMB)
+    PARAMETER (THEL=2*NCOMB)
+    REAL*8 LIMHEL
+    PARAMETER(LIMHEL=1e-6)
+    INTEGER MAXTRIES
+    PARAMETER(MAXTRIES=10)
 C  
 C ARGUMENTS 
 C  
@@ -33,15 +37,16 @@ C
 C  
 C LOCAL VARIABLES 
 C  
-        INTEGER NHEL(NEXTERNAL,NCOMB),NTRY(2,MAXSPROC)
+        INTEGER NHEL(NEXTERNAL,NCOMB),NTRY(2)
+        INTEGER ISHEL(2)
         REAL*8 T,MATRIX%(proc_id)s
         REAL*8 R,SUMHEL,TS(NCOMB)
         INTEGER I,IDEN
         INTEGER JC(NEXTERNAL),II
-        LOGICAL GOODHEL(NCOMB,2,MAXSPROC)
+        LOGICAL GOODHEL(NCOMB,2)
         REAL*8 HWGT, XTOT, XTRY, XREJ, XR, YFRAC(0:NCOMB)
-        INTEGER IDUM, NGOOD(2,MAXSPROC), IGOOD(2,MAXSPROC,NCOMB)
-	INTEGER JHEL(2,MAXSPROC), J, JJ
+        INTEGER IDUM, NGOOD(2), IGOOD(NCOMB,2)
+	INTEGER JHEL(2), J, JJ
         REAL     XRAN1
         EXTERNAL XRAN1
 C  
@@ -53,8 +58,8 @@ C
     CHARACTER*101         HEL_BUFF
     COMMON/TO_HELICITY/  HEL_BUFF
     
-    INTEGER IMIRROR, IPROC
-    COMMON/TO_MIRROR/ IMIRROR, IPROC
+    INTEGER IMIRROR
+    COMMON/TO_MIRROR/ IMIRROR
  
     REAL*8 POL(2)
     COMMON/TO_POLARIZATION/ POL
@@ -65,8 +70,9 @@ C
 %(define_iconfigs_lines)s
     DATA IDUM /0/
     DATA XTRY, XREJ /0,0/
-    DATA NTRY /MAXSPROC*0,MAXSPROC*0/
-    DATA NGOOD /MAXSPROC*0,MAXSPROC*0/
+    DATA NTRY /0,0/
+    DATA NGOOD /0,0/
+    DATA ISHEL/0,0/
     SAVE YFRAC, IGOOD, JHEL
     DATA GOODHEL/THEL*.FALSE./
 %(helicity_lines)s
@@ -74,7 +80,7 @@ C
 C ----------
 C BEGIN CODE
 C ----------
-    NTRY(IMIRROR,IPROC)=NTRY(IMIRROR,IPROC)+1
+    NTRY(IMIRROR)=NTRY(IMIRROR)+1
     DO I=1,NEXTERNAL
        JC(I) = +1
     ENDDO
@@ -93,34 +99,50 @@ C ----------
     DO I=1,NCOMB
        TS(I)=0d0
     ENDDO
-    IF (ISUM_HEL .EQ. 0 .OR. NTRY(IMIRROR,IPROC) .LT. 10) THEN
+    IF (ISHEL(IMIRROR) .EQ. 0 .OR. NTRY(IMIRROR) .LE. MAXTRIES) THEN
       DO I=1,NCOMB
-         IF (GOODHEL(I,IMIRROR,IPROC) .OR. NTRY(IMIRROR,IPROC) .LT. 2) THEN
-             T=MATRIX%(proc_id)s(P ,NHEL(1,I),JC(1))            
-             DO JJ=1,nincoming
+         IF (GOODHEL(I,IMIRROR) .OR. NTRY(IMIRROR).LE.MAXTRIES) THEN
+            T=MATRIX%(proc_id)s(P ,NHEL(1,I),JC(1))
+            DO JJ=1,nincoming
                IF(POL(JJ).NE.1d0.AND.NHEL(JJ,I).EQ.INT(SIGN(1d0,POL(JJ)))) THEN
-                 T=T*ABS(POL(JJ))
+                  T=T*ABS(POL(JJ))
                ELSE IF(POL(JJ).NE.1d0)THEN
-                 T=T*(2d0-ABS(POL(JJ)))
+                  T=T*(2d0-ABS(POL(JJ)))
                ENDIF
-             ENDDO
-             ANS=ANS+T
-             TS(I)=T
-             IF (T .NE. 0D0 .AND. .NOT. GOODHEL(I,IMIRROR,IPROC)) THEN
-               GOODHEL(I,IMIRROR,IPROC)=.TRUE.
-               NGOOD(IMIRROR,IPROC) = NGOOD(IMIRROR,IPROC) +1
-               IGOOD(IMIRROR,IPROC,NGOOD(IMIRROR,IPROC)) = I
-             ENDIF
-           ENDIF
-        ENDDO
-        JHEL(IMIRROR,IPROC) = 1
-        ISUM_HEL=MIN(ISUM_HEL,NGOOD(IMIRROR,IPROC))
+            ENDDO
+            ANS=ANS+T
+            TS(I)=T
+         ENDIF
+      ENDDO
+      JHEL(IMIRROR) = 1
+      IF(NTRY(IMIRROR).LE.MAXTRIES)THEN
+         DO I=1,NCOMB
+            IF (.NOT.GOODHEL(I,IMIRROR) .AND. (TS(I).GT.ANS*LIMHEL/NCOMB)) THEN
+               GOODHEL(I,IMIRROR)=.TRUE.
+               NGOOD(IMIRROR) = NGOOD(IMIRROR) +1
+               IGOOD(NGOOD(IMIRROR),IMIRROR) = I
+               PRINT *,'Added good helicity ',I,TS(I)*NCOMB/ANS
+            ENDIF
+         ENDDO
+         ISHEL(IMIRROR)=MIN(ISUM_HEL,NGOOD(IMIRROR))
+      ENDIF
+        IF(NTRY(IMIRROR).EQ.MAXTRIES.AND.ISHEL(IMIRROR).GT.0)THEN
+c       Check if we have stable helicities in this event
+           DO I=1,NGOOD(IMIRROR)
+              IF(TS(IGOOD(I,IMIRROR)) .lt. 0.1*ANS/NGOOD(IMIRROR))THEN
+                 write(*,*) 'Not stable helicity distribution, fraction ', TS(IGOOD(I,IMIRROR))/ANS*NGOOD(IMIRROR)
+                 write(*,*) 'Explicit sum over all non-zero helicities.'
+                 ISHEL(IMIRROR)=0
+                 EXIT
+              ENDIF
+           ENDDO
+        ENDIF
     ELSE              !RANDOM HELICITY
-        DO J=1,ISUM_HEL
-            JHEL(IMIRROR,IPROC)=JHEL(IMIRROR,IPROC)+1
-            IF (JHEL(IMIRROR,IPROC) .GT. NGOOD(IMIRROR,IPROC)) JHEL(IMIRROR,IPROC)=1
-            HWGT = REAL(NGOOD(IMIRROR,IPROC))/REAL(ISUM_HEL)
-            I = IGOOD(IMIRROR,IPROC,JHEL(IMIRROR,IPROC))
+        DO J=1,ISHEL(IMIRROR)
+            JHEL(IMIRROR)=JHEL(IMIRROR)+1
+            IF (JHEL(IMIRROR) .GT. NGOOD(IMIRROR)) JHEL(IMIRROR)=1
+            HWGT = REAL(NGOOD(IMIRROR))/REAL(ISHEL(IMIRROR))
+            I = IGOOD(JHEL(IMIRROR),IMIRROR)
             T=MATRIX%(proc_id)s(P ,NHEL(1,I),JC(1))            
             DO JJ=1,nincoming
               IF(POL(JJ).NE.1d0.AND.NHEL(JJ,I).EQ.INT(SIGN(1d0,POL(JJ)))) THEN
@@ -132,11 +154,11 @@ C ----------
             ANS=ANS+T*HWGT
             TS(I)=T*HWGT
         ENDDO
-        IF (ISUM_HEL .EQ. 1) THEN
+        IF (ISHEL(IMIRROR) .EQ. 1) THEN
           WRITE(HEL_BUFF,'(20i5)')(NHEL(II,I),II=1,NEXTERNAL)
         ENDIF
     ENDIF
-    IF (ISUM_HEL .NE. 1) THEN
+    IF (ISHEL(IMIRROR) .NE. 1) THEN
     R=XRAN1(IDUM)*ANS
     SUMHEL=0d0
     DO I=1,NCOMB

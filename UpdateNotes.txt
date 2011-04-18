@@ -1,13 +1,16 @@
 Update notes for MadGraph 5 (in reverse time order)
 
-1.0.1 (17/04/11): JA: Removed hard limit on number of external particles in 
+1.0.1 (19/04/11): JA: Removed hard limit on number of external particles in 
                       MadEvent, allowing for unlimited length decay chains there
                       (up to 12 final state particles successfully tested)
+                  JA: Improved helicity selection and automatic full helicity 
+                      sum if needed. Optimization of run parameters.
                   JA: Fixed MadEvent bugs for multiparton processes with 
-                      conflicting decays and some array limits
+                      conflicting decays and fixed some faulty array limits.
                   JA: Suppressed scary but irrelevant warnings for compiling 
                       2->1 and 1->2 processes in MadEvent
-                  JA: Speed up Pythia output
+                  JA: Optimized Pythia 8 output further
+                  JA: Several minor fixes relating to user interface etc.
 
 1.0.0 (12/04/11): Official release of MadGraph 5. Some of the features:
                   - Complete FeynRules compatibility through the UFO interface
@@ -19,7 +22,7 @@ Update notes for MadGraph 5 (in reverse time order)
                   - Support for color 1, 3, 6, 8
                   - Revamped MadEvent with improved subprocess directory 
                     organization and vastly increased speed and stability
-                  - Unlimited length decay chains (still 10 external particle 
-                    in MadEvent limit)
+                  - Unlimited length decay chains (up to 12 final state
+                    particles tested with MadEvent, see v. 1.0.1)
                   - Process checks for new model implementations
-                  - ...and much, much more (see "MadGraph 5: Going Beyond")
+                  - ...and much more (see paper "MadGraph 5: Going Beyond")

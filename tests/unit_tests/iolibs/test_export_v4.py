@@ -331,6 +331,7 @@ C     Amplitude(s) for diagram number 6
             self.mymatrixelement,
             self.myfortranmodel)
 
+        #print open(self.give_pos('test')).read()
         self.assertFileContains('test', goal_matrix_f)
 
     def test_coeff_string(self):
@@ -771,6 +772,10 @@ C
       PARAMETER (NDIAGS=6)
       INTEGER    THEL
       PARAMETER (THEL=2*NCOMB)
+      REAL*8 LIMHEL
+      PARAMETER(LIMHEL=1E-6)
+      INTEGER MAXTRIES
+      PARAMETER(MAXTRIES=10)
 C     
 C     ARGUMENTS 
 C     
@@ -779,13 +784,15 @@ C
 C     LOCAL VARIABLES 
 C     
       INTEGER NHEL(NEXTERNAL,NCOMB),NTRY(2)
+      INTEGER ISHEL(2)
       REAL*8 T,MATRIX1
       REAL*8 R,SUMHEL,TS(NCOMB)
       INTEGER I,IDEN
-      INTEGER IPROC,JC(NEXTERNAL),II
-      LOGICAL GOODHEL(2,NCOMB)
+      INTEGER JC(NEXTERNAL),II
+      LOGICAL GOODHEL(NCOMB,2)
       REAL*8 HWGT, XTOT, XTRY, XREJ, XR, YFRAC(0:NCOMB)
-      INTEGER IDUM, NGOOD(2), IGOOD(2,NCOMB), JHEL(2), J, JJ
+      INTEGER IDUM, NGOOD(2), IGOOD(NCOMB,2)
+      INTEGER JHEL(2), J, JJ
       REAL     XRAN1
       EXTERNAL XRAN1
 C     
@@ -810,8 +817,11 @@ C
       COMMON/TO_MCONFIGS/MAPCONFIG, ICONFIG
       INTEGER SUBDIAG(MAXSPROC),IB(2)
       COMMON/TO_SUB_DIAG/SUBDIAG,IB
-      DATA NTRY,IDUM /0,0,0/
-      DATA XTRY, XREJ, NGOOD /0,0,0,0/
+      DATA IDUM /0/
+      DATA XTRY, XREJ /0,0/
+      DATA NTRY /0,0/
+      DATA NGOOD /0,0/
+      DATA ISHEL/0,0/
       SAVE YFRAC, IGOOD, JHEL
       DATA GOODHEL/THEL*.FALSE./
       DATA (NHEL(I,   1),I=1,4) /-1,-1,-1,-1/
@@ -853,9 +863,9 @@ C     ----------
       DO I=1,NCOMB
         TS(I)=0D0
       ENDDO
-      IF (ISUM_HEL .EQ. 0 .OR. NTRY(IMIRROR) .LT. 10) THEN
+      IF (ISHEL(IMIRROR) .EQ. 0 .OR. NTRY(IMIRROR) .LE. MAXTRIES) THEN
         DO I=1,NCOMB
-          IF (GOODHEL(IMIRROR,I) .OR. NTRY(IMIRROR) .LT. 2) THEN
+          IF (GOODHEL(I,IMIRROR) .OR. NTRY(IMIRROR).LE.MAXTRIES) THEN
             T=MATRIX1(P ,NHEL(1,I),JC(1))
             DO JJ=1,NINCOMING
               IF(POL(JJ).NE.1D0.AND.NHEL(JJ,I).EQ.INT(SIGN(1D0
@@ -867,21 +877,39 @@ C     ----------
             ENDDO
             ANS=ANS+T
             TS(I)=T
-            IF (T .NE. 0D0 .AND. .NOT. GOODHEL(IMIRROR,I)) THEN
-              GOODHEL(IMIRROR,I)=.TRUE.
-              NGOOD(IMIRROR) = NGOOD(IMIRROR) +1
-              IGOOD(IMIRROR,NGOOD(IMIRROR)) = I
-            ENDIF
           ENDIF
         ENDDO
         JHEL(IMIRROR) = 1
-        ISUM_HEL=MIN(ISUM_HEL,NGOOD(IMIRROR))
+        IF(NTRY(IMIRROR).LE.MAXTRIES)THEN
+          DO I=1,NCOMB
+            IF (.NOT.GOODHEL(I,IMIRROR) .AND. (TS(I).GT.ANS*LIMHEL
+     $       /NCOMB)) THEN
+              GOODHEL(I,IMIRROR)=.TRUE.
+              NGOOD(IMIRROR) = NGOOD(IMIRROR) +1
+              IGOOD(NGOOD(IMIRROR),IMIRROR) = I
+              PRINT *,'Added good helicity ',I,TS(I)*NCOMB/ANS
+            ENDIF
+          ENDDO
+          ISHEL(IMIRROR)=MIN(ISUM_HEL,NGOOD(IMIRROR))
+        ENDIF
+        IF(NTRY(IMIRROR).EQ.MAXTRIES.AND.ISHEL(IMIRROR).GT.0)THEN
+C         Check if we have stable helicities in this event
+          DO I=1,NGOOD(IMIRROR)
+            IF(TS(IGOOD(I,IMIRROR)) .LT. 0.1*ANS/NGOOD(IMIRROR))THEN
+              WRITE(*,*) 'Not stable helicity distribution, fraction '
+     $         , TS(IGOOD(I,IMIRROR))/ANS*NGOOD(IMIRROR)
+              WRITE(*,*) 'Explicit sum over all non-zero helicities.'
+              ISHEL(IMIRROR)=0
+              EXIT
+            ENDIF
+          ENDDO
+        ENDIF
       ELSE  !RANDOM HELICITY
-        DO J=1,ISUM_HEL
+        DO J=1,ISHEL(IMIRROR)
           JHEL(IMIRROR)=JHEL(IMIRROR)+1
           IF (JHEL(IMIRROR) .GT. NGOOD(IMIRROR)) JHEL(IMIRROR)=1
-          HWGT = REAL(NGOOD(IMIRROR))/REAL(ISUM_HEL)
-          I = IGOOD(IMIRROR,JHEL(IMIRROR))
+          HWGT = REAL(NGOOD(IMIRROR))/REAL(ISHEL(IMIRROR))
+          I = IGOOD(JHEL(IMIRROR),IMIRROR)
           T=MATRIX1(P ,NHEL(1,I),JC(1))
           DO JJ=1,NINCOMING
             IF(POL(JJ).NE.1D0.AND.NHEL(JJ,I).EQ.INT(SIGN(1D0,POL(JJ)))
@@ -894,11 +922,11 @@ C     ----------
           ANS=ANS+T*HWGT
           TS(I)=T*HWGT
         ENDDO
-        IF (ISUM_HEL .EQ. 1) THEN
+        IF (ISHEL(IMIRROR) .EQ. 1) THEN
           WRITE(HEL_BUFF,'(20i5)')(NHEL(II,I),II=1,NEXTERNAL)
         ENDIF
       ENDIF
-      IF (ISUM_HEL .NE. 1) THEN
+      IF (ISHEL(IMIRROR) .NE. 1) THEN
         R=XRAN1(IDUM)*ANS
         SUMHEL=0D0
         DO I=1,NCOMB
@@ -1037,8 +1065,10 @@ C     Amplitude(s) for diagram number 6
       ENDDO
 
       END
+
 """ % misc.get_pkg_info()
-        
+
+        #print "test_export_matrix_element_v4_madevent_group"
         #print open(self.give_pos('test')).read()
         self.assertFileContains('test', goal_matrix1)
 
@@ -1250,8 +1280,7 @@ C     ICONFIG has this config number
       COMMON/TO_MCONFIGS/MAPCONFIG, ICONFIG
 C     IPROC has the present process number
       INTEGER IPROC
-      COMMON/TO_IPROC/IPROC
-      COMMON/TO_MIRROR/ IMIRROR
+      COMMON/TO_MIRROR/IMIRROR, IPROC
 C     ----------
 C     BEGIN CODE
 C     ----------
@@ -5716,189 +5745,6 @@ CALL FFS4C1_0(W(1,2),W(1,1),W(1,6),GC_111,AMP(4))""".split('\n')
 
         for i in range(len(goal)):
             self.assertEqual(result[i], goal[i])
-
-    def test_export_matrix_element_v4_standalone(self):
-        """Test the result of exporting a matrix element to file"""
-
-        writer = writers.FortranWriter(self.give_pos('test'))
-
-        goal_matrix_f = \
-"""      SUBROUTINE SMATRIX(P,ANS)
-C     
-C     Generated by MadGraph 5 v. %(version)s, %(date)s
-C     By the MadGraph Development Team
-C     Please visit us at https://launchpad.net/madgraph5
-C     
-C     MadGraph StandAlone Version
-C     
-C     Returns amplitude squared summed/avg over colors
-C     and helicities
-C     for the point in phase space P(0:3,NEXTERNAL)
-C     
-C     Process: e+ e- > a a a
-C     
-      IMPLICIT NONE
-C     
-C     CONSTANTS
-C     
-      INTEGER    NEXTERNAL
-      PARAMETER (NEXTERNAL=5)
-      INTEGER                 NCOMB
-      PARAMETER (             NCOMB=32)
-C     
-C     ARGUMENTS 
-C     
-      REAL*8 P(0:3,NEXTERNAL),ANS
-C     
-C     LOCAL VARIABLES 
-C     
-      INTEGER NHEL(NEXTERNAL,NCOMB),NTRY
-      REAL*8 T
-      REAL*8 MATRIX
-      INTEGER IHEL,IDEN, I
-      INTEGER JC(NEXTERNAL)
-      LOGICAL GOODHEL(NCOMB)
-      DATA NTRY/0/
-      DATA GOODHEL/NCOMB*.FALSE./
-      DATA (NHEL(IHEL,   1),IHEL=1,5) /-1,-1,-1,-1,-1/
-      DATA (NHEL(IHEL,   2),IHEL=1,5) /-1,-1,-1,-1, 1/
-      DATA (NHEL(IHEL,   3),IHEL=1,5) /-1,-1,-1, 1,-1/
-      DATA (NHEL(IHEL,   4),IHEL=1,5) /-1,-1,-1, 1, 1/
-      DATA (NHEL(IHEL,   5),IHEL=1,5) /-1,-1, 1,-1,-1/
-      DATA (NHEL(IHEL,   6),IHEL=1,5) /-1,-1, 1,-1, 1/
-      DATA (NHEL(IHEL,   7),IHEL=1,5) /-1,-1, 1, 1,-1/
-      DATA (NHEL(IHEL,   8),IHEL=1,5) /-1,-1, 1, 1, 1/
-      DATA (NHEL(IHEL,   9),IHEL=1,5) /-1, 1,-1,-1,-1/
-      DATA (NHEL(IHEL,  10),IHEL=1,5) /-1, 1,-1,-1, 1/
-      DATA (NHEL(IHEL,  11),IHEL=1,5) /-1, 1,-1, 1,-1/
-      DATA (NHEL(IHEL,  12),IHEL=1,5) /-1, 1,-1, 1, 1/
-      DATA (NHEL(IHEL,  13),IHEL=1,5) /-1, 1, 1,-1,-1/
-      DATA (NHEL(IHEL,  14),IHEL=1,5) /-1, 1, 1,-1, 1/
-      DATA (NHEL(IHEL,  15),IHEL=1,5) /-1, 1, 1, 1,-1/
-      DATA (NHEL(IHEL,  16),IHEL=1,5) /-1, 1, 1, 1, 1/
-      DATA (NHEL(IHEL,  17),IHEL=1,5) / 1,-1,-1,-1,-1/
-      DATA (NHEL(IHEL,  18),IHEL=1,5) / 1,-1,-1,-1, 1/
-      DATA (NHEL(IHEL,  19),IHEL=1,5) / 1,-1,-1, 1,-1/
-      DATA (NHEL(IHEL,  20),IHEL=1,5) / 1,-1,-1, 1, 1/
-      DATA (NHEL(IHEL,  21),IHEL=1,5) / 1,-1, 1,-1,-1/
-      DATA (NHEL(IHEL,  22),IHEL=1,5) / 1,-1, 1,-1, 1/
-      DATA (NHEL(IHEL,  23),IHEL=1,5) / 1,-1, 1, 1,-1/
-      DATA (NHEL(IHEL,  24),IHEL=1,5) / 1,-1, 1, 1, 1/
-      DATA (NHEL(IHEL,  25),IHEL=1,5) / 1, 1,-1,-1,-1/
-      DATA (NHEL(IHEL,  26),IHEL=1,5) / 1, 1,-1,-1, 1/
-      DATA (NHEL(IHEL,  27),IHEL=1,5) / 1, 1,-1, 1,-1/
-      DATA (NHEL(IHEL,  28),IHEL=1,5) / 1, 1,-1, 1, 1/
-      DATA (NHEL(IHEL,  29),IHEL=1,5) / 1, 1, 1,-1,-1/
-      DATA (NHEL(IHEL,  30),IHEL=1,5) / 1, 1, 1,-1, 1/
-      DATA (NHEL(IHEL,  31),IHEL=1,5) / 1, 1, 1, 1,-1/
-      DATA (NHEL(IHEL,  32),IHEL=1,5) / 1, 1, 1, 1, 1/
-      DATA IDEN/24/
-C     ----------
-C     BEGIN CODE
-C     ----------
-      NTRY=NTRY+1
-      DO IHEL=1,NEXTERNAL
-        JC(IHEL) = +1
-      ENDDO
-      ANS = 0D0
-      DO IHEL=1,NCOMB
-        IF (GOODHEL(IHEL) .OR. NTRY .LT. 2) THEN
-          T=MATRIX(P ,NHEL(1,IHEL),JC(1))
-          ANS=ANS+T
-          IF (T .NE. 0D0 .AND. .NOT.    GOODHEL(IHEL)) THEN
-            GOODHEL(IHEL)=.TRUE.
-          ENDIF
-        ENDIF
-      ENDDO
-      ANS=ANS/DBLE(IDEN)
-      END
-      
-      
-      REAL*8 FUNCTION MATRIX(P,NHEL,IC)
-C     
-C     Generated by MadGraph 5 v. %(version)s, %(date)s
-C     By the MadGraph Development Team
-C     Please visit us at https://launchpad.net/madgraph5
-C     
-C     Returns amplitude squared summed/avg over colors
-C     for the point with external lines W(0:6,NEXTERNAL)
-C     
-C     Process: e+ e- > a a a
-C     
-      IMPLICIT NONE
-C     
-C     CONSTANTS
-C     
-      INTEGER    NGRAPHS
-      PARAMETER (NGRAPHS=6)
-      INTEGER    NEXTERNAL
-      PARAMETER (NEXTERNAL=5)
-      INTEGER    NWAVEFUNCS, NCOLOR
-      PARAMETER (NWAVEFUNCS=11, NCOLOR=1)
-      REAL*8     ZERO
-      PARAMETER (ZERO=0D0)
-      COMPLEX*16 IMAG1
-      PARAMETER (IMAG1=(0D0,1D0))
-C     
-C     ARGUMENTS 
-C     
-      REAL*8 P(0:3,NEXTERNAL)
-      INTEGER NHEL(NEXTERNAL), IC(NEXTERNAL)
-C     
-C     LOCAL VARIABLES 
-C     
-      INTEGER I,J
-      COMPLEX*16 ZTEMP
-      REAL*8 DENOM(NCOLOR), CF(NCOLOR,NCOLOR)
-      COMPLEX*16 AMP(NGRAPHS), JAMP(NCOLOR)
-      COMPLEX*16 W(18,NWAVEFUNCS)
-C     
-C     GLOBAL VARIABLES
-C     
-      INCLUDE 'coupl.inc'
-C     
-C     COLOR DATA
-C     
-      DATA DENOM(1)/1/
-      DATA (CF(I,1),I=1,1) /1/
-C     ----------
-C     BEGIN CODE
-C     ----------
-      CALL OXXXXX(P(0,1),ZERO,NHEL(1),-1*IC(1),W(1,1))
-      CALL IXXXXX(P(0,2),ZERO,NHEL(2),+1*IC(2),W(1,2))
-      CALL VXXXXX(P(0,3),ZERO,NHEL(3),+1*IC(3),W(1,3))
-      CALL VXXXXX(P(0,4),ZERO,NHEL(4),+1*IC(4),W(1,4))
-      CALL VXXXXX(P(0,5),ZERO,NHEL(5),+1*IC(5),W(1,5))
-      CALL FVOXXX(W(1,1),W(1,3),MGVX12,ZERO,ZERO,W(1,6))
-      CALL FVIXXX(W(1,2),W(1,4),MGVX12,ZERO,ZERO,W(1,7))
-C     Amplitude(s) for diagram number 1
-      CALL IOVXXX(W(1,7),W(1,6),W(1,5),MGVX12,AMP(1))
-      CALL FVIXXX(W(1,2),W(1,5),MGVX12,ZERO,ZERO,W(1,8))
-C     Amplitude(s) for diagram number 2
-      CALL IOVXXX(W(1,8),W(1,6),W(1,4),MGVX12,AMP(2))
-      CALL FVOXXX(W(1,1),W(1,4),MGVX12,ZERO,ZERO,W(1,9))
-      CALL FVIXXX(W(1,2),W(1,3),MGVX12,ZERO,ZERO,W(1,10))
-C     Amplitude(s) for diagram number 3
-      CALL IOVXXX(W(1,10),W(1,9),W(1,5),MGVX12,AMP(3))
-C     Amplitude(s) for diagram number 4
-      CALL IOVXXX(W(1,8),W(1,9),W(1,3),MGVX12,AMP(4))
-      CALL FVOXXX(W(1,1),W(1,5),MGVX12,ZERO,ZERO,W(1,11))
-C     Amplitude(s) for diagram number 5
-      CALL IOVXXX(W(1,10),W(1,11),W(1,4),MGVX12,AMP(5))
-C     Amplitude(s) for diagram number 6
-      CALL IOVXXX(W(1,7),W(1,11),W(1,3),MGVX12,AMP(6))
-      JAMP(1)=-AMP(1)-AMP(2)-AMP(3)-AMP(4)-AMP(5)-AMP(6)
-      
-      MATRIX = 0.D0
-      DO I = 1, NCOLOR
-        ZTEMP = (0.D0,0.D0)
-        DO J = 1, NCOLOR
-          ZTEMP = ZTEMP + CF(J,I)*JAMP(J)
-        ENDDO
-        MATRIX = MATRIX+ZTEMP*DCONJG(JAMP(I))/DENOM(I)
-      ENDDO
-      END
-""" % misc.get_pkg_info()
 
     def test_matrix_multistage_decay_chain_process(self):
         """Test matrix.f for multistage decay chain
