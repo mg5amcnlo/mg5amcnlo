@@ -31,7 +31,7 @@ parser.add_option("-o", "--output_dir", default='', dest = 'output_dir',
 
 (options, args) = parser.parse_args()
 if len(args) != 1:
-    sys.exit('ALOHA requires as arguments the path to UFO directory')
+    sys.exit('ALOHA requires exactly one argument (the path to UFO directory)')
     
 # Set logging level according to the logging level given by options
 logging.basicConfig(level=vars(logging)[options.logging])

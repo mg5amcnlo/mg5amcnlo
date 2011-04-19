@@ -1847,14 +1847,21 @@ class UFOModelConverterCPP(object):
             aloha_model.compute_subset(self.wanted_lorentz)
         else:
             aloha_model.compute_all(save=False)
+            
         for abstracthelas in dict(aloha_model).values():
-            aloha_writer = aloha_writers.ALOHAWriterForCPP(abstracthelas,
-                                                           self.dir_path)
-            header = aloha_writer.define_header()
-            template_h_files.append(self.write_function_declaration(\
-                                         aloha_writer, header))
-            template_cc_files.append(self.write_function_definition(\
-                                          aloha_writer, header))
+            h_rout, cc_rout = abstracthelas.write(output_dir=None, language='CPP', 
+                                                              compiler_cmd=False)
+
+            template_h_files.append(h_rout)
+            template_cc_files.append(cc_rout)
+            
+            #aloha_writer = aloha_writers.ALOHAWriterForCPP(abstracthelas,
+            #                                               self.dir_path)
+            #header = aloha_writer.define_header()
+            #template_h_files.append(self.write_function_declaration(\
+            #                             aloha_writer, header))
+            #template_cc_files.append(self.write_function_definition(\
+            #                              aloha_writer, header))
 
         replace_dict['function_declarations'] = '\n'.join(template_h_files)
         replace_dict['function_definitions'] = '\n'.join(template_cc_files)
@@ -1894,27 +1901,27 @@ class UFOModelConverterCPP(object):
 
         return template_files
 
-    def write_function_declaration(self, aloha_writer, header):
-        """Write the function declaration for the ALOHA routine"""
-
-        ret_lines = []
-        for line in aloha_writer.write_h(header).split('\n'):
-            if self.compiler_option_re.match(line) or self.namespace_re.match(line):
-                # Strip out compiler flags and namespaces
-                continue
-            ret_lines.append(line)
-        return "\n".join(ret_lines)
-
-    def write_function_definition(self, aloha_writer, header):
-        """Write the function definition for the ALOHA routine"""
-
-        ret_lines = []
-        for line in aloha_writer.write_cc(header).split('\n'):
-            if self.compiler_option_re.match(line) or self.namespace_re.match(line):
-                # Strip out compiler flags and namespaces
-                continue
-            ret_lines.append(line)
-        return "\n".join(ret_lines)
+#    def write_function_declaration(self, aloha_writer, header):
+#        """Write the function declaration for the ALOHA routine"""
+#
+#        ret_lines = []
+#        for line in aloha_writer.write_h(header).split('\n'):
+#            if self.compiler_option_re.match(line) or self.namespace_re.match(line):
+#                # Strip out compiler flags and namespaces
+#                continue
+#            ret_lines.append(line)
+#        return "\n".join(ret_lines)
+#
+#    def write_function_definition(self, aloha_writer, header):
+#        """Write the function definition for the ALOHA routine"""
+#
+#        ret_lines = []
+#        for line in aloha_writer.write_cc(header).split('\n'):
+#            if self.compiler_option_re.match(line) or self.namespace_re.match(line):
+#                # Strip out compiler flags and namespaces
+#                continue
+#            ret_lines.append(line)
+#        return "\n".join(ret_lines)
 
     def clean_line(self, line):
         """Strip a line of compiler options and namespace options."""

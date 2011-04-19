@@ -70,13 +70,17 @@ class AbstractRoutine(object):
         if lor_list not in self.combined:
             self.combined.append(lor_list)
         
-    def write(self, output_dir, language='Fortran', mode='self'):
+    def write(self, output_dir, language='Fortran', mode='self', **opt):
         """ write the content of the object """
         
         writer = getattr(aloha_writers, 'ALOHAWriterFor%s' % language)(self, output_dir)
-        text = writer.write(mode=mode)
+        text = writer.write(mode=mode, **opt)
         for grouped in self.combined:
-            text += writer.write_combined(grouped, mode=mode)
+            if isinstance(text, tuple):
+                text = tuple([old.__add__(new)  for old, new in zip(text, 
+                             writer.write_combined(grouped, mode=mode, **opt))])
+            else:
+                text += writer.write_combined(grouped, mode=mode, **opt)
         return text
 
 class AbstractRoutineBuilder(object):
