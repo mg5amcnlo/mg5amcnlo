@@ -2252,42 +2252,40 @@ class Test_AbstractModel(unittest.TestCase):
         self.my_testmodel.set('particles', particles)
         self.my_testmodel.set('interactions', interactions)
 
-    def test_setup_particles(self):
-        """ Test the add_particles from the generate_abstract_model."""
+    def test_get_particles_type(self):
+        """Test the set_new_particle. """
         
-        # The gen_abtmodel should automatically generate abstract particles
-        self.my_testmodel_new = decay_objects.DecayModel(self.my_testmodel_base,
-                                                         force=True,
-                                                         gen_abmodel=True)
-        param_path = os.path.join(_file_path,'../input_files/param_card_full_sm.dat')
-        self.my_testmodel.read_param_card(param_path)
+        ab_model = self.my_testmodel['ab_model']
+        # get_particles_type can be run only after generate the abstract_model
+        self.my_testmodel.generate_abstract_model()
 
-        ab_model = self.my_testmodel_new['ab_model']
-        goal_abpart_keys = set([(1,1), (2,1), (2,3), (3,1), (3,8)])
-        goal_abpart_prop = {(1,1):('S1_00', 'S1_00~', 'MS1_00', 9901100),
-                            (2,1):('F1_00', 'F1_00~', 'MF1_00', 9902100),
-                            (2,3):('F3_00', 'F3_00~', 'MF3_00', 9902300),
-                            (3,1):('V1_00', 'V1_00~', 'MV1_00', 9903100),
-                            (3,8):('V8_00', 'V8_00~', 'MV8_00', 9903800)}
+        self.assertEqual(ab_model.get_particle_type(self.my_testmodel.get_particle(6)), (2, 3))
+        self.assertEqual(ab_model.get_particle_type_code(self.my_testmodel.get_particle(6)), 9902300)
 
-        # Check keys in abstract_particles_dict
-        self.assertEqual(set(ab_model.get('abstract_particles_dict').keys()),
-                         goal_abpart_keys)
-        for plist in ab_model.get('abstract_particles_dict').values():
-            self.assertEqual(len(plist), 1)
-            self.assertEqual(tuple([plist[0].get('name'),
-                                    plist[0].get('antiname'),
-                                    plist[0].get('mass'),
-                                    plist[0].get('pdg_code')]),
-                             goal_abpart_prop[plist.abstract_type])
+        input_list = [self.my_testmodel.get_particle(6),
+                      self.my_testmodel.get_particle(5),
+                      self.my_testmodel.get_particle(24),
+                      self.my_testmodel.get_particle(-6),
+                      self.my_testmodel.get_particle(11),
+                      self.my_testmodel.get_particle(22)]
 
-        # Check for exceptions
-        self.assertRaises(decay_objects.AbstractModel.PhysicsObjectError,
-                          ab_model.setup_particles,
-                          'NoneParticleList')
-        self.assertRaises(decay_objects.AbstractModel.PhysicsObjectError,
-                          ab_model.setup_particle,
-                          'NoneParticle')
+        goal_list_noignore = \
+            [9902300, 9902301, 9903100, -9902300, 9902100, 9903101]
+        goal_list_default = \
+            [9902300, 9902301, 9903100, -9902302, 9902100, 9903101]
+
+        goal_serial_dict_noignore = {(2, 3): 2, (3, 1): 2, (2, 1): 1}
+        goal_serial_dict_default = {(2, 3): 3, (3, 1): 2, (2, 1): 1}
+
+        self.assertEqual(ab_model.get_particlelist_type(input_list, False)[0],
+                         goal_list_noignore)
+        self.assertEqual(ab_model.get_particlelist_type(input_list)[0],
+                         goal_list_default)
+        self.assertEqual(ab_model.get_particlelist_type(input_list, False)[1],
+                         goal_serial_dict_noignore)
+        self.assertEqual(ab_model.get_particlelist_type(input_list)[1],
+                         goal_serial_dict_default)
+
 
     def test_add_ab_particle(self):
         """Test the set_new_particle. """
@@ -2307,14 +2305,14 @@ class Test_AbstractModel(unittest.TestCase):
         # Test for setting existing particle
         ab_model.add_ab_particle(self.my_testmodel.get_particle(6))
         # Check if new particle is in paticles and abstract_particles_dict
-        self.assertEqual(len(ab_model['abstract_particles_dict'][(2,3)]), 2)
+        self.assertEqual(len(ab_model['abstract_particles_dict'][(2,3)]), 3)
         newpart = ab_model['abstract_particles_dict'][(2,3)][-1]
         self.assertTrue(newpart in ab_model.get('particles'))
         # Check properties
-        self.assertEqual(newpart.get('name'), 'F3_01')
-        self.assertEqual(newpart.get('antiname'), 'F3_01~')
-        self.assertEqual(newpart.get('mass'), 'MF3_01')
-        self.assertEqual(newpart.get('pdg_code'), 9902301)
+        self.assertEqual(newpart.get('name'), 'F3_02')
+        self.assertEqual(newpart.get('antiname'), 'F3_02~')
+        self.assertEqual(newpart.get('mass'), 'MF3_02')
+        self.assertEqual(newpart.get('pdg_code'), 9902302)
 
         # Test for setting new particle
         newpart = base_objects.Particle({'spin':5, 'color':6})
@@ -2328,6 +2326,151 @@ class Test_AbstractModel(unittest.TestCase):
         self.assertEqual(newpart.get('antiname'), 'T6_00~')
         self.assertEqual(newpart.get('mass'), 'MT6_00')
         self.assertEqual(newpart.get('pdg_code'), 9905600)
+
+    def test_setup_particles(self):
+        """ Test the add_particles from the generate_abstract_model."""
+        
+        # The gen_abtmodel should automatically generate abstract particles
+        self.my_testmodel_new = decay_objects.DecayModel(self.my_testmodel_base,
+                                                         force=True)
+        param_path = os.path.join(_file_path,'../input_files/param_card_full_sm.dat')
+        self.my_testmodel_new.read_param_card(param_path)
+        
+
+        ab_model = self.my_testmodel_new['ab_model']
+        ab_model.setup_particles(self.my_testmodel_new['particles'])
+        goal_abpart_keys = set([(1,1), (2,1), (2,3), (3,1), (3,8)])
+        goal_abpart_prop = {(1,1):('S1_00', 'S1_00~', 'MS1_00', 9901100),
+                            (2,1):('F1_00', 'F1_00~', 'MF1_00', 9902100),
+                            (2,3):('F3_00', 'F3_00~', 'MF3_00', 9902300),
+                            (3,1):('V1_00', 'V1_00~', 'MV1_00', 9903100),
+                            (3,8):('V8_00', 'V8_00~', 'MV8_00', 9903800)}
+
+        # Check keys in abstract_particles_dict
+        self.assertEqual(set(ab_model.get('abstract_particles_dict').keys()),
+                         goal_abpart_keys)
+        for plist in ab_model.get('abstract_particles_dict').values():
+            self.assertEqual(len(plist), 1)
+            self.assertEqual(tuple([plist[0].get('name'),
+                                    plist[0].get('antiname'),
+                                    plist[0].get('mass'),
+                                    plist[0].get('pdg_code')]),
+                             goal_abpart_prop[ab_model.get_particle_type(plist[0])])
+
+        # Check for exceptions
+        self.assertRaises(decay_objects.AbstractModel.PhysicsObjectError,
+                          ab_model.setup_particles,
+                          'NoneParticleList')
+        self.assertRaises(decay_objects.AbstractModel.PhysicsObjectError,
+                          ab_model.setup_particle,
+                          'NoneParticle')
+
+    def test_set_interactions(self):
+        """ Test the sets_interactions and get_interaction_type. """
+
+        normal_sm_base = import_ufo.import_model('sm')
+        normal_sm = decay_objects.DecayModel(normal_sm_base,
+                                             force=True)
+        param_path = os.path.join(_file_path,'../input_files/param_card_sm.dat')
+        normal_sm.read_param_card(param_path)
+        normal_sm.generate_abstract_model()
+        ab_model = normal_sm['ab_model']
+
+        # Test if the interaction_type_dict/ abstract_interactions_dict
+        # has been constructed properly.
+        for inter in normal_sm.get('interactions'):
+            try:
+                inter_type = ab_model['interaction_type_dict'][inter['id']]
+            except KeyError:
+                continue
+            # Test the particlelist type
+            # Note: the particlelist type in inter_type has transformed into
+            # tuple
+            parttype, sndict =ab_model.get_particlelist_type(inter['particles'])
+            self.assertEqual(set(inter_type[1]), set(parttype))
+
+            # Test the lorentz type is the superset of real lorentz
+            self.assertTrue(set(inter_type[0]).issuperset(inter['lorentz']))
+
+            # Test if the abstract_interactions_dict has been established
+            self.assertTrue(inter_type in \
+                                ab_model['abstract_interactions_dict'].keys())
+
+        # Test if the lorentz types have no intersection
+        # if the particles type are the same            
+        keylist = sorted(ab_model['abstract_interactions_dict'].keys())
+        print "Interaction type:"
+        for k in keylist:
+            print k
+        def check_keys(keylist):
+            try:
+                key = keylist.pop()
+            except:
+                return True
+            for other in keylist:
+                if other[1] == key[1]:
+                    self.assertTrue(set(other[0]).isdisjoint(key[0]))
+
+            return check_keys(keylist)
+
+        self.assertTrue(check_keys(keylist))
+
+
+        # Test for exceptions
+        # Set an interaction that will not be included in AbstractModel
+        for inter in self.my_testmodel_base['interactions']:
+            if set([22, 6, -6]) == \
+                    set([part.get_pdg_code() for part in inter['particles']]):
+                I_rad = inter
+
+            if [25, 25, 25] == \
+                    [part.get_pdg_code() for part in inter['particles']]:
+                I_hhh = inter
+
+        self.assertRaises(decay_objects.AbstractModel.PhysicsObjectError,
+                          ab_model.get_interaction_type,
+                          I_rad)
+        self.assertRaises(decay_objects.AbstractModel.PhysicsObjectError,
+                          ab_model.get_interaction_type,
+                          I_hhh)
+
+
+    def test_add_ab_interaction(self):
+        """Test the add_ab_interaction. """
+        
+        ab_model = self.my_testmodel['ab_model']
+        self.my_testmodel.generate_abstract_model()
+
+        # Test for exceptions
+        self.assertRaises(decay_objects.AbstractModel.PhysicsObjectError,
+                          ab_model.add_ab_interaction,
+                          'NoneParticle')
+
+        # Test for setting existing particle
+        for inter in self.my_testmodel['interactions']:
+            if set([24, -6, 5]) == \
+                    set([part.get_pdg_code() for part in inter['particles']]):
+                I_wtb = inter
+
+        print I_wtb
+        ab_model.add_ab_interaction(I_wtb)
+        inter_type = ab_model.get_interaction_type(I_wtb)
+        # The real inter_type is strictly sorted tuple
+        inter_type = (tuple(sorted(inter_type[0])), 
+                      tuple(sorted(inter_type[1])))
+
+        # Check if new interaction is in paticles and abstract_particles_dict
+        self.assertEqual(len(ab_model['abstract_interactions_dict'][inter_type]),  2)
+        new_inter = ab_model['abstract_interactions_dict'][inter_type][-1]
+        self.assertTrue(new_inter in ab_model.get('interactions'))
+
+        # Check properties
+        self.assertEqual(new_inter.get('id') % 10, 1)
+        self.assertEqual(new_inter.get('color'), I_wtb.get('color'))
+        self.assertEqual(new_inter.get('lorentz'), ['FFV2', 'FFV3', 'FFV5'])
+        self.assertEqual(new_inter.get('couplings'), 'G99101')
+
+
 
 if __name__ == '__main__':
     unittest.unittest.main()
