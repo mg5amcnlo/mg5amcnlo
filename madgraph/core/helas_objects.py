@@ -80,8 +80,8 @@ class HelasWavefunction(base_objects.PhysicsObject):
         self['inter_color'] = None
         self['lorentz'] = []
         self['coupling'] = ['none']
-        # The Lorentz and color index used in this wavefunction
-        self['coupl_key'] = [(0, 0)]
+        # The color index used in this wavefunction
+        self['color_key'] = 0
         # Properties relating to the leg/vertex
         # state = initial/final (for external bosons),
         #         intermediate (for intermediate bosons),
@@ -206,28 +206,32 @@ class HelasWavefunction(base_objects.PhysicsObject):
                             "%s is not a valid Color String" % str(value)
 
         if name == 'lorentz':
-            #Should be a list
+            #Should be a list of string
             if not isinstance(value, list):
                     raise self.PhysicsObjectError, \
                         "%s is not a valid tuple" % str(value)
+            for name in value:
+                if not isinstance(name, str):
+                    raise self.PhysicsObjectError, \
+                        "%s doesn't contain only string" % str(value)
 
         if name == 'coupling':
-            #Should be a string
+            #Should be a list of string
             if not isinstance(value, list):
                 raise self.PhysicsObjectError, \
-                        "%s is not a valid coupling string" % \
-                                                                str(value)
-
-        if name == 'coupl_key':
-            if value and not isinstance(value, list):
+                        "%s is not a valid coupling string" % str(value)
+            for name in value:
+                if not isinstance(name, str):
+                    raise self.PhysicsObjectError, \
+                        "%s doesn't contain only string" % str(value)
+            if len(value) == 0:
                 raise self.PhysicsObjectError, \
-                      "%s is not a valid tuple" % str(value)
-            #if len(value) != 2:
-            #    raise self.PhysicsObjectError, \
-            #          "%s is not a valid tuple with 2 elements" % str(value)
-            #if not isinstance(value[0], int) or not isinstance(value[1], int):
-            #    raise self.PhysicsObjectError, \
-            #          "%s is not a valid tuple of integer" % str(value)
+                        "%s should have at least one value" % str(value)
+
+        if name == 'color_key':
+            if value and not isinstance(value, int):
+                raise self.PhysicsObjectError, \
+                      "%s is not a valid integer" % str(value)
 
         if name == 'state':
             if not isinstance(value, str):
@@ -343,7 +347,7 @@ class HelasWavefunction(base_objects.PhysicsObject):
 
         return ['particle', 'antiparticle', 'is_part',
                 'interaction_id', 'pdg_codes', 'orders', 'inter_color', 
-                'lorentz', 'coupling', 'coupl_key', 'state', 'number_external',
+                'lorentz', 'coupling', 'color_key', 'state', 'number_external',
                 'number', 'fermionflow', 'mothers']
 
     # Helper functions
@@ -370,7 +374,7 @@ class HelasWavefunction(base_objects.PhysicsObject):
         # Need the coupling key, to distinguish between
         # wavefunctions from the same interaction but different
         # color structures
-        array_rep.extend(list(self['coupl_key'][0]))
+        array_rep.append(self['color_key'])
         # Finally, the mother numbers
         array_rep.extend([mother['number'] for \
                           mother in self['mothers']])
@@ -876,7 +880,7 @@ class HelasWavefunction(base_objects.PhysicsObject):
             # This is where recursion happens
             color_indices.extend(mother.get_color_indices())
         # Add this wf's color index
-        color_indices.append(self.get('coupl_key')[0][0])
+        color_indices.append(self.get('color_key'))
 
         return color_indices
 
@@ -1058,7 +1062,7 @@ class HelasWavefunction(base_objects.PhysicsObject):
         # Check relevant directly defined properties
         if self['number_external'] != other['number_external'] or \
            self['fermionflow'] != other['fermionflow'] or \
-           self['coupl_key'] != other['coupl_key'] or \
+           self['color_key'] != other['color_key'] or \
            self['lorentz'] != other['lorentz'] or \
            self['coupling'] != other['coupling'] or \
            self['state'] != other['state'] or \
@@ -1296,7 +1300,7 @@ class HelasAmplitude(base_objects.PhysicsObject):
         self['lorentz'] = []
         self['coupling'] = ['none']
         # The Lorentz and color index used in this amplitude
-        self['coupl_key'] = (0, 0)
+        self['color_key'] = 0
         # Properties relating to the vertex
         self['number'] = 0
         self['fermionfactor'] = 0
@@ -1359,30 +1363,33 @@ class HelasAmplitude(base_objects.PhysicsObject):
                             "%s is not a valid Color String" % str(value)
 
         if name == 'lorentz':
-            #Should be a list
+            #Should be a list of string
             if not isinstance(value, list):
                     raise self.PhysicsObjectError, \
                         "%s is not a valid list of string" % str(value)
-
+            for name in value:
+                if not isinstance(name, str):
+                    raise self.PhysicsObjectError, \
+                        "%s doesn't contain only string" % str(value)
+                        
         if name == 'coupling':
-            #Should be a string
+            #Should be a list of string
             if not isinstance(value, list):
                 raise self.PhysicsObjectError, \
-                        "%s is not a valid coupling (list of string)" % \
-                                                                str(value)
-            if len(value) == 0:
-                raise self.PhysicsObjectError, 'coupling should have at least one value'
-
-        if name == 'coupl_key':
-            if value and not isinstance(value, list):
+                      "%s is not a valid coupling (list of string)" % str(value)
+            
+            for name in value:
+                if not isinstance(name, str):
+                    raise self.PhysicsObjectError, \
+                        "%s doesn't contain only string" % str(value)
+            if not len(value):
                 raise self.PhysicsObjectError, \
-                      "%s is not a valid tuple" % str(value)
-            #if len(value) != 2:
-            #    raise self.PhysicsObjectError, \
-            #          "%s is not a valid tuple with 2 elements" % str(value)
-            #if not isinstance(value[0], int) or not isinstance(value[1], int):
-            ##    raise self.PhysicsObjectError, \
-            #          "%s is not a valid tuple of integer" % str(value)
+                                      'coupling should have at least one value'
+
+        if name == 'color_key':
+            if value and not isinstance(value, int):
+                raise self.PhysicsObjectError, \
+                      "%s is not a valid integer" % str(value)
 
         if name == 'number':
             if not isinstance(value, int):
@@ -1493,7 +1500,7 @@ class HelasAmplitude(base_objects.PhysicsObject):
         """Return particle property names as a nicely sorted list."""
 
         return ['interaction_id', 'pdg_codes', 'orders', 'inter_color', 
-                'lorentz', 'coupling', 'coupl_key', 'number', 'color_indices',
+                'lorentz', 'coupling', 'color_key', 'number', 'color_indices',
                 'fermionfactor', 'mothers']
 
 
@@ -1796,7 +1803,7 @@ class HelasAmplitude(base_objects.PhysicsObject):
 
         # Add this amp's color index
         if self.get('interaction_id'):
-            color_indices.append(self.get('coupl_key')[0][0])
+            color_indices.append(self.get('color_key'))
 
         return color_indices
 
@@ -2252,7 +2259,6 @@ class HelasMatrixElement(base_objects.PhysicsObject):
                             wf = done_color[color]
                             wf.get('coupling').append(inter.get('couplings')[coupl_key])
                             wf.get('lorentz').append(inter.get('lorentz')[coupl_key[1]])
-                            wf.get('coupl_key').append(coupl_key)
                             continue
                         wf = HelasWavefunction(last_leg, vertex.get('id'), model)
                         wf.set('coupling', [inter.get('couplings')[coupl_key]])
@@ -2260,7 +2266,7 @@ class HelasMatrixElement(base_objects.PhysicsObject):
                             wf.set('inter_color', inter.get('color')[coupl_key[0]])
                         done_color[color] = wf
                         wf.set('lorentz', [inter.get('lorentz')[coupl_key[1]]])
-                        wf.set('coupl_key', [coupl_key])
+                        wf.set('color_key', color)
                         wf.set('mothers', mothers)
                         # Need to set incoming/outgoing and
                         # particle/antiparticle according to the fermion flow
@@ -2353,16 +2359,14 @@ class HelasMatrixElement(base_objects.PhysicsObject):
                         amp = done_color[color]
                         amp.get('coupling').append(inter.get('couplings')[coupl_key])
                         amp.get('lorentz').append(inter.get('lorentz')[coupl_key[1]])
-                        amp.get('coupl_key').append(coupl_key) 
                         continue
                     amp = HelasAmplitude(lastvx, model)
                     if inter:
                         amp.set('coupling', [inter.get('couplings')[coupl_key]])
                         amp.set('lorentz', [inter.get('lorentz')[coupl_key[1]]])
                         if inter.get('color'):
-                            amp.set('inter_color', inter.get('color')[\
-                                coupl_key[0]])
-                        amp.set('coupl_key', [coupl_key])
+                            amp.set('inter_color', inter.get('color')[color])
+                        amp.set('color_key', color)
                         done_color[color] = amp
                     amp.set('mothers', mothers)
                     amplitude_number = amplitude_number + 1
@@ -2370,7 +2374,7 @@ class HelasMatrixElement(base_objects.PhysicsObject):
                     # Add the list with color indices to the amplitude
                     new_color_list = copy.copy(color_list)
                     if inter:
-                        new_color_list.append(coupl_key[0])
+                        new_color_list.append(color)
                         
                     amp.set('color_indices', new_color_list)
 
