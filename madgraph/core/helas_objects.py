@@ -2247,10 +2247,7 @@ class HelasMatrixElement(base_objects.PhysicsObject):
                     # Need one amplitude for each color structure,
                     done_color = {} # store link to color
                     for coupl_key in sorted(inter.get('couplings').keys()):
-                        try:
-                            color = str(inter.get('color')[coupl_key[0]])
-                        except:
-                            color = ''
+                        color = coupl_key[0]
                         if color in done_color:
                             wf = done_color[color]
                             wf.get('coupling').append(inter.get('couplings')[coupl_key])
@@ -2351,10 +2348,7 @@ class HelasMatrixElement(base_objects.PhysicsObject):
                                               number_to_wavefunctions)
                 done_color = {}
                 for i, coupl_key in enumerate(keys):
-                    try:
-                        color = str(inter.get('color')[coupl_key[0]])
-                    except:
-                        color = '' 
+                    color = coupl_key[0]
                     if inter and color in done_color.keys():
                         amp = done_color[color]
                         amp.get('coupling').append(inter.get('couplings')[coupl_key])

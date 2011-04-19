@@ -16,6 +16,7 @@
 
 import madgraph.core.base_objects as base_objects
 import madgraph.core.helas_objects as helas_objects
+import aloha.aloha_writers as aloha_writers
 from madgraph import MadGraph5Error
 
 
@@ -925,12 +926,14 @@ class FortranUFOHelasCallWriter(UFOHelasCallWriter):
                 outgoing = 0
 
             # Check if we need to append a charge conjugation flag
+            l = [str(l) for l in argument.get('lorentz')]
             c_flag = '' 
             if argument.needs_hermitian_conjugate():
                 c_flag = "".join(['C%d' % i for i in \
                                   argument.get_conjugate_index()])
-            lorentz_name = '__'.join([str(l) for l in argument.get('lorentz')])
-            call = 'CALL %s%s_%s' % (lorentz_name, c_flag, outgoing) 
+            routine_name = aloha_writers.combine_name(
+                                        '%s%s' % (l[0], c_flag), l[1:], outgoing)
+            call = 'CALL %s' % (routine_name)
 
             # Add the wave function
             call = call + '('
@@ -1060,12 +1063,14 @@ class CPPUFOHelasCallWriter(UFOHelasCallWriter):
                 outgoing = 0
 
             # Check if we need to append a charge conjugation flag
+            l = [str(l) for l in argument.get('lorentz')]
             c_flag = '' 
             if argument.needs_hermitian_conjugate():
                 c_flag = "".join(['C%d' % i for i in \
                                   argument.get_conjugate_index()])
-
-            call = '%s%s_%s' % (argument.get('lorentz'), c_flag, outgoing)
+            routine_name = aloha_writers.combine_name(
+                                        '%s%s' % (l[0], c_flag), l[1:], outgoing)
+            call = '%s' % (routine_name)
 
             # Add the wave function
             call = call + '('
@@ -1080,8 +1085,8 @@ class CPPUFOHelasCallWriter(UFOHelasCallWriter):
                 #CALL L_4_011(W(1,%d),W(1,%d),%s,%s, %s, W(1,%d))
                 call_function = lambda wf: call % \
                     (tuple([mother.get('number')-1 for mother in wf.get('mothers')]) + \
-                    (CPPUFOHelasCallWriter.format_coupling(\
-                                     wf.get_with_flow('coupling')),
+                    (','.join(CPPUFOHelasCallWriter.format_coupling(\
+                                     wf.get_with_flow('coupling'))),
                                      wf.get('mass'),
                                      wf.get('width'),
                                      wf.get('number')-1))
@@ -1091,8 +1096,8 @@ class CPPUFOHelasCallWriter(UFOHelasCallWriter):
                 call_function = lambda amp: call % \
                                 (tuple([mother.get('number')-1
                                           for mother in amp.get('mothers')]) + \
-                                (CPPUFOHelasCallWriter.format_coupling(\
-                                 amp.get('coupling')),
+                                (','.join(CPPUFOHelasCallWriter.format_coupling(\
+                                 amp.get('coupling'))),
                                  amp.get('number')-1))
                 
         # Add the constructed function to wavefunction or amplitude dictionary
@@ -1102,13 +1107,18 @@ class CPPUFOHelasCallWriter(UFOHelasCallWriter):
             self.add_amplitude(argument.get_call_key(), call_function)
 
     @staticmethod
-    def format_coupling(coupling):
+    def format_coupling(couplings):
         """Format the coupling so any minus signs are put in front"""
 
-        if coupling.startswith('-'):
-            return "-pars->" + coupling[1:]
-        else:
-            return "pars->" + coupling
+        output = []
+        for coupling in couplings:
+            if coupling.startswith('-'):
+                output.append("-pars->" + coupling[1:])
+            else:
+                output.append("pars->" + coupling)
+        
+        return output
+        
 
 #===============================================================================
 # PythonUFOHelasCallWriter
@@ -1228,16 +1238,20 @@ class PythonUFOHelasCallWriter(UFOHelasCallWriter):
                 outgoing = 0
 
             # Check if we need to append a charge conjugation flag
+            l = [str(l) for l in argument.get('lorentz')]
             c_flag = '' 
             if argument.needs_hermitian_conjugate():
                 c_flag = "".join(['C%d' % i for i in \
                                   argument.get_conjugate_index()])
+            routine_name = aloha_writers.combine_name(
+                                        '%s%s' % (l[0], c_flag), l[1:], outgoing)
+
 
             if isinstance(argument, helas_objects.HelasWavefunction):
                 call = 'w[%d] = '
             else:
                 call = 'amp[%d] = '
-            call += '%s%s_%s' % ('__'.join(argument.get('lorentz')), c_flag, outgoing) 
+            call += '%s' % routine_name
 
             # Add the wave function
             call = call + '('

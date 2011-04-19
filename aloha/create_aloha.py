@@ -356,6 +356,7 @@ class AbstractALOHAModel(dict):
         # init the dictionary
         dict.__init__(self)
         self.symmetries = {}
+        self.multiple_lor = {}
         
         # check the mass of spin2 (if any)
         self.massless_spin2 = self.has_massless_spin2()
@@ -404,6 +405,7 @@ class AbstractALOHAModel(dict):
         
     def load(self, filepos=None):
         """ reload the pickle file """
+        return False
         if not filepos:
             filepos = os.path.join(self.model_pos,'aloha.pkl') 
         if os.path.exists(filepos):
@@ -436,6 +438,7 @@ class AbstractALOHAModel(dict):
         #to compute identical contribution
         self.look_for_symmetries()
         conjugate_list = self.look_for_conjugate()
+        self.look_for_multiple_lorentz_interactions()
         if not wanted_lorentz:
             wanted_lorentz = [l.name for l in self.model.all_lorentz]
         for lorentz in self.model.all_lorentz:
@@ -455,6 +458,13 @@ class AbstractALOHAModel(dict):
             if 5 in lorentz.spins and self.massless_spin2 is not None:
                 builder.spin2_massless = self.massless_spin2 
             self.compute_aloha(builder)
+            
+            if lorentz.name in self.multiple_lor:
+                for m in self.multiple_lor[lorentz.name]:
+                    for outgoing in range(len(lorentz.spins)+1):
+                        self[(lorentz.name, outgoing)].add_combine(m)
+                        
+                    
             if lorentz.name in conjugate_list:
                 conjg_builder_list= builder.define_all_conjugate_builder(\
                                                    conjugate_list[lorentz.name])
@@ -462,6 +472,11 @@ class AbstractALOHAModel(dict):
                     # No duplication of conjugation:
                     assert conjg_builder_list.count(conjg_builder) == 1
                     self.compute_aloha(conjg_builder, lorentz.name)
+                    if lorentz.name in self.multiple_lor:
+                        for m in self.multiple_lor[lorentz.name]:
+                            for outgoing in range(len(lorentz.spins)+1):
+                                self[(conjg_builder.name, outgoing)].add_combine(m)
+                                                
                     
                     
         if save:
@@ -620,7 +635,46 @@ class AbstractALOHAModel(dict):
                             else:
                                 self.symmetries[lorentz.name] = {i+1:j+1}
                         break
+    
+    def look_for_multiple_lorentz_interactions(self):
+        """Search the interaction associate with more than one lorentz structure.
+        If those lorentz structure have the same order and the same color then
+        associate a multiple lorentz routines to ALOHA """
+        
+        orders = {}
+        for coup in self.model.all_couplings:
+            orders[coup.name] = str(coup.order)
+        
+        for vertex in self.model.all_vertices:
+            if len(vertex.lorentz) == 1:
+                continue
+            #remove ghost
+            if -1 in vertex.lorentz[0].spins:
+                continue
+            
+            # assign each order/color to a set of lorentz routine
+            combine = {}
+            for (id_col, id_lor), coup in vertex.couplings.items():
+                order = orders[coup.name]
+                key = (id_col, order)
+                if key in combine:
+                    combine[key].append(id_lor)
+                else:
+                    combine[key] = [id_lor]
                     
+            # Check if more than one routine are associated
+            for list_lor in combine.values():
+                if len(list_lor) == 1:
+                    continue
+                list_lor.sort() 
+                main = vertex.lorentz[list_lor[0]].name 
+                if main not in self.multiple_lor:
+                    self.multiple_lor[main] = []
+                
+                info = tuple([vertex.lorentz[id].name for id in list_lor[1:]])
+                if info not in self.multiple_lor[main]:
+                    self.multiple_lor[main].append(info)
+                
     def has_massless_spin2(self):
         """Search if the spin2 particles are massless or not"""
         

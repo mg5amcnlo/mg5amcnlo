@@ -575,12 +575,32 @@ def get_routine_name(name,outgoing):
 def combine_name(name, other_names, outgoing):
     """ build the name for combined aloha function """
 
+    # Two possible scheme FFV1C1_2_X or FFV1__FFV2C1_X
+    # If they are all in FFVX scheme then use the first
+    p=re.compile('^(?P<type>[FSVT]+)(?P<id>\d+)')
+    routine = ''
+    if p.search(name):
+        base, id = p.search(name).groups()
+        routine = name
+        for s in other_names:
+            try:
+                base2,id2 = p.search(s).groups()
+            except:
+                routine = ''
+                break # one matching not good -> other scheme
+            if base != base2:
+                routine = ''
+                break  # one matching not good -> other scheme
+            else:
+                routine += '_%s' % id2
+    if routine:
+        return routine +'_%s' % outgoing
+
     addon = ''
     if 'C' in name:
         name, addon = name.split('C',1)
         addon = 'C' + addon
-        
-    return '__'.join((name,) + other_names) + addon + '_%s' % outgoing
+    return '__'.join((name,) + tuple(other_names)) + addon + '_%s' % outgoing
  
 class ALOHAWriterForCPP(WriteALOHA): 
     """Routines for writing out helicity amplitudes as C++ .h and .cc files."""
