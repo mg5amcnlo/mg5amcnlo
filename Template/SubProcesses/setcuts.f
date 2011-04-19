@@ -28,6 +28,7 @@ c
       logical  do_cuts(nexternal)
       integer ncheck
       logical done,fopened
+      logical from_decay(-(nexternal+3):nexternal)
 C     
 C     GLOBAL
 C
@@ -126,12 +127,17 @@ c
            endif
         endif
 
+c     Check which particles come from decays
+      if(.not.cut_decays)
+     $       call check_decay(from_decay)
+
 c
 c     check if I have to apply cuts on the particles
 c
       do i=nincoming+1,nexternal
          do_cuts(i)=.true.
          if(nincoming.eq.1) do_cuts(i)=.false.
+         if(.not.cut_decays.and.from_decay(i)) do_cuts(i)=.false.
          is_a_j(i)=.false.
          is_a_l(i)=.false.
          is_a_b(i)=.false.
@@ -522,3 +528,50 @@ c**************************************************
 
       end
 
+
+c************************************************************************
+c     Subroutine to check which external particles are from decays
+c************************************************************************
+      subroutine check_decay(from_decay)
+      implicit none
+
+      include 'nexternal.inc'
+      include 'maxconfigs.inc'
+      include 'genps.inc'
+c
+c    Arguments
+c
+      logical from_decay(-(nexternal+3):nexternal)
+c
+c     Global
+c
+      integer iforest(2,-max_branch:-1,lmaxconfigs)
+      common/to_forest/ iforest
+      integer sprop(-max_branch:-1,lmaxconfigs)
+      integer tprid(-max_branch:-1,lmaxconfigs)
+      common/to_sprop/sprop,tprid
+      logical gForceBW(-max_branch:-1,lmaxconfigs)  ! Forced BW
+      include 'decayBW.inc'
+
+c
+c     Local
+c
+      integer i,j
+
+      do i=-(nexternal-3),nexternal
+         from_decay(i)=.false.
+      enddo
+
+c     Set who comes from decay based on forced BW
+      do i=-(nexternal-3),-1
+         if(tprid(i,1).eq.0.and.gForceBW(i,1).or.
+     $        from_decay(i)) then
+            do j=i,-1
+               from_decay(j)=.true.
+               from_decay(iforest(1,j,1))=.true.
+               from_decay(iforest(2,j,1))=.true.
+            enddo
+         endif
+      enddo
+
+      end

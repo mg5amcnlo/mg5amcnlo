@@ -5,6 +5,8 @@ Update notes for MadGraph 5 (in reverse time order)
                       (up to 14 final state particles successfully integrated)
                   JA: Improved helicity selection and automatic full helicity 
                       sum if needed. Optimization of run parameters.
+                  JA: New flag in run_card.dat to decide whether basic
+                      cuts are applied to decay products or not
                   JA: Fixed MadEvent bugs for multiparton processes with 
                       conflicting decays and fixed some faulty array limits.
                   JA: Suppressed scary but irrelevant warnings for compiling 
