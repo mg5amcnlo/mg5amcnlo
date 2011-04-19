@@ -3226,8 +3226,10 @@ def SSS1_1(S2, S3, COUP, M1, W1):
     
 def SSS1_2(S2, S3, COUP, M1, W1):
     return SSS1_1(S2,S3,COUP,M1,W1)
+
 def SSS1_3(S2, S3, COUP, M1, W1):
     return SSS1_1(S3,S2,COUP,M1,W1)
+
 """
         
         SSS = UFOLorentz(name = 'SSS1',

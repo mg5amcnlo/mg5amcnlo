@@ -46,25 +46,8 @@ if '__main__' == __name__:
     logging.getLogger('tutorial').setLevel(logging.ERROR)
         
     logging.basicConfig(level=logging.INFO)
-    #my_proc_list = ['u u~ > g y $ g', 'u~ u > g y $ g ', 'y > u u~','Z >  u u~']
-    #my_proc_list = ['t t > t t', 't t~ > t t~', 't t~ > z z', 't z > t z', 't~ t~ > t~ t~', 't~ z > t~ z', 'g g > y y', 'g y > g y', 'y y > g g', 'y y > z z', 'y y > a a', 'y z > t t~', 'y z > y z', 'a y > a y',' z z > t t~', 'z z > y y', 'a a > y y']
-    #my_proc_list = ['t t~ > t t~','e+ e- > e+ e-','w+ w- > w+ w-', 't t~ > t t~ / a z h g', 'y > t t~', 'y > t t~ g', 't t~ > t t~ / z h g','t t~ > t t~ / a h g','t t~ > t t~ / z a g', 't t~ > t t~ / h ', 't t~ > t t~ / z','t t~ > z > t t~', 'y t > t z', 't t~ > z > t t~']
-    #my_proc_list += ['t t~ > z > t t~','u u~ > z > u u~', 't t~ > t t~', 'u u > u u']
-    #my_proc_list = [ 't t~ > y > t t~','z z > y > t t~','t t~ > y > z z',' u u~ > y > t t~', 't t~ > y > u u~']
-    #my_proc_list = [' t t~ > t t~ y', 't t~ > t t~ g','g g > g g g','u u~ > y > u u~', 't t~ > y > t t~' ]
-    my_proc_list2 = me_comparator.create_proc_list(['u', 'u~','g','a','e+','e-','h','ve','ve~','z','w+','w-','d','d~','y'], initial=2,
-                                                  final=2)
-    my_proc_list2 = [p for p in my_proc_list2 if p.count('y') < 2]
-    #my_proc_list1 = me_comparator.create_proc_list(['t', 't~','g','a','ta+','ta-','h','vt','vt~','z','w+','w-','b','b~','y'], initial=2,
-    #                                              final=2)
-    #fermion = ['s','s~','c','c~','b','b~','t','t~','mu-','mu+','ta-','ta+','vm','vm~','vt','vt~']
-    #boson = ['g','y','z','a','w+','w-','h']
 
-
-
-    #my_proc_list = [p for p in my_proc_list1 if p not in my_proc_list2]
-    my_proc_list = ['a e+ > e+ y',' a e- > e- y',' a w+ > w+ y',' a w- > w- y',' a y > e+ e-',' a y > w+ w-',' e+ e- > a y',' e+ e- > y z',' e+ ve > w+ y',' e+ z > e+ y',' e+ w- > ve~ y',' e+ y > a e+',' e+ y > e+ z',' e+ y > ve~ w+',' e- ve~ > w- y',' e- z > e- y',' e- w+ > ve y',' e- y > a e-',' e- y > e- z',' e- y > ve w-',' h h > h h',' h h > y y',' h z > y z',' h w+ > w+ y',' h w- > w- y',' h y > h h',' h y > h y',' h y > z z',' h y > w+ w-',' ve w- > e- y',' ve y > e- w+',' ve~ w+ > e+ y',' ve~ y > e+ w-',' z z > h y',' w+ z > w+ y',' w- z > w- y',' y z > e+ e-',' y z > h z',' y z > w+ w-',' w+ w- > a y',' w+ w- > h y',' w+ w- > y z',' w+ y > a w+',' w+ y > e+ ve',' w+ y > h w+',' w+ y > w+ z',' w- y > a w-',' w- y > e- ve~',' w- y > h w-',' w- y > w- z',' y y > h h']
-    #my_proc_list = ['u u~ >  u u~', 'e+ e- > e+ e-','a e+ > e+ y',' a e- > e- y']
+    my_proc_list=['u u~ > t t~', 'u u~ > g g g', 'u u~ > e+ e- z', 't t~ > g g']
     #my_proc_list1 = me_comparator.create_proc_list(['u', 'u~','t','t~','g','y','z','a'], initial=1,
     #                                              final=2)
     #my_proc_list = me_comparator.create_proc_list_enhanced(
@@ -94,12 +77,12 @@ if '__main__' == __name__:
 
     # Create and setup a comparator
     my_comp = me_comparator.MEComparator()
-    my_comp.set_me_runners(my_mg5_ufo, my_mg4)
+    my_comp.set_me_runners(my_mg5_ufo, my_mg4, my_mg5, my_mg5_cpp)
 
     # Run the actual comparison
     my_comp.run_comparison(my_proc_list,
-                           model='RS',
-                           orders={'QED':4, 'QCD':4, 'QTD':4}, energy=2000)
+                           model='sm',
+                           orders={'QED':99, 'QCD':99, 'QTD':4}, energy=2000)
 
     # Do some cleanup
     #my_comp.cleanup()

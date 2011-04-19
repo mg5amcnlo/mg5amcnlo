@@ -444,7 +444,7 @@ class ALOHAWriterForFortran(WriteALOHA):
         number = self.offshell 
         calls = self.reorder_call_list(self.calllist['CallList'], self.offshell,
                                                                         new_nb)
-        Outstring = 'call '+self.namestring+'('+','.join(calls)+',C,M%s,W%s,%s%s)' \
+        Outstring = 'call '+self.namestring+'('+','.join(calls)+',C,M%s,W%s,%s%s)\n' \
                          %(number,number,self.particles[number-1],number)
         return Outstring
     
@@ -783,7 +783,7 @@ class ALOHAWriterForCPP(WriteALOHA):
         #calls = [self.remove_double.match(call).group('name') for call in \
         #         calls]
         number = self.offshell 
-        Outstring = self.namestring+'('+','.join(calls)+',COUP,M%s,W%s,%s%s);' \
+        Outstring = self.namestring+'('+','.join(calls)+',COUP,M%s,W%s,%s%s);\n' \
                          %(number,number,self.particles[self.offshell-1],number)
         return Outstring
     
@@ -1162,7 +1162,7 @@ class ALOHAWriterForPython(WriteALOHA):
         number = self.offshell 
         calls = self.reorder_call_list(self.calllist['CallList'], self.offshell,
                                                                         new_nb)
-        Outstring = 'return '+self.namestring+'('+','.join(calls)+',COUP,M%s,W%s)' \
+        Outstring = 'return '+self.namestring+'('+','.join(calls)+',COUP,M%s,W%s)\n' \
                          %(number,number)
         return Outstring        
 

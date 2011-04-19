@@ -339,7 +339,7 @@ class MG5Runner(MG4Runner):
         the specified model, the specified maximal coupling orders and a certain
         energy for incoming particles (for decay, incoming particle is at rest).
         """
-
+        self.res_list = [] # ensure that to be void, and avoid pointer problem 
         self.proc_list = proc_list
         self.model = model
         self.orders = orders
