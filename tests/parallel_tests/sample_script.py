@@ -47,7 +47,9 @@ if '__main__' == __name__:
         
     logging.basicConfig(level=logging.INFO)
 
-    my_proc_list=['u u~ > t t~', 'u u~ > g g g', 'u u~ > e+ e- z', 't t~ > g g']
+    my_proc_list=['u u~ > t t~',' g g > g g']
+    #, 'u u~ > g g g', 'u u~ > e+ e- z', 't t~ > g g'
+    #              'e+ e- > e+ e- e+ e-', ' g g > t t~ g', 't t~ > h > t t~']
     #my_proc_list1 = me_comparator.create_proc_list(['u', 'u~','t','t~','g','y','z','a'], initial=1,
     #                                              final=2)
     #my_proc_list = me_comparator.create_proc_list_enhanced(
@@ -77,7 +79,7 @@ if '__main__' == __name__:
 
     # Create and setup a comparator
     my_comp = me_comparator.MEComparator()
-    my_comp.set_me_runners(my_mg5_ufo, my_mg4, my_mg5, my_mg5_cpp)
+    my_comp.set_me_runners(my_mg5_ufo, my_mg5_cpp)
 
     # Run the actual comparison
     my_comp.run_comparison(my_proc_list,

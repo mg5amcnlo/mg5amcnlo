@@ -449,7 +449,7 @@ class ALOHAWriterForFortran(WriteALOHA):
         return Outstring
     
     def define_foot(self):
-        return 'end' 
+        return 'end\n\n' 
 
     def write(self, mode='self'):
                          
@@ -490,10 +490,11 @@ class ALOHAWriterForFortran(WriteALOHA):
         
         # Set some usefull command
         if offshell is None:
-            sym = None # deactivate symetry
+            sym = 1 
             offshell = self.offshell
         else:
-            sym = 1  
+            sym = None  # deactivate symetry
+            
         name = combine_name(self.abstractname, lor_names, offshell)
 
                  
@@ -512,7 +513,7 @@ class ALOHAWriterForFortran(WriteALOHA):
         if 'C' in self.namestring:
             addon = 'C' +self.namestring.split('C',1)[1]
         else:  
-            addon = '_%s' % offshell
+            addon = '_%s' % self.offshell
 
         # how to call the routine
         if not offshell:
@@ -520,16 +521,16 @@ class ALOHAWriterForFortran(WriteALOHA):
             call_arg = '%(args)s, %(COUP)s, %(LAST)s' % \
                     {'args': ', '.join(self.calllist['CallList']), 
                      'COUP':'COUP%d',
-                     'spin': self.particles[offshell -1],
+                     'spin': self.particles[self.offshell -1],
                      'LAST': '%s'}
         else:
             main = '%(spin)s%(id)d' % \
                           {'spin': self.particles[offshell -1],
-                           'id': offshell}
+                           'id': self.offshell}
             call_arg = '%(args)s, %(COUP)s, M%(id)d, W%(id)d, %(LAST)s' % \
                     {'args': ', '.join(self.calllist['CallList']), 
                      'COUP':'COUP%d',
-                     'id': offshell,
+                     'id': self.offshell,
                      'LAST': '%s'}
 
         # make the first call
@@ -790,7 +791,7 @@ class ALOHAWriterForCPP(WriteALOHA):
     def define_foot(self):
         """Return the end of the function definition"""
 
-        return '}\n' 
+        return '}\n\n' 
 
     def write_h(self, header, compiler_cmd=True):
         """Return the full contents of the .h file"""
@@ -812,7 +813,7 @@ class ALOHAWriterForCPP(WriteALOHA):
             h_string += symmetryhead
 
         if compiler_cmd:
-            h_string += '#endif'
+            h_string += '#endif\n\n'
 
         return h_string
 
@@ -864,15 +865,13 @@ class ALOHAWriterForCPP(WriteALOHA):
 
         return cc_string
 
-    def write_combined_cc(self, lor_names, offshell=None, compiler_cmd=True):
+    def write_combined_cc(self, lor_names, offshell=None, compiler_cmd=True, sym=True):
         "Return the content of the .cc file linked to multiple lorentz call."
         
         # Set some usefull command
         if offshell is None:
-            sym = None # deactivate symetry
             offshell = self.offshell
-        else:
-            sym = 1  
+            
         name = combine_name(self.abstractname, lor_names, offshell)
 
         text = ''
@@ -894,7 +893,7 @@ class ALOHAWriterForCPP(WriteALOHA):
         if 'C' in self.namestring:
             addon = 'C' +self.namestring.split('C',1)[1]
         else:  
-            addon = '_%s' % offshell
+            addon = '_%s' % self.offshell
 
         # how to call the routine
         if not offshell:
@@ -902,16 +901,16 @@ class ALOHAWriterForCPP(WriteALOHA):
             call_arg = '%(args)s, %(COUP)s, %(LAST)s' % \
                     {'args': ', '.join(self.calllist['CallList']), 
                      'COUP':'COUP%d',
-                     'spin': self.particles[offshell -1],
+                     'spin': self.particles[self.offshell -1],
                      'LAST': '%s'}
         else:
             main = '%(spin)s%(id)d' % \
-                          {'spin': self.particles[offshell -1],
-                           'id': offshell}
+                          {'spin': self.particles[self.offshell -1],
+                           'id': self.offshell}
             call_arg = '%(args)s, %(COUP)s, M%(id)d, W%(id)d, %(LAST)s' % \
                     {'args': ', '.join(self.calllist['CallList']), 
                      'COUP':'COUP%d',
-                     'id': offshell,
+                     'id': self.offshell,
                      'LAST': '%s'}
 
         # make the first call
@@ -934,11 +933,11 @@ class ALOHAWriterForCPP(WriteALOHA):
 
         text += self.define_foot()
         
-        #ADD SYMETRY
         if sym:
             for elem in self.symmetries:
-                text += self.write_combined(lor_names, mode, elem, 
-                                                      compiler_cmd=compiler_cmd)
+                text += self.write_combined_cc(lor_names, elem, 
+                                                      compiler_cmd=compiler_cmd,
+                                                      sym=False)
             
             
         if self.out_path:
@@ -989,7 +988,7 @@ class ALOHAWriterForCPP(WriteALOHA):
         name = combine_name(self.abstractname, lor_names, offshell)
         
         h_text = self.write_combined_h(lor_names, offshell, **opt)
-        cc_text = self.write_combined_cc(lor_names, offshell, **opt)
+        cc_text = self.write_combined_cc(lor_names, offshell, sym=True, **opt)
         
         if self.out_path:
             # Prepare a specific file
@@ -1068,9 +1067,9 @@ class ALOHAWriterForPython(WriteALOHA):
     
     def define_foot(self):
         if not self.offshell:
-            return 'return vertex\n'
+            return 'return vertex\n\n'
         else:
-            return 'return %s\n' % (self.outname)
+            return 'return %s\n\n' % (self.outname)
             
     
     def define_header(self, name=None):
@@ -1197,7 +1196,10 @@ class ALOHAWriterForPython(WriteALOHA):
         
         # Set some usefull command
         if offshell is None:
+            sym = 1
             offshell = self.offshell  
+        else:
+            sym = None
         name = combine_name(self.abstractname, lor_names, offshell)
 
         # write head - momenta - body - foot
@@ -1219,7 +1221,7 @@ class ALOHAWriterForPython(WriteALOHA):
         if 'C' in self.namestring:
             addon = 'C' +self.namestring.split('C',1)[1]
         else:  
-            addon = '_%s' % offshell
+            addon = '_%s' % self.offshell
 
         # how to call the routine
         if not offshell:
@@ -1227,15 +1229,15 @@ class ALOHAWriterForPython(WriteALOHA):
             call_arg = '%(args)s, %(COUP)s' % \
                     {'args': ', '.join(self.calllist['CallList']), 
                      'COUP':'COUP%d',
-                     'spin': self.particles[offshell -1]}
+                     'spin': self.particles[self.offshell -1]}
         else:
             main = '%(spin)s%(id)d' % \
-                          {'spin': self.particles[offshell -1],
-                           'id': offshell}
+                          {'spin': self.particles[self.offshell -1],
+                           'id': self.offshell}
             call_arg = '%(args)s, %(COUP)s, M%(id)d, W%(id)d' % \
                     {'args': ', '.join(self.calllist['CallList']), 
                      'COUP':'COUP%d',
-                     'id': offshell}
+                     'id': self.offshell}
 
         # make the first call
         line = "    %s = %s%s("+call_arg+")\n"
@@ -1253,8 +1255,10 @@ class ALOHAWriterForPython(WriteALOHA):
         
         text += '    '+self.define_foot()
 
-
-        # Need to add symmetry
-
+        #ADD SYMETRY
+        if sym:
+            for elem in self.symmetries:
+                text += self.write_combined(lor_names, mode, elem)
+            
         return text
         
