@@ -2423,11 +2423,6 @@ class UFO_model_to_mg4(object):
                 double complex gal(2)
                 common/weak/ gal
 
-                double precision DUM0
-                common/FRDUM0/ DUM0
-
-                double precision DUM1
-                common/FRDUM1/ DUM1
                 """        
         fsock.writelines(header)
         
@@ -2533,10 +2528,6 @@ class UFO_model_to_mg4(object):
                              gal(2) = 1d0
                          """)
 
-        fsock.write_comments("\nDefinition of DUM symbols\n")
-        fsock.writelines(""" DUM0 = 0
-                             DUM1 = 1
-                         """)
     
     def create_couplings(self):
         """ create couplings.f and all couplingsX.f """

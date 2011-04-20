@@ -179,18 +179,19 @@ class WriteALOHA:
                 
         return call_arg
 
-    def reorder_call_list(self, call_list, old, new):
-        """ restore the correct order for symmetries """
-        spins = self.particles
-        assert(0 < old < new)
-        old, new = old -1, new -1 # pass in real position in particles list
-        assert(spins[old] == spins[new])
-        spin =spins[old]
-        
-        new_call = call_list[:]
-        val = new_call.pop(old)
-        new_call.insert(new - 1, val)
-        return new_call
+#    def reorder_call_list(self, call_list, old, new):
+#        """ restore the correct order for symmetries """
+#        raise
+#        #spins = self.particles
+#        #assert(0 < old < new)
+#        #old, new = old -1, new -1 # pass in real position in particles list
+#        #assert(spins[old] == spins[new])
+#        #spin =spins[old]
+#        
+#        new_call = call_list[:]
+#        #val = new_call.pop(old)
+#        #new_call.insert(new - 1, val)
+#        return new_call
     
         
     def make_momentum_conservation(self):
@@ -442,9 +443,9 @@ class ALOHAWriterForFortran(WriteALOHA):
     
     def define_symmetry(self, new_nb):
         number = self.offshell 
-        calls = self.reorder_call_list(self.calllist['CallList'], self.offshell,
-                                                                        new_nb)
-        Outstring = 'call '+self.namestring+'('+','.join(calls)+',C,M%s,W%s,%s%s)\n' \
+        calls = self.calllist['CallList']
+                                                                
+        Outstring = 'call '+self.namestring+'('+','.join(calls)+',COUP,M%s,W%s,%s%s)\n' \
                          %(number,number,self.particles[number-1],number)
         return Outstring
     
@@ -773,8 +774,7 @@ class ALOHAWriterForCPP(WriteALOHA):
     remove_double = re.compile('complex<double> (?P<name>[\w]+)\[\]')
     def define_symmetry(self, new_nb):
         """Write the call for symmetric routines"""
-        calls = self.reorder_call_list(self.calllist['CallList'],
-                                       self.offshell, new_nb)
+        calls = self.calllist['CallList']
         
         for i, call in enumerate(calls):
             if self.remove_double.match(call):
@@ -1159,8 +1159,7 @@ class ALOHAWriterForPython(WriteALOHA):
 
     def define_symmetry(self, new_nb):
         number = self.offshell 
-        calls = self.reorder_call_list(self.calllist['CallList'], self.offshell,
-                                                                        new_nb)
+        calls = self.calllist['CallList']
         Outstring = 'return '+self.namestring+'('+','.join(calls)+',COUP,M%s,W%s)\n' \
                          %(number,number)
         return Outstring        

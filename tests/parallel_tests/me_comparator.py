@@ -373,7 +373,8 @@ class MG5Runner(MG4Runner):
 
         # Get the ME value
         for i, proc in enumerate(proc_list):
-            self.res_list.append(self.get_me_value(proc, i))
+            value = self.get_me_value(proc, i)
+            self.res_list.append(value)
 
         return self.res_list
 

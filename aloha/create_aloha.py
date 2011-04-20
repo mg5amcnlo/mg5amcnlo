@@ -558,7 +558,7 @@ class AbstractALOHAModel(dict):
         for outgoing in routines:
             symmetric = self.has_symmetries(symmetry, outgoing, valid_output=routines)
             if symmetric:
-                self.get(symmetry, symmetric).add_symmetry(outgoing)
+                self.get(name, symmetric).add_symmetry(outgoing)
             else:
                 wavefunction = builder.compute_routine(outgoing)
                 #Store the information
@@ -627,9 +627,9 @@ class AbstractALOHAModel(dict):
             for i, part1 in enumerate(vertex.particles):
                 for j in range(i-1,-1,-1):
                     part2 = vertex.particles[j]
-                    if part1.name == part2.name and \
-                                        part1.color == part2.color == 1 and\
-                                        part1.spin != 2:
+                    if part1.pdg_code == part2.pdg_code:
+                        if part1.spin == 2 and (i % 2 != j % 2 ):
+                            continue 
                         for lorentz in vertex.lorentz:
                             if self.symmetries.has_key(lorentz.name):
                                 if self.symmetries[lorentz.name].has_key(i+1):
