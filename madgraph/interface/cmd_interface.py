@@ -12,6 +12,7 @@
 # For more information, please visit: http://madgraph.phys.ucl.ac.be
 #
 ################################################################################
+from compiler.ast import Break
 """A user friendly command line interface to access MadGraph features.
    Uses the cmd package for command interpretation and tab completion.
 """
@@ -293,8 +294,16 @@ class HelpToCmd(object):
         logger.info("syntax: tutorial [" + "|".join(self._tutorial_opts) + "]")
         logger.info("-- start/stop the tutorial mode")
 
+    def help_open(self):
+        logger.info("syntax: open FILE  ")
+        logger.info("-- open a file with the appropriate editor.")
+        logger.info('   If FILE belongs to index.html, param_card.dat, run_card.dat')
+        logger.info('   the path to the last created/used directory is used')
+        logger.info('   The program used to open those files can be choose in the')
+        logger.info('   configuration file ./input/mg5_configuration.txt')
+        
     def help_output(self):
-        logger.info("syntax [" + "|".join(self._export_formats) + \
+        logger.info("syntax: output [" + "|".join(self._export_formats) + \
                     "] [path|.|auto] [options]")
         logger.info("-- Output any generated process(es) to file.")
         logger.info("   mode: Default mode is madevent. Default path is \'.\' or auto.")
@@ -667,6 +676,8 @@ class CheckValidForCmd(object):
         mode = self.find_output_type(path)
         args[0] = mode
         args.append(path)
+        # inform where we are for future command
+        self._done_export = [path, mode]
         
     
     def find_output_type(self, path):
@@ -729,7 +740,46 @@ class CheckValidForCmd(object):
             if args[1] not in ['DEBUG','INFO','WARNING','ERROR','CRITICAL']:
                 raise self.InvalidCmd('output_level needs ' + \
                                       'a valid level')       
+    
+    def check_open(self, args):
+        """ check the validity of the line """
         
+        if len(args) != 1:
+            self.help_open()
+            raise self.InvalidCmd('OPEN command requires exactly one argument')
+
+        if args[0].startswith('./'):
+            if not os.path.isfile(args[0]):
+                raise self.InvalidCmd('%s: not such file' % args[0])
+            return True
+
+        # if special : create the path.
+        if not self._done_export:
+            if not os.path.isfile(args[0]):
+                self.help_open()
+                raise self.InvalidCmd('No command \"output\" or \"launch\" used. Impossible to associate this name to a file')
+            else:
+                return True
+            
+        path = self._done_export[0]
+        if os.path.isfile(os.path.join(path,args[0])):
+            args[0] = os.path.join(path,args[0])
+        elif os.path.isfile(os.path.join(path,'Cards',args[0])):
+            args[0] = os.path.join(path,'Cards',args[0])
+        elif os.path.isfile(os.path.join(path,'HTML',args[0])):
+            args[0] = os.path.join(path,'HTML',args[0])
+        # special for card with _default define: copy the default and open it
+        elif '_card.dat' in args[0]:   
+            name = args[0].replace('_card.dat','_card_default.dat')
+            if os.path.isfile(os.path.join(path,'Cards', name)):
+                files.cp(path + '/Cards/' + name, path + '/Cards/'+ args[0])
+                args[0] = os.path.join(path,'Cards', args[0])
+            else:
+                raise self.InvalidCmd('No default path for this file')
+        else:
+            raise self.InvalidCmd('No default path for this file')
+                
+                
     def check_output(self, args):
         """ check the validity of the line"""
         
@@ -889,6 +939,10 @@ class CheckValidForCmdWeb(CheckValidForCmd):
     def check_save(self, args):
         """ not authorize on web"""
         raise self.WebRestriction('\"save\" command not authorize online')
+    
+    def check_open(self, args):
+        """ not authorize on web"""
+        raise self.WebRestriction('\"open\" command not authorize online')
     
     def check_output(self, args):
         """ check the validity of the line"""
@@ -1136,6 +1190,31 @@ class CompleteForCmd(CheckValidForCmd):
         # Filename if directory is not given
         if len(args) == 2:
             return self.path_completion(text)
+        
+    def complete_open(self, text, line, begidx, endidx):
+        """ complete the open command """
+        
+        args = split_arg(line[0:begidx])
+        # Directory continuation
+        if os.path.sep in args[-1] + text:
+            return self.path_completion(text,
+                                    os.path.join('.',*[a for a in args if \
+                                                      a.endswith(os.path.sep)]))
+
+        if self._done_export:
+            path = self._done_export[0]
+            possibility = ['index.html']
+            if os.path.isfile(os.path.join(path,'README')):
+                possibility.append('README')
+            if os.path.isdir(os.path.join(path,'Cards')):
+                possibility += [f for f in os.listdir(os.path.join(path,'Cards')) 
+                                    if f.endswith('.dat')]
+            if os.path.isdir(os.path.join(path,'HTML')):
+                possibility += [f for f in os.listdir(os.path.join(path,'HTML')) 
+                                  if f.endswith('.html') and 'default' not in f]
+                
+            return self.list_completion(text, possibility)
+        
 
     def complete_output(self, text, line, begidx, endidx,
                         possible_options = ['f', 'noclean', 'nojpeg'],
@@ -2325,7 +2404,10 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
         """ assign all configuration variable from file 
             ./input/mg5_configuration.txt. assign to default if not define """
             
-        config = {'pythia8_path': './pythia8'}
+        self.configuration = {'pythia8_path': './pythia8',
+                  'web_browser':None,
+                  'eps_viewer':None,
+                  'text_editor':None}
         
         if not config_path:
             try:
@@ -2349,21 +2431,21 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
             else:
                 name = name.strip()
                 value = value.strip()
-                config[name] = value
+                self.configuration[name] = value
 
         # Treat each expected input
         # 1: Pythia8_path
         # try relative path
-        pythia8_dir = os.path.join(MG5DIR, config['pythia8_path'])
+        pythia8_dir = os.path.join(MG5DIR, self.configuration['pythia8_path'])
         if not os.path.isfile(os.path.join(pythia8_dir, 'include', 'Pythia.h')):
-            if os.path.isfile(os.path.join(config['pythia8_path'], 'include', 'Pythia.h')):
-                pythia8_dir = config['pythia8_path']
+            if os.path.isfile(os.path.join(self.configuration['pythia8_path'], 'include', 'Pythia.h')):
+                pythia8_dir = self.configuration['pythia8_path']
             else:
                 pythia8_dir = None
         self.pythia8_path = pythia8_dir
-        
-        return config
-                
+          
+        return self.configuration
+     
     def check_for_export_dir(self, filepath):
         """Check if the files is in a valid export directory and assign it to
         export path if if is"""
@@ -2529,7 +2611,78 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
             logging.root.setLevel(eval('logging.' + args[1]))
             logging.getLogger('madgraph').setLevel(eval('logging.' + args[1]))
             logger.info('set output information to level: %s' % args[1])
+    
+    def do_open(self, line):
+        """Open a text file/ eps file / html file"""
         
+        args = split_arg(line)
+        # Check Argument validity and modify argument to be the real path
+        self.check_open(args)
+        
+        file_path = args[0]
+        try:
+            extension = file_path.rsplit('.',1)[1]
+        except IndexError:
+            extension = ''
+                 
+        # For MAC:
+        if sys.platform == 'darwin':
+            if extension == 'html':
+                if self.configuration['web_browser']:
+                    os.system('open -a %s %s' % 
+                                   (self.configuration['web_browser'],file_path))
+                else:
+                    os.system('open %s' % file_path)
+            elif extension == 'eps':
+                if self.configuration['eps_viewer']:
+                    os.system('open -a %s %s' % 
+                                   (self.configuration['eps_viewer'],file_path))
+                else:
+                    os.system('open %s' % file_path)
+            else:
+                if os.environ.has_key('EDITOR'):
+                    os.system('%s %s' % (os.environ['EDITOR'], file_path))
+                else:
+                    os.system('open -t %s' % file_path)
+        # For Linux
+        else:
+            if extension == 'html':
+                if self.configuration['web_browser']:
+                    os.system('%s %s' % 
+                                (self.configuration['web_browser'],file_path))
+                else:
+                    prog = ['firefox', 'chrome', 'safari','opera']
+                    for p in prog:
+                        if misc.which(p):
+                            os.system('%s %s' % (p,file_path))
+                            break
+                    else:
+                        logger_stderr.warning('unable to find a valid program for such file. Please define one in ./input/mg5_configuration.txt')  
+                        
+            elif extension == 'eps':
+                if self.configuration['eps_viewer']:
+                    os.system('%s %s' % 
+                                   (self.configuration['eps_viewer'],file_path))
+                else:
+                    prog = ['gv', 'ggv', 'evince']
+                    for p in prog:
+                        if misc.which(p):
+                            os.system('%s %s' % (p,file_path))
+                            break
+                    else:
+                        logger_stderr.warning('unable to find a valid program for such file. Please define one in ./input/mg5_configuration.txt')  
+            else:
+                if os.environ.has_key('EDITOR'):
+                    os.system('%s %s' % (os.environ['EDITOR'], file_path))
+                else:
+                    prog = ['vi', 'emacs', 'vim', 'gedit', 'nano']
+                    for p in prog:
+                        if misc.which(p):
+                            os.system('%s %s' % (p,file_path))
+                            break
+                    else:
+                        logger_stderr.warning('unable to find a valid program for such file. Please define one in ./input/mg5_configuration.txt')  
+                    
     def do_output(self, line):
         """Initialize a new Template or reinitialize one"""
 
