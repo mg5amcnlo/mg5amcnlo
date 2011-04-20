@@ -391,6 +391,7 @@ c
 
       double precision sscale,aaqcd,aaqed
       integer ievent,npart
+      logical flip
 
       real ran1
       external ran1
@@ -513,20 +514,14 @@ c   Fix ordering of ptclus
       enddo
 
 c     Check if we have flipped particle 1 and 2, and flip back
+      flip = .false.
       if (p(3,1).lt.0) then
          do j=0,3
             pdum(j)=p(j,1)
             p(j,1)=p(j,2)
             p(j,2)=pdum(j)
          enddo
-         do i=1,7
-            j=jpart(i,1)
-            jpart(i,1)=jpart(i,2)
-            jpart(i,2)=j
-         enddo
-         ptcltmp(1)=ptclus(1)
-         ptclus(1)=ptclus(2)
-         ptclus(2)=ptcltmp(1)
+         flip = .true.
       endif
 
 c
@@ -555,6 +550,18 @@ c     Add info on resonant mothers
 c
       call addmothers(ip,jpart,pb,isym,jsym,sscale,aaqcd,aaqed,buff,
      $                npart,numproc)
+
+c     Need to flip after addmothers, since color might get overwritten
+      if (flip) then
+         do i=1,7
+            j=jpart(i,1)
+            jpart(i,1)=jpart(i,2)
+            jpart(i,2)=j
+         enddo
+         ptcltmp(1)=ptclus(1)
+         ptclus(1)=ptclus(2)
+         ptclus(2)=ptcltmp(1)
+      endif
 
 c
 c     Write events to lun

@@ -142,7 +142,7 @@ def find_symmetry(matrix_element, evaluator, max_time = 600):
         amp2sum = sum(amp2)
         amp2mag = []
         for a in amp2:
-            a = a*me_value/amp2sum
+            a = a*me_value/max(amp2sum, 1e-30)
             if a > 0:
                 amp2mag.append(int(math.floor(math.log10(abs(a)))))
             else:
