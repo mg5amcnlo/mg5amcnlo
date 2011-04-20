@@ -2443,7 +2443,6 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
             raise self.InvalidCmd , '%s cannot be run from MG5 interface' % args[0]
         
         
-        
         ext_program.run()
         
         

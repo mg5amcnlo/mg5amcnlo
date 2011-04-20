@@ -380,9 +380,9 @@ class Sigma_sm_qqx_qqx : public Sigma2Process
     // Private functions to calculate the matrix element for all subprocesses
     // Calculate wavefunctions
     void calculate_wavefunctions(const int perm[], const int hel[]); 
-    static const int nwavefuncs = 10; 
+    static const int nwavefuncs = 8; 
     std::complex<double> w[nwavefuncs][18]; 
-    static const int namplitudes = 10; 
+    static const int namplitudes = 4; 
     std::complex<double> amp[namplitudes]; 
     double matrix_uux_uux(); 
 
@@ -665,24 +665,16 @@ void Sigma_sm_qqx_qqx::calculate_wavefunctions(const int perm[], const int
   oxxxxx(p[perm[2]], mME[2], hel[2], +1, w[2]); 
   ixxxxx(p[perm[3]], mME[3], hel[3], -1, w[3]); 
   FFV1_3(w[0], w[1], pars->GC_10, pars->ZERO, pars->ZERO, w[4]); 
-  FFV2_3(w[0], w[1], pars->GC_35, pars->MZ, pars->WZ, w[5]); 
-  FFV5_3(w[0], w[1], pars->GC_47, pars->MZ, pars->WZ, w[6]); 
-  FFV1_3(w[0], w[2], pars->GC_10, pars->ZERO, pars->ZERO, w[7]); 
-  FFV2_3(w[0], w[2], pars->GC_35, pars->MZ, pars->WZ, w[8]); 
-  FFV5_3(w[0], w[2], pars->GC_47, pars->MZ, pars->WZ, w[9]); 
+  FFV2_5_3(w[0], w[1], pars->GC_35, pars->GC_47, pars->MZ, pars->WZ, w[5]); 
+  FFV1_3(w[0], w[2], pars->GC_10, pars->ZERO, pars->ZERO, w[6]); 
+  FFV2_5_3(w[0], w[2], pars->GC_35, pars->GC_47, pars->MZ, pars->WZ, w[7]); 
 
   // Calculate all amplitudes
   // Amplitude(s) for diagram number 0
   FFV1_0(w[3], w[2], w[4], pars->GC_10, amp[0]); 
-  FFV2_0(w[3], w[2], w[5], pars->GC_35, amp[1]); 
-  FFV5_0(w[3], w[2], w[5], pars->GC_47, amp[2]); 
-  FFV2_0(w[3], w[2], w[6], pars->GC_35, amp[3]); 
-  FFV5_0(w[3], w[2], w[6], pars->GC_47, amp[4]); 
-  FFV1_0(w[3], w[1], w[7], pars->GC_10, amp[5]); 
-  FFV2_0(w[3], w[1], w[8], pars->GC_35, amp[6]); 
-  FFV5_0(w[3], w[1], w[8], pars->GC_47, amp[7]); 
-  FFV2_0(w[3], w[1], w[9], pars->GC_35, amp[8]); 
-  FFV5_0(w[3], w[1], w[9], pars->GC_47, amp[9]); 
+  FFV2_5_0(w[3], w[2], w[5], pars->GC_35, pars->GC_47, amp[1]); 
+  FFV1_0(w[3], w[1], w[6], pars->GC_10, amp[2]); 
+  FFV2_5_0(w[3], w[1], w[7], pars->GC_35, pars->GC_47, amp[3]); 
 
 
 }
@@ -690,7 +682,7 @@ double Sigma_sm_qqx_qqx::matrix_uux_uux()
 {
   int i, j; 
   // Local variables
-  const int ngraphs = 10; 
+  const int ngraphs = 4; 
   const int ncolor = 2; 
   std::complex<double> ztemp; 
   std::complex<double> jamp[ncolor]; 
@@ -699,10 +691,8 @@ double Sigma_sm_qqx_qqx::matrix_uux_uux()
   static const double cf[ncolor][ncolor] = {{9, 3}, {3, 9}}; 
 
   // Calculate color flows
-  jamp[0] = +1./6. * amp[0] - amp[1] - amp[2] - amp[3] - amp[4] + 1./2. *
-      amp[5];
-  jamp[1] = -1./2. * amp[0] - 1./6. * amp[5] + amp[6] + amp[7] + amp[8] +
-      amp[9];
+  jamp[0] = +1./6. * amp[0] - amp[1] + 1./2. * amp[2]; 
+  jamp[1] = -1./2. * amp[0] - 1./6. * amp[2] + amp[3]; 
 
   // Sum and square the color flows to get the matrix element
   double matrix = 0; 
@@ -1307,7 +1297,6 @@ double CPPProcess::matrix_uux_gogo()
 
         #print open(self.give_pos('test.cc')).read()
         self.assertFileContains('test.cc', goal_string)
-
 
     def disabled_test_write_process_files(self):
         """Test writing the .h  and .cc Pythia file for a matrix element"""

@@ -16,6 +16,7 @@
 the output of the Feynman Rules."""
 from __future__ import division
 
+import os
 import time
 import aloha.aloha_object as aloha_obj
 import aloha.aloha_lib as aloha_lib
@@ -2798,7 +2799,7 @@ class test_aloha_creation(unittest.TestCase):
         # Check that full identification symmetry works
         helas_suite = create_aloha.AbstractALOHAModel('sm')
         helas_suite.look_for_symmetries()
-        solution = {'VVS1': {2: 1}, 'SSS1': {2: 1, 3: 2}, 'VVSS1': {2: 1, 4: 3}, 'VVVV2': {2: 1, 4: 3}, 'SSSS1': {2: 1, 3: 2, 4: 3}} 
+        solution = {'SSSS1': {2: 1, 3: 2, 4: 3}, 'VVVV4': {2: 1, 3: 2, 4: 3}, 'VVV1': {2: 1, 3: 2}, 'VVVV1': {2: 1, 3: 2, 4: 3}, 'VVVV3': {2: 1, 3: 2, 4: 3}, 'VVVV2': {2: 1, 4: 3}, 'SSS1': {2: 1, 3: 2}, 'VVSS1': {2: 1, 4: 3}, 'VVS1': {2: 1}}  
         self.assertEqual(solution, helas_suite.symmetries)
         
     def test_has_symmetries(self):
@@ -2824,6 +2825,246 @@ class test_aloha_creation(unittest.TestCase):
         
         base = helas_suite.has_symmetries('VVS1', 3, valid_output=(1, 2))
         self.assertEqual(base, None)   
+
+    def test_aloha_multiple_lorentz(self):
+        """ check if the detection of multiple lorentz work """
+        
+        helas_suite = create_aloha.AbstractALOHAModel('sm')
+        helas_suite.look_for_multiple_lorentz_interactions()
+        solution = {'FFV2': [('FFV3',), ('FFV4',), ('FFV5',)], 'FFS3': [('FFS4',)]}
+        self.assertEqual(solution, helas_suite.multiple_lor)
+        
+
+    def test_aloha_multiple_lorentz_and_symmetry(self):
+        """ check if the detection of multiple lorentz work """
+        
+        VVS1 = self.Lorentz(name = 'VVS1',
+                 spins = [ 3, 3, 1 ],
+                 structure = 'Metric(1,2)')
+
+        #VVS2 = self.Lorentz(name = 'VVS2',
+        #         spins = [ 3, 3, 1 ],
+        #         structure = 'Metric(2,1)')
+        
+        abstract = create_aloha.AbstractRoutineBuilder(VVS1).compute_routine(1)
+        abstract.add_symmetry(2)
+        abstract.add_combine(('VVS2',))
+        
+        text =  abstract.write(None, 'Fortran')
+
+        goal =""" subroutine VVS1_1(V2, S3, COUP, M1, W1, V1)
+implicit none 
+double complex V1(6)
+double complex V2(6)
+double complex S3(3)
+double complex COUP
+double complex denom
+double precision M1, W1
+double complex OM1
+double precision P1(0:3)
+
+V1(5)= V2(5)+S3(2)
+V1(6)= V2(6)+S3(3)
+P1(0) = - dble(V1(5))
+P1(1) = - dble(V1(6))
+P1(2) = - dimag(V1(6))
+P1(3) = - dimag(V1(5))
+OM1 = 0d0
+if (M1 .ne. 0d0) OM1=1d0/M1**2
+
+denom =1d0/(( (M1*( -M1+(0, 1)*W1))+( (P1(0)**2)-(P1(1)**2)-(P1(2)**2)-(P1(3)**2))))
+V1(1)= COUP*denom*(S3(1)*( (OM1*( (0, 1)*(V2(1)*P1(0))+(0, -1)*(V2(2)*P1(1))+(0, -1)*(V2(3)*P1(2))+(0, -1)*(V2(4)*P1(3)))*P1(0))+(0, -1)*V2(1)))
+V1(2)= COUP*denom*(S3(1)*( (OM1*( (0, 1)*(V2(1)*P1(0))+(0, -1)*(V2(2)*P1(1))+(0, -1)*(V2(3)*P1(2))+(0, -1)*(V2(4)*P1(3)))*P1(1))+(0, -1)*V2(2)))
+V1(3)= COUP*denom*(S3(1)*( (OM1*( (0, 1)*(V2(1)*P1(0))+(0, -1)*(V2(2)*P1(1))+(0, -1)*(V2(3)*P1(2))+(0, -1)*(V2(4)*P1(3)))*P1(2))+(0, -1)*V2(3)))
+V1(4)= COUP*denom*(S3(1)*( (OM1*( (0, 1)*(V2(1)*P1(0))+(0, -1)*(V2(2)*P1(1))+(0, -1)*(V2(3)*P1(2))+(0, -1)*(V2(4)*P1(3)))*P1(3))+(0, -1)*V2(4)))
+end
+
+
+
+ subroutine VVS1_2(V2, S3, COUP, M1, W1, V1)
+implicit none 
+double complex V1(6)
+double complex V2(6)
+double complex S3(3)
+double complex COUP
+double complex denom
+double precision M1, W1
+double complex OM1
+double precision P1(0:3)
+call VVS1_1(V2,S3,COUP,M1,W1,V1)
+end
+
+
+ subroutine VVS1_2_1(V2, S3, COUP1,COUP2, M1, W1, V1)
+implicit none 
+double complex V1(6)
+double complex V2(6)
+double complex S3(3)
+double complex COUP1,COUP2
+double complex denom
+double precision M1, W1
+double complex OM1
+double precision P1(0:3)
+ double complex TMP(6)
+ integer i
+
+ CALL VVS1_1(V2, S3, COUP1, M1, W1, V1)
+ CALL VVS2_1(V2, S3, COUP2, M1, W1, TMP)
+ do i=1,4
+                V1(i) = V1(i) + tmp(i)
+                enddo
+end
+
+ subroutine VVS1_2_2(V2, S3, COUP1,COUP2, M1, W1, V1)
+implicit none 
+double complex V1(6)
+double complex V2(6)
+double complex S3(3)
+double complex COUP1,COUP2
+double complex denom
+double precision M1, W1
+double complex OM1
+double precision P1(0:3)
+ double complex TMP(6)
+ integer i
+
+ CALL VVS1_1(V2, S3, COUP1, M1, W1, V1)
+ CALL VVS2_1(V2, S3, COUP2, M1, W1, TMP)
+ do i=1,4
+                V1(i) = V1(i) + tmp(i)
+                enddo
+end
+
+"""
+        self.assertEqual(text.split('\n'),goal.split('\n')) 
+   
+        text_h, text_cpp =  abstract.write(None, 'CPP')
+    
+        goal_h = """#ifndef VVS1_1_guard
+#define VVS1_1_guard
+#include <complex>
+using namespace std;
+
+void VVS1_1(complex<double> V2[],complex<double> S3[],complex<double> COUP, double M1, double W1, complex<double>V1[]);
+
+void VVS1_2(complex<double> V2[],complex<double> S3[],complex<double> COUP, double M1, double W1, complex<double>V1[]);
+
+#endif
+
+#ifndef VVS1_2_1_guard
+#define VVS1_2_1_guard
+#include <complex>
+using namespace std;
+
+void VVS1_2_1(complex<double> V2[],complex<double> S3[],complex<double> COUP1, complex <double>COUP2, double M1, double W1, complex<double>V1[]);
+
+void VVS1_2_2(complex<double> V2[],complex<double> S3[],complex<double> COUP1, complex <double>COUP2, double M1, double W1, complex<double>V1[]);
+
+#endif"""
+        goal_cpp = """#include "VVS1_1.h"
+
+void VVS1_1(complex<double> V2[],complex<double> S3[],complex<double> COUP, double M1, double W1, complex<double>V1[]){
+complex<double> denom;
+complex<double> OM1;
+double P1[4];
+V1[4]= V2[4]+S3[1];
+V1[5]= V2[5]+S3[2];
+P1[0] = -V1[4].real();
+P1[1] = -V1[5].real();
+P1[2] = -V1[5].imag();
+P1[3] = -V1[4].imag();
+OM1 = 0;
+if (M1 != 0) OM1= 1./pow(M1,2);
+denom =1./(( (M1*( -M1+complex<double>(0., 1.)*W1))+( (pow(P1[0],2))-(pow(P1[1],2))-(pow(P1[2],2))-(pow(P1[3],2)))));
+V1[0]= COUP*denom*(S3[0]*( (OM1*( complex<double>(0., 1.)*(V2[0]*P1[0])+complex<double>(0., -1.)*(V2[1]*P1[1])+complex<double>(0., -1.)*(V2[2]*P1[2])+complex<double>(0., -1.)*(V2[3]*P1[3]))*P1[0])+complex<double>(0., -1.)*V2[0]));
+V1[1]= COUP*denom*(S3[0]*( (OM1*( complex<double>(0., 1.)*(V2[0]*P1[0])+complex<double>(0., -1.)*(V2[1]*P1[1])+complex<double>(0., -1.)*(V2[2]*P1[2])+complex<double>(0., -1.)*(V2[3]*P1[3]))*P1[1])+complex<double>(0., -1.)*V2[1]));
+V1[2]= COUP*denom*(S3[0]*( (OM1*( complex<double>(0., 1.)*(V2[0]*P1[0])+complex<double>(0., -1.)*(V2[1]*P1[1])+complex<double>(0., -1.)*(V2[2]*P1[2])+complex<double>(0., -1.)*(V2[3]*P1[3]))*P1[2])+complex<double>(0., -1.)*V2[2]));
+V1[3]= COUP*denom*(S3[0]*( (OM1*( complex<double>(0., 1.)*(V2[0]*P1[0])+complex<double>(0., -1.)*(V2[1]*P1[1])+complex<double>(0., -1.)*(V2[2]*P1[2])+complex<double>(0., -1.)*(V2[3]*P1[3]))*P1[3])+complex<double>(0., -1.)*V2[3]));
+}
+
+void VVS1_2(complex<double> V2[],complex<double> S3[],complex<double> COUP, double M1, double W1, complex<double>V1[]){
+VVS1_1(V2,S3,COUP,M1,W1,V1);
+}
+
+#include "VVS1_2_1.h"
+
+void VVS1_2_1(complex<double> V2[],complex<double> S3[],complex<double> COUP1, complex<double>COUP2, double M1, double W1, complex<double>V1[]){
+complex<double> tmp[6];
+ int i = 0;
+
+VVS1_1(V2, S3, COUP1, M1, W1, V1);
+VVS2_1(V2, S3, COUP2, M1, W1, tmp);
+ while (i < 4)
+                {
+                V1[i] = V1[i] + tmp[i];
+                i++;
+                }
+}
+
+#include "VVS1_2_2.h"
+
+void VVS1_2_2(complex<double> V2[],complex<double> S3[],complex<double> COUP1, complex<double>COUP2, double M1, double W1, complex<double>V1[]){
+complex<double> tmp[6];
+ int i = 0;
+
+VVS1_1(V2, S3, COUP1, M1, W1, V1);
+VVS2_1(V2, S3, COUP2, M1, W1, tmp);
+ while (i < 4)
+                {
+                V1[i] = V1[i] + tmp[i];
+                i++;
+                }
+}
+
+"""
+        
+        self.assertEqual(text_h.split('\n'),goal_h.split('\n'))
+        self.assertEqual(text_cpp.split('\n'),goal_cpp.split('\n'))
+        
+        
+        text =  abstract.write(None, 'Python')
+        goal = """import wavefunctions
+def VVS1_1(V2, S3, COUP, M1, W1):
+    V1 = wavefunctions.WaveFunction(size=6)
+    V1[4] = V2[4]+S3[1]
+    V1[5] = V2[5]+S3[2]
+    P1 = [-complex(V1[4]).real, \\
+            - complex(V1[5]).real, \\
+            - complex(V1[5]).imag, \\
+            - complex(V1[4]).imag]
+    OM1 = 0.0
+    if (M1): OM1=1.0/M1**2
+    denom =1.0/(( (M1*( -M1+1j*W1))+( (P1[0]**2)-(P1[1]**2)-(P1[2]**2)-(P1[3]**2))))
+    V1[0]= COUP*denom*(S3[0]*( (OM1*( 1j*(V2[0]*P1[0])-1j*(V2[1]*P1[1])-1j*(V2[2]*P1[2])-1j*(V2[3]*P1[3]))*P1[0])-1j*V2[0]))
+    V1[1]= COUP*denom*(S3[0]*( (OM1*( 1j*(V2[0]*P1[0])-1j*(V2[1]*P1[1])-1j*(V2[2]*P1[2])-1j*(V2[3]*P1[3]))*P1[1])-1j*V2[1]))
+    V1[2]= COUP*denom*(S3[0]*( (OM1*( 1j*(V2[0]*P1[0])-1j*(V2[1]*P1[1])-1j*(V2[2]*P1[2])-1j*(V2[3]*P1[3]))*P1[2])-1j*V2[2]))
+    V1[3]= COUP*denom*(S3[0]*( (OM1*( 1j*(V2[0]*P1[0])-1j*(V2[1]*P1[1])-1j*(V2[2]*P1[2])-1j*(V2[3]*P1[3]))*P1[3])-1j*V2[3]))
+    return V1
+    
+    
+def VVS1_2(V2, S3, COUP, M1, W1):
+    return VVS1_1(V2,S3,COUP,M1,W1)
+
+def VVS1_2_1(V2, S3, COUP1,COUP2, M1, W1):
+
+
+    V1 = VVS1_1(V2, S3, COUP1, M1, W1)
+    tmp = VVS2_1(V2, S3, COUP2, M1, W1)
+    for i in range(4):
+        V1[i] += tmp[i]
+    return V1
+
+def VVS1_2_2(V2, S3, COUP1,COUP2, M1, W1):
+
+
+    V1 = VVS1_1(V2, S3, COUP1, M1, W1)
+    tmp = VVS2_1(V2, S3, COUP2, M1, W1)
+    for i in range(4):
+        V1[i] += tmp[i]
+    return V1
+
+"""
+        self.assertEqual(text.split('\n'),goal.split('\n'))
         
         
     def test_full_sm_aloha(self):
@@ -2852,17 +3093,77 @@ class test_aloha_creation(unittest.TestCase):
             spin_solution = spin_index[helas.spins[output_part -1]]
             self.assertEqual(abstract.expr.numerator.nb_spin, spin_solution, \
                              error % name)
+            
+    def test_multiple_lorentz_subset(self):
+        """test if we create the correct set of routine/files for multiple lorentz"""
+        
+        helas_suite = create_aloha.AbstractALOHAModel('sm')
+        requested_routines=[(('FFS1','FFS2') , (), 0), 
+                            (('FFV1',) , (), 0), 
+                            (('FFV1','FFV2') , (1,), 0)]
+        
+        helas_suite.compute_subset(requested_routines)
+
+        # Check that the 5 base routines are created
+        # FFS1, FFS2, FFV1, FFV1C1, FFV2C1
+        self.assertEqual(len(helas_suite), 5)
+        
+        # Check that FFS1 and FFV1C1 are correctly connected to the associate
+        #lorentz
+        linked = helas_suite[('FFS1',0)].combined
+        self.assertEqual(linked, [('FFS2',)])
+        linked = helas_suite[('FFV1C1',0)].combined
+        self.assertEqual(linked, [('FFV2',)])        
+        linked = helas_suite[('FFV1',0)].combined
+        self.assertEqual(linked, [])
+        
+        # Check that the file are correctly written
+        os.system('rm -r /tmp/mg5 &> /dev/null; mkdir /tmp/mg5 &> /dev/null')
+        helas_suite.write('/tmp/mg5', 'Fortran')
+        
+        content = set(os.listdir('/tmp/mg5'))
+        self.assertEqual(content, set(['FFS1_0.f', 'FFS2_0.f', 'FFV1_0.f',
+                                       'FFV1C1_0.f','FFV2C1_0.f', 'FFS1_2_0.f',
+                                       'FFV1C1_2_0.f']))
+        
+        # Check the content of FFV1__FFV2C1_0.f
+        fsock = open('/tmp/mg5/FFV1C1_2_0.f')
+        goal = """C     This File is Automatically generated by ALOHA 
+C     
+      SUBROUTINE FFV1C1_2_0(F1,F2,V3,COUP1,COUP2,VERTEX)
+      IMPLICIT NONE
+      DOUBLE COMPLEX F1(6)
+      DOUBLE COMPLEX F2(6)
+      DOUBLE COMPLEX V3(6)
+      DOUBLE COMPLEX COUP1,COUP2
+      DOUBLE COMPLEX VERTEX
+      DOUBLE COMPLEX TMP
+
+
+      CALL FFV1C1_0(F1, F2, V3, COUP1, VERTEX)
+      CALL FFV2C1_0(F1, F2, V3, COUP2, TMP)
+      VERTEX = VERTEX + TMP
+      END
+
+
+"""
+        self.assertEqual(fsock.read().split('\n'), goal.split('\n'))
+        
+        
+        
+        
+        
     
     def test_mssm_subset_creation(self):
         """ test the creation of subpart of ALOHA routines 
         including clash routines """
         helas_suite = create_aloha.AbstractALOHAModel('mssm')
         
-        requested_routines=[('FFV1' , (), 0), 
-                            ('FFV1', (), 2),
-                            ('FFV1', (1,), 0),
-                            ('FFV2', (1,), 3),
-                            ('VVV1', (), 3)]
+        requested_routines=[(('FFV1',) , (), 0), 
+                            (('FFV1',), (), 2),
+                            (('FFV1',), (1,), 0),
+                            (('FFV2',), (1,), 3),
+                            (('VVV1',), (), 3)]
         
         helas_suite.compute_subset(requested_routines)        
         self.assertEqual(len(helas_suite), 5)
@@ -3008,7 +3309,7 @@ class TestAlohaWriter(unittest.TestCase):
     and test_export_pythia"""
     
     
-    def test_reorder_call_listFFVV(self):
+    def old_test_reorder_call_listFFVV(self):
         
         FFVV = UFOLorentz(name = 'FFVV',
                spins = [ 2, 2, 3, 3])
@@ -3021,7 +3322,7 @@ class TestAlohaWriter(unittest.TestCase):
         new_call = writer.reorder_call_list(call_list, 1, 2)
         self.assertEqual(['F2', 'V3', 'V4'], new_call)
 
-    def test_reorder_call_listFVVV(self):
+    def old_test_reorder_call_listFVVV(self):
         FVVV = UFOLorentz(name = 'FVVV',
                spins = [ 2, 3, 3, 3])
         
@@ -3041,7 +3342,7 @@ class TestAlohaWriter(unittest.TestCase):
         new_call = writer.reorder_call_list(call_list, 2, 4)
         self.assertEqual(['F1', 'V4', 'V3'], new_call)                  
     
-    def test_reorder_call_listVVVV(self):
+    def old_test_reorder_call_listVVVV(self):
         VVVV = UFOLorentz(name = 'VVVV',
                spins = [ 3, 3, 3, 3])
     
@@ -3092,7 +3393,7 @@ class TestAlohaWriter(unittest.TestCase):
         new_call = writer.reorder_call_list(call_list, 3, 4)
         self.assertEqual(['V1', 'V2', 'V4'], new_call)
 
-    def test_reorder_call_listUVVS(self):
+    def old_test_reorder_call_listUVVS(self):
         UVVS = UFOLorentz(name = 'UVVS',
                spins = [ 2, 3, 3, 1])
     
@@ -3144,7 +3445,7 @@ class TestAlohaWriter(unittest.TestCase):
         """ test that python writer works """
         
         solution ="""import wavefunctions
-def SSS1_1(S2, S3, C, M1, W1):
+def SSS1_1(S2, S3, COUP, M1, W1):
     S1 = wavefunctions.WaveFunction(size=3)
     S1[1] = S2[1]+S3[1]
     S1[2] = S2[2]+S3[2]
@@ -3153,12 +3454,17 @@ def SSS1_1(S2, S3, C, M1, W1):
             - complex(S1[2]).imag, \\
             - complex(S1[1]).imag]
     denom =1.0/(( (M1*( -M1+1j*W1))+( (P1[0]**2)-(P1[1]**2)-(P1[2]**2)-(P1[3]**2))))
-    S1[0]= C*denom*1j*(S3[0]*S2[0])
+    S1[0]= COUP*denom*1j*(S3[0]*S2[0])
     return S1
-def SSS1_2(S2, S3, C, M1, W1):
-    return SSS1_1(S2,S3,C,M1,W1)
-def SSS1_3(S2, S3, C, M1, W1):
-    return SSS1_1(S3,S2,C,M1,W1)"""
+    
+    
+def SSS1_2(S2, S3, COUP, M1, W1):
+    return SSS1_1(S2,S3,COUP,M1,W1)
+
+def SSS1_3(S2, S3, COUP, M1, W1):
+    return SSS1_1(S2,S3,COUP,M1,W1)
+
+"""
         
         SSS = UFOLorentz(name = 'SSS1',
                  spins = [ 1, 1, 1 ],
@@ -3172,8 +3478,7 @@ def SSS1_3(S2, S3, C, M1, W1):
         
         split_solution = solution.split('\n')
         split_routine = routine.split('\n')
-        for i,line in enumerate(split_routine):
-            self.assertEqual(split_solution[i],line)
+        self.assertEqual(split_solution, split_routine)
         self.assertEqual(len(split_routine), len(split_solution))
         
         
@@ -3191,14 +3496,16 @@ def SSS1_3(S2, S3, C, M1, W1):
 
         
         solution = """import wavefunctions
-def FFV2C1_0(F1,F2,V3,C):
-    vertex = C*( (F1[3]*( (F2[0]*( -1j*V3[1]-V3[2]))+(F2[1]*( 1j*V3[0]+1j*V3[3]))))+(F1[2]*( (F2[0]*( 1j*V3[0]-1j*V3[3]))+(F2[1]*( -1j*V3[1]+V3[2])))))
-    return vertex""" 
+def FFV2C1_0(F1,F2,V3,COUP):
+    vertex = COUP*( (F1[3]*( (F2[0]*( -1j*V3[1]-V3[2]))+(F2[1]*( 1j*V3[0]+1j*V3[3]))))+(F1[2]*( (F2[0]*( 1j*V3[0]-1j*V3[3]))+(F2[1]*( -1j*V3[1]+V3[2])))))
+    return vertex
+    
+    
+""" 
 
         split_solution = solution.split('\n')
         split_routine = routine.split('\n')
-        for i,line in enumerate(split_routine):
-            self.assertEqual(split_solution[i],line)
+        self.assertEqual(split_solution,split_routine)
         self.assertEqual(len(split_routine), len(split_solution))
             
             

@@ -77,7 +77,6 @@ class Models4FermionTest(unittest.TestCase):
                                                               p)[0]
 
             
-
         self.assertAlmostEqual(values['scalar'], values['4ferm'], 3)
 
 #===============================================================================
