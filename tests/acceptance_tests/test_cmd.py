@@ -908,7 +908,7 @@ P1_qq_wp_wp_epve
         self.do('import model sm')
         self.do('define p g u d u~ d~')
         self.do('define j g u d u~ d~')
-        self.do('generate p p > w+ j')
+        self.do('generate p p > w+ j @2')
         self.do('output pythia8 %s' % self.out_dir)
         # Check that the needed files are generated
         files = ['Processes_sm/Sigma_sm_gq_wpq.h', 'Processes_sm/Sigma_sm_gq_wpq.cc',
@@ -928,7 +928,7 @@ P1_qq_wp_wp_epve
             shutil.rmdir(self.out_dir)
 
         self.do('import model sm')
-        self.do('generate e+ e- > e+ e-')
+        self.do('generate e+ e- > e+ e- @2')
         self.do('output standalone_cpp %s' % self.out_dir)
 
         # Check that all needed src files are generated
@@ -950,21 +950,21 @@ P1_qq_wp_wp_epve
         subprocess.call(['make', 'check'],
                         stdout=devnull, stderr=devnull, 
                         cwd=os.path.join(self.out_dir, 'SubProcesses',
-                                         'P0_Sigma_sm_epem_epem'))
+                                         'P2_Sigma_sm_epem_epem'))
 
         self.assertTrue(os.path.exists(os.path.join(self.out_dir,
                                                     'SubProcesses',
-                                                    'P0_Sigma_sm_epem_epem',
+                                                    'P2_Sigma_sm_epem_epem',
                                                     'check')))
 
         # Check that the output of check is correct 
         logfile = os.path.join(self.out_dir, 'SubProcesses',
-                               'P0_Sigma_sm_epem_epem', 'check.log')
+                               'P2_Sigma_sm_epem_epem', 'check.log')
 
         subprocess.call('./check', 
                         stdout=open(logfile, 'w'), stderr=devnull,
                         cwd=os.path.join(self.out_dir, 'SubProcesses',
-                                         'P0_Sigma_sm_epem_epem'), shell=True)
+                                         'P2_Sigma_sm_epem_epem'), shell=True)
 
         log_output = open(logfile, 'r').read()
         me_re = re.compile('Matrix element\s*=\s*(?P<value>[\d\.e\+-]+)\s*GeV',

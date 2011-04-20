@@ -231,7 +231,10 @@ class ProcessExporterCPP(object):
         else:
             self.process_string = self.processes[0].base_string()
 
-        self.process_number = process_number
+        if process_number:
+            self.process_number = process_number
+        else:
+            self.process_number = self.processes[0].get('id')
 
         self.process_name = self.get_process_name()
         self.process_class = "CPPProcess"
