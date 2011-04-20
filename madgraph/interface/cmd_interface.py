@@ -2431,7 +2431,12 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
         if args[0].startswith('standalone'):
             ext_program = launch_ext.SALauncher(args[1], self.timeout, **options)
         elif args[0] == 'madevent':
-            ext_program = launch_ext.MELauncher(args[1], self.timeout, **options)
+            #check if this is a cross-section
+            if len(self._generate_info.split('>')[0].strip().split())>1:
+                ext_program = launch_ext.MELauncher(args[1], self.timeout, **options)
+            else:
+                # This is a width computation
+                ext_program = launch_ext.MELauncher(args[1], self.timeout, unit='GeV', **options)
         elif args[0] == 'pythia8':
             ext_program = launch_ext.Pythia8Launcher(args[1], self.timeout, **options)
         else:

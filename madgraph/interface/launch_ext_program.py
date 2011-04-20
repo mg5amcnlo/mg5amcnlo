@@ -192,7 +192,7 @@ class MELauncher(ExtLauncher):
     
     cards = ['param_card.dat', 'run_card.dat']
 
-    def __init__(self, running_dir, timeout, **option):
+    def __init__(self, running_dir, timeout, unit='pb', **option):
         """ initialize the StandAlone Version"""
         
         
@@ -201,7 +201,8 @@ class MELauncher(ExtLauncher):
 
         assert hasattr(self, 'cluster')
         assert hasattr(self, 'name')
-         
+        self.unit = unit
+        
         # Check for pythia-pgs directory
         if os.path.isdir(os.path.join(MG5DIR,'pythia-pgs')):
             self.pythia = os.path.join(MG5DIR,'pythia-pgs')
@@ -308,7 +309,10 @@ class MELauncher(ExtLauncher):
         line = fsock.readline()
         cross, error = line.split()[0:2]
         
-        logger.info('The total cross-section is %s +- %s pb' % (cross, error))
+        if self.unit != 'GeV':
+            logger.info('The total cross-section is %s +- %s %s' % (cross, error, self.unit))
+        else:
+            logger.info('The width is %s +- %s GeV' % (cross, error))
         logger.info('more information in %s' 
                                  % os.path.join(self.running_dir, 'index.html'))
                 
