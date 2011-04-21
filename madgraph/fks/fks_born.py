@@ -199,7 +199,7 @@ class FKSRealProcess(): #test written
     """contains information about a real process:
     -- i/j fks
     -- amplitude
-    -- leg permutation"""
+    -- leg permutation<<REMOVED!"""
     
     def __init__(self, born_proc, leglist, amplist, amp_id_list):
         """initialize the real process based on born_proc and leglist,
@@ -213,8 +213,6 @@ class FKSRealProcess(): #test written
             if leg.get('fks') == 'j':
                 self.j_fks = leg.get('number')
                 
-        print "in FKSRealProcess BEFORE permutation", [l['id'] for l in leglist], "i ", self.i_fks,\
-        "   j ", self.j_fks
 
         self.process = copy.copy(born_proc)
         orders = copy.copy(born_proc.get('orders'))
@@ -224,24 +222,29 @@ class FKSRealProcess(): #test written
             else:
                 orders[n] = o +1
         self.process.set('orders', orders)
-        sorted_legs = [(leg.get('id'), leg) for leg in \
-                         leglist if not leg.get('state')] + \
-                         sorted([(leg.get('id'), leg) for leg in \
-                                 leglist if leg.get('state')])
-        pdgs = array.array('i',[s[0] for s in sorted_legs]) 
-        self.permutation= [leg[1].get('number') for leg in sorted_legs]
-        self.process.set('legs', MG.LegList([l[1] for l in sorted_legs]))
-        for i, leg in enumerate(sorted_legs):
-            leg[1].set('number', i+1)
-        try:
-            self.amplitude = amplist[amp_id_list.index(pdgs)]
-        except ValueError:
-            self.amplitude = diagram_generation.Amplitude(self.process)
-            amplist.append(self.amplitude)
-            amp_id_list.append(pdgs)
+
+        legs = [(leg.get('id'), leg) for leg in \
+                         leglist ]
+        pdgs = array.array('i',[s[0] for s in legs]) 
+        
+        self.process.set('legs', MG.LegList(leglist))
+        
+#        sorted_legs = [(leg.get('id'), leg) for leg in \
+#                         leglist if not leg.get('state')] + \
+#                         sorted([(leg.get('id'), leg) for leg in \
+#                                 leglist if leg.get('state')])
+#        pdgs = array.array('i',[s[0] for s in sorted_legs]) 
+#        self.permutation= [leg[1].get('number') for leg in sorted_legs]
+#        self.process.set('legs', MG.LegList([l[1] for l in sorted_legs]))
+#        for i, leg in enumerate(sorted_legs):
+#            leg[1].set('number', i+1)
+#        try:
+#            self.amplitude = amplist[amp_id_list.index(pdgs)]
+#        except ValueError:
+        self.amplitude = diagram_generation.Amplitude(self.process)
+        amplist.append(self.amplitude)
+        amp_id_list.append(pdgs)
         self.pdgs = pdgs
-        print "in FKSRealProcess after permutation", [l['id'] for l in leglist], "i ", self.i_fks,\
-        "   j ", self.j_fks
 
             
 
@@ -280,7 +283,7 @@ class FKSProcessFromBorn(object):
             self.model = self.born_proc['model']
             self.leglist = self.to_fks_legs(self.born_proc['legs'])
             self.nlegs = len(self.leglist)
-            print [l.get('id') for l in self.leglist]
+         #   print [l.get('id') for l in self.leglist]
 #           self.leglist = self.born_proc.get('legs')
 #            for leg in self.leglist:
 #                self.pdg_codes.append(leg['id'])
@@ -382,8 +385,8 @@ class FKSProcessFromBorn(object):
             self.splittings[i_i] = self.find_splittings(i)
             for split in self.splittings[i_i]:
                 self.reals[i_i].append(self.add_numbers(self.insert_legs(i, split)))
-                print [l.get('id') for l in self.reals[i_i][-1]]
-                print [l.get('fks') for l in self.reals[i_i][-1]]
+            #    print [l.get('id') for l in self.reals[i_i][-1]]
+            #    print [l.get('fks') for l in self.reals[i_i][-1]]
                 
     
     def insert_legs(self, leg, split):

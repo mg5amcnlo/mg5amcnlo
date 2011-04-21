@@ -42,7 +42,8 @@ import madgraph.core.base_objects as base_objects
 import madgraph.core.diagram_generation as diagram_generation
 import madgraph.core.drawing as draw_lib
 import madgraph.core.helas_objects as helas_objects
-import madgraph.core.fks_real as fks
+import madgraph.fks.fks_real as fks
+import madgraph.fks.fks_born as fks_born
 
 import madgraph.iolibs.drawing_eps as draw
 import madgraph.iolibs.export_cpp as export_cpp

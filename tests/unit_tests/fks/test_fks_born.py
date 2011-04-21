@@ -21,7 +21,7 @@ root_path = os.path.split(os.path.dirname(os.path.realpath( __file__ )))[0]
 sys.path.insert(0, os.path.join(root_path,'..','..'))
 
 import tests.unit_tests as unittest
-import madgraph.core.fks_born as fks_born
+import madgraph.fks.fks_born as fks_born
 import madgraph.core.base_objects as MG
 import madgraph.core.color_algebra as color
 import madgraph.core.diagram_generation as diagram_generation
@@ -516,10 +516,10 @@ class TestFKSProcess(unittest.TestCase):
     
     def test_FKSRealProcess_init(self):
         """tests the correct initialization of the FKSRealProcess class. 
-        In particular checks thet
+        In particular checks that
         --i /j fks
         --amplitude
-        --leg_permutation
+        --leg_permutation <<REMOVED
         are set to the correct values"""
         amplist = []
         amp_id_list = []
@@ -535,7 +535,7 @@ class TestFKSProcess(unittest.TestCase):
         self.assertEqual(len(amplist),1 )
         self.assertEqual(len(amp_id_list),1 )
         
-        self.assertEqual(amp_id_list[0], array.array('i',[2,21,2,21,21]))
+##        self.assertEqual(amp_id_list[0], array.array('i',[2,21,2,21,21]))
         sorted_legs = fksproc.to_fks_legs([
                                         fks_born.FKSLeg(
                                         {'id' :2,
@@ -547,13 +547,13 @@ class TestFKSProcess(unittest.TestCase):
                                          'number' :2,
                                          'state' :False,
                                          'fks' : 'n'}),
-                                        fks_born.FKSLeg( 
-                                         {'id' :2,
-                                         'number' :3,
-                                         'state' :True,
-                                         'fks' : 'n'}),
                                         fks_born.FKSLeg(
                                          {'id' :21,
+                                         'number' :3,
+                                         'state' :True,
+                                         'fks' : 'i'}),
+                                        fks_born.FKSLeg( 
+                                         {'id' :2,
                                          'number' :4,
                                          'state' :True,
                                          'fks' : 'n'}),
@@ -561,7 +561,7 @@ class TestFKSProcess(unittest.TestCase):
                                          {'id' :21,
                                          'number' :5,
                                          'state' :True,
-                                         'fks' : 'i'})
+                                         'fks' : 'n'})
                                         ] )
         
         sorted_real_proc= copy.copy(self.myproc)
@@ -569,21 +569,8 @@ class TestFKSProcess(unittest.TestCase):
         sorted_real_proc.set('orders', {'QCD' :11, 'QED' :0 })
         amp = diagram_generation.Amplitude(sorted_real_proc)
         self.assertEqual(amplist[0],amp)
-        self.assertEqual(realproc.permutation, [1,2,4,5,3])
-        
-        
-       #take the second real for this process 21j 21 > -2i 2 21
-        leglist = fksproc.reals[0][1]
-        realproc = fks_born.FKSRealProcess(fksproc.born_proc, leglist, amplist, amp_id_list)
+ ##       self.assertEqual(realproc.permutation, [1,2,4,5,3])
 
-        self.assertEqual(realproc.i_fks, 3)
-        self.assertEqual(realproc.j_fks, 1)
-        #something should be appended to amplist and amp_id_list
-        self.assertEqual(len(amplist),2 )
-        self.assertEqual(len(amp_id_list),2 )
-        
-        self.assertEqual(amp_id_list[1], array.array('i',[21,21,-2,2,21]))
-        
     
     def test_generate_reals(self):
         """tests the generate reals function, if all the needed lists
@@ -602,8 +589,12 @@ class TestFKSProcess(unittest.TestCase):
         self.assertEqual(len(fksproc.real_amps), 11)
         #first check that amp list and amp id list have the same length
         self.assertEqual(len(amplist), len(amp_id_list))
-        #there should be 8 amps
-        self.assertEqual(len(amplist), 8)
+##        #there should be 8 amps
+##        self.assertEqual(len(amplist), 8)
+
+        #there should be 11 amps
+        self.assertEqual(len(amplist), 11)
+
         
     def test_legs_to_color_link_string(self):
         """tests for some pair of legs that the color string and the index 

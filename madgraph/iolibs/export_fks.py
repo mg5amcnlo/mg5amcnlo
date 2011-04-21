@@ -26,7 +26,7 @@ import string
 import madgraph.core.color_algebra as color
 import madgraph.core.helas_objects as helas_objects
 import madgraph.iolibs.drawing_eps as draw
-import madgraph.core.fks_real as fks
+import madgraph.fks.fks_real as fks
 import madgraph.iolibs.files as files
 import madgraph.iolibs.misc as misc
 import madgraph.iolibs.file_writers as writers
