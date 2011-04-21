@@ -767,7 +767,7 @@ def write_aloha_file_inc(aloha_dir,file_ext, comp_ext):
     aloha_files = []
     
     # Identify the valid files
-    alohafile_pattern = re.compile(r'''^[STFV\d_]*[_C\d]*_\d%s''' % file_ext)
+    alohafile_pattern = re.compile(r'''_\d%s$''' % file_ext)
     for filename in os.listdir(aloha_dir):
         if os.path.isfile(os.path.join(aloha_dir, filename)):
             if alohafile_pattern.match(filename):
