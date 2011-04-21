@@ -1,17 +1,20 @@
 Update notes for MadGraph 5 (in reverse time order)
 
-1.0.1 (19/04/11): JA: Removed hard limit on number of external particles in 
+1.1.0 (21/04/11): OM: Merged ALOHA calls for different lorentz structures 
+                      with the same color structures, increasing the speed and 
+                      efficiency of matrix element evaluations.
+                  JA: Removed hard limit on number of external particles in 
                       MadEvent, allowing for unlimited length decay chains there
-                      (up to 14 final state particles successfully integrated)
+                      (up to 14 final state particles successfully integrated).
                   JA: Improved helicity selection and automatic full helicity 
                       sum if needed. Optimization of run parameters.
-                  JA: New flag in run_card.dat to decide whether basic
-                      cuts are applied to decay products or not
+                  JA: New flag in run_card.dat to decide whether basic cuts
+                      are applied to decay products or not.
                   JA: Fixed MadEvent bugs for multiparton processes with 
-                      conflicting decays and fixed some faulty array limits.
+                      conflicting decays and some faulty array limits.
                   JA: Suppressed scary but irrelevant warnings for compiling 
-                      2->1 and 1->2 processes in MadEvent
-                  JA: Optimized Pythia 8 output further
+                      2->1 and 1->2 processes in MadEvent.
+                  JA: Pythia 8 output further optimized.
                   JA: Several minor fixes relating to user interface etc.
 
 1.0.0 (12/04/11): Official release of MadGraph 5. Some of the features:
