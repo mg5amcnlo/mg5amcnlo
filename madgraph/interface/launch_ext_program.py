@@ -18,6 +18,7 @@ import logging
 import os
 import pydoc
 import re
+import sys
 import subprocess
 import time
 
@@ -38,12 +39,14 @@ class ExtLauncher(object):
     cards = [] # files can be modified (path from self.card_dir)
     force = False
     
-    def __init__(self, running_dir, card_dir='', timeout=None, **options):
+    def __init__(self, running_dir, card_dir='', timeout=None, configuration = {},
+                 **options):
         """ initialize an object """
         
         self.running_dir = running_dir
         self.card_dir = os.path.join(self.running_dir, card_dir)
         self.timeout = timeout
+        self.configuration = configuration
         self.found_editor()
         
         #include/overwrite options
@@ -78,16 +81,7 @@ class ExtLauncher(object):
         """edit a file"""
 
         path = os.path.realpath(path)
-        if sys.platform == 'darwin':
-            if which(self.editor):
-                subprocess.call([self.editor, path], cwd=os.getcwd())
-            elif self.editor:
-                subprocess.call(['open','-W','-a',self.editor, path])
-            else:
-                subprocess.call(['open','-W','-t', path], cwd=os.getcwd())
-        else:
-            subprocess.call([self.editor, path], cwd=os.getcwd())
-            
+        open_file(path, self.configuration)
             
     def ask(self, question, default, choices=[], path_info=[]):
         """ ask a question """
@@ -186,7 +180,7 @@ class MELauncher(ExtLauncher):
     cards = ['param_card.dat', 'run_card.dat']
 
     def __init__(self, running_dir, timeout, **option):
-        """ initialize the StandAlone Version"""
+        """ initialize the MadEvent Version"""
         
         
         ExtLauncher.__init__(self, running_dir, './Cards', timeout, **option)
@@ -214,7 +208,7 @@ class MELauncher(ExtLauncher):
         
         # Assign a valid run name if not put in options
         if self.name == '':
-            for i in range(1000):
+            for i in range(1,1000):
                 path = os.path.join(self.running_dir, 'Events','run_%02i_banner.txt' % i)
                 if not os.path.exists(path):
                     self.name = 'run_%02i' % i
@@ -275,6 +269,13 @@ class MELauncher(ExtLauncher):
     def launch_program(self):
         """launch the main program"""
         
+        # Open the corresponding crossx.html page
+        os.system('touch %s' % os.path.join(self.running_dir,'RunWeb'))
+        subprocess.call([os.path.join('bin','gen_crossxhtml-pl')], 
+                         cwd=self.running_dir)
+        open_file(os.path.join(self.running_dir, 'HTML', 'crossx.html'),
+                  self.configuration)
+
         mode = str(self.cluster)
         if mode == "0":
             subprocess.call([self.executable, mode, self.name], 
@@ -422,8 +423,91 @@ class Pythia8Launcher(ExtLauncher):
 
         print "Output of the run is found at " + \
               os.path.realpath(os.path.join(self.running_dir, self.name))
-        
 
-        
-                    
-            
+#
+# Global function to open supported file types
+#       
+def open_file(file_path, configuration):
+    """Open file if supported type, using program given by the dict configuration"""
+
+    try:
+        extension = file_path.rsplit('.',1)[1]
+    except IndexError:
+        extension = ''
+
+    # For MAC:
+    if sys.platform == 'darwin':
+        if extension == 'html':
+            html_v = configuration['web_browser']
+            if misc.which(html_v):
+                os.system('%s %s' % (html_v, file_path))
+            elif html_v:
+                os.system('open -a %s %s' % (html_v,file_path))
+            else:
+                os.system('open %s' % file_path)
+        elif extension == 'eps':
+            eps_v = configuration['eps_viewer']
+            if misc.which(eps_v):
+                os.system('%s %s' % (eps_v, file_path))
+            elif eps_v:
+                os.system('open -a %s %s' % (eps_v,file_path))
+            else:
+                os.system('open %s' % file_path)
+        else:
+            text_v = configuration['text_editor']
+            if misc.which(TEXTEDITOR):
+                subprocess.call([TEXTEDITOR, file_path])
+            elif text_v:
+                os.system('%s %s' % (text_v, file_path))
+            else:
+                logger.info('Using default editor. Set text_editor in ./input/mg5_configuration.txt')
+                prog = ['emacs', 'vi', 'vim', 'nano']
+                for p in prog:
+                    if misc.which(p):
+                        os.system('%s %s' % (p,file_path))
+                        break
+                else:
+                    logger_stderr.warning('Unable to find a valid editor for text file. Please specify one in ./input/mg5_configuration.txt')  
+    # For Linux
+    else:
+        if extension == 'html':
+            if configuration['web_browser']:
+                os.system('%s %s' % 
+                            (configuration['web_browser'],file_path))
+            else:
+                prog = ['firefox', 'chrome', 'safari','opera']
+                for p in prog:
+                    if misc.which(p):
+                        os.system('%s %s' % (p,file_path))
+                        break
+                else:
+                    logger_stderr.warning('Unable to find a valid browser for html file. Please specify one in ./input/mg5_configuration.txt')  
+
+        elif extension == 'eps':
+            if configuration['eps_viewer']:
+                os.system('%s %s' % 
+                               (configuration['eps_viewer'],file_path))
+            else:
+                prog = ['gv', 'ggv', 'evince']
+                for p in prog:
+                    if misc.which(p):
+                        os.system('%s %s' % (p,file_path))
+                        break
+                else:
+                    logger_stderr.warning('Unable to find a valid viewer for eps file. Please specify one in ./input/mg5_configuration.txt')  
+        else:
+            text_v = configuration['text_editor']
+            if misc.which(TEXTEDITOR):
+                subprocess.call([TEXTEDITOR, file_path])
+            elif text_v:
+                os.system('%s %s' % (text_v, file_path))
+            else:
+                logger.info('Using default editor. Set text_editor in ./input/mg5_configuration.txt')
+                prog = ['vi', 'emacs', 'vim', 'gedit', 'nano']
+                for p in prog:
+                    if misc.which(p):
+                        os.system('%s %s' % (p,file_path))
+                        break
+                else:
+                    logger_stderr.warning('Unable to find a valid editor for such file. Please specify one in ./input/mg5_configuration.txt')  
+

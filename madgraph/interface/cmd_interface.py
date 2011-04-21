@@ -283,10 +283,10 @@ class HelpToCmd(object):
         logger.info("-- display a the status of various internal state variables")
         logger.info("   for particles/interactions you can specify the name or id of the")
         logger.info("   particles/interactions to receive more details information.")
-        logger.info("   example display particles e+.")
+        logger.info("   Example: display particles e+.")
         logger.info("   For \"checks\", can specify only to see failed checks.")
         logger.info("   For \"diagrams\", you can specify where the file will be written.")
-        logger.info("   example display diagrams ./")
+        logger.info("   Example: display diagrams ./")
         
     def help_launch(self):
         """help for launch command"""
@@ -301,7 +301,7 @@ class HelpToCmd(object):
         logger.info("-- open a file with the appropriate editor.")
         logger.info('   If FILE belongs to index.html, param_card.dat, run_card.dat')
         logger.info('   the path to the last created/used directory is used')
-        logger.info('   The program used to open those files can be choose in the')
+        logger.info('   The program used to open those files can be chosen in the')
         logger.info('   configuration file ./input/mg5_configuration.txt')
         
     def help_output(self):
@@ -1215,6 +1215,8 @@ class CompleteForCmd(CheckValidForCmd):
             if os.path.isdir(os.path.join(path,'HTML')):
                 possibility += [f for f in os.listdir(os.path.join(path,'HTML')) 
                                   if f.endswith('.html') and 'default' not in f]
+        else:
+            possibility.extend(['./','../'])
         if os.path.exists('MG5_debug'):
             possibility.append('MG5_debug')
 
@@ -2440,6 +2442,8 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
                 name = name.strip()
                 value = value.strip()
                 self.configuration[name] = value
+                if value.lower() == "none":
+                    self.configuration[name] = None
 
         # Treat each expected input
         # 1: Pythia8_path
@@ -2493,11 +2497,17 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
         # args is now MODE PATH
         
         if args[0].startswith('standalone'):
-            ext_program = launch_ext.SALauncher(args[1], self.timeout, **options)
+            ext_program = launch_ext.SALauncher(args[1], self.timeout,
+                                                configuration = self.configuration,
+                                                **options)
         elif args[0] == 'madevent':
-            ext_program = launch_ext.MELauncher(args[1], self.timeout, **options)
+            ext_program = launch_ext.MELauncher(args[1], self.timeout,
+                                                configuration = self.configuration,
+                                                **options)
         elif args[0] == 'pythia8':
-            ext_program = launch_ext.Pythia8Launcher(args[1], self.timeout, **options)
+            ext_program = launch_ext.Pythia8Launcher(args[1], self.timeout,
+                                                configuration = self.configuration,
+                                                **options)
         else:
             raise self.InvalidCmd , '%s cannot be run from MG5 interface' % args[0]
         
@@ -2639,79 +2649,10 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
         args = split_arg(line)
         # Check Argument validity and modify argument to be the real path
         self.check_open(args)
-        
         file_path = args[0]
-        try:
-            extension = file_path.rsplit('.',1)[1]
-        except IndexError:
-            extension = ''
+        
+        launch_ext.open_file(file_path, self.configuration)
                  
-        # For MAC:
-        if sys.platform == 'darwin':
-            if extension == 'html':
-                html_v = self.configuration['web_browser']
-                if misc.which(html_v):
-                    os.system('%s %s' % (html_v, file_path))
-                elif html_v:
-                    os.system('open -a %s %s' % (html_v,file_path))
-                else:
-                    os.system('open %s' % file_path)
-            elif extension == 'eps':
-                eps_v = self.configuration['eps_viewer']
-                if misc.which(eps_v):
-                    os.system('%s %s' % (eps_v, file_path))
-                elif eps_v:
-                    os.system('open -a %s %s' % (eps_v,file_path))
-                else:
-                    os.system('open %s' % file_path)
-            else:
-                if misc.which(madgraph.TEXTEDITOR):
-                    subprocess.call([madgraph.TEXTEDITOR, file_path])
-                elif madgraph.TEXTEDITOR:
-                    subprocess.call(['open','-a',self.editor, file_path])
-                else: 
-                    os.system('open -t %s' % file_path)
-        # For Linux
-        else:
-            if extension == 'html':
-                if self.configuration['web_browser']:
-                    os.system('%s %s' % 
-                                (self.configuration['web_browser'],file_path))
-                else:
-                    prog = ['firefox', 'chrome', 'safari','opera']
-                    for p in prog:
-                        if misc.which(p):
-                            os.system('%s %s' % (p,file_path))
-                            break
-                    else:
-                        logger_stderr.warning('unable to find a valid program for such file. Please define one in ./input/mg5_configuration.txt')  
-                        
-            elif extension == 'eps':
-                if self.configuration['eps_viewer']:
-                    os.system('%s %s' % 
-                                   (self.configuration['eps_viewer'],file_path))
-                else:
-                    prog = ['gv', 'ggv', 'evince']
-                    for p in prog:
-                        if misc.which(p):
-                            os.system('%s %s' % (p,file_path))
-                            break
-                    else:
-                        logger_stderr.warning('unable to find a valid program for such file. Please define one in ./input/mg5_configuration.txt')  
-            else:
-                if which(madgraph.TEXTEDITOR):
-                    subprocess.call([madgraph.TEXTEDITOR, file_path])
-                elif os.environ.has_key('EDITOR'):
-                    os.system('%s %s' % (os.environ['EDITOR'], file_path))
-                else:
-                    prog = ['vi', 'emacs', 'vim', 'gedit', 'nano']
-                    for p in prog:
-                        if misc.which(p):
-                            os.system('%s %s' % (p,file_path))
-                            break
-                    else:
-                        logger_stderr.warning('unable to find a valid program for such file. Please define one in ./input/mg5_configuration.txt')  
-                    
     def do_output(self, line):
         """Initialize a new Template or reinitialize one"""
 
