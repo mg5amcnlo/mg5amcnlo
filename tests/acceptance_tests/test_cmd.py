@@ -89,12 +89,12 @@ class TestCmdShell1(unittest.TestCase):
         """ command 'draw' works """
 
         self.do('load processes %s' % self.join_path(_pickle_path,'e+e-_e+e-.pkl'))
-        self.do('draw .')
+        self.do('display diagrams .')
         self.assertTrue(os.path.exists('./diagrams_0_epem_epem.eps'))
         os.remove('./diagrams_0_epem_epem.eps')
         
         self.do('generate g g > g g')
-        self.do('draw .')
+        self.do('display diagrams .')
         self.assertTrue(os.path.exists('diagrams_0_gg_gg.eps'))
         os.remove('diagrams_0_gg_gg.eps')
         
@@ -103,7 +103,10 @@ class TestCmdShell1(unittest.TestCase):
         
         config = self.cmd.set_configuration(MG5DIR+'/input/mg5_configuration.txt')
         expected = {'pythia8_path': './pythia8',
-                    'symmetry_max_time': '600'}
+                    'symmetry_max_time': '600',
+                    'web_browser': None,
+                    'text_editor': 'vi',
+                    'eps_viewer': None}
 
         self.assertEqual(config, expected)
 
