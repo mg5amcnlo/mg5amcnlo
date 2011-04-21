@@ -36,3 +36,8 @@ for position in mg4_possibility:
         MG4DIR = os.path.realpath(position)
         break
 del mg4_possibility
+
+if os.environ.has_key('EDITOR'):
+    TEXTEDITOR = os.environ['EDITOR']
+else:
+    TEXTEDITOR = None

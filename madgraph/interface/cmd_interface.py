@@ -85,10 +85,10 @@ class CmdExtended(cmd.Cmd):
                                                     'display multiparticles'],
         'generate': ['add process PROCESS','output [OUTPUT_TYPE] [PATH]','draw .'],
         'add process':['output [OUTPUT_TYPE] [PATH]', 'display processes'],
-        'output':['launch','history PATH', 'exit'],
+        'output':['launch','open index.html','history PATH', 'exit'],
         'display': ['generate PROCESS', 'add process PROCESS', 'output [OUTPUT_TYPE] [PATH]'],
-        'draw': ['shell CMD'],
         'import proc_v4' : ['launch','exit'],
+        'launch': ['open index.html','exit'],
         'tutorial': ['generate PROCESS', 'import model MODEL', 'help TOPIC']
     }
     
@@ -285,7 +285,9 @@ class HelpToCmd(object):
         logger.info("   particles/interactions to receive more details information.")
         logger.info("   example display particles e+.")
         logger.info("   For \"checks\", can specify only to see failed checks.")
-
+        logger.info("   For \"diagrams\", you can specify where the file will be written.")
+        logger.info("   example display diagrams ./")
+        
     def help_launch(self):
         """help for launch command"""
         _launch_parser.print_help()
@@ -391,8 +393,8 @@ class HelpToCmd(object):
         logger.info("   If FILEPATH is omitted, the history will be output to stdout.")
         logger.info("   \"clean\" will remove all entries from the history.")
 
-    def help_draw(self):
-        _draw_parser.print_help()
+#    def help_draw(self):
+#        _draw_parser.print_help()
 
     def help_set(self):
         logger.info("syntax: set %s argument" % "|".join(self._set_options))
@@ -502,8 +504,7 @@ class CheckValidForCmd(object):
         """
         
         if len(args) < 1:
-            self.help_draw()
-            raise self.InvalidCmd('\"draw\" command requires a directory path')
+            args.append('/tmp')
         
         if not self._curr_amps:
             raise self.InvalidCmd("No process generated, please generate a process!")
@@ -776,7 +777,7 @@ class CheckValidForCmd(object):
                 args[0] = os.path.join(path,'Cards', args[0])
             else:
                 raise self.InvalidCmd('No default path for this file')
-        else:
+        elif not os.path.isfile(args[0]):
             raise self.InvalidCmd('No default path for this file')
                 
                 
@@ -1191,16 +1192,18 @@ class CompleteForCmd(CheckValidForCmd):
         if len(args) == 2:
             return self.path_completion(text)
         
-    def complete_open(self, text, line, begidx, endidx):
+    def complete_open(self, text, line, begidx, endidx): 
         """ complete the open command """
-        
+
         args = split_arg(line[0:begidx])
+        
         # Directory continuation
         if os.path.sep in args[-1] + text:
             return self.path_completion(text,
                                     os.path.join('.',*[a for a in args if \
                                                       a.endswith(os.path.sep)]))
 
+        possibility = []
         if self._done_export:
             path = self._done_export[0]
             possibility = ['index.html']
@@ -1212,10 +1215,11 @@ class CompleteForCmd(CheckValidForCmd):
             if os.path.isdir(os.path.join(path,'HTML')):
                 possibility += [f for f in os.listdir(os.path.join(path,'HTML')) 
                                   if f.endswith('.html') and 'default' not in f]
-                
-            return self.list_completion(text, possibility)
-        
+        if os.path.exists('MG5_debug'):
+            possibility.append('MG5_debug')
 
+        return self.list_completion(text, possibility)
+       
     def complete_output(self, text, line, begidx, endidx,
                         possible_options = ['f', 'noclean', 'nojpeg'],
                         possible_options_full = ['-f', '-noclean', '-nojpeg']):
@@ -1414,8 +1418,8 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
 
     # Options and formats available
     _display_opts = ['particles', 'interactions', 'processes', 'diagrams', 
-                     'multiparticles', 'couplings', 'lorentz', 'checks',
-                     'parameters']
+                     'diagrams_text', 'multiparticles', 'couplings', 'lorentz', 
+                     'checks', 'parameters']
     _add_opts = ['process']
     _save_opts = ['model', 'processes']
     _tutorial_opts = ['start', 'stop']
@@ -1587,6 +1591,9 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
         #check the validity of the arguments
         self.check_display(args)
 
+        if args[0] == 'diagrams':
+            self.draw(' '.join(args[1:]))
+
         if args[0] == 'particles' and len(args) == 1:
             print "Current model contains %i particles:" % \
                     len(self._curr_model['particles'])
@@ -1663,7 +1670,7 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
             for amp in self._curr_amps:
                 print amp.nice_string_processes()
 
-        elif args[0] == 'diagrams':
+        elif args[0] == 'diagrams_text':
             text = "\n".join([amp.nice_string() for amp in self._curr_amps])
             pydoc.pager(text)
 
@@ -1765,7 +1772,7 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
                        "please run from a" + \
                        "\n\t         valid MG_ME directory.")
 
-    def do_draw(self, line):
+    def draw(self, line):
         """ draw the Feynman diagram for the given process """
 
         args = split_arg(line)
@@ -1802,6 +1809,7 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
                          amp.get('process').nice_string())
             plot.draw(opt=options)
             logger.info("Wrote file " + filename)
+            self.exec_cmd('open %s' % filename)
 
         stop = time.time()
         logger.info('time to draw %s' % (stop - start)) 
@@ -2443,6 +2451,19 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
             else:
                 pythia8_dir = None
         self.pythia8_path = pythia8_dir
+        
+        # Treat text editor -> overwrites madgraph value
+        if misc.which(self.configuration['text_editor']):
+            madgraph.TEXTEDITOR = self.configuration['text_editor']
+        elif os.environ.has_key('EDITOR'):
+            madgraph.TEXTEDITOR = os.environ['EDITOR']
+        else:
+            prog = ['vi', 'emacs', 'vim', 'gedit', 'nano']
+            for p in prog:
+                if misc.which(p):
+                    madgraph.TEXTEDITOR = p
+                    break
+    
           
         return self.configuration
      
@@ -2628,21 +2649,27 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
         # For MAC:
         if sys.platform == 'darwin':
             if extension == 'html':
-                if self.configuration['web_browser']:
-                    os.system('open -a %s %s' % 
-                                   (self.configuration['web_browser'],file_path))
+                html_v = self.configuration['web_browser']
+                if misc.which(html_v):
+                    os.system('%s %s' % (html_v, file_path))
+                elif html_v:
+                    os.system('open -a %s %s' % (html_v,file_path))
                 else:
                     os.system('open %s' % file_path)
             elif extension == 'eps':
-                if self.configuration['eps_viewer']:
-                    os.system('open -a %s %s' % 
-                                   (self.configuration['eps_viewer'],file_path))
+                eps_v = self.configuration['eps_viewer']
+                if misc.which(eps_v):
+                    os.system('%s %s' % (eps_v, file_path))
+                elif eps_v:
+                    os.system('open -a %s %s' % (eps_v,file_path))
                 else:
                     os.system('open %s' % file_path)
             else:
-                if os.environ.has_key('EDITOR'):
-                    os.system('%s %s' % (os.environ['EDITOR'], file_path))
-                else:
+                if misc.which(madgraph.TEXTEDITOR):
+                    subprocess.call([madgraph.TEXTEDITOR, file_path])
+                elif madgraph.TEXTEDITOR:
+                    subprocess.call(['open','-a',self.editor, file_path])
+                else: 
                     os.system('open -t %s' % file_path)
         # For Linux
         else:
@@ -2672,7 +2699,9 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
                     else:
                         logger_stderr.warning('unable to find a valid program for such file. Please define one in ./input/mg5_configuration.txt')  
             else:
-                if os.environ.has_key('EDITOR'):
+                if which(madgraph.TEXTEDITOR):
+                    subprocess.call([madgraph.TEXTEDITOR, file_path])
+                elif os.environ.has_key('EDITOR'):
                     os.system('%s %s' % (os.environ['EDITOR'], file_path))
                 else:
                     prog = ['vi', 'emacs', 'vim', 'gedit', 'nano']

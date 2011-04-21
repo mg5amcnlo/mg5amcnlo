@@ -102,7 +102,10 @@ class TestCmdShell1(unittest.TestCase):
         """check that configuration file is at default value"""
         
         config = self.cmd.set_configuration(MG5DIR+'/input/mg5_configuration.txt')
-        expected = {'pythia8_path': './pythia8'}
+        expected = {'pythia8_path': './pythia8',
+                    'web_browser': 'None',
+                    'text_editor': 'None',
+                    'eps_viewer': 'None'}
 
         self.assertEqual(config, expected)
 

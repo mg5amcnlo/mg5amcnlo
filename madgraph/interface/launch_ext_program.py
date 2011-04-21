@@ -24,7 +24,7 @@ import time
 import madgraph.iolibs.files as files
 import madgraph.iolibs.misc as misc
 import madgraph.interface.extended_cmd as cmd
-from madgraph import MG4DIR, MG5DIR, MadGraph5Error
+from madgraph import MG4DIR, MG5DIR, MadGraph5Error, TEXTEDITOR
 from madgraph.iolibs.files import cp
 
 logger = logging.getLogger('cmdprint.ext_program')
@@ -54,23 +54,7 @@ class ExtLauncher(object):
     def found_editor(self):
         """ found a (shell) program for editing file """
         
-        # let first try to use the prefer editor (if EDITOR is define)
-        # if not define use the first define in a pre-define list
-            
-        if os.environ.has_key('EDITOR') and misc.which(os.environ['EDITOR']):
-            self.editor =  os.environ['EDITOR']
-            return
-        
-        logger.info('INFO: You can choose your prefered editor by defining the shell variable EDITOR')
-        
-        possibility = ['vi', 'emacs', 'vim', 'gedit', 'nano']
-        for editor in possibility:
-            if misc.which(editor):
-                self.editor = editor
-                return
-        
-        logger.warning(
-         'No valid editor detected. Please configure the shell variable EDITOR')
+        self.editor = TEXTEDITOR
             
     def run(self):
         """ execute the main code """
@@ -94,8 +78,17 @@ class ExtLauncher(object):
         """edit a file"""
 
         path = os.path.realpath(path)
-        subprocess.call([self.editor, path], cwd=os.getcwd())
-        
+        if sys.platform == 'darwin':
+            if which(self.editor):
+                subprocess.call([self.editor, path], cwd=os.getcwd())
+            elif self.editor:
+                subprocess.call(['open','-W','-a',self.editor, path])
+            else:
+                subprocess.call(['open','-W','-t', path], cwd=os.getcwd())
+        else:
+            subprocess.call([self.editor, path], cwd=os.getcwd())
+            
+            
     def ask(self, question, default, choices=[], path_info=[]):
         """ ask a question """
         
@@ -430,8 +423,7 @@ class Pythia8Launcher(ExtLauncher):
         print "Output of the run is found at " + \
               os.path.realpath(os.path.join(self.running_dir, self.name))
         
-        
-        
+
         
                     
             

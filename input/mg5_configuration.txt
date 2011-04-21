@@ -23,6 +23,11 @@
 # relative path start from mg5 directory
 pythia8_path = ./pythia8
 
+# Prefered Text Editor
+#  Default: use the shell default Editor
+#           or try to find one available on the system
+text_editor = None
+
 # Prefered WebBrower
 # If None: try to find one available on the system
 web_browser = None
@@ -31,6 +36,4 @@ web_browser = None
 # If None: try to find one available on the system
 eps_viewer = None
 
-# Prefered Text Editor
-# Use the shell default Editor
-# Put for example export EDITOR="emacs" in your ~/.bashrc
+
