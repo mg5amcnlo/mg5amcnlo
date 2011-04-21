@@ -4121,7 +4121,7 @@ CALL VVVXXX(W(1,4),W(1,2),W(1,24),MGVX5,AMP(28))""")
                                              A, \
                                              A]),
                       'color': [],
-                      'lorentz':['L1', 'L2'],
+                      'lorentz':['CL1', 'L2'],
                       'couplings':{(0, 0):'G1', (0, 1):'G2'},
                       'orders':{'QED':1}}))
 
@@ -4153,15 +4153,15 @@ CALL VVVXXX(W(1,4),W(1,2),W(1,24),MGVX5,AMP(28))""")
 CALL VXXXXX(P(0,2),zero,NHEL(2),-1*IC(2),W(1,2))
 CALL VXXXXX(P(0,3),zero,NHEL(3),+1*IC(3),W(1,3))
 CALL VXXXXX(P(0,4),zero,NHEL(4),+1*IC(4),W(1,4))
-CALL L1__L2_1(W(1,1),W(1,2),G1,G2,zero, zero, W(1,5))
+CALL CL1_L2_1(W(1,1),W(1,2),G1,G2,zero, zero, W(1,5))
 # Amplitude(s) for diagram number 1
-CALL L1__L2_0(W(1,3),W(1,4),W(1,5),G1,G2,AMP(1))
-CALL L1__L2_1(W(1,1),W(1,3),G1,G2,zero, zero, W(1,6))
+CALL CL1_L2_0(W(1,3),W(1,4),W(1,5),G1,G2,AMP(1))
+CALL CL1_L2_1(W(1,1),W(1,3),G1,G2,zero, zero, W(1,6))
 # Amplitude(s) for diagram number 2
-CALL L1__L2_0(W(1,2),W(1,4),W(1,6),G1,G2,AMP(2))
-CALL L1__L2_1(W(1,1),W(1,4),G1,G2,zero, zero, W(1,7))
+CALL CL1_L2_0(W(1,2),W(1,4),W(1,6),G1,G2,AMP(2))
+CALL CL1_L2_1(W(1,1),W(1,4),G1,G2,zero, zero, W(1,7))
 # Amplitude(s) for diagram number 3
-CALL L1__L2_0(W(1,2),W(1,3),W(1,7),G1,G2,AMP(3))""".split('\n'))
+CALL CL1_L2_0(W(1,2),W(1,3),W(1,7),G1,G2,AMP(3))""".split('\n'))
 
         exporter = export_v4.ProcessExporterFortranME()
 

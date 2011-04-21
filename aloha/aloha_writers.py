@@ -511,9 +511,14 @@ class ALOHAWriterForFortran(WriteALOHA):
             text += ' double complex TMP(%s)\n integer i' % self.type_to_size[spin]         
         
         # Define which part of the routine should be called
+        addon = ''
         if 'C' in self.namestring:
-            addon = 'C' +self.namestring.split('C',1)[1]
-        else:  
+            short_name, addon = name.split('C',1)
+            if addon.split('_')[0].isdigit():
+                addon = 'C' +self.namestring.split('C',1)[1]
+            else:
+                addon = '_%s' % self.offshell
+        else:
             addon = '_%s' % self.offshell
 
         # how to call the routine
@@ -600,9 +605,15 @@ def combine_name(name, other_names, outgoing):
 
     addon = ''
     if 'C' in name:
-        name, addon = name.split('C',1)
-        addon = 'C' + addon
-    return '__'.join((name,) + tuple(other_names)) + addon + '_%s' % outgoing
+        short_name, addon = name.split('C',1)
+        try:
+            addon = 'C' + str(int(addon))
+        except:
+            addon = ''
+        else:
+            name = short_name
+
+    return '_'.join((name,) + tuple(other_names)) + addon + '_%s' % outgoing
  
 class ALOHAWriterForCPP(WriteALOHA): 
     """Routines for writing out helicity amplitudes as C++ .h and .cc files."""
@@ -888,11 +899,16 @@ class ALOHAWriterForCPP(WriteALOHA):
         else:
             spin = self.particles[offshell -1] 
             text += 'complex<double> tmp[%s];\n int i = 0;' % self.type_to_size[spin]         
-        
+
         # Define which part of the routine should be called
+        addon = ''
         if 'C' in self.namestring:
-            addon = 'C' +self.namestring.split('C',1)[1]
-        else:  
+            short_name, addon = name.split('C',1)
+            if addon.split('_')[0].isdigit():
+                addon = 'C' +self.namestring.split('C',1)[1]
+            else:
+                addon = '_%s' % self.offshell
+        else:
             addon = '_%s' % self.offshell
 
         # how to call the routine
@@ -1217,9 +1233,14 @@ class ALOHAWriterForPython(WriteALOHA):
         text += header
   
         # Define which part of the routine should be called
+        addon = ''
         if 'C' in self.namestring:
-            addon = 'C' +self.namestring.split('C',1)[1]
-        else:  
+            short_name, addon = name.split('C',1)
+            if addon.split('_')[0].isdigit():
+                addon = 'C' +self.namestring.split('C',1)[1]
+            else:
+                addon = '_%s' % self.offshell
+        else:
             addon = '_%s' % self.offshell
 
         # how to call the routine
