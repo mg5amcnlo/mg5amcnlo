@@ -442,7 +442,7 @@ def open_file(file_path, configuration):
                 os.system('open -a %s %s' % (html_v,file_path))
             else:
                 os.system('open %s' % file_path)
-        elif extension == 'eps':
+        elif extension in ['ps', 'eps']:
             eps_v = configuration['eps_viewer']
             if misc.which(eps_v):
                 os.system('%s %s &' % (eps_v, file_path))
@@ -464,7 +464,7 @@ def open_file(file_path, configuration):
             else:
                 logger.warning('No valid web browser found. ' + \
                                'Please set in ./input/mg5_configuration.txt') 
-        elif extension == 'eps':
+        elif extension in ['ps', 'eps']:
             if configuration['eps_viewer']:
                 os.system('%s %s &' % 
                                (configuration['eps_viewer'],file_path))
