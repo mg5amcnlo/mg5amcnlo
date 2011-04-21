@@ -437,7 +437,7 @@ def open_file(file_path, configuration):
         if extension == 'html':
             html_v = configuration['web_browser']
             if misc.which(html_v):
-                os.system('%s %s' % (html_v, file_path))
+                os.system('%s %s &' % (html_v, file_path))
             elif html_v:
                 os.system('open -a %s %s' % (html_v,file_path))
             else:
@@ -445,7 +445,7 @@ def open_file(file_path, configuration):
         elif extension == 'eps':
             eps_v = configuration['eps_viewer']
             if misc.which(eps_v):
-                os.system('%s %s' % (eps_v, file_path))
+                os.system('%s %s &' % (eps_v, file_path))
             elif eps_v:
                 os.system('open -a %s %s' % (eps_v,file_path))
             else:
@@ -459,31 +459,21 @@ def open_file(file_path, configuration):
     else:
         if extension == 'html':
             if configuration['web_browser']:
-                os.system('%s %s' % 
+                os.system('%s %s &' % 
                             (configuration['web_browser'],file_path))
             else:
-                prog = ['firefox', 'chrome', 'safari','opera']
-                for p in prog:
-                    if misc.which(p):
-                        os.system('%s %s' % (p,file_path))
-                        break
-                else:
-                    logger.warning('Unable to find a valid browser for html file. Please specify one in ./input/mg5_configuration.txt')  
-
+                logger.warning('No valid web browser found. ' + \
+                               'Please set in ./input/mg5_configuration.txt') 
         elif extension == 'eps':
             if configuration['eps_viewer']:
-                os.system('%s %s' % 
+                os.system('%s %s &' % 
                                (configuration['eps_viewer'],file_path))
             else:
-                prog = ['gv', 'ggv', 'evince']
-                for p in prog:
-                    if misc.which(p):
-                        os.system('%s %s' % (p,file_path))
-                        break
-                else:
-                    logger_stderr.warning('Unable to find a valid viewer for eps file. Please specify one in ./input/mg5_configuration.txt')  
+                logger.warning('No valid eps viewer found. ' + \
+                               'Please set in ./input/mg5_configuration.txt') 
         else:
             if misc.which(configuration['text_editor']):
                 subprocess.call([configuration['text_editor'], file_path])
             else:
-                logger_stderr.warning('Unable to find a valid editor for text file. Please specify one in ./input/mg5_configuration.txt')  
+                logger.warning('No valid text editor found. ' + \
+                               'Please set in ./input/mg5_configuration.txt')

@@ -2499,14 +2499,38 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
                     for p in prog:
                         if misc.which(p):
                             self.configuration[key] = p
+                            logger.warning(('Using default text editor \"%s\". ' % p) + \
+                                       'Set text_editor in ./input/mg5_configuration.txt')
                             break
-                    logger.warning(('Using default text editor \"%s\". ' % p) + \
-                                   'Set text_editor in ./input/mg5_configuration.txt')
                 if not self.configuration[key]:
                     logger.warning('No valid text editor found. ' + \
                                    'Please set in ./input/mg5_configuration.txt') 
-            elif key in ['eps_viewer', 'web_browser']:
-                pass
+            elif key == 'eps_viewer':
+                if self.configuration[key]:
+                    continue
+                prog = ['gv', 'ggv', 'evince']
+                for p in prog:
+                    if misc.which(p):
+                        self.configuration[key] = p
+                        logger.warning(('Using default eps viewer \"%s\". ' % p) + \
+                                    'Set eps_viewer in ./input/mg5_configuration.txt')
+                        break
+                if not self.configuration[key]:
+                    logger.warning('No valid eps viewer found. ' + \
+                                   'Please set in ./input/mg5_configuration.txt') 
+            elif key == 'web_browser':
+                if self.configuration[key]:
+                    continue
+                prog = ['firefox', 'chrome', 'safari','opera']
+                for p in prog:
+                    if misc.which(p):
+                        self.configuration[key] = p
+                        logger.warning(('Using default web browser \"%s\". ' % p) + \
+                                      'Set web_browser in ./input/mg5_configuration.txt')
+                        break
+                if not self.configuration[key]:
+                    logger.warning('No valid web browser found. ' + \
+                                   'Please set in ./input/mg5_configuration.txt') 
             else:
                 # Default: try to set parameter
                 try:

@@ -17,6 +17,7 @@ import unittest
 import os
 import re
 import shutil
+import sys
 import logging
 
 logger = logging.getLogger('test_cmd')
@@ -102,11 +103,18 @@ class TestCmdShell1(unittest.TestCase):
         """check that configuration file is at default value"""
         
         config = self.cmd.set_configuration(MG5DIR+'/input/mg5_configuration.txt')
-        expected = {'pythia8_path': './pythia8',
-                    'symmetry_max_time': '600',
-                    'web_browser': None,
-                    'text_editor': 'vi',
-                    'eps_viewer': None}
+        if sys.platform == 'darwin':
+            expected = {'pythia8_path': './pythia8',
+                        'symmetry_max_time': '600',
+                        'web_browser': None,
+                        'text_editor': 'vi',
+                        'eps_viewer': None}
+        else:
+            expected = {'pythia8_path': './pythia8',
+                        'symmetry_max_time': '600',
+                        'web_browser': 'firefox',
+                        'text_editor': 'vi',
+                        'eps_viewer': 'gv'}            
 
         self.assertEqual(config, expected)
 
