@@ -239,7 +239,7 @@ c-----
       write(*,10) 'Enter Configuration Number: '
       read(*,*) dconfig
 c     ncode is number of digits needed for the BW code
-      ncode=int(dlog10(3d0)*(max_particles-4))+1
+      ncode=int(dlog10(3d0)*(max_particles-3))+1
       iconfig = int(dconfig*(1+10**-ncode))
       write(*,12) 'Running Configuration Number: ',iconfig
 c

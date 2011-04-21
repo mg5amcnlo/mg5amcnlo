@@ -246,7 +246,7 @@ c           Else remove OnBW for daughter
             endif
             if (onshell .and. (lbw(nbw).eq. 2) ) cut_bw=.true.
             if (.not. onshell .and. (lbw(nbw).eq. 1)) cut_bw=.true.
-c            write(*,*) nbw,xmass,onshell,lbw(nbw),cut_bw
+c            write(*,*) 'cut_bw: ',nbw,xmass,onshell,lbw(nbw),cut_bw
          endif
 
       enddo
@@ -292,6 +292,9 @@ c
 
       logical gForceBW(-max_branch:-1,lmaxconfigs)  ! Forced BW
       include 'decayBW.inc'
+
+      double precision forced_mass
+      data forced_mass/0d0/
 c
 c     Global
 c
@@ -324,7 +327,7 @@ c
 
       integer        lbw(0:nexternal)  !Use of B.W.
       common /to_BW/ lbw
-      
+
       include 'coupl.inc'
 
 c
@@ -430,6 +433,9 @@ c----
                   spole(-i)=pmass(i,iconfig)*pmass(i,iconfig)/stot
                   swidth(-i) = pwidth(i,iconfig)*pmass(i,iconfig)/stot
                   xm(i) = pmass(i,iconfig)
+c                 Remember largest BW mass for better grid setting
+                  forced_mass = max(forced_mass,
+     $                 pmass(i,iconfig)-bwcutoff*pwidth(i,iconfig))
 c RF & TJS, should start from final state particle masses, not only at resonance.
 c Therefore remove the next line.
 c                  xe(i) = max(xe(i),xm(i))
@@ -498,7 +504,7 @@ c               read(*,*) xo
       enddo
       if (abs(lpp(1)) .eq. 1 .or. abs(lpp(2)) .eq. 1) then
          write(*,*) 'etot',etot,nexternal
-         xo = etot**2/stot
+         xo = max(etot**2, forced_mass**2)/stot
          i = 3*(nexternal-2) - 4 + 1
 c-----------------------
 c     tjs  4/29/2008 use analytic transform for s-hat

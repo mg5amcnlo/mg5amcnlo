@@ -112,7 +112,7 @@ c  Begin Code
 c-----
       jc = index(pathname," ")
 c     ncode is number of digits needed for the bw coding
-      ncode=int(dlog10(3d0)*(max_particles-4))+1
+      ncode=int(dlog10(3d0)*(max_particles-3))+1
       fname = pathname(1:jc-1) // "/" // symfile
       nchan = 0
       open(unit=35, file=fname,status='old',err=99)

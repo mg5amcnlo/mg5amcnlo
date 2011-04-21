@@ -463,7 +463,7 @@ c  Begin Code
 c-----
       i = index(dir," ")
 c     ncode is number of digits needed for the bw coding
-      ncode=int(dlog10(3d0)*(max_particles-4))+1
+      ncode=int(dlog10(3d0)*(max_particles-3))+1
       dname = dir(1:i-1)// "/" // symfile
       open(unit=35, file=dname ,status='old',err=59)
       do while (.true.)

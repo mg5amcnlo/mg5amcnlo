@@ -239,7 +239,7 @@ c-----
       call open_bash_file(26)
       ic = 0      
 c     ncode is number of digits needed for the code
-      ncode=int(dlog10(3d0)*(max_particles-4))+1
+      ncode=int(dlog10(3d0)*(max_particles-3))+1
       do i=1,mapconfig(0)
          if (use_config(i) .gt. 0) then
             call bw_conflict(i,iforest(1,-max_branch,i),lconflict,

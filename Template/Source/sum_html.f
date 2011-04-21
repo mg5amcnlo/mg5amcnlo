@@ -74,7 +74,7 @@ c-----
       ntw = 0
       i = 0
 c     ncode is number of digits needed for the bw coding
-      ncode=int(dlog10(3d0)*(max_particles-4))+1
+      ncode=int(dlog10(3d0)*(max_particles-3))+1
       do while (.true.)
          if (sumproc) then
             j = 1

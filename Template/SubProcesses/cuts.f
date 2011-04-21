@@ -137,7 +137,6 @@ c      Preparation for reweighting by setting up clustering by diagrams
 c
 c
          write(formstr,'(a,i2.2,a)')'(a10,',nexternal,'i8)'
-         print *,'formstr:',formstr
          write(*,formstr) 'Particle',(i,i=nincoming+1,nexternal)
          write(formstr,'(a,i2.2,a)')'(a10,',nexternal,'f8.1)'
          write(*,formstr) 'Et >',(etmin(i),i=nincoming+1,nexternal)

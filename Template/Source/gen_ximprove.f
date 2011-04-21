@@ -110,7 +110,7 @@ c         write(*,*) ' with seed', iseed
       xtot = 0d0
       i = 0
 c     ncode is number of digits needed for the bw coding
-      ncode=int(dlog10(3d0)*(max_particles-4))+1
+      ncode=int(dlog10(3d0)*(max_particles-3))+1
       do while (.true.)
          read(15,*,err=99,end=99) xi,j
          if (j .gt. 0) then
