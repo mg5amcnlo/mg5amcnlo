@@ -1,0 +1,44 @@
+      write(6,*)
+      write(6,*) 'Boson couplings:'
+      write(6,*) '----------------'
+      write(6,*)
+      write(6,20) 'gwwa  = ', gwwa
+      write(6,20) 'gwwz  = ', gwwz
+      write(6,20) 'gwwh  = ', gwwh
+      write(6,20) 'gzzh  = ', gzzh
+      write(6,20) 'ghhh  = ', ghhh
+      write(6,*)
+      write(6,20) 'gwwhh = ', gwwhh
+      write(6,20) 'gzzhh = ', gzzhh
+      write(6,20) 'ghhhh = ', ghhhh
+      write(6,*)
+      write(6,*) 'FFV couplings:'
+      write(6,*) '--------------'
+      write(6,*)
+      write(6,11) 'gal(L)   =  ',gal(1), 'gal(R)   =  ',gal(2)
+      write(6,11) 'gau(L)   =  ',gau(1), 'gau(R)   =  ',gau(2)
+      write(6,11) 'gad(L)   =  ',gad(1), 'gad(R)   =  ',gad(2)
+      write(6,*)
+      write(6,11) 'gwf(L)   =  ',gwf(1), 'gwf(R)   =  ',gwf(2)
+      write(6,*)
+      write(6,11) 'gzn(L)   =  ',gzn(1), 'gzn(R)   =  ',gzn(2)
+      write(6,11) 'gzl(L)   =  ',gzl(1), 'gzl(R)   =  ',gzl(2)
+      write(6,11) 'gzu(L)   =  ',gzu(1), 'gzu(R)   =  ',gzu(2)
+      write(6,11) 'gzd(L)   =  ',gzd(1), 'gzd(R)   =  ',gzd(2)
+      write(6,*)
+      write(6,*) 'FFH couplings:'
+      write(6,*) '--------------'
+      write(6,*)
+      write(6,14) 'gHtop(L) =  ',ghtop(1), 'gHtop(R) =  ',ghtop(2)
+      write(6,14) 'gHbot(L) =  ',ghbot(1), 'gHbot(R) =  ',ghbot(2)
+      write(6,14) 'gHcha(L) =  ',ghcha(1), 'gHcha(R) =  ',ghcha(2)
+      write(6,14) 'gHtau(L) =  ',ghtau(1), 'gHtau(R) =  ',ghtau(2)
+      write(6,*)
+      write(6,*) 'Strong couplings:'
+      write(6,*) '-----------------'
+      write(6,*)
+      write(6,14) 'gg(1)    =  ',gg(1)   , 'gg(2)    =  ',gg(2)
+      write(6,*)
+      write(6,*) 'User Model masses and widths:'
+      write(6,*) '-----------------------------'
+      write(6,*)

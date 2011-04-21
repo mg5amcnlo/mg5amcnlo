@@ -1405,6 +1405,7 @@ class ProcessTest(unittest.TestCase):
                        'orders':{'QCD':5, 'QED':1},
                        'model':self.mymodel,
                        'id': 1,
+                       'uid':0,
                        'required_s_channels':[],
                        'forbidden_s_channels':[],
                        'forbidden_particles':[],
@@ -1524,7 +1525,33 @@ class ProcessTest(unittest.TestCase):
         goal_str = "2_cc_cxcc"
 
         self.assertEqual(goal_str, self.myprocess.shell_string())
+    
+    def test_long_shell_string(self):
+        """Test Process nice_string representation"""
 
+        goal_str = '1_cc_ccc_c_cccc_c_cccc_c_cccc_c_cccc_c_cccc_c_cccc_4'
+
+        decay = copy.copy(self.myprocess)
+        decay.set('legs', copy.deepcopy(decay.get('legs')))
+        decay.get('legs')[1].set('state', True)
+        decay.set('is_decay_chain', True)
+        decay.set('orders', {})
+        decay.set('forbidden_particles',[3])
+        decay2 = copy.copy(decay)
+        decay3 = copy.copy(decay)
+        decay4 = copy.copy(decay)
+        decay5 = copy.copy(decay)
+        decay6 = copy.copy(decay)
+        self.myprocess.set('uid',4)
+        self.myprocess.set('decay_chains', base_objects.ProcessList([decay]))
+        decay.set('decay_chains', base_objects.ProcessList([decay2]))
+        decay2.set('decay_chains', base_objects.ProcessList([decay3]))
+        decay3.set('decay_chains', base_objects.ProcessList([decay4]))
+        decay4.set('decay_chains', base_objects.ProcessList([decay5]))
+        decay5.set('decay_chains', base_objects.ProcessList([decay6]))
+        self.assertTrue(len(self.myprocess.shell_string()) < 70)
+        self.assertEqual(goal_str, self.myprocess.shell_string())
+        
 #===============================================================================
 # ProcessDefinitionTest
 #===============================================================================
@@ -1557,6 +1584,7 @@ class ProcessDefinitionTest(unittest.TestCase):
                        'orders':{'QCD':5, 'QED':1},
                        'model':self.mymodel,
                        'id':3,
+                       'uid':0,
                        'required_s_channels':[],
                        'forbidden_s_channels':[],
                        'forbidden_particles':[],

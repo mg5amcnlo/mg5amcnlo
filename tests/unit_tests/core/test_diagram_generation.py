@@ -25,7 +25,7 @@ import tests.unit_tests as unittest
 
 import madgraph.core.base_objects as base_objects
 import madgraph.core.diagram_generation as diagram_generation
-from madgraph import MadGraph5Error
+from madgraph import MadGraph5Error, InvalidCmd
 
 #===============================================================================
 # AmplitudeTest
@@ -51,7 +51,8 @@ class AmplitudeTest(unittest.TestCase):
 
     def setUp(self):
 
-        self.mydict = {'diagrams':self.mydiaglist, 'process':self.myprocess}
+        self.mydict = {'diagrams':self.mydiaglist, 'process':self.myprocess,
+                       'has_mirror_process': False}
 
         self.myamplitude = diagram_generation.Amplitude(self.mydict)
 
@@ -121,7 +122,8 @@ class AmplitudeTest(unittest.TestCase):
 
         goal = "{\n"
         goal = goal + "    \'process\': %s,\n" % repr(self.myprocess)
-        goal = goal + "    \'diagrams\': %s\n}" % repr(self.mydiaglist)
+        goal = goal + "    \'diagrams\': %s,\n" % repr(self.mydiaglist)
+        goal = goal + "    \'has_mirror_process\': False\n}"
 
         self.assertEqual(goal, str(self.myamplitude))
 
@@ -796,7 +798,7 @@ class DiagramGenerationTest(unittest.TestCase):
 
             self.myamplitude.set('process', myproc)
 
-            self.myamplitude.generate_diagrams()
+            self.assertRaises(InvalidCmd, self.myamplitude.generate_diagrams)
             self.assertEqual(len(self.myamplitude.get('diagrams')), 0)
 
     def test_diagram_generation_photons(self):
@@ -2324,7 +2326,7 @@ class MultiProcessTest(unittest.TestCase):
                   'model':self.mymodel,
                   'id':3}
 
-        self.my_process_definition = base_objects.ProcessDefinition(self.mydict)
+        self.my_process_definition = base_objects.ProcessDefinition(mydict)
         self.my_process_definitions = base_objects.ProcessDefinitionList(\
             [self.my_process_definition])
 
@@ -2720,3 +2722,4 @@ class MultiProcessTest(unittest.TestCase):
             if nfs <= 3:
                 self.assertRaises(MadGraph5Error,
                                   my_multiprocess.get, 'amplitudes')
+

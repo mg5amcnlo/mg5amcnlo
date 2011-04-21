@@ -25,6 +25,7 @@ import sys
 root_path = os.path.split(os.path.dirname(os.path.realpath( __file__ )))[0]
 sys.path.append(os.path.join(root_path, os.path.pardir))
 
+from madgraph import MadGraph5Error
 import vendor.ply.lex as lex
 import vendor.ply.yacc as yacc
 logger = logging.getLogger('madgraph.ufo_parsers')
@@ -182,6 +183,7 @@ class UFOExpressionParser:
     def p_error(self, p):
         if p:
             logger.error("Syntax error at '%s'" % p.value)
+            raise MadGraph5Error
         else:
             logger.error("Syntax error at EOF")
         self.parsed_string = "Error"

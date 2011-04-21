@@ -81,8 +81,8 @@ class ModelReader(base_objects.Model):
             param_lines = open(param_card, 'r').read().split('\n')
 
             # Define regular expressions
-            re_block = re.compile("^block\s+(?P<name>\w+)")
-            re_decay = re.compile("^decay\s+(?P<pid>\d+)\s+(?P<value>[\d\.e\+-]+)")
+            re_block = re.compile("^\s*block\s+(?P<name>\w+)")
+            re_decay = re.compile("^\s*decay\s+(?P<pid>\d+)\s+(?P<value>[\d\.e\+-]+)")
             re_single_index = re.compile("^\s*(?P<i1>\d+)\s+(?P<value>[\d\.e\+-]+)")
             re_double_index = re.compile(\
                            "^\s*(?P<i1>\d+)\s+(?P<i2>\d+)\s+(?P<value>[\d\.e\+-]+)")
@@ -104,7 +104,8 @@ class ModelReader(base_objects.Model):
                               value))
                         parameter_dict['decay'][(pid,)].value = complex(value)
                     except KeyError:
-                        logger.warning('No decay parameter found for %d' % pid)
+                        pass
+                        #logger.warning('No decay parameter found for %d' % pid)
                     continue
                 # Look for blocks
                 block_match = re_block.match(line)
@@ -121,9 +122,8 @@ class ModelReader(base_objects.Model):
                         exec("locals()[\'%s\'] = %s" % (parameter_dict[block][(i1,i2)].name,
                                           value))
                         parameter_dict[block][(i1,i2)].value = float(value)
-
                     except KeyError:
-                        logger.warning('No parameter found for block %s index %d %d' %\
+                            logger.warning('No parameter found for block %s index %d %d' %\
                                        (block, i1, i2))
                     continue
                 # Look for single indices
@@ -136,7 +136,8 @@ class ModelReader(base_objects.Model):
                                           value))
                         parameter_dict[block][(i1,)].value = complex(value)
                     except KeyError:
-                        logger.warning('No parameter found for block %s index %d' %\
+                        if block not in  ['qnumbers','mass']:
+                            logger.warning('No parameter found for block %s index %d' %\
                                        (block, i1))
                     continue
         else:
@@ -158,9 +159,14 @@ class ModelReader(base_objects.Model):
         for key in keys:
             derived_parameters += self['parameters'][key]
 
+
         # Now calculate derived parameters
         for param in derived_parameters:
-            exec("locals()[\'%s\'] = %s" % (param.name, param.expr))
+            try:
+                exec("locals()[\'%s\'] = %s" % (param.name, param.expr))
+            except Exception as error:
+                msg = 'Unable to evaluate %s: raise error: %s' % (param.expr, error)
+                raise MadGraph5Error, msg
             param.value = complex(eval(param.name))
             if not eval(param.name) and eval(param.name) != 0:
                 logger.warning("%s has no expression: %s" % (param.name,
@@ -171,13 +177,12 @@ class ModelReader(base_objects.Model):
         for particle in self.get('particles'):
             if particle.is_fermion() and particle.get('self_antipart') and \
                    particle.get('width').lower() != 'zero' and \
-                   eval(particle.get('mass')) < 0:
+                   eval(particle.get('mass')).real < 0:
                 exec("locals()[\'%(width)s\'] = -abs(%(width)s)" % \
                      {'width': particle.get('width')})
 
         # Extract couplings
         couplings = sum(self['couplings'].values(), [])
-
         # Now calculate all couplings
         for coup in couplings:
             exec("locals()[\'%s\'] = %s" % (coup.name, coup.expr))
@@ -193,7 +198,7 @@ class ModelReader(base_objects.Model):
                                          derived_parameters]))
 
         # Add "zero"
-        self.get('parameter_dict')['ZERO'] = 0.
+        self.get('parameter_dict')['ZERO'] = complex(0.)
 
         self.set('coupling_dict', dict([(coup.name, coup.value) \
                                         for coup in couplings]))

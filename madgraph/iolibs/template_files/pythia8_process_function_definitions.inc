@@ -8,8 +8,8 @@
 void %(process_class_name)s::initProc() {
 // Instantiate the model class and set parameters that stay fixed during run
     pars = Parameters_%(model_name)s::getInstance();
-    pars->setIndependentParameters(particleDataPtr, coupSMPtr);
-    pars->setIndependentCouplings(particleDataPtr, coupSMPtr);
+    pars->setIndependentParameters(particleDataPtr, couplingsPtr, slhaPtr);
+    pars->setIndependentCouplings();
     %(initProc_lines)s
 } 
 
@@ -18,8 +18,8 @@ void %(process_class_name)s::initProc() {
 
 void %(process_class_name)s::sigmaKin() { 
     // Set the parameters which change event by event
-    pars->setDependentParameters(particleDataPtr, coupSMPtr, alpS);
-    pars->setDependentCouplings(particleDataPtr, coupSMPtr);
+    pars->setDependentParameters(particleDataPtr, couplingsPtr, slhaPtr, alpS);
+    pars->setDependentCouplings();
     // Reset color flows
     %(reset_jamp_lines)s
     %(sigmaKin_lines)s

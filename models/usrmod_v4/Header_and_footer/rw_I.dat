@@ -1,0 +1,139 @@
+           subroutine lh_readin(param_name)
+c----------------------------------------------------------------------
+c Read the parameters from the lh file
+c
+c 1. Input values for the EW sector
+c 2. Higgs mass and width
+c 3. Fermion masses (pole and MSbar) and widths
+c----------------------------------------------------------------------
+      implicit none
+c
+c     parameters
+c
+      integer maxpara
+      parameter (maxpara=100)
+c
+c     local
+c
+	  character*(*) param_name	
+          integer npara,l1,l2,id
+          character*132 buff
+          real*8 real_value
+          real*8 value(maxpara)
+          integer ivalue(maxpara),n
+          character*20 name(maxpara),bn
+          logical block_found,done,fopened
+      integer iunit,i,name_length,idum
+c
+c       block info
+c
+      character*20 block_name
+c
+c   Common
+c
+          include 'coupl.inc'
+	  include 'input.inc'
+c
+c     Common to lh_readin and printout
+c
+      double precision  alpha, gfermi, alfas
+      double precision  mtMS,mbMS,mcMS,mtaMS!MSbar masses
+      double precision  Vud,Vus             !CKM matrix elements
+      common/values/    alpha,gfermi,alfas,
+     &                  mtMS,mbMS,mcMS,mtaMS,
+     &                  Vud
+c
+c----------
+c     start
+c----------
+c
+c     open file
+c
+      iunit=14
+      call open_file_mdl(iunit,param_name,fopened)
+           done=.false.
+
+       n=0
+           do while(.not.done)
+           block_found=.false.
+c
+c looks for the blocks or for decay
+c
+      do while(.not.block_found)
+       read(iunit,'(a132)',end=99,err=99) buff
+c--     change to lower case
+           call case_trap(buff,20)
+       if(buff(1:5).eq.'block') then
+         if(index(buff,"#").ne.0) l1=index(buff,"#")-1
+         block_name=buff(6:min(l1,26))
+         call no_spaces(block_name,name_length)
+c        write(*,*) block_name(1:name_length)
+         block_found=.true.
+           elseif(buff(1:5).eq.'decay') then
+               n=n+1
+               l1=30
+               if(index(buff,"#").ne.0) l1=index(buff,"#")-1 ! ignore comments
+               read(buff(6:l1),*) ivalue(n),value(n)
+               name(n)="decay"
+       endif
+      end do
+c
+c
+
+      if(block_found) then
+ 	  do while(.true.)
+          read(iunit,'(a132)',end=99,err=99) buff
+     	  call case_trap(buff,20)
+          if(buff(1:1).eq.'b'.or.buff(1:1).eq.'d') then
+          	backspace iunit
+          	exit
+          endif	         	
+            if(buff(1:1).ne.'#'.and.buff.ne.'') then  !if it not a comment
+              n=n+1	       
+              l1=30
+              if(index(buff,"#").ne.0) l1=index(buff,"#")-1 ! ignore comments       
+c
+c  WARNING:... not all blocks have the same sintax!! You need to change it
+c  depending on the block you are reading
+c
+             if(block_name(1:5).eq."mgckm") then
+                read(buff(1:l1),*) ivalue(n),idum,value(n)
+              else
+                read(buff(1:l1),*) ivalue(n),value(n)
+              endif  
+              name(n)=block_name(1:name_length)
+c              write(*,"(1x,i2,2x,e16.8,1x,a)") 
+c     &        ivalue(n),value(n),name(n)
+           	  endif
+      end do ! do while in the block
+      else
+        done=.true.
+      endif
+      end do ! do while the entire file
+	  
+
+ 99    continue      
+	
+       bn="sminputs"
+       call set_it(n,ivalue,value,name,1,bn,alpha,128.9d0)
+       alpha=1d0/alpha
+       call set_it(n,ivalue,value,name,2,bn,gfermi,0.1166d-4)
+       call set_it(n,ivalue,value,name,3,bn,alfas,0.119d0)
+       call set_it(n,ivalue,value,name,4,bn,zmass,91.188d0)
+       call set_it(n,ivalue,value,name,6,bn,tmass,174.3d0)
+       call set_it(n,ivalue,value,name,7,bn,lmass,1.777d0)
+       bn="mgyukawa"
+       call set_it(n,ivalue,value,name,4,bn,mcMS,1.25d0)
+       call set_it(n,ivalue,value,name,5,bn,mbMS,4.2d0)
+       call set_it(n,ivalue,value,name,6,bn,mtMS,174d0)
+       call set_it(n,ivalue,value,name,15,bn,mtaMS,1.777d0)
+       bn="mgckm"
+       call set_it(n,ivalue,value,name,1,bn,vud,1d0)
+       bn="mass"
+       call set_it(n,ivalue,value,name,4,bn,cmass,1.4d0)
+       call set_it(n,ivalue,value,name,5,bn,bmass,4.7d0)
+       call set_it(n,ivalue,value,name,6,bn,tmass,tmass*1d0)
+       call set_it(n,ivalue,value,name,15,bn,lmass,lmass*1d0)
+       call set_it(n,ivalue,value,name,25,bn,hmass,120d0)
+       call set_it(n,ivalue,value,name,23,bn,zmass,zmass*1d0)
+       call set_it(n,ivalue,value,name,24,bn,wmass,80.419d0)

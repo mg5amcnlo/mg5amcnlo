@@ -1,0 +1,23 @@
+################################################################################
+#
+# Copyright (c) 2009 The MadGraph Development team and Contributors
+#
+# This file is a part of the MadGraph 5 project, an application which 
+# automatically generates Feynman diagrams and matrix elements for arbitrary
+# high-energy processes in the Standard Model and beyond.
+#
+# It is subject to the MadGraph license which should accompany this 
+# distribution.
+#
+# For more information, please visit: http://madgraph.phys.ucl.ac.be
+#
+################################################################################
+#
+# This File contains some configuration variable for mg5
+#
+################################################################################
+
+# Pythia8 Path.
+# Define the path to the pythia8 directory.
+# relative path start from mg5 directory
+pythia8_path = ./pythia8
