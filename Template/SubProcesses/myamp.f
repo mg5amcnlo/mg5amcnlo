@@ -492,7 +492,8 @@ c            write(*,*) 'Using 2',l2,x2
 
             xo = min(x1,x2)
 
-            xo = xo*xo/stot
+c           Use 1/10000 of sqrt(s) as minimum, to always get integration
+            xo = max(xo*xo/stot,1e-8)
             a=-pmass(i,iconfig)**2/stot
 c            call setgrid(-i,xo,a,pow(i,iconfig))
 
@@ -503,8 +504,8 @@ c               read(*,*) xo
          endif
       enddo
       if (abs(lpp(1)) .eq. 1 .or. abs(lpp(2)) .eq. 1) then
-         write(*,*) 'etot',etot,nexternal
-         xo = max(etot**2, forced_mass**2)/stot
+c     Set minimum based on: 1) required energy 2) resonances 3) 1/10000 of sqrt(s)
+         xo = max(max(etot**2, forced_mass**2)/stot,1e-8)
          i = 3*(nexternal-2) - 4 + 1
 c-----------------------
 c     tjs  4/29/2008 use analytic transform for s-hat
