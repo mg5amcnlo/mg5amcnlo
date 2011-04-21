@@ -809,6 +809,13 @@ class CheckValidForCmd(object):
             raise self.InvalidCmd('')
 
         if args and args[0][0] != '-':
+            if self._done_export == (args[0], self._export_format):
+                # We have already done export in this path
+                logger.info("Matrix elements already exported to directory %s" % \
+                            self._export_dir)
+                return        
+
+        if args and args[0][0] != '-':
             # This is a path
             path = args.pop(0)
             # Check for special directory treatment
@@ -817,30 +824,37 @@ class CheckValidForCmd(object):
                 self.get_default_path()
             else:
                 self._export_dir = path
-
-        if not self._export_dir:
+        else:
             # No valid path
             self.get_default_path()
-
-        if self._done_export == (self._export_dir, self._export_format):
-            # We have already done export in this path
-            logger.info("Matrix elements already exported to directory %s" % \
-                                    self._export_dir)
-            return        
-
-        if self._export_format in ['madevent', 'standalone'] \
-               and not self._mgme_dir and \
-               os.path.realpath(self._export_dir) != os.path.realpath('.'):
-            raise MadGraph5Error, \
-                  "To generate a new MG4 directory, you need a valid MG_ME path"
 
         self._export_dir = os.path.realpath(self._export_dir)
 
             
     def get_default_path(self):
         """Set self._export_dir to the default (\'auto\') path"""
+
+        if self._export_format in ['madevent', 'standalone']:
+            # Detect if this script is launched from a valid copy of the Template,
+            # if so store this position as standard output directory
+            if 'TemplateVersion.txt' in os.listdir('.'):
+                #Check for ./
+                self._export_dir = os.path.realpath('.')
+                return
+            elif 'TemplateVersion.txt' in os.listdir('..'):
+                #Check for ../
+                self._export_dir = os.path.realpath('..')
+                return
+            elif self.stdin != sys.stdin:
+                #Check for position defined by the input files
+                input_path = os.path.realpath(self.stdin.name).split(os.path.sep)
+                print "Not standard stdin, use input path"
+                if input_path[-2] == 'Cards':
+                    self._export_dir = os.path.sep.join(input_path[:-2])
+                    if 'TemplateVersion.txt' in self._export_dir:
+                        return
         
-        if self._export_format.startswith('madevent'):
+        if self._export_format.startswith('madevent'):            
             name_dir = lambda i: 'PROC_%s_%s' % \
                                     (self._curr_model['name'], i)
             auto_path = lambda i: os.path.join(self.writing_dir,
@@ -1479,21 +1493,6 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
                              mgme_dir)
                 self._mgme_dir = MG4DIR
 
-        # Detect if this script is launched from a valid copy of the Template,
-        # if so store this position as standard output directory
-        if 'TemplateVersion.txt' in os.listdir('.'):
-            #Check for ./
-            self._export_dir = os.path.realpath('.')
-        elif 'TemplateVersion.txt' in os.listdir('..'):
-            #Check for ../
-            self._export_dir = os.path.realpath('..')
-        elif self.stdin != sys.stdin:
-            #Check for position defined by the input files
-            input_path = os.path.realpath(self.stdin.name).split(os.path.sep)
-            print "Not standard stdin, use input path"
-            if input_path[-2] == 'Cards':
-                self._export_dir = os.path.sep.join(input_path[:-2])
-                
         # Load the configuration file
         self.set_configuration()
         
@@ -2234,6 +2233,7 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
         """Remove all commands in arguments from history"""
 
         nline = 0
+        arguments = list(arguments) + ['display', 'open', 'launch', 'output']
         while nline < len(self.history) - 1:
             if any([self.history[nline].startswith(arg) for arg in arguments]):
                 self.history.pop(nline)
@@ -2252,7 +2252,7 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
             self._model_v4_path = None
             # Clear history, amplitudes and matrix elements when a model is imported
             # Remove previous imports, generations and outputs from history
-            self.clean_history('import', 'generate', 'add process', 'output')
+            self.clean_history('import', 'generate', 'add process')
             # Reset amplitudes and matrix elements
             self._curr_amps = diagram_generation.AmplitudeList()
             self._curr_matrix_elements = helas_objects.HelasMultiProcess()
@@ -2289,7 +2289,7 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
             
         elif args[0] == 'command':
             # Remove previous imports, generations and outputs from history
-            self.clean_history('import', 'generate', 'add process', 'output')
+            self.clean_history('import', 'generate', 'add process')
 
             if not os.path.isfile(args[1]):
                 raise MadGraph5Error("Path %s is not a valid pathname" % args[1])
@@ -2303,7 +2303,7 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
         elif args[0] == 'proc_v4':
             
             # Remove previous imports, generations and outputs from history
-            self.clean_history('import', 'generate', 'add process', 'output')
+            self.clean_history('import', 'generate', 'add process')
 
             if len(args) == 1 and self._export_dir:
                 proc_card = os.path.join(self._export_dir, 'Cards', \
@@ -2748,7 +2748,7 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
         self.check_output(args)
 
         # Remove previous outputs from history
-        self.clean_history("output")
+        self.clean_history()
         
         noclean = '-noclean' in args
         force = '-f' in args 
