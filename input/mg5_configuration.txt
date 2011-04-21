@@ -23,5 +23,5 @@
 pythia8_path = ./pythia8
 # symmetry_max_time
 # Set maximum time for trying to find symmetric diagrams for a single
-# matrix element
+# matrix element. 0 means no timeout.
 symmetry_max_time= 600

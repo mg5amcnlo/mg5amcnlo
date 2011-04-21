@@ -26,7 +26,7 @@ import logging
 import math
 import os
 import re
-import time
+import signal
 
 import aloha.aloha_writers as aloha_writers
 import aloha.create_aloha as create_aloha
@@ -79,6 +79,12 @@ def find_symmetry(matrix_element, evaluator, max_time = 600):
     if isinstance(matrix_element, group_subprocs.SubProcessGroup):
         return find_symmetry_subproc_group(matrix_element, evaluator, max_time)
 
+    # Exception class and routine to handle timeout
+    class TimeOutError(Exception):
+        pass
+    def handle_alarm(signum, frame):
+        raise TimeOutError
+
     (nexternal, ninitial) = matrix_element.get_nexternal_ninitial()
 
     # Prepare the symmetry vector with non-used amp2s (due to
@@ -120,62 +126,68 @@ def find_symmetry(matrix_element, evaluator, max_time = 600):
     nperm = 0
     perms = []
     ident_perms = []
-    start_time = time.time()
-    for perm in itertools.permutations(range(ninitial, nexternal)):
-        if [equivalent_process.get('legs')[i].get('id') for i in perm] != \
-           final_states:
-            # Non-identical particles permutated
-            continue
-        # Check if we need to cancel the check due to time limit
-        if not max_time or time.time() - start_time > max_time:
-            logger.warning("Cancel diagram symmetry - time exceeded")
-            break
-        ident_perms.append([0,1]+list(perm))
-        nperm += 1
-        new_p = p[:ninitial] + [p[i] for i in perm]
-        
-        res = evaluator.evaluate_matrix_element(matrix_element, new_p)
-        if not res:
-            break
-        me_value, amp2 = res
-        # Make a list with (8-pos value, magnitude) to easily compare
-        amp2sum = sum(amp2)
-        amp2mag = []
-        for a in amp2:
-            a = a*me_value/max(amp2sum, 1e-30)
-            if a > 0:
-                amp2mag.append(int(math.floor(math.log10(abs(a)))))
-            else:
-                amp2mag.append(0)
-        amp2 = [(int(a*10**(8-am)), am) for (a, am) in zip(amp2, amp2mag)]
 
-        if not perms:
-            # This is the first iteration - initialize lists
-            # Initiate symmetry with all 1:s
-            symmetry = [1 for i in range(len(amp2))]
-            # Store initial amplitudes
-            amp2start = amp2
-            # Initialize list of permutations
-            perms = [range(nexternal) for i in range(len(amp2))]
-            continue
-            
-        for i, val in enumerate(amp2):
-            if val == (0,0):
-                # If amp2 is 0, just set symmetry to 0
-                symmetry[i] = 0
+    # Set timeout for max_time
+    signal.signal(signal.SIGALRM, handle_alarm)
+    signal.alarm(max_time)
+    try:
+        for perm in itertools.permutations(range(ninitial, nexternal)):
+            if [equivalent_process.get('legs')[i].get('id') for i in perm] != \
+               final_states:
+                # Non-identical particles permutated
                 continue
-            # Only compare with diagrams below this one
-            if val in amp2start[:i]:
-                ind = amp2start.index(val)
-                # Replace if 1) this amp is unmatched (symmetry[i] > 0) or
-                # 2) this amp is matched but matched to an amp larger
-                # than ind
-                if symmetry[ind] > 0 and \
-                   (symmetry[i] > 0 or \
-                    symmetry[i] < 0 and -symmetry[i] > ind + 1):
-                    symmetry[i] = -(ind+1)
-                    perms[i] = [0, 1] + list(perm)
-                    symmetry[ind] += 1
+            ident_perms.append([0,1]+list(perm))
+            nperm += 1
+            new_p = p[:ninitial] + [p[i] for i in perm]
+
+            res = evaluator.evaluate_matrix_element(matrix_element, new_p)
+            if not res:
+                break
+            me_value, amp2 = res
+            # Make a list with (8-pos value, magnitude) to easily compare
+            amp2sum = sum(amp2)
+            amp2mag = []
+            for a in amp2:
+                a = a*me_value/max(amp2sum, 1e-30)
+                if a > 0:
+                    amp2mag.append(int(math.floor(math.log10(abs(a)))))
+                else:
+                    amp2mag.append(0)
+            amp2 = [(int(a*10**(8-am)), am) for (a, am) in zip(amp2, amp2mag)]
+
+            if not perms:
+                # This is the first iteration - initialize lists
+                # Initiate symmetry with all 1:s
+                symmetry = [1 for i in range(len(amp2))]
+                # Store initial amplitudes
+                amp2start = amp2
+                # Initialize list of permutations
+                perms = [range(nexternal) for i in range(len(amp2))]
+                continue
+
+            for i, val in enumerate(amp2):
+                if val == (0,0):
+                    # If amp2 is 0, just set symmetry to 0
+                    symmetry[i] = 0
+                    continue
+                # Only compare with diagrams below this one
+                if val in amp2start[:i]:
+                    ind = amp2start.index(val)
+                    # Replace if 1) this amp is unmatched (symmetry[i] > 0) or
+                    # 2) this amp is matched but matched to an amp larger
+                    # than ind
+                    if symmetry[ind] > 0 and \
+                       (symmetry[i] > 0 or \
+                        symmetry[i] < 0 and -symmetry[i] > ind + 1):
+                        symmetry[i] = -(ind+1)
+                        perms[i] = [0, 1] + list(perm) 
+                        symmetry[ind] += 1
+    except TimeOutError:
+        # Symmetry canceled due to time limit
+        logger.warning("Cancel diagram symmetry - time exceeded")
+
+    # Stop the alarm since we're done with this process
+    signal.alarm(0)
 
     return (symmetry, perms, ident_perms)
 

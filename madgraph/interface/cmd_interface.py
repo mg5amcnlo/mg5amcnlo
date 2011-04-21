@@ -399,7 +399,7 @@ class HelpToCmd(object):
         logger.info("     cross section but have subprocesses/channels.")
         logger.info("   symmetry_max_time N")
         logger.info("     (default 600) maximum time (in s) to find symmetric")
-        logger.info("     diagrams for each matrix element")
+        logger.info("     diagrams for each matrix element (0 means no timeout)")
         
     def help_shell(self):
         logger.info("syntax: shell CMD (or ! CMD)")
