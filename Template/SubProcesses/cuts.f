@@ -54,6 +54,7 @@ C
       integer i,j,njets,hardj1,hardj2
       REAL*8 XVAR,ptmax1,ptmax2,htj,tmp
       real*8 ptemp(0:3)
+      character*20 formstr
 C
 C     PARAMETERS
 C
@@ -135,12 +136,16 @@ c      Preparation for reweighting by setting up clustering by diagrams
          call initcluster()
 c
 c
-         write(*,'(a10,10i8)') 'Particle',(i,i=nincoming+1,nexternal)
-         write(*,'(a10,10f8.1)') 'Et >',(etmin(i),i=nincoming+1,nexternal)
-         write(*,'(a10,10f8.1)') 'E >',(emin(i),i=nincoming+1,nexternal)
-         write(*,'(a10,10f8.1)') 'Eta <',(etamax(i),i=nincoming+1,nexternal)
+         write(formstr,'(a,i2.2,a)')'(a10,',nexternal,'i8)'
+         write(*,formstr) 'Particle',(i,i=nincoming+1,nexternal)
+         write(formstr,'(a,i2.2,a)')'(a10,',nexternal,'f8.1)'
+         write(*,formstr) 'Et >',(etmin(i),i=nincoming+1,nexternal)
+         write(*,formstr) 'E >',(emin(i),i=nincoming+1,nexternal)
+         write(*,formstr) 'Eta <',(etamax(i),i=nincoming+1,nexternal)
+         write(*,formstr) 'xqcut: ',(xqcuti(i),i=nincoming+1,nexternal)
+         write(formstr,'(a,i2.2,a)')'(a,i2,a,',nexternal,'f8.1)'
          do j=nincoming+1,nexternal-1
-            write(*,'(a,i2,a,10f8.1)') 'd R #',j,'  >',(-0.0,i=nincoming+1,j),
+            write(*,formstr) 'd R #',j,'  >',(-0.0,i=nincoming+1,j),
      &           (r2min(i,j),i=j+1,nexternal)
             do i=j+1,nexternal
                r2min(i,j)=r2min(i,j)*dabs(r2min(i,j))    !Since r2 returns distance squared
@@ -148,12 +153,11 @@ c
             enddo
          enddo
          do j=nincoming+1,nexternal-1
-            write(*,'(a,i2,a,10f8.1)') 's min #',j,'>',
+            write(*,formstr) 's min #',j,'>',
      &           (s_min(i,j),i=nincoming+1,nexternal)
          enddo
-         write(*,'(a10,10f8.1)') 'xqcut: ',(xqcuti(i),i=nincoming+1,nexternal)
          do j=nincoming+1,nexternal-1
-            write(*,'(a,i2,a,10f8.1)') 'xqcutij #',j,'>',
+            write(*,formstr) 'xqcutij #',j,'>',
      &           (xqcutij(i,j),i=nincoming+1,nexternal)
          enddo
 

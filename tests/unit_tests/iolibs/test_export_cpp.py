@@ -152,6 +152,27 @@ class IOExportPythia8Test(unittest.TestCase,
 
         go = mypartlist[len(mypartlist) - 1]
 
+        # A sextet diquark
+        mypartlist.append(base_objects.Particle({'name':'six',
+                      'antiname':'six~',
+                      'spin':1,
+                      'color':6,
+                      'mass':'MSIX',
+                      'width':'WSIX',
+                      'texname':'six',
+                      'antitexname':'sixbar',
+                      'line':'straight',
+                      'charge':4./3.,
+                      'pdg_code':6000001,
+                      'propagating':True,
+                      'is_part':True,
+                      'self_antipart':False}))
+
+        six = mypartlist[len(mypartlist) - 1]
+        antisix = copy.copy(six)
+        antisix.set('is_part', False)
+        
+
         # Gluon couplings to quarks
         myinterlist.append(base_objects.Interaction({
                       'id': 1,
@@ -188,6 +209,29 @@ class IOExportPythia8Test(unittest.TestCase,
                       'couplings':{(0, 0):'GC_8'},
                       'orders':{'QCD':1}}))
 
+        # Sextet couplings to quarks
+        myinterlist.append(base_objects.Interaction({
+                      'id': 4,
+                      'particles': base_objects.ParticleList(\
+                                            [u, \
+                                             u, \
+                                             antisix]),
+                      'color': [color.ColorString([color.K6Bar(2, 0, 1)])],
+                      'lorentz':['FFS1'],
+                      'couplings':{(0,0): 'GC_24'},
+                      'orders':{'QSIX':1}}))
+
+        myinterlist.append(base_objects.Interaction({
+                      'id': 5,
+                      'particles': base_objects.ParticleList(\
+                                            [antiu, \
+                                             antiu, \
+                                             six]),
+                      'color': [color.ColorString([color.K6(2, 0, 1)])],
+                      'lorentz':['FFS1'],
+                      'couplings':{(0,0): 'GC_24'},
+                      'orders':{'QSIX':1}}))
+
         self.mymodel.set('particles', mypartlist)
         self.mymodel.set('interactions', myinterlist)
         self.mymodel.set('name', 'sm')
@@ -204,7 +248,8 @@ class IOExportPythia8Test(unittest.TestCase,
                                          'state':True}))
 
         myproc = base_objects.Process({'legs':myleglist,
-                                       'model':self.mymodel})
+                                       'model':self.mymodel,
+                                       'orders':{'QSIX':0}})
         
         myamplitude = diagram_generation.Amplitude({'process': myproc})
 
@@ -226,7 +271,8 @@ class IOExportPythia8Test(unittest.TestCase,
                                            'number' : 4}))
 
         myproc = base_objects.Process({'legs':myleglist,
-                                       'model':self.mymodel})
+                                       'model':self.mymodel,
+                                       'orders':{'QSIX':0}})
 
         self.mymatrixelement.get('matrix_elements')[0].\
                                                get('processes').append(myproc)
@@ -292,8 +338,8 @@ namespace Pythia8
 {
 //==========================================================================
 // A class for calculating the matrix elements for
-// Process: u u~ > u u~
-// Process: c c~ > c c~
+// Process: u u~ > u u~ QSIX=0
+// Process: c c~ > c c~ QSIX=0
 //--------------------------------------------------------------------------
 
 class Sigma_sm_qqx_qqx : public Sigma2Process 
@@ -334,8 +380,10 @@ class Sigma_sm_qqx_qqx : public Sigma2Process
     // Private functions to calculate the matrix element for all subprocesses
     // Calculate wavefunctions
     void calculate_wavefunctions(const int perm[], const int hel[]); 
-    static const int nwavefuncs = 10; 
+    static const int nwavefuncs = 8; 
     std::complex<double> w[nwavefuncs][18]; 
+    static const int namplitudes = 4; 
+    std::complex<double> amp[namplitudes]; 
     double matrix_uux_uux(); 
 
     // Constants for array limits
@@ -362,7 +410,6 @@ class Sigma_sm_qqx_qqx : public Sigma2Process
             writers.CPPWriter(self.give_pos('test.h')))
 
         #print open(self.give_pos('test.h')).read()
-
         self.assertFileContains('test.h', goal_string)
 
     def test_write_process_cc_file(self):
@@ -386,8 +433,8 @@ namespace Pythia8
 
 //==========================================================================
 // Class member functions for calculating the matrix elements for
-// Process: u u~ > u u~
-// Process: c c~ > c c~
+// Process: u u~ > u u~ QSIX=0
+// Process: c c~ > c c~ QSIX=0
 
 //--------------------------------------------------------------------------
 // Initialize process.
@@ -618,11 +665,16 @@ void Sigma_sm_qqx_qqx::calculate_wavefunctions(const int perm[], const int
   oxxxxx(p[perm[2]], mME[2], hel[2], +1, w[2]); 
   ixxxxx(p[perm[3]], mME[3], hel[3], -1, w[3]); 
   FFV1_3(w[0], w[1], pars->GC_10, pars->ZERO, pars->ZERO, w[4]); 
-  FFV2_3(w[0], w[1], pars->GC_35, pars->MZ, pars->WZ, w[5]); 
-  FFV5_3(w[0], w[1], pars->GC_47, pars->MZ, pars->WZ, w[6]); 
-  FFV1_3(w[0], w[2], pars->GC_10, pars->ZERO, pars->ZERO, w[7]); 
-  FFV2_3(w[0], w[2], pars->GC_35, pars->MZ, pars->WZ, w[8]); 
-  FFV5_3(w[0], w[2], pars->GC_47, pars->MZ, pars->WZ, w[9]); 
+  FFV2_5_3(w[0], w[1], pars->GC_35, pars->GC_47, pars->MZ, pars->WZ, w[5]); 
+  FFV1_3(w[0], w[2], pars->GC_10, pars->ZERO, pars->ZERO, w[6]); 
+  FFV2_5_3(w[0], w[2], pars->GC_35, pars->GC_47, pars->MZ, pars->WZ, w[7]); 
+
+  // Calculate all amplitudes
+  // Amplitude(s) for diagram number 0
+  FFV1_0(w[3], w[2], w[4], pars->GC_10, amp[0]); 
+  FFV2_5_0(w[3], w[2], w[5], pars->GC_35, pars->GC_47, amp[1]); 
+  FFV1_0(w[3], w[1], w[6], pars->GC_10, amp[2]); 
+  FFV2_5_0(w[3], w[1], w[7], pars->GC_35, pars->GC_47, amp[3]); 
 
 
 }
@@ -630,34 +682,17 @@ double Sigma_sm_qqx_qqx::matrix_uux_uux()
 {
   int i, j; 
   // Local variables
-  const int ngraphs = 10; 
+  const int ngraphs = 4; 
   const int ncolor = 2; 
   std::complex<double> ztemp; 
-  std::complex<double> amp[ngraphs], jamp[ncolor]; 
+  std::complex<double> jamp[ncolor]; 
   // The color matrix;
   static const double denom[ncolor] = {1, 1}; 
   static const double cf[ncolor][ncolor] = {{9, 3}, {3, 9}}; 
-  // Calculate all amplitudes
-  // Amplitude(s) for diagram number 1
-  FFV1_0(w[3], w[2], w[4], pars->GC_10, amp[0]); 
-  // Amplitude(s) for diagram number 2
-  FFV2_0(w[3], w[2], w[5], pars->GC_35, amp[1]); 
-  FFV5_0(w[3], w[2], w[5], pars->GC_47, amp[2]); 
-  FFV2_0(w[3], w[2], w[6], pars->GC_35, amp[3]); 
-  FFV5_0(w[3], w[2], w[6], pars->GC_47, amp[4]); 
-  // Amplitude(s) for diagram number 3
-  FFV1_0(w[3], w[1], w[7], pars->GC_10, amp[5]); 
-  // Amplitude(s) for diagram number 4
-  FFV2_0(w[3], w[1], w[8], pars->GC_35, amp[6]); 
-  FFV5_0(w[3], w[1], w[8], pars->GC_47, amp[7]); 
-  FFV2_0(w[3], w[1], w[9], pars->GC_35, amp[8]); 
-  FFV5_0(w[3], w[1], w[9], pars->GC_47, amp[9]); 
 
   // Calculate color flows
-  jamp[0] = +1./6. * amp[0] - amp[1] - amp[2] - amp[3] - amp[4] + 1./2. *
-      amp[5];
-  jamp[1] = -1./2. * amp[0] - 1./6. * amp[5] + amp[6] + amp[7] + amp[8] +
-      amp[9];
+  jamp[0] = +1./6. * amp[0] - amp[1] + 1./2. * amp[2]; 
+  jamp[1] = -1./2. * amp[0] - 1./6. * amp[2] + amp[3]; 
 
   // Sum and square the color flows to get the matrix element
   double matrix = 0; 
@@ -686,6 +721,305 @@ double Sigma_sm_qqx_qqx::matrix_uux_uux()
         exporter.write_process_cc_file(\
         writers.CPPWriter(self.give_pos('test.cc')))
 
+        #print open(self.give_pos('test.cc')).read()
+        self.assertFileContains('test.cc', goal_string)
+
+    def test_write_process_cc_file_uu_six(self):
+        """Test writing the .cc Pythia file for u u > six"""
+
+        myleglist = base_objects.LegList()
+
+        myleglist.append(base_objects.Leg({'id':2,
+                                           'state':False,
+                                           'number' : 1}))
+        myleglist.append(base_objects.Leg({'id':2,
+                                           'state':False,
+                                           'number' : 2}))
+        myleglist.append(base_objects.Leg({'id':6000001,
+                                           'number' : 3}))
+
+        myproc = base_objects.Process({'legs':myleglist,
+                                       'model':self.mymodel})
+
+        myamplitude = diagram_generation.Amplitude({'process': myproc})
+
+        mymatrixelement = helas_objects.HelasMultiProcess(myamplitude)
+
+        exporter = export_cpp.ProcessExporterPythia8(\
+            mymatrixelement, self.mycppwriter,
+            process_string = "q q > six")
+
+        goal_string = \
+"""//==========================================================================
+// This file has been automatically generated for Pythia 8 by
+// MadGraph 5 v. %(version)s, %(date)s
+// By the MadGraph Development Team
+// Please visit us at https://launchpad.net/madgraph5
+//==========================================================================
+
+#include "Sigma_sm_qq_six.h"
+#include "HelAmps_sm.h"
+
+using namespace Pythia8_sm; 
+
+namespace Pythia8 
+{
+
+//==========================================================================
+// Class member functions for calculating the matrix elements for
+// Process: u u > six
+
+//--------------------------------------------------------------------------
+// Initialize process.
+
+void Sigma_sm_qq_six::initProc() 
+{
+  // Instantiate the model class and set parameters that stay fixed during run
+  pars = Parameters_sm::getInstance(); 
+  pars->setIndependentParameters(particleDataPtr, couplingsPtr, slhaPtr); 
+  pars->setIndependentCouplings(); 
+  // Set massive/massless matrix elements for c/b/mu/tau
+  mcME = particleDataPtr->m0(4); 
+  mbME = 0.; 
+  mmuME = 0.; 
+  mtauME = 0.; 
+  jamp2[0] = new double[1]; 
+}
+
+//--------------------------------------------------------------------------
+// Evaluate |M|^2, part independent of incoming flavour.
+
+void Sigma_sm_qq_six::sigmaKin() 
+{
+  // Set the parameters which change event by event
+  pars->setDependentParameters(particleDataPtr, couplingsPtr, slhaPtr, alpS); 
+  pars->setDependentCouplings(); 
+  // Reset color flows
+  for(int i = 0; i < 1; i++ )
+    jamp2[0][i] = 0.; 
+
+  // Local variables and constants
+  const int ncomb = 4; 
+  static bool goodhel[ncomb] = {ncomb * false}; 
+  static int ntry = 0, sum_hel = 0, ngood = 0; 
+  static int igood[ncomb]; 
+  static int jhel; 
+  double t[nprocesses]; 
+  // Helicities for the process
+  static const int helicities[ncomb][nexternal] = {{-1, -1, 0}, {-1, 1, 0}, {1,
+      -1, 0}, {1, 1, 0}};
+  // Denominators: spins, colors and identical particles
+  const int denominators[nprocesses] = {36}; 
+
+  ntry = ntry + 1; 
+
+  // Reset the matrix elements
+  for(int i = 0; i < nprocesses; i++ )
+  {
+    matrix_element[i] = 0.; 
+    t[i] = 0.; 
+  }
+
+  // Define permutation
+  int perm[nexternal]; 
+  for(int i = 0; i < nexternal; i++ )
+  {
+    perm[i] = i; 
+  }
+
+  // For now, call setupForME() here
+  id1 = 2; 
+  id2 = 2; 
+  if( !setupForME())
+  {
+    return; 
+  }
+
+  if (sum_hel == 0 || ntry < 10)
+  {
+    // Calculate the matrix element for all helicities
+    for(int ihel = 0; ihel < ncomb; ihel++ )
+    {
+      if (goodhel[ihel] || ntry < 2)
+      {
+        calculate_wavefunctions(perm, helicities[ihel]); 
+        t[0] = matrix_uu_six(); 
+
+        double tsum = 0; 
+        for(int iproc = 0; iproc < nprocesses; iproc++ )
+        {
+          matrix_element[iproc] += t[iproc]; 
+          tsum += t[iproc]; 
+        }
+        // Store which helicities give non-zero result
+        if (tsum != 0. && !goodhel[ihel])
+        {
+          goodhel[ihel] = true; 
+          ngood++; 
+          igood[ngood] = ihel; 
+        }
+      }
+    }
+    jhel = 0; 
+    sum_hel = min(sum_hel, ngood); 
+  }
+  else
+  {
+    // Only use the "good" helicities
+    for(int j = 0; j < sum_hel; j++ )
+    {
+      jhel++; 
+      if (jhel >= ngood)
+        jhel = 0; 
+      double hwgt = double(ngood)/double(sum_hel); 
+      int ihel = igood[jhel]; 
+      calculate_wavefunctions(perm, helicities[ihel]); 
+      t[0] = matrix_uu_six(); 
+
+      for(int iproc = 0; iproc < nprocesses; iproc++ )
+      {
+        matrix_element[iproc] += t[iproc] * hwgt; 
+      }
+    }
+  }
+
+  for (int i = 0; i < nprocesses; i++ )
+    matrix_element[i] /= denominators[i]; 
+
+
+
+}
+
+//--------------------------------------------------------------------------
+// Evaluate |M|^2, including incoming flavour dependence.
+
+double Sigma_sm_qq_six::sigmaHat() 
+{
+  // Select between the different processes
+  if(id1 == 2 && id2 == 2)
+  {
+    // Add matrix elements for processes with beams (2, 2)
+    return matrix_element[0]; 
+  }
+  else
+  {
+    // Return 0 if not correct initial state assignment
+    return 0.; 
+  }
+}
+
+//--------------------------------------------------------------------------
+// Select identity, colour and anticolour.
+
+void Sigma_sm_qq_six::setIdColAcol() 
+{
+  if(id1 == 2 && id2 == 2)
+  {
+    // Pick one of the flavor combinations (6000001,)
+    int flavors[1][1] = {{6000001}}; 
+    vector<double> probs; 
+    double sum = matrix_element[0]; 
+    probs.push_back(matrix_element[0]/sum); 
+    int choice = rndmPtr->pick(probs); 
+    id3 = flavors[choice][0]; 
+  }
+  setId(id1, id2, id3); 
+  // Pick color flow
+  int ncolor[1] = {1}; 
+  if(id1 == 2 && id2 == 2 && id3 == 6000001)
+  {
+    vector<double> probs; 
+    double sum = jamp2[0][0]; 
+    for(int i = 0; i < ncolor[0]; i++ )
+      probs.push_back(jamp2[0][i]/sum); 
+    int ic = rndmPtr->pick(probs); 
+    static int colors[1][6] = {{1, 0, 2, 0, 1, -2}}; 
+    setColAcol(colors[ic][0], colors[ic][1], colors[ic][2], colors[ic][3],
+        colors[ic][4], colors[ic][5]);
+  }
+}
+
+//--------------------------------------------------------------------------
+// Evaluate weight for angles of decay products in process
+
+double Sigma_sm_qq_six::weightDecay(Event& process, int iResBeg, int iResEnd) 
+{
+  // Just use isotropic decay (default)
+  return 1.; 
+}
+
+//==========================================================================
+// Private class member functions
+
+//--------------------------------------------------------------------------
+// Evaluate |M|^2 for each subprocess
+
+void Sigma_sm_qq_six::calculate_wavefunctions(const int perm[], const int hel[])
+{
+  // Calculate wavefunctions for all processes
+  double p[nexternal][4]; 
+  int i; 
+
+  // Convert Pythia 4-vectors to double[]
+  for(i = 0; i < nexternal; i++ )
+  {
+    p[i][0] = pME[i].e(); 
+    p[i][1] = pME[i].px(); 
+    p[i][2] = pME[i].py(); 
+    p[i][3] = pME[i].pz(); 
+  }
+
+  // Calculate all wavefunctions
+  oxxxxx(p[perm[0]], mME[0], hel[0], -1, w[0]); 
+  ixxxxx(p[perm[1]], mME[1], hel[1], +1, w[1]); 
+  sxxxxx(p[perm[2]], +1, w[2]); 
+
+  // Calculate all amplitudes
+  // Amplitude(s) for diagram number 0
+  FFS1C1_0(w[1], w[0], w[2], pars->GC_24, amp[0]); 
+
+
+}
+double Sigma_sm_qq_six::matrix_uu_six() 
+{
+  int i, j; 
+  // Local variables
+  const int ngraphs = 1; 
+  const int ncolor = 1; 
+  std::complex<double> ztemp; 
+  std::complex<double> jamp[ncolor]; 
+  // The color matrix;
+  static const double denom[ncolor] = {1}; 
+  static const double cf[ncolor][ncolor] = {{6}}; 
+
+  // Calculate color flows
+  jamp[0] = -amp[0]; 
+
+  // Sum and square the color flows to get the matrix element
+  double matrix = 0; 
+  for(i = 0; i < ncolor; i++ )
+  {
+    ztemp = 0.; 
+    for(j = 0; j < ncolor; j++ )
+      ztemp = ztemp + cf[i][j] * jamp[j]; 
+    matrix = matrix + real(ztemp * conj(jamp[i]))/denom[i]; 
+  }
+
+  // Store the leading color flows for choice of color
+  for(i = 0; i < ncolor; i++ )
+    jamp2[0][i] += real(jamp[i] * conj(jamp[i])); 
+
+  return matrix; 
+}
+
+
+}  // end namespace Pythia
+""" % misc.get_pkg_info()
+
+        exporter.write_process_cc_file(\
+                 writers.CPPWriter(self.give_pos('test.cc')))
+
+        #print open(self.give_pos('test.cc')).read()
         self.assertFileContains('test.cc', goal_string)
 
     def test_write_cpp_go_process_cc_file(self):
@@ -913,6 +1247,9 @@ void CPPProcess::calculate_wavefunctions(const int perm[], const int hel[])
   oxxxxx(p[perm[3]], mME[3], hel[3], +1, w[3]); 
   FFV1_3(w[0], w[1], pars->GC_10, pars->ZERO, pars->ZERO, w[4]); 
 
+  // Calculate all amplitudes
+  // Amplitude(s) for diagram number 0
+  FFV1_0(w[2], w[3], w[4], pars->GC_8, amp[0]); 
 
 }
 double CPPProcess::matrix_uux_gogo() 
@@ -922,13 +1259,10 @@ double CPPProcess::matrix_uux_gogo()
   const int ngraphs = 1; 
   const int ncolor = 2; 
   std::complex<double> ztemp; 
-  std::complex<double> amp[ngraphs], jamp[ncolor]; 
+  std::complex<double> jamp[ncolor]; 
   // The color matrix;
   static const double denom[ncolor] = {3, 3}; 
   static const double cf[ncolor][ncolor] = {{16, -2}, {-2, 16}}; 
-  // Calculate all amplitudes
-  // Amplitude(s) for diagram number 1
-  FFV1_0(w[2], w[3], w[4], pars->GC_8, amp[0]); 
 
   // Calculate color flows
   jamp[0] = -std::complex<double> (0, 1) * amp[0]; 
@@ -961,8 +1295,8 @@ double CPPProcess::matrix_uux_gogo()
         exporter.write_process_cc_file(\
                   writers.CPPWriter(self.give_pos('test.cc')))
 
+        #print open(self.give_pos('test.cc')).read()
         self.assertFileContains('test.cc', goal_string)
-
 
     def disabled_test_write_process_files(self):
         """Test writing the .h  and .cc Pythia file for a matrix element"""
@@ -975,104 +1309,6 @@ double CPPProcess::matrix_uux_gogo()
         print "Please try compiling the file /tmp/Sigma_sm_qqx_qqx.cc:"
         print "cd /tmp; g++ -c -I $PATH_TO_PYTHIA8/include Sigma_sm_qqx_qqx.cc.cc"
 
-
-    def test_write_process_h_file(self):
-        """Test writing the .h Pythia file for a matrix element"""
-
-        goal_string = \
-"""//==========================================================================
-// This file has been automatically generated for Pythia 8
-// MadGraph 5 v. %(version)s, %(date)s
-// By the MadGraph Development Team
-// Please visit us at https://launchpad.net/madgraph5
-//==========================================================================
-
-#ifndef Pythia8_Sigma_sm_qqx_qqx_H
-#define Pythia8_Sigma_sm_qqx_qqx_H
-
-#include <complex> 
-
-#include "SigmaProcess.h"
-#include "Parameters_sm.h"
-
-using namespace std; 
-
-namespace Pythia8 
-{
-//==========================================================================
-// A class for calculating the matrix elements for
-// Process: u u~ > u u~
-// Process: c c~ > c c~
-//--------------------------------------------------------------------------
-
-class Sigma_sm_qqx_qqx : public Sigma2Process 
-{
-  public:
-
-    // Constructor.
-    Sigma_sm_qqx_qqx() {}
-
-    // Initialize process.
-    virtual void initProc(); 
-
-    // Calculate flavour-independent parts of cross section.
-    virtual void sigmaKin(); 
-
-    // Evaluate sigmaHat(sHat).
-    virtual double sigmaHat(); 
-
-    // Select flavour, colour and anticolour.
-    virtual void setIdColAcol(); 
-
-    // Evaluate weight for decay angles.
-    virtual double weightDecay(Event& process, int iResBeg, int iResEnd); 
-
-    // Info on the subprocess.
-    virtual string name() const {return "q q~ > q q~ (sm)";}
-
-    virtual int code() const {return 10000;}
-
-    virtual string inFlux() const {return "qqbarSame";}
-
-    virtual int resonanceA() const {return 23;}
-    // Tell Pythia that sigmaHat returns the ME^2
-    virtual bool convertM2() const {return true;}
-
-  private:
-
-    // Private functions to calculate the matrix element for all subprocesses
-    // Calculate wavefunctions
-    void calculate_wavefunctions(const int perm[], const int hel[]); 
-    static const int nwavefuncs = 10; 
-    std::complex<double> w[nwavefuncs][18]; 
-    double matrix_uux_uux(); 
-
-    // Constants for array limits
-    static const int nexternal = 4; 
-    static const int nprocesses = 1; 
-
-    // Store the matrix element value from sigmaKin
-    double matrix_element[nprocesses]; 
-
-    // Color flows, used when selecting color
-    double * jamp2[nprocesses]; 
-
-    // Pointer to the model parameters
-    Parameters_sm * pars; 
-
-}; 
-
-}  // end namespace Pythia
-
-#endif  // Pythia8_Sigma_sm_qqx_qqx_H
-""" % misc.get_pkg_info()
-
-        self.pythia8_exporter.write_process_h_file(\
-            writers.CPPWriter(self.give_pos('test.h')))
-
-        #print open(self.give_pos('test.h')).read()
-
-        self.assertFileContains('test.h', goal_string)
 
 #===============================================================================
 # ExportUFOModelPythia8Test

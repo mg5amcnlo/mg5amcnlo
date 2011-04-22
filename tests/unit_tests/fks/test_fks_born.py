@@ -299,7 +299,7 @@ class TestFKSProcess(unittest.TestCase):
                                              antid, \
                                              mypartlist[3]]
                                              ),
-                      'color': 1,
+                      'color': [color.ColorString([color.T(0,1)])],
                       'lorentz':['L1'],
                       'couplings':{(0, 0):'ADD'},
                       'orders':{'QED':1}}))
@@ -308,8 +308,8 @@ class TestFKSProcess(unittest.TestCase):
                       'particles': MG.ParticleList(\
                                             [mypartlist[0], \
                                              antiu, \
-                                             mypartlist[2]]),
-                      'color': 1,
+                                             mypartlist[3]]),
+                      'color': [color.ColorString([color.T(0,1)])],
                       'lorentz':['L1'],
                       'couplings':{(0, 0):'AUU'},
                       'orders':{'QED':1}}))

@@ -34,10 +34,10 @@ c  couplings in the feynman rules
 c
       double complex       gal(2), gad(2), gau(2), gwf(2),
      &                     gzn(2), gzl(2), gzd(2), gzu(2)
-      double precision     gw, gwwa, gwwz, dum1
+      double precision     gw, gwwa, gwwz
       common /COUPL_GAUGE/ gal   , gad   , gau   , gwf   ,
      &                     gzn   , gzl   , gzd   , gzu   ,
-     &                     gw, gwwa, gwwz, dum1
+     &                     gw, gwwa, gwwz
 c
       double complex       gwfc(2),  gwfs(2), gwfm(2)
       common /coupl_ckm/   gwfc,     gwfs   , gwfm	

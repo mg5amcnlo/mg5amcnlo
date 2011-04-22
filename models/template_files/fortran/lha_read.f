@@ -24,17 +24,12 @@ c +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
       logical islatin
       character letter
-      character*26 ref
       integer i
 
       islatin=.false.
-      ref='abcdefghijklmnopqrstuvwxyz'
-
-      call LHA_case_trap(letter)
-
-      do i=1,26
-        if(letter .eq. ref(i:i)) islatin=.true.
-      end do
+      i=ichar(letter)
+      if(i.ge.65.and.i.le. 90) islatin=.true.
+      if(i.ge.97.and.i.le.122) islatin=.true.
 
       end
 
@@ -192,7 +187,7 @@ c +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
       integer iunit,GL,logfile
       character*20 ctemp
       character*132 buff
-      character*5 tag
+      character*20 tag
       character*132 temp
       character*(*) param_name
       data iunit/21/

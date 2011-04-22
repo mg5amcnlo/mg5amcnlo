@@ -14,6 +14,7 @@
 ################################################################################
 #
 # This File contains some configuration variable for mg5
+# This File is use if the file ~/.mg5_config is not present.
 #
 ################################################################################
 
@@ -21,3 +22,20 @@
 # Define the path to the pythia8 directory.
 # relative path start from mg5 directory
 pythia8_path = ./pythia8
+# symmetry_max_time
+# Set maximum time for trying to find symmetric diagrams for a single
+# matrix element. 0 means no timeout.
+symmetry_max_time= 600
+
+# Prefered Text Editor
+#  Default: use the shell default Editor
+#           or try to find one available on the system
+text_editor = None
+
+# Prefered WebBrower
+# If None: try to find one available on the system
+web_browser = None
+
+# Prefered PS viewer
+# If None: try to find one available on the system
+eps_viewer = None

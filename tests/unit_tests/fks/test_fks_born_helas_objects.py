@@ -300,7 +300,7 @@ class testFKSBornHelasObjects(unittest.TestCase):
                                              antid, \
                                              mypartlist[3]]
                                              ),
-                      'color': 1,
+                      'color': [color.ColorString([color.T(0,1)])],
                       'lorentz':['L1'],
                       'couplings':{(0, 0):'ADD'},
                       'orders':{'QED':1}}))
@@ -340,8 +340,11 @@ class testFKSBornHelasObjects(unittest.TestCase):
                        'overall_orders': {}}
     
     myproc1 = MG.Process(dict1)
+    myproc1.set('orders', {'QED':0})
     myproc2 = MG.Process(dict2)
+    myproc2.set('orders', {'QED':0})
     myproc3 = MG.Process(dict3)
+    myproc3.set('orders', {'QED':0})
 
 
     def test_fks_helas_multi_process(self):
@@ -357,19 +360,22 @@ class testFKSBornHelasObjects(unittest.TestCase):
         my_multi_leglist[0].set('state', False)
         my_multi_leglist[1].set('state', False)
         my_process_definition = MG.ProcessDefinition({'legs':my_multi_leglist,
-                                                    'model':self.mymodel})
+                                                    'model':self.mymodel, 
+                                                    'orders':{'QED':0}})
         my_process_definitions = MG.ProcessDefinitionList(\
             [my_process_definition])
 
         my_multi_process = fks_born.FKSMultiProcess(\
             {'process_definitions':my_process_definitions})
+        print "AMP STRING"
+        print my_multi_process['born_processes'][0].born_amp.nice_string()
         my_helas_mp = fks_born_helas.FKSHelasMultiProcess(my_multi_process, False)
         
         #there should be 6 independent born_matrix_elements 
-#        for me in my_helas_mp.get('matrix_elements'):
-#            print "--"
-#            for proc in me.born_matrix_element.get('processes'):
-#                print proc.nice_string()
+        for me in my_helas_mp.get('matrix_elements'):
+            print "--"
+            for proc in me.born_matrix_element.get('processes'):
+                print proc.nice_string()
         self.assertEqual(len(my_helas_mp.get('matrix_elements')),6)
         
         

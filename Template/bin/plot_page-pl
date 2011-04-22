@@ -47,7 +47,6 @@ if ($#ARGV >= 1){
   $extra = " at ".$ARGV[1]." level";
 }
 
-print $extra."\n";
    open(PAGE,"> plots.html") || die "Error creating diagrams.html";
    print PAGE "\<HTML\> \n";
    print PAGE "\<HEAD\> \n";

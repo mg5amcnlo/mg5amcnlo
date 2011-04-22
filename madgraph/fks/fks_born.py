@@ -184,6 +184,7 @@ class FKSMultiProcess(diagram_generation.MultiProcess): #test written
     def __init__(self, *arguments):
         """initialize the original multiprocess, then generates the amps for the 
         borns, then geneare the born processes and the reals"""
+                
         super(FKSMultiProcess, self).__init__(*arguments)
         
         amps = self.get('amplitudes')
@@ -191,7 +192,6 @@ class FKSMultiProcess(diagram_generation.MultiProcess): #test written
         real_amp_id_list = []
         for amp in amps:
             born = FKSProcessFromBorn(amp)
-            print "here"
             self['born_processes'].append(born)
             born.generate_reals(real_amplist, real_amp_id_list)
 
@@ -217,13 +217,10 @@ class FKSRealProcess(): #test written
 
         self.process = copy.copy(born_proc)
         orders = copy.copy(born_proc.get('orders'))
-        print "orders", orders
         if 'QCD' in orders.keys():
             orders['QCD'] +=1
-            print "found QCD"
         else:
             orders['QCD'] = 1
-            print "NOT found QCD"
 #        for n, o in orders.items():
 #            if n != 'QCD':
 #                orders[n] = o
@@ -322,7 +319,6 @@ class FKSProcessFromBorn(object):
             self.fks_config_string = ""
 
             self.find_reals()
-            print self.reals
             self.find_color_links()
             self.real_amps = []
 
@@ -389,12 +385,12 @@ class FKSProcessFromBorn(object):
         for i, ii in model.get('interaction_dict').items():
             if any([p in ii['orders'].keys() for p in pert]) \
                and len(ii['particles']) ==3 :
-                print ii
                 masslist = [p.get('mass').lower() for p in ii.get('particles')]
-                print masslist, "before"
+                # check that there is at least a massless particle, and that the 
+                # remaining ones have the same mass 
+                # (otherwise the real emission final state will not be degenerate
+                # with the born one
                 masslist.remove('zero')
-                print masslist, "after"
-                print len(masslist)
                 if len(set(masslist)) == 1:
                     qcd_inter.append(ii)
         return sorted(qcd_inter)
@@ -413,7 +409,6 @@ class FKSProcessFromBorn(object):
             self.splittings[i_i] = self.find_splittings(i)
             for split in self.splittings[i_i]:
                 self.reals[i_i].append(self.add_numbers(self.insert_legs(i, split)))
-            print "finding reals for leg", i_i
             #    print [l.get('id') for l in self.reals[i_i][-1]]
             #    print [l.get('fks') for l in self.reals[i_i][-1]]
                 
@@ -448,7 +443,6 @@ class FKSProcessFromBorn(object):
             part = self.qcd_part[leg['id']]
             antipart = self.qcd_part[part.get_anti_pdg_code()]
             for ii in self.qcd_inter:
-                print "INTERACTION ", ii
 #check which interactions contain leg and at least one "brem" particles:
                 parts = copy.deepcopy(ii['particles'])
                 nbrem = 0
@@ -519,57 +513,57 @@ class FKSProcessFromBorn(object):
                     if i < 1-i:
                         pair.reverse()
                     set =1
-                        
 
 
-    def combine_ij(self, i, j):  #test written
-        """checks whether partons i and j can be combined together and if so 
-        combines them into ij"""
-        part_i = self.real_proc['model'].get('particle_dict')[i['id']]
-        part_j = self.real_proc['model'].get('particle_dict')[j['id']]
-#        print "PART I", part_i
-        ij = None
-        num = copy.copy(min(i['number'], j['number']))
-        if part_i['color'] != 1 and part_j['color'] != 1 and i['state']:
-            #check if we have a massless gluon
-            if part_i['color'] == 8 and part_i['mass'].lower() == 'zero':
-                #ij should be the same as j
-                #ij = copy.deepcopy(j)
-                ij = MG.Leg(j)
-                ij['number'] = num
-            
-            #check if we have two color triplets -> quarks
-            elif part_i['color'] == 3 and part_j['color'] == 3 and part_i['mass'].lower() =='zero':
-                #both final state -> i is anti-j
-                if j['state']: 
-                    if part_i['pdg_code'] == part_j['pdg_code'] and not part_i['is_part'] and part_j['is_part']:
-                      #  print "PDG ", part_i['pdg_code'] , part_j['pdg_code'], i, j
-                        #ij is an outgoing gluon
-                        ij = MG.Leg()
-                        ij['id'] = 21
-                        ij['number'] = num 
-                        ij['state'] = True
-                        ij['from_group'] = True
-                   #     { 'id' : 21, 'number' : 0, 'state' : True, 'from_group' : True }
-                
-                else:
-                #initial and final state ->i is j
-                    if part_i['pdg_code'] == part_j['pdg_code'] and (part_i['is_part'] == part_j['is_part']):
-                        #ij is an outgoing gluon
-                        ij = MG.Leg()
-                        ij['id'] = 21
-                        ij['number'] = num 
-                        ij['state'] = False
-                        ij['from_group'] = True
-           
-            # initial gluon and final massless quark
-            elif part_i['color'] == 3 and part_i['mass'].lower() == 'zero' \
-                and part_j['color'] == 8 and not j['state']:
-                #ij is the same as i but crossed to the initial state
-                #ij = copy.deepcopy(i)
-                ij = MG.Leg(i)                
-                ij['id'] = - ij['id']
-                ij['state'] = False
-        
-        return ij
- 
+    #NOT used in FKS from born
+#    def combine_ij(self, i, j):  #test written
+#        """checks whether partons i and j can be combined together and if so 
+#        combines them into ij"""
+#        part_i = self.real_proc['model'].get('particle_dict')[i['id']]
+#        part_j = self.real_proc['model'].get('particle_dict')[j['id']]
+##        print "PART I", part_i
+#        ij = None
+#        num = copy.copy(min(i['number'], j['number']))
+#        if part_i['color'] != 1 and part_j['color'] != 1 and i['state']:
+#            #check if we have a massless gluon
+#            if part_i['color'] == 8 and part_i['mass'].lower() == 'zero':
+#                #ij should be the same as j
+#                #ij = copy.deepcopy(j)
+#                ij = MG.Leg(j)
+#                ij['number'] = num
+#            
+#            #check if we have two color triplets -> quarks
+#            elif part_i['color'] == 3 and part_j['color'] == 3 and part_i['mass'].lower() =='zero':
+#                #both final state -> i is anti-j
+#                if j['state']: 
+#                    if part_i['pdg_code'] == part_j['pdg_code'] and not part_i['is_part'] and part_j['is_part']:
+#                      #  print "PDG ", part_i['pdg_code'] , part_j['pdg_code'], i, j
+#                        #ij is an outgoing gluon
+#                        ij = MG.Leg()
+#                        ij['id'] = 21
+#                        ij['number'] = num 
+#                        ij['state'] = True
+#                        ij['from_group'] = True
+#                   #     { 'id' : 21, 'number' : 0, 'state' : True, 'from_group' : True }
+#                
+#                else:
+#                #initial and final state ->i is j
+#                    if part_i['pdg_code'] == part_j['pdg_code'] and (part_i['is_part'] == part_j['is_part']):
+#                        #ij is an outgoing gluon
+#                        ij = MG.Leg()
+#                        ij['id'] = 21
+#                        ij['number'] = num 
+#                        ij['state'] = False
+#                        ij['from_group'] = True
+#           
+#            # initial gluon and final massless quark
+#            elif part_i['color'] == 3 and part_i['mass'].lower() == 'zero' \
+#                and part_j['color'] == 8 and not j['state']:
+#                #ij is the same as i but crossed to the initial state
+#                #ij = copy.deepcopy(i)
+#                ij = MG.Leg(i)                
+#                ij['id'] = - ij['id']
+#                ij['state'] = False
+#        
+#        return ij
+# 

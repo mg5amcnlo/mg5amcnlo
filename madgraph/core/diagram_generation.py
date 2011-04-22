@@ -830,6 +830,9 @@ class MultiProcess(base_objects.PhysicsObject):
         elif isinstance(argument, base_objects.ProcessDefinitionList):
             super(MultiProcess, self).__init__()
             self['process_definitions'] = argument
+        elif isinstance(argument, AmplitudeList):
+            super(MultiProcess, self).__init__()
+            self['amplitudes'] = argument 
         elif argument != None:
             # call the mother routine
             super(MultiProcess, self).__init__(argument)
@@ -884,6 +887,7 @@ class MultiProcess(base_objects.PhysicsObject):
                                        self.get('collect_mirror_procs'),
                                        self.get('ignore_six_quark_processes')))
                 else:
+
                     self['amplitudes'].extend(\
                        MultiProcess.generate_multi_amplitudes(process_def,
                                        self.get('collect_mirror_procs'),

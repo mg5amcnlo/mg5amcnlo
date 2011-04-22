@@ -4,11 +4,9 @@ double %(process_class_name)s::matrix_%(proc_name)s(%(matrix_args)s) {
 const int ngraphs = %(ngraphs)d;
 const int ncolor = %(ncolor)d;
 std::complex<double> ztemp;
-std::complex<double> amp[ngraphs], jamp[ncolor];
+std::complex<double> jamp[ncolor];
 // The color matrix;
 %(color_matrix_lines)s
-// Calculate all amplitudes
-%(amplitude_calls)s
 
 // Calculate color flows
 %(jamp_lines)s

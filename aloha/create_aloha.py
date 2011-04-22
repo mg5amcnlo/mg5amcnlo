@@ -56,18 +56,32 @@ class AbstractRoutine(object):
         self.outgoing = outgoing
         self.infostr = infostr
         self.symmetries = []
+        self.combined = []
         
     def add_symmetry(self, outgoing):
         """ add an outgoing """
         
         if not outgoing in self.symmetries:
             self.symmetries.append(outgoing)
+    
+    def add_combine(self, lor_list):
+        """add a combine rule """
         
-    def write(self, output_dir, language='Fortran', mode='self'):
+        if lor_list not in self.combined:
+            self.combined.append(lor_list)
+        
+    def write(self, output_dir, language='Fortran', mode='self', **opt):
         """ write the content of the object """
-        return getattr(aloha_writers, 'ALOHAWriterFor%s' % language)(self, output_dir).write(mode=mode)
-
-
+        
+        writer = getattr(aloha_writers, 'ALOHAWriterFor%s' % language)(self, output_dir)
+        text = writer.write(mode=mode, **opt)
+        for grouped in self.combined:
+            if isinstance(text, tuple):
+                text = tuple([old.__add__(new)  for old, new in zip(text, 
+                             writer.write_combined(grouped, mode=mode, **opt))])
+            else:
+                text += writer.write_combined(grouped, mode=mode, **opt)
+        return text
 
 class AbstractRoutineBuilder(object):
     """ Launch the creation of the Helicity Routine"""
@@ -346,6 +360,7 @@ class AbstractALOHAModel(dict):
         # init the dictionary
         dict.__init__(self)
         self.symmetries = {}
+        self.multiple_lor = {}
         
         # check the mass of spin2 (if any)
         self.massless_spin2 = self.has_massless_spin2()
@@ -394,6 +409,7 @@ class AbstractALOHAModel(dict):
         
     def load(self, filepos=None):
         """ reload the pickle file """
+        return False
         if not filepos:
             filepos = os.path.join(self.model_pos,'aloha.pkl') 
         if os.path.exists(filepos):
@@ -426,6 +442,7 @@ class AbstractALOHAModel(dict):
         #to compute identical contribution
         self.look_for_symmetries()
         conjugate_list = self.look_for_conjugate()
+        self.look_for_multiple_lorentz_interactions()
         if not wanted_lorentz:
             wanted_lorentz = [l.name for l in self.model.all_lorentz]
         for lorentz in self.model.all_lorentz:
@@ -445,6 +462,13 @@ class AbstractALOHAModel(dict):
             if 5 in lorentz.spins and self.massless_spin2 is not None:
                 builder.spin2_massless = self.massless_spin2 
             self.compute_aloha(builder)
+            
+            if lorentz.name in self.multiple_lor:
+                for m in self.multiple_lor[lorentz.name]:
+                    for outgoing in range(len(lorentz.spins)+1):
+                        self[(lorentz.name, outgoing)].add_combine(m)
+                        
+                    
             if lorentz.name in conjugate_list:
                 conjg_builder_list= builder.define_all_conjugate_builder(\
                                                    conjugate_list[lorentz.name])
@@ -452,6 +476,11 @@ class AbstractALOHAModel(dict):
                     # No duplication of conjugation:
                     assert conjg_builder_list.count(conjg_builder) == 1
                     self.compute_aloha(conjg_builder, lorentz.name)
+                    if lorentz.name in self.multiple_lor:
+                        for m in self.multiple_lor[lorentz.name]:
+                            for outgoing in range(len(lorentz.spins)+1):
+                                self[(conjg_builder.name, outgoing)].add_combine(m)
+                                                
                     
                     
         if save:
@@ -471,14 +500,16 @@ class AbstractALOHAModel(dict):
         # reorganize the data (in order to use optimization for a given lorentz
         #structure
         request = {}
-        for l_name, conjugate, outgoing in data:
-            try:
-                request[l_name][conjugate].append(outgoing)
-            except:
+        for list_l_name, conjugate, outgoing in data:
+            for l_name in list_l_name:
                 try:
-                    request[l_name][conjugate] = [outgoing]
+                    request[l_name][conjugate].append(outgoing)
                 except:
-                    request[l_name] = {conjugate: [outgoing]}
+                    try:
+                        request[l_name][conjugate] = [outgoing]
+                    except:
+                        request[l_name] = {conjugate: [outgoing]}
+                        
         # Loop on the structure to build exactly what is request
         for l_name in request:
             lorentz = eval('self.model.lorentz.%s' % l_name)
@@ -504,7 +535,14 @@ class AbstractALOHAModel(dict):
                     # Compute routines
                     self.compute_aloha(conjg_builder, symmetry=lorentz.name,
                                         routines=routines)
-            
+        
+        # Build mutiple lorentz call
+        for list_l_name, conjugate, outgoing in data:
+            if len(list_l_name) >1:
+                lorentzname = list_l_name[0]
+                for c in conjugate:
+                    lorentzname += 'C%s' % c
+                self[(lorentzname, outgoing)].add_combine(list_l_name[1:])
                         
     def compute_aloha(self, builder, symmetry=None, routines=None):
         """ define all the AbstractRoutine linked to a given lorentz structure
@@ -521,7 +559,7 @@ class AbstractALOHAModel(dict):
         for outgoing in routines:
             symmetric = self.has_symmetries(symmetry, outgoing, valid_output=routines)
             if symmetric:
-                self.get(symmetry, symmetric).add_symmetry(outgoing)
+                self.get(name, symmetric).add_symmetry(outgoing)
             else:
                 wavefunction = builder.compute_routine(outgoing)
                 #Store the information
@@ -590,9 +628,9 @@ class AbstractALOHAModel(dict):
             for i, part1 in enumerate(vertex.particles):
                 for j in range(i-1,-1,-1):
                     part2 = vertex.particles[j]
-                    if part1.name == part2.name and \
-                                        part1.color == part2.color == 1 and\
-                                        part1.spin != 2:
+                    if part1.pdg_code == part2.pdg_code:
+                        if part1.spin == 2 and (i % 2 != j % 2 ):
+                            continue 
                         for lorentz in vertex.lorentz:
                             if self.symmetries.has_key(lorentz.name):
                                 if self.symmetries[lorentz.name].has_key(i+1):
@@ -602,7 +640,46 @@ class AbstractALOHAModel(dict):
                             else:
                                 self.symmetries[lorentz.name] = {i+1:j+1}
                         break
+    
+    def look_for_multiple_lorentz_interactions(self):
+        """Search the interaction associate with more than one lorentz structure.
+        If those lorentz structure have the same order and the same color then
+        associate a multiple lorentz routines to ALOHA """
+        
+        orders = {}
+        for coup in self.model.all_couplings:
+            orders[coup.name] = str(coup.order)
+        
+        for vertex in self.model.all_vertices:
+            if len(vertex.lorentz) == 1:
+                continue
+            #remove ghost
+            if -1 in vertex.lorentz[0].spins:
+                continue
+            
+            # assign each order/color to a set of lorentz routine
+            combine = {}
+            for (id_col, id_lor), coup in vertex.couplings.items():
+                order = orders[coup.name]
+                key = (id_col, order)
+                if key in combine:
+                    combine[key].append(id_lor)
+                else:
+                    combine[key] = [id_lor]
                     
+            # Check if more than one routine are associated
+            for list_lor in combine.values():
+                if len(list_lor) == 1:
+                    continue
+                list_lor.sort() 
+                main = vertex.lorentz[list_lor[0]].name 
+                if main not in self.multiple_lor:
+                    self.multiple_lor[main] = []
+                
+                info = tuple([vertex.lorentz[id].name for id in list_lor[1:]])
+                if info not in self.multiple_lor[main]:
+                    self.multiple_lor[main].append(info)
+                
     def has_massless_spin2(self):
         """Search if the spin2 particles are massless or not"""
         
@@ -691,10 +768,10 @@ def write_aloha_file_inc(aloha_dir,file_ext, comp_ext):
     aloha_files = []
     
     # Identify the valid files
-    alohafile_pattern = re.compile(r'''^[STFV]*[_C\d]*_\d%s''' % file_ext)
+    alohafile_pattern = re.compile(r'''_\d%s''' % file_ext)
     for filename in os.listdir(aloha_dir):
         if os.path.isfile(os.path.join(aloha_dir, filename)):
-            if alohafile_pattern.match(filename):
+            if alohafile_pattern.search(filename):
                 aloha_files.append(filename.replace(file_ext, comp_ext))
 
     text="ALOHARoutine = "

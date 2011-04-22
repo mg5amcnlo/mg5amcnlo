@@ -593,6 +593,7 @@ class RestrictModel(model_reader.ModelReader):
      
     def restrict_model(self, param_card):
         """apply the model restriction following param_card"""
+        self.set('particles', self.get('particles'))
         # compute the value of all parameters
         self.set_parameters_and_couplings(param_card)
         # associte to each couplings the associated vertex: def self.coupling_pos
@@ -610,8 +611,7 @@ class RestrictModel(model_reader.ModelReader):
         # remove zero couplings and other pointless couplings
         self.del_coup += zero_couplings
         self.remove_couplings(self.del_coup)
-        
-        
+                
         # deal with parameters
         parameters = self.detect_special_parameters()
         self.fix_parameter_values(*parameters)
@@ -629,8 +629,6 @@ class RestrictModel(model_reader.ModelReader):
                 self['parameter_dict'][name] = 1
             elif value == 0.000001e-99:
                 self['parameter_dict'][name] = 0
-
-
 
     def locate_coupling(self):
         """ create a dict couplings_name -> vertex """

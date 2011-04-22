@@ -391,6 +391,7 @@ c
 
       double precision sscale,aaqcd,aaqed
       integer ievent,npart
+      logical flip
 
       real ran1
       external ran1
@@ -411,7 +412,7 @@ C
       Double Precision amp2(maxamps), jamp2(0:maxflow)
       common/to_amps/  amp2,       jamp2
 
-      character*79       hel_buf
+      character*101       hel_buf
       common/to_helicity/hel_buf
 
       integer           mincfig, maxcfig
@@ -501,7 +502,7 @@ c
 
 c   Set helicities
 c      write(*,*) 'Getting helicity',hel_buf(1:50)
-      read(hel_buf,'(15i5)') (jpart(7,isym(i, jsym)),i=1,nexternal)
+      read(hel_buf,'(20i5)') (jpart(7,isym(i, jsym)),i=1,nexternal)
 c      write(*,*) 'ihel',jpart(7,1),jpart(7,2)
 
 c   Fix ordering of ptclus
@@ -513,20 +514,14 @@ c   Fix ordering of ptclus
       enddo
 
 c     Check if we have flipped particle 1 and 2, and flip back
+      flip = .false.
       if (p(3,1).lt.0) then
          do j=0,3
             pdum(j)=p(j,1)
             p(j,1)=p(j,2)
             p(j,2)=pdum(j)
          enddo
-         do i=1,7
-            j=jpart(i,1)
-            jpart(i,1)=jpart(i,2)
-            jpart(i,2)=j
-         enddo
-         ptcltmp(1)=ptclus(1)
-         ptclus(1)=ptclus(2)
-         ptclus(2)=ptcltmp(1)
+         flip = .true.
       endif
 
 c
@@ -555,6 +550,18 @@ c     Add info on resonant mothers
 c
       call addmothers(ip,jpart,pb,isym,jsym,sscale,aaqcd,aaqed,buff,
      $                npart,numproc)
+
+c     Need to flip after addmothers, since color might get overwritten
+      if (flip) then
+         do i=1,7
+            j=jpart(i,1)
+            jpart(i,1)=jpart(i,2)
+            jpart(i,2)=j
+         enddo
+         ptcltmp(1)=ptclus(1)
+         ptclus(1)=ptclus(2)
+         ptclus(2)=ptcltmp(1)
+      endif
 
 c
 c     Write events to lun
