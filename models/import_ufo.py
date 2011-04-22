@@ -188,7 +188,7 @@ class UFOMG5Converter(object):
 
         for particle_info in self.ufomodel.all_particles:            
             self.add_particle(particle_info)
-            
+
         logger.info('load vertices')
         for interaction_info in self.ufomodel.all_vertices:
             self.add_interaction(interaction_info)
@@ -593,6 +593,10 @@ class RestrictModel(model_reader.ModelReader):
      
     def restrict_model(self, param_card):
         """apply the model restriction following param_card"""
+
+        # Reset particle dict to ensure synchronized particles and interactions
+        self.set('particles', self.get('particles'))
+
         # compute the value of all parameters
         self.set_parameters_and_couplings(param_card)
         # associte to each couplings the associated vertex: def self.coupling_pos
@@ -827,7 +831,7 @@ class RestrictModel(model_reader.ModelReader):
                 particle['mass'] = 'ZERO'
             if particle['width'] in zero_parameters:
                 particle['width'] = 'ZERO'            
-        
+
         # check if the parameters is still usefull:
         re_str = '|'.join(special_parameters)
         re_pat = re.compile(r'''\b(%s)\b''' % re_str)
