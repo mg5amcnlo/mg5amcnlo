@@ -26,6 +26,10 @@ C
     PARAMETER (NDIAGS=%(ndiags)d) 
     INTEGER    THEL
     PARAMETER (THEL=NCOMB)
+    REAL*8 LIMHEL
+    PARAMETER(LIMHEL=1e-6)
+    INTEGER MAXTRIES
+    PARAMETER(MAXTRIES=10)
 C  
 C ARGUMENTS 
 C  
@@ -35,6 +39,7 @@ C LOCAL VARIABLES
 C  
     INTEGER NHEL(NEXTERNAL,NCOMB),NTRY
     REAL*8 T,MATRIX%(proc_id)s
+    REAL*8 R,SUMHEL,TS(NCOMB)
     INTEGER I,IDEN
     INTEGER IPROC,JC(NEXTERNAL),II
     LOGICAL GOODHEL(NCOMB)
@@ -48,7 +53,7 @@ C
     DOUBLE PRECISION AMP2(MAXAMPS), JAMP2(0:MAXFLOW)
     COMMON/TO_AMPS/  AMP2,       JAMP2
     
-    CHARACTER*79         HEL_BUFF
+    CHARACTER*101        HEL_BUFF
     COMMON/TO_HELICITY/  HEL_BUFF
     
     REAL*8 POL(2)
@@ -82,10 +87,13 @@ C ----------
         ENDDO
     ENDIF
     ANS = 0D0
-    WRITE(HEL_BUFF,'(16I5)') (0,I=1,NEXTERNAL)
-    IF (ISUM_HEL .EQ. 0 .OR. NTRY .LT. 10) THEN
+    WRITE(HEL_BUFF,'(20I5)') (0,I=1,NEXTERNAL)
+    DO I=1,NCOMB
+       TS(I)=0d0
+    ENDDO
+    IF (ISUM_HEL .EQ. 0 .OR. NTRY .LE. MAXTRIES) THEN
         DO I=1,NCOMB
-           IF (GOODHEL(I) .OR. NTRY .LT. 2) THEN
+           IF (GOODHEL(I) .OR. NTRY .LE. MAXTRIES) THEN
                T=MATRIX%(proc_id)s(P ,NHEL(1,I),JC(1))            
              DO JJ=1,nincoming
                IF(POL(JJ).NE.1d0.AND.NHEL(JJ,I).EQ.INT(SIGN(1d0,POL(JJ)))) THEN
@@ -95,15 +103,32 @@ C ----------
                ENDIF
              ENDDO
              ANS=ANS+T
-             IF (T .NE. 0D0 .AND. .NOT.    GOODHEL(I)) THEN
-                 GOODHEL(I)=.TRUE.
-                 NGOOD = NGOOD +1
-                 IGOOD(NGOOD) = I
-             ENDIF
+             TS(I)=T
            ENDIF
         ENDDO
         JHEL = 1
-        ISUM_HEL=MIN(ISUM_HEL,NGOOD)
+        IF(NTRY.LE.MAXTRIES)THEN
+         DO I=1,NCOMB
+            IF (.NOT.GOODHEL(I) .AND. (TS(I).GT.ANS*LIMHEL/NCOMB)) THEN
+               GOODHEL(I)=.TRUE.
+               NGOOD = NGOOD +1
+               IGOOD(NGOOD) = I        
+               print *,'Adding good helicity ',I,TS(I)/ANS
+            ENDIF
+         ENDDO
+         ISUM_HEL=MIN(ISUM_HEL,NGOOD)
+        ENDIF
+        IF(NTRY.EQ.MAXTRIES.AND.ISUM_HEL.GT.0)THEN
+c       Check if we have stable helicities in this event
+           DO I=1,NGOOD
+              IF(TS(IGOOD(I)) .lt. 0.1*ANS/NGOOD)THEN
+                 write(*,*) 'Not stable helicity distribution, fraction ', TS(IGOOD(I))/ANS*NGOOD
+                 write(*,*) 'Explicit sum over all non-zero helicities.'
+                 ISUM_HEL=0
+                 EXIT
+              ENDIF
+           ENDDO
+        ENDIF
     ELSE              !RANDOM HELICITY
         DO J=1,ISUM_HEL
             JHEL=JHEL+1
@@ -119,10 +144,23 @@ C ----------
               ENDIF
             ENDDO
             ANS=ANS+T*HWGT
+            TS(I)=T*HWGT
         ENDDO
         IF (ISUM_HEL .EQ. 1) THEN
-            WRITE(HEL_BUFF,'(16i5)')(NHEL(II,I),II=1,NEXTERNAL)
+            WRITE(HEL_BUFF,'(20i5)')(NHEL(II,I),II=1,NEXTERNAL)
         ENDIF
+    ENDIF
+    IF (ISUM_HEL .NE. 1) THEN
+    R=XRAN1(IDUM)*ANS
+    SUMHEL=0d0
+    DO I=1,NCOMB
+       SUMHEL=SUMHEL+TS(I)
+       IF(R.LT.SUMHEL)THEN
+          WRITE(HEL_BUFF,'(20i5)')(NHEL(II,I),II=1,NEXTERNAL)
+          GOTO 10
+       ENDIF
+    ENDDO
+ 10 CONTINUE   
     ENDIF
     IF (MULTI_CHANNEL) THEN
         XTOT=0D0
@@ -176,6 +214,8 @@ C
     REAL*8 DENOM(NCOLOR), CF(NCOLOR,NCOLOR)
     COMPLEX*16 AMP(NGRAPHS), JAMP(NCOLOR)
     COMPLEX*16 W(18,NWAVEFUNCS)
+	COMPLEX*16 DUM0,DUM1
+    DATA DUM0, DUM1/(0d0, 0d0), (1d0, 0d0)/
 C  
 C GLOBAL VARIABLES
 C  

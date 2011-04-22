@@ -1755,7 +1755,7 @@ c                        endif
 c
 c              special routines to deal with xmin cutoff
 c
-               do while(grid(1,k,j) .le. 0d0 .and. k .lt. ng)
+               do while(grid(1,k,j) .le. 0d0 .and. k+1 .lt. ng)
                   k=k+1
                enddo
 
@@ -1940,7 +1940,6 @@ c     Calculate chi2 for last three events (ja 03/11)
                tmeant = 0d0
                tsigmat = 0d0
                do i=cur_it-3,cur_it-1
-                  print *,'mean, sigma: ',i,ymean(i),ysigma(i)
                   tmeant = tmeant+ymean(i)*ymean(i)**2/ysigma(i)**2
                   tsigmat = tsigmat + ymean(i)**2/ ysigma(i)**2
                enddo

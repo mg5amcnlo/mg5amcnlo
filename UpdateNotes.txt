@@ -1,0 +1,36 @@
+Update notes for MadGraph 5 (in reverse time order)
+
+1.1.0 (21/04/11): JA: Removed hard limit on number of external particles in 
+                      MadEvent, allowing for unlimited length decay chains there
+                      (up to 14 final state particles successfully integrated).
+                  JA: Improved helicity selection and automatic full helicity 
+                      sum if needed. Optimization of run parameters.
+                  JA: New flag in run_card.dat to decide whether basic cuts
+                      are applied to decay products or not.
+                  OM: Merged ALOHA calls for different lorentz structures 
+                      with the same color structures, increasing the speed and 
+                      efficiency of matrix element evaluations.
+                  OM: Added new "open" command in command line interface,
+                      allowing to open standard file types directly.
+                      Automatically open crossx.html at launch.
+                  JA: Fixed MadEvent bugs for multiparton processes with 
+                      conflicting decays and some faulty array limits.
+                  JA: Suppressed scary but irrelevant warnings for compiling 
+                      2->1 and 1->2 processes in MadEvent.
+                  JA: Pythia 8 output further optimized.
+                  JA, OM: Several minor fixes relating to user interface etc.
+
+1.0.0 (12/04/11): Official release of MadGraph 5. Some of the features:
+                  - Complete FeynRules compatibility through the UFO interface
+                  - Automatic writing of HELAS routines for any model in
+                    Fortran, C++ or Python through ALOHA
+                  - Matrix element output in Fortran, C++ or Python
+                  - Output formats: MadEvent, Pythia 8, Standalone (Fortran/C++)
+                  - Support for spin 0, 1/2, 1, 2 particles
+                  - Support for color 1, 3, 6, 8
+                  - Revamped MadEvent with improved subprocess directory 
+                    organization and vastly increased speed and stability
+                  - Unlimited length decay chains (up to 12 final state
+                    particles tested with MadEvent, see v. 1.0.1)
+                  - Process checks for new model implementations
+                  - ...and much more (see paper "MadGraph 5: Going Beyond")

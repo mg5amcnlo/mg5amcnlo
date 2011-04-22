@@ -1,6 +1,6 @@
 g77   = g77
-FFLAGS= -O -ffixed-line-length-132
-#FFLAGS = -g -ffixed-line-length-132
+FFLAGS= -O -w -ffixed-line-length-132
+#FFLAGS = -g -ffixed-line-length-132 -fbounds-check -ffpe-trap=invalid,zero,overflow,underflow,denormal
 LIBDIR = ../../lib/
 BINDIR = ../../bin/
 # $B$ obj_for_MW $B$ !this is a tag for MadWeight. Don't edit this line

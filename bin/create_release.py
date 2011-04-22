@@ -106,6 +106,16 @@ if status:
     logging.error("bzr branch failed. Script stopped")
     exit()
 
+# 1. Remove the .bzr directory and clean bin directory file,
+#    take care of README files.
+
+shutil.rmtree(path.join(filepath, '.bzr'))
+for data in glob.glob(path.join(filepath, 'bin', '*')):
+    if not data.endswith('mg5'):
+        os.remove(data)
+os.remove(path.join(filepath, 'README.developer'))
+shutil.move(path.join(filepath, 'README.release'), path.join(filepath, 'README'))
+
 # 2. Create the automatic documentation in the apidoc directory
 
 try:
@@ -122,17 +132,7 @@ if status1:
                  status)
     exit()
 
-# 3. Remove the .bzr directory and clean bin directory file,
-#    take care of README files.
-
-shutil.rmtree(path.join(filepath, '.bzr'))
-for data in path.join(filepath, 'bin'):
-    if data != 'mg5':
-        os.remove(path.join(filepath, 'bin', data))
-os.remove(path.join(filepath, 'README.developer'))
-shutil.move(path.join(filepath, 'README.release'), path.join(filepath, 'README'))
-
-# 6. tar the MadGraph5_vVERSION directory.
+# 3. tar the MadGraph5_vVERSION directory.
 
 logging.info("Create the tar file " + filename)
 

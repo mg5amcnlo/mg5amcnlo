@@ -75,8 +75,10 @@ if [[ -e Events/events.lhe ]]; then
     rm -f Events/$1_events.lhe.gz >& /dev/null
     gzip -f Events/$1_events.lhe
 fi
+if [[ -e Events/banner.txt ]]; then
+    mv -f Events/banner.txt Events/$1_banner.txt
+fi
 if [[ -e Events/unweighted_events.lhe ]]; then
-    ./bin/extract_banner-pl Events/unweighted_events.lhe  Events/$1_banner.txt 
     mv -f Events/unweighted_events.lhe Events/$1_unweighted_events.lhe 
     rm -f Events/$1_unweighted_events.lhe.gz >& /dev/null
     gzip -f Events/$1_unweighted_events.lhe 
@@ -99,10 +101,6 @@ if [[ -e pythia_events.hep ]]; then
     mv -f pythia_events.hep $1_pythia_events.hep
     gzip -f $1_pythia_events.hep
     mv -f pythia.log $1_pythia.log
-# pythia_card.dat
-   echo "<MGPythiaCard>" >>$1_banner.txt
-   if [[ -e ../Cards/pythia_card.dat ]]; then cat ../Cards/pythia_card.dat   >> $1_banner.txt; fi
-   echo "</MGPythiaCard>" >>$1_banner.txt
 fi
 
 if [[ -e pythia_events.lhe ]]; then
@@ -130,15 +128,7 @@ if [[ -e events.tree ]]; then
     gzip -f $1_beforeveto.tree
 fi
 if [[ -e pgs_events.lhco ]]; then
-# pgs_card.dat
-   echo "<MGPGSCard>" >>$1_banner.txt
-   if [[ -e ../Cards/pgs_card.dat ]]; then cat ../Cards/pgs_card.dat   >> $1_banner.txt; fi
-   echo "</MGPGSCard>" >>$1_banner.txt
-# write the pgs banner
-    sed -e "s/^/#/g" $1_banner.txt > temp.dat
-    cat pgs_events.lhco >> temp.dat
-    rm -f pgs_events.lhco
-    mv -f temp.dat $1_pgs_events.lhco
+    mv -f pgs_events.lhco $1_pgs_events.lhco
     gzip -f $1_pgs_events.lhco
     if [ -e olympics.log ];then
 	mv -f olympics.log $1_pgs.log
@@ -155,20 +145,7 @@ if [[ -e pythia_events.root ]]; then
     mv -f pythia_events.root $1_pythia_events.root
 fi
 if [ -e delphes_events.lhco ]; then
-# delphes_card.dat
-   if [ -e ../Cards/delphes_card.dat ]; then
-     echo "<MGDelphesCard>" >>$1_banner.txt
-     cat ../Cards/delphes_card.dat   >> $1_banner.txt
-     echo "</MGDelphesCard>" >>$1_banner.txt
-     echo "<MGDelphesTrigger>" >>$1_banner.txt
-     cat ../Cards/delphes_trigger.dat   >> $1_banner.txt
-     echo "</MGDelphesTrigger>" >>$1_banner.txt
-   fi
-# write the delphes banner
-    sed -e "s/^/#/g" $1_banner.txt > temp.dat
-    cat delphes_events.lhco >> temp.dat
-    rm -f delphes_events.lhco
-    mv -f temp.dat $1_delphes_events.lhco
+    mv -f delphes_events.lhcp.dat $1_delphes_events.lhco
     gzip -f $1_delphes_events.lhco
     mv -f delphes_run.log $1_delphes.log
 fi

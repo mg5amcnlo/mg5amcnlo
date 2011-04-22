@@ -506,9 +506,9 @@ Decay groups:
         self.assertEqual(len(subproc_groups), 4)
 
         group_names = ['qq_qqz_z_qqg',
-                       'qq_qqz_z_emep',
+                       'qq_qqz_z_ll',
                        'qq_ggz_z_qqg',
-                       'qq_ggz_z_emep']
+                       'qq_ggz_z_ll']
 
         for igroup, group in enumerate(subproc_groups):
             self.assertEqual(group.get('name'),

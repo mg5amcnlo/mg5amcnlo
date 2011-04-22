@@ -65,7 +65,8 @@ class MatrixElementEvaluator(object):
     """Class taking care of matrix element evaluation, storing
     relevant quantities for speedup."""
 
-    def __init__(self, full_model, helas_writer, auth_skipping = False, reuse = True):
+    def __init__(self, model, param_card = None,
+                 auth_skipping = False, reuse = True):
         """Initialize object with stored_quantities, helas_writer,
         model, etc.
         auth_skipping = True means that any identical matrix element will be
@@ -74,12 +75,17 @@ class MatrixElementEvaluator(object):
                 given process can be reused (turn off if you are using
                 different models for the same process)"""
  
-        self.stored_quantities = {}
-        self.helas_writer = helas_writer
-        self.full_model = full_model
+        # Writer for the Python matrix elements
+        self.helas_writer = helas_call_writers.PythonUFOHelasCallWriter(model)
+    
+        # Read a param_card and calculate couplings
+        self.full_model = model_reader.ModelReader(model)
+        self.full_model.set_parameters_and_couplings(param_card)
+
         self.auth_skipping = auth_skipping
         self.reuse = reuse
         self.store_aloha = []
+        self.stored_quantities = {}
         
     #===============================================================================
     # Helper function evaluate_matrix_element
@@ -399,15 +405,8 @@ def check_processes(processes, param_card = None, quick = []):
         multiprocess = processes
         model = multiprocess.get('model')
 
-        # Writer for the Python matrix elements
-        helas_writer = helas_call_writers.PythonUFOHelasCallWriter(model)
-    
-        # Read a param_card and calculate couplings
-        full_model = model_reader.ModelReader(model)
-        full_model.set_parameters_and_couplings(param_card)
-        
         # Initialize matrix element evaluation
-        evaluator = MatrixElementEvaluator(full_model, helas_writer,
+        evaluator = MatrixElementEvaluator(model,
                                            auth_skipping = True, reuse = False)
         results = run_multiprocs_no_crossings(check_process,
                                               multiprocess,
@@ -430,16 +429,8 @@ def check_processes(processes, param_card = None, quick = []):
 
     model = processes[0].get('model')
 
-    # Read a param_card and calculate couplings
-    full_model = model_reader.ModelReader(model)
-
-    full_model.set_parameters_and_couplings(param_card)
-
-    # Write the matrix element(s) in Python
-    helas_writer = helas_call_writers.PythonUFOHelasCallWriter(model)
-
     # Initialize matrix element evaluation
-    evaluator = MatrixElementEvaluator(full_model, helas_writer,
+    evaluator = MatrixElementEvaluator(model, param_card,
                                        auth_skipping = True, reuse = False)
 
     # Keep track of tested processes, matrix elements, color and already
@@ -673,15 +664,8 @@ def check_gauge(processes, param_card = None):
 
         model = multiprocess.get('model')
         
-        # Writer for the Python matrix elements
-        helas_writer = helas_call_writers.PythonUFOHelasCallWriter(model)
-    
-        # Read a param_card and calculate couplings
-        full_model = model_reader.ModelReader(model)
-        full_model.set_parameters_and_couplings(param_card)
-
         # Initialize matrix element evaluation
-        evaluator = MatrixElementEvaluator(full_model, helas_writer,
+        evaluator = MatrixElementEvaluator(model, param_card,
                                            auth_skipping = True, reuse = False)
 
         # Set all widths to zero for gauge check
@@ -704,16 +688,8 @@ def check_gauge(processes, param_card = None):
 
     model = processes[0].get('model')
 
-    # Read a param_card and calculate couplings
-    full_model = model_reader.ModelReader(model)
-
-    full_model.set_parameters_and_couplings(param_card)
-
-    # Write the matrix element(s) in Python
-    helas_writer = helas_call_writers.PythonUFOHelasCallWriter(model)
-    
     # Initialize matrix element evaluation
-    evaluator = MatrixElementEvaluator(full_model, helas_writer,
+    evaluator = MatrixElementEvaluator(model, param_card,
                                        auth_skipping = True, reuse = False)
 
     comparison_results = []
@@ -892,21 +868,15 @@ def check_lorentz(processes, param_card = None):
 
         model = multiprocess.get('model')
         
-        # Writer for the Python matrix elements
-        helas_writer = helas_call_writers.PythonUFOHelasCallWriter(model)
-    
-        # Read a param_card and calculate couplings
-        full_model = model_reader.ModelReader(model)
-        full_model.set_parameters_and_couplings(param_card)
-        # Set all widths to zero for lorentz check
-        for particle in full_model.get('particles'):
-            if particle.get('width') != 'ZERO':
-                full_model.get('parameter_dict')[particle.get('width')] = 0.
-
         # Initialize matrix element evaluation
-        evaluator = MatrixElementEvaluator(full_model, helas_writer,
+        evaluator = MatrixElementEvaluator(model,
                                            auth_skipping = False, reuse = True)
 
+        # Set all widths to zero for lorentz check
+        for particle in evaluator.full_model.get('particles'):
+            if particle.get('width') != 'ZERO':
+                evaluator.full_model.get('parameter_dict')[\
+                                                     particle.get('width')] = 0.
         return run_multiprocs_no_crossings(check_lorentz_process,
                                            multiprocess,
                                            evaluator)
@@ -921,16 +891,8 @@ def check_lorentz(processes, param_card = None):
 
     model = processes[0].get('model')
 
-    # Read a param_card and calculate couplings
-    full_model = model_reader.ModelReader(model)
-
-    full_model.set_parameters_and_couplings(param_card)
-
-    # Write the matrix element(s) in Python
-    helas_writer = helas_call_writers.PythonUFOHelasCallWriter(model)
-    
     # Initialize matrix element evaluation
-    evaluator = MatrixElementEvaluator(full_model, helas_writer,
+    evaluator = MatrixElementEvaluator(model, param_card,
                                        auth_skipping = False, reuse = True)
 
     comparison_results = []

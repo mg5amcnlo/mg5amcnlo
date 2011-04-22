@@ -14,9 +14,9 @@ c
 c     
 c     Local
 c
-      character*150 procname(maxsubprocesses)
-      character*150 channame(maxsubprocesses)
-      character*150 pathname
+      character*300 procname(maxsubprocesses)
+      character*300 channame(maxsubprocesses)
+      character*300 pathname
       integer iproc,nproc
       integer ichan,nchan
       integer jc
@@ -88,6 +88,7 @@ c     Constants
 c
       character*(*) symfile
       parameter    (symfile='symfact.dat')
+      include 'maxparticles.inc'
       integer    maxsubprocesses
       parameter (maxsubprocesses=999)
 c
@@ -99,42 +100,36 @@ c
 c
 c     Local
 c
-      character*150 fname
+      character*300 fname
       character*50 dirname
       integer jc,ip
       double precision xi
       integer j,k
+      integer ncode,npos
+      character*20 formstr
 c-----
 c  Begin Code
 c-----
       jc = index(pathname," ")
+c     ncode is number of digits needed for the bw coding
+      ncode=int(dlog10(3d0)*(max_particles-3))+1
       fname = pathname(1:jc-1) // "/" // symfile
       nchan = 0
       open(unit=35, file=fname,status='old',err=99)
       do while (.true.)
          read(35,*,err=99,end=99) xi,j
          if (j .gt. 0) then
-            if ( (xi-int(xi+.01)) .lt. 1d-5) then
-               k = int(xi+.01)
-               if (k .lt. 10) then
-                  write(dirname,'(a,i1,a)') 'G',k,'/'
-               else if (k .lt. 100) then
-                  write(dirname,'(a,i2,a)') 'G',k,'/'
-               else if (k .lt. 1000) then
-                  write(dirname,'(a,i3,a)') 'G',k,'/'
-               else if (k .lt. 10000) then
-                  write(dirname,'(a,i4,a)') 'G',k,'/'
-               endif
+            k = int(xi*(1+10**-ncode))
+            npos=int(dlog10(dble(k)))+1
+            if ( (xi-k) .eq. 0) then
+c              Write with correct number of digits
+               write(formstr,'(a,i1,a)') '(a,i',npos,',a)'
+               write(dirname, formstr) 'G',k,'/'
             else               !Handle B.W.
-               if (xi .lt. 10) then
-                  write(dirname,'(a,f5.3,a,a)') 'G',xi,'/'
-               else if (xi .lt. 100) then
-                  write(dirname,'(a,f6.3,a,a)') 'G',xi,'/'
-               else if (xi .lt. 1000) then
-                  write(dirname,'(a,f7.3,a,a)') 'G',xi,'/'
-               else if (xi .lt. 10000) then
-                  write(dirname,'(a,f8.3,a,a)') 'G',xi,'/'
-               endif
+c              Write with correct number of digits
+               write(formstr,'(a,i1,a,i1,a)') '(a,f',npos+ncode+1,
+     $                 '.',ncode,',a)'
+               write(dirname,formstr)  'G',xi,'/'
             endif     
             ip = index(dirname,'/')
             nchan=nchan+1            
@@ -165,8 +160,8 @@ c
 c
 c     Local
 c
-      character*150 fname
-      character*150 pathname
+      character*300 fname
+      character*300 pathname
       character*26 alphabet
       integer jc,i
       integer njobs
@@ -263,8 +258,9 @@ c     Constants
 c
       character*(*) eventfname
       parameter    (eventfname="events.lhe")
+      include 'maxparticles.inc'
       integer    maxexternal     !Max number external momenta
-      parameter (maxexternal=17)
+      parameter (maxexternal=2*max_particles-3)
 c     
 c     Arguments
 c
@@ -274,9 +270,9 @@ c
 c     
 c     Local
 c
-      character*150 fname
+      character*300 fname
       integer jc
-      double precision P(0:3,maxexternal),xwgt
+      double precision P(0:4,maxexternal),xwgt
       integer n,ic(7,maxexternal),ievent
       double precision scale,aqcd,aqed
       character*140 buff
@@ -328,7 +324,7 @@ c
 c     
 c     Local
 c
-      character*150 fname
+      character*300 fname
       integer jc,i,j
       double precision x1,x2,x3,x4
 c-----
@@ -385,7 +381,7 @@ c
 c     
 c     Local
 c
-      character*150 fname
+      character*300 fname
       character*26 alphabet
       integer jc,i,j
 c-----
@@ -429,7 +425,7 @@ c
 c     
 c     Local
 c
-      character*150 fname
+      character*300 fname
       integer jc,i,j
       double precision x1,x2
       integer i3,i4

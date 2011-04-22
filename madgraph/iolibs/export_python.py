@@ -354,10 +354,12 @@ class ProcessExporterPython(object):
             parameters.remove('ZERO')
 
         # Get all couplings used
-        couplings = list(set([func.get('coupling').replace('-', '') for func \
+
+        
+        couplings = list(set([c.replace('-', '') for func \
                               in matrix_element.get_all_wavefunctions() + \
-                              matrix_element.get_all_amplitudes()
-                              if func.get('mothers')]))
+                              matrix_element.get_all_amplitudes() for c in func.get('coupling')
+                              if func.get('mothers') ]))
         
         return "\n        ".join([\
                          "%(param)s = model.get(\'parameter_dict\')[\"%(param)s\"]"\

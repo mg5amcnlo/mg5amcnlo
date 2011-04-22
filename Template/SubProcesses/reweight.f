@@ -373,10 +373,11 @@ C   local variables
       integer idfl, idmap(-nexternal:nexternal)
       integer ipart(2,n_max_cl)
       double precision xnow(2)
-      integer jlast(2),jfirst(2)
+      integer jlast(2),jfirst(2),nwarning
       logical qcdline(2),qcdrad(2)
       logical failed,first
       data first/.true./
+      data nwarning/0/
 
       logical isqcd,isjet,isparton,isjetvx,cluster
       double precision alphas
@@ -583,6 +584,22 @@ c     Use the minimum scale found for fact scale in ME
      $        q2fact(1)=pt2ijcl(nexternal-2)
          if(q2fact(2).eq.0)
      $        q2fact(2)=pt2ijcl(nexternal-2)
+      endif
+
+c     Check that factorization scale is >= 2 GeV
+      if(lpp(1).ne.0.and.q2fact(1).lt.4d0.or.
+     $   lpp(2).ne.0.and.q2fact(2).lt.4d0)then
+         if(nwarning.le.10) then
+             nwarning=nwarning+1
+             write(*,*) 'Warning: Too low fact scales: ',
+     $            sqrt(q2fact(1)), sqrt(q2fact(2))
+          endif
+         if(nwarning.eq.11) then
+             nwarning=nwarning+1
+             write(*,*) 'No more warnings written out this run.'
+          endif
+         setclscales=.false.
+         return
       endif
 
       if (btest(mlevel,3))

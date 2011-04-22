@@ -90,7 +90,6 @@ c
       if(readlha) then 
          call lh_readin(param_name)
          G = DSQRT(4d0*PI*ALFAS) ! use setting of the param_card.dat @ NLO
-         DUM1 = 1d0
 c     
 c     Strong coupling
 c

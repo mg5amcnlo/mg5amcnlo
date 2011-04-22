@@ -98,7 +98,7 @@ sub writeHtmlProcessPage {
   print PAGE  "<HTML> <HEAD> \n";
 
   if (-e "RunWeb") {
-      print PAGE "<META HTTP-EQUIV=\"Refresh\" CONTENT=\"30\" > ";
+      print PAGE "<META HTTP-EQUIV=\"Refresh\" CONTENT=\"10\" > ";
   }
   print PAGE "<META HTTP-EQUIV=\"EXPIRES\" CONTENT=\"20\" > ";
   print PAGE "\n <TITLE>Online Event Generation</TITLE></HEAD> \n <BODY>";

@@ -215,32 +215,38 @@ c           Only allow onshell if no "decay" to identical particle
               idenpart=0
               do j=1,2
                 ida(j)=iforest(j,i,iconfig)
-                if((ida(j).lt.0.and.sprop(i,iconfig).eq.sprop(ida(j),iconfig))
-     $             .or.(ida(j).gt.0.and.sprop(i,iconfig).eq.IDUP(ida(j),1,1)))
-     $             idenpart=ida(j)
+                if(ida(j).lt.0) then
+                   if(sprop(i,iconfig).eq.sprop(ida(j),iconfig))
+     $                  idenpart=ida(j)
+                elseif (ida(j).gt.0) then
+                   if(sprop(i,iconfig).eq.IDUP(ida(j),1,1))
+     $                  idenpart=ida(j)
+                endif
               enddo
 c           Always remove if daughter final-state
               if(idenpart.gt.0) then
                 OnBW(i)=.false.
 c           Else remove if daughter forced to be onshell
-              elseif(idenpart.lt.0.and.gForceBW(idenpart, iconfig)) then
-                OnBW(i)=.false.
+              elseif(idenpart.lt.0)then
+                 if(gForceBW(idenpart, iconfig)) then
+                    OnBW(i)=.false.
 c           Else remove daughter if forced to be onshell
-              elseif(idenpart.lt.0.and.gForceBW(i, iconfig)) then
-                OnBW(idenpart)=.false.
+                 elseif(gForceBW(i, iconfig)) then
+                    OnBW(idenpart)=.false.
 c           Else remove either this resonance or daughter, which is closer to mass shell
-              elseif(idenpart.lt.0.and.abs(xmass-pmass(i,iconfig)).gt.
-     $             abs(sqrt(dot(xp(0,idenpart),xp(0,idenpart)))-
-     $             pmass(i,iconfig))) then
-                OnBW(i)=.false.
+                 elseif(abs(xmass-pmass(i,iconfig)).gt.
+     $                   abs(sqrt(dot(xp(0,idenpart),xp(0,idenpart)))-
+     $                   pmass(i,iconfig))) then
+                    OnBW(i)=.false.
 c           Else remove OnBW for daughter
-              else if(idenpart.lt.0) then
-                OnBW(idenpart)=.false.
+                 else
+                    OnBW(idenpart)=.false.
+                 endif
               endif
             endif
             if (onshell .and. (lbw(nbw).eq. 2) ) cut_bw=.true.
             if (.not. onshell .and. (lbw(nbw).eq. 1)) cut_bw=.true.
-c            write(*,*) nbw,xmass,onshell,lbw(nbw),cut_bw
+c            write(*,*) 'cut_bw: ',nbw,xmass,onshell,lbw(nbw),cut_bw
          endif
 
       enddo
@@ -286,6 +292,9 @@ c
 
       logical gForceBW(-max_branch:-1,lmaxconfigs)  ! Forced BW
       include 'decayBW.inc'
+
+      double precision forced_mass
+      data forced_mass/0d0/
 c
 c     Global
 c
@@ -318,7 +327,7 @@ c
 
       integer        lbw(0:nexternal)  !Use of B.W.
       common /to_BW/ lbw
-      
+
       include 'coupl.inc'
 
 c
@@ -351,7 +360,7 @@ c-JA 1/2009: Set grid also based on xqcut
       tsgn    = +1d0
 c     Reset variables
       nbw = 0
-      do i=1,nexternal
+      do i=1,nexternal-2
          iden_part(-i)=0
          spole(i)=0
          swidth(i)=0
@@ -359,22 +368,28 @@ c     Reset variables
       do i=-1,-(nexternal-3),-1              !Find all the propagotors
 c     JA 3/31/11 Keep track of identical particles (i.e., radiation vertices)
 c     by tracing the particle identity from the external particle.
-         if(iforest(1,i,iconfig).gt.0.and.
-     $        sprop(i,iconfig).eq.idup(iforest(1,i,iconfig),1,1).or.
-     $      iforest(2,i,iconfig).gt.0.and.
-     $        sprop(i,iconfig).eq.idup(iforest(2,i,iconfig),1,1).or.
-     $      iforest(1,i,iconfig).lt.0.and.
-     $        (iden_part(iforest(1,i,iconfig)).ne.0.and.
+         if(iforest(1,i,iconfig).gt.0) then
+             if (sprop(i,iconfig).eq.idup(iforest(1,i,iconfig),1,1))
+     $        iden_part(i) = sprop(i,iconfig)
+          endif
+         if(iforest(2,i,iconfig).gt.0) then
+            if(sprop(i,iconfig).eq.idup(iforest(2,i,iconfig),1,1))
+     $           iden_part(i) = sprop(i,iconfig)
+         endif
+         if(iforest(1,i,iconfig).lt.0) then
+            if((iden_part(iforest(1,i,iconfig)).ne.0.and.
      $        sprop(i,iconfig).eq.iden_part(iforest(1,i,iconfig)) .or.
      $        gforcebw(iforest(1,i,iconfig),iconfig).and.
-     $        sprop(i,iconfig).eq.sprop(iforest(1,i,iconfig),iconfig)).or.
-     $      iforest(2,i,iconfig).lt.0.and.
-     $        (iden_part(iforest(2,i,iconfig)).ne.0.and.
+     $        sprop(i,iconfig).eq.sprop(iforest(1,i,iconfig),iconfig)))
+     $       iden_part(i) = sprop(i,iconfig)
+         endif
+         if(iforest(2,i,iconfig).lt.0) then
+            if((iden_part(iforest(2,i,iconfig)).ne.0.and.
      $        sprop(i,iconfig).eq.iden_part(iforest(2,i,iconfig)).or.
      $        gforcebw(iforest(2,i,iconfig),iconfig).and.
-     $        sprop(i,iconfig).eq.sprop(iforest(2,i,iconfig),iconfig)))then
-            iden_part(i) = sprop(i,iconfig)
-            endif
+     $        sprop(i,iconfig).eq.sprop(iforest(2,i,iconfig),iconfig)))
+     $           iden_part(i) = sprop(i,iconfig)
+         endif
          if (iforest(1,i,iconfig) .eq. 1) tsgn=-1d0
          if (tsgn .eq. 1d0) then                         !s channel
             xm(i) = xm(iforest(1,i,iconfig))+xm(iforest(2,i,iconfig))
@@ -418,6 +433,9 @@ c----
                   spole(-i)=pmass(i,iconfig)*pmass(i,iconfig)/stot
                   swidth(-i) = pwidth(i,iconfig)*pmass(i,iconfig)/stot
                   xm(i) = pmass(i,iconfig)
+c                 Remember largest BW mass for better grid setting
+                  forced_mass = max(forced_mass,
+     $                 pmass(i,iconfig)-bwcutoff*pwidth(i,iconfig))
 c RF & TJS, should start from final state particle masses, not only at resonance.
 c Therefore remove the next line.
 c                  xe(i) = max(xe(i),xm(i))
@@ -474,7 +492,8 @@ c            write(*,*) 'Using 2',l2,x2
 
             xo = min(x1,x2)
 
-            xo = xo*xo/stot
+c           Use 1/10000 of sqrt(s) as minimum, to always get integration
+            xo = max(xo*xo/stot,1e-8)
             a=-pmass(i,iconfig)**2/stot
 c            call setgrid(-i,xo,a,pow(i,iconfig))
 
@@ -485,8 +504,8 @@ c               read(*,*) xo
          endif
       enddo
       if (abs(lpp(1)) .eq. 1 .or. abs(lpp(2)) .eq. 1) then
-         write(*,*) 'etot',etot,nexternal
-         xo = etot**2/stot
+c     Set minimum based on: 1) required energy 2) resonances 3) 1/10000 of sqrt(s)
+         xo = max(max(etot**2, forced_mass**2)/stot,1e-8)
          i = 3*(nexternal-2) - 4 + 1
 c-----------------------
 c     tjs  4/29/2008 use analytic transform for s-hat

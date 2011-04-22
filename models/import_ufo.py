@@ -610,8 +610,7 @@ class RestrictModel(model_reader.ModelReader):
         # remove zero couplings and other pointless couplings
         self.del_coup += zero_couplings
         self.remove_couplings(self.del_coup)
-        
-        
+                
         # deal with parameters
         parameters = self.detect_special_parameters()
         self.fix_parameter_values(*parameters)
@@ -629,8 +628,6 @@ class RestrictModel(model_reader.ModelReader):
                 self['parameter_dict'][name] = 1
             elif value == 0.000001e-99:
                 self['parameter_dict'][name] = 0
-
-
 
     def locate_coupling(self):
         """ create a dict couplings_name -> vertex """
