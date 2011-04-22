@@ -546,6 +546,21 @@ class CheckValidForCmd(object):
  
         return True
     
+        
+    def check_generateFKS(self, args):
+        """check the validity of args"""
+        
+        if  not self._curr_model:
+            raise self.InvalidCmd("No model currently active, please import a model!")
+
+        if len(args) < 1:
+            self.help_generate()
+            raise self.InvalidCmd("\"generate\" requires a process.")
+
+        self.check_process_format(" ".join(args))
+ 
+        return True
+    
     def check_process_format(self, process):
         """ check the validity of the string given to describe a format """
         
@@ -1813,7 +1828,7 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
         return
     
     def do_generateFKS(self,line):
-        """generate an amplitude with the FKS counterterms. Start with the real
+        """generate an amplitude with the FKS counterterms. Start with the born
         emission process"""
 
         args = split_arg(line)
@@ -1833,7 +1848,7 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
 
         cpu_time1 = time.time()
         # Generate processes
-        myproc = fks.FKSMultiProcess(myprocdef)
+        myproc = fks_born.FKSMultiProcess(myprocdef)
         self._curr_amps = myproc.get('amplitudes')
         cpu_time2 = time.time()
 

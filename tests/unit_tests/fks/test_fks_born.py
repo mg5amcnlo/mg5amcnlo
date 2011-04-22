@@ -93,6 +93,36 @@ class TestFKSProcess(unittest.TestCase):
 ]
     for i in mylegs2:
         myleglist2.append(MG.Leg(i))
+        
+        myleglist3 = MG.LegList()
+    # PROCESS: d d~ > a a~
+    mylegs3 = [{ \
+    'id': 1,\
+    'number': 1,\
+    'state': False,\
+ #   'from_group': True \
+}, \
+{ \
+    'id': -1,\
+    'number': 2,\
+    'state': False,\
+    #'from_group': True\
+},\
+{\
+    'id': 22,\
+    'number': 3,\
+    'state': True,\
+  #  'from_group': True\
+},\
+{\
+    'id': 22,\
+    'number': 4,\
+    'state': True,\
+   # 'from_group': True\
+}
+]
+    for i in mylegs3:
+        myleglist3.append(MG.Leg(i))
 
     
     mypartlist = MG.ParticleList()
@@ -273,6 +303,16 @@ class TestFKSProcess(unittest.TestCase):
                       'lorentz':['L1'],
                       'couplings':{(0, 0):'ADD'},
                       'orders':{'QED':1}}))
+    myinterlist.append(MG.Interaction({\
+                      'id':6,\
+                      'particles': MG.ParticleList(\
+                                            [mypartlist[0], \
+                                             antiu, \
+                                             mypartlist[2]]),
+                      'color': 1,
+                      'lorentz':['L1'],
+                      'couplings':{(0, 0):'AUU'},
+                      'orders':{'QED':1}}))
     
     expected_qcd_inter = MG.InteractionList()
         
@@ -348,10 +388,22 @@ class TestFKSProcess(unittest.TestCase):
                        'is_decay_chain': False,
                        'decay_chains': MG.ProcessList(),
                        'overall_orders': {}}
+    dict3 = {'legs' : myleglist3, 'orders':{'QCD':0, 'QED':2},
+                       'model': mymodel,
+                       'id': 1,
+                       'required_s_channels':[],
+                       'forbidden_s_channels':[],
+                       'forbidden_particles':[],
+                       'is_decay_chain': False,
+                       'decay_chains': MG.ProcessList(),
+                       'overall_orders': {}}
+    
     
     myproc = MG.Process(dict)
 
     myproc2 = MG.Process(dict2)
+    
+    myprocaa= MG.Process(dict3)
     
 
     
@@ -1345,10 +1397,133 @@ class TestFKSProcess(unittest.TestCase):
                                          'fks' : 'i'})
                                         ] )])
 
+
+
+
         for i in range(len(fksproc2.reals)):
             self.assertEqual(fksproc2.reals[i], target2[i]) 
-        
-        
+            
+    
+        #d d~ > a a
+        fksproc3 = fks_born.FKSProcessFromBorn(self.myprocaa)
+        target3 = []
+        #leg 1 can split as d d~ > g a a or  g d~ > d~ a a 
+        target3.append( [fksproc.to_fks_legs([
+                                        fks_born.FKSLeg(
+                                        {'id' :1,
+                                         'number' :1,
+                                         'state' :False,
+                                         'fks' : 'j'}),
+                                        fks_born.FKSLeg(
+                                         {'id' :-1,
+                                         'number' :2,
+                                         'state' :False,
+                                         'fks' : 'n'}),
+                                        fks_born.FKSLeg( 
+                                         {'id' :21,
+                                         'number' :3,
+                                         'state' :True,
+                                         'fks' : 'i'}),
+                                        fks_born.FKSLeg(
+                                         {'id' :22,
+                                         'number' :4,
+                                         'state' :True,
+                                         'fks' : 'n'}),
+                                        fks_born.FKSLeg(
+                                         {'id' : 22,
+                                         'number' :5,
+                                         'state' :True,
+                                         'fks' : 'n'})
+                                        ] ),
+                    fksproc.to_fks_legs([
+                                        fks_born.FKSLeg(
+                                        {'id' :21,
+                                         'number' :1,
+                                         'state' :False,
+                                         'fks' : 'j'}),
+                                        fks_born.FKSLeg(
+                                         {'id' :-1,
+                                         'number' :2,
+                                         'state' :False,
+                                         'fks' : 'n'}),
+                                        fks_born.FKSLeg(
+                                         {'id' :-1,
+                                         'number' :3,
+                                         'state' :True,
+                                         'fks' : 'i'}),
+                                        fks_born.FKSLeg(
+                                         {'id' :22,
+                                         'number' :4,
+                                         'state' :True,
+                                         'fks' : 'n'}),
+                                        fks_born.FKSLeg( 
+                                         {'id' : 22,
+                                         'number' :5,
+                                         'state' :True,
+                                         'fks' : 'n'})
+                                        ])]
+                                        )
+        #leg 2 can split as d d~ > g a a  or  d g > d a a 
+        target3.append( [fksproc.to_fks_legs([
+                                        fks_born.FKSLeg(
+                                        {'id' :1,
+                                         'number' :1,
+                                         'state' :False,
+                                         'fks' : 'n'}),
+                                        fks_born.FKSLeg(
+                                         {'id' :-1,
+                                         'number' :2,
+                                         'state' :False,
+                                         'fks' : 'j'}),
+                                        fks_born.FKSLeg( 
+                                         {'id' :21,
+                                         'number' :3,
+                                         'state' :True,
+                                         'fks' : 'i'}),
+                                        fks_born.FKSLeg(
+                                         {'id' :22,
+                                         'number' :4,
+                                         'state' :True,
+                                         'fks' : 'n'}),
+                                        fks_born.FKSLeg(
+                                         {'id' : 22,
+                                         'number' :5,
+                                         'state' :True,
+                                         'fks' : 'n'})
+                                        ] ),
+                    fksproc.to_fks_legs([
+                                        fks_born.FKSLeg(
+                                        {'id' :1,
+                                         'number' :1,
+                                         'state' :False,
+                                         'fks' : 'n'}),
+                                        fks_born.FKSLeg(
+                                         {'id' :21,
+                                         'number' :2,
+                                         'state' :False,
+                                         'fks' : 'j'}),
+                                        fks_born.FKSLeg(
+                                         {'id' : 1,
+                                         'number' :3,
+                                         'state' :True,
+                                         'fks' : 'i'}),
+                                        fks_born.FKSLeg(
+                                         {'id' : 22,
+                                         'number' :4,
+                                         'state' :True,
+                                         'fks' : 'n'}),
+                                        fks_born.FKSLeg( 
+                                         {'id' : 22,
+                                         'number' :5,
+                                         'state' :True,
+                                         'fks' : 'n'})
+                                        ])]
+                                        )        
+
+
+        for real, res in zip(fksproc3.reals, target3):
+            self.assertEqual(real, res) 
+  
         
 
     

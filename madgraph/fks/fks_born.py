@@ -191,6 +191,7 @@ class FKSMultiProcess(diagram_generation.MultiProcess): #test written
         real_amp_id_list = []
         for amp in amps:
             born = FKSProcessFromBorn(amp)
+            print "here"
             self['born_processes'].append(born)
             born.generate_reals(real_amplist, real_amp_id_list)
 
@@ -216,11 +217,19 @@ class FKSRealProcess(): #test written
 
         self.process = copy.copy(born_proc)
         orders = copy.copy(born_proc.get('orders'))
-        for n, o in orders.items():
-            if n != 'QCD':
-                orders[n] = o
-            else:
-                orders[n] = o +1
+        print "orders", orders
+        if 'QCD' in orders.keys():
+            orders['QCD'] +=1
+            print "found QCD"
+        else:
+            orders['QCD'] = 1
+            print "NOT found QCD"
+#        for n, o in orders.items():
+#            if n != 'QCD':
+#                orders[n] = o
+#            else:
+#                orders[n] = o +1
+
         self.process.set('orders', orders)
 
         legs = [(leg.get('id'), leg) for leg in \
@@ -281,8 +290,24 @@ class FKSProcessFromBorn(object):
                 self.born_amp = start_proc
                 self.born_proc = start_proc.get('process')           
             self.model = self.born_proc['model']
+            self.qcd_part = self.find_qcd_particles(self.born_proc['model'])
+            self.brem_part = self.find_brem_particles(self.born_proc['model'])
+            self.qcd_inter = self.find_qcd_interactions(self.born_proc['model'])
             self.leglist = self.to_fks_legs(self.born_proc['legs'])
             self.nlegs = len(self.leglist)
+            
+            # find the correct qcd/qed orders from born_amp
+            
+            
+            orders = {}
+            for dia in self.born_amp.get('diagrams'):
+                for o, val in dia['orders'].items():
+                    if o in orders.keys():
+                        orders[o] = max(orders[o], val)
+                    else:
+                        orders[o] =val
+            self.born_proc['orders'] = orders
+            
          #   print [l.get('id') for l in self.leglist]
 #           self.leglist = self.born_proc.get('legs')
 #            for leg in self.leglist:
@@ -295,10 +320,9 @@ class FKSProcessFromBorn(object):
                 
             self.ndirs = 0
             self.fks_config_string = ""
-            self.qcd_part = self.find_qcd_particles(self.born_proc['model'])
-            self.brem_part = self.find_brem_particles(self.born_proc['model'])
-            self.qcd_inter = self.find_qcd_interactions(self.born_proc['model'])
+
             self.find_reals()
+            print self.reals
             self.find_color_links()
             self.real_amps = []
 
@@ -365,8 +389,12 @@ class FKSProcessFromBorn(object):
         for i, ii in model.get('interaction_dict').items():
             if any([p in ii['orders'].keys() for p in pert]) \
                and len(ii['particles']) ==3 :
+                print ii
                 masslist = [p.get('mass').lower() for p in ii.get('particles')]
+                print masslist, "before"
                 masslist.remove('zero')
+                print masslist, "after"
+                print len(masslist)
                 if len(set(masslist)) == 1:
                     qcd_inter.append(ii)
         return sorted(qcd_inter)
@@ -385,6 +413,7 @@ class FKSProcessFromBorn(object):
             self.splittings[i_i] = self.find_splittings(i)
             for split in self.splittings[i_i]:
                 self.reals[i_i].append(self.add_numbers(self.insert_legs(i, split)))
+            print "finding reals for leg", i_i
             #    print [l.get('id') for l in self.reals[i_i][-1]]
             #    print [l.get('fks') for l in self.reals[i_i][-1]]
                 
@@ -419,6 +448,7 @@ class FKSProcessFromBorn(object):
             part = self.qcd_part[leg['id']]
             antipart = self.qcd_part[part.get_anti_pdg_code()]
             for ii in self.qcd_inter:
+                print "INTERACTION ", ii
 #check which interactions contain leg and at least one "brem" particles:
                 parts = copy.deepcopy(ii['particles'])
                 nbrem = 0
