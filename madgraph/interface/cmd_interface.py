@@ -2508,7 +2508,7 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
                         logger.warning(('Using default eps viewer \"%s\". ' % p) + \
                                     'Set eps_viewer in ./input/mg5_configuration.txt')
                         break
-                if not self.configuration[key]:
+                if not self.configuration[key] and sys.platform != 'darwin':
                     logger.warning('No valid eps viewer found. ' + \
                                    'Please set in ./input/mg5_configuration.txt') 
             elif key == 'web_browser':
@@ -2521,7 +2521,7 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
                         logger.warning(('Using default web browser \"%s\". ' % p) + \
                                       'Set web_browser in ./input/mg5_configuration.txt')
                         break
-                if not self.configuration[key]:
+                if not self.configuration[key] and sys.platform != 'darwin':
                     logger.warning('No valid web browser found. ' + \
                                    'Please set in ./input/mg5_configuration.txt') 
             else:
