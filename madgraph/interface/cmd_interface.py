@@ -809,13 +809,6 @@ class CheckValidForCmd(object):
             raise self.InvalidCmd('')
 
         if args and args[0][0] != '-':
-            if self._done_export == (args[0], self._export_format):
-                # We have already done export in this path
-                logger.info("Matrix elements already exported to directory %s" % \
-                            self._export_dir)
-                return        
-
-        if args and args[0][0] != '-':
             # This is a path
             path = args.pop(0)
             # Check for special directory treatment
@@ -2759,11 +2752,6 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
         except:
             pass
             
-        if self._done_export == (self._export_dir, self._export_format):
-            logger.info('Matrix elements already exported to directory %s' % \
-                        self._export_dir)
-            return
-
         if not force and not noclean and os.path.isdir(self._export_dir)\
                and self._export_format in ['madevent', 'standalone']:
             # Don't ask if user already specified force or noclean
@@ -2991,6 +2979,15 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
                 logger.info("Wrote files for %d helas calls" % \
                             (calls))
                 
+        if self._export_format == 'pythia8':
+            logger.info("- All necessary files for Pythia 8 generated.")
+            logger.info("- Run \"launch\" and select %s.cc," % filename)
+            logger.info("  or go to %s/examples and run" % path)
+            logger.info("      make -f %s" % make_filename)
+            logger.info("  (with process_name replaced by process name).")
+            logger.info("  You can then run ./%s to produce events for the process" % \
+                        filename)
+
         # Replace the amplitudes with the actual amplitudes from the
         # matrix elements, which allows proper diagram drawing also of
         # decay chain processes
@@ -3045,14 +3042,6 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
             logger.info('Type \"launch\" to generate events from this process, or see')
             logger.info(self._export_dir + '/README')
             logger.info('Run \"open index.html\" to see more information about this process.')
-        if self._export_format == 'pythia8':
-            logger.info("- All necessary files for Pythia 8 generated.")
-            logger.info("- Run \"launch\" and select %s.cc," % filename)
-            logger.info("  or go to %s/examples and run" % path)
-            logger.info("      make -f %s" % make_filename)
-            logger.info("  (with process_name replaced by process name).")
-            logger.info("  You can then run ./%s to produce events for the process" % \
-                        filename)
 
     def do_help(self, line):
         """ propose some usefull possible action """

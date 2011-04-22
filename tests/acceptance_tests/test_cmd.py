@@ -175,15 +175,7 @@ class TestCmdShell2(unittest.TestCase,
                                                     'P0_epem_epem',
                                                     'matrix1.jpg')))
         self.assertTrue(os.path.exists(os.path.join(self.out_dir,
-                                                    'madevent.tar.gz')))        
-        self.do('output %s' % self.out_dir)
-        self.assertFalse(os.path.exists(os.path.join(self.out_dir,
-                                                    'SubProcesses',
-                                                    'P0_epem_epem',
-                                                    'matrix1.jpg')))
-        self.assertTrue(os.path.exists(os.path.join(self.out_dir,
-                                               'SubProcesses', 'P0_epem_epem')))
-        self.do('load processes %s' % self.join_path(_pickle_path,'e+e-_e+e-.pkl'))
+                                                    'madevent.tar.gz')))
         self.do('output %s -f' % self.out_dir)
         self.assertTrue(os.path.exists(os.path.join(self.out_dir,
                                                     'SubProcesses',
@@ -279,8 +271,10 @@ class TestCmdShell2(unittest.TestCase,
                             os.path.join(self.out_dir,'Cards','proc_card.dat')))
     
         self.cmd = Cmd.MadGraphCmdShell()
-        self.do('import proc_v4 %s' % os.path.join(self.out_dir,
-                                                       'Cards','proc_card.dat'))
+        pwd = os.getcwd()
+        os.chdir(self.out_dir)
+        self.do('import proc_v4 %s' % os.path.join('Cards','proc_card.dat'))
+        os.chdir(pwd)
 
         self.assertTrue(os.path.exists(os.path.join(self.out_dir,
                                               'SubProcesses', 'P1_emep_vevex')))
