@@ -35,6 +35,7 @@ if [ "$run" != "" ]; then
   fi
   echo gunzip ${run}_pythia_events.hep.gz
   gunzip -c ${run}_pythia_events.hep.gz > pythia_events.hep
+  cp -f ${run}_banner.txt banner.txt
   echo Running Delphes
 fi
 
@@ -67,28 +68,31 @@ if [[ -e delphes.err ]];then
   cat delphes.err
 fi
 
-if [ "$run" != "" ]; then
-  if [ -e delphes_events.lhco ]; then
+if [ -e delphes_events.lhco ]; then
    echo Storing files
    echo Storing Delphes files > ../status
     ../bin/gen_crossxhtml-pl $run
 # delphes_card.dat
    if [ -e ../Cards/delphes_card.dat ]; then
-     echo "<MGDelphesCard>" >>${run}_banner.txt
-     cat ../Cards/delphes_card.dat   >> ${run}_banner.txt
-     echo "</MGDelphesCard>" >>${run}_banner.txt
-     echo "<MGDelphesTrigger>" >>${run}_banner.txt
-     cat ../Cards/delphes_trigger.dat   >> ${run}_banner.txt
-     echo "</MGDelphesTrigger>" >>${run}_banner.txt
+     echo "<MGDelphesCard>" >>banner.txt
+     cat ../Cards/delphes_card.dat   >> banner.txt
+     echo "</MGDelphesCard>" >>banner.txt
+     echo "<MGDelphesTrigger>" >>banner.txt
+     cat ../Cards/delphes_trigger.dat   >> banner.txt
+     echo "</MGDelphesTrigger>" >>banner.txt
    fi
 # write the delphes banner
-    sed -e "s/^/#/g" ${run}_banner.txt > temp.dat
+    sed -e "s/^/#/g" banner.txt > temp.dat
     cat delphes_events.lhco >> temp.dat
     rm -f delphes_events.lhco
-    mv -f temp.dat ${run}_delphes_events.lhco
+    mv -f temp.dat delphes_events.lhco
+fi
+
+if [ "$run" != "" ]; then
+    mv -f banner.txt ${run}_banner.txt
+    mv -f delphes_events.lhco ${run}_delphes_events.lhco
     gzip -f ${run}_delphes_events.lhco
     mv -f delphes_run.log ${run}_delphes.log
     mv -f delphes.root ${run}_delphes_events.root
-  fi
-  rm -f pythia_events.hep
+    rm -f pythia_events.hep
 fi

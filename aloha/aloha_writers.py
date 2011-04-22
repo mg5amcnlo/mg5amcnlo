@@ -19,10 +19,16 @@ class WriteALOHA:
     
     def __init__(self, abstract_routine, dirpath):
 
-        self.obj = abstract_routine.expr
+
         name = get_routine_name(abstract_routine.name, abstract_routine.outgoing)
-        self.out_path = os.path.join(dirpath, name + self.extension)
-        self.dir_out = dirpath
+        if dirpath:
+            self.dir_out = dirpath
+            self.out_path = os.path.join(dirpath, name + self.extension)
+        else:
+            self.out_path = None
+            self.dir_out = None
+
+        self.obj = abstract_routine.expr
         self.particles =  [self.type_to_variable[spin] for spin in \
                           abstract_routine.spins]
         self.namestring = name
@@ -35,6 +41,9 @@ class WriteALOHA:
         self.collect_variables() # Look for the different variables
         self.make_all_lists()    # Compute the expression for the call ordering
                                  #the definition of objects,..
+                                 
+                                 
+                                 
                                  
     def pass_to_HELAS(self, indices, start=0):
         """find the Fortran HELAS position for the list of index""" 
@@ -170,18 +179,19 @@ class WriteALOHA:
                 
         return call_arg
 
-    def reorder_call_list(self, call_list, old, new):
-        """ restore the correct order for symmetries """
-        spins = self.particles
-        assert(0 < old < new)
-        old, new = old -1, new -1 # pass in real position in particles list
-        assert(spins[old] == spins[new])
-        spin =spins[old]
-        
-        new_call = call_list[:]
-        val = new_call.pop(old)
-        new_call.insert(new - 1, val)
-        return new_call
+#    def reorder_call_list(self, call_list, old, new):
+#        """ restore the correct order for symmetries """
+#        raise
+#        #spins = self.particles
+#        #assert(0 < old < new)
+#        #old, new = old -1, new -1 # pass in real position in particles list
+#        #assert(spins[old] == spins[new])
+#        #spin =spins[old]
+#        
+#        new_call = call_list[:]
+#        #val = new_call.pop(old)
+#        #new_call.insert(new - 1, val)
+#        return new_call
     
         
     def make_momentum_conservation(self):
@@ -249,42 +259,45 @@ class ALOHAWriterForFortran(WriteALOHA):
                     'V':'double complex V%d(6)',
                     'T':'double complex T%s(18)'}
     
-    def define_header(self):
+    def define_header(self, name=None):
         """Define the Header of the fortran file. This include
             - function tag
             - definition of variable
         """
-            
+        
+        if not name:
+            name = self.namestring
+             
         Momenta = self.collected['momenta']
         OverM = self.collected['om']
         
         CallList = self.calllist['CallList']
         declare_list = self.calllist['DeclareList']
-        if 'double complex C' in declare_list:
+        if 'double complex COUP' in declare_list:
             alredy_update = True
         else:
             alredy_update = False
         
         if not alredy_update:    
-            declare_list.append('double complex C')
+            declare_list.append('double complex COUP')
 
         # define the type of function and argument        
         if not self.offshell:
             str_out = 'subroutine %(name)s(%(args)s,vertex)\n' % \
-               {'name': self.namestring,
-                'args': ','.join(CallList+ ['C']) }
+               {'name': name,
+                'args': ','.join(CallList+ ['COUP']) }
             if not alredy_update: 
-                declare_list.append('double complex vertex\n') 
+                declare_list.append('double complex vertex') 
         else:
             if not alredy_update:
                 declare_list.append('double complex denom')
                 declare_list.append('double precision M%(id)d, W%(id)d' % 
                                                           {'id': self.offshell})
-            call_arg = '%(args)s, C, M%(id)d, W%(id)d, %(spin)s%(id)d' % \
+            call_arg = '%(args)s, COUP, M%(id)d, W%(id)d, %(spin)s%(id)d' % \
                     {'args': ', '.join(CallList), 
                      'spin': self.particles[self.offshell -1],
                      'id': self.offshell}
-            str_out = ' subroutine %s(%s)\n' % (self.namestring, call_arg) 
+            str_out = ' subroutine %s(%s)\n' % (name, call_arg) 
 
         # Forcing implicit None
         str_out += 'implicit none \n'
@@ -402,7 +415,7 @@ class ALOHAWriterForFortran(WriteALOHA):
         OutString = ''
         if not self.offshell:
             for ind in self.obj.listindices():
-                string = 'Vertex = C*' + self.write_obj(self.obj.get_rep(ind))
+                string = 'Vertex = COUP*' + self.write_obj(self.obj.get_rep(ind))
                 string = string.replace('+-', '-')
                 string = re.sub('\((?P<num>[+-]*[0-9])(?P<num2>[+-][0-9])[Jj]\)\.', '(\g<num>d0,\g<num2>d0)', string)
                 string = re.sub('(?P<num>[0-9])[Jj]\.', '\g<num>.*(0d0,1d0)', string)
@@ -420,7 +433,7 @@ class ALOHAWriterForFortran(WriteALOHA):
             string = re.sub('(?P<num>[0-9])[Jj]\.', '\g<num>*(0d0,1d0)', string)
             OutString = OutString + string + '\n'
             for ind in numerator.listindices():
-                string = '%s(%d)= C*denom*' % (OffShellParticle, self.pass_to_HELAS(ind, start=1))
+                string = '%s(%d)= COUP*denom*' % (OffShellParticle, self.pass_to_HELAS(ind, start=1))
                 string += self.write_obj(numerator.get_rep(ind))
                 string = string.replace('+-', '-')
                 string = re.sub('\((?P<num>[+-][0-9])\+(?P<num2>[+-][0-9])[Jj]\)\.', '(\g<num>d0,\g<num2>d0)', string)
@@ -430,45 +443,178 @@ class ALOHAWriterForFortran(WriteALOHA):
     
     def define_symmetry(self, new_nb):
         number = self.offshell 
-        calls = self.reorder_call_list(self.calllist['CallList'], self.offshell,
-                                                                        new_nb)
-        Outstring = 'call '+self.namestring+'('+','.join(calls)+',C,M%s,W%s,%s%s)' \
+        calls = self.calllist['CallList']
+                                                                
+        Outstring = 'call '+self.namestring+'('+','.join(calls)+',COUP,M%s,W%s,%s%s)\n' \
                          %(number,number,self.particles[number-1],number)
         return Outstring
     
     def define_foot(self):
-        return 'end' 
+        return 'end\n\n' 
 
     def write(self, mode='self'):
-                
-        writer = writers.FortranWriter(self.out_path)
-        writer.downcase = False 
-        commentstring = 'This File is Automatically generated by ALOHA \n'
-        commentstring += 'The process calculated in this file is: \n'
-        commentstring += self.comment + '\n'
-        writer.write_comments(commentstring)
-         
+                         
         # write head - momenta - body - foot
-        writer.writelines(self.define_header())
-        writer.writelines(self.define_momenta())
-        writer.writelines(self.define_expression())
-        writer.writelines(self.define_foot())
+        text = self.define_header()+'\n'
+        text += self.define_momenta()+'\n'
+        text += self.define_expression()
+        text += self.define_foot()
         
+        sym_text = []
         for elem in self.symmetries: 
             symmetryhead = self.define_header().replace( \
                              self.namestring,self.namestring[0:-1]+'%s' %(elem))
             symmetrybody = self.define_symmetry(elem)
-            writer.write_comments('\n%s\n' % ('#'*65))
-            writer.writelines(symmetryhead)
-            writer.writelines(symmetrybody)
-            writer.writelines(self.define_foot())
+            
+            sym_text.append(symmetryhead + symmetrybody + self.define_foot())
+            
+            
+        if self.out_path:
+            writer = writers.FortranWriter(self.out_path)
+            writer.downcase = False 
+            commentstring = 'This File is Automatically generated by ALOHA \n'
+            commentstring += 'The process calculated in this file is: \n'
+            commentstring += self.comment + '\n'
+            writer.write_comments(commentstring)
+            writer.writelines(text)
+            for text in sym_text:
+                writer.write_comments('\n%s\n' % ('#'*65))
+                writer.writelines(text)
+        else:
+            for stext in sym_text:
+                text += '\n\n' + stext
+
+        return text + '\n'
+            
+    def write_combined(self, lor_names, mode='self', offshell=None):
+        """Write routine for combine ALOHA call (more than one coupling)"""
         
+        # Set some usefull command
+        if offshell is None:
+            sym = 1 
+            offshell = self.offshell
+        else:
+            sym = None  # deactivate symetry
+            
+        name = combine_name(self.abstractname, lor_names, offshell)
+
+                 
+        # write header 
+        header = self.define_header(name=name)
+        new_couplings = ['COUP%s' % (i+1) for i in range(len(lor_names)+1)]
+        text = header.replace('COUP', ','.join(new_couplings))
+        # define the TMP for storing output        
+        if not offshell:
+            text += ' double complex TMP\n'
+        else:
+            spin = self.particles[offshell -1] 
+            text += ' double complex TMP(%s)\n integer i' % self.type_to_size[spin]         
         
+        # Define which part of the routine should be called
+        addon = ''
+        if 'C' in self.namestring:
+            short_name, addon = name.split('C',1)
+            if addon.split('_')[0].isdigit():
+                addon = 'C' +self.namestring.split('C',1)[1]
+            else:
+                addon = '_%s' % self.offshell
+        else:
+            addon = '_%s' % self.offshell
+
+        # how to call the routine
+        if not offshell:
+            main = 'vertex'
+            call_arg = '%(args)s, %(COUP)s, %(LAST)s' % \
+                    {'args': ', '.join(self.calllist['CallList']), 
+                     'COUP':'COUP%d',
+                     'spin': self.particles[self.offshell -1],
+                     'LAST': '%s'}
+        else:
+            main = '%(spin)s%(id)d' % \
+                          {'spin': self.particles[offshell -1],
+                           'id': self.offshell}
+            call_arg = '%(args)s, %(COUP)s, M%(id)d, W%(id)d, %(LAST)s' % \
+                    {'args': ', '.join(self.calllist['CallList']), 
+                     'COUP':'COUP%d',
+                     'id': self.offshell,
+                     'LAST': '%s'}
+
+        # make the first call
+        line = " CALL %s%s("+call_arg+")\n"
+        text += '\n\n' + line % (self.namestring, '', 1, main)
+        
+        # make the other call
+        for i,lor in enumerate(lor_names):
+            text += line % (lor, addon, i+2, 'TMP')
+            if not offshell:
+                text += ' vertex = vertex + tmp\n'
+            else:
+                size = self.type_to_size[spin] -2
+                text += """ do i=1,%(id)d
+                %(main)s(i) = %(main)s(i) + tmp(i)
+                enddo\n""" %  {'id': size, 'main':main}
+                
+
+        text += self.define_foot()
+        
+        #ADD SYMETRY
+        if sym:
+            for elem in self.symmetries:
+                text += self.write_combined(lor_names, mode, elem)
+            
+            
+        if self.out_path:
+            # Prepare a specific file
+            path = os.path.join(os.path.dirname(self.out_path), name+'.f')
+            writer = writers.FortranWriter(path)
+            writer.downcase = False 
+            commentstring = 'This File is Automatically generated by ALOHA \n'
+            writer.write_comments(commentstring)
+            writer.writelines(text)
+        
+        return text
+    
 def get_routine_name(name,outgoing):
     """ build the name of the aloha function """
     
     return '%s_%s' % (name, outgoing) 
 
+def combine_name(name, other_names, outgoing):
+    """ build the name for combined aloha function """
+
+    # Two possible scheme FFV1C1_2_X or FFV1__FFV2C1_X
+    # If they are all in FFVX scheme then use the first
+    p=re.compile('^(?P<type>[FSVT]+)(?P<id>\d+)')
+    routine = ''
+    if p.search(name):
+        base, id = p.search(name).groups()
+        routine = name
+        for s in other_names:
+            try:
+                base2,id2 = p.search(s).groups()
+            except:
+                routine = ''
+                break # one matching not good -> other scheme
+            if base != base2:
+                routine = ''
+                break  # one matching not good -> other scheme
+            else:
+                routine += '_%s' % id2
+    if routine:
+        return routine +'_%s' % outgoing
+
+    addon = ''
+    if 'C' in name:
+        short_name, addon = name.split('C',1)
+        try:
+            addon = 'C' + str(int(addon))
+        except:
+            addon = ''
+        else:
+            name = short_name
+
+    return '_'.join((name,) + tuple(other_names)) + addon + '_%s' % outgoing
+ 
 class ALOHAWriterForCPP(WriteALOHA): 
     """Routines for writing out helicity amplitudes as C++ .h and .cc files."""
     
@@ -477,17 +623,20 @@ class ALOHAWriterForCPP(WriteALOHA):
                     'V':'double complex V%d[6]',
                     'T':'double complex T%s[18]'}
     
-    def define_header(self):
+    def define_header(self, name=None):
         """Define the headers for the C++ .h and .cc files. This include
             - function tag
             - definition of variable
             - momentum conservation
         """
+        
+        if name is None:
+            name = self.namestring
             
         #Width = self.collected['width']
         #Mass = self.collected['mass']
         
-        CallList = self.calllist['CallList']
+        CallList = self.calllist['CallList'][:]
         
         local_declare = []
         OffShell = self.offshell
@@ -503,12 +652,12 @@ class ALOHAWriterForCPP(WriteALOHA):
         # define the type of function and argument
         if not OffShell:
             str_out = 'void %(name)s(%(args)s, complex<double>& vertex)' % \
-               {'name': self.namestring,
-                'args': ','.join(CallList + ['complex<double> C'])}
+               {'name': name,
+                'args': ','.join(CallList + ['complex<double> COUP'])}
         else: 
             str_out = 'void %(name)s(%(args)s, double M%(number)d, double W%(number)d, complex<double>%(out)s%(number)d[])' % \
-              {'name': self.namestring,
-               'args': ','.join(CallList+ ['complex<double> C']),
+              {'name': name,
+               'args': ','.join(CallList+ ['complex<double> COUP']),
                'out': self.particles[OffShellParticle],
                'number': OffShellParticle + 1 
                }
@@ -613,7 +762,7 @@ class ALOHAWriterForCPP(WriteALOHA):
         OutString = '' 
         if not self.offshell:
             for ind in self.obj.listindices():
-                string = 'vertex = C*' + self.write_obj(self.obj.get_rep(ind))
+                string = 'vertex = COUP*' + self.write_obj(self.obj.get_rep(ind))
                 string = string.replace('+-', '-')
                 OutString = OutString + string + ';\n'
         else:
@@ -626,7 +775,7 @@ class ALOHAWriterForCPP(WriteALOHA):
             string = string.replace('+-', '-')
             OutString = OutString + string + ';\n'
             for ind in numerator.listindices():
-                string = '%s[%d]= C*denom*' % (OffShellParticle, self.pass_to_HELAS(ind))
+                string = '%s[%d]= COUP*denom*' % (OffShellParticle, self.pass_to_HELAS(ind))
                 string += self.write_obj(numerator.get_rep(ind))
                 string = string.replace('+-', '-')
                 OutString = OutString + string + ';\n' 
@@ -636,8 +785,7 @@ class ALOHAWriterForCPP(WriteALOHA):
     remove_double = re.compile('complex<double> (?P<name>[\w]+)\[\]')
     def define_symmetry(self, new_nb):
         """Write the call for symmetric routines"""
-        calls = self.reorder_call_list(self.calllist['CallList'],
-                                       self.offshell, new_nb)
+        calls = self.calllist['CallList']
         
         for i, call in enumerate(calls):
             if self.remove_double.match(call):
@@ -647,22 +795,24 @@ class ALOHAWriterForCPP(WriteALOHA):
         #calls = [self.remove_double.match(call).group('name') for call in \
         #         calls]
         number = self.offshell 
-        Outstring = self.namestring+'('+','.join(calls)+',C,M%s,W%s,%s%s);' \
+        Outstring = self.namestring+'('+','.join(calls)+',COUP,M%s,W%s,%s%s);\n' \
                          %(number,number,self.particles[self.offshell-1],number)
         return Outstring
     
     def define_foot(self):
         """Return the end of the function definition"""
 
-        return '}\n' 
+        return '}\n\n' 
 
-    def write_h(self, header):
+    def write_h(self, header, compiler_cmd=True):
         """Return the full contents of the .h file"""
 
-        h_string = '#ifndef '+ self.namestring + '_guard\n'
-        h_string += '#define ' + self.namestring + '_guard\n'
-        h_string += '#include <complex>\n'
-        h_string += 'using namespace std;\n\n'
+        h_string = ''
+        if compiler_cmd:
+            h_string = '#ifndef '+ self.namestring + '_guard\n'
+            h_string += '#define ' + self.namestring + '_guard\n'
+            h_string += '#include <complex>\n'
+            h_string += 'using namespace std;\n\n'
 
         h_header = header['h_header']
 
@@ -672,15 +822,44 @@ class ALOHAWriterForCPP(WriteALOHA):
             symmetryhead = h_header.replace( \
                              self.namestring,self.namestring[0:-1]+'%s' %(elem))
             h_string += symmetryhead
-            
-        h_string += '#endif'
+
+        if compiler_cmd:
+            h_string += '#endif\n\n'
 
         return h_string
 
-    def write_cc(self, header):
+    def write_combined_h(self, lor_names, offshell=None, compiler_cmd=True):
+        """Return the content of the .h file linked to multiple lorentz call."""
+        
+        name = combine_name(self.abstractname, lor_names, offshell)
+        text= ''
+        if compiler_cmd:
+            text = '#ifndef '+ name + '_guard\n'
+            text += '#define ' + name + '_guard\n'
+            text += '#include <complex>\n'
+            text += 'using namespace std;\n\n'
+        
+        # write header 
+        header = self.define_header(name=name)
+        h_header = header['h_header']
+        new_couplings = ['COUP%s' % (i+1) for i in range(len(lor_names)+1)]
+        h_string = h_header.replace('COUP', ', complex <double>'.join(new_couplings))
+        text += h_string 
+        
+        for elem in self.symmetries: 
+            text += h_string.replace(name, name[0:-1]+str(elem))
+        
+        if compiler_cmd:
+            text += '#endif'
+        
+        return text
+
+    def write_cc(self, header, compiler_cmd=True):
         """Return the full contents of the .cc file"""
 
-        cc_string = '#include \"%s.h\"\n\n' % self.namestring
+        cc_string = ''
+        if compiler_cmd:
+            cc_string = '#include \"%s.h\"\n\n' % self.namestring
         cc_header = header['cc_header']
         cc_string += cc_header
         cc_string += self.define_momenta()
@@ -696,24 +875,154 @@ class ALOHAWriterForCPP(WriteALOHA):
             cc_string += self.define_foot()
 
         return cc_string
+
+    def write_combined_cc(self, lor_names, offshell=None, compiler_cmd=True, sym=True):
+        "Return the content of the .cc file linked to multiple lorentz call."
+        
+        # Set some usefull command
+        if offshell is None:
+            offshell = self.offshell
+            
+        name = combine_name(self.abstractname, lor_names, offshell)
+
+        text = ''
+        if compiler_cmd:
+            text += '#include "%s.h"\n\n' % name
+           
+        # write header 
+        header = self.define_header(name=name)['cc_header']
+        new_couplings = ['COUP%s' % (i+1) for i in range(len(lor_names)+1)]
+        text += header.replace('COUP', ', complex<double>'.join(new_couplings))
+        # define the TMP for storing output        
+        if not offshell:
+            text += 'complex<double> tmp;\n'
+        else:
+            spin = self.particles[offshell -1] 
+            text += 'complex<double> tmp[%s];\n int i = 0;' % self.type_to_size[spin]         
+
+        # Define which part of the routine should be called
+        addon = ''
+        if 'C' in self.namestring:
+            short_name, addon = name.split('C',1)
+            if addon.split('_')[0].isdigit():
+                addon = 'C' +self.namestring.split('C',1)[1]
+            else:
+                addon = '_%s' % self.offshell
+        else:
+            addon = '_%s' % self.offshell
+
+        # how to call the routine
+        if not offshell:
+            main = 'vertex'
+            call_arg = '%(args)s, %(COUP)s, %(LAST)s' % \
+                    {'args': ', '.join(self.calllist['CallList']), 
+                     'COUP':'COUP%d',
+                     'spin': self.particles[self.offshell -1],
+                     'LAST': '%s'}
+        else:
+            main = '%(spin)s%(id)d' % \
+                          {'spin': self.particles[self.offshell -1],
+                           'id': self.offshell}
+            call_arg = '%(args)s, %(COUP)s, M%(id)d, W%(id)d, %(LAST)s' % \
+                    {'args': ', '.join(self.calllist['CallList']), 
+                     'COUP':'COUP%d',
+                     'id': self.offshell,
+                     'LAST': '%s'}
+
+        # make the first call
+        line = "%s%s("+call_arg+");\n"
+        text += '\n\n' + line % (self.namestring, '', 1, main)
+        
+        # make the other call
+        for i,lor in enumerate(lor_names):
+            text += line % (lor, addon, i+2, 'tmp')
+            if not offshell:
+                text += ' vertex = vertex + tmp;\n'
+            else:
+                size = self.type_to_size[spin] -2
+                text += """ while (i < %(id)d)
+                {
+                %(main)s[i] = %(main)s[i] + tmp[i];
+                i++;
+                }\n""" %  {'id': size, 'main':main}
+                
+
+        text += self.define_foot()
+        
+        if sym:
+            for elem in self.symmetries:
+                text += self.write_combined_cc(lor_names, elem, 
+                                                      compiler_cmd=compiler_cmd,
+                                                      sym=False)
+            
+            
+        if self.out_path:
+            # Prepare a specific file
+            path = os.path.join(os.path.dirname(self.out_path), name+'.f')
+            writer = writers.FortranWriter(path)
+            writer.downcase = False 
+            commentstring = 'This File is Automatically generated by ALOHA \n'
+            writer.write_comments(commentstring)
+            writer.writelines(text)
+        
+        return text
+
+
     
-    def write(self, mode='self'):
+    def write(self, mode='self', **opt):
         """Write the .h and .cc files"""
 
-        writer_h = writers.CPPWriter(self.out_path + ".h")
-        writer_cc = writers.CPPWriter(self.out_path + ".cc")
-        commentstring = 'This File is Automatically generated by ALOHA \n'
-        commentstring += 'The process calculated in this file is: \n'
-        commentstring += self.comment + '\n'
-        writer_h.write_comments(commentstring)
-        writer_cc.write_comments(commentstring)
-         
+
         # write head - momenta - body - foot
-        
         header = self.define_header()
-        writer_h.writelines(self.write_h(header))
-        writer_cc.writelines(self.write_cc(header))
+        h_text = self.write_h(header, **opt)
+        cc_text = self.write_cc(header, **opt)
+        
+        # write in two file
+        if self.out_path:
+            writer_h = writers.CPPWriter(self.out_path + ".h")
+            writer_cc = writers.CPPWriter(self.out_path + ".cc")
+            commentstring = 'This File is Automatically generated by ALOHA \n'
+            commentstring += 'The process calculated in this file is: \n'
+            commentstring += self.comment + '\n'
+            writer_h.write_comments(commentstring)
+            writer_cc.write_comments(commentstring)
+            writer_h.writelines(h_text)
+            writer_cc.writelines(cc_text)
+            
+        return h_text, cc_text
  
+ 
+ 
+    def write_combined(self, lor_names, mode='self', offshell=None, **opt):
+        """Write the .h and .cc files associated to the combined file"""
+
+        # Set some usefull command
+        if offshell is None:
+            offshell = self.offshell
+        
+        name = combine_name(self.abstractname, lor_names, offshell)
+        
+        h_text = self.write_combined_h(lor_names, offshell, **opt)
+        cc_text = self.write_combined_cc(lor_names, offshell, sym=True, **opt)
+        
+        if self.out_path:
+            # Prepare a specific file
+            path = os.path.join(os.path.dirname(self.out_path), name)
+            commentstring = 'This File is Automatically generated by ALOHA \n'
+            
+            writer_h = writers.CPPWriter(path + ".h")
+            writer_h.write_comments(commentstring)
+            writer_h.writelines(h_text)
+            
+            writer_cc = writers.CPPWriter(path + ".cc")
+            writer_cc.write_comments(commentstring)
+            writer_cc.writelines(cc_text)
+        else:
+            return h_text, cc_text
+        
+        return h_text, cc_text
+        
 class ALOHAWriterForPython(WriteALOHA):
     """ A class for returning a file/a string for python evaluation """
     
@@ -723,18 +1032,11 @@ class ALOHAWriterForPython(WriteALOHA):
         """ standard init but if dirpath is None the write routine will
         return a string (which can be evaluated by an exec"""
         
-        if dirpath:
-            WriteALOHA.__init__(self, abstract_routine, dirpath)
-        else:
-            WriteALOHA.__init__(self, abstract_routine, '')
-            self.out_path = None
-            self.dir_out = None
+        WriteALOHA.__init__(self, abstract_routine, dirpath)
         self.outname = '%s%s' % (self.particles[self.offshell -1], \
                                                                self.offshell)
     
-    
-    
-    
+        
     def change_var_format(self, name): 
         """Formatting the variable name to Python format
         start to count at zero"""
@@ -759,7 +1061,7 @@ class ALOHAWriterForPython(WriteALOHA):
         OutString = ''
         if not self.offshell:
             for ind in self.obj.listindices():
-                string = 'vertex = C*' + self.write_obj(self.obj.get_rep(ind))
+                string = 'vertex = COUP*' + self.write_obj(self.obj.get_rep(ind))
                 string = string.replace('+-', '-')
                 OutString = OutString + string + '\n'
         else:
@@ -773,7 +1075,7 @@ class ALOHAWriterForPython(WriteALOHA):
             string = string.replace('+-', '-')
             OutString += string + '\n'
             for ind in numerator.listindices():
-                string = '%s[%d]= C*denom*' % (self.outname, self.pass_to_HELAS(ind))
+                string = '%s[%d]= COUP*denom*' % (self.outname, self.pass_to_HELAS(ind))
                 string += self.write_obj(numerator.get_rep(ind))
                 string = string.replace('+-', '-')
                 OutString += string + '\n' 
@@ -781,17 +1083,19 @@ class ALOHAWriterForPython(WriteALOHA):
     
     def define_foot(self):
         if not self.offshell:
-            return 'return vertex'
+            return 'return vertex\n\n'
         else:
-            return 'return %s' % (self.outname)
+            return 'return %s\n\n' % (self.outname)
             
     
-    def define_header(self):
+    def define_header(self, name=None):
         """Define the Header of the fortran file. This include
             - function tag
             - definition of variable
         """
-            
+        if name is None:
+            name = self.namestring
+           
         Momenta = self.collected['momenta']
         OverM = self.collected['om']
         
@@ -801,11 +1105,11 @@ class ALOHAWriterForPython(WriteALOHA):
         # define the type of function and argument        
         if not self.offshell:
             str_out += 'def %(name)s(%(args)s):\n' % \
-                {'name': self.namestring,
-                 'args': ','.join(CallList+ ['C']) }
+                {'name': name,
+                 'args': ','.join(CallList+ ['COUP']) }
         else:
-            str_out += 'def %(name)s(%(args)s, C, M%(id)d, W%(id)d):\n' % \
-                {'name': self.namestring,
+            str_out += 'def %(name)s(%(args)s, COUP, M%(id)d, W%(id)d):\n' % \
+                {'name': name,
                  'args': ', '.join(CallList), 
                      'id': self.offshell}            
         return str_out     
@@ -871,9 +1175,8 @@ class ALOHAWriterForPython(WriteALOHA):
 
     def define_symmetry(self, new_nb):
         number = self.offshell 
-        calls = self.reorder_call_list(self.calllist['CallList'], self.offshell,
-                                                                        new_nb)
-        Outstring = 'return '+self.namestring+'('+','.join(calls)+',C,M%s,W%s)' \
+        calls = self.calllist['CallList']
+        Outstring = 'return '+self.namestring+'('+','.join(calls)+',COUP,M%s,W%s)\n' \
                          %(number,number)
         return Outstring        
 
@@ -900,5 +1203,82 @@ class ALOHAWriterForPython(WriteALOHA):
             
         if self.out_path:
             ff = open(self.out_path,'w').write(text)
+
+        return text + '\n'
+
+    def write_combined(self, lor_names, mode='self', offshell=None):
+        """Write routine for combine ALOHA call (more than one coupling)"""
+        
+        # Set some usefull command
+        if offshell is None:
+            sym = 1
+            offshell = self.offshell  
         else:
-            return text
+            sym = None
+        name = combine_name(self.abstractname, lor_names, offshell)
+
+        # write head - momenta - body - foot
+        text = ''
+        #if mode == 'mg5':
+        #    text = 'import aloha.template_files.wavefunctions as wavefunctions\n'
+        #else:
+        #    text = 'import wavefunctions\n'
+                    
+                 
+        # write header 
+        header = self.define_header(name=name)
+        new_couplings = ['COUP%s' % (i+1) for i in range(len(lor_names)+1)]
+        header = header.replace('COUP', ','.join(new_couplings))
+        
+        text += header
+  
+        # Define which part of the routine should be called
+        addon = ''
+        if 'C' in self.namestring:
+            short_name, addon = name.split('C',1)
+            if addon.split('_')[0].isdigit():
+                addon = 'C' +self.namestring.split('C',1)[1]
+            else:
+                addon = '_%s' % self.offshell
+        else:
+            addon = '_%s' % self.offshell
+
+        # how to call the routine
+        if not offshell:
+            main = 'vertex'
+            call_arg = '%(args)s, %(COUP)s' % \
+                    {'args': ', '.join(self.calllist['CallList']), 
+                     'COUP':'COUP%d',
+                     'spin': self.particles[self.offshell -1]}
+        else:
+            main = '%(spin)s%(id)d' % \
+                          {'spin': self.particles[self.offshell -1],
+                           'id': self.offshell}
+            call_arg = '%(args)s, %(COUP)s, M%(id)d, W%(id)d' % \
+                    {'args': ', '.join(self.calllist['CallList']), 
+                     'COUP':'COUP%d',
+                     'id': self.offshell}
+
+        # make the first call
+        line = "    %s = %s%s("+call_arg+")\n"
+        text += '\n\n' + line % (main, self.namestring, '', 1)
+        
+        # make the other call
+        for i,name in enumerate(lor_names):
+            text += line % ('tmp',name, addon, i+2)
+            if not offshell:
+               text += '    vertex += tmp\n'
+            else:
+                size = self.type_to_size[self.particles[offshell -1]] -2
+                text += "    for i in range(%(id)d):\n" % {'id': size}
+                text += "        %(main)s[i] += tmp[i]\n" %{'main': main}
+        
+        text += '    '+self.define_foot()
+
+        #ADD SYMETRY
+        if sym:
+            for elem in self.symmetries:
+                text += self.write_combined(lor_names, mode, elem)
+            
+        return text
+        

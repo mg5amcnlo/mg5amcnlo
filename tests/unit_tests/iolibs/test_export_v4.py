@@ -38,6 +38,7 @@ import madgraph.core.helas_objects as helas_objects
 import madgraph.core.diagram_generation as diagram_generation
 import madgraph.core.color_algebra as color
 import madgraph.various.diagram_symmetry as diagram_symmetry
+import madgraph.various.process_checks as process_checks
 import madgraph.core.color_amp as color_amp
 import tests.unit_tests.core.test_helas_objects as test_helas_objects
 import tests.unit_tests.iolibs.test_file_writers as test_file_writers
@@ -275,6 +276,8 @@ C
       REAL*8 DENOM(NCOLOR), CF(NCOLOR,NCOLOR)
       COMPLEX*16 AMP(NGRAPHS), JAMP(NCOLOR)
       COMPLEX*16 W(18,NWAVEFUNCS)
+      COMPLEX*16 DUM0,DUM1
+      DATA DUM0, DUM1/(0D0, 0D0), (1D0, 0D0)/
 C     
 C     GLOBAL VARIABLES
 C     
@@ -330,6 +333,7 @@ C     Amplitude(s) for diagram number 6
             self.mymatrixelement,
             self.myfortranmodel)
 
+        #print open(self.give_pos('test')).read()
         self.assertFileContains('test', goal_matrix_f)
 
     def test_coeff_string(self):
@@ -597,14 +601,14 @@ C     Amplitude(s) for diagram number 6
         amp2_lines = \
                  exporter.get_amp2_lines(matrix_elements[0],
                                           subprocess_group.get('diagram_maps')[0])
+                 
         self.assertEqual(amp2_lines,
                          ['AMP2(1)=AMP2(1)+AMP(1)*dconjg(AMP(1))',
-                          'AMP2(2)=AMP2(2)+AMP(2)*dconjg(AMP(2))',
-                          'AMP2(3)=AMP2(3)+AMP(3)*dconjg(AMP(3))+AMP(4)*dconjg(AMP(4))+AMP(5)*dconjg(AMP(5))+AMP(6)*dconjg(AMP(6))',
-                          'AMP2(4)=AMP2(4)+AMP(7)*dconjg(AMP(7))',
-                          'AMP2(5)=AMP2(5)+AMP(8)*dconjg(AMP(8))',
-                          'AMP2(6)=AMP2(6)+AMP(9)*dconjg(AMP(9))+AMP(10)*dconjg(AMP(10))+AMP(11)*dconjg(AMP(11))+AMP(12)*dconjg(AMP(12))'])
-        
+			  'AMP2(2)=AMP2(2)+AMP(2)*dconjg(AMP(2))',
+			  'AMP2(3)=AMP2(3)+AMP(3)*dconjg(AMP(3))',
+			  'AMP2(4)=AMP2(4)+AMP(4)*dconjg(AMP(4))',
+			  'AMP2(5)=AMP2(5)+AMP(5)*dconjg(AMP(5))',
+			  'AMP2(6)=AMP2(6)+AMP(6)*dconjg(AMP(6))'])
         # Test configs.inc
 
         exporter.write_configs_file(\
@@ -697,8 +701,10 @@ C     Number of configs
             diagram_symmetry.find_matrix_elements_for_configs(subprocess_group),
             ([], {}))
 
+        evaluator = process_checks.MatrixElementEvaluator(mymodel)
         symmetry, perms, ident_perms = \
-                  diagram_symmetry.find_symmetry(subprocess_group)
+                  diagram_symmetry.find_symmetry(subprocess_group,
+                                                 evaluator)
 
         self.assertEqual(symmetry, [1,1,1,1,1,1])
         self.assertEqual(perms,
@@ -763,11 +769,15 @@ C
       INTEGER                 NCOMB
       PARAMETER (             NCOMB=16)
       INTEGER    NGRAPHS
-      PARAMETER (NGRAPHS=12)
+      PARAMETER (NGRAPHS=6)
       INTEGER    NDIAGS
       PARAMETER (NDIAGS=6)
       INTEGER    THEL
       PARAMETER (THEL=2*NCOMB)
+      REAL*8 LIMHEL
+      PARAMETER(LIMHEL=1E-6)
+      INTEGER MAXTRIES
+      PARAMETER(MAXTRIES=10)
 C     
 C     ARGUMENTS 
 C     
@@ -776,13 +786,15 @@ C
 C     LOCAL VARIABLES 
 C     
       INTEGER NHEL(NEXTERNAL,NCOMB),NTRY(2)
+      INTEGER ISHEL(2)
       REAL*8 T,MATRIX1
       REAL*8 R,SUMHEL,TS(NCOMB)
       INTEGER I,IDEN
-      INTEGER IPROC,JC(NEXTERNAL),II
-      LOGICAL GOODHEL(2,NCOMB)
+      INTEGER JC(NEXTERNAL),II
+      LOGICAL GOODHEL(NCOMB,2)
       REAL*8 HWGT, XTOT, XTRY, XREJ, XR, YFRAC(0:NCOMB)
-      INTEGER IDUM, NGOOD(2), IGOOD(2,NCOMB), JHEL(2), J, JJ
+      INTEGER IDUM, NGOOD(2), IGOOD(NCOMB,2)
+      INTEGER JHEL(2), J, JJ
       REAL     XRAN1
       EXTERNAL XRAN1
 C     
@@ -791,7 +803,7 @@ C
       DOUBLE PRECISION AMP2(MAXAMPS), JAMP2(0:MAXFLOW)
       COMMON/TO_AMPS/  AMP2,       JAMP2
 
-      CHARACTER*79         HEL_BUFF
+      CHARACTER*101         HEL_BUFF
       COMMON/TO_HELICITY/  HEL_BUFF
 
       INTEGER IMIRROR
@@ -807,8 +819,11 @@ C
       COMMON/TO_MCONFIGS/MAPCONFIG, ICONFIG
       INTEGER SUBDIAG(MAXSPROC),IB(2)
       COMMON/TO_SUB_DIAG/SUBDIAG,IB
-      DATA NTRY,IDUM /0,0,0/
-      DATA XTRY, XREJ, NGOOD /0,0,0,0/
+      DATA IDUM /0/
+      DATA XTRY, XREJ /0,0/
+      DATA NTRY /0,0/
+      DATA NGOOD /0,0/
+      DATA ISHEL/0,0/
       SAVE YFRAC, IGOOD, JHEL
       DATA GOODHEL/THEL*.FALSE./
       DATA (NHEL(I,   1),I=1,4) /-1,-1,-1,-1/
@@ -846,13 +861,13 @@ C     ----------
         ENDDO
       ENDIF
       ANS = 0D0
-      WRITE(HEL_BUFF,'(16I5)') (0,I=1,NEXTERNAL)
+      WRITE(HEL_BUFF,'(20I5)') (0,I=1,NEXTERNAL)
       DO I=1,NCOMB
         TS(I)=0D0
       ENDDO
-      IF (ISUM_HEL .EQ. 0 .OR. NTRY(IMIRROR) .LT. 10) THEN
+      IF (ISHEL(IMIRROR) .EQ. 0 .OR. NTRY(IMIRROR) .LE. MAXTRIES) THEN
         DO I=1,NCOMB
-          IF (GOODHEL(IMIRROR,I) .OR. NTRY(IMIRROR) .LT. 2) THEN
+          IF (GOODHEL(I,IMIRROR) .OR. NTRY(IMIRROR).LE.MAXTRIES) THEN
             T=MATRIX1(P ,NHEL(1,I),JC(1))
             DO JJ=1,NINCOMING
               IF(POL(JJ).NE.1D0.AND.NHEL(JJ,I).EQ.INT(SIGN(1D0
@@ -864,21 +879,39 @@ C     ----------
             ENDDO
             ANS=ANS+T
             TS(I)=T
-            IF (T .NE. 0D0 .AND. .NOT. GOODHEL(IMIRROR,I)) THEN
-              GOODHEL(IMIRROR,I)=.TRUE.
-              NGOOD(IMIRROR) = NGOOD(IMIRROR) +1
-              IGOOD(IMIRROR,NGOOD(IMIRROR)) = I
-            ENDIF
           ENDIF
         ENDDO
         JHEL(IMIRROR) = 1
-        ISUM_HEL=MIN(ISUM_HEL,NGOOD(IMIRROR))
+        IF(NTRY(IMIRROR).LE.MAXTRIES)THEN
+          DO I=1,NCOMB
+            IF (.NOT.GOODHEL(I,IMIRROR) .AND. (TS(I).GT.ANS*LIMHEL
+     $       /NCOMB)) THEN
+              GOODHEL(I,IMIRROR)=.TRUE.
+              NGOOD(IMIRROR) = NGOOD(IMIRROR) +1
+              IGOOD(NGOOD(IMIRROR),IMIRROR) = I
+              PRINT *,'Added good helicity ',I,TS(I)*NCOMB/ANS
+            ENDIF
+          ENDDO
+          ISHEL(IMIRROR)=MIN(ISUM_HEL,NGOOD(IMIRROR))
+        ENDIF
+        IF(NTRY(IMIRROR).EQ.MAXTRIES.AND.ISHEL(IMIRROR).GT.0)THEN
+C         Check if we have stable helicities in this event
+          DO I=1,NGOOD(IMIRROR)
+            IF(TS(IGOOD(I,IMIRROR)) .LT. 0.1*ANS/NGOOD(IMIRROR))THEN
+              WRITE(*,*) 'Not stable helicity distribution, fraction '
+     $         , TS(IGOOD(I,IMIRROR))/ANS*NGOOD(IMIRROR)
+              WRITE(*,*) 'Explicit sum over all non-zero helicities.'
+              ISHEL(IMIRROR)=0
+              EXIT
+            ENDIF
+          ENDDO
+        ENDIF
       ELSE  !RANDOM HELICITY
-        DO J=1,ISUM_HEL
+        DO J=1,ISHEL(IMIRROR)
           JHEL(IMIRROR)=JHEL(IMIRROR)+1
           IF (JHEL(IMIRROR) .GT. NGOOD(IMIRROR)) JHEL(IMIRROR)=1
-          HWGT = REAL(NGOOD(IMIRROR))/REAL(ISUM_HEL)
-          I = IGOOD(IMIRROR,JHEL(IMIRROR))
+          HWGT = REAL(NGOOD(IMIRROR))/REAL(ISHEL(IMIRROR))
+          I = IGOOD(JHEL(IMIRROR),IMIRROR)
           T=MATRIX1(P ,NHEL(1,I),JC(1))
           DO JJ=1,NINCOMING
             IF(POL(JJ).NE.1D0.AND.NHEL(JJ,I).EQ.INT(SIGN(1D0,POL(JJ)))
@@ -891,17 +924,17 @@ C     ----------
           ANS=ANS+T*HWGT
           TS(I)=T*HWGT
         ENDDO
-        IF (ISUM_HEL .EQ. 1) THEN
-          WRITE(HEL_BUFF,'(16i5)')(NHEL(II,I),II=1,NEXTERNAL)
+        IF (ISHEL(IMIRROR) .EQ. 1) THEN
+          WRITE(HEL_BUFF,'(20i5)')(NHEL(II,I),II=1,NEXTERNAL)
         ENDIF
       ENDIF
-      IF (ISUM_HEL .NE. 1) THEN
+      IF (ISHEL(IMIRROR) .NE. 1) THEN
         R=XRAN1(IDUM)*ANS
         SUMHEL=0D0
         DO I=1,NCOMB
           SUMHEL=SUMHEL+TS(I)
           IF(R.LT.SUMHEL)THEN
-            WRITE(HEL_BUFF,'(16i5)')(NHEL(II,I),II=1,NEXTERNAL)
+            WRITE(HEL_BUFF,'(20i5)')(NHEL(II,I),II=1,NEXTERNAL)
             GOTO 10
           ENDIF
         ENDDO
@@ -938,12 +971,12 @@ C
 C     CONSTANTS
 C     
       INTEGER    NGRAPHS
-      PARAMETER (NGRAPHS=12)
+      PARAMETER (NGRAPHS=6)
       INCLUDE 'genps.inc'
       INCLUDE 'nexternal.inc'
       INCLUDE 'maxamps.inc'
       INTEGER    NWAVEFUNCS,     NCOLOR
-      PARAMETER (NWAVEFUNCS=12, NCOLOR=2)
+      PARAMETER (NWAVEFUNCS=10, NCOLOR=2)
       REAL*8     ZERO
       PARAMETER (ZERO=0D0)
       COMPLEX*16 IMAG1
@@ -989,30 +1022,20 @@ C     Amplitude(s) for diagram number 1
       CALL FFV1_3(W(1,1),W(1,2),GQED,ZERO, ZERO, W(1,6))
 C     Amplitude(s) for diagram number 2
       CALL FFV1_0(W(1,4),W(1,3),W(1,6),GQED,AMP(2))
-      CALL FFV1_3(W(1,1),W(1,2),GUZ1,MZ, WZ, W(1,7))
-      CALL FFV2_3(W(1,1),W(1,2),GUZ2,MZ, WZ, W(1,8))
+      CALL FFV1_2_3(W(1,1),W(1,2),GUZ1,GUZ2,MZ, WZ, W(1,7))
 C     Amplitude(s) for diagram number 3
-      CALL FFV1_0(W(1,4),W(1,3),W(1,7),GUZ1,AMP(3))
-      CALL FFV2_0(W(1,4),W(1,3),W(1,7),GUZ2,AMP(4))
-      CALL FFV1_0(W(1,4),W(1,3),W(1,8),GUZ1,AMP(5))
-      CALL FFV2_0(W(1,4),W(1,3),W(1,8),GUZ2,AMP(6))
-      CALL FFV1_3(W(1,1),W(1,3),GQQ,ZERO, ZERO, W(1,9))
+      CALL FFV1_2_0(W(1,4),W(1,3),W(1,7),GUZ1,GUZ2,AMP(3))
+      CALL FFV1_3(W(1,1),W(1,3),GQQ,ZERO, ZERO, W(1,8))
 C     Amplitude(s) for diagram number 4
-      CALL FFV1_0(W(1,4),W(1,2),W(1,9),GQQ,AMP(7))
-      CALL FFV1_3(W(1,1),W(1,3),GQED,ZERO, ZERO, W(1,10))
+      CALL FFV1_0(W(1,4),W(1,2),W(1,8),GQQ,AMP(4))
+      CALL FFV1_3(W(1,1),W(1,3),GQED,ZERO, ZERO, W(1,9))
 C     Amplitude(s) for diagram number 5
-      CALL FFV1_0(W(1,4),W(1,2),W(1,10),GQED,AMP(8))
-      CALL FFV1_3(W(1,1),W(1,3),GUZ1,MZ, WZ, W(1,11))
-      CALL FFV2_3(W(1,1),W(1,3),GUZ2,MZ, WZ, W(1,12))
+      CALL FFV1_0(W(1,4),W(1,2),W(1,9),GQED,AMP(5))
+      CALL FFV1_2_3(W(1,1),W(1,3),GUZ1,GUZ2,MZ, WZ, W(1,10))
 C     Amplitude(s) for diagram number 6
-      CALL FFV1_0(W(1,4),W(1,2),W(1,11),GUZ1,AMP(9))
-      CALL FFV2_0(W(1,4),W(1,2),W(1,11),GUZ2,AMP(10))
-      CALL FFV1_0(W(1,4),W(1,2),W(1,12),GUZ1,AMP(11))
-      CALL FFV2_0(W(1,4),W(1,2),W(1,12),GUZ2,AMP(12))
-      JAMP(1)=+1./6.*AMP(1)-AMP(2)-AMP(3)-AMP(4)-AMP(5)-AMP(6)
-     $ +1./2.*AMP(7)
-      JAMP(2)=-1./2.*AMP(1)-1./6.*AMP(7)+AMP(8)+AMP(9)+AMP(10)+AMP(11)
-     $ +AMP(12)
+      CALL FFV1_2_0(W(1,4),W(1,2),W(1,10),GUZ1,GUZ2,AMP(6))
+      JAMP(1)=+1./6.*AMP(1)-AMP(2)-AMP(3)+1./2.*AMP(4)
+      JAMP(2)=-1./2.*AMP(1)-1./6.*AMP(4)+AMP(5)+AMP(6)
       MATRIX1 = 0.D0
       DO I = 1, NCOLOR
         ZTEMP = (0.D0,0.D0)
@@ -1023,19 +1046,19 @@ C     Amplitude(s) for diagram number 6
       ENDDO
       AMP2(1)=AMP2(1)+AMP(1)*DCONJG(AMP(1))
       AMP2(2)=AMP2(2)+AMP(2)*DCONJG(AMP(2))
-      AMP2(3)=AMP2(3)+AMP(3)*DCONJG(AMP(3))+AMP(4)*DCONJG(AMP(4))
-     $ +AMP(5)*DCONJG(AMP(5))+AMP(6)*DCONJG(AMP(6))
-      AMP2(4)=AMP2(4)+AMP(7)*DCONJG(AMP(7))
-      AMP2(5)=AMP2(5)+AMP(8)*DCONJG(AMP(8))
-      AMP2(6)=AMP2(6)+AMP(9)*DCONJG(AMP(9))+AMP(10)*DCONJG(AMP(10))
-     $ +AMP(11)*DCONJG(AMP(11))+AMP(12)*DCONJG(AMP(12))
+      AMP2(3)=AMP2(3)+AMP(3)*DCONJG(AMP(3))
+      AMP2(4)=AMP2(4)+AMP(4)*DCONJG(AMP(4))
+      AMP2(5)=AMP2(5)+AMP(5)*DCONJG(AMP(5))
+      AMP2(6)=AMP2(6)+AMP(6)*DCONJG(AMP(6))
       DO I = 1, NCOLOR
         JAMP2(I)=JAMP2(I)+JAMP(I)*DCONJG(JAMP(I))
       ENDDO
 
       END
+
 """ % misc.get_pkg_info()
-        
+
+        #print "test_export_matrix_element_v4_madevent_group"
         #print open(self.give_pos('test')).read()
         self.assertFileContains('test', goal_matrix1)
 
@@ -1216,7 +1239,7 @@ C
       INCLUDE 'config_subproc_map.inc'
       INTEGER PERMS(NEXTERNAL,LMAXCONFIGS)
       INCLUDE 'symperms.inc'
-      LOGICAL MIRRORPROCS(LMAXCONFIGS)
+      LOGICAL MIRRORPROCS(MAXSPROC)
       INCLUDE 'mirrorprocs.inc'
 C     SELPROC is vector of selection weights for the subprocesses
 C     SUMWGT is vector of total weight for the subprocesses
@@ -1247,8 +1270,7 @@ C     ICONFIG has this config number
       COMMON/TO_MCONFIGS/MAPCONFIG, ICONFIG
 C     IPROC has the present process number
       INTEGER IPROC
-      COMMON/TO_IPROC/IPROC
-      COMMON/TO_MIRROR/ IMIRROR
+      COMMON/TO_MIRROR/IMIRROR, IPROC
 C     ----------
 C     BEGIN CODE
 C     ----------
@@ -1257,21 +1279,21 @@ C     ----------
       IF(IMODE.EQ.1)THEN
 C       Set up process information from file symfact
         LUN=NEXTUNOPEN()
-        OPEN(UNIT=LUN,FILE='../symfact.dat',STATUS='OLD',ERR=10)
         IPROC=1
         SYMCONF(IPROC)=ICONFIG
-        DO I=1,MAPCONFIG(0)
-          READ(LUN,*) XDUM, ICONF
+        OPEN(UNIT=LUN,FILE='../symfact.dat',STATUS='OLD',ERR=20)
+        DO WHILE(.TRUE.)
+          READ(LUN,*,ERR=10,END=10) XDUM, ICONF
           IF(ICONF.EQ.-MAPCONFIG(ICONFIG))THEN
             IPROC=IPROC+1
-            SYMCONF(IPROC)=I
+            SYMCONF(IPROC)=INT(XDUM)
           ENDIF
         ENDDO
-        SYMCONF(0)=IPROC
+ 10     SYMCONF(0)=IPROC
         CLOSE(LUN)
         RETURN
- 10     WRITE(*,*)'Error opening symfact.dat. No permutations will be
-     $    used.'
+ 20     SYMCONF(0)=IPROC
+        WRITE(*,*)'Error opening symfact.dat. No permutations used.'
         RETURN
       ELSE IF(IMODE.EQ.2)THEN
 C       Output weights and number of events
@@ -1475,7 +1497,11 @@ C       Flip x values (to get boost right)
 
 """ % misc.get_pkg_info()
         
+
         #print open(self.give_pos('test')).read()
+        #strings=open(self.give_pos('test')).read().split('\n')
+        #for i,s in enumerate(strings):
+        #    self.assertEqual(s,goal_super.split('\n')[i])
         self.assertFileContains('test', goal_super)
 
     def test_export_group_decay_chains(self):
@@ -1722,14 +1748,14 @@ C       Flip x values (to get boost right)
         #print '\n'.join(amp2_lines)
 
         self.assertEqual('\n'.join(amp2_lines),
-"""AMP2(5)=AMP2(5)+AMP(9)*dconjg(AMP(9))
-AMP2(6)=AMP2(6)+AMP(10)*dconjg(AMP(10))
-AMP2(7)=AMP2(7)+AMP(11)*dconjg(AMP(11))
-AMP2(8)=AMP2(8)+AMP(12)*dconjg(AMP(12))
-AMP2(9)=AMP2(9)+AMP(13)*dconjg(AMP(13))
-AMP2(10)=AMP2(10)+AMP(14)*dconjg(AMP(14))
-AMP2(11)=AMP2(11)+AMP(15)*dconjg(AMP(15))
-AMP2(12)=AMP2(12)+AMP(16)*dconjg(AMP(16))""")
+"""AMP2(5)=AMP2(5)+AMP(5)*dconjg(AMP(5))
+AMP2(6)=AMP2(6)+AMP(6)*dconjg(AMP(6))
+AMP2(7)=AMP2(7)+AMP(7)*dconjg(AMP(7))
+AMP2(8)=AMP2(8)+AMP(8)*dconjg(AMP(8))
+AMP2(9)=AMP2(9)+AMP(9)*dconjg(AMP(9))
+AMP2(10)=AMP2(10)+AMP(10)*dconjg(AMP(10))
+AMP2(11)=AMP2(11)+AMP(11)*dconjg(AMP(11))
+AMP2(12)=AMP2(12)+AMP(12)*dconjg(AMP(12))""")
         
         # Test configs.inc
 
@@ -3877,13 +3903,13 @@ CALL IOSXXX(W(1,2),W(1,19),W(1,24),MGVX494,AMP(8))""")
 
         # Test get_used_lorentz
         # Wavefunctions
-        goal_lorentz_list = [('', (), 1), ('', (), 2), ('', (), 3),
-                             ('', (1,), 2),('', (), 3), ('', (1,), 1),
-                             ('', (), 2), ('', (), 3),('', (1,), 1),
-                             ('', (), 1), ('', (), 3),('', (1,), 2),
-                             ('', (), 3), ('', (), 3)]
+        goal_lorentz_list = [(('',), (), 1), (('',), (), 2), (('',), (), 3),
+                             (('',), (1,), 2),(('',), (), 3), (('',), (1,), 1),
+                             (('',), (), 2), (('',), (), 3),(('',), (1,), 1),
+                             (('',), (), 1), (('',), (), 3),(('',), (1,), 2),
+                             (('',), (), 3), (('',), (), 3)]
         # Amplitudes
-        goal_lorentz_list += [('', (), 0)] * 8
+        goal_lorentz_list += [(('',), (), 0)] * 8
         self.assertEqual(matrix_element.get_used_lorentz(),
                          goal_lorentz_list)
 
@@ -4679,7 +4705,7 @@ CALL VVVXXX(W(1,4),W(1,2),W(1,24),MGVX5,AMP(28))""")
                                              A, \
                                              A]),
                       'color': [],
-                      'lorentz':['L1', 'L2'],
+                      'lorentz':['CL1', 'L2'],
                       'couplings':{(0, 0):'G1', (0, 1):'G2'},
                       'orders':{'QED':1}}))
 
@@ -4705,34 +4731,21 @@ CALL VVVXXX(W(1,4),W(1,2),W(1,24),MGVX5,AMP(28))""")
 
         matrix_element = helas_objects.HelasMatrixElement(myamplitude, gen_color=False)
 
-        myfortranmodel = helas_call_writers.FortranHelasCallWriter(mybasemodel)
-        self.assertEqual("\n".join(myfortranmodel.\
-                                   get_matrix_element_calls(matrix_element)),
+        myfortranmodel = helas_call_writers.FortranUFOHelasCallWriter(mybasemodel)
+        self.assertEqual(myfortranmodel.get_matrix_element_calls(matrix_element),
                          """CALL VXXXXX(P(0,1),zero,NHEL(1),-1*IC(1),W(1,1))
 CALL VXXXXX(P(0,2),zero,NHEL(2),-1*IC(2),W(1,2))
 CALL VXXXXX(P(0,3),zero,NHEL(3),+1*IC(3),W(1,3))
 CALL VXXXXX(P(0,4),zero,NHEL(4),+1*IC(4),W(1,4))
-CALL JVVL1X(W(1,1),W(1,2),G1,zero,zero,W(1,5))
-CALL JVVL2X(W(1,1),W(1,2),G2,zero,zero,W(1,6))
+CALL CL1_L2_1(W(1,1),W(1,2),G1,G2,zero, zero, W(1,5))
 # Amplitude(s) for diagram number 1
-CALL VVVL1X(W(1,3),W(1,4),W(1,5),G1,AMP(1))
-CALL VVVL2X(W(1,3),W(1,4),W(1,5),G2,AMP(2))
-CALL VVVL1X(W(1,3),W(1,4),W(1,6),G1,AMP(3))
-CALL VVVL2X(W(1,3),W(1,4),W(1,6),G2,AMP(4))
-CALL JVVL1X(W(1,1),W(1,3),G1,zero,zero,W(1,7))
-CALL JVVL2X(W(1,1),W(1,3),G2,zero,zero,W(1,8))
+CALL CL1_L2_0(W(1,3),W(1,4),W(1,5),G1,G2,AMP(1))
+CALL CL1_L2_1(W(1,1),W(1,3),G1,G2,zero, zero, W(1,6))
 # Amplitude(s) for diagram number 2
-CALL VVVL1X(W(1,2),W(1,4),W(1,7),G1,AMP(5))
-CALL VVVL2X(W(1,2),W(1,4),W(1,7),G2,AMP(6))
-CALL VVVL1X(W(1,2),W(1,4),W(1,8),G1,AMP(7))
-CALL VVVL2X(W(1,2),W(1,4),W(1,8),G2,AMP(8))
-CALL JVVL1X(W(1,1),W(1,4),G1,zero,zero,W(1,9))
-CALL JVVL2X(W(1,1),W(1,4),G2,zero,zero,W(1,10))
+CALL CL1_L2_0(W(1,2),W(1,4),W(1,6),G1,G2,AMP(2))
+CALL CL1_L2_1(W(1,1),W(1,4),G1,G2,zero, zero, W(1,7))
 # Amplitude(s) for diagram number 3
-CALL VVVL1X(W(1,2),W(1,3),W(1,9),G1,AMP(9))
-CALL VVVL2X(W(1,2),W(1,3),W(1,9),G2,AMP(10))
-CALL VVVL1X(W(1,2),W(1,3),W(1,10),G1,AMP(11))
-CALL VVVL2X(W(1,2),W(1,3),W(1,10),G2,AMP(12))""")
+CALL CL1_L2_0(W(1,2),W(1,3),W(1,7),G1,G2,AMP(3))""".split('\n'))
 
         exporter = export_v4.ProcessExporterFortranME()
 
@@ -4740,9 +4753,9 @@ CALL VVVL2X(W(1,2),W(1,3),W(1,10),G2,AMP(12))""")
         amp2_lines = \
                  exporter.get_amp2_lines(matrix_element)
         self.assertEqual(amp2_lines,
-                         ['AMP2(1)=AMP2(1)+AMP(1)*dconjg(AMP(1))+AMP(2)*dconjg(AMP(2))+AMP(3)*dconjg(AMP(3))+AMP(4)*dconjg(AMP(4))',
-                          'AMP2(2)=AMP2(2)+AMP(5)*dconjg(AMP(5))+AMP(6)*dconjg(AMP(6))+AMP(7)*dconjg(AMP(7))+AMP(8)*dconjg(AMP(8))',
-                          'AMP2(3)=AMP2(3)+AMP(9)*dconjg(AMP(9))+AMP(10)*dconjg(AMP(10))+AMP(11)*dconjg(AMP(11))+AMP(12)*dconjg(AMP(12))'])
+                         ['AMP2(1)=AMP2(1)+AMP(1)*dconjg(AMP(1))',
+                          'AMP2(2)=AMP2(2)+AMP(2)*dconjg(AMP(2))',
+                          'AMP2(3)=AMP2(3)+AMP(3)*dconjg(AMP(3))'])
 
         # Test configs file
         writer = writers.FortranWriter(self.give_pos('test'))
@@ -4927,45 +4940,23 @@ CALL VXXXXX(P(0,3),MZ,NHEL(3),+1*IC(3),W(1,3))
 CALL IXXXXX(P(0,4),Mx1p,NHEL(4),-1*IC(4),W(1,4))
 CALL OXXXXX(P(0,5),Mx1p,NHEL(5),+1*IC(5),W(1,5))
 CALL VVV1_2(W(1,1),W(1,3),GC_214,MW, WW, W(1,6))
-CALL FFV2C1_2(W(1,4),W(1,2),GC_422,Mneu1, Wneu1, W(1,7))
-CALL FFV3C1_2(W(1,4),W(1,2),GC_628,Mneu1, Wneu1, W(1,8))
+CALL FFV2C1_3_2(W(1,4),W(1,2),GC_422,GC_628,Mneu1, Wneu1, W(1,7))
 # Amplitude(s) for diagram number 1
-CALL FFV2_0(W(1,7),W(1,5),W(1,6),GC_422,AMP(1))
-CALL FFV3_0(W(1,7),W(1,5),W(1,6),GC_628,AMP(2))
-CALL FFV2_0(W(1,8),W(1,5),W(1,6),GC_422,AMP(3))
-CALL FFV3_0(W(1,8),W(1,5),W(1,6),GC_628,AMP(4))
-CALL FFV2_1(W(1,5),W(1,2),GC_422,Mneu1, Wneu1, W(1,9))
-CALL FFV3_1(W(1,5),W(1,2),GC_628,Mneu1, Wneu1, W(1,10))
+CALL FFV2_3_0(W(1,7),W(1,5),W(1,6),GC_422,GC_628,AMP(1))
+CALL FFV2_3_1(W(1,5),W(1,2),GC_422,GC_628,Mneu1, Wneu1, W(1,8))
 # Amplitude(s) for diagram number 2
-CALL FFV2C1_0(W(1,4),W(1,9),W(1,6),GC_422,AMP(5))
-CALL FFV3C1_0(W(1,4),W(1,9),W(1,6),GC_628,AMP(6))
-CALL FFV2C1_0(W(1,4),W(1,10),W(1,6),GC_422,AMP(7))
-CALL FFV3C1_0(W(1,4),W(1,10),W(1,6),GC_628,AMP(8))
-CALL FFV2C1_2(W(1,4),W(1,1),GC_422,Mneu1, Wneu1, W(1,11))
-CALL FFV3C1_2(W(1,4),W(1,1),GC_628,Mneu1, Wneu1, W(1,12))
-CALL VVV1_2(W(1,2),W(1,3),GC_214,MW, WW, W(1,13))
+CALL FFV2C1_3_0(W(1,4),W(1,8),W(1,6),GC_422,GC_628,AMP(2))
+CALL FFV2C1_3_2(W(1,4),W(1,1),GC_422,GC_628,Mneu1, Wneu1, W(1,9))
+CALL VVV1_2(W(1,2),W(1,3),GC_214,MW, WW, W(1,10))
 # Amplitude(s) for diagram number 3
-CALL FFV2_0(W(1,11),W(1,5),W(1,13),GC_422,AMP(9))
-CALL FFV3_0(W(1,11),W(1,5),W(1,13),GC_628,AMP(10))
-CALL FFV2_0(W(1,12),W(1,5),W(1,13),GC_422,AMP(11))
-CALL FFV3_0(W(1,12),W(1,5),W(1,13),GC_628,AMP(12))
+CALL FFV2_3_0(W(1,9),W(1,5),W(1,10),GC_422,GC_628,AMP(3))
 # Amplitude(s) for diagram number 4
-CALL FFV5_0(W(1,11),W(1,9),W(1,3),GC_418,AMP(13))
-CALL FFV5_0(W(1,11),W(1,10),W(1,3),GC_418,AMP(14))
-CALL FFV5_0(W(1,12),W(1,9),W(1,3),GC_418,AMP(15))
-CALL FFV5_0(W(1,12),W(1,10),W(1,3),GC_418,AMP(16))
-CALL FFV2_1(W(1,5),W(1,1),GC_422,Mneu1, Wneu1, W(1,14))
-CALL FFV3_1(W(1,5),W(1,1),GC_628,Mneu1, Wneu1, W(1,15))
+CALL FFV5_0(W(1,9),W(1,8),W(1,3),GC_418,AMP(4))
+CALL FFV2_3_1(W(1,5),W(1,1),GC_422,GC_628,Mneu1, Wneu1, W(1,11))
 # Amplitude(s) for diagram number 5
-CALL FFV2C1_0(W(1,4),W(1,14),W(1,13),GC_422,AMP(17))
-CALL FFV3C1_0(W(1,4),W(1,14),W(1,13),GC_628,AMP(18))
-CALL FFV2C1_0(W(1,4),W(1,15),W(1,13),GC_422,AMP(19))
-CALL FFV3C1_0(W(1,4),W(1,15),W(1,13),GC_628,AMP(20))
+CALL FFV2C1_3_0(W(1,4),W(1,11),W(1,10),GC_422,GC_628,AMP(5))
 # Amplitude(s) for diagram number 6
-CALL FFV5_0(W(1,7),W(1,14),W(1,3),GC_418,AMP(21))
-CALL FFV5_0(W(1,8),W(1,14),W(1,3),GC_418,AMP(22))
-CALL FFV5_0(W(1,7),W(1,15),W(1,3),GC_418,AMP(23))
-CALL FFV5_0(W(1,8),W(1,15),W(1,3),GC_418,AMP(24))""".split('\n')
+CALL FFV5_0(W(1,7),W(1,11),W(1,3),GC_418,AMP(6))""".split('\n')
 
         for i in range(len(goal)):
             self.assertEqual(result[i], goal[i])
@@ -4976,12 +4967,12 @@ CALL FFV5_0(W(1,8),W(1,15),W(1,3),GC_418,AMP(24))""".split('\n')
         amp2_lines = \
                  exporter.get_amp2_lines(matrix_element)
         self.assertEqual(amp2_lines,
-                         ['AMP2(1)=AMP2(1)+AMP(1)*dconjg(AMP(1))+AMP(2)*dconjg(AMP(2))+AMP(3)*dconjg(AMP(3))+AMP(4)*dconjg(AMP(4))',
-                          'AMP2(2)=AMP2(2)+AMP(5)*dconjg(AMP(5))+AMP(6)*dconjg(AMP(6))+AMP(7)*dconjg(AMP(7))+AMP(8)*dconjg(AMP(8))',
-                          'AMP2(3)=AMP2(3)+AMP(9)*dconjg(AMP(9))+AMP(10)*dconjg(AMP(10))+AMP(11)*dconjg(AMP(11))+AMP(12)*dconjg(AMP(12))',
-                          'AMP2(4)=AMP2(4)+AMP(13)*dconjg(AMP(13))+AMP(14)*dconjg(AMP(14))+AMP(15)*dconjg(AMP(15))+AMP(16)*dconjg(AMP(16))',
-                          'AMP2(5)=AMP2(5)+AMP(17)*dconjg(AMP(17))+AMP(18)*dconjg(AMP(18))+AMP(19)*dconjg(AMP(19))+AMP(20)*dconjg(AMP(20))',
-                          'AMP2(6)=AMP2(6)+AMP(21)*dconjg(AMP(21))+AMP(22)*dconjg(AMP(22))+AMP(23)*dconjg(AMP(23))+AMP(24)*dconjg(AMP(24))'])
+                         ['AMP2(1)=AMP2(1)+AMP(1)*dconjg(AMP(1))',
+                          'AMP2(2)=AMP2(2)+AMP(2)*dconjg(AMP(2))',
+                          'AMP2(3)=AMP2(3)+AMP(3)*dconjg(AMP(3))',
+                          'AMP2(4)=AMP2(4)+AMP(4)*dconjg(AMP(4))',
+                          'AMP2(5)=AMP2(5)+AMP(5)*dconjg(AMP(5))',
+                          'AMP2(6)=AMP2(6)+AMP(6)*dconjg(AMP(6))'])
 
     def test_four_fermion_vertex_normal_fermion_flow(self):
         """Testing process u u > t t g with fermion flow (u~t)(u~t)
@@ -5514,24 +5505,21 @@ CALL FFV1C1_0(W(1,9),W(1,2),W(1,5),GG,AMP(4))""".split('\n')
 
         result = helas_call_writers.FortranUFOHelasCallWriter(mybasemodel).\
                                    get_matrix_element_calls(matrix_element.get('core_processes')[0])
-        self.assertEqual("\n".join(result),
+        self.assertEqual(result,
                          """CALL OXXXXX(P(0,1),zero,NHEL(1),-1*IC(1),W(1,1))
 CALL IXXXXX(P(0,2),MT,NHEL(2),+1*IC(2),W(1,2))
 CALL VXXXXX(P(0,3),Mwp,NHEL(3),+1*IC(3),W(1,3))
 # Amplitude(s) for diagram number 1
-CALL FFS3_0(W(1,2),W(1,1),W(1,3),GC_108,AMP(1))
-CALL FFS4_0(W(1,2),W(1,1),W(1,3),GC_111,AMP(2))""")
+CALL FFS3_4_0(W(1,2),W(1,1),W(1,3),GC_108,GC_111,AMP(1))""".split('\n'))
         result = helas_call_writers.FortranUFOHelasCallWriter(mybasemodel).\
                                    get_matrix_element_calls(matrix_element.get('decay_chains')[0].get('core_processes')[0])
-        self.assertEqual("\n".join(result),
+        self.assertEqual(result,
                          """CALL VXXXXX(P(0,1),Mwp,NHEL(1),-1*IC(1),W(1,1))
 CALL IXXXXX(P(0,2),zero,NHEL(2),-1*IC(2),W(1,2))
 CALL OXXXXX(P(0,3),MT,NHEL(3),+1*IC(3),W(1,3))
-CALL FFS3_3(W(1,2),W(1,3),GC_108,Mwp, Wwp, W(1,4))
-CALL FFS4_3(W(1,2),W(1,3),GC_111,Mwp, Wwp, W(1,5))
+CALL FFS3_4_3(W(1,2),W(1,3),GC_108,GC_111,Mwp, Wwp, W(1,4))
 # Amplitude(s) for diagram number 1
-#
-#""")
+#""".split('\n'))
 
         matrix_elements = matrix_element.combine_decay_chain_processes()
 
@@ -5544,13 +5532,9 @@ CALL FFS4_3(W(1,2),W(1,3),GC_111,Mwp, Wwp, W(1,5))
 CALL IXXXXX(P(0,2),MT,NHEL(2),+1*IC(2),W(1,2))
 CALL IXXXXX(P(0,3),zero,NHEL(3),-1*IC(3),W(1,3))
 CALL OXXXXX(P(0,4),MT,NHEL(4),+1*IC(4),W(1,4))
-CALL FFS3_3(W(1,3),W(1,4),GC_108,Mwp, Wwp, W(1,5))
-CALL FFS4_3(W(1,3),W(1,4),GC_111,Mwp, Wwp, W(1,6))
+CALL FFS3_4_3(W(1,3),W(1,4),GC_108,GC_111,Mwp, Wwp, W(1,5))
 # Amplitude(s) for diagram number 1
-CALL FFS3_0(W(1,2),W(1,1),W(1,5),GC_108,AMP(1))
-CALL FFS3_0(W(1,2),W(1,1),W(1,6),GC_108,AMP(2))
-CALL FFS4_0(W(1,2),W(1,1),W(1,5),GC_111,AMP(3))
-CALL FFS4_0(W(1,2),W(1,1),W(1,6),GC_111,AMP(4))""".split('\n')
+CALL FFS3_4_0(W(1,2),W(1,1),W(1,5),GC_108,GC_111,AMP(1))""".split('\n')
 
         for i in range(len(goal)):
             self.assertEqual(result[i], goal[i])
@@ -5669,24 +5653,21 @@ CALL FFS4_0(W(1,2),W(1,1),W(1,6),GC_111,AMP(4))""".split('\n')
 
         result = helas_call_writers.FortranUFOHelasCallWriter(mybasemodel).\
                                    get_matrix_element_calls(matrix_element.get('core_processes')[0])
-        self.assertEqual("\n".join(result),
+        self.assertEqual(result,
                          """CALL OXXXXX(P(0,1),zero,NHEL(1),-1*IC(1),W(1,1))
 CALL IXXXXX(P(0,2),MT,NHEL(2),+1*IC(2),W(1,2))
 CALL SXXXXX(P(0,3),+1*IC(3),W(1,3))
 # Amplitude(s) for diagram number 1
-CALL FFS3C1_0(W(1,2),W(1,1),W(1,3),GC_108,AMP(1))
-CALL FFS4C1_0(W(1,2),W(1,1),W(1,3),GC_111,AMP(2))""")
+CALL FFS3C1_4_0(W(1,2),W(1,1),W(1,3),GC_108,GC_111,AMP(1))""".split('\n'))
         result = helas_call_writers.FortranUFOHelasCallWriter(mybasemodel).\
                                    get_matrix_element_calls(matrix_element.get('decay_chains')[0].get('core_processes')[0])
-        self.assertEqual("\n".join(result),
+        self.assertEqual(result,
                          """CALL SXXXXX(P(0,1),-1*IC(1),W(1,1))
 CALL OXXXXX(P(0,2),zero,NHEL(2),+1*IC(2),W(1,2))
 CALL IXXXXX(P(0,3),MT,NHEL(3),-1*IC(3),W(1,3))
-CALL FFS3C1_3(W(1,3),W(1,2),GC_108,Msix1, Wsix1, W(1,4))
-CALL FFS4C1_3(W(1,3),W(1,2),GC_111,Msix1, Wsix1, W(1,5))
+CALL FFS3C1_4_3(W(1,3),W(1,2),GC_108,GC_111,Msix1, Wsix1, W(1,4))
 # Amplitude(s) for diagram number 1
-#
-#""")
+#""".split('\n'))
 
         matrix_elements = matrix_element.combine_decay_chain_processes()
 
@@ -5699,199 +5680,12 @@ CALL FFS4C1_3(W(1,3),W(1,2),GC_111,Msix1, Wsix1, W(1,5))
 CALL IXXXXX(P(0,2),MT,NHEL(2),+1*IC(2),W(1,2))
 CALL OXXXXX(P(0,3),zero,NHEL(3),+1*IC(3),W(1,3))
 CALL IXXXXX(P(0,4),MT,NHEL(4),-1*IC(4),W(1,4))
-CALL FFS3C1_3(W(1,4),W(1,3),GC_108,Msix1, Wsix1, W(1,5))
-CALL FFS4C1_3(W(1,4),W(1,3),GC_111,Msix1, Wsix1, W(1,6))
+CALL FFS3C1_4_3(W(1,4),W(1,3),GC_108,GC_111,Msix1, Wsix1, W(1,5))
 # Amplitude(s) for diagram number 1
-CALL FFS3C1_0(W(1,2),W(1,1),W(1,5),GC_108,AMP(1))
-CALL FFS3C1_0(W(1,2),W(1,1),W(1,6),GC_108,AMP(2))
-CALL FFS4C1_0(W(1,2),W(1,1),W(1,5),GC_111,AMP(3))
-CALL FFS4C1_0(W(1,2),W(1,1),W(1,6),GC_111,AMP(4))""".split('\n')
+CALL FFS3C1_4_0(W(1,2),W(1,1),W(1,5),GC_108,GC_111,AMP(1))""".split('\n')
 
-        for i in range(len(goal)):
-            self.assertEqual(result[i], goal[i])
-
-    def test_export_matrix_element_v4_standalone(self):
-        """Test the result of exporting a matrix element to file"""
-
-        writer = writers.FortranWriter(self.give_pos('test'))
-
-        goal_matrix_f = \
-"""      SUBROUTINE SMATRIX(P,ANS)
-C     
-C     Generated by MadGraph 5 v. %(version)s, %(date)s
-C     By the MadGraph Development Team
-C     Please visit us at https://launchpad.net/madgraph5
-C     
-C     MadGraph StandAlone Version
-C     
-C     Returns amplitude squared summed/avg over colors
-C     and helicities
-C     for the point in phase space P(0:3,NEXTERNAL)
-C     
-C     Process: e+ e- > a a a
-C     
-      IMPLICIT NONE
-C     
-C     CONSTANTS
-C     
-      INTEGER    NEXTERNAL
-      PARAMETER (NEXTERNAL=5)
-      INTEGER                 NCOMB
-      PARAMETER (             NCOMB=32)
-C     
-C     ARGUMENTS 
-C     
-      REAL*8 P(0:3,NEXTERNAL),ANS
-C     
-C     LOCAL VARIABLES 
-C     
-      INTEGER NHEL(NEXTERNAL,NCOMB),NTRY
-      REAL*8 T
-      REAL*8 MATRIX
-      INTEGER IHEL,IDEN, I
-      INTEGER JC(NEXTERNAL)
-      LOGICAL GOODHEL(NCOMB)
-      DATA NTRY/0/
-      DATA GOODHEL/NCOMB*.FALSE./
-      DATA (NHEL(IHEL,   1),IHEL=1,5) /-1,-1,-1,-1,-1/
-      DATA (NHEL(IHEL,   2),IHEL=1,5) /-1,-1,-1,-1, 1/
-      DATA (NHEL(IHEL,   3),IHEL=1,5) /-1,-1,-1, 1,-1/
-      DATA (NHEL(IHEL,   4),IHEL=1,5) /-1,-1,-1, 1, 1/
-      DATA (NHEL(IHEL,   5),IHEL=1,5) /-1,-1, 1,-1,-1/
-      DATA (NHEL(IHEL,   6),IHEL=1,5) /-1,-1, 1,-1, 1/
-      DATA (NHEL(IHEL,   7),IHEL=1,5) /-1,-1, 1, 1,-1/
-      DATA (NHEL(IHEL,   8),IHEL=1,5) /-1,-1, 1, 1, 1/
-      DATA (NHEL(IHEL,   9),IHEL=1,5) /-1, 1,-1,-1,-1/
-      DATA (NHEL(IHEL,  10),IHEL=1,5) /-1, 1,-1,-1, 1/
-      DATA (NHEL(IHEL,  11),IHEL=1,5) /-1, 1,-1, 1,-1/
-      DATA (NHEL(IHEL,  12),IHEL=1,5) /-1, 1,-1, 1, 1/
-      DATA (NHEL(IHEL,  13),IHEL=1,5) /-1, 1, 1,-1,-1/
-      DATA (NHEL(IHEL,  14),IHEL=1,5) /-1, 1, 1,-1, 1/
-      DATA (NHEL(IHEL,  15),IHEL=1,5) /-1, 1, 1, 1,-1/
-      DATA (NHEL(IHEL,  16),IHEL=1,5) /-1, 1, 1, 1, 1/
-      DATA (NHEL(IHEL,  17),IHEL=1,5) / 1,-1,-1,-1,-1/
-      DATA (NHEL(IHEL,  18),IHEL=1,5) / 1,-1,-1,-1, 1/
-      DATA (NHEL(IHEL,  19),IHEL=1,5) / 1,-1,-1, 1,-1/
-      DATA (NHEL(IHEL,  20),IHEL=1,5) / 1,-1,-1, 1, 1/
-      DATA (NHEL(IHEL,  21),IHEL=1,5) / 1,-1, 1,-1,-1/
-      DATA (NHEL(IHEL,  22),IHEL=1,5) / 1,-1, 1,-1, 1/
-      DATA (NHEL(IHEL,  23),IHEL=1,5) / 1,-1, 1, 1,-1/
-      DATA (NHEL(IHEL,  24),IHEL=1,5) / 1,-1, 1, 1, 1/
-      DATA (NHEL(IHEL,  25),IHEL=1,5) / 1, 1,-1,-1,-1/
-      DATA (NHEL(IHEL,  26),IHEL=1,5) / 1, 1,-1,-1, 1/
-      DATA (NHEL(IHEL,  27),IHEL=1,5) / 1, 1,-1, 1,-1/
-      DATA (NHEL(IHEL,  28),IHEL=1,5) / 1, 1,-1, 1, 1/
-      DATA (NHEL(IHEL,  29),IHEL=1,5) / 1, 1, 1,-1,-1/
-      DATA (NHEL(IHEL,  30),IHEL=1,5) / 1, 1, 1,-1, 1/
-      DATA (NHEL(IHEL,  31),IHEL=1,5) / 1, 1, 1, 1,-1/
-      DATA (NHEL(IHEL,  32),IHEL=1,5) / 1, 1, 1, 1, 1/
-      DATA IDEN/24/
-C     ----------
-C     BEGIN CODE
-C     ----------
-      NTRY=NTRY+1
-      DO IHEL=1,NEXTERNAL
-        JC(IHEL) = +1
-      ENDDO
-      ANS = 0D0
-      DO IHEL=1,NCOMB
-        IF (GOODHEL(IHEL) .OR. NTRY .LT. 2) THEN
-          T=MATRIX(P ,NHEL(1,IHEL),JC(1))
-          ANS=ANS+T
-          IF (T .NE. 0D0 .AND. .NOT.    GOODHEL(IHEL)) THEN
-            GOODHEL(IHEL)=.TRUE.
-          ENDIF
-        ENDIF
-      ENDDO
-      ANS=ANS/DBLE(IDEN)
-      END
-      
-      
-      REAL*8 FUNCTION MATRIX(P,NHEL,IC)
-C     
-C     Generated by MadGraph 5 v. %(version)s, %(date)s
-C     By the MadGraph Development Team
-C     Please visit us at https://launchpad.net/madgraph5
-C     
-C     Returns amplitude squared summed/avg over colors
-C     for the point with external lines W(0:6,NEXTERNAL)
-C     
-C     Process: e+ e- > a a a
-C     
-      IMPLICIT NONE
-C     
-C     CONSTANTS
-C     
-      INTEGER    NGRAPHS
-      PARAMETER (NGRAPHS=6)
-      INTEGER    NEXTERNAL
-      PARAMETER (NEXTERNAL=5)
-      INTEGER    NWAVEFUNCS, NCOLOR
-      PARAMETER (NWAVEFUNCS=11, NCOLOR=1)
-      REAL*8     ZERO
-      PARAMETER (ZERO=0D0)
-      COMPLEX*16 IMAG1
-      PARAMETER (IMAG1=(0D0,1D0))
-C     
-C     ARGUMENTS 
-C     
-      REAL*8 P(0:3,NEXTERNAL)
-      INTEGER NHEL(NEXTERNAL), IC(NEXTERNAL)
-C     
-C     LOCAL VARIABLES 
-C     
-      INTEGER I,J
-      COMPLEX*16 ZTEMP
-      REAL*8 DENOM(NCOLOR), CF(NCOLOR,NCOLOR)
-      COMPLEX*16 AMP(NGRAPHS), JAMP(NCOLOR)
-      COMPLEX*16 W(18,NWAVEFUNCS)
-C     
-C     GLOBAL VARIABLES
-C     
-      INCLUDE 'coupl.inc'
-C     
-C     COLOR DATA
-C     
-      DATA DENOM(1)/1/
-      DATA (CF(I,1),I=1,1) /1/
-C     ----------
-C     BEGIN CODE
-C     ----------
-      CALL OXXXXX(P(0,1),ZERO,NHEL(1),-1*IC(1),W(1,1))
-      CALL IXXXXX(P(0,2),ZERO,NHEL(2),+1*IC(2),W(1,2))
-      CALL VXXXXX(P(0,3),ZERO,NHEL(3),+1*IC(3),W(1,3))
-      CALL VXXXXX(P(0,4),ZERO,NHEL(4),+1*IC(4),W(1,4))
-      CALL VXXXXX(P(0,5),ZERO,NHEL(5),+1*IC(5),W(1,5))
-      CALL FVOXXX(W(1,1),W(1,3),MGVX12,ZERO,ZERO,W(1,6))
-      CALL FVIXXX(W(1,2),W(1,4),MGVX12,ZERO,ZERO,W(1,7))
-C     Amplitude(s) for diagram number 1
-      CALL IOVXXX(W(1,7),W(1,6),W(1,5),MGVX12,AMP(1))
-      CALL FVIXXX(W(1,2),W(1,5),MGVX12,ZERO,ZERO,W(1,8))
-C     Amplitude(s) for diagram number 2
-      CALL IOVXXX(W(1,8),W(1,6),W(1,4),MGVX12,AMP(2))
-      CALL FVOXXX(W(1,1),W(1,4),MGVX12,ZERO,ZERO,W(1,9))
-      CALL FVIXXX(W(1,2),W(1,3),MGVX12,ZERO,ZERO,W(1,10))
-C     Amplitude(s) for diagram number 3
-      CALL IOVXXX(W(1,10),W(1,9),W(1,5),MGVX12,AMP(3))
-C     Amplitude(s) for diagram number 4
-      CALL IOVXXX(W(1,8),W(1,9),W(1,3),MGVX12,AMP(4))
-      CALL FVOXXX(W(1,1),W(1,5),MGVX12,ZERO,ZERO,W(1,11))
-C     Amplitude(s) for diagram number 5
-      CALL IOVXXX(W(1,10),W(1,11),W(1,4),MGVX12,AMP(5))
-C     Amplitude(s) for diagram number 6
-      CALL IOVXXX(W(1,7),W(1,11),W(1,3),MGVX12,AMP(6))
-      JAMP(1)=-AMP(1)-AMP(2)-AMP(3)-AMP(4)-AMP(5)-AMP(6)
-      
-      MATRIX = 0.D0
-      DO I = 1, NCOLOR
-        ZTEMP = (0.D0,0.D0)
-        DO J = 1, NCOLOR
-          ZTEMP = ZTEMP + CF(J,I)*JAMP(J)
-        ENDDO
-        MATRIX = MATRIX+ZTEMP*DCONJG(JAMP(I))/DENOM(I)
-      ENDDO
-      END
-""" % misc.get_pkg_info()
+        
+        self.assertEqual(result, goal)
 
     def test_matrix_multistage_decay_chain_process(self):
         """Test matrix.f for multistage decay chain
@@ -6180,8 +5974,8 @@ CALL IOVXXX(W(1,26),W(1,23),W(1,2),GAL,AMP(8))""")
                                              g,
                                              g]),
                       'color': [color.ColorString([color.f(0, 1, 2)]),
-                                color.ColorString([color.f(0, 1, 2)]),
-                                color.ColorString([color.f(0, 1, 2)])],
+                                color.ColorString([color.f(2, 1, 0)]),
+                                color.ColorString([color.f(1, 0, 2)])],
                       'lorentz':['gggg1', 'gggg2', 'gggg3'],
                       'couplings':{(0, 0):'GG', (1, 1):'GG', (2, 2):'GG'},
                       'orders':{'QCD':2}}))
@@ -7907,7 +7701,7 @@ CALL IOSXXX(W(1,15),W(1,2),W(1,19),GELN2P,AMP(9))""".split('\n')
                                               gen_color=True)
 
         self.assertEqual(sum([len(diagram.get('amplitudes')) for diagram in \
-                          me.get('diagrams')]), 8)
+                          me.get('diagrams')]), 2)
 
         for i, amp in enumerate(me.get_all_amplitudes()):
             self.assertEqual(amp.get('number'), i + 1)
@@ -7917,8 +7711,8 @@ CALL IOSXXX(W(1,15),W(1,2),W(1,19),GELN2P,AMP(9))""".split('\n')
         exporter = export_v4.ProcessExporterFortranME()
 
         self.assertEqual(exporter.get_JAMP_lines(me),
-                         ["JAMP(1)=-AMP(1)-AMP(2)-AMP(3)-AMP(4)",
-                         "JAMP(2)=+AMP(5)+AMP(6)+AMP(7)+AMP(8)"])
+                         ["JAMP(1)=-AMP(1)",
+                         "JAMP(2)=+AMP(2)"])
 
     def test_generate_helas_diagrams_gg_gogo(self):
         """Testing the v4 helas diagram generation g g > go go,
@@ -8778,12 +8572,12 @@ class AlohaFortranWriterTest(unittest.TestCase):
 C     The process calculated in this file is: 
 C     Gamma(3,2,1)
 C     
-      SUBROUTINE FFV1_1(F2, V3, C, M1, W1, F1)
+      SUBROUTINE FFV1_1(F2, V3, COUP, M1, W1, F1)
       IMPLICIT NONE
       DOUBLE COMPLEX F1(6)
       DOUBLE COMPLEX F2(6)
       DOUBLE COMPLEX V3(6)
-      DOUBLE COMPLEX C
+      DOUBLE COMPLEX COUP
       DOUBLE COMPLEX DENOM
       DOUBLE PRECISION M1, W1
       DOUBLE PRECISION P1(0:3)
@@ -8800,10 +8594,9 @@ C
         abstract_M.write('/tmp','Fortran')
         
         self.assertTrue(os.path.exists('/tmp/FFV1_1.f'))
-        textfile = open('/tmp/FFV1_1.f','r')
+        textfile = open('/tmp/FFV1_1.f','r').read()
         split_sol = solution.split('\n')
-        for i in range(len(split_sol)):
-            self.assertEqual(split_sol[i]+'\n', textfile.readline())
+        self.assertEqual(split_sol, textfile.split('\n')[:len(split_sol)])
 
 
 class UFO_model_to_mg4_Test(unittest.TestCase):

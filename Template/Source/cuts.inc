@@ -65,3 +65,9 @@ c
       real*8 xptj,xptb,xpta,xptl,xmtc
       real*8 xetamin,xqcut,deltaeta
       common /to_specxpt/xptj,xptb,xpta,xptl,xmtc,xetamin,xqcut,deltaeta
+
+C
+C    FLAG FOR CUTTING DECAY PRODUCTS
+C
+      logical cut_decays
+      common /to_cut_decays/cut_decays

@@ -341,17 +341,15 @@ class TestModelCreation(unittest.TestCase, CheckFileCreate):
         for line in self.ReturnFile('intparam_definition.inc'):
             if 'ENDIF' in line:
                 self.assertEqual(len(alreadydefine), 31)
-                
             if '=' not in line:
                 continue
-            
             new_def = line.split('=')[0].lstrip()
             # Check that is the firsttime that this definition is done
             self.assertFalse(new_def in alreadydefine)
             alreadydefine.append(new_def)
         alreadydefine = [name.lower() for name in alreadydefine]
         alreadydefine.sort()
-        solution = ['aew ', 'ckm33 ', 'complexi ', 'conjg__ckm33 ', 'cw ', 'cw__exp__2 ', 'dum0 ', 'dum1 ', 'ee ', 'ee__exp__2 ', 'g ', 'g1 ', 'g__exp__2 ', 'gal(1) ', 'gal(2) ', 'gw ', 'gw__exp__2 ', 'lam ', 'mh__exp__2 ', 'muh ', 'mw ', 'mw__exp__2 ', 'mz__exp__2 ', 'mz__exp__4 ', 'sqrt__2 ', 'sqrt__aew ', 'sqrt__as ', 'sqrt__sw2 ', 'sw ', 'sw2 ', 'sw__exp__2 ', 'v ', 'v__exp__2 ', 'yb ', 'yt ', 'ytau ']
+        solution = ['aew ', 'ckm33 ', 'complexi ', 'conjg__ckm33 ', 'cw ', 'cw__exp__2 ', 'ee ', 'ee__exp__2 ', 'g ', 'g1 ', 'g__exp__2 ', 'gal(1) ', 'gal(2) ', 'gw ', 'gw__exp__2 ', 'lam ', 'mh__exp__2 ', 'muh ', 'mw ', 'mw__exp__2 ', 'mz__exp__2 ', 'mz__exp__4 ', 'sqrt__2 ', 'sqrt__aew ', 'sqrt__as ', 'sqrt__sw2 ', 'sw ', 'sw2 ', 'sw__exp__2 ', 'v ', 'v__exp__2 ', 'yb ', 'yt ', 'ytau ']
         self.assertEqual(alreadydefine, solution)
         
 

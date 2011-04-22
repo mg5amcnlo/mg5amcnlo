@@ -66,10 +66,8 @@ class TestMatrixElementChecker(unittest.TestCase):
         myproc = base_objects.Process({'legs':myleglist,
                                        'model':self.base_model})
 
-        full_model = model_reader.ModelReader(self.base_model)
-        full_model.set_parameters_and_couplings()
-
-        evaluator = process_checks.MatrixElementEvaluator(full_model, None)
+        evaluator = process_checks.MatrixElementEvaluator(self.base_model)
+        full_model = evaluator.full_model
         p, w_rambo = evaluator.get_momenta(myproc)
 
         # Check massless external momenta
@@ -270,9 +268,7 @@ class TestLorentzInvariance(unittest.TestCase):
         myproc = base_objects.Process({'legs':myleglist,
                                        'model':self.base_model})
 
-        full_model = model_reader.ModelReader(self.base_model)
-        full_model.set_parameters_and_couplings()
-        evaluator = process_checks.MatrixElementEvaluator(full_model, None)
+        evaluator = process_checks.MatrixElementEvaluator(self.base_model)
         p, w_rambo = evaluator.get_momenta(myproc)
 
         def invariant_mass(p1, p2):
@@ -347,10 +343,7 @@ class TestLorentzInvariance(unittest.TestCase):
         myproc = base_objects.Process({'legs':myleglist,
                                        'model':self.base_model})
 
-        full_model = model_reader.ModelReader(self.base_model)
-        full_model.set_parameters_and_couplings()
-
-        evaluator = process_checks.MatrixElementEvaluator(full_model, None)
+        evaluator = process_checks.MatrixElementEvaluator(self.base_model)
         p, w_rambo = evaluator.get_momenta(myproc)
 
         def invariant_mass(p1, p2):
