@@ -143,6 +143,8 @@ class Amplitude(base_objects.PhysicsObject):
 
         7. Repeat from 3 (recursion done by reduce_leglist)
 
+        8. Replace final p=p vertex
+        
         Be aware that the resulting vertices have all particles outgoing,
         so need to flip for incoming particles when used.
 
@@ -167,7 +169,7 @@ class Amplitude(base_objects.PhysicsObject):
 
         assert model.get('particles'), \
            "particles are missing in model: %s" %  model.get('particles')
-         
+
         assert model.get('interactions'), \
                "interactions are missing in model" 
                   
@@ -330,15 +332,32 @@ class Amplitude(base_objects.PhysicsObject):
         # Set diagrams to res
         self['diagrams'] = res
 
-        # Trim down number of legs and vertices used to save memory
-        self.trim_diagrams()
-
         # Set actual coupling orders for each diagram
         for diagram in self['diagrams']:
             diagram.calculate_orders(model)
 
+        # Replace final id=0 vertex if necessary
+        if not process.get('is_decay_chain'):
+            for diagram in self['diagrams']:
+                vertices = diagram.get('vertices')
+                if len(vertices) > 1 and vertices[-1].get('id') == 0:
+                    # Need to "glue together" last and next-to-last
+                    # vertex, by replacing the (incoming) last leg of the
+                    # next-to-last vertex with the (outgoing) leg in the
+                    # last vertex
+                    lastvx = vertices.pop()
+                    nexttolastvertex = vertices[-1]
+                    legs = nexttolastvertex.get('legs')
+                    ntlnumber = legs[-1].get('number')
+                    lastleg = filter(lambda leg: leg.get('number') != ntlnumber,
+                                     lastvx.get('legs'))[0]
+                    # Replace the last leg of nexttolastvertex
+                    legs[-1] = lastleg
         if res:
             logger.info("Process has %d diagrams" % len(res))
+
+        # Trim down number of legs and vertices used to save memory
+        self.trim_diagrams()
 
         # Sort process legs according to leg number
         self.get('process').get('legs').sort()
@@ -371,8 +390,9 @@ class Amplitude(base_objects.PhysicsObject):
 
         if curr_leglist.can_combine_to_0(ref_dict_to0, is_decay_proc):
             # Extract the interaction id associated to the vertex 
-            vertex_ids = ref_dict_to0[tuple(sorted([leg.get('id') for \
-                                                   leg in curr_leglist]))]
+            vertex_ids = self.get_combined_vertices(curr_leglist,
+                       copy.copy(ref_dict_to0[tuple(sorted([leg.get('id') for \
+                                                       leg in curr_leglist]))]))
 
             final_vertices = [base_objects.Vertex({'legs':curr_leglist,
                                                    'id':vertex_id}) for \
@@ -558,8 +578,8 @@ class Amplitude(base_objects.PhysicsObject):
 
                     # Build the leg object which will replace the combination:
                     # 1) leg ids is as given in the ref_dict
-                    leg_vert_ids = ref_dict_to1[tuple(sorted([leg.get('id') \
-                                               for leg in entry]))]
+                    leg_vert_ids = copy.copy(ref_dict_to1[\
+                        tuple(sorted([leg.get('id') for leg in entry]))])
                     # 2) number is the minimum of leg numbers involved in the
                     # combination
                     number = min([leg.get('number') for leg in entry])
@@ -572,21 +592,24 @@ class Amplitude(base_objects.PhysicsObject):
                         state = True
                     # 4) from_group is True, by definition
 
-                    # Create and add the object
-                    mylegs = [base_objects.Leg(
-                                    {'id':leg_id[0],
-                                     'number':number,
-                                     'state':state,
-                                     'from_group':True}) \
-                                    for leg_id in leg_vert_ids]
-                    reduced_list.append(mylegs)
+                    # Create and add the object. This is done by a
+                    # separate routine, to allow overloading by
+                    # daughter classes
+                    new_leg_vert_ids = []
+                    if leg_vert_ids:
+                        new_leg_vert_ids = self.get_combined_legs(entry,
+                                                                  leg_vert_ids,
+                                                                  number,
+                                                                  state)
+                    
+                    reduced_list.append([l[0] for l in new_leg_vert_ids])
 
 
                     # Create and add the corresponding vertex
                     # Extract vertex ids corresponding to the various legs
                     # in mylegs
                     vlist = base_objects.VertexList()
-                    for ileg, myleg in enumerate(mylegs):
+                    for (myleg, vert_id) in new_leg_vert_ids:
                         # Start with the considered combination...
                         myleglist = base_objects.LegList(list(entry))
                         # ... and complete with legs after reducing
@@ -594,7 +617,7 @@ class Amplitude(base_objects.PhysicsObject):
                         # ... and consider the correct vertex id
                         vlist.append(base_objects.Vertex(
                                          {'legs':myleglist,
-                                          'id':leg_vert_ids[ileg][1]}))
+                                          'id':vert_id}))
 
                     vertex_list.append(vlist)
 
@@ -620,6 +643,25 @@ class Amplitude(base_objects.PhysicsObject):
 
         return res
 
+    def get_combined_legs(self, legs, leg_vert_ids, number, state):
+        """Create a set of new legs from the info given. This can be
+        overloaded by daughter classes."""
+
+        mylegs = [(base_objects.Leg({'id':leg_id,
+                                    'number':number,
+                                    'state':state,
+                                    'from_group':True}),
+                   vert_id)\
+                  for leg_id, vert_id in leg_vert_ids]
+
+        return mylegs
+                          
+    def get_combined_vertices(self, legs, vert_ids):
+        """Allow for selection of vertex ids. This can be
+        overloaded by daughter classes."""
+
+        return vert_ids
+                          
     def trim_diagrams(self):
         """Reduce the number of legs and vertices used in memory."""
 

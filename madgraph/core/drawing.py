@@ -718,13 +718,8 @@ class FeynmanDiagram:
         # The last vertex is particular
         last_vertex = self.vertexList[-1]
 
-        # Either is not a true vertex (just identical line)
-        if last_vertex.id == 0:
-            self.deal_special_vertex(last_vertex)
-        # Or the lines can be redundant with some other.
-        else:
-            for line in last_vertex.lines:
-                self.deal_last_line(line)
+        for line in last_vertex.lines:
+            self.deal_last_line(line)
 
         if contract:
             # Contract the non propagating particle and fuse vertex associated
@@ -868,45 +863,6 @@ class FeynmanDiagram:
         self.lineList.append(line)
 
         return line
-
-    def deal_special_vertex(self, last_vertex):
-        """Deal with the last vertex of self.diagram if that one has id=0.
-        This simply means that the two line are identical. In consequence, we 
-        remove one line, define correctly start and end vertex for the second 
-        one and finally remove this fake vertex."""
-
-        pos1 = self.find_leg_id(last_vertex.legs[0], equal=0)
-        pos2 = self.find_leg_id(last_vertex.legs[1], equal=0)
-
-        line1 = self.lineList[pos1]
-        line2 = self.lineList[pos2]
-
-        # Connect correctly the line.The two lines are simple continuation
-        #one of the other with a common vertex. We want to delete line1. In 
-        #consequence we replace in line2 the common vertex by the second vertex 
-        #present in line1, such that the new line2 is the sum of the two 
-        #previous lines.
-        to_del = pos1
-        if line1.end is line2.start:
-            line2.def_begin_point(line1.start)
-        else:
-            if line1.end:
-                # Standard case
-                line2.def_end_point(line1.end)
-            else:
-                # line1 is a initial/final line. We need to keep her status
-                #so we will delete line2 instead of line1
-                to_del = pos2
-                line1.def_begin_point(line2.end)
-        # Remove line completely
-        if to_del == pos1:
-            line1.start.remove_line(line1)
-            del self.lineList[pos1]
-        else:
-            line2.start.remove_line(line2)
-            del self.lineList[pos2]
-        # Remove last_vertex
-        self.vertexList.remove(last_vertex)
 
     def deal_last_line(self, last_line):
         """The line of the last vertex breaks the rules that line before
