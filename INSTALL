@@ -25,15 +25,7 @@ Dependencies :
 If you need to provide output for MadEvent, you also need:
 - bash
 - perl 5.8 (or higher)
-
-
-Running with MadEvent
-=====================
-
-If you want full MadEvent functionality (for cross section calculation
-and event generation), you should install the MG5 directory in the
-MG_ME directory (version 4.4.44 or higher) with the name "madgraph5".
-
+- a Fortran 77 compiler (g77 or gfortran)
 
 On Windows:
 ===========
