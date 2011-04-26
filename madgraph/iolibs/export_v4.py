@@ -52,14 +52,12 @@ class ProcessExporterFortran(object):
     """Class to take care of exporting a set of matrix elements to
     Fortran (v4) format."""
 
-    def __init__(self, mgme_dir = "", dir_path = "", clean = False,
-                 symmetry_max_time = 600):
+    def __init__(self, mgme_dir = "", dir_path = "", clean = False):
         """Initiate the ProcessExporterFortran with directory information"""
         self.mgme_dir = mgme_dir
         self.dir_path = dir_path
         self.clean = clean
         self.model = None
-        self.symmetry_max_time = symmetry_max_time
 
     #===========================================================================
     # copy the Template in a new directory.
@@ -897,14 +895,6 @@ class ProcessExporterFortranME(ProcessExporterFortran):
 
         super(ProcessExporterFortranME, self).copy_v4template()
 
-        # If we are not using subproc_group, use old symmetry.f
-        if os.path.exists(os.path.join(self.dir_path, 'SubProcesses',
-                                       'symmetry_v4.f')):
-            shutil.move(os.path.join(self.dir_path, 'SubProcesses',
-                                     'symmetry_v4.f'),
-                        os.path.join(self.dir_path, 'SubProcesses',
-                                     'symmetry.f'))
-
     #===========================================================================
     # generate_subprocess_directory_v4 
     #===========================================================================
@@ -1019,6 +1009,18 @@ class ProcessExporterFortranME(ProcessExporterFortran):
         self.write_props_file(writers.FortranWriter(filename),
                          matrix_element,
                          s_and_t_channels)
+
+        # Find config symmetries and permutations
+        symmetry, perms, ident_perms = \
+                  diagram_symmetry.find_symmetry(matrix_element)
+
+        filename = 'symswap.inc'
+        self.write_symswap_file(writers.FortranWriter(filename),
+                                ident_perms)
+
+        filename = 'symfact.dat'
+        self.write_symfact_file(writers.FortranWriter(filename),
+                           symmetry)
 
         # Generate diagrams
         filename = "matrix.ps"
@@ -1885,7 +1887,6 @@ class ProcessExporterFortranMEGroup(ProcessExporterFortranME):
         if not self.model:
             self.model = subproc_group.get('matrix_elements')[0].\
                          get('processes')[0].get('model')
-            self.evaluator = process_checks.MatrixElementEvaluator(self.model)
 
         cwd = os.getcwd()
         path = os.path.join(self.dir_path, 'SubProcesses')
@@ -2042,13 +2043,11 @@ class ProcessExporterFortranMEGroup(ProcessExporterFortranME):
 
         # Find config symmetries and permutations
         symmetry, perms, ident_perms = \
-                  diagram_symmetry.find_symmetry(subproc_group,
-                                                 self.evaluator,
-                                                 self.symmetry_max_time)
+                  diagram_symmetry.find_symmetry(subproc_group)
 
         filename = 'symswap.inc'
         self.write_symswap_file(writers.FortranWriter(filename),
-                           ident_perms)
+                                ident_perms)
 
         filename = 'symfact.dat'
         self.write_symfact_file(writers.FortranWriter(filename),

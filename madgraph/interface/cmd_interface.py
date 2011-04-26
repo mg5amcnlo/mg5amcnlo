@@ -408,9 +408,6 @@ class HelpToCmd(object):
         logger.info("     of the quarks given in multi_part_label.")
         logger.info("     These processes give negligible contribution to the")
         logger.info("     cross section but have subprocesses/channels.")
-        logger.info("   symmetry_max_time N")
-        logger.info("     (default 600) maximum time (in s) to find symmetric")
-        logger.info("     diagrams for each matrix element (0 means no timeout)")
         
     def help_shell(self):
         logger.info("syntax: shell CMD (or ! CMD)")
@@ -1445,7 +1442,6 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
     _export_formats = _v4_export_formats + ['standalone_cpp', 'pythia8']
     _set_options = ['group_subprocesses',
                     'ignore_six_quark_processes',
-                    'symmetry_max_time',
                     'stdout_level']
     # Variables to store object information
     _curr_model = None  #base_objects.Model()
@@ -2713,11 +2709,6 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
             logger.info('Set group_subprocesses to %s' % \
                         str(self._options[args[0]]))
             
-        elif args[0] == 'symmetry_max_time':
-            self._options[args[0]] = int(args[1])
-            logger.info('Set symmetry_max_time to %s' % \
-                        str(self._options[args[0]]))
-            
         elif args[0] == "stdout_level":
             logging.root.setLevel(eval('logging.' + args[1]))
             logging.getLogger('madgraph').setLevel(eval('logging.' + args[1]))
@@ -2768,8 +2759,7 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
             if group_subprocesses:
                 self._curr_exporter = export_v4.ProcessExporterFortranMEGroup(\
                                       self._mgme_dir, self._export_dir,
-                                      not noclean,
-                                      self._options["symmetry_max_time"])
+                                      not noclean)
             else:
                 self._curr_exporter = export_v4.ProcessExporterFortranME(\
                                       self._mgme_dir, self._export_dir,

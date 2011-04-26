@@ -105,13 +105,11 @@ class TestCmdShell1(unittest.TestCase):
         config = self.cmd.set_configuration(MG5DIR+'/input/mg5_configuration.txt')
         if sys.platform == 'darwin':
             expected = {'pythia8_path': './pythia8',
-                        'symmetry_max_time': '600',
                         'web_browser': None,
                         'text_editor': 'vi',
                         'eps_viewer': None}
         else:
             expected = {'pythia8_path': './pythia8',
-                        'symmetry_max_time': '600',
                         'web_browser': 'firefox',
                         'text_editor': 'vi',
                         'eps_viewer': 'gv'}            
