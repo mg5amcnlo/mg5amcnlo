@@ -17,10 +17,13 @@
 
 from __future__ import division
 
-# The following two lines (suitably modified) are needed to run the
+# The following lines are needed to run the
 # diagram generation using __main__
-#import sys
-#sys.path.append('/Users/omatt/fynu/MADGRAPH/MG_ME/mg5_drawer')
+#import os, sys
+#root_path = os.path.split(os.path.dirname(os.path.realpath( __file__ )))[0]
+#root_path = os.path.realpath(os.path.join(root_path,'..','..'))
+#sys.path.insert(0, root_path)
+
 
 import os
 import pickle
@@ -202,7 +205,7 @@ if __name__ == '__main__':
 
     from madgraph.interface.cmd_interface import MadGraphCmdShell
     cmd = MadGraphCmdShell()
-    #cmd.do_import('model /Users/omatt/fynu/MADGRAPH/MG_ME/mg5_drawer/models/sm')
+    cmd.do_import('model %s/models/sm' % root_path)
     #cmd.do_import('model_v4 ' + os.path.join(_file_path, \
     #                                    '../input_files/v4_sm_particles.dat'))
     #cmd.do_import('model_v4 ' + os.path.join(_file_path, \

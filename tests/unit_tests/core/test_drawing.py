@@ -1022,9 +1022,10 @@ class TestFeynmanDiagram(unittest.TestCase):
         diagram.load_diagram()
         diagram.define_level()
         level_solution = [1, 2, 0, 0, 3, 3]
-        for i in range(0, 6):
-            self.assertEquals(diagram.vertexList[i].level, \
-                              level_solution[i])
+        found = [v.level for v in diagram.vertexList]
+        print [v.get_uid() for v in diagram.vertexList ]
+        self.assertEqual(level_solution, found)
+
         diagram.find_initial_vertex_position()
         level_solution = [1, 2, 0, 0, 3, 3]
         x_position = [1 / 3, 2 / 3, 0, 0, 1, 1]

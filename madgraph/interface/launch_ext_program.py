@@ -39,14 +39,13 @@ class ExtLauncher(object):
     cards = [] # files can be modified (path from self.card_dir)
     force = False
     
-    def __init__(self, running_dir, card_dir='', timeout=None, configuration = {},
+    def __init__(self, running_dir, card_dir='', timeout=None,
                  **options):
         """ initialize an object """
         
         self.running_dir = running_dir
         self.card_dir = os.path.join(self.running_dir, card_dir)
         self.timeout = timeout
-        self.configuration = configuration
         
         #include/overwrite options
         for key,value in options.items():
@@ -75,7 +74,7 @@ class ExtLauncher(object):
         """edit a file"""
 
         path = os.path.realpath(path)
-        open_file(path, self.configuration)
+        open_file(path)
             
     def ask(self, question, default, choices=[], path_info=[]):
         """ ask a question """
@@ -267,8 +266,7 @@ class MELauncher(ExtLauncher):
         os.system('touch %s' % os.path.join(self.running_dir,'RunWeb'))
         subprocess.call([os.path.join('bin','gen_crossxhtml-pl')], 
                          cwd=self.running_dir)
-        open_file(os.path.join(self.running_dir, 'HTML', 'crossx.html'),
-                  self.configuration)
+        open_file(os.path.join(self.running_dir, 'HTML', 'crossx.html'))
 
         mode = str(self.cluster)
         if mode == "0":
@@ -423,57 +421,135 @@ class Pythia8Launcher(ExtLauncher):
 
 #
 # Global function to open supported file types
-#       
-def open_file(file_path, configuration):
-    """Open file if supported type, using program given by the dict configuration"""
-
-    try:
-        extension = file_path.rsplit('.',1)[1]
-    except IndexError:
-        extension = ''
-
-    # For MAC:
-    if sys.platform == 'darwin':
-        if extension == 'html':
-            html_v = configuration['web_browser']
-            if misc.which(html_v):
-                os.system('%s %s &' % (html_v, file_path))
-            elif html_v:
-                os.system('open -a %s %s' % (html_v,file_path))
-            else:
-                os.system('open %s' % file_path)
-        elif extension in ['ps', 'eps']:
-            eps_v = configuration['eps_viewer']
-            if misc.which(eps_v):
-                os.system('%s %s &' % (eps_v, file_path))
-            elif eps_v:
-                os.system('open -a %s %s' % (eps_v,file_path))
-            else:
-                os.system('open %s' % file_path)
+#
+class open_file(object):
+    """ a convinient class to open a file """
+    
+    html_viewer = None
+    eps_viewer = None
+    text_editor = None 
+    configured = False
+    
+    def __init__(self, filename):
+        """open a file"""
+        
+        # Check that the class is correctly configure
+        if not self.configured:
+            self.configure()
+        
+        try:
+            extension = filename.rsplit('.',1)[1]
+        except IndexError:
+            extension = ''   
+        print extension
+    
+    
+        # dispatch method
+        if extension in ['html','htm','php']:
+            self.open_program(self.web_browser, filename)
+        elif extension in ['ps','eps']:
+            self.open_program(self.eps_viewer, filename)
         else:
-            if misc.which(configuration['text_editor']):
-                subprocess.call([configuration['text_editor'], file_path])
-            else:
-                logger.warning('Unable to find a valid editor for text file. Please specify one in ./input/mg5_configuration.txt')  
-    # For Linux
-    else:
-        if extension == 'html':
-            if configuration['web_browser']:
-                os.system('%s %s &' % 
-                            (configuration['web_browser'],file_path))
-            else:
-                logger.warning('No valid web browser found. ' + \
-                               'Please set in ./input/mg5_configuration.txt') 
-        elif extension in ['ps', 'eps']:
-            if configuration['eps_viewer']:
-                os.system('%s %s &' % 
-                               (configuration['eps_viewer'],file_path))
-            else:
-                logger.warning('No valid eps viewer found. ' + \
-                               'Please set in ./input/mg5_configuration.txt') 
-        else:
-            if misc.which(configuration['text_editor']):
-                subprocess.call([configuration['text_editor'], file_path])
-            else:
-                logger.warning('No valid text editor found. ' + \
-                               'Please set in ./input/mg5_configuration.txt')
+            self.open_program(self.text_editor,filename, mac_check=False)
+            # mac_check to False avoid to use open cmd in mac
+    
+    @classmethod
+    def configure(cls, configuration=None):
+        """ configure the way to open the file """
+        
+        cls.configured = True
+        
+        # start like this is a configuration for mac
+        cls.configure_mac(configuration)
+        if sys.platform == 'darwin':
+            return # done for MAC
+        
+        # on Mac some default (eps/web) might be kept on None. This is not
+        #suitable for LINUX which doesn't have open command.
+        
+        # first for eps_viewer
+        if not eps_viewer:
+           cls.eps_viewer = cls.find_valid(['gv', 'ggv', 'evince'], 'eps viewer') 
+            
+        # Second for web browser
+        if not cls.web_browser:
+            cls.web_browser = cls.find_valid(
+                                    ['firefox', 'chrome', 'safari','opera'], 
+                                    'web browser')
+
+    @classmethod
+    def configure_mac(cls, configuration=None):
+        """ configure the way to open a file for mac """
+    
+        if configuration is None:
+            configuration = {'text_editor': None,
+                             'eps_viewer':None,
+                             'web_browser':None}
+        
+        for key in configuration:
+            if key == 'text_editor':
+                # Treat text editor ONLY text base editor !!
+                if configuration[key] and not misc.which(configuration[key]):
+                    logger.warning('Specified text editor %s not valid.' % \
+                                                             configuration[key])
+                elif configuration[key]:
+                    # All is good
+                    cls.text_editor = configuration[key]
+                    continue
+                #Need to find a valid default
+                if os.environ.has_key('EDITOR'):
+                    cls.text_editor = os.environ['EDITOR']
+                else:
+                    cls.text_editor = find_valid(
+                                        ['vi', 'emacs', 'vim', 'gedit', 'nano'],
+                                         'text editor')
+              
+            elif key in ['eps_viewer', 'web_browser']:
+                if configuration[key]:
+                    cls.eps_viewer = configuration[key]
+                    continue
+                # else keep None. For Mac this will use the open command.
+
+
+    @staticmethod
+    def find_valid(possibility, program='program'):
+        """find a valid shell program in the list"""
+        
+        for p in possibillity:
+            if misc.which(p):
+                logger.warning('Using default %s \"%s\". ' % (program, p) + \
+                                      'Set web_browser in ./input/mg5_configuration.txt')
+                return p
+        
+        logger.warning('No valid %s found. ' % program + \
+                                   'Please set in ./input/mg5_configuration.txt')
+        return None
+        
+        
+    def open_program(self, program, file_path, mac_check=True):
+      """ open a file with a given program """
+      
+      if mac_check==True and sys.platform == 'darwin':
+          return self.open_mac_program(program, file_path)
+      
+      # Shell program only
+      if program:
+          subprocess.call([program, file_path])
+      else:
+          logger.warning('Not able to open file %s since no program configured.' % file_path + \
+                              'Please set one in ./input/mg5_configuration.txt') 
+    
+    def open_mac_program(self, program, file_path):
+      """ open a text with the text editor """
+      
+      if not program:
+          # Ask to mac manager
+          os.system('open %s' % file_path)
+      elif misc.which(program):
+          # shell program
+          subprocess.call([program, file_path])
+      else:
+         # not shell program
+         os.system('open -a %s %s' % (program, file_path))
+      
+
