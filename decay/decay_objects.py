@@ -3878,10 +3878,12 @@ class AbstractModel(base_objects.Model):
         # Object type -> Abstract Object list of the given type
         self['abstract_particles_dict'] = {}
         self['abstract_interactions_dict'] = {}
-        # Real interaction id -> Abstract type (lorentz, 
-        #                                       pseudo abstract particlelist)
-        #(the particle list type is defined in get_particlelist_type
+        # Real interaction id -> Abstract type (pseudo abstract particlelist,
+        #                                       lorentz,
+        #                                       color)
+        #(the particle list type is defined in get_particlelist_type)
         self['interaction_type_dict'] = {}
+        self['interaction_coupling_dict'] = {}
         self.spin_text_dict = {1:'S', 2: 'F', 3:'V', 5:'T'}
         
 
@@ -3889,16 +3891,31 @@ class AbstractModel(base_objects.Model):
         return self.sorted_keys
 
     def get_particle_type(self, part):
-        """ Return the tuple (spin, color) of the given particle."""
+        """ Return the tuple (spin, color, self_antipart) 
+        of the given particle.
+        NOTE: bosons are always treated as non-self-antipart. """
 
-        return (part['spin'], part['color'])
+        if part.is_fermion():
+            self_antipart = part['self_antipart']
+        else:
+            self_antipart = False
+
+        return (part['spin'], part['color'], self_antipart)
 
     def get_particle_type_code(self, part):
-        """ Return the pseudo pdg_code 990000+1000*spin+100*color
+        """ Return the pseudo pdg_code :
+        (9900000+1000*spin+100*color) for non-self-antipart;
+        (9910000+1000*spin+100*color) for self-antipart (Majorana fermion)
         of the given particle."""
 
-        if part.is_fermion() and not part['self_antipart'] and not part['is_part']:
-            return -(9900000+1000*part['spin']+100*part['color'])
+        # Special pdg_code for Majorana fermions
+        if part.is_fermion():
+            if part['self_antipart']:
+                return 9910000+1000*part['spin']+100*part['color']
+            else:
+                return int(math.copysign(
+                        9900000+1000*part['spin']+100*part['color'],
+                        part.get_pdg_code()))
         else:
             return 9900000+1000*part['spin']+100*part['color']
 
@@ -3929,50 +3946,58 @@ class AbstractModel(base_objects.Model):
                 except KeyError:
                     serial_number_dict[part_type] = 1
 
-            # If this type has appeared,
+            # If not ignore duplicate particles,
             # check if there are same particle in the list.
-            # If so, use the abstract particle used before.
             else:
-                for j, previous_part in enumerate(partlist):
-                    # If not ignore_dup,
-                    # find duplicate particle, use the abstract particle
-                    # already exists.
-                    # No need to update the serial_number_dict
-                    if not ignore_dup and j < i:
+                set_new = True
+
+                if not ignore_dup:
+                    for j, previous_part in enumerate(partlist):
+                        # find duplicate particle, use the abstract particle
+                        # already exists.
+                        # No need to update the serial_number_dict
+                        if j == i:
+                            break
+
                         if abs(previous_part.get('pdg_code')) == \
                                 abs(part.get('pdg_code')):
                             pseudo_ab_particlelist.append(\
                                 int(math.copysign(\
                                         pseudo_ab_particlelist[j],
                                         self.get_particle_type_code(part))))
-
+                                
+                            set_new = False
                             break
 
-                    # Append new abstract particle if not appears before
-                    else:
-                        # If the abstract particle of the given serial number
-                        # does not exist, add a new abstract particle and append
-                        # it.
-                        if serial_number_dict[part_type] >= \
-                                len(self['abstract_particles_dict'][part_type]):
-                            self.add_ab_particle(part, True)
+                # Append new abstract particle if not appears before
+                if set_new:
+                    # If the abstract particle of the given serial number
+                    # does not exist, add a new abstract particle and append
+                    # it.
+                    if serial_number_dict[part_type] >= \
+                            len(self['abstract_particles_dict'][part_type]):
+                        self.add_ab_particle(part, True)
                             
+                    # Append the pdg_code into the list
+                    pseudo_ab_particlelist.append(\
+                        int(math.copysign(\
+                                abs(self.get_particle_type_code(part))+\
+                                    serial_number_dict[part_type],
+                                self.get_particle_type_code(part)))
+                        )
 
-                        # Append the pdg_code into the list
-                        pseudo_ab_particlelist.append(\
-                            int(math.copysign(\
-                                    self['abstract_particles_dict'][part_type][serial_number_dict[part_type]].get_pdg_code(),
-                                    self.get_particle_type_code(part))))
-
-                        # Update the serial_number_dict
-                        serial_number_dict[part_type] += 1
-
-                        # Break the internal loop
-                        break
+                    # Update the serial_number_dict
+                    serial_number_dict[part_type] += 1
                         
                     
         return pseudo_ab_particlelist, serial_number_dict
 
+
+    def get_color_string(self, inter):
+        """ Return the correct color string according to the 
+        sorted order of particle. """
+        
+        pass
 
 
     def get_interaction_type(self, inter):
@@ -4006,6 +4031,7 @@ class AbstractModel(base_objects.Model):
         ab_part = DecayParticle()
         ab_part['spin'] = part.get('spin')
         ab_part['color'] = part.get('color')
+        ab_part['self_antipart'] = self.get_particle_type(part)[2]
 
         # Check the current abstract_particles
         if self.get_particle_type(ab_part) in self['abstract_particles_dict'].keys():
@@ -4015,36 +4041,61 @@ class AbstractModel(base_objects.Model):
         else:
             # Setup new type of abstract particle
             self['abstract_particles_dict']\
-                [self.get_particle_type(ab_part)]= base_objects.ParticleList()
+                [self.get_particle_type(ab_part)]= DecayParticleList()
             sn = 0
             
 
         # Set other properties: name = text(spin)+color
-        #                       pdg_code = 99000'spin''color'
-        #                       mass = M'spin''color'
+        try:
+            name_string = self.spin_text_dict[part.get('spin')]
+        except KeyError:
+            name_string = 'P'
+
         ab_part['name']= \
-            self.spin_text_dict[part.get('spin')] +\
+            name_string +\
             str(part.get('color')) +\
             '_%02d' %sn
-        ab_part['antiname'] = ab_part.get('name')+'~'
-        ab_part['mass'] = 'M'+self.spin_text_dict[part.get('spin')] +\
+        ab_part['charge'] = part.get('charge')
+
+        # mass = M'S or N''spin''color' 
+        #                 % S for self-antipart, N for non-self-antipart
+        mass_string = 'M'
+        if ab_part['self_antipart']:
+            mass_string = mass_string + 'S'
+        else:
+            mass_string = mass_string + 'N'
+        mass_string = mass_string + name_string +\
             str(part.get('color')) +\
             '_%02d' %sn
+        ab_part['mass'] = mass_string
+
+        # pdg_code = 99'1:S ,0: N'00'spin''color'
+        #  e.g. w+: 9903100, gluino: 9912300
         ab_part['pdg_code'] = self.get_particle_type_code(ab_part)+sn
-            
 
+        # Set anti-part properties if this is not a self-antiparticle
+        if not ab_part['self_antipart']:
+            ab_part['antiname'] = ab_part.get('name')+'~'
 
+            # Create the anti-part
+            anti_ab_part = DecayParticle(ab_part)
+            anti_ab_part['is_part'] = False
+        
         # Append ab_part into self['particles'] and abstract_particles_dict,
         self['particles'].append(ab_part)
         self['abstract_particles_dict'][self.get_particle_type(ab_part)].append(ab_part)
-        logger.info("Add Abstract Particle %s according to %s" %(ab_part.get('name'), part.get('name')))
+        logger.info("Add Abstract Particle %s according to %s" \
+                        %(ab_part.get('name'), part.get('name')))
 
 
         # Reset the particle dictionary
-        self.reset_dictionaries()
+        self.get('particle_dict')
+        self['particle_dict'][ab_part['pdg_code']] = ab_part
+        if not ab_part['self_antipart']:
+            self['particle_dict'][-ab_part['pdg_code']] = anti_ab_part
 
 
-    def add_ab_interaction(self, inter, force=False):
+    def add_ab_interaction(self, inter, force=False, color = None):
         """ Functions to set new interaction according to the given interaction
         particles and lorentz sturcture. This function will assign the correct
         serial number of new interaction, change the abstract_interactions.
@@ -4071,33 +4122,55 @@ class AbstractModel(base_objects.Model):
             sn = 0
 
 
-        ab_inter['particles'] = base_objects.ParticleList(\
-            [self.get_particle(pid) for pid in inter_type[1]])
-        ab_inter['color'] = inter['color']
-        ab_inter['lorentz'] = list(inter_type[0])
-        # couplings =G_____
-        #             | | |_> the serial number
-        #             | |_> the lorentz identier
-        #             |_> The serial number of the interaction type
-        ab_inter['couplings'] = 'G99101'
+        # Type_sn is the serial number of the type
+        if sn == 0:
+            type_sn = len(self['abstract_interactions_dict'].keys())
+        else:
+            type_sn = \
+                self['abstract_interactions_dict'][inter_type][0]['id']/1000
 
-        # id = __0__
-        #      |   |_> the serial number
-        #      | 
-        #      |_> The serial number of the interaction type
-        type_list = sorted(self['abstract_interactions_dict'].keys())
-        type_sn = type_list.index(inter_type)
+        # id = ___0__
+        #        |  |_> the serial number
+        #        | 
+        #        |_> The serial number of the interaction type
         ab_inter['id'] = 1000*type_sn + sn
 
+        # Get particle from the model.particle_dict
+        # to ensure that the particle is DecayParticle, not Particle
+        ab_inter['particles'] = DecayParticleList(\
+            [self.get_particle(pid) for pid in inter_type[0]])
+        ab_inter['lorentz'] = list(inter_type[1])
 
-        # Append ab_part into self['particles'] and abstract_particles_dict
+        # Retrieve the color information
+        if not color and sn == 0:
+            ab_inter['color'] = inter['color']
+        elif color:
+            ab_inter['color'] = color
+        else:
+            ab_inter['color'] = self['abstract_interactions_dict'][inter_type][0]['color']
+
+        # couplings = G_______
+        #              |  || |-> the serial number
+        #              |  ||-> the color identifier
+        #              |  |-> the lorentz identifier
+        #              |-> The serial number of the interaction type
+        ab_inter['couplings'] = {}
+        for i, colr in enumerate(ab_inter['color']):
+            for j, lorentz in enumerate(ab_inter['lorentz']):
+                ab_inter['couplings'][(i, j)] = 'G%03d%1d%1d%02d' \
+                    %(type_sn, i, j, sn)
+
+
+            
+        # Append ab_inter into self['interactions'] and 
+        # abstract_interactions_dict
         self['interactions'].append(ab_inter)
         self['abstract_interactions_dict'][inter_type].append(ab_inter)
 
         # Reset the dictionary
-        self.reset_dictionaries()
-
+        self['interaction_dict'][ab_inter['id']] = ab_inter
         
+
     def setup_particle(self, part, force=False):
         """Add real particle into AbstractModel, 
         convert into abstract particle."""
@@ -4127,14 +4200,16 @@ class AbstractModel(base_objects.Model):
 
         # Reset dictionaries in the model
         self.reset_dictionaries()
-
+        
 
     def setup_interactions(self, inter_list, force=False):
         """Add real interactions into AbstractModel, 
         convert into abstract interactions.
-        The lorentz structures keep to be the union of all correpsonding
+        The lorentz and color 
+        structures keep to be the union of all correpsonding
         real ones. 
-        Construct the quick reference dictionary in the end."""
+        Construct the quick reference dictionary,
+        and setup the coupling constants in the end."""
 
         # Check argument type
         if not force and not isinstance(inter_list, 
@@ -4166,73 +4241,111 @@ class AbstractModel(base_objects.Model):
 
             # Use the get_particlelist_type to find the particles type of this
             # interaction.
-            # Sort the particles to avoid ambiguity
+            # NOTE: particles do not sort,
+            #       ambiguity might happened!!
             abpart_types, sn = \
-                self.get_particlelist_type(sorted(inter['particles'], part_cmp))
+                self.get_particlelist_type(inter['particles'])
 
             # The key have to be sorted
-            new_key = (tuple(sorted(inter['lorentz'])), 
-                       tuple(sorted(abpart_types)))
+            new_key = [tuple(abpart_types),
+                       tuple(sorted(inter['lorentz'])),
+                       tuple(sorted([str(colorstring) \
+                                         for colorstring in inter['color']]))
+                       ]
+            color_list = inter['color']
             remove_list = []
-            new_loretz = True
+            is_new_key = True
 
             # Check if this type is the subset of known lorentz type,
             # or contain the known lorentz type.
             # If so, union the two and continue search.
+            # Do the same merge for color structure
             # Note: the abstract_interactions_dict always maintains to have
             # its keys that have no intersect lorentz with others.
-            for key in self['abstract_interactions_dict']:
+            for key, ab_interlist in self['abstract_interactions_dict'].items():
                 # Check lorentz if the particles are in the same types
-                if key[1] == new_key[1]:
-                    # Stop if the exact key is already in key_list
-                    if key[0] == new_key[0]:
-                        new_loretz = False
+                if key[0] == new_key[0]:
+                    # Stop if this lorentz and color are already in
+                    # included
+                    if set(key[1]).issuperset(new_key[1]) and \
+                            set(key[2]).issuperset(new_key[2]):
+                        is_new_key = False
                         break
-                    # Continue if no joit between the lorentz types.
-                    elif set(key[0]).isdisjoint(new_key[0]):
+                    # Continue if no joit between the lorentz types
+                    # and color strings either.
+                    elif set(key[1]).isdisjoint(new_key[1]) and \
+                            set(key[2]).isdisjoint(new_key[2]):
                         continue
-                    # Stop if there is already a superset
-                    elif set(key[0]).issuperset(new_key[0]):
-                        new_key = key
-                        new_loretz = False
-                        break
-                    # This key has a related lorentz structure. 
-                    # Create the union and prepare to remove this key
+                    # This key has a related lorentz structure or
+                    # color string.
+                    # Create the unions and prepare to remove this key
                     else:
-                        # Setup the new lorentz
-                        union_lorentz = tuple(sorted(set(key[0]).union(inter['lorentz'])))
-                        new_key = (union_lorentz, new_key[1])
+                        union_lorentz = \
+                            tuple(sorted(set(key[1]).union(inter['lorentz'])))
+                        union_color = \
+                            tuple(sorted(set(key[2]).union(new_key[2])))
+                        new_key[1] = union_lorentz
+                        new_key[2] = union_color
+
+                        # Remember to remove this key later
                         remove_list.append(key)
+
+                        # Collect the real color string
+                        color_list.extend([c for c in ab_interlist[0]['color']\
+                                               if not c in color_list])
 
             # Set temporate interaction_type_dict,
             # transform list into tuple in order to be eligible for key
-            self['interaction_type_dict'][inter['id']] = (tuple(new_key[0]),
-                                                          tuple(new_key[1]))
+            self['interaction_type_dict'][inter['id']] = tuple(new_key)
 
-            # If it is a new_loretz, add interaction
+            # If it is a new key, add interaction
             # in abstract_interactions_dict
-            if new_loretz:
+            if is_new_key:
                 
                 # Use add_ab_interaction to get the correct format,
                 # it will find type from interaction_type_dict
-                self.add_ab_interaction(inter)
+                self.add_ab_interaction(inter, color = color_list)
 
                 # Remove subset, if remove_list is not empty
                 for remove_key in remove_list:                    
                     del self['abstract_interactions_dict'][remove_key]
 
-                
-        # Update the quick reference dict
-        for inter_id, old_type in self['interaction_type_dict'].items():
-            for new_type in self['abstract_interactions_dict'].keys():
-                if new_type[1] == old_type[1] and \
-                        set(old_type[0]).issubset(new_type[0]):
-                    self['interaction_type_dict'][inter_id] = new_type
-                    break
 
+        # Update the quick reference dict
+        # and setup the interaction_coupling_dict
+        for inter in inter_list:
+            # Ignore interactions that cannot decay
+            if inter['id'] not in self['interaction_type_dict'].keys():
+                continue
+
+            # Update the type dict
+            old_type = self['interaction_type_dict'][inter['id']]
+            for new_type in self['abstract_interactions_dict'].keys():
+                if new_type[0] == old_type[0] and \
+                        (set(old_type[1]) < set(new_type[1]) or \
+                             set(old_type[2]) < set(new_type[2])):
+
+                        self['interaction_type_dict'][inter['id']] = new_type
+                        break
+
+            # Construct the coupling dict
+            self['interaction_coupling_dict'][inter['id']] = {}
+            for old_key, coup in inter['couplings'].items():
+                new_key = [0,0]
+                color = inter['color'][old_key[0]]
+                lorentz = inter['lorentz'][old_key[1]]
+
+                # Get new key for the coupling
+                inter_type = self['interaction_type_dict'][inter['id']]
+                new_key[0] = inter_type[2].index(str(color))
+                new_key[1] = inter_type[1].index(lorentz)
+                self['interaction_coupling_dict'][inter['id']][tuple(new_key)]\
+                    = coup
 
         # Reset dictionaries in the model
         self.reset_dictionaries()
+        self.get('particle_dict')
+        self.get('interaction_dict')
 
 
 #===============================================================================
