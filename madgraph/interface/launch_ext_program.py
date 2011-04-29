@@ -425,7 +425,7 @@ class Pythia8Launcher(ExtLauncher):
 class open_file(object):
     """ a convinient class to open a file """
     
-    html_viewer = None
+    web_browser = None
     eps_viewer = None
     text_editor = None 
     configured = False
@@ -500,7 +500,7 @@ class open_file(object):
                 if os.environ.has_key('EDITOR'):
                     cls.text_editor = os.environ['EDITOR']
                 else:
-                    cls.text_editor = find_valid(
+                    cls.text_editor = cls.find_valid(
                                         ['vi', 'emacs', 'vim', 'gedit', 'nano'],
                                          'text editor')
               
@@ -515,7 +515,7 @@ class open_file(object):
     def find_valid(possibility, program='program'):
         """find a valid shell program in the list"""
         
-        for p in possibillity:
+        for p in possibility:
             if misc.which(p):
                 logger.warning('Using default %s \"%s\". ' % (program, p) + \
                                       'Set web_browser in ./input/mg5_configuration.txt')
