@@ -1276,7 +1276,7 @@ class Test_Channel(unittest.TestCase):
         h_tt_bbww = decay_objects.Channel({'vertices': \
                                            base_objects.VertexList(\
                                            vertexlist[2:])})
-        print h_tt_bbww.nice_string()
+        #print h_tt_bbww.nice_string()
         # Test for on shell decay ( h > b b~ mu+ mu- vm vm~)
         self.assertTrue(self.h_tt_bbmmvv.get_onshell(self.my_testmodel))
 
@@ -2256,31 +2256,40 @@ class Test_AbstractModel(unittest.TestCase):
         """Test the set_new_particle. """
         
         ab_model = self.my_testmodel['ab_model']
+
+        # Set electron as Majorana fermion
+        majorana_e = self.my_testmodel.get_particle(11)
+        majorana_e['self_antipart'] = True
         # get_particles_type can be run only after generate the abstract_model
         self.my_testmodel.generate_abstract_model()
 
-        majorana_e = self.my_testmodel.get_particle(11)
-        majorana_e['self_antipart'] = True
-
+        # Test of particle input
         self.assertEqual((2, 3, False),
-                         ab_model.get_particle_type(self.my_testmodel.get_particle(6)))
+                         ab_model.get_particle_type(\
+                self.my_testmodel.get_particle(6)))
         self.assertEqual(9902300,
-                         ab_model.get_particle_type_code(self.my_testmodel.get_particle(6)))
-
+                         ab_model.get_particle_type(\
+                self.my_testmodel.get_particle(6), get_code=True))
+        # Test of pdg_code input
+        self.assertEqual((2, 3, False),
+                         ab_model.get_particle_type(6))
+        self.assertEqual(9902300,
+                         ab_model.get_particle_type(6, get_code=True))
+        # Test of get_particle_type_code
+        self.assertEqual(-9902300,
+                         ab_model.get_particle_type_code(self.my_testmodel.get_particle(-6)))
         self.assertEqual(9912100,
                          ab_model.get_particle_type_code(majorana_e))
 
-        input_list = [self.my_testmodel.get_particle(6),
-                      self.my_testmodel.get_particle(5),
-                      self.my_testmodel.get_particle(24),
-                      self.my_testmodel.get_particle(-6),
-                      majorana_e,
-                      self.my_testmodel.get_particle(22)]
+
+        input_list = [6,5,24,-6,11,22]
 
         goal_list_noignore = \
             [9902300, 9902301, 9903100, -9902300, 9912100, 9903101]
         goal_list_default = \
             [9902300, 9902301, 9903100, -9902302, 9912100, 9903101]
+        goal_list_nonzerostart = \
+            [9902302, 9902303, 9903100, -9902302, 9912101, 9903101]
 
         goal_serial_dict_noignore = {(2, 3, False): 2, 
                                      (3, 1, False): 2, 
@@ -2288,7 +2297,10 @@ class Test_AbstractModel(unittest.TestCase):
         goal_serial_dict_default = {(2, 3, False): 3, 
                                     (3, 1, False): 2, 
                                     (2, 1, True): 1}
-
+        goal_serial_dict_nonzerostart = {(2, 3, False): 4, 
+                                         (3, 1, False): 2, 
+                                         (2, 1, True): 2}
+        #print ab_model.get_particlelist_type.serial_number_dict
         self.assertEqual(ab_model.get_particlelist_type(input_list, False)[0],
                          goal_list_noignore)
         self.assertEqual(ab_model.get_particlelist_type(input_list)[0],
@@ -2298,11 +2310,30 @@ class Test_AbstractModel(unittest.TestCase):
         self.assertEqual(ab_model.get_particlelist_type(input_list)[1],
                          goal_serial_dict_default)
 
+        self.assertEqual(ab_model.get_particlelist_type(input_list, False,
+                                                        sn_dict={\
+                    (2, 3, False):2, (2, 1, True):1})[0],
+                         goal_list_nonzerostart)
+        self.assertEqual(ab_model.get_particlelist_type(input_list, False,
+                                                        sn_dict={\
+                    (2, 3, False):2, (2, 1, True):1})[1],
+                         goal_serial_dict_nonzerostart)
+
 
     def test_add_ab_particle(self):
         """Test the set_new_particle. """
         
         ab_model = self.my_testmodel['ab_model']
+        # Set electron to be Majorana
+        majorana_e = self.my_testmodel.get_particle(11)
+        majorana_e['self_antipart'] = True
+        # Add new particle
+        newpart = decay_objects.DecayParticle({'pdg_code': 999,
+                                               'mass':'ZERO',
+                                               'spin':4, 'color':6, 
+                                               'self_antipart': True})
+        self.my_testmodel['particles'].append(newpart)
+        self.my_testmodel.reset_dictionaries()
         self.my_testmodel.generate_abstract_model()
 
         # Test for exceptions
@@ -2311,18 +2342,14 @@ class Test_AbstractModel(unittest.TestCase):
                           'NoneParticle')
 
         # Test get_particle_type
-        self.assertEqual(ab_model.get_particle_type(\
-                self.my_testmodel.get_particle(22)),
+        self.assertEqual(ab_model.get_particle_type(22),
                          (3,1, False))
-        majorana_e = self.my_testmodel.get_particle(11)
-        majorana_e['self_antipart'] = True
-        self.assertEqual(ab_model.get_particle_type(\
-                self.my_testmodel.get_particle(11)),
+        self.assertEqual(ab_model.get_particle_type(11),
                          (2,1, True))
 
 
         # Test for setting existing particle
-        ab_model.add_ab_particle(self.my_testmodel.get_particle(6))
+        ab_model.add_ab_particle(-6)
         # Check if new particle is in paticles, abstract_particles_dict,
         # and particle_dict of Model
         self.assertEqual(len(ab_model['abstract_particles_dict'][(2,3,False)]),
@@ -2340,21 +2367,19 @@ class Test_AbstractModel(unittest.TestCase):
         self.assertEqual(newpart.get('pdg_code'), 9902302)
 
         # Test for setting new particle
-        newpart = base_objects.Particle({'spin':4, 'color':6, 
-                                         'self_antipart': True})
-        ab_model.add_ab_particle(newpart)
+        ab_model.add_ab_particle(999)
 
         # Check if new particle is in paticles and abstract_particles_dict
         self.assertTrue((4,6, True) in \
                             ab_model['abstract_particles_dict'].keys())
-        self.assertTrue(ab_model.get_particle(9914600))
+        self.assertTrue(ab_model.get_particle(9914601))
 
         # Check properties
         newpart = ab_model['abstract_particles_dict'][(4,6, True)][-1]
-        self.assertEqual(newpart.get('name'), 'P6_00')
+        self.assertEqual(newpart.get('name'), 'P6_01')
         self.assertEqual(newpart.get('antiname'), 'none')
-        self.assertEqual(newpart.get('mass'), 'MSP6_00')
-        self.assertEqual(newpart.get('pdg_code'), 9914600)
+        self.assertEqual(newpart.get('mass'), 'MSP6_01')
+        self.assertEqual(newpart.get('pdg_code'), 9914601)
 
     def test_setup_particles(self):
         """ Test the add_particles from the generate_abstract_model."""
@@ -2422,7 +2447,7 @@ class Test_AbstractModel(unittest.TestCase):
             # Test the particlelist type
             # Note: the particlelist type in inter_type has transformed into
             # tuple
-            parttype, sndict =ab_model.get_particlelist_type(inter['particles'])
+            parttype, sndict =ab_model.get_particlelist_type([p.get_pdg_code() for p in inter['particles']])
             self.assertEqual(set(inter_type[0]), set(parttype))
 
             # Test the lorentz type is the superset of real lorentz
@@ -2489,10 +2514,10 @@ class Test_AbstractModel(unittest.TestCase):
 
         self.assertRaises(decay_objects.AbstractModel.PhysicsObjectError,
                           ab_model.get_interaction_type,
-                          I_rad)
+                          I_rad.get('id'))
         self.assertRaises(decay_objects.AbstractModel.PhysicsObjectError,
                           ab_model.get_interaction_type,
-                          I_hhh)
+                          I_hhh.get('id'))
 
 
     def test_add_ab_interaction(self):
@@ -2513,8 +2538,8 @@ class Test_AbstractModel(unittest.TestCase):
                 I_wtb = inter
 
         #print I_wtb
-        ab_model.add_ab_interaction(I_wtb)
-        inter_type = ab_model.get_interaction_type(I_wtb)
+        ab_model.add_ab_interaction(I_wtb.get('id'))
+        inter_type = ab_model.get_interaction_type(I_wtb.get('id'))
         # The real inter_type is strictly sorted tuple
         inter_type = (inter_type[0], inter_type[1], inter_type[2])
 
@@ -2530,9 +2555,10 @@ class Test_AbstractModel(unittest.TestCase):
         self.assertEqual(new_inter.get('id') % 10, 1)
         self.assertEqual(new_inter.get('color'), I_wtb['color'])
         self.assertEqual(new_inter.get('lorentz'), ['FFV2', 'FFV3', 'FFV5'])
-        self.assertEqual(new_inter.get('couplings'), {(0,0):'G0070001',
-                                                      (0,1):'G0070101',
-                                                      (0,2):'G0070201'})
+        self.assertEqual(new_inter.get('couplings'), 
+                         {(0,0):'G%03d0001' %type_sn,
+                          (0,1):'G%03d0101' %type_sn,
+                          (0,2):'G%03d0201' %type_sn})
 
 
 
