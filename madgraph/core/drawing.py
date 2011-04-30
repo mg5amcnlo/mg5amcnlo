@@ -845,7 +845,7 @@ class FeynmanDiagram:
         #since in this case either the last particles will be a T-channel 
         #and will be resolve latter (so we don't care) or we have to flip
         #particle to antiparticle.
-        if line.number == 1:
+        if line.number == 1 == vertex.get('legs')[0].get('number'):
             line.inverse_part_antipart()
 
 

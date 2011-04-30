@@ -441,7 +441,6 @@ class open_file(object):
             extension = filename.rsplit('.',1)[1]
         except IndexError:
             extension = ''   
-        print extension
     
     
         # dispatch method
@@ -518,7 +517,7 @@ class open_file(object):
         for p in possibility:
             if misc.which(p):
                 logger.warning('Using default %s \"%s\". ' % (program, p) + \
-                                      'Set web_browser in ./input/mg5_configuration.txt')
+                             'Set another one in ./input/mg5_configuration.txt')
                 return p
         
         logger.warning('No valid %s found. ' % program + \

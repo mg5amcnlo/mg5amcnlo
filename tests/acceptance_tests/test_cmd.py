@@ -25,6 +25,7 @@ logger = logging.getLogger('test_cmd')
 import tests.unit_tests.iolibs.test_file_writers as test_file_writers
 
 import madgraph.interface.cmd_interface as Cmd
+import madgraph.interface.launch_ext_program as launch_ext
 _file_path = os.path.split(os.path.dirname(os.path.realpath(__file__)))[0]
 _pickle_path =os.path.join(_file_path, 'input_files')
 
@@ -103,20 +104,26 @@ class TestCmdShell1(unittest.TestCase):
         """check that configuration file is at default value"""
         
         config = self.cmd.set_configuration(MG5DIR+'/input/mg5_configuration.txt')
-        if sys.platform == 'darwin':
-            expected = {'pythia8_path': './pythia8',
-                        'symmetry_max_time': '600',
-                        'web_browser': None,
-                        'text_editor': 'vi',
-                        'eps_viewer': None}
-        else:
-            expected = {'pythia8_path': './pythia8',
-                        'symmetry_max_time': '600',
-                        'web_browser': 'firefox',
-                        'text_editor': 'vi',
-                        'eps_viewer': 'gv'}            
-
+        expected = {'pythia8_path': './pythia8',
+                    'symmetry_max_time': '600',
+                    'web_browser': None,
+                    'text_editor': None,
+                    'eps_viewer': None}
+        
         self.assertEqual(config, expected)
+        
+        text_editor = 'vi'
+        if os.environ['EDITOR']:
+            text_editor = os.environ['EDITOR']
+        
+        if sys.platform == 'darwin':
+            self.assertEqual(launch_ext.open_file.web_browser, None)
+            self.assertEqual(launch_ext.open_file.text_editor, text_editor)
+            self.assertEqual(launch_ext.open_file.web_browser, None)
+        else:
+            self.assertEqual(launch_ext.open_file.web_browser, 'firefox')
+            self.assertEqual(launch_ext.open_file.text_editor, text_editor)
+            self.assertEqual(launch_ext.open_file.web_browser, 'gv')            
 
 class TestCmdShell2(unittest.TestCase,
                     test_file_writers.CheckFileCreate):

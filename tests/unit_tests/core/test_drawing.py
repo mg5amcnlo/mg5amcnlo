@@ -863,9 +863,8 @@ class TestFeynmanDiagram(unittest.TestCase):
         diagram.load_diagram()
         diagram.define_level()
         diagram.find_initial_vertex_position()
-        tag = [(1, 131), (131, 3), (131, 251), (2, 242), (242, 4), (262, 242), (251, 5),
-             (262, 6), (251, 262)]
-
+        tag = [(1, 131), (131, 3), (131, 151), (2, 242), (242, 4), (162, 242), (151, 5),
+             (151, 162), (162, 6)]
         for i, line in enumerate(diagram.lineList):
             self.assertEquals(self.vertex_identification(line.start), \
                                                                    tag[i][0])
@@ -1023,7 +1022,6 @@ class TestFeynmanDiagram(unittest.TestCase):
         diagram.define_level()
         level_solution = [1, 2, 0, 0, 3, 3]
         found = [v.level for v in diagram.vertexList]
-        print [v.get_uid() for v in diagram.vertexList ]
         self.assertEqual(level_solution, found)
 
         diagram.find_initial_vertex_position()
