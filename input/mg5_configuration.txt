@@ -26,7 +26,7 @@ pythia8_path = ./pythia8
 # Prefered Text Editor
 #  Default: use the shell default Editor
 #           or try to find one available on the system
-#  Be carfull: Only shell based editor are allowed
+#  Be careful: Only shell based editor are allowed
 text_editor = None
 
 # Prefered WebBrower
@@ -36,8 +36,3 @@ web_browser = None
 # Prefered PS viewer
 # If None: try to find one available on the system
 eps_viewer = None
-
-# symmetry_max_time
-# Set maximum time for trying to find symmetric diagrams for a single
-# matrix element. 0 means no timeout.
-symmetry_max_time= 600

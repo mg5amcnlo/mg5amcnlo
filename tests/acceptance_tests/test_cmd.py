@@ -105,7 +105,6 @@ class TestCmdShell1(unittest.TestCase):
         
         config = self.cmd.set_configuration(MG5DIR+'/input/mg5_configuration.txt')
         expected = {'pythia8_path': './pythia8',
-                    'symmetry_max_time': '600',
                     'web_browser': None,
                     'text_editor': None,
                     'eps_viewer': None}
