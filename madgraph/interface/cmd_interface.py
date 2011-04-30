@@ -1522,8 +1522,7 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
             cpu_time1 = time.time()
 
             # Generate processes
-            collect_mirror_procs = \
-                                 self._options['group_subprocesses']
+            collect_mirror_procs = self._options['group_subprocesses']
             ignore_six_quark_processes = \
                            self._options['ignore_six_quark_processes'] if \
                            "ignore_six_quark_processes" in self._options \
@@ -2472,61 +2471,17 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
                     else:
                         pythia8_dir = None
                 self.pythia8_path = pythia8_dir
-            elif key == 'text_editor':
-                # Treat text editor -> overwrites madgraph value
-                if self.configuration[key] and not misc.which(self.configuration[key]):
-                    logger.warning('Specified text editor %s not valid.' % \
-                                   self.configuration[key])
-                    self.configuration[key] = None
-                if self.configuration[key]:
-                    # All is good
-                    pass
-                elif os.environ.has_key('EDITOR'):
-                    self.configuration[key] = os.environ['EDITOR']
-                else:
-                    prog = ['vi', 'emacs', 'vim', 'gedit', 'nano']
-                    for p in prog:
-                        if misc.which(p):
-                            self.configuration[key] = p
-                            logger.warning(('Using default text editor \"%s\". ' % p) + \
-                                       'Set text_editor in ./input/mg5_configuration.txt')
-                            break
-                if not self.configuration[key]:
-                    logger.warning('No valid text editor found. ' + \
-                                   'Please set in ./input/mg5_configuration.txt') 
-            elif key == 'eps_viewer':
-                if self.configuration[key]:
-                    continue
-                prog = ['gv', 'ggv', 'evince']
-                for p in prog:
-                    if misc.which(p):
-                        self.configuration[key] = p
-                        logger.warning(('Using default eps viewer \"%s\". ' % p) + \
-                                    'Set eps_viewer in ./input/mg5_configuration.txt')
-                        break
-                if not self.configuration[key] and sys.platform != 'darwin':
-                    logger.warning('No valid eps viewer found. ' + \
-                                   'Please set in ./input/mg5_configuration.txt') 
-            elif key == 'web_browser':
-                if self.configuration[key]:
-                    continue
-                prog = ['firefox', 'chrome', 'safari','opera']
-                for p in prog:
-                    if misc.which(p):
-                        self.configuration[key] = p
-                        logger.warning(('Using default web browser \"%s\". ' % p) + \
-                                      'Set web_browser in ./input/mg5_configuration.txt')
-                        break
-                if not self.configuration[key] and sys.platform != 'darwin':
-                    logger.warning('No valid web browser found. ' + \
-                                   'Please set in ./input/mg5_configuration.txt') 
-            else:
+  
+            elif key not in ['text_editor','eps_viewer','web_browser']:
                 # Default: try to set parameter
                 try:
                     self.do_set("%s %s" % (key, self.configuration[key]))
                 except MadGraph5Error:
                     logger.warning("Option %s from config file not understood" \
                                    % key)
+        
+        # Configure the way to open a file:
+        launch_ext.open_file.configure(self.configuration)
 
           
         return self.configuration
@@ -2562,22 +2517,18 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
         
         if args[0].startswith('standalone'):
             ext_program = launch_ext.SALauncher(args[1], self.timeout,
-                                                configuration = self.configuration,
                                                 **options)
         elif args[0] == 'madevent':
             #check if this is a cross-section
             if len(self._generate_info.split('>')[0].strip().split())>1:
                 ext_program = launch_ext.MELauncher(args[1], self.timeout,
-                                                    configuration = self.configuration,
                                                     **options)
             else:
                 # This is a width computation
                 ext_program = launch_ext.MELauncher(args[1], self.timeout, unit='GeV',
-                                                    configuration = self.configuration,
                                                     **options)
         elif args[0] == 'pythia8':
             ext_program = launch_ext.Pythia8Launcher(args[1], self.timeout,
-                                                configuration = self.configuration,
                                                 **options)
         else:
             raise self.InvalidCmd , '%s cannot be run from MG5 interface' % args[0]
@@ -2722,7 +2673,7 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
         self.check_open(args)
         file_path = args[0]
         
-        launch_ext.open_file(file_path, self.configuration)
+        launch_ext.open_file(file_path)
                  
     def do_output(self, line):
         """Initialize a new Template or reinitialize one"""

@@ -1165,8 +1165,8 @@ class HelasMatrixElementTest(unittest.TestCase):
         myamplitude = diagram_generation.Amplitude({'process': myproc})
 
         goal = "2 diagrams:\n"
-        goal = goal + "1  ((1(22),2(-11)>1(-11),id:7),(3(22),4(11)>3(11),id:7),(1(-11),3(11),id:0)) (QED=2,QCD=0)\n"
-        goal = goal + "2  ((1(22),4(11)>1(11),id:7),(2(-11),3(22)>2(-11),id:7),(1(11),2(-11),id:0)) (QED=2,QCD=0)"
+        goal = goal + "1  ((1(22),2(-11)>1(-11),id:7),(3(22),4(11),1(-11),id:7)) (QED=2,QCD=0)\n"
+        goal = goal + "2  ((1(22),4(11)>1(11),id:7),(2(-11),3(22),1(11),id:7)) (QED=2,QCD=0)"
 
         self.assertEqual(goal,
                          myamplitude.get('diagrams').nice_string())
@@ -1260,8 +1260,8 @@ class HelasMatrixElementTest(unittest.TestCase):
         myamplitude = diagram_generation.Amplitude({'process': myproc})
 
         goal = "2 diagrams:\n"
-        goal = goal + "1  ((1(-11),2(22)>1(-11),id:7),(3(22),4(11)>3(11),id:7),(1(-11),3(11),id:0)) (QED=2,QCD=0)\n"
-        goal = goal + "2  ((1(-11),3(22)>1(-11),id:7),(2(22),4(11)>2(11),id:7),(1(-11),2(11),id:0)) (QED=2,QCD=0)"
+        goal = goal + "1  ((1(-11),2(22)>1(-11),id:7),(3(22),4(11),1(-11),id:7)) (QED=2,QCD=0)\n"
+        goal = goal + "2  ((1(-11),3(22)>1(-11),id:7),(2(22),4(11),1(-11),id:7)) (QED=2,QCD=0)"
 
         self.assertEqual(goal,
                          myamplitude.get('diagrams').nice_string())
@@ -2914,7 +2914,7 @@ class HelasMultiProcessTest(unittest.TestCase):
                                          'is_decay_chain': True})
 
         me3 =  helas_objects.HelasMatrixElement(\
-            diagram_generation.Amplitude(mydecay3))
+            diagram_generation.Amplitude(mydecay3), gen_color = False)
         
         #print me3.get('processes')[0].nice_string()
         #print me3.get_base_amplitude().get('diagrams').nice_string()
@@ -2993,7 +2993,7 @@ class HelasMultiProcessTest(unittest.TestCase):
         myamplitude1.generate_diagrams()
 
         mymatrixelement1 = helas_objects.HelasMatrixElement(\
-            myamplitude1)
+            myamplitude1, gen_color = False)
 
         myleglist = base_objects.LegList()
 
@@ -3017,7 +3017,7 @@ class HelasMultiProcessTest(unittest.TestCase):
         myamplitude2.generate_diagrams()
 
         mymatrixelement2 = helas_objects.HelasMatrixElement(\
-            myamplitude2)
+            myamplitude2, gen_color = False)
 
         self.assert_(helas_objects.HelasMatrixElement.\
                      check_equal_decay_processes(\

@@ -223,12 +223,13 @@ C $E$ output_file2 $E$ !this is tag for automatic modification by MW
       enddo
       close(15)
       close(sfnum)
-      return
+      goto 1000
  98   write(*,*) 'Error writing events.dat' 
-      return
+      goto 1000
  99   write(*,*) 'Error writing unweighted_events.dat' 
-      return
+      goto 1000
  999  write(*,*) 'Error opening scratch file'
+ 1000 continue
       end
 
 
