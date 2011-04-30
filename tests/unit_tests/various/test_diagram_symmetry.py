@@ -226,11 +226,11 @@ class TestDiagramTag(unittest.TestCase):
                 ind = tags.index(tag)
             except:
                 diagram_classes.append([idiag + 1])
-                permutations.append([tag.get_permutation()])
+                permutations.append([tag.get_external_numbers()])
                 tags.append(tag)
             else:
                 diagram_classes[ind].append(idiag + 1)
-                permutations[ind].append(tag.get_permutation())
+                permutations[ind].append(tag.get_external_numbers())
 
         permutations = [[diagram_symmetry.DiagramTag.reorder_permutation(p, perms[0])\
                          for p in perms] for perms in permutations]        
@@ -287,11 +287,11 @@ class TestDiagramTag(unittest.TestCase):
                 ind = tags.index(tag)
             except:
                 diagram_classes.append([idiag + 1])
-                permutations.append([tag.get_permutation()])
+                permutations.append([tag.get_external_numbers()])
                 tags.append(tag)
             else:
                 diagram_classes[ind].append(idiag + 1)
-                permutations[ind].append(tag.get_permutation())
+                permutations[ind].append(tag.get_external_numbers())
 
         permutations = [[diagram_symmetry.DiagramTag.reorder_permutation(p, perms[0])\
                          for p in perms] for perms in permutations]        
