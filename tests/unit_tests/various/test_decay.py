@@ -2215,8 +2215,26 @@ class Test_DecayAmplitude(unittest.TestCase):
         #print self.my_testmodel['parameters'], '\n',\
         #    self.my_testmodel['functions']
 
+    def test_get_amplitude_givenfinal(self):
+        """ Test the get_amplitude function of DecayAmplitudeList. """
+
+        # Setup higgs and lower its mass
+        higgs = self.my_testmodel.get_particle(25)
+        decay_objects.MH = 50
+
+        # Set channels and amplitude
+        higgs.find_channels(4, self.my_testmodel)
+        amp_list = higgs.get_amplitudes(4)
+
+        input_pids = [l.get('id') for l in amp_list[0]['process']['legs']\
+                          if l.get('state')]
+        self.assertEqual(amp_list.get_amplitude(input_pids),
+                         amp_list[0])
+        self.assertFalse(amp_list.get_amplitude([-11, 11, 6, -6]))
+
+
 #===============================================================================
-# Test_DecayAmplitude
+# Test_AbstractModel
 #===============================================================================
 class Test_AbstractModel(unittest.TestCase):
     """ Test for the AbstractModel object."""
@@ -2238,7 +2256,7 @@ class Test_AbstractModel(unittest.TestCase):
         interactions = self.my_testmodel.get('interactions')
         inter_list = copy.copy(interactions)
         # Pids that will be removed
-        no_want_pid = [1, 2, 3, 4, 15, 16, 21]
+        no_want_pid = [1, 2, 3, 4, 21]
         for pid in no_want_pid:
             particles.remove(self.my_testmodel.get_particle(pid))
 
@@ -2292,13 +2310,13 @@ class Test_AbstractModel(unittest.TestCase):
             [9902302, 9902303, 9903100, -9902302, 9912101, 9903101]
 
         goal_serial_dict_noignore = {(2, 3, False): 2, 
-                                     (3, 1, False): 2, 
+                                     (3, 1, True): 2, 
                                      (2, 1, True): 1}
         goal_serial_dict_default = {(2, 3, False): 3, 
-                                    (3, 1, False): 2, 
+                                    (3, 1, True): 2, 
                                     (2, 1, True): 1}
         goal_serial_dict_nonzerostart = {(2, 3, False): 4, 
-                                         (3, 1, False): 2, 
+                                         (3, 1, True): 2, 
                                          (2, 1, True): 2}
         #print ab_model.get_particlelist_type.serial_number_dict
         self.assertEqual(ab_model.get_particlelist_type(input_list, False)[0],
@@ -2343,7 +2361,7 @@ class Test_AbstractModel(unittest.TestCase):
 
         # Test get_particle_type
         self.assertEqual(ab_model.get_particle_type(22),
-                         (3,1, False))
+                         (3,1, True))
         self.assertEqual(ab_model.get_particle_type(11),
                          (2,1, True))
 
@@ -2393,18 +2411,18 @@ class Test_AbstractModel(unittest.TestCase):
 
         ab_model = self.my_testmodel_new['ab_model']
         ab_model.setup_particles(self.my_testmodel_new['particles'])
-        goal_abpart_keys = set([(1,1,False), (2,1,False), (2,3,False), 
-                                (3,1,False), (3,8,False)])
-        goal_abpart_prop = {(1,1,False):('S1_00', 'S1_00~', 
-                                         'MNS1_00', 9901100),
+        goal_abpart_keys = set([(1,1,True), (2,1,False), (2,3,False), 
+                                (3,1,True), (3,8,True)])
+        goal_abpart_prop = {(1,1,True):('S1_00', 'none', 
+                                         'MSS1_00', 9901100),
                             (2,1,False):('F1_00', 'F1_00~', 
                                          'MNF1_00', 9902100),
                             (2,3,False):('F3_00', 'F3_00~', 
                                          'MNF3_00', 9902300),
-                            (3,1,False):('V1_00', 'V1_00~',
-                                         'MNV1_00', 9903100),
-                            (3,8,False):('V8_00', 'V8_00~', 
-                                         'MNV8_00', 9903800)}
+                            (3,1,True):('V1_00', 'none',
+                                         'MSV1_00', 9903100),
+                            (3,8,True):('V8_00', 'none', 
+                                         'MSV8_00', 9903800)}
 
         # Check keys in abstract_particles_dict
         self.assertEqual(set(ab_model.get('abstract_particles_dict').keys()),
@@ -2434,6 +2452,7 @@ class Test_AbstractModel(unittest.TestCase):
                                              force=True)
         param_path = os.path.join(_file_path,'../input_files/param_card_mssm.dat')
         normal_sm.read_param_card(param_path)
+        #print normal_sm.get_interaction(59)
         normal_sm.generate_abstract_model()
         ab_model = normal_sm['ab_model']
 
@@ -2462,26 +2481,36 @@ class Test_AbstractModel(unittest.TestCase):
                                 ab_model['abstract_interactions_dict'].keys())
 
             # Test if the coupling_dict has been established
-            for key, coup in \
+            for ab_key, real_coup in \
                     ab_model['interaction_coupling_dict'][inter['id']].items():
 
                 ab_inter = ab_model['abstract_interactions_dict'][inter_type][0]
-                lorentz = ab_inter['lorentz'][key[1]]
-                color = ab_inter['color'][key[0]]
-
-                self.assertEqual(inter['couplings'][(\
-                            inter['color'].index(color),
-                            inter['lorentz'].index(lorentz))],
-                                 coup)
+                lorentz = ab_inter['lorentz'][ab_key[1]]
+                color = ab_inter['color'][ab_key[0]]
+                try:
+                    real_key = [0,0]
+                    real_key[0] = inter['color'].index(color)
+                    real_key[1] = inter['lorentz'].index(lorentz)
+                    self.assertEqual(inter['couplings'][tuple(real_key)],
+                                     real_coup)
+                except (ValueError, KeyError):
+                    self.assertEqual(real_coup, 'ZERO')
 
             # Test the interaction_dict
             ab_inter = ab_model['abstract_interactions_dict'][inter_type][0]
             self.assertTrue(ab_model.get_interaction(ab_inter['id']))
 
+        # Test for non-repeated interaction id
+        id_list = [i['id'] for i in ab_model['interactions']]
+        for ab_inter in ab_model['interactions']:
+            self.assertEqual(id_list.count(ab_inter['id']), 1)
 
         # Test if the lorentz and color types have no intersection
         # if the particles type are the same            
-        keylist = sorted(ab_model['abstract_interactions_dict'].keys())
+        def lorentzcmp(x,y):
+            return cmp(x[1],y[1])
+        keylist = sorted(ab_model['abstract_interactions_dict'].keys(), lorentzcmp)
+        #print normal_sm.get_particle(1000021)['self_antipart']
         print "Interaction type (%d):" % len(keylist)
         for k in keylist:
             print k
@@ -2560,6 +2589,386 @@ class Test_AbstractModel(unittest.TestCase):
                           (0,1):'G%03d0101' %type_sn,
                           (0,2):'G%03d0201' %type_sn})
 
+
+    def test_get_interactions_type(self):
+        """Test the set_new_particle. """
+        
+        ab_model = self.my_testmodel['ab_model']
+        self.my_testmodel.generate_abstract_model()
+
+        higgs = self.my_testmodel.get_particle(25)
+        tau = self.my_testmodel.get_particle(15)
+
+        higgs.find_channels(3, self.my_testmodel)
+        tau.find_channels(3, self.my_testmodel)
+        #for c in higgs.get_channels(3, True):
+        #    print c.nice_string()
+        #for c in tau.get_channels(3, True):
+        #    print c.nice_string()
+
+        h_zz_zbb = higgs.get_channels(3, True)[0]
+        h_zz_zee = higgs.get_channels(3, True)[1]
+        h_zz_zmm = higgs.get_channels(3, True)[4]
+        #print h_zz_zbb.nice_string(), h_zz_zee.nice_string()
+        tau_wvt_vteve = tau.get_channels(3, True)[0]
+        tau_wvt_vtmvm = tau.get_channels(3, True)[1]
+        #print tau_wvt_vteve.nice_string(), tau_wvt_vtmvm.nice_string()
+
+
+        # Test get_interactionlist_type
+        input_list_1 = [v.get('id') for v in h_zz_zbb['vertices']]
+        input_list_3 = [v.get('id') for v in tau_wvt_vteve['vertices']]
+        input_list_3.append(input_list_3[0])
+        FFV_type = ab_model['interaction_type_dict'][abs(input_list_3[0])]
+        FFV_type_sn = \
+            int(ab_model['abstract_interactions_dict'][FFV_type][0]['id']/1000)
+
+        goal_list3_default = \
+            [FFV_type_sn*1000, FFV_type_sn*1000+1, 0, FFV_type_sn*1000]
+        goal_list3_ignoredup = \
+            [FFV_type_sn*1000, FFV_type_sn*1000+1, 0, FFV_type_sn*1000+2]
+        goal_list_nonzerostart = \
+            [FFV_type_sn*1000+3, FFV_type_sn*1000+4, 0, FFV_type_sn*1000+3]
+
+        goal_serial_dict3_default = {FFV_type: 2}
+        goal_serial_dict3_ignoredup = {FFV_type: 3}
+        goal_serial_dict_nonzerostart = {FFV_type: 5} 
+
+        #print ab_model.get_particlelist_type.serial_number_dict
+        self.assertEqual(ab_model.get_interactionlist_type(input_list_3)[0],
+                         goal_list3_default)
+        self.assertEqual(ab_model.get_interactionlist_type(input_list_3, 
+                                                           True)[0],
+                         goal_list3_ignoredup)
+        self.assertEqual(ab_model.get_interactionlist_type(input_list_3)[1],
+                         goal_serial_dict3_default)
+        self.assertEqual(ab_model.get_interactionlist_type(input_list_3,
+                                                           True)[1],
+                         goal_serial_dict3_ignoredup)
+        self.assertEqual(ab_model.get_interactionlist_type(input_list_3,
+                                                           sn_dict=goal_serial_dict3_ignoredup)[0],
+                         goal_list_nonzerostart)
+        self.assertEqual(ab_model.get_interactionlist_type(input_list_3,
+                                                           sn_dict=goal_serial_dict3_ignoredup)[1],
+                         goal_serial_dict_nonzerostart)
+
+
+
+    def test_help_generate_ab_amplitude(self):
+        """ Test helper functions for generate abstract amplitude,
+        including compare_diagrams, add_ab_diagrams, 
+        generate_variables_dicts, and set_final_legs_dict."""
+
+        ab_model = self.my_testmodel['ab_model']
+        self.my_testmodel.generate_abstract_model()
+
+        # Setup higgs, lower the mass,  and find amplitudes
+        #decay_objects.MH = 50
+
+        higgs = self.my_testmodel.get_particle(25)
+        tau = self.my_testmodel.get_particle(15)
+        zboson = self.my_testmodel.get_particle(23)
+
+        higgs.find_channels(3, self.my_testmodel)
+        tau.find_channels(3, self.my_testmodel)
+        #for c in higgs.get_channels(3, True):
+        #    print c.nice_string()
+        #for c in tau.get_channels(3, True):
+        #    print c.nice_string()
+
+        h_zz_zbb = higgs.get_channels(3, True)[0]
+        h_zz_zee = higgs.get_channels(3, True)[4]
+        h_ww_weve = higgs.get_channels(3, True)[2]
+        h_zz_zmm = higgs.get_channels(3, True)[5]
+        #print h_zz_zbb.nice_string(), h_zz_zee.nice_string(), h_ww_weve.nice_string()
+        tau_wvt_vteve = tau.get_channels(3, True)[0]
+        tau_wvt_vtmvm = tau.get_channels(3, True)[1]
+        #print tau_wvt_vteve.nice_string(), tau_wvt_vtmvm.nice_string()
+
+
+        #----------------------
+        # Test add abstract diagram
+        #----------------------
+        ab_amp = decay_objects.DecayAmplitude()
+        # Set the initial dict, including the final and initial legs
+        ab_amp['part_sn_dict'] = {(1,1,True): 1, (2,3,False):2, (3,1,True):1}
+        ab_amp['ab2real_dicts'].append(decay_objects.Ab2RealDict())
+
+        ab_model.add_ab_diagram(ab_amp, h_zz_zbb)
+        ab_dia = ab_amp['diagrams'][0]
+        #print ab_dia.nice_string(), h_zz_zbb.nice_string()
+        goal_pids = [-9902300, 9902301, 9903101, 9903101, 9903100, 
+                      9901100, 9901100, 9901100]
+        result_pids = []
+        [result_pids.extend([l.get('id') for l in v.get('legs')]) for v in ab_dia['vertices']]
+        self.assertEqual(result_pids, goal_pids)
+        real_iid_1 = zboson['decay_vertexlist'][(2, True)][0]['id']
+        real_iid_2 = higgs['decay_vertexlist'][(2, False)][1]['id']
+        goal_interids = [ab_model['abstract_interactions_dict'][\
+                ab_model.get_interaction_type(real_iid_1)][0]['id'],
+                         ab_model['abstract_interactions_dict'][\
+                ab_model.get_interaction_type(real_iid_2)][0]['id'],
+                         0]
+        self.assertEqual([v.get('id') for v in ab_dia['vertices']], 
+                          goal_interids)
+        self.assertEqual(ab_amp['diagrams'][-1]['abstract_type'],
+                         [goal_interids, [9903100], [-9902300, 9902301, 9903100]])
+        # Add the second diagram
+        # Abstract type should remain the same
+        ab_model.add_ab_diagram(ab_amp, h_zz_zbb)
+        self.assertEqual(ab_amp['diagrams'][-1]['abstract_type'], 
+                         ab_amp['diagrams'][-2]['abstract_type'])
+
+
+        #----------------------
+        # Test compare_diagrams
+        #----------------------
+        ab_amp['ab2real_dicts'][-1].set_final_legs_dict(ab_dia, h_zz_zbb)
+        self.assertTrue(ab_model.compare_diagrams(ab_dia, h_zz_zbb,
+                                                  ab_amp['ab2real_dicts'][-1]))
+        self.assertTrue(ab_amp['ab2real_dicts'][-1]['final_legs_dict'],
+                        {-5:-9902300, 5:9902301, 23:9903100})
+        # h_zz_zmm != h_zz_zbb
+        # no final_legs_dict available
+        self.assertFalse(ab_model.compare_diagrams(ab_dia, h_zz_zmm,
+                                                   ab_amp['ab2real_dicts'][-1]))
+
+        # Construct abstract diagram for h_zz_zmm
+        ab_amp_2 = decay_objects.DecayAmplitude()
+        ab_amp_2['part_sn_dict'] = {(1,1,True): 1, (2,1,False):2, (3,1,True):1}
+        ab_amp_2['ab2real_dicts'].append(decay_objects.Ab2RealDict())
+        ab_model.add_ab_diagram(ab_amp_2, h_zz_zmm)
+        ab_dia_2 = ab_amp_2['diagrams'][0]
+        # h_zz_zmm == h_zz_zee
+        ab_amp_2['ab2real_dicts'][-1].set_final_legs_dict(ab_dia_2, h_zz_zmm)
+        self.assertTrue(ab_model.compare_diagrams(ab_dia_2, h_zz_zmm,
+                                                  ab_amp_2['ab2real_dicts'][-1]))
+        # Same final state, but not consistent as final_legs_dict
+        ab_amp_2['ab2real_dicts'].append(decay_objects.Ab2RealDict())
+        ab_amp_2['ab2real_dicts'][-1]['final_legs_dict'] = \
+            {-11: -9902101, 11:9902100, 23:9903100}
+        self.assertFalse(ab_model.compare_diagrams(ab_dia_2, h_zz_zee,
+                                                   ab_amp_2['ab2real_dicts'][-1]))
+        # f f~ = f'~ f', the comparison used abs(pid)
+        ab_amp_2['ab2real_dicts'].append(decay_objects.Ab2RealDict())
+        self.assertTrue(ab_model.compare_diagrams(ab_dia_2, h_ww_weve,
+                                                  ab_amp_2['ab2real_dicts'][-1]))
+        self.assertFalse(ab_model.compare_diagrams(ab_dia_2, h_zz_zbb,
+                                                   ab_amp_2['ab2real_dicts'][-1]))
+
+
+
+    def test_help_generate_ab_amplitude_2(self):
+        """ Test helper functions for generate abstract amplitude,
+        including compare_diagrams, add_ab_diagrams, and ."""
+
+        ab_model = self.my_testmodel['ab_model']
+        self.my_testmodel.generate_abstract_model()
+
+        # Setup higgs, lower the mass,  and find amplitudes
+        decay_objects.MH = 50
+
+        higgs = self.my_testmodel.get_particle(25)
+        tau = self.my_testmodel.get_particle(15)
+        zboson = self.my_testmodel.get_particle(23)
+
+        higgs.find_channels(4, self.my_testmodel)
+        #for c in higgs.get_channels(4, True):
+        #    print c.nice_string()
+
+        h_zz_bbbb = higgs.get_channels(4, True)[0]
+        # ta = tau
+        h_zz_tatabb = higgs.get_channels(4, True)[1]
+        h_zz_tatatata = higgs.get_channels(4, True)[2]
+        h_zz_tataee = higgs.get_channels(4, True)[9]
+        h_zz_tatamm = higgs.get_channels(4, True)[10]
+        #print h_zz_bbbb.nice_string(), h_zz_tatabb.nice_string(), \
+        #    h_zz_tatatata.nice_string(), h_zz_tataee.nice_string()
+
+        # Amplitude
+        h_zz_eevv = higgs.get_amplitude([-11, 11, 12, -12])
+        #print h_zz_eevv.nice_string()
+
+        #----------------------
+        # Test add abstract diagram
+        #----------------------
+        ab_amp = decay_objects.DecayAmplitude()
+        # Set the initial dict, including the final and initial legs
+        ab_amp['part_sn_dict'] = {(1,1,True): 1, 
+                                  (2,3,False):4}
+        ab_amp['ab2real_dicts'].append(decay_objects.Ab2RealDict())
+
+        ab_model.add_ab_diagram(ab_amp, h_zz_bbbb)
+        ab_dia = ab_amp['diagrams'][0]
+        #print ab_dia.nice_string(), h_zz_bbbb.nice_string()
+        goal_pids = [-9902300, 9902301, 9903100, 
+                      -9902302, 9902303, 9903101,
+                      9903101, 9903100, 9901100, 
+                      9901100, 9901100]
+        result_pids = []
+        [result_pids.extend([l.get('id') for l in v.get('legs')]) for v in ab_dia['vertices']]
+        self.assertEqual(result_pids, goal_pids)
+
+        real_iid_1 = zboson['decay_vertexlist'][(2, True)][0]['id']
+        real_iid_2 = higgs['decay_vertexlist'][(2, False)][1]['id']
+        ab_iid_1 = ab_model['abstract_interactions_dict'][\
+                ab_model.get_interaction_type(real_iid_1)][0]['id']
+        ab_iid_2 = ab_model['abstract_interactions_dict'][\
+                ab_model.get_interaction_type(real_iid_2)][0]['id']
+        goal_interids = [ab_iid_1, ab_iid_1, ab_iid_2, 0]
+        self.assertEqual([v.get('id') for v in ab_dia['vertices']], 
+                          goal_interids)
+
+        self.assertEqual(ab_amp['diagrams'][-1]['abstract_type'],
+                         [goal_interids, [9903100, 9903101], 
+                          [-9902300, 9902301, -9902302, 9902303]])
+        #----------------------
+        # Test compare diagrams, set_final_legs_dict, again
+        #----------------------
+        # Test set final_legs_dict
+        ab_amp['ab2real_dicts'][-1].set_final_legs_dict(ab_dia, h_zz_bbbb)
+        self.assertTrue(ab_model.compare_diagrams(ab_dia, h_zz_bbbb,
+                                                  ab_amp['ab2real_dicts'][-1]))
+        self.assertTrue(ab_amp['ab2real_dicts'][-1]['final_legs_dict'],
+                        {-5:[-9902300,-9902301], 
+                          5:[9902301, 9902302]})
+
+
+        # Test if the diagrams in one amplitude will share the same
+        # final particle correspondence
+        ab_amp = decay_objects.DecayAmplitude()
+        ab_amp['part_sn_dict'] = {(1,1,True): 1, 
+                                  (2,1,False):4}
+        ab_amp['ab2real_dicts'].append(decay_objects.Ab2RealDict())
+
+        ab_model.add_ab_diagram(ab_amp, h_zz_eevv['diagrams'][0])
+        ab_dia_1 = ab_amp['diagrams'][0]
+        ab_amp['ab2real_dicts'][-1].set_final_legs_dict(ab_dia_1,
+                                                        h_zz_eevv['diagrams'][0])
+        ab_model.add_ab_diagram(ab_amp, h_zz_eevv['diagrams'][1])
+        ab_dia_2 = ab_amp['diagrams'][-1]
+        #print ab_amp.nice_string()
+        # ab_dia_1: -e, ve, e, -ve; ab_dia_2: -ve, ve, -e, e
+        self.assertEqual([l['id'] for l in ab_dia_2.get_final_legs()],
+                         [-9902103, 9902101, -9902100, 9902102])
+
+        #----------------------
+        # Test compare diagrams, set_final_legs_dict, again
+        #----------------------
+        # h_zz_zmm != h_zz_zbb
+        # no final_legs_dict available
+        self.assertFalse(ab_model.compare_diagrams(ab_dia, h_zz_tataee,
+                                                   ab_amp['ab2real_dicts'][-1]))
+
+        # Construct abstract diagram for h_zz_zmm
+        ab_amp_2 = decay_objects.DecayAmplitude()
+        ab_amp_2['part_sn_dict'] = {(1,1,True): 1, 
+                                    (2,1,False):4}
+        ab_amp_2['ab2real_dicts'].append(decay_objects.Ab2RealDict())
+        ab_model.add_ab_diagram(ab_amp_2, h_zz_tataee)
+        ab_dia_2 = ab_amp_2['diagrams'][0]
+        # h_zz_tau tau e e == h_zz_tau tau tau tau
+        ab_amp_2['ab2real_dicts'][-1].set_final_legs_dict(ab_dia_2, 
+                                                          h_zz_tataee)
+        self.assertTrue(ab_model.compare_diagrams(\
+                ab_dia_2, 
+                h_zz_tataee,
+                ab_amp_2['ab2real_dicts'][-1]))
+        # For other diagram, add new Ab2RealDict
+        ab_amp_2['ab2real_dicts'].append(decay_objects.Ab2RealDict())
+        # ZZ > tau tau tau tau != ZZ > tau tau e e
+        # because the former use the same interaction but not the latter
+        self.assertFalse(ab_model.compare_diagrams(\
+                ab_dia_2, 
+                h_zz_tatatata,
+                ab_amp_2['ab2real_dicts'][-1]))
+
+        # tau tau e e == tau tau mu mu
+        ab_amp_2['ab2real_dicts'].append(decay_objects.Ab2RealDict())
+        self.assertTrue(ab_model.compare_diagrams(\
+                ab_dia_2, 
+                h_zz_tatamm,
+                ab_amp_2['ab2real_dicts'][-1]))
+        # Set final legs, the ab_dia_2 should be the same type
+        ab_amp_2['ab2real_dicts'][-1].set_final_legs_dict(ab_dia_2, 
+                                                          h_zz_tatamm)
+        self.assertTrue(ab_model.compare_diagrams(\
+                ab_dia_2, 
+                h_zz_tatamm,
+                ab_amp_2['ab2real_dicts'][-1]))
+
+        #----------------------
+        # Test generate_variables_dicts
+        #----------------------       
+        ab_amp['process']['legs'] = base_objects.LegList([\
+                base_objects.Leg({'id':9901100, 'state':False}),
+                base_objects.Leg({'id':-9902100, 'state':True}),
+                base_objects.Leg({'id':9902101, 'state':True}),
+                base_objects.Leg({'id':-9902102, 'state':True}),
+                base_objects.Leg({'id':9902103, 'state':True})])
+        ab_amp['process']['model'] = ab_model
+        ab_amp['ab2real_dicts'][-1]['dia_sn_dict'] = {0:0, 1:1}
+        ab_amp.generate_variables_dicts(h_zz_eevv)
+        # Test for initial particle
+        #print ab_amp.nice_string(), h_zz_eevv.nice_string()
+        #print ab_amp['ab2real_dicts'][-1]['mass_dict']
+        #print ab_amp['ab2real_dicts'][-1]['coup_dict']
+        #print ab_model['interaction_coupling_dict'][63], self.my_testmodel.get_interaction(63)
+        self.assertEqual(ab_amp['ab2real_dicts'][-1]['mass_dict'],
+                         {'MSS1_00':'MH',
+                          # lepton mass
+                          'MNF1_00':'ZERO', 'MNF1_01':'ZERO',
+                          'MNF1_02':'ZERO', 'MNF1_03':'ZERO',
+                          # w, z boson
+                          'MSV1_00':'MW', 'MSV1_01':'MW',
+                          'MSV1_02':'MZ', 'MSV1_03':'MZ'})
+        self.assertEqual(ab_amp['ab2real_dicts'][-1]['coup_dict'],
+                         {'G0010000':'GC_64',
+                          'G0010001':'GC_67',
+                          # h > ww
+                          'G0070000':'GC_33',
+                          'G0070001':'GC_53', 
+                          'G0070002':'GC_34', 'G0070102':'GC_48'
+                          })
+        #----------------------
+        # Test generate_ab_amplitude
+        #----------------------       
+        ab_model.generate_ab_amplitudes(higgs.get_amplitudes(4))
+        #print higgs.get_amplitudes(4).nice_string()
+        # amp of abstract higgs:
+        # l l~ l' l'~, q q~ l l~, q q~ q q~
+        amplist = ab_model.get_particle(9901100).get_amplitudes(4)
+        self.assertEqual(len(amplist), 3)
+        #print amplist.abstract_nice_string()
+
+
+    def test_generate_ab_amplitudes(self):
+        """ Test generate the abstract amplitudes, matrixelement. """
+
+        model_type = 'mssm'
+        normal_sm_base = import_ufo.import_model(model_type)
+        normal_sm = decay_objects.DecayModel(normal_sm_base,
+                                             force=True)
+        param_path = os.path.join(_file_path,
+                                  '../input_files/param_card_%s.dat'%model_type)
+        normal_sm.read_param_card(param_path)
+        #print normal_sm.get_interaction(59)        
+        #normal_sm.generate_abstract_model()
+        normal_sm.find_all_channels_smart(0.01, True)
+        #normal_sm.generate_abstract_amplitudes(3)
+        ab_model = normal_sm['ab_model']
+        if model_type == 'sm':
+            #print ab_model.get_particle(9902100).get_amplitudes(3).abstract_nice_string()
+            # h > q q'~ (w,z),  h > l l'~ (w,z)
+            self.assertEqual(len(ab_model.get_particle(9901100).get_amplitudes(3)), 
+                             2)
+
+            # tau > q q'~ vt,  h > l l'~ vt
+            self.assertEqual(len(ab_model.get_particle(9902100).get_amplitudes(3)), 
+                             2)
+            # tau > q q'~ vt,  h > l l'~ vt
+            self.assertEqual(len(ab_model.get_particle(9902300).get_amplitudes(2)), 
+                             1)
 
 
 if __name__ == '__main__':

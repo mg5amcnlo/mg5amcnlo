@@ -1162,7 +1162,8 @@ class DecayModel(base_objects.Model):
                    'couplings', 'lorentz', 
                    'stable_particles', 'vertexlist_found',
                    'reduced_interactions', 'decay_groups', 'max_vertexorder',
-                   'decaywidth_list'
+                   'decaywidth_list', 
+                   'ab_model', 'abmodel_generated'
                   ]
 
     def __init__(self, init_dict = {}, force=False):
@@ -1195,7 +1196,6 @@ class DecayModel(base_objects.Model):
         """The particles is changed to ParticleList"""
         super(DecayModel, self).default_setup()
         self['particles'] = DecayParticleList()
-        self['ab_model'] = AbstractModel()
         # Other properties
         self['vertexlist_found'] = False
         self['max_vertexorder'] = 0
@@ -1204,6 +1204,10 @@ class DecayModel(base_objects.Model):
         self['stable_particles'] = []
         # Width from the value of param_card.
         self['decaywidth_list'] = {}
+        # Properties for abstract model
+        self['ab_model'] = AbstractModel()
+        self['abmodel_generated'] = False
+        
 
     def get_sorted_keys(self):
         return self.sorted_keys
@@ -1329,6 +1333,20 @@ class DecayModel(base_objects.Model):
         # Add interactions, except ones with all stable particles or ones
         # with radiation process.
         self['ab_model'].setup_interactions(self.get('interactions'), force)
+
+    def generate_abstract_amplitudes(self, part, clevel):
+        """ Generate the abstract amplitudes in AbstractModel."""
+
+        # Skip search if this particle is stable
+        if part.get('is_stable'):
+            logger.info("Particle %s is stable." %part['name'] +\
+                            "No abstract amplitude will be generated.")
+            return
+        
+        logger.info("Generating the abstract amplitudes of %s %d-body decays..." % (part['name'], clevel))
+
+        self['ab_model'].generate_ab_amplitudes(part.get_amplitudes(clevel))
+
             
     def find_vertexlist(self):
         """ Check whether the interaction is able to decay from mother_part.
@@ -1367,8 +1385,6 @@ class DecayModel(base_objects.Model):
         for inter in self['interactions']:
             #Calculate the particle number and exclude partnum > 3
             partnum = len(inter['particles']) - 1
-            #if partnum > 3:
-            #    continue
             
             temp_legs = base_objects.LegList()
             total_mass = 0
@@ -1798,13 +1814,13 @@ class DecayModel(base_objects.Model):
             if not eval(param.name) and eval(param.name) != 0:
                 logger.warning("%s has no expression: %s" % (param.name,
                                                              param.expr))
-            try:
+            """try:
                 logger.info("Recalculated parameter %s = %f" % \
                             (param.name, eval(param.name)))
             except TypeError:
                 logger.info("Recalculated parameter %s = (%f, %f)" % \
                             (param.name,\
-                             eval(param.name).real, eval(param.name).imag))
+                             eval(param.name).real, eval(param.name).imag))"""
         
         # Extract couplings from couplings that depend on fewer 
         # number of external parameters.
@@ -1825,9 +1841,9 @@ class DecayModel(base_objects.Model):
             if not eval(coup.name) and eval(coup.name) != 0:
                 logger.warning("%s has no expression: %s" % (coup.name,
                                                              coup.expr))
-            logger.info("Recalculated coupling %s = (%f, %f)" % \
+            """logger.info("Recalculated coupling %s = (%f, %f)" % \
                         (coup.name,\
-                         eval(coup.name).real, eval(coup.name).imag))
+                         eval(coup.name).real, eval(coup.name).imag))"""
 
 
     def find_decay_groups(self):
@@ -2448,7 +2464,7 @@ class DecayModel(base_objects.Model):
             Call the function in DecayParticle."""
         part.find_channels(max_partnum, self)
 
-    def find_all_channels(self, max_partnum):
+    def find_all_channels(self, max_partnum, generate_abstract=False):
         """ Function that find channels for all particles in this model.
             Call the function in DecayParticle.
             It also write a file to compare the decay width from 
@@ -2459,6 +2475,12 @@ class DecayModel(base_objects.Model):
             logger.info("Vertexlist of this model has not been searched."+ \
                 "Automatically run the model.find_vertexlist()")
             self.find_vertexlist()
+
+        # If vertexlist has not been found before, run model.find_vertexlist
+        if generate_abstract and not self['abmodel_generated']:
+            logger.info("AbstractModel for this model has not been generated."\
+                            +"Automatically run the model.generate_abstract_model()")
+            self.generate_abstract_model()
 
         # Find stable particles of this model
         self.get('stable_particles')
@@ -2477,7 +2499,8 @@ class DecayModel(base_objects.Model):
             self.running_internals()
             logger.info("Find 2-body channels of %s" %part.get('name'))
             part.find_channels_nextlevel(self)
-
+            if generate_abstract:
+                self.generate_abstract_amplitudes(part, 2)
  
         for part in self.get('particles'):
             if max_partnum > 2:
@@ -2498,17 +2521,22 @@ class DecayModel(base_objects.Model):
                                                                 part.get('name')))
                     part.find_channels_nextlevel(self)
 
+                    if generate_abstract:
+                        self.generate_abstract_amplitudes(part, clevel)
 
-            # Update the decay attributes for both max_partnum >2 or == 2.
+
+            # update the decay attributes for both max_partnum >2 or == 2.
             # The update should include branching ratios and apx_decaywidth_err
             # So the apx_decaywidth_err(s) are correct even for max_partnum ==2.
             part.update_decay_attributes(False, True, True, self)
 
 
-    def find_all_channels_smart(self, precision):
+    def find_all_channels_smart(self, precision, generate_abstract=False):
         """ Function that find channels for all particles in this model.
             Decay channels more than three final particles are searched
-            when the precision is not satisfied."""
+            when the precision is not satisfied.
+            If generate_abstract = True, the abstract amplitudes will be
+            generated."""
 
         # Raise error if precision is not a float
         if not isinstance(precision, float):
@@ -2520,6 +2548,12 @@ class DecayModel(base_objects.Model):
             logger.info("Vertexlist of this model has not been searched."+ \
                 "Automatically run the model.find_vertexlist()")
             self.find_vertexlist()
+
+        # If vertexlist has not been found before, run model.find_vertexlist
+        if generate_abstract and not self['abmodel_generated']:
+            logger.info("AbstractModel for this model has not been generated."\
+                            +"Automatically run the model.generate_abstract_model()")
+            self.generate_abstract_model()
 
         # Find stable particles of this model
         self.get('stable_particles')
@@ -2539,6 +2573,8 @@ class DecayModel(base_objects.Model):
 
             logger.info("Find 2-body channels of %s" %part.get('name'))
             part.find_channels_nextlevel(self)
+            if generate_abstract:
+                self.generate_abstract_amplitudes(part, 2)
 
 
         # Search for higher final particle states, if the precision
@@ -2564,6 +2600,9 @@ class DecayModel(base_objects.Model):
                                 %(clevel,
                                   part.get('name')))
                 part.find_channels_nextlevel(self)
+                if generate_abstract:
+                    self.generate_abstract_amplitudes(part, 2)
+
                 # Note that the width is updated automatically in the
                 # find_nextlevel
                 part.update_decay_attributes(False,True,False, self)
@@ -2942,6 +2981,12 @@ class Channel(base_objects.Diagram):
         # branch ratio is multiply by 100.
         self['apx_decaywidth_nextlevel'] = 0.
         self['apx_width_calculated'] = False
+
+        # Properties for abstract Channel
+        # [pseudo_ab_inter_ids, pseudo_ab_pids, pseudo_ab_finalids]
+        # generated by add_ab_diagram in AbstractModel,
+        # finalids is in the order of final_legs
+        self['abstract_type'] = [[], [], []]
 
 
     def filter(self, name, value):
@@ -3684,7 +3729,8 @@ class DecayAmplitude(diagram_generation.Amplitude):
         This could be used to generate HELAS amplitude."""
 
     sorted_keys = ['process', 'diagrams', 'apx_decaywidth', 'apx_br',
-                   'exa_decaywidth']
+                   'exa_decaywidth', 'part_sn_dict', 'inter_sn_dict',
+                   'ab2real_dicts']
 
     def default_setup(self):
         """Default values for all properties. Property 'diagrams' is now
@@ -3695,6 +3741,10 @@ class DecayAmplitude(diagram_generation.Amplitude):
         self['apx_decaywidth'] = 0.
         self['apx_br'] = 0.
         self['exa_decaywidth'] = False
+        # Properties used in abstract amplitude
+        self['part_sn_dict'] = {}
+        self['inter_sn_dict'] = {}
+        self['ab2real_dicts'] = Ab2RealDictList()
 
     def __init__(self, argument=None, model=None):
         """ Allow initialization with a Channel and DecayModel to create 
@@ -3823,6 +3873,62 @@ class DecayAmplitude(diagram_generation.Amplitude):
 
         # Return output for full format case.
         return output
+
+
+    def abstract_nice_string(self):
+        """ Print the nice string of abstract amplitudes,
+        which shows the real process of this type."""
+
+        output = super(DecayAmplitude, self).nice_string()
+        output += "\nReal process:  "
+        output += ', '.join([ref['process'].input_string() for ref in self['ab2real_dicts']])
+
+        return output
+
+
+    def generate_variables_dicts(self, real_amp, ab2real_id = -1):
+        """ Generate the dictionary of abstract to real variables,
+        default is to use the latest Ab2RealDict."""
+
+        ab_model = self['process']['model']
+        real_model = real_amp['process']['model']
+        ab2realdict = self['ab2real_dicts'][ab2real_id]
+
+        # Set the initial particle dict
+        ab2realdict['mass_dict']\
+            [ab_model.get_particle(self['process'].get_initial_ids()[0])['mass']] = real_model.get_particle(real_amp['process'].get_initial_ids()[0])['mass']
+
+        # Set the final particle dict
+        for real_pid, ab_pid in ab2realdict['final_legs_dict'].items():
+            if isinstance(ab_pid, int):
+                ab2realdict['mass_dict'][ab_model.get_particle(ab_pid)['mass']] = real_model.get_particle(real_pid)['mass']
+            # For the case of identical particle
+            else:
+                for pid in ab_pid:
+                    ab2realdict['mass_dict'][ab_model.get_particle(pid)['mass']] = real_model.get_particle(real_pid)['mass']
+
+        # Set the interaction id dict and intermediate particles
+        for  ab_dia_id, real_dia_id in ab2realdict['dia_sn_dict'].items():
+
+            ab_dia = self['diagrams'][ab_dia_id]
+            real_dia = real_amp['diagrams'][real_dia_id]
+            
+            # Set the intermediate particle and interaction,
+            # except for the identical vertex 
+            # (the initial particle will be resetted, but it should be fine.)
+            for i, v in enumerate(ab_dia['vertices'][:-1]):
+
+                # Set intermediate particle
+                ab2realdict['mass_dict']\
+                    [ab_model.get_particle(v['legs'][-1]['id'])['mass']] \
+                    = real_model.get_particle(real_dia['vertices'][i]['legs'][-1]['id'])['mass']
+                
+                # Set the interaction
+                for ab_key, real_coup in \
+                        ab_model['interaction_coupling_dict'][abs(real_dia['vertices'][i]['id'])].items():
+
+                    ab_coup = ab_model.get_interaction(ab_dia['vertices'][i]['id'])['couplings'][ab_key]
+                    ab2realdict['coup_dict'][ab_coup] = real_coup
         
 #===============================================================================
 # DecayAmplitudeList: An Amplitude like object contain Process and Channels
@@ -3835,11 +3941,31 @@ class DecayAmplitudeList(diagram_generation.AmplitudeList):
         """ Test if the object is a valid DecayAmplitude for the list. """
         return isinstance(obj, DecayAmplitude)
 
+    def get_amplitude(self, final_ids):
+        """ Get the amplitudes with the given final particles if
+        exist in this list. Otherwise, return None.
+        Note: Use stored finallist in Channel!"""
+        
+        for amp in self:
+            if sorted([abs(l.get('id')) for l in amp['diagrams'][0]\
+                           .get_final_legs()]) == sorted(list_abs(final_ids)):
+                return amp
+            
+
+        return None
+
     def nice_string(self):
         """ Nice string from Amplitude """
         mystr = '\n'.join([a.nice_string() for a in self])
 
         return mystr
+
+    def abstract_nice_string(self):
+        """ Nice string for abstract amplitude. """
+        mystr = '\n'.join([a.abstract_nice_string() for a in self])
+
+        return mystr
+
 
     def decaytable_string(self, format='normal'):
         """ Decaytable string for Amplitudes """
@@ -3899,16 +4025,16 @@ class AbstractModel(base_objects.Model):
     def get_particle_type(self, part, get_code=False):
         """ Return the tuple (spin, color, self_antipart) 
         of the given particle.
-        NOTE: bosons are always treated as non-self-antipart. """
+        NOTE: bosons are always treated as self-antipart. """
 
         if isinstance(part, base_objects.Particle):
             if get_code:
                 return abs(self.get_particle_type_code(part))
 
-            if part.is_fermion():
-                self_antipart = part['self_antipart']
+            if part.is_boson():
+                self_antipart = True
             else:
-                self_antipart = False
+                self_antipart = part['self_antipart']
 
             return (part['spin'], part['color'], self_antipart)
 
@@ -3921,6 +4047,7 @@ class AbstractModel(base_objects.Model):
         else:
             raise self.PhysicsObjectError, \
                 "Input should be Particle type or pdg_code(int)."
+
 
     def get_particle_type_code(self, part):
         """ Return the pseudo pdg_code :
@@ -3940,22 +4067,139 @@ class AbstractModel(base_objects.Model):
             return 9900000+1000*part['spin']+100*part['color']
 
 
+    def add_ab_particle(self, pdg_code, force=False):
+        """ Functions to add new particle according to the given particle
+        spin and color information. This function will assign the correct
+        serial number of new particle and change the abstract_particles."""
+
+        # Check argument type
+        if not force and not isinstance(pdg_code, int):
+            raise self.PhysicsObjectError,\
+                "Argument must be a pdg_code."
+
+        # To ensure pdg_code is positive
+        pdg_code = abs(pdg_code)
+
+        # Setup new particle
+        ab_part = DecayParticle()
+        ab_part['spin'] = self.get_particle_type(pdg_code)[0]
+        ab_part['color'] = self.get_particle_type(pdg_code)[1]
+        ab_part['self_antipart'] = self.get_particle_type(pdg_code)[2]
+
+        # Check the current abstract_particles
+        if self.get_particle_type(pdg_code) \
+                in self['abstract_particles_dict'].keys():
+            # For existing type, record the serial number
+            sn = len(self['abstract_particles_dict']\
+                         [self.get_particle_type(pdg_code)])
+        else:
+            # Setup new type of abstract particle
+            self['abstract_particles_dict']\
+                [self.get_particle_type(pdg_code)]= DecayParticleList()
+            sn = 0
+            
+
+        # Set other properties: name = text(spin)+color
+        try:
+            name_string = self.spin_text_dict[ab_part.get('spin')]
+        except KeyError:
+            name_string = 'P'
+
+        ab_part['name']= \
+            name_string +\
+            str(ab_part.get('color')) +\
+            '_%02d' %sn
+
+        # mass = M'S or N''spin''color' 
+        #                 % S for self-antipart, N for non-self-antipart
+        mass_string = 'M'
+        if ab_part['self_antipart']:
+            mass_string = mass_string + 'S'
+        else:
+            mass_string = mass_string + 'N'
+        mass_string = mass_string + name_string +\
+            str(ab_part.get('color')) +\
+            '_%02d' %sn
+        ab_part['mass'] = mass_string
+
+        # pdg_code = 99'1:S ,0: N'00'spin''color'
+        #  e.g. w+: 9903100, gluino: 9912300
+        ab_part['pdg_code'] = self.get_particle_type(pdg_code, get_code=True)+sn
+
+        # Set anti-part properties if this is not a self-antiparticle
+        if not ab_part['self_antipart']:
+            ab_part['antiname'] = ab_part.get('name')+'~'
+
+            # Create the anti-part
+            anti_ab_part = DecayParticle(ab_part)
+            anti_ab_part['is_part'] = False
+        
+        # Append ab_part into self['particles'] and abstract_particles_dict,
+        self['particles'].append(ab_part)
+        self['abstract_particles_dict'][self.get_particle_type(ab_part)].append(ab_part)
+        logger.info("Add Abstract Particle %s according to #%s" \
+                        %(ab_part.get('name'), pdg_code))
+
+
+        # Reset the particle dictionary
+        self.get('particle_dict')
+        self['particle_dict'][ab_part['pdg_code']] = ab_part
+        if not ab_part['self_antipart']:
+            self['particle_dict'][-ab_part['pdg_code']] = anti_ab_part
+
+
+
+    def setup_particle(self, part, force=False):
+        """Add real particle into AbstractModel, 
+        convert into abstract particle."""
+
+        # Check argument type
+        if not force and not isinstance(part, base_objects.Particle):
+            raise self.PhysicsObjectError,\
+                "Argument must be a Particle object."
+
+        # Setup the particle_type_dict for all particle
+        self['particle_type_dict'][part['pdg_code']] = \
+            (self.get_particle_type(part), 
+             self.get_particle_type(part, get_code=True))
+
+        if self.get_particle_type(part) \
+                not in self['abstract_particles_dict'].keys():
+            # if not found in existing particle, create a new abstract particle
+            self.add_ab_particle(part['pdg_code'], force)
+
+
+    def setup_particles(self, part_list, force=False):
+        """Add real particles into AbstractModel, 
+        convert into abstract particles"""
+
+        # Check argument type
+        if not force and not isinstance(part_list, base_objects.ParticleList):
+            raise self.PhysicsObjectError,\
+                "Argument must be a ParticleList."
+
+        # Call add_particle for each particle
+        for part in part_list:
+            self.setup_particle(part, force)
+
+        # Reset dictionaries in the model
+        self.reset_dictionaries()
+        
+
+
     def get_particlelist_type(self, pdgcode_list, ignore_dup=True,
-                              sn_dict=None):
+                              sn_dict={}):
         """ Return a list of the type of the given particlelist,
         and a dictionary records the number of each type of particle.
         The pdg_code will start from the number given by serial_number_dict.
         Note: If ignore_dup is True,
-        diffrent particle with the same type will not be diffrentiated.
+        the same particles will not be assigned with the same id.
         """
 
         pseudo_ab_particlelist = []
         # Used the given sn_dict or an empty one
-        if sn_dict:
-            serial_number_dict = sn_dict
-        else:
-            serial_number_dict = {}
-        
+        serial_number_dict = copy.copy(sn_dict)
+
         for i, pdg_code in enumerate(pdgcode_list):
 
             # Use get_particle_type function
@@ -4048,88 +4292,6 @@ class AbstractModel(base_objects.Model):
                 % inter_id
 
 
-
-    def add_ab_particle(self, pdg_code, force=False):
-        """ Functions to add new particle according to the given particle
-        spin and color information. This function will assign the correct
-        serial number of new particle and change the abstract_particles."""
-
-        # Check argument type
-        if not force and not isinstance(pdg_code, int):
-            raise self.PhysicsObjectError,\
-                "Argument must be a pdg_code."
-
-        # To ensure pdg_code is positive
-        pdg_code = abs(pdg_code)
-
-        # Setup new particle
-        ab_part = DecayParticle()
-        ab_part['spin'] = self.get_particle_type(pdg_code)[0]
-        ab_part['color'] = self.get_particle_type(pdg_code)[1]
-        ab_part['self_antipart'] = self.get_particle_type(pdg_code)[2]
-
-        # Check the current abstract_particles
-        if self.get_particle_type(pdg_code) \
-                in self['abstract_particles_dict'].keys():
-            # For existing type, record the serial number
-            sn = len(self['abstract_particles_dict']\
-                         [self.get_particle_type(pdg_code)])
-        else:
-            # Setup new type of abstract particle
-            self['abstract_particles_dict']\
-                [self.get_particle_type(pdg_code)]= DecayParticleList()
-            sn = 0
-            
-
-        # Set other properties: name = text(spin)+color
-        try:
-            name_string = self.spin_text_dict[ab_part.get('spin')]
-        except KeyError:
-            name_string = 'P'
-
-        ab_part['name']= \
-            name_string +\
-            str(ab_part.get('color')) +\
-            '_%02d' %sn
-
-        # mass = M'S or N''spin''color' 
-        #                 % S for self-antipart, N for non-self-antipart
-        mass_string = 'M'
-        if ab_part['self_antipart']:
-            mass_string = mass_string + 'S'
-        else:
-            mass_string = mass_string + 'N'
-        mass_string = mass_string + name_string +\
-            str(ab_part.get('color')) +\
-            '_%02d' %sn
-        ab_part['mass'] = mass_string
-
-        # pdg_code = 99'1:S ,0: N'00'spin''color'
-        #  e.g. w+: 9903100, gluino: 9912300
-        ab_part['pdg_code'] = self.get_particle_type(pdg_code, get_code=True)+sn
-
-        # Set anti-part properties if this is not a self-antiparticle
-        if not ab_part['self_antipart']:
-            ab_part['antiname'] = ab_part.get('name')+'~'
-
-            # Create the anti-part
-            anti_ab_part = DecayParticle(ab_part)
-            anti_ab_part['is_part'] = False
-        
-        # Append ab_part into self['particles'] and abstract_particles_dict,
-        self['particles'].append(ab_part)
-        self['abstract_particles_dict'][self.get_particle_type(ab_part)].append(ab_part)
-        logger.info("Add Abstract Particle %s according to #%s" \
-                        %(ab_part.get('name'), pdg_code))
-
-
-        # Reset the particle dictionary
-        self.get('particle_dict')
-        self['particle_dict'][ab_part['pdg_code']] = ab_part
-        if not ab_part['self_antipart']:
-            self['particle_dict'][-ab_part['pdg_code']] = anti_ab_part
-
-
     def add_ab_interaction(self, inter_id, force=False, color = None):
         """ Functions to set new interaction according to the given interaction
         particles and lorentz sturcture. This function will assign the correct
@@ -4189,8 +4351,8 @@ class AbstractModel(base_objects.Model):
 
         # couplings = G_______
         #              |  || |-> the serial number
-        #              |  ||-> the color identifier
-        #              |  |-> the lorentz identifier
+        #              |  ||-> the lorentz identifier
+        #              |  |-> the color identifier
         #              |-> The serial number of the interaction type
         ab_inter['couplings'] = {}
         for i, colr in enumerate(ab_inter['color']):
@@ -4207,43 +4369,6 @@ class AbstractModel(base_objects.Model):
 
         # Reset the dictionary
         self['interaction_dict'][ab_inter['id']] = ab_inter
-        
-
-    def setup_particle(self, part, force=False):
-        """Add real particle into AbstractModel, 
-        convert into abstract particle."""
-
-        # Check argument type
-        if not force and not isinstance(part, base_objects.Particle):
-            raise self.PhysicsObjectError,\
-                "Argument must be a Particle object."
-
-        # Setup the particle_type_dict for all particle
-        self['particle_type_dict'][part['pdg_code']] = \
-            (self.get_particle_type(part), 
-             self.get_particle_type(part, get_code=True))
-
-        if self.get_particle_type(part) \
-                not in self['abstract_particles_dict'].keys():
-            # if not found in existing particle, create a new abstract particle
-            self.add_ab_particle(part['pdg_code'], force)
-
-
-    def setup_particles(self, part_list, force=False):
-        """Add real particles into AbstractModel, 
-        convert into abstract particles"""
-
-        # Check argument type
-        if not force and not isinstance(part_list, base_objects.ParticleList):
-            raise self.PhysicsObjectError,\
-                "Argument must be a ParticleList."
-
-        # Call add_particle for each particle
-        for part in part_list:
-            self.setup_particle(part, force)
-
-        # Reset dictionaries in the model
-        self.reset_dictionaries()
         
 
     def setup_interactions(self, inter_list, force=False):
@@ -4355,6 +4480,30 @@ class AbstractModel(base_objects.Model):
                 for remove_key in remove_list:                    
                     del self['abstract_interactions_dict'][remove_key]
 
+        # Reset the id of all abstract interactions
+        # (the deletion could cause some errors.)
+        for i, ab_inter in enumerate(self['interactions']):
+            
+            type_sn = i+1
+            # id = ___0__
+            #        |  |_> the serial number
+            #        | 
+            #        |_> The serial number of the interaction type
+            ab_inter['id'] = 1000*type_sn
+
+            # couplings = G_______
+            #              |  || |-> the serial number
+            #              |  ||-> the lorentz identifier
+            #              |  |-> the color identifier
+            #              |-> The serial number of the interaction type
+            ab_inter['couplings'] = {}
+            for i, colr in enumerate(ab_inter['color']):
+                for j, lorentz in enumerate(ab_inter['lorentz']):
+                    ab_inter['couplings'][(i, j)] = 'G%03d%1d%1d00' \
+                        %(type_sn, i, j)
+
+
+        
 
         # Update the quick reference dict
         # and setup the interaction_coupling_dict
@@ -4375,17 +4524,19 @@ class AbstractModel(base_objects.Model):
 
             # Construct the coupling dict
             self['interaction_coupling_dict'][inter['id']] = {}
-            for old_key, coup in inter['couplings'].items():
-                new_key = [0,0]
-                color = inter['color'][old_key[0]]
-                lorentz = inter['lorentz'][old_key[1]]
-
+            inter_type = self['interaction_type_dict'][inter['id']]            
+            ab_inter = self['abstract_interactions_dict'][inter_type][0]
+            for key, coup in inter['couplings'].items():
+                color = inter['color'][key[0]]
+                lorentz = inter['lorentz'][key[1]]
+                ab_key = [0, 0]
                 # Get new key for the coupling
-                inter_type = self['interaction_type_dict'][inter['id']]
-                new_key[0] = inter_type[2].index(str(color))
-                new_key[1] = inter_type[1].index(lorentz)
-                self['interaction_coupling_dict'][inter['id']][tuple(new_key)]\
+                ab_key[0] = ab_inter['color'].index(color)
+                ab_key[1] = ab_inter['lorentz'].index(lorentz)
+                
+                self['interaction_coupling_dict'][inter['id']][tuple(ab_key)]\
                     = coup
+                
 
         # Reset dictionaries in the model
         self.reset_dictionaries()
@@ -4393,42 +4544,398 @@ class AbstractModel(base_objects.Model):
         self.get('interaction_dict')
 
 
-#===============================================================================
-# AbstractParticleList
-#===============================================================================
-class AbstractParticleList(base_objects.ParticleList):
-    """A ParticleList, with additional properties that stores the
-       abstract particle type."""
+    def get_interactionlist_type(self, interid_list, ignore_dup=False,
+                                 sn_dict={}):
+        """ Return a list of the type of the given interactions,
+        and a dictionary records the number of each type of interaction.
+        The abstract interaction id will start from the number given 
+        by serial_number_dict.
+        Note: If ignore_dup is True,
+        the same interactions will not assign the same id.
+        """
+
+        pseudo_ab_interlist = []
+        # Used the given sn_dict or an empty one
+        serial_number_dict = copy.copy(sn_dict)
+        
+        for i, inter_id in enumerate(interid_list):
+
+            # Append identity vertices
+            if inter_id == 0:
+                pseudo_ab_interlist.append(0)
+                continue
+
+            # Use get_interaction_type function
+            inter_type = self.get_interaction_type(abs(inter_id))
+            inter_type_code = \
+                self['abstract_interactions_dict'][inter_type][0]['id']
+
+            # Add the pseudo id, if it is the first one in its type
+            # appearing in the list.
+            # There should be a abstract interaction for this type,
+            # if the setup_interactions has been run correctly.
+            if not inter_type in serial_number_dict.keys():
+                pseudo_ab_interlist.append(\
+                        inter_type_code)
+
+                serial_number_dict[inter_type] = 1
+
+            # If not ignore duplicate interactions (default),
+            # check if there are same interactions in the list.
+            else:
+                set_new = True
+
+                if not ignore_dup:
+                    for j, previous_id in enumerate(interid_list):
+                        # find duplicate interaction, 
+                        # use the abstract interaction already exists.
+                        # No need to update the serial_number_dict
+                        if j == i:
+                            break
+
+                        if abs(previous_id) == \
+                                abs(inter_id):
+                            pseudo_ab_interlist.append(\
+                                pseudo_ab_interlist[j])
+
+                            set_new = False
+                            break
+
+                # Append new abstract interaction if not appears before
+                if set_new:
+                    # If the abstract interaction of the given serial number
+                    # does not exist, add a new abstract interaction and append
+                    # it.
+                    if serial_number_dict[inter_type] >= \
+                            len(self['abstract_interactions_dict'][inter_type]):
+                        self.add_ab_interaction(abs(inter_id), True)
+                            
+                    # Append the pdg_code into the list,
+                    # starting from the s/n given by serial_number_dict
+                    pseudo_ab_interlist.append(\
+                        abs(inter_type_code)+\
+                            serial_number_dict[inter_type]
+                        )
+
+                    # Update the serial_number_dict
+                    serial_number_dict[inter_type] += 1
+                        
+                    
+        return pseudo_ab_interlist, serial_number_dict
 
 
-    def __init__(self, init_list=None, ab_type=None):
-        super(AbstractParticleList, self).__init__(init_list)
+    # Helper function to construct the AbstractMatrixElement
+    def compare_diagrams(self, ab_dia, real_dia, ab2realdict):
+        """ Return True if the two diagrams are in the same abstract type.
+        Algorithm:
+        a. Compare the pseudo-abstract interaction id list
+        b. Compare the pseudo-abstract pdg_code list.
+        """
 
-        # Additional attribute of abstract_type (spin, color)
-        if not ab_type:
-            self.abstract_type = (0,0)
-        elif isinstance(ab_type, tuple):
-            self.abstract_type = ab_type
+        # Interaction id list
+        ab_inter_id_list = ab_dia['abstract_type'][0]
+        real_inter_id_list = [v.get('id') for v in real_dia['vertices']]
+
+        # Quick compare from the length.
+        if len(ab_inter_id_list) != len(real_inter_id_list):
+            return False
+
+        # Full comparision of interaction type.
+        # The duplicated intereactions are take into consideration.
+        if self.get_interactionlist_type(real_inter_id_list)[0] != \
+                ab_inter_id_list:
+            return False
+
+        # Intermediate Particle id list
+        real_pdgcode_list = []
+        [real_pdgcode_list.append(v.get('legs')[-1]['id']) \
+             for v in real_dia['vertices'][:-2]]
+        
+
+        # Full comparision of particle type.
+        # Duplicated particles will be treated as different!!
+        if list_abs(self.get_particlelist_type(real_pdgcode_list)[0]) != \
+                list_abs(ab_dia['abstract_type'][1]):
+            return False
+
+        # Continue to check the final Particle id list
+        real_pdgcode_list = [l['id'] for l in real_dia.get_final_legs()]
+        ini_type = self.get_particle_type(real_dia['vertices'][-1]['legs'][-1]['id'])
+
+        # Full comparision of particle type.
+        # Duplicated particles will be treated as different!!
+        try:
+            ab_pidlist = [ab2realdict['final_legs_dict'][l['id']] for l in real_dia.get_final_legs()]
+        except KeyError:
+            if sorted(list_abs(self.get_particlelist_type(real_pdgcode_list,
+                                                 sn_dict = {ini_type: 1})[0]))  != sorted(list_abs(ab_dia['abstract_type'][2])):
+                
+                return False
+            else:
+                return True
+            
+        # Not the same if the final particle id is not the one
+        # given by final_legs_dict or not in final_legs_dict (for duplicated
+        #  particle)        
+        for i, pid in enumerate(ab_pidlist):
+            if not isinstance(pid, list):
+                if abs(pid) != \
+                        abs(ab_dia['abstract_type'][2][i]):
+                    return False                
+            else:
+                if abs(ab_dia['abstract_type'][2][i]) not in \
+                        list_abs(pid):
+                    return False
+
+        return True
+
+
+    # Helper function
+    def add_ab_diagram(self, ab_amp, real_dia,
+                       ab2realdict_id = -1):
+        """ Add abstract diagram from real one into the abstract amplitude.
+        The abstract_type of abstract diagram is constructed. """
+
+        ab_dia = Channel({'onshell': True})
+        ab_dia['vertices'] = copy.deepcopy(real_dia['vertices'])
+
+        # Setup the interaction ids
+        real_inter_id_list = [v.get('id') for v in real_dia['vertices']]
+        # Setup the abstract interaction id type first
+        new_inter_ids = self.get_interactionlist_type(real_inter_id_list)[0]
+        ab_dia['abstract_type'][0] = new_inter_ids
+        # Setup the abstract interaction ids from inter_sn_dict in ab_amp,
+        # then recycle the sn record
+        new_inter_ids, ab_amp['inter_sn_dict'] = \
+            self.get_interactionlist_type(real_inter_id_list,
+                                          sn_dict = ab_amp['inter_sn_dict'])
+            
+        for i, ab_inter_id in enumerate(new_inter_ids):
+            ab_dia['vertices'][i]['id'] = ab_inter_id
+
+
+        # Setup the initial and final legs
+        # Make sure the abstract pids are generated from sorted list
+        real_pdgcode_list = [l.get('id') for l in real_dia.get_final_legs()]
+        ini_type = self.get_particle_type(real_dia['vertices'][-1]['legs'][-1]['id'])
+        ini_code = self.get_particle_type(real_dia['vertices'][-1]['legs'][-1]['id'], get_code=True)
+        ab_dia['vertices'][-1]['legs'][-1]['id'] = ini_code
+        ab_dia['vertices'][-2]['legs'][-1]['id'] = ini_code
+        if ini_type[2]:
+            ab_dia['vertices'][-1]['legs'][0]['id'] = ini_code
         else:
-            raise self.PhysicsObjectListError,\
-                "Abstract type should be a dictionary."
+            ab_dia['vertices'][-1]['legs'][0]['id'] = -ini_code
+
+        # Setup the final abstract particle id
+        # Note that the final legs must have consistent identifier for 
+        # all diagrams in this real amplitude, so try to find it from
+        # the final_legs_dict in Ab2RealDict
+        _have_reference = False
+        try:
+            ab_pid_list = [ab_amp['ab2real_dicts'][ab2realdict_id]['final_legs_dict'][l['id']] for l in ab_dia.get_final_legs()]
+            _have_reference = True
+
+        except KeyError:
+            # Create the new final leg id and record it in the Ab2RealDict
+            new_part_ids = self.get_particlelist_type(real_pdgcode_list, 
+                                                      sn_dict = {ini_type:1})[0]
+            ab_dia['abstract_type'][2] = new_part_ids
+            for i, ab_pid in enumerate(new_part_ids):
+                ab_dia.get_final_legs()[i]['id'] = ab_pid
+
+        # Assign abstract particle id from the final_legs_dict,
+        # if exists.
+        if _have_reference:
+            ab_dia['abstract_type'][2] = []
+            for i, leg in enumerate(ab_dia.get_final_legs()):
+                if isinstance(ab_pid_list[i], int):
+                    leg['id'] = ab_pid_list[i]
+                else:
+                    list_now = [l['id'] for l in ab_dia.get_final_legs()]
+                    leg['id'] = [pid for pid in ab_pid_list[i] \
+                                     if pid not in list_now][0]
+                # Update the abstract_type
+                ab_dia['abstract_type'][2].append(leg['id'])
+
+
+
+        # Setup the intermediate Particle id list
+        real_pdgcode_list = []
+        [real_pdgcode_list.append(v.get('legs')[-1]['id']) \
+             for v in real_dia['vertices'][:-2]]
+
+        # Setup the abstract particle id type first
+        new_part_ids = self.get_particlelist_type(real_pdgcode_list)[0]
+        ab_dia['abstract_type'][1] = new_part_ids
+        # Setup the abstract interaction ids from the part_sn_dict of ab_amp,
+        # then recycle the sn_dict.
+        new_part_ids, ab_amp['part_sn_dict'] = \
+            self.get_particlelist_type(real_pdgcode_list,
+                                       sn_dict=ab_amp['part_sn_dict'])
+
+
+        for i, ab_pid in enumerate(new_part_ids):
+            ab_dia['vertices'][i]['legs'][-1]['id'] = ab_pid
+            # Find the previous leg that connect with this one
+            found = False
+            for v in ab_dia['vertices'][i+1:]:
+                # Use the number to identify the same leg
+                for l in v.get('legs')[:-1]:
+                    if l['number'] == \
+                            ab_dia['vertices'][i]['legs'][-1]['number']:
+                        l['id'] = ab_pid
+                        break
+                
+                if found:
+                    break
+
+
+        # Add this diagram into the amplitude.
+        ab_amp['diagrams'].append(ab_dia)
+
+            
+
+    def generate_ab_amplitudes(self, amp_list):
+        """ Generate the abstract Amplitudes, then
+        generating the AbstractMatrixElement. """
+
+        # Skip empty list
+        if not amp_list:
+            return
+
+        # Get the abstract initial id        
+        ini_pdg = amp_list[0]['process'].get_initial_ids()[0]
+        ab_ini_pdg = self.get_particle_type(ini_pdg, get_code=True)
+        ab_ini = self.get_particle(ab_ini_pdg)
+
+        for amp in amp_list:
+            # Check if this abstract amplitude exists
+            final_ids = [l.get('id') for l in amp['process'].get_final_legs()]
+            # PDG code start from the initial one
+            pseudo_pids, ini_sn_dict = \
+                self.get_particlelist_type(final_ids,\
+                                               sn_dict = {self.get_particle_type(ini_pdg): 1})
+            try:
+                ab_amp = ab_ini['decay_amplitudes'][len(final_ids)].get_amplitude(pseudo_pids)
+
+            except KeyError:
+                ab_ini['decay_amplitudes'][len(final_ids)] = DecayAmplitudeList()
+
+                ab_amp = None
+
+            # Construct abstract Amplitude if not exist
+            if not ab_amp:
+
+                # Construct the process
+                new_process = base_objects.Process({'model': self})
+                new_process['legs'] = copy.deepcopy(amp['process']['legs'])
+                i = 0
+                for new_leg in new_process['legs']:
+                    # Final legs
+                    if new_leg.get('state'):
+                        new_leg['id'] = pseudo_pids[i]
+                        i += 1
+                    else:
+                        new_leg['id'] = ab_ini_pdg
+
+                # Construct Amplitude
+                ab_amp = DecayAmplitude({'part_sn_dict': ini_sn_dict})
+                ab_amp['process'] = new_process
+                ab_ini['decay_amplitudes'][len(final_ids)].append(ab_amp)
+
+
+
+            # Create the Ab2RealDict for this real amplitude
+            ab_amp['ab2real_dicts'].append(Ab2RealDict({'process':
+                                                            amp['process']}))
+
+            # Scanning the diagrams in real amplitude,
+            # Create new diagrams if necessary
+            for i, dia in enumerate(amp['diagrams']):
+                not_exist = True
+                # Check diagrams in abstract amplitude
+                for j, ab_dia in enumerate(ab_amp['diagrams']):
+
+                    if not j in ab_amp['ab2real_dicts'][-1]['dia_sn_dict'].keys() and self.compare_diagrams(ab_dia, dia, ab_amp['ab2real_dicts'][-1]):
+                        
+                        # Construct the final_legs_dict for the first time
+                        if i==0:
+                            ab_amp['ab2real_dicts'][-1].set_final_legs_dict(ab_dia, dia)                            
+                        # Update the dia_sn_dict
+                        ab_amp['ab2real_dicts'][-1]['dia_sn_dict'][j] = i
+                        not_exist = False
+                        break
+
+                # Create new diagram if necessary
+                if not_exist:
+                    # the new abstract diagram corresponds to this real diagram
+                    ab_amp['ab2real_dicts'][-1]['dia_sn_dict']\
+                        [len(ab_amp['diagrams'])] = i
+                    self.add_ab_diagram(ab_amp, dia)
+
+                    # Construct the final_legs_dict for the first time
+                    if i==0:
+                        ab_amp['ab2real_dicts'][-1].set_final_legs_dict(ab_amp['diagrams'][-1], dia)
+                        
+
+            # Construct the variable dicts
+            ab_amp.generate_variables_dicts(amp)
+        
 
 #===============================================================================
-# AbstractParticleList
+# Ab2RealDict
 #===============================================================================
-class AbstractInteractionList(base_objects.InteractionList):
+class Ab2RealDict(base_objects.PhysicsObject):
+    """A Reference dict to record the information of an abstract amplitude
+    to real amplitude."""
+
+
+    sorted_keys = ['process', 'dia_sn_dict', 'mass_dict', 'coup_dict',
+                   'final_legs_dict']
+
+    def default_setup(self):
+        """Default values for all properties."""
+
+        # Dictionary of from serial numbers of diagrams in abstract amplitude
+        # to real amplitude
+        self['process'] = base_objects.Process()
+        self['dia_sn_dict'] = {}
+        self['mass_dict'] = {}
+        self['coup_dict'] = {}
+        self['final_legs_dict'] = {}
+
+    def set_final_legs_dict(self, ab_dia, real_dia):
+        """ Setup the final_legs_dict. """
+
+        for k, l in enumerate(real_dia.get_final_legs()):
+            if not l['id'] in self['final_legs_dict'].keys():
+                self['final_legs_dict'][l.get('id')] = \
+                    ab_dia['abstract_type'][2][k]
+            elif isinstance(self['final_legs_dict'][l['id']], list):
+                self['final_legs_dict'][l.get('id')].append(ab_dia['abstract_type'][2][k])
+            else:
+                temp = self['final_legs_dict'][l.get('id')]
+                self['final_legs_dict'][l.get('id')] = [temp, ab_dia['abstract_type'][2][k]]
+
+#===============================================================================
+# Ab2RealDictList
+#===============================================================================
+class Ab2RealDictList(base_objects.PhysicsObjectList):
     """A InteractionList, with additional properties that stores the
        abstract interaction type."""
 
+    def is_valid_element(self, obj):
+        """ Test if the object is a valid Ab2RealDictList for the list. """
+        return isinstance(obj, Ab2RealDict)
 
-    def __init__(self, init_list=None):
-        super(AbstractParticleList, self).__init__(init_list)
-        # Additional attribute of abstract_type
-        self.abstract_type = (0,0)
-
+    
 #===============================================================================
 # Helper function
 #===============================================================================
+def list_abs(list):
+
+    return [abs(item) for item in list]
+
 def legcmp(x, y):
     """Define the leg comparison, useful when testEqual is execute"""
     mycmp = cmp(x['id'], y['id'])
