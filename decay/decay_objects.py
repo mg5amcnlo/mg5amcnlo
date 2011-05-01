@@ -1199,6 +1199,7 @@ class DecayModel(base_objects.Model):
         # Other properties
         self['vertexlist_found'] = False
         self['max_vertexorder'] = 0
+        self['cp_conj_dict'] = {}
         self['decay_groups'] = []
         self['reduced_interactions'] = []
         self['stable_particles'] = []
@@ -1326,13 +1327,21 @@ class DecayModel(base_objects.Model):
         logger.info("Generating the abstract model...")
 
         self.get('stable_particles')
+        # If vertexlist has not been found before, run model.find_vertexlist
+        if not self['vertexlist_found']:
+            logger.info("Vertexlist of this model has not been searched."+ \
+                "Automatically run the model.find_vertexlist()")
+            self.find_vertexlist()
+
         # Add all particles, including stable ones 
         # (could appear in final states)
         self['ab_model'].setup_particles(self.get('particles'), force)
 
         # Add interactions, except ones with all stable particles or ones
         # with radiation process.
-        self['ab_model'].setup_interactions(self.get('interactions'), force)
+        self['ab_model'].setup_interactions(self.get('interactions'), 
+                                            self['cp_conj_dict'],
+                                            force)
 
     def generate_abstract_amplitudes(self, part, clevel):
         """ Generate the abstract amplitudes in AbstractModel."""
@@ -1356,13 +1365,15 @@ class DecayModel(base_objects.Model):
 
         # Return if self['vertexlist_found'] is True.\
         if self['vertexlist_found']:
-            print "Vertexlist has been searched before."
+            logger.info("Vertexlist has been searched before.")
             return
         # Find the stable particles of this model and do not assign decay vertex
         # to them.
         self.get('stable_particles')
         
+        # Valid initial particle list
         ini_list = []
+
         #Dict to store all the vertexlist (for conveniece only, removable!)
         #vertexlist_dict = {}
 
@@ -1381,9 +1392,9 @@ class DecayModel(base_objects.Model):
             #        vertexlist_dict[(part.get_pdg_code(), partnum,onshell)] = \
             #            base_objects.VertexList()
 
-        #Prepare the vertexlist
+        #Prepare the vertexlist        
         for inter in self['interactions']:
-            #Calculate the particle number and exclude partnum > 3
+            #Calculate the particle number
             partnum = len(inter['particles']) - 1
             
             temp_legs = base_objects.LegList()
@@ -1450,6 +1461,24 @@ class DecayModel(base_objects.Model):
         self['vertexlist_found'] = True
         for part in self['particles']:
             part['vertexlist_found'] = True
+
+        # Setup the cp_conj_dict for interaction id to the id of 
+        # its cp-conjugate.
+        interlist = [(i['id'], [p.get_anti_pdg_code() for p in i['particles']])\
+                         for i in self['interactions']]
+
+        for inter in self['interactions']:
+            pids = [p.get_pdg_code() for p in inter['particles']]
+            found = False
+            for item in interlist:
+                if sorted(item[1]) == sorted(pids) and \
+                        inter['id'] != item[0]:
+
+                    self['cp_conj_dict'][inter['id']] = item[0]
+                    found = True
+                    break
+            if not found:
+                logger.warning('No CP conjugate found for interaction #%d' %inter['id'])
 
         #fdata = open(os.path.join(MG5DIR, 'models', self['name'], 'vertexlist_dict.dat'), 'w')
         #fdata.write(str(vertexlist_dict))
@@ -1717,9 +1746,12 @@ class DecayModel(base_objects.Model):
                 # Running the alpha_s from MB_ref to MC_ref (fermion_num = 4)
                 t = 2.*math.log(MC_ref/MB_ref)
                 amc = self.newton1(t, amb, loopnum, 4.)
-                # Running the alpha_s from MC_ref to q
-                t = 2.*math.log(q/MC_ref)
-                a_out = self.newton1(t, amc, loopnum, 3.)
+                try:
+                    # Running the alpha_s from MC_ref to q
+                    t = 2.*math.log(q/MC_ref)
+                    a_out = self.newton1(t, amc, loopnum, 3.)
+                except ValueError:
+                    a_out = amc
             else:
                 # Running the alpha_s from MB_ref to q (fermion_num = 4)
                 t = 2.*math.log(q/MB_ref)
@@ -3925,7 +3957,7 @@ class DecayAmplitude(diagram_generation.Amplitude):
                 
                 # Set the interaction
                 for ab_key, real_coup in \
-                        ab_model['interaction_coupling_dict'][abs(real_dia['vertices'][i]['id'])].items():
+                        ab_model['interaction_coupling_dict'][real_dia['vertices'][i]['id']].items():
 
                     ab_coup = ab_model.get_interaction(ab_dia['vertices'][i]['id'])['couplings'][ab_key]
                     ab2realdict['coup_dict'][ab_coup] = real_coup
@@ -4288,7 +4320,7 @@ class AbstractModel(base_objects.Model):
             return self['interaction_type_dict'][inter_id]
         except KeyError:
             raise self.PhysicsObjectError, \
-                "Interaction #%dhas not been imported into AbstractModel." \
+                "Interaction #%d has not been imported into AbstractModel." \
                 % inter_id
 
 
@@ -4371,7 +4403,7 @@ class AbstractModel(base_objects.Model):
         self['interaction_dict'][ab_inter['id']] = ab_inter
         
 
-    def setup_interactions(self, inter_list, force=False):
+    def setup_interactions(self, inter_list, anti_dict, force=False):
         """Add real interactions into AbstractModel, 
         convert into abstract interactions.
         The lorentz and color 
@@ -4465,7 +4497,7 @@ class AbstractModel(base_objects.Model):
                                                if not c in color_list])
 
             # Set temporate interaction_type_dict,
-            # transform list into tuple in order to be eligible for key
+            # transform list into tuple in order to be eligible for key.
             self['interaction_type_dict'][inter['id']] = tuple(new_key)
 
             # If it is a new key, add interaction
@@ -4508,6 +4540,7 @@ class AbstractModel(base_objects.Model):
         # Update the quick reference dict
         # and setup the interaction_coupling_dict
         for inter in inter_list:
+
             # Ignore interactions that cannot decay
             if inter['id'] not in self['interaction_type_dict'].keys():
                 continue
@@ -4520,7 +4553,7 @@ class AbstractModel(base_objects.Model):
                              set(old_type[2]) < set(new_type[2])):
 
                         self['interaction_type_dict'][inter['id']] = new_type
-                        break
+
 
             # Construct the coupling dict
             self['interaction_coupling_dict'][inter['id']] = {}
@@ -4536,7 +4569,23 @@ class AbstractModel(base_objects.Model):
                 
                 self['interaction_coupling_dict'][inter['id']][tuple(ab_key)]\
                     = coup
-                
+
+
+        # Update dict for anti-iteraction
+        for inter in inter_list:
+            # For possible anti-interaction, 
+            # Update the interaction_type_dict, interaction_coupling_dict
+            if inter['id'] in anti_dict.keys():
+                    anti_inter_id = anti_dict[inter['id']]                    
+            else:
+                continue
+
+            # property of -(inter_id) -> property of anti_inter_id
+            self['interaction_type_dict'][-inter['id']] = \
+                self['interaction_type_dict'][anti_inter_id]
+            self['interaction_coupling_dict'][-inter['id']] = \
+                self['interaction_coupling_dict'][anti_inter_id]
+
 
         # Reset dictionaries in the model
         self.reset_dictionaries()
@@ -4566,7 +4615,7 @@ class AbstractModel(base_objects.Model):
                 continue
 
             # Use get_interaction_type function
-            inter_type = self.get_interaction_type(abs(inter_id))
+            inter_type = self.get_interaction_type(inter_id)
             inter_type_code = \
                 self['abstract_interactions_dict'][inter_type][0]['id']
 
@@ -4593,8 +4642,8 @@ class AbstractModel(base_objects.Model):
                         if j == i:
                             break
 
-                        if abs(previous_id) == \
-                                abs(inter_id):
+                        if previous_id == \
+                                inter_id:
                             pseudo_ab_interlist.append(\
                                 pseudo_ab_interlist[j])
 
@@ -4608,12 +4657,12 @@ class AbstractModel(base_objects.Model):
                     # it.
                     if serial_number_dict[inter_type] >= \
                             len(self['abstract_interactions_dict'][inter_type]):
-                        self.add_ab_interaction(abs(inter_id), True)
+                        self.add_ab_interaction(inter_id, True)
                             
                     # Append the pdg_code into the list,
                     # starting from the s/n given by serial_number_dict
                     pseudo_ab_interlist.append(\
-                        abs(inter_type_code)+\
+                        inter_type_code+\
                             serial_number_dict[inter_type]
                         )
 

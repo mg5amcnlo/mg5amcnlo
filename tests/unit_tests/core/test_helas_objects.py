@@ -408,8 +408,8 @@ class HelasMatrixElementTest(unittest.TestCase):
                                              g,
                                              g]),
                       'color': [color.ColorString([color.f(0, 1, 2)]),
-                                color.ColorString([color.f(0, 1, 2)]),
-                                color.ColorString([color.f(0, 1, 2)])],
+                                color.ColorString([color.f(1, 2, 0)]),
+                                color.ColorString([color.f(2, 0, 1)])],
                       'lorentz':['gggg1', 'gggg2', 'gggg3'],
                       'couplings':{(0, 0):'GG',(1, 1):'GG',(2, 2):'GG'},
                       'orders':{'QCD':2}}))
@@ -1137,8 +1137,10 @@ class HelasMatrixElementTest(unittest.TestCase):
         matrix_element = helas_objects.HelasMatrixElement(\
             myamplitude,
             0)
-
-        self.assertEqual(matrix_element.get('diagrams'), diagrams)
+        
+        self.assertEqual(matrix_element.get('diagrams')[0]['amplitudes'], amplitude1, 
+                         '%s != %s' %(matrix_element.get('diagrams')[0]['amplitudes'], amplitude1))
+        #self.assertEqual(matrix_element.get('diagrams'), diagrams)
 
     def test_generate_helas_diagrams_ae_ae(self):
         """Testing the helas diagram generation a e- > a e-
@@ -1163,8 +1165,8 @@ class HelasMatrixElementTest(unittest.TestCase):
         myamplitude = diagram_generation.Amplitude({'process': myproc})
 
         goal = "2 diagrams:\n"
-        goal = goal + "1  ((1(22),2(-11)>1(-11),id:7),(3(22),4(11)>3(11),id:7),(1(-11),3(11),id:0)) (QED=2)\n"
-        goal = goal + "2  ((1(22),4(11)>1(11),id:7),(2(-11),3(22)>2(-11),id:7),(1(11),2(-11),id:0)) (QED=2)"
+        goal = goal + "1  ((1(22),2(-11)>1(-11),id:7),(3(22),4(11)>3(11),id:7),(1(-11),3(11),id:0)) (QED=2,QCD=0)\n"
+        goal = goal + "2  ((1(22),4(11)>1(11),id:7),(2(-11),3(22)>2(-11),id:7),(1(11),2(-11),id:0)) (QED=2,QCD=0)"
 
         self.assertEqual(goal,
                          myamplitude.get('diagrams').nice_string())
@@ -1258,8 +1260,8 @@ class HelasMatrixElementTest(unittest.TestCase):
         myamplitude = diagram_generation.Amplitude({'process': myproc})
 
         goal = "2 diagrams:\n"
-        goal = goal + "1  ((1(-11),2(22)>1(-11),id:7),(3(22),4(11)>3(11),id:7),(1(-11),3(11),id:0)) (QED=2)\n"
-        goal = goal + "2  ((1(-11),3(22)>1(-11),id:7),(2(22),4(11)>2(11),id:7),(1(-11),2(11),id:0)) (QED=2)"
+        goal = goal + "1  ((1(-11),2(22)>1(-11),id:7),(3(22),4(11)>3(11),id:7),(1(-11),3(11),id:0)) (QED=2,QCD=0)\n"
+        goal = goal + "2  ((1(-11),3(22)>1(-11),id:7),(2(22),4(11)>2(11),id:7),(1(-11),2(11),id:0)) (QED=2,QCD=0)"
 
         self.assertEqual(goal,
                          myamplitude.get('diagrams').nice_string())
@@ -1888,9 +1890,9 @@ class HelasMatrixElementTest(unittest.TestCase):
 
         helas_writer = helas_call_writers.FortranUFOHelasCallWriter(mymodel)
 
-        self.assertEqual(len(me.get_all_amplitudes()), 8)
+        self.assertEqual(len(me.get_all_amplitudes()), 2)
 
-        self.assertEqual(len(me.get_all_wavefunctions()), 8)
+        self.assertEqual(len(me.get_all_wavefunctions()), 6)
 
         for i, amp in enumerate(me.get_all_amplitudes()):
             self.assertEqual(amp.get('number'), i + 1)

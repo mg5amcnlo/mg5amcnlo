@@ -201,7 +201,6 @@ if [[ $b != ".true." ]]; then
    mv survey refine
    $dirbin/gen_crossxhtml-pl $t
    $dirbin/refine $a $mode $n 5 $t
-   #$dirbin/refine 0.01 $mode $n
    mv refine refine2
    $dirbin/gen_crossxhtml-pl $t
    $dirbin/refine $a $mode $n 1 $t
@@ -230,6 +229,10 @@ cd ./Events
 echo "putting the banner"
 $dirbin/put_banner events.lhe
 $dirbin/put_banner unweighted_events.lhe
+
+if [[ -e unweighted_events.lhe ]]; then
+    $dirbin/extract_banner-pl unweighted_events.lhe  banner.txt 
+fi
 
 #if [[ -e ../Cards/replace_card.dat ]];then
 #    $dirbin/replace.pl unweighted_events.lhe temp.lhe < ../Cards/replace_card.dat
@@ -275,6 +278,9 @@ fi
 $dirbin/store $t
 $dirbin/gen_crossxhtml-pl $t
 
+# Restore the banner
+cp -f ${t}_banner.txt banner.txt
+
 if [[ $b == ".true." ]]; then
    cd ../
    sed -i.bak "s/\s*.false.*=.*GridRun/  .true.  =  GridRun/g" Cards/grid_card.dat
@@ -305,6 +311,13 @@ if [[ (-x $pydir/pythia) && (-e ../Cards/pythia_card.dat) ]]; then
     echo "Running pythia..."
 #    qsub -v pydir=$pydir $dirbin/run_pythia >> ../running_jobs
     $dirbin/run_pythia $pydir $mode  
+fi
+
+if [[ -e pythia_events.hep ]];then
+# pythia_card.dat
+   echo "<MGPythiaCard>" >> banner.txt
+   if [[ -e ../Cards/pythia_card.dat ]]; then cat ../Cards/pythia_card.dat   >> banner.txt; fi
+   echo "</MGPythiaCard>" >> banner.txt
 fi
 
 if [[ (-x $pydir/hep2lhe) && (-e ../Cards/pythia_card.dat) && (-e pythia_events.hep) ]]; then

@@ -17,6 +17,7 @@ import unittest
 import os
 import re
 import shutil
+import sys
 import logging
 
 logger = logging.getLogger('test_cmd')
@@ -89,12 +90,12 @@ class TestCmdShell1(unittest.TestCase):
         """ command 'draw' works """
 
         self.do('load processes %s' % self.join_path(_pickle_path,'e+e-_e+e-.pkl'))
-        self.do('draw .')
+        self.do('display diagrams .')
         self.assertTrue(os.path.exists('./diagrams_0_epem_epem.eps'))
         os.remove('./diagrams_0_epem_epem.eps')
         
         self.do('generate g g > g g')
-        self.do('draw .')
+        self.do('display diagrams .')
         self.assertTrue(os.path.exists('diagrams_0_gg_gg.eps'))
         os.remove('diagrams_0_gg_gg.eps')
         
@@ -102,7 +103,18 @@ class TestCmdShell1(unittest.TestCase):
         """check that configuration file is at default value"""
         
         config = self.cmd.set_configuration(MG5DIR+'/input/mg5_configuration.txt')
-        expected = {'pythia8_path': './pythia8'}
+        if sys.platform == 'darwin':
+            expected = {'pythia8_path': './pythia8',
+                        'symmetry_max_time': '600',
+                        'web_browser': None,
+                        'text_editor': 'vi',
+                        'eps_viewer': None}
+        else:
+            expected = {'pythia8_path': './pythia8',
+                        'symmetry_max_time': '600',
+                        'web_browser': 'firefox',
+                        'text_editor': 'vi',
+                        'eps_viewer': 'gv'}            
 
         self.assertEqual(config, expected)
 
@@ -163,15 +175,7 @@ class TestCmdShell2(unittest.TestCase,
                                                     'P0_epem_epem',
                                                     'matrix1.jpg')))
         self.assertTrue(os.path.exists(os.path.join(self.out_dir,
-                                                    'madevent.tar.gz')))        
-        self.do('output %s' % self.out_dir)
-        self.assertFalse(os.path.exists(os.path.join(self.out_dir,
-                                                    'SubProcesses',
-                                                    'P0_epem_epem',
-                                                    'matrix1.jpg')))
-        self.assertTrue(os.path.exists(os.path.join(self.out_dir,
-                                               'SubProcesses', 'P0_epem_epem')))
-        self.do('load processes %s' % self.join_path(_pickle_path,'e+e-_e+e-.pkl'))
+                                                    'madevent.tar.gz')))
         self.do('output %s -f' % self.out_dir)
         self.assertTrue(os.path.exists(os.path.join(self.out_dir,
                                                     'SubProcesses',
@@ -267,8 +271,10 @@ class TestCmdShell2(unittest.TestCase,
                             os.path.join(self.out_dir,'Cards','proc_card.dat')))
     
         self.cmd = Cmd.MadGraphCmdShell()
-        self.do('import proc_v4 %s' % os.path.join(self.out_dir,
-                                                       'Cards','proc_card.dat'))
+        pwd = os.getcwd()
+        os.chdir(self.out_dir)
+        self.do('import proc_v4 %s' % os.path.join('Cards','proc_card.dat'))
+        os.chdir(pwd)
 
         self.assertTrue(os.path.exists(os.path.join(self.out_dir,
                                               'SubProcesses', 'P1_emep_vevex')))
@@ -407,7 +413,7 @@ class TestCmdShell2(unittest.TestCase,
             shutil.rmdir(self.out_dir)
 
         self.do('import model sm')
-        self.do('set group_subprocesses_output False')
+        self.do('set group_subprocesses False')
         self.do('generate e+ e->e+ e-')
         self.do('output %s ' % self.out_dir)
         # Check that the needed ALOHA subroutines are generated
@@ -478,7 +484,7 @@ class TestCmdShell2(unittest.TestCase,
 
         self.do('import model sm')
         self.do('define p = u d u~ d~')
-        self.do('set group_subprocesses_output False')
+        self.do('set group_subprocesses False')
         self.do('generate p p > w+, w+ > l+ vl @1')
         self.do('output madevent %s ' % self.out_dir)
         devnull = open(os.devnull,'w')
@@ -542,10 +548,10 @@ class TestCmdShell2(unittest.TestCase,
 
         self.do('import model sm')
         self.do('define p = g u d u~ d~')
-        self.do('set group_subprocesses_output True')
+        self.do('set group_subprocesses True')
         self.do('generate g g > p p @2')
         self.do('output madevent %s ' % self.out_dir)
-        self.do('set group_subprocesses_output False')
+        self.do('set group_subprocesses False')
         devnull = open(os.devnull,'w')
         # Check that all subprocess directories have been created
         self.assertTrue(os.path.exists(os.path.join(self.out_dir,
@@ -564,9 +570,6 @@ class TestCmdShell2(unittest.TestCase,
         # Check that the run_config.inc file has been modified correctly
         run_config = open(os.path.join(self.out_dir, 'Source',
                                        'run_config.inc')).read()
-        self.assertTrue(run_config.find("min_events_channel = 4000"))
-        self.assertTrue(run_config.find("min_events = 4000"))
-        self.assertTrue(run_config.find("max_events = 8000"))
         self.assertTrue(run_config.find("ChanPerJob=2"))
         generate_events = open(os.path.join(self.out_dir, 'bin',
                                        'generate_events')).read()
@@ -597,7 +600,8 @@ class TestCmdShell2(unittest.TestCase,
                                                'lib', 'libdsample.a')))
         self.assertTrue(os.path.exists(os.path.join(self.out_dir,
                                                'lib', 'libpdf.a')))
-        # Check that combine_events, gen_ximprove, and combine_runs compile
+        # Check that combine_events, gen_ximprove, combine_runs and sum_html
+        # compile
         status = subprocess.call(['make', '../bin/combine_events'],
                                  stdout=devnull, 
                                  cwd=os.path.join(self.out_dir, 'Source'))
@@ -616,6 +620,12 @@ class TestCmdShell2(unittest.TestCase,
         self.assertEqual(status, 0)
         self.assertTrue(os.path.exists(os.path.join(self.out_dir,
                                                'bin', 'combine_runs')))
+        status = subprocess.call(['make', '../bin/sum_html'],
+                                 stdout=devnull, 
+                                 cwd=os.path.join(self.out_dir, 'Source'))
+        self.assertEqual(status, 0)
+        self.assertTrue(os.path.exists(os.path.join(self.out_dir,
+                                               'bin', 'sum_html')))
         # Check that gensym compiles
         status = subprocess.call(['make', 'gensym'],
                                  stdout=devnull, 
@@ -651,10 +661,10 @@ class TestCmdShell2(unittest.TestCase,
 
         self.do('import model mssm')
         self.do('define q = u d u~ d~')
-        self.do('set group_subprocesses_output True')
+        self.do('set group_subprocesses True')
         self.do('generate u u~ > g > go go, go > q q n1 / ur dr')
         self.do('output %s ' % self.out_dir)
-        self.do('set group_subprocesses_output False')
+        self.do('set group_subprocesses False')
         devnull = open(os.devnull,'w')
         # Check that all subprocess directories have been created
         self.assertTrue(os.path.exists(os.path.join(self.out_dir,
@@ -705,18 +715,18 @@ class TestCmdShell2(unittest.TestCase,
                                            'SubProcesses',
                                            'P0_qq_gogo_go_qqn1_go_qqn1',
                                            'symfact.dat')).read(),
-                         """    1.030     1
-    2.030     1
-    3.030     1
-    4.030     1
+                         """1.030     1
+2.030     1
+3.030     1
+4.030     1
      5    -2
-    6.030     1
-    7.030     1
-    8.030     1
-   11.030     1
-   12.030     1
+6.030     1
+7.030     1
+8.030     1
+11.030     1
+12.030     1
     15   -12
-   16.030     1
+16.030     1
 """)
         
     def test_madevent_subproc_group_decay_chain(self):
@@ -727,26 +737,26 @@ class TestCmdShell2(unittest.TestCase,
 
         self.do('import model sm')
         self.do('define p = g u d u~ d~')
-        self.do('set group_subprocesses_output True')
+        self.do('set group_subprocesses True')
         self.do('generate p p > w+, w+ > l+ vl @1')
         self.do('add process p p > w+ p, w+ > l+ vl @2')
         self.do('output madevent %s -nojpeg' % self.out_dir)
-        self.do('set group_subprocesses_output False')
+        self.do('set group_subprocesses False')
         devnull = open(os.devnull,'w')
         # Check that all subprocess directories have been created
         self.assertTrue(os.path.exists(os.path.join(self.out_dir,
                                                     'SubProcesses',
-                                                    'P2_gq_wpq_wp_epve')))
+                                                    'P2_gq_wpq_wp_lvl')))
         self.assertTrue(os.path.exists(os.path.join(self.out_dir,
                                                     'SubProcesses',
-                                                    'P2_gq_wpq_wp_epve')))
+                                                    'P2_gq_wpq_wp_lvl')))
         self.assertTrue(os.path.exists(os.path.join(self.out_dir,
                                                     'SubProcesses',
-                                                    'P2_qq_wpg_wp_epve')))
+                                                    'P2_qq_wpg_wp_lvl')))
         goal_subproc_mg = \
-"""P2_gq_wpq_wp_epve
-P2_qq_wpg_wp_epve
-P1_qq_wp_wp_epve
+"""P2_gq_wpq_wp_lvl
+P2_qq_wpg_wp_lvl
+P1_qq_wp_wp_lvl
 """
         self.assertFileContains(os.path.join(self.out_dir,
                                              'SubProcesses',
@@ -773,35 +783,35 @@ P1_qq_wp_wp_epve
         status = subprocess.call(['make', 'gensym'],
                                  stdout=devnull, 
                                  cwd=os.path.join(self.out_dir, 'SubProcesses',
-                                                  'P2_qq_wpg_wp_epve'))
+                                                  'P2_qq_wpg_wp_lvl'))
         self.assertEqual(status, 0)
         self.assertTrue(os.path.exists(os.path.join(self.out_dir,
                                                     'SubProcesses',
-                                                    'P2_qq_wpg_wp_epve',
+                                                    'P2_qq_wpg_wp_lvl',
                                                     'gensym')))
         # Check that gensym runs
         status = subprocess.call('./gensym', 
                                  stdout=devnull,
                                  cwd=os.path.join(self.out_dir, 'SubProcesses',
-                                                  'P2_qq_wpg_wp_epve'),
+                                                  'P2_qq_wpg_wp_lvl'),
                                  shell=True)
         self.assertEqual(status, 0)
         # Check that madevent compiles
         status = subprocess.call(['make', 'madevent'],
                                  stdout=devnull, 
                                  cwd=os.path.join(self.out_dir, 'SubProcesses',
-                                                  'P2_qq_wpg_wp_epve'))
+                                                  'P2_qq_wpg_wp_lvl'))
         self.assertEqual(status, 0)
         self.assertTrue(os.path.exists(os.path.join(self.out_dir,
                                                     'SubProcesses',
-                                                    'P2_qq_wpg_wp_epve',
+                                                    'P2_qq_wpg_wp_lvl',
                                                     'madevent')))
         
     def test_madevent_triplet_diquarks(self):
         """Test MadEvent output of triplet diquarks"""
 
         self.do('import model triplet_diquarks')
-        self.do('set group_subprocesses_output False')
+        self.do('set group_subprocesses False')
         self.do('generate u t > trip~ > u t g')
         self.do('output %s ' % self.out_dir)
 
@@ -860,7 +870,7 @@ P1_qq_wp_wp_epve
 
         # Test sextet production
         self.do('import model sextet_diquarks')
-        self.do('set group_subprocesses_output False')
+        self.do('set group_subprocesses False')
         self.do('generate u u > six g')
         self.do('output %s ' % self.out_dir)
         
@@ -908,7 +918,7 @@ P1_qq_wp_wp_epve
         self.do('import model sm')
         self.do('define p g u d u~ d~')
         self.do('define j g u d u~ d~')
-        self.do('generate p p > w+ j')
+        self.do('generate p p > w+ j @2')
         self.do('output pythia8 %s' % self.out_dir)
         # Check that the needed files are generated
         files = ['Processes_sm/Sigma_sm_gq_wpq.h', 'Processes_sm/Sigma_sm_gq_wpq.cc',
@@ -928,7 +938,7 @@ P1_qq_wp_wp_epve
             shutil.rmdir(self.out_dir)
 
         self.do('import model sm')
-        self.do('generate e+ e- > e+ e-')
+        self.do('generate e+ e- > e+ e- @2')
         self.do('output standalone_cpp %s' % self.out_dir)
 
         # Check that all needed src files are generated
@@ -950,21 +960,21 @@ P1_qq_wp_wp_epve
         subprocess.call(['make', 'check'],
                         stdout=devnull, stderr=devnull, 
                         cwd=os.path.join(self.out_dir, 'SubProcesses',
-                                         'P0_Sigma_sm_epem_epem'))
+                                         'P2_Sigma_sm_epem_epem'))
 
         self.assertTrue(os.path.exists(os.path.join(self.out_dir,
                                                     'SubProcesses',
-                                                    'P0_Sigma_sm_epem_epem',
+                                                    'P2_Sigma_sm_epem_epem',
                                                     'check')))
 
         # Check that the output of check is correct 
         logfile = os.path.join(self.out_dir, 'SubProcesses',
-                               'P0_Sigma_sm_epem_epem', 'check.log')
+                               'P2_Sigma_sm_epem_epem', 'check.log')
 
         subprocess.call('./check', 
                         stdout=open(logfile, 'w'), stderr=devnull,
                         cwd=os.path.join(self.out_dir, 'SubProcesses',
-                                         'P0_Sigma_sm_epem_epem'), shell=True)
+                                         'P2_Sigma_sm_epem_epem'), shell=True)
 
         log_output = open(logfile, 'r').read()
         me_re = re.compile('Matrix element\s*=\s*(?P<value>[\d\.e\+-]+)\s*GeV',

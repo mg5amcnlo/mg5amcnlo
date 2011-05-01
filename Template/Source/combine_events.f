@@ -13,15 +13,16 @@ c
       parameter (cmax_events=500000)
       integer    sfnum
       parameter (sfnum=17)   !Unit number for scratch file
+      include 'maxparticles.inc'
       integer    maxexternal
-      parameter (maxexternal=17)
+      parameter (maxexternal=2*max_particles-3)
       integer maxpara
       parameter (maxpara=1000)
 c     
 c     Local
 c
-      character*100 subname(maxsubprocesses)
-      character*110 pathsubname(maxsubprocesses)         !needed for MadWeight
+      character*300 subname(maxsubprocesses)
+      character*310 pathsubname(maxsubprocesses)         !needed for MadWeight
       character*80 down_path                           !needed for MadWeight
       character*40 filename                         !needed for MadWeight
       character*4  card_number                         !needed for MadWeight
@@ -442,6 +443,7 @@ c     Constants
 c
       character*(*) symfile
       parameter (symfile='symfact.dat')
+      include 'maxparticles.inc'
 c
 c     Arguments
 c
@@ -453,37 +455,31 @@ c     Local
 c
       integer i,j, k, ip
       double precision xi
-      character*150 dirname,dname,channame
+      character*300 dirname,dname,channame
+      integer ncode,npos
+      character*20 formstr
 c-----
 c  Begin Code
 c-----
-       i = index(dir," ")
+      i = index(dir," ")
+c     ncode is number of digits needed for the bw coding
+      ncode=int(dlog10(3d0)*(max_particles-3))+1
       dname = dir(1:i-1)// "/" // symfile
       open(unit=35, file=dname ,status='old',err=59)
       do while (.true.)
          read(35,*,err=99,end=99) xi,j
          if (j .gt. 0) then
-            if ( (xi-int(xi+.01)) .lt. 1d-5) then
-               k = int(xi+.01)
-               if (k .lt. 10) then
-                  write(dirname,'(a,i1,a)') 'G',k,'/'
-               else if (k .lt. 100) then
-                  write(dirname,'(a,i2,a)') 'G',k,'/'
-               else if (k .lt. 1000) then
-                  write(dirname,'(a,i3,a)') 'G',k,'/'
-               else if (k .lt. 10000) then
-                  write(dirname,'(a,i4,a)') 'G',k,'/'
-               endif
+            k = int(xi*(1+10**-ncode))
+            npos=int(dlog10(dble(k)))+1
+            if ( (xi-k) .eq. 0) then
+c              Write with correct number of digits
+               write(formstr,'(a,i1,a)') '(a,i',npos,',a)'
+               write(dirname, formstr) 'G',k,'/'
             else               !Handle B.W.
-               if (xi .lt. 10) then
-                  write(dirname,'(a,f5.3,a,a)') 'G',xi,'/'
-               else if (xi .lt. 100) then
-                  write(dirname,'(a,f6.3,a,a)') 'G',xi,'/'
-               else if (xi .lt. 1000) then
-                  write(dirname,'(a,f7.3,a,a)') 'G',xi,'/'
-               else if (xi .lt. 10000) then
-                  write(dirname,'(a,f8.3,a,a)') 'G',xi,'/'
-               endif
+c              Write with correct number of digits
+               write(formstr,'(a,i1,a,i1,a)') '(a,f',npos+ncode+1,
+     $                 '.',ncode,',a)'
+               write(dirname,formstr)  'G',xi,'/'
             endif     
             ip = index(dirname,'/')
             channame = dname(1:i-1)// "/" //dirname(1:ip)
@@ -517,8 +513,9 @@ c
       parameter (sfnum=17)   !Unit number for scratch file
       character*(*) scaled_file
       parameter (scaled_file='events.lhe')
-      integer maxexternal
-      parameter (maxexternal=17)
+      include 'maxparticles.inc'
+      integer    maxexternal
+      parameter (maxexternal=2*max_particles-3)
       include 'run_config.inc'
       integer    max_read
       parameter (max_read = 2000000)
@@ -540,7 +537,7 @@ c
       integer ievent,iseed
       logical done,found
       character*140 buff
-      character*150 fullname
+      character*300 fullname
 c
 c     Les Houches init block (for the <init> info)
 c
@@ -654,7 +651,7 @@ c
 c
 c     Arguments
 c
-      character*100 subname(maxsubprocesses)
+      character*300 subname(maxsubprocesses)
       integer ns
 c-----
 c  Begin Code

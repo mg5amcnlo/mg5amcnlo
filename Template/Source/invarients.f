@@ -226,7 +226,8 @@ c     Try simple mapping if nconfigs = 1
 c
 
       if (nconfigs .eq. 1) then
-         do j=1,3*nbranch-4+2
+c         do j=1,3*nbranch-4+2
+         do j=1,maxdim
             minvar(j,mincfig)=j
          enddo
          jgrid=j-1

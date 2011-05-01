@@ -164,7 +164,8 @@ c
 c     Local
 c
       character*30 fname
-      integer ic
+      integer ic, npos
+      character*10 formstr
 
       data ic/0/
 c-----
@@ -172,13 +173,10 @@ c  Begin Code
 c-----
       ic=ic+1
       fname='ajob'
-      if (ic .lt. 10) then
-         write(fname(5:5),'(i1)') ic
-      elseif (ic .lt. 100) then
-         write(fname(5:6),'(i2)') ic
-      elseif (ic .lt. 1000) then
-         write(fname(5:7),'(i3)') ic
-      endif
+c     Write ic with correct number of digits
+      npos=int(dlog10(dble(ic)))+1
+      write(formstr,'(a,i1,a)') '(I',npos,')'
+      write(fname(5:(5+npos-1)),formstr) ic
       open (unit=lun, file = fname, status='unknown')
       write(lun,15) '#!/bin/bash'
       write(lun,15) '#PBS -q ' // PBS_QUE
@@ -226,6 +224,9 @@ c
 c     local
 c
       integer i, j, nbw, ic, icode
+      integer ncode, nconf
+      double precision dconfig
+      character*10 formstr
       integer iarray(imax)
       logical lconflict(-max_branch:nexternal)
       logical done
@@ -237,6 +238,8 @@ c  Begin Code
 c-----
       call open_bash_file(26)
       ic = 0      
+c     ncode is number of digits needed for the code
+      ncode=int(dlog10(3d0)*(max_particles-3))+1
       do i=1,mapconfig(0)
          if (use_config(i) .gt. 0) then
             call bw_conflict(i,iforest(1,-max_branch,i),lconflict,
@@ -273,26 +276,17 @@ c            do j=1,2**nbw
                   ic = 1
                endif
 c               write(*,*) 'mapping',ic,mapconfig(i)
-               if (mapconfig(i) .lt. 10) then
-                  write(26,'(i1$)') mapconfig(i)
-               elseif (mapconfig(i) .lt. 100) then
-                  write(26,'(i2$)') mapconfig(i)
-               elseif (mapconfig(i) .lt. 1000) then
-                  write(26,'(i3$)') mapconfig(i)
-               elseif (mapconfig(i) .lt. 10000) then
-                  write(26,'(i4$)') mapconfig(i)
-               endif
+               nconf=int(dlog10(dble(mapconfig(i))))+1
                if (icode .eq. 0) then
-c                 write(26,'($a)') '.000'
-               elseif (icode .lt. 10) then
-                  write(26,'(a,i1$)') '.00', icode
-               elseif (icode .lt. 100) then
-                  write(26,'(a,i2$)') '.0', icode
-               elseif (icode .lt. 1000) then
-                  write(26,'(a,i3$)') '.', icode
+c                 Create format string based on number of digits
+                  write(formstr,'(a,i1,a)') '(I',nconf,'$)'
+                  write(26,formstr) mapconfig(i)
                else
-                  write(*,*) 'Error too many B.W. in symmetry.f',icode
-                  stop
+c                 Create format string based on number of digits
+                  dconfig=mapconfig(i)+icode*1d0/10**ncode
+                  write(formstr,'(a,i1,a,i1,a)') '(F',nconf+ncode+1,
+     $                 '.',ncode,'$)'
+                  write(26,formstr) dconfig
                endif
                write(26,'(a$)') ' '
                call bw_increment_array(iarray,imax,ibase,gForceBW(-imax,i),done)
@@ -300,8 +294,8 @@ c                 write(26,'($a)') '.000'
          endif
       enddo
       call close_bash_file(26)
-      if (mapconfig(0) .gt. 9999) then
-         write(*,*) 'Only writing first 9999 jobs',mapconfig(0)
+      if (mapconfig(0) .gt. 99999) then
+         write(*,*) 'Only writing first 99999 jobs',mapconfig(0)
       endif
 c
 c     Now write out the symmetry factors for each graph
@@ -337,8 +331,11 @@ c
             do while (.not. done)
                call enCode(icode,iarray,ibase,imax)
                if (icode .gt. 0) then
-                  write(26,'(f9.3,i6)') mapconfig(i)+real(icode)/1000.,
-     $                 use_config(i)
+                  nconf=int(dlog10(dble(mapconfig(i))))+1
+                  write(formstr,'(a,i1,a,i1,a)') '(F',nconf+ncode+1,
+     $                 '.',ncode,',i6)'
+                  dconfig=mapconfig(i)+icode*1d0/10**ncode
+                  write(26,formstr) dconfig,use_config(i)
                else
                   write(26,'(2i6)') mapconfig(i),use_config(i)
                endif
@@ -401,6 +398,8 @@ c     Reset variables
 c      
       do i=1,nexternal
          xmass(i) = 0d0
+      enddo
+      do i=1,nexternal-1
          lconflict(-i) = .false.
          iden_part(-i)=0
       enddo
@@ -414,19 +413,27 @@ c
          if (pwidth(-i,iconfig) .gt. 0d0) then
 c     JA 3/31/11 Keep track of identical particles (i.e., radiation vertices)
 c     by tracing the particle identity from the external particle.
-            if(itree(1,-i).gt.0.and.
-     $           sprop(-i).eq.idup(itree(1,-i),1,1).or.
-     $         itree(2,-i).gt.0.and.
-     $           sprop(-i).eq.idup(itree(2,-i),1,1).or.
-     $         itree(1,-i).lt.0.and.(iden_part(itree(1,-i)).ne.0.and.
+            if(itree(1,-i).gt.0) then
+               if(sprop(-i).eq.idup(itree(1,-i),1,1))
+     $              iden_part(-i) = sprop(-i)
+            endif
+            if(itree(2,-i).gt.0) then
+               if(sprop(-i).eq.idup(itree(2,-i),1,1))
+     $              iden_part(-i) = sprop(-i)
+            endif
+            if(itree(1,-i).lt.0) then
+               if(iden_part(itree(1,-i)).ne.0.and.
      $           sprop(-i).eq.iden_part(itree(1,-i)) .or.
      $         forcebw(itree(1,-i)).and.
-     $           sprop(-i).eq.sprop(itree(1,-i))).or.
-     $         itree(2,-i).lt.0.and.(iden_part(itree(2,-i)).ne.0.and.
+     $           sprop(-i).eq.sprop(itree(1,-i)))
+     $              iden_part(-i) = sprop(-i)
+            endif
+            if(itree(2,-i).lt.0) then
+               if(iden_part(itree(2,-i)).ne.0.and.
      $           sprop(-i).eq.iden_part(itree(2,-i)).or.
      $         forcebw(itree(2,-i)).and.
-     $           sprop(-i).eq.sprop(itree(2,-i))))then
-               iden_part(-i) = sprop(-i)
+     $           sprop(-i).eq.sprop(itree(2,-i)))
+     $              iden_part(-i) = sprop(-i)
             endif
             if (xmass(-i) .gt. pmass(-i,iconfig) .and.
      $           iden_part(-i).eq.0) then !Can't be on shell, and not radiation

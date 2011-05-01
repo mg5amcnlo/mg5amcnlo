@@ -104,7 +104,7 @@ class make_info_html:
     </TR>
     <TR> 
         <TD ALIGN=CENTER> <A HREF="../Source/MODEL/interactions.dat">interactions</A></TD> 
-        <TD> Interactions file used for code generation.</TABLE><P><H3 align=center><A HREF="../index.html"> Main Page </A></TD>
+        <TD> Interactions file used for code generation.</TD>
     </TR>"""
         else:
             return ''

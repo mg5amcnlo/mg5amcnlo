@@ -722,6 +722,14 @@ class Test_DecayModel(unittest.TestCase):
         self.assertTrue(all([p.get('vertexlist_found') for p in \
                                 self.my_testmodel.get('particles')]))
 
+        # Test for the CP conjugation dict
+        for key, conj_key in self.my_testmodel['cp_conj_dict'].items():
+            pids_1 = [p.get_pdg_code() \
+                          for p in self.my_testmodel.get_interaction(key)['particles']]
+            pids_2 = [p.get_anti_pdg_code() \
+                          for p in self.my_testmodel.get_interaction(conj_key)['particles']]
+            self.assertEqual(sorted(pids_1), sorted(pids_2) )
+
     def test_find_mssm_decay_groups_modified_mssm(self):
         """Test finding the decay groups of the MSSM"""
 
@@ -2463,6 +2471,8 @@ class Test_AbstractModel(unittest.TestCase):
                 inter_type = ab_model['interaction_type_dict'][inter['id']]
             except KeyError:
                 continue
+
+
             # Test the particlelist type
             # Note: the particlelist type in inter_type has transformed into
             # tuple
@@ -2499,6 +2509,16 @@ class Test_AbstractModel(unittest.TestCase):
             # Test the interaction_dict
             ab_inter = ab_model['abstract_interactions_dict'][inter_type][0]
             self.assertTrue(ab_model.get_interaction(ab_inter['id']))
+
+            # Test anti interaction
+            _has_anti = False
+            if inter['id'] in normal_sm['cp_conj_dict'].keys():
+                _has_anti = True
+            if _has_anti:
+                self.assertEqual(ab_model['interaction_type_dict'][normal_sm['cp_conj_dict'][inter['id']]],
+                                 ab_model['interaction_type_dict'][-inter['id']])
+                self.assertEqual(ab_model['interaction_coupling_dict'][normal_sm['cp_conj_dict'][inter['id']]], 
+                                 ab_model['interaction_coupling_dict'][-inter['id']])
 
         # Test for non-repeated interaction id
         id_list = [i['id'] for i in ab_model['interactions']]
@@ -2840,7 +2860,6 @@ class Test_AbstractModel(unittest.TestCase):
         ab_amp['part_sn_dict'] = {(1,1,True): 1, 
                                   (2,1,False):4}
         ab_amp['ab2real_dicts'].append(decay_objects.Ab2RealDict())
-
         ab_model.add_ab_diagram(ab_amp, h_zz_eevv['diagrams'][0])
         ab_dia_1 = ab_amp['diagrams'][0]
         ab_amp['ab2real_dicts'][-1].set_final_legs_dict(ab_dia_1,
@@ -2925,10 +2944,12 @@ class Test_AbstractModel(unittest.TestCase):
         self.assertEqual(ab_amp['ab2real_dicts'][-1]['coup_dict'],
                          {'G0010000':'GC_64',
                           'G0010001':'GC_67',
-                          # h > ww
+                          # h > ww, w+
                           'G0070000':'GC_33',
-                          'G0070001':'GC_53', 
-                          'G0070002':'GC_34', 'G0070102':'GC_48'
+                          #         w- (anti-id)
+                          'G0070001':'GC_33', 
+                          'G0070002':'GC_53', 
+                          'G0070003':'GC_34', 'G0070103':'GC_48'
                           })
         #----------------------
         # Test generate_ab_amplitude
@@ -2946,19 +2967,32 @@ class Test_AbstractModel(unittest.TestCase):
         """ Test generate the abstract amplitudes, matrixelement. """
 
         model_type = 'mssm'
-        normal_sm_base = import_ufo.import_model(model_type)
+        """if model_type == 'full_sm':
+            normal_sm_base = import_ufo.import_model(\
+                os.path.join(MG5DIR,
+                             'tests', 'input_files',
+                             'full_sm_UFO'))
+            normal_sm = decay_objects.DecayModel(full_sm_base, True)
+            param_path = os.path.join(_file_path,
+                                      '../input_files/param_card_full_sm.dat')
+        else:"""
+
+        normal_sm_base = import_ufo.import_model(\
+            model_type)
         normal_sm = decay_objects.DecayModel(normal_sm_base,
                                              force=True)
         param_path = os.path.join(_file_path,
                                   '../input_files/param_card_%s.dat'%model_type)
+
         normal_sm.read_param_card(param_path)
         #print normal_sm.get_interaction(59)        
         #normal_sm.generate_abstract_model()
-        normal_sm.find_all_channels_smart(0.01, True)
+        normal_sm.find_all_channels(3, True)
+        #normal_sm.find_vertexlist()
         #normal_sm.generate_abstract_amplitudes(3)
         ab_model = normal_sm['ab_model']
-        if model_type == 'sm':
-            #print ab_model.get_particle(9902100).get_amplitudes(3).abstract_nice_string()
+        if model_type == 'sm' or model_type == 'full_sm':
+            #print ab_model.get_particle(9901100).get_amplitudes(3).abstract_nice_string()
             # h > q q'~ (w,z),  h > l l'~ (w,z)
             self.assertEqual(len(ab_model.get_particle(9901100).get_amplitudes(3)), 
                              2)
@@ -2969,6 +3003,8 @@ class Test_AbstractModel(unittest.TestCase):
             # tau > q q'~ vt,  h > l l'~ vt
             self.assertEqual(len(ab_model.get_particle(9902300).get_amplitudes(2)), 
                              1)
+            self.assertEqual(len(ab_model.get_particle(9901100).get_amplitudes(3)), 
+                             2)
 
 
 if __name__ == '__main__':

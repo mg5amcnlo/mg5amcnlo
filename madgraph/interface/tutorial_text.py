@@ -152,33 +152,30 @@ mg5>import command my_mg5_cmd.dat
 or from the shell:
 ./bin/mg5 my_mg5_cmd.dat
 
-It is also possible to display this file directly from MG5 by
-launching a shell command. For example:
-mg5>shell less my_mg5_cmd.dat
+It is also possible to display this file directly from MG5:
+mg5>open ./my_mg5_cmd.dat
 """
 
-shell = """
+
+
+open = """
+Note that in order to open some file, you might be need to use a shell command.
 Any shell command can be launched by MG5, by running \"shell\" or
 starting the line by an exclamation mark (!).
 
-The final command of the tutorial is draw. This allows you to draw and
+The final command of the tutorial is display diagrams. This allows you to draw and
 look at the diagrams for your processes (in eps format) before
 creating an output for a given format. This can be useful for a fast
-check of your process.  In order to draw diagrams, you need to specify
-a directory where the eps files will be written:
-mg5>draw .
+check of your process. For this last command, we will also show how combine
+different command in a single line: 
+mg5>generate p p > go go; display diagrams
 
 Note that when you run output [madevent_v4], the diagrams are
 automatically written to the matrix.ps files in subprocess
 directory, just like with MadGraph 4.
 """
 
-draw = """
-You can look at the diagrams for example by running
-mg5>!gv ./diagrams_0_gg_ttx.eps
-or on MacOS X
-mg5>!open ./diagrams_0_gg_ttx.eps
-
+display_diagrams = """
 This command was the last step of the tutorial. 
 Quit the tutorial by typing:
 mg5>tutorial stop

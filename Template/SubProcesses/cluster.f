@@ -376,8 +376,8 @@ C $B$ NGRAPHS $E$ !this is a tag for MadWeight
 
       logical             OnBW(-nexternal:0)     !Set if event is on B.W.
       common/to_BWEvents/ OnBW
-      integer           mincfig, maxcfig
-      common/to_configs/mincfig, maxcfig
+      integer            mapconfig(0:lmaxconfigs), this_config
+      common/to_mconfigs/mapconfig, this_config
 C $B$ IFOREST $B$ !this is a tag for MadWeight
       integer i, iforest(2,-max_branch:-1,lmaxconfigs)
       common/to_forest/ iforest
@@ -405,8 +405,8 @@ c        print *,'No BW found'
       enddo
       ibw=0
       do i=-1,-(nexternal-3),-1
-        icl(i)=icl(iforest(1,i,mincfig))+
-     $     icl(iforest(2,i,mincfig))
+        icl(i)=icl(iforest(1,i,this_config))+
+     $     icl(iforest(2,i,this_config))
         isbw(icl(i))=.false.
 C $B$ ONBW $B$ !this is a tag for MadWeight
         if(OnBW(i))then
@@ -414,7 +414,7 @@ C $E$ ONBW $E$ !this is a tag for MadWeight
           ibw=ibw+1
           ibwlist(ibw)=icl(i)
           isbw(icl(i))=.true.
-c          print *,'Added BW for resonance ',i,icl(i),mincfig
+c          print *,'Added BW for resonance ',i,icl(i),this_config
           if(ibw.eq.nbw) return
         endif
       enddo

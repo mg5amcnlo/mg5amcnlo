@@ -31,8 +31,6 @@ c
       common /sample_status/result_file,where_file,nsteps
       integer           Minvar(maxdim,lmaxconfigs)
       common /to_invar/ Minvar
-      real*8          dsigtot(10)
-      common/to_dsig/ dsigtot
       integer ngroup
       common/to_group/ngroup
       data ngroup/0/
@@ -177,14 +175,15 @@ c
 c     Constants
 c
       include 'nexternal.inc'
+      include 'maxparticles.inc'
 c
 c     Arguments
 c
-      integer ncall,itmax,iconfig, jconfig
+      integer ncall,itmax,iconfig
 c
 c     Local
 c
-      integer i, j
+      integer i, j, jconfig, ncode
       double precision dconfig
 c
 c     Global
@@ -239,7 +238,9 @@ c-----
 
       write(*,10) 'Enter Configuration Number: '
       read(*,*) dconfig
-      iconfig = int(dconfig)
+c     ncode is number of digits needed for the BW code
+      ncode=int(dlog10(3d0)*(max_particles-3))+1
+      iconfig = int(dconfig*(1+10**-ncode))
       write(*,12) 'Running Configuration Number: ',iconfig
 c
 c     Here I want to set up with B.W. we map and which we don't
@@ -250,7 +251,7 @@ c
          lbw(0)=0
       else
          lbw(0)=1
-         jconfig=dconfig*1000.1
+         jconfig=dconfig*(10**ncode + 0.1)
          write(*,*) 'Using dconfig=',jconfig
          call DeCode(jconfig,lbw(1),3,nexternal)
          write(*,*) 'BW Setting ', (lbw(j),j=1,nexternal-2)

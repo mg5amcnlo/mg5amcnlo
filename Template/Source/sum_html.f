@@ -7,6 +7,7 @@ c*****************************************************************************
 c
 c     Constants
 c
+      include 'maxparticles.inc'
       character*(*) subfile
       parameter (subfile='subproc.mg')
       character*(*) symfile
@@ -14,7 +15,7 @@ c
       character*(*) rfile
       parameter (rfile='results.dat')
       integer   max_amps      , max_iter
-      parameter (max_amps=9999, max_iter=50)
+      parameter (max_amps=9999, max_iter=50)      
 c
 c     local
 c
@@ -34,8 +35,8 @@ c
       integer icor(max_amps)
       integer nunwgt(max_amps)
       integer minit
-      character*100 fname, pname
-      character*120 linkname(max_amps)
+      character*300 fname, pname
+      character*320 linkname(max_amps)
       integer i,j,k,l
       double precision xtot,errtot,err_goal, xi
       double precision errtotc, errtotu
@@ -44,6 +45,8 @@ c
       integer ntevents, ntw 
       integer ilen
       logical errex
+      integer ncode,npos
+      character*20 formstr
 
       logical sumproc
       common/to_sumproc/sumproc
@@ -70,6 +73,8 @@ c-----
       ntevents = 0
       ntw = 0
       i = 0
+c     ncode is number of digits needed for the bw coding
+      ncode=int(dlog10(3d0)*(max_particles-3))+1
       do while (.true.)
          if (sumproc) then
             j = 1
@@ -84,37 +89,21 @@ c            write(*,*) i,'found ilen',ilen,fname(1:ilen+10)
             read(15,*,err=99,end=99) xi,j
             if (j .gt. 0) then
             i=i+1
-            if ( (xi-int(xi+.01)) .lt. 1d-5) then
-               k = int(xi+.01)
-            if (k .lt. 10) then
-               write(fname,'(a,i1,a,a)') 'G',k,'/',rfile
-               write(linkname(i),'(a,i1,a,a)') 'G',k,'/','log.txt'
-            else if (k .lt. 100) then
-               write(fname,'(a,i2,a,a)') 'G',k,'/',rfile
-               write(linkname(i),'(a,i2,a,a)') 'G',k,'/','log.txt'
-            else if (k .lt. 1000) then
-               write(fname,'(a,i3,a,a)') 'G',k,'/',rfile
-               write(linkname(i),'(a,i3,a,a)') 'G',k,'/','log.txt'
-            else if (k .lt. 10000) then
-               write(fname,'(a,i4,a,a)') 'G',k,'/',rfile
-               write(linkname(i),'(a,i4,a,a)') 'G',k,'/','log.txt'
-            endif
-            else
-            if (xi .lt. 10) then
-               write(fname,'(a,f5.3,a,a)') 'G',xi,'/',rfile
-               write(linkname(i),'(a,f5.3,a,a)') 'G',xi,'/','log.txt'
-            else if (xi .lt. 100) then
-               write(fname,'(a,f6.3,a,a)') 'G',xi,'/',rfile
-               write(linkname(i),'(a,f6.3,a,a)') 'G',xi,'/','log.txt'
-            else if (xi .lt. 1000) then
-               write(fname,'(a,f7.3,a,a)') 'G',xi,'/',rfile
-               write(linkname(i),'(a,f7.3,a,a)') 'G',xi,'/','log.txt'
-            else if (xi .lt. 10000) then
-               write(fname,'(a,f8.3,a,a)') 'G',xi,'/',rfile
-               write(linkname(i),'(a,f8.3,a,a)') 'G',xi,'/','log.txt'
+            k = int(xi*(1+10**-ncode))
+            npos=int(dlog10(dble(k)))+1
+            if ( (xi-k) .eq. 0) then
+c              Write with correct number of digits
+               write(formstr,'(a,i1,a)') '(a,i',npos,',a,a)'
+               write(fname, formstr) 'G',k,'/',rfile
+               write(linkname(i),formstr) 'G',k,'/','log.txt'
+            else               !Handle B.W.
+c              Write with correct number of digits
+               write(formstr,'(a,i1,a,i1,a)') '(a,f',npos+ncode+1,
+     $                 '.',ncode,',a,a)'
+               write(fname, formstr) 'G',xi,'/',rfile
+               write(linkname(i),formstr) 'G',xi,'/','log.txt'
             endif
 c            write(*,*) 'log name ',fname
-            endif
             endif
          endif
 
@@ -139,7 +128,7 @@ c
             ntw=ntw+nw(i)
 c            maxit = min(maxit,2)
             if (sumproc) then
-               write(*,'(a20,e15.5)') pname(2:ilen), xsec(i)
+               write(*,'(a,e15.5)') pname(2:ilen), xsec(i)
             else
                write(*,*) fname,i,xsec(i),mfact(i)
             endif
@@ -320,7 +309,7 @@ c
       integer nsubproc          !Number of specific processes requested
       logical found
       integer ig
-      character*120 linkname(max_amps)
+      character*320 linkname(max_amps)
       integer sname(256)
       integer gname
 c
@@ -328,7 +317,7 @@ c     Local
 c
       integer i,j,k, io(max_amps), ik
       integer ntot, ip,jp
-      character*100 procname
+      character*300 procname
       character*4 cpref
       character*20 fnamel, fnamee
       double precision scale,xt(max_amps), teff
@@ -445,7 +434,7 @@ c
       if (sumproc) then
          nsubproc=0
          do i=1,ng
-            procname = linkname(io(i))(:100)
+            procname = linkname(io(i))(:300)
             gname=0
             read(procname(2:index(procname,'_')-1),*,err=20) gname
  20         found = .false.
@@ -488,22 +477,6 @@ c
 c     Create directory names using the linkname
 c
 c
-            if (.false.) then
-            if (io(i) .lt. 10) then
-               write(fnamel,'(a,i1,a,a)') 'G',io(i),'/',logfile
-               write(fnamee,'(a,i1,a,a)') 'G',io(i),'/',eventfile
-            else if (io(i) .lt. 100) then
-               write(fnamel,'(a,i2,a,a)') 'G',io(i),'/',logfile
-               write(fnamee,'(a,i2,a,a)') 'G',io(i),'/',eventfile
-            else if (io(i) .lt. 1000) then
-               write(fnamel,'(a,i3,a,a)') 'G',io(i),'/',logfile
-               write(fnamee,'(a,i3,a,a)') 'G',io(i),'/',eventfile
-            else if (io(i) .lt. 10000) then
-               write(fnamel,'(a,i4,a,a)') 'G',io(i),'/',logfile
-               write(fnamee,'(a,i4,a,a)') 'G',io(i),'/',eventfile
-            endif
-            endif
-
             ik = index(linkname(io(i)),'log.txt')-1
             fnamel = linkname(io(i))(1:ik) // logfile
             fnamee = linkname(io(i))(1:ik) // eventfile
@@ -523,7 +496,7 @@ c            write(16,65) '<tr><td align=right>',io(i),
      $           xlum(io(i))/scale,'</td></tr>'
 c            write(*,*) io(i),xmax(io(i))
             else
-                procname = linkname(io(i))(:100)
+                procname = linkname(io(i))(:300)
 cxx   tjs 3-20-2006  + cfax 12.05.2006
 c                ip = index(procname,'P')+2 !Strip off first P_
                 ip = index(procname,'P')+1 !Strip off first P
