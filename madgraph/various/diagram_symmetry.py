@@ -496,8 +496,8 @@ class DiagramTag(object):
                  sorted([(p,i) for (i,p) in enumerate(perm)])]
         return [start_perm[i]-1 for i in order]
 
-    @classmethod
-    def link_from_leg(cls, leg):
+    @staticmethod
+    def link_from_leg(leg):
         """Returns the default end link for a leg: ((id, state), number).
         Note that the number is not taken into account if tag comparison,
         but is used only to extract leg permutations."""
@@ -508,8 +508,8 @@ class DiagramTag(object):
             # Distinguish identical initial state particles
             return [((leg.get('id'), leg.get('number')), leg.get('number'))]
 
-    @classmethod
-    def vertex_id_from_vertex(cls, vertex):
+    @staticmethod
+    def vertex_id_from_vertex(vertex):
         """Returns the default vertex id: just the interaction id"""
         return vertex.get('id')
 
