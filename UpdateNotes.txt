@@ -1,5 +1,15 @@
 Update notes for MadGraph 5 (in reverse time order)
 
+1.1.1 (02/05/11): JA: Replaced (slow) diagram symmetry determination by
+                      evaluation with fast identification based on diagram tags.
+                  JA: Replacing the "p=-p" id=0 vertex produced by diagram 
+                      generation algorithm already in the diagram generation,
+                      simplifying drawing, helas objects and color.
+                  JA: Fixed compiler warnings for unary operator.
+                  JA: Always set all coupling orders for diagrams
+                      (needed for NLO implementations).
+                  OM: Improved and more elegant "open" implementation for
+                      the user interface.
 1.1.0 (21/04/11): JA: Removed hard limit on number of external particles in 
                       MadEvent, allowing for unlimited length decay chains there
                       (up to 14 final state particles successfully integrated).
