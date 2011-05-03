@@ -1,7 +1,7 @@
 Update notes for MadGraph 5 (in reverse time order)
 
 
-1.1.1 (02/05/11): JA: Replaced (slow) diagram symmetry determination by
+1.1.1 (03/05/11): JA: Replaced (slow) diagram symmetry determination by
                       evaluation with fast identification based on diagram tags.
                   JA+OM: Replacing the "p=-p" id=0 vertex produced by diagram 
                       generation algorithm already in the diagram generation,
