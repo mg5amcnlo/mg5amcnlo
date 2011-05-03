@@ -90,8 +90,8 @@ class MatrixElementEvaluator(object):
     #===============================================================================
     # Helper function evaluate_matrix_element
     #===============================================================================
-    def evaluate_matrix_element(self, matrix_element, p = None, full_model = None, 
-                                gauge_check = False, auth_skipping = None, output='m2'):
+    def evaluate_matrix_element(self, matrix_element, p=None, full_model=None, 
+                                gauge_check=False, auth_skipping=None, output='m2'):
         """Calculate the matrix element and evaluate it for a phase space point
            output is either m2, amp, jamp
         """
@@ -669,9 +669,9 @@ def check_gauge(processes, param_card = None):
                                            auth_skipping = True, reuse = False)
 
         # Set all widths to zero for gauge check
-        for particle in full_model.get('particles'):
+        for particle in evaluator.full_model.get('particles'):
             if particle.get('width') != 'ZERO':
-                full_model.get('parameter_dict')[particle.get('width')] = 0.
+                evaluator.full_model.get('parameter_dict')[particle.get('width')] = 0.
 
         return run_multiprocs_no_crossings(check_gauge_process,
                                            multiprocess,

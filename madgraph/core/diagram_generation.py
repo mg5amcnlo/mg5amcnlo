@@ -345,14 +345,19 @@ class Amplitude(base_objects.PhysicsObject):
                     # vertex, by replacing the (incoming) last leg of the
                     # next-to-last vertex with the (outgoing) leg in the
                     # last vertex
+                    vertices = copy.copy(vertices)
                     lastvx = vertices.pop()
-                    nexttolastvertex = vertices[-1]
-                    legs = nexttolastvertex.get('legs')
+                    nexttolastvertex = copy.copy(vertices.pop())
+                    legs = copy.copy(nexttolastvertex.get('legs'))
                     ntlnumber = legs[-1].get('number')
                     lastleg = filter(lambda leg: leg.get('number') != ntlnumber,
                                      lastvx.get('legs'))[0]
                     # Replace the last leg of nexttolastvertex
                     legs[-1] = lastleg
+                    nexttolastvertex.set('legs', legs)
+                    vertices.append(nexttolastvertex)
+                    diagram.set('vertices', vertices)
+
         if res:
             logger.info("Process has %d diagrams" % len(res))
 
@@ -389,7 +394,7 @@ class Amplitude(base_objects.PhysicsObject):
         # Special treatment for decay chain legs
 
         if curr_leglist.can_combine_to_0(ref_dict_to0, is_decay_proc):
-            # Extract the interaction id associated to the vertex 
+            # Extract the interaction idassociated to the vertex 
             vertex_ids = self.get_combined_vertices(curr_leglist,
                        copy.copy(ref_dict_to0[tuple(sorted([leg.get('id') for \
                                                        leg in curr_leglist]))]))
