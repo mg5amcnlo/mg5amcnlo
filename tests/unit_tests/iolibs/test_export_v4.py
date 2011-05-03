@@ -1,4 +1,4 @@
-################################################################################
+ ################################################################################
 #
 # Copyright (c) 2009 The MadGraph Development team and Contributors
 #
@@ -701,10 +701,8 @@ C     Number of configs
             diagram_symmetry.find_matrix_elements_for_configs(subprocess_group),
             ([], {}))
 
-        evaluator = process_checks.MatrixElementEvaluator(mymodel)
         symmetry, perms, ident_perms = \
-                  diagram_symmetry.find_symmetry(subprocess_group,
-                                                 evaluator)
+                  diagram_symmetry.find_symmetry(subprocess_group)
 
         self.assertEqual(symmetry, [1,1,1,1,1,1])
         self.assertEqual(perms,

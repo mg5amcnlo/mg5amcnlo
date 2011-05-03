@@ -800,7 +800,7 @@ class HelasWavefunction(base_objects.PhysicsObject):
 
         return (tuple(res), tuple(self.get('lorentz')))
 
-    def get_base_vertices(self, wf_dict = {}, vx_list = [], optimization = 1):
+    def get_base_vertices(self, wf_dict, vx_list = [], optimization = 1):
         """Recursive method to get a base_objects.VertexList
         corresponding to this wavefunction and its mothers."""
 
@@ -811,13 +811,27 @@ class HelasWavefunction(base_objects.PhysicsObject):
         if not mothers:
             return vertices
 
-        mothers = self.get('mothers')
-
         # Add vertices for all mothers
         for mother in mothers:
             # This is where recursion happens
             vertices.extend(mother.get_base_vertices(\
                                                 wf_dict, vx_list,optimization))
+
+        vertex = self.get_base_vertex(wf_dict, vx_list, optimization)
+
+        try:
+            index = vx_list.index(vertex)
+            vertex = vx_list[index]
+        except ValueError:
+            pass
+        
+        vertices.append(vertex)
+
+        return vertices
+
+    def get_base_vertex(self, wf_dict, vx_list = [], optimization = 1):
+        """Get a base_objects.Vertex corresponding to this
+        wavefunction."""
 
         # Generate last vertex
         legs = base_objects.LegList()
@@ -836,7 +850,7 @@ class HelasWavefunction(base_objects.PhysicsObject):
             if optimization != 0:
                 wf_dict[self.get('number')] = lastleg
 
-        for mother in mothers:
+        for mother in self.get('mothers'):
             try:
                 leg = wf_dict[mother.get('number')]
             except KeyError:
@@ -856,15 +870,7 @@ class HelasWavefunction(base_objects.PhysicsObject):
             'id': self.get('interaction_id'),
             'legs': legs})
 
-        try:
-            index = vx_list.index(vertex)
-            vertex = vx_list[index]
-        except ValueError:
-            pass
-        
-        vertices.append(vertex)
-
-        return vertices
+        return vertex
 
     def get_color_indices(self):
         """Recursive method to get the color indices corresponding to
@@ -901,7 +907,7 @@ class HelasWavefunction(base_objects.PhysicsObject):
                                self.get('mothers'))
 
         for mother in final_mothers:
-            schannels.extend(mother.get_base_vertices(optimization = 0))
+            schannels.extend(mother.get_base_vertices({}, optimization = 0))
 
         # Extract initial state mothers
         init_mothers = filter(lambda wf: wf.get('number_external') <= ninitial,
@@ -1576,9 +1582,11 @@ class HelasAmplitude(base_objects.PhysicsObject):
             # Bosons return a list [n1,n2,...]
             fermion_number_list.extend(boson.get_fermion_order())
 
-        self['fermionfactor'] = self.sign_flips_to_order(fermion_number_list)
+        self['fermionfactor'] = \
+                         HelasAmplitude.sign_flips_to_order(fermion_number_list)
 
-    def sign_flips_to_order(self, fermions):
+    @staticmethod
+    def sign_flips_to_order(fermions):
         """Gives the sign corresponding to the number of flips needed
         to place the fermion numbers in order"""
 
@@ -1597,7 +1605,7 @@ class HelasAmplitude(base_objects.PhysicsObject):
 
         return (-1) ** nflips
 
-    def get_base_diagram(self, wf_dict = {}, vx_list = [], optimization = 1):
+    def get_base_diagram(self, wf_dict, vx_list = [], optimization = 1):
         """Return the base_objects.Diagram which corresponds to this
         amplitude, using a recursive method for the wavefunctions."""
 
@@ -1607,11 +1615,20 @@ class HelasAmplitude(base_objects.PhysicsObject):
         for mother in self.get('mothers'):
             vertices.extend(mother.get_base_vertices(wf_dict, vx_list,
                                                      optimization))
-        mothers = self.get('mothers')
+
+        # Generate last vertex
+        vertex = self.get_base_vertex(wf_dict, vx_list, optimization)
+
+        vertices.append(vertex)
+
+        return base_objects.Diagram({'vertices': vertices})
+
+    def get_base_vertex(self, wf_dict, vx_list = [], optimization = 1):
+        """Get a base_objects.Vertex corresponding to this amplitude."""
 
         # Generate last vertex
         legs = base_objects.LegList()
-        for mother in mothers:
+        for mother in self.get('mothers'):
             try:
                 leg = wf_dict[mother.get('number')]
             except KeyError:
@@ -1625,11 +1642,9 @@ class HelasAmplitude(base_objects.PhysicsObject):
                     wf_dict[mother.get('number')] = leg
             legs.append(leg)
 
-        vertices.append(base_objects.Vertex({
+        return base_objects.Vertex({
             'id': self.get('interaction_id'),
-            'legs': legs}))
-
-        return base_objects.Diagram({'vertices': vertices})
+            'legs': legs})
 
     def get_s_and_t_channels(self, ninitial):
         """Returns two lists of vertices corresponding to the s- and
@@ -1645,7 +1660,7 @@ class HelasAmplitude(base_objects.PhysicsObject):
                                self.get('mothers'))
 
         for mother in final_mothers:
-            schannels.extend(mother.get_base_vertices(optimization = 0))
+            schannels.extend(mother.get_base_vertices({}, optimization = 0))
 
         # Extract initial state mothers
         init_mothers = filter(lambda wf: wf.get('number_external') <= ninitial,
@@ -2078,7 +2093,7 @@ class HelasMatrixElement(base_objects.PhysicsObject):
                 self.generate_helas_diagrams(amplitude, optimization, decay_ids)
                 self.calculate_fermionfactors()
                 self.calculate_identical_particle_factors()
-                if gen_color:
+                if gen_color and not self.get('color_basis'):
                     self.get('color_basis').build(self.get('base_amplitude'))
                     self.set('color_matrix',
                              color_amp.ColorMatrix(self.get('color_basis')))
@@ -2207,21 +2222,6 @@ class HelasMatrixElement(base_objects.PhysicsObject):
 
             # Single out last vertex, since this will give amplitude
             lastvx = vertices.pop()
-
-            # Check if last vertex is identity vertex
-            if not process.get('is_decay_chain') and lastvx.get('id') == 0:
-                # Need to "glue together" last and next-to-last
-                # vertext, by replacing the (incoming) last leg of the
-                # next-to-last vertex with the (outgoing) leg in the
-                # last vertex
-                nexttolastvertex = copy.deepcopy(vertices.pop())
-                legs = nexttolastvertex.get('legs')
-                ntlnumber = legs[-1].get('number')
-                lastleg = filter(lambda leg: leg.get('number') != ntlnumber,
-                                 lastvx.get('legs'))[0]
-                # Replace the last leg of nexttolastvertex
-                legs[-1] = lastleg
-                lastvx = nexttolastvertex
 
             # Go through all vertices except the last and create
             # wavefunctions

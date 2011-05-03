@@ -223,12 +223,13 @@ C $E$ output_file2 $E$ !this is tag for automatic modification by MW
       enddo
       close(15)
       close(sfnum)
-      return
+      goto 1000
  98   write(*,*) 'Error writing events.dat' 
-      return
+      goto 1000
  99   write(*,*) 'Error writing unweighted_events.dat' 
-      return
+      goto 1000
  999  write(*,*) 'Error opening scratch file'
+ 1000 continue
       end
 
 
@@ -469,7 +470,7 @@ c     ncode is number of digits needed for the bw coding
       do while (.true.)
          read(35,*,err=99,end=99) xi,j
          if (j .gt. 0) then
-            k = int(xi*(1+10**-ncode))
+            k = int(xi*(1+10**(-ncode)))
             npos=int(dlog10(dble(k)))+1
             if ( (xi-k) .eq. 0) then
 c              Write with correct number of digits

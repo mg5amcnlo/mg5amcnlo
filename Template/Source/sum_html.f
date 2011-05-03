@@ -89,7 +89,7 @@ c            write(*,*) i,'found ilen',ilen,fname(1:ilen+10)
             read(15,*,err=99,end=99) xi,j
             if (j .gt. 0) then
             i=i+1
-            k = int(xi*(1+10**-ncode))
+            k = int(xi*(1+10**(-ncode)))
             npos=int(dlog10(dble(k)))+1
             if ( (xi-k) .eq. 0) then
 c              Write with correct number of digits

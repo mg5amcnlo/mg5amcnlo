@@ -38,12 +38,11 @@ _file_path = os.path.split(os.path.dirname(os.path.realpath(__file__)))[0]
 # TestModelReader
 #===============================================================================
 class TestDiagramSymmetry(unittest.TestCase):
-    """Test class for the MatrixElementChecker and get_momenta"""
+    """Test class for the DiagramSymmetry class"""
 
 
     def setUp(self):
         self.base_model = import_ufo.import_model('sm')
-        self.evaluator = process_checks.MatrixElementEvaluator(self.base_model)
     
     def test_find_symmetry_epem_aaa(self):
         """Test the find_symmetry function"""
@@ -68,9 +67,7 @@ class TestDiagramSymmetry(unittest.TestCase):
 
         matrix_element = helas_objects.HelasMatrixElement(myamplitude)
 
-        symmetry, perms, ident_perms = \
-                                diagram_symmetry.find_symmetry(matrix_element,
-                                                               self.evaluator)
+        symmetry, perms, ident_perms = diagram_symmetry.find_symmetry(matrix_element)
 
         self.assertEqual(symmetry, [6,-1,-1,-1,-1,-1])
 
@@ -93,7 +90,6 @@ class TestDiagramSymmetry(unittest.TestCase):
                                                                new_p)
             self.assertAlmostEqual(amp2[isym], amp2_org[-sym-1])
         
-
     def test_find_symmetry_qq_qqg_with_subprocess_group(self):
         """Test the find_symmetry function for subprocess groups"""
 
@@ -117,7 +113,7 @@ class TestDiagramSymmetry(unittest.TestCase):
                   group_subprocs.SubProcessGroup.group_amplitudes(amplitudes)[0]
 
         symmetry, perms, ident_perms = diagram_symmetry.find_symmetry(\
-                                                subproc_group, self.evaluator)
+                                                subproc_group)
 
         self.assertEqual(len([s for s in symmetry if s > 0]), 26)
 
@@ -190,3 +186,135 @@ class TestDiagramSymmetry(unittest.TestCase):
             self.assertAlmostEqual(amp, new_amp, 12)
             
         
+#===============================================================================
+# TestModelReader
+#===============================================================================
+class TestDiagramTag(unittest.TestCase):
+    """Test class for the DiagramTag class"""
+
+
+    def setUp(self):
+        self.base_model = import_ufo.import_model('sm')
+    
+    def test_diagram_tag_gg_ggg(self):
+        """Test the find_symmetry function"""
+
+        myleglist = base_objects.LegList()
+
+        myleglist.append(base_objects.Leg({'id':21,
+                                           'state':False}))
+        myleglist.append(base_objects.Leg({'id':21,
+                                           'state':False}))
+        myleglist.append(base_objects.Leg({'id':21,
+                                           'state':True}))
+        myleglist.append(base_objects.Leg({'id':21,
+                                           'state':True}))
+        myleglist.append(base_objects.Leg({'id':21,
+                                           'state':True}))
+
+        myproc = base_objects.Process({'legs':myleglist,
+                                       'model':self.base_model})
+
+        myamplitude = diagram_generation.Amplitude(myproc)
+
+        tags = []
+        permutations = []
+        diagram_classes = []
+        for idiag, diagram in enumerate(myamplitude.get('diagrams')):
+            tag = diagram_symmetry.DiagramTag(diagram)
+            try:
+                ind = tags.index(tag)
+            except:
+                diagram_classes.append([idiag + 1])
+                permutations.append([tag.get_external_numbers()])
+                tags.append(tag)
+            else:
+                diagram_classes[ind].append(idiag + 1)
+                permutations[ind].append(tag.get_external_numbers())
+
+        permutations = [[diagram_symmetry.DiagramTag.reorder_permutation(p, perms[0])\
+                         for p in perms] for perms in permutations]        
+
+        goal_classes =  [[1, 2, 3],
+                         [4],
+                         [5, 6, 9, 10, 13, 14],
+                         [7, 11, 15],
+                         [8, 12, 16],
+                         [17, 18, 19],
+                         [20, 21, 22],
+                         [23, 24, 25]]
+        goal_perms =  [[[0, 1, 2, 3, 4], [0, 1, 2, 4, 3], [0, 1, 4, 2, 3]],
+                       [[0, 1, 2, 3, 4]],
+                       [[0, 1, 2, 3, 4], [0, 1, 2, 4, 3], [0, 1, 3, 2, 4],
+                        [0, 1, 4, 2, 3], [0, 1, 3, 4, 2], [0, 1, 4, 3, 2]],
+                       [[0, 1, 2, 3, 4], [0, 1, 3, 2, 4], [0, 1, 3, 4, 2]],
+                       [[0, 1, 2, 3, 4], [0, 1, 3, 2, 4], [0, 1, 3, 4, 2]],
+                       [[0, 1, 2, 3, 4], [0, 1, 3, 2, 4], [0, 1, 3, 4, 2]],
+                       [[0, 1, 2, 3, 4], [0, 1, 3, 2, 4], [0, 1, 3, 4, 2]],
+                       [[0, 1, 2, 3, 4], [0, 1, 2, 4, 3], [0, 1, 4, 2, 3]]]
+
+        for i in range(len(diagram_classes)):
+            self.assertEqual(diagram_classes[i], goal_classes[i])
+            self.assertEqual(permutations[i], goal_perms[i])
+
+    def test_diagram_tag_uu_uug(self):
+        """Test the find_symmetry function"""
+
+        myleglist = base_objects.LegList()
+
+        myleglist.append(base_objects.Leg({'id':2,
+                                           'state':False}))
+        myleglist.append(base_objects.Leg({'id':2,
+                                           'state':False}))
+        myleglist.append(base_objects.Leg({'id':2,
+                                           'state':True}))
+        myleglist.append(base_objects.Leg({'id':2,
+                                           'state':True}))
+        myleglist.append(base_objects.Leg({'id':21,
+                                           'state':True}))
+
+        myproc = base_objects.Process({'legs':myleglist,
+                                       'model':self.base_model})
+
+        myamplitude = diagram_generation.Amplitude(myproc)
+
+        tags = []
+        permutations = []
+        diagram_classes = []
+        for idiag, diagram in enumerate(myamplitude.get('diagrams')):
+            tag = diagram_symmetry.DiagramTag(diagram)
+            try:
+                ind = tags.index(tag)
+            except:
+                diagram_classes.append([idiag + 1])
+                permutations.append([tag.get_external_numbers()])
+                tags.append(tag)
+            else:
+                diagram_classes[ind].append(idiag + 1)
+                permutations[ind].append(tag.get_external_numbers())
+
+        permutations = [[diagram_symmetry.DiagramTag.reorder_permutation(p, perms[0])\
+                         for p in perms] for perms in permutations]        
+
+        goal_classes = [[1, 8], [2, 9], [3, 10], [4, 11], [5, 12], [6, 13],
+                        [7, 14], [15, 18], [16, 19], [17, 20], [21, 24],
+                        [22, 25], [23, 26]]
+
+        goal_perms = [[[0, 1, 2, 3, 4], [0, 1, 3, 2, 4]],
+                     [[0, 1, 2, 3, 4], [0, 1, 3, 2, 4]],
+                     [[0, 1, 2, 3, 4], [0, 1, 3, 2, 4]],
+                     [[0, 1, 2, 3, 4], [0, 1, 3, 2, 4]],
+                     [[0, 1, 2, 3, 4], [0, 1, 3, 2, 4]],
+                     [[0, 1, 2, 3, 4], [0, 1, 3, 2, 4]],
+                     [[0, 1, 2, 3, 4], [0, 1, 3, 2, 4]],
+                     [[0, 1, 2, 3, 4], [0, 1, 3, 2, 4]],
+                     [[0, 1, 2, 3, 4], [0, 1, 3, 2, 4]],
+                     [[0, 1, 2, 3, 4], [0, 1, 3, 2, 4]],
+                     [[0, 1, 2, 3, 4], [0, 1, 3, 2, 4]],
+                     [[0, 1, 2, 3, 4], [0, 1, 3, 2, 4]],
+                     [[0, 1, 2, 3, 4], [0, 1, 3, 2, 4]]]
+
+        for i in range(len(diagram_classes)):
+            self.assertEqual(diagram_classes[i], goal_classes[i])
+            self.assertEqual(permutations[i], goal_perms[i])
+

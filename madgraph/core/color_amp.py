@@ -61,30 +61,6 @@ class ColorBasis(dict):
         repl_dict = {}
 
         for i, vertex in enumerate(diagram.get('vertices')):
-
-        # SPECIAL VERTEX JUST BEFORE ID = 0 ------------------------------------
-
-            if i == len(diagram.get('vertices')) - 2 and \
-                diagram.get('vertices')[i + 1]['id'] == 0:
-
-                # Tag the numbers in id=0 
-                num1 = diagram.get('vertices')[i + 1].get('legs')[0].get('number')
-                num2 = diagram.get('vertices')[i + 1].get('legs')[1].get('number')
-
-                # call the ad_vertex routine with a special replacement request
-                min_index, res_dict = self.add_vertex(vertex, diagram, model,
-                            repl_dict, res_dict, min_index,
-                            id0_rep=[num1, num2])
-
-                # Return an empty list if all entries are empty
-                if all([cs == color_algebra.ColorString() \
-                        for cs in res_dict.values()]):
-                    res_dict = {}
-                # Return since this must be the last vertex
-
-                return res_dict
-
-        # NORMAL VERTICES WITH ID != 0 -----------------------------------------
             min_index, res_dict = self.add_vertex(vertex, diagram, model,
                             repl_dict, res_dict, min_index)
 
