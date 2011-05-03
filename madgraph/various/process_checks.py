@@ -90,8 +90,8 @@ class MatrixElementEvaluator(object):
     #===============================================================================
     # Helper function evaluate_matrix_element
     #===============================================================================
-    def evaluate_matrix_element(self, matrix_element, p = None, full_model = None, 
-                                gauge_check = False, auth_skipping = None, output='m2'):
+    def evaluate_matrix_element(self, matrix_element, p=None, full_model=None, 
+                                gauge_check=False, auth_skipping=None, output='m2'):
         """Calculate the matrix element and evaluate it for a phase space point
            output is either m2, amp, jamp
         """

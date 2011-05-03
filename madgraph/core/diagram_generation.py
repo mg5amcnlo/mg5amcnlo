@@ -336,6 +336,7 @@ class Amplitude(base_objects.PhysicsObject):
         for diagram in self['diagrams']:
             diagram.calculate_orders(model)
 
+        done = []
         # Replace final id=0 vertex if necessary
         if not process.get('is_decay_chain'):
             for diagram in self['diagrams']:
@@ -347,6 +348,9 @@ class Amplitude(base_objects.PhysicsObject):
                     # last vertex
                     lastvx = vertices.pop()
                     nexttolastvertex = vertices[-1]
+                    if any([v is nexttolastvertex for v in done]):
+                        continue # done already (more than one interaction by vertex)
+                    done.append(nexttolastvertex)
                     legs = nexttolastvertex.get('legs')
                     ntlnumber = legs[-1].get('number')
                     lastleg = filter(lambda leg: leg.get('number') != ntlnumber,
