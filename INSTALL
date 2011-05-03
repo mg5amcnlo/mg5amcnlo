@@ -22,14 +22,14 @@ Dependencies :
 
 - Python 2.6 (or higher, but not compatible with 3.X)
 
-If you need to provide output for MadEvent, you also need:
+If you want to provide output for MadEvent, you also need:
 - bash
 - perl 5.8 (or higher)
-- a Fortran 77 compiler (g77 or gfortran)
+- a Fortran 77 compiler (such as g77 or gfortran)
 
 On Windows:
 ===========
 
-In order to run MG5 you should
+In order to run MG5 you need to
 1) add the Python directory to the PATH
 2) run $> python ./bin/mg5
