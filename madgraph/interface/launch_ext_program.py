@@ -467,7 +467,7 @@ class open_file(object):
         #suitable for LINUX which doesn't have open command.
         
         # first for eps_viewer
-        if not eps_viewer:
+        if not cls.eps_viewer:
            cls.eps_viewer = cls.find_valid(['gv', 'ggv', 'evince'], 'eps viewer') 
             
         # Second for web browser
