@@ -668,6 +668,7 @@ class Model(PhysicsObject):
         self['got_majoranas'] = None
         self['conserved_charge'] = set()
         self['coupling_orders'] = None
+        self['path'] = None # position of the directory (for security)
 
     def filter(self, name, value):
         """Filter for model property values"""
@@ -716,6 +717,12 @@ class Model(PhysicsObject):
             if not (isinstance(value, set)):
                 raise self.PhysicsObjectError, \
                     "Object of type %s is not a set" % type(value)
+
+        elif name == 'path':
+            if not (isinstance(value, str)):
+                raise self.PhysicsObjectError, \
+                    "Object of type %s is not a string" % type(value)
+
 
         return True
 

@@ -128,7 +128,10 @@ def import_full_model(model_path):
             print error
             logger.info('failed to load model from pickle file. Try importing UFO from File')
         else:
-            return model
+            # check path is correct 
+            if model.has_key('path') and model.get('path') == os.path.realpath(model_path):
+                return model
+
 
     # Load basic information
     ufo_model = ufomodels.load_model(model_path)
@@ -137,7 +140,8 @@ def import_full_model(model_path):
     
     if model_path[-1] == '/': model_path = model_path[:-1] #avoid empty name
     model.set('name', os.path.split(model_path)[-1])
- 
+    model.set('path',os.path.realpath(model_path))
+
     # Load the Parameter/Coupling in a convinient format.
     parameters, couplings = OrganizeModelExpression(ufo_model).main()
     model.set('parameters', parameters)
@@ -170,7 +174,7 @@ class UFOMG5Converter(object):
         self.conservecharge = set(['charge'])
         
         self.ufomodel = model
-        
+
         if auto:
             self.load_model()
 
@@ -234,7 +238,7 @@ class UFOMG5Converter(object):
                     particle.set(key, str(value))
                 else:
                     particle.set(key, value)
-            elif key not in ('GhostNumber','selfconjugate','goldstoneboson'):
+            elif key.lower() not in ('ghostnumber','selfconjugate','goldstoneboson'):
                 # add charge -we will check later if those are conserve 
                 self.conservecharge.add(key)
                 particle.set(key,value, force=True)
