@@ -25,6 +25,7 @@ from madgraph import MadGraph5Error, MG5DIR
 import madgraph.core.base_objects as base_objects
 import madgraph.core.color_algebra as color
 import madgraph.iolibs.files as files
+import madgraph.iolibs.misc as misc
 import madgraph.iolibs.save_load_object as save_load_object
 from madgraph.core.color_algebra import *
 
@@ -129,7 +130,7 @@ def import_full_model(model_path):
             logger.info('failed to load model from pickle file. Try importing UFO from File')
         else:
             # check path is correct 
-            if model.has_key('path') and model.get('path') == os.path.realpath(model_path):
+            if model.has_key('version_tag') and model.get('version_tag') == os.path.realpath(model_path) + str(misc.get_pkg_info()):
                 return model
 
 
@@ -140,7 +141,7 @@ def import_full_model(model_path):
     
     if model_path[-1] == '/': model_path = model_path[:-1] #avoid empty name
     model.set('name', os.path.split(model_path)[-1])
-    model.set('path',os.path.realpath(model_path))
+    model.set('version_tag', os.path.realpath(model_path) + str(misc.get_pkg_info()))
 
     # Load the Parameter/Coupling in a convinient format.
     parameters, couplings = OrganizeModelExpression(ufo_model).main()
