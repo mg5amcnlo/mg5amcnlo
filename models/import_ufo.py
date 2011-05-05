@@ -103,6 +103,7 @@ def import_model(model_name):
         
     return model
 
+_import_once = []
 def import_full_model(model_path):
     """ a practical and efficient way to import one of those models 
         (no restriction file use)"""
@@ -131,8 +132,11 @@ def import_full_model(model_path):
         else:
             # check path is correct 
             if model.has_key('version_tag') and model.get('version_tag') == os.path.realpath(model_path) + str(misc.get_pkg_info()):
+                _import_once.append(model_path)
                 return model
 
+    if model_path in _import_once:
+        raise MadGraph5Error, 'This model is modify on disk. To reload it you need to quit/relaunch mg5' 
 
     # Load basic information
     ufo_model = ufomodels.load_model(model_path)
