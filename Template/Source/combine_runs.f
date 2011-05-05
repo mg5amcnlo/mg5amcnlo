@@ -240,8 +240,8 @@ c
          endif
       enddo
       write(*,*) "Combined ",tot_nevents," to ",channame(1:jc-2)
-      endif
       close(lunw)
+      endif
       return
  999  close(lunw)
       write(*,*) "Error, unable to open events.lhe file for output"
