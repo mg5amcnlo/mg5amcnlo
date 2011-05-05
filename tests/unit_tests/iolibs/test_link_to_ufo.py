@@ -186,6 +186,7 @@ class TestImportUFO(unittest.TestCase):
         except:
             pass
         
+        import_ufo._import_once = []
         sm_path = import_ufo.find_ufo_path('sm')
         model = import_ufo.import_model(sm_path)
     

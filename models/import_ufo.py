@@ -136,7 +136,8 @@ def import_full_model(model_path):
                 return model
 
     if model_path in _import_once:
-        raise MadGraph5Error, 'This model is modify on disk. To reload it you need to quit/relaunch mg5' 
+        print model_path
+        raise MadGraph5Error, 'This model is modified on disk. To reload it you need to quit/relaunch mg5' 
 
     # Load basic information
     ufo_model = ufomodels.load_model(model_path)
