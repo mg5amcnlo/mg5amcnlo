@@ -58,6 +58,15 @@ if __debug__ and not options.debug and \
         subprocess.call([sys.executable] + ['-O'] + sys.argv)
         sys.exit()
 
+try:
+    import psyco
+    psyco.full()
+except:
+    pass
+
+
+
+
 import logging
 import logging.config
 
