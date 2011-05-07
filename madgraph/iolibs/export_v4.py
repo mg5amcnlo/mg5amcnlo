@@ -1259,6 +1259,12 @@ class ProcessExporterFortranME(ProcessExporterFortran):
                     matrix_element)
         replace_dict['helas_calls'] = "\n".join(helas_calls)
 
+        # Set the size of Wavefunction
+        if not self.model or any([p.get('spin')==5 for p in self.model.get('particles') if p]):
+            replace_dict['wavefunctionsize'] = 18
+        else:
+            replace_dict['wavefunctionsize'] = 6
+
         # Extract amp2 lines
         amp2_lines = self.get_amp2_lines(matrix_element, config_map)
         replace_dict['amp2_lines'] = '\n'.join(amp2_lines)
@@ -1270,6 +1276,7 @@ class ProcessExporterFortranME(ProcessExporterFortran):
         file = open(os.path.join(_file_path, \
                           'iolibs/template_files/%s' % self.matrix_file)).read()
         file = file % replace_dict
+
 
         # Write the file
         writer.writelines(file)

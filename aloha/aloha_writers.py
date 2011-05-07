@@ -254,10 +254,10 @@ class ALOHAWriterForFortran(WriteALOHA):
     """routines for writing out Fortran"""
 
     extension = '.f'
-    declare_dict = {'S':'double complex S%d(3)',
-                    'F':'double complex F%d(6)',
-                    'V':'double complex V%d(6)',
-                    'T':'double complex T%s(18)'}
+    declare_dict = {'S':'double complex S%d(*)',
+                    'F':'double complex F%d(*)',
+                    'V':'double complex V%d(*)',
+                    'T':'double complex T%s(*)'}
     
     def define_header(self, name=None):
         """Define the Header of the fortran file. This include
