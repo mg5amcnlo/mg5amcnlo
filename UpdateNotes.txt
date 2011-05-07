@@ -1,5 +1,10 @@
 Update notes for MadGraph 5 (in reverse time order)
 
+
+1.2.1 (07/05/11)  OM: reduce the quantity of RAM use by matrix.f
+                  OM: add the check of valid model.pkl also for v4 model
+                  OM: add a check that UpdatesNotes is up-to-date when making a release
+
 1.2.0 (05/05/11): OM: minor fixes on check charge conjugation
                   OM: add a check on the path for the validity of the model.pkl
                   JA: Fixed problem with combine_runs on certain compilers
