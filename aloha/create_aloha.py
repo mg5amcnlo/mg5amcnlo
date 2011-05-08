@@ -628,7 +628,7 @@ class AbstractALOHAModel(dict):
             for i, part1 in enumerate(vertex.particles):
                 for j in range(i-1,-1,-1):
                     part2 = vertex.particles[j]
-                    if part1.pdg_code == part2.pdg_code:
+                    if part1.pdg_code == part2.pdg_code and part1.color == 1:
                         if part1.spin == 2 and (i % 2 != j % 2 ):
                             continue 
                         for lorentz in vertex.lorentz:
