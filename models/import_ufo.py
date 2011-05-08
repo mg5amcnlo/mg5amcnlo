@@ -127,6 +127,7 @@ def import_full_model(model_path):
             model = save_load_object.load_from_file( \
                                           os.path.join(model_path, 'model.pkl'))
         except Exception, error:
+            print error
             logger.info('failed to load model from pickle file. Try importing UFO from File')
         else:
             # check path is correct 
@@ -135,6 +136,7 @@ def import_full_model(model_path):
                 return model
 
     if model_path in _import_once:
+        print model_path
         raise MadGraph5Error, 'This model is modified on disk. To reload it you need to quit/relaunch mg5' 
 
     # Load basic information
@@ -381,7 +383,7 @@ class OrganizeModelExpression:
     
     # regular expression to shorten the expressions
     complex_number = re.compile(r'''complex\((?P<real>[^,\(\)]+),(?P<imag>[^,\(\)]+)\)''')
-    expo_expr = re.compile(r'''(?P<expr>[\w.]+)\s*\*\*\s*(?P<expo>[\d.+-]+)''')
+    expo_expr = re.compile(r'''(?P<expr>[\w.]+)\s*\*\*\s*(?P<expo>\d+)''')
     cmath_expr = re.compile(r'''cmath.(?P<operation>\w+)\((?P<expr>\w+)\)''')
     #operation is usualy sqrt / sin / cos / tan
     conj_expr = re.compile(r'''complexconjugate\((?P<expr>\w+)\)''')
@@ -530,8 +532,7 @@ class OrganizeModelExpression:
         
         expr = matchobj.group('expr')
         exponent = matchobj.group('expo')
-        new_exponent = exponent.replace('.','_').replace('+','').replace('-','_m_')
-        output = '%s__exp__%s' % (expr, new_exponent)
+        output = '%s__exp__%s' % (expr, exponent)
         old_expr = '%s**%s' % (expr,exponent)
 
         if expr.startswith('cmath'):

@@ -2854,9 +2854,9 @@ class test_aloha_creation(unittest.TestCase):
 
         goal =""" subroutine VVS1_1(V2, S3, COUP, M1, W1, V1)
 implicit none 
-double complex V1(*)
-double complex V2(*)
-double complex S3(*)
+double complex V1(6)
+double complex V2(6)
+double complex S3(3)
 double complex COUP
 double complex denom
 double precision M1, W1
@@ -2883,9 +2883,9 @@ end
 
  subroutine VVS1_2(V2, S3, COUP, M1, W1, V1)
 implicit none 
-double complex V1(*)
-double complex V2(*)
-double complex S3(*)
+double complex V1(6)
+double complex V2(6)
+double complex S3(3)
 double complex COUP
 double complex denom
 double precision M1, W1
@@ -2897,9 +2897,9 @@ end
 
  subroutine VVS1_2_1(V2, S3, COUP1,COUP2, M1, W1, V1)
 implicit none 
-double complex V1(*)
-double complex V2(*)
-double complex S3(*)
+double complex V1(6)
+double complex V2(6)
+double complex S3(3)
 double complex COUP1,COUP2
 double complex denom
 double precision M1, W1
@@ -2917,9 +2917,9 @@ end
 
  subroutine VVS1_2_2(V2, S3, COUP1,COUP2, M1, W1, V1)
 implicit none 
-double complex V1(*)
-double complex V2(*)
-double complex S3(*)
+double complex V1(6)
+double complex V2(6)
+double complex S3(3)
 double complex COUP1,COUP2
 double complex denom
 double precision M1, W1
@@ -3132,9 +3132,9 @@ def VVS1_2_2(V2, S3, COUP1,COUP2, M1, W1):
 C     
       SUBROUTINE FFV1C1_2_0(F1,F2,V3,COUP1,COUP2,VERTEX)
       IMPLICIT NONE
-      DOUBLE COMPLEX F1(*)
-      DOUBLE COMPLEX F2(*)
-      DOUBLE COMPLEX V3(*)
+      DOUBLE COMPLEX F1(6)
+      DOUBLE COMPLEX F2(6)
+      DOUBLE COMPLEX V3(6)
       DOUBLE COMPLEX COUP1,COUP2
       DOUBLE COMPLEX VERTEX
       DOUBLE COMPLEX TMP
