@@ -443,16 +443,15 @@ c                  xe(i) = max(xe(i),xm(i))
 c     JA 4/1/2011 Set grid in case there is no BW (radiation process)
                if (swidth(-i) .eq. 0d0)then
                   a=pmass(i,iconfig)**2/stot
-c              Ensure that xo > a
-                  xo = max(xm(i)**2/stot,a*1.01)
+                  xo = xm(i)**2/stot
                   call setgrid(-i,xo,a,1)
                endif
             else                                  !1/x^pow
               a=pmass(i,iconfig)**2/stot
-c     JA 4/1/2011 Ensure xo > a, always set grid
-              xo = max(xm(i)**2/stot,a*1.01)
+c     JA 4/1/2011 always set grid
+              xo = xm(i)**2/stot
 c              if (pwidth(i, iconfig) .eq. 0d0.or.iden_part(i).gt.0) then 
-                 call setgrid(-i,xo,a,1)
+              call setgrid(-i,xo,a,1)
 c              else 
 c                 write(*,*) 'Using flat grid for BW',i,nbw,
 c     $                pmass(i,iconfig)
@@ -499,13 +498,20 @@ c            call setgrid(-i,xo,a,pow(i,iconfig))
 
 c               write(*,*) 'Enter minimum for ',-i, xo
 c               read(*,*) xo
-
              if (i .ne. -1 .or. .true.) call setgrid(-i,xo,a,1)
          endif
       enddo
       if (abs(lpp(1)) .eq. 1 .or. abs(lpp(2)) .eq. 1) then
 c     Set minimum based on: 1) required energy 2) resonances 3) 1/10000 of sqrt(s)
-         xo = max(max(etot**2, forced_mass**2)/stot,1e-8)
+         if(forced_mass**2.lt.stot) then
+            xo = max(max(etot**2, forced_mass**2)/stot,1d-8)
+         else
+            xo = max(etot**2/stot,1d-8)
+         endif
+         if (xo.eq.1d-8) then
+            write(*,*) 'Warning: No minimum found for integration'
+            write(*,*) '         Setting minimum to 1e-8*stot'
+         endif
          i = 3*(nexternal-2) - 4 + 1
 c-----------------------
 c     tjs  4/29/2008 use analytic transform for s-hat
