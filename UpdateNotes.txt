@@ -1,5 +1,7 @@
 Update notes for MadGraph 5 (in reverse time order)
 
+1.2.2 (09/05/11)  OM: fix ALOHA symmetries creating not gauge invariant result for scalar octet
+
 1.2.1 (08/05/11)  OM: reduce the quantity of RAM use by matrix.f
       	          OM: support speed of psyco if this python module is installed
                   OM: fix a minor bug in the model parsing
