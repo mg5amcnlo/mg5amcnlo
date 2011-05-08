@@ -91,6 +91,11 @@ else:
     except:
         pass
 
+try:
+   import psyco
+   psyco.full()
+except:
+   pass
 
 if __debug__:
         print 'Running MG5 in debug mode'

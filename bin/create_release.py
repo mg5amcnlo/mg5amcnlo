@@ -71,7 +71,7 @@ logging.basicConfig(level=vars(logging)[options.logging],
                     format="%(message)s")
 
 # 0. check that all modification are commited in this directory
-#    and that the date is up-to-date
+#    and that the date/UpdateNote are up-to-date
 diff_result = subprocess.Popen(["bzr", "diff"], stdout=subprocess.PIPE).communicate()[0] 
 
 if diff_result:
@@ -79,10 +79,12 @@ if diff_result:
     answer = raw_input('Do you want to continue anyway? (y/n)')
     if answer != 'y':
         exit()
+
 release_date = date.fromtimestamp(time.time())
 for line in file(os.path.join(MG5DIR,'VERSION')):
     if 'version' in line:
         logging.info(line)
+        version = line.rsplit('=')[1].strip()
     if 'date' in line:
         if not str(release_date.year) in line or not str(release_date.month) in line or \
                                                            not str(release_date.day) in line:
@@ -90,6 +92,13 @@ for line in file(os.path.join(MG5DIR,'VERSION')):
             answer = raw_input('Do you want to continue anyway? (y/n)')
             if answer != 'y':
                 exit()
+
+Update_note = file(os.path.join(MG5DIR,'UpdateNotes.txt')).read()
+if version not in Update_note:
+    logging.warning("WARNING: version number %s is not found in \'UpdateNotes.txt\'" % version)
+    answer = raw_input('Do you want to continue anyway? (y/n)')
+    if answer != 'y':
+        exit()
 
 # 1. bzr branch the present directory to a new directory
 #    MadGraph5_vVERSION
