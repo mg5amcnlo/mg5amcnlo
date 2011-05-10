@@ -1,8 +1,13 @@
 Update notes for MadGraph 5 (in reverse time order)
 
-1.2.2 (09/05/11)  OM: fix ALOHA symmetries creating not gauge invariant result for scalar octet
+1.2.3 (11/05/11): JA: Fixed problem with scale choice in processes with mixed 
+                      QED/QCD orders, e.g. p p > t t~ QED=2
+		  JA: Added the ptllmin/max options in the default run_card.dat
 
-1.2.1 (08/05/11)  OM: reduce the quantity of RAM use by matrix.f
+1.2.2 (09/05/11): OM: fix ALOHA symmetries creating not gauge invariant result 
+                      for scalar octet
+
+1.2.1 (08/05/11): OM: reduce the quantity of RAM use by matrix.f
       	          OM: support speed of psyco if this python module is installed
                   OM: fix a minor bug in the model parsing
                   OM: add the check of valid model.pkl also for v4 model
