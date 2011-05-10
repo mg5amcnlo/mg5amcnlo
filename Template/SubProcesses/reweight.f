@@ -412,8 +412,10 @@ c      else
       if (btest(mlevel,1)) then
         write(*,*)'setclscales: identified tree {'
         do i=1,nexternal-2
-          write(*,*)'  ',i,': ',idacl(i,1),'&',idacl(i,2),
-     &       ' -> ',imocl(i),', ptij = ',dsqrt(pt2ijcl(i)) 
+          write(*,*)'  ',i,': ',idacl(i,1),'(',ipdgcl(idacl(i,1),igraphs(1)),')',
+     $       '&',idacl(i,2),'(',ipdgcl(idacl(i,2),igraphs(1)),')',
+     $       ' -> ',imocl(i),', ptij = ',dsqrt(pt2ijcl(i)),
+     $       '(',ipdgcl(imocl(i),igraphs(1)),')'
         enddo
         write(*,*)'  graphs (',igraphs(0),'):',(igraphs(i),i=1,igraphs(0))
         write(*,*)'}'
