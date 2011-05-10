@@ -70,6 +70,11 @@
 # BW cutoff (M+/-bwcutoff*Gamma)
 #**********************************
   15  = bwcutoff
+#**********************************************************
+# Apply pt/E/eta/dr/mij cuts on decay products or not
+# (note that etmiss/ptll/ptheavy/sorted cuts always apply)
+#**********************************************************
+   F  = cut_decays
 #*******************                                                 
 # Standard Cuts
 #*******************                                                 
@@ -151,6 +156,11 @@
 #*********************************************************************
  0   = mmnl    ! min invariant mass for all letpons (l+- and vl) 
  1d5 = mmnlmax ! max invariant mass for all letpons (l+- and vl) 
+#*********************************************************************
+# Minimum and maximum pt for 4-momenta sum of leptons                *
+#*********************************************************************
+ 0   = ptllmin  ! Minimum pt for 4-momenta sum of leptons(l and vl)
+ 1d5 = ptllmax  ! Maximum pt for 4-momenta sum of leptons(l and vl)
 #*********************************************************************
 # Inclusive cuts                                                     *
 #*********************************************************************
