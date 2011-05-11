@@ -493,6 +493,10 @@ c            write(*,*) 'Using 2',l2,x2
 
 c           Use 1/10000 of sqrt(s) as minimum, to always get integration
             xo = max(xo*xo/stot,1e-8)
+            if (xo.eq.1e-8)then
+               write(*,*) 'Warning: No good cutoff for shat integration found'
+               write(*,*) '         Minimum set to 1e-8*s'
+            endif
             a=-pmass(i,iconfig)**2/stot
 c            call setgrid(-i,xo,a,pow(i,iconfig))
 
