@@ -1,7 +1,9 @@
 Update notes for MadGraph 5 (in reverse time order)
 
 1.2.3 (11/05/11): JA: Fixed problem with scale choice in processes with mixed 
-                      QED/QCD orders, e.g. p p > t t~ QED=2
+                      QED/QCD orders, e.g. p p > t t~ QED=2. Note that this fix
+                      doesn't work for p p > t t~ j j QED=4 which should still
+                      be avoided.
 		  JA: Added the ptllmin/max options in the default run_card.dat
 
 1.2.2 (09/05/11): OM: fix ALOHA symmetries creating not gauge invariant result 
