@@ -36,7 +36,6 @@ class ExtLauncher(object):
     program_dir = ''
     executable = ''  # path from program_dir
     
-    cards = [] # files can be modified (path from self.card_dir)
     force = False
     
     def __init__(self, running_dir, card_dir='', timeout=None,
@@ -51,6 +50,7 @@ class ExtLauncher(object):
         for key,value in options.items():
             setattr(self, key, value)
             
+        self.cards = [] # files can be modified (path from self.card_dir)
             
     def run(self):
         """ execute the main code """
@@ -147,12 +147,12 @@ class ExtLauncher(object):
 class SALauncher(ExtLauncher):
     """ A class to launch a simple Standalone test """
     
-    cards = ['param_card.dat']
-
     def __init__(self, running_dir, timeout, **options):
         """ initialize the StandAlone Version"""
         
         ExtLauncher.__init__(self, running_dir, './Cards', timeout, **options)
+        self.cards = ['param_card.dat']
+
     
     def launch_program(self):
         """launch the main program"""
@@ -170,8 +170,6 @@ class SALauncher(ExtLauncher):
 class MELauncher(ExtLauncher):
     """A class to launch MadEvent run"""
     
-    cards = ['param_card.dat', 'run_card.dat']
-
     def __init__(self, running_dir, timeout, unit='pb', **option):
         """ initialize the StandAlone Version"""
         
@@ -182,6 +180,7 @@ class MELauncher(ExtLauncher):
         assert hasattr(self, 'name')
         self.unit = unit
         
+        self.cards = ['param_card.dat', 'run_card.dat']
         # Check for pythia-pgs directory
         if os.path.isdir(os.path.join(MG5DIR,'pythia-pgs')):
             self.pythia = os.path.join(MG5DIR,'pythia-pgs')
@@ -305,20 +304,16 @@ class MELauncher(ExtLauncher):
 class Pythia8Launcher(ExtLauncher):
     """A class to launch Pythia8 run"""
     
-    cards = []
-
     def __init__(self, running_dir, timeout, **option):
         """ initialize launching Pythia 8"""
 
         running_dir = os.path.join(running_dir, 'examples')
         ExtLauncher.__init__(self, running_dir, '.', timeout, **option)
-
+        self.cards = []
     
     def prepare_run(self):
         """ ask for pythia-pgs/delphes run """
 
-        self.cards = []
-        
         # Find all main_model_process.cc files
         date_file_list = []
         for file in glob.glob(os.path.join(self.running_dir,'main_*_*.cc')):

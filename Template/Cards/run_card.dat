@@ -157,6 +157,11 @@
  0   = mmnl    ! min invariant mass for all letpons (l+- and vl) 
  1d5 = mmnlmax ! max invariant mass for all letpons (l+- and vl) 
 #*********************************************************************
+# Minimum and maximum pt for 4-momenta sum of leptons                *
+#*********************************************************************
+ 0   = ptllmin  ! Minimum pt for 4-momenta sum of leptons(l and vl)
+ 1d5 = ptllmax  ! Maximum pt for 4-momenta sum of leptons(l and vl)
+#*********************************************************************
 # Inclusive cuts                                                     *
 #*********************************************************************
  0  = xptj ! minimum pt for at least one jet  
