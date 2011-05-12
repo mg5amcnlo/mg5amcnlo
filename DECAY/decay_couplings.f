@@ -441,6 +441,7 @@ c
 c--	change to lower case
 	   call case_trap(buff,20)
        if(buff(1:5).eq.'block') then
+         l1=26
          if(index(buff,"#").ne.0) l1=index(buff,"#")-1 
          block_name=buff(6:min(l1,26)) 
          call no_spaces(block_name,name_length)
@@ -511,6 +512,11 @@ c     &        ivalue(n),value(n),name(n)
        call set_it(n,ivalue,value,name,5,bn,mbMS,4.2d0)
        call set_it(n,ivalue,value,name,6,bn,mtMS,174d0)
        call set_it(n,ivalue,value,name,15,bn,mtaMS,1.777d0)
+       bn="yukawa"
+       call set_it(n,ivalue,value,name,4,bn,mcMS,mcMS*1d0)
+       call set_it(n,ivalue,value,name,5,bn,mbMS,mbMS*1d0)
+       call set_it(n,ivalue,value,name,6,bn,mtMS,mtMS*1d0)
+       call set_it(n,ivalue,value,name,15,bn,mtaMS,mtaMS*1d0)
        bn="mgckm"
        call set_it(n,ivalue,value,name,1,bn,vud,1d0)
        bn="mass"
@@ -573,7 +579,7 @@ c
       enddo
       
       if (.not.found) then
-c         write (*,*) "Warning: parameter not found"
+c         write (*,*) "Warning: parameter ",block_name,id," not found"
 c         write (*,*) "         setting it to default value ",def_value
          var=def_value
       endif
