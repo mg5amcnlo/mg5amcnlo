@@ -473,8 +473,9 @@ C   Write out compulsory init info
          write(luni,90) (idbmup(i),i=1,2),(ebmup(i),i=1,2),(pdfgup(i),i=1,2),
      $        (pdfsup(i),i=1,2),idwtup,nprup
          do i=1,sizeievent
-            read(lunr,*) xsecup,xerrup,xmaxup,lprup 
-            write(luni,91) sum(i),xerrup*sum(i)/xsecup,maxwgt(i),lprup
+            read(lunr,*) xsecup,xerrup,xmaxup,lprup
+            write(luni,91) sum(eventnr(lprup)),xerrup*sum(eventnr(lprup))/xsecup,
+     $           maxwgt(eventnr(lprup)),lprup
          enddo
       enddo
       write(luni,'(a)') '</init>'
