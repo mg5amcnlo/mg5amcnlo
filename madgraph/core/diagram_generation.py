@@ -1323,3 +1323,195 @@ def expand_list_list(mylist):
 
     return res
 
+class DiagramTag(object):
+    """Class to tag diagrams based on objects with some __lt__ measure, e.g.
+    PDG code/interaction id (for comparing diagrams from the same amplitude),
+    or Lorentz/coupling/mass/width (for comparing AMPs from different MEs).
+    Algorithm: Create chains starting from external particles:
+    1 \        / 6
+    2 /\______/\ 7
+    3_ /  |   \_ 8
+    4 /   5    \_ 9
+                \ 10
+    gives ((((9,10,id910),8,id9108),(6,7,id67),id910867)
+           (((1,2,id12),(3,4,id34)),id1234),
+           5,id91086712345)
+    where idN is the id of the corresponding interaction. The ordering within
+    chains is based on chain length (depth; here, 1234 has depth 2, 910867 has
+    depth 3, 5 has depht 0), and if equal on the ordering of the chain elements.
+    The determination of central vertex is based on minimizing the chain length
+    for the longest subchain. 
+    This gives a unique tag which can be used to identify diagrams
+    (instead of symmetry), as well as identify identical matrix elements from
+    different processes."""
+
+
+    def __init__(self, diagram):
+        """Initialize with a diagram. Create DiagramTagChainLinks according to
+        the diagram, and figure out if we need to shift the central vertex."""
+
+        # wf_dict keeps track of the intermediate particles
+        leg_dict = {}
+        # Create the chain which will be the diagram tag
+        for vertex in diagram.get('vertices'):
+            # Only add incoming legs
+            legs = vertex.get('legs')[:-1]
+            if vertex == diagram.get('vertices')[-1]:
+                # If last vertex, all legs are incoming
+                legs = vertex.get('legs')
+            # Add links corresponding to the relevant legs
+            link = DiagramTagChainLink([leg_dict.setdefault(leg.get('number'),
+                                        DiagramTagChainLink(self.link_from_leg(leg))) \
+                                        for leg in legs],
+                                        self.vertex_id_from_vertex(vertex))
+            # Add vertex to leg_dict if not last one
+            if vertex != vertex.get('legs')[-1]:
+                leg_dict[vertex.get('legs')[-1].get('number')] = link
+
+        # The resulting link is the hypothetical result
+        self.tag = link
+
+        # Now make sure to find the central vertex in the diagram,
+        # defined by the longest leg being as short as possible
+        done = False
+        while not done:
+            # Identify the longest chain in the tag
+            longest_chain = self.tag.links[0]
+            # Create a new link corresponding to moving one step
+            new_link = DiagramTagChainLink(self.tag.links[1:],
+                                           self.tag.vertex_id)
+            # Create a new final vertex in the direction of the longest link
+            other_link = DiagramTagChainLink(list(longest_chain.links) + \
+                                             [new_link],
+                                             longest_chain.vertex_id)
+
+            if other_link.links[0] < self.tag.links[0]:
+                # Switch to new tag, continue search
+                self.tag = other_link
+            else:
+                # We have found the central vertex
+                done = True
+
+    def get_external_numbers(self):
+        """Get the order of external particles in this tag"""
+
+        return self.tag.get_external_numbers()
+
+    @staticmethod
+    def reorder_permutation(perm, start_perm):
+        """Reorder a permutation with respect to start_perm"""
+        order = [i for (p,i) in \
+                 sorted([(p,i) for (i,p) in enumerate(perm)])]
+        return [start_perm[i]-1 for i in order]
+
+    @staticmethod
+    def link_from_leg(leg):
+        """Returns the default end link for a leg: ((id, state), number).
+        Note that the number is not taken into account if tag comparison,
+        but is used only to extract leg permutations."""
+        if leg.get('state'):
+            # Identify identical final state particles
+            return [((leg.get('id'), 0), leg.get('number'))]
+        else:
+            # Distinguish identical initial state particles
+            return [((leg.get('id'), leg.get('number')), leg.get('number'))]
+
+    @staticmethod
+    def vertex_id_from_vertex(vertex):
+        """Returns the default vertex id: just the interaction id"""
+        return vertex.get('id')
+
+    def __eq__(self, other):
+        """Equal if same tag"""
+        if type(self) != type(other):
+            return False
+        return self.tag == other.tag
+
+    def __ne__(self, other):
+        return not self.__eq__(other)
+
+    def __str__(self):
+        return str(self.tag)
+
+    __repr__ = __str__
+
+class DiagramTagChainLink(object):
+    """Chain link for a DiagramTag. A link is a tuple + vertex id + depth,
+    with a comparison operator defined"""
+
+    def __init__(self, objects, vertex_id = None):
+        """Initialize, either with a tuple of DiagramTagChainLinks and
+        a vertex_id (defined by DiagramTag.vertex_id_from_vertex), or
+        with an external leg object (end link) defined by
+        DiagramTag.link_from_leg"""
+
+        if vertex_id == None:
+            # This is an end link, corresponding to an external leg
+            self.links = tuple(objects)
+            self.vertex_id = 0
+            self.depth = 0
+            self.end_link = True
+            return
+        # This is an internal link, corresponding to an internal line
+        self.links = tuple(sorted(list(tuple(objects)), reverse=True))
+        self.vertex_id = vertex_id
+        self.depth = sum([l.depth for l in self.links], 1)
+        self.end_link = False
+
+    def get_external_numbers(self):
+        """Get the permutation of external numbers (assumed to be the
+        second entry in the end link tuples)"""
+
+        if self.end_link:
+            return [self.links[0][1]]
+
+        return sum([l.get_external_numbers() for l in self.links], [])
+
+    def __lt__(self, other):
+        """Compare self with other in the order:
+        1. depth 2. len(links) 3. vertex id 4. measure of links"""
+
+        if self == other:
+            return False
+
+        if self.depth != other.depth:
+            return self.depth < other.depth
+
+        if len(self.links) != len(other.links):
+            return len(self.links) < len(other.links)
+
+        if self.vertex_id != other.vertex_id:
+            return self.vertex_id < other.vertex_id
+
+        for i, link in enumerate(self.links):
+            if i > len(other.links) - 1:
+                return False
+            if link != other.links[i]:
+                return link < other.links[i]
+
+    def __gt__(self, other):
+        return self != other and not self.__lt__(other)
+
+    def __eq__(self, other):
+        """For end link,
+        consider equal if self.links[0][0] == other.links[0][0],
+        i.e., ignore the leg number (in links[0][1])."""
+
+        if self.end_link and other.end_link and  \
+               self.depth == other.depth and self.vertex_id == other.vertex_id:
+            return self.links[0][0] == other.links[0][0]
+        
+        return self.__dict__ == other.__dict__
+
+    def __ne__(self, other):
+        return not self.__eq__(other)
+
+
+    def __str__(self):
+        if self.end_link:
+            return str(self.links)
+        return "%s, %s; %d" % (str(self.links),
+                               str(self.vertex_id),
+                               self.depth)
+
+    __repr__ = __str__

@@ -25,6 +25,7 @@ import tests.unit_tests as unittest
 
 import madgraph.core.base_objects as base_objects
 import madgraph.core.diagram_generation as diagram_generation
+import models.import_ufo as import_ufo
 from madgraph import MadGraph5Error, InvalidCmd
 
 #===============================================================================
@@ -2828,4 +2829,137 @@ class MultiProcessTest(unittest.TestCase):
             if nfs <= 3:
                 self.assertRaises(MadGraph5Error,
                                   my_multiprocess.get, 'amplitudes')
+
+
+#===============================================================================
+# TestDiagramTag
+#===============================================================================
+class TestDiagramTag(unittest.TestCase):
+    """Test class for the DiagramTag class"""
+
+
+    def setUp(self):
+        self.base_model = import_ufo.import_model('sm')
+    
+    def test_diagram_tag_gg_ggg(self):
+        """Test the find_symmetry function"""
+
+        myleglist = base_objects.LegList()
+
+        myleglist.append(base_objects.Leg({'id':21,
+                                           'state':False}))
+        myleglist.append(base_objects.Leg({'id':21,
+                                           'state':False}))
+        myleglist.append(base_objects.Leg({'id':21,
+                                           'state':True}))
+        myleglist.append(base_objects.Leg({'id':21,
+                                           'state':True}))
+        myleglist.append(base_objects.Leg({'id':21,
+                                           'state':True}))
+
+        myproc = base_objects.Process({'legs':myleglist,
+                                       'model':self.base_model})
+
+        myamplitude = diagram_generation.Amplitude(myproc)
+
+        tags = []
+        permutations = []
+        diagram_classes = []
+        for idiag, diagram in enumerate(myamplitude.get('diagrams')):
+            tag = diagram_generation.DiagramTag(diagram)
+            try:
+                ind = tags.index(tag)
+            except:
+                diagram_classes.append([idiag + 1])
+                permutations.append([tag.get_external_numbers()])
+                tags.append(tag)
+            else:
+                diagram_classes[ind].append(idiag + 1)
+                permutations[ind].append(tag.get_external_numbers())
+
+        permutations = [[diagram_generation.DiagramTag.reorder_permutation(p, perms[0])\
+                         for p in perms] for perms in permutations]        
+
+        goal_classes =  [[1, 2, 3],
+                         [4],
+                         [5, 6, 9, 10, 13, 14],
+                         [7, 11, 15],
+                         [8, 12, 16],
+                         [17, 18, 19],
+                         [20, 21, 22],
+                         [23, 24, 25]]
+        goal_perms =  [[[0, 1, 2, 3, 4], [0, 1, 2, 4, 3], [0, 1, 4, 2, 3]],
+                       [[0, 1, 2, 3, 4]],
+                       [[0, 1, 2, 3, 4], [0, 1, 2, 4, 3], [0, 1, 3, 2, 4],
+                        [0, 1, 4, 2, 3], [0, 1, 3, 4, 2], [0, 1, 4, 3, 2]],
+                       [[0, 1, 2, 3, 4], [0, 1, 3, 2, 4], [0, 1, 3, 4, 2]],
+                       [[0, 1, 2, 3, 4], [0, 1, 3, 2, 4], [0, 1, 3, 4, 2]],
+                       [[0, 1, 2, 3, 4], [0, 1, 3, 2, 4], [0, 1, 3, 4, 2]],
+                       [[0, 1, 2, 3, 4], [0, 1, 3, 2, 4], [0, 1, 3, 4, 2]],
+                       [[0, 1, 2, 3, 4], [0, 1, 2, 4, 3], [0, 1, 4, 2, 3]]]
+
+        for i in range(len(diagram_classes)):
+            self.assertEqual(diagram_classes[i], goal_classes[i])
+            self.assertEqual(permutations[i], goal_perms[i])
+
+    def test_diagram_tag_uu_uug(self):
+        """Test the find_symmetry function"""
+
+        myleglist = base_objects.LegList()
+
+        myleglist.append(base_objects.Leg({'id':2,
+                                           'state':False}))
+        myleglist.append(base_objects.Leg({'id':2,
+                                           'state':False}))
+        myleglist.append(base_objects.Leg({'id':2,
+                                           'state':True}))
+        myleglist.append(base_objects.Leg({'id':2,
+                                           'state':True}))
+        myleglist.append(base_objects.Leg({'id':21,
+                                           'state':True}))
+
+        myproc = base_objects.Process({'legs':myleglist,
+                                       'model':self.base_model})
+
+        myamplitude = diagram_generation.Amplitude(myproc)
+
+        tags = []
+        permutations = []
+        diagram_classes = []
+        for idiag, diagram in enumerate(myamplitude.get('diagrams')):
+            tag = diagram_generation.DiagramTag(diagram)
+            try:
+                ind = tags.index(tag)
+            except:
+                diagram_classes.append([idiag + 1])
+                permutations.append([tag.get_external_numbers()])
+                tags.append(tag)
+            else:
+                diagram_classes[ind].append(idiag + 1)
+                permutations[ind].append(tag.get_external_numbers())
+
+        permutations = [[diagram_generation.DiagramTag.reorder_permutation(p, perms[0])\
+                         for p in perms] for perms in permutations]        
+
+        goal_classes = [[1, 8], [2, 9], [3, 10], [4, 11], [5, 12], [6, 13],
+                        [7, 14], [15, 18], [16, 19], [17, 20], [21, 24],
+                        [22, 25], [23, 26]]
+
+        goal_perms = [[[0, 1, 2, 3, 4], [0, 1, 3, 2, 4]],
+                     [[0, 1, 2, 3, 4], [0, 1, 3, 2, 4]],
+                     [[0, 1, 2, 3, 4], [0, 1, 3, 2, 4]],
+                     [[0, 1, 2, 3, 4], [0, 1, 3, 2, 4]],
+                     [[0, 1, 2, 3, 4], [0, 1, 3, 2, 4]],
+                     [[0, 1, 2, 3, 4], [0, 1, 3, 2, 4]],
+                     [[0, 1, 2, 3, 4], [0, 1, 3, 2, 4]],
+                     [[0, 1, 2, 3, 4], [0, 1, 3, 2, 4]],
+                     [[0, 1, 2, 3, 4], [0, 1, 3, 2, 4]],
+                     [[0, 1, 2, 3, 4], [0, 1, 3, 2, 4]],
+                     [[0, 1, 2, 3, 4], [0, 1, 3, 2, 4]],
+                     [[0, 1, 2, 3, 4], [0, 1, 3, 2, 4]],
+                     [[0, 1, 2, 3, 4], [0, 1, 3, 2, 4]]]
+
+        for i in range(len(diagram_classes)):
+            self.assertEqual(diagram_classes[i], goal_classes[i])
+            self.assertEqual(permutations[i], goal_perms[i])
 
