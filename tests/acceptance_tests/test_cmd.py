@@ -90,6 +90,7 @@ class TestCmdShell1(unittest.TestCase):
     def test_draw(self):
         """ command 'draw' works """
 
+        self.do('set group_subprocesses False')
         self.do('load processes %s' % self.join_path(_pickle_path,'e+e-_e+e-.pkl'))
         self.do('display diagrams .')
         self.assertTrue(os.path.exists('./diagrams_0_epem_epem.eps'))
@@ -99,6 +100,7 @@ class TestCmdShell1(unittest.TestCase):
         self.do('display diagrams .')
         self.assertTrue(os.path.exists('diagrams_0_gg_gg.eps'))
         os.remove('diagrams_0_gg_gg.eps')
+        self.do('set group_subprocesses True')
         
     def test_config(self):
         """check that configuration file is at default value"""
@@ -158,6 +160,7 @@ class TestCmdShell2(unittest.TestCase,
         if os.path.isdir(self.out_dir):
             shutil.rmdir(self.out_dir)
             
+        self.do('set group_subprocesses False')
         self.do('load processes %s' % self.join_path(_pickle_path,'e+e-_e+e-.pkl'))
         self.do('output %s -nojpeg' % self.out_dir)
         self.assertTrue(os.path.exists(self.out_dir))
@@ -182,6 +185,7 @@ class TestCmdShell2(unittest.TestCase,
         self.assertTrue(os.path.exists(os.path.join(self.out_dir,
                                                     'madevent.tar.gz')))
         self.do('output %s -f' % self.out_dir)
+        self.do('set group_subprocesses True')
         self.assertTrue(os.path.exists(os.path.join(self.out_dir,
                                                     'SubProcesses',
                                                     'P0_epem_epem',
@@ -282,14 +286,13 @@ class TestCmdShell2(unittest.TestCase,
         os.chdir(pwd)
 
         self.assertTrue(os.path.exists(os.path.join(self.out_dir,
-                                              'SubProcesses', 'P1_emep_vevex')))
+                                              'SubProcesses', 'P1_ll_vlvl')))
         self.assertTrue(os.path.exists(os.path.join(self.out_dir,
                                                  'Cards', 'proc_card_mg5.dat')))
-        self.assertFalse(os.path.exists(os.path.join(self.out_dir,
+        self.assertTrue(os.path.exists(os.path.join(self.out_dir,
                                                     'SubProcesses',
-                                                    'P0_epem_epem',
-                                                    'matrix1.jpg')))
-
+                                                    'P1_ll_vlvl',
+                                                    'matrix1.ps')))
         self.assertTrue(os.path.exists(os.path.join(self.out_dir,
                                                     'madevent.tar.gz')))
 
@@ -300,8 +303,10 @@ class TestCmdShell2(unittest.TestCase,
         if os.path.isdir(self.out_dir):
             shutil.rmdir(self.out_dir)
 
+        self.do('set group_subprocesses False')
         self.do('load processes %s' % self.join_path(_pickle_path,'e+e-_e+e-.pkl'))
         self.do('output standalone %s' % self.out_dir)
+        self.do('set group_subprocesses True')
         self.assertTrue(os.path.exists(self.out_dir))
         self.assertTrue(os.path.isfile(os.path.join(self.out_dir, 'lib', 'libdhelas3.a')))
         self.assertTrue(os.path.isfile(os.path.join(self.out_dir, 'lib', 'libmodel.a')))
