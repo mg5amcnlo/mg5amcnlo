@@ -2876,7 +2876,7 @@ class TestDiagramTag(unittest.TestCase):
         self.base_model = import_ufo.import_model('sm')
     
     def test_diagram_tag_gg_ggg(self):
-        """Test the find_symmetry function"""
+        """Test the diagram tag for gg > ggg"""
 
         myleglist = base_objects.LegList()
 
@@ -2937,7 +2937,7 @@ class TestDiagramTag(unittest.TestCase):
             self.assertEqual(permutations[i], goal_perms[i])
 
     def test_diagram_tag_uu_uug(self):
-        """Test the find_symmetry function"""
+        """Test diagram tag for uu>uug"""
 
         myleglist = base_objects.LegList()
 
@@ -2997,3 +2997,116 @@ class TestDiagramTag(unittest.TestCase):
             self.assertEqual(diagram_classes[i], goal_classes[i])
             self.assertEqual(permutations[i], goal_perms[i])
 
+#===============================================================================
+# TestIdentifyMETag
+#===============================================================================
+class TestIdentifyMETag(unittest.TestCase):
+    """Test class for the DiagramTag class"""
+
+
+    def setUp(self):
+        self.base_model = import_ufo.import_model('sm')
+    
+    def test_identify_me_tag_qq_qqg(self):
+        """Test the find_symmetry function"""
+
+        myleglist = base_objects.LegList()
+
+        myleglist.append(base_objects.Leg({'id':2,
+                                           'state':False}))
+        myleglist.append(base_objects.Leg({'id':2,
+                                           'state':False}))
+        myleglist.append(base_objects.Leg({'id':2,
+                                           'state':True}))
+        myleglist.append(base_objects.Leg({'id':2,
+                                           'state':True}))
+        myleglist.append(base_objects.Leg({'id':21,
+                                           'state':True}))
+
+        myproc = base_objects.Process({'legs':myleglist,
+                                       'model':self.base_model,
+                                       'orders': {'QED': 0}})
+
+        myamplitude1 = diagram_generation.Amplitude(myproc)
+
+
+        myleglist = base_objects.LegList()
+
+        myleglist.append(base_objects.Leg({'id':1,
+                                           'state':False,
+                                           'number': 1}))
+        myleglist.append(base_objects.Leg({'id':1,
+                                           'state':True,
+                                           'number': 3}))
+        myleglist.append(base_objects.Leg({'id':1,
+                                           'state':True,
+                                           'number': 4}))
+        myleglist.append(base_objects.Leg({'id':1,
+                                           'state':False,
+                                           'number': 2}))
+        myleglist.append(base_objects.Leg({'id':21,
+                                           'state':True,
+                                           'number': 5}))
+
+        myproc = base_objects.Process({'legs':myleglist,
+                                       'model':self.base_model,
+                                       'orders': {'QED': 0}})
+
+        myamplitude2 = diagram_generation.Amplitude(myproc)
+
+        tags1 = sorted([diagram_generation.IdentifyMETag(d, self.base_model) \
+                        for d in myamplitude1.get('diagrams')])
+        tags2 = sorted([diagram_generation.IdentifyMETag(d, self.base_model) \
+                        for d in myamplitude2.get('diagrams')])
+
+        self.assertEqual(tags1, tags2)
+
+    def test_non_identify_me_tag_qq_qqg(self):
+        """Test the find_symmetry function"""
+
+        myleglist = base_objects.LegList()
+
+        myleglist.append(base_objects.Leg({'id':2,
+                                           'state':False}))
+        myleglist.append(base_objects.Leg({'id':2,
+                                           'state':False}))
+        myleglist.append(base_objects.Leg({'id':2,
+                                           'state':True}))
+        myleglist.append(base_objects.Leg({'id':2,
+                                           'state':True}))
+        myleglist.append(base_objects.Leg({'id':21,
+                                           'state':True}))
+
+        myproc = base_objects.Process({'legs':myleglist,
+                                       'model':self.base_model})
+
+        myamplitude1 = diagram_generation.Amplitude(myproc)
+
+        myleglist = base_objects.LegList()
+
+        myleglist.append(base_objects.Leg({'id':1,
+                                           'state':False}))
+        myleglist.append(base_objects.Leg({'id':1,
+                                           'state':False}))
+        myleglist.append(base_objects.Leg({'id':1,
+                                           'state':True}))
+        myleglist.append(base_objects.Leg({'id':1,
+                                           'state':True}))
+        myleglist.append(base_objects.Leg({'id':21,
+                                           'state':True}))
+
+        myproc = base_objects.Process({'legs':myleglist,
+                                       'model':self.base_model})
+
+        myamplitude2 = diagram_generation.Amplitude(myproc)
+
+        tags1 = sorted([diagram_generation.IdentifyMETag(d, self.base_model) \
+                        for d in myamplitude1.get('diagrams')])
+
+        tags2 = sorted([diagram_generation.IdentifyMETag(d, self.base_model) \
+                        for d in myamplitude2.get('diagrams')])
+
+        self.assertFalse(tags1 == tags2)
+
+            
+            
