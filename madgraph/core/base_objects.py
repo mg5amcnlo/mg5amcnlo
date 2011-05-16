@@ -19,6 +19,7 @@ interaction, model, leg, vertex, process, ..."""
 import copy
 import itertools
 import logging
+import math
 import numbers
 import os
 import re
@@ -1805,6 +1806,24 @@ class Process(PhysicsObject):
         
         return 0
         
+    def identical_particle_factor(self):
+        """Calculate the denominator factor for identical final state particles
+        """
+
+        final_legs = filter(lambda leg: leg.get('state') == True, \
+                              self.get_legs_with_decays())
+
+        identical_indices = {}
+        for leg in final_legs:
+            if leg.get('id') in identical_indices:
+                identical_indices[leg.get('id')] = \
+                                    identical_indices[leg.get('id')] + 1
+            else:
+                identical_indices[leg.get('id')] = 1
+        return reduce(lambda x, y: x * y,
+                      [ math.factorial(val) for val in \
+                        identical_indices.values() ], 1)
+
     def __eq__(self, other):
         """Overloading the equality operator, so that only comparison
         of process id and legs is being done, using compare_for_sort."""

@@ -886,7 +886,7 @@ class Amplitude(base_objects.PhysicsObject):
 
         return vert_ids
                           
-    def trim_diagrams(self):
+    def trim_diagrams(self, decay_ids = []):
         """Reduce the number of legs and vertices used in memory."""
 
         legs = []
@@ -895,12 +895,20 @@ class Amplitude(base_objects.PhysicsObject):
         for diagram in self.get('diagrams'):
             for ivx, vertex in enumerate(diagram.get('vertices')):
                 for ileg, leg in enumerate(vertex.get('legs')):
-                    leg.set('from_group', False)
+                    if leg.get('state') and leg.get('id') in decay_ids:
+                        # Use from_group to indicate decaying legs,
+                        # i.e. legs that have decay chains
+                        leg = copy.copy(leg)
+                        leg.set('from_group', True)
+                    else:
+                        leg.set('from_group', False)
                     try:
                         index = legs.index(leg)
-                        vertex.get('legs')[ileg] = legs[index]
                     except ValueError:
+                        vertex.get('legs')[ileg] = leg
                         legs.append(leg)
+                    else: # Found a leg
+                        vertex.get('legs')[ileg] = legs[index]
                 try:
                     index = vertices.index(vertex)
                     diagram.get('vertices')[ivx] = vertices[index]
@@ -943,8 +951,8 @@ class DecayChainAmplitude(Amplitude):
             if isinstance(argument, base_objects.ProcessDefinition):
                 self['amplitudes'].extend(\
                 MultiProcess.generate_multi_amplitudes(argument,
-                                                       collect_mirror_procs,
-                                                       ignore_six_quark_processes))
+                                                    collect_mirror_procs,
+                                                    ignore_six_quark_processes))
             else:
                 self['amplitudes'].append(Amplitude(argument))
                 # Clean decay chains from process, since we haven't
@@ -966,6 +974,13 @@ class DecayChainAmplitude(Amplitude):
                 self['decay_chains'].append(\
                     DecayChainAmplitude(process, collect_mirror_procs,
                                         ignore_six_quark_processes))
+            # Flag decaying legs in the core process by from_group = True
+            decay_ids = sum([[a.get('processes')[0].get('legs')[0].get('id') \
+                              for a in dec.get('amplitudes')] for dec in \
+                             self['decay_chains']], [])
+            decay_ids = set(decay_ids)
+            for amp in self['amplitudes']:
+                amp.trim_diagrams(decay_ids)                             
         elif argument != None:
             # call the mother routine
             super(DecayChainAmplitude, self).__init__(argument)
@@ -1128,7 +1143,7 @@ class MultiProcess(base_objects.PhysicsObject):
                 raise self.PhysicsObjectError, \
                         "%s is not a valid AmplitudeList object" % str(value)
 
-        if name == 'collect_mirror_procs':
+        if name in ['collect_mirror_procs']:
             if not isinstance(value, bool):
                 raise self.PhysicsObjectError, \
                         "%s is not a valid boolean" % str(value)
@@ -1168,8 +1183,7 @@ class MultiProcess(base_objects.PhysicsObject):
     @staticmethod
     def generate_multi_amplitudes(process_definition,
                                   collect_mirror_procs = False,
-                                  ignore_six_quark_processes = [],
-                                  combine_matrix_elements = True):
+                                  ignore_six_quark_processes = []):
         """Generate amplitudes in a semi-efficient way.
         Make use of crossing symmetry for processes that fail diagram
         generation, but not for processes that succeed diagram
@@ -1194,8 +1208,6 @@ class MultiProcess(base_objects.PhysicsObject):
 
         # Store the diagram tags for processes, to allow for
         # identifying identical matrix elements already at this stage.
-        process_diagram_tags = []
-        
         model = process_definition['model']
         
         isids = [leg['ids'] for leg in process_definition['legs'] \
@@ -1262,11 +1274,11 @@ class MultiProcess(base_objects.PhysicsObject):
                                  process_definition.get('is_decay_chain'),
                               'overall_orders': \
                                  process_definition.get('overall_orders')})
-
+                
+                fast_proc = \
+                          array.array('i',[leg.get('id') for leg in legs])
                 if collect_mirror_procs:
                     # Check if mirrored process is already generated
-                    fast_proc = \
-                              array.array('i',[leg.get('id') for leg in legs])
                     mirror_proc = \
                               array.array('i', [fast_proc[1], fast_proc[0]] + \
                                           list(fast_proc[2:]))
@@ -1291,8 +1303,7 @@ class MultiProcess(base_objects.PhysicsObject):
                 else:
                     if amplitude.get('diagrams'):
                         amplitudes.append(amplitude)
-                        if collect_mirror_procs:
-                            success_procs.append(fast_proc)
+                        success_procs.append(fast_proc)
                     elif not result:
                         failed_procs.append(tuple(sorted_legs))
  
@@ -1484,74 +1495,6 @@ class MultiProcess(base_objects.PhysicsObject):
         # If no valid processes found with nfinal-1 couplings, return nfinal
         return {coupling: len(fsids)}        
 
-#===============================================================================
-# DiagramTag class to identify matrix elements
-#===============================================================================
-
-class IdentifyMETag(DiagramTag):
-    """DiagramTag daughter class to identify processes with identical
-    matrix elements. Need to compare leg number, color, lorentz,
-    coupling, state, spin, self_antipart, mass, width, color, decay
-    and is_part.
-
-    Note that we also need to check that the processes agree on
-    has_mirror_process, process id, is_decay_chain, and
-    identical_particle_factor."""
-    
-    @staticmethod
-    def link_from_leg(leg, model):
-        """Returns the end link for a leg needed to identify matrix
-        elements: ((leg numer, state, spin, self_antipart, mass,
-        width, color, decay and is_part), number)."""
-
-        part = model.get_particle(leg.get('id'))
-
-        # Identify identical final state particles
-        # REMEMBER TO ADD DECAY PARTICLE!
-
-        return [((leg.get('number'), leg.get('state'), leg.get('from_group'),
-                  part.get('spin'),
-                  part.get('is_part'), part.get('self_antipart'),
-                  part.get('mass'), part.get('width'), part.get('color')),
-                 leg.get('number'))]
-
-    @staticmethod
-    def vertex_id_from_vertex(vertex, last_vertex, model):
-        """Returns the info needed to identify matrix elements:
-        interaction color, lorentz, coupling, and wavefunction
-        spin, self_antipart, mass, width, color, decay and
-        is_part. Note that is_part needs to be flipped if we move the
-        final vertex around."""
-
-        inter = model.get_interaction(vertex.get('id'))
-        coup_keys = sorted(inter.get('couplings').keys())
-        ret_list = tuple([(key, inter.get('couplings')[key]) for key in \
-                          coup_keys] + \
-                         [str(c) for c in inter.get('color')] + \
-                         inter.get('lorentz'))
-                   
-        if last_vertex:
-            return (ret_list,)
-        else:
-            part = model.get_particle(vertex.get('legs')[-1].get('id'))
-            return ((part.get('spin'), part.get('color'),
-                     part.get('is_part'), part.get('self_antipart'),
-                     part.get('mass'), part.get('width')),
-                    ret_list)
-
-    @staticmethod
-    def flip_vertex(new_vertex, old_vertex):
-        """Move the wavefunction part of vertex id appropriately"""
-
-        if len(new_vertex) == 1 and len(old_vertex) == 2:
-            # We go from a last link to next-to-last link - add propagator info
-            return (old_vertex[1],)
-        elif len(new_vertex) == 2 and len(old_vertex) == 1:
-            # We go from a last link to next-to-last link - add propagator info
-            return (new_vertex[0], old_vertex[0])
-        # We should not get here
-        assert(False)
-        
 #===============================================================================
 # Global helper methods
 #===============================================================================

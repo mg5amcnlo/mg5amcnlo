@@ -39,6 +39,104 @@ import madgraph.core.color_algebra as color
 logger = logging.getLogger('madgraph.helas_objects')
 
 #===============================================================================
+# DiagramTag class to identify matrix elements
+#===============================================================================
+
+class IdentifyMETag(diagram_generation.DiagramTag):
+    """DiagramTag daughter class to identify processes with identical
+    matrix elements. Need to compare leg number, color, lorentz,
+    coupling, state, spin, self_antipart, mass, width, color, decay
+    and is_part.
+
+    Note that we also need to check that the processes agree on
+    has_mirror_process, process id, and
+    identical_particle_factor. Don't allow combining decay chains"""
+
+    dec_number = 1
+    
+    @staticmethod
+    def create_tag(amplitude):
+        """Create a tag which identifies identical matrix elements"""
+        process = amplitude.get('processes')[0]
+        model = process.get('model')
+        dc = 0
+        if process.get('is_decay_chain'):
+            dc = IdentifyMETag.dec_number
+            IdentifyMETag.dec_number += 1
+        return [amplitude.get('has_mirror_process'),
+                process.get('id'),
+                process.get('is_decay_chain'),
+                process.identical_particle_factor(),
+                dc,
+                sorted([IdentifyMETag(d, model) for d in \
+                        amplitude.get('diagrams')])]        
+        
+    @staticmethod
+    def link_from_leg(leg, model):
+        """Returns the end link for a leg needed to identify matrix
+        elements: ((leg numer, state, spin, self_antipart, mass,
+        width, color, decay and is_part), number)."""
+
+        part = model.get_particle(leg.get('id'))
+
+        # Identify identical final state particles
+
+        if leg.get('from_group'):
+            # This is a decaying particle - need to add also particle id
+            return [((leg.get('number'), leg.get('state'), leg.get('id'),
+                      part.get('spin'),
+                      part.get('is_part'), part.get('self_antipart'),
+                      part.get('mass'), part.get('width'), part.get('color')),
+                     leg.get('number'))]
+        else:
+            # For non-decaying legs, don't include particle id
+            return [((leg.get('number'), leg.get('state'),
+                      part.get('spin'),
+                      part.get('is_part'), part.get('self_antipart'),
+                      part.get('mass'), part.get('width'), part.get('color')),
+                     leg.get('number'))]            
+        
+    @staticmethod
+    def vertex_id_from_vertex(vertex, last_vertex, model):
+        """Returns the info needed to identify matrix elements:
+        interaction color, lorentz, coupling, and wavefunction
+        spin, self_antipart, mass, width, color, decay and
+        is_part. Note that is_part needs to be flipped if we move the
+        final vertex around."""
+
+        if vertex.get('id') == 0:
+            return (0,)
+
+        inter = model.get_interaction(vertex.get('id'))
+        coup_keys = sorted(inter.get('couplings').keys())
+        ret_list = tuple([(key, inter.get('couplings')[key]) for key in \
+                          coup_keys] + \
+                         [str(c) for c in inter.get('color')] + \
+                         inter.get('lorentz'))
+                   
+        if last_vertex:
+            return (ret_list,)
+        else:
+            part = model.get_particle(vertex.get('legs')[-1].get('id'))
+            return ((part.get('spin'), part.get('color'),
+                     part.get('is_part'), part.get('self_antipart'),
+                     part.get('mass'), part.get('width')),
+                    ret_list)
+
+    @staticmethod
+    def flip_vertex(new_vertex, old_vertex):
+        """Move the wavefunction part of vertex id appropriately"""
+
+        if len(new_vertex) == 1 and len(old_vertex) == 2:
+            # We go from a last link to next-to-last link - add propagator info
+            return (old_vertex[1],new_vertex[0])
+        elif len(new_vertex) == 2 and len(old_vertex) == 1:
+            # We go from next-to-last link to last link - remove propagator info
+            return (new_vertex[1],)
+        # We should not get here
+        assert(False)
+        
+#===============================================================================
 # HelasWavefunction
 #===============================================================================
 class HelasWavefunction(base_objects.PhysicsObject):
@@ -2092,7 +2190,7 @@ class HelasMatrixElement(base_objects.PhysicsObject):
                          amplitude.get('has_mirror_process'))
                 self.generate_helas_diagrams(amplitude, optimization, decay_ids)
                 self.calculate_fermionfactors()
-                self.calculate_identical_particle_factors()
+                self.calculate_identical_particle_factor()
                 if gen_color and not self.get('color_basis'):
                     self.get('color_basis').build(self.get('base_amplitude'))
                     self.set('color_matrix',
@@ -3102,23 +3200,12 @@ class HelasMatrixElement(base_objects.PhysicsObject):
             for amplitude in diagram.get('amplitudes'):
                 amplitude.get('fermionfactor')
 
-    def calculate_identical_particle_factors(self):
+    def calculate_identical_particle_factor(self):
         """Calculate the denominator factor for identical final state particles
         """
 
-        final_legs = filter(lambda leg: leg.get('state') == True, \
-                              self.get('processes')[0].get('legs'))
-
-        identical_indices = {}
-        for leg in final_legs:
-            if leg.get('id') in identical_indices:
-                identical_indices[leg.get('id')] = \
-                                    identical_indices[leg.get('id')] + 1
-            else:
-                identical_indices[leg.get('id')] = 1
-        self["identical_particle_factor"] = reduce(lambda x, y: x * y,
-                                          [ math.factorial(val) for val in \
-                                            identical_indices.values() ], 1)
+        self["identical_particle_factor"] = self.get('processes')[0].\
+                                            identical_particle_factor()
 
     def get_base_amplitude(self):
         """Generate a diagram_generation.Amplitude from a
@@ -3935,75 +4022,97 @@ class HelasMultiProcess(base_objects.PhysicsObject):
         list_color_basis = []
         list_color_matrices = []
 
+        # List of valid matrix elements
         matrix_elements = HelasMatrixElementList()
+        # List of identified matrix_elements
+        identified_matrix_elements = []
+        # List of amplitude tags, synchronized with identified_matrix_elements
+        amplitude_tags = []
 
         while amplitudes:
             # Pop the amplitude to save memory space
             amplitude = amplitudes.pop(0)
             if isinstance(amplitude, diagram_generation.DecayChainAmplitude):
+                # Might get multiple matrix elements from this amplitude
                 matrix_element_list = HelasDecayChainProcess(amplitude).\
                                       combine_decay_chain_processes()
             else:
                 logger.info("Generating Helas calls for %s" % \
                          amplitude.get('processes')[0].nice_string().\
                                            replace('Process', 'process'))
-                matrix_element_list = [cls.matrix_element_class(amplitude,
+                # Create tag identifying the matrix element using
+                # IdentifyMETag. If two amplitudes have the same tag,
+                # they have the same matrix element
+                amplitude_tag = IdentifyMETag.create_tag(amplitude)
+                try:
+                    me_index = amplitude_tags.index(amplitude_tag)
+                except ValueError:
+                    # Create matrix element for this amplitude
+                    matrix_element_list = [cls.matrix_element_class(amplitude,
                                                           decay_ids=decay_ids,
                                                           gen_color=False)]
-            for matrix_element in matrix_element_list:
+                    me = matrix_element_list[0]
+                    if me.get('processes') and me.get('diagrams'):
+                        # Keep track of amplitude tags
+                        amplitude_tags.append(amplitude_tag)
+                        identified_matrix_elements.append(me)
+                else:
+                    # Identical matrix element found
+                    other_processes = identified_matrix_elements[me_index].\
+                                      get('processes')
+                    logger.info("Combining process with %s" % \
+                                other_processes[0].nice_string().\
+                                replace('Process: ', ''))
+                    other_processes.extend(amplitude.get('processes'))
+                    # Go on to next amplitude
+                    continue
+            # Deal with newly generated matrix element
+            for matrix_element in copy.copy(matrix_element_list):
                 assert isinstance(matrix_element, HelasMatrixElement), \
                           "Not a HelasMatrixElement: %s" % matrix_element
 
+                # If the matrix element has no diagrams,
+                # remove this matrix element.
+                if not matrix_element.get('processes') or \
+                       not matrix_element.get('diagrams'):
+                    continue
+                # Otherwise, add this matrix element to list
+                matrix_elements.append(matrix_element)
+
+                if not gen_color:
+                    continue
+
+                # Always create an empty color basis, and the
+                # list of raw colorize objects (before
+                # simplification) associated with amplitude
+                col_basis = color_amp.ColorBasis()
+                new_amp = matrix_element.get_base_amplitude()
+                matrix_element.set('base_amplitude', new_amp)
+                colorize_obj = col_basis.create_color_dict_list(new_amp)
+
                 try:
-                    # If an identical matrix element is already in the list,
-                    # then simply add this process to the list of
-                    # processes for that matrix element
-                    me_index = matrix_elements.index(matrix_element)
-                    other_processes = matrix_elements[me_index].get('processes')
-                    logger.info("Combining process with %s" % \
-                      other_processes[0].nice_string().replace('Process: ', ''))
-                    other_processes.extend(matrix_element.get('processes'))
+                    # If the color configuration of the ME has
+                    # already been considered before, recycle
+                    # the information
+                    col_index = list_colorize.index(colorize_obj)
                 except ValueError:
-                    # Otherwise, if the matrix element has any diagrams,
-                    # add this matrix element.
-                    if matrix_element.get('processes') and \
-                           matrix_element.get('diagrams'):
-                        matrix_elements.append(matrix_element)
-
-                        if not gen_color:
-                            continue
-
-                        # Always create an empty color basis, and the
-                        # list of raw colorize objects (before
-                        # simplification) associated with amplitude
-                        col_basis = color_amp.ColorBasis()
-                        new_amp = matrix_element.get_base_amplitude()
-                        matrix_element.set('base_amplitude', new_amp)
-                        colorize_obj = col_basis.create_color_dict_list(new_amp)
-
-                        try:
-                            # If the color configuration of the ME has
-                            # already been considered before, recycle
-                            # the information
-                            col_index = list_colorize.index(colorize_obj)
-                            logger.info(\
-                              "Reusing existing color information for %s" % \
-                              matrix_element.get('processes')[0].nice_string().\
-                                                 replace('Process', 'process'))
-                        except ValueError:
-                            # If not, create color basis and color
-                            # matrix accordingly
-                            list_colorize.append(colorize_obj)
-                            col_basis.build()
-                            list_color_basis.append(col_basis)
-                            col_matrix = color_amp.ColorMatrix(col_basis)
-                            list_color_matrices.append(col_matrix)
-                            col_index = -1
-                            logger.info(\
-                              "Processing color information for %s" % \
-                              matrix_element.get('processes')[0].nice_string().\
-                                             replace('Process', 'process'))
-
+                    # If not, create color basis and color
+                    # matrix accordingly
+                    list_colorize.append(colorize_obj)
+                    col_basis.build()
+                    list_color_basis.append(col_basis)
+                    col_matrix = color_amp.ColorMatrix(col_basis)
+                    list_color_matrices.append(col_matrix)
+                    col_index = -1
+                    logger.info(\
+                      "Processing color information for %s" % \
+                      matrix_element.get('processes')[0].nice_string().\
+                                     replace('Process', 'process'))
+                else: # Found identical color
+                    logger.info(\
+                      "Reusing existing color information for %s" % \
+                      matrix_element.get('processes')[0].nice_string().\
+                                         replace('Process', 'process'))
                 if gen_color:
                     matrix_element.set('color_basis',
                                        list_color_basis[col_index])
