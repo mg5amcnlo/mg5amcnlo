@@ -1795,15 +1795,15 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
 
         for amp in amplitudes:
             filename = os.path.join(args[0], 'diagrams_' + \
-                                    amp.get('process').shell_string() + ".eps")
+                                    amp.get('processes')[0].shell_string() + ".eps")
             plot = draw.MultiEpsDiagramDrawer(amp['diagrams'],
                                           filename,
                                           model=self._curr_model,
                                           amplitude='',
-                                          legend=amp.get('process').input_string())
+                                          legend=amp.get('processes')[0].input_string())
 
             logger.info("Drawing " + \
-                         amp.get('process').nice_string())
+                         amp.get('processes')[0].nice_string())
             plot.draw(opt=options)
             logger.info("Wrote file " + filename)
             self.exec_cmd('open %s' % filename)
@@ -2580,7 +2580,7 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
                 logger.info("Loaded processes from file in %0.3f s" % \
                       (cpu_time2 - cpu_time1))
                 if amps:
-                    model = amps[0].get('process').get('model')
+                    model = amps[0].get('processes')[0].get('model')
                     if not model.get('parameters'):
                         # This is a v4 model.  Look for path.
                         self._model_v4_path = import_v4.find_model_path(\

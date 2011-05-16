@@ -371,7 +371,7 @@ class TestCmdShell2(unittest.TestCase,
         self.assertAlmostEqual(float(me_groups.group('value')), 1.953735e-2)
         
     def test_v4_heft(self):
-        """Test the import of models and the export of Helas Routine """
+        """Test standalone directory for UFO HEFT model"""
 
         if os.path.isdir(self.out_dir):
             shutil.rmdir(self.out_dir)

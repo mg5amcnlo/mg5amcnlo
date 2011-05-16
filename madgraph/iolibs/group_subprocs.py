@@ -151,7 +151,7 @@ class SubProcessGroup(base_objects.PhysicsObject):
         amplitudes = copy.copy(self.get('amplitudes'))
 
         self.set('matrix_elements',
-                 helas_objects.HelasMatrixElementList.\
+                 helas_objects.HelasMultiProcess.\
                                    generate_matrix_elements(amplitudes))
 
         self.rearrange_diagram_maps()
@@ -204,7 +204,7 @@ class SubProcessGroup(base_objects.PhysicsObject):
         the HelasMultiProcess"""
 
         amp_procs = [array.array('i',[l.get('id') for l in \
-                                      amp.get('process').get('legs')]) \
+                                      amp.get('processes')[0].get('legs')]) \
                      for amp in self.get('amplitudes')]
 
         new_diagram_maps = {}
@@ -240,7 +240,7 @@ class SubProcessGroup(base_objects.PhysicsObject):
                "Need amplitudes to run find_mapping_diagrams"
 
         amplitudes = self.get('amplitudes')
-        model = amplitudes[0].get('process').get('model')
+        model = amplitudes[0].get('processes')[0].get('model')
         # mapping_diagrams: The configurations for the non-reducable
         # diagram topologies
         mapping_diagrams = []
@@ -337,10 +337,10 @@ class SubProcessGroup(base_objects.PhysicsObject):
             group.set('amplitudes',
                       diagram_generation.AmplitudeList([amplitudes[i] for i in \
                                                         amp_nums]))
-            group.set('number', group.get('amplitudes')[0].get('process').\
+            group.set('number', group.get('amplitudes')[0].get('processes')[0].\
                                                                      get('id'))
             group.set('name', group.generate_name(\
-                                    group.get('amplitudes')[0].get('process')))
+                                    group.get('amplitudes')[0].get('processes')[0]))
             ret_list.append(group)
 
         return ret_list
@@ -356,16 +356,16 @@ class SubProcessGroup(base_objects.PhysicsObject):
                   "Argument to find_process_classes must be AmplitudeList"
         assert amplitudes
 
-        model = amplitudes[0].get('process').get('model')
+        model = amplitudes[0].get('processes')[0].get('model')
         proc_classes = []
         amplitude_classes = {}
 
         for iamp, amplitude in enumerate(amplitudes):
             is_parts = [model.get_particle(l.get('id')) for l in \
-                        amplitude.get('process').get('legs') if not \
+                        amplitude.get('processes')[0].get('legs') if not \
                         l.get('state')]
             fs_parts = [model.get_particle(l.get('id')) for l in \
-                        amplitude.get('process').get('legs') if l.get('state')]
+                        amplitude.get('processes')[0].get('legs') if l.get('state')]
             diagrams = amplitude.get('diagrams')
 
             # This is where the requirements for which particles to
@@ -378,7 +378,7 @@ class SubProcessGroup(base_objects.PhysicsObject):
                            [(p.get('mass'), p.get('spin'),
                              p.get('color') != 1) for p in \
                             is_parts + fs_parts],
-                           amplitude.get('process').get('id')]
+                           amplitude.get('processes')[0].get('id')]
             try:
                 amplitude_classes[iamp] = proc_classes.index(proc_class)
             except ValueError:
@@ -478,7 +478,7 @@ class DecayChainSubProcessGroup(SubProcessGroup):
 
         # Combine decays
         matrix_elements = \
-                helas_objects.HelasMatrixElementList.generate_matrix_elements(\
+                helas_objects.HelasMultiProcess.generate_matrix_elements(\
                                    diagram_generation.AmplitudeList(\
                                           [self.get('decay_chain_amplitude')]))
 
@@ -533,7 +533,7 @@ class DecayChainSubProcessGroup(SubProcessGroup):
             decay_group = [(i, group) for (i, group) in \
                            enumerate(self.get('decay_groups')) \
                            if any([ids in [[l.get('id') for l in \
-                                            a.get('process').get('legs')] \
+                                            a.get('processes')[0].get('legs')] \
                                            for a in g.get('amplitudes')] \
                                    for g in group.get('core_groups')])]
 
@@ -555,7 +555,7 @@ class DecayChainSubProcessGroup(SubProcessGroup):
         core_group = [(i, group) for (i, group) in \
                       enumerate(self.get('core_groups')) \
                       if ids in [[l.get('id') for l in \
-                                  a.get('process').get('legs')] \
+                                  a.get('processes')[0].get('legs')] \
                                  for a in group.get('amplitudes')]]
         assert len(core_group) == 1
         
@@ -568,7 +568,7 @@ class DecayChainSubProcessGroup(SubProcessGroup):
         org_mapping_diagrams = len(core_group[1].get('mapping_diagrams'))
 
         # Calculate the diagram map for this process
-        proc_index = [[l.get('id') for l in a.get('process').get('legs')] \
+        proc_index = [[l.get('id') for l in a.get('processes')[0].get('legs')] \
                       for a in core_group[1].get('amplitudes')].index(ids)
         org_diagram_map = core_group[1].get('diagram_maps')[proc_index]
 

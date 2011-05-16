@@ -52,7 +52,8 @@ class AmplitudeTest(unittest.TestCase):
 
     def setUp(self):
 
-        self.mydict = {'diagrams':self.mydiaglist, 'process':self.myprocess,
+        self.mydict = {'diagrams':self.mydiaglist,
+                       'processes':base_objects.ProcessList([self.myprocess]),
                        'has_mirror_process': False}
 
         self.myamplitude = diagram_generation.Amplitude(self.mydict)
@@ -122,7 +123,7 @@ class AmplitudeTest(unittest.TestCase):
         """Test amplitude object string representation."""
 
         goal = "{\n"
-        goal = goal + "    \'process\': %s,\n" % repr(self.myprocess)
+        goal = goal + "    \'processes\': [%s],\n" % repr(self.myprocess)
         goal = goal + "    \'diagrams\': %s,\n" % repr(self.mydiaglist)
         goal = goal + "    \'has_mirror_process\': False\n}"
 
@@ -603,7 +604,8 @@ class DiagramGenerationTest(unittest.TestCase):
                                                 'orders':{'QCD':ngluon},
                                                 'model':self.mymodel})
 
-            self.myamplitude.set('process', myproc)
+            self.myamplitude.set('processes',
+                                 base_objects.ProcessList([myproc]))
 
             # Call generate_diagram and output number of diagrams
             self.myamplitude.generate_diagrams()
@@ -632,7 +634,8 @@ class DiagramGenerationTest(unittest.TestCase):
         myproc = base_objects.Process({'legs':myleglist,
                                        'model':self.mymodel})
 
-        self.myamplitude.set('process', myproc)
+        self.myamplitude.set('processes',
+                             base_objects.ProcessList([myproc]))
 
         self.myamplitude.generate_diagrams()
         self.assertEqual(len(self.myamplitude.get('diagrams')), 3)
@@ -660,7 +663,8 @@ class DiagramGenerationTest(unittest.TestCase):
             myproc = base_objects.Process({'legs':myleglist,
                                            'model':self.mymodel})
 
-            self.myamplitude.set('process', myproc)
+            self.myamplitude.set('processes',
+                                 base_objects.ProcessList([myproc]))
 
             self.myamplitude.generate_diagrams()
             self.assertEqual(len(self.myamplitude.get('diagrams')),
@@ -689,7 +693,8 @@ class DiagramGenerationTest(unittest.TestCase):
             myproc = base_objects.Process({'legs':myleglist,
                                            'model':self.mymodel})
 
-            self.myamplitude.set('process', myproc)
+            self.myamplitude.set('processes',
+                                 base_objects.ProcessList([myproc]))
 
             self.myamplitude.generate_diagrams()
             self.assertEqual(len(self.myamplitude.get('diagrams')),
@@ -720,7 +725,8 @@ class DiagramGenerationTest(unittest.TestCase):
         myproc = base_objects.Process({'legs':myleglist,
                                        'model':self.mymodel})
 
-        self.myamplitude.set('process', myproc)
+        self.myamplitude.set('processes',
+                             base_objects.ProcessList([myproc]))
 
         self.myamplitude.generate_diagrams()
         mydiagrams = self.myamplitude.get('diagrams')
@@ -797,7 +803,8 @@ class DiagramGenerationTest(unittest.TestCase):
             myproc = base_objects.Process({'legs':myleglist,
                                            'model':self.mymodel})
 
-            self.myamplitude.set('process', myproc)
+            self.myamplitude.set('processes',
+                                 base_objects.ProcessList([myproc]))
 
             self.assertRaises(InvalidCmd, self.myamplitude.generate_diagrams)
             self.assertEqual(len(self.myamplitude.get('diagrams')), 0)
@@ -823,7 +830,8 @@ class DiagramGenerationTest(unittest.TestCase):
                                             'orders':{'QED':nphot},
                                             'model':self.mymodel})
 
-            self.myamplitude.set('process', myproc)
+            self.myamplitude.set('processes',
+                                 base_objects.ProcessList([myproc]))
 
             # Call generate_diagram and output number of diagrams
             self.myamplitude.generate_diagrams()
@@ -858,7 +866,8 @@ class DiagramGenerationTest(unittest.TestCase):
                                             'orders':{'QED':npairs * 2},
                                             'model':self.mymodel})
 
-            self.myamplitude.set('process', myproc)
+            self.myamplitude.set('processes',
+                                 base_objects.ProcessList([myproc]))
 
             # Call generate_diagram and output number of diagrams
             self.myamplitude.generate_diagrams()
@@ -1088,7 +1097,8 @@ class DiagramGenerationTest(unittest.TestCase):
                                        'model':mymodel})
 
         myamplitude = diagram_generation.Amplitude()
-        myamplitude.set('process', myproc)
+        myamplitude.set('processes',
+                        base_objects.ProcessList([myproc]))
 
         self.assertEqual(len(myamplitude.get('diagrams')), 1)
 
@@ -1121,7 +1131,8 @@ class DiagramGenerationTest(unittest.TestCase):
                                            'model':self.mymodel,
                                            'orders': {'QED':2, 'QCD':0}})
 
-            self.myamplitude.set('process', myproc)
+            self.myamplitude.set('processes',
+                                 base_objects.ProcessList([myproc]))
 
             self.myamplitude.generate_diagrams()
             self.assertEqual(len(self.myamplitude.get('diagrams')),
@@ -1131,7 +1142,8 @@ class DiagramGenerationTest(unittest.TestCase):
                                            'model':self.mymodel,
                                            'orders': {'QED':0, 'QCD':2}})
 
-            self.myamplitude.set('process', myproc)
+            self.myamplitude.set('processes',
+                                 base_objects.ProcessList([myproc]))
 
             self.myamplitude.generate_diagrams()
             self.assertEqual(len(self.myamplitude.get('diagrams')),
@@ -1141,7 +1153,8 @@ class DiagramGenerationTest(unittest.TestCase):
                                            'model':self.mymodel,
                                            'orders': {'QED':2, 'QCD':1}})
 
-            self.myamplitude.set('process', myproc)
+            self.myamplitude.set('processes',
+                                 base_objects.ProcessList([myproc]))
 
             self.myamplitude.generate_diagrams()
             self.assertEqual(len(self.myamplitude.get('diagrams')),
@@ -1151,7 +1164,8 @@ class DiagramGenerationTest(unittest.TestCase):
                                            'model':self.mymodel,
                                            'orders': {'QED':2, 'QCD':2}})
 
-            self.myamplitude.set('process', myproc)
+            self.myamplitude.set('processes',
+                                 base_objects.ProcessList([myproc]))
 
             self.myamplitude.generate_diagrams()
             self.assertEqual(len(self.myamplitude.get('diagrams')),
@@ -1161,7 +1175,8 @@ class DiagramGenerationTest(unittest.TestCase):
                                            'model':self.mymodel,
                                            'orders': {'QED':0, 'QCD':4}})
 
-            self.myamplitude.set('process', myproc)
+            self.myamplitude.set('processes',
+                                 base_objects.ProcessList([myproc]))
 
             self.myamplitude.generate_diagrams()
             self.assertEqual(len(self.myamplitude.get('diagrams')),
@@ -1194,7 +1209,8 @@ class DiagramGenerationTest(unittest.TestCase):
                                            'model':self.mymodel,
                                            'forbidden_particles':[22]})
 
-            self.myamplitude.set('process', myproc)
+            self.myamplitude.set('processes',
+                                 base_objects.ProcessList([myproc]))
 
             self.myamplitude.generate_diagrams()
 
@@ -1205,7 +1221,8 @@ class DiagramGenerationTest(unittest.TestCase):
                                            'model':self.mymodel,
                                            'forbidden_particles':[22, 1]})
 
-            self.myamplitude.set('process', myproc)
+            self.myamplitude.set('processes',
+                                 base_objects.ProcessList([myproc]))
 
             self.myamplitude.generate_diagrams()
 
@@ -1240,7 +1257,8 @@ class DiagramGenerationTest(unittest.TestCase):
                                            'model':self.mymodel,
                                            'forbidden_s_channels':[22]})
 
-            self.myamplitude.set('process', myproc)
+            self.myamplitude.set('processes',
+                                 base_objects.ProcessList([myproc]))
 
             self.myamplitude.generate_diagrams()
 
@@ -1266,7 +1284,8 @@ class DiagramGenerationTest(unittest.TestCase):
                                            'model':self.mymodel,
                                            'forbidden_s_channels':[1]})
 
-            self.myamplitude.set('process', myproc)
+            self.myamplitude.set('processes',
+                                 base_objects.ProcessList([myproc]))
 
             self.myamplitude.generate_diagrams()
 
@@ -1277,7 +1296,8 @@ class DiagramGenerationTest(unittest.TestCase):
                                            'model':self.mymodel,
                                            'forbidden_s_channels':[-1]})
 
-            self.myamplitude.set('process', myproc)
+            self.myamplitude.set('processes',
+                                 base_objects.ProcessList([myproc]))
 
             self.myamplitude.generate_diagrams()
 
@@ -1314,7 +1334,8 @@ class DiagramGenerationTest(unittest.TestCase):
                                            'model':self.mymodel,
                                            'required_s_channels':[[22]]})
 
-            self.myamplitude.set('process', myproc)
+            self.myamplitude.set('processes',
+                                 base_objects.ProcessList([myproc]))
 
             self.myamplitude.generate_diagrams()
 
@@ -1325,7 +1346,8 @@ class DiagramGenerationTest(unittest.TestCase):
                                            'model':self.mymodel,
                                            'required_s_channels':[[21], [22]]})
 
-            self.myamplitude.set('process', myproc)
+            self.myamplitude.set('processes',
+                                 base_objects.ProcessList([myproc]))
 
             self.myamplitude.generate_diagrams()
 
@@ -1337,7 +1359,8 @@ class DiagramGenerationTest(unittest.TestCase):
                                            'model':self.mymodel,
                                            'required_s_channels':[[22], [22]]})
 
-            self.myamplitude.set('process', myproc)
+            self.myamplitude.set('processes',
+                                 base_objects.ProcessList([myproc]))
 
             self.myamplitude.generate_diagrams()
 
@@ -1363,7 +1386,8 @@ class DiagramGenerationTest(unittest.TestCase):
                                            'model':self.mymodel,
                                            'required_s_channels':[[1]]})
 
-            self.myamplitude.set('process', myproc)
+            self.myamplitude.set('processes',
+                                 base_objects.ProcessList([myproc]))
 
             self.myamplitude.generate_diagrams()
 
@@ -1374,7 +1398,8 @@ class DiagramGenerationTest(unittest.TestCase):
                                            'model':self.mymodel,
                                            'required_s_channels':[[-1]]})
 
-            self.myamplitude.set('process', myproc)
+            self.myamplitude.set('processes',
+                                 base_objects.ProcessList([myproc]))
 
             self.myamplitude.generate_diagrams()
 
@@ -1411,7 +1436,8 @@ class DiagramGenerationTest(unittest.TestCase):
                                            'model':self.mymodel,
                                            'required_s_channels':[[22]]})
 
-            self.myamplitude.set('process', myproc)
+            self.myamplitude.set('processes',
+                                 base_objects.ProcessList([myproc]))
 
             self.myamplitude.generate_diagrams()
 
@@ -1422,7 +1448,8 @@ class DiagramGenerationTest(unittest.TestCase):
                                            'model':self.mymodel,
                                            'required_s_channels':[[21]]})
 
-            self.myamplitude.set('process', myproc)
+            self.myamplitude.set('processes',
+                                 base_objects.ProcessList([myproc]))
 
             self.myamplitude.generate_diagrams()
 
@@ -1433,7 +1460,8 @@ class DiagramGenerationTest(unittest.TestCase):
                                            'model':self.mymodel,
                                            'required_s_channels':[[1, 22]]})
 
-            self.myamplitude.set('process', myproc)
+            self.myamplitude.set('processes',
+                                 base_objects.ProcessList([myproc]))
 
             self.myamplitude.generate_diagrams()
 
@@ -1444,7 +1472,8 @@ class DiagramGenerationTest(unittest.TestCase):
                                            'model':self.mymodel,
                                            'required_s_channels':[[2, 22]]})
 
-            self.myamplitude.set('process', myproc)
+            self.myamplitude.set('processes',
+                                 base_objects.ProcessList([myproc]))
 
             self.myamplitude.generate_diagrams()
 
@@ -1456,7 +1485,8 @@ class DiagramGenerationTest(unittest.TestCase):
                                            'required_s_channels':[[1, 22],
                                                                   [2, 22]]})
 
-            self.myamplitude.set('process', myproc)
+            self.myamplitude.set('processes',
+                                 base_objects.ProcessList([myproc]))
 
             self.myamplitude.generate_diagrams()
 
@@ -1467,7 +1497,8 @@ class DiagramGenerationTest(unittest.TestCase):
                                            'model':self.mymodel,
                                            'required_s_channels':[[-1]]})
 
-            self.myamplitude.set('process', myproc)
+            self.myamplitude.set('processes',
+                                 base_objects.ProcessList([myproc]))
 
             self.myamplitude.generate_diagrams()
 
@@ -1494,7 +1525,8 @@ class DiagramGenerationTest(unittest.TestCase):
                                         'is_decay_chain': True})
 
         myamplitude1 = diagram_generation.Amplitude()
-        myamplitude1.set('process', myproc1)
+        myamplitude1.set('processes',
+                         base_objects.ProcessList([myproc1]))
         myamplitude1.generate_diagrams()
 
         self.assertEqual(len(myamplitude1.get('diagrams')), 3)
@@ -1515,7 +1547,8 @@ class DiagramGenerationTest(unittest.TestCase):
                                         'is_decay_chain': True})
 
         myamplitude2 = diagram_generation.Amplitude()
-        myamplitude2.set('process', myproc2)
+        myamplitude2.set('processes',
+                         base_objects.ProcessList([myproc2]))
         myamplitude2.generate_diagrams()
 
         self.assertEqual(len(myamplitude2.get('diagrams')), 3)
@@ -1767,7 +1800,8 @@ class DiagramGenerationTest(unittest.TestCase):
                                        'model':mymodel})
 
         myamplitude = diagram_generation.Amplitude()
-        myamplitude.set('process', myproc)
+        myamplitude.set('processes',
+                         base_objects.ProcessList([myproc]))
 
         self.assertEqual(len(myamplitude.get('diagrams')), 8)
         
@@ -2620,7 +2654,7 @@ class MultiProcessTest(unittest.TestCase):
             amplitudes = my_multiprocess.get('amplitudes')
 
             valid_procs = [([leg.get('id') for leg in \
-                             amplitude.get('process').get('legs')],
+                             amplitude.get('processes')[0].get('legs')],
                             len(amplitude.get('diagrams'))) \
                            for amplitude in amplitudes]
 
@@ -2793,7 +2827,7 @@ class MultiProcessTest(unittest.TestCase):
             #amplitudes = my_multiprocess.get('amplitudes')
 
             valid_procs = [([leg.get('id') for leg in \
-                             amplitude.get('process').get('legs')],
+                             amplitude.get('processes')[0].get('legs')],
                             len(amplitude.get('diagrams'))) \
                            for amplitude in my_multiprocess.get('amplitudes')]
 

@@ -251,7 +251,8 @@ class IOExportPythia8Test(unittest.TestCase,
                                        'model':self.mymodel,
                                        'orders':{'QSIX':0}})
         
-        myamplitude = diagram_generation.Amplitude({'process': myproc})
+        myamplitude = diagram_generation.Amplitude({'processes': \
+                                 base_objects.ProcessList([myproc])})
 
         self.mymatrixelement = helas_objects.HelasMultiProcess(myamplitude)
 
@@ -741,7 +742,8 @@ double Sigma_sm_qqx_qqx::matrix_uux_uux()
         myproc = base_objects.Process({'legs':myleglist,
                                        'model':self.mymodel})
 
-        myamplitude = diagram_generation.Amplitude({'process': myproc})
+        myamplitude = diagram_generation.Amplitude({'processes': \
+                                 base_objects.ProcessList([myproc])})
 
         mymatrixelement = helas_objects.HelasMultiProcess(myamplitude)
 
@@ -1039,7 +1041,8 @@ double Sigma_sm_qq_six::matrix_uu_six()
         myproc = base_objects.Process({'legs':myleglist,
                                        'model':self.mymodel})
         
-        myamplitude = diagram_generation.Amplitude({'process': myproc})
+        myamplitude = diagram_generation.Amplitude({'processes': \
+                                 base_objects.ProcessList([myproc])})
 
         matrix_element = helas_objects.HelasMultiProcess(myamplitude)
         matrix_element.get('matrix_elements')[0].set('has_mirror_process',

@@ -506,12 +506,13 @@ class HelasMatrixElementTest(unittest.TestCase):
         myproc = base_objects.Process({'legs':myleglist,
                                        'model':self.mymodel})
 
-        myamplitude = diagram_generation.Amplitude({'process': myproc})
+        myamplitude = diagram_generation.Amplitude({'processes': \
+                                 base_objects.ProcessList([myproc])})
 
         matrix_element = helas_objects.HelasMatrixElement(myamplitude)
 
-        self.assertEqual(matrix_element.get('processes')[0],
-                         myamplitude.get('process'))
+        self.assertEqual(matrix_element.get('processes'),
+                         myamplitude.get('processes'))
 
     def test_get_den_factor(self):
         """Testing helicity matrix using the process
@@ -601,7 +602,8 @@ class HelasMatrixElementTest(unittest.TestCase):
         myproc = base_objects.Process({'legs':myleglist,
                                        'model':self.mymodel})
 
-        myamplitude = diagram_generation.Amplitude({'process': myproc})
+        myamplitude = diagram_generation.Amplitude({'processes': \
+                                 base_objects.ProcessList([myproc])})
 
         myamplitude.get('diagrams')
 
@@ -634,7 +636,8 @@ class HelasMatrixElementTest(unittest.TestCase):
         myproc = base_objects.Process({'legs':myleglist,
                                        'model':self.mymodel})
 
-        myamplitude = diagram_generation.Amplitude({'process': myproc})
+        myamplitude = diagram_generation.Amplitude({'processes': \
+                                 base_objects.ProcessList([myproc])})
 
         myamplitude.get('diagrams')
 
@@ -684,9 +687,10 @@ class HelasMatrixElementTest(unittest.TestCase):
         myproc = base_objects.Process({'legs':myleglist,
                                        'model':self.mymodel})
 
-        myamplitude = diagram_generation.Amplitude({'process': myproc})
+        myamplitude = diagram_generation.Amplitude({'processes': \
+                                 base_objects.ProcessList([myproc])})
 
-        #print myamplitude.get('process').nice_string()
+        #print myamplitude.get('processes').nice_string()
 
         myamplitude.get('diagrams')
 
@@ -881,7 +885,8 @@ class HelasMatrixElementTest(unittest.TestCase):
         myproc = base_objects.Process({'legs':myleglist,
                                        'model':mybasemodel})
 
-        myamplitude = diagram_generation.Amplitude({'process': myproc})
+        myamplitude = diagram_generation.Amplitude({'processes': \
+                                 base_objects.ProcessList([myproc])})
 
         myamplitude.get('diagrams')
 
@@ -926,7 +931,8 @@ class HelasMatrixElementTest(unittest.TestCase):
         myproc = base_objects.Process({'legs':myleglist,
                                        'model':self.mymodel})
 
-        myamplitude = diagram_generation.Amplitude({'process': myproc})
+        myamplitude = diagram_generation.Amplitude({'processes': \
+                                 base_objects.ProcessList([myproc])})
 
         goal = "2 diagrams:\n"
         goal = goal + "1  ((1(-2),3(21)>1(-2),id:3),(4(11),5(-11)>4(22),id:7),(1(-2),2(2),4(22),id:4)) (QED=2,QCD=1)\n"
@@ -1034,7 +1040,8 @@ class HelasMatrixElementTest(unittest.TestCase):
         myproc = base_objects.Process({'legs':myleglist,
                                        'model':self.mymodel})
 
-        myamplitude = diagram_generation.Amplitude({'process': myproc})
+        myamplitude = diagram_generation.Amplitude({'processes': \
+                                 base_objects.ProcessList([myproc])})
 
         goal = "2 diagrams:\n"
         goal = goal + "1  ((1(-2),3(21)>1(-2),id:3),(4(11),5(-11)>4(22),id:7),(1(-2),2(2),4(22),id:4)) (QED=2,QCD=1)\n"
@@ -1162,7 +1169,8 @@ class HelasMatrixElementTest(unittest.TestCase):
         myproc = base_objects.Process({'legs':myleglist,
                                        'model':self.mymodel})
 
-        myamplitude = diagram_generation.Amplitude({'process': myproc})
+        myamplitude = diagram_generation.Amplitude({'processes': \
+                                 base_objects.ProcessList([myproc])})
 
         goal = "2 diagrams:\n"
         goal = goal + "1  ((1(22),2(-11)>1(-11),id:7),(3(22),4(11),1(-11),id:7)) (QED=2,QCD=0)\n"
@@ -1257,7 +1265,8 @@ class HelasMatrixElementTest(unittest.TestCase):
         myproc = base_objects.Process({'legs':myleglist,
                                        'model':self.mymodel})
 
-        myamplitude = diagram_generation.Amplitude({'process': myproc})
+        myamplitude = diagram_generation.Amplitude({'processes': \
+                                 base_objects.ProcessList([myproc])})
 
         goal = "2 diagrams:\n"
         goal = goal + "1  ((1(-11),2(22)>1(-11),id:7),(3(22),4(11),1(-11),id:7)) (QED=2,QCD=0)\n"
@@ -1351,7 +1360,8 @@ class HelasMatrixElementTest(unittest.TestCase):
         myproc = base_objects.Process({'legs':myleglist,
                                        'model':self.mymodel})
 
-        myamplitude = diagram_generation.Amplitude({'process': myproc})
+        myamplitude = diagram_generation.Amplitude({'processes': \
+                                 base_objects.ProcessList([myproc])})
 
         self.assertEqual(len(myamplitude.get('diagrams')), 4)
 
@@ -1370,7 +1380,8 @@ class HelasMatrixElementTest(unittest.TestCase):
         myproc = base_objects.Process({'legs':myleglist,
                                        'model':self.mymodel})
 
-        myamplitude = diagram_generation.Amplitude({'process': myproc})
+        myamplitude = diagram_generation.Amplitude({'processes': \
+                                 base_objects.ProcessList([myproc])})
 
         self.assertEqual(len(myamplitude.get('diagrams')), 25)
 
@@ -1392,7 +1403,8 @@ class HelasMatrixElementTest(unittest.TestCase):
         myproc = base_objects.Process({'legs':myleglist,
                                        'model':self.mymodel})
 
-        myamplitude = diagram_generation.Amplitude({'process': myproc})
+        myamplitude = diagram_generation.Amplitude({'processes': \
+                                 base_objects.ProcessList([myproc])})
 
         self.assertEqual(len(myamplitude.get('diagrams')), 220)
 
@@ -1768,7 +1780,8 @@ class HelasMatrixElementTest(unittest.TestCase):
 
         myproc = base_objects.Process({'legs':myleglist,
                                            'model':mymodel})
-        myamplitude = diagram_generation.Amplitude({'process': myproc})
+        myamplitude = diagram_generation.Amplitude({'processes': \
+                                 base_objects.ProcessList([myproc])})
 
         self.assertEqual(len(myamplitude.get('diagrams')), 24)
 
@@ -1881,7 +1894,8 @@ class HelasMatrixElementTest(unittest.TestCase):
 
         myproc = base_objects.Process({'legs':myleglist,
                                            'model':mymodel})
-        myamplitude = diagram_generation.Amplitude({'process': myproc})
+        myamplitude = diagram_generation.Amplitude({'processes': \
+                                 base_objects.ProcessList([myproc])})
 
         self.assertEqual(len(myamplitude.get('diagrams')), 2)
 
@@ -2256,7 +2270,8 @@ class HelasMultiProcessTest(unittest.TestCase):
         myproc1 = base_objects.Process({'legs':myleglist,
                                        'model':self.mymodel})
 
-        myamplitude1 = diagram_generation.Amplitude({'process': myproc1})
+        myamplitude1 = diagram_generation.Amplitude({'processes': \
+                                 base_objects.ProcessList([myproc1])})
 
         myamplitude1.get('diagrams')
 
@@ -2274,7 +2289,8 @@ class HelasMultiProcessTest(unittest.TestCase):
         myproc2 = base_objects.Process({'legs':myleglist,
                                        'model':self.mymodel})
 
-        myamplitude2 = diagram_generation.Amplitude({'process': myproc2})
+        myamplitude2 = diagram_generation.Amplitude({'processes': \
+                                 base_objects.ProcessList([myproc2])})
 
         myamplitude2.get('diagrams')
 
@@ -2294,7 +2310,7 @@ class HelasMultiProcessTest(unittest.TestCase):
                          get('diagrams'),
                          my_matrix_element1.get('diagrams'))
 
-        myamplcopy[0].get('process').set('id', 10)
+        myamplcopy[0].get('processes')[0].set('id', 10)
 
         my_multiprocess = helas_objects.HelasMultiProcess(myamplcopy)
         self.assertEqual(len(my_multiprocess.get('matrix_elements')), 2)
@@ -2989,7 +3005,8 @@ class HelasMultiProcessTest(unittest.TestCase):
                                         'is_decay_chain': True})
 
         myamplitude1 = diagram_generation.Amplitude()
-        myamplitude1.set('process', myproc1)
+        myamplitude1.set('processes',
+                         base_objects.ProcessList([myproc1]))
         myamplitude1.generate_diagrams()
 
         mymatrixelement1 = helas_objects.HelasMatrixElement(\
@@ -3013,7 +3030,8 @@ class HelasMultiProcessTest(unittest.TestCase):
                                         'is_decay_chain': True})
 
         myamplitude2 = diagram_generation.Amplitude()
-        myamplitude2.set('process', myproc2)
+        myamplitude2.set('processes',
+                         base_objects.ProcessList([myproc2]))
         myamplitude2.generate_diagrams()
 
         mymatrixelement2 = helas_objects.HelasMatrixElement(\

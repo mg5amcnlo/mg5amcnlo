@@ -202,7 +202,8 @@ class ColorAmpTest(unittest.TestCase):
 
         myamplitude = diagram_generation.Amplitude()
 
-        myamplitude.set('process', myprocess)
+        myamplitude.set('processes',
+                                 base_objects.ProcessList([myprocess]))
 
         myamplitude.generate_diagrams()
 
@@ -253,7 +254,8 @@ class ColorAmpTest(unittest.TestCase):
 
         myamplitude = diagram_generation.Amplitude()
 
-        myamplitude.set('process', myprocess)
+        myamplitude.set('processes',
+                                 base_objects.ProcessList([myprocess]))
 
         myamplitude.generate_diagrams()
 
@@ -337,7 +339,8 @@ class ColorAmpTest(unittest.TestCase):
 
         myamplitude = diagram_generation.Amplitude()
 
-        myamplitude.set('process', myprocess)
+        myamplitude.set('processes',
+                                 base_objects.ProcessList([myprocess]))
 
         myamplitude.generate_diagrams()
 
@@ -379,7 +382,8 @@ class ColorAmpTest(unittest.TestCase):
 
         myamplitude = diagram_generation.Amplitude()
 
-        myamplitude.set('process', myprocess)
+        myamplitude.set('processes',
+                                 base_objects.ProcessList([myprocess]))
 
         myamplitude.generate_diagrams()
 
@@ -636,7 +640,8 @@ class ColorSquareTest(unittest.TestCase):
 
             myamplitude = diagram_generation.Amplitude()
 
-            myamplitude.set('process', myprocess)
+            myamplitude.set('processes',
+                            base_objects.ProcessList([myprocess]))
 
             myamplitude.generate_diagrams()
 
@@ -690,7 +695,8 @@ class ColorSquareTest(unittest.TestCase):
 
             myamplitude = diagram_generation.Amplitude()
 
-            myamplitude.set('process', myprocess)
+            myamplitude.set('processes',
+                                 base_objects.ProcessList([myprocess]))
 
             myamplitude.generate_diagrams()
 
@@ -736,7 +742,8 @@ class ColorSquareTest(unittest.TestCase):
 
             myamplitude = diagram_generation.Amplitude()
 
-            myamplitude.set('process', myprocess)
+            myamplitude.set('processes',
+                                 base_objects.ProcessList([myprocess]))
 
             myamplitude.generate_diagrams()
 

@@ -1829,6 +1829,13 @@ class ProcessList(PhysicsObjectList):
 
         return isinstance(obj, Process)
 
+    def nice_string(self, indent = 0):
+        """Returns a nicely formatted string of the matrix element processes."""
+
+        mystr = "\n".join([p.nice_string(indent) for p in self])
+
+        return mystr
+
 #===============================================================================
 # ProcessDefinition
 #===============================================================================
