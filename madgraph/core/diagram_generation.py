@@ -259,7 +259,7 @@ class Amplitude(base_objects.PhysicsObject):
     def default_setup(self):
         """Default values for all properties"""
 
-        self['processes'] = base_objects.ProcessList()
+        self['process'] = base_objects.Process()
         self['diagrams'] = None
         # has_mirror_process is True if the same process but with the
         # two incoming particles interchanged has been generated
@@ -270,7 +270,7 @@ class Amplitude(base_objects.PhysicsObject):
 
         if isinstance(argument, base_objects.Process):
             super(Amplitude, self).__init__()
-            self.set('processes', base_objects.ProcessList([argument]))
+            self.set('process', argument)
             self.generate_diagrams()
         elif argument != None:
             # call the mother routine
@@ -282,10 +282,10 @@ class Amplitude(base_objects.PhysicsObject):
     def filter(self, name, value):
         """Filter for valid amplitude property values."""
 
-        if name == 'processes':
-            if not isinstance(value, base_objects.ProcessList):
+        if name == 'process':
+            if not isinstance(value, base_objects.Process):
                 raise self.PhysicsObjectError, \
-                        "%s is not a valid ProcessList object" % str(value)
+                        "%s is not a valid Process object" % str(value)
         if name == 'diagrams':
             if not isinstance(value, base_objects.DiagramList):
                 raise self.PhysicsObjectError, \
@@ -301,7 +301,7 @@ class Amplitude(base_objects.PhysicsObject):
 
         if name == 'diagrams' and self[name] == None:
             # Have not yet generated diagrams for this process
-            if self['processes']:
+            if self['process']:
                 self.generate_diagrams()
 
         return Amplitude.__bases__[0].get(self, name)  #return the mother routine
@@ -310,7 +310,7 @@ class Amplitude(base_objects.PhysicsObject):
     def get_sorted_keys(self):
         """Return diagram property names as a nicely sorted list."""
 
-        return ['processes', 'diagrams', 'has_mirror_process']
+        return ['process', 'diagrams', 'has_mirror_process']
 
     def get_number_of_diagrams(self):
         """Returns number of diagrams for this amplitude"""
@@ -324,12 +324,12 @@ class Amplitude(base_objects.PhysicsObject):
 
     def nice_string(self, indent=0):
         """Returns a nicely formatted string of the amplitude content."""
-        return self.get('processes').nice_string(indent) + "\n" + \
+        return self.get('process').nice_string(indent) + "\n" + \
                self.get('diagrams').nice_string(indent)
 
     def nice_string_processes(self, indent=0):
         """Returns a nicely formatted string of the amplitude process."""
-        return self.get('processes').nice_string(indent)
+        return self.get('process').nice_string(indent)
 
     def generate_diagrams(self):
         """Generate diagrams. Algorithm:
@@ -373,7 +373,7 @@ class Amplitude(base_objects.PhysicsObject):
         property is_decay_chain = True.
         """
 
-        process = self.get('processes')[0]
+        process = self.get('process')
         model = process.get('model')
         legs = process.get('legs')
 
@@ -584,7 +584,7 @@ class Amplitude(base_objects.PhysicsObject):
         self.trim_diagrams()
 
         # Sort process legs according to leg number
-        self.get('processes')[0].get('legs').sort()
+        self.get('process').get('legs').sort()
         
         return not failed_crossing
 
@@ -604,8 +604,8 @@ class Amplitude(base_objects.PhysicsObject):
             return None
 
         # Extract ref dict information
-        model = self['processes'][0].get('model')
-        ref_dict_to1 = self['processes'][0].get('model').get('ref_dict_to1')
+        model = self.get('process').get('model')
+        ref_dict_to1 = self.get('process').get('model').get('ref_dict_to1')
 
 
         # If all legs can be combined in one single vertex, add this
@@ -645,9 +645,9 @@ class Amplitude(base_objects.PhysicsObject):
         for leg_vertex_tuple in leg_vertex_list:
 
             # Remove forbidden particles
-            if self['processes'][0].get('forbidden_particles') and \
+            if self.get('process').get('forbidden_particles') and \
                 any([abs(vertex.get('legs')[-1].get('id')) in \
-                self['processes'][0].get('forbidden_particles') \
+                self.get('process').get('forbidden_particles') \
                 for vertex in leg_vertex_tuple[1]]):
                     continue
 
@@ -957,12 +957,9 @@ class DecayChainAmplitude(Amplitude):
                 self['amplitudes'].append(Amplitude(argument))
                 # Clean decay chains from process, since we haven't
                 # combined processes with decay chains yet
-                processes = base_objects.ProcessList()
-                for process in self['amplitudes'][0].get('processes'):
-                    process = copy.copy(process)
-                    process.set('decay_chains', base_objects.ProcessList())
-                    processes.append(process)
-                self['amplitudes'][0].set('processes', processes)
+                process = copy.copy(self.get('amplitudes')[0].get('process'))
+                process.set('decay_chains', base_objects.ProcessList())
+                self['amplitudes'][0].set('process', process)
             for process in argument.get('decay_chains'):
                 process.set('overall_orders', argument.get('overall_orders'))
                 if not process.get('is_decay_chain'):
@@ -975,7 +972,7 @@ class DecayChainAmplitude(Amplitude):
                     DecayChainAmplitude(process, collect_mirror_procs,
                                         ignore_six_quark_processes))
             # Flag decaying legs in the core process by from_group = True
-            decay_ids = sum([[a.get('processes')[0].get('legs')[0].get('id') \
+            decay_ids = sum([[a.get('process').get('legs')[0].get('id') \
                               for a in dec.get('amplitudes')] for dec in \
                              self['decay_chains']], [])
             decay_ids = set(decay_ids)
@@ -1050,7 +1047,7 @@ class DecayChainAmplitude(Amplitude):
         for amp in sum([dc.get('amplitudes') for dc \
                         in self['decay_chains']], []):
             # For each amplitude, find the initial state leg
-            decay_ids.append(amp.get('processes')[0].get_initial_ids()[0])
+            decay_ids.append(amp.get('process').get_initial_ids()[0])
             
         # Return a list with unique ids
         return list(set(decay_ids))
@@ -1288,13 +1285,12 @@ class MultiProcess(base_objects.PhysicsObject):
                         mirror_amp.set('has_mirror_process', True)
                         logger.info("Process %s added to mirror process %s" % \
                                     (process.base_string(),
-                                     mirror_amp.get('processes')[0].base_string()))
+                                     mirror_amp.get('process').base_string()))
                         continue
                     except:
                         pass
 
-                amplitude = Amplitude({'processes': \
-                                       base_objects.ProcessList([process])})
+                amplitude = Amplitude({'process': process})
                 
                 try:
                     result = amplitude.generate_diagrams()
@@ -1474,8 +1470,7 @@ class MultiProcess(base_objects.PhysicsObject):
                     if tuple(sorted_legs) in failed_procs:
                         continue
 
-                    amplitude = Amplitude({'processes': \
-                                           base_objects.ProcessList([process])})
+                    amplitude = Amplitude({'process': process})
                     try:
                         amplitude.generate_diagrams()
                     except InvalidCmd:

@@ -57,7 +57,7 @@ class IdentifyMETag(diagram_generation.DiagramTag):
     @staticmethod
     def create_tag(amplitude):
         """Create a tag which identifies identical matrix elements"""
-        process = amplitude.get('processes')[0]
+        process = amplitude.get('process')
         model = process.get('model')
         dc = 0
         if process.get('is_decay_chain'):
@@ -2185,7 +2185,7 @@ class HelasMatrixElement(base_objects.PhysicsObject):
         if amplitude != None:
             if isinstance(amplitude, diagram_generation.Amplitude):
                 super(HelasMatrixElement, self).__init__()
-                self.get('processes').extend(amplitude.get('processes'))
+                self.get('processes').append(amplitude.get('process'))
                 self.set('has_mirror_process',
                          amplitude.get('has_mirror_process'))
                 self.generate_helas_diagrams(amplitude, optimization, decay_ids)
@@ -2256,7 +2256,7 @@ class HelasMatrixElement(base_objects.PhysicsObject):
 
 
         diagram_list = amplitude.get('diagrams')
-        process = amplitude.get('processes')[0]
+        process = amplitude.get('process')
 
         model = process.get('model')
         if not diagram_list:
@@ -3233,7 +3233,7 @@ class HelasMatrixElement(base_objects.PhysicsObject):
             diag.calculate_orders(self.get('processes')[0].get('model'))
             
         return diagram_generation.Amplitude({\
-            'processes': self.get('processes'),
+            'process': self.get('processes')[0],
             'diagrams': diagrams})
 
     # Helper methods
@@ -4038,7 +4038,7 @@ class HelasMultiProcess(base_objects.PhysicsObject):
                                       combine_decay_chain_processes()
             else:
                 logger.info("Generating Helas calls for %s" % \
-                         amplitude.get('processes')[0].nice_string().\
+                            amplitude.get('process').nice_string().\
                                            replace('Process', 'process'))
                 # Create tag identifying the matrix element using
                 # IdentifyMETag. If two amplitudes have the same tag,
@@ -4063,7 +4063,7 @@ class HelasMultiProcess(base_objects.PhysicsObject):
                     logger.info("Combining process with %s" % \
                                 other_processes[0].nice_string().\
                                 replace('Process: ', ''))
-                    other_processes.extend(amplitude.get('processes'))
+                    other_processes.append(amplitude.get('process'))
                     # Go on to next amplitude
                     continue
             # Deal with newly generated matrix element

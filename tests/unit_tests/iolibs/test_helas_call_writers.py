@@ -869,8 +869,7 @@ class UFOHELASCallWriterTest(unittest.TestCase):
         myproc = base_objects.Process({'legs':legList1,
                                        'model':self.mybasemodel})
         
-        myamplitude = diagram_generation.Amplitude({'processes': \
-                                 base_objects.ProcessList([myproc])})
+        myamplitude = diagram_generation.Amplitude({'process': myproc})
         
         self.mymatrixelement = helas_objects.HelasMatrixElement(myamplitude)
         

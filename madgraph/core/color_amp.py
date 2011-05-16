@@ -273,7 +273,7 @@ class ColorBasis(dict):
 
         for diagram in amplitude.get('diagrams'):
             colorize_dict = self.colorize(diagram,
-                                          amplitude.get('processes')[0].get('model'))
+                                          amplitude.get('process').get('model'))
             list_color_dict.append(colorize_dict)
 
         self._list_color_dict = list_color_dict

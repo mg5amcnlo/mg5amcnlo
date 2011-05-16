@@ -136,8 +136,7 @@ class IOExportV4Test(unittest.TestCase,
         myproc = base_objects.Process({'legs':myleglist,
                                        'model':self.mymodel})
 
-        myamplitude = diagram_generation.Amplitude({'processes': \
-                                 base_objects.ProcessList([myproc])})
+        myamplitude = diagram_generation.Amplitude({'process': myproc})
 
         self.mymatrixelement = helas_objects.HelasMatrixElement(myamplitude)
         self.myfortranmodel.downcase = False
@@ -2539,8 +2538,7 @@ class FullHelasOutputTest(test_helas_call_writers.HelasModelTestSetup,
         myproc = base_objects.Process({'legs':myleglist,
                                        'model':self.mybasemodel})
 
-        myamplitude = diagram_generation.Amplitude({'processes': \
-                                 base_objects.ProcessList([myproc])})
+        myamplitude = diagram_generation.Amplitude({'process': myproc})
 
         matrix_element = helas_objects.HelasMatrixElement(myamplitude, 1)
 
@@ -2582,8 +2580,7 @@ CALL IOVXXX(W(1,6),W(1,4),W(1,2),MGVX12,AMP(2))""")
         myproc = base_objects.Process({'legs':myleglist,
                                        'model':self.mybasemodel})
 
-        myamplitude = diagram_generation.Amplitude({'processes': \
-                                 base_objects.ProcessList([myproc])})
+        myamplitude = diagram_generation.Amplitude({'process': myproc})
 
         matrix_element = helas_objects.HelasMatrixElement(\
             myamplitude,
@@ -2706,8 +2703,7 @@ CALL IOVXXX(W(1,1),W(1,6),W(1,7),MGVX15,AMP(2))""")
         myproc = base_objects.Process({'legs':myleglist,
                                        'model':mybasemodel})
 
-        myamplitude = diagram_generation.Amplitude({'processes': \
-                                 base_objects.ProcessList([myproc])})
+        myamplitude = diagram_generation.Amplitude({'process': myproc})
 
         matrix_element = helas_objects.HelasMatrixElement(myamplitude)
 
@@ -3551,8 +3547,7 @@ PD(IPROC)=PD(IPROC-1) + u1*ub2""")
         myproc = base_objects.Process({'legs':myleglist,
                                        'model':mybasemodel})
 
-        myamplitude = diagram_generation.Amplitude({'processes': \
-                                 base_objects.ProcessList([myproc])})
+        myamplitude = diagram_generation.Amplitude({'process': myproc})
 
         matrix_element = helas_objects.HelasMatrixElement(myamplitude)
 
@@ -3666,8 +3661,7 @@ C     Number of configs
         myproc = base_objects.Process({'legs':myleglist,
                                        'model':self.mybasemodel})
 
-        myamplitude = diagram_generation.Amplitude({'processes': \
-                                 base_objects.ProcessList([myproc])})
+        myamplitude = diagram_generation.Amplitude({'process': myproc})
 
         matrix_element = helas_objects.HelasMatrixElement(myamplitude, 1)
 
@@ -3704,8 +3698,7 @@ CALL IOSXXX(W(1,2),W(1,6),W(1,3),MGVX575,AMP(2))""")
         myproc = base_objects.Process({'legs':myleglist,
                                        'model':self.mybasemodel})
 
-        myamplitude = diagram_generation.Amplitude({'processes': \
-                                 base_objects.ProcessList([myproc])})
+        myamplitude = diagram_generation.Amplitude({'process': myproc})
 
         matrix_element = helas_objects.HelasMatrixElement(myamplitude, 1)
 
@@ -3839,8 +3832,7 @@ CALL IOVXXX(W(1,6),W(1,3),W(1,2),GZN11,AMP(2))""")
         myproc = base_objects.Process({'legs':myleglist,
                                        'model':mybasemodel})
 
-        myamplitude = diagram_generation.Amplitude({'processes': \
-                                 base_objects.ProcessList([myproc])})
+        myamplitude = diagram_generation.Amplitude({'process': myproc})
 
         matrix_element = helas_objects.HelasMatrixElement(myamplitude, 1)
 
@@ -3940,8 +3932,7 @@ CALL IOSXXX(W(1,2),W(1,19),W(1,24),MGVX494,AMP(8))""")
         myproc = base_objects.Process({'legs':myleglist,
                                        'model':self.mybasemodel})
 
-        myamplitude = diagram_generation.Amplitude({'processes': \
-                                 base_objects.ProcessList([myproc])})
+        myamplitude = diagram_generation.Amplitude({'process': myproc})
 
         matrix_element = helas_objects.HelasMatrixElement(myamplitude, 1)
 
@@ -4086,8 +4077,7 @@ CALL IOSCXX(W(1,13),W(1,1),W(1,10),MGVX575,AMP(8))""")
         myproc = base_objects.Process({'legs':myleglist,
                                        'model':mybasemodel})
 
-        myamplitude = diagram_generation.Amplitude({'processes': \
-                                 base_objects.ProcessList([myproc])})
+        myamplitude = diagram_generation.Amplitude({'process': myproc})
 
         matrix_element = helas_objects.HelasMatrixElement(myamplitude, 1)
 
@@ -4220,8 +4210,7 @@ CALL IOVXXX(W(1,4),W(1,3),W(1,5),MGVX27,AMP(1))""")
         myproc = base_objects.Process({'legs':myleglist,
                                        'model':mybasemodel})
 
-        myamplitude = diagram_generation.Amplitude({'processes': \
-                                 base_objects.ProcessList([myproc])})
+        myamplitude = diagram_generation.Amplitude({'process': myproc})
 
         matrix_element = helas_objects.HelasMatrixElement(myamplitude, 1)
 
@@ -4403,8 +4392,7 @@ CALL VVVXXX(W(1,2),W(1,4),W(1,8),MGVX5,AMP(5))""")
         myproc = base_objects.Process({'legs':myleglist,
                                        'model':mybasemodel})
 
-        myamplitude = diagram_generation.Amplitude({'processes': \
-                                 base_objects.ProcessList([myproc])})
+        myamplitude = diagram_generation.Amplitude({'process': myproc})
 
         matrix_element = helas_objects.HelasMatrixElement(myamplitude, 1)
 
@@ -4582,8 +4570,7 @@ CALL VVVXXX(W(1,6),W(1,2),W(1,3),MGVX5,AMP(3))""")
         myproc = base_objects.Process({'legs':myleglist,
                                        'model':mybasemodel})
 
-        myamplitude = diagram_generation.Amplitude({'processes': \
-                                 base_objects.ProcessList([myproc])})
+        myamplitude = diagram_generation.Amplitude({'process': myproc})
 
         matrix_element = helas_objects.HelasMatrixElement(myamplitude, 1)
 
@@ -4738,8 +4725,7 @@ CALL VVVXXX(W(1,4),W(1,2),W(1,24),MGVX5,AMP(28))""")
         myproc = base_objects.Process({'legs':myleglist,
                                        'model':mybasemodel})
 
-        myamplitude = diagram_generation.Amplitude({'processes': \
-                                 base_objects.ProcessList([myproc])})
+        myamplitude = diagram_generation.Amplitude({'process': myproc})
 
         matrix_element = helas_objects.HelasMatrixElement(myamplitude, gen_color=False)
 
@@ -4937,8 +4923,7 @@ C     Number of configs
         myproc = base_objects.Process({'legs':myleglist,
                                        'model':mybasemodel})
 
-        myamplitude = diagram_generation.Amplitude({'processes': \
-                                 base_objects.ProcessList([myproc])})
+        myamplitude = diagram_generation.Amplitude({'process': myproc})
 
         self.assertEqual(len(myamplitude.get('diagrams')), 6)
 
@@ -5109,8 +5094,7 @@ CALL FFV5_0(W(1,7),W(1,11),W(1,3),GC_418,AMP(6))""".split('\n')
         myproc = base_objects.Process({'legs':myleglist,
                                        'model':mybasemodel})
 
-        myamplitude = diagram_generation.Amplitude({'processes': \
-                                 base_objects.ProcessList([myproc])})
+        myamplitude = diagram_generation.Amplitude({'process': myproc})
 
         self.assertEqual(len(myamplitude.get('diagrams')), 4)
 
@@ -5359,8 +5343,7 @@ C     Number of configs
         myproc = base_objects.Process({'legs':myleglist,
                                        'model':mybasemodel})
 
-        myamplitude = diagram_generation.Amplitude({'processes': \
-                                 base_objects.ProcessList([myproc])})
+        myamplitude = diagram_generation.Amplitude({'process': myproc})
 
         self.assertEqual(len(myamplitude.get('diagrams')), 4)
 
@@ -6526,8 +6509,7 @@ CALL VVVXXX(W(1,2),W(1,26),W(1,39),GG,AMP(216))""")
 
         myproc = base_objects.Process({'legs':myleglist,
                                            'model':mymodel})
-        myamplitude = diagram_generation.Amplitude({'processes': \
-                                 base_objects.ProcessList([myproc])})
+        myamplitude = diagram_generation.Amplitude({'process': myproc})
 
         self.assertEqual(len(myamplitude.get('diagrams')), 2)
 
@@ -7709,8 +7691,7 @@ CALL IOSXXX(W(1,15),W(1,2),W(1,19),GELN2P,AMP(9))""".split('\n')
 
         myproc = base_objects.Process({'legs':myleglist,
                                            'model':mymodel})
-        myamplitude = diagram_generation.Amplitude({'processes': \
-                                 base_objects.ProcessList([myproc])})
+        myamplitude = diagram_generation.Amplitude({'process': myproc})
 
         self.assertEqual(len(myamplitude.get('diagrams')), 2)
 
@@ -8070,8 +8051,7 @@ CALL FFV1_0(W(1,3),W(1,7),W(1,2),GGI,AMP(3))""".split('\n')
 
         myproc = base_objects.Process({'legs':myleglist,
                                            'model':mymodel})
-        myamplitude = diagram_generation.Amplitude({'processes': \
-                                 base_objects.ProcessList([myproc])})
+        myamplitude = diagram_generation.Amplitude({'process': myproc})
 
         me = helas_objects.HelasMatrixElement(myamplitude,
                                               gen_color=False)
@@ -8448,8 +8428,7 @@ C     Number of configs
         
         myproc = base_objects.Process({'legs':myleglist,
                                        'model':mymodel})
-        myamplitude = diagram_generation.Amplitude({'processes': \
-                                 base_objects.ProcessList([myproc])})
+        myamplitude = diagram_generation.Amplitude({'process': myproc})
 
         me = helas_objects.HelasMatrixElement(myamplitude,
                                               gen_color=False)
@@ -8711,20 +8690,19 @@ if __name__ == '__main__':
 
         myproc = base_objects.Process({'legs':myleglist,
                                        'model':mymodel})
-        myamplitude = diagram_generation.Amplitude({'processes': \
-                                 base_objects.ProcessList([myproc])})
+        myamplitude = diagram_generation.Amplitude({'process': myproc})
 
         me = helas_objects.HelasMatrixElement(myamplitude,
                                               gen_color=False)
 
         import madgraph.iolibs.drawing_eps as draw
         filename = os.path.join('diagrams_' + \
-                                myamplitude.get('processes')[0].shell_string() + ".eps")
+                                myamplitude.get('process').shell_string() + ".eps")
         plot = draw.MultiEpsDiagramDrawer(myamplitude.get('diagrams'),
                                           filename,
                                           model=mymodel,
                                                 amplitude='',
-                                          legend=myamplitude.get('processes')[0].input_string())
+                                          legend=myamplitude.get('process').input_string())
 
         plot.draw()  
 

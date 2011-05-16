@@ -180,8 +180,7 @@ class IOExportPythonTest(unittest.TestCase):
         myproc = base_objects.Process({'legs':myleglist,
                                        'model':self.mymodel})
         
-        myamplitude = diagram_generation.Amplitude({'processes': \
-                                 base_objects.ProcessList([myproc])})
+        myamplitude = diagram_generation.Amplitude({'process': myproc})
 
         self.mymatrixelement = helas_objects.HelasMultiProcess(myamplitude)
 
@@ -399,8 +398,7 @@ class IOExportPythonTest(unittest.TestCase):
         myproc = base_objects.Process({'legs':myleglist,
                                        'model':model})
 
-        myamplitude = diagram_generation.Amplitude({'processes': \
-                                 base_objects.ProcessList([myproc])})
+        myamplitude = diagram_generation.Amplitude({'process': myproc})
 
         mymatrixelement = helas_objects.HelasMatrixElement(myamplitude)
 
