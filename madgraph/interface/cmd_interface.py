@@ -1578,6 +1578,7 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
         label = args[0]
         
         pdg_list = self.extract_particle_ids(args[1:])
+        self.optimize_order(pdg_list)
         self._multiparticles[label] = pdg_list
         if log:
             logger.info("Defined multiparticle %s" % \
@@ -2100,6 +2101,24 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
             res_lists = res_lists[0]
 
         return res_lists
+
+    def optimize_order(self, pdg_list):
+        """Optimize the order of particles in a pdg list, so that
+        similar particles are next to each other. Sort according to:
+        1. pdg > 0, 2. spin, 3. color, 4. mass > 0"""
+
+        if not pdg_list:
+            return
+        if not isinstance(pdg_list[0], int):
+            return
+        
+        model = self._curr_model
+        pdg_list.sort(key = lambda i: i < 0)
+        pdg_list.sort(key = lambda i: model.get_particle(i).is_fermion())
+        pdg_list.sort(key = lambda i: model.get_particle(i).get('color'),
+                      reverse = True)
+        pdg_list.sort(key = lambda i: \
+                      model.get_particle(i).get('mass').lower() != 'zero')
 
     def extract_decay_chain_process(self, line, level_down=False):
         """Recursively extract a decay chain process definition from a

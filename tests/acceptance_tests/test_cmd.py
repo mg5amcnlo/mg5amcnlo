@@ -486,6 +486,18 @@ class TestCmdShell2(unittest.TestCase,
                                                     'P0_epem_epem',
                                                     'madevent')))
         
+    def test_define_order(self):
+        """Test the reordering of particles in the define"""
+
+        self.do('import model sm')
+        self.do('define p = u c~ g d s b~ b h')
+        self.assertEqual(self.cmd._multiparticles['p'],
+                         [21, 2, 1, 3, -4, 5, -5, 25])
+        self.do('import model sm-no_masses')
+        self.do('define p = u c~ g d s b~ b h')
+        self.assertEqual(self.cmd._multiparticles['p'],
+                         [21, 2, 1, 3, 5, -4, -5, 25])
+        
     def test_madevent_decay_chain(self):
         """Test decay chain output"""
 
@@ -493,7 +505,7 @@ class TestCmdShell2(unittest.TestCase,
             shutil.rmdir(self.out_dir)
 
         self.do('import model sm')
-        self.do('define p = u d u~ d~')
+        self.do('define p = u u~ d d~')
         self.do('set group_subprocesses False')
         self.do('generate p p > w+, w+ > l+ vl @1')
         self.do('output madevent %s ' % self.out_dir)
