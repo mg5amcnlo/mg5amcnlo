@@ -792,7 +792,7 @@ C
       LOGICAL GOODHEL(NCOMB,2)
       REAL*8 HWGT, XTOT, XTRY, XREJ, XR, YFRAC(0:NCOMB)
       INTEGER IDUM, NGOOD(2), IGOOD(NCOMB,2)
-      INTEGER JHEL(2), J, JJ
+      INTEGER JHEL(2), J, JJ, HEL(NEXTERNAL)
       REAL     XRAN1
       EXTERNAL XRAN1
 C     
@@ -809,6 +809,10 @@ C
 
       REAL*8 POL(2)
       COMMON/TO_POLARIZATION/ POL
+
+C     PERM has the present permutation
+      INTEGER PERM(NEXTERNAL)
+      COMMON/TO_PERM/PERM
 
       INTEGER          ISUM_HEL
       LOGICAL                    MULTI_CHANNEL
@@ -866,7 +870,8 @@ C     ----------
       IF (ISHEL(IMIRROR) .EQ. 0 .OR. NTRY(IMIRROR) .LE. MAXTRIES) THEN
         DO I=1,NCOMB
           IF (GOODHEL(I,IMIRROR) .OR. NTRY(IMIRROR).LE.MAXTRIES) THEN
-            T=MATRIX1(P ,NHEL(1,I),JC(1))
+            CALL SWITCHHEL(NHEL(1,I),HEL,PERM,NEXTERNAL)
+            T=MATRIX1(P,HEL,JC(1))
             DO JJ=1,NINCOMING
               IF(POL(JJ).NE.1D0.AND.NHEL(JJ,I).EQ.INT(SIGN(1D0
      $         ,POL(JJ)))) THEN
@@ -910,7 +915,8 @@ C         Check if we have stable helicities in this event
           IF (JHEL(IMIRROR) .GT. NGOOD(IMIRROR)) JHEL(IMIRROR)=1
           HWGT = REAL(NGOOD(IMIRROR))/REAL(ISHEL(IMIRROR))
           I = IGOOD(JHEL(IMIRROR),IMIRROR)
-          T=MATRIX1(P ,NHEL(1,I),JC(1))
+          CALL SWITCHHEL(NHEL(1,I),HEL,PERM,NEXTERNAL)
+          T=MATRIX1(P,HEL,JC(1))
           DO JJ=1,NINCOMING
             IF(POL(JJ).NE.1D0.AND.NHEL(JJ,I).EQ.INT(SIGN(1D0,POL(JJ)))
      $       ) THEN
@@ -1444,6 +1450,9 @@ C     IB gives which beam is which (for mirror processes)
 C     ICONFIG has this config number
       INTEGER MAPCONFIG(0:LMAXCONFIGS), ICONFIG
       COMMON/TO_MCONFIGS/MAPCONFIG, ICONFIG
+C     PERM has the present permutation
+      INTEGER PERM(NEXTERNAL)
+      COMMON/TO_PERM/PERM
 C     
 C     EXTERNAL FUNCTIONS
 C     
@@ -1463,7 +1472,10 @@ C
       ENDDO
 
 C     Set momenta according to this permutation
-      CALL SWITCHMOM(PP,P1,PERMS(1,MAPCONFIG(ICONFIG)),JC,NEXTERNAL)
+      DO I=1,NEXTERNAL
+        PERM(I)=PERMS(I,MAPCONFIG(ICONFIG))
+      ENDDO
+      CALL SWITCHMOM(PP,P1,PERM,JC,NEXTERNAL)
 
       IB(1)=1
       IB(2)=2

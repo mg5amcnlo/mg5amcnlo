@@ -246,6 +246,9 @@ C     IB gives which beam is which (for mirror processes)
 C     ICONFIG has this config number
       INTEGER MAPCONFIG(0:LMAXCONFIGS), ICONFIG
       COMMON/TO_MCONFIGS/MAPCONFIG, ICONFIG
+C     PERM has the present permutation
+      INTEGER PERM(NEXTERNAL)
+      COMMON/TO_PERM/PERM
 C  
 C EXTERNAL FUNCTIONS
 C  
@@ -265,7 +268,10 @@ C
       ENDDO
 
 C     Set momenta according to this permutation
-      CALL SWITCHMOM(PP,P1,PERMS(1,MAPCONFIG(ICONFIG)),JC,NEXTERNAL)
+      DO I=1,NEXTERNAL
+         PERM(I)=PERMS(I,MAPCONFIG(ICONFIG))
+      ENDDO
+      CALL SWITCHMOM(PP,P1,PERM,JC,NEXTERNAL)
 
       IB(1)=1
       IB(2)=2
