@@ -42,8 +42,60 @@ import models.sm.write_param_card as write_param_card
 from madgraph import MadGraph5Error, MG5DIR
 from madgraph.iolibs.files import cp, ln, mv
 _file_path = os.path.split(os.path.dirname(os.path.realpath(__file__)))[0] + '/'
-logger = logging.getLogger('madgraph.export_v4')
+logger = logging.getLogger('madgraph.group_subprocs')
 
+#===============================================================================
+# DiagramTag class to identify matrix elements
+#===============================================================================
+
+class IdentifyConfigTag(diagram_generation.DiagramTag):
+    """DiagramTag daughter class to identify diagrams giving the same
+    config. Need to compare leg number, mass, width, and color."""
+
+    @staticmethod
+    def link_from_leg(leg, model):
+        """Returns the end link for a leg needed to identify matrix
+        elements: ((leg numer, state, spin, self_antipart, mass,
+        width, color, decay and is_part), number)."""
+
+        part = model.get_particle(leg.get('id'))
+
+        return [((leg.get('number'),
+                  part.get('mass'), part.get('width'), part.get('color')),
+                 leg.get('number'))]
+        
+    @staticmethod
+    def vertex_id_from_vertex(vertex, last_vertex, model):
+        """Returns the info needed to identify matrix elements:
+        interaction color, lorentz, coupling, and wavefunction
+        spin, self_antipart, mass, width, color, decay and
+        is_part. Note that is_part needs to be flipped if we move the
+        final vertex around."""
+
+        inter = model.get_interaction(vertex.get('id'))
+        ret_list = 0
+                   
+        if last_vertex:
+            return (ret_list,)
+        else:
+            part = model.get_particle(vertex.get('legs')[-1].get('id'))
+            return ((part.get('color'),
+                     part.get('mass'), part.get('width')),
+                    ret_list)
+
+    @staticmethod
+    def flip_vertex(new_vertex, old_vertex):
+        """Move the wavefunction part of vertex id appropriately"""
+
+        if len(new_vertex) == 1 and len(old_vertex) == 2:
+            # We go from a last link to next-to-last link - add propagator info
+            return (old_vertex[0],new_vertex[0])
+        elif len(new_vertex) == 2 and len(old_vertex) == 1:
+            # We go from next-to-last link to last link - remove propagator info
+            return (new_vertex[1],)
+        # We should not get here
+        assert(False)
+        
 #===============================================================================
 # SubProcessGroup
 #===============================================================================
@@ -267,15 +319,7 @@ class SubProcessGroup(base_objects.PhysicsObject):
                 # Create the equivalent diagram, in the format
                 # [[((ext_number1, mass_width_id1), ..., )],
                 #  ...]                 (for each vertex)
-                equiv_diag = [[(l.get('number'),
-                                    (model.get_particle(l.get('id')).\
-                                         get('mass'),
-                                     model.get_particle(l.get('id')).\
-                                         get('width'),
-                                     model.get_particle(l.get('id')).\
-                                         get('color'))) \
-                               for l in v.get('legs')] \
-                              for v in diagram.get('vertices')]
+                equiv_diag = IdentifyConfigTag(diagram, model)
                 try:
                     diagram_maps[iamp].append(mapping_diagrams.index(\
                                                                 equiv_diag) + 1)
@@ -326,6 +370,8 @@ class SubProcessGroup(base_objects.PhysicsObject):
 
         assert isinstance(amplitudes, diagram_generation.AmplitudeList), \
                   "Argument to group_amplitudes must be AmplitudeList"
+
+        logger.info("Organizing processes into subprocess groups")
 
         process_classes = SubProcessGroup.find_process_classes(amplitudes)
         ret_list = SubProcessGroupList()

@@ -1324,6 +1324,8 @@ class MultiProcess(base_objects.PhysicsObject):
                         success_procs.append(sorted_legs)
                         permutations.append(permutation)
                         non_permuted_procs.append(fast_proc)
+                        logger.info("Crossed process found for %s, reuse diagrams." % \
+                                    process.base_string())
                         continue
                     
                 # Create new amplitude
