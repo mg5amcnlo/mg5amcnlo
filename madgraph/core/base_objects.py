@@ -1341,6 +1341,44 @@ class Diagram(PhysicsObject):
 
         self.set('orders', coupling_orders)
 
+    def renumber_legs(self, perm_map, leg_list):
+        """Renumber legs in all vertices according to perm_map"""
+        vertices = VertexList()
+        min_dict = copy.copy(perm_map)
+        # Dictionary from leg number to state
+        state_dict = dict([(l.get('number'), l.get('state')) for l in leg_list])
+        # First renumber all legs in the n-1->1 vertices
+        for vertex in self.get('vertices')[:-1]:
+            vertex = copy.copy(vertex)
+            leg_list = LegList([copy.copy(l) for l in vertex.get('legs')])
+            for leg in leg_list[:-1]:
+                leg.set('number', min_dict[leg.get('number')])
+                leg.set('state', state_dict[leg.get('number')])
+            min_number = min([leg.get('number') for leg in leg_list[:-1]])
+            leg = leg_list[-1]
+            min_dict[leg.get('number')] = min_number
+            # resulting leg is initial state if there is exactly one
+            # initial state leg among the incoming legs
+            state_dict[min_number] = len([l for l in leg_list[:-1] if \
+                                          not l.get('state')]) != 1
+            leg.set('number', min_number)
+            leg.set('state', state_dict[min_number])
+            vertex.set('legs', leg_list)
+            vertices.append(vertex)
+        # Now renumber the legs in final vertex
+        vertex = copy.copy(self.get('vertices')[-1])
+        leg_list = LegList([copy.copy(l) for l in vertex.get('legs')])
+        for leg in leg_list:
+            leg.set('number', min_dict[leg.get('number')])
+            leg.set('state', state_dict[leg.get('number')])
+        vertex.set('legs', leg_list)
+        vertices.append(vertex)
+        # Finally create new diagram
+        new_diag = copy.copy(self)
+        new_diag.set('vertices', vertices)
+        state_dict = {True:'T',False:'F'}
+        return new_diag
+        
 #===============================================================================
 # DiagramList
 #===============================================================================

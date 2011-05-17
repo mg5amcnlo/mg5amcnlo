@@ -123,7 +123,7 @@ class IdentifyMETag(diagram_generation.DiagramTag):
 
         if len(new_vertex) == 1 and len(old_vertex) == 2:
             # We go from a last link to next-to-last link - add propagator info
-            return (old_vertex[1],new_vertex[0])
+            return (old_vertex[0],new_vertex[0])
         elif len(new_vertex) == 2 and len(old_vertex) == 1:
             # We go from next-to-last link to last link - remove propagator info
             return (new_vertex[1],)

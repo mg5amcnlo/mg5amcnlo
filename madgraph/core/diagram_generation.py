@@ -101,7 +101,7 @@ class DiagramTag(object):
                                              self.flip_vertex(\
                                                  longest_chain.vertex_id,
                                                  self.tag.vertex_id))
-
+            
             if other_link.links[0] < self.tag.links[0]:
                 # Switch to new tag, continue search
                 self.tag = other_link
@@ -1201,10 +1201,14 @@ class MultiProcess(base_objects.PhysicsObject):
         processes = base_objects.ProcessList()
         amplitudes = AmplitudeList()
 
-        # failed_procs are processes that have already failed
-        # based on crossing symmetry
+        # failed_procs and success_procs are sorted processes that have
+        # already failed/succeeded based on crossing symmetry
         failed_procs = []
         success_procs = []
+        # Complete processes, for identification of mirror processes
+        non_permuted_procs = []
+        # permutations keeps the permutations of the crossed processes
+        permutations = []
 
         # Store the diagram tags for processes, to allow for
         # identifying identical matrix elements already at this stage.
@@ -1245,7 +1249,10 @@ class MultiProcess(base_objects.PhysicsObject):
                 legs = base_objects.LegList(leg_list)
 
                 # Check for crossed processes
-                sorted_legs = tuple(sorted(legs.get_outgoing_id_list(model)))
+                sorted_legs = sorted([(l,i+1) for (i,l) in \
+                                   enumerate(legs.get_outgoing_id_list(model))])
+                permutation = [l[1] for l in sorted_legs]
+                sorted_legs = array.array('i', [l[0] for l in sorted_legs])
 
                 # Check for six-quark processes
                 if ignore_six_quark_processes and \
@@ -1284,15 +1291,42 @@ class MultiProcess(base_objects.PhysicsObject):
                                           list(fast_proc[2:]))
                     try:
                         mirror_amp = \
-                                   amplitudes[success_procs.index(mirror_proc)]
+                               amplitudes[non_permuted_procs.index(mirror_proc)]
+                    except:
+                        # Didn't find any mirror process
+                        pass
+                    else:
+                        # Mirror process found
                         mirror_amp.set('has_mirror_process', True)
                         logger.info("Process %s added to mirror process %s" % \
                                     (process.base_string(),
                                      mirror_amp.get('process').base_string()))
                         continue
-                    except:
+                        
+                # Check for successful crossings, unless we have specified
+                # properties that break crossing symmetry
+                if not process.get('required_s_channels') and \
+                   not process.get('forbidden_s_channels') and \
+                   not process.get('is_decay_chain'):
+                    try:
+                        crossed_index = success_procs.index(sorted_legs)
+                    except ValueError:
+                        # No crossing found, just continue
                         pass
-
+                    else:
+                        # Found crossing - reuse amplitude
+                        amplitude = MultiProcess.cross_amplitude(\
+                            amplitudes[crossed_index],
+                            process,
+                            permutations[crossed_index],
+                            permutation)
+                        amplitudes.append(amplitude)
+                        success_procs.append(sorted_legs)
+                        permutations.append(permutation)
+                        non_permuted_procs.append(fast_proc)
+                        continue
+                    
+                # Create new amplitude
                 amplitude = Amplitude({'process': process})
                 
                 try:
@@ -1300,11 +1334,15 @@ class MultiProcess(base_objects.PhysicsObject):
                 except InvalidCmd as error:
                     failed_procs.append(sorted_legs)
                 else:
+                    # Succeeded in generating diagrams
                     if amplitude.get('diagrams'):
                         amplitudes.append(amplitude)
-                        success_procs.append(fast_proc)
+                        success_procs.append(sorted_legs)
+                        permutations.append(permutation)
+                        non_permuted_procs.append(fast_proc)
                     elif not result:
-                        failed_procs.append(tuple(sorted_legs))
+                        # Diagram generation failed for all crossings
+                        failed_procs.append(sorted_legs)
  
         # Raise exception if there are no amplitudes for this process
         if not amplitudes:
@@ -1493,6 +1531,26 @@ class MultiProcess(base_objects.PhysicsObject):
         # If no valid processes found with nfinal-1 couplings, return nfinal
         return {coupling: len(fsids)}        
 
+    @staticmethod
+    def cross_amplitude(amplitude, process, org_perm, new_perm):
+        """Return the amplitude crossed with the permutation new_perm"""
+        # Create dict from original leg numbers to new leg numbers
+        perm_map = dict(zip(org_perm, new_perm))
+        # Initiate new amplitude
+        new_amp = copy.copy(amplitude)
+        # Number legs
+        for i, leg in enumerate(process.get('legs')):
+            leg.set('number', i+1)
+        # Set process
+        new_amp.set('process', process)
+        # Now replace the leg numbers in the diagrams
+        diagrams = base_objects.DiagramList([d.renumber_legs(perm_map,
+                                             process.get('legs'),) for \
+                                             d in new_amp.get('diagrams')])
+        new_amp.set('diagrams', diagrams)
+        new_amp.trim_diagrams()
+        return new_amp
+        
 #===============================================================================
 # Global helper methods
 #===============================================================================

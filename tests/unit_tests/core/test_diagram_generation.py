@@ -2636,7 +2636,7 @@ class MultiProcessTest(unittest.TestCase):
                            for amplitude in amplitudes]
 
             if nfs <= 3:
-                self.assertEqual(valid_procs, goal_valid_procs[nfs - 2])
+                self.assertEqual(valid_procs, goal_valid_procs[nfs-2])
 
             #print 'pp > ',nfs,'j (p,j = ', p, '):'
             #print 'Valid processes: ',len(filter(lambda item: item[1] > 0, valid_procs))
@@ -2841,7 +2841,57 @@ class MultiProcessTest(unittest.TestCase):
                 self.assertRaises(MadGraph5Error,
                                   my_multiprocess.get, 'amplitudes')
 
+    def test_crossing_uux_gg(self):
+        """Test the number of diagram generated for uu~>gg (s, t and u channels)
+        """
 
+        myleglist = base_objects.LegList()
+
+        myleglist.append(base_objects.Leg({'id':-1,
+                                         'state':False}))
+        myleglist.append(base_objects.Leg({'id':1,
+                                         'state':False}))
+        myleglist.append(base_objects.Leg({'id':21,
+                                         'state':True}))
+        myleglist.append(base_objects.Leg({'id':21,
+                                         'state':True}))
+
+        myproc = base_objects.Process({'legs':myleglist,
+                                       'model':self.mymodel})
+
+        myamplitude = diagram_generation.Amplitude(myproc)
+
+        myleglist = base_objects.LegList()
+
+        myleglist.append(base_objects.Leg({'id':1,
+                                         'state':False}))
+        myleglist.append(base_objects.Leg({'id':21,
+                                         'state':False}))
+        myleglist.append(base_objects.Leg({'id':1,
+                                         'state':True}))
+        myleglist.append(base_objects.Leg({'id':21,
+                                         'state':True}))
+
+        crossproc = base_objects.Process({'legs':myleglist,
+                                          'model':self.mymodel})
+
+        crossamp = diagram_generation.MultiProcess.cross_amplitude(myamplitude,
+                                                                   crossproc,
+                                                                   [3,4,2,1],
+                                                                   [2,4,1,3])
+        crossed_numbers =  [[[3, 1, 1], [2, 4, 1]],
+                            [[3, 2, 2], [1, 4, 2]],
+                            [[3, 4, 3], [1, 2, 3]]]
+        crossed_states =  [[[True, False, False], [False, True, False]],
+                           [[True, False, False], [False, True, False]],
+                           [[True, True, True], [False, False, True]]]
+        for idiag, diagram in enumerate(crossamp.get('diagrams')):
+            self.assertEqual([[l.get('number') for l in v.get('legs')] \
+                              for v in diagram.get('vertices')],
+                             crossed_numbers[idiag])
+            self.assertEqual([[l.get('state') for l in v.get('legs')] \
+                              for v in diagram.get('vertices')],
+                             crossed_states[idiag])
 #===============================================================================
 # TestDiagramTag
 #===============================================================================
