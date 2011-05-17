@@ -296,6 +296,9 @@ class SubProcessGroup(base_objects.PhysicsObject):
         # mapping_diagrams: The configurations for the non-reducable
         # diagram topologies
         mapping_diagrams = []
+        # equiv_diags: Tags identifying diagrams that correspond to
+        # the same configuration
+        equiv_diagrams = []
         # diagram_maps: A dict from amplitude number to list of
         # diagram maps, pointing to the mapping_diagrams (starting at
         # 1). Diagrams with multi-particle vertices will have 0.
@@ -321,13 +324,13 @@ class SubProcessGroup(base_objects.PhysicsObject):
                 #  ...]                 (for each vertex)
                 equiv_diag = IdentifyConfigTag(diagram, model)
                 try:
-                    diagram_maps[iamp].append(mapping_diagrams.index(\
+                    diagram_maps[iamp].append(equiv_diagrams.index(\
                                                                 equiv_diag) + 1)
                 except ValueError:
-                    mapping_diagrams.append(equiv_diag)
-                    diagram_maps[iamp].append(mapping_diagrams.index(\
+                    equiv_diagrams.append(equiv_diag)
+                    mapping_diagrams.append(diagram)
+                    diagram_maps[iamp].append(equiv_diagrams.index(\
                                                                 equiv_diag) + 1)
-
         return mapping_diagrams, diagram_maps
 
     def get_subproc_diagrams_for_config(self, iconfig):

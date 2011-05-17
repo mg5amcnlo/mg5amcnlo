@@ -1378,6 +1378,12 @@ class Diagram(PhysicsObject):
         new_diag.set('vertices', vertices)
         state_dict = {True:'T',False:'F'}
         return new_diag
+
+    def get_vertex_leg_numbers(self):
+        """Return a list of the number of legs in the vertices for
+        this diagram"""
+
+        return [len(v.get('legs')) for v in self.get('vertices')]
         
 #===============================================================================
 # DiagramList

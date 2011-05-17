@@ -115,16 +115,23 @@ class TestDiagramSymmetry(unittest.TestCase):
         symmetry, perms, ident_perms = diagram_symmetry.find_symmetry(\
                                                 subproc_group)
 
-        self.assertEqual(len([s for s in symmetry if s > 0]), 26)
+        self.assertEqual(len([s for s in symmetry if s > 0]), 23)
 
         self.assertEqual(symmetry,
-                         [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, -34, -35, -36, 1, 1, 1, -37, -38, -39, 1, 1, 1, -8, -9, -10, -11, -12, -13, -14, 1, 1, 1, 1, 1, 1])
+                         [1, 1, 1, 1, -2, -3, -4, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
+                          1, 1, 1, 1, 1, 1, 1, 1, 1, -8, -9, -10, -11, -12, -13,
+                          -14, -15, -16, -17, -21, -22, -23])
 
         # Check that the momentum assignments work
         matrix_element = \
                      subproc_group.get('matrix_elements')[1]
         process = matrix_element.get('processes')[0]
 
+        return
+
+        # The test below doesn't apply with the new way of determining
+        # config symmetry for subprocess groups, since we don't demand
+        # that symmetric diagrams have identical particles.
         evaluator = process_checks.MatrixElementEvaluator(self.base_model,
                                                           auth_skipping = True,
                                                           reuse = True)
