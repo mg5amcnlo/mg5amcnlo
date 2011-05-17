@@ -116,7 +116,10 @@ class DiagramTag(object):
 
     @staticmethod
     def reorder_permutation(perm, start_perm):
-        """Reorder a permutation with respect to start_perm"""
+        """Reorder a permutation with respect to start_perm. Note that
+        both need to start from 1."""
+        if perm == start_perm:
+            return range(len(perm))
         order = [i for (p,i) in \
                  sorted([(p,i) for (i,p) in enumerate(perm)])]
         return [start_perm[i]-1 for i in order]

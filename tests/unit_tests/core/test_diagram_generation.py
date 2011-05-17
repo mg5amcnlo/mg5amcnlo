@@ -2974,3 +2974,13 @@ class TestDiagramTag(unittest.TestCase):
             self.assertEqual(diagram_classes[i], goal_classes[i])
             self.assertEqual(permutations[i], goal_perms[i])
 
+
+    def test_reorder_permutation(self):
+        """Test the reorder_permutation routine"""
+
+        perm1 = [2,3,4,5,1]
+        perm2 = [3,5,2,1,4]
+        goal = [3,2,4,1,0]
+
+        self.assertEqual(diagram_generation.DiagramTag.reorder_permutation(\
+            perm1, perm2), goal)

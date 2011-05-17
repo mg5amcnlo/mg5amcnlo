@@ -79,22 +79,16 @@ class IdentifyMETag(diagram_generation.DiagramTag):
 
         part = model.get_particle(leg.get('id'))
 
-        # Identify identical final state particles
-
-        if leg.get('from_group'):
-            # This is a decaying particle - need to add also particle id
-            return [((leg.get('number'), leg.get('state'), leg.get('id'),
-                      part.get('spin'),
-                      part.get('is_part'), part.get('self_antipart'),
-                      part.get('mass'), part.get('width'), part.get('color')),
-                     leg.get('number'))]
-        else:
-            # For non-decaying legs, don't include particle id
-            return [((leg.get('number'), leg.get('state'),
-                      part.get('spin'),
-                      part.get('is_part'), part.get('self_antipart'),
-                      part.get('mass'), part.get('width'), part.get('color')),
-                     leg.get('number'))]            
+        # For legs with decay chains defined, include leg id (don't combine)
+        if leg.get('from_group'): id = leg.get('id')
+        else: id = 0
+        # For FS legs, don't care about number (but do for IS legs)
+        if leg.get('state'): number = 0
+        else: number = leg.get('number')
+        return [((number, id, part.get('spin'),
+                  part.get('is_part'), part.get('self_antipart'),
+                  part.get('mass'), part.get('width'), part.get('color')),
+                 leg.get('number'))]
         
     @staticmethod
     def vertex_id_from_vertex(vertex, last_vertex, model):
@@ -119,7 +113,7 @@ class IdentifyMETag(diagram_generation.DiagramTag):
         else:
             part = model.get_particle(vertex.get('legs')[-1].get('id'))
             return ((part.get('spin'), part.get('color'),
-                     part.get('is_part'), part.get('self_antipart'),
+                     part.get('self_antipart'),
                      part.get('mass'), part.get('width')),
                     ret_list)
 
@@ -4028,6 +4022,10 @@ class HelasMultiProcess(base_objects.PhysicsObject):
         identified_matrix_elements = []
         # List of amplitude tags, synchronized with identified_matrix_elements
         amplitude_tags = []
+        # List of the external leg permutations for the amplitude_tags,
+        # which allows to reorder the final state particles in the right way
+        # for maximal process combination
+        permutations = []
 
         while amplitudes:
             # Pop the amplitude to save memory space
@@ -4056,6 +4054,8 @@ class HelasMultiProcess(base_objects.PhysicsObject):
                         # Keep track of amplitude tags
                         amplitude_tags.append(amplitude_tag)
                         identified_matrix_elements.append(me)
+                        permutations.append(amplitude_tag[-1][0].\
+                                            get_external_numbers())
                 else:
                     # Identical matrix element found
                     other_processes = identified_matrix_elements[me_index].\
@@ -4063,7 +4063,10 @@ class HelasMultiProcess(base_objects.PhysicsObject):
                     logger.info("Combining process with %s" % \
                                 other_processes[0].nice_string().\
                                 replace('Process: ', ''))
-                    other_processes.append(amplitude.get('process'))
+                    other_processes.append(cls.reorder_process(\
+                        amplitude.get('process'),
+                        permutations[me_index],
+                        amplitude_tag[-1][0].get_external_numbers()))
                     # Go on to next amplitude
                     continue
             # Deal with newly generated matrix element
@@ -4121,3 +4124,15 @@ class HelasMultiProcess(base_objects.PhysicsObject):
             
         return matrix_elements
 
+    @staticmethod
+    def reorder_process(process, org_perm, proc_perm):
+        """Reorder the legs in the process according to the difference
+        between org_perm and proc_perm"""
+
+        leglist = base_objects.LegList(\
+                  [copy.copy(process.get('legs')[i]) for i in \
+                   diagram_generation.DiagramTag.reorder_permutation(\
+                       proc_perm, org_perm)])
+        new_proc = copy.copy(process)
+        new_proc.set('legs', leglist)
+        return new_proc

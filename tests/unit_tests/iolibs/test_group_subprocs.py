@@ -280,20 +280,19 @@ class SubProcessGroupTest(unittest.TestCase):
         p = [21, 1, -1, 2, -2]
 
         my_multi_leg = base_objects.MultiLeg({'ids': p, 'state': True});
-        
-        diagram_maps = [[{0: [0, 1, 2, 3]},
-                         {0: [1, 2, 3]},
-                         {0: [1, 2, 3], 1: [1, 2, 3]},
-                         {0: [1, 2, 3], 1: [1, 2, 3]},
-                         {0: [1, 2, 3, 4, 5, 6], 1: [7, 8, 9, 1, 2, 3], 2: [7, 8, 9], 3: [1, 2, 3], 4: [1, 2, 3], 5: [7, 8, 9, 4, 5, 6], 6: [7, 8, 9], 7: [1, 2, 3, 4, 5, 6], 8: [1, 2, 3], 9: [1, 2, 3], 10: [4, 5, 6], 11: [4, 5, 6], 12: [4, 5, 6], 13: [4, 5, 6]},
-                         {0: [1, 2, 3], 1: [1, 2, 3]}]]
-        
-        diags_for_config = [[[[2], [3], [4]],
-                             [[1], [2], [3]],
-                             [[1, 1], [2, 2], [3, 3]],
-                             [[1, 1], [2, 2], [3, 3]],
-                             [[1, 4, 0, 1, 1, 0, 0, 1, 1, 1, 0, 0, 0, 0], [2, 5, 0, 2, 2, 0, 0, 2, 2, 2, 0, 0, 0, 0], [3, 6, 0, 3, 3, 0, 0, 3, 3, 3, 0, 0, 0, 0], [4, 0, 0, 0, 0, 4, 0, 4, 0, 0, 1, 1, 1, 1], [5, 0, 0, 0, 0, 5, 0, 5, 0, 0, 2, 2, 2, 2], [6, 0, 0, 0, 0, 6, 0, 6, 0, 0, 3, 3, 3, 3], [0, 1, 1, 0, 0, 1, 1, 0, 0, 0, 0, 0, 0, 0], [0, 2, 2, 0, 0, 2, 2, 0, 0, 0, 0, 0, 0, 0], [0, 3, 3, 0, 0, 3, 3, 0, 0, 0, 0, 0, 0, 0]],
-                             [[1, 1], [2, 2], [3, 3]]]]
+
+        diagram_maps =  [[{0: [0, 1, 2, 3]},
+                          {0: [1, 2, 3]},
+                          {0: [1, 2, 3], 1: [1, 2, 3]},
+                          {0: [1, 2, 3], 1: [1, 2, 3]},
+                          {0: [1, 2, 3, 4, 5, 6], 1: [7, 8, 9, 1, 2, 3], 2: [7, 8, 9], 3: [1, 2, 3], 4: [1, 2, 3], 5: [7, 8, 9, 4, 5, 6], 6: [7, 8, 9], 7: [1, 2, 3, 4, 5, 6], 8: [1, 2, 3], 9: [1, 2, 3]},
+                          {0: [1, 2, 3], 1: [1, 2, 3]}]]
+        diags_for_config =  [[[[2], [3], [4]],
+                              [[1], [2], [3]],
+                              [[1, 1], [2, 2], [3, 3]],
+                              [[1, 1], [2, 2], [3, 3]],
+                              [[1, 4, 0, 1, 1, 0, 0, 1, 1, 1], [2, 5, 0, 2, 2, 0, 0, 2, 2, 2], [3, 6, 0, 3, 3, 0, 0, 3, 3, 3], [4, 0, 0, 0, 0, 4, 0, 4, 0, 0], [5, 0, 0, 0, 0, 5, 0, 5, 0, 0], [6, 0, 0, 0, 0, 6, 0, 6, 0, 0], [0, 1, 1, 0, 0, 1, 1, 0, 0, 0], [0, 2, 2, 0, 0, 2, 2, 0, 0, 0], [0, 3, 3, 0, 0, 3, 3, 0, 0, 0]],
+                              [[1, 1], [2, 2], [3, 3]]]]
         
         for nfs in range(2, max_fs + 1):
 
@@ -320,7 +319,6 @@ class SubProcessGroupTest(unittest.TestCase):
             subprocess_groups = group_subprocs.SubProcessGroup.\
                                 group_amplitudes(amplitudes)
 
-
             for igroup, group in enumerate(subprocess_groups):
                 group.get('matrix_elements')
                 self.assertEqual(group.get('diagram_maps'),
@@ -329,6 +327,7 @@ class SubProcessGroupTest(unittest.TestCase):
                     self.assertEqual(group.get_subproc_diagrams_for_config(\
                                                           iconfig),
                                      diags_for_config[nfs-2][igroup][iconfig])
+
 
     def test_find_process_classes_and_mapping_diagrams(self):
         """Test the find_process_classes and find_mapping_diagrams function."""

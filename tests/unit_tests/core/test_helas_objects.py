@@ -2307,13 +2307,13 @@ class HelasMultiProcessTest(unittest.TestCase):
         (which makes partial use of crossing symmetries)
         """
 
-        max_fs = 2 # 3
+        max_fs = 2 #3
 
-        p = [1, -1, 2, -2, 21]
+        p = [21, 1, -1, -2, 2]
 
         my_multi_leg = base_objects.MultiLeg({'ids': p, 'state': True});
 
-        goal_number_matrix_elements = [22, 34]
+        goal_number_matrix_elements = [18, 26]
 
         for nfs in range(2, max_fs + 1):
 
@@ -2336,6 +2336,7 @@ class HelasMultiProcessTest(unittest.TestCase):
             if nfs <= 3:
                 self.assertEqual(len(helas_multi_proc.get('matrix_elements')),
                                      goal_number_matrix_elements[nfs - 2])
+
 
     def test_complete_decay_chain_process(self):
         """Test a complete decay chain process gp>jg,j>jjj,j>jjj
