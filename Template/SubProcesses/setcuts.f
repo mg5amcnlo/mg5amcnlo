@@ -113,18 +113,30 @@ c     set ptj and s_min if xqcut and ktscheme = 1, to improve
 c     integration speed, and set drjj and drjl to 0.
 c
         if(xqcut.gt.0.and.ktscheme.eq.1) then
-           if(ptj.ge.0d0) ptj=max(ptj, xqcut)
+          if(ptj.ge.0d0.and.ptj.lt.xqcut)then
+            ptj=xqcut
+            write(*,*) 'Warning! ptj set to xqcut=',xqcut,
+     $            ' to improve integration efficiency'
+            write(*,*) 'Note that this might affect non-radiated jets,'
+            write(*,*) 'e.g. from decays. Use cut_decays=F in run_card.'
+          endif
         endif
         if(xqcut.gt.0) then
-           if(mmjj.ge.0d0) mmjj=max(mmjj, xqcut)
-           if(drjj.gt.0d0) then
-              write(*,*) 'Warning! drjj > 0 with xqcut > 0, set to 0'
-              drjj = 0d0
-           endif
-           if(drjl.gt.0d0) then
-              write(*,*) 'Warning! drjl > 0 with xqcut > 0, set to 0'
-              drjl = 0d0
-           endif
+          if(mmjj.ge.0d0.and.mmjj.lt.xqcut)then
+            mmjj=xqcut
+            write(*,*) 'Warning! mmjj set to xqcut=',xqcut,
+     $            ' to improve integration efficiency'
+            write(*,*) 'Note that this might affect non-radiated jets,'
+            write(*,*) 'e.g. from decays. Use cut_decays=F in run_card.'
+          endif
+          if(drjj.gt.0d0) then
+            write(*,*) 'Warning! drjj > 0 with xqcut > 0, set to 0'
+            drjj = 0d0
+          endif
+          if(drjl.gt.0d0) then
+            write(*,*) 'Warning! drjl > 0 with xqcut > 0, set to 0'
+            drjl = 0d0
+          endif
         endif
 
 c     Check which particles come from decays

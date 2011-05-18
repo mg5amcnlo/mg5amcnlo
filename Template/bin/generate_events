@@ -83,6 +83,12 @@ a=`awk '/^[^#].*=.*nevents/{print $1}' Cards/run_card.dat`
 b=`awk '/^[^#].*=.*gridpack/{print $1}' Cards/run_card.dat`
 c=`awk '/^[^#].*=.*pdlabel/{print $1}' Cards/run_card.dat`
 ickkw=`awk '/^[^#].*=.*ickkw.*!/{print $1}' Cards/run_card.dat`
+if [[ $a -gt 100000 ]];then
+   echo "Warning: Attempting to generate more than 100K events"
+   echo "Limiting number to 100K. Use multi_run for larger statistics."
+   perl -p -i.bak -e "s/\d+\s*=\s*nevents/100000 = nevents/" Cards/run_card.dat
+   a=`awk '/^[^#].*=.*nevents/{print $1}' Cards/run_card.dat`
+fi
 echo Generating $a events
 if [[ $b == ".true." ]]; then
     echo Generating GridPack $b
