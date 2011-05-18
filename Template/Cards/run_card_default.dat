@@ -74,7 +74,7 @@
 # Apply pt/E/eta/dr/mij cuts on decay products or not
 # (note that etmiss/ptll/ptheavy/sorted cuts always apply)
 #**********************************************************
-   F  = cut_decays
+   T  = cut_decays
 #*******************                                                 
 # Standard Cuts
 #*******************                                                 
