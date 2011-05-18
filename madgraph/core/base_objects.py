@@ -1139,6 +1139,33 @@ class Leg(PhysicsObject):
                (self.get('state') == True and part.get('is_part') or \
                 self.get('state') == False and not part.get('is_part'))
 
+    # Helper function. We don't overload the == operator because it might be useful
+    # to define it differently than that later.
+
+    def same(self, leg):
+        """ Returns true if the leg in argument has the same ID and the same numer """
+
+        # In case we want to check this leg with an integer in the tagging procedure, 
+        # then it only has to match the leg number.
+        if isinstance(leg,int):
+            if self['number']==leg:
+                return True
+            else:
+                return False
+
+        # If using a Leg object instead, we also want to compare the other relevant
+        # properties.
+        elif isinstance(leg, Leg):
+            if self['id']==leg.get('id') and \
+               self['number']==leg.get('number') and \
+               self['loop_line']==leg.get('loop_line') :
+                return True
+            else:
+                return False
+
+        else :
+            return False
+
     # Make sure sort() sorts lists of legs according to 'number'
     def __lt__(self, other):
         return self['number'] < other['number']
@@ -1454,6 +1481,13 @@ class Diagram(PhysicsObject):
 
         return diag_weighted_order
 
+    def get_order(self, order):
+        """Return the order of this diagram. It returns 0 if it is not present."""
+
+        try:
+            return self['orders'][order]
+        except:
+            return 0
 
 #===============================================================================
 # DiagramList

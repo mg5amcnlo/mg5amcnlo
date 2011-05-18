@@ -61,6 +61,9 @@ class FeynmanLine(object):
     def __init__(self, pid, init_dict={}):
         """Initialize the FeynmanLine content."""
 
+        # Add this attribute by default to have some tests with a hard-coded
+        # dictionary for initialization passing.
+        self.loop_line = False
         for key, value in init_dict.items():
             setattr(self, key, value)
         self.pid = pid
@@ -177,7 +180,10 @@ class FeynmanLine(object):
         model_info = self.model.get_particle(pid)
         if model_info is None:
             model_info = self.model.get_particle(-pid)
-        return model_info.get_name()
+        if self.loop_line:
+            return model_info.get_name()+"*"
+        else:
+            return model_info.get_name()
             
     def get_length(self):
         """ return the length of the line """

@@ -20,10 +20,14 @@ import copy
 import itertools
 import logging
 import math
+import os
 
 
 import tests.unit_tests as unittest
 
+
+import madgraph.core.drawing as draw_lib
+import madgraph.iolibs.drawing_eps as draw
 import madgraph.core.base_objects as base_objects
 import madgraph.core.diagram_generation as diagram_generation
 import madgraph.loop.loop_base_objects as loop_base_objects
@@ -792,10 +796,10 @@ class LoopDiagramGenerationTest(unittest.TestCase):
 
     def test_diagram_generation_epem_ddx(self):
         """Test the number of loop diagrams generated for e+e->dd~ (s channel)
+           with different choices for the perturbation couplings and squared orders.
         """
 
         myleglist = base_objects.LegList()
-
         myleglist.append(base_objects.Leg({'id':-11,
                                          'state':False}))
         myleglist.append(base_objects.Leg({'id':11,
@@ -805,24 +809,84 @@ class LoopDiagramGenerationTest(unittest.TestCase):
         myleglist.append(base_objects.Leg({'id':-1,
                                          'state':True}))
 
-        myproc = base_objects.Process({'legs':myleglist,
-                                       'model':self.myloopmodel,
-                                       'perturbation_couplings':self.mypertorders})
+        ordersChoices=[({},['QCD'],{},1),\
+                       ({},['QED'],{},7),\
+                       ({},['QCD','QED'],{},10),\
+                       ({},['QED','QCD'],{'QED':-1},3),\
+                       ({},['QED','QCD'],{'QCD':-1},7)]
 
+        for (bornOrders,pert,sqOrders,nDiagGoal) in ordersChoices:
+            myproc = base_objects.Process({'legs':copy.copy(myleglist),
+                                           'model':self.myloopmodel,
+                                           'orders':bornOrders,
+                                           'perturbation_couplings':pert,
+                                           'squared_orders':sqOrders})
     
-        myloopamplitude = loop_diagram_generation.LoopAmplitude()
-        myloopamplitude.set('process', myproc)
-        myloopamplitude.generate_diagrams()
+            myloopamplitude = loop_diagram_generation.LoopAmplitude()
+            myloopamplitude.set('process', myproc)
+            myloopamplitude.generate_diagrams()
+            self.assertEqual(len(myloopamplitude.get('loop_diagrams')),nDiagGoal)
 
-        #self.assertEqual(len(myloopamplitude.get('loop_diagrams')), 2)
-        self.assertEqual(len(myloopamplitude.get('born_diagrams')), 1)
+            ### This is to plot the diagrams obtained
+            #options = draw_lib.DrawOption()
+            #filename = os.path.join('/Users/Spooner/Documents/PhD/MG5/NLO', 'diagramsVall_' + \
+            #              myloopamplitude.get('process').shell_string() + ".eps")
+            #plot = draw.MultiEpsDiagramDrawer(myloopamplitude['loop_diagrams'],
+            #                                  filename,
+            #                                  model=self.myloopmodel,
+            #                                  amplitude='',
+            #                                  legend=myloopamplitude.get('process').input_string())
+            #plot.draw(opt=options)
+
+            ### This is to display some informations
+            #mydiag1=myloopamplitude.get('loop_diagrams')[0]
+            #mydiag2=myloopamplitude.get('loop_diagrams')[5]      
+            #print "I got tag for diag 1=",mydiag1['canonical_tag']
+            #print "I got tag for diag 2=",mydiag2['canonical_tag']
+            #print "I got vertices for diag 1=",mydiag1['vertices']
+            #print "I got vertices for diag 2=",mydiag2['vertices']
+            #print "mydiag=",str(mydiag)
+            #mydiag1.tag(trial,5,6,self.myloopmodel)
+            #print "I got tag=",mydiag['tag']
+            #print "I got struct[0]=\n",myloopamplitude['structure_repository'][0].nice_string()
+            #print "I got struct[2]=\n",myloopamplitude['structure_repository'][2].nice_string()   
+            #print "I got struct[3]=\n",myloopamplitude['structure_repository'][3].nice_string()
+
+    def test_diagram_generation_gg_ng(self):
+        """Test the number of loop diagrams generated for gg>ng. n being in [1,2,3]
+        """
+        
+        # For quick test 
+        nGluons = [(1,8),(2,81)]
+        # For a longer one
+        #nGluons += [(3,905),(4,11850)]
+
+        for (n, nDiagGoal) in nGluons:
+            myleglist=base_objects.LegList([base_objects.Leg({'id':21,
+                                              'number':num,
+                                              'loop_line':False}) \
+                                              for num in range(1, (n+3))])
+            myleglist[0].set('state',False)
+            myleglist[1].set('state',False)        
+
+            myproc=base_objects.Process({'legs':myleglist,
+                                       'model':self.myloopmodel,
+                                       'orders':{},
+                                       'squared_orders': {},
+                                       'perturbation_couplings':['QCD']})
+
+            myloopamplitude = loop_diagram_generation.LoopAmplitude()
+            myloopamplitude.set('process', myproc)
+            myloopamplitude.generate_diagrams()
+            self.assertEqual(len(myloopamplitude.get('loop_diagrams')), nDiagGoal)
+
 
     def test_diagram_generation_uux_ddx(self):
-        """Test the number of loop diagrams generated for e+e->dd~ (s channel)
+        """Test the number of loop diagrams generated for uu~>dd~ for different choices
+           of orders.
         """
 
         myleglist = base_objects.LegList()
-
         myleglist.append(base_objects.Leg({'id':2,
                                          'state':False}))
         myleglist.append(base_objects.Leg({'id':-2,
@@ -832,15 +896,262 @@ class LoopDiagramGenerationTest(unittest.TestCase):
         myleglist.append(base_objects.Leg({'id':-1,
                                          'state':True}))
 
-        myproc = base_objects.Process({'legs':myleglist,
-                                       'model':self.myloopmodel,
-                                       'orders':{'QED':5},
-                                       'squared_orders': {},
-                                       'perturbation_couplings':['QCD',]})
+        ordersChoices=[({},['QCD','QED'],{},21),\
+                       ({},['QCD','QED',],{'QED':-99},28),\
+                       ({},['QCD'],{},9),\
+                       ({},['QED'],{},2),\
+                       ({'QED':0},['QCD'],{},9),\
+                       ({'QCD':0},['QED'],{},7),\
+                       ({},['QCD','QED'],{'QED':-1},9),\
+                       ({},['QCD','QED'],{'QCD':-1},7),\
+                       # These last two are of no physics interest
+                       # It is just for the sake of the test.
+                       ({'QED':0},['QCD','QED'],{},21),\
+                       ({'QCD':0},['QCD','QED'],{},19)]
 
-        myloopamplitude = loop_diagram_generation.LoopAmplitude()
-        myloopamplitude.set('process', myproc)
-        myloopamplitude.generate_diagrams()
+        for (bornOrders,pert,sqOrders,nDiagGoal) in ordersChoices:
+            myproc = base_objects.Process({'legs':copy.copy(myleglist),
+                                           'model':self.myloopmodel,
+                                           'orders':bornOrders,
+                                           'perturbation_couplings':pert,
+                                           'squared_orders':sqOrders})
+    
+            myloopamplitude = loop_diagram_generation.LoopAmplitude()
+            myloopamplitude.set('process', myproc)
+            myloopamplitude.generate_diagrams()
+            self.assertEqual(len(myloopamplitude.get('loop_diagrams')),nDiagGoal)
 
-        #self.assertEqual(len(myloopamplitude.get('loop_diagrams')), 2)
-        self.assertEqual(len(myloopamplitude.get('born_diagrams')), 2)
+    def test_diagram_generation_ddx_ddx(self):
+        """Test the number of loop diagrams generated for uu~>dd~ for different choices
+           of orders.
+        """
+
+        myleglist = base_objects.LegList()
+        myleglist.append(base_objects.Leg({'id':1,
+                                         'state':False}))
+        myleglist.append(base_objects.Leg({'id':-1,
+                                         'state':False}))
+        myleglist.append(base_objects.Leg({'id':1,
+                                         'state':True}))
+        myleglist.append(base_objects.Leg({'id':-1,
+                                         'state':True}))
+
+        ordersChoices=[({},['QCD','QED'],{},42),\
+                       ({},['QCD','QED',],{'QED':-99},56),\
+                       ({},['QED'],{},4),\
+                       ({},['QCD'],{},18),\
+                       ({'QED':0},['QCD'],{},18),\
+                       ({'QCD':0},['QED'],{},14),\
+                       ({},['QCD','QED'],{'QED':-1},18),\
+                       ({},['QCD','QED'],{'QCD':-1},14)]
+        for (bornOrders,pert,sqOrders,nDiagGoal) in ordersChoices:
+            myproc = base_objects.Process({'legs':copy.copy(myleglist),
+                                           'model':self.myloopmodel,
+                                           'orders':bornOrders,
+                                           'perturbation_couplings':pert,
+                                           'squared_orders':sqOrders})
+    
+            myloopamplitude = loop_diagram_generation.LoopAmplitude()
+            myloopamplitude.set('process', myproc)
+            myloopamplitude.generate_diagrams()
+            self.assertEqual(len(myloopamplitude.get('loop_diagrams')),nDiagGoal)
+
+#===============================================================================
+# LoopDiagramFDStruct Test
+#===============================================================================
+class LoopDiagramFDStructTest(unittest.TestCase):
+    """Test class for the tagging functions of LoopDiagram and FDStructure classes"""
+
+    mypartlist = base_objects.ParticleList()
+    myinterlist = base_objects.InteractionList()
+    mymodel = base_objects.Model()
+    myproc = base_objects.Process()
+    myloopdiag = loop_base_objects.LoopDiagram()
+
+    def setUp(self):
+        """ Setup a toy-model with gluon and down-quark only """
+
+        # A gluon
+        self.mypartlist.append(base_objects.Particle({'name':'g',
+                      'antiname':'g',
+                      'spin':3,
+                      'color':8,
+                      'mass':'zero',
+                      'width':'zero',
+                      'texname':'g',
+                      'antitexname':'g',
+                      'line':'curly',
+                      'charge':0.,
+                      'pdg_code':21,
+                      'propagating':True,
+                      'is_part':True,
+                      'self_antipart':True}))
+
+        # A quark D and its antiparticle
+        self.mypartlist.append(base_objects.Particle({'name':'d',
+                      'antiname':'d~',
+                      'spin':2,
+                      'color':3,
+                      'mass':'dmass',
+                      'width':'zero',
+                      'texname':'d',
+                      'antitexname':'\bar d',
+                      'line':'straight',
+                      'charge':-1. / 3.,
+                      'pdg_code':1,
+                      'propagating':True,
+                      'is_part':True,
+                      'self_antipart':False}))
+        antid = copy.copy(self.mypartlist[1])
+        antid.set('is_part', False)
+
+        # 3 gluon vertex
+        self.myinterlist.append(base_objects.Interaction({
+                      'id': 1,
+                      'particles': base_objects.ParticleList(\
+                                            [self.mypartlist[0]] * 3),
+                      'color': [],
+                      'lorentz':['L1'],
+                      'couplings':{(0, 0):'G'},
+                      'orders':{'QCD':1}}))
+
+        # 4 gluon vertex
+        self.myinterlist.append(base_objects.Interaction({
+                      'id': 2,
+                      'particles': base_objects.ParticleList(\
+                                            [self.mypartlist[0]] * 4),
+                      'color': [],
+                      'lorentz':['L1'],
+                      'couplings':{(0, 0):'G^2'},
+                      'orders':{'QCD':2}}))
+
+        # Gluon coupling to the down-quark
+        self.myinterlist.append(base_objects.Interaction({
+                      'id': 3,
+                      'particles': base_objects.ParticleList(\
+                                            [self.mypartlist[1], \
+                                             antid, \
+                                             self.mypartlist[0]]),
+                      'color': [],
+                      'lorentz':['L1'],
+                      'couplings':{(0, 0):'GQQ'},
+                      'orders':{'QCD':1}}))
+
+        self.mymodel.set('particles', self.mypartlist)
+        self.mymodel.set('interactions', self.myinterlist)
+        self.myproc.set('model',self.mymodel)
+
+    def test_gg_5gglgl_bubble_tag(self):
+        """ Test the gg>ggggg g*g* tagging of a bubble"""
+
+        # Five gluon legs with two initial states
+        myleglist = base_objects.LegList([base_objects.Leg({'id':21,
+                                              'number':num,
+                                              'loop_line':False}) \
+                                              for num in range(1, 10)])
+        myleglist[7].set('loop_line', True)
+        myleglist[8].set('loop_line', True)
+        l1=myleglist[0]
+        l2=myleglist[1]
+        l3=myleglist[2]
+        l4=myleglist[3]
+        l5=myleglist[4]
+        l6=myleglist[5]
+        l7=myleglist[6]
+        l8=myleglist[7]
+        l9=myleglist[8]
+
+        self.myproc.set('legs',myleglist)
+
+        l67 = base_objects.Leg({'id':21,'number':6,'loop_line':False})
+        l56 = base_objects.Leg({'id':21,'number':5,'loop_line':False})
+        l235 = base_objects.Leg({'id':21,'number':2,'loop_line':False}) 
+        l24 = base_objects.Leg({'id':21,'number':2,'loop_line':False})
+        l28 = base_objects.Leg({'id':21,'number':2,'loop_line':True})
+        l19 = base_objects.Leg({'id':21,'number':1,'loop_line':True})
+
+        vx19 = base_objects.Vertex({'legs':base_objects.LegList([l1, l9, l19]), 'id': 1})
+        vx67 = base_objects.Vertex({'legs':base_objects.LegList([l6, l7, l67]), 'id': 1})
+        vx56 = base_objects.Vertex({'legs':base_objects.LegList([l5, l67, l56]), 'id': 1})
+        vx235 = base_objects.Vertex({'legs':base_objects.LegList([l2, l3, l56, l235]), 'id': 2})
+        vx24 = base_objects.Vertex({'legs':base_objects.LegList([l4, l235, l24]), 'id': 1})
+        vx28 = base_objects.Vertex({'legs':base_objects.LegList([l235, l8, l28]), 'id': 1})
+        vx0 = base_objects.Vertex({'legs':base_objects.LegList([l19, l28]), 'id': 0})
+
+        myVertexList=base_objects.VertexList([vx19,vx67,vx56,vx235,vx24,vx28,vx0])
+
+        myBubbleDiag=loop_base_objects.LoopDiagram({'vertices':myVertexList,'type':21})
+
+        myStructRep=loop_base_objects.FDStructureList()
+        myStruct=loop_base_objects.FDStructure()
+
+        goal_canonicalStruct=(((2, 3, 4, 5, 6, 7), 1), ((2, 3, 5, 6, 7), 2), ((5, 6, 7), 1), ((6, 7), 1))
+        canonicalStruct=myBubbleDiag.construct_FDStructure(5, 0, 2, myStruct)
+        self.assertEqual(canonicalStruct, goal_canonicalStruct)
+        
+        goal_vxList=base_objects.VertexList([vx67,vx56,vx235,vx24])
+        myStruct.set('canonical',canonicalStruct)
+        myStruct.generate_vertices(self.myproc)
+        self.assertEqual(myStruct['vertices'],goal_vxList)
+
+        goal_tag=[[21, [0], 1], [21, [1], 1]]
+        vx28_tag=base_objects.Vertex({'legs':base_objects.LegList([l235, l8, l28]), 'id': 1})
+        vx129_tag=base_objects.Vertex({'legs':base_objects.LegList([l1, l28, l9]), 'id': 1})
+        goal_vertices=base_objects.VertexList([vx28_tag,vx129_tag])
+        myBubbleDiag.tag(myStructRep,8,9,self.myproc)
+        self.assertEqual(myBubbleDiag.get('canonical_tag'), goal_tag)
+        self.assertEqual(myBubbleDiag.get('vertices'), goal_vertices)
+
+    def test_gg_4gdldxl_penta_tag(self):
+        """ Test the gg>gggg d*dx* tagging of a quark pentagon"""
+
+        # Five gluon legs with two initial states
+        myleglist = base_objects.LegList([base_objects.Leg({'id':21,
+                                              'number':num,
+                                              'loop_line':False}) \
+                                              for num in range(1, 7)])
+        myleglist.append(base_objects.Leg({'id':1,'number':7,'loop_line':True}))
+        myleglist.append(base_objects.Leg({'id':-1,'number':8,'loop_line':True}))                         
+        l1=myleglist[0]
+        l2=myleglist[1]
+        l3=myleglist[2]
+        l4=myleglist[3]
+        l5=myleglist[4]
+        l6=myleglist[5]
+        l7=myleglist[6]
+        l8=myleglist[7]
+
+        self.myproc.set('legs',myleglist)
+
+        # One way of constructing this diagram, with a three-point amplitude
+        l17 = base_objects.Leg({'id':1,'number':1,'loop_line':True})
+        l12 = base_objects.Leg({'id':1,'number':1,'loop_line':True})
+        l68 = base_objects.Leg({'id':-1,'number':6,'loop_line':True}) 
+        l56 = base_objects.Leg({'id':-1,'number':5,'loop_line':True})
+        l34 = base_objects.Leg({'id':21,'number':3,'loop_line':False})
+
+        vx17 = base_objects.Vertex({'legs':base_objects.LegList([l1, l7, l17]), 'id': 3})
+        vx12 = base_objects.Vertex({'legs':base_objects.LegList([l17, l2, l12]), 'id': 3})
+        vx68 = base_objects.Vertex({'legs':base_objects.LegList([l6, l8, l68]), 'id': 3})
+        vx56 = base_objects.Vertex({'legs':base_objects.LegList([l5, l68, l56]), 'id': 3})
+        vx34 = base_objects.Vertex({'legs':base_objects.LegList([l3, l4, l34]), 'id': 1})
+        vx135 = base_objects.Vertex({'legs':base_objects.LegList([l12, l56, l34]), 'id': 3})
+
+        myVertexList1=base_objects.VertexList([vx17,vx12,vx68,vx56,vx34,vx135])
+
+        myPentaDiag1=loop_base_objects.LoopDiagram({'vertices':myVertexList1,'type':1})
+
+        myStructRep=loop_base_objects.FDStructureList()
+        myStruct=loop_base_objects.FDStructure()
+        
+        goal_tag=[[1, [0], 3], [1, [1], 3], [1, [2], 3], [1, [3], 3], [1, [4], 3]]
+        myPentaDiag1.tag(myStructRep,7,8,self.myproc)
+        self.assertEqual(myPentaDiag1.get('canonical_tag'), goal_tag)
+
+        vx17_tag=base_objects.Vertex({'legs':base_objects.LegList([l1, l7, l17]), 'id': 3})
+        vx12_tag=base_objects.Vertex({'legs':base_objects.LegList([l2, l17, l12]), 'id': 3})
+        vx13_tag=base_objects.Vertex({'legs':base_objects.LegList([l34, l12, l17]), 'id': 3})
+        vx15_tag=base_objects.Vertex({'legs':base_objects.LegList([l5, l17, l17]), 'id': 3})
+        vx168_tag=base_objects.Vertex({'legs':base_objects.LegList([l6, l17, l8]), 'id': 3})        
+        goal_vertices=base_objects.VertexList([vx17_tag,vx12_tag,vx13_tag,vx15_tag,vx168_tag])
+        self.assertEqual(myPentaDiag1.get('vertices'), goal_vertices)
