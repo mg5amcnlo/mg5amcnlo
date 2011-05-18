@@ -122,16 +122,17 @@ class TestDiagramSymmetry(unittest.TestCase):
                           1, 1, 1, 1, 1, 1, 1, 1, 1, -8, -9, -10, -11, -12, -13,
                           -14, -15, -16, -17, -21, -22, -23])
 
-        # Check that the momentum assignments work
-        matrix_element = \
-                     subproc_group.get('matrix_elements')[1]
-        process = matrix_element.get('processes')[0]
-
         return
 
         # The test below doesn't apply with the new way of determining
         # config symmetry for subprocess groups, since we don't demand
         # that symmetric diagrams have identical particles.
+
+        # Check that the momentum assignments work
+        matrix_element = \
+                     subproc_group.get('matrix_elements')[1]
+        process = matrix_element.get('processes')[0]
+
         evaluator = process_checks.MatrixElementEvaluator(self.base_model,
                                                           auth_skipping = True,
                                                           reuse = True)
@@ -149,6 +150,56 @@ class TestDiagramSymmetry(unittest.TestCase):
                                               matrix_element, new_p)
             self.assertAlmostEqual(amp2[iamp], amp2_org[isymamp])
         
+    def test_find_symmetry_decay_chain_with_subprocess_group(self):
+        """Test the find_symmetry function for subprocess groups"""
+
+        procs = [[2,-1,24,21,21], [-3,4,24,21,21]]
+        decays = [[24,-11,12],[24,-13,14]]
+        amplitudes = diagram_generation.AmplitudeList()
+        decay_amps = diagram_generation.DecayChainAmplitudeList()
+
+        for proc, decay in zip(procs, decays):
+            # Define the multiprocess
+            my_leglist = base_objects.LegList([\
+                base_objects.Leg({'id': id, 'state': True}) for id in proc])
+
+            my_leglist[0].set('state', False)
+            my_leglist[1].set('state', False)
+
+            my_decaylegs = base_objects.LegList([\
+                base_objects.Leg({'id': id, 'state': True}) for id in decay])
+
+            my_decaylegs[0].set('state', False)
+            my_process = base_objects.Process({'legs':my_leglist,
+                                               'model':self.base_model})
+            my_decay_proc = base_objects.Process({'legs':my_decaylegs,
+                                                  'model':self.base_model,
+                                                  'is_decay_chain': True})
+            my_amplitude = diagram_generation.Amplitude(my_process)
+            my_decay = diagram_generation.DecayChainAmplitude(my_decay_proc)
+            amplitudes.append(my_amplitude)
+            decay_amps.append(my_decay)
+
+        amplitudes = diagram_generation.DecayChainAmplitude({\
+            'amplitudes': amplitudes,
+            'decay_chains': decay_amps})
+
+        subproc_groups = \
+                  group_subprocs.DecayChainSubProcessGroup.group_amplitudes(\
+                         amplitudes).generate_helas_decay_chain_subproc_groups()
+        self.assertEqual(len(subproc_groups), 1)
+
+        subproc_group = subproc_groups[0]
+        self.assertEqual(len(subproc_group.get('matrix_elements')), 2)
+
+        symmetry, perms, ident_perms = diagram_symmetry.find_symmetry(\
+                                                subproc_group)
+
+        self.assertEqual(len([s for s in symmetry if s > 0]), 5)
+
+        self.assertEqual(symmetry,
+                         [1, -1, 1, 1, 1, -4, -5, 1])
+
     def test_rotate_momenta(self):
         """Test that matrix element and amp2 identical for rotated momenta"""
 

@@ -698,21 +698,17 @@ class TestCmdShell2(unittest.TestCase,
                                            'P0_qq_gogo_go_qqn1_go_qqn1',
                                            'symfact.dat')).read(),
                          """ 1    1
- 2    1
- 3    1
- 4    1
- 5    -2
- 6    1
- 7    1
- 8    1
+ 2    -1
+ 3    -1
+ 4    -1
+ 5    1
+ 6    -5
+ 7    -5
+ 8    -5
  9    1
- 10   1
- 11   1
- 12   1
- 13   1
- 14   1
- 15   -12
- 16   1
+ 10   -9
+ 11   -9
+ 12   -9
 """)
 
         # Compile the Source directory
@@ -738,17 +734,17 @@ class TestCmdShell2(unittest.TestCase,
                                            'P0_qq_gogo_go_qqn1_go_qqn1',
                                            'symfact.dat')).read(),
                          """1.030     1
-2.030     1
-3.030     1
-4.030     1
-     5    -2
-6.030     1
-7.030     1
-8.030     1
-11.030     1
-12.030     1
-    15   -12
-16.030     1
+     2    -1
+     3    -1
+     4    -1
+5.030     1
+     6    -5
+     7    -5
+     8    -5
+9.030     1
+    10    -9
+    11    -9
+    12    -9
 """)
         
     def test_madevent_subproc_group_decay_chain(self):
