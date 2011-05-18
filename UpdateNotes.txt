@@ -1,5 +1,13 @@
 Update notes for MadGraph 5 (in reverse time order)
 
+1.3.0 (17/05/11): JA: Allow for grouped subprocesses also for MG4 models
+                  JA: Improved multiprocess diagram generation to reuse
+                      diagrams for crossed processes
+                  JA: Improved efficiency of identification of
+                      identical matrix elements
+                  JA: Improved identification of diagrams with identical
+                      divergency structure for grouped subprocesses
+
 1.2.4 (15/05/11): JA: Fixed long-standing bug in DECAY relating to
                       the cross section info in <init> block, and
                       fixed parameter reading for MG5 SM model.
