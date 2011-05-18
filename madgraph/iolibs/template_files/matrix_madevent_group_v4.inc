@@ -26,10 +26,6 @@ C
     PARAMETER (NDIAGS=%(ndiags)d) 
     INTEGER    THEL
     PARAMETER (THEL=2*NCOMB)
-    REAL*8 LIMHEL
-    PARAMETER(LIMHEL=1e-6)
-    INTEGER MAXTRIES
-    PARAMETER(MAXTRIES=10)
 C  
 C ARGUMENTS 
 C  
@@ -46,7 +42,7 @@ C
         LOGICAL GOODHEL(NCOMB,2)
         REAL*8 HWGT, XTOT, XTRY, XREJ, XR, YFRAC(0:NCOMB)
         INTEGER IDUM, NGOOD(2), IGOOD(NCOMB,2)
-	INTEGER JHEL(2), J, JJ, HEL(NEXTERNAL)
+	INTEGER JHEL(2), J, JJ
         REAL     XRAN1
         EXTERNAL XRAN1
 C  
@@ -64,10 +60,6 @@ C
     REAL*8 POL(2)
     COMMON/TO_POLARIZATION/ POL
     
-C   PERM has the present permutation
-    INTEGER PERM(NEXTERNAL)
-    COMMON/TO_PERM/PERM
-
     INTEGER          ISUM_HEL
     LOGICAL                    MULTI_CHANNEL
     COMMON/TO_MATRIX/ISUM_HEL, MULTI_CHANNEL
@@ -106,8 +98,7 @@ C ----------
     IF (ISHEL(IMIRROR) .EQ. 0 .OR. NTRY(IMIRROR) .LE. MAXTRIES) THEN
       DO I=1,NCOMB
          IF (GOODHEL(I,IMIRROR) .OR. NTRY(IMIRROR).LE.MAXTRIES) THEN
-            CALL SWITCHHEL(NHEL(1,I),HEL,PERM,NEXTERNAL)
-            T=MATRIX%(proc_id)s(P,HEL,JC(1))
+            T=MATRIX%(proc_id)s(P ,NHEL(1,I),JC(1))
             DO JJ=1,nincoming
                IF(POL(JJ).NE.1d0.AND.NHEL(JJ,I).EQ.INT(SIGN(1d0,POL(JJ)))) THEN
                   T=T*ABS(POL(JJ))
@@ -148,8 +139,7 @@ c       Check if we have stable helicities in this event
             IF (JHEL(IMIRROR) .GT. NGOOD(IMIRROR)) JHEL(IMIRROR)=1
             HWGT = REAL(NGOOD(IMIRROR))/REAL(ISHEL(IMIRROR))
             I = IGOOD(JHEL(IMIRROR),IMIRROR)
-            CALL SWITCHHEL(NHEL(1,I),HEL,PERM,NEXTERNAL)
-            T=MATRIX%(proc_id)s(P,HEL,JC(1))            
+            T=MATRIX%(proc_id)s(P ,NHEL(1,I),JC(1))            
             DO JJ=1,nincoming
               IF(POL(JJ).NE.1d0.AND.NHEL(JJ,I).EQ.INT(SIGN(1d0,POL(JJ)))) THEN
                 T=T*ABS(POL(JJ))

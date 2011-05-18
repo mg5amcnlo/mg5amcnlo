@@ -9,8 +9,6 @@ Update notes for MadGraph 5 (in reverse time order)
                       matrix elements
                   JA: Improved identification of diagrams with identical
                       divergency structure for grouped subprocesses
-                  JA: Ensure that helicity info is correct when
-                      permuted momenta are used (in grouped subprocesses)
 
 1.2.4 (15/05/11): JA: Fixed long-standing bug in DECAY relating to
                       the cross section info in <init> block, and
