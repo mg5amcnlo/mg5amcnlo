@@ -200,7 +200,7 @@ class MG4Runner(MERunner):
 
             # Run the newprocess script
             logging.info("Running newprocess script")
-            subprocess.call(os.path.join('bin', 'newprocess'),
+            subprocess.call(os.path.join('.','bin', 'newprocess'),
                             cwd=dir_name,
                             )#stdout=open('/dev/null', 'w'), stderr=subprocess.STDOUT)
 
@@ -339,7 +339,7 @@ class MG5Runner(MG4Runner):
         the specified model, the specified maximal coupling orders and a certain
         energy for incoming particles (for decay, incoming particle is at rest).
         """
-
+        self.res_list = [] # ensure that to be void, and avoid pointer problem 
         self.proc_list = proc_list
         self.model = model
         self.orders = orders
@@ -373,7 +373,8 @@ class MG5Runner(MG4Runner):
 
         # Get the ME value
         for i, proc in enumerate(proc_list):
-            self.res_list.append(self.get_me_value(proc, i))
+            value = self.get_me_value(proc, i)
+            self.res_list.append(value)
 
         return self.res_list
 
@@ -645,6 +646,7 @@ class MEComparator(object):
         if filename:
             file = open(filename, 'w')
             file.write(res_str)
+            file.write(str(failed_proc_list))
             file.close()
 
     def get_non_zero_processes(self):
@@ -725,11 +727,13 @@ def create_proc_list_enhanced(init_part_list, final_part_list_1,
                 for fprod2 in itertools.product(final_part_list_2,
                                                 repeat=final_2):                
                     sorted_product = sorted(iprod) + sorted(fprod1 + fprod2)
+                    if  sorted_product not in proc_list:
+                        proc_list.append(sorted_product)
             else:
                 sorted_product = sorted(iprod) + sorted(fprod1)
 
-            if  sorted_product not in proc_list:
-                proc_list.append(sorted_product)
+                if  sorted_product not in proc_list:
+                    proc_list.append(sorted_product)
 
     for proc in proc_list:
         #check charge conservation

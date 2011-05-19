@@ -761,9 +761,9 @@ class DiagramGenerationTest(unittest.TestCase):
 
         goaldiagrams = base_objects.DiagramList([\
             base_objects.Diagram({'vertices': base_objects.VertexList(\
-            [vx12glue, vx34glue, vx12glue34glue5]), 'orders':{'QCD':3}}),
+            [vx12glue, vx34glue, vx12glue34glue5]), 'orders':{'QED':0, 'QCD':3}}),
             base_objects.Diagram({'vertices': base_objects.VertexList(\
-            [vx12glue, vx35, vx12glue354]), 'orders':{'QCD':3}})\
+            [vx12glue, vx35, vx12glue354]), 'orders':{'QED':0, 'QCD':3}})\
             ])
 
         for diagram in mydiagrams:
@@ -1640,7 +1640,7 @@ class DiagramGenerationTest(unittest.TestCase):
         myamplitude.generate_diagrams()
         diagrams = myamplitude.get('diagrams')
         self.assertEqual(len(diagrams), 2)
-        self.assertEqual(diagrams[0].get('orders'),{'QCD':2})
+        self.assertEqual(diagrams[0].get('orders'),{'QCD':2, 'NP':0})
         self.assertEqual(diagrams[1].get('orders'),{'QCD':1, 'NP':1})
 
         myleglist.append(base_objects.Leg({'id':21,
@@ -1654,21 +1654,127 @@ class DiagramGenerationTest(unittest.TestCase):
         myamplitude.generate_diagrams()
         diagrams = myamplitude.get('diagrams')
         self.assertEqual(len(diagrams), 12)
-        orders = [{'QCD':3},
+        orders = [{'QCD':3, 'NP':0},
                   {'QCD':2, 'NP':1},
                   {'QCD':2, 'NP':1},
                   {'QCD':1, 'NP':2},
-                  {'QCD':3},
+                  {'QCD':3, 'NP':0},
                   {'QCD':2, 'NP':1},
                   {'QCD':2, 'NP':1},
                   {'QCD':1, 'NP':2},
-                  {'QCD':3},
+                  {'QCD':3, 'NP':0},
                   {'QCD':2, 'NP':1},
-                  {'QCD':3},
+                  {'QCD':3, 'NP':0},
                   {'QCD':2, 'NP':1}]
         for diagram, order in zip(diagrams, orders):
             self.assertEqual(diagram.get('orders'),order)
 
+    def test_multiple_interaction_identical_particles(self):
+        """Test the case with multiple interactions for identical particles
+        """
+
+        mypartlist = base_objects.ParticleList();
+        myinterlist = base_objects.InteractionList();
+
+        # A quark U and its antiparticle
+        mypartlist.append(base_objects.Particle({'name':'u',
+                      'antiname':'u~',
+                      'spin':2,
+                      'color':3,
+                      'mass':'zero',
+                      'width':'zero',
+                      'texname':'u',
+                      'antitexname':'\bar u',
+                      'line':'straight',
+                      'charge':2. / 3.,
+                      'pdg_code':2,
+                      'propagating':True,
+                      'is_part':True,
+                      'self_antipart':False}))
+        u = mypartlist[-1]
+        antiu = copy.copy(u)
+        antiu.set('is_part', False)
+
+        # A gluon
+        mypartlist.append(base_objects.Particle({'name':'g',
+                      'antiname':'g',
+                      'spin':3,
+                      'color':8,
+                      'mass':'zero',
+                      'width':'zero',
+                      'texname':'g',
+                      'antitexname':'g',
+                      'line':'curly',
+                      'charge':0.,
+                      'pdg_code':21,
+                      'propagating':True,
+                      'is_part':True,
+                      'self_antipart':True}))
+
+        g = mypartlist[-1]
+
+        # two different couplings  u u g
+
+        myinterlist.append(base_objects.Interaction({
+                      'id': 1,
+                      'particles': base_objects.ParticleList(\
+                                            [antiu, \
+                                             u, \
+                                             g]),
+                      'color': [],
+                      'lorentz':['L1'],
+                      'couplings':{(0, 0):'GQCD'},
+                      'orders':{'QCD':1}}))
+
+        myinterlist.append(base_objects.Interaction({
+                      'id': 2,
+                      'particles': base_objects.ParticleList(\
+                                            [antiu, \
+                                             u, \
+                                             g]),
+                      'color': [],
+                      'lorentz':['L1'],
+                      'couplings':{(0, 0):'GEFF'},
+                      'orders':{'EFF':1}}))
+
+        # 3 gluon vertex
+        self.myinterlist.append(base_objects.Interaction({
+                      'id': 1,
+                      'particles': base_objects.ParticleList(\
+                                            [self.mypartlist[0]] * 3),
+                      'color': [],
+                      'lorentz':['L1'],
+                      'couplings':{(0, 0):'G'},
+                      'orders':{'QCD':1}}))
+
+        mymodel = base_objects.Model()
+        mymodel.set('particles', mypartlist)
+        mymodel.set('interactions', myinterlist)
+
+        myleglist = base_objects.LegList()
+
+        myleglist.append(base_objects.Leg({'id':21,
+                                         'state':False}))
+        myleglist.append(base_objects.Leg({'id':21,
+                                         'state':False}))
+        myleglist.append(base_objects.Leg({'id':2,
+                                         'state':True}))
+        myleglist.append(base_objects.Leg({'id':-2,
+                                         'state':True}))
+
+        myproc = base_objects.Process({'legs':myleglist,
+                                       'model':mymodel})
+
+        myamplitude = diagram_generation.Amplitude()
+        myamplitude.set('process', myproc)
+
+        self.assertEqual(len(myamplitude.get('diagrams')), 8)
+        
+        goal_lastvx = set([21,2,-2])
+        for diag in myamplitude.get('diagrams'):
+            self.assertEqual(set([l.get('id') for l in \
+                                  diag.get('vertices')[-1].get('legs')]),
+                             goal_lastvx)
 
 #===============================================================================
 # Muliparticle test
@@ -2326,7 +2432,7 @@ class MultiProcessTest(unittest.TestCase):
                   'model':self.mymodel,
                   'id':3}
 
-        self.my_process_definition = base_objects.ProcessDefinition(self.mydict)
+        self.my_process_definition = base_objects.ProcessDefinition(mydict)
         self.my_process_definitions = base_objects.ProcessDefinitionList(\
             [self.my_process_definition])
 

@@ -143,6 +143,8 @@ class Amplitude(base_objects.PhysicsObject):
 
         7. Repeat from 3 (recursion done by reduce_leglist)
 
+        8. Replace final p=p vertex
+        
         Be aware that the resulting vertices have all particles outgoing,
         so need to flip for incoming particles when used.
 
@@ -205,7 +207,7 @@ class Amplitude(base_objects.PhysicsObject):
                 part = model.get('particle_dict')[leg.get('id')]
                 try:
                     value = part.get(charge)
-                except AttributeError:
+                except AttributeError, PhysicsObjectError:
                     value = 0
                     
                 if (leg.get('id') != part['pdg_code']) != leg['state']:
@@ -342,15 +344,37 @@ class Amplitude(base_objects.PhysicsObject):
                                 for vertex in diagram.get('vertices')[:-1]]),
                        res))
 
-        # Trim down number of legs and vertices used to save memory
-        self.trim_diagrams(res)
-
         # Set actual coupling orders for each diagram
         for diagram in res:
             diagram.calculate_orders(model)
 
+        # Replace final id=0 vertex if necessary
+        if not process.get('is_decay_chain'):
+            for diagram in res:
+                vertices = diagram.get('vertices')
+                if len(vertices) > 1 and vertices[-1].get('id') == 0:
+                    # Need to "glue together" last and next-to-last
+                    # vertex, by replacing the (incoming) last leg of the
+                    # next-to-last vertex with the (outgoing) leg in the
+                    # last vertex
+                    vertices = copy.copy(vertices)
+                    lastvx = vertices.pop()
+                    nexttolastvertex = copy.copy(vertices.pop())
+                    legs = copy.copy(nexttolastvertex.get('legs'))
+                    ntlnumber = legs[-1].get('number')
+                    lastleg = filter(lambda leg: leg.get('number') != ntlnumber,
+                                     lastvx.get('legs'))[0]
+                    # Replace the last leg of nexttolastvertex
+                    legs[-1] = lastleg
+                    nexttolastvertex.set('legs', legs)
+                    vertices.append(nexttolastvertex)
+                    diagram.set('vertices', vertices)
+
         if res:
             logger.info("Process has %d diagrams" % len(res))
+
+        # Trim down number of legs and vertices used to save memory
+        self.trim_diagrams(res)
 
         # Sort process legs according to leg number
         self.get('process').get('legs').sort()
@@ -408,6 +432,7 @@ class Amplitude(base_objects.PhysicsObject):
 
         if curr_leglist.can_combine_to_0(ref_dict_to0, is_decay_proc):
             # Extract the interaction id associated to the vertex 
+            
             vertex_ids = self.get_combined_vertices(curr_leglist,
                        copy.copy(ref_dict_to0[tuple(sorted([leg.get('id') for \
                                                        leg in curr_leglist]))]))
@@ -664,7 +689,7 @@ class Amplitude(base_objects.PhysicsObject):
     def get_combined_legs(self, legs, leg_vert_ids, number, state):
         """Create a set of new legs from the info given. This can be
         overloaded by daughter classes."""
-        
+
         mylegs = [(base_objects.Leg({'id':leg_id,
                                     'number':number,
                                     'state':state,

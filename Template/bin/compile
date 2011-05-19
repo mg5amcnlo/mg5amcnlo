@@ -143,6 +143,7 @@ if [[ -d Source ]]; then
     make ../bin/gen_ximprove
     make all
     make ../bin/combine_events
+    make ../bin/combine_runs
     cd ..
 else
     echo 'Error Source directory not found'

@@ -1,4 +1,4 @@
-################################################################################
+ ################################################################################
 #
 # Copyright (c) 2009 The MadGraph Development team and Contributors
 #
@@ -38,6 +38,7 @@ import madgraph.core.helas_objects as helas_objects
 import madgraph.core.diagram_generation as diagram_generation
 import madgraph.core.color_algebra as color
 import madgraph.various.diagram_symmetry as diagram_symmetry
+import madgraph.various.process_checks as process_checks
 import madgraph.core.color_amp as color_amp
 import tests.unit_tests.core.test_helas_objects as test_helas_objects
 import tests.unit_tests.iolibs.test_file_writers as test_file_writers
@@ -275,6 +276,8 @@ C
       REAL*8 DENOM(NCOLOR), CF(NCOLOR,NCOLOR)
       COMPLEX*16 AMP(NGRAPHS), JAMP(NCOLOR)
       COMPLEX*16 W(18,NWAVEFUNCS)
+      COMPLEX*16 DUM0,DUM1
+      DATA DUM0, DUM1/(0D0, 0D0), (1D0, 0D0)/
 C     
 C     GLOBAL VARIABLES
 C     
@@ -330,6 +333,7 @@ C     Amplitude(s) for diagram number 6
             self.mymatrixelement,
             self.myfortranmodel)
 
+        #print open(self.give_pos('test')).read()
         self.assertFileContains('test', goal_matrix_f)
 
     def test_coeff_string(self):
@@ -597,12 +601,14 @@ C     Amplitude(s) for diagram number 6
         amp2_lines = \
                  exporter.get_amp2_lines(matrix_elements[0],
                                           subprocess_group.get('diagram_maps')[0])
+                 
         self.assertEqual(amp2_lines,
-                         ['AMP2(1)=AMP2(1)+AMP(1)*dconjg(AMP(1))+AMP(2)*dconjg(AMP(2))',
-                          'AMP2(3)=AMP2(3)+AMP(3)*dconjg(AMP(3))+AMP(4)*dconjg(AMP(4))+AMP(5)*dconjg(AMP(5))+AMP(6)*dconjg(AMP(6))',
-                          'AMP2(4)=AMP2(4)+AMP(7)*dconjg(AMP(7))+AMP(8)*dconjg(AMP(8))',
-                          'AMP2(6)=AMP2(6)+AMP(9)*dconjg(AMP(9))+AMP(10)*dconjg(AMP(10))+AMP(11)*dconjg(AMP(11))+AMP(12)*dconjg(AMP(12))'])
-        
+                         ['AMP2(1)=AMP2(1)+AMP(1)*dconjg(AMP(1))',
+			  'AMP2(2)=AMP2(2)+AMP(2)*dconjg(AMP(2))',
+			  'AMP2(3)=AMP2(3)+AMP(3)*dconjg(AMP(3))',
+			  'AMP2(4)=AMP2(4)+AMP(4)*dconjg(AMP(4))',
+			  'AMP2(5)=AMP2(5)+AMP(5)*dconjg(AMP(5))',
+			  'AMP2(6)=AMP2(6)+AMP(6)*dconjg(AMP(6))'])
         # Test configs.inc
 
         exporter.write_configs_file(\
@@ -614,22 +620,37 @@ C     Amplitude(s) for diagram number 6
       DATA MAPCONFIG(1)/1/
       DATA (IFOREST(I,-1,1),I=1,2)/4,3/
       DATA SPROP(-1,1)/21/
+      DATA TPRID(-1,1)/0/
 C     Diagram 2
       DATA MAPCONFIG(2)/2/
       DATA (IFOREST(I,-1,2),I=1,2)/4,3/
-      DATA SPROP(-1,2)/23/
+      DATA SPROP(-1,2)/22/
+      DATA TPRID(-1,2)/0/
 C     Diagram 3
       DATA MAPCONFIG(3)/3/
-      DATA (IFOREST(I,-1,3),I=1,2)/1,3/
-      DATA TPRID(-1,3)/21/
-      DATA (IFOREST(I,-2,3),I=1,2)/-1,4/
+      DATA (IFOREST(I,-1,3),I=1,2)/4,3/
+      DATA SPROP(-1,3)/23/
+      DATA TPRID(-1,3)/0/
 C     Diagram 4
       DATA MAPCONFIG(4)/4/
       DATA (IFOREST(I,-1,4),I=1,2)/1,3/
-      DATA TPRID(-1,4)/23/
+      DATA TPRID(-1,4)/21/
+      DATA SPROP(-1,4)/0/
       DATA (IFOREST(I,-2,4),I=1,2)/-1,4/
+C     Diagram 5
+      DATA MAPCONFIG(5)/5/
+      DATA (IFOREST(I,-1,5),I=1,2)/1,3/
+      DATA TPRID(-1,5)/22/
+      DATA SPROP(-1,5)/0/
+      DATA (IFOREST(I,-2,5),I=1,2)/-1,4/
+C     Diagram 6
+      DATA MAPCONFIG(6)/6/
+      DATA (IFOREST(I,-1,6),I=1,2)/1,3/
+      DATA TPRID(-1,6)/23/
+      DATA SPROP(-1,6)/0/
+      DATA (IFOREST(I,-2,6),I=1,2)/-1,4/
 C     Number of configs
-      DATA MAPCONFIG(0)/4/
+      DATA MAPCONFIG(0)/6/
 """
         #print open(self.give_pos('test')).read()
 
@@ -642,9 +663,11 @@ C     Number of configs
             subprocess_group.get('diagrams_for_configs'))
 
         goal_confsub = """      DATA (CONFSUB(I,1),I=1,2)/1,1/
-      DATA (CONFSUB(I,2),I=1,2)/3,3/
-      DATA (CONFSUB(I,3),I=1,2)/4,0/
-      DATA (CONFSUB(I,4),I=1,2)/6,0/
+      DATA (CONFSUB(I,2),I=1,2)/2,2/
+      DATA (CONFSUB(I,3),I=1,2)/3,3/
+      DATA (CONFSUB(I,4),I=1,2)/4,0/
+      DATA (CONFSUB(I,5),I=1,2)/5,0/
+      DATA (CONFSUB(I,6),I=1,2)/6,0/
 """
         
         #print open(self.give_pos('test')).read()
@@ -660,13 +683,16 @@ C     Number of configs
 
         #print open(self.give_pos('test')).read()
         self.assertFileContains('test',
-"""      LOGICAL ICOLAMP(2,4,2)
+"""      LOGICAL ICOLAMP(2,6,2)
       DATA(ICOLAMP(I,1,1),I=1,2)/.TRUE.,.TRUE./
       DATA(ICOLAMP(I,2,1),I=1,2)/.TRUE.,.FALSE./
-      DATA(ICOLAMP(I,3,1),I=1,2)/.TRUE.,.TRUE./
-      DATA(ICOLAMP(I,4,1),I=1,2)/.FALSE.,.TRUE./
+      DATA(ICOLAMP(I,3,1),I=1,2)/.TRUE.,.FALSE./
+      DATA(ICOLAMP(I,4,1),I=1,2)/.TRUE.,.TRUE./
+      DATA(ICOLAMP(I,5,1),I=1,2)/.FALSE.,.TRUE./
+      DATA(ICOLAMP(I,6,1),I=1,2)/.FALSE.,.TRUE./
       DATA(ICOLAMP(I,1,2),I=1,2)/.TRUE.,.TRUE./
       DATA(ICOLAMP(I,2,2),I=1,2)/.TRUE.,.FALSE./
+      DATA(ICOLAMP(I,3,2),I=1,2)/.TRUE.,.FALSE./
 """)
 
         # Test find_matrix_elements_for_configs
@@ -678,9 +704,9 @@ C     Number of configs
         symmetry, perms, ident_perms = \
                   diagram_symmetry.find_symmetry(subprocess_group)
 
-        self.assertEqual(symmetry, [1,1,1,1])
+        self.assertEqual(symmetry, [1,1,1,1,1,1])
         self.assertEqual(perms,
-                         [[0,1,2,3],[0,1,2,3],[0,1,2,3],[0,1,2,3]])
+                         [[0,1,2,3],[0,1,2,3],[0,1,2,3],[0,1,2,3],[0,1,2,3],[0,1,2,3]])
         self.assertEqual(ident_perms,
                          [[0,1,2,3]])
 
@@ -707,6 +733,332 @@ mirror  none"""
                  "      DATA (MIRRORPROCS(I),I=1,2)/.TRUE.,.FALSE./\n"
         
         self.assertFileContains('test', goal_mirror_inc)
+
+        # Test matrix1.f
+        exporter.write_matrix_element_v4(\
+            writers.FortranWriter(self.give_pos('test')),
+            matrix_elements[0],
+            helas_call_writers.FortranUFOHelasCallWriter(mymodel),
+            "1")
+
+        goal_matrix1 = \
+"""      SUBROUTINE SMATRIX1(P,ANS)
+C     
+C     Generated by MadGraph 5 v. %(version)s, %(date)s
+C     By the MadGraph Development Team
+C     Please visit us at https://launchpad.net/madgraph5
+C     
+C     MadGraph for Madevent Version
+C     
+C     Returns amplitude squared summed/avg over colors
+C     and helicities
+C     for the point in phase space P(0:3,NEXTERNAL)
+C     
+C     Process: u u~ > u u~
+C     
+      IMPLICIT NONE
+C     
+C     CONSTANTS
+C     
+      INCLUDE 'genps.inc'
+      INCLUDE 'maxconfigs.inc'
+      INCLUDE 'nexternal.inc'
+      INCLUDE 'maxamps.inc'
+      INTEGER                 NCOMB
+      PARAMETER (             NCOMB=16)
+      INTEGER    NGRAPHS
+      PARAMETER (NGRAPHS=6)
+      INTEGER    NDIAGS
+      PARAMETER (NDIAGS=6)
+      INTEGER    THEL
+      PARAMETER (THEL=2*NCOMB)
+      REAL*8 LIMHEL
+      PARAMETER(LIMHEL=1E-6)
+      INTEGER MAXTRIES
+      PARAMETER(MAXTRIES=10)
+C     
+C     ARGUMENTS 
+C     
+      REAL*8 P(0:3,NEXTERNAL),ANS
+C     
+C     LOCAL VARIABLES 
+C     
+      INTEGER NHEL(NEXTERNAL,NCOMB),NTRY(2)
+      INTEGER ISHEL(2)
+      REAL*8 T,MATRIX1
+      REAL*8 R,SUMHEL,TS(NCOMB)
+      INTEGER I,IDEN
+      INTEGER JC(NEXTERNAL),II
+      LOGICAL GOODHEL(NCOMB,2)
+      REAL*8 HWGT, XTOT, XTRY, XREJ, XR, YFRAC(0:NCOMB)
+      INTEGER IDUM, NGOOD(2), IGOOD(NCOMB,2)
+      INTEGER JHEL(2), J, JJ
+      REAL     XRAN1
+      EXTERNAL XRAN1
+C     
+C     GLOBAL VARIABLES
+C     
+      DOUBLE PRECISION AMP2(MAXAMPS), JAMP2(0:MAXFLOW)
+      COMMON/TO_AMPS/  AMP2,       JAMP2
+
+      CHARACTER*101         HEL_BUFF
+      COMMON/TO_HELICITY/  HEL_BUFF
+
+      INTEGER IMIRROR
+      COMMON/TO_MIRROR/ IMIRROR
+
+      REAL*8 POL(2)
+      COMMON/TO_POLARIZATION/ POL
+
+      INTEGER          ISUM_HEL
+      LOGICAL                    MULTI_CHANNEL
+      COMMON/TO_MATRIX/ISUM_HEL, MULTI_CHANNEL
+      INTEGER MAPCONFIG(0:LMAXCONFIGS), ICONFIG
+      COMMON/TO_MCONFIGS/MAPCONFIG, ICONFIG
+      INTEGER SUBDIAG(MAXSPROC),IB(2)
+      COMMON/TO_SUB_DIAG/SUBDIAG,IB
+      DATA IDUM /0/
+      DATA XTRY, XREJ /0,0/
+      DATA NTRY /0,0/
+      DATA NGOOD /0,0/
+      DATA ISHEL/0,0/
+      SAVE YFRAC, IGOOD, JHEL
+      DATA GOODHEL/THEL*.FALSE./
+      DATA (NHEL(I,   1),I=1,4) /-1,-1,-1,-1/
+      DATA (NHEL(I,   2),I=1,4) /-1,-1,-1, 1/
+      DATA (NHEL(I,   3),I=1,4) /-1,-1, 1,-1/
+      DATA (NHEL(I,   4),I=1,4) /-1,-1, 1, 1/
+      DATA (NHEL(I,   5),I=1,4) /-1, 1,-1,-1/
+      DATA (NHEL(I,   6),I=1,4) /-1, 1,-1, 1/
+      DATA (NHEL(I,   7),I=1,4) /-1, 1, 1,-1/
+      DATA (NHEL(I,   8),I=1,4) /-1, 1, 1, 1/
+      DATA (NHEL(I,   9),I=1,4) / 1,-1,-1,-1/
+      DATA (NHEL(I,  10),I=1,4) / 1,-1,-1, 1/
+      DATA (NHEL(I,  11),I=1,4) / 1,-1, 1,-1/
+      DATA (NHEL(I,  12),I=1,4) / 1,-1, 1, 1/
+      DATA (NHEL(I,  13),I=1,4) / 1, 1,-1,-1/
+      DATA (NHEL(I,  14),I=1,4) / 1, 1,-1, 1/
+      DATA (NHEL(I,  15),I=1,4) / 1, 1, 1,-1/
+      DATA (NHEL(I,  16),I=1,4) / 1, 1, 1, 1/
+      DATA IDEN/36/
+C     ----------
+C     BEGIN CODE
+C     ----------
+      NTRY(IMIRROR)=NTRY(IMIRROR)+1
+      DO I=1,NEXTERNAL
+        JC(I) = +1
+      ENDDO
+
+      IF (MULTI_CHANNEL) THEN
+        DO I=1,NDIAGS
+          AMP2(I)=0D0
+        ENDDO
+        JAMP2(0)=2
+        DO I=1,INT(JAMP2(0))
+          JAMP2(I)=0D0
+        ENDDO
+      ENDIF
+      ANS = 0D0
+      WRITE(HEL_BUFF,'(20I5)') (0,I=1,NEXTERNAL)
+      DO I=1,NCOMB
+        TS(I)=0D0
+      ENDDO
+      IF (ISHEL(IMIRROR) .EQ. 0 .OR. NTRY(IMIRROR) .LE. MAXTRIES) THEN
+        DO I=1,NCOMB
+          IF (GOODHEL(I,IMIRROR) .OR. NTRY(IMIRROR).LE.MAXTRIES) THEN
+            T=MATRIX1(P ,NHEL(1,I),JC(1))
+            DO JJ=1,NINCOMING
+              IF(POL(JJ).NE.1D0.AND.NHEL(JJ,I).EQ.INT(SIGN(1D0
+     $         ,POL(JJ)))) THEN
+                T=T*ABS(POL(JJ))
+              ELSE IF(POL(JJ).NE.1D0)THEN
+                T=T*(2D0-ABS(POL(JJ)))
+              ENDIF
+            ENDDO
+            ANS=ANS+T
+            TS(I)=T
+          ENDIF
+        ENDDO
+        JHEL(IMIRROR) = 1
+        IF(NTRY(IMIRROR).LE.MAXTRIES)THEN
+          DO I=1,NCOMB
+            IF (.NOT.GOODHEL(I,IMIRROR) .AND. (TS(I).GT.ANS*LIMHEL
+     $       /NCOMB)) THEN
+              GOODHEL(I,IMIRROR)=.TRUE.
+              NGOOD(IMIRROR) = NGOOD(IMIRROR) +1
+              IGOOD(NGOOD(IMIRROR),IMIRROR) = I
+              PRINT *,'Added good helicity ',I,TS(I)*NCOMB/ANS
+            ENDIF
+          ENDDO
+          ISHEL(IMIRROR)=MIN(ISUM_HEL,NGOOD(IMIRROR))
+        ENDIF
+        IF(NTRY(IMIRROR).EQ.MAXTRIES.AND.ISHEL(IMIRROR).GT.0)THEN
+C         Check if we have stable helicities in this event
+          DO I=1,NGOOD(IMIRROR)
+            IF(TS(IGOOD(I,IMIRROR)) .LT. 0.1*ANS/NGOOD(IMIRROR))THEN
+              WRITE(*,*) 'Not stable helicity distribution, fraction '
+     $         , TS(IGOOD(I,IMIRROR))/ANS*NGOOD(IMIRROR)
+              WRITE(*,*) 'Explicit sum over all non-zero helicities.'
+              ISHEL(IMIRROR)=0
+              EXIT
+            ENDIF
+          ENDDO
+        ENDIF
+      ELSE  !RANDOM HELICITY
+        DO J=1,ISHEL(IMIRROR)
+          JHEL(IMIRROR)=JHEL(IMIRROR)+1
+          IF (JHEL(IMIRROR) .GT. NGOOD(IMIRROR)) JHEL(IMIRROR)=1
+          HWGT = REAL(NGOOD(IMIRROR))/REAL(ISHEL(IMIRROR))
+          I = IGOOD(JHEL(IMIRROR),IMIRROR)
+          T=MATRIX1(P ,NHEL(1,I),JC(1))
+          DO JJ=1,NINCOMING
+            IF(POL(JJ).NE.1D0.AND.NHEL(JJ,I).EQ.INT(SIGN(1D0,POL(JJ)))
+     $       ) THEN
+              T=T*ABS(POL(JJ))
+            ELSE IF(POL(JJ).NE.1D0)THEN
+              T=T*(2D0-ABS(POL(JJ)))
+            ENDIF
+          ENDDO
+          ANS=ANS+T*HWGT
+          TS(I)=T*HWGT
+        ENDDO
+        IF (ISHEL(IMIRROR) .EQ. 1) THEN
+          WRITE(HEL_BUFF,'(20i5)')(NHEL(II,I),II=1,NEXTERNAL)
+        ENDIF
+      ENDIF
+      IF (ISHEL(IMIRROR) .NE. 1) THEN
+        R=XRAN1(IDUM)*ANS
+        SUMHEL=0D0
+        DO I=1,NCOMB
+          SUMHEL=SUMHEL+TS(I)
+          IF(R.LT.SUMHEL)THEN
+            WRITE(HEL_BUFF,'(20i5)')(NHEL(II,I),II=1,NEXTERNAL)
+            GOTO 10
+          ENDIF
+        ENDDO
+ 10     CONTINUE
+      ENDIF
+      IF (MULTI_CHANNEL) THEN
+        XTOT=0D0
+        DO I=1,NDIAGS
+          XTOT=XTOT+AMP2(I)
+        ENDDO
+        IF (XTOT.NE.0D0) THEN
+          ANS=ANS*AMP2(SUBDIAG(1))/XTOT
+        ELSE
+          ANS=0D0
+        ENDIF
+      ENDIF
+      ANS=ANS/DBLE(IDEN)
+      END
+
+
+      REAL*8 FUNCTION MATRIX1(P,NHEL,IC)
+C     
+C     Generated by MadGraph 5 v. %(version)s, %(date)s
+C     By the MadGraph Development Team
+C     Please visit us at https://launchpad.net/madgraph5
+C     
+C     Returns amplitude squared summed/avg over colors
+C     for the point with external lines W(0:6,NEXTERNAL)
+C     
+C     Process: u u~ > u u~
+C     
+      IMPLICIT NONE
+C     
+C     CONSTANTS
+C     
+      INTEGER    NGRAPHS
+      PARAMETER (NGRAPHS=6)
+      INCLUDE 'genps.inc'
+      INCLUDE 'nexternal.inc'
+      INCLUDE 'maxamps.inc'
+      INTEGER    NWAVEFUNCS,     NCOLOR
+      PARAMETER (NWAVEFUNCS=10, NCOLOR=2)
+      REAL*8     ZERO
+      PARAMETER (ZERO=0D0)
+      COMPLEX*16 IMAG1
+      PARAMETER (IMAG1=(0D0,1D0))
+C     
+C     ARGUMENTS 
+C     
+      REAL*8 P(0:3,NEXTERNAL)
+      INTEGER NHEL(NEXTERNAL), IC(NEXTERNAL)
+C     
+C     LOCAL VARIABLES 
+C     
+      INTEGER I,J
+      COMPLEX*16 ZTEMP
+      REAL*8 DENOM(NCOLOR), CF(NCOLOR,NCOLOR)
+      COMPLEX*16 AMP(NGRAPHS), JAMP(NCOLOR)
+      COMPLEX*16 W(18,NWAVEFUNCS)
+C     
+C     GLOBAL VARIABLES
+C     
+      DOUBLE PRECISION AMP2(MAXAMPS), JAMP2(0:MAXFLOW)
+      COMMON/TO_AMPS/  AMP2,       JAMP2
+      INCLUDE 'coupl.inc'
+C     
+C     COLOR DATA
+C     
+      DATA DENOM(1)/1/
+      DATA (CF(I,  1),I=  1,  2) /    9,    3/
+C     1 T(2,1) T(3,4)
+      DATA DENOM(2)/1/
+      DATA (CF(I,  2),I=  1,  2) /    3,    9/
+C     1 T(2,4) T(3,1)
+C     ----------
+C     BEGIN CODE
+C     ----------
+      CALL IXXXXX(P(0,1),ZERO,NHEL(1),+1*IC(1),W(1,1))
+      CALL OXXXXX(P(0,2),ZERO,NHEL(2),-1*IC(2),W(1,2))
+      CALL OXXXXX(P(0,3),ZERO,NHEL(3),+1*IC(3),W(1,3))
+      CALL IXXXXX(P(0,4),ZERO,NHEL(4),-1*IC(4),W(1,4))
+      CALL FFV1_3(W(1,1),W(1,2),GQQ,ZERO, ZERO, W(1,5))
+C     Amplitude(s) for diagram number 1
+      CALL FFV1_0(W(1,4),W(1,3),W(1,5),GQQ,AMP(1))
+      CALL FFV1_3(W(1,1),W(1,2),GQED,ZERO, ZERO, W(1,6))
+C     Amplitude(s) for diagram number 2
+      CALL FFV1_0(W(1,4),W(1,3),W(1,6),GQED,AMP(2))
+      CALL FFV1_2_3(W(1,1),W(1,2),GUZ1,GUZ2,MZ, WZ, W(1,7))
+C     Amplitude(s) for diagram number 3
+      CALL FFV1_2_0(W(1,4),W(1,3),W(1,7),GUZ1,GUZ2,AMP(3))
+      CALL FFV1_3(W(1,1),W(1,3),GQQ,ZERO, ZERO, W(1,8))
+C     Amplitude(s) for diagram number 4
+      CALL FFV1_0(W(1,4),W(1,2),W(1,8),GQQ,AMP(4))
+      CALL FFV1_3(W(1,1),W(1,3),GQED,ZERO, ZERO, W(1,9))
+C     Amplitude(s) for diagram number 5
+      CALL FFV1_0(W(1,4),W(1,2),W(1,9),GQED,AMP(5))
+      CALL FFV1_2_3(W(1,1),W(1,3),GUZ1,GUZ2,MZ, WZ, W(1,10))
+C     Amplitude(s) for diagram number 6
+      CALL FFV1_2_0(W(1,4),W(1,2),W(1,10),GUZ1,GUZ2,AMP(6))
+      JAMP(1)=+1./6.*AMP(1)-AMP(2)-AMP(3)+1./2.*AMP(4)
+      JAMP(2)=-1./2.*AMP(1)-1./6.*AMP(4)+AMP(5)+AMP(6)
+      MATRIX1 = 0.D0
+      DO I = 1, NCOLOR
+        ZTEMP = (0.D0,0.D0)
+        DO J = 1, NCOLOR
+          ZTEMP = ZTEMP + CF(J,I)*JAMP(J)
+        ENDDO
+        MATRIX1=MATRIX1+ZTEMP*DCONJG(JAMP(I))/DENOM(I)
+      ENDDO
+      AMP2(1)=AMP2(1)+AMP(1)*DCONJG(AMP(1))
+      AMP2(2)=AMP2(2)+AMP(2)*DCONJG(AMP(2))
+      AMP2(3)=AMP2(3)+AMP(3)*DCONJG(AMP(3))
+      AMP2(4)=AMP2(4)+AMP(4)*DCONJG(AMP(4))
+      AMP2(5)=AMP2(5)+AMP(5)*DCONJG(AMP(5))
+      AMP2(6)=AMP2(6)+AMP(6)*DCONJG(AMP(6))
+      DO I = 1, NCOLOR
+        JAMP2(I)=JAMP2(I)+JAMP(I)*DCONJG(JAMP(I))
+      ENDDO
+
+      END
+
+""" % misc.get_pkg_info()
+
+        #print "test_export_matrix_element_v4_madevent_group"
+        #print open(self.give_pos('test')).read()
+        self.assertFileContains('test', goal_matrix1)
 
         # Test auto_dsig,f
         exporter.write_auto_dsig_file(\
@@ -837,7 +1189,7 @@ C       Call UNWGT to unweight and store events
             subprocess_group)
 
         goal_super = \
-"""      DOUBLE PRECISION FUNCTION DSIG(PP,WGT,IMODE)
+        """      DOUBLE PRECISION FUNCTION DSIG(PP,WGT,IMODE)
 C     ****************************************************
 C     
 C     Generated by MadGraph 5 v. %(version)s, %(date)s
@@ -862,6 +1214,7 @@ C
 C     CONSTANTS
 C     
       INCLUDE 'genps.inc'
+      INCLUDE 'maxconfigs.inc'
       INCLUDE 'nexternal.inc'
       INCLUDE 'maxamps.inc'
       REAL*8     PI
@@ -884,7 +1237,7 @@ C
       INCLUDE 'config_subproc_map.inc'
       INTEGER PERMS(NEXTERNAL,LMAXCONFIGS)
       INCLUDE 'symperms.inc'
-      LOGICAL MIRRORPROCS(LMAXCONFIGS)
+      LOGICAL MIRRORPROCS(MAXSPROC)
       INCLUDE 'mirrorprocs.inc'
 C     SELPROC is vector of selection weights for the subprocesses
 C     SUMWGT is vector of total weight for the subprocesses
@@ -915,7 +1268,7 @@ C     ICONFIG has this config number
       COMMON/TO_MCONFIGS/MAPCONFIG, ICONFIG
 C     IPROC has the present process number
       INTEGER IPROC
-      COMMON/TO_IPROC/IPROC
+      COMMON/TO_MIRROR/IMIRROR, IPROC
 C     ----------
 C     BEGIN CODE
 C     ----------
@@ -924,21 +1277,21 @@ C     ----------
       IF(IMODE.EQ.1)THEN
 C       Set up process information from file symfact
         LUN=NEXTUNOPEN()
-        OPEN(UNIT=LUN,FILE='../symfact.dat',STATUS='OLD',ERR=10)
         IPROC=1
         SYMCONF(IPROC)=ICONFIG
-        DO I=1,MAPCONFIG(0)
-          READ(LUN,*) XDUM, ICONF
+        OPEN(UNIT=LUN,FILE='../symfact.dat',STATUS='OLD',ERR=20)
+        DO WHILE(.TRUE.)
+          READ(LUN,*,ERR=10,END=10) XDUM, ICONF
           IF(ICONF.EQ.-MAPCONFIG(ICONFIG))THEN
             IPROC=IPROC+1
-            SYMCONF(IPROC)=I
+            SYMCONF(IPROC)=INT(XDUM)
           ENDIF
         ENDDO
-        SYMCONF(0)=IPROC
+ 10     SYMCONF(0)=IPROC
         CLOSE(LUN)
         RETURN
- 10     WRITE(*,*)'Error opening symfact.dat. No permutations will be
-     $    used.'
+ 20     SYMCONF(0)=IPROC
+        WRITE(*,*)'Error opening symfact.dat. No permutations used.'
         RETURN
       ELSE IF(IMODE.EQ.2)THEN
 C       Output weights and number of events
@@ -1068,6 +1421,7 @@ C     ****************************************************
       IMPLICIT NONE
 
       INCLUDE 'genps.inc'
+      INCLUDE 'maxconfigs.inc'
       INCLUDE 'nexternal.inc'
       INCLUDE 'maxamps.inc'
       INCLUDE 'coupl.inc'
@@ -1141,7 +1495,11 @@ C       Flip x values (to get boost right)
 
 """ % misc.get_pkg_info()
         
+
         #print open(self.give_pos('test')).read()
+        #strings=open(self.give_pos('test')).read().split('\n')
+        #for i,s in enumerate(strings):
+        #    self.assertEqual(s,goal_super.split('\n')[i])
         self.assertFileContains('test', goal_super)
 
     def test_export_group_decay_chains(self):
@@ -1388,14 +1746,14 @@ C       Flip x values (to get boost right)
         #print '\n'.join(amp2_lines)
 
         self.assertEqual('\n'.join(amp2_lines),
-"""AMP2(5)=AMP2(5)+AMP(9)*dconjg(AMP(9))
-AMP2(6)=AMP2(6)+AMP(10)*dconjg(AMP(10))
-AMP2(7)=AMP2(7)+AMP(11)*dconjg(AMP(11))
-AMP2(8)=AMP2(8)+AMP(12)*dconjg(AMP(12))
-AMP2(9)=AMP2(9)+AMP(13)*dconjg(AMP(13))
-AMP2(10)=AMP2(10)+AMP(14)*dconjg(AMP(14))
-AMP2(11)=AMP2(11)+AMP(15)*dconjg(AMP(15))
-AMP2(12)=AMP2(12)+AMP(16)*dconjg(AMP(16))""")
+"""AMP2(5)=AMP2(5)+AMP(5)*dconjg(AMP(5))
+AMP2(6)=AMP2(6)+AMP(6)*dconjg(AMP(6))
+AMP2(7)=AMP2(7)+AMP(7)*dconjg(AMP(7))
+AMP2(8)=AMP2(8)+AMP(8)*dconjg(AMP(8))
+AMP2(9)=AMP2(9)+AMP(9)*dconjg(AMP(9))
+AMP2(10)=AMP2(10)+AMP(10)*dconjg(AMP(10))
+AMP2(11)=AMP2(11)+AMP(11)*dconjg(AMP(11))
+AMP2(12)=AMP2(12)+AMP(12)*dconjg(AMP(12))""")
         
         # Test configs.inc
 
@@ -1411,105 +1769,145 @@ AMP2(12)=AMP2(12)+AMP(16)*dconjg(AMP(16))""")
       DATA MAPCONFIG(1)/1/
       DATA (IFOREST(I,-1,1),I=1,2)/8,6/
       DATA SPROP(-1,1)/1/
+      DATA TPRID(-1,1)/0/
       DATA (IFOREST(I,-2,1),I=1,2)/7,-1/
       DATA SPROP(-2,1)/23/
+      DATA TPRID(-2,1)/0/
       DATA (IFOREST(I,-3,1),I=1,2)/5,3/
       DATA SPROP(-3,1)/1/
+      DATA TPRID(-3,1)/0/
       DATA (IFOREST(I,-4,1),I=1,2)/4,-3/
       DATA SPROP(-4,1)/23/
+      DATA TPRID(-4,1)/0/
       DATA (IFOREST(I,-5,1),I=1,2)/1,-4/
       DATA TPRID(-5,1)/2/
+      DATA SPROP(-5,1)/0/
       DATA (IFOREST(I,-6,1),I=1,2)/-5,-2/
 C     Diagram 2
       DATA MAPCONFIG(2)/2/
       DATA (IFOREST(I,-1,2),I=1,2)/8,7/
       DATA SPROP(-1,2)/-1/
+      DATA TPRID(-1,2)/0/
       DATA (IFOREST(I,-2,2),I=1,2)/-1,6/
       DATA SPROP(-2,2)/23/
+      DATA TPRID(-2,2)/0/
       DATA (IFOREST(I,-3,2),I=1,2)/5,3/
       DATA SPROP(-3,2)/1/
+      DATA TPRID(-3,2)/0/
       DATA (IFOREST(I,-4,2),I=1,2)/4,-3/
       DATA SPROP(-4,2)/23/
+      DATA TPRID(-4,2)/0/
       DATA (IFOREST(I,-5,2),I=1,2)/1,-4/
       DATA TPRID(-5,2)/2/
+      DATA SPROP(-5,2)/0/
       DATA (IFOREST(I,-6,2),I=1,2)/-5,-2/
 C     Diagram 3
       DATA MAPCONFIG(3)/3/
       DATA (IFOREST(I,-1,3),I=1,2)/8,6/
       DATA SPROP(-1,3)/1/
+      DATA TPRID(-1,3)/0/
       DATA (IFOREST(I,-2,3),I=1,2)/7,-1/
       DATA SPROP(-2,3)/23/
+      DATA TPRID(-2,3)/0/
       DATA (IFOREST(I,-3,3),I=1,2)/5,4/
       DATA SPROP(-3,3)/-1/
+      DATA TPRID(-3,3)/0/
       DATA (IFOREST(I,-4,3),I=1,2)/-3,3/
       DATA SPROP(-4,3)/23/
+      DATA TPRID(-4,3)/0/
       DATA (IFOREST(I,-5,3),I=1,2)/1,-4/
       DATA TPRID(-5,3)/2/
+      DATA SPROP(-5,3)/0/
       DATA (IFOREST(I,-6,3),I=1,2)/-5,-2/
 C     Diagram 4
       DATA MAPCONFIG(4)/4/
       DATA (IFOREST(I,-1,4),I=1,2)/8,7/
       DATA SPROP(-1,4)/-1/
+      DATA TPRID(-1,4)/0/
       DATA (IFOREST(I,-2,4),I=1,2)/-1,6/
       DATA SPROP(-2,4)/23/
+      DATA TPRID(-2,4)/0/
       DATA (IFOREST(I,-3,4),I=1,2)/5,4/
       DATA SPROP(-3,4)/-1/
+      DATA TPRID(-3,4)/0/
       DATA (IFOREST(I,-4,4),I=1,2)/-3,3/
       DATA SPROP(-4,4)/23/
+      DATA TPRID(-4,4)/0/
       DATA (IFOREST(I,-5,4),I=1,2)/1,-4/
       DATA TPRID(-5,4)/2/
+      DATA SPROP(-5,4)/0/
       DATA (IFOREST(I,-6,4),I=1,2)/-5,-2/
 C     Diagram 5
       DATA MAPCONFIG(5)/5/
       DATA (IFOREST(I,-1,5),I=1,2)/5,3/
       DATA SPROP(-1,5)/1/
+      DATA TPRID(-1,5)/0/
       DATA (IFOREST(I,-2,5),I=1,2)/4,-1/
       DATA SPROP(-2,5)/23/
+      DATA TPRID(-2,5)/0/
       DATA (IFOREST(I,-3,5),I=1,2)/8,6/
       DATA SPROP(-3,5)/1/
+      DATA TPRID(-3,5)/0/
       DATA (IFOREST(I,-4,5),I=1,2)/7,-3/
       DATA SPROP(-4,5)/23/
+      DATA TPRID(-4,5)/0/
       DATA (IFOREST(I,-5,5),I=1,2)/1,-4/
       DATA TPRID(-5,5)/2/
+      DATA SPROP(-5,5)/0/
       DATA (IFOREST(I,-6,5),I=1,2)/-5,-2/
 C     Diagram 6
       DATA MAPCONFIG(6)/6/
       DATA (IFOREST(I,-1,6),I=1,2)/5,3/
       DATA SPROP(-1,6)/1/
+      DATA TPRID(-1,6)/0/
       DATA (IFOREST(I,-2,6),I=1,2)/4,-1/
       DATA SPROP(-2,6)/23/
+      DATA TPRID(-2,6)/0/
       DATA (IFOREST(I,-3,6),I=1,2)/8,7/
       DATA SPROP(-3,6)/-1/
+      DATA TPRID(-3,6)/0/
       DATA (IFOREST(I,-4,6),I=1,2)/-3,6/
       DATA SPROP(-4,6)/23/
+      DATA TPRID(-4,6)/0/
       DATA (IFOREST(I,-5,6),I=1,2)/1,-4/
       DATA TPRID(-5,6)/2/
+      DATA SPROP(-5,6)/0/
       DATA (IFOREST(I,-6,6),I=1,2)/-5,-2/
 C     Diagram 7
       DATA MAPCONFIG(7)/7/
       DATA (IFOREST(I,-1,7),I=1,2)/5,4/
       DATA SPROP(-1,7)/-1/
+      DATA TPRID(-1,7)/0/
       DATA (IFOREST(I,-2,7),I=1,2)/-1,3/
       DATA SPROP(-2,7)/23/
+      DATA TPRID(-2,7)/0/
       DATA (IFOREST(I,-3,7),I=1,2)/8,6/
       DATA SPROP(-3,7)/1/
+      DATA TPRID(-3,7)/0/
       DATA (IFOREST(I,-4,7),I=1,2)/7,-3/
       DATA SPROP(-4,7)/23/
+      DATA TPRID(-4,7)/0/
       DATA (IFOREST(I,-5,7),I=1,2)/1,-4/
       DATA TPRID(-5,7)/2/
+      DATA SPROP(-5,7)/0/
       DATA (IFOREST(I,-6,7),I=1,2)/-5,-2/
 C     Diagram 8
       DATA MAPCONFIG(8)/8/
       DATA (IFOREST(I,-1,8),I=1,2)/5,4/
       DATA SPROP(-1,8)/-1/
+      DATA TPRID(-1,8)/0/
       DATA (IFOREST(I,-2,8),I=1,2)/-1,3/
       DATA SPROP(-2,8)/23/
+      DATA TPRID(-2,8)/0/
       DATA (IFOREST(I,-3,8),I=1,2)/8,7/
       DATA SPROP(-3,8)/-1/
+      DATA TPRID(-3,8)/0/
       DATA (IFOREST(I,-4,8),I=1,2)/-3,6/
       DATA SPROP(-4,8)/23/
+      DATA TPRID(-4,8)/0/
       DATA (IFOREST(I,-5,8),I=1,2)/1,-4/
       DATA TPRID(-5,8)/2/
+      DATA SPROP(-5,8)/0/
       DATA (IFOREST(I,-6,8),I=1,2)/-5,-2/
 C     Number of configs
       DATA MAPCONFIG(0)/8/
@@ -1903,146 +2301,206 @@ mirror  d~ d > d d~ g d d~ g"""
       DATA MAPCONFIG(1)/1/
       DATA (IFOREST(I,-1,1),I=1,2)/5,3/
       DATA SPROP(-1,1)/1000001/
+      DATA TPRID(-1,1)/0/
       DATA (IFOREST(I,-2,1),I=1,2)/4,-1/
       DATA SPROP(-2,1)/1000021/
+      DATA TPRID(-2,1)/0/
       DATA (IFOREST(I,-3,1),I=1,2)/8,6/
       DATA SPROP(-3,1)/1000001/
+      DATA TPRID(-3,1)/0/
       DATA (IFOREST(I,-4,1),I=1,2)/7,-3/
       DATA SPROP(-4,1)/1000021/
+      DATA TPRID(-4,1)/0/
       DATA (IFOREST(I,-5,1),I=1,2)/-4,-2/
       DATA SPROP(-5,1)/21/
+      DATA TPRID(-5,1)/0/
 C     Diagram 2
       DATA MAPCONFIG(2)/2/
       DATA (IFOREST(I,-1,2),I=1,2)/5,3/
       DATA SPROP(-1,2)/1000001/
+      DATA TPRID(-1,2)/0/
       DATA (IFOREST(I,-2,2),I=1,2)/4,-1/
       DATA SPROP(-2,2)/1000021/
+      DATA TPRID(-2,2)/0/
       DATA (IFOREST(I,-3,2),I=1,2)/8,7/
       DATA SPROP(-3,2)/-1000001/
+      DATA TPRID(-3,2)/0/
       DATA (IFOREST(I,-4,2),I=1,2)/-3,6/
       DATA SPROP(-4,2)/1000021/
+      DATA TPRID(-4,2)/0/
       DATA (IFOREST(I,-5,2),I=1,2)/-4,-2/
       DATA SPROP(-5,2)/21/
+      DATA TPRID(-5,2)/0/
 C     Diagram 3
       DATA MAPCONFIG(3)/3/
       DATA (IFOREST(I,-1,3),I=1,2)/5,3/
       DATA SPROP(-1,3)/1000001/
+      DATA TPRID(-1,3)/0/
       DATA (IFOREST(I,-2,3),I=1,2)/4,-1/
       DATA SPROP(-2,3)/1000021/
+      DATA TPRID(-2,3)/0/
       DATA (IFOREST(I,-3,3),I=1,2)/8,6/
       DATA SPROP(-3,3)/1000002/
+      DATA TPRID(-3,3)/0/
       DATA (IFOREST(I,-4,3),I=1,2)/7,-3/
       DATA SPROP(-4,3)/1000021/
+      DATA TPRID(-4,3)/0/
       DATA (IFOREST(I,-5,3),I=1,2)/-4,-2/
       DATA SPROP(-5,3)/21/
+      DATA TPRID(-5,3)/0/
 C     Diagram 4
       DATA MAPCONFIG(4)/4/
       DATA (IFOREST(I,-1,4),I=1,2)/5,3/
       DATA SPROP(-1,4)/1000001/
+      DATA TPRID(-1,4)/0/
       DATA (IFOREST(I,-2,4),I=1,2)/4,-1/
       DATA SPROP(-2,4)/1000021/
+      DATA TPRID(-2,4)/0/
       DATA (IFOREST(I,-3,4),I=1,2)/8,7/
       DATA SPROP(-3,4)/-1000002/
+      DATA TPRID(-3,4)/0/
       DATA (IFOREST(I,-4,4),I=1,2)/-3,6/
       DATA SPROP(-4,4)/1000021/
+      DATA TPRID(-4,4)/0/
       DATA (IFOREST(I,-5,4),I=1,2)/-4,-2/
       DATA SPROP(-5,4)/21/
+      DATA TPRID(-5,4)/0/
 C     Diagram 5
       DATA MAPCONFIG(5)/5/
       DATA (IFOREST(I,-1,5),I=1,2)/5,4/
       DATA SPROP(-1,5)/-1000001/
+      DATA TPRID(-1,5)/0/
       DATA (IFOREST(I,-2,5),I=1,2)/-1,3/
       DATA SPROP(-2,5)/1000021/
+      DATA TPRID(-2,5)/0/
       DATA (IFOREST(I,-3,5),I=1,2)/8,6/
       DATA SPROP(-3,5)/1000001/
+      DATA TPRID(-3,5)/0/
       DATA (IFOREST(I,-4,5),I=1,2)/7,-3/
       DATA SPROP(-4,5)/1000021/
+      DATA TPRID(-4,5)/0/
       DATA (IFOREST(I,-5,5),I=1,2)/-4,-2/
       DATA SPROP(-5,5)/21/
+      DATA TPRID(-5,5)/0/
 C     Diagram 6
       DATA MAPCONFIG(6)/6/
       DATA (IFOREST(I,-1,6),I=1,2)/5,4/
       DATA SPROP(-1,6)/-1000001/
+      DATA TPRID(-1,6)/0/
       DATA (IFOREST(I,-2,6),I=1,2)/-1,3/
       DATA SPROP(-2,6)/1000021/
+      DATA TPRID(-2,6)/0/
       DATA (IFOREST(I,-3,6),I=1,2)/8,7/
       DATA SPROP(-3,6)/-1000001/
+      DATA TPRID(-3,6)/0/
       DATA (IFOREST(I,-4,6),I=1,2)/-3,6/
       DATA SPROP(-4,6)/1000021/
+      DATA TPRID(-4,6)/0/
       DATA (IFOREST(I,-5,6),I=1,2)/-4,-2/
       DATA SPROP(-5,6)/21/
+      DATA TPRID(-5,6)/0/
 C     Diagram 7
       DATA MAPCONFIG(7)/7/
       DATA (IFOREST(I,-1,7),I=1,2)/5,4/
       DATA SPROP(-1,7)/-1000001/
+      DATA TPRID(-1,7)/0/
       DATA (IFOREST(I,-2,7),I=1,2)/-1,3/
       DATA SPROP(-2,7)/1000021/
+      DATA TPRID(-2,7)/0/
       DATA (IFOREST(I,-3,7),I=1,2)/8,6/
       DATA SPROP(-3,7)/1000002/
+      DATA TPRID(-3,7)/0/
       DATA (IFOREST(I,-4,7),I=1,2)/7,-3/
       DATA SPROP(-4,7)/1000021/
+      DATA TPRID(-4,7)/0/
       DATA (IFOREST(I,-5,7),I=1,2)/-4,-2/
       DATA SPROP(-5,7)/21/
+      DATA TPRID(-5,7)/0/
 C     Diagram 8
       DATA MAPCONFIG(8)/8/
       DATA (IFOREST(I,-1,8),I=1,2)/5,4/
       DATA SPROP(-1,8)/-1000001/
+      DATA TPRID(-1,8)/0/
       DATA (IFOREST(I,-2,8),I=1,2)/-1,3/
       DATA SPROP(-2,8)/1000021/
+      DATA TPRID(-2,8)/0/
       DATA (IFOREST(I,-3,8),I=1,2)/8,7/
       DATA SPROP(-3,8)/-1000002/
+      DATA TPRID(-3,8)/0/
       DATA (IFOREST(I,-4,8),I=1,2)/-3,6/
       DATA SPROP(-4,8)/1000021/
+      DATA TPRID(-4,8)/0/
       DATA (IFOREST(I,-5,8),I=1,2)/-4,-2/
       DATA SPROP(-5,8)/21/
+      DATA TPRID(-5,8)/0/
 C     Diagram 11
       DATA MAPCONFIG(9)/11/
       DATA (IFOREST(I,-1,9),I=1,2)/5,3/
       DATA SPROP(-1,9)/1000002/
+      DATA TPRID(-1,9)/0/
       DATA (IFOREST(I,-2,9),I=1,2)/4,-1/
       DATA SPROP(-2,9)/1000021/
+      DATA TPRID(-2,9)/0/
       DATA (IFOREST(I,-3,9),I=1,2)/8,6/
       DATA SPROP(-3,9)/1000002/
+      DATA TPRID(-3,9)/0/
       DATA (IFOREST(I,-4,9),I=1,2)/7,-3/
       DATA SPROP(-4,9)/1000021/
+      DATA TPRID(-4,9)/0/
       DATA (IFOREST(I,-5,9),I=1,2)/-4,-2/
       DATA SPROP(-5,9)/21/
+      DATA TPRID(-5,9)/0/
 C     Diagram 12
       DATA MAPCONFIG(10)/12/
       DATA (IFOREST(I,-1,10),I=1,2)/5,3/
       DATA SPROP(-1,10)/1000002/
+      DATA TPRID(-1,10)/0/
       DATA (IFOREST(I,-2,10),I=1,2)/4,-1/
       DATA SPROP(-2,10)/1000021/
+      DATA TPRID(-2,10)/0/
       DATA (IFOREST(I,-3,10),I=1,2)/8,7/
       DATA SPROP(-3,10)/-1000002/
+      DATA TPRID(-3,10)/0/
       DATA (IFOREST(I,-4,10),I=1,2)/-3,6/
       DATA SPROP(-4,10)/1000021/
+      DATA TPRID(-4,10)/0/
       DATA (IFOREST(I,-5,10),I=1,2)/-4,-2/
       DATA SPROP(-5,10)/21/
+      DATA TPRID(-5,10)/0/
 C     Diagram 15
       DATA MAPCONFIG(11)/15/
       DATA (IFOREST(I,-1,11),I=1,2)/5,4/
       DATA SPROP(-1,11)/-1000002/
+      DATA TPRID(-1,11)/0/
       DATA (IFOREST(I,-2,11),I=1,2)/-1,3/
       DATA SPROP(-2,11)/1000021/
+      DATA TPRID(-2,11)/0/
       DATA (IFOREST(I,-3,11),I=1,2)/8,6/
       DATA SPROP(-3,11)/1000002/
+      DATA TPRID(-3,11)/0/
       DATA (IFOREST(I,-4,11),I=1,2)/7,-3/
       DATA SPROP(-4,11)/1000021/
+      DATA TPRID(-4,11)/0/
       DATA (IFOREST(I,-5,11),I=1,2)/-4,-2/
       DATA SPROP(-5,11)/21/
+      DATA TPRID(-5,11)/0/
 C     Diagram 16
       DATA MAPCONFIG(12)/16/
       DATA (IFOREST(I,-1,12),I=1,2)/5,4/
       DATA SPROP(-1,12)/-1000002/
+      DATA TPRID(-1,12)/0/
       DATA (IFOREST(I,-2,12),I=1,2)/-1,3/
       DATA SPROP(-2,12)/1000021/
+      DATA TPRID(-2,12)/0/
       DATA (IFOREST(I,-3,12),I=1,2)/8,7/
       DATA SPROP(-3,12)/-1000002/
+      DATA TPRID(-3,12)/0/
       DATA (IFOREST(I,-4,12),I=1,2)/-3,6/
       DATA SPROP(-4,12)/1000021/
+      DATA TPRID(-4,12)/0/
       DATA (IFOREST(I,-5,12),I=1,2)/-4,-2/
       DATA SPROP(-5,12)/21/
+      DATA TPRID(-5,12)/0/
 C     Number of configs
       DATA MAPCONFIG(0)/12/
 """)
@@ -2418,369 +2876,495 @@ JAMP(6)=+1./4.*(-1./3.*AMP(1)-1./3.*AMP(2)-AMP(5)-AMP(6)-AMP(8)-AMP(11)-AMP(13)-
       DATA MAPCONFIG(1)/1/
       DATA (IFOREST(I,-1,1),I=1,2)/4,3/
       DATA SPROP(-1,1)/21/
+      DATA TPRID(-1,1)/0/
       DATA (IFOREST(I,-2,1),I=1,2)/6,-1/
       DATA SPROP(-2,1)/-2/
+      DATA TPRID(-2,1)/0/
       DATA (IFOREST(I,-3,1),I=1,2)/5,-2/
       DATA SPROP(-3,1)/21/
+      DATA TPRID(-3,1)/0/
 C     Diagram 2
       DATA MAPCONFIG(2)/2/
       DATA (IFOREST(I,-1,2),I=1,2)/4,3/
       DATA SPROP(-1,2)/21/
+      DATA TPRID(-1,2)/0/
       DATA (IFOREST(I,-2,2),I=1,2)/5,-1/
       DATA SPROP(-2,2)/2/
+      DATA TPRID(-2,2)/0/
       DATA (IFOREST(I,-3,2),I=1,2)/6,-2/
       DATA SPROP(-3,2)/21/
+      DATA TPRID(-3,2)/0/
 C     Diagram 3
       DATA MAPCONFIG(3)/3/
       DATA (IFOREST(I,-1,3),I=1,2)/4,3/
       DATA SPROP(-1,3)/21/
+      DATA TPRID(-1,3)/0/
       DATA (IFOREST(I,-2,3),I=1,2)/6,5/
       DATA SPROP(-2,3)/21/
+      DATA TPRID(-2,3)/0/
       DATA (IFOREST(I,-3,3),I=1,2)/-2,-1/
       DATA SPROP(-3,3)/21/
+      DATA TPRID(-3,3)/0/
 C     Diagram 4
       DATA MAPCONFIG(4)/4/
       DATA (IFOREST(I,-1,4),I=1,2)/6,3/
       DATA SPROP(-1,4)/21/
+      DATA TPRID(-1,4)/0/
       DATA (IFOREST(I,-2,4),I=1,2)/5,-1/
       DATA SPROP(-2,4)/2/
+      DATA TPRID(-2,4)/0/
       DATA (IFOREST(I,-3,4),I=1,2)/4,-2/
       DATA SPROP(-3,4)/21/
+      DATA TPRID(-3,4)/0/
 C     Diagram 5
       DATA MAPCONFIG(5)/5/
       DATA (IFOREST(I,-1,5),I=1,2)/6,3/
       DATA SPROP(-1,5)/21/
+      DATA TPRID(-1,5)/0/
       DATA (IFOREST(I,-2,5),I=1,2)/4,-1/
       DATA SPROP(-2,5)/-2/
+      DATA TPRID(-2,5)/0/
       DATA (IFOREST(I,-3,5),I=1,2)/5,-2/
       DATA SPROP(-3,5)/21/
+      DATA TPRID(-3,5)/0/
 C     Diagram 6
       DATA MAPCONFIG(6)/6/
       DATA (IFOREST(I,-1,6),I=1,2)/6,3/
       DATA SPROP(-1,6)/21/
+      DATA TPRID(-1,6)/0/
       DATA (IFOREST(I,-2,6),I=1,2)/5,4/
       DATA SPROP(-2,6)/21/
+      DATA TPRID(-2,6)/0/
       DATA (IFOREST(I,-3,6),I=1,2)/-2,-1/
       DATA SPROP(-3,6)/21/
+      DATA TPRID(-3,6)/0/
 C     Diagram 7
       DATA MAPCONFIG(7)/7/
       DATA (IFOREST(I,-1,7),I=1,2)/5,4/
       DATA SPROP(-1,7)/21/
+      DATA TPRID(-1,7)/0/
       DATA (IFOREST(I,-2,7),I=1,2)/6,-1/
       DATA SPROP(-2,7)/-2/
+      DATA TPRID(-2,7)/0/
       DATA (IFOREST(I,-3,7),I=1,2)/-2,3/
       DATA SPROP(-3,7)/21/
+      DATA TPRID(-3,7)/0/
 C     Diagram 8
       DATA MAPCONFIG(8)/8/
       DATA (IFOREST(I,-1,8),I=1,2)/5,4/
       DATA SPROP(-1,8)/21/
+      DATA TPRID(-1,8)/0/
       DATA (IFOREST(I,-2,8),I=1,2)/-1,3/
       DATA SPROP(-2,8)/2/
+      DATA TPRID(-2,8)/0/
       DATA (IFOREST(I,-3,8),I=1,2)/6,-2/
       DATA SPROP(-3,8)/21/
+      DATA TPRID(-3,8)/0/
 C     Diagram 9
       DATA MAPCONFIG(9)/9/
       DATA (IFOREST(I,-1,9),I=1,2)/6,5/
       DATA SPROP(-1,9)/21/
+      DATA TPRID(-1,9)/0/
       DATA (IFOREST(I,-2,9),I=1,2)/-1,4/
       DATA SPROP(-2,9)/-2/
+      DATA TPRID(-2,9)/0/
       DATA (IFOREST(I,-3,9),I=1,2)/-2,3/
       DATA SPROP(-3,9)/21/
+      DATA TPRID(-3,9)/0/
 C     Diagram 10
       DATA MAPCONFIG(10)/10/
       DATA (IFOREST(I,-1,10),I=1,2)/6,5/
       DATA SPROP(-1,10)/21/
+      DATA TPRID(-1,10)/0/
       DATA (IFOREST(I,-2,10),I=1,2)/-1,3/
       DATA SPROP(-2,10)/2/
+      DATA TPRID(-2,10)/0/
       DATA (IFOREST(I,-3,10),I=1,2)/4,-2/
       DATA SPROP(-3,10)/21/
+      DATA TPRID(-3,10)/0/
 C     Diagram 11
       DATA MAPCONFIG(11)/11/
       DATA (IFOREST(I,-1,11),I=1,2)/1,3/
       DATA TPRID(-1,11)/21/
+      DATA SPROP(-1,11)/0/
       DATA (IFOREST(I,-2,11),I=1,2)/-1,5/
       DATA TPRID(-2,11)/2/
+      DATA SPROP(-2,11)/0/
       DATA (IFOREST(I,-3,11),I=1,2)/-2,6/
       DATA TPRID(-3,11)/21/
+      DATA SPROP(-3,11)/0/
       DATA (IFOREST(I,-4,11),I=1,2)/-3,4/
 C     Diagram 12
       DATA MAPCONFIG(12)/12/
       DATA (IFOREST(I,-1,12),I=1,2)/1,3/
       DATA TPRID(-1,12)/21/
+      DATA SPROP(-1,12)/0/
       DATA (IFOREST(I,-2,12),I=1,2)/-1,6/
       DATA TPRID(-2,12)/2/
+      DATA SPROP(-2,12)/0/
       DATA (IFOREST(I,-3,12),I=1,2)/-2,5/
       DATA TPRID(-3,12)/21/
+      DATA SPROP(-3,12)/0/
       DATA (IFOREST(I,-4,12),I=1,2)/-3,4/
 C     Diagram 13
       DATA MAPCONFIG(13)/13/
       DATA (IFOREST(I,-1,13),I=1,2)/6,5/
       DATA SPROP(-1,13)/21/
+      DATA TPRID(-1,13)/0/
       DATA (IFOREST(I,-2,13),I=1,2)/1,3/
       DATA TPRID(-2,13)/21/
+      DATA SPROP(-2,13)/0/
       DATA (IFOREST(I,-3,13),I=1,2)/-2,-1/
       DATA TPRID(-3,13)/21/
+      DATA SPROP(-3,13)/0/
       DATA (IFOREST(I,-4,13),I=1,2)/-3,4/
 C     Diagram 14
       DATA MAPCONFIG(14)/14/
       DATA (IFOREST(I,-1,14),I=1,2)/1,3/
       DATA TPRID(-1,14)/21/
+      DATA SPROP(-1,14)/0/
       DATA (IFOREST(I,-2,14),I=1,2)/-1,4/
       DATA TPRID(-2,14)/2/
+      DATA SPROP(-2,14)/0/
       DATA (IFOREST(I,-3,14),I=1,2)/-2,5/
       DATA TPRID(-3,14)/21/
+      DATA SPROP(-3,14)/0/
       DATA (IFOREST(I,-4,14),I=1,2)/-3,6/
 C     Diagram 15
       DATA MAPCONFIG(15)/15/
       DATA (IFOREST(I,-1,15),I=1,2)/1,3/
       DATA TPRID(-1,15)/21/
+      DATA SPROP(-1,15)/0/
       DATA (IFOREST(I,-2,15),I=1,2)/-1,5/
       DATA TPRID(-2,15)/2/
+      DATA SPROP(-2,15)/0/
       DATA (IFOREST(I,-3,15),I=1,2)/-2,4/
       DATA TPRID(-3,15)/21/
+      DATA SPROP(-3,15)/0/
       DATA (IFOREST(I,-4,15),I=1,2)/-3,6/
 C     Diagram 16
       DATA MAPCONFIG(16)/16/
       DATA (IFOREST(I,-1,16),I=1,2)/5,4/
       DATA SPROP(-1,16)/21/
+      DATA TPRID(-1,16)/0/
       DATA (IFOREST(I,-2,16),I=1,2)/1,3/
       DATA TPRID(-2,16)/21/
+      DATA SPROP(-2,16)/0/
       DATA (IFOREST(I,-3,16),I=1,2)/-2,-1/
       DATA TPRID(-3,16)/21/
+      DATA SPROP(-3,16)/0/
       DATA (IFOREST(I,-4,16),I=1,2)/-3,6/
 C     Diagram 17
       DATA MAPCONFIG(17)/17/
       DATA (IFOREST(I,-1,17),I=1,2)/5,4/
       DATA SPROP(-1,17)/21/
+      DATA TPRID(-1,17)/0/
       DATA (IFOREST(I,-2,17),I=1,2)/6,-1/
       DATA SPROP(-2,17)/-2/
+      DATA TPRID(-2,17)/0/
       DATA (IFOREST(I,-3,17),I=1,2)/1,3/
       DATA TPRID(-3,17)/21/
+      DATA SPROP(-3,17)/0/
       DATA (IFOREST(I,-4,17),I=1,2)/-3,-2/
 C     Diagram 18
       DATA MAPCONFIG(18)/18/
       DATA (IFOREST(I,-1,18),I=1,2)/5,4/
       DATA SPROP(-1,18)/21/
+      DATA TPRID(-1,18)/0/
       DATA (IFOREST(I,-2,18),I=1,2)/1,3/
       DATA TPRID(-2,18)/21/
+      DATA SPROP(-2,18)/0/
       DATA (IFOREST(I,-3,18),I=1,2)/-2,6/
       DATA TPRID(-3,18)/2/
+      DATA SPROP(-3,18)/0/
       DATA (IFOREST(I,-4,18),I=1,2)/-3,-1/
 C     Diagram 19
       DATA MAPCONFIG(19)/19/
       DATA (IFOREST(I,-1,19),I=1,2)/6,5/
       DATA SPROP(-1,19)/21/
+      DATA TPRID(-1,19)/0/
       DATA (IFOREST(I,-2,19),I=1,2)/-1,4/
       DATA SPROP(-2,19)/-2/
+      DATA TPRID(-2,19)/0/
       DATA (IFOREST(I,-3,19),I=1,2)/1,3/
       DATA TPRID(-3,19)/21/
+      DATA SPROP(-3,19)/0/
       DATA (IFOREST(I,-4,19),I=1,2)/-3,-2/
 C     Diagram 20
       DATA MAPCONFIG(20)/20/
       DATA (IFOREST(I,-1,20),I=1,2)/6,5/
       DATA SPROP(-1,20)/21/
+      DATA TPRID(-1,20)/0/
       DATA (IFOREST(I,-2,20),I=1,2)/1,3/
       DATA TPRID(-2,20)/21/
+      DATA SPROP(-2,20)/0/
       DATA (IFOREST(I,-3,20),I=1,2)/-2,4/
       DATA TPRID(-3,20)/2/
+      DATA SPROP(-3,20)/0/
       DATA (IFOREST(I,-4,20),I=1,2)/-3,-1/
 C     Diagram 21
       DATA MAPCONFIG(21)/21/
       DATA (IFOREST(I,-1,21),I=1,2)/1,5/
       DATA TPRID(-1,21)/21/
+      DATA SPROP(-1,21)/0/
       DATA (IFOREST(I,-2,21),I=1,2)/-1,3/
       DATA TPRID(-2,21)/2/
+      DATA SPROP(-2,21)/0/
       DATA (IFOREST(I,-3,21),I=1,2)/-2,6/
       DATA TPRID(-3,21)/21/
+      DATA SPROP(-3,21)/0/
       DATA (IFOREST(I,-4,21),I=1,2)/-3,4/
 C     Diagram 22
       DATA MAPCONFIG(22)/22/
       DATA (IFOREST(I,-1,22),I=1,2)/1,5/
       DATA TPRID(-1,22)/21/
+      DATA SPROP(-1,22)/0/
       DATA (IFOREST(I,-2,22),I=1,2)/-1,6/
       DATA TPRID(-2,22)/2/
+      DATA SPROP(-2,22)/0/
       DATA (IFOREST(I,-3,22),I=1,2)/-2,3/
       DATA TPRID(-3,22)/21/
+      DATA SPROP(-3,22)/0/
       DATA (IFOREST(I,-4,22),I=1,2)/-3,4/
 C     Diagram 23
       DATA MAPCONFIG(23)/23/
       DATA (IFOREST(I,-1,23),I=1,2)/6,3/
       DATA SPROP(-1,23)/21/
+      DATA TPRID(-1,23)/0/
       DATA (IFOREST(I,-2,23),I=1,2)/1,5/
       DATA TPRID(-2,23)/21/
+      DATA SPROP(-2,23)/0/
       DATA (IFOREST(I,-3,23),I=1,2)/-2,-1/
       DATA TPRID(-3,23)/21/
+      DATA SPROP(-3,23)/0/
       DATA (IFOREST(I,-4,23),I=1,2)/-3,4/
 C     Diagram 24
       DATA MAPCONFIG(24)/24/
       DATA (IFOREST(I,-1,24),I=1,2)/1,5/
       DATA TPRID(-1,24)/21/
+      DATA SPROP(-1,24)/0/
       DATA (IFOREST(I,-2,24),I=1,2)/-1,3/
       DATA TPRID(-2,24)/2/
+      DATA SPROP(-2,24)/0/
       DATA (IFOREST(I,-3,24),I=1,2)/-2,4/
       DATA TPRID(-3,24)/21/
+      DATA SPROP(-3,24)/0/
       DATA (IFOREST(I,-4,24),I=1,2)/-3,6/
 C     Diagram 25
       DATA MAPCONFIG(25)/25/
       DATA (IFOREST(I,-1,25),I=1,2)/1,5/
       DATA TPRID(-1,25)/21/
+      DATA SPROP(-1,25)/0/
       DATA (IFOREST(I,-2,25),I=1,2)/-1,4/
       DATA TPRID(-2,25)/2/
+      DATA SPROP(-2,25)/0/
       DATA (IFOREST(I,-3,25),I=1,2)/-2,3/
       DATA TPRID(-3,25)/21/
+      DATA SPROP(-3,25)/0/
       DATA (IFOREST(I,-4,25),I=1,2)/-3,6/
 C     Diagram 26
       DATA MAPCONFIG(26)/26/
       DATA (IFOREST(I,-1,26),I=1,2)/4,3/
       DATA SPROP(-1,26)/21/
+      DATA TPRID(-1,26)/0/
       DATA (IFOREST(I,-2,26),I=1,2)/1,5/
       DATA TPRID(-2,26)/21/
+      DATA SPROP(-2,26)/0/
       DATA (IFOREST(I,-3,26),I=1,2)/-2,-1/
       DATA TPRID(-3,26)/21/
+      DATA SPROP(-3,26)/0/
       DATA (IFOREST(I,-4,26),I=1,2)/-3,6/
 C     Diagram 27
       DATA MAPCONFIG(27)/27/
       DATA (IFOREST(I,-1,27),I=1,2)/4,3/
       DATA SPROP(-1,27)/21/
+      DATA TPRID(-1,27)/0/
       DATA (IFOREST(I,-2,27),I=1,2)/6,-1/
       DATA SPROP(-2,27)/-2/
+      DATA TPRID(-2,27)/0/
       DATA (IFOREST(I,-3,27),I=1,2)/1,5/
       DATA TPRID(-3,27)/21/
+      DATA SPROP(-3,27)/0/
       DATA (IFOREST(I,-4,27),I=1,2)/-3,-2/
 C     Diagram 28
       DATA MAPCONFIG(28)/28/
       DATA (IFOREST(I,-1,28),I=1,2)/4,3/
       DATA SPROP(-1,28)/21/
+      DATA TPRID(-1,28)/0/
       DATA (IFOREST(I,-2,28),I=1,2)/1,5/
       DATA TPRID(-2,28)/21/
+      DATA SPROP(-2,28)/0/
       DATA (IFOREST(I,-3,28),I=1,2)/-2,6/
       DATA TPRID(-3,28)/2/
+      DATA SPROP(-3,28)/0/
       DATA (IFOREST(I,-4,28),I=1,2)/-3,-1/
 C     Diagram 29
       DATA MAPCONFIG(29)/29/
       DATA (IFOREST(I,-1,29),I=1,2)/6,3/
       DATA SPROP(-1,29)/21/
+      DATA TPRID(-1,29)/0/
       DATA (IFOREST(I,-2,29),I=1,2)/4,-1/
       DATA SPROP(-2,29)/-2/
+      DATA TPRID(-2,29)/0/
       DATA (IFOREST(I,-3,29),I=1,2)/1,5/
       DATA TPRID(-3,29)/21/
+      DATA SPROP(-3,29)/0/
       DATA (IFOREST(I,-4,29),I=1,2)/-3,-2/
 C     Diagram 30
       DATA MAPCONFIG(30)/30/
       DATA (IFOREST(I,-1,30),I=1,2)/6,3/
       DATA SPROP(-1,30)/21/
+      DATA TPRID(-1,30)/0/
       DATA (IFOREST(I,-2,30),I=1,2)/1,5/
       DATA TPRID(-2,30)/21/
+      DATA SPROP(-2,30)/0/
       DATA (IFOREST(I,-3,30),I=1,2)/-2,4/
       DATA TPRID(-3,30)/2/
+      DATA SPROP(-3,30)/0/
       DATA (IFOREST(I,-4,30),I=1,2)/-3,-1/
 C     Diagram 31
       DATA MAPCONFIG(31)/31/
       DATA (IFOREST(I,-1,31),I=1,2)/6,3/
       DATA SPROP(-1,31)/21/
+      DATA TPRID(-1,31)/0/
       DATA (IFOREST(I,-2,31),I=1,2)/5,-1/
       DATA SPROP(-2,31)/2/
+      DATA TPRID(-2,31)/0/
       DATA (IFOREST(I,-3,31),I=1,2)/1,-2/
       DATA TPRID(-3,31)/21/
+      DATA SPROP(-3,31)/0/
       DATA (IFOREST(I,-4,31),I=1,2)/-3,4/
 C     Diagram 32
       DATA MAPCONFIG(32)/32/
       DATA (IFOREST(I,-1,32),I=1,2)/6,3/
       DATA SPROP(-1,32)/21/
+      DATA TPRID(-1,32)/0/
       DATA (IFOREST(I,-2,32),I=1,2)/1,-1/
       DATA TPRID(-2,32)/2/
+      DATA SPROP(-2,32)/0/
       DATA (IFOREST(I,-3,32),I=1,2)/-2,5/
       DATA TPRID(-3,32)/21/
+      DATA SPROP(-3,32)/0/
       DATA (IFOREST(I,-4,32),I=1,2)/-3,4/
 C     Diagram 33
       DATA MAPCONFIG(33)/33/
       DATA (IFOREST(I,-1,33),I=1,2)/6,5/
       DATA SPROP(-1,33)/21/
+      DATA TPRID(-1,33)/0/
       DATA (IFOREST(I,-2,33),I=1,2)/-1,3/
       DATA SPROP(-2,33)/2/
+      DATA TPRID(-2,33)/0/
       DATA (IFOREST(I,-3,33),I=1,2)/1,-2/
       DATA TPRID(-3,33)/21/
+      DATA SPROP(-3,33)/0/
       DATA (IFOREST(I,-4,33),I=1,2)/-3,4/
 C     Diagram 34
       DATA MAPCONFIG(34)/34/
       DATA (IFOREST(I,-1,34),I=1,2)/6,5/
       DATA SPROP(-1,34)/21/
+      DATA TPRID(-1,34)/0/
       DATA (IFOREST(I,-2,34),I=1,2)/1,-1/
       DATA TPRID(-2,34)/2/
+      DATA SPROP(-2,34)/0/
       DATA (IFOREST(I,-3,34),I=1,2)/-2,3/
       DATA TPRID(-3,34)/21/
+      DATA SPROP(-3,34)/0/
       DATA (IFOREST(I,-4,34),I=1,2)/-3,4/
 C     Diagram 35
       DATA MAPCONFIG(35)/35/
       DATA (IFOREST(I,-1,35),I=1,2)/4,3/
       DATA SPROP(-1,35)/21/
+      DATA TPRID(-1,35)/0/
       DATA (IFOREST(I,-2,35),I=1,2)/5,-1/
       DATA SPROP(-2,35)/2/
+      DATA TPRID(-2,35)/0/
       DATA (IFOREST(I,-3,35),I=1,2)/1,-2/
       DATA TPRID(-3,35)/21/
+      DATA SPROP(-3,35)/0/
       DATA (IFOREST(I,-4,35),I=1,2)/-3,6/
 C     Diagram 36
       DATA MAPCONFIG(36)/36/
       DATA (IFOREST(I,-1,36),I=1,2)/4,3/
       DATA SPROP(-1,36)/21/
+      DATA TPRID(-1,36)/0/
       DATA (IFOREST(I,-2,36),I=1,2)/1,-1/
       DATA TPRID(-2,36)/2/
+      DATA SPROP(-2,36)/0/
       DATA (IFOREST(I,-3,36),I=1,2)/-2,5/
       DATA TPRID(-3,36)/21/
+      DATA SPROP(-3,36)/0/
       DATA (IFOREST(I,-4,36),I=1,2)/-3,6/
 C     Diagram 37
       DATA MAPCONFIG(37)/37/
       DATA (IFOREST(I,-1,37),I=1,2)/5,4/
       DATA SPROP(-1,37)/21/
+      DATA TPRID(-1,37)/0/
       DATA (IFOREST(I,-2,37),I=1,2)/-1,3/
       DATA SPROP(-2,37)/2/
+      DATA TPRID(-2,37)/0/
       DATA (IFOREST(I,-3,37),I=1,2)/1,-2/
       DATA TPRID(-3,37)/21/
+      DATA SPROP(-3,37)/0/
       DATA (IFOREST(I,-4,37),I=1,2)/-3,6/
 C     Diagram 38
       DATA MAPCONFIG(38)/38/
       DATA (IFOREST(I,-1,38),I=1,2)/5,4/
       DATA SPROP(-1,38)/21/
+      DATA TPRID(-1,38)/0/
       DATA (IFOREST(I,-2,38),I=1,2)/1,-1/
       DATA TPRID(-2,38)/2/
+      DATA SPROP(-2,38)/0/
       DATA (IFOREST(I,-3,38),I=1,2)/-2,3/
       DATA TPRID(-3,38)/21/
+      DATA SPROP(-3,38)/0/
       DATA (IFOREST(I,-4,38),I=1,2)/-3,6/
 C     Diagram 39
       DATA MAPCONFIG(39)/39/
       DATA (IFOREST(I,-1,39),I=1,2)/6,5/
       DATA SPROP(-1,39)/21/
+      DATA TPRID(-1,39)/0/
       DATA (IFOREST(I,-2,39),I=1,2)/4,3/
       DATA SPROP(-2,39)/21/
+      DATA TPRID(-2,39)/0/
       DATA (IFOREST(I,-3,39),I=1,2)/1,-2/
       DATA TPRID(-3,39)/2/
+      DATA SPROP(-3,39)/0/
       DATA (IFOREST(I,-4,39),I=1,2)/-3,-1/
 C     Diagram 40
       DATA MAPCONFIG(40)/40/
       DATA (IFOREST(I,-1,40),I=1,2)/4,3/
       DATA SPROP(-1,40)/21/
+      DATA TPRID(-1,40)/0/
       DATA (IFOREST(I,-2,40),I=1,2)/6,5/
       DATA SPROP(-2,40)/21/
+      DATA TPRID(-2,40)/0/
       DATA (IFOREST(I,-3,40),I=1,2)/1,-2/
       DATA TPRID(-3,40)/2/
+      DATA SPROP(-3,40)/0/
       DATA (IFOREST(I,-4,40),I=1,2)/-3,-1/
 C     Diagram 41
       DATA MAPCONFIG(41)/41/
       DATA (IFOREST(I,-1,41),I=1,2)/5,4/
       DATA SPROP(-1,41)/21/
+      DATA TPRID(-1,41)/0/
       DATA (IFOREST(I,-2,41),I=1,2)/6,3/
       DATA SPROP(-2,41)/21/
+      DATA TPRID(-2,41)/0/
       DATA (IFOREST(I,-3,41),I=1,2)/1,-2/
       DATA TPRID(-3,41)/2/
+      DATA SPROP(-3,41)/0/
       DATA (IFOREST(I,-4,41),I=1,2)/-3,-1/
 C     Diagram 42
       DATA MAPCONFIG(42)/42/
       DATA (IFOREST(I,-1,42),I=1,2)/6,3/
       DATA SPROP(-1,42)/21/
+      DATA TPRID(-1,42)/0/
       DATA (IFOREST(I,-2,42),I=1,2)/5,4/
       DATA SPROP(-2,42)/21/
+      DATA TPRID(-2,42)/0/
       DATA (IFOREST(I,-3,42),I=1,2)/1,-2/
       DATA TPRID(-3,42)/2/
+      DATA SPROP(-3,42)/0/
       DATA (IFOREST(I,-4,42),I=1,2)/-3,-1/
 C     Number of configs
       DATA MAPCONFIG(0)/42/
@@ -3042,15 +3626,18 @@ JAMP(6)=+2*(+AMP(3)-AMP(1)+AMP(4)-AMP(6))""")
       DATA MAPCONFIG(1)/2/
       DATA (IFOREST(I,-1,1),I=1,2)/4,3/
       DATA SPROP(-1,1)/21/
+      DATA TPRID(-1,1)/0/
 C     Diagram 3
       DATA MAPCONFIG(2)/3/
       DATA (IFOREST(I,-1,2),I=1,2)/1,3/
       DATA TPRID(-1,2)/21/
+      DATA SPROP(-1,2)/0/
       DATA (IFOREST(I,-2,2),I=1,2)/-1,4/
 C     Diagram 4
       DATA MAPCONFIG(3)/4/
       DATA (IFOREST(I,-1,3),I=1,2)/1,4/
       DATA TPRID(-1,3)/21/
+      DATA SPROP(-1,3)/0/
       DATA (IFOREST(I,-2,3),I=1,2)/-1,3/
 C     Number of configs
       DATA MAPCONFIG(0)/3/
@@ -3314,13 +3901,13 @@ CALL IOSXXX(W(1,2),W(1,19),W(1,24),MGVX494,AMP(8))""")
 
         # Test get_used_lorentz
         # Wavefunctions
-        goal_lorentz_list = [('', (), 1), ('', (), 2), ('', (), 3),
-                             ('', (1,), 2),('', (), 3), ('', (1,), 1),
-                             ('', (), 2), ('', (), 3),('', (1,), 1),
-                             ('', (), 1), ('', (), 3),('', (1,), 2),
-                             ('', (), 3), ('', (), 3)]
+        goal_lorentz_list = [(('',), (), 1), (('',), (), 2), (('',), (), 3),
+                             (('',), (1,), 2),(('',), (), 3), (('',), (1,), 1),
+                             (('',), (), 2), (('',), (), 3),(('',), (1,), 1),
+                             (('',), (), 1), (('',), (), 3),(('',), (1,), 2),
+                             (('',), (), 3), (('',), (), 3)]
         # Amplitudes
-        goal_lorentz_list += [('', (), 0)] * 8
+        goal_lorentz_list += [(('',), (), 0)] * 8
         self.assertEqual(matrix_element.get_used_lorentz(),
                          goal_lorentz_list)
 
@@ -4116,7 +4703,7 @@ CALL VVVXXX(W(1,4),W(1,2),W(1,24),MGVX5,AMP(28))""")
                                              A, \
                                              A]),
                       'color': [],
-                      'lorentz':['L1', 'L2'],
+                      'lorentz':['CL1', 'L2'],
                       'couplings':{(0, 0):'G1', (0, 1):'G2'},
                       'orders':{'QED':1}}))
 
@@ -4142,34 +4729,21 @@ CALL VVVXXX(W(1,4),W(1,2),W(1,24),MGVX5,AMP(28))""")
 
         matrix_element = helas_objects.HelasMatrixElement(myamplitude, gen_color=False)
 
-        myfortranmodel = helas_call_writers.FortranHelasCallWriter(mybasemodel)
-        self.assertEqual("\n".join(myfortranmodel.\
-                                   get_matrix_element_calls(matrix_element)),
+        myfortranmodel = helas_call_writers.FortranUFOHelasCallWriter(mybasemodel)
+        self.assertEqual(myfortranmodel.get_matrix_element_calls(matrix_element),
                          """CALL VXXXXX(P(0,1),zero,NHEL(1),-1*IC(1),W(1,1))
 CALL VXXXXX(P(0,2),zero,NHEL(2),-1*IC(2),W(1,2))
 CALL VXXXXX(P(0,3),zero,NHEL(3),+1*IC(3),W(1,3))
 CALL VXXXXX(P(0,4),zero,NHEL(4),+1*IC(4),W(1,4))
-CALL JVVL1X(W(1,1),W(1,2),G1,zero,zero,W(1,5))
-CALL JVVL2X(W(1,1),W(1,2),G2,zero,zero,W(1,6))
+CALL CL1_L2_1(W(1,1),W(1,2),G1,G2,zero, zero, W(1,5))
 # Amplitude(s) for diagram number 1
-CALL VVVL1X(W(1,3),W(1,4),W(1,5),G1,AMP(1))
-CALL VVVL2X(W(1,3),W(1,4),W(1,5),G2,AMP(2))
-CALL VVVL1X(W(1,3),W(1,4),W(1,6),G1,AMP(3))
-CALL VVVL2X(W(1,3),W(1,4),W(1,6),G2,AMP(4))
-CALL JVVL1X(W(1,1),W(1,3),G1,zero,zero,W(1,7))
-CALL JVVL2X(W(1,1),W(1,3),G2,zero,zero,W(1,8))
+CALL CL1_L2_0(W(1,3),W(1,4),W(1,5),G1,G2,AMP(1))
+CALL CL1_L2_1(W(1,1),W(1,3),G1,G2,zero, zero, W(1,6))
 # Amplitude(s) for diagram number 2
-CALL VVVL1X(W(1,2),W(1,4),W(1,7),G1,AMP(5))
-CALL VVVL2X(W(1,2),W(1,4),W(1,7),G2,AMP(6))
-CALL VVVL1X(W(1,2),W(1,4),W(1,8),G1,AMP(7))
-CALL VVVL2X(W(1,2),W(1,4),W(1,8),G2,AMP(8))
-CALL JVVL1X(W(1,1),W(1,4),G1,zero,zero,W(1,9))
-CALL JVVL2X(W(1,1),W(1,4),G2,zero,zero,W(1,10))
+CALL CL1_L2_0(W(1,2),W(1,4),W(1,6),G1,G2,AMP(2))
+CALL CL1_L2_1(W(1,1),W(1,4),G1,G2,zero, zero, W(1,7))
 # Amplitude(s) for diagram number 3
-CALL VVVL1X(W(1,2),W(1,3),W(1,9),G1,AMP(9))
-CALL VVVL2X(W(1,2),W(1,3),W(1,9),G2,AMP(10))
-CALL VVVL1X(W(1,2),W(1,3),W(1,10),G1,AMP(11))
-CALL VVVL2X(W(1,2),W(1,3),W(1,10),G2,AMP(12))""")
+CALL CL1_L2_0(W(1,2),W(1,3),W(1,7),G1,G2,AMP(3))""".split('\n'))
 
         exporter = export_v4.ProcessExporterFortranME()
 
@@ -4177,9 +4751,9 @@ CALL VVVL2X(W(1,2),W(1,3),W(1,10),G2,AMP(12))""")
         amp2_lines = \
                  exporter.get_amp2_lines(matrix_element)
         self.assertEqual(amp2_lines,
-                         ['AMP2(1)=AMP2(1)+AMP(1)*dconjg(AMP(1))+AMP(2)*dconjg(AMP(2))+AMP(3)*dconjg(AMP(3))+AMP(4)*dconjg(AMP(4))',
-                          'AMP2(2)=AMP2(2)+AMP(5)*dconjg(AMP(5))+AMP(6)*dconjg(AMP(6))+AMP(7)*dconjg(AMP(7))+AMP(8)*dconjg(AMP(8))',
-                          'AMP2(3)=AMP2(3)+AMP(9)*dconjg(AMP(9))+AMP(10)*dconjg(AMP(10))+AMP(11)*dconjg(AMP(11))+AMP(12)*dconjg(AMP(12))'])
+                         ['AMP2(1)=AMP2(1)+AMP(1)*dconjg(AMP(1))',
+                          'AMP2(2)=AMP2(2)+AMP(2)*dconjg(AMP(2))',
+                          'AMP2(3)=AMP2(3)+AMP(3)*dconjg(AMP(3))'])
 
         # Test configs file
         writer = writers.FortranWriter(self.give_pos('test'))
@@ -4192,15 +4766,18 @@ CALL VVVL2X(W(1,2),W(1,3),W(1,10),G2,AMP(12))""")
       DATA MAPCONFIG(1)/1/
       DATA (IFOREST(I,-1,1),I=1,2)/4,3/
       DATA SPROP(-1,1)/45/
+      DATA TPRID(-1,1)/0/
 C     Diagram 2
       DATA MAPCONFIG(2)/2/
       DATA (IFOREST(I,-1,2),I=1,2)/1,3/
       DATA TPRID(-1,2)/45/
+      DATA SPROP(-1,2)/0/
       DATA (IFOREST(I,-2,2),I=1,2)/-1,4/
 C     Diagram 3
       DATA MAPCONFIG(3)/3/
       DATA (IFOREST(I,-1,3),I=1,2)/1,4/
       DATA TPRID(-1,3)/45/
+      DATA SPROP(-1,3)/0/
       DATA (IFOREST(I,-2,3),I=1,2)/-1,3/
 C     Number of configs
       DATA MAPCONFIG(0)/3/
@@ -4361,45 +4938,23 @@ CALL VXXXXX(P(0,3),MZ,NHEL(3),+1*IC(3),W(1,3))
 CALL IXXXXX(P(0,4),Mx1p,NHEL(4),-1*IC(4),W(1,4))
 CALL OXXXXX(P(0,5),Mx1p,NHEL(5),+1*IC(5),W(1,5))
 CALL VVV1_2(W(1,1),W(1,3),GC_214,MW, WW, W(1,6))
-CALL FFV2C1_2(W(1,4),W(1,2),GC_422,Mneu1, Wneu1, W(1,7))
-CALL FFV3C1_2(W(1,4),W(1,2),GC_628,Mneu1, Wneu1, W(1,8))
+CALL FFV2C1_3_2(W(1,4),W(1,2),GC_422,GC_628,Mneu1, Wneu1, W(1,7))
 # Amplitude(s) for diagram number 1
-CALL FFV2_0(W(1,7),W(1,5),W(1,6),GC_422,AMP(1))
-CALL FFV3_0(W(1,7),W(1,5),W(1,6),GC_628,AMP(2))
-CALL FFV2_0(W(1,8),W(1,5),W(1,6),GC_422,AMP(3))
-CALL FFV3_0(W(1,8),W(1,5),W(1,6),GC_628,AMP(4))
-CALL FFV2_1(W(1,5),W(1,2),GC_422,Mneu1, Wneu1, W(1,9))
-CALL FFV3_1(W(1,5),W(1,2),GC_628,Mneu1, Wneu1, W(1,10))
+CALL FFV2_3_0(W(1,7),W(1,5),W(1,6),GC_422,GC_628,AMP(1))
+CALL FFV2_3_1(W(1,5),W(1,2),GC_422,GC_628,Mneu1, Wneu1, W(1,8))
 # Amplitude(s) for diagram number 2
-CALL FFV2C1_0(W(1,4),W(1,9),W(1,6),GC_422,AMP(5))
-CALL FFV3C1_0(W(1,4),W(1,9),W(1,6),GC_628,AMP(6))
-CALL FFV2C1_0(W(1,4),W(1,10),W(1,6),GC_422,AMP(7))
-CALL FFV3C1_0(W(1,4),W(1,10),W(1,6),GC_628,AMP(8))
-CALL FFV2C1_2(W(1,4),W(1,1),GC_422,Mneu1, Wneu1, W(1,11))
-CALL FFV3C1_2(W(1,4),W(1,1),GC_628,Mneu1, Wneu1, W(1,12))
-CALL VVV1_2(W(1,2),W(1,3),GC_214,MW, WW, W(1,13))
+CALL FFV2C1_3_0(W(1,4),W(1,8),W(1,6),GC_422,GC_628,AMP(2))
+CALL FFV2C1_3_2(W(1,4),W(1,1),GC_422,GC_628,Mneu1, Wneu1, W(1,9))
+CALL VVV1_2(W(1,2),W(1,3),GC_214,MW, WW, W(1,10))
 # Amplitude(s) for diagram number 3
-CALL FFV2_0(W(1,11),W(1,5),W(1,13),GC_422,AMP(9))
-CALL FFV3_0(W(1,11),W(1,5),W(1,13),GC_628,AMP(10))
-CALL FFV2_0(W(1,12),W(1,5),W(1,13),GC_422,AMP(11))
-CALL FFV3_0(W(1,12),W(1,5),W(1,13),GC_628,AMP(12))
+CALL FFV2_3_0(W(1,9),W(1,5),W(1,10),GC_422,GC_628,AMP(3))
 # Amplitude(s) for diagram number 4
-CALL FFV5_0(W(1,11),W(1,9),W(1,3),GC_418,AMP(13))
-CALL FFV5_0(W(1,11),W(1,10),W(1,3),GC_418,AMP(14))
-CALL FFV5_0(W(1,12),W(1,9),W(1,3),GC_418,AMP(15))
-CALL FFV5_0(W(1,12),W(1,10),W(1,3),GC_418,AMP(16))
-CALL FFV2_1(W(1,5),W(1,1),GC_422,Mneu1, Wneu1, W(1,14))
-CALL FFV3_1(W(1,5),W(1,1),GC_628,Mneu1, Wneu1, W(1,15))
+CALL FFV5_0(W(1,9),W(1,8),W(1,3),GC_418,AMP(4))
+CALL FFV2_3_1(W(1,5),W(1,1),GC_422,GC_628,Mneu1, Wneu1, W(1,11))
 # Amplitude(s) for diagram number 5
-CALL FFV2C1_0(W(1,4),W(1,14),W(1,13),GC_422,AMP(17))
-CALL FFV3C1_0(W(1,4),W(1,14),W(1,13),GC_628,AMP(18))
-CALL FFV2C1_0(W(1,4),W(1,15),W(1,13),GC_422,AMP(19))
-CALL FFV3C1_0(W(1,4),W(1,15),W(1,13),GC_628,AMP(20))
+CALL FFV2C1_3_0(W(1,4),W(1,11),W(1,10),GC_422,GC_628,AMP(5))
 # Amplitude(s) for diagram number 6
-CALL FFV5_0(W(1,7),W(1,14),W(1,3),GC_418,AMP(21))
-CALL FFV5_0(W(1,8),W(1,14),W(1,3),GC_418,AMP(22))
-CALL FFV5_0(W(1,7),W(1,15),W(1,3),GC_418,AMP(23))
-CALL FFV5_0(W(1,8),W(1,15),W(1,3),GC_418,AMP(24))""".split('\n')
+CALL FFV5_0(W(1,7),W(1,11),W(1,3),GC_418,AMP(6))""".split('\n')
 
         for i in range(len(goal)):
             self.assertEqual(result[i], goal[i])
@@ -4410,12 +4965,12 @@ CALL FFV5_0(W(1,8),W(1,15),W(1,3),GC_418,AMP(24))""".split('\n')
         amp2_lines = \
                  exporter.get_amp2_lines(matrix_element)
         self.assertEqual(amp2_lines,
-                         ['AMP2(1)=AMP2(1)+AMP(1)*dconjg(AMP(1))+AMP(2)*dconjg(AMP(2))+AMP(3)*dconjg(AMP(3))+AMP(4)*dconjg(AMP(4))',
-                          'AMP2(2)=AMP2(2)+AMP(5)*dconjg(AMP(5))+AMP(6)*dconjg(AMP(6))+AMP(7)*dconjg(AMP(7))+AMP(8)*dconjg(AMP(8))',
-                          'AMP2(3)=AMP2(3)+AMP(9)*dconjg(AMP(9))+AMP(10)*dconjg(AMP(10))+AMP(11)*dconjg(AMP(11))+AMP(12)*dconjg(AMP(12))',
-                          'AMP2(4)=AMP2(4)+AMP(13)*dconjg(AMP(13))+AMP(14)*dconjg(AMP(14))+AMP(15)*dconjg(AMP(15))+AMP(16)*dconjg(AMP(16))',
-                          'AMP2(5)=AMP2(5)+AMP(17)*dconjg(AMP(17))+AMP(18)*dconjg(AMP(18))+AMP(19)*dconjg(AMP(19))+AMP(20)*dconjg(AMP(20))',
-                          'AMP2(6)=AMP2(6)+AMP(21)*dconjg(AMP(21))+AMP(22)*dconjg(AMP(22))+AMP(23)*dconjg(AMP(23))+AMP(24)*dconjg(AMP(24))'])
+                         ['AMP2(1)=AMP2(1)+AMP(1)*dconjg(AMP(1))',
+                          'AMP2(2)=AMP2(2)+AMP(2)*dconjg(AMP(2))',
+                          'AMP2(3)=AMP2(3)+AMP(3)*dconjg(AMP(3))',
+                          'AMP2(4)=AMP2(4)+AMP(4)*dconjg(AMP(4))',
+                          'AMP2(5)=AMP2(5)+AMP(5)*dconjg(AMP(5))',
+                          'AMP2(6)=AMP2(6)+AMP(6)*dconjg(AMP(6))'])
 
     def test_four_fermion_vertex_normal_fermion_flow(self):
         """Testing process u u > t t g with fermion flow (u~t)(u~t)
@@ -4599,27 +5154,35 @@ CALL FFV1_0(W(1,2),W(1,9),W(1,5),GG,AMP(4))""".split('\n')
       DATA MAPCONFIG(1)/1/
       DATA (IFOREST(I,-1,1),I=1,2)/4,3/
       DATA SPROP(-1,1)/21/
+      DATA TPRID(-1,1)/0/
       DATA (IFOREST(I,-2,1),I=1,2)/1,5/
       DATA TPRID(-2,1)/2/
+      DATA SPROP(-2,1)/0/
       DATA (IFOREST(I,-3,1),I=1,2)/-2,-1/
 C     Diagram 2
       DATA MAPCONFIG(2)/2/
       DATA (IFOREST(I,-1,2),I=1,2)/5,4/
       DATA SPROP(-1,2)/6/
+      DATA TPRID(-1,2)/0/
       DATA (IFOREST(I,-2,2),I=1,2)/-1,3/
       DATA SPROP(-2,2)/21/
+      DATA TPRID(-2,2)/0/
 C     Diagram 3
       DATA MAPCONFIG(3)/3/
       DATA (IFOREST(I,-1,3),I=1,2)/5,3/
       DATA SPROP(-1,3)/6/
+      DATA TPRID(-1,3)/0/
       DATA (IFOREST(I,-2,3),I=1,2)/4,-1/
       DATA SPROP(-2,3)/21/
+      DATA TPRID(-2,3)/0/
 C     Diagram 4
       DATA MAPCONFIG(4)/4/
       DATA (IFOREST(I,-1,4),I=1,2)/4,3/
       DATA SPROP(-1,4)/21/
+      DATA TPRID(-1,4)/0/
       DATA (IFOREST(I,-2,4),I=1,2)/1,-1/
       DATA TPRID(-2,4)/2/
+      DATA SPROP(-2,4)/0/
       DATA (IFOREST(I,-3,4),I=1,2)/-2,5/
 C     Number of configs
       DATA MAPCONFIG(0)/4/
@@ -4940,24 +5503,21 @@ CALL FFV1C1_0(W(1,9),W(1,2),W(1,5),GG,AMP(4))""".split('\n')
 
         result = helas_call_writers.FortranUFOHelasCallWriter(mybasemodel).\
                                    get_matrix_element_calls(matrix_element.get('core_processes')[0])
-        self.assertEqual("\n".join(result),
+        self.assertEqual(result,
                          """CALL OXXXXX(P(0,1),zero,NHEL(1),-1*IC(1),W(1,1))
 CALL IXXXXX(P(0,2),MT,NHEL(2),+1*IC(2),W(1,2))
 CALL VXXXXX(P(0,3),Mwp,NHEL(3),+1*IC(3),W(1,3))
 # Amplitude(s) for diagram number 1
-CALL FFS3_0(W(1,2),W(1,1),W(1,3),GC_108,AMP(1))
-CALL FFS4_0(W(1,2),W(1,1),W(1,3),GC_111,AMP(2))""")
+CALL FFS3_4_0(W(1,2),W(1,1),W(1,3),GC_108,GC_111,AMP(1))""".split('\n'))
         result = helas_call_writers.FortranUFOHelasCallWriter(mybasemodel).\
                                    get_matrix_element_calls(matrix_element.get('decay_chains')[0].get('core_processes')[0])
-        self.assertEqual("\n".join(result),
+        self.assertEqual(result,
                          """CALL VXXXXX(P(0,1),Mwp,NHEL(1),-1*IC(1),W(1,1))
 CALL IXXXXX(P(0,2),zero,NHEL(2),-1*IC(2),W(1,2))
 CALL OXXXXX(P(0,3),MT,NHEL(3),+1*IC(3),W(1,3))
-CALL FFS3_3(W(1,2),W(1,3),GC_108,Mwp, Wwp, W(1,4))
-CALL FFS4_3(W(1,2),W(1,3),GC_111,Mwp, Wwp, W(1,5))
+CALL FFS3_4_3(W(1,2),W(1,3),GC_108,GC_111,Mwp, Wwp, W(1,4))
 # Amplitude(s) for diagram number 1
-#
-#""")
+#""".split('\n'))
 
         matrix_elements = matrix_element.combine_decay_chain_processes()
 
@@ -4970,13 +5530,9 @@ CALL FFS4_3(W(1,2),W(1,3),GC_111,Mwp, Wwp, W(1,5))
 CALL IXXXXX(P(0,2),MT,NHEL(2),+1*IC(2),W(1,2))
 CALL IXXXXX(P(0,3),zero,NHEL(3),-1*IC(3),W(1,3))
 CALL OXXXXX(P(0,4),MT,NHEL(4),+1*IC(4),W(1,4))
-CALL FFS3_3(W(1,3),W(1,4),GC_108,Mwp, Wwp, W(1,5))
-CALL FFS4_3(W(1,3),W(1,4),GC_111,Mwp, Wwp, W(1,6))
+CALL FFS3_4_3(W(1,3),W(1,4),GC_108,GC_111,Mwp, Wwp, W(1,5))
 # Amplitude(s) for diagram number 1
-CALL FFS3_0(W(1,2),W(1,1),W(1,5),GC_108,AMP(1))
-CALL FFS3_0(W(1,2),W(1,1),W(1,6),GC_108,AMP(2))
-CALL FFS4_0(W(1,2),W(1,1),W(1,5),GC_111,AMP(3))
-CALL FFS4_0(W(1,2),W(1,1),W(1,6),GC_111,AMP(4))""".split('\n')
+CALL FFS3_4_0(W(1,2),W(1,1),W(1,5),GC_108,GC_111,AMP(1))""".split('\n')
 
         for i in range(len(goal)):
             self.assertEqual(result[i], goal[i])
@@ -5095,24 +5651,21 @@ CALL FFS4_0(W(1,2),W(1,1),W(1,6),GC_111,AMP(4))""".split('\n')
 
         result = helas_call_writers.FortranUFOHelasCallWriter(mybasemodel).\
                                    get_matrix_element_calls(matrix_element.get('core_processes')[0])
-        self.assertEqual("\n".join(result),
+        self.assertEqual(result,
                          """CALL OXXXXX(P(0,1),zero,NHEL(1),-1*IC(1),W(1,1))
 CALL IXXXXX(P(0,2),MT,NHEL(2),+1*IC(2),W(1,2))
 CALL SXXXXX(P(0,3),+1*IC(3),W(1,3))
 # Amplitude(s) for diagram number 1
-CALL FFS3C1_0(W(1,2),W(1,1),W(1,3),GC_108,AMP(1))
-CALL FFS4C1_0(W(1,2),W(1,1),W(1,3),GC_111,AMP(2))""")
+CALL FFS3C1_4_0(W(1,2),W(1,1),W(1,3),GC_108,GC_111,AMP(1))""".split('\n'))
         result = helas_call_writers.FortranUFOHelasCallWriter(mybasemodel).\
                                    get_matrix_element_calls(matrix_element.get('decay_chains')[0].get('core_processes')[0])
-        self.assertEqual("\n".join(result),
+        self.assertEqual(result,
                          """CALL SXXXXX(P(0,1),-1*IC(1),W(1,1))
 CALL OXXXXX(P(0,2),zero,NHEL(2),+1*IC(2),W(1,2))
 CALL IXXXXX(P(0,3),MT,NHEL(3),-1*IC(3),W(1,3))
-CALL FFS3C1_3(W(1,3),W(1,2),GC_108,Msix1, Wsix1, W(1,4))
-CALL FFS4C1_3(W(1,3),W(1,2),GC_111,Msix1, Wsix1, W(1,5))
+CALL FFS3C1_4_3(W(1,3),W(1,2),GC_108,GC_111,Msix1, Wsix1, W(1,4))
 # Amplitude(s) for diagram number 1
-#
-#""")
+#""".split('\n'))
 
         matrix_elements = matrix_element.combine_decay_chain_processes()
 
@@ -5125,199 +5678,12 @@ CALL FFS4C1_3(W(1,3),W(1,2),GC_111,Msix1, Wsix1, W(1,5))
 CALL IXXXXX(P(0,2),MT,NHEL(2),+1*IC(2),W(1,2))
 CALL OXXXXX(P(0,3),zero,NHEL(3),+1*IC(3),W(1,3))
 CALL IXXXXX(P(0,4),MT,NHEL(4),-1*IC(4),W(1,4))
-CALL FFS3C1_3(W(1,4),W(1,3),GC_108,Msix1, Wsix1, W(1,5))
-CALL FFS4C1_3(W(1,4),W(1,3),GC_111,Msix1, Wsix1, W(1,6))
+CALL FFS3C1_4_3(W(1,4),W(1,3),GC_108,GC_111,Msix1, Wsix1, W(1,5))
 # Amplitude(s) for diagram number 1
-CALL FFS3C1_0(W(1,2),W(1,1),W(1,5),GC_108,AMP(1))
-CALL FFS3C1_0(W(1,2),W(1,1),W(1,6),GC_108,AMP(2))
-CALL FFS4C1_0(W(1,2),W(1,1),W(1,5),GC_111,AMP(3))
-CALL FFS4C1_0(W(1,2),W(1,1),W(1,6),GC_111,AMP(4))""".split('\n')
+CALL FFS3C1_4_0(W(1,2),W(1,1),W(1,5),GC_108,GC_111,AMP(1))""".split('\n')
 
-        for i in range(len(goal)):
-            self.assertEqual(result[i], goal[i])
-
-    def test_export_matrix_element_v4_standalone(self):
-        """Test the result of exporting a matrix element to file"""
-
-        writer = writers.FortranWriter(self.give_pos('test'))
-
-        goal_matrix_f = \
-"""      SUBROUTINE SMATRIX(P,ANS)
-C     
-C     Generated by MadGraph 5 v. %(version)s, %(date)s
-C     By the MadGraph Development Team
-C     Please visit us at https://launchpad.net/madgraph5
-C     
-C     MadGraph StandAlone Version
-C     
-C     Returns amplitude squared summed/avg over colors
-C     and helicities
-C     for the point in phase space P(0:3,NEXTERNAL)
-C     
-C     Process: e+ e- > a a a
-C     
-      IMPLICIT NONE
-C     
-C     CONSTANTS
-C     
-      INTEGER    NEXTERNAL
-      PARAMETER (NEXTERNAL=5)
-      INTEGER                 NCOMB
-      PARAMETER (             NCOMB=32)
-C     
-C     ARGUMENTS 
-C     
-      REAL*8 P(0:3,NEXTERNAL),ANS
-C     
-C     LOCAL VARIABLES 
-C     
-      INTEGER NHEL(NEXTERNAL,NCOMB),NTRY
-      REAL*8 T
-      REAL*8 MATRIX
-      INTEGER IHEL,IDEN, I
-      INTEGER JC(NEXTERNAL)
-      LOGICAL GOODHEL(NCOMB)
-      DATA NTRY/0/
-      DATA GOODHEL/NCOMB*.FALSE./
-      DATA (NHEL(IHEL,   1),IHEL=1,5) /-1,-1,-1,-1,-1/
-      DATA (NHEL(IHEL,   2),IHEL=1,5) /-1,-1,-1,-1, 1/
-      DATA (NHEL(IHEL,   3),IHEL=1,5) /-1,-1,-1, 1,-1/
-      DATA (NHEL(IHEL,   4),IHEL=1,5) /-1,-1,-1, 1, 1/
-      DATA (NHEL(IHEL,   5),IHEL=1,5) /-1,-1, 1,-1,-1/
-      DATA (NHEL(IHEL,   6),IHEL=1,5) /-1,-1, 1,-1, 1/
-      DATA (NHEL(IHEL,   7),IHEL=1,5) /-1,-1, 1, 1,-1/
-      DATA (NHEL(IHEL,   8),IHEL=1,5) /-1,-1, 1, 1, 1/
-      DATA (NHEL(IHEL,   9),IHEL=1,5) /-1, 1,-1,-1,-1/
-      DATA (NHEL(IHEL,  10),IHEL=1,5) /-1, 1,-1,-1, 1/
-      DATA (NHEL(IHEL,  11),IHEL=1,5) /-1, 1,-1, 1,-1/
-      DATA (NHEL(IHEL,  12),IHEL=1,5) /-1, 1,-1, 1, 1/
-      DATA (NHEL(IHEL,  13),IHEL=1,5) /-1, 1, 1,-1,-1/
-      DATA (NHEL(IHEL,  14),IHEL=1,5) /-1, 1, 1,-1, 1/
-      DATA (NHEL(IHEL,  15),IHEL=1,5) /-1, 1, 1, 1,-1/
-      DATA (NHEL(IHEL,  16),IHEL=1,5) /-1, 1, 1, 1, 1/
-      DATA (NHEL(IHEL,  17),IHEL=1,5) / 1,-1,-1,-1,-1/
-      DATA (NHEL(IHEL,  18),IHEL=1,5) / 1,-1,-1,-1, 1/
-      DATA (NHEL(IHEL,  19),IHEL=1,5) / 1,-1,-1, 1,-1/
-      DATA (NHEL(IHEL,  20),IHEL=1,5) / 1,-1,-1, 1, 1/
-      DATA (NHEL(IHEL,  21),IHEL=1,5) / 1,-1, 1,-1,-1/
-      DATA (NHEL(IHEL,  22),IHEL=1,5) / 1,-1, 1,-1, 1/
-      DATA (NHEL(IHEL,  23),IHEL=1,5) / 1,-1, 1, 1,-1/
-      DATA (NHEL(IHEL,  24),IHEL=1,5) / 1,-1, 1, 1, 1/
-      DATA (NHEL(IHEL,  25),IHEL=1,5) / 1, 1,-1,-1,-1/
-      DATA (NHEL(IHEL,  26),IHEL=1,5) / 1, 1,-1,-1, 1/
-      DATA (NHEL(IHEL,  27),IHEL=1,5) / 1, 1,-1, 1,-1/
-      DATA (NHEL(IHEL,  28),IHEL=1,5) / 1, 1,-1, 1, 1/
-      DATA (NHEL(IHEL,  29),IHEL=1,5) / 1, 1, 1,-1,-1/
-      DATA (NHEL(IHEL,  30),IHEL=1,5) / 1, 1, 1,-1, 1/
-      DATA (NHEL(IHEL,  31),IHEL=1,5) / 1, 1, 1, 1,-1/
-      DATA (NHEL(IHEL,  32),IHEL=1,5) / 1, 1, 1, 1, 1/
-      DATA IDEN/24/
-C     ----------
-C     BEGIN CODE
-C     ----------
-      NTRY=NTRY+1
-      DO IHEL=1,NEXTERNAL
-        JC(IHEL) = +1
-      ENDDO
-      ANS = 0D0
-      DO IHEL=1,NCOMB
-        IF (GOODHEL(IHEL) .OR. NTRY .LT. 2) THEN
-          T=MATRIX(P ,NHEL(1,IHEL),JC(1))
-          ANS=ANS+T
-          IF (T .NE. 0D0 .AND. .NOT.    GOODHEL(IHEL)) THEN
-            GOODHEL(IHEL)=.TRUE.
-          ENDIF
-        ENDIF
-      ENDDO
-      ANS=ANS/DBLE(IDEN)
-      END
-      
-      
-      REAL*8 FUNCTION MATRIX(P,NHEL,IC)
-C     
-C     Generated by MadGraph 5 v. %(version)s, %(date)s
-C     By the MadGraph Development Team
-C     Please visit us at https://launchpad.net/madgraph5
-C     
-C     Returns amplitude squared summed/avg over colors
-C     for the point with external lines W(0:6,NEXTERNAL)
-C     
-C     Process: e+ e- > a a a
-C     
-      IMPLICIT NONE
-C     
-C     CONSTANTS
-C     
-      INTEGER    NGRAPHS
-      PARAMETER (NGRAPHS=6)
-      INTEGER    NEXTERNAL
-      PARAMETER (NEXTERNAL=5)
-      INTEGER    NWAVEFUNCS, NCOLOR
-      PARAMETER (NWAVEFUNCS=11, NCOLOR=1)
-      REAL*8     ZERO
-      PARAMETER (ZERO=0D0)
-      COMPLEX*16 IMAG1
-      PARAMETER (IMAG1=(0D0,1D0))
-C     
-C     ARGUMENTS 
-C     
-      REAL*8 P(0:3,NEXTERNAL)
-      INTEGER NHEL(NEXTERNAL), IC(NEXTERNAL)
-C     
-C     LOCAL VARIABLES 
-C     
-      INTEGER I,J
-      COMPLEX*16 ZTEMP
-      REAL*8 DENOM(NCOLOR), CF(NCOLOR,NCOLOR)
-      COMPLEX*16 AMP(NGRAPHS), JAMP(NCOLOR)
-      COMPLEX*16 W(18,NWAVEFUNCS)
-C     
-C     GLOBAL VARIABLES
-C     
-      INCLUDE 'coupl.inc'
-C     
-C     COLOR DATA
-C     
-      DATA DENOM(1)/1/
-      DATA (CF(I,1),I=1,1) /1/
-C     ----------
-C     BEGIN CODE
-C     ----------
-      CALL OXXXXX(P(0,1),ZERO,NHEL(1),-1*IC(1),W(1,1))
-      CALL IXXXXX(P(0,2),ZERO,NHEL(2),+1*IC(2),W(1,2))
-      CALL VXXXXX(P(0,3),ZERO,NHEL(3),+1*IC(3),W(1,3))
-      CALL VXXXXX(P(0,4),ZERO,NHEL(4),+1*IC(4),W(1,4))
-      CALL VXXXXX(P(0,5),ZERO,NHEL(5),+1*IC(5),W(1,5))
-      CALL FVOXXX(W(1,1),W(1,3),MGVX12,ZERO,ZERO,W(1,6))
-      CALL FVIXXX(W(1,2),W(1,4),MGVX12,ZERO,ZERO,W(1,7))
-C     Amplitude(s) for diagram number 1
-      CALL IOVXXX(W(1,7),W(1,6),W(1,5),MGVX12,AMP(1))
-      CALL FVIXXX(W(1,2),W(1,5),MGVX12,ZERO,ZERO,W(1,8))
-C     Amplitude(s) for diagram number 2
-      CALL IOVXXX(W(1,8),W(1,6),W(1,4),MGVX12,AMP(2))
-      CALL FVOXXX(W(1,1),W(1,4),MGVX12,ZERO,ZERO,W(1,9))
-      CALL FVIXXX(W(1,2),W(1,3),MGVX12,ZERO,ZERO,W(1,10))
-C     Amplitude(s) for diagram number 3
-      CALL IOVXXX(W(1,10),W(1,9),W(1,5),MGVX12,AMP(3))
-C     Amplitude(s) for diagram number 4
-      CALL IOVXXX(W(1,8),W(1,9),W(1,3),MGVX12,AMP(4))
-      CALL FVOXXX(W(1,1),W(1,5),MGVX12,ZERO,ZERO,W(1,11))
-C     Amplitude(s) for diagram number 5
-      CALL IOVXXX(W(1,10),W(1,11),W(1,4),MGVX12,AMP(5))
-C     Amplitude(s) for diagram number 6
-      CALL IOVXXX(W(1,7),W(1,11),W(1,3),MGVX12,AMP(6))
-      JAMP(1)=-AMP(1)-AMP(2)-AMP(3)-AMP(4)-AMP(5)-AMP(6)
-      
-      MATRIX = 0.D0
-      DO I = 1, NCOLOR
-        ZTEMP = (0.D0,0.D0)
-        DO J = 1, NCOLOR
-          ZTEMP = ZTEMP + CF(J,I)*JAMP(J)
-        ENDDO
-        MATRIX = MATRIX+ZTEMP*DCONJG(JAMP(I))/DENOM(I)
-      ENDDO
-      END
-""" % misc.get_pkg_info()
+        
+        self.assertEqual(result, goal)
 
     def test_matrix_multistage_decay_chain_process(self):
         """Test matrix.f for multistage decay chain
@@ -5606,8 +5972,8 @@ CALL IOVXXX(W(1,26),W(1,23),W(1,2),GAL,AMP(8))""")
                                              g,
                                              g]),
                       'color': [color.ColorString([color.f(0, 1, 2)]),
-                                color.ColorString([color.f(0, 1, 2)]),
-                                color.ColorString([color.f(0, 1, 2)])],
+                                color.ColorString([color.f(2, 1, 0)]),
+                                color.ColorString([color.f(1, 0, 2)])],
                       'lorentz':['gggg1', 'gggg2', 'gggg3'],
                       'couplings':{(0, 0):'GG', (1, 1):'GG', (2, 2):'GG'},
                       'orders':{'QCD':2}}))
@@ -6521,105 +6887,145 @@ CALL IOSXXX(W(1,28),W(1,2),W(1,27),MGVX350,AMP(8))""")
       DATA MAPCONFIG(1)/1/
       DATA (IFOREST(I,-1,1),I=1,2)/8,6/
       DATA SPROP(-1,1)/11/
+      DATA TPRID(-1,1)/0/
       DATA (IFOREST(I,-2,1),I=1,2)/7,-1/
       DATA SPROP(-2,1)/1000022/
+      DATA TPRID(-2,1)/0/
       DATA (IFOREST(I,-3,1),I=1,2)/5,3/
       DATA SPROP(-3,1)/11/
+      DATA TPRID(-3,1)/0/
       DATA (IFOREST(I,-4,1),I=1,2)/4,-3/
       DATA SPROP(-4,1)/1000022/
+      DATA TPRID(-4,1)/0/
       DATA (IFOREST(I,-5,1),I=1,2)/1,-4/
       DATA TPRID(-5,1)/1000011/
+      DATA SPROP(-5,1)/0/
       DATA (IFOREST(I,-6,1),I=1,2)/-5,-2/
 C     Diagram 2
       DATA MAPCONFIG(2)/2/
       DATA (IFOREST(I,-1,2),I=1,2)/8,7/
       DATA SPROP(-1,2)/-1000011/
+      DATA TPRID(-1,2)/0/
       DATA (IFOREST(I,-2,2),I=1,2)/-1,6/
       DATA SPROP(-2,2)/1000022/
+      DATA TPRID(-2,2)/0/
       DATA (IFOREST(I,-3,2),I=1,2)/5,3/
       DATA SPROP(-3,2)/11/
+      DATA TPRID(-3,2)/0/
       DATA (IFOREST(I,-4,2),I=1,2)/4,-3/
       DATA SPROP(-4,2)/1000022/
+      DATA TPRID(-4,2)/0/
       DATA (IFOREST(I,-5,2),I=1,2)/1,-4/
       DATA TPRID(-5,2)/1000011/
+      DATA SPROP(-5,2)/0/
       DATA (IFOREST(I,-6,2),I=1,2)/-5,-2/
 C     Diagram 3
       DATA MAPCONFIG(3)/3/
       DATA (IFOREST(I,-1,3),I=1,2)/8,6/
       DATA SPROP(-1,3)/11/
+      DATA TPRID(-1,3)/0/
       DATA (IFOREST(I,-2,3),I=1,2)/7,-1/
       DATA SPROP(-2,3)/1000022/
+      DATA TPRID(-2,3)/0/
       DATA (IFOREST(I,-3,3),I=1,2)/5,4/
       DATA SPROP(-3,3)/-1000011/
+      DATA TPRID(-3,3)/0/
       DATA (IFOREST(I,-4,3),I=1,2)/-3,3/
       DATA SPROP(-4,3)/1000022/
+      DATA TPRID(-4,3)/0/
       DATA (IFOREST(I,-5,3),I=1,2)/1,-4/
       DATA TPRID(-5,3)/1000011/
+      DATA SPROP(-5,3)/0/
       DATA (IFOREST(I,-6,3),I=1,2)/-5,-2/
 C     Diagram 4
       DATA MAPCONFIG(4)/4/
       DATA (IFOREST(I,-1,4),I=1,2)/8,7/
       DATA SPROP(-1,4)/-1000011/
+      DATA TPRID(-1,4)/0/
       DATA (IFOREST(I,-2,4),I=1,2)/-1,6/
       DATA SPROP(-2,4)/1000022/
+      DATA TPRID(-2,4)/0/
       DATA (IFOREST(I,-3,4),I=1,2)/5,4/
       DATA SPROP(-3,4)/-1000011/
+      DATA TPRID(-3,4)/0/
       DATA (IFOREST(I,-4,4),I=1,2)/-3,3/
       DATA SPROP(-4,4)/1000022/
+      DATA TPRID(-4,4)/0/
       DATA (IFOREST(I,-5,4),I=1,2)/1,-4/
       DATA TPRID(-5,4)/1000011/
+      DATA SPROP(-5,4)/0/
       DATA (IFOREST(I,-6,4),I=1,2)/-5,-2/
 C     Diagram 5
       DATA MAPCONFIG(5)/5/
       DATA (IFOREST(I,-1,5),I=1,2)/5,3/
       DATA SPROP(-1,5)/11/
+      DATA TPRID(-1,5)/0/
       DATA (IFOREST(I,-2,5),I=1,2)/4,-1/
       DATA SPROP(-2,5)/1000022/
+      DATA TPRID(-2,5)/0/
       DATA (IFOREST(I,-3,5),I=1,2)/8,6/
       DATA SPROP(-3,5)/11/
+      DATA TPRID(-3,5)/0/
       DATA (IFOREST(I,-4,5),I=1,2)/7,-3/
       DATA SPROP(-4,5)/1000022/
+      DATA TPRID(-4,5)/0/
       DATA (IFOREST(I,-5,5),I=1,2)/1,-4/
       DATA TPRID(-5,5)/1000011/
+      DATA SPROP(-5,5)/0/
       DATA (IFOREST(I,-6,5),I=1,2)/-5,-2/
 C     Diagram 6
       DATA MAPCONFIG(6)/6/
       DATA (IFOREST(I,-1,6),I=1,2)/5,3/
       DATA SPROP(-1,6)/11/
+      DATA TPRID(-1,6)/0/
       DATA (IFOREST(I,-2,6),I=1,2)/4,-1/
       DATA SPROP(-2,6)/1000022/
+      DATA TPRID(-2,6)/0/
       DATA (IFOREST(I,-3,6),I=1,2)/8,7/
       DATA SPROP(-3,6)/-1000011/
+      DATA TPRID(-3,6)/0/
       DATA (IFOREST(I,-4,6),I=1,2)/-3,6/
       DATA SPROP(-4,6)/1000022/
+      DATA TPRID(-4,6)/0/
       DATA (IFOREST(I,-5,6),I=1,2)/1,-4/
       DATA TPRID(-5,6)/1000011/
+      DATA SPROP(-5,6)/0/
       DATA (IFOREST(I,-6,6),I=1,2)/-5,-2/
 C     Diagram 7
       DATA MAPCONFIG(7)/7/
       DATA (IFOREST(I,-1,7),I=1,2)/5,4/
       DATA SPROP(-1,7)/-1000011/
+      DATA TPRID(-1,7)/0/
       DATA (IFOREST(I,-2,7),I=1,2)/-1,3/
       DATA SPROP(-2,7)/1000022/
+      DATA TPRID(-2,7)/0/
       DATA (IFOREST(I,-3,7),I=1,2)/8,6/
       DATA SPROP(-3,7)/11/
+      DATA TPRID(-3,7)/0/
       DATA (IFOREST(I,-4,7),I=1,2)/7,-3/
       DATA SPROP(-4,7)/1000022/
+      DATA TPRID(-4,7)/0/
       DATA (IFOREST(I,-5,7),I=1,2)/1,-4/
       DATA TPRID(-5,7)/1000011/
+      DATA SPROP(-5,7)/0/
       DATA (IFOREST(I,-6,7),I=1,2)/-5,-2/
 C     Diagram 8
       DATA MAPCONFIG(8)/8/
       DATA (IFOREST(I,-1,8),I=1,2)/5,4/
       DATA SPROP(-1,8)/-1000011/
+      DATA TPRID(-1,8)/0/
       DATA (IFOREST(I,-2,8),I=1,2)/-1,3/
       DATA SPROP(-2,8)/1000022/
+      DATA TPRID(-2,8)/0/
       DATA (IFOREST(I,-3,8),I=1,2)/8,7/
       DATA SPROP(-3,8)/-1000011/
+      DATA TPRID(-3,8)/0/
       DATA (IFOREST(I,-4,8),I=1,2)/-3,6/
       DATA SPROP(-4,8)/1000022/
+      DATA TPRID(-4,8)/0/
       DATA (IFOREST(I,-5,8),I=1,2)/1,-4/
       DATA TPRID(-5,8)/1000011/
+      DATA SPROP(-5,8)/0/
       DATA (IFOREST(I,-6,8),I=1,2)/-5,-2/
 C     Number of configs
       DATA MAPCONFIG(0)/8/
@@ -7293,7 +7699,7 @@ CALL IOSXXX(W(1,15),W(1,2),W(1,19),GELN2P,AMP(9))""".split('\n')
                                               gen_color=True)
 
         self.assertEqual(sum([len(diagram.get('amplitudes')) for diagram in \
-                          me.get('diagrams')]), 8)
+                          me.get('diagrams')]), 2)
 
         for i, amp in enumerate(me.get_all_amplitudes()):
             self.assertEqual(amp.get('number'), i + 1)
@@ -7303,8 +7709,8 @@ CALL IOSXXX(W(1,15),W(1,2),W(1,19),GELN2P,AMP(9))""".split('\n')
         exporter = export_v4.ProcessExporterFortranME()
 
         self.assertEqual(exporter.get_JAMP_lines(me),
-                         ["JAMP(1)=-AMP(1)-AMP(2)-AMP(3)-AMP(4)",
-                         "JAMP(2)=+AMP(5)+AMP(6)+AMP(7)+AMP(8)"])
+                         ["JAMP(1)=-AMP(1)",
+                         "JAMP(2)=+AMP(2)"])
 
     def test_generate_helas_diagrams_gg_gogo(self):
         """Testing the v4 helas diagram generation g g > go go,
@@ -7667,89 +8073,119 @@ CALL FFV1_0(W(1,3),W(1,7),W(1,2),GGI,AMP(3))""".split('\n')
       DATA MAPCONFIG(1)/1/
       DATA (IFOREST(I,-1,1),I=1,2)/5,3/
       DATA SPROP(-1,1)/6/
+      DATA TPRID(-1,1)/0/
       DATA (IFOREST(I,-2,1),I=1,2)/4,-1/
       DATA SPROP(-2,1)/21/
+      DATA TPRID(-2,1)/0/
       DATA (IFOREST(I,-3,1),I=1,2)/6,-2/
       DATA SPROP(-3,1)/2/
+      DATA TPRID(-3,1)/0/
 C     Diagram 2
       DATA MAPCONFIG(2)/2/
       DATA (IFOREST(I,-1,2),I=1,2)/5,4/
       DATA SPROP(-1,2)/-6/
+      DATA TPRID(-1,2)/0/
       DATA (IFOREST(I,-2,2),I=1,2)/-1,3/
       DATA SPROP(-2,2)/21/
+      DATA TPRID(-2,2)/0/
       DATA (IFOREST(I,-3,2),I=1,2)/6,-2/
       DATA SPROP(-3,2)/2/
+      DATA TPRID(-3,2)/0/
 C     Diagram 3
       DATA MAPCONFIG(3)/3/
       DATA (IFOREST(I,-1,3),I=1,2)/1,6/
       DATA TPRID(-1,3)/21/
+      DATA SPROP(-1,3)/0/
       DATA (IFOREST(I,-2,3),I=1,2)/-1,4/
       DATA TPRID(-2,3)/6/
+      DATA SPROP(-2,3)/0/
       DATA (IFOREST(I,-3,3),I=1,2)/-2,5/
       DATA TPRID(-3,3)/6/
+      DATA SPROP(-3,3)/0/
       DATA (IFOREST(I,-4,3),I=1,2)/-3,3/
 C     Diagram 4
       DATA MAPCONFIG(4)/4/
       DATA (IFOREST(I,-1,4),I=1,2)/5,4/
       DATA SPROP(-1,4)/-6/
+      DATA TPRID(-1,4)/0/
       DATA (IFOREST(I,-2,4),I=1,2)/1,6/
       DATA TPRID(-2,4)/21/
+      DATA SPROP(-2,4)/0/
       DATA (IFOREST(I,-3,4),I=1,2)/-2,-1/
       DATA TPRID(-3,4)/6/
+      DATA SPROP(-3,4)/0/
       DATA (IFOREST(I,-4,4),I=1,2)/-3,3/
 C     Diagram 5
       DATA MAPCONFIG(5)/5/
       DATA (IFOREST(I,-1,5),I=1,2)/1,6/
       DATA TPRID(-1,5)/21/
+      DATA SPROP(-1,5)/0/
       DATA (IFOREST(I,-2,5),I=1,2)/-1,3/
       DATA TPRID(-2,5)/6/
+      DATA SPROP(-2,5)/0/
       DATA (IFOREST(I,-3,5),I=1,2)/-2,5/
       DATA TPRID(-3,5)/6/
+      DATA SPROP(-3,5)/0/
       DATA (IFOREST(I,-4,5),I=1,2)/-3,4/
 C     Diagram 6
       DATA MAPCONFIG(6)/6/
       DATA (IFOREST(I,-1,6),I=1,2)/5,3/
       DATA SPROP(-1,6)/6/
+      DATA TPRID(-1,6)/0/
       DATA (IFOREST(I,-2,6),I=1,2)/1,6/
       DATA TPRID(-2,6)/21/
+      DATA SPROP(-2,6)/0/
       DATA (IFOREST(I,-3,6),I=1,2)/-2,-1/
       DATA TPRID(-3,6)/6/
+      DATA SPROP(-3,6)/0/
       DATA (IFOREST(I,-4,6),I=1,2)/-3,4/
 C     Diagram 7
       DATA MAPCONFIG(7)/7/
       DATA (IFOREST(I,-1,7),I=1,2)/5,3/
       DATA SPROP(-1,7)/6/
+      DATA TPRID(-1,7)/0/
       DATA (IFOREST(I,-2,7),I=1,2)/1,6/
       DATA TPRID(-2,7)/21/
+      DATA SPROP(-2,7)/0/
       DATA (IFOREST(I,-3,7),I=1,2)/-2,4/
       DATA TPRID(-3,7)/6/
+      DATA SPROP(-3,7)/0/
       DATA (IFOREST(I,-4,7),I=1,2)/-3,-1/
 C     Diagram 8
       DATA MAPCONFIG(8)/8/
       DATA (IFOREST(I,-1,8),I=1,2)/5,4/
       DATA SPROP(-1,8)/-6/
+      DATA TPRID(-1,8)/0/
       DATA (IFOREST(I,-2,8),I=1,2)/1,6/
       DATA TPRID(-2,8)/21/
+      DATA SPROP(-2,8)/0/
       DATA (IFOREST(I,-3,8),I=1,2)/-2,3/
       DATA TPRID(-3,8)/6/
+      DATA SPROP(-3,8)/0/
       DATA (IFOREST(I,-4,8),I=1,2)/-3,-1/
 C     Diagram 9
       DATA MAPCONFIG(9)/9/
       DATA (IFOREST(I,-1,9),I=1,2)/5,3/
       DATA SPROP(-1,9)/6/
+      DATA TPRID(-1,9)/0/
       DATA (IFOREST(I,-2,9),I=1,2)/4,-1/
       DATA SPROP(-2,9)/21/
+      DATA TPRID(-2,9)/0/
       DATA (IFOREST(I,-3,9),I=1,2)/1,-2/
       DATA TPRID(-3,9)/2/
+      DATA SPROP(-3,9)/0/
       DATA (IFOREST(I,-4,9),I=1,2)/-3,6/
 C     Diagram 10
       DATA MAPCONFIG(10)/10/
       DATA (IFOREST(I,-1,10),I=1,2)/5,4/
       DATA SPROP(-1,10)/-6/
+      DATA TPRID(-1,10)/0/
       DATA (IFOREST(I,-2,10),I=1,2)/-1,3/
       DATA SPROP(-2,10)/21/
+      DATA TPRID(-2,10)/0/
       DATA (IFOREST(I,-3,10),I=1,2)/1,-2/
       DATA TPRID(-3,10)/2/
+      DATA SPROP(-3,10)/0/
       DATA (IFOREST(I,-4,10),I=1,2)/-3,6/
 C     Number of configs
       DATA MAPCONFIG(0)/10/
@@ -8011,50 +8447,68 @@ C     Number of configs
       DATA MAPCONFIG(1)/1/
       DATA (IFOREST(I,-1,1),I=1,2)/3,2/
       DATA SPROP(-1,1)/5/
+      DATA TPRID(-1,1)/0/
       DATA (IFOREST(I,-2,1),I=1,2)/4,-1/
       DATA SPROP(-2,1)/6/
+      DATA TPRID(-2,1)/0/
       DATA (IFOREST(I,-3,1),I=1,2)/5,-2/
       DATA SPROP(-3,1)/6/
+      DATA TPRID(-3,1)/0/
 C     Diagram 2
       DATA MAPCONFIG(2)/2/
       DATA (IFOREST(I,-1,2),I=1,2)/3,2/
       DATA SPROP(-1,2)/5/
+      DATA TPRID(-1,2)/0/
       DATA (IFOREST(I,-2,2),I=1,2)/5,-1/
       DATA SPROP(-2,2)/5/
+      DATA TPRID(-2,2)/0/
       DATA (IFOREST(I,-3,2),I=1,2)/4,-2/
       DATA SPROP(-3,2)/6/
+      DATA TPRID(-3,2)/0/
 C     Diagram 3
       DATA MAPCONFIG(3)/3/
       DATA (IFOREST(I,-1,3),I=1,2)/4,3/
       DATA SPROP(-1,3)/6/
+      DATA TPRID(-1,3)/0/
       DATA (IFOREST(I,-2,3),I=1,2)/-1,2/
       DATA SPROP(-2,3)/6/
+      DATA TPRID(-2,3)/0/
       DATA (IFOREST(I,-3,3),I=1,2)/5,-2/
       DATA SPROP(-3,3)/6/
+      DATA TPRID(-3,3)/0/
 C     Diagram 4
       DATA MAPCONFIG(4)/4/
       DATA (IFOREST(I,-1,4),I=1,2)/4,3/
       DATA SPROP(-1,4)/6/
+      DATA TPRID(-1,4)/0/
       DATA (IFOREST(I,-2,4),I=1,2)/5,-1/
       DATA SPROP(-2,4)/6/
+      DATA TPRID(-2,4)/0/
       DATA (IFOREST(I,-3,4),I=1,2)/-2,2/
       DATA SPROP(-3,4)/6/
+      DATA TPRID(-3,4)/0/
 C     Diagram 5
       DATA MAPCONFIG(5)/5/
       DATA (IFOREST(I,-1,5),I=1,2)/5,3/
       DATA SPROP(-1,5)/5/
+      DATA TPRID(-1,5)/0/
       DATA (IFOREST(I,-2,5),I=1,2)/-1,2/
       DATA SPROP(-2,5)/5/
+      DATA TPRID(-2,5)/0/
       DATA (IFOREST(I,-3,5),I=1,2)/4,-2/
       DATA SPROP(-3,5)/6/
+      DATA TPRID(-3,5)/0/
 C     Diagram 6
       DATA MAPCONFIG(6)/6/
       DATA (IFOREST(I,-1,6),I=1,2)/5,3/
       DATA SPROP(-1,6)/5/
+      DATA TPRID(-1,6)/0/
       DATA (IFOREST(I,-2,6),I=1,2)/4,-1/
       DATA SPROP(-2,6)/6/
+      DATA TPRID(-2,6)/0/
       DATA (IFOREST(I,-3,6),I=1,2)/-2,2/
       DATA SPROP(-3,6)/6/
+      DATA TPRID(-3,6)/0/
 C     Number of configs
       DATA MAPCONFIG(0)/6/
 """)
@@ -8116,12 +8570,12 @@ class AlohaFortranWriterTest(unittest.TestCase):
 C     The process calculated in this file is: 
 C     Gamma(3,2,1)
 C     
-      SUBROUTINE FFV1_1(F2, V3, C, M1, W1, F1)
+      SUBROUTINE FFV1_1(F2, V3, COUP, M1, W1, F1)
       IMPLICIT NONE
-      DOUBLE COMPLEX F1(6)
-      DOUBLE COMPLEX F2(6)
-      DOUBLE COMPLEX V3(6)
-      DOUBLE COMPLEX C
+      DOUBLE COMPLEX F1(*)
+      DOUBLE COMPLEX F2(*)
+      DOUBLE COMPLEX V3(*)
+      DOUBLE COMPLEX COUP
       DOUBLE COMPLEX DENOM
       DOUBLE PRECISION M1, W1
       DOUBLE PRECISION P1(0:3)
@@ -8138,10 +8592,9 @@ C
         abstract_M.write('/tmp','Fortran')
         
         self.assertTrue(os.path.exists('/tmp/FFV1_1.f'))
-        textfile = open('/tmp/FFV1_1.f','r')
+        textfile = open('/tmp/FFV1_1.f','r').read()
         split_sol = solution.split('\n')
-        for i in range(len(split_sol)):
-            self.assertEqual(split_sol[i]+'\n', textfile.readline())
+        self.assertEqual(split_sol, textfile.split('\n')[:len(split_sol)])
 
 
 class UFO_model_to_mg4_Test(unittest.TestCase):

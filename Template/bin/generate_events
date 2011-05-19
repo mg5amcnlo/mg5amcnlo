@@ -201,7 +201,6 @@ if [[ $b != ".true." ]]; then
    mv survey refine
    $dirbin/gen_crossxhtml-pl $t
    $dirbin/refine $a $mode $n 5 $t
-   #$dirbin/refine 0.01 $mode $n
    mv refine refine2
    $dirbin/gen_crossxhtml-pl $t
    $dirbin/refine $a $mode $n 1 $t
@@ -230,6 +229,10 @@ cd ./Events
 echo "putting the banner"
 $dirbin/put_banner events.lhe
 $dirbin/put_banner unweighted_events.lhe
+
+if [[ -e unweighted_events.lhe ]]; then
+    $dirbin/extract_banner-pl unweighted_events.lhe  banner.txt 
+fi
 
 #if [[ -e ../Cards/replace_card.dat ]];then
 #    $dirbin/replace.pl unweighted_events.lhe temp.lhe < ../Cards/replace_card.dat
@@ -268,11 +271,15 @@ if [[ (-x $MAdir/plot_events) && (-e unweighted_events.lhe) && (-e ../Cards/plot
     echo "../unweighted_events.lhe" > events.list
     $dirbin/plot $MAdir $td > plot.log
     cd ..
-    $dirbin/plot_page-pl $t
+    $dirbin/plot_page-pl $t parton
+    mv -f plots.html ${t}_plots.html
 fi
 
 $dirbin/store $t
 $dirbin/gen_crossxhtml-pl $t
+
+# Restore the banner
+cp -f ${t}_banner.txt banner.txt
 
 if [[ $b == ".true." ]]; then
    cd ../
@@ -306,6 +313,13 @@ if [[ (-x $pydir/pythia) && (-e ../Cards/pythia_card.dat) ]]; then
     $dirbin/run_pythia $pydir $mode  
 fi
 
+if [[ -e pythia_events.hep ]];then
+# pythia_card.dat
+   echo "<MGPythiaCard>" >> banner.txt
+   if [[ -e ../Cards/pythia_card.dat ]]; then cat ../Cards/pythia_card.dat   >> banner.txt; fi
+   echo "</MGPythiaCard>" >> banner.txt
+fi
+
 if [[ (-x $pydir/hep2lhe) && (-e ../Cards/pythia_card.dat) && (-e pythia_events.hep) ]]; then
     echo "Creating Pythia LHE File" >& ../status
     $dirbin/gen_crossxhtml-pl $t
@@ -316,6 +330,19 @@ if [[ (-x $ERAdir/ExRootLHEFConverter) && (-e pythia_events.lhe) ]]; then
     echo "Creating Pythia LHE Root File" >& ../status
     $dirbin/gen_crossxhtml-pl $t
     $ERAdir/ExRootLHEFConverter pythia_events.lhe pythia_lhe_events.root
+fi
+
+if [[ (-x $MAdir/plot_events) && (-e pythia_events.lhe) && (-e ../Cards/plot_card.dat) ]]; then
+    echo "Creating Plots for Pythia"
+    echo "Creating Plots for Pythia" >& ../status
+    $dirbin/gen_crossxhtml-pl $t
+    mkdir ${t}_pythia
+    cd ${t}_pythia
+    echo "../pythia_events.lhe" > events.list
+    $dirbin/plot $MAdir $td > plot.log
+    cd ..
+    $dirbin/plot_page-pl ${t}_pythia Pythia
+    mv -f plots.html ${t}_plots_pythia.html
 fi
 
 # Compile pgs if not there
@@ -346,6 +373,32 @@ if [[ (-x $ERAdir/ExRootLHCOlympicsConverter) && (-e pgs_events.lhco) ]]; then
     echo "Creating PGS Root File" >& ../status
     $dirbin/gen_crossxhtml-pl $t
     $ERAdir/ExRootLHCOlympicsConverter pgs_events.lhco pgs_events.root
+fi
+
+if [[ (-x $MAdir/plot_events) && (-e pgs_events.lhco) && (-e ../Cards/plot_card.dat) ]]; then
+    echo "Creating Plots for PGS"
+    echo "Creating Plots for PGS" >& ../status
+    $dirbin/gen_crossxhtml-pl $t
+    mkdir ${t}_pgs
+    cd ${t}_pgs
+    echo "../pgs_events.lhco" > events.list
+    $dirbin/plot $MAdir $td > plot.log
+    cd ..
+    $dirbin/plot_page-pl ${t}_pgs PGS
+    mv -f plots.html ${t}_plots_pgs.html
+fi
+
+if [[ (-x $MAdir/plot_events) && (-e delphes_events.lhco) && (-e ../Cards/plot_card.dat) ]]; then
+    echo "Creating Plots for Delphes"
+    echo "Creating Plots for Delphes" >& ../status
+    $dirbin/gen_crossxhtml-pl $t
+    mkdir ${t}_delphes
+    cd ${t}_delphes
+    echo "../delphes_events.lhco" > events.list
+    $dirbin/plot $MAdir $td > plot.log
+    cd ..
+    $dirbin/plot_page-pl ${t}_delphes Delphes
+    mv -f plots.html ${t}_plots_delphes.html
 fi
 
 cd ../

@@ -1,0 +1,48 @@
+Update notes for DECAY package
+
+c----------------------------------------------------------------------*
+c     FIRST VERSION 16-May-2003                                        *
+c----------------------------------------------------------------------*
+c     LAST UPDATE  26-Sep-2003:                                        *
+c     - W->anything and t->b anything decays added.                    *
+c     - rnd number generator seed changes in sequential runs.          *
+c----------------------------------------------------------------------*
+c     LAST UPDATE  07-Nov-2003:                                        *
+c     - exactly turns unweighted evts in unweighted evts.              *
+c     - decaying identical particles in one event fixed.               *
+c     - bug in the Z->jets quark fractions corrected.                  *
+c     - error trap routines added                                      *
+c----------------------------------------------------------------------*
+c     LAST UPDATE 25-Feb-2004:                                         *
+c     - H->ZZ>leptons : wrong extra factor of two deleted              *
+c----------------------------------------------------------------------*
+c     LAST UPDATE 12-Dec-2004:                                         *
+c     - Merging it to the official web template                        *
+c----------------------------------------------------------------------*
+c     LAST UPDATE  June-10-2005:                                       *
+c     - Updated for use with new rw_events.f format                    *
+c     LAST UPDATE  August-18-2005:                                     *
+c     - Fixed a bug in  the previous update                            *
+c----------------------------------------------------------------------*
+c     LAST UPDATE 25-Jan-2006:                                         *
+c     - Template change structure, moved to directory Decay            *
+c----------------------------------------------------------------------*
+c     LAST UPDATE 27-July-2006:                                        *
+c     - Compliant with MadGraph_v4.0                                   *
+c----------------------------------------------------------------------*
+c     LAST UPDATE Jan 2007                                             *
+c     - Compliant with MadGraph_v4.1                                   *
+c----------------------------------------------------------------------*
+c     LAST UPDATE Mar 2008                                             *
+c     - RF: Fixed bug in writing rnd number seed in event file banner  *
+c----------------------------------------------------------------------*
+c     LAST UPDATE May 2008                                             *
+c     - FM: Fixed bug in Higgs 4 body decay                            *
+c----------------------------------------------------------------------*
+c     LAST UPDATE June 2008                                            *
+c     - RF: Fixed bug if there is more than one event number in the    *
+c           init block of event file.                                  *
+c----------------------------------------------------------------------*
+c     LAST UPDATE Sep 2009                                             *
+c     - OM: Modification for gfortran compilation compatibility        *
+c***********************************************************************

@@ -37,11 +37,11 @@ $server = $ENV{'SERVER_NAME'};
 #	and code.
 #
   if (-e "SubProcesses/procdef_mg5.dat"){
-    open (INCARD,"SubProcesses/procdef_mg5.dat") || die "Error reading file proc_card.dat";
+    open (INCARD,"SubProcesses/procdef_mg5.dat") || die "Error reading file procdef_mg5.dat";
     @incard=<INCARD>;
     close (INCARD);
   } else {
-    open (INCARD,"Cards/proc_card.dat") || die "Error reading file proc_card.dat";
+    open (INCARD,"Cards/proc_card.dat") || exit;
     @incard=<INCARD>;
     close (INCARD);
   }

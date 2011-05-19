@@ -3,6 +3,7 @@
 
       implicit none
       include 'genps.inc'
+      include 'maxconfigs.inc'
       include 'nexternal.inc'
       include 'coupl.inc'
       include 'cluster.inc'

@@ -43,7 +43,7 @@ while ( -e "matrix$imatrix.ps"){
   open PROCESS, "grep Process auto_dsig$imatrix.f |" or print "Error: can't do grep\n";
   $proc = <PROCESS>;
   if ($proc =~ /Process: (.+?)(\s\w+=\d+)*$/) { $proc = $1; }
-  print PAGE "<P>\<A HREF\=\"matrix$imatrix.ps\"\> Postscript Diagrams for $proc\<\/A\> \<BR\> \n";
+  print PAGE "<P>\<A HREF\=\"matrix$imatrix.ps\" id\=\"$imatrix\"\> Postscript Diagrams for $proc\<\/A\> \<BR\> \n";
   for($j=1;$j<$pages;$j++){
     print PAGE "\<IMG SRC=\"matrix$imatrix$j.jpg\" ALT=\"Page $j of $pages \" \> \<BR\> \n";
   }#end of for
@@ -63,14 +63,14 @@ while ( -e "matrix$imatrix.ps"){
 #  Now create jpeg file for card
 #
   if (! -e "../../card.jpg") {
-    system ("/bin/bash -c \"head -339 matrix$imatrix.ps >& junk.ps\" ");
+    system ("/bin/bash -c \"head -352 matrix$imatrix.ps >& junk.ps\" ");
     open(JUNK,">> junk.ps") || die "Error opening junk.ps";  
 
-    print JUNK "-20 -390 translate \n";
+    print JUNK "-30 -380 translate \n";
     print JUNK "0.7 0.7 scale \n";
     close(JUNK);
 
-    system ("/bin/bash -c \"cat matrix$imatrix.ps | sed 1,339d >> junk.ps\" ");
+    system ("/bin/bash -c \"cat matrix$imatrix.ps | sed 1,352d >> junk.ps\" ");
 
     system "/bin/bash -c \"nice gs  \-sDEVICE\=jpeg \-sOutputFile\=card.jpg \-q \-dNOPAUSE \-dBATCH \-g180x150 junk.ps; rm -f junk.ps; cp -p card.jpg ../../card.jpg\" ";
   }

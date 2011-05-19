@@ -31,9 +31,12 @@ import madgraph.iolibs.files as files
 import madgraph.iolibs.group_subprocs as group_subprocs
 import madgraph.iolibs.misc as misc
 import madgraph.iolibs.file_writers as writers
+import madgraph.iolibs.gen_infohtml as gen_infohtml
 import madgraph.iolibs.template_files as template_files
 import madgraph.iolibs.ufo_expression_parsers as parsers
 import madgraph.various.diagram_symmetry as diagram_symmetry
+import madgraph.various.process_checks as process_checks
+
 
 import aloha.create_aloha as create_aloha
 import models.write_param_card as param_writer
@@ -54,6 +57,7 @@ class ProcessExporterFortran(object):
         self.mgme_dir = mgme_dir
         self.dir_path = dir_path
         self.clean = clean
+        self.model = None
 
     #===========================================================================
     # copy the Template in a new directory.
@@ -146,7 +150,7 @@ class ProcessExporterFortran(object):
     #===========================================================================
     # Create jpeg diagrams, html pages,proc_card_mg5.dat and madevent.tar.gz
     #===========================================================================
-    def finalize_v4_directory(self, history = "", makejpg = False):
+    def finalize_v4_directory(self, matrix_elements, history = "", makejpg = False, online = False):
         """Function to finalize v4 directory, for inheritance.
         """
         pass
@@ -176,7 +180,7 @@ class ProcessExporterFortran(object):
         """Make the copy/symbolic links"""
         model_path = self.dir_path + '/Source/MODEL/'
         if os.path.exists(os.path.join(model_path, 'ident_card.dat')):
-            ln(model_path + '/ident_card.dat', self.dir_path + '/Cards', log=False)
+            mv(model_path + '/ident_card.dat', self.dir_path + '/Cards')
         if os.path.exists(os.path.join(model_path, 'particles.dat')):
             ln(model_path + '/particles.dat', self.dir_path + '/SubProcesses')
             ln(model_path + '/interactions.dat', self.dir_path + '/SubProcesses')
@@ -185,6 +189,9 @@ class ProcessExporterFortran(object):
         ln(model_path + '/coupl.inc', self.dir_path + '/Source')
         ln(model_path + '/coupl.inc', self.dir_path + '/SubProcesses')
         ln(self.dir_path + '/Source/run.inc', self.dir_path + '/SubProcesses', log=False)
+        ln(self.dir_path + '/Source/genps.inc', self.dir_path + '/SubProcesses', log=False)
+        ln(self.dir_path + '/Source/maxconfigs.inc', self.dir_path + '/SubProcesses', log=False)
+        ln(self.dir_path + '/Source/maxparticles.inc', self.dir_path + '/SubProcesses', log=False)
 
     #===========================================================================
     # export the helas routine
@@ -255,7 +262,7 @@ class ProcessExporterFortran(object):
         """Write the pmass.inc file for MG4"""
 
         model = matrix_element.get('processes')[0].get('model')
-
+        
         lines = []
         for wf in matrix_element.get_external_wavefunctions():
             mass = model.get('particle_dict')[wf.get('pdg_code')].get('mass')
@@ -702,7 +709,8 @@ class ProcessExporterFortranSA(ProcessExporterFortran):
     #===========================================================================
     # Create proc_card_mg5.dat for Standalone directory
     #===========================================================================
-    def finalize_v4_directory(self, history, makejpg = False):
+    def finalize_v4_directory(self, matrix_elements, history, makejpg = False,
+                              online = False):
         """Finalize Standalone MG4 directory by generation proc_card_mg5.dat"""
 
         if not misc.which('g77'):
@@ -724,7 +732,7 @@ class ProcessExporterFortranSA(ProcessExporterFortran):
     # generate_subprocess_directory_v4
     #===========================================================================
     def generate_subprocess_directory_v4(self, matrix_element,
-                                                    fortran_model):
+                                         fortran_model):
         """Generate the Pxxxxx directory for a subprocess in MG4 standalone,
         including the necessary matrix.f and nexternal.inc files"""
 
@@ -768,30 +776,6 @@ class ProcessExporterFortranSA(ProcessExporterFortran):
         filename = 'ngraphs.inc'
         self.write_ngraphs_file(writers.FortranWriter(filename),
                            len(matrix_element.get_all_amplitudes()))
-
-        # Generate diagrams
-        filename = "matrix.ps"
-        plot = draw.MultiEpsDiagramDrawer(matrix_element.get('base_amplitude').\
-                                             get('diagrams'),
-                                          filename,
-                                          model=matrix_element.get('processes')[0].\
-                                             get('model'),
-                                          amplitude='')
-        logger.info("Generating Feynman diagrams for " + \
-                     matrix_element.get('processes')[0].nice_string())
-        plot.draw()
-
-        # Generate diagrams
-        filename = "matrix.ps"
-        plot = draw.MultiEpsDiagramDrawer(matrix_element.get('base_amplitude').\
-                                             get('diagrams'),
-                                          filename,
-                                          model=matrix_element.get('processes')[0].\
-                                             get('model'),
-                                          amplitude='')
-        logger.info("Generating Feynman diagrams for " + \
-                     matrix_element.get('processes')[0].nice_string())
-        plot.draw()
 
         # Generate diagrams
         filename = "matrix.ps"
@@ -903,19 +887,13 @@ class ProcessExporterFortranME(ProcessExporterFortran):
     """Class to take care of exporting a set of matrix elements to
     MadEvent format."""
 
+    matrix_file = "matrix_madevent_v4.inc"
+
     def copy_v4template(self):
         """Additional actions needed for setup of Template
         """
 
         super(ProcessExporterFortranME, self).copy_v4template()
-
-        # If we are not using subproc_group, use old symmetry.f
-        if os.path.exists(os.path.join(self.dir_path, 'SubProcesses',
-                                       'symmetry_v4.f')):
-            shutil.move(os.path.join(self.dir_path, 'SubProcesses',
-                                     'symmetry_v4.f'),
-                        os.path.join(self.dir_path, 'SubProcesses',
-                                     'symmetry.f'))
 
     #===========================================================================
     # generate_subprocess_directory_v4 
@@ -928,6 +906,9 @@ class ProcessExporterFortranME(ProcessExporterFortran):
 
         cwd = os.getcwd()
         path = os.path.join(self.dir_path, 'SubProcesses')
+
+        if not self.model:
+            self.model = matrix_element.get('processes')[0].get('model')
 
         try:
              os.chdir(path)
@@ -1029,6 +1010,18 @@ class ProcessExporterFortranME(ProcessExporterFortran):
                          matrix_element,
                          s_and_t_channels)
 
+        # Find config symmetries and permutations
+        symmetry, perms, ident_perms = \
+                  diagram_symmetry.find_symmetry(matrix_element)
+
+        filename = 'symswap.inc'
+        self.write_symswap_file(writers.FortranWriter(filename),
+                                ident_perms)
+
+        filename = 'symfact.dat'
+        self.write_symfact_file(writers.FortranWriter(filename),
+                           symmetry)
+
         # Generate diagrams
         filename = "matrix.ps"
         plot = draw.MultiEpsDiagramDrawer(matrix_element.get('base_amplitude').\
@@ -1041,8 +1034,6 @@ class ProcessExporterFortranME(ProcessExporterFortran):
                      matrix_element.get('processes')[0].nice_string())
         plot.draw()
 
-        # Generate jpgs -> pass in make_html
-        #os.system(os.path.join('..', '..', 'bin', 'gen_jpeg-pl'))
 
         linkfiles = ['addmothers.f',
                      'cluster.f',
@@ -1059,6 +1050,8 @@ class ProcessExporterFortranME(ProcessExporterFortran):
                      'myamp.f',
                      'reweight.f',
                      'run.inc',
+                     'maxconfigs.inc',
+                     'maxparticles.inc',
                      'setcuts.f',
                      'setscales.f',
                      'sudakov.inc',
@@ -1081,24 +1074,35 @@ class ProcessExporterFortranME(ProcessExporterFortran):
         files.append_to_file(filename,
                              self.write_subproc,
                              subprocdir)
-        # Generate info page
-        os.system(os.path.join('..', 'bin', 'gen_infohtml-pl'))
 
         # Return to original dir
         os.chdir(cwd)
+
+        # Generate info page
+        gen_infohtml.make_info_html(self.dir_path)
+
 
         if not calls:
             calls = 0
         return calls
 
-
-
-
-    def finalize_v4_directory(self, history, makejpg = False):
+    def finalize_v4_directory(self, matrix_elements, history, makejpg = False,
+                              online = False):
         """Finalize ME v4 directory by creating jpeg diagrams, html
         pages,proc_card_mg5.dat and madevent.tar.gz."""
 
-        os.system('touch %s/done' % os.path.join(self.dir_path,'SubProcesses'))   
+        # Write maxconfigs.inc based on max of ME's/subprocess groups
+        filename = os.path.join(self.dir_path,'Source','maxconfigs.inc')
+        self.write_maxconfigs_file(writers.FortranWriter(filename),
+                                   matrix_elements)
+        
+        # Write maxparticles.inc based on max of ME's/subprocess groups
+        filename = os.path.join(self.dir_path,'Source','maxparticles.inc')
+        self.write_maxparticles_file(writers.FortranWriter(filename),
+                                     matrix_elements)
+        
+        # Touch "done" file
+        os.system('touch %s/done' % os.path.join(self.dir_path,'SubProcesses'))
 
         if not misc.which('g77'):
             logger.info('Change makefiles to use gfortran')
@@ -1125,9 +1129,10 @@ class ProcessExporterFortranME(ProcessExporterFortran):
 
         subprocess.call([os.path.join(old_pos, self.dir_path, 'bin', 'gen_cardhtml-pl')], \
                                                                 stdout = devnull)
-        subprocess.call([os.path.join(old_pos, self.dir_path, 'bin', 'gen_infohtml-pl')], \
-                                                                stdout = devnull)
+
         os.chdir(os.path.pardir)
+
+        gen_infohtml.make_info_html(self.dir_path)
         subprocess.call([os.path.join(old_pos, self.dir_path, 'bin', 'gen_crossxhtml-pl')],
                         stdout = devnull)
         [mv(name, './HTML/') for name in os.listdir('.') if \
@@ -1151,6 +1156,10 @@ class ProcessExporterFortranME(ProcessExporterFortran):
                 os.remove('madevent.tar.gz')
             subprocess.call(['make'], stdout = devnull)
 
+
+        if online:
+            # Touch "Online" file
+            os.system('touch %s/Online' % self.dir_path)
 
         subprocess.call([os.path.join(old_pos, self.dir_path, 'bin', 'gen_cardhtml-pl')],
                         stdout = devnull)
@@ -1250,6 +1259,12 @@ class ProcessExporterFortranME(ProcessExporterFortran):
                     matrix_element)
         replace_dict['helas_calls'] = "\n".join(helas_calls)
 
+        # Set the size of Wavefunction
+        if not self.model or any([p.get('spin')==5 for p in self.model.get('particles') if p]):
+            replace_dict['wavefunctionsize'] = 18
+        else:
+            replace_dict['wavefunctionsize'] = 6
+
         # Extract amp2 lines
         amp2_lines = self.get_amp2_lines(matrix_element, config_map)
         replace_dict['amp2_lines'] = '\n'.join(amp2_lines)
@@ -1259,8 +1274,9 @@ class ProcessExporterFortranME(ProcessExporterFortran):
         replace_dict['jamp_lines'] = '\n'.join(jamp_lines)
 
         file = open(os.path.join(_file_path, \
-                          'iolibs/template_files/matrix_madevent_v4.inc')).read()
+                          'iolibs/template_files/%s' % self.matrix_file)).read()
         file = file % replace_dict
+
 
         # Write the file
         writer.writelines(file)
@@ -1352,6 +1368,47 @@ class ProcessExporterFortranME(ProcessExporterFortran):
         return True
 
     #===========================================================================
+    # write_maxconfigs_file
+    #===========================================================================
+    def write_maxconfigs_file(self, writer, matrix_elements):
+        """Write the maxconfigs.inc file for MadEvent"""
+
+        if isinstance(matrix_elements, helas_objects.HelasMultiProcess):
+            maxconfigs = max([me.get_num_configs() for me in \
+                              matrix_elements.get('matrix_elements')])
+        else:
+            maxconfigs = max([me.get_num_configs() for me in matrix_elements])
+
+        lines = "integer lmaxconfigs\n"
+        lines += "parameter(lmaxconfigs=%d)" % maxconfigs
+
+        # Write the file
+        writer.writelines(lines)
+
+        return True
+
+    #===========================================================================
+    # write_maxparticles_file
+    #===========================================================================
+    def write_maxparticles_file(self, writer, matrix_elements):
+        """Write the maxparticles.inc file for MadEvent"""
+
+        if isinstance(matrix_elements, helas_objects.HelasMultiProcess):
+            maxparticles = max([me.get_nexternal_ninitial()[0] for me in \
+                              matrix_elements.get('matrix_elements')])
+        else:
+            maxparticles = max([me.get_nexternal_ninitial()[0] \
+                              for me in matrix_elements])
+
+        lines = "integer max_particles\n"
+        lines += "parameter(max_particles=%d)" % maxparticles
+
+        # Write the file
+        writer.writelines(lines)
+
+        return True
+
+    #===========================================================================
     # write_configs_file
     #===========================================================================
     def write_configs_file(self, writer, matrix_element):
@@ -1421,10 +1478,14 @@ class ProcessExporterFortranME(ProcessExporterFortran):
                     lines.append("data sprop(%d,%d)/%d/" % \
                                  (last_leg.get('number'), nconfigs,
                                   last_leg.get('id')))
+                    lines.append("data tprid(%d,%d)/0/" % \
+                                 (last_leg.get('number'), nconfigs))
                 elif vert in tchannels[:-1]:
                     lines.append("data tprid(%d,%d)/%d/" % \
                                  (last_leg.get('number'), nconfigs,
                                   abs(last_leg.get('id'))))
+                    lines.append("data sprop(%d,%d)/0/" % \
+                                 (last_leg.get('number'), nconfigs))
 
         # Write out number of configs
         lines.append("# Number of configs")
@@ -1789,6 +1850,8 @@ class ProcessExporterFortranMEGroup(ProcessExporterFortranME):
     """Class to take care of exporting a set of matrix elements to
     MadEvent subprocess group format."""
 
+    matrix_file = "matrix_madevent_group_v4.inc"
+
     #===========================================================================
     # copy the Template in a new directory.
     #===========================================================================
@@ -1801,16 +1864,8 @@ class ProcessExporterFortranMEGroup(ProcessExporterFortranME):
         # Update values in run_config.inc
         run_config = \
                 open(os.path.join(self.dir_path, 'Source', 'run_config.inc')).read()
-        #run_config = run_config.replace("min_events_channel = 1000",
-        #                                "min_events_channel = 4000")
-        #run_config = run_config.replace("min_events = 2000",
-        #                                "min_events = 4000")
-        run_config = run_config.replace("max_events = 2000",
-                                        "max_events = 8000")
         run_config = run_config.replace("ChanPerJob=5",
                                         "ChanPerJob=2")
-        run_config = run_config.replace("nhel_survey=1",
-                                        "nhel_survey=0")
         open(os.path.join(self.dir_path, 'Source', 'run_config.inc'), 'w').\
                                     write(run_config)
         # Update values in generate_events
@@ -1835,6 +1890,10 @@ class ProcessExporterFortranMEGroup(ProcessExporterFortranME):
         if not isinstance(subproc_group, group_subprocs.SubProcessGroup):
             raise base_objects.PhysicsObject.PhysicsObjectError,\
                   "subproc_group object not SubProcessGroup"
+
+        if not self.model:
+            self.model = subproc_group.get('matrix_elements')[0].\
+                         get('processes')[0].get('model')
 
         cwd = os.getcwd()
         path = os.path.join(self.dir_path, 'SubProcesses')
@@ -1995,7 +2054,7 @@ class ProcessExporterFortranMEGroup(ProcessExporterFortranME):
 
         filename = 'symswap.inc'
         self.write_symswap_file(writers.FortranWriter(filename),
-                           ident_perms)
+                                ident_perms)
 
         filename = 'symfact.dat'
         self.write_symfact_file(writers.FortranWriter(filename),
@@ -2023,6 +2082,8 @@ class ProcessExporterFortranMEGroup(ProcessExporterFortranME):
                      'myamp.f',
                      'reweight.f',
                      'run.inc',
+                     'maxconfigs.inc',
+                     'maxparticles.inc',
                      'setcuts.f',
                      'setscales.f',
                      'sudakov.inc',
@@ -2045,9 +2106,10 @@ class ProcessExporterFortranMEGroup(ProcessExporterFortranME):
         files.append_to_file(filename,
                              self.write_subproc,
                              subprocdir)
+        
         # Generate info page
-        os.system(os.path.join('..', 'bin', 'gen_infohtml-pl'))
-
+        gen_infohtml.make_info_html(os.path.pardir)
+        
         # Return to original dir
         os.chdir(cwd)
 
@@ -2397,11 +2459,6 @@ class UFO_model_to_mg4(object):
                 double complex gal(2)
                 common/weak/ gal
 
-                double precision DUM0
-                common/FRDUM0/ DUM0
-
-                double precision DUM1
-                common/FRDUM1/ DUM1
                 """        
         fsock.writelines(header)
         
@@ -2422,8 +2479,9 @@ class UFO_model_to_mg4(object):
         
         fsock.writelines('double precision '+','.join(masses)+'\n')
         fsock.writelines('common/masses/ '+','.join(masses)+'\n\n')
-        fsock.writelines('double precision '+','.join(widths)+'\n')
-        fsock.writelines('common/widths/ '+','.join(widths)+'\n\n')
+        if widths:
+            fsock.writelines('double precision '+','.join(widths)+'\n')
+            fsock.writelines('common/widths/ '+','.join(widths)+'\n\n')
         
         # Write the Couplings
         coupling_list = [coupl.name for coupl in self.coups_dep + self.coups_indep]       
@@ -2506,10 +2564,6 @@ class UFO_model_to_mg4(object):
                              gal(2) = 1d0
                          """)
 
-        fsock.write_comments("\nDefinition of DUM symbols\n")
-        fsock.writelines(""" DUM0 = 0
-                             DUM1 = 1
-                         """)
     
     def create_couplings(self):
         """ create couplings.f and all couplingsX.f """

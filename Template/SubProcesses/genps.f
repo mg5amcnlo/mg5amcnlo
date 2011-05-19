@@ -83,6 +83,7 @@ c
 c     Constants
 c
       include 'genps.inc'
+      include 'maxconfigs.inc'
       include 'nexternal.inc'
       double precision pi
       parameter       (pi=3.1415926d0)
