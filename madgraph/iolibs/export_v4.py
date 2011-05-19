@@ -967,7 +967,7 @@ class ProcessExporterFortranME(ProcessExporterFortran):
 
         filename = 'dname.mg'
         self.write_dname_file(writers.FortranWriter(filename),
-                         matrix_element.get('processes')[0].shell_string())
+                         "P"+matrix_element.get('processes')[0].shell_string())
 
         filename = 'iproc.dat'
         self.write_iproc_file(writers.FortranWriter(filename),
