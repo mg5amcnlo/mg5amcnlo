@@ -1532,16 +1532,16 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
 
             # Decide here wether one need an NLOMultiProcess or a MultiProcess
             multiprocessclass=None
-            if myprocdef['perturbation_couplings']:
+            if myprocdef['perturbation_couplings']!=[]:
                 multiprocessclass=loop_diagram_generation.LoopMultiProcess
             else:
                 multiprocessclass=diagram_generation.MultiProcess
 
-            myproc = multiprocessclass.MultiProcess(myprocdef,
-                                          collect_mirror_procs =\
-                                          collect_mirror_procs,
-                                          ignore_six_quark_processes = \
-                                          ignore_six_quark_processes)
+            myproc = multiprocessclass(myprocdef,
+                                       collect_mirror_procs =\
+                                       collect_mirror_procs,
+                                       ignore_six_quark_processes = \
+                                       ignore_six_quark_processes)
 
             for amp in myproc.get('amplitudes'):
                 if amp not in self._curr_amps:

@@ -63,7 +63,7 @@ class TestCmdShell1(unittest.TestCase):
         self.do('define J P g')
         self.do('add process e+ e- > J')
         self.assertEqual(len(self.cmd._curr_amps), 2)
-        self.do('add process mu+ mu- > P, Z>mu+ mu-')
+        self.do('add process mu+ mu- > P, Z > mu+ mu-')
         self.assertEqual(len(self.cmd._curr_amps), 3)
         self.do('generate e+ e- > Z > e+ e-')
         self.assertEqual(len(self.cmd._curr_amps), 1)
@@ -73,7 +73,7 @@ class TestCmdShell1(unittest.TestCase):
         self.do('generate e+ e- > V > e+ e-')
         self.assertEqual(len(self.cmd._curr_amps), 1)
         self.assertEqual(len(self.cmd._curr_amps[0].get('diagrams')), 2)
-        self.do('generate e+ e- > z|a > e+ e-')
+        self.do('generate e+ e- > z | a > e+ e-')
         self.assertEqual(len(self.cmd._curr_amps), 1)
         self.assertEqual(len(self.cmd._curr_amps[0].get('diagrams')), 2)
         self.assertRaises(MadGraph5Error, self.do, 'generate a V > e+ e-')
@@ -317,7 +317,7 @@ class TestCmdShell2(unittest.TestCase,
             shutil.rmdir(self.out_dir)
 
         self.do('import model sm')
-        self.do('generate e+ e->e+ e-')
+        self.do('generate e+ e- > e+ e-')
         self.do('output standalone %s ' % self.out_dir)
         # Check that the needed ALOHA subroutines are generated
         files = ['aloha_file.inc', 
@@ -419,7 +419,7 @@ class TestCmdShell2(unittest.TestCase,
 
         self.do('import model sm')
         self.do('set group_subprocesses False')
-        self.do('generate e+ e->e+ e-')
+        self.do('generate e+ e- > e+ e-')
         self.do('output %s ' % self.out_dir)
         # Check that the needed ALOHA subroutines are generated
         files = ['aloha_file.inc', 
