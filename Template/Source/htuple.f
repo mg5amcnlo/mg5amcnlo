@@ -66,6 +66,7 @@ c
 c     Constants
 c
       include "genps.inc"
+      include 'maxconfigs.inc'
 
       integer ndim,kdim,mdim,maxconfig,ktot
       parameter (ndim = maxdim, kdim = 181, mdim = 1060)

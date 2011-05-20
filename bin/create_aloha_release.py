@@ -58,7 +58,7 @@ sys.path.append(root_path)
 
 import madgraph.iolibs.misc as misc
 import madgraph.iolibs.files as files_routines
-from madgraph import MG4DIR, MG5DIR
+from madgraph import MG5DIR
 
 # Write out nice usage message if called with -h or --help
 usage = "usage: %prog [options] [FILE] "

@@ -169,6 +169,14 @@ MH = Parameter(name = 'MH',
                lhablock = 'MASS',
                lhacode = [ 25 ])
 
+WTA = Parameter(name = 'WTA',
+               nature = 'external',
+               type = 'real',
+               value = 0,
+               texname = '\\text{WT}',
+               lhablock = 'DECAY',
+               lhacode = [ 15 ])
+
 WT = Parameter(name = 'WT',
                nature = 'external',
                type = 'real',

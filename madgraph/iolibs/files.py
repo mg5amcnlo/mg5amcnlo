@@ -165,7 +165,11 @@ def ln(file_pos, starting_dir='.', name='', log=True):
     starting_dir = format_path(starting_dir)
     if not name:
         name = os.path.split(file_pos)[1]    
-        
+
+    # Remove existing link if necessary
+    if os.path.islink(os.path.join(starting_dir, name)):
+        os.remove(os.path.join(starting_dir, name))
+
     try:
         os.symlink(os.path.relpath(file_pos, starting_dir), \
                         os.path.join(starting_dir, name))

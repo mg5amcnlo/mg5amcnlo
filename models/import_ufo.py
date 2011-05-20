@@ -25,6 +25,7 @@ from madgraph import MadGraph5Error, MG5DIR
 import madgraph.core.base_objects as base_objects
 import madgraph.core.color_algebra as color
 import madgraph.iolibs.files as files
+import madgraph.iolibs.misc as misc
 import madgraph.iolibs.save_load_object as save_load_object
 from madgraph.core.color_algebra import *
 
@@ -92,7 +93,7 @@ def import_model(model_name):
     
     #restrict it if needed       
     if restrict_file:
-        logger.info('Restrict model %s with file %s.' % (model_name, restrict_file))
+        logger.info('Restrict model %s with file %s .' % (model_name, os.path.relpath(restrict_file)))
         if logger_mod.getEffectiveLevel() > 10:
             logger.info('Run \"set stdout_level DEBUG\" before import for more information.')
             
@@ -102,6 +103,7 @@ def import_model(model_name):
         
     return model
 
+_import_once = []
 def import_full_model(model_path):
     """ a practical and efficient way to import one of those models 
         (no restriction file use)"""
@@ -125,10 +127,15 @@ def import_full_model(model_path):
             model = save_load_object.load_from_file( \
                                           os.path.join(model_path, 'model.pkl'))
         except Exception, error:
-            print error
             logger.info('failed to load model from pickle file. Try importing UFO from File')
         else:
-            return model
+            # check path is correct 
+            if model.has_key('version_tag') and model.get('version_tag') == os.path.realpath(model_path) + str(misc.get_pkg_info()):
+                _import_once.append(model_path)
+                return model
+
+    if model_path in _import_once:
+        raise MadGraph5Error, 'This model is modified on disk. To reload it you need to quit/relaunch mg5' 
 
     # Load basic information
     ufo_model = ufomodels.load_model(model_path)
@@ -137,7 +144,8 @@ def import_full_model(model_path):
     
     if model_path[-1] == '/': model_path = model_path[:-1] #avoid empty name
     model.set('name', os.path.split(model_path)[-1])
- 
+    model.set('version_tag', os.path.realpath(model_path) + str(misc.get_pkg_info()))
+
     # Load the Parameter/Coupling in a convinient format.
     parameters, couplings = OrganizeModelExpression(ufo_model).main()
     model.set('parameters', parameters)
@@ -170,7 +178,7 @@ class UFOMG5Converter(object):
         self.conservecharge = set(['charge'])
         
         self.ufomodel = model
-        
+
         if auto:
             self.load_model()
 
@@ -188,7 +196,7 @@ class UFOMG5Converter(object):
 
         for particle_info in self.ufomodel.all_particles:            
             self.add_particle(particle_info)
-            
+
         logger.info('load vertices')
         for interaction_info in self.ufomodel.all_vertices:
             self.add_interaction(interaction_info)
@@ -234,7 +242,7 @@ class UFOMG5Converter(object):
                     particle.set(key, str(value))
                 else:
                     particle.set(key, value)
-            elif key not in ('GhostNumber','selfconjugate','goldstoneboson'):
+            elif key.lower() not in ('ghostnumber','selfconjugate','goldstoneboson'):
                 # add charge -we will check later if those are conserve 
                 self.conservecharge.add(key)
                 particle.set(key,value, force=True)
@@ -373,7 +381,7 @@ class OrganizeModelExpression:
     
     # regular expression to shorten the expressions
     complex_number = re.compile(r'''complex\((?P<real>[^,\(\)]+),(?P<imag>[^,\(\)]+)\)''')
-    expo_expr = re.compile(r'''(?P<expr>[\w.]+)\s*\*\*\s*(?P<expo>\d+)''')
+    expo_expr = re.compile(r'''(?P<expr>[\w.]+)\s*\*\*\s*(?P<expo>[\d.+-]+)''')
     cmath_expr = re.compile(r'''cmath.(?P<operation>\w+)\((?P<expr>\w+)\)''')
     #operation is usualy sqrt / sin / cos / tan
     conj_expr = re.compile(r'''complexconjugate\((?P<expr>\w+)\)''')
@@ -522,7 +530,8 @@ class OrganizeModelExpression:
         
         expr = matchobj.group('expr')
         exponent = matchobj.group('expo')
-        output = '%s__exp__%s' % (expr, exponent)
+        new_exponent = exponent.replace('.','_').replace('+','').replace('-','_m_')
+        output = '%s__exp__%s' % (expr, new_exponent)
         old_expr = '%s**%s' % (expr,exponent)
 
         if expr.startswith('cmath'):
@@ -593,6 +602,10 @@ class RestrictModel(model_reader.ModelReader):
      
     def restrict_model(self, param_card):
         """apply the model restriction following param_card"""
+
+        # Reset particle dict to ensure synchronized particles and interactions
+        self.set('particles', self.get('particles'))
+
         # compute the value of all parameters
         self.set_parameters_and_couplings(param_card)
         # associte to each couplings the associated vertex: def self.coupling_pos
@@ -610,8 +623,7 @@ class RestrictModel(model_reader.ModelReader):
         # remove zero couplings and other pointless couplings
         self.del_coup += zero_couplings
         self.remove_couplings(self.del_coup)
-        
-        
+                
         # deal with parameters
         parameters = self.detect_special_parameters()
         self.fix_parameter_values(*parameters)
@@ -620,7 +632,15 @@ class RestrictModel(model_reader.ModelReader):
         iden_parameters = self.detect_identical_parameters()
         for iden_param in iden_parameters:
             self.merge_iden_parameters(iden_param)
-
+            
+        # change value of default parameter if they have special value:
+        # 9.999999e-1 -> 1.0
+        # 0.000001e-99 -> 0 Those value are used to avoid restriction
+        for name, value in self['parameter_dict'].items():
+            if value == 9.999999e-1:
+                self['parameter_dict'][name] = 1
+            elif value == 0.000001e-99:
+                self['parameter_dict'][name] = 0
 
     def locate_coupling(self):
         """ create a dict couplings_name -> vertex """
@@ -820,7 +840,7 @@ class RestrictModel(model_reader.ModelReader):
                 particle['mass'] = 'ZERO'
             if particle['width'] in zero_parameters:
                 particle['width'] = 'ZERO'            
-        
+
         # check if the parameters is still usefull:
         re_str = '|'.join(special_parameters)
         re_pat = re.compile(r'''\b(%s)\b''' % re_str)

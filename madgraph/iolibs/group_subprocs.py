@@ -184,6 +184,12 @@ class SubProcessGroup(base_objects.PhysicsObject):
             if part.get('mass').lower() == 'zero' and part.get('color') != 1 \
                    and part.get('spin') == 2:
                 name += "q" # "j"
+            elif part.get('mass').lower() == 'zero' and part.get('color') == 1 \
+                   and part.get('spin') == 2:
+                if part.get('charge') == 0:
+                    name += "vl"
+                else:
+                    name += "l"
             else:
                 name += part.get_name().replace('~', 'x').\
                             replace('+', 'p').replace('-', 'm')
@@ -219,6 +225,11 @@ class SubProcessGroup(base_objects.PhysicsObject):
 
         return self.get('matrix_elements')[0].\
                get_nexternal_ninitial()
+
+    def get_num_configs(self):
+        """Get number of configs for this group"""
+
+        return len(self.get('mapping_diagrams'))
 
     def find_mapping_diagrams(self):
         """Find all unique diagrams for all processes in this
@@ -260,7 +271,9 @@ class SubProcessGroup(base_objects.PhysicsObject):
                                     (model.get_particle(l.get('id')).\
                                          get('mass'),
                                      model.get_particle(l.get('id')).\
-                                         get('width'))) \
+                                         get('width'),
+                                     model.get_particle(l.get('id')).\
+                                         get('color'))) \
                                for l in v.get('legs')] \
                               for v in diagram.get('vertices')]
                 try:

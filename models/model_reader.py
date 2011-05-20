@@ -81,8 +81,8 @@ class ModelReader(base_objects.Model):
             param_lines = open(param_card, 'r').read().split('\n')
 
             # Define regular expressions
-            re_block = re.compile("^block\s+(?P<name>\w+)")
-            re_decay = re.compile("^decay\s+(?P<pid>\d+)\s+(?P<value>[\d\.e\+-]+)")
+            re_block = re.compile("^\s*block\s+(?P<name>\w+)")
+            re_decay = re.compile("^\s*decay\s+(?P<pid>\d+)\s+(?P<value>[\d\.e\+-]+)")
             re_single_index = re.compile("^\s*(?P<i1>\d+)\s+(?P<value>[\d\.e\+-]+)")
             re_double_index = re.compile(\
                            "^\s*(?P<i1>\d+)\s+(?P<i2>\d+)\s+(?P<value>[\d\.e\+-]+)")
@@ -162,7 +162,11 @@ class ModelReader(base_objects.Model):
 
         # Now calculate derived parameters
         for param in derived_parameters:
-            exec("locals()[\'%s\'] = %s" % (param.name, param.expr))
+            try:
+                exec("locals()[\'%s\'] = %s" % (param.name, param.expr))
+            except Exception as error:
+                msg = 'Unable to evaluate %s: raise error: %s' % (param.expr, error)
+                raise MadGraph5Error, msg
             param.value = complex(eval(param.name))
             if not eval(param.name) and eval(param.name) != 0:
                 logger.warning("%s has no expression: %s" % (param.name,

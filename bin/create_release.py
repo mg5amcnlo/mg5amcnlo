@@ -55,7 +55,7 @@ root_path = path.split(path.dirname(path.realpath( __file__ )))[0]
 sys.path.append(root_path)
 
 import madgraph.iolibs.misc as misc
-from madgraph import MG4DIR, MG5DIR
+from madgraph import MG5DIR
 
 # Write out nice usage message if called with -h or --help
 usage = "usage: %prog [options] [FILE] "
@@ -71,7 +71,7 @@ logging.basicConfig(level=vars(logging)[options.logging],
                     format="%(message)s")
 
 # 0. check that all modification are commited in this directory
-#    and that the date is up-to-date
+#    and that the date/UpdateNote are up-to-date
 diff_result = subprocess.Popen(["bzr", "diff"], stdout=subprocess.PIPE).communicate()[0] 
 
 if diff_result:
@@ -79,10 +79,12 @@ if diff_result:
     answer = raw_input('Do you want to continue anyway? (y/n)')
     if answer != 'y':
         exit()
+
 release_date = date.fromtimestamp(time.time())
 for line in file(os.path.join(MG5DIR,'VERSION')):
     if 'version' in line:
         logging.info(line)
+        version = line.rsplit('=')[1].strip()
     if 'date' in line:
         if not str(release_date.year) in line or not str(release_date.month) in line or \
                                                            not str(release_date.day) in line:
@@ -90,6 +92,13 @@ for line in file(os.path.join(MG5DIR,'VERSION')):
             answer = raw_input('Do you want to continue anyway? (y/n)')
             if answer != 'y':
                 exit()
+
+Update_note = file(os.path.join(MG5DIR,'UpdateNotes.txt')).read()
+if version not in Update_note:
+    logging.warning("WARNING: version number %s is not found in \'UpdateNotes.txt\'" % version)
+    answer = raw_input('Do you want to continue anyway? (y/n)')
+    if answer != 'y':
+        exit()
 
 # 1. bzr branch the present directory to a new directory
 #    MadGraph5_vVERSION
@@ -105,6 +114,16 @@ status = subprocess.call(['bzr', 'branch', MG5DIR, filepath])
 if status:
     logging.error("bzr branch failed. Script stopped")
     exit()
+
+# 1. Remove the .bzr directory and clean bin directory file,
+#    take care of README files.
+
+shutil.rmtree(path.join(filepath, '.bzr'))
+for data in glob.glob(path.join(filepath, 'bin', '*')):
+    if not data.endswith('mg5'):
+        os.remove(data)
+os.remove(path.join(filepath, 'README.developer'))
+shutil.move(path.join(filepath, 'README.release'), path.join(filepath, 'README'))
 
 # 2. Create the automatic documentation in the apidoc directory
 
@@ -122,15 +141,7 @@ if status1:
                  status)
     exit()
 
-# 3. Remove the .bzr directory and the create_release.py file,
-#    take care of README files.
-
-shutil.rmtree(path.join(filepath, '.bzr'))
-os.remove(path.join(filepath, 'bin', 'create_release.py'))
-os.remove(path.join(filepath, 'README.developer'))
-shutil.move(path.join(filepath, 'README.release'), path.join(filepath, 'README'))
-
-# 6. tar the MadGraph5_vVERSION directory.
+# 3. tar the MadGraph5_vVERSION directory.
 
 logging.info("Create the tar file " + filename)
 
@@ -163,13 +174,6 @@ reload(madgraph.iolibs)
 import madgraph.iolibs.misc
 reload(madgraph.iolibs.misc)
 
-## Need a __init__ file to run tests
-##if not os.path.exists(os.path.join(filepath,'__init__.py')):
-##    open(os.path.join(filepath,'__init__.py'), 'w').close()
-
-## For acceptance tests, make sure to use filepath as MG4DIR
-##madgraph.MG4DIR = os.path.realpath(filepath)
-#madgraph.MG5DIR = os.path.realpath(filepath)
 
 test_results = test_manager.run(package=os.path.join('tests',
                                                      'unit_tests'))
@@ -194,6 +198,11 @@ if a_test_results.errors or test_results.errors:
     logging.error("Removing %s and quitting..." % filename)
     os.remove(filename)
     exit()
+
+try:
+    os.remove("%s.asc" % filename)
+except:
+    pass
 
 try:
     status1 = subprocess.call(['gpg', '--armor', '--sign', '--detach-sig',

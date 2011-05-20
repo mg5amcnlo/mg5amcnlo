@@ -198,6 +198,7 @@ c            true if no errors
 c**************************************************************************
       implicit none
       include 'genps.inc'
+      include 'maxconfigs.inc'
       include 'nexternal.inc'
       include 'cluster.inc'
       include 'coupl.inc'
@@ -313,6 +314,7 @@ c            true if no errors
 c**************************************************************************
       implicit none
       include 'genps.inc'
+      include 'maxconfigs.inc'
       include 'nexternal.inc'
       include 'cluster.inc'
       include 'run.inc'
@@ -365,6 +367,7 @@ c      Checks if any resonances are on the BW for this configuration
 c**************************************************************************
       implicit none
       include 'genps.inc'
+      include 'maxconfigs.inc'
       include 'nexternal.inc'
 C $B$ NGRAPHS $E$ !this is a tag for MadWeight
 
@@ -373,8 +376,8 @@ C $B$ NGRAPHS $E$ !this is a tag for MadWeight
 
       logical             OnBW(-nexternal:0)     !Set if event is on B.W.
       common/to_BWEvents/ OnBW
-      integer           mincfig, maxcfig
-      common/to_configs/mincfig, maxcfig
+      integer            mapconfig(0:lmaxconfigs), this_config
+      common/to_mconfigs/mapconfig, this_config
 C $B$ IFOREST $B$ !this is a tag for MadWeight
       integer i, iforest(2,-max_branch:-1,lmaxconfigs)
       common/to_forest/ iforest
@@ -402,8 +405,8 @@ c        print *,'No BW found'
       enddo
       ibw=0
       do i=-1,-(nexternal-3),-1
-        icl(i)=icl(iforest(1,i,mincfig))+
-     $     icl(iforest(2,i,mincfig))
+        icl(i)=icl(iforest(1,i,this_config))+
+     $     icl(iforest(2,i,this_config))
         isbw(icl(i))=.false.
 C $B$ ONBW $B$ !this is a tag for MadWeight
         if(OnBW(i))then
@@ -411,7 +414,7 @@ C $E$ ONBW $E$ !this is a tag for MadWeight
           ibw=ibw+1
           ibwlist(ibw)=icl(i)
           isbw(icl(i))=.true.
-c          print *,'Added BW for resonance ',i,icl(i),mincfig
+c          print *,'Added BW for resonance ',i,icl(i),this_config
           if(ibw.eq.nbw) return
         endif
       enddo
@@ -495,12 +498,16 @@ c**************************************************************************
       include 'nexternal.inc'
       include 'cluster.inc'
       include 'message.inc'
+      include 'maxconfigs.inc'
       real*8 p(0:3,nexternal), pcmsp(0:3), p1(0:3)
       real*8 pi(0:3), nr(0:3), pz(0:3)
       integer i, j, k, n, idi, idj, idij, icgs(0:n_max_cg)
       integer nleft, iwin, jwin, iwinp, imap(nexternal,2) 
       double precision nn2,ct,st
       double precision minpt2ij,pt2ij(n_max_cl),zij(n_max_cl)
+
+      integer mapconfig(0:lmaxconfigs), this_config
+      common/to_mconfigs/mapconfig, this_config
 
       integer nbw,ibwlist(nexternal)
       logical isbw(n_max_cl)
@@ -629,13 +636,13 @@ c     combine winner
             write(*,*)'winner ',n,': ',idacl(n,1),'&',idacl(n,2),
      &           ' -> ',minpt2ij,', z = ',zcl(n)
          endif
-c     Reset igscl with new mother
+c     Reset igraphs with new mother
          if (.not.findmt(imocl(n),igraphs,nbw,ibwlist)) then
             write(*,*) 'cluster.f: Error. Invalid combination.' 
             return
          endif
          if (btest(mlevel,4)) then
-            write(*,*)'diagrams: ',(igraphs(k),k=1,igraphs(0))
+            write(*,*)'graphs: ',(igraphs(k),k=1,igraphs(0))
          endif
          if (iwin.lt.3) then
 c     is clustering
@@ -736,6 +743,15 @@ c            if(pcl(0,imocl(n)).gt.0d0)then
               write(*,*) 'Last vertex is ',imap(1,2),imap(2,2),imap(3,2)
               write(*,*) '            -> ',pt2ijcl(n+1),sqrt(pt2ijcl(n+1))
             endif
+c     If present channel among graphs, use only this channel
+c     This is important when we have mixed QED-QCD
+            do i=1,igraphs(0)
+               if (igraphs(i).eq.this_config) then
+                  igraphs(0)=1
+                  igraphs(1)=this_config
+                  exit
+               endif
+            enddo
 c            if(pt2ijcl(n).gt. pt2ijcl(n+1))then
 c              pt2ijcl(n+1)=pt2ijcl(n)
 c              if (btest(mlevel,3)) then

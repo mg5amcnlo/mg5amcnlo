@@ -33,7 +33,7 @@ LIBS=-L../$(LIBDIRARCH) -lpythia8 -llhapdfdummy -l$(PROCDIR)
 all: %(main_file)s
 
 %(main_file)s: %(main_file)s.o ../$(LIBDIRARCH)/lib$(PROCDIR).a
-	g++ -o %(main_file)s %(main_file)s.o $(LIBS)
+	$(CXX) -o %(main_file)s %(main_file)s.o $(LIBS)
 
 ../$(LIBDIRARCH)/lib$(PROCDIR).a: ../$(PROCDIR)/Makefile
 	cd ../$(PROCDIR); make

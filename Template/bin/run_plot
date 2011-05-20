@@ -41,7 +41,7 @@ if [[ (-x $MAdir/plot_events) && (-e unweighted_events.lhe) && (-e ../Cards/plot
     echo "../unweighted_events.lhe" > events.list
     $dirbin/plot $MAdir $td > plot.log
     cd ..
-    $dirbin/plot_page-pl $run
+    $dirbin/plot_page-pl $run parton
     mv plots.html ${run}_plots.html
 fi
 

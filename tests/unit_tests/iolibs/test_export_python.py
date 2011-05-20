@@ -299,9 +299,9 @@ class IOExportPythonTest(unittest.TestCase):
         #  
         # Process parameters
         #  
-        ngraphs = 10
+        ngraphs = 4
         nexternal = 4
-        nwavefuncs = 10
+        nwavefuncs = 8
         ncolor = 2
         ZERO = 0.
         #  
@@ -330,32 +330,24 @@ class IOExportPythonTest(unittest.TestCase):
         w[4] = FFV1_3(w[0],w[1],GC_10,ZERO, ZERO)
         # Amplitude(s) for diagram number 1
         amp[0] = FFV1_0(w[3],w[2],w[4],GC_10)
-        w[5] = FFV2_3(w[0],w[1],GC_35,MZ, WZ)
-        w[6] = FFV5_3(w[0],w[1],GC_47,MZ, WZ)
+        w[5] = FFV2_5_3(w[0],w[1],GC_35,GC_47,MZ, WZ)
         # Amplitude(s) for diagram number 2
-        amp[1] = FFV2_0(w[3],w[2],w[5],GC_35)
-        amp[2] = FFV5_0(w[3],w[2],w[5],GC_47)
-        amp[3] = FFV2_0(w[3],w[2],w[6],GC_35)
-        amp[4] = FFV5_0(w[3],w[2],w[6],GC_47)
-        w[7] = FFV1_3(w[0],w[2],GC_10,ZERO, ZERO)
+        amp[1] = FFV2_5_0(w[3],w[2],w[5],GC_35,GC_47)
+        w[6] = FFV1_3(w[0],w[2],GC_10,ZERO, ZERO)
         # Amplitude(s) for diagram number 3
-        amp[5] = FFV1_0(w[3],w[1],w[7],GC_10)
-        w[8] = FFV2_3(w[0],w[2],GC_35,MZ, WZ)
-        w[9] = FFV5_3(w[0],w[2],GC_47,MZ, WZ)
+        amp[2] = FFV1_0(w[3],w[1],w[6],GC_10)
+        w[7] = FFV2_5_3(w[0],w[2],GC_35,GC_47,MZ, WZ)
         # Amplitude(s) for diagram number 4
-        amp[6] = FFV2_0(w[3],w[1],w[8],GC_35)
-        amp[7] = FFV5_0(w[3],w[1],w[8],GC_47)
-        amp[8] = FFV2_0(w[3],w[1],w[9],GC_35)
-        amp[9] = FFV5_0(w[3],w[1],w[9],GC_47)
+        amp[3] = FFV2_5_0(w[3],w[1],w[7],GC_35,GC_47)
 
         jamp = [None] * ncolor
-        jamp[0] = +1./6.*amp[0]-amp[1]-amp[2]-amp[3]-amp[4]+1./2.*amp[5]
-        jamp[1] = -1./2.*amp[0]-1./6.*amp[5]+amp[6]+amp[7]+amp[8]+amp[9]
+        jamp[0] = +1./6.*amp[0]-amp[1]+1./2.*amp[2]
+        jamp[1] = -1./2.*amp[0]-1./6.*amp[2]+amp[3]
 
         self.amp2[0]+=abs(amp[0]*amp[0].conjugate())
-        self.amp2[1]+=abs(amp[1]*amp[1].conjugate())+abs(amp[2]*amp[2].conjugate())+abs(amp[3]*amp[3].conjugate())+abs(amp[4]*amp[4].conjugate())
-        self.amp2[2]+=abs(amp[5]*amp[5].conjugate())
-        self.amp2[3]+=abs(amp[6]*amp[6].conjugate())+abs(amp[7]*amp[7].conjugate())+abs(amp[8]*amp[8].conjugate())+abs(amp[9]*amp[9].conjugate())
+        self.amp2[1]+=abs(amp[1]*amp[1].conjugate())
+        self.amp2[2]+=abs(amp[2]*amp[2].conjugate())
+        self.amp2[3]+=abs(amp[3]*amp[3].conjugate())
 
         matrix = 0.
         for i in range(ncolor):
@@ -373,9 +365,8 @@ class IOExportPythonTest(unittest.TestCase):
         matrix_methods = exporter.get_python_matrix_methods()["0_uux_uux"].\
                           split('\n')
 
-        for iline in range(len(goal_method)):
-            self.assertEqual(matrix_methods[iline],
-                             goal_method[iline])
+
+        self.assertEqual(matrix_methods, goal_method)
         
 
     def test_run_python_matrix_element(self):

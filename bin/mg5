@@ -50,6 +50,8 @@ parser.add_option("","--debug", action="store_true", default=False, dest='debug'
 if len(args) == 0:
     args = ''
 
+import subprocess
+
 # Check if optimize mode is (and should be) activated
 if __debug__ and not options.debug and \
     (not os.path.exists(os.path.join(root_path, 'bin','create_release.py')) or options.web):
@@ -58,8 +60,6 @@ if __debug__ and not options.debug and \
 
 import logging
 import logging.config
-import subprocess
-
 
 try: 
     import readline
@@ -91,6 +91,11 @@ else:
     except:
         pass
 
+try:
+   import psyco
+   psyco.full()
+except:
+   pass
 
 if __debug__:
         print 'Running MG5 in debug mode'
@@ -118,6 +123,7 @@ try:
             input_file = options.file
         if options.web:
             cmd_line = cmd_interface.MadGraphCmdWeb()
+            cmd_line.debug_output = os.path.join(os.path.dirname(input_file),'generation.log')
             cmd_line.use_rawinput == False
             cmd_line.run_cmd('import command ' + input_file)
             sys.exit()

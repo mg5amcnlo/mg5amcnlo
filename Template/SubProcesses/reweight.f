@@ -345,6 +345,7 @@ c**************************************************
 
       include 'message.inc'
       include 'genps.inc'
+      include 'maxconfigs.inc'
       include 'nexternal.inc'
       include 'cluster.inc'
       include 'run.inc'
@@ -372,10 +373,11 @@ C   local variables
       integer idfl, idmap(-nexternal:nexternal)
       integer ipart(2,n_max_cl)
       double precision xnow(2)
-      integer jlast(2),jfirst(2)
+      integer jlast(2),jfirst(2),nwarning
       logical qcdline(2),qcdrad(2)
       logical failed,first
       data first/.true./
+      data nwarning/0/
 
       logical isqcd,isjet,isparton,isjetvx,cluster
       double precision alphas
@@ -410,8 +412,10 @@ c      else
       if (btest(mlevel,1)) then
         write(*,*)'setclscales: identified tree {'
         do i=1,nexternal-2
-          write(*,*)'  ',i,': ',idacl(i,1),'&',idacl(i,2),
-     &       ' -> ',imocl(i),', ptij = ',dsqrt(pt2ijcl(i)) 
+          write(*,*)'  ',i,': ',idacl(i,1),'(',ipdgcl(idacl(i,1),igraphs(1)),')',
+     $       '&',idacl(i,2),'(',ipdgcl(idacl(i,2),igraphs(1)),')',
+     $       ' -> ',imocl(i),', ptij = ',dsqrt(pt2ijcl(i)),
+     $       '(',ipdgcl(imocl(i),igraphs(1)),')'
         enddo
         write(*,*)'  graphs (',igraphs(0),'):',(igraphs(i),i=1,igraphs(0))
         write(*,*)'}'
@@ -584,6 +588,22 @@ c     Use the minimum scale found for fact scale in ME
      $        q2fact(2)=pt2ijcl(nexternal-2)
       endif
 
+c     Check that factorization scale is >= 2 GeV
+      if(lpp(1).ne.0.and.q2fact(1).lt.4d0.or.
+     $   lpp(2).ne.0.and.q2fact(2).lt.4d0)then
+         if(nwarning.le.10) then
+             nwarning=nwarning+1
+             write(*,*) 'Warning: Too low fact scales: ',
+     $            sqrt(q2fact(1)), sqrt(q2fact(2))
+          endif
+         if(nwarning.eq.11) then
+             nwarning=nwarning+1
+             write(*,*) 'No more warnings written out this run.'
+          endif
+         setclscales=.false.
+         return
+      endif
+
       if (btest(mlevel,3))
      $     write(*,*) 'Set fact scales to ',sqrt(q2fact(1)),sqrt(q2fact(2))
       return
@@ -598,6 +618,7 @@ c**************************************************
 
       include 'message.inc'
       include 'genps.inc'
+      include 'maxconfigs.inc'
       include 'nexternal.inc'
       include 'cluster.inc'
       include 'run.inc'

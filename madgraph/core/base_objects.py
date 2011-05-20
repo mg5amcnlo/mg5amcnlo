@@ -758,6 +758,8 @@ class Model(PhysicsObject):
         self['got_majoranas'] = None
         self['order_hierarchy'] = {}
         self['conserved_charge'] = set()
+        self['coupling_orders'] = None
+        self['version_tag'] = None # position of the directory (for security)
 
     def filter(self, name, value):
         """Filter for model property values"""
@@ -807,7 +809,12 @@ class Model(PhysicsObject):
                 raise self.PhysicsObjectError, \
                     "Object of type %s is not a set" % type(value)
 
-        if name == 'order_hierarchy':
+        elif name == 'version_tag':
+            if not (isinstance(value, str)):
+                raise self.PhysicsObjectError, \
+                    "Object of type %s is not a string" % type(value)
+
+        elif name == 'order_hierarchy':
             if not isinstance(value, dict):
                 raise self.PhysicsObjectError, \
                     "Object of type %s is not a dictionary" % \
@@ -846,6 +853,10 @@ class Model(PhysicsObject):
             if self['particles']:
                 self['got_majoranas'] = self.check_majoranas()
 
+        if (name == 'coupling_orders') and self[name] == None:
+            if self['interactions']:
+                self['coupling_orders'] = self.get_coupling_orders()
+
         return Model.__bases__[0].get(self, name) # call the mother routine
 
     def set(self, name, value):
@@ -868,6 +879,7 @@ class Model(PhysicsObject):
             self['ref_dict_to1'] = {}
             self['ref_dict_to0'] = {}
             self['got_majoranas'] = None
+            self['coupling_orders'] = None
 
         Model.__bases__[0].set(self, name, value) # call the mother routine
 
@@ -907,6 +919,12 @@ class Model(PhysicsObject):
             return self["interaction_dict"][id]
         else:
             return None
+
+    def get_coupling_orders(self):
+        """Determine the coupling orders of the model"""
+
+        return set(sum([i.get('orders').keys() for i in \
+                        self.get('interactions')], []))
 
     def check_majoranas(self):
         """Return True if there is fermion flow violation, False otherwise"""
@@ -1456,16 +1474,13 @@ class Diagram(PhysicsObject):
     def calculate_orders(self, model):
         """Calculate the actual coupling orders of this diagram"""
 
-        coupling_orders = {}
+        coupling_orders = dict([(c, 0) for c in model.get('coupling_orders')])
         for vertex in self['vertices']:
             if vertex.get('id') == 0: continue
             couplings = model.get('interaction_dict')[vertex.get('id')].\
                         get('orders')
-            for coupling in couplings.keys():
-                try:
-                    coupling_orders[coupling] += couplings[coupling]
-                except:
-                    coupling_orders[coupling] = couplings[coupling]
+            for coupling in couplings:
+                coupling_orders[coupling] += couplings[coupling]
 
         self.set('orders', coupling_orders)
 
