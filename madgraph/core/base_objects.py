@@ -1529,11 +1529,11 @@ class DiagramList(PhysicsObjectList):
     def get_max_order(self,order):
         """ Return the order of the diagram in the list with the maximum coupling
         order for the coupling specified """
-        max_order=0
+        max_order=-1
 
         for diag in self:
             if order in diag['orders'].keys():
-                if not max_order or diag['orders'][order] > max_order:
+                if max_order==-1 or diag['orders'][order] > max_order:
                     max_order = diag['orders'][order]
 
         return max_order
@@ -1541,10 +1541,10 @@ class DiagramList(PhysicsObjectList):
     def get_min_order(self,order):
         """ Return the order of the diagram in the list with the mimimum coupling
         order for the coupling specified """
-        min_order=0
+        min_order=-1
         for diag in self:
             if order in diag['orders'].keys():
-                if not min_order or diag['orders'][order] < min_order:
+                if min_order==-1 or diag['orders'][order] < min_order:
                     min_order = diag['orders'][order]
             else:
                 return 0
@@ -1554,10 +1554,10 @@ class DiagramList(PhysicsObjectList):
     def get_min_weighted_order(self,model):
         """ Return the order of the diagram in the list with the mimimum coupling
         order for the coupling specified """
-        min_weighted_order=0
+        min_weighted_order=-1
         for diag in self:
             diag_weighted_order=diag.get_weighted_order(model)
-            if not min_weighted_order or diag_weighted_order < min_weighted_order:
+            if min_weighted_order==-1 or diag_weighted_order < min_weighted_order:
                 min_weighted_order=diag_weighted_order
 
         return min_weighted_order
