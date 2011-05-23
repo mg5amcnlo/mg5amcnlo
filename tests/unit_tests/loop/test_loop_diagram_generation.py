@@ -904,11 +904,13 @@ class LoopDiagramGenerationTest(unittest.TestCase):
                        ({'QCD':0},['QED'],{},7),\
                        ({},['QCD','QED'],{'QED':-1},9),\
                        ({},['QCD','QED'],{'QCD':-1},7),\
+                       ({},['QCD','QED'],{'QED':-2},21),\
+                       ({},['QCD','QED'],{'QED':-3},28),\
                        # These last two are of no physics interest
                        # It is just for the sake of the test.
                        ({'QED':0},['QCD','QED'],{},21),\
                        ({'QCD':0},['QCD','QED'],{},19)]
-
+        
         for (bornOrders,pert,sqOrders,nDiagGoal) in ordersChoices:
             myproc = base_objects.Process({'legs':copy.copy(myleglist),
                                            'model':self.myloopmodel,
