@@ -1,7 +1,7 @@
 F77   = gfortran
 CC    = g++
-#FFLAGS = -g -ffixed-line-length-132 -fno-automatic
-FFLAGS = -O -ffixed-line-length-132 -fno-automatic
+FFLAGS = -g -ffixed-line-length-132 -fno-automatic
+#FFLAGS = -O -ffixed-line-length-132 -fno-automatic
 #FFLAGS = -g -pg -ffixed-line-length-132 -fno-automatic
 LIBDIR = ../../lib/
 BINDIR = ../../bin/

@@ -154,7 +154,7 @@ class ProcessExporterFortranFKS(export_v4.ProcessExporterFortran):
         file = "\
           integer fks_configs, ipos, jpos \n \
           data fks_configs /  %(fksconfigs)d  / \n \
-          integer fks_i( %(fksconfigs)d ), fks_j( %(fksconfigs)d ) \n\
+          integer fks_i(%(fksconfigs)d), fks_j(%(fksconfigs)d) \n\
     \n \
           integer fks_ipos(0:nexternal) \n\
           integer fks_j_from_i(nexternal, 0:nexternal) \n\
@@ -163,7 +163,7 @@ class ProcessExporterFortranFKS(export_v4.ProcessExporterFortran):
           fks_proc.fks_config_string
     
         file += "\n \n \
-          data (fks_ipos(ipos),ipos=0,  %d  ) " % len(fks_proc.fks_ipos)
+          data (fks_ipos(ipos),ipos=0,  %d) " % len(fks_proc.fks_ipos)
         file +="\
       / %d,  " % len(fks_proc.fks_ipos) + \
          ', '.join([ "%d" % pdg for pdg in fks_proc.fks_ipos]) + " / "
@@ -171,7 +171,7 @@ class ProcessExporterFortranFKS(export_v4.ProcessExporterFortran):
         file += "\n\n"
         
         for i in fks_proc.fks_j_from_i.keys():
-            file += " data (fks_j_from_i( %d, jpos), jpos=0, %d) " %\
+            file += " data (fks_j_from_i(%d, jpos), jpos=0, %d) " %\
           (i, len(fks_proc.fks_j_from_i[i]) )
             file +="\
       / %d,  " % len(fks_proc.fks_j_from_i[i]) + \
@@ -226,6 +226,7 @@ C   \n\
         
     #write fks.inc in SubProcesses, it willbe copied later in the subdirs
         fks_inc = self.fks_inc_content(this_fks_process)
+        self.fksdirs = []
         
         for nfks, fksdir in enumerate(this_fks_process.fks_dirs):
                 calls += self.generate_subprocess_directory_fks(nfks, fksdir, fks_inc,
@@ -251,6 +252,7 @@ C   \n\
         # Create the directory PN_xx_xxxxx in the specified path
         subprocdir = "P%s_%d" % \
         (matrix_element.get('processes')[0].shell_string(), nfks+ 1)
+        self.fksdirs.append(subprocdir)
         print subprocdir
     #    dirs.append(subprocdir)
         try:
@@ -385,11 +387,14 @@ C   \n\
         
         #write out born and all relted born_x**x.inc files    
         born_matrix_element = helas_objects.HelasMatrixElement(fksdir.born_amp)
-    
+        
+#        print "used lorentz ", matrix_element.get_used_lorentz()
+#        print "used lorentz born", born_matrix_element.get_used_lorentz()
+        
         filename = 'born.f'
         calls_born, ncolor_born = \
-            self.write_born_fks(writers.FortranWriter(filename),
-                             born_matrix_element, matrix_element, fksdir.ijglu,
+            self.write_born_fks(writers.FortranWriter(filename),\
+                             born_matrix_element, matrix_element, fksdir.ijglu,\
                              fortran_model)
     
         filename = 'born_coloramps.inc'
@@ -520,6 +525,10 @@ C   \n\
         for file in linkfiles:
             ln('../' + file , '.')
         
+        cpfiles = ['born_conf.inc', 'born_props.inc', 'props.inc', 'configs.inc']
+        for file in cpfiles:
+            os.system('cp '+file+' '+file+'.back')
+        
         os.system('touch bornfromreal.inc')
         
         #import nexternal/leshouch in Source
@@ -571,7 +580,7 @@ C   \n\
             sb_mn = fksdir.soft_borns.keys()
                 
             for i, mn in enumerate(sb_mn):
-                print mn
+                #print "m, n", mn
                 iborn = i+1
                 iborns.append(iborn)
                 mms.append(mn[0])
@@ -584,10 +593,15 @@ C   \n\
                              fortran_model)
                 
                 iflines += \
-    "if (ii_fks( %(this)d ).eq.i_fks .and. mm( %(this)d ).eq.m .and. \
-    nn( %(this)d ).eq.n ) then \n\
-    call sb_sf_%(iborn)3.3d(p_born,wgt)\n\n else" %{'this': i+1, 'iborn': iborn}
-    
+    "if (ii_fks(%(this)d).eq.i_fks .and. mm(%(this)d).eq.m .and. \
+nn(%(this)d).eq.n ) then \n\
+    call sb_sf_%(iborn)3.3d(p_born,wgt)\n" %{'this': i+1, 'iborn': iborn}
+                #extra factor if m=n
+                if mn[0]==mn[1] and not mn[2]:
+                    iflines += "      wgt = wgt/2d0"
+                elif mn[2]:
+                    iflines += "wgt = - wgt"
+                iflines += "\n else"
             replace_dict['nborns'] = nborns
             replace_dict['iborns'] = ', '.join(["%d" % i for i in iborns])
             replace_dict['ifkss'] = ', '.join(["%d" % i for i in ifkss])
@@ -646,7 +660,7 @@ c     this subdir has no soft singularities
         # Extract process info lines
         process_lines = self.get_process_info_lines(matrix_element)
         replace_dict['process_lines'] = process_lines + \
-            "\nc spectators: %d %d \n" % mn 
+            "\nc spectators: %d %d \n" % mn[0:2]
         
         # Extract process info lines
         process_lines_real = self.get_process_info_lines(real_matrix_element)
@@ -667,7 +681,7 @@ c     this subdir has no soft singularities
         # Extract overall denominator
         # Averaging initial state color, spin, and identical FS particles
      #   den_factor_line = get_den_factor_line(matrix_element)
-        den_factor_line = self.get_den_factor_line(real_matrix_element)
+        den_factor_line = self.get_den_factor_line(matrix_element, real_matrix_element)
         replace_dict['den_factor_line'] = den_factor_line
     
         # Extract ngraphs
@@ -713,6 +727,9 @@ c     this subdir has no soft singularities
             line = string.replace(line, 'JAMP', 'JAMP2')
             new_jamp_lines.append(line)
         replace_dict['jamp2_lines'] = '\n'.join(new_jamp_lines)
+#        print "Spectators ", mn
+#        print "jamp1 ", replace_dict['jamp1_lines']
+#        print "jamp2 ", replace_dict['jamp2_lines']
     
         file = open(os.path.join(_file_path, \
                           'iolibs/template_files/b_sf_xxx_fks.inc')).read()
@@ -786,7 +803,7 @@ c     this subdir has no soft singularities
         # Extract overall denominator
         # Averaging initial state color, spin, and identical FS particles
         #den_factor_line = get_den_factor_line(matrix_element)
-        den_factor_line = self.get_den_factor_line(real_matrix_element)
+        den_factor_line = self.get_den_factor_line(matrix_element, real_matrix_element)
         replace_dict['den_factor_line'] = den_factor_line
     
         # Extract ngraphs
@@ -914,7 +931,9 @@ c     this subdir has no soft singularities
     
         file = open(os.path.join(_file_path, \
                           #'iolibs/template_files/matrix_fks.inc2')).read()
-                          'iolibs/template_files/matrix_fks.inc3')).read()
+                          #'iolibs/template_files/matrix_fks.inc3')).read()
+                          'iolibs/template_files/matrix_fks.inc4')).read()
+
         file = file % replace_dict
         
         # Write the file
@@ -981,7 +1000,7 @@ c     this subdir has no soft singularities
     
         # Extract number of external particles
         (nexternal, ninitial) = matrix_element.get_nexternal_ninitial()
-        print nexternal, ninitial
+     #   print nexternal, ninitial
     
     
         lines = []
@@ -1004,7 +1023,7 @@ c     this subdir has no soft singularities
             lines.append("# Diagram %d" % \
                          (helas_diag.get('number')))
             # Correspondance between the config and the amplitudes
-            lines.append("data mapconfig(%d)/%d/" % (iconfig,
+            lines.append("data mapconfig(%4d)/%4d/" % (iconfig,
                                                      helas_diag.get('number')))
     
             # Need to reorganize the topology so that we start with all
@@ -1023,21 +1042,21 @@ c     this subdir has no soft singularities
             for vert in allchannels:
                 daughters = [leg.get('number') for leg in vert.get('legs')[:-1]]
                 last_leg = vert.get('legs')[-1]
-                lines.append("data (iforest(i,%d,%d),i=1,%d)/%s/" % \
+                lines.append("data (iforest(i,%3d,%4d),i=1,%d)/%s/" % \
                              (last_leg.get('number'), iconfig, len(daughters),
-                              ",".join([str(d) for d in daughters])))
+                              ",".join(["%3d" % d for d in daughters])))
                 if vert in schannels:
-                    lines.append("data sprop(%d,%d)/%d/" % \
+                    lines.append("data sprop(%4d,%4d)/%8d/" % \
                                  (last_leg.get('number'), iconfig,
                                   last_leg.get('id')))
                 elif vert in tchannels[:-1]:
-                    lines.append("data tprid(%d,%d)/%d/" % \
+                    lines.append("data tprid(%4d,%4d)/%8d/" % \
                                  (last_leg.get('number'), iconfig,
                                   abs(last_leg.get('id'))))
     
         # Write out number of configs
         lines.append("# Number of configs")
-        lines.append("data mapconfig(0)/%d/" % iconfig)
+        lines.append("data mapconfig(0)/%4d/" % iconfig)
     
         # Write the file
         writer.writelines(lines)
@@ -1355,11 +1374,11 @@ c     this subdir has no soft singularities
     
                     pow_part = 1 + int(particle.is_boson())
     
-                lines.append("pmass(%d,%d)  = %s" % \
+                lines.append("pmass(%3d,%4d)  = %s" % \
                              (leg.get('number'), iconf + 1, mass))
-                lines.append("pwidth(%d,%d) = %s" % \
+                lines.append("pwidth(%3d,%4d) = %s" % \
                              (leg.get('number'), iconf + 1, width))
-                lines.append("pow(%d,%d) = %d" % \
+                lines.append("pow(%3d,%4d) = %d" % \
                              (leg.get('number'), iconf + 1, pow_part))
     
         # Write the file
@@ -1392,7 +1411,7 @@ c     this subdir has no soft singularities
             if os.path.isfile(os.path.join(model_path, file)):
                 shutil.copy2(os.path.join(model_path, file), \
                                      os.path.join(self.dir_path, 'Source', 'MODEL'))    
-        make_model_symbolic_link(self.dir_path)
+        self.make_model_symbolic_link()
         
     def make_model_symbolic_link(self):
         #make the copy/symbolic link
@@ -1411,7 +1430,7 @@ c     this subdir has no soft singularities
     #===============================================================================
     # export the helas routine
     #===============================================================================
-    def export_helas(self, helas_path, process_path):
+    def export_helas(self, helas_path):
         """Configure the files/link of the process according to the model"""
         
         # Import helas routine
@@ -1419,11 +1438,11 @@ c     this subdir has no soft singularities
             filepos = os.path.join(helas_path, filename)
             if os.path.isfile(filepos):
                 if filepos.endswith('Makefile.template'):
-                    cp(filepos, process_path + '/Source/DHELAS/Makefile')
+                    cp(filepos, self.dir_path + '/Source/DHELAS/Makefile')
                 elif filepos.endswith('Makefile'):
                     pass
                 else:
-                    cp(filepos, process_path + '/Source/DHELAS')
+                    cp(filepos, self.dir_path + '/Source/DHELAS')
     # following lines do the same but whithout symbolic link
     # 
     #def export_helas(mgme_dir, dir_path):
@@ -1589,10 +1608,18 @@ c     this subdir has no soft singularities
             return ret_list
     
     
-    def get_den_factor_line(self, matrix_element):
-        """Return the denominator factor line for this matrix element"""
-    
-        return "DATA IDEN/%2r/" % \
+    def get_den_factor_line(self, matrix_element, real_matrix_element = None):
+        """Return the denominator factor line for this matrix element,
+        corrected with the final state symmetry factor of real_matrix_element
+        (if given)"""
+     
+        if real_matrix_element:  
+            return "DATA IDEN/%2r/" % \
+               (matrix_element.get_denominator_factor()/\
+               matrix_element['identical_particle_factor'] *\
+               real_matrix_element['identical_particle_factor'])
+        else:
+            return "DATA IDEN/%2r/" % \
                matrix_element.get_denominator_factor()
     
     def get_icolamp_lines(self, matrix_element):

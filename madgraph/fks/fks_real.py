@@ -105,7 +105,7 @@ class FKSProcess(object):
         self.ndirs = 0
         self.fks_config_string = ""
         self.find_directories()
-
+                
     
     def find_directories(self):  #test written
         """finds the FKS subdirectories for a given process"""
@@ -114,21 +114,26 @@ class FKSProcess(object):
                 for j in self.leglist:
                     if j['number'] != i['number'] :
                         ij = self.combine_ij(i, j)
-                        if ij :                    
-                            self.ndirs += 1
-                            self.reduced_processes.append(self.reduce_real_process(i, j, ij, self.ndirs))
+                        if ij :
+                            red = self.reduce_real_process(i, j, ij, self.ndirs)                    
+                            amp = diagram_generation.Amplitude(red['process'])
+
                             #generate born amplitude here and call FKSdir
-                            amp = diagram_generation.Amplitude(self.reduced_processes[-1]['process'])
             
-                            self.fks_config_string += " \n\
+                            if amp['diagrams']:
+                                self.ndirs += 1
+                                red['conf_num'] = self.ndirs
+                                self.reduced_processes.append(red)
+                                ijglu = 0
+                                if ij['id']==21:
+                                    ijglu = ij['number']
+                                self.fks_dirs.append(FKSDirectory(amp, i, ijglu))
+                                self.fks_config_string += " \n\
 c     FKS configuration number  %(conf_num)d \n\
       data fks_i(  %(conf_num)d  ) /  %(i_fks)d  / \n\
       data fks_j(  %(conf_num)d  ) /  %(j_fks)d  / \n\
       " % self.reduced_processes[-1] 
-                            ijglu = 0
-                            if ij['id']==21:
-                                ijglu = ij['number']
-                            self.fks_dirs.append(FKSDirectory(amp, i, ijglu))
+
 
 
     def combine_ij(self, i, j):  #test written
@@ -236,20 +241,28 @@ class FKSDirectory(MG.PhysicsObject):
                         if part_m['color'] != 1 and part_n['color'] != 1:
                             if m != n or part_m['mass'].lower() != 'zero':
                                 self.spectators.append([m,n])
-                                helas = FKSHelasMultiProcess(self.born_amp, \
-                        self.define_link(m,n)
-                           )
-                                self.soft_borns[(m['number'], n['number'])] = \
+                                link, addminus = self.define_link(m,n)
+                                helas = FKSHelasMultiProcess(self.born_amp, link)
+                                self.soft_borns[(m['number'], n['number'], addminus)] = \
                                             helas
     
     def define_link(self, m, n): #test written
         """creates the link information from legs m and n"""
         link = []
+        #for each particle in the link, check if it is 
+        ##  a final state quark
+        ## an initial state anti-quark
+        ##  a gluon
+        #and if so add a minus sign
+        #This means checking color_repr = color 
+        addminus = False
         for leg in [m,n]:
             part = self.born_amp['process']['model'].get('particle_dict')[leg['id']]
             link.append({'number' : leg['number'], 
                          'color' : self.color_repr(leg)})
-        return link
+            if link[-1]['color'] == part['color'] and part['color'] != 8:
+                addminus = not addminus
+        return link, addminus
                     
         
     def color_repr(self, x): #test written
@@ -272,33 +285,57 @@ def insert_link( col_basis, link):
     given color link"""
     min_index = min(sum([sum([sum([[i for i in col] for col in str],[]) \
                     for str in dic.values() ],[]) for dic in col_basis],[]))
-
+    if min_index > 0:
+        min_index = -1000
     #prepare the color string corresponding to the link
-    c_link = []
+    c_link = color_algebra.ColorString()
     replace = []
+
     iglu = 2* min_index
     min_index -= 1
     #the second-to-last index of the t is the triplet, the last is the anti-triplet        
-    for part in link:
+    nglu = 0
+    if link[0] != link[1]:
+        #two different particles
+        for part in link:
+            if part['color'] == 3:
+                c_link.product(color_algebra.ColorString([
+                               color_algebra.T(iglu,part['number'], min_index)]))
+            elif part['color'] == -3:
+                c_link.product(color_algebra.ColorString([
+                               color_algebra.T(iglu,min_index,part['number'])]))
+            elif part['color'] == 8:
+                c_link.product(color_algebra.ColorString(init_list = [
+                               color_algebra.f(min_index,iglu,part['number'])], 
+                               is_imaginary =True))
+                nglu += 1 
+            #sixtets.....
+            replace.append([part['number'], min_index])
+            min_index -= 1
+
+    else:
+        part = link[0]
+        #same particle (eg: top quark)
         if part['color'] == 3:
-            c_link.append(color_algebra.T(iglu,part['number'], min_index))
+            c_link = color_algebra.ColorString(
+                      [ color_algebra.T(iglu, part['number'], min_index),
+                      color_algebra.T(iglu, min_index, min_index -1)])
         elif part['color'] == -3:
-            c_link.append(color_algebra.T(iglu,min_index,part['number']))
-        elif part['color'] == 8:
-            c_link.append(color_algebra.f(iglu,part['number'], min_index))
-        #sixtets.....
-        
-        replace.append([part['number'], min_index])
-        min_index -= 1
+            c_link = color_algebra.ColorString(
+                      [ color_algebra.T(iglu, min_index, part['number']),
+                      color_algebra.T(iglu, min_index-1 , min_index)])
+        replace.append([part['number'], min_index -1] )
+
     
     for dict in col_basis:
         for string in dict.values():
+  
             for col in string:
                 for ind in col:
                     for pair in replace:
                         if ind == pair[0]:
                             col[col.index(ind)] = pair[1]
-            string.extend(c_link)
+            string.product(c_link)
     return col_basis
     
     
@@ -398,16 +435,20 @@ class FKSHelasMultiProcess(helas_objects.HelasMultiProcess):
                         # matrix accordingly
                         list_colorize.append(colorize_obj)
                         col_basis.build()
-                        print col_basis                       
+                        #print col_basis                       
 
                         col_basis_link.build()
                         self.list_color_basis.append(col_basis)
                         self.list_color_basis_link.append(col_basis_link)
                         #print "BASIS", col_basis 
-                        #print "BASIS LINK", col_basis_link                         
+                        #print "BASIS LINK", col_basis_link 
+#                        print "in fksHMP "
+#                        print "col basis orig ", col_basis
+#                        print "col basis link ", col_basis_link
+                                                
                         col_matrix = color_amp.ColorMatrix(col_basis, col_basis_link)
 
-                        #print "COLOR MATRIX", col_matrix
+#                        print "COLOR MATRIX", col_matrix
                         self.list_color_matrices.append(col_matrix)
                         
                         col_index = -1

@@ -1461,7 +1461,7 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
     _check_opts = ['full', 'permutation', 'gauge', 'lorentz_invariance']
     _import_formats = ['model_v4', 'model', 'proc_v4', 'command']
     _v4_export_formats = ['madevent', 'standalone','matrix', 'fks', 'fksreal'] 
-    _fks_export_formats = ['fks']
+    _fks_export_formats = ['fks', 'fksreal']
     _export_formats = _v4_export_formats + ['standalone_cpp', 'pythia8'] +\
                                       _fks_export_formats
     _set_options = ['group_subprocesses',
@@ -2788,6 +2788,105 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
         file_path = args[0]
         
         launch_ext.open_file(file_path, self.configuration)
+        
+    def do_compile_realfks(self,line):
+        """compiles the realfks process"""
+        #check that the process has been exported in the fks format
+        if type(self._curr_exporter)!= type(export_fks.ProcessExporterFortranFKS()):
+            print type(self._curr_exporter)
+            logger.error('no FKS process exported')
+        else:
+            subprocdir = os.path.join(self._curr_exporter.dir_path, 'SubProcesses')
+            sourcedir = os.path.join(self._curr_exporter.dir_path, 'Source')
+            logfile = os.path.join(self._curr_exporter.dir_path, 'compile.log')
+            linkfile = os.path.join(self._curr_exporter.dir_path, 'link_fks.log')
+            genfile = os.path.join(self._curr_exporter.dir_path, 'gensym.log')
+
+            if os.path.exists(logfile):
+                os.system('rm -f '+ logfile)
+
+            logger.info('Compiling MadFKS')
+            compile_link = self.timed_input('Compile and run link_fks [y/n]? ', 'n')
+            compile_tests = self.timed_input('Compile and run tests [y/n]? ', 'n')
+            if compile_tests =='y':
+                test_points = self.timed_input('Enter # of points for tests: ' , '1')
+            compile_gensym = self.timed_input('Compile and run gensym [y/n]? ', 'n')
+            if compile_gensym == 'y':
+                cluster = self.timed_input('Enter 0 for local run, 1 for Condor: ', '0')
+            compile_me = self.timed_input('Compile MadEvent [y/n]? ', 'n')
+            if compile_me =='y':
+                vegas_mint = self.timed_input('0-> VEGAS, 1-> MINT, 2-> MINT MC ', '0')
+            
+            if compile_link == 'y' or compile_test == 'y' or compile_gensym == 'y'\
+                or compile_me =='y':
+                #compile source
+                os.chdir(sourcedir)
+                logger.info('Compiling Source...')
+                os.system('make >>' + logfile  + ' 2>&1')
+                logger.info('Source Compiled!')
+          #  if compile_link == 'y' or compile_gensym == 'y' or compile_me =='y':
+                logger.info('Compiling P* subdirs...')
+                os.chdir(subprocdir)
+            #for now always sum over helicities
+                os.system("""sed -i.hel 's/HelSum=.false./HelSum=.true./g;s/      include "helicities.inc"/chel  include "helicities.inc"/g' fks_singular.f""")
+                os.system("""sed -i.hel 's/HelSum=.false./HelSum=.true./g;s/      include "helicities.inc"/chel  include "helicities.inc"/g' reweight_events.f""")
+                
+                for dir in self._curr_exporter.fksdirs:
+                    logger.info('Processing directory '+ dir)
+                    thisprocdir = os.path.join(subprocdir, dir)
+                    os.chdir(thisprocdir)
+
+                    integrate = open(os.path.join(thisprocdir,"integrate.fks")\
+                                     ).read().split("\n")
+                    if integrate[0].lower() == 'n':
+                        #check if the dir has to be integrated
+                        logger.info("No need to integrate this direcory, skipping...")
+                    
+                    else:    
+                        os.system('echo ' + dir + ' >> ' + logfile + ' 2>&1')
+                        os.system('echo ' + dir + ' >> ' + linkfile + ' 2>&1')
+                        os.system('echo ' + dir + ' >> ' + genfile + ' 2>&1')
+    
+                        if compile_link =='y':
+                            logger.info('make link_fks')
+                            os.system('cp born_conf.inc.back born_conf.inc')
+                            os.system('cp born_props.inc.back born_props.inc')
+                            os.system('cp configs.inc.back configs.inc')
+                            os.system('cp props.inc.back props.inc')
+                            if os.path.exists('link_fks'):
+                                os.system('rm -f link_fks')
+                            os.system('make link_fks >> ' + logfile + ' 2>&1')
+                            if os.path.exists('link_fks'):
+                                logger.info('running link_fks')
+                                os.system('./link_fks >> ' + linkfile + ' 2>&1')
+                            else:
+                                logger.error('ERROR compiling link_fks, see compile.log for details')
+                        
+                        if compile_tests == 'y':
+                            logger.info('make test_ME')
+                            os.system('make test_ME >' + logfile + ' 2>&1')
+                            os.system("echo -2 -2 > input_testME")
+                            os.system("echo %s %s >> input_testME" % \
+                                      (test_points, test_points))
+                            os.system("echo 0 >> input_testME")
+                            os.system("echo 0 >> input_testME")
+                            logger.info("running test_ME")
+                            os.system("./test_ME < input_testME")
+                            pass
+                        
+                        if compile_gensym == 'y':
+                            logger.info('make gensym')
+                            if os.path.exists('ajob1'):
+                                os.system('rm -f ajob*')
+                            if os.path.exists('mg1.cmd'):
+                                os.system('rm -f mg*.cmd')
+                            os.system('make gensym >> ' + logfile)
+                            if os.path.exists('gensym'):
+                                logger.info('running gensym ' + cluster)
+                                os.system('echo ' + cluster + ' | ./gensym >> ' + genfile + ' 2>&1')
+                        
+
+            
                  
     def do_output(self, line):
         """Initialize a new Template or reinitialize one"""
@@ -2835,17 +2934,19 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
                                   self._mgme_dir, self._export_dir,not noclean)
         elif self._export_format == 'standalone_cpp':
             export_cpp.setup_cpp_standalone_dir(self._export_dir, self._curr_model)
-        elif self._export_format =='fksreal':
-            print "EXPORTING IN MADFKS FORMAT"
-            self._curr_exporter = export_fks.ProcessExporterFortranFKS(\
-                                      self._mgme_dir, self._export_dir,
-                                      not noclean)
-            self._curr_exporter.copy_fkstemplate()
-
-        elif self._export_format =='fks':
-            self._curr_exporter = export_fks_born.ProcessExporterFortranFKS(\
-                                      self._mgme_dir, self._export_dir,
-                                      not noclean)
+        elif self._export_format in self._fks_export_formats:
+            self.do_set('group_subprocesses False')
+            if self._export_format =='fksreal':
+                print "EXPORTING IN MADFKS FORMAT"
+                self._curr_exporter = export_fks.ProcessExporterFortranFKS(\
+                                          self._mgme_dir, self._export_dir,
+                                          not noclean)
+                self._curr_exporter.copy_fkstemplate()
+    
+            elif self._export_format =='fks':
+                self._curr_exporter = export_fks_born.ProcessExporterFortranFKS(\
+                                          self._mgme_dir, self._export_dir,
+                                          not noclean)
         elif not os.path.isdir(self._export_dir):
             os.makedirs(self._export_dir)
 
@@ -3108,15 +3209,16 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
                         (os.path.basename(self._model_v4_path), self._export_dir))
             self._curr_exporter.export_model_files(self._model_v4_path)
             self._curr_exporter.export_helas(os.path.join(self._mgme_dir,'HELAS'))
-        elif self._export_format in ['madevent', 'standalone', 'fks']:
-            print "FINALIZE FKS"
+        elif self._export_format in ['madevent', 'standalone', 'fks', 'fksreal']:
 
             logger.info('Export UFO model to MG4 format')
             # wanted_lorentz are the lorentz structures which are
             # actually used in the wavefunctions and amplitudes in
             # these processes
             wanted_lorentz = self._curr_matrix_elements.get_used_lorentz()
+     #       print "LORENTZ ", wanted_lorentz
             wanted_couplings = self._curr_matrix_elements.get_used_couplings()
+     #       print "couplings ", wanted_couplings
             self._curr_exporter.convert_model_to_mg4(self._curr_model,
                                            wanted_lorentz,
                                            wanted_couplings)

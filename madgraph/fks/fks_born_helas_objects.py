@@ -210,22 +210,11 @@ class FKSHelasProcessFromBorn(object):
                     
         if self.born_matrix_element != other.born_matrix_element:
             return False
-        print "same born ",self.born_matrix_element.get('processes')[0].nice_string()
-        print other.born_matrix_element.get('processes')[0].nice_string()
-        if len(self.real_processes) != len(other.real_processes):
-            print "Wrong length of reals"
-            return False
         reals2 = copy.copy(other.real_processes)
         for real in  self.real_processes:
             try:
                 reals2.remove(real)
-                print "removed real ",real.matrix_element.get('processes')[0].nice_string(),\
-                "  i_fks ",real.i_fks, "  j_fks ",real.j_fks
             except:
-                print "Failed remove ",real.matrix_element.get('processes')[0].nice_string(),\
-                "  i_fks ",real.i_fks, "  j_fks ",real.j_fks
-                for r in reals2:
-                    print "left ", r.matrix_element.get('processes')[0].nice_string()
                 return False  
 
         return True
@@ -305,16 +294,16 @@ class FKSHelasRealProcess(object): #test written
             self.j_fks = fksrealproc.j_fks
        #     print "in FKSHelasRealProc  i ", self.i_fks, "   j ", self.j_fks
             
-            try:
-                matrix_element = copy.copy(me_list[me_id_list.index(pdgs)])
-                matrix_element.set('processes', 
-                                   copy.copy(matrix_element.get('processes')))
-                self.matrix_element = matrix_element
-            except ValueError:
-                self.matrix_element = helas_objects.HelasMatrixElement(
+            #try:
+            #    matrix_element = copy.copy(me_list[me_id_list.index(pdgs)])
+            #    matrix_element.set('processes', 
+            #                       copy.copy(matrix_element.get('processes')))
+            #    self.matrix_element = matrix_element
+            #except ValueError:
+            self.matrix_element = helas_objects.HelasMatrixElement(
                                     fksrealproc.amplitude, **opts)
-                me_list.append(self.matrix_element)
-                me_id_list.append(pdgs)
+                #me_list.append(self.matrix_element)
+                #me_id_list.append(pdgs)
                 
        #     for p in self.matrix_element.get('processes'):
        #         print p.nice_string()
@@ -322,9 +311,7 @@ class FKSHelasRealProcess(object): #test written
     def __eq__(self, other):
         """Equality operator:
         compare two FKSHelasRealProcesses by comparing their dictionaries"""
-        print self.__dict__.keys()
-        for k1, k2 in zip(self.__dict__.keys(), other.__dict__.keys()):
-            print k1, k2, self.__dict__[k1] == other.__dict__[k2]
+
         return self.__dict__ == other.__dict__
     
     def __ne__(self, other):

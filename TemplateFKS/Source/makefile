@@ -74,7 +74,7 @@ $(LIBDIR)libpdf.a: PDF
 
 $(LIBDIR)libmodel.a: MODEL
 	cd MODEL; make	
-	mv MODEL/libmodel.a $(LIBDIR)
+#	mv MODEL/libmodel.a $(LIBDIR)
 
 # $B$ add_compile $E$ !this is a tag for add library in MadWeight compilation
 

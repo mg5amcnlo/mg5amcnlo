@@ -17,7 +17,7 @@ C CONSTANTS
 C  
       Include 'genps.inc'
       include "nexternal.inc"
-      Include 'born_maxamps.inc'
+c      Include 'born_maxamps.inc'
       INTEGER                 NCOMB,     NCROSS         
       PARAMETER (             NCOMB=  %(ncomb)d, NCROSS=  1)
       INTEGER    THEL
@@ -53,8 +53,9 @@ C
 C  
 C GLOBAL VARIABLES
 C  
-      Double Precision amp2(bmaxamps), jamp2(0:bmaxamps)
-      common/to_bamps/  amp2,       jamp2
+c      Double Precision amp2(bmaxamps), jamp2(0:bmaxamps)
+      Double Precision amp2(maxamps), jamp2(0:maxamps)
+      common/to_amps/  amp2,       jamp2
 
       include "born_nhel.inc"
       double complex saveamp(ngraphs,max_bhel)
@@ -197,7 +198,7 @@ C
       PARAMETER (NGRAPHS=   %(ngraphs)d,NEIGEN=  1) 
       include 'genps.inc'
       include "nexternal.inc"
-      INCLUDE 'born_maxamps.inc'
+c      INCLUDE 'born_maxamps.inc'
       INTEGER    NWAVEFUNCS, NCOLOR
       PARAMETER (NWAVEFUNCS=%(nwavefuncs)d, NCOLOR=%(ncolor)d) 
       REAL*8     ZERO
@@ -220,8 +221,9 @@ C
 C  
 C GLOBAL VARIABLES
 C  
-      Double Precision amp2(bmaxamps), jamp2(0:bmaxamps)
-      common/to_bamps/  amp2,       jamp2
+c      Double Precision amp2(bmaxamps), jamp2(0:bmaxamps)
+      Double Precision amp2(maxamps), jamp2(0:maxamps)
+      common/to_amps/  amp2,       jamp2
       include "born_nhel.inc"
       double complex saveamp(ngraphs,max_bhel)
       common/to_saveamp/saveamp

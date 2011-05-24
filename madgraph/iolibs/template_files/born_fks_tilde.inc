@@ -17,7 +17,7 @@ C CONSTANTS
 C  
       Include 'genps.inc'
       include "nexternal.inc"
-      Include 'born_maxamps.inc'
+c      Include 'born_maxamps.inc'
       INTEGER                 NCOMB,     NCROSS         
       PARAMETER (             NCOMB=  %(ncomb)d, NCROSS=  1)
       INTEGER    THEL
@@ -53,8 +53,8 @@ C
 C  
 C GLOBAL VARIABLES
 C  
-      Double Precision amp2(bmaxamps), jamp2(0:bmaxamps)
-      common/to_bamps/  amp2,       jamp2
+      Double Precision amp2(maxamps), jamp2(0:maxamps)
+      common/to_amps/  amp2,       jamp2
 
       include "born_nhel.inc"
       double complex saveamp(ngraphs,max_bhel)
@@ -92,7 +92,7 @@ C ----------
       NTRY=NTRY+1
       if (ntry.lt.2) then
          skip=1
-         do while(nhel(3,skip).ne.1)
+         do while(nhel( %(glu_ij)d ,skip).ne.1)
             skip=skip+1
          enddo
          skip=skip-1
@@ -136,7 +136,7 @@ C          write (*,*) "momenta not the same in Born"
       IF (ISUM_HEL .EQ. 0 .OR. NTRY .LT. 2) THEN
              hel_fac=1d0
           DO IHEL=1,NCOMB
-             IF ((GOODHEL(IHEL,IPROC) .OR. NTRY .LT. 2).and.nhel(3,ihel).eq.-1) THEN
+             IF ((GOODHEL(IHEL,IPROC) .OR. NTRY .LT. 2).and.nhel( %(glu_ij)d ,ihel).eq.-1) THEN
                  T=BORN(P1,NHEL(1,IHEL),IHEL,JC(1),T1)            
                DO JJ=1,nincoming
                  IF(POL(JJ).NE.1d0.AND.NHEL(JJ,IHEL).EQ.INT(SIGN(1d0,POL(JJ)))) THEN
@@ -213,7 +213,7 @@ C
       PARAMETER (NGRAPHS=   %(ngraphs)d,NEIGEN=  1) 
       include 'genps.inc'
       include "nexternal.inc"
-      INCLUDE 'born_maxamps.inc'
+c      INCLUDE 'born_maxamps.inc'
       INTEGER    NWAVEFUNCS, NCOLOR
       PARAMETER (NWAVEFUNCS=%(nwavefuncs)d, NCOLOR=%(ncolor)d) 
       REAL*8     ZERO
@@ -239,8 +239,8 @@ C
 C  
 C GLOBAL VARIABLES
 C  
-      Double Precision amp2(bmaxamps), jamp2(0:bmaxamps)
-      common/to_bamps/  amp2,       jamp2
+      Double Precision amp2(maxamps), jamp2(0:maxamps)
+      common/to_amps/  amp2,       jamp2
       include "born_nhel.inc"
       double complex saveamp(ngraphs,max_bhel)
       common/to_saveamp/saveamp

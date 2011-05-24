@@ -202,7 +202,8 @@ class FKSRealProcess(): #test written
     -- amplitude
     -- leg permutation<<REMOVED!"""
     
-    def __init__(self, born_proc, leglist, amplist, amp_id_list):
+    def __init__(self, born_proc, leglist, amplist, amp_id_list,
+                 perturbed_orders = ['QCD']):
         """initialize the real process based on born_proc and leglist,
         then checks if the amplitude has already been generated before in amplist,
         if not it generates the amplitude and appends to amplist.
@@ -217,10 +218,8 @@ class FKSRealProcess(): #test written
 
         self.process = copy.copy(born_proc)
         orders = copy.copy(born_proc.get('orders'))
-        if 'QCD' in orders.keys():
-            orders['QCD'] +=1
-        else:
-            orders['QCD'] = 1
+        for order in perturbed_orders:
+            orders[order] +=1
 #        for n, o in orders.items():
 #            if n != 'QCD':
 #                orders[n] = o
@@ -248,8 +247,8 @@ class FKSRealProcess(): #test written
 #            self.amplitude = amplist[amp_id_list.index(pdgs)]
 #        except ValueError:
         self.amplitude = diagram_generation.Amplitude(self.process)
-        amplist.append(self.amplitude)
-        amp_id_list.append(pdgs)
+        #amplist.append(self.amplitude)
+        #amp_id_list.append(pdgs)
         self.pdgs = pdgs
 
             

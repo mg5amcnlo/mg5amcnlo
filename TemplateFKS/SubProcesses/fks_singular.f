@@ -910,6 +910,7 @@ c called more than once in successive runs.
       character*23 buff23
       character*16 buff16,file
       character*9 dummy9
+      character*13 dummy13
       character*16 empty60
       parameter (empty60='                ')
       character*38 empty38
@@ -933,6 +934,7 @@ c called more than once in successive runs.
       integer tprid(-max_branch:-1,lmaxconfigs)
       include 'configs.inc'
       logical done
+      write(*,*) "--inverting real configs"
 
       if (nt_channel.gt.0) then
       open (unit=88,file='configs.inc',status='old')
@@ -943,9 +945,10 @@ c called more than once in successive runs.
          read(88,'(a76)',end=192) buff
          l=l+1
          write(printout(l),'(a76)'),buff
-         if (buff(1:9).eq.'c   Graph') then
+         if (buff(1:13).eq.'C     Diagram') then
+         write(*,*) "diagrem found in configs.inc"
 c found a new graph           
-            read(buff,'(a9,i7)') dummy9,curgraph
+            read(buff,'(a13,i4)') dummy13, curgraph
             if ( curgraph.eq.mapconfig(iconfig) ) then
 c this is the graph we are looking for               
                read(88,'(a33)') buff33
@@ -992,7 +995,7 @@ c then the t-channel, for which we have to reverse the order
                      write(printout(l),'(a76)'),buff
                   elseif(mod(i,2).eq.0) then
                      read(88,'(a38)') buff38
-                     write(buff38(30:37),'(i8)')
+                     write(buff38(30:36),'(i6)')
      &                    tprid(-nbranch+i/2,iconfig)
                      l=l+1
                      write(printout(l),'(a76)'),buff38//empty38
@@ -1026,7 +1029,8 @@ c Also rewrite props.inc
             read (88,'(a76)',end=193) buff
             l=l+1
             write(printout(l),'(a76)'),buff
-            if (buff(1:12).eq.'      pmass(') then
+            if (buff(1:12).eq.'      PMASS(') then
+              write(*,*)"propagator found in props.inc"
                read (buff(17:20),'(i4)') curgraph
                if (curgraph.eq.mapconfig(iconfig)) then
                   l=l-1
@@ -1041,7 +1045,7 @@ c then the t-channel
                   do i=1,nt_channel
                      read(88,'(a37)') buff37
                      write(buff37(13:15),'(i3)') -nbranch+i
-                     if (index(buff37,'abs').gt.0) then
+                     if (index(buff37,'ABS').gt.0) then
                         l=l+1
                         write(printout(l),'(a76)'),buff37//empty37
                      else
@@ -1050,7 +1054,7 @@ c then the t-channel
                      endif
                      read(88,'(a38)') buff38
                      write(buff38(14:16),'(i3)') -nbranch+i
-                     if (index(buff38,'abs').gt.0) then
+                     if (index(buff38,'ABS').gt.0) then
                         l=l+1
                         write(printout(l),'(a76)'),buff38//empty38
                      else
@@ -1106,6 +1110,7 @@ c called more than once in successive runs.
       character*23 buff23
       character*16 buff16,file
       character*9 dummy9
+      character*13 dummy13
       character*16 empty60
       parameter (empty60='                ')
       character*38 empty38
@@ -1129,6 +1134,7 @@ c called more than once in successive runs.
       integer tprid(-max_branch:-1,lmaxconfigs)
       include 'born_conf.inc'
       logical done
+      write(*,*) "--inverting born configs"
 
 
       if (nt_channel.gt.0) then
@@ -1140,9 +1146,10 @@ c called more than once in successive runs.
          read(88,'(a76)',end=192) buff
          l=l+1
          write(printout(l),'(a76)'),buff
-         if (buff(1:9).eq.'c   Graph') then
+         if (buff(1:13).eq.'C     Diagram') then
+         write(*,*) "diagrem found in born_conf.inc"
 c found a new graph           
-            read(buff,'(a9,i7)') dummy9,curgraph
+            read(buff,'(a13,i4)') dummy13, curgraph
                if (curgraph.eq.mapconfig(iconfig)) then
 c this is the graph we are looking for               
                read(88,'(a33)') buff33
@@ -1189,7 +1196,7 @@ c then the t-channel, for which we have to reverse the order
                      write(printout(l),'(a76)'),buff
                   elseif(mod(i,2).eq.0) then
                      read(88,'(a38)') buff38
-                     write(buff38(30:37),'(i8)')
+                     write(buff38(30:36),'(i6)')
      &                    tprid(-nbranch+i/2,iconfig)
                      l=l+1
                      write(printout(l),'(a76)'),buff38//empty38
@@ -1222,7 +1229,8 @@ c Also rewrite props.inc
             read (88,'(a76)',end=193) buff
             l=l+1
             write(printout(l),'(a76)'),buff
-            if (buff(1:12).eq.'      pmass(') then
+            if (buff(1:12).eq.'      PMASS(') then
+              write(*,*)"propagator found in born_props.inc"
                read (buff(17:20),'(i4)') curgraph
                if (curgraph.eq.mapconfig(iconfig)) then
                   l=l-1
@@ -1237,7 +1245,7 @@ c then the t-channel
                   do i=1,nt_channel
                      read(88,'(a37)') buff37
                      write(buff37(13:15),'(i3)') -nbranch+i
-                     if (index(buff37,'abs').gt.0) then
+                     if (index(buff37,'ABS').gt.0) then
                         l=l+1
                         write(printout(l),'(a76)'),buff37//empty37
                      else
@@ -1246,7 +1254,7 @@ c then the t-channel
                      endif
                      read(88,'(a38)') buff38
                      write(buff38(14:16),'(i3)') -nbranch+i
-                     if (index(buff38,'abs').gt.0) then
+                     if (index(buff38,'ABS').gt.0) then
                         l=l+1
                         write(printout(l),'(a76)'),buff38//empty38
                      else

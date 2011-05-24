@@ -498,7 +498,7 @@ Decay groups:
   Group 2:
     Process: z > e- e+
     1 diagrams:
-    1  ((2(11),3(-11)>2(23),id:10),(1(23),2(23),id:0)) (QED=1)""")
+    1  ((2(11),3(-11)>2(23),id:10),(1(23),2(23),id:0)) (QED=1,QCD=0)""")
 
         subproc_groups = \
                        dc_subproc_group.generate_helas_decay_chain_subproc_groups()
