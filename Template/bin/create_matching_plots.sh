@@ -28,9 +28,6 @@ if [[ ! -d $1_pythia ]];then
   mkdir $1_pythia
 fi
 for i in DJR*.eps; do mv $i $1_pythia/${i%.*}.ps;done
-../bin/plot_page-pl $1_pythia Pythia
-mv -f plots.html $1_plots_pythia.html
-../bin/gen_crossxhtml-pl $1
 if [[ donerun -eq 1 ]];then
     rm events.tree xsecs.tree
 fi
