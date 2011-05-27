@@ -8,19 +8,10 @@ c 3. cuts
 c---------------------------------------------------------------------- 
       implicit none
 c
-c     parameters
-c
-      integer maxpara
-      parameter (maxpara=1000)
-c
-c     local
-c     
-      integer npara
-      character*20 param(maxpara),value(maxpara)
-c
 c     include
 c
       include 'genps.inc'
+      include 'run_config.inc'
       include 'PDF/pdf.inc'
       include 'run.inc'
       include 'alfas.inc'
@@ -30,7 +21,9 @@ c
       common/to_dj/D
 c
 c     local
-c
+c     
+      integer npara
+      character*20 param(maxpara),value(maxpara)
       character*20 ctemp
       integer k,i,l1,l2
       character*132 buff
@@ -78,6 +71,7 @@ c----------
 c
 c     read the run_card.dat
 c
+
       call load_para(npara,param,value)
 
 c*********************************************************************

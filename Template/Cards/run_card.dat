@@ -81,10 +81,12 @@
 # (note that etmiss/ptll/ptheavy/sorted cuts always apply)
 #**********************************************************
    T  = cut_decays
-#**********************************************************
-# Explicit (0) or MC (1) sum over helicities.
-# Use >=1 if all helicities contribute, e.g. large pure QCD
-#**********************************************************
+#*************************************************************
+# Number of helicities to sum per event (0 = all helicities)
+# 0 gives more stable result, but longer run time
+# Use 2 if all helicities contribute, e.g. pure QCD
+#*************************************************************
+   0  = nhel_survey
    0  = nhel_refine
 #*******************                                                 
 # Standard Cuts

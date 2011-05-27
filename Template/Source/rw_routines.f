@@ -4,14 +4,9 @@ c Read the params from the run_card.dat file
 c---------------------------------------------------------------------- 
       implicit none
 c
-c     parameters
-c
-      integer maxpara
-      parameter (maxpara=1000)
-c
 c     arguments
 c     
-      character*20 param(maxpara),value(maxpara)
+      character*20 param(*),value(*)
       integer npara
 c
 c     local
@@ -190,15 +185,10 @@ c-------------------------------------------------------------------------------
       implicit none
 
 c
-c     parameters
-c
-      integer maxpara
-      parameter (maxpara=1000)
-c
 c     arguments
 c
       integer npara
-      character*20 param(maxpara),value(maxpara)
+      character*20 param(*),value(*)
       character*(*)  name
       real*8 var,def_value
       character*20 c_param,c_name
@@ -236,15 +226,10 @@ c     finds the parameter named "name" in param and associate to "value" in valu
 c----------------------------------------------------------------------------------
       implicit none
 c
-c     parameters
-c
-      integer maxpara
-      parameter (maxpara=1000)
-c
 c     arguments
 c
       integer npara
-      character*20 param(maxpara),value(maxpara)
+      character*20 param(*),value(*)
       character*(*)  name
       integer var,def_value
       character*20 c_param,c_name
@@ -282,15 +267,10 @@ c-------------------------------------------------------------------------------
       implicit none
 
 c
-c     parameters
-c
-      integer maxpara
-      parameter (maxpara=1000)
-c
 c     arguments
 c
       integer npara
-      character*20 param(maxpara),value(maxpara)
+      character*20 param(*),value(*)
       character*(*)  name
       character*(*)  var,def_value
       character*20 c_param,c_name
@@ -328,15 +308,10 @@ c-------------------------------------------------------------------------------
       implicit none
 
 c
-c     parameters
-c
-      integer maxpara
-      parameter (maxpara=1000)
-c
 c     arguments
 c
       integer npara
-      character*20 param(maxpara),value(maxpara)
+      character*20 param(*),value(*)
       character*(*)  name
       logical  var,def_value
       character*20 c_param,c_name

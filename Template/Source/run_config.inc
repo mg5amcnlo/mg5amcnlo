@@ -14,8 +14,9 @@ c
       parameter (min_events_channel = 1000) !per iteration in each channel
       integer    iter_survey                !Number of iterations for survey
       parameter (iter_survey=3)
-      integer    nhel_survey                !Number of helicities to sum for each
-      parameter (nhel_survey=0)             !phase space point. (0 = sum_all)
+c     The following sets the maximum number of parameters in the run_card.dat
+      integer maxpara
+      parameter (maxpara=1000)
 c
 c     The following parameters are used by gen_ximprove.f in running refine
 c

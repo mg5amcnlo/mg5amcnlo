@@ -13,8 +13,6 @@ c
       parameter (symfile='symfact.dat')
       integer   max_amps
       parameter (max_amps=9999)
-      integer maxpara
-      parameter (maxpara=1000)
 
       include 'run_config.inc'
       include 'maxparticles.inc'

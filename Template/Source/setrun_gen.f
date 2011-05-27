@@ -8,16 +8,6 @@ c 3. cuts
 c---------------------------------------------------------------------- 
       implicit none
 c
-c     parameters
-c
-      integer maxpara
-      parameter (maxpara=1000)
-c
-c     local
-c     
-      integer npara
-      character*20 param(maxpara),value(maxpara)
-c
 c     include
 c
       include 'genps.inc'
@@ -27,6 +17,8 @@ c
 c
 c     local
 c
+      integer npara
+      character*20 param(maxpara),value(maxpara)
       character*20 ctemp
       integer k,i,l1,l2
       character*132 buff
