@@ -886,21 +886,11 @@ C     ----------
               PRINT *,'Added good helicity ',I,TS(I)*NCOMB/ANS
             ENDIF
           ENDDO
-          ISHEL(IMIRROR)=MIN(ISUM_HEL,NGOOD(IMIRROR))
         ENDIF
         IF(NTRY(IMIRROR).EQ.MAXTRIES.AND.ISHEL(IMIRROR).GT.0)THEN
-C         Check if we have stable helicities in this event
-          DO I=1,NGOOD(IMIRROR)
-            IF(TS(IGOOD(I,IMIRROR)) .LT. 0.1*ANS/NGOOD(IMIRROR))THEN
-              WRITE(*,*) 'Not stable helicity distribution, fraction '
-     $         , TS(IGOOD(I,IMIRROR))/ANS*NGOOD(IMIRROR)
-              WRITE(*,*) 'Explicit sum over all non-zero helicities.'
-              ISHEL(IMIRROR)=0
-              EXIT
-            ENDIF
-          ENDDO
+          ISHEL(IMIRROR)=MIN(ISUM_HEL,NGOOD(IMIRROR))
         ENDIF
-      ELSE  !RANDOM HELICITY
+      ELSE  !LOOP OVER GOOD HELICITIES
         DO J=1,ISHEL(IMIRROR)
           JHEL(IMIRROR)=JHEL(IMIRROR)+1
           IF (JHEL(IMIRROR) .GT. NGOOD(IMIRROR)) JHEL(IMIRROR)=1

@@ -65,6 +65,11 @@
  1        = alpsfact         ! scale factor for QCD emission vx
  F        = chcluster        ! cluster only according to channel diag
  T        = pdfwgt           ! for ickkw=1, perform pdf reweighting
+#**********************************************************
+# Automatic ptj and mjj cuts if xqcut > 0
+# (turn off for VBF and single top processes)
+#**********************************************************
+   T  = auto_ptj_mjj
 #*********************************************************************
 #                                                                    
 #**********************************
@@ -76,6 +81,11 @@
 # (note that etmiss/ptll/ptheavy/sorted cuts always apply)
 #**********************************************************
    T  = cut_decays
+#**********************************************************
+# Explicit (0) or MC (1) sum over helicities.
+# Use >=1 if all helicities contribute, e.g. large pure QCD
+#**********************************************************
+   0  = nhel_refine
 #*******************                                                 
 # Standard Cuts
 #*******************                                                 

@@ -112,18 +112,9 @@ C ----------
                print *,'Adding good helicity ',I,TS(I)/ANS
             ENDIF
          ENDDO
-         ISUM_HEL=MIN(ISUM_HEL,NGOOD)
         ENDIF
         IF(NTRY.EQ.MAXTRIES.AND.ISUM_HEL.GT.0)THEN
-c       Check if we have stable helicities in this event
-           DO I=1,NGOOD
-              IF(TS(IGOOD(I)) .lt. 0.1*ANS/NGOOD)THEN
-                 write(*,*) 'Not stable helicity distribution, fraction ', TS(IGOOD(I))/ANS*NGOOD
-                 write(*,*) 'Explicit sum over all non-zero helicities.'
-                 ISUM_HEL=0
-                 EXIT
-              ENDIF
-           ENDDO
+           ISUM_HEL=MIN(ISUM_HEL,NGOOD)
         ENDIF
     ELSE              !RANDOM HELICITY
         DO J=1,ISUM_HEL

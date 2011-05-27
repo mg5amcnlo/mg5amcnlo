@@ -87,6 +87,12 @@ c*********************************************************************
       call  get_integer (npara,param,value,"maxjetflavor",maxjetflavor,4)
 
 c*********************************************************************
+c Automatically set ptj and mjj = xqcut (if xqcut > 0)
+c*********************************************************************
+
+      call  get_logical (npara,param,value,"auto_ptj_mjj",auto_ptj_mjj,.true.)
+
+c*********************************************************************
 c cut on decay products (pt/e/eta/dr/mij) or not
 c*********************************************************************
 

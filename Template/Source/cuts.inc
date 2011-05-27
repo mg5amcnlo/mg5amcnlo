@@ -67,7 +67,7 @@ c
       common /to_specxpt/xptj,xptb,xpta,xptl,xmtc,xetamin,xqcut,deltaeta
 
 C
-C    FLAG FOR CUTTING DECAY PRODUCTS
+C    FLAG FOR CUTTING DECAY PRODUCTS AND AUTOMATICALLY SETTING PTJ/MJJ
 C
-      logical cut_decays
-      common /to_cut_decays/cut_decays
+      logical cut_decays, auto_ptj_mjj
+      common /to_cut_decays/cut_decays,auto_ptj_mjj
