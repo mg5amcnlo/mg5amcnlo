@@ -22,23 +22,29 @@ import madgraph.core.helas_objects as helas_objects
 import madgraph.core.diagram_generation as diagram_generation
 import madgraph.core.color_amp as color_amp
 import madgraph.core.color_algebra as color_algebra
-import madgraph.fks.fks_born as fks_born
+import madgraph.fks.fks_common as fks_common
+import madgraph.fks.fks_real as fks_real
 import copy
 import logging
 import array
 
-logger = logging.getLogger('madgraph.fks_born_helas_objects')
+logger = logging.getLogger('madgraph.fks_real_helas_objects')
 
 
-class FKSHelasMultiProcessFromBorn(helas_objects.HelasMultiProcess):
-    """class to generate the helas calls for a FKSMultiProcess"""
+
+
+class FKSHelasMultiProcessFromReals(helas_objects.HelasMultiProcess):
+    """class to generate the helas calls for a FKSMultiProcess,
+    starting from real emission"""
     
     def __init__(self, fksmulti, gen_color =True, decay_ids =[]):
         """Initialization from a FKSMultiProcess"""
+        #super(FKSHelasMultiProcessFromReals, self).__init__()
         self['matrix_elements'] = self.generate_matrix_elements_fks(
-                                fksmulti['born_processes'], 
+                                fksmulti['real_processes'], 
                                 gen_color, decay_ids)
         
+    
     def get_used_lorentz(self):
         """Return a list of (lorentz_name, conjugate, outgoing) with
         all lorentz structures used by this HelasMultiProcess."""
@@ -49,6 +55,7 @@ class FKSHelasMultiProcessFromBorn(helas_objects.HelasMultiProcess):
             helas_list.extend(me.get_used_lorentz())
 
         return list(set(helas_list))
+    
 
     def get_used_couplings(self):
         """Return a list with all couplings used by this
@@ -57,9 +64,10 @@ class FKSHelasMultiProcessFromBorn(helas_objects.HelasMultiProcess):
         coupling_list = []
 
         for me in self.get('matrix_elements'):
-            coupling_list.extend(me.get_used_couplings())
+            coupling_list.extend([c for l in me.get_used_couplings() for c in l])
 
         return list(set(coupling_list))
+    
     
     def get_matrix_elements(self):
         """Extract the list of matrix elements"""
@@ -77,9 +85,9 @@ class FKSHelasMultiProcessFromBorn(helas_objects.HelasMultiProcess):
         particle ids, since those should not be combined even if
         matrix element is identical."""
 
-        assert isinstance(fksprocs, fks_born.FKSProcessFromBornList), \
-                  "%s is not valid FKSProcessFromBornList" % \
-                   repr(FKSProcessFromBornList)
+        assert isinstance(fksprocs, fks_real.FKSProcessFromRealsList), \
+                  "%s is not valid FKSProcessFromRealsList" % \
+                   repr(fksprocs)
 
         # Keep track of already generated color objects, to reuse as
         # much as possible
@@ -87,10 +95,10 @@ class FKSHelasMultiProcessFromBorn(helas_objects.HelasMultiProcess):
         list_color_links =[]
         list_color_basis = []
         list_color_matrices = []
-        real_me_list = []
+        born_me_list = []
         me_id_list = []
 
-        matrix_elements = FKSHelasProcessFromBornList()
+        matrix_elements = FKSHelasProcessFromRealsList()
 
         while fksprocs:
             # Pop the amplitude to save memory space
@@ -100,15 +108,15 @@ class FKSHelasMultiProcessFromBorn(helas_objects.HelasMultiProcess):
 #                                      combine_decay_chain_processes()
 #            else:
             logger.info("Generating Helas calls for FKS process %s" % \
-                         proc.born_amp.get('process').nice_string().\
+                         proc.real_amp.get('process').nice_string().\
                                            replace('Process', 'process'))
-            matrix_element_list = [FKSHelasProcessFromBorn(proc, real_me_list,
+            matrix_element_list = [FKSHelasProcessFromReals(proc, born_me_list,
                                                            me_id_list,
                                                           decay_ids=decay_ids,
                                                           gen_color=False)]
             for matrix_element in matrix_element_list:
-                assert isinstance(matrix_element, FKSHelasProcessFromBorn), \
-                          "Not a FKSHelasProcessFromBorn: %s" % matrix_element
+                assert isinstance(matrix_element, FKSHelasProcessFromReals), \
+                          "Not a FKSHelasProcessFromReals: %s" % matrix_element
 
                 try:
                     # If an identical matrix element is already in the list,
@@ -118,12 +126,12 @@ class FKSHelasMultiProcessFromBorn(helas_objects.HelasMultiProcess):
                           matrix_elements[matrix_elements.index(matrix_element)]
                     other.add_process(matrix_element)
                     logger.info("Combining process with %s" % \
-                      other.born_matrix_element.get('processes')[0].nice_string().replace('Process: ', ''))
+                      other.real_matrix_element.get('processes')[0].nice_string().replace('Process: ', ''))
                 except ValueError:
                     # Otherwise, if the matrix element has any diagrams,
                     # add this matrix element.
-                    if matrix_element.born_matrix_element.get('processes') and \
-                           matrix_element.born_matrix_element.get('diagrams'):
+                    if matrix_element.real_matrix_element.get('processes') and \
+                           matrix_element.real_matrix_element.get('diagrams'):
                         matrix_elements.append(matrix_element)
 
                         if not gen_color:
@@ -133,8 +141,8 @@ class FKSHelasMultiProcessFromBorn(helas_objects.HelasMultiProcess):
                         # list of raw colorize objects (before
                         # simplification) associated with amplitude
                         col_basis = color_amp.ColorBasis()
-                        new_amp = matrix_element.born_matrix_element.get_base_amplitude()
-                        matrix_element.born_matrix_element.set('base_amplitude', new_amp)
+                        new_amp = matrix_element.real_matrix_element.get_base_amplitude()
+                        matrix_element.real_matrix_element.set('base_amplitude', new_amp)
                         colorize_obj = col_basis.create_color_dict_list(new_amp)
 
                         try:
@@ -144,7 +152,7 @@ class FKSHelasMultiProcessFromBorn(helas_objects.HelasMultiProcess):
                             col_index = list_colorize.index(colorize_obj)
                             logger.info(\
                               "Reusing existing color information for %s" % \
-                              matrix_element.born_matrix_element.get('processes')[0].nice_string().\
+                              matrix_element.real_matrix_element.get('processes')[0].nice_string().\
                                                  replace('Process', 'process'))
                             
                             
@@ -157,157 +165,112 @@ class FKSHelasMultiProcessFromBorn(helas_objects.HelasMultiProcess):
                             col_matrix = color_amp.ColorMatrix(col_basis)
                             list_color_matrices.append(col_matrix)
                             col_index = -1
-                            list_color_links.append(
-                                    FKSHelasProcessFromBorn.insert_color_links(
-                                            col_basis, colorize_obj, 
-                                            proc.color_links))
-                            logger.info(\
-                              "Processing color information for %s" % \
-                              matrix_element.born_matrix_element.get('processes')[0].nice_string().\
-                                             replace('Process', 'process'))
-                            
-
+    
                 if gen_color:
-                    matrix_element.born_matrix_element.set('color_basis',
+                    matrix_element.real_matrix_element.set('color_basis',
                                        list_color_basis[col_index])
-                    matrix_element.born_matrix_element.set('color_matrix',
+                    matrix_element.real_matrix_element.set('color_matrix',
                                        list_color_matrices[col_index])
-                    matrix_element.color_links = list_color_links[col_index]
                     
         return matrix_elements    
 
 
-class FKSHelasProcessFromBornList(MG.PhysicsObjectList):
-    """class to handle lists of FKSHelasProcessesFromBorn"""
+class FKSHelasProcessFromRealsList(MG.PhysicsObjectList):
+    """class to handle lists of FKSHelasProcessesFromReals"""
     
     def is_valid_element(self, obj):
-        """Test if object obj is a valid FKSProcessFromBorn for the list."""
-        return isinstance(obj, FKSHelasProcessFromBorn)
+        """Test if object obj is a valid FKSProcessFromReals for the list."""
+        return isinstance(obj, FKSHelasProcessFromReals)   
     
     
+class FKSHelasProcessFromReals(object):
+    """class to generate the Helas calls for a FKSProcessFromReals. Contains:
+    -- real emission ME
+    -- list of FKSHelasBornProcesses
+    -- fks_inc string (content of file fks.inc)
+    """
     
-class FKSHelasProcessFromBorn(object):
-    """class to generate the Helas calls for a FKSProcessFromBorn. Contains:
-    -- born ME
-    -- list of FKSHelasRealProcesses
-    -- color links"""
-    
-    def __init__(self, fksproc=None, me_list =[], me_id_list=[], **opts):#test written
-        """ constructor, starts from a FKSProcessFromBorn, 
-        sets reals and color links"""
+    def __init__(self, fksproc=None, me_list =[], me_id_list=[], **opts):
+        """ constructor, starts from a FKSProcessFromReals, sets borns and ME"""
         
         if fksproc != None:
-            self.color_links = []
-            self.real_processes = []
-            for proc in fksproc.real_amps:
-                self.real_processes.append(
-                        FKSHelasRealProcess(proc, me_list, me_id_list, **opts))
-            self.born_matrix_element = helas_objects.HelasMatrixElement(
-                                    fksproc.born_amp, **opts)
+            self.born_processes = []
+            for proc in fksproc.borns:
+                self.born_processes.append(
+                        FKSHelasBornProcess(proc, me_list, me_id_list, **opts))
+            self.real_matrix_element = helas_objects.HelasMatrixElement(
+                                    fksproc.real_amp, **opts)
+            self.fks_inc_string = fksproc.get_fks_inc_string()
+    
+    def get(self, key):
+        """the get function references to real_matrix_element"""
+        return self.real_matrix_element.get(key)
+    
+    def get_used_lorentz(self):
+        """the get_used_lorentz function references to real_matrix_element and
+        to the borns"""
+        lorentz_list = self.real_matrix_element.get_used_lorentz()
+        for born in self.born_processes:
+            lorentz_list.extend(born.matrix_element.get_used_lorentz())
+        return list(set(lorentz_list))
+#        return lorentz_list
+    
+    def get_used_couplings(self):
+        """the get_used_couplings function references to real_matrix_element and
+        to the borns"""
+        coupl_list = self.real_matrix_element.get_used_couplings()
+        for born in self.born_processes:
+            coupl_list.extend([c for l in\
+                        born.matrix_element.get_used_couplings() for c in l])
+        #return list(set(coupl_list))
+        return coupl_list    
     
     def __eq__(self, other):
         """the equality between two FKSHelasProcesses is defined up to the 
         color links"""
                     
-        if self.born_matrix_element != other.born_matrix_element:
+        if self.real_matrix_element != other.real_matrix_element:
             return False
-        reals2 = copy.copy(other.real_processes)
-        for real in  self.real_processes:
+        borns2 = copy.copy(other.born_processes)
+        for born in  self.born_processes:
             try:
-                reals2.remove(real)
+                borns2.remove(born)
             except:
                 return False  
-
-        return True
+        return borns2 == []
     
-    def add_process(self, other): #test written
+    def add_process(self, other): 
         """adds processes from born and reals of other to itself"""
-        self.born_matrix_element.get('processes').extend(
-                other.born_matrix_element.get('processes'))
-        for real1, real2 in zip(self.real_processes, other.real_processes):
-            real1.matrix_element.get('processes').extend(
-                real2.matrix_element.get('processes'))  
-            
-#    @staticmethod
-#    def insert_color_links(col_basis, col_obj, links):
-#        """insert the color links in col_obj: returns a list of dictionaries
-#        (one for each link) with the following entries:
-#        --link: the numbers of the linked legs
-#        --link_basis: the linked color basis
-#        --link_matrix: the color matrix created from the original basis and the linked one
-#        """   
-#        
-#        assert isinstance(col_basis, color_amp.ColorBasis)
-#        assert isinstance(col_obj, list)
-#        result =[]
-#        for link in links:
-#            this = {}
-#            #define the link
-#            l =[]
-#            for leg in link['legs']:
-#                l.append(leg.get('number'))
-#            this['link'] = l
-#            
-#            #replace the indices in col_obj of the linked legs according to
-#            #   link['replacements']
-#            # and extend the color strings
-#            
-#            this_col_obj = []
-#            for old_dict in col_obj:
-#                dict = copy.copy(old_dict)
-#                for k, string in dict.items():
-#                    dict[k]=string.create_copy()
-#                    for col in dict[k]:
-#                        for ind in col:
-#                            for pair in link['replacements']:
-#                                if ind == pair[0]:
-#                                    col[col.index(ind)] = pair[1]
-#                    dict[k].extend(link['string'])
-#                this_col_obj.append(dict)
-#            basis_link = color_amp.ColorBasis()
-#            for ind, dict in enumerate(this_col_obj):
-#                basis_link.update_color_basis(dict, ind)
-#            
-#            this['link_basis'] = basis_link
-#            this['link_matrix'] = color_amp.ColorMatrix(col_basis,basis_link)
-#                
-#            result.append(this)
-#                
-#        return result
-            
-    
-class FKSHelasRealProcess(object): #test written
+        self.real_matrix_element.get('processes').extend(
+                other.real_matrix_element.get('processes'))
+        for born1, born2 in zip(self.born_processes, other.born_processes):
+            born1.matrix_element.get('processes').extend(
+                born2.matrix_element.get('processes'))  
+
+
+class FKSHelasBornProcess(object): #test written
     """class to generate the Helas calls for a FKSRealProcess
     contains:
     -- i/j fks
+    -- ijglu
     -- matrix element
+    -- color links
     -- leg permutation<<REMOVED"""
     
-    def __init__(self, fksrealproc=None, me_list = [], me_id_list =[], **opts):
+    def __init__(self, fksbornproc=None, me_list = [], me_id_list =[], **opts):
         """constructor, starts from a fksrealproc and then calls the
         initialization for HelasMatrixElement.
         Sets i/j fks and the permutation"""
         
-        if fksrealproc != None:
-            pdgs = fksrealproc.pdgs
- ##           self.permutation= fksrealproc.permutation
-            self.i_fks = fksrealproc.i_fks
-            self.j_fks = fksrealproc.j_fks
-       #     print "in FKSHelasRealProc  i ", self.i_fks, "   j ", self.j_fks
-            
-            #try:
-            #    matrix_element = copy.copy(me_list[me_id_list.index(pdgs)])
-            #    matrix_element.set('processes', 
-            #                       copy.copy(matrix_element.get('processes')))
-            #    self.matrix_element = matrix_element
-            #except ValueError:
+        if fksbornproc != None:
+            self.i_fks = fksbornproc.i_fks
+            self.j_fks = fksbornproc.j_fks
+            self.ijglu = fksbornproc.ijglu
+
             self.matrix_element = helas_objects.HelasMatrixElement(
-                                    fksrealproc.amplitude, **opts)
-                #me_list.append(self.matrix_element)
-                #me_id_list.append(pdgs)
-                
-       #     for p in self.matrix_element.get('processes'):
-       #         print p.nice_string()
+                                    fksbornproc.amplitude, **opts)
+            self.color_links = fksbornproc.find_color_links()
+
     
     def __eq__(self, other):
         """Equality operator:
@@ -319,9 +282,5 @@ class FKSHelasRealProcess(object): #test written
         """Inequality operator:
         compare two FKSHelasRealProcesses by comparing their dictionaries"""
         return not self.__eq__(other)
-
-
-
-        
-        
+    
     

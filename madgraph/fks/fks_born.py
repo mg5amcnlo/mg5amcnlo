@@ -27,147 +27,24 @@ import array
 logger = logging.getLogger('madgraph.fks_born')
 
 
-
-def legs_to_color_link_string(leg1, leg2):
-    """returns a dictionary containing:
-    --string: the color link between the two particles, to be appended to
-        the old color string
-    --replacements: a pair of lists containing the replacements of the color 
-        indices in the old string to match the link"""
-    dict={}
-    min_index = -3000
-    iglu = min_index*2
-    string = color_algebra.ColorString()
-    replacements = []
-    if leg1 != leg2:
-        for leg in [leg1,leg2]:
-            min_index -= 1
-            num = leg.get('number')
-            replacements.append([num, min_index])
-            icol =1
-            if not leg.get('state'):
-                icol =-1
-            if leg.get('color') * icol == 3:
-                string.append(color_algebra.T(iglu, num, min_index))
-            elif leg.get('color') * icol == -3:
-                string.append(color_algebra.T(iglu, min_index, num))
-            elif leg.get('color') * icol == 8:
-                string.append(color_algebra.f(iglu, num, min_index))
-    else:
-        icol =1
-        if not leg1.get('state'):
-            icol =-1
-        num = leg1.get('number')
-        replacements.append([num, min_index -1])
-        if leg1.get('color') * icol == 3:
-            string.append(color_algebra.T(iglu, num, min_index-2))
-            string.append(color_algebra.T(iglu, min_index-2, min_index-1))
-        elif leg1.get('color') * icol == -3:
-            string.append(color_algebra.T(iglu, min_index-2, num))
-            string.append(color_algebra.T(iglu, min_index-1, min_index-2))    
-    
-    dict['replacements'] = replacements
-    dict['string'] = string
-    return dict
-
-
-class FKSLeglist(MG.LegList):
-    """list of FKSLegs"""
-    
-    def is_valid_element(self, obj):
-        """Test if object obj is a valid FKSLeg for the list."""
-        return isinstance(obj, FKSLeg)
-
-class FKSLeg(MG.Leg):
-    """a class for FKS legs: it inherits from the ususal leg class, with two
-    extra keys in the dictionary: 
-    -'fks', whose value can be 'i', 'j' or 'n' (for "normal" particles) 
-    -'color', which gives the color of the leg
-    -'massless', boolean, true if leg is massless
-    -'spin' which gives the spin of leg"""
-
-    def default_setup(self):
-        """Default values for all properties"""
-        super(FKSLeg, self).default_setup()
-
-        self['fks'] = 'n'
-        self['color'] = 0
-        self['massless'] = True
-        self['spin'] = 0
-    
-    def get_sorted_keys(self):
-        """Return particle property names as a nicely sorted list."""
-        keys = super(FKSLeg, self).get_sorted_keys()
-        keys += ['fks', 'color', 'massless', 'spin']
-        return keys
-
-    
-    def filter(self, name, value):
-        """Filter for valid leg property values."""
-
-        if name == 'fks':
-            if not isinstance(value, str):
-                raise self.PhysicsObjectError, \
-                        "%s is not a valid string for leg fks flag" % str(value)
-
-        if name in ['color', 'spin']:
-            if not isinstance(value, int):
-                raise self.PhysicsObjectError, \
-                        "%s is not a valid leg color " % \
-                                                                    str(value)
-
-        if name == 'massless':
-            if not isinstance(value, bool):
-                raise self.PhysicsObjectError, \
-                        "%s is not a valid boolean for leg flag massless" % \
-                                                                    str(value)
-                                                                
-        return super(FKSLeg,self).filter(name, value)
- 
-    
-    def __lt__(self, other):
-        #two initial state legs are sorted by their number:
-        if (not self.get('state') and not other.get('state')):
-            return self.get('number') < other.get('number')
-        
-        #an initial state leg comes before a final state leg
-        if (self.get('state') or other.get('state')) and \
-          not (self.get('state') and other.get('state')):
-            return other.get('state')
-        
-        #two final state particles are ordered by increasing color
-        elif self.get('state') and other.get('state'):
-            if abs(self.get('color')) != abs(other.get('color')):
-                return abs(self.get('color')) < abs(other.get('color'))
-        #particles of the same color are ordered according to the pdg code
-            else:
-                if abs(self.get('id')) != abs(other.get('id')):
-                    return abs(self.get('id')) < abs(other.get('id'))
-                elif self.get('id') != other.get('id') :
-        #for the same flavour qqbar pair, first take the quark 
-                    return self.get('id') > other.get('id')
-        # i fks > j fks > n fks        
-                else: 
-                    return not self.get('fks') < other.get('fks') 
-                    
-                         
+                
 
 #===============================================================================
 # FKS Process
 #===============================================================================
-class FKSMultiProcess(diagram_generation.MultiProcess): #test written
+class FKSMultiProcessFromBorn(diagram_generation.MultiProcess): #test written
     """a multi process class that contains informations on the born processes 
     and the reals"""
     
     def default_setup(self):
         """Default values for all properties"""
-        super(FKSMultiProcess, self).default_setup()
+        super(FKSMultiProcessFromBorn, self).default_setup()
 
         self['born_processes'] = FKSProcessFromBornList()
     
     def get_sorted_keys(self):
         """Return particle property names as a nicely sorted list."""
-        keys = super(FKSMultiProcess, self).get_sorted_keys()
+        keys = super(FKSMultiProcessFromBorn, self).get_sorted_keys()
         keys += ['born_processes']
         return keys
 
@@ -179,7 +56,7 @@ class FKSMultiProcess(diagram_generation.MultiProcess): #test written
                 raise self.PhysicsObjectError, \
                         "%s is not a valid list for born_processes " % str(value)
                                                                 
-        return super(FKSMultiProcess,self).filter(name, value)
+        return super(FKSMultiProcessFromBorn,self).filter(name, value)
     
     def __init__(self, *arguments):
         """initialize the original multiprocess, then generates the amps for the 
@@ -196,7 +73,7 @@ class FKSMultiProcess(diagram_generation.MultiProcess): #test written
             born.generate_reals(real_amplist, real_amp_id_list)
 
 
-class FKSRealProcess(): #test written
+class FKSRealProcess(object): #test written
     """contains information about a real process:
     -- i/j fks
     -- amplitude
@@ -323,17 +200,10 @@ class FKSProcessFromBorn(object):
 
 
     def find_color_links(self): #test written
-        """finds all the possible color links between two legs of the born"""
-        for leg1 in self.leglist:
-            for leg2 in self.leglist:
-                #legs must be colored and different, unless massive
-                if (leg1.get('color') != 1 and leg2.get('color') != 1) \
-                  and (leg1 != leg2 or not leg1.get('massless')):
-                    self.color_links.append({
-                        'legs' : [leg1, leg2],
-                        'string' : legs_to_color_link_string(leg1, leg2)['string'],
-                        'replacements' : legs_to_color_link_string(leg1, leg2)['replacements']})
-             
+        """finds all the possible color links between two legs of the born.
+        Uses the find_color_links function in fks_common"""
+        self.color_links = fks_common.find_color_links(self.leglist)
+        
 
     def generate_reals(self, amplist, amp_id_list): #test written
         """for all the possible splittings, creates an FKSRealProcess, keeping
@@ -342,6 +212,7 @@ class FKSProcessFromBorn(object):
             self.real_amps.append(FKSRealProcess(\
                         self.born_proc, l, amplist, amp_id_list))
 
+#####to move into fks_common
     def to_fks_leg(self, leg): #test written
         """given a leg or a dict with leg properties, 
         adds color, spin and massless entries"""
@@ -360,39 +231,40 @@ class FKSProcessFromBorn(object):
         for leg in leglist:
             fkslegs.append(self.to_fks_leg(leg))
         return fkslegs      
+##################################
             
-    def find_qcd_particles(self,model): #test written
-        """finds the QCD (i.e. colored) particles in the given model"""
-        qcd_part = {}
-        for i, p in model.get('particle_dict').items():
-            if p['color'] != 1 :
-                qcd_part[i] = p
-        return qcd_part
-    
-    def find_brem_particles(self,model): #test_written
-        """finds the particles that can be radiated (i.e. colored and massless) 
-        in the given model"""
-        brem_part = {}
-        for i, p in model.get('particle_dict').items():
-            if p['color'] != 1 and p['mass'].lower() == 'zero':
-                brem_part[i] = p
-        return brem_part
-    
-    def find_qcd_interactions(self, model, pert = ['QCD']):  #test_written
-        """finds the interactions for which QCD order is >=1 in the given model"""
-        qcd_inter = MG.InteractionList()
-        for i, ii in model.get('interaction_dict').items():
-            if any([p in ii['orders'].keys() for p in pert]) \
-               and len(ii['particles']) ==3 :
-                masslist = [p.get('mass').lower() for p in ii.get('particles')]
-                # check that there is at least a massless particle, and that the 
-                # remaining ones have the same mass 
-                # (otherwise the real emission final state will not be degenerate
-                # with the born one
-                masslist.remove('zero')
-                if len(set(masslist)) == 1:
-                    qcd_inter.append(ii)
-        return sorted(qcd_inter)
+#    def find_qcd_particles(self,model): #test written
+#        """finds the QCD (i.e. colored) particles in the given model"""
+#        qcd_part = {}
+#        for i, p in model.get('particle_dict').items():
+#            if p['color'] != 1 :
+#                qcd_part[i] = p
+#        return qcd_part
+#    
+#    def find_brem_particles(self,model): #test_written
+#        """finds the particles that can be radiated (i.e. colored and massless) 
+#        in the given model"""
+#        brem_part = {}
+#        for i, p in model.get('particle_dict').items():
+#            if p['color'] != 1 and p['mass'].lower() == 'zero':
+#                brem_part[i] = p
+#        return brem_part
+#    
+#    def find_qcd_interactions(self, model, pert = ['QCD']):  #test_written
+#        """finds the interactions for which QCD order is >=1 in the given model"""
+#        qcd_inter = MG.InteractionList()
+#        for i, ii in model.get('interaction_dict').items():
+#            if any([p in ii['orders'].keys() for p in pert]) \
+#               and len(ii['particles']) ==3 :
+#                masslist = [p.get('mass').lower() for p in ii.get('particles')]
+#                # check that there is at least a massless particle, and that the 
+#                # remaining ones have the same mass 
+#                # (otherwise the real emission final state will not be degenerate
+#                # with the born one
+#                masslist.remove('zero')
+#                if len(set(masslist)) == 1:
+#                    qcd_inter.append(ii)
+#        return sorted(qcd_inter)
     
     def add_numbers(self, legs):
         """sorts and adds the numbers to the leg list"""

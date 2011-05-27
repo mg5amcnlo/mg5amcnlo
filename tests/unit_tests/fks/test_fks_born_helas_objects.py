@@ -13,7 +13,7 @@
 #
 ################################################################################
 
-"""Testing modules for FKS_process_born class"""
+"""Testing modules for fks_born_helas_objects module"""
 
 import sys
 import os

@@ -43,8 +43,10 @@ import madgraph.core.base_objects as base_objects
 import madgraph.core.diagram_generation as diagram_generation
 import madgraph.core.drawing as draw_lib
 import madgraph.core.helas_objects as helas_objects
-import madgraph.fks.fks_real as fks
+import madgraph.fks.fks_real as fks_real
+import madgraph.fks.fks_real_helas_objects as fks_real_helas
 import madgraph.fks.fks_born as fks_born
+
 
 import madgraph.iolibs.drawing_eps as draw
 import madgraph.iolibs.export_cpp as export_cpp
@@ -1912,36 +1914,68 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
 
         return
     
-    def do_generateFKS(self,line):
-        """generate an amplitude with the FKS counterterms. Start with the born
-        emission process"""
+#    def do_generateFKSFromBorn(self,line):
+#        """generate an amplitude with the FKS counterterms. Start with the born
+#        emission process"""
+#
+#        args = split_arg(line)
+#        self.check_generateFKS(args)
+#
+#        # Reset Helas matrix elements
+#        self._curr_matrix_elements = helas_objects.HelasMultiProcess()
+#        self._generate_info = line
+#        # Reset _done_export, since we have new process
+#        self._done_export = False
+#
+#        # Extract process from process definition
+#        if ',' in line:
+#            myprocdef, line = self.extract_decay_chain_process(line)
+#        else:
+#            myprocdef = self.extract_process(line)
+#
+#        cpu_time1 = time.time()
+#        # Generate processes
+#        myproc = fks_born.FKSMultiProcess(myprocdef)
+#        self._curr_amps = myproc.get('amplitudes')
+#        cpu_time2 = time.time()
+#
+#        nprocs = len(self._curr_amps)
+#        ndiags = sum([amp.get_number_of_diagrams() for \
+#                              amp in self._curr_amps])
+#        logger.info("%i processes with %i diagrams generated in %0.3f s" % \
+#                  (nprocs, ndiags, (cpu_time2 - cpu_time1)))
+#
+#    def do_generateFKSFromReals(self,line):
+#        """generate an amplitude with the FKS counterterms. Start with the reals
+#        emission process"""
+#
+#        args = split_arg(line)
+#        self.check_generateFKS(args)
+#
+#        # Reset Helas matrix elements
+#        self._curr_matrix_elements = helas_objects.HelasMultiProcess()
+#        self._generate_info = line
+#        # Reset _done_export, since we have new process
+#        self._done_export = False
+#
+#        # Extract process from process definition
+#        if ',' in line:
+#            myprocdef, line = self.extract_decay_chain_process(line)
+#        else:
+#            myprocdef = self.extract_process(line)
+#
+#        cpu_time1 = time.time()
+#        # Generate processes
+#        myproc = fks_real.FKSMultiProcessFromReals(myprocdef)
+#        self._curr_amps = myproc.get('amplitudes')
+#        cpu_time2 = time.time()
+#
+#        nprocs = len(self._curr_amps)
+#        ndiags = sum([amp.get_number_of_diagrams() for \
+#                              amp in self._curr_amps])
+#        logger.info("%i processes with %i diagrams generated in %0.3f s" % \
+#                  (nprocs, ndiags, (cpu_time2 - cpu_time1)))
 
-        args = split_arg(line)
-        self.check_generateFKS(args)
-
-        # Reset Helas matrix elements
-        self._curr_matrix_elements = helas_objects.HelasMultiProcess()
-        self._generate_info = line
-        # Reset _done_export, since we have new process
-        self._done_export = False
-
-        # Extract process from process definition
-        if ',' in line:
-            myprocdef, line = self.extract_decay_chain_process(line)
-        else:
-            myprocdef = self.extract_process(line)
-
-        cpu_time1 = time.time()
-        # Generate processes
-        myproc = fks_born.FKSMultiProcess(myprocdef)
-        self._curr_amps = myproc.get('amplitudes')
-        cpu_time2 = time.time()
-
-        nprocs = len(self._curr_amps)
-        ndiags = sum([amp.get_number_of_diagrams() for \
-                              amp in self._curr_amps])
-        logger.info("%i processes with %i diagrams generated in %0.3f s" % \
-                  (nprocs, ndiags, (cpu_time2 - cpu_time1)))
 
         
         
@@ -2937,7 +2971,7 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
         elif self._export_format in self._fks_export_formats:
             self.do_set('group_subprocesses False')
             if self._export_format =='fksreal':
-                print "EXPORTING IN MADFKS FORMAT"
+                logger.info("EXPORTING IN MADFKS FORMAT")
                 self._curr_exporter = export_fks.ProcessExporterFortranFKS(\
                                           self._mgme_dir, self._export_dir,
                                           not noclean)
@@ -3015,9 +3049,17 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
                         for me in group.get('matrix_elements'):
                             me.get('processes')[0].set('uid', uid)
                 else:
-                    self._curr_matrix_elements = \
+                    if self._export_format in ['fksreal']:
+                        fks_multi_proc = fks_real.FKSMultiProcessFromReals(
+                                            self._curr_amps)
+                        self._curr_matrix_elements = \
+                                 fks_real_helas.FKSHelasMultiProcessFromReals(\
+                                    fks_multi_proc)
+                    else:
+                        self._curr_matrix_elements = \
                                  helas_objects.HelasMultiProcess(\
                                                self._curr_amps)
+
                     ndiags = sum([len(me.get('diagrams')) for \
                                   me in self._curr_matrix_elements.\
                                   get_matrix_elements()])
@@ -3043,10 +3085,12 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
             path = os.path.join(path, 'SubProcesses')
 
         if self._export_format == 'fksreal':
+            #_curr_matrix_element is a FKSHelasMultiProcessFromRealObject 
             for ime, me in \
                 enumerate(self._curr_matrix_elements.get('matrix_elements')):
+                #me is a FKSHelasProcessFromReals
                 calls = calls + \
-                        self._curr_exporter.generate_subprocess_directories_fks(\
+                        self._curr_exporter.generate_born_directories_fks(\
                             me, self._curr_fortran_model, ime, path)
             
             card_path = os.path.join(path, os.path.pardir, 'SubProcesses', \

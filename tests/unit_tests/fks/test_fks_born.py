@@ -805,94 +805,94 @@ class TestFKSProcess(unittest.TestCase):
                              {'string' : string, 'replacements': replac})
         
         
-    def test_find_color_links(self): 
-        """tests if all the correct color links are found for a given born process"""
-        myleglist = MG.LegList()
-        # PROCESS: u u~ > g t t~ a 
-        mylegs = [{ \
-        'id': 2,\
-        'number': 1,\
-        'state': False,\
-     #   'from_group': True \
-    }, \
-    { \
-        'id': -2,\
-        'number': 2,\
-        'state': False,\
-        #'from_group': True\
-    },\
-    {\
-        'id': 21,\
-        'number': 3,\
-        'state': True,\
-      #  'from_group': True\
-    },\
-    {\
-        'id': 6,\
-        'number': 4,\
-        'state': True,\
-       # 'from_group': True\
-    },\
-    {\
-        'id': -6,\
-        'number': 5,\
-        'state': True,\
-       # 'from_group': True\
-    },\
-    {\
-        'id': 22,\
-        'number': 6,\
-        'state': True,\
-       # 'from_group': True\
-    }
-    ]
-
-        for i in mylegs:
-            myleglist.append(MG.Leg(i))   
-        proc = fks_born.FKSProcessFromBorn(MG.Process({
-                       'legs' : myleglist, 
-                       'orders':{'QCD':10, 'QED':10},
-                       'model': self.mymodel,
-                       'id': 1,
-                       'required_s_channels':[],
-                       'forbidden_s_channels':[],
-                       'forbidden_particles':[],
-                       'is_decay_chain': False,
-                       'decay_chains': MG.ProcessList(),
-                       'overall_orders': {}
-                       }))
-        fkslegs = proc.to_fks_legs(myleglist)
-        links = []
-        links.append([fkslegs[0], fkslegs[1]])
-        links.append([fkslegs[0], fkslegs[2]])
-        links.append([fkslegs[0], fkslegs[3]])
-        links.append([fkslegs[0], fkslegs[4]])
-        
-        links.append([fkslegs[1], fkslegs[0]])
-        links.append([fkslegs[1], fkslegs[2]])
-        links.append([fkslegs[1], fkslegs[3]])
-        links.append([fkslegs[1], fkslegs[4]])
-        
-        links.append([fkslegs[2], fkslegs[0]])
-        links.append([fkslegs[2], fkslegs[1]])
-        links.append([fkslegs[2], fkslegs[3]])
-        links.append([fkslegs[2], fkslegs[4]])
-        
-        links.append([fkslegs[3], fkslegs[0]])
-        links.append([fkslegs[3], fkslegs[1]])
-        links.append([fkslegs[3], fkslegs[2]])
-        links.append([fkslegs[3], fkslegs[3]])
-        links.append([fkslegs[3], fkslegs[4]])
-        
-        links.append([fkslegs[4], fkslegs[0]])
-        links.append([fkslegs[4], fkslegs[1]])
-        links.append([fkslegs[4], fkslegs[2]])
-        links.append([fkslegs[4], fkslegs[3]])
-        links.append([fkslegs[4], fkslegs[4]])
-        
-        self.assertEqual(len(links), len(proc.color_links))
-        for i in range(len(links)):
-            self.assertEqual(links[i], proc.color_links[i]['legs'])
+#    def test_find_color_links(self): 
+#        """tests if all the correct color links are found for a given born process"""
+#        myleglist = MG.LegList()
+#        # PROCESS: u u~ > g t t~ a 
+#        mylegs = [{ \
+#        'id': 2,\
+#        'number': 1,\
+#        'state': False,\
+#     #   'from_group': True \
+#    }, \
+#    { \
+#        'id': -2,\
+#        'number': 2,\
+#        'state': False,\
+#        #'from_group': True\
+#    },\
+#    {\
+#        'id': 21,\
+#        'number': 3,\
+#        'state': True,\
+#      #  'from_group': True\
+#    },\
+#    {\
+#        'id': 6,\
+#        'number': 4,\
+#        'state': True,\
+#       # 'from_group': True\
+#    },\
+#    {\
+#        'id': -6,\
+#        'number': 5,\
+#        'state': True,\
+#       # 'from_group': True\
+#    },\
+#    {\
+#        'id': 22,\
+#        'number': 6,\
+#        'state': True,\
+#       # 'from_group': True\
+#    }
+#    ]
+#
+#        for i in mylegs:
+#            myleglist.append(MG.Leg(i))   
+#        proc = fks_born.FKSProcessFromBorn(MG.Process({
+#                       'legs' : myleglist, 
+#                       'orders':{'QCD':10, 'QED':10},
+#                       'model': self.mymodel,
+#                       'id': 1,
+#                       'required_s_channels':[],
+#                       'forbidden_s_channels':[],
+#                       'forbidden_particles':[],
+#                       'is_decay_chain': False,
+#                       'decay_chains': MG.ProcessList(),
+#                       'overall_orders': {}
+#                       }))
+#        fkslegs = proc.to_fks_legs(myleglist)
+#        links = []
+#        links.append([fkslegs[0], fkslegs[1]])
+#        links.append([fkslegs[0], fkslegs[2]])
+#        links.append([fkslegs[0], fkslegs[3]])
+#        links.append([fkslegs[0], fkslegs[4]])
+#        
+#        links.append([fkslegs[1], fkslegs[0]])
+#        links.append([fkslegs[1], fkslegs[2]])
+#        links.append([fkslegs[1], fkslegs[3]])
+#        links.append([fkslegs[1], fkslegs[4]])
+#        
+#        links.append([fkslegs[2], fkslegs[0]])
+#        links.append([fkslegs[2], fkslegs[1]])
+#        links.append([fkslegs[2], fkslegs[3]])
+#        links.append([fkslegs[2], fkslegs[4]])
+#        
+#        links.append([fkslegs[3], fkslegs[0]])
+#        links.append([fkslegs[3], fkslegs[1]])
+#        links.append([fkslegs[3], fkslegs[2]])
+#        links.append([fkslegs[3], fkslegs[3]])
+#        links.append([fkslegs[3], fkslegs[4]])
+#        
+#        links.append([fkslegs[4], fkslegs[0]])
+#        links.append([fkslegs[4], fkslegs[1]])
+#        links.append([fkslegs[4], fkslegs[2]])
+#        links.append([fkslegs[4], fkslegs[3]])
+#        links.append([fkslegs[4], fkslegs[4]])
+#        
+#        self.assertEqual(len(links), len(proc.color_links))
+#        for i in range(len(links)):
+#            self.assertEqual(links[i], proc.color_links[i]['legs'])
 
         
         
