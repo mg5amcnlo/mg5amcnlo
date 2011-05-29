@@ -12,6 +12,8 @@ Update notes for MadGraph 5 (in reverse time order)
                   JA: Included more fine-grained run options in the
                       run_card, including helicity summation option,
                       whether or not to set ptj and mjj automatically, etc.
+                  JA: Fixed some minor array limit and arithmetics warnings
+                      for extreme decay and decay chain processes.
 
 1.2.4 (15/05/11): JA: Fixed long-standing bug in DECAY relating to
                       the cross section info in <init> block, and

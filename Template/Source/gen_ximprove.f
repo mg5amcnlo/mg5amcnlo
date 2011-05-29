@@ -171,7 +171,7 @@ c            tmax
             xerrc(i) = xerrc(i)*mfact(i)
             xlum(i) = xlum(i)/mfact(i)
             xtot = xtot+ xsec(i)
-            eff(i)= xerr(i)*sqrt(real(nevents(i)))/xsec(i)
+            eff(i)= xerr(i)*sqrt(real(nevents(i)))/(xsec(i)+1d-99)
             errtotu = errtotu+(xerru(i))**2
             errtotc = errtotc+(xerrc(i))
 c            xtot = xtot+ xsec(i)*mfact(i)
@@ -512,7 +512,7 @@ c-----
       k=0
       do j=1,ng
          io(j) = j
-         xt(j)= goal_lum/xlum(j)       !sort by events_needed/have.
+         xt(j)= goal_lum/(xlum(j)+1d-99)       !sort by events_needed/have.
          write(*,*) j,xlum(j),xt(j)
       enddo
 c      write(*,*) 'Number of channels',ng,k
@@ -583,7 +583,7 @@ c     tjs 12/5/2010
 c     Add loop to allow for multiple jobs on a single channel
 c
          mjobs = (goal_lum*xsec(io(np))*1000 / MaxEventsPerJob + 0.9)
-         write(*,*) "Workcing on Channel ",i,io(np),xt(np), goal_lum*xsec(io(np))*1000 /maxeventsperjob
+c         write(*,*) "Working on Channel ",i,io(np),xt(np), goal_lum*xsec(io(np))*1000 /maxeventsperjob
          if (mjobs .gt. 26)  then
             write(*,*) 'Error in gen_ximprove.f, too many events requested ',mjobs*maxeventsperjob
             mjobs=26

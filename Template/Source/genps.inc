@@ -6,7 +6,7 @@ c*************************************************************************
       integer    max_branch
       parameter (max_branch=max_particles-1)
       integer    ng     , maxdim     , maxinvar     , maxconfigs
-      parameter (ng = 96, maxdim = 3*(max_particles-2)-2, maxinvar= 4*max_particles, maxconfigs=10)
+      parameter (ng = 96, maxdim = 3*(max_particles-2)-1, maxinvar= 4*max_particles, maxconfigs=10)
 c      parameter (ng = 43, maxdim = 25, maxinvar= 57 , maxconfigs=20)
 
       double precision  xgmin,     xgmax
