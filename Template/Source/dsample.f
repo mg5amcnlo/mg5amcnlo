@@ -1142,7 +1142,7 @@ c            write(*,'(a,4e15.4)') 'Bad limits',xbin_min,xbin_max,
 c     &           xmin,xmax
 c            xbin_max=xbin_min+1d-10
             xbin_max = xbin(xmax,minvar(j,ipole))
-            xbin_min = min(xbin(xmin,minvar(j,ipole)), xbin_max-1)
+            xbin_min = min(xbin(xmin,minvar(j,ipole)), xbin_max)
          endif
 c
 c     Line which allows us to keep choosing same x
@@ -1166,6 +1166,7 @@ c     $           max(xbin_min,dble(int(tx(2,j)))),
 c     $           min(xbin_max,dble(int(tx(2,j))+1))
 
 c            ddum(j) = tx(2,j)                 !Use last value
+
 
          endif
          tx(1,j) = xbin_min
