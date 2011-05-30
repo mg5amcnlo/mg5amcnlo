@@ -113,7 +113,7 @@ C ----------
             ENDIF
          ENDDO
         ENDIF
-        IF(NTRY.EQ.MAXTRIES.AND.ISUM_HEL.GT.0)THEN
+        IF(NTRY.EQ.MAXTRIES)THEN
            ISUM_HEL=MIN(ISUM_HEL,NGOOD)
         ENDIF
     ELSE              !RANDOM HELICITY
