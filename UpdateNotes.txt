@@ -10,8 +10,9 @@ Update notes for MadGraph 5 (in reverse time order)
                   JA: Improved identification of diagrams with identical
                       divergency structure for grouped subprocesses
                   JA: Included more fine-grained run options in the
-                      run_card, including helicity summation option,
-                      whether or not to set ptj and mjj automatically, etc.
+                      run_card, including helicity summation options,
+                      whether or not to set ptj and mjj automatically
+                      based on xqcut, etc.
                   JA: Fixed some minor array limit and arithmetics warnings
                       for extreme decay and decay chain processes.
 
