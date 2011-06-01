@@ -51,8 +51,9 @@ c--cuts
       double precision r2max(nincoming+1:nexternal,nincoming+1:nexternal)
       double precision s_max(nexternal,nexternal)
       double precision ptll_min(nexternal,nexternal),ptll_max(nexternal,nexternal)
+      double precision inclHtmin,inclHtmax
       common/to_cuts/  etmin, emin, etamax, r2min, s_min,
-     $     etmax, emax, etamin, r2max, s_max, ptll_min, ptll_max
+     $     etmax, emax, etamin, r2max, s_max, ptll_min, ptll_max, inclHtmin,inclHtmax
 
       double precision ptjmin4(4),ptjmax4(4),htjmin4(2:4),htjmax4(2:4)
       logical jetor
@@ -390,6 +391,9 @@ c
       htjmax4(2)=ht2max
       htjmax4(3)=ht3max
       htjmax4(4)=ht4max
+   
+      inclHtmin=ihtmin
+      inclHtmax=ihtmax
 
       jetor = cutuse.eq.0d0
 c
