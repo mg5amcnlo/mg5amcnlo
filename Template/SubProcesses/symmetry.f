@@ -62,7 +62,10 @@ c      if (icomp .gt. 3 .or. icomp .lt. 0) icomp=0
       endif
 
       call load_para(npara,param,value)
-      call get_integer(npara,param,value," nhel_survey ",nhel_survey,0)
+      call get_integer(npara,param,value," nhel ",nhel_survey,0)
+c     If different card options set for nhel_refine and nhel_survey:
+      call get_integer(npara,param,value," nhel_survey ",nhel_survey,
+     $     1*nhel_survey)
       call setpara('param_card.dat',.true.)   !Sets up couplings and masses
       call printout
       include 'props.inc'

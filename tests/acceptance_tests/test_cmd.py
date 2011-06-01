@@ -172,6 +172,10 @@ class TestCmdShell2(unittest.TestCase,
                                                     'Cards',
                                                     'ident_card.dat')))
         self.assertTrue(os.path.exists(os.path.join(self.out_dir,
+                                                 'Cards', 'run_card_default.dat')))
+        self.assertTrue(os.path.exists(os.path.join(self.out_dir,
+                                                 'Cards', 'plot_card_default.dat')))
+        self.assertTrue(os.path.exists(os.path.join(self.out_dir,
                                                     'Source',
                                                     'maxconfigs.inc')))
         self.assertTrue(os.path.exists(os.path.join(self.out_dir,
@@ -441,6 +445,10 @@ class TestCmdShell2(unittest.TestCase,
         self.assertTrue(os.path.exists(os.path.join(self.out_dir,
                                                     'Cards',
                                                     'ident_card.dat')))
+        self.assertTrue(os.path.exists(os.path.join(self.out_dir,
+                                                 'Cards', 'run_card_default.dat')))
+        self.assertTrue(os.path.exists(os.path.join(self.out_dir,
+                                                 'Cards', 'plot_card_default.dat')))
         devnull = open(os.devnull,'w')
         # Check that the Source directory compiles
         status = subprocess.call(['make'],

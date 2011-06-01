@@ -94,7 +94,8 @@ class IdentifyConfigTag(diagram_generation.DiagramTag):
             # We go from next-to-last link to last link - remove propagator info
             return (new_vertex[1],)
         # We should not get here
-        assert(False)
+        raise diagram_generation.DiagramTag.DiagramTagError, \
+              "Error in IdentifyConfigTag, wrong setup of vertices in link."
         
 #===============================================================================
 # SubProcessGroup

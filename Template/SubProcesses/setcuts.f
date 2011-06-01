@@ -77,8 +77,7 @@ C
 c
 c
 c     reading parameters
-      integer maxpara
-      parameter (maxpara=100)
+      include '../../Source/run_config.inc'
       character*20 param(maxpara),value(maxpara)
       integer npara
 c

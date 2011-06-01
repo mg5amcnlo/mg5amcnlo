@@ -74,7 +74,18 @@ class ProcessExporterFortran(object):
                       "No valid MG_ME path given for MG4 run directory creation."
             logger.info('initialize a new directory: %s' % \
                         os.path.basename(self.dir_path))
-            shutil.copytree(os.path.join(self.mgme_dir, 'Template'), self.dir_path, True)
+            shutil.copytree(os.path.join(self.mgme_dir, 'Template'),
+                            self.dir_path, True)
+            # Duplicate run_card and plot_card
+            for card in ['run_card', 'plot_card']:
+                try:
+                    shutil.copy(os.path.join(self.dir_path, 'Cards',
+                                             card + '.dat'),
+                               os.path.join(self.dir_path, 'Cards',
+                                            card + '_default.dat'))
+                except IOError:
+                    info.warning("Failed to copy " + card + ".dat to default")
+                    
         elif not os.path.isfile(os.path.join(self.dir_path, 'TemplateVersion.txt')):
             if not self.mgme_dir:
                 raise MadGraph5Error, \

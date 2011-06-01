@@ -52,6 +52,9 @@ class IdentifyMETag(diagram_generation.DiagramTag):
     has_mirror_process, process id, and
     identical_particle_factor. Don't allow combining decay chains"""
 
+    # dec_number is used to separate between decay chains.
+    # This is needed since we don't want to merge different decays,
+    # in order to get the right factor for identical/non-identical particles
     dec_number = 1
     
     @staticmethod

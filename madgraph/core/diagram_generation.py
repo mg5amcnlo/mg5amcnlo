@@ -55,6 +55,9 @@ class DiagramTag(object):
     (instead of symmetry), as well as identify identical matrix elements from
     different processes."""
 
+    class DiagramTagError(Exception):
+        """Exception for any problems in DiagramTags"""
+        pass
 
     def __init__(self, diagram, model = None):
         """Initialize with a diagram. Create DiagramTagChainLinks according to

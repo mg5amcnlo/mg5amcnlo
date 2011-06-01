@@ -53,7 +53,10 @@ c  Begin Code
 c-----
       call load_para(npara,param,value)
       call get_logical(npara,param,value," gridpack ",gridpack,.false.)
-      call get_integer(npara,param,value," nhel_refine ",nhel_refine,0)
+      call get_integer(npara,param,value," nhel ",nhel_refine,0)
+c     If different card options set for nhel_refine and nhel_survey:
+      call get_integer(npara,param,value," nhel_refine ",nhel_refine,
+     $     1*nhel_refine)
       if (.not. Gridpack) then
          write(*,'(a,a)')'Enter fractional accuracy (<1)',
      &        ', or number events (>1), max processes per job',
