@@ -271,6 +271,9 @@ c*********************************************************************
 	call get_real   (npara,param,value,"htjmin",htjmin,0d0)
 	call get_real   (npara,param,value,"htjmax",htjmax,1d5)
 
+        call get_real   (npara,param,value,"ihtmin",ihtmin,0d0)
+        call get_real   (npara,param,value,"ihtmax",ihtmax,1d5)
+
 c*********************************************************************
 c     Random Number Seed                                             *
 c*********************************************************************
