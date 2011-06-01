@@ -108,9 +108,9 @@ class ExtLauncher(object):
                 self.force = True
             else:
                 self.timeout=None # answer at least one question so wait...
-                return out
+                return str(out)
         else:
-            return default
+            return str(default)
         
     def treat_input_file(self, filename, default=None, msg=''):
         """ask to edit a file"""
