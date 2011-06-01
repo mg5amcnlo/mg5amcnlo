@@ -108,7 +108,7 @@ class ExtLauncher(object):
                 self.force = True
             else:
                 self.timeout=None # answer at least one question so wait...
-                return str(out)
+                return out
         else:
             return str(default)
         
