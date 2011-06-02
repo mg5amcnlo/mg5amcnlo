@@ -46,13 +46,15 @@ if '__main__' == __name__:
     logging.getLogger('tutorial').setLevel(logging.ERROR)
         
     logging.basicConfig(level=logging.INFO)
-    my_proc_list=['g g > h g', 'g g > h g g', 'g g > h g g g', 'g g > h g g g g']
-    #my_proc_list1 = me_comparator.create_proc_list(['u', 'u~','t','t~','g','y','z','a'], initial=1,
-    #                                              final=2)
+    #my_proc_list=['g g > h g', 'g g > h g g', 'g g > h g g g', 'g g > h g g g g']
+    my_proc_list = me_comparator.create_proc_list(['u', 'u~','t','t~','g','z','a', 'h'],
+                                                  initial=2, final=2)
     #my_proc_list = me_comparator.create_proc_list_enhanced(
     #    fermion, fermion, boson,
     #    initial=2, final_1=2, final_2 = 1)
 
+    # Set the model we are working with
+    model = 'sm'
 
     # Create a MERunner object for MG4
     my_mg4 = me_comparator.MG4Runner()
@@ -72,16 +74,16 @@ if '__main__' == __name__:
 
     # Create and setup a comparator
     my_comp = me_comparator.MEComparator()
-    my_comp.set_me_runners(my_mg4, my_mg5, my_mg5_ufo)
+    my_comp.set_me_runners(my_mg5, my_mg5_ufo)
 
     # Run the actual comparison
     my_comp.run_comparison(my_proc_list,
-                           model='heft',
-                           orders={'QED':99, 'QCD':99, 'HIG':1, 'HIW':0}, energy=1000)
+                           model=model,
+                           orders={'QED':99, 'QCD':99, 'HIG':1, 'HIW':0}, energy=2000)
 
     # Do some cleanup
     #my_comp.cleanup()
-    filename='heft_results.log'
+    filename=model+'_results.log'
 
     # Print the output
     my_comp.output_result(filename=filename)

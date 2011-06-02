@@ -43,8 +43,8 @@ Block Wolfenstein
 ## INFORMATION FOR YUKAWA
 ###################################
 Block YUKAWA 
-    5 4.700000e+00 # ymb 
-    6 1.720000e+02 # ymt 
+    5 4.200000e+00 # ymb 
+    6 1.645000e+02 # ymt 
    15 1.777000e+00 # ymtau 
 #===========================================================
 # QUANTUM NUMBERS OF NEW STATE(S) (NON SM PDG CODE)
