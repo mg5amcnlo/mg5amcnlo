@@ -51,7 +51,7 @@ C
      &     cutuse,
      &     ht2min,ht3min,ht4min,
      &     ht2max,ht3max,ht4max,
-     &     htjmin,htjmax,
+     &     htjmin,htjmax,ihtmin,ihtmax,
      &     misset,missetmax,ptheavy,
      &     ptllmin,ptllmax,
      &     maxjetflavor
