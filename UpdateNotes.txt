@@ -1,5 +1,23 @@
 Update notes for MadGraph 5 (in reverse time order)
 
+1.3.0 (02/06/11): JA: Allow for grouped subprocesses also for MG4 models
+                  JA: Improved multiprocess diagram generation to reuse
+                      diagrams for crossed processes
+                  JA: Automatic optimization of order of particles in
+                      multiparticle labels for optimal multiprocess generation
+                  JA: Improved efficiency of identification of identical
+                      matrix elements
+                  JA: Improved identification of diagrams with identical
+                      divergency structure for grouped subprocesses
+                  JA: Included more fine-grained run options in the
+                      run_card, including helicity summation options,
+                      whether or not to set ptj and mjj automatically
+                      based on xqcut, etc.
+                  JA: Fixed some minor array limit and arithmetics warnings
+                      for extreme decay and decay chain processes.
+                  SdV: Added cuts on H_T(all jets, light and b)
+                  OM: Fixed minor bug related to cluster option in launch
+
 1.2.4 (15/05/11): JA: Fixed long-standing bug in DECAY relating to
                       the cross section info in <init> block, and
                       fixed parameter reading for MG5 SM model.

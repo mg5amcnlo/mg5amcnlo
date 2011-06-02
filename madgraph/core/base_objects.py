@@ -19,6 +19,7 @@ interaction, model, leg, vertex, process, ..."""
 import copy
 import itertools
 import logging
+import math
 import numbers
 import os
 import re
@@ -1340,6 +1341,50 @@ class Diagram(PhysicsObject):
 
         self.set('orders', coupling_orders)
 
+    def renumber_legs(self, perm_map, leg_list):
+        """Renumber legs in all vertices according to perm_map"""
+        vertices = VertexList()
+        min_dict = copy.copy(perm_map)
+        # Dictionary from leg number to state
+        state_dict = dict([(l.get('number'), l.get('state')) for l in leg_list])
+        # First renumber all legs in the n-1->1 vertices
+        for vertex in self.get('vertices')[:-1]:
+            vertex = copy.copy(vertex)
+            leg_list = LegList([copy.copy(l) for l in vertex.get('legs')])
+            for leg in leg_list[:-1]:
+                leg.set('number', min_dict[leg.get('number')])
+                leg.set('state', state_dict[leg.get('number')])
+            min_number = min([leg.get('number') for leg in leg_list[:-1]])
+            leg = leg_list[-1]
+            min_dict[leg.get('number')] = min_number
+            # resulting leg is initial state if there is exactly one
+            # initial state leg among the incoming legs
+            state_dict[min_number] = len([l for l in leg_list[:-1] if \
+                                          not l.get('state')]) != 1
+            leg.set('number', min_number)
+            leg.set('state', state_dict[min_number])
+            vertex.set('legs', leg_list)
+            vertices.append(vertex)
+        # Now renumber the legs in final vertex
+        vertex = copy.copy(self.get('vertices')[-1])
+        leg_list = LegList([copy.copy(l) for l in vertex.get('legs')])
+        for leg in leg_list:
+            leg.set('number', min_dict[leg.get('number')])
+            leg.set('state', state_dict[leg.get('number')])
+        vertex.set('legs', leg_list)
+        vertices.append(vertex)
+        # Finally create new diagram
+        new_diag = copy.copy(self)
+        new_diag.set('vertices', vertices)
+        state_dict = {True:'T',False:'F'}
+        return new_diag
+
+    def get_vertex_leg_numbers(self):
+        """Return a list of the number of legs in the vertices for
+        this diagram"""
+
+        return [len(v.get('legs')) for v in self.get('vertices')]
+        
 #===============================================================================
 # DiagramList
 #===============================================================================
@@ -1805,6 +1850,24 @@ class Process(PhysicsObject):
         
         return 0
         
+    def identical_particle_factor(self):
+        """Calculate the denominator factor for identical final state particles
+        """
+
+        final_legs = filter(lambda leg: leg.get('state') == True, \
+                              self.get_legs_with_decays())
+
+        identical_indices = {}
+        for leg in final_legs:
+            if leg.get('id') in identical_indices:
+                identical_indices[leg.get('id')] = \
+                                    identical_indices[leg.get('id')] + 1
+            else:
+                identical_indices[leg.get('id')] = 1
+        return reduce(lambda x, y: x * y,
+                      [ math.factorial(val) for val in \
+                        identical_indices.values() ], 1)
+
     def __eq__(self, other):
         """Overloading the equality operator, so that only comparison
         of process id and legs is being done, using compare_for_sort."""
@@ -1828,6 +1891,13 @@ class ProcessList(PhysicsObjectList):
         """Test if object obj is a valid Process for the list."""
 
         return isinstance(obj, Process)
+
+    def nice_string(self, indent = 0):
+        """Returns a nicely formatted string of the matrix element processes."""
+
+        mystr = "\n".join([p.nice_string(indent) for p in self])
+
+        return mystr
 
 #===============================================================================
 # ProcessDefinition

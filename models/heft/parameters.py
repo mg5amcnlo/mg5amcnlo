@@ -1,6 +1,6 @@
-# This file was automatically created by FeynRules $Revision: 535 $
+# This file was automatically created by FeynRules $Revision: 623 $
 # Mathematica version: 8.0 for Mac OS X x86 (64-bit) (November 6, 2010)
-# Date: Wed 23 Mar 2011 22:45:01
+# Date: Sat 28 May 2011 18:07:45
 
 
 
@@ -28,7 +28,7 @@ aEWM1 = Parameter(name = 'aEWM1',
 Gf = Parameter(name = 'Gf',
                nature = 'external',
                type = 'real',
-               value = 0.000011663900000000002,
+               value = 0.0000116639,
                texname = 'G_f',
                lhablock = 'SMINPUTS',
                lhacode = [ 2 ])
@@ -84,7 +84,7 @@ ymb = Parameter(name = 'ymb',
 ymt = Parameter(name = 'ymt',
                 nature = 'external',
                 type = 'real',
-                value = 174.3,
+                value = 172.,
                 texname = '\\text{ymt}',
                 lhablock = 'YUKAWA',
                 lhacode = [ 6 ])
@@ -250,36 +250,6 @@ G = Parameter(name = 'G',
               type = 'real',
               value = '2*cmath.sqrt(aS)*cmath.sqrt(cmath.pi)',
               texname = 'G')
-
-ydo = Parameter(name = 'ydo',
-                nature = 'internal',
-                type = 'real',
-                value = '0',
-                texname = '\\text{ydo}')
-
-ye = Parameter(name = 'ye',
-               nature = 'internal',
-               type = 'real',
-               value = '0',
-               texname = '\\text{ye}')
-
-ym = Parameter(name = 'ym',
-               nature = 'internal',
-               type = 'real',
-               value = '0',
-               texname = '\\text{ym}')
-
-ys = Parameter(name = 'ys',
-               nature = 'internal',
-               type = 'real',
-               value = '0',
-               texname = '\\text{ys}')
-
-yup = Parameter(name = 'yup',
-                nature = 'internal',
-                type = 'real',
-                value = '0',
-                texname = '\\text{yup}')
 
 MW = Parameter(name = 'MW',
                nature = 'internal',

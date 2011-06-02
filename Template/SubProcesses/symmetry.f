@@ -9,9 +9,7 @@ c     Constants
 c
       include 'genps.inc'
       include 'maxconfigs.inc'
-      include 'nexternal.inc'
       include '../../Source/run_config.inc'
-      include 'maxamps.inc'
       
       double precision ZERO
       parameter       (ZERO = 0d0)
@@ -24,11 +22,12 @@ c     Local
 c
       integer mapconfig(0:lmaxconfigs)
       integer use_config(0:lmaxconfigs)
-      integer i,j
+      integer i,j, npara, nhel_survey
       double precision xdum
       double precision pmass(-max_branch:-1,lmaxconfigs)   !Propagotor mass
       double precision pwidth(-max_branch:-1,lmaxconfigs)  !Propagotor width
       integer pow(-max_branch:-1,lmaxconfigs)
+      character*20 param(maxpara),value(maxpara)
 c
 c     Global
 c
@@ -62,11 +61,13 @@ c      if (icomp .gt. 3 .or. icomp .lt. 0) icomp=0
          stop
       endif
 
-      call setrun                !Sets up run parameters
+      call load_para(npara,param,value)
+      call get_integer(npara,param,value," nhel ",nhel_survey,0)
+c     If different card options set for nhel_refine and nhel_survey:
+      call get_integer(npara,param,value," nhel_survey ",nhel_survey,
+     $     1*nhel_survey)
       call setpara('param_card.dat',.true.)   !Sets up couplings and masses
-      call setcuts               !Sets up cuts 
       call printout
-      call run_printout
       include 'props.inc'
 
 c
@@ -82,11 +83,11 @@ c
       enddo
       close(25)
 
-      call write_input(j)
+      call write_input(j, nhel_survey)
       call write_bash(mapconfig,use_config,pwidth,icomp,iforest,sprop)
       end
 
-      subroutine write_input(nconfigs)
+      subroutine write_input(nconfigs, nhel_survey)
 c***************************************************************************
 c     Writes out input file for approximate calculation based on the
 c     number of active configurations
@@ -98,8 +99,7 @@ c
       include 'genps.inc'
       include 'nexternal.inc'
       include '../../Source/run_config.inc'
-      integer    maxpara
-      parameter (maxpara=1000)
+      integer    nhel_survey
 c      integer   npoint_tot,         npoint_min
 c      parameter (npoint_tot=50000, npoint_min=1000)
 c

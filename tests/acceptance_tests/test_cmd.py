@@ -90,6 +90,7 @@ class TestCmdShell1(unittest.TestCase):
     def test_draw(self):
         """ command 'draw' works """
 
+        self.do('set group_subprocesses False')
         self.do('load processes %s' % self.join_path(_pickle_path,'e+e-_e+e-.pkl'))
         self.do('display diagrams .')
         self.assertTrue(os.path.exists('./diagrams_0_epem_epem.eps'))
@@ -99,6 +100,7 @@ class TestCmdShell1(unittest.TestCase):
         self.do('display diagrams .')
         self.assertTrue(os.path.exists('diagrams_0_gg_gg.eps'))
         os.remove('diagrams_0_gg_gg.eps')
+        self.do('set group_subprocesses True')
         
     def test_config(self):
         """check that configuration file is at default value"""
@@ -158,6 +160,7 @@ class TestCmdShell2(unittest.TestCase,
         if os.path.isdir(self.out_dir):
             shutil.rmdir(self.out_dir)
             
+        self.do('set group_subprocesses False')
         self.do('load processes %s' % self.join_path(_pickle_path,'e+e-_e+e-.pkl'))
         self.do('output %s -nojpeg' % self.out_dir)
         self.assertTrue(os.path.exists(self.out_dir))
@@ -168,6 +171,10 @@ class TestCmdShell2(unittest.TestCase,
         self.assertFalse(os.path.exists(os.path.join(self.out_dir,
                                                     'Cards',
                                                     'ident_card.dat')))
+        self.assertTrue(os.path.exists(os.path.join(self.out_dir,
+                                                 'Cards', 'run_card_default.dat')))
+        self.assertTrue(os.path.exists(os.path.join(self.out_dir,
+                                                 'Cards', 'plot_card_default.dat')))
         self.assertTrue(os.path.exists(os.path.join(self.out_dir,
                                                     'Source',
                                                     'maxconfigs.inc')))
@@ -182,6 +189,7 @@ class TestCmdShell2(unittest.TestCase,
         self.assertTrue(os.path.exists(os.path.join(self.out_dir,
                                                     'madevent.tar.gz')))
         self.do('output %s -f' % self.out_dir)
+        self.do('set group_subprocesses True')
         self.assertTrue(os.path.exists(os.path.join(self.out_dir,
                                                     'SubProcesses',
                                                     'P0_epem_epem',
@@ -282,14 +290,13 @@ class TestCmdShell2(unittest.TestCase,
         os.chdir(pwd)
 
         self.assertTrue(os.path.exists(os.path.join(self.out_dir,
-                                              'SubProcesses', 'P1_emep_vevex')))
+                                              'SubProcesses', 'P1_ll_vlvl')))
         self.assertTrue(os.path.exists(os.path.join(self.out_dir,
                                                  'Cards', 'proc_card_mg5.dat')))
-        self.assertFalse(os.path.exists(os.path.join(self.out_dir,
+        self.assertTrue(os.path.exists(os.path.join(self.out_dir,
                                                     'SubProcesses',
-                                                    'P0_epem_epem',
-                                                    'matrix1.jpg')))
-
+                                                    'P1_ll_vlvl',
+                                                    'matrix1.ps')))
         self.assertTrue(os.path.exists(os.path.join(self.out_dir,
                                                     'madevent.tar.gz')))
 
@@ -300,8 +307,10 @@ class TestCmdShell2(unittest.TestCase,
         if os.path.isdir(self.out_dir):
             shutil.rmdir(self.out_dir)
 
+        self.do('set group_subprocesses False')
         self.do('load processes %s' % self.join_path(_pickle_path,'e+e-_e+e-.pkl'))
         self.do('output standalone %s' % self.out_dir)
+        self.do('set group_subprocesses True')
         self.assertTrue(os.path.exists(self.out_dir))
         self.assertTrue(os.path.isfile(os.path.join(self.out_dir, 'lib', 'libdhelas3.a')))
         self.assertTrue(os.path.isfile(os.path.join(self.out_dir, 'lib', 'libmodel.a')))
@@ -371,7 +380,7 @@ class TestCmdShell2(unittest.TestCase,
         self.assertAlmostEqual(float(me_groups.group('value')), 1.953735e-2)
         
     def test_v4_heft(self):
-        """Test the import of models and the export of Helas Routine """
+        """Test standalone directory for UFO HEFT model"""
 
         if os.path.isdir(self.out_dir):
             shutil.rmdir(self.out_dir)
@@ -436,6 +445,10 @@ class TestCmdShell2(unittest.TestCase,
         self.assertTrue(os.path.exists(os.path.join(self.out_dir,
                                                     'Cards',
                                                     'ident_card.dat')))
+        self.assertTrue(os.path.exists(os.path.join(self.out_dir,
+                                                 'Cards', 'run_card_default.dat')))
+        self.assertTrue(os.path.exists(os.path.join(self.out_dir,
+                                                 'Cards', 'plot_card_default.dat')))
         devnull = open(os.devnull,'w')
         # Check that the Source directory compiles
         status = subprocess.call(['make'],
@@ -481,6 +494,18 @@ class TestCmdShell2(unittest.TestCase,
                                                     'P0_epem_epem',
                                                     'madevent')))
         
+    def test_define_order(self):
+        """Test the reordering of particles in the define"""
+
+        self.do('import model sm')
+        self.do('define p = u c~ g d s b~ b h')
+        self.assertEqual(self.cmd._multiparticles['p'],
+                         [21, 2, 1, 3, -4, 5, -5, 25])
+        self.do('import model sm-no_masses')
+        self.do('define p = u c~ g d s b~ b h')
+        self.assertEqual(self.cmd._multiparticles['p'],
+                         [21, 2, 1, 3, 5, -4, -5, 25])
+        
     def test_madevent_decay_chain(self):
         """Test decay chain output"""
 
@@ -488,7 +513,7 @@ class TestCmdShell2(unittest.TestCase,
             shutil.rmdir(self.out_dir)
 
         self.do('import model sm')
-        self.do('define p = u d u~ d~')
+        self.do('define p = u u~ d d~')
         self.do('set group_subprocesses False')
         self.do('generate p p > w+, w+ > l+ vl @1')
         self.do('output madevent %s ' % self.out_dir)
@@ -681,21 +706,17 @@ class TestCmdShell2(unittest.TestCase,
                                            'P0_qq_gogo_go_qqn1_go_qqn1',
                                            'symfact.dat')).read(),
                          """ 1    1
- 2    1
- 3    1
- 4    1
- 5    -2
- 6    1
- 7    1
- 8    1
+ 2    -1
+ 3    -1
+ 4    -1
+ 5    1
+ 6    -5
+ 7    -5
+ 8    -5
  9    1
- 10   1
- 11   1
- 12   1
- 13   1
- 14   1
- 15   -12
- 16   1
+ 10   -9
+ 11   -9
+ 12   -9
 """)
 
         # Compile the Source directory
@@ -721,17 +742,17 @@ class TestCmdShell2(unittest.TestCase,
                                            'P0_qq_gogo_go_qqn1_go_qqn1',
                                            'symfact.dat')).read(),
                          """1.030     1
-2.030     1
-3.030     1
-4.030     1
-     5    -2
-6.030     1
-7.030     1
-8.030     1
-11.030     1
-12.030     1
-    15   -12
-16.030     1
+     2    -1
+     3    -1
+     4    -1
+5.030     1
+     6    -5
+     7    -5
+     8    -5
+9.030     1
+    10    -9
+    11    -9
+    12    -9
 """)
         
     def test_madevent_subproc_group_decay_chain(self):

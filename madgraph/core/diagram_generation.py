@@ -15,7 +15,8 @@
 """Classes for diagram generation. Amplitude performs the diagram
 generation, DecayChainAmplitude keeps track of processes with decay
 chains, and MultiProcess allows generation of processes with
-multiparticle definitions.
+multiparticle definitions. DiagramTag allows to identify diagrams
+based on relevant properties.
 """
 
 import array
@@ -27,6 +28,230 @@ import madgraph.core.base_objects as base_objects
 
 from madgraph import MadGraph5Error, InvalidCmd
 logger = logging.getLogger('madgraph.diagram_generation')
+
+#===============================================================================
+# DiagramTag mother class
+#===============================================================================
+
+class DiagramTag(object):
+    """Class to tag diagrams based on objects with some __lt__ measure, e.g.
+    PDG code/interaction id (for comparing diagrams from the same amplitude),
+    or Lorentz/coupling/mass/width (for comparing AMPs from different MEs).
+    Algorithm: Create chains starting from external particles:
+    1 \        / 6
+    2 /\______/\ 7
+    3_ /  |   \_ 8
+    4 /   5    \_ 9
+                \ 10
+    gives ((((9,10,id910),8,id9108),(6,7,id67),id910867)
+           (((1,2,id12),(3,4,id34)),id1234),
+           5,id91086712345)
+    where idN is the id of the corresponding interaction. The ordering within
+    chains is based on chain length (depth; here, 1234 has depth 2, 910867 has
+    depth 3, 5 has depht 0), and if equal on the ordering of the chain elements.
+    The determination of central vertex is based on minimizing the chain length
+    for the longest subchain. 
+    This gives a unique tag which can be used to identify diagrams
+    (instead of symmetry), as well as identify identical matrix elements from
+    different processes."""
+
+    class DiagramTagError(Exception):
+        """Exception for any problems in DiagramTags"""
+        pass
+
+    def __init__(self, diagram, model = None):
+        """Initialize with a diagram. Create DiagramTagChainLinks according to
+        the diagram, and figure out if we need to shift the central vertex."""
+
+        # wf_dict keeps track of the intermediate particles
+        leg_dict = {}
+        # Create the chain which will be the diagram tag
+        for vertex in diagram.get('vertices'):
+            # Only add incoming legs
+            legs = vertex.get('legs')[:-1]
+            lastvx = vertex == diagram.get('vertices')[-1]
+            if lastvx:
+                # If last vertex, all legs are incoming
+                legs = vertex.get('legs')
+            # Add links corresponding to the relevant legs
+            link = DiagramTagChainLink([leg_dict.setdefault(leg.get('number'),
+                          DiagramTagChainLink(self.link_from_leg(leg, model))) \
+                                        for leg in legs],
+                                        self.vertex_id_from_vertex(vertex,
+                                                                   lastvx,
+                                                                   model))
+            # Add vertex to leg_dict if not last one
+            if not lastvx:
+                leg_dict[vertex.get('legs')[-1].get('number')] = link
+
+        # The resulting link is the hypothetical result
+        self.tag = link
+
+        # Now make sure to find the central vertex in the diagram,
+        # defined by the longest leg being as short as possible
+        done = max([l.depth for l in self.tag.links]) == 0
+        while not done:
+            # Identify the longest chain in the tag
+            longest_chain = self.tag.links[0]
+            # Create a new link corresponding to moving one step
+            new_link = DiagramTagChainLink(self.tag.links[1:],
+                                           self.flip_vertex(\
+                                               self.tag.vertex_id,
+                                               longest_chain.vertex_id))
+            # Create a new final vertex in the direction of the longest link
+            other_link = DiagramTagChainLink(list(longest_chain.links) + \
+                                             [new_link],
+                                             self.flip_vertex(\
+                                                 longest_chain.vertex_id,
+                                                 self.tag.vertex_id))
+            
+            if other_link.links[0] < self.tag.links[0]:
+                # Switch to new tag, continue search
+                self.tag = other_link
+            else:
+                # We have found the central vertex
+                done = True
+
+    def get_external_numbers(self):
+        """Get the order of external particles in this tag"""
+
+        return self.tag.get_external_numbers()
+
+    @staticmethod
+    def reorder_permutation(perm, start_perm):
+        """Reorder a permutation with respect to start_perm. Note that
+        both need to start from 1."""
+        if perm == start_perm:
+            return range(len(perm))
+        order = [i for (p,i) in \
+                 sorted([(p,i) for (i,p) in enumerate(perm)])]
+        return [start_perm[i]-1 for i in order]
+
+    @staticmethod
+    def link_from_leg(leg, model):
+        """Returns the default end link for a leg: ((id, state), number).
+        Note that the number is not taken into account if tag comparison,
+        but is used only to extract leg permutations."""
+        if leg.get('state'):
+            # Identify identical final state particles
+            return [((leg.get('id'), 0), leg.get('number'))]
+        else:
+            # Distinguish identical initial state particles
+            return [((leg.get('id'), leg.get('number')), leg.get('number'))]
+
+    @staticmethod
+    def vertex_id_from_vertex(vertex, last_vertex, model):
+        """Returns the default vertex id: just the interaction id"""
+        return vertex.get('id')
+
+    @staticmethod
+    def flip_vertex(new_vertex, old_vertex):
+        """Returns the default vertex flip: just the new_vertex"""
+        return new_vertex
+
+    def __eq__(self, other):
+        """Equal if same tag"""
+        if type(self) != type(other):
+            return False
+        return self.tag == other.tag
+
+    def __ne__(self, other):
+        return not self.__eq__(other)
+
+    def __str__(self):
+        return str(self.tag)
+
+    def __lt__(self, other):
+        return self.tag < other.tag
+
+    def __gt__(self, other):
+        return self.tag > other.tag
+
+    __repr__ = __str__
+
+class DiagramTagChainLink(object):
+    """Chain link for a DiagramTag. A link is a tuple + vertex id + depth,
+    with a comparison operator defined"""
+
+    def __init__(self, objects, vertex_id = None):
+        """Initialize, either with a tuple of DiagramTagChainLinks and
+        a vertex_id (defined by DiagramTag.vertex_id_from_vertex), or
+        with an external leg object (end link) defined by
+        DiagramTag.link_from_leg"""
+
+        if vertex_id == None:
+            # This is an end link, corresponding to an external leg
+            self.links = tuple(objects)
+            self.vertex_id = 0
+            self.depth = 0
+            self.end_link = True
+            return
+        # This is an internal link, corresponding to an internal line
+        self.links = tuple(sorted(list(tuple(objects)), reverse=True))
+        self.vertex_id = vertex_id
+        # depth = sum(depth for links) + max(1, len(self.links)-1)
+        # in order to get depth 2 for a 4-particle vertex
+        self.depth = sum([l.depth for l in self.links],
+                         max(1, len(self.links)-1))
+        self.end_link = False
+
+    def get_external_numbers(self):
+        """Get the permutation of external numbers (assumed to be the
+        second entry in the end link tuples)"""
+
+        if self.end_link:
+            return [self.links[0][1]]
+
+        return sum([l.get_external_numbers() for l in self.links], [])
+
+    def __lt__(self, other):
+        """Compare self with other in the order:
+        1. depth 2. len(links) 3. vertex id 4. measure of links"""
+
+        if self == other:
+            return False
+
+        if self.depth != other.depth:
+            return self.depth < other.depth
+
+        if len(self.links) != len(other.links):
+            return len(self.links) < len(other.links)
+
+        if self.vertex_id != other.vertex_id:
+            return self.vertex_id < other.vertex_id
+
+        for i, link in enumerate(self.links):
+            if i > len(other.links) - 1:
+                return False
+            if link != other.links[i]:
+                return link < other.links[i]
+
+    def __gt__(self, other):
+        return self != other and not self.__lt__(other)
+
+    def __eq__(self, other):
+        """For end link,
+        consider equal if self.links[0][0] == other.links[0][0],
+        i.e., ignore the leg number (in links[0][1])."""
+
+        if self.end_link and other.end_link and  \
+               self.depth == other.depth and self.vertex_id == other.vertex_id:
+            return self.links[0][0] == other.links[0][0]
+        
+        return self.__dict__ == other.__dict__
+
+    def __ne__(self, other):
+        return not self.__eq__(other)
+
+
+    def __str__(self):
+        if self.end_link:
+            return str(self.links)
+        return "%s, %s; %d" % (str(self.links),
+                               str(self.vertex_id),
+                               self.depth)
+
+    __repr__ = __str__
 
 #===============================================================================
 # Amplitude
@@ -385,8 +610,8 @@ class Amplitude(base_objects.PhysicsObject):
             return None
 
         # Extract ref dict information
-        model = self['process'].get('model')
-        ref_dict_to1 = self['process'].get('model').get('ref_dict_to1')
+        model = self.get('process').get('model')
+        ref_dict_to1 = self.get('process').get('model').get('ref_dict_to1')
 
 
         # If all legs can be combined in one single vertex, add this
@@ -426,9 +651,9 @@ class Amplitude(base_objects.PhysicsObject):
         for leg_vertex_tuple in leg_vertex_list:
 
             # Remove forbidden particles
-            if self['process'].get('forbidden_particles') and \
+            if self.get('process').get('forbidden_particles') and \
                 any([abs(vertex.get('legs')[-1].get('id')) in \
-                self['process'].get('forbidden_particles') \
+                self.get('process').get('forbidden_particles') \
                 for vertex in leg_vertex_tuple[1]]):
                     continue
 
@@ -667,7 +892,7 @@ class Amplitude(base_objects.PhysicsObject):
 
         return vert_ids
                           
-    def trim_diagrams(self):
+    def trim_diagrams(self, decay_ids = []):
         """Reduce the number of legs and vertices used in memory."""
 
         legs = []
@@ -676,12 +901,20 @@ class Amplitude(base_objects.PhysicsObject):
         for diagram in self.get('diagrams'):
             for ivx, vertex in enumerate(diagram.get('vertices')):
                 for ileg, leg in enumerate(vertex.get('legs')):
-                    leg.set('from_group', False)
+                    if leg.get('state') and leg.get('id') in decay_ids:
+                        # Use from_group to indicate decaying legs,
+                        # i.e. legs that have decay chains
+                        leg = copy.copy(leg)
+                        leg.set('from_group', True)
+                    else:
+                        leg.set('from_group', False)
                     try:
                         index = legs.index(leg)
-                        vertex.get('legs')[ileg] = legs[index]
                     except ValueError:
+                        vertex.get('legs')[ileg] = leg
                         legs.append(leg)
+                    else: # Found a leg
+                        vertex.get('legs')[ileg] = legs[index]
                 try:
                     index = vertices.index(vertex)
                     diagram.get('vertices')[ivx] = vertices[index]
@@ -724,13 +957,13 @@ class DecayChainAmplitude(Amplitude):
             if isinstance(argument, base_objects.ProcessDefinition):
                 self['amplitudes'].extend(\
                 MultiProcess.generate_multi_amplitudes(argument,
-                                                       collect_mirror_procs,
-                                                       ignore_six_quark_processes))
+                                                    collect_mirror_procs,
+                                                    ignore_six_quark_processes))
             else:
                 self['amplitudes'].append(Amplitude(argument))
                 # Clean decay chains from process, since we haven't
                 # combined processes with decay chains yet
-                process = copy.copy(self['amplitudes'][0].get('process'))
+                process = copy.copy(self.get('amplitudes')[0].get('process'))
                 process.set('decay_chains', base_objects.ProcessList())
                 self['amplitudes'][0].set('process', process)
             for process in argument.get('decay_chains'):
@@ -744,6 +977,13 @@ class DecayChainAmplitude(Amplitude):
                 self['decay_chains'].append(\
                     DecayChainAmplitude(process, collect_mirror_procs,
                                         ignore_six_quark_processes))
+            # Flag decaying legs in the core process by from_group = True
+            decay_ids = sum([[a.get('process').get('legs')[0].get('id') \
+                              for a in dec.get('amplitudes')] for dec in \
+                             self['decay_chains']], [])
+            decay_ids = set(decay_ids)
+            for amp in self['amplitudes']:
+                amp.trim_diagrams(decay_ids)                             
         elif argument != None:
             # call the mother routine
             super(DecayChainAmplitude, self).__init__(argument)
@@ -906,7 +1146,7 @@ class MultiProcess(base_objects.PhysicsObject):
                 raise self.PhysicsObjectError, \
                         "%s is not a valid AmplitudeList object" % str(value)
 
-        if name == 'collect_mirror_procs':
+        if name in ['collect_mirror_procs']:
             if not isinstance(value, bool):
                 raise self.PhysicsObjectError, \
                         "%s is not a valid boolean" % str(value)
@@ -953,7 +1193,6 @@ class MultiProcess(base_objects.PhysicsObject):
         generation.  Doing so will risk making it impossible to
         identify processes with identical amplitudes.
         """
-
         assert isinstance(process_definition, base_objects.ProcessDefinition), \
                                     "%s not valid ProcessDefinition object" % \
                                     repr(process_definition)
@@ -965,11 +1204,17 @@ class MultiProcess(base_objects.PhysicsObject):
         processes = base_objects.ProcessList()
         amplitudes = AmplitudeList()
 
-        # failed_procs are processes that have already failed
-        # based on crossing symmetry
+        # failed_procs and success_procs are sorted processes that have
+        # already failed/succeeded based on crossing symmetry
         failed_procs = []
         success_procs = []
-        
+        # Complete processes, for identification of mirror processes
+        non_permuted_procs = []
+        # permutations keeps the permutations of the crossed processes
+        permutations = []
+
+        # Store the diagram tags for processes, to allow for
+        # identifying identical matrix elements already at this stage.
         model = process_definition['model']
         
         isids = [leg['ids'] for leg in process_definition['legs'] \
@@ -1007,7 +1252,10 @@ class MultiProcess(base_objects.PhysicsObject):
                 legs = base_objects.LegList(leg_list)
 
                 # Check for crossed processes
-                sorted_legs = tuple(sorted(legs.get_outgoing_id_list(model)))
+                sorted_legs = sorted([(l,i+1) for (i,l) in \
+                                   enumerate(legs.get_outgoing_id_list(model))])
+                permutation = [l[1] for l in sorted_legs]
+                sorted_legs = array.array('i', [l[0] for l in sorted_legs])
 
                 # Check for six-quark processes
                 if ignore_six_quark_processes and \
@@ -1036,38 +1284,70 @@ class MultiProcess(base_objects.PhysicsObject):
                                  process_definition.get('is_decay_chain'),
                               'overall_orders': \
                                  process_definition.get('overall_orders')})
-
+                
+                fast_proc = \
+                          array.array('i',[leg.get('id') for leg in legs])
                 if collect_mirror_procs:
                     # Check if mirrored process is already generated
-                    fast_proc = \
-                              array.array('i',[leg.get('id') for leg in legs])
                     mirror_proc = \
                               array.array('i', [fast_proc[1], fast_proc[0]] + \
                                           list(fast_proc[2:]))
                     try:
                         mirror_amp = \
-                                   amplitudes[success_procs.index(mirror_proc)]
+                               amplitudes[non_permuted_procs.index(mirror_proc)]
+                    except:
+                        # Didn't find any mirror process
+                        pass
+                    else:
+                        # Mirror process found
                         mirror_amp.set('has_mirror_process', True)
                         logger.info("Process %s added to mirror process %s" % \
                                     (process.base_string(),
                                      mirror_amp.get('process').base_string()))
                         continue
-                    except:
+                        
+                # Check for successful crossings, unless we have specified
+                # properties that break crossing symmetry
+                if not process.get('required_s_channels') and \
+                   not process.get('forbidden_s_channels') and \
+                   not process.get('is_decay_chain'):
+                    try:
+                        crossed_index = success_procs.index(sorted_legs)
+                    except ValueError:
+                        # No crossing found, just continue
                         pass
-
-                amplitude = Amplitude({"process": process})
+                    else:
+                        # Found crossing - reuse amplitude
+                        amplitude = MultiProcess.cross_amplitude(\
+                            amplitudes[crossed_index],
+                            process,
+                            permutations[crossed_index],
+                            permutation)
+                        amplitudes.append(amplitude)
+                        success_procs.append(sorted_legs)
+                        permutations.append(permutation)
+                        non_permuted_procs.append(fast_proc)
+                        logger.info("Crossed process found for %s, reuse diagrams." % \
+                                    process.base_string())
+                        continue
+                    
+                # Create new amplitude
+                amplitude = Amplitude({'process': process})
                 
                 try:
                     result = amplitude.generate_diagrams()
                 except InvalidCmd as error:
                     failed_procs.append(sorted_legs)
                 else:
+                    # Succeeded in generating diagrams
                     if amplitude.get('diagrams'):
                         amplitudes.append(amplitude)
-                        if collect_mirror_procs:
-                            success_procs.append(fast_proc)
+                        success_procs.append(sorted_legs)
+                        permutations.append(permutation)
+                        non_permuted_procs.append(fast_proc)
                     elif not result:
-                        failed_procs.append(tuple(sorted_legs))
+                        # Diagram generation failed for all crossings
+                        failed_procs.append(sorted_legs)
  
         # Raise exception if there are no amplitudes for this process
         if not amplitudes:
@@ -1124,7 +1404,6 @@ class MultiProcess(base_objects.PhysicsObject):
                  filter(lambda leg: leg['state'] == False, process_definition['legs'])]
         fsids = [leg['ids'] for leg in \
                  filter(lambda leg: leg['state'] == True, process_definition['legs'])]
-
 
         # Find coupling orders in model
         orders = list(set(sum([i.get('orders').keys() for i in \
@@ -1237,7 +1516,7 @@ class MultiProcess(base_objects.PhysicsObject):
                     if tuple(sorted_legs) in failed_procs:
                         continue
 
-                    amplitude = Amplitude({"process": process})
+                    amplitude = Amplitude({'process': process})
                     try:
                         amplitude.generate_diagrams()
                     except InvalidCmd:
@@ -1256,7 +1535,27 @@ class MultiProcess(base_objects.PhysicsObject):
 
         # If no valid processes found with nfinal-1 couplings, return nfinal
         return {coupling: len(fsids)}        
-            
+
+    @staticmethod
+    def cross_amplitude(amplitude, process, org_perm, new_perm):
+        """Return the amplitude crossed with the permutation new_perm"""
+        # Create dict from original leg numbers to new leg numbers
+        perm_map = dict(zip(org_perm, new_perm))
+        # Initiate new amplitude
+        new_amp = copy.copy(amplitude)
+        # Number legs
+        for i, leg in enumerate(process.get('legs')):
+            leg.set('number', i+1)
+        # Set process
+        new_amp.set('process', process)
+        # Now replace the leg numbers in the diagrams
+        diagrams = base_objects.DiagramList([d.renumber_legs(perm_map,
+                                             process.get('legs'),) for \
+                                             d in new_amp.get('diagrams')])
+        new_amp.set('diagrams', diagrams)
+        new_amp.trim_diagrams()
+        return new_amp
+        
 #===============================================================================
 # Global helper methods
 #===============================================================================
