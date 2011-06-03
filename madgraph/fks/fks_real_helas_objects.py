@@ -109,7 +109,7 @@ class FKSHelasMultiProcessFromReals(helas_objects.HelasMultiProcess):
 #            else:
             logger.info("Generating Helas calls for FKS process %s" % \
                          proc.real_amp.get('process').nice_string().\
-                                           replace('Process', 'process'))
+                                           replace('Process', ''))
             matrix_element_list = [FKSHelasProcessFromReals(proc, born_me_list,
                                                            me_id_list,
                                                           decay_ids=decay_ids,
@@ -269,7 +269,17 @@ class FKSHelasBornProcess(object): #test written
 
             self.matrix_element = helas_objects.HelasMatrixElement(
                                     fksbornproc.amplitude, **opts)
-            self.color_links = fksbornproc.find_color_links()
+            #generate the color for the born
+            self.matrix_element.get('color_basis').build(
+                                self.matrix_element.get('base_amplitude'))
+            self.matrix_element.set('color_matrix',
+                             color_amp.ColorMatrix(
+                                self.matrix_element.get('color_basis')))
+            col_basis = color_amp.ColorBasis()
+            col_basis.build(fksbornproc.amplitude)
+            self.color_links = fks_common.insert_color_links(col_basis,
+                                col_basis.create_color_dict_list(fksbornproc.amplitude),
+                                fksbornproc.find_color_links())
 
     
     def __eq__(self, other):

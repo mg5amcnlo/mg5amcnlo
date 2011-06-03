@@ -2836,23 +2836,27 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
             linkfile = os.path.join(self._curr_exporter.dir_path, 'link_fks.log')
             genfile = os.path.join(self._curr_exporter.dir_path, 'gensym.log')
 
+            execs = ['madevent_vegas', 'madevent_mint', 'madevent_mintMC']
             if os.path.exists(logfile):
                 os.system('rm -f '+ logfile)
 
             logger.info('Compiling MadFKS')
-            compile_link = self.timed_input('Compile and run link_fks [y/n]? ', 'n')
-            compile_tests = self.timed_input('Compile and run tests [y/n]? ', 'n')
-            if compile_tests =='y':
+            compile_link = 'y' == self.timed_input('Compile and run link_fks [y/n]? ', 'n')
+            compile_tests = 'y' == self.timed_input('Compile and run tests [y/n]? ', 'n')
+            if compile_tests:
                 test_points = self.timed_input('Enter # of points for tests: ' , '1')
-            compile_gensym = self.timed_input('Compile and run gensym [y/n]? ', 'n')
-            if compile_gensym == 'y':
+            compile_gensym = 'y' == self.timed_input('Compile and run gensym [y/n]? ', 'n')
+            if compile_gensym:
                 cluster = self.timed_input('Enter 0 for local run, 1 for Condor: ', '0')
-            compile_me = self.timed_input('Compile MadEvent [y/n]? ', 'n')
-            if compile_me =='y':
-                vegas_mint = self.timed_input('0-> VEGAS, 1-> MINT, 2-> MINT MC ', '0')
+                if cluster not in ['0', '1']:
+                    cluster = '0'
+            compile_me = 'y' == self.timed_input('Compile MadEvent [y/n]? ', 'n')
+            if compile_me:
+                vegas_mint = self.timed_input('0-> VEGAS, 1-> MINT, 2-> MINT MC: ', '0')
+                if  vegas_mint not in ['0', '1', '2']:
+                    vegas_mint = '0'
             
-            if compile_link == 'y' or compile_test == 'y' or compile_gensym == 'y'\
-                or compile_me =='y':
+            if compile_link or compile_tests or compile_gensym or compile_me:
                 #compile source
                 os.chdir(sourcedir)
                 logger.info('Compiling Source...')
@@ -2881,7 +2885,7 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
                         os.system('echo ' + dir + ' >> ' + linkfile + ' 2>&1')
                         os.system('echo ' + dir + ' >> ' + genfile + ' 2>&1')
     
-                        if compile_link =='y':
+                        if compile_link:
                             logger.info('make link_fks')
                             os.system('cp born_conf.inc.back born_conf.inc')
                             os.system('cp born_props.inc.back born_props.inc')
@@ -2895,8 +2899,9 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
                                 os.system('./link_fks >> ' + linkfile + ' 2>&1')
                             else:
                                 logger.error('ERROR compiling link_fks, see compile.log for details')
+                                return
                         
-                        if compile_tests == 'y':
+                        if compile_tests:
                             logger.info('make test_ME')
                             os.system('make test_ME >' + logfile + ' 2>&1')
                             os.system("echo -2 -2 > input_testME")
@@ -2906,9 +2911,8 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
                             os.system("echo 0 >> input_testME")
                             logger.info("running test_ME")
                             os.system("./test_ME < input_testME")
-                            pass
                         
-                        if compile_gensym == 'y':
+                        if compile_gensym:
                             logger.info('make gensym')
                             if os.path.exists('ajob1'):
                                 os.system('rm -f ajob*')
@@ -2916,11 +2920,13 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
                                 os.system('rm -f mg*.cmd')
                             os.system('make gensym >> ' + logfile)
                             if os.path.exists('gensym'):
-                                logger.info('running gensym ' + cluster)
+                                logger.info('running gensym' + cluster)
                                 os.system('echo ' + cluster + ' | ./gensym >> ' + genfile + ' 2>&1')
-                        
+                        if compile_me:
+                            exe = execs[int(vegas_mint)]
+                            logger.info('make ' + exe)
+                            os.system('make ' + exe + ' >> ' + logfile)
 
-            
                  
     def do_output(self, line):
         """Initialize a new Template or reinitialize one"""

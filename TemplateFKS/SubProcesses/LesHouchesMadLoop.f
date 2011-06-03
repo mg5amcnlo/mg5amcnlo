@@ -107,6 +107,111 @@ c Ellis-Sexton scale squared
 
       virt_wgt=0.0d0/dble(ngluons)
 
+CCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCC
+C MadLoop:
+      if (firsttime) then
+         firsttime=.false.
+         s=sumdot(p_born(0,1),p_born(0,2),1d0)
+         call InitMadLoop(s, dsqrt(mu))
+      endif
+      if (isum_hel.eq.0) then
+         sum_hel=1
+      elseif(isum_hel.eq.1) then
+         sum_hel=2
+      else
+         write (*,*) 'Can only do explicit helicity sum'//
+     &        ' or fully MC over helicity for Virtual corrections',
+     &        isum_hel
+      endif
+      do j=1,sum_hel
+         if (isum_hel.eq.1 .and. goodhel(j).gt.0) then
+            do i=1,nexternal-1
+               nhel_cts(i)=nhel(i,j)
+            enddo
+         elseif(isum_hel.eq.1 .and. goodhel(j).eq.0) then
+            cycle
+         elseif(isum_hel.eq.0) then
+            do i=1,nexternal-1
+               nhel_cts(i)=-999
+            enddo
+         else
+            write (*,*) 'Can only do explicit helicity sum'//
+     &           ' or fully MC over helicity for Virtual corrections',
+     &           isum_hel
+            stop
+         endif
+         if (iminmax.eq.0) then
+            call SigVirt(p_born(0,1), nhel_cts, dsqrt(mu), vegas_wgt,
+     &           virt_wgts(1),exceptional, minmax_virt(1,j))
+            virt_wgt = virt_wgt + virt_wgts(1)/dble(ngluons)
+            if(exceptional) then
+C Unstable point
+               ExceptPSpoint=.true.
+            endif
+         elseif(iminmax.eq.1) then
+C The maximal value:
+            virt_wgt = virt_wgt + minmax_virt(2,j)/dble(ngluons)
+         elseif(iminmax.eq.2) then
+C The minimal value:
+            virt_wgt = virt_wgt + minmax_virt(1,j)/dble(ngluons)
+         else
+            write (*,*) 'Error #8 in LesHouches',iminmax
+            stop
+         endif
+      enddo
+      if (ExceptPSpoint .and. iminmax.eq.0) then
+         ivirtpointsExcept=ivirtpointsExcept+1
+      elseif (iminmax .eq. 0) then
+         ivirtpoints=ivirtpoints+1
+      endif
+      if (isum_hel.eq.1) then
+C Average over the helicities of initial state partons
+C (is not included in MadLoop when asking for a single
+C helitity)
+         virt_wgt=virt_wgt/4d0
+C Multiply by the number of non-zero helicities
+         virt_wgt=virt_wgt*hel_wgt
+      endif
+
+CCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCC
+c Rocket:
+c      if (firsttime) then
+c         call DRtoCDR(conversion)
+c         firsttime=.false.
+c      endif
+c      do j=1,sum_hel
+c         if (isum_hel.eq.1) then
+c            read (hel_buff(j),'(16i5)') (nhel(i),i=1,nexternal-1)
+c         elseif(isum_hel.eq.0) then
+c            do i=1,nexternal-1
+c               nhel(i)=0
+c            enddo
+c         else
+c            write (*,*) 'Can only do explicit helicity sum'//
+c     &           ' or fully MC over helicity for Virtual corrections',
+c     &           isum_hel
+c            stop
+c         endif
+c      call EvalSubproc(procnum,nexternal-1,pvirt,nhel,dsqrt(mu),alphaS,
+c     &     virt_wgts)
+c      born     = born + virt_wgts(4)/dble(ngluons)
+c      double   = double + virt_wgts(1)/dble(ngluons)
+c      single   = single + virt_wgts(2)/dble(ngluons)
+c      virt_wgt = virt_wgt + virt_wgts(3)/dble(ngluons)
+c      enddo
+c      virt_wgt=virt_wgt+conversion*born*ao2pi
+c$$$      write (*,*) born,born_wgt,born/born_wgt
+c$$$      write (*,*) double,single,virt_wgt,conversion,ngluons
+CCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCC
+c BlackHat:
+c      call OLE_EvalSubprocess(procnum,pvirt,mu,alphaS,alphaEW,
+c     &     virt_wgts)
+c      double   = virt_wgts(1)
+c      single   = virt_wgts(2)
+c      virt_wgt = virt_wgts(3)
+cc 1/dble(ngluons) already in born_wgt
+c      virt_wgt=virt_wgt*born_wgt*ao2pi
+CCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCC
 
       if(doVirtTest.and.born_wgt.ne.0d0.and.iminmax.eq.0)then
          virtmax=max(virtmax,virt_wgt/born_wgt/ao2pi)

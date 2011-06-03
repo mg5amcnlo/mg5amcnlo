@@ -22,6 +22,7 @@ import re
 import shutil
 import subprocess
 import string
+import copy
 
 import madgraph.core.color_algebra as color
 import madgraph.core.helas_objects as helas_objects
@@ -232,15 +233,8 @@ class ProcessExporterFortranFKS(export_v4.ProcessExporterFortran):
         self.write_fks_inc(writers.FortranWriter(filename),
                                                 fks_inc,
                                                 fortran_model)
-###    
-###        #write the sborn_sf.f and the b_sf_files
-###        filename = 'sborn_sf.f'
-###        self.write_soft_borns_fks(writers.FortranWriter(filename),
-###                                                fksborn, matrix_element,
-###                                                fortran_model)
-###                 
-###            
-###    
+
+                     
         # Create the matrix.f file, file and all inc files (as for v4)
         filename = 'matrix.f'
         calls, ncolor = \
@@ -274,10 +268,10 @@ class ProcessExporterFortranFKS(export_v4.ProcessExporterFortran):
         self.write_iproc_file(writers.FortranWriter(filename),
                          me_number)
     
-###        filename = 'leshouche.inc'
-###        self.write_leshouche_file(writers.FortranWriter(filename),
-###                             matrix_element.real_matrix_element,
-###                             fortran_model)
+        filename = 'leshouche.inc'
+        self.write_leshouche_file(writers.FortranWriter(filename),
+                             matrix_element.real_matrix_element,
+                             fortran_model)
     
         filename = 'maxamps.inc'
         self.write_maxamps_file(writers.FortranWriter(filename),
@@ -351,10 +345,10 @@ class ProcessExporterFortranFKS(export_v4.ProcessExporterFortran):
                            fortran_model,
                             s_and_t_channels)
     
-###        filename = 'born_leshouche.inc'
-###        nflows = self.write_leshouche_file(writers.FortranWriter(filename),
-###                             fksborn.matrix_element,
-###                             fortran_model)
+        filename = 'born_leshouche.inc'
+        nflows = self.write_leshouche_file(writers.FortranWriter(filename),
+                             fksborn.matrix_element,
+                             fortran_model)
     
         filename = 'born_maxamps.inc'
         self.write_born_maxamps_file(writers.FortranWriter(filename),
@@ -362,11 +356,11 @@ class ProcessExporterFortranFKS(export_v4.ProcessExporterFortran):
                            fortran_model,
                            ncolor)
         
-###        filename = 'born_nhel.inc'
-###        self.write_born_nhel_file(writers.FortranWriter(filename),
-###                           fksborn.matrix_element, nflows,
-###                           fortran_model,
-###                           ncolor)
+        filename = 'born_nhel.inc'
+        self.write_born_nhel_file(writers.FortranWriter(filename),
+                           fksborn.matrix_element, nflows,
+                           fortran_model,
+                           ncolor)
     
         filename = 'born_ncombs.inc'
         self.write_ncombs_file(writers.FortranWriter(filename),
@@ -389,6 +383,13 @@ class ProcessExporterFortranFKS(export_v4.ProcessExporterFortran):
                          fksborn.matrix_element,
                          fortran_model,
                             s_and_t_channels)
+        
+    
+        #write the sborn_sf.f and the b_sf_files
+        filename = 'sborn_sf.f'
+        self.write_soft_borns_fks(writers.FortranWriter(filename),
+                                                fksborn, matrix_element,
+                                                fortran_model)
 ###    
 ###    
 ###        # Generate diagrams
@@ -403,79 +404,80 @@ class ProcessExporterFortranFKS(export_v4.ProcessExporterFortran):
 ###                     matrix_element.get('processes')[0].nice_string())
 ###        plot.draw()
 ###    
-###        # Generate jpgs -> pass in make_html
-###        #os.system(os.path.join('..', '..', 'bin', 'gen_jpeg-pl'))
-###    
-###        linkfiles = [#'addmothers.f',
-###                     'LesHouches.f',
-###                     'LesHouchesDummy.f',
-###                     'MCmasses_HERWIG6.inc',
-###                     'MCmasses_PYTHIA6Q.inc',
-###                     'add_write_info.f',
-###                     'check_dip.f',
-###                     'cluster.f',
-###                     'cluster.inc',
-###                     'coupl.inc',
-###                     'cuts.f',
-###                     'cuts.inc',
-###                     'dbook.inc',
-###                     'driver_mint.f',
-###                     'driver_mintMC.f',
-###                     'driver_vegas.f',
-###                     'fastjetfortran_madfks.cc',
-###                     'fks_Sij.f',
-###                     'fks_nonsingular.f',
-###                     'fks_powers.inc',
-###                     'fks_singular.f',
-###                     'genps.f',
-###                     'genps.inc',
-###                     'genps_fks.f',
-###                     'genint_fks.f',
-###                     'initcluster.f',
-###                     'ktclusdble.f',
-###                     'link_fks.f',
-###                     'madfks_dbook.f',
-###                     'madfks_mcatnlo.inc',
-###                     'madfks_plot.f',
-###                     'message.inc',
-###                     'mint-integrator2.f',
-###                     'mint.inc',
-###                     'montecarlocounter.f',
-###                     'myamp.f',
-###                     'q_es.inc',
-###                     'reweight.f',
-###                     'reweight_events.f',
-###                     'run.inc',
-###                     'setcuts.f',
-###                     'setscales.f',
-###                     'sudakov.inc',
-###                     'symmetry.f',
-###                     'symmetry_fks_test_MC.f',
-###                     'symmetry_fks_test_ME.f',
-###                     'symmetry_fks_test_Sij.f',
-###                     'symmetry_fks_v3.f',
-###                     'trapfpe.c',
-###                     'unwgt.f',
-###                     'vegas2.for',
-###                     'write_event.f']
-###    
-###        for file in linkfiles:
-###            ln('../' + file , '.')
-###        
-###        cpfiles = ['born_conf.inc', 'born_props.inc', 'props.inc', 'configs.inc']
-###        for file in cpfiles:
-###            os.system('cp '+file+' '+file+'.back')
-###        
-###        os.system('touch bornfromreal.inc')
-###        
-###        #import nexternal/leshouch in Source
-###        ln('nexternal.inc', '../../Source', log=False)
-###        ln('leshouche.inc', '../../Source', log=False)
-###    
-###        #compile and execute genint_fks
-###        os.system('gfortran -o genint_fks genint_fks.f')
-###        os.system('./genint_fks')
-###    
+        # Generate jpgs -> pass in make_html
+        #os.system(os.path.join('..', '..', 'bin', 'gen_jpeg-pl'))
+    
+        linkfiles = [#'addmothers.f',
+                     'LesHouches.f',
+                     'LesHouchesDummy.f',
+                     'LesHouchesMadLoop.f',
+                     'MCmasses_HERWIG6.inc',
+                     'MCmasses_PYTHIA6Q.inc',
+                     'add_write_info.f',
+                     'check_dip.f',
+                     'cluster.f',
+                     'cluster.inc',
+                     'coupl.inc',
+                     'cuts.f',
+                     'cuts.inc',
+                     'dbook.inc',
+                     'driver_mint.f',
+                     'driver_mintMC.f',
+                     'driver_vegas.f',
+                     'fastjetfortran_madfks.cc',
+                     'fks_Sij.f',
+                     'fks_nonsingular.f',
+                     'fks_powers.inc',
+                     'fks_singular.f',
+                     'genps.f',
+                     'genps.inc',
+                     'genps_fks.f',
+                     'genint_fks.f',
+                     'initcluster.f',
+                     'ktclusdble.f',
+                     'link_fks.f',
+                     'madfks_dbook.f',
+                     'madfks_mcatnlo.inc',
+                     'madfks_plot.f',
+                     'message.inc',
+                     'mint-integrator2.f',
+                     'mint.inc',
+                     'montecarlocounter.f',
+                     'myamp.f',
+                     'q_es.inc',
+                     'reweight.f',
+                     'reweight_events.f',
+                     'run.inc',
+                     'setcuts.f',
+                     'setscales.f',
+                     'sudakov.inc',
+                     'symmetry.f',
+                     'symmetry_fks_test_MC.f',
+                     'symmetry_fks_test_ME.f',
+                     'symmetry_fks_test_Sij.f',
+                     'symmetry_fks_v3.f',
+                     'trapfpe.c',
+                     'unwgt.f',
+                     'vegas2.for',
+                     'write_event.f']
+    
+        for file in linkfiles:
+            ln('../' + file , '.')
+        
+        cpfiles = ['born_conf.inc', 'born_props.inc', 'props.inc', 'configs.inc']
+        for file in cpfiles:
+            os.system('cp '+file+' '+file+'.back')
+        
+        os.system('touch bornfromreal.inc')
+        
+        #import nexternal/leshouch in Source
+        ln('nexternal.inc', '../../Source', log=False)
+        ln('leshouche.inc', '../../Source', log=False)
+    
+        #compile and execute genint_fks
+        os.system('gfortran -o genint_fks genint_fks.f')
+        os.system('./genint_fks')
+    
     
         # Return to SubProcesses dir
         os.chdir(pathdir)
@@ -504,7 +506,7 @@ class ProcessExporterFortranFKS(export_v4.ProcessExporterFortran):
         """Creates the b_sf_xxx.f and sborn_sf.f files in MadFKS format"""
         
         replace_dict = {}
-        nborns = len(fksdir.soft_borns)
+        nborns = len(fksborn.color_links)
         ifkss = []
         iborns = []
         mms = []
@@ -513,11 +515,9 @@ class ProcessExporterFortranFKS(export_v4.ProcessExporterFortran):
     
         if nborns > 0:
             for i in range(nborns):
-                ifkss.append(fksdir.ifks)
-            sb_mn = fksdir.soft_borns.keys()
+                ifkss.append(fksborn.i_fks)
                 
             for i, c_link in enumerate(fksborn.color_links):
-                #print "m, n", mn
                 iborn = i+1
                 iborns.append(iborn)
                 mms.append(c_link['link'][0])
@@ -531,19 +531,18 @@ class ProcessExporterFortranFKS(export_v4.ProcessExporterFortran):
                              fortran_model)
                 
                 iflines += \
-    "if (ii_fks(%(this)d).eq.i_fks .and. mm(%(this)d).eq.m .and. \
+    "if (mm(%(this)d).eq.m .and. \
 nn(%(this)d).eq.n ) then \n\
     call sb_sf_%(iborn)3.3d(p_born,wgt)\n else" %{'this': i+1, 'iborn': iborn}
             
             replace_dict['nborns'] = nborns
             replace_dict['iborns'] = ', '.join(["%d" % i for i in iborns])
-            replace_dict['ifkss'] = ', '.join(["%d" % i for i in ifkss])
             replace_dict['mms'] = ', '.join(["%d" % i for i in mms])
             replace_dict['nns'] = ', '.join(["%d" % i for i in nns])
             replace_dict['iflines'] =  iflines    
         
             file = open(os.path.join(_file_path, \
-                          'iolibs/template_files/sborn_sf_fks.inc')).read()
+                          'iolibs/template_files/sborn_sf_fks_no_i.inc')).read()
             file = file % replace_dict       
         
         elif nborns == 0:
@@ -593,7 +592,7 @@ c     this subdir has no soft singularities
         # Extract process info lines
         process_lines = self.get_process_info_lines(matrix_element)
         replace_dict['process_lines'] = process_lines + \
-            "\nc spectators: %d %d \n" % link['link'][0:2]
+            "\nc spectators: %d %d \n" % tuple(link['link'])
         
         # Extract process info lines
         process_lines_real = self.get_process_info_lines(real_matrix_element)
@@ -631,9 +630,10 @@ c     this subdir has no soft singularities
         ncolor2 = max(1, len(link['link_basis']))
         replace_dict['ncolor2'] = ncolor2
     
-###        # Extract color data lines
-###        color_data_lines = self.get_color_data_lines(matrix_element)
-###        replace_dict['color_data_lines'] = "\n".join(color_data_lines)
+        # Extract color data lines
+        color_data_lines = self.get_color_data_lines_from_color_matrix(\
+                                link['link_matrix'])
+        replace_dict['color_data_lines'] = "\n".join(color_data_lines)
     
         # Extract helas calls
         helas_calls = fortran_model.get_matrix_element_calls(\
@@ -644,22 +644,22 @@ c     this subdir has no soft singularities
         amp2_lines = self.get_amp2_lines(matrix_element)
         replace_dict['amp2_lines'] = '\n'.join(amp2_lines)
     
-###        # Extract JAMP lines
-###        jamp_lines = self.get_JAMP_lines(matrix_element)
-###        new_jamp_lines = []
-###        for line in jamp_lines:
-###            line = string.replace(line, 'JAMP', 'JAMP1')
-###            new_jamp_lines.append(line)
-###        replace_dict['jamp1_lines'] = '\n'.join(new_jamp_lines)
-###    
-###        
-###        matrix_element.set('color_basis',born_helas_proc.list_color_basis_link[0] )
-###        jamp_lines = self.get_JAMP_lines(matrix_element)
-###        new_jamp_lines = []
-###        for line in jamp_lines:
-###            line = string.replace(line, 'JAMP', 'JAMP2')
-###            new_jamp_lines.append(line)
-###        replace_dict['jamp2_lines'] = '\n'.join(new_jamp_lines)
+        # Extract JAMP lines
+        jamp_lines = self.get_JAMP_lines(matrix_element)
+        new_jamp_lines = []
+        for line in jamp_lines:
+            line = string.replace(line, 'JAMP', 'JAMP1')
+            new_jamp_lines.append(line)
+        replace_dict['jamp1_lines'] = '\n'.join(new_jamp_lines)
+    
+        
+        matrix_element.set('color_basis', link['link_basis'] )
+        jamp_lines = self.get_JAMP_lines(matrix_element)
+        new_jamp_lines = []
+        for line in jamp_lines:
+            line = string.replace(line, 'JAMP', 'JAMP2')
+            new_jamp_lines.append(line)
+        replace_dict['jamp2_lines'] = '\n'.join(new_jamp_lines)
 #        print "Spectators ", mn
 #        print "jamp1 ", replace_dict['jamp1_lines']
 #        print "jamp2 ", replace_dict['jamp2_lines']
@@ -1082,6 +1082,7 @@ c     this subdir has no soft singularities
                         lines.append("DATA (ICOLUP(%d,i,  1),i=1,%2r)/%s/" % \
                                  (i, nexternal,
                                   ",".join([ "%3r" % 0 ] * nexternal)))
+                    color_flow_list = []
     
                 else:
                     # First build a color representation dictionnary
@@ -1517,6 +1518,31 @@ c     this subdir has no soft singularities
                                                      ",".join([str(i) for \
                                                                i in int_list]))
     
+    def get_color_data_lines_from_color_matrix(self, color_matrix, n=6):
+        """Return the color matrix definition lines for this matrix element. Split
+        rows in chunks of size n."""
+    
+        if not color_matrix:
+            return ["DATA Denom(1)/1/", "DATA (CF(i,1),i=1,1) /1/"]
+        else:
+            ret_list = []
+            my_cs = color.ColorString()
+            for index, denominator in \
+                enumerate(color_matrix.get_line_denominators()):
+                # First write the common denominator for this color matrix line
+                ret_list.append("DATA Denom(%i)/%i/" % (index + 1, denominator))
+                # Then write the numerators for the matrix elements
+                num_list = color_matrix.get_line_numerators(index, denominator)
+    
+                for k in xrange(0, len(num_list), n):
+                    ret_list.append("DATA (CF(i,%3r),i=%3r,%3r) /%s/" % \
+                                    (index + 1, k + 1, min(k + n, len(num_list)),
+                                     ','.join(["%5r" % i for i in num_list[k:k + n]])))
+#                my_cs.from_immutable(sorted(matrix_element.get('color_basis').keys())[index])
+#                ret_list.append("C %s" % repr(my_cs))
+            return ret_list
+
+    
     def get_color_data_lines(self, matrix_element, n=6):
         """Return the color matrix definition lines for this matrix element. Split
         rows in chunks of size n."""
@@ -1611,6 +1637,8 @@ c     this subdir has no soft singularities
             ret_lines.append(line)
         
         return ret_lines
+
+
     
     def get_JAMP_lines(self, matrix_element):
         """Return the JAMP = sum(fermionfactor * AMP(i)) lines"""
