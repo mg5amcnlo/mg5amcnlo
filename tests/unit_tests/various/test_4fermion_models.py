@@ -26,7 +26,9 @@ import madgraph.core.base_objects as base_objects
 import madgraph.core.diagram_generation as diagram_generation
 import madgraph.core.helas_objects as helas_objects
 import madgraph.iolibs.helas_call_writers as helas_call_writers
+import madgraph.iolibs.group_subprocs as group_subprocs
 import madgraph.various.process_checks as process_checks
+import madgraph.various.diagram_symmetry as diagram_symmetry
 import models.import_ufo as import_ufo
 import models.model_reader as model_reader
 
@@ -104,6 +106,83 @@ class TestSchannelModels(Models4FermionTest):
     def test_uu_to_ttg_sch(self):
         """Test the process u u > t t g between s-channel and 4fermion vertex"""
         self.uu_to_ttng_test(1)
+
+
+    def test_find_symmetry_uu_tt(self):
+        """Test the find_symmetry function"""
+
+        myleglist = base_objects.LegList()
+
+        myleglist.append(base_objects.Leg({'id':2,
+                                           'state':False}))
+        myleglist.append(base_objects.Leg({'id':2,
+                                           'state':False}))
+        myleglist.append(base_objects.Leg({'id':6,
+                                           'state':True}))
+        myleglist.append(base_objects.Leg({'id':6,
+                                           'state':True}))
+
+        myproc = base_objects.Process({'legs':myleglist,
+                                       'model':self.base_model_4ferm})
+
+        myamplitude = diagram_generation.Amplitude(myproc)
+
+        matrix_element = helas_objects.HelasMatrixElement(myamplitude)
+
+        symmetry, perms, ident_perms = diagram_symmetry.find_symmetry(matrix_element)
+
+        self.assertEqual(symmetry, [1])
+
+        # Check that the momentum assignments work
+        process = matrix_element.get('processes')[0]
+
+        evaluator = process_checks.MatrixElementEvaluator(self.base_model_4ferm,
+                                                          auth_skipping = True,
+                                                          reuse = True)
+        
+        p, w_rambo = evaluator.get_momenta(process)
+        me_value, amp2_org = evaluator.evaluate_matrix_element(\
+                                          matrix_element, p)
+
+        for isym, (sym, perm) in enumerate(zip(symmetry, perms)):
+            new_p = [p[i] for i in perm]
+            if sym >= 0:
+                continue
+            me_value, amp2 = evaluator.evaluate_matrix_element(matrix_element,
+                                                               new_p)
+            self.assertAlmostEqual(amp2[isym], amp2_org[-sym-1])
+        
+    def test_find_symmetry_uu_tt_with_subprocess_group(self):
+        """Test the find_symmetry function for subprocess groups"""
+
+        procs = [[2,2,6,6]]
+        amplitudes = diagram_generation.AmplitudeList()
+
+        for proc in procs:
+            # Define the multiprocess
+            my_leglist = base_objects.LegList([\
+                base_objects.Leg({'id': id, 'state': True}) for id in proc])
+
+            my_leglist[0].set('state', False)
+            my_leglist[1].set('state', False)
+
+            my_process = base_objects.Process({'legs':my_leglist,
+                                               'model':self.base_model_4ferm})
+            my_amplitude = diagram_generation.Amplitude(my_process)
+            amplitudes.append(my_amplitude)
+
+        subproc_group = \
+                  group_subprocs.SubProcessGroup.group_amplitudes(amplitudes)[0]
+
+        symmetry, perms, ident_perms = diagram_symmetry.find_symmetry(\
+                                                subproc_group)
+
+        self.assertEqual(len([s for s in symmetry if s > 0]), 1)
+
+        self.assertEqual(symmetry,
+                         [1])
+
+        return
         
 #===============================================================================
 # TestTchannelModels
