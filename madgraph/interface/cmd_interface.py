@@ -2869,7 +2869,7 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
                 os.system("""sed -i.hel 's/HelSum=.false./HelSum=.true./g;s/      include "helicities.inc"/chel  include "helicities.inc"/g' fks_singular.f""")
                 os.system("""sed -i.hel 's/HelSum=.false./HelSum=.true./g;s/      include "helicities.inc"/chel  include "helicities.inc"/g' reweight_events.f""")
                 
-                for dir in self._curr_exporter.fksdirs:
+                for dir in self._fks_directories:
                     logger.info('Processing directory '+ dir)
                     thisprocdir = os.path.join(subprocdir, dir)
                     os.chdir(thisprocdir)
@@ -3092,13 +3092,14 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
 
         if self._export_format == 'fksreal':
             #_curr_matrix_element is a FKSHelasMultiProcessFromRealObject 
+            self._fks_directories = []
             for ime, me in \
                 enumerate(self._curr_matrix_elements.get('matrix_elements')):
                 #me is a FKSHelasProcessFromReals
                 calls = calls + \
                         self._curr_exporter.generate_born_directories_fks(\
                             me, self._curr_fortran_model, ime, path)
-            
+                self._fks_directories.extend(self._curr_exporter.fksdirs)
             card_path = os.path.join(path, os.path.pardir, 'SubProcesses', \
                                      'procdef_mg5.dat')
             if self._generate_info:

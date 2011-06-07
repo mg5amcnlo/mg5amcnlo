@@ -36,12 +36,12 @@ def combine_ij( i, j, model, dict, pert='QCD'): #test written
         dict = find_pert_particles_interactions(model, pert)
     ij = []
     num = copy.copy(min(i.get('number'), j.get('number')))
-
     
-    # we do not want j being a massiless vector unless also i is
+    # we do not want j being a massiless vector unless also i is or j is initial
     not_double_counting = (j.get('spin') == 3 and j.get('massless') and 
                            i.get('spin') == 3 and i.get('massless')) or \
-                          j.get('spin') != 3 or not j.get('massless')
+                           j.get('spin') != 3 or not j.get('massless') or \
+                           not j.get('state')
 
     #if i and j are a final state particle and antiparticle pair,
     # then we want i to be antipart and j to be 
@@ -58,9 +58,8 @@ def combine_ij( i, j, model, dict, pert='QCD'): #test written
                 parts.remove(model.get('particle_dict')[i.get('id')])
             except ValueError:
                 continue
-            
-            #remove j if final state, anti j if initial state
 
+            #remove j if final state, anti j if initial state
 
             if j.get('state'):
                 j_id = j.get('id')

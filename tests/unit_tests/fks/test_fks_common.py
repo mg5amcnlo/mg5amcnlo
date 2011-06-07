@@ -340,6 +340,11 @@ class TestFKSCommon(unittest.TestCase):
         legs_j.append(MG.Leg({'id' : 21, 'state' : False, 'number': 1}))
         legs_ij.append([MG.Leg({'id' : 21, 'state' : False , 'number' : 1})
                         ])
+        # i, j initial gluon/final quark 
+        legs_i.append(MG.Leg({'id' : 2, 'state' : True, 'number': 3}))
+        legs_j.append(MG.Leg({'id' : 21, 'state' : False, 'number': 1}))
+        legs_ij.append([MG.Leg({'id' : -2, 'state' : False , 'number' : 1})
+                        ])
         
         dict = {}
  

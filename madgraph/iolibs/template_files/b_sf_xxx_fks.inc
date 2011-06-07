@@ -68,7 +68,6 @@ C ----------
       DO IHEL=1,NEXTERNAL-1
          JC(IHEL) = +1
       ENDDO
-      calculatedborn = .false.
       if (calculatedBorn) then
          do j=1,nexternal-1
             if (savemom(j,1).ne.p1(0,j) .or. savemom(j,2).ne.p1(3,j)) then
@@ -166,7 +165,6 @@ C ----------
 C BEGIN CODE
 C ----------
 
-      calculatedborn = .false.
       if (.not. calculatedBorn) then
   %(helas_calls)s
       do i=1,ngraphs
