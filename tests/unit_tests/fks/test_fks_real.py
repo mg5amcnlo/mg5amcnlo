@@ -27,7 +27,7 @@ import madgraph.core.base_objects as MG
 import madgraph.core.color_algebra as color
 import madgraph.core.diagram_generation as diagram_generation
 import copy
-
+import string
 
 class TestFKSProcessFromReals(unittest.TestCase):
     """a class to test FKS Processes initiated from real process"""
@@ -336,6 +336,65 @@ class TestFKSProcessFromReals(unittest.TestCase):
     
     fks1 = fks.FKSProcessFromReals(myproc)
     fks2 = fks.FKSProcessFromReals(myproc2)
+    
+    def test_get_fks_inc_string(self):
+        """check if the fks.inc string is correct, for u u~ > u u~ g"""
+        lines = self.fks2.get_fks_inc_string().split('\n')
+                
+        goallines = """INTEGER FKS_CONFIGS, IPOS, JPOS
+      DATA FKS_CONFIGS / 7 /
+      INTEGER FKS_I(7), FKS_J(7)
+      INTEGER FKS_IPOS(0:NEXTERNAL)
+      INTEGER FKS_J_FROM_I(NEXTERNAL, 0:NEXTERNAL)
+      INTEGER PARTICLE_TYPE(NEXTERNAL), PDG_TYPE(NEXTERNAL)
+
+C     FKS configuration number  1 
+      DATA FKS_I(  1  ) /  3  /
+      DATA FKS_J(  1  ) /  1  /
+
+C     FKS configuration number  2 
+      DATA FKS_I(  2  ) /  4  /
+      DATA FKS_J(  2  ) /  2  /
+
+C     FKS configuration number  3 
+      DATA FKS_I(  3  ) /  4  /
+      DATA FKS_J(  3  ) /  3  /
+
+C     FKS configuration number  4 
+      DATA FKS_I(  4  ) /  5  /
+      DATA FKS_J(  4  ) /  1  /
+
+C     FKS configuration number  5 
+      DATA FKS_I(  5  ) /  5  /
+      DATA FKS_J(  5  ) /  2  /
+
+C     FKS configuration number  6 
+      DATA FKS_I(  6  ) /  5  /
+      DATA FKS_J(  6  ) /  3  /
+
+C     FKS configuration number  7 
+      DATA FKS_I(  7  ) /  5  /
+      DATA FKS_J(  7  ) /  4  /
+
+      DATA (FKS_IPOS(IPOS), IPOS = 0, 3)  / 3, 3, 4, 5 /
+
+      DATA (FKS_J_FROM_I(3, JPOS), JPOS = 0, 1)  / 1, 1 /
+      DATA (FKS_J_FROM_I(4, JPOS), JPOS = 0, 2)  / 2, 2, 3 /
+      DATA (FKS_J_FROM_I(5, JPOS), JPOS = 0, 4)  / 4, 1, 2, 3, 4 /
+C     
+C     Particle type:
+C     octet = 8, triplet = 3, singlet = 1
+      DATA (PARTICLE_TYPE(IPOS), IPOS=1, NEXTERNAL) / 3, -3, 3, -3, 8 /
+
+C     
+C     Particle type according to PDG:
+C     
+      DATA (PDG_TYPE(IPOS), IPOS=1, NEXTERNAL) / 2, -2, 2, -2, 21 /
+        """.split('\n')
+        
+        for l1, l2 in zip(lines, goallines):
+            self.assertEqual(string.strip(l1.upper()), string.strip(l2.upper())) 
+        
 
     
     def test_FKS_born_process(self):
@@ -344,7 +403,8 @@ class TestFKSProcessFromReals(unittest.TestCase):
         in particular check i
         --born amplitude
         --i/j fks
-        --ijglu"""
+        --ijglu
+        also the correctness of reduce_real_leglist is (implicitly) tested here"""
         model = self.mymodel
         
         ## u u~ > d d~ g g, combining d and d~ to glu
@@ -420,6 +480,8 @@ class TestFKSProcessFromReals(unittest.TestCase):
         self.assertEqual(born1.j_fks, 3)
         self.assertEqual(born1.ijglu, 3)
         self.assertEqual(born1.amplitude, born_amp1)
+        self.assertEqual(born1.need_color_links, False)
+        
         
     def test_find_color_links(self):
         """tests the find_color_link function of a FKSBornProcess object. This

@@ -116,7 +116,7 @@ def find_pert_particles_interactions(model, pert_order = 'QCD'): #test written
 
 
 
-def insert_color_links(col_basis, col_obj, links):
+def insert_color_links(col_basis, col_obj, links): #test written
     """insert the color links in col_obj: returns a list of dictionaries
     (one for each link) with the following entries:
     --link: the numbers of the linked legs
@@ -153,13 +153,9 @@ def insert_color_links(col_basis, col_obj, links):
         basis_link = color_amp.ColorBasis()
         for ind, dict in enumerate(this_col_obj):
             basis_link.update_color_basis(dict, ind)
-
-
-        
    
         this['link_basis'] = basis_link
-        this['link_matrix'] = color_amp.ColorMatrix(col_basis,basis_link)
-                
+        this['link_matrix'] = color_amp.ColorMatrix(col_basis,basis_link)               
         result.append(this)
     basis_orig = color_amp.ColorBasis()
     for ind, dict in enumerate(col_obj):
@@ -167,8 +163,6 @@ def insert_color_links(col_basis, col_obj, links):
     
     for link in result:
         link['orig_basis'] = basis_orig
-
-                
     return result
 
 
@@ -190,7 +184,7 @@ def find_color_links(leglist): #test written
              
 
 def legs_to_color_link_string(leg1, leg2): #test written, all cases
-    """returns a dictionary containing:
+    """given two FKSlegs, returns a dictionary containing:
     --string: the color link between the two particles, to be appended to
         the old color string
         extra minus or 1/2 factor are included as it was done in MadDipole
@@ -240,7 +234,7 @@ def legs_to_color_link_string(leg1, leg2): #test written, all cases
                       ])
         string.coeff = string.coeff * fractions.Fraction(1,2) 
     dict['replacements'] = replacements
-    dict['string'] = string
+    dict['string'] = string#.simplify()
       
     return dict
 

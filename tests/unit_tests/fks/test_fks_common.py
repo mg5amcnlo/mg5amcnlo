@@ -24,7 +24,9 @@ import tests.unit_tests as unittest
 import madgraph.fks.fks_common as fks_common
 import madgraph.core.base_objects as MG
 import madgraph.core.color_algebra as color
+import madgraph.core.color_amp as color_amp
 import madgraph.core.diagram_generation as diagram_generation
+import madgraph.core.helas_objects as helas_objects
 import copy
 import array
 import fractions
@@ -490,7 +492,59 @@ class TestFKSCommon(unittest.TestCase):
         self.assertEqual(len(links), len(color_links))
         for l1, l2 in zip (links, color_links):
             self.assertEqual(l1,l2['legs'])
-
+            
+    def test_insert_color_links(self):
+        """given a list of color links, tests if the insert color link works, ie 
+        if a list of dictionaries is returned. Each dict has the following entries:
+        --link, list of number of linked legs
+        --link_basis the linked color basis
+        --link_matrix the color matrix created from the original basis"""
+        #test the process u u~ > d d~, link u and d
+        leglist = MG.LegList([
+                    MG.Leg({'id':2, 'state':False, 'number':1}),
+                    MG.Leg({'id':-2, 'state':False, 'number':2}),
+                    MG.Leg({'id':1, 'state':True, 'number':3}),
+                    MG.Leg({'id':-1, 'state':True, 'number':4}),
+                    ])
+        myproc = MG.Process({'legs' : leglist,
+                       'orders':{'QCD':10, 'QED':0},
+                       'model': self.model,
+                       'id': 1,
+                       'required_s_channels':[],
+                       'forbidden_s_channels':[],
+                       'forbidden_particles':[],
+                       'is_decay_chain': False,
+                       'decay_chains': MG.ProcessList(),
+                       'overall_orders': {}})
+        helas = helas_objects.HelasMatrixElement(
+                        diagram_generation.Amplitude(myproc))
+        
+        basis_orig = copy.deepcopy(helas['color_basis'])
+        
+        links = fks_common.find_color_links(
+                                    fks_common.to_fks_legs(leglist, self.model))
+        dicts = fks_common.insert_color_links(
+                    helas['color_basis'],
+                    helas['color_basis'].create_color_dict_list(helas['base_amplitude']),
+                    links)
+        #color_string for link 1-3 (dicts[1])
+        linkstring = color.ColorString([
+                        color.T(-1000,2,-3001), color.T(-1000,-3002,4),
+                        color.T(-6000,-3001,1), color.T(-6000,3,-3002)])
+        linkstring.coeff = linkstring.coeff * (-1)
+        
+        linkdicts = [{(0,0) : linkstring}]
+        
+        link_basis = color_amp.ColorBasis()
+        for i, dict in enumerate(linkdicts):
+            link_basis.update_color_basis(dict, i)
+        
+        matrix = color_amp.ColorMatrix(basis_orig, link_basis)
+        
+        self.assertEqual(len(dicts), 12)
+        self.assertEqual(link_basis, dicts[1]['link_basis'])
+        self.assertEqual(matrix, dicts[1]['link_matrix'])
+        
 
     def test_legs_to_color_link_string(self):
         """tests if, given two fks legs, the color link between them is correctly 

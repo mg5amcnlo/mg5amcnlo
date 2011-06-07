@@ -2920,7 +2920,7 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
                                 os.system('rm -f mg*.cmd')
                             os.system('make gensym >> ' + logfile)
                             if os.path.exists('gensym'):
-                                logger.info('running gensym' + cluster)
+                                logger.info('running gensym ' + cluster)
                                 os.system('echo ' + cluster + ' | ./gensym >> ' + genfile + ' 2>&1')
                         if compile_me:
                             exe = execs[int(vegas_mint)]

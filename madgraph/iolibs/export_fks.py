@@ -512,6 +512,15 @@ class ProcessExporterFortranFKS(export_v4.ProcessExporterFortran):
         mms = []
         nns = [] 
         iflines = "\n"
+        
+        #header for the sborn_sf.f file 
+        file = """
+        subroutine sborn_sf(p_born,m,n,wgt)
+          implicit none
+          include "nexternal.inc"
+          double precision p_born(0:3,nexternal-1),wgt
+          double complex wgt1(2)
+          integer m,n \n \n"""
     
         if nborns > 0:
             for i in range(nborns):
@@ -519,49 +528,42 @@ class ProcessExporterFortranFKS(export_v4.ProcessExporterFortran):
                 
             for i, c_link in enumerate(fksborn.color_links):
                 iborn = i+1
-                iborns.append(iborn)
-                mms.append(c_link['link'][0])
-                nns.append(c_link['link'][1])
                 
-                filename = 'b_sf_%3.3d.f' % iborn
-                
+                filename = 'b_sf_%3.3d.f' % iborn                
                 born_helas_process = copy.copy(fksborn.matrix_element)
                 self.write_b_sf_fks(writers.FortranWriter(filename),
                              born_helas_process, c_link, matrix_element, iborn,
                              fortran_model)
+                if i == 0:
+                    iff = 'if'
+                else:
+                    iff = 'elseif'
+
+                m, n = c_link['link']
                 
                 iflines += \
-    "if (mm(%(this)d).eq.m .and. \
-nn(%(this)d).eq.n ) then \n\
-    call sb_sf_%(iborn)3.3d(p_born,wgt)\n else" %{'this': i+1, 'iborn': iborn}
+                "c b_sf_%(iborn)3.3d links partons %(m)d and %(n)d \n\
+                    %(iff)s (m.eq.%(m)d .and. n.eq.%(n)d) then \n\
+                    call sb_sf_%(iborn)3.3d(p_born,wgt)\n" \
+                        %{'m':m, 'n': n, 'iff': iff, 'iborn': iborn}
             
-            replace_dict['nborns'] = nborns
-            replace_dict['iborns'] = ', '.join(["%d" % i for i in iborns])
-            replace_dict['mms'] = ', '.join(["%d" % i for i in mms])
-            replace_dict['nns'] = ', '.join(["%d" % i for i in nns])
-            replace_dict['iflines'] =  iflines    
-        
-            file = open(os.path.join(_file_path, \
-                          'iolibs/template_files/sborn_sf_fks_no_i.inc')).read()
-            file = file % replace_dict       
-        
+            file += iflines + \
+            """else
+            wgt = 0d0
+            endif
+            return
+            end"""        
         elif nborns == 0:
             #write a dummy file
-            file="""subroutine sborn_sf(p_born,m,n,wgt)
-          implicit none
-          include "nexternal.inc"
-          double precision p_born(0:3,nexternal-1),wgt
-          double complex wgt1(2)
-          integer m,n
+            file+="""
 c     This is a dummy function because
 c     this subdir has no soft singularities
-          
-          wgt = 0d0
-          
-          return
-          end """
+            wgt = 0d0          
+            return
+            end"""           
         
-        # Write the file
+        # Write the end of the file
+       
         writer.writelines(file)
     
     #===============================================================================

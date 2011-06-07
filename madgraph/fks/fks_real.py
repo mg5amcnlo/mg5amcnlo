@@ -104,14 +104,11 @@ class FKSBornProcess(object):
     
     def reduce_real_leglist(self, leg_i, leg_j, leg_ij):
         """removes from the leglist of self.process leg_i, leg_j 
-        and inserts leg_ij"""
+        and inserts leg_ij (fkslegs)"""
         red_leglist = fks_common.to_fks_legs(
                         copy.deepcopy(self.process.get('legs')),
                                       self.process.get('model'))
-#        print " ".join(("%d" % l['id']) for l in red_leglist)
-#        print "LEGS ", red_leglist
-#        print "I   ", leg_i
-#        print "J   ", leg_j
+
         red_leglist.remove(leg_i)
         red_leglist.remove(leg_j)
         red_leglist.insert(leg_ij.get('number')-1, leg_ij)
@@ -179,7 +176,7 @@ class FKSProcessFromReals(object):
             
             self.find_borns()
             
-    def get_fks_inc_string(self):
+    def get_fks_inc_string(self): #test written
         """returns the list of configurations corrresponding to the various 
         underlying borns"""
         string = "integer fks_configs, ipos, jpos \n\
@@ -225,7 +222,6 @@ C     Particle type according to PDG:\n\
 C\n\
       DATA (PDG_TYPE(IPOS), IPOS=1, NEXTERNAL) / %s / \n " % \
                                 ', '.join(["%d" % i for i in self.pdg_codes])
-        
         return string
              
                  

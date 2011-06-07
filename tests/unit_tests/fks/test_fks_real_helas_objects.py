@@ -342,10 +342,24 @@ class testFKSRealHelasObjects(unittest.TestCase):
     fks2 = fks.FKSProcessFromReals(myproc2)
     
     
+    def test_fks_helas_process_from_reals(self):
+        """tests the correct initialization of a FKSHelasProcessFromReals.
+        We test the correct initalization of:
+        --real emission me
+        --fks_born_processes_list
+        --fks.inc_string (to be the same as for the FKSProcessFromReals)
+        we test the process u u~ > d d~ g g"""
+        helasfks1 = fks_helas.FKSHelasProcessFromReals(self.fks1)
+        self.assertEqual(helasfks1.real_matrix_element,
+                        helas_objects.HelasMatrixElement(self.fks1.real_amp))
+        self.assertEqual(len(helasfks1.born_processes), 11)
+        self.assertEqual(helasfks1.fks_inc_string, self.fks1.get_fks_inc_string())
+        
+    
     def test_fks_helas_born_process_init(self):
-        """tests the correct initialization of an FKSHelasRealProcess, from a 
-        FKSRealProc.
-        We test The correct initialization of:
+        """tests the correct initialization of a FKSHelasBornProcess, from a 
+        FKSBornProc.
+        We test the correct initialization of:
         --i/j fks
         --ijglu
         --matrix element

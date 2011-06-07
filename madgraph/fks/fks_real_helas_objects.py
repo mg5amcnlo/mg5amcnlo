@@ -31,8 +31,6 @@ import array
 logger = logging.getLogger('madgraph.fks_real_helas_objects')
 
 
-
-
 class FKSHelasMultiProcessFromReals(helas_objects.HelasMultiProcess):
     """class to generate the helas calls for a FKSMultiProcess,
     starting from real emission"""
@@ -249,7 +247,7 @@ class FKSHelasProcessFromReals(object):
 
 
 class FKSHelasBornProcess(object): #test written
-    """class to generate the Helas calls for a FKSRealProcess
+    """class to generate the Helas calls for a FKSBornProcess
     contains:
     -- i/j fks
     -- ijglu
