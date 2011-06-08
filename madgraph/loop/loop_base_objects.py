@@ -55,10 +55,13 @@ class LoopDiagram(base_objects.Diagram):
         # But ordered in a canonical unambiguous way.
         self['canonical_tag'] = []
         # This information is in principle recoverable from the VertexList but
-        # it is more information to store it as a single integer. It is 0 for
-        # a born diagram, -1 for R2, -2 for UV and it is the (positive) PDG of 
-        # the (particle, not anti-particle) L-cut particle for a loop diagram.
+        # it is more information to store it as a single integer.
+        # It is the (positive) PDG of the (particle, not anti-particle) L-cut 
+        # particle for a loop diagram.
         self['type'] = 0
+        # This stores the list of amplitudes vertices which give the R2/UV
+        # counter-terms to this loop.
+        self['CT_vertices'] = base_objects.VertexList()
 
     def filter(self, name, value):
         """Filter for valid diagram property values."""
@@ -85,6 +88,11 @@ class LoopDiagram(base_objects.Diagram):
                         raise self.PhysicsObjectError, \
                             "%s is not a valid canonical_tag" % str(value)
 
+        if name == 'CT_vertices':
+            if not isinstance(value, VertexList):
+                raise self.PhysicsObjectError, \
+                        "%s is not a valid VertexList object" % str(value)
+
         if name == 'type':
             if not isinstance(value, int):
                 raise self.PhysicsObjectError, \
@@ -98,13 +106,18 @@ class LoopDiagram(base_objects.Diagram):
     def get_sorted_keys(self):
         """Return particle property names as a nicely sorted list."""
         
-        return ['vertices', 'orders', 'type', 'tag']
+        return ['vertices', 'CT_vertices', 'orders', 'type', 'tag']
 
     def nice_string(self):
         """Returns a nicely formatted string of the diagram content."""
         mystr=''
         if self['tag']:
             mystr = mystr+'tag: '+str(self['tag'])+'\n'
+        if self['CT_vertices']:
+            mystr = mystr+'CT vertices:'
+            for vert in self['CT_vertices']:
+                mystr = mystr+' '+str(vert['id'])
+            mystr = mystr+'\n'
         if self['vertices']:
             mystr = mystr+'('
             for vert in self['vertices']:
@@ -124,9 +137,18 @@ class LoopDiagram(base_objects.Diagram):
         else:
             return '()'
 
+    def get_CT(self,model,string=None):
+        """ Returns the CounterTerms of the type passed in argument. If None
+            it returns all of them. """
+        if string:
+            return base_objects.VertexList([vert for vert in self['CT_vertices'] if\
+                    model['interaction_dict'][vert['id']]['type'][0]==string])
+        else:
+            return self['CT_vertices']
+        
     def get_loop_orders(self,model):
-        """ Return a dictionary one entry per type of order appearing in the interactions building the loop flow
-            The corresponding keys are the number of type this order appear in the diagram. """
+        """ Return a dictionary with one key per type of order appearing in the interactions building the loop flow
+            The corresponding values are the number of type this order appear in the diagram. """
         
         loop_orders = {}
         for vertex in self['vertices']:

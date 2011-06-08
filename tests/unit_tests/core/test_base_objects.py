@@ -1419,6 +1419,7 @@ class ProcessTest(unittest.TestCase):
                        'is_decay_chain': False,
                        'decay_chains': base_objects.ProcessList(),
                        'squared_orders': {},
+                       'has_born': True,
                        'overall_orders': {}}
 
         self.myprocess = base_objects.Process(self.mydict)
@@ -1492,6 +1493,7 @@ class ProcessTest(unittest.TestCase):
         goal = goal + "    \'orders\': %s,\n" % repr(self.myprocess['orders'])
         goal = goal + "    \'overall_orders\': %s,\n" % \
                repr(self.myprocess['overall_orders'])
+        goal = goal + "    \'squared_orders\': %s,\n" % repr(self.myprocess['squared_orders'])
         goal = goal + "    \'model\': %s,\n" % repr(self.myprocess['model'])
         goal = goal + "    \'id\': 1,\n"
         goal = goal + "    \'required_s_channels\': [],\n"
@@ -1499,7 +1501,8 @@ class ProcessTest(unittest.TestCase):
         goal = goal + "    \'forbidden_particles\': [],\n"
         goal = goal + "    \'is_decay_chain\': False,\n"
         goal = goal + "    \'decay_chains\': [],\n"
-        goal = goal + "    \'perturbation_couplings\': []\n}"
+        goal = goal + "    \'perturbation_couplings\': [],\n"
+        goal = goal + "    \'has_born\': True\n}"
 
         self.assertEqual(goal, str(self.myprocess))
 
@@ -1601,6 +1604,7 @@ class ProcessDefinitionTest(unittest.TestCase):
                        'is_decay_chain': False,
                        'decay_chains': base_objects.ProcessList(),
                        'squared_orders':{},
+                       'has_born': True,
                        'overall_orders':{}}
 
         self.my_process_definition = base_objects.ProcessDefinition(self.mydict)
@@ -1673,6 +1677,7 @@ class ProcessDefinitionTest(unittest.TestCase):
         goal = goal + "    \'legs\': %s,\n" % repr(self.my_multi_leglist)
         goal = goal + "    \'orders\': %s,\n" % repr(self.my_process_definition['orders'])
         goal = goal + "    \'overall_orders\': %s,\n" % repr(self.my_process_definition['overall_orders'])
+        goal = goal + "    \'squared_orders\': %s,\n" % repr(self.my_process_definition['squared_orders'])
         goal = goal + "    \'model\': %s,\n" % repr(self.my_process_definition['model'])
         goal = goal + "    \'id\': %s,\n" % repr(self.my_process_definition['id'])
         goal = goal + "    \'required_s_channels\': [],\n"
@@ -1680,7 +1685,8 @@ class ProcessDefinitionTest(unittest.TestCase):
         goal = goal + "    \'forbidden_particles\': [],\n"
         goal = goal + "    \'is_decay_chain\': False,\n"
         goal = goal + "    \'decay_chains\': [],\n"
-        goal = goal + "    \'perturbation_couplings\': []\n}"
+        goal = goal + "    \'perturbation_couplings\': [],\n"
+        goal = goal + "    \'has_born\': True\n}"
         self.assertEqual(goal, str(self.my_process_definition))
 
 #===============================================================================

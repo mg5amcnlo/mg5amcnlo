@@ -190,7 +190,7 @@ class LoopAmplitude(diagram_generation.Amplitude):
 
         # The decision of wether the virtual must be squared against the born or the
         # virtual is now simply made based on wether there are borns or not.
-        self['has_born'] = self['born_diagrams']!=[]
+        self['process']['has_born'] = self['born_diagrams']!=[]
         hierarchy=self['process']['model']['order_hierarchy']            
 
         if loopGenInfo: print "LoopGenInfo:: User input born orders                  = ",self['process']['orders']
@@ -210,7 +210,7 @@ class LoopAmplitude(diagram_generation.Amplitude):
                 bornminorder=self['born_diagrams'].get_min_order(order)
                 if value>=0:
                     self['process']['orders'][order]=value-bornminorder 
-                elif self['has_born']:
+                elif self['process']['has_born']:
                     # This means the user want the leading if order=-1 or N^n Leading term if 
                     # order=-n. If there is a born diag, we can infer the necessary
                     # maximum order in the loop: bornminorder+2*(n-1).
@@ -223,7 +223,7 @@ class LoopAmplitude(diagram_generation.Amplitude):
         # diagrams is a better upper bound.
         # Of course, if no hierarchy is defined we directly jump to the next step.
         if not [1 for elem in self['process']['squared_orders'].items() if \
-                elem[0].upper()!='WEIGHTED'] and hierarchy and self['has_born']:
+                elem[0].upper()!='WEIGHTED'] and hierarchy and self['process']['has_born']:
 
             min_born_wgt=self['born_diagrams'].get_min_weighted_order(self['process']['model'])
             if 'WEIGHTED' not in [key.upper() for key in self['process']['squared_orders'].keys()]:
@@ -287,7 +287,7 @@ class LoopAmplitude(diagram_generation.Amplitude):
 
         # If there was no born, we will guess the WEIGHT squared order only now, based on the
         # minimum weighted order of the loop contributions, if it was not specified by the user
-        if not self['has_born'] and not self['process']['squared_orders'] and hierarchy:         
+        if not self['process']['has_born'] and not self['process']['squared_orders'] and hierarchy:         
             pert_order_weights=[hierarchy[order] for order in \
                                 self['process']['perturbation_couplings']]
             self['process']['squared_orders']['WEIGHTED']=2*(\
@@ -322,7 +322,7 @@ class LoopAmplitude(diagram_generation.Amplitude):
         if loopGenInfo: print "LoopGenInfo:: #Diags after perturbation recognition   = ",len(self['loop_diagrams'])
         
         # The loop diagrams are filtered according to the 'squared_order' specification
-        if self['has_born']:
+        if self['process']['has_born']:
             # If there are born diagrams the selection is simple
             self.check_squared_orders(self['process']['squared_orders'])
         else:
@@ -350,6 +350,9 @@ class LoopAmplitude(diagram_generation.Amplitude):
                 tag_selected.append(diag['canonical_tag'])
         self['loop_diagrams']=loop_basis
 
+        # Set the necessary UV/R2 CounterTerms for each loop diagram generated
+        self.setCT_vertices()
+        
         if loopGenInfo: print "================================================================== "
         if loopGenInfo: print "|| LoopGenInfo:: #Diags after filtering                  = ",len(self['loop_diagrams'])," ||"
         if loopGenInfo: print "================================================================== "        
@@ -429,6 +432,113 @@ class LoopAmplitude(diagram_generation.Amplitude):
         self.lcutpartemployed=[]
 
         return loopsuccessful
+
+    def setCT_vertices(self):
+        """ Scan each loop diagram and recognizes what are the R2/UV CounterTerms
+            associated to them """
+
+        # We first create a dictionary with as a key (tupleB,tupleA). The tuple A is, for each
+        # R2/UV interaction, the ordered tuple of the loop particles (not anti-particles, so that
+        # the PDG is always positive!) listed in its 'type'[1] attribute. Tuple B is the ordered
+        # tuple of external particles ID.
+        # making up this interaction. The values of the dictionary are a list of the 
+        # interaction ID having the same key above.
+        CT_interactions = {}
+        for int in self['process']['model']['interactions']:
+            if int['type'][0] in ['R2','UV']:
+                keya=list(int['type'][1])
+                keya.sort()
+                keyb=[part.get_pdg_code() for part in int['particles']]
+                keyb.sort()
+                key=(tuple(keyb),tuple(keya))
+                try:
+                    CT_interactions[key].append(int['id'])
+                except KeyError:
+                    CT_interactions[key]=[int['id'],]
+        
+        # The dictionary CT_added keeps track of what are the CounterTerms already
+        # added and prevents us from adding them again. For instance, the fermion
+        # boxes with four external gluons exist in 6 exemplaries (with different 
+        # crossings of the external legs each time) and the corresponding R2 must
+        # be added only once. The key of this dictionary characterizing the loop
+        # is (tupleA,tupleB). Tuple A is made from the list of the ID of the external
+        # structures attached to this loop and tuple B from list of the pdg of the
+        # particles building this loop.
+        
+        CT_added = {}
+
+        for diag in self['loop_diagrams']:
+            # First build the key from this loop for the CT_interaction dictionary 
+            # (Searching Key) and the key for the CT_added dictionary (tracking Key)
+            searchingKeyA=[]
+            searchingKeyB=[]
+            trackingKeyA=[]
+            for tagElement in diag['canonical_tag']:
+                for structID in tagElement[1]:
+                    trackingKeyA.append(structID)
+                    searchingKeyA.append(self['process']['model'].get_particle(\
+                        self['structure_repository'][structID]['binding_leg']['id']).\
+                        get_pdg_code())
+                searchingKeyB.append(self['process']['model'].get_particle(\
+                    tagElement[0]).get_pdg_code())
+            searchingKeyA.sort()
+            searchingKeyB.sort()
+            trackingKeyA.sort()
+            # There are two kind of keys, the ones defining the loop
+            # particles and the ones only specifying the external legs.
+            searchingKeySimple=(tuple(searchingKeyA),())
+            searchingKeyLoopPart=(tuple(searchingKeyA),tuple(searchingKeyB))
+            trackingKeySimple=(tuple(trackingKeyA),())
+            trackingKeyLoopPart=(tuple(trackingKeyA),tuple(searchingKeyB))
+            # Now we look for a CT which might correspond to this loop by looking
+            # for its searchingKey in CT_interactions
+
+            #print "I have the following CT_interactions=",CT_interactions            
+            try:
+                CTIDs=CT_interactions[searchingKeySimple]
+            except KeyError:
+                CTIDs=[]
+            try:
+                CTIDs+=CT_interactions[searchingKeyLoopPart]
+            except KeyError:
+                pass
+            if not CTIDs:
+                continue
+            # We have found some CT interactions corresponding to this loop
+            # so we must make sure we have not included them already
+            try:    
+                usedIDs=CT_added[trackingKeySimple]
+            except KeyError:
+                usedIDs=[]
+            try:    
+                usedIDs+=CT_added[trackingKeyLoopPart]
+            except KeyError:
+                pass    
+            for CTID in CTIDs:
+                # Make sure it has not been considered yet and that the loop orders match
+                if CTID not in usedIDs and diag.get_loop_orders(self['process']['model'])==\
+                  self['process']['model']['interaction_dict'][CTID]['orders']:
+                    # Create the amplitude vertex corresponding to this CT
+                    # and add it to the LoopDiagram treated.
+                    CTleglist = base_objects.LegList()
+                    for tagElement in diag['canonical_tag']:
+                        for structID in tagElement[1]:
+                            CTleglist.append(self['structure_repository'][structID]['binding_leg'])
+                    CTVertex = base_objects.Vertex({'id':CTID, \
+                                                    'legs':CTleglist})
+                    diag['CT_vertices'].append(CTVertex)
+                    # Now add this CT vertex to the CT_added dictionary so that
+                    # we are sure it will not be double counted
+                    if self['process']['model']['interaction_dict'][CTID]['type'][1]==():
+                        try:
+                            CT_added[trackingKeySimple].append(CTID)
+                        except KeyError:
+                            CT_added[trackingKeySimple] = [CTID, ]
+                    else:
+                        try:
+                            CT_added[trackingKeyLoopPart].append(CTID)
+                        except KeyError:
+                            CT_added[trackingKeyLoopPart] = [CTID, ]
 
     def create_diagram(self, vertexlist):
         """ Return a LoopDiagram created."""
@@ -541,7 +651,7 @@ class LoopAmplitude(diagram_generation.Amplitude):
             in argument and wether the process has a born or not. """
 
         diagRef=base_objects.DiagramList()
-        if self['has_born']:
+        if self['process']['has_born']:
             diagRef=self['born_diagrams']
         else:
             diagRef=self['loop_diagrams']

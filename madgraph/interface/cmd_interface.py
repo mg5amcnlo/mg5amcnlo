@@ -1445,6 +1445,7 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
     _set_options = ['group_subprocesses',
                     'ignore_six_quark_processes',
                     'stdout_level']
+    
     # Variables to store object information
     _curr_model = None  #base_objects.Model()
     _curr_amps = diagram_generation.AmplitudeList()
@@ -2584,10 +2585,7 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
         
         
         ext_program.run()
-        
-        
-        
-    
+         
     def do_load(self, line):
         """Load information from file"""
 
@@ -2754,6 +2752,7 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
 
         group_subprocesses = self._export_format == 'madevent' and \
                              self._options['group_subprocesses']
+
         # Make a Template Copy
         if self._export_format == 'madevent':
             if group_subprocesses:

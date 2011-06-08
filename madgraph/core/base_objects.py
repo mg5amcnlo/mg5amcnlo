@@ -1600,6 +1600,7 @@ class Process(PhysicsObject):
         # gives the upper bound for the total weighted order of the
         # squared amplitude.
         self['squared_orders'] = {}
+        self['has_born'] = True
 
     def filter(self, name, value):
         """Filter for valid process property values."""
@@ -1675,6 +1676,11 @@ class Process(PhysicsObject):
                 raise self.PhysicsObjectError, \
                         "%s is not a valid bool" % str(value)
 
+        if name == 'has_born':
+            if not isinstance(value, bool):
+                raise self.PhysicsObjectError, \
+                        "%s is not a valid bool" % str(value)
+
         if name == 'decay_chains':
             if not isinstance(value, ProcessList):
                 raise self.PhysicsObjectError, \
@@ -1702,10 +1708,10 @@ class Process(PhysicsObject):
     def get_sorted_keys(self):
         """Return process property names as a nicely sorted list."""
 
-        return ['legs', 'orders', 'overall_orders', 'model', 'id',
-                'required_s_channels', 'forbidden_s_channels',
+        return ['legs', 'orders', 'overall_orders', 'squared_orders',
+                'model', 'id', 'required_s_channels', 'forbidden_s_channels',
                 'forbidden_particles', 'is_decay_chain', 'decay_chains',
-                'perturbation_couplings']
+                'perturbation_couplings', 'has_born']
 
     def nice_string(self, indent=0):
         """Returns a nicely formated string about current process

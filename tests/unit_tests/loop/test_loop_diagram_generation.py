@@ -21,6 +21,10 @@ import itertools
 import logging
 import math
 import os
+import sys
+
+root_path = os.path.split(os.path.dirname(os.path.realpath( __file__ )))[0]
+sys.path.append(os.path.join(root_path, os.path.pardir, os.path.pardir))
 
 
 import tests.unit_tests as unittest
@@ -32,7 +36,12 @@ import madgraph.core.base_objects as base_objects
 import madgraph.core.diagram_generation as diagram_generation
 import madgraph.loop.loop_base_objects as loop_base_objects
 import madgraph.loop.loop_diagram_generation as loop_diagram_generation
+import madgraph.iolibs.save_load_object as save_load_object
 from madgraph import MadGraph5Error
+
+_file_path = os.path.dirname(os.path.realpath(__file__))
+_input_file_path = os.path.join(_file_path, os.path.pardir, os.path.pardir,
+                                'input_files')
 
 #===============================================================================
 # LoopDiagramGeneration Test
@@ -738,6 +747,9 @@ class LoopDiagramGenerationTest(unittest.TestCase):
         self.ref_dict_to0 = self.myinterlist.generate_ref_dict(self.mypertorders)[0]
         self.ref_dict_to1 = self.myinterlist.generate_ref_dict(self.mypertorders)[1]
 
+        # Save this model so that it can be loaded by other loop tests
+        save_load_object.save_to_file(os.path.join(_input_file_path, 'test_toyLoopModel.pkl'),self.myloopmodel)
+
     def test_NLOAmplitude(self):
         """test different features of the NLOAmplitude class"""
         ampNLOlist=[]
@@ -814,7 +826,6 @@ class LoopDiagramGenerationTest(unittest.TestCase):
                        ({},['QCD','QED'],{},10),\
                        ({},['QED','QCD'],{'QED':-1},3),\
                        ({},['QED','QCD'],{'QCD':-1},7)]
-
         for (bornOrders,pert,sqOrders,nDiagGoal) in ordersChoices:
             myproc = base_objects.Process({'legs':copy.copy(myleglist),
                                            'model':self.myloopmodel,
@@ -857,11 +868,11 @@ class LoopDiagramGenerationTest(unittest.TestCase):
         """
         
         # For quick test 
-        nGluons = [(1,8),(2,81)]
+        nGluons = [(1,8,1,1),(2,81,7,10)]
         # For a longer one
-        #nGluons += [(3,905),(4,11850)]
+        # nGluons += [(3,905,65,105),(4,11850,755,1290)]
 
-        for (n, nDiagGoal) in nGluons:
+        for (n, nDiagGoal, nUVGoal, nR2Goal) in nGluons:
             myleglist=base_objects.LegList([base_objects.Leg({'id':21,
                                               'number':num,
                                               'loop_line':False}) \
@@ -878,8 +889,17 @@ class LoopDiagramGenerationTest(unittest.TestCase):
             myloopamplitude = loop_diagram_generation.LoopAmplitude()
             myloopamplitude.set('process', myproc)
             myloopamplitude.generate_diagrams()
+            sum=0
+            sumR2=0
+            sumUV=0
+            for i, diag in enumerate(myloopamplitude.get('loop_diagrams')):
+                sum+=len(diag.get('CT_vertices'))
+                sumR2+=len(diag.get_CT(self.myloopmodel,'R2'))
+                sumUV+=len(diag.get_CT(self.myloopmodel,'UV'))
             self.assertEqual(len(myloopamplitude.get('loop_diagrams')), nDiagGoal)
-
+            self.assertEqual(sumR2, nR2Goal)
+            self.assertEqual(sumUV, nUVGoal)            
+            self.assertEqual(sum, nUVGoal+nR2Goal)
 
     def test_diagram_generation_uux_ddx(self):
         """Test the number of loop diagrams generated for uu~>dd~ for different choices
@@ -896,22 +916,22 @@ class LoopDiagramGenerationTest(unittest.TestCase):
         myleglist.append(base_objects.Leg({'id':-1,
                                          'state':True}))
 
-        ordersChoices=[({},['QCD','QED'],{},21),\
-                       ({},['QCD','QED',],{'QED':-99},28),\
-                       ({},['QCD'],{},9),\
-                       ({},['QED'],{},2),\
-                       ({'QED':0},['QCD'],{},9),\
-                       ({'QCD':0},['QED'],{},7),\
-                       ({},['QCD','QED'],{'QED':-1},9),\
-                       ({},['QCD','QED'],{'QCD':-1},7),\
-                       ({},['QCD','QED'],{'QED':-2},21),\
-                       ({},['QCD','QED'],{'QED':-3},28),\
+        ordersChoices=[({},['QCD','QED'],{},21,7,6),\
+                       ({},['QCD','QED',],{'QED':-99},28,10,8),\
+                       ({},['QCD'],{},9,3,2),\
+                       ({},['QED'],{},2,2,2),\
+                       ({'QED':0},['QCD'],{},9,3,2),\
+                       ({'QCD':0},['QED'],{},7,3,2),\
+                       ({},['QCD','QED'],{'QED':-1},9,3,2),\
+                       ({},['QCD','QED'],{'QCD':-1},7,3,2),\
+                       ({},['QCD','QED'],{'QED':-2},21,7,6),\
+                       ({},['QCD','QED'],{'QED':-3},28,10,8),\
                        # These last two are of no physics interest
                        # It is just for the sake of the test.
-                       ({'QED':0},['QCD','QED'],{},21),\
-                       ({'QCD':0},['QCD','QED'],{},19)]
+                       ({'QED':0},['QCD','QED'],{},21,7,6),\
+                       ({'QCD':0},['QCD','QED'],{},19,7,6)]
         
-        for (bornOrders,pert,sqOrders,nDiagGoal) in ordersChoices:
+        for (bornOrders,pert,sqOrders,nDiagGoal,nR2Goal,nUVGoal) in ordersChoices:
             myproc = base_objects.Process({'legs':copy.copy(myleglist),
                                            'model':self.myloopmodel,
                                            'orders':bornOrders,
@@ -921,7 +941,14 @@ class LoopDiagramGenerationTest(unittest.TestCase):
             myloopamplitude = loop_diagram_generation.LoopAmplitude()
             myloopamplitude.set('process', myproc)
             myloopamplitude.generate_diagrams()
-            self.assertEqual(len(myloopamplitude.get('loop_diagrams')),nDiagGoal)
+            sumR2=0
+            sumUV=0
+            for i, diag in enumerate(myloopamplitude.get('loop_diagrams')):
+                sumR2+=len(diag.get_CT(self.myloopmodel,'R2'))
+                sumUV+=len(diag.get_CT(self.myloopmodel,'UV'))
+            self.assertEqual(len(myloopamplitude.get('loop_diagrams')), nDiagGoal)
+            self.assertEqual(sumR2, nR2Goal)
+            self.assertEqual(sumUV, nUVGoal)            
 
     def test_diagram_generation_ddx_ddx(self):
         """Test the number of loop diagrams generated for uu~>dd~ for different choices
@@ -938,15 +965,16 @@ class LoopDiagramGenerationTest(unittest.TestCase):
         myleglist.append(base_objects.Leg({'id':-1,
                                          'state':True}))
 
-        ordersChoices=[({},['QCD','QED'],{},42),\
-                       ({},['QCD','QED',],{'QED':-99},56),\
-                       ({},['QED'],{},4),\
-                       ({},['QCD'],{},18),\
-                       ({'QED':0},['QCD'],{},18),\
-                       ({'QCD':0},['QED'],{},14),\
-                       ({},['QCD','QED'],{'QED':-1},18),\
-                       ({},['QCD','QED'],{'QCD':-1},14)]
-        for (bornOrders,pert,sqOrders,nDiagGoal) in ordersChoices:
+        ordersChoices=[({},['QCD','QED'],{},42,14,12),\
+                       ({},['QCD','QED',],{'QED':-99},56,20,16),\
+                       ({},['QED'],{},4,4,4),\
+                       ({},['QCD'],{},18,6,4),\
+                       ({'QED':0},['QCD'],{},18,6,4),\
+                       ({'QCD':0},['QED'],{},14,6,4),\
+                       ({},['QCD','QED'],{'QED':-1},18,6,4),\
+                       ({},['QCD','QED'],{'QCD':-1},14,6,4)]
+        
+        for (bornOrders,pert,sqOrders,nDiagGoal,nR2Goal,nUVGoal) in ordersChoices:
             myproc = base_objects.Process({'legs':copy.copy(myleglist),
                                            'model':self.myloopmodel,
                                            'orders':bornOrders,
@@ -956,8 +984,148 @@ class LoopDiagramGenerationTest(unittest.TestCase):
             myloopamplitude = loop_diagram_generation.LoopAmplitude()
             myloopamplitude.set('process', myproc)
             myloopamplitude.generate_diagrams()
+            sumR2=0
+            sumUV=0
+            for i, diag in enumerate(myloopamplitude.get('loop_diagrams')):
+                sumR2+=len(diag.get_CT(self.myloopmodel,'R2'))
+                sumUV+=len(diag.get_CT(self.myloopmodel,'UV'))
             self.assertEqual(len(myloopamplitude.get('loop_diagrams')),nDiagGoal)
+            self.assertEqual(sumR2, nR2Goal)
+            self.assertEqual(sumUV, nUVGoal)  
+            
+    def test_CT_vertices_generation_gg_gg(self):
+        """ test that the Counter Term vertices are correctly
+            generated by adding some new CT interactions to the model and
+            comparing how many CT vertices are generated on the 
+            process gg_gg for different R2 specifications. """
+            
+        newLoopModel=copy.deepcopy(self.myloopmodel)
+        newInteractionList=base_objects.InteractionList()
+        for inter in newLoopModel['interactions']:
+            if inter['type'][0]=='base':
+                newInteractionList.append(inter)
+        
+        myleglist = base_objects.LegList()
+        myleglist.append(base_objects.Leg({'id':21,
+                                         'state':False}))
+        myleglist.append(base_objects.Leg({'id':21,
+                                         'state':False}))
+        myleglist.append(base_objects.Leg({'id':21,
+                                         'state':True}))
+        myleglist.append(base_objects.Leg({'id':21,
+                                         'state':True}))
+                
+        newInteractionList.append(base_objects.Interaction({
+                      'id': 666,
+                      # a dd~d~ R2
+                      'particles': base_objects.ParticleList(\
+                                            [self.mypartlist[0]]*4),
+                      'color': [],
+                      'lorentz':['L1'],
+                      'couplings':{(0, 0):'G'},
+                      'orders':{'QCD':4},
+                      # We don't specify the loop content here
+                      'type':['R2',()]}))
+        
+        myproc = base_objects.Process({'legs':myleglist,
+                                       'model':newLoopModel,
+                                       'orders':{},
+                                       'perturbation_couplings':['QCD'],
+                                       'squared_orders':{'WEIGHTED':99}})
+    
+        myloopamplitude = loop_diagram_generation.LoopAmplitude()
+        myloopamplitude.set('process', myproc)
+        myloopamplitude.generate_diagrams()
+        
+        CTChoice=[((),{'QCD':4},1),
+                  ((21,21,21,21),{'QCD':4},1),
+                  ((1,1,1,1),{'QCD':4},1),
+                  ((2,2,2,2),{'QCD':4},1),
+                  ((21,21,21,21),{'QCD':4,'QED':1},0),
+                  ((1,1,2,2),{'QCD':4},0)]
+        
+        for (parts,orders,nCTGoal) in CTChoice:
+            newInteractionList[-1]['type'][1]=parts
+            newInteractionList[-1]['orders']=orders            
+            newLoopModel.set('interactions',newInteractionList)
+            myloopamplitude['process']['model']=newLoopModel
+            for diag in myloopamplitude.get('loop_diagrams'):
+                diag['CT_vertices']=base_objects.VertexList()
+            myloopamplitude.setCT_vertices()            
+            sumR2=0
+            for i, diag in enumerate(myloopamplitude.get('loop_diagrams')):
+                sumR2+=len(diag.get_CT(newLoopModel,'R2'))
+            self.assertEqual(sumR2, nCTGoal)
 
+    def test_CT_vertices_generation_ddx_ddx(self):
+        """ test that the Counter Term vertices are correctly
+            generated by adding some new CT interactions to the model and
+            comparing how many CT vertices are generated on the 
+            process ddx_ddx for different R2 specifications. """
+            
+        newLoopModel=copy.deepcopy(self.myloopmodel)
+        newInteractionList=base_objects.InteractionList()
+        for inter in newLoopModel['interactions']:
+            if inter['type'][0]=='base':
+                newInteractionList.append(inter)
+        
+        myleglist = base_objects.LegList()
+        myleglist.append(base_objects.Leg({'id':1,
+                                         'state':False}))
+        myleglist.append(base_objects.Leg({'id':-1,
+                                         'state':False}))
+        myleglist.append(base_objects.Leg({'id':1,
+                                         'state':True}))
+        myleglist.append(base_objects.Leg({'id':-1,
+                                         'state':True}))
+                
+        antid=copy.copy(self.mypartlist[2])
+        antid.set('is_part',False)
+        newInteractionList.append(base_objects.Interaction({
+                      'id': 666,
+                      # a dd~d~ R2
+                      'particles': base_objects.ParticleList(\
+                                            [self.mypartlist[2],
+                                             antid,
+                                             self.mypartlist[2],
+                                             antid,]),
+                      'color': [],
+                      'lorentz':['L1'],
+                      'couplings':{(0, 0):'G'},
+                      'orders':{'QCD':4},
+                      # We don't specify the loop content here
+                      'type':['R2',()]}))
+        
+        myproc = base_objects.Process({'legs':myleglist,
+                                       'model':newLoopModel,
+                                       'orders':{},
+                                       'perturbation_couplings':['QCD','QED'],
+                                       'squared_orders':{'WEIGHTED':99}})
+    
+        myloopamplitude = loop_diagram_generation.LoopAmplitude()
+        myloopamplitude.set('process', myproc)
+        myloopamplitude.generate_diagrams()
+        
+        CTChoice=[((),{'QCD':4},1),
+                  ((1,21,1,21),{'QCD':4},1),
+                  ((1,22,1,22),{'QED':4},1),
+                  ((22,22,1,1),{'QED':4},1),
+                  ((1,21,1,21),{'QED':4},0),
+                  ((22,22,1,1),{'QCD':4},0)]
+        
+        for (parts,orders,nCTGoal) in CTChoice:
+            newInteractionList[-1]['type'][1]=parts
+            newInteractionList[-1]['orders']=orders            
+            newLoopModel.set('interactions',newInteractionList)
+            myloopamplitude['process']['model']=newLoopModel
+            for diag in myloopamplitude.get('loop_diagrams'):
+                diag['CT_vertices']=base_objects.VertexList()
+            myloopamplitude.setCT_vertices()            
+            sumR2=0
+            for i, diag in enumerate(myloopamplitude.get('loop_diagrams')):
+                sumR2+=len(diag.get_CT(newLoopModel,'R2'))
+            self.assertEqual(sumR2, nCTGoal)
+            
 #===============================================================================
 # LoopDiagramFDStruct Test
 #===============================================================================
