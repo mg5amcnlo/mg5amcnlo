@@ -60,8 +60,6 @@ def make_vertexlist(model):
 
             # Initial leg should be in the last
             ini_leg = temp_legs_new.pop(num)
-            #Sort other legs for comparison
-            temp_legs_new.sort(decay_objects.legcmp)
             temp_legs_new.append(ini_leg)
 
             temp_vertex = base_objects.Vertex({'id': inter.get('id'),

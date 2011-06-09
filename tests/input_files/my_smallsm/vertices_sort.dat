@@ -1,12 +1,12 @@
 {(41, -6): {
     'id': 41,
     'legs': [{
-    'id': -24,
+    'id': -5,
     'number': 0,
     'state': True,
     'from_group': True
 }, {
-    'id': -5,
+    'id': -24,
     'number': 0,
     'state': True,
     'from_group': True
@@ -199,12 +199,12 @@
 }, (11, 23): {
     'id': 11,
     'legs': [{
-    'id': -24,
+    'id': 22,
     'number': 0,
     'state': True,
     'from_group': True
 }, {
-    'id': 22,
+    'id': -24,
     'number': 0,
     'state': True,
     'from_group': True

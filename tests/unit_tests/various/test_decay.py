@@ -2081,13 +2081,16 @@ class Test_DecayAmplitude(unittest.TestCase):
         goal_id_list = [-12, -11, 11, 12, 25]
         self.assertEqual(sorted([l.get('id') for l in amplt_h_mmvv.get('process').get('legs')]), goal_id_list)
 
-        # Check the legs in process
+        # Check the legs in process (id, number, and state)
+        final_numbers = [2,3,4,5]
         for l in amplt_h_mmvv.get('process').get('legs'):
             if l.get('id') != 25:
                 self.assertTrue(l.get('state'))
+                final_numbers.remove(l.get('number'))
             else:
                 self.assertFalse(l.get('state'))
-            self.assertEqual(0, l.get('number'))
+                self.assertEqual(1, l.get('number'))
+        self.assertFalse(final_numbers)
 
         # Test the set and get in Amplitude
         goal_width = h_mmvv_1.get('apx_decaywidth')
@@ -2240,6 +2243,47 @@ class Test_DecayAmplitude(unittest.TestCase):
                          amp_list[0])
         self.assertFalse(amp_list.get_amplitude([-11, 11, 6, -6]))
 
+    def test_add_std_diagram(self):
+        """ Test the add_std_diagram of DecayAmplitude."""
+        # Setup higgs and lower its mass
+        higgs = self.my_testmodel.get_particle(25)
+        decay_objects.MH = 50
+
+        # Set channels and amplitude
+        self.my_testmodel.find_all_channels(4)
+        h_eeveve =  higgs.get_amplitude([-11, 11, -12, 12])
+
+        # Construct new amplitude
+        std_amp = decay_objects.DecayAmplitude(h_eeveve['diagrams'][0], 
+                                          self.my_testmodel)
+        std_amp.add_std_diagram(h_eeveve['diagrams'][1])
+
+        # Test final legs
+        list_a = sorted(std_amp['diagrams'][0].get_final_legs(), 
+                        key=lambda l: l['id'])
+        number_a = [l['number'] for l in list_a]
+        list_b = sorted(std_amp['diagrams'][1].get_final_legs(), 
+                        key=lambda l: l['id'])
+        number_b = [l['number'] for l in list_b]
+        self.assertEqual(number_a, number_b)
+
+        # Test all legs,
+        # numbers must be consistent.
+        #print std_amp.nice_string()
+        for dia in std_amp['diagrams']:
+            for i, vert in enumerate(dia['vertices'][:-1]):
+                # Check final leg of each vertices
+                previous_number = [l['number'] for l in vert['legs'][:-1]]
+                self.assertTrue(vert['legs'][-1]['number'] in previous_number)
+                
+                # Check intermediate legs
+                l=vert['legs'][-1]
+                for vert2 in dia['vertices'][i+1:]:
+                    for l2 in vert2['legs'][:-1]:
+                        if l['number'] == l2['number']:
+                            self.assertEqual(l['id'], l2['id'])
+                    
+                
 
 #===============================================================================
 # Test_AbstractModel
@@ -2309,13 +2353,14 @@ class Test_AbstractModel(unittest.TestCase):
 
 
         input_list = [6,5,24,-6,11,22]
+        reorder_list = [5,6,24,11,-6,22]
 
         goal_list_noignore = \
-            [9902300, 9902301, 9903100, -9902300, 9912100, 9903101]
+            [9902300, 9902301, 9903101, -9902300, 9912100, 9903100]
         goal_list_default = \
-            [9902300, 9902301, 9903100, -9902302, 9912100, 9903101]
+            [9902302, 9902301, 9903101, -9902300, 9912100, 9903100]
         goal_list_nonzerostart = \
-            [9902302, 9902303, 9903100, -9902302, 9912101, 9903101]
+            [9902302, 9902303, 9903101, -9902302, 9912101, 9903100]
 
         goal_serial_dict_noignore = {(2, 3, False): 2, 
                                      (3, 1, True): 2, 
@@ -2329,10 +2374,10 @@ class Test_AbstractModel(unittest.TestCase):
         #print ab_model.get_particlelist_type.serial_number_dict
         self.assertEqual(ab_model.get_particlelist_type(input_list, False)[0],
                          goal_list_noignore)
-        self.assertEqual(ab_model.get_particlelist_type(input_list)[0],
-                         goal_list_default)
         self.assertEqual(ab_model.get_particlelist_type(input_list, False)[1],
                          goal_serial_dict_noignore)
+        self.assertEqual(ab_model.get_particlelist_type(input_list)[0],
+                         goal_list_default)
         self.assertEqual(ab_model.get_particlelist_type(input_list)[1],
                          goal_serial_dict_default)
 
@@ -2344,6 +2389,10 @@ class Test_AbstractModel(unittest.TestCase):
                                                         sn_dict={\
                     (2, 3, False):2, (2, 1, True):1})[1],
                          goal_serial_dict_nonzerostart)
+
+        # Test if the output is regardless of input order
+        self.assertEqual(sorted(ab_model.get_particlelist_type(input_list)[0]),
+                         sorted(ab_model.get_particlelist_type(reorder_list)[0]))
 
 
     def test_add_ab_particle(self):
@@ -2682,6 +2731,9 @@ class Test_AbstractModel(unittest.TestCase):
         ab_model = self.my_testmodel['ab_model']
         self.my_testmodel.generate_abstract_model()
 
+        #----------------------
+        # Set amplitudes
+        #----------------------
         # Setup higgs, lower the mass,  and find amplitudes
         #decay_objects.MH = 50
 
@@ -2707,9 +2759,40 @@ class Test_AbstractModel(unittest.TestCase):
 
 
         #----------------------
+        # Test set_final_legs_dict
+        #----------------------
+        ab2realdict = decay_objects.Ab2RealDict()
+        ab2realdict['process'] = tau.get_amplitude([16, 11, -12])['process']
+        ab_process = copy.deepcopy(tau.get_amplitude([16, 11, -12])['process'])
+        ab_process['model'] = ab_model
+        ab2realdict['ab_process'] = ab_process
+        real_pids = [l['id'] for l in tau_wvt_vteve.get_final_legs()]
+        ab2realdict.set_final_legs_dict()
+        self.assertEqual({-9902101:-12, 9902102:11, 9902103:16},
+                         ab2realdict['final_legs_dict'])
+        ab2realdict.set_final_legs_dict(real_dia=tau_wvt_vteve)
+        self.assertEqual({-9902101:-12, 9902102:11, 9902103:16},
+                         ab2realdict['final_legs_dict'])
+        ab2realdict.set_final_legs_dict(ab_object=ab_model)
+        self.assertEqual({-9902101:-12, 9902102:11, 9902103:16},
+                         ab2realdict['final_legs_dict'])
+        self.assertRaises(decay_objects.Ab2RealDict.PhysicsObjectError,
+                          ab2realdict.set_final_legs_dict,
+                          'Non-model')
+        
+
+        #----------------------
         # Test add abstract diagram
         #----------------------
         ab_amp = decay_objects.DecayAmplitude()
+        # test i/o
+        self.assertRaises(decay_objects.AbstractModel.PhysicsObjectError,
+                          ab_model.add_ab_diagram,
+                          h_zz_zee, h_zz_zbb)
+        self.assertRaises(decay_objects.AbstractModel.PhysicsObjectError,
+                          ab_model.add_ab_diagram,
+                          ab_amp, ab_amp)
+
         # Set the initial dict, including the final and initial legs
         ab_amp['part_sn_dict'] = {(1,1,True): 1, (2,3,False):2, (3,1,True):1}
         ab_amp['ab2real_dicts'].append(decay_objects.Ab2RealDict())
@@ -2743,11 +2826,26 @@ class Test_AbstractModel(unittest.TestCase):
         #----------------------
         # Test compare_diagrams
         #----------------------
-        ab_amp['ab2real_dicts'][-1].set_final_legs_dict(ab_dia, h_zz_zbb)
+        # test i/o
+        self.assertRaises(decay_objects.AbstractModel.PhysicsObjectError,
+                          ab_model.compare_diagrams,
+                          ab_amp, h_zz_zbb)
+        self.assertRaises(decay_objects.AbstractModel.PhysicsObjectError,
+                          ab_model.compare_diagrams,
+                          ab_dia, h_zz_zbb, {})
+
+        ab_amp['ab2real_dicts'][-1].set_final_legs_dict(ab_model, h_zz_zbb)
         self.assertTrue(ab_model.compare_diagrams(ab_dia, h_zz_zbb,
                                                   ab_amp['ab2real_dicts'][-1]))
-        self.assertTrue(ab_amp['ab2real_dicts'][-1]['final_legs_dict'],
-                        {-5:-9902300, 5:9902301, 23:9903100})
+        # Test if no Ab2RealDict
+        self.assertTrue(ab_model.compare_diagrams(ab_dia, h_zz_zbb))
+        self.assertEqual(ab_amp['ab2real_dicts'][-1]['final_legs_dict'],
+                         {-9902300:-5, 9902301:5, 9903100:23})
+        # Set a wrong interaction id
+        h_zz_zbb_wrong = copy.deepcopy(h_zz_zbb)
+        h_zz_zbb_wrong['vertices'][1]['id'] = real_iid_1
+        self.assertFalse(ab_model.compare_diagrams(ab_dia, h_zz_zbb_wrong))
+
         # h_zz_zmm != h_zz_zbb
         # no final_legs_dict available
         self.assertFalse(ab_model.compare_diagrams(ab_dia, h_zz_zmm,
@@ -2760,16 +2858,15 @@ class Test_AbstractModel(unittest.TestCase):
         ab_model.add_ab_diagram(ab_amp_2, h_zz_zmm)
         ab_dia_2 = ab_amp_2['diagrams'][0]
         # h_zz_zmm == h_zz_zee
-        ab_amp_2['ab2real_dicts'][-1].set_final_legs_dict(ab_dia_2, h_zz_zmm)
+        ab_amp_2['ab2real_dicts'][-1].set_final_legs_dict(ab_model, h_zz_zmm)
         self.assertTrue(ab_model.compare_diagrams(ab_dia_2, h_zz_zmm,
                                                   ab_amp_2['ab2real_dicts'][-1]))
+        self.assertTrue(ab_model.compare_diagrams(ab_dia_2, h_zz_zmm))
         # Same final state, but not consistent as final_legs_dict
         ab_amp_2['ab2real_dicts'].append(decay_objects.Ab2RealDict())
-        ab_amp_2['ab2real_dicts'][-1]['final_legs_dict'] = \
-            {-11: -9902101, 11:9902100, 23:9903100}
+        ab_amp_2['ab2real_dicts'][-1]['final_legs_dict'] = {-9902100:11, 9902101:-11, 9903100:23}
         self.assertFalse(ab_model.compare_diagrams(ab_dia_2, h_zz_zee,
                                                    ab_amp_2['ab2real_dicts'][-1]))
-        # f f~ = f'~ f', the comparison used abs(pid)
         ab_amp_2['ab2real_dicts'].append(decay_objects.Ab2RealDict())
         self.assertTrue(ab_model.compare_diagrams(ab_dia_2, h_ww_weve,
                                                   ab_amp_2['ab2real_dicts'][-1]))
@@ -2817,12 +2914,11 @@ class Test_AbstractModel(unittest.TestCase):
         ab_amp['part_sn_dict'] = {(1,1,True): 1, 
                                   (2,3,False):4}
         ab_amp['ab2real_dicts'].append(decay_objects.Ab2RealDict())
-
         ab_model.add_ab_diagram(ab_amp, h_zz_bbbb)
         ab_dia = ab_amp['diagrams'][0]
         #print ab_dia.nice_string(), h_zz_bbbb.nice_string()
-        goal_pids = [-9902300, 9902301, 9903100, 
-                      -9902302, 9902303, 9903101,
+        goal_pids = [-9902300, 9902302, 9903100, 
+                      -9902301, 9902303, 9903101,
                       9903101, 9903100, 9901100, 
                       9901100, 9901100]
         result_pids = []
@@ -2841,17 +2937,17 @@ class Test_AbstractModel(unittest.TestCase):
 
         self.assertEqual(ab_amp['diagrams'][-1]['abstract_type'],
                          [goal_interids, [9903100, 9903101], 
-                          [-9902300, 9902301, -9902302, 9902303]])
+                          [-9902300, 9902302, -9902301, 9902303]])
         #----------------------
         # Test compare diagrams, set_final_legs_dict, again
         #----------------------
         # Test set final_legs_dict
-        ab_amp['ab2real_dicts'][-1].set_final_legs_dict(ab_dia, h_zz_bbbb)
+        ab_amp['ab2real_dicts'][-1].set_final_legs_dict(ab_model, h_zz_bbbb)
         self.assertTrue(ab_model.compare_diagrams(ab_dia, h_zz_bbbb,
                                                   ab_amp['ab2real_dicts'][-1]))
-        self.assertTrue(ab_amp['ab2real_dicts'][-1]['final_legs_dict'],
-                        {-5:[-9902300,-9902301], 
-                          5:[9902301, 9902302]})
+        #print ab_amp['ab2real_dicts'][-1]['final_legs_dict']
+        self.assertEqual(ab_amp['ab2real_dicts'][-1]['final_legs_dict'],
+                         {-9902300:-5,-9902301:-5, 9902302:5, 9902303:5})
 
 
         # Test if the diagrams in one amplitude will share the same
@@ -2862,14 +2958,14 @@ class Test_AbstractModel(unittest.TestCase):
         ab_amp['ab2real_dicts'].append(decay_objects.Ab2RealDict())
         ab_model.add_ab_diagram(ab_amp, h_zz_eevv['diagrams'][0])
         ab_dia_1 = ab_amp['diagrams'][0]
-        ab_amp['ab2real_dicts'][-1].set_final_legs_dict(ab_dia_1,
+        ab_amp['ab2real_dicts'][-1].set_final_legs_dict(ab_model,
                                                         h_zz_eevv['diagrams'][0])
         ab_model.add_ab_diagram(ab_amp, h_zz_eevv['diagrams'][1])
         ab_dia_2 = ab_amp['diagrams'][-1]
-        #print ab_amp.nice_string()
+        #print ab_amp.nice_string(), h_zz_eevv.nice_string()
         # ab_dia_1: -e, ve, e, -ve; ab_dia_2: -ve, ve, -e, e
         self.assertEqual([l['id'] for l in ab_dia_2.get_final_legs()],
-                         [-9902103, 9902101, -9902100, 9902102])
+                         [-9902100, 9902103, -9902101, 9902102])
 
         #----------------------
         # Test compare diagrams, set_final_legs_dict, again
@@ -2887,7 +2983,7 @@ class Test_AbstractModel(unittest.TestCase):
         ab_model.add_ab_diagram(ab_amp_2, h_zz_tataee)
         ab_dia_2 = ab_amp_2['diagrams'][0]
         # h_zz_tau tau e e == h_zz_tau tau tau tau
-        ab_amp_2['ab2real_dicts'][-1].set_final_legs_dict(ab_dia_2, 
+        ab_amp_2['ab2real_dicts'][-1].set_final_legs_dict(ab_model,
                                                           h_zz_tataee)
         self.assertTrue(ab_model.compare_diagrams(\
                 ab_dia_2, 
@@ -2909,7 +3005,7 @@ class Test_AbstractModel(unittest.TestCase):
                 h_zz_tatamm,
                 ab_amp_2['ab2real_dicts'][-1]))
         # Set final legs, the ab_dia_2 should be the same type
-        ab_amp_2['ab2real_dicts'][-1].set_final_legs_dict(ab_dia_2, 
+        ab_amp_2['ab2real_dicts'][-1].set_final_legs_dict(ab_model, 
                                                           h_zz_tatamm)
         self.assertTrue(ab_model.compare_diagrams(\
                 ab_dia_2, 
@@ -2962,27 +3058,40 @@ class Test_AbstractModel(unittest.TestCase):
         self.assertEqual(len(amplist), 3)
         #print amplist.abstract_nice_string()
 
+        # Test if the diagrams in each amp have consistent final leg numbers.
+        for amp in amplist:
+            number_to_id_dict = dict([(l['number'],l['id']) \
+                                          for l in amp.get('process')['legs']])
+            for channel in amp['diagrams']:
+                for l in channel.get_final_legs():
+                    self.assertEqual(l['id'],
+                                     number_to_id_dict[l['number']])
+
+                ini_leg = channel['vertices'][-1]['legs'][-2]
+                self.assertEqual(ini_leg['id'],
+                                 number_to_id_dict[ini_leg['number']])
+
 
     def test_generate_ab_amplitudes(self):
         """ Test generate the abstract amplitudes, matrixelement. """
 
-        model_type = 'mssm'
-        """if model_type == 'full_sm':
-            normal_sm_base = import_ufo.import_model(\
+        model_type = 'sm'
+        if model_type == 'full_sm':
+            normal_sm_base = import_ufo.import_full_model(\
                 os.path.join(MG5DIR,
                              'tests', 'input_files',
                              'full_sm_UFO'))
-            normal_sm = decay_objects.DecayModel(full_sm_base, True)
+            normal_sm = decay_objects.DecayModel(normal_sm_base, True)
             param_path = os.path.join(_file_path,
                                       '../input_files/param_card_full_sm.dat')
-        else:"""
-
-        normal_sm_base = import_ufo.import_model(\
-            model_type)
-        normal_sm = decay_objects.DecayModel(normal_sm_base,
-                                             force=True)
-        param_path = os.path.join(_file_path,
-                                  '../input_files/param_card_%s.dat'%model_type)
+        else:
+            
+            normal_sm_base = import_ufo.import_model(\
+                model_type)
+            normal_sm = decay_objects.DecayModel(normal_sm_base,
+                                                 force=True)
+            param_path = os.path.join(_file_path,
+                                      '../input_files/param_card_%s.dat'%model_type)
 
         normal_sm.read_param_card(param_path)
         #print normal_sm.get_interaction(59)        
@@ -3003,9 +3112,13 @@ class Test_AbstractModel(unittest.TestCase):
             # tau > q q'~ vt,  h > l l'~ vt
             self.assertEqual(len(ab_model.get_particle(9902300).get_amplitudes(2)), 
                              1)
-            self.assertEqual(len(ab_model.get_particle(9901100).get_amplitudes(3)), 
-                             2)
+            # The CP is not invariant for w > q q'~
+            if model_type == 'full_sm':
+                self.assertTrue(ab_model.get_particle(9901100).get_amplitudes(3)[0]['ab2real_dicts'][0]['coup_dict'] != \
+                                    ab_model.get_particle(9901100).get_amplitudes(3)[0]['ab2real_dicts'][1]['coup_dict'])
 
+
+        ab_model.generate_ab_matrixelements_all()
 
 if __name__ == '__main__':
     unittest.unittest.main()
