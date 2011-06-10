@@ -50,12 +50,86 @@ class LoopDiagramDrawerTest(unittest.TestCase):
     """Test class for all functions related to the LoopDiagramDrawer"""
     
     myloopmodel = loop_base_objects.LoopModel()
-    
+    mypartlist = base_objects.ParticleList()
+    myinterlist = base_objects.InteractionList()
+    mymodel = base_objects.Model()
+    myproc = base_objects.Process()
+
     def setUp(self):
-        """load the NLO toy model"""
+        """ Setup a toy-model with gluon and down-quark only """
+
+        # A gluon
+        self.mypartlist.append(base_objects.Particle({'name':'g',
+                      'antiname':'g',
+                      'spin':3,
+                      'color':8,
+                      'mass':'zero',
+                      'width':'zero',
+                      'texname':'g',
+                      'antitexname':'g',
+                      'line':'curly',
+                      'charge':0.,
+                      'pdg_code':21,
+                      'propagating':True,
+                      'is_part':True,
+                      'self_antipart':True}))
+
+        # A quark D and its antiparticle
+        self.mypartlist.append(base_objects.Particle({'name':'d',
+                      'antiname':'d~',
+                      'spin':2,
+                      'color':3,
+                      'mass':'dmass',
+                      'width':'zero',
+                      'texname':'d',
+                      'antitexname':'\bar d',
+                      'line':'straight',
+                      'charge':-1. / 3.,
+                      'pdg_code':1,
+                      'propagating':True,
+                      'is_part':True,
+                      'self_antipart':False}))
+        antid = copy.copy(self.mypartlist[1])
+        antid.set('is_part', False)
+
+        # 3 gluon vertex
+        self.myinterlist.append(base_objects.Interaction({
+                      'id': 1,
+                      'particles': base_objects.ParticleList(\
+                                            [self.mypartlist[0]] * 3),
+                      'color': [],
+                      'lorentz':['L1'],
+                      'couplings':{(0, 0):'G'},
+                      'orders':{'QCD':1}}))
+
+        # 4 gluon vertex
+        self.myinterlist.append(base_objects.Interaction({
+                      'id': 2,
+                      'particles': base_objects.ParticleList(\
+                                            [self.mypartlist[0]] * 4),
+                      'color': [],
+                      'lorentz':['L1'],
+                      'couplings':{(0, 0):'G^2'},
+                      'orders':{'QCD':2}}))
+
+        # Gluon coupling to the down-quark
+        self.myinterlist.append(base_objects.Interaction({
+                      'id': 3,
+                      'particles': base_objects.ParticleList(\
+                                            [self.mypartlist[1], \
+                                             antid, \
+                                             self.mypartlist[0]]),
+                      'color': [],
+                      'lorentz':['L1'],
+                      'couplings':{(0, 0):'GQQ'},
+                      'orders':{'QCD':1}}))
+
+        self.mymodel.set('particles', self.mypartlist)
+        self.mymodel.set('interactions', self.myinterlist)
+        self.myproc.set('model',self.mymodel)
         
         self.myloopmodel = save_load_object.load_from_file(os.path.join(_input_file_path,\
-                                                            'test_toyLoopModel.pkl')) 
+                                                            'test_toyLoopModel.pkl'))
 
     def test_draw_box(self):
         """ Test the drawing of a simple loop box """
@@ -82,7 +156,7 @@ class LoopDiagramDrawerTest(unittest.TestCase):
         vx15 = base_objects.Vertex({'legs':base_objects.LegList([l1, l5, l15]), 'id': 3})
         vx12 = base_objects.Vertex({'legs':base_objects.LegList([l15, l2, l12]), 'id': 3})
         vx13 = base_objects.Vertex({'legs':base_objects.LegList([l12, l3, l13]), 'id': 3})
-        vx164 = base_objects.Vertex({'legs':base_objects.LegList([l3, l6, l4]), 'id': 3})
+        vx164 = base_objects.Vertex({'legs':base_objects.LegList([l13, l6, l4]), 'id': 3})
         ctvx = base_objects.Vertex({'legs':base_objects.LegList([l1, l2, l3, l4]), 'id': 666})
 
         myVertexList1=base_objects.VertexList([vx15,vx12,vx13,vx164])
@@ -102,12 +176,10 @@ class LoopDiagramDrawerTest(unittest.TestCase):
         # Now the drawing test on myPentaDiag
         pass
 
-    def no_test_draw_pentagon(self):    
+    def test_draw_pentagon(self):    
         """ Test the gg>gggg d*dx* tagging of a quark pentagon which is tagged"""
 
         # Five gluon legs with two initial states
-        myproc = base_objects.Process()
-        myproc.set('model',self.myloopmodel)
         myleglist = base_objects.LegList([base_objects.Leg({'id':21,
                                               'number':num,
                                               'loop_line':False}) \
@@ -130,7 +202,7 @@ class LoopDiagramDrawerTest(unittest.TestCase):
         l56 = base_objects.Leg({'id':-1,'number':5,'loop_line':True})
         l34 = base_objects.Leg({'id':21,'number':3,'loop_line':False})
 
-        myproc.set('legs',myleglist)
+        self.myproc.set('legs',myleglist)
 
         vx17 = base_objects.Vertex({'legs':base_objects.LegList([l1, l7, l17]), 'id': 3})
         vx12 = base_objects.Vertex({'legs':base_objects.LegList([l17, l2, l12]), 'id': 3})
@@ -145,7 +217,7 @@ class LoopDiagramDrawerTest(unittest.TestCase):
 
         myStructRep=loop_base_objects.FDStructureList()
         
-        myPentaDiag1.tag(myStructRep,7,8,myproc)
+        myPentaDiag1.tag(myStructRep,7,8,self.myproc)
 
         # test the drawing of myPentaDiag with its loop vertices and those in the 
         # structures of myStructRep
