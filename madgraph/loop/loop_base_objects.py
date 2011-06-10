@@ -89,7 +89,7 @@ class LoopDiagram(base_objects.Diagram):
                             "%s is not a valid canonical_tag" % str(value)
 
         if name == 'CT_vertices':
-            if not isinstance(value, VertexList):
+            if not isinstance(value, base_objects.VertexList):
                 raise self.PhysicsObjectError, \
                         "%s is not a valid VertexList object" % str(value)
 

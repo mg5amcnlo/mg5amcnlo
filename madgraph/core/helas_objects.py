@@ -94,12 +94,15 @@ class HelasWavefunction(base_objects.PhysicsObject):
         # fermionflow = 1    fermions have +-1 for flow (bosons always +1),
         #                    -1 is used only if there is a fermion flow clash
         #                    due to a Majorana particle 
+        # is_loop = logical true if this function builds a loop or belong
+        #           to an external structure.
         self['state'] = 'incoming'
         self['leg_state'] = True
         self['mothers'] = HelasWavefunctionList()
         self['number_external'] = 0
         self['number'] = 0
         self['fermionflow'] = 1
+        self['is_loop'] = False
         # The decay flag is used in processes with defined decay chains,
         # to indicate that this wavefunction has a decay defined
         self['decay'] = False
@@ -129,6 +132,7 @@ class HelasWavefunction(base_objects.PhysicsObject):
                 self.set('particle', leg.get('id'), model)
                 self.set('number_external', leg.get('number'))
                 self.set('number', leg.get('number'))
+                self.set('is_loop', leg.get('loop_line'))
                 self.set('state', {False: 'initial', True: 'final'}[leg.get('state')])
                 self.set('leg_state', leg.get('state'))
                 # Need to set 'decay' to True for particles which will be
@@ -273,6 +277,12 @@ class HelasWavefunction(base_objects.PhysicsObject):
                 raise self.PhysicsObjectError, \
                         "%s is not a valid bool" % str(value) + \
                         " for decay or onshell"
+        
+        if name in ['is_loop']:
+            if not isinstance(value, bool):
+                raise self.PhysicsObjectError, \
+                        "%s is not a valid bool" % str(value) + \
+                        " for is_loop"
 
         return True
 
@@ -348,7 +358,7 @@ class HelasWavefunction(base_objects.PhysicsObject):
         return ['particle', 'antiparticle', 'is_part',
                 'interaction_id', 'pdg_codes', 'orders', 'inter_color', 
                 'lorentz', 'coupling', 'color_key', 'state', 'number_external',
-                'number', 'fermionflow', 'mothers']
+                'number', 'fermionflow', 'mothers', 'is_loop']
 
     # Helper functions
 
@@ -375,6 +385,8 @@ class HelasWavefunction(base_objects.PhysicsObject):
         # wavefunctions from the same interaction but different
         # color structures
         array_rep.append(self['color_key'])
+        # Also need to specify if it is a loop wf
+        array_rep.append(int(self['is_loop']))
         # Finally, the mother numbers
         array_rep.extend([mother['number'] for \
                           mother in self['mothers']])
