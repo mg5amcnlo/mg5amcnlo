@@ -44,712 +44,724 @@ _input_file_path = os.path.join(_file_path, os.path.pardir, os.path.pardir,
                                 'input_files')
 
 #===============================================================================
+# Function to load a toy hardcoded Loop Model
+#===============================================================================
+
+def loadLoopModel():
+    """Setup the NLO model"""
+    
+    mypartlist = base_objects.ParticleList()
+    myinterlist = base_objects.InteractionList()
+    myloopmodel = loop_base_objects.LoopModel()
+
+    # A gluon
+    mypartlist.append(base_objects.Particle({'name':'g',
+                  'antiname':'g',
+                  'spin':3,
+                  'color':8,
+                  'mass':'zero',
+                  'width':'zero',
+                  'texname':'g',
+                  'antitexname':'g',
+                  'line':'curly',
+                  'charge':0.,
+                  'pdg_code':21,
+                  'propagating':True,
+                  'is_part':True,
+                  'perturbation':['QCD',],
+                  'self_antipart':True}))
+    
+    # A quark U and its antiparticle
+    mypartlist.append(base_objects.Particle({'name':'u',
+                  'antiname':'u~',
+                  'spin':2,
+                  'color':3,
+                  'mass':'umass',
+                  'width':'zero',
+                  'texname':'u',
+                  'antitexname':'\bar u',
+                  'line':'straight',
+                  'charge':2. / 3.,
+                  'pdg_code':2,
+                  'propagating':True,
+                  'is_part':True,
+                  'perturbation':['QCD','QED'],
+                  'self_antipart':False}))
+    antiu = copy.copy(mypartlist[1])
+    antiu.set('is_part', False)
+
+    # A quark D and its antiparticle
+    mypartlist.append(base_objects.Particle({'name':'d',
+                  'antiname':'d~',
+                  'spin':2,
+                  'color':3,
+                  'mass':'dmass',
+                  'width':'zero',
+                  'texname':'d',
+                  'antitexname':'\bar d',
+                  'line':'straight',
+                  'charge':-1. / 3.,
+                  'pdg_code':1,
+                  'propagating':True,
+                  'is_part':True,
+                  'perturbation':['QCD','QED'],           
+                  'self_antipart':False}))
+    antid = copy.copy(mypartlist[2])
+    antid.set('is_part', False)
+
+    # A photon
+    mypartlist.append(base_objects.Particle({'name':'a',
+                  'antiname':'a',
+                  'spin':3,
+                  'color':1,
+                  'mass':'zero',
+                  'width':'zero',
+                  'texname':'\gamma',
+                  'antitexname':'\gamma',
+                  'line':'wavy',
+                  'charge':0.,
+                  'pdg_code':22,
+                  'propagating':True,
+                  'is_part':True,
+                  'perturbation':['QED',],
+                  'self_antipart':True}))
+
+    # A electron and positron
+    mypartlist.append(base_objects.Particle({'name':'e-',
+                  'antiname':'e+',
+                  'spin':2,
+                  'color':1,
+                  'mass':'zero',
+                  'width':'zero',
+                  'texname':'e^-',
+                  'antitexname':'e^+',
+                  'line':'straight',
+                  'charge':-1.,
+                  'pdg_code':11,
+                  'propagating':True,
+                  'perturbation':['QED',],
+                  'is_part':True,
+                  'self_antipart':False}))
+    antie = copy.copy(mypartlist[4])
+    antie.set('is_part', False)
+
+    # First set up the base interactions.
+
+    # 3 gluon vertex
+    myinterlist.append(base_objects.Interaction({
+                  'id': 1,
+                  'particles': base_objects.ParticleList(\
+                                        [mypartlist[0]] * 3),
+                  'color': [],
+                  'lorentz':['L1'],
+                  'couplings':{(0, 0):'G'},
+                  'orders':{'QCD':1}}))
+
+    # 4 gluon vertex
+    myinterlist.append(base_objects.Interaction({
+                  'id': 2,
+                  'particles': base_objects.ParticleList(\
+                                        [mypartlist[0]] * 4),
+                  'color': [],
+                  'lorentz':['L1'],
+                  'couplings':{(0, 0):'G^2'},
+                  'orders':{'QCD':2}}))
+
+    # Gluon and photon couplings to quarks
+    myinterlist.append(base_objects.Interaction({
+                  'id': 3,
+                  'particles': base_objects.ParticleList(\
+                                        [mypartlist[1], \
+                                         antiu, \
+                                         mypartlist[0]]),
+                  'color': [],
+                  'lorentz':['L1'],
+                  'couplings':{(0, 0):'GQQ'},
+                  'orders':{'QCD':1}}))
+
+    myinterlist.append(base_objects.Interaction({
+                  'id': 4,
+                  'particles': base_objects.ParticleList(\
+                                        [mypartlist[1], \
+                                         antiu, \
+                                         mypartlist[3]]),
+                  'color': [],
+                  'lorentz':['L1'],
+                  'couplings':{(0, 0):'GQED'},
+                  'orders':{'QED':1}}))
+
+    myinterlist.append(base_objects.Interaction({
+                  'id': 5,
+                  'particles': base_objects.ParticleList(\
+                                        [mypartlist[2], \
+                                         antid, \
+                                         mypartlist[0]]),
+                  'color': [],
+                  'lorentz':['L1'],
+                  'couplings':{(0, 0):'GQQ'},
+                  'orders':{'QCD':1}}))
+
+    myinterlist.append(base_objects.Interaction({
+                  'id': 6,
+                  'particles': base_objects.ParticleList(\
+                                        [mypartlist[2], \
+                                         antid, \
+                                         mypartlist[3]]),
+                  'color': [],
+                  'lorentz':['L1'],
+                  'couplings':{(0, 0):'GQED'},
+                  'orders':{'QED':1}}))
+
+    # Coupling of e to gamma
+
+    myinterlist.append(base_objects.Interaction({
+                  'id': 7,
+                  'particles': base_objects.ParticleList(\
+                                        [mypartlist[4], \
+                                         antie, \
+                                         mypartlist[3]]),
+                  'color': [],
+                  'lorentz':['L1'],
+                  'couplings':{(0, 0):'GQED'},
+                  'orders':{'QED':1}}))
+
+    # Then set up the R2 interactions proportional to those existing in the
+    # tree-level model.
+
+    # 3 gluon vertex
+    myinterlist.append(base_objects.Interaction({
+                  'id': 8,
+                  'particles': base_objects.ParticleList(\
+                                        [mypartlist[0]] * 3),
+                  'color': [],
+                  'lorentz':['L1'],
+                  'couplings':{(0, 0):'G'},
+                  'orders':{'QCD':3},
+                  'type':['R2',()]}))
+
+    # 4 gluon vertex
+    myinterlist.append(base_objects.Interaction({
+                  'id': 9,
+                  'particles': base_objects.ParticleList(\
+                                        [mypartlist[0]] * 4),
+                  'color': [],
+                  'lorentz':['L1'],
+                  'couplings':{(0, 0):'G^2'},
+                  'orders':{'QCD':4},
+                  'type':['R2',()]}))
+
+    # Gluon and photon couplings to quarks
+    myinterlist.append(base_objects.Interaction({
+                  'id': 10,
+                  'particles': base_objects.ParticleList(\
+                                        [mypartlist[1], \
+                                         antiu, \
+                                         mypartlist[0]]),
+                  'color': [],
+                  'lorentz':['L1'],
+                  'couplings':{(0, 0):'GQQ'},
+                  'orders':{'QCD':3},
+                  'type':['R2',()]}))
+        
+    myinterlist.append(base_objects.Interaction({
+                  'id': 11,
+                  'particles': base_objects.ParticleList(\
+                                        [mypartlist[1], \
+                                         antiu, \
+                                         mypartlist[0]]),
+                  'color': [],
+                  'lorentz':['L1'],
+                  'couplings':{(0, 0):'GQQ'},
+                  'orders':{'QCD':1, 'QED':2},
+                  'type':['R2',()]}))
+
+    myinterlist.append(base_objects.Interaction({
+                  'id': 12,
+                  'particles': base_objects.ParticleList(\
+                                        [mypartlist[1], \
+                                         antiu, \
+                                         mypartlist[3]]),
+                  'color': [],
+                  'lorentz':['L1'],
+                  'couplings':{(0, 0):'GQED'},
+                  'orders':{'QED':1, 'QCD':2},
+                  'type':['R2',()]}))
+
+    myinterlist.append(base_objects.Interaction({
+                  'id': 13,
+                  'particles': base_objects.ParticleList(\
+                                        [mypartlist[1], \
+                                         antiu, \
+                                         mypartlist[3]]),
+                  'color': [],
+                  'lorentz':['L1'],
+                  'couplings':{(0, 0):'GQED'},
+                  'orders':{'QED':3},
+                  'type':['R2',()]}))
+
+    myinterlist.append(base_objects.Interaction({
+                  'id': 14,
+                  'particles': base_objects.ParticleList(\
+                                        [mypartlist[2], \
+                                         antid, \
+                                         mypartlist[0]]),
+                  'color': [],
+                  'lorentz':['L1'],
+                  'couplings':{(0, 0):'GQQ'},
+                  'orders':{'QCD':3},
+                  'type':['R2',()]}))
+
+    myinterlist.append(base_objects.Interaction({
+                  'id': 15,
+                  'particles': base_objects.ParticleList(\
+                                        [mypartlist[2], \
+                                         antid, \
+                                         mypartlist[0]]),
+                  'color': [],
+                  'lorentz':['L1'],
+                  'couplings':{(0, 0):'GQQ'},
+                  'orders':{'QCD':1, 'QED':2},
+                  'type':['R2',()]}))
+
+    myinterlist.append(base_objects.Interaction({
+                  'id': 16,
+                  'particles': base_objects.ParticleList(\
+                                        [mypartlist[2], \
+                                         antid, \
+                                         mypartlist[3]]),
+                  'color': [],
+                  'lorentz':['L1'],
+                  'couplings':{(0, 0):'GQED'},
+                  'orders':{'QED':1, 'QCD':2},
+                  'type':['R2',()]}))
+
+    myinterlist.append(base_objects.Interaction({
+                  'id': 17,
+                  'particles': base_objects.ParticleList(\
+                                        [mypartlist[2], \
+                                         antid, \
+                                         mypartlist[3]]),
+                  'color': [],
+                  'lorentz':['L1'],
+                  'couplings':{(0, 0):'GQED'},
+                  'orders':{'QED':3},
+                  'type':['R2',()]}))
+
+    # Coupling of e to gamma
+
+    myinterlist.append(base_objects.Interaction({
+                  'id': 18,
+                  'particles': base_objects.ParticleList(\
+                                        [mypartlist[4], \
+                                         antie, \
+                                         mypartlist[3]]),
+                  'color': [],
+                  'lorentz':['L1'],
+                  'couplings':{(0, 0):'GQED'},
+                  'orders':{'QED':3},
+                  'type':['R2',()]}))
+
+    # R2 interactions not proportional to the base interactions
+
+    # Two point interactions
+
+    # The gluon
+    myinterlist.append(base_objects.Interaction({
+                  'id': 19,
+                  'particles': base_objects.ParticleList(\
+                                        [mypartlist[0]] * 2),
+                  'color': [],
+                  'lorentz':['L1'],
+                  'couplings':{(0, 0):'G'},
+                  'orders':{'QCD':2},
+                  'type':['R2',()]}))
+
+    # The photon
+    myinterlist.append(base_objects.Interaction({
+                  'id': 20,
+                  'particles': base_objects.ParticleList(\
+                                        [mypartlist[3]] * 2),
+                  'color': [],
+                  'lorentz':['L1'],
+                  'couplings':{(0, 0):'G'},
+                  'orders':{'QED':2},
+                  'type':['R2',()]}))
+
+    # The electron
+    myinterlist.append(base_objects.Interaction({
+                  'id': 21,
+                  'particles': base_objects.ParticleList([\
+                                        mypartlist[4], \
+                                         antie]),
+                  'color': [],
+                  'lorentz':['L1'],
+                  'couplings':{(0, 0):'G'},
+                  'orders':{'QED':2},
+                  'type':['R2',()]}))
+
+    # The up quark, R2QED
+    myinterlist.append(base_objects.Interaction({
+                  'id': 22,
+                  'particles': base_objects.ParticleList([\
+                                        mypartlist[2], \
+                                         antid]),
+                  'color': [],
+                  'lorentz':['L1'],
+                  'couplings':{(0, 0):'G'},
+                  'orders':{'QED':2},
+                  'type':['R2',()]}))
+
+    # The up quark, R2QCD
+    myinterlist.append(base_objects.Interaction({
+                  'id': 23,
+                  'particles': base_objects.ParticleList([\
+                                        mypartlist[2], \
+                                         antid]),
+                  'color': [],
+                  'lorentz':['L1'],
+                  'couplings':{(0, 0):'G'},
+                  'orders':{'QCD':2},
+                  'type':['R2',()]}))
+
+    # The down quark, R2QED
+    myinterlist.append(base_objects.Interaction({
+                  'id': 24,
+                  'particles': base_objects.ParticleList([\
+                                        mypartlist[1], \
+                                         antiu]),
+                  'color': [],
+                  'lorentz':['L1'],
+                  'couplings':{(0, 0):'G'},
+                  'orders':{'QED':2},
+                  'type':['R2',()]}))
+
+    # The down quark, R2QCD
+    myinterlist.append(base_objects.Interaction({
+                  'id': 25,
+                  'particles': base_objects.ParticleList([\
+                                        mypartlist[1], \
+                                         antid]),
+                  'color': [],
+                  'lorentz':['L1'],
+                  'couplings':{(0, 0):'G'},
+                  'orders':{'QCD':2},
+                  'type':['R2',()]}))
+
+    # The R2 three and four point interactions not proportional to the
+    # base interaction
+
+    # 3 photons
+    myinterlist.append(base_objects.Interaction({
+                  'id': 26,
+                  'particles': base_objects.ParticleList(\
+                                        [mypartlist[3]] * 3),
+                  'color': [],
+                  'lorentz':['L1'],
+                  'couplings':{(0, 0):'G'},
+                  'orders':{'QED':3},
+                  'type':['R2',()]}))
+
+    # 2 photon and 1 gluons
+    myinterlist.append(base_objects.Interaction({
+                  'id': 27,
+                  'particles': base_objects.ParticleList(\
+                                        [mypartlist[3],\
+                                        mypartlist[3],\
+                                        mypartlist[0],]),
+                  'color': [],
+                  'lorentz':['L1'],
+                  'couplings':{(0, 0):'G'},
+                  'orders':{'QED':2, 'QCD':1},
+                  'type':['R2',()]}))
+
+    # 1 photon and 2 gluons
+    myinterlist.append(base_objects.Interaction({
+                  'id': 28,
+                  'particles': base_objects.ParticleList(\
+                                        [mypartlist[3],\
+                                        mypartlist[0],\
+                                        mypartlist[0],]),
+                  'color': [],
+                  'lorentz':['L1'],
+                  'couplings':{(0, 0):'G'},
+                  'orders':{'QED':1, 'QCD':2},
+                  'type':['R2',()]}))
+
+    # 4 photons
+    myinterlist.append(base_objects.Interaction({
+                  'id': 29,
+                  'particles': base_objects.ParticleList(\
+                                        [mypartlist[3]] * 4),
+                  'color': [],
+                  'lorentz':['L1'],
+                  'couplings':{(0, 0):'G'},
+                  'orders':{'QED':4},
+                  'type':['R2',()]}))
+
+    # 3 photons and 1 gluon
+    myinterlist.append(base_objects.Interaction({
+                  'id': 30,
+                  'particles': base_objects.ParticleList(\
+                                        [mypartlist[3],\
+                                        mypartlist[3],\
+                                        mypartlist[3],\
+                                        mypartlist[0]]),
+                  'color': [],
+                  'lorentz':['L1'],
+                  'couplings':{(0, 0):'G'},
+                  'orders':{'QED':3,'QCD':1},
+                  'type':['R2',()]}))
+
+    # 2 photons and 2 gluons
+    myinterlist.append(base_objects.Interaction({
+                  'id': 31,
+                  'particles': base_objects.ParticleList(\
+                                        [mypartlist[3],\
+                                        mypartlist[3],\
+                                        mypartlist[0],\
+                                        mypartlist[0]]),
+                  'color': [],
+                  'lorentz':['L1'],
+                  'couplings':{(0, 0):'G'},
+                  'orders':{'QED':2,'QCD':2},
+                  'type':['R2',()]}))
+
+    # 1 photon and 3 gluons
+    myinterlist.append(base_objects.Interaction({
+                  'id': 32,
+                  'particles': base_objects.ParticleList(\
+                                        [mypartlist[3],\
+                                        mypartlist[0],\
+                                        mypartlist[0],\
+                                        mypartlist[0]]),
+                  'color': [],
+                  'lorentz':['L1'],
+                  'couplings':{(0, 0):'G'},
+                  'orders':{'QED':1,'QCD':3},
+                  'type':['R2',()]})) 
+
+    # Finally the UV interactions Counter-Terms
+
+    # 3 gluon vertex CT
+    myinterlist.append(base_objects.Interaction({
+                  'id': 33,
+                  'particles': base_objects.ParticleList(\
+                                        [mypartlist[0]] * 3),
+                  'color': [],
+                  'lorentz':['L1'],
+                  'couplings':{(0, 0):'G'},
+                  'orders':{'QCD':3},
+                  'type':['UV',()]}))
+
+    # 4 gluon vertex CT
+    myinterlist.append(base_objects.Interaction({
+                  'id': 34,
+                  'particles': base_objects.ParticleList(\
+                                        [mypartlist[0]] * 4),
+                  'color': [],
+                  'lorentz':['L1'],
+                  'couplings':{(0, 0):'G^2'},
+                  'orders':{'QCD':4},
+                  'type':['UV',()]}))
+
+    # Gluon and photon couplings to quarks CT
+    myinterlist.append(base_objects.Interaction({
+                  'id': 35,
+                  'particles': base_objects.ParticleList(\
+                                        [mypartlist[1], \
+                                         antiu, \
+                                         mypartlist[0]]),
+                  'color': [],
+                  'lorentz':['L1'],
+                  'couplings':{(0, 0):'GQQ'},
+                  'orders':{'QCD':3},
+                  'type':['UV',()]}))
+    
+    # this is the CT for the renormalization of the QED corrections to alpha_QCD
+    myinterlist.append(base_objects.Interaction({
+                  'id': 36,
+                  'particles': base_objects.ParticleList(\
+                                        [mypartlist[1], \
+                                         antiu, \
+                                         mypartlist[0]]),
+                  'color': [],
+                  'lorentz':['L1'],
+                  'couplings':{(0, 0):'GQQ'},
+                  'orders':{'QCD':1, 'QED':2},
+                  'type':['UV',()]}))
+
+    myinterlist.append(base_objects.Interaction({
+                  'id': 37,
+                  'particles': base_objects.ParticleList(\
+                                        [mypartlist[1], \
+                                         antiu, \
+                                         mypartlist[3]]),
+                  'color': [],
+                  'lorentz':['L1'],
+                  'couplings':{(0, 0):'GQED'},
+                  'orders':{'QED':1, 'QCD':2},
+                  'type':['UV',()]}))
+
+    myinterlist.append(base_objects.Interaction({
+                  'id': 38,
+                  'particles': base_objects.ParticleList(\
+                                        [mypartlist[1], \
+                                         antiu, \
+                                         mypartlist[3]]),
+                  'color': [],
+                  'lorentz':['L1'],
+                  'couplings':{(0, 0):'GQED'},
+                  'orders':{'QED':3},
+                  'type':['UV',()]}))
+
+    myinterlist.append(base_objects.Interaction({
+                  'id': 39,
+                  'particles': base_objects.ParticleList(\
+                                        [mypartlist[2], \
+                                         antid, \
+                                         mypartlist[0]]),
+                  'color': [],
+                  'lorentz':['L1'],
+                  'couplings':{(0, 0):'GQQ'},
+                  'orders':{'QCD':3},
+                  'type':['UV',()]}))
+
+    myinterlist.append(base_objects.Interaction({
+                  'id': 40,
+                  'particles': base_objects.ParticleList(\
+                                        [mypartlist[2], \
+                                         antid, \
+                                         mypartlist[0]]),
+                  'color': [],
+                  'lorentz':['L1'],
+                  'couplings':{(0, 0):'GQQ'},
+                  'orders':{'QCD':1, 'QED':2},
+                  'type':['UV',()]}))
+
+    myinterlist.append(base_objects.Interaction({
+                  'id': 41,
+                  'particles': base_objects.ParticleList(\
+                                        [mypartlist[2], \
+                                         antid, \
+                                         mypartlist[3]]),
+                  'color': [],
+                  'lorentz':['L1'],
+                  'couplings':{(0, 0):'GQED'},
+                  'orders':{'QED':1, 'QCD':2},
+                  'type':['UV',()]}))
+
+    myinterlist.append(base_objects.Interaction({
+                  'id': 42,
+                  'particles': base_objects.ParticleList(\
+                                        [mypartlist[2], \
+                                         antid, \
+                                         mypartlist[3]]),
+                  'color': [],
+                  'lorentz':['L1'],
+                  'couplings':{(0, 0):'GQED'},
+                  'orders':{'QED':3},
+                  'type':['UV',()]}))
+    
+    # alpha_QED to electron CT
+
+    myinterlist.append(base_objects.Interaction({
+                  'id': 43,
+                  'particles': base_objects.ParticleList(\
+                                        [mypartlist[4], \
+                                         antie, \
+                                         mypartlist[3]]),
+                  'color': [],
+                  'lorentz':['L1'],
+                  'couplings':{(0, 0):'GQED'},
+                  'orders':{'QED':3},
+                  'type':['UV',()]}))
+      
+    # Finally the mass renormalization of the up and down quark dotted with
+    # a mass for the occasion
+
+    # The up quark, UVQED
+    myinterlist.append(base_objects.Interaction({
+                  'id': 44,
+                  'particles': base_objects.ParticleList([\
+                                        mypartlist[2], \
+                                         antid]),
+                  'color': [],
+                  'lorentz':['L1'],
+                  'couplings':{(0, 0):'G'},
+                  'orders':{'QED':2},
+                  'type':['UV',()]}))
+
+    # The up quark, UVQCD
+    myinterlist.append(base_objects.Interaction({
+                  'id': 45,
+                  'particles': base_objects.ParticleList([\
+                                        mypartlist[2], \
+                                         antid]),
+                  'color': [],
+                  'lorentz':['L1'],
+                  'couplings':{(0, 0):'G'},
+                  'orders':{'QCD':2},
+                  'type':['UV',()]}))
+
+    # The down quark, UVQED
+    myinterlist.append(base_objects.Interaction({
+                  'id': 46,
+                  'particles': base_objects.ParticleList([\
+                                        mypartlist[1], \
+                                         antiu]),
+                  'color': [],
+                  'lorentz':['L1'],
+                  'couplings':{(0, 0):'G'},
+                  'orders':{'QED':2},
+                  'type':['UV',()]}))
+
+    # The down quark, UVQCD
+    myinterlist.append(base_objects.Interaction({
+                  'id': 47,
+                  'particles': base_objects.ParticleList([\
+                                        mypartlist[1], \
+                                         antid]),
+                  'color': [],
+                  'lorentz':['L1'],
+                  'couplings':{(0, 0):'G'},
+                  'orders':{'QCD':2},
+                  'type':['UV',()]}))
+
+    
+    myloopmodel.set('particles', mypartlist)
+    myloopmodel.set('couplings', ['QCD','QED'])        
+    myloopmodel.set('interactions', myinterlist)
+    myloopmodel.set('perturbation_couplings', ['QCD','QED'])
+    myloopmodel.set('order_hierarchy', {'QCD':1,'QED':2})
+
+    return mypartlist, myinterlist, myloopmodel
+
+    # Save this model so that it can be loaded by other loop tests
+    # save_load_object.save_to_file(os.path.join(_input_file_path, 'test_toyLoopModel.pkl'),self.myloopmodel)
+
+#===============================================================================
 # LoopDiagramGeneration Test
 #===============================================================================
+
 class LoopDiagramGenerationTest(unittest.TestCase):
     """Test class for all functions related to the Loop diagram generation"""
 
     mypartlist = base_objects.ParticleList()
     myinterlist = base_objects.InteractionList()
     myloopmodel = loop_base_objects.LoopModel()
-    myprocess = base_objects.Process()
-
+    
     ref_dict_to0 = {}
     ref_dict_to1 = {}
 
     myamplitude = diagram_generation.Amplitude()
 
-    mypertorders=['QCD','QED']
-
     def setUp(self):
-        """Setup the NLO model"""
+        """Load different objects for the tests."""
         
-        # A gluon
-        self.mypartlist.append(base_objects.Particle({'name':'g',
-                      'antiname':'g',
-                      'spin':3,
-                      'color':8,
-                      'mass':'zero',
-                      'width':'zero',
-                      'texname':'g',
-                      'antitexname':'g',
-                      'line':'curly',
-                      'charge':0.,
-                      'pdg_code':21,
-                      'propagating':True,
-                      'is_part':True,
-                      'perturbation':['QCD',],
-                      'self_antipart':True}))
+        self.mypartlist, self.myinterlist, self.myloopmodel = loadLoopModel()
+        self.ref_dict_to0 = self.myinterlist.generate_ref_dict(['QCD','QED'])[0]
+        self.ref_dict_to1 = self.myinterlist.generate_ref_dict(['QCD','QED'])[1]
         
-        # A quark U and its antiparticle
-        self.mypartlist.append(base_objects.Particle({'name':'u',
-                      'antiname':'u~',
-                      'spin':2,
-                      'color':3,
-                      'mass':'umass',
-                      'width':'zero',
-                      'texname':'u',
-                      'antitexname':'\bar u',
-                      'line':'straight',
-                      'charge':2. / 3.,
-                      'pdg_code':2,
-                      'propagating':True,
-                      'is_part':True,
-                      'perturbation':['QCD','QED'],
-                      'self_antipart':False}))
-        antiu = copy.copy(self.mypartlist[1])
-        antiu.set('is_part', False)
-
-        # A quark D and its antiparticle
-        self.mypartlist.append(base_objects.Particle({'name':'d',
-                      'antiname':'d~',
-                      'spin':2,
-                      'color':3,
-                      'mass':'dmass',
-                      'width':'zero',
-                      'texname':'d',
-                      'antitexname':'\bar d',
-                      'line':'straight',
-                      'charge':-1. / 3.,
-                      'pdg_code':1,
-                      'propagating':True,
-                      'is_part':True,
-                      'perturbation':['QCD','QED'],           
-                      'self_antipart':False}))
-        antid = copy.copy(self.mypartlist[2])
-        antid.set('is_part', False)
-
-        # A photon
-        self.mypartlist.append(base_objects.Particle({'name':'a',
-                      'antiname':'a',
-                      'spin':3,
-                      'color':1,
-                      'mass':'zero',
-                      'width':'zero',
-                      'texname':'\gamma',
-                      'antitexname':'\gamma',
-                      'line':'wavy',
-                      'charge':0.,
-                      'pdg_code':22,
-                      'propagating':True,
-                      'is_part':True,
-                      'perturbation':['QED',],
-                      'self_antipart':True}))
-
-        # A electron and positron
-        self.mypartlist.append(base_objects.Particle({'name':'e-',
-                      'antiname':'e+',
-                      'spin':2,
-                      'color':1,
-                      'mass':'zero',
-                      'width':'zero',
-                      'texname':'e^-',
-                      'antitexname':'e^+',
-                      'line':'straight',
-                      'charge':-1.,
-                      'pdg_code':11,
-                      'propagating':True,
-                      'perturbation':['QED',],
-                      'is_part':True,
-                      'self_antipart':False}))
-        antie = copy.copy(self.mypartlist[4])
-        antie.set('is_part', False)
-
-        # First set up the base interactions.
-
-        # 3 gluon vertex
-        self.myinterlist.append(base_objects.Interaction({
-                      'id': 1,
-                      'particles': base_objects.ParticleList(\
-                                            [self.mypartlist[0]] * 3),
-                      'color': [],
-                      'lorentz':['L1'],
-                      'couplings':{(0, 0):'G'},
-                      'orders':{'QCD':1}}))
-
-        # 4 gluon vertex
-        self.myinterlist.append(base_objects.Interaction({
-                      'id': 2,
-                      'particles': base_objects.ParticleList(\
-                                            [self.mypartlist[0]] * 4),
-                      'color': [],
-                      'lorentz':['L1'],
-                      'couplings':{(0, 0):'G^2'},
-                      'orders':{'QCD':2}}))
-
-        # Gluon and photon couplings to quarks
-        self.myinterlist.append(base_objects.Interaction({
-                      'id': 3,
-                      'particles': base_objects.ParticleList(\
-                                            [self.mypartlist[1], \
-                                             antiu, \
-                                             self.mypartlist[0]]),
-                      'color': [],
-                      'lorentz':['L1'],
-                      'couplings':{(0, 0):'GQQ'},
-                      'orders':{'QCD':1}}))
-
-        self.myinterlist.append(base_objects.Interaction({
-                      'id': 4,
-                      'particles': base_objects.ParticleList(\
-                                            [self.mypartlist[1], \
-                                             antiu, \
-                                             self.mypartlist[3]]),
-                      'color': [],
-                      'lorentz':['L1'],
-                      'couplings':{(0, 0):'GQED'},
-                      'orders':{'QED':1}}))
-
-        self.myinterlist.append(base_objects.Interaction({
-                      'id': 5,
-                      'particles': base_objects.ParticleList(\
-                                            [self.mypartlist[2], \
-                                             antid, \
-                                             self.mypartlist[0]]),
-                      'color': [],
-                      'lorentz':['L1'],
-                      'couplings':{(0, 0):'GQQ'},
-                      'orders':{'QCD':1}}))
-
-        self.myinterlist.append(base_objects.Interaction({
-                      'id': 6,
-                      'particles': base_objects.ParticleList(\
-                                            [self.mypartlist[2], \
-                                             antid, \
-                                             self.mypartlist[3]]),
-                      'color': [],
-                      'lorentz':['L1'],
-                      'couplings':{(0, 0):'GQED'},
-                      'orders':{'QED':1}}))
-
-        # Coupling of e to gamma
-
-        self.myinterlist.append(base_objects.Interaction({
-                      'id': 7,
-                      'particles': base_objects.ParticleList(\
-                                            [self.mypartlist[4], \
-                                             antie, \
-                                             self.mypartlist[3]]),
-                      'color': [],
-                      'lorentz':['L1'],
-                      'couplings':{(0, 0):'GQED'},
-                      'orders':{'QED':1}}))
-
-        # Then set up the R2 interactions proportional to those existing in the
-        # tree-level model.
-
-        # 3 gluon vertex
-        self.myinterlist.append(base_objects.Interaction({
-                      'id': 8,
-                      'particles': base_objects.ParticleList(\
-                                            [self.mypartlist[0]] * 3),
-                      'color': [],
-                      'lorentz':['L1'],
-                      'couplings':{(0, 0):'G'},
-                      'orders':{'QCD':3},
-                      'type':['R2',()]}))
-
-        # 4 gluon vertex
-        self.myinterlist.append(base_objects.Interaction({
-                      'id': 9,
-                      'particles': base_objects.ParticleList(\
-                                            [self.mypartlist[0]] * 4),
-                      'color': [],
-                      'lorentz':['L1'],
-                      'couplings':{(0, 0):'G^2'},
-                      'orders':{'QCD':4},
-                      'type':['R2',()]}))
-
-        # Gluon and photon couplings to quarks
-        self.myinterlist.append(base_objects.Interaction({
-                      'id': 10,
-                      'particles': base_objects.ParticleList(\
-                                            [self.mypartlist[1], \
-                                             antiu, \
-                                             self.mypartlist[0]]),
-                      'color': [],
-                      'lorentz':['L1'],
-                      'couplings':{(0, 0):'GQQ'},
-                      'orders':{'QCD':3},
-                      'type':['R2',()]}))
-            
-        self.myinterlist.append(base_objects.Interaction({
-                      'id': 11,
-                      'particles': base_objects.ParticleList(\
-                                            [self.mypartlist[1], \
-                                             antiu, \
-                                             self.mypartlist[0]]),
-                      'color': [],
-                      'lorentz':['L1'],
-                      'couplings':{(0, 0):'GQQ'},
-                      'orders':{'QCD':1, 'QED':2},
-                      'type':['R2',()]}))
-
-        self.myinterlist.append(base_objects.Interaction({
-                      'id': 12,
-                      'particles': base_objects.ParticleList(\
-                                            [self.mypartlist[1], \
-                                             antiu, \
-                                             self.mypartlist[3]]),
-                      'color': [],
-                      'lorentz':['L1'],
-                      'couplings':{(0, 0):'GQED'},
-                      'orders':{'QED':1, 'QCD':2},
-                      'type':['R2',()]}))
-
-        self.myinterlist.append(base_objects.Interaction({
-                      'id': 13,
-                      'particles': base_objects.ParticleList(\
-                                            [self.mypartlist[1], \
-                                             antiu, \
-                                             self.mypartlist[3]]),
-                      'color': [],
-                      'lorentz':['L1'],
-                      'couplings':{(0, 0):'GQED'},
-                      'orders':{'QED':3},
-                      'type':['R2',()]}))
-
-        self.myinterlist.append(base_objects.Interaction({
-                      'id': 14,
-                      'particles': base_objects.ParticleList(\
-                                            [self.mypartlist[2], \
-                                             antid, \
-                                             self.mypartlist[0]]),
-                      'color': [],
-                      'lorentz':['L1'],
-                      'couplings':{(0, 0):'GQQ'},
-                      'orders':{'QCD':3},
-                      'type':['R2',()]}))
-
-        self.myinterlist.append(base_objects.Interaction({
-                      'id': 15,
-                      'particles': base_objects.ParticleList(\
-                                            [self.mypartlist[2], \
-                                             antid, \
-                                             self.mypartlist[0]]),
-                      'color': [],
-                      'lorentz':['L1'],
-                      'couplings':{(0, 0):'GQQ'},
-                      'orders':{'QCD':1, 'QED':2},
-                      'type':['R2',()]}))
-
-        self.myinterlist.append(base_objects.Interaction({
-                      'id': 16,
-                      'particles': base_objects.ParticleList(\
-                                            [self.mypartlist[2], \
-                                             antid, \
-                                             self.mypartlist[3]]),
-                      'color': [],
-                      'lorentz':['L1'],
-                      'couplings':{(0, 0):'GQED'},
-                      'orders':{'QED':1, 'QCD':2},
-                      'type':['R2',()]}))
-
-        self.myinterlist.append(base_objects.Interaction({
-                      'id': 17,
-                      'particles': base_objects.ParticleList(\
-                                            [self.mypartlist[2], \
-                                             antid, \
-                                             self.mypartlist[3]]),
-                      'color': [],
-                      'lorentz':['L1'],
-                      'couplings':{(0, 0):'GQED'},
-                      'orders':{'QED':3},
-                      'type':['R2',()]}))
-
-        # Coupling of e to gamma
-
-        self.myinterlist.append(base_objects.Interaction({
-                      'id': 18,
-                      'particles': base_objects.ParticleList(\
-                                            [self.mypartlist[4], \
-                                             antie, \
-                                             self.mypartlist[3]]),
-                      'color': [],
-                      'lorentz':['L1'],
-                      'couplings':{(0, 0):'GQED'},
-                      'orders':{'QED':3},
-                      'type':['R2',()]}))
-
-        # R2 interactions not proportional to the base interactions
-
-        # Two point interactions
-
-        # The gluon
-        self.myinterlist.append(base_objects.Interaction({
-                      'id': 19,
-                      'particles': base_objects.ParticleList(\
-                                            [self.mypartlist[0]] * 2),
-                      'color': [],
-                      'lorentz':['L1'],
-                      'couplings':{(0, 0):'G'},
-                      'orders':{'QCD':2},
-                      'type':['R2',()]}))
-
-        # The photon
-        self.myinterlist.append(base_objects.Interaction({
-                      'id': 20,
-                      'particles': base_objects.ParticleList(\
-                                            [self.mypartlist[3]] * 2),
-                      'color': [],
-                      'lorentz':['L1'],
-                      'couplings':{(0, 0):'G'},
-                      'orders':{'QED':2},
-                      'type':['R2',()]}))
-
-        # The electron
-        self.myinterlist.append(base_objects.Interaction({
-                      'id': 21,
-                      'particles': base_objects.ParticleList([\
-                                            self.mypartlist[4], \
-                                             antie]),
-                      'color': [],
-                      'lorentz':['L1'],
-                      'couplings':{(0, 0):'G'},
-                      'orders':{'QED':2},
-                      'type':['R2',()]}))
-
-        # The up quark, R2QED
-        self.myinterlist.append(base_objects.Interaction({
-                      'id': 22,
-                      'particles': base_objects.ParticleList([\
-                                            self.mypartlist[2], \
-                                             antid]),
-                      'color': [],
-                      'lorentz':['L1'],
-                      'couplings':{(0, 0):'G'},
-                      'orders':{'QED':2},
-                      'type':['R2',()]}))
-
-        # The up quark, R2QCD
-        self.myinterlist.append(base_objects.Interaction({
-                      'id': 23,
-                      'particles': base_objects.ParticleList([\
-                                            self.mypartlist[2], \
-                                             antid]),
-                      'color': [],
-                      'lorentz':['L1'],
-                      'couplings':{(0, 0):'G'},
-                      'orders':{'QCD':2},
-                      'type':['R2',()]}))
-
-        # The down quark, R2QED
-        self.myinterlist.append(base_objects.Interaction({
-                      'id': 24,
-                      'particles': base_objects.ParticleList([\
-                                            self.mypartlist[1], \
-                                             antiu]),
-                      'color': [],
-                      'lorentz':['L1'],
-                      'couplings':{(0, 0):'G'},
-                      'orders':{'QED':2},
-                      'type':['R2',()]}))
-
-        # The down quark, R2QCD
-        self.myinterlist.append(base_objects.Interaction({
-                      'id': 25,
-                      'particles': base_objects.ParticleList([\
-                                            self.mypartlist[1], \
-                                             antid]),
-                      'color': [],
-                      'lorentz':['L1'],
-                      'couplings':{(0, 0):'G'},
-                      'orders':{'QCD':2},
-                      'type':['R2',()]}))
-
-        # The R2 three and four point interactions not proportional to the
-        # base interaction
-
-        # 3 photons
-        self.myinterlist.append(base_objects.Interaction({
-                      'id': 26,
-                      'particles': base_objects.ParticleList(\
-                                            [self.mypartlist[3]] * 3),
-                      'color': [],
-                      'lorentz':['L1'],
-                      'couplings':{(0, 0):'G'},
-                      'orders':{'QED':3},
-                      'type':['R2',()]}))
-
-        # 2 photon and 1 gluons
-        self.myinterlist.append(base_objects.Interaction({
-                      'id': 27,
-                      'particles': base_objects.ParticleList(\
-                                            [self.mypartlist[3],\
-                                            self.mypartlist[3],\
-                                            self.mypartlist[0],]),
-                      'color': [],
-                      'lorentz':['L1'],
-                      'couplings':{(0, 0):'G'},
-                      'orders':{'QED':2, 'QCD':1},
-                      'type':['R2',()]}))
-
-        # 1 photon and 2 gluons
-        self.myinterlist.append(base_objects.Interaction({
-                      'id': 28,
-                      'particles': base_objects.ParticleList(\
-                                            [self.mypartlist[3],\
-                                            self.mypartlist[0],\
-                                            self.mypartlist[0],]),
-                      'color': [],
-                      'lorentz':['L1'],
-                      'couplings':{(0, 0):'G'},
-                      'orders':{'QED':1, 'QCD':2},
-                      'type':['R2',()]}))
-
-        # 4 photons
-        self.myinterlist.append(base_objects.Interaction({
-                      'id': 29,
-                      'particles': base_objects.ParticleList(\
-                                            [self.mypartlist[3]] * 4),
-                      'color': [],
-                      'lorentz':['L1'],
-                      'couplings':{(0, 0):'G'},
-                      'orders':{'QED':4},
-                      'type':['R2',()]}))
-
-        # 3 photons and 1 gluon
-        self.myinterlist.append(base_objects.Interaction({
-                      'id': 30,
-                      'particles': base_objects.ParticleList(\
-                                            [self.mypartlist[3],\
-                                            self.mypartlist[3],\
-                                            self.mypartlist[3],\
-                                            self.mypartlist[0]]),
-                      'color': [],
-                      'lorentz':['L1'],
-                      'couplings':{(0, 0):'G'},
-                      'orders':{'QED':3,'QCD':1},
-                      'type':['R2',()]}))
-
-        # 2 photons and 2 gluons
-        self.myinterlist.append(base_objects.Interaction({
-                      'id': 31,
-                      'particles': base_objects.ParticleList(\
-                                            [self.mypartlist[3],\
-                                            self.mypartlist[3],\
-                                            self.mypartlist[0],\
-                                            self.mypartlist[0]]),
-                      'color': [],
-                      'lorentz':['L1'],
-                      'couplings':{(0, 0):'G'},
-                      'orders':{'QED':2,'QCD':2},
-                      'type':['R2',()]}))
-
-        # 1 photon and 3 gluons
-        self.myinterlist.append(base_objects.Interaction({
-                      'id': 32,
-                      'particles': base_objects.ParticleList(\
-                                            [self.mypartlist[3],\
-                                            self.mypartlist[0],\
-                                            self.mypartlist[0],\
-                                            self.mypartlist[0]]),
-                      'color': [],
-                      'lorentz':['L1'],
-                      'couplings':{(0, 0):'G'},
-                      'orders':{'QED':1,'QCD':3},
-                      'type':['R2',()]})) 
-
-        # Finally the UV interactions Counter-Terms
-
-        # 3 gluon vertex CT
-        self.myinterlist.append(base_objects.Interaction({
-                      'id': 33,
-                      'particles': base_objects.ParticleList(\
-                                            [self.mypartlist[0]] * 3),
-                      'color': [],
-                      'lorentz':['L1'],
-                      'couplings':{(0, 0):'G'},
-                      'orders':{'QCD':3},
-                      'type':['UV',()]}))
-
-        # 4 gluon vertex CT
-        self.myinterlist.append(base_objects.Interaction({
-                      'id': 34,
-                      'particles': base_objects.ParticleList(\
-                                            [self.mypartlist[0]] * 4),
-                      'color': [],
-                      'lorentz':['L1'],
-                      'couplings':{(0, 0):'G^2'},
-                      'orders':{'QCD':4},
-                      'type':['UV',()]}))
-
-        # Gluon and photon couplings to quarks CT
-        self.myinterlist.append(base_objects.Interaction({
-                      'id': 35,
-                      'particles': base_objects.ParticleList(\
-                                            [self.mypartlist[1], \
-                                             antiu, \
-                                             self.mypartlist[0]]),
-                      'color': [],
-                      'lorentz':['L1'],
-                      'couplings':{(0, 0):'GQQ'},
-                      'orders':{'QCD':3},
-                      'type':['UV',()]}))
-        
-        # this is the CT for the renormalization of the QED corrections to alpha_QCD
-        self.myinterlist.append(base_objects.Interaction({
-                      'id': 36,
-                      'particles': base_objects.ParticleList(\
-                                            [self.mypartlist[1], \
-                                             antiu, \
-                                             self.mypartlist[0]]),
-                      'color': [],
-                      'lorentz':['L1'],
-                      'couplings':{(0, 0):'GQQ'},
-                      'orders':{'QCD':1, 'QED':2},
-                      'type':['UV',()]}))
-
-        self.myinterlist.append(base_objects.Interaction({
-                      'id': 37,
-                      'particles': base_objects.ParticleList(\
-                                            [self.mypartlist[1], \
-                                             antiu, \
-                                             self.mypartlist[3]]),
-                      'color': [],
-                      'lorentz':['L1'],
-                      'couplings':{(0, 0):'GQED'},
-                      'orders':{'QED':1, 'QCD':2},
-                      'type':['UV',()]}))
-
-        self.myinterlist.append(base_objects.Interaction({
-                      'id': 38,
-                      'particles': base_objects.ParticleList(\
-                                            [self.mypartlist[1], \
-                                             antiu, \
-                                             self.mypartlist[3]]),
-                      'color': [],
-                      'lorentz':['L1'],
-                      'couplings':{(0, 0):'GQED'},
-                      'orders':{'QED':3},
-                      'type':['UV',()]}))
-
-        self.myinterlist.append(base_objects.Interaction({
-                      'id': 39,
-                      'particles': base_objects.ParticleList(\
-                                            [self.mypartlist[2], \
-                                             antid, \
-                                             self.mypartlist[0]]),
-                      'color': [],
-                      'lorentz':['L1'],
-                      'couplings':{(0, 0):'GQQ'},
-                      'orders':{'QCD':3},
-                      'type':['UV',()]}))
-
-        self.myinterlist.append(base_objects.Interaction({
-                      'id': 40,
-                      'particles': base_objects.ParticleList(\
-                                            [self.mypartlist[2], \
-                                             antid, \
-                                             self.mypartlist[0]]),
-                      'color': [],
-                      'lorentz':['L1'],
-                      'couplings':{(0, 0):'GQQ'},
-                      'orders':{'QCD':1, 'QED':2},
-                      'type':['UV',()]}))
-
-        self.myinterlist.append(base_objects.Interaction({
-                      'id': 41,
-                      'particles': base_objects.ParticleList(\
-                                            [self.mypartlist[2], \
-                                             antid, \
-                                             self.mypartlist[3]]),
-                      'color': [],
-                      'lorentz':['L1'],
-                      'couplings':{(0, 0):'GQED'},
-                      'orders':{'QED':1, 'QCD':2},
-                      'type':['UV',()]}))
-
-        self.myinterlist.append(base_objects.Interaction({
-                      'id': 42,
-                      'particles': base_objects.ParticleList(\
-                                            [self.mypartlist[2], \
-                                             antid, \
-                                             self.mypartlist[3]]),
-                      'color': [],
-                      'lorentz':['L1'],
-                      'couplings':{(0, 0):'GQED'},
-                      'orders':{'QED':3},
-                      'type':['UV',()]}))
-        
-        # alpha_QED to electron CT
-
-        self.myinterlist.append(base_objects.Interaction({
-                      'id': 43,
-                      'particles': base_objects.ParticleList(\
-                                            [self.mypartlist[4], \
-                                             antie, \
-                                             self.mypartlist[3]]),
-                      'color': [],
-                      'lorentz':['L1'],
-                      'couplings':{(0, 0):'GQED'},
-                      'orders':{'QED':3},
-                      'type':['UV',()]}))
-          
-        # Finally the mass renormalization of the up and down quark dotted with
-        # a mass for the occasion
-
-        # The up quark, UVQED
-        self.myinterlist.append(base_objects.Interaction({
-                      'id': 44,
-                      'particles': base_objects.ParticleList([\
-                                            self.mypartlist[2], \
-                                             antid]),
-                      'color': [],
-                      'lorentz':['L1'],
-                      'couplings':{(0, 0):'G'},
-                      'orders':{'QED':2},
-                      'type':['UV',()]}))
-
-        # The up quark, UVQCD
-        self.myinterlist.append(base_objects.Interaction({
-                      'id': 45,
-                      'particles': base_objects.ParticleList([\
-                                            self.mypartlist[2], \
-                                             antid]),
-                      'color': [],
-                      'lorentz':['L1'],
-                      'couplings':{(0, 0):'G'},
-                      'orders':{'QCD':2},
-                      'type':['UV',()]}))
-
-        # The down quark, UVQED
-        self.myinterlist.append(base_objects.Interaction({
-                      'id': 46,
-                      'particles': base_objects.ParticleList([\
-                                            self.mypartlist[1], \
-                                             antiu]),
-                      'color': [],
-                      'lorentz':['L1'],
-                      'couplings':{(0, 0):'G'},
-                      'orders':{'QED':2},
-                      'type':['UV',()]}))
-
-        # The down quark, UVQCD
-        self.myinterlist.append(base_objects.Interaction({
-                      'id': 47,
-                      'particles': base_objects.ParticleList([\
-                                            self.mypartlist[1], \
-                                             antid]),
-                      'color': [],
-                      'lorentz':['L1'],
-                      'couplings':{(0, 0):'G'},
-                      'orders':{'QCD':2},
-                      'type':['UV',()]}))
-
-        
-        self.myloopmodel.set('particles', self.mypartlist)
-        self.myloopmodel.set('couplings', ['QCD','QED'])        
-        self.myloopmodel.set('interactions', self.myinterlist)
-        self.myloopmodel.set('perturbation_couplings', self.mypertorders)
-        self.myloopmodel.set('order_hierarchy', {'QCD':1,'QED':2})
-
-        self.ref_dict_to0 = self.myinterlist.generate_ref_dict(self.mypertorders)[0]
-        self.ref_dict_to1 = self.myinterlist.generate_ref_dict(self.mypertorders)[1]
-
-        # Save this model so that it can be loaded by other loop tests
-        save_load_object.save_to_file(os.path.join(_input_file_path, 'test_toyLoopModel.pkl'),self.myloopmodel)
-
     def test_NLOAmplitude(self):
         """test different features of the NLOAmplitude class"""
         ampNLOlist=[]
@@ -772,7 +784,8 @@ class LoopDiagramGenerationTest(unittest.TestCase):
         ampdefaultlist.append(diagram_generation.Amplitude({'process':dummyproc}))        
         ampdefaultlist.append(diagram_generation.DecayChainAmplitude(dummyproc,False))
 
-        dummyproc.set("perturbation_couplings",self.mypertorders)
+        dummyproc.set("perturbation_couplings",['QCD','QED'
+                                                ])
         ampNLOlist.append(loop_diagram_generation.LoopAmplitude({'process':dummyproc}))                
         ampNLOlist.append(loop_diagram_generation.LoopAmplitude())        
         ampNLOlist.append(loop_diagram_generation.LoopAmplitude(dummyproc))        

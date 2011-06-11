@@ -28,7 +28,7 @@ sys.path.append(os.path.join(root_path, os.path.pardir, os.path.pardir))
 
 import tests.unit_tests as unittest
 
-
+import tests.unit_tests.loop.test_loop_diagram_generation as looptest
 import madgraph.core.drawing as draw_lib
 import madgraph.iolibs.drawing_eps as draw
 import madgraph.core.base_objects as base_objects
@@ -49,13 +49,15 @@ _input_file_path = os.path.join(_file_path, os.path.pardir, os.path.pardir,
 class LoopHelasMatrixElementTest(unittest.TestCase):
     """Test class for all functions related to the LoopHelasMatrixElement"""
     
+    mypartlist = base_objects.ParticleList()
+    myinterlist = base_objects.InteractionList()
     myloopmodel = loop_base_objects.LoopModel()
     
     def setUp(self):
         """load the NLO toy model"""
         
-        self.myloopmodel = save_load_object.load_from_file(os.path.join(_input_file_path,\
-                                                            'test_toyLoopModel.pkl')) 
+        self.mypartlist, self.myinterlist, self.myloopmodel = \
+            looptest.loadLoopModel() 
 
     def test_helas_diagrams_epemddx(self):
         """Test the generation of the helas diagrams for the process e+e->dd~
