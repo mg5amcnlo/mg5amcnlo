@@ -2347,12 +2347,20 @@ class UFO_model_to_mg4(object):
         replace = lambda match_pattern: change[match_pattern.groups()[0]]
         
         rep_pattern = re.compile(re_expr % '|'.join(to_change))
+        
+        # change parameters
         for key in keys:
             if key == ('external',):
                 continue
             for param in self.model['parameters'][key]: 
                 param.expr = rep_pattern.sub(replace, param.expr)
             
+        # change couplings
+        for key in self.model['couplings'].keys():
+            for coup in self.model['couplings'][key]:
+                coup.expr = rep_pattern.sub(replace, coup.expr)
+
+
         
     def refactorize(self, wanted_couplings = []):    
         """modify the couplings to fit with MG4 convention """
