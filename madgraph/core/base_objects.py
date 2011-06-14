@@ -506,6 +506,9 @@ class Interaction(PhysicsObject):
         #       ((1,12),(21,34),(1,45))
         # PS: Notice that the tag is not yet necessarly canonical in the UFO
         # model. The reader takes care of putting it in the canonical form.
+        # In the latest UFO format, it was chosen to only give the unordered
+        # list of the PDG of the particles running in the loop as it is enough
+        # for all practical cases up to now.
         self['type'] = ['base',()]
 
     def filter(self, name, value):
@@ -533,15 +536,12 @@ class Interaction(PhysicsObject):
                         "%s is not a valid list" % str(value)
             if value[1]:
                 for tup in value[1]:
-                    if len(tup)!=2:
-                        raise self.PhysicsObjectError, \
-                            "%s is not a valid 2-tuple" % str(tup)
-                    if not isinstance(tup[0],int):
+                    if not isinstance(tup,int):
                         raise self.PhysicsObjectError, \
                             "%s is not a valid integer" % str(tup[0])
-                    if not isinstance(tup[1],int):
+                    if tup<0:
                         raise self.PhysicsObjectError, \
-                            "%s is not a valid integer" % str(tup[1])
+                            "%s is not a valid positive integer" % str(tup[1])
 
         if name == 'orders':
             #Should be a dict with valid order names ask keys and int as values
@@ -887,13 +887,11 @@ class Model(PhysicsObject):
             # Recreate particle_dict
             self.get('particle_dict')
 
-    def actualize_dictionaries(self,perturbationlist):
-        """This function actualizes the dictionaries by ommitting or not the relevant
-           R2 and UV interactions, depending on the perturbation orders defined by
-           the user in the process"""
+    def actualize_dictionaries(self):
+        """This function actualizes the dictionaries"""
 
         [self['ref_dict_to0'], self['ref_dict_to1']] = \
-                self['interactions'].generate_ref_dict(perturbationlist)
+                self['interactions'].generate_ref_dict()
         self['ref_dict_to0'].update(
                                 self['particles'].generate_ref_dict())
 

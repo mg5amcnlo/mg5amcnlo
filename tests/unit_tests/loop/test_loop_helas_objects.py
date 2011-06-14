@@ -49,15 +49,12 @@ _input_file_path = os.path.join(_file_path, os.path.pardir, os.path.pardir,
 class LoopHelasMatrixElementTest(unittest.TestCase):
     """Test class for all functions related to the LoopHelasMatrixElement"""
     
-    mypartlist = base_objects.ParticleList()
-    myinterlist = base_objects.InteractionList()
     myloopmodel = loop_base_objects.LoopModel()
     
     def setUp(self):
         """load the NLO toy model"""
         
-        self.mypartlist, self.myinterlist, self.myloopmodel = \
-            looptest.loadLoopModel() 
+        self.myloopmodel = looptest.loadLoopModel() 
 
     def test_helas_diagrams_epemddx(self):
         """Test the generation of the helas diagrams for the process e+e->dd~

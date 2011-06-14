@@ -1515,6 +1515,8 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
             # Extract process from process definition
             if ',' in line:
                 myprocdef, line = self.extract_decay_chain_process(line)
+                if myprocdef.get('perturbation_couplings'):
+                    raise MadGraph5Error("Current MG5 version does not support Loop computations along with decay chains.")
             else:
                 myprocdef = self.extract_process(line)
 
@@ -1956,7 +1958,7 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
             squared_order_re = squared_order_pattern.match(line)
 
         # Now check for perturbation orders, specified in between squared brackets
-        perturbation_couplings_pattern = re.compile("^(.+)\s*\[\s*(.+)\s*\]\s*(.*)$")
+        perturbation_couplings_pattern = re.compile("^(.+)\s*\[\s*(\w+)\s*\]\s*(.*)$")
         perturbation_couplings_re = perturbation_couplings_pattern.match(line)
         perturbation_couplings = ""
         if perturbation_couplings_re:

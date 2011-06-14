@@ -970,7 +970,7 @@ class MultiProcess(base_objects.PhysicsObject):
                                        self.get('ignore_six_quark_processes')))
                 else:
                     self['amplitudes'].extend(\
-                       MultiProcess.generate_multi_amplitudes(process_def,
+                       self.generate_multi_amplitudes(process_def,
                                        self.get('collect_mirror_procs'),
                                        self.get('ignore_six_quark_processes')))
 
@@ -1074,8 +1074,13 @@ class MultiProcess(base_objects.PhysicsObject):
                                  process_definition.get('is_decay_chain'),
                               'perturbation_couplings': \
                                  process_definition.get('perturbation_couplings'),
+                              'squared_orders': \
+                                 process_definition.get('squared_orders'),
                               'overall_orders': \
-                                 process_definition.get('overall_orders')})
+                                 process_definition.get('overall_orders'),
+                              'has_born': \
+                                 process_definition.get('has_born')
+                                 })
 
                 if collect_mirror_procs:
                     # Check if mirrored process is already generated
@@ -1095,7 +1100,7 @@ class MultiProcess(base_objects.PhysicsObject):
                     except:
                         pass
 
-                amplitude = Amplitude({"process": process})
+                amplitude = cls.get_amplitude_from_proc(process)
 
                 try:
                     result = amplitude.generate_diagrams()

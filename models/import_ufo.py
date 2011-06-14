@@ -23,6 +23,7 @@ import sys
 
 from madgraph import MadGraph5Error, MG5DIR
 import madgraph.core.base_objects as base_objects
+import madgraph.loop.loop_base_objects as loop_base_objects
 import madgraph.core.color_algebra as color
 import madgraph.iolibs.files as files
 import madgraph.iolibs.misc as misc
@@ -166,13 +167,33 @@ class UFOMG5Converter(object):
     """Convert a UFO model to the MG5 format"""
 
     use_lower_part_names = False
+    perturbation_couplings = []
 
     def __init__(self, model, auto=False):
         """ initialize empty list for particles/interactions """
         
         self.particles = base_objects.ParticleList()
         self.interactions = base_objects.InteractionList()
-        self.model = base_objects.Model()
+        
+        # Check here if we can extract the couplings perturbed in this model
+        # which indicate a loop model or if this model is only meant for 
+        # tree-level computations
+        for part in model.all_particles:
+            try:
+                part_perturbations=part.perturbation
+                for pert_order in part_perturbations:
+                    if pert_order not in self.perturbation_couplings:
+                        self.perturbation_couplings.append(pert_order)
+            except AttributeError:
+                self.perturbation_couplings = []
+                break
+        
+        if self.perturbation_couplings:
+            self.model = loop_base_objects.LoopModel({'perturbation_couplings':\
+                                                self.perturbation_couplings})
+            self.model.set('perturbation_couplings',self.perturbation_couplings)
+        else:
+            self.model = base_objects.Model()                        
         self.model.set('particles', self.particles)
         self.model.set('interactions', self.interactions)
         self.conservecharge = set(['charge'])
@@ -202,12 +223,30 @@ class UFOMG5Converter(object):
             self.add_interaction(interaction_info)
         
         self.model.set('conserved_charge', self.conservecharge)
+        
+        # If we deal with a Loop model here, the order hierarchy MUST be 
+        # defined in the file coupling_orders.py and we import it from 
+        # there.
+
+        hierarchy={}
+        for order in self.model.get('coupling_orders'):
+            hierarchy[order]=1
+        try:
+            all_orders = self.ufomodel.all_orders
+            for order in all_orders:
+                hierarchy[order.name]=order.hierarchy
+        except AttributeError:
+            if self.perturbation_couplings:
+                raise MadGraph5Error, 'The loop model MG5 attemps to import does not specify an order hierarchy.' 
+
+        self.model.set('order_hierarchy', hierarchy)
+                    
         return self.model
         
     
     def add_particle(self, particle_info):
         """ convert and add a particle in the particle list """
-        
+                
         # MG5 have only one entry for particle and anti particles.
         #UFO has two. use the color to avoid duplictions
         if particle_info.pdg_code < 0:
@@ -238,6 +277,8 @@ class UFOMG5Converter(object):
                         particle.set(key, value)
                 elif key == 'charge':
                     particle.set(key, float(value))
+                elif key == 'perturbations':
+                    particle.set(key, value)
                 elif key in ['mass','width']:
                     particle.set(key, str(value))
                 else:
@@ -246,8 +287,11 @@ class UFOMG5Converter(object):
                 # add charge -we will check later if those are conserve 
                 self.conservecharge.add(key)
                 particle.set(key,value, force=True)
-            
-        assert(12 == nb_property) #basic check that all the information is there         
+        
+        if 'perturbation' in particle_info.__dict__.keys():
+            assert(13 == nb_property) #basic check that all the information is there, with perturbation
+        else:             
+            assert(12 == nb_property) #basic check that all the information is there         
         
         # Identify self conjugate particles
         if particle_info.name == particle_info.antiname:
@@ -259,7 +303,7 @@ class UFOMG5Converter(object):
     def add_interaction(self, interaction_info):
         """add an interaction in the MG5 model. interaction_info is the 
         UFO vertices information."""
-        
+                
         # Import particles content:
         particles = [self.model.get_particle(particle.pdg_code) \
                                     for particle in interaction_info.particles]
@@ -295,6 +339,13 @@ class UFOMG5Converter(object):
                     interaction.set('orders', coupling.order)            
                     interaction.set('color', colors)
                     order_to_int[order] = interaction
+                    # If we deal with a loop model, we must also import the attribute
+                    # type of the UFO vertex
+                    try:
+                        inter_type=interaction_info.type
+                        interaction.set('type',inter_type)
+                    except AttributeError:
+                        interaction.set('type',['base',()])                        
                     # add to the interactions
                     self.interactions.append(interaction)
 

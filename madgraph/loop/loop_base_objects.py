@@ -99,7 +99,7 @@ class LoopDiagram(base_objects.Diagram):
                         "%s is not a valid integer" % str(value)
 
         else:
-            return super(LoopDiagram, self).filter(name, value)
+            super(LoopDiagram, self).filter(name, value)
 
         return True
     
@@ -703,12 +703,14 @@ class LoopModel(base_objects.Model):
     """A class to store all the model information with advanced feature
        to compute loop process."""
     
+    
     def default_setup(self):
-       super(LoopModel,self).default_setup()         
+       super(LoopModel,self).default_setup()
        self['perturbation_couplings'] = []
-
+    
     def filter(self, name, value):
         """Filter for model property values"""
+
 
         if name == 'perturbation_couplings':
             if not isinstance(value, list):
@@ -716,12 +718,14 @@ class LoopModel(base_objects.Model):
                     "Object of type %s is not a list" % \
                                                             type(value)
             for order in value:
-                if not isinstance(value, str):
+                if not isinstance(order, str):
                     raise self.PhysicsObjectError, \
                         "Object of type %s is not a string" % \
                                                             type(order)
         else:
-            return super(LoopModel,self).filter(name,value)
+            super(LoopModel,self).filter(name,value)
+        
+        return True
 
     def get_sorted_keys(self):
         """Return process property names as a nicely sorted list."""
@@ -762,7 +766,9 @@ class DGLoopLeg(base_objects.Leg):
                     "Object of type %s is not a int" % \
                                                             type(value)
         else:
-            return super(DGLoopLeg,self).filter(name,value)
+            super(DGLoopLeg,self).filter(name,value)
+        
+        return True
 
     def get_sorted_keys(self):
         """Return process property names as a nicely sorted list."""

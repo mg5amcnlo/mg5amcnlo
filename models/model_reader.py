@@ -27,6 +27,7 @@ import os
 import re
 
 import madgraph.core.base_objects as base_objects
+import madgraph.loop.loop_base_objects as loop_base_objects
 from madgraph import MadGraph5Error, MG5DIR
 
 ZERO = 0
@@ -41,7 +42,7 @@ logger = logging.getLogger('models.model_reader')
 # ModelReader: Used to read a param_card and calculate parameters and
 #              couplings of the model.
 #===============================================================================
-class ModelReader(base_objects.Model):
+class ModelReader(loop_base_objects.LoopModel):
     """Object to read all parameters and couplings of a model
     """
 

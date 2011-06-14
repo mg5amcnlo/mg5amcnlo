@@ -734,7 +734,7 @@ def loadLoopModel():
     myloopmodel.set('perturbation_couplings', ['QCD','QED'])
     myloopmodel.set('order_hierarchy', {'QCD':1,'QED':2})
 
-    return mypartlist, myinterlist, myloopmodel
+    return myloopmodel
 
     # Save this model so that it can be loaded by other loop tests
     # save_load_object.save_to_file(os.path.join(_input_file_path, 'test_toyLoopModel.pkl'),self.myloopmodel)
@@ -758,7 +758,9 @@ class LoopDiagramGenerationTest(unittest.TestCase):
     def setUp(self):
         """Load different objects for the tests."""
         
-        self.mypartlist, self.myinterlist, self.myloopmodel = loadLoopModel()
+        self.myloopmodel = loadLoopModel()
+        self.mypartlist = self.myloopmodel['particles']
+        self.myinterlist = self.myloopmodel['interactions']
         self.ref_dict_to0 = self.myinterlist.generate_ref_dict(['QCD','QED'])[0]
         self.ref_dict_to1 = self.myinterlist.generate_ref_dict(['QCD','QED'])[1]
         

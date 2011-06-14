@@ -117,7 +117,7 @@ class LoopAmplitude(diagram_generation.Amplitude):
                         "%s is not a valid bool" % str(value)
 
         else:
-            return super(LoopAmplitude, self).filter(name, value)
+            super(LoopAmplitude, self).filter(name, value)
 
         return True
 
@@ -205,7 +205,7 @@ class LoopAmplitude(diagram_generation.Amplitude):
         # Now if the user specified some squared order, we can use them as an upper bound
         # for the loop diagram generation
         for order, value in self['process']['squared_orders'].items():
-            if order.upper()!='WEIGHT' and order not in self['process']['orders']:
+            if order.upper()!='WEIGHTED' and order not in self['process']['orders']:
                 # If there is no born, the min order will simply be 0 as it should.                    
                 bornminorder=self['born_diagrams'].get_min_order(order)
                 if value>=0:
@@ -263,7 +263,7 @@ class LoopAmplitude(diagram_generation.Amplitude):
         # amplitude orders, then we use the max order encountered in the born (and add 2 if
         # this is a perturbed order). It might be that this upper bound is better than the one
         # guessed from the hierarchy
-        for order in self['process']['model']['couplings']:
+        for order in self['process']['model']['coupling_orders']:
             neworder=self['born_diagrams'].get_max_order(order)
             if order in self['process']['perturbation_couplings']:
                 neworder+=2
@@ -679,7 +679,8 @@ class LoopMultiProcess(diagram_generation.MultiProcess):
     """LoopMultiProcess: MultiProcess with loop features.
     """
 
-    def get_amplitude_from_proc(self, proc):
+    @classmethod
+    def get_amplitude_from_proc(cls, proc):
         """ Return the correct amplitude type according to the characteristics of
             the process proc """
         return LoopAmplitude({"process": proc})
