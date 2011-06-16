@@ -352,7 +352,7 @@ class testFKSRealHelasObjects(unittest.TestCase):
         helasfks1 = fks_helas.FKSHelasProcessFromReals(self.fks1)
         self.assertEqual(helasfks1.real_matrix_element,
                         helas_objects.HelasMatrixElement(self.fks1.real_amp))
-        self.assertEqual(len(helasfks1.born_processes), 11)
+        self.assertEqual(len(helasfks1.born_processes), 6)
         self.assertEqual(helasfks1.fks_inc_string, self.fks1.get_fks_inc_string())
         
     
@@ -363,7 +363,9 @@ class testFKSRealHelasObjects(unittest.TestCase):
         --i/j fks
         --ijglu
         --matrix element
-        --color links
+        --color link
+        --is_nbody_only
+        --is_to_integrate
         """         
         model = self.mymodel
         born1 = fks.FKSBornProcess(self.myproc, 
@@ -394,5 +396,7 @@ class testFKSRealHelasObjects(unittest.TestCase):
         self.assertEqual(helas_born1.ijglu, 3)
         self.assertEqual(helas_born1.matrix_element, me)
         self.assertEqual(helas_born1.color_links, [])
+        self.assertEqual(helas_born1.is_nbody_only, False)
+        self.assertEqual(helas_born1.is_to_integrate, True)
         
     

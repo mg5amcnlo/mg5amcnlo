@@ -74,7 +74,10 @@ class FKSBornProcess(object):
     -- i/j_fks (in the real process leglist)
     -- ijglu -> 0 if ij is not a gluon, ij[number] otherwise
     -- need_color_link -> if color links are needed (ie i_fks is a gluon)
-    -- color link list"""
+    -- color link list
+    -- is_nbody_only
+    -- is_to_integrate
+    """
     
     def __init__(self, real_proc, leg_i, leg_j, leg_ij, perturbed_orders = ['QCD']):
         """initialize the born process starting from the real process and the
@@ -87,8 +90,7 @@ class FKSBornProcess(object):
         else:
             self.ijglu = 0
         
-        self.need_color_links = leg_i.get('color') == 8 and leg_i.get('massless')
-                
+        self.need_color_links = leg_i.get('spin') == 3 and leg_i.get('massless')       
         self.process = copy.copy(real_proc)
 #        orders = copy.copy(real_proc.get('orders'))
         
@@ -99,6 +101,8 @@ class FKSBornProcess(object):
         born_legs = self.reduce_real_leglist(leg_i, leg_j, leg_ij)
         self.process.set('legs', MG.LegList(born_legs))
         self.amplitude = diagram_generation.Amplitude(self.process)
+        self.is_to_integrate = True
+        self.is_nbody_only = False
         self.color_links = []
     
     
@@ -123,6 +127,19 @@ class FKSBornProcess(object):
             self.color_links = fks_common.find_color_links(\
                               self.process.get('legs'))
         return self.color_links
+    
+    def get_born_fks_inc_string(self, iconf):#test written
+        """returns the part of the fks.inc file relative to this born configuration
+        the configuration number is given"""
+        replace = {'conf_num' : iconf, 
+                   'i_fks' : self.i_fks, 
+                   'j_fks' : self.j_fks}
+        string =" \n\
+c     FKS configuration number  %(conf_num)d \n\
+data fks_i(  %(conf_num)d  ) /  %(i_fks)d  / \n\
+data fks_j(  %(conf_num)d  ) /  %(j_fks)d  / \n\
+      " % replace
+        return string
  
 #===============================================================================
 # FKS Process
@@ -139,9 +156,11 @@ class FKSProcessFromRealsList(MG.PhysicsObjectList):
 class FKSProcessFromReals(object):
     """the class for an FKS process, starting from reals """ 
     
-    def __init__(self, start_proc = None): #test written
+    def __init__(self, start_proc = None, remove_borns = True): #test written
         """initialization: starts either from an anplitude or a process,
         then init the needed variables:
+        remove_borns tells if the borns not needed for integration will be removed
+        from the born list (mainly used for testing)
         --real_proc/real_amp
         --model
         --leglist, nlegs
@@ -158,6 +177,7 @@ class FKSProcessFromReals(object):
         self.real_proc = None
         self.real_amp = None
         self.model = None
+        self.nincoming = 0
  
         if start_proc:
             if isinstance(start_proc, MG.Process):
@@ -173,8 +193,13 @@ class FKSProcessFromReals(object):
             for leg in self.leglist:
                 self.pdg_codes.append(leg['id'])
                 self.colors.append(leg['color'])
+                if not leg['state']:
+                    self.nincoming += 1
             
             self.find_borns()
+            self.find_borns_to_integrate(remove_borns)
+            self.find_born_nbodyonly()
+
             
     def get_fks_inc_string(self): #test written
         """returns the list of configurations corrresponding to the various 
@@ -186,13 +211,11 @@ INTEGER FKS_IPOS(0:NEXTERNAL) \n\
 INTEGER FKS_J_FROM_I(NEXTERNAL, 0:NEXTERNAL) \n\
 INTEGER PARTICLE_TYPE(NEXTERNAL), PDG_TYPE(NEXTERNAL) \n" %{'nconfs' : 
                                                         len(self.borns)}
-        for n, born in enumerate(self.borns):
-            replace= {'conf_num' : n+1, 'i_fks':born.i_fks, 'j_fks':born.j_fks}
-            string +=" \n\
-c     FKS configuration number  %(conf_num)d \n\
-data fks_i(  %(conf_num)d  ) /  %(i_fks)d  / \n\
-data fks_j(  %(conf_num)d  ) /  %(j_fks)d  / \n\
-      " % replace
+        n = 0
+        for born in self.borns:
+            if born.is_to_integrate:
+                n +=1
+                string += born.get_born_fks_inc_string(n)
         
         ii = sorted(set([b.i_fks for b in self.borns ]))
         ipos_dict = {'n_ipos' : len(ii), 
@@ -237,3 +260,74 @@ C\n\
                             born = FKSBornProcess(self.real_proc, i, j, ij)
                             if born.amplitude.get('diagrams'):
                                 self.borns.append(born)
+                                
+    def find_borns_to_integrate(self, remove): #test written
+        """finds double countings in the born configurations, sets the 
+        is_to_integrate variable and if "remove" is True removes the 
+        not needed ones from the born list"""
+        #find the initial number of born configurations
+        ninit = len(self.borns)
+        
+        for m in range(ninit):
+            for n in range(m+1, ninit):
+                born_m = self.borns[m]
+                born_n = self.borns[n]
+                # j j outgoing
+                if born_m.j_fks > self.nincoming and \
+                   born_n.j_fks > self.nincoming:
+                    if (self.pdg_codes[born_m.i_fks - 1] == \
+                        self.pdg_codes[born_n.i_fks - 1] and \
+                        self.pdg_codes[born_m.j_fks - 1] == \
+                        self.pdg_codes[born_n.j_fks - 1]) \
+                        or \
+                       (self.pdg_codes[born_m.i_fks - 1] == \
+                        self.pdg_codes[born_n.j_fks - 1] and \
+                        self.pdg_codes[born_m.j_fks - 1] == \
+                        self.pdg_codes[born_n.i_fks - 1]):
+                        
+                        if born_m.i_fks > born_n.i_fks:
+                            self.borns[m].is_to_integrate = False
+                        elif born_m.i_fks == born_n.i_fks and \
+                             born_m.j_fks > born_n.j_fks:
+                            self.borns[n].is_to_integrate = False
+                        else:
+                            self.borns[m].is_to_integrate = False
+                elif born_m.j_fks <= self.nincoming and \
+                     born_n.j_fks == born_m.j_fks:
+                    if self.pdg_codes[born_m.i_fks - 1] == \
+                       self.pdg_codes[born_n.i_fks - 1]:
+                        if born_m.i_fks > born_n.i_fks:
+                            self.borns[n].is_to_integrate = False
+                        else:
+                            self.borns[m].is_to_integrate = False
+        if remove:
+            newborns = []
+            for born in self.borns:
+                if born.is_to_integrate:
+                    newborns.append(born)
+            self.borns = newborns
+    
+    
+    def find_born_nbodyonly(self): #test written
+        """finds the born configuration that includes the n-body contribution 
+        in the virt0 and born0 running mode. By convention it is the  one 
+        with soft singularities for which i/j are the largest"""
+        imax = 0
+        jmax = 0
+        chosen = -1
+        for n, born in enumerate (self.borns):
+            if born.need_color_links:
+                if born.i_fks >= imax and born.j_fks >= jmax and \
+                        born.is_to_integrate:
+                    chosen = n
+                
+        if chosen >=0:
+            self.borns[chosen].is_nbody_only = True 
+                    
+                    
+                
+        
+                    
+                
+                
+        

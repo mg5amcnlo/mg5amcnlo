@@ -37,33 +37,25 @@ class FKSHelasMultiProcessFromReals(helas_objects.HelasMultiProcess):
     
     def __init__(self, fksmulti, gen_color =True, decay_ids =[]):
         """Initialization from a FKSMultiProcess"""
-        #super(FKSHelasMultiProcessFromReals, self).__init__()
         self['matrix_elements'] = self.generate_matrix_elements_fks(
                                 fksmulti['real_processes'], 
                                 gen_color, decay_ids)
-        
     
     def get_used_lorentz(self):
         """Return a list of (lorentz_name, conjugate, outgoing) with
         all lorentz structures used by this HelasMultiProcess."""
-
         helas_list = []
-
         for me in self.get('matrix_elements'):
             helas_list.extend(me.get_used_lorentz())
-
         return list(set(helas_list))
     
 
     def get_used_couplings(self):
         """Return a list with all couplings used by this
         HelasMatrixElement."""
-
         coupling_list = []
-
         for me in self.get('matrix_elements'):
             coupling_list.extend([c for l in me.get_used_couplings() for c in l])
-
         return list(set(coupling_list))
     
     
@@ -181,7 +173,7 @@ class FKSHelasProcessFromRealsList(MG.PhysicsObjectList):
         return isinstance(obj, FKSHelasProcessFromReals)   
     
     
-class FKSHelasProcessFromReals(object):
+class FKSHelasProcessFromReals(object): #test written
     """class to generate the Helas calls for a FKSProcessFromReals. Contains:
     -- real emission ME
     -- list of FKSHelasBornProcesses
@@ -189,12 +181,13 @@ class FKSHelasProcessFromReals(object):
     """
     
     def __init__(self, fksproc=None, me_list =[], me_id_list=[], **opts):
-        """ constructor, starts from a FKSProcessFromReals, sets borns and ME"""
-        
+        """ constructor, starts from a FKSProcessFromReals, sets borns and ME"""        
         if fksproc != None:
             self.born_processes = []
+                        
             for proc in fksproc.borns:
-                self.born_processes.append(
+                if proc.is_to_integrate:
+                    self.born_processes.append(
                         FKSHelasBornProcess(proc, me_list, me_id_list, **opts))
             self.real_matrix_element = helas_objects.HelasMatrixElement(
                                     fksproc.real_amp, **opts)
@@ -253,6 +246,8 @@ class FKSHelasBornProcess(object): #test written
     -- ijglu
     -- matrix element
     -- color links
+    -- is_nbody_only
+    -- is_to_integrate
     -- leg permutation<<REMOVED"""
     
     def __init__(self, fksbornproc=None, me_list = [], me_id_list =[], **opts):
@@ -264,6 +259,9 @@ class FKSHelasBornProcess(object): #test written
             self.i_fks = fksbornproc.i_fks
             self.j_fks = fksbornproc.j_fks
             self.ijglu = fksbornproc.ijglu
+            self.is_nbody_only = fksbornproc.is_nbody_only
+            self.is_to_integrate = fksbornproc.is_to_integrate
+
 
             self.matrix_element = helas_objects.HelasMatrixElement(
                                     fksbornproc.amplitude, **opts)

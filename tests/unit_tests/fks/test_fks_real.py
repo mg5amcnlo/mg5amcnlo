@@ -334,8 +334,9 @@ class TestFKSProcessFromReals(unittest.TestCase):
 
     myproc2 = MG.Process(dict2)
     
-    fks1 = fks.FKSProcessFromReals(myproc)
-    fks2 = fks.FKSProcessFromReals(myproc2)
+    fks1 = fks.FKSProcessFromReals(myproc, False)
+    fks1_rem = fks.FKSProcessFromReals(myproc)
+    fks2 = fks.FKSProcessFromReals(myproc2, False)
     
     def test_get_fks_inc_string(self):
         """check if the fks.inc string is correct, for u u~ > u u~ g"""
@@ -400,7 +401,7 @@ C
     def test_FKS_born_process(self):
         """tests the correct initialization of a FKSBornProcess object, which
         takes as input a real process, FKSlegs corresponding to i/j and ij fks
-        in particular check i
+        in particular check
         --born amplitude
         --i/j fks
         --ijglu
@@ -483,6 +484,39 @@ C
         self.assertEqual(born1.need_color_links, False)
         
         
+    def test_get_born_fks_inc_string(self):
+        """tests if the fks_inc_string realtive to the FKSBornProcess is correctly given"""
+        model = self.mymodel
+        
+        ## u u~ > d d~ g g, combining d and d~ to glu
+        born1 = fks.FKSBornProcess(self.myproc, 
+                                        fks_common.to_fks_leg(MG.Leg({\
+                                        'id': -1,\
+                                        'number': 4,\
+                                        'state': True,\
+                                       # 'from_group': True\
+                                    }), model),
+                                        fks_common.to_fks_leg(MG.Leg({\
+                                        'id': 1,\
+                                        'number': 3,\
+                                        'state': True,\
+                                       # 'from_group': True\
+                                    }), model),
+                                        fks_common.to_fks_leg(MG.Leg({\
+                                        'id': 21,\
+                                        'number': 3,\
+                                        'state': True,\
+                                       # 'from_group': True\
+                                    }), model) )
+
+        self.assertEqual(born1.get_born_fks_inc_string(2), 
+    " \n\
+c     FKS configuration number  2 \n\
+data fks_i(  2  ) /  4  / \n\
+data fks_j(  2  ) /  3  / \n\
+      ")
+        
+
     def test_find_color_links(self):
         """tests the find_color_link function of a FKSBornProcess object. This
         function calls the one in fks_common, so this tests just checks that
@@ -534,6 +568,7 @@ C
                                        # 'from_group': True\
                                     }), model) )
         born1.find_color_links()
+        self.assertEqual(born1.is_nbody_only, False)
         #no color links for this process
         self.assertEqual(len(born1.color_links), 20)
 
@@ -553,7 +588,7 @@ C
         proc1 = self.myproc
         amp1 = diagram_generation.Amplitude(proc1)
         fks1 = self.fks1
-        fks2 = fks.FKSProcessFromReals(amp1)
+        fks2 = fks.FKSProcessFromReals(amp1, False)
         
         self.assertEqual(fks1.leglist, 
                          fks_common.to_fks_legs(self.myleglist, self.mymodel))
@@ -610,4 +645,47 @@ C
         for b1, b2 in zip(fks2.borns, target_borns2):
             self.assertEqual([l.get('id') for l in  b1.process.get('legs')], b2)
 
+    
+    def test_find_borns_to_integrate(self):
+        """tests if the double genereted configurations are set as not to integrate
+        and if they are removed from the born list when asked.
+        it uses self.fks1 and self.fks1_rem (u u~ > d d~ g g). The configurations
+        for which i_fks is = 5 should be set not to integrate"""
+        to_int = 0
+        not_to_int = 0
+        for born in self.fks1.borns:
+            if born.i_fks == 5:
+                self.assertEqual(born.is_to_integrate, False)
+                not_to_int += 1
+            else:
+                self.assertEqual(born.is_to_integrate, True)
+                self.assertEqual(born.i_fks, self.fks1_rem.borns[to_int].i_fks)
+                self.assertEqual(born.j_fks, self.fks1_rem.borns[to_int].j_fks)
+                self.assertEqual(born.amplitude, self.fks1_rem.borns[to_int].amplitude)
+                to_int += 1
+
+        self.assertEqual(to_int, 6)
+        self.assertEqual(not_to_int, 5)
+        
+        self.assertEqual(len(self.fks1_rem.borns), 6)
+    
+    def test_find_nbodyonly(self):
+        """tests if the is_nbody_only variable is set to true only in the 
+        "last" soft-singular born, i.e. the one for which i/j are the largest"""
+        
+        #fks1 -> i should be 6, j should be 5
+        for born in self.fks1.borns:
+            if born.i_fks == 6 and born.j_fks ==5:
+                self.assertEqual(born.is_nbody_only, True)
+            else:
+                self.assertEqual(born.is_nbody_only, False)
+
+        #fks2 -> i should be 5, j should be 4
+        for born in self.fks2.borns:
+            if born.i_fks == 5 and born.j_fks == 4:
+                self.assertEqual(born.is_nbody_only, True)
+            else:
+                self.assertEqual(born.is_nbody_only, False)        
+        
+        
 

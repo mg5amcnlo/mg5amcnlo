@@ -755,3 +755,4 @@ class TestFKSCommon(unittest.TestCase):
                                                     )
             self.assertEqual(string, dict['string'])
             self.assertEqual(replac, dict['replacements'])
+            

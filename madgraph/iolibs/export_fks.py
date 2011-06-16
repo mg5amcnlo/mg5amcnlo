@@ -223,6 +223,24 @@ class ProcessExporterFortranFKS(export_v4.ProcessExporterFortran):
     
         #write the config.fks file, containing only nfks (+1)
         os.system("echo %d > config.fks" % (nfks+1) )
+        
+        ####
+        if fksborn.is_nbody_only:
+            os.system("echo 'Y' > nbodyonly.fks")
+        else:
+            os.system("echo 'N' > nbodyonly.fks")
+        
+        if fksborn.is_to_integrate:
+            os.system("echo 'Y' > integrate.fks")
+            if fksborn.color_links:
+                os.system("echo 'I' >> integrate.fks")
+            else:
+                os.system("echo 'E' >> integrate.fks")
+        else:
+            os.system("echo 'N' >> integrate.fks")
+                
+            
+            
 
        # born_matrix_element = fksborn.matrix_element
     
@@ -432,7 +450,7 @@ class ProcessExporterFortranFKS(export_v4.ProcessExporterFortran):
                      'genps.f',
                      'genps.inc',
                      'genps_fks.f',
-                     'genint_fks.f',
+#                     'genint_fks.f',
                      'initcluster.f',
                      'ktclusdble.f',
                      'link_fks.f',
@@ -470,13 +488,9 @@ class ProcessExporterFortranFKS(export_v4.ProcessExporterFortran):
         
         os.system('touch bornfromreal.inc')
         
-        #import nexternal/leshouch in Source
+        #import nexternal/leshouches in Source
         ln('nexternal.inc', '../../Source', log=False)
         ln('leshouche.inc', '../../Source', log=False)
-    
-        #compile and execute genint_fks
-        os.system('gfortran -o genint_fks genint_fks.f')
-        os.system('./genint_fks')
     
     
         # Return to SubProcesses dir
@@ -514,13 +528,12 @@ class ProcessExporterFortranFKS(export_v4.ProcessExporterFortran):
         iflines = "\n"
         
         #header for the sborn_sf.f file 
-        file = """
-        subroutine sborn_sf(p_born,m,n,wgt)
+        file = """subroutine sborn_sf(p_born,m,n,wgt)
           implicit none
           include "nexternal.inc"
           double precision p_born(0:3,nexternal-1),wgt
           double complex wgt1(2)
-          integer m,n \n \n"""
+          integer m,n \n"""
     
         if nborns > 0:
             for i in range(nborns):
@@ -544,13 +557,14 @@ class ProcessExporterFortranFKS(export_v4.ProcessExporterFortran):
                 iflines += \
                 "c b_sf_%(iborn)3.3d links partons %(m)d and %(n)d \n\
                     %(iff)s (m.eq.%(m)d .and. n.eq.%(n)d) then \n\
-                    call sb_sf_%(iborn)3.3d(p_born,wgt)\n" \
+                    call sb_sf_%(iborn)3.3d(p_born,wgt)\n\n" \
                         %{'m':m, 'n': n, 'iff': iff, 'iborn': iborn}
             
             file += iflines + \
             """else
             wgt = 0d0
             endif
+            
             return
             end"""        
         elif nborns == 0:
@@ -559,6 +573,7 @@ class ProcessExporterFortranFKS(export_v4.ProcessExporterFortran):
 c     This is a dummy function because
 c     this subdir has no soft singularities
             wgt = 0d0          
+            
             return
             end"""           
         

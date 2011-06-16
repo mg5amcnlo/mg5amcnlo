@@ -25,8 +25,7 @@ import copy
 import logging
 import array
 import fractions
-
-
+    
 
 def combine_ij( i, j, model, dict, pert='QCD'): #test written
     """checks whether FKSlegs i and j can be combined together in the given model
@@ -112,7 +111,6 @@ def find_pert_particles_interactions(model, pert_order = 'QCD'): #test written
     return {'interactions' : sorted(qcd_inter), 
             'pert_particles': sorted(set(pert_parts)),
             'soft_particles': sorted(set(soft_parts))}    
-
 
 
 def insert_color_links(col_basis, col_obj, links): #test written
@@ -233,7 +231,7 @@ def legs_to_color_link_string(leg1, leg2): #test written, all cases
                       ])
         string.coeff = string.coeff * fractions.Fraction(1,2) 
     dict['replacements'] = replacements
-    dict['string'] = string#.simplify()
+    dict['string'] = string
       
     return dict
 
@@ -311,6 +309,10 @@ class FKSLeg(MG.Leg):
                         "%s is not a valid boolean for leg flag massless" % \
                                                                     str(value)                                                           
         return super(FKSLeg,self).filter(name, value)
+    
+    
+    
+    
  
     
 #    def __lt__(self, other):
