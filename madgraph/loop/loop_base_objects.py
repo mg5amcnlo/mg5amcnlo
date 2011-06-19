@@ -117,8 +117,6 @@ class LoopDiagram(base_objects.Diagram):
             mystr = mystr+'canonical tag: '+str(self['canonical_tag'])+'\n'
         if self['CT_vertices']:
             mystr = mystr+'CT vertices:'
-            for vert in self['CT_vertices']:
-                mystr = mystr+' '+str(vert['id'])
             mystr = mystr+'\n'
         if self['vertices']:
             mystr = mystr+'Loop vertices: ('

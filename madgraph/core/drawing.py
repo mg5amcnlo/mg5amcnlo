@@ -123,6 +123,7 @@ class FeynmanLine(object):
                         (2 X >2) => backward        
         So the common rule is to check if the number is one or not.
         """
+        
         # Look if we already resolve this problem
         if self.begin:
             self.def_end_point(vertex)
@@ -825,16 +826,6 @@ class FeynmanDiagram(object):
             #line of vertex or not. Corresponding to that change mode to find
             #if the leg exist or not.
             mg_id = self.find_leg_id3(gen_id)
-            
-            #if i + 1 == len(vertex.get('legs')):
-            #    # Find if leg is in self._treated_legs and returns the position 
-            #    #in that list
-            #    mg_id = self.find_leg_id2(leg, len(self._treated_legs) - \
-            #                                                       previous_len)
-            #else:
-            #    # Find  thelast item in self._treated_legs with same number and
-            #    #returns the position in that list 
-            #    mg_id = self.find_leg_id(leg)
 
             # Define-recover the line associate to this leg                  
             if mg_id:
@@ -1342,9 +1333,9 @@ class FeynmanDiagram(object):
                 external = line.is_external()
             except:
                 external = '?'
-            text += 'pos, %s ,id: %s, number: %s, external: %s, S-channel: %s \
+            text += 'pos, %s ,id: %s, number: %s, external: %s, S-channel: %s, loop : %s \
                     begin at %s, end at %s \n' % (i, line.id, \
-                    line.number, external, line.state, begin, end)
+                    line.number, external, line.state, line.loop_line, begin, end)
         text += 'vertex content : \n'
         for i in range(0, len(self.vertexList)):
             vertex = self.vertexList[i]
@@ -1694,6 +1685,9 @@ class DiagramDrawer(object):
         #if already a valid diagram. nothing to do
         if isinstance(diagram, FeynmanDiagram):
             return
+        
+        if amplitude is None:
+            amplitude = self.amplitude
 
         # assign default for model and check validity (if not default)
         if model is None:
@@ -1716,10 +1710,9 @@ class DiagramDrawer(object):
         # Upgrade diagram to FeynmanDiagram or FeynmanDiagramHorizontal 
         #following option choice
         if isinstance(diagram, loop_objects.LoopDiagram) and diagram.get('type'):
-            print 'pass'
             import madgraph.loop.loop_drawing as loop_drawing
             diagram = loop_drawing.LoopFeynmanDiagram(diagram, 
-                                    self.amplitude.get('structure_repository'),
+                                    amplitude.get('structure_repository'),
                                     model, 
                                     opt=opt) 
         elif opt.horizontal:

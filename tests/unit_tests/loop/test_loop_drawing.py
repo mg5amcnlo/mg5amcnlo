@@ -15,12 +15,13 @@
 
 """Unit test library for the various properties of objects in 
    loop_helas_objects.py"""
-
+from __future__ import division
 import copy
 import itertools
 import logging
 import math
 import os
+import pickle
 import sys
 
 root_path = os.path.split(os.path.dirname(os.path.realpath( __file__ )))[0]
@@ -37,6 +38,7 @@ import madgraph.loop.loop_base_objects as loop_base_objects
 import madgraph.loop.loop_diagram_generation as loop_diagram_generation
 import madgraph.loop.loop_drawing as loop_drawing
 import madgraph.iolibs.save_load_object as save_load_object
+from madgraph.interface.cmd_interface import MadGraphCmdShell
 from madgraph import MadGraph5Error
 
 _file_path = os.path.dirname(os.path.realpath(__file__))
@@ -46,8 +48,292 @@ _input_file_path = os.path.join(_file_path, os.path.pardir, os.path.pardir,
 #===============================================================================
 # LoopDiagramDrawer Test
 #===============================================================================
+class TestLoopDrawer(unittest.TestCase):
+    """ Test class for all functions related to the LoopDiagramDrawer """
+
+    cmd = MadGraphCmdShell()
+    cmd.do_import('model loop_ToyModel' )
+    model = cmd._curr_model
+    store_diagram = pickle.load(open(os.path.join(_file_path, \
+                                    '../../input_files/test_draw_nlo.obj'), 'r'))
+
+    class FakeAMP(dict):
+        
+        def get(self, name):
+            return self[name]
+
+    def test_loop_convert_diagram(self):
+        """check that the drawer assign the correct Drawing-class"""
+        
+        lo_diagram = self.store_diagram['g g > g g'][0]
+        amp = self.FakeAMP({'structure_repository': self.store_diagram['g g > g g']['structure']})
+        drawer = draw_lib.DiagramDrawer()
+        new_diagram = drawer.convert_diagram(diagram=lo_diagram, 
+                               model=self.model, 
+                               amplitude=amp)
+        
+        self.assertEqual(new_diagram.__class__.__name__, 'FeynmanDiagram')
+        
+        nlo_diagram = self.store_diagram['g g > g g'][12]
+            
+        new_diagram = drawer.convert_diagram(diagram=nlo_diagram, 
+                               model=self.model, 
+                               amplitude=amp)
+        
+        self.assertEqual(new_diagram.__class__.__name__, 'LoopFeynmanDiagram')        
+        
+    def test_LO_draw_with_NLO_generation(self):
+        """ check if we can make the drawing """
+    
+        # test that LO is still fine when generate via NLO: 4 point
+        diagram = self.store_diagram['g g > g g'][0]
+        diagram = draw_lib.FeynmanDiagram(diagram, self.model)
+
+        diagram.load_diagram()
+        diagram.define_level()
+        level_solution = [1, 0, 0, 2, 2]
+        found = [v.level for v in diagram.vertexList]
+        self.assertEqual(level_solution, found)
+
+        diagram.find_initial_vertex_position()
+        level_solution = [1, 0, 0, 2, 2]
+        x_position = [1 / 2, 0, 0, 1, 1]
+        y_position = [1 / 2, 0, 1, 0, 1]
+        self.assertEquals(len(diagram.vertexList), 5)
+        for i in range(0, 5):
+            self.assertEquals(diagram.vertexList[i].level, \
+                              level_solution[i])
+            self.assertAlmostEquals(diagram.vertexList[i].pos_x, \
+                              x_position[i])
+            self.assertAlmostEquals(diagram.vertexList[i].pos_y, \
+                              y_position[i])
+        for line in diagram.lineList:
+            self.assertNotEquals(line.begin, None)
+            self.assertNotEquals(line.end, None)
+
+        # test that LO is still fine when generate via NLO: S-channel
+        diagram = self.store_diagram['g g > g g'][1]
+        diagram = draw_lib.FeynmanDiagram(diagram, self.model)
+
+        diagram.load_diagram()
+        diagram.define_level()
+        level_solution = [1, 2, 0, 0, 3, 3]
+        found = [v.level for v in diagram.vertexList]
+        self.assertEqual(level_solution, found)
+
+        diagram.find_initial_vertex_position()
+        level_solution = [1, 2, 0, 0, 3, 3]
+        x_position = [1/3, 2/3, 0, 0, 1, 1]
+        y_position = [1/2, 1/2, 0, 1, 0, 1]
+        self.assertEquals(len(diagram.vertexList), 6)
+
+
+    def test_NLO_draw(self):
+        """ check if we can make the drawing """
+    
+        # test that NLO DRAW is fine first check for diagram
+        # +        +
+        #  +   + 
+        #   +
+        #   I
+        #   I              +
+        #   +             +
+        #   I +          +
+        #   I  +        +
+        #   I   +------
+        #   I  +        +
+        #   I +          +
+        #   +              +
+        #  +                +
+        # +                  +
+        
+        diagram = self.store_diagram['g g > g g'][12]
+        structure = self.store_diagram['g g > g g']['structure']
+        diagram = loop_drawing.LoopFeynmanDiagram(diagram, structure, self.model)
+        
+
+        diagram.load_diagram()
+        diagram.define_level()
+
+
+        level_solution = [1, 1, 1, 2, 0, 2, 0, 3]
+        level = [v.level for v in diagram.vertexList]
+        self.assertEqual(level, level_solution)        
+        
+        diagram.find_initial_vertex_position()
+        
+        level_solution = [1, 1, 1, 2, 0, 3, 0, 3]
+        level = [v.level for v in diagram.vertexList]
+        self.assertEqual(level, level_solution)
+        x_solution = [1/3, 1/3, 1/3, 2/3, 0, 1, 0, 1]
+        y_solution = [1/6, 5/6, 1/2, 3/4, 0, 0, 1, 1]
+        
+        self.assertEquals(len(diagram.vertexList), 8)
+        for i in range(0, 8):
+            self.assertEquals(diagram.vertexList[i].level, \
+                              level_solution[i])
+            self.assertAlmostEquals(diagram.vertexList[i].pos_x, \
+                              x_solution[i])
+            self.assertAlmostEquals(diagram.vertexList[i].pos_y, \
+                              y_solution[i])
+        for line in diagram.lineList:
+            self.assertNotEquals(line.begin, None)
+            self.assertNotEquals(line.end, None)
+
+    def test_flipping(self):
+        """ check if the flipping of loop-line work"""
+        
+        
+        ### Box cut at the T-channel
+        diagram = copy.deepcopy(self.store_diagram['g g > g g'][17])
+        structure = self.store_diagram['g g > g g']['structure']
+        diagram = loop_drawing.LoopFeynmanDiagram(diagram, structure, self.model)
+            
+        self.assertTrue(diagram.need_to_flip())
+        diagram.load_diagram()
+        diagram.loop_flip()
+        nb_t = len([1 for l in diagram.lineList if l.state and l.loop_line])
+        self.assertEqual(nb_t,3)
+        self.assertFalse(diagram.need_to_flip())
+        
+        ### Triangle
+        diagram = copy.deepcopy(self.store_diagram['g g > g g'][8])
+        
+        diagram = loop_drawing.LoopFeynmanDiagram(diagram, structure, self.model)
+#        diagram.load_diagram()
+        self.assertTrue(diagram.need_to_flip())
+        
+    def test_level_with_flipping_box(self):
+        
+        diagram = copy.deepcopy(self.store_diagram['g g > g g'][17])
+        structure = self.store_diagram['g g > g g']['structure']
+        diagram = loop_drawing.LoopFeynmanDiagram(diagram, structure, self.model)
+        diagram.load_diagram()
+        self.assertTrue(diagram.need_to_flip())
+        
+        # check the position for this diagram
+        diagram.define_level()
+        level_solution = [1, 2, 2, 1, 0, 3, 3, 0]
+        level = [v.level for v in diagram.vertexList]
+        self.assertEqual(level, level_solution)        
+        
+        diagram.find_initial_vertex_position()
+        
+        level = [v.level for v in diagram.vertexList]
+        self.assertEqual(level, level_solution)
+        x_solution = [1/3, 2/3, 2/3, 1/3, 0, 1, 1, 0]
+        y_solution = [1/4, 1/4, 3/4, 3/4, 0, 0, 1, 1]
+        
+        self.assertEquals(len(diagram.vertexList), 8)
+        for i in range(0, 8):
+            self.assertEquals(diagram.vertexList[i].level, \
+                              level_solution[i])
+            self.assertAlmostEquals(diagram.vertexList[i].pos_x, \
+                              x_solution[i])
+            self.assertAlmostEquals(diagram.vertexList[i].pos_y, \
+                              y_solution[i])
+        for line in diagram.lineList:
+            self.assertNotEquals(line.begin, None)
+            self.assertNotEquals(line.end, None)
+        
+        
+    def test_level_with_flipping_triangle(self):
+
+        diagram = copy.deepcopy(self.store_diagram['g g > g g'][8])
+        structure = self.store_diagram['g g > g g']['structure']
+        diagram = loop_drawing.LoopFeynmanDiagram(diagram, structure, self.model)
+        diagram.load_diagram()
+        self.assertTrue(diagram.need_to_flip())
+
+        # check the position for this diagram
+        diagram.define_level()
+        level_solution = [1, 1, 2, 1, 0, 2, 0, 3]
+        level = [v.level for v in diagram.vertexList]
+        self.assertEqual(level, level_solution)        
+        
+        diagram.find_initial_vertex_position()
+        
+        level_solution = [1, 1, 2, 1, 0, 3, 0, 3]
+        level = [v.level for v in diagram.vertexList]
+        self.assertEqual(level, level_solution)
+        x_solution = [1/3, 1/3, 2/3, 1/3, 0, 1, 0, 1]
+        y_solution = [1/6, 1/2, 3/4, 5/6, 0, 0, 1, 1]
+        
+        self.assertEquals(len(diagram.vertexList), 8)
+        for i in range(0, 8):
+            print i
+            self.assertEquals(diagram.vertexList[i].level, \
+                              level_solution[i])
+            self.assertAlmostEquals(diagram.vertexList[i].pos_x, \
+                              x_solution[i])
+            self.assertAlmostEquals(diagram.vertexList[i].pos_y, \
+                              y_solution[i])
+        for line in diagram.lineList:
+            self.assertNotEquals(line.begin, None)
+            self.assertNotEquals(line.end, None)
+        
+
+    def test_special_gg_gg(self):
+        
+        diagram = self.store_diagram['g g > g g'][75]
+        structure = self.store_diagram['g g > g g']['structure']
+        diagram = loop_drawing.LoopFeynmanDiagram(diagram, structure, self.model)
+        
+        diagram.load_diagram()
+        self.assertFalse(diagram.need_to_flip())
+        
+        # check the position for this diagram
+        diagram.define_level()
+        level_solution = [2, 1, 1, 3, 3, 0, 0]
+        level = [v.level for v in diagram.vertexList]
+        self.assertEqual(level, level_solution)        
+        
+        diagram.find_initial_vertex_position()
+        
+        level = [v.level for v in diagram.vertexList]
+        self.assertEqual(level, level_solution)
+        x_solution = [2/3, 1/3, 1/3, 1, 1, 0, 0]
+        y_solution = [1/2, 3/4, 1/4, 0, 1, 1, 0]
+        
+        self.assertEquals(len(diagram.vertexList), 7)
+        for i in range(0, 7):
+            self.assertEquals(diagram.vertexList[i].level, \
+                              level_solution[i])
+            self.assertAlmostEquals(diagram.vertexList[i].pos_x, \
+                              x_solution[i])
+            self.assertAlmostEquals(diagram.vertexList[i].pos_y, \
+                              y_solution[i])
+        for line in diagram.lineList:
+            self.assertNotEquals(line.begin, None)
+            self.assertNotEquals(line.end, None)
+        
+        
+        
+        
+        # check the associate position
+        
+        diagram.find_initial_vertex_position()
+
+
+        
+        
+    def test_NLO_draw_all_gg_gg(self):
+        for i in range(5,85):
+            diagram = copy.deepcopy(self.store_diagram['g g > g g'][i])
+            structure = self.store_diagram['g g > g g']['structure']
+            diagram = loop_drawing.LoopFeynmanDiagram(diagram, structure, self.model)
+        
+
+            diagram.load_diagram()
+            diagram.define_level()
+            diagram.find_initial_vertex_position()
+
+
+
 class LoopDiagramDrawerTest(unittest.TestCase):
-    """Test class for all functions related to the LoopDiagramDrawer"""
+    """Test class for all functions related to the LoopDiagramDrawer
+        diagram made by hand
+    """
     
     myloopmodel = loop_base_objects.LoopModel()
     mypartlist = base_objects.ParticleList()
@@ -366,15 +652,7 @@ class LoopDiagramDrawerTest(unittest.TestCase):
         
         # Now the drawing test on myloopamplitude['loop_diagrams']
         return myloopamplitude['loop_diagrams']
-    
-    def test_need_to_flip(self):
-        """ test define level in the NLO case """
-        
-        # In some case, the diagram can be better if we permutte the T-channel 
-        #part of the loop with the non-T channel part of the loop. Check the 
-        #routine deciding if we need to flip or not.
-        raise NotImplemented, 'Not know yet the structure of this routine'    
-
+     
     def test_find_all_loop_particles(self):
         """ check if we can find the loop particles at a given position """
         
@@ -682,4 +960,39 @@ class LoopDiagramDrawerTest(unittest.TestCase):
 #                                        '__testdiag3__.eps', model=_model, \
 #                                         amplitude='')
 #        plot.draw(opt)
+        
+if __name__ == '__main__':
+
+    # For debugging it's interesting to store problematic diagram in one file.
+    #Those one are generated with cmd and store in files with pickle module.
+
+    process_diag = {}
+    process_diag['g g > g g'] = range(85)#[0, 12]
+    
+    cmd = MadGraphCmdShell()
+    cmd.do_import('model loop_ToyModel' )
+    # Create the diagrams
+    diag_content = {}
+    for gen_line, pos_list in process_diag.items():
+        print gen_line, ':',
+        gen_line_with_order = gen_line + ' [QCD]'
+        cmd.do_generate(gen_line_with_order)
+        #Look for decay chains
+        amplitude = cmd._curr_amps[0]
+        print len(amplitude.get('diagrams'))
+                    
+        diag_content[gen_line] = {}
+        diag_content[gen_line]['structure'] = amplitude.get('structure_repository')
+        for pos in pos_list:
+            diag_content[gen_line][pos] = amplitude.get('diagrams')[pos]
+
+    # Store the diagrams  
+    file_test_diagram = open(os.path.join(_file_path , \
+                                    '../../input_files/test_draw_nlo.obj'), 'w')
+    pickle.dump(diag_content, file_test_diagram)
+    print 'done'
+        
+        
+        
+        
         
