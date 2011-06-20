@@ -923,11 +923,15 @@ c-----
 c  Begin Code
 c-----
       if (flat_grid) then
-         write(*,'(a,i4,2e15.5,i4)') 'Setting grid',j,xo,a,itype
-         if (a .ge. xo) then
-            write(*,*) 'Can not integrate over singularity'
-            write(*,*) 'Set grid',j,xo,a
-            return
+         if (itype.gt.1) then
+            write(*,'(a,i4,2e15.5,i4)') 'Setting grid',j,xo,a,itype
+            if (a .ge. xo) then
+               write(*,*) 'Can not integrate over singularity'
+               write(*,*) 'Set grid',j,xo,a
+               return
+            endif
+         else
+            write(*,'(a,i4,1e15.5,i4)') 'Setting grid',j,xo,itype            
          endif
 c     grid(2,1,j) = xo
          grid(2,ng,j)=xgmax
@@ -1133,12 +1137,12 @@ c         write(*,'(7f11.5)')(ddum(j)*real(ng),j=1,dim)
 c         write(*,*) 'Getting variable',ipole,j,minvar(j,ipole)
          xbin_min = xbin(xmin,minvar(j,ipole))
          xbin_max = xbin(xmax,minvar(j,ipole))
-         if (xbin_min .gt. xbin_max) then
+         if (xbin_min .gt. xbin_max-1) then
 c            write(*,'(a,4e15.4)') 'Bad limits',xbin_min,xbin_max,
 c     &           xmin,xmax
 c            xbin_max=xbin_min+1d-10
-            xbin_min = xbin(xmin,minvar(j,ipole))
             xbin_max = xbin(xmax,minvar(j,ipole))
+            xbin_min = min(xbin(xmin,minvar(j,ipole)), xbin_max)
          endif
 c
 c     Line which allows us to keep choosing same x
@@ -1391,7 +1395,7 @@ c     Local
 c
       integer i, j, k, knt, non_zero, nun
       double precision vol,xnmin,xnmax,tot,xdum,tmp1,chi2tmp
-      double precision rc, dr, xo, xn, x(maxinvar), dum(ng)
+      double precision rc, dr, xo, xn, x(maxinvar), dum(ng-1)
       save vol,knt
       double precision  chi2
       save chi2, non_zero
@@ -1845,7 +1849,7 @@ c
 c
 c     Here is another fix for 0 width bins
 c
-               do i=1,ng-1
+               do i=1,ng-2
                   if (dum(i+1)-dum(i) .le. 1d-14) then
 c                     write(*,'(a,2i4,2f24.17,1e10.3)') 'Bin too small',
 c     &                    j,i,dum(i),dum(i+1),dum(i+1)-dum(i)

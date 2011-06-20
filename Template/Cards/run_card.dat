@@ -27,6 +27,7 @@
   .false.     = gridpack  !True = setting up the grid pack
 #*********************************************************************
 # Number of events and rnd seed                                      *
+# Warning: Do not generate more than 100K event in a single run      *
 #*********************************************************************
   10000       = nevents ! Number of unweighted events requested 
       0       = iseed   ! rnd seed (0=assigned automatically=default))
@@ -65,6 +66,11 @@
  F        = chcluster        ! cluster only according to channel diag
  T        = pdfwgt           ! for ickkw=1, perform pdf reweighting
 #*********************************************************************
+# Automatic ptj and mjj cuts if xqcut > 0
+# (turn off for VBF and single top processes)
+#**********************************************************
+   T  = auto_ptj_mjj
+#**********************************************************
 #                                                                    
 #**********************************
 # BW cutoff (M+/-bwcutoff*Gamma)
@@ -74,7 +80,14 @@
 # Apply pt/E/eta/dr/mij cuts on decay products or not
 # (note that etmiss/ptll/ptheavy/sorted cuts always apply)
 #**********************************************************
-   F  = cut_decays
+   T  = cut_decays
+#*************************************************************
+# Number of helicities to sum per event (0 = all helicities)
+# 0 gives more stable result, but longer run time (needed for
+# long decay chains e.g.).
+# Use >=2 if most helicities contribute, e.g. pure QCD.
+#*************************************************************
+   0  = nhel
 #*******************                                                 
 # Standard Cuts
 #*******************                                                 
@@ -185,6 +198,8 @@
 #*********************************************************************
  0   = htjmin ! minimum jet HT=Sum(jet pt)
  1d5 = htjmax ! maximum jet HT=Sum(jet pt)
+ 0   = ihtmin  !inclusive Ht for all partons (including b)
+ 1d5 = ihtmax  !inclusive Ht for all partons (including b)
  0   = ht2min ! minimum Ht for the two leading jets
  0   = ht3min ! minimum Ht for the three leading jets
  0   = ht4min ! minimum Ht for the four leading jets
@@ -197,8 +212,8 @@
  0   = xetamin ! minimum rapidity for two jets in the WBF case  
  0   = deltaeta ! minimum rapidity for two jets in the WBF case 
 #*********************************************************************
-# maximal pdg code for quark to be considered as a jet               *
-# otherwise b cuts are applied                                       *
+# maximal pdg code for quark to be considered as a light jet         *
+# (otherwise b cuts are applied)                                     *
 #*********************************************************************
  4 = maxjetflavor
 #*********************************************************************

@@ -576,7 +576,7 @@ c
 
       do ibranch = -1,-ns_channel,-1
          smin = (m(itree(1,ibranch))+m(itree(2,ibranch)))**2
-         smax = (dsqrt(s(-nbranch))-totmass+sqrt(smin))**2
+         smax = min((dsqrt(s(-nbranch))-totmass+sqrt(smin))**2, stot)
 c     Check for NAN - ja 3/11
          if (smax/stot.eq.smax/stot+1d0) then
             print *,'got NaN: ',smax/stot
@@ -658,7 +658,7 @@ c
      &        nbranch-1+(-ibranch)*2,iconfig,
      &        smin/stot,smax/stot)
 
-         m(ibranch-1)=dsqrt(stot*x(nbranch-1+(-ibranch)*2))
+         m(ibranch-1)=dsqrt(max(stot*x(nbranch-1+(-ibranch)*2), 0d0))
 
 c         write(*,*) 'Using s',nbranch-1+(-ibranch)*2
 
@@ -781,8 +781,8 @@ c         write(*,*) 'using costh,phi',ix,ix+1
          call sample_get_x(wgt,x(ix+1),ix+1,iconfig,0d0,1d0)
          phi  = 2d0*pi*x(ix+1)
          jac = jac * 4d0*pi
-         xa2 = m(itree(1,i))*m(itree(1,i))/s(i)
-         xb2 = m(itree(2,i))*m(itree(2,i))/s(i)
+         xa2 = m(itree(1,i))*m(itree(1,i))/(s(i)+1d-99)
+         xb2 = m(itree(2,i))*m(itree(2,i))/(s(i)+1d-99)
          if (m(itree(1,i))+m(itree(2,i)) .ge. m(i)) then
             jac=-8
             return
@@ -986,11 +986,12 @@ c-----
 c  Begin Code
 c-----
       ysqr = lambda(x,u,v)*lambda(x,w,z)
-      if (ysqr .ge. 0d0) then
+      if (ysqr .ge. tiny) then
          yr = dsqrt(ysqr)
-c      else
+      else
 c        Probably a problem with negative x selection
 c         print*,'Error in yminymax sqrt(-x)',lambda(x,u,v),lambda(x,w,z)
+         yr = tiny
       endif
       y1 = u+w -.5d0* ((x+u-v)*(x+w-z) - yr)/(x+tiny)
       y2 = u+w -.5d0* ((x+u-v)*(x+w-z) + yr)/(x+tiny)

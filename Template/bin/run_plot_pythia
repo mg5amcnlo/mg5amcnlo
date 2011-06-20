@@ -30,10 +30,7 @@ fi
 
 dirbin=$main/../bin
 
-echo  ${run}_pythia_events.lhe.gz
-
 if [[ $run != "" && -e ${run}_pythia_events.lhe.gz ]];then
-    
     gunzip -c ${run}_pythia_events.lhe.gz > pythia_events.lhe
 fi
 
@@ -46,5 +43,8 @@ if [[ (-x $MAdir/plot_events) && (-e pythia_events.lhe) && (-e ../Cards/plot_car
     cd ..
     $dirbin/plot_page-pl ${run}_pythia Pythia
     mv plots.html ${run}_plots_pythia.html
+    $dirbin/gen_crossxhtml-pl $run
+else
+   echo "Not creating plots"
 fi
 

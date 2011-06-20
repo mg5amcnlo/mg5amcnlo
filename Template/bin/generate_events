@@ -22,14 +22,16 @@ fi
 #  Now let shell know where to find important executables
 #
 main=`pwd`
+# Strip off last directory
+mainpar=${main%/*}
 dirbin=$main/bin
-pydir=$main/../pythia-pgs/src
+pydir=$mainpar/pythia-pgs/src
 pgsdir=$pydir
-delphesdir=$main/../Delphes
-ERAdir=$main/../ExRootAnalysis
-MAdir=$main/../MadAnalysis
+delphesdir=$mainpar/Delphes
+ERAdir=$mainpar/ExRootAnalysis
+MAdir=$mainpar/MadAnalysis
 webbin=$dirbin
-td=$main/../td
+td=$mainpar/td
 web=0
 
 echo $$ >> myprocid
@@ -83,6 +85,12 @@ a=`awk '/^[^#].*=.*nevents/{print $1}' Cards/run_card.dat`
 b=`awk '/^[^#].*=.*gridpack/{print $1}' Cards/run_card.dat`
 c=`awk '/^[^#].*=.*pdlabel/{print $1}' Cards/run_card.dat`
 ickkw=`awk '/^[^#].*=.*ickkw.*!/{print $1}' Cards/run_card.dat`
+if [[ $a -gt 100000 ]];then
+   echo "Warning: Attempting to generate more than 100K events"
+   echo "Limiting number to 100K. Use multi_run for larger statistics."
+   perl -p -i.bak -e "s/\d+\s*=\s*nevents/100000 = nevents/" Cards/run_card.dat
+   a=`awk '/^[^#].*=.*nevents/{print $1}' Cards/run_card.dat`
+fi
 echo Generating $a events
 if [[ $b == ".true." ]]; then
     echo Generating GridPack $b
@@ -175,7 +183,6 @@ if [ "$ickkw" = "2" ];then
     rm RunWeb
     $dirbin/gen_crossxhtml-pl $t
     $dirbin/gen_cardhtml-pl
-    exit
   else
     rm -f lib/issudgrid.dat
     gunzip -c $issudfile > lib/issudgrid.dat
@@ -200,7 +207,7 @@ fi
 if [[ $b != ".true." ]]; then
    mv survey refine
    $dirbin/gen_crossxhtml-pl $t
-   $dirbin/refine $a $mode $n 5 $t
+   $dirbin/refine $a $mode $n 1 $t
    mv refine refine2
    $dirbin/gen_crossxhtml-pl $t
    $dirbin/refine $a $mode $n 1 $t
@@ -309,7 +316,6 @@ if [[ (-x $pydir/pythia) && (-e ../Cards/pythia_card.dat) ]]; then
     $dirbin/gen_crossxhtml-pl $t
 # shower and hadronize event through Pythia
     echo "Running pythia..."
-#    qsub -v pydir=$pydir $dirbin/run_pythia >> ../running_jobs
     $dirbin/run_pythia $pydir $mode  
 fi
 
@@ -331,7 +337,10 @@ if [[ (-x $ERAdir/ExRootLHEFConverter) && (-e pythia_events.lhe) ]]; then
     $dirbin/gen_crossxhtml-pl $t
     $ERAdir/ExRootLHEFConverter pythia_events.lhe pythia_lhe_events.root
 fi
-
+if [[ ickkw -ge 1 ]];then
+    echo "Create matching plots for Pythia"
+    $dirbin/create_matching_plots.sh $t
+fi
 if [[ (-x $MAdir/plot_events) && (-e pythia_events.lhe) && (-e ../Cards/plot_card.dat) ]]; then
     echo "Creating Plots for Pythia"
     echo "Creating Plots for Pythia" >& ../status
@@ -341,6 +350,9 @@ if [[ (-x $MAdir/plot_events) && (-e pythia_events.lhe) && (-e ../Cards/plot_car
     echo "../pythia_events.lhe" > events.list
     $dirbin/plot $MAdir $td > plot.log
     cd ..
+fi
+
+if [[ -d ${t}_pythia ]];then
     $dirbin/plot_page-pl ${t}_pythia Pythia
     mv -f plots.html ${t}_plots_pythia.html
 fi

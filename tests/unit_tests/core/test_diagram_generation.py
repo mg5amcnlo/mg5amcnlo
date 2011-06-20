@@ -25,6 +25,7 @@ import tests.unit_tests as unittest
 
 import madgraph.core.base_objects as base_objects
 import madgraph.core.diagram_generation as diagram_generation
+import models.import_ufo as import_ufo
 from madgraph import MadGraph5Error, InvalidCmd
 
 #===============================================================================
@@ -1474,7 +1475,7 @@ class DiagramGenerationTest(unittest.TestCase):
                              goal_req_antid[nphotons])
 
     def test_decay_chain_generation(self):
-        """Test the number of diagram generated for uu~>gg (s, t and u channels)
+        """Test the decay chain generation d > d g g and d > g g d
         """
 
         myleglist = base_objects.LegList()
@@ -2232,7 +2233,18 @@ class DecayChainAmplitudeTest(unittest.TestCase):
         self.assertEqual(len(my_decay_chain_amps.get('decay_chains')), 1)
         self.assertEqual(len(my_decay_chain_amps.get('decay_chains')[0].\
                              get('amplitudes')), 15)
-
+        # Check that all from_group flags are set appropriately
+        for amp in my_decay_chain_amps.get('amplitudes'):
+            for diagram in amp.get('diagrams'):
+                self.assertTrue(not any([l.get('from_group') for l in \
+                                         sum([v.get('legs') for v in \
+                                              diagram.get('vertices')], []) \
+                                         if not l.get('state')]))
+                self.assertTrue(not any([not l.get('from_group') for l in \
+                                         sum([v.get('legs') for v in \
+                                              diagram.get('vertices')], []) \
+                                         if l.get('state')]))
+ 
 #===============================================================================
 # MultiProcessTest
 #===============================================================================
@@ -2624,7 +2636,7 @@ class MultiProcessTest(unittest.TestCase):
                            for amplitude in amplitudes]
 
             if nfs <= 3:
-                self.assertEqual(valid_procs, goal_valid_procs[nfs - 2])
+                self.assertEqual(valid_procs, goal_valid_procs[nfs-2])
 
             #print 'pp > ',nfs,'j (p,j = ', p, '):'
             #print 'Valid processes: ',len(filter(lambda item: item[1] > 0, valid_procs))
@@ -2829,3 +2841,196 @@ class MultiProcessTest(unittest.TestCase):
                 self.assertRaises(MadGraph5Error,
                                   my_multiprocess.get, 'amplitudes')
 
+    def test_crossing_uux_gg(self):
+        """Test the number of diagram generated for uu~>gg (s, t and u channels)
+        """
+
+        myleglist = base_objects.LegList()
+
+        myleglist.append(base_objects.Leg({'id':-1,
+                                         'state':False}))
+        myleglist.append(base_objects.Leg({'id':1,
+                                         'state':False}))
+        myleglist.append(base_objects.Leg({'id':21,
+                                         'state':True}))
+        myleglist.append(base_objects.Leg({'id':21,
+                                         'state':True}))
+
+        myproc = base_objects.Process({'legs':myleglist,
+                                       'model':self.mymodel})
+
+        myamplitude = diagram_generation.Amplitude(myproc)
+
+        myleglist = base_objects.LegList()
+
+        myleglist.append(base_objects.Leg({'id':1,
+                                         'state':False}))
+        myleglist.append(base_objects.Leg({'id':21,
+                                         'state':False}))
+        myleglist.append(base_objects.Leg({'id':1,
+                                         'state':True}))
+        myleglist.append(base_objects.Leg({'id':21,
+                                         'state':True}))
+
+        crossproc = base_objects.Process({'legs':myleglist,
+                                          'model':self.mymodel})
+
+        crossamp = diagram_generation.MultiProcess.cross_amplitude(myamplitude,
+                                                                   crossproc,
+                                                                   [3,4,2,1],
+                                                                   [2,4,1,3])
+        crossed_numbers =  [[[3, 1, 1], [2, 4, 1]],
+                            [[3, 2, 2], [1, 4, 2]],
+                            [[3, 4, 3], [1, 2, 3]]]
+        crossed_states =  [[[True, False, False], [False, True, False]],
+                           [[True, False, False], [False, True, False]],
+                           [[True, True, True], [False, False, True]]]
+        for idiag, diagram in enumerate(crossamp.get('diagrams')):
+            self.assertEqual([[l.get('number') for l in v.get('legs')] \
+                              for v in diagram.get('vertices')],
+                             crossed_numbers[idiag])
+            self.assertEqual([[l.get('state') for l in v.get('legs')] \
+                              for v in diagram.get('vertices')],
+                             crossed_states[idiag])
+#===============================================================================
+# TestDiagramTag
+#===============================================================================
+class TestDiagramTag(unittest.TestCase):
+    """Test class for the DiagramTag class"""
+
+
+    def setUp(self):
+        self.base_model = import_ufo.import_model('sm')
+    
+    def test_diagram_tag_gg_ggg(self):
+        """Test the diagram tag for gg > ggg"""
+
+        myleglist = base_objects.LegList()
+
+        myleglist.append(base_objects.Leg({'id':21,
+                                           'state':False}))
+        myleglist.append(base_objects.Leg({'id':21,
+                                           'state':False}))
+        myleglist.append(base_objects.Leg({'id':21,
+                                           'state':True}))
+        myleglist.append(base_objects.Leg({'id':21,
+                                           'state':True}))
+        myleglist.append(base_objects.Leg({'id':21,
+                                           'state':True}))
+
+        myproc = base_objects.Process({'legs':myleglist,
+                                       'model':self.base_model})
+
+        myamplitude = diagram_generation.Amplitude(myproc)
+
+        tags = []
+        permutations = []
+        diagram_classes = []
+        for idiag, diagram in enumerate(myamplitude.get('diagrams')):
+            tag = diagram_generation.DiagramTag(diagram)
+            try:
+                ind = tags.index(tag)
+            except:
+                diagram_classes.append([idiag + 1])
+                permutations.append([tag.get_external_numbers()])
+                tags.append(tag)
+            else:
+                diagram_classes[ind].append(idiag + 1)
+                permutations[ind].append(tag.get_external_numbers())
+
+        permutations = [[diagram_generation.DiagramTag.reorder_permutation(p, perms[0])\
+                         for p in perms] for perms in permutations]        
+
+        goal_classes =  [[1, 2, 3],
+                         [4],
+                         [5, 6, 9, 10, 13, 14],
+                         [7, 11, 15],
+                         [8, 12, 16],
+                         [17, 18, 19],
+                         [20, 21, 22],
+                         [23, 24, 25]]
+        goal_perms =  [[[0, 1, 2, 3, 4], [0, 1, 2, 4, 3], [0, 1, 4, 2, 3]],
+                       [[0, 1, 2, 3, 4]],
+                       [[0, 1, 2, 3, 4], [0, 1, 2, 4, 3], [0, 1, 3, 2, 4],
+                        [0, 1, 4, 2, 3], [0, 1, 3, 4, 2], [0, 1, 4, 3, 2]],
+                       [[0, 1, 2, 3, 4], [0, 1, 3, 2, 4], [0, 1, 3, 4, 2]],
+                       [[0, 1, 2, 3, 4], [0, 1, 3, 2, 4], [0, 1, 3, 4, 2]],
+                       [[0, 1, 2, 3, 4], [0, 1, 3, 2, 4], [0, 1, 3, 4, 2]],
+                       [[0, 1, 2, 3, 4], [0, 1, 3, 2, 4], [0, 1, 3, 4, 2]],
+                       [[0, 1, 2, 3, 4], [0, 1, 2, 4, 3], [0, 1, 4, 2, 3]]]
+
+        for i in range(len(diagram_classes)):
+            self.assertEqual(diagram_classes[i], goal_classes[i])
+            self.assertEqual(permutations[i], goal_perms[i])
+
+    def test_diagram_tag_uu_uug(self):
+        """Test diagram tag for uu>uug"""
+
+        myleglist = base_objects.LegList()
+
+        myleglist.append(base_objects.Leg({'id':2,
+                                           'state':False}))
+        myleglist.append(base_objects.Leg({'id':2,
+                                           'state':False}))
+        myleglist.append(base_objects.Leg({'id':2,
+                                           'state':True}))
+        myleglist.append(base_objects.Leg({'id':2,
+                                           'state':True}))
+        myleglist.append(base_objects.Leg({'id':21,
+                                           'state':True}))
+
+        myproc = base_objects.Process({'legs':myleglist,
+                                       'model':self.base_model})
+
+        myamplitude = diagram_generation.Amplitude(myproc)
+
+        tags = []
+        permutations = []
+        diagram_classes = []
+        for idiag, diagram in enumerate(myamplitude.get('diagrams')):
+            tag = diagram_generation.DiagramTag(diagram)
+            try:
+                ind = tags.index(tag)
+            except:
+                diagram_classes.append([idiag + 1])
+                permutations.append([tag.get_external_numbers()])
+                tags.append(tag)
+            else:
+                diagram_classes[ind].append(idiag + 1)
+                permutations[ind].append(tag.get_external_numbers())
+
+        permutations = [[diagram_generation.DiagramTag.reorder_permutation(p, perms[0])\
+                         for p in perms] for perms in permutations]        
+
+        goal_classes = [[1, 8], [2, 9], [3, 10], [4, 11], [5, 12], [6, 13],
+                        [7, 14], [15, 18], [16, 19], [17, 20], [21, 24],
+                        [22, 25], [23, 26]]
+
+        goal_perms = [[[0, 1, 2, 3, 4], [0, 1, 3, 2, 4]],
+                     [[0, 1, 2, 3, 4], [0, 1, 3, 2, 4]],
+                     [[0, 1, 2, 3, 4], [0, 1, 3, 2, 4]],
+                     [[0, 1, 2, 3, 4], [0, 1, 3, 2, 4]],
+                     [[0, 1, 2, 3, 4], [0, 1, 3, 2, 4]],
+                     [[0, 1, 2, 3, 4], [0, 1, 3, 2, 4]],
+                     [[0, 1, 2, 3, 4], [0, 1, 3, 2, 4]],
+                     [[0, 1, 2, 3, 4], [0, 1, 3, 2, 4]],
+                     [[0, 1, 2, 3, 4], [0, 1, 3, 2, 4]],
+                     [[0, 1, 2, 3, 4], [0, 1, 3, 2, 4]],
+                     [[0, 1, 2, 3, 4], [0, 1, 3, 2, 4]],
+                     [[0, 1, 2, 3, 4], [0, 1, 3, 2, 4]],
+                     [[0, 1, 2, 3, 4], [0, 1, 3, 2, 4]]]
+
+        for i in range(len(diagram_classes)):
+            self.assertEqual(diagram_classes[i], goal_classes[i])
+            self.assertEqual(permutations[i], goal_perms[i])
+
+
+    def test_reorder_permutation(self):
+        """Test the reorder_permutation routine"""
+
+        perm1 = [2,3,4,5,1]
+        perm2 = [3,5,2,1,4]
+        goal = [3,2,4,1,0]
+
+        self.assertEqual(diagram_generation.DiagramTag.reorder_permutation(\
+            perm1, perm2), goal)

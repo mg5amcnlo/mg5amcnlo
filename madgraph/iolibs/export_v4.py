@@ -74,7 +74,18 @@ class ProcessExporterFortran(object):
                       "No valid MG_ME path given for MG4 run directory creation."
             logger.info('initialize a new directory: %s' % \
                         os.path.basename(self.dir_path))
-            shutil.copytree(os.path.join(self.mgme_dir, 'Template'), self.dir_path, True)
+            shutil.copytree(os.path.join(self.mgme_dir, 'Template'),
+                            self.dir_path, True)
+            # Duplicate run_card and plot_card
+            for card in ['run_card', 'plot_card']:
+                try:
+                    shutil.copy(os.path.join(self.dir_path, 'Cards',
+                                             card + '.dat'),
+                               os.path.join(self.dir_path, 'Cards',
+                                            card + '_default.dat'))
+                except IOError:
+                    info.warning("Failed to copy " + card + ".dat to default")
+                    
         elif not os.path.isfile(os.path.join(self.dir_path, 'TemplateVersion.txt')):
             if not self.mgme_dir:
                 raise MadGraph5Error, \
@@ -967,7 +978,7 @@ class ProcessExporterFortranME(ProcessExporterFortran):
 
         filename = 'dname.mg'
         self.write_dname_file(writers.FortranWriter(filename),
-                         matrix_element.get('processes')[0].shell_string())
+                         "P"+matrix_element.get('processes')[0].shell_string())
 
         filename = 'iproc.dat'
         self.write_iproc_file(writers.FortranWriter(filename),
@@ -2336,12 +2347,20 @@ class UFO_model_to_mg4(object):
         replace = lambda match_pattern: change[match_pattern.groups()[0]]
         
         rep_pattern = re.compile(re_expr % '|'.join(to_change))
+        
+        # change parameters
         for key in keys:
             if key == ('external',):
                 continue
             for param in self.model['parameters'][key]: 
                 param.expr = rep_pattern.sub(replace, param.expr)
             
+        # change couplings
+        for key in self.model['couplings'].keys():
+            for coup in self.model['couplings'][key]:
+                coup.expr = rep_pattern.sub(replace, coup.expr)
+
+
         
     def refactorize(self, wanted_couplings = []):    
         """modify the couplings to fit with MG4 convention """

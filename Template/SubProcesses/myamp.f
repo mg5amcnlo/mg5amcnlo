@@ -449,7 +449,7 @@ c     JA 4/1/2011 Set grid in case there is no BW (radiation process)
             else                                  !1/x^pow
               a=pmass(i,iconfig)**2/stot
 c     JA 4/1/2011 always set grid
-              xo = xm(i)**2/stot
+              xo = max(xm(i)**2/stot, 1d-8)
 c              if (pwidth(i, iconfig) .eq. 0d0.or.iden_part(i).gt.0) then 
               call setgrid(-i,xo,a,1)
 c              else 

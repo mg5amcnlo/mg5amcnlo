@@ -446,12 +446,12 @@ c
       endif
       write(luni,'(a,a3)')  '#  particle name   : ',id(ip)
       write(luni,'(a,a)')   '#  decay mode      : ',dec_name      
-      write(luni,'(a,e12.5)') '#  MC partial width      : ',MC_width
-      write(luni,'(a,i12  )') '#  Rnd seed              : ',iseed
-      write(luni,'(a,i12  )') '#  Number of Events      : ',nevent
-      write(luni,'(a,e12.5)') '#  Integrated weight (pb): ',sum(0)
-      write(luni,'(a,e12.5)') '#  Max wgt               : ',maxwgt(0)
-      write(luni,'(a,e12.5)') '#  Average wgt           : ',sum(0)/nevent
+      write(luni,'(a,e10.5)')   '#  MC partial width: ',MC_width
+      write(luni,'(a,i10  )') '#  Rnd seed              : ',iseed
+      write(luni,'(a,i10  )') '#  Number of Events      : ',nevent
+      write(luni,'(a,e10.5)') '#  Integrated weight (pb): ',sum(0)
+      write(luni,'(a,e10.5)') '#  Max wgt               : ',maxwgt(0)
+      write(luni,'(a,e10.5)') '#  Average wgt           : ',sum(0)/nevent
       if(newbanner) then
          write(luni,'(a)') '</MGDecayInfo>'
          write(luni,'(a)') '</header>'

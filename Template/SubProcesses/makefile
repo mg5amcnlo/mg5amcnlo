@@ -42,6 +42,7 @@ qmass.inc: nexternal.inc
 symmetry.o: genps.inc nexternal.inc configs.inc ../../Source/run_config.inc
 genps.o: genps.inc nexternal.inc configs.inc
 cuts.o: genps.inc nexternal.inc pmass.inc
+setcuts.o: genps.inc ../../Source/run_config.inc
 invarients.o: genps.inc nexternal.inc
 myamp.o: props.inc genps.inc nexternal.inc
 reweight.o: sudakov.inc cluster.inc sudakov.inc run.inc message.inc
