@@ -145,16 +145,15 @@ class LoopAmplitude(diagram_generation.Amplitude):
                 if self['loop_diagrams'] == None:
                     self.generate_loop_diagrams()
 
+            return base_objects.DiagramList(self['born_diagrams']+self['loop_diagrams'])
+        
         if name == 'born_diagrams':
             if self['born_diagrams'] == None:
                 # Have not yet generated born diagrams for this process
                 if self['process']:
                     self.generate_born_diagrams()
             
-        if name=='diagrams':
-            return (self['born_diagrams']+self['loop_diagrams'])
-        else:
-            return LoopAmplitude.__bases__[0].get(self, name)  #return the mother routine
+        return LoopAmplitude.__bases__[0].get(self, name)  #return the mother routine
 
     def generate_diagrams(self):
         """ Generates all diagrams relevant to this Loop Process """

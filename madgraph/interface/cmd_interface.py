@@ -1806,11 +1806,13 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
         for amp in amplitudes:
             filename = os.path.join(args[0], 'diagrams_' + \
                                     amp.get('process').shell_string() + ".eps")
-            plot = draw.MultiEpsDiagramDrawer(amp['diagrams'],
+            
+            plot = draw.MultiEpsDiagramDrawer(amp.get('diagrams'),
                                           filename,
                                           model=self._curr_model,
-                                          amplitude='',
+                                          amplitude=amp,
                                           legend=amp.get('process').input_string())
+                                          
 
             logger.info("Drawing " + \
                          amp.get('process').nice_string())

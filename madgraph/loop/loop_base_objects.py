@@ -108,18 +108,18 @@ class LoopDiagram(base_objects.Diagram):
         
         return ['vertices', 'CT_vertices', 'orders', 'type', 'tag']
 
-    def nice_string(self):
+    def nice_string(self, struct_list=None ):
         """Returns a nicely formatted string of the diagram content."""
         mystr=''
-        if self['tag']:
-            mystr = mystr+'tag: '+str(self['tag'])+'\n'
+        if not self['vertices']:
+            return '()'
+        if self['canonical_tag']:
+            mystr = mystr+'canonical tag: '+str(self['canonical_tag'])+'\n'
         if self['CT_vertices']:
             mystr = mystr+'CT vertices:'
-            for vert in self['CT_vertices']:
-                mystr = mystr+' '+str(vert['id'])
             mystr = mystr+'\n'
         if self['vertices']:
-            mystr = mystr+'('
+            mystr = mystr+'Loop vertices: ('
             for vert in self['vertices']:
                 mystr = mystr + '('
                 for leg in vert['legs'][:-1]:
@@ -132,10 +132,16 @@ class LoopDiagram(base_objects.Diagram):
                 mystr = mystr + 'id:' + str(vert['id']) + '),'
             mystr = mystr[:-1] + ')'
             mystr += " (%s)" % ",".join(["%s=%d" % (key, self['orders'][key]) \
-                                        for key in self['orders'].keys()])
-            return mystr
-        else:
-            return '()'
+                                        for key in self['orders'].keys()])+"\n"
+        if struct_list and self['tag']:
+            for i, tag_elem in enumerate(self['tag']):
+                for j, struct in enumerate(tag_elem[1]):
+                    mystr += 'Struct. #'+str(j+1)+' on loop vx #'+str(i+1)+": "+\
+                      struct_list[struct].nice_string_vertices()+"\n"
+            #remove the unecessary last \n on the line
+            mystr=mystr[:-1]
+
+        return mystr
 
     def get_CT(self,model,string=None):
         """ Returns the CounterTerms of the type passed in argument. If None
@@ -845,7 +851,7 @@ class FDStructure(base_objects.PhysicsObject):
         return ['id','external_legs','binding_leg','canonical','vertices']
 
     def nice_string(self):
-        """Returns a nicely formatted string of the diagram content."""
+        """Returns a nicely formatted string of the structure content."""
 
         mystr=''
 
@@ -864,6 +870,26 @@ class FDStructure(base_objects.PhysicsObject):
             mystr = mystr + str(self['external_legs'][-1]['number']) + '(%s)' % str(self['external_legs'][-1]['id']) + ' },\n'
             mystr = mystr+'binding_leg: '+str(self['binding_leg']['number']) + '(%s)' % str(self['binding_leg']['id'])
         return mystr
+
+    def nice_string_vertices(self):
+        """Returns a nicely formatted string of the structure vertices."""
+        mystr=''
+        if self['vertices']:
+            mystr = mystr+'('
+            for vert in self['vertices']:
+                mystr = mystr + '('
+                for leg in vert['legs'][:-1]:
+                    mystr = mystr + str(leg['number']) + '(%s)' % str(leg['id']) + ','
+                mystr = mystr[:-1] + '>'
+                mystr = mystr + str(vert['legs'][-1]['number']) + '(%s)' % str(vert['legs'][-1]['id']) + ','
+                mystr = mystr + 'id:' + str(vert['id']) + '),'
+            mystr = mystr[:-1] + ')'
+            return mystr
+        elif len(self['external_legs'])==1:
+            return '('+str(self['external_legs'][0]['number'])+'('+str(self['external_legs'][0]['id'])+'))'
+        else:
+            return '()'    
+
 
     def generate_vertices(self, process):
         """ This functions generate the vertices building this structure, starting from the outter legs going towards the
