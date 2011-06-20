@@ -150,7 +150,7 @@ class LoopFeynmanDiagram(drawing.FeynmanDiagram):
     def find_vertex_position_at_level(self, vertexlist, level, direction=1):
         """Finds the vertex position for the particle at 'level' given the 
         ordering at previous level given by the vertexlist. 
-        if auto equals True then  pass in auto-recursive mode."""
+        if direction !=0  pass in auto-recursive mode."""
 
         if level == 2:
             self.find_vertex_position_at_level(vertexlist, 0, -1)
@@ -276,6 +276,7 @@ class LoopFeynmanDiagram(drawing.FeynmanDiagram):
         for line in self.lineList:
             if not line.is_external() and line.loop_line:
                 line.state = not line.state
+ 
     
     def remove_T_channel(self):
         """Remove T-channel information"""
@@ -286,6 +287,8 @@ class LoopFeynmanDiagram(drawing.FeynmanDiagram):
         for line in self.lineList:
             if not line.is_external() and line.loop_line:
                 line.state = True
+        
+
         
         
         
@@ -323,10 +326,16 @@ class LoopFeynmanDiagram(drawing.FeynmanDiagram):
         
         vertex.lines.sort(order)
         for line in vertex.lines:
-            # shortcut
-            next = line.end
-            if next.level is not None:
-                continue # level already define            
+            if line.begin.level and line.end.level:
+                continue # everything correctly define
+            elif line.end is vertex:
+                if line.loop_line and not line.state:
+                    line.inverse_begin_end()
+                    next = line.end
+                else:
+                    continue
+            else:
+                next = line.end       
             
             # Check if T-channel or not. Note that T-channel tag is wrongly 
             #define if only one particle in initial state.

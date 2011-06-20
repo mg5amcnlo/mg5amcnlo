@@ -169,6 +169,7 @@ class TestLoopDrawer(unittest.TestCase):
         y_solution = [1/6, 5/6, 1/2, 3/4, 0, 0, 1, 1]
         
         self.assertEquals(len(diagram.vertexList), 8)
+        
         for i in range(0, 8):
             self.assertEquals(diagram.vertexList[i].level, \
                               level_solution[i])
@@ -257,11 +258,10 @@ class TestLoopDrawer(unittest.TestCase):
         level = [v.level for v in diagram.vertexList]
         self.assertEqual(level, level_solution)
         x_solution = [1/3, 1/3, 2/3, 1/3, 0, 1, 0, 1]
-        y_solution = [1/6, 1/2, 3/4, 5/6, 0, 0, 1, 1]
+        y_solution = [1/6, 5/6, 3/4, 1/2, 0, 0, 1, 1]
         
         self.assertEquals(len(diagram.vertexList), 8)
         for i in range(0, 8):
-            print i
             self.assertEquals(diagram.vertexList[i].level, \
                               level_solution[i])
             self.assertAlmostEquals(diagram.vertexList[i].pos_x, \
