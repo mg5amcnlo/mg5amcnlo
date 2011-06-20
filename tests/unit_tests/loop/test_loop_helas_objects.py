@@ -80,4 +80,10 @@ class LoopHelasMatrixElementTest(unittest.TestCase):
         myloopamplitude.set('process', myproc)
         myloopamplitude.generate_diagrams()
         
+        ### First let's try the born diagram which should be exactly as in a
+        ### HelasMatrixElement. For that we put only one born diagrams in the
+        ### amplitude diagrams.
+        myloopamplitude.set('diagrams', \
+          base_objects.DiagramList([myloopamplitude['born_diagrams'][0]]))
+        myloopME=loop_helas_objects.LoopHelasMatrixElement(myloopamplitude)
         # myloopME=loop_helas_objects.LoopHelasMatrixElement(myloopamplitude)
