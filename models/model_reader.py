@@ -155,10 +155,10 @@ class ModelReader(base_objects.Model):
              if particle.get('width') != 'ZERO':
                  try:
                      exec("locals()[\'%(mass)s\'] = cmath.sqrt(%(mass)s**2 + complex(0,-1) * %(mass)s * %(width)s)" % {'mass':particle.get('mass'), 'width': particle.get('width')})
-#                     for param in external_parameters:
-#                         if param.name == particle.get('mass'):
-#                             param.value = eval("cmath.sqrt(%(mass)s**2 + complex(0,-1) * %(mass)s * %(width)s)" % {'mass':particle.get('mass'), 'width':particle.get('width')}) 
-#                             break
+                     for param in external_parameters:
+                         if param.name == particle.get('mass'):
+                             param.value = eval("cmath.sqrt(%(mass)s**2 + complex(0,-1) * %(mass)s * %(width)s)" % {'mass':particle.get('mass'), 'width':particle.get('width')}) 
+                             break
 
                  except Exception as error:
                      print 'mass not pass in complex scheme for', particle.get('name')
@@ -167,10 +167,10 @@ class ModelReader(base_objects.Model):
 
                  try:
                      exec("locals()[\'%s\'] = 0" % (particle.get('width')))
-#                     for param in external_parameters:
-#                         if param.name == particle.get('width'):
-#                             param.value = 0
-#                             break
+                     for param in external_parameters:
+                         if param.name == particle.get('width'):
+                             param.value = 0
+                             break
                  except Exception as error:
                      print 'width not pass in complex scheme for', particle.get('name')
                      print error
