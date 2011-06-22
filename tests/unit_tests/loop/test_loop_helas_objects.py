@@ -84,6 +84,6 @@ class LoopHelasMatrixElementTest(unittest.TestCase):
         ### HelasMatrixElement. For that we put only one born diagrams in the
         ### amplitude diagrams.
         myloopamplitude.set('diagrams', \
-          base_objects.DiagramList([myloopamplitude['born_diagrams'][0]]))
+          base_objects.DiagramList([myloopamplitude['loop_diagrams'][0]]))
         myloopME=loop_helas_objects.LoopHelasMatrixElement(myloopamplitude)
-        # myloopME=loop_helas_objects.LoopHelasMatrixElement(myloopamplitude)
+        

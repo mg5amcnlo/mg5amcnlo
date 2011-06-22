@@ -39,19 +39,29 @@ logger = logging.getLogger('madgraph.helas_objects')
 #===============================================================================
 # LoopHelasAmplitude
 #===============================================================================
-class LoopHelasAmplitude(base_objects.PhysicsObject):
+class LoopHelasAmplitude(helas_objects.HelasAmplitude):
     """LoopHelasAmplitude object, behaving exactly as an amplitude except that
        it also contains loop wave-functions closed on themselves, building an
        amplitude corresponding to the closed loop.
     """
-    
+
+    # Customized constructor
+    def __init__(self, *arguments):
+        """Constructor for the LoopHelasAmplitude. For now, it works exactly
+           as for the HelasMatrixElement one."""
+        
+        if arguments:
+            super(LoopHelasAmplitude, self).__init__(arguments)
+        else:
+            super(LoopHelasAmplitude, self).__init__()        
+
     def default_setup(self):
         """Default values for all properties"""
                 
         super(LoopHelasAmplitude,self).default_setup()
         
         # Store the wavefunctions building this loop
-        self['wavefunctions'] = helas_objects.HelasWaveFunctionList()
+        self['wavefunctions'] = helas_objects.HelasWavefunctionList()
         self['amplitudes'] = helas_objects.HelasAmplitudeList()
 
     def filter(self, name, value):
@@ -80,14 +90,6 @@ class LoopHelasAmplitude(base_objects.PhysicsObject):
 
         return super(LoopHelasAmplitude,self).get_sorted_keys()+\
                ['wavefunctions', 'amplitudes']
-
-    # Customized constructor
-    def __init__(self, *arguments):
-        """Constructor for the LoopHelasAmplitude. For now, it works exactly
-           as for the HelasMatrixElement one."""
-
-        super(LoopHelasAmplitude, self).__init__(arguments)
-
 
 #===============================================================================
 # LoopHelasMatrixElement
@@ -600,7 +602,7 @@ class LoopHelasMatrixElement(helas_objects.HelasMatrixElement):
             # This is a list to store all the last loop wavefunctions created
             # due to the possibly many color-lorentz structure of the last
             # loop vertex.
-            last_loop_wfs = HelasWavefunctionList()
+            last_loop_wfs = helas_objects.HelasWavefunctionList()
 
             # Need to keep track of the color structures for each amplitude
             color_lists = [[]]
@@ -620,10 +622,10 @@ class LoopHelasMatrixElement(helas_objects.HelasMatrixElement):
 
             # First create the starting external loop leg
             last_loop_wfs.append(\
-              HelasWavefunction(tag[0][0], 0, model, decay_ids))
+              helas_objects.HelasWavefunction(tag[0][0], 0, model, decay_ids))
             diagram_wavefunctions.append(last_loop_wfs[0])
 
-            def process_tag_elem(tagElem, wfNumber):
+            def process_tag_elem(tagElem, wfNumber, lastloopwfs, colorlists):
                 """Treat one tag element of the loop diagram (not the last one
                    which provides an amplitude)"""
                    
@@ -645,8 +647,8 @@ class LoopHelasMatrixElement(helas_objects.HelasMatrixElement):
                 # will be written out before the first amplitude is written.
                 vertex=tagElem[2]
                 structureIDs=tagElem[1]
-                for last_loop_wf, color_list in zip(last_loop_wfs,
-                                                     color_lists):
+                for last_loop_wf, color_list in zip(lastloopwfs,
+                                                     colorlists):
                     loopLegOut = copy.copy(vertex.get('legs')[-1])
    
                     # From the incoming loop leg and the struct IDs, it generates
@@ -717,11 +719,10 @@ class LoopHelasMatrixElement(helas_objects.HelasMatrixElement):
                             new_color_list.append(coupl_key[0])
                             new_color_lists.append(new_color_list)
                 
-                # We update the last_loop_wfs list and the color_lists for the
+                # We update the lastloopwfs list and the color_lists for the
                 # next iteration, i.e. the treatment of the next loop vertex
-                last_loop_wfs = new_last_loop_wfs
-                color_lists = new_color_lists
-                return wfNumber
+                # by returning them to the calling environnement.
+                return wfNumber, new_last_loop_wfs, new_color_lists
 
  
             # Go through all vertices except the last and create
@@ -856,11 +857,14 @@ class LoopHelasMatrixElement(helas_objects.HelasMatrixElement):
                 return wfNumber, amplitudeNumber
             
             for tagElem in tag:
-                wfNumber = process_tag_elem(tagElem)
+                print 'tagElem=',tagElem
+                wfNumber, last_loop_wfs, color_lists = \
+                  process_tag_elem(tagElem, wf_number, last_loop_wfs, color_lists)
 
             # Generate all amplitudes corresponding to the different
             # copies of this diagram
-            wfNumber, amplitudeNumber = process_last_tag_Elem(lastTagElem)
+            wfNumber, amplitudeNumber = process_last_tag_Elem(lastTagElem, \
+                                          wf_number, amplitude_number)
 
 ### ====
 ###   Perform here further necessary treatment to the loop_helas_amplitude at
