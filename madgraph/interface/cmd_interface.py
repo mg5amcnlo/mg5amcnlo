@@ -172,7 +172,7 @@ class CmdExtended(cmd.Cmd):
         "*           Type 'tutorial' to learn how MG5 works         *\n" + \
         "*                                                          *\n" + \
         "************************************************************")
-
+        
         cmd.Cmd.__init__(self, *arg, **opt)
     
     def postcmd(self,stop, line):
@@ -400,9 +400,9 @@ class HelpToCmd(object):
         logger.info("syntax: set %s argument" % "|".join(self._set_options))
         logger.info("-- set options for generation or output")
         logger.info("   group_subprocesses True/False: ")
-        logger.info("     Smart grouping of subprocesses into directories,")
-        logger.info("     mirroring of initial states, and combination of")
-        logger.info("     integration channels.")
+        logger.info("     (default True) Smart grouping of subprocesses into ")
+        logger.info("     directories, mirroring of initial states, and ")
+        logger.info("     combination of integration channels.")
         logger.info("     Example: p p > j j j w+ gives 5 directories and 184 channels")
         logger.info("     (cf. 65 directories and 1048 channels for regular output)")
         logger.info("   ignore_six_quark_processes multi_part_label")
@@ -798,8 +798,7 @@ class CheckValidForCmd(object):
             raise self.InvalidCmd(text)
 
         if self._model_v4_path and \
-               (self._export_format not in self._v4_export_formats or \
-                self._options['group_subprocesses']):
+               (self._export_format not in self._v4_export_formats):
             text = " The Model imported (MG4 format) does not contain enough\n "
             text += " information for this type of output. In order to create\n"
             text += " output for " + args[0] + ", you have to use a UFO model.\n"
@@ -1455,18 +1454,6 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
     _curr_exporter = None
     _done_export = False
 
-    # Variables to store state information
-    _multiparticles = {}
-    _options = {}
-    _generate_info = "" # store the first generated process
-    _model_format = None
-    _model_v4_path = None
-    _use_lower_part_names = False
-    _export_dir = None
-    _export_format = 'madevent'
-    _mgme_dir = MG4DIR
-    _comparisons = None
-    
     # Configuration variable
     pythia8_path = None
     
@@ -1485,6 +1472,22 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
                              mgme_dir)
                 self._mgme_dir = MG4DIR
 
+        # Variables to store state information
+        self._multiparticles = {}
+        self._options = {}
+        self._generate_info = "" # store the first generated process
+        self._model_format = None
+        self._model_v4_path = None
+        self._use_lower_part_names = False
+        self._export_dir = None
+        self._export_format = 'madevent'
+        self._mgme_dir = MG4DIR
+        self._comparisons = None
+    
+        # Set defaults for options
+        self._options['group_subprocesses'] = True
+        self._options['ignore_six_quark_processes'] = False
+        
         # Load the configuration file
         self.set_configuration()
         
@@ -1587,6 +1590,7 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
         label = args[0]
         
         pdg_list = self.extract_particle_ids(args[1:])
+        self.optimize_order(pdg_list)
         self._multiparticles[label] = pdg_list
         if log:
             logger.info("Defined multiparticle %s" % \
@@ -2152,6 +2156,24 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
 
         return res_lists
 
+    def optimize_order(self, pdg_list):
+        """Optimize the order of particles in a pdg list, so that
+        similar particles are next to each other. Sort according to:
+        1. pdg > 0, 2. spin, 3. color, 4. mass > 0"""
+
+        if not pdg_list:
+            return
+        if not isinstance(pdg_list[0], int):
+            return
+        
+        model = self._curr_model
+        pdg_list.sort(key = lambda i: i < 0)
+        pdg_list.sort(key = lambda i: model.get_particle(i).is_fermion())
+        pdg_list.sort(key = lambda i: model.get_particle(i).get('color'),
+                      reverse = True)
+        pdg_list.sort(key = lambda i: \
+                      model.get_particle(i).get('mass').lower() != 'zero')
+
     def extract_decay_chain_process(self, line, level_down=False):
         """Recursively extract a decay chain process definition from a
         string. Returns a ProcessDefinition."""
@@ -2305,8 +2327,6 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
                 self._curr_fortran_model = \
                       helas_call_writers.FortranHelasCallWriter(\
                                                                self._curr_model)
-                # Automatically turn off subprocess grouping
-                self.do_set('group_subprocesses False')
             else:
                 self._curr_model = import_ufo.import_model(args[1])
                 self._curr_fortran_model = \
@@ -2315,8 +2335,6 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
                 self._curr_cpp_model = \
                       helas_call_writers.CPPUFOHelasCallWriter(\
                                                                self._curr_model)
-                # Automatically turn on subprocess grouping
-                self.do_set('group_subprocesses True')
 
             if '-modelname' not in args:
                 self._curr_model.pass_particles_name_in_mg_default()
@@ -2536,7 +2554,6 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
         
         # Configure the way to open a file:
         launch_ext.open_file.configure(self.configuration)
-
           
         return self.configuration
      
@@ -2655,13 +2672,6 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
                 self._done_export = None
             else:
                 raise self.RWError('Could not load processes from file %s' % args[1])
-        if self._model_v4_path:
-            # Automatically turn off subprocess grouping
-            self.do_set('group_subprocesses False')
-        else:
-            # Automatically turn on subprocess grouping
-            self.do_set('group_subprocesses True')
-        
     
     def do_save(self, line):
         """Save information to file"""
@@ -2710,7 +2720,10 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
             self._options[args[0]] = eval(args[1])
             logger.info('Set group_subprocesses to %s' % \
                         str(self._options[args[0]]))
-            
+            logger.info('Note that you need to regenerate all processes')
+            self._curr_amps = diagram_generation.AmplitudeList()
+            self._curr_matrix_elements = helas_objects.HelasMultiProcess()
+
         elif args[0] == "stdout_level":
             logging.root.setLevel(eval('logging.' + args[1]))
             logging.getLogger('madgraph').setLevel(eval('logging.' + args[1]))

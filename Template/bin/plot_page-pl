@@ -70,6 +70,10 @@ if ($#ARGV >= 1){
    print PAGE "</table><BR>";
 
    foreach $f (<./$ARGV[0]/*.jpg>) { 
+     print "$f\n";
+     if ($f =~ /DJR/) {
+       print PAGE "<font color=\"Dark Purple\">Differential jet rate (matching check plot)</font><br>\n";
+     }
      print PAGE "\<IMG SRC=\"$f\" BORDER\=1\> \<BR\> \n";
      $fps=substr($f,0,-3)."ps";
      ($junk, $fname)   =split("$ARGV[0]\/" , $fps);

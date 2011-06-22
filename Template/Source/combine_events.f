@@ -16,8 +16,6 @@ c
       include 'maxparticles.inc'
       integer    maxexternal
       parameter (maxexternal=2*max_particles-3)
-      integer maxpara
-      parameter (maxpara=1000)
 c     
 c     Local
 c

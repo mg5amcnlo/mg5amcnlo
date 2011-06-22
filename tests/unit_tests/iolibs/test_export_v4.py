@@ -772,10 +772,6 @@ C
       PARAMETER (NDIAGS=6)
       INTEGER    THEL
       PARAMETER (THEL=2*NCOMB)
-      REAL*8 LIMHEL
-      PARAMETER(LIMHEL=1E-6)
-      INTEGER MAXTRIES
-      PARAMETER(MAXTRIES=10)
 C     
 C     ARGUMENTS 
 C     
@@ -890,21 +886,11 @@ C     ----------
               PRINT *,'Added good helicity ',I,TS(I)*NCOMB/ANS
             ENDIF
           ENDDO
+        ENDIF
+        IF(NTRY(IMIRROR).EQ.MAXTRIES)THEN
           ISHEL(IMIRROR)=MIN(ISUM_HEL,NGOOD(IMIRROR))
         ENDIF
-        IF(NTRY(IMIRROR).EQ.MAXTRIES.AND.ISHEL(IMIRROR).GT.0)THEN
-C         Check if we have stable helicities in this event
-          DO I=1,NGOOD(IMIRROR)
-            IF(TS(IGOOD(I,IMIRROR)) .LT. 0.1*ANS/NGOOD(IMIRROR))THEN
-              WRITE(*,*) 'Not stable helicity distribution, fraction '
-     $         , TS(IGOOD(I,IMIRROR))/ANS*NGOOD(IMIRROR)
-              WRITE(*,*) 'Explicit sum over all non-zero helicities.'
-              ISHEL(IMIRROR)=0
-              EXIT
-            ENDIF
-          ENDDO
-        ENDIF
-      ELSE  !RANDOM HELICITY
+      ELSE  !LOOP OVER GOOD HELICITIES
         DO J=1,ISHEL(IMIRROR)
           JHEL(IMIRROR)=JHEL(IMIRROR)+1
           IF (JHEL(IMIRROR) .GT. NGOOD(IMIRROR)) JHEL(IMIRROR)=1
@@ -2277,10 +2263,10 @@ mirror  d~ d > d d~ g d d~ g"""
         self.assertFileContains('test',
 """      DATA (CONFSUB(I,1),I=1,3)/1,0,0/
       DATA (CONFSUB(I,2),I=1,3)/2,0,0/
-      DATA (CONFSUB(I,3),I=1,3)/0,1,0/
-      DATA (CONFSUB(I,4),I=1,3)/0,2,0/
-      DATA (CONFSUB(I,5),I=1,3)/3,0,0/
-      DATA (CONFSUB(I,6),I=1,3)/4,0,0/
+      DATA (CONFSUB(I,3),I=1,3)/3,0,0/
+      DATA (CONFSUB(I,4),I=1,3)/4,0,0/
+      DATA (CONFSUB(I,5),I=1,3)/0,1,0/
+      DATA (CONFSUB(I,6),I=1,3)/0,2,0/
       DATA (CONFSUB(I,7),I=1,3)/0,3,0/
       DATA (CONFSUB(I,8),I=1,3)/0,4,0/
       DATA (CONFSUB(I,9),I=1,3)/0,0,1/
@@ -2333,14 +2319,14 @@ C     Diagram 2
       DATA TPRID(-5,2)/0/
 C     Diagram 3
       DATA MAPCONFIG(3)/3/
-      DATA (IFOREST(I,-1,3),I=1,2)/5,3/
-      DATA SPROP(-1,3)/1000001/
+      DATA (IFOREST(I,-1,3),I=1,2)/5,4/
+      DATA SPROP(-1,3)/-1000001/
       DATA TPRID(-1,3)/0/
-      DATA (IFOREST(I,-2,3),I=1,2)/4,-1/
+      DATA (IFOREST(I,-2,3),I=1,2)/-1,3/
       DATA SPROP(-2,3)/1000021/
       DATA TPRID(-2,3)/0/
       DATA (IFOREST(I,-3,3),I=1,2)/8,6/
-      DATA SPROP(-3,3)/1000002/
+      DATA SPROP(-3,3)/1000001/
       DATA TPRID(-3,3)/0/
       DATA (IFOREST(I,-4,3),I=1,2)/7,-3/
       DATA SPROP(-4,3)/1000021/
@@ -2350,14 +2336,14 @@ C     Diagram 3
       DATA TPRID(-5,3)/0/
 C     Diagram 4
       DATA MAPCONFIG(4)/4/
-      DATA (IFOREST(I,-1,4),I=1,2)/5,3/
-      DATA SPROP(-1,4)/1000001/
+      DATA (IFOREST(I,-1,4),I=1,2)/5,4/
+      DATA SPROP(-1,4)/-1000001/
       DATA TPRID(-1,4)/0/
-      DATA (IFOREST(I,-2,4),I=1,2)/4,-1/
+      DATA (IFOREST(I,-2,4),I=1,2)/-1,3/
       DATA SPROP(-2,4)/1000021/
       DATA TPRID(-2,4)/0/
       DATA (IFOREST(I,-3,4),I=1,2)/8,7/
-      DATA SPROP(-3,4)/-1000002/
+      DATA SPROP(-3,4)/-1000001/
       DATA TPRID(-3,4)/0/
       DATA (IFOREST(I,-4,4),I=1,2)/-3,6/
       DATA SPROP(-4,4)/1000021/
@@ -2367,14 +2353,14 @@ C     Diagram 4
       DATA TPRID(-5,4)/0/
 C     Diagram 5
       DATA MAPCONFIG(5)/5/
-      DATA (IFOREST(I,-1,5),I=1,2)/5,4/
-      DATA SPROP(-1,5)/-1000001/
+      DATA (IFOREST(I,-1,5),I=1,2)/5,3/
+      DATA SPROP(-1,5)/1000001/
       DATA TPRID(-1,5)/0/
-      DATA (IFOREST(I,-2,5),I=1,2)/-1,3/
+      DATA (IFOREST(I,-2,5),I=1,2)/4,-1/
       DATA SPROP(-2,5)/1000021/
       DATA TPRID(-2,5)/0/
       DATA (IFOREST(I,-3,5),I=1,2)/8,6/
-      DATA SPROP(-3,5)/1000001/
+      DATA SPROP(-3,5)/1000002/
       DATA TPRID(-3,5)/0/
       DATA (IFOREST(I,-4,5),I=1,2)/7,-3/
       DATA SPROP(-4,5)/1000021/
@@ -2384,14 +2370,14 @@ C     Diagram 5
       DATA TPRID(-5,5)/0/
 C     Diagram 6
       DATA MAPCONFIG(6)/6/
-      DATA (IFOREST(I,-1,6),I=1,2)/5,4/
-      DATA SPROP(-1,6)/-1000001/
+      DATA (IFOREST(I,-1,6),I=1,2)/5,3/
+      DATA SPROP(-1,6)/1000001/
       DATA TPRID(-1,6)/0/
-      DATA (IFOREST(I,-2,6),I=1,2)/-1,3/
+      DATA (IFOREST(I,-2,6),I=1,2)/4,-1/
       DATA SPROP(-2,6)/1000021/
       DATA TPRID(-2,6)/0/
       DATA (IFOREST(I,-3,6),I=1,2)/8,7/
-      DATA SPROP(-3,6)/-1000001/
+      DATA SPROP(-3,6)/-1000002/
       DATA TPRID(-3,6)/0/
       DATA (IFOREST(I,-4,6),I=1,2)/-3,6/
       DATA SPROP(-4,6)/1000021/
@@ -2433,8 +2419,8 @@ C     Diagram 8
       DATA (IFOREST(I,-5,8),I=1,2)/-4,-2/
       DATA SPROP(-5,8)/21/
       DATA TPRID(-5,8)/0/
-C     Diagram 11
-      DATA MAPCONFIG(9)/11/
+C     Diagram 9
+      DATA MAPCONFIG(9)/9/
       DATA (IFOREST(I,-1,9),I=1,2)/5,3/
       DATA SPROP(-1,9)/1000002/
       DATA TPRID(-1,9)/0/
@@ -2450,8 +2436,8 @@ C     Diagram 11
       DATA (IFOREST(I,-5,9),I=1,2)/-4,-2/
       DATA SPROP(-5,9)/21/
       DATA TPRID(-5,9)/0/
-C     Diagram 12
-      DATA MAPCONFIG(10)/12/
+C     Diagram 10
+      DATA MAPCONFIG(10)/10/
       DATA (IFOREST(I,-1,10),I=1,2)/5,3/
       DATA SPROP(-1,10)/1000002/
       DATA TPRID(-1,10)/0/
@@ -2467,8 +2453,8 @@ C     Diagram 12
       DATA (IFOREST(I,-5,10),I=1,2)/-4,-2/
       DATA SPROP(-5,10)/21/
       DATA TPRID(-5,10)/0/
-C     Diagram 15
-      DATA MAPCONFIG(11)/15/
+C     Diagram 11
+      DATA MAPCONFIG(11)/11/
       DATA (IFOREST(I,-1,11),I=1,2)/5,4/
       DATA SPROP(-1,11)/-1000002/
       DATA TPRID(-1,11)/0/
@@ -2484,8 +2470,8 @@ C     Diagram 15
       DATA (IFOREST(I,-5,11),I=1,2)/-4,-2/
       DATA SPROP(-5,11)/21/
       DATA TPRID(-5,11)/0/
-C     Diagram 16
-      DATA MAPCONFIG(12)/16/
+C     Diagram 12
+      DATA MAPCONFIG(12)/12/
       DATA (IFOREST(I,-1,12),I=1,2)/5,4/
       DATA SPROP(-1,12)/-1000002/
       DATA TPRID(-1,12)/0/

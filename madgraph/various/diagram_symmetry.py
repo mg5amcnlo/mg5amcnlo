@@ -108,20 +108,9 @@ def find_symmetry(matrix_element):
 
     process = matrix_element.get('processes')[0]
     base_model = process.get('model')
-    equivalent_process = base_objects.Process({\
-                     'legs': base_objects.LegList([base_objects.Leg({
-                               'id': wf.get('pdg_code'),
-                               'state': wf.get('leg_state')}) \
-                       for wf in matrix_element.get_external_wavefunctions()]),
-                     'model': base_model})
-
-    nperm = 0
-    perms = []
-
     diagrams = matrix_element.get('diagrams')
     base_diagrams = matrix_element.get_base_amplitude().get('diagrams')
-    model = matrix_element.get('processes')[0].get('model')
-    minvert = min([max(diag.get_vertex_leg_numbers()) for diag in diagrams])
+    min_vert = min([max(diag.get_vertex_leg_numbers()) for diag in diagrams])
     # diagram_tags is a list of unique tags
     diagram_tags = []
     # diagram_classes is a list of lists of diagram numbers belonging
@@ -129,11 +118,11 @@ def find_symmetry(matrix_element):
     diagram_classes = []
     perms = []
     for diag, base_diagram in zip(diagrams, base_diagrams):
-        if any([vert > minvert for vert in
+        if any([vert > min_vert for vert in
                 diag.get_vertex_leg_numbers()]):
             # Only 3-vertices allowed in configs.inc
             continue
-        tag = DiagramTag(base_diagram)
+        tag = diagram_generation.DiagramTag(base_diagram)
         try:
             ind = diagram_tags.index(tag)
         except ValueError:
@@ -155,10 +144,10 @@ def find_symmetry(matrix_element):
         else:
             symmetry[inum] = -diagram_classes[idx1][0]
         # Order permutations according to how to reach the first perm
-        permutations[inum] = DiagramTag.reorder_permutation(perms[idx1][idx2],
+        permutations[inum] = diagram_generation.DiagramTag.reorder_permutation(perms[idx1][idx2],
                                                             perms[idx1][0])
         # ident_perms ordered according to order of external momenta
-        perm = DiagramTag.reorder_permutation(perms[idx1][0],
+        perm = diagram_generation.DiagramTag.reorder_permutation(perms[idx1][0],
                                                            perms[idx1][idx2])
         if not perm in ident_perms:
             ident_perms.append(perm)
@@ -293,7 +282,133 @@ def find_symmetry_by_evaluation(matrix_element, evaluator, max_time = 600):
 
     return (symmetry, perms, ident_perms)
 
+#===============================================================================
+# DiagramTag class to identify matrix elements
+#===============================================================================
+
+class IdentifySGConfigTag(diagram_generation.DiagramTag):
+    """DiagramTag daughter class to identify configs giving the same
+    config. Need to compare state, spin, mass, width, and color."""
+
+    @staticmethod
+    def link_from_leg(leg, model):
+        """Returns the end link for a leg needed to identify matrix
+        elements: ((leg numer, state, spin, self_antipart, mass,
+        width, color, decay and is_part), number)."""
+
+        part = model.get_particle(leg.get('id'))
+
+        state = 0
+        if not leg.get('state'):
+            # Distinguish identical initial state particles
+            state = leg.get('number')
+
+        return [((state, part.get('spin'), part.get('color'),
+                  part.get('mass'), part.get('width')),
+                 leg.get('number'))]
+        
+    @staticmethod
+    def vertex_id_from_vertex(vertex, last_vertex, model):
+        """Returns the info needed to identify matrix elements:
+        interaction color, lorentz, coupling, and wavefunction
+        spin, self_antipart, mass, width, color, decay and
+        is_part. Note that is_part needs to be flipped if we move the
+        final vertex around."""
+
+        inter = model.get_interaction(vertex.get('id'))
+        ret_list = 0
+                   
+        if last_vertex:
+            return (ret_list,)
+        else:
+            part = model.get_particle(vertex.get('legs')[-1].get('id'))
+            return ((part.get('color'),
+                     part.get('mass'), part.get('width')),
+                    ret_list)
+
+    @staticmethod
+    def flip_vertex(new_vertex, old_vertex):
+        """Move the wavefunction part of vertex id appropriately"""
+
+        if len(new_vertex) == 1 and len(old_vertex) == 2:
+            # We go from a last link to next-to-last link - add propagator info
+            return (old_vertex[0],new_vertex[0])
+        elif len(new_vertex) == 2 and len(old_vertex) == 1:
+            # We go from next-to-last link to last link - remove propagator info
+            return (new_vertex[1],)
+        # We should not get here
+        raise diagram_generation.DiagramTag.DiagramTagError, \
+              "Error in IdentifyConfigTag, wrong setup of vertices in link."
+        
 def find_symmetry_subproc_group(subproc_group):
+    """Find symmetric configs by directly comparing the configurations
+    using IdentifySGConfigTag."""
+
+    assert isinstance(subproc_group, group_subprocs.SubProcessGroup),\
+           "Argument to find_symmetry_subproc_group has to be SubProcessGroup"
+
+    # diagram_numbers is a list of all relevant diagram numbers
+    diagram_numbers = []
+    # Prepare the symmetry vector with non-used amp2s (due to
+    # multiparticle vertices)
+    symmetry = []
+    permutations = []
+    diagrams = subproc_group.get('mapping_diagrams')
+    nexternal, ninitial = \
+               subproc_group.get('matrix_elements')[0].get_nexternal_ninitial()
+    model = subproc_group.get('matrix_elements')[0].get('processes')[0].\
+            get('model')
+    for idiag,diag in enumerate(diagrams):
+        diagram_numbers.append(idiag+1)
+        permutations.append(range(nexternal))
+        if max(diag.get_vertex_leg_numbers()) > 3:
+            # Ignore any diagrams with 4-particle vertices
+            symmetry.append(0)
+        else:
+            symmetry.append(1)
+
+    logger.info("Finding symmetric diagrams for subprocess group %s" % \
+                subproc_group.get('name'))
+
+    min_vert = min([max(diag.get_vertex_leg_numbers()) for diag in diagrams])
+    # diagram_tags is a list of unique tags
+    diagram_tags = []
+    # diagram_classes is a list of lists of diagram numbers belonging
+    # to the different classes
+    diagram_classes = []
+    perms = []
+    for idiag, diag in enumerate(diagrams):
+        if any([vert > min_vert for vert in
+                diag.get_vertex_leg_numbers()]):
+            # Only include vertices up to min_vert
+            continue
+        tag = IdentifySGConfigTag(diag, model)
+        try:
+            ind = diagram_tags.index(tag)
+        except ValueError:
+            diagram_classes.append([idiag + 1])
+            perms.append([tag.get_external_numbers()])
+            diagram_tags.append(tag)
+        else:
+            diagram_classes[ind].append(idiag + 1)
+            perms[ind].append(tag.get_external_numbers())
+
+    for inum, diag_number in enumerate(diagram_numbers):
+        if symmetry[inum] == 0:
+            continue
+        idx1 = [i for i, d in enumerate(diagram_classes) if \
+                diag_number in d][0]
+        idx2 = diagram_classes[idx1].index(diag_number)
+        # Note that for subproc groups, we want symfact to be 1
+        if idx2 > 0:
+            symmetry[inum] = -diagram_classes[idx1][0]
+        # Order permutations according to how to reach the first perm
+        permutations[inum] = diagram_generation.DiagramTag.reorder_permutation(perms[idx1][idx2],
+                                                            perms[idx1][0])
+    return (symmetry, permutations, [permutations[0]])
+    
+
+def old_find_symmetry_subproc_group(subproc_group):
     """Find symmetries between the configs in the subprocess group.
     For each config, find all matrix elements with maximum identical
     particle factor. Then take minimal set of these matrix elements,
@@ -414,196 +529,3 @@ def find_matrix_elements_for_configs(subproc_group):
         latest_me += 1
 
     return sorted_mes, me_config_dict    
-
-class DiagramTag(object):
-    """Class to tag diagrams based on objects with some __lt__ measure, e.g.
-    PDG code/interaction id (for comparing diagrams from the same amplitude),
-    or Lorentz/coupling/mass/width (for comparing AMPs from different MEs).
-    Algorithm: Create chains starting from external particles:
-    1 \        / 6
-    2 /\______/\ 7
-    3_ /  |   \_ 8
-    4 /   5    \_ 9
-                \ 10
-    gives ((((9,10,id910),8,id9108),(6,7,id67),id910867)
-           (((1,2,id12),(3,4,id34)),id1234),
-           5,id91086712345)
-    where idN is the id of the corresponding interaction. The ordering within
-    chains is based on chain length (depth; here, 1234 has depth 2, 910867 has
-    depth 3, 5 has depht 0), and if equal on the ordering of the chain elements.
-    The determination of central vertex is based on minimizing the chain length
-    for the longest subchain. 
-    This gives a unique tag which can be used to identify diagrams
-    (instead of symmetry), as well as identify identical matrix elements from
-    different processes."""
-
-
-    def __init__(self, diagram):
-        """Initialize with a diagram. Create DiagramTagChainLinks according to
-        the diagram, and figure out if we need to shift the central vertex."""
-
-        # wf_dict keeps track of the intermediate particles
-        leg_dict = {}
-        # Create the chain which will be the diagram tag
-        for vertex in diagram.get('vertices'):
-            # Only add incoming legs
-            legs = vertex.get('legs')[:-1]
-            if vertex == diagram.get('vertices')[-1]:
-                # If last vertex, all legs are incoming
-                legs = vertex.get('legs')
-            # Add links corresponding to the relevant legs
-            link = DiagramTagChainLink([leg_dict.setdefault(leg.get('number'),
-                                        DiagramTagChainLink(self.link_from_leg(leg))) \
-                                        for leg in legs],
-                                        self.vertex_id_from_vertex(vertex))
-            # Add vertex to leg_dict if not last one
-            if vertex != vertex.get('legs')[-1]:
-                leg_dict[vertex.get('legs')[-1].get('number')] = link
-
-        # The resulting link is the hypothetical result
-        self.tag = link
-
-        # Now make sure to find the central vertex in the diagram,
-        # defined by the longest leg being as short as possible
-        done = False
-        while not done:
-            # Identify the longest chain in the tag
-            longest_chain = self.tag.links[0]
-            # Create a new link corresponding to moving one step
-            new_link = DiagramTagChainLink(self.tag.links[1:],
-                                           self.tag.vertex_id)
-            # Create a new final vertex in the direction of the longest link
-            other_link = DiagramTagChainLink(list(longest_chain.links) + \
-                                             [new_link],
-                                             longest_chain.vertex_id)
-
-            if other_link.links[0] < self.tag.links[0]:
-                # Switch to new tag, continue search
-                self.tag = other_link
-            else:
-                # We have found the central vertex
-                done = True
-
-    def get_external_numbers(self):
-        """Get the order of external particles in this tag"""
-
-        return self.tag.get_external_numbers()
-
-    @staticmethod
-    def reorder_permutation(perm, start_perm):
-        """Reorder a permutation with respect to start_perm"""
-        order = [i for (p,i) in \
-                 sorted([(p,i) for (i,p) in enumerate(perm)])]
-        return [start_perm[i]-1 for i in order]
-
-    @staticmethod
-    def link_from_leg(leg):
-        """Returns the default end link for a leg: ((id, state), number).
-        Note that the number is not taken into account if tag comparison,
-        but is used only to extract leg permutations."""
-        if leg.get('state'):
-            # Identify identical final state particles
-            return [((leg.get('id'), 0), leg.get('number'))]
-        else:
-            # Distinguish identical initial state particles
-            return [((leg.get('id'), leg.get('number')), leg.get('number'))]
-
-    @staticmethod
-    def vertex_id_from_vertex(vertex):
-        """Returns the default vertex id: just the interaction id"""
-        return vertex.get('id')
-
-    def __eq__(self, other):
-        """Equal if same tag"""
-        if type(self) != type(other):
-            return False
-        return self.tag == other.tag
-
-    def __ne__(self, other):
-        return not self.__eq__(other)
-
-    def __str__(self):
-        return str(self.tag)
-
-    __repr__ = __str__
-
-class DiagramTagChainLink(object):
-    """Chain link for a DiagramTag. A link is a tuple + vertex id + depth,
-    with a comparison operator defined"""
-
-    def __init__(self, objects, vertex_id = None):
-        """Initialize, either with a tuple of DiagramTagChainLinks and
-        a vertex_id (defined by DiagramTag.vertex_id_from_vertex), or
-        with an external leg object (end link) defined by
-        DiagramTag.link_from_leg"""
-
-        if vertex_id == None:
-            # This is an end link, corresponding to an external leg
-            self.links = tuple(objects)
-            self.vertex_id = 0
-            self.depth = 0
-            self.end_link = True
-            return
-        # This is an internal link, corresponding to an internal line
-        self.links = tuple(sorted(list(tuple(objects)), reverse=True))
-        self.vertex_id = vertex_id
-        self.depth = sum([l.depth for l in self.links], 1)
-        self.end_link = False
-
-    def get_external_numbers(self):
-        """Get the permutation of external numbers (assumed to be the
-        second entry in the end link tuples)"""
-
-        if self.end_link:
-            return [self.links[0][1]]
-
-        return sum([l.get_external_numbers() for l in self.links], [])
-
-    def __lt__(self, other):
-        """Compare self with other in the order:
-        1. depth 2. len(links) 3. vertex id 4. measure of links"""
-
-        if self == other:
-            return False
-
-        if self.depth != other.depth:
-            return self.depth < other.depth
-
-        if len(self.links) != len(other.links):
-            return len(self.links) < len(other.links)
-
-        if self.vertex_id != other.vertex_id:
-            return self.vertex_id < other.vertex_id
-
-        for i, link in enumerate(self.links):
-            if i > len(other.links) - 1:
-                return False
-            if link != other.links[i]:
-                return link < other.links[i]
-
-    def __gt__(self, other):
-        return self != other and not self.__lt__(other)
-
-    def __eq__(self, other):
-        """For end link,
-        consider equal if self.links[0][0] == other.links[0][0],
-        i.e., ignore the leg number (in links[0][1])."""
-
-        if self.end_link and other.end_link and  \
-               self.depth == other.depth and self.vertex_id == other.vertex_id:
-            return self.links[0][0] == other.links[0][0]
-        
-        return self.__dict__ == other.__dict__
-
-    def __ne__(self, other):
-        return not self.__eq__(other)
-
-
-    def __str__(self):
-        if self.end_link:
-            return str(self.links)
-        return "%s, %s; %d" % (str(self.links),
-                               str(self.vertex_id),
-                               self.depth)
-
-    __repr__ = __str__

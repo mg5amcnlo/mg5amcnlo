@@ -51,8 +51,9 @@ c--cuts
       double precision r2max(nincoming+1:nexternal,nincoming+1:nexternal)
       double precision s_max(nexternal,nexternal)
       double precision ptll_min(nexternal,nexternal),ptll_max(nexternal,nexternal)
+      double precision inclHtmin,inclHtmax
       common/to_cuts/  etmin, emin, etamax, r2min, s_min,
-     $     etmax, emax, etamin, r2max, s_max, ptll_min, ptll_max
+     $     etmax, emax, etamin, r2max, s_max, ptll_min, ptll_max, inclHtmin,inclHtmax
 
       double precision ptjmin4(4),ptjmax4(4),htjmin4(2:4),htjmax4(2:4)
       logical jetor
@@ -77,8 +78,7 @@ C
 c
 c
 c     reading parameters
-      integer maxpara
-      parameter (maxpara=100)
+      include '../../Source/run_config.inc'
       character*20 param(maxpara),value(maxpara)
       integer npara
 c
@@ -113,18 +113,30 @@ c     set ptj and s_min if xqcut and ktscheme = 1, to improve
 c     integration speed, and set drjj and drjl to 0.
 c
         if(xqcut.gt.0.and.ktscheme.eq.1) then
-           if(ptj.ge.0d0) ptj=max(ptj, xqcut)
+          if(auto_ptj_mjj.and.ptj.ge.0d0.and.ptj.lt.xqcut)then
+            ptj=xqcut
+            write(*,*) 'Warning! ptj set to xqcut=',xqcut,
+     $            ' to improve integration efficiency'
+            write(*,*) 'Note that this might affect non-radiated jets,'
+            write(*,*) 'e.g. from decays. Use cut_decays=F in run_card.'
+          endif
         endif
         if(xqcut.gt.0) then
-           if(mmjj.ge.0d0) mmjj=max(mmjj, xqcut)
-           if(drjj.gt.0d0) then
-              write(*,*) 'Warning! drjj > 0 with xqcut > 0, set to 0'
-              drjj = 0d0
-           endif
-           if(drjl.gt.0d0) then
-              write(*,*) 'Warning! drjl > 0 with xqcut > 0, set to 0'
-              drjl = 0d0
-           endif
+          if(auto_ptj_mjj.and.mmjj.ge.0d0.and.mmjj.lt.xqcut)then
+            mmjj=xqcut
+            write(*,*) 'Warning! mmjj set to xqcut=',xqcut,
+     $            ' to improve integration efficiency'
+            write(*,*) 'Note that this might affect non-radiated jets,'
+            write(*,*) 'e.g. from decays. Use cut_decays=F in run_card.'
+          endif
+          if(drjj.gt.0d0) then
+            write(*,*) 'Warning! drjj > 0 with xqcut > 0, set to 0'
+            drjj = 0d0
+          endif
+          if(drjl.gt.0d0) then
+            write(*,*) 'Warning! drjl > 0 with xqcut > 0, set to 0'
+            drjl = 0d0
+          endif
         endif
 
 c     Check which particles come from decays
@@ -390,6 +402,9 @@ c
       htjmax4(2)=ht2max
       htjmax4(3)=ht3max
       htjmax4(4)=ht4max
+   
+      inclHtmin=ihtmin
+      inclHtmax=ihtmax
 
       jetor = cutuse.eq.0d0
 c

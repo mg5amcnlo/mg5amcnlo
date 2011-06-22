@@ -241,24 +241,26 @@ c         write(*,*) minit
          tsig  = 0d0
          f(0)  = 0d0
          do j=1,minit
-            f(j) = tsec_iter(j)**2/terr_iter(j)
+            f(j) = tsec_iter(j)**2/(terr_iter(j)+1d-99)
 c            f(j)=1
             tmean = tmean + tsec_iter(j)*f(j)
             tsig  = tsig + terr_iter(j)*f(j)
             f(0)=f(0)+f(j)
 c            write(*,*) 'Iteration',j,tmean/f(0),sqrt(tsig)/f(0)
          enddo
-         tmean=tmean/f(0)
-         tsig = sqrt(tsig/f(0)/minit)
+         if (f(0).gt.0d0) then
+            tmean=tmean/f(0)
+            tsig = sqrt(tsig/f(0)/minit)
+         endif
          chi2 = 0d0
          do j=1,minit
             chi2  = chi2+f(j)*minit*
-     &           (tsec_iter(j)-tmean)**2/terr_iter(j)/(f(0)+1d-99)
+     &           (tsec_iter(j)-tmean)**2/(terr_iter(j)+1d-99)/(f(0)+1d-99)
             write(26,*)j,tsec_iter(j),sqrt(terr_iter(j)),chi2/max(1,j-1)
 c            write(*,*) j,tsec_iter(j),sqrt(terr_iter(j)),chi2/max(1,j-1)
          enddo
          write(26,*) tmean,tsig,chi2/max((minit-1),1),
-     &        tsig*sqrt(real(ntevents))/tmean
+     &        tsig*sqrt(real(ntevents))/(tmean+1d-99)
          write(*,*) 'Results', xtot,errtot, ntevents, teff
          close(26)
 c      endif

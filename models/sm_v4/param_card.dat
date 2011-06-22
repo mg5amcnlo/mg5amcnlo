@@ -42,13 +42,13 @@ Block MGCKM     # CKM elements for MadGraph
 Block MASS      #  Mass spectrum (kinematic masses)
 #       PDG       Mass
          5     4.70000000E+00   # bottom   pole mass
-         6     1.74300000E+02   # top      pole mass
+         6     1.72000000E+02   # top      pole mass
         15     1.77700000E+00   # tau      mass
         23     9.11880000E+01   # Z        mass
         24     8.04190000E+01   # W        mass
         25     1.20000000E+02   # H        mass
 #            PDG       Width
-DECAY         6     1.50833649E+00   # top width
+DECAY         6     1.43947825E+00   # top width
 DECAY        23     2.44140351E+00   # Z   width
 DECAY        24     2.04759951E+00   # W   width
 DECAY        25     5.75308848E-03   # H   width
