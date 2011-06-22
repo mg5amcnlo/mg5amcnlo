@@ -150,6 +150,33 @@ class ModelReader(base_objects.Model):
             exec("def %s(%s):\n   return %s" % (func.name,
                                                 ",".join(func.arguments),
                                                 func.expr))
+        # Pass in complex mass scheme:
+        for particle in self.get('particles'):
+             if particle.get('width') != 'ZERO':
+                 try:
+                     exec("locals()[\'%(mass)s\'] = cmath.sqrt(%(mass)s**2 + complex(0,-1) * %(mass)s * %(width)s)" % {'mass':particle.get('mass'), 'width': particle.get('width')})
+#                     for param in external_parameters:
+#                         if param.name == particle.get('mass'):
+#                             param.value = eval("cmath.sqrt(%(mass)s**2 + complex(0,-1) * %(mass)s * %(width)s)" % {'mass':particle.get('mass'), 'width':particle.get('width')}) 
+#                             break
+
+                 except Exception as error:
+                     print 'mass not pass in complex scheme for', particle.get('name')
+                     print error
+                     pass
+
+                 try:
+                     exec("locals()[\'%s\'] = 0" % (particle.get('width')))
+#                     for param in external_parameters:
+#                         if param.name == particle.get('width'):
+#                             param.value = 0
+#                             break
+                 except Exception as error:
+                     print 'width not pass in complex scheme for', particle.get('name')
+                     print error
+                     pass
+
+
 
         # Extract derived parameters
         derived_parameters = []
@@ -193,6 +220,8 @@ class ModelReader(base_objects.Model):
 
         # Set parameter and coupling dictionaries
 
+        print [(param.name, param.value) for param in external_parameters + \
+                                         derived_parameters] 
         self.set('parameter_dict', dict([(param.name, param.value) \
                                         for param in external_parameters + \
                                          derived_parameters]))

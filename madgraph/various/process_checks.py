@@ -669,9 +669,9 @@ def check_gauge(processes, param_card = None):
                                            auth_skipping = True, reuse = False)
 
         # Set all widths to zero for gauge check
-        for particle in evaluator.full_model.get('particles'):
-            if particle.get('width') != 'ZERO':
-                evaluator.full_model.get('parameter_dict')[particle.get('width')] = 0.
+        #for particle in evaluator.full_model.get('particles'):
+        #    if particle.get('width') != 'ZERO':
+        #        evaluator.full_model.get('parameter_dict')[particle.get('width')] = 0.
 
         return run_multiprocs_no_crossings(check_gauge_process,
                                            multiprocess,
@@ -873,10 +873,10 @@ def check_lorentz(processes, param_card = None):
                                            auth_skipping = False, reuse = True)
 
         # Set all widths to zero for lorentz check
-        for particle in evaluator.full_model.get('particles'):
-            if particle.get('width') != 'ZERO':
-                evaluator.full_model.get('parameter_dict')[\
-                                                     particle.get('width')] = 0.
+        #for particle in evaluator.full_model.get('particles'):
+        #    #if particle.get('width') != 'ZERO':
+        #    #    evaluator.full_model.get('parameter_dict')[\
+        #    #                                         particle.get('width')] = 0.
         return run_multiprocs_no_crossings(check_lorentz_process,
                                            multiprocess,
                                            evaluator)
