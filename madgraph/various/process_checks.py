@@ -243,8 +243,8 @@ class MatrixElementEvaluator(object):
         mass_strings = [self.full_model.get_particle(l.get('id')).get('mass') \
                          for l in sorted_legs]
         mass = [self.full_model.get('parameter_dict')[m] for m in mass_strings]
-        mass = [m**2 for m in mass]
-        mass = [math.sqrt(m.real) for m in mass]
+        mass = [m.real for m in mass]
+        #mass = [math.sqrt(m.real) for m in mass]
 
         # Make sure energy is large enough for incoming and outgoing particles
         energy = max(energy, sum(mass[:nincoming]) + 200.,
