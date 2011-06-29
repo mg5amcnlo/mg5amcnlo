@@ -74,18 +74,18 @@ if [ "$run" != "" ]; then
     if [ -x $pydir/hep2lhe ]; then
       echo "Creating Pythia LHE File" > ../status
       echo "Creating Pythia LHE File"
-      ../bin/gen_crossxhtml-pl $run
-      ../bin/run_hep2lhe $pydir $p  
+      ../bin/internal/gen_crossxhtml-pl $run
+      ../bin/internal/run_hep2lhe $pydir $p  
     fi
     if [[ -x $ERAdir/ExRootLHEFConverter && -e pythia_events.lhe ]]; then
       echo "Creating Pythia LHE Root File" > ../status
       echo "Creating Pythia LHE Root File"
-      ../bin/gen_crossxhtml-pl $run
+      ../bin/internal/gen_crossxhtml-pl $run
       $ERAdir/ExRootLHEFConverter pythia_events.lhe ${run}_pythia_lhe_events.root
     fi
     echo Storing files
     echo Storing Pythia files > ../status
-    ../bin/gen_crossxhtml-pl $run
+    ../bin/internal/gen_crossxhtml-pl $run
     mv -f pythia_events.hep ${run}_pythia_events.hep
     gzip -f ${run}_pythia_events.hep
     mv -f pythia.log ${run}_pythia.log
@@ -99,7 +99,7 @@ if [ "$run" != "" ]; then
   if [ -e events.tree ]; then
     ickkw=`awk '/^[^#].*=.*ickkw.*!/{print $1}' unweighted_events.lhe`
     if [[ $ickkw -ge 1 ]];then
-       ../bin/create_matching_plots.sh $run
+       ../bin/internal/create_matching_plots.sh $run
     fi
     mv -f events.tree ${run}_events.tree
     gzip -f ${run}_events.tree
@@ -115,7 +115,7 @@ if [ "$run" != "" ]; then
     rm -f pythia_events.lhe
     mv -f temp.lhe ${run}_pythia_events.lhe
     gzip -f ${run}_pythia_events.lhe
-  ../bin/run_plot_pythia $run
+  ../bin/internal/run_plot_pythia $run
   fi
   rm -f unweighted_events.lhe  
 fi

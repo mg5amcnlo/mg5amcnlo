@@ -13,7 +13,7 @@ fi
 #  Now let shell know where to find important executables
 #
 main=`pwd`
-dirbin=$main/bin
+dirbin=$main/bin/internal
 # Begin Local versions
 # set dirbin = /home/tstelzer/bin/MG_ME
 # End Local versions 

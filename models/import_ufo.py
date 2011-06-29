@@ -29,7 +29,6 @@ import madgraph.iolibs.misc as misc
 import madgraph.iolibs.save_load_object as save_load_object
 from madgraph.core.color_algebra import *
 
-
 import aloha.create_aloha as create_aloha
 
 import models as ufomodels
@@ -39,6 +38,11 @@ logger_mod = logging.getLogger('madgraph.model')
 
 root_path = os.path.dirname(os.path.realpath( __file__ ))
 sys.path.append(root_path)
+
+sys.path.append(os.path.join(root_path, os.path.pardir, 'Template', 'bin', 'internal'))
+import check_param_card 
+
+
 
 class UFOImportError(MadGraph5Error):
     """ a error class for wrong import of UFO model""" 
@@ -599,6 +603,7 @@ class RestrictModel(model_reader.ModelReader):
         """define default value"""
         self.del_coup = []
         super(RestrictModel, self).default_setup()
+        self.rule_card = check_param_card.ParamCardRule()
      
     def restrict_model(self, param_card):
         """apply the model restriction following param_card"""
@@ -715,8 +720,6 @@ class RestrictModel(model_reader.ModelReader):
             if key in block_value_to_var:
                 block_value_to_var[key].append(param)
                 mult_param.add(key)
-                #remove the duplicate parameter
-                #external_parameters.remove(param)
             else: 
                 block_value_to_var[key] = [param]        
         
@@ -764,6 +767,9 @@ class RestrictModel(model_reader.ModelReader):
                                      ', '.join([param.name for param in parameters])
                 expr = obj.name
                 continue
+            # Add a Rule linked to the param_card
+            self.rule_card.add_identical(obj.lhablock.lower(), obj.lhacode, 
+                                                         parameters[0].lhacode )
             # delete the old parameters                
             external_parameters.remove(obj)    
             # replace by the new one pointing of the first obj of the class
@@ -826,6 +832,19 @@ class RestrictModel(model_reader.ModelReader):
     def fix_parameter_values(self, zero_parameters, one_parameters):
         """ Remove all instance of the parameters in the model and replace it by 
         zero when needed."""
+
+        # Add a rule for zero/one parameter
+        external_parameters = self['parameters'][('external',)]
+        for param in external_parameters[:]:
+            value = self['parameter_dict'][param.name]
+            block = param.lhablock.lower()
+            if value == 0:
+                self.rule_card.add_zero(block, param.lhacode)
+            elif value == 1:
+                self.rule_card.add_one(block, param.lhacode)   
+
+
+
 
         special_parameters = zero_parameters + one_parameters
         
@@ -894,7 +913,10 @@ class RestrictModel(model_reader.ModelReader):
             logger_mod.debug('remove parameters: %s' % param)
             data = self['parameters'][param_info[param]['dep']]
             data.remove(param_info[param]['obj'])
-                  
+        
+ 
+        
+
                 
                 
         

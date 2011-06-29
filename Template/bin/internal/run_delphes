@@ -71,7 +71,7 @@ fi
 if [ -e delphes_events.lhco ]; then
    echo Storing files
    echo Storing Delphes files > ../status
-    ../bin/gen_crossxhtml-pl $run
+    ../bin/internal/gen_crossxhtml-pl $run
 # delphes_card.dat
    if [ -e ../Cards/delphes_card.dat ]; then
      echo "<MGDelphesCard>" >>banner.txt

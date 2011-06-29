@@ -24,6 +24,10 @@ fi
 #    $i++;
 #}
 
+echo "Storing files"
+echo "Storing files" > status
+../bin/internal/gen_crossxhtml-pl $1
+
 if [[ -e $1_results.html ]]; then
     rm -f $1_results.html
 fi
@@ -53,7 +57,7 @@ for i in `cat subproc.mg` ; do
 		mv -f $j $1_$j
 	    fi
 	done
-	for j in ftn26 ; do
+	for j in ftn25 ftn99 ; do
 	    if [[ -e $j ]]; then
 		mv -f $j $1_$j
 		rm -f $1_$j.gz >&/dev/null
@@ -65,14 +69,16 @@ for i in `cat subproc.mg` ; do
     cd ../
 done
 cd ..
-./bin/gen_cardhtml-pl
+./bin/internal/gen_cardhtml-pl
 if [[ -e Events/events.lhe ]]; then
     mv -f Events/events.lhe Events/$1_events.lhe 
     rm -f Events/$1_events.lhe.gz >& /dev/null
     gzip -f Events/$1_events.lhe
 fi
+if [[ -e Events/banner.txt ]]; then
+    mv -f Events/banner.txt Events/$1_banner.txt
+fi
 if [[ -e Events/unweighted_events.lhe ]]; then
-    ./bin/extract_banner-pl Events/unweighted_events.lhe  Events/$1_banner.txt 
     mv -f Events/unweighted_events.lhe Events/$1_unweighted_events.lhe 
     rm -f Events/$1_unweighted_events.lhe.gz >& /dev/null
     gzip -f Events/$1_unweighted_events.lhe 
@@ -95,16 +101,14 @@ if [[ -e pythia_events.hep ]]; then
     mv -f pythia_events.hep $1_pythia_events.hep
     gzip -f $1_pythia_events.hep
     mv -f pythia.log $1_pythia.log
-# pythia_card.dat
-   echo "<MGPythiaCard>" >>$1_banner.txt
-   if [[ -e ../Cards/pythia_card.dat ]]; then cat ../Cards/pythia_card.dat   >> $1_banner.txt; fi
-   echo "</MGPythiaCard>" >>$1_banner.txt
 fi
 
 if [[ -e pythia_events.lhe ]]; then
 # write the pythia banner
     echo \<LesHouchesEvents version=\"1.0\"\> > temp.lhe
     echo \<\!-- >> temp.lhe
+    echo "# Warning\! Never use this file for detector studies\!" >> temp.lhe
+    echo --\> >> temp.lhe
     cat $1_banner.txt >> temp.lhe
     sed /'<LesHouchesEvents version=\"1.0\">'/s//'-->'/ pythia_events.lhe >> temp.lhe
     rm -f pythia_events.lhe
@@ -124,22 +128,28 @@ if [[ -e events.tree ]]; then
     gzip -f $1_beforeveto.tree
 fi
 if [[ -e pgs_events.lhco ]]; then
-# pgs_card.dat
-   echo "<MGPGSCard>" >>$1_banner.txt
-   if [[ -e ../Cards/pgs_card.dat ]]; then cat ../Cards/pgs_card.dat   >> $1_banner.txt; fi
-   echo "</MGPGSCard>" >>$1_banner.txt
-# write the pgs banner
-    sed -e "s/^/#/g" $1_banner.txt > temp.dat
-    cat pgs_events.lhco >> temp.dat
-    rm -f pgs_events.lhco
-    mv -f temp.dat $1_pgs_events.lhco
+    mv -f pgs_events.lhco $1_pgs_events.lhco
     gzip -f $1_pgs_events.lhco
-    mv -f pgs.log $1_pgs.log
+    if [ -e olympics.log ];then
+	mv -f olympics.log $1_pgs.log
+    else
+	mv -f pgs.log $1_pgs.log
+    fi
+    mv -f pgs_uncleaned_events.lhco $1_pgs_uncleaned_events.lhco
+    gzip -f $1_pgs_uncleaned_events.lhco
 fi
 if [[ -e pgs_events.root ]]; then
     mv -f pgs_events.root $1_pgs_events.root
 fi
 if [[ -e pythia_events.root ]]; then
     mv -f pythia_events.root $1_pythia_events.root
+fi
+if [ -e delphes_events.lhco ]; then
+    mv -f delphes_events.lhco $1_delphes_events.lhco
+    gzip -f $1_delphes_events.lhco
+    mv -f delphes_run.log $1_delphes.log
+fi
+if [ -e delphes.root ]; then
+    mv -f delphes.root $1_delphes_events.root
 fi
 cd ..

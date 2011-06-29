@@ -74,7 +74,7 @@ if [ -e pgs_events.lhco ]; then
     if [[ -x $ERAdir/ExRootLHCOlympicsConverter && -e pgs_events.lhco ]]; then
       echo "Creating PGS Root File" > ../status
       echo "Creating PGS Root File"
-      ../bin/gen_crossxhtml-pl $run
+      ../bin/internal/gen_crossxhtml-pl $run
       $ERAdir/ExRootLHCOlympicsConverter pgs_events.lhco ${run}_pgs_events.root
     fi
 # pgs_card.dat
@@ -95,7 +95,7 @@ rm -f fort.45 > /dev/null
 if [ "$run" != "" ]; then
     echo Storing files
     echo Storing PGS files > ../status
-    ../bin/gen_crossxhtml-pl $run
+    ../bin/internal/gen_crossxhtml-pl $run
     mv pgs_events.lhco ${run}_pgs_events.lhco
     gzip -f ${run}_pgs_events.lhco
     if [ -e olympics.log ];then

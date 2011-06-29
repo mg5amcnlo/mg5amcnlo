@@ -1131,20 +1131,20 @@ class ProcessExporterFortranME(ProcessExporterFortran):
             logger.info("Generate jpeg diagrams")
             for Pdir in P_dir_list:
                 os.chdir(Pdir)
-                subprocess.call([os.path.join(old_pos, self.dir_path, 'bin', 'gen_jpeg-pl')],
+                subprocess.call([os.path.join(old_pos, self.dir_path, 'bin', 'internal', 'gen_jpeg-pl')],
                                 stdout = devnull)
                 os.chdir(os.path.pardir)
 
         logger.info("Generate web pages")
         # Create the WebPage using perl script
 
-        subprocess.call([os.path.join(old_pos, self.dir_path, 'bin', 'gen_cardhtml-pl')], \
+        subprocess.call([os.path.join(old_pos, self.dir_path, 'bin', 'internal', 'gen_cardhtml-pl')], \
                                                                 stdout = devnull)
 
         os.chdir(os.path.pardir)
 
         gen_infohtml.make_info_html(self.dir_path)
-        subprocess.call([os.path.join(old_pos, self.dir_path, 'bin', 'gen_crossxhtml-pl')],
+        subprocess.call([os.path.join(old_pos, self.dir_path, 'bin', 'internal', 'gen_crossxhtml-pl')],
                         stdout = devnull)
         [mv(name, './HTML/') for name in os.listdir('.') if \
                             (name.endswith('.html') or name.endswith('.jpg')) and \
@@ -1158,7 +1158,7 @@ class ProcessExporterFortranME(ProcessExporterFortran):
             output_file.write(text)
             output_file.close()
 
-        subprocess.call([os.path.join(old_pos, self.dir_path, 'bin', 'gen_cardhtml-pl')],
+        subprocess.call([os.path.join(old_pos, self.dir_path, 'bin', 'internal', 'gen_cardhtml-pl')],
                         stdout = devnull)
 
         # Run "make" to generate madevent.tar.gz file
@@ -1172,7 +1172,7 @@ class ProcessExporterFortranME(ProcessExporterFortran):
             # Touch "Online" file
             os.system('touch %s/Online' % self.dir_path)
 
-        subprocess.call([os.path.join(old_pos, self.dir_path, 'bin', 'gen_cardhtml-pl')],
+        subprocess.call([os.path.join(old_pos, self.dir_path, 'bin', 'internal', 'gen_cardhtml-pl')],
                         stdout = devnull)
 
         #return to the initial dir
@@ -2751,4 +2751,8 @@ class UFO_model_to_mg4(object):
 
         out_path = os.path.join(self.dir_path, 'param_card.dat')
         param_writer.ParamCardWriter(self.model, out_path)
+        if hasattr(self.model, 'rule_card'):
+            out_path = os.path.join(self.dir_path, 'param_card_rule.dat')
+            self.model.rule_card.write_file(out_path)
+        
 

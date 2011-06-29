@@ -23,7 +23,8 @@ if [[ ! -x $mgdir/mg5 ]]; then
 fi
 
 
-dirbin=$main/bin
+dirbin=$main/bin/internal
+bin=$main/bin 
 
 # Local versions to work on the cluster
 tag=''
@@ -31,6 +32,7 @@ while [[ "$1" != ""  ]]; do
     if [[ "$1" == "--web" ]]; then
     mgdir=$MADGRAPH_BASE/MG_ME/mg5
     dirbin=$MADGRAPH_BASE/MG_ME/WebBin
+    bin =$MADGRAPH_BASE/MG_ME/WebBin
     tag="--web"
     fi
     shift 1

@@ -20,9 +20,9 @@ if [[ ! -e events.tree || ! -e xsecs.tree ]];then
     exit
 fi
 echo Running root
-root -q -b ../bin/read_tree_files.C
+root -q -b ../bin/internal/read_tree_files.C
 echo Creating plots
-root -q -b ../bin/create_matching_plots.C
+root -q -b ../bin/internal/create_matching_plots.C
 mv pythia.root $1_pythia.root
 if [[ ! -d $1_pythia ]];then
   mkdir $1_pythia
