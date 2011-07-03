@@ -29,6 +29,133 @@ sys.path.append('%s/../../Template/bin/internal' % _file_path)
 import check_param_card as writter
 
 
+class TestBlock(unittest.TestCase):
+    """Check the class linked to a block of the param_card"""
+    
+    def test_block_load_string(self):
+        """test that we recognize the different syntax"""
+
+        text = """Block SMINPUTS"""
+        b = writter.Block()
+        b.load_str(text)
+        self.assertEqual(b.name, 'sminputs')
+        self.assertEqual(b.scale, None)
+        
+        text = """Block SMINPUTS # Q=1 #"""
+        b = writter.Block()
+        b.load_str(text)
+        self.assertEqual(b.name, 'sminputs')
+        self.assertEqual(b.scale, None)       
+        
+        text = """Block SMINPUTS  Q=1 #"""
+        b = writter.Block()
+        b.load_str(text)
+        self.assertEqual(b.name, 'sminputs')
+        self.assertEqual(b.scale, 1) 
+        
+    def test_block_str(self):
+        """check that we can write correctly the block"""    
+
+        text = """Block SMINPUTS  Q=1 # test"""
+        b = writter.Block()
+        b.load_str(text)
+        target="""###################################
+## INFORMATION FOR SMINPUTS
+###################################
+BLOCK SMINPUTS Q=1.0 #  test
+
+"""
+        self.assertEqual(str(b).split('\n'), target.split('\n'))
+
+
+    def test_block_append_remove(self):
+        """check if we can safely add a parameter"""
+        
+        text = """Block SMINPUTS  Q=1 # test"""
+        b = writter.Block()
+        b.load_str(text)
+        
+        b.append(writter.Parameter(block='sminputs', lhacode=[1,2], value=3))
+        b.append(writter.Parameter(block='sminputs', lhacode=[1], value=4))
+
+        self.assertEqual(len(b),2)
+        self.assertRaises(AssertionError, b.append, writter.Parameter(block='other'))
+                         
+        self.assertRaises(AssertionError, 
+           b.append, writter.Parameter(block='sminputs', lhacode=[1,2], value=9))
+        self.assertEqual(len(b),2)
+        
+        
+        b.remove([1,2])
+        self.assertEqual(len(b),1)
+        self.assertEqual(b.param_dict.keys(),[(1,)])               
+
+
+class TestParamCard(unittest.TestCase):
+    """ Test the ParamCard Object """
+    
+    
+    def test_mod_card(self):
+        """ test that we can modify a param card """
+
+        full_card = os.path.join(_file_path, os.path.pardir,
+                                     'input_files', 'param_card_sm.dat')        
+        card = writter.ParamCard(full_card)
+        
+        # Rename the blocks
+        mass = card['mass']
+        card.rename_blocks({'mass':'polemass','decay':'width'})
+        self.assertTrue(card.has_key('polemass'))
+        self.assertTrue(card.has_key('width'))
+        self.assertFalse(card.has_key('mass'))
+        self.assertFalse(card.has_key('decay'))        
+        self.assertEqual(mass, card['polemass'])
+        self.assertEqual(mass.name, 'polemass')
+    
+        # Change the lhacode of a parameter
+        param = card['width'].get([23])
+        card.mod_param('width', [23], lhacode=[32])
+        
+        self.assertRaises(KeyError, card['width'].get, [23])
+        self.assertEqual(param, card['width'].get([32]))
+        self.assertEqual(param.lhacode, [32])
+        
+        # change the block of a parameter
+        card.mod_param('width', [32], block='mass')
+        
+        self.assertRaises(KeyError, card['width'].get, [32])
+        self.assertEqual(param, card['mass'].get([32]))
+        self.assertEqual(param.lhacode, [32])
+        self.assertEqual(param.block, 'mass')
+        
+        # change the block of a parameter and lhacode
+        card.mod_param('mass', [32], block='polemass', lhacode=[23])
+        
+        self.assertFalse(card.has_key('mass'))
+        self.assertRaises(KeyError, card['polemass'].get, [32])
+        self.assertRaises(KeyError, card['width'].get, [32])
+        self.assertEqual(param, card['polemass'].get([23]))
+        self.assertEqual(param.lhacode, [23])
+        self.assertEqual(param.block, 'polemass')        
+        
+        # change the value / comment
+        card.mod_param('polemass', [23], value=2, comment='new')
+        self.assertEqual(param.value, 2)
+        self.assertEqual(param.comment, 'new')
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
 
 class TestParamCardRule(unittest.TestCase):
     """ Test the ParamCardRule Object"""
@@ -76,9 +203,10 @@ class TestParamCardRule(unittest.TestCase):
 </file>"""
 
         self.assertEqual(out.split('\n'), target.split('\n'))
+
         
     def test_read_write_param_card(self):
-        """Test that we can write a param_card from the dict info"""
+        """Test that we can write a param_card from the ParamCard object"""
         
         dict = self.main.read_param_card(os.path.join(_file_path, os.path.pardir,
                                      'input_files', 'restrict_sm.dat'))
@@ -106,13 +234,80 @@ class TestParamCardRule(unittest.TestCase):
                               '[25]': (2.441404, 'wh'), 
                               '[24]': (3.0, 'ww'), 
                               '[23]': (2.441404, 'wz')}}
-        
-        self.assertEqual(dict, solution)
+
+
+        for key, item in solution.items():
+            for key2, (value, comment) in item.items():
+                self.assertEqual(value, float(dict[key].get(eval(key2)).value))
+       
+
         fsock = StringIO.StringIO()
         self.main.write_param_card(fsock, dict)
         output = fsock.getvalue()
+
+        target = """######################################################################
+## PARAM_CARD AUTOMATICALY GENERATED BY MG5                       ####
+######################################################################
+###################################
+## INFORMATION FOR MASS
+###################################
+BLOCK MASS # 
+      11 0.000000e-04 #  me
+      13 0.000000e-01 #  mm
+      15 1.777000e+00 #  mta
+      2 0.000000e-03 #  mu
+      4 0.000000e+00 #  mc
+      6 1.743000e+02 #  mt
+      1 0.000000e-03 #  md
+      3 0.000000e-01 #  ms
+      5 0.000000e+00 #  mb
+      23 9.118800e+01 #  mz
+      25 9.118800e+01 #  mh
+###################################
+## INFORMATION FOR CKMBLOCK
+###################################
+BLOCK CKMBLOCK # 
+      1 0.000000e-01 #  cabi
+###################################
+## INFORMATION FOR SMINPUTS
+###################################
+BLOCK SMINPUTS # 
+      1 1.32507000e+02 #  aewm1
+      2 1.166390e-05 #  gf
+      3 1.180000e-01 #  as
+###################################
+## INFORMATION FOR YUKAWA
+###################################
+BLOCK YUKAWA # 
+      4 0.00000e+00 #  ymc
+      5 0.000000e+00 #  ymb
+      6 1.645000e+02 #  ymt
+      15 1.777000e+00 #  ymtau
+###################################
+## INFORMATION FOR DECAY
+###################################
+DECAY 6 0.000000e+00 #  wt
+      5 24 0.99 #  branching ratio
+      3 24 0.01 #  branching ratio
+
+DECAY 23 2.441404e+00 #  wz
+      5 -5 1 # 
+
+DECAY 24 3.00e+00 #  ww
+DECAY 25 2.441404e+00 #  wh
+"""
+        self.assertEqual(target.split('\n'), output.split('\n'))
+        
+        
+        
+        
         dict = self.main.read_param_card([l+'\n' for l in output.split('\n')])
-        self.assertEqual(dict, solution)
+        
+
+        for key, item in solution.items():
+            for key2, (value, comment) in item.items():
+                self.assertEqual(value, float(dict[key].get(eval(key2)).value))       
+
  
     
     def test_load_with_restrict_model(self):
@@ -201,4 +396,94 @@ class TestParamCardRule(unittest.TestCase):
                                      'input_files', 'param_card_sm.dat')
         self.assertRaises(writter.InvalidParamCard, base_model.rule_card.check_param_card,
                     full_card) 
+    
+    def test_make_valid(self):
+        """ check that we can modify a param_card following a restriction"""
+
+        # Load a model and a given restriction file
+        full_card = os.path.join(_file_path, os.path.pardir,
+                                     'input_files', 'param_card_sm.dat')
+        
+        restriction = """<file>######################################################################
+## VALIDITY RULE FOR THE PARAM_CARD   ####
+######################################################################
+<zero>
+     ckmblock 1 # 
+     yukawa 4 # 
+     yukawa 5 # 
+     mass 11 # 
+     mass 13 # 
+     mass 2 # 
+     mass 4 # 
+     mass 1 # 
+     mass 3 # 
+     mass 5 # 
+     decay 15 # 
+     decay 6 # 
+</zero>
+<one>
+</one>
+<identical>
+     mass 25 : 23 # 
+     decay 25 : 23 # 
+</identical>
+<constraint>
+</constraint>
+</file>""" 
+        fsock = StringIO.StringIO()
+        writter.make_valid_param_card(full_card, restriction, outputpath=fsock)
+        output = fsock.getvalue()
+        target = """######################################################################
+## PARAM_CARD AUTOMATICALY GENERATED BY MG5                       ####
+######################################################################
+###################################
+## INFORMATION FOR MASS
+###################################
+BLOCK MASS # 
+      15 1.777000e+00 #  mta
+      6 1.743000e+02 #  mt
+      5 0.0 #  mb fixed by the model
+      23 9.118800e+01 #  mz
+      25 91.188 #  mh must be identical to [23]
+      11 0 # fixed by the model
+      13 0 # fixed by the model
+      2 0 # fixed by the model
+      4 0 # fixed by the model
+      1 0 # fixed by the model
+      3 0 # fixed by the model
+###################################
+## INFORMATION FOR SMINPUTS
+###################################
+BLOCK SMINPUTS # 
+      1 1.325070e+02 #  aewm1
+      2 1.166390e-05 #  gf
+      3 1.180000e-01 #  as
+###################################
+## INFORMATION FOR YUKAWA
+###################################
+BLOCK YUKAWA # 
+      5 0.0 #  ymb fixed by the model
+      6 1.645000e+02 #  ymt
+      15 1.777000e+00 #  ymtau
+      4 0 # fixed by the model
+###################################
+## INFORMATION FOR DECAY
+###################################
+DECAY 6 0.0 #  fixed by the model
+DECAY 23 2.441404e+00 # 
+DECAY 24 2.047600e+00 # 
+DECAY 25 2.441404 #  must be identical to [23]
+DECAY 15 0 # fixed by the model
+###################################
+## INFORMATION FOR CKMBLOCK
+###################################
+BLOCK CKMBLOCK # 
+      1 0 # fixed by the model
+"""
+      
+        self.assertEqual(output.split('\n'), target.split('\n'))
+        
+        
+        
+        
         

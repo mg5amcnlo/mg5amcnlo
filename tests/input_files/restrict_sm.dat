@@ -45,6 +45,9 @@ Block YUKAWA
 ## INFORMATION FOR DECAY
 ###################################
 DECAY   6 0.000000e+00 # WT 
-DECAY  23 2.441404e+00 # WZ 
+         5 24 0.99     # Branching ratio
+         3 24 0.01     # Branching ratio
+DECAY  23 2.441404e+00 # WZ
+         5 -5 1 # 
 DECAY  24 3.00e+00 # WW 
 DECAY  25 2.441404e+00 # WH 
