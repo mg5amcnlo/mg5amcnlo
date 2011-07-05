@@ -418,9 +418,20 @@ class MadEventLauncher(object):
         
         # Check the format of the param_card for Pythia and make it correct
         rule_file = pjoin(self.main,'Source','MODEL','param_card_rule.dat')
+        param_card = pjoin(self.main, 'Cards','param_card.dat')
         if os.path.exists(rule_file):
-            param_card = pjoin(self.main, 'Cards','param_card.dat')
             check_param_card.make_valid_param_card(param_card, rule_file)
+            
+        # If the model is a SLAH2 model convert to SLAH1
+        model = 'sm'
+        for line in file(os.path.join(self.main,'Cards','proc_card_mg5.dat'),'r'):
+            line = line.split('#')[0]
+            line = line.split('=')
+            if line.startswith('import') and 'model' in line:
+                model = line.split()[2]
+
+        if model.startwith('mssm'):
+            check_param_card.convert_slha1(param_card)
 
         open(self.status,'w').writelines('Running Pythia')
         os.system("gunzip -c %(path)s/%(name)s_unweighted_events.lhe.gz > %(path)s/unweighted_events.lhe"\
@@ -577,7 +588,7 @@ class MadEventLauncher(object):
                 continue
             output[line[1].strip()] = line[0].strip()
         return output
-
+    
     ############################################################################
     def check_nb_events(self,path, data=None):
         """Find the number of event in the run_card, and check that this is not 

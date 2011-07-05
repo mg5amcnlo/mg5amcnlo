@@ -93,8 +93,42 @@ BLOCK SMINPUTS Q=1.0 #  test
 
 class TestParamCard(unittest.TestCase):
     """ Test the ParamCard Object """
-    
-    
+
+    def test_mod_param(self):
+        """ test that we can modify a param card """
+
+        full_card = os.path.join(_file_path, os.path.pardir,
+                                     'input_files', 'param_card_sm.dat')        
+        card = writter.ParamCard(full_card)
+        
+        self.assertFalse(card.has_param('mass', [999]))
+        self.assertFalse(card.has_param('new', [24]))
+        self.assertFalse(card.has_param('new', [23]))
+        card.copy_param('mass',[23], 'new', [24])
+        self.assertFalse(card.has_param('mass', [24]))
+        self.assertTrue(card.has_param('mass', [23]))
+        self.assertTrue(card.has_param('new', [24]))
+        self.assertFalse(card.has_param('new', [23]))
+        card.copy_param('mass',[23], 'new')
+        card.copy_param('mass',[23], lhacode=[999])
+        
+        self.assertEqual(len(card['new']), 2)
+        self.assertTrue(card.has_param('mass', [999]))                        
+        self.assertTrue(card.has_param('new', [24]))
+        self.assertTrue(card.has_param('new', [23]))
+        self.assertTrue(card.has_param('mass', [23]))
+        
+        card.remove_param('new', [23])
+        card.remove_param('new', [24])
+        card.remove_param('mass',[999])
+        
+        self.assertFalse(card.has_param('mass', [999]))
+        self.assertFalse(card.has_param('new', [24]))
+        self.assertFalse(card.has_param('new', [23]))
+        self.assertTrue(card.has_param('mass', [23]))
+        
+        self.assertFalse('new' in card.keys())        
+
     def test_mod_card(self):
         """ test that we can modify a param card """
 

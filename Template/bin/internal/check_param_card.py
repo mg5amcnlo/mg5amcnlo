@@ -1,5 +1,5 @@
-import xml.etree.ElementTree as ET
 from __future__ import division
+import xml.etree.ElementTree as ET
 import math
 
 class InvalidParamCard(Exception):
@@ -258,7 +258,7 @@ class ParamCard(dict):
         """ remove a parameter """
         self[block].remove(lhacode)
         if len(self[block]) == 0:
-            self.rename_blocks(block)
+            self.remove_block(block)
     
     def has_param(self, block, lhacode):
         """check if param exists"""
@@ -274,8 +274,8 @@ class ParamCard(dict):
         """ make a parameter, a symbolic link on another one """
         
         # Find the current block/parameter
-        old_block = self[old_block]
-        parameter = old_block.get(old_lha)        
+        old_block_obj = self[old_block]
+        parameter = old_block_obj.get(old_lha)        
         if not block:
             block = old_block
         if not lhacode:
@@ -285,7 +285,7 @@ class ParamCard(dict):
         
     def add_param(self,block, lha, value, comment=''):
         
-        parameter = Paramater(block=block, lhacode=lha, value=value, 
+        parameter = Parameter(block=block, lhacode=lha, value=value, 
                               comment=comment)
 
         try:
@@ -334,7 +334,15 @@ class ParamCard(dict):
         if value:
             parameter.value = value
 
-    
+    def check_and_remove(self,block, lhacode, value):
+        """ check that the value is coherent and remove it"""
+        
+        if self.has_param(block, lhacode):
+            param = self['block'].get(lhacode)
+            if param.value != value:
+                error_msg = 'This card is not suitable to be convert to SLAH1\n'
+                error_msg += 'Parameter %s %s should be %s' % (block, lhacode, value)
+                raise InvalidParamCard, error_msg   
 
 class ParamCardRule(object):
     """ A class for storing the linked between the different parameter of
@@ -571,168 +579,158 @@ class ParamCardRule(object):
         return card
                         
 
-
-class SLAHConverter(ParamCard):
+def convert_to_slha1(self, path, outputpath=None ):
+    """ """
+                                                      
     
-    def __init__(self, obj=None, input_path=None):
-        
-        ParamCard.__init__(self, input_path)
-        if obj:
-            dict.__init__(self, obj)
-            self.order = obj.order
+    if not outputpath:
+        outputpath = path
     
-    def check_and_remove(self,block, lhacode, value):
-        """ check that the value is coherent and remove it"""
+    card = ParamCard(path)
+
         
-        if self.has_param(block, lhacode):
-            param = self['block'].get(lhacode)
-            if param.value != value:
-                error_msg = 'This card is not suitable to be convert to SLAH1\n'
-                error_msg += 'Parameter %s %s should be %s' % (block, lhacode, value)
-                raise InvalidParamCard, error_msg
-        
-        
-        
-    def convert_to_slha1(self):
-        """ """
-        
-        # Mass 
-        #self.reorder_mass() # needed?
-        self.copy_param('mass', [6], 'sminputs', [6])
-        self.copy_param('mass', [15], 'sminputs', [7])
-        self.copy_param('mass', [23], 'sminputs', [4])
-        # Decay: Nothing to do. 
+    # Mass 
+    #card.reorder_mass() # needed?
+    card.copy_param('mass', [6], 'sminputs', [6])
+    card.copy_param('mass', [15], 'sminputs', [7])
+    card.copy_param('mass', [23], 'sminputs', [4])
+    # Decay: Nothing to do. 
     
-        # MODSEL
-        self.add_param('modsel',[1], value=1)
-        
-        # SMINPUTS
-        if not self.has_param('sminputs', [2]):
-            aem1 = self['sminputs'].get([1])
-            mz = self['mass'].get([23])
-            mw = self['mass'].get([24])
-            gf = math.pi / sqrt(2) * aem1 * mz**2/ mw**2 /(mz**2-mw**2)
-            self.add_param('sminputs', [2], gf, 'G_F [GeV^-2]')
-        
-        # USQMIX
-        self.check_and_remove('usqmix', [1,1], 1.0)
-        self.check_and_remove('usqmix', [2,2], 1.0)
-        self.check_and_remove('usqmix', [4,4], 1.0)
-        self.check_and_remove('usqmix', [5,5], 1.0)
-        self.mod_param('usqmix', [3,3], 'stopmix', [1,1])
-        self.mod_param('usqmix', [3,6], 'stopmix', [1,2])
-        self.mod_param('usqmix', [6,3], 'stopmix', [2,1])
-        self.mod_param('usqmix', [6,6], 'stopmix', [2,2])
+    # MODSEL
+    card.add_param('modsel',[1], value=1)
+    
+    # SMINPUTS
+    if not card.has_param('sminputs', [2]):
+        aem1 = card['sminputs'].get([1])
+        mz = card['mass'].get([23])
+        mw = card['mass'].get([24])
+        gf = math.pi / sqrt(2) * aem1 * mz**2/ mw**2 /(mz**2-mw**2)
+        card.add_param('sminputs', [2], gf, 'G_F [GeV^-2]')
+    
+    # USQMIX
+    card.check_and_remove('usqmix', [1,1], 1.0)
+    card.check_and_remove('usqmix', [2,2], 1.0)
+    card.check_and_remove('usqmix', [4,4], 1.0)
+    card.check_and_remove('usqmix', [5,5], 1.0)
+    card.mod_param('usqmix', [3,3], 'stopmix', [1,1])
+    card.mod_param('usqmix', [3,6], 'stopmix', [1,2])
+    card.mod_param('usqmix', [6,3], 'stopmix', [2,1])
+    card.mod_param('usqmix', [6,6], 'stopmix', [2,2])
 
-        # DSQMIX
-        self.check_and_remove('dsqmix', [1,1], 1.0)
-        self.check_and_remove('dsqmix', [2,2], 1.0)
-        self.check_and_remove('dsqmix', [4,4], 1.0)
-        self.check_and_remove('dsqmix', [5,5], 1.0)
-        self.mod_param('dsqmix', [3,3], 'sbotmix', [1,1])
-        self.mod_param('dsqmix', [3,6], 'sbotmix', [1,2])
-        self.mod_param('dsqmix', [6,3], 'sbotmix', [2,1])
-        self.mod_param('dsqmix', [6,6], 'sbotmix', [2,2])     
-        
-        
-        # SELMIX
-        self.check_and_remove('selmix', [1,1], 1.0)
-        self.check_and_remove('selmix', [2,2], 1.0)
-        self.check_and_remove('selmix', [4,4], 1.0)
-        self.check_and_remove('selmix', [5,5], 1.0)
-        self.mod_param('selmix', [3,3], 'staumix', [1,1])
-        self.mod_param('selmix', [3,6], 'staumix', [1,2])
-        self.mod_param('selmix', [6,3], 'staumix', [2,1])
-        self.mod_param('selmix', [6,6], 'staumix', [2,2])
-        
-        # FRALPHA
-        self.mod_param('fralpha', [1], 'alpha', [])
-        
-        #HMIX
-        if not self.has_param('hmix', [3]):
-            tanb = self['hmix'].get([2]).value
-            mz = self['mass'].get([23]).value
-            mw = self['mass'].get([24]).value
-            sw = math.sqrt(mz**2 - mw**2)/mz
-            aem1 = self['sminputs'].get([1])
-            vuv = 1/(math.sqrt(math.pi)) * aem1 * mw * sw *math.atan(tanb)
-            self.add_param('hmix', [3], vuv, 'higgs vev(Q) MSSM DRb')
-        
-        # VCKM
-        self.check_and_remove('vckm', [1,1], 1.0)
-        self.check_and_remove('vckm', [2,2], 1.0)
-        self.check_and_remove('vckm', [3,3], 1.0)
-        
-        #SNUMIX
-        self.check_and_remove('snumix', [1,1], 1.0)
-        self.check_and_remove('snumix', [2,2], 1.0)
-        self.check_and_remove('snumix', [3,3], 1.0)
+    # DSQMIX
+    card.check_and_remove('dsqmix', [1,1], 1.0)
+    card.check_and_remove('dsqmix', [2,2], 1.0)
+    card.check_and_remove('dsqmix', [4,4], 1.0)
+    card.check_and_remove('dsqmix', [5,5], 1.0)
+    card.mod_param('dsqmix', [3,3], 'sbotmix', [1,1])
+    card.mod_param('dsqmix', [3,6], 'sbotmix', [1,2])
+    card.mod_param('dsqmix', [6,3], 'sbotmix', [2,1])
+    card.mod_param('dsqmix', [6,6], 'sbotmix', [2,2])     
+    
+    
+    # SELMIX
+    card.check_and_remove('selmix', [1,1], 1.0)
+    card.check_and_remove('selmix', [2,2], 1.0)
+    card.check_and_remove('selmix', [4,4], 1.0)
+    card.check_and_remove('selmix', [5,5], 1.0)
+    card.mod_param('selmix', [3,3], 'staumix', [1,1])
+    card.mod_param('selmix', [3,6], 'staumix', [1,2])
+    card.mod_param('selmix', [6,3], 'staumix', [2,1])
+    card.mod_param('selmix', [6,6], 'staumix', [2,2])
+    
+    # FRALPHA
+    card.mod_param('fralpha', [1], 'alpha', [])
+    
+    #HMIX
+    if not card.has_param('hmix', [3]):
+        tanb = card['hmix'].get([2]).value
+        mz = card['mass'].get([23]).value
+        mw = card['mass'].get([24]).value
+        sw = math.sqrt(mz**2 - mw**2)/mz
+        aem1 = card['sminputs'].get([1])
+        vuv = 1/(math.sqrt(math.pi)) * aem1 * mw * sw *math.atan(tanb)
+        card.add_param('hmix', [3], vuv, 'higgs vev(Q) MSSM DRb')
+    
+    # VCKM
+    card.check_and_remove('vckm', [1,1], 1.0)
+    card.check_and_remove('vckm', [2,2], 1.0)
+    card.check_and_remove('vckm', [3,3], 1.0)
+    
+    #SNUMIX
+    card.check_and_remove('snumix', [1,1], 1.0)
+    card.check_and_remove('snumix', [2,2], 1.0)
+    card.check_and_remove('snumix', [3,3], 1.0)
 
-        #UPMNS
-        self.check_and_remove('upmns', [1,1], 1.0)
-        self.check_and_remove('upmns', [2,2], 1.0)
-        self.check_and_remove('upmns', [3,3], 1.0)
+    #UPMNS
+    card.check_and_remove('upmns', [1,1], 1.0)
+    card.check_and_remove('upmns', [2,2], 1.0)
+    card.check_and_remove('upmns', [3,3], 1.0)
 
-        # Te
-        yu = self['ye'].get([3, 3]).value
-        tu = self['te'].get([3, 3]).value
-        self.mod_param('te', [3,3], 'ae', [3,3], value= te/ye, comment='A_tau(Q) DRbar')
-        self.add_param('te', [1,1], 0, 'A_e(Q) DRbar')
-        self.add_param('te', [2,2], 0, 'A_mu(Q) DRbar')
-        
-        # Tu
-        yu = self['yu'].get([3, 3]).value
-        tu = self['tu'].get([3, 3]).value
-        self.mod_param('tu', [3,3], 'au', [3,3], value= tu/yu, comment='A_t(Q) DRbar')
-        self.add_param('tu', [1,1], 0, 'A_u(Q) DRbar')
-        self.add_param('tu', [2,2], 0, 'A_c(Q) DRbar')
-        
-        # Td
-        yd = self['yd'].get([3, 3]).value
-        td = self['td'].get([3, 3]).value
-        self.mod_param('td', [3,3], 'ad', [3,3], value= td/yd, comment='A_b(Q) DRbar')
-        self.add_param('td', [1,1], 0, 'A_d(Q) DRbar')
-        self.add_param('td', [2,2], 0, 'A_s(Q) DRbar')
-        
-        # MSL2 
-        value = self['msl2'].get([1, 1]).value
-        self.mod_parm('msl2', [1,1], 'msoft', [31], math.sqrt(value))
-        value = self['msl2'].get([2, 2]).value
-        self.mod_parm('msl2', [2,2], 'msoft', [32], math.sqrt(value))
-        value = self['msl2'].get([3, 3]).value
-        self.mod_parm('msl2', [3,3], 'msoft', [33], math.sqrt(value))
-        
-        # MSE2
-        value = self['mse2'].get([1, 1]).value
-        self.mod_parm('mse2', [1,1], 'msoft', [34], math.sqrt(value))
-        value = self['mse2'].get([2, 2]).value
-        self.mod_parm('mse2', [2,2], 'msoft', [35], math.sqrt(value))
-        value = self['mse2'].get([3, 3]).value
-        self.mod_parm('mse2', [3,3], 'msoft', [36], math.sqrt(value))
-        
-        # MSQ2                                
-        value = self['msq2'].get([1, 1]).value
-        self.mod_parm('msq2', [1,1], 'msoft', [37], math.sqrt(value))
-        value = self['msq2'].get([2, 2]).value
-        self.mod_parm('msq2', [2,2], 'msoft', [38], math.sqrt(value))
-        value = self['msq2'].get([3, 3]).value
-        self.mod_parm('msq2', [3,3], 'msoft', [39], math.sqrt(value))    
-        
-        # MSU2                                
-        value = self['msu2'].get([1, 1]).value
-        self.mod_parm('msu2', [1,1], 'msoft', [40], math.sqrt(value))
-        value = self['msu2'].get([2, 2]).value
-        self.mod_parm('msu2', [2,2], 'msoft', [41], math.sqrt(value))
-        value = self['msu2'].get([3, 3]).value
-        self.mod_parm('msu2', [3,3], 'msoft', [42], math.sqrt(value))   
-        
-        # MSD2                                
-        value = self['msd2'].get([1, 1]).value
-        self.mod_parm('msd2', [1,1], 'msoft', [31], math.sqrt(value))
-        value = self['msd2'].get([2, 2]).value
-        self.mod_parm('msd2', [2,2], 'msoft', [32], math.sqrt(value))
-        value = self['msd2'].get([3, 3]).value
-        self.mod_parm('msd2', [3,3], 'msoft', [33], math.sqrt(value))   
+    # Te
+    yu = card['ye'].get([3, 3]).value
+    tu = card['te'].get([3, 3]).value
+    card.mod_param('te', [3,3], 'ae', [3,3], value= te/ye, comment='A_tau(Q) DRbar')
+    card.add_param('te', [1,1], 0, 'A_e(Q) DRbar')
+    card.add_param('te', [2,2], 0, 'A_mu(Q) DRbar')
+    
+    # Tu
+    yu = card['yu'].get([3, 3]).value
+    tu = card['tu'].get([3, 3]).value
+    card.mod_param('tu', [3,3], 'au', [3,3], value= tu/yu, comment='A_t(Q) DRbar')
+    card.add_param('tu', [1,1], 0, 'A_u(Q) DRbar')
+    card.add_param('tu', [2,2], 0, 'A_c(Q) DRbar')
+    
+    # Td
+    yd = card['yd'].get([3, 3]).value
+    td = card['td'].get([3, 3]).value
+    card.mod_param('td', [3,3], 'ad', [3,3], value= td/yd, comment='A_b(Q) DRbar')
+    card.add_param('td', [1,1], 0, 'A_d(Q) DRbar')
+    card.add_param('td', [2,2], 0, 'A_s(Q) DRbar')
+    
+    # MSL2 
+    value = card['msl2'].get([1, 1]).value
+    card.mod_parm('msl2', [1,1], 'msoft', [31], math.sqrt(value))
+    value = card['msl2'].get([2, 2]).value
+    card.mod_parm('msl2', [2,2], 'msoft', [32], math.sqrt(value))
+    value = card['msl2'].get([3, 3]).value
+    card.mod_parm('msl2', [3,3], 'msoft', [33], math.sqrt(value))
+    
+    # MSE2
+    value = card['mse2'].get([1, 1]).value
+    card.mod_parm('mse2', [1,1], 'msoft', [34], math.sqrt(value))
+    value = card['mse2'].get([2, 2]).value
+    card.mod_parm('mse2', [2,2], 'msoft', [35], math.sqrt(value))
+    value = card['mse2'].get([3, 3]).value
+    card.mod_parm('mse2', [3,3], 'msoft', [36], math.sqrt(value))
+    
+    # MSQ2                
+    value = card['msq2'].get([1, 1]).value
+    card.mod_parm('msq2', [1,1], 'msoft', [37], math.sqrt(value))
+    value = card['msq2'].get([2, 2]).value
+    card.mod_parm('msq2', [2,2], 'msoft', [38], math.sqrt(value))
+    value = card['msq2'].get([3, 3]).value
+    card.mod_parm('msq2', [3,3], 'msoft', [39], math.sqrt(value))    
+    
+    # MSU2                
+    value = card['msu2'].get([1, 1]).value
+    card.mod_parm('msu2', [1,1], 'msoft', [40], math.sqrt(value))
+    value = card['msu2'].get([2, 2]).value
+    card.mod_parm('msu2', [2,2], 'msoft', [41], math.sqrt(value))
+    value = card['msu2'].get([3, 3]).value
+    card.mod_parm('msu2', [3,3], 'msoft', [42], math.sqrt(value))   
+    
+    # MSD2                
+    value = card['msd2'].get([1, 1]).value
+    card.mod_parm('msd2', [1,1], 'msoft', [31], math.sqrt(value))
+    value = card['msd2'].get([2, 2]).value
+    card.mod_parm('msd2', [2,2], 'msoft', [32], math.sqrt(value))
+    value = card['msd2'].get([3, 3]).value
+    card.mod_parm('msd2', [3,3], 'msoft', [33], math.sqrt(value))   
+    
+    #################
+    # WRITE OUTPUT
+    #################
+    card.write(outputpath)
         
                                                       
 def make_valid_param_card(path, restrictpath, outputpath=None):
