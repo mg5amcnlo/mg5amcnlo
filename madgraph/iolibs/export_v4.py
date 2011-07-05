@@ -710,9 +710,12 @@ class ProcessExporterFortranSA(ProcessExporterFortran):
 
         source_dir = os.path.join(self.dir_path, "Source")
         logger.info("Running make for Helas")
-        misc.compile(arg=['../lib/libdhelas3.a'], cwd=source_dir, mode='fortran')
+        subprocess.call(['make', '../lib/libdhelas3.a'],
+                        stdout = open(os.devnull, 'w'), cwd=source_dir)
         logger.info("Running make for Model")
-        misc.compile(arg=['../lib/libmodel.a'], cwd=source_dir, mode='fortran')
+        subprocess.call(['make', '../lib/libmodel.a'],
+                        stdout = open(os.devnull, 'w'), cwd=source_dir)
+
 
     #===========================================================================
     # Create proc_card_mg5.dat for Standalone directory
@@ -1162,7 +1165,8 @@ class ProcessExporterFortranME(ProcessExporterFortran):
         if os.path.exists(os.path.join('SubProcesses', 'subproc.mg')):
             if os.path.exists('madevent.tar.gz'):
                 os.remove('madevent.tar.gz')
-            misc.compile(mode='None')
+            subprocess.call(['make'], stdout = devnull)
+
 
         if online:
             # Touch "Online" file

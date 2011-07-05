@@ -162,7 +162,7 @@ class SALauncher(ExtLauncher):
                                    os.path.isdir(os.path.join(sub_path, path)):
                 cur_path =  os.path.join(sub_path, path)
                 # make
-                misc.compile(cwd=cur_path, mode='unknown')
+                subprocess.call(['make'], cwd=cur_path)
                 # check
                 subprocess.call(['./check'], cwd=cur_path)
                 
@@ -378,14 +378,26 @@ class Pythia8Launcher(ExtLauncher):
 
         # Make pythia8
         print "Running make for pythia8 directory"
-        misc.compile(cwd=os.path.join(self.running_dir, os.path.pardir), mode='cpp')
+        status = subprocess.call(['make'], stdout = open(os.devnull, 'w'),
+                        stderr = open(os.devnull, 'w'),
+                        cwd=os.path.join(self.running_dir, os.path.pardir))
+        if status != 0:
+            raise MadGraph5Error, "make failed for pythia8 directory"
         if self.model_dir:
             print "Running make in %s" % self.model_dir
-            misc.compile(cwd=self.model_dir, mode='cpp')
+            status = subprocess.call(['make'], stdout = open(os.devnull, 'w'),
+                            stderr = open(os.devnull, 'w'),
+                            cwd=self.model_dir)
+            if status != 0:
+                raise MadGraph5Error, "make failed for %s directory" % self.model_dir
         # Finally run make for executable
         makefile = self.executable.replace("main_","Makefile_")
         print "Running make with %s" % makefile
-        misc.compile(arg=['-f', makefile], cwd=self.running_dir, mode='cpp')
+        status = subprocess.call(['make', '-f', makefile],
+                                 stdout = open(os.devnull, 'w'),
+                                 cwd=self.running_dir)
+        if status != 0:
+            raise MadGraph5Error, "make failed for %s" % self.executable
         
         print "Running " + self.executable
         
