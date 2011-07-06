@@ -11,6 +11,18 @@
 #  name is queue name for PBS or number of cores for multicore
 #
 
+function error_exit {
+    if [[  -e error  ]]; then
+	date
+	cp -f error status
+	rm survey refine refine2 >& /dev/null
+	rm RunWeb
+	$dirbin/gen_crossxhtml-pl $t
+	$dirbin/gen_cardhtml-pl
+	exit
+    fi
+}
+
 if [[  ! -d ./bin  ]]; then
     cd ../
     if [[ ! -d ./bin ]]; then
@@ -108,6 +120,7 @@ if [[  -e error  ]]; then
 fi
 touch RunWeb
 echo "Cleaning directories" > status
+cat status
 $dirbin/gen_crossxhtml-pl $t
 $dirbin/clean
 
@@ -117,7 +130,14 @@ if [[ $c == "'lhapdf'" ]]; then
 else
     unset lhapdf
 fi
-
+# Compile everything in Source
+echo "Cleaning directories" > status
+cat status
+$dirbin/gen_crossxhtml-pl $t
+$dirbin/compile_Source
+# If any compilations failed
+error_exit
+    
 if [ "$ickkw" = "2" ];then
   echo "Running with CKKW matching"
   lpp1=`awk '/^[^#].*=.*lpp1/{print $1}' Cards/run_card.dat`
@@ -153,12 +173,7 @@ if [ "$ickkw" = "2" ];then
 
   if [[ ! -e $issudfile ]];then
     echo "No sudakov grid file for parameter choice. Please generate a sudakov grid file and restart." > error
-    cat error
-    date
-    cp -f error status
-    rm RunWeb
-    $dirbin/gen_crossxhtml-pl $t
-    $dirbin/gen_cardhtml-pl
+    error_exit
   else
     rm -f lib/issudgrid.dat
     gunzip -c $issudfile > lib/issudgrid.dat
@@ -170,23 +185,16 @@ touch survey
 echo "Starting jobs" > status
 $dirbin/gen_crossxhtml-pl $t
 $dirbin/survey $mode $n $t
-if [[  -e error  ]]; then
-  cat error
-  date
-  cp -f error status
-  rm survey
-  rm RunWeb
-  $dirbin/gen_crossxhtml-pl $t
-  $dirbin/gen_cardhtml-pl
-  exit
-fi
+error_exit
 if [[ $b != ".true." ]]; then
    mv survey refine
    $dirbin/gen_crossxhtml-pl $t
    $dirbin/refine $a $mode $n 1 $t
+   error_exit
    mv refine refine2
    $dirbin/gen_crossxhtml-pl $t
    $dirbin/refine $a $mode $n 1 $t
+   error_exit
    rm -f refine2
 else
    rm survey
@@ -197,9 +205,6 @@ fi
 echo "Combining Events" >& status
 echo "Combining Events" 
 $dirbin/gen_crossxhtml-pl $t
-pushd ./Source > /dev/null
-make ../bin/combine_events
-popd > /dev/null
 pushd SubProcesses > /dev/null
 $dirbin/run_combine $mode
 mv events.lhe ../Events/
