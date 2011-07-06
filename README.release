@@ -27,7 +27,7 @@ Type "tutorial" for an interactive quick-start tutorial.
 To run using the Template bin/newprocess_mg5 script: 
 ------------------------------------------------
 Copy the Template directory to a new directory, e.g. MyRunDir.
-Modify the Cards/proc_card.dat, and run:
+Modify the Cards/proc_card.dat or Cards/proc_card_mg5.dat, and run:
 ./bin/newprocess_mg5
 After completed process generation, you will find the sequence of
 commands used by MG5 in the file Cards/proc_card_mg5.dat.
