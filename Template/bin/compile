@@ -30,106 +30,20 @@ fi
 echo $PWD
 if [[  "$1" == ""  ]]; then
     echo "Using default makefiles"
-elif [[ "$1" == "dynamic" && "$2" == "lhapdf" ]]; then
-    echo "Changing makefiles for the generation of dynamic libraries including LHAPDF support (might not work under MacOsX)"
-    if [[ -e ./Source/makefile_dlhapdf ]]; then
-	mv ./Source/makefile ./Source/makefile_static
-        cp ./Source/makefile_dlhapdf ./Source/makefile
-    else
-        echo "Error: Could not replace Source/makefile"
-        exit
-    fi
-    if [[ -e SubProcesses/makefile_dlhapdf ]]; then
-	mv SubProcesses/makefile SubProcesses/makefile_static
-        cp SubProcesses/makefile_dlhapdf SubProcesses/makefile
-    else
-        echo "Error: Could not replace SubProcesses/makefile"
-        exit
-    fi
-    if [[ -e SubProcesses/makefile_mo_dlhapdf ]]; then
-        mv SubProcesses/makefile SubProcesses/makefile_static
-        cp SubProcesses/makefile_mo_dlhapdf SubProcesses/makefile_mo
-    else
-        echo "Error: Could not replace SubProcesses/makefile_mo"
-        exit
-    fi
-    if [[ -e Source/DHELAS/Makefile_dynamic ]]; then
-	mv Source/DHELAS/Makefile Source/DHELAS/Makefile_static
-        cp Source/DHELAS/Makefile_dynamic Source/DHELAS/Makefile
-	sed -i.bak "s|f77|gfortran|g" Source/DHELAS/Makefile
-    else
-        echo "Error: Could not replace Source/DHELAS/Makefile"
-        exit
-    fi
-    if [[ -e Source/MODEL/makefile_dynamic ]]; then
-	mv Source/MODEL/makefile Source/MODEL/makefile_static
-        cp Source/MODEL/makefile_dynamic Source/MODEL/makefile
-	sed -i.bak "s|f77|gfortran|g" Source/MODEL/makefile
-    else
-        echo "Error: Could not replace Source/MODEL/makefile"
-        exit
-    fi
-    if [[ -e Source/CERNLIB/makefile_dynamic ]]; then
-	mv Source/CERNLIB/makefile Source/CERNLIB/makefile_static
-        cp Source/CERNLIB/makefile_dynamic Source/CERNLIB/makefile
-	sed -i.bak "s|f77|gfortran|g" Source/CERNLIB/makefile
-    else
-        echo "Error: Could not replace Source/CERNLIB/makefile"
-        exit
-    fi
-    if [[ -e Source/PDF/makefile_dlhapdf ]]; then
-	mv Source/PDF/makefile Source/PDF/makefile_static
-        cp Source/PDF/makefile_dlhapdf Source/PDF/makefile
-    else
-        echo "Error: Could not replace Source/PDF/makefile"
-        exit
-    fi
 elif [[ "$1" == "dynamic" ]]; then
     echo "Changing makefiles for the generation of dynamic libraries (might not work under MacOsX)"
-    if [[ -e ./Source/makefile_dynamic ]]; then
-	mv ./Source/makefile ./Source/makefile_static
-        cp ./Source/makefile_dynamic ./Source/makefile
-    else
-        echo "Error: Could not replace Source/makefile"
-        exit
-    fi
-    if [[ -e SubProcesses/makefile_dynamic ]]; then
-	mv SubProcesses/makefile SubProcesses/makefile_static
-        cp SubProcesses/makefile_dynamic SubProcesses/makefile
-    else
-        echo "Error: Could not replace SubProcesses/makefile"
-        exit
-    fi
-    if [[ -e Source/DHELAS/Makefile_dynamic ]]; then
-	mv Source/DHELAS/Makefile Source/DHELAS/Makefile_static
-        cp Source/DHELAS/Makefile_dynamic Source/DHELAS/Makefile
-    else
-        echo "Error: Could not replace Source/DHELAS/Makefile"
-        exit
-    fi
-    if [[ -e Source/MODEL/makefile_dynamic ]]; then
-	mv Source/MODEL/makefile Source/MODEL/makefile_static
-        cp Source/MODEL/makefile_dynamic Source/MODEL/makefile
-    else
-        echo "Error: Could not replace Source/MODEL/makefile"
-        exit
-    fi
-    if [[ -e Source/CERNLIB/makefile_dynamic ]]; then
-	mv Source/CERNLIB/makefile Source/CERNLIB/makefile_static
-        cp Source/CERNLIB/makefile_dynamic Source/CERNLIB/makefile
-    else
-        echo "Error: Could not replace Source/CERNLIB/makefile"
-        exit
-    fi
-    if [[ -e Source/PDF/makefile_dynamic ]]; then
-	mv Source/PDF/makefile Source/PDF/makefile_static
-        cp Source/PDF/makefile_dynamic Source/PDF/makefile
-    else
-        echo "Error: Could not replace Source/PDF/makefile"
-        exit
-    fi
+    export dynamic="true"
 else
     echo Error: invalid argument $1
+    exit
+fi
+if [[  "$2" == ""  ]]; then
+    echo "Not using LHAPDF"
+elif [[ "$1" == "lhapdf" ]]; then
+    echo "Changing makefiles for using LHAPDF"
+    export lhapdf="true"
+else
+    echo Error: invalid argument $2
     exit
 fi
 

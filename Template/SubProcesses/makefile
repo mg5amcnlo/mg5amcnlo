@@ -1,14 +1,17 @@
-g77   = g77
-FFLAGS= -O -w -ffixed-line-length-132
-#FFLAGS = -g -ffixed-line-length-132 -fbounds-check -ffpe-trap=invalid,zero,overflow,underflow,denormal
+include ../../Source/make_opts
+FFLAGS+= -w
+
+# Definitions
+
 LIBDIR = ../../lib/
 BINDIR = ../../bin/
-# $B$ obj_for_MW $B$ !this is a tag for MadWeight. Don't edit this line
 PROG   = madevent
-#    $E$ obj_for_MW $E$ !this is a tag for MadWeight. Don't edit this line
-LINKLIBS =  -L../../lib/ -ldhelas3 -ldsample -lmodel -lgeneric -lpdf -lcernlib
-LIBS = $(LIBDIR)libdhelas3.a $(LIBDIR)libdsample.a $(LIBDIR)libgeneric.a $(LIBDIR)libpdf.a $(LIBDIR)libmodel.a $(LIBDIR)libcernlib.a
 
+LINKLIBS =  -L../../lib/ -ldhelas3 -ldsample -lmodel -lgeneric -lpdf -lcernlib $(lhapdf)
+
+LIBS = $(LIBDIR)libdhelas3.$(libext) $(LIBDIR)libdsample.$(libext) $(LIBDIR)libgeneric.$(libext) $(LIBDIR)libpdf.$(libext) $(LIBDIR)libmodel.$(libext) $(LIBDIR)libcernlib.$(libext)
+
+# Source files
 
 PROCESS= driver.o myamp.o genps.o unwgt.o setcuts.o \
          cuts.o cluster.o reweight.o initcluster.o addmothers.o setscales.o \
@@ -17,28 +20,20 @@ PROCESS= driver.o myamp.o genps.o unwgt.o setcuts.o \
 SYMMETRY = myamp.o genps.o initcluster.o setscales.o reweight.o\
            $(patsubst %.f,%.o,$(wildcard matrix*.f))
 
-# $B$ obj_for_MW $E$ !this is a tag for MadWeight. Don't edit this line
+# Binaries
 
-%.o : %.f
-	$(g77) $(FFLAGS) -c $<
+$(PROG): $(PROCESS) auto_dsig.o $(LIBS)
+	$(FC) $(FFLAGS) -o $(PROG) $(PROCESS) $(LINKLIBS)
 
-# $B$ main_make $B$ !this is a tag for MadWeight. Don't edit this line
-$(PROG): $(PROCESS) auto_dsig.o makefile $(LIBS)
-	$(g77) $(FFLAGS) -o $(PROG) $(PROCESS) $(LINKLIBS)
-#    $E$ main_make $E$ !this is a tag for MadWeight. Don't edit this line
+gensym: symmetry.o genps.inc setcuts.o cuts.o cluster.o $(SYMMETRY) configs.inc $(LIBS)
+	$(FC) $(FFLAGS) -o gensym symmetry.o setcuts.o cuts.o cluster.o $(SYMMETRY) $(LINKLIBS)
 
-symmetry.dat: mg.sym gensym
-	./gensym
-
-gensym: symmetry.o genps.inc setcuts.o cuts.o cluster.o $(SYMMETRY) configs.inc  
-	$(g77) $(FFLAGS) -o gensym symmetry.o setcuts.o cuts.o cluster.o $(SYMMETRY) $(LINKLIBS)
+# Dependencies
 
 driver.f: genps.inc qmass.inc
 setcuts.f: qmass.inc
-
 qmass.inc: nexternal.inc
 	touch qmass.inc
-
 symmetry.o: genps.inc nexternal.inc configs.inc ../../Source/run_config.inc
 genps.o: genps.inc nexternal.inc configs.inc
 cuts.o: genps.inc nexternal.inc pmass.inc

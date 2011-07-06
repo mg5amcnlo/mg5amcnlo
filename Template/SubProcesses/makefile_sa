@@ -1,15 +1,12 @@
-g77   = g77
-FFLAGS= -O -ffixed-line-length-132
+include ../../Source/make_opts
+
 LIBDIR = ../../lib/
 PROG   = check
 LINKLIBS =  -L../../lib/ -ldhelas3 -lmodel 
 LIBS = $(LIBDIR)libdhelas3.a $(LIBDIR)libmodel.a 
 PROCESS=  check_sa.o matrix.o
  
-%.o : %.f
-	$(g77) $(FFLAGS) -c $<
-
 $(PROG): $(PROCESS)  makefile $(LIBS)
-	$(g77) $(FFLAGS) -o $(PROG) $(PROCESS) $(LINKLIBS)
+	$(FC) $(FFLAGS) -o $(PROG) $(PROCESS) $(LINKLIBS)
 
 driver.f: nexternal.inc pmass.inc ngraphs.inc coupl.inc

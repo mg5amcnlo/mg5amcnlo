@@ -678,6 +678,20 @@ class ProcessExporterFortran(object):
 
         return res_str + '*'
 
+    def replace_make_opt_compiler(self, compiler):
+        """Set FC=compiler in Source/make_opts"""
+
+        make_opts = os.path.join(self.dir_path, 'Source', 'make_opts')
+        lines = open(make_opts).read().split('\n')
+        FC_re = re.compile('^(\s*)FC\s*=\s*.+\s*$')
+        for iline, line in enumerate(lines):
+            FC_result = FC_re.match(line)
+            if FC_result:
+                lines[iline] = FC_result.group(1) + "FC=" + compiler
+        outfile = open(make_opts, 'w')
+        for line in lines:
+            outfile.write(line + '\n')
+
 #===============================================================================
 # ProcessExporterFortranSA
 #===============================================================================
@@ -726,8 +740,9 @@ class ProcessExporterFortranSA(ProcessExporterFortran):
 
         if not misc.which('g77'):
             logger.info('Change makefiles to use gfortran')
-            subprocess.call(['python','./bin/Passto_gfortran.py'], cwd=self.dir_path, \
-                            stdout = open(os.devnull, 'w')) 
+            #subprocess.call(['python','./bin/Passto_gfortran.py'], cwd=self.dir_path, \
+            #                stdout = open(os.devnull, 'w')) 
+            self.replace_make_opt_compiler('gfortran')
 
         self.make()
 
@@ -1117,8 +1132,9 @@ class ProcessExporterFortranME(ProcessExporterFortran):
 
         if not misc.which('g77'):
             logger.info('Change makefiles to use gfortran')
-            subprocess.call(['python','./bin/Passto_gfortran.py'], cwd=self.dir_path, \
-                            stdout = open(os.devnull, 'w')) 
+            #subprocess.call(['python','./bin/Passto_gfortran.py'], cwd=self.dir_path, \
+            #                stdout = open(os.devnull, 'w')) 
+            self.replace_make_opt_compiler('gfortran')
 
         old_pos = os.getcwd()
         os.chdir(os.path.join(self.dir_path, 'SubProcesses'))
