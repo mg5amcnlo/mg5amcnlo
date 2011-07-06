@@ -66,7 +66,7 @@ if [[ ! -e ./Events/unweighted_events.lhe ]]; then
     echo "Error: event file not found !"
     exit
 else
-    echo "Moving events"
+    echo "Moving events from madevent/Events/unweighted_events.lhe to events.lhe"
     mv ./Events/unweighted_events.lhe ../events.lhe
     cd ..
 fi
