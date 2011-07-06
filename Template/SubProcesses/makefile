@@ -45,3 +45,6 @@ cluster.o: cluster.inc genps.inc nexternal.inc message.inc
 addmothers.o: genps.inc nexternal.inc symswap.inc message.inc
 unwgt.o: genps.inc nexternal.inc symswap.inc cluster.inc run.inc message.inc
 initcluster.o: message.inc
+
+clean:
+	$(RM) *.o gensym madevent

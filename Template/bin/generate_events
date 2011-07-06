@@ -113,7 +113,9 @@ $dirbin/clean
 
 if [[ $c == "'lhapdf'" ]]; then
     echo Using LHAPDF interface!
-    export lhapdf="true"
+    export lhapdf=true
+else
+    unset lhapdf
 fi
 
 if [ "$ickkw" = "2" ];then

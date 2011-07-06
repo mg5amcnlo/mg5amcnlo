@@ -52,7 +52,9 @@ fi
 c=`awk '/^[^#].*=.*pdlabel/{print $1}' Cards/run_card.dat`
 if [[ $c == "'lhapdf'" ]]; then
     echo Using LHAPDF interface!
-    export lhapdf="true"
+    export lhapdf=true
+else
+    unset lhapdf
 fi
 
 echo "Compiling libraries"

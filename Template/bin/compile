@@ -30,18 +30,20 @@ fi
 echo $PWD
 if [[  "$1" == ""  ]]; then
     echo "Using default makefiles"
+    unset dynamic
 elif [[ "$1" == "dynamic" ]]; then
     echo "Changing makefiles for the generation of dynamic libraries (might not work under MacOsX)"
-    export dynamic="true"
+    export dynamic=true
 else
     echo Error: invalid argument $1
     exit
 fi
 if [[  "$2" == ""  ]]; then
     echo "Not using LHAPDF"
-elif [[ "$1" == "lhapdf" ]]; then
+    unset lhapdf
+elif [[ "$2" == "lhapdf" ]]; then
     echo "Changing makefiles for using LHAPDF"
-    export lhapdf="true"
+    export lhapdf=true
 else
     echo Error: invalid argument $2
     exit
