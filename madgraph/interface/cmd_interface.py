@@ -1518,8 +1518,8 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
             # Extract process from process definition
             if ',' in line:
                 myprocdef, line = self.extract_decay_chain_process(line)
-                if myprocdef.get('perturbation_couplings'):
-                    raise MadGraph5Error("Current MG5 version does not support Loop computations along with decay chains.")
+                if myprocdef.are_decays_perturbed():
+                    raise MadGraph5Error("Decay processes cannot be perturbed")
             else:
                 myprocdef = self.extract_process(line)
 
@@ -1536,7 +1536,7 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
                            "ignore_six_quark_processes" in self._options \
                            else []
 
-            # Decide here wether one need an NLOMultiProcess or a MultiProcess
+            # Decide here wether one needs a LoopMultiProcess or a MultiProcess
             multiprocessclass=None
             if myprocdef['perturbation_couplings']!=[]:
                 multiprocessclass=loop_diagram_generation.LoopMultiProcess

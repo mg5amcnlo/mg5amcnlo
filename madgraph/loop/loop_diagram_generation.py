@@ -129,7 +129,7 @@ class LoopAmplitude(diagram_generation.Amplitude):
                 self['born_diagrams']=base_objects.DiagramList([diag for diag in value if \
                                                                 diag['type']==0])
                 self['loop_diagrams']=base_objects.DiagramList([diag for diag in value if \
-                                                                diag['type']>0])
+                                                                diag['type']!=0])
         else:
             return super(LoopAmplitude, self).set(name, value)
 
@@ -343,7 +343,7 @@ class LoopAmplitude(diagram_generation.Amplitude):
             diag.tag(self['structure_repository'],len(self['process']['legs'])+1,len(self['process']['legs'])+2,\
                      self['process'])
             # Make sure not to consider wave-function renormalization, tadpoles, or redundant diagrams
-            if not diag.is_wvf_correction(self['structure_repository'],self['process']['model']) \
+            if not diag.is_wf_correction(self['structure_repository'],self['process']['model']) \
                and not diag.is_tadpole() and diag['canonical_tag'] not in tag_selected:
                 loop_basis.append(diag)
                 tag_selected.append(diag['canonical_tag'])
@@ -436,28 +436,28 @@ class LoopAmplitude(diagram_generation.Amplitude):
         """ Scan each loop diagram and recognizes what are the R2/UV CounterTerms
             associated to them """
 
-        # We first create a dictionary with as a key (tupleB,tupleA). The tuple A is, for each
-        # R2/UV interaction, the ordered tuple of the loop particles (not anti-particles, so that
-        # the PDG is always positive!) listed in its 'type'[1] attribute. Tuple B is the ordered
-        # tuple of external particles ID.
+        # We first create a base dictionary with as a key (tupleA,tupleB). For each
+        # R2/UV interaction, tuple B is the ordered tuple of the loop particles 
+        # (not anti-particles, so that the PDG is always positive!) listed in its 
+        # 'type'[1] attribute. Tuple A is the ordered tuple of external particles PDGs.
         # making up this interaction. The values of the dictionary are a list of the 
         # interaction ID having the same key above.
         CT_interactions = {}
-        for int in self['process']['model']['interactions']:
-            if int['type'][0] in ['R2','UV']:
-                keya=list(int['type'][1])
+        for inter in self['process']['model']['interactions']:
+            if inter['type'][0] in ['R2','UV']:
+                keya=list(inter['type'][1])
                 keya.sort()
-                keyb=[part.get_pdg_code() for part in int['particles']]
+                keyb=[part.get_pdg_code() for part in inter['particles']]
                 keyb.sort()
                 key=(tuple(keyb),tuple(keya))
                 try:
-                    CT_interactions[key].append(int['id'])
+                    CT_interactions[key].append(inter['id'])
                 except KeyError:
-                    CT_interactions[key]=[int['id'],]
-        
+                    CT_interactions[key]=[inter['id'],]
+                
         # The dictionary CT_added keeps track of what are the CounterTerms already
         # added and prevents us from adding them again. For instance, the fermion
-        # boxes with four external gluons exist in 6 exemplaries (with different 
+        # boxes with four external gluons exist in 6 copies (with different 
         # crossings of the external legs each time) and the corresponding R2 must
         # be added only once. The key of this dictionary characterizing the loop
         # is (tupleA,tupleB). Tuple A is made from the list of the ID of the external
@@ -492,13 +492,13 @@ class LoopAmplitude(diagram_generation.Amplitude):
             # Now we look for a CT which might correspond to this loop by looking
             # for its searchingKey in CT_interactions
 
-            #print "I have the following CT_interactions=",CT_interactions            
+            #print "I have the following CT_interactions=",CT_interactions  
             try:
-                CTIDs=CT_interactions[searchingKeySimple]
+                CTIDs=copy.copy(CT_interactions[searchingKeySimple])
             except KeyError:
                 CTIDs=[]
             try:
-                CTIDs+=CT_interactions[searchingKeyLoopPart]
+                CTIDs.extend(copy.copy(CT_interactions[searchingKeyLoopPart]))
             except KeyError:
                 pass
             if not CTIDs:
@@ -506,13 +506,14 @@ class LoopAmplitude(diagram_generation.Amplitude):
             # We have found some CT interactions corresponding to this loop
             # so we must make sure we have not included them already
             try:    
-                usedIDs=CT_added[trackingKeySimple]
+                usedIDs=copy.copy(CT_added[trackingKeySimple])
             except KeyError:
                 usedIDs=[]
             try:    
-                usedIDs+=CT_added[trackingKeyLoopPart]
+                usedIDs.extend(copy.copy(CT_added[trackingKeyLoopPart]))
             except KeyError:
                 pass    
+
             for CTID in CTIDs:
                 # Make sure it has not been considered yet and that the loop orders match
                 if CTID not in usedIDs and diag.get_loop_orders(self['process']['model'])==\

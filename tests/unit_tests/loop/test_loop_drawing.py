@@ -36,7 +36,6 @@ import madgraph.core.base_objects as base_objects
 import madgraph.core.diagram_generation as diagram_generation
 import madgraph.loop.loop_base_objects as loop_base_objects
 import madgraph.loop.loop_diagram_generation as loop_diagram_generation
-import madgraph.loop.loop_drawing as loop_drawing
 import madgraph.iolibs.save_load_object as save_load_object
 from madgraph.interface.cmd_interface import MadGraphCmdShell
 from madgraph import MadGraph5Error
@@ -152,7 +151,7 @@ class TestLoopDrawer(unittest.TestCase):
         
         diagram = self.store_diagram['g g > g g'][12]
         structure = self.store_diagram['g g > g g']['structure']
-        diagram = loop_drawing.LoopFeynmanDiagram(diagram, structure, self.model)
+        diagram = draw_lib.LoopFeynmanDiagram(diagram, structure, self.model)
         
 
         diagram.load_diagram()
@@ -191,7 +190,7 @@ class TestLoopDrawer(unittest.TestCase):
         ### Box cut at the T-channel
         diagram = copy.deepcopy(self.store_diagram['g g > g g'][17])
         structure = self.store_diagram['g g > g g']['structure']
-        diagram = loop_drawing.LoopFeynmanDiagram(diagram, structure, self.model)
+        diagram = draw_lib.LoopFeynmanDiagram(diagram, structure, self.model)
             
         self.assertTrue(diagram.need_to_flip())
         diagram.load_diagram()
@@ -203,7 +202,7 @@ class TestLoopDrawer(unittest.TestCase):
         ### Triangle
         diagram = copy.deepcopy(self.store_diagram['g g > g g'][8])
         
-        diagram = loop_drawing.LoopFeynmanDiagram(diagram, structure, self.model)
+        diagram = draw_lib.LoopFeynmanDiagram(diagram, structure, self.model)
 #        diagram.load_diagram()
         self.assertTrue(diagram.need_to_flip())
         
@@ -211,7 +210,7 @@ class TestLoopDrawer(unittest.TestCase):
         
         diagram = copy.deepcopy(self.store_diagram['g g > g g'][17])
         structure = self.store_diagram['g g > g g']['structure']
-        diagram = loop_drawing.LoopFeynmanDiagram(diagram, structure, self.model)
+        diagram = draw_lib.LoopFeynmanDiagram(diagram, structure, self.model)
         diagram.load_diagram()
         self.assertTrue(diagram.need_to_flip())
         
@@ -245,7 +244,7 @@ class TestLoopDrawer(unittest.TestCase):
 
         diagram = copy.deepcopy(self.store_diagram['g g > g g'][8])
         structure = self.store_diagram['g g > g g']['structure']
-        diagram = loop_drawing.LoopFeynmanDiagram(diagram, structure, self.model)
+        diagram = draw_lib.LoopFeynmanDiagram(diagram, structure, self.model)
         diagram.load_diagram()
         self.assertTrue(diagram.need_to_flip())
 
@@ -280,7 +279,7 @@ class TestLoopDrawer(unittest.TestCase):
         
         diagram = self.store_diagram['g g > g g'][75]
         structure = self.store_diagram['g g > g g']['structure']
-        diagram = loop_drawing.LoopFeynmanDiagram(diagram, structure, self.model)
+        diagram = draw_lib.LoopFeynmanDiagram(diagram, structure, self.model)
         
         diagram.load_diagram()
         self.assertFalse(diagram.need_to_flip())
@@ -324,7 +323,7 @@ class TestLoopDrawer(unittest.TestCase):
         for i in range(5,85):
             diagram = copy.deepcopy(self.store_diagram['g g > g g'][i])
             structure = self.store_diagram['g g > g g']['structure']
-            diagram = loop_drawing.LoopFeynmanDiagram(diagram, structure, self.model)
+            diagram = draw_lib.LoopFeynmanDiagram(diagram, structure, self.model)
         
 
             diagram.load_diagram()
@@ -423,7 +422,7 @@ class LoopDiagramDrawerTest(unittest.TestCase):
         box_diagram, box_struct = self.def_box()
         pent_diagram, pent_struct = self.def_pent()
         
-        self.box_drawing = loop_drawing.LoopFeynmanDiagram(
+        self.box_drawing = draw_lib.LoopFeynmanDiagram(
                                 box_diagram, box_struct, self.myloopmodel)
 
     def test_loop_load_diagram(self):

@@ -157,6 +157,12 @@ class EpsDiagramDrawer(draw.DiagramDrawer):
         self.text += self.line_format(line.begin.pos_x, line.begin.pos_y,
                          line.end.pos_x, line.end.pos_y, 'Ffermion')
 
+    def draw_curved_straight(self, line):
+        """ADD the EPS code for this fermion line."""
+
+        #add the code in the correct format
+        self.text += self.line_format(line.begin.pos_x, line.begin.pos_y,
+                         line.end.pos_x, line.end.pos_y, '0.25 Ffermionl')
 
     def draw_dashed(self, line):
         """ADD the EPS code for this Higgs line."""
@@ -190,6 +196,23 @@ class EpsDiagramDrawer(draw.DiagramDrawer):
             self.text += self.line_format(line.end.pos_x,
                         line.end.pos_y, line.begin.pos_x,
                         line.begin.pos_y, '0 Fgluon%s' % type)
+            
+    def draw_curved_curly(self, line, type=''):
+        """ADD the EPS code for this gluon line."""
+
+        curvature = 0.4
+        # Due to the asymmetry in the way to draw the gluon (everything is draw
+        #upper or below the line joining the points). We have to put conditions
+        #in order to have nice diagram.
+        
+        if (line.begin.pos_x, line.begin.pos_y) == self.curved_part_start:
+            curvature *= -1
+
+        self.text += self.line_format(line.end.pos_x,
+                        line.end.pos_y, line.begin.pos_x,
+                        line.begin.pos_y, '0 %s Fgluonl%s' % (-1*curvature, type))
+        
+                    
     
     def draw_scurly(self, line):
         """ADD the EPS code for this gluino line."""

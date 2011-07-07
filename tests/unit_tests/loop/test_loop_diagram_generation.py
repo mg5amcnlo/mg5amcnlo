@@ -878,6 +878,53 @@ class LoopDiagramGenerationTest(unittest.TestCase):
             #print "I got struct[2]=\n",myloopamplitude['structure_repository'][2].nice_string()   
             #print "I got struct[3]=\n",myloopamplitude['structure_repository'][3].nice_string()
 
+    def test_diagram_generation_uux_ga(self):
+        """Test the number of loop diagrams generated for uu~>g gamma (s channel)
+           with different choices for the perturbation couplings and squared orders.
+        """
+
+        myleglist = base_objects.LegList()
+        myleglist.append(base_objects.Leg({'id':2,
+                                         'state':False}))
+        myleglist.append(base_objects.Leg({'id':-2,
+                                         'state':False}))
+        myleglist.append(base_objects.Leg({'id':21,
+                                         'state':True}))
+        myleglist.append(base_objects.Leg({'id':22,
+                                         'state':True}))
+
+        ordersChoices=[({},['QCD','QED'],{},37,12,10),
+                       ({},['QCD'],{},15,5,4)]
+        for (bornOrders,pert,sqOrders,nDiagGoal, nR2, nUV) in ordersChoices:
+            myproc = base_objects.Process({'legs':copy.copy(myleglist),
+                                           'model':self.myloopmodel,
+                                           'orders':bornOrders,
+                                           'perturbation_couplings':pert,
+                                           'squared_orders':sqOrders})
+    
+            myloopamplitude = loop_diagram_generation.LoopAmplitude()
+            myloopamplitude.set('process', myproc)
+            myloopamplitude.generate_diagrams()
+            self.assertEqual(len(myloopamplitude.get('loop_diagrams')),nDiagGoal)
+            sumR2=0
+            sumUV=0
+            for i, diag in enumerate(myloopamplitude.get('loop_diagrams')):
+                sumR2+=len(diag.get_CT(self.myloopmodel,'R2'))
+                sumUV+=len(diag.get_CT(self.myloopmodel,'UV'))
+            self.assertEqual(sumR2,nR2)
+            self.assertEqual(sumUV,nUV)                
+
+            ### This is to plot the diagrams obtained
+            #options = draw_lib.DrawOption()
+            #filename = os.path.join('/Users/Spooner/Documents/PhD/MG5/NLO', 'diagramsVall_' + \
+            #              myloopamplitude.get('process').shell_string() + ".eps")
+            #plot = draw.MultiEpsDiagramDrawer(myloopamplitude['loop_diagrams'],
+            #                                  filename,
+            #                                  model=self.myloopmodel,
+            #                                  amplitude=myloopamplitude,
+            #                                  legend=myloopamplitude.get('process').input_string())
+            #plot.draw(opt=options)
+
     def test_diagram_generation_gg_ng(self):
         """Test the number of loop diagrams generated for gg>ng. n being in [1,2,3]
         """

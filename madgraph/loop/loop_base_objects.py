@@ -110,25 +110,38 @@ class LoopDiagram(base_objects.Diagram):
 
     def nice_string(self, struct_list=None ):
         """Returns a nicely formatted string of the diagram content."""
+        
+        # Return the mother nice_string if this LoopDiagram is of born type.
+        if self['type']==0:
+            return super(LoopDiagram,self).nice_string()
+        
         mystr=''
         if not self['vertices']:
             return '()'
         if self['canonical_tag']:
             mystr = mystr+'canonical tag: '+str(self['canonical_tag'])+'\n'
         if self['CT_vertices']:
-            mystr = mystr+'CT vertices:'
+            mystr = mystr+'CT vertex ids:'
+            for ctvx in self['CT_vertices']:
+                mystr = mystr +' '+str(ctvx.get('id'))
             mystr = mystr+'\n'
         if self['vertices']:
             mystr = mystr+'Loop vertices: ('
             for vert in self['vertices']:
                 mystr = mystr + '('
                 for leg in vert['legs'][:-1]:
-                    mystr = mystr + str(leg['number']) + '(%s)' % str(leg['id']) + ','
+                    if leg['loop_line']:
+                        mystr = mystr + str(leg['number']) + '(%s*)' % str(leg['id']) + ','
+                    else:
+                        mystr = mystr + str(leg['number']) + '(%s)' % str(leg['id']) + ','                        
 
                 if self['vertices'].index(vert) < len(self['vertices']) - 1:
                     # Do not want ">" in the last vertex
                     mystr = mystr[:-1] + '>'
-                mystr = mystr + str(vert['legs'][-1]['number']) + '(%s)' % str(vert['legs'][-1]['id']) + ','
+                if vert['legs'][-1]['loop_line']:
+                    mystr = mystr + str(vert['legs'][-1]['number']) + '(%s*)' % str(vert['legs'][-1]['id']) + ','
+                else:
+                    mystr = mystr + str(vert['legs'][-1]['number']) + '(%s)' % str(vert['legs'][-1]['id']) + ','                    
                 mystr = mystr + 'id:' + str(vert['id']) + '),'
             mystr = mystr[:-1] + ')'
             mystr += " (%s)" % ",".join(["%s=%d" % (key, self['orders'][key]) \
@@ -138,8 +151,8 @@ class LoopDiagram(base_objects.Diagram):
                 for j, struct in enumerate(tag_elem[1]):
                     mystr += 'Struct. #'+str(j+1)+' on loop vx #'+str(i+1)+": "+\
                       struct_list[struct].nice_string_vertices()+"\n"
-            #remove the unecessary last \n on the line
-            mystr=mystr[:-1]
+        #remove the unecessary last \n on the line
+        mystr=mystr[:-1]
 
         return mystr
 
@@ -192,7 +205,7 @@ class LoopDiagram(base_objects.Diagram):
         else:
             return None
 
-    def is_wvf_correction(self, struct_rep, model):
+    def is_wf_correction(self, struct_rep, model):
         """ Return None if there is no loop or if a tag has not yet been set and returns True if this graph contains
             a wave-function correction and False if not. """
 
@@ -394,7 +407,7 @@ class LoopDiagram(base_objects.Diagram):
                 else:
                     self['tag'].append([copy.copy(currLeg),sorted(FDStructureIDList),vertFoundID])
                     myleglist.append(copy.copy(currLeg))
-            
+                
                 # Now depending we reached the last loop vertex or not, we will create a current (with ref_dict_to1) or an 
                 # amplitude (with ref_dict_to0).
                 # WARNING: This is very important here that the endLeg has the maximal attribute 'number' among all other legs,
@@ -485,7 +498,6 @@ class LoopDiagram(base_objects.Diagram):
             (((1,2,3,4,5,6,7),72),((1,3),34),((2,6,7),42),((6,7),99),((4,5),73))
  
         """
-
         nextLeg = None
         legPos=-2
         vertPos=-2

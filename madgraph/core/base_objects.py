@@ -2183,6 +2183,14 @@ class ProcessDefinition(Process):
 
         return True
 
+    def are_decays_perturbed(self):
+        """ Check iteratively that the decayed processes are not perturbed """
+        
+        for procdef in self['decay_chains']:
+            if procdef['perturbation_couplings'] or procdef.are_decays_perturbed():
+                return True
+        return False
+
     def get_sorted_keys(self):
         """Return process property names as a nicely sorted list."""
 

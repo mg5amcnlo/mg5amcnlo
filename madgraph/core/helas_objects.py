@@ -30,6 +30,8 @@ import math
 import madgraph.core.base_objects as base_objects
 import madgraph.core.diagram_generation as diagram_generation
 import madgraph.core.color_amp as color_amp
+import madgraph.loop.loop_diagram_generation as loop_diagram_generation
+import madgraph.loop.loop_color_amp as loop_color_amp
 import madgraph.core.color_algebra as color
 
 #===============================================================================
@@ -946,28 +948,36 @@ class HelasWavefunction(base_objects.PhysicsObject):
         # We use the from_group flag to indicate whether this outgoing
         # leg corresponds to a decaying (onshell) particle or not
         try:
+            if self.get('is_loop'):
+                # Loop wavefunction should always be redefined
+                raise KeyError
             lastleg = wf_dict[self.get('number')]
         except KeyError:            
             lastleg = base_objects.Leg({
                 'id': self.get_pdg_code(),
                 'number': self.get('number_external'),
                 'state': self.get('leg_state'),
-                'from_group': self.get('onshell')
+                'from_group': self.get('onshell'),
+                'loop_line':self.get('is_loop')
                 })
-            if optimization != 0:
+            if optimization != 0 and not self.get('is_loop'):
                 wf_dict[self.get('number')] = lastleg
 
-        for mother in self.get('mothers'):
+        for mother in self.get('mothers'):           
             try:
+                if mother.get('is_loop'):
+                # Loop wavefunction should always be redefined
+                    raise KeyError
                 leg = wf_dict[mother.get('number')]
             except KeyError:
                 leg = base_objects.Leg({
                     'id': mother.get_pdg_code(),
                     'number': mother.get('number_external'),
                     'state': mother.get('leg_state'),
-                    'from_group': mother.get('onshell')
+                    'from_group': mother.get('onshell'),
+                    'loop_line':mother.get('is_loop')
                     })
-                if optimization != 0:
+                if optimization != 0 and not mother.get('is_loop'):
                     wf_dict[mother.get('number')] = leg
             legs.append(leg)
 
@@ -1360,7 +1370,6 @@ class HelasWavefunctionList(base_objects.PhysicsObjectList):
             pdg_codes.pop(my_index)
         
         mothers = copy.copy(self)
-
         # Sort according to interaction pdg codes
 
         mother_codes = [ wf.get_pdg_code() for wf \
@@ -1616,7 +1625,6 @@ class HelasAmplitude(base_objects.PhysicsObject):
                 'lorentz', 'coupling', 'color_key', 'number', 'color_indices',
                 'fermionfactor', 'mothers']
 
-
     # Helper functions
 
     def check_and_fix_fermion_flow(self,
@@ -1722,7 +1730,6 @@ class HelasAmplitude(base_objects.PhysicsObject):
         for mother in self.get('mothers'):
             vertices.extend(mother.get_base_vertices(wf_dict, vx_list,
                                                      optimization))
-
         # Generate last vertex
         vertex = self.get_base_vertex(wf_dict, vx_list, optimization)
 
@@ -1737,15 +1744,19 @@ class HelasAmplitude(base_objects.PhysicsObject):
         legs = base_objects.LegList()
         for mother in self.get('mothers'):
             try:
+                if mother.get('is_loop'):
+                    # Loop wavefunction should always be redefined
+                    raise KeyError
                 leg = wf_dict[mother.get('number')]
             except KeyError:
                 leg = base_objects.Leg({
                     'id': mother.get_pdg_code(),
                     'number': mother.get('number_external'),
                     'state': mother.get('leg_state'),
-                    'from_group': mother.get('onshell')
+                    'from_group': mother.get('onshell'),
+                    'loop_line':mother.get('is_loop')
                     })
-                if optimization != 0:
+                if optimization != 0 and not mother.get('is_loop'):
                     wf_dict[mother.get('number')] = leg
             legs.append(leg)
 
@@ -2080,6 +2091,12 @@ class HelasDiagram(base_objects.PhysicsObject):
         """Get a list of the number of legs in vertices in this diagram"""
 
         return self.get('amplitudes')[0].get_vertex_leg_numbers()
+
+    def get_regular_amplitudes(self):
+        """ For regular HelasDiagrams, it is simply all amplitudes.
+        It is overloaded in LoopHelasDiagram"""
+        
+        return self['amplitudes']
 
 #===============================================================================
 # HelasDiagramList
@@ -2429,7 +2446,6 @@ class HelasMatrixElement(base_objects.PhysicsObject):
             helas_diagram.set('number', diagram_number)
             for number_wf_dict, color_list in zip(number_to_wavefunctions,
                                                   color_lists):
-
                 # Now generate HelasAmplitudes from the last vertex.
                 if lastvx.get('id'):
                     inter = model.get_interaction(lastvx.get('id'))
@@ -4030,6 +4046,11 @@ class HelasMultiProcess(base_objects.PhysicsObject):
         list_colorize = []
         list_color_basis = []
         list_color_matrices = []
+        
+        # Now this keeps track of the color matrices created from the loop-born
+        # color basis. Keys are 2-tuple with the index of the loop and born basis
+        # in the list above and the value is the resulting matrix.
+        dict_loopborn_matrices = {}
 
         # List of valid matrix elements
         matrix_elements = HelasMatrixElementList()
@@ -4041,6 +4062,144 @@ class HelasMultiProcess(base_objects.PhysicsObject):
         # which allows to reorder the final state particles in the right way
         # for maximal process combination
         permutations = []
+
+        def process_color(matrix_element):
+            """ Process the color information for a given matrix
+            element made of a tree diagram """
+
+            # Always create an empty color basis, and the
+            # list of raw colorize objects (before
+            # simplification) associated with amplitude
+            col_basis = color_amp.ColorBasis()
+            new_amp = matrix_element.get_base_amplitude()
+            matrix_element.set('base_amplitude', new_amp)
+            
+            colorize_obj = col_basis.create_color_dict_list(\
+                             matrix_element.get('base_amplitude'))
+            
+            try:
+                # If the color configuration of the ME has
+                # already been considered before, recycle
+                # the information
+                col_index = list_colorize.index(colorize_obj)
+            except ValueError:
+                # If not, create color basis and color
+                # matrix accordingly
+                list_colorize.append(colorize_obj)
+                col_basis.build()
+                list_color_basis.append(col_basis)
+                col_matrix = color_amp.ColorMatrix(col_basis)
+                list_color_matrices.append(col_matrix)
+                col_index = -1
+                logger.info(\
+                  "Processing color information for %s" % \
+                  matrix_element.get('processes')[0].nice_string().\
+                                 replace('Process', 'process'))
+            else: # Found identical color
+                logger.info(\
+                  "Reusing existing color information for %s" % \
+                  matrix_element.get('processes')[0].nice_string().\
+                                     replace('Process', 'process'))
+            if gen_color:
+                matrix_element.set('color_basis',
+                                   list_color_basis[col_index])
+                matrix_element.set('color_matrix',
+                                   list_color_matrices[col_index])
+
+        def process_color_loop(matrix_element):
+            """ Process the color information for a given matrix
+            element made of a loop diagrams. It will create a different 
+            color matrix depending on wether the process has a born or not."""            
+
+            raise self.PhysicsObjectError, \
+                      "Color processing for loop is not ready yet."
+
+            # Always create an empty color basis, and the
+            # list of raw colorize objects (before
+            # simplification) associated with amplitude
+            new_amp = matrix_element.get_base_amplitude()
+            matrix_element.set('base_amplitude', new_amp)
+            # Process the loop color basis which is needed anyway
+            loop_col_basis = loop_color_amp.ColorBasis()
+            loop_colorize_obj = loop_col_basis.create_loop_color_dict_list(\
+                                  matrix_element.get('base_amplitude'))
+            try:
+                # If the loop color configuration of the ME has
+                # already been considered before, recycle
+                # the information
+                loop_col_basis_index = list_colorize.index(loop_colorize_obj)
+            except ValueError:
+                # If not, create color basis accordingly
+                list_colorize.append(loop_colorize_obj)
+                loop_col_basis.build()
+                loop_col_basis_index = len(list_color_basis)
+                list_color_basis.append(loop_col_basis)
+                logger.info(\
+                  "Processing color information for %s" % \
+                  matrix_element.get('processes')[0].nice_string().\
+                                 replace('Process', 'loop process'))
+            else: # Found identical color
+                logger.info(\
+                  "Reusing existing color information for %s" % \
+                  matrix_element.get('processes')[0].nice_string().\
+                                     replace('Process', 'loop process'))
+                
+            if new_amp['process']['has_born']:
+                born_col_basis = loop_color_amp.ColorBasis()
+                born_colorize_obj = born_col_basis.create_born_color_dict_list(\
+                                 matrix_element.get('base_amplitude'))
+                try:
+                    # If the loop color configuration of the ME has
+                    # already been considered before, recycle
+                    # the information
+                    born_col_basis_index = list_colorize.index(born_colorize_obj)
+                except ValueError:
+                    # If not, create color basis accordingly
+                    list_colorize.append(born_colorize_obj)
+                    born_col_basis.build()
+                    born_col_basis_index = len(list_color_basis)
+                    list_color_basis.append(born_col_basis)
+                    logger.info(\
+                      "Processing color information for %s" % \
+                      matrix_element.get('processes')[0].nice_string().\
+                                 replace('Process', 'born process'))
+                else: # Found identical color
+                    logger.info(\
+                      "Reusing existing color information for %s" % \
+                      matrix_element.get('processes')[0].nice_string().\
+                                        replace('Process', 'born process'))                 
+                loopborn_matrices_key=(loop_col_basis_index,born_col_basis_index)
+            else:
+                loopborn_matrices_key=(loop_col_basis_index,loop_col_basis_index)
+                
+
+            # Now we try to recycle the color matrix
+            try:
+                # If the color configuration of the ME has
+                # already been considered before, recycle
+                # the information
+                col_matrix = dict_loopborn_matrices(loopborn_matrices_key)
+            except KeyError:
+                # If not, create color matrix accordingly
+                col_matrix = color_amp.ColorMatrix(\
+                  list_color_basis[loopborn_matrices_key[0]],
+                  list_color_basis[loopborn_matrices_key[1]])
+                dict_loopborn_matrices[loopborn_matrices_key]=col_matrix
+                logger.info(\
+                  "Creating color matrix  %s" % \
+                  matrix_element.get('processes')[0].nice_string().\
+                                 replace('Process', 'loop process'))
+            else: # Found identical color
+                logger.info(\
+                  "Reusing existing color matrix for %s" % \
+                  matrix_element.get('processes')[0].nice_string().\
+                                     replace('Process', 'loop process'))
+                
+            if gen_color:
+                matrix_element.set('loop_color_basis',loop_col_basis)
+                if new_amp['process']['has_born']:
+                    matrix_element.set('born_color_basis',born_col_basis)                    
+                matrix_element.set('color_matrix',col_matrix)
 
         while amplitudes:
             # Pop the amplitude to save memory space
@@ -4061,7 +4220,14 @@ class HelasMultiProcess(base_objects.PhysicsObject):
                     me_index = amplitude_tags.index(amplitude_tag)
                 except ValueError:
                     # Create matrix element for this amplitude
-                    matrix_element_list = [cls.matrix_element_class(amplitude,
+                    # Correctly the LoopHelasMatrix element for the loop amps.
+                    if isinstance(amplitude,\
+                      loop_diagram_generation.LoopAmplitude):
+                        matrix_element_list = [LoopHelasMatrixElement(amplitude,
+                                                          decay_ids=decay_ids,
+                                                          gen_color=False)]
+                    else:
+                        matrix_element_list = [HelasMatrixElement(amplitude,
                                                           decay_ids=decay_ids,
                                                           gen_color=False)]
                     me = matrix_element_list[0]
@@ -4084,6 +4250,7 @@ class HelasMultiProcess(base_objects.PhysicsObject):
                         amplitude_tag[-1][0].get_external_numbers()))
                     # Go on to next amplitude
                     continue
+                
             # Deal with newly generated matrix element
             for matrix_element in copy.copy(matrix_element_list):
                 assert isinstance(matrix_element, HelasMatrixElement), \
@@ -4100,43 +4267,13 @@ class HelasMultiProcess(base_objects.PhysicsObject):
                 if not gen_color:
                     continue
 
-                # Always create an empty color basis, and the
-                # list of raw colorize objects (before
-                # simplification) associated with amplitude
-                col_basis = color_amp.ColorBasis()
-                new_amp = matrix_element.get_base_amplitude()
-                matrix_element.set('base_amplitude', new_amp)
-                colorize_obj = col_basis.create_color_dict_list(new_amp)
+                # The treatment of color is quite different for loop amplitudes
+                # than for regular tree ones.
+                if isinstance(amplitude, loop_diagram_generation.LoopAmplitude):
+                    process_color_loop(matrix_element)
+                else:
+                    process_color(matrix_element)                    
 
-                try:
-                    # If the color configuration of the ME has
-                    # already been considered before, recycle
-                    # the information
-                    col_index = list_colorize.index(colorize_obj)
-                except ValueError:
-                    # If not, create color basis and color
-                    # matrix accordingly
-                    list_colorize.append(colorize_obj)
-                    col_basis.build()
-                    list_color_basis.append(col_basis)
-                    col_matrix = color_amp.ColorMatrix(col_basis)
-                    list_color_matrices.append(col_matrix)
-                    col_index = -1
-                    logger.info(\
-                      "Processing color information for %s" % \
-                      matrix_element.get('processes')[0].nice_string().\
-                                     replace('Process', 'process'))
-                else: # Found identical color
-                    logger.info(\
-                      "Reusing existing color information for %s" % \
-                      matrix_element.get('processes')[0].nice_string().\
-                                         replace('Process', 'process'))
-                if gen_color:
-                    matrix_element.set('color_basis',
-                                       list_color_basis[col_index])
-                    matrix_element.set('color_matrix',
-                                       list_color_matrices[col_index])
-            
         return matrix_elements
 
     @staticmethod

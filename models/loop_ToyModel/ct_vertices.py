@@ -64,7 +64,7 @@ V_107 = Vertex(name = 'V_107',
                color = [ 'Identity(1,2)' ],
                lorentz = [ L.R2_GG_1],
                couplings = {(0,0):C.GC_105},
-               type = ['R2',(1,1,1)])  
+               type = ['R2',(1,1)])  
 
 # gg             
 V_117 = Vertex(name = 'V_117',
@@ -72,7 +72,7 @@ V_117 = Vertex(name = 'V_117',
                color = [ 'Identity(1,2)' ],
                lorentz = [ L.R2_GG_1],
                couplings = {(0,0):C.GC_105},
-               type = ['R2',(2,2,2)])  
+               type = ['R2',(2,2)])  
 
 # gg             
 V_127 = Vertex(name = 'V_127',
@@ -80,7 +80,7 @@ V_127 = Vertex(name = 'V_127',
                color = [ 'Identity(1,2)' ],
                lorentz = [ L.R2_GG_1 , L.R2_GG_2 ],
                couplings = {(0,0):C.GC_115, (0,1):C.GC_125},
-               type = ['R2',(21,21,21)])  
+               type = ['R2',(21,21)])  
 
 # d~d            
 V_108 = Vertex(name = 'V_108',

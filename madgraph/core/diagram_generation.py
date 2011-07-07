@@ -992,21 +992,32 @@ class DecayChainAmplitude(Amplitude):
                  ignore_six_quark_processes = False):
         """Allow initialization with Process and with ProcessDefinition"""
 
+        
+
         if isinstance(argument, base_objects.Process):
             super(DecayChainAmplitude, self).__init__()
+            from madgraph.loop.loop_diagram_generation import LoopMultiProcess
+            if argument['perturbation_couplings']:
+                MultiProcessClass=LoopMultiProcess
+            else:
+                MultiProcessClass=MultiProcess                             
             if isinstance(argument, base_objects.ProcessDefinition):
                 self['amplitudes'].extend(\
-                MultiProcess.generate_multi_amplitudes(argument,
+                  MultiProcessClass.generate_multi_amplitudes(argument,
                                                     collect_mirror_procs,
                                                     ignore_six_quark_processes))
             else:
-                self['amplitudes'].append(Amplitude(argument))
+                self['amplitudes'].append(\
+                  MultiProcessClass.get_amplitude_from_proc(argument))
                 # Clean decay chains from process, since we haven't
                 # combined processes with decay chains yet
                 process = copy.copy(self.get('amplitudes')[0].get('process'))
                 process.set('decay_chains', base_objects.ProcessList())
                 self['amplitudes'][0].set('process', process)
             for process in argument.get('decay_chains'):
+                if process.get('perturbation_couplings'):
+                    raise MadGraph5Error,\
+                          "Decay processes can not be perturbed"
                 process.set('overall_orders', argument.get('overall_orders'))
                 if not process.get('is_decay_chain'):
                     process.set('is_decay_chain',True)

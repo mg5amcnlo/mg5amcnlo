@@ -358,4 +358,4 @@ class LoopUFOImportTest(unittest.TestCase):
                          len(self.hardcoded_loopmodel['ref_dict_to0']))
         self.assertEqual(len(self.imported_loopmodel['ref_dict_to1']),\
                          len(self.hardcoded_loopmodel['ref_dict_to1']))
-        
+                

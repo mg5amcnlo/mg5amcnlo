@@ -33,10 +33,14 @@ import madgraph.core.drawing as draw_lib
 import madgraph.iolibs.drawing_eps as draw
 import madgraph.core.base_objects as base_objects
 import madgraph.core.diagram_generation as diagram_generation
+import madgraph.core.helas_objects as helas_objects
+import madgraph.core.color_amp as color_amp
+import madgraph.loop.loop_color_amp as loop_color_amp
 import madgraph.loop.loop_base_objects as loop_base_objects
 import madgraph.loop.loop_diagram_generation as loop_diagram_generation
 import madgraph.loop.loop_helas_objects as loop_helas_objects
 import madgraph.iolibs.save_load_object as save_load_object
+import models.import_ufo as models
 from madgraph import MadGraph5Error
 
 _file_path = os.path.dirname(os.path.realpath(__file__))
@@ -54,36 +58,443 @@ class LoopHelasMatrixElementTest(unittest.TestCase):
     def setUp(self):
         """load the NLO toy model"""
         
-        self.myloopmodel = looptest.loadLoopModel() 
+        self.myloopmodel = models.import_full_model(os.path.join(\
+            _input_file_path,'loop_ToyModel'))
 
-    def test_helas_diagrams_epemddx(self):
-        """Test the generation of the helas diagrams for the process e+e->dd~
+    def check_HME_individual_diag_sanity(self,Amplitude, process,\
+          mode='collective', selection=None, verbose=False, checkColor=True):
+        """ Check that the HelasDiagrams are correctly generated in
+        HelasMatrixElement (HME) by generate_diagram() when initiated with
+        the Amplitude given in argument. It does so by basically checking
+        that the reconstructed (loop_)base_objects.(Loop)Diagram correctly match
+        the original one used. The optional user arguments are:
+        selection: list specifying what diagrams should be checked 
+        mode: In 'individual' mode, a new matrix element is created for each
+              diagram tested while in 'collective' mode, a single matrix element
+              creates all the HelasDiagrams for the selection so that the dynamic
+              effects of wavefunction recycling are tested.
+        verbose: To display some informations on the diagram checked.
+        checkColor: To also check the color generation"""
+       
+        alldiags=Amplitude['diagrams']
+        # By default, try them all
+        if not selection:
+            if mode=='individual':
+                DiagProcessed=range(len(alldiags))
+            elif mode=='collective':
+                DiagProcessed=[len(alldiags)-1]                
+            else:
+                raise Error,"Mode can only be 'individual' or 'collective'"
+        else:
+            DiagProcessed=selection
+            
+        for idiag in DiagProcessed:
+            diagSelection=base_objects.DiagramList()
+            selectionStart=0
+            if mode=='individual':
+                diagSelection=base_objects.DiagramList([alldiags[idiag]])
+                selectionStart=idiag
+            elif mode=='collective':
+                if isinstance(idiag,int):
+                    diagSelection=base_objects.DiagramList(alldiags[:idiag+1])
+                elif isinstance(idiag,tuple):
+                    diagSelection=base_objects.DiagramList(alldiags[idiag[0]:idiag[1]+1])
+                    selectionStart=idiag[0]
+                else:
+                    raise Error,"Selection must be a list of integers or 2-tuple of integers."                                        
+            else:
+                raise Error,"Mode can only be 'individual' or 'collective'"
+            Amplitude.set('diagrams',diagSelection)
+            myME=helas_objects.HelasMatrixElement(Amplitude,gen_color=False)
+            # Keep in mind that the loop diagram is always placed before its
+            # corresponding CT diagrams.
+            AllReconstructedDiags=myME.get_base_amplitude()['diagrams']
+            colorize_obj=[]
+            if checkColor:
+                col_basis = color_amp.ColorBasis()
+                newamp=myME.get_base_amplitude()
+                myME.set('base_amplitude',newamp)
+                colorize_obj = col_basis.create_color_dict_list(myME.get('base_amplitude'))
+                self.assertEqual(len(colorize_obj),len(diagSelection))
+
+            diagIndex=0
+            for i, diag in enumerate(diagSelection):
+                if verbose: 
+                    print "============"
+                    print "Checking diag",selectionStart+i,"with type :",\
+                      diag.nice_string()
+                    print "============"
+                if mode=='individual':
+                    reconstructedDiags=AllReconstructedDiags
+                else:
+                    reconstructedDiags=AllReconstructedDiags[diagIndex:\
+                                                                 diagIndex+1]
+                    diagIndex+=1
+
+                if verbose: print "Reconstructed diag :",\
+                  reconstructedDiags[0].nice_string()
+                # Initialize some quantities for the tests
+                origDiagNVertices=len(diag['vertices'])
+
+                # Check of the loop diagram    
+                self.assertEqual(len(reconstructedDiags[0]['vertices']),\
+                             origDiagNVertices)
+                
+                if checkColor:
+                    numEntries=1
+                    for vert in diag['vertices']:
+                        numColorKeys=\
+        len(process['model'].get('interaction_dict')[vert['id']].get('color'))
+                        if numColorKeys>1:
+                             numEntries*=numColorKeys
+                    if verbose: print "Diag colorization :",colorize_obj[i].keys()
+                    self.assertEqual(len(colorize_obj[i].keys()),numEntries)
+                    # Commented because it is only true when there is only one
+                    # lorentz structure per vertex.
+                    #self.assertEqual(len(colorize_obj[i].keys()),\
+                    #  len(myME['diagrams'][i]['amplitudes']))
+                    for amp in myME['diagrams'][i]['amplitudes']:
+                        # Check that the amplitude 'color_indices' is in the
+                        # color keys tuples generated
+                        self.assertTrue(tuple(amp['color_indices']) in \
+                                        colorize_obj[i].keys())
+
+    def check_LHME_individual_diag_sanity(self,loopAmplitude, process,\
+            mode='collective', selection=None, verbose=False, checkColor=True):
+        """ Check that the HelasDiagrams are correctly generated in
+        LoopHelasMatrixElement (LHME) by generate_diagram() when initiated with
+        the (loop)Amplitude given in argument. It does so by basically checking
+        that the reconstructed (loop_)base_objects.(Loop)Diagram correctly match
+        the original one used. The optional user arguments are:
+        selection: list specifying what diagrams should be checked 
+        mode: In 'individual' mode, a new matrix element is created for each
+              diagram tested while in 'collective' mode, a single matrix element
+              creates all the HelasDiagrams for the selection so that the dynamic
+              effects of wavefunction recycling are tested.
+        verbose: To display some informations on the diagram checked.
+        checkColor: To also check the color generation of the tested diagrams"""
+       
+        alldiags=loopAmplitude['born_diagrams']
+        alldiags.extend(loopAmplitude['loop_diagrams'])
+        # By default, try them all
+        if not selection:
+            if mode=='individual':
+                DiagProcessed=range(len(alldiags))
+            elif mode=='collective':
+                DiagProcessed=[len(alldiags)-1]                
+            else:
+                raise Error,"Mode can only be 'individual' or 'collective'"
+        else:
+            DiagProcessed=selection
+            
+        for idiag in DiagProcessed:
+            diagSelection=base_objects.DiagramList()
+            selectionStart=0
+            if mode=='individual':
+                diagSelection=base_objects.DiagramList([alldiags[idiag]])
+                selectionStart=idiag
+            elif mode=='collective':
+                if isinstance(idiag,int):
+                    diagSelection=base_objects.DiagramList(alldiags[:idiag+1])
+                elif isinstance(idiag,tuple):
+                    diagSelection=base_objects.DiagramList(alldiags[idiag[0]:idiag[1]+1])
+                    selectionStart=idiag[0]
+                else:
+                    raise Error,"Selection must be a list of integers or 2-tuple of integers."                                        
+            else:
+                raise Error,"Mode can only be 'individual' or 'collective'"
+            bornDiagSelected=base_objects.DiagramList(\
+              [diag for diag in diagSelection if diag['type']==0])
+            loopDiagSelected=base_objects.DiagramList(\
+              [diag for diag in diagSelection if diag['type']!=0])
+            loopAmplitude.set('diagrams',diagSelection)
+            myloopME=loop_helas_objects.LoopHelasMatrixElement(loopAmplitude,gen_color=False)
+            # Keep in mind that the loop diagram is always placed before its
+            # corresponding CT diagrams.
+            AllReconstructedDiags=myloopME.get_base_amplitude().get('diagrams')
+
+            loop_colorize_obj=[]
+            born_colorize_obj=[]
+            nBornRecDiags = len(bornDiagSelected)
+            nLoopDiags = 0
+            for diag in loopDiagSelected:
+                nLoopDiags += (1+len(diag.get('CT_vertices')))
+            if checkColor:
+                loop_col_basis = loop_color_amp.LoopColorBasis()
+                newloopamp=myloopME.get_base_amplitude()
+                myloopME.set('base_amplitude',newloopamp)
+                loop_colorize_obj = loop_col_basis.create_loop_color_dict_list(\
+                                      myloopME.get('base_amplitude'))
+                self.assertEqual(len(loop_colorize_obj),nLoopDiags)
+                if bornDiagSelected:
+                    born_col_basis = loop_color_amp.LoopColorBasis()
+                    born_colorize_obj = born_col_basis.create_born_color_dict_list(\
+                                          myloopME.get('base_amplitude'))
+                    self.assertEqual(len(born_colorize_obj),nBornRecDiags)                    
+
+            diagIndex=0
+            bornColorDiagIndex=0
+            loopColorDiagIndex=0            
+            for i, diag in enumerate(diagSelection):
+                if verbose: 
+                    print "============"
+                    print "Checking diag",selectionStart+i,"with type",diag['type'],":",\
+                      diag.nice_string(loopAmplitude['structure_repository'])
+                    print "============"
+                if mode=='individual':
+                    reconstructedDiags=AllReconstructedDiags
+                    if checkColor:
+                        this_born_colorize_obj=born_colorize_obj
+                        this_loop_colorize_obj=loop_colorize_obj
+                else:
+                    if diag['type']==0:
+                        reconstructedDiags=AllReconstructedDiags[diagIndex:\
+                                                                 diagIndex+1]
+                        diagIndex+=1
+                        if checkColor:
+                            this_born_colorize_obj=born_colorize_obj[bornColorDiagIndex:
+                                                        bornColorDiagIndex+1]
+                            this_loop_colorize_obj=[]
+                            bornColorDiagIndex+=1
+                    else:
+                        # We assume here the number of base_object.Diagram
+                        # generated is correct.
+                        reconstructedDiags=AllReconstructedDiags[diagIndex:\
+                                    diagIndex+len(diag.get('CT_vertices'))+1]
+                        diagIndex=diagIndex+len(diag.get('CT_vertices'))+1
+                        if checkColor:
+                            this_loop_colorize_obj=loop_colorize_obj[loopColorDiagIndex:
+                              loopColorDiagIndex+len(diag.get('CT_vertices'))+1]
+                            this_born_colorize_obj=[]
+                            loopColorDiagIndex+=len(diag.get('CT_vertices'))+1                         
+                
+                if verbose: print "Reconstructed loop diag :",\
+                  reconstructedDiags[0].nice_string()
+                # Initialize some quantities for the tests
+                origDiagNVertices=len(diag['vertices'])
+                structNVertices=0
+                if isinstance(diag,loop_base_objects.LoopDiagram):
+                    for tagElem in diag['tag']:
+                        for structID in tagElem[1]:
+                            # Just taking out possible vertices with id=0 for safety
+                            structNVertices=structNVertices+\
+                  len([vert for vert in loopAmplitude['structure_repository'][structID]['vertices']\
+                       if vert['id']!=0])
+                
+                # Check of the loop diagram    
+                self.assertEqual(len(reconstructedDiags[0]['vertices']),\
+                             origDiagNVertices+structNVertices)
+            
+                origStructListlength=len(loopAmplitude['structure_repository'])
+                if reconstructedDiags[0]['type']!=0:
+                    reconstructedDiags[0].tag(loopAmplitude['structure_repository'],\
+                      len(process['legs'])+1,len(process['legs'])+2,process)
+                    # Then make sure it leads to the same canonical tag
+                    self.assertEqual(diag['canonical_tag'],\
+                                 reconstructedDiags[0]['canonical_tag'])
+                    # And that the structure repository is left untouched
+                    self.assertEqual(origStructListlength,\
+                                 len(loopAmplitude['structure_repository']))
+            
+                # Check CT diagrams
+                if diag.get('CT_vertices'):
+                    # Check that the right number of counter-diagrams is produced
+                    self.assertEqual(len(reconstructedDiags)-1,\
+                                 len(diag.get('CT_vertices')))
+                    for ct_number in range(1,len(reconstructedDiags)):
+                        if verbose: print 'reconstructed CT diag',ct_number,':',\
+                          reconstructedDiags[ct_number].nice_string()
+                        # Superficial check of the sanity of the Counter-terms diagrams, based
+                        # on the number of vertices building them.
+                        self.assertEqual(len(reconstructedDiags[ct_number]['vertices']),\
+                             1+structNVertices)
+
+                if checkColor:
+                    numEntries=1
+                    for vert in diag['vertices']:
+                        numColorKeys=\
+          len(process['model'].get('interaction_dict')[vert['id']].get('color'))
+                        if numColorKeys>1:
+                            numEntries*=numColorKeys
+                    if diag['type']==0:
+                        # Check born
+                        if verbose:
+                            print "Born diag colorization :",\
+                              this_born_colorize_obj[0].keys()
+                        self.assertEqual(len(this_born_colorize_obj[0]),
+                          numEntries)
+
+                        # Commented because it is only true when there is only one
+                        # lorentz structure per vertex.
+                        #self.assertEqual(len(myloopME['diagrams'][i]['amplitudes']),
+                        #                 len(this_born_colorize_obj[0].keys()))
+                        # Check that the amplitude attribute 'color_indices' is in the
+                        # color keys tuples generated
+                        for amp in myloopME['diagrams'][i]['amplitudes']:
+                            self.assertTrue(tuple(amp['color_indices']) in \
+                                        this_born_colorize_obj[0].keys()) 
+                    else:
+                        structEntries=1
+                        for tagElem in diag['canonical_tag']:
+                            for structID in tagElem[1]:
+                                # Just taking out possible vertices with id=0
+                                # for safety
+                                for vert in [v for v in \
+          loopAmplitude['structure_repository'][structID]['vertices'] if v['id']!=0]:
+                                    numColorKeys=\
+          len(process['model'].get('interaction_dict')[vert['id']].get('color'))
+                                    if numColorKeys>1:
+                                        structEntries*=numColorKeys
+                        # Check the number of key entries for the loop diagram
+                        if verbose:
+                            print "Loop diag colorization :",\
+                              this_loop_colorize_obj[0].keys()
+                        self.assertEqual(len(this_loop_colorize_obj[0].keys()),
+                          numEntries*structEntries)
+                        loop_amps=[]
+                        for loopamp in myloopME['diagrams'][i].get_loop_amplitudes():
+                            loop_amps.extend(loopamp['amplitudes'])
+                        # Commented because it is only true when there is only one
+                        # lorentz structure per vertex.                        
+                        #self.assertEqual(len(loop_amps),\
+                        #          len(this_loop_colorize_obj[0].keys()))
+                        # Check that the loop amplitudes attributes 'color_indices' are in the
+                        # color keys tuples generated
+                        for amp in loop_amps:
+                            self.assertTrue(tuple(amp['color_indices']) in \
+                              this_loop_colorize_obj[0].keys())  
+                        # Check the number of key entries for the counter-terms                        
+                        if diag.get('CT_vertices'):
+                            self.assertEqual(len(diag.get('CT_vertices')),\
+                              len(this_loop_colorize_obj)-1)
+                            for ct_number in range(1,len(reconstructedDiags)):
+                                ct_vert=diag.get('CT_vertices')[ct_number-1]
+                                nCTColor=len(process['model'].get('interaction_dict')[ct_vert['id']].get('color'))
+                                if nCTColor==0: nCTColor=1
+                                if verbose:
+                                    print "CT diag",ct_number,"colorization :",\
+                                      this_loop_colorize_obj[ct_number].keys()
+                                self.assertEqual(len(this_loop_colorize_obj[ct_number].keys()),\
+                                  structEntries*nCTColor)
+                                ct_amps=[a for a in myloopME['diagrams'][i].get_ct_amplitudes() \
+                                  if a['interaction_id']==ct_vert['id']]
+                                # Commented because it is only true when there is only one
+                                # lorentz structure per vertex.      
+                                #self.assertEqual(len(ct_amps),\
+                                #  len(this_loop_colorize_obj[ct_number].keys()))
+                                # Check that the ct amplitudes attributes 'color_indices' are in the
+                                # color keys tuples generated
+                                for amp in ct_amps:
+                                    self.assertTrue(tuple(amp['color_indices']) in \
+                                    this_loop_colorize_obj[ct_number].keys())                                                
+
+    def test_helas_diagrams_ddx_uux(self):
+        """Test the generation of the helas diagrams for the process dd~>uu
         """
 
         myleglist = base_objects.LegList()
-        myleglist.append(base_objects.Leg({'id':-11,
-                                         'state':False}))
-        myleglist.append(base_objects.Leg({'id':11,
-                                         'state':False}))
         myleglist.append(base_objects.Leg({'id':1,
-                                         'state':True}))
+                                         'state':False}))
         myleglist.append(base_objects.Leg({'id':-1,
+                                         'state':False}))
+        myleglist.append(base_objects.Leg({'id':2,
+                                         'state':True}))
+        myleglist.append(base_objects.Leg({'id':-2,
                                          'state':True}))
         
         myproc = base_objects.Process({'legs':myleglist,
+                                        'model':self.myloopmodel,
+                                        'orders':{},
+                                        'squared_orders':{}})
+    
+        myamplitude = diagram_generation.Amplitude()
+        myamplitude.set('process', myproc)
+        myamplitude.generate_diagrams()
+        self.check_HME_individual_diag_sanity(myamplitude,myproc)
+                
+        myloopproc = base_objects.Process({'legs':myleglist,
                                         'model':self.myloopmodel,
                                         'orders':{},
                                         'perturbation_couplings':['QCD',],
                                         'squared_orders':{}})
     
         myloopamplitude = loop_diagram_generation.LoopAmplitude()
-        myloopamplitude.set('process', myproc)
+        myloopamplitude.set('process', myloopproc)
+        myloopamplitude.generate_diagrams()
+        self.check_LHME_individual_diag_sanity(myloopamplitude,myloopproc)
+
+    def test_helas_diagrams_gg_gg(self):
+        """Test the generation of the helas diagrams for the loop process g g > g g
+        """
+
+        myleglist = base_objects.LegList()
+        myleglist.append(base_objects.Leg({'id':21,
+                                         'state':False}))
+        myleglist.append(base_objects.Leg({'id':21,
+                                         'state':False}))
+        myleglist.append(base_objects.Leg({'id':21,
+                                         'state':True}))
+        myleglist.append(base_objects.Leg({'id':21,
+                                         'state':True}))
+
+        myproc = base_objects.Process({'legs':myleglist,
+                                        'model':self.myloopmodel,
+                                        'orders':{},
+                                        'squared_orders':{}})
+    
+        myamplitude = diagram_generation.Amplitude()
+        myamplitude.set('process', myproc)
+        myamplitude.generate_diagrams()
+        self.check_HME_individual_diag_sanity(myamplitude,myproc)
+        
+        myloopproc = base_objects.Process({'legs':myleglist,
+                                        'model':self.myloopmodel,
+                                        'orders':{},
+                                        'perturbation_couplings':['QCD',],
+                                        'squared_orders':{}})
+    
+        myloopamplitude = loop_diagram_generation.LoopAmplitude()
+        myloopamplitude.set('process', myloopproc)
+        myloopamplitude.generate_diagrams()
+        self.check_LHME_individual_diag_sanity(myloopamplitude,myloopproc)
+        
+    def test_helas_diagrams_gg_ggg(self):
+        """Test the generation of all the helas diagrams for the loop process 
+           gg > ggg. This test is quite time consuming (30 sec) so it is
+           commented out by default.
+        """
+
+        myleglist = base_objects.LegList()
+        myleglist.append(base_objects.Leg({'id':21,
+                                         'state':False}))
+        myleglist.append(base_objects.Leg({'id':21,
+                                         'state':False}))
+        myleglist.append(base_objects.Leg({'id':21,
+                                         'state':True}))
+        myleglist.append(base_objects.Leg({'id':21,
+                                         'state':True}))
+        myleglist.append(base_objects.Leg({'id':21,
+                                         'state':True}))
+
+        myproc = base_objects.Process({'legs':myleglist,
+                                        'model':self.myloopmodel,
+                                        'orders':{},
+                                        'squared_orders':{}})
+    
+        myamplitude = diagram_generation.Amplitude()
+        myamplitude.set('process', myproc)
+        myamplitude.generate_diagrams()
+        
+        self.check_HME_individual_diag_sanity(myamplitude,myproc)
+        
+        myloopproc = base_objects.Process({'legs':myleglist,
+                                        'model':self.myloopmodel,
+                                        'orders':{},
+                                        'perturbation_couplings':['QCD',],
+                                        'squared_orders':{}})
+    
+        myloopamplitude = loop_diagram_generation.LoopAmplitude()
+        myloopamplitude.set('process', myloopproc)
         myloopamplitude.generate_diagrams()
         
-        ### First let's try the born diagram which should be exactly as in a
-        ### HelasMatrixElement. For that we put only one born diagrams in the
-        ### amplitude diagrams.
-        myloopamplitude.set('diagrams', \
-          base_objects.DiagramList([myloopamplitude['loop_diagrams'][0]]))
-        myloopME=loop_helas_objects.LoopHelasMatrixElement(myloopamplitude)
-        
+        self.check_LHME_individual_diag_sanity(myloopamplitude,myloopproc)
