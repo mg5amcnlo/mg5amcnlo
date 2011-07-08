@@ -1,7 +1,8 @@
 Update notes for MadGraph 5 (in reverse time order)
 
+1.3.4 (05/07/11): OM: More informative error message when a compilation error occurs
 
-1.3.3 (03/06/11): JA: Fixed diagram symmetry for case when there are
+1.3.3 (29/06/11): JA: Fixed diagram symmetry for case when there are
                       no 3-vertex-only diagrams
                   JA (by OM): More informative error when trying to generate invalid 
                       pythia8 process
