@@ -173,8 +173,7 @@ def make_model_cpp(dir_path):
     source_dir = os.path.join(dir_path, "src")
     # Run standalone
     logger.info("Running make for src")
-    subprocess.call(['make'], cwd=source_dir, stdout=open(os.devnull,'w'))
-
+    misc.compile(cwd=source_dir)
 
 #===============================================================================
 # ProcessExporterCPP
