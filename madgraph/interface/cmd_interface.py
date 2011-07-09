@@ -3051,7 +3051,7 @@ class MadGraphCmdWeb(MadGraphCmd, CheckValidForCmdWeb):
            MadGraphCmd.do_generate(self, line)
         except:
             # put the stop logo on the web
-            files.cp(self._export_dir+'HTML/stop.jpg',self._export_dir+'HTML/card.jpg')
+            files.cp(self._export_dir+'/HTML/stop.jpg',self._export_dir+'/HTML/card.jpg')
             raise
     
     # Add a process to the existing multiprocess definition
@@ -3061,10 +3061,10 @@ class MadGraphCmdWeb(MadGraphCmd, CheckValidForCmdWeb):
         syntax:
         """
         try:
-           MadGraphCmd.do_generate(self, line)
+           MadGraphCmd.do_add(self, line)
         except:
             # put the stop logo on the web
-            files.cp(self._export_dir+'HTML/stop.jpg',self._export_dir+'HTML/card.jpg')
+            files.cp(self._export_dir+'/HTML/stop.jpg',self._export_dir+'/HTML/card.jpg')
             raise
 
 #===============================================================================
