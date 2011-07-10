@@ -8,7 +8,8 @@ Please follow the steps below to run MadEvent with LHAPDF support:
 2) Link (or copy) the following files from the LHAPDF directory to the lib/ directory:
 - libLHAPDF.a
 - libLHAPDF.so and libLHAPDF.so.0 (if you are running dynamic compilation for a grid pack)
-- PDFsets with the PDF sets that you want to use.
+- create a directory PDFsets with the PDF sets that you want to use.
+Note that you need to copy the files in order to create a gridpack from this directory.
 
 3) Set the pdlabel and define the LHA pdf number you want to use in your run_card.dat
  'lhapdf'    = pdlabel     ! PDF set
