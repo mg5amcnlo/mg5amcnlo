@@ -19,7 +19,7 @@ if [[ ! -d ./madevent ]]; then
         exit
 fi
 
-export LD_LIBRARY_PATH=${LD_LIBRARY_PATH}:${PWD}/madevent/lib
+export LD_LIBRARY_PATH=${LD_LIBRARY_PATH}:${PWD}/madevent/lib:${PWD}/HELAS/lib
 
 card=./madevent/Cards/grid_card.dat
 

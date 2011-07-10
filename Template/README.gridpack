@@ -48,8 +48,7 @@ madevent with dynamic libraries. Use
 to compile with dynamic libraries for the madgraph source files. This
 will replace all makefiles with makefile_dynamic and compile using
 these new makefiles. Using dynamic libraries is greatly encouraged,
-because it can make the compiled gridpack significantly smaller. Note
-that you will need to have the lib/ directory in your LD_LIBRARY_PATH.
+because it can make the compiled gridpack significantly smaller.
 
 If you want to use LHAPDF, you need to compile with a second argument
 being "lhapdf", i.e.
