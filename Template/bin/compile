@@ -62,15 +62,13 @@ if [[ -d SubProcesses ]]; then
 	rm -f wait.ajob* >& /dev/null
 	rm -f run.ajob* >& /dev/null
 	rm -f done.ajob* >& /dev/null
-#        if [[ -e ajob1 ]]; then
-#	   chmod +x ajob*
         make madevent > /dev/null
 	if [[ $? -ne 0 ]];then
 	    # Make didn't exit successfully
 	    echo Error make madevent not successful > error
 	    cat error
 	    exit
-#        fi
+        fi
 	cd ..
      done
     cd ..
@@ -82,14 +80,6 @@ fi
 if [[ -d ../DECAY ]]; then
     echo "DECAY directory found, compiling..."
     cd ../DECAY
-    if [[  "$1" == ""  ]]; then
-	sed -i.bak "s|HELAS/lib/libdhelas3.a|madevent/lib/libdhelas3.a|g" makefile
-    elif [[ "$1" == "dynamic" ]]; then
-	sed -i.bak "s|HELAS/lib/libdhelas3.a|madevent/lib/libdhelas3.so|g" makefile
-    else
-	echo Error: invalid argument $1
-	exit
-    fi
     make
 fi
 

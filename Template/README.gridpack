@@ -69,15 +69,16 @@ The DECAY directory contains a program to decay final state
 particles. It has been designed to keep track of spin correlations as
 much as possible and is particularly useful for the decay of (anti)
 top quarks E.g. for the decay of top quarks up to 95% of the
-correlations are preserved.
+correlations are preserved. 
+Note that DECAY also needs the HELAS directory to compile.
 The DECAY package can be found in the MadGraph 5 developer's kit that
 can be downloaded from the MadGraph /MadEvent Downloads webpage or
 from Launchpad. To add the package to the gridpack, simply untar the
 gridpack to get the ./madevent/ directory and the ./run.sh
-script. Move the DECAY directory from the MG/ME developer's kit to the
-directory in which you untarred the gridpack, to get here the two
+script. Move the DECAY and the HELAS directories from the MG 5 developer's kit to the
+directory in which you untarred the gridpack, to get here the three
 directories and the one script file:
-./madevent/                 ./DECAY/                 ./run.sh
+./madevent/                 ./DECAY/         ./HELAS         ./run.sh
 The DECAY package is compiled automatically when
 ./bin/compile
 is executed from the ./madevent directory. As input to specify the

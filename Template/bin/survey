@@ -95,6 +95,12 @@ if [[ -d SubProcesses ]]; then
 	    exit
 	fi
         ./gensym >& gensym.log
+	if [[ ! -e ajob1 ]]; then
+	    # gensym didn't create ajob1 successfully
+	    echo Error gensym run not successful > ../../error
+	    cat ../../error
+	    exit
+	fi
 	chmod +x ajob*
 	make madevent > /dev/null
 	if [[ $? -ne 0 ]];then

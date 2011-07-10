@@ -678,10 +678,12 @@ class ProcessExporterFortran(object):
 
         return res_str + '*'
 
-    def replace_make_opt_compiler(self, compiler):
+    def replace_make_opt_compiler(self, compiler, root_dir = ""):
         """Set FC=compiler in Source/make_opts"""
 
-        make_opts = os.path.join(self.dir_path, 'Source', 'make_opts')
+        if not root_dir:
+            root_dir = self.dir_path
+        make_opts = os.path.join(root_dir, 'Source', 'make_opts')
         lines = open(make_opts).read().split('\n')
         FC_re = re.compile('^(\s*)FC\s*=\s*.+\s*$')
         for iline, line in enumerate(lines):
@@ -740,6 +742,8 @@ class ProcessExporterFortranSA(ProcessExporterFortran):
             #subprocess.call(['python','./bin/Passto_gfortran.py'], cwd=self.dir_path, \
             #                stdout = open(os.devnull, 'w')) 
             self.replace_make_opt_compiler('gfortran')
+            # Replace also for Template
+            self.replace_make_opt_compiler('gfortran', os.path.join(MG5DIR, 'Template'))
 
         self.make()
 
@@ -1132,6 +1136,8 @@ class ProcessExporterFortranME(ProcessExporterFortran):
             #subprocess.call(['python','./bin/Passto_gfortran.py'], cwd=self.dir_path, \
             #                stdout = open(os.devnull, 'w')) 
             self.replace_make_opt_compiler('gfortran')
+            # Replace also for Template
+            self.replace_make_opt_compiler('gfortran', os.path.join(MG5DIR, 'Template'))
 
         old_pos = os.getcwd()
         os.chdir(os.path.join(self.dir_path, 'SubProcesses'))

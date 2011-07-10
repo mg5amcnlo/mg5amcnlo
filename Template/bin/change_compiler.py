@@ -13,7 +13,6 @@ def mod_compilator(directory, new='gfortran'):
 
     #search file
     file_to_change=find_makefile_in_dir(directory)
-    print file_to_change
     for name in file_to_change:
         text = open(name,'r').read()
         if new == 'g77':
@@ -98,14 +97,12 @@ def go_to_main_dir():
 if "__main__"==__name__:
 
     # Collect position to modify
-    directory=['Source','SubProcesses']
+    directory=['Source']
     pypgs = os.path.join(os.path.pardir, 'pythia-pgs')
-    decay = os.path.join(os.path.pardir, 'DECAY')
     madanalysis = os.path.join(os.path.pardir, 'MadAnalysis')
-    for d in [pypgs, decay, madanalysis]:
+    for d in [pypgs, madanalysis]:
         if os.path.isdir(d):
             directory.append(d)
-
         
     # start the real work
     go_to_main_dir()
