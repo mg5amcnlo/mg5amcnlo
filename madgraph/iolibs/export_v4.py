@@ -726,7 +726,7 @@ class ProcessExporterFortranSA(ProcessExporterFortran):
 
         source_dir = os.path.join(self.dir_path, "Source")
         logger.info("Running make for Helas")
-        misc.compile(arg=['../lib/libdhelas3.a'], cwd=source_dir, mode='fortran')
+        misc.compile(arg=['../lib/libdhelas.a'], cwd=source_dir, mode='fortran')
         logger.info("Running make for Model")
         misc.compile(arg=['../lib/libmodel.a'], cwd=source_dir, mode='fortran')
 

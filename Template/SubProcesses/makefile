@@ -7,9 +7,9 @@ LIBDIR = ../../lib/
 BINDIR = ../../bin/
 PROG   = madevent
 
-LINKLIBS =  -L../../lib/ -ldhelas3 -ldsample -lmodel -lgeneric -lpdf -lcernlib $(lhapdf)
+LINKLIBS =  -L../../lib/ -ldhelas -ldsample -lmodel -lgeneric -lpdf -lcernlib $(lhapdf)
 
-LIBS = $(LIBDIR)libdhelas3.$(libext) $(LIBDIR)libdsample.$(libext) $(LIBDIR)libgeneric.$(libext) $(LIBDIR)libpdf.$(libext) $(LIBDIR)libmodel.$(libext) $(LIBDIR)libcernlib.$(libext)
+LIBS = $(LIBDIR)libdhelas.$(libext) $(LIBDIR)libdsample.$(libext) $(LIBDIR)libgeneric.$(libext) $(LIBDIR)libpdf.$(libext) $(LIBDIR)libmodel.$(libext) $(LIBDIR)libcernlib.$(libext)
 
 # Source files
 

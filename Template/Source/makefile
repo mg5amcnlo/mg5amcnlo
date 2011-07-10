@@ -25,7 +25,7 @@ LIBRARIES=$(LIBDIR)libdsample.$(libext) $(LIBDIR)libgeneric.$(libext)
 
 # Compile commands
 
-all: $(LIBRARIES) $(LIBDIR)libdhelas3.$(libext) $(LIBDIR)libpdf.$(libext) $(LIBDIR)libmodel.$(libext) $(LIBDIR)libcernlib.$(libext)
+all: $(LIBRARIES) $(LIBDIR)libdhelas.$(libext) $(LIBDIR)libpdf.$(libext) $(LIBDIR)libmodel.$(libext) $(LIBDIR)libcernlib.$(libext)
 
 # Libraries
 
@@ -33,7 +33,7 @@ $(LIBDIR)libdsample.$(libext): $(DSAMPLE)
 	$(call CREATELIB, $@, $^)
 $(LIBDIR)libgeneric.$(libext): $(GENERIC)
 	$(call CREATELIB, $@, $^)
-$(LIBDIR)libdhelas3.$(libext): DHELAS
+$(LIBDIR)libdhelas.$(libext): DHELAS
 	cd DHELAS; make
 $(LIBDIR)libpdf.$(libext): PDF
 	cd PDF; make	

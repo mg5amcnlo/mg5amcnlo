@@ -13,7 +13,7 @@
 
 include ../make_opts
 
-LIBRARY	= libdhelas3.$(libext)
+LIBRARY	= libdhelas.$(libext)
 LIBDIR  = ../../lib/
 
 BASIC_OBJS = aloha_functions.o

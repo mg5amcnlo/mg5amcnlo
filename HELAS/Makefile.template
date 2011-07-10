@@ -12,7 +12,7 @@
 
 include ../make_opts
 
-LIBRARY	= libdhelas3.$(libext)
+LIBRARY	= libdhelas.$(libext)
 LIBDIR  = ../../lib/
 
 OBJS	      =	httsxx.o hstlxx.o hvvshx.o \
