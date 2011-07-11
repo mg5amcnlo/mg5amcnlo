@@ -35,11 +35,13 @@ else
     echo "Using static libraries"
     unset dynamic
 fi
-if [[ "$2" == "lhapdf" ]]; then
-    echo "Using LHAPDF libraries"
+
+# Check for LHAPDF
+c=`awk '/^[^#].*=.*pdlabel/{print $1}' Cards/run_card.dat`
+if [[ $c == "'lhapdf'" ]]; then
+    echo Using LHAPDF interface!
     export lhapdf=true
 else
-    echo "Not using LHAPDF"
     unset lhapdf
 fi
 

@@ -48,6 +48,8 @@ web=0
 
 echo $$ >> myprocid
 
+export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:$main/lib
+
 if [[  "$1" == ""  ]]; then
     echo 'Enter 2 for multi-core, 1 for parallel, 0 for serial run' 
      read mode 

@@ -50,11 +50,6 @@ will replace all makefiles with makefile_dynamic and compile using
 these new makefiles. Using dynamic libraries is greatly encouraged,
 because it can make the compiled gridpack significantly smaller.
 
-If you want to use LHAPDF, you need to compile with a second argument
-being "lhapdf", i.e.
-./bin/compile dynamic lhapdf
-or ./bin/compile static lhapdf
-
 After a succesful compilation you can run the
 ./bin/clean4grid
 script to remove all source files and reduce the size of the
