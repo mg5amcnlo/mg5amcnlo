@@ -174,7 +174,7 @@ class MELauncher(ExtLauncher):
         """ initialize the StandAlone Version"""
         
         ExtLauncher.__init__(self, running_dir, './Cards', timeout, **option)
-        self.executable = os.path.join('.', 'bin','generate_events')
+        self.executable = os.path.join('.', 'bin','generate_events.py')
 
         assert hasattr(self, 'cluster')
         assert hasattr(self, 'name')
@@ -263,7 +263,7 @@ class MELauncher(ExtLauncher):
         
         # Open the corresponding crossx.html page
         os.system('touch %s' % os.path.join(self.running_dir,'RunWeb'))
-        subprocess.call([os.path.join('bin','gen_crossxhtml-pl')], 
+        subprocess.call([os.path.join('bin','internal','gen_crossxhtml-pl')], 
                          cwd=self.running_dir)
         open_file(os.path.join(self.running_dir, 'HTML', 'crossx.html'))
 

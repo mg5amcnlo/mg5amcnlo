@@ -207,7 +207,7 @@ c         endif
 
          if(fixed_ren_scale) then
             G = SQRT(4d0*PI*ALPHAS(scale))
-            call setpara('param_card.dat',.false.)
+            call update_as_param()
          endif
 
 c     Put momenta in the common block to zero to start
@@ -517,7 +517,7 @@ C---------------------------
       endif !if there are heavyjets
 
       if(inclht.lt.inclHtmin.or.inclht.gt.inclHtmax)then
-c         write (*,*) ' inclhtmin=',inclHtmin,' -> fails'
+         if(debug) write (*,*) ' inclhtmin=',inclHtmin,' -> fails'
          passcuts=.false.
          return
       endif
@@ -672,7 +672,7 @@ c     Set couplings in model files
                enddo
             enddo
          endif
-         call setpara('param_card.dat',.false.)
+         call update_as_param()
       endif
 
       IF (FIRSTTIME2) THEN

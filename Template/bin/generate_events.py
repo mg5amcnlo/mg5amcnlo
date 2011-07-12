@@ -13,19 +13,14 @@
 # For more information, please visit: http://madgraph.phys.ucl.ac.be
 #
 ################################################################################
-import subprocess
 """ This is the main script in order to generate events in MadEvent """
 
 import logging
 import os
 import shutil
+import subprocess
 import sys
 import time
-
-# Check that python version is valid
-if not sys.version_info[0] == 2 or sys.version_info[1] < 4:
-    sys.exit('MadEvent works with python 2.4 or higher (but not python 3.X).\n\
-               Please upgrate your version of python.')
 
 root_path = os.path.split(os.path.dirname(os.path.realpath( __file__ )))[0]
 pjoin = os.path.join
@@ -299,7 +294,7 @@ class MadEventLauncher(object):
 
         if os.path.exists(self.error):
             logger.error(open(self.error).read())
-            loger.info(time.ctime())
+            logger.info(time.ctime())
             os.remove(pjoin(self.main, 'survey'))
             os.remove(pjoin(self.main, 'RunWeb'))
             os.system('%s/gen_crossxhtml-pl %s' % (self.dirbin, self.name))
@@ -338,7 +333,7 @@ class MadEventLauncher(object):
     
         os.system("echo \"Combining Events\" >& %s" % self.status)
         os.system('%s/gen_crossxhtml-pl %s' % (self.dirbin, self.name))
-        subprocess.call(['make','../bin/combine_events'],
+        subprocess.call(['make','../bin/internal/combine_events'],
                             stdout = os.open(os.devnull, os.O_RDWR),
                             stderr = os.open(os.devnull, os.O_RDWR),
                             cwd=pjoin(self.main, 'Source'))
@@ -421,17 +416,13 @@ class MadEventLauncher(object):
         param_card = pjoin(self.main, 'Cards','param_card.dat')
         if os.path.exists(rule_file):
             check_param_card.make_valid_param_card(param_card, rule_file)
-            
-        # If the model is a SLAH2 model convert to SLAH1
-        model = 'sm'
-        for line in file(os.path.join(self.main,'Cards','proc_card_mg5.dat'),'r'):
-            line = line.split('#')[0]
-            line = line.split('=')
-            if line.startswith('import') and 'model' in line:
-                model = line.split()[2]
-
-        if model.startwith('mssm'):
-            check_param_card.convert_slha1(param_card)
+        
+        model = self.find_model_name()
+        
+        if model.startswith('mssm'):
+            pythia_param = pjoin(self.main, 'Cards', 'pythia_param_card.dat')
+            check_param_card.convert_slha1(param_card, pythia_param)
+            param_card = pythia_param
 
         open(self.status,'w').writelines('Running Pythia')
         os.system("gunzip -c %(path)s/%(name)s_unweighted_events.lhe.gz > %(path)s/unweighted_events.lhe"\
@@ -492,7 +483,7 @@ class MadEventLauncher(object):
                             cwd=pjoin(self.main,'Events')) 
             shutil.move(pjoin(self.main, 'Events', 'plots.html'), 
                     pjoin(self.main, 'Events', self.name+'_plots_pythia.html'))
-
+            
     ############################################################################
     def run_pgs(self):
         """ Run pgs and make associate root file/plot"""
@@ -608,6 +599,23 @@ class MadEventLauncher(object):
         return data['nevents']
        
     ############################################################################
+    def find_model_name(self):
+        """ return the model name """
+        if hasattr(self, 'model_name'):
+            return self.model_name
+        
+        model = 'sm'
+        for line in file(os.path.join(self.main,'Cards','proc_card_mg5.dat'),'r'):
+            line = line.split('#')[0]
+            line = line.split('=')[0]
+            if line.startswith('import') and 'model' in line:
+                model = line.split()[2]       
+       
+        self.model = model
+        return model
+       
+       
+    ############################################################################
     def treat_ckkw_matching(self, run_data):
         """check for ckkw"""
         
@@ -672,6 +680,12 @@ def is_executable(path):
 ##   EXECUTABLE
 ################################################################################                                
 if '__main__' == __name__:
+    
+    # Check that python version is valid
+    if not (sys.version_info[0] == 2 or sys.version_info[1] > 4):
+        sys.exit('MadEvent works with python 2.5 or higher (but not python 3.X).\n\
+               Please upgrate your version of python.')
+    
     # MadEvent is sensitive to the initial directory.
     # So go to the main directory
     os.chdir(root_path)

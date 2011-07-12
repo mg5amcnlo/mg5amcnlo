@@ -139,11 +139,11 @@ fi
 
 if [[ -d Source ]]; then
     cd Source
-    make ../bin/sum_html
-    make ../bin/gen_ximprove
+    make ../bin/internal/sum_html
+    make ../bin/internal/gen_ximprove
     make all
-    make ../bin/combine_events
-    make ../bin/combine_runs
+    make ../bin/internal/combine_events
+    make ../bin/internal/combine_runs
     cd ..
 else
     echo 'Error Source directory not found'

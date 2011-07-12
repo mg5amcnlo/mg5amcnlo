@@ -2,7 +2,7 @@ g77   = g77
 FFLAGS= -O -ffixed-line-length-132
 #FFLAGS= -g -ffixed-line-length-132 -fbounds-check -ffpe-trap=invalid,zero,overflow,underflow,denormal
 LIBDIR= ../lib/
-BINDIR= ../bin/
+BINDIR= ../bin/internal/
 PDFDIR= ./PDF/
 
 PROCESS= hfill.o matrix.o myamp.o 

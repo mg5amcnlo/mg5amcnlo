@@ -2737,7 +2737,7 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
             os.makedirs(self._export_dir)
 
         if self._export_format in ['madevent', 'standalone']:
-            self._curr_exporter.copy_v4template()            
+            self._curr_exporter.copy_v4template(modelname=self._curr_model.get('name'))            
 
         # Reset _done_export, since we have new directory
         self._done_export = False

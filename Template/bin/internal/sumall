@@ -14,7 +14,7 @@ if [[ ! -d Source ]]; then
     exit
 fi
 cd ./Source
-make ../bin/sum_html >& /dev/null
+make ../bin/internal/sum_html >& /dev/null
 cd ..
 if [[ ! -d SubProcesses ]]; then
     echo "Error: SubProcesses directory not found"
@@ -23,7 +23,7 @@ fi
 cd SubProcesses
 for i in `cat subproc.mg` ; do
 cd $i
-../../bin/sum_html >/dev/null
+../../bin/internal/sum_html >/dev/null
 cd ..
 done
-../bin/sum_html
+../bin/internal/sum_html

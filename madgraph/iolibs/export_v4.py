@@ -22,6 +22,7 @@ import os
 import re
 import shutil
 import subprocess
+import sys
 
 import madgraph.core.base_objects as base_objects
 import madgraph.core.color_algebra as color
@@ -62,7 +63,7 @@ class ProcessExporterFortran(object):
     #===========================================================================
     # copy the Template in a new directory.
     #===========================================================================
-    def copy_v4template(self):
+    def copy_v4template(self, modelname):
         """create the directory run_name as a copy of the MadEvent
         Template, and clean the directory
         """
@@ -102,11 +103,11 @@ class ProcessExporterFortran(object):
             logger.info('remove old information in %s' % \
                                                   os.path.basename(self.dir_path))
             if os.environ.has_key('MADGRAPH_BASE'):
-                subprocess.call([os.path.join('bin', 'clean_template'),
+                subprocess.call([os.path.join('bin', 'internal', 'clean_template'),
                                  '--web'], cwd=self.dir_path)
             else:
                 try:
-                    subprocess.call([os.path.join('bin', 'clean_template')], \
+                    subprocess.call([os.path.join('bin', 'internal', 'clean_template')], \
                                                                        cwd=self.dir_path)
                 except Exception, why:
                     raise MadGraph5Error('Failed to clean correctly %s: \n %s' \
@@ -685,11 +686,11 @@ class ProcessExporterFortranSA(ProcessExporterFortran):
     """Class to take care of exporting a set of matrix elements to
     MadGraph v4 StandAlone format."""
 
-    def copy_v4template(self):
+    def copy_v4template(self, modelname):
         """Additional actions needed for setup of Template
         """
         
-        super(ProcessExporterFortranSA, self).copy_v4template()
+        super(ProcessExporterFortranSA, self).copy_v4template(modelname)
 
         try:
             subprocess.call([os.path.join('bin', 'standalone')],
@@ -900,11 +901,19 @@ class ProcessExporterFortranME(ProcessExporterFortran):
 
     matrix_file = "matrix_madevent_v4.inc"
 
-    def copy_v4template(self):
+    def copy_v4template(self, modelname):
         """Additional actions needed for setup of Template
         """
 
-        super(ProcessExporterFortranME, self).copy_v4template()
+        super(ProcessExporterFortranME, self).copy_v4template(modelname)
+
+        self.model_name = modelname
+        # add the driver.f 
+        filename = os.path.join(self.dir_path,'SubProcesses','driver.f')
+        self.write_driver(writers.FortranWriter(filename))
+        filename = os.path.join(self.dir_path,'SubProcesses','symmetry.f')
+        self.write_symmetry(writers.FortranWriter(filename))
+
 
     #===========================================================================
     # generate_subprocess_directory_v4 
@@ -1546,6 +1555,45 @@ class ProcessExporterFortranME(ProcessExporterFortran):
         return True
 
     #===========================================================================
+    # write_driver
+    #===========================================================================
+    def write_driver(self, writer):
+        """Write the SubProcess/driver.f file for MG4"""
+
+        path = os.path.join(_file_path,'iolibs','template_files','madevent_driver.f')
+        
+        if self.model_name == 'mssm' or self.model_name.startswith('mssm-'):
+            card = 'Source/MODEL/MG5_param.dat'
+        else:
+            card = 'param_card.dat' 
+        text = open(path).read() % {'param_card_name':card} 
+
+        writer.write(text)
+        
+        return True
+
+    #===========================================================================
+    # write_driver
+    #===========================================================================
+    def write_symmetry(self, writer):
+        """Write the SubProcess/driver.f file for MG4"""
+
+        path = os.path.join(_file_path,'iolibs','template_files','madevent_symmetry.f')
+        
+        if self.model_name == 'mssm' or self.model_name.startswith('mssm-'):
+            card = 'Source/MODEL/MG5_param.dat'
+        else:
+            card = 'param_card.dat' 
+        text = open(path).read() % {'param_card_name':card} 
+
+        writer.write(text)
+        
+        return True
+
+
+
+
+    #===========================================================================
     # write_iproc_file
     #===========================================================================
     def write_iproc_file(self, writer, me_number):
@@ -1866,11 +1914,11 @@ class ProcessExporterFortranMEGroup(ProcessExporterFortranME):
     #===========================================================================
     # copy the Template in a new directory.
     #===========================================================================
-    def copy_v4template(self):
+    def copy_v4template(self, modelname):
         """Additional actions needed for setup of Template
         """
 
-        super(ProcessExporterFortranME, self).copy_v4template()
+        super(ProcessExporterFortranMEGroup, self).copy_v4template(modelname)
 
         # Update values in run_config.inc
         run_config = \
@@ -2609,25 +2657,24 @@ class UFO_model_to_mg4(object):
 
         fsock = self.open('couplings.f', format='fortran')
         
-        fsock.writelines("""subroutine coup(readlha)
+        fsock.writelines("""subroutine coup()
 
                             implicit none
-                            logical readlha
                             double precision PI
+                            logical READLHA
                             parameter  (PI=3.141592653589793d0)
                             
                             include \'input.inc\'
                             include \'coupl.inc\'
+                            READLHA = .true.
                             include \'intparam_definition.inc\'\n\n
                          """)
         
         nb_coup_indep = 1 + len(self.coups_indep) // nb_def_by_file 
         nb_coup_dep = 1 + len(self.coups_dep) // nb_def_by_file 
         
-        fsock.writelines('if (readlha) then\n')
         fsock.writelines('\n'.join(\
                     ['call coup%s()' %  (i + 1) for i in range(nb_coup_indep)]))
-        fsock.writelines('''\nendif\n''')
         
         fsock.write_comments('\ncouplings needed to be evaluated points by points\n')
 
@@ -2636,6 +2683,28 @@ class UFO_model_to_mg4(object):
                       for i in range(nb_coup_dep)]))
         fsock.writelines('''\n return \n end\n''')
 
+        fsock.writelines("""subroutine update_as_param()
+
+                            implicit none
+                            double precision PI
+                            logical READLHA
+                            parameter  (PI=3.141592653589793d0)
+                            
+                            include \'input.inc\'
+                            include \'coupl.inc\'
+                            READLHA = .false.
+                            include \'intparam_definition.inc\'\n\n
+                         """)
+        
+        nb_coup_indep = 1 + len(self.coups_indep) // nb_def_by_file 
+        nb_coup_dep = 1 + len(self.coups_dep) // nb_def_by_file 
+                
+        fsock.write_comments('\ncouplings needed to be evaluated points by points\n')
+
+        fsock.writelines('\n'.join(\
+                    ['call coup%s()' %  (nb_coup_indep + i + 1) \
+                      for i in range(nb_coup_dep)]))
+        fsock.writelines('''\n return \n end\n''')
 
     def create_couplings_part(self, nb_file, data):
         """ create couplings[nb_file].f containing information coming from data
@@ -2752,7 +2821,17 @@ class UFO_model_to_mg4(object):
         out_path = os.path.join(self.dir_path, 'param_card.dat')
         param_writer.ParamCardWriter(self.model, out_path)
         if hasattr(self.model, 'rule_card'):
-            out_path = os.path.join(self.dir_path, 'param_card_rule.dat')
-            self.model.rule_card.write_file(out_path)
+            out_path2 = os.path.join(self.dir_path, 'param_card_rule.dat')
+            self.model.rule_card.write_file(out_path2)
+        
+        # IF MSSM convert the card to SLAH1
+        if self.model_name == 'mssm' or self.model_name.startswith('mssm-'):
+            sys.path.append(os.path.join(_file_path, os.path.pardir, 'Template',
+                                         'bin','internal'))
+            import check_param_card as translator
+            
+            # Check the format of the param_card for Pythia and make it correct
+            translator.make_valid_param_card(out_path, out_path2)
+            translator.convert_to_slha1(out_path)
         
 

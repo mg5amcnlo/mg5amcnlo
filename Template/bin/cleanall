@@ -59,13 +59,13 @@ else
     echo "Error could not find lib"
     exit
 fi
-if [[ -d bin ]]; then
-    cd bin
+if [[ -d bin/internal/ ]]; then
+    cd bin/internal
     echo "Cleaning bin:"
     for i in gen_ximprove scale_events select_events sum_html ; do
 	rm -f $i >& /dev/null
     done
-    cd ../
+    cd ../../
 else
     echo "Error could not find bin"
     exit

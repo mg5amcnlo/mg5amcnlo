@@ -25,12 +25,12 @@ fi
 #	Clear out any old information/directories
 
 cp -p HTML/info-default.html HTML/info.html
-rm -f bin/plot_events >& /dev/null
-rm -f bin/scale_events >& /dev/null
-rm -f bin/sum_html >& /dev/null
-rm -f bin/select_events >& /dev/null
+rm -f bin/internal/plot_events >& /dev/null
+rm -f bin/internal/scale_events >& /dev/null
+rm -f bin/internal/sum_html >& /dev/null
+rm -f bin/internal/select_events >& /dev/null
 
-bin/gen_cardhtml-pl
+bin/internal/gen_cardhtml-pl
 
 if [[ ! -d lib ]]; then
     echo "Error: lib directory not found"

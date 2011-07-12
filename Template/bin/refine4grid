@@ -80,7 +80,7 @@ if [[ -d SubProcesses ]]; then
 #	rm -f wait.ajob* >& /dev/null
 #	rm -f run.ajob* >& /dev/null
 #	rm -f done.ajob* >& /dev/null
-	echo $a $np F | ../../bin/gen_ximprove >& gen_ximprove.log
+	echo $a $np F | ../../bin/internal/gen_ximprove >& gen_ximprove.log
 
 	if [[ -e ajob1 ]]; then
 #	    make madevent > /dev/null
@@ -91,14 +91,14 @@ if [[ -d SubProcesses ]]; then
 		$qsub -N $n $j>> ../../running_jobs
 	      else
 		nice ./$j > /dev/null
-		../../bin/sum_html >/dev/null
+		../../bin/internal/sum_html >/dev/null
 	      fi
 	    done
 	fi
 
 	cd ..
 	if [[ $p == 0  ]]; then 
-	    ../bin/sum_html 
+	    ../bin/internal/sum_html 
 	fi
     done
 #    echo "r=" $r >& randinit
@@ -107,10 +107,10 @@ else
     exit
 fi
 if [[ $p == 1 ]]; then
-    $dirbin/monitor $5
+    $dirbin/internal/monitor $5
 fi
     cd ../SubProcesses
     echo "Combining runs" >& ../status
-    ../bin/sumall
+    ../bin/internal/sumall
 cd ..
 $dirbin/gen_crossxhtml-pl $5

@@ -11,7 +11,7 @@ echo '#!/bin/bash' > combine.pbs
 echo 'if [[ "$PBS_O_WORKDIR" != "" ]]; then' >> combine.pbs
 echo '    cd $PBS_O_WORKDIR' >> combine.pbs
 echo 'fi' >> combine.pbs
-echo "../bin/combine_events;touch combine.out" >> combine.pbs
+echo "../bin/internal/combine_events;touch combine.out" >> combine.pbs
 chmod u+x combine.pbs
 qsub -N combine_run -e combine.err -o combine.log -V -q madgraph combine.pbs >> ../running_jobs 
 while [ ! -e combine.out ]
@@ -23,7 +23,7 @@ cat combine.log
 cat combine.err
 
 else
-../bin/combine_events 
+../bin/internal/combine_events 
 fi
 
 # Remove huge scratch file

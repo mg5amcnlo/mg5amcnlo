@@ -50,6 +50,12 @@ class Parameter (object):
             self.value= ' '.join(data[len(self.lhacode):])
         else:
             self.value = data[-1]
+        
+        # convert to number when possible
+        try:
+            self.value = float(self.value)
+        except:
+            pass
 
     def __str__(self):
         """ return a SLAH string """
@@ -107,6 +113,7 @@ class Block(list):
 
     def load_str(self, text):
         "set inforamtion from the line"
+        
         if '#' in text:
             data, self.comment = text.split('#',1)
         else:
@@ -115,10 +122,13 @@ class Block(list):
         data = data.lower()
         data = data.split()
         self.name = data[1] # the first part of data is model
-        if len(data) >= 3:
-            #the last part should be of the form Q=
-            self.scale = float(data[2][2:])
-            
+        
+        if len(data) == 3:
+            if data[2].startswith('q='):
+                #the last part should be of the form Q=
+                self.scale = float(data[2][2:])
+            elif self.name == 'qnumbers':
+                self.name += ' %s' % data[2]
         return self
 
     def __str__(self):
@@ -252,6 +262,7 @@ class ParamCard(dict):
     def remove_block(self, name):
         """ remove a blocks """
         assert len(self[name])==0
+        [self.order.pop(i) for i,b in enumerate(self.order) if b.name == name]
         self.pop(name)
         
     def remove_param(self, block, lhacode):
@@ -298,7 +309,7 @@ class ParamCard(dict):
         
              
     def mod_param(self, old_block, old_lha, block=None, lhacode=None, 
-                                              comment=None, value=None):
+                                              value=None, comment=None):
         """ change a parameter to a new one. This is not a duplication."""
 
         # Find the current block/parameter
@@ -334,15 +345,16 @@ class ParamCard(dict):
         if value:
             parameter.value = value
 
-    def check_and_remove(self,block, lhacode, value):
+    def check_and_remove(self, block, lhacode, value):
         """ check that the value is coherent and remove it"""
         
         if self.has_param(block, lhacode):
-            param = self['block'].get(lhacode)
+            param = self[block].get(lhacode)
             if param.value != value:
                 error_msg = 'This card is not suitable to be convert to SLAH1\n'
                 error_msg += 'Parameter %s %s should be %s' % (block, lhacode, value)
                 raise InvalidParamCard, error_msg   
+            self.remove_param(block, lhacode)
 
 class ParamCardRule(object):
     """ A class for storing the linked between the different parameter of
@@ -420,11 +432,17 @@ class ParamCardRule(object):
     
     def load_rule(self, inputpath):
         """ import a validity rule file """
+
+        
         try:
             tree = ET.parse(inputpath)
         except IOError:
-            tree = ET.fromstring(inputpath)
-            
+            if '\n' in inputpath:
+                # this is convinient for the tests
+                tree = ET.fromstring(inputpath)
+            else:
+                raise
+
         #Add zero element
         element = tree.find('zero')
         if element is not None:
@@ -531,7 +549,7 @@ class ParamCardRule(object):
         # check one 
         for block, id, comment in self.one:
             try:
-                value = card[block][str(id)][0]
+                value = card[block].get(id).value
             except KeyError:
                 if modify:
                     new_param = Parameter(block=block,lhacode=id, value=1, 
@@ -579,13 +597,11 @@ class ParamCardRule(object):
         return card
                         
 
-def convert_to_slha1(self, path, outputpath=None ):
+def convert_to_slha1(path, outputpath=None ):
     """ """
                                                       
-    
     if not outputpath:
         outputpath = path
-    
     card = ParamCard(path)
 
         
@@ -601,12 +617,12 @@ def convert_to_slha1(self, path, outputpath=None ):
     
     # SMINPUTS
     if not card.has_param('sminputs', [2]):
-        aem1 = card['sminputs'].get([1])
-        mz = card['mass'].get([23])
-        mw = card['mass'].get([24])
-        gf = math.pi / sqrt(2) * aem1 * mz**2/ mw**2 /(mz**2-mw**2)
+        aem1 = card['sminputs'].get([1]).value
+        mz = card['mass'].get([23]).value
+        mw = card['mass'].get([24]).value
+        gf = math.pi / math.sqrt(2) / aem1 * mz**2/ mw**2 /(mz**2-mw**2)
         card.add_param('sminputs', [2], gf, 'G_F [GeV^-2]')
-    
+
     # USQMIX
     card.check_and_remove('usqmix', [1,1], 1.0)
     card.check_and_remove('usqmix', [2,2], 1.0)
@@ -639,17 +655,18 @@ def convert_to_slha1(self, path, outputpath=None ):
     card.mod_param('selmix', [6,6], 'staumix', [2,2])
     
     # FRALPHA
-    card.mod_param('fralpha', [1], 'alpha', [])
+    card.mod_param('fralpha', [1], 'alpha', [' '])
     
     #HMIX
     if not card.has_param('hmix', [3]):
+        aem1 = card['sminputs'].get([1]).value
         tanb = card['hmix'].get([2]).value
         mz = card['mass'].get([23]).value
         mw = card['mass'].get([24]).value
         sw = math.sqrt(mz**2 - mw**2)/mz
-        aem1 = card['sminputs'].get([1])
-        vuv = 1/(math.sqrt(math.pi)) * aem1 * mw * sw *math.atan(tanb)
-        card.add_param('hmix', [3], vuv, 'higgs vev(Q) MSSM DRb')
+        ee = 2 * math.sqrt(1/aem1) * math.sqrt(math.pi)
+        vu = 2 * mw *sw /ee * math.sin(math.atan(tanb))
+        card.add_param('hmix', [3], vu, 'higgs vev(Q) MSSM DRb')
     
     # VCKM
     card.check_and_remove('vckm', [1,1], 1.0)
@@ -667,71 +684,211 @@ def convert_to_slha1(self, path, outputpath=None ):
     card.check_and_remove('upmns', [3,3], 1.0)
 
     # Te
-    yu = card['ye'].get([3, 3]).value
-    tu = card['te'].get([3, 3]).value
+    ye = card['ye'].get([3, 3]).value
+    te = card['te'].get([3, 3]).value
     card.mod_param('te', [3,3], 'ae', [3,3], value= te/ye, comment='A_tau(Q) DRbar')
-    card.add_param('te', [1,1], 0, 'A_e(Q) DRbar')
-    card.add_param('te', [2,2], 0, 'A_mu(Q) DRbar')
+    card.add_param('ae', [1,1], 0, 'A_e(Q) DRbar')
+    card.add_param('ae', [2,2], 0, 'A_mu(Q) DRbar')
     
     # Tu
     yu = card['yu'].get([3, 3]).value
     tu = card['tu'].get([3, 3]).value
     card.mod_param('tu', [3,3], 'au', [3,3], value= tu/yu, comment='A_t(Q) DRbar')
-    card.add_param('tu', [1,1], 0, 'A_u(Q) DRbar')
-    card.add_param('tu', [2,2], 0, 'A_c(Q) DRbar')
+    card.add_param('au', [1,1], 0, 'A_u(Q) DRbar')
+    card.add_param('au', [2,2], 0, 'A_c(Q) DRbar')
     
     # Td
     yd = card['yd'].get([3, 3]).value
     td = card['td'].get([3, 3]).value
     card.mod_param('td', [3,3], 'ad', [3,3], value= td/yd, comment='A_b(Q) DRbar')
-    card.add_param('td', [1,1], 0, 'A_d(Q) DRbar')
-    card.add_param('td', [2,2], 0, 'A_s(Q) DRbar')
+    card.add_param('ad', [1,1], 0, 'A_d(Q) DRbar')
+    card.add_param('ad', [2,2], 0, 'A_s(Q) DRbar')
     
     # MSL2 
     value = card['msl2'].get([1, 1]).value
-    card.mod_parm('msl2', [1,1], 'msoft', [31], math.sqrt(value))
+    card.mod_param('msl2', [1,1], 'msoft', [31], math.sqrt(value))
     value = card['msl2'].get([2, 2]).value
-    card.mod_parm('msl2', [2,2], 'msoft', [32], math.sqrt(value))
+    card.mod_param('msl2', [2,2], 'msoft', [32], math.sqrt(value))
     value = card['msl2'].get([3, 3]).value
-    card.mod_parm('msl2', [3,3], 'msoft', [33], math.sqrt(value))
+    card.mod_param('msl2', [3,3], 'msoft', [33], math.sqrt(value))
     
     # MSE2
     value = card['mse2'].get([1, 1]).value
-    card.mod_parm('mse2', [1,1], 'msoft', [34], math.sqrt(value))
+    card.mod_param('mse2', [1,1], 'msoft', [34], math.sqrt(value))
     value = card['mse2'].get([2, 2]).value
-    card.mod_parm('mse2', [2,2], 'msoft', [35], math.sqrt(value))
+    card.mod_param('mse2', [2,2], 'msoft', [35], math.sqrt(value))
     value = card['mse2'].get([3, 3]).value
-    card.mod_parm('mse2', [3,3], 'msoft', [36], math.sqrt(value))
+    card.mod_param('mse2', [3,3], 'msoft', [36], math.sqrt(value))
     
     # MSQ2                
     value = card['msq2'].get([1, 1]).value
-    card.mod_parm('msq2', [1,1], 'msoft', [37], math.sqrt(value))
+    card.mod_param('msq2', [1,1], 'msoft', [41], math.sqrt(value))
     value = card['msq2'].get([2, 2]).value
-    card.mod_parm('msq2', [2,2], 'msoft', [38], math.sqrt(value))
+    card.mod_param('msq2', [2,2], 'msoft', [42], math.sqrt(value))
     value = card['msq2'].get([3, 3]).value
-    card.mod_parm('msq2', [3,3], 'msoft', [39], math.sqrt(value))    
+    card.mod_param('msq2', [3,3], 'msoft', [43], math.sqrt(value))    
     
     # MSU2                
     value = card['msu2'].get([1, 1]).value
-    card.mod_parm('msu2', [1,1], 'msoft', [40], math.sqrt(value))
+    card.mod_param('msu2', [1,1], 'msoft', [44], math.sqrt(value))
     value = card['msu2'].get([2, 2]).value
-    card.mod_parm('msu2', [2,2], 'msoft', [41], math.sqrt(value))
+    card.mod_param('msu2', [2,2], 'msoft', [45], math.sqrt(value))
     value = card['msu2'].get([3, 3]).value
-    card.mod_parm('msu2', [3,3], 'msoft', [42], math.sqrt(value))   
+    card.mod_param('msu2', [3,3], 'msoft', [46], math.sqrt(value))   
     
     # MSD2                
     value = card['msd2'].get([1, 1]).value
-    card.mod_parm('msd2', [1,1], 'msoft', [31], math.sqrt(value))
+    card.mod_param('msd2', [1,1], 'msoft', [47], math.sqrt(value))
     value = card['msd2'].get([2, 2]).value
-    card.mod_parm('msd2', [2,2], 'msoft', [32], math.sqrt(value))
+    card.mod_param('msd2', [2,2], 'msoft', [48], math.sqrt(value))
     value = card['msd2'].get([3, 3]).value
-    card.mod_parm('msd2', [3,3], 'msoft', [33], math.sqrt(value))   
+    card.mod_param('msd2', [3,3], 'msoft', [49], math.sqrt(value))   
     
     #################
     # WRITE OUTPUT
     #################
     card.write(outputpath)
         
+        
+
+def convert_to_mg5card(path, outputpath=None ):
+    """ """
+                                                      
+    if not outputpath:
+        outputpath = path
+    card = ParamCard(path)
+
+        
+    # SMINPUTS
+    card.remove_param('sminputs', [2])
+    card.remove_param('sminputs', [4])
+    card.remove_param('sminputs', [6])
+    card.remove_param('sminputs', [7])
+    # Decay: Nothing to do. 
+    
+    # MODSEL
+    card.check_and_remove('modsel',[1], value=1)
+    
+    
+    # USQMIX
+    card.add_param('usqmix', [1,1], 1.0)
+    card.add_param('usqmix', [2,2], 1.0)
+    card.add_param('usqmix', [4,4], 1.0)
+    card.add_param('usqmix', [5,5], 1.0)
+    card.mod_param('stopmix', [1,1], 'usqmix', [3,3])
+    card.mod_param('stopmix', [1,2], 'usqmix', [3,6])
+    card.mod_param('stopmix', [2,1], 'usqmix', [6,3])
+    card.mod_param('stopmix', [2,2], 'usqmix', [6,6])
+
+    # DSQMIX
+    card.add_param('dsqmix', [1,1], 1.0)
+    card.add_param('dsqmix', [2,2], 1.0)
+    card.add_param('dsqmix', [4,4], 1.0)
+    card.add_param('dsqmix', [5,5], 1.0)
+    card.mod_param('sbotmix', [1,1], 'dsqmix', [3,3])
+    card.mod_param('sbotmix', [1,2], 'dsqmix', [3,6])
+    card.mod_param('sbotmix', [2,1], 'dsqmix', [6,3])
+    card.mod_param('sbotmix', [2,2], 'dsqmix', [6,6])     
+    
+    
+    # SELMIX
+    card.add_param('selmix', [1,1], 1.0)
+    card.add_param('selmix', [2,2], 1.0)
+    card.add_param('selmix', [4,4], 1.0)
+    card.add_param('selmix', [5,5], 1.0)
+    card.mod_param('staumix', [1,1], 'selmix', [3,3])
+    card.mod_param('staumix', [1,2], 'selmix', [3,6])
+    card.mod_param('staumix', [2,1], 'selmix', [6,3])
+    card.mod_param('staumix', [2,2], 'selmix', [6,6])
+    
+    # FRALPHA
+    card.mod_param('alpha', [], 'fralpha', [1])
+    
+    #HMIX
+    card.remove_param('hmix', [3])
+    
+    # VCKM
+    card.add_param('vckm', [1,1], 1.0)
+    card.add_param('vckm', [2,2], 1.0)
+    card.add_param('vckm', [3,3], 1.0)
+    
+    #SNUMIX
+    card.add_param('snumix', [1,1], 1.0)
+    card.add_param('snumix', [2,2], 1.0)
+    card.add_param('snumix', [3,3], 1.0)
+
+    #UPMNS
+    card.add_param('upmns', [1,1], 1.0)
+    card.add_param('upmns', [2,2], 1.0)
+    card.add_param('upmns', [3,3], 1.0)
+
+    # Te
+    ye = card['ye'].get([3, 3]).value
+    ae = card['ae'].get([3, 3]).value
+    card.mod_param('ae', [3,3], 'te', [3,3], value= ae * ye, comment='T_tau(Q) DRbar')
+    card.check_and_remove('ae', [1,1], 0)
+    card.check_and_remove('ae', [2,2], 0)
+    
+    # Tu
+    yu = card['yu'].get([3, 3]).value
+    au = card['au'].get([3, 3]).value
+    card.mod_param('au', [3,3], 'tu', [3,3], value= au * yu, comment='T_t(Q) DRbar')
+    card.check_and_remove('au', [1,1], 0)
+    card.check_and_remove('au', [2,2], 0)
+    
+    # Td
+    yd = card['yd'].get([3, 3]).value
+    ad = card['td'].get([3, 3]).value
+    card.mod_param('ad', [3,3], 'td', [3,3], value= ad * yd, comment='T_b(Q) DRbar')
+    card.check_and_remove('ad', [1,1], 0)
+    card.check_and_remove('ad', [2,2], 0)
+    
+    # MSL2 
+    value = card['msoft'].get([31]).value
+    card.mod_param('msoft', [31], 'msl2', [1,1], value**2)
+    value = card['msoft'].get([32]).value
+    card.mod_param('msl2', [32], 'msoft', [2,2], value**2)
+    value = card['msoft'].get([33]).value
+    card.mod_param('msl2', [33], 'msoft', [3,3], value**2)
+    
+    # MSE2
+    value = card['msoft'].get([34]).value
+    card.mod_param('msoft', [34], 'mse2', [1,1], value**2)
+    value = card['msoft'].get([35]).value
+    card.mod_param('msoft', [35], 'mse2', [2,2], value**2)
+    value = card['msoft'].get([36]).value
+    card.mod_param('msoft', [36], 'mse2', [3,3], value**2)
+    
+    # MSQ2                
+    value = card['msoft'].get([41]).value
+    card.mod_param('msoft', [41], 'msq2', [1,1], value**2)
+    value = card['msoft'].get([42]).value
+    card.mod_param('msoft', [42], 'msq2', [2,2], value**2)
+    value = card['msoft'].get([43]).value
+    card.mod_param('msoft', [43], 'msq2', [3,3], value**2)    
+    
+    # MSU2                
+    value = card['msoft'].get([44]).value
+    card.mod_param('msoft', [44], 'msu2', [1,1], value**2)
+    value = card['msoft'].get([45]).value
+    card.mod_param('msoft', [45], 'msu2', [2,2], value**2)
+    value = card['msoft'].get([46]).value
+    card.mod_param('msoft', [46], 'msu2', [3,3], value**2)   
+    
+    # MSD2
+    value = card['msoft'].get([47]).value
+    card.mod_param('msoft', [47], 'msd2', [1,1], value**2)
+    value = card['msoft'].get([48]).value
+    card.mod_param('msoft', [48], 'msd2', [2,2], value**2)
+    value = card['msoft'].get([49]).value
+    card.mod_param('msoft', [49], 'msd2', [3,3], value**2)   
+    
+    #################
+    # WRITE OUTPUT
+    #################
+    card.write(outputpath)
+    
+    
                                                       
 def make_valid_param_card(path, restrictpath, outputpath=None):
     """ modify the current param_card such that it agrees with the restriction"""
@@ -749,10 +906,14 @@ def make_valid_param_card(path, restrictpath, outputpath=None):
     else:
         if path != outputpath:
             shutil.copy(path, outputpath)
-    return new_data
+    return cardrule
 
 
+if '__main__' == __name__:
 
 
+    make_valid_param_card('./Cards/param_card.dat', './Source/MODEL/param_card_rule.dat', 
+                           outputpath='tmp1.dat')    
+    convert_to_slha1('tmp1.dat' , './param_card.dat')
 
                          

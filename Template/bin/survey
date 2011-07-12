@@ -86,7 +86,7 @@ echo "Compiling libraries"
 if [[ -d Source ]]; then
     echo "Compiling Libraries" >& status
     cd Source
-    make ../bin/sum_html >/dev/null
+    make ../bin/internal/sum_html >/dev/null
     make all >& /dev/null
     cd ..
 else
@@ -126,21 +126,21 @@ if [[ -d SubProcesses ]]; then
 	    if [[ $mode == 1 ]]; then
 		$qsub -N $n $job >> ../../running_jobs
 	    elif [[ $mode == 2 ]]; then
-		../../bin/multicore $n $job
+		../../bin/internal/multicore $n $job
 		sleep 1
 	    else
 		time nice ./$job >/dev/null
-		../../bin/sum_html >/dev/null
+		../../bin/internal/sum_html >/dev/null
 	    fi
 	done
 	cd ..
 	if [[ $mode == 0  ]]; then 
-	    ../bin/sum_html 
+	    ../bin/internal/sum_html 
 	fi
     done
     if [[ $mode -ge 1 ]]; then
 	$dirbin/monitor $3
-	../bin/sumall
+	../bin/internal/sumall
     fi
     cd ../
     $dirbin/gen_crossxhtml-pl $3
