@@ -149,7 +149,11 @@ class LoopDiagram(base_objects.Diagram):
         if struct_list and self['tag']:
             for i, tag_elem in enumerate(self['tag']):
                 for j, struct in enumerate(tag_elem[1]):
-                    mystr += 'Struct. #'+str(j+1)+' on loop vx #'+str(i+1)+": "+\
+                    if len(tag_elem[1])>1:
+                        mystr += 'Struct. #'+str(j+1)+' on loop vx #'+str(i+1)+": "+\
+                      struct_list[struct].nice_string_vertices()+"\n"
+                    else:
+                        mystr += 'Struct. on loop vx #'+str(i+1)+": "+\
                       struct_list[struct].nice_string_vertices()+"\n"
         #remove the unecessary last \n on the line
         mystr=mystr[:-1]

@@ -83,7 +83,7 @@ class ColorBasis(dict):
 
         color_num_pairs = []
         pdg_codes = []
-
+                
         for index, leg in enumerate(vertex.get('legs')):
             curr_num = leg.get('number')
             curr_part = model.get('particle_dict')[leg.get('id')]
@@ -131,6 +131,8 @@ class ColorBasis(dict):
                             get('particles')]
 
         sorted_color_num_pairs = []
+        #print "interactions_pdg=",interaction_pdgs
+        #print "pdg_codes=",pdg_codes        
         for i, pdg in enumerate(interaction_pdgs):
             index = pdg_codes.index(pdg)
             pdg_codes.pop(index)

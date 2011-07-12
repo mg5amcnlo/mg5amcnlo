@@ -1739,7 +1739,7 @@ class HelasAmplitude(base_objects.PhysicsObject):
 
     def get_base_vertex(self, wf_dict, vx_list = [], optimization = 1):
         """Get a base_objects.Vertex corresponding to this amplitude."""
-
+                
         # Generate last vertex
         legs = base_objects.LegList()
         for mother in self.get('mothers'):
@@ -2218,9 +2218,7 @@ class HelasMatrixElement(base_objects.PhysicsObject):
                 self.calculate_fermionfactors()
                 self.calculate_identical_particle_factor()
                 if gen_color and not self.get('color_basis'):
-                    self.get('color_basis').build(self.get('base_amplitude'))
-                    self.set('color_matrix',
-                             color_amp.ColorMatrix(self.get('color_basis')))
+                    self.process_color()
             else:
                 # In this case, try to use amplitude as a dictionary
                 super(HelasMatrixElement, self).__init__(amplitude)
@@ -2262,6 +2260,15 @@ class HelasMatrixElement(base_objects.PhysicsObject):
         """Overloading the nonequality operator, to make comparison easy"""
         return not self.__eq__(other)
 
+    def process_color(self):
+        """ Perform the simple color processing from a single matrix element 
+        (without optimization then). This is called from the initialization
+        and pulled out here in order to have the correct treatment in daughter
+        classes."""
+        self.get('color_basis').build(self.get('base_amplitude'))
+        self.set('color_matrix',
+          color_amp.ColorMatrix(self.get('color_basis')))
+        
     def generate_helas_diagrams(self, amplitude, optimization=1,
                                 decay_ids=[]):
         """Starting from a list of Diagrams from the diagram
@@ -3396,17 +3403,17 @@ class HelasMatrixElement(base_objects.PhysicsObject):
 
         return spin_factor * color_factor * self['identical_particle_factor']
 
-    def get_color_amplitudes(self):
-        """Return a list of (coefficient, amplitude number) lists,
-        corresponding to the JAMPs for this matrix element. The
-        coefficients are given in the format (fermion factor, color
-        coeff (frac), imaginary, Nc power)."""
+    def generate_color_amplitudes(self, color_basis, diagrams):
+        """ Return a list of (coefficient, amplitude number) lists,
+        corresponding to the JAMPs for the HelasDiagrams and color basis passed
+        in argument. The coefficients are given in the format (fermion factor, 
+        colorcoeff (frac), imaginary, Nc power). """
 
-        if not self.get('color_basis'):
+        if not color_basis:
             # No color, simply add all amplitudes with correct factor
             # for first color amplitude
             col_amp = []
-            for diagram in self.get('diagrams'):
+            for diagram in diagrams:
                 for amplitude in diagram.get('amplitudes'):
                     col_amp.append(((amplitude.get('fermionfactor'),
                                     1, False, 0),
@@ -3418,13 +3425,13 @@ class HelasMatrixElement(base_objects.PhysicsObject):
 
         col_amp_list = []
         for i, col_basis_elem in \
-                enumerate(sorted(self.get('color_basis').keys())):
+                enumerate(sorted(color_basis.keys())):
 
             col_amp = []
-            for diag_tuple in self.get('color_basis')[col_basis_elem]:
+            for diag_tuple in color_basis[col_basis_elem]:
                 res_amps = filter(lambda amp: \
                           tuple(amp.get('color_indices')) == diag_tuple[1],
-                          self.get('diagrams')[diag_tuple[0]].get('amplitudes'))
+                          diagrams[diag_tuple[0]].get('amplitudes'))
                 if not res_amps:
                     raise self.PhysicsObjectError, \
                           """No amplitude found for color structure
@@ -3443,6 +3450,14 @@ class HelasMatrixElement(base_objects.PhysicsObject):
             col_amp_list.append(col_amp)
 
         return col_amp_list
+
+    def get_color_amplitudes(self):
+        """Return a list of (coefficient, amplitude number) lists,
+        corresponding to the JAMPs for this matrix element. The
+        coefficients are given in the format (fermion factor, color
+        coeff (frac), imaginary, Nc power)."""
+        
+        return self.generate_color_amplitudes(self['color_basis'],self['diagrams'])
 
     def get_used_lorentz(self):
         """Return a list of (lorentz_name, conjugate, outgoing) with

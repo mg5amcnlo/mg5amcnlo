@@ -116,6 +116,19 @@ class LoopHelasMatrixElementTest(unittest.TestCase):
                 myME.set('base_amplitude',newamp)
                 colorize_obj = col_basis.create_color_dict_list(myME.get('base_amplitude'))
                 self.assertEqual(len(colorize_obj),len(diagSelection))
+                col_basis.build(myME.get('base_amplitude'))
+                myME.set('color_basis',col_basis)
+                col_matrix = color_amp.ColorMatrix(col_basis)
+                if verbose:
+                    print "color matrix =",col_matrix
+                self.assertEqual(len(col_matrix),len(col_basis)**2)
+                myME.set('color_matrix',col_matrix)
+                color_amplitudes=myME.get_color_amplitudes()
+                self.assertEqual(len(color_amplitudes),len(col_basis))
+                # Create list of amplitude number appearing
+                amp_number_apparition=[]
+                for jamp in color_amplitudes:
+                    amp_number_apparition.extend([a[1] for a in jamp])
 
             diagIndex=0
             for i, diag in enumerate(diagSelection):
@@ -158,6 +171,18 @@ class LoopHelasMatrixElementTest(unittest.TestCase):
                         # color keys tuples generated
                         self.assertTrue(tuple(amp['color_indices']) in \
                                         colorize_obj[i].keys())
+                        # Check that this amplitude number appear in the result
+                        # from get_color_amplitude
+                        self.assertTrue(amp['number'] in amp_number_apparition)                  
+                        # For the verbose mode, show to which color basis element each
+                        # amplitude contributes to
+                        contribution_list=[]
+                        for j, a in enumerate(color_amplitudes):
+                            if amp['number'] in [b[1] for b in a]:
+                                contribution_list.append(j)
+                        if verbose:
+                            print "Amplitude number",amp['number'],\
+                            "contributes to the following color basis elements",contribution_list                      
 
     def check_LHME_individual_diag_sanity(self,loopAmplitude, process,\
             mode='collective', selection=None, verbose=False, checkColor=True):
@@ -220,18 +245,51 @@ class LoopHelasMatrixElementTest(unittest.TestCase):
             for diag in loopDiagSelected:
                 nLoopDiags += (1+len(diag.get('CT_vertices')))
             if checkColor:
-                loop_col_basis = loop_color_amp.LoopColorBasis()
-                newloopamp=myloopME.get_base_amplitude()
-                myloopME.set('base_amplitude',newloopamp)
-                loop_colorize_obj = loop_col_basis.create_loop_color_dict_list(\
-                                      myloopME.get('base_amplitude'))
-                self.assertEqual(len(loop_colorize_obj),nLoopDiags)
+                if loopDiagSelected:
+                    loop_col_basis = loop_color_amp.LoopColorBasis()
+                    newloopamp=myloopME.get_base_amplitude()
+                    myloopME.set('base_amplitude',newloopamp)
+                    loop_colorize_obj = loop_col_basis.create_loop_color_dict_list(\
+                                          myloopME.get('base_amplitude'))
+                    self.assertEqual(len(loop_colorize_obj),nLoopDiags)
+                    loop_col_basis.build()
+                    myloopME.set('loop_color_basis',loop_col_basis)
+                    loop_color_amplitudes=myloopME.get_loop_color_amplitudes()
+                    self.assertEqual(len(loop_color_amplitudes),len(loop_col_basis))
+                    loop_amp_number_apparition=[]
+                    for jamp in loop_color_amplitudes:
+                        loop_amp_number_apparition.extend([a[1] for a in jamp])
                 if bornDiagSelected:
                     born_col_basis = loop_color_amp.LoopColorBasis()
                     born_colorize_obj = born_col_basis.create_born_color_dict_list(\
                                           myloopME.get('base_amplitude'))
-                    self.assertEqual(len(born_colorize_obj),nBornRecDiags)                    
-
+                    self.assertEqual(len(born_colorize_obj),nBornRecDiags)
+                    born_col_basis.build()
+                    myloopME.set('born_color_basis',born_col_basis)
+                    born_color_amplitudes=myloopME.get_born_color_amplitudes()
+                    self.assertEqual(len(born_color_amplitudes),len(born_col_basis))
+                    born_amp_number_apparition=[]
+                    for jamp in born_color_amplitudes:
+                        born_amp_number_apparition.extend([a[1] for a in jamp])
+                
+                if bornDiagSelected and loopDiagSelected:
+                    col_matrix=color_amp.ColorMatrix(loop_col_basis,\
+                                                       born_col_basis)
+                    if verbose:
+                        print "color matrix virt_vs_born =",col_matrix
+                    self.assertEqual(len(col_matrix),len(loop_col_basis)*len(born_col_basis))
+                elif loopDiagSelected and not bornDiagSelected:
+                    col_matrix=color_amp.ColorMatrix(loop_col_basis)
+                    if verbose:
+                        print "color matrix virt_vs_virt =",col_matrix
+                    self.assertEqual(len(col_matrix),len(loop_col_basis)**2)
+                elif bornDiagSelected and not loopDiagSelected:
+                    col_matrix=color_amp.ColorMatrix(born_col_basis)
+                    if verbose:
+                        print "color matrix born_vs_born =",col_matrix
+                    self.assertEqual(len(col_matrix),len(born_col_basis)**2)
+                myloopME.set('color_matrix',col_matrix)
+                
             diagIndex=0
             bornColorDiagIndex=0
             loopColorDiagIndex=0            
@@ -332,7 +390,19 @@ class LoopHelasMatrixElementTest(unittest.TestCase):
                         # color keys tuples generated
                         for amp in myloopME['diagrams'][i]['amplitudes']:
                             self.assertTrue(tuple(amp['color_indices']) in \
-                                        this_born_colorize_obj[0].keys()) 
+                                        this_born_colorize_obj[0].keys())
+                            # Make sure the born amplitude number appear in the color key
+                            # generated
+                            self.assertTrue(amp['number'] in born_amp_number_apparition)
+                            # For the verbose mode, show to which color basis element each
+                            # born amplitude contributes to
+                            contribution_list=[]
+                            for j, a in enumerate(born_color_amplitudes):
+                                if amp['number'] in [b[1] for b in a]:
+                                    contribution_list.append(j)
+                            if verbose:
+                                print "Born amplitude number",amp['number'],\
+                                "contributes to the following born color basis elements",contribution_list
                     else:
                         structEntries=1
                         for tagElem in diag['canonical_tag']:
@@ -362,7 +432,17 @@ class LoopHelasMatrixElementTest(unittest.TestCase):
                         # color keys tuples generated
                         for amp in loop_amps:
                             self.assertTrue(tuple(amp['color_indices']) in \
-                              this_loop_colorize_obj[0].keys())  
+                              this_loop_colorize_obj[0].keys())
+                            self.assertTrue(amp['number'] in loop_amp_number_apparition)
+                            # For the verbose mode, show to which color basis element each
+                            # loop amplitude contributes to
+                            contribution_list=[]
+                            for j, a in enumerate(loop_color_amplitudes):
+                                if amp['number'] in [b[1] for b in a]:
+                                    contribution_list.append(j)
+                            if verbose:
+                                print "Loop amplitude number",amp['number'],\
+                                "contributes to the following loop color basis elements",contribution_list
                         # Check the number of key entries for the counter-terms                        
                         if diag.get('CT_vertices'):
                             self.assertEqual(len(diag.get('CT_vertices')),\
@@ -386,7 +466,17 @@ class LoopHelasMatrixElementTest(unittest.TestCase):
                                 # color keys tuples generated
                                 for amp in ct_amps:
                                     self.assertTrue(tuple(amp['color_indices']) in \
-                                    this_loop_colorize_obj[ct_number].keys())                                                
+                                    this_loop_colorize_obj[ct_number].keys())
+                                    self.assertTrue(amp['number'] in loop_amp_number_apparition)
+                                    # For the verbose mode, show to which color basis element each
+                                    # CT amplitude contributes to
+                                    contribution_list=[]
+                                    for j, a in enumerate(loop_color_amplitudes):
+                                        if amp['number'] in [b[1] for b in a]:
+                                            contribution_list.append(j)
+                                    if verbose:
+                                        print "CT amplitude number",amp['number'],\
+                                        "contributes to the following loop color basis elements",contribution_list                                                                                
 
     def test_helas_diagrams_ddx_uux(self):
         """Test the generation of the helas diagrams for the process dd~>uu
@@ -487,6 +577,142 @@ class LoopHelasMatrixElementTest(unittest.TestCase):
         
         self.check_HME_individual_diag_sanity(myamplitude,myproc)
         
+        # Skip the lengthy check for the equivalent NLO process
+        return
+    
+        myloopproc = base_objects.Process({'legs':myleglist,
+                                        'model':self.myloopmodel,
+                                        'orders':{},
+                                        'perturbation_couplings':['QCD',],
+                                        'squared_orders':{}})
+    
+        myloopamplitude = loop_diagram_generation.LoopAmplitude()
+        myloopamplitude.set('process', myloopproc)
+        myloopamplitude.generate_diagrams()
+        
+        self.check_LHME_individual_diag_sanity(myloopamplitude,myloopproc)
+
+    def test_helas_diagrams_gd_gd(self):
+        """Test the generation of all the helas diagrams for the loop process 
+           gd > gd.
+        """
+
+        myleglist = base_objects.LegList()
+        myleglist.append(base_objects.Leg({'id':21,
+                                         'state':False}))
+        myleglist.append(base_objects.Leg({'id':1,
+                                         'state':False}))
+        myleglist.append(base_objects.Leg({'id':21,
+                                         'state':True}))
+        myleglist.append(base_objects.Leg({'id':1,
+                                         'state':True}))
+
+        myproc = base_objects.Process({'legs':myleglist,
+                                        'model':self.myloopmodel,
+                                        'orders':{},
+                                        'squared_orders':{}})
+    
+        myamplitude = diagram_generation.Amplitude()
+        myamplitude.set('process', myproc)
+        myamplitude.generate_diagrams()
+        
+        self.check_HME_individual_diag_sanity(myamplitude,myproc)
+
+        # Skip the lengthy check for the equivalent NLO process
+        #return
+
+        myloopproc = base_objects.Process({'legs':myleglist,
+                                        'model':self.myloopmodel,
+                                        'orders':{},
+                                        'perturbation_couplings':['QCD',],
+                                        'squared_orders':{}})
+    
+        myloopamplitude = loop_diagram_generation.LoopAmplitude()
+        myloopamplitude.set('process', myloopproc)
+        myloopamplitude.generate_diagrams()
+        
+        self.check_LHME_individual_diag_sanity(myloopamplitude,myloopproc)
+
+    def test_helas_diagrams_gd_ggd(self):
+
+        """Test the generation of all the helas diagrams for the loop process 
+           gd > ggd. This test is quite time consuming (30 sec) so it is
+           commented out by default.
+        """
+
+        myleglist = base_objects.LegList()
+        myleglist.append(base_objects.Leg({'id':21,
+                                         'state':False}))
+        myleglist.append(base_objects.Leg({'id':1,
+                                         'state':False}))
+        myleglist.append(base_objects.Leg({'id':21,
+                                         'state':True}))
+        myleglist.append(base_objects.Leg({'id':21,
+                                         'state':True}))
+        myleglist.append(base_objects.Leg({'id':1,
+                                         'state':True}))
+
+        myproc = base_objects.Process({'legs':myleglist,
+                                        'model':self.myloopmodel,
+                                        'orders':{},
+                                        'squared_orders':{}})
+    
+        myamplitude = diagram_generation.Amplitude()
+        myamplitude.set('process', myproc)
+        myamplitude.generate_diagrams()
+        
+        self.check_HME_individual_diag_sanity(myamplitude,myproc)
+
+        # Skip the lengthy check for the equivalent NLO process
+        return
+
+        myloopproc = base_objects.Process({'legs':myleglist,
+                                        'model':self.myloopmodel,
+                                        'orders':{},
+                                        'perturbation_couplings':['QCD',],
+                                        'squared_orders':{}})
+    
+        myloopamplitude = loop_diagram_generation.LoopAmplitude()
+        myloopamplitude.set('process', myloopproc)
+        myloopamplitude.generate_diagrams()
+        
+        self.check_LHME_individual_diag_sanity(myloopamplitude,myloopproc)
+
+    def test_helas_diagrams_ud_ggdu(self):
+
+        """Test the generation of all the helas diagrams for the loop process 
+           ud > ggdu. This test is quite time consuming (1min) so it is
+           commented out by default.
+        """
+
+        myleglist = base_objects.LegList()
+        myleglist.append(base_objects.Leg({'id':2,
+                                         'state':False}))
+        myleglist.append(base_objects.Leg({'id':1,
+                                         'state':False}))
+        myleglist.append(base_objects.Leg({'id':21,
+                                         'state':True}))
+        myleglist.append(base_objects.Leg({'id':21,
+                                         'state':True}))
+        myleglist.append(base_objects.Leg({'id':1,
+                                         'state':True}))
+        myleglist.append(base_objects.Leg({'id':2,
+                                         'state':True}))
+        
+        myproc = base_objects.Process({'legs':myleglist,
+                                        'model':self.myloopmodel,
+                                        'orders':{},
+                                        'squared_orders':{}})
+    
+        myamplitude = diagram_generation.Amplitude()
+        myamplitude.set('process', myproc)
+        myamplitude.generate_diagrams()
+        
+        self.check_HME_individual_diag_sanity(myamplitude,myproc)
+
+        # Skip the lengthy check for the equivalent NLO process
+        return
+
         myloopproc = base_objects.Process({'legs':myleglist,
                                         'model':self.myloopmodel,
                                         'orders':{},
