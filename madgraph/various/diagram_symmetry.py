@@ -87,10 +87,15 @@ def find_symmetry(matrix_element):
     symmetry = []
     permutations = []
     ident_perms = []
+    process = matrix_element.get('processes')[0]
+    base_model = process.get('model')
+    diagrams = matrix_element.get('diagrams')
+    base_diagrams = matrix_element.get_base_amplitude().get('diagrams')
+    min_vert = min([max(diag.get_vertex_leg_numbers()) for diag in diagrams])
     for diag in matrix_element.get('diagrams'):
         diagram_numbers.append(diag.get('number'))
         permutations.append(range(nexternal))
-        if max(diag.get_vertex_leg_numbers()) > 3:
+        if max(diag.get_vertex_leg_numbers()) > min_vert:
             # Ignore any diagrams with 4-particle vertices
             symmetry.append(0)
         else:
@@ -106,11 +111,6 @@ def find_symmetry(matrix_element):
                  matrix_element.get('processes')[0].nice_string().\
                  replace("Process: ", ""))
 
-    process = matrix_element.get('processes')[0]
-    base_model = process.get('model')
-    diagrams = matrix_element.get('diagrams')
-    base_diagrams = matrix_element.get_base_amplitude().get('diagrams')
-    min_vert = min([max(diag.get_vertex_leg_numbers()) for diag in diagrams])
     # diagram_tags is a list of unique tags
     diagram_tags = []
     # diagram_classes is a list of lists of diagram numbers belonging
@@ -358,10 +358,12 @@ def find_symmetry_subproc_group(subproc_group):
                subproc_group.get('matrix_elements')[0].get_nexternal_ninitial()
     model = subproc_group.get('matrix_elements')[0].get('processes')[0].\
             get('model')
+    min_vert = min([max(diag.get_vertex_leg_numbers()) for diag in diagrams])
+
     for idiag,diag in enumerate(diagrams):
         diagram_numbers.append(idiag+1)
         permutations.append(range(nexternal))
-        if max(diag.get_vertex_leg_numbers()) > 3:
+        if max(diag.get_vertex_leg_numbers()) > min_vert:
             # Ignore any diagrams with 4-particle vertices
             symmetry.append(0)
         else:
@@ -370,7 +372,6 @@ def find_symmetry_subproc_group(subproc_group):
     logger.info("Finding symmetric diagrams for subprocess group %s" % \
                 subproc_group.get('name'))
 
-    min_vert = min([max(diag.get_vertex_leg_numbers()) for diag in diagrams])
     # diagram_tags is a list of unique tags
     diagram_tags = []
     # diagram_classes is a list of lists of diagram numbers belonging

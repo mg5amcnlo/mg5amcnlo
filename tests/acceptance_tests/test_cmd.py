@@ -956,6 +956,14 @@ P1_qq_wp_wp_lvl
         for f in files:
             self.assertTrue(os.path.isfile(os.path.join(self.out_dir, f)), 
                             '%s file is not in directory' % f)
+        self.do('generate u u~ > a a a a')
+        self.assertRaises(MadGraph5Error,
+                          self.do,
+                          'output pythia8 %s' % self.out_dir)
+        self.do('generate u u~ > w+ w-, w+ > e+ ve, w- > e- ve~ @1')
+        self.assertRaises(MadGraph5Error,
+                          self.do,
+                          'output pythia8 %s' % self.out_dir)
 
     def test_standalone_cpp_output(self):
         """Test the C++ standalone output"""

@@ -821,7 +821,6 @@ class CheckValidForCmd(object):
 
         self._export_dir = os.path.realpath(self._export_dir)
 
-            
     def get_default_path(self):
         """Set self._export_dir to the default (\'auto\') path"""
 
@@ -2913,9 +2912,6 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
                 
         # Pythia 8
         if self._export_format == 'pythia8':
-            # Output the model parameter and ALOHA files
-            model_name, model_path = export_cpp.convert_model_to_pythia8(\
-                            self._curr_model, self._export_dir)
             # Output the process files
             process_names = []
             if isinstance(self._curr_matrix_elements, group_subprocs.SubProcessGroupList):
@@ -2930,6 +2926,10 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
                             self._curr_matrix_elements, self._curr_cpp_model,
                             process_string = self._generate_info, path = path)
                 process_names.append(exporter.process_file_name)
+
+            # Output the model parameter and ALOHA files
+            model_name, model_path = export_cpp.convert_model_to_pythia8(\
+                            self._curr_model, self._export_dir)
 
             # Generate the main program file
             filename, make_filename = \
@@ -3094,6 +3094,31 @@ class MadGraphCmdWeb(MadGraphCmd, CheckValidForCmdWeb):
         """Finalize web generation""" 
         
         MadGraphCmd.finalize(self, nojpeg, online = True)
+
+    # Generate a new amplitude
+    def do_generate(self, line):
+        """Generate an amplitude for a given process"""
+
+        try:
+           MadGraphCmd.do_generate(self, line)
+        except:
+            # put the stop logo on the web
+            files.cp(self._export_dir+'/HTML/stop.jpg',self._export_dir+'/HTML/card.jpg')
+            raise
+    
+    # Add a process to the existing multiprocess definition
+    def do_add(self, line):
+        """Generate an amplitude for a given process and add to
+        existing amplitudes
+        syntax:
+        """
+        try:
+           MadGraphCmd.do_add(self, line)
+        except:
+            # put the stop logo on the web
+            files.cp(self._export_dir+'/HTML/stop.jpg',self._export_dir+'/HTML/card.jpg')
+            raise
+
 #===============================================================================
 # MadGraphCmd
 #===============================================================================

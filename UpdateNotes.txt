@@ -1,5 +1,12 @@
 Update notes for MadGraph 5 (in reverse time order)
 
+1.3.4 (05/07/11): OM: More informative error message when a compilation error occurs
+
+1.3.3 (29/06/11): JA: Fixed diagram symmetry for case when there are
+                      no 3-vertex-only diagrams
+                  JA (by OM): More informative error when trying to generate invalid 
+                      pythia8 process
+
 1.3.2 (14/06/11): OM: Fix fortran output when a model is case sensitive 
       		      (Bug if a coupling was depending of a case sensitive parameter)
                   SdV: Remove a annoying print in the new cuts (added in 1.3.0)
