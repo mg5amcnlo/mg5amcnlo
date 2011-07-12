@@ -19,7 +19,10 @@ if [[ ! -d ./madevent ]]; then
         exit
 fi
 
+# For Linux
 export LD_LIBRARY_PATH=${LD_LIBRARY_PATH}:${PWD}/madevent/lib:${PWD}/HELAS/lib
+# For Mac OS X
+export DYLD_LIBRARY_PATH=${DYLD_LIBRARY_PATH}:${PWD}/madevent/lib:${PWD}/HELAS/lib
 
 card=./madevent/Cards/grid_card.dat
 

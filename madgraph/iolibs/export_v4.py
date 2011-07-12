@@ -678,6 +678,24 @@ class ProcessExporterFortran(object):
 
         return res_str + '*'
 
+    def set_compiler(self, default_compiler):
+        """Set compiler based on what's available on the system"""
+        
+        # Check for compiler
+        if misc.which('g77'):
+            compiler = 'g77'
+        elif misc.which('gfortran'):
+            compiler = 'gfortran'
+        elif misc.which('f77'):
+            compiler = 'f77'
+        else:
+            # Use g77 as default
+            compiler = 'g77'
+        logger.info('Use Fortran compiler ' + compiler)
+        self.replace_make_opt_compiler(compiler)
+        # Replace also for Template
+        self.replace_make_opt_compiler(compiler, os.path.join(MG5DIR, 'Template'))
+
     def replace_make_opt_compiler(self, compiler, root_dir = ""):
         """Set FC=compiler in Source/make_opts"""
 
@@ -691,8 +709,7 @@ class ProcessExporterFortran(object):
             if FC_result:
                 lines[iline] = FC_result.group(1) + "FC=" + compiler
         outfile = open(make_opts, 'w')
-        for line in lines:
-            outfile.write(line + '\n')
+        outfile.write('\n'.join(lines))
 
 #===============================================================================
 # ProcessExporterFortranSA
@@ -737,14 +754,7 @@ class ProcessExporterFortranSA(ProcessExporterFortran):
                               online = False):
         """Finalize Standalone MG4 directory by generation proc_card_mg5.dat"""
 
-        if not misc.which('g77'):
-            logger.info('Change makefiles to use gfortran')
-            #subprocess.call(['python','./bin/Passto_gfortran.py'], cwd=self.dir_path, \
-            #                stdout = open(os.devnull, 'w')) 
-            self.replace_make_opt_compiler('gfortran')
-            # Replace also for Template
-            self.replace_make_opt_compiler('gfortran', os.path.join(MG5DIR, 'Template'))
-
+        self.set_compiler('g77')
         self.make()
 
         # Write command history as proc_card_mg5
@@ -1131,13 +1141,8 @@ class ProcessExporterFortranME(ProcessExporterFortran):
         # Touch "done" file
         os.system('touch %s/done' % os.path.join(self.dir_path,'SubProcesses'))
 
-        if not misc.which('g77'):
-            logger.info('Change makefiles to use gfortran')
-            #subprocess.call(['python','./bin/Passto_gfortran.py'], cwd=self.dir_path, \
-            #                stdout = open(os.devnull, 'w')) 
-            self.replace_make_opt_compiler('gfortran')
-            # Replace also for Template
-            self.replace_make_opt_compiler('gfortran', os.path.join(MG5DIR, 'Template'))
+        # Check for compiler
+        self.set_compiler('g77')
 
         old_pos = os.getcwd()
         os.chdir(os.path.join(self.dir_path, 'SubProcesses'))
