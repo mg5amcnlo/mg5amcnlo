@@ -47,45 +47,35 @@ V_103 = Vertex(name = 'V_103',
 
 V_104 = Vertex(name = 'V_104',
               particles = [ P.G, P.G, P.G, P.G ],
-              color = [ 'Tr(1,2)*Tr(3,4)' , 'Tr(1,3)*Tr(2,4)' , 'Tr(1,4)*Tr(2,3)', \
-                        'd(-1,1,2)*d(-1,3,4)' , 'd(-1,1,3)*d(-1,2,4)' , 'd(-1,1,4)*d(-1,2,3)'],
+              color = [ 'Tr(1,2)*Tr(3,4)+Tr(1,4)*Tr(2,3)+Tr(1,3)*Tr(2,4)', \
+                        'Tr(1,2,3,4)+Tr(1,4,3,2)' , 'Tr(1,2,4,3)+Tr(1,3,4,2)', 'Tr(1,3,2,4)+Tr(1,4,2,3)' ],
               lorentz = [  L.R2_4G_1234, L.R2_4G_1324, L.R2_4G_1423 ],
-              couplings = {(0,0):C.GC_4GR2_Gluon_delta,(0,1):C.GC_4GR2_Gluon_delta,(0,2):C.GC_4GR2_Gluon_delta, \
-                           (1,0):C.GC_4GR2_Gluon_delta,(1,1):C.GC_4GR2_Gluon_delta,(1,2):C.GC_4GR2_Gluon_delta, \
-                           (2,0):C.GC_4GR2_Gluon_delta,(2,1):C.GC_4GR2_Gluon_delta,(2,2):C.GC_4GR2_Gluon_delta, \
-                           (3,0):C.GC_4GR2_4Struct,(3,1):C.GC_4GR2_2Struct,(3,2):C.GC_4GR2_2Struct, \
-                           (4,0):C.GC_4GR2_2Struct,(4,1):C.GC_4GR2_4Struct,(4,2):C.GC_4GR2_2Struct, \
-                           (5,0):C.GC_4GR2_2Struct,(5,1):C.GC_4GR2_2Struct,(5,2):C.GC_4GR2_4Struct },
+              couplings = {(0,0):C.GC_4GR2_delta,(0,1):C.GC_4GR2_delta,(0,2):C.GC_4GR2_delta, \
+                           (1,0):C.GC_4GR2_2Struct,(1,1):C.GC_4GR2_8Struct,(1,2):C.GC_4GR2_2Struct, \
+                           (2,0):C.GC_4GR2_2Struct,(2,1):C.GC_4GR2_2Struct,(2,2):C.GC_4GR2_8Struct,
+                           (3,0):C.GC_4GR2_8Struct,(3,1):C.GC_4GR2_2Struct,(3,2):C.GC_4GR2_2Struct},
               type = ['R2',(21,21,21,21)])
 
 # Down quark contribution to the gggg R2
 
 V_114 = Vertex(name = 'V_114',
               particles = [ P.G, P.G, P.G, P.G ],
-              color = [ 'Tr(1,2)*Tr(3,4)' , 'Tr(1,3)*Tr(2,4)' , 'Tr(1,4)*Tr(2,3)', \
-                        'd(-1,1,2)*d(-1,3,4)' , 'd(-1,1,3)*d(-1,2,4)' , 'd(-1,1,4)*d(-1,2,3)'], 
+              color = [ 'Tr(1,2,3,4)+Tr(1,4,3,2)' , 'Tr(1,2,4,3)+Tr(1,3,4,2)', 'Tr(1,3,2,4)+Tr(1,4,2,3)' ],
               lorentz = [  L.R2_4G_1234, L.R2_4G_1324, L.R2_4G_1423 ],
-              couplings = {(0,0):C.GC_4GR2_Fermion_delta,(0,1):C.GC_4GR2_Fermion_delta,(0,2):C.GC_4GR2_Fermion_delta, \
-                           (1,0):C.GC_4GR2_Fermion_delta,(1,1):C.GC_4GR2_Fermion_delta,(1,2):C.GC_4GR2_Fermion_delta, \
-                           (2,0):C.GC_4GR2_Fermion_delta,(2,1):C.GC_4GR2_Fermion_delta,(2,2):C.GC_4GR2_Fermion_delta, \
-                           (3,0):C.GC_4GR2_11Struct,(3,1):C.GC_4GR2_5Struct,(3,2):C.GC_4GR2_5Struct, \
-                           (4,0):C.GC_4GR2_5Struct,(4,1):C.GC_4GR2_11Struct,(4,2):C.GC_4GR2_5Struct, \
-                           (5,0):C.GC_4GR2_5Struct,(5,1):C.GC_4GR2_5Struct,(5,2):C.GC_4GR2_11Struct },        
+              couplings = {(0,0):C.GC_4GR2_12Struct,(0,1):C.GC_4GR2_20Struct,(0,2):C.GC_4GR2_12Struct, \
+                           (1,0):C.GC_4GR2_12Struct,(1,1):C.GC_4GR2_12Struct,(1,2):C.GC_4GR2_20Struct, \
+                           (2,0):C.GC_4GR2_20Struct,(2,1):C.GC_4GR2_12Struct,(2,2):C.GC_4GR2_12Struct},
               type = ['R2',(1,1,1,1)])
 
 # Up quark contribution to the gggg R2
 
 V_124 = Vertex(name = 'V_124',
               particles = [ P.G, P.G, P.G, P.G ],
-              color = [ 'Tr(1,2)*Tr(3,4)' , 'Tr(1,3)*Tr(2,4)' , 'Tr(1,4)*Tr(2,3)', \
-                        'd(-1,1,2)*d(-1,3,4)' , 'd(-1,1,3)*d(-1,2,4)' , 'd(-1,1,4)*d(-1,2,3)'], 
+              color = [ 'Tr(1,2,3,4)+Tr(1,4,3,2)' , 'Tr(1,2,4,3)+Tr(1,3,4,2)', 'Tr(1,3,2,4)+Tr(1,4,2,3)' ],
               lorentz = [  L.R2_4G_1234, L.R2_4G_1324, L.R2_4G_1423 ],
-              couplings = {(0,0):C.GC_4GR2_Fermion_delta,(0,1):C.GC_4GR2_Fermion_delta,(0,2):C.GC_4GR2_Fermion_delta, \
-                           (1,0):C.GC_4GR2_Fermion_delta,(1,1):C.GC_4GR2_Fermion_delta,(1,2):C.GC_4GR2_Fermion_delta, \
-                           (2,0):C.GC_4GR2_Fermion_delta,(2,1):C.GC_4GR2_Fermion_delta,(2,2):C.GC_4GR2_Fermion_delta, \
-                           (3,0):C.GC_4GR2_11Struct,(3,1):C.GC_4GR2_5Struct,(3,2):C.GC_4GR2_5Struct, \
-                           (4,0):C.GC_4GR2_5Struct,(4,1):C.GC_4GR2_11Struct,(4,2):C.GC_4GR2_5Struct, \
-                           (5,0):C.GC_4GR2_5Struct,(5,1):C.GC_4GR2_5Struct,(5,2):C.GC_4GR2_11Struct }, 
+              couplings = {(0,0):C.GC_4GR2_12Struct,(0,1):C.GC_4GR2_20Struct,(0,2):C.GC_4GR2_12Struct, \
+                           (1,0):C.GC_4GR2_12Struct,(1,1):C.GC_4GR2_12Struct,(1,2):C.GC_4GR2_20Struct, \
+                           (2,0):C.GC_4GR2_20Struct,(2,1):C.GC_4GR2_12Struct,(2,2):C.GC_4GR2_12Struct},
               type = ['R2',(2,2,2,2)])
 
 #=============================================================================================

@@ -28,15 +28,6 @@ Ncol = Parameter(name = 'Ncol',
                  value = '3.0',
                  texname = 'N_{col}')
 
-G_UV = Parameter(name = 'G_UV',
-              nature = 'internal',
-              type = 'real',
-              # At leading order without fermion masses, the UV renormalization 
-              # in MSbar does not affect the finite part of the virtual, so I
-              # put zero here
-              value = 'ZERO',
-              texname = 'G_{UV}')
-
 aS = Parameter(name = 'aS',
                nature = 'external',
                type = 'real',
@@ -66,3 +57,21 @@ G = Parameter(name = 'G',
               type = 'real',
               value = '2*cmath.sqrt(aS)*cmath.sqrt(cmath.pi)',
               texname = 'G')
+
+RGR2 = Parameter(name = 'RGR2',
+              nature = 'internal',
+              type = 'real',
+              # At leading order without fermion masses, the UV renormalization 
+              # in MSbar does not affect the finite part of the virtual, so I
+              # put zero here
+              value = '-complex(0,1)*G**4/(96.0*cmath.pi**2)',
+              texname = '4GR2')
+
+G_UV = Parameter(name = 'G_UV',
+              nature = 'internal',
+              type = 'real',
+              # At leading order without fermion masses, the UV renormalization 
+              # in MSbar does not affect the finite part of the virtual, so I
+              # put zero here
+              value = 'ZERO',
+              texname = 'G_{UV}')

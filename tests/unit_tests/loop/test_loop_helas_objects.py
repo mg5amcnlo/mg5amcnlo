@@ -447,10 +447,16 @@ class LoopHelasMatrixElementTest(unittest.TestCase):
                         if diag.get('CT_vertices'):
                             self.assertEqual(len(diag.get('CT_vertices')),\
                               len(this_loop_colorize_obj)-1)
+                            # Don't forget that in get_base_amplitude the CT are given sorted
+                            # according to their vertex id
+                            ctverts=copy.copy(diag.get('CT_vertices'))
+                            ctverts=sorted(ctverts, key=lambda vert: vert['id'])
                             for ct_number in range(1,len(reconstructedDiags)):
-                                ct_vert=diag.get('CT_vertices')[ct_number-1]
+                                ct_vert=ctverts[ct_number-1]                                
                                 nCTColor=len(process['model'].get('interaction_dict')[ct_vert['id']].get('color'))
                                 if nCTColor==0: nCTColor=1
+                                print "nCTColor=",nCTColor
+                                print "from vertex=",process['model'].get('interaction_dict')[ct_vert['id']]
                                 if verbose:
                                     print "CT diag",ct_number,"colorization :",\
                                       this_loop_colorize_obj[ct_number].keys()
@@ -535,7 +541,7 @@ class LoopHelasMatrixElementTest(unittest.TestCase):
         myamplitude = diagram_generation.Amplitude()
         myamplitude.set('process', myproc)
         myamplitude.generate_diagrams()
-        self.check_HME_individual_diag_sanity(myamplitude,myproc)
+        #self.check_HME_individual_diag_sanity(myamplitude,myproc)
         
         myloopproc = base_objects.Process({'legs':myleglist,
                                         'model':self.myloopmodel,
@@ -546,7 +552,8 @@ class LoopHelasMatrixElementTest(unittest.TestCase):
         myloopamplitude = loop_diagram_generation.LoopAmplitude()
         myloopamplitude.set('process', myloopproc)
         myloopamplitude.generate_diagrams()
-        self.check_LHME_individual_diag_sanity(myloopamplitude,myloopproc)
+        print "CT interaction considered=",self.myloopmodel.get_interaction(8)
+        self.check_LHME_individual_diag_sanity(myloopamplitude,myloopproc,selection=[(17,17)],verbose=True)
         
     def test_helas_diagrams_gg_ggg(self):
         """Test the generation of all the helas diagrams for the loop process 

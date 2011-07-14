@@ -396,7 +396,7 @@ class EpsilonBar(ColorObject):
 
 #===============================================================================
 # Color sextet objects: K6, K6Bar, T6
-#                       Note that delta3 = T, delta6 = T6, delta8 = 1/2 Tr
+#                       Note that delta3 = T, delta6 = T6, delta8 = 2 Tr
 #===============================================================================
 
 class K6(ColorObject):

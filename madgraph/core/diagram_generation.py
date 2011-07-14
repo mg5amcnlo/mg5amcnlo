@@ -992,8 +992,6 @@ class DecayChainAmplitude(Amplitude):
                  ignore_six_quark_processes = False):
         """Allow initialization with Process and with ProcessDefinition"""
 
-        
-
         if isinstance(argument, base_objects.Process):
             super(DecayChainAmplitude, self).__init__()
             from madgraph.loop.loop_diagram_generation import LoopMultiProcess

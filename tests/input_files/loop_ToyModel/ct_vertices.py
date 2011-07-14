@@ -34,13 +34,61 @@ V_103 = Vertex(name = 'V_103',
               couplings = {(0,0):C.GC_102},
               type = ['R2',(21,21,21)])
 
-# gggg
+#=============================================================================================
+#  4-gluon R2 vertex
+#=============================================================================================
+
+# Gluon contribution to the gggg R2
+
+# Keep in mind that Delta8(a,b) is 1/2 Tr(a,b)
+# Also the type is (21,21,21,21) but it also contains the ghost and the triangle gluon contribution which
+# unavaidably come along with this loop. So the following tags would work equally as well:
+#  (ghostPDG, ghostPDG, ghostPDG) or (ghostPDG, ghostPDG, ghostPDG, ghostPDG) or (21, 21, 21)
+
 V_104 = Vertex(name = 'V_104',
               particles = [ P.G, P.G, P.G, P.G ],
-              color = [ 'f(-1,1,2)*f(3,4,-1)', 'f(-1,1,3)*f(2,4,-1)', 'f(-1,1,4)*f(2,3,-1)' ],
-              lorentz = [ L.VVVV1, L.VVVV3, L.VVVV4 ],
-              couplings = {(1,1):C.GC_103,(0,0):C.GC_103,(2,2):C.GC_103},
-              type = ['UV',()])
+              color = [ 'Tr(1,2)*Tr(3,4)' , 'Tr(1,3)*Tr(2,4)' , 'Tr(1,4)*Tr(2,3)', \
+                        'd(-1,1,2)*d(-1,3,4)' , 'd(-1,1,3)*d(-1,2,4)' , 'd(-1,1,4)*d(-1,2,3)'],
+              lorentz = [  L.R2_4G_1234, L.R2_4G_1324, L.R2_4G_1423 ],
+              couplings = {(0,0):C.GC_4GR2_Gluon_delta,(0,1):C.GC_4GR2_Gluon_delta,(0,2):C.GC_4GR2_Gluon_delta, \
+                           (1,0):C.GC_4GR2_Gluon_delta,(1,1):C.GC_4GR2_Gluon_delta,(1,2):C.GC_4GR2_Gluon_delta, \
+                           (2,0):C.GC_4GR2_Gluon_delta,(2,1):C.GC_4GR2_Gluon_delta,(2,2):C.GC_4GR2_Gluon_delta, \
+                           (3,0):C.GC_4GR2_4Struct,(3,1):C.GC_4GR2_2Struct,(3,2):C.GC_4GR2_2Struct, \
+                           (4,0):C.GC_4GR2_2Struct,(4,1):C.GC_4GR2_4Struct,(4,2):C.GC_4GR2_2Struct, \
+                           (5,0):C.GC_4GR2_2Struct,(5,1):C.GC_4GR2_2Struct,(5,2):C.GC_4GR2_4Struct },
+              type = ['R2',(21,21,21,21)])
+
+# Down quark contribution to the gggg R2
+
+V_114 = Vertex(name = 'V_114',
+              particles = [ P.G, P.G, P.G, P.G ],
+              color = [ 'Tr(1,2)*Tr(3,4)' , 'Tr(1,3)*Tr(2,4)' , 'Tr(1,4)*Tr(2,3)', \
+                        'd(-1,1,2)*d(-1,3,4)' , 'd(-1,1,3)*d(-1,2,4)' , 'd(-1,1,4)*d(-1,2,3)'], 
+              lorentz = [  L.R2_4G_1234, L.R2_4G_1324, L.R2_4G_1423 ],
+              couplings = {(0,0):C.GC_4GR2_Fermion_delta,(0,1):C.GC_4GR2_Fermion_delta,(0,2):C.GC_4GR2_Fermion_delta, \
+                           (1,0):C.GC_4GR2_Fermion_delta,(1,1):C.GC_4GR2_Fermion_delta,(1,2):C.GC_4GR2_Fermion_delta, \
+                           (2,0):C.GC_4GR2_Fermion_delta,(2,1):C.GC_4GR2_Fermion_delta,(2,2):C.GC_4GR2_Fermion_delta, \
+                           (3,0):C.GC_4GR2_11Struct,(3,1):C.GC_4GR2_5Struct,(3,2):C.GC_4GR2_5Struct, \
+                           (4,0):C.GC_4GR2_5Struct,(4,1):C.GC_4GR2_11Struct,(4,2):C.GC_4GR2_5Struct, \
+                           (5,0):C.GC_4GR2_5Struct,(5,1):C.GC_4GR2_5Struct,(5,2):C.GC_4GR2_11Struct },        
+              type = ['R2',(1,1,1,1)])
+
+# Up quark contribution to the gggg R2
+
+V_124 = Vertex(name = 'V_124',
+              particles = [ P.G, P.G, P.G, P.G ],
+              color = [ 'Tr(1,2)*Tr(3,4)' , 'Tr(1,3)*Tr(2,4)' , 'Tr(1,4)*Tr(2,3)', \
+                        'd(-1,1,2)*d(-1,3,4)' , 'd(-1,1,3)*d(-1,2,4)' , 'd(-1,1,4)*d(-1,2,3)'], 
+              lorentz = [  L.R2_4G_1234, L.R2_4G_1324, L.R2_4G_1423 ],
+              couplings = {(0,0):C.GC_4GR2_Fermion_delta,(0,1):C.GC_4GR2_Fermion_delta,(0,2):C.GC_4GR2_Fermion_delta, \
+                           (1,0):C.GC_4GR2_Fermion_delta,(1,1):C.GC_4GR2_Fermion_delta,(1,2):C.GC_4GR2_Fermion_delta, \
+                           (2,0):C.GC_4GR2_Fermion_delta,(2,1):C.GC_4GR2_Fermion_delta,(2,2):C.GC_4GR2_Fermion_delta, \
+                           (3,0):C.GC_4GR2_11Struct,(3,1):C.GC_4GR2_5Struct,(3,2):C.GC_4GR2_5Struct, \
+                           (4,0):C.GC_4GR2_5Struct,(4,1):C.GC_4GR2_11Struct,(4,2):C.GC_4GR2_5Struct, \
+                           (5,0):C.GC_4GR2_5Struct,(5,1):C.GC_4GR2_5Struct,(5,2):C.GC_4GR2_11Struct }, 
+              type = ['R2',(2,2,2,2)])
+
+#=============================================================================================
 
 # gdd~
 V_105 = Vertex(name = 'V_105',
@@ -64,7 +112,7 @@ V_107 = Vertex(name = 'V_107',
                color = [ 'Identity(1,2)' ],
                lorentz = [ L.R2_GG_1],
                couplings = {(0,0):C.GC_105},
-               type = ['R2',(1,1,1)])  
+               type = ['R2',(1,1)])  
 
 # gg             
 V_117 = Vertex(name = 'V_117',
@@ -72,7 +120,7 @@ V_117 = Vertex(name = 'V_117',
                color = [ 'Identity(1,2)' ],
                lorentz = [ L.R2_GG_1],
                couplings = {(0,0):C.GC_105},
-               type = ['R2',(2,2,2)])  
+               type = ['R2',(2,2)])  
 
 # gg             
 V_127 = Vertex(name = 'V_127',
@@ -80,7 +128,7 @@ V_127 = Vertex(name = 'V_127',
                color = [ 'Identity(1,2)' ],
                lorentz = [ L.R2_GG_1 , L.R2_GG_2 ],
                couplings = {(0,0):C.GC_115, (0,1):C.GC_125},
-               type = ['R2',(21,21,21)])  
+               type = ['R2',(21,21)])  
 
 # d~d            
 V_108 = Vertex(name = 'V_108',
@@ -131,3 +179,4 @@ V_204 = Vertex(name = 'V_204',
                lorentz = [ L.FFV1 ],
                couplings = {(0,0):C.GC_203},
                type = ['UV',()])
+

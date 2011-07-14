@@ -34,30 +34,26 @@ GC_102 = Coupling(name = 'GC_102',
 
 # Gluon contribution to it
 
-GC_4GR2_Gluon_delta = Coupling(name = 'GC_4GR2_Gluon_delta',
-                 value = 'RGR2*8.0',
+GC_4GR2_delta = Coupling(name = 'GC_4GR2_delta',
+                 value = 'RGR2/2.0',
                  order = {'QCD':4})
 
 GC_4GR2_2Struct = Coupling(name = 'GC_4GR2_2Struct',
-                 value = '2.0*RGR2*Ncol*(lhv+3.0)',
+                 value = '-2.0*RGR2*Ncol*(2.0*lhv+5.0)',
                  order = {'QCD':4})
 
-GC_4GR2_4Struct = Coupling(name = 'GC_4GR2_4Struct',
-                 value = '-RGR2*Ncol*(4.0*lhv+11.0)',
+GC_4GR2_8Struct = Coupling(name = 'GC_4GR2_8Struct',
+                 value = '8.0*RGR2*Ncol*(lhv+3.0)',
                  order = {'QCD':4})
 
 # Fermion contribution to it
 
-GC_4GR2_Fermion_delta = Coupling(name = 'GC_4GR2_Fermion_delta',
-                 value = '-RGR2*2.0/Ncol',
+GC_4GR2_20Struct = Coupling(name = 'GC_4GR2_20Struct',
+                 value = '-12.0*RGR2',
                  order = {'QCD':4})
 
-GC_4GR2_5Struct = Coupling(name = 'GC_4GR2_5Struct',
-                 value = '5.0*RGR2',
-                 order = {'QCD':4})
-
-GC_4GR2_11Struct = Coupling(name = 'GC_4GR2_11Struct',
-                 value = '-11.0*RGR2',
+GC_4GR2_12Struct = Coupling(name = 'GC_4GR2_12Struct',
+                 value = '20.0*RGR2',
                  order = {'QCD':4})
 
 #=============================================================================================
