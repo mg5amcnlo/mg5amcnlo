@@ -42,6 +42,11 @@ c
       logical keep(cmax_events),done
       integer ntry
       logical gridrun,gridpack
+c
+c     PARAM_CARD
+c
+      character*30 param_card_name
+      common/to_param_card_name/param_card_name
 
       character*140 buff
 
@@ -62,6 +67,7 @@ c
       endif
 
 c   Get information for the <init> block
+      param_card_name = '%(param_card_name)s'
       call setrun
 
 c      nreq = 10000
@@ -200,7 +206,7 @@ c            write(*,*) min_goal,goal_wgt,max_goal
          write(*,*) 'Found ',nunwgt,' events writing first ',nreq
       endif
       write(*,*) 'Unweighting selected ',nreq, ' events.'
-      write(*,'(a,f5.2,a)') 'Truncated ',xtrunc*100./sum, '% of cross section'
+      write(*,'(a,f5.2,a)') 'Truncated ',xtrunc*100./sum, '%% of cross section'
 
 C $B$ output_file2 $B$ !this is tag for automatic modification by MW
       filename='unweighted_events.lhe'

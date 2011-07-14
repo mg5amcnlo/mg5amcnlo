@@ -1,6 +1,7 @@
 from __future__ import division
 import xml.etree.ElementTree as ET
 import math
+import os
 
 class InvalidParamCard(Exception):
     """ a class for invalid param_card """
@@ -61,9 +62,9 @@ class Parameter (object):
         """ return a SLAH string """
         
         if self.lhablock == 'decay':
-            return 'DECAY %s %s # %s' % (' '.join([str(d) for d in self.lhacode]), self.value, self.comment)
+            return 'DECAY %s %e # %s' % (' '.join([str(d) for d in self.lhacode]), self.value, self.comment)
         else:
-            return '      %s %s # %s' % (' '.join([str(d) for d in self.lhacode]), self.value, self.comment)
+            return '      %s %e # %s' % (' '.join([str(d) for d in self.lhacode]), self.value, self.comment)
 
 
 
@@ -94,7 +95,8 @@ class Block(list):
         
         assert isinstance(obj, Parameter)
         assert not obj.lhablock or obj.lhablock == self.name
-        assert tuple(obj.lhacode) not in self.param_dict
+        assert tuple(obj.lhacode) not in self.param_dict, \
+                                  '%s already define in %s' % (obj.lhacode,self)
         
         list.append(self, obj)
         # update the dictionary of key
@@ -257,7 +259,7 @@ class ParamCard(dict):
             self[new_name] = self.pop(old_name)
             self[new_name].name = new_name
             for param in self[new_name]:
-                param.block = new_name
+                param.lhablock = new_name
                 
     def remove_block(self, name):
         """ remove a blocks """
@@ -316,34 +318,32 @@ class ParamCard(dict):
         old_block = self[old_block]
         parameter = old_block.get(old_lha)
 
+        # Update the parameter
+        if block:
+            parameter.lhablock = block
+        if lhacode:
+            parameter.lhacode = lhacode
+        if value:
+            parameter.value = value
+        if comment:
+            parameter.comment = comment
 
-        # Change the block
+        # Change the block of the parameter
         if block:
             old_block.remove(old_lha)
             if not len(old_block):
                 self.remove_block(old_block.name)
-            parameter.block = block
             try:
                 new_block = self[block]
             except KeyError:
                 # If the new block didn't exist yet
                 new_block = Block(block)
-                self.append(new_block)
+                self.append(new_block)            
             new_block.append(parameter)
-        else:
-            new_block = old_block
-            block = old_block.name
-            
-        if lhacode:
-            parameter.lhacode = lhacode
-            self[block].param_dict[tuple(lhacode)] = \
-                                      self[block].param_dict.pop(tuple(old_lha))
+        elif lhacode:
+            old_block.param_dict[tuple(lhacode)] = \
+                                  old_block.param_dict.pop(tuple(old_lha))
 
-        if comment:
-            parameter.comment = comment
-        
-        if value:
-            parameter.value = value
 
     def check_and_remove(self, block, lhacode, value):
         """ check that the value is coherent and remove it"""
@@ -838,7 +838,7 @@ def convert_to_mg5card(path, outputpath=None ):
     
     # Td
     yd = card['yd'].get([3, 3]).value
-    ad = card['td'].get([3, 3]).value
+    ad = card['ad'].get([3, 3]).value
     card.mod_param('ad', [3,3], 'td', [3,3], value= ad * yd, comment='T_b(Q) DRbar')
     card.check_and_remove('ad', [1,1], 0)
     card.check_and_remove('ad', [2,2], 0)
@@ -847,9 +847,9 @@ def convert_to_mg5card(path, outputpath=None ):
     value = card['msoft'].get([31]).value
     card.mod_param('msoft', [31], 'msl2', [1,1], value**2)
     value = card['msoft'].get([32]).value
-    card.mod_param('msl2', [32], 'msoft', [2,2], value**2)
+    card.mod_param('msoft', [32], 'msl2', [2,2], value**2)
     value = card['msoft'].get([33]).value
-    card.mod_param('msl2', [33], 'msoft', [3,3], value**2)
+    card.mod_param('msoft', [33], 'msl2', [3,3], value**2)
     
     # MSE2
     value = card['msoft'].get([34]).value
@@ -908,6 +908,19 @@ def make_valid_param_card(path, restrictpath, outputpath=None):
             shutil.copy(path, outputpath)
     return cardrule
 
+def check_valid_param_card(path, restrictpath=None):
+    """ modify the current param_card such that it agrees with the restriction"""
+    
+    if restrictpath is None:
+        restrictpath = os.path.dirname(path)
+        restrictpath = os.path.join(restrictpath, os.pardir, 'Source', 
+                                                 'MODEL', 'param_card_rule.dat')
+        if not os.path.exists(restrictpath):
+            return True
+        
+    cardrule = ParamCardRule()
+    cardrule.load_rule(restrictpath)
+    cardrule.check_param_card(path, modify=False)
 
 if '__main__' == __name__:
 

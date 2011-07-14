@@ -17,6 +17,7 @@
 
 import logging
 import os
+import re
 import shutil
 import subprocess
 import sys
@@ -166,6 +167,14 @@ class MadEventLauncher(object):
         if self.web:
             os.system('touch Online')
 
+        # Check if we need the MSSM special treatment
+        model = self.find_model_name()
+        if model == 'mssm' or model.startswith('mssm-'):
+            param_card = pjoin(self.main, 'Cards','param_card.dat')
+            mg5_param = pjoin(self.main, 'Source', 'MODEL', 'MG5_param.dat')
+            check_param_card.convert_to_mg5card(param_card, mg5_param)
+            check_param_card.check_valid_param_card(mg5_param)
+
         # check some special information
         run_data = self.read_run_card(run_card)
         
@@ -306,6 +315,12 @@ class MadEventLauncher(object):
     def refine(self, run_data):
         """ make the refine """
         
+        mode = self.find_madevent_mode()
+        if mode == 'group':
+            nb_loop = 1
+        else:
+            nb_loop = 5
+        
         os.system('touch %s' % pjoin(self.main, 'refine'))
         
         os.system('%s/gen_crossxhtml-pl %s' % (self.dirbin, self.name))
@@ -314,9 +329,9 @@ class MadEventLauncher(object):
         if self.cluster_mode == 0:
             args = "%s 0 %s" % (nb_event, self.name)
         elif self.cluster_mode == 1:
-            args = "%s 1 %s 1 %s " % (nb_event,self.cluster_queue, self.name) 
+            args = "%s 1 %s %s %s " % (nb_event,self.cluster_queue, nb_loop, self.name) 
         elif self.cluster_mode == 2:
-            args = "%s 2 %s 1 %s " % (nb_event, self.nb_core, self.name) 
+            args = "%s 2 %s %s %s " % (nb_event, self.nb_core, nb_loop, self.name) 
         
         os.system('%s/refine %s ' % (self.bin, args))
 
@@ -416,14 +431,7 @@ class MadEventLauncher(object):
         param_card = pjoin(self.main, 'Cards','param_card.dat')
         if os.path.exists(rule_file):
             check_param_card.make_valid_param_card(param_card, rule_file)
-        
-        model = self.find_model_name()
-        
-        if model.startswith('mssm'):
-            pythia_param = pjoin(self.main, 'Cards', 'pythia_param_card.dat')
-            check_param_card.convert_slha1(param_card, pythia_param)
-            param_card = pythia_param
-
+                
         open(self.status,'w').writelines('Running Pythia')
         os.system("gunzip -c %(path)s/%(name)s_unweighted_events.lhe.gz > %(path)s/unweighted_events.lhe"\
                    % {'path': pjoin(self.main,'Events') ,'name':self.name})
@@ -613,7 +621,21 @@ class MadEventLauncher(object):
        
         self.model = model
         return model
-       
+    
+    
+    ############################################################################
+    def find_madevent_mode(self):
+        """Find if Madevent is in Group mode or not"""
+        
+        # The strategy is too look in the files Source/run_configs.inc
+        # if we found: ChanPerJob=3 then it's a group mode.
+        
+        file_path = pjoin(self.main, 'Source', 'run_config.inc')
+        text = open(file_path).read()
+        if re.search(r'''s*parameter\s+\(ChanPerJob=2\)''', text, re.I+re.M):
+            return 'group'
+        else:
+            return 'v4'
        
     ############################################################################
     def treat_ckkw_matching(self, run_data):

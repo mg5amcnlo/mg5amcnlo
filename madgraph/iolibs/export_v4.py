@@ -907,13 +907,24 @@ class ProcessExporterFortranME(ProcessExporterFortran):
 
         super(ProcessExporterFortranME, self).copy_v4template(modelname)
 
+        # File created from Template (Different in some child class)
+        filename = os.path.join(self.dir_path,'Source','run_config.inc')
+        self.write_run_config_file(writers.FortranWriter(filename))
+        
+        # The next file are model dependant (due to SLAH convention)
         self.model_name = modelname
         # add the driver.f 
         filename = os.path.join(self.dir_path,'SubProcesses','driver.f')
         self.write_driver(writers.FortranWriter(filename))
+        # add the symmetry.f 
         filename = os.path.join(self.dir_path,'SubProcesses','symmetry.f')
         self.write_symmetry(writers.FortranWriter(filename))
-
+        # add the combine_events.f 
+        filename = os.path.join(self.dir_path,'Source','combine_events.f')
+        self.write_combine_events(writers.FortranWriter(filename))
+        # add the write_banner.f 
+        filename = os.path.join(self.dir_path,'Source','write_banner.f')
+        self.write_write_banner(writers.FortranWriter(filename))
 
     #===========================================================================
     # generate_subprocess_directory_v4 
@@ -1444,6 +1455,20 @@ class ProcessExporterFortranME(ProcessExporterFortran):
                                                             mapconfigs,
                                                             nexternal, ninitial)
 
+
+
+    #===========================================================================
+    # write_run_configs_file
+    #===========================================================================
+    def write_run_config_file(self, writer):
+        """Write the run_configs.inc file for MadEvent"""
+
+        path = os.path.join(_file_path,'iolibs','template_files','madevent_run_config.inc') 
+        text = open(path).read() % {'chanperjob':'5'} 
+        writer.write(text)
+        return True
+
+
     #===========================================================================
     # write_configs_file_from_diagrams
     #===========================================================================
@@ -1573,7 +1598,44 @@ class ProcessExporterFortranME(ProcessExporterFortran):
         return True
 
     #===========================================================================
-    # write_driver
+    # write_write_banner
+    #===========================================================================
+    def write_write_banner(self, writer):
+        """Write the SubProcess/driver.f file for MG4"""
+
+        path = os.path.join(_file_path,'iolibs','template_files','madevent_write_banner.f')
+        
+        if self.model_name == 'mssm' or self.model_name.startswith('mssm-'):
+            card = 'Source/MODEL/MG5_param.dat'
+        else:
+            card = 'param_card.dat' 
+        text = open(path).read() % {'param_card_name':card} 
+
+        writer.write(text)
+        
+        return True
+
+    #===========================================================================
+    # write_combine_events
+    #===========================================================================
+    def write_combine_events(self, writer):
+        """Write the SubProcess/driver.f file for MG4"""
+
+        path = os.path.join(_file_path,'iolibs','template_files','madevent_combine_events.f')
+        
+        if self.model_name == 'mssm' or self.model_name.startswith('mssm-'):
+            card = 'Source/MODEL/MG5_param.dat'
+        else:
+            card = 'param_card.dat' 
+        text = open(path).read() % {'param_card_name':card} 
+
+        writer.write(text)
+        
+        return True
+
+
+    #===========================================================================
+    # write_symmetry
     #===========================================================================
     def write_symmetry(self, writer):
         """Write the SubProcess/driver.f file for MG4"""
@@ -1910,31 +1972,6 @@ class ProcessExporterFortranMEGroup(ProcessExporterFortranME):
     MadEvent subprocess group format."""
 
     matrix_file = "matrix_madevent_group_v4.inc"
-
-    #===========================================================================
-    # copy the Template in a new directory.
-    #===========================================================================
-    def copy_v4template(self, modelname):
-        """Additional actions needed for setup of Template
-        """
-
-        super(ProcessExporterFortranMEGroup, self).copy_v4template(modelname)
-
-        # Update values in run_config.inc
-        run_config = \
-                open(os.path.join(self.dir_path, 'Source', 'run_config.inc')).read()
-        run_config = run_config.replace("ChanPerJob=5",
-                                        "ChanPerJob=2")
-        open(os.path.join(self.dir_path, 'Source', 'run_config.inc'), 'w').\
-                                    write(run_config)
-        # Update values in generate_events
-        generate_events = \
-                open(os.path.join(self.dir_path, 'bin', 'generate_events')).read()
-        generate_events = generate_events.replace(\
-                                        "$dirbin/refine $a $mode $n 5 $t",
-                                        "$dirbin/refine $a $mode $n 1 $t")
-        open(os.path.join(self.dir_path, 'bin', 'generate_events'), 'w').\
-                                    write(generate_events)
 
     #===========================================================================
     # generate_subprocess_directory_v4
@@ -2323,6 +2360,18 @@ class ProcessExporterFortranMEGroup(ProcessExporterFortranME):
                self.write_configs_file_from_diagrams(writer, diagrams,
                                                 config_numbers,
                                                 nexternal, ninitial)
+
+    #===========================================================================
+    # write_run_configs_file
+    #===========================================================================
+    def write_run_config_file(self, writer):
+        """Write the run_configs.inc file for MadEvent"""
+
+        path = os.path.join(_file_path,'iolibs','template_files','madevent_run_config.inc') 
+        text = open(path).read() % {'chanperjob':'2'} 
+        writer.write(text)
+        return True
+
 
     #===========================================================================
     # write_leshouche_file

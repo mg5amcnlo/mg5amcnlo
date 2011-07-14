@@ -35,7 +35,7 @@ c
       parameter     (PBS_QUE = 'madgraph')
 
       integer    ChanPerJob
-      parameter (ChanPerJob=5)  !Number of channels / job for survey
+      parameter (ChanPerJob=%(chanperjob)s)  !Number of channels / job for survey
 
 c      integer    max_np
 c      parameter (max_np=1)  !Number of channels / job for refine

@@ -42,7 +42,7 @@ c
 c
 c     gather the info
 c
-      call setpara('param_card.dat',.true.)
+      call setpara('%(param_card_name)s')
 c      call setcuts
 c      call get_seed(iseed)
 c

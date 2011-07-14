@@ -693,7 +693,7 @@ class CheckValidForCmd(object):
             return 'pythia8'
         elif os.path.isdir(src_path):
             return 'standalone_cpp'
-        elif os.path.isfile(os.path.join(bin_path,'generate_events')):
+        elif os.path.isfile(os.path.join(bin_path,'generate_events.py')):
             return 'madevent'
         elif os.path.isdir(card_path):
             return 'standalone'

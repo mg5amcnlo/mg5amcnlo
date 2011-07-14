@@ -127,7 +127,24 @@ class TestParamCard(unittest.TestCase):
         self.assertFalse(card.has_param('new', [23]))
         self.assertTrue(card.has_param('mass', [23]))
         
-        self.assertFalse('new' in card.keys())        
+        self.assertFalse('new' in card.keys())
+        
+        card.mod_param('mass', [23], 'new', [25], 43)
+        card.mod_param('decay', [23], 'new', [26], 43)
+        
+        self.assertEqual(len(card['new']), 2)
+        self.assertTrue(card.has_param('new', [25]))                        
+        self.assertTrue(card.has_param('new', [26]))
+        self.assertFalse(card.has_param('new', [23]))
+        self.assertFalse(card.has_param('mass', [23]))
+        self.assertEqual(card['new'].get([25]).value, 43)
+        
+        card.mod_param('new', [25], 'mass', [23])
+        card.mod_param('new', [26], 'decay', [23])       
+                
+        self.assertFalse('new' in card.keys())       
+        
+                
 
     def test_mod_card(self):
         """ test that we can modify a param card """
@@ -160,37 +177,27 @@ class TestParamCard(unittest.TestCase):
         self.assertRaises(KeyError, card['width'].get, [32])
         self.assertEqual(param, card['mass'].get([32]))
         self.assertEqual(param.lhacode, [32])
-        self.assertEqual(param.block, 'mass')
+        self.assertEqual(param.lhablock, 'mass')
         
+       
         # change the block of a parameter and lhacode
-        card.mod_param('mass', [32], block='polemass', lhacode=[23])
+        card.mod_param('mass', [32], block='polemass', lhacode=[35])
         
         self.assertFalse(card.has_key('mass'))
         self.assertRaises(KeyError, card['polemass'].get, [32])
         self.assertRaises(KeyError, card['width'].get, [32])
-        self.assertEqual(param, card['polemass'].get([23]))
-        self.assertEqual(param.lhacode, [23])
-        self.assertEqual(param.block, 'polemass')        
+        self.assertEqual(param, card['polemass'].get([35]))
+        self.assertEqual(param.lhacode, [35])
+        self.assertEqual(param.lhablock, 'polemass')        
         
         # change the value / comment
-        card.mod_param('polemass', [23], value=2, comment='new')
+        card.mod_param('polemass', [35], value=2, comment='new')
         self.assertEqual(param.value, 2)
         self.assertEqual(param.comment, 'new')
         
+        self.assertRaises(AssertionError, card.mod_param('polemass', [35], 'width', [23]))
         
-        
-        
-        
-        
-        
-        
-        
-        
-        
-        
-        
-        
-
+    
 class TestParamCardRule(unittest.TestCase):
     """ Test the ParamCardRule Object"""
     
@@ -286,14 +293,14 @@ class TestParamCardRule(unittest.TestCase):
 ## INFORMATION FOR MASS
 ###################################
 BLOCK MASS # 
-      11 0.000000e-04 #  me
-      13 0.000000e-01 #  mm
+      11 0.000000e+00 #  me
+      13 0.000000e+00 #  mm
       15 1.777000e+00 #  mta
-      2 0.000000e-03 #  mu
+      2 0.000000e+00 #  mu
       4 0.000000e+00 #  mc
       6 1.743000e+02 #  mt
-      1 0.000000e-03 #  md
-      3 0.000000e-01 #  ms
+      1 0.000000e+00 #  md
+      3 0.000000e+00 #  ms
       5 0.000000e+00 #  mb
       23 9.118800e+01 #  mz
       25 9.118800e+01 #  mh
@@ -301,19 +308,19 @@ BLOCK MASS #
 ## INFORMATION FOR CKMBLOCK
 ###################################
 BLOCK CKMBLOCK # 
-      1 0.000000e-01 #  cabi
+      1 0.000000e+00 #  cabi
 ###################################
 ## INFORMATION FOR SMINPUTS
 ###################################
 BLOCK SMINPUTS # 
-      1 1.32507000e+02 #  aewm1
+      1 1.325070e+02 #  aewm1
       2 1.166390e-05 #  gf
       3 1.180000e-01 #  as
 ###################################
 ## INFORMATION FOR YUKAWA
 ###################################
 BLOCK YUKAWA # 
-      4 0.00000e+00 #  ymc
+      4 0.000000e+00 #  ymc
       5 0.000000e+00 #  ymb
       6 1.645000e+02 #  ymt
       15 1.777000e+00 #  ymtau
@@ -321,13 +328,13 @@ BLOCK YUKAWA #
 ## INFORMATION FOR DECAY
 ###################################
 DECAY 6 0.000000e+00 #  wt
-      5 24 0.99 #  branching ratio
-      3 24 0.01 #  branching ratio
+      5 24 9.900000e-01 #  branching ratio
+      3 24 1.000000e-02 #  branching ratio
 
 DECAY 23 2.441404e+00 #  wz
-      5 -5 1 # 
+      5 -5 1.000000e+00 # 
 
-DECAY 24 3.00e+00 #  ww
+DECAY 24 3.000000e+00 #  ww
 DECAY 25 2.441404e+00 #  wh
 """
         self.assertEqual(target.split('\n'), output.split('\n'))
@@ -476,15 +483,15 @@ DECAY 25 2.441404e+00 #  wh
 BLOCK MASS # 
       15 1.777000e+00 #  mta
       6 1.743000e+02 #  mt
-      5 0.0 #  mb fixed by the model
+      5 0.000000e+00 #  mb fixed by the model
       23 9.118800e+01 #  mz
-      25 91.188 #  mh must be identical to [23]
-      11 0 # fixed by the model
-      13 0 # fixed by the model
-      2 0 # fixed by the model
-      4 0 # fixed by the model
-      1 0 # fixed by the model
-      3 0 # fixed by the model
+      25 9.118800e+01 #  mh must be identical to [23]
+      11 0.000000e+00 # fixed by the model
+      13 0.000000e+00 # fixed by the model
+      2 0.000000e+00 # fixed by the model
+      4 0.000000e+00 # fixed by the model
+      1 0.000000e+00 # fixed by the model
+      3 0.000000e+00 # fixed by the model
 ###################################
 ## INFORMATION FOR SMINPUTS
 ###################################
@@ -496,23 +503,23 @@ BLOCK SMINPUTS #
 ## INFORMATION FOR YUKAWA
 ###################################
 BLOCK YUKAWA # 
-      5 0.0 #  ymb fixed by the model
+      5 0.000000e+00 #  ymb fixed by the model
       6 1.645000e+02 #  ymt
       15 1.777000e+00 #  ymtau
-      4 0 # fixed by the model
+      4 0.000000e+00 # fixed by the model
 ###################################
 ## INFORMATION FOR DECAY
 ###################################
-DECAY 6 0.0 #  fixed by the model
+DECAY 6 0.000000e+00 #  fixed by the model
 DECAY 23 2.441404e+00 # 
 DECAY 24 2.047600e+00 # 
-DECAY 25 2.441404 #  must be identical to [23]
-DECAY 15 0 # fixed by the model
+DECAY 25 2.441404e+00 #  must be identical to [23]
+DECAY 15 0.000000e+00 # fixed by the model
 ###################################
 ## INFORMATION FOR CKMBLOCK
 ###################################
 BLOCK CKMBLOCK # 
-      1 0 # fixed by the model
+      1 0.000000e+00 # fixed by the model
 """
       
         self.assertEqual(output.split('\n'), target.split('\n'))
