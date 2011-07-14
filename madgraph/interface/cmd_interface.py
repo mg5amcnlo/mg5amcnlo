@@ -3042,6 +3042,31 @@ class MadGraphCmdWeb(MadGraphCmd, CheckValidForCmdWeb):
         """Finalize web generation""" 
         
         MadGraphCmd.finalize(self, nojpeg, online = True)
+
+    # Generate a new amplitude
+    def do_generate(self, line):
+        """Generate an amplitude for a given process"""
+
+        try:
+           MadGraphCmd.do_generate(self, line)
+        except:
+            # put the stop logo on the web
+            files.cp(self._export_dir+'/HTML/stop.jpg',self._export_dir+'/HTML/card.jpg')
+            raise
+    
+    # Add a process to the existing multiprocess definition
+    def do_add(self, line):
+        """Generate an amplitude for a given process and add to
+        existing amplitudes
+        syntax:
+        """
+        try:
+           MadGraphCmd.do_add(self, line)
+        except:
+            # put the stop logo on the web
+            files.cp(self._export_dir+'/HTML/stop.jpg',self._export_dir+'/HTML/card.jpg')
+            raise
+
 #===============================================================================
 # MadGraphCmd
 #===============================================================================
