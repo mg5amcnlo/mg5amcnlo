@@ -1,5 +1,13 @@
 Update notes for MadGraph 5 (in reverse time order)
 
+1.3.5 (14/07/11): JA: New organization of make files, ensure that compilation works 
+                      for all modes (with/without LHAPDF, static/dynamic, 
+                      regular/gridpack) for both Linux and Mac OS X (be careful with 
+                      dynamic libraries on Mac OS X though, since it seems that 
+                      common blocks might not work properly)
+                  JA: Fixed proper error messages and clean stop for compilation 
+                      errors during MadEvent run.
+
 1.3.4 (05/07/11): OM: More informative error message when a compilation error occurs
 
 1.3.3 (29/06/11): JA: Fixed diagram symmetry for case when there are

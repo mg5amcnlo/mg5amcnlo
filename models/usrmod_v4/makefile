@@ -5,23 +5,23 @@
 #
 # ----------------------------------------------------------------------------
 
-G77           = g77
-FFLAGS        = -O -ffixed-line-length-132
-LIBRARY       = ../libmodel.a
+ifeq ($(wildcard ../make_opts), ../make_opts)
+  include ../make_opts
+else
+  FFLAGS+= -ffixed-line-length-132
+endif
+
 LIBDIR        = ../../lib/
+LIBRARY	      = libmodel.$(libext)
 MODEL         = couplings.o lha_reading.o printout.o couplings_test.o
 
-.f.o: ; $(G77) $(FFLAGS) -c $*.f
+all: $(LIBDIR)$(LIBRARY)
 
-all: $(LIBDIR)libmodel.a
+$(LIBDIR)$(LIBRARY): $(MODEL)
+	$(call CREATELIB, $@, $^)
 
 testprog: testprog.o $(MODEL)
 	$(G77) $(FFLAGS) -o $@ $^
 
 couplings: couplingsvalues.o $(MODEL)
 	$(G77) $(FFLAGS) -o $@ $^
-
-$(LIBDIR)libmodel.a: $(MODEL) makefile
-	ar cru libmodel.a $(MODEL)
-	ranlib libmodel.a
-	mv libmodel.a  $(LIBDIR)

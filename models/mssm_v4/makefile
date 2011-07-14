@@ -6,17 +6,15 @@
 # ----------------------------------------------------------------------------
 
 
-G77           = g77
-FFLAGS        = -O -ffixed-line-length-132
-LIBRARY	      = ../libmodel.a
+include ../make_opts
+
 LIBDIR        = ../../lib/
+LIBRARY	      = libmodel.$(libext)
 MODEL         = couplings.o read_slha.o printout.o hardstop.o
 
 .f.o: ; $(G77) $(FFLAGS) -c $*.f
 
-all: $(LIBDIR)libmodel.a
+all: $(LIBDIR)$(LIBRARY)
 
-$(LIBDIR)libmodel.a: $(MODEL) makefile
-	ar cru libmodel.a $(MODEL)
-	ranlib libmodel.a
-	mv libmodel.a  $(LIBDIR)
+$(LIBDIR)$(LIBRARY): $(MODEL)
+	$(call CREATELIB, $@, $^)
