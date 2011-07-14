@@ -20,3 +20,10 @@ Note that you need to copy the files in order to create a gridpack from this dir
 4) Run bin/cleanall (to remove any previously compiled files)
 
 5) Run bin/generate_events (or run.sh/...) as usual
+
+Notes for Mac OS X:
+If LHAPDF doesn't work on Mac, please try downloading gcc-4.6 from
+http://hpc.sourceforge.net/
+and make sure /usr/local/bin comes before other directories in your PATH.
+You might also need to compile LHAPDF with the option --enable-low-memory,
+and perhaps remove the flag -lstd++ in the file Source/make_opts.
