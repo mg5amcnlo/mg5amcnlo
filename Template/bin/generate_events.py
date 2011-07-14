@@ -425,13 +425,7 @@ class MadEventLauncher(object):
     ############################################################################
     def run_pythia(self, run_data):
         """ Run pythia and make the associate plot """
-        
-        # Check the format of the param_card for Pythia and make it correct
-        rule_file = pjoin(self.main,'Source','MODEL','param_card_rule.dat')
-        param_card = pjoin(self.main, 'Cards','param_card.dat')
-        if os.path.exists(rule_file):
-            check_param_card.make_valid_param_card(param_card, rule_file)
-                
+                        
         open(self.status,'w').writelines('Running Pythia')
         os.system("gunzip -c %(path)s/%(name)s_unweighted_events.lhe.gz > %(path)s/unweighted_events.lhe"\
                    % {'path': pjoin(self.main,'Events') ,'name':self.name})
