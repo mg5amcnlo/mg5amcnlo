@@ -455,8 +455,6 @@ class LoopHelasMatrixElementTest(unittest.TestCase):
                                 ct_vert=ctverts[ct_number-1]                                
                                 nCTColor=len(process['model'].get('interaction_dict')[ct_vert['id']].get('color'))
                                 if nCTColor==0: nCTColor=1
-                                print "nCTColor=",nCTColor
-                                print "from vertex=",process['model'].get('interaction_dict')[ct_vert['id']]
                                 if verbose:
                                     print "CT diag",ct_number,"colorization :",\
                                       this_loop_colorize_obj[ct_number].keys()
@@ -552,8 +550,10 @@ class LoopHelasMatrixElementTest(unittest.TestCase):
         myloopamplitude = loop_diagram_generation.LoopAmplitude()
         myloopamplitude.set('process', myloopproc)
         myloopamplitude.generate_diagrams()
-        print "CT interaction considered=",self.myloopmodel.get_interaction(8)
-        self.check_LHME_individual_diag_sanity(myloopamplitude,myloopproc,selection=[(17,17)],verbose=True)
+        
+        #print "CT interaction considered=",self.myloopmodel.get_interaction(8)
+        #self.check_LHME_individual_diag_sanity(myloopamplitude,myloopproc,selection=[(17,17)],verbose=True)
+        self.check_LHME_individual_diag_sanity(myloopamplitude,myloopproc)
         
     def test_helas_diagrams_gg_ggg(self):
         """Test the generation of all the helas diagrams for the loop process 

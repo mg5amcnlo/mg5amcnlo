@@ -336,7 +336,7 @@ class LoopUFOImportTest(unittest.TestCase):
         
         self.assertEqual(self.imported_loopmodel['perturbation_couplings'],\
                          ['QCD',])
-        self.assertEqual(len(self.imported_loopmodel['interactions']),19)
+        self.assertEqual(len(self.imported_loopmodel['interactions']),21)
         self.assertEqual(self.imported_loopmodel['name'],'loop_ToyModel')
         self.assertEqual(self.imported_loopmodel['order_hierarchy'],\
                          {'QCD':1})
