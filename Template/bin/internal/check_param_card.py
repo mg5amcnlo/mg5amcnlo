@@ -13,11 +13,13 @@ class Parameter (object):
     def __init__(self, param=None, block=None, lhacode=None, value=None, comment=None):
         """Init the parameter"""
 
+        self.format = 'float'
         if param:
             block = param.lhablock
             lhacode = param.lhacode
             value = param.value
             comment = param.comment
+            format = param.format
 
         self.lhablock = block        
         if lhacode:
@@ -61,11 +63,16 @@ class Parameter (object):
     def __str__(self):
         """ return a SLAH string """
         
-        if self.lhablock == 'decay':
-            return 'DECAY %s %e # %s' % (' '.join([str(d) for d in self.lhacode]), self.value, self.comment)
+        if self.format == 'float':
+            if self.lhablock == 'decay':
+                return 'DECAY %s %e # %s' % (' '.join([str(d) for d in self.lhacode]), self.value, self.comment)
+            else:
+                return '      %s %e # %s' % (' '.join([str(d) for d in self.lhacode]), self.value, self.comment)
         else:
-            return '      %s %e # %s' % (' '.join([str(d) for d in self.lhacode]), self.value, self.comment)
-
+            if self.lhablock == 'decay':
+                return 'DECAY %s %d # %s' % (' '.join([str(d) for d in self.lhacode]), self.value, self.comment)
+            else:
+                return '      %s %d # %s' % (' '.join([str(d) for d in self.lhacode]), self.value, self.comment)
 
 
 class Block(list):
@@ -614,6 +621,8 @@ def convert_to_slha1(path, outputpath=None ):
     
     # MODSEL
     card.add_param('modsel',[1], value=1)
+    card['modsel'].get([1]).format = 'int'
+    
     
     # SMINPUTS
     if not card.has_param('sminputs', [2]):
