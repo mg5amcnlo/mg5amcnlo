@@ -19,7 +19,7 @@ Block MASS
     6 1.720000e+02 # MT 
    11 0.000000e+00 # Me 
    13 0.000000e+00 # MM 
-   15 0.000000e+00 # MTA 
+   15 1.777000e+00 # MTA 
    23 9.118800e+01 # MZ 
    25 1.200000e+02 # MH 
 
@@ -36,10 +36,10 @@ DECAY  25 5.753088e-03
 ## INFORMATION FOR WOLFENSTEIN
 ###################################
 Block Wolfenstein 
-    1 0.000000e+00 # lamWS 
-    2 0.000000e+00 # AWS 
-    3 0.000000e+00 # rhoWS 
-    4 0.000000e+00 # etaWS 
+    1 2.253000e-01 # lamWS 
+    2 8.080000e-01 # AWS 
+    3 1.320000e-01 # rhoWS 
+    4 3.410000e-01 # etaWS 
 
 ###################################
 ## INFORMATION FOR YUKAWA
@@ -50,4 +50,4 @@ Block YUKAWA
     6 1.645000e+02 # ymt 
    11 0.000000e+00 # yme 
    13 0.000000e+00 # ymm 
-   15 0.000000e+00 # ymtau 
+   15 1.777000e+00 # ymtau 
