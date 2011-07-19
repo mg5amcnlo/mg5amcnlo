@@ -713,7 +713,7 @@ class MadEventLauncher(object):
     def close_on_error(self):
         """Close nicely the run"""
         
-        shutil.mv(self.error, self.status)
+        shutil.move(self.error, self.status)
         try:
             os.remove(pjoin(self.main,'refine'))
             os.remove(pjoin(self.main,'refine2'))
