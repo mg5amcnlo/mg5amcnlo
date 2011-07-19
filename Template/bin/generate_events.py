@@ -31,6 +31,9 @@ import check_param_card
 
 logger = logging.getLogger('madevent')
 
+class MERunError(Exception):
+    pass
+
 class MadEventLauncher(object):
     
     # Store the path of the important executables
@@ -192,6 +195,7 @@ class MadEventLauncher(object):
         if os.path.exists(self.error):
             os.remove(self.error)
         os.system('touch RunWeb')
+        logger.info('Cleaning directories')
         os.system('echo \"Cleaning directories\" > %s' % self.status)
 
         os.system('%s/gen_crossxhtml-pl %s' % (self.dirbin, self.name))
@@ -200,7 +204,13 @@ class MadEventLauncher(object):
         # LHAPDF INTERFACE
         #
         if run_data['pdlabel'] == "'lhapdf'":
-            sys.exit('MadEvent5 is not compatible with LHAPDF yet!')
+            os.environ['lhapdf'] = True
+        elif 'lhapdf' in os.environ.keys():
+            del os.environ['lhapdf']
+        #
+        # Compile Source
+        #   
+        self.compile_source()
         #
         # ICKKW=2
         #
@@ -341,6 +351,21 @@ class MadEventLauncher(object):
         os.system('%s/gen_crossxhtml-pl %s' % (self.dirbin, self.name))
         os.system('%s/refine %s ' % (self.bin, args))
         os.remove(pjoin(self.main, 'refine2'))
+   
+    ############################################################################
+    def compile_source(self):
+        """Compile the Source directory and check that all compilation suceed"""
+          
+        os.system("echo \"Cleaning directories\" >& %s" % self.status)  
+        os.system('%s/gen_crossxhtml-pl %s' % (self.dirbin, self.name))
+        
+        
+        p = subprocess.Popen([pjoin(self.dirbin, 'compile_Source')], 
+                             stdout=subprocess.PIPE, 
+                             stderr=subprocess.PIPE, cwd=self.main)
+        p.wait()
+        if p.returncode:
+            raise MERunError, 'Impossible to Compile Source directory' 
         
     ############################################################################
     def combine_events(self):
@@ -684,6 +709,20 @@ class MadEventLauncher(object):
                 os.system('%s/gen_crossxhtml-pl %s' % (self.dirbin, self.name))
                 os.system('%s/gen_cardhtml-pl' % self.dirbin)
  
+
+    def close_on_error(self):
+        """Close nicely the run"""
+        
+        shutil.mv(self.error, self.status)
+        try:
+            os.remove(pjoin(self.main,'refine'))
+            os.remove(pjoin(self.main,'refine2'))
+        except:
+            pass
+        os.remove(pjoin(self.main, 'RunWeb'))
+        os.system('%s/gen_crossxhtml-pl %s' % (self.dirbin, self.name))
+        os.system('%s/gen_cardhtml-pl' % self.dirbin)
+         
  
 def is_executable(path):
     """ check if a path is executable"""
@@ -744,9 +783,11 @@ if '__main__' == __name__:
     if len(argument) == 5:
         ME.pass_in_web_mode()
     
-    ME.launch()
-    
-     
+    try:
+        ME.launch()
+    except MERunError:
+        ME.close_on_error()
+             
         
 
         

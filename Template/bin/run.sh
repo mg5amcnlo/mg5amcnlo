@@ -19,7 +19,10 @@ if [[ ! -d ./madevent ]]; then
         exit
 fi
 
-export LD_LIBRARY_PATH=${LD_LIBRARY_PATH}:${PWD}/madevent/lib
+# For Linux
+export LD_LIBRARY_PATH=${LD_LIBRARY_PATH}:${PWD}/madevent/lib:${PWD}/HELAS/lib
+# For Mac OS X
+export DYLD_LIBRARY_PATH=${DYLD_LIBRARY_PATH}:${PWD}/madevent/lib:${PWD}/HELAS/lib
 
 card=./madevent/Cards/grid_card.dat
 
@@ -66,7 +69,7 @@ if [[ ! -e ./Events/unweighted_events.lhe ]]; then
     echo "Error: event file not found !"
     exit
 else
-    echo "Moving events"
+    echo "Moving events from madevent/Events/unweighted_events.lhe to events.lhe"
     mv ./Events/unweighted_events.lhe ../events.lhe
     cd ..
 fi
