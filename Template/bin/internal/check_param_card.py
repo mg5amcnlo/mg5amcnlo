@@ -162,7 +162,7 @@ class Block(list):
         elif not self.scale:
             text += 'BLOCK %s # %s\n' % (self.name.upper(), self.comment)
         else:
-            text += 'BLOCK %s Q=%s # %s\n' % (self.name.upper(), self.scale, self.comment)
+            text += 'BLOCK %s Q= %e # %s\n' % (self.name.upper(), self.scale, self.comment)
         
         text += '\n'.join([str(param) for param in self])
             
