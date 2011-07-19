@@ -261,20 +261,9 @@ class MELauncher(ExtLauncher):
     def launch_program(self):
         """launch the main program"""
         
-        # Open the corresponding crossx.html page
-        os.system('touch %s' % os.path.join(self.running_dir,'RunWeb'))
-        subprocess.call([os.path.join('bin','internal','gen_crossxhtml-pl')], 
-                         cwd=self.running_dir)
-        open_file(os.path.join(self.running_dir, 'HTML', 'crossx.html'))
-
+        # Check for number of cores if multicore mode
         mode = str(self.cluster)
-        if mode == "0":
-            subprocess.call([self.executable, mode, self.name], 
-                                                           cwd=self.running_dir)
-        elif mode == "1":
-            subprocess.call([self.executable, mode, self.name, self.name], 
-                                                           cwd=self.running_dir)
-        elif mode == "2":
+        if mode == "2":
             import multiprocessing
             max_node = multiprocessing.cpu_count()
             if max_node == 1:
@@ -283,6 +272,20 @@ class MELauncher(ExtLauncher):
                 self.launch_program()
                 return
             nb_node = self.ask('How many core do you want to use?', max_node, range(max_node+1))
+        # Open the corresponding crossx.html page
+        os.system('touch %s' % os.path.join(self.running_dir,'RunWeb'))
+        subprocess.call([os.path.join('bin','internal','gen_crossxhtml-pl')], 
+                         cwd=self.running_dir)
+        open_file(os.path.join(self.running_dir, 'HTML', 'crossx.html'))
+
+        # Launch event generation
+        if mode == "0":
+            subprocess.call([self.executable, mode, self.name], 
+                                                           cwd=self.running_dir)
+        elif mode == "1":
+            subprocess.call([self.executable, mode, self.name, self.name], 
+                                                           cwd=self.running_dir)
+        elif mode == "2":
             subprocess.call([self.executable, mode, nb_node, self.name], 
                                                            cwd=self.running_dir)
         

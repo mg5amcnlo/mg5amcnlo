@@ -23,6 +23,11 @@ GENSUDGRID = gensudgrid.o is-sud.o setrun_gen.o rw_routines.o open_file.o
 
 LIBRARIES=$(LIBDIR)libdsample.$(libext) $(LIBDIR)libgeneric.$(libext)
 
+# Binaries
+
+BINARIES = $(BINDIR)sum_html $(BINDIR)gen_ximprove $(BINDIR)combine_events \
+           $(BINDIR)gensudgrid $(BINDIR)combine_runs
+
 # Compile commands
 
 all: %(libraries)s
@@ -42,8 +47,6 @@ $(LIBDIR)libcernlib.$(libext): CERNLIB
 	cd CERNLIB; make	
 $(LIBDIR)libmodel.$(libext): MODEL
 	cd MODEL; make	
-
-# Binaries
 
 $(BINDIR)sum_html: sum_html.o 
 	$(FC) $(FFLAGS) -o $@ $^
@@ -68,7 +71,7 @@ select_events.o: select_events.f run_config.inc
 setrun.o: setrun.f nexternal.inc leshouche.inc
 
 clean:
-	$(RM) *.o $(LIBRARIES)
+	$(RM) *.o $(LIBRARIES) $(BINARIES)
 	cd PDF; make clean; cd ..
 	cd DHELAS; make clean; cd ..
 	cd CERNLIB; make clean; cd ..

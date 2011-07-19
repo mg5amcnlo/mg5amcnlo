@@ -36,6 +36,8 @@ class MERunError(Exception):
 
 class MadEventLauncher(object):
     
+    # Truth values
+    true = ['T','.true.',True,'true']
     # Store the path of the important executables
     main = root_path
     # Strip off last directory
@@ -59,55 +61,51 @@ class MadEventLauncher(object):
         cls.delphesdir = cls.check_dir(pjoin(mainpar, 'Delphes'))
         cls.eradir = cls.check_dir(pjoin(mainpar, 'ExRootAnalysis'))
         cls.madir = cls.check_dir(pjoin(mainpar, 'MadAnalysis'))
-        cls.td = cls.check_exec(pjoin(mainpar, 'td'))
-        if cls.td:
-            cls.td = os.path.dirname(cls.td)
+        cls.td = cls.check_dir(pjoin(mainpar, 'td'))
             
         # read file ./executables_path.dat to overwrite default
         if not os.path.exists(pjoin(cls.main,'executables_path.dat')):
             return
         for line in file(pjoin(cls.main,'executables_path.dat')):
-            line = line.strip()
             line = line.split('#')[0]
-            line = line.split()
-            if len(line) != 3 or line[1] != '=':
+            line = line.split('=')
+            if len(line) != 2:
                 continue # wrongly formatted line
-            if line[0] == 'pythia-pgs':
+            for i, l in enumerate(line): line[i] = l.strip()
+            if line[0].lower() == 'pythia-pgs':
                 # check absolute relative and relative to current dir
-                cls.pydir = cls.check_dir(line[3], cls.pydir)
+                cls.pydir = cls.check_dir(line[1], cls.pydir)
                 # Try path from maindir
-                path = pjoin(cls.main, line[3])
+                path = pjoin(cls.main, line[1])
                 cls.pydir = cls.check_dir(path, cls.pydir)
                 cls.pgsdir = cls.pydir
             
-            elif line[0] == 'delphes':
-                cls.delphesdir = cls.check_dir(line[3], cls.delphesdir)
+            elif line[0].lower() == 'delphes':
+                cls.delphesdir = cls.check_dir(line[1], cls.delphesdir)
                 # Try path from maindir
-                path = pjoin(cls.main, line[3])
+                path = pjoin(cls.main, line[1])
                 cls.delphesdir = cls.check_dir(path, cls.delphesdir)
             
-            elif line[0] == 'exrootanalysis':
-                cls.eradir = cls.check_dir(line[3], cls.eradir)
+            elif line[0].lower() == 'exrootanalysis':
+                cls.eradir = cls.check_dir(line[1], cls.eradir)
                 # Try path from maindir
-                path = pjoin(cls.main, line[3])
+                path = pjoin(cls.main, line[1])
                 cls.eradir = cls.check_dir(path, cls.eradir)
                 
-            elif line[0] == 'madanalysis':
-                cls.madir = cls.check_dir(line[3], cls.madir)
+            elif line[0].lower() == 'madanalysis':
+                cls.madir = cls.check_dir(line[1], cls.madir)
                 # Try path from maindir
-                path = pjoin(cls.main, line[3])
+                path = pjoin(cls.main, line[1])
                 cls.madir = cls.check_dir(path, cls.madir)
             
-            elif line[0] == 'td':
-                cls.td = cls.check_dir(line[3], cls.td)
+            elif line[0].lower() == 'td':
+                cls.td = cls.check_dir(line[1], cls.td)
                 # Try path from maindir
-                path = pjoin(cls.main, line[3])
+                path = pjoin(cls.main, line[1])
                 cls.td = cls.check_dir(path, cls.td)
-                if cls.td:
-                    cls.td = os.path.dirname(cls.td)
             else:
                 logger.warning('''file executables_path.dat contains configuration for
-                %s which is not supported''' % line[0])    
+                 %s which is not supported''' % line[0])    
     
     ############################################################################                        
     @staticmethod
@@ -185,7 +183,7 @@ class MadEventLauncher(object):
         nb_event = self.check_nb_events(run_card, run_data)
         logger.info("Generating %s events" % nb_event)
         
-        if run_data['gridpack'] in ['T','.true.',True,'true']:
+        if run_data['gridpack'] in self.true:
             logger.info("Generating GridPack")
 
         #  Check if run already exists. If so, store run w/ new name
@@ -199,7 +197,8 @@ class MadEventLauncher(object):
         os.system('echo \"Cleaning directories\" > %s' % self.status)
 
         os.system('%s/gen_crossxhtml-pl %s' % (self.dirbin, self.name))
-        os.system('%s/clean' % (self.dirbin))
+        # Remove all compiled files to allow switch between lhapdf and regular mode
+        os.system('%s/cleanall' % (self.bin))
         #
         # LHAPDF INTERFACE
         #
@@ -221,7 +220,7 @@ class MadEventLauncher(object):
         # SURVEY / REFINE
         #
         self.survey()
-        if not run_data['gridpack'] in ['T','.true.',True,'true']:
+        if not run_data['gridpack'] in self.true:
             self.refine(run_data)
         #
         #  Collect the events
@@ -250,6 +249,7 @@ class MadEventLauncher(object):
         #
         # STORE
         #
+        logger.info('Storing parton level results')
         subprocess.call(['%s/store' % self.dirbin, self.name],
                             cwd=pjoin(self.main, 'Events'))
         os.system('%s/gen_crossxhtml-pl %s' % (self.dirbin, self.name))
@@ -258,7 +258,7 @@ class MadEventLauncher(object):
         #
         # finish GridPack
         #
-        if run_data['gridpack'] in  ['T','.true.',True,'true']:
+        if run_data['gridpack'] in self.true:
             self.finalize_grid_pack() 
         #
         #  Run Pythia 
@@ -270,9 +270,10 @@ class MadEventLauncher(object):
         #
         #  Run PGS/Delphes 
         #        
-        if self.pgsdir and os.path.exists(pjoin(self.main, 'Cards', 'pgs_card.dat')):
+        if is_executable(pjoin(self.pgsdir, 'pgs')) and \
+               os.path.exists(pjoin(self.main, 'Cards', 'pgs_card.dat')):
                 logger.info('Running PGS')
-                self.run_pgs()     
+                self.run_pgs()
         elif is_executable(pjoin(self.delphesdir, 'Delphes')) and\
                os.path.exists(pjoin(self.main, 'Cards', 'delphes_card.dat')):
                 logger.info('Running Delphes')
@@ -280,7 +281,7 @@ class MadEventLauncher(object):
         #
         #  Store Events
         #
-        logger.info("Storing Events")
+        logger.info("Storing events")
         open(self.status, 'w').writelines("Storing Events")
         os.system('%s/gen_crossxhtml-pl %s' % (self.dirbin, self.name))
         subprocess.call(['%s/store' % self.dirbin, self.name],
@@ -300,6 +301,7 @@ class MadEventLauncher(object):
         
         os.system('touch %s' % pjoin(self.main, 'survey'))
         os.system('echo \"Starting jobs \" > %s' % self.status)
+        logger.info('Starting jobs')        
         os.system('%s/gen_crossxhtml-pl %s' % (self.dirbin, self.name))
         
         if self.cluster_mode == 0:
@@ -356,7 +358,8 @@ class MadEventLauncher(object):
     def compile_source(self):
         """Compile the Source directory and check that all compilation suceed"""
           
-        os.system("echo \"Cleaning directories\" >& %s" % self.status)  
+        os.system("echo \"Compiling Source\" >& %s" % self.status)  
+        logger.info('Compiling Source')
         os.system('%s/gen_crossxhtml-pl %s' % (self.dirbin, self.name))
         
         
@@ -373,10 +376,6 @@ class MadEventLauncher(object):
     
         os.system("echo \"Combining Events\" >& %s" % self.status)
         os.system('%s/gen_crossxhtml-pl %s' % (self.dirbin, self.name))
-        subprocess.call(['make','../bin/internal/combine_events'],
-                            stdout = os.open(os.devnull, os.O_RDWR),
-                            stderr = os.open(os.devnull, os.O_RDWR),
-                            cwd=pjoin(self.main, 'Source'))
         subprocess.call(['%s/run_combine' % self.dirbin, str(self.cluster_mode)],
                             cwd=pjoin(self.main, 'SubProcesses'))
 
@@ -481,7 +480,7 @@ class MadEventLauncher(object):
         if is_executable(pjoin(self.eradir, 'ExRootLHEFConverter')):
             open(self.status,'w').writelines('Creating Pythia LHE Root File')
             os.system('%s/gen_crossxhtml-pl %s' % (self.dirbin, self.name))
-            subprocess.call([self.erabin+'/ExRootLHEFConverter', 
+            subprocess.call([self.eradir+'/ExRootLHEFConverter', 
                              'pythia_events.lhe', 'pythia_lhe_events.root'],
                             cwd=pjoin(self.main,'Events')) 
 
@@ -537,7 +536,7 @@ class MadEventLauncher(object):
         if is_executable(pjoin(self.eradir, 'ExRootLHCOlympicsConverter')):
             open(self.status,'w').writelines('Creating PGS Root File')
             os.system('%s/gen_crossxhtml-pl %s' % (self.dirbin, self.name))
-            subprocess.call([self.erabin+'/ExRootLHCOlympicsConverter', 
+            subprocess.call([self.eradir+'/ExRootLHCOlympicsConverter', 
                              'pgs_events.lhco','pgs_events.root'],
                             cwd=pjoin(self.main,'Events')) 
 
