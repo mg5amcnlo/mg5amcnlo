@@ -764,7 +764,7 @@ class ProcessExporterFortranSA(ProcessExporterFortran):
         
         # Information at top-level
         #Write version info
-        shutil.copy(os.path.join(self.temp_dir, 'TemplateVersion.txt'), self.dir_path)
+        shutil.copy(os.path.join(temp_dir, 'TemplateVersion.txt'), self.dir_path)
         try:
             shutil.copy(os.path.join(self.mgme_dir, 'MGMEVersion.txt'), self.dir_path)
         except IOError:
@@ -773,7 +773,7 @@ class ProcessExporterFortranSA(ProcessExporterFortran):
                 "5." + MG5_version['version'])
         
         # Add file in bin directory
-        shutil.copy(os.path.join(self.temp_dir, 'bin', 'change_compiler.py'), 
+        shutil.copy(os.path.join(temp_dir, 'bin', 'change_compiler.py'), 
                     os.path.join(self.dir_path, 'bin'))
         
         # Add file in SubProcesses
@@ -783,35 +783,12 @@ class ProcessExporterFortranSA(ProcessExporterFortran):
                     os.path.join(self.dir_path, 'SubProcesses', 'check_sa.f'))
         
         # Add file in Source
-        shutil.copy(os.path.join(self.temp_dir, 'Source', 'make_opts'), 
+        shutil.copy(os.path.join(temp_dir, 'Source', 'make_opts'), 
                     os.path.join(self.dir_path, 'Source'))        
         # add the makefile 
         filename = os.path.join(self.dir_path,'SubProcesses','driver.f')
         self.write_driver(writers.FortranWriter(filename))            
         
-        
-        
-        # Duplicate run_card
-        #card = 'run_card'
-        #shutil.copy(os.path.join(self.temp_dir, 'Cards', card),
-        #            os.path.join(self.dir_path, 'Cards', card + '.dat'))
-        #shutil.copy(os.path.join(self.temp_dir, 'Cards', card),
-        #            os.path.join(self.dir_path, 'Cards', card + '_default.dat'))
-        
-        
-        
-
-        
-#        super(ProcessExporterFortranSA, self).copy_v4template(modelname)
-
-#        try:
-#            subprocess.call([os.path.join('bin', 'standalone')],
-#                            stdout = os.open(os.devnull, os.O_RDWR),
-#                            stderr = os.open(os.devnull, os.O_RDWR),
-#                            cwd=self.dir_path)
-#        except OSError:
-            # Probably standalone already called
-#            pass
 
     #===========================================================================
     # Make the Helas and Model directories for Standalone directory
