@@ -777,16 +777,16 @@ class ProcessExporterFortranSA(ProcessExporterFortran):
                     os.path.join(self.dir_path, 'bin'))
         
         # Add file in SubProcesses
-        shutil.copy(os.path.join(self.mgme_dir, 'iolibs', 'template_files', 'makefile_sa_f_sp'), 
+        shutil.copy(os.path.join(self.mgme_dir, 'madgraph', 'iolibs', 'template_files', 'makefile_sa_f_sp'), 
                     os.path.join(self.dir_path, 'SubProcesses', 'makefile'))
-        shutil.copy(os.path.join(self.mgme_dir, 'iolibs', 'template_files', 'check_sa.f'), 
+        shutil.copy(os.path.join(self.mgme_dir, 'madgraph', 'iolibs', 'template_files', 'check_sa.f'), 
                     os.path.join(self.dir_path, 'SubProcesses', 'check_sa.f'))
         
         # Add file in Source
         shutil.copy(os.path.join(temp_dir, 'Source', 'make_opts'), 
                     os.path.join(self.dir_path, 'Source'))        
         # add the makefile 
-        filename = os.path.join(self.dir_path,'SubProcesses','driver.f')
+        filename = os.path.join(self.dir_path,'SubProcesses','makefile')
         self.write_driver(writers.FortranWriter(filename))            
         
 
