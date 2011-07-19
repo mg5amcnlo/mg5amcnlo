@@ -786,7 +786,7 @@ class ProcessExporterFortranSA(ProcessExporterFortran):
         shutil.copy(os.path.join(temp_dir, 'Source', 'make_opts'), 
                     os.path.join(self.dir_path, 'Source'))        
         # add the makefile 
-        filename = os.path.join(self.dir_path,'SubProcesses','makefile')
+        filename = os.path.join(self.dir_path,'Source','makefile')
         self.write_source_makefile(writers.FortranWriter(filename))            
         
 
