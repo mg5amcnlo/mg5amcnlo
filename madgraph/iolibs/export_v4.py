@@ -118,7 +118,11 @@ class ProcessExporterFortran(object):
             open(os.path.join(self.dir_path, 'SubProcesses', 'MGVersion.txt'), 'w').write(
                                                               MG_version['version'])
 
-
+            
+        # add the makefile in Source directory 
+        filename = os.path.join(self.dir_path,'Source','makefile')
+        self.write_source_makefile(writers.FortranWriter(filename))
+            
     #===========================================================================
     # write a procdef_mg5 (an equivalent of the MG4 proc_card.dat)
     #===========================================================================
@@ -244,6 +248,20 @@ class ProcessExporterFortran(object):
         """Routine to generate a subprocess directory (for inheritance)"""
 
         pass
+
+    #===========================================================================
+    # write_source_makefile
+    #===========================================================================
+    def write_source_makefile(self, writer):
+        """Write the nexternal.inc file for MG4"""
+
+
+        path = os.path.join(_file_path,'iolibs','template_files','madevent_makefile_source')
+        set_of_lib = '$(LIBRARIES) $(LIBDIR)libdhelas.$(libext) $(LIBDIR)libpdf.$(libext) $(LIBDIR)libmodel.$(libext) $(LIBDIR)libcernlib.$(libext)'
+        text = open(path).read() % {'libraries': set_of_lib} 
+        writer.write(text)
+        
+        return True
 
     #===========================================================================
     # write_nexternal_file
@@ -722,17 +740,78 @@ class ProcessExporterFortranSA(ProcessExporterFortran):
     def copy_v4template(self, modelname):
         """Additional actions needed for setup of Template
         """
-        
-        super(ProcessExporterFortranSA, self).copy_v4template(modelname)
 
+        
+        #First copy the full template tree if dir_path doesn't exit
+        if os.path.isdir(self.dir_path):
+            return
+        
+        logger.info('initialize a new standalone directory: %s' % \
+                        os.path.basename(self.dir_path))
+        temp_dir = os.path.join(self.mgme_dir, 'Template')
+        
+        
+        # Create the directory structure
+        os.mkdir(self.dir_path)
+        os.mkdir(os.path.join(self.dir_path, 'Source'))
+        os.mkdir(os.path.join(self.dir_path, 'Source', 'MODEL'))
+        os.mkdir(os.path.join(self.dir_path, 'Source', 'DHELAS'))
+        os.mkdir(os.path.join(self.dir_path, 'SubProcesses'))
+        os.mkdir(os.path.join(self.dir_path, 'bin'))
+        os.mkdir(os.path.join(self.dir_path, 'bin', 'internal'))
+        os.mkdir(os.path.join(self.dir_path, 'lib'))
+        os.mkdir(os.path.join(self.dir_path, 'Cards'))
+        
+        # Information at top-level
+        #Write version info
+        shutil.copy(os.path.join(self.temp_dir, 'TemplateVersion.txt'), self.dir_path)
         try:
-            subprocess.call([os.path.join('bin', 'standalone')],
-                            stdout = os.open(os.devnull, os.O_RDWR),
-                            stderr = os.open(os.devnull, os.O_RDWR),
-                            cwd=self.dir_path)
-        except OSError:
+            shutil.copy(os.path.join(self.mgme_dir, 'MGMEVersion.txt'), self.dir_path)
+        except IOError:
+            MG5_version = misc.get_pkg_info()
+            open(os.path.join(self.dir_path, 'MGMEVersion.txt'), 'w').write( \
+                "5." + MG5_version['version'])
+        
+        # Add file in bin directory
+        shutil.copy(os.path.join(self.temp_dir, 'bin', 'change_compiler.py'), 
+                    os.path.join(self.dir_path, 'bin'))
+        
+        # Add file in SubProcesses
+        shutil.copy(os.path.join(self.mgme_dir, 'iolibs', 'template_files', 'makefile_sa_f_sp'), 
+                    os.path.join(self.dir_path, 'SubProcesses', 'makefile'))
+        shutil.copy(os.path.join(self.mgme_dir, 'iolibs', 'template_files', 'check_sa.f'), 
+                    os.path.join(self.dir_path, 'SubProcesses', 'check_sa.f'))
+        
+        # Add file in Source
+        shutil.copy(os.path.join(self.temp_dir, 'Source', 'make_opts'), 
+                    os.path.join(self.dir_path, 'Source'))        
+        # add the makefile 
+        filename = os.path.join(self.dir_path,'SubProcesses','driver.f')
+        self.write_driver(writers.FortranWriter(filename))            
+        
+        
+        
+        # Duplicate run_card
+        #card = 'run_card'
+        #shutil.copy(os.path.join(self.temp_dir, 'Cards', card),
+        #            os.path.join(self.dir_path, 'Cards', card + '.dat'))
+        #shutil.copy(os.path.join(self.temp_dir, 'Cards', card),
+        #            os.path.join(self.dir_path, 'Cards', card + '_default.dat'))
+        
+        
+        
+
+        
+#        super(ProcessExporterFortranSA, self).copy_v4template(modelname)
+
+#        try:
+#            subprocess.call([os.path.join('bin', 'standalone')],
+#                            stdout = os.open(os.devnull, os.O_RDWR),
+#                            stderr = os.open(os.devnull, os.O_RDWR),
+#                            cwd=self.dir_path)
+#        except OSError:
             # Probably standalone already called
-            pass
+#            pass
 
     #===========================================================================
     # Make the Helas and Model directories for Standalone directory
@@ -839,6 +918,22 @@ class ProcessExporterFortranSA(ProcessExporterFortran):
         if not calls:
             calls = 0
         return calls
+
+
+    #===========================================================================
+    # write_source_makefile
+    #===========================================================================
+    def write_source_makefile(self, writer):
+        """Write the nexternal.inc file for MG4"""
+
+
+        path = os.path.join(_file_path,'iolibs','template_files','madevent_makefile_source')
+        set_of_lib = '$(LIBDIR)libdhelas.$(libext) $(LIBDIR)libmodel.$(libext)'
+        text = open(path).read() % {'libraries': set_of_lib} 
+        writer.write(text)
+        
+        return True
+
 
     #===========================================================================
     # write_matrix_element_v4
