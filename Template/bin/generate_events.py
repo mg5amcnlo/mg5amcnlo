@@ -487,7 +487,7 @@ class MadEventLauncher(object):
 
         if int(run_data['ickkw']):
             logger.info('Create matching plots for Pythia')
-            subprocess.call([self.dirbin+'/create_matching_plot.sh', self.name],
+            subprocess.call([self.dirbin+'/create_matching_plots.sh', self.name],
                             cwd=pjoin(self.main,'Events')) 
 
         # Plot for pythia

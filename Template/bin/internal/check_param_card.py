@@ -623,6 +623,10 @@ def convert_to_slha1(path, outputpath=None ):
     card.add_param('modsel',[1], value=1)
     card['modsel'].get([1]).format = 'int'
     
+    # find scale
+    scale = card['hmix'].scale
+    if not scale:
+        scale = 1 # Need to be define (this is dummy value)
     
     # SMINPUTS
     if not card.has_param('sminputs', [2]):
@@ -676,6 +680,7 @@ def convert_to_slha1(path, outputpath=None ):
         ee = 2 * math.sqrt(1/aem1) * math.sqrt(math.pi)
         vu = 2 * mw *sw /ee * math.sin(math.atan(tanb))
         card.add_param('hmix', [3], vu, 'higgs vev(Q) MSSM DRb')
+    card['hmix'].scale= scale
     
     # VCKM
     card.check_and_remove('vckm', [1,1], 1.0)
@@ -698,21 +703,27 @@ def convert_to_slha1(path, outputpath=None ):
     card.mod_param('te', [3,3], 'ae', [3,3], value= te/ye, comment='A_tau(Q) DRbar')
     card.add_param('ae', [1,1], 0, 'A_e(Q) DRbar')
     card.add_param('ae', [2,2], 0, 'A_mu(Q) DRbar')
-    
+    card['ae'].scale = scale
+    card['ye'].scale = scale
+            
     # Tu
     yu = card['yu'].get([3, 3]).value
     tu = card['tu'].get([3, 3]).value
     card.mod_param('tu', [3,3], 'au', [3,3], value= tu/yu, comment='A_t(Q) DRbar')
     card.add_param('au', [1,1], 0, 'A_u(Q) DRbar')
     card.add_param('au', [2,2], 0, 'A_c(Q) DRbar')
-    
+    card['au'].scale = scale    
+    card['yu'].scale = scale
+        
     # Td
     yd = card['yd'].get([3, 3]).value
     td = card['td'].get([3, 3]).value
     card.mod_param('td', [3,3], 'ad', [3,3], value= td/yd, comment='A_b(Q) DRbar')
     card.add_param('ad', [1,1], 0, 'A_d(Q) DRbar')
     card.add_param('ad', [2,2], 0, 'A_s(Q) DRbar')
-    
+    card['ad'].scale = scale
+    card['yd'].scale = scale    
+        
     # MSL2 
     value = card['msl2'].get([1, 1]).value
     card.mod_param('msl2', [1,1], 'msoft', [31], math.sqrt(value))
@@ -720,7 +731,8 @@ def convert_to_slha1(path, outputpath=None ):
     card.mod_param('msl2', [2,2], 'msoft', [32], math.sqrt(value))
     value = card['msl2'].get([3, 3]).value
     card.mod_param('msl2', [3,3], 'msoft', [33], math.sqrt(value))
-    
+    card['msoft'].scale = scale
+
     # MSE2
     value = card['mse2'].get([1, 1]).value
     card.mod_param('mse2', [1,1], 'msoft', [34], math.sqrt(value))
@@ -752,6 +764,8 @@ def convert_to_slha1(path, outputpath=None ):
     card.mod_param('msd2', [2,2], 'msoft', [48], math.sqrt(value))
     value = card['msd2'].get([3, 3]).value
     card.mod_param('msd2', [3,3], 'msoft', [49], math.sqrt(value))   
+
+    
     
     #################
     # WRITE OUTPUT
