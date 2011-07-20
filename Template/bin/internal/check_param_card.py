@@ -58,16 +58,39 @@ class Parameter (object):
         try:
             self.value = float(self.value)
         except:
+            self.format = 'str'
             pass
+
+
+    def load_decay(self, text):
+        """ initialize the decay information from a str"""
+
+        if '#' in text:
+            data, self.comment = text.split('#',1)
+        else:
+            data, self.comment = text, ""
+
+
+        data = data.split()
+        if not len(data):
+            return
+        self.lhacode = tuple([int(d) for d in data[1:]])
+        self.value = float(data[0]) 
+        self.format = 'decay_table'
 
     def __str__(self):
         """ return a SLAH string """
-        
+
         if self.format == 'float':
             if self.lhablock == 'decay':
                 return 'DECAY %s %e # %s' % (' '.join([str(d) for d in self.lhacode]), self.value, self.comment)
             else:
                 return '      %s %e # %s' % (' '.join([str(d) for d in self.lhacode]), self.value, self.comment)
+        elif self.format == 'str':
+             return '      %s %s # %s' % (' '.join([str(d) for d in self.lhacode]), self.value, self.comment)
+        elif self.format == 'decay_table':
+             return '      %e %s # %s' % ( self.value,' '.join([str(d) for d in self.lhacode]), self.comment)
+        
         else:
             if self.lhablock == 'decay':
                 return 'DECAY %s %d # %s' % (' '.join([str(d) for d in self.lhacode]), self.value, self.comment)
@@ -222,7 +245,15 @@ class ParamCard(dict):
                 cur_block = Block('decay_table_%s' % id)
                 self['decay'].decay_table[id] = cur_block
             
-            if cur_block is not None:
+            
+            if cur_block is None:
+                continue
+            
+            if cur_block.name.startswith('decay_table'):
+                param = Parameter()
+                param.load_decay(line)
+                cur_block.append(param)
+            else:
                 param = Parameter()
                 param.load_str(line)
                 cur_block.append(param)
