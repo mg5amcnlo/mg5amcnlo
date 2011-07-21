@@ -230,9 +230,9 @@ class Function(object):
 
 all_orders = []
 
-class Order(object):
+class CouplingOrder(object):
 
-    def __init__(self, name, expansion_order, hierarchy):
+    def __init__(self, name, expansion_order, hierarchy, perturbative_expansion = 0):
         
         global all_orders
         all_orders.append(self)

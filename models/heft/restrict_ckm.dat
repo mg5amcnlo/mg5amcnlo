@@ -36,10 +36,10 @@ DECAY  25 5.753088e-03
 ## INFORMATION FOR WOLFENSTEIN
 ###################################
 Block Wolfenstein 
-    1 0.000000e+00 # lamWS 
-    2 0.000000e+00 # AWS 
-    3 0.000000e+00 # rhoWS 
-    4 0.000000e+00 # etaWS 
+    1 2.253000e-01 # lamWS 
+    2 8.080000e-01 # AWS 
+    3 1.320000e-01 # rhoWS 
+    4 3.410000e-01 # etaWS 
 
 ###################################
 ## INFORMATION FOR YUKAWA
