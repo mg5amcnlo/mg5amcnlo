@@ -2645,6 +2645,284 @@ class MultiProcessTest(unittest.TestCase):
             #print 'Valid processes: ',len(filter(lambda item: item[1] > 0, valid_procs))
             #print 'Attempted processes: ',len(amplitudes)
 
+    def test_heft_multiparticle_pp_hnj(self):
+        """Setting up and testing pp > h+nj based on multiparticle lists,
+        using the amplitude functionality of MultiProcess
+        (which makes partial use of crossing symmetries)
+        """
+
+    def setUp(self):
+
+        mypartlist = base_objects.ParticleList()
+        myinterlist = base_objects.InteractionList()
+
+        # A gluon
+        mypartlist.append(base_objects.Particle({'name':'g',
+                      'antiname':'g',
+                      'spin':3,
+                      'color':8,
+                      'mass':'zero',
+                      'width':'zero',
+                      'texname':'g',
+                      'antitexname':'g',
+                      'line':'curly',
+                      'charge':0.,
+                      'pdg_code':21,
+                      'propagating':True,
+                      'is_part':True,
+                      'self_antipart':True}))
+        g = mypartlist[-1]
+
+        # A quark U and its antiparticle
+        mypartlist.append(base_objects.Particle({'name':'u',
+                      'antiname':'u~',
+                      'spin':2,
+                      'color':3,
+                      'mass':'zero',
+                      'width':'zero',
+                      'texname':'u',
+                      'antitexname':'\bar u',
+                      'line':'straight',
+                      'charge':2. / 3.,
+                      'pdg_code':2,
+                      'propagating':True,
+                      'is_part':True,
+                      'self_antipart':False}))
+        antiu = copy.copy(mypartlist[1])
+        antiu.set('is_part', False)
+
+        # A quark D and its antiparticle
+        mypartlist.append(base_objects.Particle({'name':'d',
+                      'antiname':'d~',
+                      'spin':2,
+                      'color':3,
+                      'mass':'zero',
+                      'width':'zero',
+                      'texname':'d',
+                      'antitexname':'\bar d',
+                      'line':'straight',
+                      'charge':-1. / 3.,
+                      'pdg_code':1,
+                      'propagating':True,
+                      'is_part':True,
+                      'self_antipart':False}))
+        antid = copy.copy(mypartlist[2])
+        antid.set('is_part', False)
+
+        # A photon
+        mypartlist.append(base_objects.Particle({'name':'a',
+                      'antiname':'a',
+                      'spin':3,
+                      'color':1,
+                      'mass':'zero',
+                      'width':'zero',
+                      'texname':'\gamma',
+                      'antitexname':'\gamma',
+                      'line':'wavy',
+                      'charge':0.,
+                      'pdg_code':22,
+                      'propagating':True,
+                      'is_part':True,
+                      'self_antipart':True}))
+
+        # A higgs
+        mypartlist.append(base_objects.Particle({'name':'h',
+                      'antiname':'h',
+                      'spin':1,
+                      'color':1,
+                      'mass':'MH',
+                      'width':'WH',
+                      'texname':'h',
+                      'antitexname':'h',
+                      'line':'dashed',
+                      'charge':0.,
+                      'pdg_code':25,
+                      'propagating':True,
+                      'is_part':True,
+                      'self_antipart':True}))
+        h = mypartlist[-1]
+
+        # 3 gluon vertiex
+        myinterlist.append(base_objects.Interaction({
+                      'id': 1,
+                      'particles': base_objects.ParticleList(\
+                                            [mypartlist[0]] * 3),
+                      'color': [],
+                      'lorentz':['L1'],
+                      'couplings':{(0, 0):'G'},
+                      'orders':{'QCD':1}}))
+
+        # 4 gluon vertex
+        myinterlist.append(base_objects.Interaction({
+                      'id': 2,
+                      'particles': base_objects.ParticleList(\
+                                            [mypartlist[0]] * 4),
+                      'color': [],
+                      'lorentz':['L1'],
+                      'couplings':{(0, 0):'G^2'},
+                      'orders':{'QCD':2}}))
+
+        # Gluon and photon couplings to quarks
+        myinterlist.append(base_objects.Interaction({
+                      'id': 3,
+                      'particles': base_objects.ParticleList(\
+                                            [mypartlist[1], \
+                                             antiu, \
+                                             mypartlist[0]]),
+                      'color': [],
+                      'lorentz':['L1'],
+                      'couplings':{(0, 0):'GQQ'},
+                      'orders':{'QCD':1}}))
+
+        myinterlist.append(base_objects.Interaction({
+                      'id': 4,
+                      'particles': base_objects.ParticleList(\
+                                            [mypartlist[1], \
+                                             antiu, \
+                                             mypartlist[3]]),
+                      'color': [],
+                      'lorentz':['L1'],
+                      'couplings':{(0, 0):'GQED'},
+                      'orders':{'QED':1}}))
+
+        myinterlist.append(base_objects.Interaction({
+                      'id': 5,
+                      'particles': base_objects.ParticleList(\
+                                            [mypartlist[2], \
+                                             antid, \
+                                             mypartlist[0]]),
+                      'color': [],
+                      'lorentz':['L1'],
+                      'couplings':{(0, 0):'GQQ'},
+                      'orders':{'QCD':1}}))
+
+        myinterlist.append(base_objects.Interaction({
+                      'id': 6,
+                      'particles': base_objects.ParticleList(\
+                                            [mypartlist[2], \
+                                             antid, \
+                                             mypartlist[3]]),
+                      'color': [],
+                      'lorentz':['L1'],
+                      'couplings':{(0, 0):'GQED'},
+                      'orders':{'QED':1}}))
+
+        # Couplings of h to g
+
+        myinterlist.append(base_objects.Interaction({
+                      'id': 7,
+                      'particles': base_objects.ParticleList(\
+                                            [g,
+                                             g, \
+                                             h]),
+                      'color': [],
+                      'lorentz':['L1'],
+                      'couplings':{(0, 0):'GGH'},
+                      'orders':{'HIG':1}}))
+
+        myinterlist.append(base_objects.Interaction({
+                      'id': 8,
+                      'particles': base_objects.ParticleList(\
+                                            [g,
+                                             g,
+                                             g,
+                                             h]),
+                      'color': [],
+                      'lorentz':['L1'],
+                      'couplings':{(0, 0):'GGGH'},
+                      'orders':{'HIG':1, 'QCD':1}}))
+
+        myinterlist.append(base_objects.Interaction({
+                      'id': 9,
+                      'particles': base_objects.ParticleList(\
+                                            [g,
+                                             g,
+                                             g,
+                                             g,
+                                             h]),
+                      'color': [],
+                      'lorentz':['L1'],
+                      'couplings':{(0, 0):'GGGGH'},
+                      'orders':{'HIG':1, 'QCD':2}}))
+
+        mymodel = base_objects.Model()
+        mymodel.set('particles', mypartlist)
+        mymodel.set('interactions', myinterlist)
+        mymodel.set('order_hierarchy', {'QCD':1, 'HIG':1, 'QED':2})
+        mymodel.set('expansion_order', {'QCD':-1, 'HIG':1, 'QED':-1})
+        max_fs = 2
+
+        p = [21, 1, 2, -1, -2]
+
+        my_multi_leg = base_objects.MultiLeg({'ids': p, 'state': True});
+
+        goal_number_processes = [7, 21]
+
+        goal_valid_procs = [[([21, 21, 21, 25], 4),
+                             ([21, 1, 1, 25], 1),
+                             ([21, 2, 2, 25], 1),
+                             ([21, -1, -1, 25], 1),
+                             ([21, -2, -2, 25], 1),
+                             ([1, -1, 21, 25], 1),
+                             ([2, -2, 21, 25], 1)],
+                            [([21, 21, 21, 21, 25], 26),
+                             ([21, 21, 1, -1, 25], 8),
+                             ([21, 21, 2, -2, 25], 8),
+                             ([21, 1, 21, 1, 25], 8),
+                             ([21, 2, 21, 2, 25], 8),
+                             ([21, -1, 21, -1, 25], 8),
+                             ([21, -2, 21, -2, 25], 8),
+                             ([1, 1, 1, 1, 25], 2),
+                             ([1, 2, 1, 2, 25], 1),
+                             ([1, -1, 21, 21, 25], 8),
+                             ([1, -1, 1, -1, 25], 2),
+                             ([1, -1, 2, -2, 25], 1),
+                             ([1, -2, 1, -2, 25], 1),
+                             ([2, 2, 2, 2, 25], 2),
+                             ([2, -1, 2, -1, 25], 1),
+                             ([2, -2, 21, 21, 25], 8),
+                             ([2, -2, 1, -1, 25], 1),
+                             ([2, -2, 2, -2, 25], 2),
+                             ([-1, -1, -1, -1, 25], 2),
+                             ([-1, -2, -1, -2, 25], 1),
+                             ([-2, -2, -2, -2, 25], 2)]]
+
+        for nfs in range(1, max_fs + 1):
+
+            # Define the multiprocess
+            my_multi_leglist = base_objects.MultiLegList([copy.copy(leg) for leg in [my_multi_leg] * (2 + nfs)])
+            my_multi_leglist.append(base_objects.MultiLeg({'ids': [25]}))
+            
+            my_multi_leglist[0].set('state', False)
+            my_multi_leglist[1].set('state', False)
+
+            my_process_definition = base_objects.ProcessDefinition({\
+                                                     'legs':my_multi_leglist,
+                                                     'model':mymodel})
+            my_multiprocess = diagram_generation.MultiProcess(\
+                           my_process_definition, collect_mirror_procs =  True)
+
+            nproc = 0
+
+            # Calculate diagrams for all processes
+
+            amplitudes = my_multiprocess.get('amplitudes')
+
+            valid_procs = [([leg.get('id') for leg in \
+                             amplitude.get('process').get('legs')],
+                            len(amplitude.get('diagrams'))) \
+                           for amplitude in amplitudes]
+                            
+            if nfs <= 3:
+                self.assertEqual(valid_procs, goal_valid_procs[nfs-1])
+
+            #print 'pp > h + ',nfs,'j (p,j = ', p, '):'
+            #print 'Processes: ',len(amplitudes), \
+            #      ' with ', sum([v[1] for v in valid_procs]), ' diagrams'
+            #for amplitude in amplitudes:
+            #    print amplitude.get('process').nice_string()
+            #print 'valid_procs = ',valid_procs
+
     def test_find_maximal_non_qcd_order(self):
         """Test find_maximal_non_qcd_order for different configurations
         """

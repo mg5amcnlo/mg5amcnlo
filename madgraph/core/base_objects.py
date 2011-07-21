@@ -1906,8 +1906,9 @@ class Process(PhysicsObject):
         orders = self.get('orders')
         if any([v > 0 and v < 99 for v in \
                 expansion_orders.values()]):
-            for order in [ (k,v) for (k, v) in expansion_orders.items() if \
+            for order in [ (k, v) for (k, v) in expansion_orders.items() if \
                            v > 0 and v < 99 ]:
+                (k, v) = order
                 if k in orders:
                     orders[k] = min(orders[k], v)
                 else:

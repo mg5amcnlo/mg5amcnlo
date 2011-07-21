@@ -239,7 +239,7 @@ class EpsDiagramDrawer(draw.DiagramDrawer):
                                                             #zero.
 
         mystr = " (%s)" % ", ".join(["%s=%d" % (key, self.diagram.diagram['orders'][key]) \
-                                        for key in self.diagram.diagram['orders'].keys()])
+                                        for key in sorted(self.diagram.diagram['orders'].keys())])
         
         x = 0.6
         y = -0.17
