@@ -1,7 +1,9 @@
 Update notes for MadGraph 5 (in reverse time order)
 
-1.3.6 (18/07/11)  OM: Fix in the new make file in order to have it working on the 
-                        web.
+1.3.7 (21/07/11)  JA: Fix makefiles for some v4 models that were forgotten
+                      in v. 1.3.5
+
+1.3.6 (18/07/11)  OM: Ensure that the new makefiles work on the web
 
 1.3.5 (14/07/11): JA: New organization of make files, ensure that compilation works 
                       for all modes (with/without LHAPDF, static/dynamic, 
