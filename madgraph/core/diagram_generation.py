@@ -686,7 +686,9 @@ class Amplitude(base_objects.PhysicsObject):
         """Return False if the coupling orders for any coupling is <
         0, otherwise return the new coupling orders with the vertex
         orders subtracted. If coupling_orders is not given, return
-        None (which counts as success)"""
+        None (which counts as success).
+        WEIGHTED is a special order, which corresponds to the sum of
+        order hierarchys for the couplings."""
 
         if not coupling_orders:
             return None
@@ -1376,22 +1378,35 @@ class MultiProcess(base_objects.PhysicsObject):
         """Find the maximal QCD order for this set of processes.
         The algorithm:
 
-        1) Check the coupling hierarchy of the model.
+        1) Check the coupling hierarchy of the model. Assign all
+        particles to the different coupling hierarchies so that a
+        particle is considered to be in the highest hierarchy (i.e.,
+        with lowest value) where it has an interaction.
         
-        2) Successively find number of legs with couplings only to a
-        given hierarchy, sum and use as starting WEIGHTED order for
-        the process. If corresponding required s-channel particles
-        are specified, use the maximum of legs and 2*number for 
-        s-channel particles as starting WEIGHTED order.
+        2) Pick out the legs in the multiprocess according to the
+        highest hierarchy represented (so don't mix particles from
+        different hierarchy classes in the same multiparticles!)
 
-        3) Run process generation with WEIGHTED order - # gluons with
-        all gluons removed from the final state and , until we find a
-        process which passes. Return that order.
+        3) Find the starting maximum WEIGHTED order as the sum of the
+        highest n-2 weighted orders
 
-        4) If no processes pass with the given order, increase order
-        by one and repeat from 3) until we order #final - 1.
+        4) Pick out required s-channel particle hierarchys, and use
+        the highest of the maximum WEIGHTED order from the legs and
+        the minimum WEIGHTED order extracted from 2*s-channel
+        hierarchys plus the n-2-2*(number of s-channels) lowest
+        leg weighted orders.
 
-        5) If no processes found, return non-QCD order = #final.
+        5) Run process generation with the WEIGHTED order determined
+        in 3)-4) - # final state gluons, with all gluons removed from
+        the final state
+
+        6) If no process is found, increase WEIGHTED order by 1 and go
+        back to 5), until we find a process which passes. Return that
+        order.
+
+        7) Continue 5)-6) until we reach (n-2)*(highest hierarchy)-1.
+        If still no process has passed, return
+        WEIGHTED = (n-2)*(highest hierarchy)
         """
 
         assert isinstance(process_definition, base_objects.ProcessDefinition), \
@@ -1440,7 +1455,7 @@ class MultiProcess(base_objects.PhysicsObject):
             sum_orders = sum(orders[:iorder+1], [])
             sum_interactions = sum(interactions[:iorder], [])
             sum_particles = sum([list(p) for p in particles[:iorder]], [])
-            # Append all interactions that have orders with at least
+            # Append all interactions that have only orders with at least
             # this hierarchy
             interactions.append([i for i in model.get('interactions') if \
                                  not i in sum_interactions and \

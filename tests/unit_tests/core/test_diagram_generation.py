@@ -762,9 +762,11 @@ class DiagramGenerationTest(unittest.TestCase):
 
         goaldiagrams = base_objects.DiagramList([\
             base_objects.Diagram({'vertices': base_objects.VertexList(\
-            [vx12glue, vx34glue, vx12glue34glue5]), 'orders':{'QED':0, 'QCD':3}}),
+            [vx12glue, vx34glue, vx12glue34glue5]),
+                                  'orders':{'QED':0, 'QCD':3, 'WEIGHTED':3}}),
             base_objects.Diagram({'vertices': base_objects.VertexList(\
-            [vx12glue, vx35, vx12glue354]), 'orders':{'QED':0, 'QCD':3}})\
+            [vx12glue, vx35, vx12glue354]),
+                                  'orders':{'QED':0, 'QCD':3, 'WEIGHTED':3}})\
             ])
 
         for diagram in mydiagrams:
@@ -1641,8 +1643,8 @@ class DiagramGenerationTest(unittest.TestCase):
         myamplitude.generate_diagrams()
         diagrams = myamplitude.get('diagrams')
         self.assertEqual(len(diagrams), 2)
-        self.assertEqual(diagrams[0].get('orders'),{'QCD':2, 'NP':0})
-        self.assertEqual(diagrams[1].get('orders'),{'QCD':1, 'NP':1})
+        self.assertEqual(diagrams[0].get('orders'),{'QCD':2, 'NP':0, 'WEIGHTED':2})
+        self.assertEqual(diagrams[1].get('orders'),{'QCD':1, 'NP':1, 'WEIGHTED':2})
 
         myleglist.append(base_objects.Leg({'id':21,
                                          'state':True}))
@@ -1655,18 +1657,18 @@ class DiagramGenerationTest(unittest.TestCase):
         myamplitude.generate_diagrams()
         diagrams = myamplitude.get('diagrams')
         self.assertEqual(len(diagrams), 12)
-        orders = [{'QCD':3, 'NP':0},
-                  {'QCD':2, 'NP':1},
-                  {'QCD':2, 'NP':1},
-                  {'QCD':1, 'NP':2},
-                  {'QCD':3, 'NP':0},
-                  {'QCD':2, 'NP':1},
-                  {'QCD':2, 'NP':1},
-                  {'QCD':1, 'NP':2},
-                  {'QCD':3, 'NP':0},
-                  {'QCD':2, 'NP':1},
-                  {'QCD':3, 'NP':0},
-                  {'QCD':2, 'NP':1}]
+        orders = [{'QCD':3, 'NP':0, 'WEIGHTED':3},
+                  {'QCD':2, 'NP':1, 'WEIGHTED':3},
+                  {'QCD':2, 'NP':1, 'WEIGHTED':3},
+                  {'QCD':1, 'NP':2, 'WEIGHTED':3},
+                  {'QCD':3, 'NP':0, 'WEIGHTED':3},
+                  {'QCD':2, 'NP':1, 'WEIGHTED':3},
+                  {'QCD':2, 'NP':1, 'WEIGHTED':3},
+                  {'QCD':1, 'NP':2, 'WEIGHTED':3},
+                  {'QCD':3, 'NP':0, 'WEIGHTED':3},
+                  {'QCD':2, 'NP':1, 'WEIGHTED':3},
+                  {'QCD':3, 'NP':0, 'WEIGHTED':3},
+                  {'QCD':2, 'NP':1, 'WEIGHTED':3}]
         for diagram, order in zip(diagrams, orders):
             self.assertEqual(diagram.get('orders'),order)
 

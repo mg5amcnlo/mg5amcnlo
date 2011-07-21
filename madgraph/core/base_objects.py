@@ -792,6 +792,8 @@ class Model(PhysicsObject):
             self['ref_dict_to0'] = {}
             self['got_majoranas'] = None
             self['coupling_orders'] = None
+            self['order_hierarchy'] = {}
+            self['expansion_order'] = {}
 
         Model.__bases__[0].set(self, name, value) # call the mother routine
 
@@ -1344,22 +1346,27 @@ class Diagram(PhysicsObject):
                 mystr = mystr + 'id:' + str(vert['id']) + '),'
             mystr = mystr[:-1] + ')'
             mystr += " (%s)" % ",".join(["%s=%d" % (key, self['orders'][key]) \
-                                        for key in self['orders'].keys()])
+                                     for key in sorted(self['orders'].keys())])
             return mystr
         else:
             return '()'
 
     def calculate_orders(self, model):
-        """Calculate the actual coupling orders of this diagram"""
+        """Calculate the actual coupling orders of this diagram. Note
+        that the special order WEIGTHED corresponds to the sum of
+        hierarchys for the couplings."""
 
         coupling_orders = dict([(c, 0) for c in model.get('coupling_orders')])
+        weight = 0
         for vertex in self['vertices']:
             if vertex.get('id') == 0: continue
             couplings = model.get('interaction_dict')[vertex.get('id')].\
                         get('orders')
             for coupling in couplings:
                 coupling_orders[coupling] += couplings[coupling]
-
+            weight += sum([model.get('order_hierarchy')[c]*n for \
+                              (c,n) in couplings.items()])
+        coupling_orders['WEIGHTED'] = weight
         self.set('orders', coupling_orders)
 
     def renumber_legs(self, perm_map, leg_list):
