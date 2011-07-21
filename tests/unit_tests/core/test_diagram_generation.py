@@ -2430,6 +2430,7 @@ class MultiProcessTest(unittest.TestCase):
 
         self.mymodel.set('particles', mypartlist)
         self.mymodel.set('interactions', myinterlist)
+        self.mymodel.set('order_hierarchy', {'QCD':1, 'QED':2})
 
         self.my_multi_leglist = base_objects.MultiLegList(\
             [copy.copy(base_objects.MultiLeg({'ids':[3, 4, 5],
@@ -2654,6 +2655,7 @@ class MultiProcessTest(unittest.TestCase):
 
         my_multi_leg = base_objects.MultiLeg({'ids': p, 'state': True});
 
+        orders = [4, 5, 6, 7, 8]
         for nfs in range(2, max_fs + 1):
 
             # Define the multiprocess
@@ -2672,12 +2674,13 @@ class MultiProcessTest(unittest.TestCase):
 
             # Check coupling orders for process
             self.assertEqual(diagram_generation.MultiProcess.\
-                             find_maximal_non_qcd_order(my_process_definition),
-                             {"QED":2})
+                             find_optimal_process_orders(my_process_definition),
+                             {'WEIGHTED': orders[nfs-2]})
 
         # Now check p p > a > p p
         max_fs = 3
-        
+
+        orders = [4, 5]
         for nfs in range(2, max_fs + 1):
             # Define the multiprocess
             my_multi_leglist = base_objects.MultiLegList([copy.copy(leg) for \
@@ -2690,12 +2693,13 @@ class MultiProcessTest(unittest.TestCase):
                                                   'required_s_channels':[22]})
 
             self.assertEqual(diagram_generation.MultiProcess.\
-                             find_maximal_non_qcd_order(my_process_definition),
-                             {'QED': 2})
+                             find_optimal_process_orders(my_process_definition),
+                             {'WEIGHTED': orders[nfs-2]})
         
         # Now check p p > a|g > p p
         max_fs = 3
         
+        orders = [2, 3]
         for nfs in range(2, max_fs + 1):
             # Define the multiprocess
             my_multi_leglist = base_objects.MultiLegList([copy.copy(leg) for \
@@ -2708,12 +2712,11 @@ class MultiProcessTest(unittest.TestCase):
                                              'required_s_channels':[[22],[21]]})
 
             self.assertEqual(diagram_generation.MultiProcess.\
-                             find_maximal_non_qcd_order(my_process_definition),
-                             {'QED': 0})
+                             find_optimal_process_orders(my_process_definition),
+                             {'WEIGHTED': orders[nfs-2]})
         
 
-        # Check that we don't get any couplings when we have multiple
-        # non-QCD orders.
+        # Check that it works with multiple non-QCD orders.
 
         myoldinterlist = self.mymodel.get('interactions')
         myinterlist = copy.copy(myoldinterlist)
@@ -2727,9 +2730,10 @@ class MultiProcessTest(unittest.TestCase):
                       'orders':{'SQED':1}}))
 
         self.mymodel.set('interactions', myinterlist)
+        self.mymodel.set('order_hierarchy', {'QCD':1, 'QED':2, 'SQED':2})
         self.assertEqual(diagram_generation.MultiProcess.\
-                         find_maximal_non_qcd_order(my_process_definition),
-                         {})
+                         find_optimal_process_orders(my_process_definition),
+                         {'WEIGHTED': orders[nfs-2]})
         
         self.mymodel.set('interactions', myoldinterlist)
 

@@ -702,13 +702,20 @@ class Amplitude(base_objects.PhysicsObject):
                 # constraint
                 if coupling in present_couplings:
                     # Reduce the number of couplings that are left
-                    present_couplings[coupling] = \
-                             present_couplings[coupling] - \
+                    present_couplings[coupling] -= \
                              inter.get('orders')[coupling]
                     if present_couplings[coupling] < 0:
                         # We have too many couplings of this type
                         return False
-
+            # Now check for WEIGHTED, i.e. the sum of coupling hierarchy values
+            if 'WEIGHTED' in present_couplings:
+                weight = sum([model.get('order_hierarchy')[c]*n for \
+                              (c,n) in inter.get('orders').items()])
+                present_couplings['WEIGHTED'] -= weight
+                if present_couplings['WEIGHTED'] < 0:
+                        # Total coupling weight too large
+                        return False
+                
         return present_couplings
 
     def combine_legs(self, list_legs, ref_dict_to1, max_multi_to1):
@@ -1199,8 +1206,10 @@ class MultiProcess(base_objects.PhysicsObject):
 
         # Set automatic coupling orders
         process_definition.set('orders', MultiProcess.\
-                               find_maximal_non_qcd_order(process_definition))
-        
+                               find_optimal_process_orders(process_definition))
+        # Check for maximum orders from the model
+        process_definition.check_expansion_orders()
+
         processes = base_objects.ProcessList()
         amplitudes = AmplitudeList()
 
@@ -1363,19 +1372,20 @@ class MultiProcess(base_objects.PhysicsObject):
         return amplitudes
             
     @staticmethod
-    def find_maximal_non_qcd_order(process_definition):
+    def find_optimal_process_orders(process_definition):
         """Find the maximal QCD order for this set of processes.
         The algorithm:
 
-        1) Check that there is only one non-QCD coupling in model.
+        1) Check the coupling hierarchy of the model.
         
-        2) Find number of non-QCD-charged legs. This is the starting
-        non-QCD order. If non-QCD required s-channel particles are
-        specified, use the maximum of non-QCD legs and 2*number of
-        non-QCD s-channel particles as starting non-QCD order.
+        2) Successively find number of legs with couplings only to a
+        given hierarchy, sum and use as starting WEIGHTED order for
+        the process. If corresponding required s-channel particles
+        are specified, use the maximum of legs and 2*number for 
+        s-channel particles as starting WEIGHTED order.
 
-        3) Run process generation with the maximal non-QCD order with
-        all gluons removed from the final state, until we find a
+        3) Run process generation with WEIGHTED order - # gluons with
+        all gluons removed from the final state and , until we find a
         process which passes. Return that order.
 
         4) If no processes pass with the given order, increase order
@@ -1396,9 +1406,12 @@ class MultiProcess(base_objects.PhysicsObject):
                process_definition.get('overall_orders'):
             return process_definition.get('orders')
 
+        logger.info("Checking for minimal orders which gives processes.")
+        logger.info("Please specify coupling orders to bypass this step.")
+
         temp_process_definition = copy.copy(process_definition)
 
-        model = process_definition['model']
+        model = process_definition.get('model')
         
         isids = [leg['ids'] for leg in \
                  filter(lambda leg: leg['state'] == False, process_definition['legs'])]
@@ -1406,52 +1419,92 @@ class MultiProcess(base_objects.PhysicsObject):
                  filter(lambda leg: leg['state'] == True, process_definition['legs'])]
 
         # Find coupling orders in model
-        orders = list(set(sum([i.get('orders').keys() for i in \
-                               model.get('interactions')], [])))
-        non_QCD_orders = [order for order in  orders if order != 'QCD']
-        if len(non_QCD_orders) != 1 or len(orders)-len(non_QCD_orders) != 1:
-            # Too many or few orders
-            logger.info("Automatic coupling order check not possible " + \
-                        "for this model.")
-            logger.info("Please specify coupling orders by hand.")
-            return {}
+        coupling_orders = model.get('coupling_orders')
+        # Loop through the different coupling hierarchy values, so we
+        # start with the most dominant and proceed to the least dominant
+        hierarchy = sorted(list(set([model.get('order_hierarchy')[k] for \
+                                     k in coupling_orders])))
 
-        coupling = non_QCD_orders[0]
-        
-        logger.info("Checking for minimal non-QCD order which gives processes.")
-        logger.info("Please specify coupling orders to bypass this step.")
+        # orders is a rising list of the lists of orders with a given hierarchy
+        orders = []
+        for value in hierarchy:
+            orders.append([ k for (k, v) in \
+                            model.get('order_hierarchy').items() if \
+                            v == value ])
 
-        # Find number of non-QCD-charged legs
-        max_order_now = 0
-        for l in process_definition.get('legs'):
-            if any([model.get_particle(id).get('color') > 1 for id in \
-                    l.get('ids')]):
-                continue
-            max_order_now += 1
+        # Extract the interaction that correspond to the different
+        # coupling hierarchies, and the corresponding particles
+        interactions = []
+        particles = []
+        for iorder, order in enumerate(orders):
+            sum_orders = sum(orders[:iorder+1], [])
+            sum_interactions = sum(interactions[:iorder], [])
+            sum_particles = sum([list(p) for p in particles[:iorder]], [])
+            # Append all interactions that have orders with at least
+            # this hierarchy
+            interactions.append([i for i in model.get('interactions') if \
+                                 not i in sum_interactions and \
+                                 not any([k not in sum_orders for k in \
+                                          i.get('orders').keys()])])
+            # Append the corresponding particles, excluding the
+            # particles that have already been added
+            particles.append(set(sum([[p.get_pdg_code() for p in \
+                                      inter.get('particles') if \
+                                       p.get_pdg_code() not in sum_particles] \
+                                      for inter in interactions[-1]], [])))
 
-        # Check for non-QCD-charged s-channel propagators
+        # Find legs corresponding to the different orders
+        # making sure we look at lowest hierarchy first for each leg
+        max_order_now = []
+        new_legs =  copy.copy(process_definition.get('legs'))
+        for iorder, order in enumerate(orders):
+            ileg = 0
+            while ileg < len(new_legs):
+                if any([id in particles[iorder] for id in \
+                        new_legs[ileg].get('ids')]):
+                    max_order_now.append(hierarchy[iorder])
+                    new_legs.pop(ileg)
+                else:
+                    ileg += 1
+
+        # Now remove the two lowest orders to get maximum
+        max_order_now = sorted(max_order_now)[2:]
+
+        # Find s-channel propagators corresponding to the different orders
         max_order_prop = []
         for idlist in process_definition.get('required_s_channels'):
-            max_order_prop.append(0)
+            max_order_prop.append([0,0])
             for id in idlist:
-                if model.get_particle(id).get('color') > 1:
-                    continue
-                max_order_prop[-1] += 2
+                for parts, value in zip(particles, hierarchy):
+                    if id in parts:
+                        max_order_prop[-1][0] += 2*value
+                        max_order_prop[-1][1] += 1
+                        break
 
         if max_order_prop:
             if len(max_order_prop) >1:
-                max_order_prop = min(*max_order_prop)
+                max_order_prop = min(*max_order_prop, key=lambda x:x[0])
             else:
                 max_order_prop = max_order_prop[0]
 
-            max_order_now = max(max_order_now, max_order_prop)
+            # Use either the max_order from the external legs or
+            # the maximum order from the s-channel propagators, plus
+            # the appropriate lowest orders from max_order_now
+            max_order_now = max(sum(max_order_now),
+                                max_order_prop[0] + \
+                                sum(max_order_now[:-2 * max_order_prop[1]]))
+        else:
+            max_order_now = sum(max_order_now)            
+
+
+        coupling = 'WEIGHTED'
 
         # Generate all combinations for the initial state
         
-        while max_order_now < len(fsids):
+        while max_order_now < len(fsids)*max(hierarchy):
 
-            logger.info("Trying coupling order %s=%d" % (coupling,
-                                                         max_order_now))
+            logger.info("Trying coupling order WEIGHTED=%d" % max_order_now)
+
             oldloglevel = logger.getEffectiveLevel()
             logger.setLevel(logging.WARNING)
 
@@ -1477,8 +1530,12 @@ class MultiProcess(base_objects.PhysicsObject):
 
                     red_fsidlist.append(tuple(sorted(prod)));
 
-                    # Remove gluons from final state
-                    prod = [id for id in prod if id != 21]
+                    # Remove gluons from final state if QCD is among
+                    # the highest coupling hierarchy
+                    nglue = 0
+                    if 21 in particles[0]:
+                        nglue = len([id for id in prod if id == 21])
+                        prod = [id for id in prod if id != 21]
 
                     # Generate leg list for process
                     leg_list = [copy.copy(leg) for leg in islegs]
@@ -1489,8 +1546,10 @@ class MultiProcess(base_objects.PhysicsObject):
 
                     legs = base_objects.LegList(leg_list)
 
-                    # Set coupling order
-                    coupling_orders_now = {coupling: max_order_now}
+                    # Set summed coupling order according to max_order_now
+                    # subtracting the removed gluons
+                    coupling_orders_now = {coupling: max_order_now - \
+                                           nglue}
 
                     # Setup process
                     process = base_objects.Process({\
@@ -1508,6 +1567,8 @@ class MultiProcess(base_objects.PhysicsObject):
                                  process_definition.get('is_decay_chain'),
                               'overall_orders': \
                                  process_definition.get('overall_orders')})
+                    # Check for couplings with given expansion orders
+                    process.check_expansion_orders()
 
                     # Check for crossed processes
                     sorted_legs = sorted(legs.get_outgoing_id_list(model))
@@ -1533,8 +1594,8 @@ class MultiProcess(base_objects.PhysicsObject):
             max_order_now += 1
             logger.setLevel(oldloglevel)
 
-        # If no valid processes found with nfinal-1 couplings, return nfinal
-        return {coupling: len(fsids)}        
+        # If no valid processes found with nfinal-1 couplings, return maximal
+        return {coupling: len(fsids)*max(hierarchy)}
 
     @staticmethod
     def cross_amplitude(amplitude, process, org_perm, new_perm):

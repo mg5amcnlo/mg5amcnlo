@@ -3098,20 +3098,17 @@ def VVS1_2_2(V2, S3, COUP1,COUP2, M1, W1):
         """test if we create the correct set of routine/files for multiple lorentz"""
         
         helas_suite = create_aloha.AbstractALOHAModel('sm')
-        requested_routines=[(('FFS1','FFS2') , (), 0), 
-                            (('FFV1',) , (), 0), 
+        requested_routines=[(('FFV1',) , (), 0), 
                             (('FFV1','FFV2') , (1,), 0)]
         
         helas_suite.compute_subset(requested_routines)
 
-        # Check that the 5 base routines are created
-        # FFS1, FFS2, FFV1, FFV1C1, FFV2C1
-        self.assertEqual(len(helas_suite), 5)
+        # Check that the 3 base routines are created
+        # FFV1, FFV1C1, FFV2C1
+        self.assertEqual(len(helas_suite), 3)
         
-        # Check that FFS1 and FFV1C1 are correctly connected to the associate
-        #lorentz
-        linked = helas_suite[('FFS1',0)].combined
-        self.assertEqual(linked, [('FFS2',)])
+        # Check that FFV1C1 are correctly connected to the associate
+        # lorentz
         linked = helas_suite[('FFV1C1',0)].combined
         self.assertEqual(linked, [('FFV2',)])        
         linked = helas_suite[('FFV1',0)].combined
@@ -3122,8 +3119,8 @@ def VVS1_2_2(V2, S3, COUP1,COUP2, M1, W1):
         helas_suite.write('/tmp/mg5', 'Fortran')
         
         content = set(os.listdir('/tmp/mg5'))
-        self.assertEqual(content, set(['FFS1_0.f', 'FFS2_0.f', 'FFV1_0.f',
-                                       'FFV1C1_0.f','FFV2C1_0.f', 'FFS1_2_0.f',
+        self.assertEqual(content, set(['FFV1_0.f',
+                                       'FFV1C1_0.f','FFV2C1_0.f',
                                        'FFV1C1_2_0.f']))
         
         # Check the content of FFV1__FFV2C1_0.f

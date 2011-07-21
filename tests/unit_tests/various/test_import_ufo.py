@@ -30,17 +30,39 @@ _file_path = os.path.split(os.path.dirname(os.path.realpath(__file__)))[0]
 
 
 #===============================================================================
+# TestImportUFO
+#===============================================================================
+class TestImportUFO(unittest.TestCase):
+    """Test class for the RestrictModel object"""
+
+    def setUp(self):
+        """Set up decay model"""
+        #Read the full SM
+        sm_path = import_ufo.find_ufo_path('heft')
+        self.base_model = import_ufo.import_full_model(sm_path)
+
+    def test_coupling_hierarchy(self):
+        """Test that the coupling_hierarchy is set"""
+        self.assertEqual(self.base_model.get('order_hierarchy'),
+                         {'QCD': 1, 'QED': 2, 'HIG':1, 'HIW': 1})
+         
+    def test_expansion_order(self):
+        """Test that the expansion_order is set"""
+        self.assertEqual(self.base_model.get('expansion_order'),
+                         {'QCD': 99, 'QED': 99, 'HIG':1, 'HIW': 1})
+
+#===============================================================================
 # TestRestrictModel
 #===============================================================================
 class TestRestrictModel(unittest.TestCase):
     """Test class for the RestrictModel object"""
 
-    sm_path = import_ufo.find_ufo_path('sm')
-    base_model = import_ufo.import_full_model(sm_path)
-
     def setUp(self):
         """Set up decay model"""
         #Read the full SM
+        sm_path = import_ufo.find_ufo_path('sm')
+        self.base_model = import_ufo.import_full_model(sm_path)
+
         model = copy.deepcopy(self.base_model)
         self.model = import_ufo.RestrictModel(model)
         self.restrict_file = os.path.join(_file_path, os.path.pardir,
@@ -51,12 +73,12 @@ class TestRestrictModel(unittest.TestCase):
     def test_detect_special_parameters(self):
         """ check that detect zero parameters works"""        
         
-        expected = set(['cabi', 'conjg__CKM13', 'conjg__CKM12', 'CKM21', 'conjg__CKM31', 'CKM23', 'WT', 'WTA', 'conjg__CKM32', 'ymc', 'ymb', 'Me', 'CKM32', 'CKM31', 'ym', 'CKM13', 'CKM12', 'yc', 'yb', 'ye', 'conjg__CKM21', 'conjg__CKM23', 'ys', 'MD', 'MC', 'MB', 'MM', 'yup', 'ydo', 'MU', 'MS', 'sin__cabi'])
+        expected = set(['etaWS', 'conjg__CKM13', 'conjg__CKM12', 'conjg__CKM32', 'conjg__CKM31', 'CKM23', 'WT', 'lamWS', 'WTau', 'AWS', 'ymc', 'ymb', 'yme', 'ymm', 'Me', 'CKM32', 'CKM31', 'ym', 'CKM13', 'CKM12', 'lamWS__exp__2', 'lamWS__exp__3', 'yc', 'yb', 'ye', 'conjg__CKM21', 'CKM21', 'conjg__CKM23', 'MC', 'MM', 'rhoWS'])
         zero, one = self.model.detect_special_parameters()
         result = set(zero)
         self.assertEqual(expected, result)
         
-        expected = set(['CKM33', 'conjg__CKM11', 'conjg__CKM33', 'CKM22', 'CKM11', 'cos__cabi', 'conjg__CKM22'])
+        expected = set(['CKM33', 'conjg__CKM11', 'conjg__CKM33', 'CKM22', 'CKM11', 'conjg__CKM22'])
         result = set(one)
         self.assertEqual(expected, result)
 
@@ -108,7 +130,7 @@ class TestRestrictModel(unittest.TestCase):
         zero, iden = self.model.detect_identical_couplings()
         
         # check what is the zero coupling
-        expected = set(['GC_86', 'GC_75', 'GC_74', 'GC_77', 'GC_76', 'GC_71', 'GC_70', 'GC_73', 'GC_72', 'GC_31', 'GC_30', 'GC_32', 'GC_79', 'GC_78', 'GC_88', 'GC_87', 'GC_89', 'GC_105', 'GC_126', 'GC_127', 'GC_124', 'GC_125', 'GC_123', 'GC_120', 'GC_121', 'GC_108', 'GC_109', 'GC_82', 'GC_83', 'GC_84', 'GC_85', 'GC_128', 'GC_129', 'GC_99', 'GC_106', 'GC_111', 'GC_98', 'GC_80', 'GC_28', 'GC_115', 'GC_81', 'GC_119', 'GC_26', 'GC_27', 'GC_68', 'GC_69', 'GC_114', 'GC_107', 'GC_113', 'GC_112', 'GC_135', 'GC_118', 'GC_131', 'GC_130', 'GC_133', 'GC_132', 'GC_117', 'GC_116', 'GC_95', 'GC_94', 'GC_93', 'GC_92', 'GC_91', 'GC_90'])
+        expected = set(['GC_17', 'GC_15', 'GC_14', 'GC_13', 'GC_40', 'GC_41', 'GC_19', 'GC_18', 'GC_46', 'GC_44', 'GC_45', 'GC_33', 'GC_35', 'GC_34', 'GC_42', 'GC_36'])
         result = set(zero)
         for name in result:
             self.assertEqual(self.model['coupling_dict'][name], 0)
@@ -116,7 +138,7 @@ class TestRestrictModel(unittest.TestCase):
         self.assertEqual(expected, result)        
         
         # check what are the identical coupling
-        expected = [['GC_33', 'GC_29', 'GC_24', 'GC_25', 'GC_122', 'GC_134', 'GC_110'], ['GC_19', 'GC_66'], ['GC_18', 'GC_65'], ['GC_37', 'GC_12'], ['GC_49', 'GC_4'], ['GC_46', 'GC_62']]
+        expected = [['GC_16', 'GC_12', 'GC_11', 'GC_39', 'GC_47', 'GC_43', 'GC_20']]
         expected.sort()
         iden.sort()
         self.assertEqual(expected, iden)
@@ -124,14 +146,11 @@ class TestRestrictModel(unittest.TestCase):
     def test_locate_couplings(self):
         """ check the creation of the coupling to vertex dict """
         
-        target = ['GC_33', 'GC_29', 'GC_24', 'GC_25', 'GC_122', 'GC_134', 'GC_110']
-        sol = {'GC_33':[41], 
-               'GC_29':[37],
-               'GC_24':[63, 64, 65, 66, 67, 68], 
-               'GC_25':[33], 
-               'GC_122':[46], 
-               'GC_134':[50], 
-               'GC_110':[42]}
+        target = ['GC_33', 'GC_29', 'GC_24', 'GC_25']
+        sol = {'GC_33': [26],
+               'GC_29': [11],
+               'GC_24': [56, 57, 58],
+               'GC_25': [4]}
         
         self.model.locate_coupling()
         for coup in target:
@@ -147,7 +166,7 @@ class TestRestrictModel(unittest.TestCase):
         zero, iden = self.model.detect_identical_couplings()
         
         # Check that All the code/model is the one intended for this test
-        target = ['GC_33', 'GC_29', 'GC_24', 'GC_25', 'GC_122', 'GC_134', 'GC_110']
+        target = ['GC_16', 'GC_12', 'GC_11', 'GC_39', 'GC_47', 'GC_43', 'GC_20']
         assert target in iden, 'test not up-to-date'
         vertex_id = [33,37,41,42,46,50,63,64,65,66,67,68]
         
@@ -324,12 +343,11 @@ class TestRestrictModel(unittest.TestCase):
 class TestBenchmarkModel(unittest.TestCase):
     """Test class for the RestrictModel object"""
 
-    sm_path = import_ufo.find_ufo_path('sm')
-    base_model = import_ufo.import_full_model(sm_path)
-
     def setUp(self):
         """Set up decay model"""
         #Read the full SM
+        sm_path = import_ufo.find_ufo_path('sm')
+        self.base_model = import_ufo.import_full_model(sm_path)
         model = copy.deepcopy(self.base_model)
         self.model = import_ufo.RestrictModel(model)
         self.restrict_file = os.path.join(_file_path, os.path.pardir,

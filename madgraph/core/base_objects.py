@@ -667,8 +667,10 @@ class Model(PhysicsObject):
         self['ref_dict_to0'] = {}
         self['ref_dict_to1'] = {}
         self['got_majoranas'] = None
+        self['order_hierarchy'] = {}
         self['conserved_charge'] = set()
         self['coupling_orders'] = None
+        self['expansion_order'] = None
         self['version_tag'] = None # position of the directory (for security)
 
     def filter(self, name, value):
@@ -758,6 +760,15 @@ class Model(PhysicsObject):
             if self['interactions']:
                 self['coupling_orders'] = self.get_coupling_orders()
 
+        if (name == 'order_hierarchy') and not self[name]:
+            if self['interactions']:
+                self['order_hierarchy'] = self.get_order_hierarchy()    
+
+        if (name == 'expansion_order') and self[name] == None:
+            if self['interactions']:
+                self['expansion_order'] = \
+                   dict([(order, -1) for order in self.get('coupling_orders')])
+
         return Model.__bases__[0].get(self, name) # call the mother routine
 
     def set(self, name, value):
@@ -816,6 +827,16 @@ class Model(PhysicsObject):
 
         return set(sum([i.get('orders').keys() for i in \
                         self.get('interactions')], []))
+
+    def get_order_hierarchy(self):
+        """Determine the order hierarchy of the model"""
+        # Set coupling hierachy
+        hierarchy = dict([(order, 1) for order in self.get('coupling_orders')])
+        # Special case for only QCD and QED couplings, unless already set
+        if self.get('coupling_orders') == set(['QCD', 'QED']):
+            hierarchy['QED'] = 2
+        return hierarchy
+    
 
     def check_majoranas(self):
         """Return True if there is fermion flow violation, False otherwise"""
@@ -1867,6 +1888,23 @@ class Process(PhysicsObject):
         return reduce(lambda x, y: x * y,
                       [ math.factorial(val) for val in \
                         identical_indices.values() ], 1)
+
+    def check_expansion_orders(self):
+        """Ensure that maximum expansion orders from the model are
+        properly taken into account in the process"""
+
+        # Ensure that expansion orders are taken into account
+        expansion_orders = \
+                         self.get('model').get('expansion_order')
+        orders = self.get('orders')
+        if any([v > 0 and v < 99 for v in \
+                expansion_orders.values()]):
+            for order in [ (k,v) for (k, v) in expansion_orders.items() if \
+                           v > 0 and v < 99 ]:
+                if k in orders:
+                    orders[k] = min(orders[k], v)
+                else:
+                    orders[k] = v
 
     def __eq__(self, other):
         """Overloading the equality operator, so that only comparison
