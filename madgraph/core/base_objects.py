@@ -1892,8 +1892,7 @@ class Process(PhysicsObject):
                                     identical_indices[leg.get('id')] + 1
             else:
                 identical_indices[leg.get('id')] = 1
-        return reduce(lambda x, y: x * y,
-                      [ math.factorial(val) for val in \
+        return reduce(lambda x, y: x * y, [ math.factorial(val) for val in \
                         identical_indices.values() ], 1)
 
     def check_expansion_orders(self):
@@ -1901,18 +1900,15 @@ class Process(PhysicsObject):
         properly taken into account in the process"""
 
         # Ensure that expansion orders are taken into account
-        expansion_orders = \
-                         self.get('model').get('expansion_order')
+        expansion_orders = self.get('model').get('expansion_order')
         orders = self.get('orders')
-        if any([v > 0 and v < 99 for v in \
-                expansion_orders.values()]):
-            for order in [ (k, v) for (k, v) in expansion_orders.items() if \
-                           v > 0 and v < 99 ]:
-                (k, v) = order
-                if k in orders:
-                    orders[k] = min(orders[k], v)
-                else:
-                    orders[k] = v
+        
+        tmp = [(k,v) for (k,v) in expansion_orders.items() if 0 < v < 99]
+        for (k,v) in tmp:  
+            if k in orders:
+                orders[k] = min(orders[k], v)
+            else:
+                orders[k] = v
 
     def __eq__(self, other):
         """Overloading the equality operator, so that only comparison

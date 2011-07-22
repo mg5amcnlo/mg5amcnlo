@@ -1375,7 +1375,7 @@ class MultiProcess(base_objects.PhysicsObject):
             
     @staticmethod
     def find_optimal_process_orders(process_definition):
-        """Find the maximal QCD order for this set of processes.
+        """Find the maximal Weighted order for this set of processes.
         The algorithm:
 
         1) Check the coupling hierarchy of the model. Assign all
@@ -1476,7 +1476,7 @@ class MultiProcess(base_objects.PhysicsObject):
             ileg = 0
             while ileg < len(new_legs):
                 if any([id in particles[iorder] for id in \
-                        new_legs[ileg].get('ids')]):
+                                                    new_legs[ileg].get('ids')]):
                     max_order_now.append(hierarchy[iorder])
                     new_legs.pop(ileg)
                 else:
@@ -1528,8 +1528,7 @@ class MultiProcess(base_objects.PhysicsObject):
             failed_procs = []
 
             for prod in apply(itertools.product, isids):
-                islegs = [\
-                        base_objects.Leg({'id':id, 'state': False}) \
+                islegs = [ base_objects.Leg({'id':id, 'state': False}) \
                         for id in prod]
 
                 # Generate all combinations for the final state, and make
