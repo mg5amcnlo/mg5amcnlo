@@ -73,7 +73,7 @@ class TestRestrictModel(unittest.TestCase):
     def test_detect_special_parameters(self):
         """ check that detect zero parameters works"""        
         
-        expected = set(['etaWS', 'conjg__CKM13', 'conjg__CKM12', 'conjg__CKM32', 'conjg__CKM31', 'CKM23', 'WT', 'lamWS', 'WTau', 'AWS', 'ymc', 'ymb', 'yme', 'ymm', 'Me', 'CKM32', 'CKM31', 'ym', 'CKM13', 'CKM12', 'lamWS__exp__2', 'lamWS__exp__3', 'yc', 'yb', 'ye', 'conjg__CKM21', 'CKM21', 'conjg__CKM23', 'MC', 'MM', 'rhoWS'])
+        expected = set(['etaWS', 'conjg__CKM13', 'conjg__CKM12', 'conjg__CKM32', 'conjg__CKM31', 'CKM23', 'WT', 'lamWS', 'WTau', 'AWS', 'ymc', 'ymb', 'yme', 'ymm', 'Me', 'MB', 'CKM32', 'CKM31', 'ym', 'CKM13', 'CKM12', 'lamWS__exp__2', 'lamWS__exp__3', 'yc', 'yb', 'ye', 'conjg__CKM21', 'CKM21', 'conjg__CKM23', 'MC', 'MM', 'rhoWS'])
         zero, one = self.model.detect_special_parameters()
         result = set(zero)
         self.assertEqual(expected, result)
@@ -168,8 +168,17 @@ class TestRestrictModel(unittest.TestCase):
         # Check that All the code/model is the one intended for this test
         target = ['GC_16', 'GC_12', 'GC_11', 'GC_39', 'GC_47', 'GC_43', 'GC_20']
         assert target in iden, 'test not up-to-date'
-        vertex_id = [33,37,41,42,46,50,63,64,65,66,67,68]
-        
+
+        check_content = [['d', 'u', 'w+'], ['s', 'c', 'w+'], ['b', 't', 'w+'], ['u', 'd', 'w+'], ['c', 's', 'w+'], ['t', 'b', 'w+'], ['e-', 've', 'w+'], ['m-', 'vm', 'w+'], ['tt-', 'vt', 'w+'], ['ve', 'e-', 'w+'], ['vm', 'm-', 'w+'], ['vt', 'tt-', 'w+']]
+        content =  [[p.get('name') for p in v.get('particles')] \
+               for v in self.model.get('interactions') \
+               if any([c in target for c in v['couplings'].values()])]
+        assert check_content == content, 'test not up-to-date'      
+
+        vertex_id = [v.get('id') \
+               for v in self.model.get('interactions') \
+               if any([c in target for c in v['couplings'].values()])]
+
 
         for id in vertex_id:
             is_in_target = False
@@ -184,9 +193,9 @@ class TestRestrictModel(unittest.TestCase):
             has_33 = False
             for coup in self.model.get_interaction(id)['couplings'].values():
                 self.assertFalse(coup in target[1:])
-                if coup == 'GC_33':
-                    has_33 = True
-            self.assertTrue(has_33, True)
+                if coup == 'GC_16':
+                    has_16 = True
+            self.assertTrue(has_16, True)
 
     def test_remove_couplings(self):
         """ check that the detection of irrelevant interactions works """
@@ -195,23 +204,23 @@ class TestRestrictModel(unittest.TestCase):
         # check that we have the valid model
         input = self.model['interactions'][3]  # four gluon
         input2 = self.model['interactions'][28] # b b~ h
-        self.assertTrue('GC_11' in input['couplings'].values())
-        self.assertTrue('GC_68' in input2['couplings'].values())
-        found_6 = 0
-        found_34 = 0
+        self.assertTrue('GC_25' in input['couplings'].values())
+        self.assertTrue('GC_21' in input2['couplings'].values())
+        found_25 = 0
+        found_21 = 0
         for dep,data in self.model['couplings'].items():
             for param in data:
-                if param.name == 'GC_11': found_6 +=1
-                elif param.name == 'GC_68': found_34 +=1
-        self.assertTrue(found_6>0)
-        self.assertTrue(found_34>0)
+                if param.name == 'GC_25': found_25 +=1
+                elif param.name == 'GC_21': found_21 +=1
+        self.assertTrue(found_25>0)
+        self.assertTrue(found_21>0)
         
         # make the real test
-        result = self.model.remove_couplings(['GC_68','GC_11'])
+        result = self.model.remove_couplings(['GC_25','GC_21'])
         
         for dep,data in self.model['couplings'].items():
             for param in data:
-                self.assertFalse(param.name in  ['GC_11', 'GC_68'])
+                self.assertFalse(param.name in  ['GC_25', 'GC_21'])
 
              
     def test_remove_interactions(self):
@@ -220,39 +229,38 @@ class TestRestrictModel(unittest.TestCase):
         
         # first test case where they are all deleted
         # check that we have the valid model
-        input = self.model['interactions'][3]  # four gluon
-        input2 = self.model['interactions'][28] # b b~ h
-        self.assertTrue('GC_11' in input['couplings'].values())
-        self.assertTrue('GC_68' in input2['couplings'].values())
+        input = self.model['interactions'][2]  # four gluon
+        input2 = self.model['interactions'][25] # b b~ h
+        self.assertTrue('GC_6' in input['couplings'].values())
+        self.assertTrue('GC_33' in input2['couplings'].values())
         found_6 = 0
-        found_34 = 0
+        found_33 = 0
         for dep,data in self.model['couplings'].items():
             for param in data:
-                if param.name == 'GC_11': found_6 +=1
-                elif param.name == 'GC_68': found_34 +=1
+                if param.name == 'GC_6': found_6 +=1
+                elif param.name == 'GC_33': found_33 +=1
         self.assertTrue(found_6>0)
-        self.assertTrue(found_34>0)
+        self.assertTrue(found_33>0)
         
         # make the real test
         self.model.locate_coupling()
-        result = self.model.remove_interactions(['GC_68','GC_11'])
+        result = self.model.remove_interactions(['GC_6','GC_33'])
         self.assertFalse(input in self.model['interactions'])
         self.assertFalse(input2 in self.model['interactions'])
         
     
         # Now test case where some of them are deleted and some not
-        input = self.model['interactions'][29]  # d d~ Z
-        input2 = self.model['interactions'][59] # e+ e- Z
-        self.assertTrue('GC_47' in input['couplings'].values())
-        self.assertTrue('GC_34' in input['couplings'].values())
-        self.assertTrue('GC_34' in input2['couplings'].values())
-        self.assertTrue('GC_48' in input2['couplings'].values())
-        result = self.model.remove_interactions(['GC_34','GC_48'])
-        input = self.model['interactions'][29]
-        self.assertTrue('GC_47' in input['couplings'].values())
-        self.assertFalse('GC_34' in input['couplings'].values())
-        self.assertFalse('GC_34' in input2['couplings'].values())
-        self.assertFalse('GC_48' in input2['couplings'].values())
+        input = self.model['interactions'][26]  # d d~ Z
+        input2 = self.model['interactions'][55] # e+ e- Z
+        self.assertTrue('GC_23' in input['couplings'].values())
+        self.assertTrue('GC_21' in input['couplings'].values())
+        self.assertTrue('GC_21' in input2['couplings'].values())
+        self.assertTrue('GC_24' in input2['couplings'].values())
+        result = self.model.remove_interactions(['GC_21','GC_24'])
+        self.assertTrue('GC_23' in input['couplings'].values())
+        self.assertFalse('GC_21' in input['couplings'].values())
+        self.assertFalse('GC_21' in input2['couplings'].values())
+        self.assertFalse('GC_24' in input2['couplings'].values())
 
     def test_put_parameters_to_zero(self):
         """check that we remove parameters correctly"""
@@ -294,11 +302,11 @@ class TestRestrictModel(unittest.TestCase):
     def test_restrict_from_a_param_card(self):
         """ check the full restriction chain in one case b b~ h """
         
-        interaction = self.model['interactions'][28]
+        interaction = self.model['interactions'][25]
         #check sanity of the checks
         assert [p['pdg_code'] for p in interaction['particles']] == [5, 5, 25], \
              'Initial model not valid for this test => update the test'
-        assert interaction['couplings'] == {(0,0): 'GC_68'}
+        assert interaction['couplings'] == {(0,0): 'GC_33'}
         
         self.model.restrict_model(self.restrict_file)
         
@@ -313,7 +321,7 @@ class TestRestrictModel(unittest.TestCase):
         # check remove couplings
         for dep,data in self.model['couplings'].items():
             for param in data:
-                self.assertFalse(param.name in  ['GC_68'])
+                self.assertFalse(param.name in  ['GC_33'])
 
         # check masses
         part_b = self.model.get_particle(5)
