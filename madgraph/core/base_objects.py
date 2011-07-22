@@ -793,7 +793,7 @@ class Model(PhysicsObject):
             self['got_majoranas'] = None
             self['coupling_orders'] = None
             self['order_hierarchy'] = {}
-            self['expansion_order'] = {}
+            self['expansion_order'] = None
 
         Model.__bases__[0].set(self, name, value) # call the mother routine
 

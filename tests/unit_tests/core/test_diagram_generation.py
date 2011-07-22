@@ -2646,12 +2646,8 @@ class MultiProcessTest(unittest.TestCase):
             #print 'Attempted processes: ',len(amplitudes)
 
     def test_heft_multiparticle_pp_hnj(self):
-        """Setting up and testing pp > h+nj based on multiparticle lists,
-        using the amplitude functionality of MultiProcess
-        (which makes partial use of crossing symmetries)
+        """Test pp > h+nj in HEFT, which tests new optimize_orders
         """
-
-    def setUp(self):
 
         mypartlist = base_objects.ParticleList()
         myinterlist = base_objects.InteractionList()
@@ -2918,7 +2914,7 @@ class MultiProcessTest(unittest.TestCase):
 
             #print 'pp > h + ',nfs,'j (p,j = ', p, '):'
             #print 'Processes: ',len(amplitudes), \
-            #      ' with ', sum([v[1] for v in valid_procs]), ' diagrams'
+            #      ' with ', sum([v[1] for v in valid_procs]),
             #for amplitude in amplitudes:
             #    print amplitude.get('process').nice_string()
             #print 'valid_procs = ',valid_procs
