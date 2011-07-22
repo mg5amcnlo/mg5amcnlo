@@ -44,7 +44,7 @@ class TestImportUFO(unittest.TestCase):
     def test_coupling_hierarchy(self):
         """Test that the coupling_hierarchy is set"""
         self.assertEqual(self.base_model.get('order_hierarchy'),
-                         {'QCD': 1, 'QED': 2, 'HIG':1, 'HIW': 1})
+                         {'QCD': 1, 'QED': 2, 'HIG':2, 'HIW': 2})
          
     def test_expansion_order(self):
         """Test that the expansion_order is set"""
