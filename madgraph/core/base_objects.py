@@ -1650,7 +1650,7 @@ class Process(PhysicsObject):
 
         if self['orders']:
             mystr = mystr + " ".join([key + '=' + repr(self['orders'][key]) \
-                       for key in self['orders']]) + ' '
+                       for key in sorted(self['orders'])]) + ' '
 
         # Remove last space
         mystr = mystr[:-1]
@@ -1659,7 +1659,7 @@ class Process(PhysicsObject):
             mystr += " @%d" % self.get('id')
             if self.get('overall_orders'):
                 mystr += " " + " ".join([key + '=' + repr(self['orders'][key]) \
-                       for key in self['orders']]) + ' '
+                       for key in sorted(self['orders'])]) + ' '
         
         if not self.get('decay_chains'):
             return mystr
@@ -1712,7 +1712,7 @@ class Process(PhysicsObject):
 
         if self['orders']:
             mystr = mystr + " ".join([key + '=' + repr(self['orders'][key]) \
-                       for key in self['orders']]) + ' '
+                       for key in sorted(self['orders'])]) + ' '
 
         # Remove last space
         mystr = mystr[:-1]
@@ -1721,7 +1721,7 @@ class Process(PhysicsObject):
             mystr += " @%d" % self.get('id')
             if self.get('overall_orders'):
                 mystr += " " + " ".join([key + '=' + repr(self['orders'][key]) \
-                       for key in self['orders']]) + ' '
+                       for key in sorted(self['orders'])]) + ' '
         
         if not self.get('decay_chains'):
             return mystr
@@ -2143,7 +2143,7 @@ class ProcessDefinition(Process):
 
         if self['orders']:
             mystr = mystr + " ".join([key + '=' + repr(self['orders'][key]) \
-                       for key in self['orders']]) + ' '
+                       for key in sorted(self['orders'])]) + ' '
 
         # Remove last space
         mystr = mystr[:-1]
@@ -2152,7 +2152,7 @@ class ProcessDefinition(Process):
             mystr += " @%d" % self.get('id')
             if self.get('overall_orders'):
                 mystr += " " + " ".join([key + '=' + repr(self['orders'][key]) \
-                       for key in self['orders']]) + ' '
+                       for key in sorted(self['orders'])]) + ' '
         
         if not self.get('decay_chains'):
             return mystr
