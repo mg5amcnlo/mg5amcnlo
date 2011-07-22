@@ -208,30 +208,26 @@ class UFOMG5Converter(object):
         # there.
 
         hierarchy={}
-        for order in self.model.get('coupling_orders'):
-            hierarchy[order]=1
         try:
             all_orders = self.ufomodel.all_orders
             for order in all_orders:
                 hierarchy[order.name]=order.hierarchy
         except AttributeError:
             pass
-
-        self.model.set('order_hierarchy', hierarchy)
-
+        else:
+            self.model.set('order_hierarchy', hierarchy)            
+        
         # Also set expansion_order, i.e., maximum coupling order per process
 
         expansion_order={}
-        for order in self.model.get('coupling_orders'):
-            expansion_order[order]=-1
         try:
             all_orders = self.ufomodel.all_orders
             for order in all_orders:
                 expansion_order[order.name]=order.expansion_order
         except AttributeError:
             pass
-
-        self.model.set('expansion_order', expansion_order)
+        else:
+            self.model.set('expansion_order', expansion_order)
 
         return self.model
         
