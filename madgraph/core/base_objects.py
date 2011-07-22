@@ -831,7 +831,7 @@ class Model(PhysicsObject):
                         self.get('interactions')], []))
 
     def get_order_hierarchy(self):
-        """Determine the order hierarchy of the model"""
+        """Set a default order hierarchy for the model if not set by the UFO."""
         # Set coupling hierachy
         hierarchy = dict([(order, 1) for order in self.get('coupling_orders')])
         # Special case for only QCD and QED couplings, unless already set
@@ -839,6 +839,54 @@ class Model(PhysicsObject):
             hierarchy['QED'] = 2
         return hierarchy
     
+    def get_particles_hierarchy(self):
+        """Returns the order hierarchies of the model and the
+        particles which have interactions in at least this hierarchy
+        (used in find_optimal_process_orders in MultiProcess diagram
+        generation):
+
+        Check the coupling hierarchy of the model. Assign all
+        particles to the different coupling hierarchies so that a
+        particle is considered to be in the highest hierarchy (i.e.,
+        with lowest value) where it has an interaction.
+        """
+        
+        # Find coupling orders in model
+        coupling_orders = self.get('coupling_orders')
+        # Loop through the different coupling hierarchy values, so we
+        # start with the most dominant and proceed to the least dominant
+        hierarchy = sorted(list(set([self.get('order_hierarchy')[k] for \
+                                     k in coupling_orders])))
+
+        # orders is a rising list of the lists of orders with a given hierarchy
+        orders = []
+        for value in hierarchy:
+            orders.append([ k for (k, v) in \
+                            self.get('order_hierarchy').items() if \
+                            v == value ])
+
+        # Extract the interaction that correspond to the different
+        # coupling hierarchies, and the corresponding particles
+        interactions = []
+        particles = []
+        for iorder, order in enumerate(orders):
+            sum_orders = sum(orders[:iorder+1], [])
+            sum_interactions = sum(interactions[:iorder], [])
+            sum_particles = sum([list(p) for p in particles[:iorder]], [])
+            # Append all interactions that have only orders with at least
+            # this hierarchy
+            interactions.append([i for i in self.get('interactions') if \
+                                 not i in sum_interactions and \
+                                 not any([k not in sum_orders for k in \
+                                          i.get('orders').keys()])])
+            # Append the corresponding particles, excluding the
+            # particles that have already been added
+            particles.append(set(sum([[p.get_pdg_code() for p in \
+                                      inter.get('particles') if \
+                                       p.get_pdg_code() not in sum_particles] \
+                                      for inter in interactions[-1]], [])))
+
+        return particles, hierarchy
 
     def check_majoranas(self):
         """Return True if there is fermion flow violation, False otherwise"""
@@ -1981,6 +2029,76 @@ class ProcessDefinition(Process):
         """Return process property names as a nicely sorted list."""
 
         return super(ProcessDefinition, self).get_sorted_keys()
+
+    def get_minimum_WEIGHTED(self):
+        """Retrieve the minimum starting guess for WEIGHTED order, to
+        use in find_optimal_process_orders in MultiProcess diagram
+        generation (as well as particles and hierarchy). The algorithm:
+
+        1) Pick out the legs in the multiprocess according to the
+        highest hierarchy represented (so don't mix particles from
+        different hierarchy classes in the same multiparticles!)
+
+        2) Find the starting maximum WEIGHTED order as the sum of the
+        highest n-2 weighted orders
+
+        3) Pick out required s-channel particle hierarchies, and use
+        the highest of the maximum WEIGHTED order from the legs and
+        the minimum WEIGHTED order extracted from 2*s-channel
+        hierarchys plus the n-2-2*(number of s-channels) lowest
+        leg weighted orders.
+        """
+
+        model = self.get('model')
+        
+        # Extract hierarchy and particles corresponding to the
+        # different hierarchy levels from the model
+        particles, hierarchy = model.get_particles_hierarchy()
+
+        # Find legs corresponding to the different orders
+        # making sure we look at lowest hierarchy first for each leg
+        max_order_now = []
+        new_legs =  copy.copy(self.get('legs'))
+        for parts, value in zip(particles, hierarchy):
+            ileg = 0
+            while ileg < len(new_legs):
+                if any([id in parts for id in new_legs[ileg].get('ids')]):
+                    max_order_now.append(value)
+                    new_legs.pop(ileg)
+                else:
+                    ileg += 1
+
+        # Now remove the two lowest orders to get maximum (since the
+        # number of interactions is n-2)
+        max_order_now = sorted(max_order_now)[2:]
+
+        # Find s-channel propagators corresponding to the different orders
+        max_order_prop = []
+        for idlist in self.get('required_s_channels'):
+            max_order_prop.append([0,0])
+            for id in idlist:
+                for parts, value in zip(particles, hierarchy):
+                    if id in parts:
+                        max_order_prop[-1][0] += 2*value
+                        max_order_prop[-1][1] += 1
+                        break
+
+        if max_order_prop:
+            if len(max_order_prop) >1:
+                max_order_prop = min(*max_order_prop, key=lambda x:x[0])
+            else:
+                max_order_prop = max_order_prop[0]
+
+            # Use either the max_order from the external legs or
+            # the maximum order from the s-channel propagators, plus
+            # the appropriate lowest orders from max_order_now
+            max_order_now = max(sum(max_order_now),
+                                max_order_prop[0] + \
+                                sum(max_order_now[:-2 * max_order_prop[1]]))
+        else:
+            max_order_now = sum(max_order_now)            
+
+        return max_order_now, particles, hierarchy
 
     def nice_string(self, indent=0):
         """Returns a nicely formated string about current process
