@@ -963,7 +963,7 @@ def make_valid_param_card(path, restrictpath, outputpath=None):
     return cardrule
 
 def check_valid_param_card(path, restrictpath=None):
-    """ modify the current param_card such that it agrees with the restriction"""
+    """ check if the current param_card agrees with the restriction"""
     
     if restrictpath is None:
         restrictpath = os.path.dirname(path)

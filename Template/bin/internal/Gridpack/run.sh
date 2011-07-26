@@ -57,12 +57,12 @@ fi
 echo "Now generating $num_events events with random seed $seed and granularity $gran"
 
 
-if [[ ! -x ./madevent/bin/gridrun ]]; then
+if [[ ! -x ./madevent/bin/internal/gridrun ]]; then
     echo "Error: gridrun script not found !"
     exit
 else
     cd ./madevent
-    ./bin/gridrun
+    ./bin/internal/gridrun
 fi
 
 if [[ ! -e ./Events/unweighted_events.lhe ]]; then
@@ -101,9 +101,9 @@ fi
 
 # part added by Stephen Mrenna to correct the kinematics of the replaced
 #  particles
-if [[ -e ./madevent/bin/addmasses.py ]]; then
+if [[ -e ./madevent/bin/internal/addmasses.py ]]; then
   mv ./events.lhe ./events.lhe.0
-  python ./madevent/bin/addmasses.py ./events.lhe.0 ./events.lhe
+  python ./madevent/bin/internal/addmasses.py ./events.lhe.0 ./events.lhe
 fi  
 
 gzip -f events.lhe

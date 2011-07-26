@@ -34,6 +34,7 @@ class Cmd(cmd.Cmd):
 
     #suggested list of command
     next_possibility = {} # command : [list of suggested command]
+    history_header = ""
     
     class InvalidCmd(Exception):
         """expected error for wrong command"""
@@ -188,15 +189,135 @@ class Cmd(cmd.Cmd):
         # Faulty command
         logger.warning("Command \"%s\" not recognized, please try again" % \
                                                                 line.split()[0])
+        
+
+    @staticmethod
+    def split_arg(line):
+        """Split a line of arguments"""
+    
+        split = line.split()
+        out=[]
+        tmp=''
+        for data in split:
+            if data[-1] == '\\':
+                tmp += data[:-1]+' '
+            elif tmp:
+                out.append(tmp+data)
+            else:
+                out.append(data)
+        return out
+
+     
+    # Write the list of command line use in this session
+    def do_history(self, line):
+        """write in a file the suite of command that was used"""
+        
+        args = self.split_arg(line)
+        # Check arguments validity
+        self.check_history(args)
+
+        if len(args) == 0:
+            print '\n'.join(self.history)
+            return
+        elif args[0] == 'clean':
+            self.history = []
+            logger.info('History is cleaned')
+            return
+        elif args[0] == '.':
+            output_file = os.path.join(self._export_dir, 'Cards', \
+                                       'proc_card_mg5.dat')
+            output_file = open(output_file, 'w')
+        else:
+            output_file = open(args[0], 'w')
+            
+        # Create the command file
+        text = self.get_history_header()
+        text += ('\n'.join(self.history) + '\n') 
+        
+        #write this information in a file
+        output_file.write(text)
+        output_file.close()
+
+        if self.log:
+            logger.info("History written to " + output_file.name)
+
+    def clean_history(self,*arguments):
+        """Remove all commands in arguments from history"""
+
+        nline = 0
+        arguments = list(arguments) + ['display', 'open', 'launch', 'output']
+        while nline < len(self.history) - 1:
+            if any([self.history[nline].startswith(arg) for arg in arguments]):
+                self.history.pop(nline)
+            else:
+                nline += 1
+    
+    def get_history_header(self):
+        """Default history header"""
+        
+        return self.history_header
+        
+
+
+    def help_history(self):
+        logger.info("syntax: history [FILEPATH|clean|.] ")
+        logger.info("   If FILEPATH is \'.\' and \'output\' is done,")
+        logger.info("   Cards/proc_card_mg5.dat will be used.")
+        logger.info("   If FILEPATH is omitted, the history will be output to stdout.")
+        logger.info("   \"clean\" will remove all entries from the history.")
+    
+    def complete_history(self, text, line, begidx, endidx):
+        "Complete the history command"
+
+        args = self.split_arg(line[0:begidx])
+
+        # Directory continuation
+        if args[-1].endswith(os.path.sep):
+            return self.path_completion(text,
+                                        os.path.join('.',*[a for a in args \
+                                                    if a.endswith(os.path.sep)]))
+
+        if len(args) == 1:
+            return self.path_completion(text)
+        
+    def check_history(self, args):
+        """check the validity of line"""
+        
+        if len(args) > 1:
+            self.help_history()
+            raise self.InvalidCmd('\"history\" command takes at most one argument')
+        
+        if not len(args):
+            return
+        
+        if args[0] =='.':
+            if not self._export_dir:
+                raise self.InvalidCmd("No default directory is defined for \'.\' option")
+        elif args[0] != 'clean':
+                dirpath = os.path.dirname(args[0])
+                if dirpath and not os.path.exists(dirpath) or \
+                       os.path.isdir(args[0]):
+                    raise self.InvalidCmd("invalid path %s " % dirpath)
+    
+
+
     # Quit
     def do_quit(self, line):
         """ exit the mainloop() """
         print
         return True
- 
+
     # Aliases
     do_EOF = do_quit
     do_exit = do_quit
+
+    def help_quit(self):
+        logger.info("syntax: quit")
+        logger.info("-- terminates the application")
+    
+    help_EOF = help_quit
+     
+
 
     def do_help(self, line):
         """ propose some usefull possible action """
@@ -239,6 +360,11 @@ class Cmd(cmd.Cmd):
             text+='\t %s \n' % option      
         print text
 
+    def help_help(self):
+        logger.info("syntax: help")
+        logger.info("-- access to the in-line help" )
+
+
     @staticmethod
     def list_completion(text, list):
         """Propose completions of text in list"""
@@ -249,7 +375,14 @@ class Cmd(cmd.Cmd):
                             for f in list
                             if f.startswith(text)
                             ]
-        return completions
+        def put_space(name): 
+            if name.endswith(' '): 
+                return name
+            else:
+                return '%s ' % name 
+            
+        return [put_space(name) for name in completions] 
+            
 
     @staticmethod
     def path_completion(text, base_dir = None, only_dirs = False, 

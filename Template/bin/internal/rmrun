@@ -48,6 +48,6 @@ for i in `cat subproc.mg` ; do
     cd ../
 done
 cd ../
-./bin/gen_cardhtml-pl
-./bin/gen_crossxhtml-pl
+./bin/internal/gen_cardhtml-pl
+./bin/internal/gen_crossxhtml-pl
 

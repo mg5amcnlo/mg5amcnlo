@@ -436,7 +436,10 @@ class MadEventLauncher(object):
     
         os.system('sed -i.bak "s/\s*.false.*=.*GridRun/  .true.  =  GridRun/g" %s' 
                   % pjoin(self.main, 'Cards','grid_card.dat'))
-            
+        
+        # put the gridpack binaries in bin
+        os.system('cp %(main)s/bin/internal/Gridpack/* %(main)s/bin' % {'main': self.main})
+
         subprocess.call(['%s/restore_data' % self.dirbin, self.name],
                             cwd=self.main)
         subprocess.call(['%s/store4grid' % self.dirbin, 'default'],
@@ -606,23 +609,6 @@ class MadEventLauncher(object):
             output[line[1].strip()] = line[0].strip()
         return output
     
-    ############################################################################
-    def check_nb_events(self,path, data=None):
-        """Find the number of event in the run_card, and check that this is not 
-        too large"""
-
-        if not data:
-            data = self.read_run_card(path)
-        
-        nb_event = int(data['nevents'])
-        if nb_event > 100000:
-            logger.warning("Attempting to generate more than 100K events")
-            logger.warning("Limiting number to 100K. Use multi_run for larger statistics.")
-            os.system(r"""perl -p -i.bak -e "s/\d+\s*=\s*nevents/100000 = nevents/" %s""" \
-                                                                         % path)
-            data['nevents'] = 100000
-        
-        return data['nevents']
        
     ############################################################################
     def find_model_name(self):
@@ -700,14 +686,21 @@ class MadEventLauncher(object):
                     pass
                 os.system('gunzip -c %s > %s' % (issudfile, path))
             else:
-                error_msg = 'No sudakov grid file for parameter choice. Please generate a sudakov grid file and restart.'
-                logger.error(error_msg)
-                os.system("echo %s > %s" % (error_msg, self.error))
-                shutil.copy(self.error, self.status)
-                os.remove(pjoin(self.main, 'RunWeb'))
+                msg = 'No sudakov grid file for parameter choice. Start to generate it. This might take a while'
+                logger.info(error_msg)
+                if self.cluster_mode not in [0, 1]:
+                    msg = 'No sudakov grid file for parameter choice and not possible to create it automaticaly for the cluster choice'
+                    logger.error(msg)
+                    os.system("echo %s > %s" % (msg, self.error))
+                    shutil.copy(self.error, self.status)             
+                    os.remove(pjoin(self.main, 'RunWeb'))
+                    os.system('%s/gen_cardhtml-pl' % self.dirbin)    
+                    return
+                os.system("echo %s > %s" % (msg, self.status))
                 os.system('%s/gen_crossxhtml-pl %s' % (self.dirbin, self.name))
-                os.system('%s/gen_cardhtml-pl' % self.dirbin)
- 
+
+
+                os.system('%s/run_genissud %s' % (self.dirbin, self.cluster_mode))
 
     def close_on_error(self):
         """Close nicely the run"""

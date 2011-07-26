@@ -1011,18 +1011,41 @@ class ProcessExporterFortranME(ProcessExporterFortran):
         
         # The next file are model dependant (due to SLAH convention)
         self.model_name = modelname
-        # add the driver.f 
+        # Add the driver.f 
         filename = os.path.join(self.dir_path,'SubProcesses','driver.f')
         self.write_driver(writers.FortranWriter(filename))
-        # add the symmetry.f 
+        # Add the symmetry.f 
         filename = os.path.join(self.dir_path,'SubProcesses','symmetry.f')
         self.write_symmetry(writers.FortranWriter(filename))
-        # add the combine_events.f 
+        # Add the combine_events.f 
         filename = os.path.join(self.dir_path,'Source','combine_events.f')
         self.write_combine_events(writers.FortranWriter(filename))
-        # add the write_banner.f 
+        # Add the write_banner.f 
         filename = os.path.join(self.dir_path,'Source','write_banner.f')
         self.write_write_banner(writers.FortranWriter(filename))
+
+        # Copy the different python file in the Template
+        self.copy_python_file()
+
+    #===========================================================================
+    # generate_subprocess_directory_v4 
+    #===========================================================================        
+    def copy_python_file(self):
+        """copy the python file require for the Template"""
+
+        cp(_file_path+'/interface/madevent_interface.py',
+                            self.dir_path+'/bin/internal/madevent_interface.py')
+        cp(_file_path+'/interface/extended_cmd.py',
+                                  self.dir_path+'/bin/internal/extended_cmd.py')
+        cp(_file_path+'/iolibs/misc.py', self.dir_path+'/bin/internal/misc.py')        
+        cp(_file_path+'/iolibs/files.py', self.dir_path+'/bin/internal/files.py') 
+        cp(_file_path+'../models/check_param_card.py', 
+                              self.dir_path+'/bin/internal/check_param_card.py')
+        cp(_file_path+'/__init__.py', 
+                              self.dir_path+'/bin/internal/__init__.py')        
+        cp(_file_path+'/interface/.mg5_logging.conf', 
+                              self.dir_path+'/bin/internal/me5_logging.conf') 
+
 
     #===========================================================================
     # generate_subprocess_directory_v4 

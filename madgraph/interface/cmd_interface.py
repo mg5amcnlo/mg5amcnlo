@@ -12,7 +12,6 @@
 # For more information, please visit: http://madgraph.phys.ucl.ac.be
 #
 ################################################################################
-from compiler.ast import Break
 """A user friendly command line interface to access MadGraph features.
    Uses the cmd package for command interpretation and tab completion.
 """
@@ -211,27 +210,10 @@ class CmdExtended(cmd.Cmd):
             timeout = self.timeout
         
         return misc.timed_input(question, default, timeout) 
-    
-
-#===============================================================================
-# Helper function
-#=============================================================================
-def split_arg(line):
-    """Split a line of arguments"""
-    
-    split = line.split()
-    out=[]
-    tmp=''
-    for data in split:
-        if data[-1] == '\\':
-            tmp += data[:-1]+' '
-        elif tmp:
-            out.append(tmp+data)
-        else:
-            out.append(data)
-    return out
-
- 
+     
+    def get_history_header(self):
+        """return the history header""" 
+        return self.history_header % misc.get_time_info()
 
 #===============================================================================
 # HelpToCmd
@@ -384,15 +366,6 @@ class HelpToCmd(object):
         logger.info("-- define a multiparticle")
         logger.info("   Example: define p = g u u~ c c~ d d~ s s~ b b~")
         
-    def help_history(self):
-        logger.info("syntax: history [FILEPATH|clean|.] ")
-        logger.info("   If FILEPATH is \'.\' and \'output\' is done,")
-        logger.info("   Cards/proc_card_mg5.dat will be used.")
-        logger.info("   If FILEPATH is omitted, the history will be output to stdout.")
-        logger.info("   \"clean\" will remove all entries from the history.")
-
-#    def help_draw(self):
-#        _draw_parser.print_help()
 
     def help_set(self):
         logger.info("syntax: set %s argument" % "|".join(self._set_options))
@@ -408,20 +381,12 @@ class HelpToCmd(object):
         logger.info("     of the quarks given in multi_part_label.")
         logger.info("     These processes give negligible contribution to the")
         logger.info("     cross section but have subprocesses/channels.")
+        logger.info("   stdout_level DEBUG|INFO|WARNING|ERROR|CRITICAL")
+        logger.info("     change the default level for printed information")
         
     def help_shell(self):
         logger.info("syntax: shell CMD (or ! CMD)")
         logger.info("-- run the shell command CMD and catch output")
-
-    def help_quit(self):
-        logger.info("syntax: quit")
-        logger.info("-- terminates the application")
-    
-    help_EOF = help_quit
-    
-    def help_help(self):
-        logger.info("syntax: help")
-        logger.info("-- access to the in-line help" )
 
 #===============================================================================
 # CheckValidForCmd
@@ -591,26 +556,6 @@ class CheckValidForCmd(object):
                 raise self.InvalidCmd(
                 'wrong process format: restriction should be place after the final states')
         
-    
-        
-    def check_history(self, args):
-        """check the validity of line"""
-        
-        if len(args) > 1:
-            self.help_history()
-            raise self.InvalidCmd('\"history\" command takes at most one argument')
-        
-        if not len(args):
-            return
-        
-        if args[0] =='.':
-            if not self._export_dir:
-                raise self.InvalidCmd("No default directory is defined for \'.\' option")
-        elif args[0] != 'clean':
-                dirpath = os.path.dirname(args[0])
-                if dirpath and not os.path.exists(dirpath) or \
-                       os.path.isdir(args[0]):
-                    raise self.InvalidCmd("invalid path %s " % dirpath)
     
     def check_import(self, args):
         """check the validity of line"""
@@ -967,30 +912,12 @@ class CheckValidForCmdWeb(CheckValidForCmd):
 class CompleteForCmd(CheckValidForCmd):
     """ The Series of help routine for the MadGraphCmd"""
     
-    def list_completion(self, text, list):
-        """Propose completions of text in list"""
-        if not text:
-            completions = list
-        else:
-            completions = [ f
-                            for f in list
-                            if f.startswith(text)
-                            ]
-        
-        def put_space(name): 
-            if name.endswith(' '): 
-                return name
-            else:
-                return '%s ' % name 
-            
-        return [put_space(name) for name in completions] 
-
-
+ 
     def model_completion(self, text, process):
         """ complete the line with model information """
         while ',' in process:
             process = process[process.index(',')+1:]
-        args = split_arg(process)
+        args = self.split_arg(process)
         couplings = []
 
         # Force '>' if two initial particles.
@@ -1006,27 +933,13 @@ class CompleteForCmd(CheckValidForCmd):
         return self.list_completion(text, self._particle_names + \
                                     self._multiparticles.keys() + couplings)
         
-            
-    def complete_history(self, text, line, begidx, endidx):
-        "Complete the add command"
-
-        args = split_arg(line[0:begidx])
-
-        # Directory continuation
-        if args[-1].endswith(os.path.sep):
-            return self.path_completion(text,
-                                        os.path.join('.',*[a for a in args \
-                                                    if a.endswith(os.path.sep)]))
-
-        if len(args) == 1:
-            return self.path_completion(text)
-        
+                    
     def complete_generate(self, text, line, begidx, endidx):
         "Complete the add command"
 
         # Return list of particle names and multiparticle names, as well as
         # coupling orders and allowed symbols
-        args = split_arg(line[0:begidx])
+        args = self.split_arg(line[0:begidx])
         if len(args) > 2 and args[-1] == '@' or args[-1].endswith('='):
             return
 
@@ -1045,7 +958,7 @@ class CompleteForCmd(CheckValidForCmd):
     def complete_add(self, text, line, begidx, endidx):
         "Complete the add command"
 
-        args = split_arg(line[0:begidx])
+        args = self.split_arg(line[0:begidx])
 
         # Format
         if len(args) == 1:
@@ -1066,7 +979,7 @@ class CompleteForCmd(CheckValidForCmd):
     def complete_check(self, text, line, begidx, endidx):
         "Complete the add command"
 
-        args = split_arg(line[0:begidx])
+        args = self.split_arg(line[0:begidx])
 
         # Format
         if len(args) == 1:
@@ -1094,7 +1007,7 @@ class CompleteForCmd(CheckValidForCmd):
         "Complete the tutorial command"
 
         # Format
-        if len(split_arg(line[0:begidx])) == 1:
+        if len(self.split_arg(line[0:begidx])) == 1:
             return self.list_completion(text, self._tutorial_opts)
         
     def complete_define(self, text, line, begidx, endidx):
@@ -1104,7 +1017,7 @@ class CompleteForCmd(CheckValidForCmd):
     def complete_display(self, text, line, begidx, endidx):
         "Complete the display command"
 
-        args = split_arg(line[0:begidx])
+        args = self.split_arg(line[0:begidx])
         # Format
         if len(args) == 1:
             return self.list_completion(text, self._display_opts)
@@ -1118,7 +1031,7 @@ class CompleteForCmd(CheckValidForCmd):
     def complete_draw(self, text, line, begidx, endidx):
         "Complete the draw command"
 
-        args = split_arg(line[0:begidx])
+        args = self.split_arg(line[0:begidx])
 
         # Directory continuation
         if args[-1].endswith(os.path.sep):
@@ -1139,7 +1052,7 @@ class CompleteForCmd(CheckValidForCmd):
     def complete_launch(self, text, line, begidx, endidx):
         """ complete the launch command"""
 
-        args = split_arg(line[0:begidx])
+        args = self.split_arg(line[0:begidx])
 
         # Directory continuation
         if args[-1].endswith(os.path.sep):
@@ -1166,7 +1079,7 @@ class CompleteForCmd(CheckValidForCmd):
     def complete_load(self, text, line, begidx, endidx):
         "Complete the load command"
 
-        args = split_arg(line[0:begidx])        
+        args = self.split_arg(line[0:begidx])        
 
         # Format
         if len(args) == 1:
@@ -1185,7 +1098,7 @@ class CompleteForCmd(CheckValidForCmd):
     def complete_save(self, text, line, begidx, endidx):
         "Complete the save command"
 
-        args = split_arg(line[0:begidx])
+        args = self.split_arg(line[0:begidx])
 
         # Format
         if len(args) == 1:
@@ -1204,7 +1117,7 @@ class CompleteForCmd(CheckValidForCmd):
     def complete_open(self, text, line, begidx, endidx): 
         """ complete the open command """
 
-        args = split_arg(line[0:begidx])
+        args = self.split_arg(line[0:begidx])
         
         # Directory continuation
         if os.path.sep in args[-1] + text:
@@ -1243,7 +1156,7 @@ class CompleteForCmd(CheckValidForCmd):
                             'mg5', 'DECAY', 'EventConverter', 'Models',
                             'ExRootAnalysis', 'HELAS', 'Transfer_Fct']
         #name of the run =>proposes old run name
-        args = split_arg(line[0:begidx])
+        args = self.split_arg(line[0:begidx])
         if len(args) >= 1: 
             # Directory continuation
             if args[-1].endswith(os.path.sep):
@@ -1273,7 +1186,7 @@ class CompleteForCmd(CheckValidForCmd):
     def complete_set(self, text, line, begidx, endidx):
         "Complete the set command"
 
-        args = split_arg(line[0:begidx])
+        args = self.split_arg(line[0:begidx])
 
         # Format
         if len(args) == 1:
@@ -1294,12 +1207,12 @@ class CompleteForCmd(CheckValidForCmd):
 
         # Filename if directory is given
         #
-        if len(split_arg(line[0:begidx])) > 1 and line[begidx - 1] == os.path.sep:
+        if len(self.split_arg(line[0:begidx])) > 1 and line[begidx - 1] == os.path.sep:
             if not text:
                 text = ''
             output = self.path_completion(text,
                                         base_dir=\
-                                          split_arg(line[0:begidx])[-1])
+                                          self.split_arg(line[0:begidx])[-1])
         else:
             output = self.path_completion(text)
         return output
@@ -1307,7 +1220,7 @@ class CompleteForCmd(CheckValidForCmd):
     def complete_import(self, text, line, begidx, endidx):
         "Complete the import command"
 
-        args=split_arg(line[0:begidx])
+        args=self.split_arg(line[0:begidx])
         
         # Format
         if len(args) == 1:
@@ -1351,7 +1264,7 @@ class CompleteForCmd(CheckValidForCmd):
                 return all_name                  
                
         # Model directory name if directory is not given
-        if len(split_arg(line[0:begidx])) == 2:
+        if len(self.split_arg(line[0:begidx])) == 2:
             if args[1] == 'model':
                 file_cond = lambda p : os.path.exists(os.path.join(MG5DIR,'models',p,'particles.py'))
                 mod_name = lambda name: name
@@ -1495,7 +1408,7 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
         syntax:
         """
 
-        args = split_arg(line)
+        args = self.split_arg(line)
         
         # Check the validity of the arguments
         self.check_add(args)
@@ -1570,7 +1483,7 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
         # Make sure there are spaces around = and |
         line = line.replace("=", " = ")
         line = line.replace("|", " | ")
-        args = split_arg(line)
+        args = self.split_arg(line)
         # check the validity of the arguments
         self.check_define(args)
 
@@ -1587,7 +1500,7 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
     def do_display(self, line):
         """Display current internal status"""
 
-        args = split_arg(line)
+        args = self.split_arg(line)
         #check the validity of the arguments
         self.check_display(args)
 
@@ -1759,7 +1672,7 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
     def do_tutorial(self, line):
         """Activate/deactivate the tutorial mode."""
 
-        args = split_arg(line)
+        args = self.split_arg(line)
         if len(args) > 0 and args[0] == "stop":
             logger_tuto.info("\n\tThanks for using the tutorial!")
             logger_tuto.setLevel(logging.ERROR)
@@ -1775,7 +1688,7 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
     def draw(self, line):
         """ draw the Feynman diagram for the given process """
 
-        args = split_arg(line)
+        args = self.split_arg(line)
         # Check the validity of the arguments
         self.check_draw(args)
         
@@ -1818,7 +1731,7 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
     def do_check(self, line):
         """Check a given process or set of processes"""
 
-        args = split_arg(line)
+        args = self.split_arg(line)
 
         # Check args validity
         param_card = self.check_check(args)
@@ -1906,7 +1819,7 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
         self.clean_history('generate', 'add process')
 
         # Call add process
-        args = split_arg(line)
+        args = self.split_arg(line)
         args.insert(0, 'process')
         
         self.do_add(" ".join(args))
@@ -1982,7 +1895,7 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
             line = required_schannels_re.group(1) + ">" + \
                    required_schannels_re.group(3)
 
-        args = split_arg(line)
+        args = self.split_arg(line)
 
         myleglist = base_objects.MultiLegList()
         state = False
@@ -2068,7 +1981,7 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
 
         if isinstance(args, basestring):
             args.replace("|", " | ")
-            args = split_arg(args)
+            args = self.split_arg(args)
         all_ids = []
         ids=[]
         for part_name in args:
@@ -2205,55 +2118,12 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
         # more decays)
         return core_process, line
     
-    # Write the list of command line use in this session
-    def do_history(self, line):
-        """write in a file the suite of command that was used"""
-        
-        args = split_arg(line)
-        # Check arguments validity
-        self.check_history(args)
-
-        if len(args) == 0:
-            print '\n'.join(self.history)
-            return
-        elif args[0] == 'clean':
-            self.history = []
-            logger.info('History is cleaned')
-            return
-        elif args[0] == '.':
-            output_file = os.path.join(self._export_dir, 'Cards', \
-                                       'proc_card_mg5.dat')
-            output_file = open(output_file, 'w')
-        else:
-            output_file = open(args[0], 'w')
-            
-        # Create the command file
-        text = self.history_header % misc.get_time_info()
-        text += ('\n'.join(self.history) + '\n') 
-        
-        #write this information in a file
-        output_file.write(text)
-        output_file.close()
-
-        if self.log:
-            logger.info("History written to " + output_file.name)
-
-    def clean_history(self,*arguments):
-        """Remove all commands in arguments from history"""
-
-        nline = 0
-        arguments = list(arguments) + ['display', 'open', 'launch', 'output']
-        while nline < len(self.history) - 1:
-            if any([self.history[nline].startswith(arg) for arg in arguments]):
-                self.history.pop(nline)
-            else:
-                nline += 1
 
     # Import files
     def do_import(self, line):
         """Import files with external formats"""
 
-        args = split_arg(line)
+        args = self.split_arg(line)
         # Check argument's validity
         self.check_import(args)
         
@@ -2488,7 +2358,8 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
                     else:
                         pythia8_dir = None
                 self.pythia8_path = pythia8_dir
-  
+            elif key.endswith('path'):
+                pass
             elif key not in ['text_editor','eps_viewer','web_browser']:
                 # Default: try to set parameter
                 try:
@@ -2524,7 +2395,7 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
         Execute the code (madevent/standalone/...)
         """
         
-        args = split_arg(line)
+        args = self.split_arg(line)
         # check argument validity and normalise argument
         (options, args) = _launch_parser.parse_args(args)
         self.check_launch(args, options)
@@ -2558,7 +2429,7 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
     def do_load(self, line):
         """Load information from file"""
 
-        args = split_arg(line)
+        args = self.split_arg(line)
         # check argument validity
         self.check_load(args)
 
@@ -2624,7 +2495,7 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
     def do_save(self, line):
         """Save information to file"""
 
-        args = split_arg(line)
+        args = self.split_arg(line)
         # Check argument validity
         self.check_save(args)
 
@@ -2647,7 +2518,7 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
         """Set an option, which will be default for coming generations/outputs
         """
 
-        args = split_arg(line)
+        args = self.split_arg(line)
         
         # Check the validity of the arguments
         self.check_set(args)
@@ -2680,7 +2551,7 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
     def do_open(self, line):
         """Open a text file/ eps file / html file"""
         
-        args = split_arg(line)
+        args = self.split_arg(line)
         # Check Argument validity and modify argument to be the real path
         self.check_open(args)
         file_path = args[0]
@@ -2690,7 +2561,7 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
     def do_output(self, line):
         """Initialize a new Template or reinitialize one"""
 
-        args = split_arg(line)
+        args = self.split_arg(line)
         # Check Argument validity
         self.check_output(args)
 

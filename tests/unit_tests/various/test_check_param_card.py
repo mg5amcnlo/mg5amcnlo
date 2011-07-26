@@ -337,11 +337,7 @@ DECAY 23 2.441404e+00 #  wz
 DECAY 24 3.000000e+00 #  ww
 DECAY 25 2.441404e+00 #  wh
 """
-        self.assertEqual(target.split('\n'), output.split('\n'))
-        
-        
-        
-        
+        self.assertEqual(target.split('\n'), output.split('\n')) 
         dict = self.main.read_param_card([l+'\n' for l in output.split('\n')])
         
 

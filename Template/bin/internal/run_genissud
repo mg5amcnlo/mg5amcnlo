@@ -39,8 +39,8 @@ if [ -e $outfile.gz ];then
   exit
 fi
 
-if [[ ! -e bin/gensudgrid ]];then
-  cd Source;make ../bin/gensudgrid;cd ..
+if [[ ! -e bin/internal/gensudgrid ]];then
+  cd Source;make ../bin/internal/gensudgrid;cd ..
 fi
 
 echo "Generating $outfile"
@@ -54,7 +54,7 @@ if [ "$p" = "1" ]; then
     rm -f donegen$i rungen$i waitgen$i gensudgrid$i.log gensudgrid$i.pbs gen$i.log
     echo '#!/bin/bash' > gensudgrid$i.pbs
     touch waitgen$i
-    echo "cd $main;rm waitgen$i;touch rungen$i;bin/gensudgrid $i > gensudgrid$i.log;rm rungen$i;touch donegen$i" >> gensudgrid$i.pbs
+    echo "cd $main;rm waitgen$i;touch rungen$i;bin/internal/gensudgrid $i > gensudgrid$i.log;rm rungen$i;touch donegen$i" >> gensudgrid$i.pbs
     chmod u+x gensudgrid$i.pbs
     $qsub -e gensudgrid$i.err -o gen$i.log gensudgrid$i.pbs >> running_jobs
   done
@@ -76,7 +76,7 @@ if [ "$p" = "1" ]; then
 else
   for i in -2 -1 0 1 2 3 4 5;do
     echo "Generating grid for parton number $i"
-    bin/gensudgrid $i > gensudgrid$i.log
+    bin/internal/gensudgrid $i > gensudgrid$i.log
   done
 fi
 
