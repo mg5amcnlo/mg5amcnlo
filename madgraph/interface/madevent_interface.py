@@ -318,7 +318,6 @@ class CheckValidForCmd(object):
     def check_refine(self, args):
         """check that the argument for survey are valid"""
 
-        print args
         if len(args) > 2:
             self.help_refine()
             raise self.InvalidCmd('Too many argument for refine command')
@@ -630,7 +629,7 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
         self.update_random()
         self.save_random()
 
-        logger.info('Workin on SubProcesses')
+        logger.info('Working on SubProcesses')
         for subdir in open(pjoin(self.me_dir, 'SubProcesses', 'subproc.mg')):
             subdir = subdir.strip()
             Pdir = pjoin(self.me_dir, 'SubProcesses',subdir)
@@ -715,6 +714,7 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
                     self.launch_job(job, cwd=Pdir,stdout=devnull)
                     
         self.monitor()
+        
         self.update_status("Combining runs")
         try:
             os.remove(pjoin(Pdir, 'combine_runs.log'))
