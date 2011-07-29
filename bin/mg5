@@ -86,7 +86,7 @@ else:
         
     # charge history file
     try:
-        history_file = os.path.join(os.environ['HOME'], '.mg5history')
+        history_file = os.path.join(os.environ['HOME'], '.mg5', 'mg5history')
         readline.read_history_file(history_file)
     except:
         pass
@@ -143,6 +143,8 @@ except KeyboardInterrupt:
     pass
 try: 
     readline.set_history_length(100)
+    if not os.path.exists(os.path.join(os.environ['HOME'], '.mg5')):
+        os.mkdir(os.path.join(os.environ['HOME'], '.mg5'))
     readline.write_history_file(history_file)
 except:
     pass

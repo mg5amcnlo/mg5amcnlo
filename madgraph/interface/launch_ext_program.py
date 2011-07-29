@@ -101,9 +101,9 @@ class ExtLauncher(object):
             else:
                 fct = lambda q: cmd.smart_input(q, allow_arg=choices, default=default)
             try:
-                out =  misc.timed_input(question, default, timeout=self.timeout,
+                out =  cmd.Cmd.timed_input(question, default, timeout=self.timeout,
                                         noerror=False, fct=fct)
-            except misc.TimeOutError:
+            except cmd.Cmd.TimeOutError:
                 # avoid to always wait a given time for the next answer
                 self.force = True
             else:

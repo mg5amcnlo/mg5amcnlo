@@ -13,8 +13,8 @@
 #
 ################################################################################
 #
-# This File contains some configuration variable for mg5
-# This File is use if the file ~/.mg5_config is not present.
+# This File contains some configuration variable for MadGraph/MadEvent
+# This File is use if the file ~/.mg5/mg5_config is not present.
 #
 ################################################################################
 
@@ -36,3 +36,42 @@ web_browser = None
 # Prefered PS viewer
 # If None: try to find one available on the system
 eps_viewer = None
+
+
+################################################################################
+#  PATH USED FOR MADEVENT 
+################################################################################
+# If this file is in a MADEVENT Template. 'main directory' is the directory
+# containing the SubProcesses directory. Otherwise this is the madgraph5 main
+# directory (containing the directories madgraph and Template)
+
+# Pythia-PGS Package
+# relative path start from main directory
+#  
+pythia-pgs_path = ./pythia-pgs
+
+# Delphes Package
+# relative path start from main directory
+#
+delphes_path = ./Delphes
+
+# MadAnalysis Package [For Drawing output]
+# relative path start from main directory
+#
+madanalysis_path = ./MadAnalysis
+
+# ExRootAnalysis Package
+# relative path start from main directory
+#
+exrootanalysis_path = ./ExRootAnalysis
+
+# TOPDRAWER PATH
+# Path to the directory containing td executables
+# relative path start from main directory
+#
+td_path = ./
+
+
+
+
+

@@ -160,15 +160,7 @@ class CmdExtended(cmd.Cmd):
         "************************************************************")
         
         cmd.Cmd.__init__(self, *arg, **opt)
-    
-    def timed_input(self, question, default, timeout=None):
-        """ a question with a maximal time to answer take default otherwise"""
         
-        if not timeout:
-            timeout = self.timeout
-        
-        return misc.timed_input(question, default, timeout)
-    
     def get_history_header(self):
         """return the history header""" 
         return self.history_header % misc.get_time_info()
@@ -331,6 +323,45 @@ class CheckValidForCmd(object):
                 raise self.InvalidCmd('refine arguments are suppose to be number')
             
         return True
+    
+    def check_pythia(self, arg):
+        """Check the argument for pythia command
+        syntax: pythia [NAME] 
+        Note that other option are already remove at this point
+        """
+                
+        if not self.run_name:
+            if len(arg) == 0:
+                self.help_pythia()
+                raise self.InvalidCmd('No run name currently define. Please add this information.') 
+            else:
+                self.run_name = arg[0]
+        
+        if  not os.path.exists(pjoin(self.me_dir,'Events','%s_unweighted_events.lhe.gz' % self.run_name)):
+            raise self.InvalidCmd('No events file corresponding to %s run. '% self.run_name)
+
+        # If not pythia-pgs path
+        if not self.configuration['pythia-pgs_path']:
+            logger.info('Retry to read configuration file to find pythia-pgs path')
+            self.set_configuration()
+            
+        if not self.configuration['pythia-pgs_path'] or not \
+            os.path.exists(pjoin(self.configuration['pythia-pgs_path'],'src')):
+            error_msg = 'No pythia-pgs path correctly set.'
+            error_msg += 'Please use the set command to define the path and retry.'
+            error_msg += 'You can also define it in the configuration file.'
+            raise self.InvalidCmd(error_msg)
+        
+    def check_import(self, args):
+        """check the validity of line"""
+         
+        if not args or args[0] not in ['command']:
+            self.help_import()
+            raise self.InvalidCmd('wrong \"import\" format')
+        
+        if not len(args) == 2 or not os.path.exists(args[1]):
+            raise self.InvalidCmd('PATH is mandatory for import command\n')
+        
 
 #===============================================================================
 # CompleteForCmd
@@ -431,9 +462,7 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
                 
         self._options = {}        
         # Load the configuration file
-        self.find_main_executables()
         self.set_configuration()
-
 
         if self.web:
             os.system('touch Online')
@@ -483,22 +512,29 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
                               'delphes_path': '../Delphes',
                               'madanalysis_path': '../MadAnalysis',
                               'exrootanalysis_path': '../ExRootAnalysis',
+                              'td_path': '../',
                               'web_browser':None,
                               'eps_viewer':None,
                               'text_editor':None}
         
         if not config_path:
             try:
-                config_file = open(os.path.join(os.environ['HOME'],'.mg5_config'))
+                config_file = open(os.path.join(os.environ['HOME'],'.mg5','mg5_config'))
             except:
                 if self.me_dir:
                     config_file = open(os.path.relpath(
                           os.path.join(self.dirbin, 'me5_configuration.txt')))
+                    main = self.me_dir
                 elif not MADEVENT:
                     config_file = open(os.path.relpath(
                           os.path.join(MG5DIR, 'input', 'mg5_configuration.txt')))                    
+                    main = MG5DIR
         else:
             config_file = open(config_path)
+            if self.me_dir:
+                main = self.me_dir
+            else:
+                main = MG5DIR
 
         # read the file and extract information
         logger.info('load configuration from %s ' % config_file.name)
@@ -521,23 +557,14 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
         # delphes/pythia/... path
         for key in self.configuration:
             if key.endswith('path'):
-                # try relative path from MG5
-                if not MADEVENT:
-                    path = os.path.join(MG5DIR, self.configuration[key])
-                    if os.path.isdir(path):
-                        self.configuration[key] = path
-                        continue
-                # try relative path from madevent
-                if self.me_dir:
-                    path = os.path.join(self.me_dir, self.configuration[key])
-                    if os.path.isdir(path):
-                        self.configuration[key] = path
-                        continue                    
+                path = os.path.join(main, self.configuration[key])
+                if os.path.isdir(path):
+                    self.configuration[key] = path
+                    continue
                 if os.path.isdir(self.configuration[key]):
                     continue
                 else:
-                    self.configuration[key] = None
-  
+                    self.configuration[key] = ''
             elif key not in ['text_editor','eps_viewer','web_browser']:
                 # Default: try to set parameter
                 try:
@@ -550,6 +577,19 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
         misc.open_file.configure(self.configuration)
           
         return self.configuration
+  
+    ############################################################################
+    def do_import(self, line):
+        """Import files with external formats"""
+
+        args = self.split_arg(line)
+        # Check argument's validity
+        self.check_import(args)
+        # Remove previous imports, generations and outputs from history
+        self.clean_history()
+        
+        # Execute the card
+        self.import_command_file(args[1])  
   
     ############################################################################ 
     def do_open(self, line):
@@ -673,6 +713,7 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
         args = self.split_arg(line)
         # Check argument's validity
         self.check_refine(args)
+        
         precision = args[0]
         if len(args) == 2:
             max_process = args[1]
@@ -739,6 +780,36 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
                                          cwd=pjoin(self.me_dir,'SubProcesses'))
         subprocess.call([pjoin(self.dirbin, 'gen_crossxhtml-pl'), self.run_name], 
                                                                 cwd=self.me_dir)     
+ 
+    ############################################################################      
+    def do_pythia(self, line):
+        """ launch survey for the current process """
+        
+        args = self.split_arg(line)
+        # Check argument's validity
+        self.check_pythia(args) 
+        
+        pythia_src = pjoin(self.configuration['pythia-pgs_path'],'src')
+        
+        logger.info('Launching pythia')
+        subprocess.call(['../bin/internal/run_pythia', 
+                         pythia_src,
+                         self.cluster_mode,
+                         self.run_name,
+                         self.configuration['exrootanalysis_path']])
+        
+        
+        
+        
+
+
+               
+ 
+ 
+ 
+
+ 
+ 
        
     def launch_job(self,exe, cwd=None, stdout=None, **opt):
         """ """
@@ -902,68 +973,7 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
 
         return
 
-    ############################################################################
-    def find_main_executables(self):
-        """ find the path of the main executables files.
-            1) read from file ./executables_path.dat
-            2) try to use default
-            3) store None
-        """
-    
-        # Define default
-        mainpar = os.path.split(self.me_dir)[0] # MG_ME directory
-        self.pydir = self.check_dir(pjoin(mainpar, 'pythia-pgs','src'))
-        self.pgsdir = self.pydir
-        self.delphesdir = self.check_dir(pjoin(mainpar, 'Delphes'))
-        self.eradir = self.check_dir(pjoin(mainpar, 'ExRootAnalysis'))
-        self.madir = self.check_dir(pjoin(mainpar, 'MadAnalysis'))
-        self.td = self.check_dir(pjoin(mainpar, 'td'))
-            
-        # read file ./executables_path.dat to overwrite default
-        if not os.path.exists(pjoin(self.me_dir,'executables_path.dat')):
-            return
-        for line in file(pjoin(self.me_dir,'executables_path.dat')):
-            line = line.split('#')[0]
-            line = line.split('=')
-            if len(line) != 2:
-                continue # wrongly formatted line
-            for i, l in enumerate(line): line[i] = l.strip()
-            if line[0].lower() == 'pythia-pgs':
-                # check absolute relative and relative to current dir
-                self.pydir = self.check_dir(line[1], self.pydir)
-                # Try path from maindir
-                path = pjoin(self.me_dir, line[1])
-                self.pydir = self.check_dir(path, self.pydir)
-                self.pgsdir = self.pydir
-            
-            elif line[0].lower() == 'delphes':
-                self.delphesdir = self.check_dir(line[1], self.delphesdir)
-                # Try path from maindir
-                path = pjoin(self.me_dir, line[1])
-                self.delphesdir = self.check_dir(path, self.delphesdir)
-            
-            elif line[0].lower() == 'exrootanalysis':
-                self.eradir = self.check_dir(line[1], self.eradir)
-                # Try path from maindir
-                path = pjoin(self.me_dir, line[1])
-                self.eradir = self.check_dir(path, self.eradir)
-                
-            elif line[0].lower() == 'madanalysis':
-                self.madir = self.check_dir(line[1], self.madir)
-                # Try path from maindir
-                path = pjoin(self.me_dir, line[1])
-                self.madir = self.check_dir(path, self.madir)
-            
-            elif line[0].lower() == 'td':
-                self.td = self.check_dir(line[1], self.td)
-                # Try path from maindir
-                path = pjoin(self.me_dir, line[1])
-                self.td = self.check_dir(path, self.td)
-            else:
-                logger.warning('''file executables_path.dat contains configuration for
-                 %s which is not supported''' % line[0])    
-
-
+  
     ############################################################################    
     def update_random(self):
         """ change random number"""

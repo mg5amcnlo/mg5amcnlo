@@ -300,36 +300,4 @@ class open_file(object):
          # not shell program
          os.system('open -a %s %s' % (program, file_path))
           
-#===============================================================================
-# Ask a question with a maximum amount of time to answer
-#===============================================================================
-class TimeOutError(Exception):
-    """Class for run-time error"""
-         
-def timed_input(question, default, timeout=None, noerror=True, fct=None):
-    """ a question with a maximal time to answer take default otherwise"""
-    
-    def handle_alarm(signum, frame): 
-            raise TimeOutError
-        
-    signal.signal(signal.SIGALRM, handle_alarm)
-    
-    if fct is None:
-        fct = raw_input
-        
-    if timeout:
-        signal.alarm(timeout)
-        question += '[%ss to answer] ' % (timeout)    
-    try:
-        result = fct(question)
-    except TimeOutError:
-        if noerror:
-            print '\nuse %s' % default
-            return default
-        else:
-            signal.alarm(0)
-            raise
-    finally:
-        signal.alarm(0)
-    return result
 

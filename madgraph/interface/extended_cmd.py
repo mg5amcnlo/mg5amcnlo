@@ -23,6 +23,10 @@ import traceback
 logger = logging.getLogger('cmdprint') # for stdout
 logger_stderr = logging.getLogger('fatalerror') # for stderr
 
+
+class TimeOutError(Exception):
+    """Class for run-time error"""
+
 #===============================================================================
 # CmdExtended
 #===============================================================================
@@ -35,6 +39,9 @@ class Cmd(cmd.Cmd):
     #suggested list of command
     next_possibility = {} # command : [list of suggested command]
     history_header = ""
+    
+    timeout = 1 # time authorize to answer question [0 is no time limit]
+    
     
     class InvalidCmd(Exception):
         """expected error for wrong command"""
@@ -243,6 +250,10 @@ class Cmd(cmd.Cmd):
 
     def clean_history(self,*arguments):
         """Remove all commands in arguments from history"""
+        
+        if not arguments:
+            self.history = []
+            return
 
         nline = 0
         arguments = list(arguments) + ['display', 'open', 'launch', 'output']
@@ -251,12 +262,68 @@ class Cmd(cmd.Cmd):
                 self.history.pop(nline)
             else:
                 nline += 1
+                
+    def import_command_file(self, filepath):
+        # remove this call from history
+        if self.history:
+            self.history.pop()
+        self.timeout, old_time_out = 20, self.timeout
+        
+        # Read the lines of the file and execute them
+        for line in cmd.CmdFile(filepath):
+            #remove pointless spaces and \n
+            line = line.replace('\n', '').strip()
+            # execute the line
+            if line:
+                self.exec_cmd(line)
+        self.timeout = old_time_out
+        return
     
     def get_history_header(self):
         """Default history header"""
         
         return self.history_header
+
+
+    def timed_input(self, question, default, timeout=None):
+        """ a question with a maximal time to answer take default otherwise"""
         
+        if not timeout:
+            timeout = self.timeout
+        
+        return self.timed_input(question, default, timeout) 
+
+ 
+    #===============================================================================
+    # Ask a question with a maximum amount of time to answer
+    #===============================================================================    
+    @staticmethod
+    def timed_input(question, default, timeout=None, noerror=True, fct=None):
+        """ a question with a maximal time to answer take default otherwise"""
+    
+        def handle_alarm(signum, frame): 
+            raise TimeOutError
+        
+        signal.signal(signal.SIGALRM, handle_alarm)
+    
+        if fct is None:
+            fct = raw_input
+        
+        if timeout:
+            signal.alarm(timeout)
+            question += '[%ss to answer] ' % (timeout)    
+        try:
+            result = fct(question)
+        except TimeOutError:
+            if noerror:
+                print '\nuse %s' % default
+                return default
+            else:
+                signal.alarm(0)
+                raise
+        finally:
+            signal.alarm(0)
+        return result
 
 
     def help_history(self):
@@ -557,3 +624,7 @@ class CmdFile(file):
         return self.lines.__next__()    
     def __iter__(self):
         return self.lines.__iter__()
+
+
+
+

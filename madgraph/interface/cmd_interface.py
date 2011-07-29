@@ -203,13 +203,6 @@ class CmdExtended(cmd.Cmd):
         
         return stop
 
-    def timed_input(self, question, default, timeout=None):
-        """ a question with a maximal time to answer take default otherwise"""
-        
-        if not timeout:
-            timeout = self.timeout
-        
-        return misc.timed_input(question, default, timeout) 
      
     def get_history_header(self):
         """return the history header""" 
@@ -2173,7 +2166,7 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
                 #self._export dir are define
                 self.check_for_export_dir(args[1])
                 # Execute the card
-                self.import_mg5_proc_card(args[1])    
+                self.import_command_file(args[1])    
         
         elif args[0] == 'proc_v4':
             
@@ -2250,21 +2243,6 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
             self.exec_cmd(line)
     
         return 
-           
-    def import_mg5_proc_card(self, filepath):
-        # remove this call from history
-        self.history.pop()
-        self.timeout, old_time_out = 20, self.timeout
-        
-        # Read the lines of the file and execute them
-        for line in cmd.CmdFile(filepath):
-            #remove pointless spaces and \n
-            line = line.replace('\n', '').strip()
-            # execute the line
-            if line:
-                self.exec_cmd(line)
-        self.timeout = old_time_out
-        return
     
     def add_default_multiparticles(self):
         """ add default particle from file interface.multiparticles_default.txt
@@ -2322,7 +2300,7 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
         
         if not config_path:
             try:
-                config_file = open(os.path.join(os.environ['HOME'],'.mg5_config'))
+                config_file = open(os.path.join(os.environ['HOME'],'.mg5', '.mg5_config'))
             except:
                 config_file = open(os.path.relpath(
                           os.path.join(MG5DIR,'input','mg5_configuration.txt')))
