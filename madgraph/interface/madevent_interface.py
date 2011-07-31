@@ -275,14 +275,14 @@ class CheckValidForCmd(object):
             return True
 
         # if special : create the path.
-        if not self._curr_me_dir:
+        if not self.me_dir:
             if not os.path.isfile(args[0]):
                 self.help_open()
                 raise self.InvalidCmd('No MadEvent path defined. Impossible to associate this name to a file')
             else:
                 return True
             
-        path = self._curr_me_dir
+        path = self.me_dir
         if os.path.isfile(os.path.join(path,args[0])):
             args[0] = os.path.join(path,args[0])
         elif os.path.isfile(os.path.join(path,'Cards',args[0])):
@@ -379,7 +379,8 @@ class CompleteForCmd(CheckValidForCmd):
             possibility.extend(['./','../'])
         if os.path.exists('ME5_debug'):
             possibility.append('ME5_debug')
-
+        if os.path.exists('ME5_debug'):
+            possibility.append('ME5_debug')
         return self.list_completion(text, possibility)
     
     def complete_set(self, text, line, begidx, endidx):
@@ -421,17 +422,19 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
         if me_dir is None and MADEVENT:
             me_dir = root_path        
         self.me_dir = me_dir
+
+        # usefull shortcut
+        self.status = pjoin(self.me_dir, 'status')
+        self.error =  pjoin(self.me_dir, 'error')
+        self.dirbin = pjoin(self.me_dir, 'bin', 'internal')
+
                 
         self._options = {}        
         # Load the configuration file
         self.find_main_executables()
         self.set_configuration()
 
-        # usefull shortcut
-        self.status = pjoin(self.me_dir, 'status')
-        self.error =  pjoin(self.me_dir, 'error')
-        self.dirbin = pjoin(self.me_dir, 'bin', 'internal')
-        
+
         if self.web:
             os.system('touch Online')
         
@@ -490,7 +493,7 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
             except:
                 if self.me_dir:
                     config_file = open(os.path.relpath(
-                          os.path.join(self.me_dir, 'input', 'mg5_configuration.txt')))
+                          os.path.join(self.dirbin, 'me5_configuration.txt')))
                 elif not MADEVENT:
                     config_file = open(os.path.relpath(
                           os.path.join(MG5DIR, 'input', 'mg5_configuration.txt')))                    
@@ -575,11 +578,11 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
  
  
     ############################################################################
-    def update_index_status(self, status):
+    def update_status(self, status):
         """ update the index status """
         logger.info(status)
         os.system('echo \"%s \" > %s' % (status, self.status))
-        os.system('%s/gen_crossxhtml-pl %s' % (self.dirbin, self.name))
+        os.system('%s/gen_crossxhtml-pl %s' % (self.dirbin, self.run_name))
         os.system('%s/gen_cardhtml-pl' % (self.dirbin))
         
         
@@ -615,10 +618,11 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
     def do_survey(self, line):
         """ launch survey for the current process """
         
+        
         args = self.split_arg(line)
         # Check argument's validity
         self.check_survey(args)
-        
+        self.update_status('compile directory')
         # initialize / remove lhapdf mode
         self.configure_directory()
 
@@ -640,12 +644,12 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
                     os.remove(pjoin(Pdir, match))
             
             #compile gensym
-            out = subprocess.call(['make','gensym'], cwd=Pdir)
-            if out:
+            misc.compile(['gensym'], cwd=Pdir)
+            if not os.path.exists(pjoin(Pdir, 'gensym')):
                 raise MadEventError, 'Error make gensym not successful'
 
             # Launch gensym
-            subprocess.call(['gensym'], cwd=Pdir)
+            subprocess.call(['./gensym'], cwd=Pdir)
             if not os.path.exists(pjoin(Pdir, 'ajob1')):
                 raise MadEventError, 'Error gensym run not successful'
 
@@ -656,7 +660,8 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
             if out:
                 raise MadEventError, 'Error make madevent not successful'
 
-            for job in glob(pjoin(Pdir,'ajob*')):
+            for job in glob.glob(pjoin(Pdir,'ajob*')):
+                job = os.path.basename(job)
                 os.system('touch %s/wait.%s' %(Pdir,job))
                 self.launch_job(job, cwd=Pdir,stdout=devnull)
         self.monitor()
@@ -693,15 +698,19 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
                 if match[:4] in ['ajob', 'wait', 'run.', 'done']:
                     os.remove(pjoin(Pdir, match))
 
-            out = open(pjoin(Pdir, 'gen_ximprove.log'),'w')
+            out = None #open(pjoin(Pdir, 'gen_ximprove.log'),'w')
+            print 'star question'
             proc = subprocess.Popen([pjoin(bindir, 'gen_ximprove')],
-                                    stdout=out,stderr=subprocess.stdout,
+                                    stdout=out,stderr=subprocess.STDOUT,
+                                    stdin=subprocess.PIPE,
                                     cwd=Pdir)
-            proc.communicate(precision)
-            proc.communicate(max_process)
-            proc.communicate('T')
+            print 'start communication'
+            proc.communicate('%s %s T' % (precision, max_process))
+            #proc.communicate(max_process)
+            #proc.communicate('T')
+            print 'going to wait'
             proc.wait()
-            
+            print 'stop'
             if os.path.exists(pjoin(Pdir, 'ajob1')):
                 out = subprocess.call(['make','madevent'], cwd=Pdir)
                 if out:
@@ -709,8 +718,9 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
 
                 #
                 os.system("chmod +x %s/ajob*" % Pdir)            
-                for job in glob(pjoin(Pdir,'ajob*')):
-                    os.system('touch %s/wait.%s' %(Pdir,job))
+                for job in glob.glob(pjoin(Pdir,'ajob*')):
+                    job = os.path.basename(job)
+                    os.system('touch %s/wait.%s' %(Pdir, job))
                     self.launch_job(job, cwd=Pdir,stdout=devnull)
                     
         self.monitor()
@@ -727,20 +737,20 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
         
         subprocess.call([pjoin(self.dirbin, 'sumall')], 
                                          cwd=pjoin(self.me_dir,'SubProcesses'))
-        subprocess.call([pjoin(self.dirbin, 'gen_crossxhtml'), self.run_name], 
+        subprocess.call([pjoin(self.dirbin, 'gen_crossxhtml-pl'), self.run_name], 
                                                                 cwd=self.me_dir)     
        
     def launch_job(self,exe, cwd=None, stdout=None, **opt):
         """ """
         
-        if mode == 0:
+        if self.cluster_mode == 0:
             start = time.time()
-            subprocess.call([exe], cwd=cwd, stdout=stdout, **opt)
+            subprocess.call(['./'+exe], cwd=cwd, stdout=stdout, **opt)
             logger.info('run in %f s' % (time.time() -start))
-            subprocess.call(['sum_html'], cwd=self.dirbin)
-        elif mode == 1:
+            subprocess.call(['./sum_html'], cwd=self.dirbin)
+        elif self.cluster_mode == 1:
             os.system("qsub -N %s %s >> %s" % (self.queue, exe, stdout))
-        elif mode == 2:
+        elif self.cluster_mode == 2:
             os.system("%s/multicore %s %s" % (self.dirbin, self.nb_core, pjoin()))
             time.sleep(1)
             
@@ -748,12 +758,12 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
     def monitor(self):
         """ monitor the progress of running job """
         
-        if mode:
+        if self.cluster_mode:
             subprocess.call([pjoin(self.dirbin, 'monitor'), self.run_name], 
                                                                 cwd=self.me_dir)
         subprocess.call([pjoin(self.dirbin, 'sumall')], 
-                                          cwd=pjoin(self.me_dir,'SubProcesses'))    
-        subprocess.call([pjoin(self.dirbin, 'gen_crossxhtml'), self.run_name], 
+                                          cwd=pjoin(self.me_dir,'SubProcesses'))   
+        subprocess.call([pjoin(self.dirbin, 'gen_crossxhtml-pl'), self.run_name], 
                                           cwd=pjoin(self.me_dir,'SubProcesses'))
         
 
@@ -762,8 +772,8 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
         
         name = 'run_%03d'
         data = [int(s[4:7]) for s in os.listdir(pjoin(self.me_dir,'Events')) if
-                        s.startswith(run_) and len(s)>6 and s[4:7].isdigit()]
-        return name % (max(data)+1) 
+                        s.startswith('run_') and len(s)>6 and s[4:7].isdigit()]
+        return name % (max(data+[0])+1) 
 
     ############################################################################   
     def configure_directory(self):
@@ -810,10 +820,10 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
         
         # set random number
         if os.path.exists(pjoin(self.me_dir,'SubProcesses','randinit')):
-            for line in pjoin(self.me_dir,'SubProcesses','randinit'):
+            for line in open(pjoin(self.me_dir,'SubProcesses','randinit')):
                 data = line.split('=')
                 assert len(data) ==2
-                self.random = data[1]
+                self.random = int(data[1])
                 break
         else:
             self.random = random.randint(1, 30107) # 30107 maximal allow 
@@ -966,8 +976,8 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
     def save_random(self):
         """save random number in appropirate file"""
         
-        fsock = open(pjoin(self.me_dir, 'SubProcesses','randinit'))
-        fsock.writeline('r = %s\n' % self.random)
+        fsock = open(pjoin(self.me_dir, 'SubProcesses','randinit'),'w')
+        fsock.writelines('r = %s\n' % self.random)
 
 
 

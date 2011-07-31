@@ -15,6 +15,7 @@
 
 """A set of functions performing routine administrative I/O tasks."""
 
+import logging
 import os
 import re
 import signal
@@ -34,7 +35,9 @@ except:
     from internal import MadGraph5Error
     import internal.files as files
     
-    
+logger = logging.getLogger('cmdprint.ext_program')
+
+   
 #===============================================================================
 # parse_info_str
 #===============================================================================
@@ -234,7 +237,7 @@ class open_file(object):
         for key in configuration:
             if key == 'text_editor':
                 # Treat text editor ONLY text base editor !!
-                if configuration[key] and not misc.which(configuration[key]):
+                if configuration[key] and not which(configuration[key]):
                     logger.warning('Specified text editor %s not valid.' % \
                                                              configuration[key])
                 elif configuration[key]:
@@ -261,7 +264,7 @@ class open_file(object):
         """find a valid shell program in the list"""
         
         for p in possibility:
-            if misc.which(p):
+            if which(p):
                 logger.warning('Using default %s \"%s\". ' % (program, p) + \
                              'Set another one in ./input/mg5_configuration.txt')
                 return p
@@ -290,7 +293,7 @@ class open_file(object):
       if not program:
           # Ask to mac manager
           os.system('open %s' % file_path)
-      elif misc.which(program):
+      elif which(program):
           # shell program
           subprocess.call([program, file_path])
       else:
