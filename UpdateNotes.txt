@@ -1,5 +1,7 @@
 Update notes for MadGraph 5 (in reverse time order)
 
+1.3.9 (01/08/11)  OM: Add a new model DY_SM (arXiv:1107.5830). Thanks to Neil for the generation of the model 
+
 1.3.8 (25/07/11)  JA: Replace the SM and HEFT models with latest versions using
                       the Wolfenstein parameterization for the CKM matrix.
                   JA: Implemented reading of the new UFO information about
