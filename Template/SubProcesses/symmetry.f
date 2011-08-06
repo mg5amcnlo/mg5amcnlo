@@ -135,7 +135,7 @@ c-----
       else
          write(26,*) npoints,iter_survey,
      &     '     !Number of events and iterations'      
-         write(26,*) ' 0.0    !Accuracy'
+         write(26,*) ' 0.1    !Accuracy'
          write(26,*) ' 2       !Grid Adjustment 0=none, 2=adjust'
       endif
       write(26,*) ' 1       !Suppress Amplitude 1=yes'

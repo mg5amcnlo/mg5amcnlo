@@ -442,14 +442,23 @@ c                  xe(i) = max(xe(i),xm(i))
                endif
 c     JA 4/1/2011 Set grid in case there is no BW (radiation process)
                if (swidth(-i) .eq. 0d0)then
-                  a=pmass(i,iconfig)**2/stot
                   xo = xm(i)**2/stot
+                  a=0d0
+                  call setgrid(-i,xo,a,1)
+               else if (xe(i) .lt. pmass(i,iconfig)) then
+c     JA 3/8/2011 Set grid even when there is a BW, to increase selection of low-points
+c     but use the softer 1/(x+a) distribution with a = pmass
+                  xo = max(xe(i)**2/stot,
+     $                 max(pmass(i,iconfig)-bwcutoff*pwidth(i,iconfig),
+     $                 0d0)**2/stot)
+                  xo = max(xo, 1d-8)
+                  a = pmass(i,iconfig)**2/stot
                   call setgrid(-i,xo,a,1)
                endif
             else                                  !1/x^pow
-              a=pmass(i,iconfig)**2/stot
 c     JA 4/1/2011 always set grid
               xo = max(xm(i)**2/stot, 1d-8)
+              a=0d0
 c              if (pwidth(i, iconfig) .eq. 0d0.or.iden_part(i).gt.0) then 
               call setgrid(-i,xo,a,1)
 c              else 
@@ -497,7 +506,7 @@ c           Use 1/10000 of sqrt(s) as minimum, to always get integration
                write(*,*) 'Warning: No good cutoff for shat integration found'
                write(*,*) '         Minimum set to 1e-8*s'
             endif
-            a=-pmass(i,iconfig)**2/stot
+            a=0d0
 c            call setgrid(-i,xo,a,pow(i,iconfig))
 
 c               write(*,*) 'Enter minimum for ',-i, xo

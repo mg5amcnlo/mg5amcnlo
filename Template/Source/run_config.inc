@@ -13,7 +13,7 @@ c
       integer    min_events_channel         !Minimum number of events
       parameter (min_events_channel = 1000) !per iteration in each channel
       integer    iter_survey                !Number of iterations for survey
-      parameter (iter_survey=3)
+      parameter (iter_survey=4)
 c     The following sets the maximum number of parameters in the run_card.dat
       integer maxpara
       parameter (maxpara=1000)
@@ -35,7 +35,7 @@ c
       parameter     (PBS_QUE = 'madgraph')
 
       integer    ChanPerJob
-      parameter (ChanPerJob=5)  !Number of channels / job for survey
+      parameter (ChanPerJob=2)  !Number of channels / job for survey
 
 c      integer    max_np
 c      parameter (max_np=1)  !Number of channels / job for refine
