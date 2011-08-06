@@ -203,12 +203,11 @@ c-----
 c            write(*,*) 'Checking BW',nbw
             xmass = sqrt(dot(xp(0,i),xp(0,i)))
 c            write(*,*) 'xmass',xmass,pmass(i,iconfig)
-            onshell = (abs(xmass - pmass(i,iconfig)) .lt.
-     $           bwcutoff*pwidth(i,iconfig))
-
 c
 c           Here we set if the BW is "on-shell" for LesHouches
 c
+            onshell = (abs(xmass - pmass(i,iconfig)) .lt.
+     $           bwcutoff*pwidth(i,iconfig))
             if(onshell)then
 c           Only allow onshell if no "decay" to identical particle
               OnBW(i) = .true.
@@ -244,9 +243,25 @@ c           Else remove OnBW for daughter
                  endif
               endif
             endif
-            if (onshell .and. (lbw(nbw).eq. 2) ) cut_bw=.true.
-            if (.not. onshell .and. (lbw(nbw).eq. 1)) cut_bw=.true.
+c
+c     Check if we are supposed to cut forced bw
+c
+            if (gForceBW(i, iconfig) .and. .not. onshell)then
+               cut_bw = .true.
+               return
+            endif
+c
+c     Here we set onshell for phase space integration
+c
+            onshell = (abs(xmass - pmass(i,iconfig)) .lt.
+     $           5d0*pwidth(i,iconfig))
+
+            if (onshell .and. (lbw(nbw).eq. 2) .or.
+     $          .not. onshell .and. (lbw(nbw).eq. 1)) then
+               cut_bw=.true.
+               return
 c            write(*,*) 'cut_bw: ',nbw,xmass,onshell,lbw(nbw),cut_bw
+            endif
          endif
 
       enddo
@@ -442,23 +457,14 @@ c                  xe(i) = max(xe(i),xm(i))
                endif
 c     JA 4/1/2011 Set grid in case there is no BW (radiation process)
                if (swidth(-i) .eq. 0d0)then
+                  a=pmass(i,iconfig)**2/stot
                   xo = xm(i)**2/stot
-                  a=0d0
-                  call setgrid(-i,xo,a,1)
-               else if (xe(i) .lt. pmass(i,iconfig)) then
-c     JA 3/8/2011 Set grid even when there is a BW, to increase selection of low-points
-c     but use the softer 1/(x+a) distribution with a = pmass
-                  xo = max(xe(i)**2/stot,
-     $                 max(pmass(i,iconfig)-bwcutoff*pwidth(i,iconfig),
-     $                 0d0)**2/stot)
-                  xo = max(xo, 1d-8)
-                  a = pmass(i,iconfig)**2/stot
                   call setgrid(-i,xo,a,1)
                endif
             else                                  !1/x^pow
+              a=pmass(i,iconfig)**2/stot
 c     JA 4/1/2011 always set grid
               xo = max(xm(i)**2/stot, 1d-8)
-              a=0d0
 c              if (pwidth(i, iconfig) .eq. 0d0.or.iden_part(i).gt.0) then 
               call setgrid(-i,xo,a,1)
 c              else 
@@ -506,7 +512,7 @@ c           Use 1/10000 of sqrt(s) as minimum, to always get integration
                write(*,*) 'Warning: No good cutoff for shat integration found'
                write(*,*) '         Minimum set to 1e-8*s'
             endif
-            a=0d0
+            a=-pmass(i,iconfig)**2/stot
 c            call setgrid(-i,xo,a,pow(i,iconfig))
 
 c               write(*,*) 'Enter minimum for ',-i, xo

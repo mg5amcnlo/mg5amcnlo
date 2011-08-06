@@ -254,9 +254,9 @@ c                  write(*,*) 'Width',pwidth(-j,i),j,i
                   nbw=nbw+1
                   if (pwidth(-j,i) .gt. 1d-20 .and. sprop(-j,i).ne.0) then
                      write(*,*) 'Got bw',-nbw,j
-                     if(lconflict(-j).or.gForceBW(-j,i)) then
+                     if(lconflict(-j)) then
                         if(lconflict(-j)) write(*,*) 'Got conflict ',-nbw,j
-                        if(gForceBW(-j,i)) write(*,*) 'Got forced BW ',-nbw,j
+c                        if(gForceBW(-j,i)) write(*,*) 'Got forced BW ',-nbw,j
                         iarray(nbw)=1 !Cuts on BW
                         if (nbw .gt. imax) then
                            write(*,*) 'Too many BW w conflicts',nbw,imax
@@ -318,7 +318,7 @@ c
                   nbw=nbw+1
                   if (pwidth(-j,i) .gt. 1d-20  .and. sprop(-j,i).ne.0) then
                      write(*,*) 'Got bw',nbw,j
-                     if(lconflict(-j).or.gForceBW(-j,i)) then
+                     if(lconflict(-j)) then
                         iarray(nbw)=1 !Cuts on BW
                         if (nbw .gt. imax) then
                            write(*,*) 'Too many BW w conflicts',nbw,imax
@@ -566,7 +566,7 @@ c-----
       do while (i .le. imax .and. .not. found)
          if (iarray(i) .eq. 0) then    !don't increment this
             i=i+1
-         elseif (iarray(i) .lt. ibase-1 .and. .not. force(imax+1-i)) then
+         elseif (iarray(i) .lt. ibase-1) then
             found = .true.
             iarray(i)=iarray(i)+1
          else

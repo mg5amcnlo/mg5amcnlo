@@ -892,8 +892,7 @@ c      write(*,*) 'Forwarding random number generator'
 
       subroutine setgrid(j,xo,a,itype)
 c*************************************************************************
-c     For itype = 0, presets the grid for a 1/x distribution down to xo
-c     For itype > 0, presets the grid for a 1/(x-a)^itype distribution down to xo
+c     Presets the grid for a 1/(x-a)^itype distribution down to xo
 c*************************************************************************
       implicit none
 c
@@ -931,14 +930,12 @@ c-----
                write(*,*) 'Set grid',j,xo,a
                return
             endif
-         elseif (a.gt.0d0) then
-            write(*,'(a,i4,2e15.5,i4)') 'Setting grid',j,xo,a,itype
          else
             write(*,'(a,i4,1e15.5,i4)') 'Setting grid',j,xo,itype            
          endif
 c     grid(2,1,j) = xo
          grid(2,ng,j)=xgmax
-         if (itype .le. 1) then
+         if (itype .eq. 1) then
 c
 c     We'll use most for the peak, but save some for going down
 c
@@ -953,11 +950,8 @@ c-------------------
 c               grid(2,i+ngd,j)=((1d0-a)/(xo-a))**(1d0-dble(i)/dble(ngu))
 c               grid(2,i+ngd,j)=1d0/grid(2,i+ngd,j)+a
 c               grid(2,i+ngd,j) = xo + ((dble(i)+xo-a)/(dble(ngu)+xo-a))**2
-               if (a.gt.0d0) then
-                  grid(2,i+ngd,j) = (xo+a)*((1+a)/(xo+a))**(dble(i)/dble(ngu))-a
-               else
-                  grid(2,i+ngd,j) = xo**(1-dble(i)/dble(ngu))
-               endif
+               grid(2,i+ngd,j) = xo**(1-dble(i)/dble(ngu))
+
             enddo
 c
 c     Now lets go down the other side
@@ -1896,7 +1890,7 @@ c     Update weights in dsig (needed for subprocess group mode)
 c
 c     Add test to see if we have achieved desired accuracy
 c
-            if (tsigma .gt. 0d0 .and. cur_it .gt. 3 .and. accur .gt. 0d0) then
+            if (tsigma .gt. 0d0 .and. cur_it .gt. 5 .and. accur .gt. 0d0) then
 
                xmean = tmean/tsigma
                xchi2 = (chi2/xmean/xmean-tsigma)/dble(cur_it-2)               
