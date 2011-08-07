@@ -135,6 +135,7 @@ c-----
       else
          write(26,*) npoints,iter_survey,
      &     '     !Number of events and iterations'      
+c        JA 4/8/11 Set minimum accuracy 10%, to run 4th iteration if needed
          write(26,*) ' 0.1    !Accuracy'
          write(26,*) ' 2       !Grid Adjustment 0=none, 2=adjust'
       endif
@@ -254,9 +255,9 @@ c                  write(*,*) 'Width',pwidth(-j,i),j,i
                   nbw=nbw+1
                   if (pwidth(-j,i) .gt. 1d-20 .and. sprop(-j,i).ne.0) then
                      write(*,*) 'Got bw',-nbw,j
+c                    JA 4/8/11 don't treat forced BW differently
                      if(lconflict(-j)) then
-                        if(lconflict(-j)) write(*,*) 'Got conflict ',-nbw,j
-c                        if(gForceBW(-j,i)) write(*,*) 'Got forced BW ',-nbw,j
+                        write(*,*) 'Got conflict ',-nbw,j
                         iarray(nbw)=1 !Cuts on BW
                         if (nbw .gt. imax) then
                            write(*,*) 'Too many BW w conflicts',nbw,imax
@@ -289,7 +290,7 @@ c                 Create format string based on number of digits
                   write(26,formstr) dconfig
                endif
                write(26,'(a$)') ' '
-               call bw_increment_array(iarray,imax,ibase,gForceBW(-imax,i),done)
+               call bw_increment_array(iarray,imax,ibase,done)
             enddo
          endif
       enddo
@@ -318,6 +319,7 @@ c
                   nbw=nbw+1
                   if (pwidth(-j,i) .gt. 1d-20  .and. sprop(-j,i).ne.0) then
                      write(*,*) 'Got bw',nbw,j
+c                    JA 4/8/11 don't treat forced BW differently
                      if(lconflict(-j)) then
                         iarray(nbw)=1 !Cuts on BW
                         if (nbw .gt. imax) then
@@ -339,7 +341,7 @@ c
                else
                   write(26,'(2i6)') mapconfig(i),use_config(i)
                endif
-               call bw_increment_array(iarray,imax,ibase,gForceBW(-imax,i),done)
+               call bw_increment_array(iarray,imax,ibase,done)
             enddo
          else
             write(26,'(2i6)') mapconfig(i), use_config(i)
@@ -368,7 +370,7 @@ c
       integer itree(2,-max_branch:-1),iconfig
       logical lconflict(-max_branch:nexternal)
       integer sprop(-max_branch:-1)  ! Propagator id
-      logical forcebw(-max_branch:-1)  ! Forced BW
+      logical forcebw(-max_branch:-1)  ! Forced BW, for identical particle conflicts
 c
 c     local
 c
@@ -533,7 +535,7 @@ c
 
 
 
-      subroutine bw_increment_array(iarray,imax,ibase,force,done)
+      subroutine bw_increment_array(iarray,imax,ibase,done)
 c************************************************************************
 c     Increments iarray     
 c************************************************************************
@@ -543,7 +545,6 @@ c     Arguments
 c
       integer imax          !Input, number of elements in iarray
       integer ibase         !Base for incrementing, 0 is skipped
-      logical force(imax)   !Force onshell BW, counting from -imax to -1
       integer iarray(imax)  !Output:Array of values being incremented
       logical done          !Output:Set when no more incrementing
 

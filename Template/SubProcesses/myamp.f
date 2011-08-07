@@ -244,14 +244,14 @@ c           Else remove OnBW for daughter
               endif
             endif
 c
-c     Check if we are supposed to cut forced bw
+c     Check if we are supposed to cut forced bw (JA 4/8/11)
 c
             if (gForceBW(i, iconfig) .and. .not. onshell)then
                cut_bw = .true.
                return
             endif
 c
-c     Here we set onshell for phase space integration
+c     Here we set onshell for phase space integration (JA 4/8/11)
 c
             onshell = (abs(xmass - pmass(i,iconfig)) .lt.
      $           5d0*pwidth(i,iconfig))
@@ -259,8 +259,8 @@ c
             if (onshell .and. (lbw(nbw).eq. 2) .or.
      $          .not. onshell .and. (lbw(nbw).eq. 1)) then
                cut_bw=.true.
-               return
 c            write(*,*) 'cut_bw: ',nbw,xmass,onshell,lbw(nbw),cut_bw
+               return
             endif
          endif
 
@@ -426,7 +426,15 @@ c-JA 1/2009: Set grid also based on xqcut
             endif
 c            write(*,*) 'iconfig,i',iconfig,i
 c            write(*,*) pwidth(i,iconfig),pmass(i,iconfig)
-            if (pwidth(i,iconfig) .gt. 0 ) nbw=nbw+1
+            if (pwidth(i,iconfig) .gt. 0 ) then
+               nbw=nbw+1
+c              JA 6/8/2011 Set xe(i) for resonances
+               if (lbw(nbw).eq.1) then
+                  xe(i) = max(xe(i), pmass(i,iconfig)-5d0*pwidth(i,iconfig))
+               else if (gforcebw(i,iconfig)) then
+                  xe(i) = max(xe(i), pmass(i,iconfig)-bwcutoff*pwidth(i,iconfig))
+               endif
+            endif
             if (pwidth(i,iconfig) .gt. 0 .and. lbw(nbw) .le. 1) then         !B.W.
 c               nbw = nbw +1
 
