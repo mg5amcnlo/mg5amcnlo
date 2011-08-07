@@ -307,9 +307,6 @@ c
 
       logical gForceBW(-max_branch:-1,lmaxconfigs)  ! Forced BW
       include 'decayBW.inc'
-
-      double precision forced_mass
-      data forced_mass/0d0/
 c
 c     Global
 c
@@ -456,23 +453,17 @@ c----
                   spole(-i)=pmass(i,iconfig)*pmass(i,iconfig)/stot
                   swidth(-i) = pwidth(i,iconfig)*pmass(i,iconfig)/stot
                   xm(i) = pmass(i,iconfig)
-c                 Remember largest BW mass for better grid setting
-                  forced_mass = max(forced_mass,
-     $                 pmass(i,iconfig)-bwcutoff*pwidth(i,iconfig))
-c RF & TJS, should start from final state particle masses, not only at resonance.
-c Therefore remove the next line.
-c                  xe(i) = max(xe(i),xm(i))
                endif
 c     JA 4/1/2011 Set grid in case there is no BW (radiation process)
                if (swidth(-i) .eq. 0d0)then
                   a=pmass(i,iconfig)**2/stot
-                  xo = xm(i)**2/stot
+                  xo = max(xe(i)**2/stot, 1d-8)
                   call setgrid(-i,xo,a,1)
                endif
             else                                  !1/x^pow
               a=pmass(i,iconfig)**2/stot
 c     JA 4/1/2011 always set grid
-              xo = max(xm(i)**2/stot, 1d-8)
+              xo = max(xe(i)**2/stot, 1d-8)
 c              if (pwidth(i, iconfig) .eq. 0d0.or.iden_part(i).gt.0) then 
               call setgrid(-i,xo,a,1)
 c              else 
@@ -530,11 +521,7 @@ c               read(*,*) xo
       enddo
       if (abs(lpp(1)) .eq. 1 .or. abs(lpp(2)) .eq. 1) then
 c     Set minimum based on: 1) required energy 2) resonances 3) 1/10000 of sqrt(s)
-         if(forced_mass**2.lt.stot) then
-            xo = max(max(etot**2, forced_mass**2)/stot,1d-8)
-         else
-            xo = max(etot**2/stot,1d-8)
-         endif
+         xo = max(min(etot**2/stot, 1d0-1d-8),1d-8)
          if (xo.eq.1d-8) then
             write(*,*) 'Warning: No minimum found for integration'
             write(*,*) '         Setting minimum to 1e-8*stot'
