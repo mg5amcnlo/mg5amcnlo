@@ -42,7 +42,7 @@ from madgraph.iolibs.files import cp, ln, mv
 _file_path = os.path.split(os.path.dirname(os.path.realpath(__file__)))[0] + '/'
 logger = logging.getLogger('madgraph.export_fks')
 
-class ProcessExporterFortranFKS(export_v4.ProcessExporterFortran):
+class ProcessExporterFortranFKS_born(export_v4.ProcessExporterFortran):
     """Class to take care of exporting a set of matrix elements to
     Fortran (v4) format."""
     
@@ -70,8 +70,8 @@ class ProcessExporterFortranFKS(export_v4.ProcessExporterFortran):
                       "No valid MG_ME path given for MG4 run directory creation."
             logger.info('initialize a new directory: %s' % \
                         os.path.basename(dir_path))
-            print os.path.join(mgme_dir, 'TemplateFKS')
-            shutil.copytree(os.path.join(mgme_dir, 'TemplateFKS'), dir_path, True)
+            print os.path.join(mgme_dir, 'TemplateFKSborn')
+            shutil.copytree(os.path.join(mgme_dir, 'TemplateFKSborn'), dir_path, True)
         elif not os.path.isfile(os.path.join(dir_path, 'TemplateVersion.txt')):
             if not mgme_dir:
                 raise MadGraph5Error, \
@@ -143,55 +143,55 @@ class ProcessExporterFortranFKS(export_v4.ProcessExporterFortran):
         ff.close()
         
         
-    #===============================================================================
-    # write fks.inc file in SubProcesses, to be copied in the various FKS dirs    
-    #===============================================================================
-    def fks_inc_content(self,fks_proc):
-        """composes the content of the fks_inc file"""
-        
-        replace_dict = {'fksconfigs': fks_proc.ndirs}
-        
-        file = "\
-          integer fks_configs, ipos, jpos \n \
-          data fks_configs /  %(fksconfigs)d  / \n \
-          integer fks_i( %(fksconfigs)d ), fks_j( %(fksconfigs)d ) \n\
-    \n \
-          integer fks_ipos(0:nexternal) \n\
-          integer fks_j_from_i(nexternal, 0:nexternal) \n\
-          integer particle_type(nexternal), PDG_type(nexternal) \n\
-          """ % replace_dict +\
-          fks_proc.fks_config_string
-    
-        file += "\n \n \
-          data (fks_ipos(ipos),ipos=0,  %d  ) " % len(fks_proc.fks_ipos)
-        file +="\
-      / %d,  " % len(fks_proc.fks_ipos) + \
-         ', '.join([ "%d" % pdg for pdg in fks_proc.fks_ipos]) + " / "
-        
-        file += "\n\n"
-        
-        for i in fks_proc.fks_j_from_i.keys():
-            file += " data (fks_j_from_i( %d, jpos), jpos=0, %d) " %\
-          (i, len(fks_proc.fks_j_from_i[i]) )
-            file +="\
-      / %d,  " % len(fks_proc.fks_j_from_i[i]) + \
-         ', '.join([ "%d" % ii for ii in fks_proc.fks_j_from_i[i]]) + " / \n"
-          
-        file += "\n\
-C \n\
-C  Particle type: \n\
-C   octet = 8, triplet = 3, singlet = 1 \n\
-          data (particle_type(ipos), ipos=1, nexternal) \
-      / " + ', '.join([ "%d" % col for col in fks_proc.colors]) + " / "
-    
-        file += "\n \n\
-C \n\
-C  Particle type according to PDG: \n\
-C   \n\
-          data (PDG_type(ipos), ipos=1, nexternal) \
-      / " + ', '.join([ "%d" % pdg for pdg in fks_proc.pdg_codes]) + " / "
-    
-        return file
+##    #===============================================================================
+##    # write fks.inc file in SubProcesses, to be copied in the various FKS dirs    
+##    #===============================================================================
+##    def fks_inc_content(self,fks_proc):
+##        """composes the content of the fks_inc file"""
+##        
+##        replace_dict = {'fksconfigs': fks_proc.ndirs}
+##        
+##        file = "\
+##          integer fks_configs, ipos, jpos \n \
+##          data fks_configs /  %(fksconfigs)d  / \n \
+##          integer fks_i( %(fksconfigs)d ), fks_j( %(fksconfigs)d ) \n\
+##    \n \
+##          integer fks_ipos(0:nexternal) \n\
+##          integer fks_j_from_i(nexternal, 0:nexternal) \n\
+##          integer particle_type(nexternal), PDG_type(nexternal) \n\
+##          """ % replace_dict +\
+##          fks_proc.fks_config_string
+##    
+##        file += "\n \n \
+##          data (fks_ipos(ipos),ipos=0,  %d  ) " % len(fks_proc.fks_ipos)
+##        file +="\
+##      / %d,  " % len(fks_proc.fks_ipos) + \
+##         ', '.join([ "%d" % pdg for pdg in fks_proc.fks_ipos]) + " / "
+##        
+##        file += "\n\n"
+##        
+##        for i in fks_proc.fks_j_from_i.keys():
+##            file += " data (fks_j_from_i( %d, jpos), jpos=0, %d) " %\
+##          (i, len(fks_proc.fks_j_from_i[i]) )
+##            file +="\
+##      / %d,  " % len(fks_proc.fks_j_from_i[i]) + \
+##         ', '.join([ "%d" % ii for ii in fks_proc.fks_j_from_i[i]]) + " / \n"
+##          
+##        file += "\n\
+##C \n\
+##C  Particle type: \n\
+##C   octet = 8, triplet = 3, singlet = 1 \n\
+##          data (particle_type(ipos), ipos=1, nexternal) \
+##      / " + ', '.join([ "%d" % col for col in fks_proc.colors]) + " / "
+##    
+##        file += "\n \n\
+##C \n\
+##C  Particle type according to PDG: \n\
+##C   \n\
+##          data (PDG_type(ipos), ipos=1, nexternal) \
+##      / " + ', '.join([ "%d" % pdg for pdg in fks_proc.pdg_codes]) + " / "
+##    
+##        return file
     
         
         
@@ -199,17 +199,16 @@ C   \n\
     #===============================================================================
     # generate_subprocess_directory_fks
     #===============================================================================
-    def generate_subprocess_directories_fks(self, matrix_element,
+    def generate_real_directories_fks(self, matrix_element,
                                                   fortran_model,
                                                   me_number,
                                                   path=os.getcwd()):
         """Generate the Pxxxxx_i directories for a subprocess in MadFKS,
         including the necessary matrix.f and various helper files"""
         print "GENERATING FKS SUBDIRS"
-        proc = matrix_element['processes'][0]
+        proc = matrix_element.born_matrix_element['processes'][0]
         print proc.input_string()
         
-    
         cwd = os.getcwd()
         try:
             os.chdir(path)
@@ -220,16 +219,20 @@ C   \n\
                         "instead the command \"output\". "
             raise MadGraph5Error, error_msg 
         
-        this_fks_process = fks.FKSProcess(proc)
-        
         calls = 0
         
-    #write fks.inc in SubProcesses, it willbe copied later in the subdirs
-        fks_inc = self.fks_inc_content(this_fks_process)
+##    #write fks.inc in SubProcesses, it willbe copied later in the subdirs
+##        fks_inc = self.fks_inc_content(this_fks_process)
+        self.fksdirs = []
+        #first make and cd the direcrory corresponding to the born process:
+        borndir = "P%s" % \
+        (matrix_element.get('processes')[0].shell_string())
+        os.mkdir(borndir)
+        os.chdir(borndir)
         
-        for nfks, fksdir in enumerate(this_fks_process.fks_dirs):
-                calls += self.generate_subprocess_directory_fks(nfks, fksdir, fks_inc,
-                                                  matrix_element,
+        for nfks, fksreal in enumerate(matrix_element.real_processes):
+                calls += self.generate_subprocess_directory_fks(nfks, fksreal,
+                                                  matrix_element, borndir,
                                                   fortran_model,
                                                   me_number,
                                                   path)
@@ -237,5 +240,50 @@ C   \n\
         os.chdir(cwd)
         return calls
     
+    
+    def generate_subprocess_directory_fks(self, nfks, fksreal, matrix_element,
+                            born_dir, fortran_model, me_number, path=os.getcwd()):   
+        """Generate the Pxxxxx_i directory for a subprocess in MadFKS,
+        including the necessary matrix.f and various helper files
+        matrix_element is the real emission ME, the information on the 
+        reduced process are contained in fksreal
+        matrix element is a FKSHelasProcessFromBorn"""      
+    
+        pathdir = os.getcwd()
+    
+        # Create the directory PN_xx_xxxxx in the specified path
+        subprocdir = "R_%s_i%d_j%d" % \
+        (fksreal.matrix_element.get('processes')[0].shell_string()[2:], 
+         fksreal.i_fks, fksreal.j_fks)
+        self.fksdirs.append(subprocdir)
+        print subprocdir
+    #    dirs.append(subprocdir)
+        try:
+            os.mkdir(subprocdir)
+        except os.error as error:
+            logger.warning(error.strerror + " " + subprocdir)
+    
+        try:
+            os.chdir(subprocdir)
+        except os.error:
+            logger.error('Could not cd to directory %s' % subprocdir)
+            return 0
+    
+        logger.info('Creating files in directory %s' % subprocdir)
+        calls = 0
+    
+##########################
+##########################
+## write here all the files
+##########################
+##########################
+##########################
+
+        # Return to original dir
+        os.chdir(pathdir)
+    
+        if not calls:
+            calls = 0
+        return calls
             
  

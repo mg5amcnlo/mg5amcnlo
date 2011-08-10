@@ -274,6 +274,481 @@ class TestFKSCommon(unittest.TestCase):
     model.set('particles', mypartlist)
     model.set('interactions', myinterlist)
     
+    def test_split_leg(self):
+        """tests the correct splitting of a leg into two partons"""
+        leg_list = []
+        parts_list = []
+        res_list = []
+        leg_list.append( fks_common.FKSLeg({'id' : 21, 
+                                 'state' : True, 
+                                 'number' : 5}))
+        parts_list.append([MG.Particle({'name':'u',
+                  'antiname':'u~',
+                  'spin':2,
+                  'color':3,
+                  'mass':'zero',
+                  'width':'zero',
+                  'texname':'u',
+                  'antitexname':'\\overline{u}',
+                  'line':'straight',
+                  'charge':2. / 3.,
+                  'pdg_code':2,
+                  'propagating':True,
+                  'is_part': True,
+                  'self_antipart':False}),
+                  MG.Particle({'name':'d',
+                  'antiname':'d~',
+                  'spin':2,
+                  'color':3,
+                  'mass':'zero',
+                  'width':'zero',
+                  'texname':'u',
+                  'antitexname':'\\overline{u}',
+                  'line':'straight',
+                  'charge':-1. / 3.,
+                  'pdg_code':1,
+                  'propagating':True,
+                  'is_part': False,
+                  'self_antipart':False})
+                           ])
+        res_list.append([[fks_common.FKSLeg({'id' : 2, 
+                                 'state' : True,
+                                 'color' : 3,
+                                 'spin' : 2,
+                                 'massless' : True,
+                                 'fks' : 'j'}),
+                        fks_common.FKSLeg({'id' : -1, 
+                                 'state' : True,
+                                 'color' : -3,
+                                 'spin' : 2,
+                                 'massless' : True,
+                                 'fks' : 'i'})]]
+                        )
+        
+        leg_list.append( fks_common.FKSLeg({'id' : 21, 
+                                 'state' : False, 
+                                 'number' : 5}))
+        parts_list.append([MG.Particle({'name':'u',
+                  'antiname':'u~',
+                  'spin':2,
+                  'color':3,
+                  'mass':'zero',
+                  'width':'zero',
+                  'texname':'u',
+                  'antitexname':'\\overline{u}',
+                  'line':'straight',
+                  'charge':2. / 3.,
+                  'pdg_code':2,
+                  'propagating':True,
+                  'is_part': True,
+                  'self_antipart':False}),
+                  MG.Particle({'name':'d',
+                  'antiname':'d~',
+                  'spin':2,
+                  'color':3,
+                  'mass':'zero',
+                  'width':'zero',
+                  'texname':'u',
+                  'antitexname':'\\overline{u}',
+                  'line':'straight',
+                  'charge':-1. / 3.,
+                  'pdg_code':1,
+                  'propagating':True,
+                  'is_part': False,
+                  'self_antipart':False})
+                           ])
+        res_list.append([
+                        [fks_common.FKSLeg({'id' : 2, 
+                                 'state' : False,
+                                 'color' : 3,
+                                 'spin' : 2,
+                                 'massless' : True,
+                                 'fks' : 'j'}),
+                        fks_common.FKSLeg({'id' : 1, 
+                                 'state' : True,
+                                 'color' : 3,
+                                 'spin' : 2,
+                                 'massless' : True,
+                                 'fks' : 'i'})],
+                        [fks_common.FKSLeg({'id' : -1, 
+                                 'state' : False,
+                                 'color' : -3,
+                                 'spin' : 2,
+                                 'massless' : True,
+                                 'fks' : 'j'}),
+                        fks_common.FKSLeg({'id' : -2, 
+                                 'state' : True,
+                                 'color' : -3,
+                                 'spin' : 2,
+                                 'massless' : True,
+                                 'fks' : 'i'})]
+                        ]
+                        )
+        
+        leg_list.append( fks_common.FKSLeg({'id' : 21, 
+                                 'state' : False, 
+                                 'number' : 5}))
+        parts_list.append([MG.Particle({'name':'g',
+                      'antiname':'g',
+                      'spin':3,
+                      'color':8,
+                      'mass':'zero',
+                      'width':'zero',
+                      'texname':'g',
+                      'antitexname':'g',
+                      'line':'curly',
+                      'charge':0.,
+                      'pdg_code':21,
+                      'propagating':True,
+                      'is_part':True,
+                      'self_antipart':True}),
+                      MG.Particle({'name':'g',
+                      'antiname':'g',
+                      'spin':3,
+                      'color':8,
+                      'mass':'zero',
+                      'width':'zero',
+                      'texname':'g',
+                      'antitexname':'g',
+                      'line':'curly',
+                      'charge':0.,
+                      'pdg_code':21,
+                      'propagating':True,
+                      'is_part':True,
+                      'self_antipart':True})
+                      ])
+        res_list.append([
+                        [fks_common.FKSLeg({'id' : 21, 
+                                 'state' : False,
+                                 'color' : 8,
+                                 'spin' : 3,
+                                 'massless' : True,
+                                 'fks' : 'j'}),
+                        fks_common.FKSLeg({'id' : 21, 
+                                 'state' : True,
+                                 'color' : 8,
+                                 'spin' : 3,
+                                 'massless' : True,
+                                 'fks' : 'i'})]])
+        
+        for leg, parts, res in zip(leg_list, parts_list, res_list):
+            self.assertEqual(sorted(res), fks_common.split_leg(leg,parts,self.model) ) 
+    
+    def test_find_splittings(self):
+        """tests if the correct splittings are found by the find_splitting function
+        also ij_final is automatically tested here"""
+        leg_list = []
+        res_list = []
+        
+        #INITIAL STATE SPLITTINGS
+        # u to u>g u or g>u~u
+        leg_list.append( MG.Leg({'id' : 2, 
+                                 'state' : False, 
+                                 'number' : 5}))
+        res_list.append([fks_common.to_fks_legs(
+                        [fks_common.FKSLeg({'id' : 2, 
+                                 'state' : False,
+                                 'fks' : 'j'}),
+                        fks_common.FKSLeg({'id' : 21, 
+                                 'state' : True,
+                                 'fks' : 'i'})], self.model),
+                        fks_common.to_fks_legs(
+                        [fks_common.FKSLeg({'id' : 21, 
+                                 'state' : False,
+                                 'fks' : 'j'}),
+                        fks_common.FKSLeg({'id' : -2, 
+                                 'state' : True,
+                                 'fks' : 'i'})], self.model)
+                                 ])
+
+        #FINAL STATE SPLITTINGS
+        #u to ug
+        leg_list.append( MG.Leg({'id' : 2, 
+                                 'state' : True, 
+                                 'number' : 5}))
+        res_list.append([fks_common.to_fks_legs(
+                        [fks_common.FKSLeg({'id' : 2, 
+                                 'state' : True,
+                                 'fks' : 'j'}),
+                        fks_common.FKSLeg({'id' : 21, 
+                                 'state' : True,
+                                 'fks' : 'i'})], self.model) ])
+        #d to dg
+        leg_list.append( MG.Leg({'id' : 1, 
+                                 'state' : True, 
+                                 'number' : 5}))
+        res_list.append([fks_common.to_fks_legs(
+                        [fks_common.FKSLeg({'id' : 1, 
+                                 'state' : True,
+                                 'fks' : 'j'}),
+                        fks_common.FKSLeg({'id' : 21, 
+                                 'state' : True,
+                                 'fks' : 'i'})], self.model) ])
+        #t to tg
+        leg_list.append( MG.Leg({'id' : 6, 
+                                 'state' : True, 
+                                 'number' : 5}))
+        res_list.append([fks_common.to_fks_legs(
+                        [fks_common.FKSLeg({'id' : 6, 
+                                 'state' : True,
+                                 'fks' : 'j'}),
+                        fks_common.FKSLeg({'id' : 21, 
+                                 'state' : True,
+                                 'fks' : 'i'})], self.model) ])
+
+        #u~ to ug
+        leg_list.append( MG.Leg({'id' : -2, 
+                                 'state' : True, 
+                                 'number' : 5}))
+        res_list.append([fks_common.to_fks_legs(
+                        [fks_common.FKSLeg({'id' : -2, 
+                                 'state' : True,
+                                 'fks' : 'j'}),
+                        fks_common.FKSLeg({'id' : 21, 
+                                 'state' : True,
+                                 'fks' : 'i'})], self.model) ])
+        #d~ to dg
+        leg_list.append( MG.Leg({'id' : -1, 
+                                 'state' : True, 
+                                 'number' : 5}))
+        res_list.append([fks_common.to_fks_legs(
+                        [fks_common.FKSLeg({'id' : -1, 
+                                 'state' : True,
+                                 'fks' : 'j'}),
+                        fks_common.FKSLeg({'id' : 21, 
+                                 'state' : True,
+                                 'fks' : 'i'})], self.model) ])
+        #t~ to tg
+        leg_list.append( MG.Leg({'id' : -6, 
+                                 'state' : True, 
+                                 'number' : 5}))
+        res_list.append([fks_common.to_fks_legs(
+                        [fks_common.FKSLeg({'id' : -6, 
+                                 'state' : True,
+                                 'fks' : 'j'}),
+                        fks_common.FKSLeg({'id' : 21, 
+                                 'state' : True,
+                                 'fks' : 'i'})], self.model) ])
+
+        #g > uu~ or dd~
+        leg_list.append( MG.Leg({'id' : 21, 
+                                 'state' : True, 
+                                 'number' : 5}))
+        res_list.append([fks_common.to_fks_legs(
+                        [fks_common.FKSLeg({'id' : 21, 
+                                 'state' : True,
+                                 'fks' : 'j'}),
+                        fks_common.FKSLeg({'id' : 21, 
+                                 'state' : True,
+                                 'fks' : 'i'})], self.model), 
+                        fks_common.to_fks_legs(
+                        [fks_common.FKSLeg({'id' : 1, 
+                                 'state' : True,
+                                 'fks' : 'j'}),
+                        fks_common.FKSLeg({'id' : -1, 
+                                 'state' : True,
+                                 'fks' : 'i'})], self.model),
+                        fks_common.to_fks_legs(
+                        [fks_common.FKSLeg({'id' : 2, 
+                                 'state' : True,
+                                 'fks' : 'j'}),
+                        fks_common.FKSLeg({'id' : -2, 
+                                 'state' : True,
+                                 'fks' : 'i'})], self.model)
+                        ])
+
+        for leg, res in zip (leg_list, res_list):    
+            self.assertEqual(sorted(res), 
+                             fks_common.find_splittings(leg, self.model, {}) )   
+    
+    def test_insert_legs(self):
+        """test the correct implementation of the fks_common function"""
+        legs = []
+        splittings = []
+        res_leglists = []
+        
+        leglist_orig = [fks_common.FKSLeg({ 
+                                    'id': 2,
+                                    'number': 1,
+                                    'state': False,
+                                    'color': 3,
+                                    'spin': 2,
+                                    'massless': True
+                                }), \
+                                fks_common.FKSLeg({ 
+                                    'id': 21,
+                                    'number': 2,
+                                    'state': False,
+                                    'color': 8,
+                                    'spin': 3,
+                                    'massless': True
+                                }),\
+                                fks_common.FKSLeg({
+                                    'id': 2,
+                                    'number': 3,
+                                    'state': True,
+                                    'color': 3,
+                                    'spin': 2,
+                                    'massless': True
+                                }),\
+                                fks_common.FKSLeg({
+                                    'id': 21,
+                                    'number': 4,
+                                    'state': True,
+                                    'color': 8,
+                                    'spin': 3,
+                                    'massless': True
+                                })
+                                ]
+        #split initial state u  
+        legs.append(fks_common.FKSLeg({ 
+                                    'id': 2,
+                                    'number': 1,
+                                    'state': False,
+                                    'color': 3,
+                                    'spin': 2,
+                                    'massless': True
+                                }))
+        splittings.append([fks_common.FKSLeg({ 
+                                    'id': 2,
+                                    'number': 1,
+                                    'state': False,
+                                    'fks' :'j',
+                                    'color': 3,
+                                    'spin': 2,
+                                    'massless': True
+                                }),
+                           fks_common.FKSLeg({ 
+                                    'id': 21,
+                                    'number': 3,
+                                    'state': True,
+                                    'fks' : 'i',
+                                    'color': 8,
+                                    'spin': 3,
+                                    'massless': True
+                                })
+                                ])
+        
+        res_leglists.append([fks_common.FKSLeg({ 
+                                    'id': 2,
+                                    'number': 1,
+                                    'state': False,
+                                    'color': 3,
+                                    'spin': 2,
+                                    'massless': True,
+                                    'fks': 'j'
+                                }), \
+                                fks_common.FKSLeg({ 
+                                    'id': 21,
+                                    'number': 2,
+                                    'state': False,
+                                    'color': 8,
+                                    'spin': 3,
+                                    'massless': True
+                                }),\
+                                fks_common.FKSLeg({
+                                    'id': 21,
+                                    'number': 3,
+                                    'state': True,
+                                    'color': 8,
+                                    'spin': 3,
+                                    'massless': True,
+                                    'fks': 'i'
+                                }),\
+                                fks_common.FKSLeg({
+                                    'id': 2,
+                                    'number': 4,
+                                    'state': True,
+                                    'color': 3,
+                                    'spin': 2,
+                                    'massless': True
+                                }),\
+                                fks_common.FKSLeg({
+                                    'id': 21,
+                                    'number': 5,
+                                    'state': True,
+                                    'color': 8,
+                                    'spin': 3,
+                                    'massless': True
+                                })])
+        
+        #split final state u
+        legs.append(fks_common.FKSLeg({ 
+                                    'id': 2,
+                                    'number': 3,
+                                    'state': True,
+                                    'color': 3,
+                                    'spin': 2,
+                                    'massless': True
+                                }))
+        splittings.append([fks_common.FKSLeg({ 
+                                    'id': 2,
+                                    'number': 3,
+                                    'state': True,
+                                    'fks' :'j',
+                                    'color': 3,
+                                    'spin': 2,
+                                    'massless': True
+                                }),
+                           fks_common.FKSLeg({ 
+                                    'id': 21,
+                                    'number': 4,
+                                    'state': True,
+                                    'fks' : 'i',
+                                    'color': 8,
+                                    'spin': 3,
+                                    'massless': True
+                                })
+                                ])
+        
+        res_leglists.append([fks_common.FKSLeg({ 
+                                    'id': 2,
+                                    'number': 1,
+                                    'state': False,
+                                    'color': 3,
+                                    'spin': 2,
+                                    'massless': True,
+                                }), \
+                                fks_common.FKSLeg({ 
+                                    'id': 21,
+                                    'number': 2,
+                                    'state': False,
+                                    'color': 8,
+                                    'spin': 3,
+                                    'massless': True
+                                }),\
+                                fks_common.FKSLeg({
+                                    'id': 2,
+                                    'number': 3,
+                                    'state': True,
+                                    'color': 3,
+                                    'spin': 2,
+                                    'massless': True,
+                                    'fks': 'j'
+                                }),\
+                                fks_common.FKSLeg({
+                                    'id': 21,
+                                    'number': 4,
+                                    'state': True,
+                                    'color': 8,
+                                    'spin': 3,
+                                    'massless': True,
+                                    'fks': 'i'
+
+                                }),\
+                                fks_common.FKSLeg({
+                                    'id': 21,
+                                    'number': 5,
+                                    'state': True,
+                                    'color': 8,
+                                    'spin': 3,
+                                    'massless': True
+                                })])
+        
+        for leg, split, res in zip(legs, splittings, res_leglists):
+            self.assertEqual(res, fks_common.insert_legs(leglist_orig, leg, split))
+    
+    
     def test_combine_ij(self):
         """tests if legs i/j are correctly combined into leg ij"""
         legs_i = []

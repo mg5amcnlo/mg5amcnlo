@@ -26,6 +26,113 @@ import logging
 import array
 import fractions
     
+    
+    
+class FKSProcessError(Exception):
+    """Exception for MadFKS"""
+    pass
+
+def find_splittings(leg, model, dict, pert='QCD'): #test written
+    """find the possible splittings corresponding to leg"""
+    if dict == {}:
+        dict = find_pert_particles_interactions(model, pert)
+    splittings = []
+#check that the leg is a qcd leg
+
+    if leg.get('id') in dict['pert_particles']:
+        part = model.get('particle_dict')[leg.get('id')]
+        antipart = model.get('particle_dict')[part.get_anti_pdg_code()]
+        for ii in dict['interactions']:
+#check which interactions contain leg and at least one soft particles:
+            parts = copy.deepcopy(ii['particles'])
+            nsoft = 0
+            if part in parts:
+                #pops the ANTI-particle of part from the interaction
+                parts.pop(parts.index(antipart))
+                for p in parts:
+                    if p.get_pdg_code() in dict['soft_particles']:
+                        nsoft += 1
+                if nsoft >=1:
+                    splittings.extend(split_leg(leg, parts, model))
+    return splittings
+
+def split_leg(leg, parts, model): #test written
+    """splits the leg into parts, and returns the two new legs"""
+    #for an outgoing leg take the antiparticles
+    split = []
+    #for a final state particle one can have only a splitting
+    if leg['state'] :
+        split.append([])
+        for part in parts:
+            split[-1].append(to_fks_leg({'state' : True, \
+                                 'id' : part.get_pdg_code()},model))
+            ij_final(split[-1])
+    #while for an initial state particle one can have two splittings 
+    # if the two partons are different
+    else:
+        if parts[0] != parts[1]:
+            for part in parts:
+                cparts = copy.deepcopy(parts)
+                split.append([\
+                          to_fks_leg({'state' : False, 
+                                  'id' : cparts.pop(cparts.index(part)).get_pdg_code(),
+                                  'fks' : 'j'}, model),
+                          to_fks_leg({'state' : True,
+                                  'id' : cparts[0].get_anti_pdg_code(),
+                                  'fks' : 'i'}, model)\
+                          ])
+        else:
+            split.append([\
+                            to_fks_leg({'state' : False, 
+                                  'id' : parts[0].get_pdg_code(),
+                                  'fks' : 'j'}, model),
+                            to_fks_leg({'state' : True, 
+                                  'id' : parts[1].get_anti_pdg_code(),
+                                  'fks' : 'i'}, model)])
+    return split
+
+def ij_final(pair):
+    """given a pair of legs in the final state, assigns the i/j fks id
+    NOTE: the j partons is always put before the i one"""
+    #if a massless bosonic particle is in the pair, it is i
+    #else by convention the anti-particle is labeled i
+    #the order of the splitting is [ j, i]
+    if len(pair) ==2:
+        for i in range(len(pair)):
+            set =0
+            if (pair[i]['massless'] and pair[i]['spin'] %2 ==1) \
+             or (pair[i]['color'] == -3 and pair[1-i]['color'] == 3) \
+                and not set:
+                pair[i]['fks'] = 'i'
+                pair[1-i]['fks'] = 'j'
+                #check that first j then i
+                if i < 1-i:
+                    pair.reverse()
+                set =1
+
+def insert_legs(leglist_orig, leg, split):
+    """returns a new leglist with leg splitted into split."""
+    leglist = copy.deepcopy(leglist_orig)         
+    #find the position of the first final state leg
+    for i in range(len(leglist)):
+        if leglist[-i-1].get('state'):
+            firstfinal = len(leglist) -i -1
+    i = leglist.index(leg)
+    leglist.remove(leg)
+
+    for sleg in split:            
+        leglist.insert(i, sleg)
+        #keep track of the number for initial state legs
+        if not sleg.get('state') and not leg.get('state'):
+            leglist[i]['number'] = leg['number']
+        i+= 1
+        if i < firstfinal :
+            i = firstfinal
+            
+    for i, leg in enumerate(leglist):
+        leg['number'] = i+1        
+    return leglist 
+
 
 def combine_ij( i, j, model, dict, pert='QCD'): #test written
     """checks whether FKSlegs i and j can be combined together in the given model
@@ -173,10 +280,11 @@ def find_color_links(leglist): #test written
             #legs must be colored and different, unless massive
                 if (leg1.get('color') != 1 and leg2.get('color') != 1) \
                   and (leg1 != leg2 or not leg1.get('massless')):
+                    col_dict = legs_to_color_link_string(leg1,leg2)
                     color_links.append({
                         'legs' : [leg1, leg2],
-                        'string' : legs_to_color_link_string(leg1, leg2)['string'],
-                        'replacements' : legs_to_color_link_string(leg1, leg2)['replacements']})
+                        'string' : col_dict['string'],
+                        'replacements' : col_dict['replacements']})
     return color_links
              
 
@@ -215,6 +323,7 @@ def legs_to_color_link_string(leg1, leg2): #test written, all cases
                 string.product(color_algebra.ColorString(init_list = [
                                color_algebra.f(min_index,iglu,num)], 
                                is_imaginary =True))
+                
     else:
         icol =1
         if not leg1.get('state'):

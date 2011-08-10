@@ -1,0 +1,21 @@
+******************************************
+*                                        *
+*  Linking file between value and name   *
+*        O. Mattelaer   June 2007        * 
+*                                        * 
+* version 0.1.3				 *
+******************************************
+MW_perm         2        perm_with_b      logical    .false.	
+MW_perm         1        use_perm         logical    .true. 
+MW_run          6        nevents          integer    10000
+MW_run          7        final_prec       real       0.005
+MW_run          710      min_prec_cut1    real       0.001  
+MW_run          711      value_cut1       real       0.00
+MW_run          720      min_prec_cut2    real       0.0
+MW_run          721      value_cut2       real       0.0 
+MW_run          731      max_it_step1     integer    6 
+MW_run          732      max_it_step2     integer    20 
+MW_run          733      max_it_step3     integer    0 
+MW_run          734      max_it_step4     integer    0 
+MW_run          735      max_it_step5     integer    0 
+MW_run          histo    histo            logical    .false.

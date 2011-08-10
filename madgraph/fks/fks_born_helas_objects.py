@@ -23,6 +23,7 @@ import madgraph.core.diagram_generation as diagram_generation
 import madgraph.core.color_amp as color_amp
 import madgraph.core.color_algebra as color_algebra
 import madgraph.fks.fks_born as fks_born
+import madgraph.fks.fks_common as fks_common
 import copy
 import logging
 import array
@@ -42,28 +43,21 @@ class FKSHelasMultiProcessFromBorn(helas_objects.HelasMultiProcess):
     def get_used_lorentz(self):
         """Return a list of (lorentz_name, conjugate, outgoing) with
         all lorentz structures used by this HelasMultiProcess."""
-
         helas_list = []
-
         for me in self.get('matrix_elements'):
             helas_list.extend(me.get_used_lorentz())
-
         return list(set(helas_list))
 
     def get_used_couplings(self):
         """Return a list with all couplings used by this
         HelasMatrixElement."""
-
         coupling_list = []
-
         for me in self.get('matrix_elements'):
             coupling_list.extend(me.get_used_couplings())
-
         return list(set(coupling_list))
     
     def get_matrix_elements(self):
         """Extract the list of matrix elements"""
-
         return self.get('matrix_elements')        
         
 
@@ -157,23 +151,17 @@ class FKSHelasMultiProcessFromBorn(helas_objects.HelasMultiProcess):
                             col_matrix = color_amp.ColorMatrix(col_basis)
                             list_color_matrices.append(col_matrix)
                             col_index = -1
-                            list_color_links.append(
-                                    FKSHelasProcessFromBorn.insert_color_links(
-                                            col_basis, colorize_obj, 
-                                            proc.color_links))
+
                             logger.info(\
                               "Processing color information for %s" % \
                               matrix_element.born_matrix_element.get('processes')[0].nice_string().\
                                              replace('Process', 'process'))
-                            
 
                 if gen_color:
                     matrix_element.born_matrix_element.set('color_basis',
                                        list_color_basis[col_index])
                     matrix_element.born_matrix_element.set('color_matrix',
-                                       list_color_matrices[col_index])
-                    matrix_element.color_links = list_color_links[col_index]
-                    
+                                       list_color_matrices[col_index])                    
         return matrix_elements    
 
 
@@ -183,7 +171,6 @@ class FKSHelasProcessFromBornList(MG.PhysicsObjectList):
     def is_valid_element(self, obj):
         """Test if object obj is a valid FKSProcessFromBorn for the list."""
         return isinstance(obj, FKSHelasProcessFromBorn)
-    
     
     
 class FKSHelasProcessFromBorn(object):
@@ -197,13 +184,37 @@ class FKSHelasProcessFromBorn(object):
         sets reals and color links"""
         
         if fksproc != None:
-            self.color_links = []
             self.real_processes = []
             for proc in fksproc.real_amps:
                 self.real_processes.append(
                         FKSHelasRealProcess(proc, me_list, me_id_list, **opts))
             self.born_matrix_element = helas_objects.HelasMatrixElement(
                                     fksproc.born_amp, **opts)
+            col_basis = color_amp.ColorBasis()
+            col_basis.build(fksproc.born_amp)
+            self.color_links = fks_common.insert_color_links(col_basis,
+                                col_basis.create_color_dict_list(fksproc.born_amp),
+                                fksproc.find_color_links())    
+    def get(self, key):
+        """the get function references to born_matrix_element"""
+        return self.born_matrix_element.get(key)
+    
+    def get_used_lorentz(self):
+        """the get_used_lorentz function references to real_matrix_element and
+        to the borns"""
+        lorentz_list = self.born_matrix_element.get_used_lorentz()
+        for real in self.real_processes:
+            lorentz_list.extend(real.matrix_element.get_used_lorentz())
+        return list(set(lorentz_list))
+    
+    def get_used_couplings(self):
+        """the get_used_couplings function references to real_matrix_element and
+        to the borns"""
+        coupl_list = self.born_matrix_element.get_used_couplings()
+        for real in self.born_processes:
+            coupl_list.extend([c for l in\
+                        real.matrix_element.get_used_couplings() for c in l])
+        return coupl_list    
     
     def __eq__(self, other):
         """the equality between two FKSHelasProcesses is defined up to the 
@@ -227,53 +238,6 @@ class FKSHelasProcessFromBorn(object):
         for real1, real2 in zip(self.real_processes, other.real_processes):
             real1.matrix_element.get('processes').extend(
                 real2.matrix_element.get('processes'))  
-            
-#    @staticmethod
-#    def insert_color_links(col_basis, col_obj, links):
-#        """insert the color links in col_obj: returns a list of dictionaries
-#        (one for each link) with the following entries:
-#        --link: the numbers of the linked legs
-#        --link_basis: the linked color basis
-#        --link_matrix: the color matrix created from the original basis and the linked one
-#        """   
-#        
-#        assert isinstance(col_basis, color_amp.ColorBasis)
-#        assert isinstance(col_obj, list)
-#        result =[]
-#        for link in links:
-#            this = {}
-#            #define the link
-#            l =[]
-#            for leg in link['legs']:
-#                l.append(leg.get('number'))
-#            this['link'] = l
-#            
-#            #replace the indices in col_obj of the linked legs according to
-#            #   link['replacements']
-#            # and extend the color strings
-#            
-#            this_col_obj = []
-#            for old_dict in col_obj:
-#                dict = copy.copy(old_dict)
-#                for k, string in dict.items():
-#                    dict[k]=string.create_copy()
-#                    for col in dict[k]:
-#                        for ind in col:
-#                            for pair in link['replacements']:
-#                                if ind == pair[0]:
-#                                    col[col.index(ind)] = pair[1]
-#                    dict[k].extend(link['string'])
-#                this_col_obj.append(dict)
-#            basis_link = color_amp.ColorBasis()
-#            for ind, dict in enumerate(this_col_obj):
-#                basis_link.update_color_basis(dict, ind)
-#            
-#            this['link_basis'] = basis_link
-#            this['link_matrix'] = color_amp.ColorMatrix(col_basis,basis_link)
-#                
-#            result.append(this)
-#                
-#        return result
             
     
 class FKSHelasRealProcess(object): #test written

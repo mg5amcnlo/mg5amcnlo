@@ -22,6 +22,7 @@ sys.path.insert(0, os.path.join(root_path,'..','..'))
 
 import tests.unit_tests as unittest
 import madgraph.fks.fks_born as fks_born
+import madgraph.fks.fks_common as fks_common
 import madgraph.fks.fks_born_helas_objects as fks_born_helas
 import madgraph.core.base_objects as MG
 import madgraph.core.helas_objects as helas_objects
@@ -364,9 +365,9 @@ class testFKSBornHelasObjects(unittest.TestCase):
         my_process_definitions = MG.ProcessDefinitionList(\
             [my_process_definition])
 
-        my_multi_process = fks_born.FKSMultiProcess(\
+        my_multi_process = fks_born.FKSMultiProcessFromBorn(\
             {'process_definitions':my_process_definitions})
-        my_helas_mp = fks_born_helas.FKSHelasMultiProcess(my_multi_process, False)
+        my_helas_mp = fks_born_helas.FKSHelasMultiProcessFromBorn(my_multi_process, False)
         
         #there should be 6 independent born_matrix_elements 
         #for me in my_helas_mp.get('matrix_elements'):
@@ -394,16 +395,18 @@ class testFKSBornHelasObjects(unittest.TestCase):
         #uu~> dd~
         fks3 = fks_born.FKSProcessFromBorn(self.myproc3)
  
-        fksleglist = copy.copy(fks3.to_fks_legs(self.myleglist3))
+        fksleglist = copy.copy(fks_common.to_fks_legs(self.myleglist3,
+                                                      self.mymodel))
         amplist = []
         amp_id_list = []
         me_list=[]
         me_id_list=[]
         
-        fksleglist.append(fks3.to_fks_leg(MG.Leg({'id' : 21,
+        fksleglist.append(fks_common.to_fks_leg(MG.Leg({'id' : 21,
                                                  'state' : True,
                                                  'number' : 5,
-                                                 'from_group' : True})))
+                                                 'from_group' : True}),
+                                                 self.mymodel))
         fksleglist[0]['fks']='n'
         fksleglist[1]['fks']='n'
         fksleglist[2]['fks']='n'
@@ -474,8 +477,6 @@ class testFKSBornHelasObjects(unittest.TestCase):
         self.assertEqual(11, len(helas_born_proc.real_processes))
         for a,b in zip(res_reals, helas_born_proc.real_processes):
             self.assertEqual(a,b)
-        #right now no color link should be generated
-        self.assertEqual([],helas_born_proc.color_links)
         #more (in)sanity checks
         self.assertNotEqual(helas_born_proc.born_matrix_element,
                             helas_born_proc3.born_matrix_element)
@@ -537,50 +538,3 @@ class testFKSBornHelasObjects(unittest.TestCase):
                              len(r1)
                              )
             
-    def test_insert_color_links(self):
-        """tests the correct insertion of the color link 
-        {legs, string, replacements} in the given color basis.
-        Should return a list of dictionaries with
-        -- link 
-        -- linked basis
-        -- linked color matrix
-        """
-        #uu~> dd~
-        fks3 = fks_born.FKSProcessFromBorn(self.myproc3)
-        col_dicts =\
-                        [
-                {(0,0): color.ColorString([color.T(-1001,2,1),
-                                  color.T(-1001,3,4)])}
-                                    
-              #      {(0,0): color.ColorString([color.T(-1001,3,1),
-              #                    color.T(-1001,2,4)])}
-                                  ]
-        #we link legs 3 and 4
-        clstring = fks_born.legs_to_color_link_string(
-                            fks3.leglist[2], fks3.leglist[3])
-        link = [{'legs' : [fks3.leglist[2], fks3.leglist[3]],
-                 'string' : clstring['string'],
-                 'replacements' : clstring['replacements']
-                 }]
-        res_dicts = [{(0,0): color.ColorString([color.T(-1001,2,1),
-                                  color.T(-1001,-3001,-3002)] + 
-                                        link[0]['string'])},
-               #     {(0,0): color.ColorString([color.T(-1001,-3001,1),
-               #                   color.T(-1001,-3002,4)]).append(
-               #                         link[0]['string'])}
-                                  ]
-        col_basis1 = color_amp.ColorBasis()
-        col_basis2 = color_amp.ColorBasis()
-        for ind, dict in enumerate(col_dicts):
-            col_basis1.update_color_basis(dict, ind)
-        for ind, dict in enumerate(res_dicts):
-            col_basis2.update_color_basis(dict, ind)
-
-        
-        self.assertEqual(fks_born_helas.FKSHelasProcessFromBorn.insert_color_links(
-                        col_basis1, col_dicts, link), 
-                [{'link' : [3,4],
-                  'link_basis' : col_basis2,
-                  'link_matrix' : color_amp.ColorMatrix(col_basis1,col_basis2)}])
-        
-        

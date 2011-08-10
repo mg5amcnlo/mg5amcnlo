@@ -61,7 +61,6 @@ class FKSHelasMultiProcessFromReals(helas_objects.HelasMultiProcess):
     
     def get_matrix_elements(self):
         """Extract the list of matrix elements"""
-
         return self.get('matrix_elements')        
         
 
@@ -204,7 +203,6 @@ class FKSHelasProcessFromReals(object): #test written
         for born in self.born_processes:
             lorentz_list.extend(born.matrix_element.get_used_lorentz())
         return list(set(lorentz_list))
-#        return lorentz_list
     
     def get_used_couplings(self):
         """the get_used_couplings function references to real_matrix_element and
@@ -213,7 +211,6 @@ class FKSHelasProcessFromReals(object): #test written
         for born in self.born_processes:
             coupl_list.extend([c for l in\
                         born.matrix_element.get_used_couplings() for c in l])
-        #return list(set(coupl_list))
         return coupl_list    
     
     def __eq__(self, other):
@@ -251,7 +248,7 @@ class FKSHelasBornProcess(object): #test written
     -- leg permutation<<REMOVED"""
     
     def __init__(self, fksbornproc=None, me_list = [], me_id_list =[], **opts):
-        """constructor, starts from a fksrealproc and then calls the
+        """constructor, starts from a fksrbornproc and then calls the
         initialization for HelasMatrixElement.
         Sets i/j fks and the permutation"""
         

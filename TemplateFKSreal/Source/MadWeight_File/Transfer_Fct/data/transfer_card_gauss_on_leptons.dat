@@ -1,0 +1,28 @@
+#+-----------------------------------------------------------------------+
+#|                         TRANSFER_CARD.DAT                             |
+#|                                                                       |
+#|     Author: Pierre Artoisenet (UCL-CP3)                               |
+#|             Olivier Mattelaer (UCL-CP3)                               |
+#+-----------------------------------------------------------------------+
+#|     This file is generated automaticly by MADWEIGHT                   |
+#|     card generation version: 2.0.0                                    |
+#+-----------------------------------------------------------------------+
+#|                                                                       |
+#|    To change the transfer function run ./bin/change_tf.py             |
+#|    Current parametrization :gauss_on_leptons                          |
+#|                                                                       |
+#+-----------------------------------------------------------------------+
+BLOCK TF_lepton_E
+#+-----------------------------------------------------------------------+
+#|    Parameter for particles: e,mu,ta                                   |
+#|    Information: simple gaussian                                       |
+#|                                                                       |
+#+-----------------------------------------------------------------------+
+     1       0.0    # biais of the gaussian in form #1 + #2*sqrt(E) + #3*E
+     2       0.0    #
+     3       0.0    #
+     4       0.0    # sigma of the gaussian in form #4 + #5*sqrt(E) + #6*E
+     5       0.0    #
+     6       0.05   # ->sigma proportional to the energy
+
+

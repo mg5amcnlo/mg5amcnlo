@@ -1,0 +1,68 @@
+#!/bin/bash
+#
+#  First get to main level directory for this process
+#
+echo "Setting up the Template to work with the StandAlone version of MadGraphII"
+if [[  ! -d ./bin  ]]; then
+    cd ../
+    if [[ ! -d ./bin ]]; then
+	echo "Error: store must be executed from the main, or bin directory"
+	exit
+    fi
+fi
+
+#  Now let shell know where to find important executables
+
+main=`pwd`
+dirbin=$main/bin
+mgdir=$main/../MadGraphII
+mad2_sa=$mgdir/mg2_sa
+helas=$main/../HELAS
+mgmedir=$main/..
+
+echo "Transforming standard template in standalone dipole version"
+cd $main
+mkdir temp
+mv ./bin/newprocess_dip ./temp/newprocess
+mv ./bin/newprocess_dip_qed ./temp/newprocess_qed
+mv ./bin/setup_model-pl ./temp/
+mv ./Cards/proc_card.dat ./temp/
+mv ./SubProcesses/makefile_dip ./temp/makefile_dip
+mv ./SubProcesses/makefile_dip_qed ./temp/makefile_dip_qed
+mv ./SubProcesses/check_dip.f ./temp/
+mv ./SubProcesses/check_dip_qed.f ./temp/
+mv ./SubProcesses/check_intdip.f ./temp/
+mv ./SubProcesses/dipolesub.f ./temp/
+mv ./SubProcesses/transform.f ./temp/
+mv ./SubProcesses/transformint.f ./temp/
+mv ./SubProcesses/finiteterms.f ./temp/
+mv ./SubProcesses/epsterms.f ./temp/
+mv ./SubProcesses/finitetermsqed.f ./temp/
+mv ./SubProcesses/epstermsqed.f ./temp/
+mv ./SubProcesses/dipole.inc ./temp/
+mv ./Source/makefile ./temp/mfsource
+rm -rf bin/* Cards/* Events HTML Source/* lib/* SubProcesses/*
+mkdir Source/MODEL
+mkdir Source/DHELAS
+
+mv ./temp/newprocess ./bin/
+mv ./temp/newprocess_qed ./bin/
+mv ./temp/setup_model-pl ./bin/
+mv ./temp/proc_card.dat ./Cards/
+mv ./temp/makefile_dip ./SubProcesses/
+mv ./temp/makefile_dip_qed ./SubProcesses/
+mv ./temp/check_dip.f ./SubProcesses/
+mv ./temp/check_dip_qed.f ./SubProcesses/
+mv ./temp/check_intdip.f ./SubProcesses/
+mv ./temp/dipolesub.f ./SubProcesses/
+mv ./temp/transform.f ./SubProcesses/
+mv ./temp/transformint.f ./SubProcesses/
+mv ./temp/finiteterms.f ./SubProcesses/
+mv ./temp/epsterms.f ./SubProcesses/
+mv ./temp/finitetermsqed.f ./SubProcesses/
+mv ./temp/epstermsqed.f ./SubProcesses/
+mv ./temp/dipole.inc ./SubProcesses/
+mv ./temp/mfsource ./Source/makefile
+rm -rf temp
+
+echo " Ready to go with StandAlone MadGraphII MadDipole"

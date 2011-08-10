@@ -46,12 +46,12 @@ import madgraph.core.helas_objects as helas_objects
 import madgraph.fks.fks_real as fks_real
 import madgraph.fks.fks_real_helas_objects as fks_real_helas
 import madgraph.fks.fks_born as fks_born
-
+import madgraph.fks.fks_born_helas_objects as fks_born_helas
 
 import madgraph.iolibs.drawing_eps as draw
 import madgraph.iolibs.export_cpp as export_cpp
 import madgraph.iolibs.export_v4 as export_v4
-import madgraph.iolibs.export_fks as export_fks
+import madgraph.iolibs.export_fks_real as export_fks_real
 import madgraph.iolibs.export_fks_born as export_fks_born
 import madgraph.iolibs.helas_call_writers as helas_call_writers
 import madgraph.iolibs.file_writers as writers
@@ -1462,8 +1462,9 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
     _tutorial_opts = ['start', 'stop']
     _check_opts = ['full', 'permutation', 'gauge', 'lorentz_invariance']
     _import_formats = ['model_v4', 'model', 'proc_v4', 'command']
-    _v4_export_formats = ['madevent', 'standalone','matrix', 'fks', 'fksreal'] 
-    _fks_export_formats = ['fks', 'fksreal']
+    _fks_export_formats = ['fksreal', 'fksborn']
+    _v4_export_formats = ['madevent', 'standalone','matrix'] +\
+                                      _fks_export_formats
     _export_formats = _v4_export_formats + ['standalone_cpp', 'pythia8'] +\
                                       _fks_export_formats
     _set_options = ['group_subprocesses',
@@ -2826,7 +2827,7 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
     def do_compile_realfks(self,line):
         """compiles the realfks process"""
         #check that the process has been exported in the fks format
-        if type(self._curr_exporter)!= type(export_fks.ProcessExporterFortranFKS()):
+        if type(self._curr_exporter)!= type(export_fks_real.ProcessExporterFortranFKS_real()):
             print type(self._curr_exporter)
             logger.error('no FKS process exported')
         else:
@@ -2977,16 +2978,18 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
         elif self._export_format in self._fks_export_formats:
             self.do_set('group_subprocesses False')
             if self._export_format =='fksreal':
-                logger.info("EXPORTING IN MADFKS FORMAT")
-                self._curr_exporter = export_fks.ProcessExporterFortranFKS(\
+                logger.info("Exporting in MadFKS format, starting from real emission process")
+                self._curr_exporter = export_fks_real.ProcessExporterFortranFKS_real(\
                                           self._mgme_dir, self._export_dir,
                                           not noclean)
                 self._curr_exporter.copy_fkstemplate()
     
-            elif self._export_format =='fks':
-                self._curr_exporter = export_fks_born.ProcessExporterFortranFKS(\
+            elif self._export_format =='fksborn':
+                logger.info("Exporting in MadFKS format, starting from born process")
+                self._curr_exporter = export_fks_born.ProcessExporterFortranFKS_born(\
                                           self._mgme_dir, self._export_dir,
                                           not noclean)
+                self._curr_exporter.copy_fkstemplate()
         elif not os.path.isdir(self._export_dir):
             os.makedirs(self._export_dir)
 
@@ -3055,11 +3058,17 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
                         for me in group.get('matrix_elements'):
                             me.get('processes')[0].set('uid', uid)
                 else:
-                    if self._export_format in ['fksreal']:
+                    if self._export_format == 'fksreal':
                         fks_multi_proc = fks_real.FKSMultiProcessFromReals(
                                             self._curr_amps)
                         self._curr_matrix_elements = \
                                  fks_real_helas.FKSHelasMultiProcessFromReals(\
+                                    fks_multi_proc)
+                    elif self._export_format == 'fksborn':
+                        fks_multi_proc = fks_born.FKSMultiProcessFromBorn(
+                                            self._curr_amps)
+                        self._curr_matrix_elements = \
+                                 fks_born_helas.FKSHelasMultiProcessFromBorn(\
                                     fks_multi_proc)
                     else:
                         self._curr_matrix_elements = \
@@ -3087,7 +3096,7 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
         path = self._export_dir
 
         if self._export_format in ['madevent', 'standalone', 'standalone_cpp',
-                                   'fksreal']:
+                                   'fksreal', 'fksborn']:
             path = os.path.join(path, 'SubProcesses')
 
         if self._export_format == 'fksreal':
@@ -3112,10 +3121,17 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
                     pass
             
         cpu_time1 = time.time()
-        
-        if self._export_format == 'fks':
-            fksmulti = fks_born.FKSMultiProcess(self._curr_amps)
-            
+
+        if self._export_format == 'fksborn':
+            #_curr_matrix_element is a FKSHelasMultiProcessFromRealObject 
+            self._fks_directories = []
+            for ime, me in \
+                enumerate(self._curr_matrix_elements.get('matrix_elements')):
+                #me is a FKSHelasProcessFromReals
+                calls = calls + \
+                        self._curr_exporter.generate_real_directories_fks(\
+                            me, self._curr_fortran_model, ime, path)
+                self._fks_directories.extend(self._curr_exporter.fksdirs)
             card_path = os.path.join(path, os.path.pardir, 'SubProcesses', \
                                      'procdef_mg5.dat')
             if self._generate_info:
@@ -3128,6 +3144,24 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
                     pass
             
         cpu_time1 = time.time()
+
+
+        
+#        if self._export_format == 'fks':
+#            fksmulti = fks_born.FKSMultiProcess(self._curr_amps)
+#            
+#            card_path = os.path.join(path, os.path.pardir, 'SubProcesses', \
+#                                     'procdef_mg5.dat')
+#            if self._generate_info:
+#                self._curr_exporter.write_procdef_mg5(card_path, #
+#                                self._curr_model['name'],
+#                                self._generate_info)
+#                try:
+#                    cmd.Cmd.onecmd(self, 'history .')
+#                except:
+#                    pass
+#            
+#        cpu_time1 = time.time()
 
         # First treat madevent and pythia8 exports, where we need to
         # distinguish between grouped and ungrouped subprocesses

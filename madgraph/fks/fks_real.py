@@ -157,8 +157,8 @@ class FKSProcessFromReals(object):
     """the class for an FKS process, starting from reals """ 
     
     def __init__(self, start_proc = None, remove_borns = True): #test written
-        """initialization: starts either from an anplitude or a process,
-        then init the needed variables:
+        """initialization: starts either from an amplitude or a process,
+        then init the needed variables.
         remove_borns tells if the borns not needed for integration will be removed
         from the born list (mainly used for testing)
         --real_proc/real_amp
@@ -322,7 +322,7 @@ C\n\
                     chosen = n
                 
         if chosen >=0:
-            self.borns[chosen].is_nbody_only = True 
+            self.borns[chosen].is_nbody_only = True
                     
                     
                 
