@@ -28,6 +28,8 @@ c
       double precision z,zmin,zmax,xmin,xmax,ez
       double precision pole1,width1,x,xc
       double precision a,b
+      double precision cutoff
+      data cutoff/0.2/
 c-----
 c  Begin Code
 c-----
@@ -86,14 +88,23 @@ c            write(*,*) "trans",x,y,z
 c         write(*,*) 'Transpole called',x,y
          return
       elseif(pole .ge. -2d0 .and. width .gt. 0d0) then !1/x^2   limit of width
-         if (x .lt. width) then      !No transformation below cutoff
-            y=x
+         cutoff = max(cutoff, width)
+         if (x .lt. cutoff) then      !No transformation below cutoff
+c---------
+c   JA 9/8/11 use x^(-pole) below width
+c-----------
+c            y=x
+            z = cutoff - x
+            b = -width*cutoff**(pole)
+            a = width
+            y = a + b * z**(-pole)
+            jac = jac * abs((-pole) * b * z**(-pole-1d0))
          else
 c---------
 c   tjs 5/1/2008  modified for any y=x^-n transformation       
 c-----------
-            z = 1d0 - x + width
-            b = ( 1d0-width) / (width**(pole+1d0) - 1d0)
+            z = 1d0 - x + cutoff
+            b = ( 1d0-width) / (cutoff**(pole+1d0) - 1d0)
             a = width - b
             y = a + b * z**(pole+1)
             jac = jac * abs((pole+1d0) * b * z**(pole))

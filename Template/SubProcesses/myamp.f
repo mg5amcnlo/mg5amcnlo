@@ -426,8 +426,10 @@ c            write(*,*) pwidth(i,iconfig),pmass(i,iconfig)
             if (pwidth(i,iconfig) .gt. 0 ) then
                nbw=nbw+1
 c              JA 6/8/2011 Set xe(i) for resonances
-               if (lbw(nbw).eq.1) then
-                  xe(i) = max(xe(i), pmass(i,iconfig)-5d0*pwidth(i,iconfig))
+               if (lbw(nbw).le.1) then
+c              Set xe(i) even though the value can in principle go below for lbw(nbw)=0
+                  xe(i) = max(xe(i), pmass(i,iconfig)-
+     $                        min(5d0, bwcutoff)*pwidth(i,iconfig))
                else if (gforcebw(i,iconfig)) then
                   xe(i) = max(xe(i), pmass(i,iconfig)-bwcutoff*pwidth(i,iconfig))
                endif
@@ -534,6 +536,7 @@ c-----------------------
             swidth(i) = xo
             spole(i)= -2.0d0    ! 1/s pole
             write(*,*) "Transforming s_hat 1/s ",i,xo
+c            continue
          else
             write(*,*) "Transforming s_hat BW ",spole(i),swidth(i)
          endif
