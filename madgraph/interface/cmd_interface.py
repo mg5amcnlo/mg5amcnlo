@@ -1339,7 +1339,7 @@ class CompleteForCmd(CheckValidForCmd):
                 mod_name = lambda name: name
                 file_cond = lambda p : os.path.exists(os.path.join(MG5DIR,'models',p,'particles.py')) \
                                       or os.path.exists(os.path.join(MG5DIR,'models',p,'particles.dat')) \
-                                      or os.path.exists(os.path.join(self._mgme_dir,'Models',p,'particles.dat'))
+                                      or os.path.exists(os.path.join(self._mgme_dir,'Models',p,'particles.dat')) 
             else:
                 cur_path = os.path.join('.',*[a for a in args \
                                                    if a.endswith(os.path.sep)])
@@ -1360,6 +1360,12 @@ class CompleteForCmd(CheckValidForCmd):
                 for model_name in model_list:
                     all_name += self.find_restrict_card(model_name, 
                                         base_dir=os.path.join(MG5DIR,'models'))
+            if mode == 'all':
+                cur_path = os.path.join('.',*[a for a in args \
+                                                    if a.endswith(os.path.sep)])
+                all_path =  self.path_completion(text, cur_path)
+                return all_path + all_name 
+            else:
                 return all_name                
 
         # Options
