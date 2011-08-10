@@ -70,7 +70,7 @@ def import_model(model_path, mgme_dir = MG4DIR):
                                   model['particles']))
     
     model.set('name', os.path.split(model_path)[-1])  
-    
+
     # save in a pickle files to fasten future usage
     save_load_object.save_to_file(os.path.join(model_path, 'model.pkl'), model)
     

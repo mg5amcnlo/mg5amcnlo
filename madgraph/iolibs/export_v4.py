@@ -712,8 +712,9 @@ class ProcessExporterFortran(object):
             compiler = 'g77'
         logger.info('Use Fortran compiler ' + compiler)
         self.replace_make_opt_compiler(compiler)
-        # Replace also for Template
-        self.replace_make_opt_compiler(compiler, os.path.join(MG5DIR, 'Template'))
+        # Replace also for Template but not for cluster
+        if not os.environ.has_key('MADGRAPH_DATA'):
+            self.replace_make_opt_compiler(compiler, os.path.join(MG5DIR, 'Template'))
 
     def replace_make_opt_compiler(self, compiler, root_dir = ""):
         """Set FC=compiler in Source/make_opts"""

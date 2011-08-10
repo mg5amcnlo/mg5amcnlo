@@ -12,6 +12,21 @@ Update notes for MadGraph 5 (in reverse time order)
                       This one will be guess automaticaly.
                       
 
+1.3.9 (01/08/11)  OM: Add a new model DY_SM (arXiv:1107.5830). Thanks to Neil for the generation of the model 
+
+1.3.8 (25/07/11)  JA: Replace the SM and HEFT models with latest versions using
+                      the Wolfenstein parameterization for the CKM matrix.
+                  JA: Implemented reading of the new UFO information about
+                      coupling orders (order hierarchy and expansion_order).
+                  JA: New "coupling order" specification WEIGHTED which checks
+                      for  sum of coupling orders weighted by their hierarchy.
+                  JA: Implemented optimal coupling orders for processes from any
+                      model if no coupling orders specified.
+
+1.3.7 (21/07/11)  JA: Fix makefiles for some v4 models that were forgotten
+                      in v. 1.3.5
+
+1.3.6 (18/07/11)  OM: Ensure that the new makefiles work on the web
 
 1.3.5 (14/07/11): JA: New organization of make files, ensure that compilation works 
                       for all modes (with/without LHAPDF, static/dynamic, 

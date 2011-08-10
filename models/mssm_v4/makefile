@@ -12,8 +12,6 @@ LIBDIR        = ../../lib/
 LIBRARY	      = libmodel.$(libext)
 MODEL         = couplings.o read_slha.o printout.o hardstop.o
 
-.f.o: ; $(G77) $(FFLAGS) -c $*.f
-
 all: $(LIBDIR)$(LIBRARY)
 
 $(LIBDIR)$(LIBRARY): $(MODEL)

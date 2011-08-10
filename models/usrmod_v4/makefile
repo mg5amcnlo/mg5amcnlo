@@ -21,7 +21,7 @@ $(LIBDIR)$(LIBRARY): $(MODEL)
 	$(call CREATELIB, $@, $^)
 
 testprog: testprog.o $(MODEL)
-	$(G77) $(FFLAGS) -o $@ $^
+	$(FC) $(FFLAGS) -o $@ $^
 
 couplings: couplingsvalues.o $(MODEL)
-	$(G77) $(FFLAGS) -o $@ $^
+	$(FC) $(FFLAGS) -o $@ $^
