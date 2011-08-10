@@ -224,7 +224,7 @@ class LoopAmplitude(diagram_generation.Amplitude):
         if not [1 for elem in self['process']['squared_orders'].items() if \
                 elem[0].upper()!='WEIGHTED'] and hierarchy and self['process']['has_born']:
 
-            min_born_wgt=self['born_diagrams'].get_min_weighted_order(self['process']['model'])
+            min_born_wgt=self['born_diagrams'].get_min_order('WEIGHTED')
             if 'WEIGHTED' not in [key.upper() for key in self['process']['squared_orders'].keys()]:
                 # Then we guess it from the born
                 self['process']['squared_orders']['WEIGHTED']= 2*(min_born_wgt+ \
@@ -658,9 +658,9 @@ class LoopAmplitude(diagram_generation.Amplitude):
 
         for order, value in sq_order_constrains.items():
             if order.upper()=='WEIGHTED':
-                max_wgt=value-diagRef.get_min_weighted_order(self['process']['model'])
+                max_wgt=value-diagRef.get_min_order('WEIGHTED')
                 self['loop_diagrams']=base_objects.DiagramList([diag for diag in self['loop_diagrams'] if \
-                                        diag.get_weighted_order(self['process']['model'])<=max_wgt])
+                                        diag.get_order('WEIGHTED')<=max_wgt])
             else:
                 max_order = 0
                 if value>=0:

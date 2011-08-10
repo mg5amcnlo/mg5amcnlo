@@ -5,20 +5,23 @@
 #
 # ----------------------------------------------------------------------------
 
-
-g77           = g77
-FFLAGS        = -O
-LIBRARY	      = ../libpdf.a
+LIBRARY	      = libpdf.$(libext)
 LIBDIR        = ../../lib/
-PDF           = Ctq4Fn.o Ctq5Par.o Ctq5Pdf.o Partonx5.o Ctq6Pdf.o cteq3.o \
+
+include ../make_opts
+
+ifdef lhapdf
+  PDF         = pdfwrap_lhapdf.o pdf_lhapdf.o pdg2pdf_lhapdf.o opendata.o
+else
+  PDF         = Ctq4Fn.o Ctq5Par.o Ctq5Pdf.o Partonx5.o Ctq6Pdf.o cteq3.o \
                 mrs98.o mrs98lo.o mrs98ht.o mrs99.o mrst2001.o mrst2002.o jeppe02.o \
                 pdfwrap.o opendata.o pdf.o PhotonFlux.o pdg2pdf.o
+endif
 
-.f.o: ; $(g77) $(FFLAGS) -c $*.f
+all: $(LIBDIR)$(LIBRARY)
 
-all: $(LIBDIR)libpdf.a
+$(LIBDIR)$(LIBRARY): $(PDF)
+	$(call CREATELIB, $@, $^)
 
-$(LIBDIR)libpdf.a: $(PDF)
-	ar cru libpdf.a $(PDF)
-	ranlib libpdf.a
-	mv libpdf.a  $(LIBDIR)
+clean:
+	$(RM) *.o $(LIBDIR)$(LIBRARY)

@@ -14,23 +14,15 @@
 # the 2003 version of MadEvent
 # ----------------------------------------------------------------------------
 
-FC            = g77
+# Check for ../make_opts
+ifeq ($(wildcard ../Template/Source/make_opts), ../Template/Source/make_opts)
+  include ../Template/Source/make_opts
+else
+  include ../madevent/Source/make_opts
+endif
 
-FFLAGS        = -O -I.
-
-LD	      = ld
-
-DEST	      = ./lib/
-
-EXTHDRS	      =
-
-HDRS	      =
-
-INSTALL	      = /etc/install
-
-LIBRARY	      = ./lib/libdhelas3.a
-
-MAKEFILE      = Makefile
+LIBRARY	= libdhelas3.$(libext)
+LIBDIR  = ./lib/
 
 OBJS	      =	httsxx.o hstlxx.o hvvshx.o \
 		vvvtlx.o jvvtlx.o uvvvlx.o sstlxx.o usslxx.o \
@@ -68,56 +60,13 @@ OBJS	      =	httsxx.o hstlxx.o hvvshx.o \
                 ggggtx.o jgggtx.o uggggx.o \
                 w3w3nx.o jw3wnx.o jwwwnx.o wwwwnx.o
 
-PRINT	      = pr
+all:		$(LIBDIR) $(LIBDIR)$(LIBRARY)
 
-SHELL	      = /bin/sh
+$(LIBDIR):
+	if [[ ! -d $(LIBDIR) ]];then mkdir $(LIBDIR);fi
 
-SYSHDRS	      =
+$(LIBDIR)$(LIBRARY): $(OBJS)
+	$(call CREATELIB, $@, $^)
 
-MFLAGS        = -e
-
-#.F.o:
-%.o : %.F
-	$(FC) $(FFLAGS) -c $<
-
-%.o : %.f
-	$(FC) $(FFLAGS) -c $<
-
-all:		$(LIBRARY)
-
-helas:
-		-rm -f *.o
-		export FFLAGS='-O +cpp' && \
-		export LIBRARY=libdhelas3.a && \
-		$(MAKE) $(MFLAGS)
-
-helas_check:
-		-rm -f *.o
-		export FFLAGS='-O +cpp -DHELAS_CHECK' && \
-		export LIBRARY=libdhelas3_check.a && \
-		$(MAKE) $(MFLAGS)
-
-install-helas:
-		export LIBRARY=libdhelas3.a && \
-		$(MAKE) $(MFLAGS) install	
-
-install-helas_check:
-		export LIBRARY=libdhelas3.a && \
-		$(MAKE) $(MFLAGS) install	
-
-$(LIBRARY):	$(OBJS)
-		@echo  "Loading $(LIBRARY) ... "
-		@ar cru $(LIBRARY) $(OBJS)
-		@echo "done"
-
-clean:;		@rm -f $(OBJS) core
-
-clobber:;	@rm -f $(OBJS) $(LIBRARY) core tags
-
-install:	$(LIBRARY)
-	        @echo Installing $(LIBRARY) in $(DEST)
-	        @if [ $(DEST) != . ]; then \
-	        (rm -f $(DEST)/$(LIBRARY); $(INSTALL) -f $(DEST) $(LIBRARY)); fi
-
-$(DEST)/$(LIBRARY): $(SRCS) $(HDRS) $(EXTHDRS)
-	        @$(MAKE) -f $(MAKEFILE) ROOT=$(ROOT) DEST=$(DEST) install
+clean:
+	$(RM) *.o $(LIBDIR)$(LIBRARY)

@@ -336,11 +336,11 @@ class LoopUFOImportTest(unittest.TestCase):
         
         self.assertEqual(self.imported_loopmodel['perturbation_couplings'],\
                          ['QCD',])
-        self.assertEqual(len(self.imported_loopmodel['interactions']),21)
-        self.assertEqual(self.imported_loopmodel['name'],'loop_ToyModel')
-        self.assertEqual(self.imported_loopmodel['order_hierarchy'],\
+        self.assertEqual(len(self.imported_loopmodel.get('interactions')),21)
+        self.assertEqual(self.imported_loopmodel.get('name'),'loop_ToyModel')
+        self.assertEqual(self.imported_loopmodel.get('order_hierarchy'),\
                          {'QCD':1})
-        self.assertEqual(self.imported_loopmodel['coupling_orders'],\
+        self.assertEqual(self.imported_loopmodel.get('coupling_orders'),\
                          set(['QCD']))
         # The up quark
         for key in self.hardcoded_loopmodel['particles'][1].keys():

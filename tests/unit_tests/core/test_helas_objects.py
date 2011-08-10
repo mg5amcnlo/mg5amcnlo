@@ -930,8 +930,8 @@ class HelasMatrixElementTest(unittest.TestCase):
         myamplitude = diagram_generation.Amplitude({'process': myproc})
 
         goal = "2 diagrams:\n"
-        goal = goal + "1  ((1(-2),3(21)>1(-2),id:3),(4(11),5(-11)>4(22),id:7),(1(-2),2(2),4(22),id:4)) (QED=2,QCD=1)\n"
-        goal = goal + "2  ((2(2),3(21)>2(2),id:3),(4(11),5(-11)>4(22),id:7),(1(-2),2(2),4(22),id:4)) (QED=2,QCD=1)"
+        goal = goal + "1  ((1(-2),3(21)>1(-2),id:3),(4(11),5(-11)>4(22),id:7),(1(-2),2(2),4(22),id:4)) (QCD=1,QED=2,WEIGHTED=5)\n"
+        goal = goal + "2  ((2(2),3(21)>2(2),id:3),(4(11),5(-11)>4(22),id:7),(1(-2),2(2),4(22),id:4)) (QCD=1,QED=2,WEIGHTED=5)"
 
         self.assertEqual(goal,
                          myamplitude.get('diagrams').nice_string())
@@ -1038,8 +1038,8 @@ class HelasMatrixElementTest(unittest.TestCase):
         myamplitude = diagram_generation.Amplitude({'process': myproc})
 
         goal = "2 diagrams:\n"
-        goal = goal + "1  ((1(-2),3(21)>1(-2),id:3),(4(11),5(-11)>4(22),id:7),(1(-2),2(2),4(22),id:4)) (QED=2,QCD=1)\n"
-        goal = goal + "2  ((2(2),3(21)>2(2),id:3),(4(11),5(-11)>4(22),id:7),(1(-2),2(2),4(22),id:4)) (QED=2,QCD=1)"
+        goal = goal + "1  ((1(-2),3(21)>1(-2),id:3),(4(11),5(-11)>4(22),id:7),(1(-2),2(2),4(22),id:4)) (QCD=1,QED=2,WEIGHTED=5)\n"
+        goal = goal + "2  ((2(2),3(21)>2(2),id:3),(4(11),5(-11)>4(22),id:7),(1(-2),2(2),4(22),id:4)) (QCD=1,QED=2,WEIGHTED=5)"
 
         self.assertEqual(goal,
                          myamplitude.get('diagrams').nice_string())
@@ -1166,8 +1166,8 @@ class HelasMatrixElementTest(unittest.TestCase):
         myamplitude = diagram_generation.Amplitude({'process': myproc})
 
         goal = "2 diagrams:\n"
-        goal = goal + "1  ((1(22),2(-11)>1(-11),id:7),(3(22),4(11),1(-11),id:7)) (QED=2,QCD=0)\n"
-        goal = goal + "2  ((1(22),4(11)>1(11),id:7),(2(-11),3(22),1(11),id:7)) (QED=2,QCD=0)"
+        goal = goal + "1  ((1(22),2(-11)>1(-11),id:7),(3(22),4(11),1(-11),id:7)) (QCD=0,QED=2,WEIGHTED=4)\n"
+        goal = goal + "2  ((1(22),4(11)>1(11),id:7),(2(-11),3(22),1(11),id:7)) (QCD=0,QED=2,WEIGHTED=4)"
 
         self.assertEqual(goal,
                          myamplitude.get('diagrams').nice_string())
@@ -1261,8 +1261,8 @@ class HelasMatrixElementTest(unittest.TestCase):
         myamplitude = diagram_generation.Amplitude({'process': myproc})
 
         goal = "2 diagrams:\n"
-        goal = goal + "1  ((1(-11),2(22)>1(-11),id:7),(3(22),4(11),1(-11),id:7)) (QED=2,QCD=0)\n"
-        goal = goal + "2  ((1(-11),3(22)>1(-11),id:7),(2(22),4(11),1(-11),id:7)) (QED=2,QCD=0)"
+        goal = goal + "1  ((1(-11),2(22)>1(-11),id:7),(3(22),4(11),1(-11),id:7)) (QCD=0,QED=2,WEIGHTED=4)\n"
+        goal = goal + "2  ((1(-11),3(22)>1(-11),id:7),(2(22),4(11),1(-11),id:7)) (QCD=0,QED=2,WEIGHTED=4)"
 
         self.assertEqual(goal,
                          myamplitude.get('diagrams').nice_string())
