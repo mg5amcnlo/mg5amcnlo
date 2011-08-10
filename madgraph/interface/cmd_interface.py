@@ -552,27 +552,39 @@ class CheckValidForCmd(object):
     
     def check_import(self, args):
         """check the validity of line"""
- 
-        if '-modelname' in args:
-            if args[-1] != '-modelname':
-                args.remove('-modelname')
-                args.append('-modelname') 
         
-        if not args or args[0] not in self._import_formats:
+        modelname = False
+        if '-modelname' in args:
+            args.remove('-modelname')
+            modelname = True    
+                
+        if not args:
             self.help_import()
             raise self.InvalidCmd('wrong \"import\" format')
         
-        if args[0].startswith('model') and len(args) != 2:
-            if not (len(args) == 3 and args[-1] == '-modelname'):
-                self.help_import()
-                raise self.InvalidCmd('incorrect number of arguments')
-        
-        if args[0] == 'proc_v4' and len(args) != 2 and not self._export_dir:
+        if len(args) > 2 and args[0] not in self._import_formats:
             self.help_import()
-            raise self.InvalidCmd('PATH is mandatory in the current context\n' + \
+            raise self.InvalidCmd('wrong \"import\" format')
+        elif len(args) == 1:
+            if args[0] in self._import_formats:
+                if args[0] != "proc_v4":
+                    self.help_import()
+                    raise self.InvalidCmd('wrong \"import\" format')
+                elif not self._export_dir:
+                    self.help_import()
+                    raise self.InvalidCmd('PATH is mandatory in the current context\n' + \
                                   'Did you forget to run the \"output\" command')
+            # The type of the import is not given -> guess it
+            format = self.find_import_type(args[0])
+            logger.info('The import format was not given, so we guess it as %s' % format)
+            args.insert(0, format)
+            
                         
-                
+        if modelname:
+            args.append('-modelname') 
+        
+        
+          
     def check_launch(self, args, options):
         """check the validity of the line"""
         # modify args in order to be MODE DIR
@@ -616,6 +628,36 @@ class CheckValidForCmd(object):
         # inform where we are for future command
         self._done_export = [path, mode]
         
+
+    def find_import_type(self, path):
+        """ identify the import type of a given path 
+        valid output: model/model_v4/proc_v4/command"""
+        
+        possibility = [path, os.path.join(MG5DIR,'models',path), \
+                     os.path.join(MG5DIR,'models',path+'_v4')]
+        if '-' in path:
+            name = path.rsplit('-',1)[0]
+            possibility += [name, os.path.join(MG5DIR,'models',name)]
+        # Check if they are a valid directory
+        for name in possibility:
+            if os.path.isdir(name):
+                if os.path.exists(os.path.join(name,'particles.py')):
+                    return 'model'
+                elif os.path.exists(os.path.join(name,'particles.dat')):
+                    return 'model_v4'
+        
+        # Not valid directory so maybe a file
+        if os.path.isfile(path):
+            text = open(path).read()
+            if 'Begin PROCESS' in text:
+                return 'proc_v4'
+            else:
+                return 'command'
+        else:
+            return 'proc_v4'
+        
+        
+
     
     def find_output_type(self, path):
         """ identify the type of output of a given directory:
@@ -1217,22 +1259,17 @@ class CompleteForCmd(CheckValidForCmd):
         
         # Format
         if len(args) == 1:
-            return self.list_completion(text, self._import_formats)
-
-        # Directory continuation
-        if os.path.sep in args[-1] + text:
-            if args[1].startswith('model'):
-                # Directory continuation
-                return self.path_completion(text, os.path.join('.',*[a for a in args \
-                                                   if a.endswith(os.path.sep)]),
-                                                only_dirs = True)
-            else:
-                return self.path_completion(text,
-                                    os.path.join('.',*[a for a in args if \
-                                                      a.endswith(os.path.sep)]))
+            opt =  self.list_completion(text, self._import_formats)
+            if opt:
+                return opt
+            mode = 'all'
+        elif args[1] in self._import_formats:
+            mode = args[1]
+        else:
+            mode = 'all'
 
         # restriction continuation (for UFO)
-        if args[1] == 'model' and ('-' in args[-1] + text):
+        if mode in ['model', 'all'] and ('-' in args[-1] + text):
             # deal with - in readline splitting (different on some computer)
             if not GNU_SPLITTING:
                 prefix = '-'.join([part for part in text.split('-')[:-1]])+'-'
@@ -1254,19 +1291,60 @@ class CompleteForCmd(CheckValidForCmd):
                 all_name = [prefix + name for name in  all_name ]
                 
             if all_name:
-                return all_name                  
-               
+                return all_name
+
+        # Path continuation
+        if os.path.sep in args[-1] + text and text:
+            if mode.startswith('model'):
+                # Directory continuation
+                cur_path = os.path.join('.',*[a for a in args \
+                                                   if a.endswith(os.path.sep)])
+                all_dir = self.path_completion(text, cur_path, only_dirs = True)
+                if mode == 'model_v4':
+                    return all_dir
+                new = []
+                data =   [new.__iadd__(self.find_restrict_card(name, base_dir=cur_path))
+                                                            for name in all_dir]
+                if data:
+                    return data[0]
+                else:
+                    return []
+            else:
+                cur_path = os.path.join('.',*[a for a in args \
+                                                   if a.endswith(os.path.sep)])
+                all_path =  self.path_completion(text, cur_path)
+                if mode == 'all':
+                    new = [] 
+                    data =   [new.__iadd__(self.find_restrict_card(name, base_dir=cur_path)) 
+                                                           for name in all_path]
+                    if data:
+                        return data[0]
+                    else:
+                        return []
+                else:
+                    return all_path
+
+
         # Model directory name if directory is not given
-        if len(self.split_arg(line[0:begidx])) == 2:
-            if args[1] == 'model':
+        if (mode != 'all' and len(self.split_arg(line[0:begidx])) == 2) or \
+            (mode =='all' and len(self.split_arg(line[0:begidx]))==1):
+            if mode == 'model':
                 file_cond = lambda p : os.path.exists(os.path.join(MG5DIR,'models',p,'particles.py'))
                 mod_name = lambda name: name
-            elif args[1] == 'model_v4':
+            elif mode == 'model_v4':
                 file_cond = lambda p :  (os.path.exists(os.path.join(MG5DIR,'models',p,'particles.dat')) 
                                       or os.path.exists(os.path.join(self._mgme_dir,'Models',p,'particles.dat')))
                 mod_name = lambda name :(name[-3:] != '_v4' and name or name[:-3]) 
+            elif mode == 'all':
+                mod_name = lambda name: name
+                file_cond = lambda p : os.path.exists(os.path.join(MG5DIR,'models',p,'particles.py')) \
+                                      or os.path.exists(os.path.join(MG5DIR,'models',p,'particles.dat')) \
+                                      or os.path.exists(os.path.join(self._mgme_dir,'Models',p,'particles.dat'))
             else:
-                return []
+                cur_path = os.path.join('.',*[a for a in args \
+                                                   if a.endswith(os.path.sep)])
+                all_path =  self.path_completion(text, cur_path)
+                return all_path
                 
             model_list = [mod_name(name) for name in \
                                             self.path_completion(text,
@@ -1274,7 +1352,7 @@ class CompleteForCmd(CheckValidForCmd):
                                             only_dirs = True) \
                                             if file_cond(name)]
             
-            if args[1] == 'model_v4':
+            if mode == 'model_v4':
                 return model_list
             else:
                 # need to update the  list with the possible restriction
@@ -1285,14 +1363,23 @@ class CompleteForCmd(CheckValidForCmd):
                 return all_name                
 
         # Options
-        if len(args) > 2 and args[1].startswith('model') and args[-1][0] != '-':
+        if mode == 'all' and len(args)>1:
+            mode = self.find_import_type(args[1])
+            opt_len = 1
+        else:
+            opt_len =2        
+        
+        
+        if len(args) > opt_len and mode.startswith('model') and args[-1][0] != '-':
                 return ['-modelname']
             
-        if len(args) > 3 and args[1].startswith('model') and args[-1][0] == '-':
+        if len(args) > (opt_len+1) and mode[1].startswith('model') and args[-1][0] == '-':
            if GNU_SPLITTING:
                return ['modelname']
            else: 
                return ['-modelname']
+        
+        
             
     def find_restrict_card(self, model_name, base_dir='./', no_restrict=True):
         """find the restriction file associate to a given model"""

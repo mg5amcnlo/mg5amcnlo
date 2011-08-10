@@ -1,5 +1,18 @@
 Update notes for MadGraph 5 (in reverse time order)
 
+1.4.0 (XX/XX/XX): OM: New structure for madevent script
+                  OM: Add madevent.py in madevent output allowing to have an interface similar to
+                        MG5 for running madevent
+                  OM: Madevent check that the param_card is coherent with the restriction use 
+                        during the model generation 
+                  OM: FOR MSSM model, pass param_card in SLAH1. This card will be converted to 
+		      SLAH2 during the run since the UFO model use SLAH2. This allow to use the 
+                      pythia6 matching, as well as have a coherent definition for the flavor.
+                  OM: Change the import command. It's now allow to ommit the type of import
+                      This one will be guess automaticaly.
+                      
+
+
 1.3.5 (14/07/11): JA: New organization of make files, ensure that compilation works 
                       for all modes (with/without LHAPDF, static/dynamic, 
                       regular/gridpack) for both Linux and Mac OS X (be careful with 

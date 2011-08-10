@@ -783,7 +783,7 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
  
     ############################################################################      
     def do_pythia(self, line):
-        """ launch survey for the current process """
+        """launch pythia"""
         
         args = self.split_arg(line)
         # Check argument's validity
@@ -800,7 +800,22 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
         
         
         
+    ############################################################################      
+    def do_pgs(self, line):
+        """launch pgs"""
         
+        args = self.split_arg(line)
+        # Check argument's validity
+        self.check_pgs(args) 
+        
+        pgs_src = pjoin(self.configuration['pythia-pgs_path'],'src')
+        
+        logger.info('Launching pythia')
+        subprocess.call(['../bin/internal/run_pythia', 
+                         pythia_src,
+                         self.cluster_mode,
+                         self.run_name,
+                         self.configuration['exrootanalysis_path']])        
 
 
                

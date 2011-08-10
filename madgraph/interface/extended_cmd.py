@@ -270,7 +270,7 @@ class Cmd(cmd.Cmd):
         self.timeout, old_time_out = 20, self.timeout
         
         # Read the lines of the file and execute them
-        for line in cmd.CmdFile(filepath):
+        for line in CmdFile(filepath):
             #remove pointless spaces and \n
             line = line.replace('\n', '').strip()
             # execute the line
