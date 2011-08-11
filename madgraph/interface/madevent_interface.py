@@ -12,7 +12,6 @@
 # For more information, please visit: http://madgraph.phys.ucl.ac.be
 #
 ################################################################################
-from compiler.ast import Continue
 """A user friendly command line interface to access MadGraph features.
    Uses the cmd package for command interpretation and tab completion.
 """
@@ -24,6 +23,7 @@ import optparse
 import os
 import pydoc
 import re
+import shutil
 import subprocess
 import sys
 import traceback
@@ -47,6 +47,7 @@ try:
     # import from madgraph directory
     import madgraph.interface.extended_cmd as cmd
     import madgraph.iolibs.misc as misc
+    import madgraph.iolibs.files as files
     import Template as madevent
     from madgraph import MG5DIR
     MADEVENT = False
@@ -55,6 +56,7 @@ except:
     import internal.extended_cmd as cmd
     import internal.misc as misc    
     import internal as madevent
+    import internal.files as files
     MADEVENT = True
 
 
@@ -214,7 +216,15 @@ class HelpToCmd(object):
         logger.info("   require_precision: can be either the targeted number of events")
         logger.info('                      or the required relative error')
         logger.info('   max_channel:[5] maximal number of channel per job')
-        self.run_options_help()        
+        self.run_options_help()
+        
+    def help_combine_events(self):
+        """ """
+        logger.info("syntax: combine_events [GOAL] [--run_options]")
+        logger.info("-- Combine the last run in order to write GOAL events")
+        logger.info("   GOAL is taken in the run_card by default")
+        self.run_options_help()
+                
         
 #===============================================================================
 # CheckValidForCmd
@@ -557,7 +567,7 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
         # delphes/pythia/... path
         for key in self.configuration:
             if key.endswith('path'):
-                path = os.path.join(main, self.configuration[key])
+                path = os.path.join(self.me_dir, self.configuration[key])
                 if os.path.isdir(path):
                     self.configuration[key] = path
                     continue
@@ -710,6 +720,9 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
     def do_refine(self, line):
         """ launch survey for the current process """
 
+        if not hasattr(self, 'run_name'):
+            self.run_name = 'last'
+
         args = self.split_arg(line)
         # Check argument's validity
         self.check_refine(args)
@@ -740,18 +753,12 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
                     os.remove(pjoin(Pdir, match))
 
             out = None #open(pjoin(Pdir, 'gen_ximprove.log'),'w')
-            print 'star question'
             proc = subprocess.Popen([pjoin(bindir, 'gen_ximprove')],
                                     stdout=out,stderr=subprocess.STDOUT,
                                     stdin=subprocess.PIPE,
                                     cwd=Pdir)
-            print 'start communication'
-            proc.communicate('%s %s T' % (precision, max_process))
-            #proc.communicate(max_process)
-            #proc.communicate('T')
-            print 'going to wait'
+            proc.communicate('%s %s T\n' % (precision, max_process))
             proc.wait()
-            print 'stop'
             if os.path.exists(pjoin(Pdir, 'ajob1')):
                 out = subprocess.call(['make','madevent'], cwd=Pdir)
                 if out:
@@ -781,6 +788,63 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
         subprocess.call([pjoin(self.dirbin, 'gen_crossxhtml-pl'), self.run_name], 
                                                                 cwd=self.me_dir)     
  
+    ############################################################################ 
+    def do_combine_events(self, line):
+        """Launch combine events"""
+
+        if not hasattr(self, 'run_name'):
+            self.run_name = 'last'
+
+        self.update_status('Combining Events')
+        subprocess.call(['%s/run_combine' % self.dirbin, str(self.cluster_mode)],
+                            cwd=pjoin(self.me_dir, 'SubProcesses'))
+
+        shutil.move(pjoin(self.me_dir, 'SubProcesses', 'events.lhe'),
+                    pjoin(self.me_dir, 'Events', 'events.lhe'))
+        shutil.move(pjoin(self.me_dir, 'SubProcesses', 'unweighted_events.lhe'),
+                    pjoin(self.me_dir, 'Events', 'unweighted_events.lhe')) 
+        
+        subprocess.call(['%s/put_banner' % self.dirbin, 'events.lhe'],
+                            cwd=pjoin(self.me_dir, 'Events'))
+        subprocess.call(['%s/put_banner'% self.dirbin, 'unweighted_events.lhe'],
+                            cwd=pjoin(self.me_dir, 'Events'))
+        
+        if os.path.exists(pjoin(self.me_dir, 'Events', 'unweighted_events.lhe')):
+            subprocess.call(['%s/extract_banner-pl' % self.dirbin, 
+                             'unweighted_events.lhe', 'banner.txt'],
+                            cwd=pjoin(self.me_dir, 'Events'))
+        
+        eradir = self.configuration['exrootanalysis_path']
+        print 'ERA', eradir
+        madir = self.configuration['madanalysis_path']
+        td = self.configuration['td_path']
+        print  misc.is_executable(pjoin(eradir,'ExRootLHEFConverter'))
+        print os.path.exists(pjoin(self.me_dir, 'Events', 'unweighted_events.lhe'))
+        if misc.is_executable(pjoin(eradir,'ExRootLHEFConverter'))  and\
+           os.path.exists(pjoin(self.me_dir, 'Events', 'unweighted_events.lhe')):
+                self.create_root_file()
+        
+        if madir and td and \
+            os.path.exists(pjoin(self.me_dir, 'Events', 'unweighted_events.lhe')) and \
+            os.path.exists(pjoin(self.me_dir, 'Cards', 'plot_card.dat')):
+                self.create_plot()
+        
+        #
+        # STORE
+        #
+        self.update_status('Storing parton level results')
+        subprocess.call(['%s/store' % self.dirbin, self.run_name],
+                            cwd=pjoin(self.me_dir, 'Events'))
+        os.system('%s/gen_crossxhtml-pl %s' % (self.dirbin, self.run_name))
+        shutil.copy(pjoin(self.me_dir, 'Events', self.run_name+'_banner.txt'),
+                    pjoin(self.me_dir, 'Events', 'banner.txt')) 
+
+
+        
+        
+
+
+
     ############################################################################      
     def do_pythia(self, line):
         """launch pythia"""
@@ -833,7 +897,8 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
             start = time.time()
             subprocess.call(['./'+exe], cwd=cwd, stdout=stdout, **opt)
             logger.info('run in %f s' % (time.time() -start))
-            subprocess.call(['./sum_html'], cwd=self.dirbin)
+            #print 'sum_html'
+            #subprocess.call(['./sum_html'], cwd=self.dirbin)
         elif self.cluster_mode == 1:
             os.system("qsub -N %s %s >> %s" % (self.queue, exe, stdout))
         elif self.cluster_mode == 2:
@@ -914,6 +979,10 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
         else:
             self.random = random.randint(1, 30107) # 30107 maximal allow 
                                                    # random number for ME
+                                                   
+        if self.run_card['ickkw'] == 2:
+            logger.info('Running with CKKW matching')
+            self.treat_CKKW_matching()
             
     ############################################################################
     ##  HELPING ROUTINE
@@ -1002,11 +1071,114 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
         """save random number in appropirate file"""
         
         fsock = open(pjoin(self.me_dir, 'SubProcesses','randinit'),'w')
-        fsock.writelines('r = %s\n' % self.random)
+        fsock.writelines('r=%s\n' % self.random)
 
-
-
+    ############################################################################
+    def treat_ckkw_matching(self):
+        """check for ckkw"""
         
+        lpp1 = self.run_card['lpp1']
+        lpp2 = self.run_card['lpp2']
+        e1 = self.run_card['ebeam1']
+        e2 = self.run_card['ebeam2']
+        pd = self.run_card['pdlabel']
+        lha = self.run_card['lhaid']
+        xq = self.run_card['xqcut']
+        translation = {'e1': e1, 'e2':e2, 'pd':pd, 
+                       'lha':lha, 'xq':xq}
+
+        if lpp1 or lpp2:
+            # Remove ':s from pd          
+            if pd.startswith("'"):
+                pd = pd[1:]
+            if pd.endswith("'"):
+                pd = pd[:-1]                
+
+            if xq >2 or xq ==2:
+                xq = 2
+            
+            # find data file
+            if pd == "lhapdf":
+                issudfile = 'lib/issudgrid-%(e1)s-%(e2)s-%(pd)s-%(lha)s-%(xq)s.dat.gz'
+            else:
+                issudfile = 'lib/issudgrid-%(e1)s-%(e2)s-%(pd)s-%(xq)s.dat.gz'
+            if self.web:
+                issudfile = pjoin(self.webbin, issudfile % translation)
+            else:
+                issudfile = pjoin(self.main, issudfile % translation)
+            
+            logger.info('Sudakov grid file: %s' % issudfile)
+            
+            # check that filepath exist
+            if os.path.exists(issudfile):
+                path = pjoin(self.main, 'lib', 'issudgrid.dat')
+                try:
+                    os.remove(path)
+                except:
+                    pass
+                os.system('gunzip -c %s > %s' % (issudfile, path))
+            else:
+                msg = 'No sudakov grid file for parameter choice. Start to generate it. This might take a while'
+                logger.info(error_msg)
+                if self.cluster_mode not in [0, 1]:
+                    msg = 'No sudakov grid file for parameter choice and not possible to create it automaticaly for the cluster choice'
+                    logger.error(msg)
+                    os.system("echo %s > %s" % (msg, self.error))
+                    shutil.copy(self.error, self.status)             
+                    os.remove(pjoin(self.main, 'RunWeb'))
+                    os.system('%s/gen_cardhtml-pl' % self.dirbin)    
+                    return
+                os.system("echo %s > %s" % (msg, self.status))
+                os.system('%s/gen_crossxhtml-pl %s' % (self.dirbin, self.name))
+
+
+                os.system('%s/run_genissud %s' % (self.dirbin, self.cluster_mode))
+
+
+    ############################################################################
+    def create_root_file(self):
+        """create the LHE root file """
+        self.update_status('Creating root files')
+
+        eradir = self.configuration['exrootanalysis_path']
+        subprocess.call(['%s/ExRootLHEFConverter' % eradir, 
+                             'unweighted_events.lhe', 'unweighted_events.root'],
+                            cwd=pjoin(self.me_dir, 'Events'))
+        
+    ############################################################################
+    def create_plot(self):
+        """create the plot""" 
+
+        plot_dir = pjoin(self.me_dir, 'Events', self.run_name)
+        self.update_status("Creating Plots")
+        if not os.path.isdir(plot_dir):
+            os.makedirs(plot_dir) 
+        
+        madir = self.configuration['madanalysis_path']
+        td = self.configuration['td_path']
+
+
+        files.ln(pjoin(self.me_dir, 'Cards','plot_card.dat'), plot_dir, 'ma_card.dat')
+        proc = subprocess.Popen(['%s/plot_events' % madir],
+                            stdout = open(pjoin(plot_dir, 'plot.log'),'w'),
+                            stderr = subprocess.STDOUT,
+                            stdin=subprocess.PIPE,
+                            cwd=plot_dir)
+        proc.communicate('%s\n' % (pjoin(self.me_dir, 'Events','unweighted_events.lhe')))
+        proc.wait()
+        subprocess.call(['%s/plot' % self.dirbin, madir, td],
+                            stdout = open(pjoin(plot_dir, 'plot.log'),'a'),
+                            stderr = subprocess.STDOUT,
+                            cwd=plot_dir)
+
+    
+        subprocess.call(['%s/plot_page-pl' % self.dirbin, self.run_name, 'parton'],
+                            stdout = os.open(os.devnull, os.O_RDWR),
+                            stderr = subprocess.STDOUT,
+                            cwd=pjoin(self.me_dir, 'Events'))
+       
+        shutil.move(pjoin(self.me_dir, 'Events', 'plots.html'),
+                   pjoin(self.me_dir, 'Events', '%s_plots.html' % self.run_name))       
         
         
         

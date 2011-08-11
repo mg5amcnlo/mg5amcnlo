@@ -32,12 +32,12 @@ else
     exit
 fi
 
-if [[ -e events.list ]]; then
-    echo 'events.list found'
-else
-    echo 'events.list not found'
-    exit
-fi
+#if [[ -e events.list ]]; then
+#    echo 'events.list found'
+#else
+#    echo 'events.list not found'
+#    exit
+#fi
 
 if [[ -e ../../Cards/plot_card.dat ]]; then
     echo 'plot_card found'
@@ -47,7 +47,9 @@ else
     exit
 fi
 
-$MAdir/plot_events < events.list
+#$MAdir/plot_events < events.list
+
+echo 'end plot_events'
 
 #$td/td -device=ps plots.top -sideways
 $td/td plots.top 

@@ -299,5 +299,11 @@ class open_file(object):
       else:
          # not shell program
          os.system('open -a %s %s' % (program, file_path))
-          
+
+def is_executable(path):
+    """ check if a path is executable"""
+    try: 
+        return os.access(path, os.X_OK)
+    except:
+        return False        
 
