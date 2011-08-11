@@ -323,7 +323,12 @@ def legs_to_color_link_string(leg1, leg2): #test written, all cases
                 string.product(color_algebra.ColorString(init_list = [
                                color_algebra.f(min_index,iglu,num)], 
                                is_imaginary =True))
+
                 
+#                if not leg.get('state'):
+#                    string.coeff = string.coeff* (-1)
+#        if leg1.get('color') == 8 and leg2.get('color') == 8:
+#            string.coeff = string.coeff *(-1)
     else:
         icol =1
         if not leg1.get('state'):

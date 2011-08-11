@@ -377,11 +377,11 @@ C     FKS configuration number  7
       DATA FKS_I(  7  ) /  5  /
       DATA FKS_J(  7  ) /  4  /
 
-      DATA (FKS_IPOS(IPOS), IPOS = 0, 3)  / 3, 3, 4, 5 /
-
       DATA (FKS_J_FROM_I(3, JPOS), JPOS = 0, 1)  / 1, 1 /
       DATA (FKS_J_FROM_I(4, JPOS), JPOS = 0, 2)  / 2, 2, 3 /
       DATA (FKS_J_FROM_I(5, JPOS), JPOS = 0, 4)  / 4, 1, 2, 3, 4 /
+      DATA (FKS_IPOS(IPOS), IPOS = 0, 3)  / 3, 3, 4, 5 /
+
 C     
 C     Particle type:
 C     octet = 8, triplet = 3, singlet = 1
@@ -581,7 +581,8 @@ data fks_j(  2  ) /  3  / \n\
         --real_proc/real_amp
         --model
         --leglist, nlegs
-        --pdg codes, colors ###, ipos, j_from_i to be written in fks.inc
+        --pdg codes, colors 
+        -- fks_j_from_i to be written in fks.inc
         --borns"""
         
         #u u~ > d d~ g g
@@ -593,6 +594,8 @@ data fks_j(  2  ) /  3  / \n\
         self.assertEqual(fks1.leglist, 
                          fks_common.to_fks_legs(self.myleglist, self.mymodel))
         self.assertEqual(len(fks1.borns), 11)
+        self.assertEqual(fks1.fks_j_from_i, 
+                {1:[], 2:[], 3:[], 4:[3], 5:[1,2,3,4,6], 6:[1,2,3,4,5]})
         self.assertEqual(fks1.pdg_codes, [2,-2, 1, -1, 21, 21])
         self.assertEqual(fks1.colors, [3,-3,3,-3,8,8])
         self.assertEqual(fks1.nlegs, 6)

@@ -172,7 +172,6 @@ class FKSProcessFromReals(object):
         self.pdg_codes = []
         self.colors = []
         self.nlegs = 0
-        self.fks_ipos = []
         self.fks_j_from_i = {}
         self.real_proc = None
         self.real_amp = None
@@ -199,7 +198,7 @@ class FKSProcessFromReals(object):
             self.find_borns()
             self.find_borns_to_integrate(remove_borns)
             self.find_born_nbodyonly()
-
+    
             
     def get_fks_inc_string(self): #test written
         """returns the list of configurations corrresponding to the various 
@@ -217,22 +216,18 @@ INTEGER PARTICLE_TYPE(NEXTERNAL), PDG_TYPE(NEXTERNAL) \n" %{'nconfs' :
                 n +=1
                 string += born.get_born_fks_inc_string(n)
         
-        ii = sorted(set([b.i_fks for b in self.borns ]))
-        ipos_dict = {'n_ipos' : len(ii), 
-                     'string_ipos' : ', '.join(["%d" % i for i in ii]) }
+        ipos = []
+        for ii in self.fks_j_from_i.keys():
+            js = self.fks_j_from_i[ii]
+            if js:
+                ipos.append(ii)
+                string += "\n\
+data (fks_j_from_i(%d, jpos), jpos = 0, %d)  / %d, %s /" \
+        % (ii, len(js), len(js), ', '.join(["%d" % j for j in js]))
         string += "\n\
-data (fks_ipos(ipos), ipos = 0, %(n_ipos)d)  / %(n_ipos)d, %(string_ipos)s /\n" \
-                % ipos_dict
-        for i in ii:
-            jj = []
-            for b in self.borns:
-                if b.i_fks == i:
-                    jj.append(b.j_fks)
-            j_dict = {'i' : i, 'n_j' : len(jj), 
-                     'string_j' : ', '.join(["%d" % j for j in jj]) }
-            string += "\n\
-data (fks_j_from_i(%(i)d, jpos), jpos = 0, %(n_j)d)  / %(n_j)d, %(string_j)s /" \
-                % j_dict
+data (fks_ipos(ipos), ipos = 0, %d)  / %d, %s /\n" \
+        % (len(ipos), len(ipos), ', '.join(["%d" % i for i in ipos]))
+        
         string += "\n\
 C\n\
 C     Particle type:\n\
@@ -251,7 +246,9 @@ C\n\
     def find_borns(self): #test written
         """finds the underlying borns for a given fks real process"""
         dict ={}
+        
         for i in self.leglist:
+            self.fks_j_from_i[i.get('number')] = []
             if i.get('state'):
                 for j in self.leglist:
                     if j.get('number') != i.get('number') :
@@ -260,6 +257,9 @@ C\n\
                             born = FKSBornProcess(self.real_proc, i, j, ij)
                             if born.amplitude.get('diagrams'):
                                 self.borns.append(born)
+                                self.fks_j_from_i[i.get('number')].append(\
+                                                        j.get('number'))                                
+                                
                                 
     def find_borns_to_integrate(self, remove): #test written
         """finds double countings in the born configurations, sets the 
