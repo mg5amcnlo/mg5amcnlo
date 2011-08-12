@@ -217,8 +217,7 @@ INTEGER PARTICLE_TYPE(NEXTERNAL), PDG_TYPE(NEXTERNAL) \n" %{'nconfs' :
                 string += born.get_born_fks_inc_string(n)
         
         ipos = []
-        for ii in self.fks_j_from_i.keys():
-            js = self.fks_j_from_i[ii]
+        for ii, js in self.fks_j_from_i.items():
             if js:
                 ipos.append(ii)
                 string += "\n\
@@ -323,11 +322,3 @@ C\n\
                 
         if chosen >=0:
             self.borns[chosen].is_nbody_only = True
-                    
-                    
-                
-        
-                    
-                
-                
-        

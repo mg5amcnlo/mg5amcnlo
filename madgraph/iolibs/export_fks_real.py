@@ -346,9 +346,18 @@ class ProcessExporterFortranFKS_real(export_v4.ProcessExporterFortran):
     
         #write the sborn_sf.f and the b_sf_files
         filename = 'sborn_sf.f'
-        self.write_soft_borns_fks(writers.FortranWriter(filename),
+        self.write_sborn_sf(writers.FortranWriter(filename),
                                                 fksborn, matrix_element,
                                                 fortran_model)
+        
+        for i, c_link in enumerate(fksborn.color_links):
+            iborn = i+1
+                
+            filename = 'b_sf_%3.3d.f' % iborn                
+            born_helas_process = copy.copy(fksborn.matrix_element)
+            self.write_b_sf_fks(writers.FortranWriter(filename),
+                         born_helas_process, c_link, matrix_element, iborn,
+                         fortran_model)
 ###    
 ###    
 ###        # Generate diagrams
@@ -457,8 +466,9 @@ class ProcessExporterFortranFKS_real(export_v4.ProcessExporterFortran):
     #===============================================================================
     # write_born_sf_fks
     #===============================================================================
-    def write_soft_borns_fks(self, writer, fksborn, matrix_element, fortran_model):
-        """Creates the b_sf_xxx.f and sborn_sf.f files in MadFKS format"""
+    def write_sborn_sf(self, writer, fksborn, matrix_element, fortran_model):
+        """Creates the sborn_sf.f file, containing the calls to the different 
+        color linked borns"""
         
         replace_dict = {}
         nborns = len(fksborn.color_links)
@@ -483,15 +493,7 @@ class ProcessExporterFortranFKS_real(export_v4.ProcessExporterFortran):
             for i, c_link in enumerate(fksborn.color_links):
                 iborn = i+1
                 
-                filename = 'b_sf_%3.3d.f' % iborn                
-                born_helas_process = copy.copy(fksborn.matrix_element)
-                self.write_b_sf_fks(writers.FortranWriter(filename),
-                             born_helas_process, c_link, matrix_element, iborn,
-                             fortran_model)
-                if i == 0:
-                    iff = 'if'
-                else:
-                    iff = 'elseif'
+                iff = {True : 'if', False : 'elseif'}[i==0]
 
                 m, n = c_link['link']
                 
@@ -517,7 +519,6 @@ c     this subdir has no soft singularities
             
             return
             end"""           
-        
         # Write the end of the file
        
         writer.writelines(file)
@@ -837,6 +838,7 @@ c     this subdir has no soft singularities
     # write_auto_dsig_file
     #===============================================================================
     def write_auto_dsig_fks(self, writer, matrix_element, fortran_model):
+        #test written
         """Write the auto_dsig.f file for MadFKS, which contains 
           pdf call information"""
     
@@ -1011,6 +1013,7 @@ c     this subdir has no soft singularities
     # write_leshouche_file
     #===============================================================================
     def write_leshouche_file(self, writer, matrix_element, fortran_model):
+        #test written??
         """Write the leshouche.inc file for MG4"""
     
         # Extract number of external particles
@@ -1067,7 +1070,8 @@ c     this subdir has no soft singularities
     # write_maxamps_file
     #===============================================================================
     def write_born_nhel_file(self, writer, matrix_element, nflows, fortran_model, ncolor):
-        """Write the maxamps.inc file for MG4."""
+        #test written
+        """Write the born_nhel.inc file for MG4."""
     
         file = "       integer    max_bhel, max_bcol \n"
         file = file + "parameter (max_bhel=%d)\nparameter(max_bcol=%d)" % \
@@ -1083,6 +1087,7 @@ c     this subdir has no soft singularities
     # write_maxamps_file
     #===============================================================================
     def write_born_maxamps_file(self, writer, matrix_element, fortran_model, ncolor):
+        #test written
         """Write the born_maxamps.inc file for MG4."""
     
         file = "       integer    bmaxamps\n"
@@ -1099,6 +1104,7 @@ c     this subdir has no soft singularities
     # write_maxamps_file
     #===============================================================================
     def write_maxamps_file(self, writer, matrix_element, fortran_model, ncolor):
+        #test written??
         """Write the maxamps.inc file for MG4."""
     
         file = "       integer    maxamps, maxflow\n"
@@ -1114,6 +1120,7 @@ c     this subdir has no soft singularities
     # write_mg_sym_file
     #===============================================================================
     def write_mg_sym_file(self, writer, matrix_element, fortran_model):
+        #test written
         """Write the mg.sym file for MadEvent."""
     
         lines = []
@@ -1156,6 +1163,7 @@ c     this subdir has no soft singularities
     # write_ncombs_file
     #===============================================================================
     def write_ncombs_file(self, writer, matrix_element, fortran_model):
+        #test written
         """Write the ncombs.inc file for MadEvent."""
     
         # Extract number of external particles
@@ -1174,6 +1182,7 @@ c     this subdir has no soft singularities
     # write_nexternal_file
     #===============================================================================
     def write_nexternal_file(self, writer, matrix_element, fortran_model):
+        #test written
         """Write the nexternal.inc file for MG4"""
     
         replace_dict = {}
@@ -1198,6 +1207,7 @@ c     this subdir has no soft singularities
     # write_ngraphs_file
     #===============================================================================
     def write_ngraphs_file(self, writer, nconfigs):
+        #test written??
         """Write the ngraphs.inc file for MG4. Needs input from
         write_configs_file.
         Inherits the function from the parent class"""
@@ -1209,6 +1219,7 @@ c     this subdir has no soft singularities
     # write_pmass_file
     #===============================================================================
     def write_pmass_file(self, writer, matrix_element):
+        #test written
         """Write the pmass.inc file for MG4.
         Inherits the function from the parent class"""
     
@@ -1219,6 +1230,7 @@ c     this subdir has no soft singularities
     # write_props_file
     #===============================================================================
     def write_props_file(self, writer, matrix_element, fortran_model, s_and_t_channels):
+        #test_written??
         """Write the props.inc file for MadEvent. Needs input from
         write_configs_file. With respect to the parent routine, it has some 
         more specific formats that allow the props.inc file to be read by the 
@@ -1267,16 +1279,16 @@ c     this subdir has no soft singularities
     #===============================================================================
     # write_subproc
     #===============================================================================
-    def write_subproc(self, writer, matrix_element, fortran_model):
-        """Append this subprocess to the subproc.mg file for MG4"""
-    
-        line = "P%s" % \
-               matrix_element.get('processes')[0].shell_string()
-    
-        # Write line to file
-        writer.write(line + "\n")
-    
-        return True
+#    def write_subproc(self, writer, matrix_element, fortran_model):
+#        """Append this subprocess to the subproc.mg file for MG4"""
+#    
+#        line = "P%s" % \
+#               matrix_element.get('processes')[0].shell_string()
+#    
+#        # Write line to file
+#        writer.write(line + "\n")
+#    
+#        return True
        
        
     #===============================================================================
@@ -1350,6 +1362,7 @@ c     this subdir has no soft singularities
     # Helper functions
     #===============================================================================
     def get_color_data_lines_from_color_matrix(self, color_matrix, n=6):
+        #test written
         """Return the color matrix definition lines for the given color_matrix. Split
         rows in chunks of size n."""
     
@@ -1363,8 +1376,7 @@ c     this subdir has no soft singularities
                 # First write the common denominator for this color matrix line
                 ret_list.append("DATA Denom(%i)/%i/" % (index + 1, denominator))
                 # Then write the numerators for the matrix elements
-                num_list = color_matrix.get_line_numerators(index, denominator)
-    
+                num_list = color_matrix.get_line_numerators(index, denominator)    
                 for k in xrange(0, len(num_list), n):
                     ret_list.append("DATA (CF(i,%3r),i=%3r,%3r) /%s/" % \
                                     (index + 1, k + 1, min(k + n, len(num_list)),
@@ -1374,6 +1386,7 @@ c     this subdir has no soft singularities
 
     
     def get_den_factor_line(self, matrix_element, real_matrix_element = None):
+        #test written
         """Return the denominator factor line for this matrix element,
         corrected with the final state symmetry factor of real_matrix_element
         (if given)"""
@@ -1388,7 +1401,8 @@ c     this subdir has no soft singularities
                matrix_element.get_denominator_factor()
     
     
-    def get_icolamp_lines(self, matrix_element):
+    def get_icolamp_lines(self, matrix_element): 
+        #test written??
         """Return the ICOLAMP matrix, showing which AMPs are parts of
         which JAMPs."""
     
