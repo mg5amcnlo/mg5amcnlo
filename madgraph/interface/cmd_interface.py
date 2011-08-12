@@ -403,8 +403,10 @@ class CheckValidForCmd(object):
             raise self.InvalidCmd('\"add\" requires the argument \"process\"')
 
         if not self._curr_model:
-            raise MadGraph5Error, \
-                  'No model currently active, please load or import a model.'
+            logger.info("No model currently active, so we import the Standard Model")
+            self.do_import('model sm')
+            #raise MadGraph5Error, \
+            #      'No model currently active, please load or import a model.'
     
         self.check_process_format(' '.join(args[1:]))
 
@@ -499,17 +501,8 @@ class CheckValidForCmd(object):
     
     def check_generate(self, args):
         """check the validity of args"""
-        
-        if  not self._curr_model:
-            raise self.InvalidCmd("No model currently active, please import a model!")
-
-        if len(args) < 1:
-            self.help_generate()
-            raise self.InvalidCmd("\"generate\" requires a process.")
-
-        self.check_process_format(" ".join(args))
- 
-        return True
+        # Not called anymore see check_add
+        return self.check_add(args)
     
     def check_process_format(self, process):
         """ check the validity of the string given to describe a format """

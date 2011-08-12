@@ -340,11 +340,10 @@ class CheckValidForCmd(object):
         Note that other option are already remove at this point
         """
                 
-        if not self.run_name:
-            if len(arg) == 0:
+        if len(arg) == 0 and not hasattr(self, 'run_name'):
                 self.help_pythia()
-                raise self.InvalidCmd('No run name currently define. Please add this information.') 
-            else:
+                raise self.InvalidCmd('No run name currently define. Please add this information.')             
+        if len(arg) == 1:
                 self.run_name = arg[0]
         
         if  not os.path.exists(pjoin(self.me_dir,'Events','%s_unweighted_events.lhe.gz' % self.run_name)):
@@ -405,8 +404,8 @@ class CompleteForCmd(CheckValidForCmd):
                                                       a.endswith(os.path.sep)]))
 
         possibility = []
-        if self._curr_me_dir:
-            path = self._curr_me_dir
+        if self.me_dir:
+            path = self.me_dir
             possibility = ['index.html']
             if os.path.isfile(os.path.join(path,'README')):
                 possibility.append('README')
@@ -420,8 +419,8 @@ class CompleteForCmd(CheckValidForCmd):
             possibility.extend(['./','../'])
         if os.path.exists('ME5_debug'):
             possibility.append('ME5_debug')
-        if os.path.exists('ME5_debug'):
-            possibility.append('ME5_debug')
+        if os.path.exists('MG5_debug'):
+            possibility.append('MG5_debug')
         return self.list_completion(text, possibility)
     
     def complete_set(self, text, line, begidx, endidx):
@@ -437,6 +436,18 @@ class CompleteForCmd(CheckValidForCmd):
             if args[1] == 'stdout_level':
                 return self.list_completion(text, ['DEBUG','INFO','WARNING','ERROR','CRITICAL'])
     
+    def complete_pythia(self,text, line, begidx, endidx):
+        "Complete the pythia command"
+        
+        args = self.split_arg(line[0:begidx])
+        if len(args) == 1:
+            #return valid run_name
+            data = glob.glob(pjoin(self.me_dir, 'Events', '*_unweighted_events.lhe.gz'))
+            data = [n.rsplit('/',1)[1][:-25] for n in data]
+            return self.list_completion(text, data)
+        
+        
+        
 #===============================================================================
 # MadEventCmd
 #===============================================================================
@@ -815,11 +826,8 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
                             cwd=pjoin(self.me_dir, 'Events'))
         
         eradir = self.configuration['exrootanalysis_path']
-        print 'ERA', eradir
         madir = self.configuration['madanalysis_path']
         td = self.configuration['td_path']
-        print  misc.is_executable(pjoin(eradir,'ExRootLHEFConverter'))
-        print os.path.exists(pjoin(self.me_dir, 'Events', 'unweighted_events.lhe'))
         if misc.is_executable(pjoin(eradir,'ExRootLHEFConverter'))  and\
            os.path.exists(pjoin(self.me_dir, 'Events', 'unweighted_events.lhe')):
                 self.create_root_file()
@@ -853,16 +861,69 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
         # Check argument's validity
         self.check_pythia(args) 
         
+        # Check that the pythia_card exists. If not copy the default and
+        # ask for edition of the card.
+        if not os.path.exists(pjoin(self.me_dir, 'Cards', 'pythia_card.dat')):
+            files.cp(pjoin(self.me_dir, 'Cards', 'pythia_card_default.dat'),
+                     pjoin(self.me_dir, 'Cards', 'pythia_card.dat'))
+            
+            logger.info('No pythia card found. Take the default one.')
+            answer = self.ask('Do you want to edit this card?','y', ['y','n'],
+                              timeout=20)
+            if answer == 'y':
+                misc.open_file(pjoin(self.me_dir, 'Cards', 'pythia_card.dat'))
+        
         pythia_src = pjoin(self.configuration['pythia-pgs_path'],'src')
         
         logger.info('Launching pythia')
         subprocess.call(['../bin/internal/run_pythia', 
                          pythia_src,
-                         self.cluster_mode,
+                         str(self.cluster_mode),
                          self.run_name,
-                         self.configuration['exrootanalysis_path']])
+                         self.configuration['exrootanalysis_path']],
+                         cwd=pjoin(self.me_dir,'Events'))
+
+        if not os.path.exists(pjoin(self.me_dir,'Events','pythia_events.hep')):
+            logger.warning('Fail to produce pythia output')
+            return
+
+
         
+        pydir = self.configuration['pythia-pgs_path']
+        eradir = self.configuration['exrootanalysis_path']
+        madir = self.configuration['madanalysis_path']
+        td = self.configuration['td_path']
         
+        # Update the banner with the pythia card
+        banner = open(pjoin(self.me_dir,'Events','banner.txt'),'a')
+        banner.writelines('<MGPythiaCard>')
+        banner.writelines(open(pjoin(self.me_dir, 'Cards','pythia_card.dat')).read())
+        banner.writelines('</MGPythiaCard>')
+        banner.close()
+        
+        # Creating LHE file
+        if misc.is_executable(pjoin(pydir, 'hep2lhe')):
+            self.update_status('Creating Pythia LHE File')
+            subprocess.call([self.dirbin+'/run_hep2lhe', pydir, 
+                             str(self.cluster_mode)],
+                             cwd=pjoin(self.me_dir,'Events'))       
+
+        # Creating ROOT file
+        if misc.is_executable(pjoin(eradir, 'ExRootLHEFConverter')):
+            self.update_status('Creating Pythia LHE Root File')
+            subprocess.call([eradir+'/ExRootLHEFConverter', 
+                             'pythia_events.lhe', 'pythia_lhe_events.root'],
+                            cwd=pjoin(self.me_dir,'Events')) 
+
+        if int(self.run_card['ickkw']):
+            self.update_status('Create matching plots for Pythia')
+            subprocess.call([self.dirbin+'/create_matching_plots.sh', self.run_name],
+                            cwd=pjoin(self.me_dir,'Events')) 
+
+        # Plot for pythia
+        if misc.is_executable(pjoin(madir, 'plot_events')) and td:
+            self.update_status('Creating Plots for Pythia')
+            self.create_plot('Pythia')
         
     ############################################################################      
     def do_pgs(self, line):
@@ -1146,10 +1207,19 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
                             cwd=pjoin(self.me_dir, 'Events'))
         
     ############################################################################
-    def create_plot(self):
+    def create_plot(self, mode='parton', event_path=None):
         """create the plot""" 
 
+        if not event_path:
+            if mode == 'parton':
+                event_path = pjoin(self.me_dir, 'Events','unweighted_events.lhe')
+            elif mode == 'Pythia':
+                event_path = pjoin(self.me_dir, 'Events','pythia_events.lhe')
         plot_dir = pjoin(self.me_dir, 'Events', self.run_name)
+        if mode == 'Pythia':
+            plot_dir += '_pythia'
+
+        
         self.update_status("Creating Plots")
         if not os.path.isdir(plot_dir):
             os.makedirs(plot_dir) 
@@ -1164,7 +1234,7 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
                             stderr = subprocess.STDOUT,
                             stdin=subprocess.PIPE,
                             cwd=plot_dir)
-        proc.communicate('%s\n' % (pjoin(self.me_dir, 'Events','unweighted_events.lhe')))
+        proc.communicate('%s\n' % event_path)
         proc.wait()
         subprocess.call(['%s/plot' % self.dirbin, madir, td],
                             stdout = open(pjoin(plot_dir, 'plot.log'),'a'),
@@ -1172,7 +1242,9 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
                             cwd=plot_dir)
 
     
-        subprocess.call(['%s/plot_page-pl' % self.dirbin, self.run_name, 'parton'],
+        subprocess.call(['%s/plot_page-pl' % self.dirbin, 
+                                os.path.basename(plot_dir),
+                                mode],
                             stdout = os.open(os.devnull, os.O_RDWR),
                             stderr = subprocess.STDOUT,
                             cwd=pjoin(self.me_dir, 'Events'))

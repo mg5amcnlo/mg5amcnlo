@@ -75,42 +75,25 @@ class ExtLauncher(object):
 
         path = os.path.realpath(path)
         open_file(path)
-            
-    def ask(self, question, default, choices=[], path_info=[]):
-        """ ask a question """
-        
-        assert type(path_info) == list
-        
+    
+
+    # Treat Nicely the timeout
+    def timeout_fct(self,timeout):
+        if timeout:
+            # avoid to always wait a given time for the next answer
+            self.force = True
+        else:
+            self.timeout = None # answer at least one question so wait...
+   
+    def ask(self, question, default, choices=[], path_msg=None):
+        """nice handling of question"""
+     
         if not self.force:
-            # add choice info to the question
-            if choices + path_info:
-                question += ' ['
-                
-                for data in choices[:9] + path_info:
-                    if default == data:
-                        question += "\033[%dm%s\033[0m" % (4, data)
-                    else:
-                        question += "%s" % data
-                    question += ', '
-                if len(choices) > 9:
-                    question += '... , ' 
-                question = question[:-2]+']'
-                
-            if path_info:
-                fct = lambda q: cmd.raw_path_input(q, allow_arg=choices, default=default)
-            else:
-                fct = lambda q: cmd.smart_input(q, allow_arg=choices, default=default)
-            try:
-                out =  cmd.Cmd.timed_input(question, default, timeout=self.timeout,
-                                        noerror=False, fct=fct)
-            except cmd.Cmd.TimeOutError:
-                # avoid to always wait a given time for the next answer
-                self.force = True
-            else:
-                self.timeout=None # answer at least one question so wait...
-                return out
+            return cmd.Cmd.ask(question, default, choices=choices, path_msg=path_msg,
+                               timeout=self.timeout, fct_timeout=self.timeout_fct)
         else:
             return str(default)
+         
         
     def treat_input_file(self, filename, default=None, msg=''):
         """ask to edit a file"""
@@ -127,7 +110,7 @@ class ExtLauncher(object):
             if msg:  print msg
             question = 'Do you want to edit file: %(card)s?' % {'card':filename}
             choices = ['y', 'n']
-            path_info = ['path of the new %(card)s' % {'card':os.path.basename(filename)}]
+            path_info = 'path of the new %(card)s' % {'card':os.path.basename(filename)}
             ans = self.ask(question, default, choices, path_info)
         else:
             ans = default

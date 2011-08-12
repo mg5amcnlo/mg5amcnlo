@@ -285,20 +285,13 @@ class Cmd(cmd.Cmd):
         return self.history_header
 
 
-    def timed_input(self, question, default, timeout=None):
-        """ a question with a maximal time to answer take default otherwise"""
-        
-        if not timeout:
-            timeout = self.timeout
-        
-        return self.timed_input(question, default, timeout) 
-
  
     #===============================================================================
     # Ask a question with a maximum amount of time to answer
     #===============================================================================    
     @staticmethod
-    def timed_input(question, default, timeout=None, noerror=True, fct=None):
+    def timed_input(question, default, timeout=None, noerror=True, fct=None,
+                    fct_timeout=None):
         """ a question with a maximal time to answer take default otherwise"""
     
         def handle_alarm(signum, frame): 
@@ -317,14 +310,56 @@ class Cmd(cmd.Cmd):
         except TimeOutError:
             if noerror:
                 print '\nuse %s' % default
+                if fct_timeout:
+                    fct_timeout(True)
                 return default
             else:
                 signal.alarm(0)
                 raise
         finally:
             signal.alarm(0)
+        if fct_timeout:
+            fct_timeout(False)
         return result
 
+
+    #===============================================================================
+    # Ask a question with nice options handling
+    #===============================================================================    
+    @staticmethod    
+    def ask(question, default, choices=[], path_msg=None, 
+            timeout = None, fct_timeout=None):
+        """ ask a question with some pre-define possibility
+            path info is
+        """
+        
+        if path_msg:
+            path_msg = [path_msg]
+        else:
+            path_msg = []
+                    
+        # add choice info to the question
+        if choices + path_msg:
+            question += ' ['
+            question += "\033[%dm%s\033[0m, " % (4, default)    
+            for data in choices[:9] + path_msg:
+                if default == data:
+                   continue
+                else:
+                    question += "%s, " % data
+                    
+            if len(choices) > 9:
+                question += '... , ' 
+            question = question[:-2]+']'
+                
+        if path_msg:
+            fct = lambda q: raw_path_input(q, allow_arg=choices, default=default)
+        else:
+            fct = lambda q: smart_input(q, allow_arg=choices, default=default)
+        
+        return  Cmd.timed_input(question, default, timeout=timeout,
+                                    fct=fct, fct_timeout=fct_timeout)
+        
 
     def help_history(self):
         logger.info("syntax: history [FILEPATH|clean|.] ")
