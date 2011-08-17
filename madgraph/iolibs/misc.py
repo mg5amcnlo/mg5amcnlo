@@ -116,6 +116,30 @@ def which(program):
     return None
 
 #===============================================================================
+# Return Nice display for a random variable
+#===============================================================================
+def nice_representation(var, nb_space=0):
+    """ Return nice information on the current variable """
+    
+    #check which data to put:
+    info = [('type',type(var)),('str', var)]
+    if hasattr(var, 'func_doc'):
+        info.append( ('DOC', var.func_doc) )
+    if hasattr(var, '__doc__'):
+        info.append( ('DOC', var.__doc__) )
+    if hasattr(var, '__dict__'):
+        info.append( ('ATTRIBUTE', var.__dict__.keys() ))
+    
+    spaces = ' ' * nb_space
+
+    outstr=''
+    for name, value in info:
+        outstr += '%s%3s : %s\n' % (spaces,name, value)
+
+    return outstr
+
+
+#===============================================================================
 # Compiler which returns smart output error in case of trouble
 #===============================================================================
 def compile(arg=[], cwd=None, mode='fortran', **opt):

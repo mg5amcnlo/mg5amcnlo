@@ -37,6 +37,10 @@ web_browser = None
 # If None: try to find one available on the system
 eps_viewer = None
 
+# Prefered Fortran Compiler
+# If None: try to find g77 or gfortran on the system
+fortran_compiler = None
+
 
 ################################################################################
 #  PATH USED FOR MADEVENT 

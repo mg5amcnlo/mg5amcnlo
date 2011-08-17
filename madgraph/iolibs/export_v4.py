@@ -166,7 +166,8 @@ class ProcessExporterFortran(object):
     #===========================================================================
     # Create jpeg diagrams, html pages,proc_card_mg5.dat and madevent.tar.gz
     #===========================================================================
-    def finalize_v4_directory(self, matrix_elements, history = "", makejpg = False, online = False):
+    def finalize_v4_directory(self, matrix_elements, history = "", makejpg = False, 
+                              online = False, compiler='g77'):
         """Function to finalize v4 directory, for inheritance.
         """
         pass
@@ -700,16 +701,19 @@ class ProcessExporterFortran(object):
     def set_compiler(self, default_compiler):
         """Set compiler based on what's available on the system"""
         
+        
         # Check for compiler
-        if misc.which('g77'):
+        if misc.which(default_compiler):
+            compiler = default_compiler
+        elif misc.which('g77'):
             compiler = 'g77'
         elif misc.which('gfortran'):
             compiler = 'gfortran'
         elif misc.which('f77'):
             compiler = 'f77'
         else:
-            # Use g77 as default
-            compiler = 'g77'
+            logger.warning('No Fortran Compiler detected! Please install one')
+            compiler = default_compiler
         logger.info('Use Fortran compiler ' + compiler)
         self.replace_make_opt_compiler(compiler)
         # Replace also for Template but not for cluster
@@ -809,10 +813,10 @@ class ProcessExporterFortranSA(ProcessExporterFortran):
     # Create proc_card_mg5.dat for Standalone directory
     #===========================================================================
     def finalize_v4_directory(self, matrix_elements, history, makejpg = False,
-                              online = False):
+                              online = False, compiler='g77'):
         """Finalize Standalone MG4 directory by generation proc_card_mg5.dat"""
 
-        self.set_compiler('g77')
+        self.set_compiler(compiler)
         self.make()
 
         # Write command history as proc_card_mg5
@@ -1245,7 +1249,7 @@ class ProcessExporterFortranME(ProcessExporterFortran):
         return calls
 
     def finalize_v4_directory(self, matrix_elements, history, makejpg = False,
-                              online = False):
+                              online = False, compiler='g77'):
         """Finalize ME v4 directory by creating jpeg diagrams, html
         pages,proc_card_mg5.dat and madevent.tar.gz."""
 
@@ -1263,7 +1267,7 @@ class ProcessExporterFortranME(ProcessExporterFortran):
         os.system('touch %s/done' % os.path.join(self.dir_path,'SubProcesses'))
 
         # Check for compiler
-        self.set_compiler('g77')
+        self.set_compiler(compiler)
 
         old_pos = os.getcwd()
         os.chdir(os.path.join(self.dir_path, 'SubProcesses'))

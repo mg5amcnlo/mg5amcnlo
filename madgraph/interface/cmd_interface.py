@@ -261,6 +261,7 @@ class HelpToCmd(object):
         logger.info("   For \"diagrams\", you can specify where the file will be written.")
         logger.info("   Example: display diagrams ./")
         
+        
     def help_launch(self):
         """help for launch command"""
         _launch_parser.print_help()
@@ -376,6 +377,9 @@ class HelpToCmd(object):
         logger.info("     cross section but have subprocesses/channels.")
         logger.info("   stdout_level DEBUG|INFO|WARNING|ERROR|CRITICAL")
         logger.info("     change the default level for printed information")
+        logger.info("   fortran_compiler NAME")
+        logger.info("      (default None) Force a specific fortran compiler.")
+        logger.info("      If None, it tries first g77 and if not present gfortran.")
         
     def help_shell(self):
         logger.info("syntax: shell CMD (or ! CMD)")
@@ -454,6 +458,9 @@ class CheckValidForCmd(object):
             raise self.InvalidCmd("No process generated, please generate a process!")
         if args[0] == 'checks' and not self._comparisons:
             raise self.InvalidCmd("No check results to display.")
+        
+        if args[0] == 'mg5_variable' and len(args) !=2:
+            raise self.InvalidCmd('mg5_variable need a variable name')
 
 
     def check_draw(self, args):
@@ -866,6 +873,14 @@ class CheckValidForCmdWeb(CheckValidForCmd):
         """
         raise self.WebRestriction('direct call to draw is forbidden on the web')
     
+    def check_display(self, args):
+        """ check the validity of line in web mode """
+        
+        if args[0] == 'mg5_variable':
+            raise self.WebRestriction('Display internal variable is forbidden on the web')
+        
+        CheckValidForCmd.check_history(self, args)
+    
     def check_check(self, args):
         """ Not authorize for the Web"""
         
@@ -1230,6 +1245,9 @@ class CompleteForCmd(CheckValidForCmd):
             elif args[1] == 'stdout_level':
                 return self.list_completion(text, ['DEBUG','INFO','WARNING','ERROR','CRITICAL'])
         
+            elif args[1] == 'fortran_compiler':
+                return self.list_completion(text, ['f77','g77','gfortran'])
+        
     def complete_shell(self, text, line, begidx, endidx):
         """ add path for shell """
 
@@ -1422,7 +1440,7 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
     # Options and formats available
     _display_opts = ['particles', 'interactions', 'processes', 'diagrams', 
                      'diagrams_text', 'multiparticles', 'couplings', 'lorentz', 
-                     'checks', 'parameters']
+                     'checks', 'parameters', 'options', 'mg5_variable']
     _add_opts = ['process']
     _save_opts = ['model', 'processes']
     _tutorial_opts = ['start', 'stop']
@@ -1432,7 +1450,8 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
     _export_formats = _v4_export_formats + ['standalone_cpp', 'pythia8']
     _set_options = ['group_subprocesses',
                     'ignore_six_quark_processes',
-                    'stdout_level']
+                    'stdout_level',
+                    'fortran_compiler']
     # Variables to store object information
     _curr_model = None  #base_objects.Model()
     _curr_amps = diagram_generation.AmplitudeList()
@@ -1732,6 +1751,33 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
 
             pydoc.pager(outstr)            
         
+        elif args[0] == "options":
+            outstr = "Value of current MG5 Options:\n" 
+            for key, value in self.configuration.items() + self._options.items():
+                outstr += '%25s \t:\t%s\n' %(key,value)
+            print outstr
+            
+        elif args[0] == "mg5_variable":
+            outstr = "Value of Internal Variable:\n"
+            try:
+                var = eval(args[1])
+            except:
+                outstr += 'GLOBAL:\nVariable %s is not a global variable\n' % args[1]
+            else:
+                outstr += 'GLOBAL:\n' 
+                outstr += misc.nice_representation(var, nb_space=4)
+               
+            try:
+                var = eval('self.%s' % args[1])
+            except:
+                outstr += 'LOCAL:\nVariable %s is not a local variable\n' % args[1]
+            else:
+                outstr += 'LOCAL:\n'
+                outstr += misc.nice_representation(var, nb_space=4)                
+            
+            pydoc.pager(outstr)
+                
+            
     def multiparticle_string(self, key):
         """Returns a nicely formatted string for the multiparticle"""
 
@@ -2382,11 +2428,12 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
         self.configuration = {'pythia8_path': './pythia8',
                               'web_browser':None,
                               'eps_viewer':None,
-                              'text_editor':None}
+                              'text_editor':None,
+                              'fortran_compiler':None}
         
         if not config_path:
             try:
-                config_file = open(os.path.join(os.environ['HOME'],'.mg5', '.mg5_config'))
+                config_file = open(os.path.join(os.environ['HOME'],'.mg5', 'mg5_config'))
             except:
                 config_file = open(os.path.relpath(
                           os.path.join(MG5DIR,'input','mg5_configuration.txt')))
@@ -2611,6 +2658,13 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
             logging.root.setLevel(eval('logging.' + args[1]))
             logging.getLogger('madgraph').setLevel(eval('logging.' + args[1]))
             logger.info('set output information to level: %s' % args[1])
+        
+        elif args[0] == 'fortran_compiler':
+            if args[1] != 'None':
+                logger.info('set fortran compiler to %s' % args[1])
+                self.configuration['fortran_compiler'] = args[1]
+            else:
+                self.configuration['fortran_compiler'] = None
     
     def do_open(self, line):
         """Open a text file/ eps file / html file"""
@@ -2923,7 +2977,8 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
                                            [self.history_header] + \
                                            self.history,
                                            not nojpeg,
-                                           online)
+                                           online,
+                                           self.configuration['fortran_compiler'])
 
         if self._export_format in ['madevent', 'standalone', 'standalone_cpp']:
             logger.info('Output to directory ' + self._export_dir + ' done.')

@@ -28,7 +28,7 @@ else
   td=$main/../../td
 fi
 
-dirbin=$main/../bin
+dirbin=$main/../bin/internal
 
 if [[ $run != "" && -e ${run}_pythia_events.lhe.gz ]];then
     gunzip -c ${run}_pythia_events.lhe.gz > pythia_events.lhe
