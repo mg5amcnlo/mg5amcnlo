@@ -311,10 +311,11 @@ c
       xscale = xsec/xsum
       target_wgt = target_wgt*xscale
       rewind(lun)
-      if (nstore .le. neventswritten) then
-         write(*,*) 'No improvement in events',nstore, neventswritten
-         return
-      endif
+c     JA 8/17/2011 Don't check for previously stored events
+c      if (nstore .le. neventswritten) then
+c         write(*,*) 'No improvement in events',nstore, neventswritten
+c         return
+c      endif
       lunw = 25
       open(unit = lunw, file='events.lhe', status='unknown')
       done = .false.

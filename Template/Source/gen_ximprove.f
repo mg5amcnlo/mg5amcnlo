@@ -658,11 +658,11 @@ c
          write(26,'(9x,a,2i8,a)') 'echo "',npoints,max_iter,
      $        '" >& input_sg.txt' 
 c
-c     tjs 8/7/2007  Allow stop when have enough events
+c     tjs 8/7/2007-JA 8/17/11 Allow stop when have enough luminocity
 c
          write(*,*) "Cross section",i,io(np),xsec(io(np)),mfact(io(np))
-         write(26,'(9x,a,f11.3,a)') 'echo "',-goal_lum*xsec(io(np))*1000/mjobs,
-     $        '" >> input_sg.txt'                       !Accuracy
+         write(26,'(9x,a,e13.5,a)') 'echo "',-goal_lum*1000/mjobs,
+     $        '" >> input_sg.txt'                       !Luminocity
          write(26,'(9x,a)') 'echo "2" >> input_sg.txt'  !Grid Adjustment
          write(26,'(9x,a)') 'echo "1" >> input_sg.txt'  !Suppression
          write(26,'(9x,a,i4,a)') 'echo "',nhel_refine,
@@ -681,10 +681,10 @@ c
          write(26,'(9x,a,2i8,a)') 'echo "',npoints,max_iter,
      $        '" >& input_sg.txt' 
 c
-c tjs 8/7/2007    Change to request events not accuracy
+c tjs 8/7/2007-JA 8/17/11    Change to request luminocity not accuracy
 c
-         write(26,'(9x,a,f11.3,a)') 'echo "',-goal_lum*xsec(io(np))*1000/mjobs,
-     $        '" >> input_sg.txt'                       !Accuracy
+         write(26,'(9x,a,e13.5,a)') 'echo "',-goal_lum*1000/mjobs,
+     $        '" >> input_sg.txt'                       !Luminocity
 c         write(26,'(9x,a,e12.3,a)') 'echo "',-goal_lum*mfact(io(np)),
 c     $        '" >> input_sg.txt'
          write(26,'(9x,a)') 'echo "0" >> input_sg.txt'
