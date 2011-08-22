@@ -122,12 +122,12 @@ try:
         if options.web:
             cmd_line = cmd_interface.MadEventCmd()
             cmd_line.debug_output = os.path.join(os.path.dirname(input_file),'generation.log')
-            cmd_line.use_rawinput == False
+            cmd_line.use_rawinput = False
             cmd_line.run_cmd('import command ' + input_file)
             sys.exit()
         else:
             cmd_line = cmd_interface.MadEventCmd()
-            cmd_line.use_rawinput == False
+            cmd_line.use_rawinput = False
             cmd_line.run_cmd('import command ' + input_file)
             sys.exit()
     else:

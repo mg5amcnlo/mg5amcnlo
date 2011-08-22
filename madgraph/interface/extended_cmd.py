@@ -64,6 +64,8 @@ class Cmd(cmd.Cmd):
         self.save_line = ''
         cmd.Cmd.__init__(self, *arg, **opt)
         self.__initpos = os.path.abspath(os.getcwd())
+        self.child = None # sub CMD interface call from this one
+        self.mother = None #This CMD interface was called from another one
         
 
         
@@ -172,18 +174,25 @@ class Cmd(cmd.Cmd):
         without global error handling """
 
         logger.info(line)
-        line = self.precmd(line)
-        if errorhandling:
-            stop = self.onecmd(line)
+        if self.child:
+            current_interface = self.child
         else:
-            stop = cmd.Cmd.onecmd(self, line)
-        stop = self.postcmd(stop, line)
+            current_interface = self
+        
+        
+        line = current_interface.precmd(line)
+        if errorhandling:
+            stop = current_interface.onecmd(line)
+        else:
+            stop = cmd.Cmd.onecmd(current_interface, line)
+        stop = current_interface.postcmd(stop, line)
         return stop      
 
     def run_cmd(self, line):
         """for third party call, call the line with pre and postfix treatment
         with global error handling"""
         
+        print 'RAW INPUT ext l 196', self.use_rawinput
         return self.exec_cmd(line, errorhandling=True)
     
     def emptyline(self):
@@ -299,8 +308,17 @@ class Cmd(cmd.Cmd):
         
         return self.history_header
 
-
- 
+    def define_child_cmd_interface(self, obj_instance):
+        """Define a sub cmd_interface"""
+        
+        if self.use_rawinput:
+            # We are in interactive mode -> simply call the child
+            obj_instance.cmdloop()
+        
+        # We are in a file reading mode. So we need to redirect the cmd
+        self.child = obj_instance
+        self.child.mother = self
+        
     #===============================================================================
     # Ask a question with a maximum amount of time to answer
     #===============================================================================    
@@ -421,6 +439,14 @@ class Cmd(cmd.Cmd):
     # Quit
     def do_quit(self, line):
         """ exit the mainloop() """
+        if self.mother:
+            self.mother.child = None
+            if line == 'all':
+                self.mother.exec_cmd('quit')
+            elif line:
+                level = int(line) - 1
+                if level:
+                    self.mother.exec_cmd('quit %s' % level)
         print
         return True
 

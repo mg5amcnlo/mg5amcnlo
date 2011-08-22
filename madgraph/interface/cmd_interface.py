@@ -57,6 +57,8 @@ import madgraph.iolibs.save_load_object as save_load_object
 import madgraph.interface.extended_cmd as cmd
 import madgraph.interface.tutorial_text as tutorial_text
 import madgraph.interface.launch_ext_program as launch_ext
+import madgraph.interface.madevent_interface as madevent_interface
+
 import madgraph.various.process_checks as process_checks
 
 import models as ufomodels
@@ -2249,6 +2251,7 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
     def do_import(self, line):
         """Import files with external formats"""
 
+        print 'RAW INPUT L 2254',self.use_rawinput
         args = self.split_arg(line)
         # Check argument's validity
         self.check_import(args)
@@ -2520,6 +2523,11 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
             ext_program = launch_ext.SALauncher(args[1], self.timeout,
                                                 **options)
         elif args[0] == 'madevent':
+            if options['interactive']:
+                self.define_child_cmd_interface(
+                                madevent_interface.MadEventCmd(me_dir=args[1]) )
+                return
+            
             #check if this is a cross-section
             if len(self._generate_info.split('>')[0].strip().split())>1:
                 ext_program = launch_ext.MELauncher(args[1], self.timeout,
@@ -3131,6 +3139,8 @@ _launch_parser.add_option("-n", "--name", default='', type='str',
                                 help="Provide a name to the run (for madevent run)")
 _launch_parser.add_option("-c", "--cluster", default='0', type='str',
                                 help="Choose the cluster mode (0: single machine, 1: qsub cluster, 2: multi-core) (for madevent run)")
+_launch_parser.add_option("-i", "--interactive", default=False, action='store_true',
+                                help="Use Interactive Console [if available]")
     
     
 #===============================================================================
