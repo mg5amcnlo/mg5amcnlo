@@ -1048,11 +1048,15 @@ class ProcessExporterFortranME(ProcessExporterFortran):
         cp(_file_path+'/interface/extended_cmd.py',
                                   self.dir_path+'/bin/internal/extended_cmd.py')
         cp(_file_path+'/iolibs/misc.py', self.dir_path+'/bin/internal/misc.py')        
-        cp(_file_path+'/iolibs/files.py', self.dir_path+'/bin/internal/files.py') 
+        cp(_file_path+'/iolibs/files.py', self.dir_path+'/bin/internal/files.py')
+        cp(_file_path+'/iolibs/save_load_object.py', 
+                              self.dir_path+'/bin/internal/save_load_object.py') 
         cp(_file_path+'../models/check_param_card.py', 
                               self.dir_path+'/bin/internal/check_param_card.py')
         cp(_file_path+'/__init__.py', 
-                              self.dir_path+'/bin/internal/__init__.py')        
+                              self.dir_path+'/bin/internal/__init__.py')
+        cp(_file_path+'/various/gen_crossxhtml.py', 
+                              self.dir_path+'/bin/internal/gen_crossxhml.py')                
         cp(_file_path+'/interface/.mg5_logging.conf', 
                               self.dir_path+'/bin/internal/me5_logging.conf') 
 

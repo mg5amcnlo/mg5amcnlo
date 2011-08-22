@@ -41,7 +41,7 @@ def read_from_file(filename, myfunct, *args, **opt):
         if opt.has_key('print_error'):
             if not opt['print_error']:
                 return None
-        logger.error("I/O error (%s): %s" % (errno, strerror))
+        logger.error("I/O error on file %s (%s): %s" % (filename,errno, strerror))
         return None
 
     return ret_value

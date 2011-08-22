@@ -248,20 +248,35 @@ class Cmd(cmd.Cmd):
         if self.log:
             logger.info("History written to " + output_file.name)
 
-    def clean_history(self,*arguments):
+    def clean_history(self, to_keep=['set','add','load'],
+                            remove_bef_lb1=None,
+                            to_remove=['open','display','launch'],
+                            keep_last=False):
         """Remove all commands in arguments from history"""
         
-        if not arguments:
-            self.history = []
-            return
-
-        nline = 0
-        arguments = list(arguments) + ['display', 'open', 'launch', 'output']
-        while nline < len(self.history) - 1:
-            if any([self.history[nline].startswith(arg) for arg in arguments]):
+    
+        nline = -1
+        last = 0
+        while nline > -len(self.history):
+            if remove_bef_lb1 and self.history[nline].startswith(remove_bef_lb1):
+                if last:
+                    last = 2
+                    self.history.pop(nline)
+                    continue
+                else:
+                    last=1
+            if nline == -1 and keep_last:
+                nline -=1
+                continue
+            if any([self.history[nline].startswith(arg) for arg in to_remove]):
                 self.history.pop(nline)
+                continue
+            if last == 2:
+                if not any([self.history[nline].startswith(arg) for arg in to_keep]):
+                  self.history.pop(nline)
+                  continue  
             else:
-                nline += 1
+                nline -= 1
                 
     def import_command_file(self, filepath):
         # remove this call from history

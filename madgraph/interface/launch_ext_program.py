@@ -246,6 +246,7 @@ class MELauncher(ExtLauncher):
         
         # Check for number of cores if multicore mode
         mode = str(self.cluster)
+        nb_node = 1
         if mode == "2":
             import multiprocessing
             max_node = multiprocessing.cpu_count()
@@ -255,22 +256,30 @@ class MELauncher(ExtLauncher):
                 self.launch_program()
                 return
             nb_node = self.ask('How many core do you want to use?', max_node, range(max_node+1))
+        
+        import madgraph.interface.madevent_interface as ME
+        launch = ME.MadEventCmd(me_dir=self.running_dir)
+        #launch.me_dir = self.running_dir
+        launch.run_cmd('generate_events %s --cluster=%s --queue=%s --nb_core=%s'
+                       %(self.name, mode, self.name, nb_node))
+        
         # Open the corresponding crossx.html page
-        os.system('touch %s' % os.path.join(self.running_dir,'RunWeb'))
-        subprocess.call([os.path.join('bin','internal','gen_crossxhtml-pl')], 
-                         cwd=self.running_dir)
-        open_file(os.path.join(self.running_dir, 'HTML', 'crossx.html'))
+        #os.system('touch %s' % os.path.join(self.running_dir,'RunWeb'))
+        #subprocess.call([os.path.join('bin','internal','gen_crossxhtml-pl')], 
+        #                 cwd=self.running_dir)
+        #open_file(os.path.join(self.running_dir, 'HTML', 'crossx.html'))
+        
 
         # Launch event generation
-        if mode == "0":
-            subprocess.call([self.executable, mode, self.name], 
-                                                           cwd=self.running_dir)
-        elif mode == "1":
-            subprocess.call([self.executable, mode, self.name, self.name], 
-                                                           cwd=self.running_dir)
-        elif mode == "2":
-            subprocess.call([self.executable, mode, nb_node, self.name], 
-                                                           cwd=self.running_dir)
+        #if mode == "0":
+        #    subprocess.call([self.executable, mode, self.name], 
+        #                                                   cwd=self.running_dir)
+        #elif mode == "1":
+        #    subprocess.call([self.executable, mode, self.name, self.name], 
+        #                                                   cwd=self.running_dir)
+        #elif mode == "2":
+        #    subprocess.call([self.executable, mode, nb_node, self.name], 
+        #                                                   cwd=self.running_dir)
         
         # Display the cross-section to the screen
         path = os.path.join(self.running_dir, 'SubProcesses', '%s_results.dat' 

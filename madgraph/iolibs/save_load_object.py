@@ -17,7 +17,7 @@
 
 import pickle
 
-import madgraph.iolibs.files as files
+from . import files as files
 
 class SaveObjectError(Exception):
     """Exception raised if an error occurs in while trying to save an

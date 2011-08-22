@@ -1941,7 +1941,8 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
         self._export_format = None
 
         # Remove previous generations from history
-        self.clean_history('generate', 'add process')
+        self.clean_history(to_remove=['add process'], remove_bef_lb1='generate',
+                           to_keep=['add','import','set','load'])
 
         # Call add process
         args = self.split_arg(line)
@@ -2256,7 +2257,7 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
             self._model_v4_path = None
             # Clear history, amplitudes and matrix elements when a model is imported
             # Remove previous imports, generations and outputs from history
-            self.clean_history('import', 'generate', 'add process')
+            self.clean_history(remove_bef_lb1='import')
             # Reset amplitudes and matrix elements
             self._curr_amps = diagram_generation.AmplitudeList()
             self._curr_matrix_elements = helas_objects.HelasMultiProcess()
@@ -2289,7 +2290,8 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
             
         elif args[0] == 'command':
             # Remove previous imports, generations and outputs from history
-            self.clean_history('import', 'generate', 'add process')
+            self.clean_history(to_remove=['import', 'generate', 'add process',
+                                          'open','display','launch'])
 
             if not os.path.isfile(args[1]):
                 raise MadGraph5Error("Path %s is not a valid pathname" % args[1])
@@ -2303,7 +2305,8 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
         elif args[0] == 'proc_v4':
             
             # Remove previous imports, generations and outputs from history
-            self.clean_history('import', 'generate', 'add process')
+            self.clean_history(to_remove=['import', 'generate', 'add process',
+                                          'open','display','launch'])
 
             if len(args) == 1 and self._export_dir:
                 proc_card = os.path.join(self._export_dir, 'Cards', \
@@ -2684,7 +2687,9 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
         self.check_output(args)
 
         # Remove previous outputs from history
-        self.clean_history()
+        self.clean_history(to_remove=['display','open','history','launch','output'],
+                           remove_bef_lb1='generate',
+                           keep_last=True)
         
         noclean = '-noclean' in args
         force = '-f' in args 
@@ -2972,6 +2977,7 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
             export_cpp.make_model_cpp(self._export_dir)
 
         if self._export_format in ['madevent', 'standalone']:
+            
             self._curr_exporter.finalize_v4_directory( \
                                            self._curr_matrix_elements,
                                            [self.history_header] + \
@@ -3133,7 +3139,6 @@ _launch_parser.add_option("-c", "--cluster", default='0', type='str',
 
 if __name__ == '__main__':
     
-    print 'pass here'
     run_option = sys.argv
     if len(run_option) > 1:
         # The first argument of sys.argv is the name of the program
