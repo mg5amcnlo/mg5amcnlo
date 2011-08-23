@@ -155,15 +155,17 @@ class ModelReader(base_objects.Model):
              if particle.get('width') != 'ZERO':
 
                  try:
-                     if 1: #particle.get('spin') == 2: #fermion
-                         exec("locals()[\'%(mass)s\'] = %(mass)s + complex(0,0.5) * %(width)s" % {'mass':particle.get('mass'), 'width': particle.get('width')})
+                     if particle.get('spin') == 2: #fermion
+                         exec("%(mass)s = %(mass)s + complex(0, 1/2) * %(width)s" % {'mass':particle.get('mass'), 'width': particle.get('width')})
                      else:
                          exec("locals()[\'%(mass)s\'] = cmath.sqrt(%(mass)s**2 + complex(0,-1) * %(mass)s * %(width)s)" % {'mass':particle.get('mass'), 'width': particle.get('width')})
                      
+                     
                      for param in external_parameters:
                          if param.name == particle.get('mass'):
-                             if 1: particle.get('spin') ==2:
-                                 param.value = eval("%(mass)s + complex(0,0.5) * %(width)s)" % {'mass':particle.get('mass'), 'width':particle.get('width')}) 
+                             if particle.get('spin') == 2:
+                                 print "%(mass)s - complex(0, 1/2) * %(width)s" % {'mass':particle.get('mass'), 'width':particle.get('width')}
+                                 param.value = eval("%(mass)s + complex(0, 1/2) * %(width)s" % {'mass':particle.get('mass'), 'width':particle.get('width')}) 
                              else:
                                  param.value = eval("cmath.sqrt(%(mass)s**2 + complex(0,-1) * %(mass)s * %(width)s)" % {'mass':particle.get('mass'), 'width':particle.get('width')}) 
                              break
