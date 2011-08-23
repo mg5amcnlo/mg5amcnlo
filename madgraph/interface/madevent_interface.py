@@ -332,7 +332,6 @@ class CheckValidForCmd(object):
     def check_survey(self, args):
         """check that the argument for survey are valid"""
         
-        print args
         if len(args) > 1:
             self.help_survey()
             raise self.InvalidCmd('Too many argument for survey command')
@@ -1382,7 +1381,8 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
         elif self.cluster_mode == 1:
             os.system("qsub -N %s %s >> %s" % (self.queue, exe, stdout))
         elif self.cluster_mode == 2:
-            os.system("%s/multicore %s %s" % (self.dirbin, self.nb_core, pjoin()))
+            subprocess.call(['%s/multicore' % self.dirbin, str(self.nb_core), exe],
+                            cwd = cwd)
             time.sleep(1)
             
     ############################################################################

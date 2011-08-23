@@ -192,7 +192,6 @@ class Cmd(cmd.Cmd):
         """for third party call, call the line with pre and postfix treatment
         with global error handling"""
         
-        print 'RAW INPUT ext l 196', self.use_rawinput
         return self.exec_cmd(line, errorhandling=True)
     
     def emptyline(self):
