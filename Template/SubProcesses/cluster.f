@@ -253,9 +253,13 @@ c                 Add also the same propagator but from the other direction
                   icmp(2)=ishft(1,nexternal)-1-icmp(1)
 c     Set pdg code for propagator
                   do l=1,2
-                     ipdgcl(icmp(l),ignum)=sprop(k,ignum)
-                     if(ipdgcl(icmp(l),ignum).eq.0)
-     $                    ipdgcl(icmp(l),ignum)=tprid(k,ignum)
+                     if(sprop(k,ignum).ne.0)then
+                        ipdgcl(icmp(l),ignum)=sprop(k,ignum)
+                     else if(tprid(k,ignum).ne.0)then
+                        ipdgcl(icmp(l),ignum)=tprid(k,ignum)
+                     else
+                        ipdgcl(icmp(l),ignum)=ipdgcl(2,ignum)
+                     endif
 c                  write(*,*) 'add table entry for (',ipids(i,1,ipnum),
 c     &                 ',',ipids(j,1,ipnum),',',icmp,')','pdg: ',
 c     $                 ipdgcl(icmp,ignum)
@@ -727,15 +731,10 @@ c         Boost and rotate back to get m_T for final particle
                   call boostx(p1(0),pcmsp(0),pcl(0,imap(3,2)))
                endif
             endif
-c         Make sure that final-state particle is always among daughters
+c         Make sure that initial-state particle is always among daughters
             idacl(n+1,1)=imap(1,2)
-            idacl(n+1,2)=imap(3,2)
-            imocl(n+1)=imap(2,2)
-c         If mother is initial state leg (2nd beam), chose other leg
-            if (imocl(n+1).eq.4)then
-              idacl(n+1,1)=imap(2,2)
-              imocl(n+1)=imap(1,2)
-            endif
+            idacl(n+1,2)=imap(2,2)
+            imocl(n+1)=imap(3,2)
 
 c            if(pcl(0,imocl(n)).gt.0d0)then
             pt2ijcl(n+1)=djb(pcl(0,imap(3,2)))
