@@ -350,7 +350,18 @@ class TestLoopDrawer(unittest.TestCase):
             diagram.define_level()
             diagram.find_initial_vertex_position()
             self.assertnozerolength(diagram)
-            
+
+    def test_NLO_draw_uux_uuxddx(self):
+        for i in range(139,140):
+            diagram = copy.deepcopy(self.store_diagram['u u~ > u u~ d d~'][i])
+            structure = self.store_diagram['u u~ > u u~ d d~']['structure']
+            diagram = draw_lib.LoopFeynmanDiagram(diagram, structure, self.model)
+        
+            diagram.load_diagram()
+            diagram.define_level()
+            diagram.find_initial_vertex_position()
+            self.assertnozerolength(diagram)
+                        
 
 class LoopDiagramDrawerTest(unittest.TestCase):
     """Test class for all functions related to the LoopDiagramDrawer
@@ -990,7 +1001,8 @@ if __name__ == '__main__':
 
     process_diag = {}
     process_diag['g g > g g'] = range(85)#[0, 12]
-    process_diag['u u~ > u u~ g'] = range(35,60)#[0, 12]
+    process_diag['u u~ > u u~ g'] =[51]
+    process_diag['u u~ > u u~ d d~'] = [139]
     
     cmd = MadGraphCmdShell()
     cmd.do_import('model loop_ToyModel' )

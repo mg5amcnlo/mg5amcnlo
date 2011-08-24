@@ -2126,8 +2126,8 @@ class LoopFeynmanDiagram(FeynmanDiagram):
         for pdg, list_struct_id, vertex_id in self.diagram['tag']:
             for structure_id in list_struct_id:
                 leg = self.fdstructures[structure_id].get('binding_leg')
-                if leg.get('number') < 2:
-                    pass # connecting to initial particles
+                if leg.get('number') < 3:
+                    continue # connecting to initial particles
                 #compute the number of vertex in the structure
                 nb_vertex = len(self.fdstructures[structure_id].get('vertices'))
                 if not binding_side.has_key(leg.get('number')):
@@ -2140,9 +2140,6 @@ class LoopFeynmanDiagram(FeynmanDiagram):
         
         if side_weight == 0:
             return left_side > right_side
-        elif right_side == left_side == 1:
-            self.remove_T_channel()
-            return False
         else:
             return side_weight > 0
     
@@ -2187,8 +2184,7 @@ class LoopFeynmanDiagram(FeynmanDiagram):
         This routine is foreseen for an auto-recursive mode. So as soon as a 
         vertex have his level defined. We launch this routine for this vertex.
         """
-        print 'starting point', vertex.get_uid(), 'at level', vertex.level, 'currently in direction',direction
-        print self._debug_level()
+        
         level = vertex.level
         if direction == -1:     
             nb_Tloop = len([line for line in vertex.lines if line.loop_line and \
@@ -2207,19 +2203,13 @@ class LoopFeynmanDiagram(FeynmanDiagram):
         
         vertex.lines.sort(order)
         for line in vertex.lines:
-            #print self._debug_load_diagram()
-            #print line.begin.get_uid(), line.end.get_uid(),
-            print 'line id', self.lineList.index(line),
-            
             if line.begin.level is not None and line.end.level is not None:
-                print 'all connection done'
                 continue # everything correctly define
             elif line.end is vertex:
                 if line.loop_line and not line.state:
                     line.inverse_begin_end()
                     next = line.end
                 else:
-                    print 'By pass it'
                     continue
             else:
                 next = line.end       
@@ -2250,6 +2240,5 @@ class LoopFeynmanDiagram(FeynmanDiagram):
                 # Check for update in self.max_level
                 self.max_level = max(self.max_level, level + direction)
                 self.min_level = min(self.min_level, level + direction)
-            print  'connected to', next.get_uid()
             # Launch the recursion
             self.def_next_level_from(next, direction)

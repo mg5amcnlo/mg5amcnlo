@@ -479,7 +479,6 @@ class MultiEpsDiagramDrawer(EpsDiagramDrawer):
             # Check if they need to be convert in correct format
             diagram = self.convert_diagram(diagram, self.model, opt=opt)
             # Write the code associate to this diagram
-            print self.block_nb
             self.draw_diagram(diagram)
 
             # Check if the current page is full or not
