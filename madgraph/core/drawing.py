@@ -948,7 +948,7 @@ class FeynmanDiagram(object):
         This routine is foreseen for an auto-recursive mode. So as soon as a 
         vertex have his level defined. We launch this routine for this vertex.
         """
-
+        
         level = vertex.level
         for line in vertex.lines:
             if line.end.level is not None:
@@ -2187,7 +2187,8 @@ class LoopFeynmanDiagram(FeynmanDiagram):
         This routine is foreseen for an auto-recursive mode. So as soon as a 
         vertex have his level defined. We launch this routine for this vertex.
         """
-         
+        print 'starting point', vertex.get_uid(), 'at level', vertex.level, 'currently in direction',direction
+        print self._debug_level()
         level = vertex.level
         if direction == -1:     
             nb_Tloop = len([line for line in vertex.lines if line.loop_line and \
@@ -2206,13 +2207,19 @@ class LoopFeynmanDiagram(FeynmanDiagram):
         
         vertex.lines.sort(order)
         for line in vertex.lines:
-            if line.begin.level and line.end.level:
+            #print self._debug_load_diagram()
+            #print line.begin.get_uid(), line.end.get_uid(),
+            print 'line id', self.lineList.index(line),
+            
+            if line.begin.level is not None and line.end.level is not None:
+                print 'all connection done'
                 continue # everything correctly define
             elif line.end is vertex:
                 if line.loop_line and not line.state:
                     line.inverse_begin_end()
                     next = line.end
                 else:
+                    print 'By pass it'
                     continue
             else:
                 next = line.end       
@@ -2243,5 +2250,6 @@ class LoopFeynmanDiagram(FeynmanDiagram):
                 # Check for update in self.max_level
                 self.max_level = max(self.max_level, level + direction)
                 self.min_level = min(self.min_level, level + direction)
+            print  'connected to', next.get_uid()
             # Launch the recursion
             self.def_next_level_from(next, direction)

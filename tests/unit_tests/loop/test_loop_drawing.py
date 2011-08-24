@@ -63,6 +63,15 @@ class TestLoopDrawer(unittest.TestCase):
         
         def get(self, name):
             return self[name]
+    
+    def assertnozerolength(self, diagram):
+        """check that all line have a non zero length"""
+        
+        for line in diagram.lineList:
+            a = (line.begin.pos_x, line.begin.pos_y ) 
+            b= (line.end.pos_x, line.end.pos_y )
+            self.assertNotEqual(a,b)
+            
 
     def test_loop_convert_diagram(self):
         """check that the drawer assign the correct Drawing-class"""
@@ -329,8 +338,19 @@ class TestLoopDrawer(unittest.TestCase):
             diagram.load_diagram()
             diagram.define_level()
             diagram.find_initial_vertex_position()
+            self.assertnozerolength(diagram)
 
-
+    def test_NLO_draw_uux_guux(self):
+        for i in range(51,52):
+            diagram = copy.deepcopy(self.store_diagram['u u~ > u u~ g'][i])
+            structure = self.store_diagram['u u~ > u u~ g']['structure']
+            diagram = draw_lib.LoopFeynmanDiagram(diagram, structure, self.model)
+        
+            diagram.load_diagram()
+            diagram.define_level()
+            diagram.find_initial_vertex_position()
+            self.assertnozerolength(diagram)
+            
 
 class LoopDiagramDrawerTest(unittest.TestCase):
     """Test class for all functions related to the LoopDiagramDrawer
@@ -970,6 +990,7 @@ if __name__ == '__main__':
 
     process_diag = {}
     process_diag['g g > g g'] = range(85)#[0, 12]
+    process_diag['u u~ > u u~ g'] = range(35,60)#[0, 12]
     
     cmd = MadGraphCmdShell()
     cmd.do_import('model loop_ToyModel' )
