@@ -419,7 +419,6 @@ c-JA 1/2009: Set deltaR cuts here together with s_min cuts
      &           sqrt(max(etmin(l2),0d0)*max(etmin(l1),0d0)*dr))
 c-JA 1/2009: Set grid also based on xqcut
               xm(i)=max(xm(i),max(xqcutij(l1,l2),0d0))
-              xe(i)=max(xe(i),xm(i))
             endif
 c            write(*,*) 'iconfig,i',iconfig,i
 c            write(*,*) pwidth(i,iconfig),pmass(i,iconfig)
@@ -427,11 +426,12 @@ c            write(*,*) pwidth(i,iconfig),pmass(i,iconfig)
                nbw=nbw+1
 c              JA 6/8/2011 Set xe(i) for resonances
                if (lbw(nbw).eq.1) then
-                  xe(i) = max(xe(i), pmass(i,iconfig)-5d0*pwidth(i,iconfig))
+                  xm(i) = max(xm(i), pmass(i,iconfig)-5d0*pwidth(i,iconfig))
                else if (gforcebw(i,iconfig)) then
-                  xe(i) = max(xe(i), pmass(i,iconfig)-bwcutoff*pwidth(i,iconfig))
+                  xm(i) = max(xm(i), pmass(i,iconfig)-bwcutoff*pwidth(i,iconfig))
                endif
             endif
+            xe(i)=max(xe(i),xm(i))
             if (pwidth(i,iconfig) .gt. 0 .and. lbw(nbw) .le. 1) then         !B.W.
 c               nbw = nbw +1
 
@@ -440,7 +440,7 @@ c               nbw = nbw +1
 c-----
 c tjs 11/2008 if require BW then force even if worried about energy
 c----
-                  if(pmass(i,iconfig).ge.xe(i).and.iden_part(i).eq.0
+                  if(pmass(i,iconfig).ge.xm(i).and.iden_part(i).eq.0
      $                 .or. lbw(nbw).eq.1) then
                      write(*,*) 'Setting PDF BW',j,nbw,pmass(i,iconfig)
                      spole(j)=pmass(i,iconfig)*pmass(i,iconfig)/stot
@@ -457,13 +457,13 @@ c----
 c     JA 4/1/2011 Set grid in case there is no BW (radiation process)
                if (swidth(-i) .eq. 0d0)then
                   a=pmass(i,iconfig)**2/stot
-                  xo = max(xe(i)**2/stot, 1d-8)
+                  xo = max(xm(i)**2/stot, 1d-8)
                   call setgrid(-i,xo,a,1)
                endif
             else                                  !1/x^pow
               a=pmass(i,iconfig)**2/stot
 c     JA 4/1/2011 always set grid
-              xo = max(xe(i)**2/stot, 1d-8)
+              xo = max(xm(i)**2/stot, 1d-8)
 c              if (pwidth(i, iconfig) .eq. 0d0.or.iden_part(i).gt.0) then 
               call setgrid(-i,xo,a,1)
 c              else 
@@ -472,7 +472,7 @@ c     $                pmass(i,iconfig)
 c              endif
             endif
             etot = etot+xe(i)
-            mtot=mtot+max(xm(i),xm(i))
+            mtot=mtot+xm(i)
 c            write(*,*) 'New mtot',i,mtot,xm(i)
          else                                        !t channel
 c
@@ -508,7 +508,7 @@ c            write(*,*) 'Using 2',l2,x2
 c           Use 1/10000 of sqrt(s) as minimum, to always get integration
             xo = max(xo*xo/stot,1e-8)
             if (xo.eq.1e-8)then
-               write(*,*) 'Warning: No good cutoff for shat integration found'
+               write(*,*) 'Warning: No cutoff for shat integral found'
                write(*,*) '         Minimum set to 1e-8*s'
             endif
             a=-pmass(i,iconfig)**2/stot
