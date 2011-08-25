@@ -227,7 +227,8 @@ C $E$ IFOREST $E$ !this is a tag for MadWeight
       data first_time /.true./
 
       integer combid
-      external combid
+      logical isjet
+      external combid,isjet
 
       if (first_time) then
          include 'props.inc'
@@ -255,6 +256,15 @@ c     Set pdg code for propagator
                   do l=1,2
                      if(sprop(k,ignum).ne.0)then
                         ipdgcl(icmp(l),ignum)=sprop(k,ignum)
+c                       If this is radiation off heavy FS particle, set heavyrad to true
+                        if(isjet(ipdgcl(ipids(i,1,ipnum),ignum)).and.
+     $                       .not.isjet(ipdgcl(ipids(j,1,ipnum),ignum)).and.
+     $                       ipdgcl(ipids(j,1,ipnum),ignum).eq.sprop(k,ignum).or.
+     $                       isjet(ipdgcl(ipids(j,1,ipnum),ignum)).and.
+     $                       .not.isjet(ipdgcl(ipids(i,1,ipnum),ignum)).and.
+     $                       ipdgcl(ipids(i,1,ipnum),ignum).eq.sprop(k,ignum))then
+                           heavyrad(ignum) = .true.
+                        endif
                      else if(tprid(k,ignum).ne.0)then
                         ipdgcl(icmp(l),ignum)=tprid(k,ignum)
                      else
@@ -264,7 +274,6 @@ c                  write(*,*) 'add table entry for (',ipids(i,1,ipnum),
 c     &                 ',',ipids(j,1,ipnum),',',icmp,')','pdg: ',
 c     $                 ipdgcl(icmp,ignum)
                      call filprp(ignum,icmp(l))
-
 c               Insert graph in list of propagators
                      if(pwidth(k,ignum).gt.ZERO) then
 c                    write(*,*)'Adding resonance ',ignum,icmp
@@ -323,6 +332,7 @@ c**************************************************************************
       include 'cluster.inc'
       include 'run.inc'
       include 'maxamps.inc'
+      include 'message.inc'
 C $B$ IFOREST $B$ !this is a tag for MadWeight
       integer mapconfig(0:lmaxconfigs), this_config
       common/to_mconfigs/mapconfig, this_config
@@ -333,7 +343,7 @@ C $E$ IFOREST $E$ !this is a tag for MadWeight
       integer mothup(2,nexternal)
       integer icolup(2,nexternal,maxflow,maxsproc)
       include 'leshouche.inc'
-
+      
       logical filgrp
       external filgrp
 
@@ -348,6 +358,7 @@ C $E$ IFOREST $E$ !this is a tag for MadWeight
          id_cl(i,0)=0
       enddo
       do i=start_config,end_config
+         heavyrad(i)=.false.
 c         write (*,*) ' at graph ',i
          do j=1,nexternal
             ipids(j,1,nexternal)=ishft(1,j-1)
@@ -359,7 +370,21 @@ c         write (*,*) ' at graph ',i
          inpids=nexternal
 c         print *,'Inserting graph ',i
  10      if (filgrp(i,inpids,ipids)) goto 10
+         if(btest(mlevel,4).and.heavyrad(i)) then
+            write(*,*)' set heavyrad of ',i,' to T'
+         endif
       enddo
+c     Ensure that there are some allowed clusterings
+      do i=start_config,end_config
+         if(.not.heavyrad(i)) goto 20
+      enddo
+      if(btest(mlevel,4)) then
+         write(*,*)' Reset all heavyrad to .false.'
+      endif      
+      do i=start_config,end_config
+         heavyrad(i)=.false.
+      enddo
+ 20   continue
       filmap=.true.
       return
       end
@@ -445,6 +470,8 @@ c     if first clustering, set possible graphs
       if (icgs(0).eq.0) then
          ii=0
          do i=1,id_cl(idij,0)
+c        check if this diagram has radiation off heavy particle
+           if(heavyrad(id_cl(idij,i))) cycle
 c        check if we have constraint from onshell resonances
            foundbw=.true.
            do j=1,nbw
@@ -453,7 +480,7 @@ c        check if we have constraint from onshell resonances
              endif
              foundbw=.false.
  10        enddo
-           if(nbw.eq.0.or.foundbw)then
+           if((nbw.eq.0.or.foundbw))then
               ii=ii+1
               icgs(ii)=id_cl(idij,i)
            endif

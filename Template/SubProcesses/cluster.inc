@@ -6,7 +6,8 @@ c*************************************************************************
 c     parameters for clustering:
 c     id_cl gives diagrams for propagators     
       integer id_cl(n_max_cl,0:n_max_cg)
-      common/cl_map/id_cl
+      logical heavyrad(n_max_cg)
+      common/cl_map/id_cl,heavyrad
 c     resmap gives potential resonances for diagrams
       logical resmap(n_max_cl,n_max_cg)
       common/res_map/resmap
