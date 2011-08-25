@@ -1,10 +1,11 @@
 Update notes for MadGraph 5 (in reverse time order)
 
 1.3.10 (07/08/11) JA: Improved precision of "survey" by allowing 4th and 5th 
-                      iteration if accuracy after 3 iterations < 10%
+                      iteration if accuracy after 3 iterations < 10%.
                   JA: Subdivide BW in phase space integration for conflicting BWs 
                       also for forced decays, to improve generation with large
                       bwcutoff in e.g. W+ W- production with decays.
+                  JA: Don't use BW for shat if mass > sqrt(s).
 
 1.3.9 (01/08/11)  OM: Add a new model DY_SM (arXiv:1107.5830). Thanks to Neil
                       for the generation of the model 

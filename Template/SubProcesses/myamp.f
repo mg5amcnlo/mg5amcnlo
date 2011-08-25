@@ -439,9 +439,10 @@ c               nbw = nbw +1
                   j = 3*(nexternal-2)-4+1    !set i to ndim+1
 c-----
 c tjs 11/2008 if require BW then force even if worried about energy
+c JA 8/2011 don't use BW if mass is > CM energy
 c----
                   if(pmass(i,iconfig).ge.xm(i).and.iden_part(i).eq.0.and.
-     $                 pmass(i,iconfig)-5d0*pwidth(i,iconfig).lt.sqrt(stot)-etot
+     $                 pmass(i,iconfig).lt.sqrt(stot)
      $                 .or. lbw(nbw).eq.1) then
                      write(*,*) 'Setting PDF BW',j,nbw,pmass(i,iconfig)
                      spole(j)=pmass(i,iconfig)*pmass(i,iconfig)/stot
