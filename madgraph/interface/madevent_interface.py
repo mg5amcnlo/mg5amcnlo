@@ -48,6 +48,7 @@ try:
     import madgraph.interface.extended_cmd as cmd
     import madgraph.iolibs.misc as misc
     import madgraph.iolibs.files as files
+    import madgraph.iolibs.save_load_object as save_load_object
     import madgraph.various.gen_crossxhtml as gen_crossxhtml
     from madgraph import InvalidCmd
     MADEVENT = False
@@ -234,6 +235,14 @@ class HelpToCmd(object):
         logger.info("   require in the run_card.")
         self.run_options_help([])
         
+    def help_plot(self):
+        logger.info("syntax: help [RUN] [%s] " % '|'.join(self._plot_mode))
+        logger.info("-- create the plot for the RUN (current run by default)")
+        logger.info("     at the different stage of the event generation")
+        logger.info("     Note than more than one mode can be specified in the same command.")
+        logger.info("   This require to have MadAnalysis and td require. By default")
+        logger.info("     if those programs are installed correctly, the creation")
+        logger.info("     will be performed automaticaly during the event generation.")
         
     def help_pythia(self):
         logger.info("syntax: pythia [RUN] [--run_options]")
@@ -450,7 +459,7 @@ class CheckValidForCmd(object):
                      
         if len(arg) == 0:
             if not hasattr(self, 'run_name'):
-                self.help_pythia()
+                self.help_plot()
                 raise self.InvalidCmd('No run name currently define. Please add this information.')             
             arg.append('all')
             return
@@ -461,12 +470,12 @@ class CheckValidForCmd(object):
             self.set_run_name(args[1])
             del args[1]
         elif not self.run_name:
-            self.help_pythia()
+            self.help_plot()
             raise self.InvalidCmd('No run name currently define. Please add this information.')                             
         
         for arg in args:
             if arg not in self._plot_mode or arg == self.run_name:
-                 self.help_pythia()
+                 self.help_plot()
                  raise self.InvalidCmd('unknown options %s' % arg)        
     
     def check_pgs(self, arg):
@@ -625,6 +634,28 @@ class CompleteForCmd(CheckValidForCmd):
             if args[1] == 'stdout_level':
                 return self.list_completion(text, ['DEBUG','INFO','WARNING','ERROR','CRITICAL'])
     
+    def complete_survey(self, text, line, begidx, endidx):
+        """ Complete the survey command """
+        
+        args = self.split_arg(line[0:begidx])
+        
+        if len(args) > 1:
+            return self.list_completion(text, self._options)
+    
+    complete_refine = complete_survey
+    
+    def complete_plot(self, text, line, begidx, endidx):
+        """ Complete the plot command """
+        
+        args = self.split_arg(line[0:begidx])
+        
+        if len(args):
+            return self.list_completion(text, self._plot_mode)
+        else:
+            return self.list_completion(text, self._plot_mode + self.results.keys())
+        
+        
+        
     def complete_pythia(self,text, line, begidx, endidx):
         "Complete the pythia command"
         
@@ -648,6 +679,7 @@ class CompleteForCmd(CheckValidForCmd):
             return self.list_completion(text, data)
         else:
             self.list_completion(text, self._options + ['-f', '--no_default'])
+    
     complete_delphes = complete_pgs        
         
 #===============================================================================
@@ -660,7 +692,7 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
     true = ['T','.true.',True,'true']
     # Options and formats available
     _set_options = ['stdout_level','fortran_compiler']
-    _plot_mode = ['parton','pythia','pgs','delphes']
+    _plot_mode = ['all', 'parton','pythia','pgs','delphes']
     # Variables to store object information
     true = ['T','.true.',True,'true', 1, '1']
     web = False
@@ -697,6 +729,7 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
         
         # load the current status of the directory
         if os.path.exists(pjoin(self.me_dir,'HTML','results.pkl')):
+            sys.path.append(pjoin(self.me_dir,'bin'))
             self.results = save_load_object.load_from_file(pjoin(self.me_dir,'HTML','results.pkl'))
         else:
             model = self.find_model_name()
@@ -1157,7 +1190,7 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
         
         self.update_status('finish', level='pythia')
 
-    def do_plot(self):
+    def do_plot(self, line):
         """Create the plot for a given run"""
 
         # Since in principle, all plot are already done automaticaly

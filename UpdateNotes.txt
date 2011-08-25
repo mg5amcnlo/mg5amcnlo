@@ -22,7 +22,7 @@ Update notes for MadGraph 5 (in reverse time order)
                       b) display mg5_variables NAME: return the current string 
                         representation of NAME and/or self.NAME.  
 	          OM: New Python script for the creation of the crossx.html page
-                      Requiring less disk access for the generation.                  
+                      Requiring less disk access for the generation of the file.
 
 
 1.3.9 (01/08/11)  OM: Add a new model DY_SM (arXiv:1107.5830). Thanks to Neil 
