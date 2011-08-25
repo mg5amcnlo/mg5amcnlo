@@ -214,12 +214,18 @@ c       Fist set "safe" color info
      $       icolalt(2,ida(1))-icolalt(2,ida(2)).eq.0) then ! color singlet
             icolalt(1,i) = 0
             icolalt(2,i) = 0            
-          elseif(icolalt(1,ida(1))-icolalt(2,ida(2)).eq.0) then
+          elseif(icolalt(1,ida(1))-icolalt(2,ida(2)).eq.0) then ! 3bar 3 -> 8 or 8 8 -> 8
             icolalt(1,i) = icolalt(1,ida(2))
             icolalt(2,i) = icolalt(2,ida(1))
-          else if(icolalt(1,ida(2))-icolalt(2,ida(1)).eq.0) then
+          else if(icolalt(1,ida(2))-icolalt(2,ida(1)).eq.0) then ! 3 3bar -> 8 or 8 8 -> 8
             icolalt(1,i) = icolalt(1,ida(1))
             icolalt(2,i) = icolalt(2,ida(2))
+          else if(icolalt(1,ida(1)).eq.0.and.icolalt(2,ida(1)).eq.0) then ! 1 3/8 -> 3/8
+            icolalt(1,i) = icolalt(1,ida(2))
+            icolalt(2,i) = icolalt(2,ida(2))
+          else if(icolalt(1,ida(2)).eq.0.and.icolalt(2,ida(2)).eq.0) then ! 3/8 1 -> 3/8
+            icolalt(1,i) = icolalt(1,ida(1))
+            icolalt(2,i) = icolalt(2,ida(1))
           else if(icolalt(1,ida(2)).gt.0.and.icolalt(1,ida(1)).gt.0.and.
      $           icolalt(2,ida(2)).le.0.and.icolalt(2,ida(1)).le.0) then         ! sextet
             maxcolor=maxcolor+1
