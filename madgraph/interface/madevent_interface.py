@@ -1220,7 +1220,8 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
         """ tar the pythia results. This is done when we are quite sure that 
         the pythia output will not be use anymore """
 
-        if self.run_name:
+
+        if not self.run_name:
             return
         
         self.results.save()
@@ -1364,26 +1365,57 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
         self.create_plot('Delphes')
         self.update_status('finish', level='delphes')   
 
-
-
- 
- 
-       
     def launch_job(self,exe, cwd=None, stdout=None, **opt):
         """ """
         
+        def launch_in_thread(exe, cwd, stdout, control_thread):
+            """ way to launch for multicore"""
+            
+            control_thread[0] += 1 # upate the number of running thread
+            start = time.time()
+            subprocess.call(['./'+exe], cwd=cwd, stdout=stdout,
+                        stderr=subprocess.STDOUT, **opt)
+            logger.info('%s run in %f s' % (exe, time.time() -start))
+            
+            # release the lock for allowing to launch the next job      
+            while not control_thread[1].locked():
+                # check that the status is locked to avoid coincidence unlock
+                if not control_thread[2]:
+                    # Main is not yet locked
+                    control_thread[0] -= 1
+                    return 
+                time.sleep(1)
+            control_thread[1].release()
+            control_thread[0] -= 1 # upate the number of running thread
+        
+        
         if self.cluster_mode == 0:
             start = time.time()
-            subprocess.call(['./'+exe], cwd=cwd, stdout=stdout, **opt)
-            logger.info('run in %f s' % (time.time() -start))
+            subprocess.call(['./'+exe], cwd=cwd, stdout=stdout,
+                            stderr=subprocess.STDOUT, **opt)
+            logger.info('%s run in %f s' % (exe, time.time() -start))
             #print 'sum_html'
             #subprocess.call(['./sum_html'], cwd=self.dirbin)
         elif self.cluster_mode == 1:
             os.system("qsub -N %s %s >> %s" % (self.queue, exe, stdout))
         elif self.cluster_mode == 2:
-            subprocess.call(['%s/multicore' % self.dirbin, str(self.nb_core), exe],
-                            cwd = cwd)
-            time.sleep(1)
+            import thread
+            if not hasattr(self, 'control_thread'):
+                self.control_thread = [0] # [used_thread]
+                self.control_thread.append(thread.allocate_lock()) # The lock
+                self.control_thread.append(False) # True if all thread submit 
+                                                  #-> waiting mode
+
+            if self.control_thread[2]:
+                self.control_thread[1].acquire()
+                thread.start_new_thread(launch_in_thread,(exe, cwd, stdout, self.control_thread))
+            elif self.control_thread[0] <  self.nb_core -1:
+                thread.start_new_thread(launch_in_thread,(exe, cwd, stdout, self.control_thread))
+            elif self.control_thread[0] ==  self.nb_core -1:
+                thread.start_new_thread(launch_in_thread,(exe, cwd, stdout, self.control_thread))
+                self.control_thread[2] = True
+                self.control_thread[1].acquire() # Lock the next submission
+                                                 # Up to a release
             
     ############################################################################
     def find_madevent_mode(self):
@@ -1402,9 +1434,22 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
     def monitor(self):
         """ monitor the progress of running job """
         
-        if self.cluster_mode:
+        if self.cluster_mode == 1:
             subprocess.call([pjoin(self.dirbin, 'monitor'), self.run_name], 
                                                                 cwd=self.me_dir)
+        if self.cluster_mode == 2:
+            # Wait that all thread finish
+            if not self.control_thread[2]:
+                while self.control_thread[0]:
+                    time.sleep(5)
+            else:    
+                for i in range(0,self.nb_core):
+                    self.control_thread[1].acquire()
+                    print 'currently running', self.control_thread[0]
+                self.control_thread[2] = False
+                self.control_thread[1].release()
+            
+        
         proc = subprocess.Popen([pjoin(self.dirbin, 'sumall')], 
                                           cwd=pjoin(self.me_dir,'SubProcesses'),
                                           stdout=subprocess.PIPE)

@@ -263,6 +263,7 @@ class MELauncher(ExtLauncher):
         launch.run_cmd('generate_events %s --cluster=%s --queue=%s --nb_core=%s'
                        %(self.name, mode, self.name, nb_node))
         
+        
         # Open the corresponding crossx.html page
         #os.system('touch %s' % os.path.join(self.running_dir,'RunWeb'))
         #subprocess.call([os.path.join('bin','internal','gen_crossxhtml-pl')], 
