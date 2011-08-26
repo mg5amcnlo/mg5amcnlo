@@ -38,6 +38,6 @@ done
 echo $w $r $d $t
 
 # Extra sleep to allow time to copy files over network
-sleep 10
+sleep 20
 
 rm -f ../running_jobs
