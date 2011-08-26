@@ -227,9 +227,9 @@ c
       if (accur .ge. 0d0 .or. cur_it .gt. itmax+3) then
         return
       endif
-c     Check for neventswritten and chi2
-      if (neventswritten .gt. -accur .and. chi2 .lt. 10d0) then
-         write(*,*) "We found enough events",neventswritten, -accur*1000*tmean
+c     Check for neventswritten and chi2 (JA 8/17/11 lumi*mean xsec)
+      if (neventswritten .gt. -accur*tmean .and. chi2 .lt. 10d0) then
+         write(*,*) "We found enough events",neventswritten, -accur*tmean
          return
       endif
       
@@ -1888,18 +1888,19 @@ c            close(26)
 c     Update weights in dsig (needed for subprocess group mode)
             xdum=dsig(0,0,2)
 c
-c     Add test to see if we have achieved desired accuracy
+c     Add test to see if we have achieved desired accuracy 
+c     JA 8/17/2011 allow minimum 3 iterations instead of 5
 c
-            if (tsigma .gt. 0d0 .and. cur_it .gt. 5 .and. accur .gt. 0d0) then
+            if (tsigma .gt. 0d0 .and. cur_it .gt. 3 .and. accur .gt. 0d0) then
 
                xmean = tmean/tsigma
                xchi2 = (chi2/xmean/xmean-tsigma)/dble(cur_it-2)               
-               write(*,'(a,4f8.3)') 'We got it',sqrt(xchi2/tsigma),
+               write(*,'(a,4f8.3)') ' Accuracy: ',sqrt(xchi2/tsigma),
      &              accur,1/sqrt(tsigma),xchi2
 c               write(*,*) 'We got it',1d0/sqrt(tsigma), accur
 c               if (1d0/sqrt(tsigma) .lt. accur) then
                if (sqrt(xchi2/tsigma) .lt. accur) then
-                  write(*,*) 'Finished due to accuracy',sqrt(xchi2/tsigma), accur
+                  write(*,*) 'Finished due to accuracy ',sqrt(xchi2/tsigma), accur
                   tmean = tmean / tsigma
                   if (cur_it .gt. 2) then
                      chi2 = (chi2/tmean/tmean-tsigma)/dble(cur_it-2)
@@ -1929,7 +1930,7 @@ c 122              close(22)
 c
 c New check to see if we need to keep integrating this one or not.
 c
-            if (cur_it .gt. 3 .and. accur .lt. 0d0) then  !Check # unweighted
+            if (cur_it .gt. 3 .and. accur .lt. 0d0) then  !Check luminocity
 c
 c             Lets get the actual number instead 
 c             tjs 5/22/2007
@@ -1953,9 +1954,10 @@ c     Calculate chi2 for last three events (ja 03/11)
                   chi2tmp = chi2tmp+(ymean(i)-tmeant)**2/ysigma(i)**2
                enddo
                chi2tmp = chi2tmp/2d0  !Since using only last 3, n-1=2
-               write(*,*) "Checking number of events",accur,nun,' chi2: ',chi2tmp
+c     JA 8/17/2011 Redefined -accur as lumi, so nevents is -accur*cross section
+               write(*,*) "Checking number of events",-accur*tmeant,nun,' chi2: ',chi2tmp
 c     Check nun and chi2 (ja 03/11)
-               if (nun .gt. -accur .and. chi2tmp .lt. 10d0)then   
+               if (nun .gt. -accur*tmeant .and. chi2tmp .lt. 10d0)then   
                   tmean = tmean / tsigma
                   if (cur_it .gt. 2) then
                      chi2 = (chi2/tmean/tmean-tsigma)/dble(cur_it-2)
