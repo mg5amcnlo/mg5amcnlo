@@ -15,10 +15,12 @@
 """A user friendly command line interface to access MadGraph features.
    Uses the cmd package for command interpretation and tab completion.
 """
+from __future__ import division
 
 import atexit
 import glob
 import logging
+import math
 import optparse
 import os
 import pydoc
@@ -215,6 +217,22 @@ class HelpToCmd(object):
         logger.info("                   The default is all available core.")
         
 
+    def help_generate_events(self):
+        logger.info("syntax: generate_events [run_name] [--run_options])")
+        logger.info("-- Launch the full chain of script for the generation of events")
+        logger.info("   Including possible plotting, shower and detector resolution.")
+        logger.info("   Those steps are performed if the related program are installed")
+        logger.info("   and if the related card are present in the Cards directory.")
+        self.run_options_help([])
+
+    def help_multi_run(self):
+        logger.info("syntax: multi_run NB_RUN [run_name] [--run_options])")
+        logger.info("-- Launch the full chain of script for the generation of events")
+        logger.info("   NB_RUN times. This chains includes possible plotting, shower")
+        logger.info(" and detector resolution.")
+        self.run_options_help([])
+
+
     def help_survey(self):
         logger.info("syntax: survey [run_name] [--run_options])")
         logger.info("-- evaluate the different channel associate to the process")
@@ -338,12 +356,12 @@ class CheckValidForCmd(object):
         elif not os.path.isfile(args[0]):
             raise self.InvalidCmd('No default path for this file') 
     
-    def check_survey(self, args):
+    def check_survey(self, args, cmd='survey'):
         """check that the argument for survey are valid"""
         
         if len(args) > 1:
             self.help_survey()
-            raise self.InvalidCmd('Too many argument for survey command')
+            raise self.InvalidCmd('Too many argument for %s command' % cmd)
         elif not args:
             # No run name assigned -> assigned one automaticaly 
             self.set_run_name(self.find_available_run_name())
@@ -351,6 +369,22 @@ class CheckValidForCmd(object):
             self.set_run_name(args[0], True)
             args.pop(0)
             
+        return True
+
+    def check_multi_run(self, args):
+        """check that the argument for survey are valid"""
+        
+        if not len(args):
+            print self.help_multi_run()
+            raise self.InvalidCmd("""multi_run command requires at least one argument for
+            the number of times that it call generate_events command""")
+        elif not args[0].isdigit():
+            print self.help_multi_run()
+            raise self.InvalidCmd("The first argument of multi_run shoud be a integer.")
+        nb_run = args.pop(0)
+        self.check_survey(args, cmd='multi_run')
+        args.insert(0, int(nb_run))
+        
         return True
 
     def check_refine(self, args):
@@ -755,6 +789,11 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
             else:
                 continue
             args.remove(arg)
+        
+        if self.cluster_mode == 2 and not self.nb_core:
+            import multiprocessing
+            self.nb_core = multiprocessing.cpu_count()
+        
         return args
                     
     ############################################################################            
@@ -896,6 +935,10 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
     def do_generate_events(self, line):
         """ launch the full chain """
         
+        args = self.split_arg(line)
+        # Check argument's validity
+        self.check_survey(args, cmd='generate_events')  
+        
         self.exec_cmd('survey %s' % line)
         if not self.run_card['gridpack'] in self.true:        
             nb_event = self.run_card['nevents']
@@ -908,7 +951,58 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
             self.exec_cmd('pgs --no_default')
             self.exec_cmd('delphes --no_default')
         self.store_result()
-   
+    
+    ############################################################################
+    def do_multi_run(self, line):
+        
+        args = self.split_arg(line)
+        # Check argument's validity
+        self.check_multi_run(args)
+        
+        main_name = self.run_name
+        nb_run = args.pop(0)
+        crossoversig = 0
+        inv_sq_err = 0
+        for i in range(nb_run):
+            self.exec_cmd('generate_events %s_%s' % (main_name, i))
+            # Update collected value
+            if self.results[main_name]['nb_event']:
+                self.results[main_name]['nb_event'] += int(self.results[self.run_name]['nb_event'])  
+            else:
+                self.results[main_name]['nb_event'] = int(self.results[self.run_name]['nb_event'])  
+            cross = self.results[self.run_name]['cross']
+            error = self.results[self.run_name]['error'] + 1e-99
+            crossoversig+=cross/error**2
+            inv_sq_err+=1.0/error**2
+            self.results[main_name]['cross'] = crossoversig/inv_sq_err
+            self.results[main_name]['error'] = math.sqrt(1.0/inv_sq_err)            
+        
+        self.run_name = main_name
+        self.results.def_current(main_name)
+        self.update_status("Merging LHE files", level='parton')
+        os.system('%(bin)s/merge.pl %(event)s/%(name)s_*_unweighted_events.lhe.gz %(event)s/%(name)s_unweighted_events.lhe.gz %(event)s/%(name)s_banner.txt' 
+                  % {'bin': self.dirbin, 'event': pjoin(self.me_dir,'Events'),
+                     'name': self.run_name})
+
+        self.update_status("END Merging LHE files", level='parton')
+
+
+        eradir = self.configuration['exrootanalysis_path']
+        if misc.is_executable(pjoin(eradir,'ExRootLHEFConverter')):
+            os.system('gunzip %s/%s_unweighted_events.lhe.gz' % 
+                                  (pjoin(self.me_dir,'Events'), self.run_name))
+            self.create_root_file('%s_unweighted_events.lhe' % self.run_name,
+                                  '%s_unweighted_events.root' % self.run_name)
+            
+        
+        self.create_plot('parton', '%s/%s_unweighted_events.lhe' %
+                         (pjoin(self.me_dir, 'Events'),self.run_name))
+        
+        os.system('gzip %s/%s_unweighted_events.lhe' % 
+                                  (pjoin(self.me_dir, 'Events'), self.run_name))
+        
+        self.update_status('finish', level='parton')
+            
     ############################################################################      
     def do_survey(self, line):
         """ launch survey for the current process """
@@ -1741,13 +1835,14 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
 
 
     ############################################################################
-    def create_root_file(self):
+    def create_root_file(self, input='unweighted_events.lhe', 
+                                              output='unweighted_events.root' ):
         """create the LHE root file """
         self.update_status('Creating root files', level='parton')
 
         eradir = self.configuration['exrootanalysis_path']
         subprocess.call(['%s/ExRootLHEFConverter' % eradir, 
-                             'unweighted_events.lhe', 'unweighted_events.root'],
+                             input, output],
                             cwd=pjoin(self.me_dir, 'Events'))
         
     ############################################################################
@@ -1775,6 +1870,7 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
                 event_path = pjoin(self.me_dir, 'Events', 'delphes_events.lhco')
         
         if not os.path.exists(event_path):
+            print 'not path', event_path
             return False
         
         self.update_status('Creating Plots for %s level' % mode, level = mode.lower())

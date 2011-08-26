@@ -3,7 +3,11 @@ Update notes for MadGraph 5 (in reverse time order)
 1.4.0 (XX/XX/XX): OM: New structure for madevent script (./bin/madevent)
                       allowing to have an interface similar to MG5 
                       for running madevent.
-                      (accessible from MG5 via launch -i) 
+                      (accessible from MG5 via launch [DIR] -i)
+		      This script replaces most of the script present before in 
+		      ./bin/ (such as survey/refine/combine/run_XXXX/multi_run)
+		      The script generate_events still exists but call itself 
+                      ./bin/madevent. 
                   OM: Madevent check that the param_card is coherent with the 
                       restriction use during the model generation. 
                   OM: FOR MSSM model, pass param_card in SLAH1. This card will 

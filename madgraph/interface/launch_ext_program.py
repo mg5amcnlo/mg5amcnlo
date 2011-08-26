@@ -217,7 +217,9 @@ class MELauncher(ExtLauncher):
             path = os.path.join(self.card_dir, 'pythia_card.dat')
             try: os.remove(path)
             except OSError: pass
-            return # no Need to ask for PGS
+            return # no Need to ask for PGS/Delphes
+        elif answer == 'auto' and not os.path.exists(os.path.join(self.card_dir, 'pythia_card.dat')):
+            return # No need to ask for PGS/Delphes
         
         answer = self.ask('Do you want to run PGS?','auto', ['y','n','auto'])
         if answer == 'y':
