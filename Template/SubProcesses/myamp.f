@@ -203,12 +203,11 @@ c-----
 c            write(*,*) 'Checking BW',nbw
             xmass = sqrt(dot(xp(0,i),xp(0,i)))
 c            write(*,*) 'xmass',xmass,pmass(i,iconfig)
-            onshell = (abs(xmass - pmass(i,iconfig)) .lt.
-     $           bwcutoff*pwidth(i,iconfig))
-
 c
 c           Here we set if the BW is "on-shell" for LesHouches
 c
+            onshell = (abs(xmass - pmass(i,iconfig)) .lt.
+     $           bwcutoff*pwidth(i,iconfig))
             if(onshell)then
 c           Only allow onshell if no "decay" to identical particle
               OnBW(i) = .true.
@@ -244,9 +243,25 @@ c           Else remove OnBW for daughter
                  endif
               endif
             endif
-            if (onshell .and. (lbw(nbw).eq. 2) ) cut_bw=.true.
-            if (.not. onshell .and. (lbw(nbw).eq. 1)) cut_bw=.true.
+c
+c     Check if we are supposed to cut forced bw (JA 4/8/11)
+c
+            if (gForceBW(i, iconfig) .and. .not. onshell)then
+               cut_bw = .true.
+               return
+            endif
+c
+c     Here we set onshell for phase space integration (JA 4/8/11)
+c
+            onshell = (abs(xmass - pmass(i,iconfig)) .lt.
+     $           5d0*pwidth(i,iconfig))
+
+            if (onshell .and. (lbw(nbw).eq. 2) .or.
+     $          .not. onshell .and. (lbw(nbw).eq. 1)) then
+               cut_bw=.true.
 c            write(*,*) 'cut_bw: ',nbw,xmass,onshell,lbw(nbw),cut_bw
+               return
+            endif
          endif
 
       enddo
@@ -292,9 +307,6 @@ c
 
       logical gForceBW(-max_branch:-1,lmaxconfigs)  ! Forced BW
       include 'decayBW.inc'
-
-      double precision forced_mass
-      data forced_mass/0d0/
 c
 c     Global
 c
@@ -407,11 +419,19 @@ c-JA 1/2009: Set deltaR cuts here together with s_min cuts
      &           sqrt(max(etmin(l2),0d0)*max(etmin(l1),0d0)*dr))
 c-JA 1/2009: Set grid also based on xqcut
               xm(i)=max(xm(i),max(xqcutij(l1,l2),0d0))
-              xe(i)=max(xe(i),xm(i))
             endif
 c            write(*,*) 'iconfig,i',iconfig,i
 c            write(*,*) pwidth(i,iconfig),pmass(i,iconfig)
-            if (pwidth(i,iconfig) .gt. 0 ) nbw=nbw+1
+            if (pwidth(i,iconfig) .gt. 0 ) then
+               nbw=nbw+1
+c              JA 6/8/2011 Set xe(i) for resonances
+               if (lbw(nbw).eq.1) then
+                  xm(i) = max(xm(i), pmass(i,iconfig)-5d0*pwidth(i,iconfig))
+               else if (gforcebw(i,iconfig)) then
+                  xm(i) = max(xm(i), pmass(i,iconfig)-bwcutoff*pwidth(i,iconfig))
+               endif
+            endif
+            xe(i)=max(xe(i),xm(i))
             if (pwidth(i,iconfig) .gt. 0 .and. lbw(nbw) .le. 1) then         !B.W.
 c               nbw = nbw +1
 
@@ -419,8 +439,10 @@ c               nbw = nbw +1
                   j = 3*(nexternal-2)-4+1    !set i to ndim+1
 c-----
 c tjs 11/2008 if require BW then force even if worried about energy
+c JA 8/2011 don't use BW if mass is > CM energy
 c----
-                  if(pmass(i,iconfig).ge.xe(i).and.iden_part(i).eq.0
+                  if(pmass(i,iconfig).ge.xm(i).and.iden_part(i).eq.0.and.
+     $                 pmass(i,iconfig).lt.sqrt(stot)
      $                 .or. lbw(nbw).eq.1) then
                      write(*,*) 'Setting PDF BW',j,nbw,pmass(i,iconfig)
                      spole(j)=pmass(i,iconfig)*pmass(i,iconfig)/stot
@@ -433,23 +455,18 @@ c----
                   spole(-i)=pmass(i,iconfig)*pmass(i,iconfig)/stot
                   swidth(-i) = pwidth(i,iconfig)*pmass(i,iconfig)/stot
                   xm(i) = pmass(i,iconfig)
-c                 Remember largest BW mass for better grid setting
-                  forced_mass = max(forced_mass,
-     $                 pmass(i,iconfig)-bwcutoff*pwidth(i,iconfig))
-c RF & TJS, should start from final state particle masses, not only at resonance.
-c Therefore remove the next line.
-c                  xe(i) = max(xe(i),xm(i))
                endif
 c     JA 4/1/2011 Set grid in case there is no BW (radiation process)
-               if (swidth(-i) .eq. 0d0)then
+               if (swidth(-i) .eq. 0d0 .and.
+     $              i.ne.-(nexternal-(nincoming+1)))then
                   a=pmass(i,iconfig)**2/stot
-                  xo = xm(i)**2/stot
+                  xo = max(min(xm(i)**2/stot, 1-1d-8), 1d0/stot)
                   call setgrid(-i,xo,a,1)
                endif
             else                                  !1/x^pow
               a=pmass(i,iconfig)**2/stot
 c     JA 4/1/2011 always set grid
-              xo = max(xm(i)**2/stot, 1d-8)
+              xo = max(min(xm(i)**2/stot, 1-1d-8), 1d0/stot)
 c              if (pwidth(i, iconfig) .eq. 0d0.or.iden_part(i).gt.0) then 
               call setgrid(-i,xo,a,1)
 c              else 
@@ -458,7 +475,7 @@ c     $                pmass(i,iconfig)
 c              endif
             endif
             etot = etot+xe(i)
-            mtot=mtot+max(xm(i),xm(i))
+            mtot=mtot+xm(i)
 c            write(*,*) 'New mtot',i,mtot,xm(i)
          else                                        !t channel
 c
@@ -492,10 +509,10 @@ c            write(*,*) 'Using 2',l2,x2
             xo = min(x1,x2)
 
 c           Use 1/10000 of sqrt(s) as minimum, to always get integration
-            xo = max(xo*xo/stot,1e-8)
-            if (xo.eq.1e-8)then
-               write(*,*) 'Warning: No good cutoff for shat integration found'
-               write(*,*) '         Minimum set to 1e-8*s'
+            xo = max(xo*xo/stot,1d0/stot)
+            if (xo.eq.1d0/stot)then
+               write(*,*) 'Warning: No cutoff for shat integral found'
+               write(*,*) '         Minimum set to ',1d0/stot
             endif
             a=-pmass(i,iconfig)**2/stot
 c            call setgrid(-i,xo,a,pow(i,iconfig))
@@ -507,16 +524,12 @@ c               read(*,*) xo
       enddo
       if (abs(lpp(1)) .eq. 1 .or. abs(lpp(2)) .eq. 1) then
 c     Set minimum based on: 1) required energy 2) resonances 3) 1/10000 of sqrt(s)
-         if(forced_mass**2.lt.stot) then
-            xo = max(max(etot**2, forced_mass**2)/stot,1d-8)
-         else
-            xo = max(etot**2/stot,1d-8)
-         endif
-         if (xo.eq.1d-8) then
-            write(*,*) 'Warning: No minimum found for integration'
-            write(*,*) '         Setting minimum to 1e-8*stot'
-         endif
          i = 3*(nexternal-2) - 4 + 1
+         xo = max(min(etot**2/stot, 1d0-1d-8),1d0/stot)
+         if (swidth(i).eq.0.and.xo.eq.1d0/stot) then
+            write(*,*) 'Warning: No minimum found for integration'
+            write(*,*) '         Setting minimum to ',1d0/stot
+         endif
 c-----------------------
 c     tjs  4/29/2008 use analytic transform for s-hat
 c-----------------------

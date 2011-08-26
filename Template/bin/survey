@@ -64,11 +64,12 @@ if [[ -e error ]];then
 fi
 
 if [[ -d SubProcesses ]]; then
-    if [[  $mode -gt 0 ]]; then    
+    if [[  $mode -eq 1 ]]; then    
 	echo "Creating Jobs" >& status
     else
-	echo " " >& status
+	echo "Running" >& status
     fi
+    $dirbin/gen_crossxhtml-pl $3
     cd SubProcesses
     r=0
     if [[ -e randinit ]]; then
@@ -117,6 +118,7 @@ if [[ -d SubProcesses ]]; then
 		../../bin/multicore $n $job
 		sleep 1
 	    else
+		echo "Launching job $job"
 		time nice ./$job >/dev/null
 		../../bin/sum_html >/dev/null
 	    fi

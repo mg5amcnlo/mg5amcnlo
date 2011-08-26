@@ -264,7 +264,8 @@ class AddVariable(list):
         new = self[0].expand()
         for item in self[1:]:
             obj = item.expand()
-            new += obj      
+            new += obj
+
         return new
         
     
@@ -421,6 +422,7 @@ class AddVariable(list):
         maxvar = maxvar.__class__(maxvar.variable)
         if max <= 1:
             #no factorization possible
+            #aloha.depth -=1
             return self
         else:
             # split in MAXVAR * NEWADD + CONSTANT
@@ -430,6 +432,7 @@ class AddVariable(list):
             #fill NEWADD and CONSTANT
             for term in self:
                 if maxvar == term:
+                    term = term.copy()
                     term.power -= 1
                     if term.power:
                         newadd.append(term.simplify())
@@ -453,14 +456,20 @@ class AddVariable(list):
                     constant.append(term)
 
             #factorize the result
-            if len(newadd) > 1:
+            try:
+                cur_len = len(newadd)
+            except:
+                cur_len = 0
+            if cur_len > 1:
                 try:
                     newadd = newadd.factorize()
-                except:
-                    raise Exception('fail to factorize')
+                except Exception, error:
+                    raise
+                    #raise Exception('fail to factorize: %s' % error)
             else:
                 #take away the useless AddVariable to going back to a Variable class
                 newadd = newadd[0]
+
 
             # recombine the factor. First ensure that the power of the object is
             #one. Then recombine
@@ -484,10 +493,11 @@ class AddVariable(list):
             if constant:
                 constant = constant.factorize()
                 #aloha.depth -=1
-                #print ' ' * 4 * aloha.depth + 'return', AddVariable([newadd, constant])
+                # ' ' * 4 * aloha.depth + 'return', AddVariable([newadd, constant])
                 return AddVariable([newadd, constant])
             else:
                 if constant.vartype == 5 and constant != 0:
+                    #aloha.depth -=1
                     return AddVariable([newadd, constant])
                 #aloha.depth -=1
                 #print ' ' * 4 * aloha.depth + 'return:', newadd
@@ -824,7 +834,10 @@ class Variable(object):
         
     def __eq__(self, obj):
         """ identical if the variable is the same """
-        return not obj.vartype and self.variable == obj.variable
+        if hasattr(obj,'vartype'):
+            return not obj.vartype and self.variable == obj.variable
+        else:
+            return False
         
     def __str__(self):
         text = ''
@@ -918,7 +931,7 @@ class MultLorentz(MultVariable):
         """ expand each part of the product and combine them.
             Try to use a smart order in order to minimize the number of uncontracted indices.
         """
-        
+
         self.unused = self[:] # list of not expanded
         # made in a list the intersting starting point for the computation
         basic_end_point = [var for var in self if var.contract_first] 
@@ -927,7 +940,6 @@ class MultLorentz(MultVariable):
         
         while self.unused:
             #Loop untill we have expand everything
-            
             if not current:
                 # First we need to have a starting point
                 try: 
@@ -1196,9 +1208,16 @@ class LorentzObject(Variable):
                 return self.representation
             else:
                 return self.prefactor * self.representation
-        else:
-            # not possible to have power beyon 2
+        elif self.power == 2:
+            # not possible to have power beyon 2 except for scalar object
             return self.prefactor * self.representation * self.representation
+        else:
+            assert self.lorentz_ind == self.spin_ind == []
+            name =  self.representation.get_rep([0]).variable
+            new = ScalarVariable(name, prefactor=self.prefactor,
+                                                               power=self.power)
+            return LorentzObjectRepresentation(
+                                new, self.lorentz_ind, self.spin_ind)
         
     def create_representation(self):
         raise self.VariableError("This Object %s doesn't have define representation" % self.__class__.__name__)
@@ -1298,7 +1317,6 @@ class LorentzObjectRepresentation(dict):
     def __add__(self, obj, fact=1):
         assert(obj.vartype == 4 == self.vartype) # are LorentzObjectRepresentation
         
-        
         if self.lorentz_ind != obj.lorentz_ind or self.spin_ind != obj.spin_ind:
             # if the order of indices are different compute a mapping 
             switch_order = []
@@ -1316,7 +1334,7 @@ class LorentzObjectRepresentation(dict):
                     index = obj.spin_ind.index(value)
                 except:
                     raise self.LorentzObjectRepresentationError("Invalid" + \
-                                "addition. Object doen't have the same indices")
+                                "addition. Object doen't have the same indices %s != %s" % (self.spin_ind, obj.spin_ind) )
                 else:
                     switch_order.append(self.nb_lor + index)            
             switch = lambda ind : tuple([ind[switch_order[i]] for i in range(len(ind))])
@@ -1324,20 +1342,24 @@ class LorentzObjectRepresentation(dict):
             # no mapping needed (define switch as identity)
             switch = lambda ind : (ind)
    
-        assert tuple(self.lorentz_ind) == tuple(switch(obj.lorentz_ind)), '%s!=%s' % (self.lorentz_ind, switch(obj.lorentz_ind))
-
+        
+        assert tuple(self.lorentz_ind+self.spin_ind) == tuple(switch(obj.lorentz_ind+obj.spin_ind)), '%s!=%s' % (self.lorentz_ind+self.spin_ind, switch(obj.lorentz_ind+self.spin_ind))
+        assert tuple(self.lorentz_ind) == tuple(switch(obj.lorentz_ind)), '%s!=%s' % (tuple(self.lorentz_ind), switch(obj.lorentz_ind))
+        
         # define an empty representation
-        new = LorentzObjectRepresentation({}, obj.lorentz_ind, self.spin_ind)
+        new = LorentzObjectRepresentation({}, obj.lorentz_ind, obj.spin_ind)
         
         # loop over all indices and fullfill the new object         
         if fact == 1:
             for ind in self.listindices():
                 value = obj.get_rep(ind) + self.get_rep(switch(ind))
+                #value = self.get_rep(ind) + obj.get_rep(switch(ind))
                 new.set_rep(ind, value)
         else:
             for ind in self.listindices():
                 #permute index for the second object
                 value = self.get_rep(switch(ind)) + fact * obj.get_rep(ind)
+                #value = fact * obj.get_rep(switch(ind)) + self.get_rep(ind)
                 new.set_rep(ind, value)            
 
         return new
