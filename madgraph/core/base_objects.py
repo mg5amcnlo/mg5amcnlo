@@ -667,8 +667,10 @@ class Model(PhysicsObject):
         self['ref_dict_to0'] = {}
         self['ref_dict_to1'] = {}
         self['got_majoranas'] = None
+        self['order_hierarchy'] = {}
         self['conserved_charge'] = set()
         self['coupling_orders'] = None
+        self['expansion_order'] = None
         self['version_tag'] = None # position of the directory (for security)
 
     def filter(self, name, value):
@@ -758,6 +760,15 @@ class Model(PhysicsObject):
             if self['interactions']:
                 self['coupling_orders'] = self.get_coupling_orders()
 
+        if (name == 'order_hierarchy') and not self[name]:
+            if self['interactions']:
+                self['order_hierarchy'] = self.get_order_hierarchy()    
+
+        if (name == 'expansion_order') and self[name] == None:
+            if self['interactions']:
+                self['expansion_order'] = \
+                   dict([(order, -1) for order in self.get('coupling_orders')])
+
         return Model.__bases__[0].get(self, name) # call the mother routine
 
     def set(self, name, value):
@@ -781,6 +792,8 @@ class Model(PhysicsObject):
             self['ref_dict_to0'] = {}
             self['got_majoranas'] = None
             self['coupling_orders'] = None
+            self['order_hierarchy'] = {}
+            self['expansion_order'] = None
 
         Model.__bases__[0].set(self, name, value) # call the mother routine
 
@@ -816,6 +829,64 @@ class Model(PhysicsObject):
 
         return set(sum([i.get('orders').keys() for i in \
                         self.get('interactions')], []))
+
+    def get_order_hierarchy(self):
+        """Set a default order hierarchy for the model if not set by the UFO."""
+        # Set coupling hierachy
+        hierarchy = dict([(order, 1) for order in self.get('coupling_orders')])
+        # Special case for only QCD and QED couplings, unless already set
+        if self.get('coupling_orders') == set(['QCD', 'QED']):
+            hierarchy['QED'] = 2
+        return hierarchy
+    
+    def get_particles_hierarchy(self):
+        """Returns the order hierarchies of the model and the
+        particles which have interactions in at least this hierarchy
+        (used in find_optimal_process_orders in MultiProcess diagram
+        generation):
+
+        Check the coupling hierarchy of the model. Assign all
+        particles to the different coupling hierarchies so that a
+        particle is considered to be in the highest hierarchy (i.e.,
+        with lowest value) where it has an interaction.
+        """
+        
+        # Find coupling orders in model
+        coupling_orders = self.get('coupling_orders')
+        # Loop through the different coupling hierarchy values, so we
+        # start with the most dominant and proceed to the least dominant
+        hierarchy = sorted(list(set([self.get('order_hierarchy')[k] for \
+                                     k in coupling_orders])))
+
+        # orders is a rising list of the lists of orders with a given hierarchy
+        orders = []
+        for value in hierarchy:
+            orders.append([ k for (k, v) in \
+                            self.get('order_hierarchy').items() if \
+                            v == value ])
+
+        # Extract the interaction that correspond to the different
+        # coupling hierarchies, and the corresponding particles
+        interactions = []
+        particles = []
+        for iorder, order in enumerate(orders):
+            sum_orders = sum(orders[:iorder+1], [])
+            sum_interactions = sum(interactions[:iorder], [])
+            sum_particles = sum([list(p) for p in particles[:iorder]], [])
+            # Append all interactions that have only orders with at least
+            # this hierarchy
+            interactions.append([i for i in self.get('interactions') if \
+                                 not i in sum_interactions and \
+                                 not any([k not in sum_orders for k in \
+                                          i.get('orders').keys()])])
+            # Append the corresponding particles, excluding the
+            # particles that have already been added
+            particles.append(set(sum([[p.get_pdg_code() for p in \
+                                      inter.get('particles') if \
+                                       p.get_pdg_code() not in sum_particles] \
+                                      for inter in interactions[-1]], [])))
+
+        return particles, hierarchy
 
     def check_majoranas(self):
         """Return True if there is fermion flow violation, False otherwise"""
@@ -1323,22 +1394,27 @@ class Diagram(PhysicsObject):
                 mystr = mystr + 'id:' + str(vert['id']) + '),'
             mystr = mystr[:-1] + ')'
             mystr += " (%s)" % ",".join(["%s=%d" % (key, self['orders'][key]) \
-                                        for key in self['orders'].keys()])
+                                     for key in sorted(self['orders'].keys())])
             return mystr
         else:
             return '()'
 
     def calculate_orders(self, model):
-        """Calculate the actual coupling orders of this diagram"""
+        """Calculate the actual coupling orders of this diagram. Note
+        that the special order WEIGTHED corresponds to the sum of
+        hierarchys for the couplings."""
 
         coupling_orders = dict([(c, 0) for c in model.get('coupling_orders')])
+        weight = 0
         for vertex in self['vertices']:
             if vertex.get('id') == 0: continue
             couplings = model.get('interaction_dict')[vertex.get('id')].\
                         get('orders')
             for coupling in couplings:
                 coupling_orders[coupling] += couplings[coupling]
-
+            weight += sum([model.get('order_hierarchy')[c]*n for \
+                              (c,n) in couplings.items()])
+        coupling_orders['WEIGHTED'] = weight
         self.set('orders', coupling_orders)
 
     def renumber_legs(self, perm_map, leg_list):
@@ -1574,7 +1650,7 @@ class Process(PhysicsObject):
 
         if self['orders']:
             mystr = mystr + " ".join([key + '=' + repr(self['orders'][key]) \
-                       for key in self['orders']]) + ' '
+                       for key in sorted(self['orders'])]) + ' '
 
         # Remove last space
         mystr = mystr[:-1]
@@ -1583,7 +1659,7 @@ class Process(PhysicsObject):
             mystr += " @%d" % self.get('id')
             if self.get('overall_orders'):
                 mystr += " " + " ".join([key + '=' + repr(self['orders'][key]) \
-                       for key in self['orders']]) + ' '
+                       for key in sorted(self['orders'])]) + ' '
         
         if not self.get('decay_chains'):
             return mystr
@@ -1636,7 +1712,7 @@ class Process(PhysicsObject):
 
         if self['orders']:
             mystr = mystr + " ".join([key + '=' + repr(self['orders'][key]) \
-                       for key in self['orders']]) + ' '
+                       for key in sorted(self['orders'])]) + ' '
 
         # Remove last space
         mystr = mystr[:-1]
@@ -1645,7 +1721,7 @@ class Process(PhysicsObject):
             mystr += " @%d" % self.get('id')
             if self.get('overall_orders'):
                 mystr += " " + " ".join([key + '=' + repr(self['orders'][key]) \
-                       for key in self['orders']]) + ' '
+                       for key in sorted(self['orders'])]) + ' '
         
         if not self.get('decay_chains'):
             return mystr
@@ -1864,9 +1940,23 @@ class Process(PhysicsObject):
                                     identical_indices[leg.get('id')] + 1
             else:
                 identical_indices[leg.get('id')] = 1
-        return reduce(lambda x, y: x * y,
-                      [ math.factorial(val) for val in \
+        return reduce(lambda x, y: x * y, [ math.factorial(val) for val in \
                         identical_indices.values() ], 1)
+
+    def check_expansion_orders(self):
+        """Ensure that maximum expansion orders from the model are
+        properly taken into account in the process"""
+
+        # Ensure that expansion orders are taken into account
+        expansion_orders = self.get('model').get('expansion_order')
+        orders = self.get('orders')
+        
+        tmp = [(k,v) for (k,v) in expansion_orders.items() if 0 < v < 99]
+        for (k,v) in tmp:  
+            if k in orders:
+                orders[k] = min(orders[k], v)
+            else:
+                orders[k] = v
 
     def __eq__(self, other):
         """Overloading the equality operator, so that only comparison
@@ -1940,6 +2030,76 @@ class ProcessDefinition(Process):
 
         return super(ProcessDefinition, self).get_sorted_keys()
 
+    def get_minimum_WEIGHTED(self):
+        """Retrieve the minimum starting guess for WEIGHTED order, to
+        use in find_optimal_process_orders in MultiProcess diagram
+        generation (as well as particles and hierarchy). The algorithm:
+
+        1) Pick out the legs in the multiprocess according to the
+        highest hierarchy represented (so don't mix particles from
+        different hierarchy classes in the same multiparticles!)
+
+        2) Find the starting maximum WEIGHTED order as the sum of the
+        highest n-2 weighted orders
+
+        3) Pick out required s-channel particle hierarchies, and use
+        the highest of the maximum WEIGHTED order from the legs and
+        the minimum WEIGHTED order extracted from 2*s-channel
+        hierarchys plus the n-2-2*(number of s-channels) lowest
+        leg weighted orders.
+        """
+
+        model = self.get('model')
+        
+        # Extract hierarchy and particles corresponding to the
+        # different hierarchy levels from the model
+        particles, hierarchy = model.get_particles_hierarchy()
+
+        # Find legs corresponding to the different orders
+        # making sure we look at lowest hierarchy first for each leg
+        max_order_now = []
+        new_legs =  copy.copy(self.get('legs'))
+        for parts, value in zip(particles, hierarchy):
+            ileg = 0
+            while ileg < len(new_legs):
+                if any([id in parts for id in new_legs[ileg].get('ids')]):
+                    max_order_now.append(value)
+                    new_legs.pop(ileg)
+                else:
+                    ileg += 1
+
+        # Now remove the two lowest orders to get maximum (since the
+        # number of interactions is n-2)
+        max_order_now = sorted(max_order_now)[2:]
+
+        # Find s-channel propagators corresponding to the different orders
+        max_order_prop = []
+        for idlist in self.get('required_s_channels'):
+            max_order_prop.append([0,0])
+            for id in idlist:
+                for parts, value in zip(particles, hierarchy):
+                    if id in parts:
+                        max_order_prop[-1][0] += 2*value
+                        max_order_prop[-1][1] += 1
+                        break
+
+        if max_order_prop:
+            if len(max_order_prop) >1:
+                max_order_prop = min(*max_order_prop, key=lambda x:x[0])
+            else:
+                max_order_prop = max_order_prop[0]
+
+            # Use either the max_order from the external legs or
+            # the maximum order from the s-channel propagators, plus
+            # the appropriate lowest orders from max_order_now
+            max_order_now = max(sum(max_order_now),
+                                max_order_prop[0] + \
+                                sum(max_order_now[:-2 * max_order_prop[1]]))
+        else:
+            max_order_now = sum(max_order_now)            
+
+        return max_order_now, particles, hierarchy
+
     def nice_string(self, indent=0):
         """Returns a nicely formated string about current process
         content"""
@@ -1983,7 +2143,7 @@ class ProcessDefinition(Process):
 
         if self['orders']:
             mystr = mystr + " ".join([key + '=' + repr(self['orders'][key]) \
-                       for key in self['orders']]) + ' '
+                       for key in sorted(self['orders'])]) + ' '
 
         # Remove last space
         mystr = mystr[:-1]
@@ -1992,7 +2152,7 @@ class ProcessDefinition(Process):
             mystr += " @%d" % self.get('id')
             if self.get('overall_orders'):
                 mystr += " " + " ".join([key + '=' + repr(self['orders'][key]) \
-                       for key in self['orders']]) + ' '
+                       for key in sorted(self['orders'])]) + ' '
         
         if not self.get('decay_chains'):
             return mystr

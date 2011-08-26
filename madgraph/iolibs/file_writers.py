@@ -353,7 +353,7 @@ class CPPWriter(FileWriter):
     start_comment_pattern = re.compile(r"^(\s*/\*)")
     end_comment_pattern = re.compile(r"(\s*\*/)$")
 
-    quote_chars = re.compile(r"[^\\][\"\']")
+    quote_chars = re.compile(r"[^\\][\"\']|^[\"\']")
     no_space_comment_patterns = re.compile(r"--|\*\*|==|\+\+")
     line_length = 80
     max_split = 40

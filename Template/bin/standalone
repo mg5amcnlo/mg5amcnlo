@@ -39,6 +39,7 @@ mv ./Cards/proc_card.dat ./temp/
 mv ./SubProcesses/makefile_sa ./temp/makefile
 mv ./SubProcesses/check_sa.f ./temp/
 sed "s/all:\(\s\+\$(LIBDIR)lib\w\+\.\w\+\)*/all: \$(LIBDIR)libdhelas3.a \$(LIBDIR)libmodel.a/" < ./Source/makefile > ./temp/mfsource
+mv ./Source/make_opts ./temp/
 rm -rf bin/* Cards/* Events HTML Source/* lib/* SubProcesses/*
 mkdir Source/MODEL
 mkdir Source/DHELAS
@@ -51,6 +52,7 @@ mv ./temp/proc_card.dat ./Cards/
 mv ./temp/makefile ./SubProcesses/
 mv ./temp/check_sa.f ./SubProcesses/
 mv ./temp/mfsource ./Source/makefile
+mv ./temp/make_opts ./Source/
 rm -rf temp
 
 echo " Ready to go with StandAlone MadGraphII "

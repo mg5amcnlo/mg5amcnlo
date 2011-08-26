@@ -517,7 +517,7 @@ C---------------------------
       endif !if there are heavyjets
 
       if(inclht.lt.inclHtmin.or.inclht.gt.inclHtmax)then
-c         write (*,*) ' inclhtmin=',inclHtmin,' -> fails'
+         if(debug) write (*,*) ' inclhtmin=',inclHtmin,' -> fails'
          passcuts=.false.
          return
       endif

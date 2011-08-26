@@ -61,46 +61,14 @@ fi
 c=`awk '/^[^#].*=.*pdlabel/{print $1}' Cards/run_card.dat`
 if [[ $c == "'lhapdf'" ]]; then
     echo Using LHAPDF interface!
-    if [[ -e $main/Source/makefile_default ]]; then
-	echo already loaded
-    else
-        cp $main/Source/makefile $main/Source/makefile_default
-        cp $main/Source/PDF/makefile $main/Source/PDF/makefile_default
-        cp $main/Source/DHELAS/Makefile $main/Source/DHELAS/Makefile_default
-        cp $main/Source/MODEL/makefile $main/Source/MODEL/makefile_default
-        cp $main/Source/CERNLIB/makefile $main/Source/CERNLIB/makefile_default
-        cp $main/SubProcesses/makefile $main/SubProcesses/makefile_default
-        cp $main/SubProcesses/makefile_mo $main/SubProcesses/makefile_mo_default
-        cp $main/Source/makefile_lhapdf $main/Source/makefile
-        cp $main/Source/PDF/makefile_lhapdf $main/Source/PDF/makefile
-        cp $main/SubProcesses/makefile_lhapdf $main/SubProcesses/makefile
-        cp $main/SubProcesses/makefile_mo_lhapdf $main/SubProcesses/makefile_mo
-	sed -i.bak "s|f77|gfortran|g" $main/Source/DHELAS/Makefile
-	sed -i.bak "s|f77|gfortran|g" $main/Source/MODEL/makefile
-	sed -i.bak "s|f77|gfortran|g" $main/Source/CERNLIB/makefile
-        #    cp $lhadir/lib/libLHAPDF.a $main/lib/.
-    fi
+    export lhapdf=true
 else
-    if [[ -e $main/Source/makefile_default ]]; then
-	    mv Source/makefile_default Source/makefile
-	    mv Source/PDF/makefile_default Source/PDF/makefile
-	    mv Source/DHELAS/Makefile_default Source/DHELAS/Makefile
-	    mv Source/MODEL/makefile_default Source/MODEL/makefile
-	    mv Source/CERNLIB/makefile_default Source/CERNLIB/makefile
-	    mv SubProcesses/makefile_default SubProcesses/makefile
-    fi
+    unset lhapdf
 fi
 
-if [[ -d Source ]]; then
-    echo "Compiling Libraries" >& status
-    cd Source
-    make ../bin/sum_html >& /dev/null
-    make ../bin/gen_ximprove >&/dev/null
-    make ../bin/combine_runs >&/dev/null
-    make all >& /dev/null
-    cd ..
-else
-    echo 'Error Source directory not found'
+echo "Compiling libraries"
+bin/compile_Source
+if [[ -e error ]];then
     exit
 fi
 if [[ -d SubProcesses ]]; then
@@ -126,6 +94,12 @@ if [[ -d SubProcesses ]]; then
 
 	if [[ -e ajob1 ]]; then
 	    make madevent > /dev/null
+	    if [[ $? -ne 0 ]];then
+	    # Make didn't exit successfully
+		echo Error make gensym not successful > ../../error
+		cat ../../error
+		exit
+	    fi
 	    chmod +x ajob*
 	    for job in ajob*  ; do
 	      touch wait.$job

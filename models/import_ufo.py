@@ -202,6 +202,33 @@ class UFOMG5Converter(object):
             self.add_interaction(interaction_info)
         
         self.model.set('conserved_charge', self.conservecharge)
+
+        # If we deal with a Loop model here, the order hierarchy MUST be 
+        # defined in the file coupling_orders.py and we import it from 
+        # there.
+
+        hierarchy={}
+        try:
+            all_orders = self.ufomodel.all_orders
+            for order in all_orders:
+                hierarchy[order.name]=order.hierarchy
+        except AttributeError:
+            pass
+        else:
+            self.model.set('order_hierarchy', hierarchy)            
+        
+        # Also set expansion_order, i.e., maximum coupling order per process
+
+        expansion_order={}
+        try:
+            all_orders = self.ufomodel.all_orders
+            for order in all_orders:
+                expansion_order[order.name]=order.expansion_order
+        except AttributeError:
+            pass
+        else:
+            self.model.set('expansion_order', expansion_order)
+
         return self.model
         
     

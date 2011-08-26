@@ -34,11 +34,3 @@ else
     echo "Error could not find SubProcesses"
     exit
 fi
-if [[ -e Source/makefile_default ]];then
-    mv Source/makefile_default Source/makefile
-    mv Source/PDF/makefile_default Source/PDF/makefile
-    mv Source/DHELAS/Makefile_default Source/DHELAS/Makefile
-    mv Source/MODEL/makefile_default Source/MODEL/makefile
-    mv SubProcesses/makefile_default SubProcesses/makefile
-    mv SubProcesses/makefile_mo_default SubProcesses/makefile_mo
-fi
