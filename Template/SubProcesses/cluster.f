@@ -599,7 +599,7 @@ c     final state clustering
                      if(isbw(idij))then
                        pt2ij(idij)=SumDot(pcl(0,idi),pcl(0,idj),1d0)
                        if (btest(mlevel,4))
-     $                    print *,'Mother ',idij,' has ptij ',
+     $                    write(*,*)'Mother ',idij,' has ptij ',
      $                    sqrt(pt2ij(idij))
                      else
                        if(ktscheme.eq.2)then
@@ -608,6 +608,7 @@ c     final state clustering
                          pt2ij(idij)=dj(pcl(0,idi),pcl(0,idj))
                        endif
                      endif
+                     zij(idij)=0d0
                   else
 c     initial state clustering, only if hadronic collision
 c     check whether 2->(n-1) process w/ cms energy > 0 remains
@@ -615,6 +616,7 @@ c     check whether 2->(n-1) process w/ cms energy > 0 remains
                      if(ickkw.eq.2.or.ktscheme.eq.2)then
                         pt2ij(idij)=pyjb(pcl(0,idi),
      $                    pcl(0,idj),pcl(0,iwinp),zij(idij))
+                        zij(idij)=0d0
                      else
                         pt2ij(idij)=djb(pcl(0,idi))
                         zij(idij)=zclus(pcl(0,idi),pcl(0,idj),pcl(0,iwinp))
@@ -648,6 +650,8 @@ c     Take care of special 2 -> 1 case
          idacl(n,2)=idj
          pt2ijcl(n)=pcl(4,idi)
          zcl(n)=0.
+         igraphs(0)=1
+         igraphs(1)=this_config
          cluster=.true.
          clustered=.true.
          return
@@ -679,7 +683,7 @@ c     Reset igraphs with new mother
 c     is clustering
 c     Set mt2ij to m^2+pt^2 
             mt2ij(n)=djb(pcl(0,idacl(n,2)))
-            if (btest(mlevel,3)) then
+            if (btest(mlevel,1)) then
                write(*,*)'mtij(',n,') for ',idacl(n,2),' is ',sqrt(mt2ij(n)),
      $              ' (cf ',sqrt(pt2ijcl(n)),')'
             endif
@@ -729,7 +733,7 @@ c     fs clustering
            if(isbw(imocl(n)))then
              pcl(4,imocl(n))=pt2ijcl(n)
              if (btest(mlevel,4))
-     $          print *,'Mother ',imocl(n),' has mass**2 ',
+     $          write(*,*) 'Mother ',imocl(n),' has mass**2 ',
      $          pcl(4,imocl(n))
            endif
          endif
@@ -826,7 +830,7 @@ c     final state clustering
                            if(isbw(idij))then
                              pt2ij(idij)=SumDot(pcl(0,idi),pcl(0,idj),1d0)
                              if (btest(mlevel,4))
-     $                          print *,'Mother ',idij,' has ptij ',
+     $                          write(*,*) 'Mother ',idij,' has ptij ',
      $                          sqrt(pt2ij(idij))
                            else
                              if(ktscheme.eq.2)then
