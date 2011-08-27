@@ -126,7 +126,7 @@ c
       include 'maxamps.inc'
       integer iforest(2,-max_branch:-1,lmaxconfigs)
       common/to_forest/ iforest
-      integer sprop(-max_branch:-1,lmaxconfigs)
+      integer sprop(maxsproc,-max_branch:-1,lmaxconfigs)
       integer tprid(-max_branch:-1,lmaxconfigs)
       common/to_sprop/sprop,tprid
       integer            mapconfig(0:lmaxconfigs), this_config
@@ -215,10 +215,10 @@ c           Only allow onshell if no "decay" to identical particle
               do j=1,2
                 ida(j)=iforest(j,i,iconfig)
                 if(ida(j).lt.0) then
-                   if(sprop(i,iconfig).eq.sprop(ida(j),iconfig))
+                   if(sprop(1,i,iconfig).eq.sprop(1,ida(j),iconfig))
      $                  idenpart=ida(j)
                 elseif (ida(j).gt.0) then
-                   if(sprop(i,iconfig).eq.IDUP(ida(j),1,1))
+                   if(sprop(1,i,iconfig).eq.IDUP(ida(j),1,1))
      $                  idenpart=ida(j)
                 endif
               enddo
@@ -313,7 +313,7 @@ c
       integer iforest(2,-max_branch:-1,lmaxconfigs)
       common/to_forest/ iforest
 
-      integer sprop(-max_branch:-1,lmaxconfigs)
+      integer sprop(maxsproc,-max_branch:-1,lmaxconfigs)
       integer tprid(-max_branch:-1,lmaxconfigs)
       common/to_sprop/sprop,tprid
 
@@ -381,26 +381,26 @@ c     Reset variables
 c     JA 3/31/11 Keep track of identical particles (i.e., radiation vertices)
 c     by tracing the particle identity from the external particle.
          if(iforest(1,i,iconfig).gt.0) then
-             if (sprop(i,iconfig).eq.idup(iforest(1,i,iconfig),1,1))
-     $        iden_part(i) = sprop(i,iconfig)
+             if (sprop(1,i,iconfig).eq.idup(iforest(1,i,iconfig),1,1))
+     $        iden_part(i) = sprop(1,i,iconfig)
           endif
          if(iforest(2,i,iconfig).gt.0) then
-            if(sprop(i,iconfig).eq.idup(iforest(2,i,iconfig),1,1))
-     $           iden_part(i) = sprop(i,iconfig)
+            if(sprop(1,i,iconfig).eq.idup(iforest(2,i,iconfig),1,1))
+     $           iden_part(i) = sprop(1,i,iconfig)
          endif
          if(iforest(1,i,iconfig).lt.0) then
             if((iden_part(iforest(1,i,iconfig)).ne.0.and.
-     $        sprop(i,iconfig).eq.iden_part(iforest(1,i,iconfig)) .or.
+     $        sprop(1,i,iconfig).eq.iden_part(iforest(1,i,iconfig)) .or.
      $        gforcebw(iforest(1,i,iconfig),iconfig).and.
-     $        sprop(i,iconfig).eq.sprop(iforest(1,i,iconfig),iconfig)))
-     $       iden_part(i) = sprop(i,iconfig)
+     $        sprop(1,i,iconfig).eq.sprop(1,iforest(1,i,iconfig),iconfig)))
+     $       iden_part(i) = sprop(1,i,iconfig)
          endif
          if(iforest(2,i,iconfig).lt.0) then
             if((iden_part(iforest(2,i,iconfig)).ne.0.and.
-     $        sprop(i,iconfig).eq.iden_part(iforest(2,i,iconfig)).or.
+     $        sprop(1,i,iconfig).eq.iden_part(iforest(2,i,iconfig)).or.
      $        gforcebw(iforest(2,i,iconfig),iconfig).and.
-     $        sprop(i,iconfig).eq.sprop(iforest(2,i,iconfig),iconfig)))
-     $           iden_part(i) = sprop(i,iconfig)
+     $        sprop(1,i,iconfig).eq.sprop(1,iforest(2,i,iconfig),iconfig)))
+     $           iden_part(i) = sprop(1,i,iconfig)
          endif
          if (iforest(1,i,iconfig) .eq. 1) tsgn=-1d0
          if (tsgn .eq. 1d0) then                         !s channel

@@ -1455,7 +1455,7 @@ class ProcessExporterFortranME(ProcessExporterFortran):
         configs = [(i+1, d) for i,d in enumerate(matrix_element.get('diagrams'))]
         mapconfigs = [c[0] for c in configs]
         return mapconfigs, self.write_configs_file_from_diagrams(writer,
-                                                            [c[1] for c in configs],
+                                                            [[c[1]] for c in configs],
                                                             mapconfigs,
                                                             nexternal, ninitial)
 
@@ -1465,31 +1465,65 @@ class ProcessExporterFortranME(ProcessExporterFortran):
     def write_configs_file_from_diagrams(self, writer, configs, mapconfigs,
                                          nexternal, ninitial):
         """Write the actual configs.inc file.
-        configs is the diagrams corresponding to configs,
-        mapconfigs gives the diagram number for each config."""
+        
+        configs is the diagrams corresponding to configs (each
+        diagrams is a list of corresponding diagrams for all
+        subprocesses, with None if there is no corresponding diagrams
+        for a given process).
+        mapconfigs gives the diagram number for each config.
+
+        For s-channels, we need to output one PDG for each subprocess in
+        the subprocess group, in order to be able to pick the right
+        one for multiprocesses."""
 
         lines = []
 
         s_and_t_channels = []
 
-        minvert = min([max(diag.get_vertex_leg_numbers()) for diag in configs])
+        minvert = min([max([d for d in config if d][0].get_vertex_leg_numbers()) \
+                       for config in configs])
+
+        # Number of subprocesses
+        nsubprocs = len(configs[0])
 
         nconfigs = 0
 
-        for iconfig, helas_diag in enumerate(configs):
+        for iconfig, helas_diags in enumerate(configs):
             if any([vert > minvert for vert in
-                    helas_diag.get_vertex_leg_numbers()]):
+                    [d for d in helas_diags if d][0].get_vertex_leg_numbers()]):
                 # Only 3-vertices allowed in configs.inc
                 continue
             nconfigs += 1
 
-            # Need to reorganize the topology so that we start with all
-            # final state external particles and work our way inwards
+            # Need s- and t-channels for all subprocesses, including
+            # those that don't contribute to this config
+            empty_verts = []
+            stchannels = []
+            for h in helas_diags:
+                if h:
+                    # get_s_and_t_channels gives vertices starting from
+                    # final state external particles and working inwards
+                    stchannels.append(h.get('amplitudes')[0].\
+                                      get_s_and_t_channels(ninitial))
+                else:
+                    stchannels.append((empty_verts, None))
 
-            schannels, tchannels = helas_diag.get('amplitudes')[0].\
-                                              get_s_and_t_channels(ninitial)
+            # For t-channels, just need the first non-empty one
+            tchannels = [t for s,t in stchannels if t != None][0]
 
-            s_and_t_channels.append([schannels, tchannels])
+            # For s_and_t_channels (to be used later) use only first config
+            s_and_t_channels.append([[s for s,t in stchannels if t != None][0],
+                                     tchannels])
+
+            # Make sure empty_verts is same length as real vertices
+            if any([s for s,t in stchannels]):
+                empty_verts[:] = [None]*max([len(s) for s,t in stchannels])
+
+                # Reorganize s-channel vertices to get a list of all
+                # subprocesses for each vertex
+                schannels = zip(*[s for s,t in stchannels])
+            else:
+                schannels = []
 
             allchannels = schannels
             if len(tchannels) > 1:
@@ -1503,24 +1537,35 @@ class ProcessExporterFortranME(ProcessExporterFortran):
             lines.append("data mapconfig(%d)/%d/" % (nconfigs,
                                                      mapconfigs[iconfig]))
 
-            for vert in allchannels:
+            for verts in allchannels:
+                if verts in schannels:
+                    vert = [v for v in verts if v][0]
+                else:
+                    vert = verts
                 daughters = [leg.get('number') for leg in vert.get('legs')[:-1]]
                 last_leg = vert.get('legs')[-1]
                 lines.append("data (iforest(i,%d,%d),i=1,%d)/%s/" % \
                              (last_leg.get('number'), nconfigs, len(daughters),
                               ",".join([str(d) for d in daughters])))
-                if vert in schannels:
-                    lines.append("data sprop(%d,%d)/%d/" % \
-                                 (last_leg.get('number'), nconfigs,
-                                  last_leg.get('id')))
+                if verts in schannels:
+                    pdgs = []
+                    for v in verts:
+                        if v:
+                            pdgs.append(v.get('legs')[-1].get('id'))
+                        else:
+                            pdgs.append(0)
+                    lines.append("data (sprop(i,%d,%d),i=1,%d)/%s/" % \
+                                 (last_leg.get('number'), nconfigs, nsubprocs,
+                                  ",".join([str(d) for d in pdgs])))
                     lines.append("data tprid(%d,%d)/0/" % \
                                  (last_leg.get('number'), nconfigs))
-                elif vert in tchannels[:-1]:
+                elif verts in tchannels[:-1]:
                     lines.append("data tprid(%d,%d)/%d/" % \
                                  (last_leg.get('number'), nconfigs,
                                   abs(last_leg.get('id'))))
-                    lines.append("data sprop(%d,%d)/0/" % \
-                                 (last_leg.get('number'), nconfigs))
+                    lines.append("data (sprop(i,%d,%d),i=1,%d)/%s/" % \
+                                 (last_leg.get('number'), nconfigs, nsubprocs,
+                                  ",".join(['0'] * nsubprocs)))
 
         # Write out number of configs
         lines.append("# Number of configs")
@@ -2287,9 +2332,14 @@ class ProcessExporterFortranMEGroup(ProcessExporterFortranME):
             # Check if any diagrams correspond to this config
             if set(config) == set([0]):
                 continue
-            subproc, diag = [(i,d - 1) for (i,d) in enumerate(config) \
-                             if d > 0][0]
-            diagrams.append(matrix_elements[subproc].get('diagrams')[diag])
+            subproc_diags = []
+            for s,d in enumerate(config):
+                if d:
+                    subproc_diags.append(matrix_elements[s].\
+                                         get('diagrams')[d-1])
+                else:
+                    subproc_diags.append(None)
+            diagrams.append(subproc_diags)
             config_numbers.append(iconfig + 1)
 
         # Extract number of external particles
