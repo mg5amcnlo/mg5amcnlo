@@ -32,6 +32,8 @@ import madgraph.core.diagram_generation as diagram_generation
 import madgraph.core.color_amp as color_amp
 import madgraph.core.color_algebra as color
 
+from madgraph import MadGraph5Error
+
 #===============================================================================
 # 
 #===============================================================================
@@ -3736,6 +3738,7 @@ class HelasDecayChainProcess(base_objects.PhysicsObject):
             decay_chain = dc_amplitude.get('decay_chains').pop(0)
             self['decay_chains'].append(HelasDecayChainProcess(\
                 decay_chain))
+            
 
     def combine_decay_chain_processes(self):
         """Recursive function to generate complete
@@ -4125,6 +4128,10 @@ class HelasMultiProcess(base_objects.PhysicsObject):
                     matrix_element.set('color_matrix',
                                        list_color_matrices[col_index])
             
+        if not matrix_elements:
+            raise MadGraph5Error, \
+                  "No matrix elements generated, check overall coupling orders"
+
         return matrix_elements
 
     @staticmethod
