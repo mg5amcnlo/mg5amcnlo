@@ -887,7 +887,7 @@ class HelasWavefunction(base_objects.PhysicsObject):
                 # Incoming particle at odd slot -> decrease by 1
                 wf_index -= 1
         return wf_index + 1
-
+    
     def get_call_key(self):
         """Generate the (spin, number, C-state) tuple used as key for
         the helas call dictionaries in HelasModel"""
@@ -899,9 +899,9 @@ class HelasWavefunction(base_objects.PhysicsObject):
         # Sort according to spin and flow direction
         res.sort()
 
-        res.append(self.get_spin_state_number())
-
-        res.append(self.find_outgoing_number())
+        if not self['is_loop']:
+            res.append(self.get_spin_state_number())
+            res.append(self.find_outgoing_number())
 
         # Check if we need to append a charge conjugation flag
         if self.needs_hermitian_conjugate():
@@ -1416,6 +1416,9 @@ class HelasAmplitude(base_objects.PhysicsObject):
 
         # Properties related to the interaction generating the propagator
         self['interaction_id'] = 0
+        # Base for born amplitude, the 'type' argument for the CT-vertices
+        # and 'loop' for the HelasAmplitudes in a LoopHelasAmplitude.
+        self['type'] = 'base'
         self['pdg_codes'] = []
         self['orders'] = {}
         self['inter_color'] = None
@@ -1605,6 +1608,8 @@ class HelasAmplitude(base_objects.PhysicsObject):
                     self.set('orders', inter.get('orders'))
                     # Note that the following values might change, if
                     # the relevant color/lorentz/coupling is not index 0
+                    if inter.get('type'):
+                        self.set('type', inter.get('type')[0])
                     if inter.get('color'):
                         self.set('inter_color', inter.get('color')[0])
                     if inter.get('lorentz'):
@@ -1665,6 +1670,12 @@ class HelasAmplitude(base_objects.PhysicsObject):
 
         # Sort according to spin and flow direction
         res.sort()
+
+        # The call is different depending on the type of vertex. 
+        # For example, base would give AMP(%d), R2 would give AMPL(0,%d)
+        # and a single pole UV counter-term would give AMPL(1,%d).
+        if self['type']!='base':
+            res.append(self['type'])
 
         # Check if we need to append a charge conjugation flag
         if self.needs_hermitian_conjugate():

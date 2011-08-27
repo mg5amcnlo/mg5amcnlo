@@ -1,0 +1,459 @@
+################################################################################
+#
+# Copyright (c) 2009 The MadGraph Development team and Contributors
+#
+# This file is a part of the MadGraph 5 project, an application which 
+# automatically generates Feynman diagrams and matrix elements for arbitrary
+# high-energy processes in the Standard Model and beyond.
+#
+# It is subject to the MadGraph license which should accompany this 
+# distribution.
+#
+# For more information, please visit: http://madgraph.phys.ucl.ac.be
+#
+################################################################################
+"""Methods and classes to export matrix elements to v4 format."""
+
+import copy
+import fractions
+import glob
+import logging
+import os
+import re
+import shutil
+import subprocess
+
+import madgraph.core.base_objects as base_objects
+import madgraph.core.color_algebra as color
+import madgraph.core.helas_objects as helas_objects
+import madgraph.iolibs.drawing_eps as draw
+import madgraph.iolibs.files as files
+import madgraph.iolibs.group_subprocs as group_subprocs
+import madgraph.iolibs.misc as misc
+import madgraph.iolibs.file_writers as writers
+import madgraph.iolibs.gen_infohtml as gen_infohtml
+import madgraph.iolibs.template_files as template_files
+import madgraph.iolibs.ufo_expression_parsers as parsers
+import madgraph.iolibs.export_v4 as export_v4
+import madgraph.various.diagram_symmetry as diagram_symmetry
+import madgraph.various.process_checks as process_checks
+
+
+import aloha.create_aloha as create_aloha
+import models.write_param_card as param_writer
+from madgraph import MadGraph5Error, MG5DIR
+from madgraph.iolibs.files import cp, ln, mv
+_file_path = os.path.split(os.path.dirname(os.path.realpath(__file__)))[0] + '/'
+logger = logging.getLogger('madgraph.loop_exporter')
+
+#===============================================================================
+# LoopExporterFortran
+#===============================================================================
+class LoopExporterFortran(object):
+    """ Class to define general helper functions to the different 
+        loop fortran exporters (ME, SA, MEGroup, etc..) which will inherit both 
+        from this class AND from the corresponding ProcessExporterFortran(ME,SA,...).
+        It plays the same role as ProcessExporterFrotran and simply defines here
+        loop-specific helpers functions necessary for all loop exporters.
+        Notice that we do have LoopExporterFortran inheriting from 
+        ProcessExporterFortran hence giving access to arguments like dir_path and
+        clean. This creates a diamond inheritance scheme in which we avoid mro
+        (method resolution order) ambiguity by using unique method names here."""
+
+    def __init__(self, loop_dir = "", *args, **kwargs):
+        """Initiate the LoopExporterFortran with directory information on where
+        to find all the loop-related source files, like CutTools"""
+        self.loop_dir = loop_dir
+        super(LoopExporterFortran,self).__init__(*args, **kwargs)
+        
+    def copy_CutTools(self, targetPath):
+        """copy the CutTools source directory inside the target path given
+        in argument"""
+        
+        CutTools_path=os.path.join(self.loop_dir, 'CutTools')
+        if not os.path.isdir(os.path.join(targetPath, 'CutTools')):
+            if os.path.isdir(CutTools_path):
+                shutil.copytree(CutTools_path,os.path.join(targetPath,'CutTools')\
+                                , True)
+            else:
+                raise MadGraph5Error, \
+                      "No valid CutTools path given for processing loops."
+        
+        
+
+#===============================================================================
+# LoopProcessExporterFortranSA
+#===============================================================================
+class LoopProcessExporterFortranSA(export_v4.ProcessExporterFortranSA,
+                                   LoopExporterFortran):
+    """Class to take care of exporting a set of loop matrix elements in the
+       Fortran format."""
+
+    # Init function to initialize both mother classes, depending on the nature
+    # of the argument given
+    def __init__(self, *args, **kwargs):
+       super(LoopProcessExporterFortranSA, self).__init__(*args, **kwargs)          
+
+    def copy_v4template(self):
+        """Additional actions needed for setup of Template
+        """
+        
+        super(LoopProcessExporterFortranSA, self).copy_v4template()
+        
+        # We must copy the CutTools to the Source folder of the active Template
+        super(LoopProcessExporterFortranSA, self).copy_CutTools(
+                                    os.path.join(self.dir_path, 'Source'))
+        
+        try:
+            subprocess.call([os.path.join('bin', 'standalone')],
+                            stdout = os.open(os.devnull, os.O_RDWR),
+                            stderr = os.open(os.devnull, os.O_RDWR),
+                            cwd=self.dir_path)
+        except OSError:
+            # Probably standalone already called
+            pass
+
+    #===========================================================================
+    # Create proc_card_mg5.dat for Standalone directory
+    #===========================================================================
+    def finalize_v4_directory(self, matrix_elements, history, makejpg = False,
+                              online = False):
+        """Finalize Standalone MG4 directory by generation proc_card_mg5.dat"""
+
+        # The super function finalize_v4_directory of the mother class
+        # ProcessExporterFortranSA is not used here because we want to use
+        # the gfortran compiler throughout the compilation (mandatory for 
+        # CutTools written in f90)    
+
+        self.set_compiler('gfortran')
+        self.make()
+
+        # Write command history as proc_card_mg5
+        if os.path.isdir(os.path.join(self.dir_path, 'Cards')):
+            output_file = os.path.join(self.dir_path, 'Cards', 'proc_card_mg5.dat')
+            output_file = open(output_file, 'w')
+            text = ('\n'.join(history) + '\n') % misc.get_time_info()
+            output_file.write(text)
+            output_file.close()
+
+    #===========================================================================
+    # Make the CutTools directories for Standalone directory
+    #===========================================================================
+    def make(self):
+        """Run make in the DHELAS and MODEL directories, to set up
+        everything for running standalone
+        """
+        
+        super(LoopProcessExporterFortranSA, self).make()
+        
+        #source_dir = os.path.join(self.dir_path, "Source")
+        #logger.info("Running make for Helas")
+        #misc.compile(arg=['../lib/libdhelas.a'], cwd=source_dir, mode='fortran')
+        #logger.info("Running make for Model")
+        #misc.compile(arg=['../lib/libmodel.a'], cwd=source_dir, mode='fortran')
+
+
+    #===========================================================================
+    # generate_subprocess_directory_v4
+    #===========================================================================
+    def generate_loop_subprocess(self, matrix_element,
+                                         fortran_model):
+        """Generate the Pxxxxx directory for a loop subprocess in MG4 standalone,
+        including the necessary loop_matrix.f, born_matrix.f and include files.
+        Notice that this is too different from generate_subprocess_directory_v4
+        so that there is no point reusing this mother function."""
+
+        cwd = os.getcwd()
+
+        # Create the directory PN_xx_xxxxx in the specified path
+        dirpath = os.path.join(self.dir_path, 'SubProcesses', \
+                       "P%s" % matrix_element.get('processes')[0].shell_string())
+
+        try:
+            os.mkdir(dirpath)
+        except os.error as error:
+            logger.warning(error.strerror + " " + dirpath)
+
+        try:
+            os.chdir(dirpath)
+        except os.error:
+            logger.error('Could not cd to directory %s' % dirpath)
+            return 0
+
+        logger.info('Creating files in directory %s' % dirpath)
+
+        # Extract number of external particles
+        (nexternal, ninitial) = matrix_element.get_nexternal_ninitial()
+
+        # Create the necessary files for the loop matrix element subroutine
+        filename = 'loop_matrix.f'
+        calls = self.write_loopmatrix(
+            writers.FortranWriter(filename),
+            matrix_element,
+            fortran_model)
+
+        filename = 'CT_interface.f'
+        self.write_CT_interface(writers.FortranWriter(filename),\
+                                matrix_element)
+        
+        filename = 'loop_num.f'
+        self.write_loop_num(writers.FortranWriter(filename),\
+                                matrix_element,fortran_model)
+        
+#        Not ready yet
+#        filename = 'born_matrix.f'
+#        calls = self.write_bornmatrix(
+#            writers.FortranWriter(filename),
+#            matrix_element,
+#            fortran_model)
+
+        filename = 'nexternal.inc'
+        self.write_nexternal_file(writers.FortranWriter(filename),
+                             nexternal, ninitial)
+
+        filename = 'pmass.inc'
+        self.write_pmass_file(writers.FortranWriter(filename),
+                         matrix_element)
+
+#        Different for loop computations
+#        filename = 'ngraphs.inc'
+#        self.write_ngraphs_file(writers.FortranWriter(filename),
+#                           len(matrix_element.get_all_amplitudes()))
+
+#        Not ready yet
+        # Generate diagrams
+#        filename = "loop_matrix.ps"
+#        plot = draw.MultiEpsDiagramDrawer(matrix_element.get('base_amplitude').\
+#                                             get('loop_diagrams'),
+#                                          model=matrix_element.get('processes')[0].\
+#                                          filename,
+#                                             get('model'),
+#                                          amplitude='')
+#        logger.info("Generating loop Feynman diagrams for " + \
+#                     matrix_element.get('processes')[0].nice_string())
+#        plot.draw()
+#        filename = "born_matrix.ps"
+#        plot = draw.MultiEpsDiagramDrawer(matrix_element.get('base_amplitude').\
+#                                             get('born_diagrams'),
+#                                          model=matrix_element.get('processes')[0].\
+#                                          filename,
+#                                             get('model'),
+#                                          amplitude='')
+#        logger.info("Generating born Feynman diagrams for " + \
+#                     matrix_element.get('processes')[0].nice_string())
+#        plot.draw()
+
+        linkfiles = ['check_sa.f', 'coupl.inc', 'makefile']
+
+        for file in linkfiles:
+            ln('../%s' % file)
+            
+        linkfiles = ['cts_mprec.h', 'cts_mpc.h']
+
+        for file in linkfiles:
+            ln('../../Source/CutTools/src/cts/%s' % file)
+
+        # Return to original PWD
+        os.chdir(cwd)
+
+        if not calls:
+            calls = 0
+        return calls
+
+    def write_loop_num(self, writer, matrix_element,fortran_model):
+        """ Create the file containing the core subroutine called by CutTools
+        which contains the Helas calls building the loop"""
+
+        if not matrix_element.get('processes') or \
+               not matrix_element.get('diagrams'):
+            return 0
+
+        if not isinstance(writer, writers.FortranWriter):
+            raise writers.FortranWriter.FortranWriterError(\
+                "writer not FortranWriter")
+
+        # Set lowercase/uppercase Fortran code
+        writers.FortranWriter.downcase = False
+        
+        file = open(os.path.join(_file_path, \
+                 'iolibs/template_files/loop/loop_num.inc')).read()
+        
+        replace_dict = {}
+        
+        replace_dict['nexternal']=(matrix_element.get_nexternal_ninitial()[0]-2)
+        loop_helas_calls=fortran_model.get_loop_amplitude_helas_calls(matrix_element)
+        replace_dict['loop_helas_calls'] = "\n".join(loop_helas_calls)
+
+        file=file%replace_dict
+        writer.writelines(file)
+        
+    def write_CT_interface(self, writer, matrix_element):
+        """ Create the file loop_helas.f which contains the subroutine defining
+        the loop HELAS-like calls along with the general interfacing subroutine. """
+
+        files=[]
+
+        # Fill here what's common to all files read here.             
+        replace_dict_orig={}
+
+        # Extract the number of external legs
+        replace_dict_orig['nexternal']=\
+          (matrix_element.get_nexternal_ninitial()[0]-2)
+        
+        # First write CT_interface which interfaces MG5 with CutTools.
+        replace_dict=copy.copy(replace_dict_orig)
+        file = open(os.path.join(_file_path, \
+                 'iolibs/template_files/loop/CT_interface.inc')).read()
+        
+        # Extract version number and date from VERSION file
+        info_lines = self.get_mg5_info_lines()
+        replace_dict['info_lines'] = info_lines
+
+        # Extract process info lines
+        process_lines = self.get_process_info_lines(matrix_element)
+        replace_dict['process_lines'] = process_lines    
+            
+        file = file % replace_dict
+        files.append(file)
+        
+        # Now collect the different kind of subroutines needed for the
+        # loop HELAS-like calls.
+        CallKeys=[]
+        for ldiag in matrix_element.get_loop_diagrams():
+            for lamp in ldiag.get_loop_amplitudes():
+                if lamp.get_call_key()[1:] not in CallKeys:
+                    CallKeys.append(lamp.get_call_key()[1:])
+                
+        for callkey in CallKeys:
+            replace_dict=copy.copy(replace_dict_orig)
+            # Add to this dictionary all other attribute common to all
+            # HELAS-like loop subroutines.
+            replace_dict['nloopline']=callkey[0]
+            wfsargs="".join([("W"+str(i)+", ") for i in range(1,callkey[1]+1)])
+            replace_dict['wfsargs']=wfsargs
+            margs="".join([("M"+str(i)+", ") for i in range(1,callkey[0]+1)])
+            replace_dict['margs']=margs
+            wfsargsdecl="".join([("W"+str(i)+"(20), ") for i in range(1,callkey[1]+1)])[:-2]
+            replace_dict['wfsargsdecl']=wfsargsdecl
+            margsdecl="".join([("M"+str(i)+", ") for i in range(1,callkey[0]+1)])[:-2]
+            replace_dict['margsdecl']=margsdecl
+            weset="\n".join([("WE(I,"+str(i)+")=W"+str(i)+"(I)") for \
+                             i in range(1,callkey[1]+1)])
+            replace_dict['weset']=weset
+            mset="\n".join([("M2L("+str(i)+")=M"+str(i)+"**2") for \
+                             i in range(1,callkey[0]+1)])
+            replace_dict['mset']=mset            
+            if callkey[0]==callkey[1]:
+                file = open(os.path.join(_file_path, \
+                 'iolibs/template_files/loop/helas_loop_amplitude.inc')).read()                
+            else:
+                file = open(os.path.join(_file_path, \
+                 'iolibs/template_files/loop/helas_loop_amplitude_pairing.inc')).read() 
+                pairingargs="".join([("P"+str(i)+", ") for i in range(1,callkey[0]+1)])
+                replace_dict['pairingargs']=pairingargs
+                pairingdecl="".join([("P"+str(i)+", ") for i in range(1,callkey[0]+1)])[:-2]
+                replace_dict['pairingdecl']=pairingdecl
+                pairingset="\n".join([("P("+str(i)+")=P"+str(i)) for \
+                             i in range(1,callkey[0]+1)])
+                replace_dict['pairingset']=pairingset
+            file = file % replace_dict
+            files.append(file)   
+        
+        file="\n".join(files)
+        writer.writelines(file)
+        
+    def write_loopmatrix(self, writer, matrix_element, fortran_model):
+        """Create the loop_matrix.f file."""
+        
+        if not matrix_element.get('processes') or \
+               not matrix_element.get('diagrams'):
+            return 0
+
+        if not isinstance(writer, writers.FortranWriter):
+            raise writers.FortranWriter.FortranWriterError(\
+                "writer not FortranWriter")
+
+        # Set lowercase/uppercase Fortran code
+        writers.FortranWriter.downcase = False
+
+        replace_dict = {}
+
+        # Extract version number and date from VERSION file
+        info_lines = self.get_mg5_info_lines()
+        replace_dict['info_lines'] = info_lines
+
+        # Extract process info lines
+        process_lines = self.get_process_info_lines(matrix_element)
+        replace_dict['process_lines'] = process_lines
+
+        # Extract number of external particles
+        (nexternal, ninitial) = matrix_element.get_nexternal_ninitial()
+        replace_dict['nexternal'] = nexternal-2
+
+        # Extract ncomb
+        ncomb = matrix_element.get_helicity_combinations()
+        replace_dict['ncomb'] = ncomb
+
+        # Extract helicity lines
+        helicity_lines = self.get_helicity_lines(matrix_element)
+        replace_dict['helicity_lines'] = helicity_lines
+
+        # Extract overall denominator
+        # Averaging initial state color, spin, and identical FS particles
+        den_factor_line = self.get_den_factor_line(matrix_element)
+        replace_dict['den_factor_line'] = den_factor_line
+
+        # Extract nloopamps
+        nloopamps = matrix_element.get_number_of_loop_amplitudes()
+        replace_dict['nloopamps'] = nloopamps
+
+        # Extract nbronamps
+        nbornamps = matrix_element.get_number_of_born_amplitudes()
+        replace_dict['nbornamps'] = nbornamps
+
+        # Extract nwavefuncs
+        nwavefuncs = matrix_element.get_number_of_external_wavefunctions()
+        replace_dict['nwavefuncs'] = nwavefuncs
+
+        # Extract ncolorloop
+        ncolorloop = max(1, len(matrix_element.get('loop_color_basis')))
+        replace_dict['ncolorloop'] = ncolorloop
+
+        # Extract ncolorborn
+        ncolorborn = max(1, len(matrix_element.get('born_color_basis')))
+        replace_dict['ncolorborn'] = ncolorborn
+
+        # Extract color data lines
+        color_data_lines = self.get_color_data_lines(matrix_element)
+        replace_dict['color_data_lines'] = "\n".join(color_data_lines)
+
+#        Not ready yet
+        # Extract helas calls
+        helas_calls = fortran_model.get_matrix_element_calls(\
+                    matrix_element)
+        replace_dict['helas_calls'] = "\n".join(helas_calls)
+#        replace_dict['helas_calls'] = "\n".join("Not ready yet")
+
+        # Extract BORNJAMP lines
+        born_jamp_lines = self.get_JAMP_lines(matrix_element.get_born_color_amplitudes(),
+                                              "JAMPB(","AMP(")
+        replace_dict['born_jamp_lines'] = '\n'.join(born_jamp_lines)
+        # Extract LOOPJAMP lines
+        loop_jamp_lines = self.get_JAMP_lines(matrix_element.get_loop_color_amplitudes(),
+                                              "JAMPL(K,","AMPL(K,")
+        replace_dict['loop_jamp_lines'] = '\n'.join(loop_jamp_lines)        
+
+        file = open(os.path.join(_file_path, \
+                 'iolibs/template_files/loop/loop_matrix_standalone.inc')).read()
+        file = file % replace_dict
+
+        # Write the file
+        writer.writelines(file)
+
+        return len(filter(lambda call: call.find('CALL LOOP') != 0, helas_calls))
+
+    def write_bornmatrix(self, writer, matrix_element, fortran_model):
+        """Create the born_matrix.f file for the born process as for a standard
+        tree-level computation."""
+        pass
+

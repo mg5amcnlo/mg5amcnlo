@@ -1,0 +1,230 @@
+------------------------------------------------------------------------
+ 
+              CutTools V1.6.5
+
+ - Authors: Giovanni Ossola, Costas G. Papadopoulos, Roberto Pittau
+
+ - When using this code, please quote the following 4 papers:
+
+   \bibitem{CutTools} 
+     G.~Ossola, C.~G.~Papadopoulos and R.~Pittau,
+     %``CutTools: a program implementing the OPP reduction method
+     %to compute one-loop amplitudes,''   
+     arXiv:0711.3596 [hep-ph].
+     %%CITATION = ARXIV:0711.3596;%%
+
+   \bibitem{Ossola:2006us}
+     G.~Ossola, C.~G.~Papadopoulos and R.~Pittau,
+     %``Reducing full one-loop amplitudes to scalar integrals at the integrand
+     %level,''
+     Nucl.\ Phys.\  B {\bf 763} (2007) 147 [arXiv:hep-ph/0609007].
+     %%CITATION = NUPHA,B763,147;%%
+
+   \bibitem{Ossola:2008xq}
+     G.~Ossola, C.~G.~Papadopoulos and R.~Pittau,
+     %``On the Rational Terms of the one-loop amplitudes,''
+     JHEP {\bf 0805} (2008) 004
+     [arXiv:0802.1876 [hep-ph]].
+     %%CITATION = JHEPA,0805,004;%%
+
+   \bibitem{Ossola:2007bb}
+     G.~Ossola, C.~G.~Papadopoulos and R.~Pittau,
+     %``Numerical Evaluation of Six-Photon Amplitudes,''
+     JHEP {\bf 0707} (2007) 085
+     [arXiv:0704.1271 [hep-ph]].
+     %%CITATION = JHEPA,0707,085;%%
+
+ - When using this code, together with the routines in 
+   avh_olo_s4.f, please quote also the paper:
+
+   \bibitem{vanHameren:2005ed}
+     A.~van Hameren, J.~Vollinga and S.~Weinzierl,
+     %``Automated computation of one-loop integrals in massless theories,''
+     Eur.\ Phys.\ J.\  C {\bf 41} (2005) 361 [arXiv:hep-ph/0502165].
+     %%CITATION = EPHJA,C41,361;%%
+
+ - !!Do not forget that the rational part rat2 should be provided by hand!!
+
+---------------------------------------------------------------------------
+
+To compile and to test the program, edit the makefile and set the platform
+you are using by choosing between PLATFORM= LINUX and PLATFORM= DOS. 
+Then type:
+
+  > make
+
+This will produce the directory "includects", containing the *.h files, the
+*.mod files and the library "libcts.a". The whole directory "includects" 
+and the library "libcts.a", should be present (on linked with a soft link)
+in your working directory (called "examples" in the following).
+
+To check your installation go to the working directory "examples" and type
+
+  > make
+
+Then, check the implementation of the multiprecision routines by typing
+
+  > make mpcheck
+
+To compare with reference outputs contained in "examples/testdir", type
+
+  > make test  
+
+In directory "examples" will then appear the file "testoutput", containing the
+differences between the generates outputs (out*_ccc) and the reference
+ones (out*_ref) contained in "examples/testdir.
+
+Your own numerator function should be written in the file
+"numerators.f", that is also included in the directory "examples".
+When provided, a multi-precision version of it should be put in  
+"mpnumerators.f90".  
+
+---------------------------------------------------------------------------
+
+ Some history of the current version:
+
+   25 Jan 2007:
+
+   Towards a version with m-denominators
+
+   09 Apr 2008:
+
+- in dp_cutting4: 
+  if (real(cb3).le.0.d0) then changed to
+  if (real(cb3).lt.0.d0) then
+
+- in mp_cutting4: 
+  if (mpreal(cb3).le.0.d0) then changed to
+  if (mpreal(cb3).lt.0.d0) 
+
+- corrected test_rat in multiprecision (d_6 was not properly allocated 
+  when printing out its value)
+
+   24 Jun 2008:
+
+- in dp_cutting4 and mp_cutting4: corrected the roots of the quadratic 
+  equations to always get precise results
+- corrected l3 and l4 computation to always get precise results
+- The N=N test changed using now the m momenta appearing in the m denominators 
+- program restructured to interface with Formcalc/Feyncalc 
+  (call dcut,ccut etc...)
+
+   28 July 2008:
+
+- The N=N test now also contains a small component with a generic q
+
+  02 September 2008:
+
+- new algorithm implemented for calculating Rational Terms with inf=.true.  
+
+  04 September 2008:
+
+- dp_getd amd mp_getd modified to call the num function only 2 times.
+
+  24 September 2008:
+
+- Corrected error in  subroutine getdloop (cts_loopfunctions.f90)
+
+  wrong ->  k2 = den(bn4(np,3,i))%p-den(bn4(np,2,1))%p 
+  right ->  k2 = den(bn4(np,3,i))%p-den(bn4(np,2,i))%p 
+
+  October 30 2008:
+
+- interface with general avh routines 
+- corrected wrong scaless b11 function in cts_loopfunctions.f90: it was not 0.
+
+  November  04 2008:
+
+- interface with qcdloop (still to be activated at the compilation level)
+- changed the basis for the 1-point functions
+
+  December  01 2008:
+
+- changed the basis for the 2-point functions
+
+  January 23 2009:
+
+- interface with qcdloop activated 
+- loptools library disactivated (because of conflicts with qcdloop)
+
+  July 2 2009:
+ 
+- try to make of it the official version V1.1 
+
+- August 20 2009:
+
+- makefile simplified, eliminated configure, eliminated LoopTools  
+- qcdloop version 1.9 replaces qcdloop version 1.8 
+  (problem fixed in qlbox15.f)
+- makefile modified to run on DOS/Windows Platforms as well
+
+- November 19 2009:
+
+- m^2 (and not m!) as an input in acut,...,xcut
+- thrs added as an input in ctsinit
+- new bases in the 3,2 and 1 point sectors
+- N(q) is called the minimum amount of times
+- N = N test only performed with q = -momenta in the denominators
+- flag inf1 added to choose amomg 2 different ways to compute R_1 
+  in the 4 point sector in the qt2 -> limit
+- version of avh_olo with complex masses 
+
+- June 1 2010:
+
+- new test for the numerical accuracy based on a re-fitting
+  the re-constructed numerator at different values of qt2.
+  The test is now trustable.
+  The computation time is larger for simple Numerator functions because
+  the fitted ones takes more time. In real life, when N(q) is complicated
+  that should be OK. 
+- The 4-point part of R_1 is obtained with a new algorithm.
+- Most of the times, computing N(q) in double precision and
+  all the fitting procedure in mprec ADJUSTS the bad points.
+  See mpnumerators.f90 and example1.f to see how to achieve that.
+- Routines acut, bcut, ccut, dcut ... eliminated form
+  cts_cutroutines.f90
+- example2.f eliminated  
+- R_1 separated from the rest of the amplitude (HELAC-NLO convention) 
+
+- February 4 2011:
+
+- eliminated any use of dynamical memory 
+- loose N=N test added to avoid large unstable weights
+
+- February 10 2011:
+
+- computing R_1 by colling Num (not Numrec). This gives more numerical 
+  stability  
+- updated version of mprec implemented
+
+- March  1 2011:
+
+- computing R_1 and amp1 by calling Num (not Numrec) ONLY in multiprecision
+  to comprimize between speed and accuracy
+- declarations of real, complex, mp_real and mp_complex 
+  variables put in include files
+- put parameter maxden in cts_combinatorics.f90 and inserted protection
+  when number_propagators > maxden
+- inserted rootsvalue and muscalein in the input of ctsxcut  
+- introduced 2 new files cts_combinatorics.f90 and cts_combinatorics.f90, to
+  organize better the code
+
+- March 18 2011:
+
+- double-double precision routines implemented (significantly faster)
+- mptest program added in diectory examples to test the implementation
+  of the multiprecision routines
+
+- May 9 2011:
+
+- double-double precision routines my be buggy: old multiprecision 
+  re-implemented
+- maxden= 6 in this version (to be re-fixed soon)
+- option dmr= -1 implemented when 1 denominator is present in the numerator
+  function.
+
+- June 5 2011:
+
+- generic choice of maxden reinserted in /src/cts/cts_combinatorics.f90
+- an automatic test of the cuttools implementation on the user's platform
+  is now available  

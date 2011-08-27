@@ -67,6 +67,14 @@ RGR2 = Parameter(name = 'RGR2',
               value = '-complex(0,1)*G**4/(96.0*cmath.pi**2)',
               texname = '4GR2')
 
+MU_R = Parameter(name = 'MU_R',
+              nature = 'external',
+              type = 'real',
+              value = '91.188',
+              texname = '\\text{\\mu_r}',
+              lhablock = 'LOOP',
+              lhacode = [ 666 ])
+
 G_UV = Parameter(name = 'G_UV',
               nature = 'internal',
               type = 'real',

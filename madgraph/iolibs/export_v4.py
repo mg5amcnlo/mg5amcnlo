@@ -37,7 +37,6 @@ import madgraph.iolibs.ufo_expression_parsers as parsers
 import madgraph.various.diagram_symmetry as diagram_symmetry
 import madgraph.various.process_checks as process_checks
 
-
 import aloha.create_aloha as create_aloha
 import models.write_param_card as param_writer
 from madgraph import MadGraph5Error, MG5DIR
@@ -52,12 +51,13 @@ class ProcessExporterFortran(object):
     """Class to take care of exporting a set of matrix elements to
     Fortran (v4) format."""
 
-    def __init__(self, mgme_dir = "", dir_path = "", clean = False):
+    def __init__(self, mgme_dir = "", dir_path = "", clean = False, *args, **kwargs):
         """Initiate the ProcessExporterFortran with directory information"""
         self.mgme_dir = mgme_dir
         self.dir_path = dir_path
         self.clean = clean
         self.model = None
+        super(ProcessExporterFortran,self).__init__(*args, **kwargs)
 
     #===========================================================================
     # copy the Template in a new directory.
@@ -66,7 +66,7 @@ class ProcessExporterFortran(object):
         """create the directory run_name as a copy of the MadEvent
         Template, and clean the directory
         """
-
+        
         #First copy the full template tree if dir_path doesn't exit
         if not os.path.isdir(self.dir_path):
             if not self.mgme_dir:
@@ -525,15 +525,30 @@ class ProcessExporterFortran(object):
 
         return ret_lines
 
-    def get_JAMP_lines(self, matrix_element):
-        """Return the JAMP = sum(fermionfactor * AMP(i)) lines"""
+    def get_JAMP_lines(self, col_amps, basename="JAMP(", basename2="AMP("):
+        """Return the JAMP = sum(fermionfactor * AMP(i)) lines from col_amps 
+        defined as a matrix element or directly as a color_amplitudes dictionary"""
+
+        # Let the user call get_JAMP_lines directly from a MatrixElement or from
+        # the color amplitudes lists.
+        if(isinstance(col_amps,helas_objects.HelasMatrixElement)):
+            color_amplitudes=col_amps.get_color_amplitudes()
+        elif(isinstance(col_amps,list)):
+            if(col_amps and isinstance(col_amps[0],list)):
+                color_amplitudes=col_amps
+            else:
+                raise MadGraph5Error, "Incorrect col_amps argument passed to get_JAMP_lines"
+        else:
+            print "colamps=",col_amps.__class__.__name__
+            raise MadGraph5Error, "Incorrect col_amps argument passed to get_JAMP_lines"
+
 
         res_list = []
 
         for i, coeff_list in \
-                enumerate(matrix_element.get_color_amplitudes()):
+                enumerate(color_amplitudes):
 
-            res = "JAMP(%i)=" % (i + 1)
+            res = (basename+"%i)=") % (i + 1)
 
             # Optimization: if all contributions to that color basis element have
             # the same coefficient (up to a sign), put it in front
@@ -547,13 +562,14 @@ class ProcessExporterFortran(object):
 
             for (coefficient, amp_number) in coeff_list:
                 if common_factor:
-                    res = res + "%sAMP(%d)" % (self.coeff(coefficient[0],
+                    res = (res + "%s" + basename2 + "%d)") % \
+                                               (self.coeff(coefficient[0],
                                                coefficient[1] / abs(coefficient[1]),
                                                coefficient[2],
                                                coefficient[3]),
                                                amp_number)
                 else:
-                    res = res + "%sAMP(%d)" % (self.coeff(coefficient[0],
+                    res = (res + "%s" + basename2 + "%d)") % (self.coeff(coefficient[0],
                                                coefficient[1],
                                                coefficient[2],
                                                coefficient[3]),
@@ -828,7 +844,6 @@ class ProcessExporterFortranSA(ProcessExporterFortran):
         plot.draw()
 
         linkfiles = ['check_sa.f', 'coupl.inc', 'makefile']
-
 
         for file in linkfiles:
             ln('../%s' % file)

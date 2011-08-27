@@ -612,7 +612,7 @@ class Interaction(PhysicsObject):
         # Precaution only useful because some tests have a predefined model
         # bypassing the default_setup and for which type was not defined.
         if 'type' in self.keys():
-            return self['type'][0]=='R2'
+            return len(self['type'][0])>=2 and self['type'][0][:2]=='R2'
         else:
             return False
 
@@ -622,9 +622,23 @@ class Interaction(PhysicsObject):
         # Precaution only useful because some tests have a predefined model
         # bypassing the default_setup and for which type was not defined.
         if 'type' in self.keys():
-            return self['type'][0]=='UV'
+            return len(self['type'][0])>=2 and self['type'][0][:2]=='UV'
         else:
             return False
+        
+    def get_epsilon_order(self):
+        """ Returns 0 if this interaction contributes to the finite part of the
+        amplitude and 1 (2) is it contributes to its single (double) pole """
+        
+        if 'type' in self.keys():
+            if '1eps' in self['type']:
+                return 1
+            elif '2eps' in self['type']:
+                return 2
+            else:
+                return 0
+        else:
+            return 0
 
     def generate_dict_entries(self, ref_dict_to0, ref_dict_to1):
         """Add entries corresponding to the current interactions to 
