@@ -144,7 +144,6 @@ class LoopAmplitude(diagram_generation.Amplitude):
                     self.generate_born_diagrams()
                 if self['loop_diagrams'] == None:
                     self.generate_loop_diagrams()
-
             return base_objects.DiagramList(self['born_diagrams']+self['loop_diagrams'])
         
         if name == 'born_diagrams':

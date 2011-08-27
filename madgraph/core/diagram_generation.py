@@ -1481,7 +1481,8 @@ class MultiProcess(base_objects.PhysicsObject):
 
         # If there are already couplings defined, return
         if process_definition.get('orders') or \
-               process_definition.get('overall_orders'):
+               process_definition.get('overall_orders') or \
+               process_definition.get('perturbation_couplings'):
             return process_definition.get('orders')
 
         logger.info("Checking for minimal orders which gives processes.")
