@@ -6,6 +6,8 @@ Update notes for MadGraph 5 (in reverse time order)
 		      (only one of the decay chains was chosen, instead of
                       all 3 combinations (b1,b1), (b1,b1~), (b1~,b1~))
                   JA: Allow for overall orders also with grouped subprocesses
+                  JA: Ensure that only leading color flows are included in event
+                      output (so no singlet flows from color octets).
 
 1.3.11 (26/08/11) JA: Improved precision of "survey" by allowing 4th and 5th 
                       iteration if accuracy after 3 iterations < 10%.
