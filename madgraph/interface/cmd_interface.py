@@ -49,6 +49,7 @@ import madgraph.core.helas_objects as helas_objects
 import madgraph.iolibs.drawing_eps as draw
 import madgraph.iolibs.export_cpp as export_cpp
 import madgraph.iolibs.export_v4 as export_v4
+import madgraph.loop.loop_exporters as loop_exporters
 import madgraph.iolibs.helas_call_writers as helas_call_writers
 import madgraph.iolibs.file_writers as writers
 import madgraph.iolibs.files as files
@@ -2769,8 +2770,12 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
         group_subprocesses = self._export_format == 'madevent' and \
                              self._options['group_subprocesses']
 
+        if self._curr_amps.has_any_loop_process() and \
+           self._export_format not in ['standalone','matrix']:
+            raise MadGraph5Error('MG5 can only export loop processes to the standalone or matrix format for now.')
+
         # Make a Template Copy
-        if self._export_format == 'madevent':
+        if self._export_format == 'madevent':                
             if group_subprocesses:
                 self._curr_exporter = export_v4.ProcessExporterFortranMEGroup(\
                                       self._mgme_dir, self._export_dir,
@@ -2780,7 +2785,15 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
                                       self._mgme_dir, self._export_dir,
                                       not noclean)
         elif self._export_format in ['standalone', 'matrix']:
-            self._curr_exporter = export_v4.ProcessExporterFortranSA(\
+            if self._curr_amps.has_any_loop_process():
+                if os.path.isdir(os.path.join(self._mgme_dir, 'loop_material')):
+                    self._curr_exporter = loop_exporters.LoopProcessExporterFortranSA(\
+                                          self._mgme_dir, self._export_dir, not noclean,\
+                                          os.path.join(self._mgme_dir, 'loop_material'))
+                else:
+                    raise MadGraph5Error('MG5 cannot find the \'loop_material\' directory in the MG/ME folder specified.')                                                           
+            else:
+                self._curr_exporter = export_v4.ProcessExporterFortranSA(\
                                   self._mgme_dir, self._export_dir,not noclean)
         elif self._export_format == 'standalone_cpp':
             export_cpp.setup_cpp_standalone_dir(self._export_dir, self._curr_model)

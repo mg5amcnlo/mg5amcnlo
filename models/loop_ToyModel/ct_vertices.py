@@ -154,7 +154,7 @@ V_201 = Vertex(name = 'V_201',
               color = [ 'f(1,2,3)' ],
               lorentz = [ L.VVV1 ],
               couplings = {(0,0):C.GC_201},
-              type = ['UV',()])
+              type = ['UV1eps',()])
 
 # gggg
 V_202 = Vertex(name = 'V_202',
@@ -162,7 +162,7 @@ V_202 = Vertex(name = 'V_202',
               color = [ 'f(-1,1,2)*f(3,4,-1)', 'f(-1,1,3)*f(2,4,-1)', 'f(-1,1,4)*f(2,3,-1)' ],
               lorentz = [ L.VVVV1, L.VVVV3, L.VVVV4 ],
               couplings = {(1,1):C.GC_202,(0,0):C.GC_202,(2,2):C.GC_202},
-              type = ['UV',()])
+              type = ['UV1eps',()])
 
 # gdd~
 V_203 = Vertex(name = 'V_203',
@@ -170,7 +170,7 @@ V_203 = Vertex(name = 'V_203',
               color = [ 'T(3,2,1)' ],
               lorentz = [ L.FFV1 ],
               couplings = {(0,0):C.GC_203},
-              type = ['UV',()])
+              type = ['UV1eps',()])
 
 # guu~              
 V_204 = Vertex(name = 'V_204',
@@ -178,5 +178,5 @@ V_204 = Vertex(name = 'V_204',
                color = [ 'T(3,2,1)' ],
                lorentz = [ L.FFV1 ],
                couplings = {(0,0):C.GC_203},
-               type = ['UV',()])
+               type = ['UV1eps',()])
 

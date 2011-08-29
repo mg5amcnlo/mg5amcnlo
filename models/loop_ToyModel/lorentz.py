@@ -15,7 +15,7 @@ R2_GG_2 = Lorentz(name = 'R2_GG_2',
                spins = [ 3, 3 ],
                structure = 'P(1,1)*P(2,1)')
 
-R2_QQ = Lorentz(name = 'R2_QQ_1',
+R2_QQ = Lorentz(name = 'R2_QQ',
                spins = [ 2, 2 ],
                structure = 'P(-1,1)*Gamma(-1,2,1)')
 

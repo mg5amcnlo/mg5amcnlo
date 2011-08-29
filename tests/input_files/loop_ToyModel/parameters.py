@@ -28,6 +28,30 @@ Ncol = Parameter(name = 'Ncol',
                  value = '3.0',
                  texname = 'N_{col}')
 
+Nlf = Parameter(name = 'Nlf',
+                 nature = 'internal',
+                 type = 'real',
+                 value = '2.0',
+                 texname = 'N_{lf}')
+
+CA = Parameter(name = 'CA',
+                 nature = 'internal',
+                 type = 'real',
+                 value = '3.0',
+                 texname = 'C_{A}')
+
+TF = Parameter(name = 'TF',
+                 nature = 'internal',
+                 type = 'real',
+                 value = '0.5',
+                 texname = 'T_{F}')
+
+CF = Parameter(name = 'CF',
+                 nature = 'internal',
+                 type = 'real',
+                 value = '(4.0/3.0)',
+                 texname = 'C_{F}')
+
 aS = Parameter(name = 'aS',
                nature = 'external',
                type = 'real',
@@ -67,11 +91,22 @@ RGR2 = Parameter(name = 'RGR2',
               value = '-complex(0,1)*G**4/(96.0*cmath.pi**2)',
               texname = '4GR2')
 
+MU_R = Parameter(name = 'MU_R',
+              nature = 'external',
+              type = 'real',
+              value = 91.188,
+              texname = '\\text{\\mu_r}',
+              lhablock = 'LOOP',
+              lhacode = [ 666 ])
+
 G_UV = Parameter(name = 'G_UV',
               nature = 'internal',
               type = 'real',
               # At leading order without fermion masses, the UV renormalization 
-              # in MSbar does not affect the finite part of the virtual, so I
-              # put zero here
-              value = 'ZERO',
+              # in MSbar does not affect the finite part of the virtual.
+              # In the way it was done in MGv4, it is not possible to easily
+              # disantangle the contribution from the different loops to the 
+              # UV counterterms (typically g>dd~ should contain a CA which is 
+              # later cancelled by the wf renorm. So for now I leave it like this)
+              value = '-((G**2)/(48.0*cmath.pi**2))*(11.0*CA-4.0*TF*Nlf)',
               texname = 'G_{UV}')

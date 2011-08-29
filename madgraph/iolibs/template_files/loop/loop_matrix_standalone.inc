@@ -112,6 +112,12 @@ C
 C ----------
 C BEGIN CODE
 C ----------
+DO K=1, 3
+  DO I=1, NLOOPAMPS
+    AMPL(K,I)=(0.D0,0.D0)
+  ENDDO
+ENDDO
+
 %(helas_calls)s
 
 C BORN JAMPS

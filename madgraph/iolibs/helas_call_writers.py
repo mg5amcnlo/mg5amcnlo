@@ -975,7 +975,7 @@ class FortranUFOHelasCallWriter(UFOHelasCallWriter):
             call = call + "%d,"*len(loopamp.get('pairing'))
         call = call + "W(1,%d),"*len(loopamp.get('mothers'))
         call = call + "%s,"*(len(loopamp.get('wavefunctions'))-1)
-        call = call + "AMPL(0,%d))" 
+        call = call + "AMPL(1,%d))" 
         
         if (len(loopamp.get('pairing')) != len(loopamp.get('mothers'))):        
             call_function = lambda amp: call % (\
@@ -1152,8 +1152,8 @@ class FortranUFOHelasCallWriter(UFOHelasCallWriter):
             else:
                 # Amplitude
                 inter=self['model'].get_interaction(argument['interaction_id'])
-                if inter.is_UV() or inter.is_R2():
-                    call += "AMPL(%d,%s))"%(inter.get_epsilon_order(),"%d")
+                if argument['type'] not in ['base','loop']:
+                    call += "AMPL(%d,%s))"%((argument.get_epsilon_order()+1),"%d")
                     call_function = lambda amp: call % \
                                         (tuple([mother.get('number') 
                                         for mother in amp.get('mothers')]) + \

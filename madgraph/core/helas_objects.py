@@ -1660,6 +1660,17 @@ class HelasAmplitude(base_objects.PhysicsObject):
         return any([wf.get('fermionflow') < 0 for wf in \
                     self.get('mothers')])
 
+    def get_epsilon_order(self):
+        """Based on the type of the amplitude, determines to which epsilon
+        order it contributes"""
+        
+        if '1eps' in self['type']:
+            return 1
+        elif '2eps' in self['type']:
+            return 2
+        else:
+            return 0
+
     def get_call_key(self):
         """Generate the (spin, state) tuples used as key for the helas call
         dictionaries in HelasModel"""
@@ -1675,7 +1686,7 @@ class HelasAmplitude(base_objects.PhysicsObject):
         # For example, base would give AMP(%d), R2 would give AMPL(0,%d)
         # and a single pole UV counter-term would give AMPL(1,%d).
         if self['type']!='base':
-            res.append(self['type'])
+            res.append(self.get_epsilon_order())
 
         # Check if we need to append a charge conjugation flag
         if self.needs_hermitian_conjugate():
@@ -4135,10 +4146,7 @@ class HelasMultiProcess(base_objects.PhysicsObject):
         def process_color_loop(matrix_element):
             """ Process the color information for a given matrix
             element made of a loop diagrams. It will create a different 
-            color matrix depending on wether the process has a born or not."""            
-
-            raise self.PhysicsObjectError, \
-                      "Color processing for loop is not ready yet."
+            color matrix depending on wether the process has a born or not."""
 
             # Always create an empty color basis, and the
             # list of raw colorize objects (before
@@ -4146,7 +4154,7 @@ class HelasMultiProcess(base_objects.PhysicsObject):
             new_amp = matrix_element.get_base_amplitude()
             matrix_element.set('base_amplitude', new_amp)
             # Process the loop color basis which is needed anyway
-            loop_col_basis = loop_color_amp.ColorBasis()
+            loop_col_basis = loop_color_amp.LoopColorBasis()
             loop_colorize_obj = loop_col_basis.create_loop_color_dict_list(\
                                   matrix_element.get('base_amplitude'))
             try:
@@ -4171,7 +4179,7 @@ class HelasMultiProcess(base_objects.PhysicsObject):
                                      replace('Process', 'loop process'))
                 
             if new_amp['process']['has_born']:
-                born_col_basis = loop_color_amp.ColorBasis()
+                born_col_basis = loop_color_amp.LoopColorBasis()
                 born_colorize_obj = born_col_basis.create_born_color_dict_list(\
                                  matrix_element.get('base_amplitude'))
                 try:
@@ -4204,7 +4212,7 @@ class HelasMultiProcess(base_objects.PhysicsObject):
                 # If the color configuration of the ME has
                 # already been considered before, recycle
                 # the information
-                col_matrix = dict_loopborn_matrices(loopborn_matrices_key)
+                col_matrix = dict_loopborn_matrices[loopborn_matrices_key]
             except KeyError:
                 # If not, create color matrix accordingly
                 col_matrix = color_amp.ColorMatrix(\
@@ -4249,7 +4257,9 @@ class HelasMultiProcess(base_objects.PhysicsObject):
                     # Correctly the LoopHelasMatrix element for the loop amps.
                     if isinstance(amplitude,\
                       loop_diagram_generation.LoopAmplitude):
-                        matrix_element_list = [LoopHelasMatrixElement(amplitude,
+                        import madgraph.loop.loop_helas_objects as loop_helas_objects
+                        matrix_element_list = [\
+                          loop_helas_objects.LoopHelasMatrixElement(amplitude,
                                                           decay_ids=decay_ids,
                                                           gen_color=False)]
                     else:

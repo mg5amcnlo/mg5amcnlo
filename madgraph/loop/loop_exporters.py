@@ -71,9 +71,9 @@ class LoopExporterFortran(object):
         in argument"""
         
         CutTools_path=os.path.join(self.loop_dir, 'CutTools')
-        if not os.path.isdir(os.path.join(targetPath, 'CutTools')):
+        if not os.path.isdir(os.path.join(targetPath, 'CUTTOOLS')):
             if os.path.isdir(CutTools_path):
-                shutil.copytree(CutTools_path,os.path.join(targetPath,'CutTools')\
+                shutil.copytree(CutTools_path,os.path.join(targetPath,'CUTTOOLS')\
                                 , True)
             else:
                 raise MadGraph5Error, \
@@ -104,6 +104,13 @@ class LoopProcessExporterFortranSA(export_v4.ProcessExporterFortranSA,
         super(LoopProcessExporterFortranSA, self).copy_CutTools(
                                     os.path.join(self.dir_path, 'Source'))
         
+        # We must change some files to their version for NLO computations
+        cpfiles= ["Source/makefile","SubProcesses/makefile_sa",\
+                  "SubProcesses/check_sa.f"]
+        
+        for file in cpfiles:
+            shutil.copy(os.path.join(self.loop_dir,'StandAlone/', file),
+                        os.path.join(self.dir_path, file))
         try:
             subprocess.call([os.path.join('bin', 'standalone')],
                             stdout = os.open(os.devnull, os.O_RDWR),
@@ -126,7 +133,8 @@ class LoopProcessExporterFortranSA(export_v4.ProcessExporterFortranSA,
         # CutTools written in f90)    
 
         self.set_compiler('gfortran')
-        self.make()
+        # Not working yet :)
+        # self.make()
 
         # Write command history as proc_card_mg5
         if os.path.isdir(os.path.join(self.dir_path, 'Cards')):
@@ -146,11 +154,9 @@ class LoopProcessExporterFortranSA(export_v4.ProcessExporterFortranSA,
         
         super(LoopProcessExporterFortranSA, self).make()
         
-        #source_dir = os.path.join(self.dir_path, "Source")
-        #logger.info("Running make for Helas")
-        #misc.compile(arg=['../lib/libdhelas.a'], cwd=source_dir, mode='fortran')
-        #logger.info("Running make for Model")
-        #misc.compile(arg=['../lib/libmodel.a'], cwd=source_dir, mode='fortran')
+        source_dir = os.path.join(self.dir_path, "Source")
+        logger.info("Running make for CutTools")
+        misc.compile(arg=['../lib/libcts.a'], cwd=source_dir, mode='fortran')
 
 
     #===========================================================================
@@ -185,20 +191,7 @@ class LoopProcessExporterFortranSA(export_v4.ProcessExporterFortranSA,
         # Extract number of external particles
         (nexternal, ninitial) = matrix_element.get_nexternal_ninitial()
 
-        # Create the necessary files for the loop matrix element subroutine
-        filename = 'loop_matrix.f'
-        calls = self.write_loopmatrix(
-            writers.FortranWriter(filename),
-            matrix_element,
-            fortran_model)
-
-        filename = 'CT_interface.f'
-        self.write_CT_interface(writers.FortranWriter(filename),\
-                                matrix_element)
-        
-        filename = 'loop_num.f'
-        self.write_loop_num(writers.FortranWriter(filename),\
-                                matrix_element,fortran_model)
+        calls=self.write_matrix_element_v4(None,matrix_element,fortran_model)
         
 #        Not ready yet
 #        filename = 'born_matrix.f'
@@ -225,23 +218,23 @@ class LoopProcessExporterFortranSA(export_v4.ProcessExporterFortranSA,
 #        filename = "loop_matrix.ps"
 #        plot = draw.MultiEpsDiagramDrawer(matrix_element.get('base_amplitude').\
 #                                             get('loop_diagrams'),
-#                                          model=matrix_element.get('processes')[0].\
 #                                          filename,
+#                                          model=matrix_element.get('processes')[0].\
 #                                             get('model'),
 #                                          amplitude='')
 #        logger.info("Generating loop Feynman diagrams for " + \
 #                     matrix_element.get('processes')[0].nice_string())
 #        plot.draw()
-#        filename = "born_matrix.ps"
-#        plot = draw.MultiEpsDiagramDrawer(matrix_element.get('base_amplitude').\
-#                                             get('born_diagrams'),
-#                                          model=matrix_element.get('processes')[0].\
-#                                          filename,
-#                                             get('model'),
-#                                          amplitude='')
-#        logger.info("Generating born Feynman diagrams for " + \
-#                     matrix_element.get('processes')[0].nice_string())
-#        plot.draw()
+        filename = "born_matrix.ps"
+        plot = draw.MultiEpsDiagramDrawer(matrix_element.get('base_amplitude').\
+                                             get('born_diagrams'),
+                                          filename,
+                                          model=matrix_element.get('processes')[0].\
+                                             get('model'),
+                                          amplitude='')
+        logger.info("Generating born Feynman diagrams for " + \
+                     matrix_element.get('processes')[0].nice_string())
+        plot.draw()
 
         linkfiles = ['check_sa.f', 'coupl.inc', 'makefile']
 
@@ -251,7 +244,7 @@ class LoopProcessExporterFortranSA(export_v4.ProcessExporterFortranSA,
         linkfiles = ['cts_mprec.h', 'cts_mpc.h']
 
         for file in linkfiles:
-            ln('../../Source/CutTools/src/cts/%s' % file)
+            ln('../../Source/CUTTOOLS/src/cts/%s' % file)
 
         # Return to original PWD
         os.chdir(cwd)
@@ -260,6 +253,45 @@ class LoopProcessExporterFortranSA(export_v4.ProcessExporterFortranSA,
             calls = 0
         return calls
 
+    def write_matrix_element_v4(self, writer, matrix_element, fortran_model,
+                                proc_id = "", config_map = []):
+        """ Writes loop_matrix.f, CT_interface.f and loop_num.f only"""
+        # Create the necessary files for the loop matrix element subroutine
+        
+        if writer:
+            
+            file1 = self.write_loop_num(None,matrix_element,fortran_model)
+            file2 = self.write_CT_interface(None,matrix_element)            
+            calls, file3 = self.write_loopmatrix(None,matrix_element,fortran_model)
+            file = "\n".join([file1,file2,file3])
+            writer.writelines(file)
+            return calls
+        
+        else:
+            
+            filename = 'loop_matrix.f'
+            calls = self.write_loopmatrix(
+                writers.FortranWriter(filename),
+                matrix_element,
+                fortran_model)
+    
+            filename = 'CT_interface.f'
+            self.write_CT_interface(writers.FortranWriter(filename),\
+                                    matrix_element)
+            
+            filename = 'loop_num.f'
+            self.write_loop_num(writers.FortranWriter(filename),\
+                                    matrix_element,fortran_model)
+        
+            return calls
+
+    def generate_subprocess_directory_v4(self, matrix_element,
+                                         fortran_model):
+        """ To overload the default name for this function such that the correct
+        function is used when called from the command interface """
+        
+        return self.generate_loop_subprocess(matrix_element,fortran_model)
+
     def write_loop_num(self, writer, matrix_element,fortran_model):
         """ Create the file containing the core subroutine called by CutTools
         which contains the Helas calls building the loop"""
@@ -267,10 +299,6 @@ class LoopProcessExporterFortranSA(export_v4.ProcessExporterFortranSA,
         if not matrix_element.get('processes') or \
                not matrix_element.get('diagrams'):
             return 0
-
-        if not isinstance(writer, writers.FortranWriter):
-            raise writers.FortranWriter.FortranWriterError(\
-                "writer not FortranWriter")
 
         # Set lowercase/uppercase Fortran code
         writers.FortranWriter.downcase = False
@@ -285,7 +313,11 @@ class LoopProcessExporterFortranSA(export_v4.ProcessExporterFortranSA,
         replace_dict['loop_helas_calls'] = "\n".join(loop_helas_calls)
 
         file=file%replace_dict
-        writer.writelines(file)
+        
+        if writer:
+            writer.writelines(file)
+        else:
+            return file
         
     def write_CT_interface(self, writer, matrix_element):
         """ Create the file loop_helas.f which contains the subroutine defining
@@ -360,7 +392,11 @@ class LoopProcessExporterFortranSA(export_v4.ProcessExporterFortranSA,
             files.append(file)   
         
         file="\n".join(files)
-        writer.writelines(file)
+        
+        if writer:
+            writer.writelines(file)
+        else:
+            return file
         
     def write_loopmatrix(self, writer, matrix_element, fortran_model):
         """Create the loop_matrix.f file."""
@@ -368,10 +404,6 @@ class LoopProcessExporterFortranSA(export_v4.ProcessExporterFortranSA,
         if not matrix_element.get('processes') or \
                not matrix_element.get('diagrams'):
             return 0
-
-        if not isinstance(writer, writers.FortranWriter):
-            raise writers.FortranWriter.FortranWriterError(\
-                "writer not FortranWriter")
 
         # Set lowercase/uppercase Fortran code
         writers.FortranWriter.downcase = False
@@ -446,11 +478,13 @@ class LoopProcessExporterFortranSA(export_v4.ProcessExporterFortranSA,
         file = open(os.path.join(_file_path, \
                  'iolibs/template_files/loop/loop_matrix_standalone.inc')).read()
         file = file % replace_dict
-
-        # Write the file
-        writer.writelines(file)
-
-        return len(filter(lambda call: call.find('CALL LOOP') != 0, helas_calls))
+        
+        if writer:
+            # Write the file
+            writer.writelines(file)
+            return len(filter(lambda call: call.find('CALL LOOP') != 0, helas_calls))
+        else:
+            return len(filter(lambda call: call.find('CALL LOOP') != 0, helas_calls)), file
 
     def write_bornmatrix(self, writer, matrix_element, fortran_model):
         """Create the born_matrix.f file for the born process as for a standard

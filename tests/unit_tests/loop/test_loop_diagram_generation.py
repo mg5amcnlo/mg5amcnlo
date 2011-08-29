@@ -551,7 +551,7 @@ def loadLoopModel():
                   'lorentz':['L1'],
                   'couplings':{(0, 0):'G'},
                   'orders':{'QCD':3},
-                  'type':['UV',()]}))
+                  'type':['UV1eps',()]}))
 
     # 4 gluon vertex CT
     myinterlist.append(base_objects.Interaction({
@@ -562,7 +562,7 @@ def loadLoopModel():
                   'lorentz':['L1'],
                   'couplings':{(0, 0):'G^2'},
                   'orders':{'QCD':4},
-                  'type':['UV',()]}))
+                  'type':['UV1eps',()]}))
 
     # Gluon and photon couplings to quarks CT
     myinterlist.append(base_objects.Interaction({
@@ -575,7 +575,7 @@ def loadLoopModel():
                   'lorentz':['L1'],
                   'couplings':{(0, 0):'GQQ'},
                   'orders':{'QCD':3},
-                  'type':['UV',()]}))
+                  'type':['UV1eps',()]}))
     
     # this is the CT for the renormalization of the QED corrections to alpha_QCD
     myinterlist.append(base_objects.Interaction({
@@ -588,7 +588,7 @@ def loadLoopModel():
                   'lorentz':['L1'],
                   'couplings':{(0, 0):'GQQ'},
                   'orders':{'QCD':1, 'QED':2},
-                  'type':['UV',()]}))
+                  'type':['UV1eps',()]}))
 
     myinterlist.append(base_objects.Interaction({
                   'id': 37,
@@ -600,7 +600,7 @@ def loadLoopModel():
                   'lorentz':['L1'],
                   'couplings':{(0, 0):'GQED'},
                   'orders':{'QED':1, 'QCD':2},
-                  'type':['UV',()]}))
+                  'type':['UV1eps',()]}))
 
     myinterlist.append(base_objects.Interaction({
                   'id': 38,
@@ -612,7 +612,7 @@ def loadLoopModel():
                   'lorentz':['L1'],
                   'couplings':{(0, 0):'GQED'},
                   'orders':{'QED':3},
-                  'type':['UV',()]}))
+                  'type':['UV1eps',()]}))
 
     myinterlist.append(base_objects.Interaction({
                   'id': 39,
@@ -624,7 +624,7 @@ def loadLoopModel():
                   'lorentz':['L1'],
                   'couplings':{(0, 0):'GQQ'},
                   'orders':{'QCD':3},
-                  'type':['UV',()]}))
+                  'type':['UV1eps',()]}))
 
     myinterlist.append(base_objects.Interaction({
                   'id': 40,
@@ -636,7 +636,7 @@ def loadLoopModel():
                   'lorentz':['L1'],
                   'couplings':{(0, 0):'GQQ'},
                   'orders':{'QCD':1, 'QED':2},
-                  'type':['UV',()]}))
+                  'type':['UV1eps',()]}))
 
     myinterlist.append(base_objects.Interaction({
                   'id': 41,
@@ -648,7 +648,7 @@ def loadLoopModel():
                   'lorentz':['L1'],
                   'couplings':{(0, 0):'GQED'},
                   'orders':{'QED':1, 'QCD':2},
-                  'type':['UV',()]}))
+                  'type':['UV1eps',()]}))
 
     myinterlist.append(base_objects.Interaction({
                   'id': 42,
@@ -660,7 +660,7 @@ def loadLoopModel():
                   'lorentz':['L1'],
                   'couplings':{(0, 0):'GQED'},
                   'orders':{'QED':3},
-                  'type':['UV',()]}))
+                  'type':['UV1eps',()]}))
     
     # alpha_QED to electron CT
 
@@ -674,7 +674,7 @@ def loadLoopModel():
                   'lorentz':['L1'],
                   'couplings':{(0, 0):'GQED'},
                   'orders':{'QED':3},
-                  'type':['UV',()]}))
+                  'type':['UV1eps',()]}))
       
     # Finally the mass renormalization of the up and down quark dotted with
     # a mass for the occasion
@@ -689,7 +689,7 @@ def loadLoopModel():
                   'lorentz':['L1'],
                   'couplings':{(0, 0):'G'},
                   'orders':{'QED':2},
-                  'type':['UV',()]}))
+                  'type':['UV1eps',()]}))
 
     # The up quark, UVQCD
     myinterlist.append(base_objects.Interaction({
@@ -701,7 +701,7 @@ def loadLoopModel():
                   'lorentz':['L1'],
                   'couplings':{(0, 0):'G'},
                   'orders':{'QCD':2},
-                  'type':['UV',()]}))
+                  'type':['UV1eps',()]}))
 
     # The down quark, UVQED
     myinterlist.append(base_objects.Interaction({
@@ -713,7 +713,7 @@ def loadLoopModel():
                   'lorentz':['L1'],
                   'couplings':{(0, 0):'G'},
                   'orders':{'QED':2},
-                  'type':['UV',()]}))
+                  'type':['UV1eps',()]}))
 
     # The down quark, UVQCD
     myinterlist.append(base_objects.Interaction({
@@ -725,7 +725,7 @@ def loadLoopModel():
                   'lorentz':['L1'],
                   'couplings':{(0, 0):'G'},
                   'orders':{'QCD':2},
-                  'type':['UV',()]}))
+                  'type':['UV1eps',()]}))
 
     
     myloopmodel.set('particles', mypartlist)

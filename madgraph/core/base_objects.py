@@ -532,8 +532,9 @@ class Interaction(PhysicsObject):
             if not isinstance(value, list):
                 raise self.PhysicsObjectError, \
                         "%s is not a valid list" % str(value)
-            if not value[0] in ['base','R2','UV']:
-                raise self.PhysicsObjectError, \
+            if not value[0]=='base':
+                if not value[0][:2] in ['R2','UV']:
+                    raise self.PhysicsObjectError, \
                         "%s is not a valid list" % str(value)
             if value[1]:
                 for tup in value[1]:
@@ -612,7 +613,7 @@ class Interaction(PhysicsObject):
         # Precaution only useful because some tests have a predefined model
         # bypassing the default_setup and for which type was not defined.
         if 'type' in self.keys():
-            return len(self['type'][0])>=2 and self['type'][0][:2]=='R2'
+            return (len(self['type'][0])>=2 and self['type'][0][:2]=='R2')
         else:
             return False
 
@@ -622,7 +623,7 @@ class Interaction(PhysicsObject):
         # Precaution only useful because some tests have a predefined model
         # bypassing the default_setup and for which type was not defined.
         if 'type' in self.keys():
-            return len(self['type'][0])>=2 and self['type'][0][:2]=='UV'
+            return (len(self['type'][0])>=2 and self['type'][0][:2]=='UV')
         else:
             return False
         

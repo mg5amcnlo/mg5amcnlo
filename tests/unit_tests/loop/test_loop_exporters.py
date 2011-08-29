@@ -36,6 +36,7 @@ import madgraph.loop.loop_color_amp as loop_color_amp
 import madgraph.loop.loop_base_objects as loop_base_objects
 import madgraph.loop.loop_diagram_generation as loop_diagram_generation
 import madgraph.loop.loop_helas_objects as loop_helas_objects
+import madgraph.core.helas_objects as helas_objects
 import madgraph.loop.loop_exporters as loop_exporters
 import madgraph.iolibs.export_v4 as export_v4
 import madgraph.iolibs.save_load_object as save_load_object
@@ -80,10 +81,17 @@ class LoopExporterTest(unittest.TestCase):
         self.loopExporter.copy_v4template()
         self.assertTrue(os.path.isdir(os.path.join(_proc_file_path,'Source',\
                                               'CutTools')))
-        
         self.loopExporter.generate_loop_subprocess(\
                             loopME, self.fortran_model)
-            
+        wanted_lorentz = loopME.get_used_lorentz()
+        wanted_couplings = loopME.get_used_couplings()
+        self.loopExporter.convert_model_to_mg4(self.myloopmodel,
+                                           wanted_lorentz,
+                                           wanted_couplings)
+        self.loopExporter.finalize_v4_directory( \
+                        helas_objects.HelasMatrixElementList([loopME,]),
+                        ["Generation from test_loop_exporters.py",],
+                        False,False)
         
     def test_LoopProcessExporterFortranSA_ddx_uux(self):
         """Test the StandAlone output for different processes.

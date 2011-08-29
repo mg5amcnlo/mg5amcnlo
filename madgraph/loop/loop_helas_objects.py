@@ -1136,8 +1136,6 @@ class LoopHelasMatrixElement(helas_objects.HelasMatrixElement):
         for loopdiag in self.get_loop_diagrams():
             for loopamp in loopdiag.get_loop_amplitudes():
                 loopamp.set_mothers_and_pairing()
-
-    
     
     def relabel_helas_objects(self):
         """After the generation of the helas objects, we can give up on having
@@ -1247,6 +1245,25 @@ class LoopHelasMatrixElement(helas_objects.HelasMatrixElement):
 
         return helas_objects.HelasDiagramList([hd for hd in self['diagrams'] if\
                  isinstance(hd,LoopHelasDiagram)])
+
+    def get_used_lorentz(self):
+        """Return a list of (lorentz_name, conjugate, outgoing) with
+        all lorentz structures used by this LoopHelasMatrixElement."""
+
+        # for now same as for LO since aloha is not ready yet for loop
+        return [(tuple(wa.get('lorentz')), tuple(wa.get_conjugate_index()),
+                 wa.find_outgoing_number()) for wa in \
+                self.get_all_wavefunctions() + self.get_all_amplitudes() \
+                if wa.get('interaction_id') != 0]
+        
+    def get_used_couplings(self):
+        """Return a list with all couplings used by this
+        LoopHelasMatrixElement."""
+        
+        # for now same as for LO since aloha is not ready yet for loop
+        return [wa.get('coupling') for wa in \
+                self.get_all_wavefunctions() + self.get_all_amplitudes() \
+                if wa.get('interaction_id') != 0]
 
     def get_color_amplitudes(self):
         """ Just to forbid the usage of this generic function in a

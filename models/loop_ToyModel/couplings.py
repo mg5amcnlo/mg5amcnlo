@@ -91,13 +91,13 @@ GC_106 = Coupling(name = 'GC_106',
                  order = {'QCD':2})
 
 GC_201 = Coupling(name = 'GC_201',
-                 value = '-G_UV',
+                 value = '-G_UV*G',
                  order = {'QCD':3})
 
 GC_202 = Coupling(name = 'GC_202',
-                 value = 'complex(0,1)*(G_UV)**2',
+                 value = '2.0*complex(0,1)*G_UV*(G**2)',
                  order = {'QCD':4})
 
 GC_203 = Coupling(name = 'GC_203',
-                 value = 'complex(0,1)*G_UV',
+                 value = 'complex(0,1)*G_UV*G',
                  order = {'QCD':3})

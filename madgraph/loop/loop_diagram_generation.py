@@ -443,7 +443,7 @@ class LoopAmplitude(diagram_generation.Amplitude):
         # interaction ID having the same key above.
         CT_interactions = {}
         for inter in self['process']['model']['interactions']:
-            if inter['type'][0] in ['R2','UV']:
+            if inter.is_UV() or inter.is_R2():
                 keya=list(inter['type'][1])
                 keya.sort()
                 keyb=[part.get_pdg_code() for part in inter['particles']]

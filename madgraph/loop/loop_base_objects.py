@@ -165,7 +165,7 @@ class LoopDiagram(base_objects.Diagram):
             it returns all of them. """
         if string:
             return base_objects.VertexList([vert for vert in self['CT_vertices'] if\
-                    model['interaction_dict'][vert['id']]['type'][0]==string])
+                    string in model['interaction_dict'][vert['id']]['type'][0]])
         else:
             return self['CT_vertices']
         

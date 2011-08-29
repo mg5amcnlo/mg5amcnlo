@@ -978,6 +978,14 @@ class AmplitudeList(base_objects.PhysicsObjectList):
     """List of Amplitude objects
     """
 
+    def has_any_loop_process(self):
+        """ Check the content of all processes of the amplitudes in this list to
+        see if there is any which defines perturbation couplings. """
+        
+        for amp in self:
+            if amp.get('process').get('perturbation_couplings'):
+                return True
+
     def is_valid_element(self, obj):
         """Test if object obj is a valid Amplitude for the list."""
 
