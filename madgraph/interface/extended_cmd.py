@@ -508,8 +508,21 @@ class Cmd(cmd.Cmd):
 
 
     @staticmethod
-    def list_completion(text, list):
+    def list_completion(text, list, line=''):
         """Propose completions of text in list"""
+
+        rm=0
+        if text:
+            line = line[:-len(text)]
+        
+        if line.endswith('-'):
+            if line.endswith('--'):
+                rm += 2
+                text =  '--%s' % text 
+            else:
+                rm += 1
+                text =  '-%s' % text
+        
         if not text:
             completions = list
         else:
@@ -517,13 +530,13 @@ class Cmd(cmd.Cmd):
                             for f in list
                             if f.startswith(text)
                             ]
-        def put_space(name): 
+        def put_space(name, rm): 
             if name.endswith(' '): 
                 return name
             else:
-                return '%s ' % name 
+                return '%s ' % name[rm:] 
             
-        return [put_space(name) for name in completions] 
+        return [put_space(name, rm) for name in completions] 
             
 
     @staticmethod

@@ -12,13 +12,12 @@ else
   pydir=../../pythia-pgs/src
 fi
 
-p=$2
-run=$3
+run=$2
 main=`pwd`
 
-if [ "$4" != "" ]
+if [ "$3" != "" ]
 then
-  ERAdir=$4
+  ERAdir=$3
 else
   ERAdir=../../ExRootAnalysis
 fi
@@ -50,20 +49,20 @@ rm -f pythia.log > /dev/null
 rm -f pythia.err > /dev/null
 rm -f pythia.out > /dev/null
 
-if [ "$p" = "1" ]; 
-then 
-echo '#!/bin/bash' > pythia.pbs
-echo "export PDG_MASS_TBL=$pydir/mass_width_2004.mc;cd $main;$pydir/pythia;touch pythia.out" >> pythia.pbs
-chmod u+x pythia.pbs
-qsub -N pythia_run -e pythia.err -o pythia.log -V -q madgraph pythia.pbs >> ../running_jobs
-while [ ! -e pythia.out ]
-do
-  sleep 5
-done
-rm -f pythia.pbs
-else
+#if [ "$p" = "1" ]; 
+#then 
+#echo '#!/bin/bash' > pythia.pbs
+#echo "export PDG_MASS_TBL=$pydir/mass_width_2004.mc;cd $main;$pydir/pythia;touch pythia.out" >> pythia.pbs
+#chmod u+x pythia.pbs
+#qsub -N pythia_run -e pythia.err -o pythia.log -V -q madgraph pythia.pbs >> ../running_jobs
+#while [ ! -e pythia.out ]
+#do
+#  sleep 5
+#done
+#rm -f pythia.pbs
+#else
 $pydir/pythia >& pythia.log
-fi
+#fi
 
 if [[ -e pythia.err ]];then
   cat pythia.err

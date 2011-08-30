@@ -74,9 +74,10 @@ class Cluster(object):
             time.sleep(30)
         self.submitted = 0
 
-    def launch_and_wait(self, prog, argument=[], cwd=None, stdout=None, stderr=None, log=None):
+    def launch_and_wait(self, prog, argument=[], cwd=None, stdout=None, 
+                                                         stderr=None, log=None):
         """launch one job on the cluster and wait for it"""
-        id = self.submit(prog, argument=[], cwd=None, stdout=None, stderr=None, log=None)
+        id = self.submit(prog, argument, cwd, stdout, stderr, log)
         while 1:        
             status = self.control_one_job(id)
             if not status in ['R','I']:
@@ -183,24 +184,22 @@ class PBSCluster(Cluster):
         if log is None:
             log = '/dev/null'
         if argument:
-            argument = ' '.join(argument)
-        else:
-            argument = ''
-
-
-
-        a = subprocess.Popen(['qsub','-o',stdout,
+            a = subprocess.Popen(['qsub','-o',stdout,
+                                     '-N',me_dir, 
+                                     '-e',stderr,
+                                     '-q', 'madgraph',
+                                     '-V'], stdout=subprocess.PIPE, 
+                                     stdin=subprocess.PIPE, cwd=cwd)
+            output = a.communicate(' '.join(argument))[0]
+        else:            
+            a = subprocess.Popen(['qsub','-o',stdout,
                                      '-N',me_dir, 
                                      '-e',stderr,
                                      '-q', 'madgraph',
                                      '-V',
                                      prog], stdout=subprocess.PIPE, cwd=cwd)
 
-        output = a.stdout.read()
-
-        #Submitting job(s).
-        #Logging submit event(s).
-        #1 job(s) submitted to cluster 2253622.
+            output = a.stdout.read()
         id = output.split('.')[0]
         self.submitted += 1
         return id

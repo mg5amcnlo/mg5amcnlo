@@ -672,9 +672,14 @@ class CompleteForCmd(CheckValidForCmd):
     def complete_survey(self, text, line, begidx, endidx):
         """ Complete the survey command """
         
-        #args = self.split_arg(line[0:begidx])
-        
-        return self.list_completion(text, self._options)
+        if line.endswith('cluster=') and not text:
+            return ['0','1','2']
+        if line.endswith('nb_core=') and not text:
+            import multiprocessing
+            max = multiprocessing.cpu_count()
+            return [str(i) for i in range(2,max+1)]
+            
+        return  self.list_completion(text, self._run_options, line)
     
     complete_refine = complete_survey
     complete_generate_events = complete_survey
@@ -727,7 +732,7 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
     # Truth values
     true = ['T','.true.',True,'true']
     # Options and formats available
-    _options = ['--cluster=','--queue=','--nb_core=']
+    _run_options = ['--cluster=0','--cluster=1','--cluster=2','--queue=','--nb_core=']
     _set_options = ['stdout_level','fortran_compiler']
     _plot_mode = ['all', 'parton','pythia','pgs','delphes']
     # Variables to store object information
@@ -1239,9 +1244,12 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
         
         logger.info('Launching pythia')
 
-        subprocess.call(['../bin/internal/run_pythia', 
-                         pythia_src,
-                         str(self.cluster_mode)],
+        if self.cluster_mode == 1:
+            self.cluster.launch_and_wait('../bin/internal/run_pythia', 
+                                         argument= [pythia_src],
+                                        cwd=pjoin(self.me_dir,'Events'))
+        else:
+            subprocess.call(['../bin/internal/run_pythia', pythia_src],
                          cwd=pjoin(self.me_dir,'Events'))
 
 
