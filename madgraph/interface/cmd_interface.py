@@ -2251,7 +2251,6 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
     def do_import(self, line):
         """Import files with external formats"""
 
-        print 'RAW INPUT L 2254',self.use_rawinput
         args = self.split_arg(line)
         # Check argument's validity
         self.check_import(args)
@@ -2303,7 +2302,9 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
                 #self._export dir are define
                 self.check_for_export_dir(args[1])
                 # Execute the card
-                self.import_command_file(args[1])    
+                self.use_rawinput = False
+                self.import_command_file(args[1])
+                self.use_rawinput = True    
         
         elif args[0] == 'proc_v4':
             
@@ -2476,6 +2477,8 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
                         pythia8_dir = None
                 self.pythia8_path = pythia8_dir
             elif key.endswith('path'):
+                pass
+            elif key.startswith('cluster'):
                 pass
             elif key not in ['text_editor','eps_viewer','web_browser']:
                 # Default: try to set parameter

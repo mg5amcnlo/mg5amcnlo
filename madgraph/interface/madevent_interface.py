@@ -52,10 +52,10 @@ try:
     import madgraph.iolibs.files as files
     import madgraph.iolibs.save_load_object as save_load_object
     import madgraph.various.gen_crossxhtml as gen_crossxhtml
+    import madgraph.various.cluster as cluster
     from madgraph import InvalidCmd
     MADEVENT = False
 except Exception, error:
-    print error
     # import from madevent directory
     import internal.extended_cmd as cmd
     import internal.misc as misc    
@@ -63,8 +63,8 @@ except Exception, error:
     import internal.files as files
     import internal.gen_crossxhtml as gen_crossxhtml
     import internal.save_load_object as save_load_object
+    import internal.cluster as cluster
     MADEVENT = True
-
 
 # Special logger for the Cmd Interface
 logger = logging.getLogger('madevent.stdout') # -> stdout
@@ -671,12 +671,13 @@ class CompleteForCmd(CheckValidForCmd):
     def complete_survey(self, text, line, begidx, endidx):
         """ Complete the survey command """
         
-        args = self.split_arg(line[0:begidx])
+        #args = self.split_arg(line[0:begidx])
         
-        if len(args) > 1:
-            return self.list_completion(text, self._options)
+        return self.list_completion(text, self._options)
     
     complete_refine = complete_survey
+    complete_generate_events = complete_survey
+    
     
     def complete_plot(self, text, line, begidx, endidx):
         """ Complete the plot command """
@@ -725,6 +726,7 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
     # Truth values
     true = ['T','.true.',True,'true']
     # Options and formats available
+    _options = ['--cluster=','--queue=','--nb_core=']
     _set_options = ['stdout_level','fortran_compiler']
     _plot_mode = ['all', 'parton','pythia','pgs','delphes']
     # Variables to store object information
@@ -763,7 +765,6 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
         
         # load the current status of the directory
         if os.path.exists(pjoin(self.me_dir,'HTML','results.pkl')):
-            sys.path.append(pjoin(self.me_dir,'bin'))
             self.results = save_load_object.load_from_file(pjoin(self.me_dir,'HTML','results.pkl'))
         else:
             model = self.find_model_name()
@@ -793,7 +794,10 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
         if self.cluster_mode == 2 and not self.nb_core:
             import multiprocessing
             self.nb_core = multiprocessing.cpu_count()
-        
+            
+        if self.cluster_mode == 1 and not hasattr(self, cluster):
+            cluster_name = self.configuration['cluster_type']
+            self.cluster = cluster.from_name(cluster_name)()
         return args
                     
     ############################################################################            
@@ -820,7 +824,8 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
                               'web_browser':None,
                               'eps_viewer':None,
                               'text_editor':None,
-                              'fortran_compiler':None}
+                              'fortran_compiler':None,
+                              'cluster_mode':'pbs'}
         
         if not config_path:
             try:
@@ -870,6 +875,8 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
                     continue
                 else:
                     self.configuration[key] = ''
+            elif key.startswith('cluster'):
+                pass
             elif key not in ['text_editor','eps_viewer','web_browser']:
                 # Default: try to set parameter
                 try:
@@ -1521,10 +1528,10 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
             subprocess.call(['./'+exe], cwd=cwd, stdout=stdout,
                             stderr=subprocess.STDOUT, **opt)
             logger.info('%s run in %f s' % (exe, time.time() -start))
-            #print 'sum_html'
-            #subprocess.call(['./sum_html'], cwd=self.dirbin)
+
         elif self.cluster_mode == 1:
-            os.system("qsub -N %s %s >> %s" % (self.queue, exe, stdout))
+            self.cluster.submit(exe, stdout=stdout)
+
         elif self.cluster_mode == 2:
             import thread
             if not hasattr(self, 'control_thread'):
@@ -1562,8 +1569,11 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
         """ monitor the progress of running job """
         
         if self.cluster_mode == 1:
-            subprocess.call([pjoin(self.dirbin, 'monitor'), self.run_name], 
-                                                                cwd=self.me_dir)
+            def update_status(idle, run, finish):
+                self.update_status((idle, run, finish), level='parton')
+            self.cluster.wait(self.me_dir, update_status)            
+            #subprocess.call([pjoin(self.dirbin, 'monitor'), self.run_name], 
+            #                                                    cwd=self.me_dir)
         if self.cluster_mode == 2:
             # Wait that all thread finish
             if not self.control_thread[2]:
@@ -1572,7 +1582,6 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
             else:    
                 for i in range(0,self.nb_core):
                     self.control_thread[1].acquire()
-                    print 'currently running', self.control_thread[0]
                 self.control_thread[2] = False
                 self.control_thread[1].release()
             

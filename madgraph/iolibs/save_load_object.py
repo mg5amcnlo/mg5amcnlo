@@ -46,7 +46,7 @@ def load_from_file(filename):
 def pickle_object(fsock, object):
     """Helper routine to pickle an object to file socket fsock"""
 
-    pickle.dump(object, fsock, protocol=2)
+    cPickle.dump(object, fsock, protocol=2)
 
 class UnPickler(pickle.Unpickler):
     """Treat problem of librarie"""
