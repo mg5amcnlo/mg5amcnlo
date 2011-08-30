@@ -383,6 +383,7 @@ class LoopProcessExporterFortranSA(export_v4.ProcessExporterFortranSA,
                  'iolibs/template_files/loop/helas_loop_amplitude_pairing.inc')).read() 
                 pairingargs="".join([("P"+str(i)+", ") for i in range(1,callkey[0]+1)])
                 replace_dict['pairingargs']=pairingargs
+                replace_dict['nwfsargs'] = callkey[1]
                 pairingdecl="".join([("P"+str(i)+", ") for i in range(1,callkey[0]+1)])[:-2]
                 replace_dict['pairingdecl']=pairingdecl
                 pairingset="\n".join([("P("+str(i)+")=P"+str(i)) for \

@@ -969,7 +969,14 @@ class FortranUFOHelasCallWriter(UFOHelasCallWriter):
         """ Routine for automatic generation of a call to CutTools for loop
         amplitudes."""
         
-        call = "CALL LOOP(%d,"
+        call = "CALL LOOP"
+        call_key=loopamp.get_call_key()
+        # Now use a unique identifier for the Loop helas-like call, base on the call key
+        if call_key[1]==call_key[2]:
+            call = call + "_%d" % call_key[1]
+        else:
+            call = call + "_%d_%d" % (call_key[1],call_key[2])
+        call = call +"(%d,"
         if (len(loopamp.get('pairing')) != len(loopamp.get('mothers'))):
             # Possible non trivial pairing, we must specify it.
             call = call + "%d,"*len(loopamp.get('pairing'))

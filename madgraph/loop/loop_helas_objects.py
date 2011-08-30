@@ -1250,18 +1250,14 @@ class LoopHelasMatrixElement(helas_objects.HelasMatrixElement):
         """Return a list of (lorentz_name, conjugate, outgoing) with
         all lorentz structures used by this LoopHelasMatrixElement."""
 
-        # for now same as for LO since aloha is not ready yet for loop
-        return [(tuple(wa.get('lorentz')), tuple(wa.get_conjugate_index()),
-                 wa.find_outgoing_number()) for wa in \
-                self.get_all_wavefunctions() + self.get_all_amplitudes() \
-                if wa.get('interaction_id') != 0]
-        
-    def get_used_couplings(self):
-        """Return a list with all couplings used by this
-        LoopHelasMatrixElement."""
-        
-        # for now same as for LO since aloha is not ready yet for loop
-        return [wa.get('coupling') for wa in \
+        # LO version which should be replaced by below once Aloha will be ready
+        # for it.
+        return super(LoopHelasMatrixElement,self).get_used_lorentz()
+        # NLO version for when Aloha will be ready for it
+        return [(tuple(wa.get('lorentz')), tuple(wa.get_conjugate_index()),\
+                 wa.find_outgoing_number(), \
+                 False if (isinstance(wa,helas_objects.HelasAmplitude) or \
+                  not wa.get('is_loop')) else True) for wa in \
                 self.get_all_wavefunctions() + self.get_all_amplitudes() \
                 if wa.get('interaction_id') != 0]
 

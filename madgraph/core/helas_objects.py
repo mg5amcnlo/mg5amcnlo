@@ -1685,8 +1685,9 @@ class HelasAmplitude(base_objects.PhysicsObject):
         # The call is different depending on the type of vertex. 
         # For example, base would give AMP(%d), R2 would give AMPL(0,%d)
         # and a single pole UV counter-term would give AMPL(1,%d).
+        # Also for loop amplitudes, one must have the tag 'loop'
         if self['type']!='base':
-            res.append(self.get_epsilon_order())
+            res.append(self['type'])
 
         # Check if we need to append a charge conjugation flag
         if self.needs_hermitian_conjugate():

@@ -1,4 +1,4 @@
-      SUBROUTINE LOOP( LID, %(pairingargs)s%(wfsargs)s%(margs)s RES)
+      SUBROUTINE LOOP_%(nloopline)d_%(nwfsargs)d( LID, %(pairingargs)s%(wfsargs)s%(margs)s RES)
 
       INTEGER    NEXTERNAL
       PARAMETER (NEXTERNAL=%(nexternal)d)

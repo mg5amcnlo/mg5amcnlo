@@ -159,13 +159,13 @@ C     REVERSE THE MOMENTUM IN THE WF FOR THE SECOND L-CUT SPINORS
       W(3)=(0.d0,0.d0)
       W(4)=(0.d0,0.d0)
       IF (CFIG.EQ.1) THEN
-        W(1)=(0.d0,0.d0)
+        W(1)=(1.d0,0.d0)
       ELSEIF (CFIG.EQ.2) THEN
-        W(2)=(0.d0,0.d0)
+        W(2)=(1.d0,0.d0)
       ELSEIF (CFIG.EQ.3) THEN
-        W(3)=(0.d0,0.d0)
+        W(3)=(1.d0,0.d0)
       ELSEIF (CFIG.EQ.4) THEN
-        W(4)=(0.d0,0.d0)
+        W(4)=(1.d0,0.d0)
       ENDIF
 C     REVERSE THE MOMENTUM IN THE WF FOR THE SECOND L-CUT SPINORS      
       IF SCD THEN

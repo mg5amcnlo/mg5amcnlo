@@ -102,7 +102,7 @@ C
 C  
 C GLOBAL VARIABLES
 C  
-      COMPLEX*16 W(18,NWAVEFUNCS)
+      COMPLEX*16 W(20,NWAVEFUNCS)
 	  COMMON/WFCTS/W
       include 'coupl.inc'
 C  
@@ -132,7 +132,7 @@ ENDDO
       RES(2) = 0.D0
       RES(3) = 0.D0
       DO K = 1, 3
-          DO I = 1, NCOLORBON
+          DO I = 1, NCOLORBORN
               ZTEMP(1) = (0.D0,0.D0)
               ZTEMP(2) = (0.D0,0.D0)
               ZTEMP(3) = (0.D0,0.D0)

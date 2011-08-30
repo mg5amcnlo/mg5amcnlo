@@ -1,4 +1,4 @@
-      SUBROUTINE LOOP( LID, %(wfsargs)s%(margs)s RES)
+      SUBROUTINE LOOP_%(nloopline)d( LID, %(wfsargs)s%(margs)s RES)
 C  
 C CONSTANTS 
 C  
