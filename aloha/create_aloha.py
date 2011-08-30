@@ -489,7 +489,7 @@ class AbstractALOHAModel(dict):
 
     def compute_subset(self, data):
         """ create the requested ALOHA routine. 
-        data should be a list of tuple (lorentz, conjugate, outgoing)
+        data should be a list of tuple (lorentz, conjugate, outgoing, loop)
         conjugate should be a tuple with the pair number to conjugate.
         outgoing a tuple of the requested routines."""
         
@@ -500,7 +500,18 @@ class AbstractALOHAModel(dict):
         # reorganize the data (in order to use optimization for a given lorentz
         #structure
         request = {}
-        for list_l_name, conjugate, outgoing in data:
+        
+        self.loop = any([len(d)==4 for d in data])
+        
+        
+        for i, d in enumerate(data):
+            if len(d) == 3:
+                data[i] = data[i] + (False,)
+        
+        
+                
+                
+        for list_l_name, conjugate, outgoing, loop in data:
             for l_name in list_l_name:
                 try:
                     request[l_name][conjugate].append(outgoing)
