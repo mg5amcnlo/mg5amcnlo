@@ -847,7 +847,6 @@ class FeynmanDiagram(object):
         if line.number == 1 == vertex.get('legs')[0].get('number'):
             line.inverse_part_antipart()
 
-
     def load_leg(self, leg):
         """Extend the leg to Feynman line. Associate the line to the diagram.
         """
@@ -1709,12 +1708,14 @@ class DiagramDrawer(object):
                                         ' in a invalid format')
 
         # Upgrade diagram to FeynmanDiagram or FeynmanDiagramHorizontal 
-        #following option choice
-        if isinstance(diagram, loop_objects.LoopDiagram) and diagram.get('type'):
+        #following option choice type is zero for the born and negative for R2
+        if isinstance(diagram, loop_objects.LoopDiagram) and diagram.get('type') > 0:
             diagram = LoopFeynmanDiagram(diagram, 
                                     amplitude.get('structure_repository'),
                                     model, 
-                                    opt=opt) 
+                                    opt=opt)
+        elif diagram.get('type') <0:
+            return None 
         elif opt.horizontal:
             diagram = FeynmanDiagramHorizontal(diagram, model, opt=opt)
         else:
@@ -1983,16 +1984,18 @@ class LoopFeynmanDiagram(FeynmanDiagram):
         'contract' defines if we contract to one point the non propagating line.
         Compare to usual load we glue the cutted propagator of the Loop.
         """ 
-                 
-        for pdg, list_struct_id, vertex_id in self.diagram['tag']:
-            for structure_id in list_struct_id:
-                for vertex in self.fdstructures[structure_id]['vertices']:
-                     self.load_vertex(vertex)                        
-        super(LoopFeynmanDiagram, self).load_diagram(contract)
+
+        if self.diagram['tag']:
+            for pdg, list_struct_id, vertex_id in self.diagram['tag']:
+                for structure_id in list_struct_id:
+                    for vertex in self.fdstructures[structure_id]['vertices']:
+                        self.load_vertex(vertex)                        
+            super(LoopFeynmanDiagram, self).load_diagram(contract)
+        else:
+            super(LoopFeynmanDiagram, self).load_diagram(contract)
         
         # select the lines present in the loop
         loop_line = [line for line in self.lineList if line.loop_line]
-        
         # Fuse the cutted particles (the first and the last of the list)
         self.fuse_line(loop_line[0], loop_line[-1])
         
