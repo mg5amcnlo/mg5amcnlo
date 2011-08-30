@@ -194,8 +194,8 @@ class TestParamCard(unittest.TestCase):
         card.mod_param('polemass', [35], value=2, comment='new')
         self.assertEqual(param.value, 2)
         self.assertEqual(param.comment, 'new')
-        
-        self.assertRaises(AssertionError, card.mod_param('polemass', [35], 'width', [23]))
+        self.assertRaises(AssertionError, card.mod_param, 
+                                             *('polemass', [35], 'width', [24]))
         
     
 class TestParamCardRule(unittest.TestCase):
