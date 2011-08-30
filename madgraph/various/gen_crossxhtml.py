@@ -143,7 +143,7 @@ class AllResults(dict):
             status = '<td colspan=4>%s</td>' %  self.status
         else:
             status ='<td> %s </td> <td> %s </td> <td> %s </td> <td> %s </td>' % \
-                (tuple(self.status)+ sum(self.status))
+                (tuple(self.status)+ (sum(self.status),))
         status_dict = {'status': status,
                         'cross': self.current['cross'],
                         'error': self.current['error'],

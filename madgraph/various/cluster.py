@@ -16,6 +16,8 @@ import logging
 import os
 import time
 
+logger = logging.getLogger('madgraph.cluster') 
+
 class ClusterManagmentError(Exception):
     pass
 
@@ -166,8 +168,11 @@ class PBSCluster(Cluster):
 
     def submit(self, prog, argument=[], cwd=None, stdout=None, stderr=None, log=None):
         """Submit the """
+
         
-        me_dir = prog.rsplit('SubProcesses',1)[0]
+        me_dir = os.path.realpath(os.path.join(cwd,prog)).rsplit('/SubProcesses',1)[0][-14:]
+	if not me_dir[0].isalpha():
+		me_dir = 'a' + me_dir[1:]
         
         if cwd is None:
             cwd = os.getcwd()
@@ -182,14 +187,17 @@ class PBSCluster(Cluster):
         else:
             argument = ''
 
+
+
         a = subprocess.Popen(['qsub','-o',stdout,
-                                     '-N','me_dir', 
+                                     '-N',me_dir, 
                                      '-e',stderr,
                                      '-q', 'madgraph',
                                      '-V',
-                                     prog], stdout=subprocess.PIPE)
+                                     prog], stdout=subprocess.PIPE, cwd=cwd)
 
         output = a.stdout.read()
+
         #Submitting job(s).
         #Logging submit event(s).
         #1 job(s) submitted to cluster 2253622.
@@ -206,7 +214,11 @@ class PBSCluster(Cluster):
             if 'Unknown' in output:
                 return 'F'
             elif line.startswith(str(id)):
-                return line.split()[4]
+		status = line.split()[4]
+		if status in ['Q']:
+		    return 'I' 
+		elif status in ['T','E','R']:                
+		    return 'R' 
         return 'F'
         
 
@@ -216,15 +228,22 @@ class PBSCluster(Cluster):
         cmd = "qstat"
         status = subprocess.Popen([cmd], stdout=subprocess.PIPE)
 
+	if me_dir.endswith('/'):
+	    me_dir = me_dir[:-1]	
+	me_dir = me_dir[-14:]
+        if not me_dir[0].isalpha():
+		me_dir = 'a' + me_dir[1:]
+
         idle, run, fail = 0, 0, 0
         for line in status.stdout:
             if me_dir in line:
                 status = line.split()[4]
-                if status == 'I':
+                if status == 'Q':
                     idle += 1
-                elif status == 'R':
+                elif status in ['R','E','T']:
                     run += 1
                 else:
+		    print line
                     fail += 1
 
         return idle, run, self.submitted - (idle+run+fail), fail

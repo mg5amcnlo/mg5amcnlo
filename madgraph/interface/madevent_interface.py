@@ -56,6 +56,7 @@ try:
     from madgraph import InvalidCmd
     MADEVENT = False
 except Exception, error:
+    print error
     # import from madevent directory
     import internal.extended_cmd as cmd
     import internal.misc as misc    
@@ -209,7 +210,7 @@ class HelpToCmd(object):
         logger.info("      Note that those options will be kept for the current session")      
         logger.info("      --cluster= :[%s] cluster choice: 0 single machine" % 
                                                               self.cluster_mode)
-        logger.info("                                      1 pbs cluster")
+        logger.info("                                      1 %s cluster" % self.configuration['cluster_mode'])
         logger.info("                                      2 multicore")
         logger.info("      --queue= :[%s] queue name on the pbs cluster" % 
                                                                      self.queue)
@@ -795,9 +796,9 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
             import multiprocessing
             self.nb_core = multiprocessing.cpu_count()
             
-        if self.cluster_mode == 1 and not hasattr(self, cluster):
+        if self.cluster_mode == 1 and not hasattr(self, 'cluster'):
             cluster_name = self.configuration['cluster_type']
-            self.cluster = cluster.from_name(cluster_name)()
+            self.cluster = cluster.from_name[cluster_name]()
         return args
                     
     ############################################################################            
@@ -934,7 +935,10 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
     ############################################################################
     def update_status(self, status, level):
         """ update the index status """
-        logger.info(status)
+	if isinstance(status, str):
+	    logger.info(status)
+	else:
+	    logger.info(' Idle: %s Running: %s Finish: %s' % status)
         self.results.update(status, level)
         os.system('%s/gen_cardhtml-pl' % (self.dirbin))
    
@@ -1056,7 +1060,7 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
             for job in glob.glob(pjoin(Pdir,'ajob*')):
                 job = os.path.basename(job)
                 os.system('touch %s/wait.%s' %(Pdir,job))
-                self.launch_job(job, cwd=Pdir,stdout=devnull)
+                self.launch_job(job, cwd=Pdir)
         self.monitor()
         self.update_status('finish survey', 'parton')
 
@@ -1107,7 +1111,7 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
                 for job in glob.glob(pjoin(Pdir,'ajob*')):
                     job = os.path.basename(job)
                     os.system('touch %s/wait.%s' %(Pdir, job))
-                    self.launch_job(job, cwd=Pdir,stdout=devnull)
+                    self.launch_job(job, cwd=Pdir)
                     
         self.monitor()
         
@@ -1530,7 +1534,7 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
             logger.info('%s run in %f s' % (exe, time.time() -start))
 
         elif self.cluster_mode == 1:
-            self.cluster.submit(exe, stdout=stdout)
+            self.cluster.submit(exe, stdout=stdout, cwd=cwd)
 
         elif self.cluster_mode == 2:
             import thread
