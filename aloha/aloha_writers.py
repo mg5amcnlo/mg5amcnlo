@@ -2,7 +2,9 @@ try:
     import madgraph.iolibs.file_writers as writers 
 except:
     import aloha.file_writers as writers
-    
+
+import aloha.create_aloha as create_aloha
+
 import os
 import re 
 from numbers import Number
@@ -342,9 +344,13 @@ class ALOHAWriterForFortran(WriteALOHA):
             offshelltype = self.particles[self.offshell -1]
             offshell_size = self.type_to_size[offshelltype]            
             #Implement the conservation of Energy Impulsion
-            for i in range(-1,1):
+            if create_aloha.LOOP_MODE:
+                max = 3 # each component is one momentum (since it's complex)
+            else:
+                max = 1 # one componenet correspond to 2 component
+            for i in range(-1, max):
                 str_out += '%s%d(%d)= ' % (offshelltype, self.offshell, \
-                                                              offshell_size + i)
+                                                          offshell_size + i)
                 
                 pat=re.compile(r'^[-+]?(?P<spin>\w)')
                 for elem in momentum_conservation:
@@ -361,11 +367,16 @@ class ALOHAWriterForFortran(WriteALOHA):
             sign = ''
             if self.offshell == index and type in ['V','S']:
                 sign = '-'
-                            
-            str_out += '%s(0) = %s dble(%s%d(%d))\n' % (mom, sign, type, index, energy_pos)
-            str_out += '%s(1) = %s dble(%s%d(%d))\n' % (mom, sign, type, index, energy_pos + 1)
-            str_out += '%s(2) = %s dimag(%s%d(%d))\n' % (mom, sign, type, index, energy_pos + 1)
-            str_out += '%s(3) = %s dimag(%s%d(%d))\n' % (mom, sign, type, index, energy_pos)            
+            if create_aloha.LOOP_MODE:
+                str_out += '%s(0) = %s %s%d(%d)\n' % (mom, sign, type, index, energy_pos)
+                str_out += '%s(1) = %s %s%d(%d)\n' % (mom, sign, type, index, energy_pos + 1)
+                str_out += '%s(2) = %s %s%d(%d)\n' % (mom, sign, type, index, energy_pos + 2)
+                str_out += '%s(3) = %s %s%d(%d)\n' % (mom, sign, type, index, energy_pos + 3)            
+            else:  
+                str_out += '%s(0) = %s dble(%s%d(%d))\n' % (mom, sign, type, index, energy_pos)
+                str_out += '%s(1) = %s dble(%s%d(%d))\n' % (mom, sign, type, index, energy_pos + 1)
+                str_out += '%s(2) = %s dimag(%s%d(%d))\n' % (mom, sign, type, index, energy_pos + 1)
+                str_out += '%s(3) = %s dimag(%s%d(%d))\n' % (mom, sign, type, index, energy_pos)            
             
                    
         # Definition for the One Over Mass**2 terms
@@ -427,10 +438,13 @@ class ALOHAWriterForFortran(WriteALOHA):
             denominator = self.obj.denominator
             for ind in denominator.listindices():
                 denom = self.write_obj(denominator.get_rep(ind))
-            string = 'denom =' + '1d0/(' + denom + ')'
-            string = string.replace('+-', '-')
-            string = re.sub('\((?P<num>[+-]*[0-9])\+(?P<num2>[+-][0-9])[Jj]\)\.', '(\g<num>d0,\g<num2>d0)', string)
-            string = re.sub('(?P<num>[0-9])[Jj]\.', '\g<num>*(0d0,1d0)', string)
+            if create_aloha.LOOP_MODE:
+                string = 'denom = 1d0'
+            else:
+                string = 'denom =' + '1d0/(' + denom + ')'
+                string = string.replace('+-', '-')
+                string = re.sub('\((?P<num>[+-]*[0-9])\+(?P<num2>[+-][0-9])[Jj]\)\.', '(\g<num>d0,\g<num2>d0)', string)
+                string = re.sub('(?P<num>[0-9])[Jj]\.', '\g<num>*(0d0,1d0)', string)
             OutString = OutString + string + '\n'
             for ind in numerator.listindices():
                 string = '%s(%d)= COUP*denom*' % (OffShellParticle, self.pass_to_HELAS(ind, start=1))

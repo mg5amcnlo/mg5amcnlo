@@ -40,6 +40,7 @@ logger = logging.getLogger('ALOHA')
 
 _conjugate_gap = 50
 _spin2_mult = 1000
+LOOP_MODE = False
 
 class ALOHAERROR(Exception): pass
 
@@ -57,6 +58,7 @@ class AbstractRoutine(object):
         self.infostr = infostr
         self.symmetries = []
         self.combined = []
+        self.loop = False # Check if we need the denominator
         
     def add_symmetry(self, outgoing):
         """ add an outgoing """
@@ -430,9 +432,13 @@ class AbstractALOHAModel(dict):
                                                        (lorentzname, outgoing) )
             return None
     
-    def set(self, lorentzname, outgoing, abstract_routine):
+    def set(self, lorentzname, outgoing, abstract_routine, loop=True):
         """ add in the dictionary """
     
+        if loop:
+            abstract_routine = copy.copy(abstract_routine)
+            abstract_routine.loop = True
+            
         self[(lorentzname, outgoing)] = abstract_routine
     
     def compute_all(self, save=True, wanted_lorentz = []):
@@ -490,6 +496,7 @@ class AbstractALOHAModel(dict):
     def compute_subset(self, data):
         """ create the requested ALOHA routine. 
         data should be a list of tuple (lorentz, conjugate, outgoing, loop)
+        if loop is not given it's suppose to be False.
         conjugate should be a tuple with the pair number to conjugate.
         outgoing a tuple of the requested routines."""
         
@@ -501,21 +508,23 @@ class AbstractALOHAModel(dict):
         #structure
         request = {}
         
-        self.loop = any([len(d)==4 for d in data])
+        #Check Loop status
+        LOOP_MODE = any([len(d)==4 for d in data])
+        # Add loop attribut for those which are not defined
 
         for i, d in enumerate(data):
             if len(d) == 3:
                 data[i] = data[i] + (False,)
-                
+
         for list_l_name, conjugate, outgoing, loop in data:
             for l_name in list_l_name:
                 try:
-                    request[l_name][conjugate].append(outgoing)
+                    request[l_name][conjugate].append((outgoing, loop))
                 except:
                     try:
-                        request[l_name][conjugate] = [outgoing]
+                        request[l_name][conjugate] = [(outgoing, loop)]
                     except:
-                        request[l_name] = {conjugate: [outgoing]}
+                        request[l_name] = {conjugate: [(outgoing, loop)]}
                         
         # Loop on the structure to build exactly what is request
         for l_name in request:
@@ -532,10 +541,11 @@ class AbstractALOHAModel(dict):
             
             for conjg in request[l_name]:
                 #ensure that routines are in rising order (for symetries)
-                routines = sorted(request[l_name][conjg])
+                outgoing = sorted([a[0] for a in request[l_name][conjg] if not a[1]])
+                outgoing_loop = sorted([a[0] for a in request[l_name][conjg] if a[1]])
                 if not conjg:
                     # No need to conjugate -> compute directly
-                    self.compute_aloha(builder, routines=routines)
+                    self.compute_aloha(builder, routines=routines, routines_loop=outgoing_loop)
                 else:
                     # Define the high level conjugate routine
                     conjg_builder = builder.define_conjugate_builder(conjg)
@@ -551,10 +561,12 @@ class AbstractALOHAModel(dict):
                     lorentzname += 'C%s' % c
                 self[(lorentzname, outgoing)].add_combine(list_l_name[1:])
                         
-    def compute_aloha(self, builder, symmetry=None, routines=None):
+    def compute_aloha(self, builder, symmetry=None, routines=None, routines_loop=None):
         """ define all the AbstractRoutine linked to a given lorentz structure
         symmetry authorizes to use the symmetry of anoter lorentz structure.
-        routines to define only a subset of the routines."""
+        routines to define only a subset of the routines.
+        routines loop defines those which should also be written in loop output
+        """
 
         name = builder.name
         if not symmetry:
@@ -563,6 +575,7 @@ class AbstractALOHAModel(dict):
             routines = range(len(builder.spins) + 1)
   
         # Create the routines
+        # First create the tree-level routines
         for outgoing in routines:
             symmetric = self.has_symmetries(symmetry, outgoing, valid_output=routines)
             if symmetric:
@@ -571,6 +584,19 @@ class AbstractALOHAModel(dict):
                 wavefunction = builder.compute_routine(outgoing)
                 #Store the information
                 self.set(name, outgoing, wavefunction)
+        
+        # Creates the Loop routines
+        for outgoing in routines_loop:
+            symmetric = self.has_symmetries(symmetry, outgoing, valid_output=routines_loop)
+            if symmetric:
+                self.get(name+'L', symmetric).add_symmetry(outgoing)
+            elif outgoing in routines:
+                abstract = self.get(name, outgoing)
+                self.set(name+'L', outgoing, abstract, loop=True)
+            else:
+                wavefunction = builder.compute_routine(outgoing)
+                #Store the information
+                self.set(name+'L', outgoing, wavefunction, loop=True)
 
     def compute_aloha_without_kernel(self, builder, symmetry=None, routines=None):
         """define all the AbstractRoutine linked to a given lorentz structure
