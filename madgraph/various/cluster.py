@@ -210,7 +210,7 @@ class PBSCluster(Cluster):
         status = subprocess.Popen([cmd], shell=True, stdout=subprocess.PIPE)
         
         for line in status.stdout:
-            if 'Unknown' in output:
+            if 'Unknown' in line:
                 return 'F'
             elif line.startswith(str(id)):
 		status = line.split()[4]

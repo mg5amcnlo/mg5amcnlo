@@ -1142,17 +1142,20 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
 
 
         self.update_status('Combining Events', level='parton')
+        try:
+            os.remove('/tmp/combine.log')
+        except:
+            pass
         if self.cluster_mode == 1:
-            out = self.cluster.launch_and_wait('../bin/internal/combine_events', 
+            out = self.cluster.launch_and_wait('../bin/internal/run_combine', 
                                         cwd=pjoin(self.me_dir,'SubProcesses'),
                                         stdout='/tmp/combine.log')
         else:
-            out = subprocess.Popen(['../bin/internal/combine_events'],
+            out = subprocess.Popen(['../bin/internal/run_combine'],
                          cwd=pjoin(self.me_dir,'SubProcesses'), stdout=subprocess.PIPE)
             b = subprocess.Popen(['tee', '/tmp/combine.log'], stdin=out.stdout)
             out.wait()
-        # Remove huge scratch file    
-        os.system('rm -f  %s' % pjoin(self.me_dir,'SubProcesses', 'scratch'))
+
             
         output = open('/tmp/combine.log','r').read()
         # Store the number of unweighted events for the results object
