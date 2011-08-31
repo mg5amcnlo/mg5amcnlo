@@ -380,12 +380,12 @@ class ALOHAWriterForFortran(WriteALOHA):
                 str_out += '%s(3) = %s dimag(%s%d(%d))\n' % (mom, sign, type, index, energy_pos)            
             
                    
-        # Definition for the One Over Mass**2 terms
-        for elem in overm:
-            #Mom is in format OMX with X the number of the particle
-            index = int(elem[2:])
-            str_out += 'OM%d = 0d0\n' % (index)
-            str_out += 'if (M%d .ne. 0d0) OM%d' % (index, index) + '=1d0/M%d**2\n' % (index) 
+                # Definition for the One Over Mass**2 terms
+                for elem in overm:
+                    #Mom is in format OMX with X the number of the particle
+                    index = int(elem[2:])
+                    str_out += 'OM%d = 0d0\n' % (index)
+                    str_out += 'if (M%d .ne. 0d0) OM%d' % (index, index) + '=1d0/M%d**2\n' % (index) 
         
         # Returning result
         return str_out

@@ -432,12 +432,13 @@ class AbstractALOHAModel(dict):
                                                        (lorentzname, outgoing) )
             return None
     
-    def set(self, lorentzname, outgoing, abstract_routine, loop=True):
+    def set(self, lorentzname, outgoing, abstract_routine, loop=False):
         """ add in the dictionary """
     
-        if loop:
+        if loop and not abstract_routine.loop:
             abstract_routine = copy.copy(abstract_routine)
             abstract_routine.loop = True
+            abstract_routine.name += 'L'
             
         self[(lorentzname, outgoing)] = abstract_routine
     
@@ -499,7 +500,7 @@ class AbstractALOHAModel(dict):
         if loop is not given it's suppose to be False.
         conjugate should be a tuple with the pair number to conjugate.
         outgoing a tuple of the requested routines."""
-        
+
         # Search identical particles in the vertices in order to avoid
         #to compute identical contribution
         self.look_for_symmetries()
@@ -545,13 +546,15 @@ class AbstractALOHAModel(dict):
                 outgoing_loop = sorted([a[0] for a in request[l_name][conjg] if a[1]])
                 if not conjg:
                     # No need to conjugate -> compute directly
-                    self.compute_aloha(builder, routines=routines, routines_loop=outgoing_loop)
+                    self.compute_aloha(builder, routines=outgoing, 
+                                                routines_loop=outgoing_loop)
                 else:
                     # Define the high level conjugate routine
                     conjg_builder = builder.define_conjugate_builder(conjg)
                     # Compute routines
                     self.compute_aloha(conjg_builder, symmetry=lorentz.name,
-                                        routines=routines)
+                                        routines=outgoing, 
+                                        routines_loop=outgoing_loop )
         
         # Build mutiple lorentz call
         for list_l_name, conjugate, outgoing, loop in data:
