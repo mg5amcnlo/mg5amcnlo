@@ -1144,19 +1144,22 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
         self.update_status('Combining Events', level='parton')
         if self.cluster_mode == 1:
             out = self.cluster.launch_and_wait('../bin/internal/combine_events', 
-                                        cwd=pjoin(self.me_dir,'Events'),
-                                        stdout=open('/tmp/combine.log','w'))
+                                        cwd=pjoin(self.me_dir,'SubProcesses'),
+                                        stdout='/tmp/combine.log')
         else:
-            out = subprocess.call(['../bin/internal/run_combine_events'],
-                         cwd=pjoin(self.me_dir,'Events'), stdout=subprocess.PIPE)
+            out = subprocess.Popen(['../bin/internal/combine_events'],
+                         cwd=pjoin(self.me_dir,'SubProcesses'), stdout=subprocess.PIPE)
             b = subprocess.Popen(['tee', '/tmp/combine.log'], stdin=out.stdout)
             out.wait()
+        # Remove huge scratch file    
+        os.system('rm -f  %s' % pjoin(self.me_dir,'SubProcesses', 'scratch'))
+            
         output = open('/tmp/combine.log','r').read()
         # Store the number of unweighted events for the results object
         pat = re.compile(r'''\s*Unweighting selected\s*(\d+)\s*events''',re.MULTILINE)
-        nb_event = pat.search(output).groups()[0]
-        self.results.add_detail('nb_event', nb_event)
-
+        if output:
+            nb_event = pat.search(output).groups()[0]
+            self.results.add_detail('nb_event', nb_event)
         
         
 
