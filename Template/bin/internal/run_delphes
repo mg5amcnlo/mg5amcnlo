@@ -13,8 +13,7 @@ else
 fi
 
 main=`pwd`
-p=$2
-run=$3
+run=$2
 
 if [ ! -e ../Cards/delphes_card.dat ]; then
   echo "No delphes_card.dat found. Quitting..."
@@ -49,29 +48,26 @@ echo pythia_events.hep > inputfiles.list
 
 sed -e "s:DELPHESDIR:$delphesdir:g" ../Cards/delphes_card.dat > ../Cards/tmp_card.dat
 
-if [ "$p" = "1" ]; then
-  echo '#!/bin/bash' > delphes.pbs
-  echo "cd $main;$delphesdir/Delphes inputfiles.list delphes.root ../Cards/tmp_card.dat ../Cards/delphes_trigger.dat;$delphesdir/LHCO_Only delphes.root;touch delphes.out" >> delphes.pbs
-  chmod u+x delphes.pbs
-  qsub -N delphes_run -e delphes.err -o delphes.log -V -q madgraph delphes.pbs >> ../running_jobs 
+#if [ "$p" = "1" ]; then
+#  echo '#!/bin/bash' > delphes.pbs
+#  echo "cd $main;$delphesdir/Delphes inputfiles.list delphes.root ../Cards/tmp_card.dat ../Cards/delphes_trigger.dat;$delphesdir/LHCO_Only delphes.root;touch delphes.out" >> delphes.pbs
+#  chmod u+x delphes.pbs
+#  qsub -N delphes_run -e delphes.err -o delphes.log -V -q madgraph delphes.pbs >> ../running_jobs 
 
-  while [ ! -e delphes.out ]; do
-    sleep 5
-  done  
-  rm delphes.pbs
-else
+#  while [ ! -e delphes.out ]; do
+#    sleep 5
+#  done  
+#  rm delphes.pbs
+#else
   $delphesdir/Delphes inputfiles.list delphes.root ../Cards/tmp_card.dat ../Cards/delphes_trigger.dat >& delphes.log
   $delphesdir/LHCO_Only delphes.root >> delphes.log
-fi
+#fi
 
 if [[ -e delphes.err ]];then
   cat delphes.err
 fi
 
 if [ -e delphes_events.lhco ]; then
-   echo Storing files
-   echo Storing Delphes files > ../status
-    ../bin/internal/gen_crossxhtml-pl $run
 # delphes_card.dat
    if [ -e ../Cards/delphes_card.dat ]; then
      echo "<MGDelphesCard>" >>banner.txt

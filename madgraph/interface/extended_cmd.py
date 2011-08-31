@@ -41,7 +41,7 @@ class Cmd(cmd.Cmd):
     history_header = ""
     
     timeout = 1 # time authorize to answer question [0 is no time limit]
-    
+    _display_opts = ['options','variable']
     
     class InvalidCmd(Exception):
         """expected error for wrong command"""
@@ -459,7 +459,7 @@ class Cmd(cmd.Cmd):
     
     help_EOF = help_quit
      
-
+    
 
     def do_help(self, line):
         """ propose some usefull possible action """
@@ -502,6 +502,48 @@ class Cmd(cmd.Cmd):
             text+='\t %s \n' % option      
         print text
 
+    def do_display(self, line):
+        
+        args = self.split_arg(line)
+        #check the validity of the arguments
+        
+        if args[0] == "options":
+            outstr = "Value of current MG5 Options:\n" 
+            for key, value in self.configuration.items() + self._options.items():
+                outstr += '%25s \t:\t%s\n' %(key,value)
+            print outstr
+            
+        elif args[0] == "variable":
+            outstr = "Value of Internal Variable:\n"
+            try:
+                var = eval(args[1])
+            except:
+                outstr += 'GLOBAL:\nVariable %s is not a global variable\n' % args[1]
+            else:
+                outstr += 'GLOBAL:\n' 
+                outstr += misc.nice_representation(var, nb_space=4)
+               
+            try:
+                var = eval('self.%s' % args[1])
+            except:
+                outstr += 'LOCAL:\nVariable %s is not a local variable\n' % args[1]
+            else:
+                outstr += 'LOCAL:\n'
+                outstr += misc.nice_representation(var, nb_space=4)                
+            
+            pydoc.pager(outstr)
+    
+    def help_display(self):
+        """help for display command"""
+        logger.info("syntax: display " + "|".join(self._display_opts))
+        logger.info("-- display a the status of various internal state variables")
+        
+    def complete_display(self,text, line, begidx, endidx):        
+        args = self.split_arg(line[0:begidx])
+        # Format
+        if len(args) == 1:
+            return self.list_completion(text, self._display_opts)
+                                        
     def help_help(self):
         logger.info("syntax: help")
         logger.info("-- access to the in-line help" )

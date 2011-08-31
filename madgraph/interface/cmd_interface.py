@@ -1442,7 +1442,7 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
     # Options and formats available
     _display_opts = ['particles', 'interactions', 'processes', 'diagrams', 
                      'diagrams_text', 'multiparticles', 'couplings', 'lorentz', 
-                     'checks', 'parameters', 'options', 'mg5_variable']
+                     'checks', 'parameters', 'options', 'variable']
     _add_opts = ['process']
     _save_opts = ['model', 'processes']
     _tutorial_opts = ['start', 'stop']
@@ -1753,31 +1753,8 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
 
             pydoc.pager(outstr)            
         
-        elif args[0] == "options":
-            outstr = "Value of current MG5 Options:\n" 
-            for key, value in self.configuration.items() + self._options.items():
-                outstr += '%25s \t:\t%s\n' %(key,value)
-            print outstr
-            
-        elif args[0] == "mg5_variable":
-            outstr = "Value of Internal Variable:\n"
-            try:
-                var = eval(args[1])
-            except:
-                outstr += 'GLOBAL:\nVariable %s is not a global variable\n' % args[1]
-            else:
-                outstr += 'GLOBAL:\n' 
-                outstr += misc.nice_representation(var, nb_space=4)
-               
-            try:
-                var = eval('self.%s' % args[1])
-            except:
-                outstr += 'LOCAL:\nVariable %s is not a local variable\n' % args[1]
-            else:
-                outstr += 'LOCAL:\n'
-                outstr += misc.nice_representation(var, nb_space=4)                
-            
-            pydoc.pager(outstr)
+        elif args[0] in  ["options", "mg5_variable"]:
+            super(MadGraphCmd, self).do_display(self,line)
                 
             
     def multiparticle_string(self, key):

@@ -13,12 +13,11 @@ else
 fi
 
 main=`pwd`
-p=$2
-run=$3
+run=$2
 
-if [ "$4" != "" ]
+if [ "$3" != "" ]
 then
-  ERAdir=$4
+  ERAdir=$3
 else
   ERAdir=../../ExRootAnalysis
 fi
@@ -47,20 +46,20 @@ rm -f pgs.log > /dev/null
 rm -f pgs.err > /dev/null
 rm -f pgs.out > /dev/null
 
-if [ "$p" = "1" ]; then
-  echo '#!/bin/bash' > pgs.pbs
-  echo "export PDG_MASS_TBL=$pgsdir/mass_width_2004.mc;cd $main;$pgsdir/pgs --stdhep pythia_events.hep --nev 100000 --L0 --detector ../Cards/pgs_card.dat pgs_uncleaned_events.lhco;$pgsdir/clean_output -muon pgs_uncleaned_events.lhco pgs_events.lhco;touch pgs.out" >> pgs.pbs
-  chmod u+x pgs.pbs
-  qsub -N pgs_run -e pgs.err -o pgs.log -V -q madgraph pgs.pbs >> ../running_jobs 
-
-  while [ ! -e pgs.out ]; do
-    sleep 5
-  done  
-  rm pgs.pbs
-else
+#if [ "$p" = "1" ]; then
+#  echo '#!/bin/bash' > pgs.pbs
+#  echo "export PDG_MASS_TBL=$pgsdir/mass_width_2004.mc;cd $main;$pgsdir/pgs --stdhep pythia_events.hep --nev 100000 --L0 --detector ../Cards/pgs_card.dat pgs_uncleaned_events.lhco;$pgsdir/clean_output -muon pgs_uncleaned_events.lhco pgs_events.lhco;touch pgs.out" >> pgs.pbs
+#  chmod u+x pgs.pbs
+#  qsub -N pgs_run -e pgs.err -o pgs.log -V -q madgraph pgs.pbs >> ../running_jobs 
+#
+#  while [ ! -e pgs.out ]; do
+#    sleep 5
+#  done  
+#  rm pgs.pbs
+#else
   $pgsdir/pgs  --stdhep pythia_events.hep --nev 100000 --L0 --detector ../Cards/pgs_card.dat pgs_uncleaned_events.lhco >& pgs.log
   $pgsdir/clean_output -muon pgs_uncleaned_events.lhco pgs_events.lhco
-fi
+#fi
 
 if [[ -e pgs.err ]];then
 cat pgs.err

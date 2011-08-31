@@ -1056,7 +1056,7 @@ class ProcessExporterFortranME(ProcessExporterFortran):
         cp(_file_path+'/__init__.py', self.dir_path+'/bin/internal/__init__.py')
         cp(_file_path+'/various/gen_crossxhtml.py', 
                                 self.dir_path+'/bin/internal/gen_crossxhtml.py')                
-        cp(_file_path+'/various/clusster.py', 
+        cp(_file_path+'/various/cluster.py', 
                                        self.dir_path+'/bin/internal/cluster.py') 
         cp(_file_path+'/interface/.mg5_logging.conf', 
                                  self.dir_path+'/bin/internal/me5_logging.conf') 

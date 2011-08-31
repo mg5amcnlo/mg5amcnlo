@@ -2,7 +2,7 @@
 #
 #  This runs hep2lhe on the unweighted_events.dat
 #
-#  Usage: run_hep2lhe [pydir [para/serial [run_name]]]
+#  Usage: run_hep2lhe [pydir  [run_name]]
 #  where pydir is the path to the hep2lhe executable
 
 if [ "$1" != "" ]
@@ -12,8 +12,7 @@ else
   pydir=../../pythia-pgs/src
 fi
 
-p=$2
-run=$3
+run=$2
 main=`pwd`
 
 if [ ! -e ../Cards/pythia_card.dat ]; then
@@ -37,20 +36,20 @@ rm -f hep2lhe.err > /dev/null
 rm -f hep2lhe.out > /dev/null
 
 echo "Running hep2lhe"
-if [ "$p" = "1" ]; 
-then 
-echo '#!/bin/bash' > hep2lhe.pbs
-echo "cd $main;$pydir/hep2lhe;touch hep2lhe.out" >> hep2lhe.pbs
-chmod u+x hep2lhe.pbs
-qsub -N hep2lhe_run -e hep2lhe.err -o hep2lhe.log -V -q madgraph hep2lhe.pbs >> ../running_jobs
-while [ ! -e hep2lhe.out ]
-do
-  sleep 5
-done
-rm -f hep2lhe.pbs
-else
+#if [ "$p" = "1" ]; 
+#then 
+#echo '#!/bin/bash' > hep2lhe.pbs
+#echo "cd $main;$pydir/hep2lhe;touch hep2lhe.out" >> hep2lhe.pbs
+#chmod u+x hep2lhe.pbs
+#qsub -N hep2lhe_run -e hep2lhe.err -o hep2lhe.log -V -q madgraph hep2lhe.pbs >> ../running_jobs
+#while [ ! -e hep2lhe.out ]
+#do
+#  sleep 5
+#done
+#rm -f hep2lhe.pbs
+#else
 $pydir/hep2lhe >& hep2lhe.log
-fi
+#fi
 
 echo "pythia_events.lhe file generated, with simple jet clustering"
 echo "Warning! Never use this file for detector studies!"

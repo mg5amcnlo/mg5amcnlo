@@ -173,7 +173,7 @@ class CmdExtended(cmd.Cmd):
     def get_history_header(self):
         """return the history header""" 
         return self.history_header % misc.get_time_info()
-    
+            
     
 #===============================================================================
 # HelpToCmd
@@ -1144,16 +1144,19 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
 
 
         self.update_status('Combining Events', level='parton')
-        
-        out = subprocess.Popen(['%s/run_combine' % self.dirbin, str(self.cluster_mode)],
-                               stdout= subprocess.PIPE,
-                            cwd=pjoin(self.me_dir, 'SubProcesses'))
-        b = subprocess.Popen(['tee', '/tmp/combine.log'], stdin=out.stdout)
-        out.wait()
-        
+        if self.cluster_mode == 1:
+            out = self.cluster.launch_and_wait('../bin/internal/combine_events', 
+                                        cwd=pjoin(self.me_dir,'Events'),
+                                        stdout=open('/tmp/combine.log','w'))
+        else:
+            out = subprocess.call(['../bin/internal/run_combine_events'],
+                         cwd=pjoin(self.me_dir,'Events'), stdout=subprocess.PIPE)
+            b = subprocess.Popen(['tee', '/tmp/combine.log'], stdin=out.stdout)
+            out.wait()
+        output = open('/tmp/combine.log','r').read()
         # Store the number of unweighted events for the results object
         pat = re.compile(r'''\s*Unweighting selected\s*(\d+)\s*events''',re.MULTILINE)
-        nb_event = pat.search(open('/tmp/combine.log','r').read()).groups()[0]
+        nb_event = pat.search(output).groups()[0]
         self.results.add_detail('nb_event', nb_event)
 
         
@@ -1243,7 +1246,7 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
         pythia_src = pjoin(self.configuration['pythia-pgs_path'],'src')
         
         logger.info('Launching pythia')
-
+        ## LAUNCHING PYTHIA
         if self.cluster_mode == 1:
             self.cluster.launch_and_wait('../bin/internal/run_pythia', 
                                          argument= [pythia_src],
@@ -1274,8 +1277,12 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
         # Creating LHE file
         if misc.is_executable(pjoin(pydir, 'hep2lhe')):
             self.update_status('Creating Pythia LHE File', level='pythia')
-            subprocess.call([self.dirbin+'/run_hep2lhe', pydir, 
-                             str(self.cluster_mode)],
+            if self.cluster_mode == 1:
+                self.cluster.launch_and_wait(self.dirbin+'/run_hep2lhe', 
+                                         argument= [pydir],
+                                        cwd=pjoin(self.me_dir,'Events'))
+            else:
+                subprocess.call([self.dirbin+'/run_hep2lhe', pydir],
                              cwd=pjoin(self.me_dir,'Events'))
             
             # Creating ROOT file
@@ -1436,7 +1443,12 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
         
         self.update_status('Running PGS', level='pgs')
         # now pass the event to a detector simulator and reconstruct objects
-        subprocess.call([self.dirbin+'/run_pgs', pgsdir, str(self.cluster_mode)],
+        if self.cluster_mode == 1:
+            self.cluster.launch_and_wait('../bin/internal/run_pgs', 
+                                         argument= [pgsdir],
+                                        cwd=pjoin(self.me_dir,'Events'))
+        else:        
+            subprocess.call([self.dirbin+'/run_pgs', pgsdir],
                             cwd=pjoin(self.me_dir, 'Events')) 
 
         if not os.path.exists(pjoin(self.me_dir, 'Events', 'pgs_events.lhco')):
@@ -1496,9 +1508,14 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
         
         self.update_status('Running Delphes', level='delphes')
         delphes_dir = self.configuration['delphes_path']
-        subprocess.call([self.dirbin+'/run_delphes', delphes_dir, str(self.cluster_mode)],
-                            cwd=pjoin(self.me_dir,'Events')) 
-        
+        if self.cluster_mode == 1:
+            self.cluster.launch_and_wait('../bin/internal/run_delphes', 
+                                         argument= [delphes_dir],
+                                        cwd=pjoin(self.me_dir,'Events'))
+        else:
+            subprocess.call(['../bin/internal/run_delphes', delphes_dir],
+                         cwd=pjoin(self.me_dir,'Events'))
+                
         if not os.path.exists(pjoin(self.me_dir, 'Events', 'delphes_events.lhco')):
             logger.error('Fail to create LHCO events from DELPHES')
             return 
@@ -1511,15 +1528,16 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
         self.create_plot('Delphes')
         self.update_status('finish', level='delphes')   
 
-    def launch_job(self,exe, cwd=None, stdout=None, **opt):
+    def launch_job(self,exe, cwd=None, stdout=None, argument = [], **opt):
         """ """
+        argument = [str(arg) for arg in argument]
         
-        def launch_in_thread(exe, cwd, stdout, control_thread):
+        def launch_in_thread(exe, arguement, cwd, stdout, control_thread):
             """ way to launch for multicore"""
             
             control_thread[0] += 1 # upate the number of running thread
             start = time.time()
-            subprocess.call(['./'+exe], cwd=cwd, stdout=stdout,
+            subprocess.call(['./'+exe] + argument, cwd=cwd, stdout=stdout,
                         stderr=subprocess.STDOUT, **opt)
             logger.info('%s run in %f s' % (exe, time.time() -start))
             
@@ -1537,7 +1555,7 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
         
         if self.cluster_mode == 0:
             start = time.time()
-            subprocess.call(['./'+exe], cwd=cwd, stdout=stdout,
+            subprocess.call(['./'+exe] + argument, cwd=cwd, stdout=stdout,
                             stderr=subprocess.STDOUT, **opt)
             logger.info('%s run in %f s' % (exe, time.time() -start))
 
@@ -1554,11 +1572,11 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
 
             if self.control_thread[2]:
                 self.control_thread[1].acquire()
-                thread.start_new_thread(launch_in_thread,(exe, cwd, stdout, self.control_thread))
+                thread.start_new_thread(launch_in_thread,(exe, argument, cwd, stdout, self.control_thread))
             elif self.control_thread[0] <  self.nb_core -1:
-                thread.start_new_thread(launch_in_thread,(exe, cwd, stdout, self.control_thread))
+                thread.start_new_thread(launch_in_thread,(exe, argument, cwd, stdout, self.control_thread))
             elif self.control_thread[0] ==  self.nb_core -1:
-                thread.start_new_thread(launch_in_thread,(exe, cwd, stdout, self.control_thread))
+                thread.start_new_thread(launch_in_thread,(exe, argument, cwd, stdout, self.control_thread))
                 self.control_thread[2] = True
                 self.control_thread[1].acquire() # Lock the next submission
                                                  # Up to a release
@@ -1842,19 +1860,19 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
                 os.system('gunzip -fc %s > %s' % (issudfile, path))
             else:
                 msg = 'No sudakov grid file for parameter choice. Start to generate it. This might take a while'
-                logger.info(error_msg)
-                if self.cluster_mode not in [0, 1]:
-                    msg = 'No sudakov grid file for parameter choice and not possible to create it automaticaly for the cluster choice'
-                    logger.error(msg)
-                    os.system("echo %s > %s" % (msg, self.error))
-                    shutil.copy(self.error, self.status)             
-                    os.remove(pjoin(self.me_dir, 'RunWeb'))
-                    os.system('%s/gen_cardhtml-pl' % self.dirbin)    
-                    return
-                self.update_status(msg, level='none')
-                os.system('%s/run_genissud %s' % (self.dirbin, self.cluster_mode))
-
-
+                self.update_status('GENERATE SUDAKOF GRID', level='parton')
+                
+                for i in range(-2,6):
+                    self.launch_job('%s/gensudgrid ' % self.dirbin, 
+                                    arguments = [i],
+                                    cwd=self.me_dir, 
+                                    stdout=open('gensudgrid%s.log' % s,'w'))
+                self.monitor()
+                for i in range(-2,6):
+                    path = pjoin(self.me_dir, 'lib', 'issudgrid.dat')
+                    os.system('cat gensudgrid%s.log >> %s' % (i, path))
+                    os.system('gzip -fc %s > %s' % (path, issudfile))
+                                     
     ############################################################################
     def create_root_file(self, input='unweighted_events.lhe', 
                                               output='unweighted_events.root' ):
