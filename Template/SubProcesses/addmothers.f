@@ -125,9 +125,6 @@ c      print *,'Chose color flow ',ic
             icolalt(2,isym(i,jsym))=icolup(2,i,ic,numproc)
             if (icolup(1,i,ic, numproc).gt.maxcolor) maxcolor=icolup(1,i,ic, numproc)
             if (icolup(2,i,ic, numproc).gt.maxcolor) maxcolor=icolup(2,i,ic, numproc)
-         else
-            print *,'NONONO'
-            stop
          endif
       enddo
 
