@@ -1149,15 +1149,15 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
         if self.cluster_mode == 1:
             out = self.cluster.launch_and_wait('../bin/internal/run_combine', 
                                         cwd=pjoin(self.me_dir,'SubProcesses'),
-                                        stdout='/tmp/combine.log')
+                                        stdout='combine.log')
         else:
             out = subprocess.Popen(['../bin/internal/run_combine'],
                          cwd=pjoin(self.me_dir,'SubProcesses'), stdout=subprocess.PIPE)
-            b = subprocess.Popen(['tee', '/tmp/combine.log'], stdin=out.stdout)
+            b = subprocess.Popen(['tee', 'combine.log'], stdin=out.stdout)
             out.wait()
 
             
-        output = open('/tmp/combine.log','r').read()
+        output = open(pjoin(self.me_dir,'SubProcesses','combine.log')).read()
         # Store the number of unweighted events for the results object
         pat = re.compile(r'''\s*Unweighting selected\s*(\d+)\s*events''',re.MULTILINE)
         if output:
