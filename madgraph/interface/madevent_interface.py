@@ -707,7 +707,7 @@ class CompleteForCmd(CheckValidForCmd):
             data = [n.rsplit('/',1)[1][:-25] for n in data]
             return self.list_completion(text, data)
         else:
-            self.list_completion(text, self._options + ['-f', '--no_default'])
+            self.list_completion(text, self._run_options + ['-f', '--no_default'])
         
     def complete_pgs(self,text, line, begidx, endidx):
         "Complete the pythia command"
@@ -719,7 +719,7 @@ class CompleteForCmd(CheckValidForCmd):
             data = [n.rsplit('/',1)[1][:-21] for n in data]
             return self.list_completion(text, data)
         else:
-            self.list_completion(text, self._options + ['-f', '--no_default'])
+            self.list_completion(text, self._run_options + ['-f', '--no_default'])
     
     complete_delphes = complete_pgs        
         
@@ -758,9 +758,7 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
         self.status = pjoin(self.me_dir, 'status')
         self.error =  pjoin(self.me_dir, 'error')
         self.dirbin = pjoin(self.me_dir, 'bin', 'internal')
-
-                
-        self._options = {}        
+      
         self.to_store = []
         self.run_name = None
         # Load the configuration file
