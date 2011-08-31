@@ -3,7 +3,6 @@ try:
 except:
     import aloha.file_writers as writers
 
-import aloha.create_aloha as create_aloha
 
 import os
 import re 
@@ -12,12 +11,14 @@ from numbers import Number
 class WriteALOHA: 
     """ Generic writing functions """ 
     
+    loop_mode = False
     power_symbol = '**'
     change_var_format = str
     change_number_format = str
     extension = ''
     type_to_variable = {2:'F',3:'V',5:'T',1:'S'}
     type_to_size = {'S':3, 'T':18, 'V':6, 'F':6}
+    
     
     def __init__(self, abstract_routine, dirpath):
 
@@ -344,7 +345,7 @@ class ALOHAWriterForFortran(WriteALOHA):
             offshelltype = self.particles[self.offshell -1]
             offshell_size = self.type_to_size[offshelltype]            
             #Implement the conservation of Energy Impulsion
-            if create_aloha.LOOP_MODE:
+            if self.LOOP_MODE:
                 max = 3 # each component is one momentum (since it's complex)
             else:
                 max = 1 # one componenet correspond to 2 component
@@ -367,7 +368,7 @@ class ALOHAWriterForFortran(WriteALOHA):
             sign = ''
             if self.offshell == index and type in ['V','S']:
                 sign = '-'
-            if create_aloha.LOOP_MODE:
+            if self.LOOP_MODE:
                 str_out += '%s(0) = %s %s%d(%d)\n' % (mom, sign, type, index, energy_pos)
                 str_out += '%s(1) = %s %s%d(%d)\n' % (mom, sign, type, index, energy_pos + 1)
                 str_out += '%s(2) = %s %s%d(%d)\n' % (mom, sign, type, index, energy_pos + 2)
@@ -438,7 +439,7 @@ class ALOHAWriterForFortran(WriteALOHA):
             denominator = self.obj.denominator
             for ind in denominator.listindices():
                 denom = self.write_obj(denominator.get_rep(ind))
-            if create_aloha.LOOP_MODE:
+            if self.LOOP_MODE:
                 string = 'denom = 1d0'
             else:
                 string = 'denom =' + '1d0/(' + denom + ')'

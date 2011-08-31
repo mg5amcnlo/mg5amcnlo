@@ -509,7 +509,7 @@ class AbstractALOHAModel(dict):
         request = {}
         
         #Check Loop status
-        LOOP_MODE = any([len(d)==4 for d in data])
+        aloha_writers.WriteALOHA.LOOP_MODE = any([len(d)==4 for d in data])
         # Add loop attribut for those which are not defined
 
         for i, d in enumerate(data):
