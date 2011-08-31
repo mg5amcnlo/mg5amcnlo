@@ -4149,6 +4149,11 @@ class HelasMultiProcess(base_objects.PhysicsObject):
             element made of a loop diagrams. It will create a different 
             color matrix depending on wether the process has a born or not."""
 
+            # Now that the Helas Object generation is finished, we must relabel
+            # the wavefunction and the amplitudes according to what should be
+            # used for the output.
+            matrix_element.relabel_helas_objects()
+
             # Always create an empty color basis, and the
             # list of raw colorize objects (before
             # simplification) associated with amplitude

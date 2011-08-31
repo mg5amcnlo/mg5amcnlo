@@ -1714,7 +1714,7 @@ class DiagramDrawer(object):
                                     amplitude.get('structure_repository'),
                                     model, 
                                     opt=opt)
-        elif diagram.get('type') <0:
+        elif isinstance(diagram, loop_objects.LoopDiagram) and diagram.get('type') <0:
             return None 
         elif opt.horizontal:
             diagram = FeynmanDiagramHorizontal(diagram, model, opt=opt)

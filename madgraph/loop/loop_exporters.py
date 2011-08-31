@@ -105,20 +105,12 @@ class LoopProcessExporterFortranSA(export_v4.ProcessExporterFortranSA,
                                     os.path.join(self.dir_path, 'Source'))
         
         # We must change some files to their version for NLO computations
-        cpfiles= ["Source/makefile","SubProcesses/makefile_sa",\
+        cpfiles= ["Source/makefile","SubProcesses/makefile",\
                   "SubProcesses/check_sa.f"]
         
         for file in cpfiles:
             shutil.copy(os.path.join(self.loop_dir,'StandAlone/', file),
                         os.path.join(self.dir_path, file))
-        try:
-            subprocess.call([os.path.join('bin', 'standalone')],
-                            stdout = os.open(os.devnull, os.O_RDWR),
-                            stderr = os.open(os.devnull, os.O_RDWR),
-                            cwd=self.dir_path)
-        except OSError:
-            # Probably standalone already called
-            pass
 
     #===========================================================================
     # Create proc_card_mg5.dat for Standalone directory
@@ -310,6 +302,7 @@ class LoopProcessExporterFortranSA(export_v4.ProcessExporterFortranSA,
         
         replace_dict['nexternal']=(matrix_element.get_nexternal_ninitial()[0]-2)
         loop_helas_calls=fortran_model.get_loop_amplitude_helas_calls(matrix_element)
+        replace_dict['maxlcouplings']=matrix_element.find_max_loop_coupling()
         replace_dict['loop_helas_calls'] = "\n".join(loop_helas_calls)
 
         file=file%replace_dict
@@ -360,21 +353,34 @@ class LoopProcessExporterFortranSA(export_v4.ProcessExporterFortranSA,
             replace_dict=copy.copy(replace_dict_orig)
             # Add to this dictionary all other attribute common to all
             # HELAS-like loop subroutines.
+            replace_dict['maxlcouplings']=matrix_element.find_max_loop_coupling()
             replace_dict['nloopline']=callkey[0]
             wfsargs="".join([("W"+str(i)+", ") for i in range(1,callkey[1]+1)])
+            replace_dict['ncplsargs']=callkey[2]
             replace_dict['wfsargs']=wfsargs
             margs="".join([("M"+str(i)+", ") for i in range(1,callkey[0]+1)])
             replace_dict['margs']=margs
+            cplsargs="".join([("C"+str(i)+", ") for i in range(1,callkey[2]+1)])
+            replace_dict['cplsargs']=cplsargs
             wfsargsdecl="".join([("W"+str(i)+"(20), ") for i in range(1,callkey[1]+1)])[:-2]
             replace_dict['wfsargsdecl']=wfsargsdecl
             margsdecl="".join([("M"+str(i)+", ") for i in range(1,callkey[0]+1)])[:-2]
             replace_dict['margsdecl']=margsdecl
+            cplsdecl="".join([("C"+str(i)+", ") for i in range(1,callkey[2]+1)])[:-2]
+            replace_dict['cplsdecl']=cplsdecl
             weset="\n".join([("WE(I,"+str(i)+")=W"+str(i)+"(I)") for \
                              i in range(1,callkey[1]+1)])
             replace_dict['weset']=weset
             mset="\n".join([("M2L("+str(i)+")=M"+str(i)+"**2") for \
                              i in range(1,callkey[0]+1)])
-            replace_dict['mset']=mset            
+            replace_dict['mset']=mset
+            cplset="\n".join([("LC("+str(i)+")=C"+str(i)) for \
+                             i in range(1,callkey[2]+1)])
+            replace_dict['cplset']=cplset            
+            msetlines=["ML(1)=M%d"%(callkey[0]),"ML(2)=M%d"%(callkey[0])]
+            mset2="\n".join(msetlines+[("ML("+str(i)+")=M"+str(i-2)) for \
+                             i in range(3,callkey[0]+2)])
+            replace_dict['mset2']=mset2           
             if callkey[0]==callkey[1]:
                 file = open(os.path.join(_file_path, \
                  'iolibs/template_files/loop/helas_loop_amplitude.inc')).read()                
@@ -386,7 +392,7 @@ class LoopProcessExporterFortranSA(export_v4.ProcessExporterFortranSA,
                 replace_dict['nwfsargs'] = callkey[1]
                 pairingdecl="".join([("P"+str(i)+", ") for i in range(1,callkey[0]+1)])[:-2]
                 replace_dict['pairingdecl']=pairingdecl
-                pairingset="\n".join([("P("+str(i)+")=P"+str(i)) for \
+                pairingset="\n".join([("PAIRING("+str(i)+")=P"+str(i)) for \
                              i in range(1,callkey[0]+1)])
                 replace_dict['pairingset']=pairingset
             file = file % replace_dict

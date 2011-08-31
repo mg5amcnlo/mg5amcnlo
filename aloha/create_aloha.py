@@ -502,14 +502,10 @@ class AbstractALOHAModel(dict):
         request = {}
         
         self.loop = any([len(d)==4 for d in data])
-        
-        
+
         for i, d in enumerate(data):
             if len(d) == 3:
                 data[i] = data[i] + (False,)
-        
-        
-                
                 
         for list_l_name, conjugate, outgoing, loop in data:
             for l_name in list_l_name:
@@ -548,7 +544,7 @@ class AbstractALOHAModel(dict):
                                         routines=routines)
         
         # Build mutiple lorentz call
-        for list_l_name, conjugate, outgoing in data:
+        for list_l_name, conjugate, outgoing, loop in data:
             if len(list_l_name) >1:
                 lorentzname = list_l_name[0]
                 for c in conjugate:

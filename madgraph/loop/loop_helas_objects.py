@@ -57,6 +57,47 @@ class LoopHelasAmplitude(helas_objects.HelasAmplitude):
         else:
             super(LoopHelasAmplitude, self).__init__()        
 
+    def is_equivalent(self, other):
+        """Comparison between different LoopHelasAmplitude in order to recognize
+        which ones are equivalent at the level of the file output.
+        I decided not to overload the operator __eq__ to be sure not to interfere
+        with other functionalities of the code."""
+
+        if(len(self.get('wavefunctions'))!=len(other.get('wavefunctions')) or
+           len(self.get('amplitudes'))!=len(other.get('amplitudes')) or
+           [len(wf.get('coupling')) for wf in self.get('wavefunctions')]!=
+           [len(wf.get('coupling')) for wf in other.get('wavefunctions')] or
+           [len(amp.get('coupling')) for amp in self.get('amplitudes')]!=
+           [len(amp.get('coupling')) for amp in other.get('amplitudes')]):
+            return False
+        
+        wfArgsToCheck = ['fermionflow','lorentz','state','onshell','spin',\
+                         'self_antipart','color']
+        for arg in wfArgsToCheck:
+            if [wf.get(arg) for wf in self.get('wavefunctions')]!=\
+               [wf.get(arg) for wf in other.get('wavefunctions')]:
+                return False
+
+        ampArgsToCheck = ['lorentz',]
+        for arg in ampArgsToCheck:
+            if [amp.get(arg) for wf in self.get('amplitudes')]!=\
+               [amp.get(arg) for wf in other.get('amplitudes')]:
+                return False
+        
+        # Finally just check that the loop and external mother wavefunctions
+        # of the loop wavefunctions and loop amplitudes arrive at the same places 
+        # in both self and other. The characteristics of the mothers is irrelevant,
+        # the only thing that matters is that the loop-type and external-type mothers
+        # are in the same order.
+        if [[m.get('is_loop') for m in lwf.get('mothers')] for lwf in self.get('wavefunctions')]!=\
+           [[m.get('is_loop') for m in lwf.get('mothers')] for lwf in other.get('wavefunctions')]:
+            return False
+        if [[m.get('is_loop') for m in lwf.get('mothers')] for lwf in self.get('amplitudes')]!=\
+           [[m.get('is_loop') for m in lwf.get('mothers')] for lwf in other.get('amplitudes')]:
+            return False
+        
+        return True
+
     def default_setup(self):
         """Default values for all properties"""
                 
@@ -152,11 +193,21 @@ class LoopHelasAmplitude(helas_objects.HelasAmplitude):
         masses.append(self.get('wavefunctions')[0].get('mass'))
         return masses
 
+    def get_couplings(self):
+        """ Returns the list of the couplings of the different helas objects
+        building this HelasLoopAmplitude. They are ordered as they will appear
+        in the helas calls."""
+
+        return (sum([wf.get('coupling') for wf in self.get('wavefunctions') if \
+             wf.get('coupling')!=['none']],[])\
+             +sum([amp.get('coupling') for amp in self.get('amplitudes')],[]))
+
     def get_call_key(self):
         """ The helas call to a loop is simple and only depends on the number
         of loop lines and mothers. This how it is reflected in the call key. """
         
-        return ("LOOP",len(self.get('wavefunctions'))-1,len(self.get('mothers')))
+        return ("LOOP",len(self.get('wavefunctions'))-1,\
+                len(self.get('mothers')),len(self.get('coupling')))
 
     def calculate_fermionfactor(self):
         """ Overloading of the function of the mother class to bypass its use """
@@ -999,6 +1050,7 @@ class LoopHelasMatrixElement(helas_objects.HelasMatrixElement):
                             loop_amp.set('type',diagram.get('type'))
                             loop_amp.set('number',min([amp.get('number') for amp
                                                        in loop_amp.get('amplitudes')]))
+                            loop_amp.set('coupling',loop_amp.get_couplings())
                             helas_diagram.get('amplitudes').append(loop_amp)
                 return wfNumber, amplitudeNumber
                 
@@ -1136,11 +1188,35 @@ class LoopHelasMatrixElement(helas_objects.HelasMatrixElement):
         for loopdiag in self.get_loop_diagrams():
             for loopamp in loopdiag.get_loop_amplitudes():
                 loopamp.set_mothers_and_pairing()
-    
+
+    def find_max_loop_coupling(self):
+        """ Find the maximum number of loop couplings appearing in any of the
+        LoopHelasAmplitude in this LoopHelasMatrixElement"""
+        
+        return max([len(amp.get('coupling')) for amp in \
+            sum([d.get_loop_amplitudes() for d in self.get_loop_diagrams()],[])])
+
     def relabel_helas_objects(self):
         """After the generation of the helas objects, we can give up on having
         a unique number identifying the helas wavefunction and amplitudes and 
-        instead use a labeling which is optimal for the output of the loop process."""
+        instead use a labeling which is optimal for the output of the loop process.
+        Also we tag all the LoopHelasAmplitude which are identical with the same
+        'number' attribute."""
+
+        # Give a unique number to each non-equivalent (at the level of the output)
+        # LoopHelasAmplitude
+        LoopHelasAmplitudeRecognized=[]
+        for lamp in \
+         sum([d.get_loop_amplitudes() for d in self.get_loop_diagrams()],[]):
+            lamp.set('number',-1)
+            for lamp2 in LoopHelasAmplitudeRecognized:
+                #if lamp.is_equivalent(lamp2):
+                if False:
+                    lamp.set('number',lamp2.get('number'))
+                    break;
+            if lamp.get('number')==-1:
+                    lamp.set('number',(len(LoopHelasAmplitudeRecognized)+1))
+                    LoopHelasAmplitudeRecognized.append(lamp)
 
         # Start with the born diagrams
         wfnumber=1
@@ -1165,8 +1241,6 @@ class LoopHelasMatrixElement(helas_objects.HelasMatrixElement):
                 for amp in loopamp['amplitudes']:
                     amp.set('number',ampnumber)
                     ampnumber=ampnumber+1
-                loopamp.set('number',min([amp.get('number') for amp in \
-                                          loopamp.get('amplitudes')]))
             for ctamp in loopdiag.get_ct_amplitudes():
                     ctamp.set('number',ampnumber)
                     ampnumber=ampnumber+1
@@ -1255,8 +1329,10 @@ class LoopHelasMatrixElement(helas_objects.HelasMatrixElement):
         # which removes the denominator in the propagator of the wavefunction created.
         return [(tuple(wa.get('lorentz')), tuple(wa.get_conjugate_index()),\
                  wa.find_outgoing_number(), \
-                 False if (isinstance(wa,helas_objects.HelasAmplitude) or \
-                  not wa.get('is_loop')) else True) for wa in \
+                 False if ((isinstance(wa,helas_objects.HelasAmplitude) and \
+                    wa.get('type')!='loop') or \
+                  (isinstance(wa,helas_objects.HelasWavefunction) and \
+                   not wa.get('is_loop'))) else True) for wa in \
                 self.get_all_wavefunctions() + self.get_all_amplitudes() \
                 if wa.get('interaction_id') != 0]
 
