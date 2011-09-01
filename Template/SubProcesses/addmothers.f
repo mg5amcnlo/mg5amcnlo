@@ -42,7 +42,7 @@
 
       integer iforest(2,-max_branch:-1,lmaxconfigs)
       common/to_forest/ iforest
-      integer sprop(-max_branch:-1,lmaxconfigs)
+      integer sprop(maxsproc,-max_branch:-1,lmaxconfigs)
       integer tprid(-max_branch:-1,lmaxconfigs)
       common/to_sprop/sprop,tprid
       integer            mapconfig(0:lmaxconfigs), iconfig
@@ -125,11 +125,6 @@ c      print *,'Chose color flow ',ic
             icolalt(2,isym(i,jsym))=icolup(2,i,ic,numproc)
             if (icolup(1,i,ic, numproc).gt.maxcolor) maxcolor=icolup(1,i,ic, numproc)
             if (icolup(2,i,ic, numproc).gt.maxcolor) maxcolor=icolup(2,i,ic, numproc)
-         else
-            icolalt(1,i)=jpart(4,i)
-            icolalt(2,i)=jpart(5,i)
-            if (jpart(4,i).gt.maxcolor) maxcolor=jpart(4,i)
-            if (jpart(5,i).gt.maxcolor) maxcolor=jpart(5,i)
          endif
       enddo
 
@@ -159,8 +154,8 @@ c       Daughters
             if(ida(j).gt.0) ida(j)=isym(ida(j),jsym)
           enddo
 c       Decide s- or t-channel
-          if(iabs(sprop(i,iconfig)).gt.0) then ! s-channel propagator
-            jpart(1,i)=sprop(i,iconfig)
+          if(iabs(sprop(numproc,i,iconfig)).gt.0) then ! s-channel propagator
+            jpart(1,i)=sprop(numproc,i,iconfig)
             ns=ns+1
           else
 c         Don't care about t-channel propagators
