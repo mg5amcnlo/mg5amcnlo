@@ -42,7 +42,7 @@
 
       integer iforest(2,-max_branch:-1,lmaxconfigs)
       common/to_forest/ iforest
-      integer sprop(-max_branch:-1,lmaxconfigs)
+      integer sprop(maxsproc,-max_branch:-1,lmaxconfigs)
       integer tprid(-max_branch:-1,lmaxconfigs)
       common/to_sprop/sprop,tprid
       integer            mapconfig(0:lmaxconfigs), iconfig
@@ -125,11 +125,6 @@ c      print *,'Chose color flow ',ic
             icolalt(2,isym(i,jsym))=icolup(2,i,ic,numproc)
             if (icolup(1,i,ic, numproc).gt.maxcolor) maxcolor=icolup(1,i,ic, numproc)
             if (icolup(2,i,ic, numproc).gt.maxcolor) maxcolor=icolup(2,i,ic, numproc)
-         else
-            icolalt(1,i)=jpart(4,i)
-            icolalt(2,i)=jpart(5,i)
-            if (jpart(4,i).gt.maxcolor) maxcolor=jpart(4,i)
-            if (jpart(5,i).gt.maxcolor) maxcolor=jpart(5,i)
          endif
       enddo
 
@@ -159,8 +154,8 @@ c       Daughters
             if(ida(j).gt.0) ida(j)=isym(ida(j),jsym)
           enddo
 c       Decide s- or t-channel
-          if(iabs(sprop(i,iconfig)).gt.0) then ! s-channel propagator
-            jpart(1,i)=sprop(i,iconfig)
+          if(iabs(sprop(numproc,i,iconfig)).gt.0) then ! s-channel propagator
+            jpart(1,i)=sprop(numproc,i,iconfig)
             ns=ns+1
           else
 c         Don't care about t-channel propagators
@@ -214,12 +209,18 @@ c       Fist set "safe" color info
      $       icolalt(2,ida(1))-icolalt(2,ida(2)).eq.0) then ! color singlet
             icolalt(1,i) = 0
             icolalt(2,i) = 0            
-          elseif(icolalt(1,ida(1))-icolalt(2,ida(2)).eq.0) then
+          elseif(icolalt(1,ida(1))-icolalt(2,ida(2)).eq.0) then ! 3bar 3 -> 8 or 8 8 -> 8
             icolalt(1,i) = icolalt(1,ida(2))
             icolalt(2,i) = icolalt(2,ida(1))
-          else if(icolalt(1,ida(2))-icolalt(2,ida(1)).eq.0) then
+          else if(icolalt(1,ida(2))-icolalt(2,ida(1)).eq.0) then ! 3 3bar -> 8 or 8 8 -> 8
             icolalt(1,i) = icolalt(1,ida(1))
             icolalt(2,i) = icolalt(2,ida(2))
+          else if(icolalt(1,ida(1)).eq.0.and.icolalt(2,ida(1)).eq.0) then ! 1 3/8 -> 3/8
+            icolalt(1,i) = icolalt(1,ida(2))
+            icolalt(2,i) = icolalt(2,ida(2))
+          else if(icolalt(1,ida(2)).eq.0.and.icolalt(2,ida(2)).eq.0) then ! 3/8 1 -> 3/8
+            icolalt(1,i) = icolalt(1,ida(1))
+            icolalt(2,i) = icolalt(2,ida(1))
           else if(icolalt(1,ida(2)).gt.0.and.icolalt(1,ida(1)).gt.0.and.
      $           icolalt(2,ida(2)).le.0.and.icolalt(2,ida(1)).le.0) then         ! sextet
             maxcolor=maxcolor+1

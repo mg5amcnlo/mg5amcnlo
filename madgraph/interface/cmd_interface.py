@@ -2038,14 +2038,6 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
                 required_schannel_ids = [required_schannel_ids]
             
 
-            #decay_process = len(filter(lambda leg: \
-            #                           leg.get('state') == False,
-            #                           myleglist)) == 1
-
-            if overall_orders and self._options['group_subprocesses']:
-                raise MadGraph5Error, \
-                      "For grouped subprocess output, orders should be specified for each process (no overall orders after @N)"                
-
             return \
                 base_objects.ProcessDefinition({'legs': myleglist,
                               'model': self._curr_model,

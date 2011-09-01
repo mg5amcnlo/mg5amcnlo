@@ -553,6 +553,7 @@ c************************************************************************
       include 'nexternal.inc'
       include 'maxconfigs.inc'
       include 'genps.inc'
+      include 'maxamps.inc'
 c
 c    Arguments
 c
@@ -562,7 +563,7 @@ c     Global
 c
       integer iforest(2,-max_branch:-1,lmaxconfigs)
       common/to_forest/ iforest
-      integer sprop(-max_branch:-1,lmaxconfigs)
+      integer sprop(maxsproc,-max_branch:-1,lmaxconfigs)
       integer tprid(-max_branch:-1,lmaxconfigs)
       common/to_sprop/sprop,tprid
       logical gForceBW(-max_branch:-1,lmaxconfigs)  ! Forced BW

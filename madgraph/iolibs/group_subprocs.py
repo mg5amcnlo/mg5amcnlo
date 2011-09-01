@@ -556,7 +556,11 @@ class DecayChainSubProcessGroup(SubProcessGroup):
                                            for a in g.get('amplitudes')] \
                                    for g in group.get('core_groups')])]
 
-            assert len(decay_group) == 1
+            assert len(decay_group) > 0
+
+            for i in range(1,len(decay_group)):
+                assert decay_group[i-1][1] == decay_group[i][1]
+                
             decay_group = decay_group[0]
 
             group_assignment = \
