@@ -200,10 +200,9 @@ class LoopProcessExporterFortranSA(export_v4.ProcessExporterFortranSA,
         self.write_pmass_file(writers.FortranWriter(filename),
                          matrix_element)
 
-#        Different for loop computations
-#        filename = 'ngraphs.inc'
-#        self.write_ngraphs_file(writers.FortranWriter(filename),
-#                           len(matrix_element.get_all_amplitudes()))
+        filename = 'ngraphs.inc'
+        self.write_ngraphs_file(writers.FortranWriter(filename),
+                           len(matrix_element.get_all_amplitudes()))
 
 #        Not ready yet
         # Generate diagrams
