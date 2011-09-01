@@ -1110,16 +1110,16 @@ class CompleteForCmd(CheckValidForCmd):
             if MG5DIR != os.path.realpath('.'):
                 complete += self.path_completion(text, MG5DIR, only_dirs = True, 
                                                                  relative=False)
-            if MG4DIR and MG4DIR != os.path.realpath('.'):
+            if MG4DIR and MG4DIR != os.path.realpath('.') and MG4DIR != MG5DIR:
                 complete += self.path_completion(text, MG4DIR, only_dirs = True,
                                                                  relative=False)
-            return complete
-
+            
         #option
         if len(args) >= 2:
-            opt = ['--cluster=', '--name=', '-f']
-            return self.list_completion(text, opt)
-
+            complete = []
+        opt = ['--cluster=', '--name=', '-f']
+        complete += self.list_completion(text, opt, line)
+        return complete
 
     def complete_load(self, text, line, begidx, endidx):
         "Complete the load command"

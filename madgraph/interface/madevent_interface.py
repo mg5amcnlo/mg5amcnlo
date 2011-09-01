@@ -1153,7 +1153,7 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
         else:
             out = subprocess.Popen(['../bin/internal/run_combine'],
                          cwd=pjoin(self.me_dir,'SubProcesses'), stdout=subprocess.PIPE)
-            b = subprocess.Popen(['tee', 'combine.log'], stdin=out.stdout)
+            b = subprocess.Popen(['tee', pjoin(self.me_dir,'SubProcesses','combine.log')], stdin=out.stdout)
             out.wait()
 
             

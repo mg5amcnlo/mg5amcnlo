@@ -175,31 +175,31 @@ class PBSCluster(Cluster):
 	if not me_dir[0].isalpha():
 		me_dir = 'a' + me_dir[1:]
         
+        text = ""
         if cwd is None:
             cwd = os.getcwd()
+        else: 
+            text = " cd %s;" % cwd
         if stdout is None:
             stdout = '/dev/null'
         if stderr is None:
             stderr = '/dev/null'
         if log is None:
             log = '/dev/null'
+        
+        text += prog
         if argument:
-            a = subprocess.Popen(['qsub','-o',stdout,
+            text += ' ' + ' '.join(argument)
+
+        a = subprocess.Popen(['qsub','-o',stdout,
                                      '-N',me_dir, 
                                      '-e',stderr,
                                      '-q', 'madgraph',
                                      '-V'], stdout=subprocess.PIPE, 
                                      stdin=subprocess.PIPE, cwd=cwd)
-            output = a.communicate(' '.join(argument))[0]
-        else:            
-            a = subprocess.Popen(['qsub','-o',stdout,
-                                     '-N',me_dir, 
-                                     '-e',stderr,
-                                     '-q', 'madgraph',
-                                     '-V',
-                                     prog], stdout=subprocess.PIPE, cwd=cwd)
-
-            output = a.stdout.read()
+            
+        output = a.communicate(text)[0]
+        output = a.stdout.read()
         id = output.split('.')[0]
         self.submitted += 1
         return id
