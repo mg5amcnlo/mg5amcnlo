@@ -199,7 +199,6 @@ class PBSCluster(Cluster):
                                      stdin=subprocess.PIPE, cwd=cwd)
             
         output = a.communicate(text)[0]
-        output = a.stdout.read()
         id = output.split('.')[0]
         self.submitted += 1
         return id

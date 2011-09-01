@@ -1063,7 +1063,7 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
             for job in glob.glob(pjoin(Pdir,'ajob*')):
                 job = os.path.basename(job)
                 os.system('touch %s/wait.%s' %(Pdir,job))
-                self.launch_job(job, cwd=Pdir)
+                self.launch_job('./%s' % job, cwd=Pdir)
         self.monitor()
         self.update_status('finish survey', 'parton')
 
@@ -1114,7 +1114,7 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
                 for job in glob.glob(pjoin(Pdir,'ajob*')):
                     job = os.path.basename(job)
                     os.system('touch %s/wait.%s' %(Pdir, job))
-                    self.launch_job(job, cwd=Pdir)
+                    self.launch_job('./%s' % job, cwd=Pdir)
                     
         self.monitor()
         
