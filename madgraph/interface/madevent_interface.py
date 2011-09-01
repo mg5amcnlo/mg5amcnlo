@@ -682,6 +682,7 @@ class CompleteForCmd(CheckValidForCmd):
         return  self.list_completion(text, self._run_options, line)
     
     complete_refine = complete_survey
+    complete_combine_events = complete_survey
     complete_generate_events = complete_survey
     
     
@@ -705,9 +706,14 @@ class CompleteForCmd(CheckValidForCmd):
             #return valid run_name
             data = glob.glob(pjoin(self.me_dir, 'Events', '*_unweighted_events.lhe.gz'))
             data = [n.rsplit('/',1)[1][:-25] for n in data]
-            return self.list_completion(text, data)
+            tmp1 =  self.list_completion(text, data)
+            if not self.run_name:
+                return tmp1
+            else:
+                tmp2 = self.list_completion(text, self._run_options + ['-f', '--no_default'], line)
+                return tmp1 + tmp2
         else:
-            self.list_completion(text, self._run_options + ['-f', '--no_default'])
+            return self.list_completion(text, self._run_options + ['-f', '--no_default'], line)
         
     def complete_pgs(self,text, line, begidx, endidx):
         "Complete the pythia command"
@@ -717,9 +723,14 @@ class CompleteForCmd(CheckValidForCmd):
             #return valid run_name
             data = glob.glob(pjoin(self.me_dir, 'Events', '*_pythia_events.hep.gz'))
             data = [n.rsplit('/',1)[1][:-21] for n in data]
-            return self.list_completion(text, data)
+            tmp1 =  self.list_completion(text, data)
+            if not self.run_name:
+                return tmp1
+            else:
+                tmp2 = self.list_completion(text, self._run_options + ['-f', '--no_default'], line)
+                return tmp1 + tmp2        
         else:
-            self.list_completion(text, self._run_options + ['-f', '--no_default'])
+            return self.list_completion(text, self._run_options + ['-f', '--no_default'], line)
     
     complete_delphes = complete_pgs        
         
