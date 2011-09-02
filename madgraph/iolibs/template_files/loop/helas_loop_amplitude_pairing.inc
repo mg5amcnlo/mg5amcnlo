@@ -9,7 +9,7 @@
 C
 C ARGUMENTS 
 C
-      REAL*8 %(wfsargsdecl)s 
+      COMPLEX*16 %(wfsargsdecl)s 
       REAL*8 %(margsdecl)s
       COMPLEX*16 %(cplsdecl)s
       INTEGER %(pairingdecl)s
@@ -43,9 +43,9 @@ C ----------
       ID=LID
       DO I=0,3
         TEMP=1
-        DO J=NLOOPLINE
+        DO J=1,NLOOPLINE
           DO K=TEMP,(TEMP+PAIRING(J)-1)
-            PL(I,J)=DBLE(WE(17+I,K))
+            PL(I,J)=DBLE(WE(5+I,K))
           ENDDO
           TEMP=TEMP+PAIRING(J)
         ENDDO

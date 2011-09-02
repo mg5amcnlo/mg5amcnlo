@@ -3,8 +3,8 @@ C
 C ARGUMENTS 
 C  
       INCLUDE 'cts_mprec.h'
-      INCLUDE 'cts_mc.h', INTENT(IN), DIMENSION(0:3) :: Q
-      INCLUDE 'cts_mc.h', INTENT(OUT) :: RES
+      INCLUDE 'cts_mpc.h'                                             , INTENT(IN), DIMENSION(0:3) :: Q
+      INCLUDE 'cts_mpc.h'                                             , INTENT(OUT) :: RES
 C  
 C LOCAL VARIABLES 
 C
@@ -32,7 +32,7 @@ C
       INTEGER    NEXTERNAL
       PARAMETER (NEXTERNAL=%(nexternal)d)
 	  INTEGER    MAXLCOUPLINGS
-      PARAMETER (NEXTERNAL=%(maxlcouplings)d)
+      PARAMETER (MAXLCOUPLINGS=%(maxlcouplings)d)
 	  INTEGER    NMAXLOOPWFS
       PARAMETER (NMAXLOOPWFS=(NEXTERNAL+1))
 C
@@ -56,7 +56,7 @@ C GLOBAL VARIABLES
 C
       COMPLEX*16 WE(20,NEXTERNAL)
 	  COMPLEX*16 LC(MAXLCOUPLINGS)
-	  REAL*8 ML(NEXTERNAL)	  
+	  REAL*8 ML(NEXTERNAL+1)	  
       INTEGER ID
       COMMON/LOOP/WE,LC,ML,ID
 C ----------

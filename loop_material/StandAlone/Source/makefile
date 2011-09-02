@@ -41,8 +41,8 @@ $(LIBDIR)libcernlib.$(libext): CERNLIB
 	cd CERNLIB; make	
 $(LIBDIR)libmodel.$(libext): MODEL
 	cd MODEL; make	
-$(LIBDIR)libcts.$(libext): CUTTOOLS
-	cd CUTTOOLS; make
+../$(LIBDIR)libcts.$(libext): CUTTOOLS
+	cd CUTTOOLS; make; mv -f includects/libcts.a ../$(LIBDIR); mv -f includects/ddmodule.mod ../$(LIBDIR); mv -f includects/mpmodule.mod ../$(LIBDIR); 
 
 # Binaries
 

@@ -78,9 +78,22 @@ class LoopExporterFortran(object):
             else:
                 raise MadGraph5Error, \
                       "No valid CutTools path given for processing loops."
-        
-        
 
+    #===========================================================================
+    # write the multiple-precision header files
+    #===========================================================================
+    def write_mp_files(self, writer_mprec, writer_mpc):
+        """Write the cts_mprec.h and cts_mpc.h"""
+
+        file = open(os.path.join(self.loop_dir, 'CutTools/src/cts/cts_mprec.h')).read()
+        writer_mprec.writelines(file)
+
+        file = open(os.path.join(self.loop_dir, 'CutTools/src/cts/cts_mpc.h')).read()
+        file = file.replace('&','')
+        writer_mpc.writelines(file)
+
+        return True        
+        
 #===============================================================================
 # LoopProcessExporterFortranSA
 #===============================================================================
@@ -112,29 +125,30 @@ class LoopProcessExporterFortranSA(export_v4.ProcessExporterFortranSA,
             shutil.copy(os.path.join(self.loop_dir,'StandAlone/', file),
                         os.path.join(self.dir_path, file))
 
+        cwd = os.getcwd()
+        dirpath = os.path.join(self.dir_path, 'SubProcesses')
+        try:
+            os.chdir(dirpath)
+        except os.error:
+            logger.error('Could not cd to directory %s' % dirpath)
+            return 0
+                                       
+        # Write the cts_mpc.h and cts_mprec.h files imported from CutTools
+        self.write_mp_files(writers.FortranWriter('cts_mprec.h'),\
+                            writers.FortranWriter('cts_mpc.h'),)
+
+        # Return to original PWD
+        os.chdir(cwd)
+
     #===========================================================================
-    # Create proc_card_mg5.dat for Standalone directory
+    # Set the compiler to be gfortran for the loop processes.
     #===========================================================================
-    def finalize_v4_directory(self, matrix_elements, history, makejpg = False,
-                              online = False):
-        """Finalize Standalone MG4 directory by generation proc_card_mg5.dat"""
-
-        # The super function finalize_v4_directory of the mother class
-        # ProcessExporterFortranSA is not used here because we want to use
-        # the gfortran compiler throughout the compilation (mandatory for 
-        # CutTools written in f90)    
-
-        self.set_compiler('gfortran')
-        # Not working yet :)
-        # self.make()
-
-        # Write command history as proc_card_mg5
-        if os.path.isdir(os.path.join(self.dir_path, 'Cards')):
-            output_file = os.path.join(self.dir_path, 'Cards', 'proc_card_mg5.dat')
-            output_file = open(output_file, 'w')
-            text = ('\n'.join(history) + '\n') % misc.get_time_info()
-            output_file.write(text)
-            output_file.close()
+    def compiler_choice(self):
+        """ Different daughter classes might want different compilers.
+        Here, the gfortran compiler is used throughout the compilation 
+        (mandatory for CutTools written in f90) """
+        
+        self.set_compiler('gfortran',True)
 
     #===========================================================================
     # Make the CutTools directories for Standalone directory
@@ -148,8 +162,17 @@ class LoopProcessExporterFortranSA(export_v4.ProcessExporterFortranSA,
         
         source_dir = os.path.join(self.dir_path, "Source")
         logger.info("Running make for CutTools")
-        misc.compile(arg=['../lib/libcts.a'], cwd=source_dir, mode='fortran')
-
+        misc.compile(arg=['../../lib/libcts.a'], cwd=source_dir, mode='fortran')
+#        shutil.copy(os.path.join(self.dir_path,\
+#            'Source/CUTTOOLS/includects/libcts.a'),\
+#            os.path.join(self.dir_path,'lib/libcts.a'))
+#        # Copy here the two f90 modules for multiple-precision in CutTools.
+#        shutil.copy(os.path.join(self.dir_path,\
+#            'Source/CUTTOOLS/includects/mpmodule.mod'),\
+#            os.path.join(self.dir_path,'lib/mpmodule.mod'))
+#        shutil.copy(os.path.join(self.dir_path,\
+#            'Source/CUTTOOLS/includects/ddmodule.mod'),\
+#            os.path.join(self.dir_path,'lib/ddmodule.mod'))
 
     #===========================================================================
     # generate_subprocess_directory_v4
@@ -227,15 +250,16 @@ class LoopProcessExporterFortranSA(export_v4.ProcessExporterFortranSA,
                      matrix_element.get('processes')[0].nice_string())
         plot.draw()
 
-        linkfiles = ['check_sa.f', 'coupl.inc', 'makefile']
+        linkfiles = ['check_sa.f', 'coupl.inc', 'makefile', \
+                     'cts_mprec.h', 'cts_mpc.h']
 
         for file in linkfiles:
             ln('../%s' % file)
-            
-        linkfiles = ['cts_mprec.h', 'cts_mpc.h']
+
+        linkfiles = ['mpmodule.mod','ddmodule.mod']
 
         for file in linkfiles:
-            ln('../../Source/CUTTOOLS/src/cts/%s' % file)
+            ln('../../lib/%s' % file)
 
         # Return to original PWD
         os.chdir(cwd)
@@ -275,6 +299,7 @@ class LoopProcessExporterFortranSA(export_v4.ProcessExporterFortranSA,
                                     matrix_element,fortran_model)
         
             return calls
+
 
     def generate_subprocess_directory_v4(self, matrix_element,
                                          fortran_model):

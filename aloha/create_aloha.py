@@ -576,6 +576,8 @@ class AbstractALOHAModel(dict):
             symmetry = name
         if not routines:
             routines = range(len(builder.spins) + 1)
+        if not routines_loop:
+            routines_loop = []
   
         # Create the routines
         # First create the tree-level routines

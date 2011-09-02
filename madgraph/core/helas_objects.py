@@ -902,6 +902,11 @@ class HelasWavefunction(base_objects.PhysicsObject):
         if not self['is_loop']:
             res.append(self.get_spin_state_number())
             res.append(self.find_outgoing_number())
+            # Also need to make sure that the loop and non loop mothers are
+            # ordered in the same way. This is because in the write-out, the 
+            # non-loop mothers are written with WE(...) and the loop one with
+            # WL(...)
+            res.append(tuple([wf.get('is_loop') for wf in self.get('mothers')]))
 
         # Check if we need to append a charge conjugation flag
         if self.needs_hermitian_conjugate():
@@ -1688,6 +1693,11 @@ class HelasAmplitude(base_objects.PhysicsObject):
         # Also for loop amplitudes, one must have the tag 'loop'
         if self['type']!='base':
             res.append(self['type'])
+            # Also need to make sure that the loop and non loop mothers are
+            # ordered in the same way. This is because in the write-out, the 
+            # non-loop mothers are written with WE(...) and the loop one with
+            # WL(...)
+            res.append(tuple([wf.get('is_loop') for wf in self.get('mothers')]))
 
         # Check if we need to append a charge conjugation flag
         if self.needs_hermitian_conjugate():

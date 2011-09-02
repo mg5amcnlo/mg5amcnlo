@@ -694,7 +694,7 @@ class ProcessExporterFortran(object):
 
         return res_str + '*'
 
-    def set_compiler(self, default_compiler):
+    def set_compiler(self, default_compiler, force=False):
         """Set compiler based on what's available on the system"""
         
         # Check for compiler
@@ -707,6 +707,8 @@ class ProcessExporterFortran(object):
         else:
             # Use g77 as default
             compiler = 'g77'
+        if default_compiler and force:
+            compiler = default_compiler
         logger.info('Use Fortran compiler ' + compiler)
         self.replace_make_opt_compiler(compiler)
         # Replace also for Template but not for cluster
@@ -771,7 +773,7 @@ class ProcessExporterFortranSA(ProcessExporterFortran):
                               online = False):
         """Finalize Standalone MG4 directory by generation proc_card_mg5.dat"""
 
-        self.set_compiler('g77')
+        self.compiler_choice()
         self.make()
 
         # Write command history as proc_card_mg5
@@ -781,6 +783,12 @@ class ProcessExporterFortranSA(ProcessExporterFortran):
             text = ('\n'.join(history) + '\n') % misc.get_time_info()
             output_file.write(text)
             output_file.close()
+
+    def compiler_choice(self):
+        """ Different daughter classes might want different compilers.
+        So this function is meant to be overloaded if desired."""
+        
+        self.set_compiler('g77')
 
     #===========================================================================
     # generate_subprocess_directory_v4
@@ -2518,6 +2526,12 @@ class UFO_model_to_mg4(object):
                 common/weak/ gal
 
                 """        
+        if self.model.get('expansion_order'):
+            header=header+"""double precision MU_R
+                common/rscale/ MU_R
+
+                """
+                
         fsock.writelines(header)
         
         # Write the Mass definition/ common block
@@ -2573,7 +2587,7 @@ class UFO_model_to_mg4(object):
             already_def.add(particle.get('mass').lower())
             already_def.add(particle.get('width').lower())
 
-        is_valid = lambda name: name!='G' and name.lower() not in already_def
+        is_valid = lambda name: name!='G' and name!='MU_R' and name.lower() not in already_def
         
         real_parameters = [param.name for param in self.params_dep + 
                             self.params_indep if param.type == 'real'

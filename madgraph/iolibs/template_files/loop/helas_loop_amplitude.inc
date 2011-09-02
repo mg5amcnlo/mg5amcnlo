@@ -11,7 +11,7 @@ C
 C  
 C ARGUMENTS
 C  
-      REAL*8 %(wfsargsdecl)s
+      COMPLEX*16 %(wfsargsdecl)s
       REAL*8 %(margsdecl)s
       COMPLEX*16 %(cplsdecl)s	  
       COMPLEX*16 RES(3)
@@ -27,7 +27,7 @@ C GLOBAL VARIABLES
 C
       COMPLEX*16 WE(20,NEXTERNAL)
 	  COMPLEX*16 LC(MAXLCOUPLINGS)	  
-      REAL*16 ML(NEXTERNAL+1)
+      REAL*8 ML(NEXTERNAL+1)
 	  INTEGER ID
 	  COMMON/LOOP/WE,LC,ML,ID
 C ----------
@@ -41,8 +41,8 @@ C ----------
       %(cplset)s	  
 	  ID=LID
 	  DO I=0,3
-	    DO J=NLOOPLINE
-	      PL(I,J)=DBLE(WE(17+I,J)
+	    DO J=1,NLOOPLINE
+	      PL(I,J)=DBLE(WE(5+I,J))
 		ENDDO
 	  ENDDO
       CALL CTLOOP(NLOOPLINE,PL,M2L,RES)

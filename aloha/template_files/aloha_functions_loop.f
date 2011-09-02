@@ -999,3 +999,502 @@ c#endif
 c
       return
       end
+
+C###############################################################################
+C LOOP related universal subroutines
+C###############################################################################
+
+C===============================================================================
+C Subroutines to close the lorentz traces of loops 
+C===============================================================================
+
+      SUBROUTINE CLOSE_V(Q,M,AMPS,RES)
+      
+      COMPLEX*16 Q(0:3)
+      COMPLEX*16 RES
+      COMPLEX*16 AMPS(4)
+
+      IF (M.NE.0.D0) THEN
+        STOP 'Massive vector L-cut particle not supported'
+      ENDIF
+      RES=(0.D0,1.D0)*(-AMPS(1)+AMPS(2)+AMPS(3)+AMPS(4))
+
+      END
+
+      SUBROUTINE CLOSE_F(Q,M,AMPS,RES)      
+      
+      COMPLEX*16 Q(0:3)
+      COMPLEX*16 RES, QNORM
+      REAL*8 M
+      COMPLEX*16 AMPS(4) 
+      COMPLEX*16 PMM, PPM
+
+      PPM=AMPS(1)+AMPS(2)
+      PMM=AMPS(3)+AMPS(4)
+      IF (M.NE.0.D0) THEN
+        QNORM=SQRT(Q(0)**2-Q(1)**2-Q(2)**2-Q(3)**2)      
+        RES=(0.D0,0.5D0)*((PPM+PMM)+(PPM-PMM)*(M/QNORM))
+      ELSE
+        RES=(0.D0,0.5D0)*(PPM+PMM)        
+      ENDIF
+
+      END
+
+      SUBROUTINE CLOSE_S(Q,AMP,RES)
+
+      COMPLEX*16 Q(0:3)
+      COMPLEX*16 RES
+      COMPLEX*16 AMP
+
+      RES=(0.D0,1.D0)*AMP
+      
+      END
+
+C===============================================================================
+C Subroutines to create the external wavefunctions of the L-cut particles
+C===============================================================================
+
+      SUBROUTINE LCUT_F(Q,M,CFIG,SCD,W)
+
+      COMPLEX*16 Q(0:3)
+      INTEGER CFIG
+      LOGICAL SCD
+      REAL*8 M
+      COMPLEX*16 W(20)
+
+      IF (CFIG.EQ.1) THEN
+        IF (SCD) THEN
+C         UBAR, HEL=-1        
+          CALL ILXXXX(Q(0),M,-1,1,W(1))
+        ELSE
+C         U, HEL=-1        
+          CALL ILXXXX(Q(0),M,-1,-1,W(1))
+        ENDIF
+      ELSEIF (CFIG.EQ.2) THEN
+        IF (SCD) THEN
+C         UBAR, HEL=1        
+          CALL ILXXXX(Q(0),M,1,1,W(1))
+        ELSE
+C         U, HEL=1        
+          CALL ILXXXX(Q(0),M,1,-1,W(1))
+        ENDIF
+      ELSEIF (CFIG.EQ.3) THEN
+        IF (SCD) THEN
+C         VBAR, HEL=-1,        
+          CALL OLXXXX(Q(0),M,-1,-1,W(1))
+        ELSE
+C         V, HEL=-1        
+          CALL OLXXXX(Q(0),M,-1,1,W(1))
+        ENDIF
+      ELSEIF (CFIG.EQ.4) THEN
+        IF (SCD) THEN
+C         VBAR, HEL=1        
+          CALL OLXXXX(Q(0),M,1,-1,W(1))
+        ELSE
+C         V, HEL=1    
+          CALL OLXXXX(Q(0),M,1,1,W(1))
+        ENDIF
+      ENDIF
+C     REVERSE THE MOMENTUM IN THE WF FOR THE SECOND L-CUT SPINORS      
+      IF (SCD) THEN
+        W(5)=-Q(1)
+        W(6)=-Q(2)
+        W(7)=-Q(3)
+        W(8)=-Q(4)
+      ENDIF
+
+      END
+
+      SUBROUTINE LCUT_CF(Q,M,CFIG,SCD,W)
+
+      COMPLEX*16 Q(0:3)
+      INTEGER CFIG
+      LOGICAL SCD
+      REAL*8 M
+      COMPLEX*16 W(20)
+
+      IF (CFIG.EQ.1) THEN
+        IF (SCD) THEN
+C         UBAR, HEL=-1        
+          CALL ICLXXX(Q(0),M,-1,1,W(1))
+        ELSE
+C         U, HEL=-1        
+          CALL ICLXXX(Q(0),M,-1,-1,W(1))
+        ENDIF
+      ELSEIF (CFIG.EQ.2) THEN
+        IF (SCD) THEN
+C         UBAR, HEL=1        
+          CALL ICLXXX(Q(0),M,1,1,W(1))
+        ELSE
+C         U, HEL=1        
+          CALL ICLXXX(Q(0),M,1,-1,W(1))
+        ENDIF
+      ELSEIF (CFIG.EQ.3) THEN
+        IF (SCD) THEN
+C         VBAR, HEL=-1,        
+          CALL OCLXXX(Q(0),M,-1,-1,W(1))
+        ELSE
+C         V, HEL=-1        
+          CALL OCLXXX(Q(0),M,-1,1,W(1))
+        ENDIF
+      ELSEIF (CFIG.EQ.4) THEN
+        IF (SCD) THEN
+C         VBAR, HEL=1        
+          CALL OCLXXX(Q(0),M,1,-1,W(1))
+        ELSE
+C         V, HEL=1    
+          CALL OCLXXX(Q(0),M,1,1,W(1))
+        ENDIF
+      ENDIF
+C     REVERSE THE MOMENTUM IN THE WF FOR THE SECOND L-CUT SPINORS      
+      IF (SCD) THEN
+        W(5)=-Q(1)
+        W(6)=-Q(2)
+        W(7)=-Q(3)
+        W(8)=-Q(4)
+      ENDIF
+
+      END
+
+      SUBROUTINE LCUT_V(Q,M,CFIG,SCD,W)
+
+      COMPLEX*16 Q(0:3)
+      INTEGER CFIG
+      LOGICAL SCD      
+      REAL*8 M
+      COMPLEX*16 W(20)
+
+      IF (M.NE.0.D0) THEN
+        STOP 'Massive vector L-cut particle not supported'
+      ENDIF
+      W(1)=(0.d0,0.d0)
+      W(2)=(0.d0,0.d0)
+      W(3)=(0.d0,0.d0)
+      W(4)=(0.d0,0.d0)
+      IF (CFIG.EQ.1) THEN
+        W(1)=(1.d0,0.d0)
+      ELSEIF (CFIG.EQ.2) THEN
+        W(2)=(1.d0,0.d0)
+      ELSEIF (CFIG.EQ.3) THEN
+        W(3)=(1.d0,0.d0)
+      ELSEIF (CFIG.EQ.4) THEN
+        W(4)=(1.d0,0.d0)
+      ENDIF
+C     REVERSE THE MOMENTUM IN THE WF FOR THE SECOND L-CUT SPINORS      
+      IF (SCD) THEN
+        W(5)=-Q(1)
+        W(6)=-Q(2)
+        W(7)=-Q(3)
+        W(8)=-Q(4)
+      ENDIF
+
+      END
+
+      SUBROUTINE LCUT_S(Q,SCD,W)
+
+      COMPLEX*16 Q(0:3)
+      LOGICAL SCD      
+      COMPLEX*16 W(20)
+
+      W(1)=(1.D0,0.D0)
+
+C     REVERSE THE MOMENTUM IN THE WF FOR THE SECOND SPINORS      
+      IF (SCD) THEN
+        W(2)=-Q(1)
+        W(3)=-Q(2)
+        W(4)=-Q(3)
+        W(5)=-Q(4)
+      ENDIF
+
+      END
+
+C===============================================================================
+C Complex-momentum version of the subroutine to create on-shell
+C wavefunctions of particles with different spins.
+C===============================================================================
+
+      subroutine ilxxxx(p,ffmass,nhel,nsf,fi)
+c
+c This subroutine computes a fermion wavefunction with the flowing-IN
+c fermion number and defined with complex ONSHELL momentium.
+c
+c input:
+c       complex    p(0:3)         : four-momentum of fermion
+c       real    fmass          : mass          of fermion
+c       integer nhel = -1 or 1 : helicity      of fermion
+c       integer nsf  = -1 or 1 : +1 for particle, -1 for anti-particle
+c
+c output:
+c       complex fi(8)          : fermion wavefunction               |fi>
+c       Note: There are 4 components for the spinor and four for the
+c             momentum. 
+      implicit none
+      double complex fi(8),chi(2), fmass
+c      double precision p(0:3),sf(2),sfomeg(2),omega(2),fmass,
+c     &     pp,pp3,sqp0p3,sqm(0:1)
+      double complex sqm(0:1)
+      double precision sf(2),ffmass
+      double complex p(0:3), sfomeg(2),omega(2),
+     &     pp,pp3,sqp0p3 
+      integer nhel,nsf,ip,im,nh
+
+      double precision rZero, rHalf, rTwo
+      parameter( rZero = 0.0d0, rHalf = 0.5d0, rTwo = 2.0d0 )
+      
+
+      
+c      fi(5) = dcmplx(p(0),p(3))*nsf
+c      fi(6) = dcmplx(p(1),p(2))*nsf
+      fi(5) = p(0)*nsf
+      fi(6) = p(1)*nsf
+      fi(7) = p(2)*nsf
+      fi(8) = p(3)*nsf
+
+      nh = nhel*nsf
+
+      fmass = sqrt(p(0)**2-p(1)**2-p(2)**2-p(3)**2)
+
+
+      if ( ffmass.ne.rZero ) then
+c special treatment for massless particles.
+c         pp = min(p(0),sqrt(p(1)**2+p(2)**2+p(3)**2))
+         pp=sqrt(p(1)**2+p(2)**2+p(3)**2)
+c for time-like four-momenta we can always think of it as the p_vec^2          
+         if ( abs(pp).eq.rZero ) then
+c particle at rest.            
+            sqm(0) = sqrt(fmass) ! possibility of negative fermion masses
+            sqm(1) = sqm(0) ! possibility of negative fermion masses
+            ip = (1+nh)/2
+            im = (1-nh)/2
+            
+            fi(1) = ip     * sqm(ip)
+            fi(2) = im*nsf * sqm(ip)
+            fi(3) = ip*nsf * sqm(im)
+            fi(4) = im     * sqm(im)
+
+         else
+c standard spinor
+
+            pp=sqrt(p(1)**2+p(2)**2+p(3)**2)
+c            if( (dble(p(0)) .lt. 0 .and. dble(pp) .gt. 0) .or.
+c     &          (dble(p(0)) .lt. 0 .and. dble(pp) .gt. 0) ) then
+c            pp=-pp
+c            endif 
+            sf(1) = dble(1+nsf+(1-nsf)*nh)*rHalf
+c fermion spin using HELAS conventions.            
+            sf(2) = dble(1+nsf-(1-nsf)*nh)*rHalf
+            omega(1) = sqrt(p(0)+pp)
+c the omega of the definition.
+c            omega(2) = fmass/omega(1)
+            omega(2) = sqrt(p(0)-pp)
+c the prefactor
+            ip = (3+nh)/2
+            im = (3-nh)/2
+            sfomeg(1) = sf(1)*omega(ip)
+            sfomeg(2) = sf(2)*omega(im)
+c            pp3 = max(pp+p(3),rZero)
+            pp3=pp+p(3)
+            chi(1) = sqrt(pp3*rHalf/pp)
+            if ( abs(pp3).eq.rZero ) then
+               chi(2) = dcmplx(-nh )
+            else
+               chi(2) = ( (nh*p(1)) + ((0d0,1d0)*p(2)) )/
+     .sqrt(rTwo*pp*pp3)
+            endif
+            
+
+c         Write(*,*) 'Chi=',Chi(1),' and ',Chi(2)
+
+            fi(1) = sfomeg(1)*chi(im)
+            fi(2) = sfomeg(1)*chi(ip)
+c         Write(*,*) 'fi(2)=',fi(2)     
+            fi(3) = sfomeg(2)*chi(im)
+c         Write(*,*) 'fi(3)=',fi(3)
+            fi(4) = sfomeg(2)*chi(ip)
+            
+         endif
+         
+      else
+         
+c         if(zabs(p(1)).eq.0d0.and.zabs(p(2)).eq.0d0.and.
+c     .zabs(p(3)).lt.0d0) then
+c            sqp0p3 = 0d0
+c         else
+            sqp0p3 = sqrt(p(0)+p(3))*nsf
+c        end if
+         chi(1) = sqp0p3
+         if ( abs(sqp0p3).eq.rZero ) then
+            chi(2) = dcmplx(-nhel )*sqrt(rTwo*p(0))
+         else
+            chi(2) = ( nh*p(1) + ((0d0,1d0)*p(2) ) )/sqp0p3
+         endif
+         if ( nh.eq.1 ) then
+            fi(1) = dcmplx( rZero )
+            fi(2) = dcmplx( rZero )
+            fi(3) = chi(1)
+            fi(4) = chi(2)
+         else
+            fi(1) = chi(2)
+            fi(2) = chi(1)
+            fi(3) = dcmplx( rZero )
+            fi(4) = dcmplx( rZero )
+         endif
+      endif
+
+      return
+      end
+
+      subroutine olxxxx(p,ffmass,nhel,nsf,fo)
+c
+c This subroutine computes a fermion wavefunction with the flowing-OUT
+c fermion number and defined with complex ONSHELL  momentum.
+c
+c input:
+c       complex    p(0:3)         : four-momentum of fermion
+c       real    fmass          : mass          of fermion
+c       integer nhel = -1 or 1 : helicity      of fermion
+c       integer nsf  = -1 or 1 : +1 for particle, -1 for anti-particle
+c
+c output:
+c       complex fo(8)          : fermion wavefunction               <fo|
+c     
+      implicit none
+      double complex fo(8),chi(2), fmass
+
+      double complex sqm(0:1)
+      double precision sf(2), ffmass
+
+      double complex p(0:3),sfomeg(2),omega(2),
+     &     pp,pp3,sqp0p3
+      integer nhel,nsf,nh,ip,im
+
+      double precision rZero, rHalf, rTwo
+      parameter( rZero = 0.0d0, rHalf = 0.5d0, rTwo = 2.0d0 )
+
+
+c      fo(5) = dcmplx(p(0),p(3))*nsf
+c      fo(6) = dcmplx(p(1),p(2))*nsf
+      fo(5) = p(0)*(nsf)
+      fo(6) = p(1)*(nsf)
+      fo(7) = p(2)*(nsf)
+      fo(8) = p(3)*(nsf)      
+
+c     this minus sign in the flow-out complex fermion comes from the
+c     fact that we want to use the helicity sum relation and that in 
+c     fact we call u(p)ubar(-p) and not u(p)ubar(p)!!
+
+c      p(0)=-p(0)
+c      p(1)=-p(1)
+c      p(2)=-p(2)
+c      p(3)=-p(3)
+
+c BULLSHIT
+
+      nh = nhel*nsf
+
+      fmass=sqrt(p(0)**2-p(1)**2-p(2)**2-p(3)**2)
+
+      if ( ffmass.ne.rZero ) then
+
+c         pp = min(p(0),dsqrt(p(1)**2+p(2)**2+p(3)**2))
+         pp=sqrt(p(1)**2+p(2)**2+p(3)**2)
+
+         if ( abs(pp).eq.rZero ) then
+            
+            sqm(0) = sqrt(fmass) ! possibility of negative fermion masses
+            sqm(1) = sqm(0) ! possibility of negative fermion masses
+            ip = -((1+nh)/2)
+            im =  (1-nh)/2
+            
+            fo(1) = im     * sqm(im)
+            fo(2) = ip*nsf * sqm(im)
+            fo(3) = im*nsf * sqm(-ip)
+            fo(4) = ip     * sqm(-ip)
+            
+         else
+            
+c            pp = min(p(0),dsqrt(p(1)**2+p(2)**2+p(3)**2))
+            pp=sqrt(p(1)**2+p(2)**2+p(3)**2) !repetition
+c            if( (dble(p(0)) .lt. 0 .and. dble(pp) .gt. 0) .or.
+c     &          (dble(p(0)) .lt. 0 .and. dble(pp) .gt. 0) ) then
+c            pp=-pp
+c            endif
+            sf(1) = dble(1+nsf+(1-nsf)*nh)*rHalf
+            sf(2) = dble(1+nsf-(1-nsf)*nh)*rHalf
+            omega(1) = sqrt(p(0)+pp)
+c            omega(2) = fmass/omega(1)
+            omega(2) = sqrt(p(0)-pp)
+            ip = (3+nh)/2
+            im = (3-nh)/2
+            sfomeg(1) = sf(1)*omega(ip)
+            sfomeg(2) = sf(2)*omega(im)
+            pp3 = pp+p(3)
+            chi(1) = sqrt(pp3*rHalf/pp)
+            if ( abs(pp3).eq.rZero ) then
+               chi(2) = dcmplx(-nh )
+            else
+               chi(2) = ( nh*p(1) - ((0d0,1d0)*p(2)) )/
+     .sqrt(rTwo*pp*pp3)
+            endif
+            
+            fo(1) = sfomeg(2)*chi(im)
+            fo(2) = sfomeg(2)*chi(ip)
+            fo(3) = sfomeg(1)*chi(im)
+            fo(4) = sfomeg(1)*chi(ip)
+
+         endif
+         
+      else
+         
+c         if(zabs(p(1)).eq.0d0.and.zabs(p(2)).eq.0d0.and.zabs(p(3)).lt.0d0) then
+c            sqp0p3 = 0d0
+c         else
+            sqp0p3 = sqrt(p(0)+p(3))*nsf
+c         end if
+         chi(1) = sqp0p3
+         if ( abs(sqp0p3).eq.rZero ) then
+            chi(2) = dcmplx(-nhel )*sqrt(rTwo*p(0))
+         else
+            chi(2) = ( nh*p(1)-((0d0,1d0)*p(2)) )/sqp0p3
+         endif
+         if ( nh.eq.1 ) then
+            fo(1) = chi(1)
+            fo(2) = chi(2)
+            fo(3) = dcmplx( rZero )
+            fo(4) = dcmplx( rZero )
+         else
+            fo(1) = dcmplx( rZero )
+            fo(2) = dcmplx( rZero )
+            fo(3) = chi(2)
+            fo(4) = chi(1)
+         endif
+         
+      endif
+c
+      return
+      end
+
+   
+C     The subroutine with charge conjugation are not yet implemented
+
+      subroutine oclxxx(p,ffmass,nhel,nsf,fo)
+
+      implicit none
+      double complex fo(8),p(0:3)
+      double precision ffmass
+      integer nhel,nsf
+
+      CALL olxxxx(p,ffmass,nhel,nsf,fo)
+
+      end
+
+      subroutine iclxxx(p,ffmass,nhel,nsf,fi)
+
+      implicit none
+      double complex fi(8),p(0:3)
+      double precision ffmass
+      integer nhel,nsf
+
+      CALL ilxxxx(p,ffmass,nhel,nsf,fi)
+
+      end
