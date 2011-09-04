@@ -1,5 +1,10 @@
 Update notes for MadGraph 5 (in reverse time order)
 
+1.3.13 (04/09/11) JA: Fixed bug with cut_decays=F which removed cuts also for
+                      non-decay products in certain channels if there is
+                      a forced decay present. Note that this does not affect
+                      xqcut, only pt, minv and eta cuts.
+
 1.3.12 (01/09/11) JA: Fixed problem with decay chains when different decays
                       result in identical final states, such as
                       p p > go go, (go > b1/b1~ b/b~, b1/b1~ > b/b~ n1)
