@@ -810,19 +810,32 @@ class Model(PhysicsObject):
     def get_particle(self, id):
         """Return the particle corresponding to the id"""
         
-        if id in self.get("particle_dict").keys():
+        try:
             return self["particle_dict"][id]
-        else:
+        except:
             return None
 
     def get_interaction(self, id):
         """Return the interaction corresponding to the id"""
 
-
-        if id in self.get("interaction_dict").keys():
+        try:
             return self["interaction_dict"][id]
-        else:
+        except:
             return None
+
+    def get_parameter(self, name):
+        """Return the parameter associated to the name NAME"""
+        
+        # If information is saved
+        if hasattr(self, 'parameters_dict') and self.parameters_dict:
+            return self.parameters_dict[name]
+        
+        # Else first build the dictionary
+        self.parameters_dict = {}
+        for data in self['parameters'].values():
+            [self.parameters_dict.__setitem__(p.name,p) for p in data]
+        
+        return self.parameters_dict[name]
 
     def get_coupling_orders(self):
         """Determine the coupling orders of the model"""

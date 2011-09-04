@@ -1219,10 +1219,6 @@ class ALOHAWriterForPython(WriteALOHA):
 
         # write head - momenta - body - foot
         text = ''
-        #if mode == 'mg5':
-        #    text = 'import aloha.template_files.wavefunctions as wavefunctions\n'
-        #else:
-        #    text = 'import wavefunctions\n'
                     
                  
         # write header 

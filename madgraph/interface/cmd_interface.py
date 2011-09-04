@@ -528,8 +528,9 @@ class CheckValidForCmd(object):
             param_card = args.pop(1)
 
         if args[0] not in self._check_opts:
-            self.help_check()
-            raise self.InvalidCmd("\"check\" called with wrong argument")
+            args.insert(0, 'full')
+            #self.help_check()
+            #raise self.InvalidCmd("\"check\" called with wrong argument")
         
         if any([',' in elem for elem in args]):
             raise MadGraph5Error('Decay chains not allowed in check')
@@ -1279,7 +1280,7 @@ class CompleteForCmd(CheckValidForCmd):
             return self.list_completion(text, self._set_options)
 
         if len(args) == 2:
-            if args[1] in ['group_subprocesses']:
+            if args[1] in ['group_subprocesses', 'complex_mass_scheme']:
                 return self.list_completion(text, ['False', 'True'])
             
             elif args[1] in ['ignore_six_quark_processes']:
@@ -1437,9 +1438,8 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
     _import_formats = ['model_v4', 'model', 'proc_v4', 'command']
     _v4_export_formats = ['madevent', 'standalone', 'matrix'] 
     _export_formats = _v4_export_formats + ['standalone_cpp', 'pythia8']
-    _set_options = ['group_subprocesses',
-                    'ignore_six_quark_processes',
-                    'stdout_level']
+    _set_options = ['group_subprocesses', 'ignore_six_quark_processes',
+                    'stdout_level', 'complex_mass_scheme']
     # Variables to store object information
     _curr_model = None  #base_objects.Model()
     _curr_amps = diagram_generation.AmplitudeList()
@@ -1482,6 +1482,7 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
         # Set defaults for options
         self._options['group_subprocesses'] = True
         self._options['ignore_six_quark_processes'] = False
+        self._options['complex_mass_scheme'] = True
         
         # Load the configuration file
         self.set_configuration()
@@ -1837,6 +1838,7 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
         # run the check
         cpu_time1 = time.time()
         # Run matrix element generation check on processes
+        mass_scheme = self._options['complex_mass_scheme']
 
         comparisons = []
         gauge_result = []
@@ -1851,12 +1853,14 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
             
         if args[0] in  ['gauge', 'full']:
             gauge_result = process_checks.check_gauge(myprocdef,
-                                                      param_card = param_card)
+                                                      param_card = param_card,
+                                                      cmass_scheme = mass_scheme)
             nb_processes += len(gauge_result)
             
         if args[0] in ['lorentz_invariance', 'full']:
             lorentz_result = process_checks.check_lorentz(myprocdef,
-                                                      param_card = param_card)
+                                                      param_card = param_card,
+                                                      cmass_scheme = mass_scheme)
             nb_processes += len(lorentz_result)
             
         cpu_time2 = time.time()
@@ -1864,9 +1868,12 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
         logger.info("%i processes checked in %0.3f s" \
                     % (nb_processes,
                       (cpu_time2 - cpu_time1)))
-
-        text = ""
-
+        if mass_scheme:
+            text = "Note that Complex mass scheme gives gauge/lorentz invariant\n"
+            text+= "results only for stable particles in final states.\n\n"
+        else:
+            text = "Note That all width have been set to zero for those checks\n\n"
+            
         if gauge_result:
             text += 'Gauge results:\n'
             text += process_checks.output_gauge(gauge_result) + '\n'
@@ -2667,7 +2674,14 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
             logging.root.setLevel(eval('logging.' + args[1]))
             logging.getLogger('madgraph').setLevel(eval('logging.' + args[1]))
             logger.info('set output information to level: %s' % args[1])
-    
+        
+        elif args[0] == "complex_mass_scheme":
+             self._options[args[0]] = eval(args[1])
+             if self._options[args[0]]:
+                 logger.info('Activate complex mass scheme.')
+             else:
+                 logger.info('Desactivate complex mass scheme.')
+             
     def do_open(self, line):
         """Open a text file/ eps file / html file"""
         
@@ -2711,9 +2725,15 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
         # Make a Template Copy
         if self._export_format == 'madevent':
             if group_subprocesses:
-                self._curr_exporter = export_v4.ProcessExporterFortranMEGroup(\
+                if not self._options['complex_mass_scheme']:
+                    self._curr_exporter = export_v4.ProcessExporterFortranMEGroup(\
                                       self._mgme_dir, self._export_dir,
                                       not noclean)
+                else:
+                    self._curr_exporter = \
+                            export_v4.ProcessExporterFortranMEGroupComplexMass(\
+                                      self._mgme_dir, self._export_dir,
+                                      not noclean)                    
             else:
                 self._curr_exporter = export_v4.ProcessExporterFortranME(\
                                       self._mgme_dir, self._export_dir,

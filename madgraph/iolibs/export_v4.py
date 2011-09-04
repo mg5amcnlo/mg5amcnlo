@@ -2384,12 +2384,13 @@ python_to_fortran = lambda x: parsers.UFOExpressionParserFortran().parse(x)
 class UFO_model_to_mg4(object):
     """ A converter of the UFO-MG5 Model to the MG4 format """
     
-    def __init__(self, model, output_path):
+    def __init__(self, model, output_path, cmass_scheme=False):
         """ initialization of the objects """
        
         self.model = model
         self.model_name = model['name']
         self.dir_path = output_path
+        self.cmass_scheme=cmass_scheme
         
         self.coups_dep = []    # (name, expression, type)
         self.coups_indep = []  # (name, expression, type)
@@ -2442,8 +2443,77 @@ class UFO_model_to_mg4(object):
             for coup in self.model['couplings'][key]:
                 coup.expr = rep_pattern.sub(replace, coup.expr)
 
-
+    def change_mass_to_complex_scheme(self):
+        """modify the expression changing the mass to mass complex scheme"""
         
+        # 1) Find All input parameter mass and width associated
+        #   Add a internal parameter and replace mass with that param
+        # 2) Find All mass fixed by the model and width associated
+        #   -> Both need to be fixed with a real() /Imag()
+        # 3) Find All width fixed by the model
+        #   -> Need to be fixed with a real()
+        # 4) Loop through all expression and modify those accordingly
+        
+        to_change = {}
+        mass_widths = [] # parameter which should stay real
+        for particle in self.model.get('particles'):
+            mass_widths.append(particle.get('width'))
+            mass_widths.append(particle.get('mass'))
+            if particle.get('width') == 'ZERO':
+                #everything is fine when the width is zero
+                continue
+            width = self.model.get_parameter(particle.get('width'))
+            if not isinstance(width, base_objects.ParamCardVariable):
+                width.expr = 're(%s)' % width.expr
+            if particle.get('mass') != 'ZERO':
+                mass = self.model.get_parameter(particle.get('mass'))
+                if not isinstance(width, base_objects.ParamCardVariable):
+                    width.expr = 'im(%s)' % mass.expr
+                    mass.expr = 're(%s)' % mass.expr 
+                    if not isinstance(width, base_objects.ModelVariable):
+                        pass # Need to remove the width from the Param_card
+                        # Need to be DONE (not crucial)                 
+                else:
+                    # set the dependencies
+                    depend = list(set(mass.depend + width.depend))
+                    if len(depend)>1 and 'external' in depend:
+                        depend.remove('external')
+                    depend = tuple(depend)
+                    if depend == ('external',):
+                        depend = ()
+                    New_param = base_objects.ModelVariable('CMASS_'+mass.name,
+                        '%s + complex(0,0.5) * %s' % (mass.name, width.name), 
+                        'complex', depend)
+                    self.add_param(New_param, (mass, width) )
+                    to_change[mass.name] = New_param.name
+                    
+            
+        # So at this stage we still need to modify all parameters depending of
+        # particle's mass. In addition all parameter (but mass/width/external 
+        # parameter) should be pass in complex mode.
+        for type, list_param in self.model['parameters'].items():
+            for param in list_param:
+                if isinstance(param, base_objects.ParamCardVariable):
+                    continue
+                if param.name not in mass_widths:
+                    param.type = 'complex'
+                for name, new_name in to_change.items():
+                    param.expr.replace(name, new_name)
+                    
+        for type, list_param in self.model['couplings'].items():
+            for param in list_param:                
+                for name, new_name in to_change.items():
+                    param.expr.replace(name, new_name)                
+                
+                if not isinstance(param, base_objects.ParamCardVariable):
+                    if param.name not in mass_widths:
+                        param.type = 'complex'
+                else: 
+                    # Need to modify expr in order to replace
+                    # Mass by Complex_Mass
+                    pass
+               
+                
     def refactorize(self, wanted_couplings = []):    
         """modify the couplings to fit with MG4 convention """
             
@@ -2487,6 +2557,15 @@ class UFO_model_to_mg4(object):
         # write the files
         if full:
             self.write_all()
+            
+    def add_param(self, new_param, depend_param):
+        """add the parameter in the list of parameter in a correct position"""
+        
+        pos = 0
+        for i,param in enumerate(self.model.get('parameters')[new_param.depend]):
+            if param.name in depend_param:
+                pos = i + 1
+        self.model.get('parameters')[new_param.depend].insert(pos, new_param)
 
     def open(self, name, comment='c', format='default'):
         """ Open the file name in the correct directory and with a valid
@@ -2630,7 +2709,8 @@ class UFO_model_to_mg4(object):
         fsock.writelines('common/params_R/ '+','.join(real_parameters)+'\n\n')
         
         complex_parameters = [param.name for param in self.params_dep + 
-                            self.params_indep if param.type == 'complex']
+                            self.params_indep if param.type == 'complex' and
+                            is_valid(param.name)]
 
 
         fsock.writelines('double complex '+','.join(complex_parameters)+'\n')
@@ -2833,4 +2913,44 @@ class UFO_model_to_mg4(object):
 
         out_path = os.path.join(self.dir_path, 'param_card.dat')
         param_writer.ParamCardWriter(self.model, out_path)
+
+
+#===============================================================================
+# ProcessExporterFortranMEGroup
+#===============================================================================
+class ProcessExporterFortranMEGroupComplexMass(ProcessExporterFortranMEGroup):
+    """Class to take care of exporting a set of matrix elements to
+    MadEvent subprocess group format in complex mass scheme format"""
+
+    def convert_model_to_mg4(self, model, wanted_lorentz = [],
+                             wanted_couplings = []):
+        """ Create a full valid MG4 model from a MG5 model (coming from UFO)"""
+
+        # create the MODEL
+        write_dir=os.path.join(self.dir_path, 'Source', 'MODEL')
+        model_builder = UFO_model_to_mg4(model, write_dir, cmass_scheme=True)
+        model_builder.change_mass_to_complex_scheme()
+        model_builder.build(wanted_couplings)
+
+        # Create and write ALOHA Routine
+        aloha_model = create_aloha.AbstractALOHAModel(model.get('name'))
+        if wanted_lorentz:
+            aloha_model.compute_subset(wanted_lorentz)
+        else:
+            aloha_model.compute_all(save=False)
+        write_dir=os.path.join(self.dir_path, 'Source', 'DHELAS')
+        aloha_model.write(write_dir, 'Fortran')
+
+        #copy Helas Template
+        cp(MG5DIR + '/aloha/template_files/Makefile_F', write_dir+'/makefile')
+        for filename in os.listdir(os.path.join(MG5DIR,'aloha','template_files')):
+            if not filename.lower().endswith('.f'):
+                continue
+            cp((MG5DIR + '/aloha/template_files/' + filename), write_dir)
+        create_aloha.write_aloha_file_inc(write_dir, '.f', '.o')
+
+        # Make final link in the Process
+        self.make_model_symbolic_link()
+
+
 

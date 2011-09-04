@@ -66,7 +66,7 @@ class MatrixElementEvaluator(object):
     relevant quantities for speedup."""
 
     def __init__(self, model, param_card = None,
-                 auth_skipping = False, reuse = True):
+                 auth_skipping = False, reuse = True, cmass_scheme = False):
         """Initialize object with stored_quantities, helas_writer,
         model, etc.
         auth_skipping = True means that any identical matrix element will be
@@ -80,7 +80,7 @@ class MatrixElementEvaluator(object):
     
         # Read a param_card and calculate couplings
         self.full_model = model_reader.ModelReader(model)
-        self.full_model.set_parameters_and_couplings(param_card)
+        self.full_model.set_parameters_and_couplings(param_card, cmass_scheme)
 
         self.auth_skipping = auth_skipping
         self.reuse = reuse
@@ -653,7 +653,7 @@ def fixed_string_length(mystr, length):
 #===============================================================================
 # check_gauge
 #===============================================================================
-def check_gauge(processes, param_card = None):
+def check_gauge(processes, param_card=None, cmass_scheme=False):
     """Check gauge invariance of the processes by using the BRS check.
     For one of the massless external bosons (e.g. gluon or photon), 
     replace the polarization vector (epsilon_mu) with its momentum (p_mu)
@@ -667,13 +667,15 @@ def check_gauge(processes, param_card = None):
         model = multiprocess.get('model')
         
         # Initialize matrix element evaluation
-        evaluator = MatrixElementEvaluator(model, param_card,
-                                           auth_skipping = True, reuse = False)
-
-        # Set all widths to zero for gauge check
-        #for particle in evaluator.full_model.get('particles'):
-        #    if particle.get('width') != 'ZERO':
-        #        evaluator.full_model.get('parameter_dict')[particle.get('width')] = 0.
+        evaluator = MatrixElementEvaluator(model, param_card, 
+                                           cmass_scheme= cmass_scheme,
+                                           auth_skipping= True, reuse= False,)
+        if not cmass_scheme:
+            # Set all widths to zero for gauge check
+            logger.info('Set All width to zero for non complex mass scheme cheks')
+            for particle in evaluator.full_model.get('particles'):
+                if particle.get('width') != 'ZERO':
+                    evaluator.full_model.get('parameter_dict')[particle.get('width')] = 0.
 
         return run_multiprocs_no_crossings(check_gauge_process,
                                            multiprocess,
@@ -859,7 +861,7 @@ def output_gauge(comparison_results, output='text'):
 #===============================================================================
 # check_lorentz
 #===============================================================================
-def check_lorentz(processes, param_card = None):
+def check_lorentz(processes, param_card = None, cmass_scheme=False):
     """ Check if the square matrix element (sum over helicity) is lorentz 
         invariant by boosting the momenta with different value."""
     
@@ -871,14 +873,16 @@ def check_lorentz(processes, param_card = None):
         model = multiprocess.get('model')
         
         # Initialize matrix element evaluation
-        evaluator = MatrixElementEvaluator(model,
+        evaluator = MatrixElementEvaluator(model, param_card, 
+                                           cmass_scheme= cmass_scheme,
                                            auth_skipping = False, reuse = True)
-
-        # Set all widths to zero for lorentz check
-        #for particle in evaluator.full_model.get('particles'):
-        #    #if particle.get('width') != 'ZERO':
-        #    #    evaluator.full_model.get('parameter_dict')[\
-        #    #                                         particle.get('width')] = 0.
+        if not cmass_scheme:
+            # Set all widths to zero for lorentz check
+            logger.info('Set All width to zero for non complex mass scheme cheks')
+            for particle in evaluator.full_model.get('particles'):
+                if particle.get('width') != 'ZERO':
+                    evaluator.full_model.get('parameter_dict')[\
+                                                     particle.get('width')] = 0.
         return run_multiprocs_no_crossings(check_lorentz_process,
                                            multiprocess,
                                            evaluator)
