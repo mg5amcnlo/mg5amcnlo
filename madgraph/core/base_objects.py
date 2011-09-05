@@ -757,6 +757,7 @@ class Model(PhysicsObject):
                 self['got_majoranas'] = self.check_majoranas()
 
         if (name == 'coupling_orders') and self[name] == None:
+            print 'interaction',self['interactions'], self.get('interactions')
             if self['interactions']:
                 self['coupling_orders'] = self.get_coupling_orders()
 
@@ -813,13 +814,16 @@ class Model(PhysicsObject):
         try:
             return self["particle_dict"][id]
         except:
-            return None
+            try:
+                return self.get("particle_dict")[id]
+            except:
+                return None
 
     def get_interaction(self, id):
         """Return the interaction corresponding to the id"""
 
         try:
-            return self["interaction_dict"][id]
+            return self.get("interaction_dict")[id]
         except:
             return None
 
@@ -839,7 +843,10 @@ class Model(PhysicsObject):
 
     def get_coupling_orders(self):
         """Determine the coupling orders of the model"""
-
+        print 'XXXXXXX',[i.get('orders').keys() for i in \
+                        self.get('interactions')]
+        print set(sum([i.get('orders').keys() for i in \
+                        self.get('interactions')], []))
         return set(sum([i.get('orders').keys() for i in \
                         self.get('interactions')], []))
 

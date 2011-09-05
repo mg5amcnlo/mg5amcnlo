@@ -290,7 +290,6 @@ class UFOMG5Converter(object):
         # Import particles content:
         particles = [self.model.get_particle(particle.pdg_code) \
                                     for particle in interaction_info.particles]
-      
         if None in particles:
             # Interaction with a ghost/goldstone
             return 
@@ -305,7 +304,6 @@ class UFOMG5Converter(object):
                                     interaction_info.color]
         
         order_to_int={}
-        
         for key, couplings in interaction_info.couplings.items():
             if not isinstance(couplings, list):
                 couplings = [couplings]
