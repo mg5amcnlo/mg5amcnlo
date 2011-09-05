@@ -582,11 +582,9 @@ c     Set who comes from decay based on forced BW
       do i=-(nexternal-3),-1
          if(tprid(i,1).eq.0.and.gForceBW(i,1).or.
      $        from_decay(i)) then
-            do j=i,-1
-               from_decay(j)=.true.
-               from_decay(iforest(1,j,1))=.true.
-               from_decay(iforest(2,j,1))=.true.
-            enddo
+            from_decay(i)=.true.
+            from_decay(iforest(1,i,1))=.true.
+            from_decay(iforest(2,i,1))=.true.
          endif
       enddo
 
