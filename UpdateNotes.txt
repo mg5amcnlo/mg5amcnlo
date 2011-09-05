@@ -1,9 +1,12 @@
 Update notes for MadGraph 5 (in reverse time order)
 
-1.3.13 (04/09/11) JA: Fixed bug with cut_decays=F which removed cuts also for
+1.3.13 (05/09/11) JA: Fixed bug with cut_decays=F which removed cuts also for
                       non-decay products in certain channels if there is
                       a forced decay present. Note that this does not affect
                       xqcut, only pt, minv and eta cuts.
+                  JA: If non-zero phase space cutoff, don't use minimum of
+                      1 GeV (this allows to go to e.g. 2m_e invariant mass for
+                      \gamma* > e+ e-).
 
 1.3.12 (01/09/11) JA: Fixed problem with decay chains when different decays
                       result in identical final states, such as

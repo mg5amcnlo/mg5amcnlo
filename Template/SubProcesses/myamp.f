@@ -460,13 +460,15 @@ c     JA 4/1/2011 Set grid in case there is no BW (radiation process)
                if (swidth(-i) .eq. 0d0 .and.
      $              i.ne.-(nexternal-(nincoming+1)))then
                   a=pmass(i,iconfig)**2/stot
-                  xo = max(min(xm(i)**2/stot, 1-1d-8), 1d0/stot)
+                  xo = min(xm(i)**2/stot, 1-1d-8)
+                  if (xo.eq.0d0) xo=1d0/stot
                   call setgrid(-i,xo,a,1)
                endif
             else                                  !1/x^pow
               a=pmass(i,iconfig)**2/stot
 c     JA 4/1/2011 always set grid
-              xo = max(min(xm(i)**2/stot, 1-1d-8), 1d0/stot)
+              xo = min(xm(i)**2/stot, 1-1d-8)
+              if (xo.eq.0d0) xo=1d0/stot
 c              if (pwidth(i, iconfig) .eq. 0d0.or.iden_part(i).gt.0) then 
               call setgrid(-i,xo,a,1)
 c              else 
@@ -509,10 +511,11 @@ c            write(*,*) 'Using 2',l2,x2
             xo = min(x1,x2)
 
 c           Use 1/10000 of sqrt(s) as minimum, to always get integration
-            xo = max(xo*xo/stot,1d0/stot)
-            if (xo.eq.1d0/stot)then
+            xo = xo*xo/stot
+            if (xo.eq.0d0)then
+               xo=1d0/stot
                write(*,*) 'Warning: No cutoff for shat integral found'
-               write(*,*) '         Minimum set to ',1d0/stot
+               write(*,*) '         Minimum set to ', xo
             endif
             a=-pmass(i,iconfig)**2/stot
 c            call setgrid(-i,xo,a,pow(i,iconfig))
