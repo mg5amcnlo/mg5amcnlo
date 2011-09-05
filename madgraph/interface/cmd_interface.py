@@ -33,7 +33,7 @@ try:
 except:
     GNU_SPLITTING = True
 
-
+import aloha
 import madgraph
 from madgraph import MG4DIR, MG5DIR, MadGraph5Error
 
@@ -1650,8 +1650,19 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
             text = "Current model contains %i parameters\n" % \
                     sum([len(part) for part in 
                                        self._curr_model['parameters'].values()])
-            
-            for key, item in self._curr_model['parameters'].items():
+            keys = self._curr_model['parameters'].keys()
+            def key_sort(x, y):
+                if ('external',) == x:
+                    return -1
+                elif ('external',) == y:
+                    return +1
+                elif  len(x) < len(y):
+                    return -1
+                else:
+                    return 1
+            keys.sort(key_sort)
+            for key in keys:
+                item = self._curr_model['parameters'][key]
                 text += '\nparameter type: %s\n' % str(key)
                 for value in item:
                     if hasattr(value, 'expr'):
@@ -2272,6 +2283,15 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
                                                                self._curr_model)
             else:
                 self._curr_model = import_ufo.import_model(args[1])
+                if self._options['complex_mass_scheme']:
+                    self._curr_model.change_mass_to_complex_scheme()
+                    if hasattr(self._curr_model, 'set_parameters_and_couplings'):
+                        if hasattr(self._curr_model, 'restrict_card'):
+                            self._curr_model.set_parameters_and_couplings(
+                                                 self._curr_model.restrict_card)
+                        else:
+                            self._curr_model.set_parameters_and_couplings()
+                
                 self._curr_fortran_model = \
                       helas_call_writers.FortranUFOHelasCallWriter(\
                                                                self._curr_model)
@@ -2676,11 +2696,28 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
             logger.info('set output information to level: %s' % args[1])
         
         elif args[0] == "complex_mass_scheme":
-             self._options[args[0]] = eval(args[1])
-             if self._options[args[0]]:
-                 logger.info('Activate complex mass scheme.')
-             else:
-                 logger.info('Desactivate complex mass scheme.')
+            old = self._options[args[0]] 
+            self._options[args[0]] = eval(args[1])
+            if self._options[args[0]]:
+                if old:
+                    logger.info('Complex mass already activated.')
+                    return
+                aloha.complex_mass = True
+                logger.info('Activate complex mass scheme.')
+                self._curr_model.change_mass_to_complex_scheme()
+                if hasattr(self._curr_model, 'set_parameters_and_couplings'):
+                    if hasattr(self._curr_model, 'restrict_card'):
+                        self._curr_model.set_parameters_and_couplings(
+                                             self._curr_model.restrict_card)
+                    else:
+                        self._curr_model.set_parameters_and_couplings()
+            else:
+                if not old:
+                    logger.info('Complex mass already desactivated.')
+                    return
+                aloha.complex_mass = False
+                logger.info('Desactivate complex mass scheme.')
+                self.exec_cmd('import model %s' % self._curr_model.get('name'))
              
     def do_open(self, line):
         """Open a text file/ eps file / html file"""

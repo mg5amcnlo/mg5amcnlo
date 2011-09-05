@@ -3,6 +3,8 @@ try:
 except:
     import aloha.file_writers as writers
     
+import aloha
+    
 import os
 import re 
 from numbers import Number
@@ -309,6 +311,8 @@ class ALOHAWriterForFortran(WriteALOHA):
             str_out += 'double complex ' + ','.join(OverM) + '\n'
         if len(Momenta) > 0:
             str_out += 'double precision ' + '(0:3),'.join(Momenta) + '(0:3)\n'
+        if self.offshell and aloha.complex_mass:
+            str_out += 'double complex Complex_M\n'
 
         # Add entry for symmetry
         #str_out += '\n'
@@ -373,7 +377,11 @@ class ALOHAWriterForFortran(WriteALOHA):
             #Mom is in format OMX with X the number of the particle
             index = int(elem[2:])
             str_out += 'OM%d = 0d0\n' % (index)
-            str_out += 'if (M%d .ne. 0d0) OM%d' % (index, index) + '=1d0/M%d**2\n' % (index) 
+            
+            if not aloha.complex_mass:
+                str_out += 'if (M%d .ne. 0d0) OM%d' % (index, index) + '=1d0/M%d**2\n' % (index) 
+            else:
+                str_out += 'if (M%d.ne.0d0) OM%d' % (index, index) + '=1.0/(M%d+complex(0d0,5d-1)*W%d)**2\n' % (index,index)
         
         # Returning result
         return str_out
@@ -423,6 +431,7 @@ class ALOHAWriterForFortran(WriteALOHA):
         else:
             OffShellParticle = '%s%d' % (self.particles[self.offshell-1],\
                                                                   self.offshell)
+            
             numerator = self.obj.numerator
             denominator = self.obj.denominator
             for ind in denominator.listindices():
@@ -1067,6 +1076,7 @@ class ALOHAWriterForPython(WriteALOHA):
         else:
             OffShellParticle = '%s%d' % (self.particles[self.offshell-1],\
                                                                   self.offshell)
+
             numerator = self.obj.numerator
             denominator = self.obj.denominator
             for ind in denominator.listindices():
@@ -1168,8 +1178,10 @@ class ALOHAWriterForPython(WriteALOHA):
             #Mom is in format OMX with X the number of the particle
             index = int(elem[2:])
             str_out += 'OM%d = 0.0\n' % (index)
-            str_out += 'if (M%d): OM%d' % (index, index) + '=1.0/M%d**2\n' % (index) 
-        
+            if not aloha.complex_mass:
+                str_out += 'if (M%d): OM%d' % (index, index) + '=1.0/M%d**2\n' % (index) 
+            else:
+                str_out += 'if (M%d): OM%d' % (index, index) + '=1.0/(M%d+complex(0,0.5)*W%d)**2\n' % (index,index)
         # Returning result
         return str_out    
 

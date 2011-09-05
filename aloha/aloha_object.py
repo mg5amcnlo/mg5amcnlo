@@ -30,6 +30,7 @@
 ##
 ################################################################################
 from __future__ import division
+import aloha
 import aloha.aloha_lib as aloha_lib
 
 #===============================================================================
@@ -99,7 +100,7 @@ class PSlash(aloha_lib.LorentzObject):
 #===============================================================================
 # Mass
 #===============================================================================
-class Mass(aloha_lib.LorentzObject):
+class RMass(aloha_lib.LorentzObject):
     """ Helas Object for a Mass"""
     
     def __init__(self, particle, prefactor=1):
@@ -113,7 +114,28 @@ class Mass(aloha_lib.LorentzObject):
 
         self.representation = aloha_lib.LorentzObjectRepresentation(
                                 mass, self.lorentz_ind, self.spin_ind)
+#===============================================================================
+# Width
+#===============================================================================
+class Width(aloha_lib.LorentzObject):
+    """ Helas Object for an Impulsion """
+    
+    def __init__(self, particle, prefactor=1):
 
+        self.particle = particle
+        aloha_lib.LorentzObject.__init__(self, [], [], prefactor=prefactor)
+        
+    def create_representation(self):
+        width = aloha_lib.ScalarVariable('W%s' % self.particle)
+
+        self.representation= aloha_lib.LorentzObjectRepresentation(
+                            width, self.lorentz_ind, self.spin_ind)
+
+if aloha.complex_mass:
+    Mass =  lambda part: RMass(part) + complex(0,0.5) * Width(part) 
+else:
+    Mass = RMass
+    
 #===============================================================================
 # OverMass2
 #===============================================================================
@@ -133,24 +155,7 @@ class OverMass2(aloha_lib.LorentzObject):
 
         self.representation = aloha_lib.LorentzObjectRepresentation(
                                 mass, self.lorentz_ind, self.spin_ind)
-
-#===============================================================================
-# Width
-#===============================================================================
-class Width(aloha_lib.LorentzObject):
-    """ Helas Object for an Impulsion """
-    
-    def __init__(self, particle, prefactor=1):
-
-        self.particle = particle
-        aloha_lib.LorentzObject.__init__(self, [], [], prefactor=prefactor)
-        
-    def create_representation(self):
-        width = aloha_lib.ScalarVariable('W%s' % self.particle)
-
-        self.representation= aloha_lib.LorentzObjectRepresentation(
-                            width, self.lorentz_ind, self.spin_ind)
-        
+            
 #===============================================================================
 # Scalar
 #===============================================================================
@@ -747,8 +752,12 @@ class DenominatorPropagator(aloha_lib.LorentzObject):
         """Return the Denominator in a abstract way"""
 
         mass = Mass(self.particle)
-        width = Width(self.particle)       
-        denominator = P('i1', self.particle) * P('i1', self.particle) - \
+        width = Width(self.particle)
+        if aloha.complex_mass:
+            denominator = P('i1', self.particle) * P('i1', self.particle) - \
+                      mass * mass
+        else:       
+            denominator = P('i1', self.particle) * P('i1', self.particle) - \
                       mass * mass + complex(0,1) * mass* width
          
         return denominator

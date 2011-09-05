@@ -630,6 +630,7 @@ class RestrictModel(model_reader.ModelReader):
     def restrict_model(self, param_card):
         """apply the model restriction following param_card"""
 
+        self.restrict_card = param_card
         # Reset particle dict to ensure synchronized particles and interactions
         self.set('particles', self.get('particles'))
 

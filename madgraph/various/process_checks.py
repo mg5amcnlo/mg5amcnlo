@@ -80,7 +80,7 @@ class MatrixElementEvaluator(object):
     
         # Read a param_card and calculate couplings
         self.full_model = model_reader.ModelReader(model)
-        self.full_model.set_parameters_and_couplings(param_card, cmass_scheme)
+        self.full_model.set_parameters_and_couplings(param_card)
 
         self.auth_skipping = auth_skipping
         self.reuse = reuse

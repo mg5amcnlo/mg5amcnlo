@@ -2443,90 +2443,7 @@ class UFO_model_to_mg4(object):
             for coup in self.model['couplings'][key]:
                 coup.expr = rep_pattern.sub(replace, coup.expr)
 
-    def change_mass_to_complex_scheme(self):
-        """modify the expression changing the mass to mass complex scheme"""
-        
-        # 1) Find All input parameter mass and width associated
-        #   Add a internal parameter and replace mass with that param
-        # 2) Find All mass fixed by the model and width associated
-        #   -> Both need to be fixed with a real() /Imag()
-        # 3) Find All width fixed by the model
-        #   -> Need to be fixed with a real()
-        # 4) Loop through all expression and modify those accordingly
-        
-        to_change = {}
-        mass_widths = [] # parameter which should stay real
-        for particle in self.model.get('particles'):
-            mass_widths.append(particle.get('width'))
-            mass_widths.append(particle.get('mass'))
-            if particle.get('width') == 'ZERO':
-                #everything is fine when the width is zero
-                continue
-            width = self.model.get_parameter(particle.get('width'))
-            if not isinstance(width, base_objects.ParamCardVariable):
-                width.expr = 're(%s)' % width.expr
-            if particle.get('mass') != 'ZERO':
-                mass = self.model.get_parameter(particle.get('mass'))
-                
-                # Add A new parameter CMASS
-                #first compute the dependencies (as,...)
-                depend = list(set(mass.depend + width.depend))
-                if len(depend)>1 and 'external' in depend:
-                    depend.remove('external')
-                depend = tuple(depend)
-                if depend == ('external',):
-                    depend = ()
-                # Create the new parameter
-                if isinstance(mass, base_objects.ParamCardVariable):
-                    New_param = base_objects.ModelVariable('CMASS_'+mass.name,
-                        '%s + complex(0,0.5) * %s' % (mass.name, width.name), 
-                        'complex', depend)              
-                else:
-                    New_param = base_objects.ModelVariable('CMASS_'+mass.name,
-                        mass.expr, 'complex', depend)
-                    # Modify the treatment of the width in this case
-                    if not isinstance(width, base_objects.ParamCardVariable):
-                        width.expr = '2 * im(%s)' % mass.expr
-                    else:
-                        # Remove external parameter from the param_card
-                        New_width = base_objects.ModelVariable(width.name,
-                        '2 * im(%s)' % mass.expr, 'real', mass.depend)
-                        self.model.get('parameters')[('external',)].remove(width)
-                        width = New_width
-                        self.add_param(width, (mass,))
-                    mass.expr = 're(%s)' % mass.expr                
-                self.add_param(New_param, (mass, width) )
-                to_change[mass.name] = New_param.name
-                                                    
-        # So at this stage we still need to modify all parameters depending of
-        # particle's mass. In addition all parameter (but mass/width/external 
-        # parameter) should be pass in complex mode.
-        pat = '|'.join(to_change.keys())
-        pat = r'(%s)\b' % pat
-        print pat
-        pat = re.compile(pat)
-        def replace(match):
-            return to_change[match.group()]
-        
-        for dep, list_param in self.model['parameters'].items():
-            for param in list_param:
-                if param.name.startswith('CMASS_') or \
-                              isinstance(param, base_objects.ParamCardVariable):
-                    continue
-                if param.name not in mass_widths:
-                    param.type = 'complex'
-                else:
-                    continue
-                param.expr = pat.sub(replace, param.expr)
-                    
-        for dep, list_param in self.model['couplings'].items():
-            for param in list_param:                
-                
-                param.expr = pat.sub(replace, param.expr)
-                
-                if not isinstance(param, base_objects.ParamCardVariable):
-                    if param.name not in mass_widths:
-                        param.type = 'complex'
+
                
                 
     def refactorize(self, wanted_couplings = []):    
@@ -2573,14 +2490,6 @@ class UFO_model_to_mg4(object):
         if full:
             self.write_all()
             
-    def add_param(self, new_param, depend_param):
-        """add the parameter in the list of parameter in a correct position"""
-        
-        pos = 0
-        for i,param in enumerate(self.model.get('parameters')[new_param.depend]):
-            if param.name in depend_param:
-                pos = i + 1
-        self.model.get('parameters')[new_param.depend].insert(pos, new_param)
 
     def open(self, name, comment='c', format='default'):
         """ Open the file name in the correct directory and with a valid
@@ -2944,7 +2853,6 @@ class ProcessExporterFortranMEGroupComplexMass(ProcessExporterFortranMEGroup):
         # create the MODEL
         write_dir=os.path.join(self.dir_path, 'Source', 'MODEL')
         model_builder = UFO_model_to_mg4(model, write_dir, cmass_scheme=True)
-        model_builder.change_mass_to_complex_scheme()
         model_builder.build(wanted_couplings)
 
         # Create and write ALOHA Routine

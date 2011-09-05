@@ -1003,6 +1003,94 @@ class Model(PhysicsObject):
         
         return default
 
+    def change_mass_to_complex_scheme(self):
+        """modify the expression changing the mass to complex mass scheme"""
+        
+        # 1) Find All input parameter mass and width associated
+        #   Add a internal parameter and replace mass with that param
+        # 2) Find All mass fixed by the model and width associated
+        #   -> Both need to be fixed with a real() /Imag()
+        # 3) Find All width fixed by the model
+        #   -> Need to be fixed with a real()
+        # 4) Loop through all expression and modify those accordingly
+        
+        to_change = {}
+        mass_widths = [] # parameter which should stay real
+        for particle in self.get('particles'):
+            mass_widths.append(particle.get('width'))
+            mass_widths.append(particle.get('mass'))
+            if particle.get('width') == 'ZERO':
+                #everything is fine when the width is zero
+                continue
+            width = self.get_parameter(particle.get('width'))
+            if not isinstance(width, ParamCardVariable):
+                width.expr = 're(%s)' % width.expr
+            if particle.get('mass') != 'ZERO':
+                mass = self.get_parameter(particle.get('mass'))
+                
+                # Add A new parameter CMASS
+                #first compute the dependencies (as,...)
+                depend = list(set(mass.depend + width.depend))
+                if len(depend)>1 and 'external' in depend:
+                    depend.remove('external')
+                depend = tuple(depend)
+                if depend == ('external',):
+                    depend = ()
+                    
+                # Create the new parameter
+                if isinstance(mass, ParamCardVariable):
+                    New_param = ModelVariable('CMASS_'+mass.name,
+                        '%s + complex(0,0.5) * %s' % (mass.name, width.name), 
+                        'complex', depend)              
+                else:
+                    New_param = ModelVariable('CMASS_'+mass.name,
+                        mass.expr, 'complex', depend)
+                    # Modify the treatment of the width in this case
+                    if not isinstance(width, ParamCardVariable):
+                        width.expr = '2 * im(%s)' % mass.expr
+                    else:
+                        # Remove external parameter from the param_card
+                        New_width = ModelVariable(width.name,
+                        '2 * im(%s)' % mass.expr, 'real', mass.depend)
+                        self.get('parameters')[('external',)].remove(width)
+                        width = New_width
+                        self.add_param(width, (mass,))
+                    mass.expr = 're(%s)' % mass.expr                
+                self.add_param(New_param, (mass, width) )
+                to_change[mass.name] = New_param.name
+                                                    
+        # So at this stage we still need to modify all parameters depending of
+        # particle's mass. In addition all parameter (but mass/width/external 
+        # parameter) should be pass in complex mode.
+        pat = '|'.join(to_change.keys())
+        pat = r'(%s)\b' % pat
+        pat = re.compile(pat)
+        def replace(match):
+            return to_change[match.group()]
+        
+        # Modify the parameters
+        for dep, list_param in self['parameters'].items():
+            for param in list_param:
+                if param.name.startswith('CMASS_') or param.name in mass_widths or\
+                              isinstance(param, ParamCardVariable):
+                    continue
+                param.type = 'complex'
+                param.expr = pat.sub(replace, param.expr)
+        
+        # Modify the couplings        
+        for dep, list_coup in self['couplings'].items():
+            for coup in list_coup:                
+                coup.expr = pat.sub(replace, coup.expr)
+                
+    def add_param(self, new_param, depend_param):
+        """add the parameter in the list of parameter in a correct position"""
+            
+        pos = 0
+        for i,param in enumerate(self.get('parameters')[new_param.depend]):
+            if param.name in depend_param:
+                pos = i + 1
+        self.get('parameters')[new_param.depend].insert(pos, new_param)
+
 ################################################################################
 # Class for Parameter / Coupling
 ################################################################################
