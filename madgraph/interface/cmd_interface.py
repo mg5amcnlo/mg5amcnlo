@@ -498,8 +498,7 @@ class CheckValidForCmd(object):
             param_card = args.pop(1)
 
         if args[0] not in self._check_opts:
-            self.help_check()
-            raise self.InvalidCmd("\"check\" called with wrong argument")
+            args.insert(0, 'full')
         
         if any([',' in elem for elem in args]):
             raise MadGraph5Error('Decay chains not allowed in check')
@@ -1117,7 +1116,7 @@ class CompleteForCmd(CheckValidForCmd):
         #option
         if len(args) >= 2:
             complete = []
-        opt = ['--cluster=', '--name=', '-f']
+        opt = ['--cluster', '--multicore', '-i', '--name=', '-f']
         complete += self.list_completion(text, opt, line)
         return complete
 
@@ -2505,7 +2504,7 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
         elif args[0] == 'madevent':
             if options['interactive']:
                 self.define_child_cmd_interface(
-                                madevent_interface.MadEventCmd(me_dir=args[1]) )
+                                madevent_interface.MadEventCmd(me_dir=args[1]))
                 return
             
             #check if this is a cross-section
@@ -3117,8 +3116,11 @@ _launch_parser.add_option("-f", "--force", default=False, action='store_true',
                                 help="Use the card present in the directory in order to launch the different program")
 _launch_parser.add_option("-n", "--name", default='', type='str',
                                 help="Provide a name to the run (for madevent run)")
-_launch_parser.add_option("-c", "--cluster", default='0', type='str',
-                                help="Choose the cluster mode (0: single machine, 1: qsub cluster, 2: multi-core) (for madevent run)")
+_launch_parser.add_option("-c", "--cluster", default=False, action='store_true',
+                                help="submit the job on the cluster")
+_launch_parser.add_option("-m", "--multicore", default=False, action='store_true',
+                                help="submit the job on multicore core")
+
 _launch_parser.add_option("-i", "--interactive", default=False, action='store_true',
                                 help="Use Interactive Console [if available]")
     

@@ -208,14 +208,9 @@ class HelpToCmd(object):
         
         logger.info("-- session options:")
         logger.info("      Note that those options will be kept for the current session")      
-        logger.info("      --cluster= :[%s] cluster choice: 0 single machine" % 
-                                                              self.cluster_mode)
-        logger.info("                                      1 %s cluster" % self.configuration['cluster_mode'])
-        logger.info("                                      2 multicore")
-        logger.info("      --queue= :[%s] queue name on the pbs cluster" % 
-                                                                     self.queue)
-        logger.info("      --nb_core= : number of core to use in multicore.")
-        logger.info("                   The default is all available core.")
+        logger.info("      --cluster : Submit to the  cluster. Current cluster: %s" % self.configuration['cluster_mode'])
+        logger.info("      --multicore : Run in multi-core configuration")
+        logger.info("      --nb_core=X : limit the number of core to use to X.")
         
 
     def help_generate_events(self):
@@ -672,8 +667,6 @@ class CompleteForCmd(CheckValidForCmd):
     def complete_survey(self, text, line, begidx, endidx):
         """ Complete the survey command """
         
-        if line.endswith('cluster=') and not text:
-            return ['0','1','2']
         if line.endswith('nb_core=') and not text:
             import multiprocessing
             max = multiprocessing.cpu_count()
@@ -743,7 +736,7 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
     # Truth values
     true = ['T','.true.',True,'true']
     # Options and formats available
-    _run_options = ['--cluster=0','--cluster=1','--cluster=2','--queue=','--nb_core=']
+    _run_options = ['--cluster','--multicore','--nb_core=','--nb_core=2']
     _set_options = ['stdout_level','fortran_compiler']
     _plot_mode = ['all', 'parton','pythia','pgs','delphes']
     # Variables to store object information
@@ -796,11 +789,14 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
         for arg in args[:]:
             if not arg.startswith('--'):
                 continue
-            if arg.startswith('--cluster='):
-                self.cluster_mode = int(arg.split('=',1)[1])
-            elif arg.startswith('--queue='):
-                self.queue = arg.split('=',1)[1].strip()
+            if arg.startswith('--cluster'):
+                self.cluster_mode = 1
+            if arg.startswith('--multicore'):
+                self.cluster_mode = 2
+            #elif arg.startswith('--queue='):
+            #    self.queue = arg.split('=',1)[1].strip()
             elif arg.startswith('--nb_core'):
+                self.cluster_mode = 2
                 self.nb_core = int(arg.split('=',1)[1])
             else:
                 continue

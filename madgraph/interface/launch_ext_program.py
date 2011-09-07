@@ -160,8 +160,14 @@ class MELauncher(ExtLauncher):
         self.executable = os.path.join('.', 'bin','generate_events.py')
 
         assert hasattr(self, 'cluster')
+        assert hasattr(self, 'multicore')
         assert hasattr(self, 'name')
         self.unit = unit
+        
+        if self.cluster:
+            self.cluster = 1
+        if self.multicore:
+            self.multicore = 2
         
         self.cards = ['param_card.dat', 'run_card.dat']
         # Check for pythia-pgs directory

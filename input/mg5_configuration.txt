@@ -76,7 +76,7 @@ exrootanalysis_path = ./ExRootAnalysis
 # Path to the directory containing td executables
 # relative path start from main directory
 #
-td_path = ./
+td_path = ./td
 
 
 
