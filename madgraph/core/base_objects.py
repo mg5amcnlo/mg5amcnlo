@@ -757,7 +757,6 @@ class Model(PhysicsObject):
                 self['got_majoranas'] = self.check_majoranas()
 
         if (name == 'coupling_orders') and self[name] == None:
-            print 'interaction',self['interactions'], self.get('interactions')
             if self['interactions']:
                 self['coupling_orders'] = self.get_coupling_orders()
 
@@ -843,10 +842,6 @@ class Model(PhysicsObject):
 
     def get_coupling_orders(self):
         """Determine the coupling orders of the model"""
-        print 'XXXXXXX',[i.get('orders').keys() for i in \
-                        self.get('interactions')]
-        print set(sum([i.get('orders').keys() for i in \
-                        self.get('interactions')], []))
         return set(sum([i.get('orders').keys() for i in \
                         self.get('interactions')], []))
 
