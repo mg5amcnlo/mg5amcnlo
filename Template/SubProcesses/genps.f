@@ -85,6 +85,7 @@ c
       include 'genps.inc'
       include 'maxconfigs.inc'
       include 'nexternal.inc'
+      include 'maxamps.inc'
       double precision pi
       parameter       (pi=3.1415926d0)
 c
@@ -107,7 +108,7 @@ c
       double precision tprb, mtot
       double precision stot, xtau, dum
 
-      integer sprop(-max_branch:-1,lmaxconfigs)
+      integer sprop(maxsproc,-max_branch:-1,lmaxconfigs)
       integer tprid(-max_branch:-1,lmaxconfigs)
       common/to_sprop/sprop,tprid
       integer          lwgt(0:maxconfigs,maxinvar)

@@ -641,7 +641,7 @@ C   local variables
 
       integer mapconfig(0:lmaxconfigs), this_config
       integer iforest(2,-max_branch:-1,lmaxconfigs)
-      integer sprop(-max_branch:-1,lmaxconfigs)
+      integer sprop(maxsproc,-max_branch:-1,lmaxconfigs)
       integer tprid(-max_branch:-1,lmaxconfigs)
       include 'configs.inc'
       real*8 xptj,xptb,xpta,xptl,xmtc

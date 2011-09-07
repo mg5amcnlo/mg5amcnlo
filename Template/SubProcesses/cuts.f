@@ -402,11 +402,10 @@ c
 c     B.W. phase space cuts
 c     
       pass_bw=cut_bw(p)
-      if (lbw(0) .eq. 1) then
-         if ( pass_bw ) then
-            passcuts=.false.
-            return
-         endif
+c     JA 4/8/11 always check pass_bw
+      if ( pass_bw ) then
+         passcuts=.false.
+         return
       endif
 C     $E$DESACTIVATE_BW_CUT$E$ This is a Tag for MadWeight
 
