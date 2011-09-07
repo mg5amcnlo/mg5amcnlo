@@ -579,6 +579,8 @@ class CheckValidForCmd(object):
             format = self.find_import_type(args[0])
             logger.info('The import format was not given, so we guess it as %s' % format)
             args.insert(0, format)
+            if self.history[-1].startswith('import'):
+                self.history[-1] = 'import %s %s' % (format, self.history[-1][8:])
             
                         
         if modelname:

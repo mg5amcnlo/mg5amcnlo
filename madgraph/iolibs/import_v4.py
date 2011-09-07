@@ -82,7 +82,7 @@ def find_model_path(model_path, mgme_dir):
 
     # treat simple case (model_path is a valid path/ mgme_dir doesn't exist)
     if os.path.isdir(model_path):
-        pass
+        return model_path
     elif mgme_dir and os.path.isdir(os.path.join(mgme_dir, 'models',
                                                  model_path + "_v4")):
         model_path = os.path.join(mgme_dir, 'models', model_path + "_v4")

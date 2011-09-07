@@ -1868,7 +1868,6 @@ class ProcessExporterFortranME(ProcessExporterFortran):
         else:
             card = 'param_card.dat' 
         text = open(path).read() 
-        print text
         text = text % {'param_card_name':card} 
 
         writer.write(text)
