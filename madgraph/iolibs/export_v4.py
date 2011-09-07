@@ -1867,7 +1867,9 @@ class ProcessExporterFortranME(ProcessExporterFortran):
             card = 'Source/MODEL/MG5_param.dat'
         else:
             card = 'param_card.dat' 
-        text = open(path).read() % {'param_card_name':card} 
+        text = open(path).read() 
+        print text
+        text = text % {'param_card_name':card} 
 
         writer.write(text)
         

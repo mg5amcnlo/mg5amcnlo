@@ -136,7 +136,7 @@ c-----
       else
          write(26,*) npoints,iter_survey,
      &     '     !Number of events and iterations'      
-c        JA 4/8/11 Set minimum accuracy 10%, to run 4th iteration if needed
+c        JA 4/8/11 Set minimum accuracy 10pc, to run 4th iteration if needed
          write(26,*) ' 0.1    !Accuracy'
          write(26,*) ' 2       !Grid Adjustment 0=none, 2=adjust'
       endif

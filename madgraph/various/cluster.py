@@ -196,7 +196,7 @@ class PBSCluster(Cluster):
                                      '-e',stderr,
                                      '-q', 'madgraph',
                                      '-V'], stdout=subprocess.PIPE, 
-                                     stdout=subprocess.STDOUT,
+                                     stderr=subprocess.STDOUT,
                                      stdin=subprocess.PIPE, cwd=cwd)
             
         output = a.communicate(text)[0]
