@@ -422,8 +422,8 @@ c     q2bck holds the central q2fact scales
       integer idfl, idmap(-nexternal:nexternal)
       integer ipart(2,n_max_cl)
       double precision xnow(2)
-      integer jlast(2),jfirst(2),nwarning
-      logical qcdline(2)
+      integer jlast(2),jfirst(2),jcentral(2),nwarning
+      logical qcdline(2),partonline(2)
       logical failed,first
       data first/.true./
       data nwarning/0/
@@ -442,18 +442,6 @@ c
       
       if (.not.clustered) then
          clustered = cluster(p(0,1))
-c        if (xqcut.gt.0d0) then
-c          failed=.false.          
-cc          if(pt2ijcl(1).lt.xqcut**2) failed=.true.
-c          if(failed) then
-c            if (btest(mlevel,3)) then
-c              write(*,*)'q_min = ',pt2ijcl(1),' < ',xqcut**2
-c            endif
-c            setclscales=.false.
-c            return
-c          endif
-c        endif
-c      else
          if(.not.clustered) then
             write(*,*)'setclscales: Error. Clustering failed.'
             setclscales=.false.
@@ -474,16 +462,6 @@ c      else
         write(*,*)'}'
       endif
 
-cc
-cc   Set factorization scale as for the MLM case
-cc
-c      if(xqcut.gt.0) then
-cc     Using last clustering value
-c        if(pt2ijcl(nexternal-2).lt.max(4d0,xqcut**2))then
-c           setclscales=.false.
-c           return
-c        endif
-
 c     If last clustering is s-channel QCD (e.g. ttbar) use mt2last instead
 c     (i.e. geom. average of transverse mass of t and t~)
         if(mt2last.gt.4d0 .and. nexternal.gt.3) then
@@ -500,7 +478,7 @@ c     (i.e. geom. average of transverse mass of t and t~)
 
 C   If we have fixed factorization scale, for ickkw>0 means central
 C   scale, i.e. last two scales (ren. scale for these vertices are
-C   anyway already set by "scale" above
+C   anyway already set by "scale" above)
       if(ickkw.gt.0) then
          if(fixed_fac_scale.and.first)then
             q2bck(1)=q2fact(1)
@@ -518,6 +496,10 @@ C   anyway already set by "scale" above
       ibeam(2)=ishft(1,1)
       jlast(1)=1
       jlast(2)=1
+      jcentral(1)=1
+      jcentral(2)=1
+      partonline(1)=isjet(ibeam(1))
+      partonline(2)=isjet(ibeam(2))
       qcdline(1)=isqcd(ibeam(1))
       qcdline(2)=isqcd(ibeam(2))
 
@@ -525,10 +507,9 @@ c   Go through clusterings and set factorization scales for use in dsig
       if (nexternal.eq.3) goto 10
       do n=1,nexternal-2
         do i=1,2
-          if (isqcd(ipdgcl(idacl(n,i),igraphs(1)))) then
             do j=1,2
-              if (isqcd(ipdgcl(idacl(n,i),igraphs(1))).and.idacl(n,i).eq.ibeam(j)
-     $           .and.qcdline(j)) then
+              if (isqcd(ipdgcl(idacl(n,i),igraphs(1))).and.
+     $            idacl(n,i).eq.ibeam(j).and.qcdline(j)) then
 c             is emission - this is what we want
 c             Total pdf weight is f1(x1,pt2E)*fj(x1*z,Q)/fj(x1*z,pt2E)
 c             f1(x1,pt2E) is given by DSIG, just need to set scale.
@@ -540,11 +521,16 @@ c             f1(x1,pt2E) is given by DSIG, just need to set scale.
                        jfirst(j)=-1
                     endif
                  endif
-                 jlast(j)=n
+                 if(partonline(j))then
+c                   Stop fact scale where parton line stops
+                    jlast(j)=n
+                    partonline(j)=isjet(ipdgcl(imocl(n),igraphs(1)))
+                 endif
+c                Trace QCD line through event
+                 jcentral(j)=n
                  qcdline(j)=isqcd(ipdgcl(imocl(n),igraphs(1)))
               endif
             enddo
-          endif
         enddo
       enddo
       
@@ -553,23 +539,19 @@ c             f1(x1,pt2E) is given by DSIG, just need to set scale.
 
       if (btest(mlevel,3))
      $     write(*,*) 'jfirst is ',jfirst(1),jfirst(2),
-     $     ' and jlast is ',jlast(1),jlast(2)
+     $     ' jlast is ',jlast(1),jlast(2),
+     $     ' and jcentral is ',jcentral(1),jcentral(2)
 
-c     Set central scale to mT2 and multiply with scalefact
-      if(jlast(1).gt.0.and.mt2ij(jlast(1)).gt.0d0)
-     $     pt2ijcl(jlast(1))=mt2ij(jlast(1))
-      if(jlast(2).gt.0.and.mt2ij(jlast(2)).gt.0d0)
-     $     pt2ijcl(jlast(2))=mt2ij(jlast(2))
+c     Set central scale to mT2
+      if(jcentral(1).gt.0.and.mt2ij(jcentral(1)).gt.0d0)
+     $     pt2ijcl(jcentral(1))=mt2ij(jcentral(1))
+      if(jcentral(2).gt.0.and.mt2ij(jcentral(2)).gt.0d0)
+     $     pt2ijcl(jcentral(2))=mt2ij(jcentral(2))
       if(btest(mlevel,4))
      $     print *,'pt2ijcl is: ',jlast(1), sqrt(pt2ijcl(jlast(1))),
-     $     jlast(2), sqrt(pt2ijcl(jlast(2)))
-      if(jlast(1).gt.0) pt2ijcl(jlast(1))=scalefact**2*pt2ijcl(jlast(1))
-      if(jlast(2).gt.0.and.jlast(2).ne.jlast(1))
-     $     pt2ijcl(jlast(2))=scalefact**2*pt2ijcl(jlast(2))
-      if(lpp(1).eq.0.and.lpp(2).eq.0)then
-         pt2ijcl(nexternal-2)=scalefact**2*pt2ijcl(nexternal-2)
-         pt2ijcl(nexternal-3)=pt2ijcl(nexternal-2)
-      endif
+     $     jlast(2), sqrt(pt2ijcl(jlast(2))),
+     $     jcentral(1), sqrt(pt2ijcl(jcentral(1))),
+     $     jcentral(2), sqrt(pt2ijcl(jcentral(2)))
 
 c     Check xqcut for vertices with jet daughters only
       ibeam(1)=ishft(1,0)
@@ -620,28 +602,30 @@ c           FSR
       endif
 
 c     JA: Check xmtc cut for central process
-      if(pt2ijcl(jlast(1)).lt.xmtc**2.or.pt2ijcl(jlast(2)).lt.xmtc**2)then
+      if(pt2ijcl(jcentral(1)).lt.xmtc**2.or.pt2ijcl(jcentral(2)).lt.xmtc**2)then
          setclscales=.false.
          clustered = .false.
          if(btest(mlevel,3)) write(*,*)'Failed xmtc cut ',
-     $        sqrt(pt2ijcl(jlast(1))),sqrt(pt2ijcl(jlast(1))),' < ',xmtc
+     $        sqrt(pt2ijcl(jcentral(1))),sqrt(pt2ijcl(jcentral(1))),
+     $        ' < ',xmtc
          return
       endif
       
       if(ickkw.eq.0.and.(fixed_fac_scale.or.q2fact(1).gt.0).and.
      $     (fixed_ren_scale.or.scale.gt.0)) return
 
-c     Set renormalization scale to geom. aver. of factorization scales
+c     Set renormalization scale to geom. aver. of central scales
       if(scale.eq.0d0) then
-         if(jlast(1).gt.0.and.jlast(2).gt.0) then
-            scale=(pt2ijcl(jlast(1))*pt2ijcl(jlast(2)))**0.25d0
-         elseif(jlast(1).gt.0) then
-            scale=sqrt(pt2ijcl(jlast(1)))
-         elseif(jlast(2).gt.0) then
-            scale=sqrt(pt2ijcl(jlast(2)))
+         if(jcentral(1).gt.0.and.jcentral(2).gt.0) then
+            scale=(pt2ijcl(jcentral(1))*pt2ijcl(jcentral(2)))**0.25d0
+         elseif(jcentral(1).gt.0) then
+            scale=sqrt(pt2ijcl(jcentral(1)))
+         elseif(jcentral(2).gt.0) then
+            scale=sqrt(pt2ijcl(jcentral(2)))
          elseif(lpp(1).eq.0.and.lpp(2).eq.0) then
             scale=sqrt(pt2ijcl(nexternal-2))
          endif
+         scale = scalefact*scale
          if(scale.gt.0)
      $        G = SQRT(4d0*PI*ALPHAS(scale))
       endif
@@ -650,8 +634,9 @@ c     Set renormalization scale to geom. aver. of factorization scales
 
       if(ickkw.gt.0.and.q2fact(1).gt.0) then
 c     Use the fixed or previously set scale for central scale
-         if(jlast(1).gt.0) pt2ijcl(jlast(1))=q2fact(1)
-         if(jlast(2).gt.0.and.jlast(2).ne.jlast(1)) pt2ijcl(jlast(2))=q2fact(2)
+         if(jcentral(1).gt.0) pt2ijcl(jcentral(1))=q2fact(1)
+         if(jcentral(2).gt.0.and.jcentral(2).ne.jcentral(1))
+     $        pt2ijcl(jcentral(2))=q2fact(2)
       endif
 
       if(nexternal.eq.3.and.nincoming.eq.2) then
@@ -666,10 +651,19 @@ c     Use the fixed or previously set scale for central scale
          if(jlast(2).gt.0) q2fact(2)=pt2ijcl(jlast(2))
       endif
 
-      if(.not.fixed_fac_scale) then
+      if(jcentral(1).eq.jcentral(2))then
+c     We have a qcd line going through the whole event,
+c     use the geom. average of central scale and first non-radiation vertex
+         q2fact(1)=sqrt(max(q2fact(1),q2fact(2))*pt2ijcl(jcentral(1)))
+         q2fact(2)=q2fact(1)
+      endif
+
+      if(.not. fixed_fac_scale) then
+         q2fact(1)=scalefact**2*q2fact(1)
+         q2fact(2)=scalefact**2*q2fact(2)
          q2bck(1)=q2fact(1)
          q2bck(2)=q2fact(2)
-      if (btest(mlevel,3))
+         if (btest(mlevel,3))
      $     write(*,*) 'Set central fact scales to ',sqrt(q2bck(1)),sqrt(q2bck(2))
       endif
 
@@ -683,8 +677,10 @@ c     Use the fixed or previously set scale for central scale
          endif
       elseif(ickkw.eq.2.or.pdfwgt)then
 c     Use the minimum scale found for fact scale in ME
-         if(jlast(1).gt.0) q2fact(1)=min(pt2ijcl(jfirst(1)),pt2ijcl(jlast(1)))
-         if(jlast(2).gt.0) q2fact(2)=min(pt2ijcl(jfirst(2)),pt2ijcl(jlast(2)))
+         if(jlast(1).gt.0.and.jfirst(1).lt.jlast(1))
+     $        q2fact(1)=min(pt2ijcl(jfirst(1)),q2fact(1))
+         if(jlast(2).gt.0.and.jfirst(2).lt.jlast(2))
+     $        q2fact(2)=min(pt2ijcl(jfirst(2)),q2fact(2))
       endif
 
 c     Check that factorization scale is >= 2 GeV
@@ -850,24 +846,29 @@ c
 
 c   Perform alpha_s reweighting based on type of vertex
       do n=1,nexternal-2
+c       scale for alpha_s reweighting
+        q2now=min(pt2ijcl(n), scale**2)
+        if(n.ge.nexternal-3) then
+           q2now = scale**2
+        endif
         if (btest(mlevel,3)) then
           write(*,*)'  ',n,': ',idacl(n,1),'(',ipdgcl(idacl(n,1),igraphs(1)),
      &       ')&',idacl(n,2),'(',ipdgcl(idacl(n,2),igraphs(1)),') -> ',
      &       imocl(n),'(',ipdgcl(imocl(n),igraphs(1)),'), ptij = ',
-     &       dsqrt(pt2ijcl(n)) 
+     &       dsqrt(q2now) 
         endif
-c     perform alpha_s reweighting only for vertices where a jet is produced
+c     perform alpha_s reweighting only for vertices where a parton is produced
 c     and not for the last clustering (use non-fixed ren. scale for these)
         if (n.lt.nexternal-2)then
            if(ispartonvx(imocl(n),idacl(n,1),idacl(n,2),
      $       ipdgcl(1,igraphs(1)),ipart,.false.)) then
 c       alpha_s weight
-              rewgt=rewgt*alphas(alpsfact*sqrt(pt2ijcl(n)))/asref
+              rewgt=rewgt*alphas(alpsfact*sqrt(q2now))/asref
               if (btest(mlevel,3)) then
                  write(*,*)' reweight vertex: ',ipdgcl(imocl(n),igraphs(1)),
      $                ipdgcl(idacl(n,1),igraphs(1)),ipdgcl(idacl(n,2),igraphs(1))
-                 write(*,*)'       as: ',alphas(alpsfact*dsqrt(pt2ijcl(n))),
-     &                '/',asref,' -> ',alphas(alpsfact*dsqrt(pt2ijcl(n)))/asref
+                 write(*,*)'       as: ',alphas(alpsfact*dsqrt(q2now)),
+     &                '/',asref,' -> ',alphas(alpsfact*dsqrt(q2now))/asref
                  write(*,*)' and G=',SQRT(4d0*PI*ALPHAS(scale))
               endif
            endif
@@ -888,12 +889,13 @@ c       Perform PDF and, if ickkw=2, Sudakov reweighting
           do i=1,2
 c         write(*,*)'weight ',idacl(n,i),', ptij=',pt2prev(idacl(n,i))
             if (isqcd(ipdgcl(idacl(n,i),igraphs(1)))) then
-               if(pt2min.eq.0d0) then
+               if(ickkw.eq.2.and.pt2min.eq.0d0) then
                   pt2min=pt2ijcl(n)
                   if (btest(mlevel,3))
      $                 write(*,*) 'pt2min set to ',pt2min
                endif
-               if(pt2prev(idacl(n,i)).eq.0d0) pt2prev(idacl(n,i))=
+               if(ickkw.eq.2.and.pt2prev(idacl(n,i)).eq.0d0)
+     $              pt2prev(idacl(n,i))=
      $              max(pt2min,p(0,i)**2-p(1,i)**2-p(2,i)**2-p(3,i)**2)
                do j=1,2
                   if (isparton(ipdgcl(idacl(n,i),igraphs(1))).and
@@ -903,6 +905,7 @@ c               line where parton line ends with change of parton id or
 c               non-radiation vertex
                      isvx=.true.
                      ibeam(j)=imocl(n)
+c                    Perform Sudakov reweighting if ickkw=2
                      if(ickkw.eq.2.and.(ipdgcl(idacl(n,i),igraphs(1)).ne.
      $                    ipdgcl(imocl(n),igraphs(1)).or.
      $                    .not.isjetvx(imocl(n),idacl(n,1),idacl(n,2),
@@ -920,7 +923,7 @@ c               non-radiation vertex
                            write(*,*)'           Sud: ',tmp
                            write(*,*)'        -> rewgt: ',rewgt
                         endif
-                     else
+                     else if(ickkw.eq.2) then
                         pt2prev(imocl(n))=pt2prev(idacl(n,i))
                      endif
 c                 End Sudakov reweighting when we reach a non-radiation vertex
@@ -941,23 +944,25 @@ c               f1(x1,pt2E) is given by DSIG, already set scale for that
                      if (zcl(n).gt.0d0.and.zcl(n).lt.1d0) then
                         xnow(j)=xnow(j)*zcl(n)
                      endif
+c                    PDF scale
+                     q2now=min(pt2ijcl(n), q2bck(j))
 c                    Set PDF scale to central factorization scale
-c                    if non-radiating vertex
-                     q2now=pt2ijcl(n)
+c                    if non-radiating vertex or last 2->2
                      if(.not.isjetvx(imocl(n),idacl(n,1),idacl(n,2),
-     $                    ipdgcl(1,igraphs(1)),ipart,n.eq.nexternal-2)) then
+     $                    ipdgcl(1,igraphs(1)),ipart,n.eq.nexternal-2)
+     $                    .or.n.ge.nexternal-3) then
                         q2now=q2bck(j)
                      endif
                      if (btest(mlevel,3))
-     $                    write(*,*)' set q2now to ',sqrt(q2now)
+     $                    write(*,*)' set q2now for pdf to ',sqrt(q2now)
                      if(q2fact(j).eq.0d0.and.ickkw.eq.2)then
                         q2fact(j)=pt2min ! Starting scale for PS
-                        pt2pdf(imocl(n))=pt2ijcl(n)
+                        pt2pdf(imocl(n))=q2now
                         if (btest(mlevel,3))
      $                       write(*,*)' set fact scale ',j,
      $                          ' for PS scale to: ',sqrt(q2fact(j))
                      else if(pt2pdf(idacl(n,i)).eq.0d0)then
-                        pt2pdf(imocl(n))=q2fact(j)
+                        pt2pdf(imocl(n))=q2now
                         if (btest(mlevel,3))
      $                       write(*,*)' set pt2pdf for ',imocl(n),
      $                          ' to: ',sqrt(pt2pdf(imocl(n)))
@@ -991,13 +996,10 @@ c     $                          pdg2pdf(ibeam(j),21,xbk(j),sqrt(pt2ijcl(n)))
 c                           write(*,*)'       -> ',pdg2pdf(ibeam(j),21,xbk(j),sqrt(pt2pdf(idacl(n,i))))/
 c     $                          pdg2pdf(ibeam(j),21,xbk(j),sqrt(pt2ijcl(n)))*rewgt,' )'
                         endif
-c                    End PDF reweighting at q2bck (reached non-radiation vertex)
-                        if(q2now.ge.q2bck(j))then
-                           pt2pdf(imocl(n))=1d30
-                        else
-                           pt2pdf(imocl(n))=q2now                           
-                        endif
+c                       Set scale for mother as this scale
+                        pt2pdf(imocl(n))=q2now                           
                      else if(pt2pdf(idacl(n,i)).ge.q2now) then
+c                    If no reweighting, just copy daughter scale for mother
                         pt2pdf(imocl(n))=pt2pdf(idacl(n,i))
                      endif
                      goto 10
@@ -1040,7 +1042,7 @@ c           fs sudakov weight
         endif
       enddo
 
-      if((ickkw.eq.2.or.pdfwgt).and.lpp(1).eq.0.and.lpp(2).eq.0)then
+      if(ickkw.eq.2.and.lpp(1).eq.0.and.lpp(2).eq.0)then
          q2fact(1)=pt2min
          q2fact(2)=q2fact(1)
       else if (ickkw.eq.1.and.pdfwgt) then
