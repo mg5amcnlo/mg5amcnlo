@@ -22,6 +22,11 @@ C
 C ARGUMENTS 
 C  
       REAL*8 P(0:3,NEXTERNAL),ANS(3)
+C
+C GLOBAL VARIABLES
+C
+	  REAL*8 LSCALE
+      common/CT/LSCALE
 C  
 C LOCAL VARIABLES 
 C  
@@ -32,11 +37,15 @@ C
       LOGICAL GOODHEL(NCOMB)
       DATA NTRY/0/
       DATA GOODHEL/NCOMB*.FALSE./
+
 %(helicity_lines)s
 %(den_factor_line)s
 C ----------
 C BEGIN CODE
 C ----------
+
+      LSCALE=DSQRT((P(0,1)+P(0,2))**2-(P(1,1)+P(1,2))**2-(P(2,1)+P(2,2))**2-(P(3,1)+P(3,2))**2)
+
       NTRY=NTRY+1
       DO IHEL=1,NEXTERNAL
          JC(IHEL) = +1

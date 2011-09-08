@@ -129,7 +129,10 @@ class HelasCallWriter(base_objects.PhysicsObject):
                 if lcutpart.get('spin')==1:
                     pass
                 elif lcutpart.get('spin')==2:
-                    res.append("DO I=1,4")
+                    res.append("DO I=1,12")
+                    res.append("IF (I.GT.8.AND.ML(1).EQ.0.D0) THEN")
+                    res.append("BUFF(I)=(0.D0,0.D0)")                    
+                    res.append("ELSE")
                 elif lcutpart.get('spin')==3:
                     res.append("DO I=1,4")
                 else:
@@ -192,15 +195,20 @@ class HelasCallWriter(base_objects.PhysicsObject):
                     for mother in amp.get('mothers'):
                         if not mother.get('is_loop'):
                             mother.set('number',originalNumbers[indexMothers])
-                            indexMothers=indexMothers+1         
-                if lcutpart.get('spin')!=1:
+                            indexMothers=indexMothers+1  
+                if lcutpart.get('spin')==1:
+                    pass
+                elif lcutpart.get('spin')==2:
+                    res.append("ENDIF")                    
+                    res.append("ENDDO")
+                elif lcutpart.get('spin')==3:
                     res.append("ENDDO")
                 if lcutpart.get('spin')==1:
                     res.append("CALL CLOSE_S(Q,BUFF(1),RES)")
                 elif lcutpart.get('spin')==2:
-                    res.append("CALL CLOSE_F(Q,%s,BUFF(1),RES)"%lcutpart.get('mass'))                    
+                    res.append("CALL CLOSE_F(Q,ML(1),BUFF(1),RES)")                    
                 elif lcutpart.get('spin')==3:                 
-                    res.append("CALL CLOSE_V(Q,%s,BUFF(1),RES)"%lcutpart.get('mass'))
+                    res.append("CALL CLOSE_V(Q,ML(1),BUFF(1),RES)")
         # We must change the first 'ELSE IF' into an 'IF'
         res[0]=res[0][4:]
         # And add an ENDIF at the end
@@ -1007,7 +1015,7 @@ class FortranUFOHelasCallWriter(UFOHelasCallWriter):
         if (len(loopamp.get('pairing')) != len(loopamp.get('mothers'))):
             # Possible non trivial pairing, we must specify it.
             call = call + "%d,"*len(loopamp.get('pairing'))
-        call = call + "W(1,%d),"*len(loopamp.get('mothers'))
+        call = call + "W(1,%d),%d,"*len(loopamp.get('mothers'))
         call = call + "%s,"*(len(loopamp.get('wavefunctions'))-1)
         call = call + "%s,"*(len(loopamp.get('coupling')))
         call = call + "AMPL(1,%d))" 
@@ -1016,14 +1024,16 @@ class FortranUFOHelasCallWriter(UFOHelasCallWriter):
             call_function = lambda amp: call % (\
                               (amp.get('number'),)+\
                               tuple(amp.get('pairing'))+\
-                              tuple([wf.get('number') for wf in amp.get('mothers')])+\
+                              tuple(sum([[wf.get('number'),wf.get_momentum_place()] \
+                                         for wf in amp.get('mothers')],[]))+\
                               tuple(amp.get_masses())+\
                               tuple(amp.get('coupling'))+\
                               (amp.get('amplitudes')[0].get('number'),))
         else:
             call_function = lambda amp: call % (\
                               (amp.get('number'),)+\
-                              tuple([wf.get('number') for wf in amp.get('mothers')])+\
+                              tuple(sum([[wf.get('number'),wf.get_momentum_place()] \
+                                         for wf in amp.get('mothers')],[]))+\
                               tuple(amp.get_masses())+\
                               tuple(amp.get('coupling'))+\
                               (amp.get('amplitudes')[0].get('number'),))

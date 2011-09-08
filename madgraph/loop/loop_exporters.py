@@ -217,7 +217,7 @@ class LoopProcessExporterFortranSA(export_v4.ProcessExporterFortranSA,
 
         filename = 'nexternal.inc'
         self.write_nexternal_file(writers.FortranWriter(filename),
-                             nexternal, ninitial)
+                             (nexternal-2), ninitial)
 
         filename = 'pmass.inc'
         self.write_pmass_file(writers.FortranWriter(filename),
@@ -379,15 +379,17 @@ class LoopProcessExporterFortranSA(export_v4.ProcessExporterFortranSA,
             # HELAS-like loop subroutines.
             replace_dict['maxlcouplings']=matrix_element.find_max_loop_coupling()
             replace_dict['nloopline']=callkey[0]
-            wfsargs="".join([("W"+str(i)+", ") for i in range(1,callkey[1]+1)])
+            wfsargs="".join([("W%d, MP%d, "%(i,i)) for i in range(1,callkey[1]+1)])
             replace_dict['ncplsargs']=callkey[2]
             replace_dict['wfsargs']=wfsargs
             margs="".join([("M"+str(i)+", ") for i in range(1,callkey[0]+1)])
             replace_dict['margs']=margs
             cplsargs="".join([("C"+str(i)+", ") for i in range(1,callkey[2]+1)])
             replace_dict['cplsargs']=cplsargs
-            wfsargsdecl="".join([("W"+str(i)+"(20), ") for i in range(1,callkey[1]+1)])[:-2]
+            wfsargsdecl="".join([("W%d(20), "%i) for i in range(1,callkey[1]+1)])[:-2]
             replace_dict['wfsargsdecl']=wfsargsdecl
+            momposdecl="".join([("MP%d, "%i) for i in range(1,callkey[1]+1)])[:-2]
+            replace_dict['momposdecl']=momposdecl
             margsdecl="".join([("M"+str(i)+", ") for i in range(1,callkey[0]+1)])[:-2]
             replace_dict['margsdecl']=margsdecl
             cplsdecl="".join([("C"+str(i)+", ") for i in range(1,callkey[2]+1)])[:-2]
@@ -395,6 +397,9 @@ class LoopProcessExporterFortranSA(export_v4.ProcessExporterFortranSA,
             weset="\n".join([("WE(I,"+str(i)+")=W"+str(i)+"(I)") for \
                              i in range(1,callkey[1]+1)])
             replace_dict['weset']=weset
+            momposset="\n".join([("MOMPOS(%d)=MP%d"%(i,i)) for \
+                             i in range(1,callkey[1]+1)])
+            replace_dict['momposset']=momposset
             mset="\n".join([("M2L("+str(i)+")=M"+str(i)+"**2") for \
                              i in range(1,callkey[0]+1)])
             replace_dict['mset']=mset
@@ -405,6 +410,7 @@ class LoopProcessExporterFortranSA(export_v4.ProcessExporterFortranSA,
             mset2="\n".join(msetlines+[("ML("+str(i)+")=M"+str(i-2)) for \
                              i in range(3,callkey[0]+2)])
             replace_dict['mset2']=mset2           
+            replace_dict['nwfsargs'] = callkey[1]
             if callkey[0]==callkey[1]:
                 file = open(os.path.join(_file_path, \
                  'iolibs/template_files/loop/helas_loop_amplitude.inc')).read()                
@@ -413,7 +419,6 @@ class LoopProcessExporterFortranSA(export_v4.ProcessExporterFortranSA,
                  'iolibs/template_files/loop/helas_loop_amplitude_pairing.inc')).read() 
                 pairingargs="".join([("P"+str(i)+", ") for i in range(1,callkey[0]+1)])
                 replace_dict['pairingargs']=pairingargs
-                replace_dict['nwfsargs'] = callkey[1]
                 pairingdecl="".join([("P"+str(i)+", ") for i in range(1,callkey[0]+1)])[:-2]
                 replace_dict['pairingdecl']=pairingdecl
                 pairingset="\n".join([("PAIRING("+str(i)+")=P"+str(i)) for \

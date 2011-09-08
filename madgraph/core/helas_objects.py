@@ -846,6 +846,28 @@ class HelasWavefunction(base_objects.PhysicsObject):
                           ['incoming', 'outgoing'])[0]
         return self.get(name)
 
+    def get_momentum_place(self):
+        """ Returns the position of the energy component of the momentum in the
+        wavefunction array according to HELAS convention. The sign of the integer
+        return is -1 if the momentum carried by this wavefunction flows is outgoing
+        (wrt the vertex which has this wavefunction as an input) and +1 if it is
+        incoming """
+        
+        if self['state']=='incoming':
+            res=1
+        else:
+            res=-1
+        
+        if self.get('spin')==1:
+            return res*2
+        elif self.get('spin') in [2,3]:
+            return res*5
+        elif self.get('spin')==5:
+            return res*17
+        else:
+            raise self.PhysicsObjectError,\
+                  "Particles of spin %d are not supported" % self.get('spin')
+
     def get_spin_state_number(self):
         """Returns the number corresponding to the spin state, with a
         minus sign for incoming fermions"""

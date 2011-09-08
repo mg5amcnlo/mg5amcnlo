@@ -9,7 +9,8 @@
 C
 C ARGUMENTS 
 C
-      COMPLEX*16 %(wfsargsdecl)s 
+      COMPLEX*16 %(wfsargsdecl)s
+	  INTEGER %(momposdecl)s
       REAL*8 %(margsdecl)s
       COMPLEX*16 %(cplsdecl)s
       INTEGER %(pairingdecl)s
@@ -21,6 +22,7 @@ C
       REAL*8 PL(0:3,NLOOPLINE)
       REAL*8 M2L(NLOOPLINE)
       INTEGER PAIRING(NLOOPLINE)
+	  INTEGER MOMPOS(%(nwfsargs)d)
       INTEGER I, J, K, TEMP
 C
 C GLOBAL VARIABLES
@@ -36,16 +38,18 @@ C ----------
       DO I=1,20
         %(weset)s
       ENDDO
+	  %(momposset)s
       %(mset)s
 	  %(mset2)s	  
       %(pairingset)s
-      %(cplset)s	  
+      %(cplset)s
       ID=LID
       DO I=0,3
         TEMP=1
         DO J=1,NLOOPLINE
+		  PL(I,J)=0.D0
           DO K=TEMP,(TEMP+PAIRING(J)-1)
-            PL(I,J)=DBLE(WE(5+I,K))
+            PL(I,J)=PL(I,J)+SIGN(1,MOMPOS(K))*DBLE(WE(ABS(MOMPOS(K))+I,K))
           ENDDO
           TEMP=TEMP+PAIRING(J)
         ENDDO

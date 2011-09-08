@@ -10,6 +10,9 @@
 !     
       REAL*8 ZERO
       PARAMETER (ZERO=0D0)
+
+      LOGICAL READPS
+      PARAMETER (READPS = .FALSE.)
 !     
 !     INCLUDE FILES
 !     
@@ -64,7 +67,19 @@
 
       call printout()
 
-      CALL GET_MOMENTA(SQRTS,PMASS,P)      
+      if(READPS) then
+        open(967, file="PS.input", err=976, status='OLD', action='READ')
+        do i=1,NExternal
+          read(967,*,end=978) P(0,i),P(1,i),P(2,i),P(3,i)
+        enddo
+       goto 978
+  976  continue
+         stop 'Could not read the PS.input phase-space point.'
+  978  continue
+       close(967)
+      else
+        CALL GET_MOMENTA(SQRTS,PMASS,P)  
+      endif
 !
 !        write the information on the four momenta 
 !

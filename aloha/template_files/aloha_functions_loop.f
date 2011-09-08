@@ -70,8 +70,15 @@ c         write(stdo,*) '             : nsf = ',nsf
 c      endif
 c#endif
 
-      fi(5) = dcmplx(p(0),p(3))*nsf
-      fi(6) = dcmplx(p(1),p(2))*nsf
+c     Convention for trees
+c      fi(5) = dcmplx(p(0),p(3))*nsf
+c      fi(6) = dcmplx(p(1),p(2))*nsf
+
+c     Convention for loop computations
+      fi(5) = dcmplx(p(0),0.D0)*nsf
+      fi(6) = dcmplx(p(1),0.D0)*nsf
+      fi(7) = dcmplx(p(2),0.D0)*nsf
+      fi(8) = dcmplx(p(3),0.D0)*nsf
 
       nh = nhel*nsf
 
@@ -206,8 +213,16 @@ c         write(stdo,*) '             : nsf = ',nsf
 c      endif
 c#endif
 
-      fo(5) = dcmplx(p(0),p(3))*nsf
-      fo(6) = dcmplx(p(1),p(2))*nsf
+c     Convention for trees
+c      fo(5) = dcmplx(p(0),p(3))*nsf
+c      fo(6) = dcmplx(p(1),p(2))*nsf
+
+c     Convention for loop computations
+      fo(5) = dcmplx(p(0),0.D0)*nsf
+      fo(6) = dcmplx(p(1),0.D0)*nsf
+      fo(7) = dcmplx(p(2),0.D0)*nsf
+      fo(8) = dcmplx(p(3),0.D0)*nsf
+
 
       nh = nhel*nsf
 
@@ -314,8 +329,16 @@ c
 
 
       tc(1)=NHEL
-      tc(17) = dcmplx(p(0),p(3))*nst
-      tc(18) = dcmplx(p(1),p(2))*nst
+
+c     Convention for trees
+c      tc(17) = dcmplx(p(0),p(3))*nst
+c      tc(18) = dcmplx(p(1),p(2))*nst
+
+c     Convention for loop computations
+      tc(17) = dcmplx(p(0),0.D0)*nst
+      tc(18) = dcmplx(p(1),0.D0)*nst
+      tc(19) = dcmplx(p(2),0.D0)*nst
+      tc(20) = dcmplx(p(3),0.D0)*nst
 
       return
       end
@@ -372,8 +395,16 @@ c      endif
 c#endif
 
       sc(1) = dcmplx( rOne )
-      sc(2) = dcmplx(p(0),p(3))*nss
-      sc(3) = dcmplx(p(1),p(2))*nss
+
+c     Convention for trees
+c      sc(2) = dcmplx(p(0),p(3))*nss
+c      sc(3) = dcmplx(p(1),p(2))*nss
+
+c     Convention for loop computations
+      sc(2) = dcmplx(p(0),0.D0)*nss
+      sc(3) = dcmplx(p(1),0.D0)*nss
+      sc(4) = dcmplx(p(2),0.D0)*nss
+      sc(5) = dcmplx(p(3),0.D0)*nss
 c
       return
       end
@@ -415,8 +446,15 @@ c
       pp = min(p(0),sqrt(pt2+p(3)**2))
       pt = min(pp,sqrt(pt2))
 
-      ft(5,1) = dcmplx(p(0),p(3))*nst
-      ft(6,1) = dcmplx(p(1),p(2))*nst
+c     Convention for trees
+c      ft(5,1) = dcmplx(p(0),p(3))*nst
+c      ft(6,1) = dcmplx(p(1),p(2))*nst
+
+c     Convention for loop computations
+      ft(5,1) = dcmplx(p(0),0.D0)*nst
+      ft(6,1) = dcmplx(p(1),0.D0)*nst
+      ft(7,1) = dcmplx(p(2),0.D0)*nst
+      ft(8,1) = dcmplx(p(3),0.D0)*nst
 
       if ( nhel.ge.0 ) then
 c construct eps+
@@ -622,8 +660,15 @@ c#endif
       pp = min(p(0),dsqrt(pt2+p(3)**2))
       pt = min(pp,dsqrt(pt2))
 
-      vc(5) = dcmplx(p(0),p(3))*nsv
-      vc(6) = dcmplx(p(1),p(2))*nsv
+c     Convention for trees
+c      vc(5) = dcmplx(p(0),p(3))*nsv
+c      vc(6) = dcmplx(p(1),p(2))*nsv
+
+c     Convention for loop computations
+      vc(5) = dcmplx(p(0),0.D0)*nsv
+      vc(6) = dcmplx(p(1),0.D0)*nsv
+      vc(7) = dcmplx(p(2),0.D0)*nsv
+      vc(8) = dcmplx(p(3),0.D0)*nsv
 
 c#ifdef HELAS_CHECK
 c nhel=4 option for scalar polarization
@@ -1012,7 +1057,7 @@ C===============================================================================
       
       COMPLEX*16 Q(0:3)
       COMPLEX*16 RES
-      COMPLEX*16 AMPS(4)
+      COMPLEX*16 AMPS(12)
 
       IF (M.NE.0.D0) THEN
         STOP 'Massive vector L-cut particle not supported'
@@ -1021,32 +1066,66 @@ C===============================================================================
 
       END
 
-      SUBROUTINE CLOSE_F(Q,M,AMPS,RES)      
+c This subroutine is to recreate the fermion propagator with 4 helicities
+c only. This has problems with certain configuration of the imaginary
+c momentum q, so it is not implemented yet.
+
+      SUBROUTINE CLOSE_F4HEL(Q,M,AMPS,RES)      
       
       COMPLEX*16 Q(0:3)
       COMPLEX*16 RES, QNORM
       REAL*8 M
-      COMPLEX*16 AMPS(4) 
+      COMPLEX*16 AMPS(12) 
       COMPLEX*16 PMM, PPM
 
       PPM=AMPS(1)+AMPS(2)
       PMM=AMPS(3)+AMPS(4)
+      write(*,*) 'PPM=',PPM
+      write(*,*) 'PMM=',PMM      
       IF (M.NE.0.D0) THEN
-        QNORM=SQRT(Q(0)**2-Q(1)**2-Q(2)**2-Q(3)**2)      
+        QNORM=SQRT(Q(0)**2-Q(1)**2-Q(2)**2-Q(3)**2)
+        write(*,*) 'Q=',Q        
+        write(*,*) 'QNORM=',QNORM
+        write(*,*) 'M=',M
         RES=(0.D0,0.5D0)*((PPM+PMM)+(PPM-PMM)*(M/QNORM))
+        write(*,*) 'RES1=',RES
       ELSE
-        RES=(0.D0,0.5D0)*(PPM+PMM)        
+        RES=(0.D0,0.5D0)*(PPM+PMM)
+        write(*,*) 'RES2=',RES
       ENDIF
 
       END
 
-      SUBROUTINE CLOSE_S(Q,AMP,RES)
+
+      SUBROUTINE CLOSE_F(Q,M,AMPS,RES)      
+      
+      COMPLEX*16 Q(0:3)
+      COMPLEX*16 RES
+      REAL*8 M
+      COMPLEX*16 AMPS(12) 
+
+      RES=(0.D0,0.D0)
+      RES=(Q(0)-Q(3))*AMPS(1)+
+     &    (-Q(1)+(0.0d0,1.0d0)*Q(2))*AMPS(2)+
+     &    (-Q(1)-(0.0d0,1.0d0)*Q(2))*AMPS(3)+
+     &    (Q(0)+Q(3))*AMPS(4)+
+     &    (Q(0)+Q(3))*AMPS(5)+
+     &    (Q(1)-(0.0d0,1.0d0)*Q(2))*AMPS(6)+
+     &    (Q(1)+(0.0d0,1.0d0)*Q(2))*AMPS(7)+
+     &    (Q(0)-Q(3))*AMPS(8)
+      IF (M.NE.0.D0) THEN
+        RES=RES-M*(AMPS(9)+AMPS(10)+AMPS(11)+AMPS(12))
+      ENDIF
+
+      END
+
+      SUBROUTINE CLOSE_S(Q,AMPS,RES)
 
       COMPLEX*16 Q(0:3)
       COMPLEX*16 RES
-      COMPLEX*16 AMP
+      COMPLEX*16 AMPS(12)
 
-      RES=(0.D0,1.D0)*AMP
+      RES=(0.D0,1.D0)*AMPS(1)
       
       END
 
@@ -1054,10 +1133,14 @@ C===============================================================================
 C Subroutines to create the external wavefunctions of the L-cut particles
 C===============================================================================
 
-      SUBROUTINE LCUT_F(Q,M,CFIG,SCD,W)
+c This subroutine is to recreate the fermion propagator with 4 helicities
+c only. This has problems with certain configuration of the imaginary
+c momentum q, so it is not implemented yet.
+
+      SUBROUTINE LCUT_F4HEL(Q,M,CFIG,SCD,W)
 
       COMPLEX*16 Q(0:3)
-      INTEGER CFIG
+      INTEGER CFIG,J
       LOGICAL SCD
       REAL*8 M
       COMPLEX*16 W(20)
@@ -1067,8 +1150,11 @@ C===============================================================================
 C         UBAR, HEL=-1        
           CALL ILXXXX(Q(0),M,-1,1,W(1))
         ELSE
-C         U, HEL=-1        
+C         U, HEL=-1
           CALL ILXXXX(Q(0),M,-1,-1,W(1))
+          do J=1,4
+          write(*,*) 'Wcf(',j,',1)=',W(1)   
+          enddo
         ENDIF
       ELSEIF (CFIG.EQ.2) THEN
         IF (SCD) THEN
@@ -1101,6 +1187,107 @@ C     REVERSE THE MOMENTUM IN THE WF FOR THE SECOND L-CUT SPINORS
         W(6)=-Q(2)
         W(7)=-Q(3)
         W(8)=-Q(4)
+      ENDIF
+
+      END
+
+      SUBROUTINE LCUT_F(Q,M,CFIG,SCD,W)
+
+      COMPLEX*16 Q(0:3)
+      INTEGER CFIG
+      LOGICAL SCD
+      REAL*8 M
+      COMPLEX*16 W(20)
+
+      W(1)=(0.d0,0.d0)
+      W(2)=(0.d0,0.d0)
+      W(3)=(0.d0,0.d0)
+      W(4)=(0.d0,0.d0)
+
+      IF (CFIG.eq.1) then
+        IF (SCD) then
+          W(3)=(1.d0,0.d0)
+        ELSE
+          W(1)=(1.d0,0.d0)
+        ENDIF
+      ELSEIF (CFIG.eq.2) then
+        IF (SCD) then
+          W(4)=(1.d0,0.d0)
+        ELSE
+          W(1)=(1.d0,0.d0)
+        ENDIF
+      ELSEIF (CFIG.eq.3) then
+        IF (SCD) then
+          W(3)=(1.d0,0.d0)
+        ELSE
+          W(2)=(1.d0,0.d0)
+        ENDIF  
+      ELSEIF (CFIG.eq.4) then
+        IF (SCD) then
+          W(4)=(1.d0,0.d0)
+        ELSE
+          W(2)=(1.d0,0.d0)
+        ENDIF
+      ELSEIF (CFIG.eq.5) then
+        IF (SCD) then
+          W(1)=(1.d0,0.d0)
+        ELSE
+          W(3)=(1.d0,0.d0)
+        ENDIF
+      ELSEIF (CFIG.eq.6) then
+        IF (SCD) then
+          W(2)=(1.d0,0.d0)
+        ELSE
+          W(3)=(1.d0,0.d0)
+        ENDIF
+      ELSEIF (CFIG.eq.7) then
+        IF (SCD) then
+          W(1)=(1.d0,0.d0)
+        ELSE
+          W(4)=(1.d0,0.d0)
+        ENDIF
+      ELSEIF (CFIG.eq.8) then
+        IF (SCD) then
+          W(2)=(1.d0,0.d0)
+        ELSE
+          W(4)=(1.d0,0.d0)
+        ENDIF
+      ELSEIF (CFIG.eq.9) then
+        IF (SCD) then
+          W(1)=(1.d0,0.d0)
+        ELSE
+          W(1)=(1.d0,0.d0)
+        ENDIF
+      ELSEIF (CFIG.eq.10) then
+        IF (SCD) then
+          W(2)=(1.d0,0.d0)
+        ELSE
+          W(2)=(1.d0,0.d0)
+        ENDIF
+      ELSEIF (CFIG.eq.11) then
+        IF (SCD) then
+          W(3)=(1.d0,0.d0)
+        ELSE
+          W(3)=(1.d0,0.d0)
+        ENDIF
+      ELSEIF (CFIG.eq.12) then
+        IF (SCD) then
+          W(4)=(1.d0,0.d0)
+        ELSE
+          W(4)=(1.d0,0.d0)
+        ENDIF
+      ENDIF
+C     REVERSE THE MOMENTUM IN THE WF FOR THE SECOND L-CUT SPINORS      
+      IF (SCD) THEN
+        W(5)=-Q(1)
+        W(6)=-Q(2)
+        W(7)=-Q(3)
+        W(8)=-Q(4)
+      ELSE
+        W(5)=Q(1)
+        W(6)=Q(2)
+        W(7)=Q(3)
+        W(8)=Q(4)
       ENDIF
 
       END
@@ -1254,7 +1441,6 @@ c      fi(6) = dcmplx(p(1),p(2))*nsf
 
       fmass = sqrt(p(0)**2-p(1)**2-p(2)**2-p(3)**2)
 
-
       if ( ffmass.ne.rZero ) then
 c special treatment for massless particles.
 c         pp = min(p(0),sqrt(p(1)**2+p(2)**2+p(3)**2))
@@ -1276,6 +1462,7 @@ c particle at rest.
 c standard spinor
 
             pp=sqrt(p(1)**2+p(2)**2+p(3)**2)
+            write(*,*) 'ppre=',pp            
 c            if( (dble(p(0)) .lt. 0 .and. dble(pp) .gt. 0) .or.
 c     &          (dble(p(0)) .lt. 0 .and. dble(pp) .gt. 0) ) then
 c            pp=-pp
@@ -1339,7 +1526,7 @@ c        end if
             fi(3) = dcmplx( rZero )
             fi(4) = dcmplx( rZero )
          endif
-      endif
+      endif     
 
       return
       end
@@ -1378,17 +1565,6 @@ c      fo(6) = dcmplx(p(1),p(2))*nsf
       fo(6) = p(1)*(nsf)
       fo(7) = p(2)*(nsf)
       fo(8) = p(3)*(nsf)      
-
-c     this minus sign in the flow-out complex fermion comes from the
-c     fact that we want to use the helicity sum relation and that in 
-c     fact we call u(p)ubar(-p) and not u(p)ubar(p)!!
-
-c      p(0)=-p(0)
-c      p(1)=-p(1)
-c      p(2)=-p(2)
-c      p(3)=-p(3)
-
-c BULLSHIT
 
       nh = nhel*nsf
 

@@ -12,6 +12,7 @@ C
 C ARGUMENTS
 C  
       COMPLEX*16 %(wfsargsdecl)s
+	  INTEGER %(momposdecl)s	  
       REAL*8 %(margsdecl)s
       COMPLEX*16 %(cplsdecl)s	  
       COMPLEX*16 RES(3)
@@ -21,6 +22,7 @@ C LOCAL VARIABLES
 C
       REAL*8 PL(0:3,NLOOPLINE)
       REAL*8 M2L(NLOOPLINE)
+	  INTEGER MOMPOS(%(nwfsargs)d)	  
 	  INTEGER I, J
 C
 C GLOBAL VARIABLES
@@ -36,13 +38,14 @@ C ----------
 	  DO I=1,20
         %(weset)s
 	  ENDDO
+	  %(momposset)s	  
       %(mset)s
 	  %(mset2)s
       %(cplset)s	  
 	  ID=LID
 	  DO I=0,3
 	    DO J=1,NLOOPLINE
-	      PL(I,J)=DBLE(WE(5+I,J))
+	      PL(I,J)=SIGN(1,MOMPOS(J))*DBLE(WE(ABS(MOMPOS(J))+I,J))
 		ENDDO
 	  ENDDO
       CALL CTLOOP(NLOOPLINE,PL,M2L,RES)

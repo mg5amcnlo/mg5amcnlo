@@ -93,7 +93,7 @@ class LoopExporterTest(unittest.TestCase):
                         ["Generation from test_loop_exporters.py",],
                         False,False)
         
-    def no_test_LoopProcessExporterFortranSA_ddx_uux(self):
+    def test_LoopProcessExporterFortranSA_ddx_uux(self):
         """Test the StandAlone output for different processes.
         """
         
