@@ -202,11 +202,12 @@ c**************************************************************************
       include 'nexternal.inc'
       include 'cluster.inc'
       include 'coupl.inc'
+      include 'maxamps.inc'
       integer ignum, ipnum, ipids(nexternal,4,2:nexternal)
 C $B$ IFOREST $B$ !this is a tag for MadWeight
       integer i, iforest(2,-max_branch:-1,lmaxconfigs)
       common/to_forest/iforest
-      integer sprop(-max_branch:-1,lmaxconfigs)
+      integer sprop(maxsproc,-max_branch:-1,lmaxconfigs)
       integer tprid(-max_branch:-1,lmaxconfigs)
       common/to_sprop/sprop,tprid
 C $E$ IFOREST $E$ !this is a tag for MadWeight
@@ -254,15 +255,15 @@ c                 Add also the same propagator but from the other direction
                   icmp(2)=ishft(1,nexternal)-1-icmp(1)
 c     Set pdg code for propagator
                   do l=1,2
-                     if(sprop(k,ignum).ne.0)then
-                        ipdgcl(icmp(l),ignum)=sprop(k,ignum)
+                     if(sprop(1,k,ignum).ne.0)then
+                        ipdgcl(icmp(l),ignum)=sprop(1,k,ignum)
 c                       If this is radiation off heavy FS particle, set heavyrad to true
                         if(isjet(ipdgcl(ipids(i,1,ipnum),ignum)).and.
      $                       .not.isjet(ipdgcl(ipids(j,1,ipnum),ignum)).and.
-     $                       ipdgcl(ipids(j,1,ipnum),ignum).eq.sprop(k,ignum).or.
+     $                       ipdgcl(ipids(j,1,ipnum),ignum).eq.sprop(1,k,ignum).or.
      $                       isjet(ipdgcl(ipids(j,1,ipnum),ignum)).and.
      $                       .not.isjet(ipdgcl(ipids(i,1,ipnum),ignum)).and.
-     $                       ipdgcl(ipids(i,1,ipnum),ignum).eq.sprop(k,ignum))then
+     $                       ipdgcl(ipids(i,1,ipnum),ignum).eq.sprop(1,k,ignum))then
                            heavyrad(ignum) = .true.
                         endif
                      else if(tprid(k,ignum).ne.0)then
