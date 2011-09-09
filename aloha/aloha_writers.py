@@ -11,7 +11,7 @@ from numbers import Number
 class WriteALOHA: 
     """ Generic writing functions """ 
     
-    loop_mode = False
+    LOOP_MODE = False
     power_symbol = '**'
     change_var_format = str
     change_number_format = str
@@ -39,6 +39,7 @@ class WriteALOHA:
         self.comment = abstract_routine.infostr
         self.offshell = abstract_routine.outgoing 
         self.symmetries = abstract_routine.symmetries
+        self.loop_routine = abstract_routine.loop
 
         #prepare the necessary object
         self.collect_variables() # Look for the different variables
@@ -368,6 +369,7 @@ class ALOHAWriterForFortran(WriteALOHA):
             sign = ''
             if self.offshell == index and type in ['V','S']:
                 sign = '-'
+
             if self.LOOP_MODE:
                 str_out += '%s(0) = %s %s%d(%d)\n' % (mom, sign, type, index, energy_pos)
                 str_out += '%s(1) = %s %s%d(%d)\n' % (mom, sign, type, index, energy_pos + 1)
@@ -439,7 +441,7 @@ class ALOHAWriterForFortran(WriteALOHA):
             denominator = self.obj.denominator
             for ind in denominator.listindices():
                 denom = self.write_obj(denominator.get_rep(ind))
-            if self.LOOP_MODE:
+            if self.loop_routine:
                 string = 'denom = 1d0'
             else:
                 string = 'denom =' + '1d0/(' + denom + ')'
