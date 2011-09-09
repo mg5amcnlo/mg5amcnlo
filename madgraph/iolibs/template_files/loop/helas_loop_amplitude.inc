@@ -1,4 +1,4 @@
-      SUBROUTINE LOOP_%(nloopline)d_%(ncplsargs)d( LID, %(wfsargs)s%(margs)s%(cplsargs)s RES)
+      SUBROUTINE LOOP_%(nloopline)d_%(ncplsargs)d( LID, %(wfsargs)s%(margs)s%(cplsargs)s RANK, RES)
 C  
 C CONSTANTS 
 C  
@@ -16,7 +16,7 @@ C
       REAL*8 %(margsdecl)s
       COMPLEX*16 %(cplsdecl)s	  
       COMPLEX*16 RES(3)
-	  INTEGER LID
+	  INTEGER LID, RANK
 C  
 C LOCAL VARIABLES 
 C
@@ -48,6 +48,6 @@ C ----------
 	      PL(I,J)=SIGN(1,MOMPOS(J))*DBLE(WE(ABS(MOMPOS(J))+I,J))
 		ENDDO
 	  ENDDO
-      CALL CTLOOP(NLOOPLINE,PL,M2L,RES)
+      CALL CTLOOP(NLOOPLINE,PL,M2L,RANK,RES)
 
 	  END

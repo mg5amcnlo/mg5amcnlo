@@ -1018,6 +1018,7 @@ class FortranUFOHelasCallWriter(UFOHelasCallWriter):
         call = call + "W(1,%d),%d,"*len(loopamp.get('mothers'))
         call = call + "%s,"*(len(loopamp.get('wavefunctions'))-1)
         call = call + "%s,"*(len(loopamp.get('coupling')))
+        call = call + "%d,"
         call = call + "AMPL(1,%d))" 
         
         if (len(loopamp.get('pairing')) != len(loopamp.get('mothers'))):        
@@ -1028,6 +1029,7 @@ class FortranUFOHelasCallWriter(UFOHelasCallWriter):
                                          for wf in amp.get('mothers')],[]))+\
                               tuple(amp.get_masses())+\
                               tuple(amp.get('coupling'))+\
+                              (amp.get_rank(),)+\
                               (amp.get('amplitudes')[0].get('number'),))
         else:
             call_function = lambda amp: call % (\
@@ -1036,6 +1038,7 @@ class FortranUFOHelasCallWriter(UFOHelasCallWriter):
                                          for wf in amp.get('mothers')],[]))+\
                               tuple(amp.get_masses())+\
                               tuple(amp.get('coupling'))+\
+                              (amp.get_rank(),)+\
                               (amp.get('amplitudes')[0].get('number'),))
         
         self.add_amplitude(loopamp.get_call_key(), call_function)
@@ -1171,16 +1174,14 @@ class FortranUFOHelasCallWriter(UFOHelasCallWriter):
             call = call + '('
             # Wavefunctions
             for mother in argument.get('mothers'):
-                if mother['is_loop']:
-                    call = call + "WL(1,%d),"
+                if  mother['is_loop'] or \
+                    (isinstance(argument,helas_objects.HelasWavefunction) \
+                     and argument.get('is_loop')) or \
+                     ((isinstance(argument,helas_objects.HelasAmplitude) \
+                     and argument['type']=='loop')):
+                    call = call + "W%s(1,%d)," 
                 else:
-                    if (isinstance(argument,helas_objects.HelasWavefunction) \
-                        and argument.get('is_loop')) or \
-                        (isinstance(argument,helas_objects.HelasAmplitude) \
-                        and argument['type']=='loop'):
-                        call = call + "WE(1,%d)," 
-                    else:
-                        call = call + "W(1,%d),"                                           
+                    call = call + "W(1,%d),"                                           
             # Couplings
             call = call + "%s,"
 
@@ -1193,7 +1194,8 @@ class FortranUFOHelasCallWriter(UFOHelasCallWriter):
                 #CALL L_4_011(W(1,%d),W(1,%d),%s,%s, %s, W(1,%d))
                 if argument['is_loop']:
                     call_function = lambda wf: call % \
-                        (tuple([mother.get('number') for mother in wf.get('mothers')]) + \
+                        (tuple(sum([[('L' if mother.get('is_loop') else 'E'),\
+                         mother.get('number')] for mother in wf.get('mothers')],[]))+ \
                          (','.join(wf.get_with_flow('coupling')),
                           wf.get('number'),
                           wf.get('number')))
@@ -1210,17 +1212,17 @@ class FortranUFOHelasCallWriter(UFOHelasCallWriter):
                 if argument['type'] not in ['base','loop']:
                     call += "AMPL(%d,%s))"%((argument.get_epsilon_order()+1),"%d")
                     call_function = lambda amp: call % \
-                                        (tuple([mother.get('number') 
-                                        for mother in amp.get('mothers')]) + \
-                                        (','.join(amp.get('coupling')),
-                                         amp.get('number')))
+                        (tuple([mother.get('number') 
+                         for mother in amp.get('mothers')]) +\
+                        (','.join(amp.get('coupling')),
+                        amp.get('number')))
                 else:
                     if argument['type']=='loop':
                         call += "BUFF(I))"
                         call_function = lambda amp: call % \
-                                        (tuple([mother.get('number') 
-                                        for mother in amp.get('mothers')]) + \
-                                        (','.join(amp.get('coupling')),))
+                        (tuple(sum([[('L' if mother.get('is_loop') else 'E'),\
+                         mother.get('number')] for mother in amp.get('mothers')],[]))+ \
+                        (','.join(amp.get('coupling')),))
                     else:
                         call += "AMP(%d))"
                         call_function = lambda amp: call % \

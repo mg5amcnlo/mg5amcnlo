@@ -1057,7 +1057,7 @@ C===============================================================================
       
       COMPLEX*16 Q(0:3)
       COMPLEX*16 RES
-      COMPLEX*16 AMPS(12)
+      COMPLEX*16 AMPS(4)
 
       IF (M.NE.0.D0) THEN
         STOP 'Massive vector L-cut particle not supported'
@@ -1075,7 +1075,7 @@ c momentum q, so it is not implemented yet.
       COMPLEX*16 Q(0:3)
       COMPLEX*16 RES, QNORM
       REAL*8 M
-      COMPLEX*16 AMPS(12) 
+      COMPLEX*16 AMPS(4) 
       COMPLEX*16 PMM, PPM
 
       PPM=AMPS(1)+AMPS(2)
@@ -1119,13 +1119,13 @@ c momentum q, so it is not implemented yet.
 
       END
 
-      SUBROUTINE CLOSE_S(Q,AMPS,RES)
+      SUBROUTINE CLOSE_S(Q,AMP,RES)
 
       COMPLEX*16 Q(0:3)
       COMPLEX*16 RES
-      COMPLEX*16 AMPS(12)
+      COMPLEX*16 AMP
 
-      RES=(0.D0,1.D0)*AMPS(1)
+      RES=(0.D0,1.D0)*AMP
       
       END
 
@@ -1183,10 +1183,10 @@ C         V, HEL=1
       ENDIF
 C     REVERSE THE MOMENTUM IN THE WF FOR THE SECOND L-CUT SPINORS      
       IF (SCD) THEN
-        W(5)=-Q(1)
-        W(6)=-Q(2)
-        W(7)=-Q(3)
-        W(8)=-Q(4)
+        W(5)=-Q(0)
+        W(6)=-Q(1)
+        W(7)=-Q(2)
+        W(8)=-Q(3)
       ENDIF
 
       END
@@ -1279,15 +1279,15 @@ C     REVERSE THE MOMENTUM IN THE WF FOR THE SECOND L-CUT SPINORS
       ENDIF
 C     REVERSE THE MOMENTUM IN THE WF FOR THE SECOND L-CUT SPINORS      
       IF (SCD) THEN
-        W(5)=-Q(1)
-        W(6)=-Q(2)
-        W(7)=-Q(3)
-        W(8)=-Q(4)
+        W(5)=-Q(0)
+        W(6)=-Q(1)
+        W(7)=-Q(2)
+        W(8)=-Q(3)
       ELSE
-        W(5)=Q(1)
-        W(6)=Q(2)
-        W(7)=Q(3)
-        W(8)=Q(4)
+        W(5)=Q(0)
+        W(6)=Q(1)
+        W(7)=Q(2)
+        W(8)=Q(3)
       ENDIF
 
       END
@@ -1335,10 +1335,10 @@ C         V, HEL=1
       ENDIF
 C     REVERSE THE MOMENTUM IN THE WF FOR THE SECOND L-CUT SPINORS      
       IF (SCD) THEN
-        W(5)=-Q(1)
-        W(6)=-Q(2)
-        W(7)=-Q(3)
-        W(8)=-Q(4)
+        W(5)=-Q(0)
+        W(6)=-Q(1)
+        W(7)=-Q(2)
+        W(8)=-Q(3)
       ENDIF
 
       END
@@ -1369,10 +1369,10 @@ C     REVERSE THE MOMENTUM IN THE WF FOR THE SECOND L-CUT SPINORS
       ENDIF
 C     REVERSE THE MOMENTUM IN THE WF FOR THE SECOND L-CUT SPINORS      
       IF (SCD) THEN
-        W(5)=-Q(1)
-        W(6)=-Q(2)
-        W(7)=-Q(3)
-        W(8)=-Q(4)
+        W(5)=-Q(0)
+        W(6)=-Q(1)
+        W(7)=-Q(2)
+        W(8)=-Q(3)
       ENDIF
 
       END
@@ -1387,10 +1387,10 @@ C     REVERSE THE MOMENTUM IN THE WF FOR THE SECOND L-CUT SPINORS
 
 C     REVERSE THE MOMENTUM IN THE WF FOR THE SECOND SPINORS      
       IF (SCD) THEN
-        W(2)=-Q(1)
-        W(3)=-Q(2)
-        W(4)=-Q(3)
-        W(5)=-Q(4)
+        W(2)=-Q(0)
+        W(3)=-Q(1)
+        W(4)=-Q(2)
+        W(5)=-Q(3)
       ENDIF
 
       END

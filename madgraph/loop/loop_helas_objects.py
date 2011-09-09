@@ -209,6 +209,23 @@ class LoopHelasAmplitude(helas_objects.HelasAmplitude):
         return ("LOOP",len(self.get('wavefunctions'))-1,\
                 len(self.get('mothers')),len(self.get('coupling')))
 
+    def get_rank(self):
+        """ Returns the rank of the loop numerator, i.e. the maximum power to which
+        the loop momentum is elevated in the loop numerator. The way of returning it
+        here is only valid for the simple interactions of the SM. The completely
+        general approach needs to use aloha to gather the information of the
+        'lorentz' object stored in each loop vertex and it will be implemented later."""
+        
+        rank=0
+        # First add one power for each fermion propagator
+        rank=rank+len([ wf for wf in self.get('wavefunctions') if \
+                       wf.get('mothers') and wf.is_fermion()])
+        # Add one for each three boson vertex
+        rank=rank+len([ wf for wf in self.get('wavefunctions') if \
+                       wf.is_boson() and len([w for w in wf.get('mothers') \
+                         if w.is_boson()])==2])
+        return rank
+
     def calculate_fermionfactor(self):
         """ Overloading of the function of the mother class to bypass its use """
         return

@@ -1,4 +1,4 @@
-      SUBROUTINE LOOP_%(nloopline)d_%(nwfsargs)d_%(ncplsargs)d( LID, %(pairingargs)s%(wfsargs)s%(margs)s%(cplsargs)s RES)
+      SUBROUTINE LOOP_%(nloopline)d_%(nwfsargs)d_%(ncplsargs)d( LID, %(pairingargs)s%(wfsargs)s%(margs)s%(cplsargs)s RANK, RES)
 
       INTEGER    NEXTERNAL
       PARAMETER (NEXTERNAL=%(nexternal)d)
@@ -15,7 +15,7 @@ C
       COMPLEX*16 %(cplsdecl)s
       INTEGER %(pairingdecl)s
       COMPLEX*16 RES(3)
-      INTEGER LID
+      INTEGER LID, RANK
 C
 C LOCAL VARIABLES 
 C
@@ -54,6 +54,6 @@ C ----------
           TEMP=TEMP+PAIRING(J)
         ENDDO
       ENDDO
-      CALL CTLOOP(NLOOPLINE,PL,M2L,RES)
+      CALL CTLOOP(NLOOPLINE,PL,M2L,RANK,RES)
 
       END
