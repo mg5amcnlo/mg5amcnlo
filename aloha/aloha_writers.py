@@ -312,7 +312,10 @@ class ALOHAWriterForFortran(WriteALOHA):
         if len(OverM) > 0: 
             str_out += 'double complex ' + ','.join(OverM) + '\n'
         if len(Momenta) > 0:
-            str_out += 'double precision ' + '(0:3),'.join(Momenta) + '(0:3)\n'
+            if self.loop_routine:
+                str_out += 'double complex ' + '(0:3),'.join(Momenta) + '(0:3)\n'
+            else:
+                str_out += 'double precision ' + '(0:3),'.join(Momenta) + '(0:3)\n'
 
         # Add entry for symmetry
         #str_out += '\n'
