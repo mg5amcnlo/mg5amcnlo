@@ -224,6 +224,11 @@ class LoopHelasAmplitude(helas_objects.HelasAmplitude):
         rank=rank+len([ wf for wf in self.get('wavefunctions') if \
                        wf.is_boson() and len([w for w in wf.get('mothers') \
                          if w.is_boson()])==2])
+        # Finally add one if the L-cut particle is a fermion
+        if True in [ wf.is_fermion() for wf in self.get('wavefunctions') if \
+                       not wf.get('mothers')]:
+            rank=rank+1
+                
         return rank
 
     def calculate_fermionfactor(self):
