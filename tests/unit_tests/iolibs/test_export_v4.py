@@ -681,16 +681,15 @@ C     Number of configs
             matrix_elements)
 
         #print open(self.give_pos('test')).read()
-
         self.assertFileContains('test',
 """      LOGICAL ICOLAMP(2,6,2)
-      DATA(ICOLAMP(I,1,1),I=1,2)/.FALSE.,.TRUE./
+      DATA(ICOLAMP(I,1,1),I=1,2)/.TRUE.,.TRUE./
       DATA(ICOLAMP(I,2,1),I=1,2)/.TRUE.,.FALSE./
       DATA(ICOLAMP(I,3,1),I=1,2)/.TRUE.,.FALSE./
-      DATA(ICOLAMP(I,4,1),I=1,2)/.TRUE.,.FALSE./
+      DATA(ICOLAMP(I,4,1),I=1,2)/.TRUE.,.TRUE./
       DATA(ICOLAMP(I,5,1),I=1,2)/.FALSE.,.TRUE./
       DATA(ICOLAMP(I,6,1),I=1,2)/.FALSE.,.TRUE./
-      DATA(ICOLAMP(I,1,2),I=1,2)/.FALSE.,.TRUE./
+      DATA(ICOLAMP(I,1,2),I=1,2)/.TRUE.,.TRUE./
       DATA(ICOLAMP(I,2,2),I=1,2)/.TRUE.,.FALSE./
       DATA(ICOLAMP(I,3,2),I=1,2)/.TRUE.,.FALSE./
 """)
@@ -3362,48 +3361,48 @@ C     Number of configs
         self.assertEqual("\n".join(\
                        exporter.get_icolamp_lines(mapconfigs,
                                                    matrix_element, 1)),
-                         """DATA(icolamp(i,1,1),i=1,6)/.false.,.false.,.false.,.true.,.false.,.false./
-DATA(icolamp(i,2,1),i=1,6)/.false.,.false.,.false.,.false.,.true.,.false./
+                         """DATA(icolamp(i,1,1),i=1,6)/.true.,.true.,.false.,.true.,.false.,.true./
+DATA(icolamp(i,2,1),i=1,6)/.true.,.true.,.false.,.false.,.true.,.true./
 DATA(icolamp(i,3,1),i=1,6)/.false.,.false.,.false.,.true.,.true.,.false./
-DATA(icolamp(i,4,1),i=1,6)/.false.,.false.,.true.,.false.,.false.,.false./
-DATA(icolamp(i,5,1),i=1,6)/.false.,.false.,.false.,.false.,.false.,.true./
+DATA(icolamp(i,4,1),i=1,6)/.true.,.true.,.true.,.true.,.false.,.false./
+DATA(icolamp(i,5,1),i=1,6)/.true.,.true.,.false.,.true.,.false.,.true./
 DATA(icolamp(i,6,1),i=1,6)/.false.,.false.,.true.,.false.,.false.,.true./
-DATA(icolamp(i,7,1),i=1,6)/.false.,.false.,.true.,.false.,.false.,.false./
-DATA(icolamp(i,8,1),i=1,6)/.false.,.false.,.false.,.false.,.false.,.true./
-DATA(icolamp(i,9,1),i=1,6)/.false.,.false.,.false.,.false.,.true.,.false./
-DATA(icolamp(i,10,1),i=1,6)/.false.,.false.,.false.,.true.,.false.,.false./
-DATA(icolamp(i,11,1),i=1,6)/.false.,.false.,.false.,.false.,.false.,.true./
-DATA(icolamp(i,12,1),i=1,6)/.false.,.true.,.false.,.false.,.false.,.false./
+DATA(icolamp(i,7,1),i=1,6)/.true.,.true.,.true.,.false.,.true.,.false./
+DATA(icolamp(i,8,1),i=1,6)/.true.,.true.,.false.,.false.,.true.,.true./
+DATA(icolamp(i,9,1),i=1,6)/.true.,.true.,.true.,.false.,.true.,.false./
+DATA(icolamp(i,10,1),i=1,6)/.true.,.true.,.true.,.true.,.false.,.false./
+DATA(icolamp(i,11,1),i=1,6)/.false.,.false.,.true.,.true.,.true.,.true./
+DATA(icolamp(i,12,1),i=1,6)/.false.,.true.,.true.,.true.,.true.,.false./
 DATA(icolamp(i,13,1),i=1,6)/.false.,.true.,.false.,.false.,.false.,.true./
-DATA(icolamp(i,14,1),i=1,6)/.true.,.false.,.false.,.false.,.false.,.false./
-DATA(icolamp(i,15,1),i=1,6)/.false.,.false.,.false.,.true.,.false.,.false./
+DATA(icolamp(i,14,1),i=1,6)/.true.,.false.,.true.,.false.,.true.,.true./
+DATA(icolamp(i,15,1),i=1,6)/.false.,.false.,.true.,.true.,.true.,.true./
 DATA(icolamp(i,16,1),i=1,6)/.true.,.false.,.false.,.true.,.false.,.false./
-DATA(icolamp(i,17,1),i=1,6)/.true.,.false.,.false.,.false.,.false.,.false./
-DATA(icolamp(i,18,1),i=1,6)/.false.,.false.,.false.,.true.,.false.,.false./
-DATA(icolamp(i,19,1),i=1,6)/.false.,.true.,.false.,.false.,.false.,.false./
-DATA(icolamp(i,20,1),i=1,6)/.false.,.false.,.false.,.false.,.false.,.true./
-DATA(icolamp(i,21,1),i=1,6)/.false.,.false.,.false.,.false.,.true.,.false./
-DATA(icolamp(i,22,1),i=1,6)/.true.,.false.,.false.,.false.,.false.,.false./
+DATA(icolamp(i,17,1),i=1,6)/.true.,.true.,.true.,.false.,.true.,.false./
+DATA(icolamp(i,18,1),i=1,6)/.false.,.true.,.true.,.true.,.true.,.false./
+DATA(icolamp(i,19,1),i=1,6)/.true.,.true.,.true.,.false.,.true.,.false./
+DATA(icolamp(i,20,1),i=1,6)/.true.,.false.,.true.,.false.,.true.,.true./
+DATA(icolamp(i,21,1),i=1,6)/.false.,.false.,.true.,.true.,.true.,.true./
+DATA(icolamp(i,22,1),i=1,6)/.true.,.false.,.true.,.true.,.false.,.true./
 DATA(icolamp(i,23,1),i=1,6)/.true.,.false.,.false.,.false.,.true.,.false./
-DATA(icolamp(i,24,1),i=1,6)/.false.,.false.,.true.,.false.,.false.,.false./
-DATA(icolamp(i,25,1),i=1,6)/.false.,.true.,.false.,.false.,.false.,.false./
+DATA(icolamp(i,24,1),i=1,6)/.false.,.false.,.true.,.true.,.true.,.true./
+DATA(icolamp(i,25,1),i=1,6)/.false.,.true.,.false.,.true.,.true.,.true./
 DATA(icolamp(i,26,1),i=1,6)/.false.,.true.,.true.,.false.,.false.,.false./
-DATA(icolamp(i,27,1),i=1,6)/.false.,.true.,.false.,.false.,.false.,.false./
-DATA(icolamp(i,28,1),i=1,6)/.false.,.false.,.true.,.false.,.false.,.false./
-DATA(icolamp(i,29,1),i=1,6)/.true.,.false.,.false.,.false.,.false.,.false./
-DATA(icolamp(i,30,1),i=1,6)/.false.,.false.,.false.,.false.,.true.,.false./
-DATA(icolamp(i,31,1),i=1,6)/.true.,.false.,.false.,.false.,.false.,.false./
-DATA(icolamp(i,32,1),i=1,6)/.false.,.false.,.false.,.false.,.true.,.false./
-DATA(icolamp(i,33,1),i=1,6)/.false.,.true.,.false.,.false.,.false.,.false./
-DATA(icolamp(i,34,1),i=1,6)/.false.,.false.,.false.,.false.,.false.,.true./
-DATA(icolamp(i,35,1),i=1,6)/.false.,.true.,.false.,.false.,.false.,.false./
-DATA(icolamp(i,36,1),i=1,6)/.false.,.false.,.true.,.false.,.false.,.false./
-DATA(icolamp(i,37,1),i=1,6)/.true.,.false.,.false.,.false.,.false.,.false./
-DATA(icolamp(i,38,1),i=1,6)/.false.,.false.,.false.,.true.,.false.,.false./
-DATA(icolamp(i,39,1),i=1,6)/.false.,.false.,.false.,.false.,.true.,.false./
-DATA(icolamp(i,40,1),i=1,6)/.false.,.false.,.false.,.true.,.false.,.false./
-DATA(icolamp(i,41,1),i=1,6)/.false.,.false.,.true.,.false.,.false.,.false./
-DATA(icolamp(i,42,1),i=1,6)/.false.,.false.,.false.,.false.,.false.,.true./"""
+DATA(icolamp(i,27,1),i=1,6)/.true.,.true.,.false.,.true.,.false.,.true./
+DATA(icolamp(i,28,1),i=1,6)/.true.,.false.,.true.,.true.,.false.,.true./
+DATA(icolamp(i,29,1),i=1,6)/.true.,.true.,.false.,.true.,.false.,.true./
+DATA(icolamp(i,30,1),i=1,6)/.false.,.true.,.false.,.true.,.true.,.true./
+DATA(icolamp(i,31,1),i=1,6)/.true.,.true.,.true.,.true.,.false.,.false./
+DATA(icolamp(i,32,1),i=1,6)/.false.,.true.,.true.,.true.,.true.,.false./
+DATA(icolamp(i,33,1),i=1,6)/.true.,.true.,.true.,.true.,.false.,.false./
+DATA(icolamp(i,34,1),i=1,6)/.true.,.false.,.true.,.true.,.false.,.true./
+DATA(icolamp(i,35,1),i=1,6)/.true.,.true.,.false.,.false.,.true.,.true./
+DATA(icolamp(i,36,1),i=1,6)/.true.,.false.,.true.,.false.,.true.,.true./
+DATA(icolamp(i,37,1),i=1,6)/.true.,.true.,.false.,.false.,.true.,.true./
+DATA(icolamp(i,38,1),i=1,6)/.false.,.true.,.false.,.true.,.true.,.true./
+DATA(icolamp(i,39,1),i=1,6)/.true.,.false.,.true.,.false.,.true.,.true./
+DATA(icolamp(i,40,1),i=1,6)/.true.,.false.,.true.,.true.,.false.,.true./
+DATA(icolamp(i,41,1),i=1,6)/.false.,.true.,.true.,.true.,.true.,.false./
+DATA(icolamp(i,42,1),i=1,6)/.false.,.true.,.false.,.true.,.true.,.true./"""
 )
 
         # Test leshouche.inc output
