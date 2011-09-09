@@ -307,7 +307,7 @@ c***************************************************
       idda2=ipdg(ida2)
 
 c     Check QCD vertex
-      if(.not.isqcd(idmo).or..not.isqcd(idda1).or.
+      if(islast.or..not.isqcd(idmo).or..not.isqcd(idda1).or.
      &     .not.isqcd(idda2)) then
          isjetvx = .false.
          return
@@ -317,7 +317,7 @@ c     IS clustering
       if((ipart(1,ida1).ge.1.and.ipart(1,ida1).le.2).or.
      $   (ipart(1,ida2).ge.1.and.ipart(1,ida2).le.2))then
 c     Check if ida1 is outgoing parton or ida2 is outgoing parton
-         if(.not.islast.and.ipart(1,ida2).ge.1.and.ipart(1,ida2).le.2.and.isjet(idda1).or.
+         if(ipart(1,ida2).ge.1.and.ipart(1,ida2).le.2.and.isjet(idda1).or.
      $        ipart(1,ida1).ge.1.and.ipart(1,ida1).le.2.and.isjet(idda2))then
            isjetvx=.true.
         else
@@ -647,26 +647,25 @@ c     Use the fixed or previously set scale for central scale
       endif
 
       if(q2fact(1).eq.0d0) then
-         if(jlast(1).gt.0) q2fact(1)=pt2ijcl(jlast(1))
-         if(jlast(2).gt.0) q2fact(2)=pt2ijcl(jlast(2))
-      endif
+c     Use the geom. average of central scale and first non-radiation vertex
+         if(jlast(1).gt.0) q2fact(1)=sqrt(pt2ijcl(jlast(1))*pt2ijcl(jcentral(1)))
+         if(jlast(2).gt.0) q2fact(2)=sqrt(pt2ijcl(jlast(2))*pt2ijcl(jcentral(2)))
 
-      if(jcentral(1).eq.jcentral(2))then
-c     We have a qcd line going through the whole event,
-c     use the geom. average of central scale and first non-radiation vertex
-         q2fact(1)=sqrt(max(q2fact(1),q2fact(2))*pt2ijcl(jcentral(1)))
-         q2fact(2)=q2fact(1)
+         if(jcentral(1).eq.jcentral(2))then
+c     We have a qcd line going through the whole event, use single scale
+            q2fact(1)=max(q2fact(1),q2fact(2))
+            q2fact(2)=q2fact(1)
+         endif
       endif
-
       if(.not. fixed_fac_scale) then
          q2fact(1)=scalefact**2*q2fact(1)
          q2fact(2)=scalefact**2*q2fact(2)
          q2bck(1)=q2fact(1)
          q2bck(2)=q2fact(2)
          if (btest(mlevel,3))
-     $     write(*,*) 'Set central fact scales to ',sqrt(q2bck(1)),sqrt(q2bck(2))
+     $      write(*,*) 'Set central fact scales to ',sqrt(q2bck(1)),sqrt(q2bck(2))
       endif
-
+         
       if(lpp(1).eq.0.and.lpp(2).eq.0)then
          if(q2fact(1).gt.0)then
             pt2ijcl(nexternal-2)=q2fact(1)
@@ -765,13 +764,14 @@ c     ipart gives external particle number chain
 
       rewgt=1.0d0
 
-      if(ickkw.le.0) return
-
-      if(.not.clustered)then
+      if((ickkw.gt.0.or..not.fixed_fac_scale.or..not.fixed_ren_scale)
+     $     .and..not.clustered)then
         write(*,*)'Error: No clustering done when calling rewgt!'
         stop
       endif
       clustered=.false.
+
+      if(ickkw.le.0) return
 
 c   Set mimimum kt scale, depending on highest mult or not
       if(hmult.or.ickkw.eq.1)then
@@ -848,7 +848,7 @@ c   Perform alpha_s reweighting based on type of vertex
       do n=1,nexternal-2
 c       scale for alpha_s reweighting
         q2now=min(pt2ijcl(n), scale**2)
-        if(n.ge.nexternal-3) then
+        if(n.eq.nexternal-2) then
            q2now = scale**2
         endif
         if (btest(mlevel,3)) then
@@ -949,8 +949,7 @@ c                    PDF scale
 c                    Set PDF scale to central factorization scale
 c                    if non-radiating vertex or last 2->2
                      if(.not.isjetvx(imocl(n),idacl(n,1),idacl(n,2),
-     $                    ipdgcl(1,igraphs(1)),ipart,n.eq.nexternal-2)
-     $                    .or.n.ge.nexternal-3) then
+     $                    ipdgcl(1,igraphs(1)),ipart,n.eq.nexternal-2)) then
                         q2now=q2bck(j)
                      endif
                      if (btest(mlevel,3))
