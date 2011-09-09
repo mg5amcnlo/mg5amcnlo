@@ -1306,8 +1306,6 @@ class HelasWavefunctionList(base_objects.PhysicsObjectList):
                                        wf_number,
                                        force_flip_flow,
                                        number_to_wavefunctions)
-                # Already ran for all clashes, abort loop
-                break
 
         return wf_number
 
