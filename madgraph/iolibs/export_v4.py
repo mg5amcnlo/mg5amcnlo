@@ -445,15 +445,22 @@ class ProcessExporterFortran(object):
         # There is a color basis - create a list showing which JAMPs have
         # contributions to which configs
 
+        # Only want to include leading color flows, so find max_Nc
+        color_basis = matrix_element.get('color_basis')
+        max_Nc = max(sum([[v[4] for v in val] for val in color_basis.values()],
+                         []))
+
         # Crate dictionary between diagram number and JAMP number
         diag_jamp = {}
         for ijamp, col_basis_elem in \
                 enumerate(sorted(matrix_element.get('color_basis').keys())):
             for diag_tuple in matrix_element.get('color_basis')[col_basis_elem]:
-                diag_num = diag_tuple[0] + 1
-                # Add this JAMP number to this diag_num
-                diag_jamp[diag_num] = diag_jamp.setdefault(diag_num, []) + \
-                                    [ijamp+1]
+                # Only use color flows with Nc == max_Nc
+                if diag_tuple[4] == max_Nc:
+                    diag_num = diag_tuple[0] + 1
+                    # Add this JAMP number to this diag_num
+                    diag_jamp[diag_num] = diag_jamp.setdefault(diag_num, []) + \
+                                          [ijamp+1]
 
         colamps = ijamp + 1
 
@@ -2268,7 +2275,8 @@ class ProcessExporterFortranMEGroup(ProcessExporterFortranME):
                                    matrix_elements):
         """Write the coloramps.inc file for MadEvent in Subprocess group mode"""
 
-        # Create a map from subprocess (matrix element) to a list of the diagrams corresponding to each config
+        # Create a map from subprocess (matrix element) to a list of
+        # the diagrams corresponding to each config
 
         lines = []
 

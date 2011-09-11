@@ -14,6 +14,6 @@ QED = CouplingOrder(name = 'QED',
                     expansion_order = -1,
                     hierarchy = 2)
 
-QTD = CouplingOrder(name = 'QTD',
+QED = CouplingOrder(name = 'QTD',
                     expansion_order = -1,
                     hierarchy = 1)

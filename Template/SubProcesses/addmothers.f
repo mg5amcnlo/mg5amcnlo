@@ -52,15 +52,14 @@
       integer mothup(2,nexternal)
       integer icolup(2,nexternal,maxflow,maxsproc)
       include 'leshouche.inc'
-
       include 'coloramps.inc'
       
       logical             OnBW(-nexternal:0)     !Set if event is on B.W.
       common/to_BWEvents/ OnBW
 
 C     iproc has the present process number
-      integer iproc
-      common/to_iproc/iproc
+      integer imirror, iproc
+      common/to_mirror/imirror, iproc
       data iproc/1/
 
 c      integer ncols,ncolflow(maxamps),ncolalt(maxamps),icorg
@@ -105,7 +104,7 @@ c        print *,'Color flow 1 allowed for config ',iconfig
       do ic =2,nc
         if(icolamp(ic,iconfig,iproc))then
           targetamp(ic) = jamp2(ic)+targetamp(ic-1)
-c          print *,'Color flow ',ic,' allowed for config ',iconfig
+c          print *,'Color flow ',ic,' allowed for config ',iconfig,targetamp(ic)
         else
           targetamp(ic)=targetamp(ic-1)
         endif
@@ -116,20 +115,14 @@ c          print *,'Color flow ',ic,' allowed for config ',iconfig
       do while (targetamp(ic) .lt. xtarget .and. ic .lt. nc)
          ic=ic+1
       enddo
-c      print *,'Chose color flow ',ic
-
       if(targetamp(nc).eq.0) ic=0
+c      print *,'Chose color flow ',ic
       do i=1,nexternal
          if(ic.gt.0) then
             icolalt(1,isym(i,jsym))=icolup(1,i,ic,numproc)
             icolalt(2,isym(i,jsym))=icolup(2,i,ic,numproc)
             if (icolup(1,i,ic, numproc).gt.maxcolor) maxcolor=icolup(1,i,ic, numproc)
             if (icolup(2,i,ic, numproc).gt.maxcolor) maxcolor=icolup(2,i,ic, numproc)
-         else
-            icolalt(1,i)=jpart(4,i)
-            icolalt(2,i)=jpart(5,i)
-            if (jpart(4,i).gt.maxcolor) maxcolor=jpart(4,i)
-            if (jpart(5,i).gt.maxcolor) maxcolor=jpart(5,i)
          endif
       enddo
 
