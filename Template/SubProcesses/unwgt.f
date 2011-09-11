@@ -476,6 +476,9 @@ c
          jpart(1,isym(i,jsym)) = idup(i,ip,numproc)
          jpart(2,isym(i,jsym)) = mothup(1,i)
          jpart(3,isym(i,jsym)) = mothup(2,i)
+c        Color info is filled in mothup
+         jpart(4,isym(i,jsym)) = 0
+         jpart(5,isym(i,jsym)) = 0
          jpart(6,isym(i,jsym)) = 1
       enddo
       do i=1,nincoming
