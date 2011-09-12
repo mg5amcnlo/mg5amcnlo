@@ -80,6 +80,8 @@ if '__main__' == __name__:
                    %(name, mode, opt)) 
     else:
         launch.run_cmd('generate_events %s' % name)
+    
+    launch.run_cmd('quit')
             
     # reconfigure path for the web 
     #if len(argument) == 5:

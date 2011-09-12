@@ -1851,6 +1851,7 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
 
     def do_quit(self, line):
         """ """
+        os.remove(pjoin(me_dir,'RunWeb'))
         self.store_result()
         return super(MadEventCmd, self).do_quit(line)
     
