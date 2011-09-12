@@ -156,4 +156,6 @@ try:
     if cmd_line.history[-1] not in ['EOF','quit','exit']:
         cmd_line.results.store_result()
 except:
+    print 'fail to remove ',os.path.join(root_path,'RunWeb')
+    print os.getcwd()
     pass
