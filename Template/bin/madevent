@@ -133,16 +133,27 @@ try:
     else:
         # Interactive mode
         if options.web:
-            cmd_interface.MadEventCmd().cmdloop()
+            cmd_line = cmd_interface.MadEventCmd()
+            cmd_line.cmdloop()
         else:
-            cmd_interface.MadEventCmd().cmdloop()
+            cmd_line = cmd_interface.MadEventCmd()
+            cmd_line.cmdloop()
+            
 except KeyboardInterrupt:
-    print 'writting history and quit on KeyboardInterrupt' 
+    print 'writting history and directory and quit on KeyboardInterrupt' 
     pass
 try: 
     readline.set_history_length(100)
     if not os.path.exists(os.path.join(os.environ['HOME'], '.mg5')):
         os.mkdir(os.path.join(os.environ['HOME'], '.mg5'))
     readline.write_history_file(history_file)
+except:
+    pass
+    
+try:
+    # Remove lock file
+    os.remove(os.path.join(root_path,'RunWeb'))
+    if cmd_line.history[-1] not in ['EOF','quit','exit']:
+        cmd_line.results.store_result()
 except:
     pass

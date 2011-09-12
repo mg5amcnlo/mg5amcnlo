@@ -98,15 +98,21 @@ class AllResults(dict):
         self.process = ' <br> '.join(process)
         self.path = path
         self.model = model
+        self.web = False
     
     def def_current(self, name):
         """define the name of the current run"""
-        assert name in self        
+        assert name in self
         self.current = self[name]
 
+    def def_web_mode(self, web):
+        """define if we are in web mode or not """
+        if web is True:
+            web = os.environ['SERVER_NAME']
+        self.web = web
 
     def add_run(self, name, run_card, current=True):
-        """ Adding a run to this direcotry """
+        """ Adding a run to this directory"""
         
         new = OneRunResults(name, run_card, self.process, self.path)
         self[name] = new
@@ -192,6 +198,7 @@ class OneRunResults(dict):
         self['run_name'] = run_name
         self['tag'] = run_card['run_tag']
         self.event_path = pjoin(path,'Events')
+        self.me_dir = path
         
         # Set the collider information
         data = process.split('>',1)[0].split()
@@ -354,7 +361,14 @@ class OneRunResults(dict):
             if 'plot' in self.pythia:
                 out += ' <a href="../Events/%(run_name)s_plots_pythia.html">plots</a>'
             out += '</td></tr>'
-            
+        elif AllResults.web:
+            out += """<td> 
+                       <FORM ACTION="%(web)s/cgi-bin/RunProcess/handle_runs-pl"  ENCTYPE="multipart/form-data" METHOD="POST">
+                       <INPUT TYPE=HIDDEN NAME=directory VALUE="%(me_dir)s"> 
+                       <INPUT TYPE=HIDDEN NAME=whattodo VALUE="pythia"> 
+                       <INPUT TYPE=HIDDEN NAME=run VALUE="%(run_name)s"> 
+                       <INPUT TYPE=SUBMIT VALUE="Run Pythia"></FORM></td>""" 
+
         if self.pgs:
             out += '<tr><td>Reco. Objects. (PGS) : </td><td>'
             if 'lhco' in self.pgs:

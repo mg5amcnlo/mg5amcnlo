@@ -678,6 +678,20 @@ class CompleteForCmd(CheckValidForCmd):
     complete_combine_events = complete_survey
     complete_generate_events = complete_survey
     
+    def complete_multi_run(self, text, line, begidx, endidx):
+        """complete multi run command"""
+        
+        args = self.split_arg(line[0:begidx])
+        if len(args) == 1:
+            data = [str(i) for i in range(0,20)]
+            return  self.list_completion(text, data, line)
+        
+        if line.endswith('nb_core=') and not text:
+            import multiprocessing
+            max = multiprocessing.cpu_count()
+            return [str(i) for i in range(2,max+1)]
+            
+        return  self.list_completion(text, self._run_options, line)    
     
     def complete_plot(self, text, line, begidx, endidx):
         """ Complete the plot command """
@@ -757,6 +771,16 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
         if me_dir is None and MADEVENT:
             me_dir = root_path        
         self.me_dir = me_dir
+        
+        # Check that the directory is not currently running
+        if os.path.exists(pjoin(me_dir,'RunWeb')): 
+            logger.critical('''Another instance of madevent is currently running.
+            Please wait that all instance of madevent are closed. If this message
+            is an error in itself, you can suppress the files %s.''' % pjoin(me_dir,'RunWeb'))
+            sys.exit()
+        else:
+            print 'create RUNWEB ***************************'
+            os.system('touch %s' % pjoin(me_dir,'RunWeb'))
 
         # usefull shortcut
         self.status = pjoin(self.me_dir, 'status')
@@ -778,6 +802,8 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
             model = self.find_model_name()
             process = self.process # define in find_model_name
             self.results = gen_crossxhtml.AllResults(model, process, self.me_dir)
+        self.results.def_web_mode(self.web)
+        
         self.configured = 0 # time for reading the card
 
     ############################################################################    
@@ -798,6 +824,9 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
             elif arg.startswith('--nb_core'):
                 self.cluster_mode = 2
                 self.nb_core = int(arg.split('=',1)[1])
+            elif arg.startswith('--web'):
+                self.web = True
+                self.results.def_web_mode(True)
             else:
                 continue
             args.remove(arg)
