@@ -1062,7 +1062,7 @@ C===============================================================================
       IF (M.NE.0.D0) THEN
         STOP 'Massive vector L-cut particle not supported'
       ENDIF
-      RES=(0.D0,1.D0)*(-AMPS(1)+AMPS(2)+AMPS(3)+AMPS(4))
+      RES=AMPS(1)-AMPS(2)-AMPS(3)-AMPS(4)
 
       END
 
@@ -1367,12 +1367,17 @@ C     REVERSE THE MOMENTUM IN THE WF FOR THE SECOND L-CUT SPINORS
       ELSEIF (CFIG.EQ.4) THEN
         W(4)=(1.d0,0.d0)
       ENDIF
-C     REVERSE THE MOMENTUM IN THE WF FOR THE SECOND L-CUT SPINORS      
+C     REVERSE THE MOMENTUM IN THE WF FOR THE SECOND L-CUT VECTORS      
       IF (SCD) THEN
         W(5)=-Q(0)
         W(6)=-Q(1)
         W(7)=-Q(2)
         W(8)=-Q(3)
+      ELSE
+        W(5)=Q(0)
+        W(6)=Q(1)
+        W(7)=Q(2)
+        W(8)=Q(3)
       ENDIF
 
       END
@@ -1391,6 +1396,11 @@ C     REVERSE THE MOMENTUM IN THE WF FOR THE SECOND SPINORS
         W(3)=-Q(1)
         W(4)=-Q(2)
         W(5)=-Q(3)
+      ELSE
+        W(2)=Q(0)
+        W(3)=Q(1)
+        W(4)=Q(2)
+        W(5)=Q(3)
       ENDIF
 
       END

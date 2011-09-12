@@ -1,4 +1,4 @@
-      SUBROUTINE LOOP_%(nloopline)d_%(nwfsargs)d_%(ncplsargs)d( LID, %(pairingargs)s%(wfsargs)s%(margs)s%(cplsargs)s RANK, RES)
+      SUBROUTINE LOOP_%(nloopline)d_%(nwfsargs)d_%(ncplsargs)d( LID, %(pairingargs)s%(wfsargs)s%(margs)s%(cplsargs)s RANK, LSYMFACT, RES)
 
       INTEGER    NEXTERNAL
       PARAMETER (NEXTERNAL=%(nexternal)d)
@@ -15,7 +15,7 @@ C
       COMPLEX*16 %(cplsdecl)s
       INTEGER %(pairingdecl)s
       COMPLEX*16 RES(3)
-      INTEGER LID, RANK
+      INTEGER LID, RANK, LSYMFACT
 C
 C LOCAL VARIABLES 
 C
@@ -30,8 +30,8 @@ C
       COMPLEX*16 WE(20,NEXTERNAL)
 	  COMPLEX*16 LC(MAXLCOUPLINGS)	  
       REAL*8 ML(NEXTERNAL+1)	  
-      INTEGER ID
-      COMMON/LOOP/WE,LC,ML,ID
+      INTEGER ID, SYMFACT
+      COMMON/LOOP/WE,LC,ML,ID, SYMFACT
 C ----------
 C BEGIN CODE
 C ----------
@@ -44,6 +44,7 @@ C ----------
       %(pairingset)s
       %(cplset)s
       ID=LID
+	  SYMFACT=LSYMFACT
       DO I=0,3
         TEMP=1
         DO J=1,NLOOPLINE

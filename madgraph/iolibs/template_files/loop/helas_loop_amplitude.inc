@@ -1,4 +1,4 @@
-      SUBROUTINE LOOP_%(nloopline)d_%(ncplsargs)d( LID, %(wfsargs)s%(margs)s%(cplsargs)s RANK, RES)
+      SUBROUTINE LOOP_%(nloopline)d_%(ncplsargs)d( LID, %(wfsargs)s%(margs)s%(cplsargs)s RANK, LSYMFACT, RES)
 C  
 C CONSTANTS 
 C  
@@ -16,7 +16,7 @@ C
       REAL*8 %(margsdecl)s
       COMPLEX*16 %(cplsdecl)s	  
       COMPLEX*16 RES(3)
-	  INTEGER LID, RANK
+	  INTEGER LID, RANK, LSYMFACT
 C  
 C LOCAL VARIABLES 
 C
@@ -30,8 +30,8 @@ C
       COMPLEX*16 WE(20,NEXTERNAL)
 	  COMPLEX*16 LC(MAXLCOUPLINGS)	  
       REAL*8 ML(NEXTERNAL+1)
-	  INTEGER ID
-	  COMMON/LOOP/WE,LC,ML,ID
+	  INTEGER ID, SYMFACT
+	  COMMON/LOOP/WE,LC,ML,ID,SYMFACT
 C ----------
 C BEGIN CODE
 C ----------
@@ -43,6 +43,7 @@ C ----------
 	  %(mset2)s
       %(cplset)s	  
 	  ID=LID
+	  SYMFACT=LSYMFACT	  
 	  DO I=0,3
 	    DO J=1,NLOOPLINE
 	      PL(I,J)=SIGN(1,MOMPOS(J))*DBLE(WE(ABS(MOMPOS(J))+I,J))

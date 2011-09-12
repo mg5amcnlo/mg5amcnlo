@@ -37,6 +37,7 @@ import madgraph.iolibs.ufo_expression_parsers as parsers
 import madgraph.iolibs.export_v4 as export_v4
 import madgraph.various.diagram_symmetry as diagram_symmetry
 import madgraph.various.process_checks as process_checks
+import madgraph.core.color_amp as color_amp
 
 
 import aloha.create_aloha as create_aloha
@@ -207,13 +208,13 @@ class LoopProcessExporterFortranSA(export_v4.ProcessExporterFortranSA,
         (nexternal, ninitial) = matrix_element.get_nexternal_ninitial()
 
         calls=self.write_matrix_element_v4(None,matrix_element,fortran_model)
-        
-#        Not ready yet
-#        filename = 'born_matrix.f'
-#        calls = self.write_bornmatrix(
-#            writers.FortranWriter(filename),
-#            matrix_element,
-#            fortran_model)
+    
+        # The born matrix element, if needed
+        filename = 'born_matrix.f'
+        calls = self.write_bornmatrix(
+            writers.FortranWriter(filename),
+            matrix_element,
+            fortran_model)
 
         filename = 'nexternal.inc'
         self.write_nexternal_file(writers.FortranWriter(filename),
@@ -525,5 +526,33 @@ class LoopProcessExporterFortranSA(export_v4.ProcessExporterFortranSA,
     def write_bornmatrix(self, writer, matrix_element, fortran_model):
         """Create the born_matrix.f file for the born process as for a standard
         tree-level computation."""
-        pass
+        
+        if not matrix_element.get('processes') or \
+               not matrix_element.get('diagrams'):
+            return 0
+        
+        # We assume here that all processes must share the same property of 
+        # having a born or not, which must be true anyway since these are two
+        # definite different classes of processes which can never be treated on
+        # the same footing.
+        if not matrix_element.get('processes')[0].get('has_born'):
+            return 0
+        
+        if not isinstance(writer, writers.FortranWriter):
+            raise writers.FortranWriter.FortranWriterError(\
+                "writer not FortranWriter")
 
+        # For now, we can use the exact same treatment as for tree-level
+        # computations by redefining here a regular HelasMatrixElementf or the
+        # born process.
+        
+        bornME = helas_objects.HelasMatrixElement()
+        for prop in bornME.keys():
+            bornME.set(prop,matrix_element.get(prop))
+        bornME.set('base_amplitude',None,force=True)
+        bornME.set('diagrams',matrix_element.get_born_diagrams())        
+        bornME.set('color_basis',matrix_element.get('born_color_basis'))
+        bornME.set('color_matrix',color_amp.ColorMatrix(bornME.get('color_basis')))
+        
+        return super(LoopProcessExporterFortranSA,self).\
+          write_matrix_element_v4(writer,bornME,fortran_model)

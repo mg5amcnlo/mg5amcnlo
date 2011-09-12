@@ -1018,7 +1018,7 @@ class FortranUFOHelasCallWriter(UFOHelasCallWriter):
         call = call + "W(1,%d),%d,"*len(loopamp.get('mothers'))
         call = call + "%s,"*(len(loopamp.get('wavefunctions'))-1)
         call = call + "%s,"*(len(loopamp.get('coupling')))
-        call = call + "%d,"
+        call = call + "%d,%d,"
         call = call + "AMPL(1,%d))" 
         
         if (len(loopamp.get('pairing')) != len(loopamp.get('mothers'))):        
@@ -1030,6 +1030,7 @@ class FortranUFOHelasCallWriter(UFOHelasCallWriter):
                               tuple(amp.get_masses())+\
                               tuple(amp.get('coupling'))+\
                               (amp.get_rank(),)+\
+                              (amp.get('loopsymmetryfactor'),)+\
                               (amp.get('amplitudes')[0].get('number'),))
         else:
             call_function = lambda amp: call % (\
@@ -1039,6 +1040,7 @@ class FortranUFOHelasCallWriter(UFOHelasCallWriter):
                               tuple(amp.get_masses())+\
                               tuple(amp.get('coupling'))+\
                               (amp.get_rank(),)+\
+                              (amp.get('loopsymmetryfactor'),)+\
                               (amp.get('amplitudes')[0].get('number'),))
         
         self.add_amplitude(loopamp.get_call_key(), call_function)
@@ -1084,28 +1086,13 @@ class FortranUFOHelasCallWriter(UFOHelasCallWriter):
                not argument.get('mothers'):
             
             if argument.get('is_loop'):
-                if argument.get('spin') == 1:
-                    call=call+"LCUT_S(Q(0),%s,WL(1,%s))"
-                    call_function = lambda wf: call % \
-                                    (('.TRUE.' if wf.get('number')==2 else '.FALSE.'),
-                                     wf.get('number'))
-                elif argument.get('spin') ==3:
-                    call=call+"LCUT_V(Q(0),ML(%d),I,%s,WL(1,%s))"
-                    call_function = lambda wf: call % \
-                                    (wf.get('number'),
-                                     ('.TRUE.' if wf.get('number')==2 else '.FALSE.'),
-                                     wf.get('number'))
-                elif argument.get('spin') == 2:
-                    call=call+"LCUT_%sF(Q(0),ML(%d),I,%s,WL(1,%s))"
-                    call_function = lambda wf: call % \
-                                    (('C' if wf.needs_hermitian_conjugate() else ''),
-                                     wf.get('number'),
-                                     ('.TRUE.' if wf.get('number')==2 else '.FALSE.'),
-                                     wf.get('number'))
-                else:
-                    raise MadGraph5Error,'L-cut particle type not supported'
-                
-                
+                call=call+"LCUT_%s%s(Q(0),ML(%d),I,%s,WL(1,%s))"
+                call_function = lambda wf: call % \
+                                (('C' if wf.needs_hermitian_conjugate() else ''),
+                                 wf.get_lcutspinletter(),
+                                 wf.get('number'),
+                                 ('.TRUE.' if wf.get('number')==2 else '.FALSE.'),
+                                 wf.get('number'))
             else:
                 # String is just IXXXXX, OXXXXX, VXXXXX or SXXXXX
                 call = call + HelasCallWriter.mother_dict[\

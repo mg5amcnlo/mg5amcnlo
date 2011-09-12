@@ -30,7 +30,7 @@
 !     
       INTEGER I,J,K
       REAL*8 P(0:3,NEXTERNAL)   ! four momenta. Energy is the zeroth component.
-      REAL*8 SQRTS,MATELEM(3)           ! sqrt(s)= center of mass energy 
+      REAL*8 SQRTS,MATELEM(3),BORNELEM,AO2PI           ! sqrt(s)= center of mass energy 
       REAL*8 PIN(0:3), POUT(0:3)
       CHARACTER*120 BUFF(NEXTERNAL)
 !     
@@ -54,6 +54,9 @@
       call setpara('param_card.dat',.true.)  !first call to setup the paramaters
       include "pmass.inc"             !set up masses
 
+      AO2PI=G**2/(8.D0*(3.14159265358979323846**2))
+
+      write(*,*) 'AO2PI=',AO2PI
 !---  Now use a simple multipurpose PS generator (RAMBO) just to get a 
 !     RANDOM set of four momenta of given masses pmass(i) to be used to evaluate 
 !     the madgraph matrix-element.       
@@ -100,15 +103,24 @@
 !     
 !     Now we can call the matrix element!
 !
+      CALL SMATRIX(P,BORNELEM)      
       CALL SLOOPMATRIX(P,MATELEM)
 !
-
+      write (*,*) "---------------------------------------------------",
+     &"--------------------------"
+      write (*,*) "Matrix element born   = ", BORNELEM, " GeV^",
+     &-(2*nexternal-8)
       write (*,*) "Matrix element finite = ", MATELEM(1), " GeV^",
      &-(2*nexternal-8)
       write (*,*) "Matrix element 1eps   = ", MATELEM(2), " GeV^",
      &-(2*nexternal-8)
       write (*,*) "Matrix element 2eps   = ", MATELEM(3), " GeV^",
      &-(2*nexternal-8)
+      write (*,*) "---------------------------------------------------",
+     &"--------------------------"
+      write (*,*) "finite / (born*ao2pi) = ", MATELEM(1)/BORNELEM/AO2PI
+      write (*,*) "1eps / (born*ao2pi)   = ", MATELEM(2)/BORNELEM/AO2PI
+      write (*,*) "2eps / (born*ao2pi)   = ", MATELEM(3)/BORNELEM/AO2PI
       write (*,*) "---------------------------------------------------",
      &"--------------------------"
 

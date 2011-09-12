@@ -117,6 +117,17 @@ class LoopHelasAmplitude(helas_objects.HelasAmplitude):
         # Loop amplitude tracks.
         # In principle this info is recoverable from the loop wfs.
         self['type'] = -1
+        # To store the symmetry factor of the loop
+        self['loopsymmetryfactor'] = 0
+
+    # Enhanced get function
+    def get(self, name):
+        """Get the value of the property name."""
+
+        if name == 'loopsymmetryfactor' and not self[name]:
+            self.calculate_loopsymmetryfactor()
+
+        return super(LoopHelasAmplitude, self).get(name)
         
     def filter(self, name, value):
         """Filter for valid LoopHelasAmplitude property values."""
@@ -138,8 +149,13 @@ class LoopHelasAmplitude(helas_objects.HelasAmplitude):
         elif name=='type':
             if not isinstance(value, int):
                 raise self.PhysicsObjectError, \
-                  "%s is not a valid integer for the attribute 'type'" % str(value)            
-
+                  "%s is not a valid integer for the attribute 'type'" % str(value) 
+           
+        elif name == 'loopsymmetryfactor':
+            if not isinstance(value, int):
+                raise self.PhysicsObjectError, \
+                        "%s is not a valid integer for loopsymmetryfactor" % \
+                        str(value)
         else:
             return super(LoopHelasAmplitude,self).filter(name, value)
 
@@ -220,21 +236,36 @@ class LoopHelasAmplitude(helas_objects.HelasAmplitude):
         # First add one power for each fermion propagator
         rank=rank+len([ wf for wf in self.get('wavefunctions') if \
                        wf.get('mothers') and wf.is_fermion()])
-        # Add one for each three boson vertex
-        rank=rank+len([ wf for wf in self.get('wavefunctions') if \
-                       wf.is_boson() and len([w for w in wf.get('mothers') \
-                         if w.is_boson()])==2])
-        # Finally add one if the L-cut particle is a fermion
+        # Add one if the L-cut particle is a fermion
         if True in [ wf.is_fermion() for wf in self.get('wavefunctions') if \
                        not wf.get('mothers')]:
             rank=rank+1
-                
+        # Add one for each three-boson vertex
+        rank=rank+len([ wf for wf in self.get('wavefunctions') if \
+                       wf.is_boson() and len([w for w in wf.get('mothers') \
+                         if w.is_boson()])==2])
+        # Counting the amplitude as well (there is only one normally)
+        rank=rank+len([ amp for amp in self.get('amplitudes') if \
+                        len([w for w in amp.get('mothers') \
+                         if w.is_boson()])==3])
         return rank
 
     def calculate_fermionfactor(self):
-        """ Overloading of the function of the mother class to bypass its use """
-        return
+        """ Overloading of the function of the mother class as it might be necessary
+        to modify it for fermion loops."""
+        super(LoopHelasAmplitude,self).calculate_fermionfactor()
 
+    def calculate_loopsymmetryfactor(self):
+        """ Calculate the loop symmetry factor. For now it is hard-coded function valid
+        for the SM only where all symmetry factors are 1 except for the gluon bubble which
+        exhibits a factor 2."""
+        
+        if len(self.get('wavefunctions'))==3 and \
+           len([wf for wf in self.get('wavefunctions') if wf.get('pdg_code')==21]):
+            self['loopsymmetryfactor']=2
+        else:
+            self['loopsymmetryfactor']=1
+        
 #===============================================================================
 # LoopHelasDiagram
 #===============================================================================

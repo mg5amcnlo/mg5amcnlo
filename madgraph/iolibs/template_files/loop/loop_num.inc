@@ -57,11 +57,12 @@ C
       COMPLEX*16 WE(20,NEXTERNAL)
 	  COMPLEX*16 LC(MAXLCOUPLINGS)
 	  REAL*8 ML(NEXTERNAL+1)	  
-      INTEGER ID
-      COMMON/LOOP/WE,LC,ML,ID
+      INTEGER ID, SYMFACT
+      COMMON/LOOP/WE,LC,ML,ID,SYMFACT
 C ----------
 C BEGIN CODE
 C ----------
       RES=(0.D0,0.D0)
       %(loop_helas_calls)s
+	  RES=RES/SYMFACT
       END

@@ -384,6 +384,7 @@ class LoopAmplitude(diagram_generation.Amplitude):
             if partGenInfo: print "partGenInfo:: Perturbation coupling generated         = ",order
             hehe=[particle for particle in self['process']['model']['particles'] \
                          if particle.is_perturbing(order)]
+            # temporary fix by Valentin to cut first on the d-quark, not the gluon
             hehe=hehe[1:]+hehe[0:1]
             for part in hehe:
                 if part.get_pdg_code() not in self.lcutpartemployed:

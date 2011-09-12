@@ -1029,6 +1029,22 @@ class HelasWavefunction(base_objects.PhysicsObject):
 
         return color_indices
 
+    def get_lcutspinletter(self):
+        """Returns S,V or F depending on the spin of the mother loop particle.
+        Return '' otherwise."""
+        
+        if self['is_loop'] and not self.get('mothers'):
+            if self.get('spin') == 1:
+                return 'S'
+            if self.get('spin') == 2:
+                return 'F'
+            if self.get('spin') == 3:
+                return 'V'
+            else:
+                raise MadGraph5Error,'L-cut particle type not supported'
+        else:
+            return ''
+
     def get_s_and_t_channels(self, ninitial, mother_leg):
         """Returns two lists of vertices corresponding to the s- and
         t-channels that can be traced from this wavefunction, ordered
