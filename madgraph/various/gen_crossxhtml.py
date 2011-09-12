@@ -91,6 +91,8 @@ status_template = """
 class AllResults(dict):
     """Store the results for all the run of a given directory"""
     
+    web = False 
+    
     def __init__(self, model, process, path):
         
         dict.__init__(self)
@@ -98,7 +100,6 @@ class AllResults(dict):
         self.process = ' <br> '.join(process)
         self.path = path
         self.model = model
-        self.web = False
     
     def def_current(self, name):
         """define the name of the current run"""
@@ -108,9 +109,13 @@ class AllResults(dict):
     def def_web_mode(self, web):
         """define if we are in web mode or not """
         if web is True:
-            web = os.environ['SERVER_NAME']
+            try:
+                web = os.environ['SERVER_NAME']
+            except:
+                web = 'my_computer'
+        self['web'] = web
         self.web = web
-
+        
     def add_run(self, name, run_card, current=True):
         """ Adding a run to this directory"""
         
@@ -177,7 +182,7 @@ class AllResults(dict):
         # 2) Create the text for the old run:
         old_run = ''
         for key in self.order:
-            old_run += self[key].info_html()
+            old_run += self[key].info_html(self.path, self.web)
         
         text_dict = {'process': self.process,
                      'model': self.model,
@@ -305,9 +310,13 @@ class OneRunResults(dict):
         
         
 
-    def info_html(self):
+    def info_html(self, path, web=False):
         """ Return the line of the table containing run info for this run """
 
+        if web:
+            self['web'] = web
+            self['me_dir'] = path
+            
         out = "<tr>"
         # Links Events Tag Run Collider Cross Events
         
@@ -318,7 +327,7 @@ class OneRunResults(dict):
         out += '</td>'
         # Events
         out += '<td>'
-        out += self.get_html_event_info()
+        out += self.get_html_event_info(web)
         out += '</td>'
         # Tag
         out += '<td> %(tag)s </td>'
@@ -333,9 +342,9 @@ class OneRunResults(dict):
 
         return out % self
     
-    def get_html_event_info(self):
+    def get_html_event_info(self, web=False):
         """return the events information"""
-    
+        
         # Events
         out = '<table border=1>'
         if self.parton:
@@ -361,13 +370,15 @@ class OneRunResults(dict):
             if 'plot' in self.pythia:
                 out += ' <a href="../Events/%(run_name)s_plots_pythia.html">plots</a>'
             out += '</td></tr>'
-        elif AllResults.web:
-            out += """<td> 
+        elif web and self['nb_events']:
+            out += """<tr><td> Pythia Events : </td><td><center>
                        <FORM ACTION="%(web)s/cgi-bin/RunProcess/handle_runs-pl"  ENCTYPE="multipart/form-data" METHOD="POST">
                        <INPUT TYPE=HIDDEN NAME=directory VALUE="%(me_dir)s"> 
                        <INPUT TYPE=HIDDEN NAME=whattodo VALUE="pythia"> 
                        <INPUT TYPE=HIDDEN NAME=run VALUE="%(run_name)s"> 
-                       <INPUT TYPE=SUBMIT VALUE="Run Pythia"></FORM></td>""" 
+                       <INPUT TYPE=SUBMIT VALUE="Run Pythia"></FORM><center></td>
+                       </table>"""
+            return out 
 
         if self.pgs:
             out += '<tr><td>Reco. Objects. (PGS) : </td><td>'
@@ -387,6 +398,18 @@ class OneRunResults(dict):
             if 'plot' in self.delphes:
                 out += """ <a href="../Events/%(run_name)s_plots_delphes.html">plots</a>"""            
             out += '</td></tr>'
+        
+        if not (self.pgs or self.delphes) and web:
+            out += """<tr><td> Reco. Objects: </td><td><center>
+                       <FORM ACTION="%(web)s/cgi-bin/RunProcess/handle_runs-pl"  ENCTYPE="multipart/form-data" METHOD="POST">
+                       <INPUT TYPE=HIDDEN NAME=directory VALUE="%(me_dir)s"> 
+                       <INPUT TYPE=HIDDEN NAME=whattodo VALUE="pgs"> 
+                       <INPUT TYPE=HIDDEN NAME=run VALUE="%(run_name)s"> 
+                       <INPUT TYPE=SUBMIT VALUE="Run Pythia"></FORM></center></td>
+                       </table>"""
+            return out             
+        
+        
         out += '</table>'
         return out
         
