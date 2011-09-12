@@ -169,11 +169,12 @@ class Cmd(cmd.Cmd):
         except KeyboardInterrupt:
             print self.keyboard_stop_msg
             
-    def exec_cmd(self, line, errorhandling=False):
+    def exec_cmd(self, line, errorhandling=False, printcmd=True):
         """for third party call, call the line with pre and postfix treatment
         without global error handling """
 
-        logger.info(line)
+        if printcmd:
+            logger.info(line)
         if self.child:
             current_interface = self.child
         else:
@@ -438,15 +439,19 @@ class Cmd(cmd.Cmd):
     # Quit
     def do_quit(self, line):
         """ exit the mainloop() """
-        if self.mother:
+        if self.child:
+            self.child.exec_cmd(line, printcmd=False)
+            return
+        elif self.mother:
             self.mother.child = None
             if line == 'all':
-                self.mother.exec_cmd('quit')
+                self.mother.exec_cmd('quit all', printcmd=False)
             elif line:
                 level = int(line) - 1
                 if level:
                     self.mother.exec_cmd('quit %s' % level)
-        print
+        else:
+            print
         return True
 
     # Aliases

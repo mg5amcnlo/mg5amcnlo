@@ -779,7 +779,6 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
             is an error in itself, you can suppress the files %s.''' % pjoin(me_dir,'RunWeb'))
             sys.exit()
         else:
-            print 'create RUNWEB ***************************'
             os.system('touch %s' % pjoin(me_dir,'RunWeb'))
 
         # usefull shortcut
@@ -1285,7 +1284,7 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
         
         pythia_src = pjoin(self.configuration['pythia-pgs_path'],'src')
         
-        logger.info('Launching pythia')
+        self.update_status('Running Pythia', 'pythia')
         ## LAUNCHING PYTHIA
         if self.cluster_mode == 1:
             self.cluster.launch_and_wait('../bin/internal/run_pythia', 
@@ -1499,12 +1498,17 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
         if misc.is_executable(pjoin(eradir, 'ExRootLHCOlympicsConverter')):
             self.update_status('Creating PGS Root File', level='pgs')
             subprocess.call([eradir+'/ExRootLHCOlympicsConverter', 
-                             'pgs_events.lhco','pgs_events.root'],
+                             'pgs_events.lhco','%s_pgs_events.root' % self.run_name],
                             cwd=pjoin(self.me_dir, 'Events')) 
 
-        
         # Creating plots
         self.create_plot('PGS')
+        
+        if os.path.exists(pjoin(self.me_dir, 'Events', 'pgs_events.lhco')):
+            misc.cp(pjoin(self.me_dir, 'Events', 'pgs_events.lhco'), 
+                    pjoin(self.me_dir, 'Events', '%s_pgs_events.lhco' % self.run_name))
+        
+        
         self.update_status('finish', level='pgs')
 
     ############################################################################
@@ -1855,6 +1859,7 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
             os.remove(pjoin(self.me_dir,'RunWeb'))
         except:
             pass
+        self.update_status('', level=None)
         self.store_result()
         return super(MadEventCmd, self).do_quit(line)
     

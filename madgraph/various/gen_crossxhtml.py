@@ -179,10 +179,16 @@ class AllResults(dict):
         
         status = status_template % status_dict
         
+        if self.web and os.path.exists(pjoin(self.path, 'RunWeb')):
+            
+            web = False
+        else:
+            web = self.web
+        
         # 2) Create the text for the old run:
         old_run = ''
         for key in self.order:
-            old_run += self[key].info_html(self.path, self.web)
+            old_run += self[key].info_html(self.path, web)
         
         text_dict = {'process': self.process,
                      'model': self.model,
@@ -385,7 +391,7 @@ class OneRunResults(dict):
             if 'lhco' in self.pgs:
                 out += """ <a href="../Events/%(run_name)s_pgs_events.lhco.gz">LHCO</a>"""
             if 'root' in self.pgs:
-                out += """ <a href="../Events/%(run_name)_pgs_events.root">rootfile</a>"""    
+                out += """ <a href="../Events/%(run_name)s_pgs_events.root">rootfile</a>"""    
             if 'plot' in self.pgs:
                 out += """ <a href="../Events/%(run_name)s_plots_pgs.html">plots</a>"""
             out += '</td></tr>'
@@ -394,7 +400,7 @@ class OneRunResults(dict):
             if 'lhco' in self.delphes:
                 out += """ <a href="../Events/%(run_name)s_delphes_events.lhco.gz">LHCO</a>"""
             if 'root' in self.delphes:
-                out += """ <a href="../Events/%(run_name)_delphes_events.root">rootfile</a>"""    
+                out += """ <a href="../Events/%(run_name)s_delphes_events.root">rootfile</a>"""    
             if 'plot' in self.delphes:
                 out += """ <a href="../Events/%(run_name)s_plots_delphes.html">plots</a>"""            
             out += '</td></tr>'
@@ -405,7 +411,7 @@ class OneRunResults(dict):
                        <INPUT TYPE=HIDDEN NAME=directory VALUE="%(me_dir)s"> 
                        <INPUT TYPE=HIDDEN NAME=whattodo VALUE="pgs"> 
                        <INPUT TYPE=HIDDEN NAME=run VALUE="%(run_name)s"> 
-                       <INPUT TYPE=SUBMIT VALUE="Run Pythia"></FORM></center></td>
+                       <INPUT TYPE=SUBMIT VALUE="Run Reco. Objects"></FORM></center></td>
                        </table>"""
             return out             
         
