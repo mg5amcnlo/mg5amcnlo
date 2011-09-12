@@ -370,7 +370,7 @@ class OneRunResults(dict):
             if 'plot' in self.pythia:
                 out += ' <a href="../Events/%(run_name)s_plots_pythia.html">plots</a>'
             out += '</td></tr>'
-        elif web and self['nb_events']:
+        elif web and self['nb_event']:
             out += """<tr><td> Pythia Events : </td><td><center>
                        <FORM ACTION="%(web)s/cgi-bin/RunProcess/handle_runs-pl"  ENCTYPE="multipart/form-data" METHOD="POST">
                        <INPUT TYPE=HIDDEN NAME=directory VALUE="%(me_dir)s"> 
