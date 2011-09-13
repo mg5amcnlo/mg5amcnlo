@@ -1231,11 +1231,10 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
         self.update_status('Storing parton level results', level='parton')
         subprocess.call(['%s/store' % self.dirbin, self.run_name],
                             cwd=pjoin(self.me_dir, 'Events'))
-        os.system('%s/gen_crossxhtml-pl %s' % (self.dirbin, self.run_name))
         shutil.copy(pjoin(self.me_dir, 'Events', self.run_name+'_banner.txt'),
                     pjoin(self.me_dir, 'Events', 'banner.txt')) 
 
-        self.update_status('finish', level='parton')
+        self.update_status('End Parton', level='parton')
         
         
 

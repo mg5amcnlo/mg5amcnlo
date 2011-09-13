@@ -155,32 +155,35 @@ class AllResults(dict):
         else:
             status ='<td> %s </td> <td> %s </td> <td> %s </td> <td> %s </td>' % \
                 (tuple(self.status)+ (sum(self.status),))
-        status_dict = {'status': status,
-                        'cross': self.current['cross'],
-                        'error': self.current['error'],
-                        'unit': self.current['unit'],
-                        'run_name': self.current['run_name']}
-        if exists(pjoin(self.path, 'Cards', 'plot_card.dat')):
-            status_dict['plot_card'] = """ <a href="../Cards/plot_card.dat">plot_card</a><BR>"""
-        else:
-            status_dict['plot_card'] = ""
-        if exists(pjoin(self.path, 'Cards', 'pythia_card.dat')):
-            status_dict['pythia_card'] = """ <a href="../Cards/pythia_card.dat">pythia_card</a><BR>"""
-        else:
-            status_dict['pythia_card'] = ""
-        if exists(pjoin(self.path, 'Cards', 'pgs_card.dat')):
-            status_dict['pgs_card'] = """ <a href="../Cards/pgs_card.dat">pgs_card</a><BR>"""
-        else:
-            status_dict['pgs_card'] = ""
-        if exists(pjoin(self.path, 'Cards', 'delphes_card.dat')):
-            status_dict['delphes_card'] = """ <a href="../Cards/delphes_card.dat">delphes_card</a><BR>"""
-        else:
-            status_dict['delphes_card'] = ""
         
-        status = status_template % status_dict
-        
-        if self.web and os.path.exists(pjoin(self.path, 'RunWeb')):
+        if status:
+            status_dict = {'status': status,
+                            'cross': self.current['cross'],
+                            'error': self.current['error'],
+                            'unit': self.current['unit'],
+                            'run_name': self.current['run_name']}
+            if exists(pjoin(self.path, 'Cards', 'plot_card.dat')):
+                status_dict['plot_card'] = """ <a href="../Cards/plot_card.dat">plot_card</a><BR>"""
+            else:
+                status_dict['plot_card'] = ""
+            if exists(pjoin(self.path, 'Cards', 'pythia_card.dat')):
+                status_dict['pythia_card'] = """ <a href="../Cards/pythia_card.dat">pythia_card</a><BR>"""
+            else:
+                status_dict['pythia_card'] = ""
+            if exists(pjoin(self.path, 'Cards', 'pgs_card.dat')):
+                status_dict['pgs_card'] = """ <a href="../Cards/pgs_card.dat">pgs_card</a><BR>"""
+            else:
+                status_dict['pgs_card'] = ""
+            if exists(pjoin(self.path, 'Cards', 'delphes_card.dat')):
+                status_dict['delphes_card'] = """ <a href="../Cards/delphes_card.dat">delphes_card</a><BR>"""
+            else:
+                status_dict['delphes_card'] = ""
             
+            status = status_template % status_dict
+        
+        
+        
+        if self.web and os.path.exists(pjoin(self.path, 'RunWeb')):       
             web = False
         else:
             web = self.web
