@@ -1461,6 +1461,7 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
             args.remove('--no_default')
         else:
             no_default = False
+        self.update_status('prepare PGS run', level=None)
         self.check_pgs(args) 
         
         pgsdir = pjoin(self.configuration['pythia-pgs_path'], 'src')
@@ -1541,6 +1542,8 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
             args.remove('--no_default')
         else:
             no_default = False
+            
+        self.update_status('prepare delphes run', level=None)
         self.check_pgs(args) 
         
         # Check that the delphes_card exists. If not copy the default and
