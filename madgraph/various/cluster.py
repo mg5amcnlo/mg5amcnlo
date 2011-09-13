@@ -13,6 +13,7 @@
 ################################################################################
 import subprocess
 import logging
+import md5
 import os
 import time
 
@@ -168,10 +169,10 @@ class PBSCluster(Cluster):
         self.submitted = 0
 
     def submit(self, prog, argument=[], cwd=None, stdout=None, stderr=None, log=None):
-        """Submit the """
-
+        """Submit the prog to the cluser"""
         
-        me_dir = os.path.realpath(os.path.join(cwd,prog)).rsplit('/SubProcesses',1)[0][-14:]
+        me_dir = os.path.realpath(os.path.join(cwd,prog)).rsplit('/SubProcesses',1)[0]
+        me_dir = md5.md5(me_dir).hexdigest()[-14:]
 	if not me_dir[0].isalpha():
 		me_dir = 'a' + me_dir[1:]
         
@@ -229,7 +230,7 @@ class PBSCluster(Cluster):
 
 	if me_dir.endswith('/'):
 	    me_dir = me_dir[:-1]	
-	me_dir = me_dir[-14:]
+	me_dir = md5.md5(me_dir).hexdigest()[-14:]
         if not me_dir[0].isalpha():
 		me_dir = 'a' + me_dir[1:]
 
