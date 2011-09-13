@@ -423,7 +423,7 @@ class OneRunResults(dict):
                        <INPUT TYPE=HIDDEN NAME=directory VALUE="%(me_dir)s"> 
                        <INPUT TYPE=HIDDEN NAME=whattodo VALUE="pgs"> 
                        <INPUT TYPE=HIDDEN NAME=run VALUE="%(run_name)s"> 
-                       <INPUT TYPE=SUBMIT VALUE="Run Reco. Objects"></FORM></center></td>
+                       <INPUT TYPE=SUBMIT VALUE="Run Det. Sim."></FORM></center></td>
                        </table>"""
             return out             
         
