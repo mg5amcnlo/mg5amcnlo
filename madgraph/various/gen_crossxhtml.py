@@ -149,14 +149,14 @@ class AllResults(dict):
     def output(self):
         """ write the output file """
         
-        # 1) Create the text for the status directory
-        if isinstance(self.status, str):
-            status = '<td colspan=4>%s</td>' %  self.status
-        else:
-            status ='<td> %s </td> <td> %s </td> <td> %s </td> <td> %s </td>' % \
+        # 1) Create the text for the status directory        
+        if self.status:
+            if isinstance(self.status, str):
+                status = '<td colspan=4>%s</td>' %  self.status
+            else:
+                status ='<td> %s </td> <td> %s </td> <td> %s </td> <td> %s </td>' % \
                 (tuple(self.status)+ (sum(self.status),))
-        
-        if status:
+            
             status_dict = {'status': status,
                             'cross': self.current['cross'],
                             'error': self.current['error'],
@@ -180,18 +180,20 @@ class AllResults(dict):
                 status_dict['delphes_card'] = ""
             
             status = status_template % status_dict
-        
-        
-        
-        if self.web and os.path.exists(pjoin(self.path, 'RunWeb')):       
-            web = False
         else:
-            web = self.web
+            status =''
+        
+        
+        # See if we need to incorporate the button for submission
+        if self.web and os.path.exists(pjoin(self.path, 'RunWeb')):       
+            submit_button = False
+        else:
+            submit_button = self.web
         
         # 2) Create the text for the old run:
         old_run = ''
         for key in self.order:
-            old_run += self[key].info_html(self.path, web)
+            old_run += self[key].info_html(self.path, submit_button)
         
         text_dict = {'process': self.process,
                      'model': self.model,
@@ -253,8 +255,13 @@ class OneRunResults(dict):
         path = self.event_path
         # Check if the output of the last status exists
         
-        if level in ['parton','all']:
+        if level in ['gridpack','all']:
+            if 'gridpack' not in self.parton and \
+                    exists(pjoin(path, os.pardir,"%s_gridpack.tar.gz" % run)):
+                self.parton.append('gridpack')
         
+        if level in ['parton','all']:
+            
             if 'lhe' not in self.parton and \
                         exists(pjoin(path,"%s_unweighted_events.lhe.gz" % run)):
                 self.parton.append('lhe')
@@ -358,6 +365,8 @@ class OneRunResults(dict):
         out = '<table border=1>'
         if self.parton:
             out += '<tr><td> Parton Events : </td><td>'
+            if 'gridpack' in self.parton:
+                out =  '<center><a href="../%(run_name)s_gridpack.tar.gz">Gridpack</a></center><br>' + out
             if 'lhe' in self.parton:
                 out += ' <a href="../Events/%(run_name)s_unweighted_events.lhe.gz">LHE</a>'
             if 'root' in self.parton:

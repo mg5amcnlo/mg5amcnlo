@@ -24,10 +24,6 @@ fi
 #    $i++;
 #}
 
-echo "Storing files"
-echo "Storing files" > status
-../bin/internal/gen_crossxhtml-pl $1
-
 if [[ -e $1_results.html ]]; then
     rm -f $1_results.html
 fi

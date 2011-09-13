@@ -1305,8 +1305,8 @@ class ProcessExporterFortranME(ProcessExporterFortran):
         os.chdir(os.path.pardir)
 
         gen_infohtml.make_info_html(self.dir_path)
-        subprocess.call([os.path.join(old_pos, self.dir_path, 'bin', 'internal', 'gen_crossxhtml.py')],
-                        stdout = devnull)
+        #subprocess.call([os.path.join(old_pos, self.dir_path, 'bin', 'internal', 'gen_crossxhtml.py')],
+        #                stdout = devnull)
         [mv(name, './HTML/') for name in os.listdir('.') if \
                             (name.endswith('.html') or name.endswith('.jpg')) and \
                             name != 'index.html']               

@@ -150,7 +150,6 @@ try:
         os.mkdir(os.path.join(os.environ['HOME'], '.mg5'))
     readline.write_history_file(history_file)
 except Exception, error:
-    print error
     pass
 
 

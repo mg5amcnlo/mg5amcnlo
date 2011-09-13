@@ -999,6 +999,21 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
         if os.path.exists(pjoin(self.me_dir,'Events','pythia_events.hep')):
             self.exec_cmd('pgs --no_default')
             self.exec_cmd('delphes --no_default')
+        
+        if self.run_card['gridpack'] in self.true:
+            self.update_status('Creating gridpack', level='parton')
+            os.system("sed -i.bak \"s/\s*.false.*=.*GridRun/  .true.  =  GridRun/g\" %s/Cards/grid_card.dat"\
+                      % self.me_dir)
+            subprocess.call(['./bin/internal/restore_data', self.run_name],
+                            cwd=self.me_dir)
+            subprocess.call(['./bin/internal/store4grid', 'default'],
+                            cwd=self.me_dir)
+            subprocess.call(['./bin/internal/clean'], cwd=self.me_dir)
+            misc.compile(['gridpack.tar.gz'], cwd=self.me_dir)
+            files.mv(pjoin(self.me_dir, 'gridpack.tar.gz'), 
+                    pjoin(self.me_dir, '%s_gridpack.tar.gz' % self.run_name))
+            self.update_status('gridpack created', level='gridpack')
+
         self.store_result()
     
     ############################################################################
@@ -1504,7 +1519,7 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
         self.create_plot('PGS')
         
         if os.path.exists(pjoin(self.me_dir, 'Events', 'pgs_events.lhco')):
-            misc.cp(pjoin(self.me_dir, 'Events', 'pgs_events.lhco'), 
+            files.cp(pjoin(self.me_dir, 'Events', 'pgs_events.lhco'), 
                     pjoin(self.me_dir, 'Events', '%s_pgs_events.lhco' % self.run_name))
         
         
