@@ -1446,11 +1446,16 @@ class LoopHelasMatrixElement(helas_objects.HelasMatrixElement):
                     new_helas_amp_list.append(helas_amp)
             LoopDiagramsHelasAmplitudeList[i]=new_helas_amp_list
 
+#        print "I get LoopDiagramsHelasAmplitudeList="
+#        for i, elem in enumerate(LoopDiagramsHelasAmplitudeList):
+#            print "LoopDiagramsHelasAmplitudeList[",i,"]=",[amp.get('number') for amp in LoopDiagramsHelasAmplitudeList[i]]
+
         col_amp_list = []
         for i, col_basis_elem in \
                 enumerate(sorted(color_basis.keys())):
 
             col_amp = []
+#            print "color_basis[col_basis_elem]=",color_basis[col_basis_elem]
             for diag_tuple in color_basis[col_basis_elem]:
                 res_amps = filter(lambda amp: \
                           tuple(amp.get('color_indices')) == diag_tuple[1],
@@ -1539,7 +1544,7 @@ class LoopHelasMatrixElement(helas_objects.HelasMatrixElement):
         
         # Store here the type of the last LoopDiagram encountered to reuse the
         # same value, but negative, for the corresponding counter-terms. 
-        # It is not strictly necessary, it only has to be different than 0.
+        # It is not strictly necessary, it only has to be negative.
         type=1
         for HelasAmpList in self.get_helas_amplitudes_loop_diagrams():
             # We use uniformly the class LoopDiagram for the diagrams stored

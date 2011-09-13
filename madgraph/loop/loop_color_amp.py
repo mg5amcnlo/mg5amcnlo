@@ -53,7 +53,7 @@ class LoopColorBasis(color_amp.ColorBasis):
         elif lcut_charge==8:
             closingCS=color_algebra.ColorString(\
               [color_algebra.Tr(lcut_numbers[1],lcut_numbers[0])],
-              fractions.Fraction(1, 2))
+              fractions.Fraction(2, 1))
         else:
             raise ColorBasis.ColorBasisError, \
         "L-cut particle has an unsupported color representation %s" % lcut_charge

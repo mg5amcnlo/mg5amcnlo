@@ -544,10 +544,8 @@ class ProcessExporterFortran(object):
 
 
         res_list = []
-
         for i, coeff_list in \
                 enumerate(color_amplitudes):
-
             res = (basename+"%i)=") % (i + 1)
 
             # Optimization: if all contributions to that color basis element have
@@ -683,11 +681,11 @@ class ProcessExporterFortran(object):
             else:
                 return '-'
 
-        res_str = '%+i' % total_coeff.numerator
+        res_str = '%+id0' % total_coeff.numerator
 
         if total_coeff.denominator != 1:
             # Check if total_coeff is an integer
-            res_str = res_str + './%i.' % total_coeff.denominator
+            res_str = res_str + '/%id0' % total_coeff.denominator
 
         if is_imaginary:
             res_str = res_str + '*imag1'

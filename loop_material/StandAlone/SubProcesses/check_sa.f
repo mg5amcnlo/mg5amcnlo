@@ -54,7 +54,7 @@
       call setpara('param_card.dat',.true.)  !first call to setup the paramaters
       include "pmass.inc"             !set up masses
 
-      AO2PI=G**2/(8.D0*(3.14159265358979323846**2))
+      AO2PI=G**2/(8.D0*(3.14159265358979323846d0**2))
 
       write(*,*) 'AO2PI=',AO2PI
 !---  Now use a simple multipurpose PS generator (RAMBO) just to get a 
