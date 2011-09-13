@@ -515,7 +515,7 @@ class LoopHelasMatrixElementTest(unittest.TestCase):
         myloopamplitude = loop_diagram_generation.LoopAmplitude()
         myloopamplitude.set('process', myloopproc)
         myloopamplitude.generate_diagrams()
-        self.check_LHME_individual_diag_sanity(myloopamplitude,myloopproc,selection=[(1,9),],verbose=True)
+        self.check_LHME_individual_diag_sanity(myloopamplitude,myloopproc)
 
     def test_helas_diagrams_gg_gg(self):
         """Test the generation of the helas diagrams for the loop process g g > g g
