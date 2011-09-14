@@ -1263,8 +1263,9 @@ class LoopHelasMatrixElement(helas_objects.HelasMatrixElement):
          sum([d.get_loop_amplitudes() for d in self.get_loop_diagrams()],[]):
             lamp.set('number',-1)
             for lamp2 in LoopHelasAmplitudeRecognized:
-                #if lamp.is_equivalent(lamp2):
-                if False:
+                if lamp.is_equivalent(lamp2):
+                # The if statement below would be to turn the optimization off
+                #if False:
                     lamp.set('number',lamp2.get('number'))
                     break;
             if lamp.get('number')==-1:

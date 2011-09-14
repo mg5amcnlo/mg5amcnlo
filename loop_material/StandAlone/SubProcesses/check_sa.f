@@ -83,6 +83,12 @@
       else
         CALL GET_MOMENTA(SQRTS,PMASS,P)  
       endif
+!     
+!     Now we can call the matrix element!
+!
+      CALL SMATRIX(P,BORNELEM)      
+      CALL SLOOPMATRIX(P,MATELEM)
+
 !
 !        write the information on the four momenta 
 !
@@ -100,11 +106,6 @@
       write (*,*) "--------------------------------------------------",
      &"---------------------------"
 
-!     
-!     Now we can call the matrix element!
-!
-      CALL SMATRIX(P,BORNELEM)      
-      CALL SLOOPMATRIX(P,MATELEM)
 !
       write (*,*) "---------------------------------------------------",
      &"--------------------------"

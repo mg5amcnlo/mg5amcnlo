@@ -69,7 +69,7 @@ class LoopExporterTest(unittest.TestCase):
         """load the NLO toy model"""
         
         self.myloopmodel = models.import_full_model(os.path.join(\
-            _input_file_path,'loop_ToyModel'))
+            _input_file_path,'smQCDNLO'))
         self.fortran_model = helas_call_writers.FortranUFOHelasCallWriter(\
                                                             self.myloopmodel)
         
@@ -93,7 +93,7 @@ class LoopExporterTest(unittest.TestCase):
                         ["Generation from test_loop_exporters.py",],
                         False,False)
         
-    def notest_LoopProcessExporterFortranSA_ddx_uux(self):
+    def test_LoopProcessExporterFortranSA_ddx_uux(self):
         """Test the StandAlone output for different processes.
         """
         
@@ -107,6 +107,62 @@ class LoopExporterTest(unittest.TestCase):
         myleglist.append(base_objects.Leg({'id':-2,
                                          'state':True}))
                 
+        myloopproc = base_objects.Process({'legs':myleglist,
+                                        'model':self.myloopmodel,
+                                        'orders':{},
+                                        'perturbation_couplings':['QCD',],
+                                        'squared_orders':{}})
+    
+        myloopamplitude = loop_diagram_generation.LoopAmplitude()
+        myloopamplitude.set('process', myloopproc)
+        myloopamplitude.generate_diagrams()
+        myloopME=loop_helas_objects.LoopHelasMatrixElement(myloopamplitude)
+        self.check_output_sanity(myloopME)
+
+    def test_LoopProcessExporterFortranSA_ddx_ddx(self):
+        """Test the StandAlone output for different processes.
+        """
+        
+        myleglist = base_objects.LegList()
+        myleglist.append(base_objects.Leg({'id':1,
+                                         'state':False}))
+        myleglist.append(base_objects.Leg({'id':-1,
+                                         'state':False}))
+        myleglist.append(base_objects.Leg({'id':1,
+                                         'state':True}))
+        myleglist.append(base_objects.Leg({'id':-1,
+                                         'state':True}))
+                        
+        myloopproc = base_objects.Process({'legs':myleglist,
+                                        'model':self.myloopmodel,
+                                        'orders':{},
+                                        'perturbation_couplings':['QCD',],
+                                        'squared_orders':{}})
+    
+        myloopamplitude = loop_diagram_generation.LoopAmplitude()
+        myloopamplitude.set('process', myloopproc)
+        myloopamplitude.generate_diagrams()
+        myloopME=loop_helas_objects.LoopHelasMatrixElement(myloopamplitude)
+        self.check_output_sanity(myloopME)
+
+    def test_LoopProcessExporterFortranSA_ddx_ddxddx(self):
+        """Test the StandAlone output for different processes.
+        """
+        
+        myleglist = base_objects.LegList()
+        myleglist.append(base_objects.Leg({'id':1,
+                                         'state':False}))
+        myleglist.append(base_objects.Leg({'id':-1,
+                                         'state':False}))
+        myleglist.append(base_objects.Leg({'id':1,
+                                         'state':True}))
+        myleglist.append(base_objects.Leg({'id':-1,
+                                         'state':True}))
+        myleglist.append(base_objects.Leg({'id':1,
+                                         'state':True}))
+        myleglist.append(base_objects.Leg({'id':-1,
+                                         'state':True}))
+                        
         myloopproc = base_objects.Process({'legs':myleglist,
                                         'model':self.myloopmodel,
                                         'orders':{},

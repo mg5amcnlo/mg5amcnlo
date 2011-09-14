@@ -105,7 +105,7 @@ C
 C LOCAL VARIABLES 
 C  
       INTEGER I,J,K
-      COMPLEX*16 ZTEMP(3)
+      COMPLEX*16 ZTEMP
       INTEGER DENOM(NCOLORLOOP), CF(NCOLORBORN,NCOLORLOOP)
       COMPLEX*16 AMPL(3,NLOOPAMPS), AMP(NBORNAMPS)
       COMPLEX*16 JAMPL(3,NCOLORLOOP), JAMPB(NCOLORBORN)
@@ -142,18 +142,18 @@ ENDDO
       RES(3) = 0.D0
       DO K = 1, 3
           DO I = 1, NCOLORLOOP
-              ZTEMP(K) = (0.D0,0.D0)		  
+              ZTEMP = (0.D0,0.D0)		  
               DO J = 1, NCOLORBORN
-                  ZTEMP(K) = ZTEMP(K) + CF(J,I)*JAMPB(J)
+                  ZTEMP = ZTEMP + CF(J,I)*JAMPB(J)
               ENDDO
-              RES(K) = RES(K)+DBLE(ZTEMP(K)*DCONJG(JAMPL(K,I))/DENOM(I)) 
+              RES(K) = RES(K)+DBLE(ZTEMP*DCONJG(JAMPL(K,I))/DENOM(I)) 
           ENDDO
 		  DO J = 1, NCOLORBORN
-              ZTEMP(K) = (0.D0,0.D0)
+              ZTEMP = (0.D0,0.D0)
               DO I = 1, NCOLORLOOP
-                  ZTEMP(K) = ZTEMP(K) + CF(J,I)*JAMPL(K,I)/DENOM(I)
+                  ZTEMP = ZTEMP + CF(J,I)*JAMPL(K,I)/DENOM(I)
               ENDDO
-              RES(K) = RES(K)+DBLE(ZTEMP(K)*DCONJG(JAMPB(J)))
+              RES(K) = RES(K)+DBLE(ZTEMP*DCONJG(JAMPB(J)))
           ENDDO
       ENDDO
       END

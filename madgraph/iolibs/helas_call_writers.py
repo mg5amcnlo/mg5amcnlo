@@ -127,7 +127,7 @@ class HelasCallWriter(base_objects.PhysicsObject):
                 res.append("ELSEIF (ID.EQ.%d) THEN"%lamp.get('number'))
                 res.append("#Loop diagram number %d (might be others, just an example)" %ldiag.get('number'))                
                 if lcutpart.get('spin')==1:
-                    pass
+                    res.append("DO I=1,1")
                 elif lcutpart.get('spin')==2:
                     res.append("DO I=1,12")
                     res.append("IF (I.GT.8.AND.ML(1).EQ.0.D0) THEN")
@@ -197,7 +197,7 @@ class HelasCallWriter(base_objects.PhysicsObject):
                             mother.set('number',originalNumbers[indexMothers])
                             indexMothers=indexMothers+1  
                 if lcutpart.get('spin')==1:
-                    pass
+                    res.append("ENDDO")
                 elif lcutpart.get('spin')==2:
                     res.append("ENDIF")                    
                     res.append("ENDDO")

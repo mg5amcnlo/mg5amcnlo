@@ -1125,7 +1125,7 @@ c momentum q, so it is not implemented yet.
       COMPLEX*16 RES
       COMPLEX*16 AMP
 
-      RES=(0.D0,1.D0)*AMP
+      RES=(1.D0,0.D0)*AMP
       
       END
 
@@ -1382,15 +1382,17 @@ C     REVERSE THE MOMENTUM IN THE WF FOR THE SECOND L-CUT VECTORS
 
       END
 
-      SUBROUTINE LCUT_S(Q,SCD,W)
+      SUBROUTINE LCUT_S(Q,M,CFIG,SCD,W)
 
       COMPLEX*16 Q(0:3)
+      REAL*8 M
+      INTEGER CFIG
       LOGICAL SCD      
       COMPLEX*16 W(20)
 
       W(1)=(1.D0,0.D0)
 
-C     REVERSE THE MOMENTUM IN THE WF FOR THE SECOND SPINORS      
+C     REVERSE THE MOMENTUM IN THE WF FOR THE SECOND SCALAR      
       IF (SCD) THEN
         W(2)=-Q(0)
         W(3)=-Q(1)
