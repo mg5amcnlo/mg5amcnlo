@@ -153,7 +153,7 @@ class SALauncher(ExtLauncher):
 class MELauncher(ExtLauncher):
     """A class to launch MadEvent run"""
     
-    def __init__(self, running_dir, timeout, unit='pb', **option):
+    def __init__(self, running_dir, timeout, cmd_int , unit='pb', **option):
         """ initialize the StandAlone Version"""
         
         ExtLauncher.__init__(self, running_dir, './Cards', timeout, **option)
@@ -163,11 +163,12 @@ class MELauncher(ExtLauncher):
         assert hasattr(self, 'multicore')
         assert hasattr(self, 'name')
         self.unit = unit
+        self.cmd_int = cmd_int
         
         if self.cluster:
             self.cluster = 1
         if self.multicore:
-            self.multicore = 2
+            self.cluster = 2
         
         self.cards = ['param_card.dat', 'run_card.dat']
         # Check for pythia-pgs directory
@@ -263,10 +264,12 @@ class MELauncher(ExtLauncher):
                 self.cluster = 0
                 self.launch_program()
                 return
-            nb_node = self.ask('How many core do you want to use?', max_node, range(max_node+1))
+            nb_node = self.ask('How many core do you want to use?', max_node, range(2,max_node+1))
         
         import madgraph.interface.madevent_interface as ME
-        launch = ME.MadEventCmd(me_dir=self.running_dir)
+        
+        launch = self.cmd_int.define_child_cmd_interface(
+                     ME.MadEventCmd(me_dir=self.running_dir), interface=False)
         #launch.me_dir = self.running_dir
         command = 'generate_events %s' % self.name
         if mode == "1":
@@ -274,8 +277,14 @@ class MELauncher(ExtLauncher):
         elif mode == "2":
             command += " --nb_core=%s" % nb_node
         
+        try:
+            os.remove('ME5_debug')
+        except:
+           pass
         launch.run_cmd(command)
         
+        if os.path.exists('ME5_debug'):
+            return True
         
         # Display the cross-section to the screen
         path = os.path.join(self.running_dir, 'SubProcesses', '%s_results.dat' 

@@ -159,15 +159,20 @@ class Cmd(cmd.Cmd):
         
         try:
             return cmd.Cmd.onecmd(self, line)
-        except self.InvalidCmd as error:
+        except self.InvalidCmd as error:            
             if __debug__:
                 self.nice_error_handling(error, line)
             else:
                 self.nice_user_error(error, line)
         except Exception as error:
             self.nice_error_handling(error, line)
+            if self.mother:
+                self.do_quit('')
+            else:
+                print 'NO MOTHER'
         except KeyboardInterrupt:
             print self.keyboard_stop_msg
+        
             
     def exec_cmd(self, line, errorhandling=False, printcmd=True):
         """for third party call, call the line with pre and postfix treatment
@@ -308,16 +313,17 @@ class Cmd(cmd.Cmd):
         
         return self.history_header
 
-    def define_child_cmd_interface(self, obj_instance):
+    def define_child_cmd_interface(self, obj_instance, interface=True):
         """Define a sub cmd_interface"""
         
-        if self.use_rawinput:
+        if self.use_rawinput and interface:
             # We are in interactive mode -> simply call the child
             obj_instance.cmdloop()
         
         # We are in a file reading mode. So we need to redirect the cmd
         self.child = obj_instance
         self.child.mother = self
+        return self.child
         
     #===============================================================================
     # Ask a question with a maximum amount of time to answer

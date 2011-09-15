@@ -1118,7 +1118,7 @@ class CompleteForCmd(CheckValidForCmd):
         #option
         if len(args) >= 2:
             complete = []
-        opt = ['--cluster', '--multicore', '-i', '--name=', '-f']
+        opt = ['--cluster', '--multicore', '-i', '--name=', '-f','-m', '-n', '--interactive',]
         complete += self.list_completion(text, opt, line)
         return complete
 
@@ -1187,6 +1187,8 @@ class CompleteForCmd(CheckValidForCmd):
             possibility.extend(['./','../'])
         if os.path.exists('MG5_debug'):
             possibility.append('MG5_debug')
+        if os.path.exists('ME5_debug'):
+            possibility.append('ME5_debug')            
 
         return self.list_completion(text, possibility)
        
@@ -2503,11 +2505,11 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
             
             #check if this is a cross-section
             if len(self._generate_info.split('>')[0].strip().split())>1:
-                ext_program = launch_ext.MELauncher(args[1], self.timeout,
+                ext_program = launch_ext.MELauncher(args[1], self.timeout, self,
                                                     **options)
             else:
                 # This is a width computation
-                ext_program = launch_ext.MELauncher(args[1], self.timeout, unit='GeV',
+                ext_program = launch_ext.MELauncher(args[1], self.timeout, self, unit='GeV',
                                                     **options)
         elif args[0] == 'pythia8':
             ext_program = launch_ext.Pythia8Launcher(args[1], self.timeout,

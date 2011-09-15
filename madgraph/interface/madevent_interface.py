@@ -53,6 +53,7 @@ try:
     import madgraph.iolibs.save_load_object as save_load_object
     import madgraph.various.gen_crossxhtml as gen_crossxhtml
     import madgraph.various.cluster as cluster
+    import models.check_param_card as check_param_card
     from madgraph import InvalidCmd
     MADEVENT = False
 except Exception, error:
@@ -65,6 +66,7 @@ except Exception, error:
     import internal.gen_crossxhtml as gen_crossxhtml
     import internal.save_load_object as save_load_object
     import internal.cluster as cluster
+    import internal.check_param_card as check_param_card
     MADEVENT = True
 
 # Special logger for the Cmd Interface
@@ -164,7 +166,6 @@ class CmdExtended(cmd.Cmd):
         "*    https://server06.fynu.ucl.ac.be/projects/madgraph     *\n" + \
         "*                                                          *\n" + \
         "*               Type 'help' for in-line help.              *\n" + \
-        "*           Type 'tutorial' to learn how MG5 works         *\n" + \
         "*                                                          *\n" + \
         "************************************************************")
         
@@ -173,7 +174,11 @@ class CmdExtended(cmd.Cmd):
     def get_history_header(self):
         """return the history header""" 
         return self.history_header % misc.get_time_info()
-            
+    
+    #def nice_error_handling(self, error, line):
+    #    """store current result when an error occur"""
+    #    cmd.Cmd.nice_error_handling(self, error, line)
+    #    self.exec_cmd('quit')
     
 #===============================================================================
 # HelpToCmd
