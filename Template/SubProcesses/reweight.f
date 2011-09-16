@@ -5,6 +5,7 @@ c**************************************************
       implicit none
       include 'nexternal.inc'
       include 'message.inc'
+      include 'maxamps.inc'
       include 'cluster.inc'
       include 'sudakov.inc'
       include 'run.inc'
@@ -76,6 +77,7 @@ c**************************************************
       implicit none
       include 'message.inc'
       include 'nexternal.inc'
+      include 'maxamps.inc'
       include 'cluster.inc'      
       integer ipdg,imode
       double precision q0, Q11
@@ -395,6 +397,7 @@ c**************************************************
       include 'genps.inc'
       include 'maxconfigs.inc'
       include 'nexternal.inc'
+      include 'maxamps.inc'
       include 'cluster.inc'
       include 'run.inc'
       include 'coupl.inc'
@@ -402,6 +405,11 @@ C
 C   ARGUMENTS 
 C   
       DOUBLE PRECISION P(0:3,NEXTERNAL)
+
+C   global variables
+C     Present process number
+      INTEGER IMIRROR,IPROC
+      COMMON/TO_MIRROR/IMIRROR, IPROC
 
 C   local variables
       integer i, j, idi, idj
@@ -416,7 +424,6 @@ C   local variables
 c     q2bck holds the central q2fact scales
       real*8 q2bck(2)
       common /to_q2bck/q2bck
-      include 'maxamps.inc'
       double precision asref, pt2prev(n_max_cl),pt2min
       integer n, ibeam(2), iqcd(0:2)!, ilast(0:nexternal)
       integer idfl, idmap(-nexternal:nexternal)
@@ -453,11 +460,12 @@ c
       if (btest(mlevel,1)) then
         write(*,*)'setclscales: identified tree {'
         do i=1,nexternal-2
-          write(*,*)'  ',i,': ',idacl(i,1),'(',ipdgcl(idacl(i,1),igraphs(1)),')',
-     $       '&',idacl(i,2),'(',ipdgcl(idacl(i,2),igraphs(1)),')',
-     $       ' -> ',imocl(i),'(',ipdgcl(imocl(i),igraphs(1)),')',
+          write(*,*)'  ',i,': ',idacl(i,1),'(',ipdgcl(iproc,idacl(i,1),igraphs(1)),')',
+     $       '&',idacl(i,2),'(',ipdgcl(iproc,idacl(i,2),igraphs(1)),')',
+     $       ' -> ',imocl(i),'(',ipdgcl(iproc,imocl(i),igraphs(1)),')',
      $       ', ptij = ',dsqrt(pt2ijcl(i))
         enddo
+        write(*,*)'  process: ',iproc
         write(*,*)'  graphs (',igraphs(0),'):',(igraphs(i),i=1,igraphs(0))
         write(*,*)'}'
       endif
@@ -465,9 +473,9 @@ c
 c     If last clustering is s-channel QCD (e.g. ttbar) use mt2last instead
 c     (i.e. geom. average of transverse mass of t and t~)
         if(mt2last.gt.4d0 .and. nexternal.gt.3) then
-           if(isqcd(ipdgcl(idacl(nexternal-3,1),igraphs(1)))
-     $      .and. isqcd(ipdgcl(idacl(nexternal-3,2),igraphs(1)))
-     $      .and. isqcd(ipdgcl(imocl(nexternal-3),igraphs(1))))then
+           if(isqcd(ipdgcl(iproc,idacl(nexternal-3,1),igraphs(1)))
+     $      .and. isqcd(ipdgcl(iproc,idacl(nexternal-3,2),igraphs(1)))
+     $      .and. isqcd(ipdgcl(iproc,imocl(nexternal-3),igraphs(1))))then
               mt2ij(nexternal-2)=mt2last
               mt2ij(nexternal-3)=mt2last
               if (btest(mlevel,3)) then
@@ -508,14 +516,14 @@ c   Go through clusterings and set factorization scales for use in dsig
       do n=1,nexternal-2
         do i=1,2
             do j=1,2
-              if (isqcd(ipdgcl(idacl(n,i),igraphs(1))).and.
+              if (isqcd(ipdgcl(iproc,idacl(n,i),igraphs(1))).and.
      $            idacl(n,i).eq.ibeam(j).and.qcdline(j)) then
 c             is emission - this is what we want
 c             Total pdf weight is f1(x1,pt2E)*fj(x1*z,Q)/fj(x1*z,pt2E)
 c             f1(x1,pt2E) is given by DSIG, just need to set scale.
                  ibeam(j)=imocl(n)
                  if(jfirst(j).eq.0)then
-                    if(isjet(ipdgcl(imocl(n),igraphs(1)))) then
+                    if(isjet(ipdgcl(iproc,imocl(n),igraphs(1)))) then
                        jfirst(j)=n
                     else
                        jfirst(j)=-1
@@ -524,11 +532,11 @@ c             f1(x1,pt2E) is given by DSIG, just need to set scale.
                  if(partonline(j))then
 c                   Stop fact scale where parton line stops
                     jlast(j)=n
-                    partonline(j)=isjet(ipdgcl(imocl(n),igraphs(1)))
+                    partonline(j)=isjet(ipdgcl(iproc,imocl(n),igraphs(1)))
                  endif
 c                Trace QCD line through event
                  jcentral(j)=n
-                 qcdline(j)=isqcd(ipdgcl(imocl(n),igraphs(1)))
+                 qcdline(j)=isqcd(ipdgcl(iproc,imocl(n),igraphs(1)))
               endif
             enddo
         enddo
@@ -564,14 +572,14 @@ c     Check xqcut for vertices with jet daughters only
      $              ibeam(1),ibeam(2),idacl(n,j),imocl(n)
                if (n.lt.nexternal-2) then
                   if(n.ne.jlast(1).and.n.ne.jlast(2).and.
-     $              isjet(ipdgcl(idacl(n,j),igraphs(1))).and.
+     $              isjet(ipdgcl(iproc,idacl(n,j),igraphs(1))).and.
      $              (idacl(n,3-j).eq.ibeam(1).or.
      $              idacl(n,3-j).eq.ibeam(2)).and.
      $              sqrt(pt2ijcl(n)).lt.xqcut)then
 c                   ISR
                      if (btest(mlevel,3))
-     $                    write(*,*) 'Failed xqcut: ',n, ipdgcl(idacl(n,1),igraphs(1)),
-     $                    ipdgcl(idacl(n,2),igraphs(1)), xqcut
+     $                    write(*,*) 'Failed xqcut: ',n, ipdgcl(iproc,idacl(n,1),igraphs(1)),
+     $                    ipdgcl(iproc,idacl(n,2),igraphs(1)), xqcut
                      setclscales=.false.
                      clustered = .false.
                      return
@@ -584,15 +592,15 @@ c                   ISR
             enddo
             if (n.lt.nexternal-2) then
                if(n.ne.jlast(1).and.n.ne.jlast(2).and.
-     $           isjet(ipdgcl(idacl(n,1),igraphs(1))).and.
-     $           isjet(ipdgcl(idacl(n,2),igraphs(1))).and.
+     $           isjet(ipdgcl(iproc,idacl(n,1),igraphs(1))).and.
+     $           isjet(ipdgcl(iproc,idacl(n,2),igraphs(1))).and.
      $           idacl(n,1).ne.ibeam(1).and.idacl(n,1).ne.ibeam(2).and.
      $           idacl(n,2).ne.ibeam(1).and.idacl(n,2).ne.ibeam(2).and.
      $           sqrt(pt2ijcl(n)).lt.xqcut)then
 c           FSR
                   if (btest(mlevel,3))
-     $                 write(*,*) 'Failed xqcut: ',n, ipdgcl(idacl(n,1),igraphs(1)),
-     $                 ipdgcl(idacl(n,2),igraphs(1)), xqcut
+     $                 write(*,*) 'Failed xqcut: ',n, ipdgcl(iproc,idacl(n,1),igraphs(1)),
+     $                 ipdgcl(iproc,idacl(n,2),igraphs(1)), xqcut
                   setclscales=.false.
                   clustered = .false.
                   return
@@ -715,19 +723,23 @@ c**************************************************
       include 'genps.inc'
       include 'maxconfigs.inc'
       include 'nexternal.inc'
+      include 'maxamps.inc'
       include 'cluster.inc'
       include 'run.inc'
       include 'coupl.inc'
-      include 'maxamps.inc'
 C   
 C   ARGUMENTS 
 C   
       DOUBLE PRECISION P(0:3,NEXTERNAL)
 
 C   global variables
-      integer              IPROC 
+C   global variables
+C     Present process number
+      INTEGER IMIRROR,IPROC
+      COMMON/TO_MIRROR/IMIRROR, IPROC
+      integer              ISPROC 
       DOUBLE PRECISION PD(0:MAXPROC)
-      COMMON /SubProc/ PD, IPROC
+      COMMON /SubProc/ PD, ISPROC
 c     q2bck holds the central q2fact scales
       real*8 q2bck(2)
       common /to_q2bck/q2bck
@@ -784,7 +796,7 @@ c   Set mimimum kt scale, depending on highest mult or not
 
 c   Since we use pdf reweighting, need to know particle identities
       iprocset=1
-      np = iproc
+      np = isproc
       xtarget=xran1(iseed)*pd(np)
       iprocset = 1
       do while (pd(iprocset) .lt. xtarget .and. iprocset .lt. np)
@@ -818,9 +830,9 @@ c      ilast(0)=nexternal
       if (btest(mlevel,1)) then
         write(*,*)'rewgt: identified tree {'
         do i=1,nexternal-2
-          write(*,*)'  ',i,': ',idacl(i,1),'(',ipdgcl(idacl(i,1),igraphs(1)),')',
-     $       '&',idacl(i,2),'(',ipdgcl(idacl(i,2),igraphs(1)),')',
-     $       ' -> ',imocl(i),'(',ipdgcl(imocl(i),igraphs(1)),')',
+          write(*,*)'  ',i,': ',idacl(i,1),'(',ipdgcl(iproc,idacl(i,1),igraphs(1)),')',
+     $       '&',idacl(i,2),'(',ipdgcl(iproc,idacl(i,2),igraphs(1)),')',
+     $       ' -> ',imocl(i),'(',ipdgcl(iproc,imocl(i),igraphs(1)),')',
      $       ', ptij = ',dsqrt(pt2ijcl(i))
         enddo
         write(*,*)'  graphs (',igraphs(0),'):',(igraphs(i),i=1,igraphs(0))
@@ -852,21 +864,21 @@ c       scale for alpha_s reweighting
            q2now = scale**2
         endif
         if (btest(mlevel,3)) then
-          write(*,*)'  ',n,': ',idacl(n,1),'(',ipdgcl(idacl(n,1),igraphs(1)),
-     &       ')&',idacl(n,2),'(',ipdgcl(idacl(n,2),igraphs(1)),') -> ',
-     &       imocl(n),'(',ipdgcl(imocl(n),igraphs(1)),'), ptij = ',
+          write(*,*)'  ',n,': ',idacl(n,1),'(',ipdgcl(iproc,idacl(n,1),igraphs(1)),
+     &       ')&',idacl(n,2),'(',ipdgcl(iproc,idacl(n,2),igraphs(1)),') -> ',
+     &       imocl(n),'(',ipdgcl(iproc,imocl(n),igraphs(1)),'), ptij = ',
      &       dsqrt(q2now) 
         endif
 c     perform alpha_s reweighting only for vertices where a parton is produced
 c     and not for the last clustering (use non-fixed ren. scale for these)
         if (n.lt.nexternal-2)then
            if(ispartonvx(imocl(n),idacl(n,1),idacl(n,2),
-     $       ipdgcl(1,igraphs(1)),ipart,.false.)) then
+     $       ipdgcl(iproc,1,igraphs(1)),ipart,.false.)) then
 c       alpha_s weight
               rewgt=rewgt*alphas(alpsfact*sqrt(q2now))/asref
               if (btest(mlevel,3)) then
-                 write(*,*)' reweight vertex: ',ipdgcl(imocl(n),igraphs(1)),
-     $                ipdgcl(idacl(n,1),igraphs(1)),ipdgcl(idacl(n,2),igraphs(1))
+                 write(*,*)' reweight vertex: ',ipdgcl(iproc,imocl(n),igraphs(1)),
+     $                ipdgcl(iproc,idacl(n,1),igraphs(1)),ipdgcl(iproc,idacl(n,2),igraphs(1))
                  write(*,*)'       as: ',alphas(alpsfact*dsqrt(q2now)),
      &                '/',asref,' -> ',alphas(alpsfact*dsqrt(q2now))/asref
                  write(*,*)' and G=',SQRT(4d0*PI*ALPHAS(scale))
@@ -882,13 +894,13 @@ c   Update starting values for FS parton showering
           enddo
         enddo
 c   Update particle tree map
-        call ipartupdate(p,imocl(n),idacl(n,1),idacl(n,2),ipdgcl(1,igraphs(1)),ipart)
+        call ipartupdate(p,imocl(n),idacl(n,1),idacl(n,2),ipdgcl(iproc,1,igraphs(1)),ipart)
         if(ickkw.eq.2.or.pdfwgt) then
 c       Perform PDF and, if ickkw=2, Sudakov reweighting
           isvx=.false.
           do i=1,2
 c         write(*,*)'weight ',idacl(n,i),', ptij=',pt2prev(idacl(n,i))
-            if (isqcd(ipdgcl(idacl(n,i),igraphs(1)))) then
+            if (isqcd(ipdgcl(iproc,idacl(n,i),igraphs(1)))) then
                if(ickkw.eq.2.and.pt2min.eq.0d0) then
                   pt2min=pt2ijcl(n)
                   if (btest(mlevel,3))
@@ -898,7 +910,7 @@ c         write(*,*)'weight ',idacl(n,i),', ptij=',pt2prev(idacl(n,i))
      $              pt2prev(idacl(n,i))=
      $              max(pt2min,p(0,i)**2-p(1,i)**2-p(2,i)**2-p(3,i)**2)
                do j=1,2
-                  if (isparton(ipdgcl(idacl(n,i),igraphs(1))).and
+                  if (isparton(ipdgcl(iproc,idacl(n,i),igraphs(1))).and
      $                 .idacl(n,i).eq.ibeam(j)) then
 c               is sudakov weight - calculate only once for each parton
 c               line where parton line ends with change of parton id or
@@ -906,19 +918,19 @@ c               non-radiation vertex
                      isvx=.true.
                      ibeam(j)=imocl(n)
 c                    Perform Sudakov reweighting if ickkw=2
-                     if(ickkw.eq.2.and.(ipdgcl(idacl(n,i),igraphs(1)).ne.
-     $                    ipdgcl(imocl(n),igraphs(1)).or.
+                     if(ickkw.eq.2.and.(ipdgcl(iproc,idacl(n,i),igraphs(1)).ne.
+     $                    ipdgcl(iproc,imocl(n),igraphs(1)).or.
      $                    .not.isjetvx(imocl(n),idacl(n,1),idacl(n,2),
-     $                    ipdgcl(1,igraphs(1)),ipart,n.eq.nexternal-2)).and.
+     $                    ipdgcl(iproc,1,igraphs(1)),ipart,n.eq.nexternal-2)).and.
      $                    pt2prev(idacl(n,i)).lt.pt2ijcl(n))then
-                        tmp=min(1d0,max(getissud(ibeam(j),ipdgcl(idacl(n,i),
+                        tmp=min(1d0,max(getissud(ibeam(j),ipdgcl(iproc,idacl(n,i),
      $                       igraphs(1)),xnow(j),xnow(3-j),pt2ijcl(n)),1d-20)/
-     $                       max(getissud(ibeam(j),ipdgcl(idacl(n,i),
+     $                       max(getissud(ibeam(j),ipdgcl(iproc,idacl(n,i),
      $                       igraphs(1)),xnow(j),xnow(3-j),pt2prev(idacl(n,i))),1d-20))
                         rewgt=rewgt*tmp
                         pt2prev(imocl(n))=pt2ijcl(n)
                         if (btest(mlevel,3)) then
-                           write(*,*)' reweight line: ',ipdgcl(idacl(n,i),igraphs(1)), idacl(n,i)
+                           write(*,*)' reweight line: ',ipdgcl(iproc,idacl(n,i),igraphs(1)), idacl(n,i)
                            write(*,*)'     pt2prev, pt2new, x1, x2: ',pt2prev(idacl(n,i)),pt2ijcl(n),xnow(j),xnow(3-j)
                            write(*,*)'           Sud: ',tmp
                            write(*,*)'        -> rewgt: ',rewgt
@@ -929,13 +941,13 @@ c                    Perform Sudakov reweighting if ickkw=2
 c                 End Sudakov reweighting when we reach a non-radiation vertex
                      if(ickkw.eq.2.and..not.
      $                    ispartonvx(imocl(n),idacl(n,1),idacl(n,2),
-     $                    ipdgcl(1,igraphs(1)),ipart,n.eq.nexternal-2)) then
+     $                    ipdgcl(iproc,1,igraphs(1)),ipart,n.eq.nexternal-2)) then
                         pt2prev(imocl(n))=1d30
                         if (btest(mlevel,3)) then
                           write(*,*)' rewgt: ending reweighting for vx ',
      $                          idacl(n,1),idacl(n,2),imocl(n),
-     $                          ' with ids ',ipdgcl(idacl(n,1),igraphs(1)),
-     $                          ipdgcl(idacl(n,2),igraphs(1)),ipdgcl(imocl(n),igraphs(1))
+     $                          ' with ids ',ipdgcl(iproc,idacl(n,1),igraphs(1)),
+     $                          ipdgcl(iproc,idacl(n,2),igraphs(1)),ipdgcl(iproc,imocl(n),igraphs(1))
                         endif
                      endif
 c               PDF reweighting
@@ -949,7 +961,7 @@ c                    PDF scale
 c                    Set PDF scale to central factorization scale
 c                    if non-radiating vertex or last 2->2
                      if(.not.isjetvx(imocl(n),idacl(n,1),idacl(n,2),
-     $                    ipdgcl(1,igraphs(1)),ipart,n.eq.nexternal-2)) then
+     $                    ipdgcl(iproc,1,igraphs(1)),ipart,n.eq.nexternal-2)) then
                         q2now=q2bck(j)
                      endif
                      if (btest(mlevel,3))
@@ -966,10 +978,10 @@ c                    if non-radiating vertex or last 2->2
      $                       write(*,*)' set pt2pdf for ',imocl(n),
      $                          ' to: ',sqrt(pt2pdf(imocl(n)))
                      else if(pt2pdf(idacl(n,i)).lt.q2now
-     $                       .and.isjet(ipdgcl(idacl(n,i),igraphs(1)))) then
-                        pdfj1=pdg2pdf(abs(ibeam(j)),ipdgcl(idacl(n,i),
+     $                       .and.isjet(ipdgcl(iproc,idacl(n,i),igraphs(1)))) then
+                        pdfj1=pdg2pdf(abs(ibeam(j)),ipdgcl(iproc,idacl(n,i),
      $                       igraphs(1))*sign(1,ibeam(j)),xnow(j),sqrt(q2now))
-                        pdfj2=pdg2pdf(abs(ibeam(j)),ipdgcl(idacl(n,i),
+                        pdfj2=pdg2pdf(abs(ibeam(j)),ipdgcl(iproc,idacl(n,i),
      $                       igraphs(1))*sign(1,ibeam(j)),xnow(j),
      $                       sqrt(pt2pdf(idacl(n,i))))
                         if(pdfj2.lt.1d-10)then
@@ -982,7 +994,7 @@ c                          Scale too low for heavy quark
                         endif
                         rewgt=rewgt*pdfj1/pdfj2
                         if (btest(mlevel,3)) then
-                           write(*,*)' reweight ',n,i,ipdgcl(idacl(n,i),igraphs(1)),' by pdfs: '
+                           write(*,*)' reweight ',n,i,ipdgcl(iproc,idacl(n,i),igraphs(1)),' by pdfs: '
                            write(*,*)'     x, ptprev, ptnew: ',xnow(j),
      $                          sqrt(pt2pdf(idacl(n,i))),sqrt(q2now)
                            write(*,*)'           PDF: ',pdfj1,' / ',pdfj2
@@ -1006,15 +1018,15 @@ c                    If no reweighting, just copy daughter scale for mother
                enddo
 c           fs sudakov weight
                if(ickkw.eq.2.and.pt2prev(idacl(n,i)).lt.pt2ijcl(n).and.
-     $              (isvx.or.ipdgcl(idacl(n,i),igraphs(1)).ne.ipdgcl(imocl(n),igraphs(1)).or.
-     $              (ipdgcl(idacl(n,i),igraphs(1)).ne.
-     $              ipdgcl(idacl(n,3-i),igraphs(1)).and.
+     $              (isvx.or.ipdgcl(iproc,idacl(n,i),igraphs(1)).ne.ipdgcl(iproc,imocl(n),igraphs(1)).or.
+     $              (ipdgcl(iproc,idacl(n,i),igraphs(1)).ne.
+     $              ipdgcl(iproc,idacl(n,3-i),igraphs(1)).and.
      $              pt2prev(idacl(n,i)).gt.pt2prev(idacl(n,3-i))))) then
                   tmp=sudwgt(sqrt(pt2min),sqrt(pt2prev(idacl(n,i))),
-     &                 dsqrt(pt2ijcl(n)),ipdgcl(idacl(n,i),igraphs(1)),1)
+     &                 dsqrt(pt2ijcl(n)),ipdgcl(iproc,idacl(n,i),igraphs(1)),1)
                   rewgt=rewgt*tmp
                   if (btest(mlevel,3)) then
-                     write(*,*)' reweight fs line: ',ipdgcl(idacl(n,i),igraphs(1)), idacl(n,i)
+                     write(*,*)' reweight fs line: ',ipdgcl(iproc,idacl(n,i),igraphs(1)), idacl(n,i)
                      write(*,*)'     pt2prev, pt2new: ',pt2prev(idacl(n,i)),pt2ijcl(n)
                      write(*,*)'           Sud: ',tmp
                      write(*,*)'        -> rewgt: ',rewgt
@@ -1026,13 +1038,13 @@ c           fs sudakov weight
             endif
  10         continue
           enddo
-          if (ickkw.eq.2.and.n.eq.nexternal-2.and.isqcd(ipdgcl(imocl(n),igraphs(1))).and.
+          if (ickkw.eq.2.and.n.eq.nexternal-2.and.isqcd(ipdgcl(iproc,imocl(n),igraphs(1))).and.
      $         pt2prev(imocl(n)).lt.pt2ijcl(n)) then
              tmp=sudwgt(sqrt(pt2min),sqrt(pt2prev(imocl(n))),
-     &            dsqrt(pt2ijcl(n)),ipdgcl(imocl(n),igraphs(1)),1)
+     &            dsqrt(pt2ijcl(n)),ipdgcl(iproc,imocl(n),igraphs(1)),1)
              rewgt=rewgt*tmp
              if (btest(mlevel,3)) then
-                write(*,*)' reweight last fs line: ',ipdgcl(imocl(n),igraphs(1)), imocl(n)
+                write(*,*)' reweight last fs line: ',ipdgcl(iproc,imocl(n),igraphs(1)), imocl(n)
                 write(*,*)'     pt2prev, pt2new: ',pt2prev(imocl(n)),pt2ijcl(n)
                 write(*,*)'           Sud: ',tmp
                 write(*,*)'        -> rewgt: ',rewgt

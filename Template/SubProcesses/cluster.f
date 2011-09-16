@@ -166,21 +166,22 @@ c      combid=min(i+j,ishft(1,nexternal+1)-2-i-j)
       end
 
 
-      subroutine filprp(ignum,idij)
+      subroutine filprp(iproc,ignum,idij)
 c**************************************************************************
 c     Include graph ignum in list for propagator idij
 c**************************************************************************
       implicit none
       include 'nexternal.inc'
+      include 'maxamps.inc'
       include 'cluster.inc'
-      integer ignum, idij, i
+      integer ignum, idij, iproc, i
 
       if(idij.gt.n_max_cl) return
-      do i=1,id_cl(idij,0)
-         if (id_cl(idij,i).eq.ignum) return
+      do i=1,id_cl(iproc,idij,0)
+         if (id_cl(iproc,idij,i).eq.ignum) return
       enddo
-      id_cl(idij,0)=id_cl(idij,0)+1
-      id_cl(idij,id_cl(idij,0))=ignum
+      id_cl(iproc,idij,0)=id_cl(iproc,idij,0)+1
+      id_cl(iproc,idij,id_cl(iproc,idij,0))=ignum
 c      print *,'Adding graph ',ignum,' to prop ',idij
       return
       end
@@ -200,9 +201,10 @@ c**************************************************************************
       include 'genps.inc'
       include 'maxconfigs.inc'
       include 'nexternal.inc'
+      include 'maxamps.inc'
       include 'cluster.inc'
       include 'coupl.inc'
-      include 'maxamps.inc'
+      include 'message.inc'
       integer ignum, ipnum, ipids(nexternal,4,2:nexternal)
 C $B$ IFOREST $B$ !this is a tag for MadWeight
       integer i, iforest(2,-max_branch:-1,lmaxconfigs)
@@ -214,9 +216,8 @@ C $E$ IFOREST $E$ !this is a tag for MadWeight
       INTEGER    n_max_cl_cg
       PARAMETER (n_max_cl_cg=n_max_cl*n_max_cg)
       data resmap/n_max_cl_cg*.false./
- 
 
-      Integer j, k, l, icmp(2)
+      Integer j, k, l, icmp(2), iproc
 
       double precision ZERO
       parameter (ZERO=0d0)
@@ -236,14 +237,16 @@ C $E$ IFOREST $E$ !this is a tag for MadWeight
          first_time=.false.
       endif
 
-c      write(*,*) 'graph,level,iupdown: ',ignum,ipnum,iupdown
+      if(btest(mlevel,4))
+     $     write(*,*) 'graph,level: ',ignum,ipnum
 
       filgrp=.false.
 C   Follow diagram tree down to last clustering
       do i=1,ipnum
          do j=i+1,ipnum
-c            write(*,*)'at ids   (',ipids(i,1,ipnum),',',ipids(i,2,ipnum),'), (',
-c     &           ipids(j,1,ipnum),',',ipids(j,2,ipnum),'), ',i,j
+            if(btest(mlevel,4))
+     $           write(*,*)'at ids   (',ipids(i,1,ipnum),',',ipids(i,2,ipnum),'), (',
+     $           ipids(j,1,ipnum),',',ipids(j,2,ipnum),'), ',i,j
             do k=-nexternal+1,-1
                if ((iforest(1,k,ignum).eq.ipids(i,2,ipnum).and.
      &              iforest(2,k,ignum).eq.ipids(j,2,ipnum)).or.
@@ -255,31 +258,38 @@ c                 Add also the same propagator but from the other direction
                   icmp(2)=ishft(1,nexternal)-1-icmp(1)
 c     Set pdg code for propagator
                   do l=1,2
-                     if(sprop(1,k,ignum).ne.0)then
-                        ipdgcl(icmp(l),ignum)=sprop(1,k,ignum)
+                     do iproc=1,maxsproc
+                     if(sprop(iproc,k,ignum).ne.0)then
+                        ipdgcl(iproc,icmp(l),ignum)=sprop(iproc,k,ignum)
 c                       If this is radiation off heavy FS particle, set heavyrad to true
-                        if(isjet(ipdgcl(ipids(i,1,ipnum),ignum)).and.
-     $                       .not.isjet(ipdgcl(ipids(j,1,ipnum),ignum)).and.
-     $                       ipdgcl(ipids(j,1,ipnum),ignum).eq.sprop(1,k,ignum).or.
-     $                       isjet(ipdgcl(ipids(j,1,ipnum),ignum)).and.
-     $                       .not.isjet(ipdgcl(ipids(i,1,ipnum),ignum)).and.
-     $                       ipdgcl(ipids(i,1,ipnum),ignum).eq.sprop(1,k,ignum))then
+                        if(isjet(ipdgcl(iproc,ipids(i,1,ipnum),ignum)).and.
+     $                       .not.isjet(ipdgcl(iproc,ipids(j,1,ipnum),ignum)).and.
+     $                       ipdgcl(iproc,ipids(j,1,ipnum),ignum).eq.sprop(iproc,k,ignum).or.
+     $                       isjet(ipdgcl(iproc,ipids(j,1,ipnum),ignum)).and.
+     $                       .not.isjet(ipdgcl(iproc,ipids(i,1,ipnum),ignum)).and.
+     $                       ipdgcl(iproc,ipids(i,1,ipnum),ignum).eq.sprop(iproc,k,ignum))then
                            heavyrad(ignum) = .true.
                         endif
                      else if(tprid(k,ignum).ne.0)then
-                        ipdgcl(icmp(l),ignum)=tprid(k,ignum)
+                        ipdgcl(iproc,icmp(l),ignum)=tprid(k,ignum)
+                     else if(ipnum.eq.3)then
+                        ipdgcl(iproc,icmp(l),ignum)=ipdgcl(iproc,2,ignum)
                      else
-                        ipdgcl(icmp(l),ignum)=ipdgcl(2,ignum)
+                        ipdgcl(iproc,icmp(l),ignum)=0
+                        cycle
                      endif
-c                  write(*,*) 'add table entry for (',ipids(i,1,ipnum),
-c     &                 ',',ipids(j,1,ipnum),',',icmp,')','pdg: ',
-c     $                 ipdgcl(icmp,ignum)
-                     call filprp(ignum,icmp(l))
+                     if(btest(mlevel,4))
+     $                    write(*,*) 'add table entry for (',ipids(i,1,ipnum),
+     &                    ',',ipids(j,1,ipnum),',',icmp(l),')',
+     $                    'proc: ',iproc,
+     $                    ', pdg: ',ipdgcl(iproc,icmp(l),ignum)
+                     call filprp(iproc,ignum,icmp(l))
 c               Insert graph in list of propagators
                      if(pwidth(k,ignum).gt.ZERO) then
 c                    write(*,*)'Adding resonance ',ignum,icmp
                         resmap(icmp(l),ignum)=.true.
                      endif
+                  enddo
                   enddo
 c     proceed w/ next table, since there is no possibility,
 c     to combine the same particle in another way in this graph
@@ -301,11 +311,6 @@ c     to combine the same particle in another way in this graph
                      ipids(l,3,ipnum)=l+1
                      ipids(l,4,ipnum)=0
                   enddo
-c                  do l=1,ipnum
-c                     write(*,*) 'new: ipids(',l,') = (',ipids(l,1,ipnum),
-c     &                    ',',ipids(l,2,ipnum),',',ipids(l,3,ipnum),',',ipids(l,4,ipnum),')',
-c     $                    ' pdg: ', ipdgcl(ipids(l,1,ipnum),ignum)
-c                  enddo
                   if(ipnum.eq.2)then
 c                 Done with this diagram
                      return
@@ -330,15 +335,15 @@ c**************************************************************************
       include 'genps.inc'
       include 'maxconfigs.inc'
       include 'nexternal.inc'
+      include 'maxamps.inc'
       include 'cluster.inc'
       include 'run.inc'
-      include 'maxamps.inc'
       include 'message.inc'
 C $B$ IFOREST $B$ !this is a tag for MadWeight
       integer mapconfig(0:lmaxconfigs), this_config
       common/to_mconfigs/mapconfig, this_config
 C $E$ IFOREST $E$ !this is a tag for MadWeight
-      integer i, j, inpids, ipids(nexternal,4,2:nexternal)
+      integer i, j, inpids, iproc, ipids(nexternal,4,2:nexternal)
       integer start_config,end_config
       integer idup(nexternal,maxproc,maxsproc)
       integer mothup(2,nexternal)
@@ -355,8 +360,10 @@ C $E$ IFOREST $E$ !this is a tag for MadWeight
          start_config=1
          end_config=mapconfig(0)
       endif
-      do i=1,n_max_cl
-         id_cl(i,0)=0
+      do iproc=1,maxsproc
+         do i=1,n_max_cl
+            id_cl(iproc,i,0)=0
+         enddo
       enddo
       do i=start_config,end_config
          heavyrad(i)=.false.
@@ -366,7 +373,9 @@ c         write (*,*) ' at graph ',i
             ipids(j,2,nexternal)=j
             ipids(j,3,nexternal)=0
             ipids(j,4,nexternal)=0
-            ipdgcl(ipids(j,1,nexternal),i)=idup(j,1,1)
+            do iproc=1,maxsproc
+               ipdgcl(iproc,ipids(j,1,nexternal),i)=idup(j,1,iproc)
+            enddo
          enddo
          inpids=nexternal
 c         print *,'Inserting graph ',i
@@ -460,30 +469,35 @@ c            true if tree structure identified
 c**************************************************************************
       implicit none
       include 'nexternal.inc'
+      include 'maxamps.inc'
       include 'cluster.inc'
 
       integer idij,nbw,ibwlist(nexternal),icgs(0:n_max_cg)
       logical foundbw
       integer i, ii, j, jj, il, igsbk(0:n_max_cg)
 
+c     IPROC has the present process number
+      INTEGER IMIRROR,IPROC
+      COMMON/TO_MIRROR/IMIRROR, IPROC
+
       findmt=.false.
 c     if first clustering, set possible graphs
       if (icgs(0).eq.0) then
          ii=0
-         do i=1,id_cl(idij,0)
+         do i=1,id_cl(iproc,idij,0)
 c        check if this diagram has radiation off heavy particle
-           if(heavyrad(id_cl(idij,i))) cycle
+           if(heavyrad(id_cl(iproc,idij,i))) cycle
 c        check if we have constraint from onshell resonances
            foundbw=.true.
            do j=1,nbw
-             if(resmap(ibwlist(j),id_cl(idij,i)))then
+             if(resmap(ibwlist(j),id_cl(iproc,idij,i)))then
                cycle
              endif
              foundbw=.false.
  10        enddo
            if((nbw.eq.0.or.foundbw))then
               ii=ii+1
-              icgs(ii)=id_cl(idij,i)
+              icgs(ii)=id_cl(iproc,idij,i)
            endif
          enddo
          icgs(0)=ii
@@ -496,17 +510,17 @@ c     Check for common graphs
          j=1
          ii=0
          do i=1,icgs(0)
-            if(j.le.id_cl(idij,0).and.icgs(i).eq.id_cl(idij,j))then
+            if(j.le.id_cl(iproc,idij,0).and.icgs(i).eq.id_cl(iproc,idij,j))then
                ii=ii+1
-               icgs(ii)=id_cl(idij,j)
+               icgs(ii)=id_cl(iproc,idij,j)
                j=j+1
-            else if(j.le.id_cl(idij,0).and.icgs(i).gt.id_cl(idij,j)) then
-               do while(icgs(i).gt.id_cl(idij,j).and.j.le.id_cl(idij,0))
+            else if(j.le.id_cl(iproc,idij,0).and.icgs(i).gt.id_cl(iproc,idij,j)) then
+               do while(icgs(i).gt.id_cl(iproc,idij,j).and.j.le.id_cl(iproc,idij,0))
                   j=j+1
                enddo
-               if(j.le.id_cl(idij,0).and.icgs(i).eq.id_cl(idij,j))then
+               if(j.le.id_cl(iproc,idij,0).and.icgs(i).eq.id_cl(iproc,idij,j))then
                   ii=ii+1
-                  icgs(ii)=id_cl(idij,j)
+                  icgs(ii)=id_cl(iproc,idij,j)
                endif
             endif
          enddo
@@ -528,9 +542,11 @@ c**************************************************************************
       include 'run.inc'
       include 'genps.inc'
       include 'nexternal.inc'
+      include 'maxamps.inc'
       include 'cluster.inc'
       include 'message.inc'
       include 'maxconfigs.inc'
+
       real*8 p(0:3,nexternal), pcmsp(0:3), p1(0:3)
       real*8 pi(0:3), nr(0:3), pz(0:3)
       integer i, j, k, n, idi, idj, idij, icgs(0:n_max_cg)

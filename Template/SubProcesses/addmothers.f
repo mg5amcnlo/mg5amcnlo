@@ -6,10 +6,10 @@
       include 'maxconfigs.inc'
       include 'nexternal.inc'
       include 'coupl.inc'
+      include 'maxamps.inc'
       include 'cluster.inc'
       include 'message.inc'
       include 'run.inc'
-      include 'maxamps.inc'
 
       integer jpart(7,-nexternal+3:2*nexternal-3),npart,ip,numproc
       double precision pb(0:4,-nexternal+3:2*nexternal-3)
