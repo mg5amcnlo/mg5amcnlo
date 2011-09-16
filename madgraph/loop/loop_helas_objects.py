@@ -80,8 +80,8 @@ class LoopHelasAmplitude(helas_objects.HelasAmplitude):
 
         ampArgsToCheck = ['lorentz',]
         for arg in ampArgsToCheck:
-            if [amp.get(arg) for wf in self.get('amplitudes')]!=\
-               [amp.get(arg) for wf in other.get('amplitudes')]:
+            if [amp.get(arg) for amp in self.get('amplitudes')]!=\
+               [amp.get(arg) for amp in other.get('amplitudes')]:
                 return False
         
         # Finally just check that the loop and external mother wavefunctions
@@ -261,7 +261,7 @@ class LoopHelasAmplitude(helas_objects.HelasAmplitude):
         exhibits a factor 2."""
         
         if len(self.get('wavefunctions'))==3 and \
-           len([wf for wf in self.get('wavefunctions') if wf.get('pdg_code')==21]):
+           len([wf for wf in self.get('wavefunctions') if wf.get('pdg_code')==21])==3:
             self['loopsymmetryfactor']=2
         else:
             self['loopsymmetryfactor']=1
@@ -1265,7 +1265,7 @@ class LoopHelasMatrixElement(helas_objects.HelasMatrixElement):
             for lamp2 in LoopHelasAmplitudeRecognized:
                 if lamp.is_equivalent(lamp2):
                 # The if statement below would be to turn the optimization off
-                #if False:
+                # if False:
                     lamp.set('number',lamp2.get('number'))
                     break;
             if lamp.get('number')==-1:

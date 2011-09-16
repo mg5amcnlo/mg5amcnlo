@@ -383,7 +383,9 @@ class LoopAmplitude(diagram_generation.Amplitude):
         for order in self['process']['perturbation_couplings']:
             if partGenInfo: print "partGenInfo:: Perturbation coupling generated         = ",order
             hehe=[particle for particle in self['process']['model']['particles'] \
-                         if particle.is_perturbing(order)]
+                         if (particle.is_perturbing(order) and particle.get_pdg_code() not in 
+                             self['process']['forbidden_particles'])]
+            hehe=[self['process']['model'].get_particle(1),]
             for part in hehe:
                 if part.get_pdg_code() not in self.lcutpartemployed:
                     # First create the two L-cut particles to add to the process.
