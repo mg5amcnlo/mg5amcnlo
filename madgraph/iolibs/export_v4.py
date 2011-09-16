@@ -621,7 +621,7 @@ class ProcessExporterFortran(object):
                         if subproc_group:
                             pdf_lines = pdf_lines + \
                                         ("%s%d=PDG2PDF(ABS(LPP(IB(%d))),%d*LP," + \
-                                         "XBK(IB(%d)),DSQRT(Q2FACT(IB(%d))))\n") % \
+                                         "XBK(IB(%d)),DSQRT(Q2FACT(%d)))\n") % \
                                          (pdf_codes[initial_state],
                                           i + 1, i + 1, pdgtopdf[initial_state],
                                           i + 1, i + 1)
