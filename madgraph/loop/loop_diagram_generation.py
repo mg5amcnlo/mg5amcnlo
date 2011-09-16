@@ -385,7 +385,7 @@ class LoopAmplitude(diagram_generation.Amplitude):
             hehe=[particle for particle in self['process']['model']['particles'] \
                          if (particle.is_perturbing(order) and particle.get_pdg_code() not in 
                              self['process']['forbidden_particles'])]
-            hehe=[self['process']['model'].get_particle(1),]
+            #hehe=[self['process']['model'].get_particle(1),]
             for part in hehe:
                 if part.get_pdg_code() not in self.lcutpartemployed:
                     # First create the two L-cut particles to add to the process.
