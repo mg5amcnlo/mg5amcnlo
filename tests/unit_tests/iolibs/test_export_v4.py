@@ -3405,6 +3405,35 @@ DATA(icolamp(i,41,1),i=1,6)/.false.,.false.,.true.,.false.,.false.,.false./
 DATA(icolamp(i,42,1),i=1,6)/.false.,.false.,.false.,.false.,.false.,.true./"""
 )
 
+        # Test colors.f output
+        writer = writers.FortranWriter(self.give_pos('test'))
+        exporter.write_colors_file(writer, matrix_element)
+        writer.close()
+        #print open(self.give_pos('test')).read()
+
+        self.assertFileContains('test',
+        """      FUNCTION GET_COLOR(IPDG)
+      IMPLICIT NONE
+      INTEGER GET_COLOR, IPDG
+
+      IF(IPDG.EQ.-2)THEN
+        GET_COLOR=-3
+        RETURN
+      ELSE IF(IPDG.EQ.2)THEN
+        GET_COLOR=3
+        RETURN
+      ELSE IF(IPDG.EQ.21)THEN
+        GET_COLOR=8
+        RETURN
+      ELSE
+        WRITE(*,*)'Error: No color given for pdg ',IPDG
+        GET_COLOR=0
+        RETURN
+      ENDIF
+      END
+
+""")
+
         # Test leshouche.inc output
         writer = writers.FortranWriter(self.give_pos('leshouche'))
         exporter.write_leshouche_file(writer, matrix_element)

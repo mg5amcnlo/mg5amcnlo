@@ -14,7 +14,7 @@ c     resmap gives potential resonances for diagrams
       double precision pt2ijcl(nexternal),zcl(nexternal),mt2ij(nexternal),mt2last
       double precision pcl(0:4,n_max_cl) ! 4 is mass**2
       integer imocl(nexternal), idacl(nexternal,2), igraphs(0:n_max_cg)
-      integer ipdgcl(maxsproc,n_max_cl,n_max_cg)
+      integer ipdgcl(n_max_cl,n_max_cg,maxsproc)
       logical clustered
       common/cl_val/pcl,pt2ijcl,zcl,mt2ij,mt2last,imocl,idacl,igraphs,ipdgcl,
      &    clustered

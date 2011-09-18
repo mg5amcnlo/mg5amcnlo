@@ -260,29 +260,29 @@ c     Set pdg code for propagator
                   do l=1,2
                      do iproc=1,maxsproc
                      if(sprop(iproc,k,ignum).ne.0)then
-                        ipdgcl(iproc,icmp(l),ignum)=sprop(iproc,k,ignum)
+                        ipdgcl(icmp(l),ignum,iproc)=sprop(iproc,k,ignum)
 c                       If this is radiation off heavy FS particle, set heavyrad to true
-                        if(isjet(ipdgcl(iproc,ipids(i,1,ipnum),ignum)).and.
-     $                       .not.isjet(ipdgcl(iproc,ipids(j,1,ipnum),ignum)).and.
-     $                       ipdgcl(iproc,ipids(j,1,ipnum),ignum).eq.sprop(iproc,k,ignum).or.
-     $                       isjet(ipdgcl(iproc,ipids(j,1,ipnum),ignum)).and.
-     $                       .not.isjet(ipdgcl(iproc,ipids(i,1,ipnum),ignum)).and.
-     $                       ipdgcl(iproc,ipids(i,1,ipnum),ignum).eq.sprop(iproc,k,ignum))then
+                        if(isjet(ipdgcl(ipids(i,1,ipnum),ignum,iproc)).and.
+     $                       .not.isjet(ipdgcl(ipids(j,1,ipnum),ignum,iproc)).and.
+     $                       ipdgcl(ipids(j,1,ipnum),ignum,iproc).eq.sprop(iproc,k,ignum).or.
+     $                       isjet(ipdgcl(ipids(j,1,ipnum),ignum,iproc)).and.
+     $                       .not.isjet(ipdgcl(ipids(i,1,ipnum),ignum,iproc)).and.
+     $                       ipdgcl(ipids(i,1,ipnum),ignum,iproc).eq.sprop(iproc,k,ignum))then
                            heavyrad(ignum) = .true.
                         endif
                      else if(tprid(k,ignum).ne.0)then
-                        ipdgcl(iproc,icmp(l),ignum)=tprid(k,ignum)
+                        ipdgcl(icmp(l),ignum,iproc)=tprid(k,ignum)
                      else if(ipnum.eq.3)then
-                        ipdgcl(iproc,icmp(l),ignum)=ipdgcl(iproc,2,ignum)
+                        ipdgcl(icmp(l),ignum,iproc)=ipdgcl(2,ignum,iproc)
                      else
-                        ipdgcl(iproc,icmp(l),ignum)=0
+                        ipdgcl(icmp(l),ignum,iproc)=0
                         cycle
                      endif
                      if(btest(mlevel,4))
      $                    write(*,*) 'add table entry for (',ipids(i,1,ipnum),
      &                    ',',ipids(j,1,ipnum),',',icmp(l),')',
      $                    'proc: ',iproc,
-     $                    ', pdg: ',ipdgcl(iproc,icmp(l),ignum)
+     $                    ', pdg: ',ipdgcl(icmp(l),ignum,iproc)
                      call filprp(iproc,ignum,icmp(l))
 c               Insert graph in list of propagators
                      if(pwidth(k,ignum).gt.ZERO) then
@@ -374,7 +374,7 @@ c         write (*,*) ' at graph ',i
             ipids(j,3,nexternal)=0
             ipids(j,4,nexternal)=0
             do iproc=1,maxsproc
-               ipdgcl(iproc,ipids(j,1,nexternal),i)=idup(j,1,iproc)
+               ipdgcl(ipids(j,1,nexternal),i,iproc)=idup(j,1,iproc)
             enddo
          enddo
          inpids=nexternal

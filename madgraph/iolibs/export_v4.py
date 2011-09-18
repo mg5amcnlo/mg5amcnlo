@@ -1006,6 +1006,10 @@ class ProcessExporterFortranME(ProcessExporterFortran):
                              mapconfigs,
                              matrix_element)
 
+        filename = 'get_color.f'
+        self.write_colors_file(writers.FortranWriter(filename),
+                               matrix_element)
+
         filename = 'decayBW.inc'
         self.write_decayBW_file(writers.FortranWriter(filename),
                            s_and_t_channels)
@@ -1404,6 +1408,57 @@ class ProcessExporterFortranME(ProcessExporterFortran):
                          len(mapconfigs)))
 
 
+        # Write the file
+        writer.writelines(lines)
+
+        return True
+
+    #===========================================================================
+    # write_coloramps_file
+    #===========================================================================
+    def write_colors_file(self, writer, matrix_elements):
+        """Write the get_color.f file for MadEvent, which returns color
+        for all particles used in the matrix element."""
+
+        if isinstance(matrix_elements, helas_objects.HelasMatrixElement):
+            matrix_elements = [matrix_elements]
+
+        model = matrix_elements[0].get('processes')[0].get('model')
+
+        wf_ids = set(sum([sum([[wf.get('pdg_code') for wf in \
+                                d.get('wavefunctions')] for d in \
+                               me.get('diagrams')], []) for me in
+                          matrix_elements], []))
+
+        leg_ids = set(sum([sum([[l.get('id') for l in \
+                                 p.get_legs_with_decays()] for p in \
+                                me.get('processes')], []) for me in
+                           matrix_elements], []))
+
+        particle_ids = sorted(list(wf_ids.union(leg_ids)))
+
+        lines = """function get_color(ipdg)
+        implicit none
+        integer get_color, ipdg
+
+        if(ipdg.eq.%d)then
+        get_color=%d
+        return
+        """ % (particle_ids[0], model.get_particle(particle_ids[0]).get_color())
+
+        for part_id in particle_ids[1:]:
+            lines += """else if(ipdg.eq.%d)then
+            get_color=%d
+            return
+            """ % (part_id, model.get_particle(part_id).get_color())
+        lines += """else
+        write(*,*)'Error: No color given for pdg ',ipdg
+        get_color=0        
+        return
+        endif
+        end
+        """
+        
         # Write the file
         writer.writelines(lines)
 
@@ -2066,6 +2121,10 @@ class ProcessExporterFortranMEGroup(ProcessExporterFortranME):
                                    subproc_diagrams_for_config,
                                    maxflows,
                                    matrix_elements)
+
+        filename = 'get_color.f'
+        self.write_colors_file(writers.FortranWriter(filename),
+                               matrix_elements)
 
         filename = 'config_subproc_map.inc'
         self.write_config_subproc_map_file(writers.FortranWriter(filename),

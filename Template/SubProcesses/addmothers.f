@@ -18,6 +18,7 @@
 
       integer isym(nexternal,99), jsym
       integer i,j,k,ida(2),ns,nres,ires,icl,ito2,idenpart,nc,ic
+      integer mo_color,da_color(2),itmp
       integer ito(-nexternal+3:nexternal),iseed,maxcolor
       integer icolalt(2,-nexternal+3:2*nexternal-3)
       double precision qicl(-nexternal+3:2*nexternal-3), factpm
@@ -66,8 +67,9 @@ c      integer ncols,ncolflow(maxamps),ncolalt(maxamps),icorg
 c      common/to_colstats/ncols,ncolflow,ncolalt,icorg
 
       double precision pt
+      integer get_color
       real ran1
-      external pt,ran1
+      external pt,ran1,get_color
 
       if (first_time) then
          include 'props.inc'
@@ -202,37 +204,147 @@ c     Else remove either this resonance or daughter, which is closer to mass she
              endif
           endif
 c       Set color info for all s-channels
-c       Fist set "safe" color info
-          if(icolalt(1,ida(1))+icolalt(1,ida(2))-
-     $       icolalt(2,ida(1))-icolalt(2,ida(2)).eq.0) then ! color singlet
-            icolalt(1,i) = 0
-            icolalt(2,i) = 0            
-          elseif(icolalt(1,ida(1))-icolalt(2,ida(2)).eq.0) then ! 3bar 3 -> 8 or 8 8 -> 8
-            icolalt(1,i) = icolalt(1,ida(2))
-            icolalt(2,i) = icolalt(2,ida(1))
-          else if(icolalt(1,ida(2))-icolalt(2,ida(1)).eq.0) then ! 3 3bar -> 8 or 8 8 -> 8
-            icolalt(1,i) = icolalt(1,ida(1))
-            icolalt(2,i) = icolalt(2,ida(2))
-          else if(icolalt(1,ida(1)).eq.0.and.icolalt(2,ida(1)).eq.0) then ! 1 3/8 -> 3/8
-            icolalt(1,i) = icolalt(1,ida(2))
-            icolalt(2,i) = icolalt(2,ida(2))
-          else if(icolalt(1,ida(2)).eq.0.and.icolalt(2,ida(2)).eq.0) then ! 3/8 1 -> 3/8
-            icolalt(1,i) = icolalt(1,ida(1))
-            icolalt(2,i) = icolalt(2,ida(1))
-          else if(icolalt(1,ida(2)).gt.0.and.icolalt(1,ida(1)).gt.0.and.
-     $           icolalt(2,ida(2)).le.0.and.icolalt(2,ida(1)).le.0) then         ! sextet
-            maxcolor=maxcolor+1
-            icolalt(1,i) = maxcolor
-            icolalt(2,i) = 0
-          else if(icolalt(2,ida(2)).gt.0.and.icolalt(2,ida(1)).gt.0.and.
-     $           icolalt(1,ida(2)).le.0.and.icolalt(1,ida(1)).le.0) then         ! antisextet
-            maxcolor=maxcolor+1
-            icolalt(1,i) = 0
-            icolalt(2,i) = maxcolor
-          else if(jpart(6,i).ge.3) then ! Don't need to match
-            icolalt(1,i) = icolalt(1,ida(1))+icolalt(1,ida(2))
-            icolalt(2,i) = icolalt(2,ida(1))+icolalt(2,ida(2))
+          mo_color = get_color(jpart(1,i))
+          da_color(1) = get_color(jpart(1,ida(1)))
+          da_color(2) = get_color(jpart(1,ida(2)))
+          if(da_color(2).lt.da_color(1))then
+c            Order daughters according to color
+             itmp=ida(1)
+             ida(1)=ida(2)
+             ida(2)=itmp
+             itmp=da_color(1)
+             da_color(1)=da_color(2)
+             da_color(2)=itmp
+          endif
+c          print *,'graph: ',iconfig
+c          print *,'Resonance: ',i,' daughters ',ida(1),ida(2),
+c     $         ' ids ',jpart(1,i),jpart(1,ida(1)),jpart(1,ida(2)),
+c     $         ' colors ',mo_color,da_color(1),da_color(2)
+          if(mo_color.eq.1) then ! color singlet
+             icolalt(1,i) = 0
+             icolalt(2,i) = 0
+          elseif(mo_color.eq.-3) then ! color anti-triplet
+                icolalt(1,i) = 0
+             if(da_color(1).eq.-3.and.da_color(2).eq.1)then
+                icolalt(2,i) = icolalt(2,ida(1))
+             elseif(da_color(1).eq.-3.and.da_color(2).eq.8)then
+                icolalt(2,i) = icolalt(2,ida(2))
+             elseif(da_color(1).eq.-6.and.da_color(2).eq.3)then
+                if(-icolalt(1,ida(1)).eq.icolalt(1,ida(2)))then
+                   icolalt(2,i) = icolalt(2,ida(1))
+                else
+                   icolalt(2,i) = -icolalt(1,ida(1))
+                endif
+             elseif(da_color(1).eq.3.and.da_color(2).eq.3)then
+                maxcolor=maxcolor+1
+                icolalt(2,i) = maxcolor
+             else
+                write(*,*)'Error: Color combination ',da_color(1),da_color(2),
+     $               '->',mo_color,' not implemented in addmothers.f'
+                icolalt(1,i) = 0
+                icolalt(2,i) = 0
+             endif
+          elseif(mo_color.eq.3) then ! color triplet
+                icolalt(2,i) = 0
+             if(da_color(1).eq.1.and.da_color(2).eq.3)then
+                icolalt(1,i) = icolalt(1,ida(2))
+             elseif(da_color(1).eq.3.and.da_color(2).eq.8)then
+                icolalt(1,i) = icolalt(1,ida(2))
+             elseif(da_color(1).eq.-3.and.da_color(2).eq.6)then
+                if(icolalt(2,ida(1)).eq.icolalt(1,ida(2)))then
+                   icolalt(1,i) = -icolalt(2,ida(2))
+                else
+                   icolalt(1,i) = icolalt(1,ida(2))
+                endif
+             elseif(da_color(1).eq.-3.and.da_color(2).eq.-3)then
+                maxcolor=maxcolor+1
+                icolalt(1,i) = maxcolor
+             else
+                write(*,*)'Error: Color combination ',da_color(1),da_color(2),
+     $               '->',mo_color,' not implemented in addmothers.f'
+                icolalt(1,i) = 0
+                icolalt(2,i) = 0
+             endif
+          elseif(mo_color.eq.-6) then ! color anti-sextet
+             if(da_color(1).eq.-6.and.da_color(2).eq.1)then
+                icolalt(1,i) = icolalt(1,ida(1))
+                icolalt(2,i) = icolalt(2,ida(1))
+             elseif(da_color(1).eq.-6.and.da_color(2).eq.8)then
+                if(icolalt(2,ida(1)).eq.icolalt(1,ida(2)))then
+                   icolalt(1,i) = -icolalt(1,ida(1))
+                   icolalt(2,i) = icolalt(2,ida(2))
+                else
+                   icolalt(1,i) = icolalt(2,ida(2))
+                   icolalt(2,i) = icolalt(2,ida(1))
+                endif
+             elseif(da_color(1).eq.-3.and.da_color(2).eq.-3)then
+                icolalt(1,i) = -icolalt(2,ida(1))
+                icolalt(2,i) = icolalt(2,ida(2))
+             else
+                write(*,*)'Error: Color combination ',da_color(1),da_color(2),
+     $               '->',mo_color,' not implemented in addmothers.f'
+                icolalt(1,i) = 0
+                icolalt(2,i) = 0
+             endif
+          elseif(mo_color.eq.6) then ! color sextet
+             if(da_color(1).eq.1.and.da_color(2).eq.6)then
+                icolalt(1,i) = icolalt(1,ida(2))
+                icolalt(2,i) = icolalt(2,ida(2))
+             elseif(da_color(1).eq.6.and.da_color(2).eq.8)then
+                if(icolalt(1,ida(1)).eq.icolalt(2,ida(2)))then
+                   icolalt(1,i) = icolalt(1,ida(2))
+                   icolalt(2,i) = icolalt(2,ida(1))
+                else
+                   icolalt(1,i) = icolalt(1,ida(1))
+                   icolalt(2,i) = -icolalt(1,ida(2))
+                endif
+             elseif(da_color(1).eq.3.and.da_color(2).eq.3)then
+                icolalt(1,i) = icolalt(1,ida(1))
+                icolalt(2,i) = -icolalt(1,ida(2))
+             else
+                write(*,*)'Error: Color combination ',da_color(1),da_color(2),
+     $               '->',mo_color,' not implemented in addmothers.f'
+                icolalt(1,i) = 0
+                icolalt(2,i) = 0
+             endif
+          elseif(mo_color.eq.8) then ! color octet
+             if(da_color(1).eq.-3.and.da_color(2).eq.3)then
+                icolalt(1,i) = icolalt(1,ida(2))
+                icolalt(2,i) = icolalt(2,ida(1))             
+             elseif(da_color(1).eq.1.and.da_color(2).eq.8)then
+                icolalt(1,i) = icolalt(1,ida(2))
+                icolalt(2,i) = icolalt(2,ida(2))             
+             elseif(da_color(1).eq.8.and.da_color(2).eq.8)then
+                if(icolalt(1,ida(1)).eq.icolalt(2,ida(2)))then
+                   icolalt(1,i) = icolalt(1,ida(2))
+                   icolalt(2,i) = icolalt(2,ida(1))
+                else
+                   icolalt(1,i) = icolalt(1,ida(1))
+                   icolalt(2,i) = icolalt(2,ida(2))
+                endif
+             elseif(da_color(1).eq.-6.and.da_color(2).eq.6)then
+                if(-icolalt(1,ida(1)).eq.icolalt(1,ida(2)))then
+                   icolalt(1,i) = -icolalt(1,ida(2))
+                   icolalt(2,i) = icolalt(2,ida(1))
+                elseif(icolalt(1,ida(1)).eq.icolalt(2,ida(2)))then
+                   icolalt(1,i) = icolalt(1,ida(2))
+                   icolalt(2,i) = icolalt(2,ida(1))
+                elseif(icolalt(2,ida(1)).eq.icolalt(1,ida(2)))then
+                   icolalt(1,i) = -icolalt(2,ida(2))
+                   icolalt(2,i) = -icolalt(1,ida(1))
+                else
+                   icolalt(1,i) = icolalt(1,ida(2))
+                   icolalt(2,i) = -icolalt(1,ida(1))
+                endif
+             else
+                write(*,*)'Error: Color combination ',da_color(1),da_color(2),
+     $               '->',mo_color,' not implemented in addmothers.f'
+                icolalt(1,i) = 0
+                icolalt(2,i) = 0
+             endif
           else
+             write(*,*)'Error: Color combination ',da_color(1),da_color(2),
+     $            '->',mo_color,' not implemented in addmothers.f'
 c         Erraneous color assignment for propagator - set color to 0
             icolalt(1,i) = 0
             icolalt(2,i) = 0
