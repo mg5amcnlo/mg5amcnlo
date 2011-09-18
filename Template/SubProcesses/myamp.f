@@ -110,7 +110,7 @@ c     Local
 c
       double precision xp(0:3,-nexternal:nexternal)
       double precision mpole(-nexternal:0),shat,tsgn
-      integer i,j,iconfig
+      integer i,j,iconfig,iproc
 
       double precision pmass(-nexternal:0,lmaxconfigs)
       double precision pwidth(-nexternal:0,lmaxconfigs)
@@ -190,7 +190,15 @@ c-----
       enddo
       nbw = 0
       tsgn    = +1d0
-      do i=-1,-(nexternal-3),-1              !Loop over propagators
+c     Find non-zero process number
+      do iproc=1,maxsproc
+         if(sprop(iproc,-1,iconfig).ne.0) goto 10
+      enddo
+ 10   continue
+c     If no non-zero sprop, set iproc to 1
+      if(iproc.gt.maxsproc) iproc=1
+c     Start loop over propagators
+      do i=-1,-(nexternal-3),-1
          onbw(i) = .false.
          if (iforest(1,i,iconfig) .eq. 1) tsgn=-1d0
          do j=0,3
@@ -215,10 +223,10 @@ c           Only allow onshell if no "decay" to identical particle
               do j=1,2
                 ida(j)=iforest(j,i,iconfig)
                 if(ida(j).lt.0) then
-                   if(sprop(1,i,iconfig).eq.sprop(1,ida(j),iconfig))
+                   if(sprop(iproc,i,iconfig).eq.sprop(iproc,ida(j),iconfig))
      $                  idenpart=ida(j)
                 elseif (ida(j).gt.0) then
-                   if(sprop(1,i,iconfig).eq.IDUP(ida(j),1,1))
+                   if(sprop(iproc,i,iconfig).eq.IDUP(ida(j),1,1))
      $                  idenpart=ida(j)
                 endif
               enddo
@@ -263,7 +271,6 @@ c            write(*,*) 'cut_bw: ',nbw,xmass,onshell,lbw(nbw),cut_bw
                return
             endif
          endif
-
       enddo
       end
 
@@ -293,7 +300,7 @@ c
       double precision tsgn, xo, a
       double precision x1,x2,xk(nexternal)
       double precision dr,mtot,etot,stot,xqfact
-      integer i, iconfig, l1, l2, j, nt, nbw
+      integer i, iconfig, l1, l2, j, nt, nbw, iproc
       integer iden_part(-max_branch:-1)
 
       double precision pmass(-nexternal:0,lmaxconfigs)
@@ -377,30 +384,39 @@ c     Reset variables
          spole(i)=0
          swidth(i)=0
       enddo
-      do i=-1,-(nexternal-3),-1              !Find all the propagotors
+c     Find non-zero process number
+      do iproc=1,maxsproc
+         if(sprop(iproc,-1,iconfig).gt.0) goto 10
+      enddo
+ 10   continue
+c     If no non-zero sprop, set iproc to 1
+      if(iproc.ge.maxsproc.and.sprop(maxsproc,-1,iconfig).eq.0)
+     $     iproc=1
+c     Start loop over propagators
+      do i=-1,-(nexternal-3),-1
 c     JA 3/31/11 Keep track of identical particles (i.e., radiation vertices)
 c     by tracing the particle identity from the external particle.
          if(iforest(1,i,iconfig).gt.0) then
-             if (sprop(1,i,iconfig).eq.idup(iforest(1,i,iconfig),1,1))
-     $        iden_part(i) = sprop(1,i,iconfig)
+             if (sprop(iproc,i,iconfig).eq.idup(iforest(1,i,iconfig),1,1))
+     $        iden_part(i) = sprop(iproc,i,iconfig)
           endif
          if(iforest(2,i,iconfig).gt.0) then
-            if(sprop(1,i,iconfig).eq.idup(iforest(2,i,iconfig),1,1))
-     $           iden_part(i) = sprop(1,i,iconfig)
+            if(sprop(iproc,i,iconfig).eq.idup(iforest(2,i,iconfig),1,1))
+     $           iden_part(i) = sprop(iproc,i,iconfig)
          endif
          if(iforest(1,i,iconfig).lt.0) then
             if((iden_part(iforest(1,i,iconfig)).ne.0.and.
-     $        sprop(1,i,iconfig).eq.iden_part(iforest(1,i,iconfig)) .or.
+     $        sprop(iproc,i,iconfig).eq.iden_part(iforest(1,i,iconfig)) .or.
      $        gforcebw(iforest(1,i,iconfig),iconfig).and.
-     $        sprop(1,i,iconfig).eq.sprop(1,iforest(1,i,iconfig),iconfig)))
-     $       iden_part(i) = sprop(1,i,iconfig)
+     $        sprop(iproc,i,iconfig).eq.sprop(iproc,iforest(1,i,iconfig),iconfig)))
+     $       iden_part(i) = sprop(iproc,i,iconfig)
          endif
          if(iforest(2,i,iconfig).lt.0) then
             if((iden_part(iforest(2,i,iconfig)).ne.0.and.
-     $        sprop(1,i,iconfig).eq.iden_part(iforest(2,i,iconfig)).or.
+     $        sprop(iproc,i,iconfig).eq.iden_part(iforest(2,i,iconfig)).or.
      $        gforcebw(iforest(2,i,iconfig),iconfig).and.
-     $        sprop(1,i,iconfig).eq.sprop(1,iforest(2,i,iconfig),iconfig)))
-     $           iden_part(i) = sprop(1,i,iconfig)
+     $        sprop(iproc,i,iconfig).eq.sprop(iproc,iforest(2,i,iconfig),iconfig)))
+     $           iden_part(i) = sprop(iproc,i,iconfig)
          endif
          if (iforest(1,i,iconfig) .eq. 1) tsgn=-1d0
          if (tsgn .eq. 1d0) then                         !s channel

@@ -123,8 +123,8 @@ c      print *,'Chose color flow ',ic
          if(ic.gt.0) then
             icolalt(1,isym(i,jsym))=icolup(1,i,ic,numproc)
             icolalt(2,isym(i,jsym))=icolup(2,i,ic,numproc)
-            if (icolup(1,i,ic, numproc).gt.maxcolor) maxcolor=icolup(1,i,ic, numproc)
-            if (icolup(2,i,ic, numproc).gt.maxcolor) maxcolor=icolup(2,i,ic, numproc)
+            if (abs(icolup(1,i,ic, numproc)).gt.maxcolor) maxcolor=icolup(1,i,ic, numproc)
+            if (abs(icolup(2,i,ic, numproc)).gt.maxcolor) maxcolor=icolup(2,i,ic, numproc)
          endif
       enddo
 
@@ -184,25 +184,6 @@ c     $       abs(pb(4,i)-pmass(i,iconfig)).gt.5d0*pwidth(i,iconfig)) then
 c            jpart(6,i)=3
 c            nres=nres-1
 c          endif
-c     Remove propagator if "decay" to same particle (i.e. radiation of g/gamma/higgs)
-          if(jpart(6,i).eq.2 .and. (jpart(1,i).eq.jpart(1,ida(1)).or.
-     $         jpart(1,i).eq.jpart(1,ida(2)))) then
-             if(jpart(1,i).eq.jpart(1,ida(1))) idenpart=ida(1)
-             if(jpart(1,i).eq.jpart(1,ida(2))) idenpart=ida(2)
-c     Always remove if daughter final-state or already removed for this reason
-             if(idenpart.gt.0.or.jpart(6,idenpart).eq.4) then
-                jpart(6,i)=4
-                nres=nres-1
-c     Else remove either this resonance or daughter, which is closer to mass shell
-             elseif(abs(pb(4,i)-pmass(i,iconfig)).gt.
-     $               abs(pb(4,idenpart)-pmass(i,iconfig))) then
-                jpart(6,i)=4
-                nres=nres-1
-             else if(jpart(6,idenpart).eq.2) then
-                jpart(6,idenpart)=4
-                nres=nres-1
-             endif
-          endif
 c       Set color info for all s-channels
           mo_color = get_color(jpart(1,i))
           da_color(1) = get_color(jpart(1,ida(1)))
@@ -271,10 +252,10 @@ c     $         ' colors ',mo_color,da_color(1),da_color(2)
                 icolalt(2,i) = icolalt(2,ida(1))
              elseif(da_color(1).eq.-6.and.da_color(2).eq.8)then
                 if(icolalt(2,ida(1)).eq.icolalt(1,ida(2)))then
-                   icolalt(1,i) = -icolalt(1,ida(1))
+                   icolalt(1,i) = icolalt(1,ida(1))
                    icolalt(2,i) = icolalt(2,ida(2))
                 else
-                   icolalt(1,i) = icolalt(2,ida(2))
+                   icolalt(1,i) = -icolalt(2,ida(2))
                    icolalt(2,i) = icolalt(2,ida(1))
                 endif
              elseif(da_color(1).eq.-3.and.da_color(2).eq.-3)then
