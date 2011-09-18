@@ -1,7 +1,7 @@
 Update notes for MadGraph 5 (in reverse time order)
 
-1.3.17 (16/09/11) JA: Fixed pdf reweighting for matching, which due to a mistake
-                      had never been activated
+1.3.17 (18/09/11) JA: Use model information to determine color of particles
+                      for reweighting and propagator color info.
                   JA: Enable proper 4-flavor matching (such as gg>hbb~+jets)
                       Note that you need the Pythia/PGS package v. 2.1.9 or 
                       later to use with 4F matching.
@@ -9,6 +9,8 @@ Update notes for MadGraph 5 (in reverse time order)
                       new scale treatment (mu_F for pp>hbb~ is (pT_b^max m_Th)),
                       no clustering of gluons to final-state massive particles
                       in MadEvent.
+                  JA: Fixed pdf reweighting for matching, which due to a mistake
+                      had never been activated
                   JA: Improved phase space integration presetting further by 
                       taking into account special cuts like xpt, ht etc.
 		  JA: Ensure that factorization scale settings and matching works
