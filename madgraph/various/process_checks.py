@@ -256,7 +256,7 @@ class MatrixElementEvaluator(object):
         masses = rambo.FortranList(nfinal)
         for i in range(nfinal):
             masses[i+1] = mass[nincoming + i]
-
+        
         if nincoming == 1:
 
             # Momenta for the incoming particle

@@ -1445,7 +1445,7 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
     # Options and formats available
     _display_opts = ['particles', 'interactions', 'processes', 'diagrams', 
                      'diagrams_text', 'multiparticles', 'couplings', 'lorentz', 
-                     'checks', 'parameters', 'options', 'variable']
+                     'checks', 'parameters', 'options', 'coupling_order','variable']
     _add_opts = ['process']
     _save_opts = ['model', 'processes']
     _tutorial_opts = ['start', 'stop']
@@ -1694,13 +1694,31 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
             print 'Multiparticle labels:'
             for key in self._multiparticles:
                 print self.multiparticle_string(key)
-        
+                
+        elif args[0] == 'coupling_order':
+            hierarchy = self._curr_model.get_order_hierarchy().items()
+            def order(first, second):
+                if first[1] < second[1]:
+                    return -1
+                else:
+                    return 1
+            hierarchy.sort(order)
+            for order in hierarchy:
+                print ' %s : weight = %s' % order 
+            
         elif args[0] == 'couplings' and len(args) == 1:
-            couplings = set()
-            for interaction in self._curr_model['interactions']:
-                for order in interaction['orders'].keys():
-                    couplings.add(order)
-            print ' / '.join(couplings)
+            if self._model_v4_path:
+                print 'No couplings information available in V4 model'
+                return
+            text = ''
+            try:
+                ufomodel = ufomodels.load_model(self._curr_model.get('name'))
+            except:
+                raise self.InvalidCmd, 'no couplings %s in current model' % args[1]
+            for coup in ufomodel.all_couplings:
+                order = ', '.join(['%s=%s' %val for val in coup.order.items()])
+                text += '%s = %s\t( %s)\n' % (coup.name, coup.value, order)
+            pydoc.pager(text)
             
         elif args[0] == 'couplings':
             if self._model_v4_path:
@@ -1756,8 +1774,8 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
 
             pydoc.pager(outstr)            
         
-        elif args[0] in  ["options", "mg5_variable"]:
-            super(MadGraphCmd, self).do_display(self,line)
+        elif args[0] in  ["options", "variable"]:
+            super(MadGraphCmd, self).do_display(line)
                 
             
     def multiparticle_string(self, key):

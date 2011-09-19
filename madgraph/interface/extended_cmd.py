@@ -18,10 +18,16 @@
 import cmd
 import logging
 import os
+import pydoc
 import signal
 import traceback
 logger = logging.getLogger('cmdprint') # for stdout
 logger_stderr = logging.getLogger('fatalerror') # for stderr
+
+try:
+    import madgraph.iolibs.misc as misc
+except:
+    import internal.misc as misc
 
 
 class TimeOutError(Exception):
@@ -168,8 +174,6 @@ class Cmd(cmd.Cmd):
             self.nice_error_handling(error, line)
             if self.mother:
                 self.do_quit('')
-            else:
-                print 'NO MOTHER'
         except KeyboardInterrupt:
             print self.keyboard_stop_msg
         

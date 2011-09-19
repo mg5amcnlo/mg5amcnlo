@@ -19,12 +19,16 @@ Update notes for MadGraph 5 (in reverse time order)
                   OM: Add the possibility to force which fortran compiler will 
                       be use. Either via the configuration file or via the set 
                       command.
-                  OM: Add two options for display command:
+                  OM: Add three options for display command and modify a fourth one:
                       a) display options: return the current option value. 
                         i.e. those set via the set command and/or via the 
                         configuration file
-                      b) display mg5_variables NAME: return the current string 
-                        representation of NAME and/or self.NAME.  
+                      b) display variable NAME: return the current string 
+                        representation of NAME and/or self.NAME .
+                      c) display coupling_order: return the coupling order with 
+		        their associate weight (for automatic order restriction)
+		      d) display couplings returns now the list of all couplings
+		        with the associate formula 
 	          OM: New Python script for the creation of the crossx.html page
                       Requiring less disk access for the generation of the file.
 

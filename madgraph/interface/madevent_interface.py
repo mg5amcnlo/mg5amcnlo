@@ -1141,7 +1141,7 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
 
         if self.cluster_mode:
             logger.info('Creating Jobs')
-
+        self.update_status('Refine results to %s' % precision, level=None)
         logger.info("Using random number seed offset = %s" % self.random)
 
         for subdir in open(pjoin(self.me_dir, 'SubProcesses', 'subproc.mg')):
