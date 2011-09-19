@@ -798,6 +798,7 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
 
         if self.web:
             os.system('touch Online')
+
         
         # load the current status of the directory
         if os.path.exists(pjoin(self.me_dir,'HTML','results.pkl')):
@@ -809,7 +810,8 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
         self.results.def_web_mode(self.web)
         
         self.configured = 0 # time for reading the card
-
+        self._options = {} # for compatibility with extended_cmd
+        
     ############################################################################    
     def split_arg(self, line):
         """split argument and remove run_options"""
@@ -1881,8 +1883,13 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
             os.remove(pjoin(self.me_dir,'RunWeb'))
         except:
             pass
-        self.update_status('', level=None)
-        self.store_result()
+        try:
+            self.update_status('', level=None)
+            self.store_result()
+        except:
+            # If nothing runs they they are no result to update
+            pass
+
         return super(MadEventCmd, self).do_quit(line)
     
     # Aliases

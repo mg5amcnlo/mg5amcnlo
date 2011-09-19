@@ -309,6 +309,10 @@ class Cmd(cmd.Cmd):
             # execute the line
             if line:
                 self.exec_cmd(line)
+        # If a child was open close it
+        if self.child:
+            self.child.exec_cmd('quit')        
+                
         self.timeout = old_time_out
         return
     
