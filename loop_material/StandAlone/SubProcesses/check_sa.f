@@ -13,6 +13,10 @@
 
       LOGICAL READPS
       PARAMETER (READPS = .FALSE.)
+
+      INTEGER NPSPOINTS
+      PARAMETER (NPSPOINTS = 100)
+
 !     
 !     INCLUDE FILES
 !     
@@ -70,6 +74,8 @@
 
       call printout()
 
+      do K=1,NPSPOINTS
+
       if(READPS) then
         open(967, file="PS.input", err=976, status='OLD', action='READ')
         do i=1,NExternal
@@ -92,6 +98,7 @@
 !
 !        write the information on the four momenta 
 !
+      if (K.eq.NPSPOINTS) then
       write (*,*)
       write (*,*) " Phase space point:"
       write (*,*)
@@ -124,6 +131,11 @@
       write (*,*) "2eps / (born*ao2pi)   = ", MATELEM(3)/BORNELEM/AO2PI
       write (*,*) "---------------------------------------------------",
      &"--------------------------"
+
+      else
+          write (*,*) "PS Point #",K," done."
+      endif
+      enddo
 
 !!
 !!      Copy down here (or read in) the four momenta as a string. 
@@ -191,7 +203,7 @@ C         LOCAL
          mom=dsqrt(mom)
          e1=DSQRT(mom**2+m1**2)
          e2=DSQRT(mom**2+m2**2)
-         write (*,*) e1+e2,mom
+c         write (*,*) e1+e2,mom
 
          if(nincoming.eq.2) then
 
