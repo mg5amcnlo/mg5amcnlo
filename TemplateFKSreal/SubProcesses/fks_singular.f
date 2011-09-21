@@ -1290,6 +1290,24 @@ c then the t-channel
 
 
 
+      subroutine get_mirror_rescale(i_cms,rescale)
+      implicit none
+      double precision rescale, sumprob, selproc(2) 
+      double precision dlum
+      integer i_cms, imirror, imirror_bak
+      common/cmirror/imirror
+      imirror_bak=imirror
+      sumprob=0d0
+      do imirror=1,2
+        call set_cms_stuff(i_cms)
+        selproc(imirror)=dlum()
+        sumprob=sumprob+selproc(imirror)
+      enddo
+      imirror=imirror_bak
+      rescale=sumprob/selproc(imirror)
+      return
+      end
+
 
       double precision function dsig(pp,wgt,vegaswgt)
 c Here are the subtraction terms, the Sij function, 
@@ -1564,8 +1582,6 @@ c Compute pdf weight for the process and its mirror configuration
           call set_cms_stuff(i_cms)
           selproc(k)=dlum()
           sumprob=sumprob+selproc(k)
-c         if mirroring, then flip back the beams          
-          if (imirror.eq.2) call FlipBeams()
         endif
       enddo
 
@@ -1573,9 +1589,14 @@ c Choose between process and mirror
       r=ran2()*sumprob
       imirror=1
       if (r.gt.selproc(1)) imirror=2
-      rescale_mir=sumprob/selproc(imirror)
 c If mirror process rotate (all) the momenta around the x-axis
       if (imirror.eq.2) then
+        p_i_fks_ev(2)=-p_i_fks_ev(2)
+        p_i_fks_ev(3)=-p_i_fks_ev(3)
+        do i=-2,2
+          p_i_fks_cnt(2,i)=-p_i_fks_cnt(2,i)
+          p_i_fks_cnt(3,i)=-p_i_fks_cnt(3,i)
+        enddo
         do k=1,nexternal
           pp(2,k)=-pp(2,k)
           pp(3,k)=-pp(3,k)
@@ -1594,6 +1615,7 @@ c If mirror process rotate (all) the momenta around the x-axis
       if (abrv.eq.'born' .or. abrv(1:2).eq.'vi') goto 540
 c Real contribution:
 c Set the ybst_til_tolab before applying the cuts. 
+      call get_mirror_rescale(mohdr, rescale_mir)
       call set_cms_stuff(mohdr)
       if (passcuts(pp,rwgt)) then
         call set_alphaS(pp)
@@ -1602,7 +1624,7 @@ c Set the ybst_til_tolab before applying the cuts.
         s_ev = fks_Sij(pp,i_fks,j_fks,xi_i_fks_ev,y_ij_fks_ev)
         if(s_ev.gt.0.d0)then
            call sreal(pp,xi_i_fks_ev,y_ij_fks_ev,fx_ev)
-           xlum_ev = dlum()
+           xlum_ev = dlum()*rescale_mir
            ev_wgt = fx_ev*xlum_ev*s_ev*ffact*wgt*prefact*rwgt
         else
 c If mirroring and dlum has not been called, we need to flip back the
@@ -1630,6 +1652,7 @@ c
 c Collinear subtraction term:
       if( y_ij_fks_ev.gt.1d0-deltaS .and.
      #    pmass(j_fks).eq.0.d0 )then
+         call get_mirror_rescale(ione, rescale_mir)
          call set_cms_stuff(ione)
          s_c = fks_Sij(p1_cnt(0,1,1),i_fks,j_fks,xi_i_fks_cnt(ione),one)
          if(s_c.gt.0.d0)then
@@ -1638,7 +1661,7 @@ c Collinear subtraction term:
               stop
             endif
             call sreal(p1_cnt(0,1,1),xi_i_fks_cnt(ione),one,fx_c)
-            xlum_c = dlum()
+            xlum_c = dlum()*rescale_mir
             cnt_wgt_c=cnt_wgt_c-
      &           fx_c*xlum_c*s_c*jac_cnt(1)*(prefact_c+prefact_coll)*rwgt
             call sreal_deg(p1_cnt(0,1,1),xi_i_fks_cnt(ione),one,
@@ -1656,11 +1679,12 @@ c    beams
 c Soft subtraction term:
  545  continue
       if (xi_i_fks_ev .lt. max(xiScut_used,xiBSVcut_used)) then
+         call get_mirror_rescale(izero, rescale_mir)
          call set_cms_stuff(izero)
          s_s = fks_Sij(p1_cnt(0,1,0),i_fks,j_fks,zero,y_ij_fks_ev)
          if(nbodyonly)s_s=1.d0
          if(s_s.gt.0.d0)then
-            xlum_s = dlum()
+            xlum_s = dlum()*rescale_mir
             if (abrv.eq.'born' .or. abrv(1:2).eq.'vi') goto 546
             if (xi_i_fks_ev .lt. xiScut_used) then
               call sreal(p1_cnt(0,1,0),zero,y_ij_fks_ev,fx_s)
@@ -1691,6 +1715,7 @@ c Soft-Collinear subtraction term:
       if (xi_i_fks_cnt(ione) .lt. xiScut_used .and.
      #    y_ij_fks_ev .gt. 1d0-deltaS .and.
      #    pmass(j_fks).eq.0.d0 )then
+         call get_mirror_rescale(itwo, rescale_mir)
          call set_cms_stuff(itwo)
          s_sc = fks_Sij(p1_cnt(0,1,2),i_fks,j_fks,zero,one)
          if(s_sc.gt.0.d0)then
@@ -1698,7 +1723,7 @@ c Soft-Collinear subtraction term:
               write(*,*)'Wrong S function in dsig[sc]',s_sc
               stop
             endif
-            xlum_sc = dlum()
+            xlum_sc = dlum()*rescale_mir
             call sreal(p1_cnt(0,1,2),zero,one,fx_sc)
             cnt_sc=fx_sc*xlum_sc*s_sc*jac_cnt(2)
             cnt_wgt_sc=cnt_wgt_sc+cnt_sc*(prefact_c+prefact_coll)*rwgt
@@ -1778,13 +1803,13 @@ c
       cnt_wgt = cnt_wgt_c + cnt_wgt_s + cnt_wgt_sc
       cnt_swgt = cnt_swgt_s + cnt_swgt_sc
 
-      ev_wgt = ev_wgt * enhance * rescale_mir
-      cnt_wgt = cnt_wgt * enhance * rescale_mir
-      cnt_swgt = cnt_swgt * enhance * rescale_mir
-      bsv_wgt = bsv_wgt * enhance * rescale_mir
-      born_wgt = born_wgt * enhance * rescale_mir
-      deg_wgt = deg_wgt * enhance * rescale_mir
-      deg_swgt = deg_swgt * enhance * rescale_mir
+      ev_wgt = ev_wgt * enhance !* rescale_mir
+      cnt_wgt = cnt_wgt * enhance !* rescale_mir
+      cnt_swgt = cnt_swgt * enhance !* rescale_mir
+      bsv_wgt = bsv_wgt * enhance !* rescale_mir
+      born_wgt = born_wgt * enhance !* rescale_mir
+      deg_wgt = deg_wgt * enhance !* rescale_mir
+      deg_swgt = deg_swgt * enhance !* rescale_mir
 
       
       if(iminmax.eq.0) then
@@ -3654,6 +3679,7 @@ c do the same as above for the counterevents
       end
 
       subroutine FlipBeams()
+      implicit none
 c this sub flips the identities of the two beams
       include "run.inc"
       double precision ybst_til_tolab,ybst_til_tocm,sqrtshat,shat
@@ -3661,7 +3687,7 @@ c this sub flips the identities of the two beams
      #                        sqrtshat,shat
       call FlipTwoD(ebeam)
       call FlipTwoD(xbk)
-      call FlipTwoD(q2fac)
+      call FlipTwoD(q2fact)
       call FlipTwoI(lpp)
       ybst_til_tolab=-ybst_til_tolab
       ybst_til_tocm =-ybst_til_tocm
@@ -3669,6 +3695,7 @@ c this sub flips the identities of the two beams
       end
       
       subroutine FlipTwoI(vec)
+      implicit none
 c this sub flips the components of a 2-vector (intger)
       integer vec(2), dum
       dum=vec(1)
@@ -3678,6 +3705,7 @@ c this sub flips the components of a 2-vector (intger)
       end
 
       subroutine FlipTwoD(vec)
+      implicit none
 c this sub flips the components of a 2-vector (double precision)
       double precision vec(2), dum
       dum=vec(1)
