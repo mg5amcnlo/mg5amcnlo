@@ -741,15 +741,15 @@ class TestCmdShell2(unittest.TestCase,
                                            'SubProcesses',
                                            'P0_qq_gogo_go_qqn1_go_qqn1',
                                            'symfact.dat')).read(),
-                         """1.030     1
+                         """     1     1
      2    -1
      3    -1
      4    -1
-5.030     1
+     5     1
      6    -5
      7    -5
      8    -5
-9.030     1
+     9     1
     10    -9
     11    -9
     12    -9

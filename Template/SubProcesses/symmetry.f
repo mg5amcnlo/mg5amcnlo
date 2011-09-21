@@ -10,6 +10,7 @@ c
       include 'genps.inc'
       include 'maxconfigs.inc'
       include '../../Source/run_config.inc'
+      include 'maxamps.inc'
       
       double precision ZERO
       parameter       (ZERO = 0d0)
@@ -36,7 +37,7 @@ c
 c     DATA
 c
       integer iforest(2,-max_branch:-1,lmaxconfigs)
-      integer sprop(-max_branch:-1,lmaxconfigs)
+      integer sprop(maxsproc,-max_branch:-1,lmaxconfigs)
       integer tprid(-max_branch:-1,lmaxconfigs)
       include 'configs.inc'
       data use_config/0,lmaxconfigs*0/
@@ -135,7 +136,8 @@ c-----
       else
          write(26,*) npoints,iter_survey,
      &     '     !Number of events and iterations'      
-         write(26,*) ' 0.0    !Accuracy'
+c        JA 4/8/11 Set minimum accuracy 10%, to run 4th iteration if needed
+         write(26,*) ' 0.1    !Accuracy'
          write(26,*) ' 2       !Grid Adjustment 0=none, 2=adjust'
       endif
       write(26,*) ' 1       !Suppress Amplitude 1=yes'
@@ -209,6 +211,7 @@ c
       include 'maxconfigs.inc'
       include 'nexternal.inc'
       include '../../Source/run_config.inc'
+      include 'maxamps.inc'
       integer    imax,   ibase
       parameter (imax=max_branch-1, ibase=3)
 c
@@ -217,7 +220,7 @@ c
       integer mapconfig(0:lmaxconfigs),use_config(0:lmaxconfigs)
       double precision pwidth(-max_branch:-1,lmaxconfigs)  !Propagotor width
       integer iforest(2,-max_branch:-1,lmaxconfigs)
-      integer sprop(-max_branch:-1,lmaxconfigs)
+      integer sprop(maxsproc,-max_branch:-1,lmaxconfigs)
       integer jcomp
 
 c
@@ -243,7 +246,7 @@ c     ncode is number of digits needed for the code
       do i=1,mapconfig(0)
          if (use_config(i) .gt. 0) then
             call bw_conflict(i,iforest(1,-max_branch,i),lconflict,
-     $           sprop(-max_branch,i), gForceBW(-max_branch,i))
+     $           sprop(1,-max_branch,i), gForceBW(-max_branch,i))
             nbw=0               !Look for B.W. resonances
             if (jcomp .eq. 0 .or. jcomp .eq. 1 .or. .true.) then
                do j=1,imax
@@ -252,11 +255,11 @@ c     ncode is number of digits needed for the code
                do j=1,nexternal-3
 c                  write(*,*) 'Width',pwidth(-j,i),j,i
                   nbw=nbw+1
-                  if (pwidth(-j,i) .gt. 1d-20 .and. sprop(-j,i).ne.0) then
+                  if (pwidth(-j,i) .gt. 1d-20 .and. sprop(1,-j,i).ne.0) then
                      write(*,*) 'Got bw',-nbw,j
-                     if(lconflict(-j).or.gForceBW(-j,i)) then
-                        if(lconflict(-j)) write(*,*) 'Got conflict ',-nbw,j
-                        if(gForceBW(-j,i)) write(*,*) 'Got forced BW ',-nbw,j
+c                    JA 4/8/11 don't treat forced BW differently
+                     if(lconflict(-j)) then
+                        write(*,*) 'Got conflict ',-nbw,j
                         iarray(nbw)=1 !Cuts on BW
                         if (nbw .gt. imax) then
                            write(*,*) 'Too many BW w conflicts',nbw,imax
@@ -289,7 +292,7 @@ c                 Create format string based on number of digits
                   write(26,formstr) dconfig
                endif
                write(26,'(a$)') ' '
-               call bw_increment_array(iarray,imax,ibase,gForceBW(-imax,i),done)
+               call bw_increment_array(iarray,imax,ibase,done)
             enddo
          endif
       enddo
@@ -308,7 +311,7 @@ c        Need to write appropriate number of BW sets this is
 c        same thing as above for the bash file
 c
             call bw_conflict(i,iforest(1,-max_branch,i),lconflict,
-     $           sprop(-max_branch,i), gForceBW(-max_branch,i))
+     $           sprop(1,-max_branch,i), gForceBW(-max_branch,i))
             nbw=0               !Look for B.W. resonances
             if (jcomp .eq. 0 .or. jcomp .eq. 1 .or. .true.) then
                do j=1,imax
@@ -316,9 +319,10 @@ c
                enddo
                do j=1,nexternal-3
                   nbw=nbw+1
-                  if (pwidth(-j,i) .gt. 1d-20  .and. sprop(-j,i).ne.0) then
+                  if (pwidth(-j,i) .gt. 1d-20  .and. sprop(1,-j,i).ne.0) then
                      write(*,*) 'Got bw',nbw,j
-                     if(lconflict(-j).or.gForceBW(-j,i)) then
+c                    JA 4/8/11 don't treat forced BW differently
+                     if(lconflict(-j)) then
                         iarray(nbw)=1 !Cuts on BW
                         if (nbw .gt. imax) then
                            write(*,*) 'Too many BW w conflicts',nbw,imax
@@ -339,7 +343,7 @@ c
                else
                   write(26,'(2i6)') mapconfig(i),use_config(i)
                endif
-               call bw_increment_array(iarray,imax,ibase,gForceBW(-imax,i),done)
+               call bw_increment_array(iarray,imax,ibase,done)
             enddo
          else
             write(26,'(2i6)') mapconfig(i), use_config(i)
@@ -358,6 +362,7 @@ c     Constants
 c
       include 'genps.inc'
       include 'maxconfigs.inc'
+      include 'maxamps.inc'
       include 'nexternal.inc'
       double precision zero
       parameter       (zero=0d0)
@@ -367,8 +372,8 @@ c     Arguments
 c
       integer itree(2,-max_branch:-1),iconfig
       logical lconflict(-max_branch:nexternal)
-      integer sprop(-max_branch:-1)  ! Propagator id
-      logical forcebw(-max_branch:-1)  ! Forced BW
+      integer sprop(maxsproc,-max_branch:-1)  ! Propagator id
+      logical forcebw(-max_branch:-1)  ! Forced BW, for identical particle conflicts
 c
 c     local
 c
@@ -378,7 +383,6 @@ c
       double precision pmass(-max_branch:-1,lmaxconfigs)   !Propagator mass
       double precision pow(-max_branch:-1,lmaxconfigs)    !Not used, in props.inc
       double precision xmass(-max_branch:nexternal)
-      include 'maxamps.inc'
       integer idup(nexternal,maxproc,maxsproc)
       integer mothup(2,nexternal)
       integer icolup(2,nexternal,maxflow,maxsproc)
@@ -414,26 +418,26 @@ c
 c     JA 3/31/11 Keep track of identical particles (i.e., radiation vertices)
 c     by tracing the particle identity from the external particle.
             if(itree(1,-i).gt.0) then
-               if(sprop(-i).eq.idup(itree(1,-i),1,1))
-     $              iden_part(-i) = sprop(-i)
+               if(sprop(1,-i).eq.idup(itree(1,-i),1,1))
+     $              iden_part(-i) = sprop(1,-i)
             endif
             if(itree(2,-i).gt.0) then
-               if(sprop(-i).eq.idup(itree(2,-i),1,1))
-     $              iden_part(-i) = sprop(-i)
+               if(sprop(1,-i).eq.idup(itree(2,-i),1,1))
+     $              iden_part(-i) = sprop(1,-i)
             endif
             if(itree(1,-i).lt.0) then
                if(iden_part(itree(1,-i)).ne.0.and.
-     $           sprop(-i).eq.iden_part(itree(1,-i)) .or.
+     $           sprop(1,-i).eq.iden_part(itree(1,-i)) .or.
      $         forcebw(itree(1,-i)).and.
-     $           sprop(-i).eq.sprop(itree(1,-i)))
-     $              iden_part(-i) = sprop(-i)
+     $           sprop(1,-i).eq.sprop(1,itree(1,-i)))
+     $              iden_part(-i) = sprop(1,-i)
             endif
             if(itree(2,-i).lt.0) then
                if(iden_part(itree(2,-i)).ne.0.and.
-     $           sprop(-i).eq.iden_part(itree(2,-i)).or.
+     $           sprop(1,-i).eq.iden_part(itree(2,-i)).or.
      $         forcebw(itree(2,-i)).and.
-     $           sprop(-i).eq.sprop(itree(2,-i)))
-     $              iden_part(-i) = sprop(-i)
+     $           sprop(1,-i).eq.sprop(1,itree(2,-i)))
+     $              iden_part(-i) = sprop(1,-i)
             endif
             if (xmass(-i) .gt. pmass(-i,iconfig) .and.
      $           iden_part(-i).eq.0) then !Can't be on shell, and not radiation
@@ -533,7 +537,7 @@ c
 
 
 
-      subroutine bw_increment_array(iarray,imax,ibase,force,done)
+      subroutine bw_increment_array(iarray,imax,ibase,done)
 c************************************************************************
 c     Increments iarray     
 c************************************************************************
@@ -543,7 +547,6 @@ c     Arguments
 c
       integer imax          !Input, number of elements in iarray
       integer ibase         !Base for incrementing, 0 is skipped
-      logical force(imax)   !Force onshell BW, counting from -imax to -1
       integer iarray(imax)  !Output:Array of values being incremented
       logical done          !Output:Set when no more incrementing
 
@@ -566,7 +569,7 @@ c-----
       do while (i .le. imax .and. .not. found)
          if (iarray(i) .eq. 0) then    !don't increment this
             i=i+1
-         elseif (iarray(i) .lt. ibase-1 .and. .not. force(imax+1-i)) then
+         elseif (iarray(i) .lt. ibase-1) then
             found = .true.
             iarray(i)=iarray(i)+1
          else

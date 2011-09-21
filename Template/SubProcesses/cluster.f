@@ -202,11 +202,12 @@ c**************************************************************************
       include 'nexternal.inc'
       include 'cluster.inc'
       include 'coupl.inc'
+      include 'maxamps.inc'
       integer ignum, ipnum, ipids(nexternal,4,2:nexternal)
 C $B$ IFOREST $B$ !this is a tag for MadWeight
       integer i, iforest(2,-max_branch:-1,lmaxconfigs)
       common/to_forest/iforest
-      integer sprop(-max_branch:-1,lmaxconfigs)
+      integer sprop(maxsproc,-max_branch:-1,lmaxconfigs)
       integer tprid(-max_branch:-1,lmaxconfigs)
       common/to_sprop/sprop,tprid
 C $E$ IFOREST $E$ !this is a tag for MadWeight
@@ -253,7 +254,7 @@ c                 Add also the same propagator but from the other direction
                   icmp(2)=ishft(1,nexternal)-1-icmp(1)
 c     Set pdg code for propagator
                   do l=1,2
-                     ipdgcl(icmp(l),ignum)=sprop(k,ignum)
+                     ipdgcl(icmp(l),ignum)=sprop(1,k,ignum)
                      if(ipdgcl(icmp(l),ignum).eq.0)
      $                    ipdgcl(icmp(l),ignum)=tprid(k,ignum)
 c                  write(*,*) 'add table entry for (',ipids(i,1,ipnum),

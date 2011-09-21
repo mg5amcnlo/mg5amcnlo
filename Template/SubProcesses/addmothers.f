@@ -42,7 +42,7 @@
 
       integer iforest(2,-max_branch:-1,lmaxconfigs)
       common/to_forest/ iforest
-      integer sprop(-max_branch:-1,lmaxconfigs)
+      integer sprop(maxsproc,-max_branch:-1,lmaxconfigs)
       integer tprid(-max_branch:-1,lmaxconfigs)
       common/to_sprop/sprop,tprid
       integer            mapconfig(0:lmaxconfigs), iconfig
@@ -52,15 +52,14 @@
       integer mothup(2,nexternal)
       integer icolup(2,nexternal,maxflow,maxsproc)
       include 'leshouche.inc'
-
       include 'coloramps.inc'
       
       logical             OnBW(-nexternal:0)     !Set if event is on B.W.
       common/to_BWEvents/ OnBW
 
 C     iproc has the present process number
-      integer iproc
-      common/to_iproc/iproc
+      integer imirror, iproc
+      common/to_mirror/imirror, iproc
       data iproc/1/
 
 c      integer ncols,ncolflow(maxamps),ncolalt(maxamps),icorg
@@ -105,7 +104,7 @@ c        print *,'Color flow 1 allowed for config ',iconfig
       do ic =2,nc
         if(icolamp(ic,iconfig,iproc))then
           targetamp(ic) = jamp2(ic)+targetamp(ic-1)
-c          print *,'Color flow ',ic,' allowed for config ',iconfig
+c          print *,'Color flow ',ic,' allowed for config ',iconfig,targetamp(ic)
         else
           targetamp(ic)=targetamp(ic-1)
         endif
@@ -116,20 +115,14 @@ c          print *,'Color flow ',ic,' allowed for config ',iconfig
       do while (targetamp(ic) .lt. xtarget .and. ic .lt. nc)
          ic=ic+1
       enddo
-c      print *,'Chose color flow ',ic
-
       if(targetamp(nc).eq.0) ic=0
+c      print *,'Chose color flow ',ic
       do i=1,nexternal
          if(ic.gt.0) then
             icolalt(1,isym(i,jsym))=icolup(1,i,ic,numproc)
             icolalt(2,isym(i,jsym))=icolup(2,i,ic,numproc)
             if (icolup(1,i,ic, numproc).gt.maxcolor) maxcolor=icolup(1,i,ic, numproc)
             if (icolup(2,i,ic, numproc).gt.maxcolor) maxcolor=icolup(2,i,ic, numproc)
-         else
-            icolalt(1,i)=jpart(4,i)
-            icolalt(2,i)=jpart(5,i)
-            if (jpart(4,i).gt.maxcolor) maxcolor=jpart(4,i)
-            if (jpart(5,i).gt.maxcolor) maxcolor=jpart(5,i)
          endif
       enddo
 
@@ -159,8 +152,8 @@ c       Daughters
             if(ida(j).gt.0) ida(j)=isym(ida(j),jsym)
           enddo
 c       Decide s- or t-channel
-          if(iabs(sprop(i,iconfig)).gt.0) then ! s-channel propagator
-            jpart(1,i)=sprop(i,iconfig)
+          if(iabs(sprop(numproc,i,iconfig)).gt.0) then ! s-channel propagator
+            jpart(1,i)=sprop(numproc,i,iconfig)
             ns=ns+1
           else
 c         Don't care about t-channel propagators
@@ -214,12 +207,18 @@ c       Fist set "safe" color info
      $       icolalt(2,ida(1))-icolalt(2,ida(2)).eq.0) then ! color singlet
             icolalt(1,i) = 0
             icolalt(2,i) = 0            
-          elseif(icolalt(1,ida(1))-icolalt(2,ida(2)).eq.0) then
+          elseif(icolalt(1,ida(1))-icolalt(2,ida(2)).eq.0) then ! 3bar 3 -> 8 or 8 8 -> 8
             icolalt(1,i) = icolalt(1,ida(2))
             icolalt(2,i) = icolalt(2,ida(1))
-          else if(icolalt(1,ida(2))-icolalt(2,ida(1)).eq.0) then
+          else if(icolalt(1,ida(2))-icolalt(2,ida(1)).eq.0) then ! 3 3bar -> 8 or 8 8 -> 8
             icolalt(1,i) = icolalt(1,ida(1))
             icolalt(2,i) = icolalt(2,ida(2))
+          else if(icolalt(1,ida(1)).eq.0.and.icolalt(2,ida(1)).eq.0) then ! 1 3/8 -> 3/8
+            icolalt(1,i) = icolalt(1,ida(2))
+            icolalt(2,i) = icolalt(2,ida(2))
+          else if(icolalt(1,ida(2)).eq.0.and.icolalt(2,ida(2)).eq.0) then ! 3/8 1 -> 3/8
+            icolalt(1,i) = icolalt(1,ida(1))
+            icolalt(2,i) = icolalt(2,ida(1))
           else if(icolalt(1,ida(2)).gt.0.and.icolalt(1,ida(1)).gt.0.and.
      $           icolalt(2,ida(2)).le.0.and.icolalt(2,ida(1)).le.0) then         ! sextet
             maxcolor=maxcolor+1

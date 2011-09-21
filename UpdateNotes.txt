@@ -1,6 +1,48 @@
 Update notes for MadGraph 5 (in reverse time order)
 
-1.3.9 (01/08/11)  OM: Add a new model DY_SM (arXiv:1107.5830). Thanks to Neil for the generation of the model 
+1.3.16 (11/09/11) JA: Fixed the problem from 1.3.12.
+
+1.3.15 (09/09/11) OM: remove the fix of 1.3.12
+                      (No events in output for some given processes)
+
+1.3.14 (08/09/11) OM: Fix a bug in the RS model introduced in 1.3.8
+
+1.3.13 (05/09/11) JA: Fixed bug with cut_decays=F which removed cuts also for
+                      non-decay products in certain channels if there is
+                      a forced decay present. Note that this does not affect
+                      xqcut, only pt, minv and eta cuts.
+                  JA: If non-zero phase space cutoff, don't use minimum of
+                      1 GeV (this allows to go to e.g. 2m_e invariant mass for
+                      \gamma* > e+ e-).
+
+1.3.12 (01/09/11) JA: Fixed problem with decay chains when different decays
+                      result in identical final states, such as
+                      p p > go go, (go > b1/b1~ b/b~, b1/b1~ > b/b~ n1)
+		      (only one of the decay chains was chosen, instead of
+                      all 3 combinations (b1,b1), (b1,b1~), (b1~,b1~))
+                  JA: Allow for overall orders also with grouped subprocesses
+                  JA: Ensure that only leading color flows are included in event
+                      output (so no singlet flows from color octets).
+                  JA: Fixed small bug in fermion flow determination for multifermion
+                      vertices.
+
+1.3.11 (26/08/11) JA: Improved precision of "survey" by allowing 4th and 5th 
+                      iteration if accuracy after 3 iterations < 10%.
+                  JA: Subdivide BW in phase space integration for conflicting BWs 
+                      also for forced decays, to improve generation with large
+                      bwcutoff in e.g. W+ W- production with decays.
+                  JA: Do refine using luminocity instead of number of events,
+                      to work with badly determined channels.
+                  JA: Don't use BW for shat if mass > sqrt(s).
+                  JA: Fixed insertion of colors for octet resonances decaying to 
+                      octet+singlet (thanks Bogdan for finding this)
+
+1.3.10 (23/08/11) OM: Update ALOHA version
+                  OM: increase waiting time for jobs to write physically the results on
+                      the disks (in ordre to reduce trouble on the cluster).
+
+1.3.9 (01/08/11)  OM: Add a new model DY_SM (arXiv:1107.5830). Thanks to Neil
+                      for the generation of the model 
 
 1.3.8 (25/07/11)  JA: Replace the SM and HEFT models with latest versions using
                       the Wolfenstein parameterization for the CKM matrix.

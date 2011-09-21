@@ -34,6 +34,8 @@ import madgraph.loop.loop_diagram_generation as loop_diagram_generation
 import madgraph.loop.loop_color_amp as loop_color_amp
 import madgraph.core.color_algebra as color
 
+from madgraph import MadGraph5Error
+
 #===============================================================================
 # 
 #===============================================================================
@@ -1364,6 +1366,8 @@ class HelasWavefunctionList(base_objects.PhysicsObjectList):
                                        wf_number,
                                        force_flip_flow,
                                        number_to_wavefunctions)
+                # Already ran for all clashes, abort loop
+                break
 
         return wf_number
 
@@ -3840,6 +3844,7 @@ class HelasDecayChainProcess(base_objects.PhysicsObject):
             decay_chain = dc_amplitude.get('decay_chains').pop(0)
             self['decay_chains'].append(HelasDecayChainProcess(\
                 decay_chain))
+            
 
     def combine_decay_chain_processes(self):
         """Recursive function to generate complete
@@ -4353,6 +4358,10 @@ class HelasMultiProcess(base_objects.PhysicsObject):
                     process_color_loop(matrix_element)
                 else:
                     process_color(matrix_element)                    
+
+        if not matrix_elements:
+            raise MadGraph5Error, \
+                  "No matrix elements generated, check overall coupling orders"
 
         return matrix_elements
 
