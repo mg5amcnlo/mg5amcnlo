@@ -2824,8 +2824,8 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
         
         launch_ext.open_file(file_path, self.configuration)
         
-    def do_compile_realfks(self,line):
-        """compiles the realfks process"""
+    def do_compile_fksreal(self,line):
+        """compiles the fksreal process"""
         #check that the process has been exported in the fks format
         if type(self._curr_exporter)!= type(export_fks_real.ProcessExporterFortranFKS_real()):
             print type(self._curr_exporter)
@@ -2843,7 +2843,7 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
 
             logger.info('Compiling MadFKS')
             compile_link = 'y' == self.timed_input('Compile and run link_fks [y/n]? ', 'n')
-            compile_tests = 'y' == self.timed_input('Compile and run tests [y/n]? ', 'n')
+            compile_tests = 'y' == self.timed_input('Compile and run soft/collinear tests [y/n]? ', 'n')
             if compile_tests:
                 test_points = self.timed_input('Enter # of points for tests: ' , '1')
             compile_gensym = 'y' == self.timed_input('Compile and run gensym [y/n]? ', 'n')

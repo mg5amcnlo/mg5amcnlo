@@ -30,12 +30,9 @@ C
       DOUBLE PRECISION g1,g2                                          
       DOUBLE PRECISION a1,a2                                          
       DOUBLE PRECISION XPQ(-7:7)                                      
-      DOUBLE PRECISION rwgt,DSIGUU                                    
-      double precision xi_i_fks,y_ij_fks                              
 C                                                                     
 C EXTERNAL FUNCTIONS                                                  
 C                                                                     
-C      LOGICAL PASSCUTS                                               
       DOUBLE PRECISION ALPHAS2,REWGT,PDG2PDF                          
 C                                                                     
 C GLOBAL VARIABLES                                                    
@@ -45,6 +42,8 @@ C
       COMMON /SubProc/ PD, IPROC                                      
       include "coupl.inc"                                             
       include "run.inc"                                               
+      integer imirror
+      common/cmirror/imirror
 C                                                                     
 C DATA                                                                
 C                                                                     
@@ -57,14 +56,8 @@ C ----------
 C BEGIN CODE                                                          
 C ----------                                                          
       DLUM = 0D0                                                      
-C      IF (PASSCUTS(PP,rwgt)) THEN                                    
 %(pdf_lines)s
-         DSIGUU=1d0                                                   
-         If (dsiguu .lt. 1d199) then                                  
-         dlum = pd(IPROC) * conv * dsiguu                             
-         else                                                         
-             write(*,*) "Error in matrix element"                     
-             dsiguu=0d0                                               
-            dlum = 0d0                                                
-         endif                                                        
+      dlum = pd(IPROC) * conv 
+      if (imirror.eq.2) call flipbeams()
+      return
       END                                                             

@@ -1464,6 +1464,15 @@ c For tests
      &                 total_wgt_sum_min
 
       double precision pmass(nexternal)
+
+c For process mirroring
+      double precision selproc(2)
+      double precision sumprob, r, rescale_mir
+      integer imirror, k, i_cms
+      common /cmirror/imirror
+      include "mirrorprocs.inc"
+      data selproc /2*0d0/
+
       include "pmass.inc"
 
       vegas_weight=vegaswgt
@@ -1545,6 +1554,43 @@ c points)
       plot_wgt=0.d0
       iplot=-3
 
+c Compute pdf weight for the process and its mirror configuration
+      i_cms=mohdr
+      sumprob=0.d0
+      if (abrv.eq.'born'.or.abrv(1:2).eq.'vi') i_cms=izero
+      do k=1,2
+        if (k.eq.1.or.mirrorproc) then
+          imirror=k
+          call set_cms_stuff(i_cms)
+          selproc(k)=dlum()
+          sumprob=sumprob+selproc(k)
+c         if mirroring, then flip back the beams          
+          if (imirror.eq.2) call FlipBeams()
+        endif
+      enddo
+
+c Choose between process and mirror
+      r=ran2()*sumprob
+      imirror=1
+      if (r.gt.selproc(1)) imirror=2
+      rescale_mir=sumprob/selproc(imirror)
+c If mirror process rotate (all) the momenta around the x-axis
+      if (imirror.eq.2) then
+        do k=1,nexternal
+          pp(2,k)=-pp(2,k)
+          pp(3,k)=-pp(3,k)
+          do i=-2,2
+            p1_cnt(2,k,i)=-p1_cnt(2,k,i)
+            p1_cnt(3,k,i)=-p1_cnt(3,k,i)
+          enddo
+        enddo
+        do k=1,nexternal-1
+          p_born(2,k)=-p_born(2,k)
+          p_born(3,k)=-p_born(3,k)
+        enddo
+      endif
+
+
       if (abrv.eq.'born' .or. abrv(1:2).eq.'vi') goto 540
 c Real contribution:
 c Set the ybst_til_tolab before applying the cuts. 
@@ -1558,6 +1604,10 @@ c Set the ybst_til_tolab before applying the cuts.
            call sreal(pp,xi_i_fks_ev,y_ij_fks_ev,fx_ev)
            xlum_ev = dlum()
            ev_wgt = fx_ev*xlum_ev*s_ev*ffact*wgt*prefact*rwgt
+        else
+c If mirroring and dlum has not been called, we need to flip back the
+c    beams
+          if (imirror.eq.2) call FlipBeams()
         endif
       endif
 c
@@ -1571,6 +1621,9 @@ c for the collinear, soft and/or soft-collinear subtraction terms
       if ( (.not.passcuts(p1_cnt(0,1,0),rwgt)) .or.
      #     nocntevents ) goto 547
       call set_alphaS(p1_cnt(0,1,0))
+c If mirroring and dlum has not been called, we need to flip back the
+c    beams
+      if (imirror.eq.2) call FlipBeams()
 
       if (abrv.eq.'born' .or. abrv(1:2).eq.'vi') goto 545
 c
@@ -1594,6 +1647,10 @@ c Collinear subtraction term:
      #                      jac_cnt(1)*prefact_deg*rwgt/(shat/(32*pi**2))*
      #                      xlum_c
             iplot=1
+         else
+c If mirroring and dlum has not been called, we need to flip back the
+c    beams
+          if (imirror.eq.2) call FlipBeams()
          endif
       endif
 c Soft subtraction term:
@@ -1623,6 +1680,10 @@ c Soft subtraction term:
             endif
  548        continue
             iplot=0
+         else
+c If mirroring and dlum has not been called, we need to flip back the
+c    beams
+          if (imirror.eq.2) call FlipBeams()
          endif
       endif
 c Soft-Collinear subtraction term:
@@ -1653,6 +1714,10 @@ c Soft-Collinear subtraction term:
      #                     jac_cnt(2)*rwgt/(shat/(32*pi**2))*
      #                     xlum_sc
             if(iplot.ne.0)iplot=2
+         else
+c If mirroring and dlum has not been called, we need to flip back the
+c    beams
+          if (imirror.eq.2) call FlipBeams()
          endif
       endif
  547  continue
@@ -1713,13 +1778,13 @@ c
       cnt_wgt = cnt_wgt_c + cnt_wgt_s + cnt_wgt_sc
       cnt_swgt = cnt_swgt_s + cnt_swgt_sc
 
-      ev_wgt = ev_wgt * enhance
-      cnt_wgt = cnt_wgt * enhance
-      cnt_swgt = cnt_swgt * enhance
-      bsv_wgt = bsv_wgt * enhance
-      born_wgt = born_wgt * enhance
-      deg_wgt = deg_wgt * enhance
-      deg_swgt = deg_swgt * enhance
+      ev_wgt = ev_wgt * enhance * rescale_mir
+      cnt_wgt = cnt_wgt * enhance * rescale_mir
+      cnt_swgt = cnt_swgt * enhance * rescale_mir
+      bsv_wgt = bsv_wgt * enhance * rescale_mir
+      born_wgt = born_wgt * enhance * rescale_mir
+      deg_wgt = deg_wgt * enhance * rescale_mir
+      deg_swgt = deg_swgt * enhance * rescale_mir
 
       
       if(iminmax.eq.0) then
@@ -3552,6 +3617,9 @@ c has to be inserted here
       double precision xbjrk_ev(2),xbjrk_cnt(2,-2:2)
       common/cbjorkenx/xbjrk_ev,xbjrk_cnt
 
+      integer imirror
+      common/cmirror/imirror
+
 c rapidity of boost from \tilde{k}_1+\tilde{k}_2 c.m. frame to lab frame --
 c same for event and counterevents
 c This is the rapidity that enters in the arguments of the sinh() and
@@ -3580,6 +3648,41 @@ c do the same as above for the counterevents
         sqrtshat=sqrtshat_cnt(icountevts)
         ybst_til_tocm=ycm_cnt(icountevts)-ycm_cnt(0)
       endif
+
+      if (imirror.eq.2) call FlipBeams()
+      return
+      end
+
+      subroutine FlipBeams()
+c this sub flips the identities of the two beams
+      include "run.inc"
+      double precision ybst_til_tolab,ybst_til_tocm,sqrtshat,shat
+      common/parton_cms_stuff/ybst_til_tolab,ybst_til_tocm,
+     #                        sqrtshat,shat
+      call FlipTwoD(ebeam)
+      call FlipTwoD(xbk)
+      call FlipTwoD(q2fac)
+      call FlipTwoI(lpp)
+      ybst_til_tolab=-ybst_til_tolab
+      ybst_til_tocm =-ybst_til_tocm
+      return
+      end
+      
+      subroutine FlipTwoI(vec)
+c this sub flips the components of a 2-vector (intger)
+      integer vec(2), dum
+      dum=vec(1)
+      vec(1)=vec(2)
+      vec(2)=dum
+      return
+      end
+
+      subroutine FlipTwoD(vec)
+c this sub flips the components of a 2-vector (double precision)
+      double precision vec(2), dum
+      dum=vec(1)
+      vec(1)=vec(2)
+      vec(2)=dum
       return
       end
 

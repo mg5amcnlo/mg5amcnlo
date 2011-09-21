@@ -24,6 +24,8 @@ c
       do i=1,2
         kk=(i-1)*50
         call bookup(kk+1,'total rate'//cc(i),1.0d0,0.5d0,5.5d0)
+        call bookup(kk+2,'e+e- pair rapidity'//cc(i),0.5d0,-5d0,5d0)
+        call bookup(kk+3,'e+e- invariant mass'//cc(i), 10d0, 0d0, 300d0)
       enddo
       return
       end
@@ -60,6 +62,8 @@ c
       do i=1,2
         kk=(i-1)*50
         call multitop(kk+1,3,2,'total rate',ytit,'LIN')
+        call multitop(kk+2,3,2,'e+e- pair rapidity',ytit,'LOG')
+        call multitop(kk+3,3,2,'e+e- invariant mass',ytit,'LOG')
 c$$$        call mtop(kk+1,'total rate',ytit,'LIN')
       enddo
       return                
@@ -96,7 +100,7 @@ C *WARNING**WARNING**WARNING**WARNING**WARNING**WARNING**WARNING**WARNING*
       double precision pjet(4,nexternal)
       double precision cthjet(nexternal)
       integer nn,njet,nsub,jet(nexternal)
-      real*8 emax,getcth,cpar,dpar,thrust,dot,shat
+      real*8 emax,getcth,cpar,dpar,thrust,dot,shat, getrapidity
       integer i,j,kk,imax
 
       LOGICAL  IS_A_J(NEXTERNAL),IS_A_L(NEXTERNAL)
@@ -106,6 +110,11 @@ C *WARNING**WARNING**WARNING**WARNING**WARNING**WARNING**WARNING**WARNING*
 c masses
       double precision pmass(nexternal)
       common/to_mass/pmass
+      real *8 pplab(0:3, nexternal)
+      double precision shybst, chybst, chybstmo
+      real*8 xd(1:3)
+      data (xd(i), i=1,3) /0,0,1/
+      real*8 yz, pz(0:3), mz
 c
       if(itype.eq.11.or.itype.eq.12)then
         kk=0
@@ -116,9 +125,49 @@ c
         stop
       endif
 c
+      chybst=cosh(ybst_til_tolab)
+      shybst=sinh(ybst_til_tolab)
+      chybstmo= chybst-1.d0
+      do i=3,nexternal
+      call boostwdir2(chybst, shybst, chybstmo,xd,pp(0,i), pplab(0,i))
+      enddo
+      do i=0,3
+        pz(i)=pplab(i,3)+pplab(i,4)
+      enddo
+
+      mz = sqrt(dot(pz,pz))
+      yz=getrapidity(pz(0), pz(3))
+
+
+
+
       shat=2d0*dot(pp(0,1),pp(0,2))
 
       var=1.d0
       call mfill(kk+1,var,www)
+      call mfill(kk+2,yz,www)
+      call mfill(kk+3,mz,www)
  999  return      
       end
+
+
+
+            function getrapidity(en,pl)
+            implicit none
+            real*8 getrapidity,en,pl,tiny,xplus,xminus,y
+            parameter (tiny=1.d-8)
+            xplus=en+pl
+            xminus=en-pl
+            if(xplus.gt.tiny.and.xminus.gt.tiny)then
+            if( (xplus/xminus).gt.tiny.and.(xminus/xplus).gt.tiny)then
+              y=0.5d0*log( xplus/xminus  )
+             else
+             y=sign(1.d0,pl)*1.d8
+             endif
+            else 
+            y=sign(1.d0,pl)*1.d8
+             endif
+             getrapidity=y
+             return
+             end
+

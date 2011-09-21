@@ -120,6 +120,7 @@ class FKSBornProcess(object):
             red_leglist[n].set('number', n+1)
         return red_leglist
 
+
     def find_color_links(self): #test written
         """finds all the possible color links between two legs of the born.
         Uses the find_color_links function in fks_common"""
@@ -127,6 +128,7 @@ class FKSBornProcess(object):
             self.color_links = fks_common.find_color_links(\
                               self.process.get('legs'))
         return self.color_links
+    
     
     def get_born_fks_inc_string(self, iconf):#test written
         """returns the part of the fks.inc file relative to this born configuration
@@ -147,6 +149,7 @@ data fks_j(  %(conf_num)d  ) /  %(j_fks)d  / \n\
 
 class FKSProcessFromRealsList(MG.PhysicsObjectList):
     """class to handle lists of FKSProcesses"""
+    
     
     def is_valid_element(self, obj):
         """Test if object obj is a valid FKSProcessFromReals for the list."""
@@ -215,18 +218,16 @@ INTEGER PARTICLE_TYPE(NEXTERNAL), PDG_TYPE(NEXTERNAL) \n" %{'nconfs' :
             if born.is_to_integrate:
                 n +=1
                 string += born.get_born_fks_inc_string(n)
-        
         ipos = []
         for ii, js in self.fks_j_from_i.items():
             if js:
                 ipos.append(ii)
                 string += "\n\
 data (fks_j_from_i(%d, jpos), jpos = 0, %d)  / %d, %s /" \
-        % (ii, len(js), len(js), ', '.join(["%d" % j for j in js]))
-        string += "\n\
-data (fks_ipos(ipos), ipos = 0, %d)  / %d, %s /\n" \
-        % (len(ipos), len(ipos), ', '.join(["%d" % i for i in ipos]))
-        
+            % (ii, len(js), len(js), ', '.join(["%d" % j for j in js]))
+#        string += "\n\
+#data (fks_ipos(ipos), ipos = 0, %d)  / %d, %s /\n" \
+#            % (len(ipos), len(ipos), ', '.join(["%d" % i for i in ipos]))
         string += "\n\
 C\n\
 C     Particle type:\n\
@@ -314,7 +315,7 @@ C\n\
         imax = 0
         jmax = 0
         chosen = -1
-        for n, born in enumerate (self.borns):
+        for n, born in enumerate(self.borns):
             if born.need_color_links:
                 if born.i_fks >= imax and born.j_fks >= jmax and \
                         born.is_to_integrate:

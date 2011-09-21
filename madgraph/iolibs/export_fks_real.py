@@ -175,7 +175,7 @@ class ProcessExporterFortranFKS_real(export_v4.ProcessExporterFortran):
         calls = 0
         
         #copy the makefile 
-        os.system("cp ../makefile_fks_dir ./makefile")
+        os.system("ln -s ../makefile_fks_dir ./makefile")
     
         #write the config.fks file, containing only nfks (+1)
         os.system("echo %d > config.fks" % (nfks+1) )
@@ -210,6 +210,9 @@ class ProcessExporterFortranFKS_real(export_v4.ProcessExporterFortran):
                self.write_matrix_element_fks(writers.FortranWriter(filename),
                                             matrix_element.real_matrix_element,
                                             fortran_model)
+        filename = 'mirrorprocs.inc'
+        self.write_mirrorprocs(writers.FortranWriter(filename),
+                                            matrix_element.real_matrix_element)
     
         filename = 'coloramps.inc'
         self.write_coloramps_file(writers.FortranWriter(filename),
@@ -648,6 +651,18 @@ c     this subdir has no soft singularities
         writer.writelines(content)
     
         return True
+    #===============================================================================
+    # write_mirrorprocs
+    #===============================================================================   
+    def write_mirrorprocs(self, writer, matrix_element):
+        """writes the content of the mirrorprocs.inc file"""
+        bool_dict = {True: ".true.", False: ".false."}
+        content = \
+"logical mirrorproc \n\
+data mirrorproc /%s/" % bool_dict[matrix_element.get('has_mirror_process')]
+        writer.writelines(content)
+        return True
+    
     
     
     #===============================================================================
