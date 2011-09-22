@@ -1264,6 +1264,15 @@ class ProcessExporterFortranME(ProcessExporterFortran):
                               online = False, compiler='g77'):
         """Finalize ME v4 directory by creating jpeg diagrams, html
         pages,proc_card_mg5.dat and madevent.tar.gz."""
+        
+        modelname = self.model.get('name')
+        if modelname == 'mssm' or modelname.startswith('mssm-'):
+            param_card = pjoin(self.dir_path, 'Cards','param_card.dat')
+            mg5_param = pjoin(self.dir_path, 'Source', 'MODEL', 'MG5_param.dat')
+            check_param_card.convert_to_mg5card(param_card, mg5_param)
+            check_param_card.check_valid_param_card(mg5_param)
+            files.cp(mg5_param, param_card)
+
 
         # Write maxconfigs.inc based on max of ME's/subprocess groups
         filename = os.path.join(self.dir_path,'Source','maxconfigs.inc')
