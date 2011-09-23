@@ -1435,7 +1435,8 @@ class ProcessExporterFortranME(ProcessExporterFortran):
                                 me.get('processes')], []) for me in
                            matrix_elements], []))
 
-        particle_ids = sorted(list(wf_ids.union(leg_ids)))
+        abs_ids = set([abs(i) for i in wf_ids])
+        particle_ids = sorted(list(wf_ids.union(leg_ids, abs_ids)))
 
         lines = """function get_color(ipdg)
         implicit none
