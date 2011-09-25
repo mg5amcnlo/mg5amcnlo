@@ -1434,7 +1434,8 @@ class ProcessExporterFortranME(ProcessExporterFortran):
                                  p.get_legs_with_decays()] for p in \
                                 me.get('processes')], []) for me in
                            matrix_elements], []))
-
+        # We need the absolute value of all wf_ids, since for t-channel wfs
+        # the absolute value is used in configs.inc
         abs_ids = set([abs(i) for i in wf_ids])
         particle_ids = sorted(list(wf_ids.union(leg_ids, abs_ids)))
 

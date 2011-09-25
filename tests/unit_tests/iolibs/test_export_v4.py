@@ -1,4 +1,4 @@
- ################################################################################
+################################################################################
 #
 # Copyright (c) 2009 The MadGraph Development team and Contributors
 #
@@ -3405,7 +3405,7 @@ DATA(icolamp(i,41,1),i=1,6)/.false.,.false.,.true.,.false.,.false.,.false./
 DATA(icolamp(i,42,1),i=1,6)/.false.,.false.,.false.,.false.,.false.,.true./"""
 )
 
-        # Test colors.f output
+        # Test get_color.f output
         writer = writers.FortranWriter(self.give_pos('test'))
         exporter.write_colors_file(writer, matrix_element)
         writer.close()
@@ -8473,6 +8473,205 @@ C     Number of configs
                               in tchannels],
                              goal_tchannels[idiag]) 
 
+    def test_get_color_abs_tchannel(self):
+        """Testing that t-channel abs() is taken into account by get_color
+        """
+
+        # Set up model
+
+        mypartlist = base_objects.ParticleList()
+        myinterlist = base_objects.InteractionList()
+
+        # A electron and positron
+        mypartlist.append(base_objects.Particle({'name':'e-',
+                      'antiname':'e+',
+                      'spin':2,
+                      'color':1,
+                      'mass':'me',
+                      'width':'zero',
+                      'texname':'e^-',
+                      'antitexname':'e^+',
+                      'line':'straight',
+                      'charge':-1.,
+                      'pdg_code':11,
+                      'propagating':True,
+                      'is_part':True,
+                      'self_antipart':False}))
+        eminus = mypartlist[len(mypartlist) - 1]
+        eplus = copy.copy(eminus)
+        eplus.set('is_part', False)
+
+        # A neutrino
+        mypartlist.append(base_objects.Particle({'name':'ve',
+                      'antiname':'ve~',
+                      'spin':2,
+                      'color':1,
+                      'mass':'zero',
+                      'width':'zero',
+                      'texname':'\nu_e',
+                      'antitexname':'\bar\nu_e',
+                      'line':'straight',
+                      'charge':0.,
+                      'pdg_code':12,
+                      'propagating':True,
+                      'is_part':True,
+                      'self_antipart':False}))
+        nu = mypartlist[len(mypartlist) - 1]
+        nubar = copy.copy(nu)
+        nubar.set('is_part', False)
+
+        # A W
+        mypartlist.append(base_objects.Particle({'name':'W+',
+                      'antiname':'W-',
+                      'spin':3,
+                      'color':1,
+                      'mass':'MW',
+                      'width':'WW',
+                      'texname':'W^+',
+                      'antitexname':'W^-',
+                     'line':'wavy',
+                      'charge':1.,
+                      'pdg_code':24,
+                      'propagating':True,
+                      'is_part':True,
+                      'self_antipart':False}))
+        Wplus = mypartlist[len(mypartlist) - 1]
+        Wminus = copy.copy(Wplus)
+        Wminus.set('is_part', False)
+
+        # A photon
+        mypartlist.append(base_objects.Particle({'name':'a',
+                      'antiname':'a',
+                      'spin':3,
+                      'color':1,
+                      'mass':'zero',
+                      'width':'zero',
+                      'texname':'\gamma',
+                      'antitexname':'\gamma',
+                      'line':'wavy',
+                      'charge':0.,
+                      'pdg_code':22,
+                      'propagating':True,
+                      'is_part':True,
+                      'self_antipart':True}))
+        a = mypartlist[len(mypartlist) - 1]
+
+        # Coupling of W- e+ nu_e
+
+        myinterlist.append(base_objects.Interaction({
+            'id': 1,
+            'particles': base_objects.ParticleList(\
+                                            [eplus, \
+                                             nu, \
+                                             Wminus]),
+            'color': [],
+            'lorentz':[''],
+            'couplings':{(0, 0):'MGVX27'},
+            'orders':{'QED':1}}))
+
+        myinterlist.append(base_objects.Interaction({
+            'id': 2,
+            'particles': base_objects.ParticleList(\
+                                            [nubar, \
+                                             eminus, \
+                                             Wplus]),
+            'color': [],
+            'lorentz':[''],
+            'couplings':{(0, 0):'MGVX27'},
+            'orders':{'QED':1}}))
+
+        # Coupling of e to gamma
+        myinterlist.append(base_objects.Interaction({
+                      'id': 3,
+                      'particles': base_objects.ParticleList(\
+                                            [eplus, \
+                                             eminus, \
+                                             a]),
+                      'color': [],
+                      'lorentz':[''],
+                      'couplings':{(0, 0):'MGVX12'},
+                      'orders':{'QED':1}}))
+
+        mybasemodel = base_objects.Model()
+        mybasemodel.set('particles', mypartlist)
+        mybasemodel.set('interactions', myinterlist)
+
+        myleglist = base_objects.LegList()
+
+        myleglist.append(base_objects.Leg({'id':22,
+                                         'state':False}))
+        myleglist.append(base_objects.Leg({'id':24,
+                                         'state':False}))
+        myleglist.append(base_objects.Leg({'id':12,
+                                         'state':True}))
+        myleglist.append(base_objects.Leg({'id':-11,
+                                         'state':True}))
+
+        myproc = base_objects.Process({'legs':myleglist,
+                                       'model':mybasemodel})
+
+        myamplitude = diagram_generation.Amplitude({'process': myproc})
+
+        matrix_element = helas_objects.HelasMatrixElement(myamplitude, gen_color=False)
+
+        myfortranmodel = helas_call_writers.FortranHelasCallWriter(mybasemodel)
+        writer = writers.FortranWriter(self.give_pos('test'))
+
+        exporter = export_v4.ProcessExporterFortranME()
+
+        # Test configs file
+        nconfig, s_and_t_channels = exporter.write_configs_file(writer,
+                                                                matrix_element)
+        writer.close()
+#        print open(self.give_pos('test')).read()
+        self.assertFileContains('test',
+        """C     Diagram 1
+      DATA MAPCONFIG(1)/1/
+      DATA (IFOREST(I,-1,1),I=1,2)/1,4/
+      DATA TPRID(-1,1)/11/
+      DATA (SPROP(I,-1,1),I=1,1)/0/
+      DATA (IFOREST(I,-2,1),I=1,2)/-1,3/
+C     Number of configs
+      DATA MAPCONFIG(0)/1/
+""")
+        
+        # Test get_color.f output
+        writer = writers.FortranWriter(self.give_pos('test'))
+        exporter.write_colors_file(writer, matrix_element)
+        writer.close()
+        #print open(self.give_pos('test')).read()
+        self.assertFileContains('test',
+        """      FUNCTION GET_COLOR(IPDG)
+      IMPLICIT NONE
+      INTEGER GET_COLOR, IPDG
+
+      IF(IPDG.EQ.-24)THEN
+        GET_COLOR=1
+        RETURN
+      ELSE IF(IPDG.EQ.-11)THEN
+        GET_COLOR=1
+        RETURN
+      ELSE IF(IPDG.EQ.11)THEN
+        GET_COLOR=1
+        RETURN
+      ELSE IF(IPDG.EQ.12)THEN
+        GET_COLOR=1
+        RETURN
+      ELSE IF(IPDG.EQ.22)THEN
+        GET_COLOR=1
+        RETURN
+      ELSE IF(IPDG.EQ.24)THEN
+        GET_COLOR=1
+        RETURN
+      ELSE
+        WRITE(*,*)'Error: No color given for pdg ',IPDG
+        GET_COLOR=0
+        RETURN
+      ENDIF
+      END
+
+""")
+
 class AlohaFortranWriterTest(unittest.TestCase):
     """ A basic test to see if the Aloha Fortran Writter is working """
     
@@ -8640,13 +8839,3 @@ if __name__ == '__main__':
                        [me.get('diagrams')[323], me.get('diagrams')[954],
                         me.get('diagrams')[1123], me.get('diagrams')[1139]])
         
-        
-        
-
-
-    
-    
-    
-
-
-
