@@ -61,24 +61,37 @@ class LoopExporterFortran(object):
         clean. This creates a diamond inheritance scheme in which we avoid mro
         (method resolution order) ambiguity by using unique method names here."""
 
-    def __init__(self, loop_dir = "", *args, **kwargs):
+    def __init__(self, loop_dir = "", cuttools_dir = "", *args, **kwargs):
         """Initiate the LoopExporterFortran with directory information on where
         to find all the loop-related source files, like CutTools"""
         self.loop_dir = loop_dir
+        self.cuttools_dir = cuttools_dir
         super(LoopExporterFortran,self).__init__(*args, **kwargs)
         
-    def copy_CutTools(self, targetPath):
-        """copy the CutTools source directory inside the target path given
+    def link_CutTools(self, targetPath):
+        """Link the CutTools source directory inside the target path given
         in argument"""
-        
-        CutTools_path=os.path.join(self.loop_dir, 'CutTools')
-        if not os.path.isdir(os.path.join(targetPath, 'CUTTOOLS')):
-            if os.path.isdir(CutTools_path):
-                shutil.copytree(CutTools_path,os.path.join(targetPath,'CUTTOOLS')\
-                                , True)
-            else:
-                raise MadGraph5Error, \
-                      "No valid CutTools path given for processing loops."
+
+        cwd = os.getcwd()
+
+        try:
+            os.chdir(targetPath)
+        except os.error:
+            logger.error('Could not cd to directory %s' % dirpath)
+            return 0
+
+        if os.path.exists(os.path.join(self.cuttools_dir,'includects','libcts.a')):
+            linkfiles = ['libcts.a', 'ddmodule.mod', 'mpmodule.mod']
+            for file in linkfiles:
+                ln(os.path.join(self.cuttools_dir,'includects')+'/%s' % file)
+        else:
+            raise MadGraph5Error, \
+                    "Please compile your CutTools distribution in '%s' before generation."\
+                    %self.cuttools_dir
+
+
+        # Return to original PWD
+        os.chdir(cwd)
 
     #===========================================================================
     # write the multiple-precision header files
@@ -114,9 +127,9 @@ class LoopProcessExporterFortranSA(export_v4.ProcessExporterFortranSA,
         
         super(LoopProcessExporterFortranSA, self).copy_v4template()
         
-        # We must copy the CutTools to the Source folder of the active Template
-        super(LoopProcessExporterFortranSA, self).copy_CutTools(
-                                    os.path.join(self.dir_path, 'Source'))
+        # We must link the CutTools to the Library folder of the active Template
+        super(LoopProcessExporterFortranSA, self).link_CutTools(
+                                    os.path.join(self.dir_path, 'lib'))
         
         # We must change some files to their version for NLO computations
         cpfiles= ["Source/makefile","SubProcesses/makefile",\
@@ -154,16 +167,16 @@ class LoopProcessExporterFortranSA(export_v4.ProcessExporterFortranSA,
     #===========================================================================
     # Make the CutTools directories for Standalone directory
     #===========================================================================
-    def make(self):
-        """Run make in the DHELAS and MODEL directories, to set up
-        everything for running standalone
-        """
-        
-        super(LoopProcessExporterFortranSA, self).make()
-        
-        source_dir = os.path.join(self.dir_path, "Source")
-        logger.info("Running make for CutTools")
-        misc.compile(arg=['../../lib/libcts.a'], cwd=source_dir, mode='fortran')
+#    def make(self):
+#        """Run make in the DHELAS and MODEL directories, to set up
+#        everything for running standalone
+#        """
+#        
+#        super(LoopProcessExporterFortranSA, self).make()
+#        
+#        source_dir = os.path.join(self.dir_path, "Source")
+#        logger.info("Running make for CutTools")
+#        misc.compile(arg=['../../lib/libcts.a'], cwd=source_dir, mode='fortran')
 #        shutil.copy(os.path.join(self.dir_path,\
 #            'Source/CUTTOOLS/includects/libcts.a'),\
 #            os.path.join(self.dir_path,'lib/libcts.a'))
@@ -275,7 +288,7 @@ class LoopProcessExporterFortranSA(export_v4.ProcessExporterFortranSA,
         # Create the necessary files for the loop matrix element subroutine
         
         if writer:
-            
+       
             file1 = self.write_loop_num(None,matrix_element,fortran_model)
             file2 = self.write_CT_interface(None,matrix_element)            
             calls, file3 = self.write_loopmatrix(None,matrix_element,fortran_model)

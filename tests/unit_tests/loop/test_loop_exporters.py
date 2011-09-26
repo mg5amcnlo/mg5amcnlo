@@ -21,6 +21,7 @@ import logging
 import math
 import os
 import sys
+import shutil
 
 root_path = os.path.split(os.path.dirname(os.path.realpath( __file__ )))[0]
 sys.path.append(os.path.join(root_path, os.path.pardir, os.path.pardir))
@@ -51,6 +52,8 @@ _mgme_file_path = os.path.join(_file_path, os.path.pardir, os.path.pardir,
                                 os.path.pardir)
 _loop_file_path = os.path.join(_file_path, os.path.pardir, os.path.pardir,
                                 os.path.pardir, 'loop_material')
+_cuttools_file_path = os.path.join(_file_path, os.path.pardir, os.path.pardir,
+                                os.path.pardir, 'loop_material','CutTools')
 _proc_file_path = os.path.join(_file_path, 'test_proc')
 
 
@@ -64,7 +67,7 @@ class LoopExporterTest(unittest.TestCase):
     fortran_model= helas_call_writers.FortranUFOHelasCallWriter()
     loopExporter = loop_exporters.LoopProcessExporterFortranSA(\
                                   _mgme_file_path, _proc_file_path,
-                                  False, _loop_file_path)
+                                  False, _loop_file_path,_cuttools_file_path)
     def setUp(self):
         """load the NLO toy model"""
         
@@ -79,8 +82,10 @@ class LoopExporterTest(unittest.TestCase):
         of the loop exporter"""
         
         self.loopExporter.copy_v4template()
-        self.assertTrue(os.path.isdir(os.path.join(_proc_file_path,'Source',\
-                                              'CutTools')))
+        libFiles=['mpmodule.mod','ddmodule.mod','libcts.a']
+        for file in libFiles:
+            self.assertTrue(os.path.exists(os.path.join(_proc_file_path\
+                                              ,'lib',file)))
         self.loopExporter.generate_loop_subprocess(\
                             loopME, self.fortran_model)
         wanted_lorentz = loopME.get_used_lorentz()
@@ -92,6 +97,7 @@ class LoopExporterTest(unittest.TestCase):
                         helas_objects.HelasMatrixElementList([loopME,]),
                         ["Generation from test_loop_exporters.py",],
                         False,False)
+        shutil.rmtree(_proc_file_path)
         
     def notest_LoopProcessExporterFortranSA_ddx_uux(self):
         """Test the StandAlone output for different processes.

@@ -1483,7 +1483,17 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
         self._export_format = 'madevent'
         self._mgme_dir = MG4DIR
         self._comparisons = None
-    
+
+        # Set where to look for CutTools installation.
+        # In further versions, it will be set in the same manner as _mgme_dir so that
+        # the user can chose its own CutTools distribution.
+        self._cuttools_dir=str(os.path.join(self._mgme_dir,'loop_material','CutTools'))
+        if not os.path.isdir(os.path.join(self._cuttools_dir, 'src','cts')):
+            logger.warning(('Warning: Directory %s is not a valid CutTools directory.'+\
+                           'Using default CutTools instead.') % \
+                             self._cuttools_dir)
+            self._cuttools_dir=str(os.path.join(self._mgme_dir,'loop_material','CutTools'))
+
         # Set defaults for options
         self._options['group_subprocesses'] = True
         self._options['ignore_six_quark_processes'] = False
@@ -2781,7 +2791,8 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
                 if os.path.isdir(os.path.join(self._mgme_dir, 'loop_material')):
                     self._curr_exporter = loop_exporters.LoopProcessExporterFortranSA(\
                                           self._mgme_dir, self._export_dir, not noclean,\
-                                          os.path.join(self._mgme_dir, 'loop_material'))
+                                          os.path.join(self._mgme_dir, 'loop_material'),\
+                                          self._cuttools_dir)
                 else:
                     raise MadGraph5Error('MG5 cannot find the \'loop_material\' directory in the MG/ME folder specified.')                                                           
             else:

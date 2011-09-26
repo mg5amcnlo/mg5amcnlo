@@ -351,11 +351,11 @@ C     Amplitude(s) for diagram number 6
 
         self.assertEqual(process_exporter.coeff(-1,
                                          fractions.Fraction(-3),
-                                         False, 0), '+3*')
+                                         False, 0), '+3D0*')
 
         self.assertEqual(process_exporter.coeff(-1,
                                          fractions.Fraction(3, 5),
-                                         True, -2), '-1./15.*imag1*')
+                                         True, -2), '-1D0/15D0*imag1*')
 
     def test_export_matrix_element_v4_madevent_group(self):
         """Test the result of exporting a subprocess group matrix element"""
@@ -1018,8 +1018,8 @@ C     Amplitude(s) for diagram number 5
       CALL FFV1_2_3(W(1,1),W(1,3),GUZ1,GUZ2,MZ, WZ, W(1,10))
 C     Amplitude(s) for diagram number 6
       CALL FFV1_2_0(W(1,4),W(1,2),W(1,10),GUZ1,GUZ2,AMP(6))
-      JAMP(1)=+1./6.*AMP(1)-AMP(2)-AMP(3)+1./2.*AMP(4)
-      JAMP(2)=-1./2.*AMP(1)-1./6.*AMP(4)+AMP(5)+AMP(6)
+      JAMP(1)=+1D0/6D0*AMP(1)-AMP(2)-AMP(3)+1D0/2D0*AMP(4)
+      JAMP(2)=-1D0/2D0*AMP(1)-1D0/6D0*AMP(4)+AMP(5)+AMP(6)
       MATRIX1 = 0.D0
       DO I = 1, NCOLOR
         ZTEMP = (0.D0,0.D0)
@@ -2844,12 +2844,12 @@ C 1 T(2,6) T(3,4) T(5,1)""")
 
         # Test JAMP (color amplitude) output
         self.assertEqual('\n'.join(exporter.get_JAMP_lines(matrix_element)),
-                         """JAMP(1)=+1./4.*(+1./9.*AMP(1)+1./9.*AMP(2)+1./3.*AMP(4)+1./3.*AMP(5)+1./3.*AMP(7)+1./3.*AMP(8)+1./9.*AMP(9)+1./9.*AMP(10)+AMP(14)-AMP(16)+AMP(17)+1./3.*AMP(19)+1./3.*AMP(20)+AMP(22)-AMP(23)+1./3.*AMP(27)+1./3.*AMP(28)+AMP(29)+AMP(31)+1./3.*AMP(33)+1./3.*AMP(34)+1./3.*AMP(35)+1./3.*AMP(36)+AMP(37)+1./9.*AMP(39)+1./9.*AMP(40))
-JAMP(2)=+1./4.*(-1./3.*AMP(1)-1./3.*AMP(2)-1./9.*AMP(4)-1./9.*AMP(5)-1./9.*AMP(7)-1./9.*AMP(8)-1./3.*AMP(9)-1./3.*AMP(10)-AMP(12)+AMP(13)-1./3.*AMP(17)-1./3.*AMP(18)-AMP(19)-AMP(25)+AMP(26)-AMP(27)-1./3.*AMP(29)-1./3.*AMP(30)-1./3.*AMP(31)-1./3.*AMP(32)-AMP(33)-AMP(35)-1./3.*AMP(37)-1./3.*AMP(38)-1./9.*AMP(41)-1./9.*AMP(42))
-JAMP(3)=+1./4.*(-AMP(4)+AMP(6)-AMP(7)-1./3.*AMP(9)-1./3.*AMP(10)-1./9.*AMP(11)-1./9.*AMP(12)-1./3.*AMP(14)-1./3.*AMP(15)-1./3.*AMP(17)-1./3.*AMP(18)-1./9.*AMP(19)-1./9.*AMP(20)-1./3.*AMP(21)-1./3.*AMP(22)-AMP(24)-AMP(26)-AMP(28)-1./3.*AMP(31)-1./3.*AMP(32)-1./9.*AMP(33)-1./9.*AMP(34)-AMP(36)-1./3.*AMP(39)-1./3.*AMP(40)-AMP(41))
-JAMP(4)=+1./4.*(+AMP(1)+AMP(3)+1./3.*AMP(4)+1./3.*AMP(5)+AMP(10)+1./3.*AMP(11)+1./3.*AMP(12)+AMP(15)+AMP(16)+AMP(18)+1./9.*AMP(21)+1./9.*AMP(22)+1./3.*AMP(24)+1./3.*AMP(25)+1./3.*AMP(27)+1./3.*AMP(28)+1./9.*AMP(29)+1./9.*AMP(30)+1./9.*AMP(31)+1./9.*AMP(32)+1./3.*AMP(33)+1./3.*AMP(34)+AMP(38)+AMP(40)+1./3.*AMP(41)+1./3.*AMP(42))
-JAMP(5)=+1./4.*(+AMP(2)-AMP(3)+1./3.*AMP(7)+1./3.*AMP(8)+AMP(9)+1./3.*AMP(11)+1./3.*AMP(12)+1./9.*AMP(14)+1./9.*AMP(15)+1./9.*AMP(17)+1./9.*AMP(18)+1./3.*AMP(19)+1./3.*AMP(20)+AMP(21)+AMP(23)+1./3.*AMP(24)+1./3.*AMP(25)+AMP(30)+AMP(32)+1./3.*AMP(35)+1./3.*AMP(36)+1./9.*AMP(37)+1./9.*AMP(38)+AMP(39)+1./3.*AMP(41)+1./3.*AMP(42))
-JAMP(6)=+1./4.*(-1./3.*AMP(1)-1./3.*AMP(2)-AMP(5)-AMP(6)-AMP(8)-AMP(11)-AMP(13)-1./3.*AMP(14)-1./3.*AMP(15)-AMP(20)-1./3.*AMP(21)-1./3.*AMP(22)-1./9.*AMP(24)-1./9.*AMP(25)-1./9.*AMP(27)-1./9.*AMP(28)-1./3.*AMP(29)-1./3.*AMP(30)-AMP(34)-1./9.*AMP(35)-1./9.*AMP(36)-1./3.*AMP(37)-1./3.*AMP(38)-1./3.*AMP(39)-1./3.*AMP(40)-AMP(42))""")
+                         """JAMP(1)=+1D0/4D0*(+1D0/9D0*AMP(1)+1D0/9D0*AMP(2)+1D0/3D0*AMP(4)+1D0/3D0*AMP(5)+1D0/3D0*AMP(7)+1D0/3D0*AMP(8)+1D0/9D0*AMP(9)+1D0/9D0*AMP(10)+AMP(14)-AMP(16)+AMP(17)+1D0/3D0*AMP(19)+1D0/3D0*AMP(20)+AMP(22)-AMP(23)+1D0/3D0*AMP(27)+1D0/3D0*AMP(28)+AMP(29)+AMP(31)+1D0/3D0*AMP(33)+1D0/3D0*AMP(34)+1D0/3D0*AMP(35)+1D0/3D0*AMP(36)+AMP(37)+1D0/9D0*AMP(39)+1D0/9D0*AMP(40))
+JAMP(2)=+1D0/4D0*(-1D0/3D0*AMP(1)-1D0/3D0*AMP(2)-1D0/9D0*AMP(4)-1D0/9D0*AMP(5)-1D0/9D0*AMP(7)-1D0/9D0*AMP(8)-1D0/3D0*AMP(9)-1D0/3D0*AMP(10)-AMP(12)+AMP(13)-1D0/3D0*AMP(17)-1D0/3D0*AMP(18)-AMP(19)-AMP(25)+AMP(26)-AMP(27)-1D0/3D0*AMP(29)-1D0/3D0*AMP(30)-1D0/3D0*AMP(31)-1D0/3D0*AMP(32)-AMP(33)-AMP(35)-1D0/3D0*AMP(37)-1D0/3D0*AMP(38)-1D0/9D0*AMP(41)-1D0/9D0*AMP(42))
+JAMP(3)=+1D0/4D0*(-AMP(4)+AMP(6)-AMP(7)-1D0/3D0*AMP(9)-1D0/3D0*AMP(10)-1D0/9D0*AMP(11)-1D0/9D0*AMP(12)-1D0/3D0*AMP(14)-1D0/3D0*AMP(15)-1D0/3D0*AMP(17)-1D0/3D0*AMP(18)-1D0/9D0*AMP(19)-1D0/9D0*AMP(20)-1D0/3D0*AMP(21)-1D0/3D0*AMP(22)-AMP(24)-AMP(26)-AMP(28)-1D0/3D0*AMP(31)-1D0/3D0*AMP(32)-1D0/9D0*AMP(33)-1D0/9D0*AMP(34)-AMP(36)-1D0/3D0*AMP(39)-1D0/3D0*AMP(40)-AMP(41))
+JAMP(4)=+1D0/4D0*(+AMP(1)+AMP(3)+1D0/3D0*AMP(4)+1D0/3D0*AMP(5)+AMP(10)+1D0/3D0*AMP(11)+1D0/3D0*AMP(12)+AMP(15)+AMP(16)+AMP(18)+1D0/9D0*AMP(21)+1D0/9D0*AMP(22)+1D0/3D0*AMP(24)+1D0/3D0*AMP(25)+1D0/3D0*AMP(27)+1D0/3D0*AMP(28)+1D0/9D0*AMP(29)+1D0/9D0*AMP(30)+1D0/9D0*AMP(31)+1D0/9D0*AMP(32)+1D0/3D0*AMP(33)+1D0/3D0*AMP(34)+AMP(38)+AMP(40)+1D0/3D0*AMP(41)+1D0/3D0*AMP(42))
+JAMP(5)=+1D0/4D0*(+AMP(2)-AMP(3)+1D0/3D0*AMP(7)+1D0/3D0*AMP(8)+AMP(9)+1D0/3D0*AMP(11)+1D0/3D0*AMP(12)+1D0/9D0*AMP(14)+1D0/9D0*AMP(15)+1D0/9D0*AMP(17)+1D0/9D0*AMP(18)+1D0/3D0*AMP(19)+1D0/3D0*AMP(20)+AMP(21)+AMP(23)+1D0/3D0*AMP(24)+1D0/3D0*AMP(25)+AMP(30)+AMP(32)+1D0/3D0*AMP(35)+1D0/3D0*AMP(36)+1D0/9D0*AMP(37)+1D0/9D0*AMP(38)+AMP(39)+1D0/3D0*AMP(41)+1D0/3D0*AMP(42))
+JAMP(6)=+1D0/4D0*(-1D0/3D0*AMP(1)-1D0/3D0*AMP(2)-AMP(5)-AMP(6)-AMP(8)-AMP(11)-AMP(13)-1D0/3D0*AMP(14)-1D0/3D0*AMP(15)-AMP(20)-1D0/3D0*AMP(21)-1D0/3D0*AMP(22)-1D0/9D0*AMP(24)-1D0/9D0*AMP(25)-1D0/9D0*AMP(27)-1D0/9D0*AMP(28)-1D0/3D0*AMP(29)-1D0/3D0*AMP(30)-AMP(34)-1D0/9D0*AMP(35)-1D0/9D0*AMP(36)-1D0/3D0*AMP(37)-1D0/3D0*AMP(38)-1D0/3D0*AMP(39)-1D0/3D0*AMP(40)-AMP(42))""")
 
         # Test configs.inc file
         writer = writers.FortranWriter(self.give_pos('test'))
@@ -3589,12 +3589,12 @@ C 1 Tr(1,4,3,2)""")
 
         # Test JAMP (color amplitude) output
         self.assertEqual("\n".join(exporter.get_JAMP_lines(matrix_element)),
-                         """JAMP(1)=+2*(+AMP(3)-AMP(1)+AMP(4)-AMP(6))
-JAMP(2)=+2*(+AMP(1)-AMP(2)-AMP(4)-AMP(5))
-JAMP(3)=+2*(-AMP(3)+AMP(2)+AMP(5)+AMP(6))
-JAMP(4)=+2*(+AMP(1)-AMP(2)-AMP(4)-AMP(5))
-JAMP(5)=+2*(-AMP(3)+AMP(2)+AMP(5)+AMP(6))
-JAMP(6)=+2*(+AMP(3)-AMP(1)+AMP(4)-AMP(6))""")
+                         """JAMP(1)=+2D0*(+AMP(3)-AMP(1)+AMP(4)-AMP(6))
+JAMP(2)=+2D0*(+AMP(1)-AMP(2)-AMP(4)-AMP(5))
+JAMP(3)=+2D0*(-AMP(3)+AMP(2)+AMP(5)+AMP(6))
+JAMP(4)=+2D0*(+AMP(1)-AMP(2)-AMP(4)-AMP(5))
+JAMP(5)=+2D0*(-AMP(3)+AMP(2)+AMP(5)+AMP(6))
+JAMP(6)=+2D0*(+AMP(3)-AMP(1)+AMP(4)-AMP(6))""")
 
         # Test amp2 lines        
         amp2_lines = \

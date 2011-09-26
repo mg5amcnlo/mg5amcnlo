@@ -25,7 +25,7 @@ LIBRARIES=$(LIBDIR)libdsample.$(libext) $(LIBDIR)libgeneric.$(libext)
 
 # Compile commands
 
-all: $(LIBRARIES) $(LIBDIR)libdhelas.$(libext) $(LIBDIR)libpdf.$(libext) $(LIBDIR)libmodel.$(libext) $(LIBDIR)libcernlib.$(libext) $(LIBDIR)libcts.$(libext)
+all: $(LIBRARIES) $(LIBDIR)libdhelas.$(libext) $(LIBDIR)libpdf.$(libext) $(LIBDIR)libmodel.$(libext) $(LIBDIR)libcernlib.$(libext)
 
 # Libraries
 
@@ -40,9 +40,7 @@ $(LIBDIR)libpdf.$(libext): PDF
 $(LIBDIR)libcernlib.$(libext): CERNLIB
 	cd CERNLIB; make	
 $(LIBDIR)libmodel.$(libext): MODEL
-	cd MODEL; make	
-../$(LIBDIR)libcts.$(libext): CUTTOOLS
-	cd CUTTOOLS; make; mv -f includects/libcts.a ../$(LIBDIR); mv -f includects/ddmodule.mod ../$(LIBDIR); mv -f includects/mpmodule.mod ../$(LIBDIR); 
+	cd MODEL; make	 
 
 # Binaries
 
@@ -74,4 +72,3 @@ clean:
 	cd DHELAS; make clean; cd ..
 	cd CERNLIB; make clean; cd ..
 	cd MODEL; make clean; cd ..
-	cd CUTTOOLS; make clean; cd ..

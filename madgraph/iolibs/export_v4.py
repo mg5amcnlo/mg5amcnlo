@@ -688,11 +688,11 @@ class ProcessExporterFortran(object):
             else:
                 return '-'
 
-        res_str = '%+id0' % total_coeff.numerator
+        res_str = '%+iD0' % total_coeff.numerator
 
         if total_coeff.denominator != 1:
             # Check if total_coeff is an integer
-            res_str = res_str + '/%id0' % total_coeff.denominator
+            res_str = res_str + '/%iD0' % total_coeff.denominator
 
         if is_imaginary:
             res_str = res_str + '*imag1'
