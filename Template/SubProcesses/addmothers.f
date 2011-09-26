@@ -201,10 +201,10 @@ c          print *,'graph: ',iconfig
 c          print *,'Resonance: ',i,' daughters ',ida(1),ida(2),
 c     $         ' ids ',jpart(1,i),jpart(1,ida(1)),jpart(1,ida(2)),
 c     $         ' colors ',mo_color,da_color(1),da_color(2)
-          if(mo_color.eq.1) then ! color singlet
-             icolalt(1,i) = 0
-             icolalt(2,i) = 0
-          elseif(mo_color.eq.-3) then ! color anti-triplet
+c         Default: color singlet
+          icolalt(1,i) = 0
+          icolalt(2,i) = 0
+          if(mo_color.eq.-3) then ! color anti-triplet
                 icolalt(1,i) = 0
              if(da_color(1).eq.-3.and.da_color(2).eq.1)then
                 icolalt(2,i) = icolalt(2,ida(1))
@@ -220,10 +220,7 @@ c     $         ' colors ',mo_color,da_color(1),da_color(2)
                 maxcolor=maxcolor+1
                 icolalt(2,i) = maxcolor
              else
-                write(*,*)'Error: Color combination ',da_color(1),da_color(2),
-     $               '->',mo_color,' not implemented in addmothers.f'
-                icolalt(1,i) = 0
-                icolalt(2,i) = 0
+                call write_error(da_color(1), da_color(2), mo_color)
              endif
           elseif(mo_color.eq.3) then ! color triplet
                 icolalt(2,i) = 0
@@ -241,10 +238,7 @@ c     $         ' colors ',mo_color,da_color(1),da_color(2)
                 maxcolor=maxcolor+1
                 icolalt(1,i) = maxcolor
              else
-                write(*,*)'Error: Color combination ',da_color(1),da_color(2),
-     $               '->',mo_color,' not implemented in addmothers.f'
-                icolalt(1,i) = 0
-                icolalt(2,i) = 0
+                call write_error(da_color(1), da_color(2), mo_color)
              endif
           elseif(mo_color.eq.-6) then ! color anti-sextet
              if(da_color(1).eq.-6.and.da_color(2).eq.1)then
@@ -262,10 +256,7 @@ c     $         ' colors ',mo_color,da_color(1),da_color(2)
                 icolalt(1,i) = -icolalt(2,ida(1))
                 icolalt(2,i) = icolalt(2,ida(2))
              else
-                write(*,*)'Error: Color combination ',da_color(1),da_color(2),
-     $               '->',mo_color,' not implemented in addmothers.f'
-                icolalt(1,i) = 0
-                icolalt(2,i) = 0
+                call write_error(da_color(1), da_color(2), mo_color)
              endif
           elseif(mo_color.eq.6) then ! color sextet
              if(da_color(1).eq.1.and.da_color(2).eq.6)then
@@ -283,10 +274,7 @@ c     $         ' colors ',mo_color,da_color(1),da_color(2)
                 icolalt(1,i) = icolalt(1,ida(1))
                 icolalt(2,i) = -icolalt(1,ida(2))
              else
-                write(*,*)'Error: Color combination ',da_color(1),da_color(2),
-     $               '->',mo_color,' not implemented in addmothers.f'
-                icolalt(1,i) = 0
-                icolalt(2,i) = 0
+                call write_error(da_color(1), da_color(2), mo_color)
              endif
           elseif(mo_color.eq.8) then ! color octet
              if(da_color(1).eq.-3.and.da_color(2).eq.3)then
@@ -318,17 +306,10 @@ c     $         ' colors ',mo_color,da_color(1),da_color(2)
                    icolalt(2,i) = -icolalt(1,ida(1))
                 endif
              else
-                write(*,*)'Error: Color combination ',da_color(1),da_color(2),
-     $               '->',mo_color,' not implemented in addmothers.f'
-                icolalt(1,i) = 0
-                icolalt(2,i) = 0
+                call write_error(da_color(1), da_color(2), mo_color)
              endif
           else
-             write(*,*)'Error: Color combination ',da_color(1),da_color(2),
-     $            '->',mo_color,' not implemented in addmothers.f'
-c         Erraneous color assignment for propagator - set color to 0
-            icolalt(1,i) = 0
-            icolalt(2,i) = 0
+             call write_error(da_color(1), da_color(2), mo_color)
           endif
 c         Set tentative mothers
           jpart(2,i) = 1
@@ -387,4 +368,18 @@ c
         npart = nexternal+nres
 
       return
+      end
+
+      subroutine write_error(ida1,ida2,imo)
+      implicit none
+      integer ida1,ida2,imo
+
+      open(unit=26,file='../../../error',status='unknown',err=999)
+      write(26,*) 'Error: Color combination ',ida1,ida2,
+     $     '->',imo,' not implemented in addmothers.f'
+      write(*,*) 'Error: Color combination ',ida1,ida2,
+     $     '->',imo,' not implemented in addmothers.f'
+      stop
+
+ 999  write(*,*) 'error'
       end
