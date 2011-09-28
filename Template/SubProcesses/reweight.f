@@ -139,7 +139,7 @@ c**************************************************
       integer ipdg, irfl
       integer get_color
 
-      isqcd=(get_color(ipdg).gt.1)
+      isqcd=(iabs(get_color(ipdg)).gt.1)
 
       return
       end
@@ -197,33 +197,33 @@ c**************************************************
       integer imo,ida1,ida2,i,idmo,idda1,idda2
       integer ipdg(n_max_cl),ipart(2,n_max_cl)
 
-      do i=1,2
-        ipart(i,imo)=0
-      enddo
-
       idmo=ipdg(imo)
       idda1=ipdg(ida1)
       idda2=ipdg(ida2)
 
       if (btest(mlevel,4)) then
-        write(*,*) ' updating ipart for: ',ida1,ida2,imo
+        write(*,*) ' updating ipart for: ',ida1,ida2,' -> ',imo
       endif
 
-        if (btest(mlevel,4)) then
-          write(*,*) ' daughters: ',(ipart(i,ida1),i=1,2),(ipart(i,ida2),i=1,2)
-        endif
+      if (btest(mlevel,4)) then
+         write(*,*) ' daughters: ',(ipart(i,ida1),i=1,2),(ipart(i,ida2),i=1,2)
+      endif
 
 c     IS clustering - just transmit info on incoming line
       if((ipart(1,ida1).ge.1.and.ipart(1,ida1).le.2).or.
      $   (ipart(1,ida2).ge.1.and.ipart(1,ida2).le.2))then
-        if(ipart(1,ida2).ge.1.and.ipart(1,ida2).le.2)
-     $     ipart(1,imo)=ipart(1,ida2)        
-        if(ipart(1,ida1).ge.1.and.ipart(1,ida1).le.2)
-     $     ipart(1,imo)=ipart(1,ida1)
-        if (btest(mlevel,4)) then
-          write(*,*) ' -> ',(ipart(i,imo),i=1,2)
-        endif
-        return
+         ipart(2,imo)=0
+         if(ipart(1,ida1).le.2.and.ipart(1,ida2).le.2)then
+c           This is last clustering - keep mother ipart
+            ipart(1,imo)=ipart(1,imo)
+         elseif(ipart(1,ida2).ge.1.and.ipart(1,ida2).le.2)then
+            ipart(1,imo)=ipart(1,ida2)        
+         elseif(ipart(1,ida1).ge.1.and.ipart(1,ida1).le.2)then
+            ipart(1,imo)=ipart(1,ida1)
+         endif
+         if (btest(mlevel,4))
+     $        write(*,*) ' -> ',(ipart(i,imo),i=1,2)
+         return
       endif        
 
 c     FS clustering
@@ -250,9 +250,11 @@ c     gluon -> quark anti-quark: use both, but take hardest as 1
       else if(idmo.eq.idda1.or.idmo.eq.idda1+sign(1,idda2))then
 c     quark -> quark-gluon or quark-Z or quark-h or quark-W
         ipart(1,imo)=ipart(1,ida1)
+        ipart(2,imo)=0
       else if(idmo.eq.idda2.or.idmo.eq.idda2+sign(1,idda1))then
 c     quark -> gluon-quark or Z-quark or h-quark or W-quark
         ipart(1,imo)=ipart(1,ida2)
+        ipart(2,imo)=0
       else
 c     Color singlet
          ipart(1,imo)=ipart(1,ida1)
@@ -532,7 +534,7 @@ c     Set central scale to mT2
       if(jcentral(2).gt.0.and.mt2ij(jcentral(2)).gt.0d0)
      $     pt2ijcl(jcentral(2))=mt2ij(jcentral(2))
       if(btest(mlevel,4))
-     $     print *,'pt2ijcl is: ',jlast(1), sqrt(pt2ijcl(jlast(1))),
+     $     write(*,*)'pt2ijcl is: ',jlast(1), sqrt(pt2ijcl(jlast(1))),
      $     jlast(2), sqrt(pt2ijcl(jlast(2))),
      $     jcentral(1), sqrt(pt2ijcl(jcentral(1))),
      $     jcentral(2), sqrt(pt2ijcl(jcentral(2)))
@@ -739,7 +741,7 @@ C   local variables
 c     ipart gives external particle number chain
       integer ipart(2,n_max_cl)
       double precision xnow(2)
-      double precision xtarget,tmp,pdfj1,pdfj2,q2now
+      double precision xtarget,tmp,pdfj1,pdfj2,q2now,etot
       integer iseed,np
       data iseed/0/
       logical isvx
@@ -770,6 +772,9 @@ c   Set mimimum kt scale, depending on highest mult or not
       if (btest(mlevel,3))
      $     write(*,*) 'pt2min set to ',pt2min
 
+c   Set etot, used for non-radiating partons
+      etot=2d0*sqrt(ebeam(1)*ebeam(2))
+
 c   Since we use pdf reweighting, need to know particle identities
       iprocset=1
       np = isproc
@@ -797,8 +802,13 @@ c        ilast(i)=ishft(1,i)
             pt2pdf(ishft(1,i-1))=0d0
          endif
          ptclus(i)=sqrt(pt2prev(ishft(1,i-1)))
+         if (btest(mlevel,3))
+     $        write(*,*) 'Set ptclus for ',i,' to ', ptclus(i)
          ipart(1,ishft(1,i-1))=i
          ipart(2,ishft(1,i-1))=0
+         if (btest(mlevel,4))
+     $        write(*,*) 'Set ipart for ',ishft(1,i-1),' to ',
+     $        ipart(1,ishft(1,i-1)),ipart(2,ishft(1,i-1))
       enddo
 c      ilast(0)=nexternal
       ibeam(1)=ishft(1,0)
@@ -835,7 +845,7 @@ c
 c   Perform alpha_s reweighting based on type of vertex
       do n=1,nexternal-2
 c       scale for alpha_s reweighting
-        q2now=min(pt2ijcl(n), scale**2)
+        q2now=pt2ijcl(n)
         if(n.eq.nexternal-2) then
            q2now = scale**2
         endif
@@ -864,13 +874,48 @@ c       alpha_s weight
 c   Update starting values for FS parton showering
         do i=1,2
           do j=1,2
-            if(ipart(j,idacl(n,i)).gt.0)then
-              ptclus(ipart(j,idacl(n,i)))=dsqrt(pt2ijcl(n))
+            if(ipart(j,idacl(n,i)).gt.0.and.ipart(j,idacl(n,i)).gt.2)then
+              ptclus(ipart(j,idacl(n,i)))=
+     $              max(ptclus(ipart(j,idacl(n,i))),dsqrt(pt2ijcl(n)))
+              if(ickkw.ne.2.and.
+     $             (.not.isqcd(ipdgcl(imocl(n),igraphs(1),iproc)).or.
+     $             ipart(1,idacl(n,3-i)).le.2.and.
+     $             .not.isqcd(ipdgcl(idacl(n,3-i),igraphs(1),iproc)).or.
+     $             isbw(imocl(n))))then
+c             For particles originating in non-qcd t-channel vertices or decay vertices,
+c             set origination scale to machine energy since we don't want these
+c             to be included in matching.
+                 ptclus(ipart(j,idacl(n,i)))=etot
+              endif
+              if (btest(mlevel,3))
+     $             write(*,*) 'Set ptclus for ',ipart(j,idacl(n,i)),
+     $             ' to ', ptclus(ipart(j,idacl(n,i))),
+     $             ipdgcl(imocl(n),igraphs(1),iproc),
+     $             isqcd(ipdgcl(imocl(n),igraphs(1),iproc)),isbw(imocl(n))
             endif
           enddo
         enddo
+c     Special case for last 1,2->i vertex
+        if(n.eq.nexternal-2)then
+           ptclus(ipart(1,imocl(n)))=
+     $              max(ptclus(ipart(1,imocl(n))),dsqrt(pt2ijcl(n)))
+              if(ickkw.ne.2.and.
+     $             (.not.isqcd(ipdgcl(idacl(n,1),igraphs(1),iproc)).or.
+     $             .not.isqcd(ipdgcl(idacl(n,2),igraphs(1),iproc))))then
+c             For particles originating in non-qcd vertices or decay vertices,
+c             set origination scale to machine energy since we don't want these
+c             to be included in matching.
+                 ptclus(ipart(1,imocl(n)))=etot
+              endif
+              if (btest(mlevel,3))
+     $             write(*,*) 'Set ptclus for ',ipart(1,imocl(n)),
+     $             ' to ', ptclus(ipart(1,imocl(n))),
+     $             ipdgcl(idacl(n,1),igraphs(1),iproc),
+     $             ipdgcl(idacl(n,2),igraphs(1),iproc)
+        endif
 c   Update particle tree map
-        call ipartupdate(p,imocl(n),idacl(n,1),idacl(n,2),ipdgcl(1,igraphs(1),iproc),ipart)
+        call ipartupdate(p,imocl(n),idacl(n,1),idacl(n,2),
+     $       ipdgcl(1,igraphs(1),iproc),ipart)
         if(ickkw.eq.2.or.pdfwgt) then
 c       Perform PDF and, if ickkw=2, Sudakov reweighting
           isvx=.false.

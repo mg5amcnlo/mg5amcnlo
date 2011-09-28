@@ -558,7 +558,6 @@ c**************************************************************************
       common/to_mconfigs/mapconfig, this_config
 
       integer nbw,ibwlist(nexternal)
-      logical isbw(n_max_cl)
       data isbw/n_max_cl*.false./
 
       data (pz(i),i=0,3)/1d0,0d0,0d0,1d0/
