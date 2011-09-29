@@ -625,18 +625,15 @@ c     Use the fixed or previously set scale for central scale
      $        pt2ijcl(jcentral(2))=q2fact(2)
       endif
 
-      if(nexternal.eq.3.and.nincoming.eq.2) then
-         if(q2fact(1).eq.0)
-     $        q2fact(1)=pt2ijcl(nexternal-2)
-         if(q2fact(2).eq.0)
-     $        q2fact(2)=pt2ijcl(nexternal-2)
+      if(nexternal.eq.3.and.nincoming.eq.2.and.q2fact(1).eq.0) then
+         q2fact(1)=pt2ijcl(nexternal-2)
+         q2fact(2)=pt2ijcl(nexternal-2)
       endif
 
       if(q2fact(1).eq.0d0) then
 c     Use the geom. average of central scale and first non-radiation vertex
          if(jlast(1).gt.0) q2fact(1)=sqrt(pt2ijcl(jlast(1))*pt2ijcl(jcentral(1)))
          if(jlast(2).gt.0) q2fact(2)=sqrt(pt2ijcl(jlast(2))*pt2ijcl(jcentral(2)))
-
          if(jcentral(1).eq.jcentral(2))then
 c     We have a qcd line going through the whole event, use single scale
             q2fact(1)=max(q2fact(1),q2fact(2))
@@ -1078,7 +1075,7 @@ c           fs sudakov weight
          q2fact(1)=pt2min
          q2fact(2)=q2fact(1)
       else if (ickkw.eq.1.and.pdfwgt) then
-         if (q2fact(1).eq.q2fact(2))then
+         if (q2bck(1).eq.q2bck(2))then
             q2fact(1)=q2bck(1)
             q2fact(2)=q2bck(2)         
          else

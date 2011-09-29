@@ -661,10 +661,11 @@ c     Check if smallest pt2 ("winner")
 c     Take care of special 2 -> 1 case
       if (nexternal.eq.3.and.nincoming.eq.2) then
          n=1
-         imocl(n)=idij
-         idacl(n,1)=idi
-         idacl(n,2)=idj
-         pt2ijcl(n)=pcl(4,idi)
+c     Make sure that initial-state particles are daughters
+         idacl(n,1)=imap(1,2)
+         idacl(n,2)=imap(2,2)
+         imocl(n)=imap(3,2)
+         pt2ijcl(n)=pcl(4,imocl(n))
          zcl(n)=0.
          igraphs(0)=1
          igraphs(1)=this_config
