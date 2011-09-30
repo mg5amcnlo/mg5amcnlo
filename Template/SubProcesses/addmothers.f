@@ -201,10 +201,11 @@ c          print *,'graph: ',iconfig
 c          print *,'Resonance: ',i,' daughters ',ida(1),ida(2),
 c     $         ' ids ',jpart(1,i),jpart(1,ida(1)),jpart(1,ida(2)),
 c     $         ' colors ',mo_color,da_color(1),da_color(2)
-c         Default: color singlet
-          icolalt(1,i) = 0
-          icolalt(2,i) = 0
-          if(mo_color.eq.-3) then ! color anti-triplet
+          
+          if(mo_color.eq.1) then ! color singlet
+             icolalt(1,i) = 0
+             icolalt(2,i) = 0
+          elseif(mo_color.eq.-3) then ! color anti-triplet
                 icolalt(1,i) = 0
              if(da_color(1).eq.-3.and.da_color(2).eq.1)then
                 icolalt(2,i) = icolalt(2,ida(1))

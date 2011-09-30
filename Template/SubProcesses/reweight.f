@@ -600,6 +600,10 @@ c     JA: Check xmtc cut for central process
       if(ickkw.eq.0.and.(fixed_fac_scale.or.q2fact(1).gt.0).and.
      $     (fixed_ren_scale.or.scale.gt.0)) return
 
+c     Ensure that last scales are at least as big as first scales
+      pt2ijcl(jlast(1))=max(pt2ijcl(jlast(1)),pt2ijcl(jfirst(1)))
+      pt2ijcl(jlast(2))=max(pt2ijcl(jlast(2)),pt2ijcl(jfirst(2)))
+
 c     Set renormalization scale to geom. aver. of central scales
       if(scale.eq.0d0) then
          if(jcentral(1).gt.0.and.jcentral(2).gt.0) then
