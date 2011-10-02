@@ -145,7 +145,7 @@ c
       integer icolup(2,nexternal,maxflow,maxsproc)
       include 'leshouche.inc'
 
-      logical gForceBW(-max_branch:-1,lmaxconfigs)  ! Forced BW
+      integer gForceBW(-max_branch:-1,lmaxconfigs)  ! Forced BW
       include 'decayBW.inc'
 c
 c     External
@@ -217,7 +217,12 @@ c
             onshell = (abs(xmass - pmass(i,iconfig)) .lt.
      $           bwcutoff*pwidth(i,iconfig))
             if(onshell)then
-c           Only allow onshell if no "decay" to identical particle
+c     Remove on-shell forbidden s-channels (gForceBW=2) (JA 2/10/11)
+              if(gForceBW(i,iconfig).eq.2) then
+                 cut_bw = .true.
+                 return               
+              endif
+c           Only allow OnBW if no "decay" to identical particle
               OnBW(i) = .true.
               idenpart=0
               do j=1,2
@@ -235,10 +240,10 @@ c           Always remove if daughter final-state
                 OnBW(i)=.false.
 c           Else remove if daughter forced to be onshell
               elseif(idenpart.lt.0)then
-                 if(gForceBW(idenpart, iconfig)) then
+                 if(gForceBW(idenpart, iconfig).eq.1) then
                     OnBW(i)=.false.
 c           Else remove daughter if forced to be onshell
-                 elseif(gForceBW(i, iconfig)) then
+                 elseif(gForceBW(i, iconfig).eq.1) then
                     OnBW(idenpart)=.false.
 c           Else remove either this resonance or daughter, which is closer to mass shell
                  elseif(abs(xmass-pmass(i,iconfig)).gt.
@@ -250,13 +255,10 @@ c           Else remove OnBW for daughter
                     OnBW(idenpart)=.false.
                  endif
               endif
-            endif
-c
-c     Check if we are supposed to cut forced bw (JA 4/8/11)
-c
-            if (gForceBW(i, iconfig) .and. .not. onshell)then
-               cut_bw = .true.
-               return
+            else if (gForceBW(i, iconfig).eq.1) then ! .not. onshell
+c             Check if we are supposed to cut forced bw (JA 4/8/11)
+              cut_bw = .true.
+              return
             endif
 c
 c     Here we set onshell for phase space integration (JA 4/8/11)
@@ -312,7 +314,7 @@ c
       integer icolup(2,nexternal,maxflow,maxsproc)
       include 'leshouche.inc'
 
-      logical gForceBW(-max_branch:-1,lmaxconfigs)  ! Forced BW
+      integer gForceBW(-max_branch:-1,lmaxconfigs)  ! Forced BW
       include 'decayBW.inc'
 c
 c     Global
@@ -407,14 +409,14 @@ c     by tracing the particle identity from the external particle.
          if(iforest(1,i,iconfig).lt.0) then
             if((iden_part(iforest(1,i,iconfig)).ne.0.and.
      $        sprop(iproc,i,iconfig).eq.iden_part(iforest(1,i,iconfig)) .or.
-     $        gforcebw(iforest(1,i,iconfig),iconfig).and.
+     $        gforcebw(iforest(1,i,iconfig),iconfig).eq.1.and.
      $        sprop(iproc,i,iconfig).eq.sprop(iproc,iforest(1,i,iconfig),iconfig)))
      $       iden_part(i) = sprop(iproc,i,iconfig)
          endif
          if(iforest(2,i,iconfig).lt.0) then
             if((iden_part(iforest(2,i,iconfig)).ne.0.and.
      $        sprop(iproc,i,iconfig).eq.iden_part(iforest(2,i,iconfig)).or.
-     $        gforcebw(iforest(2,i,iconfig),iconfig).and.
+     $        gforcebw(iforest(2,i,iconfig),iconfig).eq.1.and.
      $        sprop(iproc,i,iconfig).eq.sprop(iproc,iforest(2,i,iconfig),iconfig)))
      $           iden_part(i) = sprop(iproc,i,iconfig)
          endif
@@ -443,7 +445,7 @@ c            write(*,*) pwidth(i,iconfig),pmass(i,iconfig)
 c              JA 6/8/2011 Set xe(i) for resonances
                if (lbw(nbw).eq.1) then
                   xm(i) = max(xm(i), pmass(i,iconfig)-5d0*pwidth(i,iconfig))
-               else if (gforcebw(i,iconfig)) then
+               else if (gforcebw(i,iconfig).eq.1) then
                   xm(i) = max(xm(i), pmass(i,iconfig)-bwcutoff*pwidth(i,iconfig))
                endif
             endif

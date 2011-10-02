@@ -546,14 +546,18 @@ class Amplitude(base_objects.PhysicsObject):
         if process.get('forbidden_s_channels'):
             ninitial = len(filter(lambda leg: leg.get('state') == False,
                               process.get('legs')))
-            res = base_objects.DiagramList(\
-                filter(lambda diagram: \
-                       not any([vertex.get_s_channel_id(\
-                                process.get('model'), ninitial) \
-                                in process.get('forbidden_s_channels')
-                                for vertex in diagram.get('vertices')[:-1]]),
-                       res))
-
+            verts = base_objects.VertexList(sum([[vertex for vertex \
+                                                  in diagram.get('vertices')[:-1]
+                                           if vertex.get_s_channel_id(\
+                                               process.get('model'), ninitial) \
+                                           in process.get('forbidden_s_channels')] \
+                                               for diagram in res], []))
+            for vert in verts:
+                # Use from_group = None to indicate that this s-channel is forbidden
+                newleg = copy.copy(vert.get('legs').pop(-1))
+                newleg.set('from_group', None)
+                vert.get('legs').append(newleg)
+                
         # Set diagrams to res
         self['diagrams'] = res
 
@@ -577,6 +581,9 @@ class Amplitude(base_objects.PhysicsObject):
                     ntlnumber = legs[-1].get('number')
                     lastleg = filter(lambda leg: leg.get('number') != ntlnumber,
                                      lastvx.get('legs'))[0]
+                    # Reset from_group in case we have forbidden s-channels
+                    if lastleg.get('from_group') == None:
+                        lastleg.set('from_group', True)
                     # Replace the last leg of nexttolastvertex
                     legs[-1] = lastleg
                     nexttolastvertex.set('legs', legs)
@@ -908,14 +915,18 @@ class Amplitude(base_objects.PhysicsObject):
         vertices = []
 
         for diagram in self.get('diagrams'):
+            # Keep track of external legs (leg numbers already used)
+            leg_external = set()
             for ivx, vertex in enumerate(diagram.get('vertices')):
                 for ileg, leg in enumerate(vertex.get('legs')):
-                    if leg.get('state') and leg.get('id') in decay_ids:
+                    # Ensure that only external legs get decay flag
+                    if leg.get('state') and leg.get('id') in decay_ids and \
+                           leg.get('number') not in leg_external:
                         # Use from_group to indicate decaying legs,
                         # i.e. legs that have decay chains
                         leg = copy.copy(leg)
                         leg.set('from_group', True)
-                    else:
+                    elif leg.get('from_group') != None:
                         leg.set('from_group', False)
                     try:
                         index = legs.index(leg)
@@ -924,6 +935,7 @@ class Amplitude(base_objects.PhysicsObject):
                         legs.append(leg)
                     else: # Found a leg
                         vertex.get('legs')[ileg] = legs[index]
+                    leg_external.add(leg.get('number'))
                 try:
                     index = vertices.index(vertex)
                     diagram.get('vertices')[ivx] = vertices[index]

@@ -1648,7 +1648,7 @@ class ProcessExporterFortranME(ProcessExporterFortran):
 
         lines = []
 
-        booldict = {False: ".false.", True: ".true."}
+        booldict = {False: "0", True: "1", None: "2"}
 
         for iconf, config in enumerate(s_and_t_channels):
             schannels = config[0]

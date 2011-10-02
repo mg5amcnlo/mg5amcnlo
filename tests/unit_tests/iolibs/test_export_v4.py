@@ -6800,7 +6800,7 @@ CALL IOSXXX(W(1,14),W(1,2),W(1,12),MGVX350,AMP(2))""")
                          "JAMP(1)=+AMP(1)-AMP(2)")
 
 
-        # e- e+ > n1 n1 / z sl5-, n1 > e- sl2+ a
+        # e- e+ > n1 n1 / z sl5-, n1 > e- sl2+ a $ sl2+
 
         myleglist = base_objects.LegList()
 
@@ -6814,7 +6814,8 @@ CALL IOSXXX(W(1,14),W(1,2),W(1,12),MGVX350,AMP(2))""")
                                          'state':True}))
 
         mydecay3 = base_objects.Process({'legs':myleglist,
-                                         'model':mymodel})
+                                         'model':mymodel,
+                                         'forbidden_s_channels':[-1000011]})
 
         me3 = helas_objects.HelasMatrixElement(\
             diagram_generation.Amplitude(mydecay3))
@@ -6829,6 +6830,8 @@ CALL IOSXXX(W(1,14),W(1,2),W(1,12),MGVX350,AMP(2))""")
         matrix_elements = matrix_element.combine_decay_chain_processes()
 
         me = matrix_elements[0]
+
+        #print me.get_base_amplitude().nice_string()
 
         # This has been checked against v4
         self.assertEqual("\n".join(myfortranmodel.get_matrix_element_calls(me)),
@@ -7058,39 +7061,40 @@ C     Number of configs
                                      s_and_t_channels)
 
         writer.close()
+        #print open(self.give_pos('test')).read()
         self.assertFileContains('test',
-                         """      DATA GFORCEBW(-1,1)/.FALSE./
-      DATA GFORCEBW(-2,1)/.TRUE./
-      DATA GFORCEBW(-3,1)/.FALSE./
-      DATA GFORCEBW(-4,1)/.TRUE./
-      DATA GFORCEBW(-1,2)/.FALSE./
-      DATA GFORCEBW(-2,2)/.TRUE./
-      DATA GFORCEBW(-3,2)/.FALSE./
-      DATA GFORCEBW(-4,2)/.TRUE./
-      DATA GFORCEBW(-1,3)/.FALSE./
-      DATA GFORCEBW(-2,3)/.TRUE./
-      DATA GFORCEBW(-3,3)/.FALSE./
-      DATA GFORCEBW(-4,3)/.TRUE./
-      DATA GFORCEBW(-1,4)/.FALSE./
-      DATA GFORCEBW(-2,4)/.TRUE./
-      DATA GFORCEBW(-3,4)/.FALSE./
-      DATA GFORCEBW(-4,4)/.TRUE./
-      DATA GFORCEBW(-1,5)/.FALSE./
-      DATA GFORCEBW(-2,5)/.TRUE./
-      DATA GFORCEBW(-3,5)/.FALSE./
-      DATA GFORCEBW(-4,5)/.TRUE./
-      DATA GFORCEBW(-1,6)/.FALSE./
-      DATA GFORCEBW(-2,6)/.TRUE./
-      DATA GFORCEBW(-3,6)/.FALSE./
-      DATA GFORCEBW(-4,6)/.TRUE./
-      DATA GFORCEBW(-1,7)/.FALSE./
-      DATA GFORCEBW(-2,7)/.TRUE./
-      DATA GFORCEBW(-3,7)/.FALSE./
-      DATA GFORCEBW(-4,7)/.TRUE./
-      DATA GFORCEBW(-1,8)/.FALSE./
-      DATA GFORCEBW(-2,8)/.TRUE./
-      DATA GFORCEBW(-3,8)/.FALSE./
-      DATA GFORCEBW(-4,8)/.TRUE./
+                         """      DATA GFORCEBW(-1,1)/0/
+      DATA GFORCEBW(-2,1)/1/
+      DATA GFORCEBW(-3,1)/0/
+      DATA GFORCEBW(-4,1)/1/
+      DATA GFORCEBW(-1,2)/2/
+      DATA GFORCEBW(-2,2)/1/
+      DATA GFORCEBW(-3,2)/0/
+      DATA GFORCEBW(-4,2)/1/
+      DATA GFORCEBW(-1,3)/0/
+      DATA GFORCEBW(-2,3)/1/
+      DATA GFORCEBW(-3,3)/2/
+      DATA GFORCEBW(-4,3)/1/
+      DATA GFORCEBW(-1,4)/2/
+      DATA GFORCEBW(-2,4)/1/
+      DATA GFORCEBW(-3,4)/2/
+      DATA GFORCEBW(-4,4)/1/
+      DATA GFORCEBW(-1,5)/0/
+      DATA GFORCEBW(-2,5)/1/
+      DATA GFORCEBW(-3,5)/0/
+      DATA GFORCEBW(-4,5)/1/
+      DATA GFORCEBW(-1,6)/0/
+      DATA GFORCEBW(-2,6)/1/
+      DATA GFORCEBW(-3,6)/2/
+      DATA GFORCEBW(-4,6)/1/
+      DATA GFORCEBW(-1,7)/2/
+      DATA GFORCEBW(-2,7)/1/
+      DATA GFORCEBW(-3,7)/0/
+      DATA GFORCEBW(-4,7)/1/
+      DATA GFORCEBW(-1,8)/2/
+      DATA GFORCEBW(-2,8)/1/
+      DATA GFORCEBW(-3,8)/2/
+      DATA GFORCEBW(-4,8)/1/
 """)
 
         fortran_model = helas_call_writers.FortranHelasCallWriter(mymodel)
