@@ -1,6 +1,6 @@
 Update notes for MadGraph 5 (in reverse time order)
 
-1.3.17 (24/09/11) JA: Use model information to determine color of particles
+1.3.18 (04/10/11) JA: Use model information to determine color of particles
                       for reweighting and propagator color info.
                   JA: Changed the definition of "forbidden s-channels"
                       denoted by "$" to exclude on-shell s-channels while
@@ -35,6 +35,9 @@ Update notes for MadGraph 5 (in reverse time order)
                   JA: Introduce new convention for invariant mass cuts
                       - if max < min, exclude intermediate range
                       (allows to exclude W/Z dijet resonances in VBF processes)
+
+1.3.17 (30/09/11) OM: Fix a crash created by ALOHA when it tries to create the full
+                      set of ALOHA routines (pythia8 output only).
 
 1.3.16 (11/09/11) JA: Fixed the problem from 1.3.12.
 

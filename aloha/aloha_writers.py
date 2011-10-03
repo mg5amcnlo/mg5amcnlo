@@ -58,7 +58,8 @@ class WriteALOHA:
         elif len(indices) == 2: 
             return  4 * indices[0] + indices[1] + start 
         else:
-            raise Exception, 'WRONG CONTRACTION OF LORENTZ OBJECT'                                 
+            raise Exception, 'WRONG CONTRACTION OF LORENTZ OBJECT for routine %s' \
+                    % self.namestring                                 
                                  
     def collect_variables(self):
         """Collects Momenta,Mass,Width into lists"""
