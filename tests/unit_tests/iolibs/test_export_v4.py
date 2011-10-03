@@ -8477,8 +8477,8 @@ C     Number of configs
                               in tchannels],
                              goal_tchannels[idiag]) 
 
-    def test_get_color_abs_tchannel(self):
-        """Testing that t-channel abs() is taken into account by get_color
+    def test_get_color_pdg_antipdg(self):
+        """Testing that both pdg and antipdg are included in get_color
         """
 
         # Set up model
@@ -8650,6 +8650,9 @@ C     Number of configs
       INTEGER GET_COLOR, IPDG
 
       IF(IPDG.EQ.-24)THEN
+        GET_COLOR=1
+        RETURN
+      ELSE IF(IPDG.EQ.-12)THEN
         GET_COLOR=1
         RETURN
       ELSE IF(IPDG.EQ.-11)THEN

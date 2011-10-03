@@ -1425,19 +1425,18 @@ class ProcessExporterFortranME(ProcessExporterFortran):
 
         model = matrix_elements[0].get('processes')[0].get('model')
 
-        wf_ids = set(sum([sum([[wf.get('pdg_code') for wf in \
-                                d.get('wavefunctions')] for d in \
-                               me.get('diagrams')], []) for me in
-                          matrix_elements], []))
+        # We need the both particle and antiparticle wf_ids, since the identity
+        # depends on the direction of the wf.
+        wf_ids = set(sum([sum([sum([[wf.get_pdg_code(),wf.get_anti_pdg_code()] \
+                                    for wf in d.get('wavefunctions')],[]) \
+                               for d in me.get('diagrams')], []) \
+                          for me in matrix_elements], []))
 
         leg_ids = set(sum([sum([[l.get('id') for l in \
                                  p.get_legs_with_decays()] for p in \
                                 me.get('processes')], []) for me in
                            matrix_elements], []))
-        # We need the absolute value of all wf_ids, since for t-channel wfs
-        # the absolute value is used in configs.inc
-        abs_ids = set([abs(i) for i in wf_ids])
-        particle_ids = sorted(list(wf_ids.union(leg_ids, abs_ids)))
+        particle_ids = sorted(list(wf_ids.union(leg_ids)))
 
         lines = """function get_color(ipdg)
         implicit none
