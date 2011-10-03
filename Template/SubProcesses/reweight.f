@@ -1079,14 +1079,8 @@ c           fs sudakov weight
          q2fact(1)=pt2min
          q2fact(2)=q2fact(1)
       else if (ickkw.eq.1.and.pdfwgt) then
-         if (q2bck(1).eq.q2bck(2))then
-            q2fact(1)=q2bck(1)
-            q2fact(2)=q2bck(2)         
-         else
-c        This is VBF-like events - offset Pythia default PARP(67)=4
-            q2fact(1)=0.25*q2bck(1)
-            q2fact(2)=0.25*q2bck(2)         
-         endif
+         q2fact(1)=q2bck(1)
+         q2fact(2)=q2bck(2)         
          if (btest(mlevel,3))
      $        write(*,*)' set fact scales for PS to ',
      $        sqrt(q2fact(1)),sqrt(q2fact(2))

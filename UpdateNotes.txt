@@ -16,19 +16,23 @@ Update notes for MadGraph 5 (in reverse time order)
                       new scale treatment (mu_F for pp>hbb~ is (pT_b^max*m_Th)),
                       no clustering of gluons to final-state massive particles
                       in MadEvent.
+		  JA: Ensure that factorization scale settings and matching works
+                      also in singlet t-channel exchange processes like
+                      single top and VBF. The dynamic factorization
+                      scale is given by the pT of the scattered quark
+                      (on each side of the event).
+                      Note: Note that you need the Pythia/PGS package v. 2.1.10 
+                      or later to use with VBF matching, to ensure that both
+                      radiated and scattered partons are treated correctly
+                      - scattered partons need to be excluded from the matching,
+                      since their pT can be below QCUT. An even better
+                      treatment would require to individually shower and match
+                      the two sides in Pythia, which is not presently possible.
                   JA: Fixed pdf reweighting for matching, which due to a mistake
                       had never been activated
                   JA: Improved phase space integration presetting further by 
                       taking into account special cuts like xpt, ht etc.
-		  JA: Ensure that factorization scale settings and matching works
-                      also in singlet t-channel exchange processes like
-                      single top and VBF. 
-                      Note: For this type of processes, the factorization 
-                      scale reported to Pythia is devided by 2 to offset the
-                      default Pythia setting PARP(67)=4. Note that you
-                      need the Pythia/PGS package v. 2.1.10 or later
-                      to use with VBF matching.
-                 JA: Introduce new convention for invariant mass cuts
+                  JA: Introduce new convention for invariant mass cuts
                       - if max < min, exclude intermediate range
                       (allows to exclude W/Z dijet resonances in VBF processes)
 
