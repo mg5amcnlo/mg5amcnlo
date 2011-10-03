@@ -1,5 +1,9 @@
 Update notes for MadGraph 5 (in reverse time order)
 
+1.3.18 (03/10/11) OM: Add a new command: install. This allow to install quite easily 
+       		      different package devellop for Madgraph/MadEvent. The list of 
+ 		      available package are pythia-pgs/MadAnalysis/ExRootAnalysis/Delphes
+
 1.3.17 (30/10/11) OM: Fix a crash created by ALOHA when it tries to create the full
                       set of ALOHA routines (pythia8 output only).
 

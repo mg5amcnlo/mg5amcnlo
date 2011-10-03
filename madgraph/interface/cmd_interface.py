@@ -275,6 +275,13 @@ class HelpToCmd(object):
         logger.info("")
         logger.info("   import command PATH :")
         logger.info("      Execute the list of command in the file at PATH")
+ 
+    def help_install(self):
+        logger.info("syntax: install " + "|".join(self._install_opts))
+        logger.info("-- Download the last version of the program and install it")
+        logger.info("   localy in the current Madgraph version. In order to have")
+        logger.info("   a sucessfull instalation, you will need to have up-to-date")
+        logger.info("   F77 and/or C and Root compiler.")
         
     def help_display(self):
         logger.info("syntax: display " + "|".join(self._display_opts))
@@ -634,6 +641,19 @@ class CheckValidForCmd(object):
             raise self.InvalidCmd('PATH is mandatory in the current context\n' + \
                                   'Did you forget to run the \"output\" command')
                         
+    def check_install(self, args):
+        """check that the install command is valid"""
+        
+        if len(args) != 1:
+            self.help_install()
+            raise self.InvalidCmd('install command require at least one argument')
+        
+        if args[0] not in self._install_opts:
+            if not args[0].startswith('td'):
+                self.help_install()
+                raise self.InvalidCmd('Not recognize program %s ' % args[0])
+
+
                 
     def check_launch(self, args, options):
         """check the validity of the line"""
@@ -921,6 +941,10 @@ class CheckValidForCmdWeb(CheckValidForCmd):
             args[:] = [args[0], './Cards/proc_card_mg5.dat']
 
         CheckValidForCmd.check_import(self, args)
+        
+    def check_install(self, args):
+        """ No possibility to install new software on the web """
+        raise self.WebRestriction('Impossible to install program on the cluster')
         
     def check_load(self, args):
         """ check the validity of the line
@@ -1421,6 +1445,14 @@ class CompleteForCmd(CheckValidForCmd):
         # return
         return output
     
+    def complete_install(self, text, line, begidx, endidx):
+        "Complete the import command"
+
+        args = split_arg(line[0:begidx])
+        
+        # Format
+        if len(args) == 1:
+            return self.list_completion(text, self._install_opts)     
 #===============================================================================
 # MadGraphCmd
 #===============================================================================
@@ -1436,6 +1468,7 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
     _tutorial_opts = ['start', 'stop']
     _check_opts = ['full', 'permutation', 'gauge', 'lorentz_invariance']
     _import_formats = ['model_v4', 'model', 'proc_v4', 'command']
+    _install_opts = ['pythia-pgs', 'Delphes', 'MadAnalysis', 'ExRootAnalysis']
     _v4_export_formats = ['madevent', 'standalone', 'matrix'] 
     _export_formats = _v4_export_formats + ['standalone_cpp', 'pythia8']
     _set_options = ['group_subprocesses',
@@ -2316,6 +2349,7 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
  
             #convert and excecute the card
             self.import_mg4_proc_card(proc_card)
+
     
     def import_ufo_model(self, model_name):
         """ import the UFO model """
@@ -2432,6 +2466,90 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
         if removed_multiparticles:
             logger.info("Removed obsolete multiparticles %s" % \
                                          " / ".join(removed_multiparticles))
+
+    def do_install(self, line):
+        """Install optional package from the MG suite."""
+        
+        args = split_arg(line)
+        #check the validity of the arguments
+        self.check_install(args)
+
+        if sys.platform == "darwin":
+            program = "curl"
+        else:
+            program = "wget"
+            
+        # Load file with path of the different program:
+        import urllib
+        path = {}
+        data = urllib.urlopen('http://madgraph.phys.ucl.ac.be/package_info.dat')
+        for line in data: 
+            split = line.split()   
+            path[split[0]] = split[1]
+        print path
+
+        
+        name = {'td_mac': 'td', 'td_linux':'td', 'Delphes':'Delphes', 
+                'pythia-pgs':'pythia-pgs', 'ExRootAnalysis': 'ExRootAnalysis',
+                'MadAnalysis':'MadAnalysis'}
+        name = name[args[0]]
+        
+        try:
+            os.system('rm -rf %s' % name)
+        except:
+            pass
+        
+        # Load that path
+        if sys.platform == "darwin":
+            subprocess.call(['curl', path[args[0]], '-o%s.tgz' % name], cwd=MG5DIR)
+        else:
+            subprocess.call(['wget', path[args[0]], '-O %s.tgz'% name], cwd=MG5DIR)
+        # Untar the file
+        subprocess.call(['tar', '-xzpvf', '%s.tgz' % name], cwd=MG5DIR)
+        # Check that the directory has the correct name
+        if not os.path.exists(os.path.join(MG5DIR, name)):
+            created_name = [n for n in os.listdir(MG5DIR) if n.startswith(name) 
+                                                  and not n.endswith('gz')][0]
+            files.mv(os.path.join(MG5DIR, created_name), os.path.join(MG5DIR, name))
+        logger.info('compile %s. This might takes a while.' % name)
+        # Compile the file
+        # Check for F77 compiler
+        if 'FC' not in os.environ or not os.environ['FC']:
+            if misc.which('g77'):
+                os.environ['FC'] = 'g77'
+            elif misc.which('gfortran'):
+                os.environ['FC'] = 'gfortran'
+            else:
+                raise self.InvalidCmd('Require F77 or Gfortran compiler')
+        subprocess.call(['make', 'clean'], cwd = os.path.join(MG5DIR, name))
+        subprocess.call(['make'], cwd = os.path.join(MG5DIR, name))
+
+
+        # Special treatment for TD program (require by MadAnalysis)
+        if args[0] == 'MadAnalysis':
+            try:
+                os.mkdir(os.path.join(MG5DIR, 'td'))
+            except Exception, error:
+                print error
+                pass
+            
+            if sys.platform == "darwin":
+                target = 'http://theory.fnal.gov/people/parke/TD/td_mac_intel.tar.gz'
+                subprocess.call(['curl', path[args[0]], '-otd.tgz'], 
+                                                  cwd=os.path.join(MG5DIR,'td'))      
+                subprocess.call(['tar', '-xzpvf', 'td.tgz'], 
+                                                  cwd=os.path.join(MG5DIR,'td'))
+            else:
+                target = 'http://cp3wks05.fynu.ucl.ac.be/twiki/pub/Software/TopDrawer/td'
+                subprocess.call(['wget', path[args[0]]], 
+                                                  cwd=os.path.join(MG5DIR,'td'))      
+            
+                if sys.maxsize > 2**32 and sys.platform != 'darwin':
+                    logger.warning('''td program (needed by MadAnalysis) is not compile for 64 bit computer
+                Please follow instruction in http://cp3wks05.fynu.ucl.ac.be/twiki/bin/view/Software/TopDrawer
+                in order to be able the current package.''')
+
+
     
     def set_configuration(self, config_path=None):
         """ assign all configuration variable from file 
