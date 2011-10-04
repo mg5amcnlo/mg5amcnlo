@@ -1215,7 +1215,6 @@ class MultiLeg(PhysicsObject):
 
         self['ids'] = []
         self['state'] = True
-        self['onshell'] = None
 
     def filter(self, name, value):
         """Filter for valid multileg property values."""
@@ -1235,18 +1234,12 @@ class MultiLeg(PhysicsObject):
                         "%s is not a valid leg state (initial|final)" % \
                                                                     str(value)
 
-        if name == 'onshell':
-            if not isinstance(value, bool) and value != None:
-                raise self.PhysicsObjectError, \
-                        "%s is not a valid leg flag onshell (Bool or None)" % \
-                                                                    str(value)
-
         return True
 
     def get_sorted_keys(self):
         """Return particle property names as a nicely sorted list."""
 
-        return ['ids', 'state', 'onshell']
+        return ['ids', 'state']
 
 #===============================================================================
 # LegList
