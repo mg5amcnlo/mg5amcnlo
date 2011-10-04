@@ -1012,6 +1012,7 @@ class CompleteForCmd(CheckValidForCmd):
 
     def model_completion(self, text, process):
         """ complete the line with model information """
+
         while ',' in process:
             process = process[process.index(',')+1:]
         args = split_arg(process)
@@ -1628,11 +1629,19 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
             self.draw(' '.join(args[1:]))
 
         if args[0] == 'particles' and len(args) == 1:
+            propagating_particle = []
+            nb_unpropagating = 0
+            for particle in self._curr_model['particles']:
+                if particle.get('propagating'):
+                    propagating_particle.append(particle)
+                else:
+                    nb_unpropagating += 1
+                    
             print "Current model contains %i particles:" % \
-                    len(self._curr_model['particles'])
-            part_antipart = [part for part in self._curr_model['particles'] \
+                    len(propagating_particle)
+            part_antipart = [part for part in propagating_particle \
                              if not part['self_antipart']]
-            part_self = [part for part in self._curr_model['particles'] \
+            part_self = [part for part in propagating_particle \
                              if part['self_antipart']]
             for part in part_antipart:
                 print part['name'] + '/' + part['antiname'],
@@ -1640,6 +1649,9 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
             for part in part_self:
                 print part['name'],
             print ''
+            if nb_unpropagating:
+                print 'In addition of %s un-physical particle mediating new interactions.' \
+                                     % nb_unpropagating
 
         elif args[0] == 'particles':
             for arg in args[1:]:
@@ -2365,8 +2377,11 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
         completion, define multiparticles"""
 
          # Set variables for autocomplete
-        self._particle_names = [p.get('name') for p in self._curr_model.get('particles')] + \
-             [p.get('antiname') for p in self._curr_model.get('particles')]
+        self._particle_names = [p.get('name') for p in self._curr_model.get('particles')\
+                                                    if p.get('propagating')] + \
+                 [p.get('antiname') for p in self._curr_model.get('particles') \
+                                                    if p.get('propagating')]
+        
         self._couplings = list(set(sum([i.get('orders').keys() for i in \
                                         self._curr_model.get('interactions')], [])))
         # Check if we can use case-independent particle names

@@ -370,7 +370,8 @@ Tri0 = Particle(pdg_code = 9000006,
                 antitexname = 'Tri0',
                 charge = 0,
                 LeptonNumber = 0,
-                GhostNumber = 0)
+                GhostNumber = 0,
+                propagating=False)
 
 Tri = Particle(pdg_code = 9000007,
                name = 'Tri',
@@ -383,7 +384,8 @@ Tri = Particle(pdg_code = 9000007,
                antitexname = 'Tri',
                charge = 1,
                LeptonNumber = 0,
-               GhostNumber = 0)
+               GhostNumber = 0,
+                propagating=False)
 
 Tri__tilde__ = Tri.anti()
 
@@ -398,7 +400,8 @@ Tri80 = Particle(pdg_code = 9000008,
                  antitexname = 'Tri80',
                  charge = 0,
                  LeptonNumber = 0,
-                 GhostNumber = 0)
+                 GhostNumber = 0,
+                propagating=False)
 
 Tri8 = Particle(pdg_code = 9000009,
                 name = 'Tri8',
@@ -411,7 +414,8 @@ Tri8 = Particle(pdg_code = 9000009,
                 antitexname = 'Tri8',
                 charge = 1,
                 LeptonNumber = 0,
-                GhostNumber = 0)
+                GhostNumber = 0,
+                propagating=False)
 
 Tri8__tilde__ = Tri8.anti()
 
@@ -426,7 +430,8 @@ V8t = Particle(pdg_code = 9000010,
                antitexname = 'V8t',
                charge = 0,
                LeptonNumber = 0,
-               GhostNumber = 0)
+               GhostNumber = 0,
+               propagating=False)
 
 V8Q = Particle(pdg_code = 9000011,
                name = 'V8Q',
@@ -439,5 +444,6 @@ V8Q = Particle(pdg_code = 9000011,
                antitexname = 'V8Q',
                charge = 0,
                LeptonNumber = 0,
-               GhostNumber = 0)
+               GhostNumber = 0,
+               propagating=False)
 
