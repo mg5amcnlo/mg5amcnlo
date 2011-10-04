@@ -2482,12 +2482,14 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
         # Load file with path of the different program:
         import urllib
         path = {}
-        data = urllib.urlopen('http://madgraph.phys.ucl.ac.be/package_info.dat')
+        try:
+            data = urllib.urlopen('http://madgraph.phys.ucl.ac.be/package_info.dat')
+        except:
+            raise MadGraph5Error, '''Impossible to connect the server. 
+            Please check your internet connection or retry later'''
         for line in data: 
             split = line.split()   
             path[split[0]] = split[1]
-        print path
-
         
         name = {'td_mac': 'td', 'td_linux':'td', 'Delphes':'Delphes', 
                 'pythia-pgs':'pythia-pgs', 'ExRootAnalysis': 'ExRootAnalysis',
@@ -2500,6 +2502,7 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
             pass
         
         # Load that path
+        logger.info('Downloading %s' % path[args[0]])
         if sys.platform == "darwin":
             subprocess.call(['curl', path[args[0]], '-o%s.tgz' % name], cwd=MG5DIR)
         else:
@@ -2509,7 +2512,11 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
         # Check that the directory has the correct name
         if not os.path.exists(os.path.join(MG5DIR, name)):
             created_name = [n for n in os.listdir(MG5DIR) if n.startswith(name) 
-                                                  and not n.endswith('gz')][0]
+                                                  and not n.endswith('gz')]
+            if not created_name:
+                raise MadGraph5Error, 'The file was not loaded correctly. Stop'
+            else:
+                created_name = created_name[0]
             files.mv(os.path.join(MG5DIR, created_name), os.path.join(MG5DIR, name))
         logger.info('compile %s. This might takes a while.' % name)
         # Compile the file
@@ -2534,14 +2541,16 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
                 pass
             
             if sys.platform == "darwin":
+                logger.info('Downloading TD for Mac')
                 target = 'http://theory.fnal.gov/people/parke/TD/td_mac_intel.tar.gz'
-                subprocess.call(['curl', path[args[0]], '-otd.tgz'], 
+                subprocess.call(['curl', target, '-otd.tgz'], 
                                                   cwd=os.path.join(MG5DIR,'td'))      
                 subprocess.call(['tar', '-xzpvf', 'td.tgz'], 
                                                   cwd=os.path.join(MG5DIR,'td'))
             else:
+                logger.info('Downloading TD for Linux 32 bit')
                 target = 'http://cp3wks05.fynu.ucl.ac.be/twiki/pub/Software/TopDrawer/td'
-                subprocess.call(['wget', path[args[0]]], 
+                subprocess.call(['wget', target,' -o td.tgz'], 
                                                   cwd=os.path.join(MG5DIR,'td'))      
             
                 if sys.maxsize > 2**32 and sys.platform != 'darwin':
