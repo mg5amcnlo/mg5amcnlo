@@ -21,15 +21,23 @@ Update notes for MadGraph 5 (in reverse time order)
                       single top and VBF. The dynamic factorization
                       scale is given by the pT of the scattered quark
                       (on each side of the event).
-                      Note: Note that you need the Pythia/PGS package v. 2.1.10 
-                      or later to use with VBF matching, to ensure that both
-                      radiated and scattered partons are treated correctly
+                Note: You need the Pythia/PGS package v. 2.1.10 or later
+                      to use with VBF matching, to ensure that both radiated
+                      and scattered partons are treated correctly
                       - scattered partons need to be excluded from the matching,
                       since their pT can be below QCUT. An even better
                       treatment would require to individually shower and match
                       the two sides in Pythia, which is not presently possible.
+                Note: In the matched 4-flavor process p p > t b~ j $ w+ w- t~ +
+                      p p > t b~ j j $ w+ w- t~, there is an admixture
+                      of t-channel single top (with up to 1 radiated jet) 
+                      and s-channel single top (with up to 2 radiated jets). 
+                      In this case, the automatic determination of maximum 
+                      multiplicity sample doesn't work (since max in the file 
+                      will be 2 jets, but for t-channel max is 1 jet).
+                      So MAXJETS=1 must be specified in the pythia_card.dat.
                   JA: Fixed pdf reweighting for matching, which due to a mistake
-                      had never been activated
+                      had never been activated.
                   JA: Improved phase space integration presetting further by 
                       taking into account special cuts like xpt, ht etc.
                   JA: Introduce new convention for invariant mass cuts
