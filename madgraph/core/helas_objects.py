@@ -85,13 +85,13 @@ class IdentifyMETag(diagram_generation.DiagramTag):
         part = model.get_particle(leg.get('id'))
 
         # For legs with decay chains defined, include leg id (don't combine)
-        if leg.get('from_group'): id = leg.get('id')
+        if leg.get('onshell'): id = leg.get('id')
         else: id = 0
         # For FS legs, don't care about number (but do for IS legs)
         if leg.get('state'): number = 0
         else: number = leg.get('number')
-        # Include also from_group, since this specifies forbidden s-channel
-        return [((number, id, part.get('spin'), leg.get('from_group'),
+        # Include also onshell, since this specifies forbidden s-channel
+        return [((number, id, part.get('spin'), leg.get('onshell'),
                   part.get('is_part'), part.get('self_antipart'),
                   part.get('mass'), part.get('width'), part.get('color')),
                  leg.get('number'))]
@@ -203,9 +203,9 @@ class HelasWavefunction(base_objects.PhysicsObject):
         self['decay'] = False
         # The onshell flag is used in processes with defined decay
         # chains, to indicate that this wavefunction is decayed and
-        # should be onshell, as well as for forbidden s-channels
-        # (denoted by None)
-        self['onshell'] = False
+        # should be onshell (True), as well as for forbidden s-channels (False).
+        # Default is None
+        self['onshell'] = None
 
     # Customized constructor
     def __init__(self, *arguments):
@@ -229,9 +229,9 @@ class HelasWavefunction(base_objects.PhysicsObject):
                 self.set('number_external', leg.get('number'))
                 self.set('number', leg.get('number'))
                 self.set('state', {False: 'initial', True: 'final'}[leg.get('state')])
-                if leg.get('from_group') == None:
+                if leg.get('onshell') == False:
                     # Denotes forbidden s-channel
-                    self.set('onshell', leg.get('from_group'))
+                    self.set('onshell', leg.get('onshell'))
                 self.set('leg_state', leg.get('state'))
                 # Need to set 'decay' to True for particles which will be
                 # decayed later, in order to not combine such processes
@@ -944,7 +944,7 @@ class HelasWavefunction(base_objects.PhysicsObject):
         # Generate last vertex
         legs = base_objects.LegList()
 
-        # We use the from_group flag to indicate whether this outgoing
+        # We use the onshell flag to indicate whether this outgoing
         # leg corresponds to a decaying (onshell) particle, forbidden
         # s-channel, or regular
         try:
@@ -954,7 +954,7 @@ class HelasWavefunction(base_objects.PhysicsObject):
                 'id': self.get_pdg_code(),
                 'number': self.get('number_external'),
                 'state': self.get('leg_state'),
-                'from_group': self.get('onshell')
+                'onshell': self.get('onshell')
                 })
             if optimization != 0:
                 wf_dict[(self.get('number'),self.get('onshell'))] = lastleg
@@ -967,7 +967,7 @@ class HelasWavefunction(base_objects.PhysicsObject):
                     'id': mother.get_pdg_code(),
                     'number': mother.get('number_external'),
                     'state': mother.get('leg_state'),
-                    'from_group': False
+                    'onshell': None
                     })
                 if optimization != 0:
                     wf_dict[(mother.get('number'),False)] = leg
@@ -1037,7 +1037,7 @@ class HelasWavefunction(base_objects.PhysicsObject):
                     'id': mother.get_pdg_code(),
                     'number': mother.get('number_external'),
                     'state': mother.get('leg_state'),
-                    'from_group': mother.get('onshell')
+                    'onshell': mother.get('onshell')
                     }))
 
             if init_mothers[0].get('number_external') == 1 and \
@@ -1103,7 +1103,7 @@ class HelasWavefunction(base_objects.PhysicsObject):
                     'id': mother.get_pdg_code(),
                     'number': mother.get('number_external'),
                     'state': mother.get('leg_state'),
-                    'from_group': mother.get('onshell')
+                    'onshell': mother.get('onshell')
                     }))
             legs.insert(0, mother_leg)
 
@@ -1747,7 +1747,7 @@ class HelasAmplitude(base_objects.PhysicsObject):
                     'id': mother.get_pdg_code(),
                     'number': mother.get('number_external'),
                     'state': mother.get('leg_state'),
-                    'from_group': False
+                    'onshell': None
                     })
                 if optimization != 0:
                     wf_dict[(mother.get('number'),False)] = leg
@@ -1793,7 +1793,7 @@ class HelasAmplitude(base_objects.PhysicsObject):
                     'id': mother.get_pdg_code(),
                     'number': mother.get('number_external'),
                     'state': mother.get('leg_state'),
-                    'from_group': mother.get('onshell')
+                    'onshell': mother.get('onshell')
                     }))
 
             # Renumber resulting leg according to minimum leg number
@@ -1827,7 +1827,7 @@ class HelasAmplitude(base_objects.PhysicsObject):
                     'id': mother.get_pdg_code(),
                     'number': mother.get('number_external'),
                     'state': mother.get('leg_state'),
-                    'from_group': mother.get('onshell')
+                    'onshell': mother.get('onshell')
                     }))
             # Renumber resulting leg according to minimum leg number
             legs[-1].set('number', min([l.get('number') for l in legs[:-1]]))
@@ -1869,7 +1869,7 @@ class HelasAmplitude(base_objects.PhysicsObject):
                 popped_legs.append(base_objects.Leg({'id': 21,
                     'number': min([l.get('number') for l in popped_legs]),
                     'state': True,
-                    'from_group': False}))
+                    'onshell': None}))
 
                 new_vertex = base_objects.Vertex({
                     'id': vertex.get('id'),

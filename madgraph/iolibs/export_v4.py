@@ -1647,17 +1647,17 @@ class ProcessExporterFortranME(ProcessExporterFortran):
 
         lines = []
 
-        booldict = {False: "0", True: "1", None: "2"}
+        booldict = {None: "0", True: "1", False: "2"}
 
         for iconf, config in enumerate(s_and_t_channels):
             schannels = config[0]
             for vertex in schannels:
                 # For the resulting leg, pick out whether it comes from
-                # decay or not, as given by the from_group flag
+                # decay or not, as given by the onshell flag
                 leg = vertex.get('legs')[-1]
                 lines.append("data gForceBW(%d,%d)/%s/" % \
                              (leg.get('number'), iconf + 1,
-                              booldict[leg.get('from_group')]))
+                              booldict[leg.get('onshell')]))
 
         # Write the file
         writer.writelines(lines)

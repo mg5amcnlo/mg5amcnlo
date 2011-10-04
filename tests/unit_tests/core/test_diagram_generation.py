@@ -1259,13 +1259,13 @@ class DiagramGenerationTest(unittest.TestCase):
                     vertices = diagrams[idiag].get('vertices')
                     for ivert in range(len(vertices)):
                         if ivert in photon_none[ngluons][idiag]:
-                            self.assertEqual(None,
-                                    vertices[ivert].get('legs')[-1].get('from_group'))
-                        else:
                             self.assertEqual(False,
-                                    vertices[ivert].get('legs')[-1].get('from_group'))
+                                    vertices[ivert].get('legs')[-1].get('onshell'))
+                        else:
+                            self.assertEqual(None,
+                                    vertices[ivert].get('legs')[-1].get('onshell'))
                 else:
-                    self.assertFalse(any([vert.get('legs')[-1].get('from_group') == None\
+                    self.assertFalse(any([vert.get('legs')[-1].get('onshell') == False\
                                           for vert in diagrams[idiag].get('vertices')]))
 
             # Test with u a > u a (+ g)
@@ -1302,13 +1302,13 @@ class DiagramGenerationTest(unittest.TestCase):
                     vertices = diagrams[idiag].get('vertices')
                     for ivert in range(len(vertices)):
                         if ivert in quark_none[ngluons][idiag]:
-                            self.assertEqual(None,
-                                    vertices[ivert].get('legs')[-1].get('from_group'))
-                        else:
                             self.assertEqual(False,
-                                    vertices[ivert].get('legs')[-1].get('from_group'))
+                                    vertices[ivert].get('legs')[-1].get('onshell'))
+                        else:
+                            self.assertEqual(None,
+                                    vertices[ivert].get('legs')[-1].get('onshell'))
                 else:
-                    self.assertFalse(any([vert.get('legs')[-1].get('from_group') == None\
+                    self.assertFalse(any([vert.get('legs')[-1].get('onshell') == False\
                                           for vert in diagrams[idiag].get('vertices')]))
             
 
@@ -1329,13 +1329,13 @@ class DiagramGenerationTest(unittest.TestCase):
                     vertices = diagrams[idiag].get('vertices')
                     for ivert in range(len(vertices)):
                         if ivert in antiquark_none[ngluons][idiag]:
-                            self.assertEqual(None,
-                                    vertices[ivert].get('legs')[-1].get('from_group'))
-                        else:
                             self.assertEqual(False,
-                                    vertices[ivert].get('legs')[-1].get('from_group'))
+                                    vertices[ivert].get('legs')[-1].get('onshell'))
+                        else:
+                            self.assertEqual(None,
+                                    vertices[ivert].get('legs')[-1].get('onshell'))
                 else:
-                    self.assertFalse(any([vert.get('legs')[-1].get('from_group') == None\
+                    self.assertFalse(any([vert.get('legs')[-1].get('onshell') == False\
                                           for vert in diagrams[idiag].get('vertices')]))
             
 
@@ -2287,15 +2287,15 @@ class DecayChainAmplitudeTest(unittest.TestCase):
         self.assertEqual(len(my_decay_chain_amps.get('decay_chains')), 1)
         self.assertEqual(len(my_decay_chain_amps.get('decay_chains')[0].\
                              get('amplitudes')), 15)
-        # Check that all from_group flags are set appropriately
+        # Check that all onshell flags are set appropriately
         for amp in my_decay_chain_amps.get('amplitudes'):
             for diagram in amp.get('diagrams'):
                 external = set()
                 for vertex in diagram.get('vertices'):
                     for l in vertex.get('legs'):
-                        self.assertTrue(l.get('from_group') and l.get('state') and \
+                        self.assertTrue(l.get('onshell') and l.get('state') and \
                                         not l.get('number') in external or \
-                                        not l.get('from_group') and (not l.get('state') or \
+                                        not l.get('onshell') and (not l.get('state') or \
                                         l.get('number') in external))
                         external.add(l.get('number'))
  
@@ -2351,13 +2351,13 @@ class DecayChainAmplitudeTest(unittest.TestCase):
                 vertices = diagrams[idiag].get('vertices')
                 for ivert in range(len(vertices)):
                     if ivert in quark_none[idiag]:
-                        self.assertEqual(None,
-                                vertices[ivert].get('legs')[-1].get('from_group'))
-                    else:
                         self.assertEqual(False,
-                                vertices[ivert].get('legs')[-1].get('from_group'))
+                                vertices[ivert].get('legs')[-1].get('onshell'))
+                    else:
+                        self.assertEqual(None,
+                                vertices[ivert].get('legs')[-1].get('onshell'))
             else:
-                self.assertFalse(any([vert.get('legs')[-1].get('from_group') == None\
+                self.assertFalse(any([vert.get('legs')[-1].get('onshell') == False\
                                       for vert in diagrams[idiag].get('vertices')]))
             
 

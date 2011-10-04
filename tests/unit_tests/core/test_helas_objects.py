@@ -1447,11 +1447,11 @@ class HelasMatrixElementTest(unittest.TestCase):
                           diagrams[idiag].get('amplitudes')[0].get_s_and_t_channels(2)
                     for ivert in range(len(vertices)):
                         if ivert in photon_none[ngluons][idiag]:
-                            self.assertEqual(None,
-                                    vertices[ivert].get('legs')[-1].get('from_group'))
-                        else:
                             self.assertEqual(False,
-                                    vertices[ivert].get('legs')[-1].get('from_group'))
+                                    vertices[ivert].get('legs')[-1].get('onshell'))
+                        else:
+                            self.assertEqual(None,
+                                    vertices[ivert].get('legs')[-1].get('onshell'))
 
             # Test with u a > u a (+ g)
 
@@ -1488,11 +1488,11 @@ class HelasMatrixElementTest(unittest.TestCase):
                           diagrams[idiag].get('amplitudes')[0].get_s_and_t_channels(2)
                     for ivert in range(len(vertices)):
                         if ivert in quark_none[ngluons][idiag]:
-                            self.assertEqual(None,
-                                    vertices[ivert].get('legs')[-1].get('from_group'))
-                        else:
                             self.assertEqual(False,
-                                    vertices[ivert].get('legs')[-1].get('from_group'))
+                                    vertices[ivert].get('legs')[-1].get('onshell'))
+                        else:
+                            self.assertEqual(None,
+                                    vertices[ivert].get('legs')[-1].get('onshell'))
             
     def test_sorted_mothers(self):
         """Testing the sorted_mothers routine
@@ -2270,15 +2270,15 @@ class HelasDecayChainProcessTest(unittest.TestCase):
                 for ivert in range(len(vertices)):
                     if ivert in quark_none[idiag]:
                         # This is forbidden leg
-                        self.assertEqual(None,
-                                vertices[ivert].get('legs')[-1].get('from_group'))
+                        self.assertEqual(False,
+                                vertices[ivert].get('legs')[-1].get('onshell'))
                     elif ivert == quark_true[idiag]:
                         # This is the decay chain leg
                         self.assertEqual(True,
-                                vertices[ivert].get('legs')[-1].get('from_group'))
+                                vertices[ivert].get('legs')[-1].get('onshell'))
                     else:
-                        self.assertEqual(False,
-                                vertices[ivert].get('legs')[-1].get('from_group'))
+                        self.assertEqual(None,
+                                vertices[ivert].get('legs')[-1].get('onshell'))
                         
         # Test with u g > u g , u > u g g
 
@@ -2330,15 +2330,15 @@ class HelasDecayChainProcessTest(unittest.TestCase):
                 for ivert in range(len(vertices)):
                     if ivert in quark_none[idiag]:
                         # This is forbidden leg
-                        self.assertEqual(None,
-                                vertices[ivert].get('legs')[-1].get('from_group'))
+                        self.assertEqual(False,
+                                vertices[ivert].get('legs')[-1].get('onshell'))
                     elif ivert == quark_true[idiag]:
                         # This is the decay chain leg
                         self.assertEqual(True,
-                                vertices[ivert].get('legs')[-1].get('from_group'))
+                                vertices[ivert].get('legs')[-1].get('onshell'))
                     else:
-                        self.assertEqual(False,
-                                vertices[ivert].get('legs')[-1].get('from_group'))
+                        self.assertEqual(None,
+                                vertices[ivert].get('legs')[-1].get('onshell'))
                         
             
 

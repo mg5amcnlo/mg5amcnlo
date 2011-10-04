@@ -553,9 +553,9 @@ class Amplitude(base_objects.PhysicsObject):
                                            in process.get('forbidden_s_channels')] \
                                                for diagram in res], []))
             for vert in verts:
-                # Use from_group = None to indicate that this s-channel is forbidden
+                # Use onshell = False to indicate that this s-channel is forbidden
                 newleg = copy.copy(vert.get('legs').pop(-1))
-                newleg.set('from_group', None)
+                newleg.set('onshell', False)
                 vert.get('legs').append(newleg)
                 
         # Set diagrams to res
@@ -581,9 +581,9 @@ class Amplitude(base_objects.PhysicsObject):
                     ntlnumber = legs[-1].get('number')
                     lastleg = filter(lambda leg: leg.get('number') != ntlnumber,
                                      lastvx.get('legs'))[0]
-                    # Reset from_group in case we have forbidden s-channels
-                    if lastleg.get('from_group') == None:
-                        lastleg.set('from_group', True)
+                    # Reset onshell in case we have forbidden s-channels
+                    if lastleg.get('onshell') == False:
+                        lastleg.set('onshell', None)
                     # Replace the last leg of nexttolastvertex
                     legs[-1] = lastleg
                     nexttolastvertex.set('legs', legs)
@@ -922,12 +922,10 @@ class Amplitude(base_objects.PhysicsObject):
                     # Ensure that only external legs get decay flag
                     if leg.get('state') and leg.get('id') in decay_ids and \
                            leg.get('number') not in leg_external:
-                        # Use from_group to indicate decaying legs,
+                        # Use onshell to indicate decaying legs,
                         # i.e. legs that have decay chains
                         leg = copy.copy(leg)
-                        leg.set('from_group', True)
-                    elif leg.get('from_group') != None:
-                        leg.set('from_group', False)
+                        leg.set('onshell', True)
                     try:
                         index = legs.index(leg)
                     except ValueError:
@@ -998,7 +996,7 @@ class DecayChainAmplitude(Amplitude):
                 self['decay_chains'].append(\
                     DecayChainAmplitude(process, collect_mirror_procs,
                                         ignore_six_quark_processes))
-            # Flag decaying legs in the core process by from_group = True
+            # Flag decaying legs in the core process by onshell = True
             decay_ids = sum([[a.get('process').get('legs')[0].get('id') \
                               for a in dec.get('amplitudes')] for dec in \
                              self['decay_chains']], [])
