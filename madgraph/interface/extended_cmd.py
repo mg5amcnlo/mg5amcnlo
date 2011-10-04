@@ -174,7 +174,8 @@ class Cmd(cmd.Cmd):
             self.nice_error_handling(error, line)
             if self.mother:
                 self.do_quit('')
-        except KeyboardInterrupt:
+        except KeyboardInterrupt as error:
+            #self.nice_error_handling(error, line)
             print self.keyboard_stop_msg
         
             
@@ -276,6 +277,7 @@ class Cmd(cmd.Cmd):
         nline = -1
         last = 0
         while nline > -len(self.history):
+
             if remove_bef_lb1 and self.history[nline].startswith(remove_bef_lb1):
                 if last:
                     last = 2
@@ -292,7 +294,9 @@ class Cmd(cmd.Cmd):
             if last == 2:
                 if not any([self.history[nline].startswith(arg) for arg in to_keep]):
                   self.history.pop(nline)
-                  continue  
+                  continue
+                else:
+                    nline -= 1  
             else:
                 nline -= 1
                 

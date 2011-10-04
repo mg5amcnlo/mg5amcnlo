@@ -41,6 +41,8 @@ import madgraph.various.process_checks as process_checks
 
 import aloha.create_aloha as create_aloha
 import models.write_param_card as param_writer
+import models.check_param_card as check_param_card
+
 from madgraph import MadGraph5Error, MG5DIR
 from madgraph.iolibs.files import cp, ln, mv
 _file_path = os.path.split(os.path.dirname(os.path.realpath(__file__)))[0] + '/'
@@ -1267,11 +1269,11 @@ class ProcessExporterFortranME(ProcessExporterFortran):
         
         modelname = self.model.get('name')
         if modelname == 'mssm' or modelname.startswith('mssm-'):
-            param_card = pjoin(self.dir_path, 'Cards','param_card.dat')
-            mg5_param = pjoin(self.dir_path, 'Source', 'MODEL', 'MG5_param.dat')
+            param_card = os.path.join(self.dir_path, 'Cards','param_card.dat')
+            mg5_param = os.path.join(self.dir_path, 'Source', 'MODEL', 'MG5_param.dat')
             check_param_card.convert_to_mg5card(param_card, mg5_param)
             check_param_card.check_valid_param_card(mg5_param)
-            files.cp(mg5_param, param_card)
+            cp(mg5_param, param_card)
 
 
         # Write maxconfigs.inc based on max of ME's/subprocess groups
