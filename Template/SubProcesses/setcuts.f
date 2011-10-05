@@ -566,7 +566,7 @@ c
       integer sprop(maxsproc,-max_branch:-1,lmaxconfigs)
       integer tprid(-max_branch:-1,lmaxconfigs)
       common/to_sprop/sprop,tprid
-      logical gForceBW(-max_branch:-1,lmaxconfigs)  ! Forced BW
+      integer gForceBW(-max_branch:-1,lmaxconfigs)  ! Forced BW
       include 'decayBW.inc'
 
 c
@@ -580,7 +580,7 @@ c
 
 c     Set who comes from decay based on forced BW
       do i=-(nexternal-3),-1
-         if(tprid(i,1).eq.0.and.gForceBW(i,1).or.
+         if(tprid(i,1).eq.0.and.gForceBW(i,1).eq.1.or.
      $        from_decay(i)) then
             from_decay(i)=.true.
             from_decay(iforest(1,i,1))=.true.
