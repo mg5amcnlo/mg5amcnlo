@@ -157,7 +157,7 @@ class MELauncher(ExtLauncher):
         """ initialize the StandAlone Version"""
         
         ExtLauncher.__init__(self, running_dir, './Cards', timeout, **option)
-        self.executable = os.path.join('.', 'bin','generate_events.py')
+        #self.executable = os.path.join('.', 'bin','generate_events')
 
         assert hasattr(self, 'cluster')
         assert hasattr(self, 'multicore')
@@ -282,6 +282,7 @@ class MELauncher(ExtLauncher):
         except:
            pass
         launch.run_cmd(command)
+        launch.run_cmd('quit')
         
         if os.path.exists('ME5_debug'):
             return True

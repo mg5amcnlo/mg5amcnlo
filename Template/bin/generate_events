@@ -30,7 +30,6 @@ import madevent_interface as ME
 ##   EXECUTABLE
 ################################################################################                                
 if '__main__' == __name__:
-    
     # Check that python version is valid
     if not (sys.version_info[0] == 2 or sys.version_info[1] > 5):
         sys.exit('MadEvent works with python 2.6 or higher (but not python 3.X).\n\

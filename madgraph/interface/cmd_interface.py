@@ -580,7 +580,8 @@ class CheckValidForCmd(object):
             logger.info('The import format was not given, so we guess it as %s' % format)
             args.insert(0, format)
             if self.history[-1].startswith('import'):
-                self.history[-1] = 'import %s %s' % (format, self.history[-1][8:])
+                self.history[-1] = 'import %s %s' % \
+                                (format, ' '.join(self.history[-1].split()[1:]))
             
                         
         if modelname:
@@ -676,7 +677,7 @@ class CheckValidForCmd(object):
             return 'pythia8'
         elif os.path.isdir(src_path):
             return 'standalone_cpp'
-        elif os.path.isfile(os.path.join(bin_path,'generate_events.py')):
+        elif os.path.isfile(os.path.join(bin_path,'generate_events')):
             return 'madevent'
         elif os.path.isdir(card_path):
             return 'standalone'

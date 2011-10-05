@@ -599,10 +599,10 @@ class ParamCardRule(object):
                         card.append(new_block)
                         new_block.append(new_param)
             else:   
-                if value != 0:
+                if value != 1:
                     if not modify:
-                        raise InvalidParamCard, 'parameter %s: %s is not at one' % \
-                                    (block, ' '.join([str(i) for i in id]))         
+                        raise InvalidParamCard, 'parameter %s: %s is not at one but at %s' % \
+                                    (block, ' '.join([str(i) for i in id]), value)         
                     else:
                         param = card[block].get(id) 
                         param.value = 1.0
@@ -967,9 +967,10 @@ def check_valid_param_card(path, restrictpath=None):
     
     if restrictpath is None:
         restrictpath = os.path.dirname(path)
-        restrictpath = os.path.join(restrictpath, os.pardir, 'Source', 
+        restrictpath = os.path.join(restrictpath, os.pardir, os.pardir, 'Source', 
                                                  'MODEL', 'param_card_rule.dat')
         if not os.path.exists(restrictpath):
+            print 'no restriction card'
             return True
         
     cardrule = ParamCardRule()

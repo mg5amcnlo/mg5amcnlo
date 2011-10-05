@@ -1273,7 +1273,6 @@ class ProcessExporterFortranME(ProcessExporterFortran):
             mg5_param = os.path.join(self.dir_path, 'Source', 'MODEL', 'MG5_param.dat')
             check_param_card.convert_to_mg5card(param_card, mg5_param)
             check_param_card.check_valid_param_card(mg5_param)
-            cp(mg5_param, param_card)
 
 
         # Write maxconfigs.inc based on max of ME's/subprocess groups
@@ -3114,9 +3113,7 @@ class UFO_model_to_mg4(object):
         
         # IF MSSM convert the card to SLAH1
         if self.model_name == 'mssm' or self.model_name.startswith('mssm-'):
-            sys.path.append(os.path.join(_file_path, os.path.pardir, 'Template',
-                                         'bin','internal'))
-            import check_param_card as translator
+            import models.check_param_card as translator
             
             # Check the format of the param_card for Pythia and make it correct
             translator.make_valid_param_card(out_path, out_path2)
