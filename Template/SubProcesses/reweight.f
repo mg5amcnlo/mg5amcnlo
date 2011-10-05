@@ -428,7 +428,11 @@ c
 c      if (.not.clustered) then
          clustered = cluster(p(0,1))
          if(.not.clustered) then
-            write(*,*)'setclscales: Error. Clustering failed.'
+            open(unit=26,file='../../../error',status='unknown',err=999)
+            write(26,*) 'Error: Clustering failed in cluster.f.'
+            write(*,*) 'Error: Clustering failed in cluster.f.'
+            stop
+ 999        write(*,*) 'error'
             setclscales=.false.
             clustered = .false.
             return
