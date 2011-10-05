@@ -563,9 +563,9 @@ class CheckValidForCmd(object):
             self.help_import()
             raise self.InvalidCmd('wrong \"import\" format')
         
-        if len(args) > 2 and args[0] not in self._import_formats:
+        if len(args) >= 2 and args[0] not in self._import_formats:
             self.help_import()
-            raise self.InvalidCmd('wrong \"import\" format')
+            raise self.InvalidCmd('wrong \"import\" format')            
         elif len(args) == 1:
             if args[0] in self._import_formats:
                 if args[0] != "proc_v4":
@@ -637,11 +637,11 @@ class CheckValidForCmd(object):
         """ identify the import type of a given path 
         valid output: model/model_v4/proc_v4/command"""
         
-        possibility = [path, os.path.join(MG5DIR,'models',path), \
-                     os.path.join(MG5DIR,'models',path+'_v4')]
+        possibility = [os.path.join(MG5DIR,'models',path), \
+                     os.path.join(MG5DIR,'models',path+'_v4'), path]
         if '-' in path:
             name = path.rsplit('-',1)[0]
-            possibility += [name, os.path.join(MG5DIR,'models',name)]
+            possibility = [os.path.join(MG5DIR,'models',name), name] + possibility
         # Check if they are a valid directory
         for name in possibility:
             if os.path.isdir(name):
@@ -2262,7 +2262,14 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
                       helas_call_writers.FortranHelasCallWriter(\
                                                                self._curr_model)
             else:
-                self._curr_model = import_ufo.import_model(args[1])
+                try:
+                    self._curr_model = import_ufo.import_model(args[1])
+                except import_ufo.UFOImportError, error:
+                    logger_stderr.warning('WARNING: %s' % error)
+                    logger_stderr.info('Trying to run `import model_v4 %s` instead.' \
+                                                                      % args[1])
+                    self.exec_cmd('import model_v4 %s ' % args[1])
+                    return
                 self._curr_fortran_model = \
                       helas_call_writers.FortranUFOHelasCallWriter(\
                                                                self._curr_model)
