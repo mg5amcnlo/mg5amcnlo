@@ -1,4 +1,4 @@
- ################################################################################
+################################################################################
 #
 # Copyright (c) 2009 The MadGraph Development team and Contributors
 #
@@ -1131,13 +1131,11 @@ C     Only run if IMODE is 0
 
       IF (ABS(LPP(IB(1))).GE.1) THEN
         LP=SIGN(1,LPP(IB(1)))
-        U1=PDG2PDF(ABS(LPP(IB(1))),2*LP,XBK(IB(1)),DSQRT(Q2FACT(IB(1))
-     $   ))
+        U1=PDG2PDF(ABS(LPP(IB(1))),2*LP,XBK(IB(1)),DSQRT(Q2FACT(1)))
       ENDIF
       IF (ABS(LPP(IB(2))).GE.1) THEN
         LP=SIGN(1,LPP(IB(2)))
-        UB2=PDG2PDF(ABS(LPP(IB(2))),-2*LP,XBK(IB(2)),DSQRT(Q2FACT(IB(2
-     $   ))))
+        UB2=PDG2PDF(ABS(LPP(IB(2))),-2*LP,XBK(IB(2)),DSQRT(Q2FACT(2)))
       ENDIF
       PD(0) = 0D0
       IPROC = 0
@@ -1331,14 +1329,15 @@ C     IMODE.EQ.0, regular run mode
 C     Select among the subprocesses based on PDF weight
       SUMPROB=0D0
       DO J=1,SYMCONF(0)
-        DO I=1,MAXSPROC
-          IF(CONFSUB(I,SYMCONF(J)).NE.0) THEN
-            DO K=1,2
-              IF(K.EQ.1.OR.MIRRORPROCS(I))THEN
+        DO IPROC=1,MAXSPROC
+          IF(CONFSUB(IPROC,SYMCONF(J)).NE.0) THEN
+            DO IMIRROR=1,2
+              IF(IMIRROR.EQ.1.OR.MIRRORPROCS(IPROC))THEN
 C               Calculate PDF weight for all subprocesses
-                SELPROC(K,I,J)=DSIGPROC(PP,J,I,K,SYMCONF,CONFSUB,1D0,4)
-                SUMPROB=SUMPROB+SELPROC(K,I,J)
-                IF(K.EQ.2)THEN
+                SELPROC(IMIRROR,IPROC,J)=DSIGPROC(PP,J,IPROC,IMIRROR
+     $           ,SYMCONF,CONFSUB,1D0,4)
+                SUMPROB=SUMPROB+SELPROC(IMIRROR,IPROC,J)
+                IF(IMIRROR.EQ.2)THEN
 C                 Need to flip back x values
                   XDUM=XBK(1)
                   XBK(1)=XBK(2)
@@ -3405,6 +3404,35 @@ DATA(icolamp(i,40,1),i=1,6)/.false.,.false.,.false.,.true.,.false.,.false./
 DATA(icolamp(i,41,1),i=1,6)/.false.,.false.,.true.,.false.,.false.,.false./
 DATA(icolamp(i,42,1),i=1,6)/.false.,.false.,.false.,.false.,.false.,.true./"""
 )
+
+        # Test get_color.f output
+        writer = writers.FortranWriter(self.give_pos('test'))
+        exporter.write_colors_file(writer, matrix_element)
+        writer.close()
+        #print open(self.give_pos('test')).read()
+
+        self.assertFileContains('test',
+        """      FUNCTION GET_COLOR(IPDG)
+      IMPLICIT NONE
+      INTEGER GET_COLOR, IPDG
+
+      IF(IPDG.EQ.-2)THEN
+        GET_COLOR=-3
+        RETURN
+      ELSE IF(IPDG.EQ.2)THEN
+        GET_COLOR=3
+        RETURN
+      ELSE IF(IPDG.EQ.21)THEN
+        GET_COLOR=8
+        RETURN
+      ELSE
+        WRITE(*,*)'Error: No color given for pdg ',IPDG
+        GET_COLOR=0
+        RETURN
+      ENDIF
+      END
+
+""")
 
         # Test leshouche.inc output
         writer = writers.FortranWriter(self.give_pos('leshouche'))
@@ -6772,7 +6800,7 @@ CALL IOSXXX(W(1,14),W(1,2),W(1,12),MGVX350,AMP(2))""")
                          "JAMP(1)=+AMP(1)-AMP(2)")
 
 
-        # e- e+ > n1 n1 / z sl5-, n1 > e- sl2+ a
+        # e- e+ > n1 n1 / z sl5-, n1 > e- sl2+ a $ sl2+
 
         myleglist = base_objects.LegList()
 
@@ -6786,7 +6814,8 @@ CALL IOSXXX(W(1,14),W(1,2),W(1,12),MGVX350,AMP(2))""")
                                          'state':True}))
 
         mydecay3 = base_objects.Process({'legs':myleglist,
-                                         'model':mymodel})
+                                         'model':mymodel,
+                                         'forbidden_s_channels':[-1000011]})
 
         me3 = helas_objects.HelasMatrixElement(\
             diagram_generation.Amplitude(mydecay3))
@@ -6801,6 +6830,8 @@ CALL IOSXXX(W(1,14),W(1,2),W(1,12),MGVX350,AMP(2))""")
         matrix_elements = matrix_element.combine_decay_chain_processes()
 
         me = matrix_elements[0]
+
+        #print me.get_base_amplitude().nice_string()
 
         # This has been checked against v4
         self.assertEqual("\n".join(myfortranmodel.get_matrix_element_calls(me)),
@@ -7030,39 +7061,40 @@ C     Number of configs
                                      s_and_t_channels)
 
         writer.close()
+        #print open(self.give_pos('test')).read()
         self.assertFileContains('test',
-                         """      DATA GFORCEBW(-1,1)/.FALSE./
-      DATA GFORCEBW(-2,1)/.TRUE./
-      DATA GFORCEBW(-3,1)/.FALSE./
-      DATA GFORCEBW(-4,1)/.TRUE./
-      DATA GFORCEBW(-1,2)/.FALSE./
-      DATA GFORCEBW(-2,2)/.TRUE./
-      DATA GFORCEBW(-3,2)/.FALSE./
-      DATA GFORCEBW(-4,2)/.TRUE./
-      DATA GFORCEBW(-1,3)/.FALSE./
-      DATA GFORCEBW(-2,3)/.TRUE./
-      DATA GFORCEBW(-3,3)/.FALSE./
-      DATA GFORCEBW(-4,3)/.TRUE./
-      DATA GFORCEBW(-1,4)/.FALSE./
-      DATA GFORCEBW(-2,4)/.TRUE./
-      DATA GFORCEBW(-3,4)/.FALSE./
-      DATA GFORCEBW(-4,4)/.TRUE./
-      DATA GFORCEBW(-1,5)/.FALSE./
-      DATA GFORCEBW(-2,5)/.TRUE./
-      DATA GFORCEBW(-3,5)/.FALSE./
-      DATA GFORCEBW(-4,5)/.TRUE./
-      DATA GFORCEBW(-1,6)/.FALSE./
-      DATA GFORCEBW(-2,6)/.TRUE./
-      DATA GFORCEBW(-3,6)/.FALSE./
-      DATA GFORCEBW(-4,6)/.TRUE./
-      DATA GFORCEBW(-1,7)/.FALSE./
-      DATA GFORCEBW(-2,7)/.TRUE./
-      DATA GFORCEBW(-3,7)/.FALSE./
-      DATA GFORCEBW(-4,7)/.TRUE./
-      DATA GFORCEBW(-1,8)/.FALSE./
-      DATA GFORCEBW(-2,8)/.TRUE./
-      DATA GFORCEBW(-3,8)/.FALSE./
-      DATA GFORCEBW(-4,8)/.TRUE./
+                         """      DATA GFORCEBW(-1,1)/0/
+      DATA GFORCEBW(-2,1)/1/
+      DATA GFORCEBW(-3,1)/0/
+      DATA GFORCEBW(-4,1)/1/
+      DATA GFORCEBW(-1,2)/2/
+      DATA GFORCEBW(-2,2)/1/
+      DATA GFORCEBW(-3,2)/0/
+      DATA GFORCEBW(-4,2)/1/
+      DATA GFORCEBW(-1,3)/0/
+      DATA GFORCEBW(-2,3)/1/
+      DATA GFORCEBW(-3,3)/2/
+      DATA GFORCEBW(-4,3)/1/
+      DATA GFORCEBW(-1,4)/2/
+      DATA GFORCEBW(-2,4)/1/
+      DATA GFORCEBW(-3,4)/2/
+      DATA GFORCEBW(-4,4)/1/
+      DATA GFORCEBW(-1,5)/0/
+      DATA GFORCEBW(-2,5)/1/
+      DATA GFORCEBW(-3,5)/0/
+      DATA GFORCEBW(-4,5)/1/
+      DATA GFORCEBW(-1,6)/0/
+      DATA GFORCEBW(-2,6)/1/
+      DATA GFORCEBW(-3,6)/2/
+      DATA GFORCEBW(-4,6)/1/
+      DATA GFORCEBW(-1,7)/2/
+      DATA GFORCEBW(-2,7)/1/
+      DATA GFORCEBW(-3,7)/0/
+      DATA GFORCEBW(-4,7)/1/
+      DATA GFORCEBW(-1,8)/2/
+      DATA GFORCEBW(-2,8)/1/
+      DATA GFORCEBW(-3,8)/2/
+      DATA GFORCEBW(-4,8)/1/
 """)
 
         fortran_model = helas_call_writers.FortranHelasCallWriter(mymodel)
@@ -8445,6 +8477,208 @@ C     Number of configs
                               in tchannels],
                              goal_tchannels[idiag]) 
 
+    def test_get_color_pdg_antipdg(self):
+        """Testing that both pdg and antipdg are included in get_color
+        """
+
+        # Set up model
+
+        mypartlist = base_objects.ParticleList()
+        myinterlist = base_objects.InteractionList()
+
+        # A electron and positron
+        mypartlist.append(base_objects.Particle({'name':'e-',
+                      'antiname':'e+',
+                      'spin':2,
+                      'color':1,
+                      'mass':'me',
+                      'width':'zero',
+                      'texname':'e^-',
+                      'antitexname':'e^+',
+                      'line':'straight',
+                      'charge':-1.,
+                      'pdg_code':11,
+                      'propagating':True,
+                      'is_part':True,
+                      'self_antipart':False}))
+        eminus = mypartlist[len(mypartlist) - 1]
+        eplus = copy.copy(eminus)
+        eplus.set('is_part', False)
+
+        # A neutrino
+        mypartlist.append(base_objects.Particle({'name':'ve',
+                      'antiname':'ve~',
+                      'spin':2,
+                      'color':1,
+                      'mass':'zero',
+                      'width':'zero',
+                      'texname':'\nu_e',
+                      'antitexname':'\bar\nu_e',
+                      'line':'straight',
+                      'charge':0.,
+                      'pdg_code':12,
+                      'propagating':True,
+                      'is_part':True,
+                      'self_antipart':False}))
+        nu = mypartlist[len(mypartlist) - 1]
+        nubar = copy.copy(nu)
+        nubar.set('is_part', False)
+
+        # A W
+        mypartlist.append(base_objects.Particle({'name':'W+',
+                      'antiname':'W-',
+                      'spin':3,
+                      'color':1,
+                      'mass':'MW',
+                      'width':'WW',
+                      'texname':'W^+',
+                      'antitexname':'W^-',
+                     'line':'wavy',
+                      'charge':1.,
+                      'pdg_code':24,
+                      'propagating':True,
+                      'is_part':True,
+                      'self_antipart':False}))
+        Wplus = mypartlist[len(mypartlist) - 1]
+        Wminus = copy.copy(Wplus)
+        Wminus.set('is_part', False)
+
+        # A photon
+        mypartlist.append(base_objects.Particle({'name':'a',
+                      'antiname':'a',
+                      'spin':3,
+                      'color':1,
+                      'mass':'zero',
+                      'width':'zero',
+                      'texname':'\gamma',
+                      'antitexname':'\gamma',
+                      'line':'wavy',
+                      'charge':0.,
+                      'pdg_code':22,
+                      'propagating':True,
+                      'is_part':True,
+                      'self_antipart':True}))
+        a = mypartlist[len(mypartlist) - 1]
+
+        # Coupling of W- e+ nu_e
+
+        myinterlist.append(base_objects.Interaction({
+            'id': 1,
+            'particles': base_objects.ParticleList(\
+                                            [eplus, \
+                                             nu, \
+                                             Wminus]),
+            'color': [],
+            'lorentz':[''],
+            'couplings':{(0, 0):'MGVX27'},
+            'orders':{'QED':1}}))
+
+        myinterlist.append(base_objects.Interaction({
+            'id': 2,
+            'particles': base_objects.ParticleList(\
+                                            [nubar, \
+                                             eminus, \
+                                             Wplus]),
+            'color': [],
+            'lorentz':[''],
+            'couplings':{(0, 0):'MGVX27'},
+            'orders':{'QED':1}}))
+
+        # Coupling of e to gamma
+        myinterlist.append(base_objects.Interaction({
+                      'id': 3,
+                      'particles': base_objects.ParticleList(\
+                                            [eplus, \
+                                             eminus, \
+                                             a]),
+                      'color': [],
+                      'lorentz':[''],
+                      'couplings':{(0, 0):'MGVX12'},
+                      'orders':{'QED':1}}))
+
+        mybasemodel = base_objects.Model()
+        mybasemodel.set('particles', mypartlist)
+        mybasemodel.set('interactions', myinterlist)
+
+        myleglist = base_objects.LegList()
+
+        myleglist.append(base_objects.Leg({'id':22,
+                                         'state':False}))
+        myleglist.append(base_objects.Leg({'id':24,
+                                         'state':False}))
+        myleglist.append(base_objects.Leg({'id':12,
+                                         'state':True}))
+        myleglist.append(base_objects.Leg({'id':-11,
+                                         'state':True}))
+
+        myproc = base_objects.Process({'legs':myleglist,
+                                       'model':mybasemodel})
+
+        myamplitude = diagram_generation.Amplitude({'process': myproc})
+
+        matrix_element = helas_objects.HelasMatrixElement(myamplitude, gen_color=False)
+
+        myfortranmodel = helas_call_writers.FortranHelasCallWriter(mybasemodel)
+        writer = writers.FortranWriter(self.give_pos('test'))
+
+        exporter = export_v4.ProcessExporterFortranME()
+
+        # Test configs file
+        nconfig, s_and_t_channels = exporter.write_configs_file(writer,
+                                                                matrix_element)
+        writer.close()
+#        print open(self.give_pos('test')).read()
+        self.assertFileContains('test',
+        """C     Diagram 1
+      DATA MAPCONFIG(1)/1/
+      DATA (IFOREST(I,-1,1),I=1,2)/1,4/
+      DATA TPRID(-1,1)/11/
+      DATA (SPROP(I,-1,1),I=1,1)/0/
+      DATA (IFOREST(I,-2,1),I=1,2)/-1,3/
+C     Number of configs
+      DATA MAPCONFIG(0)/1/
+""")
+        
+        # Test get_color.f output
+        writer = writers.FortranWriter(self.give_pos('test'))
+        exporter.write_colors_file(writer, matrix_element)
+        writer.close()
+        #print open(self.give_pos('test')).read()
+        self.assertFileContains('test',
+        """      FUNCTION GET_COLOR(IPDG)
+      IMPLICIT NONE
+      INTEGER GET_COLOR, IPDG
+
+      IF(IPDG.EQ.-24)THEN
+        GET_COLOR=1
+        RETURN
+      ELSE IF(IPDG.EQ.-12)THEN
+        GET_COLOR=1
+        RETURN
+      ELSE IF(IPDG.EQ.-11)THEN
+        GET_COLOR=1
+        RETURN
+      ELSE IF(IPDG.EQ.11)THEN
+        GET_COLOR=1
+        RETURN
+      ELSE IF(IPDG.EQ.12)THEN
+        GET_COLOR=1
+        RETURN
+      ELSE IF(IPDG.EQ.22)THEN
+        GET_COLOR=1
+        RETURN
+      ELSE IF(IPDG.EQ.24)THEN
+        GET_COLOR=1
+        RETURN
+      ELSE
+        WRITE(*,*)'Error: No color given for pdg ',IPDG
+        GET_COLOR=0
+        RETURN
+      ENDIF
+      END
+
+""")
+
 class AlohaFortranWriterTest(unittest.TestCase):
     """ A basic test to see if the Aloha Fortran Writter is working """
     
@@ -8612,13 +8846,3 @@ if __name__ == '__main__':
                        [me.get('diagrams')[323], me.get('diagrams')[954],
                         me.get('diagrams')[1123], me.get('diagrams')[1139]])
         
-        
-        
-
-
-    
-    
-    
-
-
-

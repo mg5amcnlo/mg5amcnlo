@@ -1121,6 +1121,10 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
                 job = os.path.basename(job)
                 os.system('touch %s/wait.%s' %(Pdir,job))
                 self.launch_job('./%s' % job, cwd=Pdir)
+                if os.path.exists(pjoin(self.me_dir,'error')):
+                    self.monitor()
+                    self.update_status('Error detected in survey', None)
+                    raise MadEventError, 'Error detected Stop running'
         self.monitor()
         self.update_status('finish survey', 'parton')
 

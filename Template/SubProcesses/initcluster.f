@@ -5,6 +5,7 @@
       include 'message.inc'
       include 'run.inc'
       include 'nexternal.inc'
+      include 'maxamps.inc'
       include 'cluster.inc'
 C
 C     SPECIAL CUTS
@@ -13,7 +14,7 @@ C
       real*8 xetamin,xqcut,deltaeta
       common /to_specxpt/xptj,xptb,xpta,xptl,xmtc,xetamin,xqcut,deltaeta
 
-      integer i,j
+      integer i,j,iproc
       logical filmap, cluster
       external filmap, cluster
 
@@ -46,13 +47,16 @@ c
         stop
       endif
       if (btest(mlevel,3)) then
-        do i=1,n_max_cl
-          write(*,*) 'prop ',i,' in'
-          do j=1,id_cl(i,0)
-            write(*,*) '  graph ',id_cl(i,j)
-          enddo
+        do iproc=1,maxsproc
+           write(*,*)'for proc ',iproc
+           do i=1,n_max_cl
+              write(*,*) 'prop ',i,' in'
+              do j=1,id_cl(iproc,i,0)
+                 write(*,*) '  graph ',id_cl(iproc,i,j)
+              enddo
+           enddo
+           write(*,*)'ok'
         enddo
-        write(*,*)'ok'
       endif
       igraphs(0)=0
        

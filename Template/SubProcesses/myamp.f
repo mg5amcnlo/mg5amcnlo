@@ -110,7 +110,7 @@ c     Local
 c
       double precision xp(0:3,-nexternal:nexternal)
       double precision mpole(-nexternal:0),shat,tsgn
-      integer i,j,iconfig
+      integer i,j,iconfig,iproc
 
       double precision pmass(-nexternal:0,lmaxconfigs)
       double precision pwidth(-nexternal:0,lmaxconfigs)
@@ -145,7 +145,7 @@ c
       integer icolup(2,nexternal,maxflow,maxsproc)
       include 'leshouche.inc'
 
-      logical gForceBW(-max_branch:-1,lmaxconfigs)  ! Forced BW
+      integer gForceBW(-max_branch:-1,lmaxconfigs)  ! Forced BW
       include 'decayBW.inc'
 c
 c     External
@@ -190,7 +190,15 @@ c-----
       enddo
       nbw = 0
       tsgn    = +1d0
-      do i=-1,-(nexternal-3),-1              !Loop over propagators
+c     Find non-zero process number
+      do iproc=1,maxsproc
+         if(sprop(iproc,-1,iconfig).ne.0) goto 10
+      enddo
+ 10   continue
+c     If no non-zero sprop, set iproc to 1
+      if(iproc.gt.maxsproc) iproc=1
+c     Start loop over propagators
+      do i=-1,-(nexternal-3),-1
          onbw(i) = .false.
          if (iforest(1,i,iconfig) .eq. 1) tsgn=-1d0
          do j=0,3
@@ -209,16 +217,21 @@ c
             onshell = (abs(xmass - pmass(i,iconfig)) .lt.
      $           bwcutoff*pwidth(i,iconfig))
             if(onshell)then
-c           Only allow onshell if no "decay" to identical particle
+c     Remove on-shell forbidden s-channels (gForceBW=2) (JA 2/10/11)
+              if(gForceBW(i,iconfig).eq.2) then
+                 cut_bw = .true.
+                 return               
+              endif
+c           Only allow OnBW if no "decay" to identical particle
               OnBW(i) = .true.
               idenpart=0
               do j=1,2
                 ida(j)=iforest(j,i,iconfig)
                 if(ida(j).lt.0) then
-                   if(sprop(1,i,iconfig).eq.sprop(1,ida(j),iconfig))
+                   if(sprop(iproc,i,iconfig).eq.sprop(iproc,ida(j),iconfig))
      $                  idenpart=ida(j)
                 elseif (ida(j).gt.0) then
-                   if(sprop(1,i,iconfig).eq.IDUP(ida(j),1,1))
+                   if(sprop(iproc,i,iconfig).eq.IDUP(ida(j),1,1))
      $                  idenpart=ida(j)
                 endif
               enddo
@@ -227,10 +240,10 @@ c           Always remove if daughter final-state
                 OnBW(i)=.false.
 c           Else remove if daughter forced to be onshell
               elseif(idenpart.lt.0)then
-                 if(gForceBW(idenpart, iconfig)) then
+                 if(gForceBW(idenpart, iconfig).eq.1) then
                     OnBW(i)=.false.
 c           Else remove daughter if forced to be onshell
-                 elseif(gForceBW(i, iconfig)) then
+                 elseif(gForceBW(i, iconfig).eq.1) then
                     OnBW(idenpart)=.false.
 c           Else remove either this resonance or daughter, which is closer to mass shell
                  elseif(abs(xmass-pmass(i,iconfig)).gt.
@@ -242,13 +255,10 @@ c           Else remove OnBW for daughter
                     OnBW(idenpart)=.false.
                  endif
               endif
-            endif
-c
-c     Check if we are supposed to cut forced bw (JA 4/8/11)
-c
-            if (gForceBW(i, iconfig) .and. .not. onshell)then
-               cut_bw = .true.
-               return
+            else if (gForceBW(i, iconfig).eq.1) then ! .not. onshell
+c             Check if we are supposed to cut forced bw (JA 4/8/11)
+              cut_bw = .true.
+              return
             endif
 c
 c     Here we set onshell for phase space integration (JA 4/8/11)
@@ -263,7 +273,6 @@ c            write(*,*) 'cut_bw: ',nbw,xmass,onshell,lbw(nbw),cut_bw
                return
             endif
          endif
-
       enddo
       end
 
@@ -293,7 +302,7 @@ c
       double precision tsgn, xo, a
       double precision x1,x2,xk(nexternal)
       double precision dr,mtot,etot,stot,xqfact
-      integer i, iconfig, l1, l2, j, nt, nbw
+      integer i, iconfig, l1, l2, j, nt, nbw, iproc
       integer iden_part(-max_branch:-1)
 
       double precision pmass(-nexternal:0,lmaxconfigs)
@@ -305,7 +314,7 @@ c
       integer icolup(2,nexternal,maxflow,maxsproc)
       include 'leshouche.inc'
 
-      logical gForceBW(-max_branch:-1,lmaxconfigs)  ! Forced BW
+      integer gForceBW(-max_branch:-1,lmaxconfigs)  ! Forced BW
       include 'decayBW.inc'
 c
 c     Global
@@ -341,7 +350,7 @@ c
       common /to_BW/ lbw
 
       include 'coupl.inc'
-
+      include 'cuts.inc'
 c
 c     External
 c
@@ -377,30 +386,39 @@ c     Reset variables
          spole(i)=0
          swidth(i)=0
       enddo
-      do i=-1,-(nexternal-3),-1              !Find all the propagotors
+c     Find non-zero process number
+      do iproc=1,maxsproc
+         if(sprop(iproc,-1,iconfig).gt.0) goto 10
+      enddo
+ 10   continue
+c     If no non-zero sprop, set iproc to 1
+      if(iproc.ge.maxsproc.and.sprop(maxsproc,-1,iconfig).eq.0)
+     $     iproc=1
+c     Start loop over propagators
+      do i=-1,-(nexternal-3),-1
 c     JA 3/31/11 Keep track of identical particles (i.e., radiation vertices)
 c     by tracing the particle identity from the external particle.
          if(iforest(1,i,iconfig).gt.0) then
-             if (sprop(1,i,iconfig).eq.idup(iforest(1,i,iconfig),1,1))
-     $        iden_part(i) = sprop(1,i,iconfig)
+             if (sprop(iproc,i,iconfig).eq.idup(iforest(1,i,iconfig),1,1))
+     $        iden_part(i) = sprop(iproc,i,iconfig)
           endif
          if(iforest(2,i,iconfig).gt.0) then
-            if(sprop(1,i,iconfig).eq.idup(iforest(2,i,iconfig),1,1))
-     $           iden_part(i) = sprop(1,i,iconfig)
+            if(sprop(iproc,i,iconfig).eq.idup(iforest(2,i,iconfig),1,1))
+     $           iden_part(i) = sprop(iproc,i,iconfig)
          endif
          if(iforest(1,i,iconfig).lt.0) then
             if((iden_part(iforest(1,i,iconfig)).ne.0.and.
-     $        sprop(1,i,iconfig).eq.iden_part(iforest(1,i,iconfig)) .or.
-     $        gforcebw(iforest(1,i,iconfig),iconfig).and.
-     $        sprop(1,i,iconfig).eq.sprop(1,iforest(1,i,iconfig),iconfig)))
-     $       iden_part(i) = sprop(1,i,iconfig)
+     $        sprop(iproc,i,iconfig).eq.iden_part(iforest(1,i,iconfig)) .or.
+     $        gforcebw(iforest(1,i,iconfig),iconfig).eq.1.and.
+     $        sprop(iproc,i,iconfig).eq.sprop(iproc,iforest(1,i,iconfig),iconfig)))
+     $       iden_part(i) = sprop(iproc,i,iconfig)
          endif
          if(iforest(2,i,iconfig).lt.0) then
             if((iden_part(iforest(2,i,iconfig)).ne.0.and.
-     $        sprop(1,i,iconfig).eq.iden_part(iforest(2,i,iconfig)).or.
-     $        gforcebw(iforest(2,i,iconfig),iconfig).and.
-     $        sprop(1,i,iconfig).eq.sprop(1,iforest(2,i,iconfig),iconfig)))
-     $           iden_part(i) = sprop(1,i,iconfig)
+     $        sprop(iproc,i,iconfig).eq.iden_part(iforest(2,i,iconfig)).or.
+     $        gforcebw(iforest(2,i,iconfig),iconfig).eq.1.and.
+     $        sprop(iproc,i,iconfig).eq.sprop(iproc,iforest(2,i,iconfig),iconfig)))
+     $           iden_part(i) = sprop(iproc,i,iconfig)
          endif
          if (iforest(1,i,iconfig) .eq. 1) tsgn=-1d0
          if (tsgn .eq. 1d0) then                         !s channel
@@ -427,7 +445,7 @@ c            write(*,*) pwidth(i,iconfig),pmass(i,iconfig)
 c              JA 6/8/2011 Set xe(i) for resonances
                if (lbw(nbw).eq.1) then
                   xm(i) = max(xm(i), pmass(i,iconfig)-5d0*pwidth(i,iconfig))
-               else if (gforcebw(i,iconfig)) then
+               else if (gforcebw(i,iconfig).eq.1) then
                   xm(i) = max(xm(i), pmass(i,iconfig)-bwcutoff*pwidth(i,iconfig))
                endif
             endif
@@ -529,6 +547,22 @@ c               read(*,*) xo
 c     Set minimum based on: 1) required energy 2) resonances 3) 1/10000 of sqrt(s)
          i = 3*(nexternal-2) - 4 + 1
          xo = max(min(etot**2/stot, 1d0-1d-8),1d0/stot)
+c        Take into account special cuts
+         xo = max(xo, xptj*dabs(xptj)/stot)
+         xo = max(xo, xptb*dabs(xptb)/stot)
+         xo = max(xo, xpta*dabs(xpta)/stot)
+         xo = max(xo, xptl*dabs(xptl)/stot)
+         xo = max(xo, xmtc*dabs(xmtc)/stot)
+         xo = max(xo, htjmin**2/stot)
+         xo = max(xo, ptj1min**2/stot)
+         xo = max(xo, ptj2min**2/stot)
+         xo = max(xo, ptj3min**2/stot)
+         xo = max(xo, ptj4min**2/stot)
+         xo = max(xo, ht2min**2/stot)
+         xo = max(xo, ht3min**2/stot)
+         xo = max(xo, ht4min**2/stot)
+         xo = max(xo, misset**2/stot)
+         xo = max(xo, ptllmin**2/stot)
          if (swidth(i).eq.0.and.xo.eq.1d0/stot) then
             write(*,*) 'Warning: No minimum found for integration'
             write(*,*) '         Setting minimum to ',1d0/stot
