@@ -2535,7 +2535,7 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
         if sys.platform == "darwin":
             subprocess.call(['curl', path[args[0]], '-o%s.tgz' % name], cwd=MG5DIR)
         else:
-            subprocess.call(['wget', path[args[0]], '-O %s.tgz'% name], cwd=MG5DIR)
+            subprocess.call(['wget', path[args[0]], '--output-document=%s.tgz'% name], cwd=MG5DIR)
         # Untar the file
         returncode = subprocess.call(['tar', '-xzpvf', '%s.tgz' % name], cwd=MG5DIR)
         if returncode:
