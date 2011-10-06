@@ -233,7 +233,7 @@ c
       integer iarray(imax)
       logical lconflict(-max_branch:nexternal)
       logical done
-      logical gForceBW(-max_branch:-1,lmaxconfigs)  ! Forced BW
+      integer gForceBW(-max_branch:-1,lmaxconfigs)  ! Forced BW
       include 'decayBW.inc'
 
 c-----
@@ -373,7 +373,7 @@ c
       integer itree(2,-max_branch:-1),iconfig
       logical lconflict(-max_branch:nexternal)
       integer sprop(maxsproc,-max_branch:-1)  ! Propagator id
-      logical forcebw(-max_branch:-1)  ! Forced BW, for identical particle conflicts
+      integer forcebw(-max_branch:-1) ! Forced BW, for identical particle conflicts
 c
 c     local
 c
@@ -428,14 +428,14 @@ c     by tracing the particle identity from the external particle.
             if(itree(1,-i).lt.0) then
                if(iden_part(itree(1,-i)).ne.0.and.
      $           sprop(1,-i).eq.iden_part(itree(1,-i)) .or.
-     $         forcebw(itree(1,-i)).and.
+     $         forcebw(itree(1,-i)).eq.1.and.
      $           sprop(1,-i).eq.sprop(1,itree(1,-i)))
      $              iden_part(-i) = sprop(1,-i)
             endif
             if(itree(2,-i).lt.0) then
                if(iden_part(itree(2,-i)).ne.0.and.
      $           sprop(1,-i).eq.iden_part(itree(2,-i)).or.
-     $         forcebw(itree(2,-i)).and.
+     $         forcebw(itree(2,-i)).eq.1.and.
      $           sprop(1,-i).eq.sprop(1,itree(2,-i)))
      $              iden_part(-i) = sprop(1,-i)
             endif

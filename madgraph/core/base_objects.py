@@ -1051,9 +1051,12 @@ class Leg(PhysicsObject):
 
         self['id'] = 0
         self['number'] = 0
-        # True = final, False = initial (boolean to save memory)
+        # state: True = final, False = initial (boolean to save memory)
         self['state'] = True
+        # from_group: Used in diagram generation
         self['from_group'] = True
+        # onshell: decaying leg (True), forbidden s-channel (False), none (None)
+        self['onshell'] = None
 
     def filter(self, name, value):
         """Filter for valid leg property values."""
@@ -1075,12 +1078,18 @@ class Leg(PhysicsObject):
                         "%s is not a valid boolean for leg flag from_group" % \
                                                                     str(value)
 
+        if name == 'onshell':
+            if not isinstance(value, bool) and value != None:
+                raise self.PhysicsObjectError, \
+                        "%s is not a valid boolean for leg flag onshell" % \
+                                                                    str(value)
+
         return True
 
     def get_sorted_keys(self):
         """Return particle property names as a nicely sorted list."""
 
-        return ['id', 'number', 'state', 'from_group']
+        return ['id', 'number', 'state', 'from_group', 'onshell']
 
     def is_fermion(self, model):
         """Returns True if the particle corresponding to the leg is a
