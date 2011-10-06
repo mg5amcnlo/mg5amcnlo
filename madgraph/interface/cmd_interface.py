@@ -653,7 +653,7 @@ class CheckValidForCmd(object):
                 self.help_install()
                 raise self.InvalidCmd('Not recognize program %s ' % args[0])
             
-        if args[0] == "ExRootAnalysis":
+        if args[0] in ["ExRootAnalysis", "Delphes"]:
             if not misc.which('root'):
                 raise self.InvalidCmd(
 '''In order to install ExRootAnalysis, you need to install Root on your computer first.
@@ -661,8 +661,11 @@ please follow information on http://root.cern.ch/drupal/content/downloading-root
             if 'ROOTSYS' not in os.environ:
                 raise self.InvalidCmd(
 '''The environment variable ROOTSYS is not configured.
-You can set it by adding the following line in your .bashrc:
-export ROOTSYS = %s''' % os.path.realpath(os.path.join(misc.which('root'), \
+You can set it by adding the following lines in your .bashrc [.bash_profile for mac]:
+export ROOTSYS=%s
+export PATH=$PATH:$ROOTSYS/bin
+This will take effect only in a NEW terminal
+''' % os.path.realpath(os.path.join(misc.which('root'), \
                                                os.path.pardir, os.path.pardir)))
 
                 
