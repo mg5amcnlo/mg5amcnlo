@@ -2534,7 +2534,10 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
         else:
             subprocess.call(['wget', path[args[0]], '-O %s.tgz'% name], cwd=MG5DIR)
         # Untar the file
-        subprocess.call(['tar', '-xzpvf', '%s.tgz' % name], cwd=MG5DIR)
+        returncode = subprocess.call(['tar', '-xzpvf', '%s.tgz' % name], cwd=MG5DIR)
+        if returncode:
+            raise MadGraph5Error, 'Fail to download correctly the File. Stop'
+        
         # Check that the directory has the correct name
         if not os.path.exists(os.path.join(MG5DIR, name)):
             created_name = [n for n in os.listdir(MG5DIR) if n.startswith(name) 
@@ -2545,6 +2548,15 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
                 created_name = created_name[0]
             files.mv(os.path.join(MG5DIR, created_name), os.path.join(MG5DIR, name))
         logger.info('compile %s. This might takes a while.' % name)
+        
+        # Modify Makefile for pythia-pgs on Mac 64 bit
+        if args[0] == "pythia-pgs" and sys.maxsize > 2**32:
+            path = os.path.join(MG5DIR, 'pythia-pgs', 'libraries', \
+                      'PGS4', 'src', 'stdhep-dir', 'src', 'stdhep_Arch')
+            text = open(path).read()
+            text = text.replace('-m32','-m64')
+            open(path, 'w').writelines(text)
+            
         # Compile the file
         # Check for F77 compiler
         if 'FC' not in os.environ or not os.environ['FC']:
@@ -2561,6 +2573,7 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
         # Special treatment for TD program (require by MadAnalysis)
         if args[0] == 'MadAnalysis':
             try:
+                os.system('rm -rf td')
                 os.mkdir(os.path.join(MG5DIR, 'td'))
             except Exception, error:
                 print error
@@ -2573,16 +2586,15 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
                                                   cwd=os.path.join(MG5DIR,'td'))      
                 subprocess.call(['tar', '-xzpvf', 'td.tgz'], 
                                                   cwd=os.path.join(MG5DIR,'td'))
+                files.mv('td/td_mac_intel','td')
             else:
                 logger.info('Downloading TD for Linux 32 bit')
                 target = 'http://cp3wks05.fynu.ucl.ac.be/twiki/pub/Software/TopDrawer/td'
-                subprocess.call(['wget', target,' -o td.tgz'], 
-                                                  cwd=os.path.join(MG5DIR,'td'))      
+                subprocess.call(['wget', target], cwd=os.path.join(MG5DIR,'td'))      
             
-                if sys.maxsize > 2**32 and sys.platform != 'darwin':
+                if sys.maxsize > 2**32:
                     logger.warning('''td program (needed by MadAnalysis) is not compile for 64 bit computer
-                Please follow instruction in http://cp3wks05.fynu.ucl.ac.be/twiki/bin/view/Software/TopDrawer
-                in order to be able the current package.''')
+                Please follow instruction in http://cp3wks05.fynu.ucl.ac.be/twiki/bin/view/Software/TopDrawer.''')
 
 
     
