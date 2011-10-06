@@ -24,7 +24,6 @@ c
       parameter( rZero = 0.0d0, rOne = 1.0d0 )
       double complex cImag, cZero
       parameter( cImag = ( 0.0d0, 1.0d0 ), cZero = ( 0.0d0, 0.0d0 ) )
-
 #ifdef HELAS_CHECK
       integer stdo
       parameter( stdo = 6 )

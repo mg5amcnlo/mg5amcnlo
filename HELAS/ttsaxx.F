@@ -17,9 +17,9 @@ c
 
       implicit none
 c--   dimension of the current set to arbitrary length
-c      INTEGER DIM
-c      PARAMETER(DIM=18)
-      include "dimension.inc"
+      INTEGER DIM
+      PARAMETER(DIM=18)
+c      include "dimension.inc"
       double complex tc1(DIM),tc2(DIM),sc(DIM)
       double complex vertex, gc(2)
 
