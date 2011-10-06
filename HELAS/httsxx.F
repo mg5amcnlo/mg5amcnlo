@@ -21,7 +21,7 @@ c
 c--   dimension of the current set to arbitrary length
 c      INTEGER DIM
 c      PARAMETER(DIM=18)
-      include "dimension.inc"
+      include 'dimension.inc'
       double complex tc1(DIM),htts(DIM),sc(DIM),tc2(DIM)
       double complex dg,g1(2)
 
