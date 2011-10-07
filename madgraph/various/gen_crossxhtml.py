@@ -362,7 +362,7 @@ class OneRunResults(dict):
         """return the events information"""
         
         # Events
-        out = '<table border=1>'
+        out = '<table border=0>'
         if self.parton:
             out += '<tr><td> Parton Events : </td><td>'
             if 'gridpack' in self.parton:

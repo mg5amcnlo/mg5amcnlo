@@ -510,7 +510,6 @@ c-----
 c
 c     Now write the commands
 c      
-      write(lun,20) 'echo $i'
       write(lun,20) 'echo $i >& run.$script'
       write(lun,20) 'j=G$i'
       write(lun,20) 'if [[ ! -e $j ]]; then'
@@ -521,7 +520,7 @@ c
       write(lun,20) 'rm -f $k'
       write(lun,20) 'cat ../input_app.txt >& input_app.txt'
       write(lun,20) 'echo $i >> input_app.txt'
-      write(lun,20) 'time ../madevent > $k <input_app.txt'
+      write(lun,20) '../madevent > $k <input_app.txt'
       write(lun,20) 'rm -f ftn25 ftn99'
       if(.not.gridpack) write(lun,20) 'rm -f ftn26'
       write(lun,20) 'cp $k log.txt'

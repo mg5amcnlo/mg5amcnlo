@@ -320,7 +320,6 @@ c
 c
 c     Now write the commands
 c      
-         write(26,20) 'echo $j'
          write(26,20) 'if [[ ! -e $j ]]; then'
          write(26,25) 'mkdir $j'
          write(26,20) 'fi'
@@ -338,7 +337,7 @@ c         write(26,20) 'rm -f moffset.dat'
      &        '"  >> input_sg.txt' !Helicity 
          write(26,'(5x,3a)')'echo "',gn(io(i))(2:ip-1),
      $        '" >>input_sg.txt'
-         write(26,20) 'time ../madevent >> $k <input_sg.txt'
+         write(26,20) '../madevent >> $k <input_sg.txt'
          write(26,20) 'mv ftn26 ftn25'
 c         write(26,20) 'rm ftn26'
          write(26,20) 'cat $k >> log.txt'
@@ -431,7 +430,6 @@ c      write(lun,'(a)') ')'
 c
 c     Now write the commands
 c      
-c      write(lun,20) 'echo $i'
 c      write(lun,20) 'j=G$i'
 c      write(lun,20) 'if (! -e $j) then'
 c      write(lun,25) 'mkdir $j'
@@ -445,7 +443,7 @@ c      if (.false.) then
 c         write(lun,20) 'cp ../../public.sh .'
 c         write(lun,20) 'qsub -N $1$i public.sh >> ../../running_jobs'
 c      else
-c         write(lun,20) 'time ../madevent > $k <input_app.txt'
+c         write(lun,20) '../madevent > $k <input_app.txt'
 c         write(lun,20) 'rm -f ftn25 ftn99'
 c         write(lun,20) 'cp $k log.txt'
 c      endif
@@ -669,7 +667,7 @@ c
      &        ' " >> input_sg.txt' !Helicity 0=exact
          write(26,'(9x,3a)')'echo "',gn(io(np))(2:ip-1),
      $        '" >>input_sg.txt'
-         write(26,25) 'time ../madevent >> $k <input_sg.txt'
+         write(26,25) '../madevent >> $k <input_sg.txt'
          write(26,25) 'cat $k >> log.txt'
          write(26,25) 'if [[ -e ftn26 ]]; then'
          write(26,25) '     cp ftn26 ftn25'
@@ -706,7 +704,7 @@ c         write(26,20) 'qsub -N $1$j public_sg.sh >> ../../running_jobs'
          write(26,25) 'if [[ -e ftn26 ]]; then'
          write(26,25) '     cp ftn26 ftn25'
          write(26,25) 'fi'
-         write(26,25) 'time ../madevent >> $k <input_sg.txt'
+         write(26,25) '../madevent >> $k <input_sg.txt'
          write(26,25) 'cat $k >> log.txt'
          write(26,20) 'fi'
          write(26,20) 'cd ../'
@@ -838,7 +836,7 @@ c
      &           ' " >> input_sg.txt' !Helicity 0=exact
             write(26,'(9x,3a)')'echo "',gn(i)(2:ip-1),
      $           '" >>input_sg.txt'
-            write(26,25) 'time ../madevent >> $k <input_sg.txt'
+            write(26,25) '../madevent >> $k <input_sg.txt'
             write(26,25) 'cat $k >> log.txt'
             write(26,25) 'if [[ -e ftn26 ]]; then'
             write(26,25) '     cp ftn26 ftn25'
@@ -866,7 +864,7 @@ c
             write(26,25) 'if [[ -e ftn26 ]]; then'
             write(26,25) '     cp ftn26 ftn25'
             write(26,25) 'fi'
-            write(26,25) 'time ../madevent >> $k <input_sg.txt'
+            write(26,25) '../madevent >> $k <input_sg.txt'
             write(26,25) 'cat $k >> log.txt'
             write(26,20) 'fi'
             write(26,20) 'cd ../'

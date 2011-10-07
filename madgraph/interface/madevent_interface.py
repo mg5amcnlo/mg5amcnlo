@@ -73,7 +73,7 @@ except Exception, error:
 logger = logging.getLogger('madevent.stdout') # -> stdout
 logger_stderr = logging.getLogger('madevent.stderr') # ->stderr
 
-
+devnull = os.open(os.devnull, os.O_RDWR)
 class MadEventError(Exception):
     pass
 
@@ -993,7 +993,9 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
         
         args = self.split_arg(line)
         # Check argument's validity
-        self.check_survey(args, cmd='generate_events')  
+        self.check_survey(args, cmd='generate_events')
+        
+  
         
         self.exec_cmd('survey %s' % line)
         if not self.run_card['gridpack'] in self.true:        
@@ -1091,7 +1093,7 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
         # treat random number
         self.update_random()
         self.save_random()
-
+        misc.open_file(os.path.join(self.me_dir, 'HTML', 'crossx.html'))
         logger.info('Working on SubProcesses')
         for subdir in open(pjoin(self.me_dir, 'SubProcesses', 'subproc.mg')):
             subdir = subdir.strip()
@@ -1108,8 +1110,11 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
                 raise MadEventError, 'Error make gensym not successful'
 
             # Launch gensym
-            subprocess.call(['./gensym'], cwd=Pdir)
-            if not os.path.exists(pjoin(Pdir, 'ajob1')):
+            p = subprocess.Popen(['./gensym'], stdout=subprocess.PIPE, 
+                             stderr=subprocess.STDOUT, cwd=Pdir)
+            p.wait()
+            if not os.path.exists(pjoin(Pdir, 'ajob1')) or p.returncode:
+                logger.critical(p.stdout.readlines())
                 raise MadEventError, 'Error gensym run not successful'
 
             #
@@ -1161,9 +1166,8 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
                 if match[:4] in ['ajob', 'wait', 'run.', 'done']:
                     os.remove(pjoin(Pdir, match))
 
-            out = None #open(pjoin(Pdir, 'gen_ximprove.log'),'w')
             proc = subprocess.Popen([pjoin(bindir, 'gen_ximprove')],
-                                    stdout=out,stderr=subprocess.STDOUT,
+                                    stdout=devnull,
                                     stdin=subprocess.PIPE,
                                     cwd=Pdir)
             proc.communicate('%s %s T\n' % (precision, max_process))
@@ -1187,10 +1191,12 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
         
         bindir = pjoin(os.path.relpath(self.dirbin, pjoin(self.me_dir,'SubProcesses')))
         subprocess.call([pjoin(bindir, 'combine_runs')], 
-                                          cwd=pjoin(self.me_dir,'SubProcesses'))
+                                          cwd=pjoin(self.me_dir,'SubProcesses'),
+                                          stdout=devnull)
         
         subprocess.call([pjoin(self.dirbin, 'sumall')], 
-                                         cwd=pjoin(self.me_dir,'SubProcesses'))
+                                         cwd=pjoin(self.me_dir,'SubProcesses'),
+                                         stdout=devnull)
         self.update_status('finish refine', 'parton')
         
     ############################################################################ 
@@ -1332,7 +1338,7 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
         td = self.configuration['td_path']
         
         # Update the banner with the pythia card
-        banner = open(pjoin(self.me_dir,'Events','banner.txt'),'a')
+        banner = open(pjoin(self.me_dir,'Events','banner.txt'), 'a')
         banner.writelines('<MGPythiaCard>')
         banner.writelines(open(pjoin(self.me_dir, 'Cards','pythia_card.dat')).read())
         banner.writelines('</MGPythiaCard>')
@@ -1360,7 +1366,19 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
         if int(self.run_card['ickkw']):
             self.update_status('Create matching plots for Pythia', level='pythia')
             subprocess.call([self.dirbin+'/create_matching_plots.sh', self.run_name],
-                            cwd=pjoin(self.me_dir,'Events')) 
+                            cwd=pjoin(self.me_dir,'Events'))
+            #Clean output
+            subprocess.call(['gzip','-f','events.tree'], 
+                                                cwd=pjoin(self.me_dir,'Events'))
+            files.mv(pjoin(self.me_dir,'Events','events.tree.gz'), 
+                     pjoin(self.me_dir,'Events',self.run_name +'_events.tree.gz'))
+            subprocess.call(['gzip','-f','beforeveto.tree'], 
+                                                cwd=pjoin(self.me_dir,'Events'))
+            files.mv(pjoin(self.me_dir,'Events','beforeveto.tree.gz'), 
+                     pjoin(self.me_dir,'Events',self.run_name +'_beforeveto.tree.gz'))
+            files.mv(pjoin(self.me_dir,'Events','xsecs.tree'), 
+                     pjoin(self.me_dir,'Events',self.run_name +'_xsecs.tree'))            
+             
 
         # Plot for pythia
         self.create_plot('Pythia')
@@ -1691,9 +1709,10 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
         proc = subprocess.Popen([pjoin(self.dirbin, 'sumall')], 
                                           cwd=pjoin(self.me_dir,'SubProcesses'),
                                           stdout=subprocess.PIPE)
-        tee = subprocess.Popen(['tee', '/tmp/tmp.log'], stdin=proc.stdout)
+        
+        #tee = subprocess.Popen(['tee', '/tmp/tmp.log'], stdin=proc.stdout)
         proc.wait()
-        for line in open('/tmp/tmp.log'):
+        for line in proc.stdout: 
             if line.startswith(' Results'):
                 data = line.split()
                 self.results.add_detail('cross', float(data[1]))
@@ -1871,8 +1890,7 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
         """ change random number"""
         
         self.random += 5 
-        self.random = self.random % 30107 # cann't use too big random number
-
+        self.random = self.random % 31328*30081 # cann't use too big random number
 
     ############################################################################
     def save_random(self):
