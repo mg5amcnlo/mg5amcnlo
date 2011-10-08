@@ -2554,11 +2554,13 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
         
         # Modify Makefile for pythia-pgs on Mac 64 bit
         if args[0] == "pythia-pgs" and sys.maxsize > 2**32:
-            path = os.path.join(MG5DIR, 'pythia-pgs', 'libraries', \
-                      'PGS4', 'src', 'stdhep-dir', 'src', 'stdhep_Arch')
-            text = open(path).read()
-            text = text.replace('-m32','-m64')
-            open(path, 'w').writelines(text)
+            for path in [os.path.join(MG5DIR, 'pythia-pgs', 'libraries', \
+                         'PGS4', 'src', 'stdhep-dir', 'src', 'stdhep_Arch'),
+                         os.path.join(MG5DIR, 'pythia-pgs', 'libraries', \
+                         'PGS4', 'src', 'stdhep-dir', 'mcfio', 'arch_mcfio')]:
+                text = open(path).read()
+                text = text.replace('-m32','-m64')
+                open(path, 'w').writelines(text)
             
         # Compile the file
         # Check for F77 compiler
@@ -2568,7 +2570,7 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
             elif misc.which('gfortran'):
                 os.environ['FC'] = 'gfortran'
             else:
-                raise self.InvalidCmd('Require F77 or Gfortran compiler')
+                raise self.InvalidCmd('Require g77 or Gfortran compiler')
         subprocess.call(['make', 'clean'], cwd = os.path.join(MG5DIR, name))
         subprocess.call(['make'], cwd = os.path.join(MG5DIR, name))
 
