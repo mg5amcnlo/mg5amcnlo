@@ -2591,7 +2591,7 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
                                                   cwd=os.path.join(MG5DIR,'td'))      
                 subprocess.call(['tar', '-xzpvf', 'td.tgz'], 
                                                   cwd=os.path.join(MG5DIR,'td'))
-                files.mv('td/td_mac_intel','td')
+                files.mv(MG5DIR + '/td/td_mac_intel',MG5DIR+'/td/td')
             else:
                 logger.info('Downloading TD for Linux 32 bit')
                 target = 'http://cp3wks05.fynu.ucl.ac.be/twiki/pub/Software/TopDrawer/td'
