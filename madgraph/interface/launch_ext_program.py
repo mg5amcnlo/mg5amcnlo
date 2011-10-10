@@ -264,7 +264,10 @@ class MELauncher(ExtLauncher):
                 self.cluster = 0
                 self.launch_program()
                 return
-            nb_node = self.ask('How many core do you want to use?', max_node, range(2,max_node+1))
+            elif max_node == 2:
+                nb_node = 2
+            else:
+                nb_node = self.ask('How many core do you want to use?', max_node, range(2,max_node+1))
         
         import madgraph.interface.madevent_interface as ME
         

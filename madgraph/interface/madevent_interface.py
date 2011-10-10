@@ -1263,8 +1263,8 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
         self.update_status('Storing parton level results', level='parton')
         subprocess.call(['%s/store' % self.dirbin, self.run_name],
                             cwd=pjoin(self.me_dir, 'Events'))
-        shutil.copy(pjoin(self.me_dir, 'Events', self.run_name+'_banner.txt'),
-                    pjoin(self.me_dir, 'Events', 'banner.txt')) 
+        #shutil.copy(pjoin(self.me_dir, 'Events', self.run_name+'_banner.txt'),
+        #            pjoin(self.me_dir, 'Events', 'banner.txt')) 
 
         self.update_status('End Parton', level='parton')
         
@@ -1338,7 +1338,8 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
         td = self.configuration['td_path']
         
         # Update the banner with the pythia card
-        banner = open(pjoin(self.me_dir,'Events','banner.txt'), 'a')
+        banner_path = pjoin(self.me_dir,'Events',self.run_name + '_banner.txt')
+        banner = open(banner_path, 'a')
         banner.writelines('<MGPythiaCard>')
         banner.writelines(open(pjoin(self.me_dir, 'Cards','pythia_card.dat')).read())
         banner.writelines('</MGPythiaCard>')
@@ -1347,6 +1348,16 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
         # Creating LHE file
         if misc.is_executable(pjoin(pydir, 'hep2lhe')):
             self.update_status('Creating Pythia LHE File', level='pythia')
+            # Write the banner to the LHE file
+            out = open(pjoin(self.me_dir,'Events','pythia_events.lhe'), 'w')
+            #out.writelines('<LesHouchesEvents version=\"1.0\">\n')    
+            out.writelines('<!--\n')
+            out.writelines('# Warning! Never use this file for detector studies!\n')
+            out.writelines('-->\n<!--\n')
+            out.writelines(open(banner_path).read())
+            out.writelines('\n-->\n')
+            out.close()
+            
             if self.cluster_mode == 1:
                 self.cluster.launch_and_wait(self.dirbin+'/run_hep2lhe', 
                                          argument= [pydir],
@@ -1354,7 +1365,7 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
             else:
                 subprocess.call([self.dirbin+'/run_hep2lhe', pydir],
                              cwd=pjoin(self.me_dir,'Events'))
-            
+                
             # Creating ROOT file
             if misc.is_executable(pjoin(eradir, 'ExRootLHEFConverter')):
                 self.update_status('Creating Pythia LHE Root File', level='pythia')
@@ -1538,6 +1549,17 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
             logger.error('Fail to create LHCO events')
             return 
         
+        # Update the banner with the pgs card
+        banner = open(pjoin(self.me_dir,'Events',self.run_name + '_banner.txt'), 'a')
+        banner.writelines('<MGPGSCard>')
+        banner.writelines(open(pjoin(self.me_dir, 'Cards','pgs_card.dat')).read())
+        banner.writelines('</MGPGSCard>')
+        banner.close()
+        
+        # Add the banner to the Events
+        raise NotImplemented, 'NEED TO BE DONE'
+        
+        
         # Creating Root file
         if misc.is_executable(pjoin(eradir, 'ExRootLHCOlympicsConverter')):
             self.update_status('Creating PGS Root File', level='pgs')
@@ -1609,6 +1631,20 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
         if not os.path.exists(pjoin(self.me_dir, 'Events', 'delphes_events.lhco')):
             logger.error('Fail to create LHCO events from DELPHES')
             return 
+
+        # Update the banner with the pgs card
+        banner = open(pjoin(self.me_dir,'Events',self.run_name + '_banner.txt'), 'a')
+        banner.writelines('<MGDelphesCard>')
+        banner.writelines(open(pjoin(self.me_dir, 'Cards','delphes_card.dat')).read())
+        banner.writelines('</MGDelphesCard>')
+        banner.writelines('<MGDelphesTrigger>')
+        banner.writelines(open(pjoin(self.me_dir, 'Cards','delphes_trigger.dat')).read())
+        banner.writelines('</MGDelphesTrigger>')        
+        banner.close()
+        
+        # Add the banner to the Events
+        raise NotImplemented, 'NEED TO BE DONE'
+
 
         #eradir = self.configuration['exrootanalysis_path']
         madir = self.configuration['madanalysis_path']
