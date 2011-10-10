@@ -231,7 +231,7 @@ class ColorBasis(dict):
 
                 # Here we need to force a specific order for the summed indices
                 # in case we have K6 or K6bar Clebsch Gordan coefficients
-                for colstr in col_fact: colstr.order_summation_for_K()
+                for colstr in col_fact: colstr.order_summation()
 
                 # Save the result for further use
                 canonical_col_fact = col_fact.create_copy()
@@ -256,7 +256,7 @@ class ColorBasis(dict):
 
                 # Here we need to force a specific order for the summed indices
                 # in case we have K6 or K6bar Clebsch Gordan coefficients
-                for colstr in col_fact: colstr.order_summation_for_K()
+                for colstr in col_fact: colstr.order_summation()
 
             # loop over color strings in the resulting color factor
             for col_str in col_fact:

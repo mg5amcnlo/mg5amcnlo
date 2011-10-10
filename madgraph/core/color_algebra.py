@@ -757,18 +757,25 @@ class ColorString(list):
                                             1, int(Nc ** abs(self.Nc_power))),
                     self.is_imaginary)
 
-    def order_summation_for_K(self, immutable=None):
+    def order_summation(self, immutable=None):
         """Force a specific order for the summation indices 
            in case we have Clebsch Gordan coefficients K6's or K6Bar's
            This is necessary to correctly recognize later on the equivalent 
            color strings (otherwise the color basis is degenerate)
+           The new ordering is as follow:
+                1. put K and KBar Clebsch Gordan coefficients at the end of the list of color factors
+                   the other factors are re-arranged in the reversed order compared with immutable 
+                2. rename the summation indices so that they are increasing (starting from 10000)
+                   from left to right
+                3. finally, after the summation indices have been renamed, replace
+                   K6(a,i,j) by K6(a,j,i) and K6Bar(a,i,j) by K6Bar(a,j,i) IF j>i
         """
 
         if not immutable:
             immutable = self.to_immutable()
 
-#       first scan to see whether there are some K's or KBar's,
-#       and put them at the end
+#       STEP 1: first scan to see whether there are some K's or KBar's,
+#       and put them at the en 
         immutable_order2=[]
         go_further=0
         for  elem in immutable:
@@ -779,6 +786,8 @@ class ColorString(list):
 
         if go_further==0: return
 
+#       STEP 2: rename the summation indices so that they are increasing (starting from 10000)
+#               from left to right
         replaced_indices = {}
         curr_ind = 10000
         return_list = []
@@ -786,7 +795,7 @@ class ColorString(list):
         for elem in immutable_order2:
             can_elem = [elem[0], []]
             for index in elem[1]:
-              if index>9999:
+              if index>9999:  # consider only summation indices
                 try:
                     new_index = replaced_indices[index]
                 except KeyError:
@@ -795,6 +804,7 @@ class ColorString(list):
                     replaced_indices[index] = new_index
               else: new_index=index
               can_elem[1].append(new_index)
+#       STEP 3.  replace K6(a,i,j) by K6(a,j,i) and K6Bar(a,i,j) by K6Bar(a,j,i) IF j>i
             if (can_elem[0]=="K6" or can_elem[0]=="K6Bar"):
                if can_elem[1][2]>can_elem[1][1]: can_elem[1]=[can_elem[1][0], can_elem[1][2], can_elem[1][1] ]
             return_list.append((can_elem[0], tuple(can_elem[1])))
