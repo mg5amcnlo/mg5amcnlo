@@ -20,6 +20,7 @@ fi
 
 if [[ -x $td/td ]]; then
     echo 'topdrawer found'
+    export DYLIB_LIBRARY_PATH=$DYLIB_LIBRARY_PATH:$td
 else
     echo 'topdrawer not found'
     exit
