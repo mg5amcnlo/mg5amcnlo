@@ -52,7 +52,12 @@ class IdentifyMETag(diagram_generation.DiagramTag):
 
     Note that we also need to check that the processes agree on
     has_mirror_process, process id, and
-    identical_particle_factor. Don't allow combining decay chains"""
+    identical_particle_factor. Don't allow combining decay chains.
+
+    We also don't want to combine processes with different possibly
+    onshell s-channel propagators (i.e., with non-zero width and
+    onshell=True or None) since we want the right propagator written
+    in the event file in the end. This is done by the vertex."""
 
     # dec_number is used to separate between decay chains.
     # This is needed since we don't want to merge different decays,
@@ -63,6 +68,7 @@ class IdentifyMETag(diagram_generation.DiagramTag):
     def create_tag(amplitude):
         """Create a tag which identifies identical matrix elements"""
         process = amplitude.get('process')
+        ninitial = process.get_ninitial()
         model = process.get('model')
         dc = 0
         if process.get('is_decay_chain'):
@@ -73,7 +79,7 @@ class IdentifyMETag(diagram_generation.DiagramTag):
                 process.get('is_decay_chain'),
                 process.identical_particle_factor(),
                 dc,
-                sorted([IdentifyMETag(d, model) for d in \
+                sorted([IdentifyMETag(d, model, ninitial) for d in \
                         amplitude.get('diagrams')])]        
         
     @staticmethod
@@ -97,12 +103,12 @@ class IdentifyMETag(diagram_generation.DiagramTag):
                  leg.get('number'))]
         
     @staticmethod
-    def vertex_id_from_vertex(vertex, last_vertex, model):
+    def vertex_id_from_vertex(vertex, last_vertex, model, ninitial):
         """Returns the info needed to identify matrix elements:
-        interaction color, lorentz, coupling, and wavefunction
-        spin, self_antipart, mass, width, color, decay and
-        is_part. Note that is_part needs to be flipped if we move the
-        final vertex around."""
+        interaction color, lorentz, coupling, and wavefunction spin,
+        self_antipart, mass, width, color, decay and is_part, plus PDG
+        code if possible onshell s-channel prop. Note that is_part
+        and PDG code needs to be flipped if we move the final vertex around."""
 
         if vertex.get('id') == 0:
             return (0,)
@@ -118,9 +124,13 @@ class IdentifyMETag(diagram_generation.DiagramTag):
             return (ret_list,)
         else:
             part = model.get_particle(vertex.get('legs')[-1].get('id'))
+            s_pdg = vertex.get_s_channel_id(model, ninitial)
+            if s_pdg and (part.get('width').lower() == 'zero' or \
+               vertex.get('legs')[-1].get('onshell') == False):
+                s_pdg = 0
             return ((part.get('spin'), part.get('color'),
                      part.get('self_antipart'),
-                     part.get('mass'), part.get('width')),
+                     part.get('mass'), part.get('width'), s_pdg),
                     ret_list)
 
     @staticmethod
@@ -3781,7 +3791,9 @@ class HelasDecayChainProcess(base_objects.PhysicsObject):
 
         # Store the result in matrix_elements
         matrix_elements = HelasMatrixElementList()
-
+        # Store matrix element tags in me_tags, for precise comparison
+        me_tags = []
+        
         # List of list of ids for the initial state legs in all decay
         # processes
         decay_is_ids = [[element.get('processes')[0].get_initial_ids()[0] \
@@ -3904,13 +3916,14 @@ class HelasDecayChainProcess(base_objects.PhysicsObject):
                                         for d in decay_dict.values()])))
 
                 matrix_element.insert_decay_chains(decay_dict)
+                me_tag = IdentifyMETag.create_tag(matrix_element.get_base_amplitude())
 
                 try:
                     # If an identical matrix element is already in the list,
                     # then simply add this process to the list of
                     # processes for that matrix element
                     other_processes = matrix_elements[\
-                    matrix_elements.index(matrix_element)].get('processes')
+                    me_tags.index(me_tag)].get('processes')
                     logger.info("Combining process with %s" % \
                       other_processes[0].nice_string().replace('Process: ', ''))
                     other_processes.extend(matrix_element.get('processes'))
@@ -3920,6 +3933,7 @@ class HelasDecayChainProcess(base_objects.PhysicsObject):
                     if matrix_element.get('processes') and \
                            matrix_element.get('diagrams'):
                         matrix_elements.append(matrix_element)
+                        me_tags.append(me_tag)
 
         return matrix_elements
 

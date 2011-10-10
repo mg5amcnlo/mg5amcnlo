@@ -2607,6 +2607,10 @@ class HelasMultiProcessTest(unittest.TestCase):
 
         matrix_elements = my_dc_process.combine_decay_chain_processes()
 
+        for me in matrix_elements:
+            print me.get('processes')[0].nice_string()
+            print helas_objects.IdentifyMETag.create_tag(me.get_base_amplitude())
+
         self.assertEqual(len(matrix_elements), 8)
 
         num_processes = [4, 2, 4, 2, 4, 2, 2, 1]
