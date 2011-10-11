@@ -57,7 +57,6 @@ try:
     from madgraph import InvalidCmd
     MADEVENT = False
 except Exception, error:
-    print error
     # import from madevent directory
     import internal.extended_cmd as cmd
     import internal.misc as misc    
@@ -1111,12 +1110,11 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
 
             # Launch gensym
             p = subprocess.Popen(['./gensym'], stdout=subprocess.PIPE, 
-                             stderr=subprocess.STDOUT, cwd=Pdir)
-            p.wait()
+                            stderr=subprocess.STDOUT, cwd=Pdir)
+            (stdout, stderr) = p.communicate()
             if not os.path.exists(pjoin(Pdir, 'ajob1')) or p.returncode:
-                logger.critical(p.stdout.readlines())
+                logger.critical(stdout)
                 raise MadEventError, 'Error gensym run not successful'
-
             #
             os.system("chmod +x %s/ajob*" % Pdir)
         

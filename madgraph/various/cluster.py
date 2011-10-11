@@ -13,7 +13,7 @@
 ################################################################################
 import subprocess
 import logging
-import md5
+import hashlib
 import os
 import time
 
@@ -172,7 +172,7 @@ class PBSCluster(Cluster):
         """Submit the prog to the cluser"""
         
         me_dir = os.path.realpath(os.path.join(cwd,prog)).rsplit('/SubProcesses',1)[0]
-        me_dir = md5.md5(me_dir).hexdigest()[-14:]
+        me_dir = hashlib.md5(me_dir).hexdigest()[-14:]
 	if not me_dir[0].isalpha():
 		me_dir = 'a' + me_dir[1:]
         
