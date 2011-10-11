@@ -20,6 +20,8 @@ fi
 
 if [[ -x $td/td ]]; then
     echo 'topdrawer found'
+    # This is needed for Mac OS X
+    export DYLD_LIBRARY_PATH=$DYLD_LIBRARY_PATH:$td
 else
     echo 'topdrawer not found'
     exit

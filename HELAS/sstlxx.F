@@ -13,8 +13,10 @@ c output:
 c       complex vertex         : amplitude               gamma(s1,s2,s3)
 c     
       implicit none
+      INTEGER DIM
+      PARAMETER(DIM=18)
 
-      include "dimension.inc"
+c      include "dimension.inc"
       double complex s1(DIM),s2(DIM),t3(DIM),vertex
       double precision gc
 
