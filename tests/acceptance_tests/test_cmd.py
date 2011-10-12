@@ -120,11 +120,12 @@ class TestCmdShell1(unittest.TestCase):
         if sys.platform == 'darwin':
             self.assertEqual(launch_ext.open_file.web_browser, None)
             self.assertEqual(launch_ext.open_file.text_editor, text_editor)
-            self.assertEqual(launch_ext.open_file.web_browser, None)
+            self.assertEqual(launch_ext.open_file.eps_viewer, None)
         else:
             self.assertEqual(launch_ext.open_file.web_browser, 'firefox')
             self.assertEqual(launch_ext.open_file.text_editor, text_editor)
-            self.assertEqual(launch_ext.open_file.web_browser, 'gv')            
+            self.assertEqual(launch_ext.open_file.eps_viewer, 'gv')
+                        
 class TestCmdShell2(unittest.TestCase,
                     test_file_writers.CheckFileCreate):
     """Test all command line related to MG_ME"""

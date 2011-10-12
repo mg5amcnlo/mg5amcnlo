@@ -155,7 +155,7 @@ class MELauncher(ExtLauncher):
     
     def __init__(self, running_dir, timeout, cmd_int , unit='pb', **option):
         """ initialize the StandAlone Version"""
-        
+
         ExtLauncher.__init__(self, running_dir, './Cards', timeout, **option)
         #self.executable = os.path.join('.', 'bin','generate_events')
 
@@ -171,23 +171,7 @@ class MELauncher(ExtLauncher):
             self.cluster = 2
         
         self.cards = ['param_card.dat', 'run_card.dat']
-        # Check for pythia-pgs directory
-        if os.path.isdir(os.path.join(MG5DIR,'pythia-pgs')):
-            self.pythia = os.path.join(MG5DIR,'pythia-pgs')
-        elif MG4DIR and os.path.isdir(os.path.join(MG4DIR,'pythia-pgs')):
-            self.pythia = os.path.join(MG4DIR,'pythia-pgs')
-        else:
-            self.pythia = None
-            
-        # Check for DELPHES directory
-        if os.path.isdir(os.path.join(MG5DIR,'Delphes')):
-            self.delphes = os.path.join(MG5DIR,'Delphes')
-        elif MG4DIR and os.path.isdir(os.path.join(MG4DIR,'Delphes')):
-            self.delphes = os.path.join(MG4DIR,'Delphes')
-        else:
-            self.delphes = None
-        
-        
+
         # Assign a valid run name if not put in options
         if self.name == '':
             for i in range(1,1000):
@@ -219,7 +203,6 @@ class MELauncher(ExtLauncher):
         answer = self.ask('Do you want to run pythia?','auto', ['y','n','auto'])
         if answer == 'y':
             self.copy_default_card('pythia')
-            self.cards.append('pythia_card.dat')
         elif answer == 'n':
             path = os.path.join(self.card_dir, 'pythia_card.dat')
             try: os.remove(path)
@@ -227,6 +210,7 @@ class MELauncher(ExtLauncher):
             return # no Need to ask for PGS/Delphes
         elif answer == 'auto' and not os.path.exists(os.path.join(self.card_dir, 'pythia_card.dat')):
             return # No need to ask for PGS/Delphes
+        self.cards.append('pythia_card.dat')
         
         answer = self.ask('Do you want to run PGS?','auto', ['y','n','auto'])
         if answer == 'y':
@@ -237,6 +221,9 @@ class MELauncher(ExtLauncher):
             path = os.path.join(self.card_dir, 'pgs_card.dat')
             try: os.remove(path)
             except OSError: pass
+        elif answer == 'auto' and os.path.exists(os.path.join(self.card_dir, 'pgs_card.dat')):
+            self.cards.append('pgs_card.dat')
+            return # No need to ask for Delphes
     
         if not self.delphes:
             return
@@ -248,7 +235,9 @@ class MELauncher(ExtLauncher):
         elif answer == 'n':
             path = os.path.join(self.card_dir, 'delphes_card.dat')
             try: os.remove(path)
-            except OSError: pass        
+            except OSError: pass
+        elif answer == 'auto' and os.path.exists(os.path.join(self.card_dir, 'delphes_card.dat')):
+            self.cards.append('delphes_card.dat')            
     
     def launch_program(self):
         """launch the main program"""

@@ -914,9 +914,10 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
             if key.endswith('path'):
                 path = os.path.join(self.me_dir, self.configuration[key])
                 if os.path.isdir(path):
-                    self.configuration[key] = path
+                    self.configuration[key] = os.path.realpath(path)
                     continue
                 if os.path.isdir(self.configuration[key]):
+                    self.configuration[key] = os.path.realpath(self.configuration[key])
                     continue
                 else:
                     self.configuration[key] = ''
@@ -1440,7 +1441,7 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
                 os.system('gunzip -f %s' % (filename+'.gz') )
             if  os.path.exists(filename):
                 shutil.move(filename, pjoin(self.me_dir, 'Events','pgs_events.lhco'))
-                self.create_plot('pythia')
+                self.create_plot('pgs')
                 shutil.move(pjoin(self.me_dir, 'Events','pgs_events.lhco'), filename)
                 os.system('gzip -f %s' % filename)                
             else:
@@ -1452,7 +1453,7 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
                 os.system('gunzip -f %s' % (filename+'.gz') )
             if  os.path.exists(filename):
                 shutil.move(filename, pjoin(self.me_dir, 'Events','delphes_events.lhco'))
-                self.create_plot('pythia')
+                self.create_plot('delphes')
                 shutil.move(pjoin(self.me_dir, 'Events','delphes_events.lhco'), filename)
                 os.system('gzip -f %s' % filename)                
             else:
@@ -1535,6 +1536,22 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
         
         self.update_status('Running PGS', level='pgs')
         # now pass the event to a detector simulator and reconstruct objects
+
+        # Update the banner with the pgs card
+        banner_path = pjoin(self.me_dir,'Events',self.run_name + '_banner.txt')
+        banner = open(banner_path, 'a')
+        banner.writelines('\n<MGPGSCard>')
+        banner.writelines(open(pjoin(self.me_dir, 'Cards','pgs_card.dat')).read())
+        banner.writelines('</MGPGSCard>\n')
+        banner.close()
+        
+        # Prepare the output file with the banner
+        ff = open(pjoin(self.me_dir, 'Events', 'pgs_events.lhco'), 'w')
+        text = open(banner_path).read()
+        text = '#%s' % text.replace('\n','\n#')
+        ff.writelines(text)
+        ff.close()
+
         if self.cluster_mode == 1:
             self.cluster.launch_and_wait('../bin/internal/run_pgs', 
                                          argument= [pgsdir],
@@ -1542,21 +1559,10 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
         else:        
             subprocess.call([self.dirbin+'/run_pgs', pgsdir],
                             cwd=pjoin(self.me_dir, 'Events')) 
-
+        
         if not os.path.exists(pjoin(self.me_dir, 'Events', 'pgs_events.lhco')):
             logger.error('Fail to create LHCO events')
             return 
-        
-        # Update the banner with the pgs card
-        banner = open(pjoin(self.me_dir,'Events',self.run_name + '_banner.txt'), 'a')
-        banner.writelines('<MGPGSCard>')
-        banner.writelines(open(pjoin(self.me_dir, 'Cards','pgs_card.dat')).read())
-        banner.writelines('</MGPGSCard>')
-        banner.close()
-        
-        # Add the banner to the Events
-        raise NotImplemented, 'NEED TO BE DONE'
-        
         
         # Creating Root file
         if misc.is_executable(pjoin(eradir, 'ExRootLHCOlympicsConverter')):
@@ -1571,7 +1577,7 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
         if os.path.exists(pjoin(self.me_dir, 'Events', 'pgs_events.lhco')):
             files.cp(pjoin(self.me_dir, 'Events', 'pgs_events.lhco'), 
                     pjoin(self.me_dir, 'Events', '%s_pgs_events.lhco' % self.run_name))
-        
+            subprocess.call(['gzip','-f', pjoin(self.me_dir, 'Events', '%s_pgs_events.lhco' % self.run_name)])
         
         self.update_status('finish', level='pgs')
 
@@ -1614,22 +1620,9 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
             if answer == 'y':
                 misc.open_file(pjoin(self.me_dir, 'Cards', 'delphes_card.dat')) 
  
- 
-        
-        self.update_status('Running Delphes', level='delphes')
         delphes_dir = self.configuration['delphes_path']
-        if self.cluster_mode == 1:
-            self.cluster.launch_and_wait('../bin/internal/run_delphes', 
-                                         argument= [delphes_dir],
-                                        cwd=pjoin(self.me_dir,'Events'))
-        else:
-            subprocess.call(['../bin/internal/run_delphes', delphes_dir],
-                         cwd=pjoin(self.me_dir,'Events'))
-                
-        if not os.path.exists(pjoin(self.me_dir, 'Events', 'delphes_events.lhco')):
-            logger.error('Fail to create LHCO events from DELPHES')
-            return 
-
+        self.update_status('Running Delphes', level='delphes')
+        
         # Update the banner with the pgs card
         banner = open(pjoin(self.me_dir,'Events',self.run_name + '_banner.txt'), 'a')
         banner.writelines('<MGDelphesCard>')
@@ -1640,9 +1633,18 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
         banner.writelines('</MGDelphesTrigger>')        
         banner.close()
         
-        # Add the banner to the Events
-        raise NotImplemented, 'NEED TO BE DONE'
-
+        
+        if self.cluster_mode == 1:
+            self.cluster.launch_and_wait('../bin/internal/run_delphes', 
+                                         argument= [delphes_dir, self.run_name],
+                                        cwd=pjoin(self.me_dir,'Events'))
+        else:
+            subprocess.call(['../bin/internal/run_delphes', delphes_dir, 
+                                self.run_name], cwd=pjoin(self.me_dir,'Events'))
+                
+        if not os.path.exists(pjoin(self.me_dir, 'Events', 'delphes_events.lhco')):
+            logger.error('Fail to create LHCO events from DELPHES')
+            return 
 
         #eradir = self.configuration['exrootanalysis_path']
         madir = self.configuration['madanalysis_path']
@@ -1650,6 +1652,14 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
 
         # Creating plots
         self.create_plot('Delphes')
+
+        if os.path.exists(pjoin(self.me_dir, 'Events', 'delphes_events.lhco')):
+            files.cp(pjoin(self.me_dir, 'Events', 'delphes_events.lhco'), 
+                    pjoin(self.me_dir, 'Events', '%s_delphes_events.lhco' % self.run_name))
+            subprocess.call(['gzip', pjoin(self.me_dir, 'Events', '%s_delphes_events.lhco' % self.run_name)])
+
+
+        
         self.update_status('finish', level='delphes')   
 
     def launch_job(self,exe, cwd=None, stdout=None, argument = [], **opt):
@@ -2025,14 +2035,10 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
 
         madir = self.configuration['madanalysis_path']
         td = self.configuration['td_path']
-
         if not madir or not  td or \
             not os.path.exists(pjoin(self.me_dir, 'Cards', 'plot_card.dat')):
             return False
             
-
-
-
         if not event_path:
             if mode == 'parton':
                 event_path = pjoin(self.me_dir, 'Events','unweighted_events.lhe')
@@ -2063,13 +2069,13 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
 
 
         files.ln(pjoin(self.me_dir, 'Cards','plot_card.dat'), plot_dir, 'ma_card.dat')
-        proc = subprocess.Popen(['%s/plot_events' % madir],
+        proc = subprocess.Popen([os.path.join(madir, 'plot_events')],
                             stdout = open(pjoin(plot_dir, 'plot.log'),'w'),
                             stderr = subprocess.STDOUT,
                             stdin=subprocess.PIPE,
                             cwd=plot_dir)
         proc.communicate('%s\n' % event_path)
-        proc.wait()
+        #proc.wait()
         subprocess.call(['%s/plot' % self.dirbin, madir, td],
                             stdout = open(pjoin(plot_dir, 'plot.log'),'a'),
                             stderr = subprocess.STDOUT,

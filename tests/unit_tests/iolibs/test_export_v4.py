@@ -3357,6 +3357,58 @@ C     Number of configs
       DATA MAPCONFIG(0)/42/
 """)
 
+        # Test dummy config_subproc_map.inc file
+        writer = writers.FortranWriter(self.give_pos('test'))
+        exporter.write_config_subproc_map_file(writer, s_and_t_channels)
+        writer.close()
+
+        self.assertFileContains('test',
+"""      DATA CONFSUB(1,1)/1/
+      DATA CONFSUB(1,2)/1/
+      DATA CONFSUB(1,3)/1/
+      DATA CONFSUB(1,4)/1/
+      DATA CONFSUB(1,5)/1/
+      DATA CONFSUB(1,6)/1/
+      DATA CONFSUB(1,7)/1/
+      DATA CONFSUB(1,8)/1/
+      DATA CONFSUB(1,9)/1/
+      DATA CONFSUB(1,10)/1/
+      DATA CONFSUB(1,11)/1/
+      DATA CONFSUB(1,12)/1/
+      DATA CONFSUB(1,13)/1/
+      DATA CONFSUB(1,14)/1/
+      DATA CONFSUB(1,15)/1/
+      DATA CONFSUB(1,16)/1/
+      DATA CONFSUB(1,17)/1/
+      DATA CONFSUB(1,18)/1/
+      DATA CONFSUB(1,19)/1/
+      DATA CONFSUB(1,20)/1/
+      DATA CONFSUB(1,21)/1/
+      DATA CONFSUB(1,22)/1/
+      DATA CONFSUB(1,23)/1/
+      DATA CONFSUB(1,24)/1/
+      DATA CONFSUB(1,25)/1/
+      DATA CONFSUB(1,26)/1/
+      DATA CONFSUB(1,27)/1/
+      DATA CONFSUB(1,28)/1/
+      DATA CONFSUB(1,29)/1/
+      DATA CONFSUB(1,30)/1/
+      DATA CONFSUB(1,31)/1/
+      DATA CONFSUB(1,32)/1/
+      DATA CONFSUB(1,33)/1/
+      DATA CONFSUB(1,34)/1/
+      DATA CONFSUB(1,35)/1/
+      DATA CONFSUB(1,36)/1/
+      DATA CONFSUB(1,37)/1/
+      DATA CONFSUB(1,38)/1/
+      DATA CONFSUB(1,39)/1/
+      DATA CONFSUB(1,40)/1/
+      DATA CONFSUB(1,41)/1/
+      DATA CONFSUB(1,42)/1/
+""")
+
+        #print open(self.give_pos('test')).read()
+
         # Test coloramps.inc output
         self.assertEqual("\n".join(\
                        exporter.get_icolamp_lines(mapconfigs,
@@ -3658,6 +3710,18 @@ C     Diagram 4
       DATA (IFOREST(I,-2,3),I=1,2)/-1,3/
 C     Number of configs
       DATA MAPCONFIG(0)/3/
+""")
+
+        # Test dummy config_subproc_map.inc file
+        writer = writers.FortranWriter(self.give_pos('test'))
+        exporter.write_config_subproc_map_file(writer,
+                                               s_and_t_channels)
+        writer.close()
+        #print open(self.give_pos('test')).read()
+        self.assertFileContains('test',
+"""      DATA CONFSUB(1,1)/1/
+      DATA CONFSUB(1,2)/1/
+      DATA CONFSUB(1,3)/1/
 """)
 
     def test_generate_helas_diagrams_uu_susu(self):

@@ -15,7 +15,8 @@ c output:
 c       complex hst(3)         : scalar current              j(s':s1,s2)
 c     
       implicit none
-      include "dimension.inc"
+      INTEGER DIM
+      PARAMETER(DIM=18)
 
       double complex s1(DIM),t2(DIM),hst(DIM),dg
       double precision q(0:3),smass,swidth,q2,gc

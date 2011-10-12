@@ -31,21 +31,9 @@ if [[ -e pgs.err ]];then
 fi
 
 if [[ ! -e pgs_events.lhco && -e pgs_uncleaned_events.lhco ]];then
-    mv pgs_uncleaned_events.lhco pgs_events.lhco
+    # Concatanate since the pgs_events.lhco contains the header
+    cat pgs_uncleaned_events.lhco >>  pgs_events.lhco
 fi
 
-if [ -e pgs_events.lhco ]; then
-# pgs_card.dat
-    if [ -e ../Cards/pgs_card.dat ]; then
-      echo "<MGPGSCard>" >> banner.txt
-      cat ../Cards/pgs_card.dat   >> banner.txt
-      echo "</MGPGSCard>" >> banner.txt
-    fi
-# write the pgs banner
-    sed -e "s/^/#/g" banner.txt > temp.dat
-    cat pgs_events.lhco >> temp.dat
-    rm -f pgs_events.lhco
-    mv -f temp.dat pgs_events.lhco
-fi
 # Remove tauola output file
 rm -f fort.45 > /dev/null

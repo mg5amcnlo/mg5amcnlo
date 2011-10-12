@@ -231,13 +231,13 @@ c           Only allow OnBW if no "decay" to identical particle
                    if(sprop(iproc,i,iconfig).eq.sprop(iproc,ida(j),iconfig))
      $                  idenpart=ida(j)
                 elseif (ida(j).gt.0) then
-                   if(sprop(iproc,i,iconfig).eq.IDUP(ida(j),1,1))
+                   if(sprop(iproc,i,iconfig).eq.IDUP(ida(j),1,iproc))
      $                  idenpart=ida(j)
                 endif
               enddo
 c           Always remove if daughter final-state
               if(idenpart.gt.0) then
-                OnBW(i)=.false.
+                 OnBW(i)=.false.
 c           Else remove if daughter forced to be onshell
               elseif(idenpart.lt.0)then
                  if(gForceBW(idenpart, iconfig).eq.1) then
@@ -258,6 +258,7 @@ c           Else remove OnBW for daughter
             else if (gForceBW(i, iconfig).eq.1) then ! .not. onshell
 c             Check if we are supposed to cut forced bw (JA 4/8/11)
               cut_bw = .true.
+c              write(*,*) 'cut_bw: ',i,gForceBW(i,iconfig),OnBW(i),cut_bw
               return
             endif
 c
@@ -269,10 +270,11 @@ c
             if (onshell .and. (lbw(nbw).eq. 2) .or.
      $          .not. onshell .and. (lbw(nbw).eq. 1)) then
                cut_bw=.true.
-c            write(*,*) 'cut_bw: ',nbw,xmass,onshell,lbw(nbw),cut_bw
+c               write(*,*) 'cut_bw: ',nbw,xmass,onshell,lbw(nbw),cut_bw
                return
             endif
          endif
+c         write(*,*) 'final cut_bw: ',nbw,lbw(nbw),xmass,onshell,OnBW(i),cut_bw
       enddo
       end
 
@@ -394,16 +396,17 @@ c     Find non-zero process number
 c     If no non-zero sprop, set iproc to 1
       if(iproc.ge.maxsproc.and.sprop(maxsproc,-1,iconfig).eq.0)
      $     iproc=1
+
 c     Start loop over propagators
       do i=-1,-(nexternal-3),-1
 c     JA 3/31/11 Keep track of identical particles (i.e., radiation vertices)
 c     by tracing the particle identity from the external particle.
          if(iforest(1,i,iconfig).gt.0) then
-             if (sprop(iproc,i,iconfig).eq.idup(iforest(1,i,iconfig),1,1))
+            if (sprop(iproc,i,iconfig).eq.idup(iforest(1,i,iconfig),1,iproc))
      $        iden_part(i) = sprop(iproc,i,iconfig)
-          endif
+         endif
          if(iforest(2,i,iconfig).gt.0) then
-            if(sprop(iproc,i,iconfig).eq.idup(iforest(2,i,iconfig),1,1))
+            if(sprop(iproc,i,iconfig).eq.idup(iforest(2,i,iconfig),1,iproc))
      $           iden_part(i) = sprop(iproc,i,iconfig)
          endif
          if(iforest(1,i,iconfig).lt.0) then

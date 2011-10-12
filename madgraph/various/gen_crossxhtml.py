@@ -97,7 +97,12 @@ class AllResults(dict):
         
         dict.__init__(self)
         self.order = []
-        self.process = ' <br> '.join(process)
+        self.process = ''
+        for name in process:
+            if len(self.process) > 80:
+                self.process += ', ...'
+                break
+            self.process += ', ' +name
         self.path = path
         self.model = model
     

@@ -174,6 +174,7 @@ c**************************************************************************
       include 'nexternal.inc'
       include 'maxamps.inc'
       include 'cluster.inc'
+      include 'message.inc'
       integer ignum, idij, iproc, i
 
       if(idij.gt.n_max_cl) return
@@ -182,7 +183,8 @@ c**************************************************************************
       enddo
       id_cl(iproc,idij,0)=id_cl(iproc,idij,0)+1
       id_cl(iproc,idij,id_cl(iproc,idij,0))=ignum
-c      print *,'Adding graph ',ignum,' to prop ',idij
+      if(btest(mlevel,5))
+     $     write(*,*)'Adding graph ',ignum,' to prop ',idij,' for proc ',iproc
       return
       end
 
@@ -226,6 +228,8 @@ C $E$ IFOREST $E$ !this is a tag for MadWeight
       integer pow(-nexternal:0,lmaxconfigs)
       logical first_time
       save pmass,pwidth,pow
+      INTEGER CONFSUB(MAXSPROC,LMAXCONFIGS)
+      INCLUDE 'config_subproc_map.inc'
       data first_time /.true./
 
       integer combid
@@ -259,6 +263,7 @@ c                 Add also the same propagator but from the other direction
 c     Set pdg code for propagator
                   do l=1,2
                      do iproc=1,maxsproc
+                     if(confsub(iproc,ignum).eq.0) cycle
                      if(sprop(iproc,k,ignum).ne.0)then
                         ipdgcl(icmp(l),ignum,iproc)=sprop(iproc,k,ignum)
 c                       If this is radiation off heavy FS particle, set heavyrad to true
@@ -276,7 +281,6 @@ c                       If this is radiation off heavy FS particle, set heavyrad
                         ipdgcl(icmp(l),ignum,iproc)=ipdgcl(2,ignum,iproc)
                      else
                         ipdgcl(icmp(l),ignum,iproc)=0
-                        cycle
                      endif
                      if(btest(mlevel,4))
      $                    write(*,*) 'add table entry for (',ipids(i,1,ipnum),
@@ -471,6 +475,7 @@ c**************************************************************************
       include 'nexternal.inc'
       include 'maxamps.inc'
       include 'cluster.inc'
+      include 'message.inc'
 
       integer idij,nbw,ibwlist(nexternal),icgs(0:n_max_cg)
       logical foundbw
@@ -504,6 +509,9 @@ c        check if we have constraint from onshell resonances
          if (icgs(0).gt.0)then
            findmt=.true.
          endif
+         if (btest(mlevel,5))
+     $        write (*,*)'findmt: ',findmt,' IPROC=',IPROC,' icgs(0)=',icgs(0),
+     $        ' icgs = ',(icgs(i),i=1,icgs(0))
          return
       else
 c     Check for common graphs
@@ -578,6 +586,8 @@ c**************************************************************************
       enddo
 c     Check if any resonances are on the BW, store results in to_checkbw
       call checkbw(nbw,ibwlist,isbw)
+      if(btest(mlevel,4).and.nbw.gt.0)
+     $     write(*,*) 'Found BWs: ',(ibwlist(i),i=1,nbw)
 
 c     initialize index map
       do i=1,nexternal
