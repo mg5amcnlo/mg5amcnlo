@@ -756,16 +756,10 @@ class Model(PhysicsObject):
             if self['particles']:
                 self['got_majoranas'] = self.check_majoranas()
 
-<<<<<<< TREE
-        if (name == 'coupling_orders') :#and self[name] == None:
-=======
         if (name == 'coupling_orders') and self[name] == None:
->>>>>>> MERGE-SOURCE
             if self['interactions']:
                 self['coupling_orders'] = self.get_coupling_orders()
 
-<<<<<<< TREE
-=======
         if (name == 'order_hierarchy') and not self[name]:
             if self['interactions']:
                 self['order_hierarchy'] = self.get_order_hierarchy()    
@@ -775,7 +769,6 @@ class Model(PhysicsObject):
                 self['expansion_order'] = \
                    dict([(order, -1) for order in self.get('coupling_orders')])
 
->>>>>>> MERGE-SOURCE
         return Model.__bases__[0].get(self, name) # call the mother routine
 
     def set(self, name, value):
@@ -799,11 +792,8 @@ class Model(PhysicsObject):
             self['ref_dict_to0'] = {}
             self['got_majoranas'] = None
             self['coupling_orders'] = None
-<<<<<<< TREE
-=======
             self['order_hierarchy'] = {}
             self['expansion_order'] = None
->>>>>>> MERGE-SOURCE
 
         Model.__bases__[0].set(self, name, value) # call the mother routine
 
@@ -840,8 +830,6 @@ class Model(PhysicsObject):
         return set(sum([i.get('orders').keys() for i in \
                         self.get('interactions')], []))
 
-<<<<<<< TREE
-=======
     def get_order_hierarchy(self):
         """Set a default order hierarchy for the model if not set by the UFO."""
         # Set coupling hierachy
@@ -900,7 +888,6 @@ class Model(PhysicsObject):
 
         return particles, hierarchy
 
->>>>>>> MERGE-SOURCE
     def check_majoranas(self):
         """Return True if there is fermion flow violation, False otherwise"""
 
@@ -1427,23 +1414,16 @@ class Diagram(PhysicsObject):
         hierarchys for the couplings."""
 
         coupling_orders = dict([(c, 0) for c in model.get('coupling_orders')])
-<<<<<<< TREE
-=======
         weight = 0
->>>>>>> MERGE-SOURCE
         for vertex in self['vertices']:
             if vertex.get('id') == 0: continue
             couplings = model.get('interaction_dict')[vertex.get('id')].\
                         get('orders')
             for coupling in couplings:
                 coupling_orders[coupling] += couplings[coupling]
-<<<<<<< TREE
-
-=======
             weight += sum([model.get('order_hierarchy')[c]*n for \
                               (c,n) in couplings.items()])
         coupling_orders['WEIGHTED'] = weight
->>>>>>> MERGE-SOURCE
         self.set('orders', coupling_orders)
 
     def renumber_legs(self, perm_map, leg_list):

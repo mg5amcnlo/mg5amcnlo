@@ -1505,17 +1505,12 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
     _tutorial_opts = ['start', 'stop']
     _check_opts = ['full', 'permutation', 'gauge', 'lorentz_invariance']
     _import_formats = ['model_v4', 'model', 'proc_v4', 'command']
-<<<<<<< TREE
+    _install_opts = ['pythia-pgs', 'Delphes', 'MadAnalysis', 'ExRootAnalysis']
     _fks_export_formats = ['fksreal', 'fksborn']
     _v4_export_formats = ['madevent', 'standalone','matrix'] +\
                                       _fks_export_formats
     _export_formats = _v4_export_formats + ['standalone_cpp', 'pythia8'] +\
                                       _fks_export_formats
-=======
-    _install_opts = ['pythia-pgs', 'Delphes', 'MadAnalysis', 'ExRootAnalysis']
-    _v4_export_formats = ['madevent', 'standalone', 'matrix'] 
-    _export_formats = _v4_export_formats + ['standalone_cpp', 'pythia8']
->>>>>>> MERGE-SOURCE
     _set_options = ['group_subprocesses',
                     'ignore_six_quark_processes',
                     'stdout_level']
@@ -2943,9 +2938,8 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
         # Check Argument validity and modify argument to be the real path
         self.check_open(args)
         file_path = args[0]
-        
-<<<<<<< TREE
-        launch_ext.open_file(file_path, self.configuration)
+        launch_ext.open_file(file_path)
+
         
     def do_compile_fksreal(self,line):
         """compiles the fksreal process"""
@@ -3051,9 +3045,6 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
                             logger.info('make ' + exe)
                             os.system('make ' + exe + ' >> ' + logfile)
 
-=======
-        launch_ext.open_file(file_path)
->>>>>>> MERGE-SOURCE
                  
     def do_output(self, line):
         """Initialize a new Template or reinitialize one"""

@@ -629,16 +629,10 @@ class RestrictModel(model_reader.ModelReader):
      
     def restrict_model(self, param_card):
         """apply the model restriction following param_card"""
-<<<<<<< TREE
-=======
 
         # Reset particle dict to ensure synchronized particles and interactions
->>>>>>> MERGE-SOURCE
         self.set('particles', self.get('particles'))
-<<<<<<< TREE
-=======
 
->>>>>>> MERGE-SOURCE
         # compute the value of all parameters
         self.set_parameters_and_couplings(param_card)
         # associte to each couplings the associated vertex: def self.coupling_pos
