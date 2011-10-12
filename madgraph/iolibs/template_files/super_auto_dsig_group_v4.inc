@@ -149,14 +149,14 @@ C   IMODE.EQ.0, regular run mode
 C     Select among the subprocesses based on PDF weight
       SUMPROB=0D0
       DO J=1,SYMCONF(0)
-         DO I=1,MAXSPROC
-            IF(CONFSUB(I,SYMCONF(J)).NE.0) THEN
-               DO K=1,2
-                  IF(K.EQ.1.OR.MIRRORPROCS(I))THEN
+         DO IPROC=1,MAXSPROC
+            IF(CONFSUB(IPROC,SYMCONF(J)).NE.0) THEN
+               DO IMIRROR=1,2
+                  IF(IMIRROR.EQ.1.OR.MIRRORPROCS(IPROC))THEN
 C                 Calculate PDF weight for all subprocesses
-                     SELPROC(K,I,J)=DSIGPROC(PP,J,I,K,SYMCONF,CONFSUB,1d0,4)
-                     SUMPROB=SUMPROB+SELPROC(K,I,J)
-                     IF(K.EQ.2)THEN
+                     SELPROC(IMIRROR,IPROC,J)=DSIGPROC(PP,J,IPROC,IMIRROR,SYMCONF,CONFSUB,1d0,4)
+                     SUMPROB=SUMPROB+SELPROC(IMIRROR,IPROC,J)
+                     IF(IMIRROR.EQ.2)THEN
 C                 Need to flip back x values
                         XDUM=XBK(1)
                         XBK(1)=XBK(2)

@@ -20,6 +20,8 @@ fi
 
 if [[ -x $td/td ]]; then
     echo 'topdrawer found'
+    # This is needed for Mac OS X
+    export DYLD_LIBRARY_PATH=$DYLD_LIBRARY_PATH:$td
 else
     echo 'topdrawer not found'
     exit
@@ -64,6 +66,10 @@ done
 
 
 for file in ma_plot???.ps ; do
+  echo ">> Converting file $file" >> log.convert
+  $MAdir/epstosmth --gsopt='-r60x60 -dGraphicsAlphaBits=4' --gsdev=jpeg $file
+done
+for file in DJR?.ps ; do
   echo ">> Converting file $file" >> log.convert
   $MAdir/epstosmth --gsopt='-r60x60 -dGraphicsAlphaBits=4' --gsdev=jpeg $file
 done

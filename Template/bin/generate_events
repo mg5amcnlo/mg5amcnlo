@@ -11,6 +11,18 @@
 #  name is queue name for PBS or number of cores for multicore
 #
 
+function error_exit {
+    if [[  -e error  ]]; then
+	date
+	cp -f error status
+	rm survey refine refine2 >& /dev/null
+	rm RunWeb
+	$dirbin/gen_crossxhtml-pl $t
+	$dirbin/gen_cardhtml-pl
+	exit
+    fi
+}
+
 if [[  ! -d ./bin  ]]; then
     cd ../
     if [[ ! -d ./bin ]]; then
@@ -22,17 +34,24 @@ fi
 #  Now let shell know where to find important executables
 #
 main=`pwd`
+# Strip off last directory
+mainpar=${main%/*}
 dirbin=$main/bin
-pydir=$main/../pythia-pgs/src
+pydir=$mainpar/pythia-pgs/src
 pgsdir=$pydir
-delphesdir=$main/../Delphes
-ERAdir=$main/../ExRootAnalysis
-MAdir=$main/../MadAnalysis
+delphesdir=$mainpar/Delphes
+ERAdir=$mainpar/ExRootAnalysis
+MAdir=$mainpar/MadAnalysis
 webbin=$dirbin
-td=$main/../td
+td=$mainpar/td
 web=0
 
 echo $$ >> myprocid
+
+# For Linux
+export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:$main/lib
+# For Mac OS X
+export DYLD_LIBRARY_PATH=$DYLD_LIBRARY_PATH:$main/lib
 
 if [[  "$1" == ""  ]]; then
     echo 'Enter 2 for multi-core, 1 for parallel, 0 for serial run' 
@@ -83,6 +102,12 @@ a=`awk '/^[^#].*=.*nevents/{print $1}' Cards/run_card.dat`
 b=`awk '/^[^#].*=.*gridpack/{print $1}' Cards/run_card.dat`
 c=`awk '/^[^#].*=.*pdlabel/{print $1}' Cards/run_card.dat`
 ickkw=`awk '/^[^#].*=.*ickkw.*!/{print $1}' Cards/run_card.dat`
+if [[ $a -gt 100000 ]];then
+   echo "Warning: Attempting to generate more than 100K events"
+   echo "Limiting number to 100K. Use multi_run for larger statistics."
+   perl -p -i.bak -e "s/\d+\s*=\s*nevents/100000 = nevents/" Cards/run_card.dat
+   a=`awk '/^[^#].*=.*nevents/{print $1}' Cards/run_card.dat`
+fi
 echo Generating $a events
 if [[ $b == ".true." ]]; then
     echo Generating GridPack $b
@@ -100,40 +125,24 @@ if [[  -e error  ]]; then
 fi
 touch RunWeb
 echo "Cleaning directories" > status
+cat status
 $dirbin/gen_crossxhtml-pl $t
 $dirbin/clean
 
 if [[ $c == "'lhapdf'" ]]; then
     echo Using LHAPDF interface!
-    if [[ -e $main/Source/makefile_default ]]; then
-	echo already loaded
-    else
-	cp $main/Source/makefile $main/Source/makefile_default
-	cp $main/Source/PDF/makefile $main/Source/PDF/makefile_default
-	cp $main/Source/DHELAS/Makefile $main/Source/DHELAS/Makefile_default
-	cp $main/Source/MODEL/makefile $main/Source/MODEL/makefile_default
-	cp $main/Source/CERNLIB/makefile $main/Source/CERNLIB/makefile_default
-	cp $main/SubProcesses/makefile $main/SubProcesses/makefile_default
-	cp $main/SubProcesses/makefile_mo $main/SubProcesses/makefile_mo_default
-	cp $main/Source/makefile_lhapdf $main/Source/makefile
-	cp $main/Source/PDF/makefile_lhapdf $main/Source/PDF/makefile    
-	cp $main/SubProcesses/makefile_lhapdf $main/SubProcesses/makefile    
-	cp $main/SubProcesses/makefile_mo_lhapdf $main/SubProcesses/makefile_mo  
-	sed -i.bak "s|f77|gfortran|g" $main/Source/DHELAS/Makefile
-	sed -i.bak "s|f77|gfortran|g" $main/Source/MODEL/makefile
-	sed -i.bak "s|f77|gfortran|g" $main/Source/CERNLIB/makefile
-        #    cp $lhadir/lib/libLHAPDF.a $main/lib/.
-    fi
+    export lhapdf=true
 else
-    if [[ -e $main/Source/makefile_default ]]; then
-	    mv Source/makefile_default Source/makefile
-	    mv Source/PDF/makefile_default Source/PDF/makefile
-	    mv Source/DHELAS/Makefile_default Source/DHELAS/Makefile
-	    mv Source/MODEL/makefile_default Source/MODEL/makefile
-	    mv Source/CERNLIB/makefile_default Source/CERNLIB/makefile
-	    mv SubProcesses/makefile_default SubProcesses/makefile
-    fi
+    unset lhapdf
 fi
+# Compile everything in Source
+echo "Compiling Source" > status
+cat status
+$dirbin/gen_crossxhtml-pl $t
+$dirbin/compile_Source
+# If any compilations failed
+error_exit
+    
 if [ "$ickkw" = "2" ];then
   echo "Running with CKKW matching"
   lpp1=`awk '/^[^#].*=.*lpp1/{print $1}' Cards/run_card.dat`
@@ -169,13 +178,7 @@ if [ "$ickkw" = "2" ];then
 
   if [[ ! -e $issudfile ]];then
     echo "No sudakov grid file for parameter choice. Please generate a sudakov grid file and restart." > error
-    cat error
-    date
-    cp -f error status
-    rm RunWeb
-    $dirbin/gen_crossxhtml-pl $t
-    $dirbin/gen_cardhtml-pl
-    exit
+    error_exit
   else
     rm -f lib/issudgrid.dat
     gunzip -c $issudfile > lib/issudgrid.dat
@@ -185,25 +188,19 @@ fi
 
 touch survey
 echo "Starting jobs" > status
+cat status
 $dirbin/gen_crossxhtml-pl $t
 $dirbin/survey $mode $n $t
-if [[  -e error  ]]; then
-  cat error
-  date
-  cp -f error status
-  rm survey
-  rm RunWeb
-  $dirbin/gen_crossxhtml-pl $t
-  $dirbin/gen_cardhtml-pl
-  exit
-fi
+error_exit
 if [[ $b != ".true." ]]; then
    mv survey refine
    $dirbin/gen_crossxhtml-pl $t
-   $dirbin/refine $a $mode $n 5 $t
+   $dirbin/refine $a $mode $n 1 $t
+   error_exit
    mv refine refine2
    $dirbin/gen_crossxhtml-pl $t
    $dirbin/refine $a $mode $n 1 $t
+   error_exit
    rm -f refine2
 else
    rm survey
@@ -212,11 +209,8 @@ fi
 #  Now collect the events
 #
 echo "Combining Events" >& status
-echo "Combining Events" 
+cat status
 $dirbin/gen_crossxhtml-pl $t
-pushd ./Source > /dev/null
-make ../bin/combine_events
-popd > /dev/null
 pushd SubProcesses > /dev/null
 $dirbin/run_combine $mode
 mv events.lhe ../Events/
@@ -248,6 +242,7 @@ fi
 
 if [[ (-x $ERAdir/ExRootLHEFConverter) && (-e unweighted_events.lhe) ]]; then
     echo "Creating Root File" >& ../status
+    cat ../status
     $dirbin/gen_crossxhtml-pl $t
     $ERAdir/ExRootLHEFConverter unweighted_events.lhe unweighted_events.root
 fi
@@ -263,8 +258,8 @@ fi
 #    $dirbin/plot_page-pl $t
 #endif
 if [[ (-x $MAdir/plot_events) && (-e unweighted_events.lhe) && (-e ../Cards/plot_card.dat) ]]; then
-    echo "Creating Plots"
     echo "Creating Plots" >& ../status
+    cat ../status
     $dirbin/gen_crossxhtml-pl $t
     mkdir $t
     cd $t
@@ -306,10 +301,9 @@ fi
 if [[ (-x $pydir/pythia) && (-e ../Cards/pythia_card.dat) ]]; then
     gunzip -c ${t}_unweighted_events.lhe.gz > unweighted_events.lhe
     echo "Running Pythia" >& ../status
+    cat ../status
     $dirbin/gen_crossxhtml-pl $t
 # shower and hadronize event through Pythia
-    echo "Running pythia..."
-#    qsub -v pydir=$pydir $dirbin/run_pythia >> ../running_jobs
     $dirbin/run_pythia $pydir $mode  
 fi
 
@@ -322,25 +316,33 @@ fi
 
 if [[ (-x $pydir/hep2lhe) && (-e ../Cards/pythia_card.dat) && (-e pythia_events.hep) ]]; then
     echo "Creating Pythia LHE File" >& ../status
+    cat ../status
     $dirbin/gen_crossxhtml-pl $t
     $dirbin/run_hep2lhe $pydir $mode  
 fi
 
 if [[ (-x $ERAdir/ExRootLHEFConverter) && (-e pythia_events.lhe) ]]; then
     echo "Creating Pythia LHE Root File" >& ../status
+    cat ../status
     $dirbin/gen_crossxhtml-pl $t
     $ERAdir/ExRootLHEFConverter pythia_events.lhe pythia_lhe_events.root
 fi
-
+if [[ ickkw -ge 1 ]];then
+    echo "Create matching plots for Pythia"
+    $dirbin/create_matching_plots.sh $t
+fi
 if [[ (-x $MAdir/plot_events) && (-e pythia_events.lhe) && (-e ../Cards/plot_card.dat) ]]; then
-    echo "Creating Plots for Pythia"
     echo "Creating Plots for Pythia" >& ../status
+    cat ../status
     $dirbin/gen_crossxhtml-pl $t
     mkdir ${t}_pythia
     cd ${t}_pythia
     echo "../pythia_events.lhe" > events.list
     $dirbin/plot $MAdir $td > plot.log
     cd ..
+fi
+
+if [[ -d ${t}_pythia ]];then
     $dirbin/plot_page-pl ${t}_pythia Pythia
     mv -f plots.html ${t}_plots_pythia.html
 fi
@@ -355,15 +357,15 @@ fi
 
 if [[ (-x $pgsdir/pgs) && (-e ../Cards/pgs_card.dat) ]]; then
     echo "Running PGS" >& ../status
+    cat ../status
     $dirbin/gen_crossxhtml-pl $t
     # now pass the event to a detector simulator and reconstruct objects
-    echo "Running PGS..."
 #    qsub -v pgsdir=$pgsdir $dirbin/run_pgs >> ../running_jobs
     $dirbin/run_pgs $pgsdir $mode
 else
     if [[ (-x $delphesdir/Delphes) && (-e ../Cards/delphes_card.dat) ]]; then
 	echo "Running Delphes" >& ../status
-	echo "Running Delphes..."
+	cat ../status
 	$dirbin/run_delphes $delphesdir $mode
     fi
 fi
@@ -371,13 +373,14 @@ fi
 
 if [[ (-x $ERAdir/ExRootLHCOlympicsConverter) && (-e pgs_events.lhco) ]]; then
     echo "Creating PGS Root File" >& ../status
+    cat ../status
     $dirbin/gen_crossxhtml-pl $t
     $ERAdir/ExRootLHCOlympicsConverter pgs_events.lhco pgs_events.root
 fi
 
 if [[ (-x $MAdir/plot_events) && (-e pgs_events.lhco) && (-e ../Cards/plot_card.dat) ]]; then
-    echo "Creating Plots for PGS"
     echo "Creating Plots for PGS" >& ../status
+    cat ../status
     $dirbin/gen_crossxhtml-pl $t
     mkdir ${t}_pgs
     cd ${t}_pgs
@@ -389,8 +392,8 @@ if [[ (-x $MAdir/plot_events) && (-e pgs_events.lhco) && (-e ../Cards/plot_card.
 fi
 
 if [[ (-x $MAdir/plot_events) && (-e delphes_events.lhco) && (-e ../Cards/plot_card.dat) ]]; then
-    echo "Creating Plots for Delphes"
     echo "Creating Plots for Delphes" >& ../status
+    cat ../status
     $dirbin/gen_crossxhtml-pl $t
     mkdir ${t}_delphes
     cd ${t}_delphes
@@ -406,6 +409,7 @@ cd ../
 #  Store Events
 #
 echo "Storing Events" >& status
+cat status
 $dirbin/gen_crossxhtml-pl $t
 $dirbin/store $t
 rm -f RunWeb

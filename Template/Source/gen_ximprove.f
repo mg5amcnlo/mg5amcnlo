@@ -13,8 +13,6 @@ c
       parameter (symfile='symfact.dat')
       integer   max_amps
       parameter (max_amps=9999)
-      integer maxpara
-      parameter (maxpara=1000)
 
       include 'run_config.inc'
       include 'maxparticles.inc'
@@ -42,7 +40,7 @@ c
       integer mfact(max_amps)
       logical parallel, gen_events
       character*20 param(maxpara),value(maxpara)
-      integer npara, nreq, ngran
+      integer npara, nreq, ngran, nhel_refine
       integer ij, kl, iseed
       logical Gridpack,gridrun
       logical split_channels
@@ -55,6 +53,10 @@ c  Begin Code
 c-----
       call load_para(npara,param,value)
       call get_logical(npara,param,value," gridpack ",gridpack,.false.)
+      call get_integer(npara,param,value," nhel ",nhel_refine,0)
+c     If different card options set for nhel_refine and nhel_survey:
+      call get_integer(npara,param,value," nhel_refine ",nhel_refine,
+     $     1*nhel_refine)
       if (.not. Gridpack) then
          write(*,'(a,a)')'Enter fractional accuracy (<1)',
      &        ', or number events (>1), max processes per job',
@@ -115,7 +117,7 @@ c     ncode is number of digits needed for the bw coding
          read(15,*,err=99,end=99) xi,j
          if (j .gt. 0) then
             i = i+1
-            k = int(xi*(1+10**-ncode))
+            k = int(xi*(1+10**(-ncode)))
             npos=int(dlog10(dble(k)))+1
             if ( (xi-k) .eq. 0) then
 c              Write with correct number of digits
@@ -172,7 +174,7 @@ c            tmax
             xerrc(i) = xerrc(i)*mfact(i)
             xlum(i) = xlum(i)/mfact(i)
             xtot = xtot+ xsec(i)
-            eff(i)= xerr(i)*sqrt(real(nevents(i)))/xsec(i)
+            eff(i)= xerr(i)*sqrt(real(nevents(i)))/(xsec(i)+1d-99)
             errtotu = errtotu+(xerru(i))**2
             errtotc = errtotc+(xerrc(i))
 c            xtot = xtot+ xsec(i)*mfact(i)
@@ -188,7 +190,7 @@ c            i=i-1   !This is for case w/ B.W. and optimization
       errtot=sqrt(errtotc**2+errtotu)
       if ( .not. gen_events) then
          call write_bash(xsec,xerru,xerrc,xtot,mfact,err_goal,
-     $        i,nevents,gname)
+     $        i,nevents,gname,nhel_refine)
       else
          open(unit=25,file='../results.dat',status='old',err=199)
          write(*,'(a,e12.3)') 'Reading total xsection ',xtot
@@ -196,9 +198,11 @@ c            i=i-1   !This is for case w/ B.W. and optimization
          write(*,'(e12.3)') xtot
  199     close(25)
          if (gridpack) then
-            call write_gen_grid(err_goal,dble(ngran),i,nevents,gname,xlum,xtot,mfact,xsec)
+            call write_gen_grid(err_goal,dble(ngran),i,nevents,gname,
+     $           xlum,xtot,mfact,xsec,nhel_refine)
          else
-            call write_gen(err_goal,i,nevents,gname,xlum,xtot,mfact,xsec,xerr)
+            call write_gen(err_goal,i,nevents,gname,xlum,xtot,mfact,
+     $           xsec,xerr,nhel_refine)
          endif
       endif
       stop
@@ -207,7 +211,7 @@ c            i=i-1   !This is for case w/ B.W. and optimization
 
 
       subroutine write_bash(xsec,xerru,xerrc,xtot,
-     $     mfact,err_goal,ng,jpoints,gn)
+     $     mfact,err_goal,ng,jpoints,gn,nhel_refine)
 c*****************************************************************************
 c     Writes out bash commands for running each channel as needed.
 c*****************************************************************************
@@ -230,7 +234,7 @@ c     Arguments
 c
       double precision xsec(max_amps), xerru(max_amps),xerrc(max_amps)
       double precision err_goal,xtot
-      integer mfact(max_amps),jpoints(max_amps)
+      integer mfact(max_amps),jpoints(max_amps),nhel_refine
       integer ng
       character*(80) gn(max_amps)
 c
@@ -457,7 +461,8 @@ c      write(lun,15) 'end'
 
 
 
-      subroutine write_gen(goal_lum,ng,jpoints,gn,xlum,xtot,mfact,xsec,xerr)
+      subroutine write_gen(goal_lum,ng,jpoints,gn,xlum,xtot,mfact,xsec,
+     $     xerr,nhel_refine)
 c*****************************************************************************
 c     Writes out scripts for achieving unweighted event goals
 c*****************************************************************************
@@ -482,7 +487,7 @@ c
       double precision goal_lum, xlum(max_amps), xsec(max_amps),xtot
       double precision xerr(max_amps)
       integer jpoints(max_amps), mfact(max_amps)
-      integer ng, np
+      integer ng, np, nhel_refine
       character*(80) gn(max_amps)
 c
 c     Local
@@ -510,7 +515,7 @@ c-----
       k=0
       do j=1,ng
          io(j) = j
-         xt(j)= goal_lum/xlum(j)       !sort by events_needed/have.
+         xt(j)= goal_lum/(xlum(j)+1d-99)       !sort by events_needed/have.
          write(*,*) j,xlum(j),xt(j)
       enddo
 c      write(*,*) 'Number of channels',ng,k
@@ -581,7 +586,7 @@ c     tjs 12/5/2010
 c     Add loop to allow for multiple jobs on a single channel
 c
          mjobs = (goal_lum*xsec(io(np))*1000 / MaxEventsPerJob + 0.9)
-         write(*,*) "Workcing on Channel ",i,io(np),xt(np), goal_lum*xsec(io(np))*1000 /maxeventsperjob
+c         write(*,*) "Working on Channel ",i,io(np),xt(np), goal_lum*xsec(io(np))*1000 /maxeventsperjob
          if (mjobs .gt. 26)  then
             write(*,*) 'Error in gen_ximprove.f, too many events requested ',mjobs*maxeventsperjob
             mjobs=26
@@ -653,11 +658,11 @@ c
          write(26,'(9x,a,2i8,a)') 'echo "',npoints,max_iter,
      $        '" >& input_sg.txt' 
 c
-c     tjs 8/7/2007  Allow stop when have enough events
+c     tjs 8/7/2007-JA 8/17/11 Allow stop when have enough luminocity
 c
          write(*,*) "Cross section",i,io(np),xsec(io(np)),mfact(io(np))
-         write(26,'(9x,a,f11.3,a)') 'echo "',-goal_lum*xsec(io(np))*1000/mjobs,
-     $        '" >> input_sg.txt'                       !Accuracy
+         write(26,'(9x,a,e13.5,a)') 'echo "',-goal_lum*1000/mjobs,
+     $        '" >> input_sg.txt'                       !Luminocity
          write(26,'(9x,a)') 'echo "2" >> input_sg.txt'  !Grid Adjustment
          write(26,'(9x,a)') 'echo "1" >> input_sg.txt'  !Suppression
          write(26,'(9x,a,i4,a)') 'echo "',nhel_refine,
@@ -676,10 +681,10 @@ c
          write(26,'(9x,a,2i8,a)') 'echo "',npoints,max_iter,
      $        '" >& input_sg.txt' 
 c
-c tjs 8/7/2007    Change to request events not accuracy
+c tjs 8/7/2007-JA 8/17/11    Change to request luminocity not accuracy
 c
-         write(26,'(9x,a,f11.3,a)') 'echo "',-goal_lum*xsec(io(np))*1000/mjobs,
-     $        '" >> input_sg.txt'                       !Accuracy
+         write(26,'(9x,a,e13.5,a)') 'echo "',-goal_lum*1000/mjobs,
+     $        '" >> input_sg.txt'                       !Luminocity
 c         write(26,'(9x,a,e12.3,a)') 'echo "',-goal_lum*mfact(io(np)),
 c     $        '" >> input_sg.txt'
          write(26,'(9x,a)') 'echo "0" >> input_sg.txt'
@@ -722,7 +727,7 @@ c      write(26,15) 'end'
       end
 
 
-      subroutine write_gen_grid(goal_lum,ngran,ng,jpoints,gn,xlum,xtot,mfact,xsec)
+      subroutine write_gen_grid(goal_lum,ngran,ng,jpoints,gn,xlum,xtot,mfact,xsec,nhel_refine)
 c*****************************************************************************
 c     Writes out scripts for achieving unweighted event goals
 c*****************************************************************************
@@ -744,7 +749,7 @@ c
       double precision goal_lum, xlum(max_amps), xsec(max_amps),xtot
       double precision ngran   !Granularity.... min # points from channel
       integer jpoints(max_amps), mfact(max_amps)
-      integer ng, np
+      integer ng, np, nhel_refine
       character*(80) gn(max_amps)
 c
 c     Local

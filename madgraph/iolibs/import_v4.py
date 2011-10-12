@@ -25,6 +25,7 @@ from madgraph import MadGraph5Error, MG4DIR
 import madgraph.core.color_algebra as color
 import madgraph.iolibs.files as files
 import madgraph.iolibs.save_load_object as save_load_object
+import madgraph.iolibs.misc as misc
 
 from madgraph.core.base_objects import Particle, ParticleList
 from madgraph.core.base_objects import Interaction, InteractionList
@@ -55,7 +56,8 @@ def import_model(model_path, mgme_dir = MG4DIR):
     if files.is_uptodate(os.path.join(model_path, 'model.pkl'), files_list):
         model = save_load_object.load_from_file( \
                                           os.path.join(model_path, 'model.pkl'))
-        return model, model_path
+        if model.has_key('version_tag') and model.get('version_tag') == os.path.realpath(model_path) + str(misc.get_pkg_info()):
+            return model, model_path
 
     model = base_objects.Model()    
     model.set('particles',files.read_from_file( \
@@ -68,7 +70,7 @@ def import_model(model_path, mgme_dir = MG4DIR):
                                   model['particles']))
     
     model.set('name', os.path.split(model_path)[-1])  
-    
+
     # save in a pickle files to fasten future usage
     save_load_object.save_to_file(os.path.join(model_path, 'model.pkl'), model)
     

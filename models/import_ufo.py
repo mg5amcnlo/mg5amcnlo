@@ -25,6 +25,7 @@ from madgraph import MadGraph5Error, MG5DIR
 import madgraph.core.base_objects as base_objects
 import madgraph.core.color_algebra as color
 import madgraph.iolibs.files as files
+import madgraph.iolibs.misc as misc
 import madgraph.iolibs.save_load_object as save_load_object
 from madgraph.core.color_algebra import *
 
@@ -102,6 +103,7 @@ def import_model(model_name):
         
     return model
 
+_import_once = []
 def import_full_model(model_path):
     """ a practical and efficient way to import one of those models 
         (no restriction file use)"""
@@ -125,10 +127,15 @@ def import_full_model(model_path):
             model = save_load_object.load_from_file( \
                                           os.path.join(model_path, 'model.pkl'))
         except Exception, error:
-            print error
             logger.info('failed to load model from pickle file. Try importing UFO from File')
         else:
-            return model
+            # check path is correct 
+            if model.has_key('version_tag') and model.get('version_tag') == os.path.realpath(model_path) + str(misc.get_pkg_info()):
+                _import_once.append(model_path)
+                return model
+
+    if model_path in _import_once:
+        raise MadGraph5Error, 'This model is modified on disk. To reload it you need to quit/relaunch mg5' 
 
     # Load basic information
     ufo_model = ufomodels.load_model(model_path)
@@ -137,7 +144,8 @@ def import_full_model(model_path):
     
     if model_path[-1] == '/': model_path = model_path[:-1] #avoid empty name
     model.set('name', os.path.split(model_path)[-1])
- 
+    model.set('version_tag', os.path.realpath(model_path) + str(misc.get_pkg_info()))
+
     # Load the Parameter/Coupling in a convinient format.
     parameters, couplings = OrganizeModelExpression(ufo_model).main()
     model.set('parameters', parameters)
@@ -170,7 +178,7 @@ class UFOMG5Converter(object):
         self.conservecharge = set(['charge'])
         
         self.ufomodel = model
-        
+
         if auto:
             self.load_model()
 
@@ -188,12 +196,39 @@ class UFOMG5Converter(object):
 
         for particle_info in self.ufomodel.all_particles:            
             self.add_particle(particle_info)
-            
+
         logger.info('load vertices')
         for interaction_info in self.ufomodel.all_vertices:
             self.add_interaction(interaction_info)
         
         self.model.set('conserved_charge', self.conservecharge)
+
+        # If we deal with a Loop model here, the order hierarchy MUST be 
+        # defined in the file coupling_orders.py and we import it from 
+        # there.
+
+        hierarchy={}
+        try:
+            all_orders = self.ufomodel.all_orders
+            for order in all_orders:
+                hierarchy[order.name]=order.hierarchy
+        except AttributeError:
+            pass
+        else:
+            self.model.set('order_hierarchy', hierarchy)            
+        
+        # Also set expansion_order, i.e., maximum coupling order per process
+
+        expansion_order={}
+        try:
+            all_orders = self.ufomodel.all_orders
+            for order in all_orders:
+                expansion_order[order.name]=order.expansion_order
+        except AttributeError:
+            pass
+        else:
+            self.model.set('expansion_order', expansion_order)
+
         return self.model
         
     
@@ -234,7 +269,7 @@ class UFOMG5Converter(object):
                     particle.set(key, str(value))
                 else:
                     particle.set(key, value)
-            elif key not in ('GhostNumber','selfconjugate','goldstoneboson'):
+            elif key.lower() not in ('ghostnumber','selfconjugate','goldstoneboson'):
                 # add charge -we will check later if those are conserve 
                 self.conservecharge.add(key)
                 particle.set(key,value, force=True)
@@ -373,7 +408,7 @@ class OrganizeModelExpression:
     
     # regular expression to shorten the expressions
     complex_number = re.compile(r'''complex\((?P<real>[^,\(\)]+),(?P<imag>[^,\(\)]+)\)''')
-    expo_expr = re.compile(r'''(?P<expr>[\w.]+)\s*\*\*\s*(?P<expo>\d+)''')
+    expo_expr = re.compile(r'''(?P<expr>[\w.]+)\s*\*\*\s*(?P<expo>[\d.+-]+)''')
     cmath_expr = re.compile(r'''cmath.(?P<operation>\w+)\((?P<expr>\w+)\)''')
     #operation is usualy sqrt / sin / cos / tan
     conj_expr = re.compile(r'''complexconjugate\((?P<expr>\w+)\)''')
@@ -522,7 +557,8 @@ class OrganizeModelExpression:
         
         expr = matchobj.group('expr')
         exponent = matchobj.group('expo')
-        output = '%s__exp__%s' % (expr, exponent)
+        new_exponent = exponent.replace('.','_').replace('+','').replace('-','_m_')
+        output = '%s__exp__%s' % (expr, new_exponent)
         old_expr = '%s**%s' % (expr,exponent)
 
         if expr.startswith('cmath'):
@@ -593,7 +629,16 @@ class RestrictModel(model_reader.ModelReader):
      
     def restrict_model(self, param_card):
         """apply the model restriction following param_card"""
+<<<<<<< TREE
+=======
+
+        # Reset particle dict to ensure synchronized particles and interactions
+>>>>>>> MERGE-SOURCE
         self.set('particles', self.get('particles'))
+<<<<<<< TREE
+=======
+
+>>>>>>> MERGE-SOURCE
         # compute the value of all parameters
         self.set_parameters_and_couplings(param_card)
         # associte to each couplings the associated vertex: def self.coupling_pos
@@ -828,7 +873,7 @@ class RestrictModel(model_reader.ModelReader):
                 particle['mass'] = 'ZERO'
             if particle['width'] in zero_parameters:
                 particle['width'] = 'ZERO'            
-        
+
         # check if the parameters is still usefull:
         re_str = '|'.join(special_parameters)
         re_pat = re.compile(r'''\b(%s)\b''' % re_str)

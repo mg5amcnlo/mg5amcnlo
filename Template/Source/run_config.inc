@@ -13,9 +13,10 @@ c
       integer    min_events_channel         !Minimum number of events
       parameter (min_events_channel = 1000) !per iteration in each channel
       integer    iter_survey                !Number of iterations for survey
-      parameter (iter_survey=3)
-      integer    nhel_survey                !Number of helicities to sum for each
-      parameter (nhel_survey=1)             !phase space point. (0 = sum_all)
+      parameter (iter_survey=5)             ! JA 8/17/11
+c     The following sets the maximum number of parameters in the run_card.dat
+      integer maxpara
+      parameter (maxpara=1000)
 c
 c     The following parameters are used by gen_ximprove.f in running refine
 c
@@ -25,8 +26,6 @@ c
       parameter (max_events = 2000)        !to refine a channel
       integer    max_iter                   !Maximum number of iterations
       parameter (max_iter = 9)              !during refinement
-      integer    nhel_refine                !Number of helicities to sum for each
-      parameter (nhel_refine=1)             !phase space point. (0 = sum_all)
       integer    MaxEventsPerJob            !Maximum number of events requested from a single job
       parameter (MaxEventsPerJob=1000)	
 c

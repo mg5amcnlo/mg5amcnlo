@@ -26,6 +26,7 @@ import madgraph.core.diagram_generation as diagram_generation
 import madgraph.core.color_amp as color_amp
 import madgraph.core.color_algebra as color
 import madgraph.iolibs.export_v4 as export_v4
+import models.import_ufo as import_ufo
 
 #===============================================================================
 # HelasWavefunctionTest
@@ -555,7 +556,7 @@ class HelasMatrixElementTest(unittest.TestCase):
 
         matrix_element = helas_objects.HelasMatrixElement()
         matrix_element.set('processes', base_objects.ProcessList([ myproc ]))
-        matrix_element.calculate_identical_particle_factors()
+        matrix_element.calculate_identical_particle_factor()
 
         self.assertEqual(matrix_element.get_denominator_factor(), 9 * 4 * 6)
 
@@ -577,7 +578,7 @@ class HelasMatrixElementTest(unittest.TestCase):
 
         matrix_element = helas_objects.HelasMatrixElement()
         matrix_element.set('processes', base_objects.ProcessList([ myproc ]))
-        matrix_element.calculate_identical_particle_factors()
+        matrix_element.calculate_identical_particle_factor()
 
         self.assertEqual(matrix_element.get_denominator_factor(), 1 * 6 * 6)
 
@@ -929,8 +930,8 @@ class HelasMatrixElementTest(unittest.TestCase):
         myamplitude = diagram_generation.Amplitude({'process': myproc})
 
         goal = "2 diagrams:\n"
-        goal = goal + "1  ((1(-2),3(21)>1(-2),id:3),(4(11),5(-11)>4(22),id:7),(1(-2),2(2),4(22),id:4)) (QED=2,QCD=1)\n"
-        goal = goal + "2  ((2(2),3(21)>2(2),id:3),(4(11),5(-11)>4(22),id:7),(1(-2),2(2),4(22),id:4)) (QED=2,QCD=1)"
+        goal = goal + "1  ((1(-2),3(21)>1(-2),id:3),(4(11),5(-11)>4(22),id:7),(1(-2),2(2),4(22),id:4)) (QCD=1,QED=2,WEIGHTED=5)\n"
+        goal = goal + "2  ((2(2),3(21)>2(2),id:3),(4(11),5(-11)>4(22),id:7),(1(-2),2(2),4(22),id:4)) (QCD=1,QED=2,WEIGHTED=5)"
 
         self.assertEqual(goal,
                          myamplitude.get('diagrams').nice_string())
@@ -1037,8 +1038,8 @@ class HelasMatrixElementTest(unittest.TestCase):
         myamplitude = diagram_generation.Amplitude({'process': myproc})
 
         goal = "2 diagrams:\n"
-        goal = goal + "1  ((1(-2),3(21)>1(-2),id:3),(4(11),5(-11)>4(22),id:7),(1(-2),2(2),4(22),id:4)) (QED=2,QCD=1)\n"
-        goal = goal + "2  ((2(2),3(21)>2(2),id:3),(4(11),5(-11)>4(22),id:7),(1(-2),2(2),4(22),id:4)) (QED=2,QCD=1)"
+        goal = goal + "1  ((1(-2),3(21)>1(-2),id:3),(4(11),5(-11)>4(22),id:7),(1(-2),2(2),4(22),id:4)) (QCD=1,QED=2,WEIGHTED=5)\n"
+        goal = goal + "2  ((2(2),3(21)>2(2),id:3),(4(11),5(-11)>4(22),id:7),(1(-2),2(2),4(22),id:4)) (QCD=1,QED=2,WEIGHTED=5)"
 
         self.assertEqual(goal,
                          myamplitude.get('diagrams').nice_string())
@@ -1165,8 +1166,13 @@ class HelasMatrixElementTest(unittest.TestCase):
         myamplitude = diagram_generation.Amplitude({'process': myproc})
 
         goal = "2 diagrams:\n"
+<<<<<<< TREE
         goal = goal + "1  ((1(22),2(-11)>1(-11),id:7),(3(22),4(11)>3(11),id:7),(1(-11),3(11),id:0)) (QED=2,QCD=0)\n"
         goal = goal + "2  ((1(22),4(11)>1(11),id:7),(2(-11),3(22)>2(-11),id:7),(1(11),2(-11),id:0)) (QED=2,QCD=0)"
+=======
+        goal = goal + "1  ((1(22),2(-11)>1(-11),id:7),(3(22),4(11),1(-11),id:7)) (QCD=0,QED=2,WEIGHTED=4)\n"
+        goal = goal + "2  ((1(22),4(11)>1(11),id:7),(2(-11),3(22),1(11),id:7)) (QCD=0,QED=2,WEIGHTED=4)"
+>>>>>>> MERGE-SOURCE
 
         self.assertEqual(goal,
                          myamplitude.get('diagrams').nice_string())
@@ -1260,8 +1266,13 @@ class HelasMatrixElementTest(unittest.TestCase):
         myamplitude = diagram_generation.Amplitude({'process': myproc})
 
         goal = "2 diagrams:\n"
+<<<<<<< TREE
         goal = goal + "1  ((1(-11),2(22)>1(-11),id:7),(3(22),4(11)>3(11),id:7),(1(-11),3(11),id:0)) (QED=2,QCD=0)\n"
         goal = goal + "2  ((1(-11),3(22)>1(-11),id:7),(2(22),4(11)>2(11),id:7),(1(-11),2(11),id:0)) (QED=2,QCD=0)"
+=======
+        goal = goal + "1  ((1(-11),2(22)>1(-11),id:7),(3(22),4(11),1(-11),id:7)) (QCD=0,QED=2,WEIGHTED=4)\n"
+        goal = goal + "2  ((1(-11),3(22)>1(-11),id:7),(2(22),4(11),1(-11),id:7)) (QCD=0,QED=2,WEIGHTED=4)"
+>>>>>>> MERGE-SOURCE
 
         self.assertEqual(goal,
                          myamplitude.get('diagrams').nice_string())
@@ -1402,6 +1413,97 @@ class HelasMatrixElementTest(unittest.TestCase):
         self.assertEqual(sum([len(diagram.get('amplitudes')) for diagram in \
                           matrix_element.get('diagrams')]), 510)
 
+    def test_helas_forbidden_s_channel_uux_uuxng(self):
+        """Test helas diagrams with forbidden s-channel particles.
+        """
+
+        goal_no_photon = [4, 18]
+        photon_none = [{1:[0]},{2:[1],4:[1],13:[0],17:[0]}]
+        goal_no_quark = [2, 6]
+        quark_none = [{0:[0]},{0:[0,1],1:[0,1],3:[0],5:[0]}]
+
+        for ngluons in range(2):
+
+            myleglist = base_objects.LegList()
+
+            myleglist.append(base_objects.Leg({'id':-2,
+                                             'state':False}))
+            myleglist.append(base_objects.Leg({'id':2,
+                                             'state':False}))
+            myleglist.append(base_objects.Leg({'id':-2,
+                                             'state':True}))
+            myleglist.append(base_objects.Leg({'id':2,
+                                             'state':True}))
+            myleglist.extend([base_objects.Leg({'id':21,
+                                                 'state':True})] * ngluons)
+
+            myproc = base_objects.Process({'legs':myleglist,
+                                           'model':self.mymodel,
+                                           'forbidden_s_channels':[22]})
+
+            myamplitude = diagram_generation.Amplitude(myproc)
+
+            helas_amplitude = helas_objects.HelasMatrixElement(myamplitude)
+            
+            self.assertEqual(len(helas_amplitude.get('diagrams')),
+                             goal_no_photon[ngluons])
+
+            #print myamplitude.nice_string()
+
+            diagrams = helas_amplitude.get('diagrams')
+            for idiag in range(len(diagrams)):
+                if idiag in photon_none[ngluons]:
+                    vertices, tchannels = \
+                          diagrams[idiag].get('amplitudes')[0].get_s_and_t_channels(2)
+                    for ivert in range(len(vertices)):
+                        if ivert in photon_none[ngluons][idiag]:
+                            self.assertEqual(False,
+                                    vertices[ivert].get('legs')[-1].get('onshell'))
+                        else:
+                            self.assertEqual(None,
+                                    vertices[ivert].get('legs')[-1].get('onshell'))
+
+            # Test with u a > u a (+ g)
+
+            myleglist = base_objects.LegList()
+
+            myleglist.append(base_objects.Leg({'id':2,
+                                             'state':False}))
+            myleglist.append(base_objects.Leg({'id':22,
+                                             'state':False}))
+            myleglist.append(base_objects.Leg({'id':2,
+                                             'state':True}))
+            myleglist.append(base_objects.Leg({'id':22,
+                                             'state':True}))
+            myleglist.extend([base_objects.Leg({'id':21,
+                                                 'state':True})] * ngluons)
+
+            myproc = base_objects.Process({'legs':myleglist,
+                                           'model':self.mymodel,
+                                           'forbidden_s_channels':[2]})
+
+            myamplitude = diagram_generation.Amplitude(myproc)
+
+            helas_amplitude = helas_objects.HelasMatrixElement(myamplitude)
+            
+            self.assertEqual(len(helas_amplitude.get('diagrams')),
+                             goal_no_quark[ngluons])
+
+            #print helas_amplitude.nice_string()
+
+            diagrams = helas_amplitude.get('diagrams')
+            for idiag in range(len(diagrams)):
+                if idiag in quark_none[ngluons]:
+                    vertices, tchannels = \
+                          diagrams[idiag].get('amplitudes')[0].get_s_and_t_channels(2)
+                    for ivert in range(len(vertices)):
+                        if ivert in quark_none[ngluons][idiag]:
+                            self.assertEqual(False,
+                                    vertices[ivert].get('legs')[-1].get('onshell'))
+                        else:
+                            self.assertEqual(None,
+                                    vertices[ivert].get('legs')[-1].get('onshell'))
+            
     def test_sorted_mothers(self):
         """Testing the sorted_mothers routine
         """
@@ -2122,6 +2224,134 @@ class HelasDecayChainProcessTest(unittest.TestCase):
         self.assertEqual(len(my_dc_process.get('decay_chains')[0].\
                              get('core_processes')), 15)
 
+    def test_helas_forbidden_s_channel_decay_chain(self):
+        """Test helas diagrams with forbidden s-channel particles for decay chain.
+        """
+
+        # Test with u g > u g g, u > u g
+
+        goal_no_quark = 15
+        quark_none = {0:[1,2],1:[1,2],2:[2],6:[1],8:[1],11:[1],13:[1],14:[1]}
+        quark_true = {0:0,1:0,2:0,6:0,8:0,11:0,13:0,14:0}
+
+        myleglist = base_objects.LegList()
+
+        myleglist.append(base_objects.Leg({'id':2,
+                                         'state':False}))
+        myleglist.append(base_objects.Leg({'id':21,
+                                         'state':False}))
+        myleglist.append(base_objects.Leg({'id':2,
+                                         'state':True}))
+        myleglist.append(base_objects.Leg({'id':21,
+                                         'state':True}))
+        myleglist.append(base_objects.Leg({'id':21,
+                                         'state':True}))
+
+        myproc = base_objects.Process({'legs':myleglist,
+                                       'model':self.mymodel,
+                                       'forbidden_s_channels':[2]})
+
+        myleglist = base_objects.LegList()
+        myleglist.append(base_objects.Leg({'id':2,
+                                         'state':False}))
+        myleglist.append(base_objects.Leg({'id':21,
+                                         'state':True}))
+        myleglist.append(base_objects.Leg({'id':2,
+                                         'state':True}))
+        mydecayproc = base_objects.Process({'legs':myleglist,
+                                            'model':self.mymodel})
+        myproc.set('decay_chains', base_objects.ProcessList([mydecayproc]))
+
+        myamplitude = diagram_generation.DecayChainAmplitude(myproc)
+
+        #print myamplitude.nice_string()
+
+        helas_amplitude = helas_objects.HelasDecayChainProcess(myamplitude).\
+                          combine_decay_chain_processes()[0]
+
+        self.assertEqual(len(helas_amplitude.get('diagrams')),
+                         goal_no_quark)
+
+        diagrams = helas_amplitude.get('diagrams')
+        for idiag in range(len(diagrams)):
+            if idiag in quark_none:
+                vertices, tchannels = \
+                      diagrams[idiag].get('amplitudes')[0].get_s_and_t_channels(2)
+                for ivert in range(len(vertices)):
+                    if ivert in quark_none[idiag]:
+                        # This is forbidden leg
+                        self.assertEqual(False,
+                                vertices[ivert].get('legs')[-1].get('onshell'))
+                    elif ivert == quark_true[idiag]:
+                        # This is the decay chain leg
+                        self.assertEqual(True,
+                                vertices[ivert].get('legs')[-1].get('onshell'))
+                    else:
+                        self.assertEqual(None,
+                                vertices[ivert].get('legs')[-1].get('onshell'))
+                        
+        # Test with u g > u g , u > u g g
+
+        goal_no_quark = 9
+        quark_none = {0:[0],1:[0],3:[0],4:[0],6:[0],7:[0]}
+        quark_true = dict(zip(range(goal_no_quark),[1]*goal_no_quark))
+
+        myleglist = base_objects.LegList()
+
+        myleglist.append(base_objects.Leg({'id':2,
+                                         'state':False}))
+        myleglist.append(base_objects.Leg({'id':21,
+                                         'state':False}))
+        myleglist.append(base_objects.Leg({'id':2,
+                                         'state':True}))
+        myleglist.append(base_objects.Leg({'id':21,
+                                         'state':True}))
+
+        myproc = base_objects.Process({'legs':myleglist,
+                                       'model':self.mymodel})
+
+        myleglist = base_objects.LegList()
+        myleglist.append(base_objects.Leg({'id':2,
+                                         'state':False}))
+        myleglist.append(base_objects.Leg({'id':2,
+                                         'state':True}))
+        myleglist.append(base_objects.Leg({'id':21,
+                                         'state':True}))
+        myleglist.append(base_objects.Leg({'id':21,
+                                         'state':True}))
+        mydecayproc = base_objects.Process({'legs':myleglist,
+                                            'model':self.mymodel,
+                                            'forbidden_s_channels':[2]})
+        myproc.set('decay_chains', base_objects.ProcessList([mydecayproc]))
+
+        myamplitude = diagram_generation.DecayChainAmplitude(myproc)
+
+        helas_amplitude = helas_objects.HelasDecayChainProcess(myamplitude).\
+                          combine_decay_chain_processes()[0]
+
+        self.assertEqual(len(helas_amplitude.get('diagrams')),
+                         goal_no_quark)
+
+        diagrams = helas_amplitude.get('diagrams')
+        for idiag in range(len(diagrams)):
+            if idiag in quark_none:
+                vertices, tchannels = \
+                      diagrams[idiag].get('amplitudes')[0].get_s_and_t_channels(2)
+                for ivert in range(len(vertices)):
+                    if ivert in quark_none[idiag]:
+                        # This is forbidden leg
+                        self.assertEqual(False,
+                                vertices[ivert].get('legs')[-1].get('onshell'))
+                    elif ivert == quark_true[idiag]:
+                        # This is the decay chain leg
+                        self.assertEqual(True,
+                                vertices[ivert].get('legs')[-1].get('onshell'))
+                    else:
+                        self.assertEqual(None,
+                                vertices[ivert].get('legs')[-1].get('onshell'))
+                        
+            
+
 #===============================================================================
 # HelasMultiProcessTest
 #===============================================================================
@@ -2306,13 +2536,13 @@ class HelasMultiProcessTest(unittest.TestCase):
         (which makes partial use of crossing symmetries)
         """
 
-        max_fs = 2 # 3
+        max_fs = 2 #3
 
-        p = [1, -1, 2, -2, 21]
+        p = [21, 1, -1, -2, 2]
 
         my_multi_leg = base_objects.MultiLeg({'ids': p, 'state': True});
 
-        goal_number_matrix_elements = [22, 34]
+        goal_number_matrix_elements = [18, 26]
 
         for nfs in range(2, max_fs + 1):
 
@@ -2335,6 +2565,7 @@ class HelasMultiProcessTest(unittest.TestCase):
             if nfs <= 3:
                 self.assertEqual(len(helas_multi_proc.get('matrix_elements')),
                                      goal_number_matrix_elements[nfs - 2])
+
 
     def test_complete_decay_chain_process(self):
         """Test a complete decay chain process gp>jg,j>jjj,j>jjj
@@ -2552,8 +2783,10 @@ class HelasMultiProcessTest(unittest.TestCase):
         mycoreproc = base_objects.Process({'legs':myleglist,
                                        'model':self.mymodel})
 
+        amp_core = diagram_generation.Amplitude(mycoreproc)
+
         me_core =  helas_objects.HelasMatrixElement(\
-            diagram_generation.Amplitude(mycoreproc))
+            amp_core)
 
         myleglist = base_objects.LegList()
 
@@ -2618,13 +2851,13 @@ class HelasMultiProcessTest(unittest.TestCase):
         #print matrix_elements[0].get('identical_particle_factor')
 
         #for diag in matrix_elements[0].get('diagrams'):
-        #    print 'Diagram ',diag.get('number')
-        #    print "Wavefunctions: ", len(diag.get('wavefunctions'))
-        #    for wf in diag.get('wavefunctions'):
-        #        print wf.get('number'), wf.get('number_external'), wf.get('pdg_code'), [mother.get('number') for mother in wf.get('mothers')]
-        #    print "Amplitudes: ", len(diag.get('amplitudes'))
-        #    for amp in diag.get('amplitudes'):
-        #        print amp.get('number'), [mother.get('number') for mother in amp.get('mothers')]
+            #print 'Diagram ',diag.get('number')
+            #print "Wavefunctions: ", len(diag.get('wavefunctions'))
+            #for wf in diag.get('wavefunctions'):
+            #    print wf.get('number'), wf.get('number_external'), wf.get('pdg_code'), [mother.get('number') for mother in wf.get('mothers')], wf.get('onshell')
+            #print "Amplitudes: ", len(diag.get('amplitudes'))
+            #for amp in diag.get('amplitudes'):
+            #    print amp.get('number'), [mother.get('number') for mother in amp.get('mothers')]
 
         self.assertEqual(matrix_elements[0].get_number_of_amplitudes(),
                          me_core.get_number_of_amplitudes() * \
@@ -2914,7 +3147,7 @@ class HelasMultiProcessTest(unittest.TestCase):
                                          'is_decay_chain': True})
 
         me3 =  helas_objects.HelasMatrixElement(\
-            diagram_generation.Amplitude(mydecay3))
+            diagram_generation.Amplitude(mydecay3), gen_color = False)
         
         #print me3.get('processes')[0].nice_string()
         #print me3.get_base_amplitude().get('diagrams').nice_string()
@@ -2993,7 +3226,7 @@ class HelasMultiProcessTest(unittest.TestCase):
         myamplitude1.generate_diagrams()
 
         mymatrixelement1 = helas_objects.HelasMatrixElement(\
-            myamplitude1)
+            myamplitude1, gen_color = False)
 
         myleglist = base_objects.LegList()
 
@@ -3017,8 +3250,119 @@ class HelasMultiProcessTest(unittest.TestCase):
         myamplitude2.generate_diagrams()
 
         mymatrixelement2 = helas_objects.HelasMatrixElement(\
-            myamplitude2)
+            myamplitude2, gen_color = False)
 
         self.assert_(helas_objects.HelasMatrixElement.\
                      check_equal_decay_processes(\
                        mymatrixelement1, mymatrixelement2))
+
+#===============================================================================
+# TestIdentifyMETag
+#===============================================================================
+class TestIdentifyMETag(unittest.TestCase):
+    """Test class for the DiagramTag class"""
+
+
+    def setUp(self):
+        self.base_model = import_ufo.import_model('sm')
+    
+    def test_identify_me_tag_qq_qqg(self):
+        """Test the find_symmetry function"""
+
+        myleglist = base_objects.LegList()
+
+        myleglist.append(base_objects.Leg({'id':2,
+                                           'state':False}))
+        myleglist.append(base_objects.Leg({'id':2,
+                                           'state':False}))
+        myleglist.append(base_objects.Leg({'id':2,
+                                           'state':True}))
+        myleglist.append(base_objects.Leg({'id':2,
+                                           'state':True}))
+        myleglist.append(base_objects.Leg({'id':21,
+                                           'state':True}))
+
+        myproc = base_objects.Process({'legs':myleglist,
+                                       'model':self.base_model,
+                                       'orders': {'QED': 0}})
+
+        myamplitude1 = diagram_generation.Amplitude(myproc)
+
+
+        myleglist = base_objects.LegList()
+
+        myleglist.append(base_objects.Leg({'id':1,
+                                           'state':False,
+                                           'number': 1}))
+        myleglist.append(base_objects.Leg({'id':1,
+                                           'state':True,
+                                           'number': 3}))
+        myleglist.append(base_objects.Leg({'id':1,
+                                           'state':True,
+                                           'number': 4}))
+        myleglist.append(base_objects.Leg({'id':1,
+                                           'state':False,
+                                           'number': 2}))
+        myleglist.append(base_objects.Leg({'id':21,
+                                           'state':True,
+                                           'number': 5}))
+
+        myproc = base_objects.Process({'legs':myleglist,
+                                       'model':self.base_model,
+                                       'orders': {'QED': 0}})
+
+        myamplitude2 = diagram_generation.Amplitude(myproc)
+
+        tags1 = sorted([helas_objects.IdentifyMETag(d, self.base_model) \
+                        for d in myamplitude1.get('diagrams')])
+        tags2 = sorted([helas_objects.IdentifyMETag(d, self.base_model) \
+                        for d in myamplitude2.get('diagrams')])
+
+        self.assertEqual(tags1, tags2)
+
+    def test_non_identify_me_tag_qq_qqg(self):
+        """Test the find_symmetry function"""
+
+        myleglist = base_objects.LegList()
+
+        myleglist.append(base_objects.Leg({'id':2,
+                                           'state':False}))
+        myleglist.append(base_objects.Leg({'id':2,
+                                           'state':False}))
+        myleglist.append(base_objects.Leg({'id':2,
+                                           'state':True}))
+        myleglist.append(base_objects.Leg({'id':2,
+                                           'state':True}))
+        myleglist.append(base_objects.Leg({'id':21,
+                                           'state':True}))
+
+        myproc = base_objects.Process({'legs':myleglist,
+                                       'model':self.base_model})
+
+        myamplitude1 = diagram_generation.Amplitude(myproc)
+
+        myleglist = base_objects.LegList()
+
+        myleglist.append(base_objects.Leg({'id':1,
+                                           'state':False}))
+        myleglist.append(base_objects.Leg({'id':1,
+                                           'state':False}))
+        myleglist.append(base_objects.Leg({'id':1,
+                                           'state':True}))
+        myleglist.append(base_objects.Leg({'id':1,
+                                           'state':True}))
+        myleglist.append(base_objects.Leg({'id':21,
+                                           'state':True}))
+
+        myproc = base_objects.Process({'legs':myleglist,
+                                       'model':self.base_model})
+
+        myamplitude2 = diagram_generation.Amplitude(myproc)
+
+        tags1 = sorted([helas_objects.IdentifyMETag(d, self.base_model) \
+                        for d in myamplitude1.get('diagrams')])
+
+        tags2 = sorted([helas_objects.IdentifyMETag(d, self.base_model) \
+                        for d in myamplitude2.get('diagrams')])
+
+        self.assertFalse(tags1 == tags2)

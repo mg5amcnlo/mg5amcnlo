@@ -6,7 +6,7 @@ c*************************************************************************
       integer    max_branch
       parameter (max_branch=max_particles-1)
       integer    ng     , maxdim     , maxinvar     , maxconfigs
-      parameter (ng = 96, maxdim = 3*(max_particles-2)-2, maxinvar= 4*max_particles, maxconfigs=10)
+      parameter (ng = 96, maxdim = 3*(max_particles-2)-1, maxinvar= 4*max_particles, maxconfigs=10)
 c      parameter (ng = 43, maxdim = 25, maxinvar= 57 , maxconfigs=20)
 
       double precision  xgmin,     xgmax
@@ -16,7 +16,7 @@ c      parameter (ng = 43, maxdim = 25, maxinvar= 57 , maxconfigs=20)
       parameter (maxevents=200000)  !Maximum # events to write to disk
 
 c*************************************************************************
-c	Parameters used for parrallel running
+c	Parameters used for parallel running
 c*************************************************************************
       integer    max_host   ,maxplace    ,maxpoints    ,maxans
       parameter (max_host=9,maxplace=9,maxpoints=10,maxans=5)
@@ -26,8 +26,10 @@ c      parameter (max_host=99,maxplace=199,maxpoints=100,maxans=50)
       integer    maxfprb
       parameter (maxfprb = maxinvar*maxplace*maxpoints)
 
-
-
-
-
-
+c*************************************************************************
+c	Parameters for helicity sums in matrixN.f
+c*************************************************************************
+      REAL*8 LIMHEL
+      PARAMETER(LIMHEL=1e-6)
+      INTEGER MAXTRIES
+      PARAMETER(MAXTRIES=10)

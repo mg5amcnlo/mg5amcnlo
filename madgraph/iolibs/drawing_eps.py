@@ -237,14 +237,18 @@ class EpsDiagramDrawer(draw.DiagramDrawer):
         self.text += '( diagram %s )   show\n' % (number + 1) # +1 python
                                                             #starts to count at
                                                             #zero.
+
         mystr = " (%s)" % ", ".join(["%s=%d" % (key, self.diagram.diagram['orders'][key]) \
-                                        for key in self.diagram.diagram['orders'].keys()])
+                      for key in sorted(self.diagram.diagram['orders'].keys()) \
+                      if key != 'WEIGHTED'])
+        
         x = 0.6
         y = -0.17
         x, y = self.rescale(x, y)
         #write the text
         self.text += ' %s  %s moveto \n' % (x, y)
-        self.text += '%s   show\n' % (mystr)                                                             #zero.
+        self.text += '%s   show\n' % (mystr)                                                             
+        
         
 
     def associate_number(self, line, number):

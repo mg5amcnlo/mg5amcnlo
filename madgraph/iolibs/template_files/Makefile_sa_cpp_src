@@ -9,6 +9,7 @@ objects=HelAmps_%(model)s.o Parameters_%(model)s.o rambo.o read_slha.o
 
 $(target): $(objects)
 	$(AR) cru $@ $(objects)
+	ranlib $(target)
 
 .PHONY: clean
 

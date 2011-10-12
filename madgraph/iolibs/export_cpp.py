@@ -173,8 +173,7 @@ def make_model_cpp(dir_path):
     source_dir = os.path.join(dir_path, "src")
     # Run standalone
     logger.info("Running make for src")
-    subprocess.call(['make'],
-                    stdout = open(os.devnull, 'w'), cwd=source_dir)
+    misc.compile(cwd=source_dir)
 
 #===============================================================================
 # ProcessExporterCPP
@@ -958,10 +957,19 @@ class ProcessExporterPythia8(ProcessExporterCPP):
     process_definition_template = 'pythia8_process_function_definitions.inc'
     process_wavefunction_template = 'pythia8_process_wavefunctions.inc'
     process_sigmaKin_function_template = 'pythia8_process_sigmaKin_function.inc'
+
     def __init__(self, *args, **opts):
         """Set process class name"""
 
         super(ProcessExporterPythia8, self).__init__(*args, **opts)
+
+        # Check if any processes are not 2->1,2,3
+        for me in self.matrix_elements:
+            if me.get_nexternal_ninitial() not in [(3,2),(4,2),(5,2)]:
+                nex,nin = me.get_nexternal_ninitial()
+                raise MadGraph5Error,\
+                      "Pythia 8 can only handle 2->1,2,3 processes, not %d->%d" % \
+                      (nin,nex-nin)
 
         self.process_class = self.process_name
         

@@ -1,5 +1,5 @@
 FILES = Cards HTML SubProcesses bin lib Source Events index.html README \
-        TemplateVersion.txt MGMEVersion.txt
+        README.lhapdf TemplateVersion.txt MGMEVersion.txt
 
 madevent.tar.gz: madevent.tar
 	rm -f madevent.tar.gz
@@ -19,7 +19,7 @@ gridpack.tar:
 	mkdir madevent
 	cp bin/run.sh ./
 	mv -f $(FILES) madevent
-	tar -cf gridpack.tar madevent run.sh
+	tar -cf gridpack.tar madevent run.sh README.gridpack
 	mv -f madevent/* ./ 
 	rmdir madevent
 	rm run.sh
