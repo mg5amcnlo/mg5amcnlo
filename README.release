@@ -15,6 +15,11 @@
 *                   Code download from:                    *
 *             https://launchpad.net/madgraph5              *
 *                                                          *
+*    Please refer to: MadGraph 5 : Going Beyond.           *
+*                     J. Alwall, M. Herquet, F. Maltoni,   *
+*                     O. Mattelaer, T. Stelzer             *
+*                     JHEP 1106 (2011) 128                 *
+*                     arXiv:1106.0522 [hep-ph]             *
 ************************************************************
 
 To run MadGraph 5 using the command line interface:
@@ -27,7 +32,7 @@ Type "tutorial" for an interactive quick-start tutorial.
 To run using the Template bin/newprocess_mg5 script: 
 ------------------------------------------------
 Copy the Template directory to a new directory, e.g. MyRunDir.
-Modify the Cards/proc_card.dat, and run:
+Modify the Cards/proc_card.dat or Cards/proc_card_mg5.dat, and run:
 ./bin/newprocess_mg5
 After completed process generation, you will find the sequence of
 commands used by MG5 in the file Cards/proc_card_mg5.dat.

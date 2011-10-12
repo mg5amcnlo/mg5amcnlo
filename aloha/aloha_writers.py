@@ -58,7 +58,8 @@ class WriteALOHA:
         elif len(indices) == 2: 
             return  4 * indices[0] + indices[1] + start 
         else:
-            raise Exception, 'WRONG CONTRACTION OF LORENTZ OBJECT'                                 
+            raise Exception, 'WRONG CONTRACTION OF LORENTZ OBJECT for routine %s' \
+                    % self.namestring                                 
                                  
     def collect_variables(self):
         """Collects Momenta,Mass,Width into lists"""
@@ -254,10 +255,10 @@ class ALOHAWriterForFortran(WriteALOHA):
     """routines for writing out Fortran"""
 
     extension = '.f'
-    declare_dict = {'S':'double complex S%d(3)',
-                    'F':'double complex F%d(6)',
-                    'V':'double complex V%d(6)',
-                    'T':'double complex T%s(18)'}
+    declare_dict = {'S':'double complex S%d(*)',
+                    'F':'double complex F%d(*)',
+                    'V':'double complex V%d(*)',
+                    'T':'double complex T%s(*)'}
     
     def define_header(self, name=None):
         """Define the Header of the fortran file. This include
@@ -516,11 +517,12 @@ class ALOHAWriterForFortran(WriteALOHA):
             short_name, addon = name.split('C',1)
             if addon.split('_')[0].isdigit():
                 addon = 'C' +self.namestring.split('C',1)[1]
+            elif all([n.isdigit() for n in addon.split('_')[0].split('C')]):
+                addon = 'C' +self.namestring.split('C',1)[1]
             else:
                 addon = '_%s' % self.offshell
         else:
             addon = '_%s' % self.offshell
-
         # how to call the routine
         if not offshell:
             main = 'vertex'
@@ -906,6 +908,8 @@ class ALOHAWriterForCPP(WriteALOHA):
             short_name, addon = name.split('C',1)
             if addon.split('_')[0].isdigit():
                 addon = 'C' +self.namestring.split('C',1)[1]
+            elif all([n.isdigit() for n in addon.split('_')[0].split('C')]):
+                addon = 'C' +self.namestring.split('C',1)[1]
             else:
                 addon = '_%s' % self.offshell
         else:
@@ -1237,6 +1241,8 @@ class ALOHAWriterForPython(WriteALOHA):
         if 'C' in self.namestring:
             short_name, addon = name.split('C',1)
             if addon.split('_')[0].isdigit():
+                addon = 'C' +self.namestring.split('C',1)[1]
+            elif all([n.isdigit() for n in addon.split('_')[0].split('C')]):
                 addon = 'C' +self.namestring.split('C',1)[1]
             else:
                 addon = '_%s' % self.offshell

@@ -19,9 +19,9 @@ c
       implicit none
 
 c dimension of the current set to arbitrary length
-c      integer DIM
-c      parameter (DIM=18)
-      include "dimension.inc"
+      integer DIM
+      parameter (DIM=18)
+c      include "dimension.inc"
       double complex ga(DIM),gb(DIM),tc(DIM)
       double precision xm,xw,g
       double precision sqrTwo

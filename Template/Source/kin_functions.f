@@ -535,6 +535,22 @@ c-----
       jc(ic(2))=-1
       end
 
+      subroutine switchhel(hel,hel1,ic,nexternal)
+c**************************************************************************
+c     Changes stuff for crossings
+c**************************************************************************
+      implicit none
+      integer nexternal
+      integer ic(nexternal),hel(nexternal),hel1(nexternal)
+      integer i
+c-----
+c Begin Code
+c-----
+      do i=1,nexternal
+         hel1(i)=hel(ic(i))
+      enddo
+      end
+
       double precision function dot(p1,p2)
 C****************************************************************************
 C     4-Vector Dot product

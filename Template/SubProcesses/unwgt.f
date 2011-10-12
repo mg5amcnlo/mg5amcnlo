@@ -311,10 +311,11 @@ c
       xscale = xsec/xsum
       target_wgt = target_wgt*xscale
       rewind(lun)
-      if (nstore .le. neventswritten) then
-         write(*,*) 'No improvement in events',nstore, neventswritten
-         return
-      endif
+c     JA 8/17/2011 Don't check for previously stored events
+c      if (nstore .le. neventswritten) then
+c         write(*,*) 'No improvement in events',nstore, neventswritten
+c         return
+c      endif
       lunw = 25
       open(unit = lunw, file='events.lhe', status='unknown')
       done = .false.
@@ -461,23 +462,6 @@ c
       endif
       
 c
-c     Now choose a color flow
-c
-      nc = jamp2(0)
-c      ncols=jamp2(0)
-      if(nc.gt.0)then
-        targetamp(1)=jamp2(1)
-        do ic =2,nc
-          targetamp(ic) = jamp2(ic)+targetamp(ic-1)
-        enddo
-        xtarget=ran1(iseed)*targetamp(nc)
-        ic = 1
-        do while (targetamp(ic) .lt. xtarget .and. ic .lt. nc)
-          ic=ic+1
-        enddo
-c        ncolflow(ic)=ncolflow(ic)+1
-      endif
-c
 c     In case of identical particles symmetry, choose assignment
 c
       xtarget = ran1(iseed)*nsym
@@ -492,8 +476,9 @@ c
          jpart(1,isym(i,jsym)) = idup(i,ip,numproc)
          jpart(2,isym(i,jsym)) = mothup(1,i)
          jpart(3,isym(i,jsym)) = mothup(2,i)
-         jpart(4,isym(i,jsym)) = icolup(1,i,ic,numproc)
-         jpart(5,isym(i,jsym)) = icolup(2,i,ic,numproc)
+c        Color info is filled in mothup
+         jpart(4,isym(i,jsym)) = 0
+         jpart(5,isym(i,jsym)) = 0
          jpart(6,isym(i,jsym)) = 1
       enddo
       do i=1,nincoming
@@ -568,7 +553,7 @@ c     Write events to lun
 c
 c      write(*,*) 'Writing event'
       if(q2fact(1).gt.0.and.q2fact(2).gt.0)then
-         sscale = (q2fact(1)*q2fact(2))**0.25
+         sscale = sqrt(max(q2fact(1),q2fact(2)))
       else if(q2fact(1).gt.0)then
          sscale = sqrt(q2fact(1))
       else if(q2fact(2).gt.0)then

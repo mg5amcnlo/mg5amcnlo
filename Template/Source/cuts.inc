@@ -31,7 +31,7 @@ C
       REAL*8 ptj1max,ptj2max,ptj3max,ptj4max
       REAL*8 ht2min,ht3min,ht4min
       REAL*8 ht2max,ht3max,ht4max
-      REAL*8 htjmin,htjmax
+      REAL*8 htjmin,htjmax,ihtmin,ihtmax
       REAL*8 misset,missetmax,ptheavy
       REAL*8 ptllmin,ptllmax
       integer maxjetflavor
@@ -51,7 +51,7 @@ C
      &     cutuse,
      &     ht2min,ht3min,ht4min,
      &     ht2max,ht3max,ht4max,
-     &     htjmin,htjmax,
+     &     htjmin,htjmax,ihtmin,ihtmax,
      &     misset,missetmax,ptheavy,
      &     ptllmin,ptllmax,
      &     maxjetflavor
@@ -67,7 +67,7 @@ c
       common /to_specxpt/xptj,xptb,xpta,xptl,xmtc,xetamin,xqcut,deltaeta
 
 C
-C    FLAG FOR CUTTING DECAY PRODUCTS
+C    FLAG FOR CUTTING DECAY PRODUCTS AND AUTOMATICALLY SETTING PTJ/MJJ
 C
-      logical cut_decays
-      common /to_cut_decays/cut_decays
+      logical cut_decays, auto_ptj_mjj
+      common /to_cut_decays/cut_decays,auto_ptj_mjj

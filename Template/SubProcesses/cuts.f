@@ -51,8 +51,8 @@ C     LOCAL
 C
       LOGICAL FIRSTTIME,FIRSTTIME2,pass_bw,notgood,good,foundheavy
       LOGICAL DEBUG
-      integer i,j,njets,hardj1,hardj2
-      REAL*8 XVAR,ptmax1,ptmax2,htj,tmp
+      integer i,j,njets,nheavyjets,hardj1,hardj2
+      REAL*8 XVAR,ptmax1,ptmax2,htj,tmp,inclht
       real*8 ptemp(0:3)
       character*20 formstr
 C
@@ -73,6 +73,7 @@ C
       include 'cuts.inc'
 
       double precision ptjet(nexternal)
+      double precision ptheavyjet(nexternal)
       double precision temp
 
       double precision etmin(nincoming+1:nexternal),etamax(nincoming+1:nexternal)
@@ -84,8 +85,9 @@ C
       double precision r2max(nincoming+1:nexternal,nincoming+1:nexternal)
       double precision s_max(nexternal,nexternal)
       double precision ptll_min(nexternal,nexternal),ptll_max(nexternal,nexternal)
+      double precision inclHtmin,inclHtmax
       common/to_cuts/  etmin, emin, etamax, r2min, s_min,
-     $     etmax, emax, etamin, r2max, s_max,ptll_min,ptll_max
+     $     etmax, emax, etamin, r2max, s_max, ptll_min, ptll_max, inclHtmin,inclHtmax
 
       double precision ptjmin4(4),ptjmax4(4),htjmin4(2:4),htjmax4(2:4)
       logical jetor
@@ -386,11 +388,20 @@ c
             if(debug) write (*,*) dsqrt(s_min(j,i)),dsqrt(s_max(j,i))
             if(s_min(j,i).gt.0.or.s_max(j,i).lt.1d5) then
                tmp=SumDot(p(0,i),p(0,j),+1d0)
-               notgood=(tmp .lt. s_min(j,i).or.tmp .gt. s_max(j,i)) 
-               if (notgood) then
-                  if(debug) write (*,*) i,j,' -> fails'
-                  passcuts=.false.
-                  return
+               if(s_min(j,i).le.s_max(j,i))then
+                  notgood=(tmp .lt. s_min(j,i).or.tmp .gt. s_max(j,i)) 
+                  if (notgood) then
+                     if(debug) write (*,*) i,j,' -> fails'
+                     passcuts=.false.
+                     return
+                  endif
+               else
+                  notgood=(tmp .lt. s_min(j,i).and.tmp .gt. s_max(j,i)) 
+                  if (notgood) then
+                     if(debug) write (*,*) i,j,' -> fails'
+                     passcuts=.false.
+                     return
+                  endif
                endif
             endif
          enddo
@@ -400,11 +411,10 @@ c
 c     B.W. phase space cuts
 c     
       pass_bw=cut_bw(p)
-      if (lbw(0) .eq. 1) then
-         if ( pass_bw ) then
-            passcuts=.false.
-            return
-         endif
+c     JA 4/8/11 always check pass_bw
+      if ( pass_bw ) then
+         passcuts=.false.
+         return
       endif
 C     $E$DESACTIVATE_BW_CUT$E$ This is a Tag for MadWeight
 
@@ -412,6 +422,7 @@ C
 C     maximal and minimal pt of the jets sorted by pt
 c     
       njets=0
+      nheavyjets=0
 
 c- fill ptjet with the pt's of the jets.
       do i=nincoming+1,nexternal
@@ -419,6 +430,11 @@ c- fill ptjet with the pt's of the jets.
             njets=njets+1
             ptjet(njets)=pt(p(0,i))
          endif
+         if(is_a_b(i)) then
+            nheavyjets=nheavyjets+1
+            ptheavyjet(nheavyjets)=pt(p(0,i))
+         endif
+
       enddo
       if(debug) write (*,*) 'not yet ordered ',njets,'   ',ptjet
 
@@ -446,6 +462,8 @@ c - sort jet pts
 c
 c     Use "and" or "or" prescriptions 
 c     
+      inclht=0
+
       if(njets.gt.0) then
 
        notgood=.not.jetor
@@ -477,8 +495,8 @@ c---  all cuts must fail to reject the event
 c---------------------------
 c      Ht cuts
 C---------------------------
-      
       htj=ptjet(1)
+
       do i=2,njets
          htj=htj+ptjet(i)
          if(debug) write (*,*) i, 'htj ',htj
@@ -490,15 +508,28 @@ C---------------------------
          endif
       enddo
 
-
       if(htj.lt.htjmin.or.htj.gt.htjmax)then
          if(debug) write (*,*) i, ' htj -> fails'
          passcuts=.false.
          return
       endif
 
+      inclht=htj
+
       endif !if there are jets 
-      
+
+      if(nheavyjets.gt.0) then
+         do i=1,nheavyjets
+            inclht=inclht+ptheavyjet(i)
+         enddo
+      endif !if there are heavyjets
+
+      if(inclht.lt.inclHtmin.or.inclht.gt.inclHtmax)then
+         if(debug) write (*,*) ' inclhtmin=',inclHtmin,' -> fails'
+         passcuts=.false.
+         return
+      endif
+ 
 C>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>     
 C     SPECIAL CUTS
 C<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<

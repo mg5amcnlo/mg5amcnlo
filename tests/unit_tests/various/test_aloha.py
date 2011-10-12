@@ -16,6 +16,7 @@
 the output of the Feynman Rules."""
 from __future__ import division
 
+import math
 import os
 import time
 import aloha.aloha_object as aloha_obj
@@ -24,6 +25,7 @@ import aloha.create_aloha as create_aloha
 import aloha.aloha_writers as aloha_writers
 import models.sm.object_library as object_library
 import tests.unit_tests as unittest
+
 
 class TestVariable(unittest.TestCase):
 
@@ -474,7 +476,6 @@ class TestAddVariable(unittest.TestCase):
         sum = p1 * p2 + p1 * p3 + 2 * p1 + 2 *p1 * p2 * p4
         sum = sum.factorize()
         #Should return p1*(p2(2*p4 + 1) + p3 + 2)
-    
         self.assertEqual(sum.__class__,aloha_lib.MultVariable)
         self.assertEqual(len(sum),2)
         for fact in sum:
@@ -578,6 +579,32 @@ class TestAddVariable(unittest.TestCase):
         
         expr1 = expr1.factorize()
         self.assertEqual(eval(str(expr1)), value)
+
+
+    def test_factorization5(self):
+        """check that P [gamma + P/M] == (/p+M) [Onshell]"""
+
+        P1_0 = aloha_lib.ScalarVariable('p1')
+        P1_1 = aloha_lib.ScalarVariable('p2')
+        P1_2 = aloha_lib.ScalarVariable('p3')
+        P1_3 = aloha_lib.ScalarVariable('p4')        
+        M1  = aloha_lib.ScalarVariable('m1') 
+    
+        p1, p2, p3, p4, m1 = 1,2,3,4,5
+    
+        data = (P1_0**2 * M1 - P1_1**2 * M1 + M1)
+        value = eval(str(data))
+        data2 = data.factorize()
+        self.assertEqual(eval(str(data2)), value)
+        
+        #check that original object is still un-touched
+        self.assertEqual(eval(str(data)), value)
+
+
+
+    
+
+
 
 
     
@@ -1245,7 +1272,96 @@ class testLorentzObject(unittest.TestCase):
             self.assertEqual(low_level.get_rep(ind).__class__, aloha_lib.MultVariable)
             self.assertEqual(low_level.get_rep(ind), aloha_lib.ScalarVariable('M3') 
                                 * aloha_lib.ScalarVariable('P2_%s' % ind[0]))
-            
+    
+    
+    def test_spin32propagator(self):
+        """check various property of the spin3/2 propagator"""
+        
+        Metric = aloha_obj.Metric
+        P = aloha_obj.P
+        OM = aloha_obj.OverMass2
+        Gamma = aloha_obj.Gamma
+        Identity = aloha_obj.Identity
+        t = 1
+        mu, nu, s0, s1, s2 = 2,3,4,5,6
+        
+        zero = P(mu,t) * aloha_obj.Spin3halfPropagator(mu,nu,s1,s2, t)
+        zero = zero.expand()
+        P1_0, P1_1, P1_2, P1_3 = 2,0,0,0
+        OM1 = 1/(P1_0 **2 - P1_1 **2 -P1_2 **2 -P1_3 **2)
+        M1 = math.sqrt(P1_0 **2 - P1_1 **2 -P1_2 **2 -P1_3 **2)
+        for ind in zero.listindices():
+            data = zero.get_rep(ind)
+            self.assertAlmostEqual(eval(str(zero.get_rep(ind))),0)    
+     
+    def test_mass_overmass(self):
+        """check various property of the spin3/2 propagator"""
+        
+        Metric = aloha_obj.Metric
+        P = aloha_obj.P
+        OM = aloha_obj.OverMass2
+        Gamma = aloha_obj.Gamma
+        Identity = aloha_obj.Identity
+        Gamma = aloha_obj.Gamma
+        PSlash = aloha_obj.PSlash
+        Mass = aloha_obj.Mass
+        OverMass2 = aloha_obj.OverMass2
+        Identity = aloha_obj.Identity
+        t = 1
+        mu, nu, s0, s1, s2 = 2,3,4,5,6
+        Spin3halfPropagator =  lambda nu, s1, s2, part: (P(-1,part)**2 - Mass(part)*Mass(part)) * \
+                             (Mass(part) * Identity(-3, s2) )  
+        
+        #- 1/3 * (PSlash(s1,-2,part) + Identity(s1, -2) * Mass(part))* \
+        #                     (PSlash(-2,-3, part) - Identity(-2,-3) * Mass(part)) * \
+        #                     (P(-1,part)**2 - Mass(part)*Mass(part))
+        #                     (Mass(part) * Identity(-3, s2) )
+                                     
+        zero = Spin3halfPropagator(nu,s1,s2, t)
+        zero = zero.expand()
+        P1_0, P1_1, P1_2, P1_3 = 2,0,0,0
+        OM1 = 1/(P1_0 **2 - P1_1 **2 -P1_2 **2 -P1_3 **2)
+        M1 = math.sqrt(P1_0 **2 - P1_1 **2 -P1_2 **2 -P1_3 **2)
+        M99 = M1
+        for ind in zero.listindices():
+            data = zero.get_rep(ind)
+            self.assertAlmostEqual(eval(str(zero.get_rep(ind))),0)     
+ 
+ 
+        
+
+    def test_part_spin32propagator(self):
+        P = aloha_obj.P
+        OM = aloha_obj.OverMass2
+        Gamma = aloha_obj.Gamma
+        Identity = aloha_obj.Identity
+        Mass = aloha_obj.Mass
+        Pslash = aloha_obj.PSlash
+        part = 1
+        mu, nu, s0, s1, s2,s3 = 2,3,4,5,6,7
+        
+        
+        paranthesis = (Gamma(mu,s1,s2) + Identity(s1, s2) *  P(mu, part) * Mass(part) * OM(part)) * Gamma(nu,s2,s3)
+        paranthesis = Gamma(mu,s1,s2) * Gamma(nu,s2,s3) + Identity(s1, s2) *  P(mu, part) * Mass(part) * OM(part) * Gamma(nu,s2,s3)
+        #paranthesis =  Gamma(mu,s1,s2) * Gamma(nu,s2,s3)
+        goal = (Pslash(s1,s2,part) + Mass(part) * Identity(s1,s2)  ) * Gamma(nu, s2, s3)
+        #goal = Pslash(s1,s2,part) * Gamma(nu, s2, s3)
+        goal2= P(mu,part) * paranthesis 
+        goal2 =  P(mu,part) * Gamma(mu,s1,s2) * Gamma(nu,s2,s3) + Identity(s1, s2) *  P(mu,part) * P(mu, part) * Mass(part) * OM(part) * Gamma(nu,s2,s3)
+        zero = goal2 - goal
+        
+        #zero = zero.simplify()
+        zero=zero.expand()
+        P1_0, P1_1, P1_2, P1_3 = 20,3,4,5
+        OM1 = 1/(P1_0 **2 - P1_1 **2 -P1_2 **2 -P1_3 **2)
+        M1 = math.sqrt(P1_0 **2 - P1_1 **2 -P1_2 **2 -P1_3 **2)
+        for ind in zero.listindices():
+            data = zero.get_rep(ind)
+            self.assertEqual(eval(str(data)),0)
+
+
+    
+    
     def test_spin2propagator(self):
         """Check that the two definition are coherent"""
         
@@ -2189,18 +2305,18 @@ class TestSomeObjectProperty(unittest.TestCase):
         prod_gam2 = Gamma(2,1,2) * Gamma(1,2,3)
         self.assertNotEqual(prod_gam, prod_gam2)
     
-        # Sigma_mu_nu * Sigma_mu_nu = 12* Id
+        # Sigma_mu_nu * Sigma_mu_nu = 3* Id
         sigma_cont  = Sigma(1,2,1,2) * Sigma(1,2,2,1) 
         sigma_cont = sigma_cont.expand().simplify()
-        self.assertEqual(sigma_cont.get_rep((0,)), 48)
+        self.assertEqual(sigma_cont.get_rep((0,)), 12)
 
-        # Sigma_mu_nu * Gamma_nu = 3i * Gamma_nu # Trace
+        # Sigma_mu_nu * Gamma_nu = 3/2i * Gamma_nu # Trace
         prod = Sigma(1,2,'a','b') * Gamma(2,'b','a')
         prod = prod.expand().simplify()
         self.assertEqual(prod.get_rep((0,)), 0)
 
-        # Sigma_mu_nu * Gamma_nu = 3i * Gamma_nu # Full
-        zero = Sigma(1,2,'a','b') * Gamma(2,'b','c') - complex(0,3) * Gamma(1,'a','c')
+        # Sigma_mu_nu * Gamma_nu = 3/2i * Gamma_nu # Full
+        zero = Sigma(1,2,'a','b') * Gamma(2,'b','c') - complex(0,3/2) * Gamma(1,'a','c')
         zero = zero.expand().simplify()
         for ind in zero.listindices():
             self.assertEqual(zero.get_rep(ind), 0, '%s != 0.0for %s' % \
@@ -2231,7 +2347,44 @@ class TestSomeObjectProperty(unittest.TestCase):
             self.assertEqual(zero.get_rep(ind), 0, '%s != 0.0for %s' % \
                              (zero.get_rep(ind), ind))  
     
+    
+    def test_Pslashproperty(self):
+        """Test Pslash"""
+    
+        Gamma = aloha_obj.Gamma
+        P = aloha_obj.P
+        M = aloha_obj.Mass
+        PSlash = aloha_obj.PSlash
+        Identity = aloha_obj.Identity
         
+        
+        ps1 = PSlash(1,2,3).simplify().expand().simplify()
+        
+        ps2 = Gamma(-1,1,2) * P(-1,3)
+        ps2 = ps2.simplify().expand().simplify()
+        zero = ps1 - ps2
+        zero = zero.simplify()
+        for ind in zero.listindices():
+            self.assertEqual(zero.get_rep(ind), 0, '%s != 0.0for %s' % \
+                             (zero.get_rep(ind), ind)) 
+            
+        
+        #checking that (/p + m)(/p-m)=0 (for onshell)
+        expr = (PSlash(1,2,1)+ M(1))*(PSlash(2,3,1)-M(1))
+        P1_0, P1_1, P1_2, P1_3 = 7,2,3,5
+        M1 = math.sqrt(P1_0 **2 - P1_1 **2 -P1_2 **2 -P1_3 **2)
+
+        for ind in zero.listindices():
+            data = zero.get_rep(ind)
+            self.assertAlmostEqual(eval(str(data)), 0)  
+         
+        #checking that (/p + m)(/p-m)(P)=0 (for onshell)
+        expr = (PSlash(1,2,1)+ M(1))*(PSlash(2,3,1)-M(1))*(Gamma(4,3,4)*Identity(3,4) * P(4,1))
+        for ind in zero.listindices():
+            data = zero.get_rep(ind)
+            self.assertAlmostEqual(eval(str(data)), 0)  
+
+    
     def testGammaAlgebraDefinition(self):
         """Test the coherence between gamma/gamma5/sigma/projector"""
         Gamma = aloha_obj.Gamma
@@ -2322,34 +2475,32 @@ class TestSomeObjectProperty(unittest.TestCase):
         self.assertEqual(metric, metric2)
 
        
-        #Sigma_mu_nu = i/2 * [Gamma_mu, Gamma_nu]
-        sigma = complex(0, 1/2) * (Gamma(1,1,2)*Gamma(2,2,3) - Gamma(2,1,2)*Gamma(1,2,3))
 
-        #handly build
-        sigma_2 = aloha_lib.LorentzObjectRepresentation({},[2,1],[3,1])
-        prod_gam = Gamma(1,1,2) * Gamma(2,2,3)
-        prod_gam = prod_gam.expand().simplify()
-        for ind in prod_gam.listindices():
-            if ind[0] == ind[1]:
-                sigma_2.set_rep(ind, 0)
-            else:
-                value = complex(0, 1)* (prod_gam.get_rep(ind))
-                sigma_2.set_rep(ind, value)
-     
-        sigma_3 = Sigma(1,2,1,3)
-        diff1 = sigma - sigma_3
-        diff1 = diff1.simplify()
-        diff1 = diff1.expand()
-        diff1 = diff1.simplify()
+        sigma = complex(0, 1/4) * (Gamma(1,3,2)*Gamma(2,2,1) - Gamma(2,3,2)*Gamma(1,2,1))
+        sigma2 = sigma.expand()
         
-        for ind in diff1.listindices():
-            self.assertEqual(diff1.get_rep(ind), 0)
+        zero = Sigma(1,2,3,1) - sigma
+        zero = zero.expand()
+        for ind in zero.listindices(): 
+            self.assertEqual(zero.get_rep(ind), 0)        
         
-        diff1 = sigma.expand() + -1 * sigma_2
-        diff1 = diff1.simplify()
-        for ind in diff1.listindices():
-            self.assertEqual(diff1.get_rep(ind), 0, 'not zero %s for %s' 
-                             % (diff1.get_rep(ind),ind ))
+        mu, nu, rho, sigma = 1,2,3,4
+        commutator = Sigma(mu,nu,1,2) * Sigma(rho, sigma,2,3) - Sigma(rho,sigma,1,2) * Sigma(mu, nu,2,3) 
+        algebra = -1j * Metric(mu,rho) * Sigma(nu,sigma,1,3) + \
+                  1j * Metric(nu,rho) * Sigma(mu,sigma,1,3) + \
+                  -1j * Metric(nu,sigma) * Sigma(mu,rho,1,3) + \
+                  1j * Metric(mu,sigma) * Sigma(nu,rho,1,3)
+        
+        zero = commutator - algebra
+        zero = zero.simplify().expand().simplify()
+        for ind in zero.listindices(): 
+            self.assertEqual(zero.get_rep(ind), 0)         
+        
+        
+        
+        
+        
+
             
 #    def test_Spin2Contraction(self): 
 #        """check spin2 contraction"""
@@ -2799,7 +2950,7 @@ class test_aloha_creation(unittest.TestCase):
         # Check that full identification symmetry works
         helas_suite = create_aloha.AbstractALOHAModel('sm')
         helas_suite.look_for_symmetries()
-        solution = {'SSSS1': {2: 1, 3: 2, 4: 3}, 'VVVV4': {2: 1, 3: 2, 4: 3}, 'VVV1': {2: 1, 3: 2}, 'VVVV1': {2: 1, 3: 2, 4: 3}, 'VVVV3': {2: 1, 3: 2, 4: 3}, 'VVVV2': {2: 1, 4: 3}, 'SSS1': {2: 1, 3: 2}, 'VVSS1': {2: 1, 4: 3}, 'VVS1': {2: 1}}  
+        solution = {'VVVV2': {2: 1 ,4: 3}, 'SSS1': {2: 1, 3: 2}, 'VVSS1': {2: 1, 4: 3}, 'VVS1': {2: 1}}  
         self.assertEqual(solution, helas_suite.symmetries)
         
     def test_has_symmetries(self):
@@ -2831,7 +2982,7 @@ class test_aloha_creation(unittest.TestCase):
         
         helas_suite = create_aloha.AbstractALOHAModel('sm')
         helas_suite.look_for_multiple_lorentz_interactions()
-        solution = {'FFV2': [('FFV3',), ('FFV4',), ('FFV5',)], 'FFS3': [('FFS4',)]}
+        solution = {'FFV2': [('FFV3',), ('FFV4',), ('FFV5',)]}
         self.assertEqual(solution, helas_suite.multiple_lor)
         
 
@@ -2854,9 +3005,9 @@ class test_aloha_creation(unittest.TestCase):
 
         goal =""" subroutine VVS1_1(V2, S3, COUP, M1, W1, V1)
 implicit none 
-double complex V1(6)
-double complex V2(6)
-double complex S3(3)
+double complex V1(*)
+double complex V2(*)
+double complex S3(*)
 double complex COUP
 double complex denom
 double precision M1, W1
@@ -2883,9 +3034,9 @@ end
 
  subroutine VVS1_2(V2, S3, COUP, M1, W1, V1)
 implicit none 
-double complex V1(6)
-double complex V2(6)
-double complex S3(3)
+double complex V1(*)
+double complex V2(*)
+double complex S3(*)
 double complex COUP
 double complex denom
 double precision M1, W1
@@ -2897,9 +3048,9 @@ end
 
  subroutine VVS1_2_1(V2, S3, COUP1,COUP2, M1, W1, V1)
 implicit none 
-double complex V1(6)
-double complex V2(6)
-double complex S3(3)
+double complex V1(*)
+double complex V2(*)
+double complex S3(*)
 double complex COUP1,COUP2
 double complex denom
 double precision M1, W1
@@ -2917,9 +3068,9 @@ end
 
  subroutine VVS1_2_2(V2, S3, COUP1,COUP2, M1, W1, V1)
 implicit none 
-double complex V1(6)
-double complex V2(6)
-double complex S3(3)
+double complex V1(*)
+double complex V2(*)
+double complex S3(*)
 double complex COUP1,COUP2
 double complex denom
 double precision M1, W1
@@ -3098,20 +3249,17 @@ def VVS1_2_2(V2, S3, COUP1,COUP2, M1, W1):
         """test if we create the correct set of routine/files for multiple lorentz"""
         
         helas_suite = create_aloha.AbstractALOHAModel('sm')
-        requested_routines=[(('FFS1','FFS2') , (), 0), 
-                            (('FFV1',) , (), 0), 
+        requested_routines=[(('FFV1',) , (), 0), 
                             (('FFV1','FFV2') , (1,), 0)]
         
         helas_suite.compute_subset(requested_routines)
 
-        # Check that the 5 base routines are created
-        # FFS1, FFS2, FFV1, FFV1C1, FFV2C1
-        self.assertEqual(len(helas_suite), 5)
+        # Check that the 3 base routines are created
+        # FFV1, FFV1C1, FFV2C1
+        self.assertEqual(len(helas_suite), 3)
         
-        # Check that FFS1 and FFV1C1 are correctly connected to the associate
-        #lorentz
-        linked = helas_suite[('FFS1',0)].combined
-        self.assertEqual(linked, [('FFS2',)])
+        # Check that FFV1C1 are correctly connected to the associate
+        # lorentz
         linked = helas_suite[('FFV1C1',0)].combined
         self.assertEqual(linked, [('FFV2',)])        
         linked = helas_suite[('FFV1',0)].combined
@@ -3122,8 +3270,8 @@ def VVS1_2_2(V2, S3, COUP1,COUP2, M1, W1):
         helas_suite.write('/tmp/mg5', 'Fortran')
         
         content = set(os.listdir('/tmp/mg5'))
-        self.assertEqual(content, set(['FFS1_0.f', 'FFS2_0.f', 'FFV1_0.f',
-                                       'FFV1C1_0.f','FFV2C1_0.f', 'FFS1_2_0.f',
+        self.assertEqual(content, set(['FFV1_0.f',
+                                       'FFV1C1_0.f','FFV2C1_0.f',
                                        'FFV1C1_2_0.f']))
         
         # Check the content of FFV1__FFV2C1_0.f
@@ -3132,9 +3280,9 @@ def VVS1_2_2(V2, S3, COUP1,COUP2, M1, W1):
 C     
       SUBROUTINE FFV1C1_2_0(F1,F2,V3,COUP1,COUP2,VERTEX)
       IMPLICIT NONE
-      DOUBLE COMPLEX F1(6)
-      DOUBLE COMPLEX F2(6)
-      DOUBLE COMPLEX V3(6)
+      DOUBLE COMPLEX F1(*)
+      DOUBLE COMPLEX F2(*)
+      DOUBLE COMPLEX V3(*)
       DOUBLE COMPLEX COUP1,COUP2
       DOUBLE COMPLEX VERTEX
       DOUBLE COMPLEX TMP

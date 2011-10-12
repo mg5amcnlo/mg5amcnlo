@@ -8,19 +8,10 @@ c 3. cuts
 c---------------------------------------------------------------------- 
       implicit none
 c
-c     parameters
-c
-      integer maxpara
-      parameter (maxpara=1000)
-c
-c     local
-c     
-      integer npara
-      character*20 param(maxpara),value(maxpara)
-c
 c     include
 c
       include 'genps.inc'
+      include 'run_config.inc'
       include 'PDF/pdf.inc'
       include 'run.inc'
       include 'alfas.inc'
@@ -30,7 +21,9 @@ c
       common/to_dj/D
 c
 c     local
-c
+c     
+      integer npara
+      character*20 param(maxpara),value(maxpara)
       character*20 ctemp
       integer k,i,l1,l2
       character*132 buff
@@ -65,6 +58,7 @@ c
       integer mothup(2,nexternal)
       integer icolup(2,nexternal,maxflow,maxsproc)
       include 'leshouche.inc'
+      data pdfwgt/.false./
 c
 c
 c
@@ -78,6 +72,7 @@ c----------
 c
 c     read the run_card.dat
 c
+
       call load_para(npara,param,value)
 
 c*********************************************************************
@@ -85,6 +80,12 @@ c max jet flavor                                                     *
 c*********************************************************************
 
       call  get_integer (npara,param,value,"maxjetflavor",maxjetflavor,4)
+
+c*********************************************************************
+c Automatically set ptj and mjj = xqcut (if xqcut > 0)
+c*********************************************************************
+
+      call  get_logical (npara,param,value,"auto_ptj_mjj",auto_ptj_mjj,.true.)
 
 c*********************************************************************
 c cut on decay products (pt/e/eta/dr/mij) or not
@@ -271,6 +272,9 @@ c*********************************************************************
 	call get_real   (npara,param,value,"htjmin",htjmin,0d0)
 	call get_real   (npara,param,value,"htjmax",htjmax,1d5)
 
+        call get_real   (npara,param,value,"ihtmin",ihtmin,0d0)
+        call get_real   (npara,param,value,"ihtmax",ihtmax,1d5)
+
 c*********************************************************************
 c     Random Number Seed                                             *
 c*********************************************************************
@@ -309,6 +313,7 @@ c     ktscheme for xqcut: 1: pT/Durham kT; 2: pythia pTE/Durham kT
 
       if(ickkw.gt.0)then
          call get_real   (npara,param,value," alpsfact "       ,alpsfact , 1d0)
+         call get_logical   (npara,param,value," pdfwgt "       ,pdfwgt , .true.)
       endif
       if(ickkw.eq.2)then
         call get_integer(npara,param,value," highestmult "    ,nhmult, 0)

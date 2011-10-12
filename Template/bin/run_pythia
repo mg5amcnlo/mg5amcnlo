@@ -37,6 +37,7 @@ if [ "$run" != "" ]; then
   fi
   echo gunzip ${run}_unweighted_events.lhe.gz
   gunzip -c ${run}_unweighted_events.lhe.gz > unweighted_events.lhe
+  rm ${run}_events.tree.gz ${run}_xsecs.tree
   echo Running Pythia
 fi
 
@@ -96,6 +97,10 @@ if [ "$run" != "" ]; then
    fi
   fi
   if [ -e events.tree ]; then
+    ickkw=`awk '/^[^#].*=.*ickkw.*!/{print $1}' unweighted_events.lhe`
+    if [[ $ickkw -ge 1 ]];then
+       ../bin/create_matching_plots.sh $run
+    fi
     mv -f events.tree ${run}_events.tree
     gzip -f ${run}_events.tree
     mv -f xsecs.tree ${run}_xsecs.tree
@@ -110,6 +115,7 @@ if [ "$run" != "" ]; then
     rm -f pythia_events.lhe
     mv -f temp.lhe ${run}_pythia_events.lhe
     gzip -f ${run}_pythia_events.lhe
+  ../bin/run_plot_pythia $run
   fi
   rm -f unweighted_events.lhe  
 fi

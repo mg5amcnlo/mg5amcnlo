@@ -18,10 +18,12 @@
 import os
 import re
 import signal
+import subprocess
 import StringIO
 import time
 
 import madgraph
+from madgraph import MadGraph5Error
 import madgraph.iolibs.files as files
 
 #===============================================================================
@@ -101,6 +103,60 @@ def which(program):
 
     return None
 
+#===============================================================================
+# Compiler which returns smart output error in case of trouble
+#===============================================================================
+def compile(arg=[], cwd=None, mode='fortran', **opt):
+    """compile a given directory"""
+
+    try:
+        p = subprocess.Popen(['make'] + arg, stdout=subprocess.PIPE, 
+                             stderr=subprocess.STDOUT, cwd=cwd, **opt)
+        p.wait()
+    except OSError, error:
+        if cwd and not os.path.exists(cwd):
+            raise OSError, 'Directory %s doesn\'t exists. Impossible to run make' % cwd
+        else:
+            error_text = "Impossible to compile %s directory\n" % cwd
+            error_text += "Trying to launch make command returns:\n"
+            error_text += "    " + error + "\n"
+            error_text += "In general this means that your computer is not able to compile."
+            if sys.platform == "darwin":
+                error_text += "Note that MacOSX doesn\'t have gmake/gfortan install by default.\n"
+                error_text += "Xcode3 contains those require program"
+            raise MadGraph5Error, error_text
+
+    if p.returncode:
+        # Check that makefile exists
+        if not cwd:
+            cwd = os.getcwd()
+        all_file = [f.lower() for f in os.listdir(cwd)]
+        if 'makefile' not in all_file:
+            raise OSError, 'no makefile present in %s' % os.path.realpath(cwd)
+
+        if mode == 'fortran' and (not which('g77') or not which('gfortran')):
+            error_msg = 'A fortran compilator (g77 or gfortran) is required to create this output.\n'
+            error_msg += 'Please install g77 or gfortran on your computer and retry.'
+            raise MadGraph5Error, error_msg
+        elif mode == 'cpp' and not which('g++'):            
+            error_msg ='A C++ compilator (g++) is required to create this output.\n'
+            error_msg += 'Please install g++ (which is part of the gcc package)  on your computer and retry.'
+            raise MadGraph5Error, error_msg
+
+        # Other reason
+
+        error_text = 'A compilation Error occurs '
+        if cwd:
+            error_text += 'when trying to compile %s.\n' % cwd
+        error_text += 'The compilation fails with the following output message:\n'
+        error_text += ''.join(['  '+l for l in p.stdout.readlines()])+'\n'
+        error_text += 'Please try to fix this compilations issue and retry.\n'
+        error_text += 'Help might be found at https://answers.launchpad.net/madgraph5.\n'
+        error_text += 'If you think that this is a bug, you can report this at https://bugs.launchpad.net/madgraph5'
+
+        raise MadGraph5Error, error_text
+
+    
 #===============================================================================
 # Ask a question with a maximum amount of time to answer
 #===============================================================================

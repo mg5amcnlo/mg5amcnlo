@@ -240,7 +240,7 @@ c-----
       read(*,*) dconfig
 c     ncode is number of digits needed for the BW code
       ncode=int(dlog10(3d0)*(max_particles-3))+1
-      iconfig = int(dconfig*(1+10**-ncode))
+      iconfig = int(dconfig*(1+10**(-ncode)))
       write(*,12) 'Running Configuration Number: ',iconfig
 c
 c     Here I want to set up with B.W. we map and which we don't

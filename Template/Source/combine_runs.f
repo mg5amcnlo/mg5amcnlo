@@ -119,7 +119,7 @@ c     ncode is number of digits needed for the bw coding
       do while (.true.)
          read(35,*,err=99,end=99) xi,j
          if (j .gt. 0) then
-            k = int(xi*(1+10**-ncode))
+            k = int(xi*(1+10**(-ncode)))
             npos=int(dlog10(dble(k)))+1
             if ( (xi-k) .eq. 0) then
 c              Write with correct number of digits
@@ -240,8 +240,8 @@ c
          endif
       enddo
       write(*,*) "Combined ",tot_nevents," to ",channame(1:jc-2)
-      endif
       close(lunw)
+      endif
       return
  999  close(lunw)
       write(*,*) "Error, unable to open events.lhe file for output"

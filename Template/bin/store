@@ -145,7 +145,7 @@ if [[ -e pythia_events.root ]]; then
     mv -f pythia_events.root $1_pythia_events.root
 fi
 if [ -e delphes_events.lhco ]; then
-    mv -f delphes_events.lhcp.dat $1_delphes_events.lhco
+    mv -f delphes_events.lhco $1_delphes_events.lhco
     gzip -f $1_delphes_events.lhco
     mv -f delphes_run.log $1_delphes.log
 fi

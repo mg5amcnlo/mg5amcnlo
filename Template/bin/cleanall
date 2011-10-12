@@ -23,10 +23,8 @@ if [[ -d SubProcesses ]]; then
     for i in `cat subproc.mg` ; do
 	cd $i
 	echo -n "."
-	rm -f *.o >& /dev/null
-	rm -f madevent >& /dev/null
+	make clean >& /dev/null
 	rm -f *ajob* >& /dev/null
-	rm -f gensym >& /dev/null
         rm -f G*/ftn* >& /dev/null
 	rm -f G*/events.lhe >& /dev/null
 	cd ..
@@ -40,41 +38,20 @@ fi
 if [[ -d Source ]]; then
     cd Source
     echo "Cleaning Source:"
-    rm -f *.o >& /dev/null
-    rm -f DHELAS/*.o >& /dev/null
-    rm -f PDF/*.o >& /dev/null
-    rm -f MODEL/*.o >& /dev/null
-    rm -f DECAY/*.o >& /dev/null
+    make clean >& /dev/null
     cd ../
 else
     echo "Error could not find Source"
     exit
 fi
-if [[ -d lib ]]; then
-    cd lib
-    echo "Cleaning lib:"
-    rm -f libdhelas3.a libdsample.a libgeneric.a libmodel.a libpdf.a libdhelas3.so libdsample.so libgeneric.so libmodel.so libpdf.so >& /dev/null
-    cd ../
-else
-    echo "Error could not find lib"
-    exit
-fi
 if [[ -d bin ]]; then
     cd bin
     echo "Cleaning bin:"
-    for i in gen_ximprove scale_events select_events sum_html ; do
+    for i in gen_ximprove scale_events select_events sum_html combine_runs combine_events; do
 	rm -f $i >& /dev/null
     done
     cd ../
 else
     echo "Error could not find bin"
     exit
-fi
-if [[ -e Source/makefile_default ]];then
-    mv Source/makefile_default Source/makefile
-    mv Source/PDF/makefile_default Source/PDF/makefile
-    mv Source/DHELAS/Makefile_default Source/DHELAS/Makefile
-    mv Source/MODEL/makefile_default Source/MODEL/makefile
-    mv SubProcesses/makefile_default SubProcesses/makefile
-    mv SubProcesses/makefile_mo_default SubProcesses/makefile_mo
 fi
