@@ -1001,6 +1001,10 @@ class ProcessExporterFortranME(ProcessExporterFortran):
             writers.FortranWriter(filename),
             matrix_element)
 
+        filename = 'config_subproc_map.inc'
+        self.write_config_subproc_map_file(writers.FortranWriter(filename),
+                                           s_and_t_channels)
+
         filename = 'coloramps.inc'
         self.write_coloramps_file(writers.FortranWriter(filename),
                              mapconfigs,
@@ -1638,6 +1642,23 @@ class ProcessExporterFortranME(ProcessExporterFortran):
         writer.writelines(lines)
 
         return s_and_t_channels
+
+    #===========================================================================
+    # write_config_subproc_map_file
+    #===========================================================================
+    def write_config_subproc_map_file(self, writer, s_and_t_channels):
+        """Write a dummy config_subproc.inc file for MadEvent"""
+
+        lines = []
+
+        for iconfig in range(len(s_and_t_channels)):
+            lines.append("DATA CONFSUB(1,%d)/1/" % \
+                         (iconfig + 1))
+
+        # Write the file
+        writer.writelines(lines)
+
+        return True
 
     #===========================================================================
     # write_decayBW_file
