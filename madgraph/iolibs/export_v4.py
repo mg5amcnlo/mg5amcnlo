@@ -532,7 +532,57 @@ class ProcessExporterFortran(object):
 
         return ret_lines
 
-    def get_JAMP_lines(self, col_amps, basename="JAMP(", basename2="AMP("):
+    #===========================================================================
+    # Returns the data statements initializing the coeffictients for the JAMP
+    # decomposition. It is used when the JAMP initialization is decided to be 
+    # done through big arrays containing the projection coefficients.
+    #===========================================================================    
+    def get_JAMP_coefs(self, color_amplitudes, color_basis=None, tag_letter="",\
+                       n=50, Nc_value=3):
+        """This functions return the lines defining the DATA statement setting
+        the coefficients building the JAMPS out of the AMPS. Split rows in
+        bunches of size n.
+        One can specify the color_basis from which the color amplitudes originates
+        so that there are commentaries telling what color structure each JAMP
+        corresponds to."""
+        
+        if(not isinstance(color_amplitudes,list) or 
+           not (color_amplitudes and isinstance(color_amplitudes[0],list))):
+                raise MadGraph5Error, "Incorrect col_amps argument passed to get_JAMP_coefs"
+
+        res_list = []
+        my_cs = color.ColorString()
+        for index, coeff_list in enumerate(color_amplitudes):
+            # Create the list of the complete numerical coefficient.
+            coefs_list=[coefficient[0][0]*coefficient[0][1]*\
+                        (fractions.Fraction(Nc_value)**coefficient[0][3]) for \
+                        coefficient in coeff_list]
+            # Create the list of the numbers of the contributing amplitudes.
+            # Mutliply by -1 for those which have an imaginary coefficient.
+            ampnumbers_list=[coefficient[1]*(-1 if coefficient[0][2] else 1) \
+                              for coefficient in coeff_list]
+            # Find the common denominator.      
+            commondenom=abs(reduce(fractions.gcd, coefs_list).denominator)
+            num_list=[(coefficient*commondenom).numerator \
+                      for coefficient in coefs_list]
+            res_list.append("DATA NCONTRIBAMPS%s(%i)/%i/"%(tag_letter,\
+                                                         index+1,len(num_list)))
+            res_list.append("DATA DENOMCCOEF%s(%i)/%i/"%(tag_letter,\
+                                                         index+1,commondenom))
+            if color_basis:
+                my_cs.from_immutable(sorted(color_basis.keys())[index])
+                res_list.append("C %s" % repr(my_cs))
+            for k in xrange(0, len(num_list), n):
+                res_list.append("DATA (NUMCCOEF%s(%3r,i),i=%6r,%6r) /%s/" % \
+                    (tag_letter,index + 1, k + 1, min(k + n, len(num_list)),
+                                 ','.join(["%6r" % i for i in num_list[k:k + n]])))
+                res_list.append("DATA (AMPNUMBERS%s(%3r,i),i=%6r,%6r) /%s/" % \
+                    (tag_letter,index + 1, k + 1, min(k + n, len(num_list)),
+                                 ','.join(["%6r" % i for i in ampnumbers_list[k:k + n]])))
+                pass
+        return res_list
+
+    def get_JAMP_lines(self, col_amps, basename="JAMP(", basename2="AMP(", split=-1):
         """Return the JAMP = sum(fermionfactor * AMP(i)) lines from col_amps 
         defined as a matrix element or directly as a color_amplitudes dictionary"""
 
@@ -553,37 +603,45 @@ class ProcessExporterFortran(object):
         res_list = []
         for i, coeff_list in \
                 enumerate(color_amplitudes):
-            res = (basename+"%i)=") % (i + 1)
-
-            # Optimization: if all contributions to that color basis element have
-            # the same coefficient (up to a sign), put it in front
-            list_fracs = [abs(coefficient[0][1]) for coefficient in coeff_list]
-            common_factor = False
-            diff_fracs = list(set(list_fracs))
-            if len(diff_fracs) == 1 and abs(diff_fracs[0]) != 1:
-                common_factor = True
-                global_factor = diff_fracs[0]
-                res = res + '%s(' % self.coeff(1, global_factor, False, 0)
-
-            for (coefficient, amp_number) in coeff_list:
+            # Break the JAMP definition into 'n=split' pieces to avoid having
+            # arbitrarly long lines.
+            first=True
+            n = (len(coeff_list)+1 if split<=0 else split) 
+            while coeff_list!=[]:
+                coefs=coeff_list[:n]
+                coeff_list=coeff_list[n:]
+                res = ((basename+"%i)=") % (i + 1)) + \
+                      (((basename+"%i)") % (i + 1)) if not first and split>0 else '')
+                first=False
+                # Optimization: if all contributions to that color basis element have
+                # the same coefficient (up to a sign), put it in front
+                list_fracs = [abs(coefficient[0][1]) for coefficient in coefs]
+                common_factor = False
+                diff_fracs = list(set(list_fracs))
+                if len(diff_fracs) == 1 and abs(diff_fracs[0]) != 1:
+                    common_factor = True
+                    global_factor = diff_fracs[0]
+                    res = res + '%s(' % self.coeff(1, global_factor, False, 0)
+    
+                for (coefficient, amp_number) in coefs:
+                    if common_factor:
+                        res = (res + "%s" + basename2 + "%d)") % \
+                                                   (self.coeff(coefficient[0],
+                                                   coefficient[1] / abs(coefficient[1]),
+                                                   coefficient[2],
+                                                   coefficient[3]),
+                                                   amp_number)
+                    else:
+                        res = (res + "%s" + basename2 + "%d)") % (self.coeff(coefficient[0],
+                                                   coefficient[1],
+                                                   coefficient[2],
+                                                   coefficient[3]),
+                                                   amp_number)
+    
                 if common_factor:
-                    res = (res + "%s" + basename2 + "%d)") % \
-                                               (self.coeff(coefficient[0],
-                                               coefficient[1] / abs(coefficient[1]),
-                                               coefficient[2],
-                                               coefficient[3]),
-                                               amp_number)
-                else:
-                    res = (res + "%s" + basename2 + "%d)") % (self.coeff(coefficient[0],
-                                               coefficient[1],
-                                               coefficient[2],
-                                               coefficient[3]),
-                                               amp_number)
-
-            if common_factor:
-                res = res + ')'
-
-            res_list.append(res)
+                    res = res + ')'
+    
+                res_list.append(res)
 
         return res_list
 

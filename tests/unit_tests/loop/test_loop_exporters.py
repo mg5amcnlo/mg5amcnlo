@@ -97,9 +97,9 @@ class LoopExporterTest(unittest.TestCase):
                         helas_objects.HelasMatrixElementList([loopME,]),
                         ["Generation from test_loop_exporters.py",],
                         False,False)
-        shutil.rmtree(_proc_file_path)
+#        shutil.rmtree(_proc_file_path)
         
-    def notest_LoopProcessExporterFortranSA_ddx_uux(self):
+    def test_LoopProcessExporterFortranSA_ddx_uux(self):
         """Test the StandAlone output for different processes.
         """
         
@@ -125,7 +125,7 @@ class LoopExporterTest(unittest.TestCase):
         myloopME=loop_helas_objects.LoopHelasMatrixElement(myloopamplitude)
         self.check_output_sanity(myloopME)
 
-    def notest_LoopProcessExporterFortranSA_ddx_ddx(self):
+    def test_LoopProcessExporterFortranSA_ddx_ddx(self):
         """Test the StandAlone output for different processes.
         """
         
@@ -151,7 +151,7 @@ class LoopExporterTest(unittest.TestCase):
         myloopME=loop_helas_objects.LoopHelasMatrixElement(myloopamplitude)
         self.check_output_sanity(myloopME)
 
-    def notest_LoopProcessExporterFortranSA_gg_gddx(self):
+    def test_LoopProcessExporterFortranSA_gg_gddx(self):
         """Test the StandAlone output for different processes.
         """
         
@@ -205,7 +205,7 @@ class LoopExporterTest(unittest.TestCase):
         myloopME=loop_helas_objects.LoopHelasMatrixElement(myloopamplitude)
         self.check_output_sanity(myloopME)
 
-    def notest_LoopProcessExporterFortranSA_ddx_uuxddx(self):
+    def test_LoopProcessExporterFortranSA_ddx_uuxddx(self):
         """Test the StandAlone output for different processes.
         """
         
@@ -235,7 +235,7 @@ class LoopExporterTest(unittest.TestCase):
         myloopME=loop_helas_objects.LoopHelasMatrixElement(myloopamplitude)
         self.check_output_sanity(myloopME)
 
-    def notest_LoopProcessExporterFortranSA_ddx_ddxddx(self):
+    def test_LoopProcessExporterFortranSA_ddx_ddxddx(self):
         """Test the StandAlone output for different processes.
         """
         
@@ -279,6 +279,33 @@ class LoopExporterTest(unittest.TestCase):
         myleglist.append(base_objects.Leg({'id':21,
                                          'state':True}))
                 
+        myloopproc = base_objects.Process({'legs':myleglist,
+                                        'model':self.myloopmodel,
+                                        'orders':{},
+                                        'perturbation_couplings':['QCD',],
+                                        'squared_orders':{}})
+    
+        myloopamplitude = loop_diagram_generation.LoopAmplitude()
+        myloopamplitude.set('process', myloopproc)
+        myloopamplitude.generate_diagrams()
+        myloopME=loop_helas_objects.LoopHelasMatrixElement(myloopamplitude)
+        self.check_output_sanity(myloopME)
+
+    def test_LoopProcessExporterFortranSA_gg_ggg(self):
+        """Test the StandAlone output for different processes.
+        """
+        
+        myleglist = base_objects.LegList()
+        myleglist.append(base_objects.Leg({'id':21,
+                                         'state':False}))
+        myleglist.append(base_objects.Leg({'id':21,
+                                         'state':False}))
+        myleglist.append(base_objects.Leg({'id':21,
+                                         'state':True}))
+        myleglist.append(base_objects.Leg({'id':21,
+                                         'state':True}))
+        myleglist.append(base_objects.Leg({'id':21,
+                                         'state':True}))                       
         myloopproc = base_objects.Process({'legs':myleglist,
                                         'model':self.myloopmodel,
                                         'orders':{},

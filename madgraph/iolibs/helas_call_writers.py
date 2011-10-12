@@ -1019,7 +1019,7 @@ class FortranUFOHelasCallWriter(UFOHelasCallWriter):
         call = call + "%s,"*(len(loopamp.get('wavefunctions'))-1)
         call = call + "%s,"*(len(loopamp.get('coupling')))
         call = call + "%d,%d,"
-        call = call + "AMPL(1,%d))" 
+        call = call + "AMPL(1,%d),GOODAMP(%d,H))" 
         
         if (len(loopamp.get('pairing')) != len(loopamp.get('mothers'))):        
             call_function = lambda amp: call % (\
@@ -1031,6 +1031,7 @@ class FortranUFOHelasCallWriter(UFOHelasCallWriter):
                               tuple(amp.get('coupling'))+\
                               (amp.get_rank(),)+\
                               (amp.get('loopsymmetryfactor'),)+\
+                              (amp.get('amplitudes')[0].get('number'),)+\
                               (amp.get('amplitudes')[0].get('number'),))
         else:
             call_function = lambda amp: call % (\
@@ -1041,6 +1042,7 @@ class FortranUFOHelasCallWriter(UFOHelasCallWriter):
                               tuple(amp.get('coupling'))+\
                               (amp.get_rank(),)+\
                               (amp.get('loopsymmetryfactor'),)+\
+                              (amp.get('amplitudes')[0].get('number'),)+\
                               (amp.get('amplitudes')[0].get('number'),))
         
         self.add_amplitude(loopamp.get_call_key(), call_function)

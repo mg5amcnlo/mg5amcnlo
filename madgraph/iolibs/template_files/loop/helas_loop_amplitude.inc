@@ -1,4 +1,4 @@
-      SUBROUTINE LOOP_%(nloopline)d_%(ncplsargs)d( LID, %(wfsargs)s%(margs)s%(cplsargs)s RANK, LSYMFACT, RES)
+      SUBROUTINE LOOP_%(nloopline)d_%(ncplsargs)d( LID, %(wfsargs)s%(margs)s%(cplsargs)s RANK, LSYMFACT, RES,CONTRIBUTE)
 C  
 C CONSTANTS 
 C  
@@ -17,6 +17,7 @@ C
       COMPLEX*16 %(cplsdecl)s	  
       COMPLEX*16 RES(3)
 	  INTEGER LID, RANK, LSYMFACT
+	  LOGICAL CONTRIBUTE
 C  
 C LOCAL VARIABLES 
 C
@@ -35,6 +36,11 @@ C
 C ----------
 C BEGIN CODE
 C ----------
+      IF (.not.CONTRIBUTE) THEN
+	    RES(1)=(0.D0,0.D0)
+	    RES(2)=(0.D0,0.D0)
+	    RES(3)=(0.D0,0.D0)
+	  ELSE
 	  DO I=1,20
         %(weset)s
 	  ENDDO
@@ -50,5 +56,6 @@ C ----------
 		ENDDO
 	  ENDDO
       CALL CTLOOP(NLOOPLINE,PL,M2L,RANK,RES)
+	  ENDIF
 
 	  END
