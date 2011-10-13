@@ -367,7 +367,7 @@ class OneRunResults(dict):
         """return the events information"""
         
         # Events
-        out = '<table border=0>'
+        out = '<table border=1>'
         if self.parton:
             out += '<tr><td> Parton Events : </td><td>'
             if 'gridpack' in self.parton:
@@ -378,7 +378,7 @@ class OneRunResults(dict):
                 out += ' <a href="../Events/%(run_name)s_unweighted_events.root">rootfile</a>'
             if 'plot' in self.parton:
                 out += ' <a href="../Events/%(run_name)s_plots.html">plots</a>'
-            out += '<td></tr>'
+            out += '</td></tr>'
         if self.pythia:
             out += '<tr><td> Pythia Events : </td><td>'
 

@@ -800,6 +800,8 @@ This will take effect only in a NEW terminal
     def check_output(self, args):
         """ check the validity of the line"""
         
+        print 'check_output', self._export_dir
+        
         if args and args[0] in self._export_formats:
             self._export_format = args.pop(0)
         else:
@@ -832,6 +834,7 @@ This will take effect only in a NEW terminal
             else:
                 self._export_dir = path
         else:
+            print 'search for a new one'
             # No valid path
             self.get_default_path()
 
@@ -840,6 +843,7 @@ This will take effect only in a NEW terminal
     def get_default_path(self):
         """Set self._export_dir to the default (\'auto\') path"""
 
+        print 'cwd is',os.getcwd()
         if self._export_format in ['madevent', 'standalone']:
             # Detect if this script is launched from a valid copy of the Template,
             # if so store this position as standard output directory
@@ -2683,6 +2687,7 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
         """Ask for editing the parameter and then 
         Execute the code (madevent/standalone/...)
         """
+        start_cwd = os.getcwd()
         
         args = self.split_arg(line)
         # check argument validity and normalise argument
@@ -2717,10 +2722,12 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
             ext_program = launch_ext.Pythia8Launcher(args[1], self.timeout,
                                                 **options)
         else:
+            os.chdir(start_cwd) #ensure to go to the initial path
             raise self.InvalidCmd , '%s cannot be run from MG5 interface' % args[0]
         
         
         ext_program.run()
+        os.chdir(start_cwd) #ensure to go to the initial path
         
         
         

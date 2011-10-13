@@ -12,6 +12,7 @@
 # For more information, please visit: http://madgraph.phys.ucl.ac.be
 #
 ################################################################################
+from cmd import Cmd
 """ Basic test of the command interface """
 
 import unittest
@@ -76,3 +77,15 @@ class TestValidCmd(unittest.TestCase):
         self.wrong(cmd.check_process_format, ' e+ > e+, (e+ > e- / z, e- > top')   
         self.wrong(cmd.check_process_format, 'e+ > ')
         self.wrong(cmd.check_process_format, 'e+ >')
+        
+    def test_output_default(self):
+        """check that if a export_dir is define before an output
+           a new one is propose"""
+           
+        cmd = self.cmd
+        cmd._export_dir = 'tmp'
+        cmd._curr_amps = 'dummy'
+        cmd._curr_model = {'name':'WHY'}
+        cmd.check_output([])
+        
+        self.assertNotEqual('tmp', cmd._export_dir)
