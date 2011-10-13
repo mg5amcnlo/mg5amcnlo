@@ -477,7 +477,7 @@ class LoopProcessExporterFortranSA(export_v4.ProcessExporterFortranSA,
                                                   "JAMPL(K,","AMPL(K,",15)
             replace_dict['loop_jamp_lines'] = '\n'.join(loop_jamp_lines) 
             
-        def split_HELASJAMP():
+        def split_HELASJAMP(masterfile):
             """ Finish the loop_matrix.f generation with splitting """         
             # Split the helas calls into bunches of size n_helas calls.
             n_helas=2000
@@ -501,7 +501,7 @@ class LoopProcessExporterFortranSA(export_v4.ProcessExporterFortranSA,
                     filename = 'helas_calls_%d.f'%(i+1)
                     writers.FortranWriter(filename).writelines(helascalls_file)
             else:
-                    file='\n'.join([file,]+helascalls_files)                
+                    masterfile='\n'.join([masterfile,]+helascalls_files)                
             
             if splitColor:
                 # Split the jamp definition into bunches of size n_jamp calls.
@@ -553,8 +553,8 @@ class LoopProcessExporterFortranSA(export_v4.ProcessExporterFortranSA,
                         filename = 'jampL_calls_%d.f'%(i+1)
                         writers.FortranWriter(filename).writelines(jampLcalls_file)
                 else:
-                    file='\n'.join([file,]+jampBcalls_file)
-                    file='\n'.join([file,]+jampLcalls_file)                    
+                    masterfile='\n'.join([masterfile,]+jampBcalls_files)
+                    masterfile='\n'.join([masterfile,]+jampLcalls_files)                    
             else:
                 # Create the born_color.inc include
                 replace_dict2 = {}
@@ -593,8 +593,10 @@ class LoopProcessExporterFortranSA(export_v4.ProcessExporterFortranSA,
                     # The user wants a unique self-contained loop_matrix.f
                     replace_dict['born_jamps_coefs'] = file2
                     replace_dict['loop_jamps_coefs'] = file3
-                    
+            return masterfile
+        
         # Set lowercase/uppercase Fortran code
+        
         writers.FortranWriter.downcase = False
 
         replace_dict = {}
@@ -661,7 +663,7 @@ class LoopProcessExporterFortranSA(export_v4.ProcessExporterFortranSA,
               'iolibs/template_files/loop/loop_matrix_standalone_split.inc'\
               if splitColor else \
               'iolibs/template_files/loop/loop_matrix_standalone_split_helasCallsOnly.inc')).read()
-            split_HELASJAMP()
+            file=split_HELASJAMP(file)
                                                     
         file = file % replace_dict
         if writer:
