@@ -1933,8 +1933,8 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
     def update_random(self):
         """ change random number"""
         
-        self.random += 5 
-        self.random = self.random % 31328*30081 # cann't use too big random number
+        self.random += 5
+        assert self.random < 31328*30081 # cann't use too big random number
 
     ############################################################################
     def save_random(self):
