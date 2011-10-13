@@ -205,7 +205,7 @@ class LoopExporterTest(unittest.TestCase):
         myloopME=loop_helas_objects.LoopHelasMatrixElement(myloopamplitude)
         self.check_output_sanity(myloopME)
 
-    def test_LoopProcessExporterFortranSA_ddx_uuxddx(self):
+    def notest_LoopProcessExporterFortranSA_ddx_uuxddx(self):
         """Test the StandAlone output for different processes.
         """
         
@@ -235,7 +235,7 @@ class LoopExporterTest(unittest.TestCase):
         myloopME=loop_helas_objects.LoopHelasMatrixElement(myloopamplitude)
         self.check_output_sanity(myloopME)
 
-    def test_LoopProcessExporterFortranSA_ddx_ddxddx(self):
+    def notest_LoopProcessExporterFortranSA_ddx_ddxddx(self):
         """Test the StandAlone output for different processes.
         """
         
@@ -265,7 +265,7 @@ class LoopExporterTest(unittest.TestCase):
         myloopME=loop_helas_objects.LoopHelasMatrixElement(myloopamplitude)
         self.check_output_sanity(myloopME)
         
-    def test_LoopProcessExporterFortranSA_gg_gg(self):
+    def notest_LoopProcessExporterFortranSA_gg_gg(self):
         """Test the StandAlone output for different processes.
         """
         

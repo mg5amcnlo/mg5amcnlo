@@ -1,5 +1,80 @@
 Update notes for MadGraph 5 (in reverse time order)
 
+1.3.22 (12/10/11) JA: Fixed another bug (also introduced in 1.3.18), which 
+                      could give the wrong ordering between the s-channel 
+                      propagators for certain multiprocess cases (this
+                      also lead to a hard stop, so don't worry, if you get 
+                      your events, the bug doesn't affect you). Sorry about
+                      that, this is what happens when you add a lot of
+                      new functionality...
+
+1.3.21 (12/10/11) OM: Add a new command: install.
+                      This allow to install quite easily different package
+                      devellop for Madgraph/MadEvent. The list of available
+                      package are pythia-pgs/MadAnalysis/ExRootAnalysis/Delphes
+                  OM: Adding TopEffth Model
+                  OM: Improve display particles and autocompletion in
+                      presence of nonpropagating particles
+                  OM: Fix Aloha bug linked to four fermion operator
+                  PA: fix the problem of degenerate color basis in the
+                      diquark sextet model
+                  JA: Fixed bug in cluster.f that created a hard stop,
+                      introduced in 1.3.18.
+
+1.3.20 (09/10/11) JA: Fixed bug in myamp.f that created a hard stop
+                      error for certain cases with many processes with
+                      different propagators in the same subprocess dir.
+
+1.3.19 (06/10/11) JA: Fixed problem with SubProcesses makefile on Linux,
+                      introduced in 1.3.18.
+
+1.3.18 (04/10/11) JA: Use model information to determine color of particles
+                      for reweighting and propagator color info.
+                  JA: Changed the definition of "forbidden s-channels"
+                      denoted by "$" to exclude on-shell s-channels while
+                      keeping all diagrams (i.e., complemetary to the decay
+                      chain formalism). This reduces the problems with 
+                      gauge invariance compared to previously.
+                      "Onshell" is as usual defined by the "bwcutoff" flag 
+                      in the run_card.dat.
+                  JA: Enable proper 4-flavor matching (such as gg>hbb~+jets)
+                      Note that you need the Pythia/PGS package v. 2.1.9 or 
+                      later to use with 4F matching.
+                      Changes include: alpha_s reweighting also for b vertices,
+                      new scale treatment (mu_F for pp>hbb~ is (pT_b^max*m_Th)),
+                      no clustering of gluons to final-state massive particles
+                      in MadEvent.
+		  JA: Ensure that factorization scale settings and matching works
+                      also in singlet t-channel exchange processes like
+                      single top and VBF. The dynamic factorization
+                      scale is given by the pT of the scattered quark
+                      (on each side of the event).
+                Note: You need the Pythia/PGS package v. 2.1.10 or later
+                      to use with VBF matching, to ensure that both radiated
+                      and scattered partons are treated correctly
+                      - scattered partons need to be excluded from the matching,
+                      since their pT can be below QCUT. An even better
+                      treatment would require to individually shower and match
+                      the two sides in Pythia, which is not presently possible.
+                Note: In the matched 4-flavor process p p > t b~ j $ w+ w- t~ +
+                      p p > t b~ j j $ w+ w- t~, there is an admixture
+                      of t-channel single top (with up to 1 radiated jet) 
+                      and s-channel single top (with up to 2 radiated jets). 
+                      In this case, the automatic determination of maximum 
+                      multiplicity sample doesn't work (since max in the file 
+                      will be 2 jets, but for t-channel max is 1 jet).
+                      So MAXJETS=1 must be specified in the pythia_card.dat.
+                  JA: Fixed pdf reweighting for matching, which due to a mistake
+                      had never been activated.
+                  JA: Improved phase space integration presetting further by 
+                      taking into account special cuts like xpt, ht etc.
+                  JA: Introduce new convention for invariant mass cuts
+                      - if max < min, exclude intermediate range
+                      (allows to exclude W/Z dijet resonances in VBF processes)
+
+1.3.17 (30/09/11) OM: Fix a crash created by ALOHA when it tries to create the full
+                      set of ALOHA routines (pythia8 output only).
+
 1.3.16 (11/09/11) JA: Fixed the problem from 1.3.12.
 
 1.3.15 (09/09/11) OM: remove the fix of 1.3.12

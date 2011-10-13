@@ -13,11 +13,12 @@ LIBS = $(LIBDIR)libdhelas.$(libext) $(LIBDIR)libdsample.$(libext) $(LIBDIR)libge
 
 # Source files
 
-PROCESS= driver.o myamp.o genps.o unwgt.o setcuts.o \
+PROCESS= driver.o myamp.o genps.o unwgt.o setcuts.o get_color.o \
          cuts.o cluster.o reweight.o initcluster.o addmothers.o setscales.o \
          $(patsubst %.f,%.o,$(wildcard auto_dsig*.f)) \
          $(patsubst %.f,%.o,$(wildcard matrix*.f))
-SYMMETRY = myamp.o genps.o initcluster.o setscales.o reweight.o\
+SYMMETRY = symmetry.o setcuts.o cuts.o cluster.o myamp.o genps.o \
+	   initcluster.o setscales.o reweight.o get_color.o \
            $(patsubst %.f,%.o,$(wildcard matrix*.f))
 
 # Binaries
@@ -25,8 +26,8 @@ SYMMETRY = myamp.o genps.o initcluster.o setscales.o reweight.o\
 $(PROG): $(PROCESS) auto_dsig.o $(LIBS)
 	$(FC) $(FFLAGS) -o $(PROG) $(PROCESS) $(LINKLIBS)
 
-gensym: symmetry.o genps.inc setcuts.o cuts.o cluster.o $(SYMMETRY) configs.inc $(LIBS)
-	$(FC) $(FFLAGS) -o gensym symmetry.o setcuts.o cuts.o cluster.o $(SYMMETRY) $(LINKLIBS)
+gensym: $(SYMMETRY) configs.inc $(LIBS)
+	$(FC) $(FFLAGS) -o gensym $(SYMMETRY) $(LINKLIBS)
 
 # Dependencies
 

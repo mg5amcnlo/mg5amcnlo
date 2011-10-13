@@ -87,12 +87,13 @@ class IdentifyMETag(diagram_generation.DiagramTag):
         part = model.get_particle(leg.get('id'))
 
         # For legs with decay chains defined, include leg id (don't combine)
-        if leg.get('from_group'): id = leg.get('id')
+        if leg.get('onshell'): id = leg.get('id')
         else: id = 0
         # For FS legs, don't care about number (but do for IS legs)
         if leg.get('state'): number = 0
         else: number = leg.get('number')
-        return [((number, id, part.get('spin'),
+        # Include also onshell, since this specifies forbidden s-channel
+        return [((number, id, part.get('spin'), leg.get('onshell'),
                   part.get('is_part'), part.get('self_antipart'),
                   part.get('mass'), part.get('width'), part.get('color')),
                  leg.get('number'))]
@@ -195,7 +196,7 @@ class HelasWavefunction(base_objects.PhysicsObject):
         #                    due to a Majorana particle 
         # is_loop = logical true if this function builds a loop or belong
         #           to an external structure.
-        self['state'] = 'incoming'
+        self['state'] = 'initial'
         self['leg_state'] = True
         self['mothers'] = HelasWavefunctionList()
         self['number_external'] = 0
@@ -207,8 +208,9 @@ class HelasWavefunction(base_objects.PhysicsObject):
         self['decay'] = False
         # The onshell flag is used in processes with defined decay
         # chains, to indicate that this wavefunction is decayed and
-        # should be onshell
-        self['onshell'] = False
+        # should be onshell (True), as well as for forbidden s-channels (False).
+        # Default is None
+        self['onshell'] = None
 
     # Customized constructor
     def __init__(self, *arguments):
@@ -233,6 +235,9 @@ class HelasWavefunction(base_objects.PhysicsObject):
                 self.set('number', leg.get('number'))
                 self.set('is_loop', leg.get('loop_line'))
                 self.set('state', {False: 'initial', True: 'final'}[leg.get('state')])
+                if leg.get('onshell') == False:
+                    # Denotes forbidden s-channel
+                    self.set('onshell', leg.get('onshell'))
                 self.set('leg_state', leg.get('state'))
                 # Need to set 'decay' to True for particles which will be
                 # decayed later, in order to not combine such processes
@@ -371,18 +376,17 @@ class HelasWavefunction(base_objects.PhysicsObject):
                       "%s is not a valid list of mothers for wavefunction" % \
                       str(value)
 
-        if name in ['decay', 'onshell']:
+        if name in ['decay']:
             if not isinstance(value, bool):
                 raise self.PhysicsObjectError, \
                         "%s is not a valid bool" % str(value) + \
-                        " for decay or onshell"
+                        " for decay"
         
         if name in ['is_loop']:
             if not isinstance(value, bool):
                 raise self.PhysicsObjectError, \
                         "%s is not a valid bool" % str(value) + \
                         " for is_loop"
-
         return True
 
     # Enhanced get function, where we can directly call the properties of the particle
@@ -969,40 +973,43 @@ class HelasWavefunction(base_objects.PhysicsObject):
         # Generate last vertex
         legs = base_objects.LegList()
 
-        # We use the from_group flag to indicate whether this outgoing
-        # leg corresponds to a decaying (onshell) particle or not
+        # We use the onshell flag to indicate whether this outgoing
+        # leg corresponds to a decaying (onshell) particle, forbidden
+        # s-channel, or regular
         try:
             if self.get('is_loop'):
                 # Loop wavefunction should always be redefined
                 raise KeyError
-            lastleg = wf_dict[self.get('number')]
+            lastleg = wf_dict[(self.get('number'),self.get('onshell'))]
         except KeyError:            
             lastleg = base_objects.Leg({
                 'id': self.get_pdg_code(),
                 'number': self.get('number_external'),
                 'state': self.get('leg_state'),
-                'from_group': self.get('onshell'),
+                'onshell': self.get('onshell'),
                 'loop_line':self.get('is_loop')
                 })
+
             if optimization != 0 and not self.get('is_loop'):
-                wf_dict[self.get('number')] = lastleg
+                wf_dict[(self.get('number'),self.get('onshell'))] = lastleg
 
         for mother in self.get('mothers'):           
             try:
                 if mother.get('is_loop'):
                 # Loop wavefunction should always be redefined
                     raise KeyError
-                leg = wf_dict[mother.get('number')]
+                leg = wf_dict[(mother.get('number'),False)]
             except KeyError:
                 leg = base_objects.Leg({
                     'id': mother.get_pdg_code(),
                     'number': mother.get('number_external'),
                     'state': mother.get('leg_state'),
-                    'from_group': mother.get('onshell'),
-                    'loop_line':mother.get('is_loop')
+                    'onshell': None,
+                    'loop_line':mother.get('is_loop'),
+                    'onshell': None
                     })
                 if optimization != 0 and not mother.get('is_loop'):
-                    wf_dict[mother.get('number')] = leg
+                    wf_dict[(mother.get('number'),False)] = leg
             legs.append(leg)
 
         legs.append(lastleg)
@@ -1085,7 +1092,7 @@ class HelasWavefunction(base_objects.PhysicsObject):
                     'id': mother.get_pdg_code(),
                     'number': mother.get('number_external'),
                     'state': mother.get('leg_state'),
-                    'from_group': False
+                    'onshell': mother.get('onshell')
                     }))
 
             if init_mothers[0].get('number_external') == 1 and \
@@ -1151,7 +1158,7 @@ class HelasWavefunction(base_objects.PhysicsObject):
                     'id': mother.get_pdg_code(),
                     'number': mother.get('number_external'),
                     'state': mother.get('leg_state'),
-                    'from_group': False
+                    'onshell': mother.get('onshell')
                     }))
             legs.insert(0, mother_leg)
 
@@ -1176,6 +1183,9 @@ class HelasWavefunction(base_objects.PhysicsObject):
             schannels.extend(mother_s)
             tchannels.extend(mother_t)
 
+        # Sort s-channels according to number
+        schannels.sort(lambda x1,x2: x2.get('legs')[-1].get('number') - \
+                       x1.get('legs')[-1].get('number'))
 
         return schannels, tchannels
 
@@ -1812,17 +1822,17 @@ class HelasAmplitude(base_objects.PhysicsObject):
                 if mother.get('is_loop'):
                     # Loop wavefunction should always be redefined
                     raise KeyError
-                leg = wf_dict[mother.get('number')]
+                leg = wf_dict[(mother.get('number'),False)]
             except KeyError:
                 leg = base_objects.Leg({
                     'id': mother.get_pdg_code(),
                     'number': mother.get('number_external'),
                     'state': mother.get('leg_state'),
-                    'from_group': mother.get('onshell'),
+                    'onshell': None,
                     'loop_line':mother.get('is_loop')
                     })
                 if optimization != 0 and not mother.get('is_loop'):
-                    wf_dict[mother.get('number')] = leg
+                    wf_dict[(mother.get('number'),False)] = leg
             legs.append(leg)
 
         return base_objects.Vertex({
@@ -1865,7 +1875,7 @@ class HelasAmplitude(base_objects.PhysicsObject):
                     'id': mother.get_pdg_code(),
                     'number': mother.get('number_external'),
                     'state': mother.get('leg_state'),
-                    'from_group': False
+                    'onshell': mother.get('onshell')
                     }))
 
             # Renumber resulting leg according to minimum leg number
@@ -1899,7 +1909,7 @@ class HelasAmplitude(base_objects.PhysicsObject):
                     'id': mother.get_pdg_code(),
                     'number': mother.get('number_external'),
                     'state': mother.get('leg_state'),
-                    'from_group': False
+                    'onshell': mother.get('onshell')
                     }))
             # Renumber resulting leg according to minimum leg number
             legs[-1].set('number', min([l.get('number') for l in legs[:-1]]))
@@ -1941,7 +1951,7 @@ class HelasAmplitude(base_objects.PhysicsObject):
                 popped_legs.append(base_objects.Leg({'id': 21,
                     'number': min([l.get('number') for l in popped_legs]),
                     'state': True,
-                    'from_group': False}))
+                    'onshell': None}))
 
                 new_vertex = base_objects.Vertex({
                     'id': vertex.get('id'),
@@ -1957,6 +1967,10 @@ class HelasAmplitude(base_objects.PhysicsObject):
                 legs.insert(0, copy.copy(popped_legs[-1]))
                 # Renumber resulting leg according to minimum leg number
                 legs[-1].set('number', min([l.get('number') for l in legs[:-1]]))
+
+        # Sort s-channels according to number
+        schannels.sort(lambda x1,x2: x2.get('legs')[-1].get('number') - \
+                       x1.get('legs')[-1].get('number'))
 
         # Finally go through all vertices, sort the legs and replace
         # leg number with propagator number -1, -2, ...

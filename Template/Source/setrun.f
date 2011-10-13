@@ -58,6 +58,7 @@ c
       integer mothup(2,nexternal)
       integer icolup(2,nexternal,maxflow,maxsproc)
       include 'leshouche.inc'
+      data pdfwgt/.false./
 c
 c
 c
@@ -312,6 +313,7 @@ c     ktscheme for xqcut: 1: pT/Durham kT; 2: pythia pTE/Durham kT
 
       if(ickkw.gt.0)then
          call get_real   (npara,param,value," alpsfact "       ,alpsfact , 1d0)
+         call get_logical   (npara,param,value," pdfwgt "       ,pdfwgt , .true.)
       endif
       if(ickkw.eq.2)then
         call get_integer(npara,param,value," highestmult "    ,nhmult, 0)

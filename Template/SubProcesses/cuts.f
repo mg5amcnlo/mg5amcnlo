@@ -388,11 +388,20 @@ c
             if(debug) write (*,*) dsqrt(s_min(j,i)),dsqrt(s_max(j,i))
             if(s_min(j,i).gt.0.or.s_max(j,i).lt.1d5) then
                tmp=SumDot(p(0,i),p(0,j),+1d0)
-               notgood=(tmp .lt. s_min(j,i).or.tmp .gt. s_max(j,i)) 
-               if (notgood) then
-                  if(debug) write (*,*) i,j,' -> fails'
-                  passcuts=.false.
-                  return
+               if(s_min(j,i).le.s_max(j,i))then
+                  notgood=(tmp .lt. s_min(j,i).or.tmp .gt. s_max(j,i)) 
+                  if (notgood) then
+                     if(debug) write (*,*) i,j,' -> fails'
+                     passcuts=.false.
+                     return
+                  endif
+               else
+                  notgood=(tmp .lt. s_min(j,i).and.tmp .gt. s_max(j,i)) 
+                  if (notgood) then
+                     if(debug) write (*,*) i,j,' -> fails'
+                     passcuts=.false.
+                     return
+                  endif
                endif
             endif
          enddo

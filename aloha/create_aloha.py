@@ -445,17 +445,20 @@ class AbstractALOHAModel(dict):
     def compute_all(self, save=True, wanted_lorentz = []):
         """ define all the AbstractRoutine linked to a model """
 
+
         # Search identical particles in the vertices in order to avoid
         #to compute identical contribution
         self.look_for_symmetries()
         conjugate_list = self.look_for_conjugate()
         self.look_for_multiple_lorentz_interactions()
+        
         if not wanted_lorentz:
             wanted_lorentz = [l.name for l in self.model.all_lorentz]
         for lorentz in self.model.all_lorentz:
             if not lorentz.name in wanted_lorentz:
                 # Only include the routines we ask for
                 continue
+            
             if -1 in lorentz.spins:
                 # No Ghost in ALOHA
                 continue 
@@ -467,14 +470,17 @@ class AbstractALOHAModel(dict):
             builder = AbstractRoutineBuilder(lorentz)
             # add information for spin2mass
             if 5 in lorentz.spins and self.massless_spin2 is not None:
-                builder.spin2_massless = self.massless_spin2 
+                builder.spin2_massless = self.massless_spin2
             self.compute_aloha(builder)
-            
+
             if lorentz.name in self.multiple_lor:
                 for m in self.multiple_lor[lorentz.name]:
                     for outgoing in range(len(lorentz.spins)+1):
-                        self[(lorentz.name, outgoing)].add_combine(m)
-                        
+                        try:
+                            self[(lorentz.name, outgoing)].add_combine(m)
+                        except:
+                            pass # this routine is a symmetric one, so it 
+                                 # already has the combination.
                     
             if lorentz.name in conjugate_list:
                 conjg_builder_list= builder.define_all_conjugate_builder(\

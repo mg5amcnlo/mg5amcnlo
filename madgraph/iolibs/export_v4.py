@@ -693,7 +693,7 @@ class ProcessExporterFortran(object):
                         if subproc_group:
                             pdf_lines = pdf_lines + \
                                         ("%s%d=PDG2PDF(ABS(LPP(IB(%d))),%d*LP," + \
-                                         "XBK(IB(%d)),DSQRT(Q2FACT(IB(%d))))\n") % \
+                                         "XBK(IB(%d)),DSQRT(Q2FACT(%d)))\n") % \
                                          (pdf_codes[initial_state],
                                           i + 1, i + 1, pdgtopdf[initial_state],
                                           i + 1, i + 1)
@@ -1080,10 +1080,18 @@ class ProcessExporterFortranME(ProcessExporterFortran):
             writers.FortranWriter(filename),
             matrix_element)
 
+        filename = 'config_subproc_map.inc'
+        self.write_config_subproc_map_file(writers.FortranWriter(filename),
+                                           s_and_t_channels)
+
         filename = 'coloramps.inc'
         self.write_coloramps_file(writers.FortranWriter(filename),
                              mapconfigs,
                              matrix_element)
+
+        filename = 'get_color.f'
+        self.write_colors_file(writers.FortranWriter(filename),
+                               matrix_element)
 
         filename = 'decayBW.inc'
         self.write_decayBW_file(writers.FortranWriter(filename),
@@ -1489,6 +1497,58 @@ class ProcessExporterFortranME(ProcessExporterFortran):
         return True
 
     #===========================================================================
+    # write_coloramps_file
+    #===========================================================================
+    def write_colors_file(self, writer, matrix_elements):
+        """Write the get_color.f file for MadEvent, which returns color
+        for all particles used in the matrix element."""
+
+        if isinstance(matrix_elements, helas_objects.HelasMatrixElement):
+            matrix_elements = [matrix_elements]
+
+        model = matrix_elements[0].get('processes')[0].get('model')
+
+        # We need the both particle and antiparticle wf_ids, since the identity
+        # depends on the direction of the wf.
+        wf_ids = set(sum([sum([sum([[wf.get_pdg_code(),wf.get_anti_pdg_code()] \
+                                    for wf in d.get('wavefunctions')],[]) \
+                               for d in me.get('diagrams')], []) \
+                          for me in matrix_elements], []))
+
+        leg_ids = set(sum([sum([[l.get('id') for l in \
+                                 p.get_legs_with_decays()] for p in \
+                                me.get('processes')], []) for me in
+                           matrix_elements], []))
+        particle_ids = sorted(list(wf_ids.union(leg_ids)))
+
+        lines = """function get_color(ipdg)
+        implicit none
+        integer get_color, ipdg
+
+        if(ipdg.eq.%d)then
+        get_color=%d
+        return
+        """ % (particle_ids[0], model.get_particle(particle_ids[0]).get_color())
+
+        for part_id in particle_ids[1:]:
+            lines += """else if(ipdg.eq.%d)then
+            get_color=%d
+            return
+            """ % (part_id, model.get_particle(part_id).get_color())
+        lines += """else
+        write(*,*)'Error: No color given for pdg ',ipdg
+        get_color=0        
+        return
+        endif
+        end
+        """
+        
+        # Write the file
+        writer.writelines(lines)
+
+        return True
+
+    #===========================================================================
     # write_maxconfigs_file
     #===========================================================================
     def write_maxconfigs_file(self, writer, matrix_elements):
@@ -1663,6 +1723,23 @@ class ProcessExporterFortranME(ProcessExporterFortran):
         return s_and_t_channels
 
     #===========================================================================
+    # write_config_subproc_map_file
+    #===========================================================================
+    def write_config_subproc_map_file(self, writer, s_and_t_channels):
+        """Write a dummy config_subproc.inc file for MadEvent"""
+
+        lines = []
+
+        for iconfig in range(len(s_and_t_channels)):
+            lines.append("DATA CONFSUB(1,%d)/1/" % \
+                         (iconfig + 1))
+
+        # Write the file
+        writer.writelines(lines)
+
+        return True
+
+    #===========================================================================
     # write_decayBW_file
     #===========================================================================
     def write_decayBW_file(self, writer, s_and_t_channels):
@@ -1670,17 +1747,17 @@ class ProcessExporterFortranME(ProcessExporterFortran):
 
         lines = []
 
-        booldict = {False: ".false.", True: ".true."}
+        booldict = {None: "0", True: "1", False: "2"}
 
         for iconf, config in enumerate(s_and_t_channels):
             schannels = config[0]
             for vertex in schannels:
                 # For the resulting leg, pick out whether it comes from
-                # decay or not, as given by the from_group flag
+                # decay or not, as given by the onshell flag
                 leg = vertex.get('legs')[-1]
                 lines.append("data gForceBW(%d,%d)/%s/" % \
                              (leg.get('number'), iconf + 1,
-                              booldict[leg.get('from_group')]))
+                              booldict[leg.get('onshell')]))
 
         # Write the file
         writer.writelines(lines)
@@ -2145,6 +2222,10 @@ class ProcessExporterFortranMEGroup(ProcessExporterFortranME):
                                    subproc_diagrams_for_config,
                                    maxflows,
                                    matrix_elements)
+
+        filename = 'get_color.f'
+        self.write_colors_file(writers.FortranWriter(filename),
+                               matrix_elements)
 
         filename = 'config_subproc_map.inc'
         self.write_config_subproc_map_file(writers.FortranWriter(filename),

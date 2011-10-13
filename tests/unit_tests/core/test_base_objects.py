@@ -906,6 +906,7 @@ class LegTest(unittest.TestCase):
                       'number':5,
                       'state':True,
                       'from_group':False,
+                      'onshell':None,                       
                       'loop_line':False}
 
         self.myleg = base_objects.Leg(self.mydict)
@@ -985,8 +986,9 @@ class LegTest(unittest.TestCase):
         goal = goal + "    \'id\': 3,\n"
         goal = goal + "    \'number\': 5,\n"
         goal = goal + "    \'state\': True,\n"
-        goal = goal + "    \'from_group\': False,\n"
-        goal = goal + "    \'loop_line\': False\n}"
+        goal = goal + "    \'from_group\': False,\n" 
+        goal = goal + "    \'loop_line\': False,\n"
+        goal = goal + "    \'onshell\': None\n}"
 
         self.assertEqual(goal, str(self.myleg))
 
