@@ -462,66 +462,11 @@ class LoopProcessExporterFortranSA(export_v4.ProcessExporterFortranSA,
         #       split in different jamp_calls_#.f subroutines. 
         splitColor=True
 
-        # Set lowercase/uppercase Fortran code
-        writers.FortranWriter.downcase = False
-
-        replace_dict = {}
-
-        # Extract version number and date from VERSION file
-        info_lines = self.get_mg5_info_lines()
-        replace_dict['info_lines'] = info_lines
-
-        # Extract process info lines
-        process_lines = self.get_process_info_lines(matrix_element)
-        replace_dict['process_lines'] = process_lines
-
-        # Extract number of external particles
-        (nexternal, ninitial) = matrix_element.get_nexternal_ninitial()
-        replace_dict['nexternal'] = nexternal-2
-
-        # Extract ncomb
-        ncomb = matrix_element.get_helicity_combinations()
-        replace_dict['ncomb'] = ncomb
-
-        # Extract helicity lines
-        helicity_lines = self.get_helicity_lines(matrix_element)
-        replace_dict['helicity_lines'] = helicity_lines
-
-        # Extract overall denominator
-        # Averaging initial state color, spin, and identical FS particles
-        den_factor_line = self.get_den_factor_line(matrix_element)
-        replace_dict['den_factor_line'] = den_factor_line
-
-        # Extract nloopamps
-        nloopamps = matrix_element.get_number_of_loop_amplitudes()
-        replace_dict['nloopamps'] = nloopamps
-
-        # Extract nbronamps
-        nbornamps = matrix_element.get_number_of_born_amplitudes()
-        replace_dict['nbornamps'] = nbornamps
-
-        # Extract nwavefuncs
-        nwavefuncs = matrix_element.get_number_of_external_wavefunctions()
-        replace_dict['nwavefuncs'] = nwavefuncs
-
-        # Extract ncolorloop
-        ncolorloop = max(1, len(matrix_element.get('loop_color_basis')))
-        replace_dict['ncolorloop'] = ncolorloop
-
-        # Extract ncolorborn
-        ncolorborn = max(1, len(matrix_element.get('born_color_basis')))
-        replace_dict['ncolorborn'] = ncolorborn
-
-        # Extract color data lines
-        color_data_lines = self.get_color_data_lines(matrix_element)
-        replace_dict['color_data_lines'] = "\n".join(color_data_lines)
-
-        # Extract helas calls
-        helas_calls = fortran_model.get_matrix_element_calls(\
-                                                            matrix_element)        
-        if not needSplitting:
-            file = open(os.path.join(_file_path, \
-                'iolibs/template_files/loop/loop_matrix_standalone.inc')).read()
+        # Helper function to define the JAMP and HELAS calls directly in the
+        # loop_matrix.f file or split in dedicated subroutines split in
+        # different files if the output is too large.
+        def normal_HELASJAMP():
+            """ Finish the loop_matrix.f generation without splitting """
             replace_dict['helas_calls'] = "\n".join(helas_calls)
             # Extract BORNJAMP lines
             born_jamp_lines = self.get_JAMP_lines(matrix_element.get_born_color_amplitudes(),
@@ -530,12 +475,10 @@ class LoopProcessExporterFortranSA(export_v4.ProcessExporterFortranSA,
             # Extract LOOPJAMP lines
             loop_jamp_lines = self.get_JAMP_lines(matrix_element.get_loop_color_amplitudes(),
                                                   "JAMPL(K,","AMPL(K,",15)
-            replace_dict['loop_jamp_lines'] = '\n'.join(loop_jamp_lines)            
-        else:     
-            file = open(os.path.join(_file_path, \
-              'iolibs/template_files/loop/loop_matrix_standalone_split.inc'\
-              if splitColor else \
-              'iolibs/template_files/loop/loop_matrix_standalone_split_helasCallsOnly.inc')).read()         
+            replace_dict['loop_jamp_lines'] = '\n'.join(loop_jamp_lines) 
+            
+        def split_HELASJAMP():
+            """ Finish the loop_matrix.f generation with splitting """         
             # Split the helas calls into bunches of size n_helas calls.
             n_helas=2000
             helascalls_replace_dict={}
@@ -650,6 +593,75 @@ class LoopProcessExporterFortranSA(export_v4.ProcessExporterFortranSA,
                     # The user wants a unique self-contained loop_matrix.f
                     replace_dict['born_jamps_coefs'] = file2
                     replace_dict['loop_jamps_coefs'] = file3
+                    
+        # Set lowercase/uppercase Fortran code
+        writers.FortranWriter.downcase = False
+
+        replace_dict = {}
+
+        # Extract version number and date from VERSION file
+        info_lines = self.get_mg5_info_lines()
+        replace_dict['info_lines'] = info_lines
+
+        # Extract process info lines
+        process_lines = self.get_process_info_lines(matrix_element)
+        replace_dict['process_lines'] = process_lines
+
+        # Extract number of external particles
+        (nexternal, ninitial) = matrix_element.get_nexternal_ninitial()
+        replace_dict['nexternal'] = nexternal-2
+
+        # Extract ncomb
+        ncomb = matrix_element.get_helicity_combinations()
+        replace_dict['ncomb'] = ncomb
+
+        # Extract helicity lines
+        helicity_lines = self.get_helicity_lines(matrix_element)
+        replace_dict['helicity_lines'] = helicity_lines
+
+        # Extract overall denominator
+        # Averaging initial state color, spin, and identical FS particles
+        den_factor_line = self.get_den_factor_line(matrix_element)
+        replace_dict['den_factor_line'] = den_factor_line
+
+        # Extract nloopamps
+        nloopamps = matrix_element.get_number_of_loop_amplitudes()
+        replace_dict['nloopamps'] = nloopamps
+
+        # Extract nbronamps
+        nbornamps = matrix_element.get_number_of_born_amplitudes()
+        replace_dict['nbornamps'] = nbornamps
+
+        # Extract nwavefuncs
+        nwavefuncs = matrix_element.get_number_of_external_wavefunctions()
+        replace_dict['nwavefuncs'] = nwavefuncs
+
+        # Extract ncolorloop
+        ncolorloop = max(1, len(matrix_element.get('loop_color_basis')))
+        replace_dict['ncolorloop'] = ncolorloop
+
+        # Extract ncolorborn
+        ncolorborn = max(1, len(matrix_element.get('born_color_basis')))
+        replace_dict['ncolorborn'] = ncolorborn
+
+        # Extract color data lines
+        color_data_lines = self.get_color_data_lines(matrix_element)
+        replace_dict['color_data_lines'] = "\n".join(color_data_lines)
+
+        # Extract helas calls
+        helas_calls = fortran_model.get_matrix_element_calls(\
+                                                            matrix_element) 
+                       
+        if not needSplitting:
+            file = open(os.path.join(_file_path, \
+                'iolibs/template_files/loop/loop_matrix_standalone.inc')).read()
+            normal_HELASJAMP()
+        else:     
+            file = open(os.path.join(_file_path, \
+              'iolibs/template_files/loop/loop_matrix_standalone_split.inc'\
+              if splitColor else \
+              'iolibs/template_files/loop/loop_matrix_standalone_split_helasCallsOnly.inc')).read()
+            split_HELASJAMP()
                                                     
         file = file % replace_dict
         if writer:
