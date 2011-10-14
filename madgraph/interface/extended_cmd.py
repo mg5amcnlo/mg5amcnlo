@@ -175,9 +175,13 @@ class Cmd(cmd.Cmd):
             if self.mother:
                 self.do_quit('')
         except KeyboardInterrupt as error:
+            self.stop_on_keyboard_stop()
             #self.nice_error_handling(error, line)
             print self.keyboard_stop_msg
-        
+    
+    def stop_on_keyboard_stop(self):
+        """action to perform to close nicely on a keyboard interupt"""
+        pass # dummy function
             
     def exec_cmd(self, line, errorhandling=False, printcmd=True):
         """for third party call, call the line with pre and postfix treatment
@@ -529,6 +533,10 @@ class Cmd(cmd.Cmd):
         
         args = self.split_arg(line)
         #check the validity of the arguments
+        
+        if len(args) == 0:
+            self.help_display()
+            raise self.InvalidCmd, 'display require at least one argument'
         
         if args[0] == "options":
             outstr = "Value of current MG5 Options:\n" 

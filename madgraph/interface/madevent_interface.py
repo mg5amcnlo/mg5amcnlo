@@ -173,6 +173,14 @@ class CmdExtended(cmd.Cmd):
         """return the history header""" 
         return self.history_header % misc.get_time_info()
     
+    def stop_on_keyboard_stop(self):
+        """action to perform to close nicely on a keyboard interupt"""
+        try:
+            if hasattr(self, 'results'):
+                self.results.update('Stop by the user', level=None)
+        except:
+            pass
+    
     #def nice_error_handling(self, error, line):
     #    """store current result when an error occur"""
     #    cmd.Cmd.nice_error_handling(self, error, line)
@@ -793,6 +801,7 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
         self.run_name = None
         # Load the configuration file
         self.set_configuration()
+        self.open_crossx = True # allow to open automatically the web browser
 
         if self.web:
             os.system('touch Online')
@@ -817,14 +826,23 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
         args = CmdExtended.split_arg(line)
         
         for arg in args[:]:
-            if not arg.startswith('--'):
+            print arg
+            if not arg.startswith('-'):
                 continue
-            if arg.startswith('--cluster'):
+            elif arg == '-c':
+                args.remove(arg)
                 self.cluster_mode = 1
-            if arg.startswith('--multicore'):
+            elif arg == '-m':
+                args.remove(arg)
                 self.cluster_mode = 2
-            #elif arg.startswith('--queue='):
-            #    self.queue = arg.split('=',1)[1].strip()
+            elif arg == '-f':
+                continue
+            elif not arg.startswith('--'):
+                raise self.InvalidCmd('%s argument cannot start with - symbol' % arg)
+            elif arg.startswith('--cluster'):
+                self.cluster_mode = 1
+            elif arg.startswith('--multicore'):
+                self.cluster_mode = 2
             elif arg.startswith('--nb_core'):
                 self.cluster_mode = 2
                 self.nb_core = int(arg.split('=',1)[1])
@@ -993,9 +1011,7 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
         args = self.split_arg(line)
         # Check argument's validity
         self.check_survey(args, cmd='generate_events')
-        
-  
-        
+              
         self.exec_cmd('survey %s' % line)
         if not self.run_card['gridpack'] in self.true:        
             nb_event = self.run_card['nevents']
@@ -1093,7 +1109,9 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
         # treat random number
         self.update_random()
         self.save_random()
-        misc.open_file(os.path.join(self.me_dir, 'HTML', 'crossx.html'))
+        if self.open_crossx:
+            misc.open_file(os.path.join(self.me_dir, 'HTML', 'crossx.html'))
+            self.open_crossx = False
         logger.info('Working on SubProcesses')
         for subdir in open(pjoin(self.me_dir, 'SubProcesses', 'subproc.mg')):
             subdir = subdir.strip()
@@ -1473,6 +1491,8 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
                                     pjoin(self.me_dir,'Events'),self.run_name))
             self.to_store.remove('pythia')
             self.update_status('Done', level='pythia')
+        
+        self.to_store = []
             
         
     ############################################################################      
