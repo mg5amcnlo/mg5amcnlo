@@ -290,7 +290,8 @@ c                       If this is radiation off heavy FS particle, set heavyrad
                      call filprp(iproc,ignum,icmp(l))
 c               Insert graph in list of propagators
                      if(pwidth(k,ignum).gt.ZERO) then
-c                    write(*,*)'Adding resonance ',ignum,icmp
+                     if(btest(mlevel,4))
+     $                       write(*,*)'Adding resonance ',ignum,icmp(l)
                         resmap(icmp(l),ignum)=.true.
                      endif
                   enddo
@@ -490,8 +491,6 @@ c     if first clustering, set possible graphs
       if (icgs(0).eq.0) then
          ii=0
          do i=1,id_cl(iproc,idij,0)
-c        check if this diagram has radiation off heavy particle
-           if(heavyrad(id_cl(iproc,idij,i))) cycle
 c        check if we have constraint from onshell resonances
            foundbw=.true.
            do j=1,nbw
@@ -500,6 +499,12 @@ c        check if we have constraint from onshell resonances
              endif
              foundbw=.false.
  10        enddo
+c        check if this diagram has radiation off heavy particle
+c        For now, turn this off if there is a bw in the process,
+c        since this created problems when the bw included a radiated part.
+c        This is something that might need to be thought more about later
+c        (in order for b matching to work...)
+           if(nbw.eq.0.and.heavyrad(id_cl(iproc,idij,i))) cycle
            if((nbw.eq.0.or.foundbw))then
               ii=ii+1
               icgs(ii)=id_cl(iproc,idij,i)
