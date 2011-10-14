@@ -181,6 +181,21 @@ class CmdExtended(cmd.Cmd):
         except:
             pass
     
+    def postcmd(self, stop, line):
+        """ Upate the status of  the run for finishing interactive command """
+        if not self.use_rawinput:
+            return stop
+        
+        arg = line.split()
+        if  len(arg) == 0:
+            return stop
+        if self.results.status.startswith('Error'):
+            return stop
+        elif not self.results.status:
+            return stop
+        
+        self.update_status('%s Done. Waiting instruction.' % arg[0], level=None)
+        
     #def nice_error_handling(self, error, line):
     #    """store current result when an error occur"""
     #    cmd.Cmd.nice_error_handling(self, error, line)
@@ -782,6 +797,11 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
         if me_dir is None and MADEVENT:
             me_dir = root_path        
         self.me_dir = me_dir
+
+        # usefull shortcut
+        self.status = pjoin(self.me_dir, 'status')
+        self.error =  pjoin(self.me_dir, 'error')
+        self.dirbin = pjoin(self.me_dir, 'bin', 'internal')
         
         # Check that the directory is not currently running
         if os.path.exists(pjoin(me_dir,'RunWeb')): 
@@ -791,11 +811,7 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
             sys.exit()
         else:
             os.system('touch %s' % pjoin(me_dir,'RunWeb'))
-
-        # usefull shortcut
-        self.status = pjoin(self.me_dir, 'status')
-        self.error =  pjoin(self.me_dir, 'error')
-        self.dirbin = pjoin(self.me_dir, 'bin', 'internal')
+            os.system('%s/gen_cardhtml-pl' % (self.dirbin))
       
         self.to_store = []
         self.run_name = None
@@ -826,7 +842,6 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
         args = CmdExtended.split_arg(line)
         
         for arg in args[:]:
-            print arg
             if not arg.startswith('-'):
                 continue
             elif arg == '-c':
@@ -995,14 +1010,15 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
  
  
     ############################################################################
-    def update_status(self, status, level):
+    def update_status(self, status, level, makehtml=True):
         """ update the index status """
-	if isinstance(status, str):
-	    logger.info(status)
-	else:
-	    logger.info(' Idle: %s Running: %s Finish: %s' % status)
-        self.results.update(status, level)
-        os.system('%s/gen_cardhtml-pl' % (self.dirbin))
+
+        if isinstance(status, str):
+           logger.info(status)
+        else:
+            logger.info(' Idle: %s Running: %s Finish: %s' % status)
+        self.results.update(status, level,makehtml=makehtml)
+        
    
     ############################################################################      
     def do_generate_events(self, line):
@@ -1012,18 +1028,18 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
         # Check argument's validity
         self.check_survey(args, cmd='generate_events')
               
-        self.exec_cmd('survey %s' % line)
+        self.exec_cmd('survey %s' % line, postcmd=False)
         if not self.run_card['gridpack'] in self.true:        
             nb_event = self.run_card['nevents']
-            self.exec_cmd('refine %s' % nb_event)
-            self.exec_cmd('refine %s' % nb_event)
+            self.exec_cmd('refine %s' % nb_event, postcmd=False)
+            self.exec_cmd('refine %s' % nb_event, postcmd=False)
         
-        self.exec_cmd('combine_events')
+        self.exec_cmd('combine_events', postcmd=False)
         if not self.run_card['gridpack'] in self.true:
-            self.exec_cmd('pythia --no_default')
+            self.exec_cmd('pythia --no_default', postcmd=False, printcmd=False)
             if os.path.exists(pjoin(self.me_dir,'Events','pythia_events.hep')):
-                self.exec_cmd('pgs --no_default')
-                self.exec_cmd('delphes --no_default')
+                self.exec_cmd('pgs --no_default', postcmd=False, printcmd=False)
+                self.exec_cmd('delphes --no_default', postcmd=False, printcmd=False)
         
         if self.run_card['gridpack'] in self.true:
             self.update_status('Creating gridpack', level='parton')
@@ -1053,7 +1069,7 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
         crossoversig = 0
         inv_sq_err = 0
         for i in range(nb_run):
-            self.exec_cmd('generate_events %s_%s' % (main_name, i))
+            self.exec_cmd('generate_events %s_%s' % (main_name, i), postcmd=False)
             # Update collected value
             if self.results[main_name]['nb_event']:
                 self.results[main_name]['nb_event'] += int(self.results[self.run_name]['nb_event'])  
@@ -1073,11 +1089,12 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
                   % {'bin': self.dirbin, 'event': pjoin(self.me_dir,'Events'),
                      'name': self.run_name})
 
-        self.update_status("END Merging LHE files", level='parton')
+        
 
 
         eradir = self.configuration['exrootanalysis_path']
         if misc.is_executable(pjoin(eradir,'ExRootLHEFConverter')):
+            self.update_status("Create Root file", level='parton')
             os.system('gunzip %s/%s_unweighted_events.lhe.gz' % 
                                   (pjoin(self.me_dir,'Events'), self.run_name))
             self.create_root_file('%s_unweighted_events.lhe' % self.run_name,
@@ -1089,8 +1106,8 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
         
         os.system('gzip %s/%s_unweighted_events.lhe' % 
                                   (pjoin(self.me_dir, 'Events'), self.run_name))
-        
-        self.update_status('finish', level='parton')
+
+        self.update_status('', level=parton)
             
     ############################################################################      
     def do_survey(self, line):
@@ -1148,7 +1165,7 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
                     self.update_status('Error detected in survey', None)
                     raise MadEventError, 'Error detected Stop running'
         self.monitor()
-        self.update_status('finish survey', 'parton')
+        self.update_status('End survey', 'parton', makehtml=False)
 
     ############################################################################      
     def do_refine(self, line):
@@ -1214,7 +1231,7 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
         subprocess.call([pjoin(self.dirbin, 'sumall')], 
                                          cwd=pjoin(self.me_dir,'SubProcesses'),
                                          stdout=devnull)
-        self.update_status('finish refine', 'parton')
+        self.update_status('finish refine', 'parton', makehtml=False)
         
     ############################################################################ 
     def do_combine_events(self, line):
@@ -1326,15 +1343,16 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
         self.update_status('Running Pythia', 'pythia')
         ## LAUNCHING PYTHIA
         if self.cluster_mode == 1:
-            self.cluster.launch_and_wait('../bin/internal/run_pythia', 
+            retcode = self.cluster.launch_and_wait('../bin/internal/run_pythia', 
                                          argument= [pythia_src],
                                         cwd=pjoin(self.me_dir,'Events'))
         else:
-            subprocess.call(['../bin/internal/run_pythia', pythia_src],
+            retcode = subprocess.call(['../bin/internal/run_pythia', pythia_src],
                          cwd=pjoin(self.me_dir,'Events'))
 
 
-        if not os.path.exists(pjoin(self.me_dir,'Events','pythia_events.hep')):
+        if not os.path.exists(pjoin(self.me_dir,'Events','pythia_events.hep')) \
+                                                                     or retcode:
             logger.warning('Fail to produce pythia output')
             return
         
@@ -1409,7 +1427,7 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
                                         '%s_pythia_events.lhe' % self.run_name))      
 
         
-        self.update_status('finish', level='pythia')
+        self.update_status('finish', level='pythia', makehtml=False)
 
     def do_plot(self, line):
         """Create the plot for a given run"""
@@ -1590,7 +1608,7 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
                     pjoin(self.me_dir, 'Events', '%s_pgs_events.lhco' % self.run_name))
             subprocess.call(['gzip','-f', pjoin(self.me_dir, 'Events', '%s_pgs_events.lhco' % self.run_name)])
         
-        self.update_status('finish', level='pgs')
+        self.update_status('finish', level='pgs', makehtml=False)
 
     ############################################################################
     def do_delphes(self, line):
@@ -1671,7 +1689,7 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
 
 
         
-        self.update_status('finish', level='delphes')   
+        self.update_status('delphes done', level='delphes', makehtml=False)   
 
     def launch_job(self,exe, cwd=None, stdout=None, argument = [], **opt):
         """ """
@@ -1968,6 +1986,7 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
         except:
             # If nothing runs they they are no result to update
             pass
+        os.system('%s/gen_cardhtml-pl' % (self.dirbin))
 
         return super(MadEventCmd, self).do_quit(line)
     
@@ -2104,6 +2123,9 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
         shutil.move(pjoin(self.me_dir, 'Events', 'plots.html'),
                    pjoin(self.me_dir, 'Events', '%s_plots%s.html' % 
                          (self.run_name, addon)) )
+        
+        self.update_status('End Plots for %s level' % mode, level = mode.lower(),
+                                                                 makehtml=False)
         
         return True   
         

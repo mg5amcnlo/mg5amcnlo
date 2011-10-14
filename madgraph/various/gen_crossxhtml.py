@@ -97,12 +97,11 @@ class AllResults(dict):
         
         dict.__init__(self)
         self.order = []
-        self.process = ''
-        for name in process:
-            if len(self.process) > 80:
-                self.process += ', ...'
-                break
-            self.process += ', ' +name
+        self.process = ','.join(process)
+        if len(self.process) > 60:
+            pos = self.process[50:].find(',')
+            if pos != -1:
+                self.process = self.process[:50+pos] + ', ...'
         self.path = path
         self.model = model
     
@@ -134,11 +133,12 @@ class AllResults(dict):
             self.def_current(name)
         
         
-    def update(self, status, level):
+    def update(self, status, level, makehtml=True):
         """update the current run status"""
         self.current.update_status(level)
         self.status = status
-        self.output()
+        if makehtml:
+            self.output()
     
     def save(self):
         """Save the results of this directory in a pickle file"""

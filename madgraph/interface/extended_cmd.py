@@ -183,7 +183,7 @@ class Cmd(cmd.Cmd):
         """action to perform to close nicely on a keyboard interupt"""
         pass # dummy function
             
-    def exec_cmd(self, line, errorhandling=False, printcmd=True):
+    def exec_cmd(self, line, errorhandling=False, printcmd=True, postcmd=True):
         """for third party call, call the line with pre and postfix treatment
         without global error handling """
 
@@ -200,7 +200,8 @@ class Cmd(cmd.Cmd):
             stop = current_interface.onecmd(line)
         else:
             stop = cmd.Cmd.onecmd(current_interface, line)
-        stop = current_interface.postcmd(stop, line)
+        if postcmd:
+            stop = current_interface.postcmd(stop, line)
         return stop      
 
     def run_cmd(self, line):
