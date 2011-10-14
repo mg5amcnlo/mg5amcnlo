@@ -6,8 +6,8 @@
 # ----------------------------------------------------------------------------
 
 
-F77           = gfortran
-FFLAGS        = -O
+include ../make_opts
+
 LIBRARY	      = ../libpdf.a
 LIBDIR        = ../../lib/
 PDF           = Ctq4Fn.o Ctq5Par.o Ctq5Pdf.o Partonx5.o Ctq6Pdf.o cteq3.o \

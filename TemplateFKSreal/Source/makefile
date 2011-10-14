@@ -1,6 +1,5 @@
-F77   = gfortran
-FFLAGS= -O -ffixed-line-length-132
-#FFLAGS= -O 
+include make_opts
+
 LIBDIR= ../lib/
 BINDIR= ../bin/
 PDFDIR= ./PDF/
@@ -26,7 +25,7 @@ COMBINE = combine_events.o  rw_events.o ranmar.o  kin_functions.o open_file.o rw
 .f.o: ; $(F77) $(FFLAGS) -c $*.f
 
 # $B$ mod_all $B$ !this is a tag for modify main compilation in MadWeight compilation. Don't edit this line
-all: $(LIBDIR)libdhelas3.a $(LIBDIR)libdsample.a $(LIBDIR)libdsample_fks.a $(LIBDIR)libgeneric.a $(LIBDIR)libpdf.a  $(LIBDIR)libmodel.a
+all: $(LIBDIR)libdhelas.a $(LIBDIR)libdsample.a $(LIBDIR)libdsample_fks.a $(LIBDIR)libgeneric.a $(LIBDIR)libpdf.a  $(LIBDIR)libmodel.a
 # $E$ mod_all $E$ !this is a tag for modify main compilation in MadWeight compilation. Don't edit this line
 
 scaled.dat:
@@ -48,10 +47,8 @@ $(BINDIR)sum_html: sum_html.o
 	$(F77) $(FFLAGS) -o sum_html sum_html.o   
 	mv sum_html $(BINDIR)
 
-$(LIBDIR)libdhelas3.a: DHELAS
+$(LIBDIR)libdhelas.a: DHELAS
 	cd DHELAS; make
-	ranlib libdhelas3.a
-	mv libdhelas3.a $(LIBDIR)
 
 $(LIBDIR)libdsample.a: $(DSAMPLE)
 	ar cru libdsample.a $(DSAMPLE)

@@ -1,8 +1,7 @@
-F77   = gfortran
+include ../../Source/make_opts
+
 CC    = g++
-FFLAGS = -g -ffixed-line-length-132 -fno-automatic
-#FFLAGS = -O -ffixed-line-length-132 -fno-automatic
-#FFLAGS = -g -pg -ffixed-line-length-132 -fno-automatic
+
 LIBDIR = ../../lib/
 BINDIR = ../../bin/
 
@@ -12,8 +11,8 @@ FJLIBS += $(shell $(FASTJET_CONFIG) --libs --plugins ) -lstdc++
 #FJLIBS += $(shell $(FASTJET_CONFIG) --libs --plugins )
 #FJLIBS=
 
-LINKLIBS =  -L../../lib/ -ldhelas3 -ldsample_fks -lmodel -lgeneric -lpdf
-LIBS = $(LIBDIR)libdhelas3.a $(LIBDIR)libdsample_fks.a $(LIBDIR)libgeneric.a $(LIBDIR)libpdf.a $(LIBDIR)libmodel.a
+LINKLIBS =  -L../../lib/ -ldhelas -ldsample_fks -lmodel -lgeneric -lpdf
+LIBS = $(LIBDIR)libdhelas.a $(LIBDIR)libdsample_fks.a $(LIBDIR)libgeneric.a $(LIBDIR)libpdf.a $(LIBDIR)libmodel.a
 
 # Files for all executables
 FILES= myamp.o auto_dsig.o genps_fks.o matrix.o setcuts.o cluster.o reweight.o initcluster.o setscales.o born.o sborn_sf.o $(patsubst %.f,%.o,$(wildcard b_sf_???.f)) fks_Sij.o trapfpe.o fastjetfortran_madfks.o ktclusdble.o fks_singular.o montecarlocounter.o

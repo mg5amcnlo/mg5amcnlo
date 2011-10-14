@@ -113,9 +113,7 @@ class ProcessExporterFortranFKS_real(export_v4.ProcessExporterFortran):
                                                   path=os.getcwd()):
         """Generate the Pxxxxx_i directories for a subprocess in MadFKS,
         including the necessary matrix.f and various helper files"""
-        print "GENERATING FKS SUBDIRS"
         proc = matrix_element.real_matrix_element['processes'][0]
-        print proc.input_string()
     
         cwd = os.getcwd()
         try:
@@ -129,7 +127,7 @@ class ProcessExporterFortranFKS_real(export_v4.ProcessExporterFortran):
                 
         calls = 0
         
-    #write fks.inc in SubProcesses, it willbe copied later in the subdirs
+    #write fks.inc in SubProcesses, it will be copied later in the subdirs
         fks_inc = matrix_element.fks_inc_string
         self.fksdirs = []
         
@@ -1312,11 +1310,9 @@ data mirrorproc /%s/" % bool_dict[matrix_element.get('has_mirror_process')]
     def finalize_fks_directory(self, dir_path, makejpg, history):
         """Finalize fks directory by creating jpeg diagrams, html
         pages,proc_card_mg5.dat and madevent.tar.gz."""
-    
-        if not misc.which('f77'):
-            logger.info('Change makefiles to use gfortran')
-            subprocess.call(['python','./bin/Passto_gfortran.py'], cwd=dir_path, \
-                            stdout = open(os.devnull, 'w')) 
+        logger.info('finalizing...')
+
+#        self.set_compiler('gfortran')
         
         old_pos = os.getcwd()
         os.chdir(os.path.join(dir_path, 'SubProcesses'))
@@ -1325,29 +1321,7 @@ data mirrorproc /%s/" % bool_dict[matrix_element.get('has_mirror_process')]
         
         os.system('touch %s/done' % os.path.join(dir_path,'SubProcesses'))   
         devnull = os.open(os.devnull, os.O_RDWR)
-        # Convert the poscript in jpg files (if authorize)
-        if makejpg:
-            logger.info("Generate jpeg diagrams")
-            for Pdir in P_dir_list:
-                os.chdir(Pdir)
-                subprocess.call([os.path.join(old_pos, dir_path, 'bin', 'gen_jpeg-pl')],
-                                stdout = devnull)
-                os.chdir(os.path.pardir)
-    
-        logger.info("Generate web pages")
-        # Create the WebPage using perl script
-    
-        subprocess.call([os.path.join(old_pos, dir_path, 'bin', 'gen_cardhtml-pl')], \
-                                                                stdout = devnull)
-        subprocess.call([os.path.join(old_pos, dir_path, 'bin', 'gen_infohtml-pl')], \
-                                                                stdout = devnull)
-        os.chdir(os.path.pardir)
-        subprocess.call([os.path.join(old_pos, dir_path, 'bin', 'gen_crossxhtml-pl')],
-                        stdout = devnull)
-        [mv(name, './HTML/') for name in os.listdir('.') if \
-                            (name.endswith('.html') or name.endswith('.jpg')) and \
-                            name != 'index.html']               
-        
+
         # Write command history as proc_card_mg5
         if os.path.isdir('Cards'):
             output_file = os.path.join('Cards', 'proc_card_mg5.dat')

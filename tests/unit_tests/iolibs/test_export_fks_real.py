@@ -260,16 +260,11 @@ class IOExportV4Test(unittest.TestCase,
     
         myleglist = MG.LegList()
         
-        myleglist.append(MG.Leg({'id':2,
-                                             'state':False}))
-        myleglist.append(MG.Leg({'id':-2,
-                                             'state':False}))
-        myleglist.append(MG.Leg({'id':2,
-                                             'state':True}))
-        myleglist.append(MG.Leg({'id':-2,
-                                             'state':True}))
-        myleglist.append(MG.Leg({'id':21,
-                                             'state':True}))
+        myleglist.append(MG.Leg({'id':2, 'state':False}))
+        myleglist.append(MG.Leg({'id':-2, 'state':False}))
+        myleglist.append(MG.Leg({'id':2, 'state':True}))
+        myleglist.append(MG.Leg({'id':-2, 'state':True}))
+        myleglist.append(MG.Leg({'id':21, 'state':True}))
     
         myproc = MG.Process({'legs':myleglist,
                                            'model':self.mymodel})

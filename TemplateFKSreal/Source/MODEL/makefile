@@ -6,8 +6,8 @@
 # ----------------------------------------------------------------------------
 
 
-F77     = gfortran
-FFLAGS        = -O -ffixed-line-length-132
+include ../make_opts
+
 LIBRARY	      = ../libmodel.a
 LIBDIR        = ../../lib/
 MODEL         = printout.o couplings.o

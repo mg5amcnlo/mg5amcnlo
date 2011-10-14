@@ -3092,7 +3092,7 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
         elif self._export_format == 'standalone_cpp':
             export_cpp.setup_cpp_standalone_dir(self._export_dir, self._curr_model)
         elif self._export_format in self._fks_export_formats:
-            self.do_set('group_subprocesses False')
+        #    self.do_set('group_subprocesses False')
             if self._export_format =='fksreal':
                 logger.info("Exporting in MadFKS format, starting from real emission process")
                 self._curr_exporter = export_fks_real.ProcessExporterFortranFKS_real(\
@@ -3143,7 +3143,8 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
             cpu_time1 = time.time()
             ndiags = 0
             if not self._curr_matrix_elements.get_matrix_elements():
-                if self._options['group_subprocesses']:
+                if self._options['group_subprocesses']  \
+                    and not self._export_format in self._fks_export_formats:
                     cpu_time1 = time.time()
                     dc_amps = [amp for amp in self._curr_amps if isinstance(amp, \
                                         diagram_generation.DecayChainAmplitude)]
@@ -3219,7 +3220,7 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
             #_curr_matrix_element is a FKSHelasMultiProcessFromRealObject 
             self._fks_directories = []
             for ime, me in \
-                enumerate(self._curr_matrix_elements.get('matrix_elements')):
+                enumerate(self._curr_matrix_elements.get_matrix_elements()):
                 #me is a FKSHelasProcessFromReals
                 calls = calls + \
                         self._curr_exporter.generate_born_directories_fks(\
@@ -3454,7 +3455,7 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
                                            not nojpeg,
                                            online)
 
-        elif self._export_format == 'fks':
+        elif self._export_format == 'fksreal':
             os.system('touch %s/done' % os.path.join(self._export_dir,
                                                      'SubProcesses'))        
             self._curr_exporter.finalize_fks_directory(self._export_dir, not nojpeg,

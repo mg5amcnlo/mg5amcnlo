@@ -1,6 +1,7 @@
 # Note that optimization doesn't work on all machines
-F77     = gfortran
-FFLAGS  = 
+
+include ../make_opts
+
 LIBRARY	= libcernlib.a
 LIBDIR  = ../../lib/
 SOURCES = abend.o dlsqp2.o lenocc.o mtlprt.o mtlset.o radmul.o
