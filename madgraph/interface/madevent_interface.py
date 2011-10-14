@@ -1228,11 +1228,6 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
             nb_event = pat.search(output).groups()[0]
             self.results.add_detail('nb_event', nb_event)
         
-        shutil.move(pjoin(self.me_dir, 'SubProcesses', 'events.lhe'),
-                    pjoin(self.me_dir, 'Events', 'events.lhe'))
-        shutil.move(pjoin(self.me_dir, 'SubProcesses', 'unweighted_events.lhe'),
-                    pjoin(self.me_dir, 'Events', 'unweighted_events.lhe')) 
-        
         subprocess.call(['%s/put_banner' % self.dirbin, 'events.lhe'],
                             cwd=pjoin(self.me_dir, 'Events'))
         subprocess.call(['%s/put_banner'% self.dirbin, 'unweighted_events.lhe'],

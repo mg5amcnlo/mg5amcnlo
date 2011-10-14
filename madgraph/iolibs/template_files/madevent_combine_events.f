@@ -136,7 +136,7 @@ c
 c     Write out the events in iarray order
 c
 C $B$ output_file1 $B$ !this is tag for automatic modification by MW
-      filename='events.lhe'
+      filename='../Events/events.lhe'
 C $E$ output_file1 $E$ !this is tag for automatic modification by MW
 
       open(unit=15,file=filename,status='unknown',err=98)
@@ -209,7 +209,7 @@ c            write(*,*) min_goal,goal_wgt,max_goal
       write(*,'(a,f5.2,a)') 'Truncated ',xtrunc*100./sum, '%% of cross section'
 
 C $B$ output_file2 $B$ !this is tag for automatic modification by MW
-      filename='unweighted_events.lhe'
+      filename='../Events/unweighted_events.lhe'
 C $E$ output_file2 $E$ !this is tag for automatic modification by MW
 
       open(unit=15,file=filename,status='unknown',err=99)
