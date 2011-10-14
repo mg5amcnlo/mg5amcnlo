@@ -43,7 +43,6 @@ sys.path.insert(0, os.path.join(root_path,'bin'))
 
 # usefull shortcut
 pjoin = os.path.join
-devnull = os.open(os.devnull, os.O_RDWR)
  
 try:
     # import from madgraph directory
@@ -72,7 +71,7 @@ except Exception, error:
 logger = logging.getLogger('madevent.stdout') # -> stdout
 logger_stderr = logging.getLogger('madevent.stderr') # ->stderr
 
-devnull = os.open(os.devnull, os.O_RDWR)
+
 class MadEventError(Exception):
     pass
 
@@ -1004,10 +1003,11 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
             self.exec_cmd('refine %s' % nb_event)
         
         self.exec_cmd('combine_events')
-        self.exec_cmd('pythia --no_default')
-        if os.path.exists(pjoin(self.me_dir,'Events','pythia_events.hep')):
-            self.exec_cmd('pgs --no_default')
-            self.exec_cmd('delphes --no_default')
+        if not self.run_card['gridpack'] in self.true:
+            self.exec_cmd('pythia --no_default')
+            if os.path.exists(pjoin(self.me_dir,'Events','pythia_events.hep')):
+                self.exec_cmd('pgs --no_default')
+                self.exec_cmd('delphes --no_default')
         
         if self.run_card['gridpack'] in self.true:
             self.update_status('Creating gridpack', level='parton')
@@ -1101,7 +1101,7 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
             logger.info('    %s ' % subdir)
             # clean previous run
             for match in glob.glob(pjoin(Pdir, '*ajob*')):
-                if match[:4] in ['ajob', 'wait', 'run.', 'done']:
+                if os.path.basename(match)[:4] in ['ajob', 'wait', 'run.', 'done']:
                     os.remove(pjoin(Pdir, match))
             
             #compile gensym
@@ -1162,15 +1162,16 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
             logger.info('    %s ' % subdir)
             # clean previous run
             for match in glob.glob(pjoin(Pdir, '*ajob*')):
-                if match[:4] in ['ajob', 'wait', 'run.', 'done']:
+                if os.path.basename(match)[:4] in ['ajob', 'wait', 'run.', 'done']:
                     os.remove(pjoin(Pdir, match))
-
+            
+            devnull = os.open(os.devnull, os.O_RDWR)
             proc = subprocess.Popen([pjoin(bindir, 'gen_ximprove')],
                                     stdout=devnull,
                                     stdin=subprocess.PIPE,
                                     cwd=Pdir)
             proc.communicate('%s %s T\n' % (precision, max_process))
-            proc.wait()
+            #proc.wait()
             if os.path.exists(pjoin(Pdir, 'ajob1')):
                 misc.compile(['madevent'], cwd=Pdir)
                 #
@@ -1179,7 +1180,6 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
                     job = os.path.basename(job)
                     os.system('touch %s/wait.%s' %(Pdir, job))
                     self.launch_job('./%s' % job, cwd=Pdir)
-                    
         self.monitor()
         
         self.update_status("Combining runs", level='parton')
@@ -1215,13 +1215,11 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
         if self.cluster_mode == 1:
             out = self.cluster.launch_and_wait('../bin/internal/run_combine', 
                                         cwd=pjoin(self.me_dir,'SubProcesses'),
-                                        stdout='combine.log')
+                                        stdout=open(pjoin(self.me_dir,'SubProcesses', 'combine.log'),'w'))
         else:
-            out = subprocess.Popen(['../bin/internal/run_combine'],
-                         cwd=pjoin(self.me_dir,'SubProcesses'), stdout=subprocess.PIPE)
-            b = subprocess.Popen(['tee', pjoin(self.me_dir,'SubProcesses','combine.log')], stdin=out.stdout)
-            out.wait()
-
+            out = subprocess.call(['../bin/internal/run_combine'],
+                         cwd=pjoin(self.me_dir,'SubProcesses'), 
+                         stdout=open(pjoin(self.me_dir,'SubProcesses','combine.log'),'w'))
             
         output = open(pjoin(self.me_dir,'SubProcesses','combine.log')).read()
         # Store the number of unweighted events for the results object
@@ -1230,8 +1228,6 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
             nb_event = pat.search(output).groups()[0]
             self.results.add_detail('nb_event', nb_event)
         
-        
-
         shutil.move(pjoin(self.me_dir, 'SubProcesses', 'events.lhe'),
                     pjoin(self.me_dir, 'Events', 'events.lhe'))
         shutil.move(pjoin(self.me_dir, 'SubProcesses', 'unweighted_events.lhe'),
@@ -1339,9 +1335,9 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
         # Update the banner with the pythia card
         banner_path = pjoin(self.me_dir,'Events',self.run_name + '_banner.txt')
         banner = open(banner_path, 'a')
-        banner.writelines('<MGPythiaCard>')
+        banner.writelines('\n<MGPythiaCard>\n')
         banner.writelines(open(pjoin(self.me_dir, 'Cards','pythia_card.dat')).read())
-        banner.writelines('</MGPythiaCard>')
+        banner.writelines('\n</MGPythiaCard>\n')
         banner.close()
         
         # Creating LHE file
@@ -1689,8 +1685,9 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
         
         if self.cluster_mode == 0:
             start = time.time()
-            subprocess.call(['./'+exe] + argument, cwd=cwd, stdout=stdout,
-                            stderr=subprocess.STDOUT, **opt)
+            os.system('cd %s; ./%s' % (cwd,exe))
+            #subprocess.call(['./'+exe] + argument, cwd=cwd, stdout=stdout, 
+            #                bufsize=-1, **opt)
             logger.info('%s run in %f s' % (exe, time.time() -start))
 
         elif self.cluster_mode == 1:
@@ -1755,8 +1752,8 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
                                           stdout=subprocess.PIPE)
         
         #tee = subprocess.Popen(['tee', '/tmp/tmp.log'], stdin=proc.stdout)
-        proc.wait()
-        for line in proc.stdout: 
+        (stdout, stderr) = proc.communicate()
+        for line in stdout.split('\n'): 
             if line.startswith(' Results'):
                 data = line.split()
                 self.results.add_detail('cross', float(data[1]))

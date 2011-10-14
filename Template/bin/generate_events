@@ -16,6 +16,7 @@
 """ This is the main script in order to generate events in MadEvent """
 
 import logging
+import logging.config
 import os
 import re
 import shutil
@@ -39,9 +40,10 @@ if '__main__' == __name__:
     # So go to the main directory
     os.chdir(root_path)
  
-    logging.basicConfig()
+    logging.config.fileConfig(os.path.join(root_path, 'bin', 'internal', 'me5_logging.conf'))
     logging.root.setLevel(logging.INFO)
     logging.getLogger('madevent').setLevel(logging.INFO)
+    logging.getLogger('madgraph').setLevel(logging.INFO)
  
     argument = sys.argv
     try:
@@ -71,12 +73,12 @@ if '__main__' == __name__:
         
 
     if mode == 1:
-        launch.run_cmd('generate_events %s --cluster=%s --queue=%s'
-                   %(name, mode, opt))            
+        launch.run_cmd('generate_events %s --cluster --queue=%s'
+                   %(name, opt))            
         ME = MadEventLauncher(1, name=name, cluster_queue=opt)
     elif mode ==2:
-        launch.run_cmd('generate_events %s --cluster=%s --nb_core=%s'
-                   %(name, mode, opt)) 
+        launch.run_cmd('generate_events %s --multicore --nb_core=%s'
+                   %(name, opt)) 
     else:
         launch.run_cmd('generate_events %s' % name)
     
