@@ -162,6 +162,7 @@ class MELauncher(ExtLauncher):
         assert hasattr(self, 'cluster')
         assert hasattr(self, 'multicore')
         assert hasattr(self, 'name')
+        assert hasattr(self, 'shell')
         self.unit = unit
         self.cmd_int = cmd_int
         
@@ -260,8 +261,12 @@ class MELauncher(ExtLauncher):
         
         import madgraph.interface.madevent_interface as ME
         
+        if self.shell:
+            usecmd = ME.MadEventCmdShell
+        else:
+            usecmd = ME.MadEventCmd
         launch = self.cmd_int.define_child_cmd_interface(
-                     ME.MadEventCmd(me_dir=self.running_dir), interface=False)
+                     usecmd(me_dir=self.running_dir), interface=False)
         #launch.me_dir = self.running_dir
         command = 'generate_events %s' % self.name
         if mode == "1":

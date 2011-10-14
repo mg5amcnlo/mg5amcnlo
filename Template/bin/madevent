@@ -126,7 +126,7 @@ try:
             cmd_line.run_cmd('import command ' + input_file)
             sys.exit()
         else:
-            cmd_line = cmd_interface.MadEventCmd()
+            cmd_line = cmd_interface.MadEventCmdShell()
             cmd_line.use_rawinput = False
             cmd_line.run_cmd('import command ' + input_file)
             sys.exit()
@@ -136,7 +136,7 @@ try:
             cmd_line = cmd_interface.MadEventCmd()
             cmd_line.cmdloop()
         else:
-            cmd_line = cmd_interface.MadEventCmd()
+            cmd_line = cmd_interface.MadEventCmdShell()
             cmd_line.cmdloop()
             
 except KeyboardInterrupt:

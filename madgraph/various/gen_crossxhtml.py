@@ -104,6 +104,7 @@ class AllResults(dict):
                 self.process = self.process[:50+pos] + ', ...'
         self.path = path
         self.model = model
+        self.status = ''
     
     def def_current(self, name):
         """define the name of the current run"""

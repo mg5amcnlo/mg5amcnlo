@@ -390,9 +390,7 @@ class HelpToCmd(object):
         logger.info("      (default None) Force a specific fortran compiler.")
         logger.info("      If None, it tries first g77 and if not present gfortran.")
         
-    def help_shell(self):
-        logger.info("syntax: shell CMD (or ! CMD)")
-        logger.info("-- run the shell command CMD and catch output")
+
 
 #===============================================================================
 # CheckValidForCmd
@@ -799,9 +797,7 @@ This will take effect only in a NEW terminal
                 
     def check_output(self, args):
         """ check the validity of the line"""
-        
-        print 'check_output', self._export_dir
-        
+          
         if args and args[0] in self._export_formats:
             self._export_format = args.pop(0)
         else:
@@ -834,7 +830,6 @@ This will take effect only in a NEW terminal
             else:
                 self._export_dir = path
         else:
-            print 'search for a new one'
             # No valid path
             self.get_default_path()
 
@@ -843,7 +838,6 @@ This will take effect only in a NEW terminal
     def get_default_path(self):
         """Set self._export_dir to the default (\'auto\') path"""
 
-        print 'cwd is',os.getcwd()
         if self._export_format in ['madevent', 'standalone']:
             # Detect if this script is launched from a valid copy of the Template,
             # if so store this position as standard output directory
@@ -1297,21 +1291,6 @@ class CompleteForCmd(CheckValidForCmd):
             elif args[1] == 'fortran_compiler':
                 return self.list_completion(text, ['f77','g77','gfortran'])
         
-    def complete_shell(self, text, line, begidx, endidx):
-        """ add path for shell """
-
-        # Filename if directory is given
-        #
-        if len(self.split_arg(line[0:begidx])) > 1 and line[begidx - 1] == os.path.sep:
-            if not text:
-                text = ''
-            output = self.path_completion(text,
-                                        base_dir=\
-                                          self.split_arg(line[0:begidx])[-1])
-        else:
-            output = self.path_completion(text)
-        return output
-
     def complete_import(self, text, line, begidx, endidx):
         "Complete the import command"
 
@@ -2701,8 +2680,11 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
                                                 **options)
         elif args[0] == 'madevent':
             if options['interactive']:
-                self.define_child_cmd_interface(
-                                madevent_interface.MadEventCmd(me_dir=args[1]))
+                if hasattr(self, 'do_shell'):
+                    ME = madevent_interface.MadEventCmdShell(me_dir=args[1])
+                else:
+                     ME = madevent_interface.MadEventCmdShell(me_dir=args[1])
+                self.define_child_cmd_interface(ME)
                 return
             
             #check if this is a cross-section
@@ -2710,6 +2692,7 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
                 ext_program = launch_ext.MELauncher(args[1], self.timeout, self,
                                 pythia=self.configuration['pythia-pgs_path'],
                                 delphes=self.configuration['delphes_path'],
+                                shell = hasattr(self, 'do_shell'),
                                 **options)
             else:
                 # This is a width computation
@@ -2717,6 +2700,7 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
                                 unit='GeV',
                                 pythia=self.configuration['pythia-pgs_path'],
                                 delphes=self.configuration['delphes_path'],
+                                shell = hasattr(self, 'do_shell'),
                                 **options)
         elif args[0] == 'pythia8':
             ext_program = launch_ext.Pythia8Launcher(args[1], self.timeout,
@@ -3258,7 +3242,7 @@ class MadGraphCmdWeb(MadGraphCmd, CheckValidForCmdWeb):
 #===============================================================================
 # MadGraphCmd
 #===============================================================================
-class MadGraphCmdShell(MadGraphCmd, CompleteForCmd, CheckValidForCmd):
+class MadGraphCmdShell(MadGraphCmd, CompleteForCmd, CheckValidForCmd, cmd.CmdShell):
     """The command line processor of MadGraph""" 
     
     writing_dir = '.'
@@ -3273,17 +3257,6 @@ class MadGraphCmdShell(MadGraphCmd, CompleteForCmd, CheckValidForCmd):
         logger.info("Loading default model: sm")
         self.do_import('model sm')
         self.history.append('import model sm')
-
-
-    # Access to shell
-    def do_shell(self, line):
-        "Run a shell command"
-
-        if line.strip() is '':
-            self.help_shell()
-        else:
-            logging.info("running shell command: " + line)
-            subprocess.call(line, shell=True)
 
 
 #===============================================================================

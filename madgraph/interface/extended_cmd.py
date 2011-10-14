@@ -20,6 +20,7 @@ import logging
 import os
 import pydoc
 import signal
+import subprocess
 import traceback
 logger = logging.getLogger('cmdprint') # for stdout
 logger_stderr = logging.getLogger('fatalerror') # for stderr
@@ -332,14 +333,16 @@ class Cmd(cmd.Cmd):
 
     def define_child_cmd_interface(self, obj_instance, interface=True):
         """Define a sub cmd_interface"""
-        
+
+        # We are in a file reading mode. So we need to redirect the cmd
+        self.child = obj_instance
+        self.child.mother = self
+
         if self.use_rawinput and interface:
             # We are in interactive mode -> simply call the child
             obj_instance.cmdloop()
         
-        # We are in a file reading mode. So we need to redirect the cmd
-        self.child = obj_instance
-        self.child.mother = self
+
         return self.child
         
     #===============================================================================
@@ -462,8 +465,11 @@ class Cmd(cmd.Cmd):
     # Quit
     def do_quit(self, line):
         """ exit the mainloop() """
+
+        print ''
+        
         if self.child:
-            self.child.exec_cmd(line, printcmd=False)
+            self.child.exec_cmd('quit ' + line, printcmd=False)
             return
         elif self.mother:
             self.mother.child = None
@@ -657,9 +663,39 @@ class Cmd(cmd.Cmd):
 
         return completion
 
+class CmdShell(Cmd):
+    """CMD command with shell activate"""
 
+    # Access to shell
+    def do_shell(self, line):
+        "Run a shell command"
 
+        if line.strip() is '':
+            self.help_shell()
+        else:
+            logging.info("running shell command: " + line)
+            subprocess.call(line, shell=True)
+    
+    def complete_shell(self, text, line, begidx, endidx):
+        """ add path for shell """
 
+        # Filename if directory is given
+        #
+        if len(self.split_arg(line[0:begidx])) > 1 and line[begidx - 1] == os.path.sep:
+            if not text:
+                text = ''
+            output = self.path_completion(text,
+                                        base_dir=\
+                                          self.split_arg(line[0:begidx])[-1])
+        else:
+            output = self.path_completion(text)
+        return output
+
+    def help_shell(self):
+        """help for the shell"""
+        
+        logger.info("syntax: shell CMD (or ! CMD)")
+        logger.info("-- run the shell command CMD and catch output")
 
 #===============================================================================
 # Question with auto-completion

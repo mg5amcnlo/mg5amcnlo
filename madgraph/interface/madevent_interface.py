@@ -177,7 +177,7 @@ class CmdExtended(cmd.Cmd):
         """action to perform to close nicely on a keyboard interupt"""
         try:
             if hasattr(self, 'results'):
-                self.results.update('Stop by the user', level=None)
+                self.results.update('Stop by the user', level=None, makehtml=False)
         except:
             pass
     
@@ -191,6 +191,9 @@ class CmdExtended(cmd.Cmd):
             return stop
         if self.results.status.startswith('Error'):
             return stop
+        if self.results.status == 'Stop by the user':
+            self.results.update('%s Stop by the user' % arg[0], level=None)
+            return stop        
         elif not self.results.status:
             return stop
         
@@ -221,10 +224,6 @@ class HelpToCmd(object):
         logger.info("   stdout_level DEBUG|INFO|WARNING|ERROR|CRITICAL")
         logger.info("     change the default level for printed information")
         
-    def help_shell(self):
-        logger.info("syntax: shell CMD (or ! CMD)")
-        logger.info("-- run the shell command CMD and catch output")
-
 
     def run_options_help(self, data):
         if data:
@@ -845,10 +844,8 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
             if not arg.startswith('-'):
                 continue
             elif arg == '-c':
-                args.remove(arg)
                 self.cluster_mode = 1
             elif arg == '-m':
-                args.remove(arg)
                 self.cluster_mode = 2
             elif arg == '-f':
                 continue
@@ -866,6 +863,7 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
                 self.results.def_web_mode(True)
             else:
                 continue
+            print arg
             args.remove(arg)
         
         if self.cluster_mode == 2 and not self.nb_core:
@@ -2128,4 +2126,12 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
                                                                  makehtml=False)
         
         return True   
-        
+
+#===============================================================================
+# MadEventCmd
+#===============================================================================
+class MadEventCmdShell(MadEventCmd, cmd.CmdShell):
+    """The command line processor of MadGraph"""  
+
+
+     

@@ -630,7 +630,6 @@ c            if (ijob .eq. 1)  np = ifile !Only increment once / source channel
 c
 c     Now write the commands
 c      
-         write(26,20) 'echo $j'
          write(26,20) 'if [[ ! -e $j ]]; then'
          write(26,25) 'mkdir $j'
          write(26,20) 'fi'
@@ -805,7 +804,6 @@ c      kl = 4321
 c
 c           Now write the commands
 c      
-            write(26,20) 'echo $j'
             write(26,20) 'if [[ ! -e $j ]]; then'
             write(26,25) 'mkdir $j'
             write(26,20) 'fi'

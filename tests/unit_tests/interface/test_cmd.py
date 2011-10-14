@@ -18,6 +18,7 @@ from cmd import Cmd
 import unittest
 import madgraph
 import madgraph.interface.cmd_interface as cmd
+import madgraph.interface.extended_cmd as ext_cmd
 import os
 
 
@@ -89,3 +90,39 @@ class TestValidCmd(unittest.TestCase):
         cmd.check_output([])
         
         self.assertNotEqual('tmp', cmd._export_dir)
+
+
+class TestExtendedCmd(unittest.TestCase):
+    """test the extension of cmd interface"""
+    
+    
+    def test_the_exit_from_child_cmd(self):
+        """ """
+        main = ext_cmd.Cmd()
+        child = ext_cmd.Cmd()
+        main.define_child_cmd_interface(child, interface=False)
+        self.assertEqual(main.child, child)
+        self.assertEqual(child.mother, main)        
+        
+        ret = main.do_quit('')
+        self.assertEqual(ret, None)
+        self.assertEqual(main.child, None)
+        ret = main.do_quit('')
+        self.assertEqual(ret, True)
+        
+    def test_the_exit_from_child_cmd2(self):
+        """ """
+        main = ext_cmd.Cmd()
+        child = ext_cmd.Cmd()
+        main.define_child_cmd_interface(child, interface=False)
+        self.assertEqual(main.child, child)
+        self.assertEqual(child.mother, main)        
+        
+        ret = child.do_quit('')
+        self.assertEqual(ret, True)
+        self.assertEqual(main.child, None)
+        #ret = main.do_quit('')
+        #self.assertEqual(ret, True)        
+         
+    
+
