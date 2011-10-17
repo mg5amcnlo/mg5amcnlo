@@ -197,7 +197,7 @@ class CmdExtended(cmd.Cmd):
         elif not self.results.status:
             return stop
         
-        self.update_status('%s Done. Waiting instruction.' % arg[0], level=None)
+        self.update_status('%s Done.<br> Waiting for instruction.' % arg[0], level=None)
         
     #def nice_error_handling(self, error, line):
     #    """store current result when an error occur"""
@@ -1012,12 +1012,12 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
         """ update the index status """
 
         if isinstance(status, str):
-           logger.info(status)
+            if '<br>' not  in status:
+                logger.info(status)
         else:
             logger.info(' Idle: %s Running: %s Finish: %s' % status)
         self.results.update(status, level,makehtml=makehtml)
         
-   
     ############################################################################      
     def do_generate_events(self, line):
         """ launch the full chain """
@@ -1340,13 +1340,18 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
         
         self.update_status('Running Pythia', 'pythia')
         ## LAUNCHING PYTHIA
+        pythia_log = open(pjoin(self.me_dir, 'Events', '%s_pythia.log' % self.run_name), 'w')
         if self.cluster_mode == 1:
             retcode = self.cluster.launch_and_wait('../bin/internal/run_pythia', 
-                                         argument= [pythia_src],
-                                        cwd=pjoin(self.me_dir,'Events'))
+                        argument= [pythia_src],
+                        stdout= pythia_log,
+                        stderr=subprocess.STDOUT,
+                        cwd=pjoin(self.me_dir,'Events'))
         else:
             retcode = subprocess.call(['../bin/internal/run_pythia', pythia_src],
-                         cwd=pjoin(self.me_dir,'Events'))
+                           stdout=pythia_log,
+                           stderr=subprocess.STDOUT,
+                           cwd=pjoin(self.me_dir,'Events'))
 
 
         if not os.path.exists(pjoin(self.me_dir,'Events','pythia_events.hep')) \
@@ -1578,14 +1583,16 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
         text = '#%s' % text.replace('\n','\n#')
         ff.writelines(text)
         ff.close()
-
+        
+        pgs_log = open(pjoin(self.me_dir, 'Events', "%s_pgs.log" % self.run_name),'w')
         if self.cluster_mode == 1:
             self.cluster.launch_and_wait('../bin/internal/run_pgs', 
-                                         argument= [pgsdir],
-                                        cwd=pjoin(self.me_dir,'Events'))
+                            argument=[pgsdir], cwd=pjoin(self.me_dir,'Events'),
+                            stdout=pgs_log, stderr=subprocess.STDOUT)
         else:        
-            subprocess.call([self.dirbin+'/run_pgs', pgsdir],
-                            cwd=pjoin(self.me_dir, 'Events')) 
+            subprocess.call([self.dirbin+'/run_pgs', pgsdir], stdout= pgs_log,
+                                               stderr=subprocess.STDOUT,
+                                               cwd=pjoin(self.me_dir, 'Events')) 
         
         if not os.path.exists(pjoin(self.me_dir, 'Events', 'pgs_events.lhco')):
             logger.error('Fail to create LHCO events')
@@ -1660,14 +1667,17 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
         banner.writelines('</MGDelphesTrigger>')        
         banner.close()
         
-        
+        delphes_log = open(pjoin(self.me_dir, 'Events', "%s_delphes.log" % self.run_name),'w')
         if self.cluster_mode == 1:
             self.cluster.launch_and_wait('../bin/internal/run_delphes', 
-                                         argument= [delphes_dir, self.run_name],
-                                        cwd=pjoin(self.me_dir,'Events'))
+                        argument= [delphes_dir, self.run_name],
+                        stdout=delphes_log, stderr=subprocess.STDOUT,
+                        cwd=pjoin(self.me_dir,'Events'))
         else:
             subprocess.call(['../bin/internal/run_delphes', delphes_dir, 
-                                self.run_name], cwd=pjoin(self.me_dir,'Events'))
+                                self.run_name],
+                                stdout= delphes_log, stderr=subprocess.STDOUT,
+                                cwd=pjoin(self.me_dir,'Events'))
                 
         if not os.path.exists(pjoin(self.me_dir, 'Events', 'delphes_events.lhco')):
             logger.error('Fail to create LHCO events from DELPHES')

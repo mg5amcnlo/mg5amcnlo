@@ -18,17 +18,9 @@ echo $$ >> ../myprocid
 
 export PDG_MASS_TBL=$pgsdir/mass_width_2004.mc
 
-rm -f pgs.log > /dev/null
-rm -f pgs.err > /dev/null
-rm -f pgs.out > /dev/null
-
-  $pgsdir/pgs  --stdhep pythia_events.hep --nev 100000 --L0 --detector ../Cards/pgs_card.dat pgs_uncleaned_events.lhco >& pgs.log
+  $pgsdir/pgs  --stdhep pythia_events.hep --nev 100000 --L0 --detector ../Cards/pgs_card.dat pgs_uncleaned_events.lhco
   $pgsdir/clean_output -muon pgs_uncleaned_events.lhco pgs_events.lhco
 
-
-if [[ -e pgs.err ]];then
-   cat pgs.err
-fi
 
 if [[ ! -e pgs_events.lhco && -e pgs_uncleaned_events.lhco ]];then
     # Concatanate since the pgs_events.lhco contains the header

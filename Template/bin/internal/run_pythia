@@ -14,19 +14,10 @@ if [ ! -e ../Cards/pythia_card.dat ]; then
 fi
 
 echo $$ >> ../myprocid
-
 # shower and hadronize event through Pythia
-
 echo " " >> ../Cards/pythia_card.dat
 echo "      LHAPATH=$pydir/PDFsets" >> ../Cards/pythia_card.dat
 export PDG_MASS_TBL=$pydir/mass_width_2004.mc
-rm -f pythia.log > /dev/null
-rm -f pythia.err > /dev/null
-rm -f pythia.out > /dev/null
 
-$pydir/pythia >& pythia.log
 
-if [[ -e pythia.err ]];then
-  cat pythia.err
-fi
-
+$pydir/pythia 

@@ -23,9 +23,6 @@ fi
 
 echo $$ >> ../myprocid
 
-rm -f delphes.log > /dev/null
-rm -f delphes.err > /dev/null
-rm -f delphes.out > /dev/null
 
 echo pythia_events.hep > inputfiles.list
 
@@ -34,13 +31,9 @@ echo pythia_events.hep > inputfiles.list
 sed -e "s:DELPHESDIR:$delphesdir:g" ../Cards/delphes_card.dat > ../Cards/tmp_card.dat
 
 
-$delphesdir/Delphes inputfiles.list delphes.root ../Cards/tmp_card.dat ../Cards/delphes_trigger.dat >& delphes.log
-$delphesdir/LHCO_Only delphes.root >> delphes.log
+$delphesdir/Delphes inputfiles.list delphes.root ../Cards/tmp_card.dat ../Cards/delphes_trigger.dat
+$delphesdir/LHCO_Only delphes.root
 
-
-if [[ -e delphes.err ]];then
-  cat delphes.err
-fi
 
 if [ -e delphes_events.lhco ]; then
 # write the delphes banner

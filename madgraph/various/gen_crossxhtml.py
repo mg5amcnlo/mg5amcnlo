@@ -44,7 +44,7 @@ crossxhtml_template = """
         <TABLE BORDER=2 align="center" >  
             <TR align="center">
                 <TH>Links</TH> 
-                <TH>Events</TH> 
+                <TH>Output File</TH> 
                 <TH NOWRAP> Tag </TH>
                 <TH NOWRAP> Run </TH> 
                 <TH>Collider</TH> 
@@ -300,7 +300,11 @@ class OneRunResults(dict):
                 
             if 'lheroot' not in self.pythia and \
                           exists(pjoin(path,"%s_pythia_lhe_events.root" % run)):
-                self.pythia.append('lheroot')            
+                self.pythia.append('lheroot')
+            
+            if 'log' not in self.pythia and \
+                          exists(pjoin(path,"%s_pythia.log" % run)):
+                self.pythia.append('log')     
 
         if level in ['pgs', 'all']:
             
@@ -314,7 +318,11 @@ class OneRunResults(dict):
                 
             if 'root' not in self.pgs and \
                                  exists(pjoin(path,"%s_pgs_events.root" % run)):
-                self.pgs.append('root') 
+                self.pgs.append('root')
+            
+            if 'log' not in self.pgs and \
+                          exists(pjoin(path,"%s_pgs.log" % run)):
+                self.pgs.append('log') 
     
         if level in ['delphes', 'all']:
             
@@ -329,7 +337,10 @@ class OneRunResults(dict):
             if 'root' not in self.delphes and \
                              exists(pjoin(path,"%s_delphes_events.root" % run)):
                 self.delphes.append('root')     
-        
+            
+            if 'log' not in self.delphes and \
+                          exists(pjoin(path,"%s_delphes.log" % run)):
+                self.delphes.append('log') 
         
 
     def info_html(self, path, web=False):
@@ -382,7 +393,9 @@ class OneRunResults(dict):
             out += '</td></tr>'
         if self.pythia:
             out += '<tr><td> Pythia Events : </td><td>'
-
+            
+            if 'log' in self.pythia:
+                out += """ <a href="../Events/%(run_name)s_pythia.log">LOG</a>"""
             if 'hep' in self.pythia:
                 out += """ <a href="../Events/%(run_name)s_pythia_events.hep.gz">STDHEP</a>"""
             if 'lhe' in self.pythia:
@@ -406,6 +419,8 @@ class OneRunResults(dict):
 
         if self.pgs:
             out += '<tr><td>Reco. Objects. (PGS) : </td><td>'
+            if 'log' in self.pgs:
+                out += """ <a href="../Events/%(run_name)s_pgs.log">LOG</a>"""
             if 'lhco' in self.pgs:
                 out += """ <a href="../Events/%(run_name)s_pgs_events.lhco.gz">LHCO</a>"""
             if 'root' in self.pgs:
@@ -415,6 +430,8 @@ class OneRunResults(dict):
             out += '</td></tr>'
         if self.delphes:
             out += '<tr><td>Reco. Objects. (Delphes) : </td><td>'
+            if 'log' in self.delphes:
+                out += """ <a href="../Events/%(run_name)s_delphes.log">LOG</a>"""
             if 'lhco' in self.delphes:
                 out += """ <a href="../Events/%(run_name)s_delphes_events.lhco.gz">LHCO</a>"""
             if 'root' in self.delphes:
