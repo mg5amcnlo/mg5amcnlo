@@ -192,6 +192,40 @@ def compile(arg=[], cwd=None, mode='fortran', **opt):
 
         raise MadGraph5Error, error_text
 
+
+################################################################################
+# TAIL FUNCTION
+################################################################################
+def tail(f, n, offset=None):
+    """Reads a n lines from f with an offset of offset lines.  The return
+    value is a tuple in the form ``lines``.
+    """
+    avg_line_length = 74
+    to_read = n + (offset or 0)
+
+    while 1:
+        try:
+            f.seek(-(avg_line_length * to_read), 2)
+        except IOError:
+            # woops.  apparently file is smaller than what we want
+            # to step back, go to the beginning instead
+            f.seek(0)
+        pos = f.tell()
+        lines = f.read().splitlines()
+        if len(lines) >= to_read or pos == 0:
+            return lines[-to_read:offset and -offset or None]
+        avg_line_length *= 1.3
+
+################################################################################
+# LAST LINE FUNCTION
+################################################################################
+def get_last_line(fsock):
+    """return the last line of a file"""
+    
+    return tail(fsock, 1)[0]
+    
+
+
 #
 # Global function to open supported file types
 #

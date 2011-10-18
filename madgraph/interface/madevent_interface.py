@@ -401,7 +401,7 @@ class CheckValidForCmd(object):
             the number of times that it call generate_events command""")
         elif not args[0].isdigit():
             print self.help_multi_run()
-            raise self.InvalidCmd("The first argument of multi_run shoud be a integer.")
+            raise self.InvalidCmd("The first argument of multi_run should be a integer.")
         nb_run = args.pop(0)
         self.check_survey(args, cmd='multi_run')
         args.insert(0, int(nb_run))
@@ -863,7 +863,6 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
                 self.results.def_web_mode(True)
             else:
                 continue
-            print arg
             args.remove(arg)
         
         if self.cluster_mode == 2 and not self.nb_core:
@@ -1365,6 +1364,14 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
         
         self.to_store.append('pythia')
         
+        # Find the matched cross-section
+        if int(self.run_card['ickkw']):    
+            pythia_log = open(pjoin(self.me_dir,'Events', '%s_pythia.log' % self.run_name))
+            cs_info = misc.get_last_line(pythia_log)
+            # line should be of type: Cross section (pb):    1840.20000000006 
+            cs_info = cs_info.split(':')[1]
+            self.results.add_detail('cross_pythia', cs_info)
+        
         pydir = pjoin(self.configuration['pythia-pgs_path'], 'src')
         eradir = self.configuration['exrootanalysis_path']
         madir = self.configuration['madanalysis_path']
@@ -1410,10 +1417,11 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
         if int(self.run_card['ickkw']):
             self.update_status('Create matching plots for Pythia', level='pythia')
             subprocess.call([self.dirbin+'/create_matching_plots.sh', self.run_name],
+                            stdout = os.open(os.devnull, os.O_RDWR),
                             cwd=pjoin(self.me_dir,'Events'))
             #Clean output
             subprocess.call(['gzip','-f','events.tree'], 
-                                                cwd=pjoin(self.me_dir,'Events'))
+                                                cwd=pjoin(self.me_dir,'Events'))          
             files.mv(pjoin(self.me_dir,'Events','events.tree.gz'), 
                      pjoin(self.me_dir,'Events',self.run_name +'_events.tree.gz'))
             subprocess.call(['gzip','-f','beforeveto.tree'], 

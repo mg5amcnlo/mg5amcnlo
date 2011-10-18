@@ -97,7 +97,7 @@ class AllResults(dict):
         
         dict.__init__(self)
         self.order = []
-        self.process = ','.join(process)
+        self.process = ', '.join(process)
         if len(self.process) > 60:
             pos = self.process[50:].find(',')
             if pos != -1:
@@ -149,8 +149,11 @@ class AllResults(dict):
     def add_detail(self, name, value):
         """ add information to current run (cross/error/event)"""
         
-        assert name in ['cross', 'error', 'nb_event']        
-        self.current[name] = value
+        assert name in ['cross', 'error', 'nb_event', 'cross_pythia']
+        if name == 'cross_pythia':
+            self.current[name] = '<br> matched: %s' % value   
+        else:    
+            self.current[name] = value
         
     def output(self):
         """ write the output file """
@@ -244,6 +247,7 @@ class OneRunResults(dict):
         # Default value
         self['nb_event'] = None
         self['cross'] = 0
+        self['cross_pythia'] = ''
         self['error'] = 0
         self.parton = [] 
         self.pythia = []
@@ -369,7 +373,7 @@ class OneRunResults(dict):
         # Collider
         out += '<td> %(collider)s </td>'
         # Cross
-        out += '<td> %(cross).4g <font face=symbol>&#177</font> %(error).4g  </td>'
+        out += '<td> %(cross).4g <font face=symbol>&#177</font> %(error).4g %(cross_pythia)s </td>'
         # Events
         out += '<td> %(nb_event)s </td>' 
 
