@@ -25,6 +25,7 @@ import time
 import madgraph.iolibs.files as files
 import madgraph.iolibs.misc as misc
 import madgraph.interface.extended_cmd as cmd
+import madgraph.interface.madevent_interface as me_cmd
 from madgraph import MG4DIR, MG5DIR, MadGraph5Error
 from madgraph.iolibs.files import cp
 
@@ -175,14 +176,7 @@ class MELauncher(ExtLauncher):
 
         # Assign a valid run name if not put in options
         if self.name == '':
-            for i in range(1,1000):
-                path = os.path.join(self.running_dir, 'Events','run_%02i_banner.txt' % i)
-                if not os.path.exists(path):
-                    self.name = 'run_%02i' % i
-                    break
-        
-        if self.name == '':
-            raise MadGraph5Error, 'too much run in this directory'
+            self.name = me_cmd.MadEventCmd.find_available_run_name(self.running_dir)
     
     
     def copy_default_card(self, name):

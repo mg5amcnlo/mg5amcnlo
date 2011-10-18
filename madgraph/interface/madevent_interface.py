@@ -385,7 +385,7 @@ class CheckValidForCmd(object):
             raise self.InvalidCmd('Too many argument for %s command' % cmd)
         elif not args:
             # No run name assigned -> assigned one automaticaly 
-            self.set_run_name(self.find_available_run_name())
+            self.set_run_name(self.find_available_run_name(self.me_dir))
         else:
             self.set_run_name(args[0], True)
             args.pop(0)
@@ -487,7 +487,7 @@ class CheckValidForCmd(object):
             error_msg += 'You can also define it in the configuration file.'
             raise self.InvalidCmd(error_msg)
     
-    def check_plot(self, arg):
+    def check_plot(self, args):
         """Check the argument for the plot command
         plot run_name modes"""
 
@@ -512,24 +512,24 @@ class CheckValidForCmd(object):
             error_msg += 'You can also define it in the configuration file.'
             raise self.InvalidCmd(error_msg)  
                      
-        if len(arg) == 0:
+        if len(args) == 0:
             if not hasattr(self, 'run_name'):
                 self.help_plot()
                 raise self.InvalidCmd('No run name currently define. Please add this information.')             
-            arg.append('all')
+            args.append('all')
             return
-
-            
-        
-        if args[1] not in self._plot_mode:
-            self.set_run_name(args[1])
-            del args[1]
+                
+        if args[0] not in self._plot_mode:
+            self.set_run_name(args[0])
+            del args[0]
+            if len(args) == 0:
+                args.append('all')
         elif not self.run_name:
             self.help_plot()
             raise self.InvalidCmd('No run name currently define. Please add this information.')                             
         
         for arg in args:
-            if arg not in self._plot_mode or arg == self.run_name:
+            if arg not in self._plot_mode and arg != self.run_name:
                  self.help_plot()
                  raise self.InvalidCmd('unknown options %s' % arg)        
     
@@ -722,8 +722,7 @@ class CompleteForCmd(CheckValidForCmd):
         """ Complete the plot command """
         
         args = self.split_arg(line[0:begidx])
-        
-        if len(args):
+        if len(args) > 1:
             return self.list_completion(text, self._plot_mode)
         else:
             return self.list_completion(text, self._plot_mode + self.results.keys())
@@ -733,7 +732,7 @@ class CompleteForCmd(CheckValidForCmd):
     def complete_pythia(self,text, line, begidx, endidx):
         "Complete the pythia command"
         
-        args = self.split_arg(line[0:begidx])
+        args = cmd.Cmd.split_arg(line[0:begidx])
         if len(args) == 1:
             #return valid run_name
             data = glob.glob(pjoin(self.me_dir, 'Events', '*_unweighted_events.lhe.gz'))
@@ -750,7 +749,8 @@ class CompleteForCmd(CheckValidForCmd):
     def complete_pgs(self,text, line, begidx, endidx):
         "Complete the pythia command"
         
-        args = self.split_arg(line[0:begidx])
+        args = cmd.Cmd.split_arg(line[0:begidx]) 
+                
         if len(args) == 1:
             #return valid run_name
             data = glob.glob(pjoin(self.me_dir, 'Events', '*_pythia_events.hep.gz'))
@@ -775,7 +775,7 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
     # Truth values
     true = ['T','.true.',True,'true']
     # Options and formats available
-    _run_options = ['--cluster','--multicore','--nb_core=','--nb_core=2']
+    _run_options = ['--cluster','--multicore','--nb_core=','--nb_core=2', '-c', '-m']
     _set_options = ['stdout_level','fortran_compiler']
     _plot_mode = ['all', 'parton','pythia','pgs','delphes']
     # Variables to store object information
@@ -1024,6 +1024,8 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
         args = self.split_arg(line)
         # Check argument's validity
         self.check_survey(args, cmd='generate_events')
+        logger.info('Generating %s events with run name %s' %
+                                      (self.run_card['nevents'], self.run_name))
               
         self.exec_cmd('survey %s' % line, postcmd=False)
         if not self.run_card['gridpack'] in self.true:        
@@ -1482,9 +1484,9 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
             if os.path.exists(filename+'.gz'):
                 os.system('gunzip -f %s' % (filename+'.gz') )
             if  os.path.exists(filename):
-                shutil.move(filename, pjoin(self.me_dir, 'Events','pgs_events.lhco'))
+                #shutil.move(filename, pjoin(self.me_dir, 'Events','pgs_events.lhco'))
                 self.create_plot('pgs')
-                shutil.move(pjoin(self.me_dir, 'Events','pgs_events.lhco'), filename)
+                #shutil.move(pjoin(self.me_dir, 'Events','pgs_events.lhco'), filename)
                 os.system('gzip -f %s' % filename)                
             else:
                 logger.info('No valid files for pgs plot')
@@ -1494,9 +1496,9 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
             if os.path.exists(filename+'.gz'):
                 os.system('gunzip -f %s' % (filename+'.gz') )
             if  os.path.exists(filename):
-                shutil.move(filename, pjoin(self.me_dir, 'Events','delphes_events.lhco'))
+                #shutil.move(filename, pjoin(self.me_dir, 'Events','delphes_events.lhco'))
                 self.create_plot('delphes')
-                shutil.move(pjoin(self.me_dir, 'Events','delphes_events.lhco'), filename)
+                #shutil.move(pjoin(self.me_dir, 'Events','delphes_events.lhco'), filename)
                 os.system('gzip -f %s' % filename)                
             else:
                 logger.info('No valid files for delphes plot')
@@ -1615,6 +1617,7 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
             return 
         else:
             os.remove(pjoin(self.me_dir, 'Events', 'pgs.done'))
+            
         if os.path.getsize(banner_path) == os.path.getsize(pjoin(self.me_dir, 'Events','pgs_events.lhco')):
             subprocess.call(['cat pgs_uncleaned_events.lhco >>  pgs_events.lhco'], 
                             cwd=pjoin(self.me_dir, 'Events'))
@@ -1625,14 +1628,15 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
             subprocess.call([eradir+'/ExRootLHCOlympicsConverter', 
                              'pgs_events.lhco','%s_pgs_events.root' % self.run_name],
                             cwd=pjoin(self.me_dir, 'Events')) 
-
-        # Creating plots
-        self.create_plot('PGS')
         
         if os.path.exists(pjoin(self.me_dir, 'Events', 'pgs_events.lhco')):
-            files.cp(pjoin(self.me_dir, 'Events', 'pgs_events.lhco'), 
+            files.mv(pjoin(self.me_dir, 'Events', 'pgs_events.lhco'), 
                     pjoin(self.me_dir, 'Events', '%s_pgs_events.lhco' % self.run_name))
+            # Creating plots
+            self.create_plot('PGS')
             subprocess.call(['gzip','-f', pjoin(self.me_dir, 'Events', '%s_pgs_events.lhco' % self.run_name)])
+
+
         
         self.update_status('finish', level='pgs', makehtml=False)
 
@@ -1700,7 +1704,7 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
                                 stdout= delphes_log, stderr=subprocess.STDOUT,
                                 cwd=pjoin(self.me_dir,'Events'))
                 
-        if not os.path.exists(pjoin(self.me_dir, 'Events', 'delphes_events.lhco')):
+        if not os.path.exists(pjoin(self.me_dir, 'Events', '%s_delphes_events.lhco' % self.run_name)):
             logger.error('Fail to create LHCO events from DELPHES')
             return 
 
@@ -1821,13 +1825,13 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
                 self.results.add_detail('cross', float(data[1]))
                 self.results.add_detail('error', float(data[2]))                
         
-        
-    def find_available_run_name(self):
+    @staticmethod
+    def find_available_run_name(me_dir):
         """ find a valid run_name for the current job """
         
-        name = 'run_%03d'
-        data = [int(s[4:7]) for s in os.listdir(pjoin(self.me_dir,'Events')) if
-                        s.startswith('run_') and len(s)>6 and s[4:7].isdigit()]
+        name = 'run_%02d'
+        data = [int(s[4:6]) for s in os.listdir(pjoin(me_dir,'Events')) if
+                        s.startswith('run_') and len(s)>5 and s[4:6].isdigit()]
         return name % (max(data+[0])+1) 
 
     ############################################################################   
@@ -2102,13 +2106,14 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
         if not event_path:
             if mode == 'parton':
                 event_path = pjoin(self.me_dir, 'Events','unweighted_events.lhe')
-            elif mode == 'Pythia':
+            elif mode == 'pythia':
                 event_path = pjoin(self.me_dir, 'Events','pythia_events.lhe')
-            elif mode == 'PGS':
-                event_path = pjoin(self.me_dir, 'Events', 'pgs_events.lhco')
-            elif mode == 'Delphes':
-                event_path = pjoin(self.me_dir, 'Events', 'delphes_events.lhco')
-        
+            elif mode == 'pgs':
+                event_path = pjoin(self.me_dir, 'Events', '%s_pgs_events.lhco' % self.run_name)
+            elif mode == 'delphes':
+                event_path = pjoin(self.me_dir, 'Events', '%s_delphes_events.lhco' % self.run_name)
+            else:
+                raise MadEvent5Error, 'Invalid mode %s' % mode
         if not os.path.exists(event_path):
             print 'not path', event_path
             return False

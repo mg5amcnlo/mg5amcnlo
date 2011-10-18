@@ -151,7 +151,7 @@ class AllResults(dict):
         
         assert name in ['cross', 'error', 'nb_event', 'cross_pythia']
         if name == 'cross_pythia':
-            self.current[name] = '<br> matched: %s' % value   
+            self.current[name] = '<br> matched: %.4g' % float(value)   
         else:    
             self.current[name] = value
         
