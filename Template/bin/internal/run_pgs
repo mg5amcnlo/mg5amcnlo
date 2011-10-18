@@ -18,14 +18,9 @@ echo $$ >> ../myprocid
 
 export PDG_MASS_TBL=$pgsdir/mass_width_2004.mc
 
-  $pgsdir/pgs  --stdhep pythia_events.hep --nev 100000 --L0 --detector ../Cards/pgs_card.dat pgs_uncleaned_events.lhco
-  $pgsdir/clean_output -muon pgs_uncleaned_events.lhco pgs_events.lhco
-
-
-if [[ ! -e pgs_events.lhco && -e pgs_uncleaned_events.lhco ]];then
-    # Concatanate since the pgs_events.lhco contains the header
-    cat pgs_uncleaned_events.lhco >>  pgs_events.lhco
-fi
-
+  $pgsdir/pgs  --stdhep pythia_events.hep --nev 100000 --L0 --detector ../Cards/pgs_card.dat pgs_uncleaned_events.lhco \
+   && $pgsdir/clean_output -muon pgs_uncleaned_events.lhco pgs_events.lhco && \
+   touch pgs.done
+   
 # Remove tauola output file
 rm -f fort.45 > /dev/null

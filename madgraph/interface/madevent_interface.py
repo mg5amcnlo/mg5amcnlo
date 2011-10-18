@@ -1339,25 +1339,29 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
         pythia_src = pjoin(self.configuration['pythia-pgs_path'],'src')
         
         self.update_status('Running Pythia', 'pythia')
+        try:
+            os.remove(pjoin(self.me_dir,'Events','pythia.done'))
+        except:
+            pass
+        
         ## LAUNCHING PYTHIA
         pythia_log = open(pjoin(self.me_dir, 'Events', '%s_pythia.log' % self.run_name), 'w')
         if self.cluster_mode == 1:
-            retcode = self.cluster.launch_and_wait('../bin/internal/run_pythia', 
-                        argument= [pythia_src],
-                        stdout= pythia_log,
+            self.cluster.launch_and_wait('../bin/internal/run_pythia', 
+                        argument= [pythia_src], stdout= pythia_log,
                         stderr=subprocess.STDOUT,
                         cwd=pjoin(self.me_dir,'Events'))
         else:
-            retcode = subprocess.call(['../bin/internal/run_pythia', pythia_src],
+            subprocess.call(['../bin/internal/run_pythia', pythia_src],
                            stdout=pythia_log,
                            stderr=subprocess.STDOUT,
                            cwd=pjoin(self.me_dir,'Events'))
 
-
-        if not os.path.exists(pjoin(self.me_dir,'Events','pythia_events.hep')) \
-                                                                     or retcode:
+        if not os.path.exists(pjoin(self.me_dir,'Events','pythia.done')):
             logger.warning('Fail to produce pythia output')
             return
+        else:
+            os.remove(pjoin(self.me_dir,'Events','pythia.done'))
         
         self.to_store.append('pythia')
         
@@ -1583,7 +1587,11 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
         text = '#%s' % text.replace('\n','\n#')
         ff.writelines(text)
         ff.close()
-        
+
+        try: 
+            os.remove(pjoin(self.me_dir, 'Events', 'pgs.done'))
+        except:
+            pass
         pgs_log = open(pjoin(self.me_dir, 'Events', "%s_pgs.log" % self.run_name),'w')
         if self.cluster_mode == 1:
             self.cluster.launch_and_wait('../bin/internal/run_pgs', 
@@ -1594,10 +1602,15 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
                                                stderr=subprocess.STDOUT,
                                                cwd=pjoin(self.me_dir, 'Events')) 
         
-        if not os.path.exists(pjoin(self.me_dir, 'Events', 'pgs_events.lhco')):
+        if not os.path.exists(pjoin(self.me_dir, 'Events', 'pgs.done')):
             logger.error('Fail to create LHCO events')
             return 
-        
+        else:
+            os.remove(pjoin(self.me_dir, 'Events', 'pgs.done'))
+        if os.path.getsize(banner_path) == os.path.getsize(pjoin(self.me_dir, 'Events','pgs_events.lhco')):
+            subprocess.call(['cat pgs_uncleaned_events.lhco >>  pgs_events.lhco'], 
+                            cwd=pjoin(self.me_dir, 'Events'))
+
         # Creating Root file
         if misc.is_executable(pjoin(eradir, 'ExRootLHCOlympicsConverter')):
             self.update_status('Creating PGS Root File', level='pgs')
