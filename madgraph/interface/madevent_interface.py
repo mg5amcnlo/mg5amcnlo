@@ -1715,9 +1715,7 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
         # Creating plots
         self.create_plot('Delphes')
 
-        if os.path.exists(pjoin(self.me_dir, 'Events', 'delphes_events.lhco')):
-            files.cp(pjoin(self.me_dir, 'Events', 'delphes_events.lhco'), 
-                    pjoin(self.me_dir, 'Events', '%s_delphes_events.lhco' % self.run_name))
+        if os.path.exists(pjoin(self.me_dir, 'Events', '%s_delphes_events.lhco' % self.run_name)):
             subprocess.call(['gzip', pjoin(self.me_dir, 'Events', '%s_delphes_events.lhco' % self.run_name)])
 
 
