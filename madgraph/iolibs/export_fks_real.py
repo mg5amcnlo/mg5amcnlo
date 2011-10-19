@@ -71,7 +71,6 @@ class ProcessExporterFortranFKS_real(export_v4.ProcessExporterFortran):
                       "No valid MG_ME path given for MG4 run directory creation."
             logger.info('initialize a new directory: %s' % \
                         os.path.basename(dir_path))
-            print os.path.join(mgme_dir, 'TemplateFKSreal')
             shutil.copytree(os.path.join(mgme_dir, 'TemplateFKSreal'), dir_path, True)
         elif not os.path.isfile(os.path.join(dir_path, 'TemplateVersion.txt')):
             if not mgme_dir:
@@ -156,7 +155,6 @@ class ProcessExporterFortranFKS_real(export_v4.ProcessExporterFortran):
         subprocdir = "P%s_%d" % \
         (matrix_element.get('processes')[0].shell_string(), nfks+ 1)
         self.fksdirs.append(subprocdir)
-        print subprocdir
     #    dirs.append(subprocdir)
         try:
             os.mkdir(subprocdir)
@@ -283,10 +281,6 @@ class ProcessExporterFortranFKS_real(export_v4.ProcessExporterFortran):
                              fortran_model) 
         
         #write out born and all relted born_x**x.inc files    
-###        
-####        print "used lorentz ", matrix_element.get_used_lorentz()
-####        print "used lorentz born", born_matrix_element.get_used_lorentz()
-###        
         filename = 'born.f'
         calls_born, ncolor_born = \
             self.write_born_fks(writers.FortranWriter(filename),\
@@ -411,6 +405,7 @@ class ProcessExporterFortranFKS_real(export_v4.ProcessExporterFortran):
                      'message.inc',
                      'mint-integrator2.f',
                      'mint.inc',
+                     'mirror.f',
                      'montecarlocounter.f',
                      'myamp.f',
                      'q_es.inc',
@@ -620,9 +615,6 @@ c     this subdir has no soft singularities
             line = string.replace(line, 'JAMP', 'JAMP2')
             new_jamp_lines.append(line)
         replace_dict['jamp2_lines'] = '\n'.join(new_jamp_lines)
-#        print "Spectators ", mn
-#        print "jamp1 ", replace_dict['jamp1_lines']
-#        print "jamp2 ", replace_dict['jamp2_lines']
     
         file = open(os.path.join(_file_path, \
                           'iolibs/template_files/b_sf_xxx_fks.inc')).read()
@@ -907,7 +899,6 @@ data mirrorproc /%s/" % bool_dict[matrix_element.get('has_mirror_process')]
     
         # Extract number of external particles
         (nexternal, ninitial) = matrix_element.get_nexternal_ninitial()
-     #   print nexternal, ninitial
     
     
         lines = []

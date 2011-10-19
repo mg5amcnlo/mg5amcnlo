@@ -558,7 +558,7 @@ class TestFKSCommon(unittest.TestCase):
                         ])
 
         for leg, res in zip (leg_list, res_list):    
-            self.assertEqual(sorted(res), 
+            self.assertEqual(res, 
                              fks_common.find_splittings(leg, self.model, {}) )   
     
     def test_insert_legs(self):

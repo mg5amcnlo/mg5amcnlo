@@ -380,8 +380,6 @@ C     FKS configuration number  7
       DATA (FKS_J_FROM_I(3, JPOS), JPOS = 0, 1)  / 1, 1 /
       DATA (FKS_J_FROM_I(4, JPOS), JPOS = 0, 2)  / 2, 2, 3 /
       DATA (FKS_J_FROM_I(5, JPOS), JPOS = 0, 4)  / 4, 1, 2, 3, 4 /
-      DATA (FKS_IPOS(IPOS), IPOS = 0, 3)  / 3, 3, 4, 5 /
-
 C     
 C     Particle type:
 C     octet = 8, triplet = 3, singlet = 1
@@ -467,7 +465,7 @@ C
             mylegsborn1.append(MG.Leg(i))
         
         born_amp1 = diagram_generation.Amplitude(MG.Process(
-                            {'legs' : fks_common.to_fks_legs(mylegsborn1, model), 'orders':{'QCD':10, 'QED':0},
+                            {'legs' : mylegsborn1, 'orders':{'QCD':10, 'QED':0},
                            'model': model,
                            'id': 1,
                            'required_s_channels':[],

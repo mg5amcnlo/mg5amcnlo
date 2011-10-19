@@ -24,8 +24,8 @@ c
       do i=1,2
         kk=(i-1)*50
         call bookup(kk+1,'total rate'//cc(i),1.0d0,0.5d0,5.5d0)
-        call bookup(kk+2,'e+e- pair rapidity'//cc(i),0.5d0,-5d0,5d0)
-        call bookup(kk+3,'e+e- invariant mass'//cc(i), 10d0, 0d0, 300d0)
+        call bookup(kk+2,'t rapidity'//cc(i),0.5d0,-5d0,5d0)
+        call bookup(kk+3,'tx rapidity'//cc(i),0.5d0,-5d0,5d0)
       enddo
       return
       end
@@ -62,8 +62,8 @@ c
       do i=1,2
         kk=(i-1)*50
         call multitop(kk+1,3,2,'total rate',ytit,'LIN')
-        call multitop(kk+2,3,2,'e+e- pair rapidity',ytit,'LOG')
-        call multitop(kk+3,3,2,'e+e- invariant mass',ytit,'LOG')
+        call multitop(kk+2,3,2,'t rapidity',ytit,'LOG')
+        call multitop(kk+2,3,2,'tx rapidity',ytit,'LOG')
 c$$$        call mtop(kk+1,'total rate',ytit,'LIN')
       enddo
       return                
@@ -114,7 +114,7 @@ c masses
       double precision shybst, chybst, chybstmo
       real*8 xd(1:3)
       data (xd(i), i=1,3) /0,0,1/
-      real*8 yz, pz(0:3), mz
+      real*8 yt, ytx, pz(0:3), mz
 c
       if(itype.eq.11.or.itype.eq.12)then
         kk=0
@@ -135,8 +135,8 @@ c
         pz(i)=pplab(i,3)+pplab(i,4)
       enddo
 
-      mz = sqrt(dot(pz,pz))
-      yz=getrapidity(pz(0), pz(3))
+      yt=getrapidity(pplab(0,3), pplab(3,3))
+      ytx=getrapidity(pplab(0,4), pplab(3,4))
 
 
 
@@ -145,8 +145,8 @@ c
 
       var=1.d0
       call mfill(kk+1,var,www)
-      call mfill(kk+2,yz,www)
-      call mfill(kk+3,mz,www)
+      call mfill(kk+2,yt,www)
+      call mfill(kk+3,ytx,www)
  999  return      
       end
 

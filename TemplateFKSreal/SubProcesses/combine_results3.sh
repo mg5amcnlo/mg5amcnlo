@@ -14,9 +14,8 @@ done
 
 sed -i.bak s/"\+\/\-"/" \+\/\-"/ res.txt
 
-f77 -o sumres sumres.f
 
-./sumres
+./sumres.py
 
 rm -r res.txt.bak
 

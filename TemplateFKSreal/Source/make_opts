@@ -2,9 +2,10 @@
 
 ifeq ($(origin FFLAGS),undefined)
   #FFLAGS= -O -w
-  FFLAGS = -g 
+  FFLAGS = -g -fno-automatic 
   #FFLAGS+= -g -fbounds-check -ffpe-trap=invalid,zero,overflow,underflow,denormal -Wall
 endif
+
 FFLAGS+= -ffixed-line-length-132
 
 # Set FC unless it's defined by an environment variable

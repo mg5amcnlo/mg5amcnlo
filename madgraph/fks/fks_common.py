@@ -349,6 +349,33 @@ def legs_to_color_link_string(leg1, leg2): #test written, all cases
       
     return dict
 
+def sort_proc(process):
+    """given a process, returns the same process but with sorted fkslegs"""
+    leglist = to_fks_legs(process.get('legs'), process.get('model'))
+    leglist.sort()
+    for n, leg in enumerate(leglist):
+        leg['number'] = n+1
+    process['legs'] = leglist
+
+    return process
+
+def to_leg(fksleg):
+    """Given a FKSLeg, returns the original Leg"""
+    leg = MG.Leg( \
+        {'id': fksleg.get('id'),
+         'number': fksleg.get('number'),
+         'state': fksleg.get('state'),
+         'from_group': fksleg.get('from_group'),
+         'onshell': fksleg.get('onshell') } )
+    return leg
+
+def to_legs(fkslegs):
+    """Given a FKSLegList, returns the corresponding LegList"""
+    leglist = MG.LegList()
+    for leg in fkslegs:
+        leglist.append(to_leg(leg))
+    return leglist
+
 
 def to_fks_leg(leg, model): #test written
     """given a leg or a dict with leg properties, 
@@ -426,32 +453,30 @@ class FKSLeg(MG.Leg):
     
     
     
-    
- 
-    
-#    def __lt__(self, other):
-#        #two initial state legs are sorted by their number:
-#        if (not self.get('state') and not other.get('state')):
-#            return self.get('number') < other.get('number')
-#        
-#        #an initial state leg comes before a final state leg
-#        if (self.get('state') or other.get('state')) and \
-#          not (self.get('state') and other.get('state')):
-#            return other.get('state')
-#        
-#        #two final state particles are ordered by increasing color
-#        elif self.get('state') and other.get('state'):
-#            if abs(self.get('color')) != abs(other.get('color')):
-#                return abs(self.get('color')) < abs(other.get('color'))
-#        #particles of the same color are ordered according to the pdg code
-#            else:
-#                if abs(self.get('id')) != abs(other.get('id')):
-#                    return abs(self.get('id')) < abs(other.get('id'))
-#                elif self.get('id') != other.get('id') :
-#        #for the same flavour qqbar pair, first take the quark 
-#                    return self.get('id') > other.get('id')
-#        # i fks > j fks > n fks        
-#                else: 
-#                    return not self.get('fks') < other.get('fks') 
-                    
+    def __lt__(self, other):
+        #two initial state legs are sorted by their number:
+        if (not self.get('state') and not other.get('state')):
+            return self.get('number') < other.get('number')
+        
+        #an initial state leg comes before a final state leg
+        if (self.get('state') or other.get('state')) and \
+          not (self.get('state') and other.get('state')):
+            return other.get('state')
+        
+        #two final state particles are ordered by increasing color
+        elif self.get('state') and other.get('state'):
+            if abs(self.get('color')) != abs(other.get('color')):
+                return abs(self.get('color')) < abs(other.get('color'))
+            else:
+        #if same color, put massive particles first
+                if (self.get('massless') or other.get('massless')) and \
+                  not (self.get('massless') and other.get('massless')):
+                    return other.get('massless')
+                else:
+#3                    if (self.get('id') != other.get('id')):
+##                        return self.get('id') < other.get('id')
+##                    else:
+##                        return self.get('number') < other.get('number')
+                    return self.get('number') < other.get('number')
+        return True;
          

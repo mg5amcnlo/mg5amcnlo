@@ -1290,24 +1290,6 @@ c then the t-channel
 
 
 
-      subroutine get_mirror_rescale(i_cms,rescale)
-      implicit none
-      double precision rescale, sumprob, selproc(2) 
-      double precision dlum
-      integer i_cms, imirror, imirror_bak
-      common/cmirror/imirror
-      imirror_bak=imirror
-      sumprob=0d0
-      do imirror=1,2
-        call set_cms_stuff(i_cms)
-        selproc(imirror)=dlum()
-        sumprob=sumprob+selproc(imirror)
-      enddo
-      imirror=imirror_bak
-      rescale=sumprob/selproc(imirror)
-      return
-      end
-
 
       double precision function dsig(pp,wgt,vegaswgt)
 c Here are the subtraction terms, the Sij function, 
@@ -1803,13 +1785,13 @@ c
       cnt_wgt = cnt_wgt_c + cnt_wgt_s + cnt_wgt_sc
       cnt_swgt = cnt_swgt_s + cnt_swgt_sc
 
-      ev_wgt = ev_wgt * enhance !* rescale_mir
-      cnt_wgt = cnt_wgt * enhance !* rescale_mir
-      cnt_swgt = cnt_swgt * enhance !* rescale_mir
-      bsv_wgt = bsv_wgt * enhance !* rescale_mir
-      born_wgt = born_wgt * enhance !* rescale_mir
-      deg_wgt = deg_wgt * enhance !* rescale_mir
-      deg_swgt = deg_swgt * enhance !* rescale_mir
+      ev_wgt = ev_wgt * enhance
+      cnt_wgt = cnt_wgt * enhance
+      cnt_swgt = cnt_swgt * enhance
+      bsv_wgt = bsv_wgt * enhance
+      born_wgt = born_wgt * enhance
+      deg_wgt = deg_wgt * enhance
+      deg_swgt = deg_swgt * enhance
 
       
       if(iminmax.eq.0) then
@@ -1847,6 +1829,8 @@ c For tests
          if( (s_s.gt.0.d0.or.s_c.gt.0.d0.or.
      &        s_sc.gt.0.d0).and.abs(cnt_wgt).gt.0.d0)
      &        icou_mecnt=icou_mecnt+1
+         
+         if (imirror.eq.2) ybst_til_tolab = - ybst_til_tolab
 
 c Plot observables for event
          plot_wgt=ev_wgt*fkssymmetryfactor*vegaswgt
@@ -3675,42 +3659,6 @@ c do the same as above for the counterevents
       endif
 
       if (imirror.eq.2) call FlipBeams()
-      return
-      end
-
-      subroutine FlipBeams()
-      implicit none
-c this sub flips the identities of the two beams
-      include "run.inc"
-      double precision ybst_til_tolab,ybst_til_tocm,sqrtshat,shat
-      common/parton_cms_stuff/ybst_til_tolab,ybst_til_tocm,
-     #                        sqrtshat,shat
-      call FlipTwoD(ebeam)
-      call FlipTwoD(xbk)
-      call FlipTwoD(q2fact)
-      call FlipTwoI(lpp)
-      ybst_til_tolab=-ybst_til_tolab
-      ybst_til_tocm =-ybst_til_tocm
-      return
-      end
-      
-      subroutine FlipTwoI(vec)
-      implicit none
-c this sub flips the components of a 2-vector (intger)
-      integer vec(2), dum
-      dum=vec(1)
-      vec(1)=vec(2)
-      vec(2)=dum
-      return
-      end
-
-      subroutine FlipTwoD(vec)
-      implicit none
-c this sub flips the components of a 2-vector (double precision)
-      double precision vec(2), dum
-      dum=vec(1)
-      vec(1)=vec(2)
-      vec(2)=dum
       return
       end
 

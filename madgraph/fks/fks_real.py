@@ -99,7 +99,7 @@ class FKSBornProcess(object):
 #        self.process.set('orders', orders)
         
         born_legs = self.reduce_real_leglist(leg_i, leg_j, leg_ij)
-        self.process.set('legs', MG.LegList(born_legs))
+        self.process.set('legs', fks_common.to_legs(born_legs))
         self.amplitude = diagram_generation.Amplitude(self.process)
         self.is_to_integrate = True
         self.is_nbody_only = False
@@ -126,7 +126,9 @@ class FKSBornProcess(object):
         Uses the find_color_links function in fks_common"""
         if self.need_color_links:
             self.color_links = fks_common.find_color_links(\
-                              self.process.get('legs'))
+                              fks_common.to_fks_legs(\
+                                self.process.get('legs'),
+                                self.process.get('model')))
         return self.color_links
     
     
@@ -183,14 +185,17 @@ class FKSProcessFromReals(object):
  
         if start_proc:
             if isinstance(start_proc, MG.Process):
-                self.real_proc = start_proc 
+                self.real_proc = fks_common.sort_proc(start_proc) 
                 self.real_amp = diagram_generation.Amplitude(self.real_proc)
             elif isinstance(start_proc, diagram_generation.Amplitude):
-                self.real_amp = start_proc
-                self.real_proc = start_proc.get('process') 
+                self.real_proc = fks_common.sort_proc(start_proc.get('process'))
+                self.real_amp = diagram_generation.Amplitude(self.real_proc)
+                self.real_amp['has_mirror_process'] = start_proc['has_mirror_process']
+
             self.model = self.real_proc.get('model')   
 
-            self.leglist = fks_common.to_fks_legs(self.real_proc.get('legs'), self.model)
+            #self.leglist = fks_common.to_fks_legs(self.real_proc.get('legs'), self.model)
+            self.leglist = self.real_proc.get('legs')
             self.nlegs = len(self.leglist)
             for leg in self.leglist:
                 self.pdg_codes.append(leg['id'])

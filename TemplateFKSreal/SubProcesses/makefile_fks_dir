@@ -15,7 +15,9 @@ LINKLIBS =  -L../../lib/ -ldhelas -ldsample_fks -lmodel -lgeneric -lpdf
 LIBS = $(LIBDIR)libdhelas.a $(LIBDIR)libdsample_fks.a $(LIBDIR)libgeneric.a $(LIBDIR)libpdf.a $(LIBDIR)libmodel.a
 
 # Files for all executables
-FILES= myamp.o auto_dsig.o genps_fks.o matrix.o setcuts.o cluster.o reweight.o initcluster.o setscales.o born.o sborn_sf.o $(patsubst %.f,%.o,$(wildcard b_sf_???.f)) fks_Sij.o trapfpe.o fastjetfortran_madfks.o ktclusdble.o fks_singular.o montecarlocounter.o
+FILES= myamp.o auto_dsig.o genps_fks.o matrix.o setcuts.o cluster.o reweight.o initcluster.o setscales.o \
+         born.o sborn_sf.o $(patsubst %.f,%.o,$(wildcard b_sf_???.f)) fks_Sij.o trapfpe.o fastjetfortran_madfks.o \
+         ktclusdble.o fks_singular.o montecarlocounter.o mirror.o
 
 # Files needed for vegas, mint & mintMC
 RUN= $(FILES) unwgt.o cuts.o add_write_info.o LesHouches.o madfks_dbook.o madfks_plot.o
