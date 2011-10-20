@@ -5,7 +5,7 @@ Update notes for MadGraph 5 (in reverse time order)
                       for running madevent.
                       (accessible from MG5 via launch [DIR] -i)
 		      This script replaces most of the script present before in 
-		      ./bin/ (such as survey/refine/combine/run_XXXX/multi_run)
+		      ./bin/ (such as survey/refine/combine/run_XXXX/multi_run/plot)
 		      The script generate_events still exists but call itself 
                       ./bin/madevent. 
                   OM: Madevent check that the param_card is coherent with the 
@@ -15,7 +15,8 @@ Update notes for MadGraph 5 (in reverse time order)
                       model use SLAH2. This allow to use the pythia6 matching, 
                       as well as have a coherent definition for the flavor.
                   OM: Change the import command. It's now allow to ommit the 
-                      type of import. This one will be guess automaticaly.
+                      type of import. This one will be guess automaticaly. 
+                      This is NOT allowed on the web.
                   OM: Add the possibility to force which fortran compiler will 
                       be use. Either via the configuration file or via the set 
                       command.
@@ -31,6 +32,8 @@ Update notes for MadGraph 5 (in reverse time order)
 		        with the associate formula 
 	          OM: New Python script for the creation of the crossx.html page
                       Requiring less disk access for the generation of the file.
+                  OM: Modify the gestion of error, especially for Invalid command.
+                      Configuration problem.
 
 1.3.22 (12/10/11) JA: Fixed another bug (also introduced in 1.3.18), which 
                       could give the wrong ordering between the s-channel 

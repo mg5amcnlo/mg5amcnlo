@@ -32,7 +32,7 @@ import madgraph.core.diagram_generation as diagram_generation
 import madgraph.core.color_amp as color_amp
 import madgraph.core.color_algebra as color
 
-from madgraph import MadGraph5Error
+from madgraph import InvalidCmd
 
 #===============================================================================
 # 
@@ -4150,7 +4150,7 @@ class HelasMultiProcess(base_objects.PhysicsObject):
                                        list_color_matrices[col_index])
             
         if not matrix_elements:
-            raise MadGraph5Error, \
+            raise InvalidCmd, \
                   "No matrix elements generated, check overall coupling orders"
 
         return matrix_elements

@@ -36,7 +36,7 @@ import madgraph.iolibs.misc as misc
 import madgraph.iolibs.file_writers as writers
 import madgraph.iolibs.template_files as template_files
 import madgraph.iolibs.ufo_expression_parsers as parsers
-from madgraph import MadGraph5Error, MG5DIR
+from madgraph import MadGraph5Error, InvalidCmd, MG5DIR
 from madgraph.iolibs.files import cp, ln, mv
 
 import aloha.create_aloha as create_aloha
@@ -967,7 +967,7 @@ class ProcessExporterPythia8(ProcessExporterCPP):
         for me in self.matrix_elements:
             if me.get_nexternal_ninitial() not in [(3,2),(4,2),(5,2)]:
                 nex,nin = me.get_nexternal_ninitial()
-                raise MadGraph5Error,\
+                raise InvalidCmd,\
                       "Pythia 8 can only handle 2->1,2,3 processes, not %d->%d" % \
                       (nin,nex-nin)
 
@@ -1134,7 +1134,7 @@ class ProcessExporterPythia8(ProcessExporterCPP):
             if beams.issubset(set_tuple[0]):
                 return set_tuple[1]
 
-        raise MadGraph5Error('Pythia 8 cannot handle incoming flavors %s' %\
+        raise InvalidCmd('Pythia 8 cannot handle incoming flavors %s' %\
                              repr(beams))
 
         return 

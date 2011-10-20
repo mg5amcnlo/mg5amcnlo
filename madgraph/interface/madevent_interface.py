@@ -53,13 +53,13 @@ try:
     import madgraph.various.gen_crossxhtml as gen_crossxhtml
     import madgraph.various.cluster as cluster
     import models.check_param_card as check_param_card
-    from madgraph import InvalidCmd
+    from madgraph import InvalidCmd, MadGraph5Error
     MADEVENT = False
 except Exception, error:
     # import from madevent directory
     import internal.extended_cmd as cmd
     import internal.misc as misc    
-    from internal import InvalidCmd
+    from internal import InvalidCmd, MadGraph5Error
     import internal.files as files
     import internal.gen_crossxhtml as gen_crossxhtml
     import internal.save_load_object as save_load_object
@@ -90,12 +90,17 @@ class CmdExtended(cmd.Cmd):
     error_debug = 'Please report this bug on https://bugs.launchpad.net/madgraph5\n'
     error_debug += 'More information is found in \'%s\'.\n' 
     error_debug += 'Please attach this file to your report.'
-    
+
+    config_debug = 'If you need help with this issue please contact us on https://answers.launchpad.net/madgraph5\n'
+
+
     keyboard_stop_msg = """stopping all operation
             in order to quit madevent please enter exit"""
     
     # Define the Error
     InvalidCmd = InvalidCmd
+    ConfigurationError = MadGraph5Error
+
     
     def __init__(self, *arg, **opt):
         """Init history and line continuation"""

@@ -26,7 +26,7 @@ import logging
 
 import madgraph.core.base_objects as base_objects
 
-from madgraph import MadGraph5Error, InvalidCmd
+from madgraph import InvalidCmd
 logger = logging.getLogger('madgraph.diagram_generation')
 
 #===============================================================================
@@ -990,7 +990,7 @@ class DecayChainAmplitude(Amplitude):
                 if not process.get('is_decay_chain'):
                     process.set('is_decay_chain',True)
                 if not process.get_ninitial() == 1:
-                    raise MadGraph5Error,\
+                    raise InvalidCmd,\
                           "Decay chain process must have exactly one" + \
                           " incoming particle"
                 self['decay_chains'].append(\
@@ -1375,7 +1375,7 @@ class MultiProcess(base_objects.PhysicsObject):
             if len(failed_procs) == 1 and 'error' in locals():
                 raise error
             else:
-                raise MadGraph5Error, \
+                raise InvalidCmd, \
             "No amplitudes generated from process %s. Please enter a valid process" % \
                   process_definition.nice_string()
         

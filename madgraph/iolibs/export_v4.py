@@ -72,9 +72,8 @@ class ProcessExporterFortran(object):
 
         #First copy the full template tree if dir_path doesn't exit
         if not os.path.isdir(self.dir_path):
-            if not self.mgme_dir:
-                raise MadGraph5Error, \
-                      "No valid MG_ME path given for MG4 run directory creation."
+            assert self.mgme_dir, \
+                     "No valid MG_ME path given for MG4 run directory creation."
             logger.info('initialize a new directory: %s' % \
                         os.path.basename(self.dir_path))
             shutil.copytree(os.path.join(self.mgme_dir, 'Template'),
@@ -90,8 +89,7 @@ class ProcessExporterFortran(object):
                     info.warning("Failed to copy " + card + ".dat to default")
                     
         elif not os.path.isfile(os.path.join(self.dir_path, 'TemplateVersion.txt')):
-            if not self.mgme_dir:
-                raise MadGraph5Error, \
+            assert self.mgme_dir, \
                       "No valid MG_ME path given for MG4 run directory creation."
         try:
             shutil.copy(os.path.join(self.mgme_dir, 'MGMEVersion.txt'), self.dir_path)
@@ -1086,17 +1084,7 @@ class ProcessExporterFortranME(ProcessExporterFortran):
         if not self.model:
             self.model = matrix_element.get('processes')[0].get('model')
 
-        try:
-             os.chdir(path)
-        except OSError, error:
-            error_msg = "The directory %s should exist in order to be able " % path + \
-                        "to \"export\" in it. If you see this error message by " + \
-                        "typing the command \"export\" please consider to use " + \
-                        "instead the command \"output\". "
-            raise MadGraph5Error, error_msg 
-
-
-        pathdir = os.getcwd()
+        os.chdir(path)
 
         # Create the directory PN_xx_xxxxx in the specified path
         subprocdir = "P%s" % matrix_element.get('processes')[0].shell_string()
@@ -1251,7 +1239,7 @@ class ProcessExporterFortranME(ProcessExporterFortran):
         ln('maxamps.inc', '../../Source', log=False)
 
         # Return to SubProcesses dir
-        os.chdir(pathdir)
+        os.chdir(os.path.pardir)
 
         # Add subprocess to subproc.mg
         filename = 'subproc.mg'

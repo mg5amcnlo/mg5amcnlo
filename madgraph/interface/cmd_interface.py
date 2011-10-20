@@ -98,12 +98,15 @@ class CmdExtended(cmd.Cmd):
     error_debug += 'More information is found in \'%s\'.\n' 
     error_debug += 'Please attach this file to your report.'
     
+    config_debug = 'If you need help with this issue please contact us on https://answers.launchpad.net/madgraph5\n'
+
     keyboard_stop_msg = """stopping all operation
             in order to quit mg5 please enter exit"""
     
-    # Define the Error
+    # Define the Error Class # Define how error are handle
     InvalidCmd = madgraph.InvalidCmd
-    
+    ConfigurationError = MadGraph5Error
+
     def __init__(self, *arg, **opt):
         """Init history and line continuation"""
         
@@ -416,8 +419,6 @@ class CheckValidForCmd(object):
         if not self._curr_model:
             logger.info("No model currently active, so we import the Standard Model")
             self.do_import('model sm')
-            #raise MadGraph5Error, \
-            #      'No model currently active, please load or import a model.'
     
         self.check_process_format(' '.join(args[1:]))
 
@@ -446,7 +447,7 @@ class CheckValidForCmd(object):
             self.do_import('model sm')
 
         if self._curr_model['particles'].find_name(args[0]):
-            raise MadGraph5Error("label %s is a particle name in this model\n\
+            raise self.InvalidCmd("label %s is a particle name in this model\n\
             Please retry with another name." % args[0])
 
     def check_display(self, args):
@@ -506,7 +507,7 @@ class CheckValidForCmd(object):
             args.insert(0, 'full')
         
         if any([',' in elem for elem in args]):
-            raise MadGraph5Error('Decay chains not allowed in check')
+            raise self.InvalidCmd('Decay chains not allowed in check')
         
         self.check_process_format(" ".join(args[1:]))
 
@@ -937,7 +938,11 @@ class CheckValidForCmdWeb(CheckValidForCmd):
         No Path authorize for the Web"""
         
         if not args:
-            raise MadGraph5Error, 'import requires at least one option'
+            raise self.WebRestriction, 'import requires at least one option'
+        
+        if args[0] not in self._import_format:
+            print self.help_import()
+            raise self.WebRestriction, 'No implicit format on the web. Please modify your card.'
 
         if args[0] == 'proc_v4':
             args[:] = [args[0], './Cards/proc_card.dat']
@@ -1568,7 +1573,7 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
 
             # Check that we have something    
             if not myprocdef:
-                raise MadGraph5Error("Empty or wrong format process, please try again.")
+                raise self.InvalidCmd("Empty or wrong format process, please try again.")
                 
             cpu_time1 = time.time()
 
@@ -1910,7 +1915,7 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
 
         # Check that we have something    
         if not myprocdef:
-            raise MadGraph5Error("Empty or wrong format process, please try again.")
+            raise self.InvalidCmd("Empty or wrong format process, please try again.")
 
         # Disable diagram generation logger
         diag_logger = logging.getLogger('madgraph.diagram_generation')
@@ -2074,14 +2079,14 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
         for part_name in args:
             if part_name == '>':
                 if not myleglist:
-                    raise MadGraph5Error, "No final state particles"
+                    raise self.InvalidCmd, "No final state particles"
                 state = True
                 continue
 
             mylegids = []
             if part_name in self._multiparticles:
                 if isinstance(self._multiparticles[part_name][0], list):
-                    raise MadGraph5Error,\
+                    raise self.InvalidCmd,\
                           "Multiparticle %s is or-multiparticle" % part_name + \
                           " which can be used only for required s-channels"
                 mylegids.extend(self._multiparticles[part_name])
@@ -2094,7 +2099,7 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
                 myleglist.append(base_objects.MultiLeg({'ids':mylegids,
                                                         'state':state}))
             else:
-                raise MadGraph5Error, \
+                raise self.InvalidCmd, \
                       "No particle %s in model" % part_name
 
         if filter(lambda leg: leg.get('state') == True, myleglist):
@@ -2105,14 +2110,14 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
                               self.extract_particle_ids(forbidden_particles)
             if forbidden_particle_ids and \
                isinstance(forbidden_particle_ids[0], list):
-                raise MadGraph5Error,\
+                raise self.InvalidCmd,\
                       "Multiparticle %s is or-multiparticle" % part_name + \
                       " which can be used only for required s-channels"
             forbidden_schannel_ids = \
                               self.extract_particle_ids(forbidden_schannels)
             if forbidden_schannel_ids and \
                isinstance(forbidden_schannel_ids[0], list):
-                raise MadGraph5Error,\
+                raise self.InvalidCmd,\
                       "Multiparticle %s is or-multiparticle" % part_name + \
                       " which can be used only for required s-channels"
             required_schannel_ids = \
@@ -2158,7 +2163,7 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
                     all_ids.append(ids)
                 ids = []
             else:
-                raise MadGraph5Error("No particle %s in model" % part_name)
+                raise self.InvalidCmd("No particle %s in model" % part_name)
         all_ids.append(ids)
         # Flatten id list, to take care of multiparticles and
         # or-multiparticles
@@ -2261,7 +2266,7 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
 
             if level_down:
                 if index_par == -1:
-                    raise MadGraph5Error, \
+                    raise self.InvalidCmd, \
                       "Missing ending parenthesis for decay process"
 
                 if index_par < index_comma:
@@ -2272,7 +2277,7 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
         if level_down:
             index_par = line.find(')')
             if index_par == -1:
-                raise MadGraph5Error, \
+                raise self.InvalidCmd, \
                       "Missing ending parenthesis for decay process"
             line = line[index_par + 1:]
             
@@ -2337,7 +2342,7 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
                                           'open','display','launch'])
 
             if not os.path.isfile(args[1]):
-                raise MadGraph5Error("Path %s is not a valid pathname" % args[1])
+                raise self.InvalidCmd("Path %s is not a valid pathname" % args[1])
             else:
                 # Check the status of export and try to use file position if no
                 #self._export dir are define
@@ -2362,7 +2367,7 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
                 # self._export dir are define
                 self.check_for_export_dir(os.path.realpath(proc_card))
             else:
-                raise MadGraph5Error('No default directory in output')
+                raise MadGraph5('No default directory in output')
 
  
             #convert and excecute the card
@@ -2408,7 +2413,7 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
         # read the proc_card.dat
         reader = files.read_from_file(filepath, import_v4.read_proc_card_v4)
         if not reader:
-            raise MadGraph5Error('\"%s\" is not a valid path' % filepath)
+            raise self.InvalidCmd('\"%s\" is not a valid path' % filepath)
         
         if self._mgme_dir:
             # Add comment to history
@@ -2458,7 +2463,7 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
                 if multipart_name not in self._multiparticles:
                     self.do_define(line)
                     
-            except MadGraph5Error, why:
+            except self.InvalidCmd, why:
                 logger_stderr.warning('impossible to set default multiparticles %s because %s' %
                                         (line.split()[0],why))
         if defined_multiparticles:
@@ -2883,7 +2888,7 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
             logger.info('If you continue this directory will be cleaned')
             answer = self.timed_input('Do you want to continue? [y/n]', 'y')
             if answer != 'y':
-                raise MadGraph5Error('Stopped by user request')
+                raise self.InvalidCmd('Stopped by user request')
 
         group_subprocesses = self._export_format == 'madevent' and \
                              self._options['group_subprocesses']

@@ -53,13 +53,16 @@ class Cmd(cmd.Cmd):
     class InvalidCmd(Exception):
         """expected error for wrong command"""
         pass    
- 
-        debug_output = 'debug'
-        error_debug = """Please report this bug to developers\n
+    
+    ConfigurationError = InvalidCmd
+
+    debug_output = 'debug'
+    error_debug = """Please report this bug to developers\n
            More information is found in '%s'.\n
            Please attach this file to your report."""
+    config_debug = error_debug
            
-        keyboard_stop_msg = """stopping all current operation
+    keyboard_stop_msg = """stopping all current operation
             in order to quit the program please enter exit"""
  
     
@@ -160,6 +163,30 @@ class Cmd(cmd.Cmd):
         # Remove failed command from history
         self.history.pop()
         return False
+    
+    def nice_config_error(self, error, line):
+        # Make sure that we are at the initial position                                 
+        os.chdir(self.__initpos)
+        if line == self.history[-1]:
+            error_text = 'Error detected in \"%s\"\n' % line
+        else:
+            error_text = 'Error detected in sub-command %s\n' % self.history[-1]
+        error_text += 'write debug file %s \n' % self.debug_output
+        self.log = False
+        cmd.Cmd.onecmd(self, 'history %s' % self.debug_output)
+        debug_file = open(self.debug_output, 'a')
+        traceback.print_exc(file=debug_file)
+        error_text += self.config_debug
+        error_text += '%s : %s' % (error.__class__.__name__,
+                                                str(error).replace('\n','\n\t'))
+        logger_stderr.error(error_text)
+        #stop the execution if on a non interactive mode                                
+        if self.use_rawinput == False:
+            return True
+        # Remove failed command from history                                            
+        self.history.pop()
+        return False
+
 
     def onecmd(self, line):
         """catch all error and stop properly command accordingly"""
@@ -171,6 +198,8 @@ class Cmd(cmd.Cmd):
                 self.nice_error_handling(error, line)
             else:
                 self.nice_user_error(error, line)
+        except self.ConfigurationError:
+            self.nice_config_error(error, line)
         except Exception as error:
             self.nice_error_handling(error, line)
             if self.mother:
@@ -466,7 +495,7 @@ class Cmd(cmd.Cmd):
     def do_quit(self, line):
         """ exit the mainloop() """
 
-        print ''
+        logger.info('')
         
         if self.child:
             self.child.exec_cmd('quit ' + line, printcmd=False)
@@ -480,7 +509,7 @@ class Cmd(cmd.Cmd):
                 if level:
                     self.mother.exec_cmd('quit %s' % level)
         else:
-            print
+            logger.info('')
         return True
 
     # Aliases
