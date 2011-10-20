@@ -2316,7 +2316,7 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
                     logger_stderr.warning('WARNING: %s' % error)
                     logger_stderr.info('Trying to run `import model_v4 %s` instead.' \
                                                                       % args[1])
-                    self.exec_cmd('import model_v4 %s ' % args[1])
+                    self.exec_cmd('import model_v4 %s ' % args[1], precmd=True)
                     return
                 self._curr_fortran_model = \
                       helas_call_writers.FortranUFOHelasCallWriter(\
@@ -2417,9 +2417,9 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
         
         if self._mgme_dir:
             # Add comment to history
-            self.exec_cmd("# Import the model %s" % reader.model)
+            self.exec_cmd("# Import the model %s" % reader.model, precmd=True)
             line = self.exec_cmd('import model_v4 %s -modelname' % \
-                                 (reader.model))
+                                 (reader.model), precmd=True)
         else:
             logging.error('No MG_ME installation detected')
             return    
@@ -2429,7 +2429,7 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
         lines = reader.extract_command_lines(self._curr_model)
 
         for line in lines:
-            self.exec_cmd(line)
+            self.exec_cmd(line, precmd=True)
     
         return 
     
