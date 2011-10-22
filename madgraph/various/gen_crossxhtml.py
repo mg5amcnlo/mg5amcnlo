@@ -140,7 +140,32 @@ class AllResults(dict):
         self.status = status
         if makehtml:
             self.output()
-    
+            
+    def clean(self, levels = ['all']):
+        """clean the run for the levels"""
+
+        to_clean = self.current
+        run = self.current['run_name']
+        if not self.current:
+            return
+        
+        if 'all' in levels:
+            levels = ['parton', 'pythia', 'pgs', 'delphes', 'channel']
+        
+        if 'parton' in levels:
+            to_clean.parton = []
+        if 'pythia' in levels:
+            to_clean.pythia = []
+        if 'pgs' in levels:
+            to_clean.pgs = []
+        if 'delphes' in levels:
+            to_clean.delphes = []
+        
+        if run in self.order:
+            self.order.remove(run)
+        self.order.insert(0, run)
+            
+        
     def save(self):
         """Save the results of this directory in a pickle file"""
         filename = pjoin(self.path, 'HTML', 'results.pkl')
@@ -154,6 +179,8 @@ class AllResults(dict):
             self.current[name] = '<br> matched: %.4g' % float(value)   
         else:    
             self.current[name] = value
+            if name == 'cross':
+                self.results = True
         
     def output(self):
         """ write the output file """
@@ -253,6 +280,7 @@ class OneRunResults(dict):
         self.pythia = []
         self.pgs = []
         self.delphes = []
+        self.results = False #no results.html 
         
         # data 
         self.status = ''
@@ -359,8 +387,9 @@ class OneRunResults(dict):
         
         #Links:
         out += '<td>'
-        out += """<a href="../SubProcesses/%(run_name)s_results.html">results</a>"""
-        out += """<br><a href="../Events/%(run_name)s_banner.txt">banner</a>"""
+        if self.results:
+            out += """<a href="../SubProcesses/%(run_name)s_results.html">results</a><br>"""
+        out += """<a href="../Events/%(run_name)s_banner.txt">banner</a>"""
         out += '</td>'
         # Events
         out += '<td>'

@@ -198,7 +198,7 @@ class Cmd(cmd.Cmd):
                 self.nice_error_handling(error, line)
             else:
                 self.nice_user_error(error, line)
-        except self.ConfigurationError:
+        except self.ConfigurationError as error:
             self.nice_config_error(error, line)
         except Exception as error:
             self.nice_error_handling(error, line)
@@ -239,7 +239,7 @@ class Cmd(cmd.Cmd):
         """for third party call, call the line with pre and postfix treatment
         with global error handling"""
         
-        return self.exec_cmd(line, errorhandling=True)
+        return self.exec_cmd(line, errorhandling=True, precmd=True)
     
     def emptyline(self):
         """If empty line, do nothing. Default is repeat previous command."""

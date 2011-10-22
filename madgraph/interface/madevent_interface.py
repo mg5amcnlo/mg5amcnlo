@@ -188,7 +188,11 @@ class CmdExtended(cmd.Cmd):
     
     def postcmd(self, stop, line):
         """ Upate the status of  the run for finishing interactive command """
+        
         if not self.use_rawinput:
+            return stop
+        
+        if not self.results.current:
             return stop
         
         arg = line.split()
@@ -202,13 +206,8 @@ class CmdExtended(cmd.Cmd):
         elif not self.results.status:
             return stop
         
-        self.update_status('%s Done.<br> Waiting for instruction.' % arg[0], level=None)
+        self.update_status('Command \'%s\' Done.<br> Waiting for instruction.' % arg[0], level=None)
         
-    #def nice_error_handling(self, error, line):
-    #    """store current result when an error occur"""
-    #    cmd.Cmd.nice_error_handling(self, error, line)
-    #    self.exec_cmd('quit')
-    
 #===============================================================================
 # HelpToCmd
 #===============================================================================
@@ -288,6 +287,14 @@ class HelpToCmd(object):
         logger.info("     if those programs are installed correctly, the creation")
         logger.info("     will be performed automaticaly during the event generation.")
         
+    def help_clean(self):
+        logger.info("syntax: clean RUN [all|parton|pythia|pgs|delphes] [-f]")
+        logger.info("-- Remove all the files linked to previous run RUN")
+        logger.info("   if RUN is 'all', then all run will be cleaned.")
+        logger.info("   The optional argument precise which part should be cleaned.")
+        logger.info("   By default we clean all the related files but the banner.")
+        logger.info("   the optional '-f' allows to by-pass all security question")
+
     def help_pythia(self):
         logger.info("syntax: pythia [RUN] [--run_options]")
         logger.info("-- run pythia on RUN (current one by default)")
@@ -401,11 +408,11 @@ class CheckValidForCmd(object):
         """check that the argument for survey are valid"""
         
         if not len(args):
-            print self.help_multi_run()
+            self.help_multi_run()
             raise self.InvalidCmd("""multi_run command requires at least one argument for
             the number of times that it call generate_events command""")
         elif not args[0].isdigit():
-            print self.help_multi_run()
+            self.help_multi_run()
             raise self.InvalidCmd("The first argument of multi_run should be a integer.")
         nb_run = args.pop(0)
         self.check_survey(args, cmd='multi_run')
@@ -492,6 +499,23 @@ class CheckValidForCmd(object):
             error_msg += 'You can also define it in the configuration file.'
             raise self.InvalidCmd(error_msg)
     
+    def check_clean(self, args):
+        """Check that the clean command is valid"""
+
+
+        if len(args) == 0:
+            self.help_clean()
+            raise self.InvalidCmd('clean command require the name of the run to clean')
+        elif len(args) == 1:
+            args.append('all')
+        else:
+            for arg in args[1:]:
+                if arg not in self._clean_mode and arg != '-f':
+                    self.help_clean()
+                    raise self.InvalidCmd('%s is not a valid options for clean command'\
+                                              % arg)
+
+
     def check_plot(self, args):
         """Check the argument for the plot command
         plot run_name modes"""
@@ -732,7 +756,17 @@ class CompleteForCmd(CheckValidForCmd):
         else:
             return self.list_completion(text, self._plot_mode + self.results.keys())
         
-        
+    def complete_clean(self, text, line, begidx, endidx):
+        """Complete the clean command """
+     
+        args = self.split_arg(line[0:begidx])
+        if len(args) > 1:
+            return self.list_completion(text, self._clean_mode + ['-f'])
+        else:
+            data = glob.glob(pjoin(self.me_dir, 'Events', '*_banner.txt'))
+            data = [n.rsplit('/',1)[1].rsplit('_',1)[0] for n in data]
+            return self.list_completion(text, ['all'] + data)
+         
         
     def complete_pythia(self,text, line, begidx, endidx):
         "Complete the pythia command"
@@ -770,7 +804,11 @@ class CompleteForCmd(CheckValidForCmd):
             return self.list_completion(text, self._run_options + ['-f', '--no_default'], line)
     
     complete_delphes = complete_pgs        
-        
+
+
+class MadEventAlreadyRunning(InvalidCmd):
+    pass
+
 #===============================================================================
 # MadEventCmd
 #===============================================================================
@@ -782,7 +820,8 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
     # Options and formats available
     _run_options = ['--cluster','--multicore','--nb_core=','--nb_core=2', '-c', '-m']
     _set_options = ['stdout_level','fortran_compiler']
-    _plot_mode = ['all', 'parton','pythia','pgs','delphes']
+    _plot_mode = ['all', 'parton','pythia','pgs','delphes','channel']
+    _clean_mode = _plot_mode
     # Variables to store object information
     true = ['T','.true.',True,'true', 1, '1']
     web = False
@@ -809,10 +848,11 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
         
         # Check that the directory is not currently running
         if os.path.exists(pjoin(me_dir,'RunWeb')): 
-            logger.critical('''Another instance of madevent is currently running.
+            message = '''Another instance of madevent is currently running.
             Please wait that all instance of madevent are closed. If this message
-            is an error in itself, you can suppress the files %s.''' % pjoin(me_dir,'RunWeb'))
-            sys.exit()
+            is an error in itself, you can suppress the files: 
+            %s.''' % pjoin(me_dir,'RunWeb')
+            raise MadEventAlreadyRunning, message
         else:
             os.system('touch %s' % pjoin(me_dir,'RunWeb'))
             os.system('%s/gen_cardhtml-pl' % (self.dirbin))
@@ -822,7 +862,7 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
         # Load the configuration file
         self.set_configuration()
         self.open_crossx = True # allow to open automatically the web browser
-
+        self.timeout = 20
         if self.web:
             os.system('touch Online')
 
@@ -1020,7 +1060,7 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
                 logger.info(status)
         else:
             logger.info(' Idle: %s Running: %s Finish: %s' % status)
-        self.results.update(status, level,makehtml=makehtml)
+        self.results.update(status, level, makehtml=makehtml)
         
     ############################################################################      
     def do_generate_events(self, line):
@@ -1295,11 +1335,7 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
         #shutil.copy(pjoin(self.me_dir, 'Events', self.run_name+'_banner.txt'),
         #            pjoin(self.me_dir, 'Events', 'banner.txt')) 
 
-        self.update_status('End Parton', level='parton')
-        
-        
-
-
+        self.update_status('End Parton', level='parton', makehtml=False)
 
     ############################################################################      
     def do_pythia(self, line):
@@ -1451,6 +1487,95 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
         
         self.update_status('finish', level='pythia', makehtml=False)
 
+    ################################################################################
+    def do_clean(self, line):
+        """Clean one/all run or only part of it"""
+
+        args = self.split_arg(line)
+        self.check_clean(args)
+        if args[0] == 'all':
+            # Check first if they are not a run with a name run.
+            if os.path.exists(pjoin(self.me_dir, 'Events', 'all_banner.txt')):
+                logger.warning('A run with name all exists. So we will not supress all processes.')
+            else:
+                for match in glob.glob(pjoin(self.me_dir, 'Events', '*_banner.txt')):
+                    run = os.path.basename(match).rsplit('_',1)[0]
+                    try:
+                        self.exec_cmd('clean %s %s' % (run, ' '.join(args[1:]) ) )
+                    except self.InvalidCmd, error:
+                        logger.info(error)
+                        pass # run already clear
+                    return
+
+        run = args[0]
+
+        # Check that run exists
+        if not os.path.exists(pjoin(self.me_dir, 'Events', '%s_banner.txt' % run)):
+            raise self.InvalidCmd('No run \'%s\' detected' % run)
+
+        try:
+            self.resuls.def_current(run)
+            self.update_status(' Cleaning %s' % run, level=None)
+        except:
+            pass # Just ensure that html never makes crash this function
+
+        # Found the file to suppress:
+        to_suppress = glob.glob(pjoin(self.me_dir, 'Events', '%s_*' % run))
+        to_suppress = [os.path.basename(f) for f in to_suppress if 'banner' not in f]
+
+        if 'all' in args:
+            pass # suppress everything
+        else:
+            if 'pythia' not in args:
+                to_suppress = [f for f in to_suppress if 'pythia' not in f]
+            if 'pgs' not in args:
+                to_suppress = [f for f in to_suppress if 'pgs' not in f]
+            if 'delphes' not in args:
+                to_suppress = [f for f in to_suppress if 'delphes' not in f]
+            if 'parton' not in args:
+                to_suppress = [f for f in to_suppress if 'delphes' in f 
+                                                      or 'pgs' in f 
+                                                      or 'pythia' in f]
+
+        if '-f' not in args and len(to_suppress):
+            question = 'Do you want to suppress the following files?\n     %s' % \
+                               '\n    '.join(to_suppress)
+            ans = self.ask(question, 'y', choices=['y','n'], timeout = self.timeout)
+        else:
+            ans = 'y'
+        
+        if ans == 'y':
+            for file2rm in to_suppress:
+                if os.path.isdir(pjoin(self.me_dir, 'Events', file2rm)):
+                    shutil.rmtree(pjoin(self.me_dir, 'Events', file2rm))
+                else:
+                    os.remove(pjoin(self.me_dir, 'Events', file2rm))
+
+        # Remove file in SubProcess directory
+        if 'all' in args or 'channel' in args:
+            to_suppress = glob.glob(pjoin(self.me_dir, 'SubProcesses', '%s*' % run))
+            to_suppress += glob.glob(pjoin(self.me_dir, 'SubProcesses', '*','%s*' % run))
+            to_suppress += glob.glob(pjoin(self.me_dir, 'SubProcesses', '*','*','%s*' % run))
+
+            if '-f' in args or len(to_suppress) == 0:
+                ans = 'y'
+            else:
+                question = 'Do you want to suppress the following files?\n     %s' % \
+                               '\n    '.join(to_suppress)
+                ans = self.ask(question, 'y', choices=['y','n'], timeout = self.timeout)
+
+            if ans == 'y':
+                for file2rm in to_suppress:
+                    os.remove(file2rm)
+
+        # update database.
+        if 1:
+            self.results.clean(args[1:])
+            self.update_status('Done', level='all', makehtml=False)
+
+
+
+    ################################################################################
     def do_plot(self, line):
         """Create the plot for a given run"""
 
@@ -1478,7 +1603,7 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
                 os.system('gunzip -f %s' % (filename+'.gz') )
             if  os.path.exists(filename):
                 shutil.move(filename, pjoin(self.me_dir, 'Events','pythia_events.lhe'))
-                self.create_plot('pythia')
+                self.create_plot('Pythia')
                 shutil.move(pjoin(self.me_dir, 'Events','pythia_events.lhe'), filename)
                 os.system('gzip -f %s' % filename)                
             else:
@@ -1490,7 +1615,7 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
                 os.system('gunzip -f %s' % (filename+'.gz') )
             if  os.path.exists(filename):
                 #shutil.move(filename, pjoin(self.me_dir, 'Events','pgs_events.lhco'))
-                self.create_plot('pgs')
+                self.create_plot('PGS')
                 #shutil.move(pjoin(self.me_dir, 'Events','pgs_events.lhco'), filename)
                 os.system('gzip -f %s' % filename)                
             else:
@@ -1502,7 +1627,7 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
                 os.system('gunzip -f %s' % (filename+'.gz') )
             if  os.path.exists(filename):
                 #shutil.move(filename, pjoin(self.me_dir, 'Events','delphes_events.lhco'))
-                self.create_plot('delphes')
+                self.create_plot('Delphes')
                 #shutil.move(pjoin(self.me_dir, 'Events','delphes_events.lhco'), filename)
                 os.system('gzip -f %s' % filename)                
             else:
@@ -2109,14 +2234,14 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
         if not event_path:
             if mode == 'parton':
                 event_path = pjoin(self.me_dir, 'Events','unweighted_events.lhe')
-            elif mode == 'pythia':
+            elif mode == 'Pythia':
                 event_path = pjoin(self.me_dir, 'Events','pythia_events.lhe')
-            elif mode == 'pgs':
+            elif mode == 'PGS':
                 event_path = pjoin(self.me_dir, 'Events', '%s_pgs_events.lhco' % self.run_name)
-            elif mode == 'delphes':
+            elif mode == 'Delphes':
                 event_path = pjoin(self.me_dir, 'Events', '%s_delphes_events.lhco' % self.run_name)
             else:
-                raise MadEvent5Error, 'Invalid mode %s' % mode
+                raise self.InvalidCmd, 'Invalid mode %s' % mode
         if not os.path.exists(event_path):
             print 'not path', event_path
             return False
