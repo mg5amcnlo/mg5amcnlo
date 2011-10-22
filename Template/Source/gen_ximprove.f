@@ -830,8 +830,8 @@ c
 c     tjs 8/7/2007  Allow stop when have enough events
 c
             write(*,*) "Cross section",i,xsec(i),mfact(i)
-            write(26,'(9x,a,f11.3,a)') 'echo "',-npoints*1.2,
-     $        '" >> input_sg.txt'                       !Accuracy
+            write(26,'(9x,a,e13.5,a)') 'echo "',-goal_lum/xtot,
+     $        '" >> input_sg.txt'                       !Luminocity
             write(26,'(9x,a)') 'echo "2" >> input_sg.txt' !Grid Adjustment
             write(26,'(9x,a)') 'echo "1" >> input_sg.txt' !Suppression
             write(26,'(9x,a,i4,a)') 'echo "',nhel_refine,
@@ -852,8 +852,8 @@ c
 c
 c tjs 8/7/2007    Change to request events not accuracy
 c
-            write(26,'(9x,a,f11.3,a)') 'echo "',-npoints*1.2,
-     $           '" >> input_sg.txt' !Accuracy
+            write(26,'(9x,a,e13.5,a)') 'echo "',-goal_lum / xtot,
+     $           '" >> input_sg.txt' ! Luminocity
             write(26,'(9x,a)') 'echo "0" >> input_sg.txt'
             write(26,'(9x,a)') 'echo "1" >> input_sg.txt'
 

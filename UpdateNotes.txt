@@ -1,7 +1,12 @@
 Update notes for MadGraph 5 (in reverse time order)
 
+1.3.24 (22/10/11) JA: Fix problem with getting enough events in gridpack
+                      mode (this was broken in v. 1.3.11 when we moved
+                      from events to luminocity in refine). Thanks to
+                      Alexis Kalogeropoulos.
+
 1.3.23 (19/10/11) JA: Allow user to set scales using setscales.f again 
-                      (this was broken in v. 1.3.18).
+                      (this was broken in v. 1.3.18). Thanks to Arindam Das.
                   JA: Ensure that the error message is displayed if the
                      "make" command is not installed on the system.
  
