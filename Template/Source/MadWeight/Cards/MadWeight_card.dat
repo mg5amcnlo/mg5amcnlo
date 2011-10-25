@@ -1,0 +1,71 @@
+##########################################################################
+##					 				##
+##                             MadWeigth                                ##
+##			     =============                              ##
+##									##
+##		              Run control              			##
+##			      -----------	                        ##
+##									##
+##									##
+##    Author: Mattelaer Olivier (UCL-CP3)				##
+##            Artoisenet Pierre (UCL-CP3)				##
+##									##
+##    Version:     1.1.5						##
+##    Last change: 01/06/10						##
+##									##
+##########################################################################
+##                                                                      ##
+##  This Card defines all specific parameters of Madweight               ## 
+##                                                                      ##
+##########################################################################
+#*************************************************************************
+##                      select run options                               ##  
+#*************************************************************************
+Block MW_Run 
+#   TAG                 VALUE                    UTILITY
+     name                fermi    # name for the run  
+     cluster              1       # 0:single machine, 1: condor, 2: SGE
+                                  # 3: Bash cluster, 4: multiprocessor, 5: qsub
+                                  # For more info, see the wiki
+     queue       'madgraph==True' # queue condition (usage depend of the cluster)
+     nb_exp_events        10      # number of experimental events to consider
+     write_log            F       # avoid writting of a lot of log files
+     normalize            T       # normalizes weight  (1/sigma prefactor)
+     ME_int_points        10000   # number of points in MadEvent integration 
+     MW_int_points        50000   # number of points in MadWeight integration
+     use_cut              F       # use the cut defined in run_card.dat
+     bw_cut               F       # use the BW cut 
+     nwa                  F       # do not use narrow width approximation
+     
+#*************************************************************************
+##                  define the different param_card's                   ##  
+#*************************************************************************
+Block MW_parameter         
+#   TAG      VALUE                     UTILITY
+    mode         1           #    type of input 
+                           #    0 : inputs are read from the cards: param_card_1.dat, param_card_2.dat,...
+	                   #    1 : redefines some values from param_card.dat according to the form below
+                           #    2 : same but the value for different parameters are modified simultaneously
+#                             
+#                             # first parameter #
+     11       mass          # Block of the parameter to change  
+     12       6             # id of the parameter to change 
+     13       180           # here you can enter the different values:
+     13       190           # 	add a new line with tag 13 to introduce a new value	
+#
+#                            #  second parameter #
+#                            !DELETE ALL THE FOLLOWING TAG IF YOU WANT TO RUN WITH ONLY ONE PARAM!
+#     21       MGCKM          # Block of the parameter to change  
+#     22       1              # id of the paramter to change 
+#     22       2              # id2 of the paramter to change
+#     23       1.5E-02        # here you can enter the different values:
+#     23       1.8E-02        #	add a new line with tag 23 to introduce a new value
+#
+#  use same syntax for parameters 3,4,...
+#*************************************************************************
+##                                Permutations                          ##  
+#*************************************************************************
+Block MW_perm
+#   TAG           VALUE                    UTILITY
+     permutation  T         # make permutation
+     bjet_is_jet  T         # consider permutation between b-jets and light jets

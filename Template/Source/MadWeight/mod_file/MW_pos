@@ -1,0 +1,38 @@
+##########################################################################
+##            								##
+##									##
+##				MadWeigth				##
+##				*********				##
+##									##
+##	         Mattelaer Olivier et  Artoisenet Pierre 		##
+##									##
+##########################################################################
+##########################################################################
+##									##
+##									##
+##	version 1.0							##
+##									##
+## 	This file gives the position in which we have                   ##
+##		to take/rewrite each file                               ##
+##	first column   = position of the file to modify			##
+##	second column  = file to use to perform modifications           ##
+##      		 rule associated to each file                   ##
+##	third column   = position to write the modified file            ##
+##									##
+########################################################################## 
+main_dir=../../../
+#    position_file                  modif_rule  	write_position	
+#    -------------             	    ----------		--------------
+     ./bin/put_banner     	    mod_putbanner	./bin/put_banner_MW
+#     ./bin/setup_model-pl	    mod_setup_model     ./bin/setup_model-pl
+#     ./Source/setrun.f             mod_setrun          ./Source/setrun_MW.f
+     ./Cards/proc_card.dat          mod_proccard        ./Cards/proc_card.dat
+     ./Source/makefile              mod_Source_make     ./Source/makefile
+     ./Source/makefile_lhapdf       mod_Source_make_lhapdf     ./Source/makefile_lhapdf
+     ./SubProcesses/driver.f        mod_setpara         ./SubProcesses/driver.f
+     ./SubProcesses/makefile        mod_P_make          ./SubProcesses/makefile
+     ./SubProcesses/makefile_lhapdf mod_P_make          ./SubProcesses/makefile_lhapdf
+     ./SubProcesses/cuts.f          mod_cuts            ./SubProcesses/cuts_MW.f
+     ./SubProcesses/unwgt.f         mod_unwgt           ./SubProcesses/unwgt.f
+     ./SubProcesses/cluster.f       mod_cluster         ./SubProcesses/cluster_MW.f
+#     ./Cards/pythia_card.dat        mod_pythia_card     ./Cards/pythia_card.dat

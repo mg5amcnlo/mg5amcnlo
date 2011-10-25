@@ -1484,7 +1484,7 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
     _check_opts = ['full', 'permutation', 'gauge', 'lorentz_invariance']
     _import_formats = ['model_v4', 'model', 'proc_v4', 'command']
     _install_opts = ['pythia-pgs', 'Delphes', 'MadAnalysis', 'ExRootAnalysis']
-    _v4_export_formats = ['madevent', 'standalone', 'matrix'] 
+    _v4_export_formats = ['madevent', 'standalone', 'matrix', 'madweight'] 
     _export_formats = _v4_export_formats + ['standalone_cpp', 'pythia8']
     _set_options = ['group_subprocesses',
                     'ignore_six_quark_processes',
@@ -2869,7 +2869,7 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
             pass
             
         if not force and not noclean and os.path.isdir(self._export_dir)\
-               and self._export_format in ['madevent', 'standalone']:
+               and self._export_format in ['madevent', 'standalone', 'madweight']:
             # Don't ask if user already specified force or noclean
             logger.info('INFO: directory %s already exists.' % self._export_dir)
             logger.info('If you continue this directory will be cleaned')
@@ -2892,12 +2892,15 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
         elif self._export_format in ['standalone', 'matrix']:
             self._curr_exporter = export_v4.ProcessExporterFortranSA(\
                                   self._mgme_dir, self._export_dir,not noclean)
+        elif self._export_format in ['madweight']:
+            self._curr_exporter = export_v4.ProcessExporterFortranMW(\
+                                  self._mgme_dir, self._export_dir,not noclean)
         elif self._export_format == 'standalone_cpp':
             export_cpp.setup_cpp_standalone_dir(self._export_dir, self._curr_model)
         elif not os.path.isdir(self._export_dir):
             os.makedirs(self._export_dir)
 
-        if self._export_format in ['madevent', 'standalone']:
+        if self._export_format in ['madevent', 'standalone','madweight']:
             self._curr_exporter.copy_v4template()            
 
         # Reset _done_export, since we have new directory
@@ -2984,7 +2987,7 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
         calls = 0
 
         path = self._export_dir
-        if self._export_format in ['standalone_cpp', 'madevent', 'standalone']:
+        if self._export_format in ['standalone_cpp', 'madevent', 'standalone', 'madweight']:
             path = os.path.join(path, 'SubProcesses')
             
         cpu_time1 = time.time()
@@ -3052,6 +3055,13 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
         # Pick out the matrix elements in a list
         matrix_elements = \
                         self._curr_matrix_elements.get_matrix_elements()
+
+        # Fortran MadGraph MadWeight
+        if self._export_format == 'madweight':
+            for me in matrix_elements:
+                calls = calls + \
+                        self._curr_exporter.generate_subprocess_directory_v4(\
+                            me, self._curr_fortran_model)
 
         # Fortran MadGraph Standalone
         if self._export_format == 'standalone':
@@ -3121,7 +3131,7 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
                         (os.path.basename(self._model_v4_path), self._export_dir))
             self._curr_exporter.export_model_files(self._model_v4_path)
             self._curr_exporter.export_helas(os.path.join(self._mgme_dir,'HELAS'))
-        elif self._export_format in ['madevent', 'standalone']:
+        elif self._export_format in ['madevent', 'standalone', 'madweight']:
             logger.info('Export UFO model to MG4 format')
             # wanted_lorentz are the lorentz structures which are
             # actually used in the wavefunctions and amplitudes in
@@ -3144,7 +3154,7 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
                                             wanted_couplings)
             export_cpp.make_model_cpp(self._export_dir)
 
-        if self._export_format in ['madevent', 'standalone']:
+        if self._export_format in ['madevent', 'standalone','madweight']:
             self._curr_exporter.finalize_v4_directory( \
                                            self._curr_matrix_elements,
                                            [self.history_header] + \
@@ -3152,7 +3162,7 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
                                            not nojpeg,
                                            online)
 
-        if self._export_format in ['madevent', 'standalone', 'standalone_cpp']:
+        if self._export_format in ['madevent', 'standalone', 'standalone_cpp','madweight']:
             logger.info('Output to directory ' + self._export_dir + ' done.')
         if self._export_format == 'madevent':
             logger.info('Type \"launch\" to generate events from this process, or see')

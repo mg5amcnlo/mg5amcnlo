@@ -10,7 +10,7 @@ c----------------------------------------------------------------------
 c
 c     include
 c
-      include 'genps.inc'
+c      include 'genps.inc'
       include 'run_config.inc'
       include 'PDF/pdf.inc'
       include 'run.inc'
