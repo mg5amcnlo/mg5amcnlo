@@ -402,7 +402,7 @@ class OneRunResults(dict):
         # Collider
         out += '<td> %(collider)s </td>'
         # Cross
-        out += '<td> %(cross).4g <font face=symbol>&#177</font> %(error).4g %(cross_pythia)s </td>'
+        out += '<td> %(cross).4g <font face=symbol>&#177</font> %(error).2g %(cross_pythia)s </td>'
         # Events
         out += '<td> %(nb_event)s </td>' 
 
