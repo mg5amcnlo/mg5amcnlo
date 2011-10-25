@@ -758,12 +758,6 @@ c     ipart gives external particle number chain
       external alphas, isjetvx, getissud, pdg2pdf, xran1,  sudwgt
 
       rewgt=1.0d0
-
-      if((ickkw.gt.0.or..not.fixed_fac_scale.or..not.fixed_ren_scale)
-     $     .and..not.clustered)then
-        write(*,*)'Error: No clustering done when calling rewgt!'
-        stop
-      endif
       clustered=.false.
 
       if(ickkw.le.0) return

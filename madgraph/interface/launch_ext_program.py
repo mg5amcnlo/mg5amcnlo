@@ -289,6 +289,9 @@ class MELauncher(ExtLauncher):
         # Display the cross-section to the screen
         path = os.path.join(self.running_dir, 'SubProcesses', '%s_results.dat' 
                                                                     % self.name) 
+        if not os.path.exists(path):
+            logger.error('Generation failed (no results.dat file found)')
+            return
         fsock = open(path)
         line = fsock.readline()
         cross, error = line.split()[0:2]

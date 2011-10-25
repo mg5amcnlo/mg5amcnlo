@@ -1128,6 +1128,9 @@ class HelasWavefunction(base_objects.PhysicsObject):
             schannels.extend(mother_s)
             tchannels.extend(mother_t)
 
+        # Sort s-channels according to number
+        schannels.sort(lambda x1,x2: x2.get('legs')[-1].get('number') - \
+                       x1.get('legs')[-1].get('number'))
 
         return schannels, tchannels
 
@@ -1885,6 +1888,10 @@ class HelasAmplitude(base_objects.PhysicsObject):
                 legs.insert(0, copy.copy(popped_legs[-1]))
                 # Renumber resulting leg according to minimum leg number
                 legs[-1].set('number', min([l.get('number') for l in legs[:-1]]))
+
+        # Sort s-channels according to number
+        schannels.sort(lambda x1,x2: x2.get('legs')[-1].get('number') - \
+                       x1.get('legs')[-1].get('number'))
 
         # Finally go through all vertices, sort the legs and replace
         # leg number with propagator number -1, -2, ...
