@@ -88,6 +88,10 @@ c others: same as 1 (for now)
       err=0
  10   continue
       nit=nit+1
+      if (nit.ge.2.and.ans.eq.0d0) then
+         xint=0d0
+         return
+      endif
       if(nit.gt.nitmax.or.(err/ans).lt.accuracy) then
          if(imode.eq.0) xint=ans
          return

@@ -57,10 +57,6 @@ c     set parameters of the run
       include 'madweight_card.inc'
 
 
-       if(fixed_ren_scale) then
-          G = SQRT(4d0*PI*ALPHAS(scale))
-c          call setpara('param_card.dat',.false.) ! not necessary, done below
-       endif
 
       open(unit=90,file="./start")
       write(90,*) 'start'
@@ -74,6 +70,13 @@ c          call setpara('param_card.dat',.false.) ! not necessary, done below
       write(*,*) 'Parameter card: ',param_name
       call setpara(param_name,.true.)
       write(*,*) 'number of points',nevents
+
+
+       if(fixed_ren_scale) then
+          G = SQRT(4d0*PI*ALPHAS(scale))
+          call setpara('param_card.dat',.false.) 
+       endif
+
 
 c     set cuts
 c      CALL SETCUTS
@@ -274,14 +277,14 @@ c
       do i=3,nexternal
         do j=1,3
           if (c_point(i,j,2).ne.zero) temp=temp+1
-          write(*,*) 'exp. uncertainty on ',variable(j),'of particle',j,': ' ,c_point(i,j,2)
+          write(*,*) 'exp. uncertainty on ',variable(j),'of particle',i,': ' ,c_point(i,j,2)
         enddo
       enddo
 
       if (c_point(1,1,2).eq.zero) temp=temp-1
       if (c_point(2,1,2).eq.zero) temp=temp-1
       
-      write(*,*) 'the number of dimension is ', temp
+c      write(*,*) 'the number of dimension is ', temp
 
       Ndimens=temp
 
