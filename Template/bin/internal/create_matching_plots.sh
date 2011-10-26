@@ -9,11 +9,11 @@ if [[ ! -e `which root` ]];then
     exit
 fi
 donerun=0
-if [[ -e $1_events.tree.gz ]];then
+if [[ -e $1_pythia_events.tree.gz ]];then
     donerun=1
-    echo gunzip $1_events.tree.gz
-    gunzip -c $1_events.tree.gz > events.tree
-    cp $1_xsecs.tree xsecs.tree
+    echo gunzip $1_pythia_events.tree.gz
+    gunzip -c $1_pythia_events.tree.gz > events.tree
+    cp $1_pythia_xsecs.tree xsecs.tree
 fi
 if [[ ! -e events.tree || ! -e xsecs.tree ]];then
     echo "No events.tree or xsecs.tree files found"

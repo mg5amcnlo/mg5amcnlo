@@ -148,7 +148,7 @@ def compile(arg=[], cwd=None, mode='fortran', **opt):
     try:
         p = subprocess.Popen(['make'] + arg, stdout=subprocess.PIPE, 
                              stderr=subprocess.STDOUT, cwd=cwd, **opt)
-        p.wait()
+        (out, err) = p.communicate()
     except OSError, error:
         if cwd and not os.path.exists(cwd):
             raise OSError, 'Directory %s doesn\'t exists. Impossible to run make' % cwd
@@ -185,7 +185,7 @@ def compile(arg=[], cwd=None, mode='fortran', **opt):
         if cwd:
             error_text += 'when trying to compile %s.\n' % cwd
         error_text += 'The compilation fails with the following output message:\n'
-        error_text += ''.join(['  '+l for l in p.stdout.readlines()])+'\n'
+        error_text += '    '+out.replace('\n','\n    ')+'\n'
         error_text += 'Please try to fix this compilations issue and retry.\n'
         error_text += 'Help might be found at https://answers.launchpad.net/madgraph5.\n'
         error_text += 'If you think that this is a bug, you can report this at https://bugs.launchpad.net/madgraph5'

@@ -117,11 +117,11 @@ if [[ -e pythia_lhe_events.root ]]; then
 fi
 
 if [[ -e events.tree ]]; then
-    mv -f events.tree $1_events.tree
-    gzip -f $1_events.tree
-    mv -f xsecs.tree $1_xsecs.tree
-    mv -f beforeveto.tree $1_beforeveto.tree
-    gzip -f $1_beforeveto.tree
+    mv -f events.tree $1_pythia_events.tree
+    gzip -f $1_pythia_events.tree
+    mv -f xsecs.tree $1_pythia_xsecs.tree
+    mv -f beforeveto.tree $1_pythia_beforeveto.tree
+    gzip -f $1_pythia_beforeveto.tree
 fi
 if [[ -e pgs_events.lhco ]]; then
 # pgs_card.dat

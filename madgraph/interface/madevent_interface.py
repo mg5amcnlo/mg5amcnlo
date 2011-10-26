@@ -188,11 +188,11 @@ class CmdExtended(cmd.Cmd):
     
     def postcmd(self, stop, line):
         """ Upate the status of  the run for finishing interactive command """
-        
+                        
         if not self.use_rawinput:
             return stop
         
-        if not self.results.current:
+        if self.results and not self.results.current:
             return stop
         
         arg = line.split()
@@ -205,8 +205,10 @@ class CmdExtended(cmd.Cmd):
             return stop        
         elif not self.results.status:
             return stop
+        elif str(arg[0]) in ['exit','quit','EOF']:
+            return stop
         
-        self.update_status('Command \'%s\' Done.<br> Waiting for instruction.' % arg[0], level=None)
+        self.update_status('Command \'%s\' done.<br> Waiting for instruction.' % arg[0], level=None)
         
 #===============================================================================
 # HelpToCmd
@@ -287,13 +289,14 @@ class HelpToCmd(object):
         logger.info("     if those programs are installed correctly, the creation")
         logger.info("     will be performed automaticaly during the event generation.")
         
-    def help_clean(self):
-        logger.info("syntax: clean RUN [all|parton|pythia|pgs|delphes] [-f]")
+    def help_remove(self):
+        logger.info("syntax: remove RUN [all|parton|pythia|pgs|delphes] [-f]")
         logger.info("-- Remove all the files linked to previous run RUN")
         logger.info("   if RUN is 'all', then all run will be cleaned.")
         logger.info("   The optional argument precise which part should be cleaned.")
         logger.info("   By default we clean all the related files but the banner.")
         logger.info("   the optional '-f' allows to by-pass all security question")
+        logger.info("   The banner can be remove only if all files are removed first.")
 
     def help_pythia(self):
         logger.info("syntax: pythia [RUN] [--run_options]")
@@ -499,8 +502,8 @@ class CheckValidForCmd(object):
             error_msg += 'You can also define it in the configuration file.'
             raise self.InvalidCmd(error_msg)
     
-    def check_clean(self, args):
-        """Check that the clean command is valid"""
+    def check_remove(self, args):
+        """Check that the remove command is valid"""
 
 
         if len(args) == 0:
@@ -756,8 +759,8 @@ class CompleteForCmd(CheckValidForCmd):
         else:
             return self.list_completion(text, self._plot_mode + self.results.keys())
         
-    def complete_clean(self, text, line, begidx, endidx):
-        """Complete the clean command """
+    def complete_remove(self, text, line, begidx, endidx):
+        """Complete the remove command """
      
         args = self.split_arg(line[0:begidx])
         if len(args) > 1:
@@ -820,7 +823,7 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
     # Options and formats available
     _run_options = ['--cluster','--multicore','--nb_core=','--nb_core=2', '-c', '-m']
     _set_options = ['stdout_level','fortran_compiler']
-    _plot_mode = ['all', 'parton','pythia','pgs','delphes','channel']
+    _plot_mode = ['all', 'parton','pythia','pgs','delphes','channel', 'banner']
     _clean_mode = _plot_mode
     # Variables to store object information
     true = ['T','.true.',True,'true', 1, '1']
@@ -1378,6 +1381,16 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
             if answer == 'y':
                 misc.open_file(pjoin(self.me_dir, 'Cards', 'pythia_card.dat'))
         
+        if not force:
+            if os.path.exists(pjoin(self.me_dir, 'Events','%s_pythia.log')):
+                question = 'Previous run of pythia detected. Do you want to remove it?'
+                ans = self.ask(question, 'y', choices=['y','n'], timeout = 20)
+                if ans == 'n':
+                    return
+        
+        print 'cleaning'        
+        self.exec_cmd('remove %s pythia -f' % self.run_name)
+        
         pythia_src = pjoin(self.configuration['pythia-pgs_path'],'src')
         
         self.update_status('Running Pythia', 'pythia')
@@ -1466,13 +1479,13 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
             subprocess.call(['gzip','-f','events.tree'], 
                                                 cwd=pjoin(self.me_dir,'Events'))          
             files.mv(pjoin(self.me_dir,'Events','events.tree.gz'), 
-                     pjoin(self.me_dir,'Events',self.run_name +'_events.tree.gz'))
+                     pjoin(self.me_dir,'Events',self.run_name +'_pythia_events.tree.gz'))
             subprocess.call(['gzip','-f','beforeveto.tree'], 
                                                 cwd=pjoin(self.me_dir,'Events'))
             files.mv(pjoin(self.me_dir,'Events','beforeveto.tree.gz'), 
-                     pjoin(self.me_dir,'Events',self.run_name +'_beforeveto.tree.gz'))
+                     pjoin(self.me_dir,'Events',self.run_name +'_pythia_beforeveto.tree.gz'))
             files.mv(pjoin(self.me_dir,'Events','xsecs.tree'), 
-                     pjoin(self.me_dir,'Events',self.run_name +'_xsecs.tree'))            
+                     pjoin(self.me_dir,'Events',self.run_name +'_pythia_xsecs.tree'))            
              
 
         # Plot for pythia
@@ -1488,11 +1501,11 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
         self.update_status('finish', level='pythia', makehtml=False)
 
     ################################################################################
-    def do_clean(self, line):
-        """Clean one/all run or only part of it"""
+    def do_remove(self, line):
+        """Remove one/all run or only part of it"""
 
         args = self.split_arg(line)
-        self.check_clean(args)
+        self.check_remove(args)
         if args[0] == 'all':
             # Check first if they are not a run with a name run.
             if os.path.exists(pjoin(self.me_dir, 'Events', 'all_banner.txt')):
@@ -1568,10 +1581,23 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
                 for file2rm in to_suppress:
                     os.remove(file2rm)
 
+        if 'banner' in args[1:]:
+            to_suppress = glob.glob(pjoin(self.me_dir, 'Events', '%s_*' % run))
+            if len(to_suppress) > 1:
+                raise MadGraph5Error, '''Some output still exists for this run. 
+                Please remove those output first. Do for example: 
+                remove %s all banner
+                ''' % run
+            elif len(to_suppress):
+                # remove banner
+                os.remove(to_suppress[0])
+                # remove the run from the html output
+                if run in self.results:
+                    del self.results[run]
+                     
         # update database.
-        if 1:
-            self.results.clean(args[1:])
-            self.update_status('Done', level='all', makehtml=False)
+        self.results.clean(args[1:])
+        self.update_status('Done', level='all', makehtml=False)
 
 
 
@@ -2142,11 +2168,11 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
         except:
             pass
         try:
-            self.update_status('', level=None)
             self.store_result()
         except:
             # If nothing runs they they are no result to update
             pass
+        self.update_status('', level=None)
         os.system('%s/gen_cardhtml-pl' % (self.dirbin))
 
         return super(MadEventCmd, self).do_quit(line)
