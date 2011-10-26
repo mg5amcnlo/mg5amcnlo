@@ -18,9 +18,9 @@ c       complex vertex         : amplitude
 c     
       implicit none
 c--   dimension of the current set to arbitrary length
-c     INTEGER DIM
-c      PARAMETER(DIM=18)
-      include "dimension.inc"
+      INTEGER DIM
+      PARAMETER(DIM=18)
+c      include "dimension.inc"
       double complex v1(DIM),v2(DIM),sc(DIM),vertex,vertex1,vertex2
       double complex v12,p2v1,p1v2,v13,v14,v23,v24,v34
       double precision p12,p13,p14,p23,p24,p34

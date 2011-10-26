@@ -17,7 +17,10 @@ c       xm,xw
 c
 
       implicit none
-      include "dimension.inc"
+      INTEGER DIM
+      PARAMETER(DIM=18)
+
+c      include "dimension.inc"
       double complex s1(DIM),s2(DIM),uss(DIM)
       double precision xm,xw,gc
 

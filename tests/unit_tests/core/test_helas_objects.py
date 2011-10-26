@@ -2221,8 +2221,8 @@ class HelasDecayChainProcessTest(unittest.TestCase):
         # Test with u g > u g g, u > u g
 
         goal_no_quark = 15
-        quark_none = {0:[1,2],1:[1,2],2:[2],6:[1],8:[1],11:[1],13:[1],14:[1]}
-        quark_true = {0:0,1:0,2:0,6:0,8:0,11:0,13:0,14:0}
+        quark_none = {0:[1,2],1:[1,2],2:[2],8:[1],11:[1],13:[1],14:[1]}
+        quark_true = {0:0,1:0,2:1,6:0,8:0,11:0,13:0,14:0}
 
         myleglist = base_objects.LegList()
 
@@ -2253,9 +2253,7 @@ class HelasDecayChainProcessTest(unittest.TestCase):
         myproc.set('decay_chains', base_objects.ProcessList([mydecayproc]))
 
         myamplitude = diagram_generation.DecayChainAmplitude(myproc)
-
-        #print myamplitude.nice_string()
-
+        
         helas_amplitude = helas_objects.HelasDecayChainProcess(myamplitude).\
                           combine_decay_chain_processes()[0]
 
@@ -2279,7 +2277,7 @@ class HelasDecayChainProcessTest(unittest.TestCase):
                     else:
                         self.assertEqual(None,
                                 vertices[ivert].get('legs')[-1].get('onshell'))
-                        
+                       
         # Test with u g > u g , u > u g g
 
         goal_no_quark = 9

@@ -181,11 +181,11 @@ class TestColorSextetModel(unittest.TestCase):
                                                                       2)
         self.assertEqual(len(col_flow), len(matrix_element.get('color_basis')))
         self.assertEqual(col_flow,
-                         [{1: [502, 0], 2: [0, 501],
-                           3: [502, -503], 4: [-503, 501]},
-                          {1: [502, 0], 2: [0, 501],
-                           3: [502, -503], 4: [-503, 501]},
-                          {1: [501, 0], 2: [0, 501],
+                         [{1: [503, 0], 2: [0, 501], 
+                           3: [502, -503], 4: [-501, 502]}, 
+                          {1: [502, 0], 2: [0, 501], 
+                           3: [502, -503], 4: [-503, 501]}, 
+                          {1: [501, 0], 2: [0, 501], 
                            3: [502, -503], 4: [-502, 503]}])
 
         # Test u u > six g
@@ -223,14 +223,14 @@ class TestColorSextetModel(unittest.TestCase):
                                                                       2)
         self.assertEqual(len(col_flow), len(matrix_element.get('color_basis')))
         self.assertEqual(col_flow,
-                         [{1: [501, 0], 2: [502, 0],
-                           3: [501, -503], 4: [502, 503]},
-                          {1: [502, 0], 2: [503, 0],
-                           3: [501, -503], 4: [502, 501]},
-                          {1: [501, 0], 2: [502, 0],
-                           3: [501, -503], 4: [502, 503]},
-                          {1: [502, 0], 2: [501, 0],
-                           3: [501, -503], 4: [502, 503]}])
+                          [{1: [503, 0], 2: [502, 0], 
+                            3: [501, -503], 4: [502, 501]}, 
+                           {1: [502, 0], 2: [503, 0], 
+                            3: [501, -503], 4: [502, 501]}, 
+                           {1: [501, 0], 2: [502, 0], 
+                            3: [501, -503], 4: [502, 503]}, 
+                           {1: [502, 0], 2: [501, 0], 
+                            3: [501, -503], 4: [502, 503]}])
 
         # Test u u > six > u u g
 
@@ -267,14 +267,14 @@ class TestColorSextetModel(unittest.TestCase):
                                                                       2)
         self.assertEqual(len(col_flow), len(matrix_element.get('color_basis')))
         self.assertEqual(col_flow,
-                         [{1: [501, 0], 2: [503, 0], 3: [501, 0],
-                           4: [502, 0], 5: [503, 502]},
-                          {1: [503, 0], 2: [501, 0], 3: [501, 0],
-                           4: [502, 0], 5: [503, 502]},
-                          {1: [502, 0], 2: [503, 0], 3: [501, 0],
-                           4: [502, 0], 5: [503, 501]},
-                          {1: [503, 0], 2: [502, 0], 3: [501, 0],
-                           4: [502, 0], 5: [503, 501]}])
+                          [{1: [501, 0], 2: [503, 0], 3: [501, 0], 
+                            4: [502, 0], 5: [503, 502]}, 
+                           {1: [503, 0], 2: [501, 0], 3: [501, 0], 
+                            4: [502, 0], 5: [503, 502]}, 
+                           {1: [502, 0], 2: [503, 0], 3: [501, 0], 
+                            4: [502, 0], 5: [503, 501]}, {1: [503, 0], 
+                            2: [502, 0], 3: [501, 0], 
+                            4: [502, 0], 5: [503, 501]}])
 
         # Test six > u u
 
@@ -304,7 +304,31 @@ class TestColorSextetModel(unittest.TestCase):
                                                                       2)
         self.assertEqual(len(col_flow), len(matrix_element.get('color_basis')))
         self.assertEqual(col_flow,
-                         [{1: [502, -501], 2: [0, 501], 3: [502, 0]}])
+                          [{1: [501, -502], 2: [0, 501], 3: [502, 0]}])
+
+        # Test the size of the color basis in g g  > g six six 
+
+        myleglist = base_objects.LegList()
+
+
+        myleglist.append(base_objects.Leg({'id':21,
+                                           'state':False}))
+        myleglist.append(base_objects.Leg({'id':21,
+                                           'state':False}))
+        myleglist.append(base_objects.Leg({'id':21,
+                                           'state':True}))
+        myleglist.append(base_objects.Leg({'id':9000006,
+                                           'state':True}))
+        myleglist.append(base_objects.Leg({'id':-9000006,
+                                           'state':True}))
+
+        myproc = base_objects.Process({'legs':myleglist,
+                                       'model':self.base_model})
+
+        myamp = diagram_generation.Amplitude(myproc)
+        matrix_element = helas_objects.HelasMatrixElement(myamp)
+        self.assertEqual(13, len(matrix_element.get('color_basis')))
+
 
 #===============================================================================
 # TestColorTripletModel
