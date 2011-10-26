@@ -65,7 +65,7 @@ class IdentifyMETag(diagram_generation.DiagramTag):
     dec_number = 1
     
     @staticmethod
-    def create_tag(amplitude):
+    def create_tag(amplitude, identical_particle_factor = 0):
         """Create a tag which identifies identical matrix elements"""
         process = amplitude.get('process')
         ninitial = process.get_ninitial()
@@ -74,10 +74,12 @@ class IdentifyMETag(diagram_generation.DiagramTag):
         if process.get('is_decay_chain'):
             dc = IdentifyMETag.dec_number
             IdentifyMETag.dec_number += 1
+        if not identical_particle_factor:
+            identical_particle_factor = process.identical_particle_factor()
         return [amplitude.get('has_mirror_process'),
                 process.get('id'),
                 process.get('is_decay_chain'),
-                process.identical_particle_factor(),
+                identical_particle_factor,
                 dc,
                 sorted([IdentifyMETag(d, model, ninitial) for d in \
                         amplitude.get('diagrams')])]        
@@ -124,6 +126,10 @@ class IdentifyMETag(diagram_generation.DiagramTag):
             return (ret_list,)
         else:
             part = model.get_particle(vertex.get('legs')[-1].get('id'))
+            # If we have possibly onshell s-channel particles with
+            # identical properties but different PDG code, split the
+            # processes to ensure that we write the correct resonance
+            # in the event file
             s_pdg = vertex.get_s_channel_id(model, ninitial)
             if s_pdg and (part.get('width').lower() == 'zero' or \
                vertex.get('legs')[-1].get('onshell') == False):
@@ -3916,7 +3922,9 @@ class HelasDecayChainProcess(base_objects.PhysicsObject):
                                         for d in decay_dict.values()])))
 
                 matrix_element.insert_decay_chains(decay_dict)
-                me_tag = IdentifyMETag.create_tag(matrix_element.get_base_amplitude())
+                me_tag = IdentifyMETag.create_tag(\
+                            matrix_element.get_base_amplitude(),
+                            matrix_element.get('identical_particle_factor'))
 
                 try:
                     # If an identical matrix element is already in the list,
