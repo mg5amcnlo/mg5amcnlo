@@ -192,7 +192,7 @@ class CmdExtended(cmd.Cmd):
         if len(args)==1:
             command=args[0]
         else:
-            command = args[0]+'_'+args[1]
+            command = args[0]+'_'+args[1].split('.')[0]
         
         try:
             logger_tuto.info(getattr(tutorial_text, command).replace('\n','\n\t'))
