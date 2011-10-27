@@ -20,6 +20,7 @@ import pydoc
 import re
 import sys
 import subprocess
+import thread
 import time
 
 import madgraph.iolibs.files as files
@@ -431,7 +432,7 @@ class open_file(object):
     
         # dispatch method
         if extension in ['html','htm','php']:
-            self.open_program(self.web_browser, filename)
+            self.open_program(self.web_browser, filename, background=True)
         elif extension in ['ps','eps']:
             self.open_program(self.eps_viewer, filename)
         else:
@@ -511,7 +512,7 @@ class open_file(object):
         return None
         
         
-    def open_program(self, program, file_path, mac_check=True):
+    def open_program(self, program, file_path, mac_check=True, background=False):
       """ open a file with a given program """
       
       if mac_check==True and sys.platform == 'darwin':
@@ -519,7 +520,10 @@ class open_file(object):
       
       # Shell program only
       if program:
-          subprocess.call([program, file_path])
+          if not background:
+              subprocess.call([program, file_path])
+          else:
+              thread.start_new_thread(subprocess.call([program, file_path]))
       else:
           logger.warning('Not able to open file %s since no program configured.' % file_path + \
                               'Please set one in ./input/mg5_configuration.txt') 
