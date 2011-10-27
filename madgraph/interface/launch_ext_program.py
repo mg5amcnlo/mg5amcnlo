@@ -429,12 +429,14 @@ class open_file(object):
         except IndexError:
             extension = ''   
     
+        print 'try to open file:'
+        print filename, 'with extension', extension
     
         # dispatch method
         if extension in ['html','htm','php']:
             self.open_program(self.web_browser, filename, background=True)
         elif extension in ['ps','eps']:
-            self.open_program(self.eps_viewer, filename)
+            self.open_program(self.eps_viewer, filename, background=True)
         else:
             self.open_program(self.text_editor,filename, mac_check=False)
             # mac_check to False avoid to use open cmd in mac
@@ -514,6 +516,13 @@ class open_file(object):
         
     def open_program(self, program, file_path, mac_check=True, background=False):
       """ open a file with a given program """
+      
+      print 'argument to open it:'
+      print 'program', program
+      print 'file_path', file_path
+      print 'ma_check', mac_check
+      print 'background', background
+      
       
       if mac_check==True and sys.platform == 'darwin':
           return self.open_mac_program(program, file_path)
