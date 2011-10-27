@@ -532,7 +532,7 @@ class open_file(object):
           if not background:
               subprocess.call([program, file_path])
           else:
-              thread.start_new_thread(subprocess.call([program, file_path]))
+              thread.start_new_thread(subprocess.call,([program, file_path]))
       else:
           logger.warning('Not able to open file %s since no program configured.' % file_path + \
                               'Please set one in ./input/mg5_configuration.txt') 
