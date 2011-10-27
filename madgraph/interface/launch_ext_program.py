@@ -429,9 +429,6 @@ class open_file(object):
         except IndexError:
             extension = ''   
     
-        print 'try to open file:'
-        print filename, 'with extension', extension
-    
         # dispatch method
         if extension in ['html','htm','php']:
             self.open_program(self.web_browser, filename, background=True)
@@ -516,14 +513,7 @@ class open_file(object):
         
     def open_program(self, program, file_path, mac_check=True, background=False):
       """ open a file with a given program """
-      
-      print 'argument to open it:'
-      print 'program', program
-      print 'file_path', file_path
-      print 'ma_check', mac_check
-      print 'background', background
-      
-      
+            
       if mac_check==True and sys.platform == 'darwin':
           return self.open_mac_program(program, file_path)
       
@@ -532,7 +522,7 @@ class open_file(object):
           if not background:
               subprocess.call([program, file_path])
           else:
-              thread.start_new_thread(subprocess.call,([program, file_path]))
+              thread.start_new_thread(subprocess.call,([program, file_path],))
       else:
           logger.warning('Not able to open file %s since no program configured.' % file_path + \
                               'Please set one in ./input/mg5_configuration.txt') 
