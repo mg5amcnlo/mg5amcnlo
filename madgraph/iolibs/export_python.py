@@ -293,14 +293,17 @@ class ProcessExporterPython(object):
                 ret_lines.append(line)
             ret_lines.sort()
         else:
+            wf_dict = {}
+            vx_list = []
+            optimization = 0
             for idiag, diag in enumerate(matrix_element.get('diagrams')):
                 # Ignore any diagrams with 4-particle vertices.  The
                 # easiest way to get this info is to use the
-                # get_s_and_t_channels function, which collects all
+                # get_base_diagram function, which collects all
                 # vertices corresponding to this diagram.
-                schannels, tchannels = diag.get('amplitudes')[0].\
-                                             get_s_and_t_channels(2)
-                allchannels = schannels + tchannels
+                base_diagram = diag.get('amplitudes')[0].\
+                                       get_base_diagram(wf_dict, vx_list, optimization)
+                allchannels = base_diagram.get('vertices')
                 if not allchannels or \
                        any([len(vert.get('legs')) > 3 for vert in allchannels]):
                     continue

@@ -3477,7 +3477,8 @@ DATA(icolamp(i,42,1),i=1,6)/.false.,.false.,.false.,.false.,.false.,.true./"""
       ELSE IF(IPDG.EQ.21)THEN
         GET_COLOR=8
         RETURN
-      ELSE IF(IPDG.EQ.20)THEN
+      ELSE IF(IPDG.EQ.1)THEN
+C       This is dummy particle used in multiparticle vertices
         GET_COLOR=2
         RETURN
       ELSE
@@ -5239,7 +5240,7 @@ CALL FFV1_0(W(1,2),W(1,9),W(1,5),GG,AMP(4))""".split('\n')
 """C     Diagram 1
       DATA MAPCONFIG(1)/1/
       DATA (IFOREST(I,-1,1),I=1,2)/4,3/
-      DATA (SPROP(I,-1,1),I=1,1)/20/
+      DATA (SPROP(I,-1,1),I=1,1)/1/
       DATA TPRID(-1,1)/0/
       DATA (IFOREST(I,-2,1),I=1,2)/1,5/
       DATA TPRID(-2,1)/2/
@@ -5251,7 +5252,7 @@ C     Diagram 2
       DATA (SPROP(I,-1,2),I=1,1)/6/
       DATA TPRID(-1,2)/0/
       DATA (IFOREST(I,-2,2),I=1,2)/-1,3/
-      DATA (SPROP(I,-2,2),I=1,1)/20/
+      DATA (SPROP(I,-2,2),I=1,1)/1/
       DATA TPRID(-2,2)/0/
 C     Diagram 3
       DATA MAPCONFIG(3)/3/
@@ -5259,12 +5260,12 @@ C     Diagram 3
       DATA (SPROP(I,-1,3),I=1,1)/6/
       DATA TPRID(-1,3)/0/
       DATA (IFOREST(I,-2,3),I=1,2)/4,-1/
-      DATA (SPROP(I,-2,3),I=1,1)/20/
+      DATA (SPROP(I,-2,3),I=1,1)/1/
       DATA TPRID(-2,3)/0/
 C     Diagram 4
       DATA MAPCONFIG(4)/4/
       DATA (IFOREST(I,-1,4),I=1,2)/4,3/
-      DATA (SPROP(I,-1,4),I=1,1)/20/
+      DATA (SPROP(I,-1,4),I=1,1)/1/
       DATA TPRID(-1,4)/0/
       DATA (IFOREST(I,-2,4),I=1,2)/1,-1/
       DATA TPRID(-2,4)/2/
@@ -8537,7 +8538,7 @@ C     Number of configs
         for (idiag, diagram) in enumerate(diagrams):
 
             schannels, tchannels = diagram.get('amplitudes')[0].\
-                                         get_s_and_t_channels(2)
+                                         get_s_and_t_channels(2, 20)
 
             self.assertEqual([[l.get('number') for l in v.get('legs')] for v \
                               in schannels],
@@ -8739,7 +8740,8 @@ C     Number of configs
       ELSE IF(IPDG.EQ.24)THEN
         GET_COLOR=1
         RETURN
-      ELSE IF(IPDG.EQ.20)THEN
+      ELSE IF(IPDG.EQ.1)THEN
+C       This is dummy particle used in multiparticle vertices
         GET_COLOR=2
         RETURN
       ELSE
