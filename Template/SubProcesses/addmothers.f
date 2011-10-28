@@ -205,6 +205,34 @@ c     $         ' colors ',mo_color,da_color(1),da_color(2)
           if(mo_color.eq.1) then ! color singlet
              icolalt(1,i) = 0
              icolalt(2,i) = 0
+          elseif(mo_color.eq.2) then ! used as dummy for multipart. vert
+             if(icolalt(1,ida(1))+icolalt(1,ida(2))-
+     $            icolalt(2,ida(1))-icolalt(2,ida(2)).eq.0) then ! color singlet
+                icolalt(1,i) = 0
+                icolalt(2,i) = 0            
+             elseif(icolalt(1,ida(1))-icolalt(2,ida(2)).eq.0) then ! 3bar 3 -> 8 or 8 8 -> 8
+                icolalt(1,i) = icolalt(1,ida(2))
+                icolalt(2,i) = icolalt(2,ida(1))
+             else if(icolalt(1,ida(2))-icolalt(2,ida(1)).eq.0) then ! 3 3bar -> 8 or 8 8 -> 8
+                icolalt(1,i) = icolalt(1,ida(1))
+                icolalt(2,i) = icolalt(2,ida(2))
+             else if(icolalt(1,ida(1)).eq.0.and.icolalt(2,ida(1)).eq.0) then ! 1 3/6/8 -> 3/8
+                icolalt(1,i) = icolalt(1,ida(2))
+                icolalt(2,i) = icolalt(2,ida(2))
+             else if(icolalt(1,ida(2)).eq.0.and.icolalt(2,ida(2)).eq.0) then ! 3/6/8 1 -> 3/8
+                icolalt(1,i) = icolalt(1,ida(1))
+                icolalt(2,i) = icolalt(2,ida(1))
+             elseif(-icolalt(1,ida(1)).eq.icolalt(1,ida(2)))then
+                icolalt(1,i) = -icolalt(1,ida(2))
+                icolalt(2,i) = icolalt(2,ida(1))
+             elseif(icolalt(2,ida(1)).eq.-icolalt(2,ida(2)))then
+                icolalt(1,i) = icolalt(1,ida(2))
+                icolalt(2,i) = -icolalt(1,ida(1))
+             else
+c               This might be sextet or antisextet, 
+c               but there are just too many possibilities...
+                call write_error(da_color(1), da_color(2), mo_color)
+             endif
           elseif(mo_color.eq.-3) then ! color anti-triplet
                 icolalt(1,i) = 0
              if(da_color(1).eq.-3.and.da_color(2).eq.1)then

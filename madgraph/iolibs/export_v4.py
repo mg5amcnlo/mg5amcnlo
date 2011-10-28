@@ -1456,6 +1456,11 @@ class ProcessExporterFortranME(ProcessExporterFortran):
             get_color=%d
             return
             """ % (part_id, model.get_particle(part_id).get_color())
+        # Dummy particle 20 for multiparticle vertices
+        lines += """else if(ipdg.eq.20)then
+            get_color=2
+            return
+            """
         lines += """else
         write(*,*)'Error: No color given for pdg ',ipdg
         get_color=0        
@@ -1877,7 +1882,7 @@ class ProcessExporterFortranME(ProcessExporterFortran):
         for iconf, configs in enumerate(s_and_t_channels):
             for vertex in configs[0] + configs[1][:-1]:
                 leg = vertex.get('legs')[-1]
-                if leg.get('id') == 21 and 21 not in particle_dict:
+                if leg.get('id') == 20 and 20 not in particle_dict:
                     # Fake propagator used in multiparticle vertices
                     mass = 'zero'
                     width = 'zero'
