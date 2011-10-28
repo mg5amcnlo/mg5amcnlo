@@ -1072,9 +1072,12 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
         args = self.split_arg(line)
         # Check argument's validity
         self.check_survey(args, cmd='generate_events')
+        
+        self.ask_run_configuration()
         logger.info('Generating %s events with run name %s' %
                                       (self.run_card['nevents'], self.run_name))
-              
+        
+      
         self.exec_cmd('survey %s' % line, postcmd=False)
         if not self.run_card['gridpack'] in self.true:        
             nb_event = self.run_card['nevents']
@@ -2316,6 +2319,111 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
                                                                  makehtml=False)
         
         return True   
+
+
+    ############################################################################
+    def ask_run_configuration(self):
+        """Ask the question when launching generate_events/multi_run"""
+        
+        available_mode = [0, 1]
+
+        to_run = []
+        if not self.configuration['pythia-pgs_path']:
+            logger.info('''pythia-pgs not detected. If you want to run pythia-pgs.
+            Please start to install it by the command \'install pythia-pgs\'''')            
+        else:
+            available_mode.append(2)
+            available_mode.append(3)
+
+        if not self.configuration['delphes_path']:
+            logger.info('''pythia-pgs not detected. If you want to run pythia-pgs.
+            Please start to install it by the command \'install pythia-pgs\'''')            
+        else:
+            available_mode.append(4)
+        
+        if len(available_mode) == 2:
+            mode = 'parton'
+        else:
+            name = {0: 'auto', 1: 'parton', 2:'pythia', 3:'pgs', 4:'delphes'}
+            options = available_mode + [name[val] for val in available_mode]
+            question = """Which program do you want to run?
+            Enter 0 or 'auto' in order to run the code associate to the current card.
+            Enter 1 or 'parton' to launch only Madevent.\n"""
+            if 2 in available_mode:
+                question += """            Enter 2 of 'pythia' to launch MadEvent+pythia.
+            Enter 3 or 'pgs' to launch MadEvent+pythia+pgs.\n"""
+            if 3 in available_mode:
+                question +="""            Enter 4 or 'delphes' to launch MadEvent+pythia+delphes.\n"""
+
+            mode = self.ask(question, 0, options, timeout=self.timeout)
+            if mode.isdigit():
+                mode = name[int(mode)]
+            logger.info('Will run in mode %s' % mode)
+            # Now that we know in which mode we are check that all the card
+            #exists (copy default if needed)
+
+            cards = ['param_card.dat', 'run_card.dat']
+            if mode in ['pythia', 'pgs', 'delphes']:
+                self.add_card_to_run('pythia')
+                cards.append('pythia_card.dat')
+            if mode == 'pgs':
+                self.add_card_to_run('pgs')
+                cards.append('pgs_card.dat')
+            if mode == 'delphes':
+                self.add_card_to_run('delphes')
+                cards.append('delphes_card.dat')
+
+            # Ask the user if he wants to edit any of the files
+            #First create the asking text
+            question = """Do you want to edit one of the card?
+            Press enter or enter 'done' to use the current card.
+            Enter 0 or 'param' to edit the param_card (be carefull about parameter consistency, especially the widths)
+            Enter 1 or 'run' to edit the run_card.\n"""
+            possible_answer = ['done', 0, 'param', 1, 'run']
+            if mode in ['pythia', 'pgs', 'delphes']:
+                question += '            Enter 2 or \'pythia\' to edit the pythia_card.\n'
+                possible_answer.append(2)
+                possible_answer.append('pythia')
+            if mode == 'pgs':
+                question += '            Enter 3 or \'pgs\' to edit the pgs_card.\n'
+                possible_answer.append(3)
+                possible_answer.append('pgs')            
+            if mode == 'delphes':
+                question += '            Enter 4 or \'delphes\' to edit the pgs_card.\n'
+                possible_answer.append(4)
+                possible_answer.append('delphes')
+            card = {0:'param', 1:'run', 2:'pythia', 3: 'pgs', 4: 'delphes'}
+            
+            # Loop as long as the user is not done.
+            answer = 'no'
+            while answer != 'done':
+                answer = self.ask(question, 'done', possible_answer, timeout=self.timeout)
+                if answer.isdigit():
+                    answer = card[int(answer)]
+                if answer == 'done':
+                    return
+                path = pjoin(self.me_dir,'Cards','%s_card.dat' % answer)
+                print path
+                self.exec_cmd('open %s' % path)                    
+                
+                
+            if mode.isdigit():
+                mode = name[int(mode)]
+
+
+    def add_card_to_run(self, name):
+        """ensure that card name is define. If not use the default one"""
+        dico = {'dir': self.me_dir, 'name': name }
+
+        if not os.path.exists('%(dir)s/Cards/%(name)s_card.dat' % dico):
+            files.cp('%(dir)s/Cards/%(name)s_card_default.dat' % dico,
+                '%(dir)s/Cards/%(name)s_card.dat' % dico)
+            
+
+
+
+
+
 
 #===============================================================================
 # MadEventCmd

@@ -172,67 +172,11 @@ class MELauncher(ExtLauncher):
         if self.multicore:
             self.cluster = 2
         
-        self.cards = ['param_card.dat', 'run_card.dat']
+        self.cards = []
 
         # Assign a valid run name if not put in options
         if self.name == '':
             self.name = me_cmd.MadEventCmd.find_available_run_name(self.running_dir)
-    
-    
-    def copy_default_card(self, name):
-
-        dico = {'dir': self.card_dir, 'name': name }
-
-        if not os.path.exists('%(dir)s/%(name)s_card.dat' % dico):
-            cp('%(dir)s/%(name)s_card_default.dat' % dico,
-                '%(dir)s/%(name)s_card.dat' % dico)
-    
-          
-    def prepare_run(self):
-        """ ask for pythia-pgs/delphes run """
-        
-        # Check If we Need to run pythia 
-        if not self.pythia or self.force:
-            return
-        
-        answer = self.ask('Do you want to run pythia?','auto', ['y','n','auto'])
-        if answer == 'y':
-            self.copy_default_card('pythia')
-        elif answer == 'n':
-            path = os.path.join(self.card_dir, 'pythia_card.dat')
-            try: os.remove(path)
-            except OSError: pass
-            return # no Need to ask for PGS/Delphes
-        elif answer == 'auto' and not os.path.exists(os.path.join(self.card_dir, 'pythia_card.dat')):
-            return # No need to ask for PGS/Delphes
-        self.cards.append('pythia_card.dat')
-        
-        answer = self.ask('Do you want to run PGS?','auto', ['y','n','auto'])
-        if answer == 'y':
-            self.copy_default_card('pgs')
-            self.cards.append('pgs_card.dat')
-            return # No Need to ask for Delphes
-        elif answer == 'n':
-            path = os.path.join(self.card_dir, 'pgs_card.dat')
-            try: os.remove(path)
-            except OSError: pass
-        elif answer == 'auto' and os.path.exists(os.path.join(self.card_dir, 'pgs_card.dat')):
-            self.cards.append('pgs_card.dat')
-            return # No need to ask for Delphes
-    
-        if not self.delphes:
-            return
-        
-        answer = self.ask('Do you want to run Delphes?','n', ['y','n','auto'])
-        if answer == 'y':
-            self.copy_default_card('delphes')
-            self.cards.append('delphes_card.dat')
-        elif answer == 'n':
-            path = os.path.join(self.card_dir, 'delphes_card.dat')
-            try: os.remove(path)
-            except OSError: pass
-        elif answer == 'auto' and os.path.exists(os.path.join(self.card_dir, 'delphes_card.dat')):
-            self.cards.append('delphes_card.dat')            
     
     def launch_program(self):
         """launch the main program"""
