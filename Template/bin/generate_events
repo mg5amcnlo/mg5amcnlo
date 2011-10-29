@@ -73,14 +73,14 @@ if '__main__' == __name__:
         
 
     if mode == 1:
-        launch.run_cmd('generate_events %s --cluster --queue=%s'
+        launch.run_cmd('generate_events -f %s --cluster --queue=%s'
                    %(name, opt))            
         ME = MadEventLauncher(1, name=name, cluster_queue=opt)
     elif mode ==2:
-        launch.run_cmd('generate_events %s --multicore --nb_core=%s'
+        launch.run_cmd('generate_events -f %s --multicore --nb_core=%s'
                    %(name, opt)) 
     else:
-        launch.run_cmd('generate_events %s' % name)
+        launch.run_cmd('generate_events -f %s' % name)
     
     launch.run_cmd('quit')
             
