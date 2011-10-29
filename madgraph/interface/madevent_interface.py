@@ -245,20 +245,21 @@ class HelpToCmd(object):
         
 
     def help_generate_events(self):
-        logger.info("syntax: generate_events [run_name] [--run_options])")
+        logger.info("syntax: generate_events [run_name] [options])")
         logger.info("-- Launch the full chain of script for the generation of events")
         logger.info("   Including possible plotting, shower and detector resolution.")
         logger.info("   Those steps are performed if the related program are installed")
         logger.info("   and if the related card are present in the Cards directory.")
-        self.run_options_help([])
+        self.run_options_help([('-f', 'Use default for all questions.'),
+                               ('--run=', 'argument might be parton/pythia/pgs/delphes and indicate the last level to be run.')])
 
     def help_multi_run(self):
         logger.info("syntax: multi_run NB_RUN [run_name] [--run_options])")
         logger.info("-- Launch the full chain of script for the generation of events")
         logger.info("   NB_RUN times. This chains includes possible plotting, shower")
         logger.info(" and detector resolution.")
-        self.run_options_help([])
-
+        self.run_options_help([('-f', 'Use default for all questions.'),
+                               ('--run=', 'argument might be parton/pythia/pgs/delphes and indicate the last level to be run.')])
 
     def help_survey(self):
         logger.info("syntax: survey [run_name] [--run_options])")
@@ -407,9 +408,64 @@ class CheckValidForCmd(object):
             
         return True
 
+    def check_generate_events(self, args):
+        """check that the argument for generate_events are valid"""
+        
+        force = False
+        run = None
+        if '-f' in args:
+            force = True
+            args.remove('-f')
+        if args[-1].startswith('--run='):
+            run = args[-1][6:]
+            if run not in ['parton', 'pythia', 'pgs', 'delphes']:
+                self.help_generate_events()
+                raise self.InvalidCmd('invalid %s argument'% args[-1])
+            if run != 'parton' and not self.configuration['pythia-pgs_path']:                
+                raise self.InvalidCmd('''pythia-pgs not install. Please install this package first. 
+                To do so type: \'install pythia-pgs\' in the mg5 interface''')
+            if run == 'delphes' and not self.configuration['delphes_path']:
+                raise self.InvalidCmd('''delphes not install. Please install this package first. 
+                To do so type: \'install Delphes\' in the mg5 interface''')
+            del args[-1]
+                                
+        if len(args) > 1:
+            self.help_generate_events()
+            raise self.InvalidCmd('Too many argument for generate_events command' % cmd)
+            
+        
+        if not args:
+            # No run name assigned -> assigned one automaticaly 
+            self.set_run_name(self.find_available_run_name(self.me_dir))
+        else:
+            self.set_run_name(args[0], True)
+            args.pop(0)
+            
+        return force, run
+
+
+
     def check_multi_run(self, args):
         """check that the argument for survey are valid"""
-        
+
+        force = False
+        run = None
+        if '-f' in args:
+            force = True
+            args.remove('-f')
+        if args[-1].startswith('--run='):
+            run = args[-1][6:]
+            if run not in ['parton', 'pythia', 'pgs', 'delphes']:
+                self.help_multi_run()
+                raise self.InvalidCmd('invalid %s argument'% args[-1])
+            if run != 'parton' and not self.configuration['pythia-pgs_path']:                
+                raise self.InvalidCmd('''pythia-pgs not install. Please install this package first. 
+                To do so type: \'install pythia-pgs\' in the mg5 interface''')
+            if run == 'delphes' and not self.configuration['delphes_path']:
+                raise self.InvalidCmd('''delphes not install. Please install this package first. 
+                To do so type: \'install Delphes\' in the mg5 interface''')
+            del args[-1]
+            
         if not len(args):
             self.help_multi_run()
             raise self.InvalidCmd("""multi_run command requires at least one argument for
@@ -421,7 +477,7 @@ class CheckValidForCmd(object):
         self.check_survey(args, cmd='multi_run')
         args.insert(0, int(nb_run))
         
-        return True
+        return force, run
 
     def check_refine(self, args):
         """check that the argument for survey are valid"""
@@ -735,25 +791,50 @@ class CompleteForCmd(CheckValidForCmd):
     complete_combine_events = complete_survey
     complete_generate_events = complete_survey
     
-    def complete_multi_run(self, text, line, begidx, endidx):
-        """complete multi run command"""
-        
-        args = self.split_arg(line[0:begidx])
-        if len(args) == 1:
-            data = [str(i) for i in range(0,20)]
-            return  self.list_completion(text, data, line)
+    def complete_generate_events(self, text, line, begidx, endidx):
+        """ Complete the generate events"""
         
         if line.endswith('nb_core=') and not text:
             import multiprocessing
             max = multiprocessing.cpu_count()
             return [str(i) for i in range(2,max+1)]
-            
-        return  self.list_completion(text, self._run_options, line)    
+        if line.endswith('run=') and not text:
+            return ['parton','pythia','pgs','delphes']
+        elif '--run=' in line.split()[-1] and line and line[-1] != ' ':
+            return self.list_completion(text,['parton','pythia','pgs','delphes'],line)
+        
+        opts = self._run_options + self._generate_options
+        return  self.list_completion(text, opts, line)
+
+    def complete_multi_run(self, text, line, begidx, endidx):
+        """complete multi run command"""
+        
+        args = self.split_arg(line[0:begidx], error=False)
+        if len(args) == 1:
+            data = [str(i) for i in range(0,20)]
+            return  self.list_completion(text, data, line)
+        
+        if line.endswith('run=') and not text:
+            return ['parton','pythia','pgs','delphes']
+        elif '--run=' in line.split()[-1] and line and line[-1] != ' ':
+            return self.list_completion(text,['parton','pythia','pgs','delphes'],line)
+        
+        opts = self._run_options + self._generate_options
+        return  self.list_completion(text, opts, line)
+        
+        
+        
+        if line.endswith('nb_core=') and not text:
+            import multiprocessing
+            max = multiprocessing.cpu_count()
+            return [str(i) for i in range(2,max+1)]
+        opts = self._run_options + self._generate_options
+        return  self.list_completion(text, opts, line)
     
     def complete_plot(self, text, line, begidx, endidx):
         """ Complete the plot command """
         
-        args = self.split_arg(line[0:begidx])
+        args = self.split_arg(line[0:begidx], error=False)
         if len(args) > 1:
             return self.list_completion(text, self._plot_mode)
         else:
@@ -762,7 +843,7 @@ class CompleteForCmd(CheckValidForCmd):
     def complete_remove(self, text, line, begidx, endidx):
         """Complete the remove command """
      
-        args = self.split_arg(line[0:begidx])
+        args = self.split_arg(line[0:begidx], error=False)
         if len(args) > 1:
             return self.list_completion(text, self._clean_mode + ['-f'])
         else:
@@ -774,7 +855,7 @@ class CompleteForCmd(CheckValidForCmd):
     def complete_pythia(self,text, line, begidx, endidx):
         "Complete the pythia command"
         
-        args = cmd.Cmd.split_arg(line[0:begidx])
+        args = cmd.Cmd.split_arg(line[0:begidx], error=False)
         if len(args) == 1:
             #return valid run_name
             data = glob.glob(pjoin(self.me_dir, 'Events', '*_unweighted_events.lhe.gz'))
@@ -791,7 +872,7 @@ class CompleteForCmd(CheckValidForCmd):
     def complete_pgs(self,text, line, begidx, endidx):
         "Complete the pythia command"
         
-        args = cmd.Cmd.split_arg(line[0:begidx]) 
+        args = cmd.Cmd.split_arg(line[0:begidx], error=False) 
                 
         if len(args) == 1:
             #return valid run_name
@@ -822,6 +903,7 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
     true = ['T','.true.',True,'true']
     # Options and formats available
     _run_options = ['--cluster','--multicore','--nb_core=','--nb_core=2', '-c', '-m']
+    _generate_options = ['-f', '--run=parton', '--run=pythia', '--run=pgs', '--run=delphes']
     _set_options = ['stdout_level','fortran_compiler']
     _plot_mode = ['all', 'parton','pythia','pgs','delphes','channel', 'banner']
     _clean_mode = _plot_mode
@@ -883,7 +965,7 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
         self._options = {} # for compatibility with extended_cmd
         
     ############################################################################    
-    def split_arg(self, line):
+    def split_arg(self, line, error=True):
         """split argument and remove run_options"""
         
         args = CmdExtended.split_arg(line)
@@ -898,7 +980,10 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
             elif arg == '-f':
                 continue
             elif not arg.startswith('--'):
-                raise self.InvalidCmd('%s argument cannot start with - symbol' % arg)
+                if error:
+                    raise self.InvalidCmd('%s argument cannot start with - symbol' % arg)
+                else:
+                    continue
             elif arg.startswith('--cluster'):
                 self.cluster_mode = 1
             elif arg.startswith('--multicore'):
@@ -1071,14 +1156,13 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
         
         args = self.split_arg(line)
         # Check argument's validity
-        self.check_survey(args, cmd='generate_events')
-        
-        self.ask_run_configuration()
+        force, mode = self.check_generate_events(args)
+        self.ask_run_configuration(mode, force)
         logger.info('Generating %s events with run name %s' %
                                       (self.run_card['nevents'], self.run_name))
         
       
-        self.exec_cmd('survey %s' % line, postcmd=False)
+        self.exec_cmd('survey  %s %s' % (self.run_name,' '.join(args)), postcmd=False)
         if not self.run_card['gridpack'] in self.true:        
             nb_event = self.run_card['nevents']
             self.exec_cmd('refine %s' % nb_event, postcmd=False)
@@ -1112,14 +1196,14 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
         
         args = self.split_arg(line)
         # Check argument's validity
-        self.check_multi_run(args)
-        
+        force, mode = self.check_multi_run(args)
+        self.ask_run_configuration(mode, force)
         main_name = self.run_name
         nb_run = args.pop(0)
         crossoversig = 0
         inv_sq_err = 0
         for i in range(nb_run):
-            self.exec_cmd('generate_events %s_%s' % (main_name, i), postcmd=False)
+            self.exec_cmd('generate_events %s_%s -f' % (main_name, i), postcmd=False)
             # Update collected value
             if self.results[main_name]['nb_event']:
                 self.results[main_name]['nb_event'] += int(self.results[self.run_name]['nb_event'])  
@@ -1130,7 +1214,8 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
             crossoversig+=cross/error**2
             inv_sq_err+=1.0/error**2
             self.results[main_name]['cross'] = crossoversig/inv_sq_err
-            self.results[main_name]['error'] = math.sqrt(1.0/inv_sq_err)            
+            self.results[main_name]['error'] = math.sqrt(1.0/inv_sq_err) 
+            self.results[main_name]['nb_event'] += int(self.results[self.run_name]['nb_event'])                       
         
         self.run_name = main_name
         self.results.def_current(main_name)
@@ -2322,40 +2407,46 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
 
 
     ############################################################################
-    def ask_run_configuration(self):
+    def ask_run_configuration(self, mode=None, force=False):
         """Ask the question when launching generate_events/multi_run"""
         
-        available_mode = [0, 1]
-
-        to_run = []
+        available_mode = ['0', '1']
         if not self.configuration['pythia-pgs_path']:
             logger.info('''pythia-pgs not detected. If you want to run pythia-pgs.
-            Please start to install it by the command \'install pythia-pgs\'''')            
+            Please start to install it by the command \'install pythia-pgs\' in 
+            the MG5 interface.''')            
         else:
-            available_mode.append(2)
-            available_mode.append(3)
+            available_mode.append('2')
+            available_mode.append('3')
 
         if not self.configuration['delphes_path']:
-            logger.info('''pythia-pgs not detected. If you want to run pythia-pgs.
-            Please start to install it by the command \'install pythia-pgs\'''')            
-        else:
-            available_mode.append(4)
+            logger.info('''Delphes not detected. If you want to run delphes.
+            Please start to install it by the command \'install Delphes\' in the 
+            MG5 interface.''')            
+        elif '2' in available_mode:
+            available_mode.append('4')
         
         if len(available_mode) == 2:
             mode = 'parton'
         else:
-            name = {0: 'auto', 1: 'parton', 2:'pythia', 3:'pgs', 4:'delphes'}
+            name = {'0': 'auto', '1': 'parton', '2':'pythia', '3':'pgs', '4':'delphes'}
             options = available_mode + [name[val] for val in available_mode]
-            question = """Which program do you want to run?
+            question = """Which programs do you want to run?
             Enter 0 or 'auto' in order to run the code associate to the current card.
             Enter 1 or 'parton' to launch only Madevent.\n"""
             if 2 in available_mode:
                 question += """            Enter 2 of 'pythia' to launch MadEvent+pythia.
             Enter 3 or 'pgs' to launch MadEvent+pythia+pgs.\n"""
-            if 3 in available_mode:
+            if 4 in available_mode:
                 question +="""            Enter 4 or 'delphes' to launch MadEvent+pythia+delphes.\n"""
 
-            mode = self.ask(question, 0, options, timeout=self.timeout)
+            if not force:
+                print mode
+                if not mode:
+                    mode = self.ask(question, '0', options, timeout=self.timeout)
+            elif not mode:
+                mode = 'auto'
+                
             if mode.isdigit():
                 mode = name[int(mode)]
             logger.info('Will run in mode %s' % mode)
@@ -2373,9 +2464,12 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
                 self.add_card_to_run('delphes')
                 cards.append('delphes_card.dat')
 
+            if force:
+                return
+
             # Ask the user if he wants to edit any of the files
             #First create the asking text
-            question = """Do you want to edit one of the card?
+            question = """Do you want to edit one of those cards?
             Press enter or enter 'done' to use the current card.
             Enter 0 or 'param' to edit the param_card (be carefull about parameter consistency, especially the widths)
             Enter 1 or 'run' to edit the run_card.\n"""

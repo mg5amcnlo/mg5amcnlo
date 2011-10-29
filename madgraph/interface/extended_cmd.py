@@ -256,7 +256,7 @@ class Cmd(cmd.Cmd):
     @staticmethod
     def split_arg(line):
         """Split a line of arguments"""
-    
+        
         split = line.split()
         out=[]
         tmp=''

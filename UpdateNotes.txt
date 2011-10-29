@@ -20,6 +20,7 @@ Update notes for MadGraph 5 (in reverse time order)
                   OM: Add the possibility to force which fortran compiler will 
                       be use. Either via the configuration file or via the set 
                       command.
+                  OM: Change the scheme of question when running madevent.
                   OM: Add three options for display command and modify a fourth one:
                       a) display options: return the current option value. 
                         i.e. those set via the set command and/or via the 

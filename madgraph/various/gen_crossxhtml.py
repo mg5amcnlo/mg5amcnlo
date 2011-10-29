@@ -177,10 +177,11 @@ class AllResults(dict):
         assert name in ['cross', 'error', 'nb_event', 'cross_pythia']
         if name == 'cross_pythia':
             self.current[name] = '<br> matched: %.4g' % float(value)
-            print (self.current['nb_event'], value, self.current['cross']) 
-            self.current['nb_event'] = '%s <br> matched: %d' % (self.current['nb_event'],
+            self.current['nb_event_text'] = '%s <br> matched: %d' % (self.current['nb_event'],
                     int(self.current['nb_event']) * float(value) /float(self.current['cross'])) 
-               
+        elif name == 'nb_event':
+            self.current[name] = value
+            self.current['nb_event_text'] = value
         else:    
             self.current[name] = value
             if name == 'cross':
@@ -277,6 +278,7 @@ class OneRunResults(dict):
         
         # Default value
         self['nb_event'] = None
+        self['nb_event_text'] = 'No event'
         self['cross'] = 0
         self['cross_pythia'] = ''
         self['error'] = 0
@@ -408,7 +410,7 @@ class OneRunResults(dict):
         # Cross
         out += '<td> %(cross).4g <font face=symbol>&#177</font> %(error).2g %(cross_pythia)s </td>'
         # Events
-        out += '<td> %(nb_event)s </td>' 
+        out += '<td> %(nb_event_text)s </td>' 
 
         return out % self
     
