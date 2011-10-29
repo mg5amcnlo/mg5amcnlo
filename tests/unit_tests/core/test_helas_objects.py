@@ -3188,6 +3188,242 @@ class HelasMultiProcessTest(unittest.TestCase):
             self.assert_(wf.get_with_flow('state') != old_wf.get_with_flow('state'))
         
 
+    def test_decay_chain_different_pdgs(self):
+        """Test decay chain with identical particles with different PDG
+        With the new IdentifyMETag, processes with identical s-channel particles
+        but different PDG code are not combined, to ensure that the particles
+        are correctly included in the event file.
+        """
+
+        mypartlist = base_objects.ParticleList()
+        myinterlist = base_objects.InteractionList()
+
+        # A electron and positron
+        mypartlist.append(base_objects.Particle({'name':'e-',
+                      'antiname':'e+',
+                      'spin':2,
+                      'color':1,
+                      'mass':'zero',
+                      'width':'zero',
+                      'texname':'e^-',
+                      'antitexname':'e^+',
+                      'line':'straight',
+                      'charge':-1.,
+                      'pdg_code':11,
+                      'propagating':True,
+                      'is_part':True,
+                      'self_antipart':False}))
+        eminus = mypartlist[len(mypartlist) - 1]
+        eplus = copy.copy(eminus)
+        eplus.set('is_part', False)
+
+        # A E slepton and its antiparticle
+        mypartlist.append(base_objects.Particle({'name':'sl2-',
+                      'antiname':'sl2+',
+                      'spin':1,
+                      'color':1,
+                      'mass':'Msl2',
+                      'width':'Wsl2',
+                      'texname':'\tilde e^-',
+                      'antitexname':'\tilde e^+',
+                      'line':'dashed',
+                      'charge':1.,
+                      'pdg_code':1000011,
+                      'propagating':True,
+                      'is_part':True,
+                      'self_antipart':False}))
+        seminus = mypartlist[len(mypartlist) - 1]
+        seplus = copy.copy(seminus)
+        seplus.set('is_part', False)
+
+        # A E' slepton and its antiparticle
+        mypartlist.append(base_objects.Particle({'name':'sl4-',
+                      'antiname':'sl4+',
+                      'spin':1,
+                      'color':1,
+                      'mass':'Msl2',
+                      'width':'Wsl2',
+                      'texname':'\tilde mu^-',
+                      'antitexname':'\tilde mu^+',
+                      'line':'dashed',
+                      'charge':1.,
+                      'pdg_code':1000013,
+                      'propagating':True,
+                      'is_part':True,
+                      'self_antipart':False}))
+        sepminus = mypartlist[len(mypartlist) - 1]
+        sepplus = copy.copy(sepminus)
+        sepplus.set('is_part', False)
+
+        # A neutralino
+        mypartlist.append(base_objects.Particle({'name':'n1',
+                      'antiname':'n1',
+                      'spin':2,
+                      'color':1,
+                      'mass':'Mneu1',
+                      'width':'Wneu1',
+                      'texname':'\chi_0^1',
+                      'antitexname':'\chi_0^1',
+                      'line':'straight',
+                      'charge':0.,
+                      'pdg_code':1000022,
+                      'propagating':True,
+                      'is_part':True,
+                      'self_antipart':True}))
+        n1 = mypartlist[len(mypartlist) - 1]
+
+        # A photon
+        mypartlist.append(base_objects.Particle({'name':'a',
+                      'antiname':'a',
+                      'spin':3,
+                      'color':1,
+                      'mass':'zero',
+                      'width':'zero',
+                      'texname':'\gamma',
+                      'antitexname':'\gamma',
+                      'line':'wavy',
+                      'charge':0.,
+                      'pdg_code':22,
+                      'propagating':True,
+                      'is_part':True,
+                      'self_antipart':True}))
+        a = mypartlist[len(mypartlist) - 1]
+
+        # Coupling of n1 to e and se
+        myinterlist.append(base_objects.Interaction({
+                      'id': 103,
+                      'particles': base_objects.ParticleList(\
+                                            [n1, \
+                                             eminus, \
+                                             seplus]),
+                      'color': [],
+                      'lorentz':[''],
+                      'couplings':{(0, 0):'MGVX350'},
+                      'orders':{'QED':1}}))
+
+        myinterlist.append(base_objects.Interaction({
+                      'id': 104,
+                      'particles': base_objects.ParticleList(\
+                                            [eplus, \
+                                             n1, \
+                                             seminus]),
+                      'color': [],
+                      'lorentz':[''],
+                      'couplings':{(0, 0):'MGVX494'},
+                      'orders':{'QED':1}}))
+
+        myinterlist.append(base_objects.Interaction({
+                      'id': 105,
+                      'particles': base_objects.ParticleList(\
+                                            [n1, \
+                                             eminus, \
+                                             sepplus]),
+                      'color': [],
+                      'lorentz':[''],
+                      'couplings':{(0, 0):'MGVX350'},
+                      'orders':{'QED':1}}))
+
+        myinterlist.append(base_objects.Interaction({
+                      'id': 106,
+                      'particles': base_objects.ParticleList(\
+                                            [eplus, \
+                                             n1, \
+                                             sepminus]),
+                      'color': [],
+                      'lorentz':[''],
+                      'couplings':{(0, 0):'MGVX494'},
+                      'orders':{'QED':1}}))
+
+        # Coupling of e to gamma
+        myinterlist.append(base_objects.Interaction({
+                      'id': 7,
+                      'particles': base_objects.ParticleList(\
+                                            [eminus, \
+                                             eplus, \
+                                             a]),
+                      'color': [],
+                      'lorentz':[''],
+                      'couplings':{(0, 0):'MGVX12'},
+                      'orders':{'QED':1}}))
+
+        # Coupling of sl2 to gamma
+        myinterlist.append(base_objects.Interaction({
+                      'id': 8,
+                      'particles': base_objects.ParticleList(\
+                                            [a, \
+                                             seplus, \
+                                             seminus]),
+                      'color': [],
+                      'lorentz':[''],
+                      'couplings':{(0, 0):'MGVX56'},
+                      'orders':{'QED':1}}))
+
+        myinterlist.append(base_objects.Interaction({
+                      'id': 9,
+                      'particles': base_objects.ParticleList(\
+                                            [a, \
+                                             sepplus, \
+                                             sepminus]),
+                      'color': [],
+                      'lorentz':[''],
+                      'couplings':{(0, 0):'MGVX56'},
+                      'orders':{'QED':1}}))
+
+        mymodel = base_objects.Model()
+        mymodel.set('particles', mypartlist)
+        mymodel.set('interactions', myinterlist)
+
+        myleglist = base_objects.MultiLegList()
+
+        myleglist.append(base_objects.MultiLeg({'ids':[11],
+                                         'state':False}))
+        myleglist.append(base_objects.MultiLeg({'ids':[-11],
+                                         'state':False}))
+        myleglist.append(base_objects.MultiLeg({'ids':[1000011,1000013],
+                                         'state':True}))
+        myleglist.append(base_objects.MultiLeg({'ids':[-1000011,-1000013],
+                                         'state':True}))
+
+        mycoreproc = base_objects.ProcessDefinition({'legs':myleglist,
+                                       'model':mymodel})
+
+        myleglist = base_objects.MultiLegList()
+
+        myleglist.append(base_objects.MultiLeg({'ids':[1000011,1000013],
+                                         'state':False}))
+        myleglist.append(base_objects.MultiLeg({'ids':[11],
+                                         'state':True}))
+        myleglist.append(base_objects.MultiLeg({'ids':[1000022],
+                                         'state':True}))
+
+        mydecay1 = base_objects.ProcessDefinition({'legs':myleglist,
+                                         'model':mymodel})
+
+        myleglist = base_objects.MultiLegList()
+
+        myleglist.append(base_objects.MultiLeg({'ids':[-1000011,-1000013],
+                                         'state':False}))
+        myleglist.append(base_objects.MultiLeg({'ids':[-11],
+                                         'state':True}))
+        myleglist.append(base_objects.MultiLeg({'ids':[1000022],
+                                         'state':True}))
+
+
+        mydecay2 = base_objects.ProcessDefinition({'legs':myleglist,
+                                         'model':mymodel})
+
+        mycoreproc.set('decay_chains', base_objects.ProcessDefinitionList([\
+            mydecay1,mydecay2]))
+
+        myamplitude = diagram_generation.DecayChainAmplitude(mycoreproc)
+
+        matrix_element = helas_objects.HelasDecayChainProcess(myamplitude)
+
+        matrix_elements = matrix_element.combine_decay_chain_processes()
+        
+        self.assertEqual(len(matrix_elements), 4)
+
+
     def test_equal_decay_chains(self):
         """Test the functions for checking equal decay chains
         """

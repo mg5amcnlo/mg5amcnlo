@@ -252,9 +252,9 @@ class open_file(object):
     
         # dispatch method
         if extension in ['html','htm','php']:
-            self.open_program(self.web_browser, filename, wait=False)
+            self.open_program(self.web_browser, filename, background=True)
         elif extension in ['ps','eps']:
-            self.open_program(self.eps_viewer, filename, wait=False)
+            self.open_program(self.eps_viewer, filename, background=True)
         else:
             self.open_program(self.text_editor,filename, mac_check=False)
             # mac_check to False avoid to use open cmd in mac
@@ -332,21 +332,21 @@ class open_file(object):
         return None
         
         
-    def open_program(self, program, file_path, mac_check=True, wait=True):
+    def open_program(self, program, file_path, mac_check=True, background=False):
       """ open a file with a given program """
-      
+
       if mac_check==True and sys.platform == 'darwin':
           return self.open_mac_program(program, file_path)
-      
-      # Shell program only
+
+      # Shell program only                                                                                                                                                                 
       if program:
-          if wait:
+          if not background:
               subprocess.call([program, file_path])
           else:
-              subprocess.Popen([program, file_path])
+              thread.start_new_thread(subprocess.call,([program, file_path],))
       else:
           logger.warning('Not able to open file %s since no program configured.' % file_path + \
-                              'Please set one in ./input/mg5_configuration.txt') 
+                              'Please set one in ./input/mg5_configuration.txt')
     
     def open_mac_program(self, program, file_path):
       """ open a text with the text editor """

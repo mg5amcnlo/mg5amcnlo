@@ -20,6 +20,7 @@ import pydoc
 import re
 import sys
 import subprocess
+import thread
 import time
 
 import madgraph.iolibs.files as files
@@ -343,4 +344,5 @@ class Pythia8Launcher(ExtLauncher):
 
 # old compatibility shortcut
 open_file = misc.open_file
+
 

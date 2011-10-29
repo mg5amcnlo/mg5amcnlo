@@ -36,6 +36,14 @@ Update notes for MadGraph 5 (in reverse time order)
                   OM: Modify the gestion of error, especially for Invalid command.
                       Configuration problem.
 
+1.3.25 (27/10/11) JA: Ensure that the correct intermediate resonance
+                      is always written in the event file, even when we
+                      have resonances with identical properties.
+ 		  OM: Fix the bug forcing to quit the web browse in order to
+		      have MG5 continuing to run.
+		  OM: Change the tutorial in order to allow open index.html
+		      after the output command. 
+ 
 1.3.24 (22/10/11) JA: Fix problem with getting enough events in gridpack
                       mode (this was broken in v. 1.3.11 when we moved
                       from events to luminocity in refine). Thanks to

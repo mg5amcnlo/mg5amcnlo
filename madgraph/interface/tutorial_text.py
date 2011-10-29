@@ -87,6 +87,8 @@ mg5> launch MY_FIRST_MG5_RUN
 (you can interrupt the computation to continue the tutorial by pressing Ctrl-C)
 """
 
+open_index = output
+
 launch = """This step ends the tutorial of the basic commands of MG5. You can
 always use the help to see the options available for different
 commands. For example, if you want to know all valid output formats,
