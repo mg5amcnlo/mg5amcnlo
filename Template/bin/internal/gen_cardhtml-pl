@@ -219,7 +219,7 @@ until($listpos>$#incard){
 # 
   print PAGE "</tr><tr> \n";
 
-  print PAGE "<td ALIGN=center><a href=\"HTML/crossx.html\"> \n ";
+  print PAGE "<td ALIGN=center><a href=\"crossx.html\"> \n ";
   print PAGE  "Results and Event Database </a> \n";
   print PAGE "<td ALIGN=center> ";
 

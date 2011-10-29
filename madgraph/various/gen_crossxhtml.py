@@ -35,6 +35,28 @@ crossxhtml_template = """
     <TITLE>Online Event Generation</TITLE>
 </HEAD>
 <BODY>
+<script type="text/javascript">
+function UrlExists(url) {
+  var http = new XMLHttpRequest();
+  http.open('HEAD', url, false);
+  try{
+     http.send()
+     }
+  catch(err){
+   return 1==2;
+  }
+  return http.status!=404;
+}
+function check_link(url,alt, id){
+    var obj = document.getElementById(id);
+    if ( ! UrlExists(url)){
+       obj.href = alt;
+       return 1 == 2;
+    }
+    obj.href = url;
+    return 1==1;
+}
+</script>    
     <H2 align=center> Results in the %(model)s for %(process)s </H2> 
     <HR>
     %(status)s
@@ -75,15 +97,15 @@ status_template = """
     </TR>
     <TR ALIGN=CENTER> 
         <TD nowrap> %(run_name)s </TD>
-        <TD nowrap> <a href="../Cards/param_card.dat">param_card</a><BR>
-                    <a href="../Cards/run_card.dat">run_card</a><BR>
+        <TD nowrap> <a href="./Cards/param_card.dat">param_card</a><BR>
+                    <a href="./Cards/run_card.dat">run_card</a><BR>
                     %(plot_card)s
                     %(pythia_card)s
                     %(pgs_card)s
                     %(delphes_card)s
                     
         </TD>
-        <TD nowrap> <A HREF="../SubProcesses/results.html">%(cross).4g <font face=symbol>&#177</font> %(error).4g (%(unit)s)</A> </TD> 
+        <TD nowrap> <A HREF="./SubProcesses/results.html">%(cross).4g <font face=symbol>&#177</font> %(error).4g (%(unit)s)</A> </TD> 
         %(status)s
  </TR></TABLE>
 """
@@ -204,19 +226,19 @@ class AllResults(dict):
                             'unit': self.current['unit'],
                             'run_name': self.current['run_name']}
             if exists(pjoin(self.path, 'Cards', 'plot_card.dat')):
-                status_dict['plot_card'] = """ <a href="../Cards/plot_card.dat">plot_card</a><BR>"""
+                status_dict['plot_card'] = """ <a href="./Cards/plot_card.dat">plot_card</a><BR>"""
             else:
                 status_dict['plot_card'] = ""
             if exists(pjoin(self.path, 'Cards', 'pythia_card.dat')):
-                status_dict['pythia_card'] = """ <a href="../Cards/pythia_card.dat">pythia_card</a><BR>"""
+                status_dict['pythia_card'] = """ <a href="./Cards/pythia_card.dat">pythia_card</a><BR>"""
             else:
                 status_dict['pythia_card'] = ""
             if exists(pjoin(self.path, 'Cards', 'pgs_card.dat')):
-                status_dict['pgs_card'] = """ <a href="../Cards/pgs_card.dat">pgs_card</a><BR>"""
+                status_dict['pgs_card'] = """ <a href="./Cards/pgs_card.dat">pgs_card</a><BR>"""
             else:
                 status_dict['pgs_card'] = ""
             if exists(pjoin(self.path, 'Cards', 'delphes_card.dat')):
-                status_dict['delphes_card'] = """ <a href="../Cards/delphes_card.dat">delphes_card</a><BR>"""
+                status_dict['delphes_card'] = """ <a href="./Cards/delphes_card.dat">delphes_card</a><BR>"""
             else:
                 status_dict['delphes_card'] = ""
             
@@ -242,7 +264,7 @@ class AllResults(dict):
                      'old_run': old_run}
         
         text = crossxhtml_template % text_dict
-        open(pjoin(self.path,'HTML','crossx.html'),'w').write(text)
+        open(pjoin(self.path,'crossx.html'),'w').write(text)
         
         
 class OneRunResults(dict):
@@ -394,8 +416,8 @@ class OneRunResults(dict):
         #Links:
         out += '<td>'
         if self.results:
-            out += """<a href="../SubProcesses/%(run_name)s_results.html">results</a><br>"""
-        out += """<a href="../Events/%(run_name)s_banner.txt">banner</a>"""
+            out += """<a href="./SubProcesses/%(run_name)s_results.html">results</a><br>"""
+        out += """<a href="./Events/%(run_name)s_banner.txt">banner</a>"""
         out += '</td>'
         # Events
         out += '<td>'
@@ -414,6 +436,13 @@ class OneRunResults(dict):
 
         return out % self
     
+    def special_link(self, link, level, name):
+        
+        id = '%s_%s_%s' % (self['run_name'], level, name)
+        
+        return " <a  id='%(id)s' href='%(link)s' onClick=\"check_link('%(link)s.gz','%(link)s','%(id)s')\">%(name)s</a>" \
+              % {'link': link, 'id': id, 'name':name}
+    
     def get_html_event_info(self, web=False):
         """return the events information"""
         
@@ -422,29 +451,42 @@ class OneRunResults(dict):
         if self.parton:
             out += '<tr><td> Parton Events : </td><td>'
             if 'gridpack' in self.parton:
-                out =  '<center><a href="../%(run_name)s_gridpack.tar.gz">Gridpack</a></center><br>' + out
+                out2 =  '<center>'
+                out2 += self.special_link("./%(run_name)s_gridpack.tar",
+                                                                 'grid', 'grid')
+                out = out2 +"</center><br>" + out
+            
             if 'lhe' in self.parton:
-                out += ' <a href="../Events/%(run_name)s_unweighted_events.lhe.gz">LHE</a>'
+                link = './Events/%(run_name)s_unweighted_events.lhe'
+                level = 'parton'
+                name = 'LHE'
+                out += self.special_link(link, level, name) 
             if 'root' in self.parton:
-                out += ' <a href="../Events/%(run_name)s_unweighted_events.root">rootfile</a>'
+                out += ' <a href="./Events/%(run_name)s_unweighted_events.root">rootfile</a>'
             if 'plot' in self.parton:
-                out += ' <a href="../Events/%(run_name)s_plots.html">plots</a>'
+                out += ' <a href="./Events/%(run_name)s_plots.html">plots</a>'
             out += '</td></tr>'
         if self.pythia:
             out += '<tr><td> Pythia Events : </td><td>'
             
             if 'log' in self.pythia:
-                out += """ <a href="../Events/%(run_name)s_pythia.log">LOG</a>"""
+                out += """ <a href="./Events/%(run_name)s_pythia.log">LOG</a>"""
             if 'hep' in self.pythia:
-                out += """ <a href="../Events/%(run_name)s_pythia_events.hep.gz">STDHEP</a>"""
+                link = './Events/%(run_name)s_pythia_events.hep'
+                level = 'pythia'
+                name = 'STDHEP'
+                out += self.special_link(link, level, name)                 
             if 'lhe' in self.pythia:
-                out += """ <a href="../Events/%(run_name)s_pythia_events.lhe.gz">LHE</a>"""
+                link = './Events/%(run_name)s_pythia_events.lhe'
+                level = 'pythia'
+                name = 'LHE'                
+                out += self.special_link(link, level, name) 
             if 'root' in self.pythia:
-                out += """ <a href="../Events/%(run_name)s_pythia_events.root">rootfile (LHE)</a>"""
+                out += """ <a href="./Events/%(run_name)s_pythia_events.root">rootfile (LHE)</a>"""
             if 'lheroot' in self.pythia:
-                out += """ <a href="../Events/%(run_name)s_pythia_lhe_events.root">rootfile (LHE)</a>"""
+                out += """ <a href="./Events/%(run_name)s_pythia_lhe_events.root">rootfile (LHE)</a>"""
             if 'plot' in self.pythia:
-                out += ' <a href="../Events/%(run_name)s_plots_pythia.html">plots</a>'
+                out += ' <a href="./Events/%(run_name)s_plots_pythia.html">plots</a>'
             out += '</td></tr>'
         elif web and self['nb_event']:
             out += """<tr><td> Pythia Events : </td><td><center>
@@ -459,24 +501,30 @@ class OneRunResults(dict):
         if self.pgs:
             out += '<tr><td>Reco. Objects. (PGS) : </td><td>'
             if 'log' in self.pgs:
-                out += """ <a href="../Events/%(run_name)s_pgs.log">LOG</a>"""
+                out += """ <a href="./Events/%(run_name)s_pgs.log">LOG</a>"""
             if 'lhco' in self.pgs:
-                out += """ <a href="../Events/%(run_name)s_pgs_events.lhco.gz">LHCO</a>"""
+                link = './Events/%(run_name)s_pgs_events.lhco'
+                level = 'pgs'
+                name = 'LHCO'                
+                out += self.special_link(link, level, name)  
             if 'root' in self.pgs:
-                out += """ <a href="../Events/%(run_name)s_pgs_events.root">rootfile</a>"""    
+                out += """ <a href="./Events/%(run_name)s_pgs_events.root">rootfile</a>"""    
             if 'plot' in self.pgs:
-                out += """ <a href="../Events/%(run_name)s_plots_pgs.html">plots</a>"""
+                out += """ <a href="./Events/%(run_name)s_plots_pgs.html">plots</a>"""
             out += '</td></tr>'
         if self.delphes:
             out += '<tr><td>Reco. Objects. (Delphes) : </td><td>'
             if 'log' in self.delphes:
-                out += """ <a href="../Events/%(run_name)s_delphes.log">LOG</a>"""
+                out += """ <a href="./Events/%(run_name)s_delphes.log">LOG</a>"""
             if 'lhco' in self.delphes:
-                out += """ <a href="../Events/%(run_name)s_delphes_events.lhco.gz">LHCO</a>"""
+                link = './Events/%(run_name)s_delphes_events.lhco'
+                level = 'pgs'
+                name = 'LHCO'                
+                out += self.special_link(link, level, name)
             if 'root' in self.delphes:
-                out += """ <a href="../Events/%(run_name)s_delphes_events.root">rootfile</a>"""    
+                out += """ <a href="./Events/%(run_name)s_delphes_events.root">rootfile</a>"""    
             if 'plot' in self.delphes:
-                out += """ <a href="../Events/%(run_name)s_plots_delphes.html">plots</a>"""            
+                out += """ <a href="./Events/%(run_name)s_plots_delphes.html">plots</a>"""            
             out += '</td></tr>'
         
         if not (self.pgs or self.delphes) and web and self['nb_event']:
@@ -488,7 +536,6 @@ class OneRunResults(dict):
                        <INPUT TYPE=SUBMIT VALUE="Run Det. Sim."></FORM></center></td>
                        </table>"""
             return out             
-        
         
         out += '</table>'
         return out

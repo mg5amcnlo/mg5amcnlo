@@ -1262,7 +1262,7 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
         self.update_random()
         self.save_random()
         if self.open_crossx:
-            misc.open_file(os.path.join(self.me_dir, 'HTML', 'crossx.html'))
+            misc.open_file(os.path.join(self.me_dir, 'crossx.html'))
             self.open_crossx = False
         logger.info('Working on SubProcesses')
         for subdir in open(pjoin(self.me_dir, 'SubProcesses', 'subproc.mg')):

@@ -165,6 +165,7 @@ class MELauncher(ExtLauncher):
         assert hasattr(self, 'multicore')
         assert hasattr(self, 'name')
         assert hasattr(self, 'shell')
+
         self.unit = unit
         self.cmd_int = cmd_int
         
@@ -195,9 +196,11 @@ class MELauncher(ExtLauncher):
                 return
             elif max_node == 2:
                 nb_node = 2
-            else:
+            elif not self.force:
                 nb_node = self.ask('How many core do you want to use?', max_node, range(2,max_node+1))
-        
+            else:
+                nb_node=max_node
+                
         import madgraph.interface.madevent_interface as ME
         
         if self.shell:
@@ -212,6 +215,9 @@ class MELauncher(ExtLauncher):
             command += " --cluster"
         elif mode == "2":
             command += " --nb_core=%s" % nb_node
+        
+        if self.force:
+            command+= " -f"
         
         try:
             os.remove('ME5_debug')
