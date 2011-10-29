@@ -1475,8 +1475,7 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
                 ans = self.ask(question, 'y', choices=['y','n'], timeout = 20)
                 if ans == 'n':
                     return
-        
-        print 'cleaning'        
+               
         self.exec_cmd('remove %s pythia -f' % self.run_name)
         
         pythia_src = pjoin(self.configuration['pythia-pgs_path'],'src')
@@ -2434,21 +2433,20 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
             question = """Which programs do you want to run?
             Enter 0 or 'auto' in order to run the code associate to the current card.
             Enter 1 or 'parton' to launch only Madevent.\n"""
-            if 2 in available_mode:
+            if '2' in available_mode:
                 question += """            Enter 2 of 'pythia' to launch MadEvent+pythia.
             Enter 3 or 'pgs' to launch MadEvent+pythia+pgs.\n"""
-            if 4 in available_mode:
+            if '4' in available_mode:
                 question +="""            Enter 4 or 'delphes' to launch MadEvent+pythia+delphes.\n"""
 
             if not force:
-                print mode
                 if not mode:
                     mode = self.ask(question, '0', options, timeout=self.timeout)
             elif not mode:
                 mode = 'auto'
                 
             if mode.isdigit():
-                mode = name[int(mode)]
+                mode = name[mode]
             logger.info('Will run in mode %s' % mode)
             # Now that we know in which mode we are check that all the card
             #exists (copy default if needed)
@@ -2497,7 +2495,6 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
                 if answer == 'done':
                     return
                 path = pjoin(self.me_dir,'Cards','%s_card.dat' % answer)
-                print path
                 self.exec_cmd('open %s' % path)                    
                 
                 
