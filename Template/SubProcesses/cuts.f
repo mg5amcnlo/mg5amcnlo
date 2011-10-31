@@ -263,7 +263,7 @@ c
       enddo
 c
 c    missing ET min & max cut + Invariant mass of leptons and neutrino 
-c    nb: missing et simply defined as the sum over the neutrino's 4 momenta
+c    nb: missing Et defined as the vector sum over the neutrino's pt
 c
 c-- reset ptemp(0:3)
       do j=0,3
