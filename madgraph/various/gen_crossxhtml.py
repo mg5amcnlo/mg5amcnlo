@@ -127,6 +127,7 @@ class AllResults(dict):
         self.path = path
         self.model = model
         self.status = ''
+        self.current = None
     
     def def_current(self, name):
         """define the name of the current run"""
@@ -162,15 +163,25 @@ class AllResults(dict):
         self.status = status
         if makehtml:
             self.output()
-            
+
+    def resetall(self):
+        """check the output status of all run"""
+        
+        for run in self.keys():
+            if run == 'web':
+                continue
+            self.def_current(run)
+            self.clean()
+            self.current.update_status()
+
     def clean(self, levels = ['all']):
         """clean the run for the levels"""
 
-        to_clean = self.current
-        run = self.current['run_name']
         if not self.current:
             return
-        
+        to_clean = self.current
+        run = to_clean['run_name']
+
         if 'all' in levels:
             levels = ['parton', 'pythia', 'pgs', 'delphes', 'channel']
         
@@ -329,7 +340,8 @@ class OneRunResults(dict):
         if level in ['parton','all']:
             
             if 'lhe' not in self.parton and \
-                        exists(pjoin(path,"%s_unweighted_events.lhe.gz" % run)):
+                        (exists(pjoin(path,"%s_unweighted_events.lhe.gz" % run)) or
+                         exists(pjoin(path,"%s_unweighted_events.lhe" % run))):
                 self.parton.append('lhe')
         
             if 'root' not in self.parton and \
@@ -347,11 +359,13 @@ class OneRunResults(dict):
                 self.pythia.append('plot')
             
             if 'lhe' not in self.pythia and \
-                            exists(pjoin(path,"%s_pythia_events.lhe.gz" % run)):
+                            (exists(pjoin(path,"%s_pythia_events.lhe.gz" % run)) or
+                             exists(pjoin(path,"%s_pythia_events.lhe" % run))):
                 self.pythia.append('lhe')
 
             if 'hep' not in self.pythia and \
-                            exists(pjoin(path,"%s_pythia_events.hep.gz" % run)):
+                            (exists(pjoin(path,"%s_pythia_events.hep.gz" % run)) or
+                             exists(pjoin(path,"%s_pythia_events.hep" % run))):
                 self.pythia.append('hep')
             
             if 'root' not in self.pythia and \
@@ -373,7 +387,8 @@ class OneRunResults(dict):
                 self.pgs.append('plot')
             
             if 'lhco' not in self.pgs and \
-                              exists(pjoin(path,"%s_pgs_events.lhco.gz" % run)):
+                              (exists(pjoin(path,"%s_pgs_events.lhco.gz" % run)) or
+                              exists(pjoin(path,"%s_pgs_events.lhco." % run))):
                 self.pgs.append('lhco')
                 
             if 'root' not in self.pgs and \
@@ -391,7 +406,8 @@ class OneRunResults(dict):
                 self.delphes.append('plot')
             
             if 'lhco' not in self.delphes and \
-                 exists(pjoin(path,"%s_delphes_events.lhco.gz" % run)):
+                 (exists(pjoin(path,"%s_delphes_events.lhco.gz" % run)) or
+                 exists(pjoin(path,"%s_delphes_events.lhco" % run))):
                 self.delphes.append('lhco')
                 
             if 'root' not in self.delphes and \

@@ -1547,6 +1547,14 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
         
         # Load the configuration file
         self.set_configuration()
+
+    def do_quit(self, line):
+        """Do quit"""
+        
+        if os.path.exists(os.path.join(self._done_export[0],'RunWeb')):
+            os.remove(os.path.join(self._done_export[0],'RunWeb'))
+        
+        return super(MadGraphCmd, self).do_quit(line)
         
     # Add a process to the existing multiprocess definition
     # Generate a new amplitude

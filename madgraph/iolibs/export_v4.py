@@ -1649,7 +1649,7 @@ class ProcessExporterFortranME(ProcessExporterFortran):
                 # just need to copy seed the path are absolute
                 path = writer.name
                 writer.close()
-                mv(conf, path)
+                cp(conf, path)
                 return
         
         # Use local configuration => Need to update the path

@@ -946,6 +946,7 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
         # load the current status of the directory
         if os.path.exists(pjoin(self.me_dir,'HTML','results.pkl')):
             self.results = save_load_object.load_from_file(pjoin(self.me_dir,'HTML','results.pkl'))
+            self.results.resetall()
         else:
             model = self.find_model_name()
             process = self.process # define in find_model_name
@@ -2448,7 +2449,7 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
             if mode == 'auto':
                 if not os.path.exists(pjoin(self.me_dir, 'Cards', 'pythia_card.dat')):
                     mode = 'parton'
-                if os.path.exists(pjoin(self.me_dir, 'Cards', 'pgs_card.dat')):
+                elif os.path.exists(pjoin(self.me_dir, 'Cards', 'pgs_card.dat')):
                     mode = 'pgs'
                 elif os.path.exists(pjoin(self.me_dir, 'Cards', 'delphes_card.dat')):
                     mode = 'delphes'
