@@ -1,0 +1,12 @@
+import model mssm
+#install pythia-pgs
+generate p p > go go
+output /tmp/MGPROCESS/
+launch -i
+generate_events
+pythia
+/tmp/MGPROCESS/Cards/pythia_card_default.dat
+quit
+history /tmp/MGPROCESS/history
+launch
+parton

@@ -24,6 +24,7 @@ Update notes for MadGraph 5 (in reverse time order)
                       web browser (via the configuration file: ./input/mg5_configuration.txt )
                   OM: Change the scheme of question when running madevent and allow to specify
 		      in the command interface if you want to run pythia/pgs/...
+		      Allow to put the answers to the questions in the proc_card.dat.
                   OM: Add three options for display command and modify a fourth one:
                       a) display options: return the current option value. 
                         i.e. those set via the set command and/or via the 

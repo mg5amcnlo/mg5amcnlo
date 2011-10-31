@@ -416,7 +416,7 @@ class CheckValidForCmd(object):
         if '-f' in args:
             force = True
             args.remove('-f')
-        if args[-1].startswith('--laststep='):
+        if args and args[-1].startswith('--laststep='):
             run = args[-1].split('=')[-1]
             if run not in ['auto','parton', 'pythia', 'pgs', 'delphes']:
                 self.help_generate_events()
@@ -2415,20 +2415,12 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
         """Ask the question when launching generate_events/multi_run"""
         
         available_mode = ['0', '1']
-        if not self.configuration['pythia-pgs_path']:
-            logger.info('''pythia-pgs not detected. If you want to run pythia-pgs.
-            Please start to install it by the command \'install pythia-pgs\' in 
-            the MG5 interface.''')            
-        else:
+        if self.configuration['pythia-pgs_path']:
             available_mode.append('2')
             available_mode.append('3')
 
-        if not self.configuration['delphes_path']:
-            logger.info('''Delphes not detected. If you want to run delphes.
-            Please start to install it by the command \'install Delphes\' in the 
-            MG5 interface.''')            
-        elif '2' in available_mode:
-            available_mode.append('4')
+            if self.configuration['delphes_path']:
+                available_mode.append('4')
         
         if len(available_mode) == 2:
             mode = 'parton'
@@ -2436,13 +2428,13 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
             name = {'0': 'auto', '1': 'parton', '2':'pythia', '3':'pgs', '4':'delphes'}
             options = available_mode + [name[val] for val in available_mode]
             question = """Which programs do you want to run?
-            Enter 0 or 'auto' in order to run the code associate to the current card.
-            Enter 1 or 'parton' to launch only Madevent.\n"""
+  0 / auto    : running existing card
+  1 / parton  :  Madevent\n"""
             if '2' in available_mode:
-                question += """            Enter 2 of 'pythia' to launch MadEvent+pythia.
-            Enter 3 or 'pgs' to launch MadEvent+pythia+pgs.\n"""
+                question += """  2 / pythia  : MadEvent + Pythia.
+  3 / pgs     : MadEvent + Pythia + PGS.\n"""
             if '4' in available_mode:
-                question +="""            Enter 4 or 'delphes' to launch MadEvent+pythia+delphes.\n"""
+                question += """  4 / delphes :  MadEvent + Pythia + Delphes.\n"""
 
             if not force:
                 if not mode:
@@ -2498,33 +2490,48 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
 
             # Ask the user if he wants to edit any of the files
             #First create the asking text
-            question = """Do you want to edit one of those cards?
-            Press enter or enter 'done' to use the current card.
-            Enter 0 or 'param' to edit the param_card (be carefull about parameter consistency, especially the widths)
-            Enter 1 or 'run' to edit the run_card.\n"""
-            possible_answer = ['done', 0, 'param', 1, 'run']
+            question = """Do you want to edit one cards (press enter to bypass editing)?
+  1 / param   : param_card.dat (be carefull about parameter consistency, especially widths)
+  2 / run     : run_card.dat\n"""
+            possible_answer = ['0', 1, 'param', 2, 'run']
             if mode in ['pythia', 'pgs', 'delphes']:
-                question += '            Enter 2 or \'pythia\' to edit the pythia_card.\n'
-                possible_answer.append(2)
+                question += '  3 / pythia  : pythia_card.dat\n'
+                possible_answer.append(3)
                 possible_answer.append('pythia')
             if mode == 'pgs':
-                question += '            Enter 3 or \'pgs\' to edit the pgs_card.\n'
-                possible_answer.append(3)
+                question += '  4 / pgs     : pgs_card.dat\n'
+                possible_answer.append(4)
                 possible_answer.append('pgs')            
             if mode == 'delphes':
-                question += '            Enter 4 or \'delphes\' to edit the pgs_card.\n'
-                possible_answer.append(4)
+                question += '  5 / delphes : delphes_card.dat\n'
+                question += '  6 / trigger : delphes_trigger.dat\n'
+                possible_answer.append(5)
                 possible_answer.append('delphes')
-            card = {0:'param', 1:'run', 2:'pythia', 3: 'pgs', 4: 'delphes'}
-            
+                possible_answer.append(6)
+                possible_answer.append('trigger')
+            card = {0:'done', 1:'param', 2:'run', 3:'pythia', 4: 'pgs', 5: 'delphes', 6:'trigger'}
+            # Add the path options
+            question += '  Path to a valid card.\n'
+       
             # Loop as long as the user is not done.
             answer = 'no'
             while answer != 'done':
-                answer = self.ask(question, 'done', possible_answer, timeout=self.timeout)
+                answer = self.ask(question, '0', possible_answer, timeout=2*self.timeout, path_msg='enter path')
                 if answer.isdigit():
                     answer = card[int(answer)]
                 if answer == 'done':
                     return
+                if os.path.exists(answer):
+                    # detect which card is provide
+                    card_name = self.detect_card_type(answer)
+                    if card_name == 'unknown':
+                        card_name = self.ask('Fail to determine the type of the file. Please specify the format',
+                     ['param_card.dat', 'run_card.dat','pythia_card.dat','pgs_card.dat',
+                      'delphes_card.dat', 'delphes_trigger.dat','plot_card.dat'])
+
+                    logger.info('copy %s as %s' % (answer, card_name))
+                    files.cp(answer, pjoin(self.me_dir, 'Cards', card_name))
+                    continue
                 path = pjoin(self.me_dir,'Cards','%s_card.dat' % answer)
                 self.exec_cmd('open %s' % path)                    
                 
@@ -2541,10 +2548,39 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
             files.cp('%(dir)s/Cards/%(name)s_card_default.dat' % dico,
                 '%(dir)s/Cards/%(name)s_card.dat' % dico)
             
-
-
-
-
+    @staticmethod
+    def detect_card_type(path):
+        """detect the type of the card. Return value are
+           param_card.dat
+           run_card.dat
+           pythia_card.dat
+           plot_card.dat
+           pgs_card.dat
+           delphes_card.dat
+           delphes_trigger.dat
+        """
+        
+        text = open(path).read()
+        if 'CEN_max_tracker' in text:
+            return 'delphes_card.dat'
+        elif '#TRIGGER CARD' in text:
+            return 'delphes_trigger.dat'
+        elif 'parameter set name' in text:
+            return 'pgs_card.dat'
+        elif 'muon eta coverage' in text:
+            return 'pgs_card.dat'
+        elif 'MSTP' in text:
+            return 'pythia_card.dat'
+        elif 'MSTU' in text:
+            return 'pythia_param_card.dat'
+        elif 'Begin Minpts' in text:
+            return 'plot_card.dat'
+        elif 'gridpack' in text and 'ebeam1' in text:
+            return 'run_card.dat'
+        elif 'BLOCK' in text.upper() and 'DECAY' in text.upper(): 
+            return 'param_card.dat'
+        else:
+            return 'unknown'
 
 
 #===============================================================================

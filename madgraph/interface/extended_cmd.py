@@ -71,12 +71,14 @@ class Cmd(cmd.Cmd):
         
         self.log = True
         self.history = []
-        self.save_line = ''
+        self.save_line = '' # for line splitting
         cmd.Cmd.__init__(self, *arg, **opt)
         self.__initpos = os.path.abspath(os.getcwd())
         self.child = None # sub CMD interface call from this one
         self.mother = None #This CMD interface was called from another one
-        
+        self.inputfile = None # input file (in non interactive mode)
+        self.stored_line = '' # for be able to treat answer to question in input file 
+                             # answer which are not required.
 
         
         
@@ -167,7 +169,7 @@ class Cmd(cmd.Cmd):
     def nice_config_error(self, error, line):
         # Make sure that we are at the initial position                                 
         os.chdir(self.__initpos)
-        if line == self.history[-1]:
+        if not self.history or line == self.history[-1]:
             error_text = 'Error detected in \"%s\"\n' % line
         else:
             error_text = 'Error detected in sub-command %s\n' % self.history[-1]
@@ -343,12 +345,16 @@ class Cmd(cmd.Cmd):
         self.timeout, old_time_out = 20, self.timeout
         
         # Read the lines of the file and execute them
-        for line in CmdFile(filepath):
+        self.inputfile = open(filepath)
+        for line in self.inputfile:
             #remove pointless spaces and \n
             line = line.replace('\n', '').strip()
             # execute the line
             if line:
-                self.exec_cmd(line)
+                self.exec_cmd(line, precmd=True)
+            if self.stored_line: # created by intermediate question
+                self.exec_cmd(self.stored_line, precmd=True)
+                self.stored_line = ''
         # If a child was open close it
         if self.child:
             self.child.exec_cmd('quit')        
@@ -371,6 +377,9 @@ class Cmd(cmd.Cmd):
         if self.use_rawinput and interface:
             # We are in interactive mode -> simply call the child
             obj_instance.cmdloop()
+        if self.inputfile:
+            # we are in non interactive mode -> so pass the line information
+            obj_instance.inputfile = self.inputfile
         
 
         return self.child
@@ -415,8 +424,7 @@ class Cmd(cmd.Cmd):
     #===============================================================================
     # Ask a question with nice options handling
     #===============================================================================    
-    @staticmethod    
-    def ask(question, default, choices=[], path_msg=None, 
+    def ask(self, question, default, choices=[], path_msg=None, 
             timeout = None, fct_timeout=None):
         """ ask a question with some pre-define possibility
             path info is
@@ -445,10 +453,55 @@ class Cmd(cmd.Cmd):
             fct = lambda q: raw_path_input(q, allow_arg=choices, default=default)
         else:
             fct = lambda q: smart_input(q, allow_arg=choices, default=default)
+
+        answer = self.check_answer_in_input_file(choices, path_msg)
+        if answer is not None:
+            return answer
         
         return  Cmd.timed_input(question, default, timeout=timeout,
                                     fct=fct, fct_timeout=fct_timeout)
         
+    def check_answer_in_input_file(self, options, path=False):
+        """Questions can have answer in output file (or not)"""
+
+        if self.check_stored_line():
+            return None # already one line not correctly answer 
+
+        if not self.inputfile:
+            return None# interactive mode
+
+        try:
+            line = self.inputfile.next()
+        except StopIteration:
+            return None
+        line = line.replace('\n','').strip()
+        if '#' in line: 
+            line = line.split('#')[0]
+        if not line:
+            return self.check_answer_in_input_file(options, path)
+
+        if line in options:
+            return line
+        elif path and os.path.exists(line):
+            return line
+        else:
+            self.store_line(line)
+            return None
+
+    def store_line(self, line):
+        """store a line of the input file which should be executed by the higher mother"""
+        
+        if self.mother:
+            self.mother.store_line(line)
+        else:
+            self.stored_line = line
+
+    def check_stored_line(self):
+        if self.mother:
+            return self.mother.check_stored_line()
+        else:
+            return self.stored_line
+
 
     def help_history(self):
         logger.info("syntax: history [FILEPATH|clean|.] ")
@@ -457,6 +510,9 @@ class Cmd(cmd.Cmd):
         logger.info("   If FILEPATH is omitted, the history will be output to stdout.")
         logger.info("   \"clean\" will remove all entries from the history.")
     
+    
+
+
     def complete_history(self, text, line, begidx, endidx):
         "Complete the history command"
 
@@ -661,8 +717,6 @@ class Cmd(cmd.Cmd):
         base_dir = os.path.join(base_dir, prefix)
         if prefix:
             prefix += os.path.sep
-        
-        
 
         if only_dirs:
             completion = [prefix + f
@@ -795,11 +849,27 @@ class OneLinePathCompletion(SmartQuestion):
     """ a class for answering a question with the path autocompletion"""
 
 
-    def completenames(self, text, *ignored):
+    def completenames(self, text, line, begidx, endidx):
         signal.alarm(0) # avoid timer if any
-        
-        return SmartQuestion.completenames(self, text) + Cmd.path_completion(text,'.', only_dirs = False)
-            
+        try:
+          return SmartQuestion.completenames(self, text) + Cmd.path_completion(text, only_dirs = False)
+        except Exception, error:
+            print error
+
+    def completedefault(self,text, line, begidx, endidx):
+        try:
+            args = Cmd.split_arg(line[0:begidx])
+        except Exception, error:
+            print error
+
+        # Directory continuation                 
+        if args[-1].endswith(os.path.sep):
+            return Cmd.path_completion(text,
+                                        os.path.join('.',*[a for a in args \
+                                               if a.endswith(os.path.sep)]))
+        self.completenames(line+text)
+
+
     def postcmd(self, stop, line):
         
         try:    
@@ -850,6 +920,7 @@ class CmdFile(file):
     
     def __next__(self):
         return self.lines.__next__()    
+
     def __iter__(self):
         return self.lines.__iter__()
 

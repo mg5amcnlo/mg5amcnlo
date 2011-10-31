@@ -62,7 +62,7 @@ if [[ ! -x ./madevent/bin/internal/gridrun ]]; then
     exit
 else
     cd ./madevent
-    ./bin/internal/gridrun $num_events
+    ./bin/internal/gridrun.py $num_events $seed
 fi
 
 if [[ ! -e ./Events/unweighted_events.lhe ]]; then

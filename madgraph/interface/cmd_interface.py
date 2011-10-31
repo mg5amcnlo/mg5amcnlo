@@ -1163,11 +1163,11 @@ class CompleteForCmd(CheckValidForCmd):
             complete = []
 
         if line[0:begidx].endswith('--laststep='):
-            opt = ['parton', 'pythia', 'pgs','delphes']
+            opt = ['parton', 'pythia', 'pgs','delphes','auto']
         else:
             opt = ['--cluster', '--multicore', '-i', '--name=', '-f','-m', '-n', 
                '--interactive', '--laststep=parton', '--laststep=pythia',
-               '--laststep=pgs', '--laststep=delphes']
+               '--laststep=pgs', '--laststep=delphes','--laststep=auto']
         
         complete += self.list_completion(text, opt, line)
         return complete
@@ -2893,7 +2893,7 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
             # Don't ask if user already specified force or noclean
             logger.info('INFO: directory %s already exists.' % self._export_dir)
             logger.info('If you continue this directory will be cleaned')
-            answer = self.timed_input('Do you want to continue? [y/n]', 'y')
+            answer = self.ask('Do you want to continue? [y/n]', 'y')
             if answer != 'y':
                 raise self.InvalidCmd('Stopped by user request')
 
@@ -3313,8 +3313,8 @@ _launch_parser.add_option("-m", "--multicore", default=False, action='store_true
 
 _launch_parser.add_option("-i", "--interactive", default=False, action='store_true',
                                 help="Use Interactive Console [if available]")
-_launch_parser.add_option("-s", "--laststep", default='auto', 
-                                help="last program run in MadEvent run.")
+_launch_parser.add_option("-s", "--laststep", default='', 
+                                help="last program run in MadEvent run. [auto|parton|pythia|pgs|delphes]")
     
     
 #===============================================================================

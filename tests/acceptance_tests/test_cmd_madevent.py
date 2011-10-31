@@ -32,6 +32,8 @@ _pickle_path =os.path.join(_file_path, 'input_files')
 
 from madgraph import MG4DIR, MG5DIR, MadGraph5Error, InvalidCmd
 
+pjoin = os.path.join
+
 #===============================================================================
 # TestCmd
 #===============================================================================
@@ -72,7 +74,26 @@ class TestMECmdShell(unittest.TestCase):
                     '/tmp/MGPROCESS/Cards/run_card.dat')
         shutil.copy('/tmp/MGPROCESS/Cards/pythia_card_default.dat',
                     '/tmp/MGPROCESS/Cards/pythia_card.dat')
-        self.do('generate_events')
-        self.do('generate_events')
+        self.do('generate_events -f')
+        self.do('generate_events -f')
         self.do('pythia run_01')
 
+#===============================================================================
+# TestCmd
+#===============================================================================
+class TestMEfromfile(unittest.TestCase):
+    """test that we can launch everything from a single file"""
+
+    def test_generation_from_file(self):
+        """ """
+        
+        try:
+            shutil.rmtree('/tmp/MGPROCESS/')
+        except Exception, error:
+            print error
+            pass
+
+        import subprocess
+        subprocess.call([pjoin(_file_path, os.path.pardir,'bin','mg5'), pjoin(_file_path, 'input_files','test_mssm_generation')])
+
+        print open('/tmp/MGPROCESS/history').read()
