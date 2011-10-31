@@ -20,7 +20,10 @@ Update notes for MadGraph 5 (in reverse time order)
                   OM: Add the possibility to force which fortran compiler will 
                       be use. Either via the configuration file or via the set 
                       command.
-                  OM: Change the scheme of question when running madevent.
+                  OM: Add the possibility to by-pass the automatic opening of the
+                      web browser (via the configuration file: ./input/mg5_configuration.txt )
+                  OM: Change the scheme of question when running madevent and allow to specify
+		      in the command interface if you want to run pythia/pgs/...
                   OM: Add three options for display command and modify a fourth one:
                       a) display options: return the current option value. 
                         i.e. those set via the set command and/or via the 
@@ -33,13 +36,13 @@ Update notes for MadGraph 5 (in reverse time order)
 		        with the associate formula 
 	          OM: New Python script for the creation of the crossx.html page
                       Requiring less disk access for the generation of the file.
-                  OM: Modify the gestion of error, especially for Invalid command.
+                  OM: Modify the gestion of error, especially for Invalid command and
                       Configuration problem.
 
 1.3.25 (27/10/11) JA: Ensure that the correct intermediate resonance
                       is always written in the event file, even when we
                       have resonances with identical properties.
- 		  OM: Fix the bug forcing to quit the web browse in order to
+ 		  OM: Fix the bug forcing to quit the web browser in order to
 		      have MG5 continuing to run.
 		  OM: Change the tutorial in order to allow open index.html
 		      after the output command. 

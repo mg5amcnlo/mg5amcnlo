@@ -251,7 +251,7 @@ class HelpToCmd(object):
         logger.info("   Those steps are performed if the related program are installed")
         logger.info("   and if the related card are present in the Cards directory.")
         self.run_options_help([('-f', 'Use default for all questions.'),
-                               ('--run=', 'argument might be parton/pythia/pgs/delphes and indicate the last level to be run.')])
+                               ('--laststep=', 'argument might be parton/pythia/pgs/delphes and indicate the last level to be run.')])
 
     def help_multi_run(self):
         logger.info("syntax: multi_run NB_RUN [run_name] [--run_options])")
@@ -259,7 +259,7 @@ class HelpToCmd(object):
         logger.info("   NB_RUN times. This chains includes possible plotting, shower")
         logger.info(" and detector resolution.")
         self.run_options_help([('-f', 'Use default for all questions.'),
-                               ('--run=', 'argument might be parton/pythia/pgs/delphes and indicate the last level to be run.')])
+                               ('--laststep=', 'argument might be parton/pythia/pgs/delphes and indicate the last level to be run.')])
 
     def help_survey(self):
         logger.info("syntax: survey [run_name] [--run_options])")
@@ -416,9 +416,9 @@ class CheckValidForCmd(object):
         if '-f' in args:
             force = True
             args.remove('-f')
-        if args[-1].startswith('--run='):
-            run = args[-1][6:]
-            if run not in ['parton', 'pythia', 'pgs', 'delphes']:
+        if args[-1].startswith('--laststep='):
+            run = args[-1].split('=')[-1]
+            if run not in ['auto','parton', 'pythia', 'pgs', 'delphes']:
                 self.help_generate_events()
                 raise self.InvalidCmd('invalid %s argument'% args[-1])
             if run != 'parton' and not self.configuration['pythia-pgs_path']:                
@@ -432,15 +432,7 @@ class CheckValidForCmd(object):
         if len(args) > 1:
             self.help_generate_events()
             raise self.InvalidCmd('Too many argument for generate_events command' % cmd)
-            
-        
-        if not args:
-            # No run name assigned -> assigned one automaticaly 
-            self.set_run_name(self.find_available_run_name(self.me_dir))
-        else:
-            self.set_run_name(args[0], True)
-            args.pop(0)
-            
+                    
         return force, run
 
 
@@ -453,7 +445,7 @@ class CheckValidForCmd(object):
         if '-f' in args:
             force = True
             args.remove('-f')
-        if args[-1].startswith('--run='):
+        if args[-1].startswith('--laststep='):
             run = args[-1][6:]
             if run not in ['parton', 'pythia', 'pgs', 'delphes']:
                 self.help_multi_run()
@@ -800,7 +792,7 @@ class CompleteForCmd(CheckValidForCmd):
             return [str(i) for i in range(2,max+1)]
         if line.endswith('run=') and not text:
             return ['parton','pythia','pgs','delphes']
-        elif '--run=' in line.split()[-1] and line and line[-1] != ' ':
+        elif '--laststep=' in line.split()[-1] and line and line[-1] != ' ':
             return self.list_completion(text,['parton','pythia','pgs','delphes'],line)
         
         opts = self._run_options + self._generate_options
@@ -816,7 +808,7 @@ class CompleteForCmd(CheckValidForCmd):
         
         if line.endswith('run=') and not text:
             return ['parton','pythia','pgs','delphes']
-        elif '--run=' in line.split()[-1] and line and line[-1] != ' ':
+        elif '--laststep=' in line.split()[-1] and line and line[-1] != ' ':
             return self.list_completion(text,['parton','pythia','pgs','delphes'],line)
         
         opts = self._run_options + self._generate_options
@@ -903,7 +895,7 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
     true = ['T','.true.',True,'true']
     # Options and formats available
     _run_options = ['--cluster','--multicore','--nb_core=','--nb_core=2', '-c', '-m']
-    _generate_options = ['-f', '--run=parton', '--run=pythia', '--run=pgs', '--run=delphes']
+    _generate_options = ['-f', '--laststep=parton', '--laststep=pythia', '--laststep=pgs', '--laststep=delphes']
     _set_options = ['stdout_level','fortran_compiler']
     _plot_mode = ['all', 'parton','pythia','pgs','delphes','channel', 'banner']
     _clean_mode = _plot_mode
@@ -946,7 +938,6 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
         self.run_name = None
         # Load the configuration file
         self.set_configuration()
-        self.open_crossx = True # allow to open automatically the web browser
         self.timeout = 20
         if self.web:
             os.system('touch Online')
@@ -1032,11 +1023,12 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
                               'eps_viewer':None,
                               'text_editor':None,
                               'fortran_compiler':None,
-                              'cluster_mode':'pbs'}
+                              'cluster_mode':'pbs',
+                              'automatic_html_opening':True}
         
         if not config_path:
             try:
-                config_file = open(os.path.join(os.environ['HOME'],'.mg5','mg5_config'))
+                config_file = open(os.path.join(os.environ['HOME'],'.mg5','mg5_configuration.txt'))
             except:
                 if self.me_dir:
                     config_file = open(os.path.relpath(
@@ -1085,6 +1077,11 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
                     self.configuration[key] = ''
             elif key.startswith('cluster'):
                 pass
+            elif key == 'automatic_html_opening':
+                if self.configuration[key] == 'False':
+                    self.open_crossx = False
+                else:
+                    self.open_crossx = True
             elif key not in ['text_editor','eps_viewer','web_browser']:
                 # Default: try to set parameter
                 try:
@@ -1158,6 +1155,15 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
         # Check argument's validity
         force, mode = self.check_generate_events(args)
         self.ask_run_configuration(mode, force)
+        if not args:
+            # No run name assigned -> assigned one automaticaly 
+            self.set_run_name(self.find_available_run_name(self.me_dir))
+        else:
+            self.set_run_name(args[0], True)
+            args.pop(0)
+            
+
+
         logger.info('Generating %s events with run name %s' %
                                       (self.run_card['nevents'], self.run_name))
         
@@ -2127,8 +2133,7 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
                 self.random = int(data[1])
                 break
         else:
-            self.random = random.randint(1, 30107) # 30107 maximal allow 
-                                                   # random number for ME
+            self.random = random.randint(1, 30107) 
                                                    
         if self.run_card['ickkw'] == 2:
             logger.info('Running with CKKW matching')
@@ -2447,7 +2452,33 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
                 
             if mode.isdigit():
                 mode = name[mode]
+                
+            if mode == 'auto':
+                if not os.path.exists(pjoin(self.me_dir, 'Cards', 'pythia_card.dat')):
+                    mode = 'parton'
+                if os.path.exists(pjoin(self.me_dir, 'Cards', 'pgs_card.dat')):
+                    mode = 'pgs'
+                elif os.path.exists(pjoin(self.me_dir, 'Cards', 'delphes_card.dat')):
+                    mode = 'delphes'
+                else: 
+                    mode = 'pythia'
             logger.info('Will run in mode %s' % mode)
+            
+            # Clean the pointless card
+            if mode == 'parton':
+                if os.path.exists(pjoin(self.me_dir,'Cards','pythia_card.dat')):
+                    os.remove(pjoin(self.me_dir,'Cards','pythia_card.dat'))
+                if os.path.exists(pjoin(self.me_dir,'Cards','pgs_card.dat')):
+                    os.remove(pjoin(self.me_dir,'Cards','pgs_card.dat'))
+                if os.path.exists(pjoin(self.me_dir,'Cards','delphes_card.dat')):
+                    os.remove(pjoin(self.me_dir,'Cards','delphes_card.dat'))
+            if mode == 'pgs':
+                if os.path.exists(pjoin(self.me_dir,'Cards','delphes_card.dat')):
+                    os.remove(pjoin(self.me_dir,'Cards','delphes_card.dat'))
+            if mode == 'delphes':
+                if os.path.exists(pjoin(self.me_dir,'Cards','pgs_card.dat')):
+                    os.remove(pjoin(self.me_dir,'Cards','pgs_card.dat'))                                         
+            
             # Now that we know in which mode we are check that all the card
             #exists (copy default if needed)
 
@@ -2523,4 +2554,48 @@ class MadEventCmdShell(MadEventCmd, cmd.CmdShell):
     """The command line processor of MadGraph"""  
 
 
-     
+#===============================================================================
+# GridPack
+#===============================================================================     
+class GridPackCmd(MadEventCmd):
+    """The command for the gridpack --Those are not suppose to be use interactively--"""
+    
+    
+    def __init__(self, me_dir = None, nb_event=0, seed=0, *completekey, **stdin):
+        """Initialize the command and directly run"""
+        
+        # Initialize properly
+        MadEventCmd.__init__(self, me_dir, *completekey, **stdin)
+        
+        # Now it's time to run!
+        if me_dir and nb_event and seed:
+            self.launch(nb_event, seed)
+    
+    def launch(self, nb_event, seed):
+        """ launch the generation for the grid """
+        
+        # 1) Restore the default data
+        logger.info('generate %s events' % nb_event)
+        self.set_run_name('GridRun_%s' % seed)
+        self.update_status('restoring default data', level=None)
+        subprocess.call([pjoin(self.me_dir,'bin','internal','restore_data'), 'default'],
+                        cwd=self.me_dir)
+        
+        # 2) Run the refine for the grid
+        self.update_status('Generating Events', level=None) 
+        ### TO EDIT ####
+        subprocess.call([pjoin(self.me_dir,'bin','internal','refine4grid'), 
+                         str(nb_event), '0', 'Madevent','1','GridRun_%s' % seed],
+                        cwd=self.me_dir)
+        
+        # 3) Combine the events/pythia/...
+        self.exec_cmd('combine_events')
+        self.exec_cmd('pythia --nodefault')
+        self.exec_cmd('pgs --nodefault')
+        
+        
+        
+        
+    
+    
+    

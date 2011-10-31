@@ -1161,7 +1161,14 @@ class CompleteForCmd(CheckValidForCmd):
         #option
         if len(args) >= 2:
             complete = []
-        opt = ['--cluster', '--multicore', '-i', '--name=', '-f','-m', '-n', '--interactive',]
+
+        if line[0:begidx].endswith('--laststep='):
+            opt = ['parton', 'pythia', 'pgs','delphes']
+        else:
+            opt = ['--cluster', '--multicore', '-i', '--name=', '-f','-m', '-n', 
+               '--interactive', '--laststep=parton', '--laststep=pythia',
+               '--laststep=pgs', '--laststep=delphes']
+        
         complete += self.list_completion(text, opt, line)
         return complete
 
@@ -2597,7 +2604,7 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
         
         if not config_path:
             try:
-                config_file = open(os.path.join(os.environ['HOME'],'.mg5', 'mg5_config'))
+                config_file = open(os.path.join(os.environ['HOME'],'.mg5', 'mg5_configuration.txt'))
             except:
                 config_file = open(os.path.relpath(
                           os.path.join(MG5DIR,'input','mg5_configuration.txt')))
@@ -2635,7 +2642,7 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
                 self.pythia8_path = pythia8_dir
             elif key.endswith('path'):
                 pass
-            elif key.startswith('cluster'):
+            elif key in ['cluster_type', 'automatic_html_opening']:
                 pass
             elif key not in ['text_editor','eps_viewer','web_browser']:
                 # Default: try to set parameter
@@ -3306,6 +3313,8 @@ _launch_parser.add_option("-m", "--multicore", default=False, action='store_true
 
 _launch_parser.add_option("-i", "--interactive", default=False, action='store_true',
                                 help="Use Interactive Console [if available]")
+_launch_parser.add_option("-s", "--laststep", default='auto', 
+                                help="last program run in MadEvent run.")
     
     
 #===============================================================================
