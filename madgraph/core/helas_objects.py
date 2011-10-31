@@ -1776,7 +1776,7 @@ class HelasAmplitude(base_objects.PhysicsObject):
             'id': self.get('interaction_id'),
             'legs': legs})
 
-    def get_s_and_t_channels(self, ninitial):
+    def get_s_and_t_channels(self, ninitial, new_pdg):
         """Returns two lists of vertices corresponding to the s- and
         t-channels of this amplitude/diagram, ordered from the outermost
         s-channel and in/down towards the highest number initial state
@@ -1885,7 +1885,8 @@ class HelasAmplitude(base_objects.PhysicsObject):
                 popped_legs = \
                            base_objects.LegList([vertex.get('legs').pop(0) \
                                                     for i in [0,1]])
-                popped_legs.append(base_objects.Leg({'id': 21,
+                popped_legs.append(base_objects.Leg({\
+                    'id': new_pdg,
                     'number': min([l.get('number') for l in popped_legs]),
                     'state': True,
                     'onshell': None}))

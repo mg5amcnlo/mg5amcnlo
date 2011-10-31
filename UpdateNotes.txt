@@ -1,5 +1,12 @@
 Update notes for MadGraph 5 (in reverse time order)
 
+1.3.26 (31/10/11) JA: Fix color setting in MadEvent event file for
+                      multiparticle vertices, which was not taken into
+                      account in the upgrade in v. 1.3.18
+                  OM: Fixed mmnl cut (inv. mass of all leptons and neutrinos)
+                      which was never active.
+                  OM: Fix td install in Linux were a chmod was missing
+
 1.3.25 (27/10/11) JA: Ensure that the correct intermediate resonance
                       is always written in the event file, even when we
                       have resonances with identical properties.
