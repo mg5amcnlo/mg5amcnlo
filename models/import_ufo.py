@@ -189,6 +189,15 @@ class UFOMG5Converter(object):
     def load_model(self):
         """load the different of the model first particles then interactions"""
 
+        # Check the validity of the model
+        # 1) check that all lhablock are single word.
+        for param in self.ufomodel.all_parameters:
+            if param.nature == "external":
+                if len(param.lhablock.split())>1:
+                    raise UFOImportError, '''LHABlock should be single word which is not the case for
+    \'%s\' parameter with lhablock \'%s\'''' % (param.name, param.lhablock)
+            
+
         logger.info('load particles')
         # Check if multiple particles have the same name but different case.
         # Otherwise, we can use lowercase particle names.
