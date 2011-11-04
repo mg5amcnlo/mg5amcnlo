@@ -287,10 +287,10 @@ class ProcessExporterFortranFKS_real(export_v4.ProcessExporterFortran):
                              fksborn, matrix_element,
                              fortran_model)
     
-        filename = 'born_coloramps.inc'
-        self.write_coloramps_file(writers.FortranWriter(filename),
-                             fksborn.matrix_element,
-                             fortran_model)
+#        filename = 'born_coloramps.inc'
+#        self.write_coloramps_file(writers.FortranWriter(filename),
+#                             fksborn.matrix_element,
+#                             fortran_model)
     
         filename = 'born_conf.inc'
         nconfigs, s_and_t_channels = self.write_configs_file(\
@@ -307,11 +307,11 @@ class ProcessExporterFortranFKS_real(export_v4.ProcessExporterFortran):
                              fksborn.matrix_element,
                              fortran_model)
     
-        filename = 'born_maxamps.inc'
-        self.write_born_maxamps_file(writers.FortranWriter(filename),
-                           fksborn.matrix_element,
-                           fortran_model,
-                           ncolor)
+#        filename = 'born_maxamps.inc'
+#        self.write_born_maxamps_file(writers.FortranWriter(filename),
+#                           fksborn.matrix_element,
+#                           fortran_model,
+#                           ncolor)
         
         filename = 'born_nhel.inc'
         self.write_born_nhel_file(writers.FortranWriter(filename),
@@ -319,18 +319,18 @@ class ProcessExporterFortranFKS_real(export_v4.ProcessExporterFortran):
                            fortran_model,
                            ncolor)
     
-        filename = 'born_ncombs.inc'
-        self.write_ncombs_file(writers.FortranWriter(filename),
-                          matrix_element.real_matrix_element,
-                          fortran_model)
+#        filename = 'born_ncombs.inc'
+#        self.write_ncombs_file(writers.FortranWriter(filename),
+#                          matrix_element.real_matrix_element,
+#                          fortran_model)
     
         filename = 'born_ngraphs.inc'
         self.write_ngraphs_file(writers.FortranWriter(filename),
                             nconfigs)
     
-        filename = 'born_pmass.inc'
-        self.write_pmass_file(writers.FortranWriter(filename),
-                         fksborn.matrix_element)
+#        filename = 'born_pmass.inc'
+#        self.write_pmass_file(writers.FortranWriter(filename),
+#                         fksborn.matrix_element)
     
         filename = 'born_props.inc'
         self.write_props_file(writers.FortranWriter(filename),
@@ -867,8 +867,11 @@ data mirrorproc /%s/" % bool_dict[matrix_element.get('has_mirror_process')]
         process_lines = self.get_process_info_lines(matrix_element)
         replace_dict['process_lines'] = process_lines
     
-        pdf_lines = self.get_pdf_lines(matrix_element, ninitial)
+        pdf_lines = self.get_pdf_lines_mir(matrix_element, ninitial, False, False)
         replace_dict['pdf_lines'] = pdf_lines
+
+        pdf_lines_mirr = self.get_pdf_lines_mir(matrix_element, ninitial, False, True)
+        replace_dict['pdf_lines_mirr'] = pdf_lines_mirr
     
     
         file = open(os.path.join(_file_path, \
@@ -1077,10 +1080,10 @@ data mirrorproc /%s/" % bool_dict[matrix_element.get('has_mirror_process')]
         #test written
         """Write the born_nhel.inc file for MG4."""
     
+        ncomb = matrix_element.get_helicity_combinations()
         file = "       integer    max_bhel, max_bcol \n"
         file = file + "parameter (max_bhel=%d)\nparameter(max_bcol=%d)" % \
-               (len(fortran_model.get_matrix_element_calls(\
-                    matrix_element)), nflows)
+               (ncomb, nflows)
     
         # Write the file
         writer.writelines(file)
@@ -1090,18 +1093,18 @@ data mirrorproc /%s/" % bool_dict[matrix_element.get('has_mirror_process')]
     #===============================================================================
     # write_maxamps_file
     #===============================================================================
-    def write_born_maxamps_file(self, writer, matrix_element, fortran_model, ncolor):
-        #test written
-        """Write the born_maxamps.inc file for MG4."""
-    
-        file = "       integer    bmaxamps\n"
-        file = file + "parameter (bmaxamps=%d)" % \
-               (len(matrix_element.get_all_amplitudes()))
-    
-        # Write the file
-        writer.writelines(file)
-    
-        return True
+#    def write_born_maxamps_file(self, writer, matrix_element, fortran_model, ncolor):
+#        #test written
+#        """Write the born_maxamps.inc file for MG4."""
+#    
+#        file = "       integer    bmaxamps\n"
+#        file = file + "parameter (bmaxamps=%d)" % \
+#               (len(matrix_element.get_all_amplitudes()))
+#   
+#        # Write the file
+#        writer.writelines(file)
+#    
+#        return True
     
     
     #===============================================================================
@@ -1167,7 +1170,7 @@ data mirrorproc /%s/" % bool_dict[matrix_element.get('has_mirror_process')]
     # write_ncombs_file
     #===============================================================================
     def write_ncombs_file(self, writer, matrix_element, fortran_model):
-        #test written
+#        #test written
         """Write the ncombs.inc file for MadEvent."""
     
         # Extract number of external particles
@@ -1179,7 +1182,7 @@ data mirrorproc /%s/" % bool_dict[matrix_element.get('has_mirror_process')]
     
         # Write the file
         writer.writelines(file)
-    
+   
         return True
     
     #===============================================================================
@@ -1341,6 +1344,93 @@ data mirrorproc /%s/" % bool_dict[matrix_element.get('has_mirror_process')]
     #===============================================================================
     # Helper functions
     #===============================================================================
+
+    def get_pdf_lines_mir(self, matrix_element, ninitial, subproc_group = False,\
+                          mirror = False):
+        """Generate the PDF lines for the auto_dsig.f file"""
+
+        processes = matrix_element.get('processes')
+
+        pdf_lines = ""
+
+        if ninitial == 1:
+            pdf_lines = "PD(0) = 0d0\nIPROC = 0\n"
+            for i, proc in enumerate(processes):
+                process_line = proc.base_string()
+                pdf_lines = pdf_lines + "IPROC=IPROC+1 ! " + process_line
+                pdf_lines = pdf_lines + "\nPD(IPROC)=PD(IPROC-1) + 1d0\n"
+        else:
+            # Set notation for the variables used for different particles
+            pdf_codes = {1: 'd', 2: 'u', 3: 's', 4: 'c', 5: 'b',
+                         21: 'g', 22: 'a'}
+            # Set conversion from PDG code to number used in PDF calls
+            pdgtopdf = {21: 0, 22: 7}
+            # Fill in missing entries
+            for key in pdf_codes.keys():
+                if key < 21:
+                    pdf_codes[-key] = pdf_codes[key] + 'b'
+                    pdgtopdf[key] = key
+                    pdgtopdf[-key] = -key
+
+            # Pick out all initial state particles for the two beams
+            initial_states = [sorted(list(set([p.get_initial_pdg(1) for \
+                                               p in processes]))),
+                              sorted(list(set([p.get_initial_pdg(2) for \
+                                               p in processes])))]
+
+            # Get PDF values for the different initial states
+            for i, init_states in enumerate(initial_states):
+                if not mirror:
+                    ibeam = i + 1
+                else:
+                    ibeam = 2 - i
+                if subproc_group:
+                    pdf_lines = pdf_lines + \
+                           "IF (ABS(LPP(IB(%d))).GE.1) THEN\nLP=SIGN(1,LPP(IB(%d)))\n" \
+                                 % (ibeam, ibeam)
+                else:
+                    pdf_lines = pdf_lines + \
+                           "IF (ABS(LPP(%d)) .GE. 1) THEN\nLP=SIGN(1,LPP(%d))\n" \
+                                 % (ibeam, ibeam)
+
+                for initial_state in init_states:
+                    if initial_state in pdf_codes.keys():
+                        if subproc_group:
+                            pdf_lines = pdf_lines + \
+                                        ("%s%d=PDG2PDF(ABS(LPP(IB(%d))),%d*LP," + \
+                                         "XBK(IB(%d)),DSQRT(Q2FACT(%d)))\n") % \
+                                         (pdf_codes[initial_state],
+                                          i + 1, ibeam, pdgtopdf[initial_state],
+                                          ibeam, ibeam)
+                        else:
+                            pdf_lines = pdf_lines + \
+                                        ("%s%d=PDG2PDF(ABS(LPP(%d)),%d*LP," + \
+                                         "XBK(%d),DSQRT(Q2FACT(%d)))\n") % \
+                                         (pdf_codes[initial_state],
+                                          i + 1, ibeam, pdgtopdf[initial_state],
+                                          ibeam, ibeam)
+                pdf_lines = pdf_lines + "ENDIF\n"
+
+            # Add up PDFs for the different initial state particles
+            pdf_lines = pdf_lines + "PD(0) = 0d0\nIPROC = 0\n"
+            for proc in processes:
+                process_line = proc.base_string()
+                pdf_lines = pdf_lines + "IPROC=IPROC+1 ! " + process_line
+                pdf_lines = pdf_lines + "\nPD(IPROC)=PD(IPROC-1) + "
+                for ibeam in [1, 2]:
+                    initial_state = proc.get_initial_pdg(ibeam)
+                    if initial_state in pdf_codes.keys():
+                        pdf_lines = pdf_lines + "%s%d*" % \
+                                    (pdf_codes[initial_state], ibeam)
+                    else:
+                        pdf_lines = pdf_lines + "1d0*"
+                # Remove last "*" from pdf_lines
+                pdf_lines = pdf_lines[:-1] + "\n"
+
+        # Remove last line break from pdf_lines
+        return pdf_lines[:-1]
+
+
     def get_color_data_lines_from_color_matrix(self, color_matrix, n=6):
         #test written
         """Return the color matrix definition lines for the given color_matrix. Split

@@ -8,14 +8,14 @@ fi
 touch res.txt
 
 for dir in $* ; do
-    grep 'Final result' P*/$dir/log.txt >> res.txt
+    grep -H 'Final result' P*/$dir/log.txt >> res.txt
 done
 
 
 sed -i.bak s/"\+\/\-"/" \+\/\-"/ res.txt
 
 
-./sumres.py
+./sumres.py -1
 
 rm -r res.txt.bak
 

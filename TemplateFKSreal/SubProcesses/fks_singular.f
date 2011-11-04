@@ -1463,16 +1463,19 @@ c For tests
       common/csum_of_wgts/total_wgt_sum,total_wgt_sum_max,
      &                 total_wgt_sum_min
 
-      double precision pmass(nexternal)
-
 c For process mirroring
       double precision selproc(2)
       double precision sumprob, r, rescale_mir
-      integer imirror, k, i_cms
+      integer imirror, k
       common /cmirror/imirror
       include "mirrorprocs.inc"
       data selproc /2*0d0/
+      integer totpts, mirpts, nomirpts
+      data totpts/ 0 /
+      data mirpts/ 0 /
+      data nomirpts/ 0 /
 
+      double precision pmass(nexternal)
       include "pmass.inc"
 
       vegas_weight=vegaswgt
@@ -1554,14 +1557,17 @@ c points)
       plot_wgt=0.d0
       iplot=-3
 
+
 c Compute pdf weight for the process and its mirror configuration
-      i_cms=mohdr
       sumprob=0.d0
-      if (abrv.eq.'born'.or.abrv(1:2).eq.'vi') i_cms=izero
+      if (abrv.eq.'born'.or.abrv(1:2).eq.'vi') then
+        call set_cms_stuff(izero)
+      else
+        call set_cms_stuff(mohdr)
+      endif
       do k=1,2
         if (k.eq.1.or.mirrorproc) then
           imirror=k
-          call set_cms_stuff(i_cms)
           selproc(k)=dlum()
           sumprob=sumprob+selproc(k)
         endif
@@ -1571,34 +1577,40 @@ c Choose between process and mirror
       r=ran2()*sumprob
       imirror=1
       if (r.gt.selproc(1)) imirror=2
+
 c If mirror process rotate (all) the momenta around the x-axis
+      totpts = totpts+1
       if (imirror.eq.2) then
-        p_i_fks_ev(2)=-p_i_fks_ev(2)
-        p_i_fks_ev(3)=-p_i_fks_ev(3)
+        mirpts = mirpts+1
+        p_i_fks_ev(2)= - p_i_fks_ev(2)
+        p_i_fks_ev(3)= - p_i_fks_ev(3)
         do i=-2,2
-          p_i_fks_cnt(2,i)=-p_i_fks_cnt(2,i)
-          p_i_fks_cnt(3,i)=-p_i_fks_cnt(3,i)
+          p_i_fks_cnt(2,i)= - p_i_fks_cnt(2,i)
+          p_i_fks_cnt(3,i)= - p_i_fks_cnt(3,i)
         enddo
         do k=1,nexternal
-          pp(2,k)=-pp(2,k)
-          pp(3,k)=-pp(3,k)
+          pp(2,k)= - pp(2,k)
+          pp(3,k)= - pp(3,k)
           do i=-2,2
-            p1_cnt(2,k,i)=-p1_cnt(2,k,i)
-            p1_cnt(3,k,i)=-p1_cnt(3,k,i)
+            p1_cnt(2,k,i)= - p1_cnt(2,k,i)
+            p1_cnt(3,k,i)= - p1_cnt(3,k,i)
           enddo
         enddo
         do k=1,nexternal-1
-          p_born(2,k)=-p_born(2,k)
-          p_born(3,k)=-p_born(3,k)
+          p_born(2,k)= - p_born(2,k)
+          p_born(3,k)= - p_born(3,k)
         enddo
+      else
+        nomirpts = nomirpts+1
       endif
 
+      if (mod(totpts, 1000).eq.0) write(*,*) mirpts, nomirpts, totpts
 
       if (abrv.eq.'born' .or. abrv(1:2).eq.'vi') goto 540
 c Real contribution:
 c Set the ybst_til_tolab before applying the cuts. 
-      call get_mirror_rescale(mohdr, rescale_mir)
       call set_cms_stuff(mohdr)
+      call get_mirror_rescale(rescale_mir)
       if (passcuts(pp,rwgt)) then
         call set_alphaS(pp)
         x = abs(2d0*dot(pp(0,i_fks),pp(0,j_fks))/shat)
@@ -1608,10 +1620,6 @@ c Set the ybst_til_tolab before applying the cuts.
            call sreal(pp,xi_i_fks_ev,y_ij_fks_ev,fx_ev)
            xlum_ev = dlum()*rescale_mir
            ev_wgt = fx_ev*xlum_ev*s_ev*ffact*wgt*prefact*rwgt
-        else
-c If mirroring and dlum has not been called, we need to flip back the
-c    beams
-          if (imirror.eq.2) call FlipBeams()
         endif
       endif
 c
@@ -1627,15 +1635,14 @@ c for the collinear, soft and/or soft-collinear subtraction terms
       call set_alphaS(p1_cnt(0,1,0))
 c If mirroring and dlum has not been called, we need to flip back the
 c    beams
-      if (imirror.eq.2) call FlipBeams()
 
       if (abrv.eq.'born' .or. abrv(1:2).eq.'vi') goto 545
 c
 c Collinear subtraction term:
       if( y_ij_fks_ev.gt.1d0-deltaS .and.
      #    pmass(j_fks).eq.0.d0 )then
-         call get_mirror_rescale(ione, rescale_mir)
          call set_cms_stuff(ione)
+         call get_mirror_rescale(rescale_mir)
          s_c = fks_Sij(p1_cnt(0,1,1),i_fks,j_fks,xi_i_fks_cnt(ione),one)
          if(s_c.gt.0.d0)then
             if(abs(s_c-1.d0).gt.1.d-6.and.j_fks.le.nincoming)then
@@ -1652,17 +1659,13 @@ c Collinear subtraction term:
      #                      jac_cnt(1)*prefact_deg*rwgt/(shat/(32*pi**2))*
      #                      xlum_c
             iplot=1
-         else
-c If mirroring and dlum has not been called, we need to flip back the
-c    beams
-          if (imirror.eq.2) call FlipBeams()
          endif
       endif
 c Soft subtraction term:
  545  continue
       if (xi_i_fks_ev .lt. max(xiScut_used,xiBSVcut_used)) then
-         call get_mirror_rescale(izero, rescale_mir)
          call set_cms_stuff(izero)
+         call get_mirror_rescale(rescale_mir)
          s_s = fks_Sij(p1_cnt(0,1,0),i_fks,j_fks,zero,y_ij_fks_ev)
          if(nbodyonly)s_s=1.d0
          if(s_s.gt.0.d0)then
@@ -1686,10 +1689,6 @@ c Soft subtraction term:
             endif
  548        continue
             iplot=0
-         else
-c If mirroring and dlum has not been called, we need to flip back the
-c    beams
-          if (imirror.eq.2) call FlipBeams()
          endif
       endif
 c Soft-Collinear subtraction term:
@@ -1697,8 +1696,8 @@ c Soft-Collinear subtraction term:
       if (xi_i_fks_cnt(ione) .lt. xiScut_used .and.
      #    y_ij_fks_ev .gt. 1d0-deltaS .and.
      #    pmass(j_fks).eq.0.d0 )then
-         call get_mirror_rescale(itwo, rescale_mir)
          call set_cms_stuff(itwo)
+         call get_mirror_rescale(rescale_mir)
          s_sc = fks_Sij(p1_cnt(0,1,2),i_fks,j_fks,zero,one)
          if(s_sc.gt.0.d0)then
             if(abs(s_sc-1.d0).gt.1.d-6.and.j_fks.le.nincoming)then
@@ -1721,10 +1720,6 @@ c Soft-Collinear subtraction term:
      #                     jac_cnt(2)*rwgt/(shat/(32*pi**2))*
      #                     xlum_sc
             if(iplot.ne.0)iplot=2
-         else
-c If mirroring and dlum has not been called, we need to flip back the
-c    beams
-          if (imirror.eq.2) call FlipBeams()
          endif
       endif
  547  continue
@@ -1830,9 +1825,8 @@ c For tests
      &        s_sc.gt.0.d0).and.abs(cnt_wgt).gt.0.d0)
      &        icou_mecnt=icou_mecnt+1
          
-         if (imirror.eq.2) ybst_til_tolab = - ybst_til_tolab
-
 c Plot observables for event
+
          plot_wgt=ev_wgt*fkssymmetryfactor*vegaswgt
          if(abs(plot_wgt).gt.1.d-20.and.pp(0,1).ne.-99d0)
      &        call outfun(pp,ybst_til_tolab,plot_wgt,iplot_ev)
@@ -3658,7 +3652,11 @@ c do the same as above for the counterevents
         ybst_til_tocm=ycm_cnt(icountevts)-ycm_cnt(0)
       endif
 
-      if (imirror.eq.2) call FlipBeams()
+c if mirroring just flip the sign of ybsts
+      if (imirror.eq.2) then
+c        ybst_til_tolab = - ybst_til_tolab
+c        ybst_til_tocm  = - ybst_til_tocm
+      endif
       return
       end
 

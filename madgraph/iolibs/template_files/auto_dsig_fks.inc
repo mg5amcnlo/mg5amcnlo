@@ -56,8 +56,11 @@ C ----------
 C BEGIN CODE                                                          
 C ----------                                                          
       DLUM = 0D0                                                      
+      if (imirror.eq.2) then
+%(pdf_lines_mirr)s
+      else
 %(pdf_lines)s
+      endif
       dlum = pd(IPROC) * conv 
-      if (imirror.eq.2) call flipbeams()
       return
       END                                                             

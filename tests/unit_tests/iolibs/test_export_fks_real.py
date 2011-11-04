@@ -776,7 +776,7 @@ C     IF (PASSCUTS(PP,rwgt)) THEN
         """tests if the born_nhel.inc file is correctly written"""
         goal = \
 """      INTEGER    MAX_BHEL, MAX_BCOL
-      PARAMETER (MAX_BHEL=13)
+      PARAMETER (MAX_BHEL=16)
       PARAMETER(MAX_BCOL=2)
 """        
         process_exporter = export_fks_real.ProcessExporterFortranFKS_real()
@@ -803,28 +803,6 @@ C     IF (PASSCUTS(PP,rwgt)) THEN
         self.assertFileContains('test', goal) 
 
     
-    def test_write_born_maxamps_file(self):
-        """tests if the born_maxamps.inc file is correctly written"""
-        goal = \
-"""      INTEGER    BMAXAMPS
-      PARAMETER (BMAXAMPS=3)
-"""        
-        process_exporter = export_fks_real.ProcessExporterFortranFKS_real()
-
-        calls, ncolor = \
-            process_exporter.write_matrix_element_fks(
-                    writers.FortranWriter(self.give_pos('test1')),
-                    self.myfks_me.real_matrix_element,
-                    self.myfortranmodel)    
-
-        process_exporter.write_born_maxamps_file(
-                    writers.FortranWriter(self.give_pos('test')),
-                    self.myfks_me.born_processes[0].matrix_element,
-                    self.myfortranmodel,
-                    ncolor)  
-
-        self.assertFileContains('test', goal) 
-
 
     def test_write_maxamps_file(self):
         """tests if the maxamps.inc file is correctly written"""
@@ -863,22 +841,6 @@ C     IF (PASSCUTS(PP,rwgt)) THEN
 
         self.assertFileContains('test', goal) 
 
-
-    def test_write_ncombs_file(self):
-        """tests if the nexternal.inc file is correctly written"""
-        goal = \
-"""      INTEGER    N_MAX_CL
-      PARAMETER (N_MAX_CL=64)
-"""
-        process_exporter = export_fks_real.ProcessExporterFortranFKS_real()
-        
-        process_exporter.write_ncombs_file(
-                    writers.FortranWriter(self.give_pos('test')),
-                    self.myfks_me.real_matrix_element,
-                    self.myfortranmodel)        
-
-        self.assertFileContains('test', goal)  
-            
     
     def test_write_nexternal_file(self):
         """tests if the nexternal.inc file is correctly written"""

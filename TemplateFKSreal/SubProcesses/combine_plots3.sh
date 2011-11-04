@@ -133,5 +133,6 @@ else
 fi
 
 ./NLO_Born3.py
-
+td_mac_intel MADatNLO_combined.top "POSTSCR,ORIENT=3"
+open MADatNLO_combined.ps
 #td2pdf MADatNLO_con

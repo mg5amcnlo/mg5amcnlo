@@ -17,7 +17,6 @@ C CONSTANTS
 C  
       Include 'genps.inc'
       include "nexternal.inc"
-c      Include 'born_maxamps.inc'
       INTEGER                 NCOMB,     NCROSS         
       PARAMETER (             NCOMB=  %(ncomb)d, NCROSS=  1)
       INTEGER    THEL
