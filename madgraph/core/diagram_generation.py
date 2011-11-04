@@ -332,7 +332,7 @@ class Amplitude(base_objects.PhysicsObject):
     def nice_string(self, indent=0):
         """Returns a nicely formatted string of the amplitude content."""
         return self.get('process').nice_string(indent) + "\n" + \
-               str(self.get('has_mirror_process'))
+               self.get('diagrams').nice_string(indent)
 
     def nice_string_processes(self, indent=0):
         """Returns a nicely formatted string of the amplitude process."""
@@ -1569,7 +1569,7 @@ class MultiProcess(base_objects.PhysicsObject):
 
         # Make sure to reset mirror process
         new_amp.set('has_mirror_process', False)
-
+        
         return new_amp
         
 #===============================================================================
