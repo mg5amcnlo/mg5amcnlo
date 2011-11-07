@@ -1305,14 +1305,11 @@ class HelasWavefunctionList(base_objects.PhysicsObjectList):
                                           fermion_mother.get_with_flow('state'):
                 clashes.append([fermion_mother])
             elif my_wf.is_majorana() and fermion_mother.is_majorana():
-                print 'check for clash 1'
                 pos = self.get('pdg_codes').index(my_wf.get_anti_pdg_code())
                 if my_wf['state'] == 'incoming':
                     if pos % 2:
-                        print 'found'
                         clashes.append([fermion_mother])
                 elif not pos % 2:
-                    print 'found'
                     clashes.append([fermion_mother])
                     
 
@@ -1326,28 +1323,13 @@ class HelasWavefunctionList(base_objects.PhysicsObjectList):
                 clashes.append([other_fermions[iferm],
                                 other_fermions[iferm+1]])
             elif other_fermions[iferm].is_majorana() and other_fermions[iferm+1].is_majorana():
-                print 'check for clash 2'
-                print ([w.get('pdg_code') for w in wavefunctions],
-                                   [w.get('pdg_code') for w in diagram_wavefunctions],
-                                   len(external_wavefunctions),
-                                   my_wf,
-                                   wf_number,
-                                   force_flip_flow)
-                
-                
-                print type(other_fermions[iferm])
-                print other_fermions[iferm].get('pdg_codes')
                 if not other_fermions[iferm].get('pdg_codes'):
                     continue
-                print other_fermions[iferm].get_anti_pdg_code()
-                print other_fermions[iferm].get_pdg_code()
                 pos = other_fermions[iferm].get('pdg_codes').index(other_fermions[iferm].get_anti_pdg_code())
                 if other_fermions[iferm]['state'] == 'incoming':
                     if pos % 2:
-                        print 'found'
                         clashes.append([other_fermions[iferm],other_fermions[iferm+1]])
                 elif not pos % 2:
-                    print 'found'
                     clashes.append([other_fermions[iferm],other_fermions[iferm+1]])
         if not clashes:
             return wf_number
