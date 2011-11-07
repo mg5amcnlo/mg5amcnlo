@@ -1304,13 +1304,13 @@ class HelasWavefunctionList(base_objects.PhysicsObjectList):
             if my_wf.get_with_flow('state') != \
                                           fermion_mother.get_with_flow('state'):
                 clashes.append([fermion_mother])
-            elif my_wf.is_majorana() and fermion_mother.is_majorana():
-                pos = self.get('pdg_codes').index(my_wf.get_anti_pdg_code())
-                if my_wf['state'] == 'incoming':
-                    if pos % 2:
-                        clashes.append([fermion_mother])
-                elif not pos % 2:
-                    clashes.append([fermion_mother])
+#            elif my_wf.is_majorana() and fermion_mother.is_majorana():
+#                pos = self.get('pdg_codes').index(my_wf.get_anti_pdg_code())
+#                if my_wf['state'] == 'incoming':
+#                    if pos % 2:
+#                        clashes.append([fermion_mother])
+#                elif not pos % 2:
+#                    clashes.append([fermion_mother])
                     
 
         # Now check all other fermions
