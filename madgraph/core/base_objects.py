@@ -372,6 +372,10 @@ class Particle(PhysicsObject):
 
         return self['spin'] % 2 == 1
 
+    def is_majorana(self):
+        """Returns True for Majorana Fermion, False Otherwise"""
+        return self['spin'] % 2 == 0 and self['name'] == self['antiname']
+
 #===============================================================================
 # ParticleList
 #===============================================================================

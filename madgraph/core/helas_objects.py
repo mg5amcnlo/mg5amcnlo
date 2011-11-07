@@ -487,6 +487,10 @@ class HelasWavefunction(base_objects.PhysicsObject):
 
     def is_boson(self):
         return not self.is_fermion()
+    
+    def is_majorana(self):
+        return self.get('spin') % 2 == 0 and \
+               self.get('particle') == self.get('antiparticle')
 
     def to_array(self):
         """Generate an array with the information needed to uniquely
@@ -841,9 +845,38 @@ class HelasWavefunction(base_objects.PhysicsObject):
         """Returns true if any of the mothers have negative
         fermionflow"""
 
-        return any([wf.get('fermionflow') < 0 for wf in \
+        if any([wf.get('fermionflow') < 0 for wf in \
                     self.get('mothers')]) or \
-                    (self.get('interaction_id') and self.get('fermionflow') < 0)
+                    (self.get('interaction_id') and self.get('fermionflow') < 0):
+            return True
+
+        if not self.get('mothers'):
+            return False
+        # In case of a flow of majorana particles need to check if the flow is 
+        # in the correct directions. For this we need to distinguish case where
+        # the majorana is the wavefunctions or not.
+        if self.is_boson():
+            # check that we have only majorana
+            if all([ wf.is_majorana() for wf in self.get('mothers') if wf.is_fermion()]):
+                order = [ wf.get('particle').get('pdg_code') for wf in self.get('mothers')]
+                if not order:
+                    return False
+                if order != self.get('pdg_codes')[:-1]:
+                    return True
+        elif self.is_majorana():
+            if all([ wf.is_majorana() for wf in self.get('mothers') if wf.is_fermion()]):
+                pos = self.get('pdg_codes').index(self.get_anti_pdg_code())
+                if self['state'] == 'incoming':
+                    if pos % 2:
+                        return True
+                    else:
+                        return False
+                else:
+                    if pos % 2:
+                        return False
+                    else:
+                        return True                   
+        return False        
 
     def get_with_flow(self, name):
         """Generate the is_part and state needed for writing out
@@ -1164,6 +1197,8 @@ class HelasWavefunction(base_objects.PhysicsObject):
                 if fermions[i].get('fermionflow') < 0 or \
                    fermions[i+1].get('fermionflow') < 0:
                     indices.append(i/2 + 1)
+            if not indices:
+                return (1,)
             return tuple(indices)
         else:
             return ()
@@ -1263,13 +1298,23 @@ class HelasWavefunctionList(base_objects.PhysicsObjectList):
 
         # Keep track of clashing fermion wavefunctions
         clashes = []
-        
         # First check the fermion mother on the same fermion line
         if my_wf and my_wf.is_fermion():
             fermion_mother = my_wf.find_mother_fermion()
             if my_wf.get_with_flow('state') != \
-                   fermion_mother.get_with_flow('state'):
+                                          fermion_mother.get_with_flow('state'):
                 clashes.append([fermion_mother])
+            elif my_wf.is_majorana() and fermion_mother.is_majorana():
+                print 'check for clash 1'
+                pos = self.get('pdg_codes').index(my_wf.get_anti_pdg_code())
+                if my_wf['state'] == 'incoming':
+                    if pos % 2:
+                        print 'found'
+                        clashes.append([fermion_mother])
+                elif not pos % 2:
+                    print 'found'
+                    clashes.append([fermion_mother])
+                    
 
         # Now check all other fermions
         other_fermions = [w for w in self if \
@@ -1280,7 +1325,30 @@ class HelasWavefunctionList(base_objects.PhysicsObjectList):
                other_fermions[iferm+1].get_with_flow('state'):
                 clashes.append([other_fermions[iferm],
                                 other_fermions[iferm+1]])
-
+            elif other_fermions[iferm].is_majorana() and other_fermions[iferm+1].is_majorana():
+                print 'check for clash 2'
+                print ([w.get('pdg_code') for w in wavefunctions],
+                                   [w.get('pdg_code') for w in diagram_wavefunctions],
+                                   len(external_wavefunctions),
+                                   my_wf,
+                                   wf_number,
+                                   force_flip_flow)
+                
+                
+                print type(other_fermions[iferm])
+                print other_fermions[iferm].get('pdg_codes')
+                if not other_fermions[iferm].get('pdg_codes'):
+                    continue
+                print other_fermions[iferm].get_anti_pdg_code()
+                print other_fermions[iferm].get_pdg_code()
+                pos = other_fermions[iferm].get('pdg_codes').index(other_fermions[iferm].get_anti_pdg_code())
+                if other_fermions[iferm]['state'] == 'incoming':
+                    if pos % 2:
+                        print 'found'
+                        clashes.append([other_fermions[iferm],other_fermions[iferm+1]])
+                elif not pos % 2:
+                    print 'found'
+                    clashes.append([other_fermions[iferm],other_fermions[iferm+1]])
         if not clashes:
             return wf_number
 
@@ -1667,8 +1735,17 @@ class HelasAmplitude(base_objects.PhysicsObject):
         """Returns true if any of the mothers have negative
         fermionflow"""
 
-        return any([wf.get('fermionflow') < 0 for wf in \
-                    self.get('mothers')])
+        if any([wf.get('fermionflow') < 0 for wf in \
+                    self.get('mothers')]):
+            return True
+
+        if all([ wf.is_majorana() for wf in self.get('mothers') if wf.is_fermion()]):
+            order = [ wf.get('particle').get('pdg_code') for wf in self.get('mothers')] 
+            if not order:
+                return False
+            if order != self.get('pdg_codes'):
+                return True
+        return False            
 
     def get_call_key(self):
         """Generate the (spin, state) tuples used as key for the helas call
@@ -1974,6 +2051,8 @@ class HelasAmplitude(base_objects.PhysicsObject):
                 if fermions[i].get('fermionflow') < 0 or \
                    fermions[i+1].get('fermionflow') < 0:
                     indices.append(i/2 + 1)
+            if not indices:
+                return (1,)
             return tuple(indices)
         else:
             return ()
