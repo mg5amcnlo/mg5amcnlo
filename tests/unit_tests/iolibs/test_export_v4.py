@@ -8015,6 +8015,239 @@ CALL FFV1_0(W(1,3),W(1,7),W(1,2),GGI,AMP(3))""".split('\n')
         for i in range(max(len(goal_string),len(result))):
             self.assertEqual(result[i], goal_string[i])
 
+    def test_majorana_conjugate_process(self):
+        """Test process e+ e- > n1 n2 z, which needs conjugate wfs.
+        """
+
+        mypartlist = base_objects.ParticleList()
+        myinterlist = base_objects.InteractionList()
+
+        # A electron and positron
+        mypartlist.append(base_objects.Particle({'name':'e-',
+                      'antiname':'e+',
+                      'spin':2,
+                      'color':1,
+                      'mass':'zero',
+                      'width':'zero',
+                      'texname':'e^-',
+                      'antitexname':'e^+',
+                      'line':'straight',
+                      'charge':-1.,
+                      'pdg_code':11,
+                      'propagating':True,
+                      'is_part':True,
+                      'self_antipart':False}))
+        eminus = mypartlist[len(mypartlist) - 1]
+        eplus = copy.copy(eminus)
+        eplus.set('is_part', False)
+
+        # A E slepton and its antiparticle
+        mypartlist.append(base_objects.Particle({'name':'el-',
+                      'antiname':'el+',
+                      'spin':1,
+                      'color':1,
+                      'mass':'Msl2',
+                      'width':'Wsl2',
+                      'texname':'\tilde e^-',
+                      'antitexname':'\tilde e^+',
+                      'line':'dashed',
+                      'charge':1.,
+                      'pdg_code':1000011,
+                      'propagating':True,
+                      'is_part':True,
+                      'self_antipart':False}))
+        seminus = mypartlist[len(mypartlist) - 1]
+        seplus = copy.copy(seminus)
+        seplus.set('is_part', False)
+
+        # Neutralinos
+        mypartlist.append(base_objects.Particle({'name':'n1',
+                      'antiname':'n1',
+                      'spin':2,
+                      'color':1,
+                      'mass':'mn1',
+                      'width':'zero',
+                      'texname':'\chi_0^1',
+                      'antitexname':'\chi_0^1',
+                      'line':'straight',
+                      'charge':0.,
+                      'pdg_code':1000022,
+                      'propagating':True,
+                      'is_part':True,
+                      'self_antipart':True}))
+        n1 = mypartlist[len(mypartlist) - 1]
+
+        mypartlist.append(base_objects.Particle({'name':'n2',
+                      'antiname':'n2',
+                      'spin':2,
+                      'color':1,
+                      'mass':'mn2',
+                      'width':'wn2',
+                      'texname':'\chi_0^2',
+                      'antitexname':'\chi_0^2',
+                      'line':'straight',
+                      'charge':0.,
+                      'pdg_code':1000023,
+                      'propagating':True,
+                      'is_part':True,
+                      'self_antipart':True}))
+        n2 = mypartlist[len(mypartlist) - 1]
+
+        # A z
+        mypartlist.append(base_objects.Particle({'name':'z',
+                      'antiname':'z',
+                      'spin':3,
+                      'color':1,
+                      'mass':'zmass',
+                      'width':'zwidth',
+                      'texname':'\gamma',
+                      'antitexname':'\gamma',
+                      'line':'wavy',
+                      'charge':0.,
+                      'pdg_code':23,
+                      'propagating':True,
+                      'is_part':True,
+                      'self_antipart':True}))
+        z = mypartlist[len(mypartlist) - 1]
+
+        # Coupling of n1 to n2 and z
+        myinterlist.append(base_objects.Interaction({
+                      'id': 2,
+                      'particles': base_objects.ParticleList(\
+                                            [n1, \
+                                             n2, \
+                                             z]),
+                      'color': [],
+                      'lorentz':[''],
+                      'couplings':{(0, 0):'GZN12'},
+                      'orders':{'QED':1}}))
+
+        # Coupling of n1 and n2 to e and el
+        myinterlist.append(base_objects.Interaction({
+                      'id': 3,
+                      'particles': base_objects.ParticleList(\
+                                            [eplus, \
+                                             n1, \
+                                             seminus]),
+                      'color': [],
+                      'lorentz':[''],
+                      'couplings':{(0, 0):'GELN1M'},
+                      'orders':{'QED':1}}))
+
+        myinterlist.append(base_objects.Interaction({
+                      'id': 4,
+                      'particles': base_objects.ParticleList(\
+                                            [n1, \
+                                             eminus, \
+                                             seplus]),
+                      'color': [],
+                      'lorentz':[''],
+                      'couplings':{(0, 0):'GELN1P'},
+                      'orders':{'QED':1}}))
+
+        myinterlist.append(base_objects.Interaction({
+                      'id': 5,
+                      'particles': base_objects.ParticleList(\
+                                            [eplus, \
+                                             n2, \
+                                             seminus]),
+                      'color': [],
+                      'lorentz':[''],
+                      'couplings':{(0, 0):'GELN2M'},
+                      'orders':{'QED':1}}))
+
+        myinterlist.append(base_objects.Interaction({
+                      'id': 6,
+                      'particles': base_objects.ParticleList(\
+                                            [n2, \
+                                             eminus, \
+                                             seplus]),
+                      'color': [],
+                      'lorentz':[''],
+                      'couplings':{(0, 0):'GELN2P'},
+                      'orders':{'QED':1}}))
+
+
+        mymodel = base_objects.Model()
+        mymodel.set('particles', mypartlist)
+        mymodel.set('interactions', myinterlist)
+
+        myleglist = base_objects.LegList()
+
+        myleglist.append(base_objects.Leg({'id':11,
+                                           'state':False}))
+        myleglist.append(base_objects.Leg({'id':-11,
+                                           'state':False}))
+        myleglist.append(base_objects.Leg({'id':1000023,
+                                           'state':True}))
+        myleglist.append(base_objects.Leg({'id':1000022,
+                                           'state':True}))
+        myleglist.append(base_objects.Leg({'id':23,
+                                           'state':True}))
+        myleglist.append(base_objects.Leg({'id':23,
+                                           'state':True}))
+
+        myproc = base_objects.Process({'legs':myleglist,
+                                       'model':mymodel})
+
+        myamplitude = diagram_generation.Amplitude(myproc)
+
+        matrix_element = helas_objects.HelasMatrixElement(myamplitude)
+
+        myfortranmodel = helas_call_writers.FortranHelasCallWriter(mymodel)
+
+        result = myfortranmodel.get_matrix_element_calls(matrix_element)
+
+        goal = """CALL IXXXXX(P(0,1),zero,NHEL(1),+1*IC(1),W(1,1))
+CALL IXXXXX(P(0,2),zero,NHEL(2),+1*IC(2),W(1,2))
+CALL OXXXXX(P(0,3),mn2,NHEL(3),+1*IC(3),W(1,3))
+CALL OXXXXX(P(0,4),mn1,NHEL(4),+1*IC(4),W(1,4))
+CALL VXXXXX(P(0,5),zmass,NHEL(5),+1*IC(5),W(1,5))
+CALL VXXXXX(P(0,6),zmass,NHEL(6),+1*IC(6),W(1,6))
+CALL HIOXXX(W(1,1),W(1,3),GELN2M,Msl2,Wsl2,W(1,7))
+CALL FVOCXX(W(1,4),W(1,5),GZN12,mn2,wn2,W(1,8))
+CALL FSICXX(W(1,2),W(1,7),GELN1P,mn1,zero,W(1,9))
+# Amplitude(s) for diagram number 1
+CALL IOVXXX(W(1,9),W(1,8),W(1,6),GZN12,AMP(1))
+CALL FVOCXX(W(1,4),W(1,6),GZN12,mn2,wn2,W(1,10))
+# Amplitude(s) for diagram number 2
+CALL IOVXXX(W(1,9),W(1,10),W(1,5),GZN12,AMP(2))
+CALL HIOXXX(W(1,1),W(1,4),GELN1M,Msl2,Wsl2,W(1,11))
+CALL FVOXXX(W(1,3),W(1,5),GZN12,mn1,zero,W(1,12))
+CALL FSICXX(W(1,2),W(1,11),GELN2P,mn2,wn2,W(1,13))
+# Amplitude(s) for diagram number 3
+CALL IOVCXX(W(1,13),W(1,12),W(1,6),GZN12,AMP(3))
+CALL FVOXXX(W(1,3),W(1,6),GZN12,mn1,zero,W(1,14))
+# Amplitude(s) for diagram number 4
+CALL IOVCXX(W(1,13),W(1,14),W(1,5),GZN12,AMP(4))
+CALL HIOCXX(W(1,2),W(1,3),GELN2P,Msl2,Wsl2,W(1,15))
+CALL FSIXXX(W(1,1),W(1,15),GELN1M,mn1,zero,W(1,16))
+# Amplitude(s) for diagram number 5
+CALL IOVXXX(W(1,16),W(1,8),W(1,6),GZN12,AMP(5))
+# Amplitude(s) for diagram number 6
+CALL IOVXXX(W(1,16),W(1,10),W(1,5),GZN12,AMP(6))
+CALL HIOCXX(W(1,2),W(1,4),GELN1P,Msl2,Wsl2,W(1,17))
+CALL FSIXXX(W(1,1),W(1,17),GELN2M,mn2,wn2,W(1,18))
+# Amplitude(s) for diagram number 7
+CALL IOVCXX(W(1,18),W(1,12),W(1,6),GZN12,AMP(7))
+# Amplitude(s) for diagram number 8
+CALL IOVCXX(W(1,18),W(1,14),W(1,5),GZN12,AMP(8))
+CALL HIOXXX(W(1,1),W(1,12),GELN1M,Msl2,Wsl2,W(1,19))
+# Amplitude(s) for diagram number 9
+CALL IOSCXX(W(1,2),W(1,10),W(1,19),GELN2P,AMP(9))
+CALL HIOXXX(W(1,1),W(1,10),GELN2M,Msl2,Wsl2,W(1,20))
+# Amplitude(s) for diagram number 10
+CALL IOSCXX(W(1,2),W(1,12),W(1,20),GELN1P,AMP(10))
+CALL HIOXXX(W(1,1),W(1,14),GELN1M,Msl2,Wsl2,W(1,21))
+# Amplitude(s) for diagram number 11
+CALL IOSCXX(W(1,2),W(1,8),W(1,21),GELN2P,AMP(11))
+CALL HIOXXX(W(1,1),W(1,8),GELN2M,Msl2,Wsl2,W(1,22))
+# Amplitude(s) for diagram number 12
+CALL IOSCXX(W(1,2),W(1,14),W(1,22),GELN1P,AMP(12))""".split('\n')
+
+        for i in range(max(len(result), len(goal))):
+            self.assertEqual(result[i], goal[i])
+
     def test_configs_ug_ttxz(self):
         """Test configs.inc which previously failed.
         """

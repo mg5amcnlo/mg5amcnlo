@@ -487,10 +487,9 @@ class HelasWavefunction(base_objects.PhysicsObject):
 
     def is_boson(self):
         return not self.is_fermion()
-    
+
     def is_majorana(self):
-        return self.get('spin') % 2 == 0 and \
-               self.get('particle') == self.get('antiparticle')
+        return self.is_fermion() and self.get('self_antipart')
 
     def to_array(self):
         """Generate an array with the information needed to uniquely
@@ -845,39 +844,10 @@ class HelasWavefunction(base_objects.PhysicsObject):
         """Returns true if any of the mothers have negative
         fermionflow"""
 
-        if any([wf.get('fermionflow') < 0 for wf in \
+        return any([wf.get('fermionflow') < 0 for wf in \
                     self.get('mothers')]) or \
-                    (self.get('interaction_id') and self.get('fermionflow') < 0):
-            return True
-
-        if not self.get('mothers'):
-            return False
-        # In case of a flow of majorana particles need to check if the flow is 
-        # in the correct directions. For this we need to distinguish case where
-        # the majorana is the wavefunctions or not.
-        if self.is_boson():
-            # check that we have only majorana
-            if any([1 for wf in self.get('mothers') if wf.is_fermion()]) and \
-               all([ wf.is_majorana() for wf in self.get('mothers') if wf.is_fermion()]):
-                order = [ wf.get('particle').get('pdg_code') for wf in self.get('mothers')]
-                if not order:
-                    return False
-                if order != self.get('pdg_codes')[:-1]:
-                    return True
-        elif self.is_majorana():
-            if all([ wf.is_majorana() for wf in self.get('mothers') if wf.is_fermion()]):
-                pos = self.get('pdg_codes').index(self.get_anti_pdg_code())
-                if self['state'] == 'incoming':
-                    if pos % 2:
-                        return True
-                    else:
-                        return False
-                else:
-                    if pos % 2:
-                        return False
-                    else:
-                        return True                   
-        return False        
+                    (self.get('interaction_id') and self.get('fermionflow') < 0) \
+                    or HelasMatrixElement.majorana_conjugates(self)
 
     def get_with_flow(self, name):
         """Generate the is_part and state needed for writing out
@@ -1190,7 +1160,8 @@ class HelasWavefunction(base_objects.PhysicsObject):
         if self.needs_hermitian_conjugate():
             fermions = [wf for wf in self.get('mothers') if \
                         wf.is_fermion()]
-            indices = []
+            # Initialize indices with indices due to Majoranas
+            indices = HelasMatrixElement.majorana_conjugates(self)
             self_index = self.find_outgoing_number() - 1
             if self.is_fermion():
                 fermions.insert(self_index, self)
@@ -1198,9 +1169,7 @@ class HelasWavefunction(base_objects.PhysicsObject):
                 if fermions[i].get('fermionflow') < 0 or \
                    fermions[i+1].get('fermionflow') < 0:
                     indices.append(i/2 + 1)
-            if not indices:
-                return (1,)
-            return tuple(indices)
+            return tuple(sorted(indices))
         else:
             return ()
 
@@ -1299,13 +1268,13 @@ class HelasWavefunctionList(base_objects.PhysicsObjectList):
 
         # Keep track of clashing fermion wavefunctions
         clashes = []
+        
         # First check the fermion mother on the same fermion line
         if my_wf and my_wf.is_fermion():
             fermion_mother = my_wf.find_mother_fermion()
             if my_wf.get_with_flow('state') != \
-                                          fermion_mother.get_with_flow('state'):
+                   fermion_mother.get_with_flow('state'):
                 clashes.append([fermion_mother])
-                    
 
         # Now check all other fermions
         other_fermions = [w for w in self if \
@@ -1316,15 +1285,7 @@ class HelasWavefunctionList(base_objects.PhysicsObjectList):
                other_fermions[iferm+1].get_with_flow('state'):
                 clashes.append([other_fermions[iferm],
                                 other_fermions[iferm+1]])
-            elif other_fermions[iferm].is_majorana() and other_fermions[iferm+1].is_majorana():
-                if not other_fermions[iferm].get('pdg_codes'):
-                    continue
-                pos = other_fermions[iferm].get('pdg_codes').index(other_fermions[iferm].get_anti_pdg_code())
-                if other_fermions[iferm]['state'] == 'incoming':
-                    if pos % 2:
-                        clashes.append([other_fermions[iferm],other_fermions[iferm+1]])
-                elif not pos % 2:
-                    clashes.append([other_fermions[iferm],other_fermions[iferm+1]])
+
         if not clashes:
             return wf_number
 
@@ -1711,18 +1672,9 @@ class HelasAmplitude(base_objects.PhysicsObject):
         """Returns true if any of the mothers have negative
         fermionflow"""
 
-        if any([wf.get('fermionflow') < 0 for wf in \
-                    self.get('mothers')]):
-            return True
-
-        if any([True for wf in self.get('mothers') if wf.is_fermion()]) and \
-           all([ wf.is_majorana() for wf in self.get('mothers') if wf.is_fermion()]):
-            order = [ wf.get('particle').get('pdg_code') for wf in self.get('mothers')] 
-            if not order:
-                return False
-            if order != self.get('pdg_codes'):
-                return True
-        return False            
+        return any([wf.get('fermionflow') < 0 for wf in \
+                    self.get('mothers')]) or \
+                    HelasMatrixElement.majorana_conjugates(self)
 
     def get_call_key(self):
         """Generate the (spin, state) tuples used as key for the helas call
@@ -2023,13 +1975,12 @@ class HelasAmplitude(base_objects.PhysicsObject):
         if self.needs_hermitian_conjugate():
             fermions = [wf for wf in self.get('mothers') if \
                         wf.is_fermion()]
-            indices = []
+            # Initialize indices with indices due to Majoranas
+            indices = HelasMatrixElement.majorana_conjugates(self)
             for i in range(0,len(fermions), 2):
                 if fermions[i].get('fermionflow') < 0 or \
                    fermions[i+1].get('fermionflow') < 0:
                     indices.append(i/2 + 1)
-            if not indices:
-                return (1,)
             return tuple(indices)
         else:
             return ()
@@ -3730,6 +3681,79 @@ class HelasMatrixElement(base_objects.PhysicsObject):
 
         # Next sort according to spin_state_number
         return HelasWavefunctionList(sorted_mothers)
+
+    @staticmethod
+    def majorana_conjugates(arg):
+        """Returns a list [bool, bool, ...] of necessary conjugates
+        due to wrong order of I/O Majorana particles compared to
+        interaction order (or empty list if no Majorana particles).
+        This is crucial if the Lorentz structure depends on the direction
+        of the Majorana particles, as in MSSM with goldstinos."""
+
+        assert isinstance(arg, (HelasWavefunction, HelasAmplitude)), \
+            "%s is not a valid HelasWavefunction or HelasAmplitude" % repr(arg)
+
+        if not arg.get('interaction_id'):
+            return []
+
+        if not any([m.is_majorana() for m in arg.get('mothers')]):
+            return []
+
+        my_pdg_code = 0
+        my_spin = 0
+        if isinstance(arg, HelasWavefunction):
+            my_pdg_code = arg.get_anti_pdg_code()
+            my_spin = arg.get_spin_state_number()
+
+        sorted_mothers, my_index = arg.get('mothers').sort_by_pdg_codes(\
+            arg.get('pdg_codes'), my_pdg_code)
+
+        # If fermion, remove fermion partner from list
+        partner = None
+        if isinstance(arg, HelasWavefunction) and arg.is_fermion():
+            # Fermion case, pick out the fermion flow partner
+            if my_index % 2 == 0:
+                # partner is after arg
+                partner_index = my_index
+            else:
+                # partner is before arg
+                partner_index = my_index - 1
+            partner = sorted_mothers.pop(partner_index)
+
+        conjugates = []
+        
+        # Check if the order for Majorana fermions is correct
+        for i in range(0, len(sorted_mothers), 2):
+            if my_index >= 0 and arg.is_fermion() and \
+                   i == my_index or i+1 == my_index:
+                # Insert for this wavefunction
+                if arg.is_majorana() and partner.is_majorana() and \
+                       arg.get_pdg_code() != partner.get_pdg_code() and \
+                       (i == my_index and arg.get_spin_state_number() < 0 or \
+                        i+1 == my_index and arg.get_spin_state_number() > 0):
+                    # The I/O order is not correct for wavefunction
+                    # (note that incoming result correspond to outgoing in amp)
+                    conjugates.append(True)
+                else:
+                    conjugates.append(False)
+            if sorted_mothers[i].is_majorana() and sorted_mothers[i+1].is_majorana() \
+                   and sorted_mothers[i].get_pdg_code() != \
+                   sorted_mothers[i+1].get_pdg_code():
+                # Check if mother I/O order is correct (IO)
+                if sorted_mothers[i].get_spin_state_number() > 0 and \
+                   sorted_mothers[i + 1].get_spin_state_number() < 0:
+                    # Order is wrong, we need a conjugate here
+                    conjugates.append(True)
+                else:
+                    conjugates.append(False)
+            elif sorted_mothers[i].is_fermion():
+                # For non-Majorana case, always False
+                conjugates.append(False)
+
+        # Return list 1,2,... for which indices are needed
+        conjugates = [i+1 for (i,c) in enumerate(conjugates) if c]
+
+        return conjugates
 
 #===============================================================================
 # HelasMatrixElementList
