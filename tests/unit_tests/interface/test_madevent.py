@@ -54,8 +54,6 @@ class TestMadEventCmd(unittest.TestCase):
         # run_card
         self.assertEqual(detect(pjoin(card_dir, 'run_card.dat')),
                          'run_card.dat')
-        self.assertEqual(detect(pjoin(card_dir, 'run_card.dat.bak')),
-                         'run_card.dat')
         self.assertEqual(detect(pjoin(root_path, 'input_files','run_card_matching.dat')),
                          'run_card.dat')
 

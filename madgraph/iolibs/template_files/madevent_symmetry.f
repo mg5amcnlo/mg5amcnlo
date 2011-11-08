@@ -191,7 +191,6 @@ c     Write ic with correct number of digits
       write(lun,15) 'script=' // fname
       write(lun,15) 'rm -f wait.$script >& /dev/null'
       write(lun,15) 'touch run.$script'
-      write(lun,15) 'echo $script'
       write(lun,'(a$)') 'for i in '
  15   format(a)
       end

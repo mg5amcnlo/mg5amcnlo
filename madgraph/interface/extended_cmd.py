@@ -583,13 +583,50 @@ class Cmd(cmd.Cmd):
 
     def do_help(self, line):
         """ propose some usefull possible action """
-        
-        cmd.Cmd.do_help(self,line)
-        
-        # if not basic help -> simple call is enough    
+                
+        # if they are an argument use the default help
         if line:
-            return
+            return cmd.Cmd.do_help(self, line)
+        
+        
+        names = self.get_names()
+        cmds = {}
+        names.sort()
+        # There can be duplicates if routines overridden
+        prevname = ''
+        for name in names:
+            if name[:3] == 'do_':
+                if name == prevname:
+                    continue
+                prevname = name
+                cmdname=name[3:]
+                doc = getattr(self, name).__doc__
+                if not doc:
+                    tag = "Documented commands"
+                elif ':' in doc:
+                    tag = doc.split(':',1)[0]
+                else:
+                    tag = "Documented commands"
+                if tag in cmds:
+                    cmds[tag].append(cmdname)
+                else:
+                    cmds[tag] = [cmdname]
+                
 
+        self.stdout.write("%s\n"%str(self.doc_leader))
+        tag = "Documented commands"
+        header = "%s (type help <topic>):" % tag
+        self.print_topics(header, cmds[tag],   15,80)
+        for name, item in cmds.items():
+            if name == "Documented commands":
+                continue
+            if name == "Not in help":
+                continue
+            header = "%s (type help <topic>):" % name
+            self.print_topics(header, item,   15,80)
+
+
+        ## Add contextual help
         if len(self.history) == 0:
             last_action_2 = last_action = 'start'
         else:
@@ -623,6 +660,7 @@ class Cmd(cmd.Cmd):
         print text
 
     def do_display(self, line):
+        """Advanced commands: basic display"""
         
         args = self.split_arg(line)
         #check the validity of the arguments

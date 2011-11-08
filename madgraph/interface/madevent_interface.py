@@ -208,8 +208,10 @@ class CmdExtended(cmd.Cmd):
         elif str(arg[0]) in ['exit','quit','EOF']:
             return stop
         
-        self.update_status('Command \'%s\' done.<br> Waiting for instruction.' % arg[0], level=None)
-        
+        try:
+            self.update_status('Command \'%s\' done.<br> Waiting for instruction.' % arg[0], level=None)
+        except:
+            pass
 #===============================================================================
 # HelpToCmd
 #===============================================================================
@@ -280,15 +282,28 @@ class HelpToCmd(object):
         logger.info("-- Combine the last run in order to write the number of events")
         logger.info("   require in the run_card.")
         self.run_options_help([])
+
+    def help_combine_events(self):
+        """ """
+        logger.info("syntax: store_events [run_name] [--run_options]")
+        logger.info("-- Write physically the events in the files.")
+        self.run_options_help([])
+
+    def help_import(self):
+        """ """
+        logger.info("syntax: import command PATH")
+        logger.info("-- Execute the command present in the file")
+        self.run_options_help([])
         
     def help_plot(self):
-        logger.info("syntax: help [RUN] [%s] " % '|'.join(self._plot_mode))
+        logger.info("syntax: help [RUN] [%s] [-f]" % '|'.join(self._plot_mode))
         logger.info("-- create the plot for the RUN (current run by default)")
         logger.info("     at the different stage of the event generation")
         logger.info("     Note than more than one mode can be specified in the same command.")
         logger.info("   This require to have MadAnalysis and td require. By default")
         logger.info("     if those programs are installed correctly, the creation")
         logger.info("     will be performed automaticaly during the event generation.")
+        logger.info("   -f options: answer all question by default.")
         
     def help_remove(self):
         logger.info("syntax: remove RUN [all|parton|pythia|pgs|delphes] [-f]")
@@ -445,6 +460,12 @@ class CheckValidForCmd(object):
         if '-f' in args:
             force = True
             args.remove('-f')
+        
+        if not len(args):
+            self.help_multi_run()
+            raise self.InvalidCmd("""multi_run command requires at least one argument for
+            the number of times that it call generate_events command""")
+            
         if args[-1].startswith('--laststep='):
             run = args[-1][6:]
             if run not in ['parton', 'pythia', 'pgs', 'delphes']:
@@ -458,10 +479,7 @@ class CheckValidForCmd(object):
                 To do so type: \'install Delphes\' in the mg5 interface''')
             del args[-1]
             
-        if not len(args):
-            self.help_multi_run()
-            raise self.InvalidCmd("""multi_run command requires at least one argument for
-            the number of times that it call generate_events command""")
+
         elif not args[0].isdigit():
             self.help_multi_run()
             raise self.InvalidCmd("The first argument of multi_run should be a integer.")
@@ -598,7 +616,12 @@ class CheckValidForCmd(object):
                 raise self.InvalidCmd('No run name currently define. Please add this information.')             
             args.append('all')
             return
-                
+
+        force = False
+        if '-f' in args:
+            args.remove('-f')
+            force = True
+        
         if args[0] not in self._plot_mode:
             self.set_run_name(args[0])
             del args[0]
@@ -612,6 +635,10 @@ class CheckValidForCmd(object):
             if arg not in self._plot_mode and arg != self.run_name:
                  self.help_plot()
                  raise self.InvalidCmd('unknown options %s' % arg)        
+    
+        if force:
+            args.append('-f')
+    
     
     def check_pgs(self, arg):
         """Check the argument for pythia command
@@ -697,11 +724,16 @@ class CheckValidForCmd(object):
     def check_import(self, args):
         """check the validity of line"""
          
-        if not args or args[0] not in ['command']:
+        if not args:
             self.help_import()
             raise self.InvalidCmd('wrong \"import\" format')
         
+        if args[0] != 'command':
+            args.insert(0,'command')
+        
+        
         if not len(args) == 2 or not os.path.exists(args[1]):
+            print len(args), os.path.exists(args[1]),args[1]
             raise self.InvalidCmd('PATH is mandatory for import command\n')
         
 
@@ -907,6 +939,22 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
     queue  = 'madgraph'
     nb_core = None
     
+    next_possibility = {
+        'start': ['generate_events [OPTIONS]', 'multi_run [OPTIONS]',
+                      'help generate_events'],
+        'generate_events': ['generate_events [OPTIONS]', 'multi_run [OPTIONS]', 'pythia', 'pgs','delphes'],
+        'multi_run': ['generate_events [OPTIONS]', 'multi_run [OPTIONS]'],
+        'survey': ['refine'],
+        'refine': ['combine_events'],
+        'combine_events': ['store'],
+        'store': ['pythia'],
+        'pythia': ['pgs', 'delphes'],
+        'pgs': ['generate_events [OPTIONS]', 'multi_run [OPTIONS]'],
+        'delphes' : ['generate_events [OPTIONS]', 'multi_run [OPTIONS]']
+    }
+    
+    
+    
     ############################################################################
     def __init__(self, me_dir = None, *completekey, **stdin):
         """ add information to the cmd """
@@ -940,7 +988,7 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
         self.set_configuration()
         self.timeout = 20
         if self.web:
-            os.system('touch Online')
+            os.system('touch %s' % pjoin(self.me_dir,'Online'))
 
         
         # load the current status of the directory
@@ -1098,7 +1146,7 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
   
     ############################################################################
     def do_import(self, line):
-        """Import files with external formats"""
+        """Advanced commands: Import command files"""
 
         args = self.split_arg(line)
         # Check argument's validity
@@ -1176,6 +1224,7 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
             self.exec_cmd('refine %s' % nb_event, postcmd=False)
         
         self.exec_cmd('combine_events', postcmd=False)
+        self.exec_cmd('store_events', postcmd=False)
         if not self.run_card['gridpack'] in self.true:
             self.exec_cmd('pythia --no_default', postcmd=False, printcmd=False)
             if os.path.exists(pjoin(self.me_dir,'Events','pythia_events.hep')):
@@ -1253,7 +1302,7 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
             
     ############################################################################      
     def do_survey(self, line):
-        """ launch survey for the current process """
+        """Advanced commands: launch survey for the current process """
                 
         args = self.split_arg(line)
         # Check argument's validity
@@ -1311,7 +1360,7 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
 
     ############################################################################      
     def do_refine(self, line):
-        """ launch survey for the current process """
+        """Advanced commands: launch survey for the current process """
 
         args = self.split_arg(line)
         # Check argument's validity
@@ -1377,7 +1426,7 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
         
     ############################################################################ 
     def do_combine_events(self, line):
-        """Launch combine events"""
+        """Advanced commands: Launch combine events"""
 
         args = self.split_arg(line)
         # Check argument's validity
@@ -1423,7 +1472,16 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
                 self.create_root_file()
         
         self.create_plot()
-            
+
+
+    ############################################################################ 
+    def do_store_events(self, line):
+        """Advanced commands: Launch combine events"""
+
+        args = self.split_arg(line)
+        # Check argument's validity
+        self.check_combine_events(args)
+
         #
         # STORE
         #
@@ -1441,6 +1499,8 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
         
         args = self.split_arg(line)
         # Check argument's validity
+        self.edit_one_card('pythia_card.dat', args)
+        
         if '-f' in args:
             force = True
             args.remove('-f')
@@ -1704,7 +1764,10 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
         args = self.split_arg(line)
         # Check argument's validity
         self.check_plot(args)
+        logger.info('plot for run %s' % self.run_name)
         
+        self.edit_one_card('plot_card.dat', args)
+                
         if any([arg in ['all','parton'] for arg in args]):
             filename = pjoin(self.me_dir, 'Events','%s_unweighted_events.lhe' % self.run_name)
             if os.path.exists(filename+'.gz'):
@@ -1785,6 +1848,7 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
         """launch pgs"""
         
         args = self.split_arg(line)
+        self.edit_one_card('pgs_card.dat', args)
         # Check argument's validity
         if '-f' in args:
             force = True
@@ -1895,6 +1959,8 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
         """ run delphes and make associate root file/plot """
  
         args = self.split_arg(line)
+        self.edit_one_card('delphes_card.dat', args)
+        self.edit_one_card('trigger_card.dat', args)
         # Check argument's validity
         if '-f' in args:
             force = True
@@ -2265,8 +2331,11 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
         except:
             # If nothing runs they they are no result to update
             pass
-        self.update_status('', level=None)
-        os.system('%s/gen_cardhtml-pl' % (self.dirbin))
+        try:
+            self.update_status('', level=None)
+        except:
+            pass
+        os.system('%s/gen_cardhtml-pl &> /dev/null' % (self.dirbin))
 
         return super(MadEventCmd, self).do_quit(line)
     
@@ -2539,6 +2608,25 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
                 
             if mode.isdigit():
                 mode = name[int(mode)]
+
+    def edit_one_card(self, card, fct_args):
+        """ """
+
+        if '-f' in fct_args or '--no_default' in fct_args:
+            return
+
+        question = """Do you want to edit the %s?""" % card
+        answer = self.ask(question, 'n', ['y','n'], timeout=self.timeout,path_msg='enter path')
+        if answer == 'y':
+            path = pjoin(self.me_dir,'Cards', card)
+            self.exec_cmd('open %s' % path)
+        elif answer != 'n':
+            card_name = self.detect_card_type(answer)
+            if card_name != card:
+                raise self.InvalidCmd('Invalid File Format for a %s' % card)
+            logger.info('copy %s as %s' % (answer, card_name))
+            files.cp(answer, pjoin(self.me_dir, 'Cards', card_name))   
+
 
 
     def add_card_to_run(self, name):

@@ -1561,7 +1561,6 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
     def do_add(self, line):
         """Generate an amplitude for a given process and add to
         existing amplitudes
-        syntax:
         """
 
         args = self.split_arg(line)
@@ -2737,7 +2736,7 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
         
     
     def do_load(self, line):
-        """Load information from file"""
+        """Not in help: Load information from file"""
 
         args = self.split_arg(line)
         # check argument validity
@@ -2803,7 +2802,7 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
                 raise self.RWError('Could not load processes from file %s' % args[1])
     
     def do_save(self, line):
-        """Save information to file"""
+        """Not in help: Save information to file"""
 
         args = self.split_arg(line)
         # Check argument validity
