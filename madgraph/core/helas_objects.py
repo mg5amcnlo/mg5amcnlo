@@ -857,7 +857,8 @@ class HelasWavefunction(base_objects.PhysicsObject):
         # the majorana is the wavefunctions or not.
         if self.is_boson():
             # check that we have only majorana
-            if all([ wf.is_majorana() for wf in self.get('mothers') if wf.is_fermion()]):
+            if any([1 for wf in self.get('mothers') if wf.is_fermion()]) and \
+               all([ wf.is_majorana() for wf in self.get('mothers') if wf.is_fermion()]):
                 order = [ wf.get('particle').get('pdg_code') for wf in self.get('mothers')]
                 if not order:
                     return False
@@ -1304,13 +1305,6 @@ class HelasWavefunctionList(base_objects.PhysicsObjectList):
             if my_wf.get_with_flow('state') != \
                                           fermion_mother.get_with_flow('state'):
                 clashes.append([fermion_mother])
-#            elif my_wf.is_majorana() and fermion_mother.is_majorana():
-#                pos = self.get('pdg_codes').index(my_wf.get_anti_pdg_code())
-#                if my_wf['state'] == 'incoming':
-#                    if pos % 2:
-#                        clashes.append([fermion_mother])
-#                elif not pos % 2:
-#                    clashes.append([fermion_mother])
                     
 
         # Now check all other fermions
@@ -1721,7 +1715,8 @@ class HelasAmplitude(base_objects.PhysicsObject):
                     self.get('mothers')]):
             return True
 
-        if all([ wf.is_majorana() for wf in self.get('mothers') if wf.is_fermion()]):
+        if any([True for wf in self.get('mothers') if wf.is_fermion()]) and \
+           all([ wf.is_majorana() for wf in self.get('mothers') if wf.is_fermion()]):
             order = [ wf.get('particle').get('pdg_code') for wf in self.get('mothers')] 
             if not order:
                 return False
