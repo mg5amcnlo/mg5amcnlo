@@ -3684,11 +3684,12 @@ class HelasMatrixElement(base_objects.PhysicsObject):
 
     @staticmethod
     def majorana_conjugates(arg):
-        """Returns a list [bool, bool, ...] of necessary conjugates
-        due to wrong order of I/O Majorana particles compared to
-        interaction order (or empty list if no Majorana particles).
-        This is crucial if the Lorentz structure depends on the direction
-        of the Majorana particles, as in MSSM with goldstinos."""
+        """Returns a list [1,2,...] of fermion lines that need
+         conjugate wfs due to wrong order of I/O Majorana particles
+         compared to interaction order (or empty list if no Majorana
+         particles).  This is crucial if the Lorentz structure depends
+         on the direction of the Majorana particles, as in MSSM with
+         goldstinos."""
 
         assert isinstance(arg, (HelasWavefunction, HelasAmplitude)), \
             "%s is not a valid HelasWavefunction or HelasAmplitude" % repr(arg)
