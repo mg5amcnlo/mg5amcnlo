@@ -1734,9 +1734,7 @@ class HelasAmplitude(base_objects.PhysicsObject):
         for i in range(len(fermions) - 1):
             for j in range(i + 1, len(fermions)):
                 if fermions[j] < fermions[i]:
-                    tmp = fermions[i]
-                    fermions[i] = fermions[j]
-                    fermions[j] = tmp
+                    fermions[i], fermions[j] = fermions[j], fermions[i]
                     nflips = nflips + 1
 
         return (-1) ** nflips
