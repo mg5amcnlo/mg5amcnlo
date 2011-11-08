@@ -1981,7 +1981,7 @@ class HelasAmplitude(base_objects.PhysicsObject):
                 if fermions[i].get('fermionflow') < 0 or \
                    fermions[i+1].get('fermionflow') < 0:
                     indices.append(i/2 + 1)
-            return tuple(indices)
+            return tuple(sorted(indices))
         else:
             return ()
 
