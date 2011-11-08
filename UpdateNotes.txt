@@ -1,5 +1,16 @@
 Update notes for MadGraph 5 (in reverse time order)
 
+1.3.27 (05/11/11) JA: Fix bug in mirrored amplitudes (sometimes
+                      amplitudes that should not be flagged as
+                      mirrored were flagged as mirrored). Thanks
+                      Marco Zaro for reporting this!
+                  JA: Fix another problem getting enough events in
+                      gridpack mode (it was not completely fixed in
+                      v. 1.3.24). Thanks Alexis!
+                  JA: Added "!" comments for all parameters in the default
+                      run_card, since apparently this is still needed
+                      for g77 to correctly read the parameters.
+ 
 1.3.26 (31/10/11) JA: Fix color setting in MadEvent event file for
                       multiparticle vertices, which was not taken into
                       account in the upgrade in v. 1.3.18

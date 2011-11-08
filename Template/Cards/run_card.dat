@@ -69,25 +69,25 @@
 # Automatic ptj and mjj cuts if xqcut > 0
 # (turn off for VBF and single top processes)
 #**********************************************************
-   T  = auto_ptj_mjj
+   T  = auto_ptj_mjj  ! Automatic setting of ptj and mjj
 #**********************************************************
 #                                                                    
 #**********************************
 # BW cutoff (M+/-bwcutoff*Gamma)
 #**********************************
-  15  = bwcutoff
+  15  = bwcutoff      ! (M+/-bwcutoff*Gamma)
 #**********************************************************
 # Apply pt/E/eta/dr/mij cuts on decay products or not
-# (note that etmiss/ptll/ptheavy/sorted cuts always apply)
+# (note that etmiss/ptll/ptheavy/ht/sorted cuts always apply)
 #**********************************************************
-   T  = cut_decays
+   T  = cut_decays    ! Cut decay products 
 #*************************************************************
 # Number of helicities to sum per event (0 = all helicities)
 # 0 gives more stable result, but longer run time (needed for
 # long decay chains e.g.).
 # Use >=2 if most helicities contribute, e.g. pure QCD.
 #*************************************************************
-   0  = nhel
+   0  = nhel          ! Number of helicities used per event
 #*******************                                                 
 # Standard Cuts
 #*******************                                                 
@@ -215,7 +215,7 @@
 # maximal pdg code for quark to be considered as a light jet         *
 # (otherwise b cuts are applied)                                     *
 #*********************************************************************
- 4 = maxjetflavor
+ 4 = maxjetflavor    ! Maximum jet pdg code
 #*********************************************************************
 # Jet measure cuts                                                   *
 #*********************************************************************
