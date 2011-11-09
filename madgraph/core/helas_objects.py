@@ -222,6 +222,9 @@ class HelasWavefunction(base_objects.PhysicsObject):
         # should be onshell (True), as well as for forbidden s-channels (False).
         # Default is None
         self['onshell'] = None
+        # conjugate_indices is a list [1,2,...] with fermion lines
+        # that need conjugates. Default is "None"
+        self['conjugate_indices'] = None
 
     # Customized constructor
     def __init__(self, *arguments):
@@ -398,12 +401,22 @@ class HelasWavefunction(base_objects.PhysicsObject):
                         "%s is not a valid bool" % str(value) + \
                         " for onshell"
 
+        if name == 'conjugate_indices':
+            if not isinstance(value, tuple) and value != None:
+                raise self.PhysicsObjectError, \
+                        "%s is not a valid tuple" % str(value) + \
+                        " for conjugate_indices"
+
         return True
 
     # Enhanced get function, where we can directly call the properties of the particle
     def get(self, name):
         """When calling any property related to the particle,
         automatically call the corresponding property of the particle."""
+
+        # Set conjugate_indices if it's not already set
+        if name == 'conjugate_indices' and self[name] == None:
+            self['conjugate_indices'] = self.get_conjugate_index()
 
         if name in ['spin', 'mass', 'width', 'self_antipart']:
             return self['particle'].get(name)
@@ -844,10 +857,7 @@ class HelasWavefunction(base_objects.PhysicsObject):
         """Returns true if any of the mothers have negative
         fermionflow"""
 
-        return any([wf.get('fermionflow') < 0 for wf in \
-                    self.get('mothers')]) or \
-                    (self.get('interaction_id') and self.get('fermionflow') < 0) \
-                    or HelasMatrixElement.majorana_conjugates(self)
+        return self.get('conjugate_indices') != ()
 
     def get_with_flow(self, name):
         """Generate the is_part and state needed for writing out
@@ -924,7 +934,7 @@ class HelasWavefunction(base_objects.PhysicsObject):
 
         # Check if we need to append a charge conjugation flag
         if self.needs_hermitian_conjugate():
-            res.append(self.get_conjugate_index())
+            res.append(self.get('conjugate_indices'))
 
         return (tuple(res), tuple(self.get('lorentz')))
 
@@ -1157,21 +1167,37 @@ class HelasWavefunction(base_objects.PhysicsObject):
     def get_conjugate_index(self):
         """Return the index of the particle that should be conjugated."""
 
-        if self.needs_hermitian_conjugate():
-            fermions = [wf for wf in self.get('mothers') if \
-                        wf.is_fermion()]
-            # Initialize indices with indices due to Majoranas
-            indices = HelasMatrixElement.majorana_conjugates(self)
-            self_index = self.find_outgoing_number() - 1
-            if self.is_fermion():
-                fermions.insert(self_index, self)
-            for i in range(0,len(fermions), 2):
-                if fermions[i].get('fermionflow') < 0 or \
-                   fermions[i+1].get('fermionflow') < 0:
-                    indices.append(i/2 + 1)
-            return tuple(sorted(indices))
-        else:
+        if not any([(wf.get('fermionflow') < 0 or wf.is_majorana()) for wf in \
+                    self.get('mothers')]) and \
+                    (not self.get('interaction_id') or \
+                    self.get('fermionflow') >= 0):
             return ()
+        
+        # Pick out first sorted mothers, then fermions
+        mothers, self_index = \
+                      self.get('mothers').sort_by_pdg_codes(self.get('pdg_codes'),
+                                                            self.get_anti_pdg_code())
+        fermions = HelasWavefunctionList([wf for wf in mothers if wf.is_fermion()])
+
+        # Insert this wavefunction in list (in the right place)
+        if self.is_fermion():
+            me = copy.copy(self)
+            # Flip incoming/outgoing to make me equivalent to mother
+            # as needed by majorana_conjugates
+            me.set('state', [state for state in ['incoming', 'outgoing'] \
+                             if state != me.get('state')][0])
+            fermions.insert(self_index, me)
+
+        # Initialize indices with indices due to Majoranas with wrong order
+        indices = fermions.majorana_conjugates()
+
+        # Check for fermions with negative fermion flow
+        for i in range(0,len(fermions), 2):
+            if fermions[i].get('fermionflow') < 0 or \
+               fermions[i+1].get('fermionflow') < 0:
+                indices.append(i/2 + 1)
+
+        return tuple(sorted(indices))
 
     def get_vertex_leg_numbers(self):
         """Get a list of the number of legs in vertices in this diagram"""
@@ -1410,6 +1436,40 @@ class HelasWavefunctionList(base_objects.PhysicsObjectList):
 
         return HelasWavefunctionList(sorted_mothers), my_index
 
+    def majorana_conjugates(self):
+        """Returns a list [1,2,...] of fermion lines that need
+         conjugate wfs due to wrong order of I/O Majorana particles
+         compared to interaction order (or empty list if no Majorana
+         particles).  This is crucial if the Lorentz structure depends
+         on the direction of the Majorana particles, as in MSSM with
+         goldstinos."""
+
+        if len([m for m in self if m.is_majorana()]) < 2:
+            return []
+
+        conjugates = []
+        
+        # Check if the order for Majorana fermions is correct
+        for i in range(0, len(self), 2):
+            if self[i].is_majorana() and self[i+1].is_majorana() \
+                   and self[i].get_pdg_code() != \
+                   self[i+1].get_pdg_code():
+                # Check if mother I/O order is correct (IO)
+                if self[i].get_spin_state_number() > 0 and \
+                   self[i + 1].get_spin_state_number() < 0:
+                    # Order is wrong, we need a conjugate here
+                    conjugates.append(True)
+                else:
+                    conjugates.append(False)
+            elif self[i].is_fermion():
+                # For non-Majorana case, always False
+                conjugates.append(False)
+
+        # Return list 1,2,... for which indices are needed
+        conjugates = [i+1 for (i,c) in enumerate(conjugates) if c]
+
+        return conjugates
+
     @staticmethod
     def extract_wavefunctions(mothers):
         """Recursively extract the wavefunctions from mothers of mothers"""
@@ -1447,6 +1507,9 @@ class HelasAmplitude(base_objects.PhysicsObject):
         self['fermionfactor'] = 0
         self['color_indices'] = []
         self['mothers'] = HelasWavefunctionList()
+        # conjugate_indices is a list [1,2,...] with fermion lines
+        # that need conjugates. Default is "None"
+        self['conjugate_indices'] = None
 
     # Customized constructor
     def __init__(self, *arguments):
@@ -1564,6 +1627,12 @@ class HelasAmplitude(base_objects.PhysicsObject):
                       "%s is not a valid list of mothers for amplitude" % \
                       str(value)
 
+        if name == 'conjugate_indices':
+            if not isinstance(value, tuple) and value != None:
+                raise self.PhysicsObjectError, \
+                        "%s is not a valid tuple" % str(value) + \
+                        " for conjugate_indices"
+
         return True
 
     def __str__(self):
@@ -1596,6 +1665,10 @@ class HelasAmplitude(base_objects.PhysicsObject):
 
         if name == 'fermionfactor' and not self[name]:
             self.calculate_fermionfactor()
+
+        # Set conjugate_indices if it's not already set
+        if name == 'conjugate_indices' and self[name] == None:
+            self['conjugate_indices'] = self.get_conjugate_index()
 
         return super(HelasAmplitude, self).get(name)
 
@@ -1672,9 +1745,7 @@ class HelasAmplitude(base_objects.PhysicsObject):
         """Returns true if any of the mothers have negative
         fermionflow"""
 
-        return any([wf.get('fermionflow') < 0 for wf in \
-                    self.get('mothers')]) or \
-                    HelasMatrixElement.majorana_conjugates(self)
+        return self.get('conjugate_indices') != ()
 
     def get_call_key(self):
         """Generate the (spin, state) tuples used as key for the helas call
@@ -1689,7 +1760,7 @@ class HelasAmplitude(base_objects.PhysicsObject):
 
         # Check if we need to append a charge conjugation flag
         if self.needs_hermitian_conjugate():
-            res.append(self.get_conjugate_index())
+            res.append(self.get('conjugate_indices'))
 
         return (tuple(res), tuple(self.get('lorentz')))
 
@@ -1970,18 +2041,25 @@ class HelasAmplitude(base_objects.PhysicsObject):
     def get_conjugate_index(self):
         """Return the index of the particle that should be conjugated."""
 
-        if self.needs_hermitian_conjugate():
-            fermions = [wf for wf in self.get('mothers') if \
-                        wf.is_fermion()]
-            # Initialize indices with indices due to Majoranas
-            indices = HelasMatrixElement.majorana_conjugates(self)
-            for i in range(0,len(fermions), 2):
-                if fermions[i].get('fermionflow') < 0 or \
-                   fermions[i+1].get('fermionflow') < 0:
-                    indices.append(i/2 + 1)
-            return tuple(sorted(indices))
-        else:
+        if not any([(wf.get('fermionflow') < 0 or wf.is_majorana()) for wf in \
+                    self.get('mothers')]):
             return ()
+        
+        # Pick out first sorted mothers, then fermions
+        mothers, self_index = \
+                      self.get('mothers').sort_by_pdg_codes(self.get('pdg_codes'))
+        fermions = HelasWavefunctionList([wf for wf in mothers if wf.is_fermion()])
+
+        # Initialize indices with indices due to Majoranas with wrong order
+        indices = fermions.majorana_conjugates()
+
+        # Check for fermions with negative fermion flow
+        for i in range(0,len(fermions), 2):
+            if fermions[i].get('fermionflow') < 0 or \
+               fermions[i+1].get('fermionflow') < 0:
+                indices.append(i/2 + 1)
+                
+        return tuple(sorted(indices))
 
     def get_vertex_leg_numbers(self):
         """Get a list of the number of legs in vertices in this diagram"""
@@ -3679,80 +3757,6 @@ class HelasMatrixElement(base_objects.PhysicsObject):
 
         # Next sort according to spin_state_number
         return HelasWavefunctionList(sorted_mothers)
-
-    @staticmethod
-    def majorana_conjugates(arg):
-        """Returns a list [1,2,...] of fermion lines that need
-         conjugate wfs due to wrong order of I/O Majorana particles
-         compared to interaction order (or empty list if no Majorana
-         particles).  This is crucial if the Lorentz structure depends
-         on the direction of the Majorana particles, as in MSSM with
-         goldstinos."""
-
-        assert isinstance(arg, (HelasWavefunction, HelasAmplitude)), \
-            "%s is not a valid HelasWavefunction or HelasAmplitude" % repr(arg)
-
-        if not arg.get('interaction_id'):
-            return []
-
-        if not any([m.is_majorana() for m in arg.get('mothers')]):
-            return []
-
-        my_pdg_code = 0
-        my_spin = 0
-        if isinstance(arg, HelasWavefunction):
-            my_pdg_code = arg.get_anti_pdg_code()
-            my_spin = arg.get_spin_state_number()
-
-        sorted_mothers, my_index = arg.get('mothers').sort_by_pdg_codes(\
-            arg.get('pdg_codes'), my_pdg_code)
-
-        # If fermion, remove fermion partner from list
-        partner = None
-        if isinstance(arg, HelasWavefunction) and arg.is_fermion():
-            # Fermion case, pick out the fermion flow partner
-            if my_index % 2 == 0:
-                # partner is after arg
-                partner_index = my_index
-            else:
-                # partner is before arg
-                partner_index = my_index - 1
-            partner = sorted_mothers.pop(partner_index)
-
-        conjugates = []
-        
-        # Check if the order for Majorana fermions is correct
-        for i in range(0, len(sorted_mothers), 2):
-            if my_index >= 0 and arg.is_fermion() and \
-                   i == my_index or i+1 == my_index:
-                # Insert for this wavefunction
-                if arg.is_majorana() and partner.is_majorana() and \
-                       arg.get_pdg_code() != partner.get_pdg_code() and \
-                       (i == my_index and arg.get_spin_state_number() < 0 or \
-                        i+1 == my_index and arg.get_spin_state_number() > 0):
-                    # The I/O order is not correct for wavefunction
-                    # (note that incoming result correspond to outgoing in amp)
-                    conjugates.append(True)
-                else:
-                    conjugates.append(False)
-            if sorted_mothers[i].is_majorana() and sorted_mothers[i+1].is_majorana() \
-                   and sorted_mothers[i].get_pdg_code() != \
-                   sorted_mothers[i+1].get_pdg_code():
-                # Check if mother I/O order is correct (IO)
-                if sorted_mothers[i].get_spin_state_number() > 0 and \
-                   sorted_mothers[i + 1].get_spin_state_number() < 0:
-                    # Order is wrong, we need a conjugate here
-                    conjugates.append(True)
-                else:
-                    conjugates.append(False)
-            elif sorted_mothers[i].is_fermion():
-                # For non-Majorana case, always False
-                conjugates.append(False)
-
-        # Return list 1,2,... for which indices are needed
-        conjugates = [i+1 for (i,c) in enumerate(conjugates) if c]
-
-        return conjugates
 
 #===============================================================================
 # HelasMatrixElementList

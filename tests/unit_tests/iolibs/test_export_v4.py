@@ -8118,7 +8118,7 @@ CALL FFV1_0(W(1,3),W(1,7),W(1,2),GGI,AMP(3))""".split('\n')
                                              n2, \
                                              z]),
                       'color': [],
-                      'lorentz':[''],
+                      'lorentz':['FFV1'],
                       'couplings':{(0, 0):'GZN12'},
                       'orders':{'QED':1}}))
 
@@ -8130,7 +8130,7 @@ CALL FFV1_0(W(1,3),W(1,7),W(1,2),GGI,AMP(3))""".split('\n')
                                              n1, \
                                              seminus]),
                       'color': [],
-                      'lorentz':[''],
+                      'lorentz':['FFS1'],
                       'couplings':{(0, 0):'GELN1M'},
                       'orders':{'QED':1}}))
 
@@ -8141,7 +8141,7 @@ CALL FFV1_0(W(1,3),W(1,7),W(1,2),GGI,AMP(3))""".split('\n')
                                              eminus, \
                                              seplus]),
                       'color': [],
-                      'lorentz':[''],
+                      'lorentz':['FFS1'],
                       'couplings':{(0, 0):'GELN1P'},
                       'orders':{'QED':1}}))
 
@@ -8152,7 +8152,7 @@ CALL FFV1_0(W(1,3),W(1,7),W(1,2),GGI,AMP(3))""".split('\n')
                                              n2, \
                                              seminus]),
                       'color': [],
-                      'lorentz':[''],
+                      'lorentz':['FFS1'],
                       'couplings':{(0, 0):'GELN2M'},
                       'orders':{'QED':1}}))
 
@@ -8163,7 +8163,7 @@ CALL FFV1_0(W(1,3),W(1,7),W(1,2),GGI,AMP(3))""".split('\n')
                                              eminus, \
                                              seplus]),
                       'color': [],
-                      'lorentz':[''],
+                      'lorentz':['FFS1'],
                       'couplings':{(0, 0):'GELN2P'},
                       'orders':{'QED':1}}))
 
@@ -8194,9 +8194,11 @@ CALL FFV1_0(W(1,3),W(1,7),W(1,2),GGI,AMP(3))""".split('\n')
 
         matrix_element = helas_objects.HelasMatrixElement(myamplitude)
 
-        myfortranmodel = helas_call_writers.FortranHelasCallWriter(mymodel)
+        myfortranmodel = helas_call_writers.FortranUFOHelasCallWriter(mymodel)
 
         result = myfortranmodel.get_matrix_element_calls(matrix_element)
+
+        #print "\n".join(result)
 
         goal = """CALL IXXXXX(P(0,1),zero,NHEL(1),+1*IC(1),W(1,1))
 CALL IXXXXX(P(0,2),zero,NHEL(2),+1*IC(2),W(1,2))
@@ -8204,46 +8206,46 @@ CALL OXXXXX(P(0,3),mn2,NHEL(3),+1*IC(3),W(1,3))
 CALL OXXXXX(P(0,4),mn1,NHEL(4),+1*IC(4),W(1,4))
 CALL VXXXXX(P(0,5),zmass,NHEL(5),+1*IC(5),W(1,5))
 CALL VXXXXX(P(0,6),zmass,NHEL(6),+1*IC(6),W(1,6))
-CALL HIOXXX(W(1,1),W(1,3),GELN2M,Msl2,Wsl2,W(1,7))
-CALL FVOCXX(W(1,4),W(1,5),GZN12,mn2,wn2,W(1,8))
-CALL FSICXX(W(1,2),W(1,7),GELN1P,mn1,zero,W(1,9))
+CALL FFS1_3(W(1,1),W(1,3),GELN2M,Msl2, Wsl2, W(1,7))
+CALL FFV1C1_1(W(1,4),W(1,5),GZN12,mn2, wn2, W(1,8))
+CALL FFS1C1_2(W(1,2),W(1,7),GELN1P,mn1, zero, W(1,9))
 # Amplitude(s) for diagram number 1
-CALL IOVXXX(W(1,9),W(1,8),W(1,6),GZN12,AMP(1))
-CALL FVOCXX(W(1,4),W(1,6),GZN12,mn2,wn2,W(1,10))
+CALL FFV1_0(W(1,9),W(1,8),W(1,6),GZN12,AMP(1))
+CALL FFV1C1_1(W(1,4),W(1,6),GZN12,mn2, wn2, W(1,10))
 # Amplitude(s) for diagram number 2
-CALL IOVXXX(W(1,9),W(1,10),W(1,5),GZN12,AMP(2))
-CALL HIOXXX(W(1,1),W(1,4),GELN1M,Msl2,Wsl2,W(1,11))
-CALL FVOXXX(W(1,3),W(1,5),GZN12,mn1,zero,W(1,12))
-CALL FSICXX(W(1,2),W(1,11),GELN2P,mn2,wn2,W(1,13))
+CALL FFV1_0(W(1,9),W(1,10),W(1,5),GZN12,AMP(2))
+CALL FFS1_3(W(1,1),W(1,4),GELN1M,Msl2, Wsl2, W(1,11))
+CALL FFV1_1(W(1,3),W(1,5),GZN12,mn1, zero, W(1,12))
+CALL FFS1C1_2(W(1,2),W(1,11),GELN2P,mn2, wn2, W(1,13))
 # Amplitude(s) for diagram number 3
-CALL IOVCXX(W(1,13),W(1,12),W(1,6),GZN12,AMP(3))
-CALL FVOXXX(W(1,3),W(1,6),GZN12,mn1,zero,W(1,14))
+CALL FFV1C1_0(W(1,13),W(1,12),W(1,6),GZN12,AMP(3))
+CALL FFV1_1(W(1,3),W(1,6),GZN12,mn1, zero, W(1,14))
 # Amplitude(s) for diagram number 4
-CALL IOVCXX(W(1,13),W(1,14),W(1,5),GZN12,AMP(4))
-CALL HIOCXX(W(1,2),W(1,3),GELN2P,Msl2,Wsl2,W(1,15))
-CALL FSIXXX(W(1,1),W(1,15),GELN1M,mn1,zero,W(1,16))
+CALL FFV1C1_0(W(1,13),W(1,14),W(1,5),GZN12,AMP(4))
+CALL FFS1C1_3(W(1,2),W(1,3),GELN2P,Msl2, Wsl2, W(1,15))
+CALL FFS1_2(W(1,1),W(1,15),GELN1M,mn1, zero, W(1,16))
 # Amplitude(s) for diagram number 5
-CALL IOVXXX(W(1,16),W(1,8),W(1,6),GZN12,AMP(5))
+CALL FFV1_0(W(1,16),W(1,8),W(1,6),GZN12,AMP(5))
 # Amplitude(s) for diagram number 6
-CALL IOVXXX(W(1,16),W(1,10),W(1,5),GZN12,AMP(6))
-CALL HIOCXX(W(1,2),W(1,4),GELN1P,Msl2,Wsl2,W(1,17))
-CALL FSIXXX(W(1,1),W(1,17),GELN2M,mn2,wn2,W(1,18))
+CALL FFV1_0(W(1,16),W(1,10),W(1,5),GZN12,AMP(6))
+CALL FFS1C1_3(W(1,2),W(1,4),GELN1P,Msl2, Wsl2, W(1,17))
+CALL FFS1_2(W(1,1),W(1,17),GELN2M,mn2, wn2, W(1,18))
 # Amplitude(s) for diagram number 7
-CALL IOVCXX(W(1,18),W(1,12),W(1,6),GZN12,AMP(7))
+CALL FFV1C1_0(W(1,18),W(1,12),W(1,6),GZN12,AMP(7))
 # Amplitude(s) for diagram number 8
-CALL IOVCXX(W(1,18),W(1,14),W(1,5),GZN12,AMP(8))
-CALL HIOXXX(W(1,1),W(1,12),GELN1M,Msl2,Wsl2,W(1,19))
+CALL FFV1C1_0(W(1,18),W(1,14),W(1,5),GZN12,AMP(8))
+CALL FFS1_3(W(1,1),W(1,12),GELN1M,Msl2, Wsl2, W(1,19))
 # Amplitude(s) for diagram number 9
-CALL IOSCXX(W(1,2),W(1,10),W(1,19),GELN2P,AMP(9))
-CALL HIOXXX(W(1,1),W(1,10),GELN2M,Msl2,Wsl2,W(1,20))
+CALL FFS1C1_0(W(1,2),W(1,10),W(1,19),GELN2P,AMP(9))
+CALL FFS1_3(W(1,1),W(1,10),GELN2M,Msl2, Wsl2, W(1,20))
 # Amplitude(s) for diagram number 10
-CALL IOSCXX(W(1,2),W(1,12),W(1,20),GELN1P,AMP(10))
-CALL HIOXXX(W(1,1),W(1,14),GELN1M,Msl2,Wsl2,W(1,21))
+CALL FFS1C1_0(W(1,2),W(1,12),W(1,20),GELN1P,AMP(10))
+CALL FFS1_3(W(1,1),W(1,14),GELN1M,Msl2, Wsl2, W(1,21))
 # Amplitude(s) for diagram number 11
-CALL IOSCXX(W(1,2),W(1,8),W(1,21),GELN2P,AMP(11))
-CALL HIOXXX(W(1,1),W(1,8),GELN2M,Msl2,Wsl2,W(1,22))
+CALL FFS1C1_0(W(1,2),W(1,8),W(1,21),GELN2P,AMP(11))
+CALL FFS1_3(W(1,1),W(1,8),GELN2M,Msl2, Wsl2, W(1,22))
 # Amplitude(s) for diagram number 12
-CALL IOSCXX(W(1,2),W(1,14),W(1,22),GELN1P,AMP(12))""".split('\n')
+CALL FFS1C1_0(W(1,2),W(1,14),W(1,22),GELN1P,AMP(12))""".split('\n')
 
         for i in range(max(len(result), len(goal))):
             self.assertEqual(result[i], goal[i])

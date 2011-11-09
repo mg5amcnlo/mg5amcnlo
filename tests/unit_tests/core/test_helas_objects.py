@@ -260,7 +260,7 @@ class HelasMatrixElementTest(unittest.TestCase):
                       'is_part':True,
                       'self_antipart':True}))
 
-        g = mypartlist[len(mypartlist) - 1]
+        g = mypartlist[-1]
 
         # A quark U and its antiparticle
         mypartlist.append(base_objects.Particle({'name':'u',
@@ -277,7 +277,7 @@ class HelasMatrixElementTest(unittest.TestCase):
                       'propagating':True,
                       'is_part':True,
                       'self_antipart':False}))
-        u = mypartlist[len(mypartlist) - 1]
+        u = mypartlist[-1]
         antiu = copy.copy(u)
         antiu.set('is_part', False)
 
@@ -296,7 +296,7 @@ class HelasMatrixElementTest(unittest.TestCase):
                       'propagating':True,
                       'is_part':True,
                       'self_antipart':False}))
-        eminus = mypartlist[len(mypartlist) - 1]
+        eminus = mypartlist[-1]
         eplus = copy.copy(eminus)
         eplus.set('is_part', False)
 
@@ -315,7 +315,7 @@ class HelasMatrixElementTest(unittest.TestCase):
                       'propagating':True,
                       'is_part':True,
                       'self_antipart':True}))
-        a = mypartlist[len(mypartlist) - 1]
+        a = mypartlist[-1]
 
 
         # A E slepton and its antiparticle
@@ -333,7 +333,7 @@ class HelasMatrixElementTest(unittest.TestCase):
                       'propagating':True,
                       'is_part':True,
                       'self_antipart':False}))
-        seminus = mypartlist[len(mypartlist) - 1]
+        seminus = mypartlist[-1]
         seplus = copy.copy(seminus)
         seplus.set('is_part', False)
 
@@ -352,7 +352,7 @@ class HelasMatrixElementTest(unittest.TestCase):
                       'propagating':True,
                       'is_part':True,
                       'self_antipart':True}))
-        n1 = mypartlist[len(mypartlist) - 1]
+        n1 = mypartlist[-1]
 
         # Gluon and photon couplings to quarks
         myinterlist.append(base_objects.Interaction({
@@ -797,7 +797,7 @@ class HelasMatrixElementTest(unittest.TestCase):
                       'propagating':True,
                       'is_part':True,
                       'self_antipart':False}))
-        eminus = mypartlist[len(mypartlist) - 1]
+        eminus = mypartlist[-1]
         eplus = copy.copy(eminus)
         eplus.set('is_part', False)
 
@@ -816,7 +816,7 @@ class HelasMatrixElementTest(unittest.TestCase):
                       'propagating':True,
                       'is_part':True,
                       'self_antipart':False}))
-        seminus = mypartlist[len(mypartlist) - 1]
+        seminus = mypartlist[-1]
         seplus = copy.copy(seminus)
         seplus.set('is_part', False)
 
@@ -835,7 +835,7 @@ class HelasMatrixElementTest(unittest.TestCase):
                       'propagating':True,
                       'is_part':True,
                       'self_antipart':True}))
-        n1 = mypartlist[len(mypartlist) - 1]
+        n1 = mypartlist[-1]
 
         # Coupling of n1 to e and se
         myinterlist.append(base_objects.Interaction({
@@ -1518,7 +1518,7 @@ class HelasMatrixElementTest(unittest.TestCase):
                       'propagating':True,
                       'is_part':True,
                       'self_antipart':False}))
-        Wplus = mypartlist[len(mypartlist) - 1]
+        Wplus = mypartlist[-1]
         Wminus = copy.copy(Wplus)
         Wminus.set('is_part', False)
 
@@ -1537,7 +1537,7 @@ class HelasMatrixElementTest(unittest.TestCase):
                       'propagating':True,
                       'is_part':True,
                       'self_antipart':True}))
-        a = mypartlist[len(mypartlist) - 1]
+        a = mypartlist[-1]
 
         # Z
         mypartlist.append(base_objects.Particle({'name':'Z',
@@ -1554,7 +1554,7 @@ class HelasMatrixElementTest(unittest.TestCase):
                       'propagating':True,
                       'is_part':True,
                       'self_antipart':True}))
-        Z = mypartlist[len(mypartlist) - 1]
+        Z = mypartlist[-1]
 
 
         # WWZ and WWa couplings
@@ -1673,7 +1673,7 @@ class HelasMatrixElementTest(unittest.TestCase):
                       'propagating':True,
                       'is_part':True,
                       'self_antipart':False}))
-        eminus = mypartlist[len(mypartlist) - 1]
+        eminus = mypartlist[-1]
         eplus = copy.copy(eminus)
         eplus.set('is_part', False)
 
@@ -1692,7 +1692,7 @@ class HelasMatrixElementTest(unittest.TestCase):
                       'propagating':True,
                       'is_part':True,
                       'self_antipart':False}))
-        elminus = mypartlist[len(mypartlist) - 1]
+        elminus = mypartlist[-1]
         elplus = copy.copy(elminus)
         elplus.set('is_part', False)
 
@@ -1710,7 +1710,7 @@ class HelasMatrixElementTest(unittest.TestCase):
                       'propagating':True,
                       'is_part':True,
                       'self_antipart':False}))
-        erminus = mypartlist[len(mypartlist) - 1]
+        erminus = mypartlist[-1]
         erplus = copy.copy(erminus)
         erplus.set('is_part', False)
 
@@ -1729,7 +1729,7 @@ class HelasMatrixElementTest(unittest.TestCase):
                       'propagating':True,
                       'is_part':True,
                       'self_antipart':True}))
-        n2 = mypartlist[len(mypartlist) - 1]
+        n2 = mypartlist[-1]
 
         # A z
         mypartlist.append(base_objects.Particle({'name':'z',
@@ -1746,7 +1746,7 @@ class HelasMatrixElementTest(unittest.TestCase):
                       'propagating':True,
                       'is_part':True,
                       'self_antipart':True}))
-        z = mypartlist[len(mypartlist) - 1]
+        z = mypartlist[-1]
 
         # Coupling of e to Z
         myinterlist.append(base_objects.Interaction({
@@ -1895,7 +1895,7 @@ class HelasMatrixElementTest(unittest.TestCase):
                       'propagating':True,
                       'is_part':True,
                       'self_antipart':False}))
-        x1plus = mypartlist[len(mypartlist) - 1]
+        x1plus = mypartlist[-1]
         x1minus = copy.copy(x1plus)
         x1minus.set('is_part', False)
 
@@ -1911,7 +1911,7 @@ class HelasMatrixElementTest(unittest.TestCase):
                       'propagating':True,
                       'is_part':True,
                       'self_antipart':False}))
-        wplus = mypartlist[len(mypartlist) - 1]
+        wplus = mypartlist[-1]
         wminus = copy.copy(wplus)
         wminus.set('is_part', False)
 
@@ -1930,7 +1930,7 @@ class HelasMatrixElementTest(unittest.TestCase):
                       'propagating':True,
                       'is_part':True,
                       'self_antipart':True}))
-        n1 = mypartlist[len(mypartlist) - 1]
+        n1 = mypartlist[-1]
 
         # Coupling of n1 to w and x1
         myinterlist.append(base_objects.Interaction({
@@ -2058,6 +2058,318 @@ class HelasMatrixElementTest(unittest.TestCase):
         wf5.set('fermionflow', 1)
         self.assertEqual(amp.get_conjugate_index(), (2,))
 
+    def test_get_conjugate_index_majoranas(self):
+        """Test the get_conjugate_index for Majoranas"""
+
+        mypartlist = base_objects.ParticleList()
+        myinterlist = base_objects.InteractionList()
+
+        # x1+ and x1-
+        mypartlist.append(base_objects.Particle({'name':'x1+',
+                      'antiname':'x1-',
+                      'spin':2,
+                      'color':1,
+                      'mass':'Mch1',
+                      'width':'Wch1',
+                      'charge':1.,
+                      'pdg_code':1000024,
+                      'propagating':True,
+                      'is_part':True,
+                      'self_antipart':False}))
+        x1plus = mypartlist[-1]
+        x1minus = copy.copy(x1plus)
+        x1minus.set('is_part', False)
+
+        # W+, W- and Z
+        mypartlist.append(base_objects.Particle({'name':'w+',
+                      'antiname':'w-',
+                      'spin':3,
+                      'color':1,
+                      'mass':'MW',
+                      'width':'WW',
+                      'charge':1.,
+                      'pdg_code':24,
+                      'propagating':True,
+                      'is_part':True,
+                      'self_antipart':False}))
+        wplus = mypartlist[-1]
+        wminus = copy.copy(wplus)
+        wminus.set('is_part', False)
+
+        mypartlist.append(base_objects.Particle({'name':'z',
+                      'antiname':'z',
+                      'spin':3,
+                      'color':1,
+                      'mass':'MZ',
+                      'width':'WZ',
+                      'charge':1.,
+                      'pdg_code':23,
+                      'propagating':True,
+                      'is_part':True,
+                      'self_antipart':True}))
+        z = mypartlist[-1]
+
+        # Neutralinos
+        mypartlist.append(base_objects.Particle({'name':'n1',
+                      'antiname':'n1',
+                      'spin':2,
+                      'color':1,
+                      'mass':'Mneu1',
+                      'width':'Wneu1',
+                      'texname':'\chi_0^1',
+                      'antitexname':'\chi_0^1',
+                      'line':'straight',
+                      'charge':0.,
+                      'pdg_code':1000022,
+                      'propagating':True,
+                      'is_part':True,
+                      'self_antipart':True}))
+        n1 = mypartlist[-1]
+
+        mypartlist.append(base_objects.Particle({'name':'n2',
+                      'antiname':'n2',
+                      'spin':2,
+                      'color':1,
+                      'mass':'Mneu2',
+                      'width':'Wneu2',
+                      'texname':'\chi_0^2',
+                      'antitexname':'\chi_0^2',
+                      'line':'straight',
+                      'charge':0.,
+                      'pdg_code':1000023,
+                      'propagating':True,
+                      'is_part':True,
+                      'self_antipart':True}))
+        n2 = mypartlist[-1]
+
+        # Coupling of n1 to w and x1
+        myinterlist.append(base_objects.Interaction({
+                      'id': 1,
+                      'particles': base_objects.ParticleList(\
+                                            [x1minus, \
+                                             n1, \
+                                             wplus]),
+                      'color': [],
+                      'lorentz':['FFV2', 'FFV3'],
+                      'couplings':{(0, 0):'GC_666', (0, 1):'GC_416'},
+                      'orders':{'QED':1}}))
+
+        myinterlist.append(base_objects.Interaction({
+                      'id': 2,
+                      'particles': base_objects.ParticleList(\
+                                            [n1, \
+                                             x1plus, \
+                                             wminus]),
+                      'color': [],
+                      'lorentz':['FFV2', 'FFV3'],
+                      'couplings':{(0, 0):'GC_424', (0, 1):'GC_630'},
+                      'orders':{'QED':1}}))
+
+        # Coupling of n1 to n2
+        myinterlist.append(base_objects.Interaction({
+                      'id': 3,
+                      'particles': base_objects.ParticleList(\
+                                            [n1, \
+                                             n2, \
+                                             z]),
+                      'color': [],
+                      'lorentz':['FFV2'],
+                      'couplings':{(0, 0):'GC_424'},
+                      'orders':{'QED':1}}))
+
+        # 4f coupling
+        myinterlist.append(base_objects.Interaction({
+                      'id': 4,
+                      'particles': base_objects.ParticleList(\
+                                            [n1, \
+                                             n2, \
+                                             x1minus,
+                                             x1plus]),
+                      'color': [],
+                      'lorentz':['FFV2'],
+                      'couplings':{(0, 0):'GC_424'},
+                      'orders':{'QED':1}}))
+        
+        mymodel = base_objects.Model()
+        mymodel.set('particles', mypartlist)
+        mymodel.set('interactions', myinterlist)
+        mylegn1 = base_objects.Leg({'id':1000022})
+        mylegn2 = base_objects.Leg({'id':1000023})
+        mylegxp = base_objects.Leg({'id':1000024})
+        mylegxm = base_objects.Leg({'id':-1000024})
+        mylegz  = base_objects.Leg({'id':23})
+        mylegwp = base_objects.Leg({'id':24})
+        mylegwm = base_objects.Leg({'id':-24})
+
+        wfn1 = helas_objects.HelasWavefunction(mylegn1, 1, mymodel)
+        wfn2 = helas_objects.HelasWavefunction(mylegn2, 1, mymodel)
+        wfxp = helas_objects.HelasWavefunction(mylegxp, 1, mymodel)
+        wfxm = helas_objects.HelasWavefunction(mylegxm, 1, mymodel)
+        wfz = helas_objects.HelasWavefunction(mylegz, 1, mymodel)
+        wfwp = helas_objects.HelasWavefunction(mylegwp, 1, mymodel)
+        wfwm = helas_objects.HelasWavefunction(mylegwm, 1, mymodel)
+        # Dummy vertex just to create an amplitude
+        vx = base_objects.Vertex({'legs': base_objects.LegList([mylegn1]),
+                                  'id': 4})
+        amp = helas_objects.HelasAmplitude(vx, mymodel)
+
+        # Test wavefunctions with mothers
+
+        mothers = helas_objects.HelasWavefunctionList([wfn2, wfz])
+        wfn1.set('mothers', mothers)
+        wfn1.set('pdg_codes', [1000022,1000023,23])
+
+        wfn1.set('state', 'incoming')
+        wfn2.set('state', 'incoming')
+        # n2 is incoming mother (so n1 is incoming result) -> need conj.
+        self.assertEqual(wfn1.get_conjugate_index(), (1,))
+
+        wfn1.set('state', 'outgoing')
+        wfn2.set('state', 'outgoing')
+        # n2 is outgoing mother -> don't need conj.
+        self.assertEqual(wfn1.get_conjugate_index(), ())
+
+        mothers = helas_objects.HelasWavefunctionList([wfn1, wfz])
+        wfn2.set('mothers', mothers)
+        wfn2.set('pdg_codes', [1000022,1000023,23])
+
+        wfn1.set('state', 'incoming')
+        wfn2.set('state', 'incoming')
+        # n1 is incoming mother -> don't need conj.
+        self.assertEqual(wfn2.get_conjugate_index(), ())
+
+        wfn1.set('state', 'outgoing')
+        wfn2.set('state', 'outgoing')
+        # n2 is outgoing mother -> need conj.
+        self.assertEqual(wfn2.get_conjugate_index(), (1,))
+
+        mothers = helas_objects.HelasWavefunctionList([wfxp, wfwm])
+        wfn1.set('mothers', mothers)
+        wfn1.set('pdg_codes', [1000022,1000024,-24])
+
+        wfn1.set('state', 'incoming')
+        # only one Majorana
+        self.assertEqual(wfn1.get_conjugate_index(), ())
+
+        wfn1.set('state', 'outgoing')
+        # only one Majorana
+        self.assertEqual(wfn1.get_conjugate_index(), ())
+
+        wfxp.set('fermionflow', -1)
+        # neg. fermion flow
+        self.assertEqual(wfn1.get_conjugate_index(), (1,))
+        wfxp.set('fermionflow', 1)
+
+        mothers = helas_objects.HelasWavefunctionList([wfn1, wfwm])
+        wfxm.set('mothers', mothers)
+        wfxm.set('pdg_codes', [1000022,1000024,-24])
+
+        wfxm.set('state', 'incoming')
+        wfn1.set('state', 'incoming')
+        # only one Majorana
+        self.assertEqual(wfxm.get_conjugate_index(), ())
+
+        wfxm.set('state', 'outgoing')
+        wfn1.set('state', 'outgoing')
+        # only one Majorana
+        self.assertEqual(wfxm.get_conjugate_index(), ())
+
+        wfxm.set('fermionflow', -1)
+        # neg. fermion flow
+        self.assertEqual(wfxm.get_conjugate_index(), (1,))
+        wfxm.set('fermionflow', 1)
+
+        mothers = helas_objects.HelasWavefunctionList([wfn1, wfxm, wfxp])
+        wfn2.set('mothers', mothers)
+        wfn2.set('pdg_codes', [1000024,-1000024,1000022,1000023])
+
+        wfn2.set('state', 'incoming')
+        # n1 is incoming mother -> don't need conj.
+        self.assertEqual(wfn2.get_conjugate_index(), ())
+
+        wfxm.set('fermionflow', -1)
+        # neg. fermion flow
+        self.assertEqual(wfn2.get_conjugate_index(), (1,))
+        wfxm.set('fermionflow', 1)
+
+        wfn2.set('state', 'outgoing')
+        # n1 is outgoing mother -> need conj.
+        self.assertEqual(wfn2.get_conjugate_index(), (2,))
+
+        wfxm.set('fermionflow', -1)
+        # neg. fermion flow
+        self.assertEqual(wfn2.get_conjugate_index(), (1,2))
+        wfxm.set('fermionflow', 1)
+
+        mothers = helas_objects.HelasWavefunctionList([wfn1, wfxm, wfxp])
+        wfn2.set('mothers', mothers)
+        wfn2.set('pdg_codes', [1000022,1000023,1000024,-1000024])
+
+        wfn2.set('state', 'incoming')
+        # n1 is incoming mother -> don't need conj.
+        self.assertEqual(wfn2.get_conjugate_index(), ())
+
+        wfxm.set('fermionflow', -1)
+        # neg. fermion flow
+        self.assertEqual(wfn2.get_conjugate_index(), (2,))
+        wfxm.set('fermionflow', 1)
+
+        wfn2.set('state', 'outgoing')
+        # n1 is outgoing mother -> need conj.
+        self.assertEqual(wfn2.get_conjugate_index(), (1,))
+
+        wfxm.set('fermionflow', -1)
+        # neg. fermion flow
+        self.assertEqual(wfn2.get_conjugate_index(), (1,2))
+        wfxm.set('fermionflow', 1)
+
+        mothers = helas_objects.HelasWavefunctionList([wfn1, wfxm, wfxp])
+        wfn2.set('mothers', mothers)
+        wfn2.set('pdg_codes', [1000022,1000024,1000023,-1000024])
+
+        wfn2.set('state', 'incoming')
+        # only one Majorana in fermion line -> don't need conj.
+        self.assertEqual(wfn2.get_conjugate_index(), ())
+
+        wfn2.set('state', 'outgoing')
+        # only one Majorana in fermion line -> don't need conj.
+        self.assertEqual(wfn2.get_conjugate_index(), ())
+
+        wfxp.set('fermionflow', -1)
+        # neg. fermion flow
+        self.assertEqual(wfn2.get_conjugate_index(), (1,))
+        wfxp.set('fermionflow', 1)
+
+        wfxm.set('fermionflow', -1)
+        # neg. fermion flow
+        self.assertEqual(wfn2.get_conjugate_index(), (2,))
+        wfxm.set('fermionflow', 1)
+
+        # Test amplitudes with mothers
+        mothers = helas_objects.HelasWavefunctionList([wfn1, wfn2, wfxm, wfxp])
+        amp.set('mothers', mothers)
+        amp.set('pdg_codes', [1000022,1000023,1000024,-1000024])
+
+        wfn1.set('state', 'incoming')
+        wfn2.set('state', 'outgoing')
+        # n1 is incoming mother -> don't need conj.
+        self.assertEqual(amp.get_conjugate_index(), ())
+
+        wfxp.set('fermionflow', -1)
+        # neg. fermion flow
+        self.assertEqual(amp.get_conjugate_index(), (2,))
+        wfxp.set('fermionflow', 1)
+
+        wfn1.set('state', 'outgoing')
+        wfn2.set('state', 'incoming')
+        # n1 is outgoing mother -> need conj.
+        self.assertEqual(amp.get_conjugate_index(), (1,))
+
+        wfxm.set('fermionflow', -1)
+        # neg. fermion flow
+        self.assertEqual(amp.get_conjugate_index(), (1,2))
+        wfxm.set('fermionflow', 1)
+
 #===============================================================================
 # HelasDecayChainProcessTest
 #===============================================================================
@@ -2095,7 +2407,7 @@ class HelasDecayChainProcessTest(unittest.TestCase):
                       'is_part':True,
                       'self_antipart':True}))
 
-        g = mypartlist[len(mypartlist) - 1]
+        g = mypartlist[-1]
 
         # A quark U and its antiparticle
         mypartlist.append(base_objects.Particle({'name':'u',
@@ -2112,7 +2424,7 @@ class HelasDecayChainProcessTest(unittest.TestCase):
                       'propagating':True,
                       'is_part':True,
                       'self_antipart':False}))
-        u = mypartlist[len(mypartlist) - 1]
+        u = mypartlist[-1]
         antiu = copy.copy(u)
         antiu.set('is_part', False)
 
@@ -2131,7 +2443,7 @@ class HelasDecayChainProcessTest(unittest.TestCase):
                       'propagating':True,
                       'is_part':True,
                       'self_antipart':False}))
-        d = mypartlist[len(mypartlist) - 1]
+        d = mypartlist[-1]
         antid = copy.copy(d)
         antid.set('is_part', False)
 
@@ -2377,7 +2689,7 @@ class HelasMultiProcessTest(unittest.TestCase):
                       'is_part':True,
                       'self_antipart':True}))
 
-        g = mypartlist[len(mypartlist) - 1]
+        g = mypartlist[-1]
 
         # A quark U and its antiparticle
         mypartlist.append(base_objects.Particle({'name':'u',
@@ -2394,7 +2706,7 @@ class HelasMultiProcessTest(unittest.TestCase):
                       'propagating':True,
                       'is_part':True,
                       'self_antipart':False}))
-        u = mypartlist[len(mypartlist) - 1]
+        u = mypartlist[-1]
         antiu = copy.copy(u)
         antiu.set('is_part', False)
 
@@ -2413,7 +2725,7 @@ class HelasMultiProcessTest(unittest.TestCase):
                       'propagating':True,
                       'is_part':True,
                       'self_antipart':False}))
-        d = mypartlist[len(mypartlist) - 1]
+        d = mypartlist[-1]
         antid = copy.copy(d)
         antid.set('is_part', False)
 
@@ -2662,7 +2974,7 @@ class HelasMultiProcessTest(unittest.TestCase):
                       'is_part':True,
                       'self_antipart':True}))
 
-        a = mypartlist[len(mypartlist) - 1]
+        a = mypartlist[-1]
         u = self.mymodel.get('particle_dict')[2]
         antiu = self.mymodel.get('particle_dict')[-2]
         d = self.mymodel.get('particle_dict')[1]
@@ -2934,7 +3246,7 @@ class HelasMultiProcessTest(unittest.TestCase):
                       'propagating':True,
                       'is_part':True,
                       'self_antipart':False}))
-        eminus = mypartlist[len(mypartlist) - 1]
+        eminus = mypartlist[-1]
         eplus = copy.copy(eminus)
         eplus.set('is_part', False)
 
@@ -2953,7 +3265,7 @@ class HelasMultiProcessTest(unittest.TestCase):
                       'propagating':True,
                       'is_part':True,
                       'self_antipart':False}))
-        seminus = mypartlist[len(mypartlist) - 1]
+        seminus = mypartlist[-1]
         seplus = copy.copy(seminus)
         seplus.set('is_part', False)
 
@@ -2972,7 +3284,7 @@ class HelasMultiProcessTest(unittest.TestCase):
                       'propagating':True,
                       'is_part':True,
                       'self_antipart':True}))
-        n1 = mypartlist[len(mypartlist) - 1]
+        n1 = mypartlist[-1]
 
         # A photon
         mypartlist.append(base_objects.Particle({'name':'a',
@@ -2989,7 +3301,7 @@ class HelasMultiProcessTest(unittest.TestCase):
                       'propagating':True,
                       'is_part':True,
                       'self_antipart':True}))
-        a = mypartlist[len(mypartlist) - 1]
+        a = mypartlist[-1]
 
         # Coupling of n1 to e and se
         myinterlist.append(base_objects.Interaction({
@@ -3213,7 +3525,7 @@ class HelasMultiProcessTest(unittest.TestCase):
                       'propagating':True,
                       'is_part':True,
                       'self_antipart':False}))
-        eminus = mypartlist[len(mypartlist) - 1]
+        eminus = mypartlist[-1]
         eplus = copy.copy(eminus)
         eplus.set('is_part', False)
 
@@ -3232,7 +3544,7 @@ class HelasMultiProcessTest(unittest.TestCase):
                       'propagating':True,
                       'is_part':True,
                       'self_antipart':False}))
-        seminus = mypartlist[len(mypartlist) - 1]
+        seminus = mypartlist[-1]
         seplus = copy.copy(seminus)
         seplus.set('is_part', False)
 
@@ -3251,7 +3563,7 @@ class HelasMultiProcessTest(unittest.TestCase):
                       'propagating':True,
                       'is_part':True,
                       'self_antipart':False}))
-        sepminus = mypartlist[len(mypartlist) - 1]
+        sepminus = mypartlist[-1]
         sepplus = copy.copy(sepminus)
         sepplus.set('is_part', False)
 
@@ -3270,7 +3582,7 @@ class HelasMultiProcessTest(unittest.TestCase):
                       'propagating':True,
                       'is_part':True,
                       'self_antipart':True}))
-        n1 = mypartlist[len(mypartlist) - 1]
+        n1 = mypartlist[-1]
 
         # A photon
         mypartlist.append(base_objects.Particle({'name':'a',
@@ -3287,7 +3599,7 @@ class HelasMultiProcessTest(unittest.TestCase):
                       'propagating':True,
                       'is_part':True,
                       'self_antipart':True}))
-        a = mypartlist[len(mypartlist) - 1]
+        a = mypartlist[-1]
 
         # Coupling of n1 to e and se
         myinterlist.append(base_objects.Interaction({
