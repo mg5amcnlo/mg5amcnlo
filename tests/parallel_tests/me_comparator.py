@@ -12,7 +12,6 @@
 # For more information, please visit: http://madgraph.phys.ucl.ac.be
 #
 ################################################################################
-
 """A set of objects to allow for easy comparisons of results from various ME
 generators (e.g., MG v5 against v4, ...) and output nice reports in different
 formats (txt, tex, ...).
@@ -41,7 +40,7 @@ import madgraph.iolibs.save_load_object as save_load_object
 
 import madgraph.interface.cmd_interface as cmd_interface
 
-from madgraph import MadGraph5Error
+from madgraph import MadGraph5Error, MG5DIR
 
 class MERunner(object):
     """Base class to containing default function to setup, run and access results
@@ -56,6 +55,7 @@ class MERunner(object):
     setup_flag = False
 
     name = 'None'
+    model_dir = os.path.join(MG5DIR,'models')
 
     class MERunnerException(Exception):
         """Default Exception class for MERunner objects"""
@@ -156,15 +156,17 @@ class MG4Runner(MERunner):
     def cleanup(self):
         """Clean up temporary directories"""
 
-        if not self.setup_flag:
-            raise self.MERunnerException, \
-                    "MERunner setup should be called first"
-
-        if os.path.isdir(os.path.join(self.mg4_path, self.temp_dir_name)):
-            shutil.rmtree(os.path.join(self.mg4_path, self.temp_dir_name))
-            logging.info("Temporary standalone directory %s successfully removed" % \
+        #if not self.setup_flag:
+        #    raise self.MERunnerException, \
+        #            "MERunner setup should be called first"
+        try:
+            if os.path.isdir(os.path.join(self.mg4_path, self.temp_dir_name)):
+                shutil.rmtree(os.path.join(self.mg4_path, self.temp_dir_name))
+                logging.info("Temporary standalone directory %s successfully removed" % \
                      self.temp_dir_name)
-
+        except:
+            pass
+            
     def run(self, proc_list, model, orders={}, energy=1000):
         """Execute MG4 on the list of processes mentioned in proc_list, using
         the specified model, the specified maximal coupling orders and a certain
@@ -319,6 +321,7 @@ class MG5Runner(MG4Runner):
 
     name = 'MadGraph v5'
     type = 'v5'
+        
 
     def setup(self, mg5_path, mg4_path, temp_dir=None):
         """Wrapper for the mg4 setup, also initializing the mg5 path variable"""
@@ -360,12 +363,19 @@ class MG5Runner(MG4Runner):
         # Run mg5
         logging.info("Running mg5")
         proc_card = open(proc_card_location, 'r').read()
+        self.proc_list = []
         cmd = cmd_interface.MadGraphCmdShell()
         for line in proc_card.split('\n'):
             try:
-                cmd.run_cmd(line)
+                cmd.exec_cmd(line, errorhandling=False)
             except MadGraph5Error:
-                raise Exception
+                print 'FAIL',line
+            else:
+                print 'OK:', line
+                if line.startswith('add'):
+                    self.proc_list.append(line)
+        print 'create PROC_CARD'
+        self.proc_list = '\n'.join(self.proc_list)
 
         # Remove the temporary proc_card
         os.remove(proc_card_location)
@@ -375,13 +385,14 @@ class MG5Runner(MG4Runner):
         for i, proc in enumerate(proc_list):
             value = self.get_me_value(proc, i)
             self.res_list.append(value)
+            print proc, value
 
         return self.res_list
 
     def format_mg5_proc_card(self, proc_list, model, orders):
         """Create a proc_card.dat string following v5 conventions."""
 
-        v5_string = "import model_v4 %s\n" % model
+        v5_string = "import model_v4 %s\n" % os.path.join(self.model_dir, model)
 
         couplings = ' '.join(["%s=%i" % (k, v) for k, v in orders.items()])
 
@@ -401,7 +412,7 @@ class MG5_UFO_Runner(MG5Runner):
     def format_mg5_proc_card(self, proc_list, model, orders):
         """Create a proc_card.dat string following v5 conventions."""
 
-        v5_string = "import model %s \n" % model
+        v5_string = "import model %s \n" % os.path.join(self.model_dir, model)
 
         couplings = ' '.join(["%s=%i" % (k, v) for k, v in orders.items()])
 
@@ -565,6 +576,9 @@ class MEComparator(object):
             cpu_time1 = time.time()
             logging.info("Now running %s" % runner.name)
             self.results.append(runner.run(proc_list, model[i], orders, energy))
+            if hasattr(runner, 'proc_list'):
+                print 'save proc_card'
+                proc_list = runner.proc_list
             cpu_time2 = time.time()
             logging.info(" Done in %0.3f s" % (cpu_time2 - cpu_time1))
             logging.info(" (%i/%i with zero ME)" % \
