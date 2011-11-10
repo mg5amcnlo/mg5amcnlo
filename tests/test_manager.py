@@ -375,7 +375,7 @@ if __name__ == "__main__":
     #logging.basicConfig(level=vars(logging)[options.logging])
     run(args, re_opt=options.reopt, verbosity=options.verbose, \
             package=options.path)
-
+    
 #some example
 #    run('iolibs')
 #    run('test_test_manager.py')

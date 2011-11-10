@@ -201,10 +201,12 @@ class MG4Runner(MERunner):
                          (len(temp_proc_list), os.path.join(dir_name, 'Cards')))
 
             # Run the newprocess script
+            devnull = open(os.devnull, 'w')
             logging.info("Running newprocess script")
             subprocess.call(os.path.join('.','bin', 'newprocess'),
                             cwd=dir_name,
-                            )#stdout=open('/dev/null', 'w'), stderr=subprocess.STDOUT)
+                            stdout=devnull, stderr=devnull
+                            )
 
             # Get the ME value
             for i, proc in enumerate(temp_proc_list):
@@ -256,9 +258,11 @@ class MG4Runner(MERunner):
         
         dir_name = os.path.join(working_dir, 'SubProcesses', shell_name)
         # Run make
+        devnull = open(os.devnull, 'w')
         retcode = subprocess.call('make',
-                        cwd=dir_name)#,
-                        #stdout=open('/dev/null', 'w'))#, stderr=subprocess.STDOUT)
+                        cwd=dir_name,
+                        stdout=devnull, stderr=devnull)
+                        
         if retcode != 0:
             logging.info("Error while executing make in %s" % shell_name)
             return ((0.0, 0), [])
@@ -363,19 +367,19 @@ class MG5Runner(MG4Runner):
         # Run mg5
         logging.info("Running mg5")
         proc_card = open(proc_card_location, 'r').read()
-        self.proc_list = []
+        new_proc_list = []
         cmd = cmd_interface.MadGraphCmdShell()
         for line in proc_card.split('\n'):
             try:
                 cmd.exec_cmd(line, errorhandling=False)
             except MadGraph5Error:
-                print 'FAIL',line
+                pass
             else:
-                print 'OK:', line
                 if line.startswith('add'):
-                    self.proc_list.append(line)
-        print 'create PROC_CARD'
-        self.proc_list = '\n'.join(self.proc_list)
+                    new_proc_list.append(line)
+
+        if hasattr(self, 'store_proc_card'):
+            self.proc_list = '\n'.join(new_proc_list)
 
         # Remove the temporary proc_card
         os.remove(proc_card_location)
@@ -385,7 +389,6 @@ class MG5Runner(MG4Runner):
         for i, proc in enumerate(proc_list):
             value = self.get_me_value(proc, i)
             self.res_list.append(value)
-            print proc, value
 
         return self.res_list
 
@@ -423,6 +426,94 @@ class MG5_UFO_Runner(MG5Runner):
                      os.path.join(self.mg4_path, self.temp_dir_name)
 
         return v5_string
+
+class MG5OldRunner(MG5Runner):
+    """ """
+    
+    mg5_path = ""
+    name = 'MadGraph5 Reference'
+    type = 'ufo_ref'
+    
+    def setup(self, mg5_path, temp_dir=None):
+        """ initializing the mg5 path variable"""
+        self.mg5_path = os.path.abspath(mg5_path)
+
+        if not temp_dir:
+            i=0
+            while os.path.exists(os.path.join(MG5DIR, 
+                                              "ptest_%s_%s" % (self.type, i))):
+                i += 1
+            temp_dir = "ptest_%s_%s" % (self.type, i)         
+        self.temp_dir_name = temp_dir    
+
+    def run(self, proc_list, model, orders={}, energy=1000):
+        """Execute MG5 on the list of processes mentioned in proc_list, using
+        the specified model, the specified maximal coupling orders and a certain
+        energy for incoming particles (for decay, incoming particle is at rest).
+        """
+        self.res_list = [] # ensure that to be void, and avoid pointer problem 
+        self.proc_list = proc_list
+        self.model = model
+        self.orders = orders
+        self.energy = energy
+
+        dir_name = os.path.join(MG5DIR, self.temp_dir_name)
+
+        # Create a proc_card.dat in the v5 format
+        proc_card_location = os.path.join(self.mg4_path, 'proc_card_%s.dat' % \
+                                          self.temp_dir_name)
+        proc_card_file = open(proc_card_location, 'w')
+        if isinstance(proc_list, list):
+            proc_card_file.write(self.format_mg5_proc_card(proc_list, model, orders))
+        else:
+            v5_string = "import model %s \n" % model
+            proc_card_file.write(v5_string)
+            proc_card_file.write(proc_list)
+            proc_card_file.write("\n output standalone %s -f\n" % dir_name)
+        proc_card_file.close()
+
+        logging.info("proc_card.dat file for %i processes successfully created in %s" % \
+                     (len(proc_list), os.path.join(dir_name, 'Cards')))
+
+        # Run mg5
+        logging.info("Running mg5")
+
+        devnull = open(os.devnull,'w')        
+        subprocess.call([pjoin(self.mg5_path,'bin','mg5'), proc_card_location],
+                        stdout=devnull, stderr=devnull)
+        
+        # Remove the temporary proc_card
+        os.remove(proc_card_location)
+        self.fix_energy_in_check(dir_name, energy)
+
+        # Get the ME value
+        for i, proc in enumerate(proc_list):
+            value = self.get_me_value(proc, i)
+            self.res_list.append(value)
+
+        return self.res_list
+
+
+class MG5_UFO_OldRunner(MG5OldRunner):
+    
+    name = 'UFO-ALOHA-MG5-REF'
+    type = 'ufo_ref'
+    
+    def format_mg5_proc_card(self, proc_list, model, orders):
+        """Create a proc_card.dat string following v5 conventions."""
+
+        v5_string = "import model %s \n" % model
+
+        couplings = ' '.join(["%s=%i" % (k, v) for k, v in orders.items()])
+
+        for i, proc in enumerate(proc_list):
+            v5_string += 'add process ' + proc + ' ' + couplings + \
+                         '@%i' % i + '\n'
+        v5_string += "output standalone %s -f\n" % \
+                     os.path.join(self.mg4_path, self.temp_dir_name)
+
+        return v5_string
+
 
 class MG5_CPP_Runner(MG5Runner):
     """Runner object for the MG5 C++ Standalone output."""
@@ -577,7 +668,6 @@ class MEComparator(object):
             logging.info("Now running %s" % runner.name)
             self.results.append(runner.run(proc_list, model[i], orders, energy))
             if hasattr(runner, 'proc_list'):
-                print 'save proc_card'
                 proc_list = runner.proc_list
             cpu_time2 = time.time()
             logging.info(" Done in %0.3f s" % (cpu_time2 - cpu_time1))

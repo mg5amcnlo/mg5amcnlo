@@ -85,7 +85,6 @@ def import_model(model_name):
         else:
             restrict_file = None
     
-    print 'model_path', model_path
     #import the FULL model
     model = import_full_model(model_path) 
     # restore the model name
@@ -140,7 +139,6 @@ def import_full_model(model_path):
 
     # Load basic information
     ufo_model = ufomodels.load_model(model_path)
-    print 'found', ufo_model.__file__
     ufo2mg5_converter = UFOMG5Converter(ufo_model)
     model = ufo2mg5_converter.load_model()
     
