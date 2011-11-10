@@ -1566,6 +1566,10 @@ class MultiProcess(base_objects.PhysicsObject):
                                              d in new_amp.get('diagrams')])
         new_amp.set('diagrams', diagrams)
         new_amp.trim_diagrams()
+
+        # Make sure to reset mirror process
+        new_amp.set('has_mirror_process', False)
+        
         return new_amp
         
 #===============================================================================

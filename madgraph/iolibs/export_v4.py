@@ -1583,6 +1583,13 @@ class ProcessExporterFortranME(ProcessExporterFortran):
             get_color=%d
             return
             """ % (part_id, model.get_particle(part_id).get_color())
+        # Dummy particle for multiparticle vertices with pdg given by
+        # first code not in the model
+        lines += """else if(ipdg.eq.%d)then
+c           This is dummy particle used in multiparticle vertices
+            get_color=2
+            return
+            """ % model.get_first_non_pdg()
         lines += """else
         write(*,*)'Error: No color given for pdg ',ipdg
         get_color=0        
@@ -1684,10 +1691,12 @@ class ProcessExporterFortranME(ProcessExporterFortran):
 
         configs = [(i+1, d) for i,d in enumerate(matrix_element.get('diagrams'))]
         mapconfigs = [c[0] for c in configs]
+        model = matrix_element.get('processes')[0].get('model')
         return mapconfigs, self.write_configs_file_from_diagrams(writer,
                                                             [[c[1]] for c in configs],
                                                             mapconfigs,
-                                                            nexternal, ninitial)
+                                                            nexternal, ninitial,
+                                                            model)
 
 
 
@@ -1707,7 +1716,7 @@ class ProcessExporterFortranME(ProcessExporterFortran):
     # write_configs_file_from_diagrams
     #===========================================================================
     def write_configs_file_from_diagrams(self, writer, configs, mapconfigs,
-                                         nexternal, ninitial):
+                                         nexternal, ninitial, model):
         """Write the actual configs.inc file.
         
         configs is the diagrams corresponding to configs (each
@@ -1732,6 +1741,8 @@ class ProcessExporterFortranME(ProcessExporterFortran):
 
         nconfigs = 0
 
+        new_pdg = model.get_first_non_pdg()
+
         for iconfig, helas_diags in enumerate(configs):
             if any([vert > minvert for vert in
                     [d for d in helas_diags if d][0].get_vertex_leg_numbers()]):
@@ -1748,7 +1759,7 @@ class ProcessExporterFortranME(ProcessExporterFortran):
                     # get_s_and_t_channels gives vertices starting from
                     # final state external particles and working inwards
                     stchannels.append(h.get('amplitudes')[0].\
-                                      get_s_and_t_channels(ninitial))
+                                      get_s_and_t_channels(ninitial, new_pdg))
                 else:
                     stchannels.append((empty_verts, None))
 
@@ -2131,7 +2142,7 @@ class ProcessExporterFortranME(ProcessExporterFortran):
         for iconf, configs in enumerate(s_and_t_channels):
             for vertex in configs[0] + configs[1][:-1]:
                 leg = vertex.get('legs')[-1]
-                if leg.get('id') == 21 and 21 not in particle_dict:
+                if leg.get('id') not in particle_dict:
                     # Fake propagator used in multiparticle vertices
                     mass = 'zero'
                     width = 'zero'
@@ -2643,6 +2654,7 @@ class ProcessExporterFortranMEGroup(ProcessExporterFortranME):
         configuration."""
 
         matrix_elements = subproc_group.get('matrix_elements')
+        model = matrix_elements[0].get('processes')[0].get('model')
 
         diagrams = []
         config_numbers = []
@@ -2666,7 +2678,8 @@ class ProcessExporterFortranMEGroup(ProcessExporterFortranME):
         return len(diagrams), \
                self.write_configs_file_from_diagrams(writer, diagrams,
                                                 config_numbers,
-                                                nexternal, ninitial)
+                                                nexternal, ninitial,
+                                                     model)
 
     #===========================================================================
     # write_run_configs_file

@@ -1184,19 +1184,22 @@ class ProcessExporterPythia8(ProcessExporterCPP):
         """Return the PIDs for any resonances in 2->2 and 2->3 processes."""
 
         resonances = []
-
+        model = self.matrix_elements[0].get('processes')[0].get('model')
+        new_pdg = model.get_first_non_pdg()
         # Get a list of all resonant s-channel contributions
         diagrams = sum([me.get('diagrams') for me in self.matrix_elements], [])
         for diagram in diagrams:
             schannels, tchannels = diagram.get('amplitudes')[0].\
-                                   get_s_and_t_channels(self.ninitial)
+                                   get_s_and_t_channels(self.ninitial, new_pdg)
 
             for schannel in schannels:
                 sid = schannel.get('legs')[-1].get('id')
-                width = self.model.get_particle(sid).get('width')
-                if width.lower() != 'zero':
-                    resonances.append(sid)
-
+                try:
+                    width = self.model.get_particle(sid).get('width')
+                    if width.lower() != 'zero':
+                        resonances.append(sid)
+                except KeyError:
+                    pass
         resonance_set = set(resonances)
 
         singleres = 0
@@ -1210,7 +1213,7 @@ class ProcessExporterPythia8(ProcessExporterCPP):
         # schannel is True if all diagrams are s-channel and there are
         # no QCD vertices
         schannel = not any([\
-            len(d.get('amplitudes')[0].get_s_and_t_channels(self.ninitial)[0])\
+            len(d.get('amplitudes')[0].get_s_and_t_channels(self.ninitial, new_pdg)[0])\
                  == 0 for d in diagrams]) and \
                    not any(['QCD' in d.calculate_orders() for d in diagrams])
 

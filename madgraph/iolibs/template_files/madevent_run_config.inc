@@ -52,4 +52,4 @@ c
       integer      npoints_wu,        itmax_wu !warmup # points/iterations
       parameter   (npoints_wu = 2000, itmax_wu = 8)
       integer      min_gevents_wu
-      parameter   (min_gevents_wu=1000)   !Minumum # unweighted events to generate from channel
+      parameter   (min_gevents_wu=200)   !Minumum # unweighted events to generate from channel

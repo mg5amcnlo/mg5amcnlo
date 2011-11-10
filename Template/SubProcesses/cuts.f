@@ -53,7 +53,7 @@ C
       LOGICAL DEBUG
       integer i,j,njets,nheavyjets,hardj1,hardj2
       REAL*8 XVAR,ptmax1,ptmax2,htj,tmp,inclht
-      real*8 ptemp(0:3)
+      real*8 ptemp(0:3), ptemp2(0:3)
       character*20 formstr
 C
 C     PARAMETERS
@@ -262,12 +262,13 @@ c
          endif
       enddo
 c
-c    missing ET min & max cut 
-c    nb: missing et simply defined as the sum over the neutrino's 4 momenta
+c    missing ET min & max cut + Invariant mass of leptons and neutrino 
+c    nb: missing Et defined as the vector sum over the neutrino's pt
 c
 c-- reset ptemp(0:3)
       do j=0,3
-         ptemp(j)=0
+         ptemp(j)=0 ! for the neutrino
+         ptemp2(j)=0 ! for the leptons
       enddo
 c-  sum over the momenta
       do i=nincoming+1,nexternal
@@ -276,16 +277,31 @@ c-  sum over the momenta
             do j=0,3
                ptemp(j)=ptemp(j)+p(j,i)
             enddo
+         elseif(is_a_l(i)) then            
+         if(debug) write (*,*) i,' -> lepton '
+            do j=0,3
+               ptemp2(j)=ptemp2(j)+p(j,i)
+            enddo
          endif
+
       enddo
 c-  check the et
       if(debug.and.ptemp(0).eq.0d0) write (*,*) 'No et miss in event'
       if(debug.and.ptemp(0).gt.0d0) write (*,*) 'Et miss =',pt(ptemp(0)),'   ',misset,':',missetmax
+      if(debug.and.ptemp2(0).eq.0d0) write (*,*) 'No leptons in event'
+      if(debug.and.ptemp(0).gt.0d0) write (*,*) 'Energy of leptons =',pt(ptemp2(0))
       if(ptemp(0).gt.0d0) then
          notgood=(pt(ptemp(0)) .lt. misset).or.
      &        (pt(ptemp(0)) .gt. missetmax)
          if (notgood) then
             if(debug) write (*,*) ' missing et cut -> fails'
+            passcuts=.false.
+            return
+         endif
+      endif
+      if (mmnl.gt.0d0.or.mmnlmax.lt.1d5)then
+         if(SumDot(ptemp,ptemp2,1d0).lt.mmnl.or.SumDot(ptemp, ptemp2,1d0).gt.mmnlmax) then
+            if(debug) write (*,*) 'lepton invariant mass -> fails'
             passcuts=.false.
             return
          endif
