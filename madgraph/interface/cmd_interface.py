@@ -467,8 +467,8 @@ class CheckValidForCmd(object):
         if args[0] == 'checks' and not self._comparisons:
             raise self.InvalidCmd("No check results to display.")
         
-        if args[0] == 'mg5_variable' and len(args) !=2:
-            raise self.InvalidCmd('mg5_variable need a variable name')
+        if args[0] == 'variable' and len(args) !=2:
+            raise self.InvalidCmd('variable need a variable name')
 
 
     def check_draw(self, args):
@@ -1550,11 +1550,14 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
 
     def do_quit(self, line):
         """Do quit"""
-        
-        if os.path.exists(os.path.join(self._done_export[0],'RunWeb')):
+
+        if self._done_export and \
+                    os.path.exists(os.path.join(self._done_export[0],'RunWeb')):
             os.remove(os.path.join(self._done_export[0],'RunWeb'))
-        
-        return super(MadGraphCmd, self).do_quit(line)
+                
+        value = super(MadGraphCmd, self).do_quit(line)
+        print
+        return value
         
     # Add a process to the existing multiprocess definition
     # Generate a new amplitude
@@ -2703,8 +2706,8 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
                     ME = madevent_interface.MadEventCmdShell(me_dir=args[1])
                 else:
                      ME = madevent_interface.MadEventCmdShell(me_dir=args[1])
-                self.define_child_cmd_interface(ME)
-                return
+                stop = self.define_child_cmd_interface(ME)
+                return stop
             
             #check if this is a cross-section
             if len(self._generate_info.split('>')[0].strip().split())>1:

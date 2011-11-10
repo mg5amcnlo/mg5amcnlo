@@ -131,9 +131,23 @@ class AllResults(dict):
     
     def def_current(self, name):
         """define the name of the current run"""
-        assert name in self
-        self.current = self[name]
-
+        assert name in self or name == None
+        if name:
+            self.current = self[name]
+        else:
+            self.current = None
+    
+    def delete_run(self, name):
+        """delete a run from the database"""
+        if self.current == name:
+            self.results.def_current(None)                    
+        del self[name]
+        self.order.remove(name)
+        #update the html
+        self.output()
+        
+        
+    
     def def_web_mode(self, web):
         """define if we are in web mode or not """
         if web is True:
@@ -159,7 +173,8 @@ class AllResults(dict):
         
     def update(self, status, level, makehtml=True):
         """update the current run status"""
-        self.current.update_status(level)
+        if self.current:
+            self.current.update_status(level)
         self.status = status
         if makehtml:
             self.output()
@@ -224,7 +239,7 @@ class AllResults(dict):
         """ write the output file """
         
         # 1) Create the text for the status directory        
-        if self.status:
+        if self.status and self.current:
             if isinstance(self.status, str):
                 status = '<td colspan=4>%s</td>' %  self.status
             else:

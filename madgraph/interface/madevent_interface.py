@@ -720,6 +720,21 @@ class CheckValidForCmd(object):
                 os.system('gunzip -c %s > %s' % (input_file, output_file))
 
 
+    def check_display(self, args):
+        """check the validity of line
+        syntax: display XXXXX
+        """
+            
+        if len(args) < 1 or args[0] not in self._display_opts:
+            self.help_display()
+            raise self.InvalidCmd
+        
+        if args[0] == 'variable' and len(args) !=2:
+            raise self.InvalidCmd('variable need a variable name')
+
+
+
+
 
     def check_import(self, args):
         """check the validity of line"""
@@ -879,7 +894,7 @@ class CompleteForCmd(CheckValidForCmd):
     def complete_pythia(self,text, line, begidx, endidx):
         "Complete the pythia command"
         
-        args = cmd.Cmd.split_arg(line[0:begidx], error=False)
+        args = self.split_arg(line[0:begidx], error=False)
         if len(args) == 1:
             #return valid run_name
             data = glob.glob(pjoin(self.me_dir, 'Events', '*_unweighted_events.lhe.gz'))
@@ -892,11 +907,11 @@ class CompleteForCmd(CheckValidForCmd):
                 return tmp1 + tmp2
         else:
             return self.list_completion(text, self._run_options + ['-f', '--no_default'], line)
-        
+
     def complete_pgs(self,text, line, begidx, endidx):
         "Complete the pythia command"
         
-        args = cmd.Cmd.split_arg(line[0:begidx], error=False) 
+        args = self.split_arg(line[0:begidx], error=False) 
                 
         if len(args) == 1:
             #return valid run_name
@@ -931,6 +946,7 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
     _set_options = ['stdout_level','fortran_compiler']
     _plot_mode = ['all', 'parton','pythia','pgs','delphes','channel', 'banner']
     _clean_mode = _plot_mode
+    _display_opts = ['run_name', 'options', 'variable']
     # Variables to store object information
     true = ['T','.true.',True,'true', 1, '1']
     web = False
@@ -963,7 +979,8 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
         
         # Define current MadEvent directory
         if me_dir is None and MADEVENT:
-            me_dir = root_path        
+            me_dir = root_path
+        
         self.me_dir = me_dir
 
         # usefull shortcut
@@ -1143,6 +1160,31 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
         misc.open_file.configure(self.configuration)
           
         return self.configuration
+ 
+ 
+    ############################################################################
+    def do_display(self, line):
+        """Display current internal status"""
+
+        args = self.split_arg(line)
+        #check the validity of the arguments
+        self.check_display(args)
+
+        if args[0] == 'run_name':
+            
+            
+            #return valid run_name
+            data = glob.glob(pjoin(self.me_dir, 'Events', '*_banner.txt'))
+            data = [n.rsplit('/',1)[1][:-11] for n in data]
+            if data:
+                print 'the runs available are:'
+                for run_name in data:
+                    print '    %s' % run_name
+            else:
+                print 'No run detected.'
+        else:
+            super(MadEventCmd, self).do_display(line)
+ 
   
     ############################################################################
     def do_import(self, line):
@@ -1298,6 +1340,7 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
         os.system('gzip %s/%s_unweighted_events.lhe' % 
                                   (pjoin(self.me_dir, 'Events'), self.run_name))
 
+        self.results.def_current(None)
         self.update_status('', level=parton)
             
     ############################################################################      
@@ -1308,9 +1351,9 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
         # Check argument's validity
         self.check_survey(args)
         # initialize / remove lhapdf mode
-        self.update_status('compile directory', level=None)
-        self.configure_directory()
 
+        self.configure_directory()
+        self.update_status('Running Survey', level=None)
         if self.cluster_mode:
             logger.info('Creating Jobs')
 
@@ -1747,11 +1790,12 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
                 os.remove(to_suppress[0])
                 # remove the run from the html output
                 if run in self.results:
-                    del self.results[run]
-                     
+                    self.results.delete_run(run)
+                    return
+
         # update database.
         self.results.clean(args[1:])
-        self.update_status('Done', level='all', makehtml=False)
+        self.update_status('', level='all')
 
 
 
@@ -2164,7 +2208,7 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
             return
         else:
             self.configured = time.time()
-
+        self.update_status('compile directory', level=None)
         # Change current working directory
         self.launching_dir = os.getcwd()
         os.chdir(self.me_dir)
@@ -2321,7 +2365,7 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
 
     def do_quit(self, line):
         """ """
-
+  
         try:
             os.remove(pjoin(self.me_dir,'RunWeb'))
         except:
@@ -2563,7 +2607,7 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
             question = """Do you want to edit one cards (press enter to bypass editing)?
   1 / param   : param_card.dat (be carefull about parameter consistency, especially widths)
   2 / run     : run_card.dat\n"""
-            possible_answer = ['0', 1, 'param', 2, 'run']
+            possible_answer = ['0','done', 1, 'param', 2, 'run']
             if mode in ['pythia', 'pgs', 'delphes']:
                 question += '  3 / pythia  : pythia_card.dat\n'
                 possible_answer.append(3)
@@ -2579,14 +2623,19 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
                 possible_answer.append('delphes')
                 possible_answer.append(6)
                 possible_answer.append('trigger')
-            card = {0:'done', 1:'param', 2:'run', 3:'pythia', 4: 'pgs', 5: 'delphes', 6:'trigger'}
+            if self.configuration['madanalysis_path']:
+                question += '  9 / plot : plot_card.dat\n'
+                possible_answer.append(9)
+                possible_answer.append('plot')
+            card = {0:'done', 1:'param', 2:'run', 3:'pythia', 
+                    4: 'pgs', 5: 'delphes', 6:'trigger',9:'plot'}
             # Add the path options
             question += '  Path to a valid card.\n'
        
             # Loop as long as the user is not done.
             answer = 'no'
             while answer != 'done':
-                answer = self.ask(question, '0', possible_answer, timeout=2*self.timeout, path_msg='enter path')
+                answer = self.ask(question, '0', possible_answer, timeout=int(1.5*self.timeout), path_msg='enter path')
                 if answer.isdigit():
                     answer = card[int(answer)]
                 if answer == 'done':

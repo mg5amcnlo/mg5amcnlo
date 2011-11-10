@@ -84,3 +84,20 @@ class TestMadEventCmd(unittest.TestCase):
                          'param_card.dat')
         self.assertEqual(detect(pjoin(root_path, 'input_files','restrict_sm.dat')),
                          'param_card.dat')
+        
+    def test_help_category(self):
+        """Check that no help category are introduced by mistake.
+           If this test failes, this is due to a un-expected ':' in a command of
+           the cmd interface.
+        """
+        cmd = mecmd.MadEventCmdShell
+        category = set()
+        valid_command = [c for c in dir(cmd) if c.startswith('do_')]
+        
+        for command in valid_command:
+            obj = getattr(cmd,command)
+            if obj.__doc__ and ':' in obj.__doc__:
+                category.add(obj.__doc__.split(':',1)[0])
+                
+        target = set(['Advanced commands'])
+        self.assertEqual(target, category)

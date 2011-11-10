@@ -54,6 +54,26 @@ class TestValidCmd(unittest.TestCase):
         self.do(' ! cd /tmp; touch tmp_file')
         self.assertTrue(os.path.exists('/tmp/tmp_file'))
     
+    def test_help_category(self):
+        """Check that no help category are introduced by mistake.
+           If this test failes, this is due to a un-expected ':' in a command of
+           the cmd interface.
+        """
+        
+        category = set()
+        valid_command = [c for c in dir(self.cmd) if c.startswith('do_')]
+        
+        for command in valid_command:
+            obj = getattr(self.cmd,command)
+            if obj.__doc__ and ':' in obj.__doc__:
+                category.add(obj.__doc__.split(':',1)[0])
+                
+        target = set(['Not in help'])
+        self.assertEqual(target, category)
+        
+    
+    
+    
     
     def test_check_generate(self):
         """check if generate format are correctly supported"""

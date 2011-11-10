@@ -377,12 +377,26 @@ class Cmd(cmd.Cmd):
         if self.use_rawinput and interface:
             # We are in interactive mode -> simply call the child
             obj_instance.cmdloop()
+            stop = obj_instance.postloop()
+            return stop
         if self.inputfile:
             # we are in non interactive mode -> so pass the line information
             obj_instance.inputfile = self.inputfile
         
-
-        return self.child
+        if not interface:
+            return self.child
+    
+    def postloop(self):
+        """ """
+        
+        args = self.split_arg(self.lastcmd)
+        if args[0] in ['quit','exit']:
+            if 'all' in args:
+                return True
+            if len(args) >1 and args[1].isdigit():
+                if args[1] not in  ['0', '1']:
+                    return True
+        return False
         
     #===============================================================================
     # Ask a question with a maximum amount of time to answer
@@ -551,8 +565,6 @@ class Cmd(cmd.Cmd):
     # Quit
     def do_quit(self, line):
         """ exit the mainloop() """
-
-        logger.info('')
         
         if self.child:
             self.child.exec_cmd('quit ' + line, printcmd=False)
@@ -560,13 +572,12 @@ class Cmd(cmd.Cmd):
         elif self.mother:
             self.mother.child = None
             if line == 'all':
-                self.mother.exec_cmd('quit all', printcmd=False)
+                pass
             elif line:
                 level = int(line) - 1
                 if level:
-                    self.mother.exec_cmd('quit %s' % level)
-        else:
-            logger.info('')
+                    self.mother.lastcmd = 'quit %s' % level
+
         return True
 
     # Aliases
