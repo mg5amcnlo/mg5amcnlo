@@ -28,6 +28,7 @@ import subprocess
 import sys
 import time
 
+pjoin = os.path.join
 # Get the grand parent directory (mg5 root) of the module real path 
 # (tests/acceptance_tests) and add it to the current PYTHONPATH to allow
 # for easy import of MG5 tools
@@ -351,6 +352,7 @@ class MG5Runner(MG4Runner):
         self.model = model
         self.orders = orders
         self.energy = energy
+        self.non_zero = 0 
 
         dir_name = os.path.join(self.mg4_path, self.temp_dir_name)
 
@@ -376,22 +378,28 @@ class MG5Runner(MG4Runner):
                 pass
             else:
                 if line.startswith('add'):
+                    self.non_zero += 1
                     new_proc_list.append(line)
 
         if hasattr(self, 'store_proc_card'):
-            self.proc_list = '\n'.join(new_proc_list)
+            self.new_proc_list = '\n'.join(new_proc_list)
 
         # Remove the temporary proc_card
         os.remove(proc_card_location)
-        self.fix_energy_in_check(dir_name, energy)
+        if self.non_zero:
+            self.fix_energy_in_check(dir_name, energy)
 
-        # Get the ME value
-        for i, proc in enumerate(proc_list):
-            value = self.get_me_value(proc, i)
-            self.res_list.append(value)
+            # Get the ME value
+            for i, proc in enumerate(proc_list):
+                value = self.get_me_value(proc, i)
+                self.res_list.append(value)
 
-        return self.res_list
-
+            return self.res_list
+        else:
+            self.res_list = [((0.0, 0), [])] * len(proc_list)
+            return self.res_list
+        
+        
     def format_mg5_proc_card(self, proc_list, model, orders):
         """Create a proc_card.dat string following v5 conventions."""
 
@@ -463,12 +471,12 @@ class MG5OldRunner(MG5Runner):
         proc_card_location = os.path.join(self.mg4_path, 'proc_card_%s.dat' % \
                                           self.temp_dir_name)
         proc_card_file = open(proc_card_location, 'w')
-        if isinstance(proc_list, list):
+        if not hasattr(self, 'pass_proc'):
             proc_card_file.write(self.format_mg5_proc_card(proc_list, model, orders))
         else:
             v5_string = "import model %s \n" % model
             proc_card_file.write(v5_string)
-            proc_card_file.write(proc_list)
+            proc_card_file.write(self.pass_proc)
             proc_card_file.write("\n output standalone %s -f\n" % dir_name)
         proc_card_file.close()
 
@@ -484,8 +492,10 @@ class MG5OldRunner(MG5Runner):
         
         # Remove the temporary proc_card
         os.remove(proc_card_location)
-        self.fix_energy_in_check(dir_name, energy)
-
+        try:
+            self.fix_energy_in_check(dir_name, energy)
+        except:
+            return [((0.0, 0), [])] * len(proc_list)
         # Get the ME value
         for i, proc in enumerate(proc_list):
             value = self.get_me_value(proc, i)
@@ -663,12 +673,15 @@ class MEComparator(object):
              '/'.join([onemodel for onemodel in model]),
              energy))
 
+        pass_proc = False
         for i,runner in enumerate(self.me_runners):
             cpu_time1 = time.time()
             logging.info("Now running %s" % runner.name)
+            if pass_proc:
+                runner.pass_proc = pass_proc 
             self.results.append(runner.run(proc_list, model[i], orders, energy))
-            if hasattr(runner, 'proc_list'):
-                proc_list = runner.proc_list
+            if hasattr(runner, 'new_proc_list'):
+                pass_proc = runner.new_proc_list
             cpu_time2 = time.time()
             logging.info(" Done in %0.3f s" % (cpu_time2 - cpu_time1))
             logging.info(" (%i/%i with zero ME)" % \
@@ -852,6 +865,35 @@ def create_proc_list_enhanced(init_part_list, final_part_list_1,
         res_list.append(' '.join(proc))
 
     return res_list
+
+
+def create_proc_list_2_3(init_part_list1, 
+                         init_part_list2, 
+                         final_part_list_1,
+                         final_part_list_2,
+                         final_part_list_3,
+                         charge_conservation=True):
+    """Helper function to automatically create process lists starting from 
+    a particle list."""
+
+    proc_list = []
+    res_list = []
+    for i,a in enumerate(init_part_list1):
+        for b in init_part_list2:
+            for c in final_part_list_1:
+                for d in final_part_list_2:
+                    for e in final_part_list_3:
+                        proc = [a,b,'>',c,d,e]
+                        res_list.append(' '.join(proc))
+
+    return res_list
+
+
+
+
+
+
+
 
 
 

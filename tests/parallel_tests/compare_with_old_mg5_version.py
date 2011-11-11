@@ -177,7 +177,7 @@ class OLDMG5Comparator(unittest.TestCase):
         self.compare_processes(my_proc_list,
                              model='mssm',
                              orders = {'QED':99, 'QCD':99},
-                             filename = "short_sm.log",
+                             filename = "short_mssm.log",
                              pickle_file = pickle_file)
 
     def create_short_paralel_heft(self):
@@ -193,7 +193,7 @@ class OLDMG5Comparator(unittest.TestCase):
         self.compare_processes(my_proc_list,
                              model='heft',
                              orders = {'QED':99, 'QCD':99},
-                             filename = "short_sm.log",
+                             filename = "short_heft.log",
                              pickle_file = pickle_file)
 
     ############################################################################    
@@ -302,7 +302,7 @@ class OLDMG5Comparator(unittest.TestCase):
         #pickle_file = "mg4_sm_%sminitest.pkl" % self.suffix_name
         self.compare_processes(my_proc_list, model='mssm',
                              orders = {'QED':2, 'QCD':2},
-                             filename = "sm_mini.log",
+                             filename = "mssm_mini.log",
                              energy = 1000)
 
     ############################################################################    
@@ -330,8 +330,10 @@ class OLDMG5Comparator(unittest.TestCase):
              'b', 'b~', 't', 't~', 'ta+', 'ta-', 'vt', 'vt~'],
             initial=2, final=3)
 
+        for i in range(len(my_proc_list)//500):
+            print 'step %s/%s' %(i+1,len(my_proc_list)//500 )
         # Store list of non-zero processes and results in file
-        self.compare_processes(my_proc_list,
+            self.compare_processes(my_proc_list[500*i:500*(i+1)],
                              orders = {'QED':3, 'QCD':3},
                              filename = "sm_23.log")
 
@@ -361,9 +363,22 @@ class OLDMG5Comparator(unittest.TestCase):
                              energy = 2000,
                              filename = "mssm_22.log")
 
-    def test_mg5_mssm_23(self):
+    def test_mg5_mssm_23_p1(self):
         """Test a semi-complete list of mssm 2->3 processes"""
         # Create a list of processes to check automatically
+        
+        init_part_list1 = ['w+', 'a', 'z', 'h1', 'h+', 'g', 'u~',
+            'd~', 'b~', 't~', 'ta+', 'vt~']
+        init_part_list2 = ['w-', 'a', 'z', 'h1', 'h-', 'g', 'u',
+            'd', 'b', 't', 'ta+', 'vt']        
+        final_part_list1 = ['w-', 'w+', 'a', 'z', 'h1', 'h-', 'h+', 'g'] 
+        final_part_list2 = ['dl~', 'dr~', 'ul~', 'ur~']
+        final_part_list3 = ['dl', 'dr', 'ul', 'ur']
+        
+        my_proc_list = me_comparator.create_proc_list_2_3(
+                    init_part_list1, init_part_list2, final_part_list1,
+                      final_part_list2,final_part_list3)                                   
+                                                                  
         sm_parts = ['w+', 'w-', 'a', 'z', 'h1', 'h+', 'h-', 'g', 'u', 'u~',
             'd', 'd~', 'b', 'b~', 't', 't~', 'ta+', 'ta-', 'vt', 'vt~']
         mssm_parts = ['dl', 'dl~', 'dr', 'dr~', 'ul', 'ul~', 'ur', 'ur~', 'b1',
@@ -372,15 +387,42 @@ class OLDMG5Comparator(unittest.TestCase):
                       'go', 'n1']
         # Generate 2 -> 2+1 processes, with MSSM particles in pairs in
         # final state
-        my_proc_list = me_comparator.create_proc_list_enhanced(\
-            sm_parts, mssm_parts, sm_parts)
-
+        #my_proc_list = me_comparator.create_proc_list_enhanced(\
+        #    sm_parts, mssm_parts, sm_parts)
+        for i in range(len(my_proc_list)//500):
+            print 'step %s/%s' %(i+1,len(my_proc_list)//500 )
         # Store list of non-zero processes and results in file
-        self.compare_processes(my_proc_list,
+            self.compare_processes(my_proc_list[500*i:500*(i+1)],
                              orders = {'QED':3, 'QCD':3},
                              model = "mssm",
                              energy = 2000,
-                             filename = "mssm_23.log")    
+                             filename = "mssm_23_p1.log")    
+
+    def test_mg5_mssm_23_p2(self):
+        """Test a semi-complete list of mssm 2->3 processes"""
+        # Create a list of processes to check automatically
+        
+        init_part_list1 = ['w+', 'a', 'z', 'h1', 'h+', 'g', 'u~',
+            'd~', 'b~', 't~', 'ta+', 'vt~']
+        init_part_list2 = ['w-', 'a', 'z', 'h1', 'h-', 'g', 'u',
+            'd', 'b', 't', 'ta+', 'vt']        
+        final_part_list1 = ['w-', 'w+', 'a', 'z', 'h1', 'h-', 'h+', 'g'] 
+        final_part_list2 = ['x1-', 'x1+', 'x2-', 'x2+', 'go', 'n1']
+        final_part_list3 = ['x1-', 'x1+', 'x2-', 'x2+', 'go', 'n1']
+        
+        my_proc_list = me_comparator.create_proc_list_2_3(
+                    init_part_list1, init_part_list2, final_part_list1,
+                      final_part_list2,final_part_list3)
+
+        for i in range(len(my_proc_list)//500):
+            print 'step %s/%s' %(i+1,len(my_proc_list)//500 )
+        # Store list of non-zero processes and results in file
+            self.compare_processes(my_proc_list[500*i:500*(i+1)],
+                             orders = {'QED':3, 'QCD':3},
+                             model = "mssm",
+                             energy = 2000,
+                             filename = "mssm_23_p2.log")   
+
         
     ############################################################################    
     #  EXTENSIVE TEST FOR THE HEFT
