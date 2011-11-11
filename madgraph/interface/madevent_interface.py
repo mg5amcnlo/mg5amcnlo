@@ -530,23 +530,32 @@ class CheckValidForCmd(object):
         
         return True
     
-    def check_pythia(self, arg):
+    def check_pythia(self, args):
         """Check the argument for pythia command
         syntax: pythia [NAME] 
         Note that other option are already remove at this point
         """
-               
+        
+        mode = None
+        laststep = [arg for arg in args if arg.startswith('--lastep=')]
+        if laststep and len(laststep)==1:
+            mode = laststep[0].split('=')[-1]
+            if mode not in ['auto', 'pythia', 'pgs', 'delphes']:
+                self.help_pythia()
+                raise self.InvalidCmd('invalid %s argument'% args[-1])     
+        elif laststep:
+            raise self.InvalidCmd('only one laststep argument is allowed')
      
-        if len(arg) == 0 and not self.run_name:
+        if len(args) == 0 and not self.run_name:
             self.help_pythia()
             raise self.InvalidCmd('No run name currently define. Please add this information.')             
         
-        if len(arg) == 1:
-            if arg[0] != self.run_name and\
+        if len(args) == 1:
+            if args[0] != self.run_name and\
              not os.path.exists(pjoin(self.me_dir,'Events','%s_unweighted_events.lhe.gz'
-                                                                     % arg[0])):
-                raise self.InvalidCmd('No events file corresponding to %s run. '% arg[0])
-            self.set_run_name(arg[0])
+                                                                     % args[0])):
+                raise self.InvalidCmd('No events file corresponding to %s run. '% args[0])
+            self.set_run_name(args[0])
         
         
         input_file = pjoin(self.me_dir,'Events', '%s_unweighted_events.lhe.gz' % self.run_name)
@@ -567,6 +576,8 @@ class CheckValidForCmd(object):
             error_msg += 'Please use the set command to define the path and retry.'
             error_msg += 'You can also define it in the configuration file.'
             raise self.InvalidCmd(error_msg)
+        
+        args.append(mode)
     
     def check_remove(self, args):
         """Check that the remove command is valid"""
@@ -1540,52 +1551,36 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
     def do_pythia(self, line):
         """launch pythia"""
         
-        args = self.split_arg(line)
         # Check argument's validity
-        self.edit_one_card('pythia_card.dat', args)
-        
+        args = self.split_arg(line)
         if '-f' in args:
             force = True
             args.remove('-f')
         else:
             force = False
         if '--no_default' in args:
+            force = True
             no_default = True
             args.remove('--no_default')
         else:
             no_default = False
-        self.check_pythia(args) 
+        self.check_pythia(args)        
+        # the args are modify and the last arg is always the mode
+        
+        self.ask_pythia_run_configuration(args[-1], force)
+
+                     
         # initialize / remove lhapdf mode        
         self.configure_directory()
         
-        
-        # Check that the pythia_card exists. If not copy the default and
-        # ask for edition of the card.
-        if not os.path.exists(pjoin(self.me_dir, 'Cards', 'pythia_card.dat')):
-            if no_default:
-                logger.info('No pythia_card detected, so not run pythia')
-                return
-            
-            files.cp(pjoin(self.me_dir, 'Cards', 'pythia_card_default.dat'),
-                     pjoin(self.me_dir, 'Cards', 'pythia_card.dat'))
-            logger.info('No pythia card found. Take the default one.')
-            
-            if not force:
-                answer = self.ask('Do you want to edit this card?','n', ['y','n'],
-                          timeout=20)
-            else: 
-                answer = 'n'
                 
-            if answer == 'y':
-                misc.open_file(pjoin(self.me_dir, 'Cards', 'pythia_card.dat'))
-        
         if not force:
             if os.path.exists(pjoin(self.me_dir, 'Events','%s_pythia.log')):
                 question = 'Previous run of pythia detected. Do you want to remove it?'
                 ans = self.ask(question, 'y', choices=['y','n'], timeout = 20)
                 if ans == 'n':
                     return
-               
+             
         self.exec_cmd('remove %s pythia -f' % self.run_name)
         
         pythia_src = pjoin(self.configuration['pythia-pgs_path'],'src')
@@ -1696,7 +1691,9 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
 
         
         self.update_status('finish', level='pythia', makehtml=False)
-
+        self.exec_cmd('pgs --no_default', postcmd=False, printcmd=False)
+        self.exec_cmd('delphes --no_default', postcmd=False, printcmd=False)
+        
     ################################################################################
     def do_remove(self, line):
         """Remove one/all run or only part of it"""
@@ -2657,6 +2654,115 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
                 
             if mode.isdigit():
                 mode = name[int(mode)]
+
+    ############################################################################
+    def ask_pythia_run_configuration(self, mode=None, force=False):
+        """Ask the question when launching generate_events/multi_run"""
+        
+        available_mode = ['0', '1', '2']
+        if self.configuration['delphes_path']:
+                available_mode.append('3')
+        name = {'0': 'auto', '1': 'pythia', '2':'pgs', '3':'delphes'}
+        options = available_mode + [name[val] for val in available_mode]
+        question = """Which programs do you want to run?
+  0 / auto    : running existing card
+  1 / pythia  : Pythia 
+  2 / pgs     : Pythia + PGS\n"""
+        if '3' in available_mode:
+            question += """  3 / delphes  : Pythia + Delphes.\n"""
+
+            if not force:
+                if not mode:
+                    mode = self.ask(question, '0', options, timeout=self.timeout)
+            elif not mode:
+                mode = 'auto'
+                
+            if mode.isdigit():
+                mode = name[mode]
+                
+            if mode == 'auto':
+                if os.path.exists(pjoin(self.me_dir, 'Cards', 'pgs_card.dat')):
+                    mode = 'pgs'
+                elif os.path.exists(pjoin(self.me_dir, 'Cards', 'delphes_card.dat')):
+                    mode = 'delphes'
+                else: 
+                    mode = 'pythia'
+            logger.info('Will run in mode %s' % mode)
+            
+            # Clean the pointless card
+            if mode == 'pgs':
+                if os.path.exists(pjoin(self.me_dir,'Cards','delphes_card.dat')):
+                    os.remove(pjoin(self.me_dir,'Cards','delphes_card.dat'))
+            if mode == 'delphes':
+                if os.path.exists(pjoin(self.me_dir,'Cards','pgs_card.dat')):
+                    os.remove(pjoin(self.me_dir,'Cards','pgs_card.dat'))                                         
+            
+            # Now that we know in which mode we are check that all the card
+            #exists (copy default if needed)
+
+            cards = ['pythia_card.dat']
+            self.add_card_to_run('pythia')
+            if mode == 'pgs':
+                self.add_card_to_run('pgs')
+                cards.append('pgs_card.dat')
+            if mode == 'delphes':
+                self.add_card_to_run('delphes')
+                cards.append('delphes_card.dat')
+
+            if force:
+                return mode
+
+            # Ask the user if he wants to edit any of the files
+            #First create the asking text
+            question = """Do you want to edit one cards (press enter to bypass editing)?
+  1 / pythia   : pythia_card.dat\n""" 
+            possible_answer = ['0','done', '1', 'pythia']
+            card = {0:'done', 1:'pythia', 9:'plot'}
+            if mode == 'pgs':
+                question += '  2 / pgs     : pgs_card.dat\n'
+                possible_answer.append(2)
+                possible_answer.append('pgs') 
+                card[2] = 'pgs'           
+            if mode == 'delphes':
+                question += '  2 / delphes : delphes_card.dat\n'
+                question += '  3 / trigger : delphes_trigger.dat\n'
+                possible_answer.append(2)
+                possible_answer.append('delphes')
+                possible_answer.append(3)
+                possible_answer.append('trigger')
+                card[2] = 'delphes'
+                card[3] = 'trigger'
+            if self.configuration['madanalysis_path']:
+                question += '  9 / plot : plot_card.dat\n'
+                possible_answer.append(9)
+                possible_answer.append('plot')
+
+            # Add the path options
+            question += '  Path to a valid card.\n'
+       
+            # Loop as long as the user is not done.
+            answer = 'no'
+            while answer != 'done':
+                answer = self.ask(question, '0', possible_answer, timeout=int(1.5*self.timeout), path_msg='enter path')
+                if answer.isdigit():
+                    answer = card[int(answer)]
+                if answer == 'done':
+                    return
+                if os.path.exists(answer):
+                    # detect which card is provide
+                    card_name = self.detect_card_type(answer)
+                    if card_name == 'unknown':
+                        card_name = self.ask('Fail to determine the type of the file. Please specify the format',
+                     ['pythia_card.dat','pgs_card.dat',
+                      'delphes_card.dat', 'delphes_trigger.dat','plot_card.dat'])
+
+                    logger.info('copy %s as %s' % (answer, card_name))
+                    files.cp(answer, pjoin(self.me_dir, 'Cards', card_name))
+                    continue
+                path = pjoin(self.me_dir,'Cards','%s_card.dat' % answer)
+                self.exec_cmd('open %s' % path)                    
+                 
+        return mode
 
     def edit_one_card(self, card, fct_args):
         """ """

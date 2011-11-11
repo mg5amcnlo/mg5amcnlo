@@ -991,9 +991,6 @@ class CheckValidForCmdWeb(CheckValidForCmd):
         if 'madevent' != self._export_format:
                 raise self.WebRestriction, 'only available output format is madevent (at current stage)'
 
-        # In web mode, can only do forced, automatic madevent output
-        CheckValidForCmd.check_output(self, args)
-
 #===============================================================================
 # CompleteForCmd
 #===============================================================================
