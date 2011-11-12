@@ -218,6 +218,15 @@ class CmdExtended(cmd.Cmd):
 class HelpToCmd(object):
     """ The Series of help routine for the MadEventCmd"""
     
+    def help_banner_run(self):
+        logger.info("syntax: banner_run Path|RUN [--run_options]")
+        logger.info("-- Reproduce a run following a given banner")
+        logger.info("   One of the following argument is require:")
+        logger.info("   Path should be the path of a valid banner.")
+        logger.info("   RUN should be the name of a run of the current directory")
+        self.run_options_help([('-f','answer all question by default'),
+                               ('--name=X', 'Define the name associated with the new run')]) 
+    
     def help_open(self):
         logger.info("syntax: open FILE  ")
         logger.info("-- open a file with the appropriate editor.")
@@ -338,6 +347,44 @@ class HelpToCmd(object):
 class CheckValidForCmd(object):
     """ The Series of check routine for the MadEventCmd"""
 
+    def check_banner_run(self, args):
+        """check the validity of line"""
+        
+        if len(args) == 0:
+            self.help_banner_run()
+            raise self.InvalidCmd('banner_run reauires at least one argument.')
+        
+        if os.path.exists(args[0]):
+            type ='banner'
+            format = self.detect_card_type(args[0])
+            if format != 'banner':
+                raise self.InvalidCmd('The file is not a valid banner.')
+        elif os.path.exists(pjoin(self.me_dir,'Events','%s_banner.txt' % args[0])):
+            name = args[0]
+            args[0] = pjoin(self.me_dir,'Events','%s_banner.txt')
+            type = 'run'
+        else:
+            raise self.InvalidCmd('No banner associates to this name.')
+            
+        run_name = [arg[7:] for arg in args if arg.startswith('--name')]
+        if run_name:
+            try:
+                os.exec_cmd('remove %s all' % run_name)
+            except:
+                pass
+            self.set_run_name(args[0], True)
+        elif type == 'banner':
+            self.set_run_name(self.find_available_run_name(self.me_dir))
+        elif type == 'run':
+            data = glob.glob(pjoin(self.me_dir, 'Events', '%s_*' % name))
+            if len(data) > 1:
+                run_name = self.find_available_run_name(self.me_dir)
+                logger.info('Run %s is not empty so will use run_name: %s' % \
+                                                               (name, run_name))
+                self.set_run_name(run_name)
+            else:
+                self.set_run_name(name)
+            
 
     def check_history(self, args):
         """check the validity of line"""
@@ -1074,7 +1121,7 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
             cluster_name = self.configuration['cluster_type']
             self.cluster = cluster.from_name[cluster_name]()
         return args
-                    
+    
     ############################################################################            
     def check_output_type(self, path):
         """ Check that the output path is a valid madevent directory """
@@ -1084,7 +1131,7 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
             return True
         else: 
             return False
-        
+            
     ############################################################################
     def set_configuration(self, config_path=None):
         """ assign all configuration variable from file 
@@ -1171,6 +1218,20 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
         misc.open_file.configure(self.configuration)
           
         return self.configuration
+
+    ############################################################################
+    def do_banner_run(self, line): 
+        """Make a run from the banner file"""
+        
+        args = self.split_arg(line)
+        #check the validity of the arguments
+        self.check_banner_run(args)
+        if '-f' in args:
+            force = True
+        else:
+            force = False     
+ 
+ 
  
  
     ############################################################################
@@ -2795,6 +2856,7 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
     @staticmethod
     def detect_card_type(path):
         """detect the type of the card. Return value are
+           banner
            param_card.dat
            run_card.dat
            pythia_card.dat
@@ -2805,6 +2867,8 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
         """
         
         text = open(path).read()
+        if '<MGVersion>' in text:
+            return 'banner'
         if 'CEN_max_tracker' in text:
             return 'delphes_card.dat'
         elif '#TRIGGER CARD' in text:
