@@ -8521,6 +8521,218 @@ C     Number of configs
       DATA MAPCONFIG(0)/10/
 """)
         
+    def test_configs_4f_decay(self):
+        """Test configs.inc for 4f decay process that failed in v. 1.3.27
+        """
+
+        mypartlist = base_objects.ParticleList()
+        myinterlist = base_objects.InteractionList()
+
+        # u, b and t quarks
+        mypartlist.append(base_objects.Particle({'name':'u',
+                      'antiname':'u~',
+                      'spin':2,
+                      'color':3,
+                      'mass':'zero',
+                      'width':'zero',
+                      'texname':'u',
+                      'antitexname':'\bar u',
+                      'line':'straight',
+                      'charge':2. / 3.,
+                      'pdg_code':2,
+                      'propagating':True,
+                      'is_part':True,
+                      'self_antipart':False}))
+        u = mypartlist[len(mypartlist) - 1]
+        antiu = copy.copy(u)
+        antiu.set('is_part', False)
+
+        mypartlist.append(base_objects.Particle({'name':'b',
+                      'antiname':'b~',
+                      'spin':2,
+                      'color':3,
+                      'mass':'MB',
+                      'width':'zero',
+                      'texname':'b',
+                      'antitexname':'\bar b',
+                      'line':'straight',
+                      'charge':-1. / 3.,
+                      'pdg_code':5,
+                      'propagating':True,
+                      'is_part':True,
+                      'self_antipart':False}))
+        b = mypartlist[len(mypartlist) - 1]
+        antib = copy.copy(b)
+        antib.set('is_part', False)
+
+        mypartlist.append(base_objects.Particle({'name':'t',
+                      'antiname':'t~',
+                      'spin':2,
+                      'color':3,
+                      'mass':'MT',
+                      'width':'WT',
+                      'texname':'y',
+                      'antitexname':'\bar t',
+                      'line':'straight',
+                      'charge':2. / 3.,
+                      'pdg_code':6,
+                      'propagating':True,
+                      'is_part':True,
+                      'self_antipart':False}))
+        t = mypartlist[len(mypartlist) - 1]
+        antit = copy.copy(t)
+        antit.set('is_part', False)
+
+        # W+/-
+        mypartlist.append(base_objects.Particle({'name':'w+',
+                      'antiname':'w-',
+                      'spin':3,
+                      'color':1,
+                      'mass':'WMASS',
+                      'width':'WWIDTH',
+                      'texname':'w+',
+                      'antitexname':'w-',
+                      'line':'wavy',
+                      'charge':1.,
+                      'pdg_code':24,
+                      'propagating':True,
+                      'is_part':True,
+                      'self_antipart':False}))
+        wplus = mypartlist[len(mypartlist) - 1]
+        wminus = copy.copy(wplus)
+        wminus.set('is_part', False)
+
+        # t b w couplings
+        myinterlist.append(base_objects.Interaction({
+                      'id': 1,
+                      'particles': base_objects.ParticleList(\
+                                            [t, \
+                                             antib, \
+                                             wminus]),
+                      'color': [color.ColorString([color.T(0, 1)])],
+                      'lorentz':['L1'],
+                      'couplings':{(0,0):'GC_23'},
+                      'orders':{'QED':1}}))
+
+        myinterlist.append(base_objects.Interaction({
+                      'id': 2,
+                      'particles': base_objects.ParticleList(\
+                                            [antit, \
+                                             b, \
+                                             wplus]),
+                      'color': [color.ColorString([color.T(0, 1)])],
+                      'lorentz':['L1'],
+                      'couplings':{(0,0):'GC_23'},
+                      'orders':{'QED':1}}))
+
+        # t t u u 4F couplings
+
+        myinterlist.append(base_objects.Interaction({
+                      'id': 3,
+                      'particles': base_objects.ParticleList(\
+                                            [antiu,
+                                             t,
+                                             antiu,
+                                             t]),
+                      'color': [color.ColorString([color.T(1,0),color.T(3,2)])],
+                      'lorentz':['FFFF1'],
+                      'couplings':{(0,0):'GC_27'},
+                      'orders':{'NP':2}}))
+
+        myinterlist.append(base_objects.Interaction({
+                      'id': 4,
+                      'particles': base_objects.ParticleList(\
+                                            [antit,
+                                             u,
+                                             antit,
+                                             u]),
+                      'color': [color.ColorString([color.T(1,0),color.T(3,2)])],
+                      'lorentz':['FFFF1'],
+                      'couplings':{(0,0):'GC_27'},
+                      'orders':{'NP':2}}))
+
+        mymodel = base_objects.Model()
+        mymodel.set('particles', mypartlist)
+        mymodel.set('interactions', myinterlist)
+
+        myleglist = base_objects.LegList()
+        myleglist.append(base_objects.Leg({'id':2,
+                                         'state':False}))
+        myleglist.append(base_objects.Leg({'id':2,
+                                         'state':False}))
+        myleglist.append(base_objects.Leg({'id':6}))
+        myleglist.append(base_objects.Leg({'id':6}))
+
+        myproc = base_objects.Process({'legs':myleglist,
+                                       'model':mymodel})
+        myleglist = base_objects.LegList()
+        myleglist.append(base_objects.Leg({'id':6,
+                                         'state':False}))
+        myleglist.append(base_objects.Leg({'id':-6}))
+        myleglist.append(base_objects.Leg({'id':2}))
+        myleglist.append(base_objects.Leg({'id':2}))
+
+        mydecay1 = base_objects.Process({'legs':myleglist,
+                                         'model':mymodel})
+
+        myleglist = base_objects.LegList()
+        myleglist.append(base_objects.Leg({'id':-6,
+                                         'state':False}))
+        myleglist.append(base_objects.Leg({'id':-5}))
+        myleglist.append(base_objects.Leg({'id':-24}))
+
+        mydecay2 = base_objects.Process({'legs':myleglist,
+                                         'model':mymodel})
+
+        mydecay1.set('decay_chains', base_objects.ProcessList([mydecay2]))
+        myproc.set('decay_chains', base_objects.ProcessList([mydecay1]))
+
+        myamplitude = diagram_generation.DecayChainAmplitude(myproc)
+
+        helas_decay_chain = helas_objects.HelasDecayChainProcess(myamplitude)
+        me = helas_decay_chain.combine_decay_chain_processes()[0]
+
+        myfortranmodel = helas_call_writers.FortranUFOHelasCallWriter(mymodel)
+        writer = writers.FortranWriter(self.give_pos('test'))
+
+        exporter = export_v4.ProcessExporterFortranME()
+
+        # Test configs file
+        nconfig, s_and_t_channels = exporter.write_configs_file(writer,
+                                                                me)
+        writer.close()
+        #print open(self.give_pos('test')).read()
+
+        # 2  2 > -24 -5 2 2 -24 -5 2 2
+        # 1  2     3  4 5 6   7  8 9 10
+        self.assertFileContains('test',
+"""C     Diagram 1
+      DATA MAPCONFIG(1)/1/
+      DATA (IFOREST(I,-1,1),I=1,2)/8,7/
+      DATA (SPROP(I,-1,1),I=1,1)/-6/
+      DATA TPRID(-1,1)/0/
+      DATA (IFOREST(I,-2,1),I=1,2)/9,-1/
+      DATA (SPROP(I,-2,1),I=1,1)/1/
+      DATA TPRID(-2,1)/0/
+      DATA (IFOREST(I,-3,1),I=1,2)/10,-2/
+      DATA (SPROP(I,-3,1),I=1,1)/6/
+      DATA TPRID(-3,1)/0/
+      DATA (IFOREST(I,-4,1),I=1,2)/4,3/
+      DATA (SPROP(I,-4,1),I=1,1)/-6/
+      DATA TPRID(-4,1)/0/
+      DATA (IFOREST(I,-5,1),I=1,2)/5,-4/
+      DATA (SPROP(I,-5,1),I=1,1)/1/
+      DATA TPRID(-5,1)/0/
+      DATA (IFOREST(I,-6,1),I=1,2)/6,-5/
+      DATA (SPROP(I,-6,1),I=1,1)/6/
+      DATA TPRID(-6,1)/0/
+      DATA (IFOREST(I,-7,1),I=1,2)/-3,-6/
+      DATA (SPROP(I,-7,1),I=1,1)/1/
+      DATA TPRID(-7,1)/0/
+C     Number of configs
+      DATA MAPCONFIG(0)/1/
+""")
+        
     def test_configs_long_decay(self):
         """Test configs.inc which previously failed.
         """

@@ -1945,12 +1945,17 @@ class HelasAmplitude(base_objects.PhysicsObject):
             schannels.extend(mother_s)
             tchannels.extend(mother_t)
 
+        # Sort s-channels according to number
+        schannels.sort(lambda x1,x2: x2.get('legs')[-1].get('number') - \
+                       x1.get('legs')[-1].get('number'))
+
         # Split up multiparticle vertices using fake s-channel propagators
         multischannels = [(i, v) for (i, v) in enumerate(schannels) \
                           if len(v.get('legs')) > 3]
         multitchannels = [(i, v) for (i, v) in enumerate(tchannels) \
                           if len(v.get('legs')) > 3]
-
+        
+        increase = 0
         for channel in multischannels + multitchannels:
             newschannels = []
             vertex = channel[1]
@@ -1972,7 +1977,9 @@ class HelasAmplitude(base_objects.PhysicsObject):
 
                 # Insert the new s-channel before this vertex
                 if channel in multischannels:
-                    schannels.insert(channel[0], new_vertex)
+                    schannels.insert(channel[0]+increase, new_vertex)
+                    # Account for previous insertions
+                    increase += 1
                 else:
                     schannels.append(new_vertex)
                 legs = vertex.get('legs')
@@ -1980,10 +1987,6 @@ class HelasAmplitude(base_objects.PhysicsObject):
                 legs.insert(0, copy.copy(popped_legs[-1]))
                 # Renumber resulting leg according to minimum leg number
                 legs[-1].set('number', min([l.get('number') for l in legs[:-1]]))
-
-        # Sort s-channels according to number
-        schannels.sort(lambda x1,x2: x2.get('legs')[-1].get('number') - \
-                       x1.get('legs')[-1].get('number'))
 
         # Finally go through all vertices, sort the legs and replace
         # leg number with propagator number -1, -2, ...
