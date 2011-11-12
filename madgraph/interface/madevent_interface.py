@@ -816,10 +816,30 @@ class CheckValidForCmd(object):
 class CompleteForCmd(CheckValidForCmd):
     """ The Series of help routine for the MadGraphCmd"""
     
+    def complete_banner_run(self, text, line, begidx, endidx):
+       "Complete the banner run command"
+       try:
+        args = self.split_arg(line[0:begidx], error=False)
+        if len(args)==1:
+            comp = self.path_completion(text,
+                                        os.path.join('.',*[a for a in args \
+                                                    if a.endswith(os.path.sep)]))
+            run_list =  glob.glob(pjoin(self.me_dir, 'Events', '*_banner.txt'))
+            run_list = [n.rsplit('/',1)[1][:-11] for n in run_list]
+            comp += self.list_completion(text, run_list)
+            return comp
+        if args[-1].endswith(os.path.sep):
+            return self.path_completion(text,
+                                        os.path.join('.',*[a for a in args \
+                                                    if a.endswith(os.path.sep)]))
+    
+        return self.list_completion(text, ['--name=','-f'], line)
+       except Exception, error:
+           print error
     def complete_history(self, text, line, begidx, endidx):
         "Complete the history command"
 
-        args = self.split_arg(line[0:begidx])
+        args = self.split_arg(line[0:begidx], error=False)
 
         # Directory continuation
         if args[-1].endswith(os.path.sep):
@@ -1231,6 +1251,23 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
         else:
             force = False     
  
+        # Split the banner
+        if MADEVENT:
+            import internal.splitbanner as splitbanner
+        else:
+            import madgraph.various.splitbanner as splitbanner
+            
+        splitbanner.split_banner(args[0], self.me_dir)
+        
+        # Check if we want to modify the run
+        if not force:
+            ans = self.ask('Do you want to modify this run?', 'n', ['y','n'], 
+                                                           timeout=self.timeout)
+            if ans == 'n':
+                force = True
+        
+        # Call Generate events
+        self.exec_cmd('generate_events %s %s' % (self.run_name, force and '-f' or ''))
  
  
  
@@ -1409,7 +1446,7 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
         self.create_plot('parton', '%s/%s_unweighted_events.lhe' %
                          (pjoin(self.me_dir, 'Events'),self.run_name))
         
-        os.system('gzip %s/%s_unweighted_events.lhe' % 
+        os.system('gzip -f %s/%s_unweighted_events.lhe' % 
                                   (pjoin(self.me_dir, 'Events'), self.run_name))
 
         self.results.def_current(None)
@@ -2102,10 +2139,10 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
         
         # Update the banner with the pgs card
         banner = open(pjoin(self.me_dir,'Events',self.run_name + '_banner.txt'), 'a')
-        banner.writelines('<MGDelphesCard>')
+        banner.writelines('<MGDelphesCard>\n')
         banner.writelines(open(pjoin(self.me_dir, 'Cards','delphes_card.dat')).read())
-        banner.writelines('</MGDelphesCard>')
-        banner.writelines('<MGDelphesTrigger>')
+        banner.writelines('</MGDelphesCard>\n')
+        banner.writelines('<MGDelphesTrigger>\n')
         banner.writelines(open(pjoin(self.me_dir, 'Cards','delphes_trigger.dat')).read())
         banner.writelines('</MGDelphesTrigger>')        
         banner.close()
@@ -2134,7 +2171,7 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
         self.create_plot('Delphes')
 
         if os.path.exists(pjoin(self.me_dir, 'Events', '%s_delphes_events.lhco' % self.run_name)):
-            subprocess.call(['gzip', pjoin(self.me_dir, 'Events', '%s_delphes_events.lhco' % self.run_name)])
+            subprocess.call(['gzip','-f', pjoin(self.me_dir, 'Events', '%s_delphes_events.lhco' % self.run_name)])
 
 
         
