@@ -316,6 +316,11 @@ c
      $        ' please increase maxcolmp in addmothers.f'
          stop
       endif
+      if (ida1.eq.1001)then
+         write(26,*) 'Error: failed to reduce to color indices: ',ida2,imo
+         write(*,*) 'Error: failed to reduce to color indices: ',ida2,imo
+         stop
+      endif
       write(26,*) 'Error: Color combination ',ida1,ida2,
      $     '->',imo,' not implemented in addmothers.f'
       write(*,*) 'Error: Color combination ',ida1,ida2,
@@ -378,6 +383,9 @@ c        This is an epsilonbar index interaction
                maxcolor=maxcolor+1
                icolres(1)=-maxcolor
             endif
+         else
+c           Don't know how to deal with this
+            call write_error(1001,n3,n3bar)
          endif
       endif
 
