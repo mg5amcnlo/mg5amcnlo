@@ -2322,7 +2322,7 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
         self.update_status('compile directory', level=None)
         # Change current working directory
         self.launching_dir = os.getcwd()
-        os.chdir(self.me_dir)
+        #os.chdir(self.me_dir)
         
         # Check if we need the MSSM special treatment
         model = self.find_model_name()
@@ -2546,11 +2546,11 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
                     self.launch_job('%s/gensudgrid ' % self.dirbin, 
                                     arguments = [i],
                                     cwd=self.me_dir, 
-                                    stdout=open('gensudgrid%s.log' % s,'w'))
+                                    stdout=open(pjoin(self.me_dir, 'gensudgrid%s.log' % s,'w')))
                 self.monitor()
                 for i in range(-2,6):
                     path = pjoin(self.me_dir, 'lib', 'issudgrid.dat')
-                    os.system('cat gensudgrid%s.log >> %s' % (i, path))
+                    os.system('cat %s/gensudgrid%s.log >> %s' % (self.me_dir, path))
                     os.system('gzip -fc %s > %s' % (path, issudfile))
                                      
     ############################################################################

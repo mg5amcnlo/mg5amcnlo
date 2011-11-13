@@ -19,6 +19,7 @@ import re
 import shutil
 import sys
 import logging
+import time
 
 logger = logging.getLogger('test_cmd')
 
@@ -27,6 +28,8 @@ import tests.unit_tests.iolibs.test_file_writers as test_file_writers
 import madgraph.interface.cmd_interface as MGCmd
 import madgraph.interface.madevent_interface as MECmd
 import madgraph.interface.launch_ext_program as launch_ext
+import madgraph.iolibs.misc as misc
+
 _file_path = os.path.split(os.path.dirname(os.path.realpath(__file__)))[0]
 _pickle_path =os.path.join(_file_path, 'input_files')
 
@@ -46,13 +49,19 @@ class TestMECmdShell(unittest.TestCase):
         try:
             shutil.rmtree('/tmp/MGPROCESS/')
         except Exception, error:
-            print error
             pass
 
         interface = MGCmd.MadGraphCmdShell()
         interface.onecmd('import model %s' % model)
         interface.onecmd('generate %s' % process)
         interface.onecmd('output madevent /tmp/MGPROCESS/ -f')
+        if not os.path.exists(pjoin(_file_path, os.path.pardir, 'pythia-pgs')):
+            interface.onecmd('install pythia-pgs')
+        if not misc.which('root'):
+            raise Exception, 'root is require for this test'
+        if not os.path.exists(pjoin(_file_path, os.path.pardir, 'MadAnalysis')):
+            interface.onecmd('install MadAnalysis')
+        
         self.cmd_line = MECmd.MadEventCmdShell(me_dir= '/tmp/MGPROCESS')
 
 
@@ -68,15 +77,62 @@ class TestMECmdShell(unittest.TestCase):
         
     def test_creating_matched_plot(self):
         """test that the creation of matched plot works"""
-        
+
+        cmd = os.getcwd()
         self.generate('p p > W+ j', 'sm')
+        self.assertEqual(cmd, os.getcwd())        
         shutil.copy(os.path.join(_file_path, 'input_files', 'run_card_matching.dat'),
                     '/tmp/MGPROCESS/Cards/run_card.dat')
         shutil.copy('/tmp/MGPROCESS/Cards/pythia_card_default.dat',
                     '/tmp/MGPROCESS/Cards/pythia_card.dat')
         self.do('generate_events -f')
+        
+        self.check_matched_plot()         
+        start = time.time()
+                
+        self.assertEqual(cmd, os.getcwd())
         self.do('generate_events -f')
         self.do('pythia run_01 -f')
+        self.do('quit')
+        
+        self.check_parton_output()
+        self.check_parton_output('run_02')
+        self.check_pythia_output()        
+        self.check_matched_plot(mintime=start)        
+        
+        
+        self.assertEqual(cmd, os.getcwd())
+
+    def load_result(self, run_name):
+        
+        import madgraph.iolibs.save_load_object as save_load_object
+        import madgraph.various.gen_crossxhtml as gen_crossxhtml
+        
+        result = save_load_object.load_from_file('/tmp/MGPROCESS/HTML/results.pkl')
+        return result[run_name]
+
+    def check_parton_output(self, run_name='run_01', target_event=100):
+        """Check that parton output exists and reach the targert for event"""
+                
+        # check that the number of event is fine:
+        data = self.load_result(run_name)
+        self.assertEqual(int(data['nb_event']), target_event)
+        self.assertTrue('lhe' in data.parton)
+                
+    def check_pythia_output(self, run_name='run_01'):
+        """ """
+        # check that the number of event is fine:
+        data = self.load_result(run_name)
+        self.assertTrue('lhe' in data.pythia)
+        self.assertTrue('log' in data.pythia)
+
+    def check_matched_plot(self, run_name='run_01', mintime=None):
+        """ """
+        path = '/tmp/MGPROCESS/Events/%s_pythia/DJR1.ps' % run_name
+        self.assertTrue(os.path.exists(path))
+        
+        if mintime:
+            self.assertTrue(os.path.getctime(path) > mintime)
 
 #===============================================================================
 # TestCmd
@@ -99,15 +155,18 @@ class TestMEfromfile(unittest.TestCase):
                              stdin=subprocess.PIPE,
                              stdout=devnull,stderr=devnull)
             out = p.communicate('install pythia-pgs')
-            
+        
+
         subprocess.call([pjoin(_file_path, os.path.pardir,'bin','mg5'), 
                          pjoin(_file_path, 'input_files','test_mssm_generation')],
                          cwd=pjoin(_file_path, os.path.pardir),
                          stdout=devnull,stderr=devnull)
 
+        
         self.check_parton_output()
         self.check_parton_output('run_02')
         self.check_pythia_output()
+        print cwd
         self.assertEqual(cwd, os.getcwd())
         #
 

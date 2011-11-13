@@ -97,7 +97,12 @@ def import_model(model_name):
     
     #restrict it if needed       
     if restrict_file:
-        logger.info('Restrict model %s with file %s .' % (model_name, os.path.relpath(restrict_file)))
+        try:
+            logger.info('Restrict model %s with file %s .' % (model_name, os.path.relpath(restrict_file)))
+        except OSError:
+            # sometimes has trouble with relative path
+            logger.info('Restrict model %s with file %s .' % (model_name, restrict_file))
+            
         if logger_mod.getEffectiveLevel() > 10:
             logger.info('Run \"set stdout_level DEBUG\" before import for more information.')
             
