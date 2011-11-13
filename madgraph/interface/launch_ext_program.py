@@ -91,7 +91,7 @@ class ExtLauncher(object):
         """nice handling of question"""
      
         if not self.force:
-            return cmd.Cmd.ask(question, default, choices=choices, path_msg=path_msg,
+            return self.cmd.ask(question, default, choices=choices, path_msg=path_msg,
                                timeout=self.timeout, fct_timeout=self.timeout_fct)
         else:
             return str(default)
@@ -132,12 +132,12 @@ class ExtLauncher(object):
 class SALauncher(ExtLauncher):
     """ A class to launch a simple Standalone test """
     
-    def __init__(self, running_dir, timeout, **options):
+    def __init__(self, cmd_int, running_dir, timeout, **options):
         """ initialize the StandAlone Version"""
         
         ExtLauncher.__init__(self, running_dir, './Cards', timeout, **options)
         self.cards = ['param_card.dat']
-
+        self.cmd = cmd_int
     
     def launch_program(self):
         """launch the main program"""
@@ -253,12 +253,13 @@ class MELauncher(ExtLauncher):
 class Pythia8Launcher(ExtLauncher):
     """A class to launch Pythia8 run"""
     
-    def __init__(self, running_dir, timeout, **option):
+    def __init__(self, cmd_int, running_dir, timeout, **option):
         """ initialize launching Pythia 8"""
 
         running_dir = os.path.join(running_dir, 'examples')
         ExtLauncher.__init__(self, running_dir, '.', timeout, **option)
         self.cards = []
+        self.cmd = cmd_int
     
     def prepare_run(self):
         """ ask for pythia-pgs/delphes run """

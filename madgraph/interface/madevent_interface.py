@@ -408,7 +408,7 @@ class CheckValidForCmd(object):
             self.help_set()
             raise self.InvalidCmd('set needs an option and an argument')
 
-        if args[0] not in self._set_options:
+        if args[0] not in self._set_options + self.configuration.keys():
             self.help_set()
             raise self.InvalidCmd('Possible options for set are %s' % \
                                   self._set_options)
@@ -893,6 +893,15 @@ class CompleteForCmd(CheckValidForCmd):
         if len(args) == 2:
             if args[1] == 'stdout_level':
                 return self.list_completion(text, ['DEBUG','INFO','WARNING','ERROR','CRITICAL'])
+            else:
+                first_set = ['None','True','False']
+                # directory names
+                second_set = [name for name in self.path_completion(text, '.', only_dirs = True)]
+                return self.list_completion(text, first_set + second_set)
+        elif len(args) >2 and args[-1].endswith(os.path.sep):
+                return self.path_completion(text,
+                        os.path.join('.',*[a for a in args if a.endswith(os.path.sep)]),
+                        only_dirs = True) 
     
     def complete_survey(self, text, line, begidx, endidx):
         """ Complete the survey command """
@@ -1334,6 +1343,11 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
             logger.info('set output information to level: %s' % args[1])
         elif args[0] == "fortran_compiler":
             self.configuration['fortran_compiler'] = args[1] 
+        elif args[0] in self.configuration:
+            if args[1] in ['None','True','False']:
+                self.configuration[args[0]] = eval(args[1])
+            else:
+                self.configuration[args[0]] = args[1]             
  
  
     ############################################################################
@@ -1435,7 +1449,7 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
 
 
         eradir = self.configuration['exrootanalysis_path']
-        if misc.is_executable(pjoin(eradir,'ExRootLHEFConverter')):
+        if eradir and misc.is_executable(pjoin(eradir,'ExRootLHEFConverter')):
             self.update_status("Create Root file", level='parton')
             os.system('gunzip %s/%s_unweighted_events.lhe.gz' % 
                                   (pjoin(self.me_dir,'Events'), self.run_name))
@@ -1619,7 +1633,7 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
         eradir = self.configuration['exrootanalysis_path']
         madir = self.configuration['madanalysis_path']
         td = self.configuration['td_path']
-        if misc.is_executable(pjoin(eradir,'ExRootLHEFConverter'))  and\
+        if eradir and misc.is_executable(pjoin(eradir,'ExRootLHEFConverter'))  and\
            os.path.exists(pjoin(self.me_dir, 'Events', 'unweighted_events.lhe')):
                 self.create_root_file()
         
@@ -1657,6 +1671,8 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
         else:
             force = False
         if '--no_default' in args:
+            if not os.path.exists(pjoin(self.me_dir, 'Cards', 'pythia_card.dat')):
+                return
             force = True
             no_default = True
             args.remove('--no_default')
@@ -1753,7 +1769,7 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
                              cwd=pjoin(self.me_dir,'Events'))
                 
             # Creating ROOT file
-            if misc.is_executable(pjoin(eradir, 'ExRootLHEFConverter')):
+            if eradir and misc.is_executable(pjoin(eradir, 'ExRootLHEFConverter')):
                 self.update_status('Creating Pythia LHE Root File', level='pythia')
                 subprocess.call([eradir+'/ExRootLHEFConverter', 
                              'pythia_events.lhe', '%s_pythia_lhe_events.root' % self.run_name],
@@ -2076,7 +2092,7 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
                             cwd=pjoin(self.me_dir, 'Events'))
 
         # Creating Root file
-        if misc.is_executable(pjoin(eradir, 'ExRootLHCOlympicsConverter')):
+        if eradir and misc.is_executable(pjoin(eradir, 'ExRootLHCOlympicsConverter')):
             self.update_status('Creating PGS Root File', level='pgs')
             subprocess.call([eradir+'/ExRootLHCOlympicsConverter', 
                              'pgs_events.lhco','%s_pgs_events.root' % self.run_name],

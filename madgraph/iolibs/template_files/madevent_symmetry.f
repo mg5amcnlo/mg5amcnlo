@@ -67,7 +67,7 @@ c      if (icomp .gt. 3 .or. icomp .lt. 0) icomp=0
 c     If different card options set for nhel_refine and nhel_survey:
       call get_integer(npara,param,value," nhel_survey ",nhel_survey,
      $     1*nhel_survey)
-      call setpara('%(param_card_name)s')   !Sets up couplings and masses
+      call setpara('%(param_card_name)s' %(setparasecondarg)s)   !Sets up couplings and masses
       call printout
       include 'props.inc'
 

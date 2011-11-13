@@ -95,7 +95,6 @@ class MatrixElementEvaluator(object):
         """Calculate the matrix element and evaluate it for a phase space point
            output is either m2, amp, jamp
         """
-        print 'evaluate with p', p
         if full_model:
             self.full_model = full_model
 

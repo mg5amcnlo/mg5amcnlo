@@ -106,11 +106,19 @@ class TestCmdShell1(unittest.TestCase):
         """check that configuration file is at default value"""
         
         config = self.cmd.set_configuration(MG5DIR+'/input/mg5_configuration.txt')
-        expected = {'pythia8_path': './pythia8',
-                    'web_browser': None,
-                    'text_editor': None,
-                    'eps_viewer': None}
-        
+        expected = {'web_browser': None, 
+                    'text_editor': None, 
+                    'pythia-pgs_path': './pythia-pgs', 
+                    'td_path': './td', 
+                    'delphes_path': './Delphes', 
+                    'cluster_type': 'pbs', 
+                    'madanalysis_path': './MadAnalysis', 
+                    'fortran_compiler': None, 
+                    'exrootanalysis_path': './ExRootAnalysis', 
+                    'eps_viewer': None, 
+                    'automatic_html_opening': 'True', 
+                    'pythia8_path': './pythia8'}
+
         self.assertEqual(config, expected)
         
         text_editor = 'vi'
@@ -415,13 +423,14 @@ class TestCmdShell2(unittest.TestCase,
         logfile = os.path.join(self.out_dir,'SubProcesses', 'P0_gg_hgg',
                                'check.log')
         subprocess.call('./check', 
-                        stdout=open(logfile, 'w'), stderr=devnull,
+                        stdout=open(logfile, 'w'), stderr=subprocess.STDOUT,
                         cwd=os.path.join(self.out_dir, 'SubProcesses',
                                          'P0_gg_hgg'), shell=True)
         log_output = open(logfile, 'r').read()
         me_re = re.compile('Matrix element\s*=\s*(?P<value>[\d\.eE\+-]+)\s*GeV',
                            re.IGNORECASE)
         me_groups = me_re.search(log_output)
+        
         self.assertTrue(me_groups)
         self.assertAlmostEqual(float(me_groups.group('value')), 1.10908942e-06)
         
@@ -641,30 +650,30 @@ class TestCmdShell2(unittest.TestCase,
                                                'lib', 'libpdf.a')))
         # Check that combine_events, gen_ximprove, combine_runs and sum_html
         # compile
-        status = subprocess.call(['make', '../bin/combine_events'],
+        status = subprocess.call(['make', '../bin/internal/combine_events'],
                                  stdout=devnull, 
                                  cwd=os.path.join(self.out_dir, 'Source'))
         self.assertEqual(status, 0)
         self.assertTrue(os.path.exists(os.path.join(self.out_dir,
-                                               'bin', 'combine_events')))
-        status = subprocess.call(['make', '../bin/gen_ximprove'],
+                                               'bin','internal', 'combine_events')))
+        status = subprocess.call(['make', '../bin/internal/gen_ximprove'],
                                  stdout=devnull, 
                                  cwd=os.path.join(self.out_dir, 'Source'))
         self.assertEqual(status, 0)
         self.assertTrue(os.path.exists(os.path.join(self.out_dir,
-                                               'bin', 'gen_ximprove')))
-        status = subprocess.call(['make', '../bin/combine_runs'],
+                                               'bin','internal', 'gen_ximprove')))
+        status = subprocess.call(['make', '../bin/internal/combine_runs'],
                                  stdout=devnull, 
                                  cwd=os.path.join(self.out_dir, 'Source'))
         self.assertEqual(status, 0)
         self.assertTrue(os.path.exists(os.path.join(self.out_dir,
-                                               'bin', 'combine_runs')))
-        status = subprocess.call(['make', '../bin/sum_html'],
+                                               'bin','internal', 'combine_runs')))
+        status = subprocess.call(['make', '../bin/internal/sum_html'],
                                  stdout=devnull, 
                                  cwd=os.path.join(self.out_dir, 'Source'))
         self.assertEqual(status, 0)
         self.assertTrue(os.path.exists(os.path.join(self.out_dir,
-                                               'bin', 'sum_html')))
+                                               'bin', 'internal', 'sum_html')))
         # Check that gensym compiles
         status = subprocess.call(['make', 'gensym'],
                                  stdout=devnull, 

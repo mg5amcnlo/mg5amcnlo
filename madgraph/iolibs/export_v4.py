@@ -190,8 +190,8 @@ class ProcessExporterFortran(object):
         for file in os.listdir(model_path):
             if os.path.isfile(os.path.join(model_path, file)):
                 shutil.copy2(os.path.join(model_path, file), \
-                                     os.path.join(self.dir_path, 'Source', 'MODEL'))    
-        self.make_model_symbolic_link()
+                                     os.path.join(self.dir_path, 'Source', 'MODEL'))
+
 
     def make_model_symbolic_link(self):
         """Make the copy/symbolic links"""
@@ -801,6 +801,24 @@ class ProcessExporterFortranSA(ProcessExporterFortran):
         filename = os.path.join(self.dir_path,'Source','makefile')
         self.write_source_makefile(writers.FortranWriter(filename))            
         
+    #===========================================================================
+    # export model files
+    #=========================================================================== 
+    def export_model_files(self, model_path):
+        """export the model dependent files for V4 model"""
+        
+        super(ProcessExporterFortranSA,self).export_model_files(model_path)
+        # Add the routine update_as_param in v4 model 
+        # This is a function created in the UFO 
+        
+        
+        text = open(os.path.join(self.dir_path,'SubProcesses','check_sa.f')).read()
+        text = text.replace('call setpara(\'param_card.dat\')', 'call setpara(\'param_card.dat\', .true.)')
+        fsock = open(os.path.join(self.dir_path,'SubProcesses','check_sa.f'), 'w')
+        fsock.write(text)
+        fsock.close()
+        
+        self.make_model_symbolic_link()
 
     #===========================================================================
     # Make the Helas and Model directories for Standalone directory
@@ -1023,19 +1041,18 @@ class ProcessExporterFortranME(ProcessExporterFortran):
         
         # The next file are model dependant (due to SLAH convention)
         self.model_name = modelname
-        # Add the driver.f 
-        filename = os.path.join(self.dir_path,'SubProcesses','driver.f')
-        self.write_driver(writers.FortranWriter(filename))
-        # Add the symmetry.f 
-        filename = os.path.join(self.dir_path,'SubProcesses','symmetry.f')
-        self.write_symmetry(writers.FortranWriter(filename))
         # Add the combine_events.f 
         filename = os.path.join(self.dir_path,'Source','combine_events.f')
         self.write_combine_events(writers.FortranWriter(filename))
         # Add the write_banner.f 
         filename = os.path.join(self.dir_path,'Source','write_banner.f')
         self.write_write_banner(writers.FortranWriter(filename))
-
+        # Add the symmetry.f 
+        filename = os.path.join(self.dir_path,'SubProcesses','symmetry.f')
+        self.write_symmetry(writers.FortranWriter(filename))
+        # Add the driver.f 
+        filename = os.path.join(self.dir_path,'SubProcesses','driver.f')
+        self.write_driver(writers.FortranWriter(filename))
         # Copy the different python file in the Template
         self.copy_python_file()
         
@@ -1063,10 +1080,49 @@ class ProcessExporterFortranME(ProcessExporterFortran):
         cp(_file_path+'/__init__.py', self.dir_path+'/bin/internal/__init__.py')
         cp(_file_path+'/various/gen_crossxhtml.py', 
                                 self.dir_path+'/bin/internal/gen_crossxhtml.py')                
+        cp(_file_path+'/various/splitbanner.py', 
+                                   self.dir_path+'/bin/internal/splitbanner.py')
         cp(_file_path+'/various/cluster.py', 
                                        self.dir_path+'/bin/internal/cluster.py') 
         cp(_file_path+'/interface/.mg5_logging.conf', 
                                  self.dir_path+'/bin/internal/me5_logging.conf') 
+
+
+    #===========================================================================
+    # export model files
+    #=========================================================================== 
+    def export_model_files(self, model_path):
+        """export the model dependent files"""
+        
+        super(ProcessExporterFortranME,self).export_model_files(model_path)
+        # Add the routine update_as_param in v4 model 
+        # This is a function created in the UFO 
+        text="""
+        subroutine update_as_param()
+          call setpara('param_card.dat',.false.)
+          return
+        end
+        """
+        ff = open(os.path.join(self.dir_path, 'Source', 'MODEL', 'couplings.f'),'a')
+        ff.write(text)
+        ff.close()
+                
+        # Add the symmetry.f 
+        filename = os.path.join(self.dir_path,'SubProcesses','symmetry.f')
+        self.write_symmetry(writers.FortranWriter(filename), v5=False)
+        
+        # Add the driver.f 
+        filename = os.path.join(self.dir_path,'SubProcesses','driver.f')
+        self.write_driver(writers.FortranWriter(filename), v5=False)
+        
+        # Modify setrun.f
+        text = open(os.path.join(self.dir_path,'Source','setrun.f')).read()
+        text = text.replace('call setpara(param_card_name)', 'call setpara(param_card_name, .true.)')
+        fsock = open(os.path.join(self.dir_path,'Source','setrun.f'), 'w')
+        fsock.write(text)
+        fsock.close()
+        
+        self.make_model_symbolic_link()
 
 
     #===========================================================================
@@ -1083,6 +1139,8 @@ class ProcessExporterFortranME(ProcessExporterFortran):
 
         if not self.model:
             self.model = matrix_element.get('processes')[0].get('model')
+
+
 
         os.chdir(path)
 
@@ -1889,7 +1947,7 @@ c           This is dummy particle used in multiparticle vertices
     #===========================================================================
     # write_driver
     #===========================================================================
-    def write_driver(self, writer):
+    def write_driver(self, writer, v5=True):
         """Write the SubProcess/driver.f file for MG4"""
 
         path = os.path.join(_file_path,'iolibs','template_files','madevent_driver.f')
@@ -1898,8 +1956,11 @@ c           This is dummy particle used in multiparticle vertices
             card = 'Source/MODEL/MG5_param.dat'
         else:
             card = 'param_card.dat' 
-        text = open(path).read() % {'param_card_name':card} 
-
+        if v5:
+            text = open(path).read() % {'param_card_name':card, 'secondparam':''} 
+        else:
+            text = open(path).read() % {'param_card_name':card, 
+                                        'secondparam': ',.true.'} 
         writer.write(text)
         
         return True
@@ -1944,8 +2005,8 @@ c           This is dummy particle used in multiparticle vertices
     #===========================================================================
     # write_symmetry
     #===========================================================================
-    def write_symmetry(self, writer):
-        """Write the SubProcess/driver.f file for MG4"""
+    def write_symmetry(self, writer, v5=True):
+        """Write the SubProcess/driver.f file for ME"""
 
         path = os.path.join(_file_path,'iolibs','template_files','madevent_symmetry.f')
         
@@ -1954,8 +2015,11 @@ c           This is dummy particle used in multiparticle vertices
         else:
             card = 'param_card.dat' 
         text = open(path).read() 
-        text = text % {'param_card_name':card} 
-
+        
+        if v5:
+            text = text % {'param_card_name':card, 'setparasecondarg':''} 
+        else:
+            text = text % {'param_card_name':card, 'setparasecondarg':',.true.'} 
         writer.write(text)
         
         return True

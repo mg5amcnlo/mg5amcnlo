@@ -84,7 +84,7 @@ c
       nsteps=2
       param_card_name = '%(param_card_name)s'
       call setrun                !Sets up run parameters
-      call setpara('param_card.dat')   !Sets up couplings and masses
+      call setpara(param_card_name %(secondparam)s)   !Sets up couplings and masses
       include 'pmass.inc'        !Sets up particle masses
       include 'qmass.inc'        !Sets up particle masses inside onium state
       call setcuts               !Sets up cuts 

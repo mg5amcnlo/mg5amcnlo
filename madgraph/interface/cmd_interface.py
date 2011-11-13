@@ -739,8 +739,9 @@ This will take effect only in a NEW terminal
             raise self.InvalidCmd('set needs an option and an argument')
 
         if args[0] not in self._set_options:
-            self.help_set()
-            raise self.InvalidCmd('Possible options for set are %s' % \
+            if not args[0] in self._options and not args[0] in self.configuration:
+                self.help_set()
+                raise self.InvalidCmd('Possible options for set are %s' % \
                                   self._set_options)
 
         if args[0] in ['group_subprocesses']:
@@ -1285,7 +1286,8 @@ class CompleteForCmd(CheckValidForCmd):
 
         # Format
         if len(args) == 1:
-            return self.list_completion(text, self._set_options)
+            opts = self._set_options + self._options.keys() + self.configuration.keys()
+            return self.list_completion(text, opts)
 
         if len(args) == 2:
             if args[1] in ['group_subprocesses']:
@@ -1299,6 +1301,15 @@ class CompleteForCmd(CheckValidForCmd):
         
             elif args[1] == 'fortran_compiler':
                 return self.list_completion(text, ['f77','g77','gfortran'])
+            else:
+                first_set = ['None','True','False']
+                # directory names
+                second_set = [name for name in self.path_completion(text, '.', only_dirs = True)]
+                return self.list_completion(text, first_set + second_set)
+        elif len(args) >2 and args[-1].endswith(os.path.sep):
+                return self.path_completion(text,
+                        os.path.join('.',*[a for a in args if a.endswith(os.path.sep)]),
+                        only_dirs = True)
         
     def complete_import(self, text, line, begidx, endidx):
         "Complete the import command"
@@ -1530,7 +1541,6 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
         self._multiparticles = {}
         self._options = {}
         self._generate_info = "" # store the first generated process
-        self._model_format = None
         self._model_v4_path = None
         self._use_lower_part_names = False
         self._export_dir = None
@@ -2422,7 +2432,8 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
         """ read a V4 proc card, convert it and run it in mg5"""
         
         # change the status of this line in the history -> pass in comment
-        self.history[-1] = '#%s' % self.history[-1]
+        if self.history and self.history[-1].startswith('import proc_v4'):
+            self.history[-1] = '#%s' % self.history[-1]
          
         # read the proc_card.dat
         reader = files.read_from_file(filepath, import_v4.read_proc_card_v4)
@@ -2695,7 +2706,7 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
         # args is now MODE PATH
         
         if args[0].startswith('standalone'):
-            ext_program = launch_ext.SALauncher(args[1], self.timeout,
+            ext_program = launch_ext.SALauncher(self, args[1], self.timeout,
                                                 **options)
         elif args[0] == 'madevent':
             if options['interactive']:
@@ -2722,7 +2733,7 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
                                 shell = hasattr(self, 'do_shell'),
                                 **options)
         elif args[0] == 'pythia8':
-            ext_program = launch_ext.Pythia8Launcher(args[1], self.timeout,
+            ext_program = launch_ext.Pythia8Launcher(self, args[1], self.timeout,
                                                 **options)
         else:
             os.chdir(start_cwd) #ensure to go to the initial path
@@ -2863,6 +2874,17 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
                 self.configuration['fortran_compiler'] = args[1]
             else:
                 self.configuration['fortran_compiler'] = None
+        elif args[0] in self._options:
+            if args[1] in  ['None','True', 'False']:
+                self._options[args[0]] = eval(args[1])
+            else:
+                self._options[args[0]] = args[1] 
+        elif args[0] in self.configuration:
+            if args[1] in ['None','True','False']:
+                self.configuration[args[0]] = eval(args[1])
+            else:
+                self.configuration[args[0]] = args[1]             
+
     
     def do_open(self, line):
         """Open a text file/ eps file / html file"""
@@ -2926,7 +2948,6 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
 
         if self._export_format in ['madevent', 'standalone']:
             self._curr_exporter.copy_v4template(modelname=self._curr_model.get('name'))            
-
         # Reset _done_export, since we have new directory
         self._done_export = False
 
