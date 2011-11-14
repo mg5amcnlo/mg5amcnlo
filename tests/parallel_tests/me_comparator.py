@@ -486,9 +486,13 @@ class MG5OldRunner(MG5Runner):
         # Run mg5
         logging.info("Running mg5")
 
-        devnull = open(os.devnull,'w')        
-        subprocess.call([pjoin(self.mg5_path,'bin','mg5'), proc_card_location],
+        devnull = open(os.devnull,'w') 
+        if logging.root.level >=20:
+            subprocess.call([pjoin(self.mg5_path,'bin','mg5'), proc_card_location],
                         stdout=devnull, stderr=devnull)
+        else:       
+            subprocess.call([pjoin(self.mg5_path,'bin','mg5'), proc_card_location])
+                        
         
         # Remove the temporary proc_card
         os.remove(proc_card_location)

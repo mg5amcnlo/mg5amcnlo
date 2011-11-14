@@ -35,7 +35,7 @@ class OLDMG5Comparator(unittest.TestCase):
     """A class to compare the value of a old MG5 version and the current one"""
     
     old_mg5 = None
-    reference_number = 149 #149 corresponds to 1.3.3 
+    reference_number = 146 #149 corresponds to 1.3.3 
     nb_test = 0
     
     
@@ -356,12 +356,14 @@ class OLDMG5Comparator(unittest.TestCase):
         my_proc_list = me_comparator.create_proc_list_enhanced(\
             sm_parts, mssm_parts)
 
+        for i in range(len(my_proc_list)//500):
+            print 'step %s/%s' %(i+1,len(my_proc_list)//500 )
         # Store list of non-zero processes and results in file
-        self.compare_processes(my_proc_list,
+            self.compare_processes(my_proc_list[500*i:500*(i+1)],
                              orders = {'QED':2, 'QCD':2},
                              model = "mssm",
                              energy = 2000,
-                             filename = "mssm_22.log")
+                             filename = "mssm_22.log")   
 
     def test_mg5_mssm_23_p1(self):
         """Test a semi-complete list of mssm 2->3 processes"""
