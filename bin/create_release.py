@@ -199,6 +199,24 @@ if a_test_results.errors or test_results.errors:
     os.remove(filename)
     exit()
 
+p_test_results = test_manager.run(['test_short_.*'],
+                                  re_opt=0,
+                                  package=os.path.join('tests',
+                                                       'parallel_tests')
+                                  )
+
+if not p_test_results.wasSuccessful():
+    logging.error("Failed %d parallel tests, please check!" % \
+                  (len(p_test_results.errors) + len(p_test_results.failures)))
+
+if p_test_results.errors or p_test_results.failures:
+    logging.error("Removing %s and quitting..." % filename)
+    os.remove(filename)
+    exit()
+
+
+
+
 try:
     os.remove("%s.asc" % filename)
 except:

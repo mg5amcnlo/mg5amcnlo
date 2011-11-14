@@ -12,7 +12,6 @@
 # For more information, please visit: http://madgraph.phys.ucl.ac.be
 #
 ################################################################################
-
 """A set of objects to allow for easy comparisons of results from various ME
 generators (e.g., MG v5 against v4, ...) and output nice reports in different
 formats (txt, tex, ...).
@@ -29,6 +28,7 @@ import subprocess
 import sys
 import time
 
+pjoin = os.path.join
 # Get the grand parent directory (mg5 root) of the module real path 
 # (tests/acceptance_tests) and add it to the current PYTHONPATH to allow
 # for easy import of MG5 tools
@@ -41,7 +41,7 @@ import madgraph.iolibs.save_load_object as save_load_object
 
 import madgraph.interface.cmd_interface as cmd_interface
 
-from madgraph import MadGraph5Error
+from madgraph import MadGraph5Error, MG5DIR
 
 class MERunner(object):
     """Base class to containing default function to setup, run and access results
@@ -56,6 +56,7 @@ class MERunner(object):
     setup_flag = False
 
     name = 'None'
+    model_dir = os.path.join(MG5DIR,'models')
 
     class MERunnerException(Exception):
         """Default Exception class for MERunner objects"""
@@ -156,15 +157,17 @@ class MG4Runner(MERunner):
     def cleanup(self):
         """Clean up temporary directories"""
 
-        if not self.setup_flag:
-            raise self.MERunnerException, \
-                    "MERunner setup should be called first"
-
-        if os.path.isdir(os.path.join(self.mg4_path, self.temp_dir_name)):
-            shutil.rmtree(os.path.join(self.mg4_path, self.temp_dir_name))
-            logging.info("Temporary standalone directory %s successfully removed" % \
+        #if not self.setup_flag:
+        #    raise self.MERunnerException, \
+        #            "MERunner setup should be called first"
+        try:
+            if os.path.isdir(os.path.join(self.mg4_path, self.temp_dir_name)):
+                shutil.rmtree(os.path.join(self.mg4_path, self.temp_dir_name))
+                logging.info("Temporary standalone directory %s successfully removed" % \
                      self.temp_dir_name)
-
+        except:
+            pass
+            
     def run(self, proc_list, model, orders={}, energy=1000):
         """Execute MG4 on the list of processes mentioned in proc_list, using
         the specified model, the specified maximal coupling orders and a certain
@@ -199,10 +202,12 @@ class MG4Runner(MERunner):
                          (len(temp_proc_list), os.path.join(dir_name, 'Cards')))
 
             # Run the newprocess script
+            devnull = open(os.devnull, 'w')
             logging.info("Running newprocess script")
             subprocess.call(os.path.join('.','bin', 'newprocess'),
                             cwd=dir_name,
-                            )#stdout=open('/dev/null', 'w'), stderr=subprocess.STDOUT)
+                            stdout=devnull, stderr=devnull
+                            )
 
             # Get the ME value
             for i, proc in enumerate(temp_proc_list):
@@ -254,9 +259,11 @@ class MG4Runner(MERunner):
         
         dir_name = os.path.join(working_dir, 'SubProcesses', shell_name)
         # Run make
+        devnull = open(os.devnull, 'w')
         retcode = subprocess.call('make',
-                        cwd=dir_name)#,
-                        #stdout=open('/dev/null', 'w'))#, stderr=subprocess.STDOUT)
+                        cwd=dir_name,
+                        stdout=devnull, stderr=devnull)
+                        
         if retcode != 0:
             logging.info("Error while executing make in %s" % shell_name)
             return ((0.0, 0), [])
@@ -319,6 +326,7 @@ class MG5Runner(MG4Runner):
 
     name = 'MadGraph v5'
     type = 'v5'
+        
 
     def setup(self, mg5_path, mg4_path, temp_dir=None):
         """Wrapper for the mg4 setup, also initializing the mg5 path variable"""
@@ -344,6 +352,7 @@ class MG5Runner(MG4Runner):
         self.model = model
         self.orders = orders
         self.energy = energy
+        self.non_zero = 0 
 
         dir_name = os.path.join(self.mg4_path, self.temp_dir_name)
 
@@ -360,28 +369,41 @@ class MG5Runner(MG4Runner):
         # Run mg5
         logging.info("Running mg5")
         proc_card = open(proc_card_location, 'r').read()
+        new_proc_list = []
         cmd = cmd_interface.MadGraphCmdShell()
         for line in proc_card.split('\n'):
             try:
-                cmd.run_cmd(line)
+                cmd.exec_cmd(line, errorhandling=False)
             except MadGraph5Error:
-                raise Exception
+                pass
+            else:
+                if line.startswith('add'):
+                    self.non_zero += 1
+                    new_proc_list.append(line)
+
+        if hasattr(self, 'store_proc_card'):
+            self.new_proc_list = '\n'.join(new_proc_list)
 
         # Remove the temporary proc_card
         os.remove(proc_card_location)
-        self.fix_energy_in_check(dir_name, energy)
+        if self.non_zero:
+            self.fix_energy_in_check(dir_name, energy)
 
-        # Get the ME value
-        for i, proc in enumerate(proc_list):
-            value = self.get_me_value(proc, i)
-            self.res_list.append(value)
+            # Get the ME value
+            for i, proc in enumerate(proc_list):
+                value = self.get_me_value(proc, i)
+                self.res_list.append(value)
 
-        return self.res_list
-
+            return self.res_list
+        else:
+            self.res_list = [((0.0, 0), [])] * len(proc_list)
+            return self.res_list
+        
+        
     def format_mg5_proc_card(self, proc_list, model, orders):
         """Create a proc_card.dat string following v5 conventions."""
 
-        v5_string = "import model_v4 %s\n" % model
+        v5_string = "import model_v4 %s\n" % os.path.join(self.model_dir, model)
 
         couplings = ' '.join(["%s=%i" % (k, v) for k, v in orders.items()])
 
@@ -401,6 +423,95 @@ class MG5_UFO_Runner(MG5Runner):
     def format_mg5_proc_card(self, proc_list, model, orders):
         """Create a proc_card.dat string following v5 conventions."""
 
+        v5_string = "import model %s \n" % os.path.join(self.model_dir, model)
+
+        couplings = ' '.join(["%s=%i" % (k, v) for k, v in orders.items()])
+
+        for i, proc in enumerate(proc_list):
+            v5_string += 'add process ' + proc + ' ' + couplings + \
+                         '@%i' % i + '\n'
+        v5_string += "output standalone %s -f\n" % \
+                     os.path.join(self.mg4_path, self.temp_dir_name)
+
+        return v5_string
+
+class MG5OldRunner(MG5Runner):
+    """ """
+    
+    mg5_path = ""
+    name = 'MadGraph5 Reference'
+    type = 'ufo_ref'
+    
+    def setup(self, mg5_path, temp_dir=None):
+        """ initializing the mg5 path variable"""
+        self.mg5_path = os.path.abspath(mg5_path)
+
+        if not temp_dir:
+            i=0
+            while os.path.exists(os.path.join(MG5DIR, 
+                                              "ptest_%s_%s" % (self.type, i))):
+                i += 1
+            temp_dir = "ptest_%s_%s" % (self.type, i)         
+        self.temp_dir_name = temp_dir    
+
+    def run(self, proc_list, model, orders={}, energy=1000):
+        """Execute MG5 on the list of processes mentioned in proc_list, using
+        the specified model, the specified maximal coupling orders and a certain
+        energy for incoming particles (for decay, incoming particle is at rest).
+        """
+        self.res_list = [] # ensure that to be void, and avoid pointer problem 
+        self.proc_list = proc_list
+        self.model = model
+        self.orders = orders
+        self.energy = energy
+
+        dir_name = os.path.join(MG5DIR, self.temp_dir_name)
+
+        # Create a proc_card.dat in the v5 format
+        proc_card_location = os.path.join(self.mg4_path, 'proc_card_%s.dat' % \
+                                          self.temp_dir_name)
+        proc_card_file = open(proc_card_location, 'w')
+        if not hasattr(self, 'pass_proc'):
+            proc_card_file.write(self.format_mg5_proc_card(proc_list, model, orders))
+        else:
+            v5_string = "import model %s \n" % model
+            proc_card_file.write(v5_string)
+            proc_card_file.write(self.pass_proc)
+            proc_card_file.write("\n output standalone %s -f\n" % dir_name)
+        proc_card_file.close()
+
+        logging.info("proc_card.dat file for %i processes successfully created in %s" % \
+                     (len(proc_list), os.path.join(dir_name, 'Cards')))
+
+        # Run mg5
+        logging.info("Running mg5")
+
+        devnull = open(os.devnull,'w')        
+        subprocess.call([pjoin(self.mg5_path,'bin','mg5'), proc_card_location],
+                        stdout=devnull, stderr=devnull)
+        
+        # Remove the temporary proc_card
+        os.remove(proc_card_location)
+        try:
+            self.fix_energy_in_check(dir_name, energy)
+        except:
+            return [((0.0, 0), [])] * len(proc_list)
+        # Get the ME value
+        for i, proc in enumerate(proc_list):
+            value = self.get_me_value(proc, i)
+            self.res_list.append(value)
+
+        return self.res_list
+
+
+class MG5_UFO_OldRunner(MG5OldRunner):
+    
+    name = 'UFO-ALOHA-MG5-REF'
+    type = 'ufo_ref'
+    
+    def format_mg5_proc_card(self, proc_list, model, orders):
+        """Create a proc_card.dat string following v5 conventions."""
+
         v5_string = "import model %s \n" % model
 
         couplings = ' '.join(["%s=%i" % (k, v) for k, v in orders.items()])
@@ -412,6 +523,7 @@ class MG5_UFO_Runner(MG5Runner):
                      os.path.join(self.mg4_path, self.temp_dir_name)
 
         return v5_string
+
 
 class MG5_CPP_Runner(MG5Runner):
     """Runner object for the MG5 C++ Standalone output."""
@@ -561,10 +673,15 @@ class MEComparator(object):
              '/'.join([onemodel for onemodel in model]),
              energy))
 
+        pass_proc = False
         for i,runner in enumerate(self.me_runners):
             cpu_time1 = time.time()
             logging.info("Now running %s" % runner.name)
+            if pass_proc:
+                runner.pass_proc = pass_proc 
             self.results.append(runner.run(proc_list, model[i], orders, energy))
+            if hasattr(runner, 'new_proc_list'):
+                pass_proc = runner.new_proc_list
             cpu_time2 = time.time()
             logging.info(" Done in %0.3f s" % (cpu_time2 - cpu_time1))
             logging.info(" (%i/%i with zero ME)" % \
@@ -748,6 +865,35 @@ def create_proc_list_enhanced(init_part_list, final_part_list_1,
         res_list.append(' '.join(proc))
 
     return res_list
+
+
+def create_proc_list_2_3(init_part_list1, 
+                         init_part_list2, 
+                         final_part_list_1,
+                         final_part_list_2,
+                         final_part_list_3,
+                         charge_conservation=True):
+    """Helper function to automatically create process lists starting from 
+    a particle list."""
+
+    proc_list = []
+    res_list = []
+    for i,a in enumerate(init_part_list1):
+        for b in init_part_list2:
+            for c in final_part_list_1:
+                for d in final_part_list_2:
+                    for e in final_part_list_3:
+                        proc = [a,b,'>',c,d,e]
+                        res_list.append(' '.join(proc))
+
+    return res_list
+
+
+
+
+
+
+
 
 
 
