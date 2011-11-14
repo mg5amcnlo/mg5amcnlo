@@ -9,8 +9,6 @@ Update notes for MadGraph 5 (in reverse time order)
                   JA: Fixed problem with colors in addmothers.f for complicated
                       multiparticle vertices and simplified color treatment 
                       (thanks to Gauthier Durieux for pointing this out).
-                  JA: Fixed problem with colors in addmothers.f for complicated
-                      multiparticle vertices and simplified color treatment 
                   JA: Further improved gridpack parameters
 
 1.3.27 (05/11/11) JA: Fix bug in mirrored amplitudes (sometimes
