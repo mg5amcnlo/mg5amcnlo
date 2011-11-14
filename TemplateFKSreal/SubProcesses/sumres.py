@@ -26,6 +26,7 @@ for line in lines:
     if list:
         proc={}
         proc['folder'] = list[0].split('/')[0]
+        proc['subproc'] = proc['folder'][0:proc['folder'].rfind('_')]
         proc['channel'] = list[0].split('/')[1]
         if list[3] != '[ABS]:':
             proc['result'] = float(list[3])
@@ -39,9 +40,36 @@ for line in lines:
         err+= math.pow(proc['error'],2)
 
 processes.sort(key = lambda proc: -proc['result'])
-content+='\n\n'
+
+subprocs_string=[]
+for proc in processes:
+    subprocs_string.append(proc['subproc'])
+subprocs_string=set(subprocs_string)
+
+content+='\n\nCross-section per integration channel:\n'
 for proc in processes:
     content+='%(folder)20s %(channel)15s   %(result)10.8e    %(error)6.4e       %(err_perc)6.4e%%  \n' %  proc
+
+content+='\n\nCross-section per subprocess:\n'
+#for subpr in sorted(set(subprocs)):
+subprocesses=[]
+for sub in subprocs_string:
+    subpr={}
+    subpr['subproc']=sub
+    subpr['xsect']=0.
+    subpr['err']=0.
+    for proc in processes:
+        if proc['subproc'] == subpr:
+            subproc['xsect'] += proc['result']
+            subproc['err'] += math.pow(proc['error'],2)
+    subpr['err']=math.sqrt(subpr['err'])
+    subprocesses.append(subpr)
+
+
+subprocesses.sort(key = lambda proc: -proc['xsect'])
+for subpr in subprocesses:
+    content+=  '%(subproc)20s    %(xsect)10.8e   %(err)6.4e\n '%subpr
+
 
 content+='\nTotal cross-section: %10.8e +- %6.4e  (%6.4e%%)\n' %\
         (tot, math.sqrt(err), math.sqrt(err)/tot *100.)

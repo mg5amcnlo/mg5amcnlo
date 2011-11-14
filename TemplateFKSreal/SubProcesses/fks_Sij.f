@@ -54,7 +54,7 @@ c
       logical firsttime
       real*8 hfact,h_damp,z
       real*8 phat_ii(0:3),E_ii_resc,xnum,xden,inverseSij
-      integer i,k,l,kk,ll,ihdamp,isorsc,ijskip(nexternal,nexternal)
+      integer i,j,k,l,kk,ll,ihdamp,isorsc,ijskip(nexternal,nexternal)
       integer ione,itwo
       parameter (ione=1)
       parameter (itwo=2)
@@ -140,9 +140,11 @@ c entering this function
              ijskip(k,l) = 0
            enddo
          enddo
-         do k=1,fks_configs
-            kk = fks_i(k)
-            ll = fks_j(k)
+         do i=1,nexternal
+          if (fks_j_from_i(i,0).ne.0) then
+           do j=1,fks_j_from_i(i,0)
+            kk = i
+            ll = fks_j_from_i(i,j)
             if     ( ijskip(kk,ll).eq.0 .and. ijskip(ll,kk).eq.0 ) then
                ijskip(kk,ll) = 1
             elseif ( ijskip(kk,ll).eq.0 .and. ijskip(ll,kk).eq.1 ) then
@@ -156,6 +158,8 @@ c entering this function
                write (*,*)'Error #2 in fks_Sij',kk,ll
                stop
             endif
+           enddo
+          endif
          enddo
       endif
 
@@ -163,9 +167,11 @@ c entering this function
       ihdamp=0
       hfact=1.d0
       
-      do k=1,fks_configs
-         kk = fks_i(k)
-         ll = fks_j(k)
+      do i=1,nexternal
+       if (fks_j_from_i(i,0).ne.0) then
+        do j=1,fks_j_from_i(i,0)
+         kk = i
+         ll = fks_j_from_i(i,j)
          if(ijskip(kk,ll).ne.1)goto 222
          if(particle_type(ll).eq.8.and.particle_type(kk).ne.8.and.
      #      ll.gt.nincoming)then
@@ -246,6 +252,8 @@ c entering this function
             inverseSij=inverseSij+xnum/xden
          endif
  222     continue
+        enddo
+       endif
       enddo
 
       if(ihdamp.ne.0.and.ihdamp.ne.1)then

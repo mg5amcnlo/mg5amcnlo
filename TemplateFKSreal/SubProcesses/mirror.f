@@ -17,7 +17,11 @@ c  mirroring in MadFKS. Written by MZ
         endif
       enddo
       imirror=imirror_bak
-      rescale=sumprob/selproc(imirror)
+      if (selproc(imirror).gt.1d-8) then
+        rescale=sumprob/selproc(imirror)
+      else
+        rescale=0d0
+      endif
       return
       end
 
