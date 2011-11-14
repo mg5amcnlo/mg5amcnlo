@@ -18,12 +18,14 @@ constraints to this test is that the current version can still read the old
 model format. 
 The reference version is given here as a argument which can be changed by hand.
 """
+import itertools
 import logging
 import os
 import shutil
 import me_comparator
 import unittest
 import subprocess
+
 from madgraph import MG5DIR
 
 pjoin = os.path.join
@@ -317,25 +319,112 @@ class OLDMG5Comparator(unittest.TestCase):
             initial=2, final=2)
 
         # Store list of non-zero processes and results in file
-        self.compare_processes(my_proc_list,
-                             orders = {'QED':2, 'QCD':2},
-                             filename = "sm_22.log")
-
-
-    def test_mg5_sm_23(self):
-        """Test a semi-complete list of sm 2->3 processes"""
-        # Create a list of processes to check automatically
-        my_proc_list = me_comparator.create_proc_list(\
-            ['w+', 'w-','a', 'z', 'h', 'g', 'u', 'u~', 'd', 'd~',
-             'b', 'b~', 't', 't~', 'ta+', 'ta-', 'vt', 'vt~'],
-            initial=2, final=3)
-
         for i in range(len(my_proc_list)//500):
             print 'step %s/%s' %(i+1,len(my_proc_list)//500 )
         # Store list of non-zero processes and results in file
             self.compare_processes(my_proc_list[500*i:500*(i+1)],
+                             orders = {'QED':2, 'QCD':2},
+                             model = "sm",
+                             energy = 1000,
+                             filename = "sm_22.log")   
+
+    def test_mg5_sm_23_p1(self):
+        """Test a semi-complete list of sm 2->3 processes"""
+        # Create a list of processes to check automatically
+        particles = ['w+', 'w-','a', 'z', 'h', 'g']
+        
+        def get_process(pos):
+            proc = ''
+            for i,ind in enumerate(pos):
+                proc += ' '
+                if i == 2:
+                    proc += '> '
+                proc += particles[ind]
+            return proc
+                        
+        iter = itertools.product(range(len(particles)), repeat=5)
+        for i in range(len(particles)**5//500):
+            my_proc_list = []
+            for j in range(0,500):
+                try:
+                    my_proc_list.append(get_process(iter.next()))
+                except:
+                    break
+            print 'step %s/%s' %(i+1,len(particles)**5//500 )
+        # Store list of non-zero processes and results in file
+            self.compare_processes(my_proc_list,
                              orders = {'QED':3, 'QCD':3},
-                             filename = "sm_23.log")
+                             filename = "sm_23_p1.log")
+
+
+    def test_mg5_sm_23_p2(self):
+        """Test a semi-complete list of sm 2->3 processes"""
+        # Create a list of processes to check automatically
+        particles = ['u', 'u~', 'ta+', 'ta-', 'vt', 'vt~',
+             'b', 'b~', 't', 't~']
+        last_particles =  ['w+', 'w-','a', 'z', 'h', 'g']
+        
+        def get_process(pos, last):           
+            proc = ''
+            for i,ind in enumerate(pos):
+                proc += ' '
+                if i == 2:
+                    proc += '> '
+               
+                proc += particles[ind]
+            return proc + ' %s' % last
+                        
+        
+        for i, last in enumerate(last_particles):
+            iter = itertools.product(range(len(particles)), repeat=4)
+            for j in range(len(particles)**4//500):
+                my_proc_list = []
+                for k in range(0,500):
+                    try:
+                        my_proc_list.append(get_process(iter.next(), last))
+                    except:
+                        break
+                print 'step %s/%s' %(i*(len(particles)**4)//500+j+1, len(particles)**4//500 * len(last_particles))
+        # Store list of non-zero processes and results in file
+                self.compare_processes(my_proc_list,
+                             orders = {'QED':3, 'QCD':3},
+                             filename = "sm_23_p2.log")
+
+    def test_mg5_sm_23_p3(self):
+        """Test a semi-complete list of sm 2->3 processes"""
+        # Create a list of processes to check automatically
+        fermion = ['u', 'u~', 'd', 'd~',
+             'b', 'b~', 't', 't~', 'ta+', 'ta-', 'vt', 'vt~']
+        boson =  ['w+', 'w-','a', 'z', 'h', 'g']
+        
+        def get_process(pos_f, pos_b):           
+            proc = ''
+            for i,ind in enumerate(pos_f):
+                proc += ' '
+                proc += fermion[ind]
+            proc += ' > '
+            for i,ind in enumerate(pos_b):
+                proc += ' '
+                proc += boson[ind]            
+            return proc 
+        
+        iter_f = itertools.product(range(len(fermion)), repeat=2)
+        f_comb=-1
+        for fermions in iter_f:
+            f_comb+=1
+            iter = itertools.product(range(len(boson)), repeat=3)
+            if not f_comb % 2:
+                print 'step %s/%s' % ((f_comb)//2 + 1, len(fermion)**2//2) 
+                my_proc_list = []
+            for j in range(len(boson)**3):
+                my_proc_list.append( get_process(fermions, iter.next()))
+        # Store list of non-zero processes and results in file
+            if f_comb %2:
+                self.compare_processes(my_proc_list,
+                             orders = {'QED':3, 'QCD':3},
+                             filename = "sm_23_p3.log")
+
+
 
 
 
