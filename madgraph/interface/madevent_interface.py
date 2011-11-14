@@ -275,7 +275,8 @@ class HelpToCmd(object):
     def help_survey(self):
         logger.info("syntax: survey [run_name] [--run_options])")
         logger.info("-- evaluate the different channel associate to the process")
-        self.run_options_help([])
+        self.run_options_help([("--" + key,value[-1]) for (key,value) in \
+                               self._survey_options.items()])
         
     def help_refine(self):
         logger.info("syntax: refine require_precision [max_channel] [run_name] [--run_options]")
@@ -458,6 +459,24 @@ class CheckValidForCmd(object):
     def check_survey(self, args, cmd='survey'):
         """check that the argument for survey are valid"""
         
+        
+        self.opts = dict([(key,value[1]) for (key,value) in \
+                          self._survey_options.items()])
+
+        # Treat any arguments starting with '--'
+        while args and args[-1].startswith('--'):
+            arg = args.pop(-1)
+            try:
+                for opt,value in self._survey_options.items():
+                    if arg.startswith('--%s=' % opt):
+                        exec('self.opts[\'%s\'] = %s(arg.split(\'=\')[-1])' % \
+                             (opt, value[0]))
+                        arg = ""
+                if arg != "": raise Exception
+            except Exception:
+                self.help_generate_events()
+                raise self.InvalidCmd('invalid %s argument'% arg)
+
         if len(args) > 1:
             self.help_survey()
             raise self.InvalidCmd('Too many argument for %s command' % cmd)
@@ -806,7 +825,6 @@ class CheckValidForCmd(object):
         
         
         if not len(args) == 2 or not os.path.exists(args[1]):
-            print len(args), os.path.exists(args[1]),args[1]
             raise self.InvalidCmd('PATH is mandatory for import command\n')
         
 
@@ -1034,6 +1052,10 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
     _plot_mode = ['all', 'parton','pythia','pgs','delphes','channel', 'banner']
     _clean_mode = _plot_mode
     _display_opts = ['run_name', 'options', 'variable']
+    # survey options, dict from name to type, default value, and help text
+    _survey_options = {'points':('int', 1000,'Number of points for first iteration'),
+                       'iterations':('int', 5, 'Number of iterations'),
+                       'accuracy':('float', 0.1, 'Required accuracy')}
     # Variables to store object information
     true = ['T','.true.',True,'true', 1, '1']
     web = False
@@ -1376,41 +1398,40 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
             self.set_run_name(args[0], True)
             args.pop(0)
             
-
-
-        logger.info('Generating %s events with run name %s' %
-                                      (self.run_card['nevents'], self.run_name))
+        if self.run_card['gridpack'] in self.true:        
+            # Running gridpack warmup
+            gridpack_opts=[('accuracy', 0.01),
+                           ('points', 2000),
+                           ('iterations',8)]
+            logger.info('Generating gridpack with run name %s' % self.run_name)
+            self.exec_cmd('survey  %s %s' % \
+                          (self.run_name,
+                           " ".join(['--' + opt + '=' + str(val) for (opt,val) \
+                                     in gridpack_opts])),
+                          postcmd=False)
+            self.exec_cmd('combine_events', postcmd=False)
+            self.exec_cmd('store_events', postcmd=False)
+            self.exec_cmd('create_gridpack', postcmd=False)
+        else:
+            # Regular run mode
+            logger.info('Generating %s events with run name %s' %
+                        (self.run_card['nevents'], self.run_name))
         
-      
-        self.exec_cmd('survey  %s %s' % (self.run_name,' '.join(args)), postcmd=False)
-        if not self.run_card['gridpack'] in self.true:        
+            self.exec_cmd('survey  %s %s' % (self.run_name,' '.join(args)),
+                          postcmd=False)
+
             nb_event = self.run_card['nevents']
             self.exec_cmd('refine %s' % nb_event, postcmd=False)
             self.exec_cmd('refine %s' % nb_event, postcmd=False)
-        
-        self.exec_cmd('combine_events', postcmd=False)
-        self.exec_cmd('store_events', postcmd=False)
-        if not self.run_card['gridpack'] in self.true:
+            self.exec_cmd('combine_events', postcmd=False)
+            self.create_plot('parton')
+            self.exec_cmd('store_events', postcmd=False)
             self.exec_cmd('pythia --no_default', postcmd=False, printcmd=False)
             if os.path.exists(pjoin(self.me_dir,'Events','pythia_events.hep')):
                 self.exec_cmd('pgs --no_default', postcmd=False, printcmd=False)
                 self.exec_cmd('delphes --no_default', postcmd=False, printcmd=False)
         
-        if self.run_card['gridpack'] in self.true:
-            self.update_status('Creating gridpack', level='parton')
-            os.system("sed -i.bak \"s/\s*.false.*=.*GridRun/  .true.  =  GridRun/g\" %s/Cards/grid_card.dat"\
-                      % self.me_dir)
-            subprocess.call(['./bin/internal/restore_data', self.run_name],
-                            cwd=self.me_dir)
-            subprocess.call(['./bin/internal/store4grid', 'default'],
-                            cwd=self.me_dir)
-            subprocess.call(['./bin/internal/clean'], cwd=self.me_dir)
-            misc.compile(['gridpack.tar.gz'], cwd=self.me_dir)
-            files.mv(pjoin(self.me_dir, 'gridpack.tar.gz'), 
-                    pjoin(self.me_dir, '%s_gridpack.tar.gz' % self.run_name))
-            self.update_status('gridpack created', level='gridpack')
-
-        self.store_result()
+            self.store_result()
     
     ############################################################################
     def do_multi_run(self, line):
@@ -1502,9 +1523,11 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
                 raise MadEventError, 'Error make gensym not successful'
 
             # Launch gensym
-            p = subprocess.Popen(['./gensym'], stdout=subprocess.PIPE, 
-                            stderr=subprocess.STDOUT, cwd=Pdir)
-            (stdout, stderr) = p.communicate()
+            p = subprocess.Popen(['./gensym'], stdin=subprocess.PIPE,
+                                 stdout=subprocess.PIPE, 
+                                 stderr=subprocess.STDOUT, cwd=Pdir)
+            sym_input = "%(points)d %(iterations)d %(accuracy)f" % self.opts
+            (stdout, stderr) = p.communicate(sym_input)
             if not os.path.exists(pjoin(Pdir, 'ajob1')) or p.returncode:
                 logger.critical(stdout)
                 raise MadEventError, 'Error gensym run not successful'
@@ -1637,9 +1660,6 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
            os.path.exists(pjoin(self.me_dir, 'Events', 'unweighted_events.lhe')):
                 self.create_root_file()
         
-        self.create_plot()
-
-
     ############################################################################ 
     def do_store_events(self, line):
         """Advanced commands: Launch combine events"""
@@ -1658,6 +1678,23 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
         #            pjoin(self.me_dir, 'Events', 'banner.txt')) 
 
         self.update_status('End Parton', level='parton', makehtml=False)
+
+    ############################################################################ 
+    def do_create_gridpack(self, line):
+        """Advanced commands: Create gridpack from present run"""
+
+        self.update_status('Creating gridpack', level='parton')
+        os.system("sed -i.bak \"s/\s*.false.*=.*GridRun/  .true.  =  GridRun/g\" %s/Cards/grid_card.dat" \
+                  % self.me_dir)
+        subprocess.call(['./bin/internal/restore_data', self.run_name],
+                        cwd=self.me_dir)
+        subprocess.call(['./bin/internal/store4grid', 'default'],
+                        cwd=self.me_dir)
+        subprocess.call(['./bin/internal/clean'], cwd=self.me_dir)
+        misc.compile(['gridpack.tar.gz'], cwd=self.me_dir)
+        files.mv(pjoin(self.me_dir, 'gridpack.tar.gz'), 
+                pjoin(self.me_dir, '%s_gridpack.tar.gz' % self.run_name))
+        self.update_status('gridpack created', level='gridpack')
 
     ############################################################################      
     def do_pythia(self, line):
@@ -2735,7 +2772,7 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
                 possible_answer.append(6)
                 possible_answer.append('trigger')
             if self.configuration['madanalysis_path']:
-                question += '  9 / plot : plot_card.dat\n'
+                question += '  9 / plot    : plot_card.dat\n'
                 possible_answer.append(9)
                 possible_answer.append('plot')
             card = {0:'done', 1:'param', 2:'run', 3:'pythia', 
@@ -2987,6 +3024,7 @@ class GridPackCmd(MadEventCmd):
         
         # 3) Combine the events/pythia/...
         self.exec_cmd('combine_events')
+        self.create_plot('parton')
         self.exec_cmd('pythia --nodefault')
         self.exec_cmd('pgs --nodefault')
         

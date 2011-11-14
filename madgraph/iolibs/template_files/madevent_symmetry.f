@@ -110,7 +110,8 @@ c
 c
 c     local
 c
-      integer npoints
+      integer npoints,itmax
+      double precision acc
       character*20 param(maxpara),value(maxpara)
       integer npara, nreq
 c
@@ -121,25 +122,15 @@ c
 c-----
 c  Begin Code
 c-----
-      call load_para(npara,param,value)
-      call get_logical(npara,param,value," gridpack ",gridpack,.false.)
+      write(*,*) 'Give npoints, max iter, and accuracy'
+      read(*,*)  npoints,itmax,acc
 
-      npoints = min_events_subprocess/nconfigs
-      npoints = max(npoints,min_events_channel)
       open (unit=26, file = 'input_app.txt', status='unknown',
      $     err=99)
-      if (gridpack) then
-         write(26,*) npoints_wu,itmax_wu,
+      write(26,*) npoints,itmax,
      &     '     !Number of events and iterations'      
-         write(26,'(f8.4,a)') acc_wu, '    !Accuracy'
-         write(26,*) ' 2       !Grid Adjustment 0=none, 2=adjust'
-      else
-         write(26,*) npoints,iter_survey,
-     &     '     !Number of events and iterations'      
-c        JA 4/8/11 Set minimum accuracy 10pc, to run 4th iteration if needed
-         write(26,*) ' 0.1    !Accuracy'
-         write(26,*) ' 2       !Grid Adjustment 0=none, 2=adjust'
-      endif
+      write(26,'(f8.4,a)') acc, '    !Accuracy'
+      write(26,*) ' 2       !Grid Adjustment 0=none, 2=adjust'
       write(26,*) ' 1       !Suppress Amplitude 1=yes'
       write(26,*) nhel_survey,'       !Helicity Sum/event 0=exact'
       close(26)
