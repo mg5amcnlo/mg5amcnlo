@@ -20,6 +20,8 @@ import shutil
 import sys
 import logging
 
+
+
 logger = logging.getLogger('test_cmd')
 
 import tests.unit_tests.iolibs.test_file_writers as test_file_writers
@@ -244,11 +246,12 @@ class TestCmdShell2(unittest.TestCase,
                                                     'P0_epem_epem',
                                                     'gensym')))
         # Check that gensym runs
-        status = subprocess.call('./gensym', 
-                                 stdout=devnull, stderr=devnull,
+        proc = subprocess.Popen('./gensym', 
+                                 stdout=devnull, stderr=devnull, stdin=subprocess.PIPE,
                                  cwd=os.path.join(self.out_dir, 'temp', 'SubProcesses',
                                                   'P0_epem_epem'), shell=True)
-        self.assertEqual(status, 0)
+        proc.communicate('100 2 0.1')
+        self.assertEqual(proc.returncode, 0)
         # Check that madevent compiles
         status = subprocess.call(['make', 'madevent'],
                                  stdout=devnull, stderr=devnull, 
@@ -492,11 +495,13 @@ class TestCmdShell2(unittest.TestCase,
                                                     'P0_epem_epem',
                                                     'gensym')))
         # Check that gensym runs
-        status = subprocess.call('./gensym', 
-                                 stdout=devnull,
+        proc = subprocess.Popen('./gensym', 
+                                 stdout=devnull, stdin=subprocess.PIPE,
                                  cwd=os.path.join(self.out_dir, 'SubProcesses',
                                                   'P0_epem_epem'), shell=True)
-        self.assertEqual(status, 0)
+        proc.communicate('100 2 0.1')
+        
+        self.assertEqual(proc.returncode, 0)
         # Check that madevent compiles
         status = subprocess.call(['make', 'madevent'],
                                  stdout=devnull, 
@@ -543,6 +548,7 @@ class TestCmdShell2(unittest.TestCase,
         status = subprocess.call(['make'],
                                  stdout=devnull, 
                                  cwd=os.path.join(self.out_dir, 'Source'))
+
         self.assertEqual(status, 0)
         self.assertTrue(os.path.exists(os.path.join(self.out_dir,
                                                'lib', 'libdhelas.a')))
@@ -561,18 +567,22 @@ class TestCmdShell2(unittest.TestCase,
                                  stdout=devnull, 
                                  cwd=os.path.join(self.out_dir, 'SubProcesses',
                                                   'P1_udx_wp_wp_epve'))
+        print 'make gensym done'
         self.assertEqual(status, 0)
         self.assertTrue(os.path.exists(os.path.join(self.out_dir,
                                                     'SubProcesses',
                                                     'P1_udx_wp_wp_epve',
                                                     'gensym')))
         # Check that gensym runs
-        status = subprocess.call('./gensym', 
+        proc = subprocess.Popen('./gensym',
+                                  stdin=subprocess.PIPE, 
                                  stdout=devnull,
                                  cwd=os.path.join(self.out_dir, 'SubProcesses',
                                                   'P1_udx_wp_wp_epve'),
                                  shell=True)
-        self.assertEqual(status, 0)
+        proc.communicate('100 4 0.1')
+        
+        self.assertEqual(proc.returncode, 0)
         # Check that madevent compiles
         status = subprocess.call(['make', 'madevent'],
                                  stdout=devnull, 
@@ -685,11 +695,12 @@ class TestCmdShell2(unittest.TestCase,
                                                     'P2_gg_qq',
                                                     'gensym')))
         # Check that gensym runs
-        status = subprocess.call('./gensym', 
-                                 stdout=devnull,
+        proc = subprocess.Popen('./gensym', 
+                                 stdout=devnull, stdin=subprocess.PIPE,
                                  cwd=os.path.join(self.out_dir, 'SubProcesses',
                                                   'P2_gg_qq'), shell=True)
-        self.assertEqual(status, 0)
+        proc.communicate('100 4 0.1')
+        self.assertEqual(proc.returncode, 0)
         # Check that madevent compiles
         status = subprocess.call(['make', 'madevent'],
                                  stdout=devnull, 
@@ -749,11 +760,13 @@ class TestCmdShell2(unittest.TestCase,
                                  cwd=os.path.join(self.out_dir, 'SubProcesses',
                                                   'P0_qq_gogo_go_qqn1_go_qqn1'))
         # Run gensym
-        status = subprocess.call('./gensym', 
-                                 stdout=devnull,
+        proc = subprocess.Popen('./gensym', 
+                                 stdout=devnull, stdin=subprocess.PIPE,
                                  cwd=os.path.join(self.out_dir, 'SubProcesses',
                                                   'P0_qq_gogo_go_qqn1_go_qqn1'), shell=True)
-        self.assertEqual(status, 0)
+        proc.communicate('100 4 0.1')
+        self.assertEqual(proc.returncode, 0)
+
         # Check the new contents of the symfact.dat file
         self.assertEqual(open(os.path.join(self.out_dir,
                                            'SubProcesses',
@@ -834,12 +847,13 @@ P1_qq_wp_wp_lvl
                                                     'P2_qq_wpg_wp_lvl',
                                                     'gensym')))
         # Check that gensym runs
-        status = subprocess.call('./gensym', 
-                                 stdout=devnull,
+        proc = subprocess.Popen('./gensym', 
+                                 stdout=devnull, stdin=subprocess.PIPE,
                                  cwd=os.path.join(self.out_dir, 'SubProcesses',
                                                   'P2_qq_wpg_wp_lvl'),
                                  shell=True)
-        self.assertEqual(status, 0)
+        proc.communicate('100 4 0.1')
+        self.assertEqual(proc.returncode, 0)
         # Check that madevent compiles
         status = subprocess.call(['make', 'madevent'],
                                  stdout=devnull, 
@@ -888,11 +902,13 @@ P1_qq_wp_wp_lvl
                                                     'P0_ut_tripx_utg',
                                                     'gensym')))
         # Check that gensym runs
-        status = subprocess.call('./gensym', 
-                                 stdout=devnull,
+        proc = subprocess.Popen('./gensym', 
+                                 stdout=devnull, stdin=subprocess.PIPE,
                                  cwd=os.path.join(self.out_dir, 'SubProcesses',
                                                   'P0_ut_tripx_utg'), shell=True)
-        self.assertEqual(status, 0)
+        proc.communicate('100 4 0.1')
+        self.assertEqual(proc.returncode, 0)
+        
         # Check that madevent compiles
         status = subprocess.call(['make', 'madevent'],
                                  stdout=devnull, 
