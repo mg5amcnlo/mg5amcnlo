@@ -25,6 +25,11 @@
       double precision xtarget
       data iseed/0/
 
+c     Variables for combination of color indices (including multipart. vert)
+      integer maxcolmp
+      parameter(maxcolmp=20)
+      integer ncolmp,icolmp(2,maxcolmp)
+
       double precision ZERO
       parameter (ZERO=0d0)
       double precision pmass(-nexternal:0,lmaxconfigs)
@@ -67,9 +72,9 @@ c      integer ncols,ncolflow(maxamps),ncolalt(maxamps),icorg
 c      common/to_colstats/ncols,ncolflow,ncolalt,icorg
 
       double precision pt
-      integer get_color
+      integer get_color,elim_indices
       real ran1
-      external pt,ran1,get_color
+      external pt,ran1,get_color,elim_indices
 
       if (first_time) then
          include 'props.inc'
@@ -188,8 +193,9 @@ c       Set color info for all s-channels
           mo_color = get_color(jpart(1,i))
           da_color(1) = get_color(jpart(1,ida(1)))
           da_color(2) = get_color(jpart(1,ida(2)))
-          if(da_color(2).lt.da_color(1))then
-c            Order daughters according to color
+          if(da_color(1).ne.2.and.da_color(2).lt.da_color(1).or.
+     $         da_color(2).eq.2)then
+c            Order daughters according to color, but always color 2 first
              itmp=ida(1)
              ida(1)=ida(2)
              ida(2)=itmp
@@ -197,149 +203,48 @@ c            Order daughters according to color
              da_color(1)=da_color(2)
              da_color(2)=itmp
           endif
-c          print *,'graph: ',iconfig
-c          print *,'Resonance: ',i,' daughters ',ida(1),ida(2),
-c     $         ' ids ',jpart(1,i),jpart(1,ida(1)),jpart(1,ida(2)),
-c     $         ' colors ',mo_color,da_color(1),da_color(2)
-          
+c     Reset list of color indices if not inside multipart. vertex
+c     (indicated by color 2)
+          if(da_color(1).ne.2)then
+             ncolmp=0
+          endif
+c     Add new color indices to list of color indices
+c     Note that color=2 means continued multiparticle index
+          do j=1,2
+             if(da_color(j).eq.2.or.da_color(j).eq.1) cycle
+             ncolmp=ncolmp+1
+             icolmp(1,ncolmp)=icolalt(1,ida(j))
+             icolmp(2,ncolmp)=icolalt(2,ida(j))
+c            Avoid color sextet-type negative indices
+             if(icolmp(1,ncolmp).lt.0)then
+                ncolmp=ncolmp+1
+                icolmp(2,ncolmp)=-icolmp(1,ncolmp-1)
+                icolmp(1,ncolmp-1)=0
+                icolmp(1,ncolmp)=0
+             elseif(icolmp(2,ncolmp).lt.0)then
+                ncolmp=ncolmp+1
+                icolmp(1,ncolmp)=-icolmp(2,ncolmp-1)
+                icolmp(2,ncolmp-1)=0
+                icolmp(2,ncolmp)=0
+             endif
+             if(ncolmp.gt.maxcolmp)
+     $            call write_error(1000,ncolmp,maxcolmp)
+          enddo
+
           if(mo_color.eq.1) then ! color singlet
              icolalt(1,i) = 0
              icolalt(2,i) = 0
-          elseif(mo_color.eq.2) then ! used as dummy for multipart. vert
-             if(icolalt(1,ida(1)).eq.icolalt(2,ida(2)).and.
-     $            icolalt(2,ida(1)).eq.icolalt(1,ida(2)).or.
-     $            icolalt(1,ida(1)).eq.-icolalt(1,ida(2)).and.
-     $            icolalt(2,ida(1)).eq.-icolalt(2,ida(2))) then ! color singlet
-                icolalt(1,i) = 0
-                icolalt(2,i) = 0            
-             elseif(icolalt(1,ida(1)).eq.icolalt(2,ida(2))) then ! 3bar 3 -> 8 or 8 8 -> 8
-                icolalt(1,i) = icolalt(1,ida(2))
-                icolalt(2,i) = icolalt(2,ida(1))
-             else if(icolalt(1,ida(2)).eq.icolalt(2,ida(1))) then ! 3 3bar -> 8 or 8 8 -> 8
-                icolalt(1,i) = icolalt(1,ida(1))
-                icolalt(2,i) = icolalt(2,ida(2))
-             else if(icolalt(1,ida(1)).eq.0.and.icolalt(2,ida(1)).eq.0) then ! 1 3/6/8 -> 3/6/8
-                icolalt(1,i) = icolalt(1,ida(2))
-                icolalt(2,i) = icolalt(2,ida(2))
-             else if(icolalt(1,ida(2)).eq.0.and.icolalt(2,ida(2)).eq.0) then ! 3/6/8 1 -> 3/6/8
-                icolalt(1,i) = icolalt(1,ida(1))
-                icolalt(2,i) = icolalt(2,ida(1))
-             elseif(icolalt(1,ida(1)).eq.-icolalt(1,ida(2))) then ! antisextet
-                icolalt(1,i) = -icolalt(1,ida(2))
-                icolalt(2,i) = icolalt(2,ida(1))
-             elseif(icolalt(2,ida(1)).eq.-icolalt(2,ida(2))) then ! sextet
-                icolalt(1,i) = icolalt(1,ida(2))
-                icolalt(2,i) = -icolalt(1,ida(1))
-             else
-c               This might be due to multiparticle vertex with color combinations
-c               that can't be captured with just two sets of color indices
-                call write_error(da_color(1), da_color(2), mo_color)
-             endif
           elseif(mo_color.eq.-3) then ! color anti-triplet
-                icolalt(1,i) = 0
-             if(da_color(1).eq.-3.and.da_color(2).eq.1)then
-                icolalt(2,i) = icolalt(2,ida(1))
-             elseif(da_color(1).eq.-3.and.da_color(2).eq.8)then
-                icolalt(2,i) = icolalt(2,ida(2))
-             elseif(da_color(1).eq.-6.and.da_color(2).eq.3)then
-                if(-icolalt(1,ida(1)).eq.icolalt(1,ida(2)))then
-                   icolalt(2,i) = icolalt(2,ida(1))
-                else
-                   icolalt(2,i) = -icolalt(1,ida(1))
-                endif
-             elseif(da_color(1).eq.3.and.da_color(2).eq.3)then
-                maxcolor=maxcolor+1
-                icolalt(2,i) = maxcolor
-             else
-                call write_error(da_color(1), da_color(2), mo_color)
-             endif
+             maxcolor=elim_indices(0,1,ncolmp,icolmp,icolalt(1,i),maxcolor)
           elseif(mo_color.eq.3) then ! color triplet
-                icolalt(2,i) = 0
-             if(da_color(1).eq.1.and.da_color(2).eq.3)then
-                icolalt(1,i) = icolalt(1,ida(2))
-             elseif(da_color(1).eq.3.and.da_color(2).eq.8)then
-                icolalt(1,i) = icolalt(1,ida(2))
-             elseif(da_color(1).eq.-3.and.da_color(2).eq.6)then
-                if(icolalt(2,ida(1)).eq.icolalt(1,ida(2)))then
-                   icolalt(1,i) = -icolalt(2,ida(2))
-                else
-                   icolalt(1,i) = icolalt(1,ida(2))
-                endif
-             elseif(da_color(1).eq.-3.and.da_color(2).eq.-3)then
-                maxcolor=maxcolor+1
-                icolalt(1,i) = maxcolor
-             else
-                call write_error(da_color(1), da_color(2), mo_color)
-             endif
+             maxcolor=elim_indices(1,0,ncolmp,icolmp,icolalt(1,i),maxcolor)
           elseif(mo_color.eq.-6) then ! color anti-sextet
-             if(da_color(1).eq.-6.and.da_color(2).eq.1)then
-                icolalt(1,i) = icolalt(1,ida(1))
-                icolalt(2,i) = icolalt(2,ida(1))
-             elseif(da_color(1).eq.-6.and.da_color(2).eq.8)then
-                if(icolalt(2,ida(1)).eq.icolalt(1,ida(2)))then
-                   icolalt(1,i) = icolalt(1,ida(1))
-                   icolalt(2,i) = icolalt(2,ida(2))
-                else
-                   icolalt(1,i) = -icolalt(2,ida(2))
-                   icolalt(2,i) = icolalt(2,ida(1))
-                endif
-             elseif(da_color(1).eq.-3.and.da_color(2).eq.-3)then
-                icolalt(1,i) = -icolalt(2,ida(1))
-                icolalt(2,i) = icolalt(2,ida(2))
-             else
-                call write_error(da_color(1), da_color(2), mo_color)
-             endif
+             maxcolor=elim_indices(0,2,ncolmp,icolmp,icolalt(1,i),maxcolor)
           elseif(mo_color.eq.6) then ! color sextet
-             if(da_color(1).eq.1.and.da_color(2).eq.6)then
-                icolalt(1,i) = icolalt(1,ida(2))
-                icolalt(2,i) = icolalt(2,ida(2))
-             elseif(da_color(1).eq.6.and.da_color(2).eq.8)then
-                if(icolalt(1,ida(1)).eq.icolalt(2,ida(2)))then
-                   icolalt(1,i) = icolalt(1,ida(2))
-                   icolalt(2,i) = icolalt(2,ida(1))
-                else
-                   icolalt(1,i) = icolalt(1,ida(1))
-                   icolalt(2,i) = -icolalt(1,ida(2))
-                endif
-             elseif(da_color(1).eq.3.and.da_color(2).eq.3)then
-                icolalt(1,i) = icolalt(1,ida(1))
-                icolalt(2,i) = -icolalt(1,ida(2))
-             else
-                call write_error(da_color(1), da_color(2), mo_color)
-             endif
+             maxcolor=elim_indices(2,0,ncolmp,icolmp,icolalt(1,i),maxcolor)
           elseif(mo_color.eq.8) then ! color octet
-             if(da_color(1).eq.-3.and.da_color(2).eq.3)then
-                icolalt(1,i) = icolalt(1,ida(2))
-                icolalt(2,i) = icolalt(2,ida(1))             
-             elseif(da_color(1).eq.1.and.da_color(2).eq.8)then
-                icolalt(1,i) = icolalt(1,ida(2))
-                icolalt(2,i) = icolalt(2,ida(2))             
-             elseif(da_color(1).eq.8.and.da_color(2).eq.8)then
-                if(icolalt(1,ida(1)).eq.icolalt(2,ida(2)))then
-                   icolalt(1,i) = icolalt(1,ida(2))
-                   icolalt(2,i) = icolalt(2,ida(1))
-                else
-                   icolalt(1,i) = icolalt(1,ida(1))
-                   icolalt(2,i) = icolalt(2,ida(2))
-                endif
-             elseif(da_color(1).eq.-6.and.da_color(2).eq.6)then
-                if(-icolalt(1,ida(1)).eq.icolalt(1,ida(2)))then
-                   icolalt(1,i) = -icolalt(1,ida(2))
-                   icolalt(2,i) = icolalt(2,ida(1))
-                elseif(icolalt(1,ida(1)).eq.icolalt(2,ida(2)))then
-                   icolalt(1,i) = icolalt(1,ida(2))
-                   icolalt(2,i) = icolalt(2,ida(1))
-                elseif(icolalt(2,ida(1)).eq.icolalt(1,ida(2)))then
-                   icolalt(1,i) = -icolalt(2,ida(2))
-                   icolalt(2,i) = -icolalt(1,ida(1))
-                else
-                   icolalt(1,i) = icolalt(1,ida(2))
-                   icolalt(2,i) = -icolalt(1,ida(1))
-                endif
-             else
-                call write_error(da_color(1), da_color(2), mo_color)
-             endif
-          else
+             maxcolor=elim_indices(1,1,ncolmp,icolmp,icolalt(1,i),maxcolor)
+          elseif(mo_color.ne.2) then ! 2 indicates multipart. vertex
              call write_error(da_color(1), da_color(2), mo_color)
           endif
 c         Set tentative mothers
@@ -406,6 +311,18 @@ c
       integer ida1,ida2,imo
 
       open(unit=26,file='../../../error',status='unknown',err=999)
+      if (ida1.eq.1000)then
+         write(26,*) 'Error: too many particles in multipart. vertex,',
+     $        ' please increase maxcolmp in addmothers.f'
+         write(*,*) 'Error: too many particles in multipart. vertex,',
+     $        ' please increase maxcolmp in addmothers.f'
+         stop
+      endif
+      if (ida1.eq.1001)then
+         write(26,*) 'Error: failed to reduce to color indices: ',ida2,imo
+         write(*,*) 'Error: failed to reduce to color indices: ',ida2,imo
+         stop
+      endif
       write(26,*) 'Error: Color combination ',ida1,ida2,
      $     '->',imo,' not implemented in addmothers.f'
       write(*,*) 'Error: Color combination ',ida1,ida2,
@@ -413,4 +330,80 @@ c
       stop
 
  999  write(*,*) 'error'
+      end
+
+c*******************************************************************
+      function elim_indices(n3,n3bar,ncolmp,icolmp,icolres,maxcolor)
+c*******************************************************************
+c     Successively eliminate identical pairwise color indices from the
+c     icolmp list, until only the wanted indices remain
+c     n3 gives the number of triplet indices, n3bar number of antitriplets
+c     n3=1 for triplet, n3bar=1 for antitriplet, 
+c     (n3,n3bar)=(1,1) for octet,
+c     n3=2 for sextet, n3bar=2 for antisextet 
+c     If there are epsilon^{ijk} or epsilonbar color couplings, we
+c     need to introduce new index based on maxcolor.
+c
+
+      implicit none
+      integer elim_indices
+      integer n3,n3bar,ncolmp,icolmp(2,*),icolres(2),maxcolor
+      integer i,j,i3,i3bar
+
+c     Successively eliminate color indices in pairs until only the wanted
+c     indices remain
+      do i=1,ncolmp
+         do j=1,ncolmp
+            if(icolmp(1,i).ne.0.and.icolmp(1,i).eq.icolmp(2,j)) then
+               icolmp(1,i)=0
+               icolmp(2,j)=0
+            endif
+         enddo
+      enddo
+      
+      i3=0
+      i3bar=0
+      icolres(1)=0
+      icolres(2)=0
+      do i=1,ncolmp
+         if(icolmp(1,i).gt.0)then
+            i3=i3+1
+            if(i3.eq.1) icolres(1)=icolmp(1,i)
+            if(i3.eq.2) icolres(2)=-icolmp(1,i)
+         endif
+         if(icolmp(2,i).gt.0)then
+            i3bar=i3bar+1
+            if(i3bar.eq.1) icolres(2)=icolmp(2,i)
+            if(i3bar.eq.2) icolres(1)=-icolmp(2,i)
+         endif
+      enddo
+
+      if(i3.ne.n3.or.i3bar.ne.n3bar) then
+         if(n3.gt.0.and.n3bar.eq.0)then
+c        This is an epsilon index interaction
+            maxcolor=maxcolor+1
+            icolres(1)=maxcolor
+            icolres(2)=0
+            if(n3.eq.2)then
+               maxcolor=maxcolor+1
+               icolres(2)=-maxcolor
+            endif
+         elseif(n3bar.gt.0.and.n3.eq.0)then
+c        This is an epsilonbar index interaction
+            maxcolor=maxcolor+1
+            icolres(1)=0
+            icolres(2)=maxcolor
+            if(n3.eq.2)then
+               maxcolor=maxcolor+1
+               icolres(1)=-maxcolor
+            endif
+         else
+c           Don't know how to deal with this
+            call write_error(1001,n3,n3bar)
+         endif
+      endif
+
+      elim_indices=maxcolor
+      
+      return
       end

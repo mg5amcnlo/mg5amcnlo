@@ -823,8 +823,8 @@ c
             write(26,20) 'if [[ ! -e ftn25 ]]; then'
 
 
-            write(26,'(9x,a,2i8,a)') 'echo "',npoints,max_iter,
-     $           '" >& input_sg.txt' 
+            write(26,'(9x,a,2i8,a)') 'echo "',max(npoints,min_events),
+     $           max_iter,'" >& input_sg.txt' 
 c
 c     tjs 8/7/2007  Allow stop when have enough events
 c
@@ -846,8 +846,8 @@ c
 
             write(26,25) 'rm -f $k'
             
-            write(26,'(9x,a,2i8,a)') 'echo "',npoints,max_iter,
-     $           '" >& input_sg.txt' 
+            write(26,'(9x,a,2i8,a)') 'echo "',max(npoints,min_events),
+     $           max_iter,'" >& input_sg.txt' 
 c
 c tjs 8/7/2007    Change to request events not accuracy
 c
