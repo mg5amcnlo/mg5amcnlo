@@ -25,7 +25,7 @@
       double precision xtarget
       data iseed/0/
 
-c     Color indices for multiparticle vertices
+c     Variables for combination of color indices (including multipart. vert)
       integer maxcolmp
       parameter(maxcolmp=20)
       integer ncolmp,icolmp(2,maxcolmp)
@@ -195,7 +195,7 @@ c       Set color info for all s-channels
           da_color(2) = get_color(jpart(1,ida(2)))
           if(da_color(1).ne.2.and.da_color(2).lt.da_color(1).or.
      $         da_color(2).eq.2)then
-c            Order daughters according to color, but with 2 as first
+c            Order daughters according to color, but always color 2 first
              itmp=ida(1)
              ida(1)=ida(2)
              ida(2)=itmp
@@ -203,11 +203,13 @@ c            Order daughters according to color, but with 2 as first
              da_color(1)=da_color(2)
              da_color(2)=itmp
           endif
-c      Reset list of color indices if not multipart. vertex
+c     Reset list of color indices if not inside multipart. vertex
+c     (indicated by color 2)
           if(da_color(1).ne.2)then
              ncolmp=0
           endif
-c     Set list of color indices
+c     Add new color indices to list of color indices
+c     Note that color=2 means continued multiparticle index
           do j=1,2
              if(da_color(j).eq.2.or.da_color(j).eq.1) cycle
              ncolmp=ncolmp+1
@@ -330,7 +332,19 @@ c
  999  write(*,*) 'error'
       end
 
+c*******************************************************************
       function elim_indices(n3,n3bar,ncolmp,icolmp,icolres,maxcolor)
+c*******************************************************************
+c     Successively eliminate identical pairwise color indices from the
+c     icolmp list, until only the wanted indices remain
+c     n3 gives the number of triplet indices, n3bar number of antitriplets
+c     n3=1 for triplet, n3bar=1 for antitriplet, 
+c     (n3,n3bar)=(1,1) for octet,
+c     n3=2 for sextet, n3bar=2 for antisextet 
+c     If there are epsilon^{ijk} or epsilonbar color couplings, we
+c     need to introduce new index based on maxcolor.
+c
+
       implicit none
       integer elim_indices
       integer n3,n3bar,ncolmp,icolmp(2,*),icolres(2),maxcolor
