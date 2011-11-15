@@ -1,44 +1,48 @@
 Update notes for MadGraph 5 (in reverse time order)
 
-1.4.b0 (14/11/11): OM: New structure for madevent script (./bin/madevent)
+1.4.b0 (15/11/11): OM: New structure for madevent script (./bin/madevent)
                       allowing to have an interface similar to MG5 
                       for running madevent.
                       (accessible from MG5 via launch [DIR] -i)
-		      This script replaces most of the script present before in 
-		      ./bin/ (such as survey/refine/combine/run_XXXX/multi_run/plot)
-		      The script generate_events still exists but call itself 
+                      This script replaces most of the earlier scripts in
+                      ./bin/ (such as survey/refine/combine/run_XXXX/
+                      multi_run/plot)
+                      The script generate_events still exists but now calls
                       ./bin/madevent. 
-                  OM: Madevent check that the param_card is coherent with the 
-                      restriction use during the model generation. 
-                  OM: FOR MSSM model, pass param_card in SLAH1. This card will 
-                      be converted to the SLAH2 during the run since the UFO 
-                      model use SLAH2. This allow to use the pythia6 matching, 
+                  OM: MadEvent checks that the param_card is coherent with the 
+                      restriction used during the model generation. 
+                  OM: For MSSM model, convert param_card to SLAH1. This card is
+                      converted to SLAH2 during the MadEvent run since the UFO 
+                      model uses SLAH2. This allows to use Pythia 6,
                       as well as have a coherent definition for the flavor.
-                  OM: Change the import command. It's now allow to ommit the 
-                      type of import. This one will be guess automaticaly. 
+                  OM: Change the import command. It's now allowed to omit the 
+                      type of import. The type is guessed automaticaly. 
                       This is NOT allowed on the web.
-                  OM: Add the possibility to force which fortran compiler will 
-                      be use. Either via the configuration file or via the set 
+                  OM: Add the possibility to force which fortran compiler is
+                      be used, either via the configuration file or via the set 
                       command.
-                  OM: Add the possibility to by-pass the automatic opening of the
-                      web browser (via the configuration file: ./input/mg5_configuration.txt )
-                  OM: Change the scheme of question when running madevent and allow to specify
-		      in the command interface if you want to run pythia/pgs/...
-		      Allow to put the answers to the questions in the proc_card.dat.
-                  OM: Add three options for display command and modify a fourth one:
+                  OM: Add the possibility to bypass the automatic opening of 
+                      the web browser (via the configuration file: 
+                      ./input/mg5_configuration.txt )
+                  OM: Change the scheme of questions when running madevent and 
+                      allow to specify in the command interface if you
+                      want to run pythia/pgs/...
+                      Allow to put the answers to the questions in the 
+                      proc_card.dat.
+                  OM: Add options for the display command:
                       a) display options: return the current option value. 
                         i.e. those set via the set command and/or via the 
                         configuration file
                       b) display variable NAME: return the current string 
                         representation of NAME and/or self.NAME .
-                      c) display coupling_order: return the coupling order with 
-		        their associate weight (for automatic order restriction)
-		      d) display couplings returns now the list of all couplings
-		        with the associate formula 
-	          OM: New Python script for the creation of the crossx.html page
+                      c) display coupling_order: return the coupling orders with
+                        their associated weight (for automatic order restriction)
+                      d) display couplings now returns the list of all couplings
+                        with the associated expression
+                  OM: New Python script for the creation of the crossx.html page
                       Requiring less disk access for the generation of the file.
-                  OM: Modify the gestion of error, especially for Invalid command and
-                      Configuration problem.
+                  OM: Modify error treatment, especially for Invalid commands
+                      and Configuration problems.
 
 1.3.28 (14/11/11) OM+JA: Fix special case when Lorentz structure combining
                       two different Majorana particles depends on the
@@ -72,10 +76,10 @@ Update notes for MadGraph 5 (in reverse time order)
 1.3.25 (27/10/11) JA: Ensure that the correct intermediate resonance
                       is always written in the event file, even when we
                       have resonances with identical properties.
- 		  OM: Fix the bug forcing to quit the web browser in order to
-		      have MG5 continuing to run.
-		  OM: Change the tutorial in order to allow open index.html
-		      after the output command. 
+                  OM: Fix the bug forcing to quit the web browser in order to
+                      have MG5 continuing to run.
+                  OM: Change the tutorial in order to allow open index.html
+                      after the output command. 
 
 1.3.24 (22/10/11) JA: Fix problem with getting enough events in gridpack
                       mode (this was broken in v. 1.3.11 when we moved
