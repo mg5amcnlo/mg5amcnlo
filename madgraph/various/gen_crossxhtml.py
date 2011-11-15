@@ -233,7 +233,7 @@ class AllResults(dict):
         else:    
             self.current[name] = value
             if name == 'cross':
-                self.results = True
+                self.current.results = True
         
     def output(self):
         """ write the output file """
@@ -479,13 +479,15 @@ class OneRunResults(dict):
         
         # Events
         out = '<table border=1>'
-        if self.parton:
+        if 'gridpack' in self.parton:
+            out += '<tr><td> GridPack : </td><td>'
+            out += self.special_link("./%(run_name)s_gridpack.tar",
+                                                                 'gridpack', 'gridpack')
+            out += "</td></tr>"
+
+        if self.parton and self.parton != ['gridpack']:
+            
             out += '<tr><td> Parton Events : </td><td>'
-            if 'gridpack' in self.parton:
-                out2 =  '<center>'
-                out2 += self.special_link("./%(run_name)s_gridpack.tar",
-                                                                 'grid', 'grid')
-                out = out2 +"</center><br>" + out
             
             if 'lhe' in self.parton:
                 link = './Events/%(run_name)s_unweighted_events.lhe'

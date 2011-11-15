@@ -1526,7 +1526,7 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
             p = subprocess.Popen(['./gensym'], stdin=subprocess.PIPE,
                                  stdout=subprocess.PIPE, 
                                  stderr=subprocess.STDOUT, cwd=Pdir)
-            sym_input = "%(points)d %(iterations)d %(accuracy)f" % self.opts
+            sym_input = "%(points)d %(iterations)d %(accuracy)f\n" % self.opts
             (stdout, stderr) = p.communicate(sym_input)
             if not os.path.exists(pjoin(Pdir, 'ajob1')) or p.returncode:
                 logger.critical(stdout)
