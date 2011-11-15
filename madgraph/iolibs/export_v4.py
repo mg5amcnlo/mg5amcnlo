@@ -1082,7 +1082,7 @@ class ProcessExporterFortranME(ProcessExporterFortran):
                                           filename,
                                           model=matrix_element.get('processes')[0].\
                                              get('model'),
-                                          amplitude='')
+                                          amplitude=True)
         logger.info("Generating Feynman diagrams for " + \
                      matrix_element.get('processes')[0].nice_string())
         plot.draw()

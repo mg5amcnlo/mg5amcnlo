@@ -851,7 +851,11 @@ class FeynmanDiagram:
         #and will be resolve latter (so we don't care) or we have to flip
         #particle to antiparticle.
         if line.number == 1 == vertex.get('legs')[0].get('number'):
-            line.inverse_part_antipart()            
+            line.inverse_part_antipart()
+        elif self.amplitude and line.number == 1:
+            nb = [l.get('number') for l in vertex.get('legs')]
+            if nb.count(1) == 2: 
+                line.inverse_part_antipart()           
 
     def load_leg(self, leg):
         """Extend the leg to Feynman line. Associate the line to the diagram.

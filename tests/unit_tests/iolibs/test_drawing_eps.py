@@ -204,8 +204,8 @@ if __name__ == '__main__':
     process_diag['e- e+ > t t~, t > w+ b'] = [0]
     process_diag['u u~ > w+ w- e+ e-'] = [0]
     process_diag['OUTPUT: u u~ > w+ w- e+ e-'] = [0]
-    process_diag['w+ w- > w+ w- z z'] = [7]
-    process_diag['OUTPUT: w+ w- > w+ w- z z'] = [7]
+    process_diag['w+ w- > w+ w- z z'] = [7,9,10]
+    process_diag['OUTPUT: w+ w- > w+ w- z z'] = [7,9,10]
     
     from madgraph.interface.cmd_interface import MadGraphCmdShell
     cmd = MadGraphCmdShell()
@@ -250,6 +250,7 @@ if __name__ == '__main__':
         diag_content[gen_line] = {}
         for pos in pos_list:
             diag_content[gen_line][pos] = amplitude['diagrams'][pos]
+
 
     # Store the diagrams  
     file_test_diagram = open(os.path.join(_file_path , \
