@@ -909,6 +909,9 @@ data mirrorproc /%s/" % bool_dict[matrix_element.get('has_mirror_process')]
         iconfig = 0
     
         s_and_t_channels = []
+
+        model = matrix_element.get('processes')[0].get('model')
+        new_pdg = model.get_first_non_pdg()
     
         base_diagrams = matrix_element.get('base_amplitude').get('diagrams')
         minvert = min([max([len(vert.get('legs')) for vert in \
@@ -930,7 +933,7 @@ data mirrorproc /%s/" % bool_dict[matrix_element.get('has_mirror_process')]
             # Need to reorganize the topology so that we start with all
             # final state external particles and work our way inwards
             schannels, tchannels = helas_diag.get('amplitudes')[0].\
-                                         get_s_and_t_channels(ninitial)
+                                         get_s_and_t_channels(ninitial, new_pdg)
     
             s_and_t_channels.append([schannels, tchannels])
     

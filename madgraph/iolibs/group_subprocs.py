@@ -65,7 +65,7 @@ class IdentifyConfigTag(diagram_generation.DiagramTag):
                  leg.get('number'))]
         
     @staticmethod
-    def vertex_id_from_vertex(vertex, last_vertex, model):
+    def vertex_id_from_vertex(vertex, last_vertex, model, ninitial):
         """Returns the info needed to identify matrix elements:
         interaction color, lorentz, coupling, and wavefunction
         spin, self_antipart, mass, width, color, decay and

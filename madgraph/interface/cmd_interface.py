@@ -198,7 +198,7 @@ class CmdExtended(cmd.Cmd):
         if len(args)==1:
             command=args[0]
         else:
-            command = args[0]+'_'+args[1]
+            command = args[0]+'_'+args[1].split('.')[0]
         
         try:
             logger_tuto.info(getattr(tutorial_text, command).replace('\n','\n\t'))
@@ -2688,7 +2688,7 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
                 logger.info('Downloading TD for Linux 32 bit')
                 target = 'http://cp3wks05.fynu.ucl.ac.be/twiki/pub/Software/TopDrawer/td'
                 subprocess.call(['wget', target], cwd=os.path.join(MG5DIR,'td'))      
-            
+                os.chmod(os.path.join(MG5DIR,'td','td'), 0775)
                 if sys.maxsize > 2**32:
                     logger.warning('''td program (needed by MadAnalysis) is not compile for 64 bit computer
                 Please follow instruction in http://cp3wks05.fynu.ucl.ac.be/twiki/bin/view/Software/TopDrawer.''')

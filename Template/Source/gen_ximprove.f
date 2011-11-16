@@ -41,7 +41,7 @@ c
       logical parallel, gen_events
       character*20 param(maxpara),value(maxpara)
       integer npara, nreq, ngran, nhel_refine
-      integer ij, kl, iseed
+      integer ij, kl, iseed, ioffset
       logical Gridpack,gridrun
       logical split_channels
       common /to_split/split_channels
@@ -80,7 +80,7 @@ c     If different card options set for nhel_refine and nhel_survey:
          gen_events=.true.
          split_channels=.false.
          call get_integer(npara,param,value," gevents "  ,nreq  ,2000   )
-         err_goal = 1.2*nreq
+         err_goal = 1.5*nreq ! extra factor to ensure works
          call get_integer(npara,param,value," gseed "  ,iseed  ,4321   )
          call get_integer(npara,param,value," ngran "  ,ngran  , -1)
          if (ngran.eq.-1) ngran = int(sqrt(real(nreq)))
@@ -91,9 +91,12 @@ c     TJS 3/13/2008
 c     Modified to allow for more sequences
 c     iseed can be between 0 and 31328*30081
 c     before patern repeats
+c     JA 11/2/2011: Check for ioffset, as in ntuple (ranmar.f)
 c
+         call get_offset(ioffset)
+         iseed = iseed * 31300       
          ij=1802 + mod(iseed,30081)
-         kl=9373 + (iseed/31328)
+         kl=9373 + (iseed/31328) + ioffset
 c         write(*,'($a,i6,a3,i6)') 'Using random seed offsets',jconfig," : ",ioffset
 c         write(*,*) ' with seed', iseed
          do while (ij .gt. 31328)
@@ -799,8 +802,8 @@ c      kl = 4321
                np = 1
             endif
             ip = index(gn(i),'/')
-            write(*,*) 'Channel ',gn(i)(2:ip-1),
-     $           yerr, jpoints(i),npoints
+            write(*,*) 'Channel ',gn(i)(2:ip-1), goal_lum * xsec(i) / xtot,
+     $           npoints
 
             ip = index(gn(i),'/')
             write(26,'(2a)') 'j=',gn(i)(1:ip-1)
@@ -824,14 +827,14 @@ c
             write(26,20) 'if [[ ! -e ftn25 ]]; then'
 
 
-            write(26,'(9x,a,2i8,a)') 'echo "',npoints,max_iter,
-     $           '" >& input_sg.txt' 
+            write(26,'(9x,a,2i8,a)') 'echo "',max(npoints,min_events),
+     $           max_iter,'" >& input_sg.txt' 
 c
 c     tjs 8/7/2007  Allow stop when have enough events
 c
             write(*,*) "Cross section",i,xsec(i),mfact(i)
-            write(26,'(9x,a,f11.3,a)') 'echo "',-npoints*1.2,
-     $        '" >> input_sg.txt'                       !Accuracy
+            write(26,'(9x,a,e13.5,a)') 'echo "',-npoints/xsec(i),
+     $        '" >> input_sg.txt'                       !Luminocity
             write(26,'(9x,a)') 'echo "2" >> input_sg.txt' !Grid Adjustment
             write(26,'(9x,a)') 'echo "1" >> input_sg.txt' !Suppression
             write(26,'(9x,a,i4,a)') 'echo "',nhel_refine,
@@ -847,13 +850,13 @@ c
 
             write(26,25) 'rm -f $k'
             
-            write(26,'(9x,a,2i8,a)') 'echo "',npoints,max_iter,
-     $           '" >& input_sg.txt' 
+            write(26,'(9x,a,2i8,a)') 'echo "',max(npoints,min_events),
+     $           max_iter,'" >& input_sg.txt' 
 c
 c tjs 8/7/2007    Change to request events not accuracy
 c
-            write(26,'(9x,a,f11.3,a)') 'echo "',-npoints*1.2,
-     $           '" >> input_sg.txt' !Accuracy
+            write(26,'(9x,a,e13.5,a)') 'echo "',-npoints / xsec(i),
+     $           '" >> input_sg.txt' ! Luminocity
             write(26,'(9x,a)') 'echo "0" >> input_sg.txt'
             write(26,'(9x,a)') 'echo "1" >> input_sg.txt'
 
