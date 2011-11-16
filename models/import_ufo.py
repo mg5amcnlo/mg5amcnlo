@@ -84,7 +84,7 @@ def import_model(model_name):
             restrict_file = os.path.join(model_path,'restrict_default.dat')
         else:
             restrict_file = None
-            
+    
     #import the FULL model
     model = import_full_model(model_path) 
     # restore the model name
