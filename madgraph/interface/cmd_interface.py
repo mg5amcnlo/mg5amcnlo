@@ -941,7 +941,7 @@ class CheckValidForCmdWeb(CheckValidForCmd):
         if not args:
             raise self.WebRestriction, 'import requires at least one option'
         
-        if args[0] not in self._import_format:
+        if args[0] not in self._import_formats:
             self.help_import()
             raise self.WebRestriction, 'No implicit format on the web. Please modify your card.'
 
