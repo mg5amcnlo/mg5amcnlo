@@ -75,7 +75,7 @@ function check_link(url,alt, id){
             </TR>     
             %(old_run)s
         </TABLE>
-    <H3 align=center><A HREF="../index.html"> Main Page </A></H3>
+    <H3 align=center><A HREF="./index.html"> Main Page </A></H3>
 </BODY> 
 </HTML> 
 """

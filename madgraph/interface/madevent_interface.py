@@ -1159,6 +1159,7 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
                 self.nb_core = int(arg.split('=',1)[1])
             elif arg.startswith('--web'):
                 self.web = True
+                self.cluster_mode = 1
                 self.results.def_web_mode(True)
             else:
                 continue
@@ -2255,10 +2256,13 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
         
         if self.cluster_mode == 0:
             start = time.time()
-            os.system('cd %s; ./%s' % (cwd,exe))
-            #subprocess.call(['./'+exe] + argument, cwd=cwd, stdout=stdout, 
-            #                bufsize=-1, **opt)
+            #os.system('cd %s; ./%s' % (cwd,exe))
+            status = subprocess.call(['./'+exe] + argument, cwd=cwd, 
+                                                           stdout=stdout, **opt)
             logger.info('%s run in %f s' % (exe, time.time() -start))
+            if status:
+                raise MadGraph5Error, '%s didn\'t stop properly. Stop all computation' % exe
+
 
         elif self.cluster_mode == 1:
             self.cluster.submit(exe, stdout=stdout, cwd=cwd)
