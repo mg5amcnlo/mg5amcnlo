@@ -1241,16 +1241,6 @@ class FeynmanDiagram:
         for line in self.lineList:
             if line.state == True:
                 line.define_line_orientation()
-        if self.amplitude:
-            # In this case we know the direction of the arrow for each vertex.
-            # So we need to follow the IO order of each vertex.
-            for vertex in self.vertexList:
-                for i, line in enumerate(vertex.lines[:-1]):
-                    if line.is_external() or not line.is_fermion():
-                        continue
-                    if i % 2 ^ (line.start == vertex):
-                        line.inverse_part_antipart()
-                        line.inverse_begin_end()
                                   
         # The define line orientation use level information and in consequence 
         #fails on T-Channel. So in consequence we still have to fix T-channel
