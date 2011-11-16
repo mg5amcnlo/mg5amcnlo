@@ -1,5 +1,8 @@
 Update notes for MadGraph 5 (in reverse time order)
 
+1.3.29 (16/11/11) OM: Fixed particle identities in the Feynman diagram drawing
+                  JA: Fixed bug in pdf reweighting when external LHAPDF is used.
+
 1.3.28 (14/11/11) OM+JA: Fix special case when Lorentz structure combining
                       two different Majorana particles depends on the
                       incoming/outgoing status of the Majorana particles
