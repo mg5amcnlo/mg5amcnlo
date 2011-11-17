@@ -27,6 +27,9 @@ import sys
 import traceback
 import time
 
+#usefull shortcut
+pjoin = os.path.join
+
 try:
     import readline
     GNU_SPLITTING = ('GNU' in readline.__doc__)
@@ -618,7 +621,7 @@ You can set it by adding the following lines in your .bashrc [.bash_profile for 
 export ROOTSYS=%s
 export PATH=$PATH:$ROOTSYS/bin
 This will take effect only in a NEW terminal
-''' % os.path.realpath(os.path.join(misc.which('root'), \
+''' % os.path.realpath(pjoin(misc.which('root'), \
                                                os.path.pardir, os.path.pardir)))
 
                 
@@ -650,10 +653,10 @@ This will take effect only in a NEW terminal
         # search for a valid path
         if os.path.sep in args[0] and os.path.isdir(args[0]):
             path = args[0]
-        elif os.path.isdir(os.path.join(MG5DIR,args[0])):
-            path = os.path.join(MG5DIR,args[0])
-        elif  MG4DIR and os.path.isdir(os.path.join(MG4DIR,args[0])):
-            path = os.path.join(MG4DIR,args[0])
+        elif os.path.isdir(pjoin(MG5DIR,args[0])):
+            path = pjoin(MG5DIR,args[0])
+        elif  MG4DIR and os.path.isdir(pjoin(MG4DIR,args[0])):
+            path = pjoin(MG4DIR,args[0])
         elif os.path.isdir(args[0]):
             path = args[0]
         else:    
@@ -670,17 +673,17 @@ This will take effect only in a NEW terminal
         """ identify the import type of a given path 
         valid output: model/model_v4/proc_v4/command"""
         
-        possibility = [os.path.join(MG5DIR,'models',path), \
-                     os.path.join(MG5DIR,'models',path+'_v4'), path]
+        possibility = [pjoin(MG5DIR,'models',path), \
+                     pjoin(MG5DIR,'models',path+'_v4'), path]
         if '-' in path:
             name = path.rsplit('-',1)[0]
-            possibility = [os.path.join(MG5DIR,'models',name), name] + possibility
+            possibility = [pjoin(MG5DIR,'models',name), name] + possibility
         # Check if they are a valid directory
         for name in possibility:
             if os.path.isdir(name):
-                if os.path.exists(os.path.join(name,'particles.py')):
+                if os.path.exists(pjoin(name,'particles.py')):
                     return 'model'
-                elif os.path.exists(os.path.join(name,'particles.dat')):
+                elif os.path.exists(pjoin(name,'particles.dat')):
                     return 'model_v4'
         
         # Not valid directory so maybe a file
@@ -700,17 +703,17 @@ This will take effect only in a NEW terminal
         """ identify the type of output of a given directory:
         valid output: madevent/standalone/standalone_cpp"""
         
-        card_path = os.path.join(path,'Cards')
-        bin_path = os.path.join(path,'bin')
-        src_path = os.path.join(path,'src')
-        include_path = os.path.join(path,'include')
-        subproc_path = os.path.join(path,'SubProcesses')
+        card_path = pjoin(path,'Cards')
+        bin_path = pjoin(path,'bin')
+        src_path = pjoin(path,'src')
+        include_path = pjoin(path,'include')
+        subproc_path = pjoin(path,'SubProcesses')
 
-        if os.path.isfile(os.path.join(include_path, 'Pythia.h')):
+        if os.path.isfile(pjoin(include_path, 'Pythia.h')):
             return 'pythia8'
         elif os.path.isdir(src_path):
             return 'standalone_cpp'
-        elif os.path.isfile(os.path.join(bin_path,'generate_events')):
+        elif os.path.isfile(pjoin(bin_path,'generate_events')):
             return 'madevent'
         elif os.path.isdir(card_path):
             return 'standalone'
@@ -779,18 +782,18 @@ This will take effect only in a NEW terminal
                 return True
             
         path = self._done_export[0]
-        if os.path.isfile(os.path.join(path,args[0])):
-            args[0] = os.path.join(path,args[0])
-        elif os.path.isfile(os.path.join(path,'Cards',args[0])):
-            args[0] = os.path.join(path,'Cards',args[0])
-        elif os.path.isfile(os.path.join(path,'HTML',args[0])):
-            args[0] = os.path.join(path,'HTML',args[0])
+        if os.path.isfile(pjoin(path,args[0])):
+            args[0] = pjoin(path,args[0])
+        elif os.path.isfile(pjoin(path,'Cards',args[0])):
+            args[0] = pjoin(path,'Cards',args[0])
+        elif os.path.isfile(pjoin(path,'HTML',args[0])):
+            args[0] = pjoin(path,'HTML',args[0])
         # special for card with _default define: copy the default and open it
         elif '_card.dat' in args[0]:   
             name = args[0].replace('_card.dat','_card_default.dat')
-            if os.path.isfile(os.path.join(path,'Cards', name)):
+            if os.path.isfile(pjoin(path,'Cards', name)):
                 files.cp(path + '/Cards/' + name, path + '/Cards/'+ args[0])
-                args[0] = os.path.join(path,'Cards', args[0])
+                args[0] = pjoin(path,'Cards', args[0])
             else:
                 raise self.InvalidCmd('No default path for this file')
         elif not os.path.isfile(args[0]):
@@ -863,17 +866,17 @@ This will take effect only in a NEW terminal
         if self._export_format.startswith('madevent'):            
             name_dir = lambda i: 'PROC_%s_%s' % \
                                     (self._curr_model['name'], i)
-            auto_path = lambda i: os.path.join(self.writing_dir,
+            auto_path = lambda i: pjoin(self.writing_dir,
                                                name_dir(i))
         elif self._export_format == 'standalone':
             name_dir = lambda i: 'PROC_SA_%s_%s' % \
                                     (self._curr_model['name'], i)
-            auto_path = lambda i: os.path.join(self.writing_dir,
+            auto_path = lambda i: pjoin(self.writing_dir,
                                                name_dir(i))                
         elif self._export_format == 'standalone_cpp':
             name_dir = lambda i: 'PROC_SA_CPP_%s_%s' % \
                                     (self._curr_model['name'], i)
-            auto_path = lambda i: os.path.join(self.writing_dir,
+            auto_path = lambda i: pjoin(self.writing_dir,
                                                name_dir(i))
         elif self._export_format == 'pythia8':
             if self.pythia8_path:
@@ -967,7 +970,7 @@ class CheckValidForCmdWeb(CheckValidForCmd):
                 raise self.WebRestriction('only model can be loaded online')
             if 'model.pkl' not in args[1]:
                 raise self.WebRestriction('not valid pkl file: wrong name')
-            if not os.path.realpath(args[1]).startswith(os.path.join(MG4DIR, \
+            if not os.path.realpath(args[1]).startswith(pjoin(MG4DIR, \
                                                                     'Models')):
                 raise self.WebRestriction('Wrong path to load model')
         
@@ -1078,7 +1081,7 @@ class CompleteForCmd(CheckValidForCmd):
         # Directory continuation
         if args[-1].endswith(os.path.sep):
             return self.path_completion(text,
-                                        os.path.join('.',*[a for a in args \
+                                        pjoin('.',*[a for a in args \
                                                     if a.endswith(os.path.sep)]))
         # autocompletion for particles/couplings
         model_comp = self.model_completion(text, ' '.join(args[2:]))
@@ -1123,7 +1126,7 @@ class CompleteForCmd(CheckValidForCmd):
         # Directory continuation
         if args[-1].endswith(os.path.sep):
             return self.path_completion(text,
-                                        os.path.join('.',*[a for a in args if a.endswith(os.path.sep)]),
+                                        pjoin('.',*[a for a in args if a.endswith(os.path.sep)]),
                                         only_dirs = True)
         # Format
         if len(args) == 1:
@@ -1144,7 +1147,7 @@ class CompleteForCmd(CheckValidForCmd):
         # Directory continuation
         if args[-1].endswith(os.path.sep):
             return self.path_completion(text,
-                                        os.path.join('.',*[a for a in args if a.endswith(os.path.sep)]),
+                                        pjoin('.',*[a for a in args if a.endswith(os.path.sep)]),
                                         only_dirs = True)
         # Format
         if len(args) == 1:
@@ -1182,7 +1185,7 @@ class CompleteForCmd(CheckValidForCmd):
         # Directory continuation
         if args[-1].endswith(os.path.sep):
             return self.path_completion(text,
-                                        os.path.join('.',*[a for a in args if \
+                                        pjoin('.',*[a for a in args if \
                                                       a.endswith(os.path.sep)]))
 
         # Filename if directory is not given
@@ -1201,7 +1204,7 @@ class CompleteForCmd(CheckValidForCmd):
         # Directory continuation
         if args[-1].endswith(os.path.sep):
             return self.path_completion(text,
-                                        os.path.join('.',*[a for a in args if a.endswith(os.path.sep)]),
+                                        pjoin('.',*[a for a in args if a.endswith(os.path.sep)]),
                                         only_dirs = True)
 
         # Filename if directory is not given
@@ -1216,20 +1219,20 @@ class CompleteForCmd(CheckValidForCmd):
         # Directory continuation
         if os.path.sep in args[-1] + text:
             return self.path_completion(text,
-                                    os.path.join('.',*[a for a in args if \
+                                    pjoin('.',*[a for a in args if \
                                                       a.endswith(os.path.sep)]))
 
         possibility = []
         if self._done_export:
             path = self._done_export[0]
             possibility = ['index.html']
-            if os.path.isfile(os.path.join(path,'README')):
+            if os.path.isfile(pjoin(path,'README')):
                 possibility.append('README')
-            if os.path.isdir(os.path.join(path,'Cards')):
-                possibility += [f for f in os.listdir(os.path.join(path,'Cards')) 
+            if os.path.isdir(pjoin(path,'Cards')):
+                possibility += [f for f in os.listdir(pjoin(path,'Cards')) 
                                     if f.endswith('.dat')]
-            if os.path.isdir(os.path.join(path,'HTML')):
-                possibility += [f for f in os.listdir(os.path.join(path,'HTML')) 
+            if os.path.isdir(pjoin(path,'HTML')):
+                possibility += [f for f in os.listdir(pjoin(path,'HTML')) 
                                   if f.endswith('.html') and 'default' not in f]
         else:
             possibility.extend(['./','../'])
@@ -1257,7 +1260,7 @@ class CompleteForCmd(CheckValidForCmd):
             # Directory continuation
             if args[-1].endswith(os.path.sep):
                 return [name for name in self.path_completion(text,
-                        os.path.join('.',*[a for a in args if a.endswith(os.path.sep)]),
+                        pjoin('.',*[a for a in args if a.endswith(os.path.sep)]),
                         only_dirs = True) if name not in forbidden_names]
             # options
             if args[-1][0] == '-' or len(args) > 1 and args[-2] == '-':
@@ -1308,7 +1311,7 @@ class CompleteForCmd(CheckValidForCmd):
                 return self.list_completion(text, first_set + second_set)
         elif len(args) >2 and args[-1].endswith(os.path.sep):
                 return self.path_completion(text,
-                        os.path.join('.',*[a for a in args if a.endswith(os.path.sep)]),
+                        pjoin('.',*[a for a in args if a.endswith(os.path.sep)]),
                         only_dirs = True)
         
     def complete_import(self, text, line, begidx, endidx):
@@ -1339,7 +1342,7 @@ class CompleteForCmd(CheckValidForCmd):
             # find the different possibilities
             all_name = self.find_restrict_card(path, no_restrict=False)
             all_name += self.find_restrict_card(path, no_restrict=False,
-                                        base_dir=os.path.join(MG5DIR,'models'))
+                                        base_dir=pjoin(MG5DIR,'models'))
 
             # select the possibility according to the current line            
             all_name = [name.split('-')[-1] for name in  all_name ]
@@ -1356,7 +1359,7 @@ class CompleteForCmd(CheckValidForCmd):
         if os.path.sep in args[-1] + text and text:
             if mode.startswith('model'):
                 # Directory continuation
-                cur_path = os.path.join('.',*[a for a in args \
+                cur_path = pjoin('.',*[a for a in args \
                                                    if a.endswith(os.path.sep)])
                 all_dir = self.path_completion(text, cur_path, only_dirs = True)
                 if mode == 'model_v4':
@@ -1369,7 +1372,7 @@ class CompleteForCmd(CheckValidForCmd):
                 else:
                     return []
             else:
-                cur_path = os.path.join('.',*[a for a in args \
+                cur_path = pjoin('.',*[a for a in args \
                                                    if a.endswith(os.path.sep)])
                 all_path =  self.path_completion(text, cur_path)
                 if mode == 'all':
@@ -1388,26 +1391,26 @@ class CompleteForCmd(CheckValidForCmd):
         if (mode != 'all' and len(self.split_arg(line[0:begidx])) == 2) or \
             (mode =='all' and len(self.split_arg(line[0:begidx]))==1):
             if mode == 'model':
-                file_cond = lambda p : os.path.exists(os.path.join(MG5DIR,'models',p,'particles.py'))
+                file_cond = lambda p : os.path.exists(pjoin(MG5DIR,'models',p,'particles.py'))
                 mod_name = lambda name: name
             elif mode == 'model_v4':
-                file_cond = lambda p :  (os.path.exists(os.path.join(MG5DIR,'models',p,'particles.dat')) 
-                                      or os.path.exists(os.path.join(self._mgme_dir,'Models',p,'particles.dat')))
+                file_cond = lambda p :  (os.path.exists(pjoin(MG5DIR,'models',p,'particles.dat')) 
+                                      or os.path.exists(pjoin(self._mgme_dir,'Models',p,'particles.dat')))
                 mod_name = lambda name :(name[-3:] != '_v4' and name or name[:-3]) 
             elif mode == 'all':
                 mod_name = lambda name: name
-                file_cond = lambda p : os.path.exists(os.path.join(MG5DIR,'models',p,'particles.py')) \
-                                      or os.path.exists(os.path.join(MG5DIR,'models',p,'particles.dat')) \
-                                      or os.path.exists(os.path.join(self._mgme_dir,'Models',p,'particles.dat')) 
+                file_cond = lambda p : os.path.exists(pjoin(MG5DIR,'models',p,'particles.py')) \
+                                      or os.path.exists(pjoin(MG5DIR,'models',p,'particles.dat')) \
+                                      or os.path.exists(pjoin(self._mgme_dir,'Models',p,'particles.dat')) 
             else:
-                cur_path = os.path.join('.',*[a for a in args \
+                cur_path = pjoin('.',*[a for a in args \
                                                    if a.endswith(os.path.sep)])
                 all_path =  self.path_completion(text, cur_path)
                 return all_path
                 
             model_list = [mod_name(name) for name in \
                                             self.path_completion(text,
-                                            os.path.join(MG5DIR,'models'),
+                                            pjoin(MG5DIR,'models'),
                                             only_dirs = True) \
                                             if file_cond(name)]
             
@@ -1418,9 +1421,9 @@ class CompleteForCmd(CheckValidForCmd):
                 all_name = []
                 for model_name in model_list:
                     all_name += self.find_restrict_card(model_name, 
-                                        base_dir=os.path.join(MG5DIR,'models'))
+                                        base_dir=pjoin(MG5DIR,'models'))
             if mode == 'all':
-                cur_path = os.path.join('.',*[a for a in args \
+                cur_path = pjoin('.',*[a for a in args \
                                                     if a.endswith(os.path.sep)])
                 all_path =  self.path_completion(text, cur_path)
                 return all_path + all_name 
@@ -1456,7 +1459,7 @@ class CompleteForCmd(CheckValidForCmd):
             output = []
         
         # check that the model is a valid model
-        if not os.path.exists(os.path.join(base_dir, model_name, 'couplings.py')):
+        if not os.path.exists(pjoin(base_dir, model_name, 'couplings.py')):
             # not valid UFO model
             return output
         
@@ -1464,11 +1467,11 @@ class CompleteForCmd(CheckValidForCmd):
             model_name = model_name[:-1]
         
         # look for _default and treat this case
-        if os.path.exists(os.path.join(base_dir, model_name, 'restrict_default.dat')):
+        if os.path.exists(pjoin(base_dir, model_name, 'restrict_default.dat')):
             output.append('%s-full' % model_name)
         
         # look for other restrict_file
-        for name in os.listdir(os.path.join(base_dir, model_name)):
+        for name in os.listdir(pjoin(base_dir, model_name)):
             if name.startswith('restrict_') and not name.endswith('default.dat') \
                 and name.endswith('.dat'):
                 tag = name[9:-4] #remove restrict and .dat
@@ -1529,7 +1532,7 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
         
         # Set MG/ME directory path
         if mgme_dir:
-            if os.path.isdir(os.path.join(mgme_dir, 'Template')):
+            if os.path.isdir(pjoin(mgme_dir, 'Template')):
                 self._mgme_dir = mgme_dir
                 logger.info('Setting MG/ME directory to %s' % mgme_dir)
             else:
@@ -1559,8 +1562,8 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
         """Do quit"""
 
         if self._done_export and \
-                    os.path.exists(os.path.join(self._done_export[0],'RunWeb')):
-            os.remove(os.path.join(self._done_export[0],'RunWeb'))
+                    os.path.exists(pjoin(self._done_export[0],'RunWeb')):
+            os.remove(pjoin(self._done_export[0],'RunWeb'))
                 
         value = super(MadGraphCmd, self).do_quit(line)
         print
@@ -1908,7 +1911,7 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
             amplitudes.extend(amp.get_amplitudes())            
 
         for amp in amplitudes:
-            filename = os.path.join(args[0], 'diagrams_' + \
+            filename = pjoin(args[0], 'diagrams_' + \
                                     amp.get('process').shell_string() + ".eps")
             plot = draw.MultiEpsDiagramDrawer(amp['diagrams'],
                                           filename,
@@ -2383,7 +2386,7 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
                                           'open','display','launch'])
 
             if len(args) == 1 and self._export_dir:
-                proc_card = os.path.join(self._export_dir, 'Cards', \
+                proc_card = pjoin(self._export_dir, 'Cards', \
                                                                 'proc_card.dat')
             elif len(args) == 2:
                 proc_card = args[1]
@@ -2476,7 +2479,7 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
                 removed_multiparticles.append(key)
         
         # Now add default multiparticles
-        for line in open(os.path.join(MG5DIR, 'input', \
+        for line in open(pjoin(MG5DIR, 'input', \
                                       'multiparticles_default.txt')):
             if line.startswith('#'):
                 continue
@@ -2549,21 +2552,21 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
             raise MadGraph5Error, 'Fail to download correctly the File. Stop'
         
         # Check that the directory has the correct name
-        if not os.path.exists(os.path.join(MG5DIR, name)):
+        if not os.path.exists(pjoin(MG5DIR, name)):
             created_name = [n for n in os.listdir(MG5DIR) if n.startswith(name) 
                                                   and not n.endswith('gz')]
             if not created_name:
                 raise MadGraph5Error, 'The file was not loaded correctly. Stop'
             else:
                 created_name = created_name[0]
-            files.mv(os.path.join(MG5DIR, created_name), os.path.join(MG5DIR, name))
+            files.mv(pjoin(MG5DIR, created_name), pjoin(MG5DIR, name))
         logger.info('compile %s. This might takes a while.' % name)
         
         # Modify Makefile for pythia-pgs on Mac 64 bit
         if args[0] == "pythia-pgs" and sys.maxsize > 2**32:
-            for path in [os.path.join(MG5DIR, 'pythia-pgs', 'libraries', \
+            for path in [pjoin(MG5DIR, 'pythia-pgs', 'libraries', \
                          'PGS4', 'src', 'stdhep-dir', 'src', 'stdhep_Arch'),
-                         os.path.join(MG5DIR, 'pythia-pgs', 'libraries', \
+                         pjoin(MG5DIR, 'pythia-pgs', 'libraries', \
                          'PGS4', 'src', 'stdhep-dir', 'mcfio', 'arch_mcfio')]:
                 text = open(path).read()
                 text = text.replace('-m32','-m64')
@@ -2578,15 +2581,15 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
                 os.environ['FC'] = 'gfortran'
             else:
                 raise self.InvalidCmd('Require g77 or Gfortran compiler')
-        subprocess.call(['make', 'clean'], cwd = os.path.join(MG5DIR, name))
-        subprocess.call(['make'], cwd = os.path.join(MG5DIR, name))
+        subprocess.call(['make', 'clean'], cwd = pjoin(MG5DIR, name))
+        subprocess.call(['make'], cwd = pjoin(MG5DIR, name))
 
 
         # Special treatment for TD program (require by MadAnalysis)
         if args[0] == 'MadAnalysis':
             try:
                 os.system('rm -rf td')
-                os.mkdir(os.path.join(MG5DIR, 'td'))
+                os.mkdir(pjoin(MG5DIR, 'td'))
             except Exception, error:
                 print error
                 pass
@@ -2595,15 +2598,15 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
                 logger.info('Downloading TD for Mac')
                 target = 'http://theory.fnal.gov/people/parke/TD/td_mac_intel.tar.gz'
                 subprocess.call(['curl', target, '-otd.tgz'], 
-                                                  cwd=os.path.join(MG5DIR,'td'))      
+                                                  cwd=pjoin(MG5DIR,'td'))      
                 subprocess.call(['tar', '-xzpvf', 'td.tgz'], 
-                                                  cwd=os.path.join(MG5DIR,'td'))
+                                                  cwd=pjoin(MG5DIR,'td'))
                 files.mv(MG5DIR + '/td/td_mac_intel',MG5DIR+'/td/td')
             else:
                 logger.info('Downloading TD for Linux 32 bit')
                 target = 'http://cp3wks05.fynu.ucl.ac.be/twiki/pub/Software/TopDrawer/td'
-                subprocess.call(['wget', target], cwd=os.path.join(MG5DIR,'td'))      
-                os.chmod(os.path.join(MG5DIR,'td','td'), 0775)
+                subprocess.call(['wget', target], cwd=pjoin(MG5DIR,'td'))      
+                os.chmod(pjoin(MG5DIR,'td','td'), 0775)
                 if sys.maxsize > 2**32:
                     logger.warning('''td program (needed by MadAnalysis) is not compile for 64 bit computer
                 Please follow instruction in http://cp3wks05.fynu.ucl.ac.be/twiki/bin/view/Software/TopDrawer.''')
@@ -2622,10 +2625,10 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
         
         if not config_path:
             try:
-                config_file = open(os.path.join(os.environ['HOME'],'.mg5', 'mg5_configuration.txt'))
+                config_file = open(pjoin(os.environ['HOME'],'.mg5', 'mg5_configuration.txt'))
             except:
                 config_file = open(os.path.relpath(
-                          os.path.join(MG5DIR,'input','mg5_configuration.txt')))
+                          pjoin(MG5DIR,'input','mg5_configuration.txt')))
         else:
             config_file = open(config_path)
 
@@ -2651,9 +2654,9 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
         # try relative path
         for key in self.configuration:
             if key == 'pythia8_path':
-                pythia8_dir = os.path.join(MG5DIR, self.configuration['pythia8_path'])
-                if not os.path.isfile(os.path.join(pythia8_dir, 'include', 'Pythia.h')):
-                    if os.path.isfile(os.path.join(self.configuration['pythia8_path'], 'include', 'Pythia.h')):
+                pythia8_dir = pjoin(MG5DIR, self.configuration['pythia8_path'])
+                if not os.path.isfile(pjoin(pythia8_dir, 'include', 'Pythia.h')):
+                    if os.path.isfile(pjoin(self.configuration['pythia8_path'], 'include', 'Pythia.h')):
                         pythia8_dir = self.configuration['pythia8_path']
                     else:
                         pythia8_dir = None
@@ -2683,7 +2686,7 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
         if self._export_dir:
             return
         
-        if os.path.exists(os.path.join(os.getcwd(), 'Cards')):    
+        if os.path.exists(pjoin(os.getcwd(), 'Cards')):    
             self._export_dir = os.getcwd()
             return
     
@@ -3033,7 +3036,7 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
 
         path = self._export_dir
         if self._export_format in ['standalone_cpp', 'madevent', 'standalone']:
-            path = os.path.join(path, 'SubProcesses')
+            path = pjoin(path, 'SubProcesses')
             
         cpu_time1 = time.time()
 
@@ -3057,7 +3060,7 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
 
 
             # Write the procdef_mg5.dat file with process info
-            card_path = os.path.join(path, os.path.pardir, 'SubProcesses', \
+            card_path = pjoin(path, os.path.pardir, 'SubProcesses', \
                                      'procdef_mg5.dat')
             if self._generate_info:
                 self._curr_exporter.write_procdef_mg5(card_path,
@@ -3111,7 +3114,7 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
         # Just the matrix.f files
         if self._export_format == 'matrix':
             for me in matrix_elements:
-                filename = os.path.join(path, 'matrix_' + \
+                filename = pjoin(path, 'matrix_' + \
                            me.get('processes')[0].shell_string() + ".f")
                 if os.path.isfile(filename):
                     logger.warning("Overwriting existing file %s" % filename)
@@ -3168,7 +3171,7 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
             logger.info('Copy %s model files to directory %s' % \
                         (os.path.basename(self._model_v4_path), self._export_dir))
             self._curr_exporter.export_model_files(self._model_v4_path)
-            self._curr_exporter.export_helas(os.path.join(self._mgme_dir,'HELAS'))
+            self._curr_exporter.export_helas(pjoin(self._mgme_dir,'HELAS'))
         elif self._export_format in ['madevent', 'standalone']:
             logger.info('Export UFO model to MG4 format')
             # wanted_lorentz are the lorentz structures which are
@@ -3187,7 +3190,7 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
             wanted_lorentz = self._curr_matrix_elements.get_used_lorentz()
             wanted_couplings = self._curr_matrix_elements.get_used_couplings()
             export_cpp.convert_model_to_cpp(self._curr_model,
-                                            os.path.join(self._export_dir),
+                                            pjoin(self._export_dir),
                                             wanted_lorentz,
                                             wanted_couplings)
             export_cpp.make_model_cpp(self._export_dir)
@@ -3240,10 +3243,10 @@ class MadGraphCmdWeb(MadGraphCmd, CheckValidForCmdWeb):
     def __init__(self, *arg, **opt):
     
         if os.environ.has_key('_CONDOR_SCRATCH_DIR'):
-            self.writing_dir = os.path.join(os.environ['_CONDOR_SCRATCH_DIR'], \
+            self.writing_dir = pjoin(os.environ['_CONDOR_SCRATCH_DIR'], \
                                                                  os.path.pardir)
         else:
-            self.writing_dir = os.path.join(os.environ['MADGRAPH_DATA'],
+            self.writing_dir = pjoin(os.environ['MADGRAPH_DATA'],
                                os.environ['REMOTE_USER'])
             
         
