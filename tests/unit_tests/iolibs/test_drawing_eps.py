@@ -19,10 +19,10 @@ from __future__ import division
 
 # The following lines are needed to run the
 # diagram generation using __main__
-#import os, sys
-#root_path = os.path.split(os.path.dirname(os.path.realpath( __file__ )))[0]
-#root_path = os.path.realpath(os.path.join(root_path,'..','..'))
-#sys.path.insert(0, root_path)
+import os, sys
+root_path = os.path.split(os.path.dirname(os.path.realpath( __file__ )))[0]
+root_path = os.path.realpath(os.path.join(root_path,'..','..'))
+sys.path.insert(0, root_path)
 
 
 import os
@@ -202,10 +202,14 @@ if __name__ == '__main__':
     process_diag['u~ u~ > z u~ u~ g'] = [26]
     process_diag['u~ u~ > e+ e- u~ u~ g'] = [1, 8]
     process_diag['e- e+ > t t~, t > w+ b'] = [0]
-
+    process_diag['u u~ > w+ w- e+ e-'] = [0]
+    process_diag['OUTPUT: u u~ > w+ w- e+ e-'] = [0]
+    process_diag['w+ w- > w+ w- z z'] = [7,9,10]
+    process_diag['OUTPUT: w+ w- > w+ w- z z'] = [7,9,10]
+    
     from madgraph.interface.cmd_interface import MadGraphCmdShell
     cmd = MadGraphCmdShell()
-    cmd.do_import('model %s/models/sm' % root_path)
+    cmd.exec_cmd('import model %s/models/sm' % root_path)
     #cmd.do_import('model_v4 ' + os.path.join(_file_path, \
     #                                    '../input_files/v4_sm_particles.dat'))
     #cmd.do_import('model_v4 ' + os.path.join(_file_path, \
@@ -215,9 +219,21 @@ if __name__ == '__main__':
     # Create the diagrams
     diag_content = {}
     for gen_line, pos_list in process_diag.items():
+        output=False
+        if gen_line.startswith('OUTPUT:'):
+            output = True
+            gen_line = gen_line[7:]
+            print 'WITH OUTPUT :',
         print gen_line, ':',
         gen_line_with_order = gen_line + ' QCD=99'
-        cmd.do_generate(gen_line_with_order)
+        cmd.exec_cmd('generate ' + gen_line_with_order)
+        if output:
+            gen_line = 'OUTPUT:'+gen_line
+            #cmd.export.generate_matrix_elements()
+            try:
+                cmd.do_output('/tmp/MGPROC -f')
+            except: 
+                pass
         #Look for decay chains
         if ',' in gen_line:
             amp = cmd._curr_amps[0]
@@ -234,6 +250,7 @@ if __name__ == '__main__':
         diag_content[gen_line] = {}
         for pos in pos_list:
             diag_content[gen_line][pos] = amplitude['diagrams'][pos]
+
 
     # Store the diagrams  
     file_test_diagram = open(os.path.join(_file_path , \
