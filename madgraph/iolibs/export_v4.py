@@ -712,10 +712,10 @@ class ProcessExporterFortran(object):
         # Check for compiler
         if misc.which(default_compiler):
             compiler = default_compiler
-        elif misc.which('g77'):
-            compiler = 'g77'
         elif misc.which('gfortran'):
             compiler = 'gfortran'
+        elif misc.which('g77'):
+            compiler = 'g77'
         elif misc.which('f77'):
             compiler = 'f77'
         else:

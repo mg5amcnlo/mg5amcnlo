@@ -1,6 +1,6 @@
 Update notes for MadGraph 5 (in reverse time order)
 
-1.4.b0 (15/11/11): OM: New structure for madevent script (./bin/madevent)
+1.4.b0 (17/11/11): OM: New structure for madevent script (./bin/madevent)
                       allowing to have an interface similar to MG5 
                       for running madevent.
                       (accessible from MG5 via launch [DIR] -i)
@@ -18,7 +18,8 @@ Update notes for MadGraph 5 (in reverse time order)
                   OM: Change the import command. It's now allowed to omit the 
                       type of import. The type is guessed automaticaly. 
                       This is NOT allowed on the web.
-                  OM: Add the possibility to force which fortran compiler is
+                  OM: Change the default fortran compiler to gfortran.
+                  OM: Add the possibility to force which fortran compiler will
                       be used, either via the configuration file or via the set 
                       command.
                   OM: Add the possibility to bypass the automatic opening of 

@@ -2575,10 +2575,10 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
         # Compile the file
         # Check for F77 compiler
         if 'FC' not in os.environ or not os.environ['FC']:
-            if misc.which('g77'):
-                os.environ['FC'] = 'g77'
-            elif misc.which('gfortran'):
+            if misc.which('gfortran'):
                 os.environ['FC'] = 'gfortran'
+            elif misc.which('g77'):
+                os.environ['FC'] = 'g77'
             else:
                 raise self.InvalidCmd('Require g77 or Gfortran compiler')
         subprocess.call(['make', 'clean'], cwd = pjoin(MG5DIR, name))
