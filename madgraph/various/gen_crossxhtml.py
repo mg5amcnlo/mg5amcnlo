@@ -540,7 +540,7 @@ class OneRunResults(dict):
             if 'plot' in self.pythia:
                 out += ' <a href="./Events/%(run_name)s_plots_pythia.html">plots</a>'
             out += '</td></tr>'
-        elif web and self['nb_event']:
+        elif web and not running and self['nb_event']:
             out += """<tr><td> Pythia Events : </td><td><center>
                        <FORM ACTION="http://%(web)s/cgi-bin/RunProcess/handle_runs-pl"  ENCTYPE="multipart/form-data" METHOD="POST">
                        <INPUT TYPE=HIDDEN NAME=directory VALUE="%(me_dir)s"> 
@@ -579,7 +579,7 @@ class OneRunResults(dict):
                 out += """ <a href="./Events/%(run_name)s_plots_delphes.html">plots</a>"""            
             out += '</td></tr>'
         
-        if not (self.pgs or self.delphes) and web and self['nb_event']:
+        if not (self.pgs or self.delphes) and web and not running and self['nb_event']:
             out += """<tr><td> Reco. Objects: </td><td><center>
                        <FORM ACTION="http://%(web)s/cgi-bin/RunProcess/handle_runs-pl"  ENCTYPE="multipart/form-data" METHOD="POST">
                        <INPUT TYPE=HIDDEN NAME=directory VALUE="%(me_dir)s"> 
