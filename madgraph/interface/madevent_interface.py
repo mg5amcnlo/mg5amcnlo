@@ -88,7 +88,7 @@ class CmdExtended(cmd.Cmd):
     
     debug_output = 'ME5_debug'
     error_debug = 'Please report this bug on https://bugs.launchpad.net/madgraph5\n'
-    error_debug += 'More information is found in \'%s\'.\n' 
+    error_debug += 'More information is found in \'%(debug)s\'.\n' 
     error_debug += 'Please attach this file to your report.'
 
     config_debug = 'If you need help with this issue please contact us on https://answers.launchpad.net/madgraph5\n'
@@ -212,6 +212,43 @@ class CmdExtended(cmd.Cmd):
             self.update_status('Command \'%s\' done.<br> Waiting for instruction.' % arg[0], level=None)
         except:
             pass
+        
+    def add_error_log_in_html(self):
+        """If a ME run is currently running add a link in the html output"""
+
+        # Be very carefull to not raise any error here (the traceback 
+        #will modify in that case.
+        if hasattr(self, 'results') and hasattr(self.results, 'current') and\
+                self.results.current and 'run_name' in self.results.current and \
+                hasattr(self, 'me_dir'):
+            name = self.results.current['run_name']
+            self.debug_output = pjoin(self.me_dir, '%s_debug.log' % name)
+            self.results.current.debug = self.debug_output
+        else:
+            #Force class default
+            self.debug_output = MadEventCmd.debug_output
+
+    
+    def nice_user_error(self, error, line):
+        """If a ME run is currently running add a link in the html output"""
+
+        self.add_error_log_in_html()
+        cmd.Cmd.nice_user_error(self, error, line)
+        
+    def nice_config_error(self, error, line):
+        """If a ME run is currently running add a link in the html output"""
+
+        self.add_error_log_in_html()            
+        cmd.Cmd.nice_config_error(self, error, line)
+
+    def nice_error_handling(self, error, line):
+        """If a ME run is currently running add a link in the html output"""
+
+        self.add_error_log_in_html()            
+        cmd.Cmd.nice_error_handling(self, error, line)
+
+        
+        
 #===============================================================================
 # HelpToCmd
 #===============================================================================
@@ -512,7 +549,7 @@ class CheckValidForCmd(object):
                                 
         if len(args) > 1:
             self.help_generate_events()
-            raise self.InvalidCmd('Too many argument for generate_events command' % cmd)
+            raise self.InvalidCmd('Too many argument for generate_events command: %s' % cmd)
                     
         return force, run
 
@@ -2530,7 +2567,7 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
             pass
         try:
             self.update_status('', level=None)
-        except:
+        except Exception, error:         
             pass
         os.system('%s/gen_cardhtml-pl &> /dev/null' % (self.dirbin))
 

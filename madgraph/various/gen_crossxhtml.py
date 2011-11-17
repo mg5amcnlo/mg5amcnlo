@@ -176,6 +176,8 @@ class AllResults(dict):
         if self.current:
             self.current.update_status(level)
         self.status = status
+        if self.status:
+            self.debug = None
         if makehtml:
             self.output()
 
@@ -287,7 +289,7 @@ class AllResults(dict):
         # 2) Create the text for the old run:
         old_run = ''
         for key in self.order:
-            old_run += self[key].info_html(self.path, submit_button)
+            old_run += self[key].info_html(self.path, self.web, submit_button)
         
         text_dict = {'process': self.process,
                      'model': self.model,
@@ -309,6 +311,7 @@ class OneRunResults(dict):
         self['tag'] = run_card['run_tag']
         self.event_path = pjoin(path,'Events')
         self.me_dir = path
+        self.debug = None
         
         # Set the collider information
         data = process.split('>',1)[0].split()
@@ -439,11 +442,11 @@ class OneRunResults(dict):
                 self.delphes.append('log') 
         
 
-    def info_html(self, path, web=False):
+    def info_html(self, path, web=False, running=False):
         """ Return the line of the table containing run info for this run """
 
-        if web:
-            self['web'] = web
+        if running:
+            self['web'] = running
             self['me_dir'] = path
             
         out = "<tr>"
@@ -454,9 +457,11 @@ class OneRunResults(dict):
         
             
             
-        out += """<a href="./Events/%(run_name)s_banner.txt">banner</a><br>"""
+        out += """<a href="./Events/%(run_name)s_banner.txt">banner</a>"""
         if web:
-            out += """<a href="./%(run_name)s.log">log</a>"""
+            out += """<br><a href="./%(run_name)s.log">log</a>"""
+        if self.debug:
+            out += """<br><a href="./%(run_name)s_debug.log"><font color=red>ERROR DETECTED</font></a>"""
         out += '</td>'
         # Events
         out += '<td>'

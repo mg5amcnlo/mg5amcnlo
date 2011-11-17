@@ -98,7 +98,7 @@ class CmdExtended(cmd.Cmd):
     
     debug_output = 'MG5_debug'
     error_debug = 'Please report this bug on https://bugs.launchpad.net/madgraph5\n'
-    error_debug += 'More information is found in \'%s\'.\n' 
+    error_debug += 'More information is found in \'%(debug)s\'.\n' 
     error_debug += 'Please attach this file to your report.'
     
     config_debug = 'If you need help with this issue please contact us on https://answers.launchpad.net/madgraph5\n'

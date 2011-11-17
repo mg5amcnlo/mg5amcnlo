@@ -125,6 +125,9 @@ class Cmd(cmd.Cmd):
     def nice_error_handling(self, error, line):
         """ """ 
         # Make sure that we are at the initial position
+        if self.child:
+            return self.child.nice_error_handling(error, line)
+        
         os.chdir(self.__initpos)
         # Create the debug files
         self.log = False
@@ -140,8 +143,8 @@ class Cmd(cmd.Cmd):
         else:
             error_text = ''
         error_text += '%s : %s\n' % (error.__class__.__name__, 
-                                                str(error).replace('\n','\n\t'))
-        error_text += self.error_debug % self.debug_output
+                                            str(error).replace('\n','\n\t'))
+        error_text += self.error_debug % {'debug': self.debug_output}
         logger_stderr.critical(error_text)
         #stop the execution if on a non interactive mode
         if self.use_rawinput == False:
@@ -149,6 +152,8 @@ class Cmd(cmd.Cmd):
         return False
 
     def nice_user_error(self, error, line):
+        if self.child:
+            return self.child.nice_user_error(error, line)
         # Make sure that we are at the initial position
         os.chdir(self.__initpos)
         if line == self.history[-1]:
@@ -167,6 +172,8 @@ class Cmd(cmd.Cmd):
         return False
     
     def nice_config_error(self, error, line):
+        if self.child:
+            return self.child.nice_user_error(error, line)
         # Make sure that we are at the initial position                                 
         os.chdir(self.__initpos)
         if not self.history or line == self.history[-1]:
@@ -178,7 +185,7 @@ class Cmd(cmd.Cmd):
         cmd.Cmd.onecmd(self, 'history %s' % self.debug_output)
         debug_file = open(self.debug_output, 'a')
         traceback.print_exc(file=debug_file)
-        error_text += self.config_debug
+        error_text += self.config_debug % {'debug' :self.debug_output}
         error_text += '%s : %s' % (error.__class__.__name__,
                                                 str(error).replace('\n','\n\t'))
         logger_stderr.error(error_text)

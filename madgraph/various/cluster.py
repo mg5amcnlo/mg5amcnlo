@@ -173,8 +173,8 @@ class PBSCluster(Cluster):
         
         me_dir = os.path.realpath(os.path.join(cwd,prog)).rsplit('/SubProcesses',1)[0]
         me_dir = hashlib.md5(me_dir).hexdigest()[-14:]
-	if not me_dir[0].isalpha():
-		me_dir = 'a' + me_dir[1:]
+        if not me_dir[0].isalpha():
+            me_dir = 'a' + me_dir[1:]
         
         text = ""
         if cwd is None:
@@ -185,6 +185,8 @@ class PBSCluster(Cluster):
             stdout = '/dev/null'
         if stderr is None:
             stderr = '/dev/null'
+        elif stderr == -2: # -2 is subprocess.STDOUT
+            stderr = stdout
         if log is None:
             log = '/dev/null'
         
