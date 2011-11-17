@@ -281,15 +281,15 @@ class AllResults(dict):
         
         
         # See if we need to incorporate the button for submission
-        if self.web and os.path.exists(pjoin(self.path, 'RunWeb')):       
-            submit_button = False
+        if os.path.exists(pjoin(self.path, 'RunWeb')):       
+           running  = True
         else:
-            submit_button = self.web
+            running = False
         
         # 2) Create the text for the old run:
         old_run = ''
         for key in self.order:
-            old_run += self[key].info_html(self.path, self.web, submit_button)
+            old_run += self[key].info_html(self.path, self.web, running)
         
         text_dict = {'process': self.process,
                      'model': self.model,
@@ -445,8 +445,8 @@ class OneRunResults(dict):
     def info_html(self, path, web=False, running=False):
         """ Return the line of the table containing run info for this run """
 
-        if running:
-            self['web'] = running
+        if not running:
+            self['web'] = web
             self['me_dir'] = path
             
         out = "<tr>"
