@@ -1445,20 +1445,19 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
         nb_run = args.pop(0)
         crossoversig = 0
         inv_sq_err = 0
+        nb_event = 0
         for i in range(nb_run):
             self.exec_cmd('generate_events %s_%s -f' % (main_name, i), postcmd=False)
             # Update collected value
-            if self.results[main_name]['nb_event']:
-                self.results[main_name]['nb_event'] += int(self.results[self.run_name]['nb_event'])  
-            else:
-                self.results[main_name]['nb_event'] = int(self.results[self.run_name]['nb_event'])  
+            nb_event += int(self.results[self.run_name]['nb_event'])  
+            self.results.add_detail('nb_event', nb_event ,run=main_name)            
             cross = self.results[self.run_name]['cross']
             error = self.results[self.run_name]['error'] + 1e-99
             crossoversig+=cross/error**2
             inv_sq_err+=1.0/error**2
             self.results[main_name]['cross'] = crossoversig/inv_sq_err
             self.results[main_name]['error'] = math.sqrt(1.0/inv_sq_err) 
-            self.results[main_name]['nb_event'] += int(self.results[self.run_name]['nb_event'])                       
+
         
         self.run_name = main_name
         self.results.def_current(main_name)
@@ -1466,9 +1465,6 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
         os.system('%(bin)s/merge.pl %(event)s/%(name)s_*_unweighted_events.lhe.gz %(event)s/%(name)s_unweighted_events.lhe.gz %(event)s/%(name)s_banner.txt' 
                   % {'bin': self.dirbin, 'event': pjoin(self.me_dir,'Events'),
                      'name': self.run_name})
-
-        
-
 
         eradir = self.configuration['exrootanalysis_path']
         if eradir and misc.is_executable(pjoin(eradir,'ExRootLHEFConverter')):
@@ -1485,8 +1481,8 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
         os.system('gzip -f %s/%s_unweighted_events.lhe' % 
                                   (pjoin(self.me_dir, 'Events'), self.run_name))
 
+        self.update_status('', level='parton')
         self.results.def_current(None)
-        self.update_status('', level=parton)
             
     ############################################################################      
     def do_survey(self, line):

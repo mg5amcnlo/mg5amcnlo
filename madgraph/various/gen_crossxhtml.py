@@ -219,19 +219,24 @@ class AllResults(dict):
         filename = pjoin(self.path, 'HTML', 'results.pkl')
         save_load_object.save_to_file(filename, self)
 
-    def add_detail(self, name, value):
+    def add_detail(self, name, value, run=None):
         """ add information to current run (cross/error/event)"""
         
         assert name in ['cross', 'error', 'nb_event', 'cross_pythia']
+        if not run:
+            run = self.current
+        else:
+            run = self[run]
+        
         if name == 'cross_pythia':
-            self.current[name] = '<br> matched: %.4g' % float(value)
-            self.current['nb_event_text'] = '%s <br> matched: %d' % (self.current['nb_event'],
+            run[name] = '<br> matched: %.4g' % float(value)
+            run['nb_event_text'] = '%s <br> matched: %d' % (self.current['nb_event'],
                     int(self.current['nb_event']) * float(value) /float(self.current['cross'])) 
         elif name == 'nb_event':
-            self.current[name] = value
-            self.current['nb_event_text'] = value
+            run[name] = value
+            run['nb_event_text'] = value
         else:    
-            self.current[name] = value
+            run[name] = value
             if name == 'cross':
                 self.current.results = True
         
@@ -446,9 +451,12 @@ class OneRunResults(dict):
         
         #Links:
         out += '<td>'
-        if self.results:
-            out += """<a href="./SubProcesses/%(run_name)s_results.html">results</a><br>"""
-        out += """<a href="./Events/%(run_name)s_banner.txt">banner</a>"""
+        
+            
+            
+        out += """<a href="./Events/%(run_name)s_banner.txt">banner</a><br>"""
+        if web:
+            out += """<a href="./%(run_name)s.log">log</a>"""
         out += '</td>'
         # Events
         out += '<td>'
@@ -461,7 +469,13 @@ class OneRunResults(dict):
         # Collider
         out += '<td> %(collider)s </td>'
         # Cross
-        out += '<td> %(cross).4g <font face=symbol>&#177</font> %(error).2g %(cross_pythia)s </td>'
+        out += '<td><center>'
+        if self.results:
+                out += """<a href="./SubProcesses/%(run_name)s_results.html">"""
+        out += '%(cross).4g <font face=symbol>&#177</font> %(error).2g %(cross_pythia)s'
+        if self.results:
+            out += '</a>'
+        out+='</center></td>'
         # Events
         out += '<td> %(nb_event_text)s </td>' 
 
