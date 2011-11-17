@@ -465,7 +465,7 @@ class OneRunResults(dict):
         out += '</td>'
         # Events
         out += '<td>'
-        out += self.get_html_event_info(web)
+        out += self.get_html_event_info(web, running)
         out += '</td>'
         # Tag
         out += '<td> %(tag)s </td>'
@@ -493,7 +493,7 @@ class OneRunResults(dict):
         return " <a  id='%(id)s' href='%(link)s' onClick=\"check_link('%(link)s.gz','%(link)s','%(id)s')\">%(name)s</a>" \
               % {'link': link, 'id': id, 'name':name}
     
-    def get_html_event_info(self, web=False):
+    def get_html_event_info(self, web=False, running=False):
         """return the events information"""
         
         # Events
