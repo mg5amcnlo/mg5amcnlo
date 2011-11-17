@@ -3278,6 +3278,13 @@ class MadGraphCmdWeb(MadGraphCmd, CheckValidForCmdWeb):
             # put the stop logo on the web
             files.cp(self._export_dir+'/HTML/stop.jpg',self._export_dir+'/HTML/card.jpg')
             raise
+        
+    # Use the cluster file for the configuration
+    def set_configuration(self, config_path=None):
+        
+        """Force to use the web configuration file only"""
+        config_path = pjoin(os.environ['MADGRAPH_BASE'], 'mg5_configuration.txt')
+        return MadGraphCmd.set_configuration(self, config_path=config_path)
 
 #===============================================================================
 # MadGraphCmd

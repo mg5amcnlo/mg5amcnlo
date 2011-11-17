@@ -1202,7 +1202,9 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
                               'cluster_mode':'pbs',
                               'automatic_html_opening':True}
         
-        if not config_path:
+        if os.environ.has_key('MADGRAPH_BASE'):
+            config_path = open(os.path.join(os.environ['MADGRAPH_BASE'],'mg5_configuration.txt'))
+        elif not config_path:
             try:
                 config_file = open(os.path.join(os.environ['HOME'],'.mg5','mg5_configuration.txt'))
             except:
