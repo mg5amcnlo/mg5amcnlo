@@ -1627,7 +1627,7 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
         if self.cluster_mode == 1:
             out = self.cluster.launch_and_wait('../bin/internal/run_combine', 
                                         cwd=pjoin(self.me_dir,'SubProcesses'),
-                                        stdout=open(pjoin(self.me_dir,'SubProcesses', 'combine.log'),'w'))
+                                        stdout=pjoin(self.me_dir,'SubProcesses', 'combine.log'))
         else:
             out = subprocess.call(['../bin/internal/run_combine'],
                          cwd=pjoin(self.me_dir,'SubProcesses'), 
@@ -1738,13 +1738,15 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
             pass
         
         ## LAUNCHING PYTHIA
-        pythia_log = open(pjoin(self.me_dir, 'Events', '%s_pythia.log' % self.run_name), 'w')
+        
         if self.cluster_mode == 1:
+            pythia_log = pjoin(self.me_dir, 'Events', '%s_pythia.log' % self.run_name)
             self.cluster.launch_and_wait('../bin/internal/run_pythia', 
                         argument= [pythia_src], stdout= pythia_log,
                         stderr=subprocess.STDOUT,
                         cwd=pjoin(self.me_dir,'Events'))
         else:
+            pythia_log = open(pjoin(self.me_dir, 'Events', '%s_pythia.log' % self.run_name), 'w')
             subprocess.call(['../bin/internal/run_pythia', pythia_src],
                            stdout=pythia_log,
                            stderr=subprocess.STDOUT,
@@ -2103,12 +2105,13 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
             os.remove(pjoin(self.me_dir, 'Events', 'pgs.done'))
         except:
             pass
-        pgs_log = open(pjoin(self.me_dir, 'Events', "%s_pgs.log" % self.run_name),'w')
         if self.cluster_mode == 1:
+            pgs_log = pjoin(self.me_dir, 'Events', "%s_pgs.log" % self.run_name)
             self.cluster.launch_and_wait('../bin/internal/run_pgs', 
                             argument=[pgsdir], cwd=pjoin(self.me_dir,'Events'),
                             stdout=pgs_log, stderr=subprocess.STDOUT)
-        else:        
+        else:
+            pgs_log = open(pjoin(self.me_dir, 'Events', "%s_pgs.log" % self.run_name),'w')
             subprocess.call([self.dirbin+'/run_pgs', pgsdir], stdout= pgs_log,
                                                stderr=subprocess.STDOUT,
                                                cwd=pjoin(self.me_dir, 'Events')) 
@@ -2195,13 +2198,15 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
         banner.writelines('</MGDelphesTrigger>')        
         banner.close()
         
-        delphes_log = open(pjoin(self.me_dir, 'Events', "%s_delphes.log" % self.run_name),'w')
+        
         if self.cluster_mode == 1:
+            delphes_log = pjoin(self.me_dir, 'Events', "%s_delphes.log" % self.run_name)
             self.cluster.launch_and_wait('../bin/internal/run_delphes', 
                         argument= [delphes_dir, self.run_name],
                         stdout=delphes_log, stderr=subprocess.STDOUT,
                         cwd=pjoin(self.me_dir,'Events'))
         else:
+            delphes_log = open(pjoin(self.me_dir, 'Events', "%s_delphes.log" % self.run_name),'w')
             subprocess.call(['../bin/internal/run_delphes', delphes_dir, 
                                 self.run_name],
                                 stdout= delphes_log, stderr=subprocess.STDOUT,
