@@ -230,7 +230,7 @@ class PBSCluster(Cluster):
 
 	if me_dir.endswith('/'):
 	    me_dir = me_dir[:-1]	
-	me_dir = md5.md5(me_dir).hexdigest()[-14:]
+	me_dir = haslib.md5(me_dir).hexdigest()[-14:]
         if not me_dir[0].isalpha():
 		me_dir = 'a' + me_dir[1:]
 
