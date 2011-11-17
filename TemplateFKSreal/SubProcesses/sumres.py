@@ -14,6 +14,33 @@ nevents=int(sys.argv[1])
 # if nevents is >0 the script will also determine the 
 # number of events required for each process
 
+
+def Mirrorprocs(p1, p2):
+    """determine if the folder names p1, p2 (with the _N already taken out)
+    correspond to the same process with
+    mirrror initial state. Returns true/false"""
+    if p1 ==p2:
+        return False
+    p1s = p1.split('_')
+    p2s = p2.split('_')
+    if len(p1s) != len(p2s):
+        return False
+    for a1, a2 in zip(p1s, p2s):
+        if len(a1) != len(a2):
+            return False
+
+   # check that final state is the same
+    if p1s[2] != p2s[2]:
+        return False
+    else:
+        i1 = p1s[1]
+        i2 = p2s[1]
+        if i1[len(i1)/2:] + i1[:len(i1)/2] == i2 or \
+            i1[len(i1)/2+1:] + i1[:len(i1)/2+1] == i2 :
+#            print i1[len(i1)/2:] ,' ', i1[:len(i1)/2]
+#            print i1[len(i1)/2+1:] ,' ', i1[:len(i1)/2+1]
+            return True
+
 file=open("res.txt")
 content = file.read()
 file.close()
@@ -59,16 +86,37 @@ for sub in subprocs_string:
     subpr['xsect']=0.
     subpr['err']=0.
     for proc in processes:
-        if proc['subproc'] == subpr:
-            subproc['xsect'] += proc['result']
-            subproc['err'] += math.pow(proc['error'],2)
+        if proc['subproc'] == sub:
+            subpr['xsect'] += proc['result']
+            subpr['err'] += math.pow(proc['error'],2)
     subpr['err']=math.sqrt(subpr['err'])
     subprocesses.append(subpr)
 
 
+#find and combine mirror configurations (if in v4)
+for i1, s1 in enumerate(subprocesses):
+    for i2, s2 in enumerate(subprocesses):
+        if Mirrorprocs(s1['subproc'], s2['subproc']) and i1 >= i2:
+            print s1['subproc'], s2['subproc']
+            s1['xsect'] += s2['xsect']
+            s1['err'] = math.sqrt(math.pow(s1['err'],2)+ math.pow(s2['err'],2))
+            s2['toremove'] = True
+
+new = []
+for s in subprocesses:
+    try:
+        a= s['toremove']
+    except KeyError:
+        new.append(s)
+subprocesses= new
+
+
 subprocesses.sort(key = lambda proc: -proc['xsect'])
 for subpr in subprocesses:
-    content+=  '%(subproc)20s    %(xsect)10.8e   %(err)6.4e\n '%subpr
+    content+=  '%(subproc)20s    %(xsect)10.8e   %(err)6.4e\n' % subpr
+ 
+#print '\n'.join(subprocesses)
+#print '\n'.join( p['subproc'] for p in subprocesses )
 
 
 content+='\nTotal cross-section: %10.8e +- %6.4e  (%6.4e%%)\n' %\
