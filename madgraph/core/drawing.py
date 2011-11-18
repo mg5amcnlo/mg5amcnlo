@@ -650,11 +650,12 @@ class FeynmanDiagram:
     class FeynamDiagramError(Exception):
         """Class for internal error."""
 
-    def __init__(self, diagram, model, opt=None):
+    def __init__(self, diagram, model, amplitude=False, opt=None):
         """Store the information concerning this diagram. This routines didn't
         perform any action at all.
         diagram: The diagram object to draw
         model: The model associate to the diagram
+        amplitude: tell if the diagram has already fixed the I/O state of the fermion
         opt: A DrawingOpt instance with all options for drawing the diagram."""
 
         # Check if input are what we are expecting 
@@ -663,9 +664,10 @@ class FeynmanDiagram:
         assert isinstance(model, base_objects.Model), \
                             'second argument should derivate from Model object'
         
-        
+       
         self.diagram = diagram
         self.model = model
+        self.amplitude = amplitude
         
         if opt is None:
             self.opt = DrawOption()
@@ -801,7 +803,10 @@ class FeynmanDiagram:
         3) Update vertex.lines list. (first update the leg into line if needed)
         4) assign line.start[end] to this vertex. (in end if start is already
                 assigned to another vertex). the start-end will be flip later
-                if needed."""
+                if needed.
+        5) if the fermion flow is correctly set by the diagram (amplitude=True)
+           Then change the particles/anti-particles states accordingly.
+        """
 
         #1) Extend to a vertex point
         vertex_point = VertexPoint(vertex)
@@ -847,7 +852,10 @@ class FeynmanDiagram:
         #particle to antiparticle.
         if line.number == 1 == vertex.get('legs')[0].get('number'):
             line.inverse_part_antipart()
-
+        elif self.amplitude and line.number == 1:
+            nb = [l.get('number') for l in vertex.get('legs')]
+            if nb.count(1) == 2: 
+                line.inverse_part_antipart()           
 
     def load_leg(self, leg):
         """Extend the leg to Feynman line. Associate the line to the diagram.
@@ -1227,9 +1235,13 @@ class FeynmanDiagram:
         at this stage."""
 
         # Use the basic rules. Assigns correctly but for T-channel
+        # This methods fails if the creation of wavefunctions modify the 
+        # particle content.
+
         for line in self.lineList:
             if line.state == True:
                 line.define_line_orientation()
+                                  
         # The define line orientation use level information and in consequence 
         #fails on T-Channel. So in consequence we still have to fix T-channel
         #line.
@@ -1361,7 +1373,7 @@ class FeynmanDiagram:
         text = ''
         for vertex in self.vertexList:
             text += 'line : '
-            text += ','.join([str(line['id']) for line in vertex.line])
+            text += ','.join([str(line['id']) for line in vertex.legs])
             text += ' level : ' + str(vertex.level)
             text += '\n'
         if text:
@@ -1645,7 +1657,7 @@ class DiagramDrawer(object):
         base_objects.Diagram in one of the Diagram object."""
 
         # Check if we need to upgrade the diagram.
-        self.convert_diagram(opt=opt)
+        self.convert_diagram(amplitude=self.amplitude, opt=opt)
         # Initialize some variable before starting to draw the diagram
         # This is just for frameworks capabilities (default: open file in 
         #write mode if a filename was provide.
@@ -1705,10 +1717,10 @@ class DiagramDrawer(object):
         #following option choice
         if opt.horizontal:
             diagram = FeynmanDiagramHorizontal(diagram, model, \
-                                                opt=opt)
+                                                   amplitude=amplitude, opt=opt)
         else:
             diagram = FeynmanDiagram(diagram, model, \
-                                              opt=opt)
+                                                   amplitude=amplitude, opt=opt)
 
         # Find the position of all vertex and all line orientation
         diagram.main()
