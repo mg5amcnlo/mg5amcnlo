@@ -338,61 +338,6 @@ class TestFKSProcessFromReals(unittest.TestCase):
     fks1_rem = fks.FKSProcessFromReals(myproc)
     fks2 = fks.FKSProcessFromReals(myproc2, False)
     
-    def test_get_fks_inc_string(self):
-        """check if the fks.inc string is correct, for u u~ > u u~ g"""
-        lines = self.fks2.get_fks_inc_string().split('\n')
-                
-        goallines = """INTEGER FKS_CONFIGS, IPOS, JPOS
-      DATA FKS_CONFIGS / 7 /
-      INTEGER FKS_I(7), FKS_J(7)
-      INTEGER FKS_IPOS(0:NEXTERNAL)
-      INTEGER FKS_J_FROM_I(NEXTERNAL, 0:NEXTERNAL)
-      INTEGER PARTICLE_TYPE(NEXTERNAL), PDG_TYPE(NEXTERNAL)
-
-C     FKS configuration number  1 
-      DATA FKS_I(  1  ) /  3  /
-      DATA FKS_J(  1  ) /  1  /
-
-C     FKS configuration number  2 
-      DATA FKS_I(  2  ) /  4  /
-      DATA FKS_J(  2  ) /  2  /
-
-C     FKS configuration number  3 
-      DATA FKS_I(  3  ) /  4  /
-      DATA FKS_J(  3  ) /  3  /
-
-C     FKS configuration number  4 
-      DATA FKS_I(  4  ) /  5  /
-      DATA FKS_J(  4  ) /  1  /
-
-C     FKS configuration number  5 
-      DATA FKS_I(  5  ) /  5  /
-      DATA FKS_J(  5  ) /  2  /
-
-C     FKS configuration number  6 
-      DATA FKS_I(  6  ) /  5  /
-      DATA FKS_J(  6  ) /  3  /
-
-C     FKS configuration number  7 
-      DATA FKS_I(  7  ) /  5  /
-      DATA FKS_J(  7  ) /  4  /
-
-      DATA (FKS_J_FROM_I(3, JPOS), JPOS = 0, 1)  / 1, 1 /
-      DATA (FKS_J_FROM_I(4, JPOS), JPOS = 0, 2)  / 2, 2, 3 /
-      DATA (FKS_J_FROM_I(5, JPOS), JPOS = 0, 4)  / 4, 1, 2, 3, 4 /
-C     
-C     Particle type:
-C     octet = 8, triplet = 3, singlet = 1
-      DATA (PARTICLE_TYPE(IPOS), IPOS=1, NEXTERNAL) / 3, -3, 3, -3, 8 /
-
-C     
-C     Particle type according to PDG:
-C     
-      DATA (PDG_TYPE(IPOS), IPOS=1, NEXTERNAL) / 2, -2, 2, -2, 21 /
-        """.split('\n')
-        
-        for l1, l2 in zip(lines, goallines):
-            self.assertEqual(string.strip(l1.upper()), string.strip(l2.upper())) 
         
 
     
@@ -482,37 +427,6 @@ C
         self.assertEqual(born1.need_color_links, False)
         
         
-    def test_get_born_fks_inc_string(self):
-        """tests if the fks_inc_string realtive to the FKSBornProcess is correctly given"""
-        model = self.mymodel
-        
-        ## u u~ > d d~ g g, combining d and d~ to glu
-        born1 = fks.FKSBornProcess(self.myproc, 
-                                        fks_common.to_fks_leg(MG.Leg({\
-                                        'id': -1,\
-                                        'number': 4,\
-                                        'state': True,\
-                                       # 'from_group': True\
-                                    }), model),
-                                        fks_common.to_fks_leg(MG.Leg({\
-                                        'id': 1,\
-                                        'number': 3,\
-                                        'state': True,\
-                                       # 'from_group': True\
-                                    }), model),
-                                        fks_common.to_fks_leg(MG.Leg({\
-                                        'id': 21,\
-                                        'number': 3,\
-                                        'state': True,\
-                                       # 'from_group': True\
-                                    }), model) )
-
-        self.assertEqual(born1.get_born_fks_inc_string(2), 
-    " \n\
-c     FKS configuration number  2 \n\
-data fks_i(  2  ) /  4  / \n\
-data fks_j(  2  ) /  3  / \n\
-      ")
         
 
     def test_find_color_links(self):
@@ -669,6 +583,15 @@ data fks_j(  2  ) /  3  / \n\
         self.assertEqual(not_to_int, 5)
         
         self.assertEqual(len(self.fks1_rem.borns), 6)
+
+    def test_fks_j_from_i(self):
+        """tests the correct filling of the fks_j_from_i dictionary.
+        In particular check that it is filled also with j/i corresponding
+        to configurations that are removed because not to be integrated"""
+        self.assertEqual(self.fks1.fks_j_from_i, 
+                {1:[], 2:[], 3:[], 4:[3], 5:[1,2,3,4,6], 6:[1,2,3,4,5]})
+        self.assertEqual(self.fks1.fks_j_from_i, self.fks1_rem.fks_j_from_i)
+
     
     def test_find_nbodyonly(self):
         """tests if the is_nbody_only variable is set to true only in the 

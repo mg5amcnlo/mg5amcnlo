@@ -267,15 +267,154 @@ class IOExportV4Test(unittest.TestCase,
         myleglist.append(MG.Leg({'id':21, 'state':True}))
     
         myproc = MG.Process({'legs':myleglist,
-                                           'model':self.mymodel})
+                                           'model':self.mymodel,
+                                           'orders': {'QED': 0}})
         
-        myfks = fks_real.FKSProcessFromReals(myproc)
+        self.myfks = fks_real.FKSProcessFromReals(myproc)
         
-        self.myfks_me = fks_real_helas.FKSHelasProcessFromReals(myfks) 
+        self.myfks_me = fks_real_helas.FKSHelasProcessFromReals(self.myfks) 
 
         self.myfortranmodel.downcase = False
 
         tearDown = test_file_writers.CheckFileCreate.clean_files
+
+    def test_get_fks_conf_lines(self):
+        """Test that the lines corresponding to the fks confs, to be 
+        written in fks.inc"""
+        lines = \
+"""c     FKS configuration number  1
+DATA FKS_I(1) / 3 /
+DATA FKS_J(1) / 1 /
+c     FKS configuration number  2
+DATA FKS_I(2) / 4 /
+DATA FKS_J(2) / 2 /
+c     FKS configuration number  3
+DATA FKS_I(3) / 4 /
+DATA FKS_J(3) / 3 /
+c     FKS configuration number  4
+DATA FKS_I(4) / 5 /
+DATA FKS_J(4) / 1 /
+c     FKS configuration number  5
+DATA FKS_I(5) / 5 /
+DATA FKS_J(5) / 2 /
+c     FKS configuration number  6
+DATA FKS_I(6) / 5 /
+DATA FKS_J(6) / 3 /
+c     FKS configuration number  7
+DATA FKS_I(7) / 5 /
+DATA FKS_J(7) / 4 /
+"""
+        process_exporter = export_fks_real.ProcessExporterFortranFKS_real()
+        self.assertEqual(lines, process_exporter.get_fks_conf_lines(self.myfks_me))
+
+    def test_get_fks_j_from_i_lines(self):
+        """Test that the lines corresponding to the fks_j_from_i array, to be 
+        written in fks.inc"""
+        lines = \
+"""DATA (FKS_J_FROM_I(3, JPOS), JPOS = 0, 1)  / 1, 1 /
+DATA (FKS_J_FROM_I(4, JPOS), JPOS = 0, 2)  / 2, 2, 3 /
+DATA (FKS_J_FROM_I(5, JPOS), JPOS = 0, 4)  / 4, 1, 2, 3, 4 /
+"""
+        process_exporter = export_fks_real.ProcessExporterFortranFKS_real()
+        self.assertEqual(lines, process_exporter.get_fks_j_from_i_lines(self.myfks_me))
+
+    def test_write_fks_inc(self):
+        """Tests the correct writing of the fks.inc file, containing informations 
+        for all the different fks configurations"""
+        goal = \
+"""      INTEGER FKS_CONFIGS, IPOS, JPOS
+      DATA FKS_CONFIGS / 7 /
+      INTEGER FKS_I(7), FKS_J(7)
+      INTEGER FKS_J_FROM_I(NEXTERNAL, 0:NEXTERNAL)
+      INTEGER PARTICLE_TYPE(NEXTERNAL), PDG_TYPE(NEXTERNAL)
+
+C     FKS configuration number  1
+      DATA FKS_I(1) / 3 /
+      DATA FKS_J(1) / 1 /
+C     FKS configuration number  2
+      DATA FKS_I(2) / 4 /
+      DATA FKS_J(2) / 2 /
+C     FKS configuration number  3
+      DATA FKS_I(3) / 4 /
+      DATA FKS_J(3) / 3 /
+C     FKS configuration number  4
+      DATA FKS_I(4) / 5 /
+      DATA FKS_J(4) / 1 /
+C     FKS configuration number  5
+      DATA FKS_I(5) / 5 /
+      DATA FKS_J(5) / 2 /
+C     FKS configuration number  6
+      DATA FKS_I(6) / 5 /
+      DATA FKS_J(6) / 3 /
+C     FKS configuration number  7
+      DATA FKS_I(7) / 5 /
+      DATA FKS_J(7) / 4 /
+
+      DATA (FKS_J_FROM_I(3, JPOS), JPOS = 0, 1)  / 1, 1 /
+      DATA (FKS_J_FROM_I(4, JPOS), JPOS = 0, 2)  / 2, 2, 3 /
+      DATA (FKS_J_FROM_I(5, JPOS), JPOS = 0, 4)  / 4, 1, 2, 3, 4 /
+C     
+C     Particle type:
+C     octet = 8, triplet = 3, singlet = 1
+      DATA (PARTICLE_TYPE(IPOS), IPOS=1, NEXTERNAL) / 3, -3, 3, -3, 8 /
+
+C     
+C     Particle type according to PDG:
+C     
+      DATA (PDG_TYPE(IPOS), IPOS=1, NEXTERNAL) / 2, -2, 2, -2, 21 /
+
+"""
+
+        process_exporter = export_fks_real.ProcessExporterFortranFKS_real()
+        process_exporter.write_fks_inc(\
+            writers.FortranWriter(self.give_pos('test')),
+            self.myfks_me,
+            self.myfortranmodel)
+        self.assertFileContains('test', goal)
+
+
+    def test_get_pdf_lines_mir_false(self):
+        """tests the correct writing of the pdf lines for a non-mirror configuration,
+        i.e. with beam indices 1,2 in the usual position"""
+        lines = \
+"""IF (ABS(LPP(1)) .GE. 1) THEN
+LP=SIGN(1,LPP(1))
+u1=PDG2PDF(ABS(LPP(1)),2*LP,XBK(1),DSQRT(Q2FACT(1)))
+ENDIF
+IF (ABS(LPP(2)) .GE. 1) THEN
+LP=SIGN(1,LPP(2))
+ub2=PDG2PDF(ABS(LPP(2)),-2*LP,XBK(2),DSQRT(Q2FACT(2)))
+ENDIF
+PD(0) = 0d0
+IPROC = 0
+IPROC=IPROC+1 ! u u~ > u u~ g
+PD(IPROC)=PD(IPROC-1) + u1*ub2"""
+        process_exporter = export_fks_real.ProcessExporterFortranFKS_real()
+        self.assertEqual(lines, 
+                         process_exporter.get_pdf_lines_mir( \
+                             self.myfks_me, 2, False, False))
+
+    def test_get_pdf_lines_mir_true(self):
+        """tests the correct writing of the pdf lines for a mirror configuration,
+        i.e. with exchanged beam indices 1,2"""
+        lines = \
+"""IF (ABS(LPP(2)) .GE. 1) THEN
+LP=SIGN(1,LPP(2))
+u1=PDG2PDF(ABS(LPP(2)),2*LP,XBK(2),DSQRT(Q2FACT(2)))
+ENDIF
+IF (ABS(LPP(1)) .GE. 1) THEN
+LP=SIGN(1,LPP(1))
+ub2=PDG2PDF(ABS(LPP(1)),-2*LP,XBK(1),DSQRT(Q2FACT(1)))
+ENDIF
+PD(0) = 0d0
+IPROC = 0
+IPROC=IPROC+1 ! u u~ > u u~ g
+PD(IPROC)=PD(IPROC-1) + u1*ub2"""
+
+        process_exporter = export_fks_real.ProcessExporterFortranFKS_real()
+        self.assertEqual(lines, 
+                         process_exporter.get_pdf_lines_mir( \
+                             self.myfks_me, 2, False, True))
 
     def test_write_sborn_sf_dum(self):
         """Tests the correct writing of the sborn_sf file, containing the calls 
@@ -307,7 +446,6 @@ C     this subdir has no soft singularities
 
         #print open(self.give_pos('test')).read()
         self.assertFileContains('test', goal)
-        
 
     def test_write_sborn_sf(self):
         """Tests the correct writing of the sborn_sf file, containing the calls 
@@ -387,268 +525,268 @@ C       b_sf_012 links partons 4 and 3
         #print open(self.give_pos('test')).read()
         self.assertFileContains('test', goal)
         
-###    def test_write_b_sf_fks(self):
-###        """Tests the correct writing of a b_sf_xxx.f file, containing one color
-###        linked born."""
-###        
-###        goal = \
-###"""      SUBROUTINE SB_SF_001(P1,ANS)
-###C     
-###C     Generated by MadGraph 5 v. %(version)s, %(date)s
-###C     By the MadGraph Development Team
-###C     Please visit us at https://launchpad.net/madgraph5
-###C     
-###C     RETURNS AMPLITUDE SQUARED SUMMED/AVG OVER COLORS
-###C     AND HELICITIES
-###C     FOR THE POINT IN PHASE SPACE P(0:3,NEXTERNAL-1)
-###C     
-###C     Process: d d~ > d d~ g QED=0
-###C     
-###C     BORN AMPLITUDE IS 
-###C     Process: d d~ > d d~ QED=0
-###C     spectators: 1 2 
-###
-###C     
-###      IMPLICIT NONE
-###C     
-###C     CONSTANTS
-###C     
-###      INCLUDE 'nexternal.inc'
-###      INTEGER                 NCOMB,     NCROSS
-###      PARAMETER (             NCOMB=  16, NCROSS=  1)
-###      INTEGER    THEL
-###      PARAMETER (THEL=NCOMB*NCROSS)
-###      INTEGER NGRAPHS
-###      PARAMETER (NGRAPHS=   2)
-###C     
-###C     ARGUMENTS 
-###C     
-###      REAL*8 P1(0:3,NEXTERNAL-1),ANS(NCROSS)
-###C     
-###C     LOCAL VARIABLES 
-###C     
-###      REAL*8 P(0:3,NEXTERNAL-1)
-###      INTEGER NHEL(NEXTERNAL-1,NCOMB),NTRY
-###      REAL*8 T
-###      REAL*8 B_SF_001
-###      REAL*8 ZERO
-###      PARAMETER(ZERO=0D0)
-###      INTEGER IHEL,IDEN(NCROSS),IC(NEXTERNAL-1,NCROSS)
-###      INTEGER IPROC,JC(NEXTERNAL-1), I,L,K
-###      LOGICAL GOODHEL(NCOMB,NCROSS)
-###      DATA NTRY/0/
-###      INTEGER NGOOD,IGOOD(NCOMB),JHEL
-###      DATA NGOOD /0/
-###      SAVE IGOOD,JHEL
-###      REAL*8 HWGT
-###      INTEGER J,JJ
-###      INCLUDE 'born_nhel.inc'
-###      DOUBLE COMPLEX SAVEAMP(NGRAPHS,MAX_BHEL)
-###      COMMON/TO_SAVEAMP/SAVEAMP
-###      DOUBLE PRECISION SAVEMOM(NEXTERNAL-1,2)
-###      COMMON/TO_SAVEMOM/SAVEMOM
-###
-###      CHARACTER*79         HEL_BUFF(2)
-###      COMMON/TO_HELICITY/  HEL_BUFF
-###
-###      DATA GOODHEL/THEL*.FALSE./
-###      DATA (NHEL(I,   1),I=1,4) /-1,-1,-1,-1/
-###      DATA (NHEL(I,   2),I=1,4) /-1,-1,-1, 1/
-###      DATA (NHEL(I,   3),I=1,4) /-1,-1, 1,-1/
-###      DATA (NHEL(I,   4),I=1,4) /-1,-1, 1, 1/
-###      DATA (NHEL(I,   5),I=1,4) /-1, 1,-1,-1/
-###      DATA (NHEL(I,   6),I=1,4) /-1, 1,-1, 1/
-###      DATA (NHEL(I,   7),I=1,4) /-1, 1, 1,-1/
-###      DATA (NHEL(I,   8),I=1,4) /-1, 1, 1, 1/
-###      DATA (NHEL(I,   9),I=1,4) / 1,-1,-1,-1/
-###      DATA (NHEL(I,  10),I=1,4) / 1,-1,-1, 1/
-###      DATA (NHEL(I,  11),I=1,4) / 1,-1, 1,-1/
-###      DATA (NHEL(I,  12),I=1,4) / 1,-1, 1, 1/
-###      DATA (NHEL(I,  13),I=1,4) / 1, 1,-1,-1/
-###      DATA (NHEL(I,  14),I=1,4) / 1, 1,-1, 1/
-###      DATA (NHEL(I,  15),I=1,4) / 1, 1, 1,-1/
-###      DATA (NHEL(I,  16),I=1,4) / 1, 1, 1, 1/
-###      DATA IDEN/36/
-###      DOUBLE PRECISION HEL_FAC
-###      LOGICAL CALCULATEDBORN
-###      INTEGER GET_HEL,SKIP
-###      COMMON/CBORN/HEL_FAC,CALCULATEDBORN,GET_HEL,SKIP
-###C     ----------
-###C     BEGIN CODE
-###C     ----------
-###      NTRY=NTRY+1
-###      DO IPROC=1,NCROSS
-###        DO IHEL=1,NEXTERNAL-1
-###          JC(IHEL) = +1
-###        ENDDO
-###        IF (CALCULATEDBORN) THEN
-###          DO J=1,NEXTERNAL-1
-###            IF (SAVEMOM(J,1).NE.P1(0,J) .OR. SAVEMOM(J,2).NE.P1(3
-###     $       ,J)) THEN
-###              CALCULATEDBORN=.FALSE.
-###C             write (*,*) "momenta not the same in Born"
-###            ENDIF
-###          ENDDO
-###        ENDIF
-###        IF (.NOT.CALCULATEDBORN) THEN
-###          DO J=1,NEXTERNAL-1
-###            SAVEMOM(J,1)=P1(0,J)
-###            SAVEMOM(J,2)=P1(3,J)
-###          ENDDO
-###          DO J=1,MAX_BHEL
-###            DO JJ=1,NGRAPHS
-###              SAVEAMP(JJ,J)=(0D0,0D0)
-###            ENDDO
-###          ENDDO
-###        ENDIF
-###        ANS(IPROC) = 0D0
-###        IF (GET_HEL .EQ. 0 .OR. NTRY .LT. 2) THEN
-###          DO IHEL=1,NCOMB
-###            IF (GOODHEL(IHEL,IPROC) .OR. NTRY .LT. 2) THEN
-###              T=B_SF_001(P1,NHEL(1,IHEL),IHEL,JC(1))
-###              ANS(IPROC)=ANS(IPROC)+T
-###              IF (T .NE. 0D0 .AND. .NOT. GOODHEL(IHEL,IPROC)) THEN
-###                GOODHEL(IHEL,IPROC)=.TRUE.
-###                NGOOD = NGOOD +1
-###                IGOOD(NGOOD) = IHEL
-###              ENDIF
-###            ENDIF
-###          ENDDO
-###        ELSE  !RANDOM HELICITY
-###          HWGT = REAL(NGOOD)
-###          IHEL=GET_HEL
-###          T=B_SF_001(P1,NHEL(1,IHEL),IHEL,JC(1))
-###          ANS(IPROC)=ANS(IPROC)+T*HWGT
-###        ENDIF
-###        ANS(IPROC)=ANS(IPROC)/DBLE(IDEN(IPROC))
-###      ENDDO
-###      CALCULATEDBORN=.TRUE.
-###      END
-###
-###
-###      REAL*8 FUNCTION B_SF_001(P,NHEL,HELL,IC)
-###C     
-###C     Generated by MadGraph 5 v. %(version)s, %(date)s
-###C     By the MadGraph Development Team
-###C     Please visit us at https://launchpad.net/madgraph5
-###C     RETURNS AMPLITUDE SQUARED SUMMED/AVG OVER COLORS
-###C     FOR THE POINT WITH EXTERNAL LINES W(0:6,NEXTERNAL-1)
-###
-###C     Process: d d~ > d d~ QED=0
-###C     spectators: 1 2 
-###
-###C     
-###      IMPLICIT NONE
-###C     
-###C     CONSTANTS
-###C     
-###      INTEGER    NGRAPHS,    NEIGEN
-###      PARAMETER (NGRAPHS=   2,NEIGEN=  1)
-###      INCLUDE 'nexternal.inc'
-###      INTEGER    NWAVEFUNCS, NCOLOR1, NCOLOR2
-###      PARAMETER (NWAVEFUNCS=6, NCOLOR1=2, NCOLOR2=2)
-###      REAL*8     ZERO
-###      PARAMETER (ZERO=0D0)
-###C     
-###C     ARGUMENTS 
-###C     
-###      REAL*8 P(0:3,NEXTERNAL-1)
-###      INTEGER NHEL(NEXTERNAL-1), IC(NEXTERNAL-1), HELL
-###C     
-###C     LOCAL VARIABLES 
-###C     
-###      INTEGER I,J
-###      COMPLEX*16 ZTEMP
-###      REAL*8 DENOM(NCOLOR1), CF(NCOLOR2,NCOLOR1)
-###      COMPLEX*16 AMP(NGRAPHS), JAMP1(NCOLOR1), JAMP2(NCOLOR2)
-###      COMPLEX*16 W(18,NWAVEFUNCS)
-###      COMPLEX*16 IMAG1
-###      PARAMETER (IMAG1 = (0D0,1D0))
-###C     
-###C     GLOBAL VARIABLES
-###C     
-###      INCLUDE 'born_nhel.inc'
-###      DOUBLE COMPLEX SAVEAMP(NGRAPHS,MAX_BHEL)
-###      COMMON/TO_SAVEAMP/SAVEAMP
-###      DOUBLE PRECISION HEL_FAC
-###      LOGICAL CALCULATEDBORN
-###      INTEGER GET_HEL,SKIP
-###      COMMON/CBORN/HEL_FAC,CALCULATEDBORN,GET_HEL,SKIP
-###      INCLUDE 'coupl.inc'
-###C     
-###C     COLOR DATA
-###C     
-###      DATA DENOM(1)/1/
-###      DATA (CF(I,  1),I=  1,  2) /    9,    3/
-###      DATA DENOM(2)/1/
-###      DATA (CF(I,  2),I=  1,  2) /    3,    9/
-###C     ----------
-###C     BEGIN CODE
-###C     ----------
-###
-###      IF (.NOT. CALCULATEDBORN) THEN
-###        CALL IXXXXX(P(0,1),ZERO,NHEL(1),+1*IC(1),W(1,1))
-###        CALL OXXXXX(P(0,2),ZERO,NHEL(2),-1*IC(2),W(1,2))
-###        CALL OXXXXX(P(0,3),ZERO,NHEL(3),+1*IC(3),W(1,3))
-###        CALL IXXXXX(P(0,4),ZERO,NHEL(4),-1*IC(4),W(1,4))
-###        CALL FFV1_3(W(1,1),W(1,2),GC_10,ZERO, ZERO, W(1,5))
-###C       Amplitude(s) for diagram number 1
-###        CALL FFV1_0(W(1,4),W(1,3),W(1,5),GC_10,AMP(1))
-###        CALL FFV1_3(W(1,1),W(1,3),GC_10,ZERO, ZERO, W(1,6))
-###C       Amplitude(s) for diagram number 2
-###        CALL FFV1_0(W(1,4),W(1,2),W(1,6),GC_10,AMP(2))
-###        DO I=1,NGRAPHS
-###          SAVEAMP(I,HELL)=AMP(I)
-###        ENDDO
-###      ELSEIF (CALCULATEDBORN) THEN
-###        DO I=1,NGRAPHS
-###          AMP(I)=SAVEAMP(I,HELL)
-###        ENDDO
-###      ENDIF
-###      JAMP1(1)=+1./2.*(+1./3.*AMP(1)+AMP(2))
-###      JAMP1(2)=+1./2.*(-AMP(1)-1./3.*AMP(2))
-###      JAMP2(1)=+1./36.*AMP(1)-3./4.*AMP(2)+1./6.*AMP(2)
-###      JAMP2(2)=+1./4.*(-1./3.*AMP(1)-1./9.*AMP(2))
-###      B_SF_001 = 0.D0
-###      DO I = 1, NCOLOR1
-###        ZTEMP = (0.D0,0.D0)
-###        DO J = 1, NCOLOR2
-###          ZTEMP = ZTEMP + CF(J,I)*JAMP2(J)
-###        ENDDO
-###        B_SF_001 =B_SF_001+ZTEMP*DCONJG(JAMP1(I))/DENOM(I)
-###      ENDDO
-###      END
-###
-###
-###
-###""" % misc.get_pkg_info()
-###        
-###        process_exporter = export_fks_real.ProcessExporterFortranFKS_real()
-###
-###        process_exporter.write_b_sf_fks(\
-###            writers.FortranWriter(self.give_pos('test')),
-###            copy.copy(self.myfks_me.born_processes[0].matrix_element),
-###            self.myfks_me.born_processes[3].color_links[0], self.myfks_me, 1,
-###            self.myfortranmodel)
-###
-###        #print open(self.give_pos('test')).read()
-###        self.assertFileContains('test', goal)
+    def test_write_b_sf_fks(self):
+        """Tests the correct writing of a b_sf_xxx.f file, containing one color
+        linked born."""
+        
+        goal = \
+"""      SUBROUTINE SB_SF_001(P1,ANS)
+C     
+C     Generated by MadGraph 5 v. %(version)s, %(date)s
+C     By the MadGraph Development Team
+C     Please visit us at https://launchpad.net/madgraph5
+C     
+C     RETURNS AMPLITUDE SQUARED SUMMED/AVG OVER COLORS
+C     AND HELICITIES
+C     FOR THE POINT IN PHASE SPACE P(0:3,NEXTERNAL-1)
+C     
+C     Process: u u~ > u u~ g QED=0
+C     
+C     BORN AMPLITUDE IS 
+C     Process: u u~ > u u~ QED=0
+C     spectators: 1 2 
+
+C     
+      IMPLICIT NONE
+C     
+C     CONSTANTS
+C     
+      INCLUDE 'nexternal.inc'
+      INTEGER                 NCOMB,     NCROSS
+      PARAMETER (             NCOMB=  16, NCROSS=  1)
+      INTEGER    THEL
+      PARAMETER (THEL=NCOMB*NCROSS)
+      INTEGER NGRAPHS
+      PARAMETER (NGRAPHS=   2)
+C     
+C     ARGUMENTS 
+C     
+      REAL*8 P1(0:3,NEXTERNAL-1),ANS(NCROSS)
+C     
+C     LOCAL VARIABLES 
+C     
+      REAL*8 P(0:3,NEXTERNAL-1)
+      INTEGER NHEL(NEXTERNAL-1,NCOMB),NTRY
+      REAL*8 T
+      REAL*8 B_SF_001
+      REAL*8 ZERO
+      PARAMETER(ZERO=0D0)
+      INTEGER IHEL,IDEN(NCROSS),IC(NEXTERNAL-1,NCROSS)
+      INTEGER IPROC,JC(NEXTERNAL-1), I,L,K
+      LOGICAL GOODHEL(NCOMB,NCROSS)
+      DATA NTRY/0/
+      INTEGER NGOOD,IGOOD(NCOMB),JHEL
+      DATA NGOOD /0/
+      SAVE IGOOD,JHEL
+      REAL*8 HWGT
+      INTEGER J,JJ
+      INCLUDE 'born_nhel.inc'
+      DOUBLE COMPLEX SAVEAMP(NGRAPHS,MAX_BHEL)
+      COMMON/TO_SAVEAMP/SAVEAMP
+      DOUBLE PRECISION SAVEMOM(NEXTERNAL-1,2)
+      COMMON/TO_SAVEMOM/SAVEMOM
+
+      CHARACTER*79         HEL_BUFF(2)
+      COMMON/TO_HELICITY/  HEL_BUFF
+
+      DATA GOODHEL/THEL*.FALSE./
+      DATA (NHEL(I,   1),I=1,4) /-1,-1,-1,-1/
+      DATA (NHEL(I,   2),I=1,4) /-1,-1,-1, 1/
+      DATA (NHEL(I,   3),I=1,4) /-1,-1, 1,-1/
+      DATA (NHEL(I,   4),I=1,4) /-1,-1, 1, 1/
+      DATA (NHEL(I,   5),I=1,4) /-1, 1,-1,-1/
+      DATA (NHEL(I,   6),I=1,4) /-1, 1,-1, 1/
+      DATA (NHEL(I,   7),I=1,4) /-1, 1, 1,-1/
+      DATA (NHEL(I,   8),I=1,4) /-1, 1, 1, 1/
+      DATA (NHEL(I,   9),I=1,4) / 1,-1,-1,-1/
+      DATA (NHEL(I,  10),I=1,4) / 1,-1,-1, 1/
+      DATA (NHEL(I,  11),I=1,4) / 1,-1, 1,-1/
+      DATA (NHEL(I,  12),I=1,4) / 1,-1, 1, 1/
+      DATA (NHEL(I,  13),I=1,4) / 1, 1,-1,-1/
+      DATA (NHEL(I,  14),I=1,4) / 1, 1,-1, 1/
+      DATA (NHEL(I,  15),I=1,4) / 1, 1, 1,-1/
+      DATA (NHEL(I,  16),I=1,4) / 1, 1, 1, 1/
+      DATA IDEN/36/
+      DOUBLE PRECISION HEL_FAC
+      LOGICAL CALCULATEDBORN
+      INTEGER GET_HEL,SKIP
+      COMMON/CBORN/HEL_FAC,CALCULATEDBORN,GET_HEL,SKIP
+C     ----------
+C     BEGIN CODE
+C     ----------
+      NTRY=NTRY+1
+      DO IPROC=1,NCROSS
+        DO IHEL=1,NEXTERNAL-1
+          JC(IHEL) = +1
+        ENDDO
+        IF (CALCULATEDBORN) THEN
+          DO J=1,NEXTERNAL-1
+            IF (SAVEMOM(J,1).NE.P1(0,J) .OR. SAVEMOM(J,2).NE.P1(3
+     $       ,J)) THEN
+              CALCULATEDBORN=.FALSE.
+C             write (*,*) "momenta not the same in Born"
+            ENDIF
+          ENDDO
+        ENDIF
+        IF (.NOT.CALCULATEDBORN) THEN
+          DO J=1,NEXTERNAL-1
+            SAVEMOM(J,1)=P1(0,J)
+            SAVEMOM(J,2)=P1(3,J)
+          ENDDO
+          DO J=1,MAX_BHEL
+            DO JJ=1,NGRAPHS
+              SAVEAMP(JJ,J)=(0D0,0D0)
+            ENDDO
+          ENDDO
+        ENDIF
+        ANS(IPROC) = 0D0
+        IF (GET_HEL .EQ. 0 .OR. NTRY .LT. 2) THEN
+          DO IHEL=1,NCOMB
+            IF (GOODHEL(IHEL,IPROC) .OR. NTRY .LT. 2) THEN
+              T=B_SF_001(P1,NHEL(1,IHEL),IHEL,JC(1))
+              ANS(IPROC)=ANS(IPROC)+T
+              IF (T .NE. 0D0 .AND. .NOT. GOODHEL(IHEL,IPROC)) THEN
+                GOODHEL(IHEL,IPROC)=.TRUE.
+                NGOOD = NGOOD +1
+                IGOOD(NGOOD) = IHEL
+              ENDIF
+            ENDIF
+          ENDDO
+        ELSE  !RANDOM HELICITY
+          HWGT = REAL(NGOOD)
+          IHEL=GET_HEL
+          T=B_SF_001(P1,NHEL(1,IHEL),IHEL,JC(1))
+          ANS(IPROC)=ANS(IPROC)+T*HWGT
+        ENDIF
+        ANS(IPROC)=ANS(IPROC)/DBLE(IDEN(IPROC))
+      ENDDO
+      CALCULATEDBORN=.TRUE.
+      END
+
+
+      REAL*8 FUNCTION B_SF_001(P,NHEL,HELL,IC)
+C     
+C     Generated by MadGraph 5 v. %(version)s, %(date)s
+C     By the MadGraph Development Team
+C     Please visit us at https://launchpad.net/madgraph5
+C     RETURNS AMPLITUDE SQUARED SUMMED/AVG OVER COLORS
+C     FOR THE POINT WITH EXTERNAL LINES W(0:6,NEXTERNAL-1)
+
+C     Process: u u~ > u u~ QED=0
+C     spectators: 1 2 
+
+C     
+      IMPLICIT NONE
+C     
+C     CONSTANTS
+C     
+      INTEGER    NGRAPHS,    NEIGEN
+      PARAMETER (NGRAPHS=   2,NEIGEN=  1)
+      INCLUDE 'nexternal.inc'
+      INTEGER    NWAVEFUNCS, NCOLOR1, NCOLOR2
+      PARAMETER (NWAVEFUNCS=6, NCOLOR1=2, NCOLOR2=2)
+      REAL*8     ZERO
+      PARAMETER (ZERO=0D0)
+C     
+C     ARGUMENTS 
+C     
+      REAL*8 P(0:3,NEXTERNAL-1)
+      INTEGER NHEL(NEXTERNAL-1), IC(NEXTERNAL-1), HELL
+C     
+C     LOCAL VARIABLES 
+C     
+      INTEGER I,J
+      COMPLEX*16 ZTEMP
+      REAL*8 DENOM(NCOLOR1), CF(NCOLOR2,NCOLOR1)
+      COMPLEX*16 AMP(NGRAPHS), JAMP1(NCOLOR1), JAMP2(NCOLOR2)
+      COMPLEX*16 W(18,NWAVEFUNCS)
+      COMPLEX*16 IMAG1
+      PARAMETER (IMAG1 = (0D0,1D0))
+C     
+C     GLOBAL VARIABLES
+C     
+      INCLUDE 'born_nhel.inc'
+      DOUBLE COMPLEX SAVEAMP(NGRAPHS,MAX_BHEL)
+      COMMON/TO_SAVEAMP/SAVEAMP
+      DOUBLE PRECISION HEL_FAC
+      LOGICAL CALCULATEDBORN
+      INTEGER GET_HEL,SKIP
+      COMMON/CBORN/HEL_FAC,CALCULATEDBORN,GET_HEL,SKIP
+      INCLUDE 'coupl.inc'
+C     
+C     COLOR DATA
+C     
+      DATA DENOM(1)/1/
+      DATA (CF(I,  1),I=  1,  2) /    9,    3/
+      DATA DENOM(2)/1/
+      DATA (CF(I,  2),I=  1,  2) /    3,    9/
+C     ----------
+C     BEGIN CODE
+C     ----------
+
+      IF (.NOT. CALCULATEDBORN) THEN
+        CALL IXXXXX(P(0,1),ZERO,NHEL(1),+1*IC(1),W(1,1))
+        CALL OXXXXX(P(0,2),ZERO,NHEL(2),-1*IC(2),W(1,2))
+        CALL OXXXXX(P(0,3),ZERO,NHEL(3),+1*IC(3),W(1,3))
+        CALL IXXXXX(P(0,4),ZERO,NHEL(4),-1*IC(4),W(1,4))
+        CALL JIOL1X(W(1,1),W(1,2),GQQ,ZERO,ZERO,W(1,5))
+C       Amplitude(s) for diagram number 1
+        CALL IOVL1X(W(1,4),W(1,3),W(1,5),GQQ,AMP(1))
+        CALL JIOL1X(W(1,1),W(1,3),GQQ,ZERO,ZERO,W(1,6))
+C       Amplitude(s) for diagram number 2
+        CALL IOVL1X(W(1,4),W(1,2),W(1,6),GQQ,AMP(2))
+        DO I=1,NGRAPHS
+          SAVEAMP(I,HELL)=AMP(I)
+        ENDDO
+      ELSEIF (CALCULATEDBORN) THEN
+        DO I=1,NGRAPHS
+          AMP(I)=SAVEAMP(I,HELL)
+        ENDDO
+      ENDIF
+      JAMP1(1)=+1./2.*(+1./3.*AMP(1)+AMP(2))
+      JAMP1(2)=+1./2.*(-AMP(1)-1./3.*AMP(2))
+      JAMP2(1)=+1./36.*AMP(1)-3./4.*AMP(2)+1./6.*AMP(2)
+      JAMP2(2)=+1./4.*(-1./3.*AMP(1)-1./9.*AMP(2))
+      B_SF_001 = 0.D0
+      DO I = 1, NCOLOR1
+        ZTEMP = (0.D0,0.D0)
+        DO J = 1, NCOLOR2
+          ZTEMP = ZTEMP + CF(J,I)*JAMP2(J)
+        ENDDO
+        B_SF_001 =B_SF_001+ZTEMP*DCONJG(JAMP1(I))/DENOM(I)
+      ENDDO
+      END
+
+
+
+""" % misc.get_pkg_info()
+        
+        process_exporter = export_fks_real.ProcessExporterFortranFKS_real()
+
+        process_exporter.write_b_sf_fks(\
+            writers.FortranWriter(self.give_pos('test')),
+            copy.copy(self.myfks_me.born_processes[3].matrix_element),
+            self.myfks_me.born_processes[3].color_links[0], self.myfks_me, 1,
+            self.myfortranmodel)
+
+        #print open(self.give_pos('test')).read()
+        self.assertFileContains('test', goal)
 
     
-    def test_auto_dsig_fks(self):
+    def test_write_auto_dsig_fks(self):
         """test if the auto_dsig.f, containing (for MadFKS) the parton luminosity,
         is correctly written"""
         goal = \
 """      DOUBLE PRECISION FUNCTION DLUM()
 C     ****************************************************            
 C         
-C     Generated by MadGraph 5 v. 1.1.0, 2011-04-22
+C     Generated by MadGraph 5 v. %(version)s, %(date)s
 C     By the MadGraph Development Team
 C     Please visit us at https://launchpad.net/madgraph5
 C     RETURNS PARTON LUMINOSITIES FOR MADFKS                          
 C        
 C     
-C     Process: u u~ > u u~ g
+C     Process: u u~ > u u~ g QED=0
 C     
 C     ****************************************************            
 C         
@@ -679,13 +817,10 @@ C
       DOUBLE PRECISION G1,G2
       DOUBLE PRECISION A1,A2
       DOUBLE PRECISION XPQ(-7:7)
-      DOUBLE PRECISION RWGT,DSIGUU
-      DOUBLE PRECISION XI_I_FKS,Y_IJ_FKS
 C     
 C     EXTERNAL FUNCTIONS                                              
 C         
 C     
-C     LOGICAL PASSCUTS                                               
       DOUBLE PRECISION ALPHAS2,REWGT,PDG2PDF
 C     
 C     GLOBAL VARIABLES                                                
@@ -696,6 +831,8 @@ C
       COMMON /SUBPROC/ PD, IPROC
       INCLUDE 'coupl.inc'
       INCLUDE 'run.inc'
+      INTEGER IMIRROR
+      COMMON/CMIRROR/IMIRROR
 C     
 C     DATA                                                            
 C         
@@ -712,27 +849,35 @@ C
 C     ----------                                                      
 C         
       DLUM = 0D0
-C     IF (PASSCUTS(PP,rwgt)) THEN                                    
-      IF (ABS(LPP(1)) .GE. 1) THEN
-        LP=SIGN(1,LPP(1))
-        U1=PDG2PDF(ABS(LPP(1)),2*LP,XBK(1),DSQRT(Q2FACT(1)))
-      ENDIF
-      IF (ABS(LPP(2)) .GE. 1) THEN
-        LP=SIGN(1,LPP(2))
-        UB2=PDG2PDF(ABS(LPP(2)),-2*LP,XBK(2),DSQRT(Q2FACT(2)))
-      ENDIF
-      PD(0) = 0D0
-      IPROC = 0
-      IPROC=IPROC+1  ! u u~ > u u~ g
-      PD(IPROC)=PD(IPROC-1) + U1*UB2
-      DSIGUU=1D0
-      IF (DSIGUU .LT. 1D199) THEN
-        DLUM = PD(IPROC) * CONV * DSIGUU
+      IF (IMIRROR.EQ.2) THEN
+        IF (ABS(LPP(2)) .GE. 1) THEN
+          LP=SIGN(1,LPP(2))
+          U1=PDG2PDF(ABS(LPP(2)),2*LP,XBK(2),DSQRT(Q2FACT(2)))
+        ENDIF
+        IF (ABS(LPP(1)) .GE. 1) THEN
+          LP=SIGN(1,LPP(1))
+          UB2=PDG2PDF(ABS(LPP(1)),-2*LP,XBK(1),DSQRT(Q2FACT(1)))
+        ENDIF
+        PD(0) = 0D0
+        IPROC = 0
+        IPROC=IPROC+1  ! u u~ > u u~ g
+        PD(IPROC)=PD(IPROC-1) + U1*UB2
       ELSE
-        WRITE(*,*) 'Error in matrix element'
-        DSIGUU=0D0
-        DLUM = 0D0
+        IF (ABS(LPP(1)) .GE. 1) THEN
+          LP=SIGN(1,LPP(1))
+          U1=PDG2PDF(ABS(LPP(1)),2*LP,XBK(1),DSQRT(Q2FACT(1)))
+        ENDIF
+        IF (ABS(LPP(2)) .GE. 1) THEN
+          LP=SIGN(1,LPP(2))
+          UB2=PDG2PDF(ABS(LPP(2)),-2*LP,XBK(2),DSQRT(Q2FACT(2)))
+        ENDIF
+        PD(0) = 0D0
+        IPROC = 0
+        IPROC=IPROC+1  ! u u~ > u u~ g
+        PD(IPROC)=PD(IPROC-1) + U1*UB2
       ENDIF
+      DLUM = PD(IPROC) * CONV
+      RETURN
       END
 
 """ % misc.get_pkg_info()
@@ -749,7 +894,7 @@ C     IF (PASSCUTS(PP,rwgt)) THEN
     def test_write_leshouche_file(self):
         """tests if the leshouche.inc file is correctly written"""
         goal = \
-"""      DATA (IDUP(I,1),I=1,5)/1,-1,1,-1,21/
+"""      DATA (IDUP(I,1),I=1,5)/2,-2,2,-2,21/
       DATA (MOTHUP(1,I,  1),I=1, 5)/  0,  0,  1,  1,  1/
       DATA (MOTHUP(2,I,  1),I=1, 5)/  0,  0,  2,  2,  2/
       DATA (ICOLUP(1,I,  1),I=1, 5)/501,  0,502,  0,503/
@@ -802,8 +947,6 @@ C     IF (PASSCUTS(PP,rwgt)) THEN
 
         self.assertFileContains('test', goal) 
 
-    
-
     def test_write_maxamps_file(self):
         """tests if the maxamps.inc file is correctly written"""
         goal = \
@@ -825,7 +968,6 @@ C     IF (PASSCUTS(PP,rwgt)) THEN
                     ncolor)  
 
         self.assertFileContains('test', goal) 
-
     
     def test_write_mg_sym_file(self):
         """tests if the mg.sym file is correctly written"""

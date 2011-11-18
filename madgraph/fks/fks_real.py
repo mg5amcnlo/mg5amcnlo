@@ -132,18 +132,6 @@ class FKSBornProcess(object):
         return self.color_links
     
     
-    def get_born_fks_inc_string(self, iconf):#test written
-        """returns the part of the fks.inc file relative to this born configuration
-        the configuration number is given"""
-        replace = {'conf_num' : iconf, 
-                   'i_fks' : self.i_fks, 
-                   'j_fks' : self.j_fks}
-        string =" \n\
-c     FKS configuration number  %(conf_num)d \n\
-data fks_i(  %(conf_num)d  ) /  %(i_fks)d  / \n\
-data fks_j(  %(conf_num)d  ) /  %(j_fks)d  / \n\
-      " % replace
-        return string
  
 #===============================================================================
 # FKS Process
@@ -208,44 +196,6 @@ class FKSProcessFromReals(object):
             self.find_born_nbodyonly()
     
             
-    def get_fks_inc_string(self): #test written
-        """returns the list of configurations corrresponding to the various 
-        underlying borns"""
-        string = "integer fks_configs, ipos, jpos \n\
-data fks_configs / %(nconfs)d / \n\
-integer fks_i(%(nconfs)d), fks_j(%(nconfs)d) \n\
-INTEGER FKS_IPOS(0:NEXTERNAL) \n\
-INTEGER FKS_J_FROM_I(NEXTERNAL, 0:NEXTERNAL) \n\
-INTEGER PARTICLE_TYPE(NEXTERNAL), PDG_TYPE(NEXTERNAL) \n" %{'nconfs' : 
-                                                        len(self.borns)}
-        n = 0
-        for born in self.borns:
-            if born.is_to_integrate:
-                n +=1
-                string += born.get_born_fks_inc_string(n)
-        ipos = []
-        for ii, js in self.fks_j_from_i.items():
-            if js:
-                ipos.append(ii)
-                string += "\n\
-data (fks_j_from_i(%d, jpos), jpos = 0, %d)  / %d, %s /" \
-            % (ii, len(js), len(js), ', '.join(["%d" % j for j in js]))
-#        string += "\n\
-#data (fks_ipos(ipos), ipos = 0, %d)  / %d, %s /\n" \
-#            % (len(ipos), len(ipos), ', '.join(["%d" % i for i in ipos]))
-        string += "\n\
-C\n\
-C     Particle type:\n\
-C     octet = 8, triplet = 3, singlet = 1\n\
-DATA (PARTICLE_TYPE(IPOS), IPOS=1, NEXTERNAL) / %s / \n" % \
-                                ', '.join(["%d" % i for i in self.colors])
-        string += "\n\
-C\n\
-C     Particle type according to PDG:\n\
-C\n\
-      DATA (PDG_TYPE(IPOS), IPOS=1, NEXTERNAL) / %s / \n " % \
-                                ', '.join(["%d" % i for i in self.pdg_codes])
-        return string
              
                  
     def find_borns(self): #test written

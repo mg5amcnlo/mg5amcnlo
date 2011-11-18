@@ -127,11 +127,10 @@ class ProcessExporterFortranFKS_real(export_v4.ProcessExporterFortran):
         calls = 0
         
     #write fks.inc in SubProcesses, it will be copied later in the subdirs
-        fks_inc = matrix_element.fks_inc_string
         self.fksdirs = []
         
         for nfks, fksborn in enumerate(matrix_element.born_processes):
-                calls += self.generate_subprocess_directory_fks(nfks, fksborn, fks_inc,
+                calls += self.generate_subprocess_directory_fks(nfks, fksborn,
                                                   matrix_element,
                                                   fortran_model,
                                                   me_number,
@@ -141,7 +140,7 @@ class ProcessExporterFortranFKS_real(export_v4.ProcessExporterFortran):
         return calls
     
     
-    def generate_subprocess_directory_fks(self, nfks, fksborn, fks_inc, matrix_element,
+    def generate_subprocess_directory_fks(self, nfks, fksborn, matrix_element,
                             fortran_model, me_number, path=os.getcwd()):   
         """Generate the Pxxxxx_i directory for a subprocess in MadFKS,
         including the necessary matrix.f and various helper files
@@ -155,7 +154,6 @@ class ProcessExporterFortranFKS_real(export_v4.ProcessExporterFortran):
         subprocdir = "P%s_%d" % \
         (matrix_element.get('processes')[0].shell_string(), nfks+ 1)
         self.fksdirs.append(subprocdir)
-    #    dirs.append(subprocdir)
         try:
             os.mkdir(subprocdir)
         except os.error as error:
@@ -176,7 +174,6 @@ class ProcessExporterFortranFKS_real(export_v4.ProcessExporterFortran):
         #write the config.fks file, containing only nfks (+1)
         os.system("echo %d > config.fks" % (nfks+1) )
         
-        ####
         bool_dict = {True : 'Y', False : 'N'}
         bool_dict1 = {True : 'I', False : 'E'}
         
@@ -190,14 +187,12 @@ class ProcessExporterFortranFKS_real(export_v4.ProcessExporterFortran):
         os.system('echo %s >> integrate.fks' % \
                   bool_dict1[len(fksborn.color_links) > 0])
 
-       # born_matrix_element = fksborn.matrix_element
-    
         #write the fks.inc file, which is the same for all the fks_dirs belonging
         #to the same fks_process
         
         filename = 'fks.inc'
         self.write_fks_inc(writers.FortranWriter(filename),
-                                                fks_inc,
+                                                matrix_element,
                                                 fortran_model)
  
         # Create the matrix.f file, file and all inc files (as for v4)
@@ -287,11 +282,6 @@ class ProcessExporterFortranFKS_real(export_v4.ProcessExporterFortran):
                              fksborn, matrix_element,
                              fortran_model)
     
-#        filename = 'born_coloramps.inc'
-#        self.write_coloramps_file(writers.FortranWriter(filename),
-#                             fksborn.matrix_element,
-#                             fortran_model)
-    
         filename = 'born_conf.inc'
         nconfigs, s_and_t_channels = self.write_configs_file(\
             writers.FortranWriter(filename),
@@ -307,30 +297,15 @@ class ProcessExporterFortranFKS_real(export_v4.ProcessExporterFortran):
                              fksborn.matrix_element,
                              fortran_model)
     
-#        filename = 'born_maxamps.inc'
-#        self.write_born_maxamps_file(writers.FortranWriter(filename),
-#                           fksborn.matrix_element,
-#                           fortran_model,
-#                           ncolor)
-        
         filename = 'born_nhel.inc'
         self.write_born_nhel_file(writers.FortranWriter(filename),
                            fksborn.matrix_element, nflows,
                            fortran_model,
                            ncolor)
     
-#        filename = 'born_ncombs.inc'
-#        self.write_ncombs_file(writers.FortranWriter(filename),
-#                          matrix_element.real_matrix_element,
-#                          fortran_model)
-    
         filename = 'born_ngraphs.inc'
         self.write_ngraphs_file(writers.FortranWriter(filename),
                             nconfigs)
-    
-#        filename = 'born_pmass.inc'
-#        self.write_pmass_file(writers.FortranWriter(filename),
-#                         fksborn.matrix_element)
     
         filename = 'born_props.inc'
         self.write_props_file(writers.FortranWriter(filename),
@@ -338,7 +313,6 @@ class ProcessExporterFortranFKS_real(export_v4.ProcessExporterFortran):
                          fortran_model,
                             s_and_t_channels)
         
-    
         #write the sborn_sf.f and the b_sf_files
         filename = 'sborn_sf.f'
         self.write_sborn_sf(writers.FortranWriter(filename),
@@ -347,7 +321,6 @@ class ProcessExporterFortranFKS_real(export_v4.ProcessExporterFortran):
         
         for i, c_link in enumerate(fksborn.color_links):
             iborn = i+1
-                
             filename = 'b_sf_%3.3d.f' % iborn                
             born_helas_process = copy.copy(fksborn.matrix_element)
             self.write_b_sf_fks(writers.FortranWriter(filename),
@@ -370,8 +343,7 @@ class ProcessExporterFortranFKS_real(export_v4.ProcessExporterFortran):
         # Generate jpgs -> pass in make_html
         #os.system(os.path.join('..', '..', 'bin', 'gen_jpeg-pl'))
     
-        linkfiles = [#'addmothers.f',
-                     'LesHouches.f',
+        linkfiles = ['LesHouches.f',
                      'LesHouchesDummy.f',
                      'LesHouchesMadLoop.f',
                      'MCmasses_HERWIG6.inc',
@@ -395,7 +367,6 @@ class ProcessExporterFortranFKS_real(export_v4.ProcessExporterFortran):
                      'genps.f',
                      'genps.inc',
                      'genps_fks.f',
-#                     'genint_fks.f',
                      'initcluster.f',
                      'ktclusdble.f',
                      'link_fks.f',
@@ -462,6 +433,7 @@ class ProcessExporterFortranFKS_real(export_v4.ProcessExporterFortran):
     #===============================================================================
     # write_born_sf_fks
     #===============================================================================
+    #test written
     def write_sborn_sf(self, writer, fksborn, matrix_element, fortran_model):
         """Creates the sborn_sf.f file, containing the calls to the different 
         color linked borns"""
@@ -626,21 +598,50 @@ c     this subdir has no soft singularities
         return len(filter(lambda call: call.find('#') != 0, helas_calls)), ncolor1
     
     
+
     #===============================================================================
     # write_fks_inc
     #===============================================================================
-    def write_fks_inc(self, writer, content, fortran_model):
-        """Writes the already-generated content of fks.inc"""
-    
+    def write_fks_inc(self, writer, me, fortran_model): #test_written
+        """Writes the content of fks.inc, which lists the various fks configs
+        of a FKSHelasProcessFromReal, plus some extra additional ifos"""
+
+        replace_dict = {}
+        replace_dict['nconfs'] = len(me.born_processes)
+        replace_dict['confs_lines'] = self.get_fks_conf_lines(me)
+        replace_dict['fks_j_from_i_lines'] = self.get_fks_j_from_i_lines(me)
+        replace_dict['pdg_string'] = ", ".join("%d" % pdg for pdg in me.real_pdg_codes)
+        replace_dict['col_string'] = ", ".join("%d" % col for col in me.real_colors)
+
+        content = \
+"""      INTEGER FKS_CONFIGS, IPOS, JPOS
+      DATA FKS_CONFIGS / %(nconfs)d /
+      INTEGER FKS_I(%(nconfs)d), FKS_J(%(nconfs)d)
+      INTEGER FKS_J_FROM_I(NEXTERNAL, 0:NEXTERNAL)
+      INTEGER PARTICLE_TYPE(NEXTERNAL), PDG_TYPE(NEXTERNAL)
+
+%(confs_lines)s
+%(fks_j_from_i_lines)sC     
+C     Particle type:
+C     octet = 8, triplet = 3, singlet = 1
+      DATA (PARTICLE_TYPE(IPOS), IPOS=1, NEXTERNAL) / %(col_string)s /
+
+C     
+C     Particle type according to PDG:
+C     
+      DATA (PDG_TYPE(IPOS), IPOS=1, NEXTERNAL) / %(pdg_string)s /
+"""   % replace_dict
+
         if not isinstance(writer, writers.FortranWriter):
             raise writers.FortranWriter.FortranWriterError(\
                 "writer not FortranWriter")
         # Set lowercase/uppercase Fortran code
         writers.FortranWriter.downcase = False
-    
+        
         writer.writelines(content)
     
         return True
+
     #===============================================================================
     # write_mirrorprocs
     #===============================================================================   
@@ -828,8 +829,6 @@ data mirrorproc /%s/" % bool_dict[matrix_element.get('has_mirror_process')]
         replace_dict['jamp_lines'] = '\n'.join(jamp_lines)
     
         file = open(os.path.join(_file_path, \
-                          #'iolibs/template_files/matrix_fks.inc2')).read()
-                          #'iolibs/template_files/matrix_fks.inc3')).read()
                           'iolibs/template_files/matrix_fks.inc4')).read()
 
         file = file % replace_dict
@@ -1023,7 +1022,7 @@ data mirrorproc /%s/" % bool_dict[matrix_element.get('has_mirror_process')]
     # write_leshouche_file
     #===============================================================================
     def write_leshouche_file(self, writer, matrix_element, fortran_model):
-        #test written??
+        #test written
         """Write the leshouche.inc file for MG4"""
     
         # Extract number of external particles
@@ -1114,7 +1113,7 @@ data mirrorproc /%s/" % bool_dict[matrix_element.get('has_mirror_process')]
     # write_maxamps_file
     #===============================================================================
     def write_maxamps_file(self, writer, matrix_element, fortran_model, ncolor):
-        #test written??
+        #test written
         """Write the maxamps.inc file for MG4."""
     
         file = "       integer    maxamps, maxflow\n"
@@ -1217,7 +1216,7 @@ data mirrorproc /%s/" % bool_dict[matrix_element.get('has_mirror_process')]
     # write_ngraphs_file
     #===============================================================================
     def write_ngraphs_file(self, writer, nconfigs):
-        #test written??
+        #test written
         """Write the ngraphs.inc file for MG4. Needs input from
         write_configs_file.
         Inherits the function from the parent class"""
@@ -1240,7 +1239,7 @@ data mirrorproc /%s/" % bool_dict[matrix_element.get('has_mirror_process')]
     # write_props_file
     #===============================================================================
     def write_props_file(self, writer, matrix_element, fortran_model, s_and_t_channels):
-        #test_written??
+        #test_written
         """Write the props.inc file for MadEvent. Needs input from
         write_configs_file. With respect to the parent routine, it has some 
         more specific formats that allow the props.inc file to be read by the 
@@ -1348,8 +1347,32 @@ data mirrorproc /%s/" % bool_dict[matrix_element.get('has_mirror_process')]
     # Helper functions
     #===============================================================================
 
+
+    def get_fks_conf_lines(self, me): #test written
+        """generate the lines for fks.inc describing the various fks configs"""
+        n = 0
+        lines = ""
+        for born in me.born_processes:
+            if born.is_to_integrate:
+                n += 1
+                lines += 'c     FKS configuration number  %d\n' % n \
+                       + 'DATA FKS_I(%d) / %d /\n' % (n, born.i_fks)\
+                       + 'DATA FKS_J(%d) / %d /\n' % (n, born.j_fks)
+        return lines
+
+    def get_fks_j_from_i_lines(self, me): #test written
+        """generate the lines for fks.inc describing initializating the
+        fks_j_from_i array"""
+        lines = ""
+        for ii, js in me.fks_j_from_i.items():
+            if js:
+                lines += 'DATA (FKS_J_FROM_I(%d, JPOS), JPOS = 0, %d)  / %d, %s /\n' \
+                         % (ii, len(js), len(js), ', '.join(["%d" % j for j in js]))
+        return lines
+
+
     def get_pdf_lines_mir(self, matrix_element, ninitial, subproc_group = False,\
-                          mirror = False):
+                          mirror = False): #test written
         """Generate the PDF lines for the auto_dsig.f file"""
 
         processes = matrix_element.get('processes')
@@ -1475,7 +1498,7 @@ data mirrorproc /%s/" % bool_dict[matrix_element.get('has_mirror_process')]
     
     
     def get_icolamp_lines(self, matrix_element): 
-        #test written??
+        #test written
         """Return the ICOLAMP matrix, showing which AMPs are parts of
         which JAMPs."""
     

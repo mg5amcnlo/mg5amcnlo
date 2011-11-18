@@ -36,7 +36,12 @@ class CheckFileCreate():
         """ Check the content of a file """
 
         current_value = open(self.give_pos(filename)).read()
+        list_cur=current_value.split('\n')
+        list_sol=solution.split('\n')
+        for a, b in zip(list_sol, list_cur):
+            self.assertEqual(a,b)
         self.assertEqual(current_value.split('\n'), solution.split('\n'))
+        self.assertEqual(len(list_sol), len(list_cur))
 
     def give_pos(self, filename):
         """ take a name and a change it in order to have a valid path in the output directory """

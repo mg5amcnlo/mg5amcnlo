@@ -176,13 +176,15 @@ class FKSHelasProcessFromReals(object): #test written
     """class to generate the Helas calls for a FKSProcessFromReals. Contains:
     -- real emission ME
     -- list of FKSHelasBornProcesses
-    -- fks_inc string (content of file fks.inc)
     """
     
     def __init__(self, fksproc=None, me_list =[], me_id_list=[], **opts):
         """ constructor, starts from a FKSProcessFromReals, sets borns and ME"""        
         if fksproc != None:
             self.born_processes = []
+            self.real_pdg_codes = fksproc.pdg_codes
+            self.real_colors = fksproc.colors
+            self.fks_j_from_i = fksproc.fks_j_from_i
                         
             for proc in fksproc.borns:
                 if proc.is_to_integrate:
@@ -190,7 +192,6 @@ class FKSHelasProcessFromReals(object): #test written
                         FKSHelasBornProcess(proc, me_list, me_id_list, **opts))
             self.real_matrix_element = helas_objects.HelasMatrixElement(
                                     fksproc.real_amp, **opts)
-            self.fks_inc_string = fksproc.get_fks_inc_string()
     
     def get(self, key):
         """the get function references to real_matrix_element"""
