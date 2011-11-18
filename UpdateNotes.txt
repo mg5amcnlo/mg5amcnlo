@@ -1,6 +1,5 @@
 Update notes for MadGraph 5 (in reverse time order)
 
-
 1.4.b0 (17/11/11): OM: New structure for madevent script (./bin/madevent)
                       allowing to have an interface similar to MG5 
                       for running madevent.
@@ -45,6 +44,12 @@ Update notes for MadGraph 5 (in reverse time order)
                       Requiring less disk access for the generation of the file.
                   OM: Modify error treatment, especially for Invalid commands
                       and Configuration problems.
+
+1.3.30 (18/11/11) OM: Fix a bug for the instalation of pythia-pgs on a 64 bit
+       		      UNIX machine.
+		  OM: If ROOTSYS is define but root in the PATH, add it 
+		      automatically in create_matching_plots.sh
+		      This is require for the UIUC cluster.
 
 1.3.29 (16/11/11) OM: Fixed particle identities in the Feynman diagram drawing
                   JA: Fixed bug in pdf reweighting when external LHAPDF is used.
