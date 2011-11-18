@@ -172,16 +172,16 @@ c     Write ic with correct number of digits
       write(fname(5:(5+npos-1)),formstr) ic
       open (unit=lun, file = fname, status='unknown')
       write(lun,15) '#!/bin/bash'
-      write(lun,15) '#PBS -q ' // PBS_QUE
-      write(lun,15) '#PBS -o PBS.log'
-      write(lun,15) '#PBS -e PBS.err'
+c      write(lun,15) '#PBS -q ' // PBS_QUE
+c      write(lun,15) '#PBS -o PBS.log'
+c      write(lun,15) '#PBS -e PBS.err'
       write(lun,15) 'if [[ "$PBS_O_WORKDIR" != "" ]]; then' 
       write(lun,15) '    cd $PBS_O_WORKDIR'
       write(lun,15) 'fi'
       write(lun,15) 'k=run1_app.log'
       write(lun,15) 'script=' // fname
-      write(lun,15) 'rm -f wait.$script >& /dev/null'
-      write(lun,15) 'touch run.$script'
+c      write(lun,15) 'rm -f wait.$script >& /dev/null'
+c      write(lun,15) 'touch run.$script'
       write(lun,'(a$)') 'for i in '
  15   format(a)
       end

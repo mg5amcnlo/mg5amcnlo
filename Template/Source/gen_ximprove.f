@@ -393,16 +393,16 @@ c     Write ic with correct number of digits
       write(*,*) 'Opening file ',fname
       open (unit=26, file = fname, status='unknown')
       write(26,15) '#!/bin/bash'
-      write(26,15) '#PBS -q ' // PBS_QUE
-      write(26,15) '#PBS -o /dev/null'
-      write(26,15) '#PBS -e /dev/null'
+c      write(26,15) '#PBS -q ' // PBS_QUE
+c      write(26,15) '#PBS -o /dev/null'
+c      write(26,15) '#PBS -e /dev/null'
       write(26,15) 'if [[ "$PBS_O_WORKDIR" != "" ]]; then' 
       write(26,15) '    cd $PBS_O_WORKDIR'
       write(26,15) 'fi'
       write(26,15) 'k=run1_app.log'
       write(lun,15) 'script=' // fname
-      write(lun,15) 'rm -f wait.$script >& /dev/null'
-      write(lun,15) 'touch run.$script'
+c      write(lun,15) 'rm -f wait.$script >& /dev/null'
+c      write(lun,15) 'touch run.$script'
  15   format(a)
       end
 

@@ -163,6 +163,8 @@ class PBSCluster(Cluster):
     """Basic class for dealing with cluster submission"""
     
     name = 'pbs'
+    idle_tag = ['Q']
+    running_tag = ['T','E','R']
 
     def __init__(self):
         """ """
@@ -213,14 +215,15 @@ class PBSCluster(Cluster):
         status = subprocess.Popen([cmd], shell=True, stdout=subprocess.PIPE)
         
         for line in status.stdout:
+            line = line.strip()
             if 'Unknown' in line:
                 return 'F'
             elif line.startswith(str(id)):
-		status = line.split()[4]
-		if status in ['Q']:
-		    return 'I' 
-		elif status in ['T','E','R']:                
-		    return 'R' 
+                status = line.split()[4]
+        if status in self.idle_tag:
+            return 'I' 
+        elif status in self.running_tag:                
+            return 'R' 
         return 'F'
         
 
@@ -230,28 +233,37 @@ class PBSCluster(Cluster):
         cmd = "qstat"
         status = subprocess.Popen([cmd], stdout=subprocess.PIPE)
 
-	if me_dir.endswith('/'):
-	    me_dir = me_dir[:-1]	
-	me_dir = hashlib.md5(me_dir).hexdigest()[-14:]
+        if me_dir.endswith('/'):
+           me_dir = me_dir[:-1]    
+        me_dir = hashlib.md5(me_dir).hexdigest()[-14:]
         if not me_dir[0].isalpha():
-		me_dir = 'a' + me_dir[1:]
+                  me_dir = 'a' + me_dir[1:]
 
         idle, run, fail = 0, 0, 0
         for line in status.stdout:
             if me_dir in line:
                 status = line.split()[4]
-                if status == 'Q':
+                if status in self.idle_tag:
                     idle += 1
-                elif status in ['R','E','T']:
+                elif status in self.running_tag:
                     run += 1
                 else:
-		    print line
+                    print line
                     fail += 1
 
         return idle, run, self.submitted - (idle+run+fail), fail
 
-from_name = {'condor':CondorCluster, 'pbs': PBSCluster}
+
+class SGECluster(PBSCluster):
+    """Basic class for dealing with cluster submission"""
+    
+    name = 'sge'
+    idle_tqg = ['qw', 'w','s','S']
+    running_tqg = ['R', 'r','t','T']
+
+
+
+from_name = {'condor':CondorCluster, 'pbs': PBSCluster, 'sge': SGECluster}
 
 
     
-
