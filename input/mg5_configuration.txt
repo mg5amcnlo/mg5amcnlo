@@ -53,8 +53,17 @@ fortran_compiler = None
 #when launching MadEvent [True/False]
 automatic_html_opening = True
 
-# Cluster Type [pbs|condor] Use for cluster run only
+# Default Running mode 
+# 0: single machine/ 1: cluster / 2: multicore
+run_mode = 0
+
+# Cluster Type [pbs|sge|condor] Use for cluster run only
+# And cluster queue
 cluster_type = pbs
+cluster_queue = madgraph
+
+# Nb_core to use (None = all) This is use only for multicore run
+nb_core = None
 
 # Pythia-PGS Package
 # relative path start from main directory

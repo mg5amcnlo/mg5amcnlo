@@ -1208,7 +1208,7 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
             
         if self.cluster_mode == 1 and not hasattr(self, 'cluster'):
             cluster_name = self.configuration['cluster_type']
-            self.cluster = cluster.from_name[cluster_name]()
+            self.cluster = cluster.from_name[cluster_name](self.configuration['cluster_queue'])
         return args
     
     ############################################################################            
@@ -1237,7 +1237,10 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
                               'text_editor':None,
                               'fortran_compiler':None,
                               'cluster_mode':'pbs',
-                              'automatic_html_opening':True}
+                              'automatic_html_opening':True,
+                              'run_mode':0,
+                              'cluster_queue':'madgraph',
+                              'nb_core':None}
         
         if os.environ.has_key('MADGRAPH_BASE'):
             config_file = open(os.path.join(os.environ['MADGRAPH_BASE'],'mg5_configuration.txt'))
@@ -1291,7 +1294,7 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
                 else:
                     self.configuration[key] = ''
             elif key.startswith('cluster'):
-                pass
+                pass              
             elif key == 'automatic_html_opening':
                 if self.configuration[key] == 'False':
                     self.open_crossx = False
@@ -1404,7 +1407,22 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
             logging.getLogger('madgraph').setLevel(eval('logging.' + args[1]))
             logger.info('set output information to level: %s' % args[1])
         elif args[0] == "fortran_compiler":
-            self.configuration['fortran_compiler'] = args[1] 
+            self.configuration['fortran_compiler'] = args[1]
+        elif args[0] == "run_mode":
+            if not args[1] in [0,1,2,'0','1','2']:
+                raise self.InvalidCmd, 'run_mode should be 0, 1 or 2.'
+            self.cluster_mode = int(args[1])
+            self.configuration['cluster_mode'] =  self.cluster_mode
+        elif args[0] == 'nb_core':
+            if args[1] == 'None':
+                import multiprocessing
+                self.nb_core = multiprocessing.cpu_count()
+                self.configuration['nb_core'] = self.nb_core
+                return
+            if not args[1].isdigit():
+                raise self.InvalidCmd('nb_core should be a positive number') 
+            self.nb_core = int(args[1])
+            self.configuration['nb_core'] = self.nb_core
         elif args[0] in self.configuration:
             if args[1] in ['None','True','False']:
                 self.configuration[args[0]] = eval(args[1])

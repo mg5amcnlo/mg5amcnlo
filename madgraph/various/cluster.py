@@ -28,11 +28,12 @@ class Cluster(object):
     """Basic Class for all cluster type submission"""
     name = 'mother class'
 
-    def __init__(self):
+    def __init__(self, cluster_queue=None):
         """Init the cluster"""
         self.submitted = 0
         self.submitted_ids = []
         self.finish = 0
+        self.cluster_queue = cluster_queue
 
     def submit(self, prog, argument=[], cwd=None, stdout=None, stderr=None, log=None):
         """How to make one submission. Return status id on the cluster."""
@@ -105,7 +106,7 @@ class CondorCluster(Cluster):
                   Universe = vanilla
                   notification = Error
                   Initialdir = %(cwd)s
-                  condor_req = madgraph=?=True
+                  condor_req = %(cluster_queue)s=?=True
                   queue 1
                """
 
@@ -123,7 +124,8 @@ class CondorCluster(Cluster):
             argument = ''
 
         dico = {'prog': prog, 'cwd': cwd, 'stdout': stdout, 
-                'stderr': stderr,'log': log,'argument': argument}
+                'stderr': stderr,'log': log,'argument': argument,
+                'cluster_queue': self.cluster_queue}
 
         open('/tmp/submit_condor','w').write(text % dico)
         a = subprocess.Popen(['condor_submit','/tmp/submit_condor'], stdout=subprocess.PIPE)
@@ -196,10 +198,10 @@ class PBSCluster(Cluster):
         if argument:
             text += ' ' + ' '.join(argument)
 
-        a = subprocess.Popen(['qsub','-o',stdout,
-                                     '-N',me_dir, 
-                                     '-e',stderr,
-                                     '-q', 'madgraph',
+        a = subprocess.Popen(['qsub','-o', stdout,
+                                     '-N', me_dir, 
+                                     '-e', stderr,
+                                     '-q', self.cluster_queue,
                                      '-V'], stdout=subprocess.PIPE, 
                                      stderr=subprocess.STDOUT,
                                      stdin=subprocess.PIPE, cwd=cwd)
@@ -258,8 +260,8 @@ class SGECluster(PBSCluster):
     """Basic class for dealing with cluster submission"""
     
     name = 'sge'
-    idle_tqg = ['qw', 'w','s','S']
-    running_tqg = ['R', 'r','t','T']
+    idle_tqg = ['qw', 'hqw','hRqw']
+    running_tqg = ['r','t','Rr','Rt']
 
 
 
