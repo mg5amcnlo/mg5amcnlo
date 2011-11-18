@@ -2553,7 +2553,7 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
         
         # Modify Makefile for pythia-pgs on Mac 64 bit
         if args[0] == "pythia-pgs" and sys.maxsize > 2**32:
-            path = os.path.join(MG5DIR, 'pythia-pgs', 'src', 'make_opts ')
+            path = os.path.join(MG5DIR, 'pythia-pgs', 'src', 'make_opts')
             text = open(path).read()
             text = text.replace('MBITS=32','MBITS=64')
             open(path, 'w').writelines(text)
@@ -2568,7 +2568,7 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
             else:
                 raise self.InvalidCmd('Require g77 or Gfortran compiler')
             if compiler == 'gfortran' and args[0] == "pythia-pgs":
-                path = os.path.join(MG5DIR, 'pythia-pgs', 'src', 'make_opts ')
+                path = os.path.join(MG5DIR, 'pythia-pgs', 'src', 'make_opts')
                 text = open(path).read()
                 text = text.replace('FC=g77','FC=gfortran')
                 open(path, 'w').writelines(text)            
