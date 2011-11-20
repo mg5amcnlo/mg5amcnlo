@@ -1150,6 +1150,7 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
         # Load the configuration file
         self.set_configuration()
         self.timeout = 20
+        self.nb_refine=0
         if self.web:
             os.system('touch %s' % pjoin(self.me_dir,'Online'))
 
@@ -1420,7 +1421,7 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
             if '<br>' not  in status:
                 logger.info(status)
         else:
-            logger.info(' Idle: %s Running: %s Finish: %s' % status)
+            logger.info(' Idle: %s Running: %s Finish: %s' % status[:3])
         self.results.update(status, level, makehtml=makehtml)
         
     ############################################################################      
@@ -1571,11 +1572,12 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
             os.system("chmod +x %s/ajob*" % Pdir)
         
             misc.compile(['madevent'], cwd=Pdir)
-
-            for job in glob.glob(pjoin(Pdir,'ajob*')):
+            
+            alljobs = glob.glob(pjoin(Pdir,'ajob*'))
+            nb_jobs = len(alljobs)
+            for i, job in enumerate(alljobs):
                 job = os.path.basename(job)
-                os.system('touch %s/wait.%s' %(Pdir,job))
-                self.launch_job('./%s' % job, cwd=Pdir)
+                self.launch_job('./%s' % job, cwd=Pdir, nbjobs=nb_jobs, jobnumber=i, run_type='survey on %s' % subdir)
                 if os.path.exists(pjoin(self.me_dir,'error')):
                     self.monitor()
                     self.update_status('Error detected in survey', None)
@@ -1586,7 +1588,7 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
     ############################################################################      
     def do_refine(self, line):
         """Advanced commands: launch survey for the current process """
-
+        self.nb_refine += 1
         args = self.split_arg(line)
         # Check argument's validity
         self.check_refine(args)
@@ -1626,11 +1628,13 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
             if os.path.exists(pjoin(Pdir, 'ajob1')):
                 misc.compile(['madevent'], cwd=Pdir)
                 #
-                os.system("chmod +x %s/ajob*" % Pdir)            
-                for job in glob.glob(pjoin(Pdir,'ajob*')):
+                os.system("chmod +x %s/ajob*" % Pdir)
+                alljobs = glob.glob(pjoin(Pdir,'ajob*'))
+                nb_tot = len(alljobs)            
+                for i, job in enumerate(alljobs):
                     job = os.path.basename(job)
-                    os.system('touch %s/wait.%s' %(Pdir, job))
-                    self.launch_job('./%s' % job, cwd=Pdir)
+                    self.launch_job('./%s' % job, cwd=Pdir, jobnumber=i, 
+                                nbjobs=nb_tot, run_type='Refine number %s on %s' % (self.nb_refine, subdir))
         self.monitor()
         
         self.update_status("Combining runs", level='parton')
@@ -2269,7 +2273,8 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
         
         self.update_status('delphes done', level='delphes', makehtml=False)   
 
-    def launch_job(self,exe, cwd=None, stdout=None, argument = [], **opt):
+    def launch_job(self,exe, cwd=None, stdout=None, argument = [], jobnumber=0, 
+                   nbjobs=1, run_type='', **opt):
         """ """
         argument = [str(arg) for arg in argument]
         
@@ -2295,6 +2300,8 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
         
         
         if self.cluster_mode == 0:
+            self.update_status((nbjobs - jobnumber - 1, 1, 
+                                jobnumber, run_type), level=None)
             start = time.time()
             #os.system('cd %s; ./%s' % (cwd,exe))
             status = subprocess.call(['./'+exe] + argument, cwd=cwd, 
@@ -2795,8 +2802,8 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
         # Ask the user if he wants to edit any of the files
         #First create the asking text
         question = """Do you want to edit one cards (press enter to bypass editing)?
-1 / param   : param_card.dat (be carefull about parameter consistency, especially widths)
-2 / run     : run_card.dat\n"""
+  1 / param   : param_card.dat (be carefull about parameter consistency, especially widths)
+  2 / run     : run_card.dat\n"""
         possible_answer = ['0','done', 1, 'param', 2, 'run']
         if mode in ['pythia', 'pgs', 'delphes']:
             question += '  3 / pythia  : pythia_card.dat\n'

@@ -96,8 +96,8 @@ status_template = """
         </TR>
     </TR>
     <TR ALIGN=CENTER> 
-        <TD nowrap> %(run_name)s </TD>
-        <TD nowrap> <a href="./Cards/param_card.dat">param_card</a><BR>
+        <TD nowrap ROWSPAN=2> %(run_name)s </TD>
+        <TD nowrap ROWSPAN=2> <a href="./Cards/param_card.dat">param_card</a><BR>
                     <a href="./Cards/run_card.dat">run_card</a><BR>
                     %(plot_card)s
                     %(pythia_card)s
@@ -105,7 +105,7 @@ status_template = """
                     %(delphes_card)s
                     
         </TD>
-        <TD nowrap> <A HREF="./SubProcesses/results.html">%(cross).4g <font face=symbol>&#177</font> %(error).4g (%(unit)s)</A> </TD> 
+        <TD nowrap ROWSPAN=2> <A HREF="./SubProcesses/results.html">%(cross).4g <font face=symbol>&#177</font> %(error).4g (%(unit)s)</A> </TD> 
         %(status)s
  </TR></TABLE>
 """
@@ -248,10 +248,12 @@ class AllResults(dict):
         # 1) Create the text for the status directory        
         if self.status and self.current:
             if isinstance(self.status, str):
-                status = '<td colspan=4>%s</td>' %  self.status
+                status = '<td ROWSPAN=2 colspan=4>%s</td>' %  self.status
             else:
-                status ='<td> %s </td> <td> %s </td> <td> %s </td> <td> %s </td>' % \
-                (tuple(self.status)+ (sum(self.status),))
+                s = self.status
+                status ='''<td> %s </td> <td> %s </td> <td> %s </td> <td> %s </td>
+                </tr><tr><td colspan=4><center> %s </center></td>''' % (s[0],s[1], s[2], sum(s[:3]), s[3])
+                
             
             status_dict = {'status': status,
                             'cross': self.current['cross'],
