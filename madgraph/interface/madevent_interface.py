@@ -1291,7 +1291,7 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
                 if os.path.isdir(self.configuration[key]):
                     self.configuration[key] = os.path.realpath(self.configuration[key])
                     continue
-                else:
+                elif not os.path.isdir(self.configuration[key]):
                     self.configuration[key] = ''
             elif key.startswith('cluster'):
                 pass              

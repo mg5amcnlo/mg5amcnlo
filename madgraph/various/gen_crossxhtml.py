@@ -176,8 +176,8 @@ class AllResults(dict):
         if self.current:
             self.current.update_status(level)
         self.status = status
-        if self.status:
-            self.debug = None
+        if self.status and self.current:
+            self.current.debug = None
         if makehtml:
             self.output()
 
