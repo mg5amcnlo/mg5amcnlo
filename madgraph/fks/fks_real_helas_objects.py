@@ -246,6 +246,7 @@ class FKSHelasBornProcess(object): #test written
     -- color links
     -- is_nbody_only
     -- is_to_integrate
+    -- orders
     -- leg permutation<<REMOVED"""
     
     def __init__(self, fksbornproc=None, me_list = [], me_id_list =[], **opts):
@@ -259,7 +260,7 @@ class FKSHelasBornProcess(object): #test written
             self.ijglu = fksbornproc.ijglu
             self.is_nbody_only = fksbornproc.is_nbody_only
             self.is_to_integrate = fksbornproc.is_to_integrate
-
+            self.orders = fks_common.find_orders(fksbornproc.amplitude)
 
             self.matrix_element = helas_objects.HelasMatrixElement(
                                     fksbornproc.amplitude, **opts)
@@ -274,6 +275,20 @@ class FKSHelasBornProcess(object): #test written
             self.color_links = fks_common.insert_color_links(col_basis,
                                 col_basis.create_color_dict_list(fksbornproc.amplitude),
                                 fksbornproc.find_color_links())
+    def get_lh_pdg_string(self):
+        """Returns the pdgs of the legs in the form "i1 i2 -> f1 f2 ...", which may
+        be useful (eg. to be written in a B-LH order file"""
+
+        initial = ''
+        final = ''
+        for leg in self.matrix_element.get('processes')[0].get('legs'):
+            if leg.get('state'):
+                final += '%d ' % leg.get('id')
+            else:
+                initial += '%d ' % leg.get('id')
+        return initial + '-> ' + final
+
+
 
     
     def __eq__(self, other):

@@ -1231,3 +1231,64 @@ class TestFKSCommon(unittest.TestCase):
             self.assertEqual(string, dict['string'])
             self.assertEqual(replac, dict['replacements'])
             
+        
+    def test_find_orders(self):
+        """tests if the orders of a given amplitude are correctly returned"""
+
+        myleglist = MG.LegList()
+        # PROCESS: u u~ > g t t~ a 
+        mylegs = [{ \
+        'id': 2,\
+        'number': 1,\
+        'state': False,\
+     #   'from_group': True \
+    }, \
+    { \
+        'id': -2,\
+        'number': 2,\
+        'state': False,\
+        #'from_group': True\
+    },\
+    {\
+        'id': 21,\
+        'number': 3,\
+        'state': True,\
+      #  'from_group': True\
+    },\
+    {\
+        'id': 6,\
+        'number': 4,\
+        'state': True,\
+       # 'from_group': True\
+    },\
+    {\
+        'id': -6,\
+        'number': 5,\
+        'state': True,\
+       # 'from_group': True\
+    },\
+    {\
+        'id': 22,\
+        'number': 6,\
+        'state': True,\
+       # 'from_group': True\
+    }
+    ]
+
+        for i in mylegs:
+            myleglist.append(MG.Leg(i))   
+
+        amp = diagram_generation.Amplitude(\
+                        MG.Process({'legs' : myleglist,
+                       'orders':{'QCD':10, 'QED':1},
+                       'model': self.model,
+                       'id': 1,
+                       'required_s_channels':[],
+                       'forbidden_s_channels':[],
+                       'forbidden_particles':[],
+                       'is_decay_chain': False,
+                       'decay_chains': MG.ProcessList(),
+                       'overall_orders': {}}) )
+        self.assertEqual(fks_common.find_orders(amp), \
+                        {'QED':1, 'QCD':3, 'WEIGHTED':5})
+

@@ -371,6 +371,7 @@ class testFKSRealHelasObjects(unittest.TestCase):
         --color link
         --is_nbody_only
         --is_to_integrate
+        --orders
         """         
         model = self.mymodel
         born1 = fks.FKSBornProcess(self.myproc, 
@@ -403,5 +404,12 @@ class testFKSRealHelasObjects(unittest.TestCase):
         self.assertEqual(helas_born1.color_links, [])
         self.assertEqual(helas_born1.is_nbody_only, False)
         self.assertEqual(helas_born1.is_to_integrate, True)
+        self.assertEqual(helas_born1.orders, {'QCD':3, 'QED':0, 'WEIGHTED': 3})
         
-    
+    def test_get_lh_pdg_string(self):
+        """test that the stings "i1 12 -> f1 f2 ... " is correct"""
+        helasfks1 = fks_helas.FKSHelasProcessFromReals(self.fks1)
+        helasborn = helasfks1.born_processes[-1]
+        # should be u u~ > d d~ g g 
+        goal = '2 -2 -> 1 -1 21 '
+        self.assertEqual(helasborn.get_lh_pdg_string(),goal)

@@ -32,6 +32,20 @@ class FKSProcessError(Exception):
     """Exception for MadFKS"""
     pass
 
+
+def find_orders(amp): #test_written
+    """take an amplitude as input, and returns a dictionary with the
+    order of the couplings"""
+    assert isinstance(amp, diagram_generation.Amplitude)
+    orders = {}
+    for diag in amp.get('diagrams'):
+        for order, value in diag.get('orders').items():
+            try:
+                orders[order] = max(orders[order], value)
+            except KeyError:
+                orders[order] = value
+    return orders
+
 def find_splittings(leg, model, dict, pert='QCD'): #test written
     """find the possible splittings corresponding to leg"""
     if dict == {}:
@@ -478,5 +492,6 @@ class FKSLeg(MG.Leg):
 ##                    else:
 ##                        return self.get('number') < other.get('number')
                     return self.get('number') < other.get('number')
-        return True;
+        return True
          
+

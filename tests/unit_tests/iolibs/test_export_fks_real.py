@@ -373,6 +373,30 @@ C
         self.assertFileContains('test', goal)
 
 
+    def test_write_lh_order(self):
+        """tests the correct writing of the B-LH order file"""
+
+        goal = \
+"""OLE_order written by MadGraph 5
+
+MatrixElementSquareType CHsummed
+CorrectionType          QCD
+IRregularisation        CDR
+AlphasPower             2
+AlphaPower              0
+NJetSymmetrizeFinal     Yes
+
+# process
+2 -2 -> 2 -2 
+"""
+        process_exporter = export_fks_real.ProcessExporterFortranFKS_real()
+        process_exporter.write_lh_order(\
+            self.give_pos('test'),\
+            self.myfks_me.born_processes[-1])
+        self.assertFileContains('test', goal)
+
+
+
     def test_get_pdf_lines_mir_false(self):
         """tests the correct writing of the pdf lines for a non-mirror configuration,
         i.e. with beam indices 1,2 in the usual position"""

@@ -3412,7 +3412,7 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
                         (os.path.basename(self._model_v4_path), self._export_dir))
             self._curr_exporter.export_model_files(self._model_v4_path)
             self._curr_exporter.export_helas(os.path.join(self._mgme_dir,'HELAS'))
-        elif self._export_format in ['madevent', 'standalone', 'fks', 'fksreal']:
+        elif self._export_format in ['madevent', 'standalone', 'fks', 'fksreal', 'fksborn']:
 
             logger.info('Export UFO model to MG4 format')
             # wanted_lorentz are the lorentz structures which are

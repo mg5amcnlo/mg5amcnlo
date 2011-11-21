@@ -189,6 +189,11 @@ class ProcessExporterFortranFKS_real(export_v4.ProcessExporterFortran):
 
         #write the fks.inc file, which is the same for all the fks_dirs belonging
         #to the same fks_process
+
+        #write the B-LHAccord order file (to include in the nbodyonly dir)
+        if fksborn.is_nbody_only:
+            filename = 'OLE_order.lh'
+            self.write_lh_order(filename, fksborn)
         
         filename = 'fks.inc'
         self.write_fks_inc(writers.FortranWriter(filename),
@@ -429,6 +434,44 @@ class ProcessExporterFortranFKS_real(export_v4.ProcessExporterFortran):
             calls = 0
         return calls
     
+
+    #===============================================================================
+    # write_lh_order
+    #===============================================================================
+    def write_lh_order(self, filename, fksborn):
+        """Creates the OLE_order.lh file. This function should be edited according
+        to the OLP which is used. NOW FOR NJET"""
+        replace_dict = {}
+        orders = fksborn.orders 
+        replace_dict['mesq'] = 'CHsummed'
+        replace_dict['corr'] = 'QCD'
+        replace_dict['irreg'] = 'CDR'
+        replace_dict['aspow'] = orders['QCD']
+        replace_dict['aepow'] = orders['QED']
+        replace_dict['pdgs'] = fksborn.get_lh_pdg_string()
+        replace_dict['symfin'] = 'Yes'
+        content = \
+"OLE_order written by MadGraph 5\n\
+\n\
+MatrixElementSquareType %(mesq)s\n\
+CorrectionType          %(corr)s\n\
+IRregularisation        %(irreg)s\n\
+AlphasPower             %(aspow)d\n\
+AlphaPower              %(aepow)d\n\
+NJetSymmetrizeFinal     %(symfin)s\n\
+\n\
+# process\n\
+%(pdgs)s\n\
+" % replace_dict 
+        
+        file = open(filename, 'w')
+        file.write(content)
+        file.close
+        return
+
+        
+
+
     
     #===============================================================================
     # write_born_sf_fks
