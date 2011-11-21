@@ -110,6 +110,9 @@ class TestCmdShell1(unittest.TestCase):
         config = self.cmd.set_configuration(MG5DIR+'/input/mg5_configuration.txt')
         expected = {'web_browser': None, 
                     'text_editor': None, 
+                    'cluster_queue': 'madgraph',
+                    'nb_core': None,
+                    'run_mode': '0',
                     'pythia-pgs_path': './pythia-pgs', 
                     'td_path': './td', 
                     'delphes_path': './Delphes', 

@@ -296,16 +296,13 @@ class OLDMG5Comparator(unittest.TestCase):
     def test_mg5_minitest_mssm(self):
         """Test a minimal list of sm 2->2 processes, mainly to test the test"""
         # Create a list of processes to check automatically
-        my_proc_list = me_comparator.create_proc_list(\
-            ['u'],
-            initial=2, final=2)
         my_proc_list = ['g g > go go', 'e+ e-  > n1 n2']
         # Store list of non-zero processes and results in file
         #pickle_file = "mg4_sm_%sminitest.pkl" % self.suffix_name
         self.compare_processes(my_proc_list, model='mssm',
                              orders = {'QED':2, 'QCD':2},
                              filename = "mssm_mini.log",
-                             energy = 1000)
+                             energy = 2000)
 
     ############################################################################    
     #  EXTENSIVE TEST FOR THE SM
