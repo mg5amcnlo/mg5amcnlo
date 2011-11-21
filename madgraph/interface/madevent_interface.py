@@ -1422,7 +1422,7 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
             if hasattr(self, 'next_update') and time.time() < self.next_update:
                 return
             else:
-                self.next_update = time.time() + 30
+                self.next_update = time.time() + 3
         
 
         if isinstance(status, str):

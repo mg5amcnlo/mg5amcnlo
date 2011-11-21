@@ -918,7 +918,7 @@ class OneLinePathCompletion(SmartQuestion):
             self.stdout.write(line)
             self.stdout.flush()
         try:
-          return SmartQuestion.completenames(self, text) + Cmd.path_completion(text, only_dirs = False)
+          return SmartQuestion.completenames(self, text, line) + Cmd.path_completion(text, only_dirs = False)
         except Exception, error:
             print error
 
