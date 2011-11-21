@@ -336,7 +336,7 @@ class OneRunResults(dict):
         
         # Default value
         self['nb_event'] = None
-        self['nb_event_text'] = 'No event'
+        self['nb_event_text'] = 'No events yet'
         self['cross'] = 0
         self['cross_pythia'] = ''
         self['error'] = 0
