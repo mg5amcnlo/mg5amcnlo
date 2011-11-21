@@ -91,10 +91,6 @@ class CondorCluster(Cluster):
     
     name = 'condor'
 
-    def __init__(self):
-        """ """
-        self.submitted = 0
-
     def submit(self, prog, argument=[], cwd=None, stdout=None, stderr=None, log=None):
         """Submit the """
         
@@ -146,7 +142,7 @@ class CondorCluster(Cluster):
         
     def control(self, me_dir):
         """ control the status of a single job with it's cluster id """
-        cmd = "condor_q --constraint 'CMD>=\""+str(me_dir)+"\" -format \'%-2s \\n\' \'ifThenElse(JobStatus==0,\"U\",ifThenElse(JobStatus==1,\"I\",ifThenElse(JobStatus==2,\"R\",ifThenElse(JobStatus==3,\"X\",ifThenElse(JobStatus==4,\"C\",ifThenElse(JobStatus==5,\"H\",ifThenElse(JobStatus==6,\"E\",string(JobStatus))))))))\'"
+        cmd = "condor_q -constraint 'CMD>=\""+str(me_dir)+"\" -format \'%-2s \\n\' \'ifThenElse(JobStatus==0,\"U\",ifThenElse(JobStatus==1,\"I\",ifThenElse(JobStatus==2,\"R\",ifThenElse(JobStatus==3,\"X\",ifThenElse(JobStatus==4,\"C\",ifThenElse(JobStatus==5,\"H\",ifThenElse(JobStatus==6,\"E\",string(JobStatus))))))))\'"
         status = subprocess.Popen([cmd], shell=True, stdout=subprocess.PIPE)
 
         idle, run, fail = 0, 0, 0
@@ -168,9 +164,6 @@ class PBSCluster(Cluster):
     idle_tag = ['Q']
     running_tag = ['T','E','R']
 
-    def __init__(self):
-        """ """
-        self.submitted = 0
 
     def submit(self, prog, argument=[], cwd=None, stdout=None, stderr=None, log=None):
         """Submit the prog to the cluser"""
@@ -260,8 +253,8 @@ class SGECluster(PBSCluster):
     """Basic class for dealing with cluster submission"""
     
     name = 'sge'
-    idle_tqg = ['qw', 'hqw','hRqw']
-    running_tqg = ['r','t','Rr','Rt']
+    idle_tag = ['qw', 'hqw','hRqw','w']
+    running_tag = ['r','t','Rr','Rt']
 
 
 

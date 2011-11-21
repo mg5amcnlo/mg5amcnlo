@@ -3171,22 +3171,23 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
         """Make the html output, write proc_card_mg5.dat and create
         madevent.tar.gz for a MadEvent directory"""
         
-        # For v4 models, copy the model/HELAS information.
-        if self._model_v4_path:
-            logger.info('Copy %s model files to directory %s' % \
-                        (os.path.basename(self._model_v4_path), self._export_dir))
-            self._curr_exporter.export_model_files(self._model_v4_path)
-            self._curr_exporter.export_helas(pjoin(self._mgme_dir,'HELAS'))
-        elif self._export_format in ['madevent', 'standalone']:
-            logger.info('Export UFO model to MG4 format')
-            # wanted_lorentz are the lorentz structures which are
-            # actually used in the wavefunctions and amplitudes in
-            # these processes
-            wanted_lorentz = self._curr_matrix_elements.get_used_lorentz()
-            wanted_couplings = self._curr_matrix_elements.get_used_couplings()
-            self._curr_exporter.convert_model_to_mg4(self._curr_model,
-                                           wanted_lorentz,
-                                           wanted_couplings)
+        if self._export_format in ['madevent', 'standalone']:
+            # For v4 models, copy the model/HELAS information.
+            if self._model_v4_path:
+                logger.info('Copy %s model files to directory %s' % \
+                            (os.path.basename(self._model_v4_path), self._export_dir))
+                self._curr_exporter.export_model_files(self._model_v4_path)
+                self._curr_exporter.export_helas(pjoin(self._mgme_dir,'HELAS'))
+            else:
+                logger.info('Export UFO model to MG4 format')
+                # wanted_lorentz are the lorentz structures which are
+                # actually used in the wavefunctions and amplitudes in
+                # these processes
+                wanted_lorentz = self._curr_matrix_elements.get_used_lorentz()
+                wanted_couplings = self._curr_matrix_elements.get_used_couplings()
+                self._curr_exporter.convert_model_to_mg4(self._curr_model,
+                                               wanted_lorentz,
+                                               wanted_couplings)
         if self._export_format == 'standalone_cpp':
             logger.info('Export UFO model to C++ format')
             # wanted_lorentz are the lorentz structures which are

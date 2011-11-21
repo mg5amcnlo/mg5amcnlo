@@ -854,8 +854,13 @@ class SmartQuestion(cmd.Cmd):
         self.default_value = str(default)
         cmd.Cmd.__init__(self, *arg, **opt)
 
-    def completenames(self, text, *ignored):
-        signal.alarm(0) # avoid timer if any
+    def completenames(self, text, line, *ignored):
+        prev_timer = signal.alarm(0) # avoid timer if any
+        if prev_timer:
+            nb_back = len(line)
+            self.stdout.write('\b'*nb_back + '[timer stopped]\n')
+            self.stdout.write(line)
+            self.stdout.flush()
         try:
             return Cmd.list_completion(text, self.allow_arg)
         except Exception, error:
@@ -906,9 +911,14 @@ class OneLinePathCompletion(SmartQuestion):
 
 
     def completenames(self, text, line, begidx, endidx):
-        signal.alarm(0) # avoid timer if any
+        prev_timer = signal.alarm(0) # avoid timer if any
+        if prev_timer:
+            nb_back = len(line)
+            self.stdout.write('\b'*nb_back + '[timer stopped]\n')
+            self.stdout.write(line)
+            self.stdout.flush()
         try:
-          return SmartQuestion.completenames(self, text) + Cmd.path_completion(text, only_dirs = False)
+          return SmartQuestion.completenames(self, text, line) + Cmd.path_completion(text, only_dirs = False)
         except Exception, error:
             print error
 

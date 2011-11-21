@@ -182,7 +182,9 @@ class CmdExtended(cmd.Cmd):
         """action to perform to close nicely on a keyboard interupt"""
         try:
             if hasattr(self, 'results'):
-                self.results.update('Stop by the user', level=None, makehtml=False)
+                print 'pass here'
+                self.update_status('Stop by the user', level=None, makehtml=False, error=True)
+                self.add_error_log_in_html()
         except:
             pass
     
@@ -201,7 +203,7 @@ class CmdExtended(cmd.Cmd):
         if self.results.status.startswith('Error'):
             return stop
         if self.results.status == 'Stop by the user':
-            self.results.update('%s Stop by the user' % arg[0], level=None)
+            self.update_status('%s Stop by the user' % arg[0], level=None, error=True)
             return stop        
         elif not self.results.status:
             return stop
@@ -943,7 +945,7 @@ class CompleteForCmd(CheckValidForCmd):
 
         # Format
         if len(args) == 1:
-            return self.list_completion(text, self._set_options)
+            return self.list_completion(text, self._set_options + self.configuration.keys() )
 
         if len(args) == 2:
             if args[1] == 'stdout_level':
@@ -1150,6 +1152,7 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
         # Load the configuration file
         self.set_configuration()
         self.timeout = 20
+        self.nb_refine=0
         if self.web:
             os.system('touch %s' % pjoin(self.me_dir,'Online'))
 
@@ -1431,15 +1434,25 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
  
  
     ############################################################################
-    def update_status(self, status, level, makehtml=True):
+    def update_status(self, status, level, makehtml=True, force=True, error=False):
         """ update the index status """
+        
+
+        if makehtml and not force:
+            if hasattr(self, 'next_update') and time.time() < self.next_update:
+                return
+            else:
+                self.next_update = time.time() + 3
+        
 
         if isinstance(status, str):
             if '<br>' not  in status:
                 logger.info(status)
         else:
-            logger.info(' Idle: %s Running: %s Finish: %s' % status)
-        self.results.update(status, level, makehtml=makehtml)
+            logger.info(' Idle: %s Running: %s Finish: %s' % status[:3])
+        
+        self.last_update = time
+        self.results.update(status, level, makehtml=makehtml, error=error)
         
     ############################################################################      
     def do_generate_events(self, line):
@@ -1562,6 +1575,7 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
             misc.open_file(os.path.join(self.me_dir, 'crossx.html'))
             self.open_crossx = False
         logger.info('Working on SubProcesses')
+        self.total_jobs = 0
         for subdir in open(pjoin(self.me_dir, 'SubProcesses', 'subproc.mg')):
             subdir = subdir.strip()
             Pdir = pjoin(self.me_dir, 'SubProcesses',subdir)
@@ -1589,22 +1603,24 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
             os.system("chmod +x %s/ajob*" % Pdir)
         
             misc.compile(['madevent'], cwd=Pdir)
-
-            for job in glob.glob(pjoin(Pdir,'ajob*')):
+            
+            alljobs = glob.glob(pjoin(Pdir,'ajob*'))
+            self.total_jobs += len(alljobs)
+            for i, job in enumerate(alljobs):
                 job = os.path.basename(job)
-                os.system('touch %s/wait.%s' %(Pdir,job))
-                self.launch_job('./%s' % job, cwd=Pdir)
+                self.launch_job('./%s' % job, cwd=Pdir, remaining=(len(alljobs)-i-1), 
+                                                    run_type='survey on %s' % subdir)
                 if os.path.exists(pjoin(self.me_dir,'error')):
                     self.monitor()
                     self.update_status('Error detected in survey', None)
                     raise MadEventError, 'Error detected Stop running'
-        self.monitor()
+        self.monitor(run_type='All jobs submitted for survey')
         self.update_status('End survey', 'parton', makehtml=False)
 
     ############################################################################      
     def do_refine(self, line):
         """Advanced commands: launch survey for the current process """
-
+        self.nb_refine += 1
         args = self.split_arg(line)
         # Check argument's validity
         self.check_refine(args)
@@ -1622,7 +1638,8 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
             logger.info('Creating Jobs')
         self.update_status('Refine results to %s' % precision, level=None)
         logger.info("Using random number seed offset = %s" % self.random)
-
+        
+        self.total_jobs = 0
         for subdir in open(pjoin(self.me_dir, 'SubProcesses', 'subproc.mg')):
             subdir = subdir.strip()
             Pdir = pjoin(self.me_dir, 'SubProcesses',subdir)
@@ -1644,12 +1661,15 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
             if os.path.exists(pjoin(Pdir, 'ajob1')):
                 misc.compile(['madevent'], cwd=Pdir)
                 #
-                os.system("chmod +x %s/ajob*" % Pdir)            
-                for job in glob.glob(pjoin(Pdir,'ajob*')):
+                os.system("chmod +x %s/ajob*" % Pdir)
+                alljobs = glob.glob(pjoin(Pdir,'ajob*'))
+                nb_tot = len(alljobs)            
+                self.total_jobs += nb_tot
+                for i, job in enumerate(alljobs):
                     job = os.path.basename(job)
-                    os.system('touch %s/wait.%s' %(Pdir, job))
-                    self.launch_job('./%s' % job, cwd=Pdir)
-        self.monitor()
+                    self.launch_job('./%s' % job, cwd=Pdir, remaining=(nb_tot-i-1), 
+                             run_type='Refine number %s on %s' % (self.nb_refine, subdir))
+        self.monitor(run_type='All job submitted for refine number %s' % self.nb_refine)
         
         self.update_status("Combining runs", level='parton')
         try:
@@ -1674,7 +1694,6 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
         args = self.split_arg(line)
         # Check argument's validity
         self.check_combine_events(args)
-
 
         self.update_status('Combining Events', level='parton')
         try:
@@ -2287,14 +2306,14 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
         
         self.update_status('delphes done', level='delphes', makehtml=False)   
 
-    def launch_job(self,exe, cwd=None, stdout=None, argument = [], **opt):
+    def launch_job(self,exe, cwd=None, stdout=None, argument = [], remaining=0, 
+                    run_type='', **opt):
         """ """
         argument = [str(arg) for arg in argument]
-        
-        def launch_in_thread(exe, arguement, cwd, stdout, control_thread):
+
+        def launch_in_thread(exe, argument, cwd, stdout, control_thread):
             """ way to launch for multicore"""
-            
-            control_thread[0] += 1 # upate the number of running thread
+
             start = time.time()
             subprocess.call(['./'+exe] + argument, cwd=cwd, stdout=stdout,
                         stderr=subprocess.STDOUT, **opt)
@@ -2308,11 +2327,14 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
                     control_thread[0] -= 1
                     return 
                 time.sleep(1)
-            control_thread[1].release()
             control_thread[0] -= 1 # upate the number of running thread
+            control_thread[1].release()
+
         
         
         if self.cluster_mode == 0:
+            self.update_status((remaining, 1, 
+                                self.total_jobs - remaining -1, run_type), level=None, force=False)
             start = time.time()
             #os.system('cd %s; ./%s' % (cwd,exe))
             status = subprocess.call(['./'+exe] + argument, cwd=cwd, 
@@ -2334,11 +2356,17 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
                                                   #-> waiting mode
 
             if self.control_thread[2]:
+                self.update_status((remaining + 1, self.control_thread[0], 
+                                self.total_jobs - remaining - self.control_thread[0] - 1, run_type), 
+                                   level=None, force=False)
                 self.control_thread[1].acquire()
+                self.control_thread[0] += 1 # upate the number of running thread
                 thread.start_new_thread(launch_in_thread,(exe, argument, cwd, stdout, self.control_thread))
             elif self.control_thread[0] <  self.nb_core -1:
+                self.control_thread[0] += 1 # upate the number of running thread
                 thread.start_new_thread(launch_in_thread,(exe, argument, cwd, stdout, self.control_thread))
             elif self.control_thread[0] ==  self.nb_core -1:
+                self.control_thread[0] += 1 # upate the number of running thread
                 thread.start_new_thread(launch_in_thread,(exe, argument, cwd, stdout, self.control_thread))
                 self.control_thread[2] = True
                 self.control_thread[1].acquire() # Lock the next submission
@@ -2358,32 +2386,44 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
             return 'v4'
     
     ############################################################################
-    def monitor(self):
+    def monitor(self, run_type='monitor'):
         """ monitor the progress of running job """
         
         if self.cluster_mode == 1:
             def update_status(idle, run, finish):
-                self.update_status((idle, run, finish), level='parton')
+                self.update_status((idle, run, finish, run_type), level=None)
             self.cluster.wait(self.me_dir, update_status)            
-            #subprocess.call([pjoin(self.dirbin, 'monitor'), self.run_name], 
-            #                                                    cwd=self.me_dir)
+
         if self.cluster_mode == 2:
             # Wait that all thread finish
             if not self.control_thread[2]:
+#                time.sleep(1)
+                nb = self.control_thread[0]
                 while self.control_thread[0]:
                     time.sleep(5)
+                    if nb != self.control_thread[0]:
+                        self.update_status((0, self.control_thread[0], 
+                                           self.total_jobs - self.control_thread[0], run_type), 
+                                           level=None, force=False)
+                        nb = self.control_thread[0]
+                try:
+                    del self.next_update
+                except:
+                    pass
             else:    
                 for i in range(0,self.nb_core):
+                    self.update_status((0, self.control_thread[0], 
+                                           self.total_jobs - self.control_thread[0], run_type), 
+                                           level=None, force=False)
                     self.control_thread[1].acquire()
                 self.control_thread[2] = False
                 self.control_thread[1].release()
-            
-        
+                del self.next_update
+
         proc = subprocess.Popen([pjoin(self.dirbin, 'sumall')], 
                                           cwd=pjoin(self.me_dir,'SubProcesses'),
                                           stdout=subprocess.PIPE)
         
-        #tee = subprocess.Popen(['tee', '/tmp/tmp.log'], stdin=proc.stdout)
         (stdout, stderr) = proc.communicate()
         for line in stdout.split('\n'): 
             if line.startswith(' Results'):
@@ -2434,7 +2474,7 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
 
         # set environment variable for lhapdf.
         if self.run_card['pdlabel'] == "'lhapdf'":
-            os.environ['lhapdf'] = True
+            os.environ['lhapdf'] = 'True'
         elif 'lhapdf' in os.environ.keys():
             del os.environ['lhapdf']
         
@@ -2813,8 +2853,8 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
         # Ask the user if he wants to edit any of the files
         #First create the asking text
         question = """Do you want to edit one cards (press enter to bypass editing)?
-1 / param   : param_card.dat (be carefull about parameter consistency, especially widths)
-2 / run     : run_card.dat\n"""
+  1 / param   : param_card.dat (be carefull about parameter consistency, especially widths)
+  2 / run     : run_card.dat\n"""
         possible_answer = ['0','done', 1, 'param', 2, 'run']
         if mode in ['pythia', 'pgs', 'delphes']:
             question += '  3 / pythia  : pythia_card.dat\n'
