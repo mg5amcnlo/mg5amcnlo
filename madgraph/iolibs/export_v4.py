@@ -610,12 +610,6 @@ class ProcessExporterFortran(object):
                 pdf_lines = pdf_lines + "IPROC=IPROC+1 ! " + process_line
                 pdf_lines = pdf_lines + "\nPD(IPROC)=PD(IPROC-1) + 1d0\n"
         else:
-            # Set notation for the variables used for different particles
-            pdf_codes = {1: 'd', 2: 'u', 3: 's', 4: 'c', 5: 'b',
-                         21: 'g', 22: 'a'}
-            # Set conversion from PDG code to number used in PDF calls
-            pdgtopdf = {21: 0, 22: 7}
-
             # Pick out all initial state particles for the two beams
             initial_states = [sorted(list(set([p.get_initial_pdg(1) for \
                                                p in processes]))),
@@ -627,6 +621,9 @@ class ProcessExporterFortran(object):
                               sum(initial_states,[])])
             for key,val in pdf_codes.items():
                 pdf_codes[key] = val.replace('~','x').replace('+','p').replace('-','m')
+
+            # Set conversion from PDG code to number used in PDF calls
+            pdgtopdf = {21: 0, 22: 7}
 
             # Fill in missing entries of pdgtopdf
             for pdg in sum(initial_states,[]):

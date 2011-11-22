@@ -59,6 +59,8 @@ Update notes for MadGraph 5 (in reverse time order)
                        output
                        launch -i
                        calculate_decay_widths
+		  JA: Ensure that we get zero cross section if we have
+                      non-parton initial states with proton/antiproton beams
 
 1.3.30 (18/11/11) OM: Fix a bug for the instalation of pythia-pgs on a 64 bit
        		      UNIX machine.
