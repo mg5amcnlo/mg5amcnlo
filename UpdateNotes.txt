@@ -44,6 +44,21 @@ Update notes for MadGraph 5 (in reverse time order)
                       Requiring less disk access for the generation of the file.
                   OM: Modify error treatment, especially for Invalid commands
                       and Configuration problems.
+		  JA: Add new run mode, calculate_decay_widths, which calculates 
+                      decay widths for processes of type A > B C ... and inserts
+                      decay widths and branching ratios into the param_card.
+                      Example of use (after launch bin/mg5):
+                       import model sm-full
+                       generate t > b w+
+                       define all = p b b~ l+ l- ta+ ta- vl vl~
+                       add process w+ > all all
+                       add process z > all all
+                       define v = z w+ w-
+                       add process h > all all
+                       add process h > v v, v > all all
+                       output
+                       launch -i
+                       calculate_decay_widths
 
 1.3.30 (18/11/11) OM: Fix a bug for the instalation of pythia-pgs on a 64 bit
        		      UNIX machine.

@@ -303,6 +303,16 @@ class HelpToCmd(object):
         self.run_options_help([('-f', 'Use default for all questions.'),
                                ('--laststep=', 'argument might be parton/pythia/pgs/delphes and indicate the last level to be run.')])
 
+    def help_calculate_decay_widths(self):
+        logger.info("syntax: calculate_decay_widths [run_name] [options])")
+        logger.info("-- Calculate decay widths and enter widths and BRs in param_card")
+        logger.info("   for a series of processes of type A > B C ...")
+        logger.info("   Note that you want to do \"set group_subprocesses False\"")
+        logger.info("   before generating the processes.")
+        self.run_options_help([('-f', 'Use default for all questions.'),
+                               ('--accuracy=', 'accuracy (for each partial decay width).'\
+                                + ' Default is 0.01.')])
+
     def help_multi_run(self):
         logger.info("syntax: multi_run NB_RUN [run_name] [--run_options])")
         logger.info("-- Launch the full chain of script for the generation of events")
@@ -513,7 +523,7 @@ class CheckValidForCmd(object):
                         arg = ""
                 if arg != "": raise Exception
             except Exception:
-                self.help_generate_events()
+                self.help_survey()
                 raise self.InvalidCmd('invalid %s argument'% arg)
 
         if len(args) > 1:
@@ -554,6 +564,29 @@ class CheckValidForCmd(object):
             raise self.InvalidCmd('Too many argument for generate_events command: %s' % cmd)
                     
         return force, run
+
+    def check_calculate_decay_widths(self, args):
+        """check that the argument for calculate_decay_widths are valid"""
+        
+        if self.ninitial != 1:
+            raise self.InvalidCmd('Can only calculate decay widths for decay processes A > B C ...')
+        force = False
+        accuracy = 0.01
+        run = None
+        if '-f' in args:
+            force = True
+            args.remove('-f')
+        if args and args[-1].startswith('--accuracy='):
+            try:
+                accuracy = float(args[-1].split('=')[-1])
+            except:
+                self.InvalidCmd('Argument error in calculate_decay_widths command')
+            del args[-1]
+        if len(args) > 1:
+            self.help_calculate_decay_widths()
+            raise self.InvalidCmd('Too many argument for calculate_decay_widths command: %s' % cmd)
+                    
+        return force, accuracy
 
 
 
@@ -981,12 +1014,23 @@ class CompleteForCmd(CheckValidForCmd):
             import multiprocessing
             max = multiprocessing.cpu_count()
             return [str(i) for i in range(2,max+1)]
-        if line.endswith('run=') and not text:
+        if line.endswith('laststep=') and not text:
             return ['parton','pythia','pgs','delphes']
         elif '--laststep=' in line.split()[-1] and line and line[-1] != ' ':
             return self.list_completion(text,['parton','pythia','pgs','delphes'],line)
         
         opts = self._run_options + self._generate_options
+        return  self.list_completion(text, opts, line)
+
+    def complete_calculate_decay_widths(self, text, line, begidx, endidx):
+        """ Complete the calculate_decay_widths command"""
+        
+        if line.endswith('nb_core=') and not text:
+            import multiprocessing
+            max = multiprocessing.cpu_count()
+            return [str(i) for i in range(2,max+1)]
+        
+        opts = self._run_options + self._calculate_decay_options
         return  self.list_completion(text, opts, line)
 
     def complete_multi_run(self, text, line, begidx, endidx):
@@ -1087,6 +1131,7 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
     # Options and formats available
     _run_options = ['--cluster','--multicore','--nb_core=','--nb_core=2', '-c', '-m']
     _generate_options = ['-f', '--laststep=parton', '--laststep=pythia', '--laststep=pgs', '--laststep=delphes']
+    _calculate_decay_options = ['-f', '--accuracy=0.']
     _set_options = ['stdout_level','fortran_compiler']
     _plot_mode = ['all', 'parton','pythia','pgs','delphes','channel', 'banner']
     _clean_mode = _plot_mode
@@ -1105,8 +1150,11 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
     
     next_possibility = {
         'start': ['generate_events [OPTIONS]', 'multi_run [OPTIONS]',
-                      'help generate_events'],
+                  'calculate_decay_widths [OPTIONS]',
+                  'help generate_events'],
         'generate_events': ['generate_events [OPTIONS]', 'multi_run [OPTIONS]', 'pythia', 'pgs','delphes'],
+        'calculate_decay_widths': ['calculate_decay_widths [OPTIONS]',
+                                   'generate_events [OPTIONS]'],
         'multi_run': ['generate_events [OPTIONS]', 'multi_run [OPTIONS]'],
         'survey': ['refine'],
         'refine': ['combine_events'],
@@ -1149,6 +1197,12 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
       
         self.to_store = []
         self.run_name = None
+
+        # Get number of initial states
+        nexternal = open(pjoin(me_dir,'Source','nexternal.inc')).read()
+        found = re.search("PARAMETER\s*\(NINCOMING=(\d)\)", nexternal)
+        self.ninitial = int(found.group(1))
+        
         # Load the configuration file
         self.set_configuration()
         self.timeout = 20
@@ -1504,6 +1558,44 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
         
             self.store_result()
     
+    ############################################################################      
+    def do_calculate_decay_widths(self, line):
+        """ launch decay width calculation and automatic inclusion of
+        calculated widths and BRs in the param_card."""
+        
+        args = self.split_arg(line)
+        # Check argument's validity
+        force, accuracy = self.check_calculate_decay_widths(args)
+        self.ask_run_configuration('parton', force)
+        if not args:
+            # No run name assigned -> assigned one automaticaly 
+            self.set_run_name(self.find_available_run_name(self.me_dir))
+        else:
+            self.set_run_name(args[0], True)
+            args.pop(0)
+            
+        # Running gridpack warmup
+        opts=[('accuracy', accuracy), # default 0.01
+              ('points', 1000),
+              ('iterations',9)]
+
+        logger.info('Calculating decay widths with run name %s' % self.run_name)
+        self.exec_cmd('survey  %s %s' % \
+                      (self.run_name,
+                       " ".join(['--' + opt + '=' + str(val) for (opt,val) \
+                                 in opts])),
+                      postcmd=False)
+        self.exec_cmd('combine_events', postcmd=False)
+        self.exec_cmd('store_events', postcmd=False)
+        # Combine decay widths into new file
+        proc = subprocess.Popen(['python',
+                                 pjoin(self.dirbin, 'collect_decay_widths.py'),
+                                 self.run_name], 
+                                cwd=self.me_dir,
+                                stdout=subprocess.PIPE)
+        
+        (stdout, stderr) = proc.communicate()
+    
     ############################################################################
     def do_multi_run(self, line):
         
@@ -1735,7 +1827,7 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
         
     ############################################################################ 
     def do_store_events(self, line):
-        """Advanced commands: Launch combine events"""
+        """Advanced commands: Launch store events"""
 
         args = self.split_arg(line)
         # Check argument's validity

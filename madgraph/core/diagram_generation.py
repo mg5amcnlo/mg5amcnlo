@@ -338,6 +338,10 @@ class Amplitude(base_objects.PhysicsObject):
         """Returns a nicely formatted string of the amplitude process."""
         return self.get('process').nice_string(indent)
 
+    def get_ninitial(self):
+        """Returns the number of initial state particles in the process."""
+        return self.get('process').get_ninitial()
+
     def generate_diagrams(self):
         """Generate diagrams. Algorithm:
 
@@ -1063,6 +1067,10 @@ class DecayChainAmplitude(Amplitude):
             mystr = mystr + dec.nice_string_processes(indent + 2) + "\n"
 
         return  mystr[:-1]
+
+    def get_ninitial(self):
+        """Returns the number of initial state particles in the process."""
+        return self.get('amplitudes')[0].get('process').get_ninitial()
 
     def get_decay_ids(self):
         """Returns a set of all particle ids for which a decay is defined"""

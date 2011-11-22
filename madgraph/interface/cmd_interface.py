@@ -1601,7 +1601,12 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
             # Check that we have something    
             if not myprocdef:
                 raise self.InvalidCmd("Empty or wrong format process, please try again.")
-                
+            # Check that we have the same number of initial states as
+            # existing processes
+            if self._curr_amps and self._curr_amps[0].get_ninitial() != \
+               myprocdef.get_ninitial():
+                raise self.InvalidCmd("Can not mix processes with different number of initial states.")               
+            
             cpu_time1 = time.time()
 
             # Generate processes

@@ -378,6 +378,11 @@ class OneRunResults(dict):
                                       exists(pjoin(path,"%s_plots.html" % run)):
                 self.parton.append('plot')
 
+            if 'param_card' not in self.parton and \
+                                      exists(pjoin(path, os.path.pardir,
+                                                   "%s_param_card.dat" % run)):
+                self.parton.append('param_card')
+                
         if level in ['pythia', 'all']:
             
             if 'plot' not in self.pythia and \
@@ -520,6 +525,8 @@ class OneRunResults(dict):
                 out += ' <a href="./Events/%(run_name)s_unweighted_events.root">rootfile</a>'
             if 'plot' in self.parton:
                 out += ' <a href="./Events/%(run_name)s_plots.html">plots</a>'
+            if 'param_card' in self.parton:
+                out += ' <a href="./%(run_name)s_param_card.dat">param_card</a>'
             out += '</td></tr>'
         if self.pythia:
             out += '<tr><td> Pythia Events : </td><td>'
