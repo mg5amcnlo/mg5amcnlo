@@ -377,7 +377,7 @@ C
         """tests the correct writing of the B-LH order file"""
 
         goal = \
-"""OLE_order written by MadGraph 5
+"""#OLE_order written by MadGraph 5
 
 MatrixElementSquareType CHsummed
 CorrectionType          QCD

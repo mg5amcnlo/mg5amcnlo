@@ -451,7 +451,7 @@ class ProcessExporterFortranFKS_real(export_v4.ProcessExporterFortran):
         replace_dict['pdgs'] = fksborn.get_lh_pdg_string()
         replace_dict['symfin'] = 'Yes'
         content = \
-"OLE_order written by MadGraph 5\n\
+"#OLE_order written by MadGraph 5\n\
 \n\
 MatrixElementSquareType %(mesq)s\n\
 CorrectionType          %(corr)s\n\
