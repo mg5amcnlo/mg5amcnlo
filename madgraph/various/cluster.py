@@ -249,13 +249,94 @@ class PBSCluster(Cluster):
         return idle, run, self.submitted - (idle+run+fail), fail
 
 
-class SGECluster(PBSCluster):
-    """Basic class for dealing with cluster submission"""
-    
-    name = 'sge'
-    idle_tag = ['qw', 'hqw','hRqw','w']
-    running_tag = ['r','t','Rr','Rt']
+class SGECluster(Cluster):
+   """Basic class for dealing with cluster submission"""
+   # Class written by Arian Abrahantes.
 
+   name = 'sge'
+   idle_tag = ['qw', 'hqw','hRqw','w']
+   running_tag = ['r','t','Rr','Rt']
+
+   def submit(self, prog, argument=[], cwd=None, stdout=None, stderr=None, log=None):
+       """Submit the prog to the cluser"""
+
+       me_dir = os.path.realpath(os.path.join(cwd,prog)).rsplit('/SubProcesses',1)[0]
+       me_dir = hashlib.md5(me_dir).hexdigest()[-10:]
+       if not me_dir[0].isalpha():
+           me_dir = 'a' + me_dir[1:]
+
+       text = ""
+       if cwd is None:
+           cwd = os.getcwd()
+       else: 
+           text = " cd %s;" % cwd
+       if stdout is None:
+           stdout = '/dev/null'
+       if stderr is None:
+           stderr = '/dev/null'
+       elif stderr == -2: # -2 is subprocess.STDOUT
+           stderr = stdout
+       if log is None:
+           log = '/dev/null'
+
+       text += prog
+       if argument:
+           text += ' ' + ' '.join(argument)
+
+       a = subprocess.Popen(['qsub','-o', stdout,
+                                    '-N', me_dir, 
+                                    '-e', stderr,
+                                    '-q', self.cluster_queue,
+                                    '-V'], stdout=subprocess.PIPE, 
+                                    stderr=subprocess.STDOUT,
+                                    stdin=subprocess.PIPE, cwd=cwd)
+
+       output = a.communicate(text)[0]
+       id = output.split(' ')[2]
+       self.submitted += 1
+
+       return id
+
+   def control_one_job(self, id):
+       """ control the status of a single job with it's cluster id """
+       cmd = 'qstat '+str(id)
+       status = subprocess.Popen([cmd], shell=True, stdout=subprocess.PIPE)
+       for line in status.stdout:
+           line = line.strip()
+           if 'Unknown' in line:
+               return 'F'
+           elif line.startswith(str(id)):
+               status = line.split()[4]
+       if status in self.idle_tag:
+           return 'I' 
+       elif status in self.running_tag:                
+           return 'R' 
+       return 'F'
+
+   def control(self, me_dir):
+       """ control the status of a single job with it's cluster id """
+       cmd = "qstat "
+       status = subprocess.Popen([cmd], shell=True, stdout=subprocess.PIPE)
+
+       if me_dir.endswith('/'):
+          me_dir = me_dir[:-1]    
+       me_dir = hashlib.md5(me_dir).hexdigest()[-10:]
+       if not me_dir[0].isalpha():
+                 me_dir = 'a' + me_dir[1:]
+
+       idle, run, fail = 0, 0, 0
+       for line in status.stdout:
+           if me_dir in line:
+               status = line.split()[4]
+               if status in self.idle_tag:
+                   idle += 1
+               elif status in self.running_tag:
+                   run += 1
+               else:
+                   print line
+                   fail += 1
+
+       return idle, run, self.submitted - (idle+run+fail), fail
 
 
 from_name = {'condor':CondorCluster, 'pbs': PBSCluster, 'sge': SGECluster}

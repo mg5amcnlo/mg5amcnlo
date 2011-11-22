@@ -211,7 +211,8 @@ class CmdExtended(cmd.Cmd):
             return stop
         
         try:
-            self.update_status('Command \'%s\' done.<br> Waiting for instruction.' % arg[0], level=None)
+            self.update_status('Command \'%s\' done.<br> Waiting for instruction.' % arg[0], 
+                               level=None, error=True)
         except:
             pass
         
@@ -240,7 +241,7 @@ class CmdExtended(cmd.Cmd):
     def nice_config_error(self, error, line):
         """If a ME run is currently running add a link in the html output"""
 
-        self.add_error_log_in_html()            
+        self.add_error_log_in_html()
         cmd.Cmd.nice_config_error(self, error, line)
 
     def nice_error_handling(self, error, line):
@@ -1544,7 +1545,15 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
         
             self.exec_cmd('survey  %s %s' % (self.run_name,' '.join(args)),
                           postcmd=False)
-
+            if not float(self.results.current['cross']):
+                # Zero cross-section. Try to guess why
+                raise MadGraph5Error('''Survey return zero cross section. 
+   Typical reasons are the following:
+   1) A massive s-channel particle has a width set to zero.
+   2) The pdf are zero for at least one of the initial state particles.
+   3) The cuts are too strong.
+   Please check/correct your param_card and your run_card.''')
+            
             nb_event = self.run_card['nevents']
             self.exec_cmd('refine %s' % nb_event, postcmd=False)
             self.exec_cmd('refine %s' % nb_event, postcmd=False)
@@ -1655,6 +1664,9 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
         self.check_survey(args)
         # initialize / remove lhapdf mode
 
+        if os.path.exists(pjoin(self.me_dir,'error')):
+            os.remove(pjoin(self.me_dir,'error'))
+            
         self.configure_directory()
         self.update_status('Running Survey', level=None)
         if self.cluster_mode:
@@ -1704,8 +1716,8 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
                                                     run_type='survey on %s' % subdir)
                 if os.path.exists(pjoin(self.me_dir,'error')):
                     self.monitor()
-                    self.update_status('Error detected in survey', None)
-                    raise MadEventError, 'Error detected Stop running'
+                    raise MadEventError, 'Error detected Stop running: %s' % \
+                                         open(pjoin(self.me_dir,'error')).read()
         self.monitor(run_type='All jobs submitted for survey')
         self.update_status('End survey', 'parton', makehtml=False)
 

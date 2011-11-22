@@ -177,6 +177,8 @@ class AllResults(dict):
             self.current.update_status(level)
         self.status = status
         if self.current and self.current.debug  and self.status and not error:
+            print 'removing bug status'
+            print 'current status', status
             self.current.debug = None
 
         if makehtml:
