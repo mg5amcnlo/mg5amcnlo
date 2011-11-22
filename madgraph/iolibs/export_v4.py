@@ -597,7 +597,10 @@ class ProcessExporterFortran(object):
         """Generate the PDF lines for the auto_dsig.f file"""
 
         processes = matrix_element.get('processes')
+        model = processes[0].get('model')
 
+        pdf_definition_lines = ""
+        pdf_data_lines = ""
         pdf_lines = ""
 
         if ninitial == 1:
@@ -612,12 +615,6 @@ class ProcessExporterFortran(object):
                          21: 'g', 22: 'a'}
             # Set conversion from PDG code to number used in PDF calls
             pdgtopdf = {21: 0, 22: 7}
-            # Fill in missing entries
-            for key in pdf_codes.keys():
-                if key < 21:
-                    pdf_codes[-key] = pdf_codes[key] + 'b'
-                    pdgtopdf[key] = key
-                    pdgtopdf[-key] = -key
 
             # Pick out all initial state particles for the two beams
             initial_states = [sorted(list(set([p.get_initial_pdg(1) for \
@@ -625,7 +622,37 @@ class ProcessExporterFortran(object):
                               sorted(list(set([p.get_initial_pdg(2) for \
                                                p in processes])))]
 
-            # Get PDF values for the different initial states
+            # Prepare all variable names
+            pdf_codes = dict([(p, model.get_particle(p).get_name()) for p in \
+                              sum(initial_states,[])])
+            for key,val in pdf_codes.items():
+                pdf_codes[key] = val.replace('~','x').replace('+','p').replace('-','m')
+
+            # Fill in missing entries of pdgtopdf
+            for pdg in sum(initial_states,[]):
+                if not pdg in pdgtopdf and not pdg in pdgtopdf.values():
+                    pdgtopdf[pdg] = pdg
+                elif pdg not in pdgtopdf and pdg in pdgtopdf.values():
+                    # If any particle has pdg code 7, we need to use something else
+                    pdgtopdf[pdg] = 6000000 + pdg
+                    
+            # Get PDF variable declarations for all initial states
+            for i in [0,1]:
+                pdf_definition_lines += "DOUBLE PRECISION " + \
+                                       ",".join(["%s%d" % (pdf_codes[pdg],i+1) \
+                                                 for pdg in \
+                                                 initial_states[i]]) + \
+                                                 "\n"
+
+            # Get PDF data lines for all initial states
+            for i in [0,1]:
+                pdf_data_lines += "DATA " + \
+                                       ",".join(["%s%d" % (pdf_codes[pdg],i+1) \
+                                                 for pdg in initial_states[i]]) + \
+                                                 "/%d*1D0/" % len(initial_states[i]) + \
+                                                 "\n"
+
+            # Get PDF lines for all different initial states
             for i, init_states in enumerate(initial_states):
                 if subproc_group:
                     pdf_lines = pdf_lines + \
@@ -670,8 +697,8 @@ class ProcessExporterFortran(object):
                 # Remove last "*" from pdf_lines
                 pdf_lines = pdf_lines[:-1] + "\n"
 
-        # Remove last line break from pdf_lines
-        return pdf_lines[:-1]
+        # Remove last line break from the return variables
+        return pdf_definition_lines[:-1], pdf_data_lines[:-1], pdf_lines[:-1]
 
 
     #===========================================================================
@@ -1560,7 +1587,10 @@ class ProcessExporterFortranME(ProcessExporterFortran):
         replace_dict['dsig_line'] = dsig_line
 
         # Extract pdf lines
-        pdf_lines = self.get_pdf_lines(matrix_element, ninitial, proc_id != "")
+        pdf_vars, pdf_data, pdf_lines = \
+                  self.get_pdf_lines(matrix_element, ninitial, proc_id != "")
+        replace_dict['pdf_vars'] = pdf_vars
+        replace_dict['pdf_data'] = pdf_data
         replace_dict['pdf_lines'] = pdf_lines
 
         # Lines that differ between subprocess group and regular
