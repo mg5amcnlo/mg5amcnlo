@@ -3022,10 +3022,13 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
                         uid += 1 # update the identification number
                         for me in group.get('matrix_elements'):
                             me.get('processes')[0].set('uid', uid)
-                else:
+                else: # Not grouped subprocesses
+                    combine_matrix_elements = True
+                    if self._curr_amps[0].get_ninitial() == 1:
+                        combine_matrix_elements = False
                     self._curr_matrix_elements = \
-                                 helas_objects.HelasMultiProcess(\
-                                               self._curr_amps)
+                        helas_objects.HelasMultiProcess(self._curr_amps,
+                                                        combine_matrix_elements)
                     ndiags = sum([len(me.get('diagrams')) for \
                                   me in self._curr_matrix_elements.\
                                   get_matrix_elements()])

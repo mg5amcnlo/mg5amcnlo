@@ -867,6 +867,34 @@ P1_qq_wp_wp_lvl
                                                     'P2_qq_wpg_wp_lvl',
                                                     'madevent')))
         
+    def test_ungroup_decay(self):
+        """Test group_subprocesses=False for decay process"""
+
+        if os.path.isdir(self.out_dir):
+            shutil.rmdir(self.out_dir)
+
+        self.do('import model sm')
+        self.do('set group_subprocesses False')
+        self.do('generate w+ > l+ vl')
+        self.do('add process w+ > j j')
+        self.do('output %s ' % self.out_dir)
+        # Check that all subprocesses have separate directories
+        directories = ['P0_wp_epve','P0_wp_mupvm','P0_wp_udx','P0_wp_csx']
+        for d in directories:
+            self.assertTrue(os.path.isdir(os.path.join(self.out_dir,
+                                                       'Subprocesses',
+                                                       d)))
+        self.do('set group_subprocesses True')
+        self.do('generate w+ > l+ vl')
+        self.do('add process w+ > j j')
+        self.do('output %s -f' % self.out_dir)
+        # Check that all subprocesses are combined
+        directories = ['P0_wp_lvl','P0_wp_qq']
+        for d in directories:
+            self.assertTrue(os.path.isdir(os.path.join(self.out_dir,
+                                                       'Subprocesses',
+                                                       d)))
+        
     def test_madevent_triplet_diquarks(self):
         """Test MadEvent output of triplet diquarks"""
 
