@@ -23,6 +23,7 @@ import logging
 import os
 import shutil
 import me_comparator
+import madevent_comparator
 import unittest
 import subprocess
 
@@ -36,8 +37,8 @@ _pickle_path = pjoin(_file_path, 'input_files')
 class OLDMG5Comparator(unittest.TestCase):
     """A class to compare the value of a old MG5 version and the current one"""
     
-    old_mg5 = None
-    reference_number = 146 #149 corresponds to 1.3.3 
+    old_mg5 = None # link to the previous version of MG5 (prevent multiple build)
+    reference_number = 302 #146 #146 corresponds to 1.3.3 
     nb_test = 0
     
     
@@ -46,7 +47,7 @@ class OLDMG5Comparator(unittest.TestCase):
         """build the directory for mg5 run in the old template"""
         if cls.old_mg5:
             return cls.old_mg5
-        
+        print 'create new parralel test'
         init_dir = os.getcwd()
         os.chdir(MG5DIR)    
         # 1. bzr branch the present directory to a new directory
@@ -91,11 +92,11 @@ class OLDMG5Comparator(unittest.TestCase):
             current_mg5.setup(MG5DIR,MG5DIR)
             current_mg5.store_proc_card = True
         
-        self.nb_test +=1      
-        while os.path.exists(pjoin(MG5DIR,'models','paralel_test_model_%s' % self.nb_test )):
-            self.nb_test += 1
+        if os.path.exists(pjoin(MG5DIR,'models','paralel_test_model_%s' % model)):
+            shutil.rmtree(pjoin(MG5DIR,'models','paralel_test_model_%s' % model))
         os.system('cp -rf %s %s' % (pjoin(mg5_path,'models',model) ,
-                                    pjoin(MG5DIR,'models','paralel_test_model_%s' % self.nb_test)))
+                                    pjoin(MG5DIR,'models','paralel_test_model_%s' % model)))
+
         
         # Create and setup a comparator
         my_comp = me_comparator.MEComparator()
@@ -103,7 +104,7 @@ class OLDMG5Comparator(unittest.TestCase):
 
         # Run the actual comparison
         my_comp.run_comparison(my_proc_list,
-                               ['paralel_test_model_%s' %self.nb_test, model], orders, energy)
+                               ['paralel_test_model_%s' % model, model], orders, energy)
 
         # Print the output
         if filename:
@@ -125,6 +126,91 @@ class OLDMG5Comparator(unittest.TestCase):
         # Do some cleanup
         my_comp.cleanup()
        
+    def compare_cross_section(self, my_proc_list = [], orders = {}, model = 'sm',
+                        filename = "", print_result = False,
+                        tolerance = 1e-02):
+        """ """
+        mg5_path = self.build_old_mg5()
+        
+        if 'v4' in model:
+            raise Exception, 'Not implemented'
+            #old_mg5 = me_comparator.MG5OldRunner()
+            #old_mg5.setup(mg5_path)
+            #current_mg5 = me_comparator.MG5Runner()
+            #current_mg5.setup(MG5DIR, MG5DIR)
+            #current_mg5.store_proc_card = True
+        else:
+            old_mg5 = madevent_comparator.MG5OldRunner()
+            old_mg5.setup(mg5_path)
+            current_mg5 = madevent_comparator.MG5Runner()
+            current_mg5.setup(MG5DIR)
+            current_mg5.store_proc_card = True
+        
+        self.nb_test +=1      
+        if os.path.exists(pjoin(MG5DIR,'models','paralel_test_model_%s' % model)):
+            shutil.rmtree(pjoin(MG5DIR,'models','paralel_test_model_%s' % model))
+        os.system('cp -rf %s %s' % (pjoin(mg5_path,'models',model) ,
+                                    pjoin(MG5DIR,'models','paralel_test_model_%s' % model)))
+        
+        # Create and setup a comparator
+        my_comp = madevent_comparator.MadEventComparator()
+        my_comp.set_me_runners(current_mg5, old_mg5)
+
+        # Run the actual comparison
+        my_comp.run_comparison(my_proc_list,
+                               ['paralel_test_model_%s' % model, model], orders)
+
+        # Print the output
+        if filename:
+            my_comp.output_result(filename=filename)
+        
+                # Store output to a pickle file in the input_files directory
+        if print_result:
+            print my_comp.results[0]
+
+        # Assert that all process comparisons passed the tolerance cut
+        my_comp.assert_processes(self, tolerance)
+            
+        # Do some cleanup
+        my_comp.cleanup()
+        return my_comp.results
+       
+    def compare_cross_section_to_values( self, values, my_proc_list = [], 
+                        orders = {}, model = 'sm',
+                        filename = "", print_result = False,
+                        tolerance = 1e-02):   
+                
+        if 'v4' in model:
+            raise Exception, 'Not implemented'
+            #old_mg5 = me_comparator.MG5OldRunner()
+            #old_mg5.setup(mg5_path)
+            #current_mg5 = me_comparator.MG5Runner()
+            #current_mg5.setup(MG5DIR, MG5DIR)
+            #current_mg5.store_proc_card = True
+        else:
+            current_mg5 = madevent_comparator.MG5Runner()
+            current_mg5.setup(MG5DIR)
+            current_mg5.store_proc_card = True
+        
+
+        # Create and setup a comparator
+        my_comp = madevent_comparator.MadEventComparator()
+        my_comp.set_me_runners(current_mg5)
+
+        # Run the actual comparison
+        my_comp.run_comparison(my_proc_list,
+                               [model], orders)
+
+        # add the default value to the comparison
+        my_comp.results.append(values)
+        my_comp.me_runners =(my_comp.me_runners[0], madevent_comparator.FakeRunner())
+        
+        # Assert that all process comparisons passed the tolerance cut
+        my_comp.assert_processes(self, tolerance)
+            
+        # Do some cleanup
+        my_comp.cleanup()
+    
     ############################################################################    
     #  ROUTINE FOR CREATING THE SHORT TEST (USE by the release script)
     ############################################################################    
@@ -134,12 +220,12 @@ class OLDMG5Comparator(unittest.TestCase):
            in the model. In consequence, you need to change the old MG5 comparison
            point. (Since the default use another model)."""
         
-        return # By default no need this
+        #return # By default no need this
         
         self.create_short_paralel_sm()
         self.create_short_paralel_mssm()
         self.create_short_paralel_heft()
-        
+        #self.create_short_paralel_cross_sm()
         
 
     def create_short_paralel_sm(self):
@@ -197,6 +283,8 @@ class OLDMG5Comparator(unittest.TestCase):
                              orders = {'QED':99, 'QCD':99},
                              filename = "short_heft.log",
                              pickle_file = pickle_file)
+
+
 
     ############################################################################    
     #  ROUTINE FOR THE SHORT TEST (USE by the release script)
@@ -275,6 +363,57 @@ class OLDMG5Comparator(unittest.TestCase):
 
             # Do some cleanup
             my_comp.cleanup()   
+    
+    ############################################################################
+    # Short test for the evaluation of the cross-section
+    ############################################################################
+    def test_short_cross_sm1(self):
+        """Test a short list of sm processes"""
+        # Create a list of processes to check automatically                                                                                                                             
+        my_proc_list = ['p p > t t~']
+        values = {'number_of_P0': '2', 
+                  'cross_P0_qq_ttx': '0.74191E+02', 
+                  'cross_P0_gg_ttx': '0.48006E+03'}
+
+        # Store list of non-zero processes and results in file                                                                                                                          
+        self.compare_cross_section_to_values(values, my_proc_list,
+                             orders = {'QED':99, 'QCD':99},
+                             filename = "short_cs_sm1.log")
+ 
+    def test_short_cross_sm2(self):
+        """Test a short list of sm processes""" 
+        my_proc_list = ['u j > W+ g', 'g g > W+ j j']
+
+
+        values = {'number_of_P0': '1', 
+         'number_of_P1': '1', 
+         'cross_P0_qq_wpg': '0.27889E+04', 
+         'cross_P1_gg_wpqq': '0.48043E+03'}      
+        self.compare_cross_section_to_values(values, my_proc_list,
+                             orders = {'QED':99, 'QCD':99},
+                             filename = "short_cs_sm2.log")
+
+    def test_short_cross_sm3(self):
+        """Test a short list of sm processes""" 
+        my_proc_list = ['g g > t t~, (t > b W+, W+ > e+ ve)']
+
+        values =  {'number_of_P0': '1', 
+                   'cross_P0_gg_ttx_t_bwp_wp_lvl': '0.45836E+02'} 
+                  
+        self.compare_cross_section_to_values(values, my_proc_list,
+                             orders = {'QED':99, 'QCD':99},
+                             filename = "short_cs_sm3.log")
+
+    def test_short_cross_mssm1(self):
+        """Test a short list of sm processes""" 
+        my_proc_list = ['g g > go go']
+
+        values = {'number_of_P0': '1', 'cross_P0_gg_gogo': '0.43433E+01'}
+        
+        self.compare_cross_section_to_values(values, my_proc_list,
+                             model='mssm',
+                             orders = {'QED':99, 'QCD':99},
+                             filename = "short_cs_sm3.log")        
         
     ############################################################################    
     #  ROUTINE FOR CHECKING THE PARRALEL TEST
@@ -531,6 +670,23 @@ class OLDMG5Comparator(unittest.TestCase):
                              model = "heft",
                              energy = 500,
                              filename = "heft_23.log")
+
+    ############################################################################
+    # Short test for the evaluation of the cross-section
+    ############################################################################
+    def test_paralel_cross_sm(self):
+        """Test a short list of sm processes"""
+        # Create a list of processes to check automatically                                                                                                                             
+        proc_lists = [['p p > t t~'], ['g g > W+ j', 'g g > W+ j j']]
+
+        # Store list of non-zero processes and results in file                                                                                                                          
+        pickle_file = os.path.join(_pickle_path, "mg5_short_parraleltest_cross_sm.pkl")
+        for my_proc_list in proc_lists:
+            print '.'
+            self.compare_cross_section(my_proc_list,
+                             orders = {'QED':99, 'QCD':99},
+                             filename = "short_cs_sm.log")
+
 
 
 

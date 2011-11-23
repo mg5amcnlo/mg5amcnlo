@@ -122,9 +122,9 @@ class MG4Runner(MERunner):
         if not temp_dir:
             i=0
             while os.path.exists(os.path.join(mg4_path, 
-                                              "test_%s_%s" % (self.type, i))):
+                                              "ptest_%s_%s" % (self.type, i))):
                 i += 1
-            temp_dir = "test_%s_%s" % (self.type, i)         
+            temp_dir = "ptest_%s_%s" % (self.type, i)         
 
         if os.path.exists(os.path.join(mg4_path, temp_dir)):
             raise IOError, "Path %s for test already exist" % \
@@ -336,9 +336,9 @@ class MG5Runner(MG4Runner):
         if not temp_dir:
             i=0
             while os.path.exists(os.path.join(mg4_path, 
-                                              "test_%s_%s" % (self.type, i))):
+                                              "ptest_%s_%s" % (self.type, i))):
                 i += 1
-            temp_dir = "test_%s_%s" % (self.type, i)         
+            temp_dir = "ptest_%s_%s" % (self.type, i)         
 
         self.temp_dir_name = temp_dir
 
