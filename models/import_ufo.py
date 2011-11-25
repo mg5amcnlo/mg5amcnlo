@@ -178,7 +178,6 @@ class UFOMG5Converter(object):
         # Check here if we can extract the couplings perturbed in this model
         # which indicate a loop model or if this model is only meant for 
         # tree-level computations
-        exit()
         for part in model.all_particles:
             try:
                 part_perturbations=part.perturbation
