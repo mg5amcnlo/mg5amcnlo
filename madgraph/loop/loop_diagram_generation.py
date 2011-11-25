@@ -45,6 +45,7 @@ class LoopAmplitude(diagram_generation.Amplitude):
         super(LoopAmplitude, self).default_setup()
         self['born_diagrams'] = None        
         self['loop_diagrams'] = None
+        self['loop_WfctUVCT_diagrams'] = base_objects.DiagramList()
         # This is in principle equal to self['born_diagram']==[] but it can be 
         # that for some reason the born diagram can be generated but do not
         # contribute.
@@ -127,9 +128,12 @@ class LoopAmplitude(diagram_generation.Amplitude):
         if name == 'diagrams':
             if self.filter(name, value):
                 self['born_diagrams']=base_objects.DiagramList([diag for diag in value if \
-                                                                diag['type']==0])
+                  not isinstance(diag,loop_base_objects.LoopWavefunctionCTDiagram) and diag['type']==0])
                 self['loop_diagrams']=base_objects.DiagramList([diag for diag in value if \
-                                                                diag['type']!=0])
+                  not isinstance(diag,loop_base_objects.LoopWavefunctionCTDiagram) and diag['type']!=0])
+                self['loop_WfctUVCT_diagrams']=base_objects.DiagramList([diag for diag in value if \
+                  isinstance(diag,loop_base_objects.LoopWavefunctionCTDiagram)])
+                
         else:
             return super(LoopAmplitude, self).set(name, value)
 
@@ -144,7 +148,9 @@ class LoopAmplitude(diagram_generation.Amplitude):
                     self.generate_born_diagrams()
                 if self['loop_diagrams'] == None:
                     self.generate_loop_diagrams()
-            return base_objects.DiagramList(self['born_diagrams']+self['loop_diagrams'])
+            return base_objects.DiagramList(self['born_diagrams']+\
+                                            self['loop_diagrams']+\
+                                            self['loop_WfctUVCT_diagrams'])
         
         if name == 'born_diagrams':
             if self['born_diagrams'] == None:
@@ -181,10 +187,11 @@ class LoopAmplitude(diagram_generation.Amplitude):
         # This is a bool controlling the verbosity of this subroutine only
         loopGenInfo=False
 
-        if loopGenInfo: print "LoopGenInfo:: Start of loop diagram generation."
+        if loopGenInfo: print "LoopGenInfo:: Loop diagram generation for process",self['process'].nice_string()
 
         # First generate the born diagram
         bornsuccessful = self.generate_born_diagrams()
+        if loopGenInfo: print "LoopGenInfo:: # born diagrams after first generation  = ",len(self['born_diagrams'])        
 
         # The decision of wether the virtual must be squared against the born or the
         # virtual is now simply made based on wether there are borns or not.
@@ -296,7 +303,7 @@ class LoopAmplitude(diagram_generation.Amplitude):
         if loopGenInfo: print "LoopGenInfo:: #Diags after diagram generation         = ",len(self['loop_diagrams'])        
 
         # Now select only the loops corresponding to the perturbative orders asked for.
-        # First defined what are the set of particles allowed to run in the loop.
+        # First define what are the set of particles allowed to run in the loop.
         allowedpart=[]
         for part in self['process']['model']['particles']:
             for order in self['process']['perturbation_couplings']:
@@ -315,10 +322,15 @@ class LoopAmplitude(diagram_generation.Amplitude):
             if (diag.get_loop_line_types()-set(allowedpart))==set() and \
               sum([loop_orders[order] for order in pert_loop_order])>=2:
                 newloopselection.append(diag)
-        self['loop_diagrams']=newloopselection   
-
-        if loopGenInfo: print "LoopGenInfo:: #Diags after perturbation recognition   = ",len(self['loop_diagrams'])
+        self['loop_diagrams']=newloopselection
         
+        # We add here the wavefunction renormalization contribution represented
+        # here as a LoopWavefunctionCTDiagram.
+        # It is done before the square order selection as it is possible that
+        # some wf-renormalization diagrams are removed as well.
+        if self['process']['has_born']:
+            self.setUVWavefunctionCT()
+        if loopGenInfo: print "LoopGenInfo:: #WfctUVCTDiags generated                = ",len(self['loop_WfctUVCT_diagrams'])                
         # The loop diagrams are filtered according to the 'squared_order' specification
         if self['process']['has_born']:
             # If there are born diagrams the selection is simple
@@ -335,10 +347,13 @@ class LoopAmplitude(diagram_generation.Amplitude):
                     break
 
         if loopGenInfo: print "LoopGenInfo:: #Diags after squared_orders constraints = ",len(self['loop_diagrams'])                
+        if loopGenInfo: print "LoopGenInfo:: # born diagrams after s.o constraints   = ",len(self['born_diagrams'])        
+        if loopGenInfo: print "LoopGenInfo:: #WfctUVCTDiags after s.o. constraints   = ",len(self['loop_WfctUVCT_diagrams'])
+
         # Now the loop diagrams are tagged and filtered for redundancy.
         tag_selected=[]
         loop_basis=base_objects.DiagramList()
-        for i, diag in enumerate(self['loop_diagrams']):
+        for diag in self['loop_diagrams']:
             diag.tag(self['structure_repository'],len(self['process']['legs'])+1,len(self['process']['legs'])+2,\
                      self['process'])
             # Make sure not to consider wave-function renormalization, tadpoles, or redundant diagrams
@@ -382,11 +397,11 @@ class LoopAmplitude(diagram_generation.Amplitude):
 
         for order in self['process']['perturbation_couplings']:
             if partGenInfo: print "partGenInfo:: Perturbation coupling generated         = ",order
-            hehe=[particle for particle in self['process']['model']['particles'] \
+            lcutPart=[particle for particle in self['process']['model']['particles'] \
                          if (particle.is_perturbing(order) and particle.get_pdg_code() not in 
                              self['process']['forbidden_particles'])]
-            #hehe=[self['process']['model'].get_particle(1),]
-            for part in hehe:
+            #lcutPart=[self['process']['model'].get_particle(1),]
+            for part in lcutPart:
                 if part.get_pdg_code() not in self.lcutpartemployed:
                     # First create the two L-cut particles to add to the process.
                     # Remember that in the model only the particles should be tagged as 
@@ -434,6 +449,55 @@ class LoopAmplitude(diagram_generation.Amplitude):
 
         return loopsuccessful
 
+    def setUVWavefunctionCT(self):
+        """ Scan all born diagrams and add for each all the corresponding wavefunction
+        renormalization loop diagrams"""
+        
+        if not self['process']['has_born']:
+            return
+        
+        # We recognize the UV interactions which are renormalizing the
+        # wavefunctions using the fact that they must be the only ones
+        # defined with only one particle.
+        # We need to make sure that the perturbating order for this counterterm
+        # are considered in this process and also that particles running in 
+        # the loop which yield to this counterterm are not forbidden in this 
+        # process.
+        # The key of the dictionary is the pdg of the particle which is 
+        # renormalized and the value is the list of all interaction concerned.
+        CTUVwfct_interactions = {}
+        for inter in self['process']['model']['interactions']:
+            if inter.is_UV() and len(inter['particles'])==1 and \
+              inter['particles'][0]['pdg_code'] in \
+              [abs(leg['id']) for leg in self['process']['legs']] and\
+              (set(inter['orders'].keys())-\
+               set(self['process']['perturbation_couplings']))==set([]) and \
+              set([elem[0] for elem in inter['type'][1]]).\
+              intersection(set(self['process']['forbidden_particles']))==set([]):
+                try:
+                    # The wavefunction renormalization does not differentiate particles
+                    # from antiparticles, so we directly use ['pdg_code'] here.
+                    CTUVwfct_interactions[inter['particles'][0]['pdg_code']].\
+                                                          append(inter['id'])
+                except KeyError:
+                    CTUVwfct_interactions[inter['particles'][0]['pdg_code']]=\
+                                                          [inter['id'],]
+        
+        for bornDiag in self['born_diagrams']:
+            for leg in self['process']['legs']:
+                try:
+                    for interID in CTUVwfct_interactions[abs(leg['id'])]:
+                        self['loop_WfctUVCT_diagrams'].append(\
+                        loop_base_objects.LoopWavefunctionCTDiagram({\
+                        'vertices':copy.deepcopy(bornDiag['vertices']),
+                        'UVCTVertex':base_objects.Vertex({\
+                          'legs':base_objects.LegList([copy.copy(leg),]),
+                          'id':interID})}))
+                        self['loop_WfctUVCT_diagrams'][-1].calculate_orders(\
+                                                     self['process']['model'])
+                except KeyError:
+                    pass
+
     def setCT_vertices(self):
         """ Scan each loop diagram and recognizes what are the R2/UV CounterTerms
             associated to them """
@@ -446,7 +510,7 @@ class LoopAmplitude(diagram_generation.Amplitude):
         # interaction ID having the same key above.
         CT_interactions = {}
         for inter in self['process']['model']['interactions']:
-            if inter.is_UV() or inter.is_R2():
+            if inter.is_UV() or inter.is_R2() and len(inter['particles'])>1:
                 keya=list(inter['type'][1])
                 keya.sort()
                 keyb=[part.get_pdg_code() for part in inter['particles']]
@@ -653,16 +717,18 @@ class LoopAmplitude(diagram_generation.Amplitude):
             in argument and wether the process has a born or not. """
 
         diagRef=base_objects.DiagramList()
+        AllLoopDiagrams=base_objects.DiagramList(self['loop_diagrams']+\
+                                                 self['loop_WfctUVCT_diagrams'])
         if self['process']['has_born']:
             diagRef=self['born_diagrams']
         else:
-            diagRef=self['loop_diagrams']
+            diagRef=AllLoopDiagrams
 
         for order, value in sq_order_constrains.items():
             if order.upper()=='WEIGHTED':
                 max_wgt=value-diagRef.get_min_order('WEIGHTED')
-                self['loop_diagrams']=base_objects.DiagramList([diag for diag in self['loop_diagrams'] if \
-                                        diag.get_order('WEIGHTED')<=max_wgt])
+                AllLoopDiagrams=base_objects.DiagramList([diag for diag in\
+                  AllLoopDiagrams if diag.get_order('WEIGHTED')<=max_wgt])
             else:
                 max_order = 0
                 if value>=0:
@@ -671,9 +737,14 @@ class LoopAmplitude(diagram_generation.Amplitude):
                 else:
                     # ask for the N^(-value) Leading Order in tha coupling
                     max_order=diagRef.get_min_order(order)+2*(-value-1)                    
-                self['loop_diagrams']=base_objects.DiagramList([diag for diag in self['loop_diagrams'] if \
-                                        diag.get_order(order)<=max_order])
-
+                AllLoopDiagrams=base_objects.DiagramList([diag for diag in \
+                    AllLoopDiagrams if diag.get_order(order)<=max_order])
+        
+        self['loop_diagrams']=[diag for diag in AllLoopDiagrams if not \
+            isinstance(diag,loop_base_objects.LoopWavefunctionCTDiagram)]
+        self['loop_WfctUVCT_diagrams']=[diag for diag in AllLoopDiagrams if \
+            isinstance(diag,loop_base_objects.LoopWavefunctionCTDiagram)]
+        
 #===============================================================================
 # LoopMultiProcess
 #===============================================================================

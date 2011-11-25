@@ -327,7 +327,7 @@ class ProcessExporterFortran(object):
 
         #copy Helas Template
         cp(MG5DIR + '/aloha/template_files/Makefile_F', write_dir+'/makefile')
-        if any([len(d)==4 for d in wanted_lorentz]):
+        if any([len(d)==4 and d[3] for d in wanted_lorentz]):
             cp(MG5DIR + '/aloha/template_files/aloha_functions_loop.f', write_dir+'/aloha_functions.f')
         else:
             cp(MG5DIR + '/aloha/template_files/aloha_functions.f', write_dir+'/aloha_functions.f')
@@ -2743,9 +2743,9 @@ class UFO_model_to_mg4(object):
             if one_width.lower() != 'zero':
                 widths.add(one_width)
             
-        
-        fsock.writelines('double precision '+','.join(masses)+'\n')
-        fsock.writelines('common/masses/ '+','.join(masses)+'\n\n')
+        if masses:
+            fsock.writelines('double precision '+','.join(masses)+'\n')
+            fsock.writelines('common/masses/ '+','.join(masses)+'\n\n')
         if widths:
             fsock.writelines('double precision '+','.join(widths)+'\n')
             fsock.writelines('common/widths/ '+','.join(widths)+'\n\n')

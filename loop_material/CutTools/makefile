@@ -10,7 +10,7 @@ SRC = ./src
 EXE = 
 FC  = gfortran
 #FC  = lf95
-FFLAGS = -fno-automatic -O2 -funroll-all-loops  
+FFLAGS = -fno-automatic -g -O2 -funroll-all-loops  
 #FFLAGS = -O0 -g -ffixed-line-length-none -Wall   -DU77EXT=0
 #FFLAGS = -fno-automatic -g -O0 -fbounds-check 
 #FFLAGS = -O0 -ffixed-line-length-none

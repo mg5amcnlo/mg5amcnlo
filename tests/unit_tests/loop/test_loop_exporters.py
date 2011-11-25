@@ -70,11 +70,19 @@ class LoopExporterTest(unittest.TestCase):
                                   False, _loop_file_path,_cuttools_file_path)
     def setUp(self):
         """load the NLO toy model"""
+        self.loadModel("UFO")
         
-        self.myloopmodel = models.import_full_model(os.path.join(\
-            _input_file_path,'smQCDNLO'))
-        self.fortran_model = helas_call_writers.FortranUFOHelasCallWriter(\
+    def loadModel(self, mode="UFO"):
+        """ Either loads the model from a UFO model in the input files
+        (if mode is set to "UFO") or use the equivalent hardcoded one."""
+        # Import it from the stone-graved smQCDNLO model in the input_files of
+        # the test.
+        if mode=="UFO":
+            self.myloopmodel = models.import_full_model(os.path.join(\
+                                                _input_file_path,'smQCDNLO'))
+            self.fortran_model = helas_call_writers.FortranUFOHelasCallWriter(\
                                                             self.myloopmodel)
+            return
         
     def check_output_sanity(self, loopME):
         """ Test different characteristics of the output of the 
@@ -82,10 +90,6 @@ class LoopExporterTest(unittest.TestCase):
         of the loop exporter"""
         
         self.loopExporter.copy_v4template()
-        libFiles=['mpmodule.mod','ddmodule.mod','libcts.a']
-        for file in libFiles:
-            self.assertTrue(os.path.exists(os.path.join(_proc_file_path\
-                                              ,'lib',file)))
         self.loopExporter.generate_loop_subprocess(\
                             loopME, self.fortran_model)
         wanted_lorentz = loopME.get_used_lorentz()
@@ -97,7 +101,31 @@ class LoopExporterTest(unittest.TestCase):
                         helas_objects.HelasMatrixElementList([loopME,]),
                         ["Generation from test_loop_exporters.py",],
                         False,False)
-#        shutil.rmtree(_proc_file_path)
+        files=['mpmodule.mod','ddmodule.mod','libcts.a']
+        for file in files:
+            self.assertTrue(os.path.exists(os.path.join(_proc_file_path\
+                                              ,'lib',file)))
+        files=['param_card.dat']
+        for file in files:
+            self.assertTrue(os.path.exists(os.path.join(_proc_file_path\
+                                              ,'Cards',file)))
+        files=['DHELAS','MODEL','coupl.inc','make_opts','makefile']
+        for file in files:
+            self.assertTrue(os.path.exists(os.path.join(_proc_file_path\
+                                              ,'Source',file)))
+        files=['P0_ddx_uux','coupl.inc','cts_mprec.h','makefile',\
+               'check_sa.f','cts_mpc.h']
+        for file in files:
+            self.assertTrue(os.path.exists(os.path.join(_proc_file_path\
+                                              ,'SubProcesses',file)))    
+        
+        files=['CT_interface.f','check_sa.f','cts_mprec.h','loop_num.f',
+               'nexternal.inc','born_matrix.f','coupl.inc','ddmodule.mod',
+               'makefile','ngraphs.inc','born_matrix.ps','loop_matrix.ps',
+               'cts_mpc.h','loop_matrix.f','mpmodule.mod','pmass.inc']
+        for file in files:
+            self.assertTrue(os.path.exists(os.path.join(_proc_file_path\
+                             ,'SubProcesses','P0_ddx_uux',file)))
         
     def test_LoopProcessExporterFortranSA_ddx_uux(self):
         """Test the StandAlone output for different processes.
@@ -124,6 +152,11 @@ class LoopExporterTest(unittest.TestCase):
         myloopamplitude.generate_diagrams()
         myloopME=loop_helas_objects.LoopHelasMatrixElement(myloopamplitude)
         self.check_output_sanity(myloopME)
+        
+        subproc_file_path=os.path.join(_proc_file_path,'Subprocesses',\
+                                       'P0_ddx_uux')
+        
+        #        shutil.rmtree(_proc_file_path)
 
     def test_LoopProcessExporterFortranSA_ddx_ddx(self):
         """Test the StandAlone output for different processes.
@@ -305,7 +338,7 @@ class LoopExporterTest(unittest.TestCase):
         myleglist.append(base_objects.Leg({'id':21,
                                          'state':True}))
         myleglist.append(base_objects.Leg({'id':21,
-                                         'state':True}))                       
+                                         'state':True}))                     
         myloopproc = base_objects.Process({'legs':myleglist,
                                         'model':self.myloopmodel,
                                         'orders':{},

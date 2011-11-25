@@ -676,7 +676,7 @@ def loadLoopModel():
                   'orders':{'QED':3},
                   'type':['UV1eps',()]}))
       
-    # Finally the mass renormalization of the up and down quark dotted with
+    # The mass renormalization of the up and down quark dotted with
     # a mass for the occasion
 
     # The up quark, UVQED
@@ -727,7 +727,53 @@ def loadLoopModel():
                   'orders':{'QCD':2},
                   'type':['UV1eps',()]}))
 
-    
+    # The UV wavefunction renormalization of the up and down quark dotted with
+    # a mass for the occasion
+
+    # The up quark, UVQED
+    myinterlist.append(base_objects.Interaction({
+                  'id': 48,
+                  'particles': base_objects.ParticleList([\
+                                        mypartlist[2],]),
+                  'color': [],
+                  'lorentz':['L1'],
+                  'couplings':{(0, 0):'G'},
+                  'orders':{'QED':2},
+                  'type':['UV1eps',()]}))
+
+    # The up quark, UVQCD
+    myinterlist.append(base_objects.Interaction({
+                  'id': 49,
+                  'particles': base_objects.ParticleList([\
+                                        mypartlist[2],]),
+                  'color': [],
+                  'lorentz':['L1'],
+                  'couplings':{(0, 0):'G'},
+                  'orders':{'QCD':2},
+                  'type':['UV1eps',()]}))
+
+    # The down quark, UVQED
+    myinterlist.append(base_objects.Interaction({
+                  'id': 50,
+                  'particles': base_objects.ParticleList([\
+                                        mypartlist[1],]),
+                  'color': [],
+                  'lorentz':['L1'],
+                  'couplings':{(0, 0):'G'},
+                  'orders':{'QED':2},
+                  'type':['UV1eps',()]}))
+
+    # The down quark, UVQCD
+    myinterlist.append(base_objects.Interaction({
+                  'id': 51,
+                  'particles': base_objects.ParticleList([\
+                                        mypartlist[1],]),
+                  'color': [],
+                  'lorentz':['L1'],
+                  'couplings':{(0, 0):'G'},
+                  'orders':{'QCD':2},
+                  'type':['UV1eps',()]}))
+
     myloopmodel.set('particles', mypartlist)
     myloopmodel.set('couplings', ['QCD','QED'])        
     myloopmodel.set('interactions', myinterlist)
@@ -825,7 +871,7 @@ class LoopDiagramGenerationTest(unittest.TestCase):
         """Test the number of loop diagrams generated for e+e->dd~ (s channel)
            with different choices for the perturbation couplings and squared orders.
         """
-
+        
         myleglist = base_objects.LegList()
         myleglist.append(base_objects.Leg({'id':-11,
                                          'state':False}))
@@ -852,6 +898,10 @@ class LoopDiagramGenerationTest(unittest.TestCase):
             myloopamplitude.set('process', myproc)
             myloopamplitude.generate_diagrams()
             self.assertEqual(len(myloopamplitude.get('loop_diagrams')),nDiagGoal)
+            
+            #self.assertEqual(len([1 for diag in \
+            #  myloopamplitude.get('loop_diagrams') if not isinstance(diag,
+            #  loop_base_objects.LoopWavefunctionCTDiagram)]),nDiagGoal)
 
             ### This is to plot the diagrams obtained
             #options = draw_lib.DrawOption()
@@ -1027,16 +1077,16 @@ class LoopDiagramGenerationTest(unittest.TestCase):
         myleglist.append(base_objects.Leg({'id':-1,
                                          'state':True}))
 
-        ordersChoices=[({},['QCD','QED'],{},42,14,12),\
-                       ({},['QCD','QED',],{'QED':-99},56,20,16),\
-                       ({},['QED'],{},4,4,4),\
-                       ({},['QCD'],{},18,6,4),\
-                       ({'QED':0},['QCD'],{},18,6,4),\
-                       ({'QCD':0},['QED'],{},14,6,4),\
-                       ({},['QCD','QED'],{'QED':-1},18,6,4),\
-                       ({},['QCD','QED'],{'QCD':-1},14,6,4)]
+        ordersChoices=[({},['QCD','QED'],{},42,14,12,24),\
+                       ({},['QCD','QED',],{'QED':-99},56,20,16,32),\
+                       ({},['QED'],{},4,4,4,8),\
+                       ({},['QCD'],{},18,6,4,8),\
+                       ({'QED':0},['QCD'],{},18,6,4,8),\
+                       ({'QCD':0},['QED'],{},14,6,4,8),\
+                       ({},['QCD','QED'],{'QED':-1},18,6,4,8),\
+                       ({},['QCD','QED'],{'QCD':-1},14,6,4,8)]
         
-        for (bornOrders,pert,sqOrders,nDiagGoal,nR2Goal,nUVGoal) in ordersChoices:
+        for (bornOrders,pert,sqOrders,nDiagGoal,nR2Goal,nUVGoal,nWfctUVCT) in ordersChoices:
             myproc = base_objects.Process({'legs':copy.copy(myleglist),
                                            'model':self.myloopmodel,
                                            'orders':bornOrders,
@@ -1053,7 +1103,8 @@ class LoopDiagramGenerationTest(unittest.TestCase):
                 sumUV+=len(diag.get_CT(self.myloopmodel,'UV'))
             self.assertEqual(len(myloopamplitude.get('loop_diagrams')),nDiagGoal)
             self.assertEqual(sumR2, nR2Goal)
-            self.assertEqual(sumUV, nUVGoal)  
+            self.assertEqual(sumUV, nUVGoal)
+            self.assertEqual(len(myloopamplitude.get('loop_WfctUVCT_diagrams')),nWfctUVCT)
             
     def test_CT_vertices_generation_gg_gg(self):
         """ test that the Counter Term vertices are correctly

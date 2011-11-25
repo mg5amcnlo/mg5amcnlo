@@ -1020,6 +1020,9 @@ class Model(PhysicsObject):
         # No Majorana particles, but may still be fermion flow
         # violating interactions
         for inter in self.get('interactions'):
+            # Do not look at UV Wfct renormalization counterterms
+            if len(inter.get('particles'))==1:
+                continue
             fermions = [p for p in inter.get('particles') if p.is_fermion()]
             for i in range(0, len(fermions), 2):
                 if fermions[i].get('is_part') == \

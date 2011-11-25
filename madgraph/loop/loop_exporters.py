@@ -239,9 +239,9 @@ class LoopProcessExporterFortranSA(export_v4.ProcessExporterFortranSA,
         self.write_ngraphs_file(writers.FortranWriter(filename),
                            len(matrix_element.get_all_amplitudes()))
 
+        filename = "loop_matrix.ps"
 #        Not ready yet
-        # Generate diagrams
-#        filename = "loop_matrix.ps"
+        writers.FortranWriter(filename).writelines("""C Post-helas generation loop-drawing is not ready yet.""")
 #        plot = draw.MultiEpsDiagramDrawer(matrix_element.get('base_amplitude').\
 #                                             get('loop_diagrams'),
 #                                          filename,
@@ -251,6 +251,7 @@ class LoopProcessExporterFortranSA(export_v4.ProcessExporterFortranSA,
 #        logger.info("Generating loop Feynman diagrams for " + \
 #                     matrix_element.get('processes')[0].nice_string())
 #        plot.draw()
+
         filename = "born_matrix.ps"
         plot = draw.MultiEpsDiagramDrawer(matrix_element.get('base_amplitude').\
                                              get('born_diagrams'),
@@ -444,7 +445,7 @@ class LoopProcessExporterFortranSA(export_v4.ProcessExporterFortranSA,
         else:
             return file
         
-    def write_loopmatrix(self, writer, matrix_element, fortran_model):
+    def write_loopmatrix(self, writer, matrix_element, fortran_model, noSplit=False):
         """Create the loop_matrix.f file."""
         
         if not matrix_element.get('processes') or \
@@ -452,7 +453,8 @@ class LoopProcessExporterFortranSA(export_v4.ProcessExporterFortranSA,
             return 0
         
         # Decide here wether we need to split the loop_matrix.f file or not.
-        needSplitting=(len(matrix_element.get_all_amplitudes())>1000)
+        needSplitting=(not noSplit and \
+                       (len(matrix_element.get_all_amplitudes())>1000))
         # If splitting is necessary, one has two choices to treat color:
         # A: splitColor=False
         #       The color info is kept together in a big array initialized

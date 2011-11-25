@@ -55,7 +55,7 @@ class LoopDiagram(base_objects.Diagram):
         # But ordered in a canonical unambiguous way.
         self['canonical_tag'] = []
         # This information is in principle recoverable from the VertexList but
-        # it is more information to store it as a single integer.
+        # it is faster to store it as a single integer.
         # It is the (positive) PDG of the (particle, not anti-particle) L-cut 
         # particle for a loop diagram.
         self['type'] = 0
@@ -718,6 +718,72 @@ class LoopDiagram(base_objects.Diagram):
 
         return revTag
 
+
+#===============================================================================
+# LoopDiagram
+#===============================================================================
+class LoopWavefunctionCTDiagram(LoopDiagram):
+    """ A special kind of LoopDiagram which does not contain a loop but only
+    specifies a wavefunction UV renormalization counter-term."""
+    pass
+
+    def default_setup(self):
+        """Default values for all properties"""
+
+        super(LoopDiagram,self).default_setup()
+        # This attributes stores the vertex of the wavefunction UV
+        # renormalization counterterm.
+        self['UVCTVertex']=base_objects.Vertex()
+
+    def filter(self, name, value):
+        """Filter for valid diagram property values."""
+
+        if name == 'UVWavefunctionCTVertex':
+            if not isinstance(value, Vertex):
+                raise self.PhysicsObjectError, \
+                        "%s is not a valid UV wavefunction CT vertex" % str(value)
+            else:
+                if len(value['legs'])!=1:
+                    raise self.PhysicsObjectError, \
+                        "%s is not a valid UV wavefunction CT vertex" % str(value)
+
+        else:
+            super(LoopDiagram, self).filter(name, value)
+
+        return True
+    
+    def get_sorted_keys(self):
+        """Return particle property names as a nicely sorted list."""
+        
+        return ['vertices', 'UVCTVertex', 'orders']
+
+    def calculate_orders(self, model):
+        """Calculate the actual coupling orders of this diagram. Note
+        that the special order WEIGTHED corresponds to the sum of
+        hierarchys for the couplings."""
+
+        coupling_orders = dict([(c, 0) for c in model.get('coupling_orders')])
+        weight = 0
+        for vertex in (self['vertices']+[self['UVCTVertex'],]):
+            if vertex.get('id') == 0: continue
+            couplings = model.get('interaction_dict')[vertex.get('id')].\
+                        get('orders')
+            for coupling in couplings:
+                coupling_orders[coupling] += couplings[coupling]
+            weight += sum([model.get('order_hierarchy')[c]*n for \
+                              (c,n) in couplings.items()])
+        coupling_orders['WEIGHTED'] = weight
+        self.set('orders', coupling_orders)
+
+    def nice_string(self):
+        """Returns a nicely formatted string of the diagram content."""
+        res=''
+        if self['vertices']:
+            res=res+super(LoopDiagram,self).nice_string()
+        if self['UVCTVertiex']:
+            res=res+'UV wfct. renorm. vertex: '
+            res=res+str(self['UVCTVertex'])+'\n'
+            
 #===============================================================================
 # LoopModel
 #===============================================================================
@@ -732,7 +798,6 @@ class LoopModel(base_objects.Model):
     
     def filter(self, name, value):
         """Filter for model property values"""
-
 
         if name == 'perturbation_couplings':
             if not isinstance(value, list):
