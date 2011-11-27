@@ -6,7 +6,7 @@
 from __future__ import division
 from object_library import all_particles, Particle
 import parameters as Param
-import CTparameters as CTParam
+import CT_parameters as CTParam
 
 d = Particle(pdg_code = 1,
              name = 'd',
@@ -58,7 +58,7 @@ c = Particle(pdg_code = 4,
              antiname = 'c~',
              spin = 2,
              color = 3,
-             mass = Param.MC,
+             mass = Param.ZERO,
              width = Param.ZERO,
              texname = 'c',
              antitexname = 'c',
@@ -129,12 +129,12 @@ gh__tilde__ = gh.anti()
 
 # Wavefunction renormalization
 
-b.loop_particles = [[[P.b,P.G]]]
+b.loop_particles = [[[b,G]]]
 b.counterterm = {(1,0):CTParam.bWcft_UV.value}
 
-t.loop_particles = [[[P.t,P.G]]]
+t.loop_particles = [[[t,G]]]
 t.counterterm = {(1,0):CTParam.tWcft_UV.value}
 
-G.loop_particles = [[[P.b],[P.t]]]
+G.loop_particles = [[[b],[t]]]
 G.counterterm = {(1,0):CTParam.GWcft_UV_b.value,(1,1):CTParam.GWcft_UV_t.value}
 

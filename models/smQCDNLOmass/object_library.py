@@ -171,7 +171,7 @@ class CTParameter(UFOBaseClass):
 
         UFOBaseClass.__init__(self, *args)
 
-        args=(name,nature,type,value,texname)
+        args=(name,type,value,texname)
 
         self.nature='interal'
 

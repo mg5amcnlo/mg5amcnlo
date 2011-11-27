@@ -3,9 +3,9 @@
 # Date: Fri 18 Mar 2011 18:40:51
 
 
-from object_library import all_vertices, Vertex
+from object_library import all_vertices, all_CTvertices, Vertex, CTVertex
 import particles as P
-import CTcouplings as C
+import CT_couplings as C
 import lorentz as L
 
 ################
@@ -90,7 +90,7 @@ V_R2GUU = Vertex(name = 'V_R2GCC',
 V_R2GG = Vertex(name = 'V_R2GG',
                particles = [ P.G, P.G ],
                color = [ 'Identity(1,2)' ],
-               lorentz = [ L.R2_GG_1, L.R2_GG_2, R2_GG_3],
+               lorentz = [ L.R2_GG_1, L.R2_GG_2, L.R2_GG_3],
                loop_particles = [ [[P.u],[P.d],[P.c],[P.s]],
                                   [[P.b]],
                                   [[P.t]],
@@ -241,7 +241,7 @@ V_UVGTT = Vertex(name = 'V_UVGTT',
 V_UVbMass = Vertex(name = 'V_UVbMass',
                particles = [ P.b__tilde__, P.b ],
                color = [ 'Identity(1,2)' ],
-               lorentz = [ L.R2_QQ ],
+               lorentz = [ L.R2_QQ_2 ],
                loop_particles = [[[P.G,P.b]]],                   
                couplings = {(0,0,0):C.UV_bMass},
                type = 'UVmass') 
@@ -250,7 +250,7 @@ V_UVbMass = Vertex(name = 'V_UVbMass',
 V_UVbMass = Vertex(name = 'V_UVtMass',
                particles = [ P.t__tilde__, P.t ],
                color = [ 'Identity(1,2)' ],
-               lorentz = [ L.R2_QQ ],
+               lorentz = [ L.R2_QQ_2 ],
                loop_particles = [[[P.G,P.t]]],                   
                couplings = {(0,0,0):C.UV_tMass},
                type = 'UVmass')

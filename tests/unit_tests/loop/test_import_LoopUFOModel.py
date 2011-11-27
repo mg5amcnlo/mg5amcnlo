@@ -323,8 +323,10 @@ class LoopUFOImportTest(unittest.TestCase):
                 _input_file_path,'loop_ToyModel','model.pkl'))+" "+\
                 str(os.path.join(_input_file_path,'loop_ToyModel',\
                 'model_old.pkl')))
+#        self.imported_loopmodel = models.import_full_model(os.path.join(\
+#            _input_file_path,'loop_ToyModel'))
         self.imported_loopmodel = models.import_full_model(os.path.join(\
-            _input_file_path,'loop_ToyModel'))
+            _input_file_path,'LoopModelTest'))
         self.imported_loopmodel.actualize_dictionaries()
         self.hardcoded_loopmodel.actualize_dictionaries()
     

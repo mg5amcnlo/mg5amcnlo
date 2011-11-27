@@ -2,7 +2,7 @@
 # Mathematica version: 7.0 for Mac OS X x86 (64-bit) (November 11, 2008)
 # Date: Fri 18 Mar 2011 18:40:51
 
-from object_library import all_parameters, Parameter
+from object_library import all_parameters, Parameter, CTParameter
 
 
 from function_library import complexconjugate, re, im, csc, sec, acsc, asec

@@ -7,7 +7,8 @@ from object_library import all_parameters, Parameter
 
 from function_library import complexconjugate, re, im, csc, sec, acsc, asec
 
-import CTparameters as CTP
+import CT_parameters as CTP
+import particles as P
 
 # This is a default parameter object representing 0.
 ZERO = Parameter(name = 'ZERO',
@@ -58,8 +59,6 @@ MT = Parameter(name = 'MT',
                nature = 'external',
                type = 'real',
                value = 172.,
-               loop_particles= [[[P.t,P.G]]]               
-               counterterm = {(1,0):CTP.tMass_UV.value}               
                texname = '\\text{MT}',
                lhablock = 'MASS',
                lhacode = [ 6 ])
@@ -68,8 +67,6 @@ MB = Parameter(name = 'MB',
                nature = 'external',
                type = 'real',
                value = 4.7,
-               loop_particles= [[[P.b,P.G]]]
-               counterterm = {(1,0):CTP.bMass_UV.value}
                texname = '\\text{MB}',
                lhablock = 'MASS',
                lhacode = [ 5 ])
@@ -86,6 +83,4 @@ G = Parameter(name = 'G',
               nature = 'internal',
               type = 'real',
               value = '2*cmath.sqrt(aS)*cmath.sqrt(cmath.pi)',
-              loop_particles = [[[P.u],[P.d],[P.c],[P.s]],[[P.b]],[[P.t]],[[P.G]]],
-              counterterm = {(1,0):CTP.G_UVq.value,(1,1):CTP.G_UVb.value,(1,2):CTP.G_UVt.value,(1,3):CTP.G_UVg.value}
               texname = 'G')
