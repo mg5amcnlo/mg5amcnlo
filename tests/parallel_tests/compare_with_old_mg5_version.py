@@ -38,7 +38,7 @@ class OLDMG5Comparator(unittest.TestCase):
     """A class to compare the value of a old MG5 version and the current one"""
     
     old_mg5 = None # link to the previous version of MG5 (prevent multiple build)
-    reference_number = 302 #146 #146 corresponds to 1.3.3 
+    reference_number = 146 #146 corresponds to 1.3.3 
     nb_test = 0
     
     
@@ -220,12 +220,10 @@ class OLDMG5Comparator(unittest.TestCase):
            in the model. In consequence, you need to change the old MG5 comparison
            point. (Since the default use another model)."""
         
-        #return # By default no need this
-        
+        return # By default no need this
         self.create_short_paralel_sm()
         self.create_short_paralel_mssm()
         self.create_short_paralel_heft()
-        #self.create_short_paralel_cross_sm()
         
 
     def create_short_paralel_sm(self):
@@ -241,7 +239,7 @@ class OLDMG5Comparator(unittest.TestCase):
                         'u u~ > d d~ w+ w-']
         
         # Store list of non-zero processes and results in file
-        pickle_file = os.path.join(_pickle_path, "mg5_short_parraleltest_sm.pkl")
+        pickle_file = os.path.join(_pickle_path, "mg5_short_paralleltest_sm.pkl")
         self.compare_processes(my_proc_list,
                              orders = {'QED':99, 'QCD':99},
                              filename = "short_sm.log",
@@ -261,7 +259,7 @@ class OLDMG5Comparator(unittest.TestCase):
                         'h1 h1 > x1+ x1- h2']
         
         # Store list of non-zero processes and results in file
-        pickle_file = os.path.join(_pickle_path, "mg5_short_parraleltest_mssm.pkl")
+        pickle_file = os.path.join(_pickle_path, "mg5_short_paralleltest_mssm.pkl")
         self.compare_processes(my_proc_list,
                              model='mssm',
                              orders = {'QED':99, 'QCD':99},
@@ -277,7 +275,7 @@ class OLDMG5Comparator(unittest.TestCase):
                         'g g > h g g g']
         
         # Store list of non-zero processes and results in file
-        pickle_file = os.path.join(_pickle_path, "mg5_short_parraleltest_heft.pkl")
+        pickle_file = os.path.join(_pickle_path, "mg5_short_paralleltest_heft.pkl")
         self.compare_processes(my_proc_list,
                              model='heft',
                              orders = {'QED':99, 'QCD':99},
@@ -293,7 +291,7 @@ class OLDMG5Comparator(unittest.TestCase):
         """Test a minimal list of sm 2->2 processes, mainly to test the test"""
         # Create a list of processes to check automatically
         comparisons = me_comparator.PickleRunner.find_comparisons(\
-            os.path.join(_pickle_path, "mg5_short_parraleltest_sm.pkl"))
+            os.path.join(_pickle_path, "mg5_short_paralleltest_sm.pkl"))
         for stored_runner in comparisons:
             # Create a MERunner object for MG5
             my_mg5 = me_comparator.MG5_UFO_Runner()
@@ -318,7 +316,7 @@ class OLDMG5Comparator(unittest.TestCase):
         """Test a minimal list of sm 2->2 processes, mainly to test the test"""
         # Create a list of processes to check automatically
         comparisons = me_comparator.PickleRunner.find_comparisons(\
-            os.path.join(_pickle_path, "mg5_short_parraleltest_mssm.pkl"))
+            os.path.join(_pickle_path, "mg5_short_paralleltest_mssm.pkl"))
         for stored_runner in comparisons:
             # Create a MERunner object for MG5
             my_mg5 = me_comparator.MG5_UFO_Runner()
@@ -343,7 +341,7 @@ class OLDMG5Comparator(unittest.TestCase):
         """Test a minimal list of sm 2->2 processes, mainly to test the test"""
         # Create a list of processes to check automatically
         comparisons = me_comparator.PickleRunner.find_comparisons(\
-            os.path.join(_pickle_path, "mg5_short_parraleltest_heft.pkl"))
+            os.path.join(_pickle_path, "mg5_short_paralleltest_heft.pkl"))
         for stored_runner in comparisons:
             # Create a MERunner object for MG5
             my_mg5 = me_comparator.MG5_UFO_Runner()
