@@ -28,7 +28,6 @@ import sys
 
 #Look for MG5/MG4 path
 mg5_path = os.sep.join(os.path.realpath(__file__).split(os.sep)[:-3])
-print mg5_path
 sys.path.append(mg5_path)
 
 import me_comparator

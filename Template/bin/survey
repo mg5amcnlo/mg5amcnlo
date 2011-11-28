@@ -122,6 +122,10 @@ if [[ -d SubProcesses ]]; then
 		time nice ./$job >/dev/null
 		../../bin/sum_html >/dev/null
 	    fi
+	    if [[ -e ../../error ]]; then
+		echo "File error present, stop execution"
+		exit
+	    fi
 	done
 	cd ..
 	if [[ $mode == 0  ]]; then 

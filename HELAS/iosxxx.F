@@ -14,7 +14,10 @@ c       complex vertex         : amplitude                     <fo|s|fi>
 c     
       implicit none
       double complex fi(6),fo(6),sc(3),gc(2),vertex
+      INTEGER DIM
+      PARAMETER(DIM=18)
 
+c      include 'dimension.inc'
 #ifdef HELAS_CHECK
       double precision p0,p1,p2,p3,q0,q1,q2,q3,r0,r1,r2,r3,pm
       double precision epsi

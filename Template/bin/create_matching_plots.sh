@@ -5,8 +5,11 @@ if [[ "$1" == "" ]];then
     exit
 fi
 if [[ ! -e `which root` ]];then
-    echo "Error: root executable not found"
-    exit
+    if [[ "$ROOTSYS" == "" ]];then
+        echo "Error: root executable not found"
+        exit
+    fi
+    export PATH=$ROOTSYS/bin:$PATH
 fi
 donerun=0
 if [[ -e $1_events.tree.gz ]];then
