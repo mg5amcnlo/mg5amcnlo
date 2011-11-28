@@ -129,16 +129,284 @@ class ProcessExporterFortranFKS_real(export_v4.ProcessExporterFortran):
     #write fks.inc in SubProcesses, it will be copied later in the subdirs
         self.fksdirs = []
         
-        for nfks, fksborn in enumerate(matrix_element.born_processes):
+        if not matrix_element.isfinite:
+        #if the matrix element has IR singularities
+            for nfks, fksborn in enumerate(matrix_element.born_processes):
                 calls += self.generate_subprocess_directory_fks(nfks, fksborn,
                                                   matrix_element,
                                                   fortran_model,
                                                   me_number,
                                                   path)
+        #otherwise
+#        else:
+#            calls += self.generate_subprocess_directory_finite(\
+#                                                  matrix_element,
+#                                                  fortran_model,
+#                                                  me_number,
+#                                                  path)
             
         os.chdir(cwd)
         return calls
     
+#############################################################################
+#############################################################################
+#############################################################################
+
+    def generate_subprocess_directory_finite(self, matrix_element,
+                            fortran_model, me_number, path=os.getcwd()):   
+        """Generate the Pxxxxx_i directory for a subprocess in MadFKS,
+        including the necessary matrix.f and various helper files
+        matrix_element is the real emission ME, the information on the 
+        reduced process are contained in fksborn
+        matrix element is a FKSHelasProcessFromReals"""      
+    
+        pathdir = os.getcwd()
+    
+        # Create the directory PN_xx_xxxxx in the specified path
+        subprocdir = "P%s_%d" % \
+        (matrix_element.get('processes')[0].shell_string(), 1)
+        self.fksdirs.append(subprocdir)
+        try:
+            os.mkdir(subprocdir)
+        except os.error as error:
+            logger.warning(error.strerror + " " + subprocdir)
+    
+        try:
+            os.chdir(subprocdir)
+        except os.error:
+            logger.error('Could not cd to directory %s' % subprocdir)
+            return 0
+    
+        logger.info('Creating files in directory %s' % subprocdir)
+        calls = 0
+        
+        #copy the makefile 
+        os.system("ln -s ../makefile_fks_dir ./makefile")
+    
+        #write the config.fks file, containing only nfks (+1)
+        os.system("echo %d > config.fks" % 1 )
+        
+        bool_dict = {True : 'Y', False : 'N'}
+        bool_dict1 = {True : 'I', False : 'E'}
+        
+        # write nbodyonly.fks
+        os.system('echo %s > nbodyonly.fks' % 'N')
+        
+        # write integrate.fks
+        os.system('echo %s > integrate.fks' % 'Y')
+        os.system('echo %s >> integrate.fks' % 'E')
+
+        #write the fks.inc file, which is the same for all the fks_dirs belonging
+        #to the same fks_process
+
+        filename = 'fks.inc'
+        self.write_fks_inc(writers.FortranWriter(filename),
+                                                matrix_element,
+                                                fortran_model)
+ 
+        # Create the matrix.f file, file and all inc files (as for v4)
+        filename = 'matrix.f'
+        calls, ncolor = \
+               self.write_matrix_element_fks(writers.FortranWriter(filename),
+                                            matrix_element.real_matrix_element,
+                                            fortran_model)
+        filename = 'mirrorprocs.inc'
+        self.write_mirrorprocs(writers.FortranWriter(filename),
+                                            matrix_element.real_matrix_element)
+    
+        filename = 'coloramps.inc'
+        self.write_coloramps_file(writers.FortranWriter(filename),
+                             matrix_element.real_matrix_element,
+                             fortran_model)
+    
+        filename = 'configs.inc'
+        nconfigs, s_and_t_channels = self.write_configs_file(\
+            writers.FortranWriter(filename),
+            matrix_element.real_matrix_element,
+            fortran_model)
+    
+        filename = 'decayBW.inc'
+        self.write_decayBW_file(writers.FortranWriter(filename),
+                            s_and_t_channels)
+    
+        filename = 'dname.mg'
+        self.write_dname_file(writers.FortranWriter(filename),
+                         matrix_element.real_matrix_element,
+                         fortran_model)
+    
+        filename = 'iproc.dat'
+        self.write_iproc_file(writers.FortranWriter(filename),
+                         me_number)
+    
+        filename = 'leshouche.inc'
+        self.write_leshouche_file(writers.FortranWriter(filename),
+                             matrix_element.real_matrix_element,
+                             fortran_model)
+    
+        filename = 'maxamps.inc'
+        self.write_maxamps_file(writers.FortranWriter(filename),
+                           matrix_element.real_matrix_element,
+                           fortran_model,
+                           ncolor)
+    
+        filename = 'mg.sym'
+        self.write_mg_sym_file(writers.FortranWriter(filename),
+                          matrix_element.real_matrix_element,
+                          fortran_model)
+    
+        filename = 'ncombs.inc'
+        self.write_ncombs_file(writers.FortranWriter(filename),
+                          matrix_element.real_matrix_element,
+                          fortran_model)
+    
+        filename = 'nexternal.inc'
+        self.write_nexternal_file(writers.FortranWriter(filename),
+                             matrix_element.real_matrix_element,
+                             fortran_model)
+    
+        filename = 'ngraphs.inc'
+        self.write_ngraphs_file(writers.FortranWriter(filename),
+                            nconfigs)
+    
+        filename = 'pmass.inc'
+        self.write_pmass_file(writers.FortranWriter(filename),
+                         matrix_element.real_matrix_element)
+    
+        filename = 'props.inc'
+        self.write_props_file(writers.FortranWriter(filename),
+                         matrix_element.real_matrix_element,
+                         fortran_model,
+                            s_and_t_channels)
+        
+    #write auto_dsig (for MadFKS it contains only the parton luminosities
+        filename = 'auto_dsig.f'
+        self.write_auto_dsig_fks(writers.FortranWriter(filename),
+                             matrix_element.real_matrix_element,
+                             fortran_model) 
+        
+        #write out born and all relted born_x**x.inc files    
+        filename = 'born.f'
+        calls_born, ncolor_born = \
+            self.write_born_dummy(writers.FortranWriter(filename),\
+                             fortran_model)
+
+
+        #write the sborn_sf.f 
+        filename = 'sborn_sf.f'
+        self.write_sborn_sf(writers.FortranWriter(filename),
+                                                [],
+                                                fortran_model)
+    
+###    
+###    
+###        # Generate diagrams
+###        filename = "matrix.ps"
+###        plot = draw.MultiEpsDiagramDrawer(matrix_element.get('base_amplitude').\
+###                                             get('diagrams'),
+###                                          filename,
+###                                          model=matrix_element.get('processes')[0].\
+###                                             get('model'),
+###                                          amplitude='')
+###        logger.info("Generating Feynman diagrams for " + \
+###                     matrix_element.get('processes')[0].nice_string())
+###        plot.draw()
+###    
+        # Generate jpgs -> pass in make_html
+        #os.system(os.path.join('..', '..', 'bin', 'gen_jpeg-pl'))
+    
+        linkfiles = ['LesHouches.f',
+                     'LesHouchesDummy.f',
+                     'LesHouchesMadLoop.f',
+                     'MCmasses_HERWIG6.inc',
+                     'MCmasses_PYTHIA6Q.inc',
+                     'add_write_info.f',
+                     'check_dip.f',
+                     'cluster.f',
+                     'cluster.inc',
+                     'coupl.inc',
+                     'cuts.f',
+                     'cuts.inc',
+                     'dbook.inc',
+                     'driver_mint.f',
+                     'driver_mintMC.f',
+                     'driver_vegas.f',
+                     'fastjetfortran_madfks.cc',
+                     'fks_Sij.f',
+                     'fks_nonsingular.f',
+                     'fks_powers.inc',
+                     'fks_singular.f',
+                     'genps.f',
+                     'genps.inc',
+                     'genps_fks.f',
+                     'initcluster.f',
+                     'ktclusdble.f',
+                     'link_fks.f',
+                     'madfks_dbook.f',
+                     'madfks_mcatnlo.inc',
+                     'madfks_plot.f',
+                     'message.inc',
+                     'mint-integrator2.f',
+                     'mint.inc',
+                     'mirror.f',
+                     'montecarlocounter.f',
+                     'myamp.f',
+                     'q_es.inc',
+                     'reweight.f',
+                     'reweight_events.f',
+                     'run.inc',
+                     'setcuts.f',
+                     'setscales.f',
+                     'sudakov.inc',
+                     'symmetry.f',
+                     'symmetry_fks_test_MC.f',
+                     'symmetry_fks_test_ME.f',
+                     'symmetry_fks_test_Sij.f',
+                     'symmetry_fks_v3.f',
+                     'trapfpe.c',
+                     'unwgt.f',
+                     'vegas2.for',
+                     'write_event.f']
+    
+        for file in linkfiles:
+            ln('../' + file , '.')
+        
+        cpfiles = [ 'props.inc', 'configs.inc']
+        for file in cpfiles:
+            os.system('cp '+file+' '+file+'.back')
+        
+        os.system('touch bornfromreal.inc')
+        
+        #import nexternal/leshouches in Source
+        ln('nexternal.inc', '../../Source', log=False)
+        ln('leshouche.inc', '../../Source', log=False)
+    
+    
+        # Return to SubProcesses dir
+        os.chdir(pathdir)
+    #
+    #    # Add subprocess to subproc.mg
+    #    filename = 'subproc.mg'
+    #    files.append_to_file(filename,
+    #                        write_subproc,
+    #                        matrix_element,
+    #                        fortran_model)
+    #    # Generate info page
+    #    os.system(os.path.join('..', 'bin', 'gen_infohtml-pl'))
+    
+        # Return to original dir
+        os.chdir(pathdir)
+    
+        if not calls:
+            calls = 0
+        return calls
+
+
+
+#############################################################################
+#############################################################################
+#############################################################################
+
+
     
     def generate_subprocess_directory_fks(self, nfks, fksborn, matrix_element,
                             fortran_model, me_number, path=os.getcwd()):   
@@ -187,13 +455,13 @@ class ProcessExporterFortranFKS_real(export_v4.ProcessExporterFortran):
         os.system('echo %s >> integrate.fks' % \
                   bool_dict1[len(fksborn.color_links) > 0])
 
-        #write the fks.inc file, which is the same for all the fks_dirs belonging
-        #to the same fks_process
-
         #write the B-LHAccord order file (to include in the nbodyonly dir)
         if fksborn.is_nbody_only:
             filename = 'OLE_order.lh'
             self.write_lh_order(filename, fksborn)
+
+        #write the fks.inc file, which is the same for all the fks_dirs belonging
+        #to the same fks_process
         
         filename = 'fks.inc'
         self.write_fks_inc(writers.FortranWriter(filename),
@@ -321,7 +589,7 @@ class ProcessExporterFortranFKS_real(export_v4.ProcessExporterFortran):
         #write the sborn_sf.f and the b_sf_files
         filename = 'sborn_sf.f'
         self.write_sborn_sf(writers.FortranWriter(filename),
-                                                fksborn, matrix_element,
+                                                fksborn.color_links,
                                                 fortran_model)
         
         for i, c_link in enumerate(fksborn.color_links):
@@ -477,12 +745,12 @@ NJetSymmetrizeFinal     %(symfin)s\n\
     # write_born_sf_fks
     #===============================================================================
     #test written
-    def write_sborn_sf(self, writer, fksborn, matrix_element, fortran_model):
+    def write_sborn_sf(self, writer, color_links, fortran_model):
         """Creates the sborn_sf.f file, containing the calls to the different 
         color linked borns"""
         
         replace_dict = {}
-        nborns = len(fksborn.color_links)
+        nborns = len(color_links)
         ifkss = []
         iborns = []
         mms = []
@@ -498,10 +766,8 @@ NJetSymmetrizeFinal     %(symfin)s\n\
           integer m,n \n"""
     
         if nborns > 0:
-            for i in range(nborns):
-                ifkss.append(fksborn.i_fks)
-                
-            for i, c_link in enumerate(fksborn.color_links):
+
+            for i, c_link in enumerate(color_links):
                 iborn = i+1
                 
                 iff = {True : 'if', False : 'elseif'}[i==0]
@@ -650,7 +916,7 @@ c     this subdir has no soft singularities
         of a FKSHelasProcessFromReal, plus some extra additional ifos"""
 
         replace_dict = {}
-        replace_dict['nconfs'] = len(me.born_processes)
+        replace_dict['nconfs'] = max(len(me.born_processes), 1)
         replace_dict['confs_lines'] = self.get_fks_conf_lines(me)
         replace_dict['fks_j_from_i_lines'] = self.get_fks_j_from_i_lines(me)
         replace_dict['pdg_string'] = ", ".join("%d" % pdg for pdg in me.real_pdg_codes)
@@ -796,6 +1062,50 @@ data mirrorproc /%s/" % bool_dict[matrix_element.get('has_mirror_process')]
         writer.writelines(file)
     
         return len(filter(lambda call: call.find('#') != 0, helas_calls)), ncolor
+
+
+    #===============================================================================
+    # write_born_dummy
+    #===============================================================================
+
+    def write_born_dummy(self, writer, fortran_model):
+        """This function writes a dummy born.f file, with a function that returns 0.
+        It is called when the RE process is finite"""
+        
+        if not isinstance(writer, writers.FortranWriter):
+            raise writers.FortranWriter.FortranWriterError(\
+                "writer not FortranWriter")
+        # Set lowercase/uppercase Fortran code
+        writers.FortranWriter.downcase = False
+    
+        replace_dict = {}
+    
+        # Extract version number and date from VERSION file
+        info_lines = self.get_mg5_info_lines()
+        replace_dict['info_lines'] = info_lines
+
+        file = """SUBROUTINE SBORN(P1,ANS)
+C  
+%(info_lines)s
+C
+C this sub returns 0 because the real emission process is finite
+
+include 'nexternal.inc'
+
+REAL*8 P(0:3,NEXTERNAL-1)
+COMPLEX*16 ANS(2)
+
+ANS(1)=(0d0,0d0)      
+ANS(2)=(0d0,0d0)      
+
+RETURN
+END
+""" % replace_dict
+        
+        # Write the file
+        writer.writelines(file)
+    
+        return 0, 0
     
     
     #===============================================================================
@@ -1017,7 +1327,8 @@ data mirrorproc /%s/" % bool_dict[matrix_element.get('has_mirror_process')]
 
         lines = []
 
-        booldict = {False: ".false.", True: ".true."}
+        booldict = {False: ".false.", True: ".false."}
+        ####Changed by MZ 2011-11-23!!!!
 
         for iconf, config in enumerate(s_and_t_channels):
             schannels = config[0]
@@ -1395,22 +1706,33 @@ data mirrorproc /%s/" % bool_dict[matrix_element.get('has_mirror_process')]
         """generate the lines for fks.inc describing the various fks configs"""
         n = 0
         lines = ""
-        for born in me.born_processes:
-            if born.is_to_integrate:
-                n += 1
-                lines += 'c     FKS configuration number  %d\n' % n \
-                       + 'DATA FKS_I(%d) / %d /\n' % (n, born.i_fks)\
-                       + 'DATA FKS_J(%d) / %d /\n' % (n, born.j_fks)
+        if not me.isfinite:
+            for born in me.born_processes:
+                if born.is_to_integrate:
+                    n += 1
+                    lines += 'c     FKS configuration number  %d\n' % n \
+                           + 'DATA FKS_I(%d) / %d /\n' % (n, born.i_fks)\
+                           + 'DATA FKS_J(%d) / %d /\n' % (n, born.j_fks)
+        else:
+            lines += 'c     FKS configuration number  %d\n' % 1 \
+                   + 'DATA FKS_I(%d) / %d /\n' % (1,2)\
+                   + 'DATA FKS_J(%d) / %d /\n' % (1,1)
+
         return lines
 
     def get_fks_j_from_i_lines(self, me): #test written
         """generate the lines for fks.inc describing initializating the
         fks_j_from_i array"""
         lines = ""
-        for ii, js in me.fks_j_from_i.items():
-            if js:
-                lines += 'DATA (FKS_J_FROM_I(%d, JPOS), JPOS = 0, %d)  / %d, %s /\n' \
-                         % (ii, len(js), len(js), ', '.join(["%d" % j for j in js]))
+        if not me.isfinite:
+            for ii, js in me.fks_j_from_i.items():
+                if js:
+                    lines += 'DATA (FKS_J_FROM_I(%d, JPOS), JPOS = 0, %d)  / %d, %s /\n' \
+                             % (ii, len(js), len(js), ', '.join(["%d" % j for j in js]))
+        else:
+            lines += 'DATA (FKS_J_FROM_I(%d, JPOS), JPOS = 0, %d)  / %d, %s /\n' \
+                     % (2, 1, 1, '1')
+
         return lines
 
 

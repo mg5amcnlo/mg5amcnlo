@@ -170,6 +170,7 @@ class FKSProcessFromReals(object):
         self.real_amp = None
         self.model = None
         self.nincoming = 0
+        self.isfinite = False
  
         if start_proc:
             if isinstance(start_proc, MG.Process):
@@ -194,6 +195,9 @@ class FKSProcessFromReals(object):
             self.find_borns()
             self.find_borns_to_integrate(remove_borns)
             self.find_born_nbodyonly()
+
+            if self.real_amp.get('diagrams') and not self.borns:
+                self.isfinite = True
     
             
              

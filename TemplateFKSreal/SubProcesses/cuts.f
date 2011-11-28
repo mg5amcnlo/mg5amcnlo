@@ -136,7 +136,7 @@ c jet cluster algorithm
       double precision d01,d12,d23,d34
       external fastjetdmerge
 
-      integer mm
+      integer ii
 
 C-----
 C  BEGIN CODE
@@ -203,11 +203,11 @@ c Cut some peculiar momentum configurations, i.e. two partons very soft
 c This is needed to get rid of numerical instabilities in the Real emission
 c matrix elements when the Born has a massless final-state parton, but
 c no possible divergence related to it (e.g. t-channel single top)
-      mm=0
+      ii=0
       do j=1,nn
-        if(abs(pQCD(0,j)/p(0,1)).lt.1.d-8) mm=mm+1
+        if(abs(pQCD(0,j)/p(0,1)).lt.1.d-8) ii=ii+1
       enddo
-      if(mm.gt.1)then
+      if(ii.gt.1)then
          passcuts=.false.
          return
       endif

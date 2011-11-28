@@ -464,8 +464,7 @@ C     this subdir has no soft singularities
 
         process_exporter.write_sborn_sf(\
             writers.FortranWriter(self.give_pos('test')),
-            self.myfks_me.born_processes[0],
-            self.myfks_me,
+            self.myfks_me.born_processes[0].color_links,
             self.myfortranmodel)
 
         #print open(self.give_pos('test')).read()
@@ -542,8 +541,7 @@ C       b_sf_012 links partons 4 and 3
 
         process_exporter.write_sborn_sf(\
             writers.FortranWriter(self.give_pos('test')),
-            self.myfks_me.born_processes[3],
-            self.myfks_me,
+            self.myfks_me.born_processes[3].color_links,
             self.myfortranmodel)
 
         #print open(self.give_pos('test')).read()

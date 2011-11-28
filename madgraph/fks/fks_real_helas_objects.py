@@ -185,7 +185,8 @@ class FKSHelasProcessFromReals(object): #test written
             self.real_pdg_codes = fksproc.pdg_codes
             self.real_colors = fksproc.colors
             self.fks_j_from_i = fksproc.fks_j_from_i
-                        
+            self.isfinite = fksproc.isfinite            
+            
             for proc in fksproc.borns:
                 if proc.is_to_integrate:
                     self.born_processes.append(

@@ -3246,6 +3246,51 @@ c q->gq splitting
       end
 
 
+      subroutine AP_reduced_massive(part1, part2, t, z, q2, m2, ap)
+c Returns massive Altarelli-Parisi splitting function summed/averaged over helicities
+c times prefactors such that |M_n+1|^2 = ap * |M_n|^2. This means
+c    AP_reduced = (1-z) P_{S(part1,part2)->part1+part2}(z) * gS^2/t
+c Therefore, the labeling conventions for particle IDs are not as in FKS:
+c part1 and part2 are the two particles emerging from the branching.
+c part1 and part2 can be either gluon (8) or (anti-)quark (+-3). z is the
+c fraction of the energy of part1 and t is the invariant mass of the mother.
+      implicit none
+
+      integer part1, part2
+      double precision z,ap,t,q2,m2
+
+      double precision CA,TR,CF
+      parameter (CA=3d0,TR=1d0/2d0,CF=4d0/3d0)
+
+      include "coupl.inc"
+
+      if (part1.eq.8 .and. part2.eq.8)then
+c g->gg splitting
+         ap = 2d0 * CA * ( (1d0-z)**2/z + z + z*(1d0-z)**2 )
+
+      elseif(abs(part1).eq.3 .and. abs(part2).eq.3)then
+c g->qqbar splitting
+         ap = TR * ( z**2 + (1d0-z)**2 )*(1d0-z) + TR * 2d0*m2/(z*q2)
+         
+      elseif(abs(part1).eq.3 .and. part2.eq.8)then
+c q->qg splitting
+         ap = CF * (1d0+z**2) - CF * 2d0*m2/(z*q2)
+
+      elseif(part1.eq.8 .and. abs(part2).eq.3)then
+c q->gq splitting
+         ap = CF * (1d0+(1d0-z)**2)*(1d0-z)/z - CF * 2d0*m2/(z*q2)
+      else
+         write (*,*) 'Fatal error in AP_reduced',part1,part2
+         stop
+      endif
+
+      ap = ap*g**2/t
+
+      return
+      end
+
+
+
 
       subroutine Qterms_reduced_timelike(part1, part2, t, z, Qterms)
 c Eq's B.31 to B.34 of FKS paper, times (1-z)*gS^2/t. The labeling

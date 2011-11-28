@@ -37,8 +37,6 @@ def Mirrorprocs(p1, p2):
         i2 = p2s[1]
         if i1[len(i1)/2:] + i1[:len(i1)/2] == i2 or \
             i1[len(i1)/2+1:] + i1[:len(i1)/2+1] == i2 :
-#            print i1[len(i1)/2:] ,' ', i1[:len(i1)/2]
-#            print i1[len(i1)/2+1:] ,' ', i1[:len(i1)/2+1]
             return True
 
 file=open("res.txt")
@@ -97,7 +95,6 @@ for sub in subprocs_string:
 for i1, s1 in enumerate(subprocesses):
     for i2, s2 in enumerate(subprocesses):
         if Mirrorprocs(s1['subproc'], s2['subproc']) and i1 >= i2:
-            print s1['subproc'], s2['subproc']
             s1['xsect'] += s2['xsect']
             s1['err'] = math.sqrt(math.pow(s1['err'],2)+ math.pow(s2['err'],2))
             s2['toremove'] = True
@@ -115,9 +112,6 @@ subprocesses.sort(key = lambda proc: -proc['xsect'])
 for subpr in subprocesses:
     content+=  '%(subproc)20s    %(xsect)10.8e   %(err)6.4e\n' % subpr
  
-#print '\n'.join(subprocesses)
-#print '\n'.join( p['subproc'] for p in subprocesses )
-
 
 content+='\nTotal cross-section: %10.8e +- %6.4e  (%6.4e%%)\n' %\
         (tot, math.sqrt(err), math.sqrt(err)/tot *100.)
