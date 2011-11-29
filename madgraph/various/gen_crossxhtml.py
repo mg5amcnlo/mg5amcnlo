@@ -70,7 +70,7 @@ function check_link(url,alt, id){
                 <TH NOWRAP> Tag </TH>
                 <TH NOWRAP> Run </TH> 
                 <TH>Collider</TH> 
-                <TH> Cross section (pb) </TH> 
+                <TH> %(numerical_title)s </TH> 
                 <TH> Events  </TH> 
             </TR>     
             %(old_run)s
@@ -127,6 +127,7 @@ class AllResults(dict):
         self.path = path
         self.model = model
         self.status = ''
+        self.numerical_title = 'Cross Section (pb)'
         self.current = None
     
     def def_current(self, name):
@@ -169,6 +170,8 @@ class AllResults(dict):
         self.order.append(name)
         if current:
             self.def_current(name)
+        if new['unit'] == 'GeV':
+            self.numerical_title = 'Width (GeV)'
         
         
     def update(self, status, level, makehtml=True, error=False):
@@ -297,7 +300,8 @@ class AllResults(dict):
         text_dict = {'process': self.process,
                      'model': self.model,
                      'status': status,
-                     'old_run': old_run}
+                     'old_run': old_run,
+                     'numerical_title': self.numerical_title}
         
         text = crossxhtml_template % text_dict
         open(pjoin(self.path,'crossx.html'),'w').write(text)
