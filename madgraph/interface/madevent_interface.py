@@ -1194,7 +1194,7 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
             raise MadEventAlreadyRunning, message
         else:
             os.system('touch %s' % pjoin(me_dir,'RunWeb'))
-            os.system('%s/gen_cardhtml-pl' % (self.dirbin))
+            subprocess.call(['%s/gen_cardhtml-pl' % self.dirbin], cwd=me_dir)
       
         self.to_store = []
         self.run_name = None
@@ -2731,7 +2731,11 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
             self.update_status('', level=None)
         except Exception, error:         
             pass
-        os.system('%s/gen_cardhtml-pl &> /dev/null' % (self.dirbin))
+        try:
+            subprocess.call(['./bin/internal/gen_cardhtml-pl'], cwd=self.me_dir,
+                        stdout=devnull, stderr=devnull)
+        except:
+            pass
 
         return super(MadEventCmd, self).do_quit(line)
     

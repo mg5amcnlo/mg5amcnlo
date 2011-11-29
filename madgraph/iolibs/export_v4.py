@@ -3280,6 +3280,7 @@ class UFO_model_to_mg4(object):
 
         out_path = os.path.join(self.dir_path, 'param_card.dat')
         param_writer.ParamCardWriter(self.model, out_path)
+        out_path2 = None
         if hasattr(self.model, 'rule_card'):
             out_path2 = os.path.join(self.dir_path, 'param_card_rule.dat')
             self.model.rule_card.write_file(out_path2)
@@ -3289,7 +3290,8 @@ class UFO_model_to_mg4(object):
             import models.check_param_card as translator
             
             # Check the format of the param_card for Pythia and make it correct
-            translator.make_valid_param_card(out_path, out_path2)
+            if out_path2:
+                translator.make_valid_param_card(out_path, out_path2)
             translator.convert_to_slha1(out_path)
         
 

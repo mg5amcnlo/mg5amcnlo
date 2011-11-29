@@ -311,12 +311,16 @@ class open_file(object):
                                         ['vi', 'emacs', 'vim', 'gedit', 'nano'],
                                          'text editor')
               
-            elif key in ['eps_viewer', 'web_browser']:
+            elif key == 'eps_viewer':
                 if configuration[key]:
                     cls.eps_viewer = configuration[key]
                     continue
                 # else keep None. For Mac this will use the open command.
-
+            elif key == 'web_browser':
+                if configuration[key]:
+                    cls.web_browser = configuration[key]
+                    continue
+                # else keep None. For Mac this will use the open command.
 
     @staticmethod
     def find_valid(possibility, program='program'):

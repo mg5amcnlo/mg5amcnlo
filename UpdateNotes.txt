@@ -67,6 +67,8 @@ Update notes for MadGraph 5 (in reverse time order)
 		      some of the parralel suite. This ensures more stability of the 
 		      code for the future release.
 
+                  Thanks to Johan Alwall, Sho Iwamoto for all the important testing/bug reports
+
 1.3.30 (18/11/11) OM: Fix a bug for the instalation of pythia-pgs on a 64 bit
        		      UNIX machine.
 		  OM: If ROOTSYS is define but root in the PATH, add it 
