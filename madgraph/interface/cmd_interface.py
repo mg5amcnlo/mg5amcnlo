@@ -658,7 +658,7 @@ This will take effect only in a NEW terminal
         elif  MG4DIR and os.path.isdir(pjoin(MG4DIR,args[0])):
             path = pjoin(MG4DIR,args[0])
         elif os.path.isdir(args[0]):
-            path = args[0]
+            path = os.path.realpath(args[0])
         else:    
             raise self.InvalidCmd, '%s is not a valid directory' % args[0]
             
