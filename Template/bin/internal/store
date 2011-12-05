@@ -1,6 +1,7 @@
 #!/bin/bash
 #  
-#   First we need to get into the main directory
+# Need to launch as store RUN_NAME TAG_NAME
+#
 #
 if [[  ! -d ./bin  ]]; then
     cd ../
@@ -66,6 +67,7 @@ for i in `cat subproc.mg` ; do
 done
 cd ..
 ./bin/internal/gen_cardhtml-pl
+if [[ ! -e Events/$1 ]];
 if [[ -e Events/events.lhe ]]; then
     mv -f Events/events.lhe Events/$1_events.lhe 
     rm -f Events/$1_events.lhe.gz >& /dev/null

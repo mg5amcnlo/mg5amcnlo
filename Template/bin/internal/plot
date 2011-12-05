@@ -41,9 +41,9 @@ fi
 #    exit
 #fi
 
-if [[ -e ../../Cards/plot_card.dat ]]; then
+if [[ -e ../../../Cards/plot_card.dat ]]; then
     echo 'plot_card found'
-    cp ../../Cards/plot_card.dat ./ma_card.dat
+    cp ../../../Cards/plot_card.dat ./ma_card.dat
 else
     echo 'plot_card not found'
     exit

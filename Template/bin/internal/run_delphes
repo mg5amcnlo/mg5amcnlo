@@ -7,7 +7,7 @@
 
 delphesdir=$1
 run=$2
-
+tag=$3 
 
 main=`pwd`
 
@@ -37,7 +37,7 @@ $delphesdir/LHCO_Only delphes.root
 
 if [ -e delphes_events.lhco ]; then
 # write the delphes banner
-    sed -e "s/^/#/g" ${run}_banner.txt > ${run}_delphes_events.lhco
-    cat delphes_events.lhco >> ${run}_delphes_events.lhco
+    sed -e "s/^/#/g" ${run}_banner.txt > ${run}/${tag}_delphes_events.lhco
+    cat delphes_events.lhco >> ${run}/${tag}_delphes_events.lhco
     rm -f delphes_events.lhco
 fi

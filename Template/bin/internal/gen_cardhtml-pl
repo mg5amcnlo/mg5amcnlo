@@ -224,19 +224,18 @@ until($listpos>$#incard){
   print PAGE "<td ALIGN=center> ";
 
   $nfound = 0;
-  if (chdir("./SubProcesses")){ 
-      if (opendir DIR, ".") {
-	  @entries = readdir DIR;
-	  @found = grep /results.html$/, @entries;
-	  $nfound = $#found + 1;
-      }
-      if ($nfound == "0") {
+  chdir("./HTML");
+  @files = <*>;
+  foreach $file (@files) {
+  if (-d $file) {
+    $nfound = $nfound + 1;
+  }
+  } 
+  if ($nfound == "0") {
 	  print PAGE "No runs available </td> \n";
-      }else { 
-	  $nfound = $nfound -1;
+  }else { 
 	  print PAGE "$nfound "; 
 	  print PAGE " runs available </td> \n";
-      }
   }
   }
   print PAGE "</tr> \n";

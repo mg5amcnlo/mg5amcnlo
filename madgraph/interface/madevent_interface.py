@@ -43,6 +43,9 @@ sys.path.insert(0, os.path.join(root_path,'bin'))
 
 # usefull shortcut
 pjoin = os.path.join
+# Special logger for the Cmd Interface
+logger = logging.getLogger('madevent.stdout') # -> stdout
+logger_stderr = logging.getLogger('madevent.stderr') # ->stderr
  
 try:
     # import from madgraph directory
@@ -52,10 +55,13 @@ try:
     import madgraph.iolibs.save_load_object as save_load_object
     import madgraph.various.gen_crossxhtml as gen_crossxhtml
     import madgraph.various.cluster as cluster
-    import models.check_param_card as check_param_card
+    import madgraph.various.sum_html as sum_html
+    import models.check_param_card as check_param_card    
     from madgraph import InvalidCmd, MadGraph5Error
     MADEVENT = False
 except Exception, error:
+    if __debug__:
+        print error
     # import from madevent directory
     import internal.extended_cmd as cmd
     import internal.misc as misc    
@@ -65,11 +71,9 @@ except Exception, error:
     import internal.save_load_object as save_load_object
     import internal.cluster as cluster
     import internal.check_param_card as check_param_card
+    import internal.sum_html as sum_html
     MADEVENT = True
 
-# Special logger for the Cmd Interface
-logger = logging.getLogger('madevent.stdout') # -> stdout
-logger_stderr = logging.getLogger('madevent.stderr') # ->stderr
 
 
 class MadEventError(Exception):
@@ -691,18 +695,18 @@ class CheckValidForCmd(object):
         
         if len(args) == 1:
             if args[0] != self.run_name and\
-             not os.path.exists(pjoin(self.me_dir,'Events','%s_unweighted_events.lhe.gz'
-                                                                     % args[0])):
+             not os.path.exists(pjoin(self.me_dir,'Events',args[0], 'unweighted_events.lhe.gz')):
                 raise self.InvalidCmd('No events file corresponding to %s run. '% args[0])
             self.set_run_name(args[0])
+
+        if  not os.path.exists(pjoin(self.me_dir,'Events',self.run_name,'unweighted_events.lhe.gz')):
+            raise self.InvalidCmd('No events file corresponding to %s run. '% self.run_name)
+
         
-        
-        input_file = pjoin(self.me_dir,'Events', '%s_unweighted_events.lhe.gz' % self.run_name)
+        input_file = pjoin(self.me_dir,'Events',self.run_name, 'unweighted_events.lhe')
         output_file = pjoin(self.me_dir, 'Events', 'unweighted_events.lhe')
         os.system('gunzip -c %s > %s' % (input_file, output_file))
             
-        if  not os.path.exists(pjoin(self.me_dir,'Events','%s_unweighted_events.lhe.gz' % self.run_name)):
-            raise self.InvalidCmd('No events file corresponding to %s run. '% self.run_name)
 
         # If not pythia-pgs path
         if not self.configuration['pythia-pgs_path']:
@@ -1561,10 +1565,7 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
             self.create_plot('parton')
             self.exec_cmd('store_events', postcmd=False)
             self.exec_cmd('pythia --no_default', postcmd=False, printcmd=False)
-            if os.path.exists(pjoin(self.me_dir,'Events','pythia_events.hep')):
-                self.exec_cmd('pgs --no_default', postcmd=False, printcmd=False)
-                self.exec_cmd('delphes --no_default', postcmd=False, printcmd=False)
-        
+            # pythia launches pgs/delphes if needed
             self.store_result()
     
     ############################################################################      
@@ -1666,21 +1667,21 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
 
         if os.path.exists(pjoin(self.me_dir,'error')):
             os.remove(pjoin(self.me_dir,'error'))
-            
+                        
         self.configure_directory()
+        # treat random number
+        self.update_random()
+        self.save_random()
         self.update_status('Running Survey', level=None)
         if self.cluster_mode:
             logger.info('Creating Jobs')
 
-        # treat random number
-        self.update_random()
-        self.save_random()
-        if self.open_crossx:
-            misc.open_file(os.path.join(self.me_dir, 'crossx.html'))
-            self.open_crossx = False
+
         logger.info('Working on SubProcesses')
         self.total_jobs = 0
-        for subdir in open(pjoin(self.me_dir, 'SubProcesses', 'subproc.mg')):
+        subproc = [P for P in os.listdir(pjoin(self.me_dir,'SubProcesses')) if 
+                   P.startswith('P') and os.path.isdir(pjoin(self.me_dir,'SubProcesses', P))]
+        for nb_proc,subdir in enumerate(subproc):
             subdir = subdir.strip()
             Pdir = pjoin(self.me_dir, 'SubProcesses',subdir)
             logger.info('    %s ' % subdir)
@@ -1713,7 +1714,7 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
             for i, job in enumerate(alljobs):
                 job = os.path.basename(job)
                 self.launch_job('./%s' % job, cwd=Pdir, remaining=(len(alljobs)-i-1), 
-                                                    run_type='survey on %s' % subdir)
+                                                    run_type='survey on %s (%s/%s)' % (subdir,nb_proc+1,len(subproc)))
                 if os.path.exists(pjoin(self.me_dir,'error')):
                     self.monitor()
                     raise MadEventError, 'Error detected Stop running: %s' % \
@@ -1744,7 +1745,9 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
         logger.info("Using random number seed offset = %s" % self.random)
         
         self.total_jobs = 0
-        for subdir in open(pjoin(self.me_dir, 'SubProcesses', 'subproc.mg')):
+        subproc = [P for P in os.listdir(pjoin(self.me_dir,'SubProcesses')) if 
+                   P.startswith('P') and os.path.isdir(pjoin(self.me_dir,'SubProcesses', P))]
+        for nb_proc,subdir in enumerate(subproc):
             subdir = subdir.strip()
             Pdir = pjoin(self.me_dir, 'SubProcesses',subdir)
             bindir = pjoin(os.path.relpath(self.dirbin, Pdir))
@@ -1761,7 +1764,7 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
                                     stdin=subprocess.PIPE,
                                     cwd=Pdir)
             proc.communicate('%s %s T\n' % (precision, max_process))
-            #proc.wait()
+
             if os.path.exists(pjoin(Pdir, 'ajob1')):
                 misc.compile(['madevent'], cwd=Pdir)
                 #
@@ -1772,7 +1775,7 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
                 for i, job in enumerate(alljobs):
                     job = os.path.basename(job)
                     self.launch_job('./%s' % job, cwd=Pdir, remaining=(nb_tot-i-1), 
-                             run_type='Refine number %s on %s' % (self.nb_refine, subdir))
+                             run_type='Refine number %s on %s (%s/%s)' % (self.nb_refine, subdir, nb_proc+1, len(subproc)))
         self.monitor(run_type='All job submitted for refine number %s' % self.nb_refine)
         
         self.update_status("Combining runs", level='parton')
@@ -1786,9 +1789,10 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
                                           cwd=pjoin(self.me_dir,'SubProcesses'),
                                           stdout=devnull)
         
-        subprocess.call([pjoin(self.dirbin, 'sumall')], 
-                                         cwd=pjoin(self.me_dir,'SubProcesses'),
-                                         stdout=devnull)
+        #subprocess.call([pjoin(self.dirbin, 'sumall')], 
+        #                                 cwd=pjoin(self.me_dir,'SubProcesses'),
+        #                                 stdout=devnull)
+        
         self.update_status('finish refine', 'parton', makehtml=False)
         
     ############################################################################ 
@@ -1835,7 +1839,9 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
         td = self.configuration['td_path']
         if eradir and misc.is_executable(pjoin(eradir,'ExRootLHEFConverter'))  and\
            os.path.exists(pjoin(self.me_dir, 'Events', 'unweighted_events.lhe')):
-                self.create_root_file()
+                if not os.path.exists(pjoin(self.me_dir, 'Events', self.run_name)):
+                    os.mkdir(pjoin(self.me_dir, 'Events', self.run_name))
+                self.create_root_file(output='%s/unweighted_events.root' % self.run_name)
         
     ############################################################################ 
     def do_store_events(self, line):
@@ -1844,14 +1850,84 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
         args = self.split_arg(line)
         # Check argument's validity
         self.check_combine_events(args)
-
-        #
-        # STORE
-        #
         self.update_status('Storing parton level results', level='parton')
-        subprocess.call(['%s/store' % self.dirbin, self.run_name],
-                            cwd=pjoin(self.me_dir, 'Events'))
 
+        run = self.run_name
+        tag = self.run_card['run_tag']
+        devnull = os.open(os.devnull, os.O_RDWR)
+
+        if not os.path.exists(pjoin(self.me_dir, 'Events', run)):
+            os.mkdir(pjoin(self.me_dir, 'Events', run))
+        if not os.path.exists(pjoin(self.me_dir, 'HTML', run)):
+            os.mkdir(pjoin(self.me_dir, 'HTML', run))    
+        
+        # 1) TREAT FILE PRESENT IN SubProcesses
+        # results.html
+        #input = pjoin(self.me_dir, 'SubProcesses', 'results.html')
+        #output = pjoin(self.me_dir, 'HTML', run, 'results.html')
+        #files.mv(input, output)
+        # results.dat. The usefull information is store in the pickle -> remove
+        #os.remove(pjoin(self.me_dir, 'SubProcesses','results.dat'))
+
+        # 2) Treat the files present in the P directory
+        for Pdir in open(pjoin(self.me_dir, 'SubProcesses','subproc.mg')):
+            Pdir = Pdir.strip()
+            P_path = pjoin(self.me_dir, 'SubProcesses', Pdir)
+            # results.dat. 
+            #os.remove(pjoin(P_path, 'results.dat'))
+            # results.html
+            #input = pjoin(P_path, 'results.html')
+            #output = pjoin(self.me_dir, 'HTML', run, '%s_results.html' % Pdir)
+            #files.mv(input, output) 
+            G_dir = [G for G in os.listdir(P_path) if G.startswith('G') and 
+                                                os.path.isdir(pjoin(P_path,G))]
+            for G in G_dir:
+                G_path = pjoin(P_path,G)
+                # Remove events file (if present)
+                if os.path.exists(pjoin(G_path, 'events.lhe')):
+                    os.remove(pjoin(G_path, 'events.lhe'))
+                # Remove results.dat 
+                if os.path.exists(pjoin(G_path, 'results.dat')):
+                    os.remove(pjoin(G_path, 'results.dat'))
+                # Store log
+                if os.path.exists(pjoin(G_path, 'log.txt')):
+                    input = pjoin(G_path, 'log.txt')
+                    output = pjoin(G_path, '%s_log.txt' % run)
+                    files.mv(input, output) 
+                # Grid
+                for name in ['ftn25', 'ftn99']:
+                    if os.path.exists(pjoin(G_path, name)):
+                        if os.path.exists(pjoin(G_path, '%s_%s.gz'%(run,name))):
+                            os.remove(pjoin(G_path, '%s_%s.gz'%(run,name)))
+                        input = pjoin(G_path, name)
+                        output = pjoin(G_path, '%s_%s' % (run,name))
+                        files.mv(input, output) 
+                        subprocess.call(['gzip', output], stdout=devnull, 
+                                        stderr=devnull, cwd=G_path)
+        
+        # 3) Update the index.html
+        subprocess.call(['%s/gen_cardhtml-pl' % self.dirbin],
+                            cwd=pjoin(self.me_dir))
+        
+        # 4) Move the Files present in Events directory
+        E_path = pjoin(self.me_dir, 'Events')
+        O_path = pjoin(self.me_dir, 'Events', run)
+        # The events file
+        for name in ['events.lhe', 'unweighted_events.lhe']:
+            if os.path.exists(pjoin(E_path, name)):
+                if os.path.exists(pjoin(O_path, '%s.gz' % name)):
+                    os.remove(pjoin(O_path, '%s.lhe.gz' % name))
+                input = pjoin(E_path, name)
+                output = pjoin(O_path, name)
+                files.mv(input, output) 
+                subprocess.call(['gzip', output], stdout=devnull, stderr=devnull, 
+                                                                     cwd=O_path)
+        # The banner -- This is tag dependent
+        if os.path.exists(pjoin(E_path, 'banner.txt')):
+            input = pjoin(E_path, 'banner.txt')
+            output = pjoin(O_path, '%s_%s_banner.txt' % (run, tag))            
+            files.mv(input, output)
+           
         self.update_status('End Parton', level='parton', makehtml=False)
 
     ############################################################################ 
@@ -1875,6 +1951,7 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
     def do_pythia(self, line):
         """launch pythia"""
         
+        tag = self.run_card['run_tag']
         # Check argument's validity
         args = self.split_arg(line)
         if '-f' in args:
@@ -1901,12 +1978,12 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
         
                 
         if not force:
-            if os.path.exists(pjoin(self.me_dir, 'Events','%s_pythia.log')):
+            if os.path.exists(pjoin(self.me_dir, 'Events', self.run_name, '%s_pythia.log' % tag)):
                 question = 'Previous run of pythia detected. Do you want to remove it?'
                 ans = self.ask(question, 'y', choices=['y','n'], timeout = 20)
                 if ans == 'n':
                     return
-             
+         
         self.exec_cmd('remove %s pythia -f' % self.run_name)
         
         pythia_src = pjoin(self.configuration['pythia-pgs_path'],'src')
@@ -1920,13 +1997,13 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
         ## LAUNCHING PYTHIA
         
         if self.cluster_mode == 1:
-            pythia_log = pjoin(self.me_dir, 'Events', '%s_pythia.log' % self.run_name)
+            pythia_log = pjoin(self.me_dir, 'Events', self.run_name , '%s_pythia.log' % tag)
             self.cluster.launch_and_wait('../bin/internal/run_pythia', 
                         argument= [pythia_src], stdout= pythia_log,
                         stderr=subprocess.STDOUT,
                         cwd=pjoin(self.me_dir,'Events'))
         else:
-            pythia_log = open(pjoin(self.me_dir, 'Events', '%s_pythia.log' % self.run_name), 'w')
+            pythia_log = open(pjoin(self.me_dir, 'Events',  self.run_name , '%s_pythia.log' % tag), 'w')
             subprocess.call(['../bin/internal/run_pythia', pythia_src],
                            stdout=pythia_log,
                            stderr=subprocess.STDOUT,
@@ -1942,7 +2019,7 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
         
         # Find the matched cross-section
         if int(self.run_card['ickkw']):    
-            pythia_log = open(pjoin(self.me_dir,'Events', '%s_pythia.log' % self.run_name))
+            pythia_log = open(pjoin(self.me_dir,'Events', self.run_name, '%s_pythia.log' % tag))
             cs_info = misc.get_last_line(pythia_log)
             # line should be of type: Cross section (pb):    1840.20000000006 
             cs_info = cs_info.split(':')[1]
@@ -1954,7 +2031,7 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
         td = self.configuration['td_path']
         
         # Update the banner with the pythia card
-        banner_path = pjoin(self.me_dir,'Events',self.run_name + '_banner.txt')
+        banner_path = pjoin(self.me_dir,'Events',self.run_name, '%s_%s_banner.txt' % (self.run_name, tag))
         banner = open(banner_path, 'a')
         banner.writelines('\n<MGPythiaCard>\n')
         banner.writelines(open(pjoin(self.me_dir, 'Cards','pythia_card.dat')).read())
@@ -1986,7 +2063,8 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
             if eradir and misc.is_executable(pjoin(eradir, 'ExRootLHEFConverter')):
                 self.update_status('Creating Pythia LHE Root File', level='pythia')
                 subprocess.call([eradir+'/ExRootLHEFConverter', 
-                             'pythia_events.lhe', '%s_pythia_lhe_events.root' % self.run_name],
+                             'pythia_events.lhe', 
+                             pjoin(self.run_name, '%s_pythia_lhe_events.root' % tag)],
                             cwd=pjoin(self.me_dir,'Events')) 
             
 
@@ -2013,9 +2091,9 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
 
         if os.path.exists(pjoin(self.me_dir,'Events','pythia_events.lhe')):
             shutil.move(pjoin(self.me_dir,'Events','pythia_events.lhe'),
-            pjoin(self.me_dir,'Events','%s_pythia_events.lhe' % self.run_name))
-            os.system('gzip -f %s' % pjoin(self.me_dir,'Events',
-                                        '%s_pythia_events.lhe' % self.run_name))      
+            pjoin(self.me_dir,'Events', self.run_name,'%s_pythia_events.lhe' % tag))
+            os.system('gzip -f %s' % pjoin(self.me_dir,'Events', self.run_name,
+                                        '%s_pythia_events.lhe' % tag))      
 
         
         self.update_status('finish', level='pythia', makehtml=False)
@@ -2045,7 +2123,7 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
         run = args[0]
 
         # Check that run exists
-        if not os.path.exists(pjoin(self.me_dir, 'Events', '%s_banner.txt' % run)):
+        if not os.path.exists(pjoin(self.me_dir, 'Events', run)):
             raise self.InvalidCmd('No run \'%s\' detected' % run)
 
         try:
@@ -2200,12 +2278,14 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
         if not self.to_store:
             return 
         
+        tag = self.run_card['run_tag']
         if 'pythia' in self.to_store:
             self.update_status('Storing Pythia files of Previous run', level='pythia')
-            os.system('mv -f %(path)s/pythia_events.hep %(path)s/%(name)s_pythia_events.hep' % 
-                  {'name': self.run_name, 'path' : pjoin(self.me_dir,'Events')})
+            os.system('mv -f %(path)s/pythia_events.hep %(path)s/%(name)s/%(tag)s_pythia_events.hep' % 
+                  {'name': self.run_name, 'path' : pjoin(self.me_dir,'Events'),
+                   'tag':tag})
             os.system('gzip -f %s/%s_pythia_events.hep' % ( 
-                                    pjoin(self.me_dir,'Events'),self.run_name))
+                                pjoin(self.me_dir,'Events',self.run_name), tag))
             self.to_store.remove('pythia')
             self.update_status('Done', level='pythia')
         
@@ -2264,10 +2344,11 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
         
         
         self.update_status('Running PGS', level='pgs')
+        tag = self.run_card['run_tag']
         # now pass the event to a detector simulator and reconstruct objects
 
         # Update the banner with the pgs card
-        banner_path = pjoin(self.me_dir,'Events',self.run_name + '_banner.txt')
+        banner_path = pjoin(self.me_dir,'Events',self.run_name, '%s_banner.txt' % tag)
         banner = open(banner_path, 'a')
         banner.writelines('\n<MGPGSCard>')
         banner.writelines(open(pjoin(self.me_dir, 'Cards','pgs_card.dat')).read())
@@ -2286,12 +2367,12 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
         except:
             pass
         if self.cluster_mode == 1:
-            pgs_log = pjoin(self.me_dir, 'Events', "%s_pgs.log" % self.run_name)
+            pgs_log = pjoin(self.me_dir, 'Events', self.run_name, "%s_pgs.log" % tag)
             self.cluster.launch_and_wait('../bin/internal/run_pgs', 
                             argument=[pgsdir], cwd=pjoin(self.me_dir,'Events'),
                             stdout=pgs_log, stderr=subprocess.STDOUT)
         else:
-            pgs_log = open(pjoin(self.me_dir, 'Events', "%s_pgs.log" % self.run_name),'w')
+            pgs_log = open(pjoin(self.me_dir, 'Events', self.run_name,"%s_pgs.log" % tag),'w')
             subprocess.call([self.dirbin+'/run_pgs', pgsdir], stdout= pgs_log,
                                                stderr=subprocess.STDOUT,
                                                cwd=pjoin(self.me_dir, 'Events')) 
@@ -2305,20 +2386,22 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
         if os.path.getsize(banner_path) == os.path.getsize(pjoin(self.me_dir, 'Events','pgs_events.lhco')):
             subprocess.call(['cat pgs_uncleaned_events.lhco >>  pgs_events.lhco'], 
                             cwd=pjoin(self.me_dir, 'Events'))
+            os.remove(pjoin(self.me_dir, 'Events', 'pgs_uncleaned_events.lhco '))
 
         # Creating Root file
         if eradir and misc.is_executable(pjoin(eradir, 'ExRootLHCOlympicsConverter')):
             self.update_status('Creating PGS Root File', level='pgs')
             subprocess.call([eradir+'/ExRootLHCOlympicsConverter', 
-                             'pgs_events.lhco','%s_pgs_events.root' % self.run_name],
+                             'pgs_events.lhco',pjoin('%s/%s_pgs_events.root' % (self.run_name, tag))],
                             cwd=pjoin(self.me_dir, 'Events')) 
         
         if os.path.exists(pjoin(self.me_dir, 'Events', 'pgs_events.lhco')):
-            files.mv(pjoin(self.me_dir, 'Events', 'pgs_events.lhco'), 
-                    pjoin(self.me_dir, 'Events', '%s_pgs_events.lhco' % self.run_name))
             # Creating plots
             self.create_plot('PGS')
-            subprocess.call(['gzip','-f', pjoin(self.me_dir, 'Events', '%s_pgs_events.lhco' % self.run_name)])
+            files.mv(pjoin(self.me_dir, 'Events', 'pgs_events.lhco'), 
+                    pjoin(self.me_dir, 'Events', self.run_name, '%s_pgs_events.lhco' % tag))
+            subprocess.call(['gzip','-f', pjoin(self.me_dir, 'Events', 
+                                                self.run_name, '%s_pgs_events.lhco' % tag)])
 
 
         
@@ -2366,10 +2449,12 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
                 misc.open_file(pjoin(self.me_dir, 'Cards', 'delphes_card.dat')) 
  
         delphes_dir = self.configuration['delphes_path']
+        tag = self.run_card['run_tag']
         self.update_status('Running Delphes', level='delphes')
         
         # Update the banner with the pgs card
-        banner = open(pjoin(self.me_dir,'Events',self.run_name + '_banner.txt'), 'a')
+        banner = open(pjoin(self.me_dir,'Events', self.run_name,  
+                                                    '%s_banner.txt' % tag), 'a')
         banner.writelines('<MGDelphesCard>\n')
         banner.writelines(open(pjoin(self.me_dir, 'Cards','delphes_card.dat')).read())
         banner.writelines('</MGDelphesCard>\n')
@@ -2380,21 +2465,26 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
         
         
         if self.cluster_mode == 1:
-            delphes_log = pjoin(self.me_dir, 'Events', "%s_delphes.log" % self.run_name)
+            delphes_log = pjoin(self.me_dir, 'Events', self.run_name, "%s_delphes.log" % tag)
             self.cluster.launch_and_wait('../bin/internal/run_delphes', 
-                        argument= [delphes_dir, self.run_name],
+                        argument= [delphes_dir, self.run_name, tag],
                         stdout=delphes_log, stderr=subprocess.STDOUT,
                         cwd=pjoin(self.me_dir,'Events'))
         else:
-            delphes_log = open(pjoin(self.me_dir, 'Events', "%s_delphes.log" % self.run_name),'w')
+            delphes_log = open(pjoin(self.me_dir, 'Events', self.run_name, "%s_delphes.log" % tag),'w')
             subprocess.call(['../bin/internal/run_delphes', delphes_dir, 
-                                self.run_name],
+                                self.run_name, tag],
                                 stdout= delphes_log, stderr=subprocess.STDOUT,
                                 cwd=pjoin(self.me_dir,'Events'))
                 
-        if not os.path.exists(pjoin(self.me_dir, 'Events', '%s_delphes_events.lhco' % self.run_name)):
+        if not os.path.exists(pjoin(self.me_dir, 'Events', 
+                                self.run_name, '%s_delphes_events.lhco' % tag)):
             logger.error('Fail to create LHCO events from DELPHES')
             return 
+        
+        if os.path.exists(pjoin(self.me_dir,'Eventes','delphes.root')):
+            source = pjoin(self.me_dir,'Events','delphes.root')
+            target = pjoin(self.me_dir,'Events', self.run_name, "%s_delphes_events.root" % tag)
 
         #eradir = self.configuration['exrootanalysis_path']
         madir = self.configuration['madanalysis_path']
@@ -2403,8 +2493,8 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
         # Creating plots
         self.create_plot('Delphes')
 
-        if os.path.exists(pjoin(self.me_dir, 'Events', '%s_delphes_events.lhco' % self.run_name)):
-            subprocess.call(['gzip','-f', pjoin(self.me_dir, 'Events', '%s_delphes_events.lhco' % self.run_name)])
+        if os.path.exists(pjoin(self.me_dir, 'Events', self.run_name,  '%s_delphes_events.lhco' % tag)):
+            subprocess.call(['gzip','-f', pjoin(self.me_dir, 'Events', self.run_name, '%s_delphes_events.lhco' % tag)])
 
 
         
@@ -2524,20 +2614,31 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
                 self.control_thread[1].release()
                 del self.next_update
 
-        proc = subprocess.Popen([pjoin(self.dirbin, 'sumall')], 
-                                          cwd=pjoin(self.me_dir,'SubProcesses'),
-                                          stdout=subprocess.PIPE)
+        #proc = subprocess.Popen([pjoin(self.dirbin, 'sumall')], 
+        #                                  cwd=pjoin(self.me_dir,'SubProcesses'),
+        #                                  stdout=subprocess.PIPE)
         
-        (stdout, stderr) = proc.communicate()
-        for line in stdout.split('\n'): 
-            if line.startswith(' Results'):
-                data = line.split()
-                self.results.add_detail('cross', float(data[1]))
-                self.results.add_detail('error', float(data[2]))                
+        #(stdout, stderr) = proc.communicate()
+        #for line in stdout.split('\n'): 
+        #    if line.startswith(' Results'):
+        #        data = line.split()
+        #        self.results.add_detail('cross', float(data[1]))
+        #        self.results.add_detail('error', float(data[2]))                
+        
+        # TEST##################################################################
+        cross, error = sum_html.make_all_html_results(self)
+        self.results.add_detail('cross', cross)
+        self.results.add_detail('error', error)   
+        
+        
+        
         
     @staticmethod
     def find_available_run_name(me_dir):
         """ find a valid run_name for the current job """
+        
+        
+        
         
         name = 'run_%02d'
         data = [int(s[4:6]) for s in os.listdir(pjoin(me_dir,'Events')) if
@@ -2561,6 +2662,9 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
         else:
             self.configured = time.time()
         self.update_status('compile directory', level=None)
+        if self.open_crossx:
+            misc.open_file(os.path.join(self.me_dir, 'crossx.html'))
+            self.open_crossx = False
         # Change current working directory
         self.launching_dir = os.getcwd()
         #os.chdir(self.me_dir)
@@ -2820,35 +2924,35 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
             return False
             
         if not event_path:
+            tag = self.run_card['run_tag']
             if mode == 'parton':
                 event_path = pjoin(self.me_dir, 'Events','unweighted_events.lhe')
+                output = pjoin(self.me_dir, 'HTML',self.run_name, 'plots_parton.html')
             elif mode == 'Pythia':
                 event_path = pjoin(self.me_dir, 'Events','pythia_events.lhe')
+                output = pjoin(self.me_dir, 'HTML',self.run_name, 
+                              'plots_pythia_%s.html' % tag)                                   
             elif mode == 'PGS':
-                event_path = pjoin(self.me_dir, 'Events', '%s_pgs_events.lhco' % self.run_name)
+                event_path = pjoin(self.me_dir, 'Events', 'pgs_events.lhco')
+                output = pjoin(self.me_dir, 'HTML',self.run_name, 
+                              'plots_pgs_%s.html' % tag)  
             elif mode == 'Delphes':
-                event_path = pjoin(self.me_dir, 'Events', '%s_delphes_events.lhco' % self.run_name)
+                event_path = pjoin(self.me_dir, 'Events', self.run_name,'%s_delphes_events.lhco' % tag)
+                output = pjoin(self.me_dir, 'HTML',self.run_name, 
+                              'plots_delphes_%s.html' % tag) 
             else:
                 raise self.InvalidCmd, 'Invalid mode %s' % mode
+            
         if not os.path.exists(event_path):
-            print 'not path', event_path
-            return False
+            raise self.InvalidCmd, 'Events file %s does not exits' % event_path
         
         self.update_status('Creating Plots for %s level' % mode, level = mode.lower())
                
-        plot_dir = pjoin(self.me_dir, 'Events', self.run_name)
-        
-        addon = ''
-        if mode != 'parton':
-            addon = '_%s' % mode.lower()
-            plot_dir += addon
-        
+        plot_dir = pjoin(self.me_dir, 'HTML', self.run_name,'plots_%s' % mode.lower())
+                
         if not os.path.isdir(plot_dir):
             os.makedirs(plot_dir) 
         
-
-
-
         files.ln(pjoin(self.me_dir, 'Cards','plot_card.dat'), plot_dir, 'ma_card.dat')
         proc = subprocess.Popen([os.path.join(madir, 'plot_events')],
                             stdout = open(pjoin(plot_dir, 'plot.log'),'w'),
@@ -2868,11 +2972,10 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
                                 mode],
                             stdout = os.open(os.devnull, os.O_RDWR),
                             stderr = subprocess.STDOUT,
-                            cwd=pjoin(self.me_dir, 'Events'))
+                            cwd=pjoin(self.me_dir, 'HTML', self.run_name))
        
-        shutil.move(pjoin(self.me_dir, 'Events', 'plots.html'),
-                   pjoin(self.me_dir, 'Events', '%s_plots%s.html' % 
-                         (self.run_name, addon)) )
+        shutil.move(pjoin(self.me_dir, 'HTML',self.run_name ,'plots.html'),
+                                                                         output)
         
         self.update_status('End Plots for %s level' % mode, level = mode.lower(),
                                                                  makehtml=False)

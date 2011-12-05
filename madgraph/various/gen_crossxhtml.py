@@ -33,6 +33,8 @@ crossxhtml_template = """
     <META HTTP-EQUIV="Refresh" CONTENT="10" > 
     <META HTTP-EQUIV="EXPIRES" CONTENT="20" > 
     <TITLE>Online Event Generation</TITLE>
+    <script type="text/javascript" src="./HTML/sortable.js"></script>
+    <link rel=stylesheet href="./HTML/mgstyle.css" type="text/css">
 </HEAD>
 <BODY>
 <script type="text/javascript">
@@ -63,7 +65,7 @@ function check_link(url,alt, id){
     <br>
     <br>
     <H2 align="center"> Available Results </H2>
-        <TABLE BORDER=2 align="center" >  
+        <TABLE BORDER=2 align="center" class="sortable" id='tablesort'>  
             <TR align="center">
                 <TH>Links</TH> 
                 <TH>Output File</TH> 
@@ -107,7 +109,9 @@ status_template = """
         </TD>
         <TD nowrap ROWSPAN=2> <A HREF="./SubProcesses/results.html">%(cross).4g <font face=symbol>&#177</font> %(error).4g (%(unit)s)</A> </TD> 
         %(status)s
- </TR></TABLE>
+ </TR>
+ <tr></tr>
+ </TABLE>
 """
 
 class AllResults(dict):
@@ -307,6 +311,38 @@ class AllResults(dict):
         open(pjoin(self.path,'crossx.html'),'w').write(text)
         
         
+class OneTagResults(dict):
+    """Store the data for a specific run"""
+    
+    # tag linked to parton output
+    tag_to_file = {'gridpack': "%(path)s/%(run)s_gridpack.tar.gz",
+                   'part_lhe': '%(path)s/%(run)s_unweighted_events.lhe.gz',
+                   'part_lhe_root': '%(path)s/%(run)s_unweighted_events.root',
+                   'part_plot': '%(path)s/%(run)s_plots.html',
+                   'param_card': '%(path)s/%(run)s_param_card.dat'}
+    
+    # tag linked to pythia output
+    tag_to_file.update({'pythia_plot': '%(path)s/%(run)s_%(tag)s_pythia.html',
+                      'pythia_lhe':  '%(path)s/%(run)s_%(tag)s_pythia_events.lhe.gz'
+                     })
+
+    
+    
+    
+    def __init__(self, tag):
+        """All the data associate to a specific tag"""
+        
+        self.tag = tag
+        self.parton = {}
+        self.pythia = {}
+        self.pgs = {}
+        self.delphes = {}
+        self.matching = False # Important to know for the 
+                              # display of cross-section
+        
+        
+        
+        
 class OneRunResults(dict):
     """ Store the results of a specific run """
     
@@ -316,6 +352,7 @@ class OneRunResults(dict):
         # define at run_result
         self['run_name'] = run_name
         self['tag'] = run_card['run_tag']
+        #self.data = {run_card['run_tag']:{}}
         self.event_path = pjoin(path,'Events')
         self.me_dir = path
         self.debug = None
@@ -325,11 +362,15 @@ class OneRunResults(dict):
         if len(data) == 2:
             name1,name2 = data
             if run_card['lpp1'] == '-1':
-                name1 += '~'
+                name1 = ' p~'
+            elif run_card['lpp1']  == '1':
+                name1 = ' p'   
             elif run_card['lpp1'] == '2':
                 name1 = ' a'
             if run_card['lpp2'] == '-1':
-                name2 += '~'
+                name2 = 'p~'
+            elif run_card['lpp1']  == '1':
+                name2 = ' p' 
             elif run_card['lpp2'] == '2':
                 name2 = ' a'                
             self['collider'] = '''%s %s <br> %s x %s  GeV''' % \
@@ -338,6 +379,7 @@ class OneRunResults(dict):
         else:
             self['collider'] = 'decay'
             self['unit'] = 'GeV'
+        
         
         # Default value
         self['nb_event'] = None
@@ -349,108 +391,111 @@ class OneRunResults(dict):
         self.pythia = []
         self.pgs = []
         self.delphes = []
-        self.results = False #no results.html 
-        
+        self.results = False #no results.html         
         # data 
         self.status = ''
+        
         
     def update_status(self, level='all'):
         """update the status of the current run """
 
         exists = os.path.exists
         run = self['run_name']
-        path = self.event_path
-        # Check if the output of the last status exists
+        tag =self['tag']
         
+        path = pjoin(self.event_path, run)
+        html_path = pjoin(self.event_path, os.pardir, 'HTML', run)
+        
+        # Check if the output of the last status exists
         if level in ['gridpack','all']:
             if 'gridpack' not in self.parton and \
-                    exists(pjoin(path, os.pardir,"%s_gridpack.tar.gz" % run)):
+                    exists(pjoin(path,os.pardir ,os.pardir,"%s_gridpack.tar.gz" % run)):
                 self.parton.append('gridpack')
         
         if level in ['parton','all']:
             
             if 'lhe' not in self.parton and \
-                        (exists(pjoin(path,"%s_unweighted_events.lhe.gz" % run)) or
-                         exists(pjoin(path,"%s_unweighted_events.lhe" % run))):
+                        (exists(pjoin(path,"unweighted_events.lhe.gz")) or
+                         exists(pjoin(path,"unweighted_events.lhe"))):
                 self.parton.append('lhe')
         
             if 'root' not in self.parton and \
-                          exists(pjoin(path,"%s_unweighted_events.root" % run)):
+                          exists(pjoin(path,"unweighted_events.root")):
                 self.parton.append('root')
             
             if 'plot' not in self.parton and \
-                                      exists(pjoin(path,"%s_plots.html" % run)):
+                                      exists(pjoin(html_path,"plots_parton.html")):
                 self.parton.append('plot')
 
             if 'param_card' not in self.parton and \
-                                      exists(pjoin(path, os.path.pardir,
-                                                   "%s_param_card.dat" % run)):
+                                    exists(pjoin(path, "param_card.dat")):
                 self.parton.append('param_card')
                 
         if level in ['pythia', 'all']:
             
             if 'plot' not in self.pythia and \
-                               exists(pjoin(path,"%s_plots_pythia.html" % run)):
+                          exists(pjoin(html_path,"plots_pythia_%s.html" % tag)):
                 self.pythia.append('plot')
             
             if 'lhe' not in self.pythia and \
-                            (exists(pjoin(path,"%s_pythia_events.lhe.gz" % run)) or
-                             exists(pjoin(path,"%s_pythia_events.lhe" % run))):
+                            (exists(pjoin(path,"%s_pythia_events.lhe.gz" % tag)) or
+                             exists(pjoin(path,"%s_pythia_events.lhe" % tag))):
                 self.pythia.append('lhe')
 
+
             if 'hep' not in self.pythia and \
-                            (exists(pjoin(path,"%s_pythia_events.hep.gz" % run)) or
-                             exists(pjoin(path,"%s_pythia_events.hep" % run))):
+                            (exists(pjoin(path,"%s_pythia_events.hep.gz" % tag)) or
+                             exists(pjoin(path,"%s_pythia_events.hep" % tag))):
                 self.pythia.append('hep')
             
             if 'root' not in self.pythia and \
-                              exists(pjoin(path,"%s_pythia_events.root" % run)):
+                              exists(pjoin(path,"%s_pythia_events.root" % tag)):
                 self.pythia.append('root')
                 
             if 'lheroot' not in self.pythia and \
-                          exists(pjoin(path,"%s_pythia_lhe_events.root" % run)):
+                          exists(pjoin(path,"%s_pythia_lhe_events.root" % tag)):
                 self.pythia.append('lheroot')
             
             if 'log' not in self.pythia and \
-                          exists(pjoin(path,"%s_pythia.log" % run)):
+                          exists(pjoin(path,"%s_pythia.log" % tag)):
                 self.pythia.append('log')     
 
         if level in ['pgs', 'all']:
             
             if 'plot' not in self.pgs and \
-                         exists(pjoin(path,"%s_plots_pgs.html" % run)):
+                         exists(pjoin(html_path,"plots_pgs_%s.html" % tag)):
                 self.pgs.append('plot')
             
             if 'lhco' not in self.pgs and \
-                              (exists(pjoin(path,"%s_pgs_events.lhco.gz" % run)) or
-                              exists(pjoin(path,"%s_pgs_events.lhco." % run))):
+                              (exists(pjoin(path,"%s_pgs_events.lhco.gz" % tag)) or
+                              exists(pjoin(path,"%s_pgs_events.lhco." % tag))):
                 self.pgs.append('lhco')
                 
             if 'root' not in self.pgs and \
-                                 exists(pjoin(path,"%s_pgs_events.root" % run)):
+                                 exists(pjoin(path,"%s_pgs_events.root" % tag)):
                 self.pgs.append('root')
             
             if 'log' not in self.pgs and \
-                          exists(pjoin(path,"%s_pgs.log" % run)):
+                          exists(pjoin(path,"%s_pgs.log" % tag)):
                 self.pgs.append('log') 
     
         if level in ['delphes', 'all']:
             
             if 'plot' not in self.delphes and \
-                              exists(pjoin(path,"%s_plots_delphes.html" % run)):
+                              exists(pjoin(html_path,"plots_delphes_%s.html" % tag)):
                 self.delphes.append('plot')
             
             if 'lhco' not in self.delphes and \
-                 (exists(pjoin(path,"%s_delphes_events.lhco.gz" % run)) or
-                 exists(pjoin(path,"%s_delphes_events.lhco" % run))):
+                 (exists(pjoin(path,"%s_delphes_events.lhco.gz" % tag)) or
+                 exists(pjoin(path,"%s_delphes_events.lhco" % tag))):
                 self.delphes.append('lhco')
                 
             if 'root' not in self.delphes and \
-                             exists(pjoin(path,"%s_delphes_events.root" % run)):
+                             exists(pjoin(path,"%s_delphes_events.root" % tag)):
                 self.delphes.append('root')     
             
             if 'log' not in self.delphes and \
-                          exists(pjoin(path,"%s_delphes.log" % run)):
+                          exists(pjoin(path,"%s_delphes.log" % tag)):
                 self.delphes.append('log') 
         
 
@@ -488,7 +533,7 @@ class OneRunResults(dict):
         # Cross
         out += '<td><center>'
         if self.results:
-                out += """<a href="./SubProcesses/%(run_name)s_results.html">"""
+                out += """<a href="./HTML/%(run_name)s/results.html">"""
         out += '%(cross).4g <font face=symbol>&#177</font> %(error).2g %(cross_pythia)s'
         if self.results:
             out += '</a>'
@@ -504,6 +549,11 @@ class OneRunResults(dict):
         
         return " <a  id='%(id)s' href='%(link)s' onClick=\"check_link('%(link)s.gz','%(link)s','%(id)s')\">%(name)s</a>" \
               % {'link': link, 'id': id, 'name':name}
+    
+    def double_link(self, link1, link2, name, id):
+        
+         return " <a  id='%(id)s' href='%(link1)s' onClick=\"check_link('%(link1)s','%(link2)s','%(id)s')\">%(name)s</a>" \
+              % {'link1': link1, 'link2':link2, 'id': id, 'name':name}       
     
     def get_html_event_info(self, web=False, running=False):
         """return the events information"""
@@ -528,7 +578,7 @@ class OneRunResults(dict):
             if 'root' in self.parton:
                 out += ' <a href="./Events/%(run_name)s_unweighted_events.root">rootfile</a>'
             if 'plot' in self.parton:
-                out += ' <a href="./Events/%(run_name)s_plots.html">plots</a>'
+                out += ' <a href="./HTML/%(run_name)s/plots_parton.html">plots</a>'
             if 'param_card' in self.parton:
                 out += ' <a href="./%(run_name)s_param_card.dat">param_card</a>'
             out += '</td></tr>'
@@ -536,23 +586,23 @@ class OneRunResults(dict):
             out += '<tr><td> Pythia Events : </td><td>'
             
             if 'log' in self.pythia:
-                out += """ <a href="./Events/%(run_name)s_pythia.log">LOG</a>"""
+                out += """ <a href="./Events/%(run_name)s/%(tag)s_pythia.log">LOG</a>"""
             if 'hep' in self.pythia:
                 link = './Events/%(run_name)s_pythia_events.hep'
                 level = 'pythia'
                 name = 'STDHEP'
                 out += self.special_link(link, level, name)                 
             if 'lhe' in self.pythia:
-                link = './Events/%(run_name)s_pythia_events.lhe'
+                link = './Events/%(run_name)s/%(tag)s_pythia_events.lhe'
                 level = 'pythia'
                 name = 'LHE'                
                 out += self.special_link(link, level, name) 
             if 'root' in self.pythia:
-                out += """ <a href="./Events/%(run_name)s_pythia_events.root">rootfile (LHE)</a>"""
+                out += """ <a href="./Events/%(run_name)s/%(tag)s_pythia_events.root">rootfile (LHE)</a>"""
             if 'lheroot' in self.pythia:
-                out += """ <a href="./Events/%(run_name)s_pythia_lhe_events.root">rootfile (LHE)</a>"""
+                out += """ <a href="./Events/%(run_name)s/%(tag)s_pythia_lhe_events.root">rootfile (LHE)</a>"""
             if 'plot' in self.pythia:
-                out += ' <a href="./Events/%(run_name)s_plots_pythia.html">plots</a>'
+                out += ' <a href="./HTML/%(run_name)s/plots_pythia_%(tag)s.html">plots</a>'
             out += '</td></tr>'
         elif web and not running and self['nb_event']:
             out += """<tr><td> Pythia Events : </td><td><center>
@@ -567,30 +617,30 @@ class OneRunResults(dict):
         if self.pgs:
             out += '<tr><td>Reco. Objects. (PGS) : </td><td>'
             if 'log' in self.pgs:
-                out += """ <a href="./Events/%(run_name)s_pgs.log">LOG</a>"""
+                out += """ <a href="./Events/%(run_name)s/%(tag)s_pgs.log">LOG</a>"""
             if 'lhco' in self.pgs:
-                link = './Events/%(run_name)s_pgs_events.lhco'
+                link = './Events/%(run_name)s/%(tag)s_pgs_events.lhco'
                 level = 'pgs'
                 name = 'LHCO'                
                 out += self.special_link(link, level, name)  
             if 'root' in self.pgs:
-                out += """ <a href="./Events/%(run_name)s_pgs_events.root">rootfile</a>"""    
+                out += """ <a href="./Events/%(run_name)s/%(tag)s_pgs_events.root">rootfile</a>"""    
             if 'plot' in self.pgs:
-                out += """ <a href="./Events/%(run_name)s_plots_pgs.html">plots</a>"""
+                out += """ <a href="./HTML/%(run_name)s/plots_pgs_%(tag)s.html">plots</a>"""
             out += '</td></tr>'
         if self.delphes:
             out += '<tr><td>Reco. Objects. (Delphes) : </td><td>'
             if 'log' in self.delphes:
-                out += """ <a href="./Events/%(run_name)s_delphes.log">LOG</a>"""
+                out += """ <a href="./Events/%(run_name)s/%(tag)s_delphes.log">LOG</a>"""
             if 'lhco' in self.delphes:
-                link = './Events/%(run_name)s_delphes_events.lhco'
-                level = 'pgs'
+                link = './Events/%(run_name)s/%(tag)s_delphes_events.lhco'
+                level = 'delphes'
                 name = 'LHCO'                
                 out += self.special_link(link, level, name)
             if 'root' in self.delphes:
-                out += """ <a href="./Events/%(run_name)s_delphes_events.root">rootfile</a>"""    
+                out += """ <a href="./Events/%(run_name)s/%(tag)s_delphes_events.root">rootfile</a>"""    
             if 'plot' in self.delphes:
-                out += """ <a href="./Events/%(run_name)s_plots_delphes.html">plots</a>"""            
+                out += """ <a href="./HTML/%(run_name)s/plots_delphes_%(tag)s.html">plots</a>"""            
             out += '</td></tr>'
         
         if not (self.pgs or self.delphes) and web and not running and self['nb_event']:

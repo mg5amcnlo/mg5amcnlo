@@ -1,10 +1,10 @@
 #!/usr/bin/perl -w
 
-if (-e "../SubProcesses/procdef_mg5.dat"){
-  open (INCARD,"../SubProcesses/procdef_mg5.dat") || die "Error reading file proc_card.dat";
+if (-e "....//SubProcesses/procdef_mg5.dat"){
+  open (INCARD,"../../SubProcesses/procdef_mg5.dat") || die "Error reading file proc_card.dat";
   @incard=<INCARD>;
   close (INCARD);
-} elsif (open (INCARD,"../Cards/proc_card.dat")){
+} elsif (open (INCARD,"../../Cards/proc_card.dat")){
   @incard=<INCARD>;
   close (INCARD);
 }
