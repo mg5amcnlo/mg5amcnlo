@@ -22,6 +22,13 @@ import pydoc
 import signal
 import subprocess
 import traceback
+try:
+    import readline
+    GNU_SPLITTING = ('GNU' in readline.__doc__)
+except:
+    readline = None
+    GNU_SPLITTING = True
+
 logger = logging.getLogger('cmdprint') # for stdout
 logger_stderr = logging.getLogger('fatalerror') # for stderr
 
@@ -392,6 +399,11 @@ class Cmd(cmd.Cmd):
         
         if not interface:
             return self.child
+    
+    
+    def preloop(self):
+        if readline and not 'libedit' in readline.__doc__:
+            readline.set_completion_display_matches_hook(self.print_suggestions)
     
     def postloop(self):
         """ """
@@ -802,6 +814,98 @@ class Cmd(cmd.Cmd):
                        f.startswith(text) and not prefix.startswith('.')]
 
         return completion
+    
+    #============================================================================
+    # Customize Readline auto-completion
+    #============================================================================
+    def deal_multiple_categories(self, dico):
+        """convert the multiple category in a formatted list understand by our
+        specific readline parser"""
+
+        if 'libedit' in readline.__doc__:
+            # No parser in this case, just send all the valid options
+            out = []
+            for name, opt in dico.items():
+                out += opt
+            return out
+
+        # That's the real work
+        out = []
+        valid=0
+        # if the key starts with number order the key with that number.
+        for name, opt in dico.items():
+            if not opt:
+                continue
+            name = name.replace(' ', '_')
+            valid += 1
+            out.append(opt[0]+'@@'+name+'@@')
+            out += opt
+        if valid == 1:
+            out = out[1:]
+        return out
+
+    def print_suggestions(self, substitution, matches, longest_match_length) :
+        """print auto-completions by category"""
+        try:
+            if len(matches) == 1:
+                self.stdout.write(matches[0]+' ')
+                return
+            self.stdout.write('\n')
+            l2 = [a[-2:] for a in matches]
+            if '@@' in l2:
+                nb_column = self.getTerminalSize()//(longest_match_length+1)
+                pos=0
+                for val in self.completion_matches:
+                    if val.endswith('@@'):
+                        category = val.rsplit('@@',2)[1]
+                        category = category.replace('_',' ')
+                        self.stdout.write('\n %s:\n%s\n' % (category, '=' * (len(category)+2)))
+                        start = 0
+                        continue
+                    elif pos and pos % nb_column ==0:
+                        self.stdout.write('\n')
+                    self.stdout.write(val + ' ' * (longest_match_length +1 -len(val)))
+                    pos +=1
+                self.stdout.write('\n')
+            else:
+                # nb column
+                nb_column = self.getTerminalSize()//(longest_match_length+1)
+                for i,val in enumerate(matches):
+                    if i and i%nb_column ==0:
+                        self.stdout.write('\n')
+                    self.stdout.write(val + ' ' * (longest_match_length +1 -len(val)))
+                self.stdout.write('\n')
+    
+            self.stdout.write(self.prompt+readline.get_line_buffer())
+            self.stdout.flush()
+        except Exception, error:
+            if __debug__:
+                 print error
+            
+    def getTerminalSize(self):
+        def ioctl_GWINSZ(fd):
+            try:
+                import fcntl, termios, struct, os
+                cr = struct.unpack('hh', fcntl.ioctl(fd, termios.TIOCGWINSZ,
+                                                     '1234'))
+            except:
+                return None
+            return cr
+        cr = ioctl_GWINSZ(0) or ioctl_GWINSZ(1) or ioctl_GWINSZ(2)
+        if not cr:
+            try:
+                fd = os.open(os.ctermid(), os.O_RDONLY)
+                cr = ioctl_GWINSZ(fd)
+                os.close(fd)
+            except:
+                pass
+        if not cr:
+            try:
+                cr = (env['LINES'], env['COLUMNS'])
+            except:
+                cr = (25, 80)
+        return int(cr[1])
+    
 
 class CmdShell(Cmd):
     """CMD command with shell activate"""
@@ -836,6 +940,9 @@ class CmdShell(Cmd):
         
         logger.info("syntax: shell CMD (or ! CMD)")
         logger.info("-- run the shell command CMD and catch output")
+
+
+
 
 #===============================================================================
 # Question with auto-completion

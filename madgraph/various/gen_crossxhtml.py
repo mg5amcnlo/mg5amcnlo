@@ -107,7 +107,7 @@ status_template = """
                     %(delphes_card)s
                     
         </TD>
-        <TD nowrap ROWSPAN=2> <A HREF="./SubProcesses/results.html">%(cross).4g <font face=symbol>&#177</font> %(error).4g (%(unit)s)</A> </TD> 
+        <TD nowrap ROWSPAN=2> <A HREF="./HTML/%(run_name)s/results.html">%(cross).4g <font face=symbol>&#177</font> %(error).4g (%(unit)s)</A> </TD> 
         %(status)s
  </TR>
  <tr></tr>
@@ -514,7 +514,7 @@ class OneRunResults(dict):
         
             
             
-        out += """<a href="./Events/%(run_name)s_banner.txt">banner</a>"""
+        out += """<a href="./Events/%(run_name)s/%(run_name)s_%(tag)s_banner.txt">banner</a>"""
         if web:
             out += """<br><a href="./%(run_name)s.log">log</a>"""
         if self.debug:

@@ -219,7 +219,8 @@ class MELauncher(ExtLauncher):
         if self.force:
             command+= " -f"
         
-        command += ' --laststep=%s' % self.laststep
+        if self.laststep:
+            command += ' --laststep=%s' % self.laststep
         
         try:
             os.remove('ME5_debug')

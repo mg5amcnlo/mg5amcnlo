@@ -827,10 +827,10 @@ class CheckValidForCmd(object):
                               
         if len(arg) == 1:
             self.set_run_name(arg[0])
-            if  not os.path.exists(pjoin(self.me_dir,'Events','%s_pythia_events.hep.gz' % self.run_name)):
+            if  not os.path.exists(pjoin(self.me_dir,'Events',self.run_name,'%s_pythia_events.hep.gz' % self.run_card['run_tag'])):
                 raise self.InvalidCmd('No events file corresponding to %s run. '% self.run_name)
             else:
-                input_file = pjoin(self.me_dir,'Events', '%s_pythia_events.hep.gz' % self.run_name)
+                input_file = pjoin(self.me_dir,'Events', self.run_name, '%s_pythia_events.hep.gz' % self.run_card['run_tag'])
                 output_file = pjoin(self.me_dir, 'Events', 'pythia_events.hep')
                 os.system('gunzip -c %s > %s' % (input_file, output_file))
 
@@ -2346,9 +2346,11 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
         self.update_status('Running PGS', level='pgs')
         tag = self.run_card['run_tag']
         # now pass the event to a detector simulator and reconstruct objects
-
+        
         # Update the banner with the pgs card
-        banner_path = pjoin(self.me_dir,'Events',self.run_name, '%s_banner.txt' % tag)
+        banner_path = pjoin(self.me_dir,'Events',self.run_name, '%s_%s_banner.txt' % (self.run_name,tag))  
+        print banner_path
+        print 
         banner = open(banner_path, 'a')
         banner.writelines('\n<MGPGSCard>')
         banner.writelines(open(pjoin(self.me_dir, 'Cards','pgs_card.dat')).read())
@@ -2482,10 +2484,11 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
             logger.error('Fail to create LHCO events from DELPHES')
             return 
         
-        if os.path.exists(pjoin(self.me_dir,'Eventes','delphes.root')):
+        if os.path.exists(pjoin(self.me_dir,'Events','delphes.root')):
             source = pjoin(self.me_dir,'Events','delphes.root')
             target = pjoin(self.me_dir,'Events', self.run_name, "%s_delphes_events.root" % tag)
-
+            files.mv(source, target)
+            
         #eradir = self.configuration['exrootanalysis_path']
         madir = self.configuration['madanalysis_path']
         td = self.configuration['td_path']
@@ -2922,9 +2925,9 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
         if not madir or not  td or \
             not os.path.exists(pjoin(self.me_dir, 'Cards', 'plot_card.dat')):
             return False
-            
+
+        tag = self.run_card['run_tag']    
         if not event_path:
-            tag = self.run_card['run_tag']
             if mode == 'parton':
                 event_path = pjoin(self.me_dir, 'Events','unweighted_events.lhe')
                 output = pjoin(self.me_dir, 'HTML',self.run_name, 'plots_parton.html')
@@ -2948,7 +2951,7 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
         
         self.update_status('Creating Plots for %s level' % mode, level = mode.lower())
                
-        plot_dir = pjoin(self.me_dir, 'HTML', self.run_name,'plots_%s' % mode.lower())
+        plot_dir = pjoin(self.me_dir, 'HTML', self.run_name,'plots_%s_%s' % (mode.lower(),tag))
                 
         if not os.path.isdir(plot_dir):
             os.makedirs(plot_dir) 
@@ -2960,17 +2963,17 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
                             stdin=subprocess.PIPE,
                             cwd=plot_dir)
         proc.communicate('%s\n' % event_path)
+        del proc
         #proc.wait()
         subprocess.call(['%s/plot' % self.dirbin, madir, td],
                             stdout = open(pjoin(plot_dir, 'plot.log'),'a'),
                             stderr = subprocess.STDOUT,
                             cwd=plot_dir)
-
     
         subprocess.call(['%s/plot_page-pl' % self.dirbin, 
                                 os.path.basename(plot_dir),
                                 mode],
-                            stdout = os.open(os.devnull, os.O_RDWR),
+                            stdout = open(pjoin(plot_dir, 'plot.log'),'a'),
                             stderr = subprocess.STDOUT,
                             cwd=pjoin(self.me_dir, 'HTML', self.run_name))
        

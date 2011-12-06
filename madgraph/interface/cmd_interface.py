@@ -1141,7 +1141,6 @@ class CompleteForCmd(CheckValidForCmd):
 
     def complete_launch(self, text, line, begidx, endidx):
         """ complete the launch command"""
-
         args = self.split_arg(line[0:begidx])
 
         # Directory continuation
@@ -1151,27 +1150,30 @@ class CompleteForCmd(CheckValidForCmd):
                                         only_dirs = True)
         # Format
         if len(args) == 1:
-            complete = self.path_completion(text, '.', only_dirs = True)
+            out = {'Path from ./': self.path_completion(text, '.', only_dirs = True)}
             if MG5DIR != os.path.realpath('.'):
-                complete += self.path_completion(text, MG5DIR, only_dirs = True, 
-                                                                 relative=False)
+                out['Path from %s' % MG5DIR] =  self.path_completion(text,
+                                     MG5DIR, only_dirs = True, relative=False)
             if MG4DIR and MG4DIR != os.path.realpath('.') and MG4DIR != MG5DIR:
-                complete += self.path_completion(text, MG4DIR, only_dirs = True,
-                                                                 relative=False)
+                out['Path from %s' % MG4DIR] =  self.path_completion(text,
+                                     MG4DIR, only_dirs = True, relative=False)
+
             
         #option
         if len(args) >= 2:
-            complete = []
+            out={}
 
         if line[0:begidx].endswith('--laststep='):
             opt = ['parton', 'pythia', 'pgs','delphes','auto']
+            out['Options'] = self.list_completion(text, opt, line)
         else:
             opt = ['--cluster', '--multicore', '-i', '--name=', '-f','-m', '-n', 
                '--interactive', '--laststep=parton', '--laststep=pythia',
                '--laststep=pgs', '--laststep=delphes','--laststep=auto']
+            out['Options'] = self.list_completion(text, opt, line)
         
-        complete += self.list_completion(text, opt, line)
-        return complete
+
+        return self.deal_multiple_categories(out)
 
     def complete_load(self, text, line, begidx, endidx):
         "Complete the load command"
@@ -1254,6 +1256,7 @@ class CompleteForCmd(CheckValidForCmd):
                             'Calculators', 'MadAnalysis', 'SimpleAnalysis',
                             'mg5', 'DECAY', 'EventConverter', 'Models',
                             'ExRootAnalysis', 'HELAS', 'Transfer_Fct']
+        
         #name of the run =>proposes old run name
         args = self.split_arg(line[0:begidx])
         if len(args) >= 1: 
@@ -3322,6 +3325,9 @@ class MadGraphCmdShell(MadGraphCmd, CompleteForCmd, CheckValidForCmd, cmd.CmdShe
         logger.info("Loading default model: sm")
         self.do_import('model sm')
         self.history.append('import model sm')
+        
+        # preloop mother
+        cmd.CmdShell.preloop(self)
 
 
 #===============================================================================
