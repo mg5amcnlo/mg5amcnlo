@@ -1661,7 +1661,7 @@ class HelasAmplitude(base_objects.PhysicsObject):
                     # Note that the following values might change, if
                     # the relevant color/lorentz/coupling is not index 0
                     if inter.get('type'):
-                        self.set('type', inter.get('type')[0])
+                        self.set('type', inter.get('type'))
                     if inter.get('color'):
                         self.set('inter_color', inter.get('color')[0])
                     if inter.get('lorentz'):

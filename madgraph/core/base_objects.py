@@ -201,7 +201,7 @@ class Particle(PhysicsObject):
     sorted_keys = ['name', 'antiname', 'spin', 'color',
                    'charge', 'mass', 'width', 'pdg_code',
                    'texname', 'antitexname', 'line', 'propagating',
-                   'is_part', 'self_antipart', 'perturbation']
+                   'is_part', 'self_antipart']
 
     def default_setup(self):
         """Default values for all properties"""
@@ -220,7 +220,6 @@ class Particle(PhysicsObject):
         self['propagating'] = True
         self['is_part'] = True
         self['self_antipart'] = False
-        self['perturbation']=[]
 
     def filter(self, name, value):
         """Filter for valid particle property values."""
@@ -270,15 +269,6 @@ class Particle(PhysicsObject):
                 raise self.PhysicsObjectError, \
                    "Line type %s is unknown" % value
 
-        if name is 'perturbation':
-            if not isinstance(value, list):
-                raise self.PhysicsObjectError, \
-                    "%s is not a list of orders" % repr(value)
-            for order in value:
-                if not isinstance(order,str):
-                    raise self.PhysicsObjectError, \
-                        "%s is not an order." % order
-
         if name is 'charge':
             if not isinstance(value, float):
                 raise self.PhysicsObjectError, \
@@ -303,12 +293,17 @@ class Particle(PhysicsObject):
 
     # Helper functions
 
-    def is_perturbing(self,order):
+    def is_perturbating(self,order,model):
         """Returns wether this particle contributes in perturbation of the order passed
-           in argument"""
-
-        return (order in self['perturbation'])
-
+           in argument given the model specified. It is very fast for usual models"""
+           
+        for int in model['interactions'].get_type('base'):
+            if order in int.get('orders').keys() and self.get('pdg_code') in \
+              [part.get('pdg_code') for part in int.get('particles')]:
+                return True
+            
+        return False
+           
     def get_pdg_code(self):
         """Return the PDG code with a correct minus sign if the particle is its
         own antiparticle"""
@@ -464,7 +459,7 @@ class Interaction(PhysicsObject):
     """
 
     sorted_keys = ['id', 'particles', 'color', 'lorentz', 'couplings',
-                   'orders','type']
+                   'orders','loop_particles','type']
 
     def default_setup(self):
         """Default values for all properties"""
@@ -505,12 +500,16 @@ class Interaction(PhysicsObject):
         # This insures to have one unique unambiguous canonical tag chosen.
         # In the example above, it would be:
         #       ((1,12),(21,34),(1,45))
-        # PS: Notice that the tag is not yet necessarly canonical in the UFO
-        # model. The reader takes care of putting it in the canonical form.
-        # In the latest UFO format, it was chosen to only give the unordered
-        # list of the PDG of the particles running in the loop as it is enough
-        # for all practical cases up to now.
-        self['type'] = ['base',()]
+        # PS: Notice that in the UFO model, the tag-information is limited to 
+        # the minimally relevant one which are the loop particles specified in
+        # in the attribute below.
+        # 'loop_particles' is the list of all the loops giving this same
+        # counterterm contribution. Each loop being represented by a list of the 
+        # PDG of the particles (not repeated) constituting it. If the loop particles
+        # are not specified then MG5 will account for this counterterm only once
+        # per concerned vertex.
+        self['loop_particles']=[[]]
+        self['type'] = 'base'
 
     def filter(self, name, value):
         """Filter for valid interaction property values."""
@@ -528,22 +527,21 @@ class Interaction(PhysicsObject):
                         "%s is not a valid list of particles" % str(value)
 
         if name == 'type':
-            #Should be a list of valid particle names
-            if not isinstance(value, list):
+            #Should be a string
+            if not isinstance(value, str):
                 raise self.PhysicsObjectError, \
-                        "%s is not a valid list" % str(value)
-            if not value[0]=='base':
-                if not value[0][:2] in ['R2','UV']:
-                    raise self.PhysicsObjectError, \
-                        "%s is not a valid list" % str(value)
-            if value[1]:
-                for tup in value[1]:
-                    if not isinstance(tup,int):
-                        raise self.PhysicsObjectError, \
-                            "%s is not a valid integer" % str(tup[0])
-                    if tup<0:
-                        raise self.PhysicsObjectError, \
-                            "%s is not a valid positive integer" % str(tup[1])
+                        "%s is not a valid string" % str(value)
+        if name == 'loop_particles':
+            if isinstance(value,list):
+                for l in value:
+                    if isinstance(l,list):
+                        for part in l:
+                            if not isinstance(part,int):
+                                raise self.PhysicsObjectError, \
+                                    "%s is not a valid integer" % str(part)
+                            if part<0:
+                                raise self.PhysicsObjectError, \
+                                    "%s is not a valid positive integer" % str(part)
 
         if name == 'orders':
             #Should be a dict with valid order names ask keys and int as values
@@ -613,7 +611,7 @@ class Interaction(PhysicsObject):
         # Precaution only useful because some tests have a predefined model
         # bypassing the default_setup and for which type was not defined.
         if 'type' in self.keys():
-            return (len(self['type'][0])>=2 and self['type'][0][:2]=='R2')
+            return (len(self['type'])>=2 and self['type'][:2]=='R2')
         else:
             return False
 
@@ -623,7 +621,17 @@ class Interaction(PhysicsObject):
         # Precaution only useful because some tests have a predefined model
         # bypassing the default_setup and for which type was not defined.
         if 'type' in self.keys():
-            return (len(self['type'][0])>=2 and self['type'][0][:2]=='UV')
+            return (len(self['type'])>=2 and self['type'][:2]=='UV')
+        else:
+            return False
+        
+    def is_UVmass(self):
+        """ Returns if the interaction is of UV type."""
+
+        # Precaution only useful because some tests have a predefined model
+        # bypassing the default_setup and for which type was not defined.
+        if 'type' in self.keys():
+            return (len(self['type'])>=6 and self['type'][:6]=='UVmass')
         else:
             return False
         
@@ -751,6 +759,22 @@ class InteractionList(PhysicsObjectList):
             except KeyError:
                 # This interaction has particles that no longer exist
                 self.pop(iint)
+
+    def get_type(self, type):
+        """ return all interactions in the list of type 'type' """
+        return InteractionList([int for int in self if int.get('type')==type])
+
+    def get_R2(self):
+        """ return all interactions in the list of type R2 """
+        return InteractionList([int for int in self if int.is_R2()])
+
+    def get_UV(self):
+        """ return all interactions in the list of type UV """
+        return InteractionList([int for int in self if int.is_UV()])
+
+    def get_UVmass(self):
+        """ return all interactions in the list of type UVmass """
+        return InteractionList([int for int in self if int.is_UVmass()])    
 
 #===============================================================================
 # Model
@@ -939,7 +963,6 @@ class Model(PhysicsObject):
 
     def get_interaction(self, id):
         """Return the interaction corresponding to the id"""
-
 
         if id in self.get("interaction_dict").keys():
             return self["interaction_dict"][id]

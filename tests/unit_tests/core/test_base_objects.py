@@ -46,8 +46,7 @@ class ParticleTest(unittest.TestCase):
                       'pdg_code':6,
                       'propagating':True,
                       'is_part':True,
-                      'self_antipart':False,
-                      'perturbation':[]}
+                      'self_antipart':False}
 
         self.mypart = base_objects.Particle(self.mydict)
 
@@ -162,8 +161,7 @@ class ParticleTest(unittest.TestCase):
         goal = goal + "    \'line\': \'straight\',\n"
         goal = goal + "    \'propagating\': True,\n"
         goal = goal + "    \'is_part\': True,\n"
-        goal = goal + "    \'self_antipart\': False,\n"        
-        goal = goal + "    \'perturbation\': []\n}"
+        goal = goal + "    \'self_antipart\': False\n}"
 
         self.assertEqual(goal, str(self.mypart))
 
@@ -273,7 +271,8 @@ class InteractionTest(unittest.TestCase):
                                     (1, 0):'g10',
                                     (1, 1):'g11'},
                        'orders':{'QCD':1, 'QED':1},
-                       'type':['base',()]}
+                       'loop_particles':[[]],
+                       'type':'base'}
 
         self.myinter = base_objects.Interaction(self.mydict)
 
@@ -284,7 +283,7 @@ class InteractionTest(unittest.TestCase):
 
         # First fill myinter2 it using set
         for prop in ['id', 'particles', 'color', 'lorentz', 'couplings',
-                     'orders', 'type']:
+                     'orders', 'type', 'loop_particles']:
             myinter2.set(prop, self.mydict[prop])
 
         # Check equality between Interaction objects
@@ -373,8 +372,9 @@ class InteractionTest(unittest.TestCase):
         goal = goal + "    \'lorentz\': [\'L1\', \'L2\'],\n"
         goal = goal + "    \'couplings\': %s,\n" % \
                                     repr(self.myinter['couplings'])
-        goal = goal + "    \'orders\': %s,\n" % repr(self.myinter['orders'])   
-        goal = goal + "    \'type\': ['base', ()]\n}"
+        goal = goal + "    \'orders\': %s,\n" % repr(self.myinter['orders'])
+        goal = goal + "    \'loop_particles\': [[]],\n"        
+        goal = goal + "    \'type\': \'base\'\n}"
 
         self.assertEqual(goal, str(self.myinter))
 

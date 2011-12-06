@@ -315,6 +315,5 @@ class TestParamWrittingWithRestrict(unittest.TestCase):
                 'DECAY  15 0.000000 # tt- : 0.0 ',
                 'DECAY  25 2.441404 # h : WZ ',
                 '']
-
         self.assertEqual(self.content.getvalue().split('\n'), goal)
     

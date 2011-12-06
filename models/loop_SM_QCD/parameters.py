@@ -3,11 +3,12 @@
 # Date: Fri 18 Mar 2011 18:40:51
 
 
-
 from object_library import all_parameters, Parameter
 
-
 from function_library import complexconjugate, re, im, csc, sec, acsc, asec
+
+import particles as P
+import CT_parameters as CTP
 
 # This is a default parameter object representing 0.
 ZERO = Parameter(name = 'ZERO',
@@ -27,12 +28,6 @@ Ncol = Parameter(name = 'Ncol',
                  type = 'real',
                  value = '3.0',
                  texname = 'N_{col}')
-
-Nlf = Parameter(name = 'Nlf',
-                 nature = 'internal',
-                 type = 'real',
-                 value = '2.0',
-                 texname = 'N_{lf}')
 
 CA = Parameter(name = 'CA',
                  nature = 'internal',
@@ -60,36 +55,21 @@ aS = Parameter(name = 'aS',
                lhablock = 'SMINPUTS',
                lhacode = [ 3 ])
 
-MU = Parameter(name = 'MU',
+MT = Parameter(name = 'MT',
                nature = 'external',
                type = 'real',
-               value = 0.0,
-               texname = 'M',
+               value = 172.,
+               texname = '\\text{MT}',
                lhablock = 'MASS',
-               lhacode = [ 2 ])
+               lhacode = [ 6 ])
 
-MD = Parameter(name = 'MD',
+MB = Parameter(name = 'MB',
                nature = 'external',
                type = 'real',
-               value = 0.0,
-               texname = '\\text{MD}',
+               value = 4.7,
+               texname = '\\text{MB}',
                lhablock = 'MASS',
-               lhacode = [ 1 ])
-
-G = Parameter(name = 'G',
-              nature = 'internal',
-              type = 'real',
-              value = '2*cmath.sqrt(aS)*cmath.sqrt(cmath.pi)',
-              texname = 'G')
-
-RGR2 = Parameter(name = 'RGR2',
-              nature = 'internal',
-              type = 'real',
-              # At leading order without fermion masses, the UV renormalization 
-              # in MSbar does not affect the finite part of the virtual, so I
-              # put zero here
-              value = '-complex(0,1)*G**4/(96.0*cmath.pi**2)',
-              texname = '4GR2')
+               lhacode = [ 5 ])
 
 MU_R = Parameter(name = 'MU_R',
               nature = 'external',
@@ -99,14 +79,8 @@ MU_R = Parameter(name = 'MU_R',
               lhablock = 'LOOP',
               lhacode = [ 666 ])
 
-G_UV = Parameter(name = 'G_UV',
+G = Parameter(name = 'G',
               nature = 'internal',
               type = 'real',
-              # At leading order without fermion masses, the UV renormalization 
-              # in MSbar does not affect the finite part of the virtual.
-              # In the way it was done in MGv4, it is not possible to easily
-              # disantangle the contribution from the different loops to the 
-              # UV counterterms (typically g>dd~ should contain a CA which is 
-              # later cancelled by the wf renorm. So for now I leave it like this)
-              value = '-((G**2)/(48.0*cmath.pi**2))*(11.0*CA-4.0*TF*Nlf)',
-              texname = 'G_{UV}')
+              value = '2*cmath.sqrt(aS)*cmath.sqrt(cmath.pi)',
+              texname = 'G')

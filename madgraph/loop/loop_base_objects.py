@@ -165,7 +165,7 @@ class LoopDiagram(base_objects.Diagram):
             it returns all of them. """
         if string:
             return base_objects.VertexList([vert for vert in self['CT_vertices'] if\
-                    string in model['interaction_dict'][vert['id']]['type'][0]])
+                    string in model['interaction_dict'][vert['id']]['type']])
         else:
             return self['CT_vertices']
         
@@ -722,10 +722,12 @@ class LoopDiagram(base_objects.Diagram):
 #===============================================================================
 # LoopDiagram
 #===============================================================================
-class LoopWavefunctionCTDiagram(LoopDiagram):
+class LoopUVCTDiagram(LoopDiagram):
     """ A special kind of LoopDiagram which does not contain a loop but only
-    specifies a wavefunction UV renormalization counter-term."""
-    pass
+    specifies all UV counter-term which factorize the the same given born
+    and bringing in the same orders. UV mass renormalization does not belong to
+    this class of counter-term for example, and it is added along with the R2 
+    interactions."""
 
     def default_setup(self):
         """Default values for all properties"""
@@ -733,20 +735,15 @@ class LoopWavefunctionCTDiagram(LoopDiagram):
         super(LoopDiagram,self).default_setup()
         # This attributes stores the vertex of the wavefunction UV
         # renormalization counterterm.
-        self['UVCTVertex']=base_objects.Vertex()
+        self['UVCTVertices']=base_objects.VertexList()
 
     def filter(self, name, value):
         """Filter for valid diagram property values."""
 
-        if name == 'UVWavefunctionCTVertex':
-            if not isinstance(value, Vertex):
+        if name == 'UVCTVertices':
+            if not isinstance(value, base_objects.VertexList):
                 raise self.PhysicsObjectError, \
-                        "%s is not a valid UV wavefunction CT vertex" % str(value)
-            else:
-                if len(value['legs'])!=1:
-                    raise self.PhysicsObjectError, \
-                        "%s is not a valid UV wavefunction CT vertex" % str(value)
-
+                        "%s is not a valid UV CT VertexList" % str(value)
         else:
             super(LoopDiagram, self).filter(name, value)
 
@@ -755,16 +752,16 @@ class LoopWavefunctionCTDiagram(LoopDiagram):
     def get_sorted_keys(self):
         """Return particle property names as a nicely sorted list."""
         
-        return ['vertices', 'UVCTVertex', 'orders']
+        return ['vertices', 'UVCTVertices', 'orders']
 
     def calculate_orders(self, model):
         """Calculate the actual coupling orders of this diagram. Note
         that the special order WEIGTHED corresponds to the sum of
-        hierarchys for the couplings."""
+        hierarchies for the couplings."""
 
         coupling_orders = dict([(c, 0) for c in model.get('coupling_orders')])
         weight = 0
-        for vertex in (self['vertices']+[self['UVCTVertex'],]):
+        for vertex in (self['vertices']+[self['UVCTVertices'][0],]):
             if vertex.get('id') == 0: continue
             couplings = model.get('interaction_dict')[vertex.get('id')].\
                         get('orders')
@@ -780,9 +777,9 @@ class LoopWavefunctionCTDiagram(LoopDiagram):
         res=''
         if self['vertices']:
             res=res+super(LoopDiagram,self).nice_string()
-        if self['UVCTVertiex']:
-            res=res+'UV wfct. renorm. vertex: '
-            res=res+str(self['UVCTVertex'])+'\n'
+        if self['UVCTVertices']:
+            res=res+'UV renorm. vertices: '
+            res=res+','.join(str(vert) for vert in self['UVCTVertices'])+'\n'
             
 #===============================================================================
 # LoopModel
@@ -794,7 +791,7 @@ class LoopModel(base_objects.Model):
     
     def default_setup(self):
        super(LoopModel,self).default_setup()
-       self['perturbation_couplings'] = []
+       self['perturbation_couplings'] = {}
     
     def filter(self, name, value):
         """Filter for model property values"""

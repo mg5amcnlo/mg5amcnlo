@@ -1162,7 +1162,7 @@ class LoopHelasMatrixElement(helas_objects.HelasMatrixElement):
                             amp_color_list = copy.copy(structcolorlist)
                             amp_color_list.append(color)     
                             amp.set('color_indices', amp_color_list)
-                            amp.set('type',inter.get('type')[0])
+                            amp.set('type',inter.get('type'))
                             
                             # Add amplitude to amplitdes in helas_diagram
                             helas_diagram.get('amplitudes').append(amp)

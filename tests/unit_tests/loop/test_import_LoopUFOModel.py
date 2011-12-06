@@ -63,7 +63,6 @@ def loadLoopToyModel():
                   'pdg_code':21,
                   'propagating':True,
                   'is_part':True,
-                  'perturbation':['QCD',],
                   'self_antipart':True}))
     
     # A quark U and its antiparticle
@@ -71,7 +70,7 @@ def loadLoopToyModel():
                   'antiname':'u~',
                   'spin':2,
                   'color':3,
-                  'mass':'MU',
+                  'mass':'ZERO',
                   'width':'ZERO',
                   'texname':'u',
                   'antitexname':'u',
@@ -80,7 +79,6 @@ def loadLoopToyModel():
                   'pdg_code':2,
                   'propagating':True,
                   'is_part':True,
-                  'perturbation':['QCD'],
                   'self_antipart':False}))
     antiu = copy.copy(mypartlist[1])
     antiu.set('is_part', False)
@@ -90,7 +88,7 @@ def loadLoopToyModel():
                   'antiname':'d~',
                   'spin':2,
                   'color':3,
-                  'mass':'MD',
+                  'mass':'ZERO',
                   'width':'ZERO',
                   'texname':'d',
                   'antitexname':'d',
@@ -99,199 +97,9 @@ def loadLoopToyModel():
                   'pdg_code':1,
                   'propagating':True,
                   'is_part':True,
-                  'perturbation':['QCD'],           
                   'self_antipart':False}))
     antid = copy.copy(mypartlist[2])
     antid.set('is_part', False)
-    
-    # First set up the base interactions.
-
-    # 3 gluon vertex
-    myinterlist.append(base_objects.Interaction({
-                  'id': 1,
-                  'particles': base_objects.ParticleList(\
-                                        [mypartlist[0]] * 3),
-                  'color': [],
-                  'lorentz':['L1'],
-                  'couplings':{(0, 0):'G'},
-                  'orders':{'QCD':1}}))
-
-    # 4 gluon vertex
-    myinterlist.append(base_objects.Interaction({
-                  'id': 2,
-                  'particles': base_objects.ParticleList(\
-                                        [mypartlist[0]] * 4),
-                  'color': [],
-                  'lorentz':['L1'],
-                  'couplings':{(0, 0):'G^2'},
-                  'orders':{'QCD':2}}))
-
-    # Gluon coupling to u quark
-    myinterlist.append(base_objects.Interaction({
-                  'id': 3,
-                  'particles': base_objects.ParticleList(\
-                                        [mypartlist[1], \
-                                         antiu, \
-                                         mypartlist[0]]),
-                  'color': [],
-                  'lorentz':['L1'],
-                  'couplings':{(0, 0):'GQQ'},
-                  'orders':{'QCD':1}}))
-
-    # Gluon coupling to d quark
-    myinterlist.append(base_objects.Interaction({
-                  'id': 4,
-                  'particles': base_objects.ParticleList(\
-                                        [mypartlist[2], \
-                                         antid, \
-                                         mypartlist[0]]),
-                  'color': [],
-                  'lorentz':['L1'],
-                  'couplings':{(0, 0):'GQQ'},
-                  'orders':{'QCD':1}}))
-
-    # Then set up the R2 interactions proportional to those existing in the
-    # tree-level model.
-    
-    # ggg R2
-    myinterlist.append(base_objects.Interaction({
-                  'id': 5,
-                  'particles': base_objects.ParticleList(\
-                                        [mypartlist[0]] * 3),
-                  'color': [],
-                  'lorentz':['L1'],
-                  'couplings':{(0, 0):'G'},
-                  'orders':{'QCD':3},
-                  'type':['R2',()]}))
-
-    # gggg R2
-    myinterlist.append(base_objects.Interaction({
-                  'id': 6,
-                  'particles': base_objects.ParticleList(\
-                                        [mypartlist[0]] * 4),
-                  'color': [],
-                  'lorentz':['L1'],
-                  'couplings':{(0, 0):'G^2'},
-                  'orders':{'QCD':4},
-                  'type':['R2',()]}))
-
-    # guu R2
-    myinterlist.append(base_objects.Interaction({
-                  'id': 7,
-                  'particles': base_objects.ParticleList(\
-                                        [mypartlist[1], \
-                                         antiu, \
-                                         mypartlist[0]]),
-                  'color': [],
-                  'lorentz':['L1'],
-                  'couplings':{(0, 0):'GQQ'},
-                  'orders':{'QCD':3},
-                  'type':['R2',()]}))
-    # gdd R2
-    myinterlist.append(base_objects.Interaction({
-                  'id': 8,
-                  'particles': base_objects.ParticleList(\
-                                        [mypartlist[2], \
-                                         antid, \
-                                         mypartlist[0]]),
-                  'color': [],
-                  'lorentz':['L1'],
-                  'couplings':{(0, 0):'GQQ'},
-                  'orders':{'QCD':3},
-                  'type':['R2',()]}))
-
-    # R2 interactions not proportional to the base interactions
-
-    # Two point interactions
-
-    # gg R2
-    myinterlist.append(base_objects.Interaction({
-                  'id': 9,
-                  'particles': base_objects.ParticleList(\
-                                        [mypartlist[0]] * 2),
-                  'color': [],
-                  'lorentz':['L1'],
-                  'couplings':{(0, 0):'G'},
-                  'orders':{'QCD':2},
-                  'type':['R2',()]}))
-
-    # uu~ R2
-    myinterlist.append(base_objects.Interaction({
-                  'id': 10,
-                  'particles': base_objects.ParticleList([\
-                                        mypartlist[2], \
-                                         antid]),
-                  'color': [],
-                  'lorentz':['L1'],
-                  'couplings':{(0, 0):'G'},
-                  'orders':{'QCD':2},
-                  'type':['R2',()]}))
-
-    # dd~ R2
-    myinterlist.append(base_objects.Interaction({
-                  'id': 11,
-                  'particles': base_objects.ParticleList([\
-                                        mypartlist[1], \
-                                         antid]),
-                  'color': [],
-                  'lorentz':['L1'],
-                  'couplings':{(0, 0):'G'},
-                  'orders':{'QCD':2},
-                  'type':['R2',()]}))
-
-
-    # Finally the UV interactions Counter-Terms
-
-    # ggg UV
-    myinterlist.append(base_objects.Interaction({
-                  'id': 12,
-                  'particles': base_objects.ParticleList(\
-                                        [mypartlist[0]] * 3),
-                  'color': [],
-                  'lorentz':['L1'],
-                  'couplings':{(0, 0):'G'},
-                  'orders':{'QCD':3},
-                  'type':['UV',()]}))
-
-    # gggg UV
-    myinterlist.append(base_objects.Interaction({
-                  'id': 13,
-                  'particles': base_objects.ParticleList(\
-                                        [mypartlist[0]] * 4),
-                  'color': [],
-                  'lorentz':['L1'],
-                  'couplings':{(0, 0):'G^2'},
-                  'orders':{'QCD':4},
-                  'type':['UV',()]}))
-
-    # guu~ UV
-    myinterlist.append(base_objects.Interaction({
-                  'id': 14,
-                  'particles': base_objects.ParticleList(\
-                                        [mypartlist[1], \
-                                         antiu, \
-                                         mypartlist[0]]),
-                  'color': [],
-                  'lorentz':['L1'],
-                  'couplings':{(0, 0):'GQQ'},
-                  'orders':{'QCD':3},
-                  'type':['UV',()]}))
-    
-    # gdd~ UV
-    myinterlist.append(base_objects.Interaction({
-                  'id': 15,
-                  'particles': base_objects.ParticleList(\
-                                        [mypartlist[2], \
-                                         antid, \
-                                         mypartlist[0]]),
-                  'color': [],
-                  'lorentz':['L1'],
-                  'couplings':{(0, 0):'GQQ'},
-                  'orders':{'QCD':3},
-                  'type':['UV',()]}))
-
-   # We take the u and d-quark as massless so that there is no
-   # UV 2-point interactions for them.
 
     myloopmodel.set('particles', mypartlist)
     myloopmodel.set('couplings', ['QCD'])        
@@ -338,26 +146,30 @@ class LoopUFOImportTest(unittest.TestCase):
         
         self.assertEqual(self.imported_loopmodel['perturbation_couplings'],\
                          ['QCD',])
-        self.assertEqual(len(self.imported_loopmodel.get('interactions')),21)
-        self.assertEqual(self.imported_loopmodel.get('name'),'loop_ToyModel')
+        self.assertEqual(len(self.imported_loopmodel.get('interactions')),53)
+        self.assertEqual(len(self.imported_loopmodel.get('interactions').\
+                             get_type('base')),9)
+        self.assertEqual(len(self.imported_loopmodel.get('interactions').\
+                             get_R2()),18)
+        self.assertEqual(len(self.imported_loopmodel.get('interactions').\
+                             get_UV()),26)
+        self.assertEqual(len(self.imported_loopmodel.get('interactions').\
+                             get_UVmass()),2)
+        self.assertEqual(self.imported_loopmodel.get('name'),'LoopModelTest')
         self.assertEqual(self.imported_loopmodel.get('order_hierarchy'),\
                          {'QCD':1})
         self.assertEqual(self.imported_loopmodel.get('coupling_orders'),\
                          set(['QCD']))
         # The up quark
-        for key in self.hardcoded_loopmodel['particles'][1].keys():
-            self.assertEqual(self.imported_loopmodel['particles'][0][key],\
-                         self.hardcoded_loopmodel['particles'][1][key])
-        # The down quark
         for key in self.hardcoded_loopmodel['particles'][2].keys():
-            self.assertEqual(self.imported_loopmodel['particles'][1][key],\
+            self.assertEqual(self.imported_loopmodel['particles'][0][key],\
                          self.hardcoded_loopmodel['particles'][2][key])
+        # The down quark
+        for key in self.hardcoded_loopmodel['particles'][1].keys():
+            self.assertEqual(self.imported_loopmodel['particles'][1][key],\
+                         self.hardcoded_loopmodel['particles'][1][key])
         # The gluon
         for key in self.hardcoded_loopmodel['particles'][0].keys():
-            self.assertEqual(self.imported_loopmodel['particles'][2][key],\
+            self.assertEqual(self.imported_loopmodel['particles'][6][key],\
                          self.hardcoded_loopmodel['particles'][0][key])
-        self.assertEqual(len(self.imported_loopmodel['ref_dict_to0']),\
-                         len(self.hardcoded_loopmodel['ref_dict_to0']))
-        self.assertEqual(len(self.imported_loopmodel['ref_dict_to1']),\
-                         len(self.hardcoded_loopmodel['ref_dict_to1']))
-                
+        

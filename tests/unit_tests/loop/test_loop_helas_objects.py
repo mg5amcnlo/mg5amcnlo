@@ -59,7 +59,7 @@ class LoopHelasMatrixElementTest(unittest.TestCase):
         """load the NLO toy model"""
         
         self.myloopmodel = models.import_full_model(os.path.join(\
-            _input_file_path,'loop_ToyModel'))
+            _input_file_path,'LoopModelTest'))
 
     def check_HME_individual_diag_sanity(self,Amplitude, process,\
           mode='collective', selection=None, verbose=False, checkColor=True):
@@ -539,7 +539,7 @@ class LoopHelasMatrixElementTest(unittest.TestCase):
         myamplitude = diagram_generation.Amplitude()
         myamplitude.set('process', myproc)
         myamplitude.generate_diagrams()
-        #self.check_HME_individual_diag_sanity(myamplitude,myproc)
+        self.check_HME_individual_diag_sanity(myamplitude,myproc)
         
         myloopproc = base_objects.Process({'legs':myleglist,
                                         'model':self.myloopmodel,
