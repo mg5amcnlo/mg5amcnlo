@@ -193,7 +193,7 @@ class CmdExtended(cmd.Cmd):
             pass
     
     def postcmd(self, stop, line):
-        """ Upate the status of  the run for finishing interactive command """
+        """ Update the status of  the run for finishing interactive command """
                         
         if not self.use_rawinput:
             return stop

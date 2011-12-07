@@ -33,7 +33,6 @@ crossxhtml_template = """
     <META HTTP-EQUIV="Refresh" CONTENT="10" > 
     <META HTTP-EQUIV="EXPIRES" CONTENT="20" > 
     <TITLE>Online Event Generation</TITLE>
-    <script type="text/javascript" src="./HTML/sortable.js"></script>
     <link rel=stylesheet href="./HTML/mgstyle.css" type="text/css">
 </HEAD>
 <BODY>
@@ -65,16 +64,16 @@ function check_link(url,alt, id){
     <br>
     <br>
     <H2 align="center"> Available Results </H2>
-        <TABLE BORDER=2 align="center" class="sortable" id='tablesort'>  
+        <TABLE BORDER=2 align="center">  
             <TR align="center">
-                <TH>Links</TH> 
-                <TH>Output File</TH> 
-                <TH NOWRAP> Tag </TH>
-                <TH NOWRAP> Run </TH> 
+                <TH>Run</TH> 
                 <TH>Collider</TH> 
+                <TH> Tag </TH>
                 <TH> %(numerical_title)s </TH> 
-                <TH> Events  </TH> 
-            </TR>     
+                <TH> Events  </TH>
+                <TH> Data </TH>  
+                <TH>Output</TH> 
+            </TR>      
             %(old_run)s
         </TABLE>
     <H3 align=center><A HREF="./index.html"> Main Page </A></H3>
@@ -131,18 +130,28 @@ class AllResults(dict):
         self.path = path
         self.model = model
         self.status = ''
-        self.numerical_title = 'Cross Section (pb)'
+        self.unit = 'pb'
         self.current = None
     
-    def def_current(self, name):
-        """define the name of the current run"""
-        assert name in self or name == None
-        if name:
-            self.current = self[name]
+    def def_current(self, run, tag=None):
+        """define the name of the current run
+            The first argument can be a OneTagResults
+        """
+        
+        if isinstance(run, OneTagResults):
+            self.current = run
+            return
+        
+        assert run in self or run == None
+        if run:
+            if not tag:
+                self.current = self[run][-1]
+            else:
+                self.current = self[run][tag]
         else:
             self.current = None
     
-    def delete_run(self, name):
+    def delete_run(self, run_name):
         """delete a run from the database"""
         if self.current == name:
             self.results.def_current(None)                    
@@ -150,8 +159,6 @@ class AllResults(dict):
         self.order.remove(name)
         #update the html
         self.output()
-        
-        
     
     def def_web_mode(self, web):
         """define if we are in web mode or not """
@@ -166,16 +173,15 @@ class AllResults(dict):
     def add_run(self, name, run_card, current=True):
         """ Adding a run to this directory"""
         
-        new = OneRunResults(name, run_card, self.process, self.path)
+        new = RunResults(name, run_card, self.process, self.path)
         self[name] = new
-        self.def_current(name)
         if name in self.order:
             self.order.remove(name)
         self.order.append(name)
         if current:
             self.def_current(name)
-        if new['unit'] == 'GeV':
-            self.numerical_title = 'Width (GeV)'
+        if new.info['unit'] == 'GeV':
+            self.unit = 'GeV'
         
         
     def update(self, status, level, makehtml=True, error=False):
@@ -192,12 +198,13 @@ class AllResults(dict):
     def resetall(self):
         """check the output status of all run"""
         
-        for run in self.keys():
-            if run == 'web':
+        for key,run in self.items():
+            if key == 'web':
                 continue
-            self.def_current(run)
-            self.clean()
-            self.current.update_status()
+            for subrun in run:
+                self.def_current(subrun)
+                self.clean()
+                self.current.update_status()
 
     def clean(self, levels = ['all']):
         """clean the run for the levels"""
@@ -219,9 +226,9 @@ class AllResults(dict):
         if 'delphes' in levels:
             to_clean.delphes = []
         
-        if run in self.order:
-            self.order.remove(run)
-        self.order.insert(0, run)
+        #if run in self.order:
+        #    self.order.remove(run)
+        #self.order.insert(0, run)
             
         
     def save(self):
@@ -229,27 +236,27 @@ class AllResults(dict):
         filename = pjoin(self.path, 'HTML', 'results.pkl')
         save_load_object.save_to_file(filename, self)
 
-    def add_detail(self, name, value, run=None):
+    def add_detail(self, name, value, run=None, tag=None):
         """ add information to current run (cross/error/event)"""
-        
         assert name in ['cross', 'error', 'nb_event', 'cross_pythia']
         if not run:
             run = self.current
         else:
-            run = self[run]
-        
+            run = self[run].return_tag(tag)
+            
         if name == 'cross_pythia':
-            run[name] = '<br> matched: %.4g' % float(value)
-            run['nb_event_text'] = '%s <br> matched: %d' % (self.current['nb_event'],
-                    int(self.current['nb_event']) * float(value) /float(self.current['cross'])) 
+            run['cross_pythia'] = float(value)
+            self.check_def_cross(run) # check that cross / err / nb_event are defined
         elif name == 'nb_event':
-            run[name] = value
-            run['nb_event_text'] = value
+            run[name] = int(value)
         else:    
-            run[name] = value
-            if name == 'cross':
-                self.current.results = True
-        
+            run[name] = float(value)
+
+    def check_def_cross(self, run):
+        pass
+    
+    
+    
     def output(self):
         """ write the output file """
         
@@ -266,8 +273,9 @@ class AllResults(dict):
             status_dict = {'status': status,
                             'cross': self.current['cross'],
                             'error': self.current['error'],
-                            'unit': self.current['unit'],
-                            'run_name': self.current['run_name']}
+                            'run_name': self.current['run_name'],
+                            'unit': self[self.current['run_name']].info['unit']}
+
             if exists(pjoin(self.path, 'Cards', 'plot_card.dat')):
                 status_dict['plot_card'] = """ <a href="./Cards/plot_card.dat">plot_card</a><BR>"""
             else:
@@ -299,64 +307,27 @@ class AllResults(dict):
         # 2) Create the text for the old run:
         old_run = ''
         for key in self.order:
-            old_run += self[key].info_html(self.path, self.web, running)
+            old_run += self[key].get_html(self.path, self.web, running)
         
         text_dict = {'process': self.process,
                      'model': self.model,
                      'status': status,
                      'old_run': old_run,
-                     'numerical_title': self.numerical_title}
+                     'numerical_title': self.unit == 'pb' and 'Cross section (pb)'\
+                                                          or 'Width (GeV)'}
         
         text = crossxhtml_template % text_dict
         open(pjoin(self.path,'crossx.html'),'w').write(text)
         
-        
-class OneTagResults(dict):
-    """Store the data for a specific run"""
-    
-    # tag linked to parton output
-    tag_to_file = {'gridpack': "%(path)s/%(run)s_gridpack.tar.gz",
-                   'part_lhe': '%(path)s/%(run)s_unweighted_events.lhe.gz',
-                   'part_lhe_root': '%(path)s/%(run)s_unweighted_events.root',
-                   'part_plot': '%(path)s/%(run)s_plots.html',
-                   'param_card': '%(path)s/%(run)s_param_card.dat'}
-    
-    # tag linked to pythia output
-    tag_to_file.update({'pythia_plot': '%(path)s/%(run)s_%(tag)s_pythia.html',
-                      'pythia_lhe':  '%(path)s/%(run)s_%(tag)s_pythia_events.lhe.gz'
-                     })
+       
 
-    
-    
-    
-    def __init__(self, tag):
-        """All the data associate to a specific tag"""
-        
-        self.tag = tag
-        self.parton = {}
-        self.pythia = {}
-        self.pgs = {}
-        self.delphes = {}
-        self.matching = False # Important to know for the 
-                              # display of cross-section
-        
-        
-        
-        
-class OneRunResults(dict):
-    """ Store the results of a specific run """
-    
+class RunResults(list):
+    """The list of all OneTagResults"""        
+
     def __init__(self, run_name, run_card, process, path):
         """initialize the object"""
         
-        # define at run_result
-        self['run_name'] = run_name
-        self['tag'] = run_card['run_tag']
-        #self.data = {run_card['run_tag']:{}}
-        self.event_path = pjoin(path,'Events')
-        self.me_dir = path
-        self.debug = None
-        
+        self.info = {'run_name': run_name}
         # Set the collider information
         data = process.split('>',1)[0].split()
         if len(data) == 2:
@@ -373,17 +344,58 @@ class OneRunResults(dict):
                 name2 = ' p' 
             elif run_card['lpp2'] == '2':
                 name2 = ' a'                
-            self['collider'] = '''%s %s <br> %s x %s  GeV''' % \
+            self.info['collider'] = '''%s %s <br> %s x %s  GeV''' % \
                     (name1, name2, run_card['ebeam1'], run_card['ebeam2'])
-            self['unit'] = 'pb'                       
+            self.info['unit'] = 'pb'                       
         else:
-            self['collider'] = 'decay'
-            self['unit'] = 'GeV'
+            self.info['collider'] = 'decay'
+            self.info['unit'] = 'GeV'
+            
+        self.append(OneTagResults(run_name, run_card, path))
+
+    
+    def get_html(self, output_path, *arg, **opt):
+        """WRITE HTML OUTPUT"""
+
+        dico = self.info
+        dico['run_span'] = sum([tag.get_nb_line() for tag in self], 1) -1
+        dico['tag_data'] = '\n'.join([tag.get_html() for tag in self])
+        text = """
+        <tr>
+        <td rowspan=%(run_span)s>%(run_name)s</td> 
+        <td rowspan=%(run_span)s><center> %(collider)s </center></td>
+        %(tag_data)s
+        </tr>
+        """ % dico
+
+        return text
+    
+    def return_tag(self, name):
         
+        for data in self:
+            if data['tag'] == name:
+                return tag
+        
+    
+    
+        
+class OneTagResults(dict):
+    """ Store the results of a specific run """
+    
+    def __init__(self, run_name, run_card, path):
+        """initialize the object"""
+        
+        # define at run_result
+        self['run_name'] = run_name
+        self['tag'] = run_card['run_tag']
+        #self.data = {run_card['run_tag']:{}}
+        self.event_path = pjoin(path,'Events')
+        self.me_dir = path
+        self.debug = None
         
         # Default value
-        self['nb_event'] = None
-        self['nb_event_text'] = 'No events yet'
+        self['nb_event'] = 0
+        #self['nb_event_text'] = 'No events yet'
         self['cross'] = 0
         self['cross_pythia'] = ''
         self['error'] = 0
@@ -391,11 +403,13 @@ class OneRunResults(dict):
         self.pythia = []
         self.pgs = []
         self.delphes = []
-        self.results = False #no results.html         
+        #self.results = False #no results.html         
         # data 
         self.status = ''
         
-        
+    
+    
+    
     def update_status(self, level='all'):
         """update the status of the current run """
 
@@ -557,18 +571,15 @@ class OneRunResults(dict):
     
     def get_html_event_info(self, web=False, running=False):
         """return the events information"""
+    
+    def get_links(self, level):
+        """ Get the links for a given level"""
         
-        # Events
-        out = '<table border=1>'
-        if 'gridpack' in self.parton:
-            out += '<tr><td> GridPack : </td><td>'
-            out += self.special_link("./%(run_name)s_gridpack.tar",
-                                                                 'gridpack', 'gridpack')
-            out += "</td></tr>"
-
-        if self.parton and self.parton != ['gridpack']:
-            
-            out += '<tr><td> Parton Events : </td><td>'
+        out = ''
+        if level == 'parton':
+            if 'gridpack' in self.parton:
+                out += self.special_link("./%(run_name)s_gridpack.tar",
+                                                         'gridpack', 'gridpack')
             
             if 'lhe' in self.parton:
                 link = './Events/%(run_name)s_unweighted_events.lhe'
@@ -581,10 +592,10 @@ class OneRunResults(dict):
                 out += ' <a href="./HTML/%(run_name)s/plots_parton.html">plots</a>'
             if 'param_card' in self.parton:
                 out += ' <a href="./%(run_name)s_param_card.dat">param_card</a>'
-            out += '</td></tr>'
-        if self.pythia:
-            out += '<tr><td> Pythia Events : </td><td>'
-            
+
+            return out % self
+        
+        if level == 'pythia':          
             if 'log' in self.pythia:
                 out += """ <a href="./Events/%(run_name)s/%(tag)s_pythia.log">LOG</a>"""
             if 'hep' in self.pythia:
@@ -603,19 +614,10 @@ class OneRunResults(dict):
                 out += """ <a href="./Events/%(run_name)s/%(tag)s_pythia_lhe_events.root">rootfile (LHE)</a>"""
             if 'plot' in self.pythia:
                 out += ' <a href="./HTML/%(run_name)s/plots_pythia_%(tag)s.html">plots</a>'
-            out += '</td></tr>'
-        elif web and not running and self['nb_event']:
-            out += """<tr><td> Pythia Events : </td><td><center>
-                       <FORM ACTION="http://%(web)s/cgi-bin/RunProcess/handle_runs-pl"  ENCTYPE="multipart/form-data" METHOD="POST">
-                       <INPUT TYPE=HIDDEN NAME=directory VALUE="%(me_dir)s"> 
-                       <INPUT TYPE=HIDDEN NAME=whattodo VALUE="pythia"> 
-                       <INPUT TYPE=HIDDEN NAME=run VALUE="%(run_name)s"> 
-                       <INPUT TYPE=SUBMIT VALUE="Run Pythia"></FORM><center></td>
-                       </table>"""
-            return out 
+            return out % self
 
-        if self.pgs:
-            out += '<tr><td>Reco. Objects. (PGS) : </td><td>'
+
+        if level == 'pgs':
             if 'log' in self.pgs:
                 out += """ <a href="./Events/%(run_name)s/%(tag)s_pgs.log">LOG</a>"""
             if 'lhco' in self.pgs:
@@ -627,9 +629,10 @@ class OneRunResults(dict):
                 out += """ <a href="./Events/%(run_name)s/%(tag)s_pgs_events.root">rootfile</a>"""    
             if 'plot' in self.pgs:
                 out += """ <a href="./HTML/%(run_name)s/plots_pgs_%(tag)s.html">plots</a>"""
-            out += '</td></tr>'
-        if self.delphes:
-            out += '<tr><td>Reco. Objects. (Delphes) : </td><td>'
+            return out % self
+        
+        if level == 'delphes':
+            
             if 'log' in self.delphes:
                 out += """ <a href="./Events/%(run_name)s/%(tag)s_delphes.log">LOG</a>"""
             if 'lhco' in self.delphes:
@@ -641,26 +644,128 @@ class OneRunResults(dict):
                 out += """ <a href="./Events/%(run_name)s/%(tag)s_delphes_events.root">rootfile</a>"""    
             if 'plot' in self.delphes:
                 out += """ <a href="./HTML/%(run_name)s/plots_delphes_%(tag)s.html">plots</a>"""            
-            out += '</td></tr>'
+            return out % self
+                
+    
+    def get_nb_line(self):
         
-        if not (self.pgs or self.delphes) and web and not running and self['nb_event']:
-            out += """<tr><td> Reco. Objects: </td><td><center>
-                       <FORM ACTION="http://%(web)s/cgi-bin/RunProcess/handle_runs-pl"  ENCTYPE="multipart/form-data" METHOD="POST">
-                       <INPUT TYPE=HIDDEN NAME=directory VALUE="%(me_dir)s"> 
-                       <INPUT TYPE=HIDDEN NAME=whattodo VALUE="pgs"> 
-                       <INPUT TYPE=HIDDEN NAME=run VALUE="%(run_name)s"> 
-                       <INPUT TYPE=SUBMIT VALUE="Run Det. Sim."></FORM></center></td>
-                       </table>"""
-            return out             
+        nb_line = 0
+        for i in [self.parton, self.pythia, self.pgs, self.delphes]:
+            if len(i):
+                nb_line += 1
+        return max([nb_line,1])
         
-        out += '</table>'
-        return out
+    def get_html(self):
+        """create the html output linked to the this tag"""
         
+        
+        tag_template = """
+        <td rowspan=%(tag_span)s> <a href="./Events/%(run)s/%(run)s_%(tag)s_banner.txt">%(tag)s</a></td>
+        %(subruns)s"""
+        
+        # Compute the text for eachsubpart
+        
+        sub_part_template_parton = """
+        <td rowspan=%(cross_span)s><center><a href="./HTML/%(run)s/results.html"> %(cross).4g <font face=symbol>&#177</font> %(err).4g </a></center></td>
+        <td rowspan=%(cross_span)s><center> %(nb_event)s<center></td><td> %(type)s </td>
+        <td> %(links)s</td>
+        </tr>"""
+        
+        sub_part_template_pgs = """
+        <td> %(type)s </td>
+        <td> %(links)s</td>
+        </tr>"""        
+        
+        # Compute the HTMl output for subpart
+        nb_line = self.get_nb_line()
+        first = None
+        subresults_html = ''
+        for type in ['parton', 'pythia', 'pgs', 'delphes']:
+            data = getattr(self, type)
+            if not data:
+                continue
+            
+            local_dico = {'type': type, 'run': self['run_name']}
+
+            if not first:
+                template = sub_part_template_parton
+                first = type
+                if type=='parton' and self['cross_pythia']:
+                    local_dico['cross_span'] = 1
+                    local_dico['cross'] = self['cross']
+                    local_dico['err'] = self['error']
+                    local_dico['nb_event'] = self['nb_event']
+                elif self['cross_pythia']:
+                    local_dico['cross'] = self['cross_pythia']
+                    local_dico['err'] = self['error'] * self['cross_pythia'] / self['cross']
+                    local_dico['nb_event'] = int(0.5+(self['nb_event'] * self['cross_pythia'] /self.current['cross']))
+                else:
+                    local_dico['cross_span'] = nb_line
+                    local_dico['cross'] = self['cross']
+                    local_dico['err'] = self['error']
+                    local_dico['nb_event'] = self['nb_event']
+                    
+            elif type == 'pythia' and self['cross_pythia']:
+                template = sub_part_template_parton
+                if self.parton:           
+                    local_dico['cross_span'] = nb_line - 1
+                else:
+                    local_dico['cross_span'] = nb_line
+                local_dico['cross'] = self['cross_pythia']
+                local_dico['err'] = self['error'] * self['cross_pythia'] / self['cross'] 
+                local_dico['nb_event'] = self['nb_event']
+            else:
+               template = sub_part_template_pgs 
+            
+            
+            # Fill the links
+            local_dico['links'] = self.get_links(type)
+            subresults_html += template % local_dico
+
+
+        if subresults_html == '':
+            subresults_html = sub_part_template_parton % \
+                          {'type': 'parton', 
+                           'run': self['run_name'],
+                           'cross_span': 1,
+                           'cross': self['cross'],
+                           'err': self['error'],
+                           'nb_event': self['nb_event'] and self['nb_event'] or 'No events yet',
+                           'links':'&nbsp;'
+                           }                                
+                                                          
+                                               
+        text = tag_template % {'tag_span': nb_line,
+                           'run': self['run_name'], 'tag': self['tag'],
+                           'subruns' : subresults_html}
+
+        return text
+        
+
+  
     
+#            elif web and not running and self['nb_event']:
+#            out += """<tr><td> Pythia Events : </td><td><center>
+#                       <FORM ACTION="http://%(web)s/cgi-bin/RunProcess/handle_runs-pl"  ENCTYPE="multipart/form-data" METHOD="POST">
+#                       <INPUT TYPE=HIDDEN NAME=directory VALUE="%(me_dir)s"> 
+#                       <INPUT TYPE=HIDDEN NAME=whattodo VALUE="pythia"> 
+#                       <INPUT TYPE=HIDDEN NAME=run VALUE="%(run_name)s"> 
+#                       <INPUT TYPE=SUBMIT VALUE="Run Pythia"></FORM><center></td>
+#                       </table>"""
+#            return out 
     
-    
-    
-    
+#        if not (self.pgs or self.delphes) and web and not running and self['nb_event']:
+#            out += """<tr><td> Reco. Objects: </td><td><center>
+#                       <FORM ACTION="http://%(web)s/cgi-bin/RunProcess/handle_runs-pl"  ENCTYPE="multipart/form-data" METHOD="POST">
+#                       <INPUT TYPE=HIDDEN NAME=directory VALUE="%(me_dir)s"> 
+#                       <INPUT TYPE=HIDDEN NAME=whattodo VALUE="pgs"> 
+#                       <INPUT TYPE=HIDDEN NAME=run VALUE="%(run_name)s"> 
+#                       <INPUT TYPE=SUBMIT VALUE="Run Det. Sim."></FORM></center></td>
+#                       </table>"""
+#            return out             
+#        
+#        out += '</table>'
+#        return out    
 
 
 

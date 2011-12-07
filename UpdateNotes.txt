@@ -1,6 +1,6 @@
 Update notes for MadGraph 5 (in reverse time order)
 
-1.4.b5 (26/11/11): OM: New structure for madevent script (./bin/madevent)
+1.4.b6 (1/12/11): OM: New structure for madevent script (./bin/madevent)
                       allowing to have an interface similar to MG5 
                       for running madevent.
                       (accessible from MG5 via launch [DIR] -i)
@@ -40,7 +40,7 @@ Update notes for MadGraph 5 (in reverse time order)
                         their associated weight (for automatic order restriction)
                       d) display couplings now returns the list of all couplings
                         with the associated expression
-                  OM: New Python script for the creation of the crossx.html page
+                  OM: New Python script for the creation of the crossx.html/results.html page
                       Requiring less disk access for the generation of the file.
                   OM: Modify error treatment, especially for Invalid commands
                       and Configuration problems.

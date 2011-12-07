@@ -232,7 +232,7 @@ def make_all_html_results(cmd):
     if not os.path.exists(pjoin(cmd.me_dir, 'HTML', run)):
         os.mkdir(pjoin(cmd.me_dir, 'HTML', run))
     
-    unit = cmd.results.current['unit']
+    unit = cmd.results.unit
             
     all = Combine_results(run)
     

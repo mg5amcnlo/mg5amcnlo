@@ -2580,10 +2580,10 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
         # Compile the file
         # Check for F77 compiler
         if 'FC' not in os.environ or not os.environ['FC']:
-            if misc.which('g77'):
-                 compiler = 'g77'
-            elif misc.which('gfortran'):
-                compiler = 'gfortran'
+            if misc.which('gfortran'):
+                 compiler = 'gfortran'
+            elif misc.which('g77'):
+                compiler = 'g77'
             else:
                 raise self.InvalidCmd('Require g77 or Gfortran compiler')
             if compiler == 'gfortran' and args[0] == "pythia-pgs":

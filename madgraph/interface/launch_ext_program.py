@@ -233,8 +233,7 @@ class MELauncher(ExtLauncher):
             return True
         
         # Display the cross-section to the screen
-        path = os.path.join(self.running_dir, 'SubProcesses', '%s_results.dat' 
-                                                                    % self.name) 
+        path = os.path.join(self.running_dir, 'SubProcesses', 'results.dat') 
         if not os.path.exists(path):
             logger.error('Generation failed (no results.dat file found)')
             return
