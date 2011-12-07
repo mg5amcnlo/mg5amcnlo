@@ -173,13 +173,21 @@ class AllResults(dict):
     def add_run(self, name, run_card, current=True):
         """ Adding a run to this directory"""
         
-        new = RunResults(name, run_card, self.process, self.path)
-        self[name] = new
+        tag = run_card['run_tag']
         if name in self.order:
             self.order.remove(name)
+            new = OneTagResults(name, run_card, self.path)
+            if  tag not in self[name].tags:
+                self[name].remove(tag)    
+            self[name].add(new)
+        else:
+            new = RunResults(name, run_card, self.process, self.path)
+            self[name] = new  
+        
         self.order.append(name)
+        
         if current:
-            self.def_current(name)
+            self.def_current(name)        
         if new.info['unit'] == 'GeV':
             self.unit = 'GeV'
         
@@ -225,10 +233,6 @@ class AllResults(dict):
             to_clean.pgs = []
         if 'delphes' in levels:
             to_clean.delphes = []
-        
-        #if run in self.order:
-        #    self.order.remove(run)
-        #self.order.insert(0, run)
             
         
     def save(self):
@@ -246,16 +250,10 @@ class AllResults(dict):
             
         if name == 'cross_pythia':
             run['cross_pythia'] = float(value)
-            self.check_def_cross(run) # check that cross / err / nb_event are defined
         elif name == 'nb_event':
             run[name] = int(value)
         else:    
-            run[name] = float(value)
-
-    def check_def_cross(self, run):
-        pass
-    
-    
+            run[name] = float(value)    
     
     def output(self):
         """ write the output file """
@@ -328,6 +326,7 @@ class RunResults(list):
         """initialize the object"""
         
         self.info = {'run_name': run_name}
+        self.tags = []
         # Set the collider information
         data = process.split('>',1)[0].split()
         if len(data) == 2:
@@ -350,8 +349,9 @@ class RunResults(list):
         else:
             self.info['collider'] = 'decay'
             self.info['unit'] = 'GeV'
-            
+        
         self.append(OneTagResults(run_name, run_card, path))
+        
 
     
     def get_html(self, output_path, *arg, **opt):
@@ -359,7 +359,7 @@ class RunResults(list):
 
         dico = self.info
         dico['run_span'] = sum([tag.get_nb_line() for tag in self], 1) -1
-        dico['tag_data'] = '\n'.join([tag.get_html() for tag in self])
+        dico['tag_data'] = '\n'.join([tag.get_html(self) for tag in self])
         text = """
         <tr>
         <td rowspan=%(run_span)s>%(run_name)s</td> 
@@ -376,6 +376,23 @@ class RunResults(list):
             if data['tag'] == name:
                 return tag
         
+    def add(self, obj):
+        """ """
+        
+        assert isinstance(obj, OneTagResults)
+        tag = obj['tag']
+        assert tag in self.tags
+        
+        self.tags.append(tag)
+        self.append(obj)
+        
+    def remove(self, tag):
+        
+        assert tag in self.tags
+        
+        obj = [o for o in self and o['tag']==tag][0]
+        self.tags.remove(tag)
+        list.remove(self, obj)
     
     
         
@@ -569,8 +586,6 @@ class OneTagResults(dict):
          return " <a  id='%(id)s' href='%(link1)s' onClick=\"check_link('%(link1)s','%(link2)s','%(id)s')\">%(name)s</a>" \
               % {'link1': link1, 'link2':link2, 'id': id, 'name':name}       
     
-    def get_html_event_info(self, web=False, running=False):
-        """return the events information"""
     
     def get_links(self, level):
         """ Get the links for a given level"""
@@ -655,8 +670,11 @@ class OneTagResults(dict):
                 nb_line += 1
         return max([nb_line,1])
         
-    def get_html(self):
-        """create the html output linked to the this tag"""
+    def get_html(self, RunResults):
+        """create the html output linked to the this tag
+           RunResults is given in case of cross-section need to be taken
+           from a previous run
+        """
         
         
         tag_template = """
@@ -678,6 +696,22 @@ class OneTagResults(dict):
         
         # Compute the HTMl output for subpart
         nb_line = self.get_nb_line()
+        # Check that cross/nb_event/error are define
+        if self.pythia and not self['nb_event']:
+            self['nb_event'] = RunResults[-2]['nb_event']
+            self['cross'] = RunResults[-2]['cross']
+            self['error'] = RunResults[-2]['error']
+        elif (self.pgs or self.delphes) and not self['nb_event']:
+            if RunResults[-2]['cross_pythia']:
+                self['cross'] = RunResults[-2]['cross_pythia']
+                self['error'] = RunResults[-2]['error'] * self['cross'] / RunResults[-2]['cross']
+                self['nb_event'] = int(0.5+(RunResults[-2]['nb_event'] * self['cross'] /RunResults[-2]['cross']))           
+            else:
+                self['nb_event'] = RunResults[-2]['nb_event']
+                self['cross'] = RunResults[-2]['cross']
+                self['error'] = RunResults[-2]['error']
+
+        
         first = None
         subresults_html = ''
         for type in ['parton', 'pythia', 'pgs', 'delphes']:
@@ -698,7 +732,7 @@ class OneTagResults(dict):
                 elif self['cross_pythia']:
                     local_dico['cross'] = self['cross_pythia']
                     local_dico['err'] = self['error'] * self['cross_pythia'] / self['cross']
-                    local_dico['nb_event'] = int(0.5+(self['nb_event'] * self['cross_pythia'] /self.current['cross']))
+                    local_dico['nb_event'] = int(0.5+(self['nb_event'] * self['cross_pythia'] /self['cross']))
                 else:
                     local_dico['cross_span'] = nb_line
                     local_dico['cross'] = self['cross']

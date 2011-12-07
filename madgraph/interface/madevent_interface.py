@@ -186,7 +186,6 @@ class CmdExtended(cmd.Cmd):
         """action to perform to close nicely on a keyboard interupt"""
         try:
             if hasattr(self, 'results'):
-                print 'pass here'
                 self.update_status('Stop by the user', level=None, makehtml=False, error=True)
                 self.add_error_log_in_html()
         except:
@@ -1951,7 +1950,7 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
     def do_pythia(self, line):
         """launch pythia"""
         
-        tag = self.run_card['run_tag']
+
         # Check argument's validity
         args = self.split_arg(line)
         if '-f' in args:
@@ -1976,7 +1975,7 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
         # initialize / remove lhapdf mode        
         self.configure_directory()
         
-                
+        tag = self.run_card['run_tag']                
         if not force:
             if os.path.exists(pjoin(self.me_dir, 'Events', self.run_name, '%s_pythia.log' % tag)):
                 question = 'Previous run of pythia detected. Do you want to remove it?'

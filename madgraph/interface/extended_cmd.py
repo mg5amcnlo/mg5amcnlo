@@ -45,7 +45,102 @@ class TimeOutError(Exception):
 #===============================================================================
 # CmdExtended
 #===============================================================================
-class Cmd(cmd.Cmd):
+class BasicCmd(cmd.Cmd):
+    """Simple extension for the readline"""
+
+    def preloop(self):
+        if readline and not 'libedit' in readline.__doc__:
+            readline.set_completion_display_matches_hook(self.print_suggestions)
+
+    def deal_multiple_categories(self, dico):
+        """convert the multiple category in a formatted list understand by our
+        specific readline parser"""
+
+        if 'libedit' in readline.__doc__:
+            # No parser in this case, just send all the valid options
+            out = []
+            for name, opt in dico.items():
+                out += opt
+            return out
+
+        # That's the real work
+        out = []
+        valid=0
+        # if the key starts with number order the key with that number.
+        for name, opt in dico.items():
+            if not opt:
+                continue
+            name = name.replace(' ', '_')
+            valid += 1
+            out.append(opt[0]+'@@'+name+'@@')
+            out += opt
+        if valid == 1:
+            out = out[1:]
+        return out
+
+    def print_suggestions(self, substitution, matches, longest_match_length) :
+        """print auto-completions by category"""
+        try:
+            if len(matches) == 1:
+                self.stdout.write(matches[0]+' ')
+                return
+            self.stdout.write('\n')
+            l2 = [a[-2:] for a in matches]
+            if '@@' in l2:
+                nb_column = self.getTerminalSize()//(longest_match_length+1)
+                pos=0
+                for val in self.completion_matches:
+                    if val.endswith('@@'):
+                        category = val.rsplit('@@',2)[1]
+                        category = category.replace('_',' ')
+                        self.stdout.write('\n %s:\n%s\n' % (category, '=' * (len(category)+2)))
+                        start = 0
+                        continue
+                    elif pos and pos % nb_column ==0:
+                        self.stdout.write('\n')
+                    self.stdout.write(val + ' ' * (longest_match_length +1 -len(val)))
+                    pos +=1
+                self.stdout.write('\n')
+            else:
+                # nb column
+                nb_column = self.getTerminalSize()//(longest_match_length+1)
+                for i,val in enumerate(matches):
+                    if i and i%nb_column ==0:
+                        self.stdout.write('\n')
+                    self.stdout.write(val + ' ' * (longest_match_length +1 -len(val)))
+                self.stdout.write('\n')
+    
+            self.stdout.write(self.prompt+readline.get_line_buffer())
+            self.stdout.flush()
+        except Exception, error:
+            if __debug__:
+                 print error
+            
+    def getTerminalSize(self):
+        def ioctl_GWINSZ(fd):
+            try:
+                import fcntl, termios, struct, os
+                cr = struct.unpack('hh', fcntl.ioctl(fd, termios.TIOCGWINSZ,
+                                                     '1234'))
+            except:
+                return None
+            return cr
+        cr = ioctl_GWINSZ(0) or ioctl_GWINSZ(1) or ioctl_GWINSZ(2)
+        if not cr:
+            try:
+                fd = os.open(os.ctermid(), os.O_RDONLY)
+                cr = ioctl_GWINSZ(fd)
+                os.close(fd)
+            except:
+                pass
+        if not cr:
+            try:
+                cr = (env['LINES'], env['COLUMNS'])
+            except:
+                cr = (25, 80)
+        return int(cr[1])
+
+class Cmd(BasicCmd):
     """Extension of the cmd.Cmd command line.
     This extensions supports line breaking, history, comments,
     internal call to cmdline, path completion,...
@@ -400,11 +495,6 @@ class Cmd(cmd.Cmd):
         
         if not interface:
             return self.child
-    
-    
-    def preloop(self):
-        if readline and not 'libedit' in readline.__doc__:
-            readline.set_completion_display_matches_hook(self.print_suggestions)
     
     def postloop(self):
         """ """
@@ -816,96 +906,7 @@ class Cmd(cmd.Cmd):
 
         return completion
     
-    #============================================================================
-    # Customize Readline auto-completion
-    #============================================================================
-    def deal_multiple_categories(self, dico):
-        """convert the multiple category in a formatted list understand by our
-        specific readline parser"""
 
-        if 'libedit' in readline.__doc__:
-            # No parser in this case, just send all the valid options
-            out = []
-            for name, opt in dico.items():
-                out += opt
-            return out
-
-        # That's the real work
-        out = []
-        valid=0
-        # if the key starts with number order the key with that number.
-        for name, opt in dico.items():
-            if not opt:
-                continue
-            name = name.replace(' ', '_')
-            valid += 1
-            out.append(opt[0]+'@@'+name+'@@')
-            out += opt
-        if valid == 1:
-            out = out[1:]
-        return out
-
-    def print_suggestions(self, substitution, matches, longest_match_length) :
-        """print auto-completions by category"""
-        try:
-            if len(matches) == 1:
-                self.stdout.write(matches[0]+' ')
-                return
-            self.stdout.write('\n')
-            l2 = [a[-2:] for a in matches]
-            if '@@' in l2:
-                nb_column = self.getTerminalSize()//(longest_match_length+1)
-                pos=0
-                for val in self.completion_matches:
-                    if val.endswith('@@'):
-                        category = val.rsplit('@@',2)[1]
-                        category = category.replace('_',' ')
-                        self.stdout.write('\n %s:\n%s\n' % (category, '=' * (len(category)+2)))
-                        start = 0
-                        continue
-                    elif pos and pos % nb_column ==0:
-                        self.stdout.write('\n')
-                    self.stdout.write(val + ' ' * (longest_match_length +1 -len(val)))
-                    pos +=1
-                self.stdout.write('\n')
-            else:
-                # nb column
-                nb_column = self.getTerminalSize()//(longest_match_length+1)
-                for i,val in enumerate(matches):
-                    if i and i%nb_column ==0:
-                        self.stdout.write('\n')
-                    self.stdout.write(val + ' ' * (longest_match_length +1 -len(val)))
-                self.stdout.write('\n')
-    
-            self.stdout.write(self.prompt+readline.get_line_buffer())
-            self.stdout.flush()
-        except Exception, error:
-            if __debug__:
-                 print error
-            
-    def getTerminalSize(self):
-        def ioctl_GWINSZ(fd):
-            try:
-                import fcntl, termios, struct, os
-                cr = struct.unpack('hh', fcntl.ioctl(fd, termios.TIOCGWINSZ,
-                                                     '1234'))
-            except:
-                return None
-            return cr
-        cr = ioctl_GWINSZ(0) or ioctl_GWINSZ(1) or ioctl_GWINSZ(2)
-        if not cr:
-            try:
-                fd = os.open(os.ctermid(), os.O_RDONLY)
-                cr = ioctl_GWINSZ(fd)
-                os.close(fd)
-            except:
-                pass
-        if not cr:
-            try:
-                cr = (env['LINES'], env['COLUMNS'])
-            except:
-                cr = (25, 80)
-        return int(cr[1])
     
 
 class CmdShell(Cmd):
@@ -948,13 +949,14 @@ class CmdShell(Cmd):
 #===============================================================================
 # Question with auto-completion
 #===============================================================================
-class SmartQuestion(cmd.Cmd):
+class SmartQuestion(BasicCmd):
     """ a class for answering a question with the path autocompletion"""
 
     def preloop(self):
         """Initializing before starting the main loop"""
         self.prompt = ''
         self.value = None
+        BasicCmd.preloop(self)
 
     def __init__(self,  allow_arg=[], default=None, *arg, **opt):
         self.allow_arg = [str(a) for a in allow_arg]
@@ -1026,11 +1028,21 @@ class OneLinePathCompletion(SmartQuestion):
             self.stdout.write(line)
             self.stdout.flush()
         try:
-          return SmartQuestion.completenames(self, text, line) + Cmd.path_completion(text, only_dirs = False)
+            out = {}
+            out[' Options'] = SmartQuestion.completenames(self, text, line)
+            out[' Path from ./'] = Cmd.path_completion(text, only_dirs = False)
+            
+            return self.deal_multiple_categories(out)
         except Exception, error:
             print error
 
     def completedefault(self,text, line, begidx, endidx):
+        prev_timer = signal.alarm(0) # avoid timer if any
+        if prev_timer:
+            nb_back = len(line)
+            self.stdout.write('\b'*nb_back + '[timer stopped]\n')
+            self.stdout.write(line)
+            self.stdout.flush()
         try:
             args = Cmd.split_arg(line[0:begidx])
         except Exception, error:
@@ -1038,6 +1050,7 @@ class OneLinePathCompletion(SmartQuestion):
 
         # Directory continuation                 
         if args[-1].endswith(os.path.sep):
+
             return Cmd.path_completion(text,
                                         os.path.join('.',*[a for a in args \
                                                if a.endswith(os.path.sep)]))
