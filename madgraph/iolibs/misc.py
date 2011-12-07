@@ -19,6 +19,7 @@ import os
 import re
 import signal
 import subprocess
+import sys
 import StringIO
 import time
 
@@ -119,7 +120,7 @@ def compile(arg=[], cwd=None, mode='fortran', **opt):
         else:
             error_text = "Impossible to compile %s directory\n" % cwd
             error_text += "Trying to launch make command returns:\n"
-            error_text += "    " + error + "\n"
+            error_text += "    " + str(error) + "\n"
             error_text += "In general this means that your computer is not able to compile."
             if sys.platform == "darwin":
                 error_text += "Note that MacOSX doesn\'t have gmake/gfortan install by default.\n"

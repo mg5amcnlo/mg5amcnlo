@@ -1107,6 +1107,11 @@ class Model(PhysicsObject):
                     part.set('antiname', default[pdg])
                     if antipart:
                         antipart.set('antiname', default[pdg])
+
+    def get_first_non_pdg(self):
+        """Return the first positive number that is not a valid PDG code"""
+        return [c for c in range(1, len(self.get('particles')) + 1) if \
+                c not in self.get('particle_dict').keys()][0]
                 
     def write_param_card(self):
         """Write out the param_card, and return as string."""

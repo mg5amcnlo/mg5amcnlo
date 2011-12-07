@@ -29,7 +29,7 @@ def load_model(name):
         __import__(model_pos)
         return sys.modules[model_pos]
     else:
-        sys.path.append(os.sep.join(path_split[:-1]))
+        sys.path.insert(0, os.sep.join(path_split[:-1]))
         __import__(path_split[-1])
+        sys.path.pop(0)
         return sys.modules[path_split[-1]]
-        sys.path.pop()

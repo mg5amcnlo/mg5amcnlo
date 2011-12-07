@@ -59,7 +59,7 @@ class DiagramTag(object):
         """Exception for any problems in DiagramTags"""
         pass
 
-    def __init__(self, diagram, model = None):
+    def __init__(self, diagram, model = None, ninitial = 2):
         """Initialize with a diagram. Create DiagramTagChainLinks according to
         the diagram, and figure out if we need to shift the central vertex."""
 
@@ -79,7 +79,8 @@ class DiagramTag(object):
                                         for leg in legs],
                                         self.vertex_id_from_vertex(vertex,
                                                                    lastvx,
-                                                                   model))
+                                                                   model,
+                                                                   ninitial))
             # Add vertex to leg_dict if not last one
             if not lastvx:
                 leg_dict[vertex.get('legs')[-1].get('number')] = link
@@ -140,7 +141,7 @@ class DiagramTag(object):
             return [((leg.get('id'), leg.get('number')), leg.get('number'))]
 
     @staticmethod
-    def vertex_id_from_vertex(vertex, last_vertex, model):
+    def vertex_id_from_vertex(vertex, last_vertex, model, ninitial):
         """Returns the default vertex id: just the interaction id"""
         return vertex.get('id')
 
@@ -1640,6 +1641,10 @@ class MultiProcess(base_objects.PhysicsObject):
                                              d in new_amp.get('diagrams')])
         new_amp.set('diagrams', diagrams)
         new_amp.trim_diagrams()
+
+        # Make sure to reset mirror process
+        new_amp.set('has_mirror_process', False)
+        
         return new_amp
         
 #===============================================================================

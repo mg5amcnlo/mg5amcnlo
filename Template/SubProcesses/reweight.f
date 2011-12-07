@@ -758,12 +758,6 @@ c     ipart gives external particle number chain
       external alphas, isjetvx, getissud, pdg2pdf, xran1,  sudwgt
 
       rewgt=1.0d0
-
-      if((ickkw.gt.0.or..not.fixed_fac_scale.or..not.fixed_ren_scale)
-     $     .and..not.clustered)then
-        write(*,*)'Error: No clustering done when calling rewgt!'
-        stop
-      endif
       clustered=.false.
 
       if(ickkw.le.0) return
@@ -1005,9 +999,9 @@ c                    if non-radiating vertex or last 2->2
      $                          ' to: ',sqrt(pt2pdf(imocl(n)))
                      else if(pt2pdf(idacl(n,i)).lt.q2now
      $                       .and.isjet(ipdgcl(idacl(n,i),igraphs(1),iproc))) then
-                        pdfj1=pdg2pdf(abs(ibeam(j)),ipdgcl(idacl(n,i),
+                        pdfj1=pdg2pdf(abs(lpp(j)),ipdgcl(idacl(n,i),
      $                       igraphs(1),iproc)*sign(1,ibeam(j)),xnow(j),sqrt(q2now))
-                        pdfj2=pdg2pdf(abs(ibeam(j)),ipdgcl(idacl(n,i),
+                        pdfj2=pdg2pdf(abs(lpp(j)),ipdgcl(idacl(n,i),
      $                       igraphs(1),iproc)*sign(1,ibeam(j)),xnow(j),
      $                       sqrt(pt2pdf(idacl(n,i))))
                         if(pdfj2.lt.1d-10)then
@@ -1026,12 +1020,12 @@ c                          Scale too low for heavy quark
                            write(*,*)'           PDF: ',pdfj1,' / ',pdfj2
                            write(*,*)'        -> rewgt: ',rewgt
 c                           write(*,*)'  (compare for glue: ',
-c     $                          pdg2pdf(ibeam(j),21,xbk(j),sqrt(pt2pdf(idacl(n,i)))),' / ',
-c     $                          pdg2pdf(ibeam(j),21,xbk(j),sqrt(pt2ijcl(n)))
+c     $                          pdg2pdf(lpp(j),21,xbk(j),sqrt(pt2pdf(idacl(n,i)))),' / ',
+c     $                          pdg2pdf(lpp(j),21,xbk(j),sqrt(pt2ijcl(n)))
 c                           write(*,*)'       = ',pdg2pdf(ibeam(j),21,xbk(j),sqrt(pt2pdf(idacl(n,i))))/
-c     $                          pdg2pdf(ibeam(j),21,xbk(j),sqrt(pt2ijcl(n)))
+c     $                          pdg2pdf(lpp(j),21,xbk(j),sqrt(pt2ijcl(n)))
 c                           write(*,*)'       -> ',pdg2pdf(ibeam(j),21,xbk(j),sqrt(pt2pdf(idacl(n,i))))/
-c     $                          pdg2pdf(ibeam(j),21,xbk(j),sqrt(pt2ijcl(n)))*rewgt,' )'
+c     $                          pdg2pdf(lpp(j),21,xbk(j),sqrt(pt2ijcl(n)))*rewgt,' )'
                         endif
 c                       Set scale for mother as this scale
                         pt2pdf(imocl(n))=q2now                           

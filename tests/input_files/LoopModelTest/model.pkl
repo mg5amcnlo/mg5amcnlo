@@ -4853,7 +4853,7 @@ g57
 I99
 ssS'version_tag'
 p1592
-S"/Users/Spooner/Documents/PhD/MG5/NLO/tests/input_files/LoopModelTest{'date': '2011-10-12', 'version': '1.3.22'}"
+S"/Users/Spooner/Documents/PhD/MG5/NLO/tests/input_files/LoopModelTest{'date': '2011-11-18', 'version': '1.3.30'}"
 p1593
 sS'perturbation_couplings'
 p1594

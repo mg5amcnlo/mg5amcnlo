@@ -153,7 +153,9 @@ class AbstractRoutineBuilder(object):
         if self.routine_kernel is None:
             self.kernel_tag = set()
             self.routine_kernel = eval(self.lorentz_expr)
-           
+        
+        # We need to compute C Gamma^T C^-1 = C_ab G_cb (-1) C_cd 
+        #                  = C_ac G_bc (-1) C_bd = C_ac G_bc C_db
         self.routine_kernel = \
              C(new_id, old_id + 1) * self.routine_kernel * C(new_id + 1, old_id)
         self.name += 'C'

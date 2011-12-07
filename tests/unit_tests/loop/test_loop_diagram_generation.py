@@ -1008,15 +1008,15 @@ class LoopDiagramGenerationTest(unittest.TestCase):
             myloopamplitude.generate_diagrams()
             
             ### This is to plot the diagrams obtained
-            options = draw_lib.DrawOption()
-            filename = os.path.join('/Users/Spooner/Documents/PhD/MG5/NLO', 'diagramsVall_' + \
-                          myloopamplitude.get('process').shell_string() + ".eps")
-            plot = draw.MultiEpsDiagramDrawer(myloopamplitude['loop_diagrams'],
-                                              filename,
-                                              model=self.myloopmodel,
-                                              amplitude=myloopamplitude,
-                                              legend=myloopamplitude.get('process').input_string())
-            plot.draw(opt=options)
+#            options = draw_lib.DrawOption()
+#            filename = os.path.join('/Users/Spooner/Documents/PhD/MG5/NLO', 'diagramsVall_' + \
+#                          myloopamplitude.get('process').shell_string() + ".eps")
+#            plot = draw.MultiEpsDiagramDrawer(myloopamplitude['loop_diagrams'],
+#                                              filename,
+#                                              model=self.myloopmodel,
+#                                              amplitude=myloopamplitude,
+#                                              legend=myloopamplitude.get('process').input_string())
+#            plot.draw(opt=options)
             
             sumR2=0
             sumUV=0

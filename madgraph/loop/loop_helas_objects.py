@@ -38,7 +38,7 @@ import madgraph.core.helas_objects as helas_objects
 
 logger = logging.getLogger('madgraph.helas_objects')
 
-#===============================================================================
+#============================test_drawing===================================================
 # LoopHelasAmplitude
 #===============================================================================
 class LoopHelasAmplitude(helas_objects.HelasAmplitude):

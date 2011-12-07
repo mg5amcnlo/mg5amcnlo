@@ -3033,6 +3033,71 @@ class MultiProcessTest(unittest.TestCase):
             #    print amplitude.get('process').nice_string()
             #print 'valid_procs = ',valid_procs
 
+    def test_multiparticle_mirror_pp_3j(self):
+        """Setting up and testing pp > 3j mirror process functionality
+        """
+
+        max_fs = 3
+
+        p = [21, 1, 2, -1, -2]
+
+        my_multi_leg = base_objects.MultiLeg({'ids': p, 'state': True});
+
+        goal_number_processes = 29
+
+        goal_legs_mirror = [\
+            ([21, 21, 21, 21, 21], False),
+            ([21, 21, 21, 1, -1], False),
+            ([21, 21, 21, 2, -2], False),
+            ([21, 1, 21, 21, 1], True),
+            ([21, 1, 1, 1, -1], True),
+            ([21, 1, 1, 2, -2], True),
+            ([21, 2, 21, 21, 2], True),
+            ([21, 2, 1, 2, -1], True),
+            ([21, 2, 2, 2, -2], True),
+            ([21, -1, 21, 21, -1], True),
+            ([21, -1, 1, -1, -1], True),
+            ([21, -1, 2, -1, -2], True),
+            ([21, -2, 21, 21, -2], True),
+            ([21, -2, 1, -1, -2], True),
+            ([21, -2, 2, -2, -2], True),
+            ([1, 1, 21, 1, 1], False),
+            ([1, 2, 21, 1, 2], True),
+            ([1, -1, 21, 21, 21], True),
+            ([1, -1, 21, 1, -1], True),
+            ([1, -1, 21, 2, -2], True),
+            ([1, -2, 21, 1, -2], True),
+            ([2, 2, 21, 2, 2], False),
+            ([2, -1, 21, 2, -1], True),
+            ([2, -2, 21, 21, 21], True),
+            ([2, -2, 21, 1, -1], True),
+            ([2, -2, 21, 2, -2], True),
+            ([-1, -1, 21, -1, -1], False),
+            ([-1, -2, 21, -1, -2], True),
+            ([-2, -2, 21, -2, -2], False)]
+
+        # Define the multiprocess
+        my_multi_leglist = base_objects.MultiLegList([copy.copy(leg) for leg in [my_multi_leg] * 5])
+
+        my_multi_leglist[0].set('state', False)
+        my_multi_leglist[1].set('state', False)
+
+        my_process_definition = base_objects.ProcessDefinition({\
+                                                 'legs':my_multi_leglist,
+                                                 'model':self.mymodel,
+                                                 'orders': {'QED': 0}})
+
+        # Calculate diagrams for all processes
+        myproc = diagram_generation.MultiProcess(my_process_definition,
+                                      collect_mirror_procs = True)
+
+        amplitudes = myproc.get('amplitudes')
+
+        legs_mirror = [([l.get('id') for l in a.get('process').get('legs')],
+                        a.get('has_mirror_process')) for a in amplitudes]
+
+        self.assertEqual(legs_mirror, goal_legs_mirror)
+
     def test_find_maximal_non_qcd_order(self):
         """Test find_maximal_non_qcd_order for different configurations
         """

@@ -262,6 +262,9 @@ class ProcessExporterPython(object):
         """Return the amp2(i) = sum(amp for diag(i))^2 lines"""
 
         ret_lines = []
+        # Get minimum legs in a vertex
+        minvert = min([max(diag.get_vertex_leg_numbers()) for diag in \
+                       matrix_element.get('diagrams')])
         if config_map:
             # In this case, we need to sum up all amplitudes that have
             # identical topologies, as given by the config_map (which
@@ -293,16 +296,12 @@ class ProcessExporterPython(object):
                 ret_lines.append(line)
             ret_lines.sort()
         else:
+            wf_dict = {}
+            vx_list = []
+            optimization = 0
             for idiag, diag in enumerate(matrix_element.get('diagrams')):
-                # Ignore any diagrams with 4-particle vertices.  The
-                # easiest way to get this info is to use the
-                # get_s_and_t_channels function, which collects all
-                # vertices corresponding to this diagram.
-                schannels, tchannels = diag.get('amplitudes')[0].\
-                                             get_s_and_t_channels(2)
-                allchannels = schannels + tchannels
-                if not allchannels or \
-                       any([len(vert.get('legs')) > 3 for vert in allchannels]):
+                # Ignore any diagrams with 4-particle vertices.
+                if max(diag.get_vertex_leg_numbers()) > minvert:
                     continue
                 # Now write out the expression for AMP2, meaning the sum of
                 # squared amplitudes belonging to the same diagram
