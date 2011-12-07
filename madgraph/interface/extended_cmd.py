@@ -29,6 +29,7 @@ except:
     readline = None
     GNU_SPLITTING = True
 
+
 logger = logging.getLogger('cmdprint') # for stdout
 logger_stderr = logging.getLogger('fatalerror') # for stderr
 
