@@ -175,11 +175,12 @@ class AllResults(dict):
         
         tag = run_card['run_tag']
         if name in self.order:
-            self.order.remove(name)
-            new = OneTagResults(name, run_card, self.path)
-            if  tag not in self[name].tags:
-                self[name].remove(tag)    
-            self[name].add(new)
+            self.order.remove(name) # Reorder the run to put this one at the end 
+            if  tag in self[name].tags:
+                self[name].remove(tag) # Remove previous tag if define
+            #add the new tag run    
+            self[name].add(OneTagResults(name, run_card, self.path))
+            new = self[name] 
         else:
             new = RunResults(name, run_card, self.process, self.path)
             self[name] = new  
@@ -381,8 +382,7 @@ class RunResults(list):
         
         assert isinstance(obj, OneTagResults)
         tag = obj['tag']
-        assert tag in self.tags
-        
+        assert tag not in self.tags
         self.tags.append(tag)
         self.append(obj)
         
@@ -597,12 +597,12 @@ class OneTagResults(dict):
                                                          'gridpack', 'gridpack')
             
             if 'lhe' in self.parton:
-                link = './Events/%(run_name)s_unweighted_events.lhe'
+                link = './Events/%(run_name)s/unweighted_events.lhe'
                 level = 'parton'
                 name = 'LHE'
                 out += self.special_link(link, level, name) 
             if 'root' in self.parton:
-                out += ' <a href="./Events/%(run_name)s_unweighted_events.root">rootfile</a>'
+                out += ' <a href="./Events/%(run_name)s/unweighted_events.root">rootfile</a>'
             if 'plot' in self.parton:
                 out += ' <a href="./HTML/%(run_name)s/plots_parton.html">plots</a>'
             if 'param_card' in self.parton:
@@ -614,7 +614,7 @@ class OneTagResults(dict):
             if 'log' in self.pythia:
                 out += """ <a href="./Events/%(run_name)s/%(tag)s_pythia.log">LOG</a>"""
             if 'hep' in self.pythia:
-                link = './Events/%(run_name)s_pythia_events.hep'
+                link = './Events/%(run_name)s/%(tag)s_pythia_events.hep'
                 level = 'pythia'
                 name = 'STDHEP'
                 out += self.special_link(link, level, name)                 
@@ -678,7 +678,7 @@ class OneTagResults(dict):
         
         
         tag_template = """
-        <td rowspan=%(tag_span)s> <a href="./Events/%(run)s/%(run)s_%(tag)s_banner.txt">%(tag)s</a></td>
+        <td rowspan=%(tag_span)s> <a href="./Events/%(run)s/%(run)s_%(tag)s_banner.txt">%(tag)s</a>%(debug)s</td>
         %(subruns)s"""
         
         # Compute the text for eachsubpart
@@ -730,9 +730,14 @@ class OneTagResults(dict):
                     local_dico['err'] = self['error']
                     local_dico['nb_event'] = self['nb_event']
                 elif self['cross_pythia']:
+                    if self.parton:
+                        local_dico['cross_span'] = nb_line -1
+                    else:
+                        local_dico['cross_span'] = nb_line
+                    local_dico['nb_event'] = int(0.5+(self['nb_event'] * self['cross_pythia'] /self['cross']))
                     local_dico['cross'] = self['cross_pythia']
                     local_dico['err'] = self['error'] * self['cross_pythia'] / self['cross']
-                    local_dico['nb_event'] = int(0.5+(self['nb_event'] * self['cross_pythia'] /self['cross']))
+                    
                 else:
                     local_dico['cross_span'] = nb_line
                     local_dico['cross'] = self['cross']
@@ -743,11 +748,13 @@ class OneTagResults(dict):
                 template = sub_part_template_parton
                 if self.parton:           
                     local_dico['cross_span'] = nb_line - 1
+                    local_dico['nb_event'] = int(0.5+(self['nb_event'] * self['cross_pythia'] /self['cross']))
                 else:
                     local_dico['cross_span'] = nb_line
+                    local_dico['nb_event'] = self['nb_event']
                 local_dico['cross'] = self['cross_pythia']
                 local_dico['err'] = self['error'] * self['cross_pythia'] / self['cross'] 
-                local_dico['nb_event'] = self['nb_event']
+                
             else:
                template = sub_part_template_pgs 
             
@@ -759,19 +766,23 @@ class OneTagResults(dict):
 
         if subresults_html == '':
             subresults_html = sub_part_template_parton % \
-                          {'type': 'parton', 
+                          {'type': '', 
                            'run': self['run_name'],
                            'cross_span': 1,
                            'cross': self['cross'],
                            'err': self['error'],
                            'nb_event': self['nb_event'] and self['nb_event'] or 'No events yet',
-                           'links':'&nbsp;'
+                           'links':'Running'
                            }                                
-                                                          
-                                               
+                                  
+        if self.debug:
+            debug = '<br> <a href=\'./%s_debug.log\'> <font color=red>ERROR</font></a>' % self['run_name'] 
+        else:
+            debug = ''                                       
         text = tag_template % {'tag_span': nb_line,
                            'run': self['run_name'], 'tag': self['tag'],
-                           'subruns' : subresults_html}
+                           'subruns' : subresults_html,
+                           'debug':debug}
 
         return text
         

@@ -56,6 +56,7 @@ try:
     import madgraph.various.gen_crossxhtml as gen_crossxhtml
     import madgraph.various.cluster as cluster
     import madgraph.various.sum_html as sum_html
+    import madgraph.various.banner as banner_mod
     import models.check_param_card as check_param_card    
     from madgraph import InvalidCmd, MadGraph5Error
     MADEVENT = False
@@ -64,6 +65,7 @@ except Exception, error:
         print error
     # import from madevent directory
     import internal.extended_cmd as cmd
+    import internal.banner as banner_mod
     import internal.misc as misc    
     from internal import InvalidCmd, MadGraph5Error
     import internal.files as files
@@ -381,6 +383,7 @@ class HelpToCmd(object):
         logger.info("syntax: pythia [RUN] [--run_options]")
         logger.info("-- run pythia on RUN (current one by default)")
         self.run_options_help([('-f','answer all question by default'),
+                               ('-tag=', 'define the tag for the pythia run')
                                ('--no_default', 'not run if pythia_card not present')])        
                 
     def help_pgs(self):
@@ -679,7 +682,7 @@ class CheckValidForCmd(object):
         """
         
         mode = None
-        laststep = [arg for arg in args if arg.startswith('--lastep=')]
+        laststep = [arg for arg in args if arg.startswith('--laststep=')]
         if laststep and len(laststep)==1:
             mode = laststep[0].split('=')[-1]
             if mode not in ['auto', 'pythia', 'pgs', 'delphes']:
@@ -918,7 +921,7 @@ class CompleteForCmd(CheckValidForCmd):
             comp = self.path_completion(text,
                                         os.path.join('.',*[a for a in args \
                                                     if a.endswith(os.path.sep)]))
-            run_list =  glob.glob(pjoin(self.me_dir, 'Events', '*_banner.txt'))
+            run_list =  glob.glob(pjoin(self.me_dir, 'Events', '*','*_banner.txt'))
             run_list = [n.rsplit('/',1)[1][:-11] for n in run_list]
             comp += self.list_completion(text, run_list)
             return comp
@@ -1089,16 +1092,16 @@ class CompleteForCmd(CheckValidForCmd):
         args = self.split_arg(line[0:begidx], error=False)
         if len(args) == 1:
             #return valid run_name
-            data = glob.glob(pjoin(self.me_dir, 'Events', '*_unweighted_events.lhe.gz'))
-            data = [n.rsplit('/',1)[1][:-25] for n in data]
+            data = glob.glob(pjoin(self.me_dir, 'Events', '*','unweighted_events.lhe.gz'))
+            data = [n.rsplit('/',2)[1] for n in data]
             tmp1 =  self.list_completion(text, data)
             if not self.run_name:
                 return tmp1
             else:
-                tmp2 = self.list_completion(text, self._run_options + ['-f', '--no_default'], line)
+                tmp2 = self.list_completion(text, self._run_options + ['-f', '--no_default', '--tag='], line)
                 return tmp1 + tmp2
         else:
-            return self.list_completion(text, self._run_options + ['-f', '--no_default'], line)
+            return self.list_completion(text, self._run_options + ['-f', '--no_default','--tag='], line)
 
     def complete_pgs(self,text, line, begidx, endidx):
         "Complete the pythia command"
@@ -1225,6 +1228,8 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
             self.results = gen_crossxhtml.AllResults(model, process, self.me_dir)
         self.results.def_web_mode(self.web)
         
+        # Banner Object
+        self.banner = None
         self.configured = 0 # time for reading the card
         self._options = {} # for compatibility with extended_cmd
         
@@ -1385,14 +1390,8 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
             force = True
         else:
             force = False     
- 
-        # Split the banner
-        if MADEVENT:
-            import internal.splitbanner as splitbanner
-        else:
-            import madgraph.various.splitbanner as splitbanner
-            
-        splitbanner.split_banner(args[0], self.me_dir)
+             
+        banner_mod.split_banner(args[0], self.me_dir)
         
         # Check if we want to modify the run
         if not force:
@@ -1415,15 +1414,23 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
         self.check_display(args)
 
         if args[0] == 'run_name':
-            
-            
             #return valid run_name
-            data = glob.glob(pjoin(self.me_dir, 'Events', '*_banner.txt'))
-            data = [n.rsplit('/',1)[1][:-11] for n in data]
+            data = glob.glob(pjoin(self.me_dir, 'Events', '*','*_banner.txt'))
+            data = [n.rsplit('/',2)[1:] for n in data]
+            
             if data:
+                out = {}
+                for name, tag in data:
+                    tag = tag[len(name):-11]
+                    if name in out:
+                        name[out].append(tag)
+                    else:
+                        name[out] = [tag]
                 print 'the runs available are:'
-                for run_name in data:
-                    print '    %s' % run_name
+                for run_name, tags in out.items():
+                    print '  run: %s' % run_name
+                    for tag in tags:
+                        print '     tag:%s ' % tag
             else:
                 print 'No run detected.'
         else:
@@ -1823,15 +1830,27 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
             nb_event = pat.search(output).groups()[0]
             self.results.add_detail('nb_event', nb_event)
         
+        # Define The Banner
+        tag = self.run_card['run_tag']
+        self.banner = banner_mod.Banner()
+        self.banner.load_basic(self.me_dir)
+        if not os.path.exists(pjoin(self.me_dir, 'Events', self.run_name)):
+            os.mkdir(pjoin(self.me_dir, 'Events', self.run_name))
+        self.banner.write(pjoin(self.me_dir, 'Events', self.run_name, 
+                                     '%s_%s_banner.txt' % (self.run_name, tag)))
+        self.banner.add(pjoin(self.me_dir, 'Cards', 'param_card.dat'))
+        self.banner.add(pjoin(self.me_dir, 'Cards', 'run_card.dat'))
+        
+        
         subprocess.call(['%s/put_banner' % self.dirbin, 'events.lhe'],
                             cwd=pjoin(self.me_dir, 'Events'))
         subprocess.call(['%s/put_banner'% self.dirbin, 'unweighted_events.lhe'],
                             cwd=pjoin(self.me_dir, 'Events'))
         
-        if os.path.exists(pjoin(self.me_dir, 'Events', 'unweighted_events.lhe')):
-            subprocess.call(['%s/extract_banner-pl' % self.dirbin, 
-                             'unweighted_events.lhe', 'banner.txt'],
-                            cwd=pjoin(self.me_dir, 'Events'))
+        #if os.path.exists(pjoin(self.me_dir, 'Events', 'unweighted_events.lhe')):
+        #    subprocess.call(['%s/extract_banner-pl' % self.dirbin, 
+        #                     'unweighted_events.lhe', 'banner.txt'],
+        #                    cwd=pjoin(self.me_dir, 'Events'))
         
         eradir = self.configuration['exrootanalysis_path']
         madir = self.configuration['madanalysis_path']
@@ -1922,10 +1941,10 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
                 subprocess.call(['gzip', output], stdout=devnull, stderr=devnull, 
                                                                      cwd=O_path)
         # The banner -- This is tag dependent
-        if os.path.exists(pjoin(E_path, 'banner.txt')):
-            input = pjoin(E_path, 'banner.txt')
-            output = pjoin(O_path, '%s_%s_banner.txt' % (run, tag))            
-            files.mv(input, output)
+        #if os.path.exists(pjoin(E_path, 'banner.txt')):
+        #    input = pjoin(E_path, 'banner.txt')
+        #    output = pjoin(O_path, '%s_%s_banner.txt' % (run, tag))            
+        #    files.mv(input, output)
            
         self.update_status('End Parton', level='parton', makehtml=False)
 
@@ -1950,7 +1969,6 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
     def do_pythia(self, line):
         """launch pythia"""
         
-
         # Check argument's validity
         args = self.split_arg(line)
         if '-f' in args:
@@ -1966,24 +1984,50 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
             args.remove('--no_default')
         else:
             no_default = False
+        
+        tag = [a for a in args if a.startswith('--tag=')]
+        if tag: 
+            tag = tag[0]
+            args.remove(tag)
+            new_tag = True
+        elif hasattr(self, 'run_card'):
+            tag = self.run_card['run_tag']
+            new_tag = False
+                
         self.check_pythia(args)        
         # the args are modify and the last arg is always the mode
+        if not tag:
+            # pythia is call in SA -> so choose a convenient tag
+            used_tags = [r['tag'] for r in self.results[self.run_name]]
+            i=-1
+            while 1:
+                i+=1
+                if 'tag_%s' %i not in used_tags:
+                    tag = 'tag_%s' % i
+                    break
+            new_tag = True
+        # Ensure that the tag is the expected one
+        self.run_card['run_tag'] = tag
+        if new_tag:
+            # add the new run to the html output
+            self.results.add_run(self.run_name, self.run_card)
+                         
+        #logger.info('pythia run for run: %s and tag: %s ' % (self.run_name, tag))    
         
         self.ask_pythia_run_configuration(args[-1], force)
 
                      
         # initialize / remove lhapdf mode        
         self.configure_directory()
-        
-        tag = self.run_card['run_tag']                
-        if not force:
-            if os.path.exists(pjoin(self.me_dir, 'Events', self.run_name, '%s_pythia.log' % tag)):
-                question = 'Previous run of pythia detected. Do you want to remove it?'
-                ans = self.ask(question, 'y', choices=['y','n'], timeout = 20)
-                if ans == 'n':
-                    return
+
+        #if not force:
+        #    if os.path.exists(pjoin(self.me_dir, 'Events', self.run_name, '%s_pythia.log' % tag)):
+        #        question = 'Previous run of pythia detected. Do you want to remove it?'
+        #        ans = self.ask(question, 'y', choices=['y','n'], timeout = 20)
+        #        if ans == 'n':
+        #            return
          
-        self.exec_cmd('remove %s pythia -f' % self.run_name)
+        #self.exec_cmd('remove %s pythia -f' % self.run_name)
         
         pythia_src = pjoin(self.configuration['pythia-pgs_path'],'src')
         
@@ -2029,13 +2073,14 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
         madir = self.configuration['madanalysis_path']
         td = self.configuration['td_path']
         
+
         # Update the banner with the pythia card
-        banner_path = pjoin(self.me_dir,'Events',self.run_name, '%s_%s_banner.txt' % (self.run_name, tag))
-        banner = open(banner_path, 'a')
-        banner.writelines('\n<MGPythiaCard>\n')
-        banner.writelines(open(pjoin(self.me_dir, 'Cards','pythia_card.dat')).read())
-        banner.writelines('\n</MGPythiaCard>\n')
-        banner.close()
+        if not self.banner:
+            self.banner = banner_mod.recover_banner(self.results, 'pgs')
+        
+        self.banner.add(pjoin(self.me_dir, 'Cards','pythia_card.dat'))
+        banner_path = pjoin(self.me_dir, 'Events', self.run_name, '%s_%s_banner.txt' % (self.run_name, tag))
+        self.banner.write(banner_path)
         
         # Creating LHE file
         if misc.is_executable(pjoin(pydir, 'hep2lhe')):
@@ -2069,20 +2114,20 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
 
         if int(self.run_card['ickkw']):
             self.update_status('Create matching plots for Pythia', level='pythia')
-            subprocess.call([self.dirbin+'/create_matching_plots.sh', self.run_name],
+            subprocess.call([self.dirbin+'/create_matching_plots.sh', self.run_name, tag],
                             stdout = os.open(os.devnull, os.O_RDWR),
                             cwd=pjoin(self.me_dir,'Events'))
             #Clean output
             subprocess.call(['gzip','-f','events.tree'], 
                                                 cwd=pjoin(self.me_dir,'Events'))          
             files.mv(pjoin(self.me_dir,'Events','events.tree.gz'), 
-                     pjoin(self.me_dir,'Events',self.run_name +'_pythia_events.tree.gz'))
+                     pjoin(self.me_dir,'Events',self.run_name, tag + '_pythia_events.tree.gz'))
             subprocess.call(['gzip','-f','beforeveto.tree'], 
                                                 cwd=pjoin(self.me_dir,'Events'))
             files.mv(pjoin(self.me_dir,'Events','beforeveto.tree.gz'), 
-                     pjoin(self.me_dir,'Events',self.run_name +'_pythia_beforeveto.tree.gz'))
+                     pjoin(self.me_dir,'Events',self.run_name, tag+'_pythia_beforeveto.tree.gz'))
             files.mv(pjoin(self.me_dir,'Events','xsecs.tree'), 
-                     pjoin(self.me_dir,'Events',self.run_name +'_pythia_xsecs.tree'))            
+                     pjoin(self.me_dir,'Events',self.run_name, tag+'_pythia_xsecs.tree'))            
              
 
         # Plot for pythia
@@ -2279,14 +2324,14 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
         
         tag = self.run_card['run_tag']
         if 'pythia' in self.to_store:
-            self.update_status('Storing Pythia files of Previous run', level='pythia')
+            self.update_status('Storing Pythia files of Previous run', level='pythia', error=True)
             os.system('mv -f %(path)s/pythia_events.hep %(path)s/%(name)s/%(tag)s_pythia_events.hep' % 
                   {'name': self.run_name, 'path' : pjoin(self.me_dir,'Events'),
                    'tag':tag})
             os.system('gzip -f %s/%s_pythia_events.hep' % ( 
                                 pjoin(self.me_dir,'Events',self.run_name), tag))
             self.to_store.remove('pythia')
-            self.update_status('Done', level='pythia')
+            self.update_status('Done', level='pythia',makehtml=False,error=True)
         
         self.to_store = []
             
@@ -2345,21 +2390,22 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
         self.update_status('Running PGS', level='pgs')
         tag = self.run_card['run_tag']
         # now pass the event to a detector simulator and reconstruct objects
-        
+
         # Update the banner with the pgs card
-        banner_path = pjoin(self.me_dir,'Events',self.run_name, '%s_%s_banner.txt' % (self.run_name,tag))  
-        print banner_path
-        print 
-        banner = open(banner_path, 'a')
-        banner.writelines('\n<MGPGSCard>')
-        banner.writelines(open(pjoin(self.me_dir, 'Cards','pgs_card.dat')).read())
-        banner.writelines('</MGPGSCard>\n')
-        banner.close()
+        if not self.banner:
+            self.banner = banner_mod.recover_banner(self.results, 'pgs')
+        
+        self.banner.add(pjoin(self.me_dir, 'Cards','pgs_card.dat'))
+        banner_path = pjoin(self.me_dir, 'Events', self.run_name, '%s_%s_banner.txt' % (self.run_name, tag))
+        self.banner.write(banner_path)            
+
         
         # Prepare the output file with the banner
         ff = open(pjoin(self.me_dir, 'Events', 'pgs_events.lhco'), 'w')
         text = open(banner_path).read()
         text = '#%s' % text.replace('\n','\n#')
+        text +='\n##  Integrated weight (pb)  : %.4g' % self.results.current['cross']
+        text +='\n##  Number of Event         : %s\n' % self.results.current['nb_event']
         ff.writelines(text)
         ff.close()
 
@@ -2453,28 +2499,24 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
         tag = self.run_card['run_tag']
         self.update_status('Running Delphes', level='delphes')
         
-        # Update the banner with the pgs card
-        banner = open(pjoin(self.me_dir,'Events', self.run_name,  
-                                                    '%s_banner.txt' % tag), 'a')
-        banner.writelines('<MGDelphesCard>\n')
-        banner.writelines(open(pjoin(self.me_dir, 'Cards','delphes_card.dat')).read())
-        banner.writelines('</MGDelphesCard>\n')
-        banner.writelines('<MGDelphesTrigger>\n')
-        banner.writelines(open(pjoin(self.me_dir, 'Cards','delphes_trigger.dat')).read())
-        banner.writelines('</MGDelphesTrigger>')        
-        banner.close()
+        # Update the banner with the delphes card
+        if not self.banner:
+            self.banner = banner_mod.recover_banner(self.results, 'delphes')
         
-        
+        self.banner.add(pjoin(self.me_dir, 'Cards','delphes_card.dat'))
+        self.banner.add(pjoin(self.me_dir, 'Cards','delphes_trigger.dat'))
+        self.banner.write(pjoin(self.me_dir, 'Events', self.run_name, '%s_%s_banner.txt' % (self.run_name, tag)))
+                    
         if self.cluster_mode == 1:
             delphes_log = pjoin(self.me_dir, 'Events', self.run_name, "%s_delphes.log" % tag)
             self.cluster.launch_and_wait('../bin/internal/run_delphes', 
-                        argument= [delphes_dir, self.run_name, tag],
+                        argument= [delphes_dir, self.run_name, tag, str(self.results.current['cross'])],
                         stdout=delphes_log, stderr=subprocess.STDOUT,
                         cwd=pjoin(self.me_dir,'Events'))
         else:
             delphes_log = open(pjoin(self.me_dir, 'Events', self.run_name, "%s_delphes.log" % tag),'w')
             subprocess.call(['../bin/internal/run_delphes', delphes_dir, 
-                                self.run_name, tag],
+                                self.run_name, tag, str(self.results.current['cross'])],
                                 stdout= delphes_log, stderr=subprocess.STDOUT,
                                 cwd=pjoin(self.me_dir,'Events'))
                 
@@ -2669,7 +2711,6 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
             self.open_crossx = False
         # Change current working directory
         self.launching_dir = os.getcwd()
-        #os.chdir(self.me_dir)
         
         # Check if we need the MSSM special treatment
         model = self.find_model_name()

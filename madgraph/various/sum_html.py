@@ -60,8 +60,8 @@ class OneResult(object):
                 l, sec, err, eff, maxwgt = line.split()
             except:
                 return
-            self.ysec_iter.append(sec)
-            self.yerr_iter.append(err)
+            self.ysec_iter.append(float(sec))
+            self.yerr_iter.append(float(err))
         
         
     def set_mfactor(self, value):
@@ -74,10 +74,10 @@ class OneResult(object):
             return
         
         # Combine the first iterations into a single bin
-        nb_to_rm = nb_iter - len(self.ysec_iter)
+        nb_to_rm =  len(self.ysec_iter) - nb_iter
         ysec = [0]
         yerr = [0]
-        for i in range(nb_to_rm+1):
+        for i in range(nb_to_rm):
             ysec[0] += self.ysec_iter[i]
             yerr[0] += self.yerr_iter[i]**2
         ysec[0] /= (nb_to_rm+1)

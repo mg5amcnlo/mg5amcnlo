@@ -1104,8 +1104,8 @@ class ProcessExporterFortranME(ProcessExporterFortran):
         cp(_file_path+'/__init__.py', self.dir_path+'/bin/internal/__init__.py')
         cp(_file_path+'/various/gen_crossxhtml.py', 
                                 self.dir_path+'/bin/internal/gen_crossxhtml.py')                
-        cp(_file_path+'/various/splitbanner.py', 
-                                   self.dir_path+'/bin/internal/splitbanner.py')
+        cp(_file_path+'/various/banner.py', 
+                                   self.dir_path+'/bin/internal/banner.py')
         cp(_file_path+'/various/cluster.py', 
                                        self.dir_path+'/bin/internal/cluster.py') 
         cp(_file_path+'/various/sum_html.py', 
