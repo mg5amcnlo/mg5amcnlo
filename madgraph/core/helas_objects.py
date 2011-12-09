@@ -34,7 +34,7 @@ import madgraph.loop.loop_diagram_generation as loop_diagram_generation
 import madgraph.loop.loop_color_amp as loop_color_amp
 import madgraph.core.color_algebra as color
 
-from madgraph import MadGraph5Error
+from madgraph import InvalidCmd
 
 #===============================================================================
 # 
@@ -4184,20 +4184,23 @@ class HelasMultiProcess(base_objects.PhysicsObject):
 
         return ['matrix_elements']
 
-    def __init__(self, argument=None):
+    def __init__(self, argument=None, combine_matrix_elements=True):
         """Allow initialization with AmplitudeList"""
 
         if isinstance(argument, diagram_generation.AmplitudeList):
             super(HelasMultiProcess, self).__init__()
-            self.set('matrix_elements', self.generate_matrix_elements(argument))
+            self.set('matrix_elements', self.generate_matrix_elements(argument,
+                            combine_matrix_elements = combine_matrix_elements))
         elif isinstance(argument, diagram_generation.MultiProcess):
             super(HelasMultiProcess, self).__init__()
             self.set('matrix_elements',
-                     self.generate_matrix_elements(argument.get('amplitudes')))
+                     self.generate_matrix_elements(argument.get('amplitudes'),
+                             combine_matrix_elements = combine_matrix_elements))
         elif isinstance(argument, diagram_generation.Amplitude):
             super(HelasMultiProcess, self).__init__()
             self.set('matrix_elements', self.generate_matrix_elements(\
-                diagram_generation.AmplitudeList([argument])))
+                             diagram_generation.AmplitudeList([argument]),
+                             combine_matrix_elements = combine_matrix_elements))
         elif argument:
             # call the mother routine
             super(HelasMultiProcess, self).__init__(argument)
@@ -4240,7 +4243,7 @@ class HelasMultiProcess(base_objects.PhysicsObject):
 
     @classmethod
     def generate_matrix_elements(cls, amplitudes, gen_color = True,
-                                 decay_ids = []):
+                                decay_ids = [], combine_matrix_elements = True):
         """Generate the HelasMatrixElements for the amplitudes,
         identifying processes with identical matrix elements, as
         defined by HelasMatrixElement.__eq__. Returns a
@@ -4448,10 +4451,11 @@ class HelasMultiProcess(base_objects.PhysicsObject):
                     me = matrix_element_list[0]
                     if me.get('processes') and me.get('diagrams'):
                         # Keep track of amplitude tags
-                        amplitude_tags.append(amplitude_tag)
-                        identified_matrix_elements.append(me)
-                        permutations.append(amplitude_tag[-1][0].\
-                                            get_external_numbers())
+                        if combine_matrix_elements:
+                            amplitude_tags.append(amplitude_tag)
+                            identified_matrix_elements.append(me)
+                            permutations.append(amplitude_tag[-1][0].\
+                                                get_external_numbers())
                 else:
                     # Identical matrix element found
                     other_processes = identified_matrix_elements[me_index].\
@@ -4490,7 +4494,7 @@ class HelasMultiProcess(base_objects.PhysicsObject):
                     process_color(matrix_element)                    
 
         if not matrix_elements:
-            raise MadGraph5Error, \
+            raise InvalidCmd, \
                   "No matrix elements generated, check overall coupling orders"
 
         return matrix_elements

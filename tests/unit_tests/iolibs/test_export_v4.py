@@ -1091,10 +1091,8 @@ C
 C     LOCAL VARIABLES 
 C     
       INTEGER I,ITYPE,LP
-      DOUBLE PRECISION U1,UB1,D1,DB1,C1,CB1,S1,SB1,B1,BB1
-      DOUBLE PRECISION U2,UB2,D2,DB2,C2,CB2,S2,SB2,B2,BB2
-      DOUBLE PRECISION G1,G2
-      DOUBLE PRECISION A1,A2
+      DOUBLE PRECISION U1
+      DOUBLE PRECISION UX2
       DOUBLE PRECISION XPQ(-7:7)
       DOUBLE PRECISION DSIGUU
 C     
@@ -1116,10 +1114,8 @@ C
 C     
 C     DATA
 C     
-      DATA U1,UB1,D1,DB1,C1,CB1,S1,SB1,B1,BB1/10*1D0/
-      DATA U2,UB2,D2,DB2,C2,CB2,S2,SB2,B2,BB2/10*1D0/
-      DATA A1,G1/2*1D0/
-      DATA A2,G2/2*1D0/
+      DATA U1/1*1D0/
+      DATA UX2/1*1D0/
 C     ----------
 C     BEGIN CODE
 C     ----------
@@ -1135,12 +1131,12 @@ C     Only run if IMODE is 0
       ENDIF
       IF (ABS(LPP(IB(2))).GE.1) THEN
         LP=SIGN(1,LPP(IB(2)))
-        UB2=PDG2PDF(ABS(LPP(IB(2))),-2*LP,XBK(IB(2)),DSQRT(Q2FACT(2)))
+        UX2=PDG2PDF(ABS(LPP(IB(2))),-2*LP,XBK(IB(2)),DSQRT(Q2FACT(2)))
       ENDIF
       PD(0) = 0D0
       IPROC = 0
       IPROC=IPROC+1  ! u u~ > u u~
-      PD(IPROC)=PD(IPROC-1) + U1*UB2
+      PD(IPROC)=PD(IPROC-1) + U1*UX2
       IF (IMODE.EQ.4)THEN
         DSIG1 = PD(IPROC)
         RETURN
@@ -3514,20 +3510,21 @@ C       This is dummy particle used in multiparticle vertices
 """)
 
         # Test pdf output (for auto_dsig.f)
-
         self.assertEqual(exporter.get_pdf_lines(matrix_element, 2),
-                         """IF (ABS(LPP(1)) .GE. 1) THEN
+                         ("DOUBLE PRECISION u1\nDOUBLE PRECISION ux2",
+                          "DATA u1/1*1D0/\nDATA ux2/1*1D0/",
+                          """IF (ABS(LPP(1)) .GE. 1) THEN
 LP=SIGN(1,LPP(1))
 u1=PDG2PDF(ABS(LPP(1)),2*LP,XBK(1),DSQRT(Q2FACT(1)))
 ENDIF
 IF (ABS(LPP(2)) .GE. 1) THEN
 LP=SIGN(1,LPP(2))
-ub2=PDG2PDF(ABS(LPP(2)),-2*LP,XBK(2),DSQRT(Q2FACT(2)))
+ux2=PDG2PDF(ABS(LPP(2)),-2*LP,XBK(2),DSQRT(Q2FACT(2)))
 ENDIF
 PD(0) = 0d0
 IPROC = 0
 IPROC=IPROC+1 ! u u~ > u u~ u u~
-PD(IPROC)=PD(IPROC-1) + u1*ub2""")
+PD(IPROC)=PD(IPROC-1) + u1*ux2"""))
 
         # Test mg.sym
         writer = writers.FortranWriter(self.give_pos('test'))

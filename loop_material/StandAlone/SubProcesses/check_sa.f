@@ -55,7 +55,7 @@
 !     in Source/MODEL/couplings.f. The values are stored in common blocks that are listed
 !     in coupl.inc .
 
-      call setpara('param_card.dat',.true.)  !first call to setup the paramaters
+      call setpara('param_card.dat')  !first call to setup the paramaters
       include "pmass.inc"             !set up masses
 
       AO2PI=G**2/(8.D0*(3.14159265358979323846d0**2))

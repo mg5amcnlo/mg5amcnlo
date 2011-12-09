@@ -89,7 +89,7 @@ class LoopExporterTest(unittest.TestCase):
         LoopMatrixElement given in argument to check the correct behavior
         of the loop exporter"""
         
-        self.loopExporter.copy_v4template()
+        self.loopExporter.copy_v4template(self.myloopmodel.get('name'))
         self.loopExporter.generate_loop_subprocess(\
                             loopME, self.fortran_model)
         wanted_lorentz = loopME.get_used_lorentz()

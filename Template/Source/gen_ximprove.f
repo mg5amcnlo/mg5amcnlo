@@ -323,7 +323,6 @@ c
 c
 c     Now write the commands
 c      
-         write(26,20) 'echo $j'
          write(26,20) 'if [[ ! -e $j ]]; then'
          write(26,25) 'mkdir $j'
          write(26,20) 'fi'
@@ -341,7 +340,7 @@ c         write(26,20) 'rm -f moffset.dat'
      &        '"  >> input_sg.txt' !Helicity 
          write(26,'(5x,3a)')'echo "',gn(io(i))(2:ip-1),
      $        '" >>input_sg.txt'
-         write(26,20) 'time ../madevent >> $k <input_sg.txt'
+         write(26,20) '../madevent >> $k <input_sg.txt'
          write(26,20) 'mv ftn26 ftn25'
 c         write(26,20) 'rm ftn26'
          write(26,20) 'cat $k >> log.txt'
@@ -394,16 +393,16 @@ c     Write ic with correct number of digits
       write(*,*) 'Opening file ',fname
       open (unit=26, file = fname, status='unknown')
       write(26,15) '#!/bin/bash'
-      write(26,15) '#PBS -q ' // PBS_QUE
-      write(26,15) '#PBS -o /dev/null'
-      write(26,15) '#PBS -e /dev/null'
+c      write(26,15) '#PBS -q ' // PBS_QUE
+c      write(26,15) '#PBS -o /dev/null'
+c      write(26,15) '#PBS -e /dev/null'
       write(26,15) 'if [[ "$PBS_O_WORKDIR" != "" ]]; then' 
       write(26,15) '    cd $PBS_O_WORKDIR'
       write(26,15) 'fi'
       write(26,15) 'k=run1_app.log'
       write(lun,15) 'script=' // fname
-      write(lun,15) 'rm -f wait.$script >& /dev/null'
-      write(lun,15) 'touch run.$script'
+c      write(lun,15) 'rm -f wait.$script >& /dev/null'
+c      write(lun,15) 'touch run.$script'
  15   format(a)
       end
 
@@ -434,7 +433,6 @@ c      write(lun,'(a)') ')'
 c
 c     Now write the commands
 c      
-c      write(lun,20) 'echo $i'
 c      write(lun,20) 'j=G$i'
 c      write(lun,20) 'if (! -e $j) then'
 c      write(lun,25) 'mkdir $j'
@@ -448,7 +446,7 @@ c      if (.false.) then
 c         write(lun,20) 'cp ../../public.sh .'
 c         write(lun,20) 'qsub -N $1$i public.sh >> ../../running_jobs'
 c      else
-c         write(lun,20) 'time ../madevent > $k <input_app.txt'
+c         write(lun,20) '../madevent > $k <input_app.txt'
 c         write(lun,20) 'rm -f ftn25 ftn99'
 c         write(lun,20) 'cp $k log.txt'
 c      endif
@@ -635,7 +633,6 @@ c            if (ijob .eq. 1)  np = ifile !Only increment once / source channel
 c
 c     Now write the commands
 c      
-         write(26,20) 'echo $j'
          write(26,20) 'if [[ ! -e $j ]]; then'
          write(26,25) 'mkdir $j'
          write(26,20) 'fi'
@@ -672,7 +669,7 @@ c
      &        ' " >> input_sg.txt' !Helicity 0=exact
          write(26,'(9x,3a)')'echo "',gn(io(np))(2:ip-1),
      $        '" >>input_sg.txt'
-         write(26,25) 'time ../madevent >> $k <input_sg.txt'
+         write(26,25) '../madevent >> $k <input_sg.txt'
          write(26,25) 'cat $k >> log.txt'
          write(26,25) 'if [[ -e ftn26 ]]; then'
          write(26,25) '     cp ftn26 ftn25'
@@ -709,7 +706,7 @@ c         write(26,20) 'qsub -N $1$j public_sg.sh >> ../../running_jobs'
          write(26,25) 'if [[ -e ftn26 ]]; then'
          write(26,25) '     cp ftn26 ftn25'
          write(26,25) 'fi'
-         write(26,25) 'time ../madevent >> $k <input_sg.txt'
+         write(26,25) '../madevent >> $k <input_sg.txt'
          write(26,25) 'cat $k >> log.txt'
          write(26,20) 'fi'
          write(26,20) 'cd ../'
@@ -810,7 +807,6 @@ c      kl = 4321
 c
 c           Now write the commands
 c      
-            write(26,20) 'echo $j'
             write(26,20) 'if [[ ! -e $j ]]; then'
             write(26,25) 'mkdir $j'
             write(26,20) 'fi'
@@ -841,7 +837,7 @@ c
      &           ' " >> input_sg.txt' !Helicity 0=exact
             write(26,'(9x,3a)')'echo "',gn(i)(2:ip-1),
      $           '" >>input_sg.txt'
-            write(26,25) 'time ../madevent >> $k <input_sg.txt'
+            write(26,25) '../madevent >> $k <input_sg.txt'
             write(26,25) 'cat $k >> log.txt'
             write(26,25) 'if [[ -e ftn26 ]]; then'
             write(26,25) '     cp ftn26 ftn25'
@@ -869,7 +865,7 @@ c
             write(26,25) 'if [[ -e ftn26 ]]; then'
             write(26,25) '     cp ftn26 ftn25'
             write(26,25) 'fi'
-            write(26,25) 'time ../madevent >> $k <input_sg.txt'
+            write(26,25) '../madevent >> $k <input_sg.txt'
             write(26,25) 'cat $k >> log.txt'
             write(26,20) 'fi'
             write(26,20) 'cd ../'

@@ -121,11 +121,11 @@ class LoopProcessExporterFortranSA(export_v4.ProcessExporterFortranSA,
     def __init__(self, *args, **kwargs):
        super(LoopProcessExporterFortranSA, self).__init__(*args, **kwargs)          
 
-    def copy_v4template(self):
+    def copy_v4template(self, modelname):
         """Additional actions needed for setup of Template
         """
         
-        super(LoopProcessExporterFortranSA, self).copy_v4template()
+        super(LoopProcessExporterFortranSA, self).copy_v4template(modelname)
         
         # We must link the CutTools to the Library folder of the active Template
         super(LoopProcessExporterFortranSA, self).link_CutTools(
@@ -157,12 +157,16 @@ class LoopProcessExporterFortranSA(export_v4.ProcessExporterFortranSA,
     #===========================================================================
     # Set the compiler to be gfortran for the loop processes.
     #===========================================================================
-    def compiler_choice(self):
+    def compiler_choice(self, compiler):
         """ Different daughter classes might want different compilers.
         Here, the gfortran compiler is used throughout the compilation 
         (mandatory for CutTools written in f90) """
-        
-        self.set_compiler('gfortran',True)
+        if compiler not in ['gfortran','ifort']:
+            logger.info('For loop processes, the compiler must be fortran90'+\
+                        'compatible, like gfortran.')
+            self.set_compiler('gfortran',True)
+        else:
+            self.set_compiler(compiler)
 
     #===========================================================================
     # Make the CutTools directories for Standalone directory
