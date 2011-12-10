@@ -230,8 +230,10 @@ class CmdExtended(cmd.Cmd):
                 self.results.current and 'run_name' in self.results.current and \
                 hasattr(self, 'me_dir'):
             name = self.results.current['run_name']
-            self.debug_output = pjoin(self.me_dir, '%s_debug.log' % name)
+            tag = self.results.current['tag']
+            self.debug_output = pjoin(self.me_dir, '%s_%s_debug.log' % (name,tag))
             self.results.current.debug = self.debug_output
+            os.system('ln %s ME5_debug' % self.debug_output)
         else:
             #Force class default
             self.debug_output = MadEventCmd.debug_output
@@ -429,7 +431,7 @@ class CheckValidForCmd(object):
                 os.exec_cmd('remove %s all' % run_name)
             except:
                 pass
-            self.set_run_name(args[0], True)
+            self.set_run_name(args[0], None, 'banner', True)
         elif type == 'banner':
             self.set_run_name(self.find_available_run_name(self.me_dir))
         elif type == 'run':
@@ -540,7 +542,7 @@ class CheckValidForCmd(object):
             # No run name assigned -> assigned one automaticaly 
             self.set_run_name(self.find_available_run_name(self.me_dir))
         else:
-            self.set_run_name(args[0], True)
+            self.set_run_name(args[0], None,'parton', True)
             args.pop(0)
             
         return True
@@ -691,6 +693,11 @@ class CheckValidForCmd(object):
         elif laststep:
             raise self.InvalidCmd('only one laststep argument is allowed')
      
+        tag = [a for a in args if a.startswith('--tag=')]
+        if tag: 
+            tag = tag[0]
+            args.remove(tag)
+     
         if len(args) == 0 and not self.run_name:
             self.help_pythia()
             raise self.InvalidCmd('No run name currently define. Please add this information.')             
@@ -699,7 +706,10 @@ class CheckValidForCmd(object):
             if args[0] != self.run_name and\
              not os.path.exists(pjoin(self.me_dir,'Events',args[0], 'unweighted_events.lhe.gz')):
                 raise self.InvalidCmd('No events file corresponding to %s run. '% args[0])
-            self.set_run_name(args[0])
+            self.set_run_name(args[0], tag, 'pythia')
+        elif tag:
+            self.run_card['run_tag'] = tag
+            self.results.add_run(self.run_name, self.run_card)
 
         if  not os.path.exists(pjoin(self.me_dir,'Events',self.run_name,'unweighted_events.lhe.gz')):
             raise self.InvalidCmd('No events file corresponding to %s run. '% self.run_name)
@@ -812,8 +822,14 @@ class CheckValidForCmd(object):
             error_msg = 'No pythia-pgs path correctly set.'
             error_msg += 'Please use the set command to define the path and retry.'
             error_msg += 'You can also define it in the configuration file.'
-            raise self.InvalidCmd(error_msg)  
-                  
+            raise self.InvalidCmd(error_msg)          
+        
+        tag = [a for a in arg if a.startswith('--tag=')]
+        if tag: 
+            tag = tag[0]
+            arg.remove(tag)
+        
+        
         if len(arg) == 0 and not self.run_name:
             self.help_pgs()
             raise self.InvalidCmd('No run name currently define. Please add this information.')             
@@ -828,13 +844,16 @@ class CheckValidForCmd(object):
             Please specify a valid run_name''')
                               
         if len(arg) == 1:
-            self.set_run_name(arg[0])
-            if  not os.path.exists(pjoin(self.me_dir,'Events',self.run_name,'%s_pythia_events.hep.gz' % self.run_card['run_tag'])):
-                raise self.InvalidCmd('No events file corresponding to %s run. '% self.run_name)
+            prev_tag = self.set_run_name(arg[0], tag, 'pgs')
+            if  not os.path.exists(pjoin(self.me_dir,'Events',self.run_name,'%s_pythia_events.hep.gz' % prev_tag)):
+                raise self.InvalidCmd('No events file corresponding to %s run with tag %s. '% (self.run_name, prev_tag))
             else:
-                input_file = pjoin(self.me_dir,'Events', self.run_name, '%s_pythia_events.hep.gz' % self.run_card['run_tag'])
+                input_file = pjoin(self.me_dir,'Events', self.run_name, '%s_pythia_events.hep.gz' % prev_tag)
                 output_file = pjoin(self.me_dir, 'Events', 'pythia_events.hep')
                 os.system('gunzip -c %s > %s' % (input_file, output_file))
+        elif tag:
+            self.run_card['run_tag'] = tag
+            self.results.add_run(self.run_name, self.run_card)
 
     def check_delphes(self, arg):
         """Check the argument for pythia command
@@ -852,6 +871,11 @@ class CheckValidForCmd(object):
             error_msg += 'Please use the set command to define the path and retry.'
             error_msg += 'You can also define it in the configuration file.'
             raise self.InvalidCmd(error_msg)  
+
+        tag = [a for a in arg if a.startswith('--tag=')]
+        if tag: 
+            tag = tag[0]
+            arg.remove(tag)
                   
         if len(arg) == 0 and not self.run_name:
             self.help_delphes()
@@ -867,14 +891,18 @@ class CheckValidForCmd(object):
             Please specify a valid run_name''')
                               
         if len(arg) == 1:
-            self.set_run_name(arg[0])
-            if  not os.path.exists(pjoin(self.me_dir,'Events','%s_pythia_events.hep.gz' % self.run_name)):
-                raise self.InvalidCmd('No events file corresponding to %s run. '% self.run_name)
+            prev_tag = self.set_run_name(arg[0], tag, 'delphes')
+            if  not os.path.exists(pjoin(self.me_dir,'Events',self.run_name, '%s_pythia_events.hep.gz' % prev_tag)):
+                raise self.InvalidCmd('No events file corresponding to %s run with tag %s.:%s '\
+                    % (self.run_name, prev_tag, 
+                       pjoin(self.me_dir,'Events',self.run_name, '%s_pythia_events.hep.gz' % prev_tag)))
             else:
-                input_file = pjoin(self.me_dir,'Events', '%s_pythia_events.hep.gz' % self.run_name)
+                input_file = pjoin(self.me_dir,'Events', self.run_name, '%s_pythia_events.hep.gz' % prev_tag)
                 output_file = pjoin(self.me_dir, 'Events', 'pythia_events.hep')
                 os.system('gunzip -c %s > %s' % (input_file, output_file))
-
+        elif tag:
+            self.run_card['run_tag'] = tag
+            self.results.add_run(self.run_name, self.run_card)            
 
     def check_display(self, args):
         """check the validity of line
@@ -1204,6 +1232,8 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
       
         self.to_store = []
         self.run_name = None
+        self.run_tag = None
+        self.banner = None
 
         # Get number of initial states
         nexternal = open(pjoin(me_dir,'Source','nexternal.inc')).read()
@@ -1227,9 +1257,8 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
             process = self.process # define in find_model_name
             self.results = gen_crossxhtml.AllResults(model, process, self.me_dir)
         self.results.def_web_mode(self.web)
+
         
-        # Banner Object
-        self.banner = None
         self.configured = 0 # time for reading the card
         self._options = {} # for compatibility with extended_cmd
         
@@ -1529,9 +1558,9 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
         self.ask_run_configuration(mode, force)
         if not args:
             # No run name assigned -> assigned one automaticaly 
-            self.set_run_name(self.find_available_run_name(self.me_dir))
+            self.set_run_name(self.find_available_run_name(self.me_dir), None, 'parton')
         else:
-            self.set_run_name(args[0], True)
+            self.set_run_name(args[0], None, 'parton', True)
             args.pop(0)
             
         if self.run_card['gridpack'] in self.true:        
@@ -1832,7 +1861,6 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
         
         # Define The Banner
         tag = self.run_card['run_tag']
-        self.banner = banner_mod.Banner()
         self.banner.load_basic(self.me_dir)
         if not os.path.exists(pjoin(self.me_dir, 'Events', self.run_name)):
             os.mkdir(pjoin(self.me_dir, 'Events', self.run_name))
@@ -1984,38 +2012,15 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
             args.remove('--no_default')
         else:
             no_default = False
-        
-        tag = [a for a in args if a.startswith('--tag=')]
-        if tag: 
-            tag = tag[0]
-            args.remove(tag)
-            new_tag = True
-        elif hasattr(self, 'run_card'):
-            tag = self.run_card['run_tag']
-            new_tag = False
-                
+                                    
         self.check_pythia(args)        
         # the args are modify and the last arg is always the mode
-        if not tag:
-            # pythia is call in SA -> so choose a convenient tag
-            used_tags = [r['tag'] for r in self.results[self.run_name]]
-            i=-1
-            while 1:
-                i+=1
-                if 'tag_%s' %i not in used_tags:
-                    tag = 'tag_%s' % i
-                    break
-            new_tag = True
-        # Ensure that the tag is the expected one
-        self.run_card['run_tag'] = tag
-        if new_tag:
-            # add the new run to the html output
-            self.results.add_run(self.run_name, self.run_card)
-                         
-        #logger.info('pythia run for run: %s and tag: %s ' % (self.run_name, tag))    
         
         self.ask_pythia_run_configuration(args[-1], force)
 
+        # Update the banner with the pythia card
+        if not self.banner:
+            self.banner = banner_mod.recover_banner(self.results, 'pythia')
                      
         # initialize / remove lhapdf mode        
         self.configure_directory()
@@ -2038,6 +2043,7 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
             pass
         
         ## LAUNCHING PYTHIA
+        tag = self.run_tag
         
         if self.cluster_mode == 1:
             pythia_log = pjoin(self.me_dir, 'Events', self.run_name , '%s_pythia.log' % tag)
@@ -2073,10 +2079,6 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
         madir = self.configuration['madanalysis_path']
         td = self.configuration['td_path']
         
-
-        # Update the banner with the pythia card
-        if not self.banner:
-            self.banner = banner_mod.recover_banner(self.results, 'pgs')
         
         self.banner.add(pjoin(self.me_dir, 'Cards','pythia_card.dat'))
         banner_path = pjoin(self.me_dir, 'Events', self.run_name, '%s_%s_banner.txt' % (self.run_name, tag))
@@ -2143,7 +2145,21 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
         self.update_status('finish', level='pythia', makehtml=False)
         self.exec_cmd('pgs --no_default', postcmd=False, printcmd=False)
         self.exec_cmd('delphes --no_default', postcmd=False, printcmd=False)
+    
+    def get_available_tag(self):
+        """create automatically a tag"""
         
+        used_tags = [r['tag'] for r in self.results[self.run_name]]
+        print 'USED TAG', used_tags
+        i=0
+        while 1:
+            i+=1
+            if 'tag_%s' %i not in used_tags:
+                print 'RETURN', 'tag_%s' % i
+                return 'tag_%s' % i
+   
+    
+    
     ################################################################################
     def do_remove(self, line):
         """Remove one/all run or only part of it"""
@@ -2353,7 +2369,8 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
             args.remove('--no_default')
         else:
             no_default = False
-        self.update_status('prepare PGS run', level=None)
+        self.update_status('prepare PGS run', level=None)            
+    
         self.check_pgs(args) 
         
         pgsdir = pjoin(self.configuration['pythia-pgs_path'], 'src')
@@ -2388,17 +2405,16 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
         
         
         self.update_status('Running PGS', level='pgs')
-        tag = self.run_card['run_tag']
-        # now pass the event to a detector simulator and reconstruct objects
-
-        # Update the banner with the pgs card
-        if not self.banner:
-            self.banner = banner_mod.recover_banner(self.results, 'pgs')
         
+        tag = self.run_tag
+        # Update the banner with the pgs card        
         self.banner.add(pjoin(self.me_dir, 'Cards','pgs_card.dat'))
-        banner_path = pjoin(self.me_dir, 'Events', self.run_name, '%s_%s_banner.txt' % (self.run_name, tag))
+        banner_path = pjoin(self.me_dir, 'Events', self.run_name, '%s_%s_banner.txt' % (self.run_name, self.run_tag))
         self.banner.write(banner_path)            
 
+        ########################################################################
+        # now pass the event to a detector simulator and reconstruct objects
+        ########################################################################
         
         # Prepare the output file with the banner
         ff = open(pjoin(self.me_dir, 'Events', 'pgs_events.lhco'), 'w')
@@ -2474,7 +2490,7 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
             no_default = False
             
         self.update_status('prepare delphes run', level=None)
-        self.check_pgs(args) 
+        self.check_delphes(args) 
         
         # Check that the delphes_card exists. If not copy the default and
         # ask for edition of the card.
@@ -2499,10 +2515,7 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
         tag = self.run_card['run_tag']
         self.update_status('Running Delphes', level='delphes')
         
-        # Update the banner with the delphes card
-        if not self.banner:
-            self.banner = banner_mod.recover_banner(self.results, 'delphes')
-        
+        tag = self.run_tag
         self.banner.add(pjoin(self.me_dir, 'Cards','delphes_card.dat'))
         self.banner.add(pjoin(self.me_dir, 'Cards','delphes_trigger.dat'))
         self.banner.write(pjoin(self.me_dir, 'Events', self.run_name, '%s_%s_banner.txt' % (self.run_name, tag)))
@@ -2681,9 +2694,6 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
     def find_available_run_name(me_dir):
         """ find a valid run_name for the current job """
         
-        
-        
-        
         name = 'run_%02d'
         data = [int(s[4:6]) for s in os.listdir(pjoin(me_dir,'Events')) if
                         s.startswith('run_') and len(s)>5 and s[4:6].isdigit()]
@@ -2776,9 +2786,10 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
             return default
         
     ############################################################################
-    def set_run_name(self, name, reload_card=False):
-        """define the run name and update the results object"""
+    def set_run_name(self, name, tag=None, level='parton', reload_card=False):
+        """define the run name, the run_tag, the banner and the results."""
         
+
         if name == self.run_name:
             if reload_card:
                 run_card = pjoin(self.me_dir, 'Cards','run_card.dat')
@@ -2794,12 +2805,52 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
         # Read run_card
         run_card = pjoin(self.me_dir, 'Cards','run_card.dat')
         self.run_card = self.read_run_card(run_card)
+
+        # First call for this run -> set the banner
+        self.banner = banner_mod.recover_banner(self.results, level)
+        if tag:
+            self.run_card['run_tag'] = tag
+            new_tag = True
+        elif not self.run_name in self.results and level =='parton':
+            pass # No results yet, so current tag is fine
+        elif getattr(self.results[self.run_name][-1], level):
+            # LEVEL is already define in the last tag -> need to switch tag
+            tag = self.get_available_tag()
+            self.run_card['run_tag'] = tag
+            new_tag = True
+        else: 
+            # We can add the results to the current run
+            tag = self.results[self.run_name][-1]['tag']
+            self.run_card['run_tag'] = tag # ensure that run_tag is correct
+            new_tag = False
         
-        if name in self.results:
+        if name in self.results and not new_tag:
             self.results.def_current(self.run_name)
         else:
+            print
+            print 'CREATE NEW WITH', self.run_card['run_tag']
+            print
             self.results.add_run(self.run_name, self.run_card)
-        
+
+        self.run_tag = self.run_card['run_tag']
+
+        # Return the tag of the previous run having the required data for this
+        # tag/run to working wel.
+        if level == 'parton':
+            return
+        elif level == 'pythia':
+            return self.results[self.run_name][0]['tag']
+        else:
+            print range(-1,-len(self.results[self.run_name])-1,-1)
+            print [a['tag'] for a in self.results[self.run_name]]
+            for i in range(-1,-len(self.results[self.run_name])-1,-1):
+                tagRun = self.results[self.run_name][i]
+                print i, tagRun['tag'], tagRun.pythia 
+                if tagRun.pythia:
+                    print 'return'
+                    return tagRun['tag']
+            
+            
         
         
         

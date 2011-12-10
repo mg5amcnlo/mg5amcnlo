@@ -168,18 +168,18 @@ def recover_banner(results_object, level):
     """as input we receive a gen_crossxhtml.AllResults object.
        This define the current banner and load it
     """
-    
-    run = results_object.current['run_name']
-    #
-    tag = results_object[run][-2]['tag'] # the last one is the current one
-                                         #So need the previous one
+    try:  
+        run = results_object.current['run_name']    
+        tag = results_object.current['tag'] 
+    except:
+        return Banner()                                  
     path = results_object.path
 
     banner = Banner(pjoin(path,'Events',run,'%s_%s_banner.txt' % (run, tag)))
     
     if level == 'pythia':
-        if 'MGPythiaCard' in self:
-            del self['MGPythiaCard']
+        if 'MGPythiaCard' in banner:
+            del banner['MGPythiaCard']
     if level in ['pythia','pgs','delphes']:
         for tag in ['MGPGSCard', 'MGDelphesCard', 'MGDelphesTrigger']:
             if tag in banner:

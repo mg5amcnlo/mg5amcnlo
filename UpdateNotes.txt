@@ -9,6 +9,9 @@ Update notes for MadGraph 5 (in reverse time order)
                       multi_run/plot)
                       The script generate_events still exists but now calls
                       ./bin/madevent. 
+                  OM: Change the path of the output files. This allow to run 
+		      mulitple times pythia/pgs/delphes for the same set of 
+		      events (with different parameters).
                   OM: MadEvent checks that the param_card is coherent with the 
                       restriction used during the model generation. 
                   OM: For MSSM model, convert param_card to SLAH1. This card is

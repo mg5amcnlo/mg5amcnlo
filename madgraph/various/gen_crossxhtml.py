@@ -210,11 +210,14 @@ class AllResults(dict):
         for key,run in self.items():
             if key == 'web':
                 continue
-            for subrun in run:
+            for i,subrun in enumerate(run):
                 self.def_current(subrun)
                 self.clean()
-                self.current.update_status()
-
+                if i==0:
+                    self.current.update_status()
+                else:
+                    self.current.update_status(nolevel='parton')
+                    
     def clean(self, levels = ['all']):
         """clean the run for the levels"""
 
@@ -427,7 +430,7 @@ class OneTagResults(dict):
     
     
     
-    def update_status(self, level='all'):
+    def update_status(self, level='all', nolevel=[]):
         """update the status of the current run """
 
         exists = os.path.exists
@@ -443,7 +446,7 @@ class OneTagResults(dict):
                     exists(pjoin(path,os.pardir ,os.pardir,"%s_gridpack.tar.gz" % run)):
                 self.parton.append('gridpack')
         
-        if level in ['parton','all']:
+        if level in ['parton','all'] and 'parton' not in nolevel:
             
             if 'lhe' not in self.parton and \
                         (exists(pjoin(path,"unweighted_events.lhe.gz")) or
@@ -528,51 +531,6 @@ class OneTagResults(dict):
             if 'log' not in self.delphes and \
                           exists(pjoin(path,"%s_delphes.log" % tag)):
                 self.delphes.append('log') 
-        
-
-    def info_html(self, path, web=False, running=False):
-        """ Return the line of the table containing run info for this run """
-
-        if not running:
-            self['web'] = web
-            self['me_dir'] = path
-            
-        out = "<tr>"
-        # Links Events Tag Run Collider Cross Events
-        
-        #Links:
-        out += '<td>'
-        
-            
-            
-        out += """<a href="./Events/%(run_name)s/%(run_name)s_%(tag)s_banner.txt">banner</a>"""
-        if web:
-            out += """<br><a href="./%(run_name)s.log">log</a>"""
-        if self.debug:
-            out += """<br><a href="./%(run_name)s_debug.log"><font color=red>ERROR DETECTED</font></a>"""
-        out += '</td>'
-        # Events
-        out += '<td>'
-        out += self.get_html_event_info(web, running)
-        out += '</td>'
-        # Tag
-        out += '<td> %(tag)s </td>'
-        # Run
-        out += '<td> %(run_name)s </td>'
-        # Collider
-        out += '<td> %(collider)s </td>'
-        # Cross
-        out += '<td><center>'
-        if self.results:
-                out += """<a href="./HTML/%(run_name)s/results.html">"""
-        out += '%(cross).4g <font face=symbol>&#177</font> %(error).2g %(cross_pythia)s'
-        if self.results:
-            out += '</a>'
-        out+='</center></td>'
-        # Events
-        out += '<td> %(nb_event_text)s </td>' 
-
-        return out % self
     
     def special_link(self, link, level, name):
         
@@ -776,7 +734,8 @@ class OneTagResults(dict):
                            }                                
                                   
         if self.debug:
-            debug = '<br> <a href=\'./%s_debug.log\'> <font color=red>ERROR</font></a>' % self['run_name'] 
+            debug = '<br> <a href=\'./%s_%s_debug.log\'> <font color=red>ERROR</font></a>' \
+                                               % (self['run_name'], self['tag']) 
         else:
             debug = ''                                       
         text = tag_template % {'tag_span': nb_line,
