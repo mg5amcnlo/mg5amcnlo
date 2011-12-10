@@ -12,9 +12,9 @@ QCD = CouplingOrder(name = 'QCD',
 
 QED = CouplingOrder(name = 'QED',
                     expansion_order = 99,
-                    hierarchy = 1)
+                    hierarchy = 2)
 
 QTD = CouplingOrder(name = 'QTD',
-                    expansion_order = 99,
-                    hierarchy = 1)
+                    expansion_order = 2,
+                    hierarchy = 2)
 
