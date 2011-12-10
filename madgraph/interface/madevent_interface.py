@@ -385,19 +385,21 @@ class HelpToCmd(object):
         logger.info("syntax: pythia [RUN] [--run_options]")
         logger.info("-- run pythia on RUN (current one by default)")
         self.run_options_help([('-f','answer all question by default'),
-                               ('-tag=', 'define the tag for the pythia run')
+                               ('-tag=', 'define the tag for the pythia run'),
                                ('--no_default', 'not run if pythia_card not present')])        
                 
     def help_pgs(self):
         logger.info("syntax: pgs [RUN] [--run_options]")
         logger.info("-- run pgs on RUN (current one by default)")
         self.run_options_help([('-f','answer all question by default'),
+                               ('-tag=', 'define the tag for the pgs run'),
                                ('--no_default', 'not run if pgs_card not present')]) 
 
     def help_delphes(self):
         logger.info("syntax: delphes [RUN] [--run_options]")
         logger.info("-- run delphes on RUN (current one by default)")
         self.run_options_help([('-f','answer all question by default'),
+                               ('-tag=', 'define the tag for the delphes run'),
                                ('--no_default', 'not run if delphes_card not present')]) 
        
 #===============================================================================
@@ -695,8 +697,8 @@ class CheckValidForCmd(object):
      
         tag = [a for a in args if a.startswith('--tag=')]
         if tag: 
-            tag = tag[0]
             args.remove(tag)
+            tag = tag[0][6:]
      
         if len(args) == 0 and not self.run_name:
             self.help_pythia()
@@ -707,9 +709,11 @@ class CheckValidForCmd(object):
              not os.path.exists(pjoin(self.me_dir,'Events',args[0], 'unweighted_events.lhe.gz')):
                 raise self.InvalidCmd('No events file corresponding to %s run. '% args[0])
             self.set_run_name(args[0], tag, 'pythia')
-        elif tag:
-            self.run_card['run_tag'] = tag
-            self.results.add_run(self.run_name, self.run_card)
+        else:
+            if tag:
+                self.run_card['run_tag'] = tag
+            self.set_run_name(self.run_name, tag, 'pythia')
+            
 
         if  not os.path.exists(pjoin(self.me_dir,'Events',self.run_name,'unweighted_events.lhe.gz')):
             raise self.InvalidCmd('No events file corresponding to %s run. '% self.run_name)
@@ -826,8 +830,8 @@ class CheckValidForCmd(object):
         
         tag = [a for a in arg if a.startswith('--tag=')]
         if tag: 
-            tag = tag[0]
-            arg.remove(tag)
+            arg.remove(tag[0])
+            tag = tag[0][6:]
         
         
         if len(arg) == 0 and not self.run_name:
@@ -851,9 +855,11 @@ class CheckValidForCmd(object):
                 input_file = pjoin(self.me_dir,'Events', self.run_name, '%s_pythia_events.hep.gz' % prev_tag)
                 output_file = pjoin(self.me_dir, 'Events', 'pythia_events.hep')
                 os.system('gunzip -c %s > %s' % (input_file, output_file))
-        elif tag:
-            self.run_card['run_tag'] = tag
-            self.results.add_run(self.run_name, self.run_card)
+        else:
+            if tag: 
+                self.run_card['run_tag'] = tag
+            self.set_run_name(self.run_name, tag, 'pgs')
+            
 
     def check_delphes(self, arg):
         """Check the argument for pythia command
@@ -874,8 +880,9 @@ class CheckValidForCmd(object):
 
         tag = [a for a in arg if a.startswith('--tag=')]
         if tag: 
-            tag = tag[0]
             arg.remove(tag)
+            tag = tag[0][6:]
+            
                   
         if len(arg) == 0 and not self.run_name:
             self.help_delphes()
@@ -900,9 +907,10 @@ class CheckValidForCmd(object):
                 input_file = pjoin(self.me_dir,'Events', self.run_name, '%s_pythia_events.hep.gz' % prev_tag)
                 output_file = pjoin(self.me_dir, 'Events', 'pythia_events.hep')
                 os.system('gunzip -c %s > %s' % (input_file, output_file))
-        elif tag:
-            self.run_card['run_tag'] = tag
-            self.results.add_run(self.run_name, self.run_card)            
+        else:
+            if tag:
+                self.run_card['run_tag'] = tag
+            self.set_run_name(self.run_name, tag, 'delphes')               
 
     def check_display(self, args):
         """check the validity of line
@@ -1126,10 +1134,12 @@ class CompleteForCmd(CheckValidForCmd):
             if not self.run_name:
                 return tmp1
             else:
-                tmp2 = self.list_completion(text, self._run_options + ['-f', '--no_default', '--tag='], line)
+                tmp2 = self.list_completion(text, self._run_options + ['-f', 
+                                                '--no_default', '--tag='], line)
                 return tmp1 + tmp2
         else:
-            return self.list_completion(text, self._run_options + ['-f', '--no_default','--tag='], line)
+            return self.list_completion(text, self._run_options + ['-f', 
+                                                 '--no_default','--tag='], line)
 
     def complete_pgs(self,text, line, begidx, endidx):
         "Complete the pythia command"
@@ -1144,10 +1154,12 @@ class CompleteForCmd(CheckValidForCmd):
             if not self.run_name:
                 return tmp1
             else:
-                tmp2 = self.list_completion(text, self._run_options + ['-f', '--no_default'], line)
+                tmp2 = self.list_completion(text, self._run_options + ['-f', 
+                                                '--tag=' ,'--no_default'], line)
                 return tmp1 + tmp2        
         else:
-            return self.list_completion(text, self._run_options + ['-f', '--no_default'], line)
+            return self.list_completion(text, self._run_options + ['-f', 
+                                                 '--tag=','--no_default'], line)
     
     complete_delphes = complete_pgs        
 
@@ -2150,12 +2162,10 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
         """create automatically a tag"""
         
         used_tags = [r['tag'] for r in self.results[self.run_name]]
-        print 'USED TAG', used_tags
         i=0
         while 1:
             i+=1
             if 'tag_%s' %i not in used_tags:
-                print 'RETURN', 'tag_%s' % i
                 return 'tag_%s' % i
    
     
@@ -2790,10 +2800,21 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
         """define the run name, the run_tag, the banner and the results."""
         
 
-        if name == self.run_name:
+        if name == self.run_name:        
             if reload_card:
                 run_card = pjoin(self.me_dir, 'Cards','run_card.dat')
                 self.run_card = self.read_run_card(run_card)
+            #check tag
+            if level != 'parton':
+                if tag:
+                    self.run_card['run_tag'] = tag
+                    self.run_tag = tag
+                    self.results.add_run(self.run_name, self.run_card)
+                elif getattr(self.results[self.run_name][-1], level):
+                    tag = self.get_available_tag()
+                    self.run_card['run_tag'] = tag
+                    self.run_tag = tag
+                    self.results.add_run(self.run_name, self.run_card)
             return # Nothing to do
         
         # save/clean previous run
@@ -2827,9 +2848,6 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
         if name in self.results and not new_tag:
             self.results.def_current(self.run_name)
         else:
-            print
-            print 'CREATE NEW WITH', self.run_card['run_tag']
-            print
             self.results.add_run(self.run_name, self.run_card)
 
         self.run_tag = self.run_card['run_tag']
@@ -2841,13 +2859,9 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
         elif level == 'pythia':
             return self.results[self.run_name][0]['tag']
         else:
-            print range(-1,-len(self.results[self.run_name])-1,-1)
-            print [a['tag'] for a in self.results[self.run_name]]
             for i in range(-1,-len(self.results[self.run_name])-1,-1):
                 tagRun = self.results[self.run_name][i]
-                print i, tagRun['tag'], tagRun.pythia 
                 if tagRun.pythia:
-                    print 'return'
                     return tagRun['tag']
             
             
