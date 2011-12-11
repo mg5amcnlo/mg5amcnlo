@@ -233,10 +233,12 @@ class CmdExtended(cmd.Cmd):
             tag = self.results.current['tag']
             self.debug_output = pjoin(self.me_dir, '%s_%s_debug.log' % (name,tag))
             self.results.current.debug = self.debug_output
-            os.system('ln %s ME5_debug' % self.debug_output)
         else:
             #Force class default
             self.debug_output = MadEventCmd.debug_output
+        if os.path.exists('ME5_debug'):
+            os.remove('ME5_debug')
+        os.system('ln -s %s ME5_debug &> /dev/null' % self.debug_output)
 
     
     def nice_user_error(self, error, line):
@@ -373,11 +375,11 @@ class HelpToCmd(object):
         logger.info("   -f options: answer all question by default.")
         
     def help_remove(self):
-        logger.info("syntax: remove RUN [all|parton|pythia|pgs|delphes] [-f]")
+        logger.info("syntax: remove RUN [all|parton|pythia|pgs|delphes|banner] [-f] [--tag=]")
         logger.info("-- Remove all the files linked to previous run RUN")
         logger.info("   if RUN is 'all', then all run will be cleaned.")
         logger.info("   The optional argument precise which part should be cleaned.")
-        logger.info("   By default we clean all the related files but the banner.")
+        logger.info("   By default we clean all the related files but the banners.")
         logger.info("   the optional '-f' allows to by-pass all security question")
         logger.info("   The banner can be remove only if all files are removed first.")
 
@@ -697,7 +699,7 @@ class CheckValidForCmd(object):
      
         tag = [a for a in args if a.startswith('--tag=')]
         if tag: 
-            args.remove(tag)
+            args.remove(tag[0])
             tag = tag[0][6:]
      
         if len(args) == 0 and not self.run_name:
@@ -741,19 +743,34 @@ class CheckValidForCmd(object):
     def check_remove(self, args):
         """Check that the remove command is valid"""
 
+        tmp_args = args[:]
 
-        if len(args) == 0:
+        tag = [a[6:] for a in tmp_args if a.startswith('--tag=')]
+        if tag:
+            tag = tag[0]
+            tmp_args.remove('--tag=%s' % tag)
+
+        try:
+            tmp_args.remove('-f')
+        except:
+            pass
+        else:
+            if args[0] == '-f':
+                args.pop(0)
+                args.append('-f')
+
+        if len(tmp_args) == 0:
             self.help_clean()
             raise self.InvalidCmd('clean command require the name of the run to clean')
-        elif len(args) == 1:
-            args.append('all')
+        elif len(tmp_args) == 1:
+            return tmp_args[0], tag, ['all']
         else:
-            for arg in args[1:]:
+            for arg in tmp_args[1:]:
                 if arg not in self._clean_mode and arg != '-f':
                     self.help_clean()
                     raise self.InvalidCmd('%s is not a valid options for clean command'\
                                               % arg)
-
+            return tmp_args[0], tag, tmp_args[1:]
 
     def check_plot(self, args):
         """Check the argument for the plot command
@@ -880,7 +897,7 @@ class CheckValidForCmd(object):
 
         tag = [a for a in arg if a.startswith('--tag=')]
         if tag: 
-            arg.remove(tag)
+            arg.remove(tag[0])
             tag = tag[0][6:]
             
                   
@@ -1114,11 +1131,23 @@ class CompleteForCmd(CheckValidForCmd):
         """Complete the remove command """
      
         args = self.split_arg(line[0:begidx], error=False)
-        if len(args) > 1:
-            return self.list_completion(text, self._clean_mode + ['-f'])
+        if len(args) > 1 and (text.startswith('--t')):
+            run = args[1]
+            tags = ['--tag=%s' % tag['tag'] for tag in self.results[run]]
+            return self.list_completion(text, tags)
+        elif len(args) > 1 and '--' == args[-1]:
+            run = args[1]
+            tags = ['tag=%s' % tag['tag'] for tag in self.results[run]]
+            return self.list_completion(text, tags)
+        elif len(args) > 1 and '--tag=' == args[-1]:
+            run = args[1]
+            tags = [tag['tag'] for tag in self.results[run]]
+            return self.list_completion(text, tags)
+        elif len(args) > 1:
+            return self.list_completion(text, self._clean_mode + ['-f','--tag='])
         else:
-            data = glob.glob(pjoin(self.me_dir, 'Events', '*_banner.txt'))
-            data = [n.rsplit('/',1)[1].rsplit('_',1)[0] for n in data]
+            data = glob.glob(pjoin(self.me_dir, 'Events','*','*_banner.txt'))
+            data = [n.rsplit('/',2)[1] for n in data]
             return self.list_completion(text, ['all'] + data)
          
         
@@ -1462,16 +1491,16 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
             if data:
                 out = {}
                 for name, tag in data:
-                    tag = tag[len(name):-11]
+                    tag = tag[len(name)+1:-11]
                     if name in out:
-                        name[out].append(tag)
+                        out[name].append(tag)
                     else:
-                        name[out] = [tag]
+                        out[name] = [tag]
                 print 'the runs available are:'
                 for run_name, tags in out.items():
                     print '  run: %s' % run_name
-                    for tag in tags:
-                        print '     tag:%s ' % tag
+                    print '       tags: ', 
+                    print ', '.join(tags)
             else:
                 print 'No run detected.'
         else:
@@ -2175,23 +2204,21 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
         """Remove one/all run or only part of it"""
 
         args = self.split_arg(line)
-        self.check_remove(args)
-        if args[0] == 'all':
+        run, tag, mode = self.check_remove(args)
+        if run == 'all':
             # Check first if they are not a run with a name run.
-            if os.path.exists(pjoin(self.me_dir, 'Events', 'all_banner.txt')):
+            if os.path.exists(pjoin(self.me_dir, 'Events', 'all')):
                 logger.warning('A run with name all exists. So we will not supress all processes.')
             else:
-                for match in glob.glob(pjoin(self.me_dir, 'Events', '*_banner.txt')):
-                    run = os.path.basename(match).rsplit('_',1)[0]
+                for match in glob.glob(pjoin(self.me_dir, 'Events','*','*_banner.txt')):
+                    run = match.rsplit(os.path.sep,2)[1]
                     try:
                         self.exec_cmd('clean %s %s' % (run, ' '.join(args[1:]) ) )
                     except self.InvalidCmd, error:
                         logger.info(error)
                         pass # run already clear
                     return
-
-        run = args[0]
-
+            
         # Check that run exists
         if not os.path.exists(pjoin(self.me_dir, 'Events', run)):
             raise self.InvalidCmd('No run \'%s\' detected' % run)
@@ -2202,20 +2229,26 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
         except:
             pass # Just ensure that html never makes crash this function
 
-        # Found the file to suppress:
-        to_suppress = glob.glob(pjoin(self.me_dir, 'Events', '%s_*' % run))
-        to_suppress = [os.path.basename(f) for f in to_suppress if 'banner' not in f]
 
-        if 'all' in args:
+        # Found the file to suppress
+        
+        to_suppress = glob.glob(pjoin(self.me_dir, 'Events', run, '*'))
+        to_suppress += glob.glob(pjoin(self.me_dir, 'HTML', run, '*'))
+        # forbid the banner to be removed
+        to_suppress = [os.path.basename(f) for f in to_suppress if 'banner' not in f]
+        if tag:
+            to_suppress = [f for f in to_suppress if tag in f]
+
+        if 'all' in mode:
             pass # suppress everything
         else:
-            if 'pythia' not in args:
+            if 'pythia' not in mode:
                 to_suppress = [f for f in to_suppress if 'pythia' not in f]
-            if 'pgs' not in args:
+            if 'pgs' not in mode:
                 to_suppress = [f for f in to_suppress if 'pgs' not in f]
-            if 'delphes' not in args:
+            if 'delphes' not in mode:
                 to_suppress = [f for f in to_suppress if 'delphes' not in f]
-            if 'parton' not in args:
+            if 'parton' not in mode:
                 to_suppress = [f for f in to_suppress if 'delphes' in f 
                                                       or 'pgs' in f 
                                                       or 'pythia' in f]
@@ -2229,13 +2262,21 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
         
         if ans == 'y':
             for file2rm in to_suppress:
-                if os.path.isdir(pjoin(self.me_dir, 'Events', file2rm)):
-                    shutil.rmtree(pjoin(self.me_dir, 'Events', file2rm))
+                if os.path.exists(pjoin(self.me_dir, 'Events', run, file2rm)):
+                    try:
+                        os.remove(pjoin(self.me_dir, 'Events', run, file2rm))
+                    except:
+                        shutil.rmtree(pjoin(self.me_dir, 'Events', run, file2rm))
                 else:
-                    os.remove(pjoin(self.me_dir, 'Events', file2rm))
+                    try:
+                        os.remove(pjoin(self.me_dir, 'HTML', run, file2rm))
+                    except:
+                        shutil.rmtree(pjoin(self.me_dir, 'HTML', run, file2rm))
+
+
 
         # Remove file in SubProcess directory
-        if 'all' in args or 'channel' in args:
+        if 'all' in mode or 'channel' in mode:
             to_suppress = glob.glob(pjoin(self.me_dir, 'SubProcesses', '%s*' % run))
             to_suppress += glob.glob(pjoin(self.me_dir, 'SubProcesses', '*','%s*' % run))
             to_suppress += glob.glob(pjoin(self.me_dir, 'SubProcesses', '*','*','%s*' % run))
@@ -2251,23 +2292,35 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
                 for file2rm in to_suppress:
                     os.remove(file2rm)
 
-        if 'banner' in args[1:]:
-            to_suppress = glob.glob(pjoin(self.me_dir, 'Events', '%s_*' % run))
-            if len(to_suppress) > 1:
-                raise MadGraph5Error, '''Some output still exists for this run. 
+        if 'banner' in mode:
+            to_suppress = glob.glob(pjoin(self.me_dir, 'Events', run, '*'))
+            if tag:
+                # remove banner
+                try:
+                    os.remove(pjoin(self.me_dir, 'Events',run,'%s_%s_banner.txt' % (run,tag)))
+                except:
+                    logger.warning('fail to remove the banner')
+                # remove the run from the html output
+                if run in self.results:
+                    self.results.delete_run(run, tag)
+                    return
+            elif any(['banner' not in os.path.basename(p) for p in to_suppress]):
+                if to_suppress:
+                    raise MadGraph5Error, '''Some output still exists for this run. 
                 Please remove those output first. Do for example: 
                 remove %s all banner
                 ''' % run
-            elif len(to_suppress):
-                # remove banner
-                os.remove(to_suppress[0])
-                # remove the run from the html output
+            else:
+                shutil.rmtree(pjoin(self.me_dir, 'Events',run))
                 if run in self.results:
                     self.results.delete_run(run)
                     return
+        else:
+            logger.info('''The banner is not removed. In order to remove it run:
+    remove %s all banner %s''' % (run, tag and '--tag=%s ' % tag or '')) 
 
         # update database.
-        self.results.clean(args[1:])
+        self.results.clean(mode, run, tag)
         self.update_status('', level='all')
 
 

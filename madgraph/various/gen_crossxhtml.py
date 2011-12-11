@@ -16,6 +16,7 @@
 
 
 import os
+import math
 import pickle
 try:
     import internal.files as files
@@ -30,7 +31,7 @@ exists = os.path.exists
 crossxhtml_template = """
 <HTML> 
 <HEAD> 
-    <META HTTP-EQUIV="Refresh" CONTENT="10" > 
+    %(refresh)s 
     <META HTTP-EQUIV="EXPIRES" CONTENT="20" > 
     <TITLE>Online Event Generation</TITLE>
     <link rel=stylesheet href="./HTML/mgstyle.css" type="text/css">
@@ -151,12 +152,24 @@ class AllResults(dict):
         else:
             self.current = None
     
-    def delete_run(self, run_name):
+    def delete_run(self, run_name, tag=None):
         """delete a run from the database"""
-        if self.current == name:
-            self.results.def_current(None)                    
-        del self[name]
-        self.order.remove(name)
+
+        assert run_name in self
+
+        if not tag :
+            if self.current['run_name'] == run_name:
+                self.results.def_current(None)                    
+            del self[run_name]
+            self.order.remove(run_name)
+        else:
+            assert tag in [a['tag'] for a in self[run_name]]
+            RUN = self[run_name]
+            if len(RUN) == 1:
+                self.delete_run(run_name)
+                return
+            RUN.remove(tag)
+
         #update the html
         self.output()
     
@@ -184,7 +197,7 @@ class AllResults(dict):
         else:
             new = RunResults(name, run_card, self.process, self.path)
             self[name] = new  
-        
+
         self.order.append(name)
         
         if current:
@@ -218,14 +231,22 @@ class AllResults(dict):
                 else:
                     self.current.update_status(nolevel='parton')
                     
-    def clean(self, levels = ['all']):
+    def clean(self, levels = ['all'], run=None, tag=None):
         """clean the run for the levels"""
 
-        if not self.current:
+        if not run and not self.current:
             return
         to_clean = self.current
-        run = to_clean['run_name']
+        if run and not tag:
+            for tagrun in self[run]:
+                self.clean(levels, run, tagrun['tag'])
+            return
 
+        if run:
+            to_clean = self[run].return_tag(tag)
+        else:
+            run = to_clean['run_name']
+        
         if 'all' in levels:
             levels = ['parton', 'pythia', 'pgs', 'delphes', 'channel']
         
@@ -237,7 +258,7 @@ class AllResults(dict):
             to_clean.pgs = []
         if 'delphes' in levels:
             to_clean.delphes = []
-            
+        
         
     def save(self):
         """Save the results of this directory in a pickle file"""
@@ -296,13 +317,15 @@ class AllResults(dict):
                 status_dict['delphes_card'] = ""
             
             status = status_template % status_dict
+            refresh = "<META HTTP-EQUIV=\"Refresh\" CONTENT=\"10\">"
         else:
             status =''
+            refresh = ''
         
         
         # See if we need to incorporate the button for submission
         if os.path.exists(pjoin(self.path, 'RunWeb')):       
-           running  = True
+            running  = True
         else:
             running = False
         
@@ -315,6 +338,7 @@ class AllResults(dict):
                      'model': self.model,
                      'status': status,
                      'old_run': old_run,
+                     'refresh': refresh,
                      'numerical_title': self.unit == 'pb' and 'Cross section (pb)'\
                                                           or 'Width (GeV)'}
         
@@ -378,7 +402,7 @@ class RunResults(list):
         
         for data in self:
             if data['tag'] == name:
-                return tag
+                return data
         
     def add(self, obj):
         """ """
@@ -393,7 +417,7 @@ class RunResults(list):
         
         assert tag in self.tags
         
-        obj = [o for o in self and o['tag']==tag][0]
+        obj = [o for o in self if o['tag']==tag][0]
         self.tags.remove(tag)
         list.remove(self, obj)
     
@@ -544,6 +568,16 @@ class OneTagResults(dict):
          return " <a  id='%(id)s' href='%(link1)s' onClick=\"check_link('%(link1)s','%(link2)s','%(id)s')\">%(name)s</a>" \
               % {'link1': link1, 'link2':link2, 'id': id, 'name':name}       
     
+    def get_pythia_error(self, cross, error, pythia_cross, nb_event):
+        """compute the error associate to pythie"""
+        # pythia_cross = cross * n_acc / n_gen
+        # error_pythia = error * n_acc /n_gen + cross * sqrt(n_acc) / n_gen
+        
+        n_acc = int(0.5 + pythia_cross / cross * nb_event)
+        error_pythia = error * n_acc / nb_event 
+        error_pythia += cross * math.sqrt(n_acc) / nb_event
+        
+        return error_pythia
     
     def get_links(self, level):
         """ Get the links for a given level"""
@@ -662,8 +696,9 @@ class OneTagResults(dict):
         elif (self.pgs or self.delphes) and not self['nb_event']:
             if RunResults[-2]['cross_pythia']:
                 self['cross'] = RunResults[-2]['cross_pythia']
-                self['error'] = RunResults[-2]['error'] * self['cross'] / RunResults[-2]['cross']
-                self['nb_event'] = int(0.5+(RunResults[-2]['nb_event'] * self['cross'] /RunResults[-2]['cross']))           
+                self['nb_event'] = int(0.5+(RunResults[-2]['nb_event'] * self['cross'] /RunResults[-2]['cross']))                           
+                self['error'] = self.get_pythia_error(RunResults[-2]['cross'], 
+                       RunResults[-2]['error'], self['cross'], self['nb_event'])
             else:
                 self['nb_event'] = RunResults[-2]['nb_event']
                 self['cross'] = RunResults[-2]['cross']
@@ -694,8 +729,8 @@ class OneTagResults(dict):
                         local_dico['cross_span'] = nb_line
                     local_dico['nb_event'] = int(0.5+(self['nb_event'] * self['cross_pythia'] /self['cross']))
                     local_dico['cross'] = self['cross_pythia']
-                    local_dico['err'] = self['error'] * self['cross_pythia'] / self['cross']
-                    
+                    local_dico['err'] = self.get_pythia_error(self['cross'],
+                           self['error'],self['cross_pythia'], self['nb_event']) 
                 else:
                     local_dico['cross_span'] = nb_line
                     local_dico['cross'] = self['cross']
@@ -711,8 +746,8 @@ class OneTagResults(dict):
                     local_dico['cross_span'] = nb_line
                     local_dico['nb_event'] = self['nb_event']
                 local_dico['cross'] = self['cross_pythia']
-                local_dico['err'] = self['error'] * self['cross_pythia'] / self['cross'] 
-                
+                local_dico['err'] = self.get_pythia_error(self['cross'],
+                           self['error'],self['cross_pythia'], self['nb_event'])
             else:
                template = sub_part_template_pgs 
             
@@ -730,7 +765,7 @@ class OneTagResults(dict):
                            'cross': self['cross'],
                            'err': self['error'],
                            'nb_event': self['nb_event'] and self['nb_event'] or 'No events yet',
-                           'links':'Running'
+                           'links': 'banner only'
                            }                                
                                   
         if self.debug:

@@ -458,9 +458,12 @@ class CheckValidForCmd(object):
         syntax: display XXXXX
         """
             
-        if len(args) < 1 or args[0] not in self._display_opts:
+        if len(args) < 1:
             self.help_display()
-            raise self.InvalidCmd
+            raise self.InvalidCmd, 'display requires an argument specifying what to display'
+        if args[0] not in self._display_opts:
+            self.help_display()
+            raise self.InvalidCmd, 'Invalid arguments for display command: %s' % args[0]
 
         if not self._curr_model:
             raise self.InvalidCmd("No model currently active, please import a model!")
