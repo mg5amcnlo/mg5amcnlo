@@ -99,11 +99,17 @@ class Banner(dict):
     ############################################################################
     #  SPLIT BANNER
     ############################################################################
-    def split(self, me_dir):
-        """write the banner in the Cards directory"""
+    def split(self, me_dir, proc_card=True):
+        """write the banner in the Cards directory.
+        proc_card argument is present to avoid the overwrite of proc_card 
+        information"""
 
         for tag, text in self.items():
-            ff = open(pjoin(me_dir, 'Cards', tag_to_file[tag]), 'w')
+            if tag == 'MGVERSION':
+                continue
+            if not proc_card and tag in ['MG5ProcCard','MGProcCard']:
+                continue
+            ff = open(pjoin(me_dir, 'Cards', self.tag_to_file[tag]), 'w')
             ff.write(text)
 
     ############################################################################
@@ -158,11 +164,11 @@ class Banner(dict):
 
 
 
-def split_banner(self, banner_path, me_dir):
+def split_banner(banner_path, me_dir, proc_card=True):
     """a simple way to split a banner"""
     
     banner = Banner(banner_path)
-    banner.split(me_dir)
+    banner.split(me_dir, proc_card)
     
 def recover_banner(results_object, level):
     """as input we receive a gen_crossxhtml.AllResults object.

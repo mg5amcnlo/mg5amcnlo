@@ -417,30 +417,45 @@ class CheckValidForCmd(object):
             self.help_banner_run()
             raise self.InvalidCmd('banner_run reauires at least one argument.')
         
+        tag = [a[6:] for a in args if a.startswith('--tag=')]
+        
+        
         if os.path.exists(args[0]):
             type ='banner'
             format = self.detect_card_type(args[0])
             if format != 'banner':
                 raise self.InvalidCmd('The file is not a valid banner.')
-        elif os.path.exists(pjoin(self.me_dir,'Events','%s_banner.txt' % args[0])):
-            name = args[0]
-            args[0] = pjoin(self.me_dir,'Events','%s_banner.txt')
-            type = 'run'
+        elif tag:
+            args[0] = pjoin(self.me_dir,'Events', args[0], '%s_%s_banner.txt' % \
+                                    (args[0], tag))                  
+            if not os.path.exists(args[0]):
+                raise self.InvalidCmd('No banner associates to this name and tag.')
         else:
-            raise self.InvalidCmd('No banner associates to this name.')
-            
-        run_name = [arg[7:] for arg in args if arg.startswith('--name')]
+            name = args[0]
+            type = 'run'
+            banners = glob.glob(pjoin(self.me_dir,'Events', args[0], '*_banner.txt'))
+            if not banners:
+                raise self.InvalidCmd('No banner associates to this name.')    
+            elif len(banners) == 1:
+                args[0] = banners[0]
+            else:
+                #list the tag and propose those to the user
+                tags = [os.path.basename(p)[len(args[0])+1:-11] for p in banners]
+                tag = self.ask('which tag do you want to use?', tags[0], tags)
+                args[0] = pjoin(self.me_dir,'Events', args[0], '%s_%s_banner.txt' % \
+                                    (args[0], tag))                
+                        
+        run_name = [arg[7:] for arg in args if arg.startswith('--name=')]
         if run_name:
             try:
-                os.exec_cmd('remove %s all' % run_name)
+                os.exec_cmd('remove %s all banner' % run_name)
             except:
                 pass
-            self.set_run_name(args[0], None, 'banner', True)
+            self.set_run_name(args[0], tag=None, level='parton', reload_card=True)
         elif type == 'banner':
             self.set_run_name(self.find_available_run_name(self.me_dir))
         elif type == 'run':
-            data = glob.glob(pjoin(self.me_dir, 'Events', '%s_*' % name))
-            if len(data) > 1:
+            if os.path.exists(pjoin(self.me_dir, 'Events', name)):
                 run_name = self.find_available_run_name(self.me_dir)
                 logger.info('Run %s is not empty so will use run_name: %s' % \
                                                                (name, run_name))
@@ -448,7 +463,6 @@ class CheckValidForCmd(object):
             else:
                 self.set_run_name(name)
             
-
     def check_history(self, args):
         """check the validity of line"""
         
@@ -969,21 +983,44 @@ class CompleteForCmd(CheckValidForCmd):
     def complete_banner_run(self, text, line, begidx, endidx):
        "Complete the banner run command"
        try:
+  
+        
         args = self.split_arg(line[0:begidx], error=False)
-        if len(args)==1:
-            comp = self.path_completion(text,
-                                        os.path.join('.',*[a for a in args \
-                                                    if a.endswith(os.path.sep)]))
-            run_list =  glob.glob(pjoin(self.me_dir, 'Events', '*','*_banner.txt'))
-            run_list = [n.rsplit('/',1)[1][:-11] for n in run_list]
-            comp += self.list_completion(text, run_list)
-            return comp
+        
         if args[-1].endswith(os.path.sep):
             return self.path_completion(text,
                                         os.path.join('.',*[a for a in args \
+                                                    if a.endswith(os.path.sep)]))        
+        
+        
+        if len(args) > 1:
+            # only options are possible
+            tags = glob.glob(pjoin(self.me_dir, 'Events' , args[1],'%s_*_banner.txt' % args[1]))
+            tags = ['%s' % os.path.basename(t)[len(args[1])+1:-11] for t in tags]
+
+            if args[-1] != '--tag=':
+                tags = ['--tag=%s' % t for t in tags]
+            else:
+                return self.list_completion(text, tags)
+            return self.list_completion(text, tags +['--name=','-f'], line)
+        
+        # First argument
+        possibilites = {} 
+
+        comp = self.path_completion(text, os.path.join('.',*[a for a in args \
                                                     if a.endswith(os.path.sep)]))
+        if os.path.sep in line:
+            return comp
+        else:
+            possibilites['Path from ./'] = comp
+
+        run_list =  glob.glob(pjoin(self.me_dir, 'Events', '*','*_banner.txt'))
+        run_list = [n.rsplit('/',2)[1] for n in run_list]
+        possibilites['RUN Name'] = self.list_completion(text, run_list)
+        
+        return self.deal_multiple_categories(possibilites)
     
-        return self.list_completion(text, ['--name=','-f'], line)
+        
        except Exception, error:
            print error
     def complete_history(self, text, line, begidx, endidx):
@@ -1461,11 +1498,20 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
         else:
             force = False     
              
-        banner_mod.split_banner(args[0], self.me_dir)
+        banner_mod.split_banner(args[0], self.me_dir, proc_card=False)
+        
+        # Remove previous cards
+        for name in ['delphes_trigger.dat', 'delphes_card.dat',
+                     'pgs_card.dat', 'pythia_card.dat']:
+            try:
+                os.remove(pjoin(self.me_dir, 'Cards', name))
+            except:
+                pass
+        
         
         # Check if we want to modify the run
         if not force:
-            ans = self.ask('Do you want to modify this run?', 'n', ['y','n'], 
+            ans = self.ask('Do you want to modify the Cards?', 'n', ['y','n'], 
                                                            timeout=self.timeout)
             if ans == 'n':
                 force = True

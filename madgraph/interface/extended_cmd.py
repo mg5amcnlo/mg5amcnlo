@@ -73,7 +73,15 @@ class BasicCmd(cmd.Cmd):
             name = name.replace(' ', '_')
             valid += 1
             out.append(opt[0]+'@@'+name+'@@')
+            # Remove duplicate
+            d = {}
+            for x in opt:
+                d[x] = 1    
+            opt = list(d.keys())
+            opt.sort()
             out += opt
+
+            
         if valid == 1:
             out = out[1:]
         return out
@@ -95,6 +103,7 @@ class BasicCmd(cmd.Cmd):
                         category = category.replace('_',' ')
                         self.stdout.write('\n %s:\n%s\n' % (category, '=' * (len(category)+2)))
                         start = 0
+                        pos = 0
                         continue
                     elif pos and pos % nb_column ==0:
                         self.stdout.write('\n')
