@@ -2637,7 +2637,8 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
                               'web_browser':None,
                               'eps_viewer':None,
                               'text_editor':None,
-                              'fortran_compiler':None}
+                              'fortran_compiler':None,
+                              'automatic_html_opening':True}
         
         if not config_path:
             try:
@@ -2732,8 +2733,13 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
                 if hasattr(self, 'do_shell'):
                     ME = madevent_interface.MadEventCmdShell(me_dir=args[1])
                 else:
-                     ME = madevent_interface.MadEventCmdShell(me_dir=args[1])
-                stop = self.define_child_cmd_interface(ME)
+                     ME = madevent_interface.MadEventCmd(me_dir=args[1])
+                # transfer interactive configuration
+                config_line = [l for l in self.history if l.strip().startswith('set')]
+                for line in config_line:
+                    print 'line', line
+                    ME.exec_cmd(line)
+                stop = self.define_child_cmd_interface(ME)                
                 return stop
             
             #check if this is a cross-section

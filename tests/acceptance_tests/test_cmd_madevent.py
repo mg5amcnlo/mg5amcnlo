@@ -12,6 +12,7 @@
 # For more information, please visit: http://madgraph.phys.ucl.ac.be
 #
 ################################################################################
+from __future__ import division
 import subprocess
 import unittest
 import os
@@ -63,7 +64,7 @@ class TestMECmdShell(unittest.TestCase):
             interface.onecmd('install MadAnalysis')
         
         self.cmd_line = MECmd.MadEventCmdShell(me_dir= '/tmp/MGPROCESS')
-
+        self.cmd_line.exec_cmd('set automatic_html_opening False')
 
     @staticmethod
     def join_path(*path):
@@ -87,7 +88,7 @@ class TestMECmdShell(unittest.TestCase):
                     '/tmp/MGPROCESS/Cards/pythia_card.dat')
         self.do('generate_events -f')
         
-        self.check_matched_plot()         
+        f1 = self.check_matched_plot(tag='fermi')         
         start = time.time()
                 
         self.assertEqual(cmd, os.getcwd())
@@ -98,7 +99,9 @@ class TestMECmdShell(unittest.TestCase):
         self.check_parton_output()
         self.check_parton_output('run_02')
         self.check_pythia_output()        
-        self.check_matched_plot(mintime=start)        
+        f2 = self.check_matched_plot(mintime=start, tag='tag_1')        
+        
+        self.assertNotEqual(f1.split('\n'), f2.split('\n'))
         
         
         self.assertEqual(cmd, os.getcwd())
@@ -116,24 +119,26 @@ class TestMECmdShell(unittest.TestCase):
                 
         # check that the number of event is fine:
         data = self.load_result(run_name)
-        self.assertEqual(int(data['nb_event']), target_event)
-        self.assertTrue('lhe' in data.parton)
+        self.assertEqual(int(data[0]['nb_event']), target_event)
+        self.assertTrue('lhe' in data[0].parton)
                 
     def check_pythia_output(self, run_name='run_01'):
         """ """
         # check that the number of event is fine:
         data = self.load_result(run_name)
-        self.assertTrue('lhe' in data.pythia)
-        self.assertTrue('log' in data.pythia)
+        self.assertTrue('lhe' in data[0].pythia)
+        self.assertTrue('log' in data[0].pythia)
 
-    def check_matched_plot(self, run_name='run_01', mintime=None):
+    def check_matched_plot(self, run_name='run_01', mintime=None, tag='fermi'):
         """ """
-        path = '/tmp/MGPROCESS/Events/%s_pythia/DJR1.ps' % run_name
+        path = '/tmp/MGPROCESS/HTML/%(run)s/plots_pythia_%(tag)s/DJR1.ps' % \
+                                {'run': run_name, 'tag': tag}
         self.assertTrue(os.path.exists(path))
         
         if mintime:
             self.assertTrue(os.path.getctime(path) > mintime)
-
+        
+        return open(path).read()
 #===============================================================================
 # TestCmd
 #===============================================================================
@@ -163,10 +168,9 @@ class TestMEfromfile(unittest.TestCase):
                          stdout=devnull,stderr=devnull)
 
         
-        self.check_parton_output()
-        self.check_parton_output('run_02')
+        self.check_parton_output(cross=4.541638, error=0.035)
+        self.check_parton_output('run_02', cross=4.541638, error=0.035)
         self.check_pythia_output()
-        print cwd
         self.assertEqual(cwd, os.getcwd())
         #
 
@@ -178,18 +182,21 @@ class TestMEfromfile(unittest.TestCase):
         result = save_load_object.load_from_file('/tmp/MGPROCESS/HTML/results.pkl')
         return result[run_name]
 
-    def check_parton_output(self, run_name='run_01', target_event=100):
+    def check_parton_output(self, run_name='run_01', target_event=100, cross=0, error=9e99):
         """Check that parton output exists and reach the targert for event"""
                 
         # check that the number of event is fine:
         data = self.load_result(run_name)
-        self.assertEqual(int(data['nb_event']), target_event)
-        self.assertTrue('lhe' in data.parton)
+        self.assertEqual(int(data[0]['nb_event']), target_event)
+        self.assertTrue('lhe' in data[0].parton)
+        
+        if cross:
+            self.assertTrue(abs(cross - float(data[0]['cross']))/error < 3)
                 
     def check_pythia_output(self, run_name='run_01'):
         """ """
         # check that the number of event is fine:
         data = self.load_result(run_name)
-        self.assertTrue('lhe' in data.pythia)
-        self.assertTrue('log' in data.pythia)
-        self.assertTrue('hep' in data.pythia)
+        self.assertTrue('lhe' in data[0].pythia)
+        self.assertTrue('log' in data[0].pythia)
+        self.assertTrue('hep' in data[0].pythia)

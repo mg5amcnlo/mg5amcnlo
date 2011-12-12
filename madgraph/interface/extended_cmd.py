@@ -205,10 +205,15 @@ class Cmd(BasicCmd):
 
         # Update the history of this suite of command,
         # except for useless commands (empty history and help calls)
-        if line != "history" and \
-            not line.startswith('help') and \
-            not line.startswith('#*'):
-            self.history.append(line)
+        if ';' in line: 
+            lines = line.split(';')
+        else:
+            lines = [line]
+        for l in lines:
+            l = l.strip()
+            if not (l.startswith("history") or l.startswith('help') or \
+                                                            l.startswith('#*')):
+                self.history.append(l)
 
         # Check if we are continuing a line:
         if self.save_line:

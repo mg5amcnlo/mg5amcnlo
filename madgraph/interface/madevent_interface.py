@@ -1469,10 +1469,8 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
             elif key.startswith('cluster'):
                 pass              
             elif key == 'automatic_html_opening':
-                if self.configuration[key] == 'False':
-                    self.open_crossx = False
-                else:
-                    self.open_crossx = True
+                if self.configuration[key] in ['False', 'True']:
+                    self.configuration[key] =eval(self.configuration[key])
             elif key not in ['text_editor','eps_viewer','web_browser']:
                 # Default: try to set parameter
                 try:
@@ -2825,9 +2823,10 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
         else:
             self.configured = time.time()
         self.update_status('compile directory', level=None)
-        if self.open_crossx:
+        if self.configuration['automatic_html_opening']:
             misc.open_file(os.path.join(self.me_dir, 'crossx.html'))
-            self.open_crossx = False
+            self.configuration['automatic_html_opening'] = False
+            #open only once the web page
         # Change current working directory
         self.launching_dir = os.getcwd()
         
@@ -2880,7 +2879,7 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
             line = line.split('=')
             if len(line) != 2:
                 continue
-            output[line[1].strip()] = line[0].strip()
+            output[line[1].strip()] = line[0].replace('\'','').strip()
         return output
 
     ############################################################################
@@ -2903,6 +2902,7 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
             if reload_card:
                 run_card = pjoin(self.me_dir, 'Cards','run_card.dat')
                 self.run_card = self.read_run_card(run_card)
+
             #check tag
             if level != 'parton':
                 if tag:

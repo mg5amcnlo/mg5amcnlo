@@ -204,11 +204,17 @@ class MELauncher(ExtLauncher):
         import madgraph.interface.madevent_interface as ME
         
         if self.shell:
-            usecmd = ME.MadEventCmdShell
+            usecmd = ME.MadEventCmdShell(me_dir=self.running_dir)
         else:
-            usecmd = ME.MadEventCmd
+            usecmd = ME.MadEventCmd(me_dir=self.running_dir)
+        
+        #Check if some configuration were overwritten by a command. If so use it    
+        set_cmd = [l for l in self.cmd_int.history if l.strip().startswith('set')]
+        for line in set_cmd:
+            usecmd.exec_cmd(line)
+        
         launch = self.cmd_int.define_child_cmd_interface(
-                     usecmd(me_dir=self.running_dir), interface=False)
+                     usecmd, interface=False)
         #launch.me_dir = self.running_dir
         command = 'generate_events %s' % self.name
         if mode == "1":
