@@ -835,8 +835,13 @@ This will take effect only in a NEW terminal
             if path == 'auto' and self._export_format in \
                      ['madevent', 'standalone', 'standalone_cpp']:
                 self.get_default_path()
-            else:
+            elif 'pythia8' != self._export_format:
                 self._export_dir = path
+            else:
+                if self.configuration['pythia8_path']:
+                    self._export_dir = self.configuration['pythia8_path']
+                else:
+                    self._export_dir = '.'
         else:
             # No valid path
             self.get_default_path()
@@ -882,8 +887,8 @@ This will take effect only in a NEW terminal
             auto_path = lambda i: pjoin(self.writing_dir,
                                                name_dir(i))
         elif self._export_format == 'pythia8':
-            if self.pythia8_path:
-                self._export_dir = self.pythia8_path
+            if self.configuration['pythia8_path']:
+                self._export_dir = self.configuration['pythia8_path']
             else:
                 self._export_dir = '.'
             return
@@ -1528,8 +1533,6 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
     _curr_exporter = None
     _done_export = False
 
-    # Configuration variable
-    pythia8_path = None
     
     def __init__(self, mgme_dir = '', *completekey, **stdin):
         """ add a tracker of the history """
@@ -2673,11 +2676,11 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
             if key == 'pythia8_path':
                 pythia8_dir = pjoin(MG5DIR, self.configuration['pythia8_path'])
                 if not os.path.isfile(pjoin(pythia8_dir, 'include', 'Pythia.h')):
-                    if os.path.isfile(pjoin(self.configuration['pythia8_path'], 'include', 'Pythia.h')):
-                        pythia8_dir = self.configuration['pythia8_path']
+                    if not os.path.isfile(pjoin(self.configuration['pythia8_path'], 'include', 'Pythia.h')):
+                       self.configuration['pythia8_path'] = None
                     else:
-                        pythia8_dir = None
-                self.pythia8_path = pythia8_dir
+                        continue
+                    
             elif key.endswith('path'):
                 pass
             elif key in ['cluster_type', 'automatic_html_opening']:
@@ -2758,7 +2761,7 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
                                 shell = hasattr(self, 'do_shell'),
                                 **options)
         elif args[0] == 'pythia8':
-            ext_program = launch_ext.Pythia8Launcher(self, args[1], self.timeout,
+            ext_program = launch_ext.Pythia8Launcher( args[1], self.timeout, self,
                                                 **options)
         else:
             os.chdir(start_cwd) #ensure to go to the initial path
