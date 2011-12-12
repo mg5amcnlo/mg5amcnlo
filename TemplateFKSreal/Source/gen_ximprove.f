@@ -659,11 +659,9 @@ c         write(26,20) 'qsub -N $1$j public_sg.sh >> ../../running_jobs'
          write(26,20) 'fi'
          write(26,20) 'cd ../'
       enddo
-      if (fopened) then
-        write(26,15) 'rm -f run.$script'
-        write(26,15) 'touch done.$script'
-        close(26)
-      endif
+      write(26,15) 'rm -f run.$script'
+      write(26,15) 'touch done.$script'
+      close(26)
 c      write(26,15) 'end'
  15   format(a)
  20   format(5x,a)

@@ -15,7 +15,7 @@ c
       integer    iter_survey                !Number of iterations for survey
       parameter (iter_survey=4)
       integer    nhel_survey                !Number of helicities to sum for each
-      parameter (nhel_survey=1)             !phase space point. (0 = sum_all)
+      parameter (nhel_survey=0)             !phase space point. (0 = sum_all)
 c
 c     The following parameters are used by gen_ximprove.f in running refine
 c
@@ -26,7 +26,7 @@ c
       integer    max_iter                   !Maximum number of iterations
       parameter (max_iter = 9)              !during refinement
       integer    nhel_refine                !Number of helicities to sum for each
-      parameter (nhel_refine=1)             !phase space point. (0 = sum_all)
+      parameter (nhel_refine=0)             !phase space point. (0 = sum_all)
 c
 c     The following are used for parallel running
 c
@@ -34,7 +34,7 @@ c
       parameter     (PBS_QUE = 'madgraph')
 
       integer    ChanPerJob
-      parameter (ChanPerJob=5)  !Number of channels / job for survey
+      parameter (ChanPerJob=1)  !Number of channels / job for survey
 
 c      integer    max_np
 c      parameter (max_np=1)  !Number of channels / job for refine

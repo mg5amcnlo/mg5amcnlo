@@ -20,13 +20,7 @@ c
 c     
 c     Local
 c
-      character*100 subname(maxsubprocesses)
-      character*110 pathsubname(maxsubprocesses)         !needed for MadWeight
-      character*80 down_path                           !needed for MadWeight
-      character*40 filename                         !needed for MadWeight
-      character*4  card_number                         !needed for MadWeight
-      character*20 run_name                            !needed for MadWeight
-      integer pos1,pos2,pos3                           ! needed for MadWeight
+      character*30 subname(maxsubprocesses)
       integer i,j,m,ns,nreq,ievent
       integer kevent,revent,iarray(cmax_events)
       double precision sum, xsec, xerr, goal_wgt,xarray(cmax_events)
@@ -71,11 +65,7 @@ c     Get total cross section
 c
       xsec = 0d0
       xerr = 0d0
-c $B$ input_file $B$
-      filename='results.dat'
-c $E$ input_file $E$
-
-      open(unit=15,file=filename,status='old',err=21)
+      open(unit=15,file='results.dat',status='old',err=21)
       read(15,*,err=20) xsec,xerr
       write(*,*) "Results.dat xsec = ",xsec
  20   close(15)
@@ -96,10 +86,7 @@ c
       R8 = 8
       record_length = 4*I4+maxexternal*I4*7+maxexternal*5*R8+3*R8+
      &   140
-C $B$ scratch_name $B$ !this is tag for automatic modification by MW
-      filename='scratch'
-C $E$ scratch_name $E$ !this is tag for automatic modification by MW
-      open(unit=sfnum,access='direct',file=filename,err=999,
+      open(unit=sfnum,access='direct',file='scratch',err=999,
      &     recl=record_length)
 c
 c     Loop through subprocesses filling up scratch file with events
@@ -109,15 +96,9 @@ c
       revent=0
       maxwgt=0d0
       write(*,*) 'SubProcess/Channel     kept   read   xsec '
-
-C $B$ down_path $B$ !this is tag for automatic modification by MW
-      down_path=''
-c $E$ down_path $E$ !this is tag for automatic modification by MW
       do i=1,ns
 c         write(*,*) 'Subprocess: ',subname(ns)
-         pos3=index(subname(i),' ')
-         pathsubname(i)=subname(i)(1:pos3-1)//'/'//down_path
-         call read_channels(pathsubname(i),sum,kevent,revent,goal_wgt,maxwgt)
+         call read_channels(subname(i),sum,kevent,revent,goal_wgt,maxwgt)
       enddo 
 c
 c     Get Random order for events
@@ -130,11 +111,7 @@ c
 c
 c     Write out the events in iarray order
 c
-C $B$ output_file1 $B$ !this is tag for automatic modification by MW
-      filename='events.lhe'
-C $E$ output_file1 $E$ !this is tag for automatic modification by MW
-
-      open(unit=15,file=filename,status='unknown',err=98)
+      open(unit=15,file='events.lhe',status='unknown',err=98)
       call writebanner(15,kevent,sum,maxwgt,xerr)
       do i=1,kevent
          read(sfnum,rec=iarray(i)) wgt,n,
@@ -202,12 +179,7 @@ c            write(*,*) min_goal,goal_wgt,max_goal
       endif
       write(*,*) 'Unweighting selected ',nreq, ' events.'
       write(*,'(a,f5.2,a)') 'Truncated ',xtrunc*100./sum, '% of cross section'
-
-C $B$ output_file2 $B$ !this is tag for automatic modification by MW
-      filename='unweighted_events.lhe'
-C $E$ output_file2 $E$ !this is tag for automatic modification by MW
-
-      open(unit=15,file=filename,status='unknown',err=99)
+      open(unit=15,file='unweighted_events.lhe',status='unknown',err=99)
       call writebanner_u(15,nreq,xsec,xtrunc,xerr)
       ntry = 0
       do i=1,kevent
@@ -322,7 +294,7 @@ C   Write out compulsory init info
          write(lunw,91) xsecup(i),xerr*xsecup(i)/sum,maxwgt,lprup(i) ! FACTOR OF nevts for maxwgt and wgt? error?
       enddo
       write(lunw,'(a)') '</init>'
- 90   FORMAT(2i9,2e19.11,2i2,2i6,i2,i3)
+ 90   FORMAT(2i6,2e19.11,2i2,2i6,i2,i3)
  91   FORMAT(3e19.11,i4)
       end
 
@@ -341,7 +313,6 @@ c
 c     Local
 c
       integer i,j
-      double precision tmpsum
 c
 c     Les Houches init block (for the <init> info)
 c
@@ -399,17 +370,6 @@ c
 c     Now write out specific information on the event set
 c
 
-c     Reweight the different subprocess group xsecs according to
-c     xsec from results.dat
-      tmpsum=0d0
-      do i=1,nprup
-         tmpsum=tmpsum+xsecup(i)
-      enddo
-      do i=1,nprup
-         xsecup(i)=xsecup(i)*sum/tmpsum
-      enddo
-      
-
       write(lunw,'(a)') '<MGGenerationInfo>'
       write(lunw,'(a30,i10)')   '#  Number of Events        :  ',nevent
       write(lunw,'(a30,e10.5)') '#  Integrated weight (pb)  :  ',sum
@@ -426,7 +386,7 @@ C   Write out compulsory init info
          write(lunw,91) xsecup(i),xerr*xsecup(i)/sum,sum/nevent,lprup(i) ! FACTOR OF nevts for maxwgt and wgt? error?
       enddo
       write(lunw,'(a)') '</init>'
- 90   FORMAT(2i9,2e19.11,2i2,2i6,i2,i3)
+ 90   FORMAT(2i6,2e19.11,2i2,2i6,i2,i3)
  91   FORMAT(3e19.11,i4)
 
       end
@@ -445,7 +405,7 @@ c
 c
 c     Arguments
 c
-      character*(*) dir
+      character*(30) dir
       integer kevent,revent
       double precision sum,goal_wgt,maxwgt
 c
@@ -453,7 +413,7 @@ c     Local
 c
       integer i,j, k, ip
       double precision xi
-      character*150 dirname,dname,channame
+      character*50 dirname,dname,channame
 c-----
 c  Begin Code
 c-----
@@ -536,11 +496,11 @@ c
       double precision gsfact
       real xwgt(max_read),xtot
       integer i,j,k,m, ic(7,maxexternal),n
-      double precision scale,aqcd,aqed,tmpsum
+      double precision scale,aqcd,aqed
       integer ievent,iseed
       logical done,found
       character*140 buff
-      character*150 fullname
+      character*60 fullname
 c
 c     Les Houches init block (for the <init> info)
 c
@@ -552,7 +512,6 @@ c
      &     idwtup,nprup,xsecup(maxpup),xerrup(maxpup),
      &     xmaxup(maxpup),lprup(maxpup)
       data nprup/0/
-      data xsecup/maxpup*0d0/
 c
 c     external
 c
@@ -612,13 +571,6 @@ c
                   lprup(nprup)=ievent
                   xsecup(nprup)=wgt
                endif
-               tmpsum=0d0
-               do i=1,nprup
-                  tmpsum = tmpsum+xsecup(i)
-               enddo
-               if(abs(sum-tmpsum)/sum .gt. 1e-3)then
-                  print *,'Warning! Sum and xsecup differ: ',sum,tmpsum
-               endif
             endif
          endif
          if (kevent .ge. max_read) then
@@ -654,7 +606,7 @@ c
 c
 c     Arguments
 c
-      character*100 subname(maxsubprocesses)
+      character*30 subname(maxsubprocesses)
       integer ns
 c-----
 c  Begin Code

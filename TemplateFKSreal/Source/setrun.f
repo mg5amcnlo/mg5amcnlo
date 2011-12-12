@@ -34,7 +34,6 @@ c
       character*20 ctemp
       integer k,i,l1,l2
       character*132 buff
-      real*8 sf1,sf2
       integer lp1,lp2
       real*8 eb1,eb2
       real*8 pb1,pb2
@@ -91,223 +90,325 @@ c*********************************************************************
 c     Minimum pt's                                                   *
 c*********************************************************************
 
-      call get_real   (npara,param,value," ptj    ",ptj,20d0)
-      call get_real   (npara,param,value," ptb    ",ptb,20d0)
-      call get_real   (npara,param,value," pta    ",pta,20d0)
-      call get_real   (npara,param,value," ptl    ",ptl,20d0)
-      call get_real   (npara,param,value," misset ",misset,0d0)
-      call get_real   (npara,param,value," ptonium ",ptonium,0d0)
+      call get_real   (npara,param,value," ptj ",ptj    ,0d0)
+c$$$      call get_real   (npara,param,value," ptb ",ptb    ,20d0)
+c$$$      call get_real   (npara,param,value," pta ",pta    ,20d0)
+c$$$      call get_real   (npara,param,value," ptl ",ptl    ,20d0)
+c$$$      call get_real   (npara,param,value," misset ",misset ,0d0)
+c$$$      call get_real   (npara,param,value," ptonium ",ptonium,0d0)
+      ptb     = 0d0
+      pta     = 0d0
+      ptl     = 0d0
+      misset  = 0d0
+      ptonium = 0d0
+      
 
 c*********************************************************************
 c     Maximum pt's                                                   *
 c*********************************************************************
 
-      call get_real   (npara,param,value," ptjmax ",ptjmax,1d5)
-      call get_real   (npara,param,value," ptbmax ",ptbmax,1d5)
-      call get_real   (npara,param,value," ptamax ",ptamax,1d5)
-      call get_real   (npara,param,value," ptlmax ",ptlmax,1d5)
-      call get_real   (npara,param,value," missetmax ",missetmax,1d5)
+c$$$      call get_real   (npara,param,value," ptjmax "   ,ptjmax,1d5)
+c$$$      call get_real   (npara,param,value," ptbmax "   ,ptbmax,1d5)
+c$$$      call get_real   (npara,param,value," ptamax "   ,ptamax,1d5)
+c$$$      call get_real   (npara,param,value," ptlmax "   ,ptlmax,1d5)
+c$$$      call get_real   (npara,param,value," missetmax ",missetmax,1d5)
+      ptjmax=1d5
+      ptbmax=1d5
+      ptamax=1d5
+      ptlmax=1d5
+      missetmax=1d5
 
 c*********************************************************************
 c     Maximum rapidity (absolute value)                              *
 c*********************************************************************
 
-      call get_real   (npara,param,value," etaj ",etaj,4d0)
-      call get_real   (npara,param,value," etab ",etab,4d0)
-      call get_real   (npara,param,value," etaa ",etaa,4d0)
-      call get_real   (npara,param,value," etal ",etal,4d0)
-      call get_real   (npara,param,value," etaonium ",etaonium,1d2)
+c$$$      call get_real   (npara,param,value," etaj ",    etaj,4d0)
+c$$$      call get_real   (npara,param,value," etab ",    etab,4d0)
+c$$$      call get_real   (npara,param,value," etaa ",    etaa,4d0)
+c$$$      call get_real   (npara,param,value," etal ",    etal,4d0)
+c$$$      call get_real   (npara,param,value," etaonium ",etaonium,1d2)
+      etaj=1d2
+      etab=1d2
+      etaa=1d2
+      etal=1d2
+      etaonium=1d2
 
 c*********************************************************************
 c     Minimum rapidity (absolute value)                              *
 c*********************************************************************
 
-      call get_real   (npara,param,value," etajmin ",etajmin,0d0)
-      call get_real   (npara,param,value," etabmin ",etabmin,0d0)
-      call get_real   (npara,param,value," etaamin ",etaamin,0d0)
-      call get_real   (npara,param,value," etalmin ",etalmin,0d0)
+c$$$      call get_real   (npara,param,value," etajmin ",etajmin,0d0)
+c$$$      call get_real   (npara,param,value," etabmin ",etabmin,0d0)
+c$$$      call get_real   (npara,param,value," etaamin ",etaamin,0d0)
+c$$$      call get_real   (npara,param,value," etalmin ",etalmin,0d0)
+      etajmin=0d0
+      etabmin=0d0
+      etaamin=0d0
+      etalmin=0d0
 
 c*********************************************************************
 c     Minimum E's                                                   *
 c*********************************************************************
 
-      call get_real   (npara,param,value," ej ", ej, 0d0)
-      call get_real   (npara,param,value," eb ", eb, 0d0)
-      call get_real   (npara,param,value," ea ", ea, 0d0)
-      call get_real   (npara,param,value," el ", el, 0d0)
-
+c$$$      call get_real   (npara,param,value," ej ", ej, 0d0)
+c$$$      call get_real   (npara,param,value," eb ", eb, 0d0)
+c$$$      call get_real   (npara,param,value," ea ", ea, 0d0)
+c$$$      call get_real   (npara,param,value," el ", el, 0d0)
+      ej=0d0
+      eb=0d0
+      ea=0d0
+      el=0d0
 
 c*********************************************************************
 c     Maximum E's                                                    *
 c*********************************************************************
 
-      call get_real   (npara,param,value," ejmax ", ejmax, 1d5)
-      call get_real   (npara,param,value," ebmax ", ebmax, 1d5)
-      call get_real   (npara,param,value," eamax ", eamax, 1d5)
-      call get_real   (npara,param,value," elmax ", elmax, 1d5)
+c$$$      call get_real   (npara,param,value," ejmax ", ejmax, 1d5)
+c$$$      call get_real   (npara,param,value," ebmax ", ebmax, 1d5)
+c$$$      call get_real   (npara,param,value," eamax ", eamax, 1d5)
+c$$$      call get_real   (npara,param,value," elmax ", elmax, 1d5)
+      ejmax=1d5
+      ebmax=1d5
+      eamax=1d5
+      elmax=1d5
 
 c*********************************************************************
 c     Minimum DeltaR distance                                        *
 c*********************************************************************
 
-      call get_real   (npara,param,value," drjj ",drjj,0.4d0)
-      call get_real   (npara,param,value," drbb ",drbb,0.4d0)
-      call get_real   (npara,param,value," drll ",drll,0.4d0)
-      call get_real   (npara,param,value," draa ",draa,0.4d0)
-      call get_real   (npara,param,value," drbj ",drbj,0.4d0)
-      call get_real   (npara,param,value," draj ",draj,0.4d0)
-      call get_real   (npara,param,value," drjl ",drjl,0.4d0)
-      call get_real   (npara,param,value," drab ",drab,0.4d0)
-      call get_real   (npara,param,value," drbl ",drbl,0.4d0)
-      call get_real   (npara,param,value," dral ",dral,0.4d0)
+c$$$      call get_real   (npara,param,value," drjj ",drjj,0.4d0)
+c$$$      call get_real   (npara,param,value," drbb ",drbb,0.4d0)
+c$$$      call get_real   (npara,param,value," drll ",drll,0.4d0)
+c$$$      call get_real   (npara,param,value," draa ",draa,0.4d0)
+c$$$      call get_real   (npara,param,value," drbj ",drbj,0.4d0)
+c$$$      call get_real   (npara,param,value," draj ",draj,0.4d0)
+c$$$      call get_real   (npara,param,value," drjl ",drjl,0.4d0)
+c$$$      call get_real   (npara,param,value," drab ",drab,0.4d0)
+c$$$      call get_real   (npara,param,value," drbl ",drbl,0.4d0)
+c$$$      call get_real   (npara,param,value," dral ",dral,0.4d0)
+      drjj=0d0
+      drbb=0d0
+      drll=0d0
+      draa=0d0
+      drbj=0d0
+      draj=0d0
+      drjl=0d0
+      drab=0d0
+      drbl=0d0
+      dral=0d0
 
 c*********************************************************************
 c     Maximum DeltaR distance                                        *
 c*********************************************************************
 
-      call get_real   (npara,param,value," drjjmax ",drjjmax,1d2)
-      call get_real   (npara,param,value," drbbmax ",drbbmax,1d2)
-      call get_real   (npara,param,value," drllmax ",drllmax,1d2)
-      call get_real   (npara,param,value," draamax ",draamax,1d2)
-      call get_real   (npara,param,value," drbjmax ",drbjmax,1d2)
-      call get_real   (npara,param,value," drajmax ",drajmax,1d2)
-      call get_real   (npara,param,value," drjlmax ",drjlmax,1d2)
-      call get_real   (npara,param,value," drabmax ",drabmax,1d2)
-      call get_real   (npara,param,value," drblmax ",drblmax,1d2)
-      call get_real   (npara,param,value," dralmax ",dralmax,1d2)
+c$$$      call get_real   (npara,param,value," drjjmax ",drjjmax,1d2)
+c$$$      call get_real   (npara,param,value," drbbmax ",drbbmax,1d2)
+c$$$      call get_real   (npara,param,value," drllmax ",drllmax,1d2)
+c$$$      call get_real   (npara,param,value," draamax ",draamax,1d2)
+c$$$      call get_real   (npara,param,value," drbjmax ",drbjmax,1d2)
+c$$$      call get_real   (npara,param,value," drajmax ",drajmax,1d2)
+c$$$      call get_real   (npara,param,value," drjlmax ",drjlmax,1d2)
+c$$$      call get_real   (npara,param,value," drabmax ",drabmax,1d2)
+c$$$      call get_real   (npara,param,value," drblmax ",drblmax,1d2)
+c$$$      call get_real   (npara,param,value," dralmax ",dralmax,1d2)
+      drjjmax=1d2
+      drbbmax=1d2
+      drllmax=1d2
+      draamax=1d2
+      drbjmax=1d2
+      drajmax=1d2
+      drjlmax=1d2
+      drabmax=1d2
+      drblmax=1d2
+      dralmax=1d2
 
 c*********************************************************************
 c     Minimum invariant mass for pairs                               *
 c*********************************************************************
 
-      call get_real   (npara,param,value," mmjj ",mmjj,0d0)
-      call get_real   (npara,param,value," mmbb ",mmbb,0d0)
-      call get_real   (npara,param,value," mmaa ",mmaa,0d0)
-      call get_real   (npara,param,value," mmll ",mmll,0d0)
+c$$$      call get_real   (npara,param,value," mmjj ",mmjj,0d0)
+c$$$      call get_real   (npara,param,value," mmbb ",mmbb,0d0)
+c$$$      call get_real   (npara,param,value," mmaa ",mmaa,0d0)
+c$$$      call get_real   (npara,param,value," mmll ",mmll,0d0)
+      mmjj=0d0
+      mmbb=0d0
+      mmaa=0d0
+      mmll=0d0
 
 c*********************************************************************
 c     Maximum invariant mass for pairs                               *
 c*********************************************************************
 
-      call get_real   (npara,param,value," mmjjmax ",mmjjmax,1d5)
-      call get_real   (npara,param,value," mmbbmax ",mmbbmax,1d5)
-      call get_real   (npara,param,value," mmaamax ",mmaamax,1d5)
-      call get_real   (npara,param,value," mmllmax ",mmllmax,1d5)
+c$$$      call get_real   (npara,param,value," mmjjmax ",mmjjmax,1d5)
+c$$$      call get_real   (npara,param,value," mmbbmax ",mmbbmax,1d5)
+c$$$      call get_real   (npara,param,value," mmaamax ",mmaamax,1d5)
+c$$$      call get_real   (npara,param,value," mmllmax ",mmllmax,1d5)
+      mmjjmax=1d5
+      mmbbmax=1d5
+      mmaamax=1d5
+      mmllmax=1d5
 
 c*********************************************************************
 c     Min Maxi invariant mass for all leptons                        *
 c*********************************************************************
 
-      call get_real   (npara,param,value," mmnl    ",mmnl   ,0d0)
-      call get_real   (npara,param,value," mmnlmax ",mmnlmax,1d5)
+c$$$      call get_real   (npara,param,value," mmnl    ",mmnl   ,0d0)
+c$$$      call get_real   (npara,param,value," mmnlmax ",mmnlmax,1d5)
+      mmnl=0d0
+      mmnlmax=1d5
 
 c*********************************************************************
 c     Inclusive cuts                                                 *
 c*********************************************************************
 
-      call get_real   (npara,param,value," xptj ",xptj,0d0)
-      call get_real   (npara,param,value," xptb ",xptb,0d0)
-      call get_real   (npara,param,value," xpta ",xpta,0d0)
-      call get_real   (npara,param,value," xptl ",xptl,0d0)
-      call get_real   (npara,param,value," xmtcentral ",xmtc,0d0)
+c$$$      call get_real   (npara,param,value," xptj ",xptj,0d0)
+c$$$      call get_real   (npara,param,value," xptb ",xptb,0d0)
+c$$$      call get_real   (npara,param,value," xpta ",xpta,0d0)
+c$$$      call get_real   (npara,param,value," xptl ",xptl,0d0)
+c$$$      call get_real   (npara,param,value," xmtcentral ",xmtc,0d0)
+      xptj=0d0
+      xptb=0d0
+      xpta=0d0
+      xptl=0d0
+      xmtc=0d0
 
 c*********************************************************************
 c     WBF cuts                                                       *
 c*********************************************************************
 
-      call get_real   (npara,param,value," xetamin ",xetamin,0d0)
-      call get_real   (npara,param,value," deltaeta",deltaeta,0d0)
+c$$$      call get_real   (npara,param,value," xetamin ",xetamin,0d0)
+c$$$      call get_real   (npara,param,value," deltaeta",deltaeta,0d0)
+      xetamin=0d0
+      deltaeta=0d0
 
 c*********************************************************************
 c     Jet measure cuts                                               *
 c*********************************************************************
 
-      call get_real   (npara,param,value," xqcut ",xqcut,0d0)
-      call get_real   (npara,param,value," d ",D,1d0)
+c$$$      call get_real   (npara,param,value," xqcut ",xqcut,0d0)
+c$$$      call get_real   (npara,param,value," d ",D,1d0)
+      xqcut=0d0
+      d=1d0
 
 c*********************************************************************
 c Set min pt of one heavy particle                                   *
 c*********************************************************************
 
- 	call get_real   (npara,param,value,"ptheavy",ptheavy,0d0)
-
-c*********************************************************************
-c	Pt of pairs of leptons (charged and neutrals)                *
-c*********************************************************************
-
-      call get_real   (npara,param,value," ptllmin ",ptllmin,0d0)
-      call get_real   (npara,param,value," ptllmax ",ptllmax,1d5)
+c$$$ 	call get_real   (npara,param,value,"ptheavy",ptheavy,0d0)
+        ptheavy=0d0
 
 c*********************************************************************
 c Check   the pt's of the jets sorted by pt                          *
 c*********************************************************************
 
- 	call get_real   (npara,param,value,"ptj1min",ptj1min,0d0)
- 	call get_real   (npara,param,value,"ptj1max",ptj1max,1d5)
- 	call get_real   (npara,param,value,"ptj2min",ptj2min,0d0)
- 	call get_real   (npara,param,value,"ptj2max",ptj2max,1d5)
- 	call get_real   (npara,param,value,"ptj3min",ptj3min,0d0)
- 	call get_real   (npara,param,value,"ptj3max",ptj3max,1d5)
- 	call get_real   (npara,param,value,"ptj4min",ptj4min,0d0)
- 	call get_real   (npara,param,value,"ptj4max",ptj4max,1d5)
-	call get_real   (npara,param,value,"cutuse",cutuse,0d0)
+c$$$ 	call get_real   (npara,param,value,"ptj1min",ptj1min,0d0)
+c$$$ 	call get_real   (npara,param,value,"ptj1max",ptj1max,1d5)
+c$$$ 	call get_real   (npara,param,value,"ptj2min",ptj2min,0d0)
+c$$$ 	call get_real   (npara,param,value,"ptj2max",ptj2max,1d5)
+c$$$ 	call get_real   (npara,param,value,"ptj3min",ptj3min,0d0)
+c$$$ 	call get_real   (npara,param,value,"ptj3max",ptj3max,1d5)
+c$$$ 	call get_real   (npara,param,value,"ptj4min",ptj4min,0d0)
+c$$$ 	call get_real   (npara,param,value,"ptj4max",ptj4max,1d5)
+c$$$	call get_real   (npara,param,value,"cutuse" ,cutuse,0d0)
+        ptj1min=0d0
+        ptj1max=1d5
+        ptj2min=0d0
+        ptj2max=1d5
+        ptj3min=0d0
+        ptj3max=1d5
+        ptj4min=0d0
+        ptj4max=1d5
+        cutuse=0d0
 
 c*********************************************************************
 c Check  Ht                                                          *
 c*********************************************************************
 
-	call get_real   (npara,param,value,"ht2min",ht2min,0d0)
-	call get_real   (npara,param,value,"ht3min",ht3min,0d0)
-	call get_real   (npara,param,value,"ht4min",ht4min,0d0)
-	call get_real   (npara,param,value,"ht2max",ht2max,1d5)
-	call get_real   (npara,param,value,"ht3max",ht3max,1d5)
-	call get_real   (npara,param,value,"ht4max",ht4max,1d5)
-
-	call get_real   (npara,param,value,"htjmin",htjmin,0d0)
-	call get_real   (npara,param,value,"htjmax",htjmax,1d5)
+c$$$	call get_real   (npara,param,value,"ht2min",ht2min,0d0)
+c$$$	call get_real   (npara,param,value,"ht3min",ht3min,0d0)
+c$$$	call get_real   (npara,param,value,"ht4min",ht4min,0d0)
+c$$$	call get_real   (npara,param,value,"ht2max",ht2max,1d5)
+c$$$	call get_real   (npara,param,value,"ht3max",ht3max,1d5)
+c$$$	call get_real   (npara,param,value,"ht4max",ht4max,1d5)
+c$$$	call get_real   (npara,param,value,"htjmin",htjmin,0d0)
+c$$$	call get_real   (npara,param,value,"htjmax",htjmax,1d5)
+        ht2min=0d0
+        ht3min=0d0
+        ht4min=0d0
+        ht2max=1d5
+        ht3max=1d5
+        ht4max=1d5
+        htjmin=0d0
+        htjmax=1d5
 
 c*********************************************************************
 c     Random Number Seed                                             *
 c*********************************************************************
 
-      call get_logical   (npara,param,value," gridrun ",gridrun,.false.)
-      call get_logical   (npara,param,value," gridpack ",gridpack,.false.)
-      if (gridrun.and.gridpack)then
-         call get_integer   (npara,param,value," gseed ",iseed,0)
-      else 
-         call get_integer (npara,param,value," iseed ",iseed,0)
-      endif
+c$$$      call get_logical   (npara,param,value," gridrun ",gridrun,.false.)
+c$$$      call get_logical   (npara,param,value," gridpack ",gridpack,.false.)
+c$$$      if (gridrun.and.gridpack)then
+c$$$         call get_integer   (npara,param,value," gseed ",iseed,0)
+c$$$      else 
+c$$$         call get_integer (npara,param,value," iseed ",iseed,0)
+c$$$      endif
+        gridrun=.false.
+        gridpack=.false.
+        iseed=0
 
 c************************************************************************     
 c     Renormalization and factorization scales                          *
 c************************************************************************     
 c
-c     If the following flags to .false. then event-by-event
-c     scale choice is requested. In this case edit the 
-c     user subroutines set_ren_scale and set_fac_scale in setpara.f
+c Note: case_trap2 in rw_routines will convert input strings
+c to lowercase
 
-      call get_logical(npara,param,value," fixed_ren_scale ",fixed_ren_scale,.true.)
-      call get_logical(npara,param,value," fixed_fac_scale ",fixed_fac_scale,.true.)
-      call get_real   (npara,param,value," scale "          ,scale,91.188d0)
-      call get_real   (npara,param,value," dsqrt_q2fact1 "  ,sf1  ,91.188d0)
-      call get_real   (npara,param,value," dsqrt_q2fact2 "  ,sf2  ,91.188d0)
-
-      q2fact(1) = sf1**2      ! fact scale**2 for pdf1
-      q2fact(2) = sf2**2      ! fact scale**2 for pdf2     
-
-      call get_real   (npara,param,value," scalefact "      ,scalefact, 1d0)
-      call get_logical(npara,param,value," fixed_couplings ",fixed_couplings,.true.)
-      call get_integer(npara,param,value," ickkw "          ,ickkw    , 0  )
-      call get_logical(npara,param,value," chcluster ",chcluster,.false.)
-c     ktscheme for xqcut: 1: pT/Durham kT; 2: pythia pTE/Durham kT
-      call get_integer (npara,param,value," ktscheme ",ktscheme,1)
-
+      call get_logical(npara,param,value," fixed_ren_scale ",
+     #                 fixed_ren_scale,.true.)
+      call get_logical(npara,param,value," fixed_fac_scale ",
+     #                 fixed_fac_scale,.true.)
+      call get_logical(npara,param,value," fixed_qes_scale ",
+     #                 fixed_QES_scale,.true.)
+c
+      call get_real(npara,param,value," mur_ref_fixed ",
+     #              muR_ref_fixed,91.188d0)
+      call get_real(npara,param,value," muf1_ref_fixed ",
+     #              muF1_ref_fixed,91.188d0)
+      call get_real(npara,param,value," muf2_ref_fixed ",
+     #              muF2_ref_fixed,91.188d0)
+      call get_real(npara,param,value," qes_ref_fixed ",
+     #              QES_ref_fixed,91.188d0)
+c For backward compatibility
+      scale = muR_ref_fixed
+      q2fact(1) = muF1_ref_fixed**2      ! fact scale**2 for pdf1
+      q2fact(2) = muF2_ref_fixed**2      ! fact scale**2 for pdf2     
+c
+      call get_real(npara,param,value," mur_over_ref ",muR_over_ref,1d0)
+      call get_real(npara,param,value," muf1_over_ref ",muF1_over_ref,1d0)
+      call get_real(npara,param,value," muf2_over_ref ",muF2_over_ref,1d0)
+      call get_real(npara,param,value," qes_over_ref ",QES_over_ref,1d0)
+c For backward compatibility
+      scalefact=muR_over_ref
+      ellissextonfact=QES_over_ref
+c
+      call get_logical(npara,param,value," fixed_couplings ",
+     #                 fixed_couplings,.true.)
+c$$$      call get_integer(npara,param,value," ickkw "          ,ickkw    , 0  )
+c$$$      call get_logical(npara,param,value," chcluster ",chcluster,.false.)
+c$$$c     ktscheme for xqcut: 1: pT/Durham kT; 2: pythia pTE/Durham kT
+c$$$      call get_integer (npara,param,value," ktscheme ",ktscheme,1)
+      ickkw=0
+      chcluster=.false.
+      ktscheme=1
+      
       if(ickkw.gt.0)then
-         call get_real   (npara,param,value," alpsfact "       ,alpsfact , 1d0)
+c$$$         call get_real   (npara,param,value," alpsfact "       ,alpsfact , 1d0)
+         alpsfact=1d0
       endif
       if(ickkw.eq.2)then
         call get_integer(npara,param,value," highestmult "    ,nhmult, 0)
-        call get_string (npara,param,value," issgridfile ",issgridfile,'issudgrid.dat')
+        call get_string (npara,param,value," issgridfile ",
+     &       issgridfile,'issudgrid.dat')
       endif
 
 c************************************************************************     
@@ -331,8 +432,10 @@ c     ebeam= energy of each beam in GeV
 c************************************************************************     
 c    Beam polarization
 c************************************************************************     
-      call get_real   (npara,param,value," polbeam1 " ,pb1,0d0)
-      call get_real   (npara,param,value," polbeam2 " ,pb2,0d0)
+c$$$      call get_real   (npara,param,value," polbeam1 " ,pb1,0d0)
+c$$$      call get_real   (npara,param,value," polbeam2 " ,pb2,0d0)
+      pb1=0d0
+      pb2=0d0
 
       if(pb1.ne.0d0.and.lp1.eq.0) pol(1)=sign(1+abs(pb1)/100d0,pb1)
       if(pb2.ne.0d0.and.lp2.eq.0) pol(2)=sign(1+abs(pb2)/100d0,pb2)
@@ -450,7 +553,7 @@ C-------------------------------------------------
       if(pdfin.eq."lhapdf") then
         write(*,*)'using LHAPDF'
         do i=1,2
-           pdfgup(i)=0
+           pdfgup(i)=-1
            pdfsup(i)=lhaid
         enddo
         return
@@ -473,7 +576,7 @@ C-------------------------------------------------
       endif
 
       do i=1,2
-        pdfgup(i)=0
+        pdfgup(i)=-1
         pdfsup(i)=mpdf
       enddo
 
