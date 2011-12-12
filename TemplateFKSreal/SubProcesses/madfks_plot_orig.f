@@ -24,11 +24,6 @@ c
       do i=1,2
         kk=(i-1)*50
         call bookup(kk+1,'total rate'//cc(i),1.0d0,0.5d0,5.5d0)
-        call bookup(kk+2,'e rapidity'//cc(i),0.5d0,-5d0,5d0)
-        call bookup(kk+3,'e pt'//cc(i),20d0,0d0,400d0)
-        call bookup(kk+4,'et miss'//cc(i),20d0,0d0,400d0)
-        call bookup(kk+5,'transverse mass'//cc(i),5d0,0d0,200d0)
-        call bookup(kk+6,'w rapidity'//cc(i),0.5d0,-5d0,5d0)
       enddo
       return
       end
@@ -65,11 +60,6 @@ c
       do i=1,2
         kk=(i-1)*50
         call multitop(kk+1,3,2,'total rate',ytit,'LIN')
-        call multitop(kk+2,3,2,'e rapidity',ytit,'LOG')
-        call multitop(kk+3,3,2,'e pt',ytit,'LOG')
-        call multitop(kk+4,3,2,'et miss',ytit,'LOG')
-        call multitop(kk+5,3,2,'transverse mass',ytit,'LOG')
-        call multitop(kk+6,3,2,'w rapidity',ytit,'LOG')
 c$$$        call mtop(kk+1,'total rate',ytit,'LIN')
       enddo
       return                
@@ -106,7 +96,7 @@ C *WARNING**WARNING**WARNING**WARNING**WARNING**WARNING**WARNING**WARNING*
       double precision pjet(4,nexternal)
       double precision cthjet(nexternal)
       integer nn,njet,nsub,jet(nexternal)
-      real*8 emax,getcth,cpar,dpar,thrust,dot,shat, getrapidity
+      real*8 emax,getcth,cpar,dpar,thrust,dot,shat
       integer i,j,kk,imax
 
       LOGICAL  IS_A_J(NEXTERNAL),IS_A_L(NEXTERNAL)
@@ -116,11 +106,6 @@ C *WARNING**WARNING**WARNING**WARNING**WARNING**WARNING**WARNING**WARNING*
 c masses
       double precision pmass(nexternal)
       common/to_mass/pmass
-      real *8 pplab(0:3, nexternal)
-      double precision shybst, chybst, chybstmo
-      real*8 xd(1:3)
-      data (xd(i), i=1,3) /0,0,1/
-      real*8 ye, pte, etmiss, mtr, pw(0:3), yw
 c
       if(itype.eq.11.or.itype.eq.12)then
         kk=0
@@ -131,62 +116,9 @@ c
         stop
       endif
 c
-      chybst=cosh(ybst_til_tolab)
-      shybst=sinh(ybst_til_tolab)
-      chybstmo= chybst-1.d0
-      do i=3,nexternal
-      call boostwdir2(chybst, shybst, chybstmo,xd,pp(0,i), pplab(0,i))
-      enddo
-      do i=0,3
-        pw(i)=pplab(i,3)+pplab(i,4)
-      enddo
-
-      ye=getrapidity(pplab(0,3), pplab(3,3))
-      yw=getrapidity(pw(0), pw(3))
-      pte = dsqrt(pplab(1,3)**2 + pplab(2,3)**2)
-      etmiss = dsqrt(pplab(1,4)**2 + pplab(2,4)**2)
-      mtr = dsqrt(2d0*pte*etmiss - 2d0 * pplab(1,3) * pplab(1,4)
-     1 - 2d0 * pplab(2,3) * pplab(2,4))
-
-c        call multitop(kk+1,3,2,'total rate',ytit,'LIN')
-c        call multitop(kk+2,3,2,'e rapidity',ytit,'LOG')
-c        call multitop(kk+3,3,2,'e pt',ytit,'LOG')
-c        call multitop(kk+4,3,2,'et miss',ytit,'LOG')
-c        call multitop(kk+5,3,2,'transverse mass',ytit,'LOG')
-c        call multitop(kk+6,3,2,'w rapidity',ytit,'LOG')
-
-
-
       shat=2d0*dot(pp(0,1),pp(0,2))
 
       var=1.d0
       call mfill(kk+1,var,www)
-      call mfill(kk+2,ye,www)
-      call mfill(kk+3,pte,www)
-      call mfill(kk+4,etmiss,www)
-      call mfill(kk+5,mtr,www)
-      call mfill(kk+6,yw,www)
  999  return      
       end
-
-
-
-            function getrapidity(en,pl)
-            implicit none
-            real*8 getrapidity,en,pl,tiny,xplus,xminus,y
-            parameter (tiny=1.d-8)
-            xplus=en+pl
-            xminus=en-pl
-            if(xplus.gt.tiny.and.xminus.gt.tiny)then
-            if( (xplus/xminus).gt.tiny.and.(xminus/xplus).gt.tiny)then
-              y=0.5d0*log( xplus/xminus  )
-             else
-             y=sign(1.d0,pl)*1.d8
-             endif
-            else 
-            y=sign(1.d0,pl)*1.d8
-             endif
-             getrapidity=y
-             return
-             end
-

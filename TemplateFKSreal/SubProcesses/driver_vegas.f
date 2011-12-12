@@ -9,7 +9,7 @@ C
       double precision zero
       parameter       (ZERO = 0d0)
       include 'genps.inc'
-      include "nexternal.inc"
+      include 'nexternal.inc'
       INTEGER    ITMAX,   NCALL
       common/citmax/itmax,ncall
 C
@@ -155,6 +155,18 @@ c
             minvar(ndim,j) = ninvar
          endif
       enddo
+
+c Don't proceed if muF1#muF2 (we need to work out the relevant formulae
+c at the NLO)
+      if( ( fixed_fac_scale .and.
+     #       (muF1_over_ref*muF1_ref_fixed) .ne.
+     #       (muF2_over_ref*muF2_ref_fixed) ) .or.
+     #    ( (.not.fixed_fac_scale) .and.
+     #      muF1_over_ref.ne.muF2_over_ref ) )then
+        write(*,*)'NLO computations require muF1=muF2'
+        stop
+      endif
+
       write(*,*) "about to integrate ", ndim,ncall,itmax,ninvar,nconfigs
 
       if(doVirtTest)then

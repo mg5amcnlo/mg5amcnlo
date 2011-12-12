@@ -28,7 +28,7 @@ c
       parameter (pi=3.1415926535897932385d0)
       integer procnum,i,j,dummyHel(nexternal-1)
       double precision pvirt(0:4,nexternal-1),p_born(0:3,nexternal-1)
-      double precision virt_wgt,born_wgt,double,single,born
+      double precision virt_wgt,born_wgt,double,single
       double precision mu,alphaS,alphaEW,virt_wgts(3),UVnorm(2),s
       double precision virtcor,ao2pi,conversion,hel_fac,sumdot
       external sumdot
@@ -76,11 +76,14 @@ c
       double precision vegas_wgt
       double precision vegas_weight
       common/cvegas_weight/vegas_weight
+      double precision epinv, epinv2
+      common/to_poles/epinv, epinv2
 
       double precision pmass(nexternal),zero
       parameter (zero=0d0)
       double precision qes2
       common /coupl_es/ qes2
+      double precision conv
       include "pmass.inc"
 
       do i=1, nexternal-1
@@ -93,19 +96,17 @@ c
          enddo
          pvirt(4,j)=pmass(j)
       enddo
+
       alphaS=g**2/(4d0*PI)
       ao2pi=alphaS/(2d0*Pi)
       alphaEW=dble(gal(1))**2/(4d0*PI)
       virt_wgt= 0d0
       double  = 0d0
       single  = 0d0
-      born    = 0d0
       vegas_wgt=vegas_weight
 
 c Ellis-Sexton scale squared
       mu = QES2
-
-      virt_wgt=0.0d0/dble(ngluons)
 
 
       if(doVirtTest.and.born_wgt.ne.0d0.and.iminmax.eq.0)then
@@ -201,10 +202,12 @@ c Particle types (=color) of i_fks, j_fks and fks_mother
          endif
       enddo
 
-      write (*,*) 'From DR to CDR conversion: ',octet,' octets and ',
-     &     triplet,' triplets in Born (both massless), sum =',conversion
-
+c      write (*,*) 'From DR to CDR conversion: ',octet,' octets and ',
+c     &     triplet,' triplets in Born (both massless), sum =',conversion
+c
+c         stop
       return
+      
       end
 
 

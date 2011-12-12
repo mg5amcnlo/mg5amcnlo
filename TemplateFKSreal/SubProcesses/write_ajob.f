@@ -1,64 +1,5 @@
-      program improve
-      implicit none
-      logical done
-      character*140 buffer
-      character*140 DIRNAME
-      integer lendirname,start,graph,start2,start3
-      character*5 mode
-      integer lmode
-      common /run_mode/lmode,mode
-      integer run_cluster
-      common/c_run_mode/run_cluster
 
-c$$$      write (*,'(a)') 'Enter "0" for local run, "1" for condor cluster'
-      read  (*,*) run_cluster
-      if (run_cluster.ne.0 .and. run_cluster .ne. 1) then
-         write (*,*) "Invalid run mode", run_cluster
-         stop
-      endif
-      
-      done=.false.
-      open (unit=1, file="dname.mg",status="old")
-      read(1,'(a)') buffer
-      read(buffer(9:index(buffer," ")-1),*) dirname
-      lendirname=index(dirname," ")-1
-      close(1)
-
-      open (unit=1, file="../res.txt", status="old")
-      do while (.not.done)
-         read(1,'(a)',err=12,end=12) buffer
-         start = index(buffer,DIRNAME(1:lendirname+1))
-         if (index(buffer,DIRNAME(1:lendirname+1)).gt.0) then
-            if (buffer(110:110).eq."Y") then
-               start2=start+index(buffer(start:110)," ")
-               do while (index(buffer(start2:110)," ").eq.1)
-                  start2=start2+1
-               enddo
-               start3 = start2+index(buffer(start2:110),"G")
-               lmode=start3-start2-2
-               read (buffer(start2:start2+6),'(a)') mode
-               read(buffer(start3:start3+index(buffer(start3:110),"  ")),*) graph
-               write (*,*) mode(1:lmode),graph
-               call open_bash_file(26)
-               if (graph .lt. 10) then
-                  write(26,'(i1$)') graph
-               elseif (graph .lt. 100) then
-                  write(26,'(i2$)') graph
-               elseif (graph .lt. 1000) then
-                  write(26,'(i3$)') graph
-               elseif (graph .lt. 10000) then
-                  write(26,'(i4$)') graph
-               endif
-               call close_bash_file(26)
-            endif
-         endif
-      enddo
- 12   continue
-      close(1)
-
-      end
-
-      subroutine open_bash_file(lun)
+      subroutine open_bash_file(lun,fname,lname,mname)
 c***********************************************************************
 c     Opens bash file for looping including standard header info
 c     which can be used with pbs, or stand alone
@@ -67,7 +8,7 @@ c***********************************************************************
 c
 c     Constants
 c
-      include '../../Source/run_config.inc'
+c      include '../../Source/run_config.inc'
 c
 c     Arguments
 c
@@ -79,12 +20,11 @@ c
 
       data ic/0/
 
+      integer lname
       character*30 mname
       character*30 fname
-      common/to_close_bash_file/fname
-      character*5 mode
-      integer lmode
-      common /run_mode/lmode,mode
+c$$$      common/to_close_bash_file/lname,fname
+
       integer run_cluster
       common/c_run_mode/run_cluster
 
@@ -92,23 +32,23 @@ c-----
 c  Begin Code
 c-----
       ic=ic+1
-      fname='ajob'//mode(1:lmode)
-      mname='mg'//mode(1:lmode)
       if (ic .lt. 10) then
-         write(fname(lmode+5:lmode+5),'(i1)') ic
-         write(mname(lmode+3:lmode+7),'(i1,a4)') ic,".cmd"
+         write(fname(5:5),'(i1)') ic
+         write(mname(3:7),'(i1,a4)') ic,".cmd"
+         lname=lname+1
       elseif (ic .lt. 100) then
-         write(fname(lmode+5:lmode+6),'(i2)') ic
-         write(mname(lmode+3:lmode+8),'(i2,a4)') ic,".cmd"
+         write(fname(5:6),'(i2)') ic
+         write(mname(3:8),'(i2,a4)') ic,".cmd"
+         lname=lname+2
       elseif (ic .lt. 1000) then
-         write(fname(lmode+5:lmode+7),'(i3)') ic
-         write(mname(lmode+3:lmode+9),'(i3,a4)') ic,".cmd"
+         write(fname(5:7),'(i3)') ic
+         write(mname(3:9),'(i3,a4)') ic,".cmd"
+         lname=lname+3
       endif
-
       open (unit=lun, file = fname, status='unknown')
       if (run_cluster.eq.0) then
          write(lun,15) '#!/bin/bash'
-         write(lun,15) 'script=' // fname
+         write(lun,15) 'script=' // fname(1:lname)//'.$1.$2.$3'
          write(lun,15) 'rm -f wait.$script >& /dev/null'
          write(lun,15) 'touch run.$script'
          write(lun,15) 'echo $script'
@@ -119,6 +59,10 @@ c-----
          write(lun,15) '    CONDOR_INITIAL_DIR=`pwd`'
          write(lun,15) '    cd $_CONDOR_SCRATCH_DIR'
          write(lun,15) 'fi'
+         write(lun,15) 'script=' // mname(1:lname+2)//'.$1.$2.$3'
+         write(lun,15) 'rm -f $CONDOR_INITIAL_DIR/wait.$script '//
+     &        '>& /dev/null'
+         write(lun,15) 'touch $CONDOR_INITIAL_DIR/run.$script'
          write(lun,15) 'mkdir lib'
          write(lun,15) 'mkdir Cards'
          write(lun,15) 'mkdir SubProcesses'
@@ -159,13 +103,7 @@ c         write(lun,15) 'cd ../../'
          write(lun+1,15) 'error = /dev/null'
          write(lun+1,15) 'requirements = (MADGRAPH == True)'
          write(lun+1,15) 'log = /dev/null'
-         if (mode(1:lmode).eq.'novi') then
-            write(lun+1,15) 'Arguments = 0 novi grid'
-         elseif (mode(1:lmode).eq.'virt0') then
-            write(lun+1,15) 'Arguments = 0 virt0 born0'
-         else
-            write(lun+1,15) 'Arguments = 0 '//mode(1:lmode)
-         endif
+         write(lun+1,15) ''
          write(lun+1,15) 'queue'
          write(lun+1,15) ''
          close(lun+1)
@@ -196,8 +134,6 @@ c
 
       data ic/0/
 
-      character*30 fname
-      common/to_close_bash_file/fname
       integer run_cluster
       common/c_run_mode/run_cluster
 
@@ -295,6 +231,8 @@ c endif
          write(lun,15) 'touch done.$script'
 
       elseif(run_cluster.eq.1) then
+         write(lun,20) 'echo $i >& $CONDOR_INITIAL_DIR/run.$script'
+         write(lun,20) 'runnumber=0'
 c madevent_vegas or madevent_mint
          write(lun,20) "if [[ $1 == '0' || $1 == '1' ]]; then"
          write(lun,25) 'j=$2\_G$i'
@@ -325,13 +263,19 @@ c madevent_mintMC
          write(lun,25) 'cd $j'
          write(lun,25) 'cp -f $CONDOR_INITIAL_DIR/$j/* .'
          write(lun,25) 'if [[ "$3" != "" ]]; then'
-         write(lun,30) 'if [[ -e $CONDOR_INITIAL_DIR/G$3$i ]]; then'
-         write(lun,35) 'cp -f $CONDOR_INITIAL_DIR/G$3$i/mint_grids '//
+         write(lun,30) 'if [[ "$3" == "H" ||"$3" == "S" ||'//
+     &        ' "$3" == "V" || "$3" == "B" ]]; then'
+
+         write(lun,35) 'if [[ -e $CONDOR_INITIAL_DIR/G$3$i ]]; then'
+         write(lun,40) 'cp -f $CONDOR_INITIAL_DIR/G$3$i/mint_grids '//
      &        './preset_mint_grids'
-         write(lun,30) 'else'
-         write(lun,35) 'echo "Cannot find direcotry ../G$3$i/"'//
+         write(lun,35) 'else'
+         write(lun,40) 'echo "Cannot find direcotry ../G$3$i/"'//
      &        ' > log.txt'
-         write(lun,35) 'exit'
+         write(lun,40) 'exit'
+         write(lun,35) 'fi'
+         write(lun,30) 'else'
+         write(lun,35) 'runnumber=$3'
          write(lun,30) 'fi'
          write(lun,25) 'fi'
 c endif
@@ -377,6 +321,12 @@ c madevent_mint
          write(lun,25) 'time ../madevent_mint > log.txt <input_app.txt'
 c madevent_mintMC
          write(lun,20) "elif [[ $1 == '2' ]]; then"
+         write(lun,20) 'if [[ $runnumber != 0 ]]; then'
+         write(lun,25) 'mv -f nevts__$runnumber nevts'
+         write(lun,25) 'source ./randinit'
+         write(lun,25) 'r=`expr $r + $runnumber`'
+         write(lun,25) 'echo "r=$r" >& randinit'
+         write(lun,20) 'fi'
          write(lun,25) 'head -n 6 $CONDOR_INITIAL_DIR/'//
      &        '../madinMMC_$2.2 >& input_app.txt'
          write(lun,25) 'echo $i >> input_app.txt'
@@ -386,17 +336,26 @@ c madevent_mintMC
 c endif
          write(lun,20) "fi"
 
+         write(lun,20) "if [[ $1 == '2' && $runnumber != 0 ]]; then"
+         write(lun,25) 'cp -f events.lhe $CONDOR_INITIAL_DIR'//
+     &        '/G$2$i/events_$runnumber.lhe'
+         write(lun,25) 'cp -f log.txt $CONDOR_INITIAL_DIR'//
+     &        '/G$2$i/log_$runnumber.txt'
+         write(lun,20) 'fi'
+
          write(lun,20) 'cd ../'
          write(lun,15) 'done'
 c madevent_vegas or madevent_mint
          write(lun,15) "if [[ $1 == '0' || $1 == '1' ]]; then"
          write(lun,20) 'cp -ar $2\_G* $CONDOR_INITIAL_DIR/'
 c madevent_mintMC
-         write(lun,15) "elif [[ $1 == '2' ]]; then"
+         write(lun,15) "elif [[ $1 == '2' && $runnumber == 0 ]]; then"
          write(lun,20) 'cp -ar G$2* $CONDOR_INITIAL_DIR/'
          write(lun,20) 
 c endif
          write(lun,15) "fi"
+         write(lun,15) 'rm -f $CONDOR_INITIAL_DIR/run.$script'
+         write(lun,15) 'touch $CONDOR_INITIAL_DIR/done.$script'
       endif
       
  15   format(a)
@@ -405,75 +364,7 @@ c endif
  30   format(12x,a)
  35   format(16x,a)
  40   format(20x,a)
+ 45   format(24x,a)
       close(lun)
       end
-
-
-
-      subroutine bw_increment_array(iarray,imax,ibase,force,done)
-c************************************************************************
-c     Increments iarray     
-c************************************************************************
-      implicit none
-c
-c     Arguments
-c
-      integer imax          !Input, number of elements in iarray
-      integer ibase         !Base for incrementing, 0 is skipped
-      logical force(imax)   !Force onshell BW, counting from -imax to -1
-      integer iarray(imax)  !Output:Array of values being incremented
-      logical done          !Output:Set when no more incrementing
-
-c
-c     Global
-c
-      include 'genps.inc'
-
-c
-c     Local
-c
-      integer i,j
-      logical found
-c-----
-c  Begin Code
-c-----
-      found = .false.
-      i = 1
-      do while (i .le. imax .and. .not. found)
-         if (iarray(i) .eq. 0) then    !don't increment this
-            i=i+1
-         elseif (iarray(i) .lt. ibase-1 .and. .not. force(imax+1-i)) then
-            found = .true.
-            iarray(i)=iarray(i)+1
-         else
-            iarray(i)=1
-            i=i+1
-         endif
-      enddo
-      done = .not. found
-      end
-
-c
-c
-c Dummy routines
-c
-c
-      subroutine outfun(pp,www,iplot)
-c      write(*,*)'This routine should not be called here'
-c      stop
-      end
-
-
-
-      logical function pass_point(p)
-      pass_point = .true.
-      end
-
-      LOGICAL FUNCTION PASSCUTS(P,rwgt)
-      real*8 rwgt
-      real*8 p(0:3,99)
-      rwgt=1d0
-      passcuts=.true.
-      RETURN
-      END
 

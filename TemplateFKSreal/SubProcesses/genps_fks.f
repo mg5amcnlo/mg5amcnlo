@@ -4,7 +4,7 @@ c     Returns number of arguments which come from x_to_f_arg
 c**************************************************************************
       implicit none
       include 'genps.inc'
-      include "nexternal.inc"
+      include 'nexternal.inc'
       integer ndim
       f_get_nargs=4*nexternal+2      !All 4-momentum and x1,x2
       end
@@ -31,7 +31,6 @@ c
 c     Constants
 c
       include 'genps.inc' 
-      include "nexternal.inc"
 c
 c     Arguments
 c
@@ -89,7 +88,7 @@ c
 c     Constants
 c
       include 'genps.inc'
-      include "nexternal.inc"
+      include 'nexternal.inc'
       double precision pi
       parameter       (pi=3.1415926d0)
 c
@@ -309,7 +308,7 @@ c
 c     Constants
 c      
       include 'genps.inc'
-      include "nexternal.inc"
+      include 'nexternal.inc'
       double precision pi            , one
       parameter       (pi=3.1415926d0, one=1d0)
       double precision zero
@@ -406,11 +405,12 @@ c calls to sample_get_x
       double complex resAoR0,resAoR5
       parameter (ximag=(0.d0,1.d0))
 
-      double precision tiny,qtiny,stiny,sstiny,ctiny,cctiny
+      double precision tiny,qtiny,stiny,sstiny,ctiny,cctiny,vtiny
       parameter (tiny=1d-5)
       parameter (qtiny=1d-7)
       parameter (stiny=1d-6)
       parameter (ctiny=5d-7)
+      parameter (vtiny=1d-12)
 
       double precision xmj,xmj2,xmjhat,xmhat,xim,cffA2,cffB2,cffC2,
      # cffDEL2,xiBm,ximax,xitmp1,xitmp2,xirplus,xirminus,rat_xi,b2m4ac,
@@ -814,7 +814,7 @@ c Flat grid below soft cut-off
                    tau_cnt(0)=roH+(roHs-roH)*x(ndim-1)/fract
                    sjac=sjac*(roHs-roH)/fract
                 else
-c Use 1/x importance sampling above soft cut-off
+c Use 1/x^(nsamp) importance sampling above soft cut-off
                    ximax0 = roHs**(-nsamp)
                    ximin0 = 1.d0
                    tmp  = ximin0 +(1d0-(x(ndim-1)-fract)/(1d0-fract))*
@@ -1273,8 +1273,17 @@ c         write(*,*) 'using costh,phi',ix,ix+1
          xpswgt0 = xpswgt0*.5D0*PI*SQRT(LAMBDA(ONE,XA2,XB2))/(4.D0*PI)
          call mom2cx(m(i),m(itree(1,i)),m(itree(2,i)),costh,phi,
      &        xp0(0,itree(1,i)),xp0(0,itree(2,i)))
-         call boostx(xp0(0,itree(1,i)),xp0(0,i),xp0(0,itree(1,i)))
-         call boostx(xp0(0,itree(2,i)),xp0(0,i),xp0(0,itree(2,i)))
+c If there is an extremely large boost needed here, skip the phase-space point
+c because of numerical stabilities.
+         if (dsqrt(abs(dot(xp0(0,i),xp0(0,i))))/xp0(0,i) 
+     &        .lt.vtiny) then
+            xjac0=-81
+            goto 222
+         else
+            call boostx(xp0(0,itree(1,i)),xp0(0,i),xp0(0,itree(1,i)))
+            call boostx(xp0(0,itree(2,i)),xp0(0,i),xp0(0,itree(2,i)))
+         endif
+         
  44      continue
       enddo
 
@@ -1337,7 +1346,11 @@ c Kajantie's normalization of phase space (compensated below in flux)
             endif
          enddo
       enddo
-      call phspncheck_born(sqrtshat_cnt(0),m_born,p_born)
+      call phspncheck_born(sqrtshat_cnt(0),m_born,p_born,pass)
+      if (.not.pass) then
+           xjac0=-142
+           goto 222
+      endif
 
       if(j_fks.le.nincoming)then
 c
@@ -1857,10 +1870,12 @@ c
         else
           costh_i_fks=(x3len_fks_mother**2-x3len_j_fks**2+x3len_i_fks**2)/
      #                (2*x3len_fks_mother*x3len_i_fks)
-          if(abs(costh_i_fks).gt.1.d0)then
+          if(abs(costh_i_fks).gt.1.d0+qtiny)then
             write(*,*)'Fatal error #8 in one_tree',
      #                costh_i_fks,xi_i_fks,y_ij_fks,xmrec2
             stop
+          elseif(abs(costh_i_fks).gt.1.d0)then
+             costh_i_fks = sign(1d0,costh_i_fks)
           endif
         endif
 
@@ -2132,9 +2147,14 @@ c account elsewhere
 c All done, so check four-momentum conservation
       if(xjac.gt.0.d0)then
         if(icountevts.eq.-100)then
-          call phspncheck_nocms(nexternal,sqrtshat_ev,m,xp)
+          call phspncheck_nocms(nexternal,sqrtshat_ev,m,xp,pass)
         else
-          call phspncheck_nocms(nexternal,sqrtshat_cnt(icountevts),m,xp)
+          call phspncheck_nocms(nexternal,sqrtshat_cnt(icountevts),
+     &          m,xp,pass)
+        endif
+        if (.not.pass) then
+           xjac=-199
+           goto 112
         endif
       endif
 

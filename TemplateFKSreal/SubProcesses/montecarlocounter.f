@@ -1,8 +1,8 @@
       subroutine set_mc_matrices
       implicit none
       include "genps.inc"
+      include 'nexternal.inc'
       include "born_nhel.inc"
-      include "nexternal.inc"
       integer idup(nexternal-1,maxproc)
       integer mothup(2,nexternal-1,maxproc)
       integer icolup(2,nexternal-1,max_bcol)
@@ -3273,8 +3273,8 @@ c the same method
       implicit none
 
       include "genps.inc"
+      include 'nexternal.inc'
       include "born_nhel.inc"
-      include "nexternal.inc"
 
       double precision p(0:3,nexternal)
       double precision y_ij_fks,bornbars(max_bcol),bornbarstilde(max_bcol)

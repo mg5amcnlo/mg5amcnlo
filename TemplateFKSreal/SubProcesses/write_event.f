@@ -14,7 +14,7 @@
       integer i,j,lunlhe
       real*8 xx(ndim),res_abs,plot_wgt,evnt_wgt
       logical plotEv, putonshell
-      double precision wgt
+      double precision wgt,unwgtfun
       double precision x(99),p(0:3,99),pp(0:3,nexternal)
       integer jpart(7,-nexternal+3:2*nexternal-3)
       double precision pb(0:4,-nexternal+3:2*nexternal-3)
@@ -83,6 +83,13 @@ c Plot the events also on the fly
          endif
       endif
 
+      call unweight_function(p_born,unwgtfun)
+      if (unwgtfun.ne.0d0) then
+         evnt_wgt=evnt_wgt/unwgtfun
+      else
+         write (*,*) 'ERROR in finalize_event, unwgtfun=0',unwgtfun
+         stop
+      endif
 c Write-out the events
       call write_events_lhe(pb(0,1),evnt_wgt,jpart(1,1),npart,lunlhe)
       
@@ -250,18 +257,28 @@ c get info on beam and PDFs
       include "nexternal.inc"
       include "coupl.inc"
       include "madfks_mcatnlo.inc"
+      include 'reweight.inc'
       double precision p(0:4,2*nexternal-3),wgt
       integer ic(7,2*nexternal-3),npart,lunlhe
 
-      double precision pi
+      double precision pi,zero
       parameter (pi=3.1415926535897932385d0)
-      integer ievent
+      parameter (zero=0.d0)
+      integer ievent,izero
+      parameter (izero=0)
       double precision aqcd,aqed,scale
 
       character*140 buff
 
       double precision SCALUP
       common /cshowerscale/SCALUP
+
+      INTEGER MAXNUP,i
+      PARAMETER (MAXNUP=500)
+      INTEGER NUP,IDPRUP,IDUP(MAXNUP),ISTUP(MAXNUP),
+     # MOTHUP(2,MAXNUP),ICOLUP(2,MAXNUP)
+      DOUBLE PRECISION XWGTUP,AQEDUP,AQCDUP,
+     # PUP(5,MAXNUP),VTIMUP(MAXNUP),SPINUP(MAXNUP)
 
       integer iSorH_lhe,ifks_lhe,jfks_lhe,fksfather_lhe,ipartner_lhe
       double precision scale1_lhe,scale2_lhe
@@ -275,9 +292,25 @@ c
       aqed=gal(1)**2/(4d0*pi)
 
       if(AddInfoLHE)then
-        write(buff,200)'#',iSorH_lhe,ifks_lhe,jfks_lhe,
-     #                     fksfather_lhe,ipartner_lhe,
-     #                     scale1_lhe,scale2_lhe
+        if(.not.doreweight)then
+          write(buff,200)'#',iSorH_lhe,ifks_lhe,jfks_lhe,
+     #                       fksfather_lhe,ipartner_lhe,
+     #                       scale1_lhe,scale2_lhe,
+     #                       izero,izero,izero,
+     #                       zero,zero,zero,zero,zero
+        else
+          if(iwgtinfo.lt.1.or.iwgtinfo.gt.4)then
+            write(*,*)'Error in write_events_lhe'
+            write(*,*)'  Inconsistency in reweight parameters'
+            write(*,*)doreweight,iwgtinfo
+            stop
+          endif
+          write(buff,200)'#',iSorH_lhe,ifks_lhe,jfks_lhe,
+     #                       fksfather_lhe,ipartner_lhe,
+     #                       scale1_lhe,scale2_lhe,
+     #                       iwgtinfo,nexternal,iwgtnumpartn,
+     #                       zero,zero,zero,zero,zero
+        endif
       else
         buff=' '
       endif
@@ -293,10 +326,31 @@ c     ic(6,*) = ISTUP   -1=initial state +1=final  +2=decayed
 c     ic(7,*) = Helicity
 c********************************************************************
 
-      call write_event
-     &     (lunlhe,p,wgt,npart,ic,ievent,scale,aqcd,aqed,buff)
+      NUP=npart
+      IDPRUP=ievent
+      XWGTUP=wgt
+      AQEDUP=aqed
+      AQCDUP=aqcd
+      do i=1,NUP
+        IDUP(i)=ic(1,i)
+        ISTUP(i)=ic(6,i)
+        MOTHUP(1,i)=ic(2,i)
+        MOTHUP(2,i)=ic(3,i)
+        ICOLUP(1,i)=ic(4,i)
+        ICOLUP(2,i)=ic(5,i)
+        PUP(1,i)=p(1,i)
+        PUP(2,i)=p(2,i)
+        PUP(3,i)=p(3,i)
+        PUP(4,i)=p(0,i)
+        PUP(5,i)=p(4,i)
+        VTIMUP(i)=0.d0
+        SPINUP(i)=dfloat(ic(7,i))
+      enddo
+      call write_lhef_event(lunlhe,
+     #    NUP,IDPRUP,XWGTUP,scale,AQEDUP,AQCDUP,
+     #    IDUP,ISTUP,MOTHUP,ICOLUP,PUP,VTIMUP,SPINUP,buff)
 
- 200  format(1a,1x,i1,4(1x,i2),2(1x,d14.8))
+ 200  format(1a,1x,i1,4(1x,i2),2(1x,d14.8),1x,i1,2(1x,i2),5(1x,d14.8))
       return
       end
 

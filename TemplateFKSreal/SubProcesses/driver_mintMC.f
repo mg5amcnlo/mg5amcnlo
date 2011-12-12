@@ -9,7 +9,6 @@ C
       double precision zero
       parameter       (ZERO = 0d0)
       include 'genps.inc'
-      include "nexternal.inc"
       INTEGER    ITMAX,   NCALL
 
       common/citmax/itmax,ncall
@@ -74,6 +73,17 @@ c For tests
       real*8 fksmaxwgt,xisave,ysave
       common/cfksmaxwgt/fksmaxwgt,xisave,ysave
 
+      integer itotalpoints
+      common/ctotalpoints/itotalpoints
+
+      integer ivirtpoints,ivirtpointsExcept
+      double precision  virtmax,virtmin,virtsum
+      common/cvirt3test/virtmax,virtmin,virtsum,ivirtpoints,
+     &     ivirtpointsExcept
+      double precision total_wgt_sum,total_wgt_sum_max,
+     &                 total_wgt_sum_min
+      common/csum_of_wgts/total_wgt_sum,total_wgt_sum_max,
+     &                 total_wgt_sum_min
 c For MINT:
       include "mint.inc"
       real * 8 xgrid(0:nintervals,ndimmax),xint,ymax(nintervals,ndimmax)
@@ -144,7 +154,26 @@ c
             minvar(ndim,j) = ninvar
          endif
       enddo
+
+c Don't proceed if muF1#muF2 (we need to work out the relevant formulae
+c at the NLO)
+      if( ( fixed_fac_scale .and.
+     #       (muF1_over_ref*muF1_ref_fixed) .ne.
+     #       (muF2_over_ref*muF2_ref_fixed) ) .or.
+     #    ( (.not.fixed_fac_scale) .and.
+     #      muF1_over_ref.ne.muF2_over_ref ) )then
+        write(*,*)'NLO computations require muF1=muF2'
+        stop
+      endif
+
       write(*,*) "about to integrate ", ndim,ncall,itmax,ninvar,nconfigs
+
+      itotalpoints=0
+      ivirtpoints=0
+      ivirtpointsExcept=0
+      total_wgt_sum=0d0
+      total_wgt_sum_max=0d0
+      total_wgt_sum_min=0d0
 
       unwgt=.false.
 
@@ -335,6 +364,34 @@ c to restore grids:
 
       write(*,*)'Maximum weight found:',fksmaxwgt
       write(*,*)'Found for:',xisave,ysave
+
+
+
+      write (*,*) ''
+      write (*,*) '----------------------------------------------------'
+      write (*,*) 'Total points tried:                   ',
+     &     ncall*itmax
+      write (*,*) 'Total points passing generation cuts: ',
+     &     itotalpoints
+      write (*,*) 'Efficiency of events passing cuts:    ',
+     &     dble(itotalpoints)/dble(ncall*itmax)
+      write (*,*) '----------------------------------------------------'
+      write (*,*) ''
+      write (*,*) ''
+      write (*,*) '----------------------------------------------------'
+      write (*,*) 'number of except PS points:',ivirtpointsExcept,
+     &     'out of',ivirtpoints,'points'
+      write (*,*) '   treatment of exceptional PS points:'
+      write (*,*) '      maximum approximation:',
+     &     total_wgt_sum + dsqrt(total_wgt_sum_max)/dble(ncall*itmax)
+      write (*,*) '      minimum approximation:',
+     &     total_wgt_sum - dsqrt(total_wgt_sum_min)/dble(ncall*itmax)
+      write (*,*) '      taking the max/min average:',
+     &     total_wgt_sum/dble(ncall*itmax)
+      write (*,*) '----------------------------------------------------'
+      write (*,*) ''
+
+
 
       if(plotEv.or.plotKin)then
         call mclear

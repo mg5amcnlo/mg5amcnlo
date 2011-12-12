@@ -1,9 +1,14 @@
       program check_events
+c Checks self-consistency of event files. Compile with
+c g77 -o check_events check_events.f handling_lhe_events.f
+c With some work on finalizeprocesses(), it should work also for 
+c LH files created by Herwig, assuming they are identified by a 
+c negative number of events
       implicit none
-      integer maxevt,ifile,efile,jfile,kfile,i,npart,iuseres_1
+      integer maxevt,ifile,efile,jfile,kfile,rfile,i,npart,iuseres_1
       double precision chtot,xint,xinterr
       double precision charges(-100:100),zmasses(1:100)
-      integer npartS,npartH,nevS_lhe,nevH_lhe,npartS_lhe,npartH_lhe,
+      integer nevS_lhe,nevH_lhe,npartS_lhe,npartH_lhe,
      # itoterr,numproc,numconn,idup_eff(10),icolup_eff(2,10)
       logical wrong
       integer mxlproc,minnp,maxnp,idups_proc(1000,-1:10)
@@ -13,8 +18,8 @@
       common/cHW6processes/idups_Sproc_HW6,idups_Hproc_HW6
       integer icolups_proc(1000,0:500,0:2,10)
       common/ccolconn/icolups_proc
-      integer IDBMUP(2),PDFGUP(2),PDFSUP(2),IDWTUP,NPRUP
-      double precision EBMUP(2),XSECUP,XERRUP,XMAXUP,LPRUP
+      integer IDBMUP(2),PDFGUP(2),PDFSUP(2),IDWTUP,NPRUP,LPRUP
+      double precision EBMUP(2),XSECUP,XERRUP,XMAXUP
       INTEGER MAXNUP
       PARAMETER (MAXNUP=500)
       INTEGER NUP,IDPRUP,IDUP(MAXNUP),ISTUP(MAXNUP),
@@ -24,6 +29,13 @@
       double precision sum_wgt,err_wgt,toterr,diff
       integer isorh_lhe,ifks_lhe,jfks_lhe,fksfather_lhe,ipartner_lhe
       double precision scale1_lhe,scale2_lhe
+      double precision wgtcentral,wgtmumin,wgtmumax,wgtpdfmin,wgtpdfmax
+      double precision wgt1a,wgt1s
+      double precision wgt2a,wgt2s
+      double precision wgt3a,wgt3s
+      double precision wgt4a,wgt4s
+      double precision wgt5a,wgt5s
+      double precision saved_weight,tmp
       character*80 event_file
       character*140 buff
       character*6 ch6
@@ -32,11 +44,17 @@
       character*10 MonteCarlo
       character*2 ch2
       character*1 ch1
-      logical AddInfoLHE
+      logical AddInfoLHE,rwgtinfo,unweighted,keepevent,shower
 
       include "genps.inc"
       integer j,k
       real*8 ecm,xmass(nexternal),xmom(0:3,nexternal)
+
+      include 'reweight0.inc'
+      integer kr,kf,kpdf
+      double precision sum_wgt_resc_scale(maxscales,maxscales),
+     # sum_wgt_resc_pdf(0:maxPDFs)
+
 
       call setcharges(charges)
       call setmasses(zmasses)
@@ -85,26 +103,134 @@ c Discard absolute values
       kfile=54
       open (unit=kfile,file='LHEF.stats',status='unknown')
       AddInfoLHE=.false.
+      rwgtinfo=.false.
+      unweighted=.true.
+      keepevent=.true.
+      shower=.false.
 
       call read_lhef_header(ifile,maxevt,MonteCarlo)
+c Showered LH files have maxevt<0; in that case, it is not the number of
+c events, but its upper bound
+      if(maxevt.lt.0)then
+        write(*,*)'This appears to be a showered LH file'
+        shower=.true.
+      endif
+      maxevt=abs(maxevt)
+      call read_lhef_init(ifile,
+     &     IDBMUP,EBMUP,PDFGUP,PDFSUP,IDWTUP,NPRUP,
+     &     XSECUP,XERRUP,XMAXUP,LPRUP)
+
+      
+      do i=1,min(10,maxevt)
+        call read_lhef_event_catch(ifile,
+     &       NUP,IDPRUP,XWGTUP,SCALUP,AQEDUP,AQCDUP,
+     &       IDUP,ISTUP,MOTHUP,ICOLUP,PUP,VTIMUP,SPINUP,buff)
+
+        if(i.eq.1.and.buff(1:1).eq.'#')AddInfoLHE=.true.
+        if(AddInfoLHE)then
+          if(buff(1:1).ne.'#')then
+            write(*,*)'Inconsistency in event file',i,' ',buff
+            stop
+          endif
+          read(buff,200)ch1,iSorH_lhe,ifks_lhe,jfks_lhe,
+     #                      fksfather_lhe,ipartner_lhe,
+     #                      scale1_lhe,scale2_lhe,
+     #                      jwgtinfo,mexternal,iwgtnumpartn,
+     #           wgtcentral,wgtmumin,wgtmumax,wgtpdfmin,wgtpdfmax
+          if(i.eq.1)then
+            if( (jwgtinfo.eq.0.and.wgtcentral.ne.0.d0) .or.
+     #          jwgtinfo.eq.8 )rwgtinfo=.true.
+            saved_weight=abs(XWGTUP)
+          else
+            if( ((jwgtinfo.eq.0.and.wgtcentral.ne.0.d0) .or.
+     #           jwgtinfo.eq.8) .and. (.not.rwgtinfo) )then
+              write(*,*)'Inconsistency #2 in event file',i,' ',buff
+              stop
+            endif
+          unweighted=unweighted.and.
+     #               abs(1.d0-abs(XWGTUP)/saved_weight).lt.1.d-5
+          endif
+        endif
+
+      enddo
+      close(34)
+
+      write(*,*)'  '
+      if(unweighted)then
+        write(*,*)'The events appear to be unweighted'
+      else
+        write(*,*)'The events appear to be weighted'
+      endif
+
+      if(rwgtinfo)then
+        wgt1a=0.d0
+        wgt1s=0.d0
+        wgt2a=0.d0
+        wgt2s=0.d0
+        wgt3a=0.d0
+        wgt3s=0.d0
+        wgt4a=0.d0
+        wgt4s=0.d0
+        wgt5a=0.d0
+        wgt5s=0.d0
+
+        rfile=64
+        open (unit=rfile,file='LHEF.rwgt',status='unknown')
+      endif
+
+      open (unit=ifile,file=event_file,status='old')
+
+      call read_lhef_header(ifile,maxevt,MonteCarlo)
+      maxevt=abs(maxevt)
       call read_lhef_init(ifile,
      &     IDBMUP,EBMUP,PDFGUP,PDFSUP,IDWTUP,NPRUP,
      &     XSECUP,XERRUP,XMAXUP,LPRUP)
       
+
       sum_wgt=0d0
       nevS_lhe=0
       npartS_lhe=0
       nevH_lhe=0
       npartH_lhe=0
       itoterr=0
+      if(jwgtinfo.eq.8)then
+        do kr=1,maxscales
+          do kf=1,maxscales
+            sum_wgt_resc_scale(kr,kf)=0.d0
+          enddo
+        enddo
+        do kpdf=0,maxPDFs
+          sum_wgt_resc_pdf(kpdf)=0.d0
+        enddo
+      endif
 
-      do i=1,maxevt
-         call read_lhef_event(ifile,
+      i=0
+      dowhile(i.lt.maxevt.and.keepevent)
+         call read_lhef_event_catch(ifile,
      &        NUP,IDPRUP,XWGTUP,SCALUP,AQEDUP,AQCDUP,
      &        IDUP,ISTUP,MOTHUP,ICOLUP,PUP,VTIMUP,SPINUP,buff)
+
+         if(index(buff,'endoffile').ne.0)then
+           keepevent=.false.
+           goto 111
+         endif
+
+         i=i+1
          sum_wgt=sum_wgt+XWGTUP
 
-         if(i.eq.1.and.buff(1:1).eq.'#')AddInfoLHE=.true.
+         if(jwgtinfo.eq.8)then
+           do kr=1,numscales
+             do kf=1,numscales
+               sum_wgt_resc_scale(kr,kf)=sum_wgt_resc_scale(kr,kf)+
+     #                               XWGTUP*wgtxsecmu(kr,kf)/wgtref
+             enddo
+           enddo
+           do kpdf=1,2*numPDFpairs
+             sum_wgt_resc_pdf(kpdf)=sum_wgt_resc_pdf(kpdf)+
+     #                       XWGTUP*wgtxsecPDF(kpdf)/wgtref
+           enddo
+         endif
+
          if(AddInfoLHE)then
            if(buff(1:1).ne.'#')then
              write(*,*)'Inconsistency in event file',i,' ',buff
@@ -112,7 +238,14 @@ c Discard absolute values
            endif
            read(buff,200)ch1,iSorH_lhe,ifks_lhe,jfks_lhe,
      #                       fksfather_lhe,ipartner_lhe,
-     #                       scale1_lhe,scale2_lhe
+     #                       scale1_lhe,scale2_lhe,
+     #                       jwgtinfo,mexternal,iwgtnumpartn,
+     #            wgtcentral,wgtmumin,wgtmumax,wgtpdfmin,wgtpdfmax
+          if( ((jwgtinfo.eq.0.and.wgtcentral.ne.0.d0) .or.
+     #         jwgtinfo.eq.8) .and. (.not.rwgtinfo) )then
+             write(*,*)'Inconsistency #2 in event file',i,' ',buff
+             stop
+           endif
          endif
 
          npart=0
@@ -185,14 +318,51 @@ c Discard absolute values
              write(44,*)' unknown iSorH',iSorH_lhe
              itoterr=itoterr+1
            endif
-
          endif
 
-         call phspncheck_nocms2(i,npart,xmass,xmom)
+
+         if(rwgtinfo)then
+           if(unweighted)then
+             wgt1a=wgt1a+wgtcentral
+             wgt1s=wgt1s+wgtcentral**2
+             wgt2a=wgt2a+wgtmumin
+             wgt2s=wgt2s+wgtmumin**2
+             wgt3a=wgt3a+wgtmumax
+             wgt3s=wgt3s+wgtmumax**2
+             wgt4a=wgt4a+wgtpdfmin
+             wgt4s=wgt4s+wgtpdfmin**2
+             wgt5a=wgt5a+wgtpdfmax
+             wgt5s=wgt5s+wgtpdfmax**2
+           else
+             tmp=wgtcentral/XWGTUP
+             wgt1a=wgt1a+tmp
+             wgt1s=wgt1s+tmp**2
+             tmp=wgtmumin/wgtcentral
+             wgt2a=wgt2a+tmp
+             wgt2s=wgt2s+tmp**2
+             tmp=wgtmumax/wgtcentral
+             wgt3a=wgt3a+tmp
+             wgt3s=wgt3s+tmp**2
+             tmp=wgtpdfmin/wgtcentral
+             wgt4a=wgt4a+tmp
+             wgt4s=wgt4s+tmp**2
+             tmp=wgtpdfmax/wgtcentral
+             wgt5a=wgt5a+tmp
+             wgt5s=wgt5s+tmp**2
+           endif
+         endif
+
+c Showered LH files only contain final-state particles.
+c Don't check momentum conservation in that case
+         if(.not.shower)call phspncheck_nocms2(i,npart,xmass,xmom)
+
+ 111     continue
 
       enddo
 
       err_wgt=sum_wgt/sqrt(dfloat(maxevt))
+      write(*,*)'  '
+      write (*,*) 'The total number of events is:',i
       write (*,*) 'The sum of the weights is:',sum_wgt,' +-',err_wgt
 
       if(iuseres_1.eq.0)then
@@ -213,13 +383,46 @@ c Error if more that 1sigma away
         stop
       endif
 
-      npartS=minnp
-      npartH=maxnp
-      if(npartH-npartS.ne.1)then
-        write(*,*)'Fatal error in event size',npartS,npartH
-        stop
-      endif
+      write (*,*) ' '
+      write (*,*) 'Smallest and largest numbers of particles:',
+     #            minnp,maxnp
+
       call finalizeprocesses(maxevt,kfile)
+
+      if(rwgtinfo)then
+        wgt1a=wgt1a/maxevt
+        wgt1s=sqrt(abs(wgt1s/maxevt-wgt1a**2))
+        wgt2a=wgt2a/maxevt
+        wgt2s=sqrt(abs(wgt2s/maxevt-wgt2a**2))
+        wgt3a=wgt3a/maxevt
+        wgt3s=sqrt(abs(wgt3s/maxevt-wgt3a**2))
+        wgt4a=wgt4a/maxevt
+        wgt4s=sqrt(abs(wgt4s/maxevt-wgt4a**2))
+        wgt5a=wgt5a/maxevt
+        wgt5s=sqrt(abs(wgt5s/maxevt-wgt5a**2))
+
+        write(64,*)'central:  ',wgt1a,' +-',wgt1s
+        write(64,*)'mu lower: ',wgt2a,' +-',wgt2s
+        write(64,*)'mu upper: ',wgt3a,' +-',wgt3s
+        write(64,*)'PDF lower:',wgt4a,' +-',wgt4s
+        write(64,*)'PDF upper:',wgt5a,' +-',wgt5s
+
+        if(jwgtinfo.eq.8)then
+          write(64,*)'  '
+          write(64,*)'Sums of rescaled weights'
+          do kr=1,numscales
+            do kf=1,numscales
+              write(64,*)'scales',kr,kf,' ->',
+     #                   sum_wgt_resc_scale(kr,kf)
+            enddo
+          enddo
+          do kpdf=1,2*numPDFpairs
+            write(64,*)'PDF',kpdf,' ->',
+     #                 sum_wgt_resc_pdf(kpdf)
+          enddo
+        endif
+
+      endif
 
       write (*,*) ' '
       write (*,*) 'Total number of errors found:',itoterr
@@ -228,7 +431,9 @@ c Error if more that 1sigma away
       close(44)
       close(50)
       close(54)
- 200  format(1a,1x,i1,4(1x,i2),2(1x,d14.8))
+      if(rwgtinfo)close(64)
+
+ 200  format(1a,1x,i1,4(1x,i2),2(1x,d14.8),1x,i1,2(1x,i2),5(1x,d14.8))
 
       end
 

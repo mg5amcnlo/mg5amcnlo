@@ -5,12 +5,21 @@
       character*15 outputfile
       integer istep,i,numoffiles,nbunches,nevents,ievents,junit(80)
       double precision xtotal,absxsec,evwgt
+      integer i_orig
+      common /c_i_orig/i_orig
       integer ioutput
       parameter(ioutput=99)
 
+      write (*,*) 'Keep the original weights from the event files, '
+      write (*,*) 'or overwrite them by the (total Xsec)/(# events)?'
+      write (*,*)
+     &     "give '0' for original or '1' for overwrite (default is '1')"
+      read (*,*) i_orig
+      if (i_orig.ne.0 .and. i_orig.ne.1) stop
+      write(*,*) i_orig
+
       istep=0
       write (*,*) 'step #',istep
-
  1    continue
       outputfile='allevents_X_000'
       if(istep.eq.0) then
@@ -123,16 +132,18 @@ c
       subroutine collect_all_evfiles(ioutput,numoffiles,junit,
      #                               imaxevt,evwgt)
       implicit none
+      integer i_orig
+      common /c_i_orig/i_orig
       integer ioutput,junit(80)
       integer imaxevt,maxevt,ii,numoffiles,nevents,itot,iunit,
-     # mx_of_evt(80)
+     # mx_of_evt(80),i0
       double precision evwgt,evwgt_sign
       integer ione
       parameter (ione=1)
-      integer IDBMUP(2),PDFGUP(2),PDFSUP(2),IDWTUP,NPRUP
-      double precision EBMUP(2),XSECUP,XERRUP,XMAXUP,LPRUP
-      integer IDBMUP1(2),PDFGUP1(2),PDFSUP1(2),IDWTUP1,NPRUP1
-      double precision EBMUP1(2),XSECUP1,XERRUP1,XMAXUP1,LPRUP1
+      integer IDBMUP(2),PDFGUP(2),PDFSUP(2),IDWTUP,NPRUP,LPRUP
+      double precision EBMUP(2),XSECUP,XERRUP,XMAXUP
+      integer IDBMUP1(2),PDFGUP1(2),PDFSUP1(2),IDWTUP1,NPRUP1,LPRUP1
+      double precision EBMUP1(2),XSECUP1,XERRUP1,XMAXUP1
       INTEGER MAXNUP
       PARAMETER (MAXNUP=500)
       INTEGER NUP,IDPRUP,IDUP(MAXNUP),ISTUP(MAXNUP),
@@ -207,19 +218,28 @@ c
       itot=maxevt
       do ii=1,maxevt
         rnd=fk88random(iseed)
-        call whichone(rnd,numoffiles,itot,mx_of_evt,junit,iunit)
+        call whichone(rnd,numoffiles,itot,mx_of_evt,junit,iunit,i0)
         call read_lhef_event(iunit,
      #    NUP,IDPRUP,XWGTUP,SCALUP,AQEDUP,AQCDUP,
      #    IDUP,ISTUP,MOTHUP,ICOLUP,PUP,VTIMUP,SPINUP,buff)
-c Sanity check on weights read and computed a posteriori
-        if( abs(XWGTUP/evwgt).gt.2.d0.or.
-     #      abs(XWGTUP/evwgt).lt.0.5d0)then
+c Sanity check on weights read and computed a posteriori (check only for
+c event samples that are relatively large, otherwise it could be a
+c statistical fluctuation because the number of events per channel is
+c assigned randomly with a weight according to the contribution of that
+c channel to the total cross section)
+        if( ( abs(XWGTUP/evwgt).gt.2.d0.or.
+     #        abs(XWGTUP/evwgt).lt.0.5d0 ) .and.
+     #       mx_of_evt(i0).gt.50 )then
           write(*,*)'Error in collect_all_evfiles'
           write(*,*)'Events weights appear to be wrong'
           write(*,*)XWGTUP,evwgt
           stop
         endif
-        evwgt_sign=dsign(evwgt,XWGTUP)
+        if (i_orig.eq.0) then
+           evwgt_sign=XWGTUP
+        else
+           evwgt_sign=dsign(evwgt,XWGTUP)
+        endif
         call write_lhef_event(ioutput,
      #    NUP,IDPRUP,evwgt_sign,SCALUP,AQEDUP,AQCDUP,
      #    IDUP,ISTUP,MOTHUP,ICOLUP,PUP,VTIMUP,SPINUP,buff)
@@ -229,7 +249,7 @@ c Sanity check on weights read and computed a posteriori
       end
 
 
-      subroutine whichone(rnd,numoffiles,itot,mx_of_evt,junit,iunit)
+      subroutine whichone(rnd,numoffiles,itot,mx_of_evt,junit,iunit,i0)
       implicit none
       double precision rnd,tiny,one,xp(80),xsum,prob
       integer numoffiles,itot,mx_of_evt(80),junit(80),iunit,ifiles,i0
@@ -272,7 +292,7 @@ c
       end
 
 
-     FUNCTION FK88RANDOM(SEED)
+      FUNCTION FK88RANDOM(SEED)
 *     -----------------
 * Ref.: K. Park and K.W. Miller, Comm. of the ACM 31 (1988) p.1192
 * Use seed = 1 as first value.

@@ -1,339 +1,167 @@
-      subroutine set_ren_scale(P,rscale)
-c----------------------------------------------------------------------
-c     This is the USER-FUNCTION to calculate the renormalization
-c     scale on event-by-event basis.
-c----------------------------------------------------------------------      
-      implicit none
-      integer    maxexternal
-      parameter (maxexternal=15)
-      real*8 Pi
-      parameter( Pi = 3.14159265358979323846d0 )
-      real*8   alphas
-      external alphas
+c Functions that set the scales and compute alphaS
 c
-c     INCLUDE and COMMON
+c The renormalization, the two factorization, and the Ellis-Sexton scales
+c are treated independently. For each of them, one has
 c
-      include 'genps.inc'
-      include "nexternal.inc"
-      include 'coupl.inc'
-
-      integer    maxflow, i
-      parameter (maxflow=999)
-      integer idup(nexternal,maxproc)
-      integer mothup(2,nexternal,maxproc)
-      integer icolup(2,nexternal,maxflow)
-      include 'leshouche.inc'
-      include 'run.inc'
-
-      double precision pmass(nexternal)
-      common/to_mass/  pmass
-
-      real*8 xptj,xptb,xpta,xptl
-      real*8 xetamin,xqcut,deltaeta
-      common /to_specxpt/xptj,xptb,xpta,xptl,xetamin,xqcut,deltaeta
-
-      logical first
-      data first/.true./
-
+c   scale = ratio_over_ref * reference_scale
 c
-c     ARGUMENTS
-c      
-      REAL*8 P(0:3,maxexternal)
-      REAL*8 rscale
+c The values of ratio_over_ref must be given in run_card.dat
+c (muR_over_ref, muF1_over_ref, muF2_over_ref, QES_over_ref).
+c The reference scale is either a fixed value, given in run_card.dat
+c (muR_ref_fixed, muF1_ref_fixed, muF2_ref_fixed, QES_ref_fixed),
+c or is computed dynamically, by the functions:
+c  
+c   function muR_ref_dynamic(pp)
+c   function muF_ref_dynamic(pp)
+c   function QES_ref_dynamic(pp)
 c
-c     EXTERNAL
+c which can be found in this file. Note, then, that when choosing
+c dynamic factorization scales the reference scale for the two legs
+c is the same; the scales can still be different, if muF1_over_ref is
+c not equal to muF2_over_ref. This condition can be easily relaxed.
+c However, in order to do so we must first implement formulae that
+c take the muF1#muF2 case into account at the NLO. With fixed reference
+c scales, this condition is easily enforced before starting the integration.
 c
-      REAL*8 R2,DOT,ET,ETA,DJ,SumDot,PT
-
-c----------
-c     start
-c----------
-
-      if(fixed_ren_scale) then
-         rscale=scale
-      else
-
-      if(ickkw.gt.0.or.xqcut.gt.0)then
-c     alpha_s reweighted due to clustering in reweight.f
-         rscale=scale
-         return
-      endif
-
-      rscale=0d0
-
-      if(first) then
-         write(*,*) 'Using event- by event '//
-     &        'renormalization/factorization scale:'
-         write(*,*) 'scalefact^2*(Max of squared masses '//
-     &        'of final-state particles + '
-         write(*,*) '             sum of pT^2 for jets and '//
-     &        'massless particles)'
-      endif
-      do i=3,nexternal
-         rscale=max(rscale,pmass(i)**2)
-      enddo
-      do i=3,nexternal
-         if(iabs(idup(i,1)).le.5.or.idup(i,1).eq.21.or.
-     &                                 pmass(i).eq.0d0)then
-            rscale=rscale+pt(p(0,i))**2
-         endif
-      enddo
-
-      rscale=sqrt(rscale)
-
-      if(first)then
-         write(*,*) 'mu_R = ',scalefact,' * ',rscale
-         first=.false.
-      endif
-
-      rscale=rscale*scalefact
-
-c
-c-some examples of dynamical scales
+c The bodies of the functions above are independent of each other.
+c The easiest way to set them all equal is that of choosing
+c imurtype=1, imuftype=1, and iQEStype=1 (these parameters are
+c local to the bodies of the correspondent functions). This 
+c will set the function above equal to the return value of
+c   function scale_global_reference(pp)
+c which again can be found in this file
+c 
+c When calling set_alphaS for the first time, that routine will print
+c out the numerical values of the scales, and a string which is supposed
+c to give the functional form used for the reference scales. This will
+c be done automatically, provided that for each new functional form
+c introduced one stores a corresponding ID string in the variable
+c   temp_scale_id
+c in the bodies of the functions
+c   function muR_ref_dynamic(pp)
+c   function muF_ref_dynamic(pp)
+c   function QES_ref_dynamic(pp)
+c   function scale_global_reference(pp)
 c
 
-c---------------------------------------
-c-- total transverse energy of the event 
-c---------------------------------------
-c     scale=0d0
-c     do i=3,nexternal
-c      scale=scale+et(P(0,i))
-c     enddo
 
-c--------------------------------------
-c-- scale^2 = \sum_i  (pt_i^2+m_i^2)  
-c--------------------------------------
-c     scale=0d0
-c     do i=3,nexternal
-c      scale=scale+pt(P(0,i))**2+dot(p(0,i),p(0,i))
-c     enddo
-c     scale=dsqrt(scale)
-
-c--------------------------------------
-c-- \sqrt(s): partonic energy
-c--------------------------------------
-c     scale=dsqrt(2d0*dot(P(0,1),P(0,2)))
-
-      endif                     ! fixed_ren_scale
-
-      G = SQRT(4d0*PI*ALPHAS(rscale))
-      
-      return
-      end
-
-
-      subroutine set_fac_scale(P,q2fact)
-c----------------------------------------------------------------------
-c     This is the USER-FUNCTION to calculate the factorization 
-c     scales^2 on event-by-event basis.
-c----------------------------------------------------------------------      
-      implicit none
-      integer    maxexternal
-      parameter (maxexternal=15)
-c
-c     INCLUDE and COMMON
-c
-      include 'genps.inc'
-      include "nexternal.inc"
-      include 'coupl.inc'
-      include 'message.inc'
-c--masses and poles
-c
-c     ARGUMENTS
-c      
-      REAL*8 P(0:3,maxexternal)
-      real*8 q2fact(2)
-c
-c     EXTERNAL
-c
-      REAL*8 R2,DOT,ET,ETA,DJ,SumDot,PT
-c
-c     LOCAL
-c
-      integer i
-      logical first
-      data first/.true./
-
-c----------
-c     start
-c----------
-      
-      
-      q2fact(1)=0d0             !factorization scale**2 for pdf1
-
-      call set_ren_scale(P,q2fact(1))
-
-      if(first)then
-        write(*,*) 'mu_F = mu_R'
-        first=.false.
-      endif
-      
-      if (btest(mlevel,3)) then
-        write(*,*)'setscales.f: Setting fact scale to ',q2fact(1)
-      endif
-
-      q2fact(1)=q2fact(1)**2
-
-      q2fact(2)=q2fact(1)       !factorization scale**2 for pdf2
-      
-
-c
-c-some examples of dynamical scales
-c
-
-c---------------------------------------
-c-- total transverse energy of the event 
-c---------------------------------------
-c     q2fact(1)=0d0
-c     do i=3,nexternal
-c      q2fact(1)= q2fact(1)+et(P(0,i))**2
-c     enddo
-c     q2fact(2)=q2fact(1)  
-
-c--------------------------------------
-c-- scale^2 = \sum_i  (pt_i^2+m_i^2)  
-c--------------------------------------
-c     q2fact(1)=0d0
-c     do i=3,nexternal
-c      q2fact(1)=q2fact(1)+pt(P(0,i))**2+dot(p(0,i),p(0,i))
-c     enddo
-c     q2fact(2)=q2fact(1)  
-
-c--------------------------------------
-c-- \sqrt(s): partonic energy
-c--------------------------------------
-c     q2fact(1)=2d0*dot(P(0,1),P(0,2))
-c     q2fact(2)=q2fact(1)  
-
-      
-      return
-      end
-
-
-
-
-      subroutine set_alphaS(P)
-c     This subroutine sets the value of the strong coupling.
-c     It updates the scales in run.inc and coupling itself in coupl.inc.
-c     For an event-by-event scale choice, this should in general only
-c     be called if the event passes the cuts.
+      subroutine set_alphaS(xp)
+c This subroutine sets the values of the renormalization, factorization,
+c and Ellis-Sexton scales, and computes the value of alpha_S through the
+c call to set_ren_scale (for backward compatibility).
+c The scale and couplings values are updated in the relevant common blocks
+c (mostly in run.inc, and one  in coupl.inc)
       implicit none
       include "genps.inc"
       include "nexternal.inc"
-      REAL*8 P(0:3,nexternal),rwgt
-      integer i,j
       include "run.inc"
       include "coupl.inc"
-      include "q_es.inc"
+
+      double precision xp(0:3,nexternal)
+      double precision dummy,dummyQES,dummies(2)
+      integer i,j
+
+      character*80 muR_id_str,muF1_id_str,muF2_id_str,QES_id_str
+      common/cscales_id_string/muR_id_str,muF1_id_str,
+     #                         muF2_id_str,QES_id_str
 
 c put momenta in common block for couplings.f
       double precision PP(0:3,max_particles)
       COMMON /MOMENTA_PP/PP
 
-      logical firsttime,firsttime2
-      data firsttime,firsttime2 /.true.,.true./
+      logical firsttime
+      data firsttime/.true./
 
 c After recomputing alphaS, be sure to set 'calculatedBorn' to false
       double precision hel_fac
       logical calculatedBorn
       integer get_hel,skip
       common/cBorn/hel_fac,calculatedBorn,get_hel,skip
-
-
+c
       if (firsttime) then
-         firsttime=.false.
+        firsttime=.false.
+c Set scales and check that everything is all right
+c Renormalization
+        call set_ren_scale(xp,dummy)
+        if(dummy.lt.0.2d0)then
+          write(*,*)'Error in set_alphaS: muR too soft',dummy
+          stop
+        endif
+c Factorization
+        call set_fac_scale(xp,dummies)
+        if(dummies(1).lt.0.2d0.or.dummies(2).lt.0.2d0)then
+          write(*,*)'Error in set_alphaS: muF too soft',
+     #              dummies(1),dummies(2)
+          stop
+        endif
+c Ellis-Sexton
+        call set_QES_scale(xp,dummyQES)
+        if(scale.lt.0.2d0)then
+          write(*,*)'Error in set_alphaS: QES too soft',dummyQES
+          stop
+        endif
 c
-c     Set the strong coupling
+        write(*,*)'Scale values (may change event by event):'
+        write(*,200)'muR,  muR_reference: ',dummy,
+     #              dummy/muR_over_ref,muR_over_ref
+        write(*,200)'muF1, muF1_reference:',dummies(1),
+     #              dummies(1)/muF1_over_ref,muF1_over_ref
+        write(*,200)'muF2, muF2_reference:',dummies(2),
+     #              dummies(2)/muF2_over_ref,muF2_over_ref
+        write(*,200)'QES,  QES_reference: ',dummyQES,
+     #              dummyQES/QES_over_ref,QES_over_ref
+        write(*,*)' '
+        write(*,*)'muR_reference [functional form]:'
+        write(*,*)'   ',muR_id_str(1:len_trim(muR_id_str))
+        write(*,*)'muF1_reference [functional form]:'
+        write(*,*)'   ',muF1_id_str(1:len_trim(muF1_id_str))
+        write(*,*)'muF2_reference [functional form]:'
+        write(*,*)'   ',muF2_id_str(1:len_trim(muF2_id_str))
+        write(*,*)'QES_reference [functional form]: '
+        write(*,*)'   ',QES_id_str(1:len_trim(QES_id_str))
+        write(*,*)' '
+        write(*,*) 'alpha_s=',g**2/(16d0*atan(1d0))
 c
-         call set_ren_scale(P,scale)
-c
-c     Check that the user funtions for setting the scales
-c     have been edited if the choice of an event-by-event
-c     scale choice has been made 
-c
-         if(.not.fixed_ren_scale) then
-            if(scale.eq.0d0) then
-               write(6,*) 
-               write(6,*) '* >>>>>>>>>ERROR<<<<<<<<<<<<<<<<<<<<<<<*'
-               write(6,*) ' Dynamical renormalization scale choice '
-               write(6,*) ' selected but user subroutine' 
-               write(6,*) ' set_ren_scale not edited in file:setpara.f'
-               write(6,*) ' Switching to a fixed_ren_scale choice'
-               write(6,*) ' with scale=zmass'
-               scale=91.2d0
-               write(6,*) 'scale=',scale
-               fixed_ren_scale=.true.
-               call set_ren_scale(P,scale)
-            endif
-         endif
-         
-         if(.not.fixed_fac_scale) then
-            call set_fac_scale(P,q2fact)
-            if(q2fact(1).eq.0d0.or.q2fact(2).eq.0d0) then
-               write(6,*) 
-               write(6,*) '* >>>>>>>>>ERROR<<<<<<<<<<<<<<<<<<<<<<<*'
-               write(6,*) ' Dynamical renormalization scale choice '
-               write(6,*) ' selected but user subroutine' 
-               write(6,*) ' set_fac_scale not edited in file:setpara.f'
-               write(6,*) ' Switching to a fixed_fac_scale choice'
-               write(6,*) ' with q2fact(i)=zmass**2'
-               fixed_fac_scale=.true.
-               q2fact(1)=91.2d0**2
-               q2fact(2)=91.2d0**2
-               write(6,*) 'scales=',q2fact(1),q2fact(2)
-            endif
-         endif
-
-         if(fixed_ren_scale) then
-            call setpara('param_card.dat',.false.)
-         endif
-
-c     Put momenta in the common block to zero to start
-         do i=0,3
-            do j=1,max_particles
-               pp(i,j) = 0d0
-            enddo
-         enddo
+        if(fixed_ren_scale) then
+          call setpara('param_card.dat',.false.)
+        endif
+c Put momenta in the common block to zero to start
+        do i=0,3
+          do j=1,max_particles
+            pp(i,j) = 0d0
+          enddo
+        enddo
       endif
-      
 c
-c     Here we reset factorization and renormalization
-c     scales on an event-by-event basis
-c
+c Recompute scales if dynamic
+c Note: Ellis-Sexton scale must be computed before calling setpara(),
+c since some R2 couplings depend on it
       if(.not.fixed_ren_scale) then
-         call set_ren_scale(P,scale)
+        call set_ren_scale(xp,dummy)
       endif
 
       if(.not.fixed_fac_scale) then
-         call set_fac_scale(P,q2fact)
+        call set_fac_scale(xp,dummies)
+      endif
+
+      if(.not.fixed_QES_scale) then
+        call set_QES_scale(xp,dummyQES)
       endif
 c
 
-c
-c Set the Ellis-Sexton scale (should be set before the call to
-c setpara(), because some of the R2 coupling constant depend on
-c this scale.
-      QES2=q2fact(1)
-
-
-C...Set strong couplings if event passed cuts
-      if(.not.fixed_ren_scale.or..not.fixed_couplings) then
-         if (.not.fixed_couplings)then
-            do i=0,3
-               do j=1,nexternal
-                  PP(i,j)=p(i,j)
-               enddo
+c Pass momenta to couplings.f
+      if ( .not.fixed_ren_scale.or.
+     &         .not.fixed_couplings.or.
+     &             .not.fixed_QES_scale) then
+        if (.not.fixed_couplings)then
+          do i=0,3
+            do j=1,nexternal
+              PP(i,j)=xp(i,j)
             enddo
-         endif
+          enddo
+        endif
          call setpara('param_card.dat',.false.)
       endif
-
-      IF (FIRSTTIME2) THEN
-         FIRSTTIME2=.FALSE.
-         write(6,*) 'alpha_s for scale ',scale,' is ',
-     &        G**2/(16d0*atan(1d0))
-      ENDIF
-
 
 c Reset calculatedBorn, because the couplings might have been changed.
 c This is needed in particular for the MC events, because there the
@@ -341,5 +169,259 @@ c coupling should be set according to the real-emission kinematics,
 c even when computing the Born matrix elements.
       calculatedBorn=.false.
 
+ 200  format(1x,a,2(1x,d12.6),2x,f4.2)
+
+      return
+      end
+
+
+      subroutine set_ren_scale(pp,muR)
+c Sets the value of the renormalization scale, returned as muR.
+c For backward compatibility, computes the value of alpha_S, and sets 
+c the value of variable scale in common block /to_scale/
+      implicit none
+      include 'genps.inc'
+      include 'nexternal.inc'
+      include 'run.inc'
+      include 'coupl.inc'
+      double precision pp(0:3,nexternal),muR
+      double precision mur_temp,mur_ref_dynamic,alphas
+      double precision pi
+      parameter (pi=3.14159265358979323846d0)
+      character*80 muR_id_str,muF1_id_str,muF2_id_str,QES_id_str
+      common/cscales_id_string/muR_id_str,muF1_id_str,
+     #                         muF2_id_str,QES_id_str
+      character*80 temp_scale_id
+      common/ctemp_scale_id/temp_scale_id
+c
+      temp_scale_id='  '
+      if(fixed_ren_scale)then
+        mur_temp=muR_ref_fixed
+        temp_scale_id='fixed'
+      else
+        mur_temp=muR_ref_dynamic(pp)
+      endif
+      muR=muR_over_ref*mur_temp
+      muR2_current=muR**2
+      muR_id_str=temp_scale_id
+c The following is for backward compatibility. DO NOT REMOVE
+      scale=muR
+      g=sqrt(4d0*pi*alphas(scale))
+c
+      return
+      end
+
+
+      function muR_ref_dynamic(pp)
+c This is a function of the kinematic configuration pp, which returns
+c a scale to be used as a reference for renormalization scale
+      implicit none
+      include 'genps.inc'
+      include 'nexternal.inc'
+      double precision muR_ref_dynamic,pp(0:3,nexternal)
+      double precision tmp,scale_global_reference,pt
+      external pt
+      character*80 temp_scale_id
+      common/ctemp_scale_id/temp_scale_id
+      integer i,imurtype
+      parameter (imurtype=1)
+c
+      tmp=0
+      if(imurtype.eq.1)then
+        tmp=scale_global_reference(pp)
+      elseif(imurtype.eq.2)then
+        do i=nincoming+1,nexternal
+          tmp=tmp+pt(pp(0,i))
+        enddo
+        temp_scale_id='sum_i pT(i), i=final state'
+      else
+        write(*,*)'Unknown option in muR_ref_dynamic',imurtype
+        stop
+      endif
+      muR_ref_dynamic=tmp
+c
+      return
+      end
+
+
+      subroutine set_fac_scale(pp,muF)
+c Sets the values of the factorization scales, returned as muF().
+c For backward compatibility, sets the values of variables q2fact()
+c in common block /to_collider/
+c Note: the old version returned the factorization scales squared
+      implicit none
+      include 'genps.inc'
+      include 'nexternal.inc'
+      include 'run.inc'
+      include 'coupl.inc'
+      double precision pp(0:3,nexternal),muF(2)
+      double precision muf_temp(2),muF_ref_dynamic
+      character*80 muR_id_str,muF1_id_str,muF2_id_str,QES_id_str
+      common/cscales_id_string/muR_id_str,muF1_id_str,
+     #                         muF2_id_str,QES_id_str
+      character*80 temp_scale_id,temp_scale_id2
+      common/ctemp_scale_id/temp_scale_id
+c
+      temp_scale_id='  '
+      temp_scale_id2='  '
+      if(fixed_fac_scale)then
+        muf_temp(1)=muF1_ref_fixed
+        muf_temp(2)=muF2_ref_fixed
+        temp_scale_id='fixed'
+        temp_scale_id2='fixed'
+      else
+        muf_temp(1)=muF_ref_dynamic(pp)
+        muf_temp(2)=muf_temp(1)
+        temp_scale_id2=temp_scale_id
+      endif
+      muF(1)=muF1_over_ref*muf_temp(1)
+      muF(2)=muF2_over_ref*muf_temp(2)
+      muF12_current=muF(1)**2
+      muF22_current=muF(2)**2
+      muF1_id_str=temp_scale_id
+      muF2_id_str=temp_scale_id2
+c The following is for backward compatibility. DO NOT REMOVE
+      q2fact(1)=muF12_current
+      q2fact(2)=muF22_current
+c
+      return
+      end
+
+
+      function muF_ref_dynamic(pp)
+c This is a function of the kinematic configuration pp, which returns
+c a scale to be used as a reference for factorizations scales
+      implicit none
+      include 'genps.inc'
+      include 'nexternal.inc'
+      double precision muF_ref_dynamic,pp(0:3,nexternal)
+      double precision tmp,scale_global_reference,pt
+      external pt
+      character*80 temp_scale_id
+      common/ctemp_scale_id/temp_scale_id
+      integer i,imuftype
+      parameter (imuftype=1)
+c
+      tmp=0
+      if(imuftype.eq.1)then
+        tmp=scale_global_reference(pp)
+      elseif(imuftype.eq.2)then
+        do i=nincoming+1,nexternal
+          tmp=tmp+pt(pp(0,i))**2
+        enddo
+        tmp=sqrt(tmp)
+        temp_scale_id='Sqrt[sum_i pT(i)**2], i=final state'
+      else
+        write(*,*)'Unknown option in muF_ref_dynamic',imuftype
+        stop
+      endif
+      muF_ref_dynamic=tmp
+c
+      return
+      end
+
+
+      subroutine set_QES_scale(pp,QES)
+c Sets the value of the Ellis-Sexton scale, returned as QES.
+c For backward compatibility, sets the value of variable QES2 
+c (Ellis-Sexton scale squared) in common block /COUPL_ES/
+      implicit none
+      include 'genps.inc'
+      include 'nexternal.inc'
+      include 'run.inc'
+      include 'coupl.inc'
+      include 'q_es.inc'
+      double precision pp(0:3,nexternal),QES
+      double precision QES_temp,QES_ref_dynamic
+      double precision pi
+      parameter (pi=3.14159265358979323846d0)
+      character*80 muR_id_str,muF1_id_str,muF2_id_str,QES_id_str
+      common/cscales_id_string/muR_id_str,muF1_id_str,
+     #                         muF2_id_str,QES_id_str
+      character*80 temp_scale_id
+      common/ctemp_scale_id/temp_scale_id
+c
+      temp_scale_id='  '
+      if(fixed_QES_scale)then
+        QES_temp=QES_ref_fixed
+        temp_scale_id='fixed'
+      else
+        QES_temp=QES_ref_dynamic(pp)
+      endif
+      QES=QES_over_ref*QES_temp
+      QES2_current=QES**2
+      QES_id_str=temp_scale_id
+c The following is for backward compatibility. DO NOT REMOVE
+      QES2=QES2_current
+c
+      return
+      end
+
+
+      function QES_ref_dynamic(pp)
+c This is a function of the kinematic configuration pp, which returns
+c a scale to be used as a reference for Ellis-Sexton scale
+      implicit none
+      include 'genps.inc'
+      include 'nexternal.inc'
+      double precision QES_ref_dynamic,pp(0:3,nexternal)
+      double precision tmp,scale_global_reference,pt
+      external pt
+      character*80 temp_scale_id
+      common/ctemp_scale_id/temp_scale_id
+      integer i,iQEStype
+      parameter (iQEStype=1)
+c
+      tmp=0
+      if(iQEStype.eq.1)then
+        tmp=scale_global_reference(pp)
+      elseif(iQEStype.eq.2)then
+        do i=nincoming+1,nexternal
+          tmp=tmp+pt(pp(0,i))
+        enddo
+        temp_scale_id='sum_i pT(i), i=final state'
+      else
+        write(*,*)'Unknown option in QES_ref_dynamic',iQEStype
+        stop
+      endif
+      QES_ref_dynamic=tmp
+c
+      return
+      end
+
+
+      function scale_global_reference(pp)
+c This is a function of the kinematic configuration pp, which returns
+c a scale to be used as a reference for renormalization scale
+      implicit none
+      include 'genps.inc'
+      include 'nexternal.inc'
+      double precision scale_global_reference,pp(0:3,nexternal)
+      double precision tmp,pt,et,dot
+      external pt,et,dot
+      integer i,itype
+      parameter (itype=1)
+      character*80 temp_scale_id
+      common/ctemp_scale_id/temp_scale_id
+c
+      tmp=0
+      if(itype.eq.1)then
+c Sum of transverse energies
+        do i=nincoming+1,nexternal
+          tmp=tmp+et(pp(0,i))
+        enddo
+        temp_scale_id='sum_i eT(i), i=final state'
+      elseif(itype.eq.2)then
+c Sum of transverse masses
+        do i=nincoming+1,nexternal
+          tmp=tmp+sqrt(pt(pp(0,i))**2+dot(pp(0,i),pp(0,i)))
+        enddo
+        temp_scale_id='sum_i mT(i), i=final state'
+      else
+        write(*,*)'Unknown option in scale_global_reference',itype
+        stop
+      endif
+      scale_global_reference=tmp
+c
       return
       end

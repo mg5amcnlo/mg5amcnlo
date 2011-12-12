@@ -7,7 +7,7 @@ c
 c     INCLUDE
 c
       include 'genps.inc'
-      include "nexternal.inc"
+      include 'nexternal.inc'
       include 'coupl.inc'
       include 'run.inc'
       include 'cuts.inc'
@@ -377,7 +377,7 @@ c variable ptj
       include 'cuts.inc'
       include 'run.inc'
       include 'genps.inc'
-      include "nexternal.inc"
+      include 'nexternal.inc'
       include 'coupl.inc'
       LOGICAL  IS_A_J(NEXTERNAL),IS_A_L(NEXTERNAL)
       LOGICAL  IS_A_B(NEXTERNAL),IS_A_A(NEXTERNAL)
@@ -431,6 +431,11 @@ c Also find the minimum lower bound if all internal s-channel particles
 c were on-shell
       tsign=-1
       iconfig=this_config
+      if (iconfig.eq.0) then
+         write (*,*) 'Warning iconfig is still zero; '//
+     &        'set temporarily to 1 in "set_tau_min"'
+         iconfig=1
+      endif
       xmmax=0d0
       do i=-1,-(nexternal-3),-1                ! All propagators
          if ( iforest(1,i,iconfig) .eq. 1 .or.

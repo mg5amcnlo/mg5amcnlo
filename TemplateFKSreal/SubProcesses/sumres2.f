@@ -3,22 +3,23 @@
       integer maxsize
       parameter(maxsize=50000)
       integer map(maxsize),size,i,j
-      real*8 num1(maxsize),num2(maxsize),onum2(maxsize),sum, avg
+      real*8 num1(maxsize),num2(maxsize),onum2(maxsize),prob(maxsize)
+      real*8 sum, avg
       character*140 buffer,filename
       character*1 todo(maxsize)
 
       character*100 dir(maxsize),graph(maxsize),cor(maxsize)
       integer ldir(maxsize),lgraph(maxsize),lcor(maxsize),yes,no
 
-      real*8 min_err_per_channel
-      real*8 min_err_total
-      integer max_improve
+      real*8 min_err_per_channel,min_err_total
+      integer max_improve,granularity
       parameter( min_err_per_channel=0.40 )
       parameter( min_err_total=0.001 )
       parameter( max_improve=100 )
+      parameter( granularity=1 )
 
       
-      real*8 totalrest,rest(maxsize),restsum,xtarget,ran1
+      real*8 totalrest,rest(maxsize),restsum,xtarget,fk88random
       integer nevents,totevts,nevts(maxsize),restevents,totalevents
       integer iseed
       data iseed/1/
@@ -74,9 +75,9 @@ c$$$     &        index(buffer(ldir(size)+lcor(size)+3:100),"/")))
          j=map(i)
          buffer=""
          write (buffer(1:10),'(i5,i5)') i,j
-         write (buffer(14:14+ldir(j)),'(a)') dir(j)
-         write (buffer(35:35+lcor(j)),'(a)') cor(j)
-c$$$         write (buffer(45:45+lgraph(j)),'(a)') graph(j)
+         write (buffer(14:14+ldir(j)),'(a)') dir(j)(1:ldir(j))
+         write (buffer(35:35+lcor(j)),'(a)') cor(j)(1:lcor(j))
+c$$$         write (buffer(45:45+lgraph(j)),'(a)') graph(j)(1:lgraph(j))
          write (buffer(52:70),'(d15.8)') num1(j)
          write (buffer(71:89),'(d15.8)') num2(j)
          write (buffer(90:105),'(f10.5)')
@@ -101,51 +102,37 @@ c
       close(1)
 
 
+c***********************************************
 c Determine the number of events for unweighting
+c***********************************************
       write (*,*) 'give number of unweighted events'
       read (*,*) nevents
       write (*,*) nevents
-      totalrest=0d0
-      totevts=0
-      do j=1,size
-         nevts(j)=int(num1(j)/sum*nevents)
-         totevts=totevts+nevts(j)
-         rest(j)=num1(j)/sum*nevents - int(num1(j)/sum*nevents)
-         totalrest=totalrest+dsqrt(rest(j)+dble(nevts(j)))
+c determine the relative, accumulative weights of the channels
+      prob(1)=num1(1)/sum
+      do j=2,size
+         prob(j)=prob(j-1)+num1(j)/sum
       enddo
-      restevents=nevents-totevts
-      if (restevents.ge.size) then
-         write (*,*) 'Error, more rest events than channels.'
-         write (*,*) 'This is impossible.'
+c final weight should be one
+      if (abs(prob(size)-1d0).gt.1d-7) then
+         write (*,*) 'error in determining accumulative probabilities',
+     &        prob(size)+num1(size)/sum-1d0
          stop
       endif
 
-c Determine what to do with the few remaining 'rest events'.
-c Put them to channels at random given by the sqrt(Nevents) 
-c already in the channel (including the rest(j))
-      do j=1,restevents
-         i=1
-         restsum=dsqrt(rest(1)+dble(nevts(1)))
-         xtarget=ran1(iseed)*totalrest
-         do while (restsum .lt. xtarget)
-            i=i+1
-            restsum=restsum+dsqrt(rest(i)+dble(nevts(i)))
+c Assign events to the channels with a probability according
+c to the relative weights of the channels.
+      do i=1,nevents,granularity
+         j=1
+         xtarget=fk88random(iseed)
+         do while (prob(j) .lt. xtarget)
+            j=j+1
          enddo
-         totalrest=totalrest-dsqrt(rest(i)+dble(nevts(i)))+
-     &        dsqrt(dble(nevts(i)+1))
-         nevts(i)=nevts(i)+1
-         rest(i)=0d0
+         nevts(j)=nevts(j)+granularity
       enddo
+c***********************************************
 
-      totalevents=0
-      do j=1,size
-         totalevents=totalevents+nevts(j)
-      enddo
-      if (totalevents.ne.nevents) then
-         write (*,*) 'Do not have the correct number of events',
-     &        totalevents,nevents
-         stop
-      endif
+
 
 c Write the number of events in each P*/G* directory in files
 c called nevts
@@ -165,8 +152,16 @@ c called nevts
          write (1,'(i8)') nevts(j)
          close(1)
          filename(ldir(j)+lcor(j)+3:ldir(j)+lcor(j)+12)='events.lhe'
-         write (2,*) filename(1:ldir(j)+lcor(j)+12),'     ',nevts(j),
-     &        '     ',num1(j)
+         if (ldir(j)+lcor(j)+13.ge.40) then
+            write (*,*) 'error #1 in sumres2.f'
+            write (*,*) 'increase line length',ldir(j)+lcor(j)+13
+            stop
+         endif
+         do i=ldir(j)+lcor(j)+13,40
+            filename(i:i)=' '
+         enddo
+
+         write (2,*) filename(1:40),'     ',nevts(j),'     ',num1(j)
       enddo
       close(2)
 
@@ -224,33 +219,21 @@ c called nevts
       end
 
 
-      function ran1(idum)
-      dimension r(97)
-      parameter (m1=259200,ia1=7141,ic1=54773,rm1=3.8580247e-6)
-      parameter (m2=134456,ia2=8121,ic2=28411,rm2=7.4373773e-6)
-      parameter (m3=243000,ia3=4561,ic3=51349)
-      data iff /0/
-      save r, ix1, ix2, ix3
-      if (idum.lt.0.or.iff.eq.0) then
-        iff=1
-        ix1=mod(ic1-idum,m1)
-        ix1=mod(ia1*ix1+ic1,m1)
-        ix2=mod(ix1,m2)
-        ix1=mod(ia1*ix1+ic1,m1)
-        ix3=mod(ix1,m3)
-        do 11 j=1,97
-          ix1=mod(ia1*ix1+ic1,m1)
-          ix2=mod(ia2*ix2+ic2,m2)
-          r(j)=(float(ix1)+float(ix2)*rm2)*rm1
-11      continue
-        idum=1
-      endif
-      ix1=mod(ia1*ix1+ic1,m1)
-      ix2=mod(ia2*ix2+ic2,m2)
-      ix3=mod(ia3*ix3+ic3,m3)
-      j=1+(97*ix3)/m3
-      if(j.gt.97.or.j.lt.1) stop
-      ran1=r(j)
-      r(j)=(float(ix1)+float(ix2)*rm2)*rm1
-      return
-      end
+      FUNCTION FK88RANDOM(SEED)
+*     -----------------
+* Ref.: K. Park and K.W. Miller, Comm. of the ACM 31 (1988) p.1192
+* Use seed = 1 as first value.
+*
+      IMPLICIT INTEGER(A-Z)
+      REAL*8 MINV,FK88RANDOM
+      SAVE
+      PARAMETER(M=2147483647,A=16807,Q=127773,R=2836)
+      PARAMETER(MINV=0.46566128752458d-09)
+      HI = SEED/Q
+      LO = MOD(SEED,Q)
+      SEED = A*LO - R*HI
+      IF(SEED.LE.0) SEED = SEED + M
+      FK88RANDOM = SEED*MINV
+      END
+
+

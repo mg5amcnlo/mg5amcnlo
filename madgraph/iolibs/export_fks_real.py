@@ -318,6 +318,7 @@ class ProcessExporterFortranFKS_real(export_v4.ProcessExporterFortran):
                      'LesHouchesDummy.f',
                      'LesHouchesMadLoop.f',
                      'MCmasses_HERWIG6.inc',
+                     'MCmasses_HERWIGPP.inc',
                      'MCmasses_PYTHIA6Q.inc',
                      'add_write_info.f',
                      'check_dip.f',
@@ -352,7 +353,11 @@ class ProcessExporterFortranFKS_real(export_v4.ProcessExporterFortran):
                      'myamp.f',
                      'q_es.inc',
                      'reweight.f',
+                     'reweight.inc',
+                     'reweight0.inc',
+                     'reweight1.inc',
                      'reweight_events.f',
+                     'reweight_xsec.f',
                      'run.inc',
                      'setcuts.f',
                      'setscales.f',
@@ -365,6 +370,7 @@ class ProcessExporterFortranFKS_real(export_v4.ProcessExporterFortran):
                      'trapfpe.c',
                      'unwgt.f',
                      'vegas2.for',
+                     'write_ajob.f',
                      'write_event.f']
     
         for file in linkfiles:
@@ -620,6 +626,7 @@ class ProcessExporterFortranFKS_real(export_v4.ProcessExporterFortran):
                      'LesHouchesDummy.f',
                      'LesHouchesMadLoop.f',
                      'MCmasses_HERWIG6.inc',
+                     'MCmasses_HERWIGPP.inc',
                      'MCmasses_PYTHIA6Q.inc',
                      'add_write_info.f',
                      'check_dip.f',
@@ -654,7 +661,11 @@ class ProcessExporterFortranFKS_real(export_v4.ProcessExporterFortran):
                      'myamp.f',
                      'q_es.inc',
                      'reweight.f',
+                     'reweight.inc',
+                     'reweight0.inc',
+                     'reweight1.inc',
                      'reweight_events.f',
+                     'reweight_xsec.f',
                      'run.inc',
                      'setcuts.f',
                      'setscales.f',
@@ -667,6 +678,7 @@ class ProcessExporterFortranFKS_real(export_v4.ProcessExporterFortran):
                      'trapfpe.c',
                      'unwgt.f',
                      'vegas2.for',
+                     'write_ajob.f',
                      'write_event.f']
     
         for file in linkfiles:
