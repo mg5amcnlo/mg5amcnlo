@@ -380,7 +380,8 @@ def to_leg(fksleg):
          'number': fksleg.get('number'),
          'state': fksleg.get('state'),
          'from_group': fksleg.get('from_group'),
-         'onshell': fksleg.get('onshell') } )
+#         'onshell': fksleg.get('onshell') 
+          } )
     return leg
 
 def to_legs(fkslegs):

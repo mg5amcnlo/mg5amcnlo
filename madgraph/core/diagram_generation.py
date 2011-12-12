@@ -59,7 +59,7 @@ class DiagramTag(object):
         """Exception for any problems in DiagramTags"""
         pass
 
-    def __init__(self, diagram, model = None, ninitial = 2):
+    def __init__(self, diagram, model = None):
         """Initialize with a diagram. Create DiagramTagChainLinks according to
         the diagram, and figure out if we need to shift the central vertex."""
 
@@ -79,8 +79,7 @@ class DiagramTag(object):
                                         for leg in legs],
                                         self.vertex_id_from_vertex(vertex,
                                                                    lastvx,
-                                                                   model,
-                                                                   ninitial))
+                                                                   model))
             # Add vertex to leg_dict if not last one
             if not lastvx:
                 leg_dict[vertex.get('legs')[-1].get('number')] = link
@@ -141,7 +140,7 @@ class DiagramTag(object):
             return [((leg.get('id'), leg.get('number')), leg.get('number'))]
 
     @staticmethod
-    def vertex_id_from_vertex(vertex, last_vertex, model, ninitial):
+    def vertex_id_from_vertex(vertex, last_vertex, model):
         """Returns the default vertex id: just the interaction id"""
         return vertex.get('id')
 
@@ -547,18 +546,14 @@ class Amplitude(base_objects.PhysicsObject):
         if process.get('forbidden_s_channels'):
             ninitial = len(filter(lambda leg: leg.get('state') == False,
                               process.get('legs')))
-            verts = base_objects.VertexList(sum([[vertex for vertex \
-                                                  in diagram.get('vertices')[:-1]
-                                           if vertex.get_s_channel_id(\
-                                               process.get('model'), ninitial) \
-                                           in process.get('forbidden_s_channels')] \
-                                               for diagram in res], []))
-            for vert in verts:
-                # Use onshell = False to indicate that this s-channel is forbidden
-                newleg = copy.copy(vert.get('legs').pop(-1))
-                newleg.set('onshell', False)
-                vert.get('legs').append(newleg)
-                
+            res = base_objects.DiagramList(\
+                filter(lambda diagram: \
+                       not any([vertex.get_s_channel_id(\
+                                process.get('model'), ninitial) \
+                                in process.get('forbidden_s_channels')
+                                for vertex in diagram.get('vertices')[:-1]]),
+                       res))
+
         # Set diagrams to res
         self['diagrams'] = res
 
@@ -582,9 +577,6 @@ class Amplitude(base_objects.PhysicsObject):
                     ntlnumber = legs[-1].get('number')
                     lastleg = filter(lambda leg: leg.get('number') != ntlnumber,
                                      lastvx.get('legs'))[0]
-                    # Reset onshell in case we have forbidden s-channels
-                    if lastleg.get('onshell') == False:
-                        lastleg.set('onshell', None)
                     # Replace the last leg of nexttolastvertex
                     legs[-1] = lastleg
                     nexttolastvertex.set('legs', legs)
@@ -916,17 +908,15 @@ class Amplitude(base_objects.PhysicsObject):
         vertices = []
 
         for diagram in self.get('diagrams'):
-            # Keep track of external legs (leg numbers already used)
-            leg_external = set()
             for ivx, vertex in enumerate(diagram.get('vertices')):
                 for ileg, leg in enumerate(vertex.get('legs')):
-                    # Ensure that only external legs get decay flag
-                    if leg.get('state') and leg.get('id') in decay_ids and \
-                           leg.get('number') not in leg_external:
-                        # Use onshell to indicate decaying legs,
+                    if leg.get('state') and leg.get('id') in decay_ids:
+                        # Use from_group to indicate decaying legs,
                         # i.e. legs that have decay chains
                         leg = copy.copy(leg)
-                        leg.set('onshell', True)
+                        leg.set('from_group', True)
+                    else:
+                        leg.set('from_group', False)
                     try:
                         index = legs.index(leg)
                     except ValueError:
@@ -934,7 +924,6 @@ class Amplitude(base_objects.PhysicsObject):
                         legs.append(leg)
                     else: # Found a leg
                         vertex.get('legs')[ileg] = legs[index]
-                    leg_external.add(leg.get('number'))
                 try:
                     index = vertices.index(vertex)
                     diagram.get('vertices')[ivx] = vertices[index]
@@ -997,7 +986,7 @@ class DecayChainAmplitude(Amplitude):
                 self['decay_chains'].append(\
                     DecayChainAmplitude(process, collect_mirror_procs,
                                         ignore_six_quark_processes))
-            # Flag decaying legs in the core process by onshell = True
+            # Flag decaying legs in the core process by from_group = True
             decay_ids = sum([[a.get('process').get('legs')[0].get('id') \
                               for a in dec.get('amplitudes')] for dec in \
                              self['decay_chains']], [])
@@ -1139,7 +1128,7 @@ class MultiProcess(base_objects.PhysicsObject):
             self['process_definitions'] = argument
         elif isinstance(argument, AmplitudeList):
             super(MultiProcess, self).__init__()
-            self['amplitudes'] = argument 
+            self['amplitudes'] = argument
         elif argument != None:
             # call the mother routine
             super(MultiProcess, self).__init__(argument)
@@ -1194,7 +1183,6 @@ class MultiProcess(base_objects.PhysicsObject):
                                        self.get('collect_mirror_procs'),
                                        self.get('ignore_six_quark_processes')))
                 else:
-
                     self['amplitudes'].extend(\
                        MultiProcess.generate_multi_amplitudes(process_def,
                                        self.get('collect_mirror_procs'),
@@ -1313,7 +1301,7 @@ class MultiProcess(base_objects.PhysicsObject):
                 
                 fast_proc = \
                           array.array('i',[leg.get('id') for leg in legs])
-                if collect_mirror_procs and False:
+                if collect_mirror_procs and False: #MZ for madfks
                     # Check if mirrored process is already generated
                     mirror_proc = \
                               array.array('i', [fast_proc[1], fast_proc[0]] + \
@@ -1571,9 +1559,9 @@ class MultiProcess(base_objects.PhysicsObject):
         new_amp.set('diagrams', diagrams)
         new_amp.trim_diagrams()
 
-        # Make sure to reset mirror process
+        # Make sure to reset mirror processes
         new_amp.set('has_mirror_process', False)
-        
+
         return new_amp
         
 #===============================================================================
