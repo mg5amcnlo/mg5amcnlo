@@ -79,6 +79,7 @@ namespace fwrapper {
   void transfer_cluster_transfer(const double * p, const int & npart, 
                                  const JetDefinition & jet_def,
 				 double * f77jets, int & njets,
+                                 const double & ptmin = 0.0,
 				 const double & ghost_maxrap = 0.0,  
 				 const int & nrepeat = 0, const double & ghost_area = 0.0) {
 
@@ -96,7 +97,7 @@ namespace fwrapper {
 	 cs.reset(new ClusterSequenceArea(input_particles,jet_def,area_def));
     }
     // extract jets (pt-ordered)
-    jets = sorted_by_pt(cs->inclusive_jets());
+    jets = sorted_by_pt(cs->inclusive_jets(ptmin));
     
     // transfer jets -> f77jets[4*ijet+0..3]
     transfer_jets(f77jets, njets);
@@ -198,7 +199,7 @@ void fastjetsisconewitharea_(const double * p, const int & npart,
     jet_def = plugin.get();
 
     // do everything
-    transfer_cluster_transfer(p,npart,jet_def,f77jets,njets,ghost_rapmax,nrepeat,ghost_area);
+    transfer_cluster_transfer(p,npart,jet_def,f77jets,njets,0.0,ghost_rapmax,nrepeat,ghost_area);
 }
 
 
@@ -240,7 +241,8 @@ void fastjetsisconewitharea_(const double * p, const int & npart,
 // (particle mass).
 //
 void fastjetppgenkt_(const double * p, const int & npart,                   
-                     const double & R, const double & palg,
+                     const double & R, const double & ptmin,
+                     const double & palg,
                      double * f77jets, int & njets) {
 
     // prepare jet def
@@ -255,7 +257,7 @@ void fastjetppgenkt_(const double * p, const int & npart,
     }
 
     // do everything
-    transfer_cluster_transfer(p,npart,jet_def,f77jets,njets);
+    transfer_cluster_transfer(p,npart,jet_def,f77jets,njets,ptmin);
 }
 
 
@@ -317,7 +319,7 @@ void fastjetppgenktwitharea_(const double * p, const int & npart,
     }
         
     // do everything
-    transfer_cluster_transfer(p,npart,jet_def,f77jets,njets,ghost_rapmax,nrepeat,ghost_area);
+    transfer_cluster_transfer(p,npart,jet_def,f77jets,njets,0.0,ghost_rapmax,nrepeat,ghost_area);
 }
 
 

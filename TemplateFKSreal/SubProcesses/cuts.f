@@ -246,16 +246,8 @@ ccc----
 
 
 ccc----FOR FJ v > 3.0
-      call fastjetppgenkt(pQCD,NN,rfj,palg,pjet,njet)
+      call fastjetppgenkt(pQCD,NN,rfj,sycut,palg,pjet,njet)
 
-c now find the jets with pt > sycut
-      njetnew = 0
-      do i = 1,njet
-        thispt = dsqrt(pjet(1,i)**2+pjet(2,i)**2)
-        if (thispt.gt.sycut) njetnew= njetnew+1
-      enddo
-      njet = njetnew
-ccc---        
 
       if (NJET .ne. NN .and. NJET .ne. NN-1) then
          passcuts=.false.
