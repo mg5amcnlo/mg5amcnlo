@@ -84,11 +84,11 @@ fi
 # Always run madevent_vegas: set vegas_mint to '0'.
 vegas_mint='0'
 
-if [[ $run_mode == "born0" || $run_mode == "virt0" ]] ; then
+if [[ $run_mode == "born0" || $run_mode == "virt0" || $run_mode == "viSA0" || $run_mode == "viSB0" ]] ; then
     runmode=1
-elif [[ $run_mode == "virt" || $run_mode == "viSC" || $run_mode == "viLC" || $run_mode == "born" ]] ; then
+elif [[ $run_mode == "virt" || $run_mode == "viSC" || $run_mode == "viSA" || $run_mode == "viSB" || $run_mode == "viLC" || $run_mode == "born" ]] ; then
     runmode=2
-elif [[ $run_mode == "novi" || $run_mode == "grid" || $run_mode == "real" || $run_mode == "all" ]] ; then
+elif [[ $run_mode == "novi" || $run_mode == "novA" || $run_mode == "novB" || $run_mode == "grid" || $run_mode == "real" || $run_mode == "all" ]] ; then
     runmode=3
 else
     echo "don't know what to do:   " $run_mode
@@ -138,6 +138,10 @@ if [[ $runmode == 1 ]] ; then
             for job in $jobs ; do
 		if [[ $run_cluster == 1 ]] ; then
                     sed -i.bak "7s/.*/Arguments = $vegas_mint $run_mode $use_preset/" $job
+		    if [[ -e done.$job.$vegas_mint.$run_mode.$use_preset ]] ; then
+			rm -f done.$job.$vegas_mint.$run_mode.$use_preset
+		    fi
+		    touch wait.$job.$vegas_mint.$run_mode.$use_preset
                     condor_submit $job
                     rm $job.bak
 		elif [[ $run_cluster == 0 ]] ; then
@@ -157,6 +161,10 @@ elif [[ $runmode == 2 ]] ; then
             for job in $jobs ; do
 		if [[ $run_cluster == 1 ]] ; then
                     sed -i.bak "7s/.*/Arguments = $vegas_mint $run_mode $use_preset/" $job
+		    if [[ -e done.$job.$vegas_mint.$run_mode.$use_preset ]] ; then
+			rm -f done.$job.$vegas_mint.$run_mode.$use_preset
+		    fi
+		    touch wait.$job.$vegas_mint.$run_mode.$use_preset
                     condor_submit $job
                     rm $job.bak
 		elif [[ $run_cluster == 0 ]] ; then
@@ -175,6 +183,10 @@ elif [[ $runmode == 3 ]] ; then
         for job in $jobs ; do
 	    if [[ $run_cluster == 1 ]] ; then
                 sed -i.bak "7s/.*/Arguments = $vegas_mint $run_mode $use_preset/" $job
+		if [[ -e done.$job.$vegas_mint.$run_mode.$use_preset ]] ; then
+		    rm -f done.$job.$vegas_mint.$run_mode.$use_preset
+		fi
+		touch wait.$job.$vegas_mint.$run_mode.$use_preset
                 condor_submit $job
                 rm $job.bak
 	    elif [[ $run_cluster == 0 ]] ; then
