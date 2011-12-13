@@ -236,9 +236,10 @@ class CmdExtended(cmd.Cmd):
         else:
             #Force class default
             self.debug_output = MadEventCmd.debug_output
-        if os.path.exists('ME5_debug'):
+        if os.path.exists('ME5_debug') and not 'ME5_debug' in self.debug_output:
             os.remove('ME5_debug')
-        os.system('ln -s %s ME5_debug &> /dev/null' % self.debug_output)
+        if not 'ME5_debug' in self.debug_output:
+            os.system('ln -s %s ME5_debug &> /dev/null' % self.debug_output)
 
     
     def nice_user_error(self, error, line):

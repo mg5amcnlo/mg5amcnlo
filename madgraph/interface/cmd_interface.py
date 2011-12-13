@@ -664,8 +664,9 @@ This will take effect only in a NEW terminal
             path = os.path.realpath(args[0])
         else:    
             raise self.InvalidCmd, '%s is not a valid directory' % args[0]
-            
+                
         mode = self.find_output_type(path)
+        
         args[0] = mode
         args.append(path)
         # inform where we are for future command
@@ -714,7 +715,10 @@ This will take effect only in a NEW terminal
 
         if os.path.isfile(pjoin(include_path, 'Pythia.h')):
             return 'pythia8'
-        elif os.path.isdir(src_path):
+        elif not os.path.isdir(os.path.join(path, 'SubProcesses')):
+            raise self.InvalidCmd, '%s : Not a valid directory' % path
+        
+        if os.path.isdir(src_path):
             return 'standalone_cpp'
         elif os.path.isfile(pjoin(bin_path,'generate_events')):
             return 'madevent'
