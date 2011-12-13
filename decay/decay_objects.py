@@ -4733,9 +4733,12 @@ class AbstractModel(base_objects.Model):
                 self.add_ab_interaction(inter['id'], color = color_list)
 
                 # Remove subset, if remove_list is not empty
-                for remove_key in remove_list:                    
+                for remove_key in remove_list:
+                    # Remove old abstract interactions in interaction list
+                    for old_int in self['abstract_interactions_dict'][remove_key]:
+                        self['interactions'].remove(old_int)
                     del self['abstract_interactions_dict'][remove_key]
-
+                
         # Reset the id of all abstract interactions
         # (the deletion could cause some errors.)
         for i, ab_inter in enumerate(self['interactions']):
@@ -4759,7 +4762,6 @@ class AbstractModel(base_objects.Model):
                         %(type_sn, i, j)
 
 
-        
 
         # Update the quick reference dict
         # and setup the interaction_coupling_dict
@@ -4923,7 +4925,7 @@ class AbstractModel(base_objects.Model):
             return False
 
         # Full comparision of interaction type.
-        # The duplicated intereactions are take into consideration.
+        # The duplicated intereactions are taken into consideration.
         if self.get_interactionlist_type(real_inter_id_list)[0] != \
                 ab_inter_id_list:
             return False
@@ -5223,8 +5225,10 @@ class Ab2RealDict(base_objects.PhysicsObject):
             if not ab_pid in self['final_legs_dict'].keys():
                 self['final_legs_dict'][ab_pid] = real_pids[k]
             elif isinstance(self['final_legs_dict'][ab_pid], list):
+                logger.warning('multiple real id correspondence')
                 self['final_legs_dict'][ab_pid].append(real_pids[k])
             else:
+                logger.warning('multiple real id correspondence')
                 self['final_legs_dict'][ab_pid] = \
                     [self['final_legs_dict'][ab_pid], real_pids[k]]
 

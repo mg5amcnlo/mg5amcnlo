@@ -2570,9 +2570,15 @@ class Test_AbstractModel(unittest.TestCase):
                                  ab_model['interaction_coupling_dict'][-inter['id']])
 
         # Test for non-repeated interaction id
+        # Test if all interactions in ab_model is up-to-date
         id_list = [i['id'] for i in ab_model['interactions']]
+        new_inter_list = [intlist[0] for key, intlist \
+                              in ab_model['abstract_interactions_dict'].items()]
+
         for ab_inter in ab_model['interactions']:
             self.assertEqual(id_list.count(ab_inter['id']), 1)
+            self.assertTrue(ab_inter in new_inter_list)
+
 
         # Test if the lorentz and color types have no intersection
         # if the particles type are the same            
@@ -3025,10 +3031,10 @@ class Test_AbstractModel(unittest.TestCase):
         ab_amp['ab2real_dicts'][-1]['dia_sn_dict'] = {0:0, 1:1}
         ab_amp.generate_variables_dicts(h_zz_eevv)
         # Test for initial particle
-        #print ab_amp.nice_string(), h_zz_eevv.nice_string()
+        print ab_amp.nice_string(), h_zz_eevv.nice_string()
         #print ab_amp['ab2real_dicts'][-1]['mass_dict']
         #print ab_amp['ab2real_dicts'][-1]['coup_dict']
-        #print ab_model['interaction_coupling_dict'][63], self.my_testmodel.get_interaction(63)
+        #print ab_model['interaction_coupling_dict'][63], self.my_testmodel.get_interaction(63), ab_model['abstract_interactions_dict'][ab_model['interaction_type_dict'][63]]
         self.assertEqual(ab_amp['ab2real_dicts'][-1]['mass_dict'],
                          {'MSS1_00':'MH',
                           # lepton mass
@@ -3041,11 +3047,11 @@ class Test_AbstractModel(unittest.TestCase):
                          {'G0010000':'GC_64',
                           'G0010001':'GC_67',
                           # h > ww, w+
-                          'G0070000':'GC_33',
+                          'G0060000':'GC_33',
                           #         w- (anti-id)
-                          'G0070001':'GC_33', 
-                          'G0070002':'GC_53', 
-                          'G0070003':'GC_34', 'G0070103':'GC_48'
+                          'G0060001':'GC_33', 
+                          'G0060002':'GC_53', 
+                          'G0060003':'GC_34', 'G0060103':'GC_48'
                           })
         #----------------------
         # Test generate_ab_amplitude
