@@ -30,6 +30,7 @@ import madgraph.iolibs.save_load_object as save_load_object
 from madgraph.core.color_algebra import *
 
 import aloha.create_aloha as create_aloha
+import aloha.aloha_fct as aloha_fct
 
 import models as ufomodels
 import models.model_reader as model_reader
@@ -46,6 +47,9 @@ import check_param_card
 
 class UFOImportError(MadGraph5Error):
     """ a error class for wrong import of UFO model""" 
+
+class InvalidModel(MadGraph5Error):
+    """ a class for invalid Model """
 
 def find_ufo_path(model_name):
     """ find the path to a model """
@@ -315,6 +319,17 @@ class UFOMG5Converter(object):
         
         particles = base_objects.ParticleList(particles)
         
+        # Check the coherence of the Fermion Flow
+        nb_fermion = sum([p.is_fermion() and 1 or 0 for p in particles])
+        try:
+            if nb_fermion:
+                [aloha_fct.check_flow_validity(helas.structure, nb_fermion) \
+                                          for helas in interaction_info.lorentz]
+        except aloha_fct.WrongFermionFlow, error:
+            text = 'Fermion Flow error for interactions %s:\n %s' % \
+             (', '.join([p.name for p in interaction_info.particles]), error)
+            raise InvalidModel, text
+            
         # Import Lorentz content:
         lorentz = [helas.name for helas in interaction_info.lorentz]
         

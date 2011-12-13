@@ -250,7 +250,6 @@ class Cmd(BasicCmd):
         self.log = False
         if os.path.exists(self.debug_output):
             os.remove(self.debug_output)
-        print self.debug_output
         try:
             cmd.Cmd.onecmd(self, 'history %s' % self.debug_output)
         except Exception, error:

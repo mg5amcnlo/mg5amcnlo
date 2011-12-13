@@ -21,6 +21,8 @@ Update notes for MadGraph 5 (in reverse time order)
                   OM: Change the import command. It's now allowed to omit the 
                       type of import. The type is guessed automaticaly. 
                       This is NOT allowed on the web.
+                  OM: Add a check that the fermion flow is coherent with the 
+		      Lorentz structure associates to the vertex.
                   OM: Change the default fortran compiler to gfortran.
                   OM: Add the possibility to force which fortran compiler will
                       be used, either via the configuration file or via the set 
