@@ -248,7 +248,14 @@ class Cmd(BasicCmd):
         os.chdir(self.__initpos)
         # Create the debug files
         self.log = False
-        cmd.Cmd.onecmd(self, 'history %s' % self.debug_output)
+        if os.path.exists(self.debug_output):
+            os.remove(self.debug_output)
+        print self.debug_output
+        try:
+            cmd.Cmd.onecmd(self, 'history %s' % self.debug_output)
+        except Exception, error:
+            print error
+            
         debug_file = open(self.debug_output, 'a')
         traceback.print_exc(file=debug_file)
         # Create a nice error output

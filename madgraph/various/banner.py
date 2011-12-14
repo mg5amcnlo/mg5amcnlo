@@ -41,7 +41,7 @@ class Banner(dict):
         
         #Look at the version
         if MADEVENT:
-            self['MGVERSION'] = '#%s\n' % open(pjoin(MEDIR, 'MGMEVERSION'.txt)).read()
+            self['MGVERSION'] = '#%s\n' % open(pjoin(MEDIR, 'MGMEVersion.txt')).read()
         else:
             info = misc.get_pkg_info()
             self['MGVERSION'] = info['version']+'\n'
