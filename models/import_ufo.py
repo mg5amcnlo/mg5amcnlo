@@ -716,7 +716,7 @@ class RestrictModel(model_reader.ModelReader):
                 continue
             elif not strict_zero and abs(value) < 1e-10:
                 return self.detect_identical_couplings(strict_zero=True)
-            elif not strict_zero:
+            elif not strict_zero and abs(value) < 1e-15:
                 zero_coupling.append(name)
             
             if value in dict_value_coupling:
