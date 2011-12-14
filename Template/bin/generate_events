@@ -34,6 +34,7 @@ if not (sys.version_info[0] == 2 or sys.version_info[1] > 5):
 
 
 def set_configuration():
+    import coloring_logging
     logging.config.fileConfig(os.path.join(root_path, 'bin', 'internal', 'me5_logging.conf'))
     logging.root.setLevel(logging.INFO)
     logging.getLogger('madevent').setLevel(logging.INFO)
@@ -95,17 +96,24 @@ if '__main__' == __name__:
 
     set_configuration()
     argument = sys.argv
-    
-    if '-h' in argument or '--help' in argument:
-        launch = ME.MadEventCmd(me_dir=root_path)
-        launch.exec_cmd('help generate_events')
-    elif len(argument) > 1 and argument[1] in ['0', '1', '2']:
-        treat_old_argument(argument)
-    else:
-        launch = ME.MadEventCmd(me_dir=root_path)
-        launch.exec_cmd('generate_events %s' % ' '.join(argument[1:]))
-        launch.run_cmd('quit')
-                
+    try:
+        if '-h' in argument or '--help' in argument:
+            launch = ME.MadEventCmd(me_dir=root_path)
+            launch.exec_cmd('help generate_events')
+        elif len(argument) > 1 and argument[1] in ['0', '1', '2']:
+            treat_old_argument(argument)
+        else:
+            open('/tmp/mg5tmp.cmd','w').write('generate_events %s' % ' '.join(argument[1:]))
+            os.system('%s/madevent /tmp/mg5tmp.cmd' % pjoin(root_path, 'bin'))
+    except KeyboardInterrupt:
+        pass
+    except ME.MadEventAlreadyRunning, error:
+        logging.error(str(error))
+        sys.exit()
+                          
+    if os.path.exists(pjoin(root_path, 'RunWeb')):  
+        os.remove(pjoin(root_path, 'RunWeb'))      
+            
     # reconfigure path for the web 
     #if len(argument) == 5:
     #    ME.pass_in_web_mode()

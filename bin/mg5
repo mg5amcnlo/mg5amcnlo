@@ -60,6 +60,7 @@ if __debug__ and not options.debug and \
 
 import logging
 import logging.config
+import madgraph.interface.coloring_logging
 
 try: 
     import readline

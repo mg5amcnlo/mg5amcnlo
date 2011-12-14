@@ -1112,7 +1112,8 @@ class ProcessExporterFortranME(ProcessExporterFortran):
                                        self.dir_path+'/bin/internal/sum_html.py') 
         cp(_file_path+'/interface/.mg5_logging.conf', 
                                  self.dir_path+'/bin/internal/me5_logging.conf') 
-
+        cp(_file_path+'/interface/coloring_logging.py', 
+                                 self.dir_path+'/bin/internal/coloring_logging.py') 
 
     #===========================================================================
     # export model files

@@ -842,6 +842,7 @@ This will take effect only in a NEW terminal
             elif 'pythia8' != self._export_format:
                 self._export_dir = path
             else:
+                print path, args
                 if self.configuration['pythia8_path']:
                     self._export_dir = self.configuration['pythia8_path']
                 else:
@@ -3109,6 +3110,7 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
             # Output the process files
             process_names = []
             if isinstance(self._curr_matrix_elements, group_subprocs.SubProcessGroupList):
+                print "PYTHIa 8 sue", path
                 for (group_number, me_group) in enumerate(self._curr_matrix_elements):
                     exporter = export_cpp.generate_process_files_pythia8(\
                             me_group.get('matrix_elements'), self._curr_cpp_model,
