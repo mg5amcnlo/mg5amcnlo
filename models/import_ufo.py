@@ -817,7 +817,11 @@ class RestrictModel(model_reader.ModelReader):
                 expr = obj.name
                 continue
             # Add a Rule linked to the param_card
-            self.rule_card.add_identical(obj.lhablock.lower(), obj.lhacode, 
+            if factor ==1:
+                self.rule_card.add_identical(obj.lhablock.lower(), obj.lhacode, 
+                                                         parameters[0][0].lhacode )
+            else:
+                self.rule_card.add_opposite(obj.lhablock.lower(), obj.lhacode, 
                                                          parameters[0][0].lhacode )
             # delete the old parameters                
             external_parameters.remove(obj)    

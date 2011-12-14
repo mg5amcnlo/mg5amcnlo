@@ -14,6 +14,8 @@ Update notes for MadGraph 5 (in reverse time order)
 		      events (with different parameters).
                   OM: MadEvent checks that the param_card is coherent with the 
                       restriction used during the model generation. 
+                  OM: Restriction Model will now also force opposite number to match.
+		      (helpfull for constraining to rotation matrix).  
                   OM: For MSSM model, convert param_card to SLAH1. This card is
                       converted to SLAH2 during the MadEvent run since the UFO 
                       model uses SLAH2. This allows to use Pythia 6,

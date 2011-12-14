@@ -410,6 +410,7 @@ class ParamCardRule(object):
         self.zero = []
         self.one = []    
         self.identical = []
+        self.opposite = []
 
         # constraint due to the model
         self.rule = []
@@ -425,10 +426,14 @@ class ParamCardRule(object):
         """add a one rule"""
         self.one.append( (lhablock, lhacode, comment) )        
 
-    def add_identical(self, lhablock, lhacode, lhacode2, factor, comment=''):
+    def add_identical(self, lhablock, lhacode, lhacode2, comment=''):
         """add a rule for identical value"""
-        #1 = factor * #2
-        self.identical.append( (lhablock, lhacode, lhacode2, factor, comment) )
+        self.identical.append( (lhablock, lhacode, lhacode2, comment) )
+        
+    def add_opposite(self, lhablock, lhacode, lhacode2, comment=''):
+        """add a rule for identical value"""
+        self.opposite.append( (lhablock, lhacode, lhacode2, comment) )
+
         
     def add_rule(self, lhablock, lhacode, rule, comment=''):
         """add a rule for constraint value"""
@@ -455,9 +460,15 @@ class ParamCardRule(object):
         for name, id,id2, comment in self.identical:
             text+='     %s %s : %s # %s\n' % (name, '    '.join([str(i) for i in id]), 
                                       '    '.join([str(i) for i in id2]), comment)
+
+        # OPPOSITE
+        text +='</identical>\n<opposite>\n'
+        for name, id,id2, comment in self.opposite:
+            text+='     %s %s : %s # %s\n' % (name, '    '.join([str(i) for i in id]), 
+                                      '    '.join([str(i) for i in id2]), comment)
         
         # CONSTRAINT
-        text += '</identical>\n<constraint>\n'
+        text += '</opposite>\n<constraint>\n'
         for name, id, rule, comment in self.rule:
             text += '     %s %s : %s # %s\n' % (name, '    '.join([str(i) for i in id]), 
                                                                   rule, comment)
@@ -519,6 +530,20 @@ class ParamCardRule(object):
                 lhacode = [int(code) for code in lhacode ]
                 lhacode2 = [int(code) for code in lhacode2.split() ]
                 self.add_identical(blockname, lhacode, lhacode2, '')        
+
+        #Add Opposite element
+        element = tree.find('opposite')
+        if element is not None:
+            for line in element.text.split('\n'):
+                line = line.split('#',1)[0] 
+                if not line:
+                    continue
+                line, lhacode2 = line.split(':')
+                lhacode = line.split()
+                blockname = lhacode.pop(0)
+                lhacode = [int(code) for code in lhacode ]
+                lhacode2 = [int(code) for code in lhacode2.split() ]
+                self.add_opposite(blockname, lhacode, lhacode2, '') 
 
         #Add Rule element
         element = tree.find('rule')
@@ -623,7 +648,7 @@ class ParamCardRule(object):
             else:
                 value1 = float(param.value)
 
-                if abs(value1) != abs(value2):
+                if value1 != value2:
                     if not modify:
                         raise InvalidParamCard, 'parameter %s: %s is not to identical to parameter  %s' % \
                                     (block, ' '.join([str(i) for i in id1]),
@@ -632,6 +657,29 @@ class ParamCardRule(object):
                         param = card[block].get(id1) 
                         param.value = value2
                         param.comment += ' must be identical to %s' % id2
+
+        # check opposite
+        for block, id1, id2, comment in self.opposite:
+            value2 = float(card[block].get(id2).value)
+            try:
+                param = card[block].get(id1)
+            except KeyError:
+                if modify:
+                    new_param = Parameter(block=block,lhacode=id1, value=-value2, 
+                                    comment='must be opposite to to %s' %id2)
+                    card[block].append(new_param)
+            else:
+                value1 = float(param.value)
+
+                if value1 != -value2:
+                    if not modify:
+                        raise InvalidParamCard, 'parameter %s: %s is not to opposite to parameter  %s' % \
+                                    (block, ' '.join([str(i) for i in id1]),
+                                            ' '.join([str(i) for i in id2]))         
+                    else:
+                        param = card[block].get(id1) 
+                        param.value = -value2
+                        param.comment += ' must be opposite to %s' % id2
 
         return card
                         
