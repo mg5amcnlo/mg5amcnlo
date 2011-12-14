@@ -2637,7 +2637,7 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
 
 
     
-    def set_configuration(self, config_path=None):
+    def set_configuration(self, config_path=None, test=False):
         """ assign all configuration variable from file 
             ./input/mg5_configuration.txt. assign to default if not define """
             
@@ -2673,6 +2673,9 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
                 self.configuration[name] = value
                 if value.lower() == "none":
                     self.configuration[name] = None
+
+        if test:
+            return self.configuration
 
         # Treat each expected input
         # 1: Pythia8_path
