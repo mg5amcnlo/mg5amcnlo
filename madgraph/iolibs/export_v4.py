@@ -1740,7 +1740,7 @@ c           This is dummy particle used in multiparticle vertices
         if os.environ.has_key('HOME'):
             conf = os.path.join(os.environ['HOME'], '.mg5','mg5_configuration.txt')
             if os.path.exists(conf):
-                # just need to copy seed the path are absolute
+                # just need to copy since the path are absolute
                 path = writer.name
                 writer.close()
                 cp(conf, path)

@@ -1609,6 +1609,13 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
         elif args[0] in self.configuration:
             if args[1] in ['None','True','False']:
                 self.configuration[args[0]] = eval(args[1])
+            elif args[0].endswith('path'):
+                if os.path.exists(args[1]):
+                    self.configuration[args[0]] = args[1]
+                elif os.path.exists(pjoin(self.me_dir, args[1])):
+                    self.configuration[args[0]] = pjoin(self.me_dir, args[1])
+                else:
+                    raise self.InvalidCmd('Not a valid path: keep previous value: \'%s\'' % self.configuration[args[0]])
             else:
                 self.configuration[args[0]] = args[1]             
  
