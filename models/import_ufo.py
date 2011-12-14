@@ -702,7 +702,7 @@ class RestrictModel(model_reader.ModelReader):
                     
         return self.coupling_pos
         
-    def detect_identical_couplings(self):
+    def detect_identical_couplings(self, strict_zero=False):
         """return a list with the name of all vanishing couplings"""
         
         dict_value_coupling = {}
@@ -714,6 +714,10 @@ class RestrictModel(model_reader.ModelReader):
             if value == 0:
                 zero_coupling.append(name)
                 continue
+            elif not strict_zero and abs(value) < 1e-10:
+                return self.detect_identical_couplings(strict_zero=True)
+            elif not strict_zero:
+                zero_coupling.append(name)
             
             if value in dict_value_coupling:
                 iden_key.add(value)
@@ -757,12 +761,16 @@ class RestrictModel(model_reader.ModelReader):
             value = self['parameter_dict'][param.name]
             if value == 0:
                 continue
-            key = (param.lhablock, value) 
+            key = (param.lhablock, value)
+            mkey =  (param.lhablock, -value)
             if key in block_value_to_var:
-                block_value_to_var[key].append(param)
+                block_value_to_var[key].append((param,1))
                 mult_param.add(key)
+            elif mkey in block_value_to_var:
+                block_value_to_var[mkey].append((param,-1))
+                mult_param.add(mkey)
             else: 
-                block_value_to_var[key] = [param]        
+                block_value_to_var[key] = [(param,1)]        
         
         output=[]  
         for key in mult_param:
@@ -797,35 +805,35 @@ class RestrictModel(model_reader.ModelReader):
         """ merge the identical parameters given in argument """
             
         logger_mod.debug('Parameters set to identical values: %s '% \
-                        ', '.join([obj.name for obj in parameters]))
+                        ', '.join(['%s*%s' % (f, obj.name) for (obj,f) in parameters]))
         
         # Extract external parameters
         external_parameters = self['parameters'][('external',)]
-        for i, obj in enumerate(parameters):
+        for i, (obj, factor) in enumerate(parameters):
             # Keeped intact the first one and store information
             if i == 0:
                 obj.info = 'set of param :' + \
-                                     ', '.join([param.name for param in parameters])
+                                     ', '.join([str(f)+'*'+param.name for (param, f) in parameters])
                 expr = obj.name
                 continue
             # Add a Rule linked to the param_card
             self.rule_card.add_identical(obj.lhablock.lower(), obj.lhacode, 
-                                                         parameters[0].lhacode )
+                                                         parameters[0][0].lhacode )
             # delete the old parameters                
             external_parameters.remove(obj)    
             # replace by the new one pointing of the first obj of the class
-            new_param = base_objects.ModelVariable(obj.name, expr, 'real')
+            new_param = base_objects.ModelVariable(obj.name, '%s*%s' %(factor, expr), 'real')
             self['parameters'][()].insert(0, new_param)
         
         # For Mass-Width, we need also to replace the mass-width in the particles
         #This allows some optimization for multi-process.
-        if parameters[0].lhablock in ['MASS','DECAY']:
-            new_name = parameters[0].name
-            if parameters[0].lhablock == 'MASS':
+        if parameters[0][0].lhablock in ['MASS','DECAY']:
+            new_name = parameters[0][0].name
+            if parameters[0][0].lhablock == 'MASS':
                 arg = 'mass'
             else:
                 arg = 'width'
-            change_name = [p.name for p in parameters[1:]]
+            change_name = [p.name for (p,f) in parameters[1:]]
             [p.set(arg, new_name) for p in self['particle_dict'].values() 
                                                        if p[arg] in change_name]
             
@@ -882,7 +890,7 @@ class RestrictModel(model_reader.ModelReader):
             if value == 0:
                 self.rule_card.add_zero(block, param.lhacode)
             elif value == 1:
-                self.rule_card.add_one(block, param.lhacode)   
+                self.rule_card.add_one(block, param.lhacode)
 
 
 

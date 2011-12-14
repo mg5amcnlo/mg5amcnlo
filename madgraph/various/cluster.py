@@ -102,7 +102,7 @@ class CondorCluster(Cluster):
                   Universe = vanilla
                   notification = Error
                   Initialdir = %(cwd)s
-                  condor_req = %(cluster_queue)s=?=True
+                  Requirements = %(cluster_queue)s=?=True
                   queue 1
                """
 

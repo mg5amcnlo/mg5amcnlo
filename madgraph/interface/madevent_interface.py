@@ -2229,7 +2229,8 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
         
         self.update_status('finish', level='pythia', makehtml=False)
         self.exec_cmd('pgs --no_default', postcmd=False, printcmd=False)
-        self.exec_cmd('delphes --no_default', postcmd=False, printcmd=False)
+        if self.configuration['delphes_path']:
+            self.exec_cmd('delphes --no_default', postcmd=False, printcmd=False)
     
     def get_available_tag(self):
         """create automatically a tag"""

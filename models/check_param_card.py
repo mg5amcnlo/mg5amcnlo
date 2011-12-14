@@ -425,9 +425,10 @@ class ParamCardRule(object):
         """add a one rule"""
         self.one.append( (lhablock, lhacode, comment) )        
 
-    def add_identical(self, lhablock, lhacode, lhacode2, comment=''):
+    def add_identical(self, lhablock, lhacode, lhacode2, factor, comment=''):
         """add a rule for identical value"""
-        self.identical.append( (lhablock, lhacode, lhacode2, comment) )
+        #1 = factor * #2
+        self.identical.append( (lhablock, lhacode, lhacode2, factor, comment) )
         
     def add_rule(self, lhablock, lhacode, rule, comment=''):
         """add a rule for constraint value"""
@@ -622,7 +623,7 @@ class ParamCardRule(object):
             else:
                 value1 = float(param.value)
 
-                if value1 != value2:
+                if abs(value1) != abs(value2):
                     if not modify:
                         raise InvalidParamCard, 'parameter %s: %s is not to identical to parameter  %s' % \
                                     (block, ' '.join([str(i) for i in id1]),
