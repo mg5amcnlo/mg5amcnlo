@@ -1112,7 +1112,8 @@ class ProcessExporterFortranME(ProcessExporterFortran):
                                        self.dir_path+'/bin/internal/sum_html.py') 
         cp(_file_path+'/interface/.mg5_logging.conf', 
                                  self.dir_path+'/bin/internal/me5_logging.conf') 
-
+        cp(_file_path+'/interface/coloring_logging.py', 
+                                 self.dir_path+'/bin/internal/coloring_logging.py') 
 
     #===========================================================================
     # export model files
@@ -1740,7 +1741,7 @@ c           This is dummy particle used in multiparticle vertices
         if os.environ.has_key('HOME'):
             conf = os.path.join(os.environ['HOME'], '.mg5','mg5_configuration.txt')
             if os.path.exists(conf):
-                # just need to copy seed the path are absolute
+                # just need to copy since the path are absolute
                 path = writer.name
                 writer.close()
                 cp(conf, path)

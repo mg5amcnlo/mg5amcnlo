@@ -107,7 +107,7 @@ class TestCmdShell1(unittest.TestCase):
     def test_config(self):
         """check that configuration file is at default value"""
         
-        config = self.cmd.set_configuration(MG5DIR+'/input/mg5_configuration.txt')
+        config = self.cmd.set_configuration(MG5DIR+'/input/mg5_configuration.txt', test=True)
         expected = {'web_browser': None, 
                     'text_editor': None, 
                     'cluster_queue': 'madgraph',
@@ -882,7 +882,7 @@ P1_qq_wp_wp_lvl
         directories = ['P0_wp_epve','P0_wp_mupvm','P0_wp_udx','P0_wp_csx']
         for d in directories:
             self.assertTrue(os.path.isdir(os.path.join(self.out_dir,
-                                                       'Subprocesses',
+                                                       'SubProcesses',
                                                        d)))
         self.do('set group_subprocesses True')
         self.do('generate w+ > l+ vl')
@@ -892,7 +892,7 @@ P1_qq_wp_wp_lvl
         directories = ['P0_wp_lvl','P0_wp_qq']
         for d in directories:
             self.assertTrue(os.path.isdir(os.path.join(self.out_dir,
-                                                       'Subprocesses',
+                                                       'SubProcesses',
                                                        d)))
         
     def test_madevent_triplet_diquarks(self):
@@ -998,7 +998,6 @@ P1_qq_wp_wp_lvl
 
         if os.path.isdir(self.out_dir):
             shutil.rmdir(self.out_dir)
-
         # Create out_dir and out_dir/include
         os.makedirs(os.path.join(self.out_dir,'include'))
         # Touch the file Pythia.h, which is needed to verify that this is a Pythia dir

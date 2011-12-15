@@ -239,6 +239,8 @@ class TestParamCardRule(unittest.TestCase):
 <identical>
      mass 1 : 2 # 
 </identical>
+<opposite>
+</opposite>
 <constraint>
 </constraint>
 </file>"""
@@ -419,6 +421,8 @@ DECAY 25 2.441404e+00 #  wh
      mass 25 : 23 # 
      decay 25 : 23 # 
 </identical>
+<opposite>
+</opposite>
 <constraint>
 </constraint>
 </file>"""
