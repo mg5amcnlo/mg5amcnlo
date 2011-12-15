@@ -132,7 +132,7 @@ C
 C     START
 C
       NHIST=0
-      DO 1, I=1,500             
+      DO 1, I=1,NPLOTS             
    1  BOOK(I)=' NO'
       END  
  
@@ -1022,7 +1022,10 @@ C*******************************************************************
 
 
       subroutine bookup4(n,string,del,xl,xu)
-      character * (*) string
+      implicit none
+      integer n
+      character*(*) string
+      double precision del,xl,xu
 c
 c Per ogni istogramma da fare, ne sono richiesti quattro
 c In n si accumulano i valori in outfun.
@@ -1046,8 +1049,9 @@ c
       end
 
       subroutine accum
-      PARAMETER (NMB=500)
       implicit real * 8 (a-h,o-z)
+      include 'dbook.inc'
+      PARAMETER (NMB=NPLOTS)
       character * 3 tag
 c
 c     Accumula i valori e i valori al quadrato per l'analisi statistica,
@@ -1082,8 +1086,9 @@ c adds file filn to the list of save files.
       end
 
       subroutine sumfil(files,nfil)
-      PARAMETER (NMB=500)
       implicit real * 8 (a-h,o-z)
+      include 'dbook.inc'
+      PARAMETER (NMB=NPLOTS)
       external dummyinit
       character * 3 tag
       character * 70 files(*)
@@ -1107,6 +1112,9 @@ c
       end
 
       subroutine addup(j)
+      implicit none
+      integer j
+      real*8 dum
 c
 c accumula j+1 riscalato in j e pone in j+2 la stima dell'errore
 c

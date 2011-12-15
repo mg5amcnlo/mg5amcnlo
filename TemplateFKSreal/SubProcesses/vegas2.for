@@ -221,9 +221,9 @@ c Abort. (if itmp=2 this is not the case)
       end
 
       subroutine savea(name,statf)
-      PARAMETER (NMB=500)
-      character * 80 runstr,string
       include "dbook.inc"
+      PARAMETER (NMB=NPLOTS)
+      character * 80 runstr,string
       character * 3 books(nmb)
       real * 8 xl,xu,acc
       common/bveg1/xl(58),xu(58),acc,ndim,ncall,itmx,nprn
@@ -348,9 +348,9 @@ c
       end
 
       subroutine save(name,statf)
-      PARAMETER (NMB=500)
-      character * 80 runstr,string
       include "dbook.inc"
+      PARAMETER (NMB=NPLOTS)
+      character * 80 runstr,string
       character * 3 books(nmb)
       real * 8 xl,xu,acc
       common/bveg1/xl(58),xu(58),acc,ndim,ncall,itmx,nprn

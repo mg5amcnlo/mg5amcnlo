@@ -24,11 +24,6 @@ c
       do i=1,2
         kk=(i-1)*50
         call bookup(kk+1,'total rate'//cc(i),1.0d0,0.5d0,5.5d0)
-        call bookup(kk+2,'e rapidity'//cc(i),0.5d0,-5d0,5d0)
-        call bookup(kk+3,'e pt'//cc(i),20d0,0d0,400d0)
-        call bookup(kk+4,'et miss'//cc(i),20d0,0d0,400d0)
-        call bookup(kk+5,'transverse mass'//cc(i),5d0,0d0,200d0)
-        call bookup(kk+6,'w rapidity'//cc(i),0.5d0,-5d0,5d0)
       enddo
       return
       end
@@ -46,6 +41,7 @@ c
       double precision evtsgn
       common /c_unwgt/evtsgn,unwgt
       integer i,kk
+      include 'dbook.inc'
 c
       if (unwgt) then
          ytit='events per bin'
@@ -54,7 +50,7 @@ c
       endif
       xnorm1=1.d0/float(itmax)
       xnorm2=1.d0/float(ncall*itmax)
-      do i=1,500
+      do i=1,NPLOTS
         if(usexinteg.and..not.mint) then
            call mopera(i,'+',i,i,xnorm1,0.d0)
         elseif(mint) then
@@ -65,12 +61,6 @@ c
       do i=1,2
         kk=(i-1)*50
         call multitop(kk+1,3,2,'total rate',ytit,'LIN')
-        call multitop(kk+2,3,2,'e rapidity',ytit,'LOG')
-        call multitop(kk+3,3,2,'e pt',ytit,'LOG')
-        call multitop(kk+4,3,2,'et miss',ytit,'LOG')
-        call multitop(kk+5,3,2,'transverse mass',ytit,'LOG')
-        call multitop(kk+6,3,2,'w rapidity',ytit,'LOG')
-c$$$        call mtop(kk+1,'total rate',ytit,'LIN')
       enddo
       return                
       end
@@ -101,12 +91,16 @@ C *WARNING**WARNING**WARNING**WARNING**WARNING**WARNING**WARNING**WARNING*
       integer itype
       real*8 var
       real*8 ppevs(0:3,nexternal)
-      double precision djet,ecut,ycut
+
+      real*8 getrapidity,getpseudorap,chybst,shybst,chybstmo
+      real*8 xd(1:3)
+      data (xd(i),i=1,3)/0,0,1/
+      real*8 pplab(0:3,nexternal)
       double precision ppcl(4,nexternal),y(nexternal)
-      double precision pjet(4,nexternal)
+      double precision pjet(0:3,nexternal)
       double precision cthjet(nexternal)
       integer nn,njet,nsub,jet(nexternal)
-      real*8 emax,getcth,cpar,dpar,thrust,dot,shat, getrapidity
+      real*8 emax,getcth,cpar,dpar,thrust,dot,shat
       integer i,j,kk,imax
 
       LOGICAL  IS_A_J(NEXTERNAL),IS_A_L(NEXTERNAL)
@@ -115,12 +109,13 @@ C *WARNING**WARNING**WARNING**WARNING**WARNING**WARNING**WARNING**WARNING*
       COMMON /TO_SPECISA/IS_A_J,IS_A_A,IS_A_L,IS_A_B,IS_A_NU,IS_HEAVY
 c masses
       double precision pmass(nexternal)
+      double precision  pt1, eta1, y1, pt2, eta2, y2, pt3, eta3, y3, ht
+
       common/to_mass/pmass
-      real *8 pplab(0:3, nexternal)
-      double precision shybst, chybst, chybstmo
-      real*8 xd(1:3)
-      data (xd(i), i=1,3) /0,0,1/
-      real*8 ye, pte, etmiss, mtr, pw(0:3), yw
+      double precision ppkt(0:3,nexternal),ecut,djet
+      double precision ycut, palg
+      integer ipartjet(nexternal)
+
 c
       if(itype.eq.11.or.itype.eq.12)then
         kk=0
@@ -130,63 +125,58 @@ c
         write(*,*)'Error in outfun: unknown itype',itype
         stop
       endif
-c
+
       chybst=cosh(ybst_til_tolab)
       shybst=sinh(ybst_til_tolab)
-      chybstmo= chybst-1.d0
+      chybstmo=chybst-1.d0
       do i=3,nexternal
-      call boostwdir2(chybst, shybst, chybstmo,xd,pp(0,i), pplab(0,i))
-      enddo
-      do i=0,3
-        pw(i)=pplab(i,3)+pplab(i,4)
+        call boostwdir2(chybst,shybst,chybstmo,xd,
+     #                  pp(0,i),pplab(0,i))
       enddo
 
-      ye=getrapidity(pplab(0,3), pplab(3,3))
-      yw=getrapidity(pw(0), pw(3))
-      pte = dsqrt(pplab(1,3)**2 + pplab(2,3)**2)
-      etmiss = dsqrt(pplab(1,4)**2 + pplab(2,4)**2)
-      mtr = dsqrt(2d0*pte*etmiss - 2d0 * pplab(1,3) * pplab(1,4)
-     1 - 2d0 * pplab(2,3) * pplab(2,4))
 
-c        call multitop(kk+1,3,2,'total rate',ytit,'LIN')
-c        call multitop(kk+2,3,2,'e rapidity',ytit,'LOG')
-c        call multitop(kk+3,3,2,'e pt',ytit,'LOG')
-c        call multitop(kk+4,3,2,'et miss',ytit,'LOG')
-c        call multitop(kk+5,3,2,'transverse mass',ytit,'LOG')
-c        call multitop(kk+6,3,2,'w rapidity',ytit,'LOG')
+        var=1.d0
+        call mfill(kk+1,var,www)
 
-
-
-      shat=2d0*dot(pp(0,1),pp(0,2))
-
-      var=1.d0
-      call mfill(kk+1,var,www)
-      call mfill(kk+2,ye,www)
-      call mfill(kk+3,pte,www)
-      call mfill(kk+4,etmiss,www)
-      call mfill(kk+5,mtr,www)
-      call mfill(kk+6,yw,www)
  999  return      
       end
 
 
+      function getrapidity(en,px,py,pl)
+      implicit none
+      real*8 getrapidity,en,px,py,pl,tiny,xplus,xminus,y
+      parameter (tiny=1.d-8)
+      if (abs(en).lt.abs(pl)) en = dsqrt(px**2+py**2+pl**2)
+c
+      xplus=en+pl
+      xminus=en-pl
+      if(xplus.gt.tiny.and.xminus.gt.tiny)then
+        if( (xplus/xminus).gt.tiny.and.(xminus/xplus).gt.tiny )then
+          y=0.5d0*log( xplus/xminus )
+        else
+          y=sign(1.d0,pl)*1.d8
+        endif
+      else
+        y=sign(1.d0,pl)*1.d8
+      endif
+      getrapidity=y
+      return
+      end
 
-            function getrapidity(en,pl)
-            implicit none
-            real*8 getrapidity,en,pl,tiny,xplus,xminus,y
-            parameter (tiny=1.d-8)
-            xplus=en+pl
-            xminus=en-pl
-            if(xplus.gt.tiny.and.xminus.gt.tiny)then
-            if( (xplus/xminus).gt.tiny.and.(xminus/xplus).gt.tiny)then
-              y=0.5d0*log( xplus/xminus  )
-             else
-             y=sign(1.d0,pl)*1.d8
-             endif
-            else 
-            y=sign(1.d0,pl)*1.d8
-             endif
-             getrapidity=y
-             return
-             end
+
+      function getpseudorap(en,ptx,pty,pl)
+      implicit none
+      real*8 getpseudorap,en,ptx,pty,pl,tiny,pt,eta,th
+      parameter (tiny=1.d-5)
+c
+      pt=sqrt(ptx**2+pty**2)
+      if(pt.lt.tiny.and.abs(pl).lt.tiny)then
+        eta=sign(1.d0,pl)*1.d8
+      else
+        th=atan2(pt,pl)
+        eta=-log(tan(th/2.d0))
+      endif
+      getpseudorap=eta
+      return
+      end
 
