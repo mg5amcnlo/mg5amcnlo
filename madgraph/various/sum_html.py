@@ -253,6 +253,7 @@ def make_all_html_results(cmd):
         P_comb.compute_values()
         P_comb.write_html(pjoin(cmd.me_dir, 'HTML', run,'%s_results.html' % Pdir),
                           run, unit)
+        P_comb.write_results_dat(pjoin(P_path, '%s_results.dat' % run))
         all.append(P_comb)
     all.compute_values()
     all.write_html(pjoin(cmd.me_dir, 'HTML', run, 'results.html'), run, unit)
