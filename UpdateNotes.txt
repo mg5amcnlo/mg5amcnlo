@@ -1,6 +1,6 @@
 Update notes for MadGraph 5 (in reverse time order)
 
-1.4.b6 (1/12/11): OM: New structure for madevent script (./bin/madevent)
+1.4.b7 (14/12/11): OM: New structure for madevent script (./bin/madevent)
                       allowing to have an interface similar to MG5 
                       for running madevent.
                       (accessible from MG5 via launch [DIR] -i)
