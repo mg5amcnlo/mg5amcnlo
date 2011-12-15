@@ -57,6 +57,7 @@ namespace fwrapper {
          mom[(j+3) % 4] = *(p++);
       }
       PseudoJet psjet(mom);
+///      cout<<" transfer f77->c++ xyze "<< mom[0]<< " "<<mom[1]<<" "<<mom[2]<<" "<<mom[3]<<endl;
       input_particles.push_back(psjet);    
     }
   }
@@ -71,6 +72,7 @@ namespace fwrapper {
         *f77jets = jets[i][(j+3) % 4];
         f77jets++;
       } 
+///      cout <<"c++ jets after cluster xyze "<<jets[i][0]<< " " <<jets[i][1]<< " "<<jets[i][2]<< " "<<jets[i][3]<<endl;
     }
   }
   
@@ -78,6 +80,7 @@ namespace fwrapper {
   /// and the extraction of the jets
   void transfer_cluster_transfer(const double * p, const int & npart, 
                                  const JetDefinition & jet_def,
+                                 const double & ptmin,
 				 double * f77jets, int & njets,
 				 const double & ghost_maxrap = 0.0,  
 				 const int & nrepeat = 0, const double & ghost_area = 0.0) {
@@ -96,7 +99,7 @@ namespace fwrapper {
 	 cs.reset(new ClusterSequenceArea(input_particles,jet_def,area_def));
     }
     // extract jets (pt-ordered)
-    jets = sorted_by_pt(cs->inclusive_jets());
+    jets = sorted_by_pt(cs->inclusive_jets(ptmin));
     
     // transfer jets -> f77jets[4*ijet+0..3]
     transfer_jets(f77jets, njets);
@@ -149,7 +152,7 @@ void fastjetsiscone_(const double * p, const int & npart,
     jet_def = plugin.get();
 
     // do everything
-    transfer_cluster_transfer(p,npart,jet_def,f77jets,njets);
+//    transfer_cluster_transfer(p,npart,jet_def,f77jets,njets);
 }
 
 
@@ -198,7 +201,7 @@ void fastjetsisconewitharea_(const double * p, const int & npart,
     jet_def = plugin.get();
 
     // do everything
-    transfer_cluster_transfer(p,npart,jet_def,f77jets,njets,ghost_rapmax,nrepeat,ghost_area);
+//    transfer_cluster_transfer(p,npart,jet_def,f77jets,njets,ghost_rapmax,nrepeat,ghost_area);
 }
 
 
@@ -240,7 +243,8 @@ void fastjetsisconewitharea_(const double * p, const int & npart,
 // (particle mass).
 //
 void fastjetppgenkt_(const double * p, const int & npart,                   
-                     const double & R, const double & palg,
+                     const double & R, const double & ptjetmin,
+                     const double & palg,
                      double * f77jets, int & njets) {
 
     // prepare jet def
@@ -255,7 +259,7 @@ void fastjetppgenkt_(const double * p, const int & npart,
     }
 
     // do everything
-    transfer_cluster_transfer(p,npart,jet_def,f77jets,njets);
+    transfer_cluster_transfer(p,npart,jet_def,ptjetmin,f77jets,njets);
 }
 
 
@@ -317,7 +321,7 @@ void fastjetppgenktwitharea_(const double * p, const int & npart,
     }
         
     // do everything
-    transfer_cluster_transfer(p,npart,jet_def,f77jets,njets,ghost_rapmax,nrepeat,ghost_area);
+//    transfer_cluster_transfer(p,npart,jet_def,f77jets,njets,ghost_rapmax,nrepeat,ghost_area);
 }
 
 
