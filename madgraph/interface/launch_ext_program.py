@@ -215,7 +215,16 @@ class MELauncher(ExtLauncher):
         launch = self.cmd_int.define_child_cmd_interface(
                      usecmd, interface=False)
         #launch.me_dir = self.running_dir
-        command = 'generate_events %s' % self.name
+        if self.unit == 'pb':
+            command = 'generate_events %s' % self.name
+        else:
+            warning_text = '''\
+This command will create a new param_card with the computed width. 
+This param_card makes sense only if you include all processes for
+the computation of the width.'''
+            logger.warning(warning_text)
+
+            command = 'calculate_decay_widths %s' % self.name
         if mode == "1":
             command += " --cluster"
         elif mode == "2":

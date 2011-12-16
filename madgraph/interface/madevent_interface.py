@@ -1725,15 +1725,116 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
                       postcmd=False)
         self.exec_cmd('combine_events', postcmd=False)
         self.exec_cmd('store_events', postcmd=False)
-        # Combine decay widths into new file
-        proc = subprocess.Popen(['python',
-                                 pjoin(self.dirbin, 'collect_decay_widths.py'),
-                                 self.run_name], 
-                                cwd=self.me_dir,
-                                stdout=subprocess.PIPE)
         
-        (stdout, stderr) = proc.communicate()
+        self.collect_decay_widths()
+        # Combine decay widths into new file
+        #proc = subprocess.Popen(['python',
+        #                         pjoin(self.dirbin, 'collect_decay_widths.py'),
+        #                         self.run_name], 
+        #                        cwd=self.me_dir,
+        #                        stdout=subprocess.PIPE)
+        # 
+        #(stdout, stderr) = proc.communicate()
     
+    ############################################################################
+    def collect_decay_widths(self):
+        """ Collect the decay widths and calculate BRs for all particles, and put 
+        in param_card form. 
+        """
+        
+        particle_dict = {} # store the results
+        run_name = self.run_name
+
+        # Looping over the Subprocesses
+        for P_path in SubProcesses.get_subP(self.me_dir):
+            ids = SubProcesses.get_subP_ids(P_path)
+            nb_output = len(ids)
+            results = open(pjoin(P_path, run_name + '_results.dat')).read().split('\n')[0]
+            result = float(results.strip().split(' ')[0])
+            for particles in ids:
+                try:
+                    particle_dict[particles[0]].append([particles[1:], result/nb_output])
+                except KeyError:
+                    particle_dict[particles[0]] = [[particles[1:], result/nb_output]]
+
+        # Open the param_card.dat and insert the calculated decays and BRs
+        param_card_file = open(pjoin(self.me_dir, 'Cards', 'param_card.dat'))
+        param_card = param_card_file.read().split('\n')
+        param_card_file.close()
+
+        decay_lines = []
+        line_number = 0
+        # Read and remove all decays from the param_card                     
+        while line_number < len(param_card):
+            line = param_card[line_number]
+            if line.lower().startswith('decay'):
+                # Read decay if particle in particle_dict 
+                # DECAY  6   1.455100e+00                                    
+                line = param_card.pop(line_number)
+                line = line.split()
+                particle = 0
+                if int(line[1]) not in particle_dict:
+                    try: # If formatting is wrong, don't want this particle
+                        particle = int(line[1])
+                        width = float(line[2])
+                    except:
+                        particle = 0
+                # Read BRs for this decay
+                line = param_card[line_number]
+                while line.startswith('#') or line.startswith(' '):
+                    line = param_card.pop(line_number)
+                    if not particle or line.startswith('#'):
+                        line=param_card[line_number]
+                        continue
+                    #    6.668201e-01   3    5  2  -1
+                    line = line.split()
+                    try: # Remove BR if formatting is wrong
+                        partial_width = float(line[0])*width
+                        decay_products = [int(p) for p in line[2:2+int(line[1])]]
+                    except:
+                        line=param_card[line_number]
+                        continue
+                    try:
+                        particle_dict[particle].append([decay_products, partial_width])
+                    except KeyError:
+                        particle_dict[particle] = [[decay_products, partial_width]]
+                    line=param_card[line_number]
+                if particle and particle not in particle_dict:
+                    # No decays given, only total width       
+                    particle_dict[particle] = [[[], width]]
+            else: # Not decay                              
+                line_number += 1
+        # Clean out possible remaining comments at the end of the card
+        while not param_card[-1] or param_card[-1].startswith('#'):
+            param_card.pop(-1)
+
+        # Append calculated and read decays to the param_card                                   
+        param_card.append("#\n#*************************")
+        param_card.append("#      Decay widths      *")
+        param_card.append("#*************************")
+        for key in sorted(particle_dict.keys()):
+            width = sum([r for p,r in particle_dict[key]])
+            param_card.append("#\n#      PDG        Width")
+            param_card.append("DECAY  %i   %e" % (key, width))
+            if not width:
+                continue
+            if particle_dict[key][0][0]:
+                param_card.append("#  BR             NDA  ID1    ID2   ...")
+                brs = [[val[1]/width, val[0]] for val in particle_dict[key] if val[1]]
+                for val in sorted(brs, reverse=True):
+                    param_card.append("   %e   %i    %s" % (val[0], len(val[1]),
+                                           "  ".join([str(v) for v in val[1]])))
+        output_name = pjoin(self.me_dir, 'Events', run_name, "param_card.dat")
+        decay_table = open(output_name, 'w')
+        decay_table.write("\n".join(param_card) + "\n")
+        logger.info("Results written to %s" %  output_name)
+
+
+            
+
+
+
+
     ############################################################################
     def do_multi_run(self, line):
         
@@ -2009,15 +2110,7 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
         #os.remove(pjoin(self.me_dir, 'SubProcesses','results.dat'))
 
         # 2) Treat the files present in the P directory
-        for Pdir in open(pjoin(self.me_dir, 'SubProcesses','subproc.mg')):
-            Pdir = Pdir.strip()
-            P_path = pjoin(self.me_dir, 'SubProcesses', Pdir)
-            # results.dat. 
-            #os.remove(pjoin(P_path, 'results.dat'))
-            # results.html
-            #input = pjoin(P_path, 'results.html')
-            #output = pjoin(self.me_dir, 'HTML', run, '%s_results.html' % Pdir)
-            #files.mv(input, output) 
+        for P_path in SubProcesses.get_subP(self.me_dir):
             G_dir = [G for G in os.listdir(P_path) if G.startswith('G') and 
                                                 os.path.isdir(pjoin(P_path,G))]
             for G in G_dir:
@@ -3511,49 +3604,89 @@ class MadEventCmdShell(MadEventCmd, cmd.CmdShell):
     """The command line processor of MadGraph"""  
 
 
+
 #===============================================================================
-# GridPack
-#===============================================================================     
-class GridPackCmd(MadEventCmd):
-    """The command for the gridpack --Those are not suppose to be use interactively--"""
+# HELPING FUNCTION For Subprocesses
+#===============================================================================
+class SubProcesses(object):
+
+    name_to_pdg = {}
+
+    @classmethod
+    def clean(cls):
+        cls.name_to_pdg = {}
     
-    
-    def __init__(self, me_dir = None, nb_event=0, seed=0, *completekey, **stdin):
-        """Initialize the command and directly run"""
+    @staticmethod
+    def get_subP(me_dir):
+        """return the list of Subprocesses"""
         
-        # Initialize properly
-        MadEventCmd.__init__(self, me_dir, *completekey, **stdin)
+        out = []
+        for line in open(pjoin(me_dir,'SubProcesses', 'subproc.mg')):
+            if not line:
+                continue
+            name = line.strip()
+            if os.path.exists(pjoin(me_dir, 'SubProcesses', name)):
+                out.append(pjoin(me_dir, 'SubProcesses', name))
         
-        # Now it's time to run!
-        if me_dir and nb_event and seed:
-            self.launch(nb_event, seed)
-    
-    def launch(self, nb_event, seed):
-        """ launch the generation for the grid """
+        return out
         
-        # 1) Restore the default data
-        logger.info('generate %s events' % nb_event)
-        self.set_run_name('GridRun_%s' % seed)
-        self.update_status('restoring default data', level=None)
-        subprocess.call([pjoin(self.me_dir,'bin','internal','restore_data'), 'default'],
-                        cwd=self.me_dir)
-        
-        # 2) Run the refine for the grid
-        self.update_status('Generating Events', level=None) 
-        ### TO EDIT ####
-        subprocess.call([pjoin(self.me_dir,'bin','internal','refine4grid'), 
-                         str(nb_event), '0', 'Madevent','1','GridRun_%s' % seed],
-                        cwd=self.me_dir)
-        
-        # 3) Combine the events/pythia/...
-        self.exec_cmd('combine_events')
-        self.create_plot('parton')
-        self.exec_cmd('pythia --nodefault')
-        self.exec_cmd('pgs --nodefault')
-        
-        
-        
-        
-    
-    
-    
+
+
+    @staticmethod
+    def get_subP_info(path):
+        """ return the list of processes with their name"""
+
+        nb_sub = 0
+        names = {}
+        old_main = ''
+
+        if not os.path.exists(os.path.join(path,'processes.dat')):
+            return make_info_html.get_subprocess_info_v4(path)
+
+        for line in open(os.path.join(path,'processes.dat')):
+            main = line[:8].strip()
+            if main == 'mirror':
+                main = old_main
+            if line[8:].strip() == 'none':
+                continue
+            else:
+                main = int(main)
+                old_main = main
+
+            sub_proccess = line[8:]
+            nb_sub += sub_proccess.count(',') + 1
+            if main in names:
+                names[main] += [sub_proccess.split(',')]
+            else:
+                names[main]= [sub_proccess.split(',')]
+
+        return names
+
+    @staticmethod
+    def get_subP_info_v4(path):
+        """ return the list of processes with their name in case without grouping """
+
+        nb_sub = 0
+        names = {'':[[]]}
+        path = os.path.join(path, 'auto_dsig.f')
+        found = 0
+        for line in open(path):
+            if line.startswith('C     Process:'):
+                found += 1
+                names[''][0].append(line[15:])
+            elif found >1:
+                break
+        return names
+
+
+    @staticmethod
+    def get_subP_ids(path):
+        """return the pdg codes of the particles present in the Subprocesses"""
+
+        all_ids = []
+        for line in open(pjoin(path, 'leshouche.inc')):
+            if not 'IDUP' in line:
+                continue
+            particles = re.search("/([\d,-]+)/", line)
+            all_ids.append([int(p) for p in particles.group(1).split(',')])
+        return all_ids

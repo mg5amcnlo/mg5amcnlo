@@ -1,14 +1,34 @@
 Update notes for MadGraph 5 (in reverse time order)
 
-1.4.b7 (14/12/11): OM: New structure for madevent script (./bin/madevent)
-                      allowing to have an interface similar to MG5 
-                      for running madevent.
-                      (accessible from MG5 via launch [DIR] -i)
-                      This script replaces most of the earlier scripts in
-                      ./bin/ (such as survey/refine/combine/run_XXXX/
-                      multi_run/plot)
+1.4.b8 (14/12/11): OM: New Interface to controll the madevent run.
+                       This one is accessible by 
+		       1) (from madevent output) ./bin/madevent
+		       2) (from MG5 command line) launch [MADEVENT_PATH] -i
+		       This interface replaces various script like refine, 
+		        survey, combine, run_..., rm_run, ...
                       The script generate_events still exists but now calls
                       ./bin/madevent. 
+                  OM: For MSSM model, convert param_card to SLAH1. This card is
+                      converted to SLAH2 during the MadEvent run since the UFO 
+                      model uses SLAH2. This allows to use Pythia 6,
+                      as well as have a coherent definition for the flavor.
+		  JA+OM: For decay width computations, the launch command in addition
+		      to compute the width, creates a new param_card with the width set
+		      to the associates values, and with the Branching ratio associated
+		      (usefull for pythia). 
+		  NOTE: This param_card makes sense for future run ONLY if all relevant
+		      decay are generated.
+		  EXAMPLE: (after launch bin/mg5):
+                       import model sm-full
+                       generate t > b w+
+                       define all = p b b~ l+ l- ta+ ta- vl vl~
+                       add process w+ > all all
+                       add process z > all all
+                       define v = z w+ w-
+                       add process h > all all
+                       add process h > v v, v > all all
+                       output
+                       launch
                   OM: Change the path of the output files. This allow to run 
 		      mulitple times pythia/pgs/delphes for the same set of 
 		      events (with different parameters).
@@ -16,10 +36,6 @@ Update notes for MadGraph 5 (in reverse time order)
                       restriction used during the model generation. 
                   OM: Restriction Model will now also force opposite number to match.
 		      (helpfull for constraining to rotation matrix).  
-                  OM: For MSSM model, convert param_card to SLAH1. This card is
-                      converted to SLAH2 during the MadEvent run since the UFO 
-                      model uses SLAH2. This allows to use Pythia 6,
-                      as well as have a coherent definition for the flavor.
                   OM: Change the import command. It's now allowed to omit the 
                       type of import. The type is guessed automaticaly. 
                       This is NOT allowed on the web.
@@ -47,25 +63,10 @@ Update notes for MadGraph 5 (in reverse time order)
                         their associated weight (for automatic order restriction)
                       d) display couplings now returns the list of all couplings
                         with the associated expression
-                  OM: New Python script for the creation of the crossx.html/results.html page
-                      Requiring less disk access for the generation of the file.
+                  OM: New Python script for the creation of the various html pages.
+                      This Requires less disk access for the generation of the files.
                   OM: Modify error treatment, especially for Invalid commands
                       and Configuration problems.
-		  JA: Add new run mode, calculate_decay_widths, which calculates 
-                      decay widths for processes of type A > B C ... and inserts
-                      decay widths and branching ratios into the param_card.
-                      Example of use (after launch bin/mg5):
-                       import model sm-full
-                       generate t > b w+
-                       define all = p b b~ l+ l- ta+ ta- vl vl~
-                       add process w+ > all all
-                       add process z > all all
-                       define v = z w+ w-
-                       add process h > all all
-                       add process h > v v, v > all all
-                       output
-                       launch -i
-                       calculate_decay_widths
 		  JA: Ensure that we get zero cross section if we have
                       non-parton initial states with proton/antiproton beams
 		  OM: Improve cluster support. MadEvent now supports PBS/Condor/SGE
@@ -74,7 +75,8 @@ Update notes for MadGraph 5 (in reverse time order)
 		      some of the parralel suite. This ensures more stability of the 
 		      code for the future release.
 
-                  Thanks to Johan Alwall, Sho Iwamoto for all the important testing/bug reports
+                  Thanks to Johan Alwall, Sho Iwamoto for all the important 
+                  testing/bug reports.
 
 1.3.31 (29/11/11) OM: Fix a bug an overflow in RAMBO (affects standalone 
        		      output only)
