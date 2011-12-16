@@ -771,7 +771,7 @@ def loadLoopModel():
                                         mypartlist[2],]),
                   'color': [],
                   'lorentz':['L1'],
-                  'couplings':{(0, 0):'G'},
+                  'couplings':{(0, 0):'GWfct'},
                   'orders':{'QED':2},
                   'loop_particles':[[]],
                   'type':'UV1eps'}))
@@ -783,7 +783,7 @@ def loadLoopModel():
                                         mypartlist[2],]),
                   'color': [],
                   'lorentz':['L1'],
-                  'couplings':{(0, 0):'G'},
+                  'couplings':{(0, 0):'GWfct'},
                   'orders':{'QCD':2},
                   'loop_particles':[[]],
                   'type':'UV1eps'}))
@@ -795,7 +795,7 @@ def loadLoopModel():
                                         mypartlist[1],]),
                   'color': [],
                   'lorentz':['L1'],
-                  'couplings':{(0, 0):'G'},
+                  'couplings':{(0, 0):'GWfct'},
                   'orders':{'QED':2},
                   'loop_particles':[[]],
                   'type':'UV1eps'}))
@@ -807,7 +807,7 @@ def loadLoopModel():
                                         mypartlist[1],]),
                   'color': [],
                   'lorentz':['L1'],
-                  'couplings':{(0, 0):'G'},
+                  'couplings':{(0, 0):'GWfct'},
                   'orders':{'QCD':2},
                   'loop_particles':[[]],
                   'type':'UV1eps'}))
@@ -819,7 +819,7 @@ def loadLoopModel():
                                         mypartlist[0],]),
                   'color': [],
                   'lorentz':['L1'],
-                  'couplings':{(0, 0):'G'},
+                  'couplings':{(0, 0):'GWfct'},
                   'orders':{'QCD':2},
                   'loop_particles':[[]],
                   'type':'UV1eps'}))
@@ -1028,7 +1028,7 @@ class LoopDiagramGenerationTest(unittest.TestCase):
             self.assertEqual(sumUV, nUVmassGoal)
             sumUVCT=0
             for loop_UVCT_diag in myloopamplitude.get('loop_UVCT_diagrams'):
-                sumUVCT+=len(loop_UVCT_diag.get('UVCTVertices'))
+                sumUVCT+=len(loop_UVCT_diag.get('UVCT_couplings'))
             self.assertEqual(sumUVCT,nUVCTGoal)
 
     def test_diagram_generation_gg_ng(self):
@@ -1065,7 +1065,7 @@ class LoopDiagramGenerationTest(unittest.TestCase):
                 sumUV+=len(diag.get_CT(self.myloopmodel,'UV'))
             sumUVCT=0
             for loop_UVCT_diag in myloopamplitude.get('loop_UVCT_diagrams'):
-                sumUVCT+=len(loop_UVCT_diag.get('UVCTVertices'))
+                sumUVCT+=len(loop_UVCT_diag.get('UVCT_couplings'))
             self.assertEqual(len(myloopamplitude.get('loop_diagrams')), nDiagGoal)
             self.assertEqual(sumR2, nR2Goal)
             self.assertEqual(sumUV, nUVmassGoal)   
@@ -1115,8 +1115,8 @@ class LoopDiagramGenerationTest(unittest.TestCase):
             
             sumUVwfct=0
             for loop_UVCT_diag in myloopamplitude.get('loop_UVCT_diagrams'):
-                for vert in loop_UVCT_diag.get('UVCTVertices'):
-                    if len(self.myloopmodel.get_interaction(vert.get('id')).get('particles'))>1:
+                for coupl in loop_UVCT_diag.get('UVCT_couplings'):
+                    if not 'Wfct' in coupl:
                         sumUV+=1
                     else:
                         sumUVwfct+=1
@@ -1170,7 +1170,7 @@ class LoopDiagramGenerationTest(unittest.TestCase):
             self.assertEqual(sumUV, nUVmassGoal)
             sumUVCT=0
             for loop_UVCT_diag in myloopamplitude.get('loop_UVCT_diagrams'):
-                sumUVCT+=len(loop_UVCT_diag.get('UVCTVertices'))
+                sumUVCT+=len(loop_UVCT_diag.get('UVCT_couplings'))
             self.assertEqual(sumUVCT,nUVCTGoal)
             
     def test_CT_vertices_generation_gg_gg(self):

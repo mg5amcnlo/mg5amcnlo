@@ -88,6 +88,12 @@ class LoopColorBasis(color_amp.ColorBasis):
                 self.closeColorLoop(colorize_dict,lcut_charge,lcut_numbers)
                 
             list_color_dict.append(colorize_dict)
+            
+        # Now let's treat the UVCT diagrams as well
+        for diagram in amplitude.get('loop_UVCT_diagrams'):
+            colorize_dict = self.colorize(diagram,
+                                          amplitude.get('process').get('model'))
+            list_color_dict.append(colorize_dict)
 
         self._list_color_dict = list_color_dict
 

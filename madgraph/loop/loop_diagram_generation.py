@@ -89,7 +89,8 @@ class LoopAmplitude(diagram_generation.Amplitude):
                 raise self.PhysicsObjectError, \
                         "%s is not a valid DiagramList" % str(value)
             for diag in value:
-                if not isinstance(diag,loop_base_objects.LoopDiagram):
+                if not isinstance(diag,loop_base_objects.LoopDiagram) and \
+                   not isinstance(diag,loop_base_objects.LoopUVCTDiagram):
                     raise self.PhysicsObjectError, \
                         "%s contains a diagram which is not an NLODiagrams." % str(value)
         if name == 'born_diagrams':
@@ -459,11 +460,76 @@ class LoopAmplitude(diagram_generation.Amplitude):
         other contributions like the UV mass renormalization are added in the
         function setLoopCTVertices"""
 
-        if not self['process']['has_born']:
-            return
+
+        #  ============================================
+        #     Vertex renormalization
+        #  ============================================
+
+        # The following lists the UV interactions potentially giving UV counterterms
+        # (The UVmass interactions is accounted for like the R2s)
+        UVCTvertex_interactions = base_objects.InteractionList()
+        for inter in self['process']['model']['interactions'].get_UV():
+            if not inter.is_UVmass() and len(inter['particles'])>1 and \
+              (set(inter['orders'].keys())-\
+               set(self['process']['perturbation_couplings']))==set([]) and \
+              any([set(loop_parts).intersection(set(self['process']\
+                   ['forbidden_particles']))==set([]) for loop_parts in \
+                   inter.get('loop_particles')]):
+                UVCTvertex_interactions.append(inter)
         
-        # The UV counterterms which factorize the born have the type 'UV' while
-        # all the other have the tag 'UVMass'-
+        # Temporarly give the tagging order 'UVCT_SPECIAL' to those interactions
+        self['process']['model'].get('order_hierarchy')['UVCT_SPECIAL']=0
+        self['process']['model'].get('coupling_orders').add('UVCT_SPECIAL')
+        for inter in UVCTvertex_interactions:
+            newinter=copy.copy(inter.get('orders'))
+            newinter['UVCT_SPECIAL']=1
+            inter.set('orders',newinter)
+        # Refresh the model interaction dictionary while including those special 
+        # interactions
+        self['process']['model'].actualize_dictionaries(useUVCT=True)
+        
+        # Generate the UVCTdiagrams (born diagrams with 'UVCT_SPECIAL'=0 order 
+        # will be generated along)
+        self['process']['orders']['UVCT_SPECIAL']=1
+        UVCTsuccessful, UVCTdiagrams = \
+          super(LoopAmplitude, self).generate_diagrams(True)
+
+        for UVCTdiag in UVCTdiagrams:
+            if UVCTdiag.get_order('UVCT_SPECIAL')==1:
+                newUVCTDiag = loop_base_objects.LoopUVCTDiagram({\
+                  'vertices':copy.deepcopy(UVCTdiag['vertices'])})
+                UVCTinter = newUVCTDiag.get_UVCTinteraction(self['process']['model'])
+                newUVCTDiag.set('type',UVCTinter.get('type'))
+                # This interaction counter-term must be accounted for as many times
+                # as they are list of loop_particles defined and allowed for by
+                # the process.
+                newUVCTDiag.get('UVCT_couplings').append(len([1 for loop_parts \
+                  in UVCTinter.get('loop_particles') if set(loop_parts).intersection(\
+                  set(self['process']['forbidden_particles']))==set([])]))
+                self['loop_UVCT_diagrams'].append(newUVCTDiag)
+
+        # Remove the additional order requirement in the born orders for this
+        # process
+        del self['process']['orders']['UVCT_SPECIAL']
+        # Remove the fake order added to the selected UVCT interactions
+        del self['process']['model'].get('order_hierarchy')['UVCT_SPECIAL']
+        self['process']['model'].get('coupling_orders').remove('UVCT_SPECIAL')
+        for inter in UVCTvertex_interactions:
+            del inter.get('orders')['UVCT_SPECIAL']     
+        # Revert the model interaction dictionaries to default
+        self['process']['model'].actualize_dictionaries(useUVCT=False)
+        
+        # Set the correct orders to the loop_UVCT_diagrams
+        for UVCTdiag in self['loop_UVCT_diagrams']:
+            UVCTdiag.calculate_orders(self['process']['model'])        
+        
+        #  ============================================
+        #     Wavefunction renormalization
+        #  ============================================
+        
+        if not self['process']['has_born']:
+            return UVCTsuccessful
+
         # We recognize the UV interactions which are the wavefunctions
         # renormalization by using the fact that they must be the only ones
         # defined with only one particle.
@@ -491,21 +557,7 @@ class LoopAmplitude(diagram_generation.Amplitude):
                     except KeyError:
                         UVCTwfct_interactions[inter['particles'][0]['pdg_code']]=\
                                                               [inter,]
-        
-        # The following lists the UV interaction factorizing the born
-        UVCTvertex_interactions = base_objects.InteractionList()
-        for inter in self['process']['model']['interactions'].get_UV():
-            for loop_parts in inter.get('loop_particles'):
-                if not inter.is_UVmass() and len(inter['particles'])>=1 and \
-                  (set(inter['orders'].keys())-\
-                   set(self['process']['perturbation_couplings']))==set([]) and \
-                  set(loop_parts).\
-                  intersection(set(self['process']['forbidden_particles']))==set([]):
-                    UVCTvertex_interactions.append(inter)
-        
-        # We are only interested in the ref_dict_0 of the UVCTvertex_interactions
-        UVCTvertex_interactions=UVCTvertex_interactions.generate_ref_dict(True)[0]
-        
+
         # We now scan each born diagram, adding the necessary wavefunction
         # renormalizations and vertex corrections defined in CTUVwfct_interactions
         # and the interactions of the model with type 'UV'.
@@ -514,76 +566,37 @@ class LoopAmplitude(diagram_generation.Amplitude):
             # (('OrderName1',power1),...,('OrderNameN',powerN) representing
             # the power brought by the counterterm and the value is the
             # corresponding LoopUVCTDiagram.
+            # The last entry is of the form ('EpsilonOrder', value) to put the 
+            # contribution of each different EpsilonOrder to different
+            # LoopUVCTDiagrams.
             LoopUVCTDiagramsAdded={}
             # We start by adding the wavefunction renormalization
             for leg in self['process']['legs']:
                 try:
                     for inter in UVCTwfct_interactions[abs(leg['id'])]:
-                        # Create the UVCTwfct vertex
-                        UVCTwfctVertex = base_objects.Vertex({\
-                          'legs':base_objects.LegList([copy.copy(leg),]),
-                          'id':inter.get('id')})
-                        # Create the order key of the UV counterterm interaciton
+                        # Create the order key of the UV counterterm
                         orderKey=[(orderName,value) for orderName, value in \
                                    inter.get('orders').items()]
                         orderKey.sort()
+                        orderKey.append(('EpsilonOrder',inter.get_epsilon_order()))
                         try:
                             LoopUVCTDiagramsAdded[tuple(orderKey)].get(\
-                              'UVCTVertices').append(UVCTwfctVertex)
+                              'UVCT_couplings').append(inter.get('couplings').values()[0])
                         except KeyError:
                             LoopUVCTDiagramsAdded[tuple(orderKey)]=\
                               loop_base_objects.LoopUVCTDiagram({\
                                 'vertices':copy.deepcopy(bornDiag['vertices']),
-                                'UVCTVertices':base_objects.VertexList\
-                                ([UVCTwfctVertex,])})
+                                'type':inter.get('type'),
+                                'UVCT_orders':inter.get('orders'),
+                                'UVCT_couplings':[inter.get('couplings').values()[0],]})
                 except KeyError:
                     pass
-            
-            # We now go through the vertices renormalizations
-            for i, vert in enumerate(bornDiag.get('vertices')):
-                # First create the tuple for the n->0 interaction dictionary
-                key=[leg.get('id') for leg in vert.get('legs')[:-1]]
-                if not i==(len(bornDiag.get('vertices'))-1):
-                    key.append(self['process']['model'].get_particle(\
-                           vert.get('legs')[-1].get('id')).get_anti_pdg_code())
-                else:
-                    key.append(vert.get('legs')[-1].get('id'))
-                key=tuple(sorted(key))
-#                print "bornDiag=",bornDiag.nice_string()
-#                print "key=",key
-#                try:
-#                    print "found=",UVCTvertex_interactions[key]
-#                except KeyError:
-#                    print "NotFound"
-                try:
-                    for interID in UVCTvertex_interactions[key]:
-                        inter=self['process']['model'].get_interaction(interID)
-                        # Create the UVCT vertex
-                        UVCTVertex = base_objects.Vertex({\
-                          'legs':vert.get('legs'),
-                          'id':inter.get('id')})
-                        # Create the order key of the UV counterterm interaction
-                        orderKey=[(orderName,value) for orderName, value in \
-                                   inter.get('orders').items()]
-                        orderKey.sort()
-                        try:
-                            LoopUVCTDiagramsAdded[tuple(orderKey)].get(\
-                              'UVCTVertices').append(UVCTVertex)
-                        except KeyError:
-                            LoopUVCTDiagramsAdded[tuple(orderKey)]=\
-                              loop_base_objects.LoopUVCTDiagram({\
-                                'vertices':copy.deepcopy(bornDiag['vertices']),
-                                'UVCTVertices':base_objects.VertexList\
-                                ([UVCTVertex,])})
-                except KeyError:
-                    pass                    
-            
-#            print "LoopUVCTDiagramsAdded.keys()=",LoopUVCTDiagramsAdded.keys()
-#            for key in LoopUVCTDiagramsAdded.keys():
-#                print "for key=",key," I have",[v.get('id') for v in LoopUVCTDiagramsAdded[key].get('UVCTVertices')]
+
             for LoopUVCTDiagram in LoopUVCTDiagramsAdded.values():
                 LoopUVCTDiagram.calculate_orders(self['process']['model'])
                 self['loop_UVCT_diagrams'].append(LoopUVCTDiagram)
+
+        return UVCTsuccessful
 
     def setLoopCT_vertices(self):
         """ Scan each loop diagram and recognizes what are the R2/UVmass CounterTerms

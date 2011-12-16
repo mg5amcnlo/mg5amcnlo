@@ -415,14 +415,15 @@ class LoopProcessExporterFortranSA(export_v4.ProcessExporterFortranSA,
             momposset="\n".join([("MOMPOS(%d)=MP%d"%(i,i)) for \
                              i in range(1,callkey[1]+1)])
             replace_dict['momposset']=momposset
-            mset="\n".join([("M2L("+str(i)+")=M"+str(i)+"**2") for \
-                             i in range(1,callkey[0]+1)])
+            msetlines=["M2L(1)=M%d**2"%(callkey[0]),]
+            mset="\n".join(msetlines+[("M2L("+str(i)+")=M"+str(i-1)+"**2") for \
+                             i in range(2,callkey[0]+1)])
             replace_dict['mset']=mset
             cplset="\n".join([("LC("+str(i)+")=C"+str(i)) for \
                              i in range(1,callkey[2]+1)])
             replace_dict['cplset']=cplset            
-            msetlines=["ML(1)=M%d"%(callkey[0]),"ML(2)=M%d"%(callkey[0])]
-            mset2="\n".join(msetlines+[("ML("+str(i)+")=M"+str(i-2)) for \
+            mset2lines=["ML(1)=M%d"%(callkey[0]),"ML(2)=M%d"%(callkey[0])]
+            mset2="\n".join(mset2lines+[("ML("+str(i)+")=M"+str(i-2)) for \
                              i in range(3,callkey[0]+2)])
             replace_dict['mset2']=mset2           
             replace_dict['nwfsargs'] = callkey[1]

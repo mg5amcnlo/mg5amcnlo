@@ -38,7 +38,114 @@ import madgraph.core.helas_objects as helas_objects
 
 logger = logging.getLogger('madgraph.helas_objects')
 
-#============================test_drawing===================================================
+#===============================================================================
+# LoopUVCTHelasAmplitude
+#===============================================================================
+class LoopHelasUVCTAmplitude(helas_objects.HelasAmplitude):
+    """LoopHelasUVCTAmplitude object, behaving exactly as an amplitude except that
+       it also contains additional vertices with coupling constants corresponding
+       to the 'UVCTVertices' defined in the 'UVCTVertices ' of the 
+       loop_base_objects.LoopUVCTDiagram of the LoopAmplitude. These are stored
+       in the additional attribute 'UVCT_interaction_ids' of this class.
+    """
+    
+    # Customized constructor
+    def __init__(self, *arguments):
+        """Constructor for the LoopHelasAmplitude. For now, it works exactly
+           as for the HelasMatrixElement one."""
+        
+        if arguments:           
+            super(LoopHelasUVCTAmplitude, self).__init__(*arguments)
+        else:
+            super(LoopHelasUVCTAmplitude, self).__init__() 
+    
+    def default_setup(self):
+        """Default values for all properties"""
+                
+        super(LoopHelasUVCTAmplitude,self).default_setup()
+        
+        # Store interactions ID of the UV counterterms related to this diagram
+        self['UVCT_couplings'] = []
+        self['UVCT_orders'] = {}
+
+    def filter(self, name, value):
+        """Filter for valid LoopHelasAmplitude property values."""
+
+        if name=='UVCT_couplings':
+            if not isinstance(value, list):
+                raise self.PhysicsObjectError, \
+                  "%s is not a valid list for UVCT_couplings" % str(value)
+            for id in value:
+                if not isinstance(id, str) and not isinstance(id, int):
+                    raise self.PhysicsObjectError, \
+                      "%s is not a valid string or integer for UVCT_couplings" % str(value)
+                      
+        if name == 'UVCT_orders':
+            if not isinstance(value, dict):
+                raise self.PhysicsObjectError, \
+                        "%s is not a valid dictionary" % str(value)
+
+        if name == 'type':
+            if not isinstance(value, str):
+                raise self.PhysicsObjectError, \
+                        "%s is not a valid string" % str(value)
+
+        else:
+            return super(LoopHelasUVCTAmplitude,self).filter(name, value)
+
+    def get_sorted_keys(self):
+        """Return LoopHelasAmplitude property names as a nicely sorted list."""
+
+        return super(LoopHelasUVCTAmplitude,self).get_sorted_keys()+\
+               ['UVCT_couplings','UVCT_orders','type']
+
+        return True
+
+    def get_call_key(self):
+        """ Exactly as a regular HelasAmplitude except that here we must add 
+        an entry to mutliply the final result by the coupling constants of the
+        interaction in UVCT_couplings if there are any"""
+        original_call_key = super(LoopHelasUVCTAmplitude,self).get_call_key()
+        
+        if self.get_UVCT_couplings()=='1.0d0':
+            return original_call_key
+        else:
+            return (original_call_key[0],original_call_key[1],'UVCT')
+
+    def get_UVCT_couplings(self):
+        """ Returns the string corresponding to the overall UVCT coupling which
+        factorize this amplitude """
+        if self['UVCT_couplings']==[]:
+            return '1.0d0'
+
+        answer=[]
+        integer_sum=0
+        for coupl in list(set(self['UVCT_couplings'])):
+            if isinstance(coupl,int):
+                integer_sum+=coupl
+            else:
+                answer.append(str(len([1 for c in self['UVCT_couplings'] if \
+                                   c==coupl]))+'.0d0*'+coupl)
+        if integer_sum!=0:
+            answer.append(str(integer_sum)+'.0d0')
+        if answer==[] and (integer_sum==0 or integer_sum==1):
+            return '1.0d0'
+        else:
+            return '+'.join(answer)
+
+    def get_base_diagram(self, wf_dict, vx_list = [], optimization = 1):
+        """Return the loop_base_objects.LoopUVCTDiagram which corresponds to this
+        amplitude, using a recursive method for the wavefunctions."""
+
+        vertices = super(LoopHelasUVCTAmplitude,self).get_base_diagram(\
+                     wf_dict, vx_list, optimization)['vertices']
+
+        return loop_base_objects.LoopUVCTDiagram({'vertices': vertices, \
+                                    'UVCT_couplings': self['UVCT_couplings'], \
+                                    'UVCT_orders': self['UVCT_orders'], \
+                                    'type': self['type']})
+
+#===============================================================================
 # LoopHelasAmplitude
 #===============================================================================
 class LoopHelasAmplitude(helas_objects.HelasAmplitude):
@@ -299,6 +406,12 @@ class LoopHelasDiagram(helas_objects.HelasDiagram):
         return helas_objects.HelasAmplitudeList([amp for amp in \
           self['amplitudes'] if isinstance(amp, LoopHelasAmplitude)])
 
+    def get_loop_UVCTamplitudes(self):
+        """ Quick access to the loop amplitudes only"""
+        
+        return helas_objects.HelasAmplitudeList([amp for amp in \
+          self['amplitudes'] if isinstance(amp, LoopHelasUVCTAmplitude)])
+
 #===============================================================================
 # LoopHelasMatrixElement
 #===============================================================================
@@ -463,9 +576,11 @@ class LoopHelasMatrixElement(helas_objects.HelasMatrixElement):
         amplitude_number = 0
         diagram_number = 0
             
-        def process_born_diagram(diagram, wfNumber, amplitudeNumber):
+        def process_born_diagram(diagram, wfNumber, amplitudeNumber, UVCTdiag=False):
             """ Helper function to process a born diagrams exactly as it is done in 
-            HelasMatrixElement for tree-level diagrams."""
+            HelasMatrixElement for tree-level diagrams. This routine can also
+            process LoopUVCTDiagrams, and if so the argument UVCTdiag must be set
+            to true"""
             
             # List of dictionaries from leg number to wave function,
             # keeps track of the present position in the tree.
@@ -578,7 +693,10 @@ class LoopHelasMatrixElement(helas_objects.HelasMatrixElement):
 
             # Generate all amplitudes corresponding to the different
             # copies of this diagram
-            helas_diagram = helas_objects.HelasDiagram()
+            if not UVCTdiag:
+                helas_diagram = helas_objects.HelasDiagram()
+            else:
+                helas_diagram = LoopHelasDiagram()                
                         
             for number_wf_dict, color_list in zip(number_to_wavefunctions,
                                                   color_lists):
@@ -620,7 +738,13 @@ class LoopHelasMatrixElement(helas_objects.HelasMatrixElement):
                         amp.get('coupling').append(inter.get('couplings')[coupl_key])
                         amp.get('lorentz').append(inter.get('lorentz')[coupl_key[1]])
                         continue
-                    amp = helas_objects.HelasAmplitude(lastvx, model)
+                    if not UVCTdiag:
+                        amp = helas_objects.HelasAmplitude(lastvx, model)
+                    else:
+                        amp = LoopHelasUVCTAmplitude(lastvx, model)
+                        amp.set('UVCT_orders',diagram.get('UVCT_orders'))
+                        amp.set('UVCT_couplings',diagram.get('UVCT_couplings'))
+                        amp.set('type',diagram.get('type'))
                     if inter:
                         amp.set('coupling', [inter.get('couplings')[coupl_key]])
                         amp.set('lorentz', [inter.get('lorentz')[coupl_key[1]]])
@@ -1228,6 +1352,15 @@ class LoopHelasMatrixElement(helas_objects.HelasMatrixElement):
             loopHelDiag.set('number', diagram_number)
             helas_diagrams.append(loopHelDiag)
 
+        # We finally turn to the UVCT diagrams
+        for diagram in amplitude.get('loop_UVCT_diagrams'):
+            loopHelDiag, wf_number, amplitude_number=\
+              process_born_diagram(diagram, wf_number, amplitude_number, \
+                                   UVCTdiag=True)
+            diagram_number = diagram_number + 1
+            loopHelDiag.set('number', diagram_number)
+            helas_diagrams.append(loopHelDiag)
+ 
         self.set('diagrams', helas_diagrams)
 
         # Sort all mothers according to the order wanted in Helas calls
@@ -1283,6 +1416,7 @@ class LoopHelasMatrixElement(helas_objects.HelasMatrixElement):
                 amp.set('number',ampnumber)
                 ampnumber=ampnumber+1
         ampnumber=1
+        # Now the loop ones
         for loopdiag in self.get_loop_diagrams():
             for wf in loopdiag.get('wavefunctions'):
                 wf.set('number',wfnumber)
@@ -1298,6 +1432,14 @@ class LoopHelasMatrixElement(helas_objects.HelasMatrixElement):
             for ctamp in loopdiag.get_ct_amplitudes():
                     ctamp.set('number',ampnumber)
                     ampnumber=ampnumber+1
+        # Finally the loopUVCT ones
+        for loopUVCTdiag in self.get_loop_UVCT_diagrams():
+            for wf in loopUVCTdiag.get('wavefunctions'):
+                wf.set('number',wfnumber)
+                wfnumber=wfnumber+1
+            for amp in loopUVCTdiag.get('amplitudes'):
+                amp.set('number',ampnumber)
+                ampnumber=ampnumber+1            
     
     def get_number_of_wavefunctions(self):
         """Gives the total number of wavefunctions for this ME, including the
@@ -1343,7 +1485,8 @@ class LoopHelasMatrixElement(helas_objects.HelasMatrixElement):
         (So only one amplitude is counted per loop amplitude.)
         """
         
-        return sum([len(d.get('amplitudes')) for d in self.get_loop_diagrams()])
+        return sum([len(d.get('amplitudes')) for d in (self.get_loop_diagrams()+
+                    self.get_loop_UVCT_diagrams())])
 
     def get_number_of_born_amplitudes(self):
         """Gives the total number of amplitudes for the born diagrams of this ME
@@ -1372,7 +1515,15 @@ class LoopHelasMatrixElement(helas_objects.HelasMatrixElement):
         """Gives a list of the loop diagrams for this ME"""
 
         return helas_objects.HelasDiagramList([hd for hd in self['diagrams'] if\
-                 isinstance(hd,LoopHelasDiagram)])
+                 isinstance(hd,LoopHelasDiagram) and\
+                 len(hd.get_loop_amplitudes())>=1])
+
+    def get_loop_UVCT_diagrams(self):
+        """Gives a list of the loop UVCT diagrams for this ME"""
+        
+        return helas_objects.HelasDiagramList([hd for hd in self['diagrams'] if\
+                 isinstance(hd,LoopHelasDiagram) and\
+                 len(hd.get_loop_UVCTamplitudes())>=1])
 
     def get_used_lorentz(self):
         """Return a list of (lorentz_name, conjugate, outgoing) with
@@ -1389,6 +1540,16 @@ class LoopHelasMatrixElement(helas_objects.HelasMatrixElement):
                    not wa.get('is_loop'))) else True) for wa in \
                 self.get_all_wavefunctions() + self.get_all_amplitudes() \
                 if wa.get('interaction_id') != 0]
+
+    def get_used_couplings(self):
+        """Return a list with all couplings used by this
+        HelasMatrixElement."""
+
+        answer = super(LoopHelasMatrixElement, self).get_used_couplings()
+        for diag in self.get_loop_UVCT_diagrams():
+            answer.extend([amp.get('UVCT_couplings') for amp in \
+              diag.get_loop_UVCTamplitudes()])
+        return answer
 
     def get_color_amplitudes(self):
         """ Just to forbid the usage of this generic function in a
@@ -1514,6 +1675,9 @@ class LoopHelasMatrixElement(helas_objects.HelasMatrixElement):
             keys.sort()
             for key in keys:
                 amplitudes_loop_diagrams.append(ctIDs[key])
+        
+        for diag in self.get_loop_UVCT_diagrams():
+            amplitudes_loop_diagrams.append(diag.get_loop_UVCTamplitudes())
 
         return amplitudes_loop_diagrams
 
@@ -1554,11 +1718,15 @@ class LoopHelasMatrixElement(helas_objects.HelasMatrixElement):
                 diagrams.append(HelasAmpList[0].get_base_diagram(\
                       wf_dict, vx_list, optimization))
                 type=diagrams[-1]['type']
+            elif isinstance(HelasAmpList[0],LoopHelasUVCTAmplitude):
+                diagrams.append(HelasAmpList[0].\
+                            get_base_diagram(wf_dict, vx_list, optimization))
             else:
                 newdiag=HelasAmpList[0].get_base_diagram(wf_dict, vx_list, optimization)
                 diagrams.append(loop_base_objects.LoopDiagram({
                   'vertices':newdiag['vertices'],'type':-type}))
-                
+
+        
         for diag in diagrams:
             diag.calculate_orders(self.get('processes')[0].get('model'))
             

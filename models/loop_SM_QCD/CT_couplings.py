@@ -100,58 +100,59 @@ R2_QQt = Coupling(name = 'R2_QQt',
 # UV couplings #
 ################
 
+
 UV_3Gg = Coupling(name = 'UV_3Gg',
                  value = '-G_UVg*G',
-                 order = {'QCD':2})
+                 order = {'QCD':3})
 
 UV_3Gq = Coupling(name = 'UV_3Gq',
                  value = '-G_UVq*G',
-                 order = {'QCD':2})
+                 order = {'QCD':3})
 
 UV_3Gb = Coupling(name = 'UV_3Gb',
                  value = '-G_UVb*G',
-                 order = {'QCD':2})
+                 order = {'QCD':3})
 
 UV_3Gt = Coupling(name = 'UV_3Gt',
                  value = '-G_UVt*G',
-                 order = {'QCD':2})
+                 order = {'QCD':3})
 
 UV_4Gg = Coupling(name = 'UV_4Gg',
                  value = '2.0*complex(0,1)*G_UVg*(G**2)',
-                 order = {'QCD':2})
+                 order = {'QCD':4})
 
 UV_4Gq = Coupling(name = 'UV_4Gq',
                  value = '2.0*complex(0,1)*G_UVq*(G**2)',
-                 order = {'QCD':2})
+                 order = {'QCD':4})
 
 UV_4Gb = Coupling(name = 'UV_4Gb',
                  value = '2.0*complex(0,1)*G_UVb*(G**2)',
-                 order = {'QCD':2})
+                 order = {'QCD':4})
 
 UV_4Gt = Coupling(name = 'UV_4Ggt',
                  value = '2.0*complex(0,1)*G_UVt*(G**2)',
-                 order = {'QCD':2})
+                 order = {'QCD':4})
 
 UV_GQQg = Coupling(name = 'UV_GQQg',
                  value = 'complex(0,1)*G_UVg*G',
-                 order = {'QCD':2})
+                 order = {'QCD':3})
 
 UV_GQQq = Coupling(name = 'UV_GQQq',
                  value = 'complex(0,1)*G_UVq*G',
-                 order = {'QCD':2})
+                 order = {'QCD':3})
 
 UV_GQQb = Coupling(name = 'UV_GQQb',
                  value = 'complex(0,1)*G_UVb*G',
-                 order = {'QCD':2})
+                 order = {'QCD':3})
 
 UV_GQQt = Coupling(name = 'UV_GQQt',
                  value = 'complex(0,1)*G_UVt*G',
-                 order = {'QCD':2})
+                 order = {'QCD':3})
 
 UV_bMass = Coupling(name = 'UV_bMass',
                  value = 'bMass_UV',
-                 order = {'QCD':2}) 
+                 order = {'QCD':3}) 
 
 UV_tMass = Coupling(name = 'UV_tMass',
                  value = 'tMass_UV',
-                 order = {'QCD':2})
+                 order = {'QCD':3})

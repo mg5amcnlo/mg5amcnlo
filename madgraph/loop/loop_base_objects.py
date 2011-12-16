@@ -722,7 +722,7 @@ class LoopDiagram(base_objects.Diagram):
 #===============================================================================
 # LoopDiagram
 #===============================================================================
-class LoopUVCTDiagram(LoopDiagram):
+class LoopUVCTDiagram(base_objects.Diagram):
     """ A special kind of LoopDiagram which does not contain a loop but only
     specifies all UV counter-term which factorize the the same given born
     and bringing in the same orders. UV mass renormalization does not belong to
@@ -732,27 +732,55 @@ class LoopUVCTDiagram(LoopDiagram):
     def default_setup(self):
         """Default values for all properties"""
 
-        super(LoopDiagram,self).default_setup()
-        # This attributes stores the vertex of the wavefunction UV
-        # renormalization counterterm.
-        self['UVCTVertices']=base_objects.VertexList()
+        super(LoopUVCTDiagram,self).default_setup()
+        # These attributes store the specifics of the UV counter-term
+        # contribution of this diagram
+        self['type']='UV'
+        self['UVCT_orders']={}
+        self['UVCT_couplings']=[]
 
     def filter(self, name, value):
         """Filter for valid diagram property values."""
 
-        if name == 'UVCTVertices':
-            if not isinstance(value, base_objects.VertexList):
+        if name == 'UVCT_couplings':
+            if not isinstance(value, list):
                 raise self.PhysicsObjectError, \
-                        "%s is not a valid UV CT VertexList" % str(value)
+                        "%s is not a valid list" % str(value)
+            else:
+                for elem in value:
+                    if not isinstance(elem, str):
+                        raise self.PhysicsObjectError, \
+                        "%s is not a valid string" % str(value)
+        
+        if name == 'UVCT_orders':
+            if not isinstance(value, dict):
+                raise self.PhysicsObjectError, \
+                        "%s is not a valid dictionary" % str(value)
+
+        if name == 'type':
+            if not isinstance(value, str):
+                raise self.PhysicsObjectError, \
+                        "%s is not a valid string" % str(value)
+        
         else:
-            super(LoopDiagram, self).filter(name, value)
+            super(LoopUVCTDiagram, self).filter(name, value)
 
         return True
     
     def get_sorted_keys(self):
         """Return particle property names as a nicely sorted list."""
         
-        return ['vertices', 'UVCTVertices', 'orders']
+        return ['vertices', 'UVCT_couplings', 'UVCT_orders', 'type', 'orders']
+
+    def get_UVCTinteraction(self, model):
+        """ Finds the UV counter-term interaction present in this UVCTDiagram """
+        
+        for vert in self['vertices']:
+            if vert.get('id') != 0:
+                if model.get_interaction(vert.get('id')).is_UV():
+                    return model.get_interaction(vert.get('id'))
+                
+        return None
 
     def calculate_orders(self, model):
         """Calculate the actual coupling orders of this diagram. Note
@@ -761,10 +789,9 @@ class LoopUVCTDiagram(LoopDiagram):
 
         coupling_orders = dict([(c, 0) for c in model.get('coupling_orders')])
         weight = 0
-        for vertex in (self['vertices']+[self['UVCTVertices'][0],]):
-            if vertex.get('id') == 0: continue
-            couplings = model.get('interaction_dict')[vertex.get('id')].\
-                        get('orders')
+        for couplings in [model.get('interaction_dict')[vertex.get('id')].\
+                        get('orders') for vertex in self['vertices'] if \
+                        vertex.get('id') != 0]+[self['UVCT_orders']]:
             for coupling in couplings:
                 coupling_orders[coupling] += couplings[coupling]
             weight += sum([model.get('order_hierarchy')[c]*n for \
@@ -776,10 +803,15 @@ class LoopUVCTDiagram(LoopDiagram):
         """Returns a nicely formatted string of the diagram content."""
         res=''
         if self['vertices']:
-            res=res+super(LoopDiagram,self).nice_string()
-        if self['UVCTVertices']:
+            res=res+super(LoopUVCTDiagram,self).nice_string()
+        if self['UVCT_couplings']:
             res=res+'UV renorm. vertices: '
-            res=res+','.join(str(vert) for vert in self['UVCTVertices'])+'\n'
+            res=res+','.join(vert for vert in self['UVCT_couplings'])+'\n'
+        if self['UVCT_orders']:
+            res=res+'UVCT orders: '
+            res=res+','.join(order for order in self['UVCT_orders'].keys())+'\n'      
+        if self['type']:
+            res=res+'UVCT type: '+self['type']
             
 #===============================================================================
 # LoopModel
@@ -792,6 +824,15 @@ class LoopModel(base_objects.Model):
     def default_setup(self):
        super(LoopModel,self).default_setup()
        self['perturbation_couplings'] = {}
+       # The 'coupling_orders_counterterms' has all coupling orders
+       # as keys and values are tuple of the form:
+       #    (loop_particles, counterterm, laurent_order)
+       # where loop_particles are defined as usual:
+       #    [[lpartID1, lpartID2, ...], [lpartID1bis, lpartID2bis, ...],...]
+       # and the counterterm is a string giving the name of the coupling
+       # representing the counterterm and finally 'laurent_order' is to which
+       # laurent order this counterterm contributes.
+       self['coupling_orders_counterterms']={}
     
     def filter(self, name, value):
         """Filter for model property values"""
@@ -810,6 +851,18 @@ class LoopModel(base_objects.Model):
             super(LoopModel,self).filter(name,value)
         
         return True
+
+    def actualize_dictionaries(self, useUVCT=False):
+        """This function actualizes the dictionaries"""
+
+        if useUVCT:
+            [self['ref_dict_to0'], self['ref_dict_to1']] = \
+              self['interactions'].generate_ref_dict(useR2UV=False,useUVCT=True)
+        else:
+            [self['ref_dict_to0'], self['ref_dict_to1']] = \
+                    self['interactions'].generate_ref_dict() 
+        self['ref_dict_to0'].update(
+                                self['particles'].generate_ref_dict())
 
     def get_sorted_keys(self):
         """Return process property names as a nicely sorted list."""

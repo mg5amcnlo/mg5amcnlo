@@ -626,12 +626,25 @@ class Interaction(PhysicsObject):
             return False
         
     def is_UVmass(self):
-        """ Returns if the interaction is of UV type."""
+        """ Returns if the interaction is of UVmass type."""
 
         # Precaution only useful because some tests have a predefined model
         # bypassing the default_setup and for which type was not defined.
         if 'type' in self.keys():
             return (len(self['type'])>=6 and self['type'][:6]=='UVmass')
+        else:
+            return False
+        
+    def is_UVCT(self):
+        """ Returns if the interaction is of the UVCT type which means that 
+        it has been selected as a possible UV counterterm interaction for this
+        process. Such interactions are marked by having the 'UVCT_SPECIAL' order
+        key in their orders."""
+
+        # Precaution only useful because some tests have a predefined model
+        # bypassing the default_setup and for which type was not defined.
+        if 'UVCT_SPECIAL' in self['orders'].keys():
+            return True
         else:
             return False
         
@@ -716,7 +729,7 @@ class InteractionList(PhysicsObjectList):
 
         return isinstance(obj, Interaction)
 
-    def generate_ref_dict(self,useR2UV=False):
+    def generate_ref_dict(self,useR2UV=False, useUVCT=False):
         """Generate the reference dictionaries from interaction list.
         Return a list where the first element is the n>0 dictionary and
         the second one is n-1>1."""
@@ -725,7 +738,8 @@ class InteractionList(PhysicsObjectList):
         ref_dict_to1 = {}
 
         for inter in self:
-            if useR2UV or (not inter.is_UV() and not inter.is_R2()):
+            if useR2UV or (useUVCT and inter.is_UVCT()) or \
+               (not inter.is_UV() and not inter.is_R2()):
                 inter.generate_dict_entries(ref_dict_to0, ref_dict_to1)
 
         return [ref_dict_to0, ref_dict_to1]

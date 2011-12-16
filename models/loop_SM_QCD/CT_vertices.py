@@ -69,7 +69,7 @@ V_R2GUU = CTVertex(name = 'V_R2GUU',
                type = 'R2')  
 
 # gss~
-V_R2GDD = CTVertex(name = 'V_R2GSS',
+V_R2GSS = CTVertex(name = 'V_R2GSS',
               particles = [ P.s__tilde__, P.s, P.G ],
               color = [ 'T(3,2,1)' ],
               lorentz = [ L.FFV1 ],
@@ -78,13 +78,31 @@ V_R2GDD = CTVertex(name = 'V_R2GSS',
               type = 'R2')
 
 # gcc~              
-V_R2GUU = CTVertex(name = 'V_R2GCC',
+V_R2GCC = CTVertex(name = 'V_R2GCC',
                particles = [ P.c__tilde__, P.c, P.G ],
                color = [ 'T(3,2,1)' ],
                lorentz = [ L.FFV1 ],
                loop_particles =[[[P.c,P.G]]],               
                couplings = {(0,0,0):C.R2_GQQ},
                type = 'R2')  
+
+# gbb~
+V_R2GBB = CTVertex(name = 'V_R2GBB',
+              particles = [ P.b__tilde__, P.b, P.G ],
+              color = [ 'T(3,2,1)' ],
+              lorentz = [ L.FFV1 ],
+              loop_particles =[[[P.b,P.G]]],
+              couplings = {(0,0,0):C.R2_GQQ},
+              type = 'R2')
+
+# gtt~              
+V_R2GTT = CTVertex(name = 'V_R2GTT',
+               particles = [ P.t__tilde__, P.t, P.G ],
+               color = [ 'T(3,2,1)' ],
+               lorentz = [ L.FFV1 ],
+               loop_particles =[[[P.t,P.G]]],               
+               couplings = {(0,0,0):C.R2_GQQ},
+               type = 'R2')
 
 # gg             
 V_R2GG = CTVertex(name = 'V_R2GG',

@@ -245,10 +245,10 @@ class UFOMG5Converter(object):
         # defined in the file coupling_orders.py and we import it from 
         # there.
 
-        hierarchy={}
+        all_orders = self.ufomodel.all_orders
 
+        hierarchy={}
         try:
-            all_orders = self.ufomodel.all_orders
             for order in all_orders:
                 hierarchy[order.name]=order.hierarchy
         except AttributeError:
@@ -260,10 +260,8 @@ class UFOMG5Converter(object):
             self.model.set('order_hierarchy', hierarchy)            
         
         # Also set expansion_order, i.e., maximum coupling order per process
-
         expansion_order={}
         try:
-            all_orders = self.ufomodel.all_orders
             for order in all_orders:
                 expansion_order[order.name]=order.expansion_order
         except AttributeError:
@@ -273,7 +271,20 @@ class UFOMG5Converter(object):
                 pass
         else:
             self.model.set('expansion_order', expansion_order)
-                
+        
+        # And finally the UVCT coupling order counterterms
+        coupling_order_counterterms={}
+        try:
+            for order in all_orders:
+                coupling_order_counterterms[order.name]=order.expansion_order
+        except AttributeError:
+            if self.perturbation_couplings:
+                raise MadGraph5Error, 'The loop model MG5 attemps to import does not specify an expansion_order for all coupling orders.' 
+            else:
+                pass
+        else:
+            self.model.set('expansion_order', expansion_order)
+        
         return self.model
         
     
@@ -354,7 +365,8 @@ class UFOMG5Converter(object):
         for key, counterterm in couplings.items():
             order_dict={}
             for i, order in enumerate(self.ufomodel.all_orders):
-                order_dict[order.name]=key[i]
+                # Times two because the laurent expansion is in alpha_s not g_s
+                order_dict[order.name]=key[i]*2
             # We want to keep this new coupling in the list all_couplings.
             new_couplings[(0,0,key[-1])]=self.ufomodel.object_library.Coupling(\
                 name = 'C_UVWfct_'+particle_info.name+'_'+str(key[-1]),
@@ -371,9 +383,10 @@ class UFOMG5Converter(object):
             loop_particles =loop_particles,                 
             couplings = new_couplings,
             type = 'UV')
-        self.add_CTinteraction(UVinteraction)
+#        print "Adding for the particles =",particle_info.pdg_code
+#        self.add_CTinteraction(UVinteraction)
         # The particle dictionary was created but not all particles are defined yet
-        self.model.reset_dictionaries()
+#        self.model.reset_dictionaries()
 
     def add_CTinteraction(self, interaction):
         """ Split this interaction in order to call add_interaction for
@@ -407,14 +420,14 @@ class UFOMG5Converter(object):
         # correct place in new_couplings.
         for key, coupling in interaction_info.couplings.items():
             for poleOrder in range(0,3):
-                newCoupling=copy.copy(coupling)
-                if poleOrder!=0:
-                    newCoupling.name=newCoupling.name+"_"+str(poleOrder)+"eps"
-                elif coupling.pole(poleOrder)!='ZERO':
+                if coupling.pole(poleOrder)!='ZERO':
+                    newCoupling=copy.copy(coupling)
+                    if poleOrder!=0:
+                        newCoupling.name=newCoupling.name+"_"+str(poleOrder)+"eps"
                     newCoupling.value=coupling.pole(poleOrder)
                     new_couplings[key[2]][poleOrder][(key[0],key[1])]=\
                       newCoupling
-
+        
         # Now we can add an interaction for each.         
         for i, all_couplings in enumerate(new_couplings):
             loop_particles=[[]]
@@ -423,10 +436,10 @@ class UFOMG5Converter(object):
                     for loop_parts in interaction_info.loop_particles[i]]
             for poleOrder in range(0,3):
                 if all_couplings[poleOrder]!={}:
-                    if poleOrder!=0:
-                        intType=intType+str(poleOrder)+'eps'
                     interaction_info.couplings=all_couplings[poleOrder]
-                    self.add_interaction(interaction_info,intType,loop_particles)
+                    self.add_interaction(interaction_info,\
+                      (intType if poleOrder==0 else (intType+str(poleOrder)+\
+                                                     'eps')),loop_particles)
     
     def add_interaction(self, interaction_info, type='base', loop_particles=None):
         """add an interaction in the MG5 model. interaction_info is the 
