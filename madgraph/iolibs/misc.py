@@ -343,13 +343,16 @@ class open_file(object):
       if mac_check==True and sys.platform == 'darwin':
           return self.open_mac_program(program, file_path)
 
+      arguments = program.split() # allow argument in program definition
+      arguments.append(file_path)
+
       # Shell program only                                                                                                                                                                 
       if program:
           if not background:
-              subprocess.call([program, file_path])
+              subprocess.call(arguments)
           else:
               import thread
-              thread.start_new_thread(subprocess.call,([program, file_path],))
+              thread.start_new_thread(subprocess.call,(arguments,))
       else:
           logger.warning('Not able to open file %s since no program configured.' % file_path + \
                               'Please set one in ./input/mg5_configuration.txt')
@@ -362,7 +365,9 @@ class open_file(object):
           os.system('open %s' % file_path)
       elif which(program):
           # shell program
-          subprocess.call([program, file_path])
+          arguments = program.split() # Allow argument in program definition
+          arguments.append(file_path)
+          subprocess.call(arguments)
       else:
          # not shell program
          os.system('open -a %s %s' % (program, file_path))
