@@ -598,7 +598,7 @@ class OneTagResults(dict):
             if 'plot' in self.parton:
                 out += ' <a href="./HTML/%(run_name)s/plots_parton.html">plots</a>'
             if 'param_card' in self.parton:
-                out += ' <a href="./%(run_name)s_param_card.dat">param_card</a>'
+                out += ' <a href="./param_card.dat">param_card</a>'
 
             return out % self
         

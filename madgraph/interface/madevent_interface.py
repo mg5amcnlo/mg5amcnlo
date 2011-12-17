@@ -1709,15 +1709,16 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
             # No run name assigned -> assigned one automaticaly 
             self.set_run_name(self.find_available_run_name(self.me_dir))
         else:
-            self.set_run_name(args[0], True)
+            self.set_run_name(args[0], reload_card=True)
             args.pop(0)
-            
+        
         # Running gridpack warmup
         opts=[('accuracy', accuracy), # default 0.01
               ('points', 1000),
               ('iterations',9)]
 
         logger.info('Calculating decay widths with run name %s' % self.run_name)
+        
         self.exec_cmd('survey  %s %s' % \
                       (self.run_name,
                        " ".join(['--' + opt + '=' + str(val) for (opt,val) \
@@ -1727,14 +1728,9 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
         self.exec_cmd('store_events', postcmd=False)
         
         self.collect_decay_widths()
-        # Combine decay widths into new file
-        #proc = subprocess.Popen(['python',
-        #                         pjoin(self.dirbin, 'collect_decay_widths.py'),
-        #                         self.run_name], 
-        #                        cwd=self.me_dir,
-        #                        stdout=subprocess.PIPE)
-        # 
-        #(stdout, stderr) = proc.communicate()
+        self.update_status('calculate_decay_widths done', 
+                                                 level='parton', makehtml=False)   
+
     
     ############################################################################
     def collect_decay_widths(self):
@@ -1748,7 +1744,10 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
         # Looping over the Subprocesses
         for P_path in SubProcesses.get_subP(self.me_dir):
             ids = SubProcesses.get_subP_ids(P_path)
-            nb_output = len(ids)
+            # due to grouping we need to compute the ratio factor for the 
+            # ungroup resutls (that we need here). Note that initial particles
+            # grouping are not at the same stage as final particle grouping
+            nb_output = len(ids) / (len(set([p[0] for p in ids])) + 1)
             results = open(pjoin(P_path, run_name + '_results.dat')).read().split('\n')[0]
             result = float(results.strip().split(' ')[0])
             for particles in ids:
