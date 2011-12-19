@@ -748,7 +748,7 @@ class LoopUVCTDiagram(base_objects.Diagram):
                         "%s is not a valid list" % str(value)
             else:
                 for elem in value:
-                    if not isinstance(elem, str):
+                    if not isinstance(elem, str) and not isinstance(elem, int):
                         raise self.PhysicsObjectError, \
                         "%s is not a valid string" % str(value)
         
