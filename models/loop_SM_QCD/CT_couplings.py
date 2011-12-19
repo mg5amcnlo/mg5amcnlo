@@ -89,11 +89,11 @@ R2_QQq = Coupling(name = 'R2_QQq',
                  order = {'QCD':2})
 
 R2_QQb = Coupling(name = 'R2_QQb',
-                 value =  'complex(0,1)*G**2*(Ncol**2-1)*(-2.0*MB)/(32.0*cmath.pi**2*Ncol)',
+                 value =  'complex(0,1)*G**2*(Ncol**2-1)*(2.0*MB)/(32.0*cmath.pi**2*Ncol)',
                  order = {'QCD':2})
 
 R2_QQt = Coupling(name = 'R2_QQt',
-                 value =  'complex(0,1)*G**2*(Ncol**2-1)*(-2.0*MT)/(32.0*cmath.pi**2*Ncol)',
+                 value =  'complex(0,1)*G**2*(Ncol**2-1)*(2.0*MT)/(32.0*cmath.pi**2*Ncol)',
                  order = {'QCD':2})
 
 ################
@@ -151,8 +151,8 @@ UV_GQQt = Coupling(name = 'UV_GQQt',
 
 UV_bMass = Coupling(name = 'UV_bMass',
                  value = 'bMass_UV',
-                 order = {'QCD':3}) 
+                 order = {'QCD':2}) 
 
 UV_tMass = Coupling(name = 'UV_tMass',
                  value = 'tMass_UV',
-                 order = {'QCD':3})
+                 order = {'QCD':2})

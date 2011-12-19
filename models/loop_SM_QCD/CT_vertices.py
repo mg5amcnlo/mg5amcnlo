@@ -17,7 +17,7 @@ V_R23G = CTVertex(name = 'V_R23G',
               particles = [ P.G, P.G, P.G ],
               color = [ 'f(1,2,3)' ],
               lorentz = [ L.VVV1 ],
-              loop_particles = [ [[P.u], [P.d], [P.c], [P.s]],
+              loop_particles = [ [[P.u], [P.d], [P.c], [P.s], [P.b], [P.t]],
                                [[P.G]] ],
               couplings = {(0,0,0):C.R2_3Gq, (0,0,1):C.R2_3Gg},
               type = 'R2' )
@@ -33,7 +33,7 @@ V_R24G = CTVertex(name = 'V_R24G',
               color = [ 'Tr(1,2)*Tr(3,4)' , 'Tr(1,3)*Tr(2,4)' , 'Tr(1,4)*Tr(2,3)', \
                         'd(-1,1,2)*d(-1,3,4)' , 'd(-1,1,3)*d(-1,2,4)' , 'd(-1,1,4)*d(-1,2,3)'],
               lorentz = [  L.R2_4G_1234, L.R2_4G_1324, L.R2_4G_1423 ],
-              loop_particles = [ [[P.G]], [[P.u],[P.d],[P.c],[P.s]] ],
+              loop_particles = [ [[P.G]], [[P.u],[P.d],[P.c],[P.s],[P.b],[P.t]] ],
               couplings = {(0,0,0):C.GC_4GR2_Gluon_delta5,(0,1,0):C.GC_4GR2_Gluon_delta7,(0,2,0):C.GC_4GR2_Gluon_delta7, \
                            (1,0,0):C.GC_4GR2_Gluon_delta7,(1,1,0):C.GC_4GR2_Gluon_delta5,(1,2,0):C.GC_4GR2_Gluon_delta7, \
                            (2,0,0):C.GC_4GR2_Gluon_delta7,(2,1,0):C.GC_4GR2_Gluon_delta7,(2,2,0):C.GC_4GR2_Gluon_delta5, \

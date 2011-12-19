@@ -292,7 +292,7 @@ class UFOMG5Converter(object):
         """ convert and add a particle in the particle list """
                 
         loop_particles = [[[]]]
-        couplings = {}
+        counterterms = {}
         
         # MG5 have only one entry for particle and anti particles.
         #UFO has two. use the color to avoid duplictions
@@ -315,7 +315,7 @@ class UFOMG5Converter(object):
         # Loop over the element defining the UFO particles
         for key,value in particle_info.__dict__.items():
             # Check if we use it in the MG5 definition of a particles
-            if key in base_objects.Particle.sorted_keys:
+            if key in base_objects.Particle.sorted_keys and not key=='counterterm':
                 nb_property +=1
                 if key in ['name', 'antiname']:
                     if self.use_lower_part_names:
@@ -331,7 +331,7 @@ class UFOMG5Converter(object):
             elif key == 'loop_particles':
                 loop_particles = value
             elif key == 'counterterm':
-                couplings = value
+                counterterms = value
             elif key.lower() not in ('ghostnumber','selfconjugate','goldstoneboson'):
                 # add charge -we will check later if those are conserved 
                 self.conservecharge.add(key)
@@ -341,52 +341,49 @@ class UFOMG5Converter(object):
         # ignore them otherwise
         if particle.get('spin') < 0:
             particle.set('spin',-particle.get('spin'))
-      
+        
         assert(12 == nb_property) #basic check that all the information is there         
         
         # Identify self conjugate particles
         if particle_info.name == particle_info.antiname:
             particle.set('self_antipart', True)
-            
-        # Add the particles to the list
-        self.particles.append(particle)
-        
+                    
         # Proceed only if we deal with a loop model and that this particle
         # has wavefunction renormalization
-        if not self.perturbation_couplings or couplings=={}:
+        if not self.perturbation_couplings or counterterms=={}:
+            self.particles.append(particle)
             return
         
-        # Add the UV vertex corresponding to the UV wavefunction renormalization
-        # of this particle.
+        # Set here the 'counterterm' attribute to the particle.
         # First we must change the couplings dictionary keys from the entry format
         # (order1,order2,...,orderN,loop_particle#):LaurentSerie
-        # two a three-entry tuple with format (0,0,loop_particle#):CTCoupling.
-        new_couplings = {}
-        for key, counterterm in couplings.items():
-            order_dict={}
-            for i, order in enumerate(self.ufomodel.all_orders):
-                # Times two because the laurent expansion is in alpha_s not g_s
-                order_dict[order.name]=key[i]*2
-            # We want to keep this new coupling in the list all_couplings.
-            new_couplings[(0,0,key[-1])]=self.ufomodel.object_library.Coupling(\
-                name = 'C_UVWfct_'+particle_info.name+'_'+str(key[-1]),
-                value = counterterm,
-                order = order_dict)
+        # two a dictionary with format 
+        # ('ORDER_OF_COUNTERTERM',((Particle_list_PDG))):{laurent_order:CTCouplingName}
+        particle_counterterms = {}
+        for key, counterterm in counterterms.items():
+            # Makes sure this counterterm contributes at one-loop.
+            if len([1 for k in key[:-1] if k==1])==1 and \
+               not any(k>1 for k in key[:-1]):
+                newParticleCountertermKey=[None,\
+                  tuple([tuple([abs(part.pdg_code) for part in loop_parts]) for\
+                    loop_parts in loop_particles[key[-1]]])]
+                for i, order in enumerate(self.ufomodel.all_orders):
+                    if key[i]==1:
+                        newParticleCountertermKey[0]=order.name
+                newCouplingName='C_UVWfct_'+particle_info.name+'_'+str(key[-1])
+                particle_counterterms[tuple(newParticleCountertermKey)]=\
+                  dict([(key,newCouplingName+('' if key==0 else '_'+str(-key)+'eps'))\
+                        for key in counterterm.keys()])
+                # We want to create the new coupling for this wavefunction
+                # renormalization.
+                self.ufomodel.object_library.Coupling(\
+                    name = newCouplingName,
+                    value = counterterm,
+                    order = {newParticleCountertermKey[0]:2})
 
-        # We want to keep this new CTVertex in the list all_CTvertices. But it is
-        # irrelevant in the actual implementation.                        
-        UVinteraction=self.ufomodel.object_library.CTVertex(
-            name = 'V_UVWfct_'+particle_info.name,
-            particles = [ particle_info ],
-            color = [],
-            lorentz = [],
-            loop_particles =loop_particles,                 
-            couplings = new_couplings,
-            type = 'UV')
-#        print "Adding for the particles =",particle_info.pdg_code
-#        self.add_CTinteraction(UVinteraction)
-        # The particle dictionary was created but not all particles are defined yet
-#        self.model.reset_dictionaries()
+        particle.set('counterterm',particle_counterterms)
+        self.particles.append(particle)
+        return
 
     def add_CTinteraction(self, interaction):
         """ Split this interaction in order to call add_interaction for

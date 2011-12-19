@@ -68,7 +68,8 @@ def loadLoopModel():
                   'pdg_code':21,
                   'propagating':True,
                   'is_part':True,
-                  'self_antipart':True}))
+                  'self_antipart':True,
+                  'counterterm':{('QCD',((),)):{-1:'GWfct'}}}))
     
     # A quark U and its antiparticle
     mypartlist.append(base_objects.Particle({'name':'u',
@@ -87,6 +88,8 @@ def loadLoopModel():
                   'self_antipart':False}))
     antiu = copy.copy(mypartlist[1])
     antiu.set('is_part', False)
+    mypartlist[1].set('counterterm',{('QCD',((),)):{-1:'UQCDWfct'},
+                                     ('QED',((),)):{-1:'UQEDWfct'}})
 
     # A quark D and its antiparticle
     mypartlist.append(base_objects.Particle({'name':'d',
@@ -104,6 +107,8 @@ def loadLoopModel():
                   'self_antipart':False}))
     antid = copy.copy(mypartlist[2])
     antid.set('is_part', False)
+    mypartlist[2].set('counterterm',{('QCD',((),)):{-1:'DQCDWfct'},
+                                     ('QED',((),)):{-1:'DQEDWfct'}})
 
     # A photon
     mypartlist.append(base_objects.Particle({'name':'a',
@@ -232,6 +237,7 @@ def loadLoopModel():
                   'couplings':{(0, 0):'G'},
                   'orders':{'QCD':3},
                   'loop_particles':[[]],
+                  'perturbation_type':'QCD',
                   'type':'R2'}))
 
     # 4 gluon vertex
@@ -244,6 +250,7 @@ def loadLoopModel():
                   'couplings':{(0, 0):'G^2'},
                   'orders':{'QCD':4},
                   'loop_particles':[[]],
+                  'perturbation_type':'QCD',
                   'type':'R2'}))
 
     # Gluon and photon couplings to quarks
@@ -258,6 +265,7 @@ def loadLoopModel():
                   'couplings':{(0, 0):'GQQ'},
                   'orders':{'QCD':3},
                   'loop_particles':[[]],
+                  'perturbation_type':'QCD',
                   'type':'R2'}))
         
     myinterlist.append(base_objects.Interaction({
@@ -271,6 +279,7 @@ def loadLoopModel():
                   'couplings':{(0, 0):'GQQ'},
                   'orders':{'QCD':1, 'QED':2},
                   'loop_particles':[[]],
+                  'perturbation_type':'QED',
                   'type':'R2'}))
 
     myinterlist.append(base_objects.Interaction({
@@ -283,6 +292,7 @@ def loadLoopModel():
                   'lorentz':['L1'],
                   'couplings':{(0, 0):'GQED'},
                   'orders':{'QED':1, 'QCD':2},
+                  'perturbation_type':'QCD',
                   'loop_particles':[[]],
                   'type':'R2'}))
 
@@ -297,6 +307,7 @@ def loadLoopModel():
                   'couplings':{(0, 0):'GQED'},
                   'orders':{'QED':3},
                   'loop_particles':[[]],
+                  'perturbation_type':'QED',
                   'type':'R2'}))
 
     myinterlist.append(base_objects.Interaction({
@@ -310,6 +321,7 @@ def loadLoopModel():
                   'couplings':{(0, 0):'GQQ'},
                   'orders':{'QCD':3},
                   'loop_particles':[[]],
+                  'perturbation_type':'QCD',
                   'type':'R2'}))
 
     myinterlist.append(base_objects.Interaction({
@@ -323,6 +335,7 @@ def loadLoopModel():
                   'couplings':{(0, 0):'GQQ'},
                   'orders':{'QCD':1, 'QED':2},
                   'loop_particles':[[]],
+                  'perturbation_type':'QED',
                   'type':'R2'}))
 
     myinterlist.append(base_objects.Interaction({
@@ -336,6 +349,7 @@ def loadLoopModel():
                   'couplings':{(0, 0):'GQED'},
                   'orders':{'QED':1, 'QCD':2},
                   'loop_particles':[[]],
+                  'perturbation_type':'QCD',
                   'type':'R2'}))
 
     myinterlist.append(base_objects.Interaction({
@@ -349,6 +363,7 @@ def loadLoopModel():
                   'couplings':{(0, 0):'GQED'},
                   'orders':{'QED':3},
                   'loop_particles':[[]],
+                  'perturbation_type':'QED',
                   'type':'R2'}))
 
     # Coupling of e to gamma
@@ -364,6 +379,7 @@ def loadLoopModel():
                   'couplings':{(0, 0):'GQED'},
                   'orders':{'QED':3},
                   'loop_particles':[[]],
+                  'perturbation_type':'QED',
                   'type':'R2'}))
 
     # R2 interactions not proportional to the base interactions
@@ -380,6 +396,7 @@ def loadLoopModel():
                   'couplings':{(0, 0):'G'},
                   'orders':{'QCD':2},
                   'loop_particles':[[]],
+                  'perturbation_type':'QCD',
                   'type':'R2'}))
 
     # The photon
@@ -392,6 +409,7 @@ def loadLoopModel():
                   'couplings':{(0, 0):'G'},
                   'orders':{'QED':2},
                   'loop_particles':[[]],
+                  'perturbation_type':'QED',
                   'type':'R2'}))
 
     # The electron
@@ -405,6 +423,7 @@ def loadLoopModel():
                   'couplings':{(0, 0):'G'},
                   'orders':{'QED':2},
                   'loop_particles':[[]],
+                  'perturbation_type':'QED',
                   'type':'R2'}))
 
     # The up quark, R2QED
@@ -418,6 +437,7 @@ def loadLoopModel():
                   'couplings':{(0, 0):'G'},
                   'orders':{'QED':2},
                   'loop_particles':[[]],
+                  'perturbation_type':'QED',
                   'type':'R2'}))
 
     # The up quark, R2QCD
@@ -431,6 +451,7 @@ def loadLoopModel():
                   'couplings':{(0, 0):'G'},
                   'orders':{'QCD':2},
                   'loop_particles':[[]],
+                  'perturbation_type':'QCD',
                   'type':'R2'}))
 
     # The down quark, R2QED
@@ -444,6 +465,7 @@ def loadLoopModel():
                   'couplings':{(0, 0):'G'},
                   'orders':{'QED':2},
                   'loop_particles':[[]],
+                  'perturbation_type':'QED',
                   'type':'R2'}))
 
     # The down quark, R2QCD
@@ -457,6 +479,7 @@ def loadLoopModel():
                   'couplings':{(0, 0):'G'},
                   'orders':{'QCD':2},
                   'loop_particles':[[]],
+                  'perturbation_type':'QCD',
                   'type':'R2'}))
 
     # The R2 three and four point interactions not proportional to the
@@ -472,6 +495,7 @@ def loadLoopModel():
                   'couplings':{(0, 0):'G'},
                   'orders':{'QED':3},
                   'loop_particles':[[]],
+                  'perturbation_type':'QED',
                   'type':'R2'}))
 
     # 2 photon and 1 gluons
@@ -486,6 +510,7 @@ def loadLoopModel():
                   'couplings':{(0, 0):'G'},
                   'orders':{'QED':2, 'QCD':1},
                   'loop_particles':[[]],
+                  'perturbation_type':'QED',
                   'type':'R2'}))
 
     # 1 photon and 2 gluons
@@ -500,6 +525,7 @@ def loadLoopModel():
                   'couplings':{(0, 0):'G'},
                   'orders':{'QED':1, 'QCD':2},
                   'loop_particles':[[]],
+                  'perturbation_type':'QCD',
                   'type':'R2'}))
 
     # 4 photons
@@ -512,6 +538,7 @@ def loadLoopModel():
                   'couplings':{(0, 0):'G'},
                   'orders':{'QED':4},
                   'loop_particles':[[]],
+                  'perturbation_type':'QED',
                   'type':'R2'}))
 
     # 3 photons and 1 gluon
@@ -569,8 +596,9 @@ def loadLoopModel():
                   'color': [],
                   'lorentz':['L1'],
                   'couplings':{(0, 0):'G'},
-                  'orders':{'QCD':2},
+                  'orders':{'QCD':3},
                   'loop_particles':[[]],
+                  'perturbation_type':'QCD',
                   'type':'UV1eps'}))
 
     # 4 gluon vertex CT
@@ -581,8 +609,9 @@ def loadLoopModel():
                   'color': [],
                   'lorentz':['L1'],
                   'couplings':{(0, 0):'G^2'},
-                  'orders':{'QCD':2},
+                  'orders':{'QCD':4},
                   'loop_particles':[[]],
+                  'perturbation_type':'QCD',
                   'type':'UV1eps'}))
 
     # Gluon and photon couplings to quarks CT
@@ -595,8 +624,9 @@ def loadLoopModel():
                   'color': [],
                   'lorentz':['L1'],
                   'couplings':{(0, 0):'GQQ'},
-                  'orders':{'QCD':2},
+                  'orders':{'QCD':3},
                   'loop_particles':[[]],
+                  'perturbation_type':'QCD',
                   'type':'UV1eps'}))
     
     # this is the CT for the renormalization of the QED corrections to alpha_QCD
@@ -609,8 +639,9 @@ def loadLoopModel():
                   'color': [],
                   'lorentz':['L1'],
                   'couplings':{(0, 0):'GQQ'},
-                  'orders':{'QED':2},
+                  'orders':{'QED':2,'QCD':1},
                   'loop_particles':[[]],
+                  'perturbation_type':'QED',
                   'type':'UV1eps'}))
 
     myinterlist.append(base_objects.Interaction({
@@ -622,8 +653,9 @@ def loadLoopModel():
                   'color': [],
                   'lorentz':['L1'],
                   'couplings':{(0, 0):'GQED'},
-                  'orders':{'QCD':2},
+                  'orders':{'QCD':2,'QED':1},
                   'loop_particles':[[]],
+                  'perturbation_type':'QCD',
                   'type':'UV1eps'}))
 
     myinterlist.append(base_objects.Interaction({
@@ -635,8 +667,9 @@ def loadLoopModel():
                   'color': [],
                   'lorentz':['L1'],
                   'couplings':{(0, 0):'GQED'},
-                  'orders':{'QED':2},
+                  'orders':{'QED':3},
                   'loop_particles':[[]],
+                  'perturbation_type':'QED',
                   'type':'UV1eps'}))
 
     myinterlist.append(base_objects.Interaction({
@@ -648,8 +681,9 @@ def loadLoopModel():
                   'color': [],
                   'lorentz':['L1'],
                   'couplings':{(0, 0):'GQQ'},
-                  'orders':{'QCD':2},
+                  'orders':{'QCD':3},
                   'loop_particles':[[]],
+                  'perturbation_type':'QCD',
                   'type':'UV1eps'}))
 
     myinterlist.append(base_objects.Interaction({
@@ -661,8 +695,9 @@ def loadLoopModel():
                   'color': [],
                   'lorentz':['L1'],
                   'couplings':{(0, 0):'GQQ'},
-                  'orders':{'QED':2},
+                  'orders':{'QED':2,'QCD':1},
                   'loop_particles':[[]],
+                  'perturbation_type':'QED',
                   'type':'UV1eps'}))
 
     myinterlist.append(base_objects.Interaction({
@@ -674,8 +709,9 @@ def loadLoopModel():
                   'color': [],
                   'lorentz':['L1'],
                   'couplings':{(0, 0):'GQED'},
-                  'orders':{'QCD':2},
+                  'orders':{'QCD':2,'QED':1},
                   'loop_particles':[[]],
+                  'perturbation_type':'QCD',
                   'type':'UV1eps'}))
 
     myinterlist.append(base_objects.Interaction({
@@ -687,8 +723,9 @@ def loadLoopModel():
                   'color': [],
                   'lorentz':['L1'],
                   'couplings':{(0, 0):'GQED'},
-                  'orders':{'QED':2},
+                  'orders':{'QED':3},
                   'loop_particles':[[]],
+                  'perturbation_type':'QED',
                   'type':'UV1eps'}))
     
     # alpha_QED to electron CT
@@ -702,8 +739,9 @@ def loadLoopModel():
                   'color': [],
                   'lorentz':['L1'],
                   'couplings':{(0, 0):'GQED'},
-                  'orders':{'QED':2},
+                  'orders':{'QED':3},
                   'loop_particles':[[]],
+                  'perturbation_type':'QED',
                   'type':'UV1eps'}))
       
     # The mass renormalization of the up and down quark granted
@@ -720,6 +758,7 @@ def loadLoopModel():
                   'couplings':{(0, 0):'G'},
                   'orders':{'QED':2},
                   'loop_particles':[[]],
+                  'perturbation_type':'QED',
                   'type':'UVmass1eps'}))
 
     # The up quark, UVQCD
@@ -733,6 +772,7 @@ def loadLoopModel():
                   'couplings':{(0, 0):'G'},
                   'orders':{'QCD':2},
                   'loop_particles':[[]],
+                  'perturbation_type':'QCD',
                   'type':'UVmass1eps'}))
 
     # The down quark, UVQED
@@ -746,6 +786,7 @@ def loadLoopModel():
                   'couplings':{(0, 0):'G'},
                   'orders':{'QED':2},
                   'loop_particles':[[]],
+                  'perturbation_type':'QED',
                   'type':'UVmass1eps'}))
 
     # The down quark, UVQCD
@@ -759,70 +800,10 @@ def loadLoopModel():
                   'couplings':{(0, 0):'G'},
                   'orders':{'QCD':2},
                   'loop_particles':[[]],
+                  'perturbation_type':'QCD',
                   'type':'UVmass1eps'}))
 
-    # The UV wavefunction renormalization of the gluon and up and down quark granted
-    # a mass for the occasion
 
-    # The up quark, UVQED
-    myinterlist.append(base_objects.Interaction({
-                  'id': 48,
-                  'particles': base_objects.ParticleList([\
-                                        mypartlist[2],]),
-                  'color': [],
-                  'lorentz':['L1'],
-                  'couplings':{(0, 0):'GWfct'},
-                  'orders':{'QED':2},
-                  'loop_particles':[[]],
-                  'type':'UV1eps'}))
-
-    # The up quark, UVQCD
-    myinterlist.append(base_objects.Interaction({
-                  'id': 49,
-                  'particles': base_objects.ParticleList([\
-                                        mypartlist[2],]),
-                  'color': [],
-                  'lorentz':['L1'],
-                  'couplings':{(0, 0):'GWfct'},
-                  'orders':{'QCD':2},
-                  'loop_particles':[[]],
-                  'type':'UV1eps'}))
-
-    # The down quark, UVQED
-    myinterlist.append(base_objects.Interaction({
-                  'id': 50,
-                  'particles': base_objects.ParticleList([\
-                                        mypartlist[1],]),
-                  'color': [],
-                  'lorentz':['L1'],
-                  'couplings':{(0, 0):'GWfct'},
-                  'orders':{'QED':2},
-                  'loop_particles':[[]],
-                  'type':'UV1eps'}))
-
-    # The down quark, UVQCD
-    myinterlist.append(base_objects.Interaction({
-                  'id': 51,
-                  'particles': base_objects.ParticleList([\
-                                        mypartlist[1],]),
-                  'color': [],
-                  'lorentz':['L1'],
-                  'couplings':{(0, 0):'GWfct'},
-                  'orders':{'QCD':2},
-                  'loop_particles':[[]],
-                  'type':'UV1eps'}))
-
-    # The gluon, UVQCD
-    myinterlist.append(base_objects.Interaction({
-                  'id': 52,
-                  'particles': base_objects.ParticleList([\
-                                        mypartlist[0],]),
-                  'color': [],
-                  'lorentz':['L1'],
-                  'couplings':{(0, 0):'GWfct'},
-                  'orders':{'QCD':2},
-                  'loop_particles':[[]],
-                  'type':'UV1eps'}))
 
     myloopmodel.set('particles', mypartlist)
     myloopmodel.set('couplings', ['QCD','QED'])        
@@ -1103,7 +1084,6 @@ class LoopDiagramGenerationTest(unittest.TestCase):
                                            'orders':bornOrders,
                                            'perturbation_couplings':pert,
                                            'squared_orders':sqOrders})
-    
             myloopamplitude = loop_diagram_generation.LoopAmplitude()
             myloopamplitude.set('process', myproc)
             myloopamplitude.generate_diagrams()
@@ -1116,7 +1096,7 @@ class LoopDiagramGenerationTest(unittest.TestCase):
             sumUVwfct=0
             for loop_UVCT_diag in myloopamplitude.get('loop_UVCT_diagrams'):
                 for coupl in loop_UVCT_diag.get('UVCT_couplings'):
-                    if not 'Wfct' in coupl:
+                    if not isinstance(coupl,str) or not 'Wfct' in coupl:
                         sumUV+=1
                     else:
                         sumUVwfct+=1

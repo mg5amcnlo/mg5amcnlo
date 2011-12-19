@@ -201,7 +201,7 @@ class Particle(PhysicsObject):
     sorted_keys = ['name', 'antiname', 'spin', 'color',
                    'charge', 'mass', 'width', 'pdg_code',
                    'texname', 'antitexname', 'line', 'propagating',
-                   'is_part', 'self_antipart']
+                   'is_part', 'self_antipart', 'counterterm']
 
     def default_setup(self):
         """Default values for all properties"""
@@ -220,6 +220,9 @@ class Particle(PhysicsObject):
         self['propagating'] = True
         self['is_part'] = True
         self['self_antipart'] = False
+        # Counterterm defined as a dictionary with format:
+        # ('ORDER_OF_COUNTERTERM',((Particle_list_PDG))):{laurent_order:CTCouplingName}
+        self['counterterm'] = {}
 
     def filter(self, name, value):
         """Filter for valid particle property values."""
@@ -232,6 +235,41 @@ class Particle(PhysicsObject):
                 raise self.PhysicsObjectError, \
                         "%s is not a valid particle name" % value
 
+        if name is 'counterterm':
+            if not isinstance(value,dict):
+                raise self.PhysicsObjectError, \
+                    "counterterm %s is not a valid dictionary" % repr(value)
+            for key, val in value.items():
+                if not isinstance(key,tuple):
+                    raise self.PhysicsObjectError, \
+                        "key %s is not a valid tuple for counterterm key" % repr(key)
+                if not isinstance(key[0],str):
+                    raise self.PhysicsObjectError, \
+                        "%s is not a valid string" % repr(key[0])
+                if not isinstance(key[1],tuple):
+                    raise self.PhysicsObjectError, \
+                        "%s is not a valid list" % repr(key[1])
+                for elem in key[1]:
+                    if not isinstance(elem,tuple):
+                        raise self.PhysicsObjectError, \
+                            "%s is not a valid list" % repr(elem)
+                    for partPDG in elem:
+                        if not isinstance(partPDG,int):
+                            raise self.PhysicsObjectError, \
+                                "%s is not a valid integer for PDG" % repr(partPDG)
+                        if partPDG<=0:
+                            raise self.PhysicsObjectError, \
+                                "%s is not a valid positive PDG" % repr(partPDG)
+                if not isinstance(val,dict):
+                    raise self.PhysicsObjectError, \
+                        "value %s is not a valid dictionary for counterterm value" % repr(val)
+                for vkey, vvalue in val.items():
+                    if vkey not in [0,-1,-2]:
+                        raise self.PhysicsObjectError, \
+                            "Key %s is not a valid laurent serie order" % repr(vkey)
+                    if not isinstance(vvalue,str):
+                        raise self.PhysicsObjectError, \
+                            "Coupling %s is not a valid string" % repr(vvalue)
         if name is 'spin':
             if not isinstance(value, int):
                 raise self.PhysicsObjectError, \
@@ -459,7 +497,7 @@ class Interaction(PhysicsObject):
     """
 
     sorted_keys = ['id', 'particles', 'color', 'lorentz', 'couplings',
-                   'orders','loop_particles','type']
+                   'orders','loop_particles','type','perturbation_type']
 
     def default_setup(self):
         """Default values for all properties"""
@@ -510,6 +548,7 @@ class Interaction(PhysicsObject):
         # per concerned vertex.
         self['loop_particles']=[[]]
         self['type'] = 'base'
+        self['perturbation_type'] = None
 
     def filter(self, name, value):
         """Filter for valid interaction property values."""
@@ -525,6 +564,11 @@ class Interaction(PhysicsObject):
             if not isinstance(value, ParticleList):
                 raise self.PhysicsObjectError, \
                         "%s is not a valid list of particles" % str(value)
+
+        if name == 'perturbation_type':
+            if value!=None and not isinstance(value, str):
+                raise self.PhysicsObjectError, \
+                        "%s is not a valid string" % str(value)            
 
         if name == 'type':
             #Should be a string
@@ -604,6 +648,15 @@ class Interaction(PhysicsObject):
         """Return particle property names as a nicely sorted list."""
 
         return self.sorted_keys 
+                
+    def is_perturbating(self, orders_considered):
+        """ Returns if this interaction comes from the perturbation of one of
+        the order listed in the argument """
+        
+        if self['perturbation_type']==None:
+            return True
+        else:
+            return (self['perturbation_type'] in orders_considered)
                 
     def is_R2(self):
         """ Returns if the interaction is of R2 type."""
@@ -736,12 +789,15 @@ class InteractionList(PhysicsObjectList):
 
         ref_dict_to0 = {}
         ref_dict_to1 = {}
+        buffer = {}
 
         for inter in self:
-            if useR2UV or (useUVCT and inter.is_UVCT()) or \
-               (not inter.is_UV() and not inter.is_R2()):
+            if useR2UV or (not inter.is_UV() and not inter.is_R2() and \
+                           not inter.is_UVCT()):
                 inter.generate_dict_entries(ref_dict_to0, ref_dict_to1)
-
+            if useUVCT and inter.is_UVCT():
+                inter.generate_dict_entries(ref_dict_to0, ref_dict_to1)
+                
         return [ref_dict_to0, ref_dict_to1]
 
     def generate_dict(self):

@@ -71,14 +71,14 @@ tWcft_UV = CTParameter(name = 'tWcft_UV',
 
 bMass_UV = CTParameter(name = 'bMass_UV',
                        type = 'real',
-                       value = {-1:'-complex(0,1)*((G**2)/(2.0*16.0*cmath.pi**2))*(3.0*CF)*MB',
-                                 0:'-complex(0,1)*((G**2)/(2.0*16.0*cmath.pi**2))*CF*(4.0+3.0*cmath.log(MU_R**2/MB**2))*MB'
+                       value = {-1:'complex(0,1)*((G**2)/(16.0*cmath.pi**2))*(3.0*CF)*MB',
+                                 0:'complex(0,1)*((G**2)/(16.0*cmath.pi**2))*CF*(4.0+3.0*cmath.log(MU_R**2/MB**2))*MB'
                                },
                        texname = '\delta m_b')
 
 tMass_UV = CTParameter(name = 'tMass_UV',
                        type = 'real',
-                       value = {-1:'-complex(0,1)*((G**2)/(2.0*16.0*cmath.pi**2))*(3.0*CF)*MT',
-                                 0:'-complex(0,1)*((G**2)/(2.0*16.0*cmath.pi**2))*CF*(4.0+3.0*cmath.log(MU_R**2/MT**2))*MT'
+                       value = {-1:'complex(0,1)*((G**2)/(16.0*cmath.pi**2))*(3.0*CF)*MT',
+                                 0:'complex(0,1)*((G**2)/(16.0*cmath.pi**2))*CF*(4.0+3.0*cmath.log(MU_R**2/MT**2))*MT'
                                },
                        texname = '\delta m_t')

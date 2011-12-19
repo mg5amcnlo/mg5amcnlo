@@ -63,6 +63,7 @@ def loadLoopToyModel():
                   'pdg_code':21,
                   'propagating':True,
                   'is_part':True,
+                  'counterterm':{('QCD', ((6,),)): {0: 'C_UVWfct_G_1', -1: 'C_UVWfct_G_1_1eps'}, ('QCD', ((5,),)): {0: 'C_UVWfct_G_0', -1: 'C_UVWfct_G_0_1eps'}},
                   'self_antipart':True}))
     
     # A quark U and its antiparticle
@@ -146,15 +147,15 @@ class LoopUFOImportTest(unittest.TestCase):
         
         self.assertEqual(self.imported_loopmodel['perturbation_couplings'],\
                          ['QCD',])
-        self.assertEqual(len(self.imported_loopmodel.get('interactions')),53)
+        self.assertEqual(len(self.imported_loopmodel.get('interactions')),81)
         self.assertEqual(len(self.imported_loopmodel.get('interactions').\
                              get_type('base')),9)
         self.assertEqual(len(self.imported_loopmodel.get('interactions').\
-                             get_R2()),18)
+                             get_R2()),20)
         self.assertEqual(len(self.imported_loopmodel.get('interactions').\
-                             get_UV()),26)
+                             get_UV()),52)
         self.assertEqual(len(self.imported_loopmodel.get('interactions').\
-                             get_UVmass()),2)
+                             get_UVmass()),4)
         self.assertEqual(self.imported_loopmodel.get('name'),'LoopModelTest')
         self.assertEqual(self.imported_loopmodel.get('order_hierarchy'),\
                          {'QCD':1})

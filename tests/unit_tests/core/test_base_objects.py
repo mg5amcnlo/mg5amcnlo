@@ -46,7 +46,8 @@ class ParticleTest(unittest.TestCase):
                       'pdg_code':6,
                       'propagating':True,
                       'is_part':True,
-                      'self_antipart':False}
+                      'self_antipart':False,
+                      'counterterm':{('QCD',((1,2),(3,4))):{0:'GC_0',-1:'GC_1'}}}
 
         self.mypart = base_objects.Particle(self.mydict)
 
@@ -161,7 +162,8 @@ class ParticleTest(unittest.TestCase):
         goal = goal + "    \'line\': \'straight\',\n"
         goal = goal + "    \'propagating\': True,\n"
         goal = goal + "    \'is_part\': True,\n"
-        goal = goal + "    \'self_antipart\': False\n}"
+        goal = goal + "    \'self_antipart\': False,\n"
+        goal = goal + "    \'counterterm\': {('QCD', ((1, 2), (3, 4))): {0: 'GC_0', -1: 'GC_1'}}\n}"
 
         self.assertEqual(goal, str(self.mypart))
 
@@ -272,6 +274,7 @@ class InteractionTest(unittest.TestCase):
                                     (1, 1):'g11'},
                        'orders':{'QCD':1, 'QED':1},
                        'loop_particles':[[]],
+                       'perturbation_type':'QCD',
                        'type':'base'}
 
         self.myinter = base_objects.Interaction(self.mydict)
@@ -283,7 +286,7 @@ class InteractionTest(unittest.TestCase):
 
         # First fill myinter2 it using set
         for prop in ['id', 'particles', 'color', 'lorentz', 'couplings',
-                     'orders', 'type', 'loop_particles']:
+                     'orders', 'type', 'loop_particles','perturbation_type']:
             myinter2.set(prop, self.mydict[prop])
 
         # Check equality between Interaction objects
@@ -374,7 +377,8 @@ class InteractionTest(unittest.TestCase):
                                     repr(self.myinter['couplings'])
         goal = goal + "    \'orders\': %s,\n" % repr(self.myinter['orders'])
         goal = goal + "    \'loop_particles\': [[]],\n"        
-        goal = goal + "    \'type\': \'base\'\n}"
+        goal = goal + "    \'type\': \'base\',\n"
+        goal = goal + "    \'perturbation_type\': 'QCD'\n}"
 
         self.assertEqual(goal, str(self.myinter))
 
