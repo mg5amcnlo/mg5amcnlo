@@ -494,7 +494,7 @@ class LoopAmplitude(diagram_generation.Amplitude):
         
         # Generate the UVCTdiagrams (born diagrams with 'UVCT_SPECIAL'=0 order 
         # will be generated along)
-        user_born_orders = self['process']['orders']
+        user_born_orders = copy.copy(self['process']['orders'])
         self['process']['orders']['UVCT_SPECIAL']=1      
         
         UVCTsuccessful, UVCTdiagrams = \
