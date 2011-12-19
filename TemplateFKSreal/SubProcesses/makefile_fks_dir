@@ -1,9 +1,10 @@
 include ../../Source/make_opts
 
-CC    = g++
+CC    = g++44
 
 LIBDIR = ../../lib/
 BINDIR = ../../bin/
+
 
 FASTJET_CONFIG = fastjet-config
 CXXFLAGS += $(shell $(FASTJET_CONFIG) --cxxflags)
@@ -11,7 +12,8 @@ FJLIBS += $(shell $(FASTJET_CONFIG) --libs --plugins ) -lstdc++
 #FJLIBS += $(shell $(FASTJET_CONFIG) --libs --plugins )
 #FJLIBS=
 
-LINKLIBS =  -L../../lib/ -ldhelas -ldsample_fks -lmodel -lgeneric -lpdf
+NLOLIBS= 
+LINKLIBS =  -L../../lib/ -ldhelas -ldsample_fks -lmodel -lgeneric -lpdf $(lhapdf)
 LIBS = $(LIBDIR)libdhelas.a $(LIBDIR)libdsample_fks.a $(LIBDIR)libgeneric.a $(LIBDIR)libpdf.a $(LIBDIR)libmodel.a
 
 # Files for all executables
@@ -73,7 +75,7 @@ test_MC: symmetry_fks_test_MC.o $(TEST)
 	$(F77) $(FFLAGS) -o test_MC symmetry_fks_test_MC.o $(TEST) $(LINKLIBS) $(FJLIBS)
 
 madevent_vegas: $(VEGAS)  makefile $(LIBS)
-	$(F77) $(FFLAGS) -o madevent_vegas $(VEGAS) $(LINKLIBS) $(FJLIBS)
+	$(F77) $(FFLAGS) -o madevent_vegas $(VEGAS) $(NLOLIBS) $(LINKLIBS) $(FJLIBS)
 
 madevent_mint: $(MINT)  makefile $(LIBS)
 	$(F77) $(FFLAGS) -o madevent_mint $(MINT) $(LINKLIBS) $(FJLIBS)

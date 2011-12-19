@@ -16,6 +16,18 @@ Maindir=`pwd`
 
 libdir=$Maindir/lib
 CutToolsdir=$Maindir/../CutTools
+carddir=$Maindir/Cards
+LHAPDF=`lhapdf-config --libdir`
+
+c=`awk '/^[^#].*=.*pdlabel/{print $1}' Cards/run_card.dat`
+if [[ $c == "'lhapdf'" ]]; then
+    echo Using LHAPDF interface!
+    export lhapdf=true
+    ln -s $LHAPDF/libLHAPDF.a $libdir/libLHAPDF.a 
+else
+    unset lhapdf
+fi
+
 
 echo ''
 echo 'Press "0" for "NO" and "1" for "YES"'
