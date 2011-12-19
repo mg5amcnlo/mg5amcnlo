@@ -112,6 +112,13 @@ class LoopHelasUVCTAmplitude(helas_objects.HelasAmplitude):
         else:
             return (original_call_key[0],original_call_key[1],'UVCT')
 
+    def get_used_UVCT_couplings(self):
+        """ Returns a list of the string UVCT_couplings defined for this
+        amplitudes. """
+        
+        return [coupl for coupl in self['UVCT_couplings'] if \
+                isinstance(coupl,str)]
+
     def get_UVCT_couplings(self):
         """ Returns the string corresponding to the overall UVCT coupling which
         factorize this amplitude """
@@ -1547,7 +1554,7 @@ class LoopHelasMatrixElement(helas_objects.HelasMatrixElement):
 
         answer = super(LoopHelasMatrixElement, self).get_used_couplings()
         for diag in self.get_loop_UVCT_diagrams():
-            answer.extend([amp.get('UVCT_couplings') for amp in \
+            answer.extend([amp.get_used_UVCT_couplings() for amp in \
               diag.get_loop_UVCTamplitudes()])
         return answer
 
