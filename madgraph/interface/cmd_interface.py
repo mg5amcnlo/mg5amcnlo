@@ -379,12 +379,14 @@ class HelpToCmd(object):
     def help_set(self):
         logger.info("syntax: set %s argument" % "|".join(self._set_options))
         logger.info("-- set options for generation or output")
-        logger.info("   group_subprocesses True/False: ")
-        logger.info("     (default True) Smart grouping of subprocesses into ")
+        logger.info("   group_subprocesses True/False/Auto: ")
+        logger.info("     (default Auto) Smart grouping of subprocesses into ")
         logger.info("     directories, mirroring of initial states, and ")
         logger.info("     combination of integration channels.")
         logger.info("     Example: p p > j j j w+ gives 5 directories and 184 channels")
         logger.info("     (cf. 65 directories and 1048 channels for regular output)")
+        logger.info("     Auto means False for decay computation and True for") 
+        logger.info("     collisions.")
         logger.info("   ignore_six_quark_processes multi_part_label")
         logger.info("     (default none) ignore processes with at least 6 of any")
         logger.info("     of the quarks given in multi_part_label.")
@@ -755,8 +757,8 @@ This will take effect only in a NEW terminal
                                   self._set_options)
 
         if args[0] in ['group_subprocesses']:
-            if args[1] not in ['False', 'True']:
-                raise self.InvalidCmd('%s needs argument False or True' % \
+            if args[1] not in ['False', 'True', 'Auto']:
+                raise self.InvalidCmd('%s needs argument False, True or Auto' % \
                                       args[0])
         if args[0] in ['ignore_six_quark_processes']:
             if args[1] not in self._multiparticles.keys():
@@ -1309,7 +1311,7 @@ class CompleteForCmd(CheckValidForCmd):
 
         if len(args) == 2:
             if args[1] in ['group_subprocesses']:
-                return self.list_completion(text, ['False', 'True'])
+                return self.list_completion(text, ['False', 'True', 'Auto'])
             
             elif args[1] in ['ignore_six_quark_processes']:
                 return self.list_completion(text, self._multiparticles.keys())
@@ -1565,7 +1567,7 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
         self._comparisons = None
     
         # Set defaults for options
-        self._options['group_subprocesses'] = True
+        self._options['group_subprocesses'] = 'Auto'
         self._options['ignore_six_quark_processes'] = False
         
         # Load the configuration file
@@ -1623,7 +1625,10 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
             cpu_time1 = time.time()
 
             # Generate processes
-            collect_mirror_procs = self._options['group_subprocesses']
+            if self._options['group_subprocesses'] == 'Auto':
+                    collect_mirror_procs = True
+            else:
+                collect_mirror_procs = self._options['group_subprocesses']
             ignore_six_quark_processes = \
                            self._options['ignore_six_quark_processes'] if \
                            "ignore_six_quark_processes" in self._options \
@@ -2891,7 +2896,10 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
                             for q in self._options[args[0]]]))
             
         elif args[0] == 'group_subprocesses':
-            self._options[args[0]] = eval(args[1])
+            if args[1] != 'Auto':
+                self._options[args[0]] = eval(args[1])
+            else:
+                self._options[args[0]] = 'Auto'
             logger.info('Set group_subprocesses to %s' % \
                         str(self._options[args[0]]))
             logger.info('Note that you need to regenerate all processes')
@@ -2962,8 +2970,16 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
             if answer != 'y':
                 raise self.InvalidCmd('Stopped by user request')
 
-        group_subprocesses = self._export_format == 'madevent' and \
-                             self._options['group_subprocesses']
+        #check if we need to group processes
+        group_subprocesses = False
+        if self._export_format == 'madevent' and \
+                                            self._options['group_subprocesses']:
+                if self._options['group_subprocesses'] is True:
+                    group_subprocesses = True
+                elif self._curr_amps[0].get_ninitial()  == 2:
+                    group_subprocesses = True
+
+                             
         # Make a Template Copy
         if self._export_format == 'madevent':
             if group_subprocesses:
@@ -3015,7 +3031,8 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
             cpu_time1 = time.time()
             ndiags = 0
             if not self._curr_matrix_elements.get_matrix_elements():
-                if self._options['group_subprocesses']:
+                if self._options['group_subprocesses'] is True or \
+                                         self._curr_amps[0].get_ninitial() == 2:
                     cpu_time1 = time.time()
                     dc_amps = [amp for amp in self._curr_amps if isinstance(amp, \
                                         diagram_generation.DecayChainAmplitude)]

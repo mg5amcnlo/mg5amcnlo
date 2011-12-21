@@ -1395,13 +1395,14 @@ class ProcessExporterFortranME(ProcessExporterFortran):
 
         os.chdir(os.path.pardir)
 
-        gen_infohtml.make_info_html(self.dir_path)
-        #subprocess.call([os.path.join(old_pos, self.dir_path, 'bin', 'internal', 'gen_crossxhtml.py')],
-        #                stdout = devnull)
+        obj = gen_infohtml.make_info_html(self.dir_path)
         [mv(name, './HTML/') for name in os.listdir('.') if \
                             (name.endswith('.html') or name.endswith('.jpg')) and \
                             name != 'index.html']               
-
+        if online:
+            nb_channel = obj.rep_rule['nb_gen_diag']
+            open(pjoin('./numdiag'),'w').write(str(nb_channel))
+        
         # Write command history as proc_card_mg5
         if os.path.isdir('Cards'):
             output_file = os.path.join('Cards', 'proc_card_mg5.dat')

@@ -296,13 +296,15 @@ class open_file(object):
         for key in configuration:
             if key == 'text_editor':
                 # Treat text editor ONLY text base editor !!
-                if configuration[key] and not which(configuration[key]):
-                    logger.warning('Specified text editor %s not valid.' % \
+                if configuration[key]:
+                    program = configuration[key].split()[0]                    
+                    if not which(program):
+                        logger.warning('Specified text editor %s not valid.' % \
                                                              configuration[key])
-                elif configuration[key]:
-                    # All is good
-                    cls.text_editor = configuration[key]
-                    continue
+                    else:
+                        # All is good
+                        cls.text_editor = configuration[key]
+                        continue
                 #Need to find a valid default
                 if os.environ.has_key('EDITOR'):
                     cls.text_editor = os.environ['EDITOR']
