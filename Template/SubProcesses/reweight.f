@@ -723,6 +723,9 @@ C     Present process number
       integer              ISPROC 
       DOUBLE PRECISION PD(0:MAXPROC)
       COMMON /SubProc/ PD, ISPROC
+      INTEGER SUBDIAG(MAXSPROC),IB(2)
+      COMMON/TO_SUB_DIAG/SUBDIAG,IB
+      data IB/1,2/
 c     q2bck holds the central q2fact scales
       real*8 q2bck(2)
       common /to_q2bck/q2bck
@@ -825,7 +828,7 @@ c      ilast(0)=nexternal
       endif
 c     Set x values for the two sides, for IS Sudakovs
       do i=1,2
-        xnow(i)=xbk(i)
+        xnow(i)=xbk(ib(i))
       enddo
       if(btest(mlevel,3))then
         write(*,*) 'Set x values to ',xnow(1),xnow(2)
@@ -999,11 +1002,12 @@ c                    if non-radiating vertex or last 2->2
      $                          ' to: ',sqrt(pt2pdf(imocl(n)))
                      else if(pt2pdf(idacl(n,i)).lt.q2now
      $                       .and.isjet(ipdgcl(idacl(n,i),igraphs(1),iproc))) then
-                        pdfj1=pdg2pdf(abs(lpp(j)),ipdgcl(idacl(n,i),
-     $                       igraphs(1),iproc)*sign(1,ibeam(j)),xnow(j),sqrt(q2now))
-                        pdfj2=pdg2pdf(abs(lpp(j)),ipdgcl(idacl(n,i),
-     $                       igraphs(1),iproc)*sign(1,ibeam(j)),xnow(j),
-     $                       sqrt(pt2pdf(idacl(n,i))))
+                        pdfj1=pdg2pdf(abs(lpp(IB(j))),ipdgcl(idacl(n,i),
+     $                       igraphs(1),iproc)*sign(1,lpp(IB(j))),
+     $                       xnow(j),sqrt(q2now))
+                        pdfj2=pdg2pdf(abs(lpp(IB(j))),ipdgcl(idacl(n,i),
+     $                       igraphs(1),iproc)*sign(1,lpp(IB(j))),
+     $                       xnow(j),sqrt(pt2pdf(idacl(n,i))))
                         if(pdfj2.lt.1d-10)then
 c                          Scale too low for heavy quark
                            rewgt=0d0
