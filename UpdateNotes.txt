@@ -3,7 +3,7 @@ Update notes for MadGraph 5 (in reverse time order)
 1.3.32 (21/12/11) JA: Fixed a bug in the PDF reweighting routine,
                       which caused skewed eta distributions for
                       matched samples with pdfwgt=T. Thanks to Giulio
-                      Lenzi and the CMS MC generation team for finding this.
+                      Lenzi for finding this.
  
 1.3.31 (29/11/11) OM: Fix a bug an overflow in RAMBO (affects standalone 
        		      output only)
