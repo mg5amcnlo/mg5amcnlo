@@ -19,8 +19,8 @@
       integer isym(nexternal,99), jsym
       integer i,j,k,ida(2),ns,nres,ires,icl,ito2,idenpart,nc,ic
       integer mo_color,da_color(2),itmp
-      integer ito(-nexternal+3:nexternal),iseed,maxcolor
-      integer icolalt(2,-nexternal+3:2*nexternal-3)
+      integer ito(-nexternal+3:nexternal),iseed,maxcolor,maxorg
+      integer icolalt(2,-nexternal+2:2*nexternal-3)
       double precision qicl(-nexternal+3:2*nexternal-3), factpm
       double precision xtarget
       data iseed/0/
@@ -35,7 +35,7 @@ c     Variables for combination of color indices (including multipart. vert)
       double precision pmass(-nexternal:0,lmaxconfigs)
       double precision pwidth(-nexternal:0,lmaxconfigs)
       integer pow(-nexternal:0,lmaxconfigs)
-      logical first_time
+      logical first_time,tchannel
       save pmass,pwidth,pow
       data first_time /.true./
 
@@ -72,9 +72,9 @@ c      integer ncols,ncolflow(maxamps),ncolalt(maxamps),icorg
 c      common/to_colstats/ncols,ncolflow,ncolalt,icorg
 
       double precision pt
-      integer get_color,elim_indices
+      integer get_color,elim_indices,set_colmp,fix_tchannel_color
       real ran1
-      external pt,ran1,get_color,elim_indices
+      external pt,ran1,get_color,elim_indices,set_colmp,fix_tchannel_color
 
       if (first_time) then
          include 'props.inc'
@@ -142,6 +142,9 @@ c      print *,'Chose color flow ',ic
 
       endif ! nc.gt.0
 
+c     Store original maxcolor to know if we have epsilon vertices
+        maxorg=maxcolor
+
 c     
 c     Get mother information from chosen graph
 c     
@@ -149,22 +152,76 @@ c
 c     First check number of resonant s-channel propagators
         ns=0
         nres=0
-
+        tchannel=.false.
 c     Loop over propagators to find mother-daughter information
-        do i=-1,-nexternal+3,-1
+        do i=-1,-nexternal+2,-1
 c       Daughters
-          ida(1)=iforest(1,i,iconfig)
-          ida(2)=iforest(2,i,iconfig)
-          do j=1,2
-            if(ida(j).gt.0) ida(j)=isym(ida(j),jsym)
-          enddo
+          if(i.gt.-nexternal+2)then
+             ida(1)=iforest(1,i,iconfig)
+             ida(2)=iforest(2,i,iconfig)
+             do j=1,2
+                if(ida(j).gt.0) ida(j)=isym(ida(j),jsym)
+             enddo
+          endif
 c       Decide s- or t-channel
-          if(iabs(sprop(numproc,i,iconfig)).gt.0) then ! s-channel propagator
+          if(i.gt.-nexternal+2.and.
+     $         iabs(sprop(numproc,i,iconfig)).gt.0) then ! s-channel propagator
             jpart(1,i)=sprop(numproc,i,iconfig)
             ns=ns+1
+          else if(nres.gt.0.and.maxcolor.gt.maxorg) then
+c         For t-channel propagators, just check that the colors are ok
+             if(i.eq.-nexternal+2) then
+c            This is the final t-channel, combining with leg 2
+                mo_color=0
+                if(.not.tchannel)then
+c                  There are no previous t-channels, so this is a combination of
+c                  2, 1 and the last s-channel
+                   ida(1)=1
+                   ida(2)=i+1
+                else
+c                  The daughter info is in iforest
+                   ida(1)=iforest(1,i,iconfig)
+                   ida(2)=iforest(2,i,iconfig)
+                endif
+                da_color(1)=get_color(jpart(1,ida(1)))
+                da_color(2)=get_color(jpart(1,ida(2)))
+                if(da_color(1).ne.2.and.da_color(2).ne.2) ncolmp=0
+c            Reverse colors of t-channels to get right color ordering
+                print *,'da_color, ncolmp: ',(da_color(j),j=1,2),ncolmp
+                ncolmp=set_colmp(ncolmp,icolmp,get_color(jpart(1,2)),
+     $               icolalt(2,2),icolalt(1,2))
+             else
+                mo_color=get_color(tprid(i,iconfig))
+                jpart(1,i)=tprid(i,iconfig)
+                if(mo_color.eq.1) then
+                   icolalt(1,i) = 0
+                   icolalt(2,i) = 0
+                   tchannel=.true.
+                   goto 100
+                endif
+                da_color(1)=get_color(jpart(1,ida(1)))
+                da_color(2)=get_color(jpart(1,ida(2)))
+                if(da_color(2).ne.2) ncolmp=0
+             endif
+             if(mo_color.ne.0.and.mo_color.ne.3.and.mo_color.eq.8)then
+                call write_error(da_color(1), da_color(2), mo_color)
+             endif
+c            Set icolmp for daughters
+             ncolmp=set_colmp(ncolmp,icolmp,da_color(2),
+     $            icolalt(1,ida(2)),icolalt(2,ida(2)))
+c            Reverse colors of t-channels to get right color ordering
+             ncolmp=set_colmp(ncolmp,icolmp,da_color(1),
+     $            icolalt(2,ida(1)),icolalt(1,ida(1)))
+c            Fix t-channel color
+             print *,'t-channel: ',i,ida(1),ida(2),mo_color,da_color(1),
+     $            da_color(2)
+             print *,'colors: ',((icolmp(j,k),j=1,2),k=1,ncolmp)
+             maxcolor=fix_tchannel_color(mo_color,maxcolor,
+     $                                   ncolmp,icolmp,i,icolalt)
+             tchannel=.true.
+             cycle
           else
-c         Don't care about t-channel propagators
-            goto 100
+            goto 100             
           endif
 c       Set status codes for propagator
 c          if((igscl(0).ne.0.and.
@@ -211,39 +268,22 @@ c     (indicated by color 2)
 c     Add new color indices to list of color indices
 c     Note that color=2 means continued multiparticle index
           do j=1,2
-             if(da_color(j).eq.2.or.da_color(j).eq.1) cycle
-             ncolmp=ncolmp+1
-             icolmp(1,ncolmp)=icolalt(1,ida(j))
-             icolmp(2,ncolmp)=icolalt(2,ida(j))
-c            Avoid color sextet-type negative indices
-             if(icolmp(1,ncolmp).lt.0)then
-                ncolmp=ncolmp+1
-                icolmp(2,ncolmp)=-icolmp(1,ncolmp-1)
-                icolmp(1,ncolmp-1)=0
-                icolmp(1,ncolmp)=0
-             elseif(icolmp(2,ncolmp).lt.0)then
-                ncolmp=ncolmp+1
-                icolmp(1,ncolmp)=-icolmp(2,ncolmp-1)
-                icolmp(2,ncolmp-1)=0
-                icolmp(2,ncolmp)=0
-             endif
-             if(ncolmp.gt.maxcolmp)
-     $            call write_error(1000,ncolmp,maxcolmp)
+             ncolmp=set_colmp(ncolmp,icolmp,da_color(j),
+     $            icolalt(1,ida(j)),icolalt(2,ida(j)))
           enddo
-
           if(mo_color.eq.1) then ! color singlet
              icolalt(1,i) = 0
              icolalt(2,i) = 0
           elseif(mo_color.eq.-3) then ! color anti-triplet
-             maxcolor=elim_indices(0,1,ncolmp,icolmp,icolalt(1,i),maxcolor)
+             maxcolor=elim_indices(0,1,ncolmp,icolmp,i,icolalt,maxcolor)
           elseif(mo_color.eq.3) then ! color triplet
-             maxcolor=elim_indices(1,0,ncolmp,icolmp,icolalt(1,i),maxcolor)
+             maxcolor=elim_indices(1,0,ncolmp,icolmp,i,icolalt,maxcolor)
           elseif(mo_color.eq.-6) then ! color anti-sextet
-             maxcolor=elim_indices(0,2,ncolmp,icolmp,icolalt(1,i),maxcolor)
+             maxcolor=elim_indices(0,2,ncolmp,icolmp,i,icolalt,maxcolor)
           elseif(mo_color.eq.6) then ! color sextet
-             maxcolor=elim_indices(2,0,ncolmp,icolmp,icolalt(1,i),maxcolor)
+             maxcolor=elim_indices(2,0,ncolmp,icolmp,i,icolalt,maxcolor)
           elseif(mo_color.eq.8) then ! color octet
-             maxcolor=elim_indices(1,1,ncolmp,icolmp,icolalt(1,i),maxcolor)
+             maxcolor=elim_indices(1,1,ncolmp,icolmp,i,icolalt,maxcolor)
           elseif(mo_color.ne.2) then ! 2 indicates multipart. vertex
              call write_error(da_color(1), da_color(2), mo_color)
           endif
@@ -332,8 +372,206 @@ c
  999  write(*,*) 'error'
       end
 
+c     ******************************************************
+      function set_colmp(ncolmp,icolmp,da_color,icol1,icol2)
+c     ******************************************************
+      implicit none
+c     Arguments
+      integer maxcolmp
+      parameter(maxcolmp=20)
+      integer set_colmp
+      integer ncolmp,icolmp(2,*),da_color,icol1,icol2
+
+      set_colmp=ncolmp
+      if(da_color.eq.2.or.da_color.eq.1) return
+      ncolmp=ncolmp+1
+      icolmp(1,ncolmp)=icol1
+      icolmp(2,ncolmp)=icol2
+c     Avoid color sextet-type negative indices
+      if(icolmp(1,ncolmp).lt.0)then
+         ncolmp=ncolmp+1
+         icolmp(2,ncolmp)=-icolmp(1,ncolmp-1)
+         icolmp(1,ncolmp-1)=0
+         icolmp(1,ncolmp)=0
+      elseif(icolmp(2,ncolmp).lt.0)then
+         ncolmp=ncolmp+1
+         icolmp(1,ncolmp)=-icolmp(2,ncolmp-1)
+         icolmp(2,ncolmp-1)=0
+         icolmp(2,ncolmp)=0
+      endif
+      if(ncolmp.gt.maxcolmp)
+     $     call write_error(1000,ncolmp,maxcolmp)
+      set_colmp=ncolmp
+      return
+      end
+
+
+c********************************************************************
+      function fix_tchannel_color(mo_color,maxcolor,ncolmp,icolmp,ires,icol)
+c********************************************************************
+c     Successively eliminate identical pairwise color indices from the
+c     icolmp list, until only (max) one triplet and one antitriplet remains
+c
+
+      implicit none
+      include 'nexternal.inc'
+      integer fix_tchannel_color
+      integer mo_color,maxcolor,ncolmp,icolmp(2,*)
+      integer ires,icol(2,-nexternal+2:2*nexternal-3)
+      integer i,j,i3,i3bar,max3,max3bar,min3,min3bar,maxcol,mincol
+
+c     Successively eliminate color indices in pairs until only the wanted
+c     indices remain
+      do i=1,ncolmp
+         do j=1,ncolmp
+            if(icolmp(1,i).ne.0.and.icolmp(1,i).eq.icolmp(2,j)) then
+               icolmp(1,i)=0
+               icolmp(2,j)=0
+            endif
+         enddo
+      enddo
+      
+      i3=0
+      i3bar=0
+      icol(1,ires)=0
+      icol(2,ires)=0
+      min3=1000
+      max3=0
+      min3bar=1000
+      max3bar=0
+      do i=1,ncolmp
+         if(icolmp(1,i).gt.0)then
+            i3=i3+1
+c           color for t-channels needs to be reversed
+            if(i3.eq.1) icol(2,ires)=icolmp(1,i)
+            if(i3.eq.2) icol(1,ires)=-icolmp(1,i)
+            if(icolmp(1,i).gt.max3) max3=icolmp(1,i)
+            if(icolmp(1,i).lt.min3) min3=icolmp(1,i)
+         endif
+         if(icolmp(2,i).gt.0)then
+            i3bar=i3bar+1
+c           color for t-channels needs to be reversed
+            if(i3bar.eq.1) icol(1,ires)=icolmp(2,i)
+            if(i3bar.eq.2) icol(2,ires)=-icolmp(2,i)
+            if(icolmp(2,i).gt.max3bar) max3bar=icolmp(2,i)
+            if(icolmp(2,i).lt.min3bar) min3bar=icolmp(2,i)
+         endif
+      enddo
+
+      fix_tchannel_color=maxcolor
+      if(mo_color.eq.0.and.i3.eq.0.and.i3bar.eq.0) return
+      if(mo_color.eq.3.and.(i3.eq.1.and.i3bar.eq.0
+     $     .or.i3bar.eq.1.and.i3.eq.0)) return
+      if(mo_color.eq.8.and.i3.eq.1.and.i3bar.eq.1) return
+
+      if(mo_color.eq.0.and.i3-i3bar.eq.2) then
+c     Replace the maximum index with the minimum one everywhere
+         do i=ires+1,-1
+            do j=1,2
+               if(icol(j,i).eq.max3)
+     $              icol(j,i)=min3bar
+            enddo
+         enddo
+         print *,'Replaced ',max3,' by ',min3bar
+      elseif(mo_color.eq.0.and.i3bar-i3.eq.2) then
+c     Replace the maximum index with the minimum one everywhere
+         do i=ires+1,-1
+            do j=1,2
+               if(icol(j,i).eq.max3bar)
+     $              icol(j,i)=min3
+            enddo
+         enddo
+         print *,'Replaced ',max3bar,' by ',min3
+      elseif(mo_color.eq.0.and.i3.eq.1.and.i3bar.eq.1) then
+c     Replace the maximum index with the minimum one everywhere
+         maxcol=max(max3,max3bar)
+         mincol=min(min3,min3bar)
+         do i=ires+1,-1
+            do j=1,2
+               if(icol(j,i).eq.maxcol)
+     $              icol(j,i)=mincol
+            enddo
+         enddo
+         print *,'Replaced ',maxcol,' by ',mincol
+      elseif(mo_color.eq.0.and.i3.eq.2.and.i3bar.eq.2) then
+c     Replace the maximum index with the minimum one everywhere
+         do i=ires+1,-1
+            do j=1,2
+               if(icol(j,i).eq.max3bar)
+     $              icol(j,i)=min3
+               if(icol(j,i).eq.max3)
+     $              icol(j,i)=min3bar
+            enddo
+         enddo
+         print *,'Replaced ',max3bar,' by ',min3,' and ',max3,' by ',min3bar
+      elseif(mo_color.eq.0.and.mod(i3,3).eq.0.and.mod(i3bar,3).eq.0)then
+c     This is epsilon index - do nothing
+         continue
+      else if(mo_color.eq.3.and.i3-i3bar.eq.1) then
+c     Replace the maximum index with the minimum one everywhere
+         do i=ires+1,-1
+            do j=1,2
+               if(icol(j,i).eq.max3)
+     $              icol(j,i)=min3bar
+            enddo
+         enddo
+         print *,'Replaced ',max3,' by ',min3bar
+c     Fix the color for ires
+         icol(1,ires)=min3
+         icol(2,ires)=0
+         print *,'Set mother color for ',ires,' to ',(icol(j,ires),j=1,2)
+      else if(mo_color.eq.3.and.i3bar-i3.eq.1) then
+c     Replace the maximum index with the minimum one everywhere
+         do i=ires+1,-1
+            do j=1,2
+               if(icol(j,i).eq.max3bar)
+     $              icol(j,i)=min3
+            enddo
+         enddo
+         print *,'Replaced ',max3bar,' by ',min3
+c     Fix the color for ires
+         icol(1,ires)=0
+         icol(2,ires)=min3bar
+         print *,'Set mother color for ',ires,' to ',(icol(j,ires),j=1,2)
+      else if(mo_color.eq.3.and.mod(i3-i3bar,3).eq.2) then
+c     This is an epsilon index
+         maxcolor=maxcolor+1
+         icol(1,ires)=maxcolor
+         icol(2,ires)=0
+         print *,'Set mother color for ',ires,' to ',(icol(j,ires),j=1,2)
+      else if(mo_color.eq.3.and.mod(i3bar-i3,3).eq.2) then
+c     This is an epsilon index
+         maxcolor=maxcolor+1
+         icol(1,ires)=0
+         icol(2,ires)=maxcolor
+         print *,'Set mother color for ',ires,' to ',(icol(j,ires),j=1,2)
+      else if(mo_color.eq.8.and.i3.eq.1.and.i3bar.eq.1) then
+c     Replace the maximum index with the minimum one everywhere
+         maxcol=max(max3,max3bar)
+         mincol=min(min3,min3bar)
+         do i=ires+1,-1
+            do j=1,2
+               if(icol(j,i).eq.maxcol)
+     $              icol(j,i)=mincol
+            enddo
+         enddo
+         print *,'Replaced ',maxcol,' by ',mincol
+c     Fix the color for ires
+         icol(1,ires)=min3
+         icol(2,ires)=min3bar         
+         print *,'Set mother color for ',ires,' to ',(icol(j,ires),j=1,2)
+      else
+c     Don't know how to deal with this
+         call write_error(1001,i3,i3bar)
+      endif
+
+      fix_tchannel_color=maxcolor
+      
+      return
+      end
+
 c*******************************************************************
-      function elim_indices(n3,n3bar,ncolmp,icolmp,icolres,maxcolor)
+      function elim_indices(n3,n3bar,ncolmp,icolmp,ires,icol,maxcolor)
 c*******************************************************************
 c     Successively eliminate identical pairwise color indices from the
 c     icolmp list, until only the wanted indices remain
@@ -346,8 +584,10 @@ c     need to introduce new index based on maxcolor.
 c
 
       implicit none
+      include 'nexternal.inc'
       integer elim_indices
-      integer n3,n3bar,ncolmp,icolmp(2,*),icolres(2),maxcolor
+      integer n3,n3bar,ncolmp,icolmp(2,*),maxcolor
+      integer ires,icol(2,-nexternal+2:2*nexternal-3)
       integer i,j,i3,i3bar
 
 c     Successively eliminate color indices in pairs until only the wanted
@@ -363,40 +603,44 @@ c     indices remain
       
       i3=0
       i3bar=0
-      icolres(1)=0
-      icolres(2)=0
+      icol(1,ires)=0
+      icol(2,ires)=0
       do i=1,ncolmp
          if(icolmp(1,i).gt.0)then
             i3=i3+1
-            if(i3.eq.1) icolres(1)=icolmp(1,i)
-            if(i3.eq.2) icolres(2)=-icolmp(1,i)
+            if(i3.eq.1) icol(1,ires)=icolmp(1,i)
+            if(i3.eq.2) icol(2,ires)=-icolmp(1,i)
          endif
          if(icolmp(2,i).gt.0)then
             i3bar=i3bar+1
-            if(i3bar.eq.1) icolres(2)=icolmp(2,i)
-            if(i3bar.eq.2) icolres(1)=-icolmp(2,i)
+            if(i3bar.eq.1) icol(2,ires)=icolmp(2,i)
+            if(i3bar.eq.2) icol(1,ires)=-icolmp(2,i)
          endif
       enddo
 
       if(i3.ne.n3.or.i3bar.ne.n3bar) then
-         if(n3.gt.0.and.n3bar.eq.0)then
+         if(n3.gt.0.and.n3bar.eq.0.and.mod(i3bar+n3,3).eq.0)then
 c        This is an epsilon index interaction
             maxcolor=maxcolor+1
-            icolres(1)=maxcolor
-            icolres(2)=0
+            icol(1,ires)=maxcolor
+            icol(2,ires)=0
             if(n3.eq.2)then
                maxcolor=maxcolor+1
-               icolres(2)=-maxcolor
+               icol(2,ires)=-maxcolor
             endif
-         elseif(n3bar.gt.0.and.n3.eq.0)then
+         elseif(n3bar.gt.0.and.n3.eq.0.and.mod(i3+n3bar,3).eq.0)then
 c        This is an epsilonbar index interaction
             maxcolor=maxcolor+1
-            icolres(1)=0
-            icolres(2)=maxcolor
+            icol(1,ires)=0
+            icol(2,ires)=maxcolor
             if(n3.eq.2)then
                maxcolor=maxcolor+1
-               icolres(1)=-maxcolor
+               icol(1,ires)=-maxcolor
             endif
+         elseif(n3.gt.0.and.n3bar.eq.0.and.i3-i3bar.eq.n3.or.
+     $          n3bar.gt.0.and.n3.eq.0.and.i3bar-i3.eq.n3bar)then
+c        We have a previous epsilon which gives the wrong pop-up index
+            call fix_s_color_indices(n3,n3bar,i3,i3bar,ncolmp,icolmp,ires,icol)
          else
 c           Don't know how to deal with this
             call write_error(1001,n3,n3bar)
@@ -405,5 +649,60 @@ c           Don't know how to deal with this
 
       elim_indices=maxcolor
       
+      return
+      end
+
+c*******************************************************************
+      subroutine fix_s_color_indices(n3,n3bar,i3,i3bar,ncolmp,icolmp,
+     $                             ires,icol)
+c*******************************************************************
+c
+c     Fix color flow if some particle has got the wrong pop-up color
+c     due to epsilon-ijk vertices
+c
+
+      implicit none
+      include 'nexternal.inc'
+      integer n3,n3bar,ncolmp,icolmp(2,*),maxcolor
+      integer ires,icol(2,-nexternal+2:2*nexternal-3)
+      integer i,j,i3,i3bar
+      integer max_n3,max_n3bar,min_n3,min_n3bar
+
+      max_n3=0
+      max_n3bar=0
+      min_n3=1000
+      min_n3bar=1000
+      do i=1,ncolmp
+         if(icolmp(1,i).gt.max_n3)
+     $        max_n3=icolmp(1,i)
+         if(icolmp(2,i).gt.max_n3bar)
+     $        max_n3bar=icolmp(2,i)
+         if(icolmp(1,i).gt.0.and.icolmp(1,i).lt.min_n3)
+     $        min_n3=icolmp(1,i)
+         if(icolmp(2,i).gt.0.and.icolmp(2,i).lt.min_n3bar)
+     $        min_n3bar=icolmp(2,i)
+      enddo
+      if(n3.eq.1.and.n3bar.eq.0.and.i3-i3bar.eq.n3)then
+c     Replace the highest 3-index with the lowest 3bar-index,
+c     and set daughter index to lowest 3-index
+         icol(1,ires)=min_n3
+         icol(2,ires)=0
+         do i=ires+1,-1
+            if(icol(1,i).eq.max_n3)
+     $           icol(1,i)=min_n3bar
+         enddo
+      else if(n3bar.eq.1.and.n3.eq.0.and.i3bar-i3.eq.n3bar)then
+c     Replace the highest 3bar-index with the lowest 3-index,
+c     and set daughter index to lowest 3bar-index
+         icol(1,ires)=0
+         icol(2,ires)=min_n3bar
+         do i=ires+1,-1
+            if(icol(2,i).eq.max_n3bar)
+     $           icol(2,i)=min_n3
+         enddo
+      else
+c     Don't know how to deal with this
+         call write_error(1001,n3,n3bar)
+      endif
       return
       end
