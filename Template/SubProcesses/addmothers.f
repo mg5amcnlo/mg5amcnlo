@@ -183,39 +183,37 @@ c                  The daughter info is in iforest
                    ida(1)=iforest(1,i,iconfig)
                    ida(2)=iforest(2,i,iconfig)
                 endif
-                da_color(1)=get_color(jpart(1,ida(1)))
-                da_color(2)=get_color(jpart(1,ida(2)))
-                if(da_color(1).ne.2.and.da_color(2).ne.2) ncolmp=0
 c            Reverse colors of t-channels to get right color ordering
-                print *,'da_color, ncolmp: ',(da_color(j),j=1,2),ncolmp
-                ncolmp=set_colmp(ncolmp,icolmp,get_color(jpart(1,2)),
+                ncolmp=0
+                ncolmp=set_colmp(ncolmp,icolmp,2,jpart,
+     $               iforest(1,-max_branch,iconfig),icolalt,
      $               icolalt(2,2),icolalt(1,2))
              else
                 mo_color=get_color(tprid(i,iconfig))
-                jpart(1,i)=tprid(i,iconfig)
                 if(mo_color.eq.1) then
                    icolalt(1,i) = 0
                    icolalt(2,i) = 0
                    tchannel=.true.
                    goto 100
                 endif
-                da_color(1)=get_color(jpart(1,ida(1)))
-                da_color(2)=get_color(jpart(1,ida(2)))
-                if(da_color(2).ne.2) ncolmp=0
+                ncolmp=0
              endif
              if(mo_color.ne.0.and.mo_color.ne.3.and.mo_color.eq.8)then
+                da_color(1)=get_color(jpart(1,ida(1)))
+                da_color(2)=get_color(jpart(1,ida(2)))
                 call write_error(da_color(1), da_color(2), mo_color)
              endif
 c            Set icolmp for daughters
-             ncolmp=set_colmp(ncolmp,icolmp,da_color(2),
+             ncolmp=set_colmp(ncolmp,icolmp,ida(2),jpart,
+     $            iforest(1,-max_branch,iconfig),icolalt,
      $            icolalt(1,ida(2)),icolalt(2,ida(2)))
 c            Reverse colors of t-channels to get right color ordering
-             ncolmp=set_colmp(ncolmp,icolmp,da_color(1),
+             ncolmp=set_colmp(ncolmp,icolmp,ida(1),jpart,
+     $            iforest(1,-max_branch,iconfig),icolalt,
      $            icolalt(2,ida(1)),icolalt(1,ida(1)))
 c            Fix t-channel color
-             print *,'t-channel: ',i,ida(1),ida(2),mo_color,da_color(1),
-     $            da_color(2)
-             print *,'colors: ',((icolmp(j,k),j=1,2),k=1,ncolmp)
+c             print *,'t-channel: ',i,ida(1),ida(2),mo_color
+c             print *,'colors: ',((icolmp(j,k),j=1,2),k=1,ncolmp)
              maxcolor=fix_tchannel_color(mo_color,maxcolor,
      $                                   ncolmp,icolmp,i,icolalt)
              tchannel=.true.
@@ -248,29 +246,26 @@ c            nres=nres-1
 c          endif
 c       Set color info for all s-channels
           mo_color = get_color(jpart(1,i))
-          da_color(1) = get_color(jpart(1,ida(1)))
-          da_color(2) = get_color(jpart(1,ida(2)))
-          if(da_color(1).ne.2.and.da_color(2).lt.da_color(1).or.
-     $         da_color(2).eq.2)then
-c            Order daughters according to color, but always color 2 first
-             itmp=ida(1)
-             ida(1)=ida(2)
-             ida(2)=itmp
-             itmp=da_color(1)
-             da_color(1)=da_color(2)
-             da_color(2)=itmp
-          endif
-c     Reset list of color indices if not inside multipart. vertex
-c     (indicated by color 2)
-          if(da_color(1).ne.2)then
-             ncolmp=0
-          endif
-c     Add new color indices to list of color indices
-c     Note that color=2 means continued multiparticle index
+c     If inside multipart. vertex (indicated by color 2) cycle
+c         Set tentative mothers
+          jpart(2,i) = 1
+          jpart(3,i) = 2
+c         Set mother info for daughters
           do j=1,2
-             ncolmp=set_colmp(ncolmp,icolmp,da_color(j),
+            jpart(2,ida(j)) = i
+            jpart(3,ida(j)) = i
+          enddo
+          if(mo_color.eq.2) cycle
+c     Reset list of color indices
+          ncolmp=0
+c     Add new color indices to list of color indices
+          do j=1,2
+             ncolmp=set_colmp(ncolmp,icolmp,ida(j),jpart,
+     $            iforest(1,-max_branch,iconfig),icolalt,
      $            icolalt(1,ida(j)),icolalt(2,ida(j)))
           enddo
+c          print *,'s-channel: ',i,mo_color,ida(1),ida(2)
+c          print *,'colors: ',((icolmp(j,k),j=1,2),k=1,ncolmp)
           if(mo_color.eq.1) then ! color singlet
              icolalt(1,i) = 0
              icolalt(2,i) = 0
@@ -284,17 +279,11 @@ c     Note that color=2 means continued multiparticle index
              maxcolor=elim_indices(2,0,ncolmp,icolmp,i,icolalt,maxcolor)
           elseif(mo_color.eq.8) then ! color octet
              maxcolor=elim_indices(1,1,ncolmp,icolmp,i,icolalt,maxcolor)
-          elseif(mo_color.ne.2) then ! 2 indicates multipart. vertex
+          else ! 2 indicates multipart. vertex
+             da_color(1) = get_color(jpart(1,ida(1)))
+             da_color(2) = get_color(jpart(1,ida(2)))
              call write_error(da_color(1), da_color(2), mo_color)
           endif
-c         Set tentative mothers
-          jpart(2,i) = 1
-          jpart(3,i) = 2
-c         Set mother info for daughters
-          do j=1,2
-            jpart(2,ida(j)) = i
-            jpart(3,ida(j)) = i
-          enddo
 c       Just zero helicity info for intermediate states
           jpart(7,i) = 0
         enddo                   ! do i
@@ -346,7 +335,9 @@ c
       return
       end
 
+c     *************************************
       subroutine write_error(ida1,ida2,imo)
+c     *************************************
       implicit none
       integer ida1,ida2,imo
 
@@ -372,18 +363,72 @@ c
  999  write(*,*) 'error'
       end
 
+c     *********************************************************************
+      function set_colmp(ncolmp,icolmp,npart,jpart,forest,icol,icol1,icol2)
+c     *********************************************************************
+      implicit none
+      integer maxcolmp
+      parameter(maxcolmp=20)
+      include 'nexternal.inc'
+      include 'genps.inc'
+c     Arguments
+      integer set_colmp
+      integer ncolmp,icolmp(2,*),npart,icol1,icol2
+      integer icol(2,-nexternal+2:2*nexternal-3)
+      integer jpart(7,-nexternal+3:2*nexternal-3)
+      integer forest(2,-max_branch:-1)
+c     Local
+      integer da_color(2),itmp,ida(2),icolor,ipart,i,j
+      integer get_color,set1colmp
+
+      set_colmp=ncolmp
+      icolor=get_color(jpart(1,npart))
+      if(icolor.eq.1) return
+      if(icolor.eq.2) then
+c     Multiparticle vertex - need to go through daughters and collect all colors
+         ipart=npart
+        do while(icolor.eq.2)
+          ida(1)=forest(1,ipart)
+          ida(2)=forest(2,ipart)
+          da_color(1)=get_color(jpart(1,ida(1)))
+          da_color(2)=get_color(jpart(1,ida(2)))
+c          print *,'iforest: ',ipart,ida(1),ida(2),da_color(1),da_color(2)
+          if(da_color(1).ne.2.and.da_color(2).lt.da_color(1).or.
+     $         da_color(2).eq.2)then
+c            Order daughters according to color, but always color 2 first
+             itmp=ida(1)
+             ida(1)=ida(2)
+             ida(2)=itmp
+             itmp=da_color(1)
+             da_color(1)=da_color(2)
+             da_color(2)=itmp
+          endif
+          do i=1,2
+             if(da_color(i).ne.1.and.da_color(i).ne.2)then
+                ncolmp=set1colmp(ncolmp,icolmp,icol(1,ida(i)),
+     $               icol(2,ida(i)))
+             endif
+          enddo
+          icolor=da_color(1)
+          ipart=ida(1)
+        enddo
+      else
+         ncolmp=set1colmp(ncolmp,icolmp,icol1,icol2)
+      endif
+      set_colmp=ncolmp
+      return
+      end
+
 c     ******************************************************
-      function set_colmp(ncolmp,icolmp,da_color,icol1,icol2)
+      function set1colmp(ncolmp,icolmp,icol1,icol2)
 c     ******************************************************
       implicit none
 c     Arguments
       integer maxcolmp
       parameter(maxcolmp=20)
-      integer set_colmp
-      integer ncolmp,icolmp(2,*),da_color,icol1,icol2
+      integer set1colmp
+      integer ncolmp,icolmp(2,*),icol1,icol2
 
-      set_colmp=ncolmp
-      if(da_color.eq.2.or.da_color.eq.1) return
       ncolmp=ncolmp+1
       icolmp(1,ncolmp)=icol1
       icolmp(2,ncolmp)=icol2
@@ -401,10 +446,9 @@ c     Avoid color sextet-type negative indices
       endif
       if(ncolmp.gt.maxcolmp)
      $     call write_error(1000,ncolmp,maxcolmp)
-      set_colmp=ncolmp
+      set1colmp=ncolmp
       return
       end
-
 
 c********************************************************************
       function fix_tchannel_color(mo_color,maxcolor,ncolmp,icolmp,ires,icol)
@@ -472,7 +516,7 @@ c     Replace the maximum index with the minimum one everywhere
      $              icol(j,i)=min3bar
             enddo
          enddo
-         print *,'Replaced ',max3,' by ',min3bar
+c         print *,'Replaced ',max3,' by ',min3bar
       elseif(mo_color.eq.0.and.i3bar-i3.eq.2) then
 c     Replace the maximum index with the minimum one everywhere
          do i=ires+1,-1
@@ -481,7 +525,7 @@ c     Replace the maximum index with the minimum one everywhere
      $              icol(j,i)=min3
             enddo
          enddo
-         print *,'Replaced ',max3bar,' by ',min3
+c         print *,'Replaced ',max3bar,' by ',min3
       elseif(mo_color.eq.0.and.i3.eq.1.and.i3bar.eq.1) then
 c     Replace the maximum index with the minimum one everywhere
          maxcol=max(max3,max3bar)
@@ -492,7 +536,7 @@ c     Replace the maximum index with the minimum one everywhere
      $              icol(j,i)=mincol
             enddo
          enddo
-         print *,'Replaced ',maxcol,' by ',mincol
+c         print *,'Replaced ',maxcol,' by ',mincol
       elseif(mo_color.eq.0.and.i3.eq.2.and.i3bar.eq.2) then
 c     Replace the maximum index with the minimum one everywhere
          do i=ires+1,-1
@@ -503,7 +547,7 @@ c     Replace the maximum index with the minimum one everywhere
      $              icol(j,i)=min3bar
             enddo
          enddo
-         print *,'Replaced ',max3bar,' by ',min3,' and ',max3,' by ',min3bar
+c         print *,'Replaced ',max3bar,' by ',min3,' and ',max3,' by ',min3bar
       elseif(mo_color.eq.0.and.mod(i3,3).eq.0.and.mod(i3bar,3).eq.0)then
 c     This is epsilon index - do nothing
          continue
@@ -515,11 +559,11 @@ c     Replace the maximum index with the minimum one everywhere
      $              icol(j,i)=min3bar
             enddo
          enddo
-         print *,'Replaced ',max3,' by ',min3bar
+c         print *,'Replaced ',max3,' by ',min3bar
 c     Fix the color for ires
-         icol(1,ires)=min3
-         icol(2,ires)=0
-         print *,'Set mother color for ',ires,' to ',(icol(j,ires),j=1,2)
+         icol(1,ires)=0
+         icol(2,ires)=min3
+c         print *,'Set mother color for ',ires,' to ',(icol(j,ires),j=1,2)
       else if(mo_color.eq.3.and.i3bar-i3.eq.1) then
 c     Replace the maximum index with the minimum one everywhere
          do i=ires+1,-1
@@ -528,23 +572,23 @@ c     Replace the maximum index with the minimum one everywhere
      $              icol(j,i)=min3
             enddo
          enddo
-         print *,'Replaced ',max3bar,' by ',min3
+c         print *,'Replaced ',max3bar,' by ',min3
 c     Fix the color for ires
-         icol(1,ires)=0
-         icol(2,ires)=min3bar
-         print *,'Set mother color for ',ires,' to ',(icol(j,ires),j=1,2)
+         icol(1,ires)=min3bar
+         icol(2,ires)=0
+c         print *,'Set mother color for ',ires,' to ',(icol(j,ires),j=1,2)
       else if(mo_color.eq.3.and.mod(i3-i3bar,3).eq.2) then
 c     This is an epsilon index
          maxcolor=maxcolor+1
          icol(1,ires)=maxcolor
          icol(2,ires)=0
-         print *,'Set mother color for ',ires,' to ',(icol(j,ires),j=1,2)
+c         print *,'Set mother color for ',ires,' to ',(icol(j,ires),j=1,2)
       else if(mo_color.eq.3.and.mod(i3bar-i3,3).eq.2) then
 c     This is an epsilon index
          maxcolor=maxcolor+1
          icol(1,ires)=0
          icol(2,ires)=maxcolor
-         print *,'Set mother color for ',ires,' to ',(icol(j,ires),j=1,2)
+c         print *,'Set mother color for ',ires,' to ',(icol(j,ires),j=1,2)
       else if(mo_color.eq.8.and.i3.eq.1.and.i3bar.eq.1) then
 c     Replace the maximum index with the minimum one everywhere
          maxcol=max(max3,max3bar)
@@ -555,11 +599,11 @@ c     Replace the maximum index with the minimum one everywhere
      $              icol(j,i)=mincol
             enddo
          enddo
-         print *,'Replaced ',maxcol,' by ',mincol
+c         print *,'Replaced ',maxcol,' by ',mincol
 c     Fix the color for ires
          icol(1,ires)=min3
          icol(2,ires)=min3bar         
-         print *,'Set mother color for ',ires,' to ',(icol(j,ires),j=1,2)
+c         print *,'Set mother color for ',ires,' to ',(icol(j,ires),j=1,2)
       else
 c     Don't know how to deal with this
          call write_error(1001,i3,i3bar)
@@ -638,7 +682,8 @@ c        This is an epsilonbar index interaction
                icol(1,ires)=-maxcolor
             endif
          elseif(n3.gt.0.and.n3bar.eq.0.and.i3-i3bar.eq.n3.or.
-     $          n3bar.gt.0.and.n3.eq.0.and.i3bar-i3.eq.n3bar)then
+     $          n3bar.gt.0.and.n3.eq.0.and.i3bar-i3.eq.n3bar.or.
+     $          n3.eq.1.and.n3bar.eq.1.and.i3-i3bar.eq.0)then
 c        We have a previous epsilon which gives the wrong pop-up index
             call fix_s_color_indices(n3,n3bar,i3,i3bar,ncolmp,icolmp,ires,icol)
          else
@@ -699,6 +744,17 @@ c     and set daughter index to lowest 3bar-index
          do i=ires+1,-1
             if(icol(2,i).eq.max_n3bar)
      $           icol(2,i)=min_n3
+         enddo
+      else if(n3bar.eq.1.and.n3.eq.1.and.i3bar-i3.eq.0)then
+c     Replace the highest 3bar-index with the lowest 3-index,
+c     and vice versa
+         icol(1,ires)=min_n3
+         icol(2,ires)=min_n3bar
+         do i=ires,-1
+            if(icol(2,i).eq.max_n3bar)
+     $           icol(2,i)=min_n3
+            if(icol(1,i).eq.max_n3)
+     $           icol(1,i)=min_n3bar
          enddo
       else
 c     Don't know how to deal with this
