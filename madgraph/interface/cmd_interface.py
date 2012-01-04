@@ -305,8 +305,9 @@ class HelpToCmd(object):
         logger.info("   - If mode is standalone_cpp, create a standalone C++")
         logger.info("     directory in \"path\".")
         logger.info("   - If mode is pythia8, output all files needed to generate")
-        logger.info("     the processes using Pythia 8. Directory \"path\"")
-        logger.info("     should be a Pythia 8 main directory (v. 8.150 or later).")
+        logger.info("     the processes using Pythia 8. The files are written in")
+        logger.info("     the Pythia 8 directory (default).")
+        logger.info("     NOTE: The Pythia 8 directory is set in the ./input/mg5_configuration.txt")
         logger.info("   path: The path of the process directory.")
         logger.info("     If you put '.' as path, your pwd will be used.")
         logger.info("     If you put 'auto', an automatic directory PROC_XX_n will be created.")
@@ -841,17 +842,23 @@ This will take effect only in a NEW terminal
             if path == 'auto' and self._export_format in \
                      ['madevent', 'standalone', 'standalone_cpp']:
                 self.get_default_path()
-            elif 'pythia8' != self._export_format:
+            elif path != 'auto':
                 self._export_dir = path
-            else:
+            elif path == 'auto':
                 if self.configuration['pythia8_path']:
                     self._export_dir = self.configuration['pythia8_path']
                 else:
                     self._export_dir = '.'
         else:
-            # No valid path
-            self.get_default_path()
-
+            if self._export_format != 'pythia8':
+                # No valid path
+                self.get_default_path()
+            else:
+                if self.configuration['pythia8_path']:
+                    self._export_dir = self.configuration['pythia8_path']
+                else:
+                    self._export_dir = '.'
+                    
         self._export_dir = os.path.realpath(self._export_dir)
 
     def get_default_path(self):
@@ -3028,11 +3035,20 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
             self._curr_amps.sort(lambda a1, a2: a2.get_number_of_diagrams() - \
                                  a1.get_number_of_diagrams())
 
+            # Check if we need to group the SubProcesses or not
+            group = True
+            if self._options['group_subprocesses'] is False:
+                group = False
+            elif self._options['group_subprocesses'] == 'Auto' and \
+                                         self._curr_amps[0].get_ninitial() == 1:
+                   group = False 
+
+
+
             cpu_time1 = time.time()
             ndiags = 0
             if not self._curr_matrix_elements.get_matrix_elements():
-                if self._options['group_subprocesses'] is True or \
-                                         self._curr_amps[0].get_ninitial() == 2:
+                if group:
                     cpu_time1 = time.time()
                     dc_amps = [amp for amp in self._curr_amps if isinstance(amp, \
                                         diagram_generation.DecayChainAmplitude)]

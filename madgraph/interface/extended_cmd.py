@@ -269,6 +269,7 @@ class Cmd(BasicCmd):
                                             str(error).replace('\n','\n\t'))
         error_text += self.error_debug % {'debug': self.debug_output}
         logger_stderr.critical(error_text)
+                
         #stop the execution if on a non interactive mode
         if self.use_rawinput == False:
             return True 
@@ -316,7 +317,8 @@ class Cmd(BasicCmd):
         if self.use_rawinput == False:
             return True
         # Remove failed command from history                                            
-        self.history.pop()
+        if self.history:
+            self.history.pop()
         return False
 
 

@@ -126,18 +126,18 @@ class TestCmdShell1(unittest.TestCase):
 
         self.assertEqual(config, expected)
         
-        text_editor = 'vi'
-        if 'EDITOR' in os.environ and os.environ['EDITOR']:
-            text_editor = os.environ['EDITOR']
+        #text_editor = 'vi'
+        #if 'EDITOR' in os.environ and os.environ['EDITOR']:
+        #    text_editor = os.environ['EDITOR']
         
-        if sys.platform == 'darwin':
-            self.assertEqual(launch_ext.open_file.web_browser, None)
-            self.assertEqual(launch_ext.open_file.text_editor, text_editor)
-            self.assertEqual(launch_ext.open_file.eps_viewer, None)
-        else:
-            self.assertEqual(launch_ext.open_file.web_browser, 'firefox')
-            self.assertEqual(launch_ext.open_file.text_editor, text_editor)
-            self.assertEqual(launch_ext.open_file.eps_viewer, 'gv')
+        #if sys.platform == 'darwin':
+        #    self.assertEqual(launch_ext.open_file.web_browser, None)
+        #    self.assertEqual(launch_ext.open_file.text_editor, text_editor)
+        #    self.assertEqual(launch_ext.open_file.eps_viewer, None)
+        #else:
+        #    self.assertEqual(launch_ext.open_file.web_browser, 'firefox')
+        #    self.assertEqual(launch_ext.open_file.text_editor, text_editor)
+        #    self.assertEqual(launch_ext.open_file.eps_viewer, 'gv')
                         
 class TestCmdShell2(unittest.TestCase,
                     test_file_writers.CheckFileCreate):
@@ -173,9 +173,11 @@ class TestCmdShell2(unittest.TestCase,
 
         if os.path.isdir(self.out_dir):
             shutil.rmdir(self.out_dir)
-            
+        
+        self.do('import model_v4 sm')
         self.do('set group_subprocesses False')
-        self.do('load processes %s' % self.join_path(_pickle_path,'e+e-_e+e-.pkl'))
+        self.do('generate e+ e- > e+ e-')
+#        self.do('load processes %s' % self.join_path(_pickle_path,'e+e-_e+e-.pkl'))
         self.do('output %s -nojpeg' % self.out_dir)
         self.assertTrue(os.path.exists(self.out_dir))
         self.assertTrue(os.path.exists(os.path.join(self.out_dir,

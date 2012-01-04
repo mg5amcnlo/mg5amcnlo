@@ -1164,13 +1164,13 @@ class ProcessExporterFortranME(ProcessExporterFortran):
         cwd = os.getcwd()
         path = os.path.join(self.dir_path, 'SubProcesses')
 
+
         if not self.model:
             self.model = matrix_element.get('processes')[0].get('model')
 
 
 
         os.chdir(path)
-
         # Create the directory PN_xx_xxxxx in the specified path
         subprocdir = "P%s" % matrix_element.get('processes')[0].shell_string()
         try:
@@ -1401,7 +1401,7 @@ class ProcessExporterFortranME(ProcessExporterFortran):
                             name != 'index.html']               
         if online:
             nb_channel = obj.rep_rule['nb_gen_diag']
-            open(pjoin('./numdiag'),'w').write(str(nb_channel))
+            open(pjoin('./Online'),'w').write(str(nb_channel))
         
         # Write command history as proc_card_mg5
         if os.path.isdir('Cards'):
