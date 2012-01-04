@@ -1695,7 +1695,7 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
                                              self.multiparticle_string(label))
     
     # Display
-    def do_display(self, line):
+    def do_display(self, line, output=sys.stdout):
         """Display current internal status"""
 
         args = self.split_arg(line)
@@ -1881,7 +1881,7 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
             pydoc.pager(outstr)            
         
         elif args[0] in  ["options", "variable"]:
-            super(MadGraphCmd, self).do_display(line)
+            super(MadGraphCmd, self).do_display(line, output)
                 
             
     def multiparticle_string(self, key):

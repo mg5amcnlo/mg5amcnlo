@@ -1521,7 +1521,7 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
  
  
     ############################################################################
-    def do_display(self, line):
+    def do_display(self, line, output=sys.stdout):
         """Display current internal status"""
 
         args = self.split_arg(line)
@@ -1549,7 +1549,7 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
             else:
                 print 'No run detected.'
         else:
-            super(MadEventCmd, self).do_display(line)
+            super(MadEventCmd, self).do_display(line, output)
  
   
     ############################################################################

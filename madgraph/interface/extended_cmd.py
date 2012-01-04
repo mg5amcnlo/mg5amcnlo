@@ -21,6 +21,7 @@ import os
 import pydoc
 import signal
 import subprocess
+import sys
 import traceback
 try:
     import readline
@@ -270,6 +271,12 @@ class Cmd(BasicCmd):
         error_text += self.error_debug % {'debug': self.debug_output}
         logger_stderr.critical(error_text)
                 
+        # Add options status to the debug file
+        try:
+            self.do_display('options', debug_file)
+        except Exception, error:
+            debug_file.write('Fail to write options with error %s' % error)
+        
         #stop the execution if on a non interactive mode
         if self.use_rawinput == False:
             return True 
@@ -313,6 +320,12 @@ class Cmd(BasicCmd):
         error_text += '%s : %s' % (error.__class__.__name__,
                                                 str(error).replace('\n','\n\t'))
         logger_stderr.error(error_text)
+        
+        # Add options status to the debug file
+        try:
+            self.do_display('options', debug_file)
+        except Exception, error:
+            debug_file.write('Fail to write options with error %s' % error)
         #stop the execution if on a non interactive mode                                
         if self.use_rawinput == False:
             return True
@@ -802,7 +815,7 @@ class Cmd(BasicCmd):
             text+='\t %s \n' % option      
         print text
 
-    def do_display(self, line):
+    def do_display(self, line, output=sys.stdout):
         """Advanced commands: basic display"""
         
         args = self.split_arg(line)
@@ -813,10 +826,10 @@ class Cmd(BasicCmd):
             raise self.InvalidCmd, 'display require at least one argument'
         
         if args[0] == "options":
-            outstr = "Value of current MG5 Options:\n" 
+            outstr = "Value of current Options:\n" 
             for key, value in self.configuration.items() + self._options.items():
                 outstr += '%25s \t:\t%s\n' %(key,value)
-            print outstr
+            output.write(outstr)
             
         elif args[0] == "variable":
             outstr = "Value of Internal Variable:\n"
