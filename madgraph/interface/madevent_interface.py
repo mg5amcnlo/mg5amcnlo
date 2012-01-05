@@ -2244,7 +2244,7 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
                            cwd=pjoin(self.me_dir,'Events'))
 
         if not os.path.exists(pjoin(self.me_dir,'Events','pythia.done')):
-            logger.warning('Fail to produce pythia output')
+            logger.warning('Fail to produce pythia output. More info in \n     %s' % pythia_log)
             return
         else:
             os.remove(pjoin(self.me_dir,'Events','pythia.done'))
@@ -3431,102 +3431,102 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
         name = {'0': 'auto', '1': 'pythia', '2':'pgs', '3':'delphes'}
         options = available_mode + [name[val] for val in available_mode]
         question = """Which programs do you want to run?
-  0 / auto    : running existing card
-  1 / pythia  : Pythia 
-  2 / pgs     : Pythia + PGS\n"""
+    0 / auto    : running existing card
+    1 / pythia  : Pythia 
+    2 / pgs     : Pythia + PGS\n"""
         if '3' in available_mode:
             question += """  3 / delphes  : Pythia + Delphes.\n"""
 
-            if not force:
-                if not mode:
-                    mode = self.ask(question, '0', options, timeout=self.timeout)
-            elif not mode:
-                mode = 'auto'
-                
-            if mode.isdigit():
-                mode = name[mode]
-                
-            if mode == 'auto':
-                if os.path.exists(pjoin(self.me_dir, 'Cards', 'pgs_card.dat')):
-                    mode = 'pgs'
-                elif os.path.exists(pjoin(self.me_dir, 'Cards', 'delphes_card.dat')):
-                    mode = 'delphes'
-                else: 
-                    mode = 'pythia'
-            logger.info('Will run in mode %s' % mode)
+        if not force:
+            if not mode:
+                mode = self.ask(question, '0', options, timeout=self.timeout)
+        elif not mode:
+            mode = 'auto'
             
-            # Clean the pointless card
-            if mode == 'pgs':
-                if os.path.exists(pjoin(self.me_dir,'Cards','delphes_card.dat')):
-                    os.remove(pjoin(self.me_dir,'Cards','delphes_card.dat'))
-            if mode == 'delphes':
-                if os.path.exists(pjoin(self.me_dir,'Cards','pgs_card.dat')):
-                    os.remove(pjoin(self.me_dir,'Cards','pgs_card.dat'))                                         
-            
-            # Now that we know in which mode we are check that all the card
-            #exists (copy default if needed)
-
-            cards = ['pythia_card.dat']
-            self.add_card_to_run('pythia')
-            if mode == 'pgs':
-                self.add_card_to_run('pgs')
-                cards.append('pgs_card.dat')
-            if mode == 'delphes':
-                self.add_card_to_run('delphes')
-                cards.append('delphes_card.dat')
-
-            if force:
-                return mode
-
-            # Ask the user if he wants to edit any of the files
-            #First create the asking text
-            question = """Do you want to edit one cards (press enter to bypass editing)?
-  1 / pythia   : pythia_card.dat\n""" 
-            possible_answer = ['0','done', '1', 'pythia']
-            card = {0:'done', 1:'pythia', 9:'plot'}
-            if mode == 'pgs':
-                question += '  2 / pgs     : pgs_card.dat\n'
-                possible_answer.append(2)
-                possible_answer.append('pgs') 
-                card[2] = 'pgs'           
-            if mode == 'delphes':
-                question += '  2 / delphes : delphes_card.dat\n'
-                question += '  3 / trigger : delphes_trigger.dat\n'
-                possible_answer.append(2)
-                possible_answer.append('delphes')
-                possible_answer.append(3)
-                possible_answer.append('trigger')
-                card[2] = 'delphes'
-                card[3] = 'trigger'
-            if self.configuration['madanalysis_path']:
-                question += '  9 / plot : plot_card.dat\n'
-                possible_answer.append(9)
-                possible_answer.append('plot')
-
-            # Add the path options
-            question += '  Path to a valid card.\n'
-       
-            # Loop as long as the user is not done.
-            answer = 'no'
-            while answer != 'done':
-                answer = self.ask(question, '0', possible_answer, timeout=int(1.5*self.timeout), path_msg='enter path')
-                if answer.isdigit():
-                    answer = card[int(answer)]
-                if answer == 'done':
-                    return
-                if os.path.exists(answer):
-                    # detect which card is provide
-                    card_name = self.detect_card_type(answer)
-                    if card_name == 'unknown':
-                        card_name = self.ask('Fail to determine the type of the file. Please specify the format',
-                     ['pythia_card.dat','pgs_card.dat',
-                      'delphes_card.dat', 'delphes_trigger.dat','plot_card.dat'])
-
-                    logger.info('copy %s as %s' % (answer, card_name))
-                    files.cp(answer, pjoin(self.me_dir, 'Cards', card_name))
-                    continue
-                path = pjoin(self.me_dir,'Cards','%s_card.dat' % answer)
-                self.exec_cmd('open %s' % path)                    
+        if mode.isdigit():
+            mode = name[mode]
+             
+        if mode == 'auto':
+            if os.path.exists(pjoin(self.me_dir, 'Cards', 'pgs_card.dat')):
+                mode = 'pgs'
+            elif os.path.exists(pjoin(self.me_dir, 'Cards', 'delphes_card.dat')):
+                mode = 'delphes'
+            else: 
+                mode = 'pythia'
+        logger.info('Will run in mode %s' % mode)
+        
+        # Clean the pointless card
+        if mode == 'pgs':
+            if os.path.exists(pjoin(self.me_dir,'Cards','delphes_card.dat')):
+                os.remove(pjoin(self.me_dir,'Cards','delphes_card.dat'))
+        if mode == 'delphes':
+            if os.path.exists(pjoin(self.me_dir,'Cards','pgs_card.dat')):
+                os.remove(pjoin(self.me_dir,'Cards','pgs_card.dat'))                                         
+         
+        # Now that we know in which mode we are check that all the card
+        #exists (copy default if needed)
+        
+        cards = ['pythia_card.dat']
+        self.add_card_to_run('pythia')
+        if mode == 'pgs':
+            self.add_card_to_run('pgs')
+            cards.append('pgs_card.dat')
+        if mode == 'delphes':
+            self.add_card_to_run('delphes')
+            cards.append('delphes_card.dat')
+        
+        if force:
+            return mode
+        
+        # Ask the user if he wants to edit any of the files
+        #First create the asking text
+        question = """Do you want to edit one cards (press enter to bypass editing)?
+        1 / pythia   : pythia_card.dat\n""" 
+        possible_answer = ['0','done', '1', 'pythia']
+        card = {0:'done', 1:'pythia', 9:'plot'}
+        if mode == 'pgs':
+             question += '  2 / pgs     : pgs_card.dat\n'
+             possible_answer.append(2)
+             possible_answer.append('pgs') 
+             card[2] = 'pgs'           
+        if mode == 'delphes':
+             question += '  2 / delphes : delphes_card.dat\n'
+             question += '  3 / trigger : delphes_trigger.dat\n'
+             possible_answer.append(2)
+             possible_answer.append('delphes')
+             possible_answer.append(3)
+             possible_answer.append('trigger')
+             card[2] = 'delphes'
+             card[3] = 'trigger'
+        if self.configuration['madanalysis_path']:
+             question += '  9 / plot : plot_card.dat\n'
+             possible_answer.append(9)
+             possible_answer.append('plot')
+        
+        # Add the path options
+        question += '  Path to a valid card.\n'
+        
+        # Loop as long as the user is not done.
+        answer = 'no'
+        while answer != 'done':
+             answer = self.ask(question, '0', possible_answer, timeout=int(1.5*self.timeout), path_msg='enter path')
+             if answer.isdigit():
+                 answer = card[int(answer)]
+             if answer == 'done':
+                 return
+             if os.path.exists(answer):
+                 # detect which card is provide
+                 card_name = self.detect_card_type(answer)
+                 if card_name == 'unknown':
+                     card_name = self.ask('Fail to determine the type of the file. Please specify the format',
+                  ['pythia_card.dat','pgs_card.dat',
+                   'delphes_card.dat', 'delphes_trigger.dat','plot_card.dat'])
+        
+                 logger.info('copy %s as %s' % (answer, card_name))
+                 files.cp(answer, pjoin(self.me_dir, 'Cards', card_name))
+                 continue
+             path = pjoin(self.me_dir,'Cards','%s_card.dat' % answer)
+             self.exec_cmd('open %s' % path)                    
                  
         return mode
 

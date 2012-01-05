@@ -180,8 +180,15 @@ def recover_banner(results_object, level):
     except:
         return Banner()                                  
     path = results_object.path
-
-    banner = Banner(pjoin(path,'Events',run,'%s_%s_banner.txt' % (run, tag)))
+    banner_path = pjoin(path,'Events',run,'%s_%s_banner.txt' % (run, tag))
+    
+    if not os.path.exists(banner_path):
+        # security if the banner was remove (or program canceled before created it)
+        return Banner()  
+    
+    banner = Banner(banner_path)
+    
+    
     
     if level == 'pythia':
         if 'MGPythiaCard' in banner:

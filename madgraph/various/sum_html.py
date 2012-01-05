@@ -165,7 +165,7 @@ class Combine_results(list, OneResult):
 """    
     table_line_template = \
 """
-<tr><td align=right>  %(P_title)s </td>
+<tr><td align=right>%(P_title)s</td>
     <td align=right><a href=%(P_link)s> %(cross)s </a> </td>
     <td align=right>  %(error)s</td>
     <td align=right>  %(events)s</td>
@@ -177,12 +177,20 @@ class Combine_results(list, OneResult):
     def write_html(self, output_path, run, unit):
         """write html output"""
         
+        # store value for global cross-section
+        P_grouping = {}
+
         self.output_path = output_path
         tables_line = ''
         for oneresult in self:
             if oneresult.name.startswith('P'):
-                title = '<a href=../../SubProcesses/%(P)s/diagrams.html> %(P)s</a>' \
+                title = '<a href=../../SubProcesses/%(P)s/diagrams.html>%(P)s</a>' \
                                                           % {'P':oneresult.name}
+                P = oneresult.name.split('_',1)[0]
+                if P in P_grouping:
+                    P_grouping[P] += float(oneresult.xsec)
+                else:
+                    P_grouping[P] = float(oneresult.xsec)
             else:
                 title = oneresult.name
             
@@ -206,6 +214,17 @@ class Combine_results(list, OneResult):
     
             tables_line += self.table_line_template % dico
         
+        for P_name, cross in P_grouping.items():
+            dico = {'P_title': '%s sum' % P_name,
+                    'P_link': '',
+                    'cross': cross,
+                    'error': '',
+                    'events': '',
+                    'unweighted': '',
+                    'luminosity': ''
+                   }
+            tables_line += self.table_line_template % dico
+
         dico = {'cross': self.xsec,
                 'error': self.xerru,
                 'unit': unit,

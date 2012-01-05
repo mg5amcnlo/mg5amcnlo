@@ -69,7 +69,7 @@ function check_link(url,alt, id){
             <TR align="center">
                 <TH>Run</TH> 
                 <TH>Collider</TH> 
-                <TH> Tag </TH>
+                <TH> Banner </TH>
                 <TH> %(numerical_title)s </TH> 
                 <TH> Events  </TH>
                 <TH> Data </TH>  
@@ -87,6 +87,7 @@ status_template = """
 <TABLE BORDER=2 ALIGN=CENTER>
     <TR ALIGN=CENTER>
         <TH nowrap ROWSPAN=2 font color="#0000FF"> Run Name </TH>
+        <TH nowrap ROWSPAN=2 font color="#0000FF"> Tag Name </TH>
         <TH nowrap ROWSPAN=2 font color="#0000FF"> Cards </TH>   
         <TH nowrap ROWSPAN=2 font color="#0000FF"> Results </TH> 
         <TH nowrap ROWSPAN=1 COLSPAN=4 font color="#0000FF"> Status/Jobs
@@ -99,6 +100,7 @@ status_template = """
     </TR>
     <TR ALIGN=CENTER> 
         <TD nowrap ROWSPAN=2> %(run_name)s </TD>
+        <TD nowrap ROWSPAN=2> %(tag_name)s </TD>
         <TD nowrap ROWSPAN=2> <a href="./Cards/param_card.dat">param_card</a><BR>
                     <a href="./Cards/run_card.dat">run_card</a><BR>
                     %(plot_card)s
@@ -297,6 +299,7 @@ class AllResults(dict):
                             'cross': self.current['cross'],
                             'error': self.current['error'],
                             'run_name': self.current['run_name'],
+                            'tag_name': self.current['tag'],
                             'unit': self[self.current['run_name']].info['unit']}
 
             if exists(pjoin(self.path, 'Cards', 'plot_card.dat')):
