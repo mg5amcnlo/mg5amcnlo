@@ -91,7 +91,7 @@ class ExtLauncher(object):
         """nice handling of question"""
      
         if not self.force:
-            return cmd.Cmd.ask(question, default, choices=choices, path_msg=path_msg,
+            return cmd.Cmd().ask(question, default, choices=choices, path_msg=path_msg,
                                timeout=self.timeout, fct_timeout=self.timeout_fct)
         else:
             return str(default)
@@ -158,7 +158,7 @@ class MELauncher(ExtLauncher):
     def __init__(self, running_dir, timeout, cmd_int , unit='pb', **option):
         """ initialize the StandAlone Version"""
 
-        ExtLauncher.__init__(self, running_dir, './Cards', timeout, **option)
+        super(MELauncher,self).__init__(running_dir, './Cards', timeout, **option)
         #self.executable = os.path.join('.', 'bin','generate_events')
 
         assert hasattr(self, 'cluster')

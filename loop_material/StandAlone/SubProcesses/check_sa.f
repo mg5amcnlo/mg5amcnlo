@@ -15,7 +15,7 @@
       PARAMETER (READPS = .FALSE.)
 
       INTEGER NPSPOINTS
-      PARAMETER (NPSPOINTS = 100)
+      PARAMETER (NPSPOINTS = 1)
 
 !     
 !     INCLUDE FILES
@@ -86,9 +86,24 @@
          stop 'Could not read the PS.input phase-space point.'
   978  continue
        close(967)
-      else
+       else
         CALL GET_MOMENTA(SQRTS,PMASS,P)  
       endif
+
+      do i=0,3
+        PIN(i)=0.0d0
+        do j=1,nincoming
+          PIN(i)=PIN(i)+p(i,j)
+        enddo
+      enddo
+
+!---  In standalone mode, always use sqrt_s as the renormalization
+!     scale.
+      SQRTS=dsqrt(dabs(DOT(PIN(0),PIN(0))))
+      MU_R=SQRTS
+!---  Update the couplings with the new MU_R
+      CALL COUP()
+
 !     
 !     Now we can call the matrix element!
 !
@@ -127,11 +142,21 @@
       write (*,*) "---------------------------------------------------",
      &"--------------------------"
       write (*,*) "finite / (born*ao2pi) = ", MATELEM(1)/BORNELEM/AO2PI
-      write (*,*) "1eps / (born*ao2pi)   = ", MATELEM(2)/BORNELEM/AO2PI
-      write (*,*) "2eps / (born*ao2pi)   = ", MATELEM(3)/BORNELEM/AO2PI
+      write (*,*) "1eps   / (born*ao2pi) = ", MATELEM(2)/BORNELEM/AO2PI
+      write (*,*) "2eps   / (born*ao2pi) = ", MATELEM(3)/BORNELEM/AO2PI
       write (*,*) "---------------------------------------------------",
      &"--------------------------"
 
+      open(69, file="result.dat", err=976, action='WRITE')
+      do i=1,nexternal      
+          write (69,'(a2,1x,5e25.15)') 'PS',P(0,i),P(1,i),P(2,i),P(3,i)
+      enddo
+      write (69,'(a3,1x,i2)') 'EXP',-(2*nexternal-8)
+      write (69,'(a4,1x,1e25.15)') 'BORN',BORNELEM
+      write (69,'(a3,1x,1e25.15)') 'FIN',MATELEM(1)
+      write (69,'(a4,1x,1e25.15)') '1EPS',MATELEM(2)
+      write (69,'(a4,1x,1e25.15)') '2EPS',MATELEM(3)
+      close(69)
       else
           write (*,*) "PS Point #",K," done."
       endif

@@ -326,8 +326,12 @@ class UFOMG5Converter(object):
                     particle.set(key, float(value))
                 elif key in ['mass','width']:
                     particle.set(key, str(value))
+                elif key == 'spin':
+                    # MG5 internally treats ghost with positive spin for loop models and 
+                    # ignore them otherwise
+                    particle.set(key,abs(value))
                 else:
-                    particle.set(key, value)
+                    particle.set(key, value)    
             elif key == 'loop_particles':
                 loop_particles = value
             elif key == 'counterterm':
@@ -336,11 +340,6 @@ class UFOMG5Converter(object):
                 # add charge -we will check later if those are conserved 
                 self.conservecharge.add(key)
                 particle.set(key,value, force=True)
-
-        # MG5 internally treats ghost with positive spin for loop models and 
-        # ignore them otherwise
-        if particle.get('spin') < 0:
-            particle.set('spin',-particle.get('spin'))
         
         assert(12 == nb_property) #basic check that all the information is there         
         
@@ -370,7 +369,7 @@ class UFOMG5Converter(object):
                 for i, order in enumerate(self.ufomodel.all_orders):
                     if key[i]==1:
                         newParticleCountertermKey[0]=order.name
-                newCouplingName='C_UVWfct_'+particle_info.name+'_'+str(key[-1])
+                newCouplingName='UVWfct_'+particle_info.name+'_'+str(key[-1])
                 particle_counterterms[tuple(newParticleCountertermKey)]=\
                   dict([(key,newCouplingName+('' if key==0 else '_'+str(-key)+'eps'))\
                         for key in counterterm.keys()])
@@ -647,36 +646,35 @@ class OrganizeModelExpression:
         """creates the shortcut for all special function/parameter
         separate the couplings dependent of track variables of the others"""
         
-        for coupling in self.model.all_couplings:
-            if self.perturbation_couplings:
-                newCoupling=copy.copy(coupling)
+        # First expand the couplings on all their non-zero contribution to the 
+        # three laurent orders 0, -1 and -2.
+        if self.perturbation_couplings:
+            new_couplings_list=[]
+            for coupling in self.model.all_couplings:
                 for poleOrder in range(0,3):
+                    newCoupling=copy.deepcopy(coupling)
                     if poleOrder!=0:
                         newCoupling.name=newCoupling.name+"_"+str(poleOrder)+"eps"
-                    if newCoupling.pole(poleOrder)!='ZERO':
-                        # shorten expression, find dependencies, create short object
-                        expr = self.shorten_expr(newCoupling.pole(poleOrder))
-                        depend_on = self.find_dependencies(expr)
-                        parameter = base_objects.ModelVariable(newCoupling.name, expr, 'complex', depend_on)
+                    if newCoupling.pole(poleOrder)!='ZERO':                    
+                        newCoupling.value=newCoupling.pole(poleOrder)
+                        new_couplings_list.append(newCoupling)
+            self.model.all_couplings=new_couplings_list
                         
-                        # Add consistently in the couplings/all_expr
-                        try:
-                            self.couplings[depend_on].append(parameter)
-                        except KeyError:
-                            self.couplings[depend_on] = [parameter]
-                        self.all_expr[newCoupling.pole(poleOrder)] = parameter
-            else:
-                # shorten expression, find dependencies, create short object
-                expr = self.shorten_expr(coupling.value)
-                depend_on = self.find_dependencies(expr)
-                parameter = base_objects.ModelVariable(coupling.name, expr, 'complex', depend_on)
-                
-                # Add consistently in the couplings/all_expr
-                try:
-                    self.couplings[depend_on].append(parameter)
-                except KeyError:
-                    self.couplings[depend_on] = [parameter]
-                self.all_expr[coupling.value] = parameter                
+                                        
+        
+        
+        for coupling in self.model.all_couplings:
+            # shorten expression, find dependencies, create short object
+            expr = self.shorten_expr(coupling.value)
+            depend_on = self.find_dependencies(expr)
+            parameter = base_objects.ModelVariable(coupling.name, expr, 'complex', depend_on)
+            
+            # Add consistently in the couplings/all_expr
+            try:
+                self.couplings[depend_on].append(parameter)
+            except KeyError:
+                self.couplings[depend_on] = [parameter]
+            self.all_expr[coupling.value] = parameter                
 
     def find_dependencies(self, expr):
         """check if an expression should be evaluated points by points or not
@@ -848,7 +846,7 @@ class RestrictModel(model_reader.ModelReader):
                 self['parameter_dict'][name] = 0
 
     def locate_coupling(self):
-        """ create a dict couplings_name -> vertex """
+        """ create a dict couplings_name -> vertex or (particle, counterterm_key) """
         
         self.coupling_pos = {}
         for vertex in self['interactions']:
@@ -858,7 +856,16 @@ class RestrictModel(model_reader.ModelReader):
                         self.coupling_pos[coupling].append(vertex)
                 else:
                     self.coupling_pos[coupling] = [vertex]
-                    
+        
+        for particle in self['particles']:
+            for key, coupling_dict in particle['counterterm'].items():
+                for LaurentOrder, coupling in coupling_dict.items():
+                    if coupling in self.coupling_pos:
+                        if (particle,key) not in self.coupling_pos[coupling]:
+                            self.coupling_pos[coupling].append((particle,key))
+                    else:
+                        self.coupling_pos[coupling] = [(particle,key)]
+
         return self.coupling_pos
         
     def detect_identical_couplings(self):
@@ -931,7 +938,8 @@ class RestrictModel(model_reader.ModelReader):
 
 
     def merge_iden_couplings(self, couplings):
-        """merge the identical couplings in the interactions"""
+        """merge the identical couplings in the interactions and particle 
+        counterterms"""
 
         
         logger_mod.debug(' Fuse the Following coupling (they have the same value): %s '% \
@@ -945,11 +953,20 @@ class RestrictModel(model_reader.ModelReader):
             if coupling not in self.coupling_pos:
                 continue
             # replace the coupling, by checking all coupling of the interaction
-            vertices = self.coupling_pos[coupling]
+            vertices = [ vert for vert in self.coupling_pos[coupling] if 
+                         isinstance(vert, base_objects.Interaction)]
             for vertex in vertices:
                 for key, value in vertex['couplings'].items():
                     if value == coupling:
                         vertex['couplings'][key] = main
+
+            # replace the coupling appearing in the particle counterterm
+            particles_ct = [ pct for pct in self.coupling_pos[coupling] if 
+                         isinstance(pct, tuple)]
+            for pct in particles_ct:
+                for key, value in pct[0]['counterterm'][pct[1]].items():
+                    if value == coupling:
+                        pct[0]['counterterm'][pct[1]][key] = main
 
          
     def merge_iden_parameters(self, parameters):
@@ -989,15 +1006,22 @@ class RestrictModel(model_reader.ModelReader):
                                                        if p[arg] in change_name]
             
     def remove_interactions(self, zero_couplings):
-        """ remove the interactions associated to couplings"""
+        """ remove the interactions and particle counterterms 
+        associated to couplings"""
         
-        mod = []
+        mod_vertex = []
+        mod_particle_ct = []
         for coup in zero_couplings:
             # some coupling might be not related to any interactions
             if coup not in self.coupling_pos:
                 coup, self.coupling_pos.keys()
                 continue
-            for vertex in self.coupling_pos[coup]:
+            
+            # Remove the corresponding interactions.
+                        # replace the coupling appearing in the particle counterterm
+            vertices = [ vert for vert in self.coupling_pos[coup] if 
+                         isinstance(vert, base_objects.Vertex) ]
+            for vertex in vertices:
                 modify = False
                 for key, coupling in vertex['couplings'].items():
                     if coupling in zero_couplings:
@@ -1005,9 +1029,21 @@ class RestrictModel(model_reader.ModelReader):
                         del vertex['couplings'][key]
                 if modify:
                     mod.append(vertex)
+            
+            # Remove the corresponding particle counterterm
+            particles_ct = [ pct for pct in self.coupling_pos[coup] if 
+                         isinstance(pct, tuple)]
+            for pct in particles_ct:
+                modify = False
+                for key, coupling in pct[0]['counterterm'][pct[1]]:
+                    if coupling in zero_couplings:
+                        modify=True
+                        del pct[0]['counterterm'][pct[1]][key]
+                if modify:
+                    mod_particle_ct.append(pct)
 
-        # print usefull log and clean the empty interaction
-        for vertex in mod:
+        # print useful log and clean the empty interaction
+        for vertex in mod_vertex:
             part_name = [part['name'] for part in vertex['particles']]
             orders = ['%s=%s' % (order,value) for order,value in vertex['orders'].items()]
                                         
@@ -1018,7 +1054,25 @@ class RestrictModel(model_reader.ModelReader):
             else:
                 logger_mod.debug('modify interactions: %s at order: %s' % \
                                 (' '.join(part_name),', '.join(orders)))       
-        
+
+        # print useful log and clean the empty counterterm values
+        for pct in mod_particle_ct:
+            part_name = pct[0]['name']
+            order = pct[1][0]
+            loop_parts = ','.join(['('+','.join([\
+                         self.get_particle(p)['name'] for p in part])+')' \
+                         for part in pct[1][1]])
+                                        
+            if not pct[0]['counterterm'][pct[1]]:
+                logger_mod.debug('remove counterterm of particle %s'%part_name+\
+                                 ' with loop particles (%s)'%loop_parts+\
+                                 ' perturbing order %s'%order)
+                del pct[0]['counterterm'][pct[1]]
+            else:
+                logger_mod.debug('Modify counterterm of particle %s'%part_name+\
+                                 ' with loop particles (%s)'%loop_parts+\
+                                 ' perturbing order %s'%order)  
+
         return
                 
     def remove_couplings(self, couplings):                

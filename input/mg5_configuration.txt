@@ -39,7 +39,7 @@ eps_viewer = None
 
 # Prefered Fortran Compiler
 # If None: try to find g77 or gfortran on the system
-fortran_compiler = None
+fortran_compiler = gfortran
 
 
 ################################################################################

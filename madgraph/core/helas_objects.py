@@ -4344,6 +4344,7 @@ class HelasMultiProcess(base_objects.PhysicsObject):
                 # already been considered before, recycle
                 # the information
                 loop_col_basis_index = list_colorize.index(loop_colorize_obj)
+                loop_col_basis = list_color_basis[loop_col_basis_index]
             except ValueError:
                 # If not, create color basis accordingly
                 list_colorize.append(loop_colorize_obj)
@@ -4369,6 +4370,7 @@ class HelasMultiProcess(base_objects.PhysicsObject):
                     # already been considered before, recycle
                     # the information
                     born_col_basis_index = list_colorize.index(born_colorize_obj)
+                    born_col_basis = list_color_basis[born_col_basis_index]
                 except ValueError:
                     # If not, create color basis accordingly
                     list_colorize.append(born_colorize_obj)
@@ -4414,7 +4416,7 @@ class HelasMultiProcess(base_objects.PhysicsObject):
             if gen_color:
                 matrix_element.set('loop_color_basis',loop_col_basis)
                 if new_amp['process']['has_born']:
-                    matrix_element.set('born_color_basis',born_col_basis)                    
+                    matrix_element.set('born_color_basis',born_col_basis)
                 matrix_element.set('color_matrix',col_matrix)
 
         while amplitudes:

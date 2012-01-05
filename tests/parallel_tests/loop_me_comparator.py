@@ -1,0 +1,715 @@
+################################################################################
+#
+# Copyright (c) 2009 The MadGraph Development team and Contributors
+#
+# This file is a part of the MadGraph 5 project, an application which 
+# automatically generates Feynman diagrams and matrix elements for arbitrary
+# high-energy processes in the Standard Model and beyond.
+#
+# It is subject to the MadGraph license which should accompany this 
+# distribution.
+#
+# For more information, please visit: http://madgraph.phys.ucl.ac.be
+#
+################################################################################
+"""A set of objects to allow for easy comparisons of results for loop processes
+from various ME generators (e.g., MadLoop v5 against v4, ...) and output nice 
+reports in different formats (txt, tex, ...).
+"""
+
+import datetime
+import glob
+import itertools
+import logging
+import os
+import re
+import shutil
+import subprocess
+import sys
+import time
+
+pjoin = os.path.join
+# Get the grand parent directory (mg5 root) of the module real path 
+# (tests/acceptance_tests) and add it to the current PYTHONPATH to allow
+# for easy import of MG5 tools
+
+_file_path = os.path.dirname(os.path.realpath(__file__))
+
+import madgraph.iolibs.template_files as template_files
+import madgraph.iolibs.misc as misc
+import madgraph.iolibs.save_load_object as save_load_object
+
+import madgraph.interface.cmd_interface as cmd_interface
+
+import me_comparator
+
+from madgraph import MadGraph5Error, MG5DIR
+
+class LoopMG5RunnerError(Exception):
+        """class for error in LoopMG5Runner"""
+        pass
+
+class LoopMG5Runner(me_comparator.MG5Runner):
+    """Runner object for the MG5 Matrix Element generator for loop processes."""
+
+    mg5_path = ""
+
+    name = 'MadLoop v5'
+    type = 'MLv5'
+    compilator ='gfortran'
+
+    def setup(self, mg5_path, temp_dir=None):
+        """Initialization of the temp directory"""
+
+        self.mg5_path = os.path.abspath(mg5_path)
+
+        if not temp_dir:
+            i=0
+            while os.path.exists(os.path.join(mg5_path, 
+                                              "ptest_%s_%s" % (self.type, i))):
+                i += 1
+            temp_dir = "ptest_%s_%s" % (self.type, i)         
+
+        self.temp_dir_name = temp_dir
+
+    def run(self, proc_list, model, born_orders={}, perturbation_orders=[],
+                            squared_orders={}, energy=1000, PSpoints=[]):
+        """Execute MG5 on the list of processes mentioned in proc_list, using
+        the specified model and the specified orders with a given c.o.m energy
+        or the given Phase-Space points if specified.
+        """
+        self.res_list = [] # ensure that to be void, and avoid pointer problem 
+        self.proc_list = proc_list
+        self.model = model
+        self.born_orders = born_orders
+        self.perturbation_orders = perturbation_orders
+        self.squared_orders = squared_orders
+        self.orders = (born_orders,perturbation_orders,squared_orders)
+        self.energy = energy
+        self.non_zero = 0 
+
+        dir_name = os.path.join(self.mg5_path, self.temp_dir_name)
+
+        # Check that the perturbation orders defined is exactly ['QCD'] so far
+        if self.perturbation_orders!=['QCD']:
+            raise self.LoopMG5RunnerError, \
+                        "LoopMG5RunnerError handles only QCD perturbations."
+
+        # Create a proc_card.dat in the v5 format
+        proc_card_location = os.path.join(self.mg5_path, 'proc_card_%s.dat' % \
+                                          self.temp_dir_name)
+        proc_card_file = open(proc_card_location, 'w')
+        proc_card_file.write(self.format_mg5_proc_card(proc_list, model, 
+                             born_orders, perturbation_orders, squared_orders))
+        proc_card_file.close()
+
+        logging.info("proc_card.dat file for %i processes successfully created in %s" % \
+                     (len(proc_list), os.path.join(dir_name, 'Cards')))
+
+        # Run mg5
+        logging.info("Running mg5")
+        proc_card = open(proc_card_location, 'r').read()
+        new_proc_list = []
+        cmd = cmd_interface.MadGraphCmdShell()
+        for line in proc_card.split('\n'):
+            try:
+                cmd.exec_cmd(line, errorhandling=False)
+            except MadGraph5Error:
+                pass
+            else:
+                if line.startswith('add'):
+                    self.non_zero += 1
+                    new_proc_list.append(line)
+
+        if hasattr(self, 'store_proc_card'):
+            self.new_proc_list = '\n'.join(new_proc_list)
+
+        # Remove the temporary proc_card
+        os.remove(proc_card_location)
+        if self.non_zero:
+            if PSpoints==[]:
+                self.fix_energy_in_check(dir_name, energy)
+            else:
+                self.fix_PSPoint_in_check(dir_name)          
+
+            # Get the ME value
+            for i, proc in enumerate(proc_list):
+                value = self.get_me_value(proc, i, ([] if PSpoints==[] \
+                                                    else PSpoints[i]))
+                self.res_list.append(value)
+
+            return self.res_list
+        else:
+            self.res_list = [((0.0, 0.0, 0.0, 0.0, 0), [])] * len(proc_list)
+            return self.res_list
+
+    def format_mg5_proc_card(self, proc_list, model, born_orders,
+                             perturbation_orders, squared_orders):
+        """Create a proc_card.dat string following v5 conventions."""
+
+        v5_string = "import model %s\n" % os.path.join(self.model_dir, model)
+
+        born_couplings = ' '.join(["%s=%i" % (k, v) for k, v \
+                                   in born_orders.items()])
+        perturbations = ' '.join([k for k \
+                                   in perturbation_orders])
+
+        squared_couplings = ' '.join(["%s=%i" % (k, v) for k, v \
+                                   in squared_orders.items()])
+        
+        for i, proc in enumerate(proc_list):            
+            v5_string += 'add process ' + proc + ' ' + born_couplings + \
+                         ' [' + perturbations + '] ' + squared_couplings + \
+                         (' @%i\n'%i)
+        v5_string += "output standalone %s -f\n" % \
+                     os.path.join(self.mg5_path, self.temp_dir_name)
+        return v5_string
+
+    def get_me_value(self, proc, proc_id, PSpoint=[]):
+        """Compile and run ./check, then parse the output and return the result
+        for process with id = proc_id and PSpoint if specified."""
+
+        sys.stdout.write('.')
+        sys.stdout.flush()
+        working_dir = os.path.join(self.mg5_path, self.temp_dir_name)
+         
+        shell_name = None
+        directories = glob.glob(os.path.join(working_dir, 'SubProcesses',
+                                  'P%i_*' % proc_id))
+        if directories and os.path.isdir(directories[0]):
+            shell_name = os.path.basename(directories[0])
+
+        # If directory doesn't exist, skip and return 0
+        if not shell_name:
+            logging.info("Directory hasn't been created for process %s" % (proc))
+            return ((0.0, 0.0, 0.0, 0.0, 0), [])
+
+        logging.info("Working on process %s in dir %s" % (proc, shell_name))
+        
+        dir_name = os.path.join(working_dir, 'SubProcesses', shell_name)
+        # Run make
+        devnull = open(os.devnull, 'w')
+        retcode = subprocess.call('make',
+                        cwd=dir_name,
+                        stdout=devnull, stderr=devnull)
+                        
+        if retcode != 0:
+            logging.info("Error while executing make in %s" % shell_name)
+            return ((0.0, 0.0, 0.0, 0.0, 0), [])
+
+        # If a PS point is specified, write out the corresponding PS.input
+        if PSpoint:
+            PSfile = open(os.path.join(dir_name, 'PS.input'), 'w')
+            PSfile.write('\n'.join([' '.join(['%.16E'%pi for pi in p]) \
+                                  for p in PSpoint]))
+            PSfile.close()
+        
+        # Run ./check
+        try:
+            output = subprocess.Popen('./check',
+                        cwd=dir_name,
+                        stdout=subprocess.PIPE, stderr=subprocess.STDOUT).stdout
+            output.read()
+            output.close()
+            if os.path.exists(os.path.join(dir_name,'result.dat')):
+                return self.parse_check_output(file(dir_name+'/result.dat'))  
+            else:
+                logging.warning("Error while looking for file %s"%str(os.path\
+                                                  .join(dir_name,'result.dat')))
+                return ((0.0, 0.0, 0.0, 0.0, 0), [])
+        except IOError:
+            logging.warning("Error while executing ./check in %s" % shell_name)
+            return ((0.0, 0.0, 0.0, 0.0, 0), [])
+
+    def parse_check_output(self, output):
+        """Parse the output string and return a pair where first four values are 
+        the finite, born, single and double pole of the ME and the fourth is the
+        GeV exponent and the second value is a list of 4 momenta for all particles 
+        involved."""
+
+        res_p = []
+        value = [0.0,0.0,0.0,0.0]
+        gev_pow = 0
+
+        for line in output:
+            splitline=line.split()
+            if splitline[0]=='PS':
+                res_p.append([float(s) for s in splitline[1:]])
+            elif splitline[0]=='BORN':
+                value[1]=float(splitline[1])
+            elif splitline[0]=='FIN':
+                value[0]=float(splitline[1])
+            elif splitline[0]=='1EPS':
+                value[2]=float(splitline[1])
+            elif splitline[0]=='2EPS':
+                value[3]=float(splitline[1])
+            elif splitline[0]=='EXP':
+                gev_pow=int(splitline[1])
+
+        return ((value[0],value[1],value[2],value[3],gev_pow), res_p)
+
+    def cleanup(self):
+        """Clean up temporary directories"""
+
+        #if not self.setup_flag:
+        #    raise self.MERunnerException, \
+        #            "MERunner setup should be called first"
+        try:
+            if os.path.isdir(os.path.join(self.mg5_path, self.temp_dir_name)):
+                shutil.rmtree(os.path.join(self.mg5_path, self.temp_dir_name))
+                logging.info("Temporary standalone directory %s successfully removed" % \
+                     self.temp_dir_name)
+        except:
+            pass
+
+    def fix_PSPoint_in_check(self, dir_name):
+        """Set check_sa.f to be reading PS.input assuming a working dir dir_name"""
+
+        file = open(os.path.join(dir_name, 'SubProcesses', 'check_sa.f'), 'r')
+        check_sa = file.read()
+        file.close()
+
+        file = open(os.path.join(dir_name, 'SubProcesses', 'check_sa.f'), 'w')
+        file.write(re.sub("READPS = .FALSE.", "READPS = .TRUE.", check_sa))
+        file.close()
+
+class LoopMG4RunnerError(Exception):
+        """class for error in LoopMG4Runner"""
+        pass
+
+class LoopMG4Runner(me_comparator.MERunner):
+    """Runner object for the MadLoop4 Matrix Element generator for loop processes."""
+
+    mg4_path = ""
+
+    name = 'MadLoop v4'
+    type = 'MLv4'
+    compilator ='gfortran'
+
+    def setup(self, mg4_path, temp_dir=None):
+        """Initialization of the temporary directory"""
+
+        self.mg4_path = os.path.abspath(mg4_path)
+
+        if not temp_dir:
+            i=0
+            while os.path.exists(os.path.join(mg4_path, 
+                                              "ptest_%s_%s" % (self.type, i))):
+                i += 1
+            temp_dir = "ptest_%s_%s" % (self.type, i)         
+
+        self.temp_dir_name = temp_dir
+
+    def run(self, proc_list, model, born_orders={}, perturbation_orders=[],
+                            squared_orders={}, energy=1000, PSpoints=[]):
+        """Execute MadLoop4 on the list of processes mentioned in proc_list, using
+        the specified model and the specified orders with a given c.o.m energy
+        or the given Phase-Space points if specified.
+        """
+        
+        self.res_list = [] # ensure that to be void, and avoid pointer problem 
+        self.proc_list = proc_list
+        self.model = model
+        self.born_orders = born_orders
+        self.perturbation_orders = perturbation_orders
+        self.squared_orders = squared_orders
+        self.orders = (born_orders,perturbation_orders,squared_orders)
+        self.energy = energy
+
+        dir_name = os.path.join(self.mg4_path, self.temp_dir_name)
+
+        # Check that the perturbation orders defined is exactly ['QCD'] so far
+        if self.perturbation_orders!=['QCD']:
+            raise self.LoopMG4RunnerError, \
+                        "%s LoopMG5RunnerError handles only QCD perturbations."
+
+        # Get the ME value for each process
+        for i, proc in enumerate(proc_list):
+            # Create a proc_card.dat in the MadLoop4 format
+            proc_card_location = os.path.join(self.mg4_path, 'Cards', 
+                                    'order.lh')
+            proc_card_file = open(proc_card_location, 'w')
+            card, proc_name = self.format_ml4_proc_card(i,proc, model,\
+                born_orders)
+            proc_card_file.write(card)
+            proc_card_file.close()
+            # Run MadLoop4
+            logging.info("Running MadLoop4 for process %s"%proc)
+            devnull = open(os.devnull, 'w')
+            retcode = subprocess.call(['./bin/newprocess_nlo','-nocompile'],
+                    cwd=self.mg4_path,
+                    stdout=devnull, stderr=devnull)
+                    
+            if retcode != 0:
+                logging.info("Error while running MadLoop4 in %s" % self.mg4_path)
+                self.res_list.append(((0.0, 0.0, 0.0, 0.0, 0), []))
+            
+            if os.path.isdir(os.path.join(self.mg4_path,'NLO_'+proc_name)):
+                shutil.move(os.path.join(self.mg4_path,'NLO_'+proc_name),
+                            os.path.join(dir_name,proc_name))
+            else:
+                logging.info("Could not find produced directory %s" %str(
+                              os.path.join(self.mg4_path,'NLO_'+proc_name)))
+                self.res_list.append(((0.0, 0.0, 0.0, 0.0, 0), []))
+            value = self.get_me_value(proc, i, energy, ([] if PSpoints==[] \
+                                                else PSpoints[i]))
+            self.res_list.append(value)
+                                
+        return self.res_list
+        
+    def format_ml4_proc_card(self, procID, proc, model, born_orders):
+        """Create a les-houches order file, like in MadLoop4"""
+
+        particle_dictionary = {'d':(1,'d'),'d~':(-1,'dx'),
+                               'u':(2,'u'),'u~':(-2,'ux'),
+                               's':(3,'s'),'s~':(-3,'sx'),
+                               'c':(4,'c'),'c~':(-4,'cx'),
+                               'b':(5,'b'),'b~':(-5,'bx'),
+                               't':(6,'t'),'t~':(-6,'tx'),
+                               'g':(21,'g'),
+                               'a':(22,'a'),
+                               'z':(23,'z'),
+                               'w+':(24,'wp'),'w-':(-24,'wm'),
+                               'e+':(-11,'ep'),'e-':(11,'em'),
+                               'mu+':(-13,'mup'),'mu-':(13,'mum'),
+                               'ta+':(-15,'tap'),'ta-':(15,'tam'),
+                               've':(12,'ve'),'ve~':(-12,'vex'),
+                               'vm':(14,'vm'),'vm~':(-14,'vmx'),
+                               'vt':(16,'vt'),'vt~':(-16,'vtx')}
+
+        order_file ="MatrixElementSquareType CHsummed\n"
+        order_file+="IRregularisation        CDR\n"
+        order_file+="ModelFile               ../../Cards/param_card.dat\n"        
+        order_file+="SubdivideSubprocess     No\n"
+        order_file+="AlphasPower             %(QCD)i\n"
+        order_file+="AlphaPower              %(QED)i\n"
+        order_file+="OutputBaseName          %(BaseName)s\n"
+        order_file+="CorrectionType          QCD\n"
+        order_file+="LoopParticles           1 -1 2 -2 3 -3 4 -4 5 -5 6 -6 21\n"
+        order_file+="PhysicsModel            %(ModelName)s\n"
+        order_file+="\n%(Process)s"        
+        
+        replace_dict={}
+        # QCD order, 99 by default
+        if 'QCD' in born_orders.keys():
+            replace_dict['QCD']=born_orders['QCD']
+        else:
+            replace_dict['QCD']=99
+            
+        # The exact QED order at born level must be supplied. If it is not
+        # present it is then assumed to be zero
+        if 'QED' in born_orders.keys():
+            replace_dict['QED']=born_orders['QED']
+        else:
+            replace_dict['QED']=0
+        
+        proc_parts=proc.split()
+        if '>' in proc_parts:
+            incoming_parts=proc_parts[:proc_parts.index('>')]
+            outcoming_parts=proc_parts[proc_parts.index('>')+1:]            
+        else:
+            raise self.LoopMG4RunnerError, \
+                        "The process %s is ill-formated."%proc
+        
+        for part in incoming_parts+outcoming_parts:
+            if part not in particle_dictionary.keys():
+                raise self.LoopMG4RunnerError, \
+                        "Particle %s is not recognized by MadLoop4."%part                
+        
+        proc_name ='P%i_'%procID+''.join([particle_dictionary[inc][1] for \
+                                   inc in incoming_parts])+'_'+ \
+                   ''.join([particle_dictionary[out][1] for out in \
+                            outcoming_parts])
+        replace_dict['BaseName']=proc_name
+        
+        replace_dict['ModelName']=model
+
+        replace_dict['Process']=' '+' '.join([str(particle_dictionary[inc][0]) \
+                                              for inc in incoming_parts])+' -> '\
+                                +' '.join([str(particle_dictionary[out][0]) \
+                                              for out in outcoming_parts])
+
+        return order_file%replace_dict, proc_name
+
+    def get_me_value(self, proc, proc_id, energy, PSpoint=[],):
+        """Compile and run ./NLOComp_sa, then parse the output and return the
+        result for process with id = proc_id and PSpoint if specified."""
+
+        sys.stdout.write('.')
+        sys.stdout.flush()
+        working_dir = os.path.join(self.mg4_path, self.temp_dir_name)
+         
+        shell_name = None
+        directories = glob.glob(os.path.join(working_dir,'P%i_*' % proc_id))
+        if directories and os.path.isdir(directories[0]):
+            shell_name = os.path.basename(directories[0])
+
+        # If directory doesn't exist, skip and return 0
+        if not shell_name:
+            logging.info("Directory hasn't been created for process %s" % (proc))
+            return ((0.0, 0.0, 0.0, 0.0, 0), [])
+
+        logging.info("Working on process %s in dir %s" % (proc, shell_name))
+        
+        dir_name = os.path.join(working_dir, shell_name, 'SigVirt')
+        
+        if PSpoint==[]:
+            self.fix_energy_in_check(dir_name, energy)
+        else:
+            self.fix_PSPoint_in_check(dir_name)  
+
+        # If a PS point is specified, write out the corresponding PS.input
+        if PSpoint!=[]:
+            PSfile = open(os.path.join(dir_name, 'PS.input'), 'w')
+            PSfile.write('\n'.join([' '.join(['%.16E'%pi for pi in p]) \
+                                  for p in PSpoint]))
+            PSfile.close()
+        
+        # Run make
+        devnull = open(os.devnull, 'w')
+        retcode = subprocess.call(['make','NLOComp_sa'],
+                        cwd=dir_name,
+                        stdout=devnull, stderr=devnull)
+                        
+        if retcode != 0:
+            logging.info("Error while executing make in %s" % dir_name)
+            return ((0.0, 0.0, 0.0, 0.0, 0), [])
+        
+        # Run ./check
+        try:
+            output = subprocess.Popen('./NLOComp_sa',
+                        cwd=dir_name,
+                        stdout=subprocess.PIPE, stderr=subprocess.STDOUT).stdout
+            output.read()
+            output.close()
+            if os.path.exists(os.path.join(dir_name,'result.dat')):
+                return self.parse_check_output(file(dir_name+'/result.dat'))  
+            else:
+                logging.warning("Error while looking for file %s"%str(os.path\
+                                                  .join(dir_name,'result.dat')))
+                return ((0.0, 0.0, 0.0, 0.0, 0), [])
+        except IOError:
+            logging.warning("Error while executing ./check in %s" % shell_name)
+            return ((0.0, 0.0, 0.0, 0.0, 0), [])
+
+    def parse_check_output(self, output):
+        """Parse the output string and return a pair where first four values are 
+        the finite, born, single and double pole of the ME and the fourth is the
+        GeV exponent and the second value is a list of 4 momenta for all particles 
+        involved."""
+
+        res_p = []
+        value = [0.0,0.0,0.0,0.0]
+        gev_pow = 0
+
+        for line in output:
+            splitline=line.split()
+            if splitline[0]=='PS':
+                res_p.append([float(s) for s in splitline[1:]])
+            elif splitline[0]=='BORN':
+                value[1]=float(splitline[1])
+            elif splitline[0]=='FIN':
+                value[0]=float(splitline[1])
+            elif splitline[0]=='1EPS':
+                value[2]=float(splitline[1])
+            elif splitline[0]=='2EPS':
+                value[3]=float(splitline[1])
+            elif splitline[0]=='EXP':
+                gev_pow=int(splitline[1])
+
+        return ((value[0],value[1],value[2],value[3],gev_pow), res_p)
+
+    def cleanup(self):
+        """Clean up temporary directories"""
+
+        try:
+            if os.path.isdir(os.path.join(self.mg4_path, self.temp_dir_name)):
+                shutil.rmtree(os.path.join(self.mg4_path, self.temp_dir_name))
+                logging.info("Temporary standalone directory %s successfully removed" % \
+                     self.temp_dir_name)
+        except:
+            pass
+
+    def fix_PSPoint_in_check(self, dir_name):
+        """Set check_sa.f to be reading PS.input assuming a working dir dir_name"""
+
+        file = open(os.path.join(dir_name,'NLOComp_sa.f'), 'r')
+        nlocomp_sa = file.read()
+        file.close()
+
+        file = open(os.path.join(dir_name,'NLOCOmp_sa.f'), 'w')
+        file.write(re.sub("FixedPs = .false.", "FixedPs = .true.", nlocomp_sa))
+        file.close()
+
+    def fix_energy_in_check(self, dir_name, energy):
+        """Replace the hard coded collision energy in check_sa.f by the given
+        energy, assuming a working dir dir_name"""
+
+        file = open(os.path.join(dir_name,'NLOComp_sa.f'), 'r')
+        check_sa = file.read()
+        file.close()
+
+        file = open(os.path.join(dir_name,'NLOComp_sa.f'), 'w')
+        file.write(re.sub("SQRTS=1000d0", "SQRTS=%id0" % int(energy), check_sa))
+        file.close()
+
+class LoopMEComparator(me_comparator.MEComparator):
+    """Base object to run comparison tests for loop processes. Take standard 
+    MERunner objects and a list of loop proc as an input and return detailed 
+    comparison tables in various formats."""
+
+    me_runners = []
+    results    = []
+    proc_list  = []
+
+    def run_comparison(self, proc_list, model='loop_SM_QCD', born_orders={}, 
+                       perturbation_orders=['QCD'], squared_orders={}, energy=1000):
+        """Run the codes and store results."""
+
+        if isinstance(model, basestring):
+            model= [model] * len(self.me_runners)
+
+        self.results = []
+        self.proc_list = proc_list
+
+        logging.info(\
+            "Running on %i processes with order: %s, in model %s @ %i GeV" % \
+            (len(proc_list),
+             ' '.join(["%s=%i" % (k, v) for k, v in born_orders.items()])+\
+             ' ['+' '.join(perturbation_orders)+'] '+\
+             ' '.join(["%s=%i" % (k, v) for k, v in squared_orders.items()]),\
+             '/'.join([onemodel for onemodel in model]),
+             energy))
+
+        pass_proc = False
+        for i,runner in enumerate(self.me_runners):
+            cpu_time1 = time.time()
+            logging.info("Now running %s" % runner.name)
+            if pass_proc:
+                runner.pass_proc = pass_proc 
+            # If this is the first runner, then let it generate the PS points,
+            # otherwise reuse the already generated ones
+            if self.results!=[]:
+                PSpoints=[PS[1] for PS in self.results[0]]
+            else:
+                PSpoints=[]
+            self.results.append(runner.run(proc_list, model[i], born_orders,
+                                perturbation_orders, squared_orders, energy,
+                                PSpoints))
+            if hasattr(runner, 'new_proc_list'):
+                pass_proc = runner.new_proc_list
+            cpu_time2 = time.time()
+            logging.info(" Done in %0.3f s" % (cpu_time2 - cpu_time1))
+            logging.info(" (%i/%i with zero ME)" % \
+                    (len([res for res in self.results[-1] if res[0][0] == 0.0]),
+                     len(proc_list)))
+
+    def output_result(self, filename=None, tolerance=3e-06, skip_zero=True):
+        """Output result as a nicely formated table. If filename is provided,
+        write it to the file, else to the screen. Tolerance can be adjusted."""
+
+        proc_col_size = 20
+
+        for proc in self.proc_list:
+            if len(proc) + 2 > proc_col_size:
+                proc_col_size = len(proc) + 2
+        
+        col_size = 20
+
+        pass_proc = 0
+        fail_proc = 0
+
+        failed_proc_list = []
+        
+        res_str = ""
+        
+        testing_list=['Finite', 'Born', 'Single pole', 'Double pole']
+        for index in range(0,4):
+            res_str +=("\n\n" if index!=0 else "")
+#            res_str +=''.join(['=']*(len(testing_list[index])+8))
+            res_str +="=== "+testing_list[index]+" ==="
+#            res_str +="\n"+''.join(['=']*(len(testing_list[index])+8))
+            res_str += "\n" + self._fixed_string_length("Process", proc_col_size) + \
+                    ''.join([self._fixed_string_length(runner.name, col_size) for \
+                               runner in self.me_runners]) + \
+                      self._fixed_string_length("Relative diff.", col_size) + \
+                      "Result"
+    
+            for i, proc in enumerate(self.proc_list):
+                list_res = [res[i][0][index] for res in self.results]
+                if max(list_res) == 0.0 and min(list_res) == 0.0:
+                    diff = 0.0
+                    if skip_zero:
+                        continue
+                else:
+                    diff = (max(list_res) - min(list_res)) / \
+                           abs((max(list_res) + min(list_res)))
+    
+                res_str += '\n' + self._fixed_string_length(proc, proc_col_size)+ \
+                           ''.join([self._fixed_string_length("%1.10e" % res,
+                                                   col_size) for res in list_res])
+    
+                res_str += self._fixed_string_length("%1.10e" % diff, col_size)
+    
+                if diff < tolerance:
+                    if index==3 and proc not in failed_proc_list:
+                        pass_proc += 1
+                    res_str += "Pass"
+                else:
+                    if proc not in failed_proc_list:
+                        fail_proc += 1
+                        failed_proc_list.append(proc)
+                    res_str += "Fail"
+
+        res_str +="\n\n=== Summary ==="
+
+        res_str += "\n %i/%i passed, %i/%i failed" % \
+                    (pass_proc, pass_proc + fail_proc,
+                     fail_proc, pass_proc + fail_proc)
+
+        if fail_proc != 0:
+            res_str += "\nFailed processes: %s" % ', '.join(failed_proc_list)
+
+        logging.info("\n"+res_str)
+
+        if filename:
+            file = open(filename, 'w')
+            file.write(res_str)
+            if failed_proc_list:
+                file.write('\n'+str(failed_proc_list))
+            file.close()
+
+    def assert_processes(self, test_object, tolerance = 1e-06):
+        """Run assert to check that all processes passed comparison""" 
+
+        col_size = 17
+        fail_proc = 0
+        fail_str = "Failed for processes:"
+        for i, proc in enumerate(self.proc_list):
+            list_res = [res[i][0][0] for res in self.results]
+            if max(list_res) == 0.0 and min(list_res) == 0.0:
+                diff = 0.0
+            else:
+                diff = (max(list_res) - min(list_res)) / \
+                       abs((max(list_res) + min(list_res)))
+
+            if diff >= tolerance:
+                fail_str += self._fixed_string_length('\n' + proc, col_size) + \
+                            ''.join([self._fixed_string_length("%1.10e" % res,
+                                                               col_size) for \
+                                     res in list_res])
+                
+                fail_str += self._fixed_string_length("%1.10e" % diff, col_size)
+
+        test_object.assertEqual(fail_str, "Failed for processes:")
+
+
+
+
+
+
+
+
+
+
+

@@ -115,7 +115,6 @@ class LoopHelasUVCTAmplitude(helas_objects.HelasAmplitude):
     def get_used_UVCT_couplings(self):
         """ Returns a list of the string UVCT_couplings defined for this
         amplitudes. """
-        
         return [coupl for coupl in self['UVCT_couplings'] if \
                 isinstance(coupl,str)]
 
