@@ -189,16 +189,17 @@ c            Reverse colors of t-channels to get right color ordering
      $               iforest(1,-max_branch,iconfig),icolalt,
      $               icolalt(2,2),icolalt(1,2))
              else
-                mo_color=get_color(tprid(i,iconfig))
+                jpart(1,i)=tprid(i,iconfig)
+                mo_color=get_color(jpart(1,i))
                 if(mo_color.eq.1) then
                    icolalt(1,i) = 0
                    icolalt(2,i) = 0
                    tchannel=.true.
-                   goto 100
+                   cycle
                 endif
                 ncolmp=0
              endif
-             if(mo_color.ne.0.and.mo_color.ne.3.and.mo_color.eq.8)then
+             if(mo_color.ne.0.and.mo_color.ne.3.and.mo_color.ne.8)then
                 da_color(1)=get_color(jpart(1,ida(1)))
                 da_color(2)=get_color(jpart(1,ida(2)))
                 call write_error(da_color(1), da_color(2), mo_color)
