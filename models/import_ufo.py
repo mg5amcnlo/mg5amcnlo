@@ -191,6 +191,7 @@ class UFOMG5Converter(object):
         self.conservecharge = set(['charge'])
         
         self.ufomodel = model
+        self.checked_lor = set()
 
         if auto:
             self.load_model()
@@ -250,7 +251,10 @@ class UFOMG5Converter(object):
             pass
         else:
             self.model.set('expansion_order', expansion_order)
-
+        
+        #clean memory
+        del self.checked_lor
+        
         return self.model
         
     
@@ -324,7 +328,9 @@ class UFOMG5Converter(object):
         try:
             if nb_fermion:
                 [aloha_fct.check_flow_validity(helas.structure, nb_fermion) \
-                                          for helas in interaction_info.lorentz]
+                                          for helas in interaction_info.lorentz
+                                          if helas.name not in self.checked_lor]
+                self.checked_lor.update(set([helas.name for helas in interaction_info.lorentz]))
         except aloha_fct.WrongFermionFlow, error:
             text = 'Fermion Flow error for interactions %s:\n %s' % \
              (', '.join([p.name for p in interaction_info.particles]), error)

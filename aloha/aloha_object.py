@@ -478,7 +478,7 @@ class Gamma5(aloha_lib.LorentzObject):
               (3,0): 0, (3,1): 0, (3,2): 0, (3,3): 1}
     
     def __init__(self, spin1, spin2, prefactor=1):
-        if spin1 < spin2:
+        if spin1 > spin2:
             aloha_lib.LorentzObject.__init__(self,[], [spin1, spin2], prefactor)
         else:
             aloha_lib.LorentzObject.__init__(self,[], [spin2, spin1], prefactor)

@@ -1209,8 +1209,8 @@ class CompleteForCmd(CheckValidForCmd):
                                                  '--no_default','--tag='], line)
 
     def complete_pgs(self,text, line, begidx, endidx):
-        "Complete the pythia command"
-        
+      "Complete the pythia command"
+      try:  
         args = self.split_arg(line[0:begidx], error=False) 
                 
         if len(args) == 1:
@@ -1227,7 +1227,8 @@ class CompleteForCmd(CheckValidForCmd):
         else:
             return self.list_completion(text, self._run_options + ['-f', 
                                                  '--tag=','--no_default'], line)
-    
+      except Exception, error:
+          print error
     complete_delphes = complete_pgs        
 
 
@@ -2565,7 +2566,6 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
         """launch pgs"""
         
         args = self.split_arg(line)
-        self.edit_one_card('pgs_card.dat', args)
         # Check argument's validity
         if '-f' in args:
             force = True
@@ -2577,9 +2577,23 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
             args.remove('--no_default')
         else:
             no_default = False
+        self.check_pgs(args) 
+
+        # Check that the pgs_card exists. If not copy the default 
+        if not os.path.exists(pjoin(self.me_dir, 'Cards', 'pgs_card.dat')):
+            if no_default:
+                logger.info('No pgs_card detected, so not run pgs')
+                return 
+            
+            files.cp(pjoin(self.me_dir, 'Cards', 'pgs_card_default.dat'),
+                     pjoin(self.me_dir, 'Cards', 'pgs_card.dat'))
+            logger.info('No pgs card found. Take the default one.')        
+        
+        self.edit_one_card('pgs_card.dat', args)
+
         self.update_status('prepare PGS run', level=None)            
     
-        self.check_pgs(args) 
+
         
         pgsdir = pjoin(self.configuration['pythia-pgs_path'], 'src')
         eradir = self.configuration['exrootanalysis_path']
@@ -2591,27 +2605,10 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
             logger.info('No PGS executable -- running make')
             misc.compile(cwd=pgsdir)
         
-        # Check that the pgs_card exists. If not copy the default and
-        # ask for edition of the card.
-        if not os.path.exists(pjoin(self.me_dir, 'Cards', 'pgs_card.dat')):
-            if no_default:
-                logger.info('No pgs_card detected, so not run pgs')
-                return 
+
             
-            files.cp(pjoin(self.me_dir, 'Cards', 'pgs_card_default.dat'),
-                     pjoin(self.me_dir, 'Cards', 'pgs_card.dat'))
-            logger.info('No pgs card found. Take the default one.')
+
             
-            if not force:
-                answer = self.ask('Do you want to edit this card?','n', ['y','n'],
-                              timeout=20)
-            else:
-                answer = 'n'
-                
-            if answer == 'y':
-                misc.open_file(pjoin(self.me_dir, 'Cards', 'pgs_card.dat'))
-        
-        
         self.update_status('Running PGS', level='pgs')
         
         tag = self.run_tag
@@ -2628,8 +2625,9 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
         ff = open(pjoin(self.me_dir, 'Events', 'pgs_events.lhco'), 'w')
         text = open(banner_path).read()
         text = '#%s' % text.replace('\n','\n#')
-        text +='\n##  Integrated weight (pb)  : %.4g' % self.results.current['cross']
-        text +='\n##  Number of Event         : %s\n' % self.results.current['nb_event']
+        dico = self.results[self.run_name].get_current_info()
+        text +='\n##  Integrated weight (pb)  : %.4g' % dico['cross']
+        text +='\n##  Number of Event         : %s\n' % dico['nb_event']
         ff.writelines(text)
         ff.close()
 
@@ -2683,8 +2681,6 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
         """ run delphes and make associate root file/plot """
  
         args = self.split_arg(line)
-        self.edit_one_card('delphes_card.dat', args)
-        self.edit_one_card('trigger_card.dat', args)
         # Check argument's validity
         if '-f' in args:
             force = True
@@ -2696,10 +2692,9 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
             args.remove('--no_default')
         else:
             no_default = False
-            
-        self.update_status('prepare delphes run', level=None)
         self.check_delphes(args) 
-        
+        self.update_status('prepare delphes run', level=None)
+                
         # Check that the delphes_card exists. If not copy the default and
         # ask for edition of the card.
         if not os.path.exists(pjoin(self.me_dir, 'Cards', 'delphes_card.dat')):
@@ -2710,14 +2705,15 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
             files.cp(pjoin(self.me_dir, 'Cards', 'delphes_card_default.dat'),
                      pjoin(self.me_dir, 'Cards', 'delphes_card.dat'))
             logger.info('No delphes card found. Take the default one.')
-            if not force:
-                answer = self.ask('Do you want to edit this card?','n', ['y','n'],
-                             timeout=20)
-            else:
-                answer = 'n'
-                
-            if answer == 'y':
-                misc.open_file(pjoin(self.me_dir, 'Cards', 'delphes_card.dat')) 
+        
+        self.edit_one_card('delphes_card.dat', args)
+        self.edit_one_card('trigger_card.dat', args)
+
+            
+
+
+        
+
  
         delphes_dir = self.configuration['delphes_path']
         tag = self.run_card['run_tag']

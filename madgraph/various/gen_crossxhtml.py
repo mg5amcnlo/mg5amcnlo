@@ -206,8 +206,7 @@ class AllResults(dict):
             self.def_current(name)        
         if new.info['unit'] == 'GeV':
             self.unit = 'GeV'
-        
-        
+            
     def update(self, status, level, makehtml=True, error=False):
         """update the current run status"""
         if self.current:
@@ -415,6 +414,38 @@ class RunResults(list):
         assert tag not in self.tags
         self.tags.append(tag)
         self.append(obj)
+        
+    def get_current_info(self):
+        
+        output = {}
+        current = self[-1]
+        # Check that cross/nb_event/error are define
+        if current.pythia and not current['nb_event']:
+            output['nb_event'] = self[-2]['nb_event']
+            output['cross'] = self[-2]['cross']
+            output['error'] = self[-2]['error']
+        elif (current.pgs or current.delphes) and not current['nb_event']:
+            if self[-2]['cross_pythia']:
+                output['cross'] = self[-2]['cross_pythia']
+                output['nb_event'] = int(0.5+(self[-2]['nb_event'] * current['cross'] /self[-2]['cross']))                           
+                output['error'] = current.get_pythia_error(self[-2]['cross'], 
+                       self[-2]['error'], current['cross'], current['nb_event'])
+            else:
+                output['nb_event'] = self[-2]['nb_event']
+                output['cross'] = self[-2]['cross']
+                output['error'] = self[-2]['error']
+        elif current['cross']:
+            return current
+        elif len(self) > 1:
+            output['nb_event'] = self[-2]['nb_event']
+            output['cross'] = self[-2]['cross']
+            output['error'] = self[-2]['error']
+        else:
+            output['nb_event'] = 0
+            output['cross'] = 0
+            output['error'] = 1e-99             
+        return output
+        
         
     def remove(self, tag):
         
@@ -664,7 +695,8 @@ class OneTagResults(dict):
             if len(i):
                 nb_line += 1
         return max([nb_line,1])
-        
+    
+    
     def get_html(self, RunResults):
         """create the html output linked to the this tag
            RunResults is given in case of cross-section need to be taken
