@@ -2759,13 +2759,21 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
                 # transfer interactive configuration
                 config_line = [l for l in self.history if l.strip().startswith('set')]
                 for line in config_line:
-                    print 'line', line
                     ME.exec_cmd(line)
                 stop = self.define_child_cmd_interface(ME)                
                 return stop
             
             #check if this is a cross-section
-            if len(self._generate_info.split('>')[0].strip().split())>1:
+            if not self._generate_info:
+                # This relaunch an old run -> need to check if this is a 
+                # cross-section or a width
+                info = open(pjoin(args[1],'SubProcesses','procdef_mg5.dat')).read()
+                generate_info = info.split('# Begin PROCESS',1)[1].split('\n')[1]
+                generate_info = generate_info.split('#')[0]
+            else:
+                generate_info = self._generate_info
+            
+            if len(generate_info.split('>')[0].strip().split())>1:
                 ext_program = launch_ext.MELauncher(args[1], self.timeout, self,
                                 pythia=self.configuration['pythia-pgs_path'],
                                 delphes=self.configuration['delphes_path'],
@@ -2779,6 +2787,7 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
                                 delphes=self.configuration['delphes_path'],
                                 shell = hasattr(self, 'do_shell'),
                                 **options)
+
         elif args[0] == 'pythia8':
             ext_program = launch_ext.Pythia8Launcher( args[1], self.timeout, self,
                                                 **options)

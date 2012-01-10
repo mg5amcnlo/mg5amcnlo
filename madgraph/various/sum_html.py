@@ -149,6 +149,29 @@ class Combine_results(list, OneResult):
     <link rel=stylesheet href="../mgstyle.css" type="text/css">
 </head>
 <body>
+<script type="text/javascript">
+function UrlExists(url) {
+  var http = new XMLHttpRequest();
+  http.open('HEAD', url, false);
+  try{
+     http.send()
+     }
+  catch(err){
+   return 1==2;
+  }
+  return http.status!=404;
+}
+function check_link(url,alt, id){
+    var obj = document.getElementById(id);
+    if ( ! UrlExists(url)){
+       obj.href = alt;
+       return 1 == 2;
+    }
+    obj.href = url;
+    return 1==1;
+}
+</script>  
+
  <h2>Process results</h2> 
  <BR>
 &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<b>s= %(cross)s &#177 %(error)s (%(unit)s)</b><br><br>
@@ -166,7 +189,7 @@ class Combine_results(list, OneResult):
     table_line_template = \
 """
 <tr><td align=right>%(P_title)s</td>
-    <td align=right><a href=%(P_link)s> %(cross)s </a> </td>
+    <td align=right><a id="%(P_link)s" href=%(P_link)s onClick="check_link('%(P_link)s','%(mod_P_link)s','%(P_link)s')"> %(cross)s </a> </td>
     <td align=right>  %(error)s</td>
     <td align=right>  %(events)s</td>
     <td align=right>  %(unweighted)s</td>
@@ -199,12 +222,17 @@ class Combine_results(list, OneResult):
                                         {'P': self.name,
                                          'G': oneresult.name,
                                          'R': run}
+                mod_link = '../../SubProcesses/%(P)s/%(G)s/log.txt' % \
+                                        {'P': self.name,
+                                         'G': oneresult.name}
             else:
                 link = os.path.relpath(oneresult.output_path, 
                                                    os.path.dirname(output_path))
+                mod_link = link
             
             dico = {'P_title': title,
                     'P_link': link,
+                    'mod_P_link': mod_link,
                     'cross': oneresult.xsec,
                     'error': oneresult.xerru,
                     'events': oneresult.nevents,
@@ -216,7 +244,8 @@ class Combine_results(list, OneResult):
         
         for P_name, cross in P_grouping.items():
             dico = {'P_title': '%s sum' % P_name,
-                    'P_link': '',
+                    'P_link': './results.html',
+                    'mod_P_link':'',
                     'cross': cross,
                     'error': '',
                     'events': '',

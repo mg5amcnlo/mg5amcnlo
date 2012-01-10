@@ -95,7 +95,6 @@ status_template = """
             <TH>   Queued </TH>
             <TH>  Running </TH>
             <TH> Done  </TH>
-            <TH> Total </TH>
         </TR>
     </TR>
     <TR ALIGN=CENTER> 
@@ -107,7 +106,6 @@ status_template = """
                     %(pythia_card)s
                     %(pgs_card)s
                     %(delphes_card)s
-                    
         </TD>
         <TD nowrap ROWSPAN=2> <A HREF="./HTML/%(run_name)s/results.html">%(cross).4g <font face=symbol>&#177</font> %(error).4g (%(unit)s)</A> </TD> 
         %(status)s
@@ -125,6 +123,7 @@ class AllResults(dict):
         
         dict.__init__(self)
         self.order = []
+        self.lastrun = None
         self.process = ', '.join(process)
         if len(self.process) > 60:
             pos = self.process[50:].find(',')
@@ -143,9 +142,11 @@ class AllResults(dict):
         
         if isinstance(run, OneTagResults):
             self.current = run
+            self.lastrun = run['run_name']
             return
         
         assert run in self or run == None
+        self.lastrun = run
         if run:
             if not tag:
                 self.current = self[run][-1]
@@ -164,6 +165,8 @@ class AllResults(dict):
                 self.results.def_current(None)                    
             del self[run_name]
             self.order.remove(run_name)
+            if self.lastrun == run_name:
+                self.lastrun = None
         else:
             assert tag in [a['tag'] for a in self[run_name]]
             RUN = self[run_name]
@@ -190,7 +193,7 @@ class AllResults(dict):
         
         tag = run_card['run_tag']
         if name in self.order:
-            self.order.remove(name) # Reorder the run to put this one at the end 
+            #self.order.remove(name) # Reorder the run to put this one at the end 
             if  tag in self[name].tags:
                 self[name].remove(tag) # Remove previous tag if define
             #add the new tag run    
@@ -199,8 +202,7 @@ class AllResults(dict):
         else:
             new = RunResults(name, run_card, self.process, self.path)
             self[name] = new  
-
-        self.order.append(name)
+            self.order.append(name)
         
         if current:
             self.def_current(name)        
@@ -290,8 +292,8 @@ class AllResults(dict):
                 status = '<td ROWSPAN=2 colspan=4>%s</td>' %  self.status
             else:
                 s = self.status
-                status ='''<td> %s </td> <td> %s </td> <td> %s </td> <td> %s </td>
-                </tr><tr><td colspan=4><center> %s </center></td>''' % (s[0],s[1], s[2], sum(s[:3]), s[3])
+                status ='''<td> %s </td> <td> %s </td> <td> %s </td>
+                </tr><tr><td colspan=3><center> %s </center></td>''' % (s[0],s[1], s[2], s[3])
                 
             
             status_dict = {'status': status,
@@ -592,7 +594,7 @@ class OneTagResults(dict):
     
     def special_link(self, link, level, name):
         
-        id = '%s_%s_%s' % (self['run_name'], level, name)
+        id = '%s_%s_%s_%s' % (self['run_name'],self['tag'], level, name)
         
         return " <a  id='%(id)s' href='%(link)s' onClick=\"check_link('%(link)s.gz','%(link)s','%(id)s')\">%(name)s</a>" \
               % {'link': link, 'id': id, 'name':name}

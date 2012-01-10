@@ -54,7 +54,11 @@ class TestMECmdShell(unittest.TestCase):
 
         interface = MGCmd.MadGraphCmdShell()
         interface.onecmd('import model %s' % model)
-        interface.onecmd('generate %s' % process)
+        if isinstance(process, str):
+            interface.onecmd('generate %s' % process)
+        else:
+            for p in process:
+                interface.onecmd('add process %s' % p)
         interface.onecmd('output madevent /tmp/MGPROCESS/ -f')
         if not os.path.exists(pjoin(_file_path, os.path.pardir, 'pythia-pgs')):
             interface.onecmd('install pythia-pgs')
@@ -76,6 +80,35 @@ class TestMECmdShell(unittest.TestCase):
         """ exec a line in the cmd under test """        
         self.cmd_line.exec_cmd(line)
         
+    def test_width_computation(self):
+        """test the param_card created is correct"""
+        
+        cmd = os.getcwd()
+        self.generate(['Z > l+ l-','Z > j j'], 'sm')
+        self.assertEqual(cmd, os.getcwd())
+        self.do('calculate_decay_widths -f')        
+        
+        # test the param_card is correctly written
+        self.assertTrue(os.path.exists('/tmp/MGPROCESS/Events/run_01/param_card.dat'))
+        
+        text = open('/tmp/MGPROCESS/Events/run_01/param_card.dat').read()
+        data = text.split('DECAY  23')[1].split('DECAY',1)[0]
+        self.assertEqual("""1.492250e+00
+#  BR             NDA  ID1    ID2   ...
+   2.493148e-01   2    3  -3
+   2.493148e-01   2    1  -1
+   1.944178e-01   2    4  -4
+   1.944178e-01   2    2  -2
+   5.626738e-02   2    -11  11
+   5.626738e-02   2    -13  13
+#
+#      PDG        Width""", data.strip())
+        
+        
+        
+        
+        
+    
     def test_creating_matched_plot(self):
         """test that the creation of matched plot works"""
 
