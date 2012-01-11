@@ -590,24 +590,31 @@ c     This is an epsilon index
          icol(1,ires)=0
          icol(2,ires)=maxcolor
 c         print *,'Set mother color for ',ires,' to ',(icol(j,ires),j=1,2)
-      else if(mo_color.eq.8.and.i3.eq.1.and.i3bar.eq.1) then
+      else if(mo_color.eq.8.and.i3.eq.2.and.i3bar.eq.2) then
 c     Replace the maximum index with the minimum one everywhere
          maxcol=max(max3,max3bar)
-         mincol=min(min3,min3bar)
          do i=ires+1,-1
             do j=1,2
-               if(icol(j,i).eq.maxcol)
-     $              icol(j,i)=mincol
+               if(icol(j,i).eq.max3.and.max3.eq.maxcol)
+     $              icol(j,i)=min3bar
+               if(icol(j,i).eq.max3bar.and.max3bar.eq.maxcol)
+     $              icol(j,i)=min3
             enddo
          enddo
-c         print *,'Replaced ',maxcol,' by ',mincol
 c     Fix the color for ires
-         icol(1,ires)=min3
-         icol(2,ires)=min3bar         
+         if(max3.eq.maxcol)then
+c            print *,'Replaced ',max3,' by ',min3bar
+            icol(1,ires)=max3bar
+            icol(2,ires)=min3
+         else
+c            print *,'Replaced ',max3bar,' by ',min3
+            icol(1,ires)=min3bar
+            icol(2,ires)=max3
+         endif
 c         print *,'Set mother color for ',ires,' to ',(icol(j,ires),j=1,2)
       else
 c     Don't know how to deal with this
-         call write_error(1001,i3,i3bar)
+         call write_error(i3,i3bar,mo_color)
       endif
 
       fix_tchannel_color=maxcolor
