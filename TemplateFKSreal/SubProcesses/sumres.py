@@ -10,7 +10,8 @@ import sys
 import random
 import os
 
-nevents=int(sys.argv[1])
+nexpected=int(sys.argv[1])
+nevents=int(sys.argv[2])
 # if nevents is >0 the script will also determine the 
 # number of events required for each process
 
@@ -46,6 +47,14 @@ lines = content.split("\n")
 processes=[]
 tot=0
 err=0
+
+# open the file containing the list of directories
+file=open("dirs.txt")
+dirs = file.read().split("\n")
+file.close()
+dirs.remove('')
+
+
 for line in lines:
     list = line.split()
     if list:
@@ -53,6 +62,7 @@ for line in lines:
         proc['folder'] = list[0].split('/')[0]
         proc['subproc'] = proc['folder'][0:proc['folder'].rfind('_')]
         proc['channel'] = list[0].split('/')[1]
+        dirs.remove(os.path.join(proc['folder'], proc['channel']))
         if list[3] != '[ABS]:':
             proc['result'] = float(list[3])
             proc['error'] = float(list[5])
@@ -64,7 +74,16 @@ for line in lines:
         tot+= proc['result']
         err+= math.pow(proc['error'],2)
 
+if dirs:
+    print "%d jobs did not terminate correctly " % len(dirs)
+    print '\n'.join(dirs)
+
 processes.sort(key = lambda proc: -proc['result'])
+
+correct = len(processes) == nexpected
+print "Found %d correctly terminated jobs " %len(processes) 
+if not len(processes)==nexpected:
+    print len(processes), nexpected
 
 subprocs_string=[]
 for proc in processes:
@@ -73,7 +92,7 @@ subprocs_string=set(subprocs_string)
 
 content+='\n\nCross-section per integration channel:\n'
 for proc in processes:
-    content+='%(folder)20s %(channel)15s   %(result)10.8e    %(error)6.4e       %(err_perc)6.4e%%  \n' %  proc
+    content+='%(folder)20s %(channel)15s   %(result)10.8e    %(error)6.4e       %(err_perc)6.4f%%  \n' %  proc
 
 content+='\n\nCross-section per subprocess:\n'
 #for subpr in sorted(set(subprocs)):
@@ -115,6 +134,9 @@ for subpr in subprocesses:
 
 content+='\nTotal cross-section: %10.8e +- %6.4e  (%6.4e%%)\n' %\
         (tot, math.sqrt(err), math.sqrt(err)/tot *100.)
+
+if not correct:
+    print 'ERROR: not all jobs terminated correctly\n'
 
 file=open("res.txt", 'w')
 

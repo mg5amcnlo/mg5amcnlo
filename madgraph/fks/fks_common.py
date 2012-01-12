@@ -143,6 +143,7 @@ def insert_legs(leglist_orig, leg, split):
         if i < firstfinal :
             i = firstfinal
             
+    leglist.sort()
     for i, leg in enumerate(leglist):
         leg['number'] = i+1        
     return leglist 

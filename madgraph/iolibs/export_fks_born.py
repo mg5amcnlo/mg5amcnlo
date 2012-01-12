@@ -255,6 +255,8 @@ class ProcessExporterFortranFKS_born(export_v4.ProcessExporterFortran):
         subprocdir = "R_%s_i%d_j%d" % \
         (fksreal.matrix_element.get('processes')[0].shell_string()[2:], 
          fksreal.i_fks, fksreal.j_fks)
+        print subprocdir, \
+                " ".join("%d" % leg['id'] for leg in fksreal.matrix_element.get('processes')[0].get('legs'))
         self.fksdirs.append(subprocdir)
         print subprocdir
     #    dirs.append(subprocdir)

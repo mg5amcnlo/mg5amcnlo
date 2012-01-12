@@ -460,6 +460,47 @@ class TestFKSCommon(unittest.TestCase):
                                  'state' : True,
                                  'fks' : 'i'})], self.model)
                                  ])
+        # g to g>gg or g>uu~ or g>u~u or g>dd~ or g>d~d
+        leg_list.append( MG.Leg({'id' : 21, 
+                                 'state' : False, 
+                                 'number' : 5}))
+        res_list.append([fks_common.to_fks_legs(
+                        [fks_common.FKSLeg({'id' : 21, 
+                                 'state' : False,
+                                 'fks' : 'j'}),
+                        fks_common.FKSLeg({'id' : 21, 
+                                 'state' : True,
+                                 'fks' : 'i'})], self.model),
+                        fks_common.to_fks_legs(
+                        [fks_common.FKSLeg({'id' : 1, 
+                                 'state' : False,
+                                 'fks' : 'j'}),
+                        fks_common.FKSLeg({'id' : 1, 
+                                 'state' : True,
+                                 'fks' : 'i'})], self.model),
+                        fks_common.to_fks_legs(
+                        [fks_common.FKSLeg({'id' : -1, 
+                                 'state' : False,
+                                 'fks' : 'j'}),
+                        fks_common.FKSLeg({'id' : -1, 
+                                 'state' : True,
+                                 'fks' : 'i'})], self.model),
+                        fks_common.to_fks_legs(
+                        [fks_common.FKSLeg({'id' : 2, 
+                                 'state' : False,
+                                 'fks' : 'j'}),
+                        fks_common.FKSLeg({'id' : 2, 
+                                 'state' : True,
+                                 'fks' : 'i'})], self.model),
+                        fks_common.to_fks_legs(
+                        [fks_common.FKSLeg({'id' : -2, 
+                                 'state' : False,
+                                 'fks' : 'j'}),
+                        fks_common.FKSLeg({'id' : -2, 
+                                 'state' : True,
+                                 'fks' : 'i'})], self.model)
+                                 ]
+                                 )
 
         #FINAL STATE SPLITTINGS
         #u to ug

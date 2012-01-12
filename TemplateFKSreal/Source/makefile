@@ -11,7 +11,7 @@ DSAMPLE_FKS = dsample_fks.o ranmar.o
 
 HBOOK = hfill.o hcurve.o hbook1.o hbook2.o
 
-GENERIC = alfas_functions.o transpole.o invarients.o hfill.o pawgraphs.o ran1.o rw_events.o rw_routines.o kin_functions.o open_file.o basecode.o setrun.o run_printout.o dgauss.o
+GENERIC = $(alfas_functions).o transpole.o invarients.o hfill.o pawgraphs.o ran1.o rw_events.o rw_routines.o kin_functions.o open_file.o basecode.o setrun.o run_printout.o dgauss.o
 
 INCLUDEF= coupl.inc genps.inc hbook.inc DECAY/decay.inc psample.inc pmass.inc nexternal.inc cluster.inc
 

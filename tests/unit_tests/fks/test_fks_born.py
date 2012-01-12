@@ -513,6 +513,9 @@ class TestFKSProcess(unittest.TestCase):
         fksproc.generate_reals(amplist, amp_id_list)
         
         #there should be 11 real processes for this born
+        for amp in fksproc.real_amps:
+            #print " ".join(leg['id'] for leg in amp['process']['legs'])
+            print  amp.pdgs, amp.i_fks, amp.j_fks
         self.assertEqual(len(fksproc.real_amps), 11)
         
         #nbodyonly contribution should be included in real_amps[8]

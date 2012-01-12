@@ -18,12 +18,19 @@ libdir=$Maindir/lib
 CutToolsdir=$Maindir/../CutTools
 carddir=$Maindir/Cards
 LHAPDF=`lhapdf-config --libdir`
+LHAPDFSETS=`lhapdf-config --pdfsets-path`
+
 
 c=`awk '/^[^#].*=.*pdlabel/{print $1}' Cards/run_card.dat`
 if [[ $c == "'lhapdf'" ]]; then
     echo Using LHAPDF interface!
     export lhapdf=true
-    ln -s $LHAPDF/libLHAPDF.a $libdir/libLHAPDF.a 
+    if [ ! -f $libdir/libLHAPDF.a ]; then 
+      ln -s $LHAPDF/libLHAPDF.a $libdir/libLHAPDF.a 
+    fi
+    if [ ! -d $libdir/PDFsets ]; then 
+      ln -s $LHAPDFSETS $libdir/. 
+    fi
 else
     unset lhapdf
 fi

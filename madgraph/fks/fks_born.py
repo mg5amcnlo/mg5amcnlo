@@ -196,7 +196,9 @@ class FKSProcessFromBorn(object):
         track of all the already generated processes through amplist and amp_id_list
         It removes double counted configorations from the ones to integrates and
         sets the one which includes the bosn (is_nbody_only)"""
+
         for l in sum(self.reals, []):
+            print len(sum (self.reals, []))
             self.real_amps.append(FKSRealProcess(\
                         self.born_proc, l, amplist, amp_id_list))
         self.find_reals_to_integrate()
@@ -243,11 +245,14 @@ class FKSProcessFromBorn(object):
                             self.real_amps[m].is_to_integrate = False
                 elif real_m.j_fks <= self.nincoming and \
                      real_n.j_fks == real_m.j_fks:
-                    if real_m.get_leg_i()['id'] == real_n.get_leg_i()['id']:
+                    if real_m.get_leg_i()['id'] == real_n.get_leg_i()['id'] and \
+                       real_m.get_leg_j()['id'] == real_n.get_leg_j()['id']:
                         if real_m.i_fks > real_n.i_fks:
                             self.real_amps[n].is_to_integrate = False
                         else:
                             self.real_amps[m].is_to_integrate = False
+        for amp in self.real_amps:
+            print amp.is_to_integrate, amp.pdgs
         if remove:
             newreal_amps = []
             for real in self.real_amps:

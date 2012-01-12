@@ -211,7 +211,7 @@ class FKSHelasProcessFromBorn(object):
         """the get_used_couplings function references to real_matrix_element and
         to the borns"""
         coupl_list = self.born_matrix_element.get_used_couplings()
-        for real in self.born_processes:
+        for real in self.real_processes:
             coupl_list.extend([c for l in\
                         real.matrix_element.get_used_couplings() for c in l])
         return coupl_list    
