@@ -12,6 +12,7 @@
 # For more information, please visit: http://madgraph.phys.ucl.ac.be
 #
 ################################################################################
+from compiler.ast import Continue
 """ How to import a UFO model to the MG5 format """
 
 
@@ -220,9 +221,13 @@ class UFOMG5Converter(object):
         for particle_info in self.ufomodel.all_particles:            
             self.add_particle(particle_info)
 
+        # Find which particles is in the 3/3bar color states (retrun {id: 3/-3})
+        color_info = self.find_color_anti_color_rep()
+
+
         logger.info('load vertices')
         for interaction_info in self.ufomodel.all_vertices:
-            self.add_interaction(interaction_info)
+            self.add_interaction(interaction_info, color_info)
         
         self.model.set('conserved_charge', self.conservecharge)
 
@@ -309,7 +314,64 @@ class UFOMG5Converter(object):
         # Add the particles to the list
         self.particles.append(particle)
 
-    def add_interaction(self, interaction_info):
+
+    def find_color_anti_color_rep(self):
+        """find which color are in the 3/3bar states"""
+        # method look at the 3 3bar 8 configuration.
+        # If the color is T(3,2,1) and the interaction F1 F2 V
+        # Then set F1 to anticolor (and F2 to color)
+        # if this is T(3,1,2) set the opposite
+        output = {}
+        
+        for interaction_info in self.ufomodel.all_vertices:
+            if len(interaction_info.particles) != 3:
+                continue
+            colors = [abs(p.color) for p in interaction_info.particles]
+            if colors[:2] == [3,3]:
+                if 'T(3,2,1)' in interaction_info.color:
+                    color, anticolor, other = interaction_info.particles
+                elif 'T(3,1,2)' in interaction_info.color:
+                    anticolor, color, other = interaction_info.particles
+                else:
+                    continue
+            elif colors[1:] == [3,3]:
+                if 'T(1,2,3)' in interaction_info.color:
+                    other, anticolor, color = interaction_info.particles
+                elif 'T(1,3,2)' in interaction_info.color:
+                    other, color, anticolor = interaction_info.particles
+                else:
+                    continue                  
+               
+            elif colors.count(3) == 2:
+                if 'T(2,3,1)' in interaction_info.color:
+                    color, other, anticolor = interaction_info.particles
+                elif 'T(2,1,3)' in interaction_info.color:
+                    anticolor, other, color = interaction_info.particles
+                else:
+                    continue                 
+            else:
+                continue    
+            
+            # Check/assign for the color particle
+            if color.pdg_code in output: 
+                if output[color.pdg_code] == -3:
+                    raise InvalidModel, 'Particles %s is sometimes in the 3 and sometimes in the 3bar representations' \
+                                    % color.name
+            else:
+                output[color.pdg_code] = 3
+            
+            # Check/assign for the anticolor particle
+            if anticolor.pdg_code in output: 
+                if output[anticolor.pdg_code] == 3:
+                    raise InvalidModel, 'Particles %s is sometimes set as in the 3 and sometimes in the 3bar representations' \
+                                    % anticolor.name
+            else:
+                output[anticolor.pdg_code] = -3
+        
+        return output
+
+            
+    def add_interaction(self, interaction_info, color_info):
         """add an interaction in the MG5 model. interaction_info is the 
         UFO vertices information."""
         
@@ -340,7 +402,7 @@ class UFOMG5Converter(object):
         lorentz = [helas.name for helas in interaction_info.lorentz]
         
         # Import color information:
-        colors = [self.treat_color(color_obj, interaction_info) for color_obj in \
+        colors = [self.treat_color(color_obj, interaction_info, color_info) for color_obj in \
                                     interaction_info.color]
         
         order_to_int={}
@@ -379,7 +441,7 @@ class UFOMG5Converter(object):
     _pat_T = re.compile(r'T\((?P<first>\d*),(?P<second>\d*)\)')
     _pat_id = re.compile(r'Identity\((?P<first>\d*),(?P<second>\d*)\)')
     
-    def treat_color(self, data_string, interaction_info):
+    def treat_color(self, data_string, interaction_info, color_info):
         """ convert the string to ColorString"""
         
         #original = copy.copy(data_string)
@@ -393,23 +455,49 @@ class UFOMG5Converter(object):
             if pattern:
                 particle = interaction_info.particles[int(pattern.group('first'))-1]
                 particle2 = interaction_info.particles[int(pattern.group('second'))-1]
-                if particle.color == particle2.color and particle.color in [-6, -3, 3, 6]:
+                if particle.color == particle2.color and particle.color in [-6, 6]:
                     error_msg = 'UFO model have inconsistency in the format:\n'
                     error_msg += 'interactions for  particles %s has color information %s\n'
                     error_msg += ' but both fermion are in the same representation %s'
                     raise UFOFormatError, error_msg % (', '.join([p.name for p in interaction_info.particles]),data_string, particle.color)
-
-                if particle.color == -3 :
-                    output.append(self._pat_id.sub('color.T(\g<second>,\g<first>)', term))
-                elif particle.color == 3:
-                    output.append(self._pat_id.sub('color.T(\g<first>,\g<second>)', term))
+                if particle.color == particle2.color and particle.color in [-3, 3]:
+                    if particle.pdg_code in color_info and particle2.pdg_code in color_info:
+                      if color_info[particle.pdg_code] == color_info[particle2.pdg_code]:
+                        error_msg = 'UFO model have inconsistency in the format:\n'
+                        error_msg += 'interactions for  particles %s has color information %s\n'
+                        error_msg += ' but both fermion are in the same representation %s'
+                        raise UFOFormatError, error_msg % (', '.join([p.name for p in interaction_info.particles]),data_string, particle.color)
+                    elif particle.pdg_code in color_info:
+                        color_info[particle2.pdg_code] = -particle.pdg_code
+                    elif particle2.pdg_code in color_info:
+                        color_info[particle.pdg_code] = -particle2.pdg_code
+                    else:
+                        error_msg = 'UFO model have inconsistency in the format:\n'
+                        error_msg += 'interactions for  particles %s has color information %s\n'
+                        error_msg += ' but both fermion are in the same representation %s'
+                        raise UFOFormatError, error_msg % (', '.join([p.name for p in interaction_info.particles]),data_string, particle.color)
+                
+                
+                if particle.color == 6:
+                    output.append(self._pat_id.sub('color.T6(\g<first>,\g<second>)', term))
                 elif particle.color == -6 :
                     output.append(self._pat_id.sub('color.T6(\g<second>,\g<first>)', term))
-                elif particle.color == 6:
-                    output.append(self._pat_id.sub('color.T6(\g<first>,\g<second>)', term))
                 elif particle.color == 8:
                     output.append(self._pat_id.sub('color.Tr(\g<first>,\g<second>)', term))
                     factor *= 2
+                elif particle.color in [-3,3]:
+                    if particle.pdg_code not in color_info:
+                        logger.debug('Not able to find the 3/3bar rep from the interactions for particle %s' % particle.name)
+                        color_info[particle.pdg_code] = particle.color
+                    if particle2.pdg_code not in color_info:
+                        logger.debug('Not able to find the 3/3bar rep from the interactions for particle %s' % particle2.name)
+                        color_info[particle2.pdg_code] = particle2.color                    
+                
+                
+                    if color_info[particle.pdg_code] == 3 :
+                        output.append(self._pat_id.sub('color.T(\g<second>,\g<first>)', term))
+                    elif color_info[particle.pdg_code] == -3:
+                        output.append(self._pat_id.sub('color.T(\g<first>,\g<second>)', term))
                 else:
                     raise MadGraph5Error, \
                           "Unknown use of Identity for particle with color %d" \

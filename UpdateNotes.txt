@@ -1,6 +1,6 @@
 Update notes for MadGraph 5 (in reverse time order)
 
-1.4.b9 (14/12/11): OM: New Interface to controll the madevent run.
+1.4.b9 (12/01/12): OM: New Interface to controll the madevent run.
                        This one is accessible by 
                         1) (from madevent output) ./bin/madevent
                         2) (from MG5 command line) launch [MADEVENT_PATH] -i
@@ -43,6 +43,9 @@ Update notes for MadGraph 5 (in reverse time order)
                       This is NOT allowed on the web.
                   OM: Add a check that the fermion flow is coherent with the 
                       Lorentz structure associates to the vertex.
+                  OM: Add a check that color representation is coherent. 
+                      This allow to detect/fix various problem linked to the new model
+                      created by FR and SARAH.
                   OM: Change the default fortran compiler to gfortran.
                   OM: Add the possibility to force which fortran compiler will
                       be used, either via the configuration file or via the set 
@@ -65,6 +68,8 @@ Update notes for MadGraph 5 (in reverse time order)
                         their associated weight (for automatic order restriction)
                       d) display couplings now returns the list of all couplings
                         with the associated expression
+                      e) display interactions PART1 [PART2] [PART3] ...
+		         display all interactions containing at least the particles set in arguments
                   OM: New Python script for the creation of the various html pages.
                       This Requires less disk access for the generation of the files.
                   OM: Modify error treatment, especially for Invalid commands
@@ -76,6 +81,7 @@ Update notes for MadGraph 5 (in reverse time order)
                   OM: Improve the parralel suite and change the release script to run
                       some of the parralel suite. This ensures more stability of the 
                       code for the future release.
+                  
 
                   Thanks to Johan Alwall, Sho Iwamoto for all the important 
                   testing/bug reports.

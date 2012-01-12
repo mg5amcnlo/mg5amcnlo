@@ -115,6 +115,7 @@ function ts_resortTable(lnk, clid) {
 	if (itm.match(/^\d\d[\/\.-]\d\d[\/\.-]\d\d\d{2}?$/)) sortfn = ts_sort_date;
 	if (itm.match(/^-?[£$€Û¢´]\d/)) sortfn = ts_sort_numeric;
 	if (itm.match(/^-?(\d+[,\.]?)+(E[-+][\d]+)?%?$/)) sortfn = ts_sort_numeric;
+	if (itm.match(/^-?(\d+[,\.]?\d+e[-+][\d]+)?%?$/)) sortfn = ts_sort_numeric;
 	if (itm.match(/^-?(\d+[,\.]?)+([\d]+)?%?$/)) sortfn = ts_sort_numeric;
 	SORT_COLUMN_INDEX = column;
 	var firstRow = new Array();
@@ -244,7 +245,7 @@ function ts_sort_date(a,b) {
 }
 function ts_sort_numeric(a,b) {
 	var aa = ts_getInnerText(a.cells[SORT_COLUMN_INDEX]);
-	aa = clean_num(aa);
+        aa = clean_num(aa);
 	var bb = ts_getInnerText(b.cells[SORT_COLUMN_INDEX]);
 	bb = clean_num(bb);
 	return compare_numeric(aa,bb);
@@ -295,7 +296,7 @@ function addEvent(elm, evType, fn, useCapture)
 	}
 }
 function clean_num(str) {
-	str = str.replace(new RegExp(/[^-?0-9.]/g),"");
+	str = str.replace(new RegExp(/[^-?0-9.eE]/g),"");
 	return str;
 }
 function trim(s) {

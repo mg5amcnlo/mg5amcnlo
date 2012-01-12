@@ -1380,7 +1380,7 @@ class CompleteForCmd(CheckValidForCmd):
                 return all_name
 
         # Path continuation
-        if os.path.sep in args[-1] + text and text:
+        if os.path.sep in (args[-1] + text) and text:
             if mode.startswith('model'):
                 # Directory continuation
                 cur_path = pjoin('.',*[a for a in args \
@@ -1758,7 +1758,7 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
                 text += '\n'
             pydoc.pager(text)
 
-        elif args[0] == 'interactions':
+        elif args[0] == 'interactions' and len(args)==2 and args[1].isdigit():
             for arg in args[1:]:
                 if int(arg) > len(self._curr_model['interactions']):
                     raise self.InvalidCmd, 'no interaction %s in current model' % arg
@@ -1767,6 +1767,43 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
                 else:
                     print "Interactions %s has the following property:" % arg
                     print self._curr_model['interactions'][int(arg)-1]
+
+        elif args[0] == 'interactions':
+            request_part = args[1:]
+            text = ''
+            for i, inter in enumerate(self._curr_model['interactions']):
+                present_part = [part['is_part'] and part['name'] or part['antiname']
+                                 for part in inter['particles']
+                                if (part['is_part'] and  part['name'] in request_part) or
+                                   (not part['is_part'] and part['antiname'] in request_part)]
+                if len(present_part) < len(request_part):
+                    continue
+                # check that all particles are selected at least once
+                if set(present_part) != set(request_part):
+                    continue
+                # check if a particle is asked more than once
+                if len(request_part) > len(set(request_part)):
+                    for p in request_part:
+                        print p, request_part.count(p),present_part.count(p)
+                        if request_part.count(p) > present_part.count(p):
+                            continue
+                        
+                name = str(i+1) + ' : '
+                for part in inter['particles']:
+                    if part['is_part']:
+                        name += part['name']
+                    else:
+                        name += part['antiname']
+                    name += " "                   
+                text += "\nInteractions %s has the following property:\n" % name
+                text += str(self._curr_model['interactions'][i]) 
+
+                text += '\n'
+                print name
+            if text =='':
+                text += 'No matching for any interactions'
+            pydoc.pager(text)
+
 
         elif args[0] == 'parameters' and len(args) == 1:
             text = "Current model contains %i parameters\n" % \

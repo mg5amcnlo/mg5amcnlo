@@ -174,7 +174,7 @@ function check_link(url,alt, id){
 
  <h2>Process results</h2> 
  <BR>
-&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<b>s= %(cross)s &#177 %(error)s (%(unit)s)</b><br><br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<b>s= %(cross).5g &#177 %(error).3g (%(unit)s)</b><br><br>
 <table class="sortable" id='tablesort'>
 <tr><th>Graph</th>
     <th> %(result_type)s</th>
@@ -233,11 +233,11 @@ function check_link(url,alt, id){
             dico = {'P_title': title,
                     'P_link': link,
                     'mod_P_link': mod_link,
-                    'cross': oneresult.xsec,
-                    'error': oneresult.xerru,
+                    'cross': '%.4g' % oneresult.xsec,
+                    'error': '%.3g' % oneresult.xerru,
                     'events': oneresult.nevents,
                     'unweighted': oneresult.nunwgt,
-                    'luminosity': oneresult.luminosity
+                    'luminosity': '%.3g' % oneresult.luminosity
                    }
     
             tables_line += self.table_line_template % dico
