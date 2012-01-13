@@ -1,12 +1,13 @@
 c Compile with
 c   gfortran -g -ffixed-line-length-132 -fno-automatic -I./any-P-directory
 c      -o plot_events plot_events.f madfks_plot.f madfks_dbook.f setcuts.f
+c         handling_lhe_events.f 
 c         any-dependencies-in-madfksplot
       program plot_events
       implicit none
       integer maxevt,ifile,i,npart,itype
-      integer IDBMUP(2),PDFGUP(2),PDFSUP(2),IDWTUP,NPRUP
-      double precision EBMUP(2),XSECUP,XERRUP,XMAXUP,LPRUP
+      integer IDBMUP(2),PDFGUP(2),PDFSUP(2),IDWTUP,NPRUP,LPRUP
+      double precision EBMUP(2),XSECUP,XERRUP,XMAXUP
       INTEGER MAXNUP
       PARAMETER (MAXNUP=500)
       INTEGER NUP,IDPRUP,IDUP(MAXNUP),ISTUP(MAXNUP),
@@ -16,6 +17,8 @@ c         any-dependencies-in-madfksplot
       double precision sum_wgt
       integer isorh_lhe,ifks_lhe,jfks_lhe,fksfather_lhe,ipartner_lhe
       double precision scale1_lhe,scale2_lhe
+      integer jwgtinfo,mexternal,iwgtnumpartn
+      double precision wgtcentral,wgtmumin,wgtmumax,wgtpdfmin,wgtpdfmax
       double precision zero
       parameter (zero=0.d0)
       character*80 event_file
@@ -30,6 +33,7 @@ c         any-dependencies-in-madfksplot
       include "genps.inc"
       integer j,k
       real*8 ecm,xmass(nexternal),xmom(0:3,nexternal)
+      character*10 MonteCarlo
 
       usexinteg=.false.
       mint=.false.
@@ -44,7 +48,7 @@ c         any-dependencies-in-madfksplot
       open (unit=ifile,file=event_file,status='old')
       AddInfoLHE=.false.
 
-      call read_lhef_header(ifile,maxevt)
+      call read_lhef_header(ifile,maxevt,MonteCarlo)
       call read_lhef_init(ifile,
      &     IDBMUP,EBMUP,PDFGUP,PDFSUP,IDWTUP,NPRUP,
      &     XSECUP,XERRUP,XMAXUP,LPRUP)
@@ -66,7 +70,9 @@ c         any-dependencies-in-madfksplot
            endif
            read(buff,200)ch1,iSorH_lhe,ifks_lhe,jfks_lhe,
      #                       fksfather_lhe,ipartner_lhe,
-     #                       scale1_lhe,scale2_lhe
+     #                       scale1_lhe,scale2_lhe,
+     #                       jwgtinfo,mexternal,iwgtnumpartn,
+     #            wgtcentral,wgtmumin,wgtmumax,wgtpdfmin,wgtpdfmax
          endif
 
          npart=0
@@ -90,7 +96,7 @@ c         any-dependencies-in-madfksplot
       close(99)
 
       write (*,*) 'The sum of the weights is:',sum_wgt
- 200  format(1a,1x,i1,4(1x,i2),2(1x,d14.8))
+ 200  format(1a,1x,i1,4(1x,i2),2(1x,d14.8),1x,i1,2(1x,i2),5(1x,d14.8))
 
       end
 

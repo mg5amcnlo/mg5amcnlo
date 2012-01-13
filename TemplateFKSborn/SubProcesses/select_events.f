@@ -4,8 +4,8 @@ c Compile with
 c g77 -o select_events select_events.f mcatnlo_str.f handling_lhe_events.f
       implicit none
       integer maxevt,ifile,ofile,i,npart,nevmin,nevmax
-      integer IDBMUP(2),PDFGUP(2),PDFSUP(2),IDWTUP,NPRUP
-      double precision EBMUP(2),XSECUP,XERRUP,XMAXUP,LPRUP
+      integer IDBMUP(2),PDFGUP(2),PDFSUP(2),IDWTUP,NPRUP,LPRUP
+      double precision EBMUP(2),XSECUP,XERRUP,XMAXUP
       INTEGER MAXNUP
       PARAMETER (MAXNUP=500)
       INTEGER NUP,IDPRUP,IDUP(MAXNUP),ISTUP(MAXNUP),
@@ -15,7 +15,9 @@ c g77 -o select_events select_events.f mcatnlo_str.f handling_lhe_events.f
       double precision sum_wgt
       integer isorh_lhe,ifks_lhe,jfks_lhe,fksfather_lhe,ipartner_lhe
       double precision scale1_lhe,scale2_lhe,percentage
-      character*80 event_file,fname1,fname2,fname3,tmpstr
+      integer jwgtinfo,mexternal,iwgtnumpartn
+      double precision wgtcentral,wgtmumin,wgtmumax,wgtpdfmin,wgtpdfmax
+      character*80 event_file,fname2
       character*140 buff
       character*10 MonteCarlo,string
       character*1 ch1
@@ -23,28 +25,25 @@ c g77 -o select_events select_events.f mcatnlo_str.f handling_lhe_events.f
 
       include "genps.inc"
       integer j,k,itype,istep,ievts_ok
-      real*8 ecm,xmass(nexternal),xmom(0:3,nexternal)
+      real*8 ecm,xmass(nexternal),xmasstmp(nexternal),
+     &xmom(0:3,nexternal)
 c
-      write(*,*)'Insert prefix for event file'
+      write(*,*)'Enter event file name'
       read(*,*)event_file
       write(*,*)'Type 1 to keep S events'
       write(*,*)'     2 to keep H events'
       write(*,*)'     3 to keep a subset of events'
       read(*,*)itype
-      call fk88strcat(event_file,'.events',fname1)
       if(itype.eq.1)then
-         call fk88strcat(event_file,'S',fname3)
-         call fk88strcat(fname3,'.events',fname2)
+         call fk88strcat(event_file,'.S',fname2)
       elseif(itype.eq.2)then
-         call fk88strcat(event_file,'H',fname3)
-         call fk88strcat(fname3,'.events',fname2)
+         call fk88strcat(event_file,'.H',fname2)
       elseif(itype.eq.3)then
-         call fk88strcat(event_file,'RED',fname3)
-         call fk88strcat(fname3,'.events',fname2)
+         call fk88strcat(event_file,'.RED',fname2)
          write(*,*)'Enter first and last event to keep'
          read(*,*)nevmin,nevmax
          ifile=34
-         open(unit=ifile,file=fname1,status='old')
+         open(unit=ifile,file=event_file,status='old')
          call read_lhef_header(ifile,maxevt,MonteCarlo)
          if(nevmin.gt.maxevt.and.nevmax.gt.maxevt)then
             write(*,*)'Invalid inputs',nevmin,nevmax,maxevt
@@ -58,7 +57,7 @@ c
 
       ifile=34
       ofile=35
-      open(unit=ifile,file=fname1,status='old')
+      open(unit=ifile,file=event_file,status='old')
       open(unit=ofile,file=fname2,status='unknown')
       open(unit=36,file='select_events.out')
       AddInfoLHE=.false.
@@ -91,15 +90,19 @@ c
               stop
             endif
             read(buff,200)ch1,iSorH_lhe,ifks_lhe,jfks_lhe,
-     #                       fksfather_lhe,ipartner_lhe,
-     #                       scale1_lhe,scale2_lhe
+     #                        fksfather_lhe,ipartner_lhe,
+     #                        scale1_lhe,scale2_lhe,
+     #                        jwgtinfo,mexternal,iwgtnumpartn,
+     #             wgtcentral,wgtmumin,wgtmumax,wgtpdfmin,wgtpdfmax
           endif
 
           npart=0
           do k=1,nup
             if(abs(ISTUP(k)).eq.1)then
               npart=npart+1
-              xmass(npart)=pup(5,k)
+              xmasstmp(npart)=pup(5,k)
+              xmass(npart)=0d0
+              xmass(npart)=xmasstmp(npart)
               do j=1,4
                 xmom(mod(j,4),npart)=pup(j,k)
               enddo
@@ -136,18 +139,22 @@ c
               stop
             endif
             read(buff,200)ch1,iSorH_lhe,ifks_lhe,jfks_lhe,
-     #                       fksfather_lhe,ipartner_lhe,
-     #                       scale1_lhe,scale2_lhe
+     #                        fksfather_lhe,ipartner_lhe,
+     #                        scale1_lhe,scale2_lhe,
+     #                        jwgtinfo,mexternal,iwgtnumpartn,
+     #             wgtcentral,wgtmumin,wgtmumax,wgtpdfmin,wgtpdfmax
           endif
 
           npart=0
           do k=1,nup
             if(abs(ISTUP(k)).eq.1)then
               npart=npart+1
-              xmass(npart)=pup(5,k)
               do j=1,4
                 xmom(mod(j,4),npart)=pup(j,k)
               enddo
+              xmasstmp(npart)=pup(5,k)
+              xmass(npart)=0d0
+              xmass(npart)=xmasstmp(npart)
             endif
           enddo
           call phspncheck_nocms2(i,npart,xmass,xmom)
@@ -177,8 +184,7 @@ c
 
       if(itype.eq.3)write(*,*)'The sum of the weights is:',sum_wgt
 
-
- 200  format(1a,1x,i1,4(1x,i2),2(1x,d14.8))
+ 200  format(1a,1x,i1,4(1x,i2),2(1x,d14.8),1x,i1,2(1x,i2),5(1x,d14.8))
 
       close(34)
       close(35)

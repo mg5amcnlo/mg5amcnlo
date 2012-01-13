@@ -1,6 +1,6 @@
 include ../../Source/make_opts
 
-CC    = g++44
+CC    = g++
 
 LIBDIR = ../../lib/
 BINDIR = ../../bin/

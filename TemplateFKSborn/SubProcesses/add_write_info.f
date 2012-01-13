@@ -18,9 +18,9 @@ c Computes all the info needed to write out the events including the
 c intermediate resonances. It also boosts the events to the lab frame
       implicit none
       include "genps.inc"
+      include "nexternal.inc"
       include "born_nhel.inc"
       include "coloramps.inc"
-      include "nexternal.inc"
       integer mapbconf(0:lmaxconfigs)
       integer b_from_r(lmaxconfigs)
       integer r_from_b(lmaxconfigs)
@@ -483,8 +483,8 @@ c
       implicit none
       integer iconfig,size
       include "genps.inc"
+      include 'nexternal.inc'
       include "coupl.inc"
-      include "nexternal.inc"
       double precision ZERO
       parameter (ZERO=0d0)
       integer itree(2,-max_branch:-1)
@@ -517,8 +517,8 @@ c
       implicit none
       integer iBornGraph,size
       include "genps.inc"
+      include 'nexternal.inc'
       include "coupl.inc"
-      include "nexternal.inc"
       double precision ZERO
       parameter (ZERO=0d0)
       integer itree(2,-max_branch:-1)
@@ -564,7 +564,7 @@ c
 c     Constants
 c     
       include 'genps.inc'
-      include "nexternal.inc"
+      include 'nexternal.inc'
       include 'run.inc'
 c
 c     Arguments
@@ -662,7 +662,7 @@ c                  whichever is closer to mass shell
       subroutine get_ID_H(IDUP_tmp)
       implicit none
       include "genps.inc"
-      include "nexternal.inc"
+      include 'nexternal.inc'
       integer    maxflow
       parameter (maxflow=999)
       integer idup(nexternal,maxproc)
@@ -679,7 +679,7 @@ c                  whichever is closer to mass shell
       subroutine get_ID_S(IDUP_tmp)
       implicit none
       include "genps.inc"
-      include "nexternal.inc"
+      include 'nexternal.inc'
       integer    maxflow
       parameter (maxflow=999)
       integer idup(nexternal,maxproc)
@@ -875,7 +875,7 @@ c The following works only if i_fks is always greater than j_fks.
       subroutine fill_icolor_S(iflow,jpart,lc)
       implicit none
       include 'genps.inc'
-      include "nexternal.inc"
+      include 'nexternal.inc'
       integer    maxflow
       parameter (maxflow=999)
       integer i
@@ -923,7 +923,10 @@ c
             mcmass(i)=mcmass(-i)
          enddo
       elseif (MonteCarlo.eq.'HERWIGPP') then
-         goto 999
+         include "MCmasses_HERWIGPP.inc"
+         do i=-5,-1
+            mcmass(i)=mcmass(-i)
+         enddo
       elseif (MonteCarlo.eq.'PYTHIA6Q') then
          include "MCmasses_PYTHIA6Q.inc"
          do i=-5,-1
@@ -937,7 +940,7 @@ c
 
       return
 
- 999  write (*,*) 'Wrong MonteCarlo', MonteCarlo, 'in fill_MC_mshell'
+ 999  write (*,*) 'Wrong MonteCarlo', MonteCarlo, ' in fill_MC_mshell'
       stop
       
       end
@@ -1129,6 +1132,12 @@ c
       integer i_fks,j_fks
       common/fks_indices/i_fks,j_fks
 c
+      if (p(0,1).lt.0d0) then
+         mfail=1
+         write (*,*) 'Momenta generation for put_on_MC_mshell failed'
+         return
+      endif
+
       if(j_fks.le.nincoming)then
         call put_on_MC_mshell_Hevin(p,xmi,xm1,xm2,mfail)
       else
@@ -1153,6 +1162,12 @@ c
       double precision xmcmass(nexternal)
       common/cxmcmass/xmcmass
 c
+      if (p(0,1).lt.0d0) then
+         mfail=1
+         write (*,*) 'Momenta generation for put_on_MC_mshell failed'
+         return
+      endif
+
       if(abs(p(3,1)+p(3,2)).gt.1.d-10)then
         write(*,*)'Error #1 in put_on_MC_mshell_in',p(3,1),p(3,2)
         stop
@@ -1511,11 +1526,17 @@ c$$$NOTE: IRRELEVANT HERE SINCE THIS ROUTINE IS CALLED ONLY FOR J_FKS=1,2
         p2(i)=p(i,2)
         xk(i)=p(i,i_fks)
       enddo
+c        write(*,*) 'p1:',(p1(i),i=0,3)
+c        write(*,*) 'p2:',(p2(i),i=0,3)
+c        write(*,*) 'xk:',(xk(i),i=0,3)
       call boostwdir2(chy,shy,chymo,zaxis,p1,p1)
       call boostwdir2(chy,shy,chymo,zaxis,p2,p2)
       call boostwdir2(chy,shy,chymo,zaxis,xk,xk)
       if(abs(p1(3)+p2(3)).gt.1.d-6)then
         write(*,*)'Error #1 in put_on_MC_mshell_Hevin',p1(3),p2(3)
+        write(*,*) 'p1:',(p1(i),i=0,3)
+        write(*,*) 'p2:',(p2(i),i=0,3)
+        write(*,*) 'xk:',(xk(i),i=0,3)
         stop
       endif
       q0=p1(0)+p2(0)-xk(0)

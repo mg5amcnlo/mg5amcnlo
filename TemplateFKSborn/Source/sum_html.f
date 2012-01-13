@@ -43,7 +43,6 @@ c
       integer mfact(max_amps)
       integer ntevents, ntw 
       integer ilen
-      logical errex
 
       logical sumproc
       common/to_sumproc/sumproc
@@ -281,11 +280,6 @@ c      endif
         write(26,'(a)') 'Cross section is 0, try loosening cuts'
         close(26)
         stop
-      else
-        inquire(file="../error",exist=errex)
-        if(errex) then
-          call system ('rm -f ../error')
-        endif
       endif
       stop
  999  write(*,*) 'error'
@@ -344,13 +338,16 @@ c
 c     Here we determine the appropriate units. Assuming the results 
 c     were written in picobarns
 c
-      if (xtot .ge. 1e4) then         !Use nano barns
+cRF      if (xtot .ge. 1e4) then         !Use nano barns
+      if (abs(xtot) .ge. 1e4) then         !Use nano barns
          scale=1e-3
          cpref='(nb)'
-      elseif (xtot .ge. 1e1) then     !Use pico barns
+cRF      elseif (xtot .ge. 1e1) then     !Use pico barns
+      elseif (abs(xtot) .ge. 1e1) then     !Use pico barns
          scale=1e0
          cpref='(pb)'
-      elseif (xtot .ge. 1e-2) then    !Use fempto
+cRF      elseif (xtot .ge. 1e-2) then    !Use fempto
+      elseif (abs(xtot) .ge. 1e-2) then    !Use fempto
          scale=1e+3
          cpref='(fb)'
       else                               !Use Attobarns
@@ -384,10 +381,10 @@ c      procname='Set caption in file input.dat'
       ip = 1
       jp = 30
       open(unit=15, file='input.dat', status='old',err=11)
-      read(15,'(a)',err=11,end=11) procname
+      read(15,'(a)') procname
  11   close(15)
       open(unit=15, file='dname.mg', status='old',err=12)
-      read(15,'(a)',err=12,end=12) procname
+      read(15,'(a)') procname
 cxx   tjs 3-20-2006
 c      ip = index(procname,'P')+1  !Strip off first P
       ip = index(procname,'P')+1      !Strip off P

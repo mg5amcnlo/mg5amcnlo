@@ -21,6 +21,7 @@ import madgraph.core.diagram_generation as diagram_generation
 import madgraph.core.color_amp as color_amp
 import madgraph.core.color_algebra as color_algebra
 import madgraph.fks.fks_common as fks_common
+import madgraph.fks.fks_real as fks_real
 import copy
 import logging
 import array
@@ -74,11 +75,13 @@ class FKSMultiProcessFromBorn(diagram_generation.MultiProcess): #test written
 class FKSRealProcess(object): 
     """contains information about a real process:
     -- i/j fks
+    -- ijglu
     -- amplitude 
     -- is_to_integrate
+    -- need_color_links
     -- leg permutation<<REMOVED!"""
     
-    def __init__(self, born_proc, leglist, amplist, amp_id_list,
+    def __init__(self, born_proc, leglist, ijglu, amplist, amp_id_list,
                  perturbed_orders = ['QCD']): #test written
         """initialize the real process based on born_proc and leglist,
         then checks if the amplitude has already been generated before in amplist,
@@ -87,12 +90,20 @@ class FKSRealProcess(object):
         for leg in leglist:
             if leg.get('fks') == 'i':
                 self.i_fks = leg.get('number')
+                self.need_color_links = leg.get('massless') \
+                        and leg.get('spin') == 3 \
+                        and leg.get('color') == 8
             if leg.get('fks') == 'j':
                 self.j_fks = leg.get('number')
+        self.ijglu = ijglu
         self.process = copy.copy(born_proc)
         orders = copy.copy(born_proc.get('orders'))
         for order in perturbed_orders:
             orders[order] +=1
+            if order == 'QCD':
+                orders['WEIGHTED'] +=1
+            else: 
+                orders['WEIGHTED'] +=2
 #        for n, o in orders.items():
 #            if n != 'QCD':
 #                orders[n] = o
@@ -106,8 +117,27 @@ class FKSRealProcess(object):
         self.process.set('legs', MG.LegList(leglist))
         self.amplitude = diagram_generation.Amplitude(self.process)
         self.pdgs = pdgs
+        self.colors = [leg['color'] for leg in leglist]
         self.is_to_integrate = True
         self.is_nbody_only = False
+
+    def find_fks_j_from_i(self):
+        """returns a dictionary with the entries i : [j_from_i]"""
+        fks_j_from_i = {}
+        dict = {}
+        for i in self.process.get('legs'):
+            fks_j_from_i[i.get('number')] = []
+            if i.get('state'):
+                for j in self.process.get('legs'):
+                    if j.get('number') != i.get('number') :
+                        ijlist = fks_common.combine_ij(i, j, self.process.get('model'), dict)
+                        for ij in ijlist:
+                            born = fks_real.FKSBornProcess(self.process, i, j, ij)
+                            if born.amplitude.get('diagrams'):
+                                fks_j_from_i[i.get('number')].append(\
+                                                        j.get('number'))                                
+        return fks_j_from_i
+
         
     def get_leg_i(self): #test written
         """returns leg corresponding to i_fks"""
@@ -197,10 +227,14 @@ class FKSProcessFromBorn(object):
         It removes double counted configorations from the ones to integrates and
         sets the one which includes the bosn (is_nbody_only)"""
 
-        for l in sum(self.reals, []):
-            print len(sum (self.reals, []))
-            self.real_amps.append(FKSRealProcess(\
-                        self.born_proc, l, amplist, amp_id_list))
+        for i, list in enumerate(self.reals):
+            if self.leglist[i]['massless'] and self.leglist[i]['spin'] == 3:
+                ijglu = i
+            else:
+                ijglu = 0
+            for l in list:
+                self.real_amps.append(FKSRealProcess(\
+                        self.born_proc, l, ijglu, amplist, amp_id_list))
         self.find_reals_to_integrate()
         self.find_real_nbodyonly()
 
@@ -251,8 +285,6 @@ class FKSProcessFromBorn(object):
                             self.real_amps[n].is_to_integrate = False
                         else:
                             self.real_amps[m].is_to_integrate = False
-        for amp in self.real_amps:
-            print amp.is_to_integrate, amp.pdgs
         if remove:
             newreal_amps = []
             for real in self.real_amps:

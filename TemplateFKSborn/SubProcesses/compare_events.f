@@ -1,10 +1,12 @@
+c Compile with
+c g77 -o compare_events compare_events.f handling_lhe_events.f
       program compare_events
       implicit none
       integer maxevt,maxevt2,ifile,ifile2,i
-      integer IDBMUP(2),PDFGUP(2),PDFSUP(2),IDWTUP,NPRUP
-      double precision EBMUP(2),XSECUP,XERRUP,XMAXUP,LPRUP
-      integer IDBMUP2(2),PDFGUP2(2),PDFSUP2(2),IDWTUP2,NPRUP2
-      double precision EBMUP2(2),XSECUP2,XERRUP2,XMAXUP2,LPRUP2
+      integer IDBMUP(2),PDFGUP(2),PDFSUP(2),IDWTUP,NPRUP,LPRUP
+      double precision EBMUP(2),XSECUP,XERRUP,XMAXUP
+      integer IDBMUP2(2),PDFGUP2(2),PDFSUP2(2),IDWTUP2,NPRUP2,LPRUP2
+      double precision EBMUP2(2),XSECUP2,XERRUP2,XMAXUP2
       INTEGER MAXNUP
       PARAMETER (MAXNUP=500)
       INTEGER NUP,IDPRUP,IDUP(MAXNUP),ISTUP(MAXNUP),
@@ -18,6 +20,7 @@
       double precision sum_wgt,sum_wgt2,xtmp,ytmp,xmomshifts(4)
       character*80 event_file,event_file2
       character*10 MonteCarlo,MonteCarlo2
+      character*140 buff
 
       include "genps.inc"
       integer j,k
@@ -64,7 +67,7 @@
       do i=1,maxevt
          call read_lhef_event(ifile,
      &        NUP,IDPRUP,XWGTUP,SCALUP,AQEDUP,AQCDUP,
-     &        IDUP,ISTUP,MOTHUP,ICOLUP,PUP,VTIMUP,SPINUP)
+     &        IDUP,ISTUP,MOTHUP,ICOLUP,PUP,VTIMUP,SPINUP,buff)
          sum_wgt=sum_wgt+XWGTUP
 
          do k=1,nup
@@ -77,7 +80,7 @@
 
          call read_lhef_event(ifile2,
      &        NUP2,IDPRUP2,XWGTUP2,SCALUP2,AQEDUP2,AQCDUP2,
-     &        IDUP2,ISTUP2,MOTHUP2,ICOLUP2,PUP2,VTIMUP2,SPINUP2)
+     &        IDUP2,ISTUP2,MOTHUP2,ICOLUP2,PUP2,VTIMUP2,SPINUP2,buff)
          sum_wgt2=sum_wgt2+XWGTUP2
 
          if(nup.ne.nup2)then

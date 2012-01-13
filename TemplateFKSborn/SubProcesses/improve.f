@@ -67,7 +67,7 @@ c***********************************************************************
 c
 c     Constants
 c
-      include '../../Source/run_config.inc'
+      include '../../../Source/run_config.inc'
 c
 c     Arguments
 c
@@ -123,13 +123,13 @@ c-----
          write(lun,15) 'mkdir Cards'
          write(lun,15) 'mkdir SubProcesses'
          write(lun,15) 'cp -a  $CONDOR_INITIAL_DIR/'//
-     &        '../../MGMEVersion.txt .'
+     &        '../../../MGMEVersion.txt .'
          write(lun,15) '#cp -ra  $CONDOR_INITIAL_DIR/'//
-     &        '../../Source .'
+     &        '../../../Source .'
          write(lun,15) 'cp -ra  $CONDOR_INITIAL_DIR/'//
-     &        '../../Cards/* ./Cards/'
+     &        '../../../Cards/* ./Cards/'
          write(lun,15) 'cp -ra  $CONDOR_INITIAL_DIR/'//
-     &        '../../lib/Pdfdata ./lib/'
+     &        '../../../lib/Pdfdata ./lib/'
 c         write(lun,15) 'cp -ra  $CONDOR_INITIAL_DIR/'//
 c     &        '../../lib/PDFsets ./lib/'
 c         write(lun,15) 'cd ./lib/PDFsets'
@@ -221,7 +221,11 @@ c madevent_vegas or madevent_mint
          write(lun,25) 'cd $j'
          write(lun,25) 'if [[ "$3" != "" ]]; then'
          write(lun,30) 'if [[ -e ../$3\_G$i ]]; then'
-         write(lun,35) 'cp -f ../$3\_G$i/*.sv1 .'
+         write(lun,35) "if [[ $1 == '0' ]]; then"
+         write(lun,40) 'cp -f ../$3\_G$i/*.sv1 .'
+         write(lun,35) "elif [[ $1 == '1' ]]; then"
+         write(lun,40) 'cp -f ../$3\_G$i/mint_grids .'
+         write(lun,35) "fi"
          write(lun,30) 'else'
          write(lun,35) 'echo "Cannot find direcotry ../$3\_G$i/"'//
      &        ' > log.txt'
@@ -281,7 +285,8 @@ c madevent_mintMC
          write(lun,25) 'head -n 6 ../../madinMMC_$2.2 >& input_app.txt'
          write(lun,25) 'echo $i >> input_app.txt'
          write(lun,25) 'tail -n 4 ../../madinMMC_$2.2 >> input_app.txt'
-         write(lun,25) 'time ../madevent_mintMC > log.txt <input_app.txt'
+         write(lun,25)
+     &        'time ../madevent_mintMC > log.txt <input_app.txt'
 c endif
          write(lun,20) "fi"
          write(lun,20) 'cd ../'
@@ -300,7 +305,11 @@ c madevent_vegas or madevent_mint
          write(lun,25) 'cp -f $CONDOR_INITIAL_DIR/$j/* .'
          write(lun,25) 'if [[ "$3" != "" ]]; then'
          write(lun,30) 'if [[ -e $CONDOR_INITIAL_DIR/$3\_G$i ]]; then'
-         write(lun,35) 'cp -f $CONDOR_INITIAL_DIR/$3\_G$i/*.sv1 .'
+         write(lun,35) "if [[ $1 == '0' ]]; then"
+         write(lun,40) 'cp -f $CONDOR_INITIAL_DIR/$3\_G$i/*.sv1 .'
+         write(lun,35) "elif [[ $1 == '1' ]]; then"
+         write(lun,40) 'cp -f $CONDOR_INITIAL_DIR/$3\_G$i/mint_grids .'
+         write(lun,35) "fi"
          write(lun,30) 'else'
          write(lun,35) 'echo "Cannot find direcotry ../$3\_G$i/"'//
      &        ' > log2.txt'
@@ -315,6 +324,16 @@ c madevent_mintMC
          write(lun,25) 'fi'
          write(lun,25) 'cd $j'
          write(lun,25) 'cp -f $CONDOR_INITIAL_DIR/$j/* .'
+         write(lun,25) 'if [[ "$3" != "" ]]; then'
+         write(lun,30) 'if [[ -e $CONDOR_INITIAL_DIR/G$3$i ]]; then'
+         write(lun,35) 'cp -f $CONDOR_INITIAL_DIR/G$3$i/mint_grids '//
+     &        './preset_mint_grids'
+         write(lun,30) 'else'
+         write(lun,35) 'echo "Cannot find direcotry ../G$3$i/"'//
+     &        ' > log.txt'
+         write(lun,35) 'exit'
+         write(lun,30) 'fi'
+         write(lun,25) 'fi'
 c endif
          write(lun,20) "fi"
 
@@ -355,7 +374,7 @@ c madevent_mint
          write(lun,25) 'echo $i >> input_app.txt'
          write(lun,25) 'tail -n 3 $CONDOR_INITIAL_DIR/'//
      &        '../madinM.$2 >> input_app.txt'
-         write(lun,25) 'time ../madevent_vegas > log.txt <input_app.txt'
+         write(lun,25) 'time ../madevent_mint > log.txt <input_app.txt'
 c madevent_mintMC
          write(lun,20) "elif [[ $1 == '2' ]]; then"
          write(lun,25) 'head -n 6 $CONDOR_INITIAL_DIR/'//
@@ -385,6 +404,7 @@ c endif
  25   format(8x,a)
  30   format(12x,a)
  35   format(16x,a)
+ 40   format(20x,a)
       close(lun)
       end
 

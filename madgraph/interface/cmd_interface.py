@@ -3421,7 +3421,6 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
             wanted_lorentz = self._curr_matrix_elements.get_used_lorentz()
      #       print "LORENTZ ", wanted_lorentz
             wanted_couplings = self._curr_matrix_elements.get_used_couplings()
-     #       print "couplings ", wanted_couplings
             self._curr_exporter.convert_model_to_mg4(self._curr_model,
                                            wanted_lorentz,
                                            wanted_couplings)

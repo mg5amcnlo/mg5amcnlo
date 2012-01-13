@@ -53,7 +53,7 @@ class FKSHelasMultiProcessFromBorn(helas_objects.HelasMultiProcess):
         HelasMatrixElement."""
         coupling_list = []
         for me in self.get('matrix_elements'):
-            coupling_list.extend(me.get_used_couplings())
+            coupling_list.extend([c for l in me.get_used_couplings() for c in l])
         return list(set(coupling_list))
     
     def get_matrix_elements(self):
@@ -212,8 +212,8 @@ class FKSHelasProcessFromBorn(object):
         to the borns"""
         coupl_list = self.born_matrix_element.get_used_couplings()
         for real in self.real_processes:
-            coupl_list.extend([c for l in\
-                        real.matrix_element.get_used_couplings() for c in l])
+            coupl_list.extend([c for c in\
+                        real.matrix_element.get_used_couplings()])
         return coupl_list    
     
     def __eq__(self, other):
@@ -243,8 +243,13 @@ class FKSHelasProcessFromBorn(object):
 class FKSHelasRealProcess(object): #test written
     """class to generate the Helas calls for a FKSRealProcess
     contains:
+    -- colors
     -- i/j fks
+    -- ijglu
+    -- need_color_links
+    -- fks_j_from_i
     -- matrix element
+    -- is_to_integrate
     -- leg permutation<<REMOVED"""
     
     def __init__(self, fksrealproc=None, me_list = [], me_id_list =[], **opts):
@@ -253,10 +258,16 @@ class FKSHelasRealProcess(object): #test written
         Sets i/j fks and the permutation"""
         
         if fksrealproc != None:
-            pdgs = fksrealproc.pdgs
+            self.isfinite = False
+            self.colors = fksrealproc.colors
  ##           self.permutation= fksrealproc.permutation
             self.i_fks = fksrealproc.i_fks
             self.j_fks = fksrealproc.j_fks
+            self.ijglu = fksrealproc.ijglu
+            self.need_color_links = fksrealproc.need_color_links
+            self.is_to_integrate = fksrealproc.is_to_integrate
+            self.is_nbody_only = fksrealproc.is_nbody_only
+            self.fks_j_from_i = fksrealproc.find_fks_j_from_i()
        #     print "in FKSHelasRealProc  i ", self.i_fks, "   j ", self.j_fks
             
             #try:
@@ -276,7 +287,6 @@ class FKSHelasRealProcess(object): #test written
     def __eq__(self, other):
         """Equality operator:
         compare two FKSHelasRealProcesses by comparing their dictionaries"""
-
         return self.__dict__ == other.__dict__
     
     def __ne__(self, other):

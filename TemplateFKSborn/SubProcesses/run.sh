@@ -24,7 +24,7 @@ r=0
 if [[ -e randinit ]]; then
     source ./randinit
 fi
-for i in P*_* ; do
+for i in P*/R* ; do
     r=`expr $r + 1`
 done
 echo "r=$r" >& randinit
@@ -84,11 +84,11 @@ fi
 # Always run madevent_vegas: set vegas_mint to '0'.
 vegas_mint='0'
 
-if [[ $run_mode == "born0" || $run_mode == "virt0" ]] ; then
+if [[ $run_mode == "born0" || $run_mode == "virt0" || $run_mode == "viSA0" || $run_mode == "viSB0" ]] ; then
     runmode=1
-elif [[ $run_mode == "virt" || $run_mode == "viSC" || $run_mode == "viLC" || $run_mode == "born" ]] ; then
+elif [[ $run_mode == "virt" || $run_mode == "viSC" || $run_mode == "viSA" || $run_mode == "viSB" || $run_mode == "viLC" || $run_mode == "born" ]] ; then
     runmode=2
-elif [[ $run_mode == "novi" || $run_mode == "grid" || $run_mode == "real" || $run_mode == "all" ]] ; then
+elif [[ $run_mode == "novi" || $run_mode == "novA" || $run_mode == "novB" || $run_mode == "grid" || $run_mode == "real" || $run_mode == "all" ]] ; then
     runmode=3
 else
     echo "don't know what to do:   " $run_mode
@@ -114,7 +114,7 @@ fi
 
 if [[ $run_cluster == 2 ]] ; then
     args='[\n'
-    for dir in P*_[1-9]* ; do
+    for dir in P*/R* ; do
 	cd $dir 
 	for job in ajob* ; do
 	    graph=`fgrep "for i in" $job | cut -d" " -f4`
@@ -130,7 +130,7 @@ fi
 
 if [[ $runmode == 1 ]] ; then
     echo "runmode is 1: run n-body only, i.e. 1 fks directory per subprocess -> S-functions are set to one."
-    for p in P*_[1-9]* ; do
+    for p in P*/R* ; do
 	cd $p
 	if [[ "$(head -n 1 nbodyonly.fks)" == "Y" ]] ; then
 	    echo "Running in" $p
@@ -138,6 +138,10 @@ if [[ $runmode == 1 ]] ; then
             for job in $jobs ; do
 		if [[ $run_cluster == 1 ]] ; then
                     sed -i.bak "7s/.*/Arguments = $vegas_mint $run_mode $use_preset/" $job
+		    if [[ -e done.$job.$vegas_mint.$run_mode.$use_preset ]] ; then
+			rm -f done.$job.$vegas_mint.$run_mode.$use_preset
+		    fi
+		    touch wait.$job.$vegas_mint.$run_mode.$use_preset
                     condor_submit $job
                     rm $job.bak
 		elif [[ $run_cluster == 0 ]] ; then
@@ -149,7 +153,7 @@ if [[ $runmode == 1 ]] ; then
     done
 elif [[ $runmode == 2 ]] ; then
     echo "runmode is 2: run all fks dir's for subprocesses with soft singularity; S-functions are not set to one."
-    for p in P*_[1-9]* ; do
+    for p in P*/R* ; do
 	cd $p
 	if [[ "$(tail -n 1 integrate.fks)" == "I" ]] ; then
 	    echo "Running in" $p
@@ -157,6 +161,10 @@ elif [[ $runmode == 2 ]] ; then
             for job in $jobs ; do
 		if [[ $run_cluster == 1 ]] ; then
                     sed -i.bak "7s/.*/Arguments = $vegas_mint $run_mode $use_preset/" $job
+		    if [[ -e done.$job.$vegas_mint.$run_mode.$use_preset ]] ; then
+			rm -f done.$job.$vegas_mint.$run_mode.$use_preset
+		    fi
+		    touch wait.$job.$vegas_mint.$run_mode.$use_preset
                     condor_submit $job
                     rm $job.bak
 		elif [[ $run_cluster == 0 ]] ; then
@@ -168,13 +176,17 @@ elif [[ $runmode == 2 ]] ; then
     done
 elif [[ $runmode == 3 ]] ; then
     echo "runmode is 3: run all fks dir's for all subprocesses."
-    for p in P*_[1-9]* ; do
+    for p in P*/R* ; do
 	cd $p
 	echo "Running in" $p
 	chmod +x ajob*
         for job in $jobs ; do
 	    if [[ $run_cluster == 1 ]] ; then
                 sed -i.bak "7s/.*/Arguments = $vegas_mint $run_mode $use_preset/" $job
+		if [[ -e done.$job.$vegas_mint.$run_mode.$use_preset ]] ; then
+		    rm -f done.$job.$vegas_mint.$run_mode.$use_preset
+		fi
+		touch wait.$job.$vegas_mint.$run_mode.$use_preset
                 condor_submit $job
                 rm $job.bak
 	    elif [[ $run_cluster == 0 ]] ; then

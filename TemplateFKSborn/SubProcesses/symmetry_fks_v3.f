@@ -9,7 +9,7 @@ c     Constants
 c
       include 'genps.inc'      
       include "nexternal.inc"
-      include '../../Source/run_config.inc'
+      include '../../../Source/run_config.inc'
       
       double precision ZERO
       parameter       (ZERO = 0d0)
@@ -91,9 +91,9 @@ c     External
 c
       logical pass_point,passcuts
       logical check_swap
-      double precision dsig,fks_sij,dsig2
+      double precision dsig,fks_sij,dsig2,ran2
       external pass_point,passcuts, dsig,fks_sij,dsig2
-      external check_swap
+      external check_swap,ran2
 
 c      integer icomp
 c
@@ -189,7 +189,8 @@ c
 c     Get momentum configuration
 c
 c Set xexternal to false to generate new xexternal in the x_to_f_arg subroutine
-      xexternal=.false.
+c$$$      xexternal=.false.
+      xexternal=.true.
 
 c Set-up helicities
       call get_helicity(i_fks,j_fks)
@@ -197,6 +198,9 @@ c Set-up helicities
       do i = 1,3   !Not needed, but ok
       ntry = 1
       wgt=1d0
+      do j=1,ndim
+         x(j)=ran2()
+      enddo
       call x_to_f_arg(ndim,iconfig,minconfig,maxconfig,ninvar,wgt,x,p)
       do while ((.not.passcuts(p,rwgt) .or. wgt .lt. 0 .or. p(0,1) .le. 0d0
      &           .or. p_born(0,1) .le. 0d0) .and. ntry .lt. 10000)
@@ -532,8 +536,7 @@ c
 c     Constants
 c
       include 'genps.inc'
-      include "nexternal.inc"
-      include '../../Source/run_config.inc'
+      include '../../../Source/run_config.inc'
       integer    maxpara
       parameter (maxpara=1000)
 c      integer   npoint_tot,         npoint_min
@@ -553,7 +556,8 @@ c-----
 c  Begin Code
 c-----
       call load_para(npara,param,value)
-      call get_logical(npara,param,value," gridpack ",gridpack,.false.)
+c$$$      call get_logical(npara,param,value," gridpack ",gridpack,.false.)
+      gridpack=.false.
 
       npoints = min_events_subprocess/nconfigs
       npoints = max(npoints,min_events_channel)
@@ -591,7 +595,7 @@ c     Constants
 c
       include 'genps.inc'
       include "nexternal.inc"
-      include '../../Source/run_config.inc'
+      include '../../../Source/run_config.inc'
       integer    imax,   ibase
       parameter (imax=max_branch-1, ibase=3)
 c
@@ -613,11 +617,17 @@ c
       logical done
       logical gForceBW(-max_branch:-1,lmaxconfigs)  ! Forced BW
       include 'born_decayBW.inc'
+      integer lname
+      character*30 mname
+      character*30 fname
 
 c-----
 c  Begin Code
 c-----
-      call open_bash_file(26)
+      fname='ajob'
+      lname=4
+      mname='mg'
+      call open_bash_file(26,fname,lname,mname)
       ic = 0      
       do i=1,mapconfig(0)
          if (use_config(i) .gt. 0) then
@@ -650,7 +660,10 @@ c            do j=1,2**nbw
                ic=ic+1
                if (ic .gt. ChanPerJob) then
                   call close_bash_file(26)
-                  call open_bash_file(26)
+                  fname='ajob'
+                  lname=4
+                  mname='mg'
+                  call open_bash_file(26,fname,lname,mname)
                   ic = 1
                endif
 c               write(*,*) 'mapping',ic,mapconfig(i)
@@ -743,7 +756,7 @@ c
       include "nexternal.inc"
       double precision zero
       parameter       (zero=0d0)
-c      include '../../Source/run_config.inc'
+c      include '../../../Source/run_config.inc'
 c
 c     Arguments
 c
@@ -838,7 +851,6 @@ c
 c     Global
 c
       include 'genps.inc'
-      include "nexternal.inc"
 
 c
 c     Local
@@ -863,323 +875,6 @@ c-----
       enddo
       done = .not. found
       end
-
-      subroutine open_bash_file(lun)
-c***********************************************************************
-c     Opens bash file for looping including standard header info
-c     which can be used with pbs, or stand alone
-c***********************************************************************
-      implicit none
-c
-c     Constants
-c
-      include '../../Source/run_config.inc'
-c
-c     Arguments
-c
-      integer lun
-c
-c     Local
-c
-      integer ic
-
-      data ic/0/
-
-      character*30 mname
-      character*30 fname
-      common/to_close_bash_file/fname
-
-      integer run_cluster
-      common/c_run_mode/run_cluster
-
-c-----
-c  Begin Code
-c-----
-      ic=ic+1
-      fname='ajob'
-      mname='mg'
-      if (ic .lt. 10) then
-         write(fname(5:5),'(i1)') ic
-         write(mname(3:7),'(i1,a4)') ic,".cmd"
-      elseif (ic .lt. 100) then
-         write(fname(5:6),'(i2)') ic
-         write(mname(3:8),'(i2,a4)') ic,".cmd"
-      elseif (ic .lt. 1000) then
-         write(fname(5:7),'(i3)') ic
-         write(mname(3:9),'(i3,a4)') ic,".cmd"
-      endif
-      open (unit=lun, file = fname, status='unknown')
-      if (run_cluster.eq.0) then
-         write(lun,15) '#!/bin/bash'
-         write(lun,15) 'script=' // fname
-         write(lun,15) 'rm -f wait.$script >& /dev/null'
-         write(lun,15) 'touch run.$script'
-         write(lun,15) 'echo $script'
-         write(lun,'(a$)') 'for i in '
-      elseif(run_cluster.eq.1) then
-         write(lun,15) '#!/bin/bash'
-         write(lun,15) 'if [ -n "$_CONDOR_SCRATCH_DIR" ]; then'
-         write(lun,15) '    CONDOR_INITIAL_DIR=`pwd`'
-         write(lun,15) '    cd $_CONDOR_SCRATCH_DIR'
-         write(lun,15) 'fi'
-         write(lun,15) 'mkdir lib'
-         write(lun,15) 'mkdir Cards'
-         write(lun,15) 'mkdir SubProcesses'
-         write(lun,15) 'cp -a  $CONDOR_INITIAL_DIR/'//
-     &        '../../MGMEVersion.txt .'
-         write(lun,15) 'cp -ra  $CONDOR_INITIAL_DIR/'//
-     &        '../../Source .'
-         write(lun,15) 'cp -ra  $CONDOR_INITIAL_DIR/'//
-     &        '../../Cards/* ./Cards/'
-         write(lun,15) 'cp -ra  $CONDOR_INITIAL_DIR/'//
-     &        '../../lib/Pdfdata ./lib/'
-
-         write(lun,15) "if [[ $1 == '0' ]]; then"
-         write(lun,15) '    cp -a  $CONDOR_INITIAL_DIR/'//
-     &           'madevent_vegas ./SubProcesses'
-         write(lun,15) "elif [[ $1 == '1' ]]; then"
-         write(lun,15) '    cp -a  $CONDOR_INITIAL_DIR/'//
-     &           'madevent_mint ./SubProcesses'
-         write(lun,15) "elif [[ $1 == '2' ]]; then"
-         write(lun,15) '    cp -a  $CONDOR_INITIAL_DIR/'//
-     &           'madevent_mintMC ./SubProcesses'
-         write(lun,15) "fi"
-
-         write(lun,15) 'cd SubProcesses'
-         write(lun,'(a$)') 'for i in '
-      endif
-
-      if (run_cluster.eq.1) then
-         open (unit=lun+1,file=mname,status='unknown')
-         write(lun+1,15) 'universe = vanilla'
-         write(lun+1,15) 'executable = '//fname
-         write(lun+1,15) 'output = /dev/null'
-         write(lun+1,15) 'error = /dev/null'
-         write(lun+1,15) 'requirements = (MADGRAPH == True)'
-         write(lun+1,15) 'log = /dev/null'
-         write(lun+1,15) ''
-         write(lun+1,15) 'queue'
-         write(lun+1,15) ''
-         close(lun+1)
-      endif
-
- 15   format(a)
-      end
-
-      subroutine close_bash_file(lun)
-c***********************************************************************
-c     Opens bash file for looping including standard header info
-c     which can be used with pbs, or stand alone
-c***********************************************************************
-      implicit none
-c
-c     Constants
-c
-c
-c     Constants
-c
-c     Arguments
-c
-      integer lun
-c
-c     local
-c
-      integer ic,j
-
-      data ic/0/
-
-      character*30 fname
-      common/to_close_bash_file/fname
-      integer run_cluster
-      common/c_run_mode/run_cluster
-
-c-----
-c  Begin Code
-c-----
-
-      write(lun,'(a)') '; do'
-c
-c     Now write the commands
-c      
-      if (run_cluster.eq.0) then
-         write(lun,20) 'echo $i'
-         write(lun,20) 'echo $i >& run.$script'
-c madevent_vegas or madevent_mint
-         write(lun,20) "if [[ $1 == '0' || $1 == '1' ]]; then"
-         write(lun,25) 'j=$2\_G$i'
-         write(lun,25) 'if [[ ! -e $j ]]; then'
-         write(lun,30) 'mkdir $j'
-         write(lun,25) 'fi'
-         write(lun,25) 'cd $j'
-         write(lun,25) 'if [[ "$3" != "" ]]; then'
-         write(lun,30) 'if [[ -e ../$3\_G$i ]]; then'
-         write(lun,35) 'cp -f ../$3\_G$i/*.sv1 .'
-         write(lun,30) 'else'
-         write(lun,35) 'echo "Cannot find direcotry ../$3\_G$i/"'//
-     &        ' > log.txt'
-         write(lun,35) 'exit'
-         write(lun,30) 'fi'
-         write(lun,25) 'fi'
-c madevent_mintMC
-         write(lun,20) "elif [[ $1 == '2' ]]; then"
-         write(lun,25) 'j=G$2$i'
-         write(lun,25) 'if [[ ! -e $j ]]; then'
-         write(lun,30) 'mkdir $j'
-         write(lun,25) 'fi'
-         write(lun,25) 'cd $j'
-         write(lun,25) 'if [[ "$3" != "" ]]; then'
-         write(lun,30) 'if [[ -e ../G$3$i ]]; then'
-         write(lun,35) 'cp -f ../G$3$i/mint_grids ./preset_mint_grids'
-         write(lun,30) 'else'
-         write(lun,35) 'echo "Cannot find direcotry ../G$3$i/"'//
-     &        ' > log.txt'
-         write(lun,35) 'exit'
-         write(lun,30) 'fi'
-         write(lun,25) 'fi'
-c endif
-         write(lun,20) "fi"
-
-         write(lun,20) 'cp ../config.fks .'
-         write(lun,20) 'cp ../integrate.fks .'
-         write(lun,20) 'cp ../nbodyonly.fks .'
-         write(lun,20) 'cp ../iproc.dat .'
-         write(lun,20) 'if [[ -e ../../randinit ]]; then'
-         write(lun,25) 'cp ../../randinit .'
-         write(lun,20) 'fi'
-         write(lun,20) 'cp ../symfact.dat .'
-         write(lun,20) 'if [[ -e ../HelasNLO.input ]]; then'
-         write(lun,25) 'cp -f ../HelasNLO.input .'
-         write(lun,20) 'fi'
-         write(lun,20) 'if [[ -e ../MadLoop.param ]]; then'
-         write(lun,25) 'cp -f ../MadLoop.param .'
-         write(lun,20) 'fi'
-         write(lun,20) 'if [[ -e ../order.file ]]; then'
-         write(lun,25) 'cp -f ../order.file .'
-         write(lun,20) 'fi'
-c madevent_vegas
-         write(lun,20) "if [[ $1 == '0' ]]; then"
-         write(lun,25) 'head -n 5 ../../madin.$2 >& input_app.txt'
-         write(lun,25) 'echo $i >> input_app.txt'
-         write(lun,25) 'tail -n 4 ../../madin.$2 >> input_app.txt'
-         write(lun,25) 'time ../madevent_vegas > log.txt <input_app.txt'
-c madevent_mint
-         write(lun,20) "elif [[ $1 == '1' ]]; then"
-         write(lun,25) 'head -n 5 ../../madinM.$2 >& input_app.txt'
-         write(lun,25) 'echo $i >> input_app.txt'
-         write(lun,25) 'tail -n 3 ../../madinM.$2 >> input_app.txt'
-         write(lun,25) 'time ../madevent_mint > log.txt <input_app.txt'
-c madevent_mintMC
-         write(lun,20) "elif [[ $1 == '2' ]]; then"
-         write(lun,25) 'head -n 6 ../../madinMMC_$2.2 >& input_app.txt'
-         write(lun,25) 'echo $i >> input_app.txt'
-         write(lun,25) 'tail -n 4 ../../madinMMC_$2.2 >> input_app.txt'
-         write(lun,25) 'time ../madevent_mintMC > log.txt <input_app.txt'
-c endif
-         write(lun,20) "fi"
-         write(lun,20) 'cd ../'
-         write(lun,15) 'done'
-         write(lun,15) 'rm -f run.$script'
-         write(lun,15) 'touch done.$script'
-
-      elseif(run_cluster.eq.1) then
-c madevent_vegas or madevent_mint
-         write(lun,20) "if [[ $1 == '0' || $1 == '1' ]]; then"
-         write(lun,25) 'j=$2\_G$i'
-         write(lun,25) 'if [[ ! -e $j ]]; then'
-         write(lun,30) 'mkdir $j'
-         write(lun,25) 'fi'
-         write(lun,25) 'cd $j'
-         write(lun,25) 'cp -f $CONDOR_INITIAL_DIR/$j/* .'
-         write(lun,25) 'if [[ "$3" != "" ]]; then'
-         write(lun,30) 'if [[ -e $CONDOR_INITIAL_DIR/$3\_G$i ]]; then'
-         write(lun,35) 'cp -f $CONDOR_INITIAL_DIR/$3\_G$i/*.sv1 .'
-         write(lun,30) 'else'
-         write(lun,35) 'echo "Cannot find direcotry ../$3\_G$i/"'//
-     &        ' > log2.txt'
-         write(lun,30) 'fi'
-         write(lun,25) 'fi'
-
-c madevent_mintMC
-         write(lun,20) "elif [[ $1 == '2' ]]; then"
-         write(lun,25) 'j=G$2$i'
-         write(lun,25) 'if [[ ! -e $j ]]; then'
-         write(lun,30) 'mkdir $j'
-         write(lun,25) 'fi'
-         write(lun,25) 'cd $j'
-         write(lun,25) 'cp -f $CONDOR_INITIAL_DIR/$j/* .'
-c endif
-         write(lun,20) "fi"
-
-         write(lun,20) 'cp -f $CONDOR_INITIAL_DIR/config.fks .'
-         write(lun,20) 'cp -f $CONDOR_INITIAL_DIR/iproc.dat .'
-         write(lun,20)
-     &        'if [[ -e $CONDOR_INITIAL_DIR/../randinit ]]; then'
-         write(lun,25) 'cp -f $CONDOR_INITIAL_DIR/../randinit .'
-         write(lun,20) 'fi'
-         write(lun,20) 'cp -f $CONDOR_INITIAL_DIR/integrate.fks .'
-         write(lun,20) 'cp -f $CONDOR_INITIAL_DIR/nbodyonly.fks .'
-         write(lun,20) 'cp -f $CONDOR_INITIAL_DIR/symfact.dat .'
-         write(lun,20)
-     &        'if [[ -e $CONDOR_INITIAL_DIR/HelasNLO.input ]]; then'
-         write(lun,25) 'cp -f $CONDOR_INITIAL_DIR/HelasNLO.input .'
-         write(lun,20) 'fi'
-         write(lun,20)
-     &        'if [[ -e $CONDOR_INITIAL_DIR/MadLoop.param ]]; then'
-         write(lun,25) 'cp -f $CONDOR_INITIAL_DIR/MadLoop.param .'
-         write(lun,20) 'fi'
-         write(lun,20)
-     &        'if [[ -e $CONDOR_INITIAL_DIR/order.file ]]; then'
-         write(lun,25) 'cp -f $CONDOR_INITIAL_DIR/order.file .'
-         write(lun,20) 'fi'
-
-c madevent_vegas
-         write(lun,20) "if [[ $1 == '0' ]]; then"
-         write(lun,25) 'head -n 5 $CONDOR_INITIAL_DIR/'//
-     &        '../madin.$2 >& input_app.txt'
-         write(lun,25) 'echo $i >> input_app.txt'
-         write(lun,25) 'tail -n 4 $CONDOR_INITIAL_DIR/'//
-     &        '../madin.$2 >> input_app.txt'
-         write(lun,25) 'time ../madevent_vegas > log.txt <input_app.txt'
-c madevent_mint
-         write(lun,20) "elif [[ $1 == '1' ]]; then"
-         write(lun,25) 'head -n 5 $CONDOR_INITIAL_DIR/'//
-     &        '../madinM.$2 >& input_app.txt'
-         write(lun,25) 'echo $i >> input_app.txt'
-         write(lun,25) 'tail -n 3 $CONDOR_INITIAL_DIR/'//
-     &        '../madinM.$2 >> input_app.txt'
-         write(lun,25) 'time ../madevent_vegas > log.txt <input_app.txt'
-c madevent_mintMC
-         write(lun,20) "elif [[ $1 == '2' ]]; then"
-         write(lun,25) 'head -n 6 $CONDOR_INITIAL_DIR/'//
-     &        '../madinMMC_$2.2 >& input_app.txt'
-         write(lun,25) 'echo $i >> input_app.txt'
-         write(lun,25) 'tail -n 4 $CONDOR_INITIAL_DIR/'//
-     &        '../madinMMC_$2.2 >> input_app.txt'
-         write(lun,25)'time ../madevent_mintMC > log.txt <input_app.txt'
-c endif
-         write(lun,20) "fi"
-
-         write(lun,20) 'cd ../'
-         write(lun,15) 'done'
-c madevent_vegas or madevent_mint
-         write(lun,15) "if [[ $1 == '0' || $1 == '1' ]]; then"
-         write(lun,20) 'cp -ar $2\_G* $CONDOR_INITIAL_DIR/'
-c madevent_mintMC
-         write(lun,15) "elif [[ $1 == '2' ]]; then"
-         write(lun,20) 'cp -ar G$2* $CONDOR_INITIAL_DIR/'
-         write(lun,20) 
-c endif
-         write(lun,15) "fi"
-      endif
-      
- 15   format(a)
- 20   format(4x,a)
- 25   format(8x,a)
- 30   format(12x,a)
- 35   format(16x,a)
-      close(lun)
-      end
-
 c
 c
 c Dummy routines
@@ -1197,4 +892,12 @@ c
       passcuts=.true.
       RETURN
       END
+      subroutine unweight_function(p_born,unwgtfun)
+c Dummy function. Should always retrun 1.
+      implicit none
+      include 'nexternal.inc'
+      double precision unwgtfun,p_born(0:3,nexternal-1)
+      unwgtfun=1d0
+      return
+      end
 

@@ -268,7 +268,7 @@ c**************************************************
 
       include 'message.inc'
       include 'genps.inc'
-      include "nexternal.inc"
+      include 'nexternal.inc'
       include 'cluster.inc'
       include 'run.inc'
       include 'coupl.inc'

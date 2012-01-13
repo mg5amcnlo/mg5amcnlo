@@ -32,8 +32,8 @@ c
 c
       strtit(1:17)='  TITLE    TOP   '
       ifound=-1
-      open(unit=88,type='unknown',name='fort.88',form='formatted')
-      open(unit=99,type='unknown',name='read40.out',form='formatted')
+      open(unit=88,status='unknown',file='fort.88',form='formatted')
+      open(unit=99,status='unknown',file='read40.out',form='formatted')
       if(iverbose.eq.1)
      #  write(6,*)'enter number of files (less than 40)'
       read(5,*)nfil
@@ -43,13 +43,13 @@ c
       filename(1)=file
       write(99,*)nfil
       write(99,*)"10 ",file
-      open(unit=10,type='old',name=file,form='formatted')
+      open(unit=10,status='old',file=file,form='formatted')
       do i=1,nfil-1
         iunit=10+i
         read(5,'(a)')file1
         filename(i+1)=file1
         write(99,*)i," ",file1
-        open(unit=iunit,type='old',name=file1,form='formatted')
+        open(unit=iunit,status='old',file=file1,form='formatted')
       enddo
 c Multiplicative factors may be entered here if need be
       do i=1,nfil

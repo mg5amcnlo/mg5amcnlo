@@ -211,8 +211,8 @@ class FKSHelasProcessFromReals(object): #test written
         to the borns"""
         coupl_list = self.real_matrix_element.get_used_couplings()
         for born in self.born_processes:
-            coupl_list.extend([c for l in\
-                        born.matrix_element.get_used_couplings() for c in l])
+            coupl_list.extend([c for c in\
+                        born.matrix_element.get_used_couplings()])
         return coupl_list    
     
     def __eq__(self, other):

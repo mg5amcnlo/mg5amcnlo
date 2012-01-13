@@ -8,34 +8,39 @@ c                     xx(1:ndim) are the variables of integration
 c                     ifirst=0: normal behaviour
 c imode: integer flag
 c
-c imode=-1: same as imode=0 as far as this routine is concerned, except
-c  for the fact that a grid is read at the beginning (rather than initialized).
-c  The return value of imode will be zero.
+c imode=-1:
+c same as imode=0 as far as this routine is concerned, except for the
+c fact that a grid is read at the beginning (rather than initialized).
+c The return value of imode will be zero.
 c
 c imode=0:
-c When called with imode=0 the routine integrates the absolute value of the function
-c and sets up a grid xgrid(0:50,ndim) such that in each ndim-1 dimensional slice
-c (i.e. xgrid(m-1,n)<xx(n)<xgrid(m,n)) the contribution of the integral is the same
-c the array xgrid is setup at this stage; ans and err are the integral and its error 
+c When called with imode=0 the routine integrates the absolute value of
+c the function and sets up a grid xgrid(0:50,ndim) such that in each
+c ndim-1 dimensional slice (i.e. xgrid(m-1,n)<xx(n)<xgrid(m,n)) the
+c contribution of the integral is the same the array xgrid is setup at
+c this stage; ans and err are the integral and its error
 c
 c imode=1 (in fact #0)
-c When called with imode=1, the routine performs the integral of the function fun
-c using the grid xgrid. If some number in the array ifold, (say, ifold(n))
-c is different from 1, it must be a divisor of 50, and the 50 intervals xgrid(0:50,n)
-c are grouped into ifold(n) groups, each group containing 50/ifold(n) nearby
-c intervals. For example, if ifold(1)=5, the 50 intervals for the first dimension
-c are divided in 5 groups of 10. The integral is then performed by folding on top
-c of each other these 5 groups. Suppose, for example, that we choose a random point
-c in xx(1) = xgrid(2,1)+x*(xgrid(3,1)-xgrid(2,1)), in the group of the first 5 interval.
-c we sum the contribution of this point to the contributions of points
+c When called with imode=1, the routine performs the integral of the
+c function fun using the grid xgrid. If some number in the array ifold,
+c (say, ifold(n)) is different from 1, it must be a divisor of 50, and
+c the 50 intervals xgrid(0:50,n) are grouped into ifold(n) groups, each
+c group containing 50/ifold(n) nearby intervals. For example, if
+c ifold(1)=5, the 50 intervals for the first dimension are divided in 5
+c groups of 10. The integral is then performed by folding on top of each
+c other these 5 groups. Suppose, for example, that we choose a random
+c point in xx(1) = xgrid(2,1)+x*(xgrid(3,1)-xgrid(2,1)), in the group of
+c the first 5 interval.  we sum the contribution of this point to the
+c contributions of points
 c xgrid(2+m*10,1)+x*(xgrid(3+m*10,1)-xgrid(2+m*10,1)), with m=1,...,4.
-c In the sequence of calls to the
-c function fun, the call for the first point is performed with ifirst=0, and that for
-c all subsequent points with ifirst=1, so that the function can avoid to compute
-c quantities that only depend upon dimensions that have ifold=1, and do not change
-c in each group of folded call. The values returned by fun in a sequence of folded
-c calls with ifirst=0 and ifirst=1 are not used. The function itself must accumulate
-c the values, and must return them when called with ifirst=2.
+c In the sequence of calls to the function fun, the call for the first
+c point is performed with ifirst=0, and that for all subsequent points
+c with ifirst=1, so that the function can avoid to compute quantities
+c that only depend upon dimensions that have ifold=1, and do not change
+c in each group of folded call. The values returned by fun in a sequence
+c of folded calls with ifirst=0 and ifirst=1 are not used. The function
+c itself must accumulate the values, and must return them when called
+c with ifirst=2.
 c 
 
       subroutine mint(fun,ndim,ncalls0,nitmax,imode,
@@ -56,17 +61,23 @@ c others: same as 1 (for now)
       integer nhits(1:nintervals,ndimmax)
       real * 8 rand(ndimmax)
       real * 8 dx(ndimmax),f,f_sgn,vtot_abs,etot_abs,vtot_sgn,etot_sgn,
-     &     prod
+     &     prod,f1
       integer kdim,kint,kpoint,nit,ncalls,ibin,iret,nintcurr,ifirst
-      real * 8 ran2
-      external ran2,fun
+      real * 8 ran3
+      external ran3,fun
+c Set to true to use more evenly distributed random numbers (imode=0
+c only)
+      logical even
 c
+      ncalls=ncalls0
       if(imode.eq.-1) then
+         even=.true.
          imode=0
          do kdim=1,ndim
             ifold(kdim)=1
          enddo
       elseif(imode.eq.0) then
+         even=.true.
          do kdim=1,ndim
             ifold(kdim)=1
             do kint=0,nintervals
@@ -74,6 +85,7 @@ c
             enddo
          enddo
       elseif(imode.eq.1) then
+         even=.false.
          do kdim=1,ndim
             nintcurr=nintervals/ifold(kdim)
             if(nintcurr*ifold(kdim).ne.nintervals) then
@@ -88,7 +100,12 @@ c
             enddo
          enddo
       endif
-      ncalls=ncalls0
+      if (even) then
+c Uses more evenly distributed random numbers. This overwrites the
+c number of calls
+         call initialize_even_random_numbers(ncalls0,ndim,ncalls)
+         write (*,*) 'Update ncalls: ',ncalls0,' --> ',ncalls
+      endif
       nit=0
       ans_abs=0
       err_abs=0
@@ -96,6 +113,9 @@ c
       err_sgn=0
  10   continue
       nit=nit+1
+      if (nit.gt.nitmax/2+1) then
+         even=.false.
+      endif
       if(nit.gt.nitmax) then
          if(imode.eq.0) xint=ans_abs
          return
@@ -118,8 +138,19 @@ c
 c find random x, and its random cell
          do kdim=1,ndim
             kfold(kdim)=1
-            ncell(kdim)=nintervals/ifold(kdim)*ran2()+1
-            rand(kdim)=ran2()
+c if(even), we should compute the ncell and the rand from the ran3()
+            if (even) then
+               rand(kdim)=ran3(even)
+               ncell(kdim)= min(int(rand(kdim)*nintervals)+1,
+     &              nintervals)
+               rand(kdim)=rand(kdim)*nintervals-(ncell(kdim)-1)
+            else
+cRF fix here if ran3() is exactly one
+c$$$            ncell(kdim)=nintervals/ifold(kdim)*ran3(even))+1
+               ncell(kdim)=min(int(nintervals/ifold(kdim)*ran3(even))+1,
+     &              nintervals)
+               rand(kdim)=ran3(even)
+            endif
          enddo
          f=0
          f_sgn=0
@@ -137,18 +168,21 @@ c find random x, and its random cell
          enddo
 c contribution to integral
          if(imode.eq.0) then
-            f=abs(fun(x,vol,ifirst))+f
-            f_sgn=fun(x,vol,ifirst)+f_sgn
+            f1=fun(x,vol,ifirst)
+            f=abs(f1)+f
+            f_sgn=f1+f_sgn
          else
 c this accumulated value will not be used
-            f=abs(fun(x,vol,ifirst))+f
-            f_sgn=fun(x,vol,ifirst)+f_sgn
+            f1=fun(x,vol,ifirst)
+            f=abs(f1)+f
+            f_sgn=f1+f_sgn
             ifirst=1
             call nextlexi(ndim,ifold,kfold,iret)
             if(iret.eq.0) goto 1
 c closing call: accumulated value with correct sign
-            f=abs(fun(x,vol,2))
-            f_sgn=fun(x,vol,2)
+            f1=fun(x,vol,2)
+            f=abs(f1)
+            f_sgn=f1
          endif
 c
          if(imode.eq.0) then
@@ -228,7 +262,8 @@ c Do next iteration
       implicit none
       integer  nint,nhits(nint),nit
       real * 8 xacc(0:nint),xgrid(0:nint)
-      real * 8 xn(100),r
+      real * 8 xn(nint),r,tiny
+      parameter ( tiny=1d-8 )
       integer kint,jint
       logical plot_grid
       parameter (plot_grid=.false.)
@@ -245,17 +280,42 @@ c Thus the integral of rho is performed by summing up
       do kint=1,nint
          xacc(kint)=xacc(kint)/xacc(nint)
       enddo
+cRF: Check that we have a reasonable result and update the accumulated
+c results if need be
+      do kint=1,nint
+         if (xacc(kint).le.(xacc(kint-1)+tiny)) then
+            write (*,*) 'Accumulated results need adaptation #1:'
+            write (*,*) xacc(kint),xacc(kint-1),' become'
+            xacc(kint)=xacc(kint-1)+tiny
+            write (*,*) xacc(kint),xacc(kint-1)
+         endif
+      enddo
+c it could happen that the change above yielded xacc() values greater
+c than 1; should be fixed once more.
+      xacc(nint)=1d0
+      do kint=1,nint
+         if (xacc(nint-kint).ge.(xacc(nint-kint+1)-tiny)) then
+            write (*,*) 'Accumulated results need adaptation #2:'
+            write (*,*) xacc(nint-kint),xacc(nint-kint+1),' become'
+            xacc(nint-kint)=1d0-dble(kint)*tiny
+            write (*,*) xacc(nint-kint),xacc(nint-kint+1)
+         else
+            exit
+         endif
+      enddo
+cend RF
+
       if (plot_grid) then
          write(11,*) 'set limits x 0 1 y 0 1'
          write(11,*) 0, 0
          do kint=1,nint
             write(11,*) xgrid(kint),xacc(kint)
          enddo
-         write(11,*) 'join 0'
+         write(11,*) 'join 1'
       endif
 
       do kint=1,nint
-         r=dble(kint)/nint
+         r=dble(kint)/dble(nint)
 
          if (plot_grid) then
             write(11,*) 0, r
@@ -344,9 +404,9 @@ c imode=3 store generation efficiency in x(1)
       integer icell(ndimmax),ncell(ndimmax)
       integer ifold(ndimmax),kfold(ndimmax)
       common/cifold/ifold
-      real * 8 r,f,ubound,vol,ran2,xmmm(nintervals,ndimmax)
+      real * 8 r,f,ubound,vol,ran3,xmmm(nintervals,ndimmax)
       real * 8 rand(ndimmax)
-      external fun,ran2
+      external fun,ran3
       integer icalls,mcalls,kdim,kint,nintcurr,iret,ifirst
       save icalls,mcalls,xmmm
       if(imode.eq.0) then
@@ -377,7 +437,7 @@ c imode=3 store generation efficiency in x(1)
  10   continue
       do kdim=1,ndim
          nintcurr=nintervals/ifold(kdim)
-         r=ran2()
+         r=ran3(.false.)
          do kint=1,nintcurr
             if(r.lt.xmmm(kint,kdim)) then
                ncell(kdim)=kint
@@ -385,7 +445,7 @@ c imode=3 store generation efficiency in x(1)
             endif
          enddo
  1       continue
-         rand(kdim)=ran2()
+         rand(kdim)=ran3(.false.)
       enddo
       ubound=1
       do kdim=1,ndim
@@ -421,7 +481,7 @@ c get final value (x and vol not used in this call)
          call increasecnt
      &        ('upper bound failure in inclusive cross section',imode)
       endif
-      ubound=ubound*ran2()
+      ubound=ubound*ran3(.false.)
       icalls=icalls+1
       if(ubound.gt.f) then
          call increasecnt
@@ -485,3 +545,70 @@ c long for this subroutine to work properly
          enddo
       endif
       end
+
+      double precision function ran3(even)
+      implicit none
+      double precision ran2,ran3,get_ran
+      logical even
+      external get_ran
+      if (even) then
+         ran3=get_ran()
+      else
+         ran3=ran2()
+      endif
+      return
+      end
+
+      subroutine initialize_even_random_numbers(ncalls0,ndim,ncalls)
+c Recompute the number of calls. Uses the algorithm from VEGAS
+      implicit none
+      integer ncalls0,ndim,ncalls,i
+      integer dim,ng,npg,k
+      common /even_ran/dim,ng,npg,k
+      dim=ndim
+      ng=(ncalls0/2.)**(1./ndim)
+      k=ng**ndim
+      npg=ncalls0/k
+      if(npg.lt.2)npg=2
+      ncalls=npg*k
+      write (*,*) ' dim:',dim,' ng:',ng,' npg:',npg,' k:',k
+      return
+      end
+
+
+      double precision function get_ran()
+      implicit none
+      double precision get_ran,ran2,dng
+      external ran2
+      logical firsttime
+      data firsttime/.true./
+      integer dim,ng,npg,k
+      common /even_ran/dim,ng,npg,k
+      integer maxdim
+      parameter (maxdim=100)
+      integer iii(maxdim),kkk(maxdim),i,iret
+      integer current_dim
+      save current_dim,dng,kkk,iii
+      if (firsttime) then
+         dng=1d0/dble(ng)
+         current_dim=0
+         do i=1,dim
+           iii(i)=ng
+           kkk(i)=1
+        enddo
+        firsttime=.false.
+      endif
+      current_dim=mod(current_dim,dim)+1
+c This is the random number in the hypercube 'k' for current_dim
+      get_ran=dng*(ran2()+dble(kkk(current_dim)-1))
+c Got random numbers for all dimensions, update kkk() for the next call
+      if (current_dim.eq.dim) then
+         call nextlexi(dim,iii,kkk,iret)
+         if (iret.eq.1) then
+            call nextlexi(dim,iii,kkk,iret)
+         endif
+      endif
+      return
+      end
+
+

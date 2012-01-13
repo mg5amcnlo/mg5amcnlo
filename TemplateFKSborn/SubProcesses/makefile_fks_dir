@@ -1,10 +1,10 @@
-F77   = gfortran
+include ../../../Source/make_opts
+
 CC    = g++
-FFLAGS = -g -ffixed-line-length-132 -fno-automatic
-#FFLAGS = -O -ffixed-line-length-132 -fno-automatic
-#FFLAGS = -g -pg -ffixed-line-length-132 -fno-automatic
-LIBDIR = ../../lib/
-BINDIR = ../../bin/
+
+LIBDIR = ../../../lib/
+BINDIR = ../../../bin/
+
 
 FASTJET_CONFIG = fastjet-config
 CXXFLAGS += $(shell $(FASTJET_CONFIG) --cxxflags)
@@ -12,11 +12,14 @@ FJLIBS += $(shell $(FASTJET_CONFIG) --libs --plugins ) -lstdc++
 #FJLIBS += $(shell $(FASTJET_CONFIG) --libs --plugins )
 #FJLIBS=
 
-LINKLIBS =  -L../../lib/ -ldhelas3 -ldsample_fks -lmodel -lgeneric -lpdf
-LIBS = $(LIBDIR)libdhelas3.a $(LIBDIR)libdsample_fks.a $(LIBDIR)libgeneric.a $(LIBDIR)libpdf.a $(LIBDIR)libmodel.a
+NLOLIBS= 
+LINKLIBS =  -L../../../lib/ -ldhelas -ldsample_fks -lmodel -lgeneric -lpdf $(lhapdf)
+LIBS = $(LIBDIR)libdhelas.a $(LIBDIR)libdsample_fks.a $(LIBDIR)libgeneric.a $(LIBDIR)libpdf.a $(LIBDIR)libmodel.a
 
 # Files for all executables
-FILES= myamp.o auto_dsig.o genps_fks.o matrix.o setcuts.o cluster.o reweight.o initcluster.o setscales.o born.o sborn_sf.o $(patsubst %.f,%.o,$(wildcard b_sf_???.f)) fks_Sij.o trapfpe.o fastjetfortran_madfks.o ktclusdble.o fks_singular.o montecarlocounter.o
+FILES= myamp.o auto_dsig.o genps_fks.o matrix.o setcuts.o cluster.o reweight.o initcluster.o setscales.o \
+         born.o sborn_sf.o $(patsubst %.f,%.o,$(wildcard b_sf_???.f)) fks_Sij.o trapfpe.o fastjetfortran_madfks.o \
+         ktclusdble.o fks_singular.o montecarlocounter.o mirror.o reweight_xsec.o
 
 # Files needed for vegas, mint & mintMC
 RUN= $(FILES) unwgt.o cuts.o add_write_info.o LesHouches.o madfks_dbook.o madfks_plot.o
@@ -28,13 +31,13 @@ VEGAS= $(RUN) driver_vegas.o vegas2.o
 MINT= $(RUN) mint-integrator2.o driver_mint.o
 
 # Files for mintMC
-MINTMC= $(RUN) mint-integrator2.o driver_mintMC.o write_event.o
+MINTMC= $(RUN) mint-integrator2.o driver_mintMC.o write_event.o handling_lhe_events.o
 
 # Files for tests
 TEST= $(FILES) LesHouchesDummy.o cuts.o
 
 # Files for gensym
-SYM= $(FILES) LesHouchesDummy.o symmetry_fks_v3.o
+SYM= $(FILES) LesHouchesDummy.o symmetry_fks_v3.o write_ajob.o
 
 # Files for link_fks
 LINK= $(TEST) link_fks.o
@@ -72,7 +75,7 @@ test_MC: symmetry_fks_test_MC.o $(TEST)
 	$(F77) $(FFLAGS) -o test_MC symmetry_fks_test_MC.o $(TEST) $(LINKLIBS) $(FJLIBS)
 
 madevent_vegas: $(VEGAS)  makefile $(LIBS)
-	$(F77) $(FFLAGS) -o madevent_vegas $(VEGAS) $(LINKLIBS) $(FJLIBS)
+	$(F77) $(FFLAGS) -o madevent_vegas $(VEGAS) $(NLOLIBS) $(LINKLIBS) $(FJLIBS)
 
 madevent_mint: $(MINT)  makefile $(LIBS)
 	$(F77) $(FFLAGS) -o madevent_mint $(MINT) $(LINKLIBS) $(FJLIBS)

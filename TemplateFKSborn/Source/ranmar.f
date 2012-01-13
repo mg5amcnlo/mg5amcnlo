@@ -69,66 +69,6 @@ c
 
 
 
-
-      subroutine ntuple(x,a,b,ii,jconfig)
-c-------------------------------------------------------
-c     Front to ranmar which allows user to easily
-c     choose the seed.
-c------------------------------------------------------
-      implicit none
-c
-c     Arguments
-c
-      double precision x,a,b
-      integer ii,jconfig
-c
-c     Local
-c
-      integer init, ioffset
-      integer     ij, kl, iseed1,iseed2
-
-c
-c     Global
-c
-      integer         iseed
-      common /to_seed/iseed
-c
-c     Data
-c
-      data init /1/
-      save ij, kl
-c-----
-c  Begin Code
-c-----
-      if (init .eq. 1) then
-         init = 0
-         call get_offset(ioffset)
-         if (iseed .eq. 0) call get_base(iseed)
-c
-c     TJS 3/13/2008
-c     Modified to allow for more sequences 
-c     iseed can be between 0 and 31328*30081
-c     before pattern repeats
-c
-         ij=1802+jconfig + mod(iseed,30081)
-         kl=9373+(iseed/31328)+ioffset 
-         write(*,'(a,i6,a3,i6)') 'Using random seed offsets',jconfig," : ",ioffset
-         write(*,*) ' with seed', iseed
-         do while (ij .gt. 31328)
-            ij = ij - 31328
-         enddo
-         do while (kl .gt. 30081)
-            kl = kl - 30081
-         enddo
-        call rmarin(ij,kl)         
-      endif
-      call ranmar(x)
-      do while (x .lt. 1d-16)
-         call ranmar(x)
-      enddo
-      x = a+x*(b-a)
-      end
-
       subroutine get_base(iseed)
 c-------------------------------------------------------
 c     Looks for file iproc.dat to offset random number gen
@@ -272,4 +212,73 @@ c-----
       rancm = 16777213d0 / 16777216d0
       iranmr = 97
       jranmr = 33
+      end
+
+
+
+
+
+
+
+
+
+
+      subroutine ntuple(x,a,b,ii,jconfig)
+c-------------------------------------------------------
+c     Front to ranmar which allows user to easily
+c     choose the seed.
+c------------------------------------------------------
+      implicit none
+c
+c     Arguments
+c
+      double precision x,a,b
+      integer ii,jconfig
+c
+c     Local
+c
+      integer init, ioffset
+      integer     ij, kl, iseed1,iseed2
+
+c
+c     Global
+c
+      integer         iseed
+      common /to_seed/iseed
+c
+c     Data
+c
+      data init /1/
+      save ij, kl
+c-----
+c  Begin Code
+c-----
+      if (init .eq. 1) then
+         init = 0
+         call get_offset(ioffset)
+         if (iseed .eq. 0) call get_base(iseed)
+c
+c     TJS 3/13/2008
+c     Modified to allow for more sequences 
+c     iseed can be between 0 and 31328*30081
+c     before pattern repeats
+c
+         ij=1802+jconfig + mod(iseed,30081)
+         kl=9373+(iseed/31328)+ioffset 
+         write(*,'(a,i6,a3,i6)') 'Using random seed offsets',jconfig,
+     &        " : ",ioffset
+         write(*,*) ' with seed', iseed
+         do while (ij .gt. 31328)
+            ij = ij - 31328
+         enddo
+         do while (kl .gt. 30081)
+            kl = kl - 30081
+         enddo
+        call rmarin(ij,kl)         
+      endif
+      call ranmar(x)
+      do while (x .lt. 1d-16)
+         call ranmar(x)
+      enddo
+      x = a+x*(b-a)
       end

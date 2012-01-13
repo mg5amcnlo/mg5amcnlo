@@ -1442,7 +1442,7 @@ END
         return len(color_flow_list)
     
     #===============================================================================
-    # write_maxamps_file
+    # write_born_nhel_file
     #===============================================================================
     def write_born_nhel_file(self, writer, matrix_element, nflows, fortran_model, ncolor):
         #test written
@@ -1458,21 +1458,6 @@ END
     
         return True
     
-    #===============================================================================
-    # write_maxamps_file
-    #===============================================================================
-#    def write_born_maxamps_file(self, writer, matrix_element, fortran_model, ncolor):
-#        #test written
-#        """Write the born_maxamps.inc file for MG4."""
-#    
-#        file = "       integer    bmaxamps\n"
-#        file = file + "parameter (bmaxamps=%d)" % \
-#               (len(matrix_element.get_all_amplitudes()))
-#   
-#        # Write the file
-#        writer.writelines(file)
-#    
-#        return True
     
     
     #===============================================================================
@@ -1746,7 +1731,6 @@ END
                      % (2, 1, 1, '1')
 
         return lines
-
 
     def get_pdf_lines_mir(self, matrix_element, ninitial, subproc_group = False,\
                           mirror = False): #test written

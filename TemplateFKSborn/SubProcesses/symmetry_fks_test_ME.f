@@ -9,7 +9,7 @@ c     Constants
 c
       include 'genps.inc'      
       include "nexternal.inc"
-      include '../../Source/run_config.inc'
+      include '../../../Source/run_config.inc'
       
       double precision ZERO,one
       parameter       (ZERO = 0d0)

@@ -1,4 +1,6 @@
 #!/bin/bash
+TD=td_mac_intel
+PSOPEN=open
 
 # $? is the value of last executed command. A call to this function
 # after a failure will cause the program to quit the script
@@ -133,5 +135,6 @@ else
 fi
 
 ./NLO_Born3.py
-
+$TD MADatNLO_combined.top "POSTSCR,ORIENT=3"
+$PSOPEN MADatNLO_combined.ps
 #td2pdf MADatNLO_con

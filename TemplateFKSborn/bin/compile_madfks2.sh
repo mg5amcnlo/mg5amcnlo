@@ -16,6 +16,25 @@ Maindir=`pwd`
 
 libdir=$Maindir/lib
 CutToolsdir=$Maindir/../CutTools
+carddir=$Maindir/Cards
+LHAPDF=`lhapdf-config --libdir`
+LHAPDFSETS=`lhapdf-config --pdfsets-path`
+
+
+c=`awk '/^[^#].*=.*pdlabel/{print $1}' Cards/run_card.dat`
+if [[ $c == "'lhapdf'" ]]; then
+    echo Using LHAPDF interface!
+    export lhapdf=true
+    if [ ! -f $libdir/libLHAPDF.a ]; then 
+      ln -s $LHAPDF/libLHAPDF.a $libdir/libLHAPDF.a 
+    fi
+    if [ ! -d $libdir/PDFsets ]; then 
+      ln -s $LHAPDFSETS $libdir/. 
+    fi
+else
+    unset lhapdf
+fi
+
 
 echo ''
 echo 'Press "0" for "NO" and "1" for "YES"'
@@ -99,7 +118,7 @@ if [[ $all_dirs != '1' ]] ; then
     read dirs
 else
     cd SubProcesses
-    dirs=`ls -d P*_[1-9]*`
+    dirs=`ls -d P*/R_*`
     cd ..
 fi
 
@@ -178,7 +197,7 @@ echo 'continuing with the P* directories...'
 echo ''
 
 if [[ $link_fks == '1' || $gensym == '1' || $madevent_compile == '1' ]]; then
-    dir=`ls -d P* | tail -n1`
+    dir=`ls -d P*/R* | tail -n1`
     if [[ -e $dir"/helicities.inc" ]]; then
 	echo 'helicities.inc found: it is recommended to MC over helicities'
 	echo 'converting fks_singular.f and fks_singularMC.f'
@@ -353,7 +372,7 @@ for dir in $dirs ; do
     else
 	echo '     No need for this dir: doing n-body only'
     fi
-    cd ..
+    cd $Maindir/SubProcesses
 done
 
 if [[ $test == "1" ]]; then

@@ -41,10 +41,7 @@ c
 c     open file
 c
       call open_file(iunit,'run_card.dat',fopened)
-      if(.not.fopened) then
-         write(*,*) 'Error: File run_card.dat not found'
-         stop
-      else
+      if(fopened) then
 c
 c     first look for process-specific parameters
 c
@@ -74,9 +71,8 @@ c
              call case_trap2(ctemp)
              param(npara)=ctemp
 c
- 11          cycle
          endif
-      enddo
+ 11   enddo
  20   rewind(iunit)
 c
 c     read in values
@@ -143,9 +139,8 @@ c
              call case_trap2(ctemp)
              param(npara)=ctemp
 c
- 21          cycle
          endif
-       enddo
+ 21   enddo
  30   rewind(iunit)
 c
 c     read in values

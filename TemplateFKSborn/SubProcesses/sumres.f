@@ -71,9 +71,9 @@ c         write (*,*) lgraph(size),graph(size)
          j=map(i)
          buffer=""
          write (buffer(1:10),'(i5,i5)') i,j
-         write (buffer(14:14+ldir(j)),'(a)') dir(j)
-         write (buffer(35:35+lcor(j)),'(a)') cor(j)
-c$$$         write (buffer(45:45+lgraph(j)),'(a)') graph(j)
+         write (buffer(14:14+ldir(j)),'(a)') dir(j)(1:ldir(j))
+         write (buffer(39:39+lcor(j)),'(a)') cor(j)(1:lcor(j))
+c$$$         write (buffer(45:45+lgraph(j)),'(a)') graph(j)(1:lgraph(j))
          write (buffer(52:70),'(d15.8)') num1(j)
          write (buffer(71:89),'(d15.8)') num2(j)
          write (buffer(90:105),'(f10.5)')

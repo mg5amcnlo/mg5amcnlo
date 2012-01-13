@@ -4,11 +4,40 @@ c**************************************************************
 c
 c     Scales
 c
-      real*8          scale,scalefact,alpsfact
+      real*8          scale,scalefact,ellissextonfact,alpsfact
       logical         fixed_ren_scale,fixed_fac_scale,fixed_couplings,hmult
       integer         ickkw,nhmult
-      common/to_scale/scale,scalefact,alpsfact,fixed_ren_scale,fixed_fac_scale,
-     $                fixed_couplings,ickkw,nhmult,hmult
+      common/to_scale/scale,scalefact,ellissextonfact,alpsfact,fixed_ren_scale,
+     $                fixed_fac_scale,fixed_couplings,ickkw,nhmult,hmult
+
+c
+c New stuff for scales (NLO)
+c
+
+c Same as fixed_ren_scale and fixed_fac_scale, for Ellis-Sexton scale
+      logical fixed_QES_scale
+      common/cfxQES/fixed_QES_scale
+
+c Ratios of current values of scales over their reference values. The
+c latter may be fixed or dynamic
+      double precision muR_over_ref,muF1_over_ref,muF2_over_ref,
+     #                 QES_over_ref
+      common/cscales_fact/muR_over_ref,muF1_over_ref,muF2_over_ref,
+     #                    QES_over_ref
+
+c Values of fixed reference scales, to be given in input
+      double precision muR_ref_fixed,muF1_ref_fixed,
+     #                 muF2_ref_fixed,QES_ref_fixed
+      common/cscales_fixed_values/muR_ref_fixed,muF1_ref_fixed,
+     #                            muF2_ref_fixed,QES_ref_fixed
+
+c Values of the current scales squared. The information is partly
+c redundant with that of common block /to_scale/
+      double precision muR2_current,muF12_current,
+     #                 muF22_current,QES2_current
+      common/cscales_current_values/muR2_current,muF12_current,
+     #                              muF22_current,QES2_current
+
 c
 c     Collider
 c

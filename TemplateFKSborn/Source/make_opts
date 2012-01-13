@@ -1,14 +1,17 @@
 # Environment variables
 
 ifeq ($(origin FFLAGS),undefined)
-  FFLAGS= -O -w
+  #FFLAGS= -O -w
+  FFLAGS = -g -fno-automatic 
   #FFLAGS+= -g -fbounds-check -ffpe-trap=invalid,zero,overflow,underflow,denormal -Wall
 endif
+
 FFLAGS+= -ffixed-line-length-132
 
 # Set FC unless it's defined by an environment variable
 ifeq ($(origin FC),default)
-  FC=g77
+#  FC=g77
+  FC=gfortran
 endif
 
 # Options: dynamic, lhapdf

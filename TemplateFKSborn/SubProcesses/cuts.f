@@ -135,6 +135,9 @@ c jet cluster algorithm
       double precision rfj,sycut,palg,fastjetdmerge
       double precision d01,d12,d23,d34
       external fastjetdmerge
+      double precision ptmin(5)
+      integer njetnew
+      double precision thispt
 
       integer mm
 
@@ -191,7 +194,8 @@ c From the run_card.dat, maxjetflavor defines if b quark should
 c be considered here (via the logical variable 'is_a_jet').
       NN=0
       do j=nincoming+1,nexternal
-         if (is_a_j(j))then
+         if (is_a_j(j) .and. p(0,j).gt.1d-8) then
+             ! do not pass 0-momenta jets
             NN=NN+1
             do i=0,3
                pQCD(i,NN)=p(i,j)
@@ -219,7 +223,7 @@ c$$$      goto 123
 c Define jet clustering parameters
       palg=1.d0                 ! jet algorithm: 1.0=kt, 0.0=C/A, -1.0 = anti-kt
       rfj=0.7d0                 ! the radius parameter
-      sycut=15.d0                ! minimum jet pt
+      sycut=10d0
 
 c******************************************************************************
 c     call FASTJET to get all the jets
@@ -238,66 +242,20 @@ c     the jet for a given particle 'i':        jet(i),   note that this is
 c     the particle in pQCD, which doesn't necessarily correspond to the particle
 c     label in the process
 c
-      call fastjetppgenkt(pQCD,NN,rfj,sycut,palg,pjet,njet,jet)
-c
-c******************************************************************************
+ccc----FOR FJ v < 3.0
+c      call fastjetppgenkt(pQCD,NN,rfj,sycut,palg,pjet,njet,jet)
+ccc----
 
-c
-c Get the dmin corresponding to the recombination that went from n+1 to n jets
-c (sometimes known as d_{n n+1}).
-c$$$      d01=fastjetdmerge(0)
-c$$$      d12=fastjetdmerge(1)
-c$$$      d23=fastjetdmerge(2)
-c$$$      d34=fastjetdmerge(3)
-c$$$      write (*,*) njet,d01,d12,d23,d34
-c   ... etc.
 
-c$$$c Instead of using fastjet, KTCLUR can be used:
-c$$$c
-c$$$c KTCLUR clusters according to the usual kt-clustering scheme, as
-c$$$c proposed in Nucl.Phys.B406(1993)187. The first entry equal to 5
-c$$$c is equivalent to 4211, ie (pp collisions)+(angular variable=DeltaR)+
-c$$$c (no monotonic definition)+(recombination scheme=E). The E recombination
-c$$$c scheme is equivalent to summing four-momenta, so jets have in
-c$$$c general a non-zero mass. The entry ECUT is the denominator of the
-c$$$c kt-measure; thus setting it to one is equivalent to expressing
-c$$$c all d_i and d_{ij} in units of GeV^2 (assuming that Herwig returns
-c$$$c four-momenta in GeV)
-c$$$      NN=0
-c$$$      do j=nincoming+1,nexternal
-c$$$         if (is_a_j(j))then
-c$$$            NN=NN+1
-c$$$            do i=1,4
-c$$$               ppkt(i,NN)=p(mod(i,4),j)
-c$$$            enddo
-c$$$         endif
-c$$$      enddo
-c$$$      ECUT=1d0
-c$$$      DJET=1d0
-c$$$      CALL KTCLUR(5,PPkt,NN,DJET,ECUT,Y,*999)
-c$$$c Now define jet momenta, keeping only those jets with d>YCUT;
-c$$$c since ECUT=1, YCUT has units GeV^2. If one needs the list of all jets,
-c$$$c call KTINCL instead of KTRECO. Since we want to keep only jets with
-c$$$c pt>ptcut0, and the jets are massive, it seems safe to set YCUT=ptcut0^2
-c$$$      YCUT=10d0**2
-c$$$      CALL KTRECO(1,PPkt,NN,ECUT,YCUT,YCUT,PJET,JET,NJET,NSUB,*999)
-c$$$c Find which particles ended up in which jet
-c$$$c      CALL KTWICH(ECUT,YCUT,JETB,NJET1,*999)
-c$$$      goto 998
-c$$$ 999  write (*,*) 'Error in cuts.f: Jet clustering failed'
-c$$$      stop
-c$$$ 998  continue
+ccc----FOR FJ v > 3.0
+      call fastjetppgenkt(pQCD,NN,rfj,sycut,palg,pjet,njet)
+
 
       if (NJET .ne. NN .and. NJET .ne. NN-1) then
          passcuts=.false.
          return
       endif
 
-c For N+1 resolved partons (tests of non singular ME) uncomment what follows
-c$$$      if (NJET .ne. NN) then
-c$$$         passcuts=.false.
-c$$$         return
-c$$$      endif
 
  123  continue
 
@@ -307,4 +265,12 @@ c$$$      endif
 
 
 
+      subroutine unweight_function(p_born,unwgtfun)
+c Dummy function. Should always retrun 1.
+      implicit none
+      include 'nexternal.inc'
+      double precision unwgtfun,p_born(0:3,nexternal-1)
+      unwgtfun=1d0
+      return
+      end
 
