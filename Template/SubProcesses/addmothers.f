@@ -104,14 +104,14 @@ c
       if(nc.gt.0)then
       if(icolamp(1,iconfig,iproc)) then
         targetamp(1)=jamp2(1)
-c        print *,'Color flow 1 allowed for config ',iconfig
+        print *,'Color flow 1 allowed for config ',iconfig
       else
         targetamp(1)=0d0
       endif
       do ic =2,nc
         if(icolamp(ic,iconfig,iproc))then
           targetamp(ic) = jamp2(ic)+targetamp(ic-1)
-c          print *,'Color flow ',ic,' allowed for config ',iconfig,targetamp(ic)
+          print *,'Color flow ',ic,' allowed for config ',iconfig,targetamp(ic)
         else
           targetamp(ic)=targetamp(ic-1)
         endif
@@ -123,7 +123,7 @@ c          print *,'Color flow ',ic,' allowed for config ',iconfig,targetamp(ic)
          ic=ic+1
       enddo
       if(targetamp(nc).eq.0) ic=0
-c      print *,'Chose color flow ',ic
+      print *,'Chose color flow ',ic
       do i=1,nexternal
          if(ic.gt.0) then
             icolalt(1,isym(i,jsym))=icolup(1,i,ic,numproc)
@@ -191,15 +191,10 @@ c            Reverse colors of t-channels to get right color ordering
              else
                 jpart(1,i)=tprid(i,iconfig)
                 mo_color=get_color(jpart(1,i))
-                if(mo_color.eq.1) then
-                   icolalt(1,i) = 0
-                   icolalt(2,i) = 0
-                   tchannel=.true.
-                   cycle
-                endif
                 ncolmp=0
              endif
-             if(mo_color.ne.0.and.mo_color.ne.3.and.mo_color.ne.8)then
+             if(mo_color.gt.1.and.
+     $            mo_color.ne.3.and.mo_color.ne.8)then
                 da_color(1)=get_color(jpart(1,ida(1)))
                 da_color(2)=get_color(jpart(1,ida(2)))
                 call write_error(da_color(1), da_color(2), mo_color)
@@ -213,8 +208,8 @@ c            Reverse colors of t-channels to get right color ordering
      $            iforest(1,-max_branch,iconfig),icolalt,
      $            icolalt(2,ida(1)),icolalt(1,ida(1)))
 c            Fix t-channel color
-c             print *,'t-channel: ',i,ida(1),ida(2),mo_color
-c             print *,'colors: ',((icolmp(j,k),j=1,2),k=1,ncolmp)
+             print *,'t-channel: ',i,ida(1),ida(2),mo_color
+             print *,'colors: ',((icolmp(j,k),j=1,2),k=1,ncolmp)
              maxcolor=fix_tchannel_color(mo_color,maxcolor,
      $                                   ncolmp,icolmp,i,icolalt)
              tchannel=.true.
@@ -265,11 +260,10 @@ c     Add new color indices to list of color indices
      $            iforest(1,-max_branch,iconfig),icolalt,
      $            icolalt(1,ida(j)),icolalt(2,ida(j)))
           enddo
-c          print *,'s-channel: ',i,mo_color,ida(1),ida(2)
-c          print *,'colors: ',((icolmp(j,k),j=1,2),k=1,ncolmp)
+          print *,'s-channel: ',i,mo_color,ida(1),ida(2)
+          print *,'colors: ',((icolmp(j,k),j=1,2),k=1,ncolmp)
           if(mo_color.eq.1) then ! color singlet
-             icolalt(1,i) = 0
-             icolalt(2,i) = 0
+             maxcolor=elim_indices(0,0,ncolmp,icolmp,i,icolalt,maxcolor)
           elseif(mo_color.eq.-3) then ! color anti-triplet
              maxcolor=elim_indices(0,1,ncolmp,icolmp,i,icolalt,maxcolor)
           elseif(mo_color.eq.3) then ! color triplet
@@ -393,7 +387,7 @@ c     Multiparticle vertex - need to go through daughters and collect all colors
           ida(2)=forest(2,ipart)
           da_color(1)=get_color(jpart(1,ida(1)))
           da_color(2)=get_color(jpart(1,ida(2)))
-c          print *,'iforest: ',ipart,ida(1),ida(2),da_color(1),da_color(2)
+          print *,'iforest: ',ipart,ida(1),ida(2),da_color(1),da_color(2)
           if(da_color(1).ne.2.and.da_color(2).lt.da_color(1).or.
      $         da_color(2).eq.2)then
 c            Order daughters according to color, but always color 2 first
@@ -452,7 +446,8 @@ c     Avoid color sextet-type negative indices
       end
 
 c********************************************************************
-      function fix_tchannel_color(mo_color,maxcolor,ncolmp,icolmp,ires,icol)
+      function fix_tchannel_color(mo_color,maxcolor,ncolmp,icolmp,ires,
+     $                            icol)
 c********************************************************************
 c     Successively eliminate identical pairwise color indices from the
 c     icolmp list, until only (max) one triplet and one antitriplet remains
@@ -503,13 +498,21 @@ c           color for t-channels needs to be reversed
          endif
       enddo
 
+      if(mo_color.eq.0)then
+         icol(1,ires)=0
+         icol(2,ires)=0
+      endif
+
       fix_tchannel_color=maxcolor
-      if(mo_color.eq.0.and.i3.eq.0.and.i3bar.eq.0) return
+      if(mo_color.le.1.and.i3.eq.0.and.i3bar.eq.0) return
       if(mo_color.eq.3.and.(i3.eq.1.and.i3bar.eq.0
      $     .or.i3bar.eq.1.and.i3.eq.0)) return
       if(mo_color.eq.8.and.i3.eq.1.and.i3bar.eq.1) return
 
-      if(mo_color.eq.0.and.i3-i3bar.eq.2) then
+c     Make sure that max and min don't come from the same octet
+      call clean_max_min(icolmp,ncolmp,max3,min3,max3bar,min3bar,i3,i3bar)
+
+      if(mo_color.le.1.and.i3-i3bar.eq.2) then
 c     Replace the maximum index with the minimum one everywhere
          do i=ires+1,-1
             do j=1,2
@@ -517,8 +520,8 @@ c     Replace the maximum index with the minimum one everywhere
      $              icol(j,i)=min3bar
             enddo
          enddo
-c         print *,'Replaced ',max3,' by ',min3bar
-      elseif(mo_color.eq.0.and.i3bar-i3.eq.2) then
+         print *,'Replaced ',max3,' by ',min3bar
+      elseif(mo_color.le.1.and.i3bar-i3.eq.2) then
 c     Replace the maximum index with the minimum one everywhere
          do i=ires+1,-1
             do j=1,2
@@ -526,19 +529,23 @@ c     Replace the maximum index with the minimum one everywhere
      $              icol(j,i)=min3
             enddo
          enddo
-c         print *,'Replaced ',max3bar,' by ',min3
-      elseif(mo_color.eq.0.and.i3.eq.1.and.i3bar.eq.1) then
+         print *,'Replaced ',max3bar,' by ',min3
+      elseif(mo_color.le.1.and.i3.eq.1.and.i3bar.eq.1) then
 c     Replace the maximum index with the minimum one everywhere
          maxcol=max(max3,max3bar)
-         mincol=min(min3,min3bar)
+         if(maxcol.eq.max3) then
+            mincol=min3bar
+         else
+            mincol=min3
+         endif
          do i=ires+1,-1
             do j=1,2
                if(icol(j,i).eq.maxcol)
      $              icol(j,i)=mincol
             enddo
          enddo
-c         print *,'Replaced ',maxcol,' by ',mincol
-      elseif(mo_color.eq.0.and.i3.eq.2.and.i3bar.eq.2) then
+         print *,'Replaced ',maxcol,' by ',mincol
+      elseif(mo_color.le.1.and.i3.eq.2.and.i3bar.eq.2) then
 c     Replace the maximum index with the minimum one everywhere
          do i=ires+1,-1
             do j=1,2
@@ -548,70 +555,51 @@ c     Replace the maximum index with the minimum one everywhere
      $              icol(j,i)=min3bar
             enddo
          enddo
-c         print *,'Replaced ',max3bar,' by ',min3,' and ',max3,' by ',min3bar
-      elseif(mo_color.eq.0.and.mod(i3,3).eq.0.and.mod(i3bar,3).eq.0)then
+         print *,'Replaced ',max3bar,' by ',min3,' and ',max3,' by ',min3bar
+      elseif(mo_color.le.1.and.mod(i3,3).eq.0.and.mod(i3bar,3).eq.0)then
 c     This is epsilon index - do nothing
          continue
-      else if(mo_color.eq.3.and.i3-i3bar.eq.1) then
-c     Replace the maximum index with the minimum one everywhere
-         do i=ires+1,-1
-            do j=1,2
-               if(icol(j,i).eq.max3)
-     $              icol(j,i)=min3bar
-            enddo
-         enddo
-c         print *,'Replaced ',max3,' by ',min3bar
-c     Fix the color for ires
-         icol(1,ires)=0
-         icol(2,ires)=min3
-c         print *,'Set mother color for ',ires,' to ',(icol(j,ires),j=1,2)
-      else if(mo_color.eq.3.and.i3bar-i3.eq.1) then
-c     Replace the maximum index with the minimum one everywhere
-         do i=ires+1,-1
-            do j=1,2
-               if(icol(j,i).eq.max3bar)
-     $              icol(j,i)=min3
-            enddo
-         enddo
-c         print *,'Replaced ',max3bar,' by ',min3
-c     Fix the color for ires
-         icol(1,ires)=min3bar
-         icol(2,ires)=0
-c         print *,'Set mother color for ',ires,' to ',(icol(j,ires),j=1,2)
       else if(mo_color.eq.3.and.mod(i3-i3bar,3).eq.2) then
 c     This is an epsilon index
          maxcolor=maxcolor+1
          icol(1,ires)=maxcolor
          icol(2,ires)=0
-c         print *,'Set mother color for ',ires,' to ',(icol(j,ires),j=1,2)
+         print *,'Set mother color for ',ires,' to ',(icol(j,ires),j=1,2)
       else if(mo_color.eq.3.and.mod(i3bar-i3,3).eq.2) then
 c     This is an epsilon index
          maxcolor=maxcolor+1
          icol(1,ires)=0
          icol(2,ires)=maxcolor
-c         print *,'Set mother color for ',ires,' to ',(icol(j,ires),j=1,2)
-      else if(mo_color.eq.8.and.i3.eq.2.and.i3bar.eq.2) then
+         print *,'Set mother color for ',ires,' to ',(icol(j,ires),j=1,2)
+      else if(mo_color.eq.3.and.(i3-i3bar.eq.1.or.i3bar-i3.eq.1).or.
+     $        mo_color.eq.8.and.i3.eq.2.and.i3bar.eq.2) then
 c     Replace the maximum index with the minimum one everywhere
+c     (we don't know if we should replace i3 with i3bar or vice versa)
          maxcol=max(max3,max3bar)
+         if(maxcol.eq.max3) then
+            mincol=min3bar
+         else
+            mincol=min3
+         endif
          do i=ires+1,-1
             do j=1,2
-               if(icol(j,i).eq.max3.and.max3.eq.maxcol)
-     $              icol(j,i)=min3bar
-               if(icol(j,i).eq.max3bar.and.max3bar.eq.maxcol)
-     $              icol(j,i)=min3
+               if(icol(j,i).eq.maxcol)
+     $              icol(j,i)=mincol
             enddo
          enddo
 c     Fix the color for ires
+         icol(1,ires)=0
+         icol(2,ires)=0
          if(max3.eq.maxcol)then
-c            print *,'Replaced ',max3,' by ',min3bar
-            icol(1,ires)=max3bar
-            icol(2,ires)=min3
+            print *,'Replaced ',max3,' by ',min3bar
+            if(i3-i3bar.ge.0) icol(2,ires)=min3
+            if(i3bar-i3.ge.0) icol(1,ires)=max3bar
          else
-c            print *,'Replaced ',max3bar,' by ',min3
-            icol(1,ires)=min3bar
-            icol(2,ires)=max3
+            print *,'Replaced ',max3bar,' by ',min3
+            if(i3-i3bar.ge.0) icol(2,ires)=max3
+            if(i3bar-i3.ge.0) icol(1,ires)=min3bar
          endif
-c         print *,'Set mother color for ',ires,' to ',(icol(j,ires),j=1,2)
+         print *,'Set mother color for ',ires,' to ',(icol(j,ires),j=1,2)
       else
 c     Don't know how to deal with this
          call write_error(i3,i3bar,mo_color)
@@ -670,12 +658,14 @@ c     indices remain
          endif
       enddo
 
+      if(n3.eq.0) icol(1,ires)=0
+      if(n3bar.eq.0) icol(2,ires)=0
+
       if(i3.ne.n3.or.i3bar.ne.n3bar) then
          if(n3.gt.0.and.n3bar.eq.0.and.mod(i3bar+n3,3).eq.0)then
 c        This is an epsilon index interaction
             maxcolor=maxcolor+1
             icol(1,ires)=maxcolor
-            icol(2,ires)=0
             if(n3.eq.2)then
                maxcolor=maxcolor+1
                icol(2,ires)=-maxcolor
@@ -683,7 +673,6 @@ c        This is an epsilon index interaction
          elseif(n3bar.gt.0.and.n3.eq.0.and.mod(i3+n3bar,3).eq.0)then
 c        This is an epsilonbar index interaction
             maxcolor=maxcolor+1
-            icol(1,ires)=0
             icol(2,ires)=maxcolor
             if(n3.eq.2)then
                maxcolor=maxcolor+1
@@ -691,7 +680,8 @@ c        This is an epsilonbar index interaction
             endif
          elseif(n3.gt.0.and.n3bar.eq.0.and.i3-i3bar.eq.n3.or.
      $          n3bar.gt.0.and.n3.eq.0.and.i3bar-i3.eq.n3bar.or.
-     $          n3.eq.1.and.n3bar.eq.1.and.i3-i3bar.eq.0)then
+     $          n3.eq.1.and.n3bar.eq.1.and.i3-i3bar.eq.0.or.
+     $          n3.eq.0.and.n3bar.eq.0.and.i3-i3bar.eq.0)then
 c        We have a previous epsilon which gives the wrong pop-up index
             call fix_s_color_indices(n3,n3bar,i3,i3bar,ncolmp,icolmp,ires,icol)
          else
@@ -719,7 +709,7 @@ c
       integer n3,n3bar,ncolmp,icolmp(2,*),maxcolor
       integer ires,icol(2,-nexternal+2:2*nexternal-3)
       integer i,j,i3,i3bar
-      integer max_n3,max_n3bar,min_n3,min_n3bar
+      integer max_n3,max_n3bar,min_n3,min_n3bar,maxcol,mincol
 
       max_n3=0
       max_n3bar=0
@@ -735,38 +725,107 @@ c
          if(icolmp(2,i).gt.0.and.icolmp(2,i).lt.min_n3bar)
      $        min_n3bar=icolmp(2,i)
       enddo
-      if(n3.eq.1.and.n3bar.eq.0.and.i3-i3bar.eq.n3)then
-c     Replace the highest 3-index with the lowest 3bar-index,
-c     and set daughter index to lowest 3-index
-         icol(1,ires)=min_n3
-         icol(2,ires)=0
-         do i=ires+1,-1
-            if(icol(1,i).eq.max_n3)
-     $           icol(1,i)=min_n3bar
-         enddo
-      else if(n3bar.eq.1.and.n3.eq.0.and.i3bar-i3.eq.n3bar)then
-c     Replace the highest 3bar-index with the lowest 3-index,
-c     and set daughter index to lowest 3bar-index
-         icol(1,ires)=0
-         icol(2,ires)=min_n3bar
-         do i=ires+1,-1
-            if(icol(2,i).eq.max_n3bar)
-     $           icol(2,i)=min_n3
-         enddo
-      else if(n3bar.eq.1.and.n3.eq.1.and.i3bar-i3.eq.0)then
+
+c     Make sure that max and min don't come from the same octet
+      call clean_max_min(icolmp,ncolmp,max_n3,min_n3,
+     $                   max_n3bar,min_n3bar,i3,i3bar)
+
+      if(n3.eq.1.and.n3bar.eq.0.and.i3-i3bar.eq.n3.or.
+     $   n3bar.eq.1.and.n3.eq.0.and.i3bar-i3.eq.n3bar.or.
+     $   n3bar.eq.1.and.n3.eq.1.and.i3bar-i3.eq.0.or.
+     $   n3bar.eq.0.and.n3.eq.0.and.i3bar-i3.eq.0)then
 c     Replace the highest 3bar-index with the lowest 3-index,
 c     and vice versa
-         icol(1,ires)=min_n3
-         icol(2,ires)=min_n3bar
+         maxcol=max(max_n3,max_n3bar)
+         if(maxcol.eq.max_n3) then
+            mincol=min_n3bar
+         else
+            mincol=min_n3
+         endif
          do i=ires,-1
-            if(icol(2,i).eq.max_n3bar)
-     $           icol(2,i)=min_n3
-            if(icol(1,i).eq.max_n3)
-     $           icol(1,i)=min_n3bar
+            do j=1,2
+               if(icol(j,i).eq.maxcol)
+     $              icol(j,i)=mincol
+            enddo
          enddo
+         print *,'Replaced ',maxcol,' with ',mincol
       else
 c     Don't know how to deal with this
          call write_error(1001,n3,n3bar)
       endif
       return
+      end
+
+c*******************************************************************************
+      subroutine clean_max_min(icolmp,ncolmp,max3,min3,max3bar,min3bar,i3,i3bar)
+c*******************************************************************************
+      implicit none
+      integer ncolmp,icolmp(2,*)
+      integer i,j,max3,max3bar,min3,min3bar,i3,i3bar
+      
+
+c     Make sure that max and min don't come from the same octet
+      do i=1,ncolmp
+         if(icolmp(1,i).eq.max3.and.icolmp(2,i).eq.min3bar)then
+            min3bar=1000
+            do j=1,ncolmp
+               if(j.eq.i) cycle
+               if(icolmp(2,j).lt.min3bar) min3bar=icolmp(2,j)
+            enddo
+         endif
+         if(icolmp(2,i).eq.max3bar.and.icolmp(1,i).eq.min3)then
+            min3=1000
+            do j=1,ncolmp
+               if(j.eq.i) cycle
+               if(icolmp(1,j).lt.min3) min3=icolmp(1,j)
+            enddo
+         endif
+      enddo
+
+c     ...and that max and min are different
+      if(i3.gt.1.and.max3.eq.min3.or.i3bar.gt.1.and.max3bar.eq.min3bar)then
+         if(max3.eq.min3.and.i3.gt.1.and.
+     $        (max3.gt.max3bar.or.i3bar.le.1))then
+c        Need to change min3, while still ensuring that max3bar is ok
+            max3bar=0
+            min3=1000
+            do i=1,ncolmp
+               if(icolmp(2,i).gt.max3bar.and.icolmp(2,i).ne.min3bar)
+     $              max3bar=icolmp(2,i)
+               if(icolmp(1,i).lt.min3.and.icolmp(1,i).ne.max3)
+     $              min3=icolmp(1,i)
+            enddo
+c     Make sure that max3bar and min3 don't come from the same octet
+            do i=1,ncolmp
+               if(icolmp(2,i).eq.max3bar.and.icolmp(1,i).eq.min3)then
+                  min3=1000
+                  do j=1,ncolmp
+                     if(j.eq.i.or.icolmp(1,j).eq.max3) cycle
+                     if(icolmp(1,j).lt.min3) min3=icolmp(1,j)
+                  enddo
+               endif
+            enddo
+         else
+c        Need to change min3bar, while still ensuring that max3 is ok
+            max3=0
+            min3bar=1000
+            do i=1,ncolmp
+               if(icolmp(1,i).gt.max3.and.icolmp(1,i).ne.min3)
+     $              max3=icolmp(1,i)
+               if(icolmp(2,i).lt.min3bar.and.icolmp(2,i).ne.max3bar)
+     $              min3bar=icolmp(2,i)
+            enddo
+c     Make sure that max3 and min3bar don't come from the same octet
+            do i=1,ncolmp
+               if(icolmp(1,i).eq.max3.and.icolmp(2,i).eq.min3bar)then
+                  min3bar=1000
+                  do j=1,ncolmp
+                     if(j.eq.i.or.icolmp(2,j).eq.max3bar) cycle
+                     if(icolmp(2,j).lt.min3bar) min3bar=icolmp(2,j)
+                  enddo
+               endif
+            enddo
+         endif
+      endif
+
       end
