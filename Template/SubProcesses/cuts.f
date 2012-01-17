@@ -207,7 +207,7 @@ c         endif
 
          if(fixed_ren_scale) then
             G = SQRT(4d0*PI*ALPHAS(scale))
-            call setpara('param_card.dat',.false.)
+            call update_as_param()
          endif
 
 c     Put momenta in the common block to zero to start
@@ -300,7 +300,7 @@ c-  check the et
          endif
       endif
       if (mmnl.gt.0d0.or.mmnlmax.lt.1d5)then
-         if(SumDot(ptemp,ptemp2,1d0).lt.mmnl.or.SumDot(ptemp, ptemp2,1d0).gt.mmnlmax) then
+         if(dsqrt(SumDot(ptemp,ptemp2,1d0)).lt.mmnl.or.dsqrt(SumDot(ptemp, ptemp2,1d0)).gt.mmnlmax) then
             if(debug) write (*,*) 'lepton invariant mass -> fails'
             passcuts=.false.
             return
@@ -696,7 +696,7 @@ c     Set couplings in model files
                enddo
             enddo
          endif
-         call setpara('param_card.dat',.false.)
+         call update_as_param()
       endif
 
       IF (FIRSTTIME2) THEN

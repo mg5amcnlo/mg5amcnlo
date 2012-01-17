@@ -225,9 +225,8 @@ class Particle(PhysicsObject):
         """Filter for valid particle property values."""
 
         if name in ['name', 'antiname']:
-            # Must start with a letter, followed by letters,  digits,
-            # - and + only
-            p = re.compile('\A[a-zA-Z]+[\w]*[\-\+]*~?\Z')
+            # Forbid special character but +-~_
+            p=re.compile('''^[\w\-\+~_]+$''')
             if not p.match(value):
                 raise self.PhysicsObjectError, \
                         "%s is not a valid particle name" % value

@@ -24,15 +24,6 @@ Block MASS
    25 9.118800e+01 # MH 
 
 ###################################
-## INFORMATION FOR DECAY
-###################################
-DECAY   6 0.000000e+00 # WT
-DECAY  15 0.000000e+00
-DECAY  23 2.441404e+00 # WZ
-DECAY  24 3.00e+00     # WW
-DECAY  25 2.441404e+00 # WH
-
-###################################
 ## INFORMATION FOR WOLFENSTEIN
 ###################################
 Block Wolfenstein 
@@ -51,3 +42,15 @@ Block YUKAWA
    11 0.000000e+00 # yme 
    13 0.000000e+00 # ymm 
    15 1.777000e+00 # ymtau 
+###################################
+## INFORMATION FOR DECAY
+###################################
+DECAY   6 0.000000e+00 # WT 
+      0.99 5 24     # Branching ratio
+      0.01 3 24     # Branching ratio
+DECAY  15 0.000000e+00
+DECAY  23 2.441404e+00 # WZ
+      1.000e+00 5 -5  # 
+DECAY  24 3.00e+00 # WW 
+DECAY  25 2.441404e+00 # WH 
+

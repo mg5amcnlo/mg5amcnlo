@@ -17,9 +17,7 @@
 import madgraph.core.base_objects as base_objects
 import madgraph.core.helas_objects as helas_objects
 import aloha.aloha_writers as aloha_writers
-from madgraph import MadGraph5Error
 import aloha
-
 
 class HelasWriterError(Exception):
     """Class for the error of this module """

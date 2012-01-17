@@ -60,6 +60,7 @@ if __debug__ and not options.debug and \
 
 import logging
 import logging.config
+import madgraph.interface.coloring_logging
 
 try: 
     import readline
@@ -86,7 +87,7 @@ else:
         
     # charge history file
     try:
-        history_file = os.path.join(os.environ['HOME'], '.mg5history')
+        history_file = os.path.join(os.environ['HOME'], '.mg5', 'mg5history')
         readline.read_history_file(history_file)
     except:
         pass
@@ -124,25 +125,33 @@ try:
         if options.web:
             cmd_line = cmd_interface.MadGraphCmdWeb()
             cmd_line.debug_output = os.path.join(os.path.dirname(input_file),'generation.log')
-            cmd_line.use_rawinput == False
+            cmd_line.use_rawinput = False
             cmd_line.run_cmd('import command ' + input_file)
-            sys.exit()
         else:
             cmd_line = cmd_interface.MadGraphCmdShell(mgme_dir = options.mgme_dir)
-            cmd_line.use_rawinput == False
+            cmd_line.use_rawinput = False
             cmd_line.run_cmd('import command ' + input_file)
-            sys.exit()
+
     else:
         # Interactive mode
         if options.web:
-            cmd_interface.MadGraphCmdWeb().cmdloop()
+            cmd_line = cmd_interface.MadGraphCmdWeb()
+            cmd_line.cmdloop()
         else:
-            cmd_interface.MadGraphCmdShell(mgme_dir = options.mgme_dir).cmdloop()
+            cmd_line = cmd_interface.MadGraphCmdShell(mgme_dir = options.mgme_dir)
+            cmd_line.cmdloop()
 except KeyboardInterrupt:
     print 'writting history and quit on KeyboardInterrupt' 
     pass
-try: 
+
+try:
+    cmd_line.exec_cmd('quit all', printcmd=False)
     readline.set_history_length(100)
+    if not os.path.exists(os.path.join(os.environ['HOME'], '.mg5')):
+        os.mkdir(os.path.join(os.environ['HOME'], '.mg5'))
     readline.write_history_file(history_file)
-except:
+except Exception, error:
     pass
+
+
+    

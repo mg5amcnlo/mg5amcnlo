@@ -1,0 +1,34 @@
+#!/bin/bash
+#
+#  This runs hep2lhe on the unweighted_events.dat
+#
+#  Usage: run_hep2lhe [pydir  [run_name]]
+#  where pydir is the path to the hep2lhe executable
+
+pydir=$1
+
+
+if [ ! -e ../Cards/pythia_card.dat ]; then
+  echo "No pythia_card.dat found. Quitting..."
+  exit
+fi
+
+echo $$ >> ../myprocid
+
+rm -f hep2lhe.log > /dev/null
+rm -f hep2lhe.err > /dev/null
+rm -f hep2lhe.out > /dev/null
+
+echo "Running hep2lhe"
+$pydir/hep2lhe >& hep2lhe.log
+
+echo "pythia_events.lhe file generated, with simple jet clustering"
+echo "Warning! Never use this file for detector studies!"
+
+if [ -e pythia_events.lhe ] && [ -e pythia_events.init ]; then
+   echo "<LesHouchesEvents version=\"1.0\">" > temp.lhe
+   cat pythia_events.init >> temp.lhe
+   cat pythia_events.lhe >> temp.lhe
+   mv temp.lhe pythia_events.lhe
+   rm pythia_events.init
+fi

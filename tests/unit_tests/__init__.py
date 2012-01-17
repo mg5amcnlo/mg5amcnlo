@@ -12,11 +12,12 @@
 # For more information, please visit: http://madgraph.phys.ucl.ac.be
 #
 ################################################################################
-
 import unittest
 import math
-
 TestLoader = unittest.TestLoader
+#import tests
+#tests.NBTEST = 0
+
 
 class TestCase(unittest.TestCase):
     """Test Case with smarter self.assertraise in optimize mode"""
@@ -24,6 +25,7 @@ class TestCase(unittest.TestCase):
     maxDiff = None
     def assertRaises(self, error, *opt):
         """ smarter self.assertraise in optimize mode"""
+#        tests.NBTEST += 1
         if not __debug__:
             if error == AssertionError:
                 return
@@ -32,6 +34,7 @@ class TestCase(unittest.TestCase):
     def assertAlmostEqual(self, a, b, *opt, **arg):
         """Redefine the stupid unittest.assertAlmostEqual to act on
         significance instead of decimal places"""
+#        tests.NBTEST += 1
 
         places = 7
         if opt:
@@ -56,3 +59,22 @@ class TestCase(unittest.TestCase):
         unittest.TestCase.assertAlmostEqual(self, a/10**magnitude,
                                             b/10**magnitude, *opt, **arg)
         
+#    def assertEqual(self, *arg, **opt):
+#        """ """
+#        tests.NBTEST += 1
+#        unittest.TestCase.assertEqual(self, *arg, **opt)
+#
+#    def assertNotEqual(self, *arg, **opt):
+#        """ """
+#        tests.NBTEST += 1
+#        unittest.TestCase.assertNotEqual(self, *arg, **opt)        
+#        
+#    def assertTrue(self, *arg, **opt):
+#        tests.NBTEST += 1
+#        unittest.TestCase.assertTrue(self, *arg, **opt)    
+#        
+#    def assertFalse(self, *arg, **opt):
+#        tests.NBTEST += 1
+#        unittest.TestCase.assertFalse(self, *arg, **opt)        
+        
+            

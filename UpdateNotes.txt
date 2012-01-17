@@ -1,14 +1,114 @@
 Update notes for MadGraph 5 (in reverse time order)
 
+1.4.b9 (12/01/12): OM: New Interface to controll the madevent run.
+                       This one is accessible by 
+                        1) (from madevent output) ./bin/madevent
+                        2) (from MG5 command line) launch [MADEVENT_PATH] -i
+                       This interface replaces various script like refine, 
+                       survey, combine, run_..., rm_run, ...
+                       The script generate_events still exists but now calls
+                        ./bin/madevent. 
+                  OM: For MSSM model, convert param_card to SLAH1. This card is
+                      converted to SLAH2 during the MadEvent run since the UFO 
+                      model uses SLAH2. This allows to use Pythia 6,
+                      as well as have a coherent definition for the flavor.
+                  JA+OM: For decay width computations, the launch command in 
+                     addition to compute the width, creates a new param_card 
+                     with the width set to the associates values, and with the 
+                     Branching ratio associated (usefull for pythia). 
+                  NOTE: This param_card makes sense for future run ONLY if all 
+                     relevant decay are generated.
+                  EXAMPLE: (after launch bin/mg5):
+                       import model sm-full
+                       generate t > b w+
+                       define all = p b b~ l+ l- ta+ ta- vl vl~
+                       add process w+ > all all
+                       add process z > all all
+                       define v = z w+ w-
+                       add process h > all all
+                       add process h > v v, v > all all
+                       output
+                       launch
+                  OM: change output pythia8 syntax: If a path is specified this 
+                      is considered as the output directory.
+                  OM: Change the path of the madevent output files. This allow to 
+                      run mulitple times pythia/pgs/delphes for the same set of 
+                      events (with different parameters).
+                  OM: MadEvent checks that the param_card is coherent with the 
+                      restriction used during the model generation. 
+                  OM: Restriction Model will now also force opposite number to match.
+                      (helpfull for constraining to rotation matrix).  
+                  OM: Change the import command. It's now allowed to omit the 
+                      type of import. The type is guessed automaticaly. 
+                      This is NOT allowed on the web.
+                  OM: Add a check that the fermion flow is coherent with the 
+                      Lorentz structure associates to the vertex.
+                  OM: Add a check that color representation is coherent. 
+                      This allow to detect/fix various problem linked to the new model
+                      created by FR and SARAH.
+                  OM: Change the default fortran compiler to gfortran.
+                  OM: Add the possibility to force which fortran compiler will
+                      be used, either via the configuration file or via the set 
+                      command.
+                  OM: Add the possibility to bypass the automatic opening of 
+                      the web browser (via the configuration file: 
+                      ./input/mg5_configuration.txt )
+                  OM: Change the scheme of questions when running madevent and 
+                      allow to specify in the command interface if you
+                      want to run pythia/pgs/...
+                      Allow to put the answers to the questions in the 
+                      proc_card.dat.
+                  OM: Add options for the display command:
+                      a) display options: return the current option value. 
+                        i.e. those set via the set command and/or via the 
+                        configuration file
+                      b) display variable NAME: return the current string 
+                        representation of NAME and/or self.NAME .
+                      c) display coupling_order: return the coupling orders with
+                        their associated weight (for automatic order restriction)
+                      d) display couplings now returns the list of all couplings
+                        with the associated expression
+                      e) display interactions PART1 [PART2] [PART3] ...
+		         display all interactions containing at least the particles set in arguments
+                  OM: New Python script for the creation of the various html pages.
+                      This Requires less disk access for the generation of the files.
+                  OM: Modify error treatment, especially for Invalid commands
+                      and Configuration problems.
+                  JA: Ensure that we get zero cross section if we have
+                      non-parton initial states with proton/antiproton beams
+                  OM: Improve cluster support. MadEvent now supports PBS/Condor/SGE
+                      Thanks to Arian Abrahantes for the SGE implementation.
+                  OM: Improve the parralel suite and change the release script to run
+                      some of the parralel suite. This ensures more stability of the 
+                      code for the future release.
+                  
+
+                  Thanks to Johan Alwall, Sho Iwamoto for all the important 
+                  testing/bug reports.
+
+1.3.32 (21/12/11) JA: Fixed a bug in the PDF reweighting routine,
+                      which caused skewed eta distributions for
+                      matched samples with pdfwgt=T. Thanks to Giulio
+                      Lenzi and the CMS MC generation team for finding this.
+ 
+1.3.31 (29/11/11) OM: Fix a bug an overflow in RAMBO (affects standalone 
+                     output only)
+                  PdA (via OM): Change RS model (add a width to the spin2)
+                  OM: Fix a bug in the cuts associate to  allowed mass of all 
+                      neutrinos+leptons (thanks to Brock Tweedie for finding it)
+                  OM: Remove some limitation in the name for the particles
+
+
 1.3.30 (18/11/11) OM: Fix a bug for the instalation of pythia-pgs on a 64 bit
-       		      UNIX machine.
-		  OM: If ROOTSYS is define but root in the PATH, add it 
-		      automatically in create_matching_plots.sh
-		      This is require for the UIUC cluster.
+                      UNIX machine.
+                  OM: If ROOTSYS is define but root in the PATH, add it 
+                      automatically in create_matching_plots.sh
+                     This is require for the UIUC cluster.
 
 1.3.29 (16/11/11) OM: Fixed particle identities in the Feynman diagram drawing
                   JA: Fixed bug in pdf reweighting when external LHAPDF is used.
                   OM+JA: Simplify the compilation of pythia-pgs package.
+
 
 1.3.28 (14/11/11) OM+JA: Fix special case when Lorentz structure combining
                       two different Majorana particles depends on the
@@ -43,11 +143,11 @@ Update notes for MadGraph 5 (in reverse time order)
 1.3.25 (27/10/11) JA: Ensure that the correct intermediate resonance
                       is always written in the event file, even when we
                       have resonances with identical properties.
-                  OM: Fix the bug forcing to quit the web browse in order to
+                  OM: Fix the bug forcing to quit the web browser in order to
                       have MG5 continuing to run.
                   OM: Change the tutorial in order to allow open index.html
                       after the output command. 
- 
+
 1.3.24 (22/10/11) JA: Fix problem with getting enough events in gridpack
                       mode (this was broken in v. 1.3.11 when we moved
                       from events to luminocity in refine). Thanks to
@@ -174,7 +274,7 @@ Update notes for MadGraph 5 (in reverse time order)
                   OM: increase waiting time for jobs to write physically the results on
                       the disks (in ordre to reduce trouble on the cluster).
 
-1.3.9 (01/08/11)  OM: Add a new model DY_SM (arXiv:1107.5830). Thanks to Neil
+1.3.9 (01/08/11)  OM: Add a new model DY_SM (arXiv:1107.5830). Thanks to Neil 
                       for the generation of the model 
 
 1.3.8 (25/07/11)  JA: Replace the SM and HEFT models with latest versions using

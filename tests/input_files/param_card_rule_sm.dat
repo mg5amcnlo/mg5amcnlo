@@ -1,0 +1,15 @@
+<file>
+<zero>
+Mass 1
+Mass 2
+</zero>
+<one>
+CKM 1 1
+CKM 2 2
+</one>
+<identical>
+Mass 1 : 2
+</identical>
+<constraint>
+</constraint>
+</file>

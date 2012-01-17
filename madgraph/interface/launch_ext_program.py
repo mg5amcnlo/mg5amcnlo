@@ -26,6 +26,7 @@ import time
 import madgraph.iolibs.files as files
 import madgraph.iolibs.misc as misc
 import madgraph.interface.extended_cmd as cmd
+import madgraph.interface.madevent_interface as me_cmd
 from madgraph import MG4DIR, MG5DIR, MadGraph5Error
 from madgraph.iolibs.files import cp
 
@@ -39,14 +40,14 @@ class ExtLauncher(object):
     
     force = False
     
-    def __init__(self, running_dir, card_dir='', timeout=None,
+    def __init__(self, cmd, running_dir, card_dir='', timeout=None,
                  **options):
         """ initialize an object """
         
         self.running_dir = running_dir
         self.card_dir = os.path.join(self.running_dir, card_dir)
         self.timeout = timeout
-        
+        self.cmd_int = cmd
         #include/overwrite options
         for key,value in options.items():
             setattr(self, key, value)
@@ -76,42 +77,25 @@ class ExtLauncher(object):
 
         path = os.path.realpath(path)
         open_file(path)
-            
-    def ask(self, question, default, choices=[], path_info=[]):
-        """ ask a question """
-        
-        assert type(path_info) == list
-        
+    
+
+    # Treat Nicely the timeout
+    def timeout_fct(self,timeout):
+        if timeout:
+            # avoid to always wait a given time for the next answer
+            self.force = True
+        else:
+            self.timeout = None # answer at least one question so wait...
+   
+    def ask(self, question, default, choices=[], path_msg=None):
+        """nice handling of question"""
+     
         if not self.force:
-            # add choice info to the question
-            if choices + path_info:
-                question += ' ['
-                
-                for data in choices[:9] + path_info:
-                    if default == data:
-                        question += "\033[%dm%s\033[0m" % (4, data)
-                    else:
-                        question += "%s" % data
-                    question += ', '
-                if len(choices) > 9:
-                    question += '... , ' 
-                question = question[:-2]+']'
-                
-            if path_info:
-                fct = lambda q: cmd.raw_path_input(q, allow_arg=choices, default=default)
-            else:
-                fct = lambda q: cmd.smart_input(q, allow_arg=choices, default=default)
-            try:
-                out =  misc.timed_input(question, default, timeout=self.timeout,
-                                        noerror=False, fct=fct)
-            except misc.TimeOutError:
-                # avoid to always wait a given time for the next answer
-                self.force = True
-            else:
-                self.timeout=None # answer at least one question so wait...
-                return out
+            return self.cmd_int.ask(question, default, choices=choices, path_msg=path_msg,
+                               timeout=self.timeout, fct_timeout=self.timeout_fct)
         else:
             return str(default)
+         
         
     def treat_input_file(self, filename, default=None, msg=''):
         """ask to edit a file"""
@@ -128,7 +112,7 @@ class ExtLauncher(object):
             if msg:  print msg
             question = 'Do you want to edit file: %(card)s?' % {'card':filename}
             choices = ['y', 'n']
-            path_info = ['path of the new %(card)s' % {'card':os.path.basename(filename)}]
+            path_info = 'path of the new %(card)s' % {'card':os.path.basename(filename)}
             ans = self.ask(question, default, choices, path_info)
         else:
             ans = default
@@ -148,10 +132,10 @@ class ExtLauncher(object):
 class SALauncher(ExtLauncher):
     """ A class to launch a simple Standalone test """
     
-    def __init__(self, running_dir, timeout, **options):
+    def __init__(self, cmd_int, running_dir, timeout, **options):
         """ initialize the StandAlone Version"""
         
-        ExtLauncher.__init__(self, running_dir, './Cards', timeout, **options)
+        ExtLauncher.__init__(self, cmd_int, running_dir, './Cards', timeout, **options)
         self.cards = ['param_card.dat']
 
     
@@ -171,111 +155,37 @@ class SALauncher(ExtLauncher):
 class MELauncher(ExtLauncher):
     """A class to launch MadEvent run"""
     
-    def __init__(self, running_dir, timeout, unit='pb', **option):
+    def __init__(self, running_dir, timeout, cmd_int , unit='pb', **option):
         """ initialize the StandAlone Version"""
-        
-        ExtLauncher.__init__(self, running_dir, './Cards', timeout, **option)
-        self.executable = os.path.join('.', 'bin','generate_events')
+
+        ExtLauncher.__init__(self, cmd_int, running_dir, './Cards', timeout, **option)
+        #self.executable = os.path.join('.', 'bin','generate_events')
 
         assert hasattr(self, 'cluster')
+        assert hasattr(self, 'multicore')
         assert hasattr(self, 'name')
+        assert hasattr(self, 'shell')
+
         self.unit = unit
         
-        self.cards = ['param_card.dat', 'run_card.dat']
-        # Check for pythia-pgs directory
-        if os.path.isdir(os.path.join(MG5DIR,'pythia-pgs')):
-            self.pythia = os.path.join(MG5DIR,'pythia-pgs')
-        elif MG4DIR and os.path.isdir(os.path.join(MG4DIR,'pythia-pgs')):
-            self.pythia = os.path.join(MG4DIR,'pythia-pgs')
-        else:
-            self.pythia = None
-            
-        # Check for DELPHES directory
-        if os.path.isdir(os.path.join(MG5DIR,'Delphes')):
-            self.delphes = os.path.join(MG5DIR,'Delphes')
-        elif MG4DIR and os.path.isdir(os.path.join(MG4DIR,'Delphes')):
-            self.delphes = os.path.join(MG4DIR,'Delphes')
-        else:
-            self.delphes = None
+        if self.cluster:
+            self.cluster = 1
+        if self.multicore:
+            self.cluster = 2
         
-        
+        self.cards = []
+
         # Assign a valid run name if not put in options
         if self.name == '':
-            for i in range(1,1000):
-                path = os.path.join(self.running_dir, 'Events','run_%02i_banner.txt' % i)
-                if not os.path.exists(path):
-                    self.name = 'run_%02i' % i
-                    break
-        
-        if self.name == '':
-            raise MadGraph5Error, 'too much run in this directory'
-    
-    
-    def copy_default_card(self, name):
-
-        dico = {'dir': self.card_dir, 'name': name }
-
-        if not os.path.exists('%(dir)s/%(name)s_card.dat' % dico):
-            cp('%(dir)s/%(name)s_card_default.dat' % dico,
-                '%(dir)s/%(name)s_card.dat' % dico)
-    
-          
-    def prepare_run(self):
-        """ ask for pythia-pgs/delphes run """
-        
-        # Check If we Need to run pythia 
-        if not self.pythia or self.force:
-            return
-        
-        answer = self.ask('Do you want to run pythia?','auto', ['y','n','auto'])
-        if answer == 'y':
-            self.copy_default_card('pythia')
-            self.cards.append('pythia_card.dat')
-        elif answer == 'n':
-            path = os.path.join(self.card_dir, 'pythia_card.dat')
-            try: os.remove(path)
-            except OSError: pass
-            return # no Need to ask for PGS
-        
-        answer = self.ask('Do you want to run PGS?','auto', ['y','n','auto'])
-        if answer == 'y':
-            self.copy_default_card('pgs')
-            self.cards.append('pgs_card.dat')
-            return # No Need to ask for Delphes
-        elif answer == 'n':
-            path = os.path.join(self.card_dir, 'pgs_card.dat')
-            try: os.remove(path)
-            except OSError: pass
-    
-        if not self.delphes:
-            return
-        
-        answer = self.ask('Do you want to run Delphes?','n', ['y','n','auto'])
-        if answer == 'y':
-            self.copy_default_card('delphes')
-            self.cards.append('delphes_card.dat')
-        elif answer == 'n':
-            path = os.path.join(self.card_dir, 'delphes_card.dat')
-            try: os.remove(path)
-            except OSError: pass        
+            self.name = me_cmd.MadEventCmd.find_available_run_name(self.running_dir)
     
     def launch_program(self):
         """launch the main program"""
         
-        # Open the corresponding crossx.html page
-        os.system('touch %s' % os.path.join(self.running_dir,'RunWeb'))
-        subprocess.call([os.path.join('bin','gen_crossxhtml-pl')], 
-                         cwd=self.running_dir)
-        open_file(os.path.join(self.running_dir, 'HTML', 'crossx.html'))
-
+        # Check for number of cores if multicore mode
         mode = str(self.cluster)
-        if mode == "0":
-            subprocess.call([self.executable, mode, self.name], 
-                                                           cwd=self.running_dir)
-        elif mode == "1":
-            subprocess.call([self.executable, mode, self.name, self.name], 
-                                                           cwd=self.running_dir)
-        elif mode == "2":
+        nb_node = 1
+        if mode == "2":
             import multiprocessing
             max_node = multiprocessing.cpu_count()
             if max_node == 1:
@@ -283,13 +193,63 @@ class MELauncher(ExtLauncher):
                 self.cluster = 0
                 self.launch_program()
                 return
-            nb_node = self.ask('How many core do you want to use?', max_node, range(max_node+1))
-            subprocess.call([self.executable, mode, nb_node, self.name], 
-                                                           cwd=self.running_dir)
+            elif max_node == 2:
+                nb_node = 2
+            elif not self.force:
+                nb_node = self.ask('How many core do you want to use?', max_node, range(2,max_node+1))
+            else:
+                nb_node=max_node
+                
+        import madgraph.interface.madevent_interface as ME
+        
+        if self.shell:
+            usecmd = ME.MadEventCmdShell(me_dir=self.running_dir)
+        else:
+            usecmd = ME.MadEventCmd(me_dir=self.running_dir)
+        
+        #Check if some configuration were overwritten by a command. If so use it    
+        set_cmd = [l for l in self.cmd_int.history if l.strip().startswith('set')]
+        for line in set_cmd:
+            try:
+                usecmd.exec_cmd(line)
+            except:
+                pass
+        launch = self.cmd_int.define_child_cmd_interface(
+                     usecmd, interface=False)
+        #launch.me_dir = self.running_dir
+        if self.unit == 'pb':
+            command = 'generate_events %s' % self.name
+        else:
+            warning_text = '''\
+This command will create a new param_card with the computed width. 
+This param_card makes sense only if you include all processes for
+the computation of the width.'''
+            logger.warning(warning_text)
+
+            command = 'calculate_decay_widths %s' % self.name
+        if mode == "1":
+            command += " --cluster"
+        elif mode == "2":
+            command += " --nb_core=%s" % nb_node
+        
+        if self.force:
+            command+= " -f"
+        
+        if self.laststep:
+            command += ' --laststep=%s' % self.laststep
+        
+        try:
+            os.remove('ME5_debug')
+        except:
+           pass
+        launch.run_cmd(command)
+        launch.run_cmd('quit')
+        
+        if os.path.exists('ME5_debug'):
+            return True
         
         # Display the cross-section to the screen
-        path = os.path.join(self.running_dir, 'SubProcesses', '%s_results.dat' 
-                                                                    % self.name) 
+        path = os.path.join(self.running_dir, 'SubProcesses', 'results.dat') 
         if not os.path.exists(path):
             logger.error('Generation failed (no results.dat file found)')
             return
@@ -308,11 +268,11 @@ class MELauncher(ExtLauncher):
 class Pythia8Launcher(ExtLauncher):
     """A class to launch Pythia8 run"""
     
-    def __init__(self, running_dir, timeout, **option):
+    def __init__(self, running_dir, timeout, cmd_int, **option):
         """ initialize launching Pythia 8"""
 
         running_dir = os.path.join(running_dir, 'examples')
-        ExtLauncher.__init__(self, running_dir, '.', timeout, **option)
+        ExtLauncher.__init__(self, cmd_int, running_dir, '.', timeout, **option)
         self.cards = []
     
     def prepare_run(self):
@@ -406,138 +366,7 @@ class Pythia8Launcher(ExtLauncher):
         print "Output of the run is found at " + \
               os.path.realpath(os.path.join(self.running_dir, self.name))
 
-#
-# Global function to open supported file types
-#
-class open_file(object):
-    """ a convinient class to open a file """
-    
-    web_browser = None
-    eps_viewer = None
-    text_editor = None 
-    configured = False
-    
-    def __init__(self, filename):
-        """open a file"""
-        
-        # Check that the class is correctly configure
-        if not self.configured:
-            self.configure()
-        
-        try:
-            extension = filename.rsplit('.',1)[1]
-        except IndexError:
-            extension = ''   
-    
-        # dispatch method
-        if extension in ['html','htm','php']:
-            self.open_program(self.web_browser, filename, background=True)
-        elif extension in ['ps','eps']:
-            self.open_program(self.eps_viewer, filename, background=True)
-        else:
-            self.open_program(self.text_editor,filename, mac_check=False)
-            # mac_check to False avoid to use open cmd in mac
-    
-    @classmethod
-    def configure(cls, configuration=None):
-        """ configure the way to open the file """
-        
-        cls.configured = True
-        
-        # start like this is a configuration for mac
-        cls.configure_mac(configuration)
-        if sys.platform == 'darwin':
-            return # done for MAC
-        
-        # on Mac some default (eps/web) might be kept on None. This is not
-        #suitable for LINUX which doesn't have open command.
-        
-        # first for eps_viewer
-        if not cls.eps_viewer:
-           cls.eps_viewer = cls.find_valid(['gv', 'ggv', 'evince'], 'eps viewer') 
-            
-        # Second for web browser
-        if not cls.web_browser:
-            cls.web_browser = cls.find_valid(
-                                    ['firefox', 'chrome', 'safari','opera'], 
-                                    'web browser')
+# old compatibility shortcut
+open_file = misc.open_file
 
-    @classmethod
-    def configure_mac(cls, configuration=None):
-        """ configure the way to open a file for mac """
-    
-        if configuration is None:
-            configuration = {'text_editor': None,
-                             'eps_viewer':None,
-                             'web_browser':None}
-        
-        for key in configuration:
-            if key == 'text_editor':
-                # Treat text editor ONLY text base editor !!
-                if configuration[key] and not misc.which(configuration[key]):
-                    logger.warning('Specified text editor %s not valid.' % \
-                                                             configuration[key])
-                elif configuration[key]:
-                    # All is good
-                    cls.text_editor = configuration[key]
-                    continue
-                #Need to find a valid default
-                if os.environ.has_key('EDITOR'):
-                    cls.text_editor = os.environ['EDITOR']
-                else:
-                    cls.text_editor = cls.find_valid(
-                                        ['vi', 'emacs', 'vim', 'gedit', 'nano'],
-                                         'text editor')
-              
-            elif key in ['eps_viewer', 'web_browser']:
-                if configuration[key]:
-                    cls.eps_viewer = configuration[key]
-                    continue
-                # else keep None. For Mac this will use the open command.
-
-
-    @staticmethod
-    def find_valid(possibility, program='program'):
-        """find a valid shell program in the list"""
-        
-        for p in possibility:
-            if misc.which(p):
-                logger.warning('Using default %s \"%s\". ' % (program, p) + \
-                             'Set another one in ./input/mg5_configuration.txt')
-                return p
-        
-        logger.warning('No valid %s found. ' % program + \
-                                   'Please set in ./input/mg5_configuration.txt')
-        return None
-        
-        
-    def open_program(self, program, file_path, mac_check=True, background=False):
-      """ open a file with a given program """
-            
-      if mac_check==True and sys.platform == 'darwin':
-          return self.open_mac_program(program, file_path)
-      
-      # Shell program only
-      if program:
-          if not background:
-              subprocess.call([program, file_path])
-          else:
-              thread.start_new_thread(subprocess.call,([program, file_path],))
-      else:
-          logger.warning('Not able to open file %s since no program configured.' % file_path + \
-                              'Please set one in ./input/mg5_configuration.txt') 
-    
-    def open_mac_program(self, program, file_path):
-      """ open a text with the text editor """
-      
-      if not program:
-          # Ask to mac manager
-          os.system('open %s' % file_path)
-      elif misc.which(program):
-          # shell program
-          subprocess.call([program, file_path])
-      else:
-         # not shell program
-         os.system('open -a %s %s' % (program, file_path))
-      
 

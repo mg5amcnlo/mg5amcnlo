@@ -73,6 +73,9 @@ def run(expression='', re_opt=0, package='./tests/unit_tests', verbosity=1):
         
     return unittest.TextTestRunner(verbosity=verbosity).run(testsuite)
 
+    #import tests
+    #print 'runned %s checks' % tests.NBTEST
+    #return out
 #===============================================================================
 # TestFinder
 #===============================================================================
