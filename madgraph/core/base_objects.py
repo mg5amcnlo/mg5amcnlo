@@ -1047,23 +1047,24 @@ class Model(PhysicsObject):
                 # Create the new parameter
                 if isinstance(mass, ParamCardVariable):
                     New_param = ModelVariable('CMASS_'+mass.name,
-                        '%s + complex(0,0.5) * %s' % (mass.name, width.name), 
+                        'cmath.sqrt(%(mass)s**2 - complex(0,1) * %(mass)s * %(width)s)' \
+                              % {'mass': mass.name, 'width': width.name}, 
                         'complex', depend)              
                 else:
                     New_param = ModelVariable('CMASS_'+mass.name,
                         mass.expr, 'complex', depend)
                     # Modify the treatment of the width in this case
                     if not isinstance(width, ParamCardVariable):
-                        width.expr = '2 * im(%s)' % mass.expr
+                        width.expr = '- im(%s**2) / cmath.sqrt(re(%s**2))' % (mass.expr, mass.expr)
                     else:
                         # Remove external parameter from the param_card
                         New_width = ModelVariable(width.name,
-                        '2 * im(%s)' % mass.expr, 'real', mass.depend)
+                        '-1 * im(%s**2) / cmath.sqrt(re(%s**2))' % (mass.expr, mass.expr), 'real', mass.depend)
                         self.get('parameters')[('external',)].remove(width)
                         width = New_width
                         self.add_param(width, (mass,))
                     mass.expr = 're(%s)' % mass.expr                
-                self.add_param(New_param, (mass, width) )
+                self.add_param(New_param, (mass, width))
                 to_change[mass.name] = New_param.name
                                                     
         # So at this stage we still need to modify all parameters depending of

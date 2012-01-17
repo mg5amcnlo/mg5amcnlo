@@ -18,6 +18,7 @@ import madgraph.core.base_objects as base_objects
 import madgraph.core.helas_objects as helas_objects
 import aloha.aloha_writers as aloha_writers
 from madgraph import MadGraph5Error
+import aloha
 
 
 class HelasWriterError(Exception):
@@ -1261,10 +1262,22 @@ class PythonUFOHelasCallWriter(UFOHelasCallWriter):
             call = call + "%s"
 
             if isinstance(argument, helas_objects.HelasWavefunction):
-                # Create call for wavefunction
-                call = call + ",%s, %s)"
-                #CALL L_4_011(W(1,%d),W(1,%d),%s,%s, %s, W(1,%d))
-                call_function = lambda wf: call % \
+                if aloha.complex_mass:
+                    call = call + ", %s)"
+                    #CALL L_4_011(W(1,%d),W(1,%d),%s,%s, %s, W(1,%d))
+                    call_function = lambda wf: call % \
+                                ((wf.get('number')-1,) + \
+                                 tuple([mother.get('number')-1 for mother in \
+                                        wf.get('mothers')]) + \
+                                 (','.join(wf.get_with_flow('coupling')),
+                                  ((wf.get('width') == 'ZERO' or wf.get('mass') == 'ZERO') 
+                                   and  wf.get('mass') or 'CMASS_%s' % wf.get('mass'))))               
+                
+                else:
+                    # Create call for wavefunction
+                    call = call + ",%s, %s)"
+                    #CALL L_4_011(W(1,%d),W(1,%d),%s,%s, %s, W(1,%d))
+                    call_function = lambda wf: call % \
                                 ((wf.get('number')-1,) + \
                                  tuple([mother.get('number')-1 for mother in \
                                         wf.get('mothers')]) + \

@@ -32,6 +32,7 @@
 from __future__ import division
 import aloha
 import aloha.aloha_lib as aloha_lib
+import cmath
 
 #===============================================================================
 # P (Momenta)
@@ -100,7 +101,7 @@ class PSlash(aloha_lib.LorentzObject):
 #===============================================================================
 # Mass
 #===============================================================================
-class RMass(aloha_lib.LorentzObject):
+class Mass(aloha_lib.LorentzObject):
     """ Helas Object for a Mass"""
     
     def __init__(self, particle, prefactor=1):
@@ -131,10 +132,10 @@ class Width(aloha_lib.LorentzObject):
         self.representation= aloha_lib.LorentzObjectRepresentation(
                             width, self.lorentz_ind, self.spin_ind)
 
-if aloha.complex_mass:
-    Mass =  lambda part: RMass(part) + complex(0,0.5) * Width(part) 
-else:
-    Mass = RMass
+#if aloha.complex_mass:
+#    Mass =  lambda part: 'cmath.sqrt(RMass(part)**2 - 1j * RMass(part) * Width(part)) 
+#else:
+#    Mass = RMass
     
 #===============================================================================
 # OverMass2

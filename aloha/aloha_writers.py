@@ -1122,7 +1122,7 @@ class ALOHAWriterForPython(WriteALOHA):
                 {'name': name,
                  'args': ','.join(CallList+ ['COUP']) }
         else:
-            str_out += 'def %(name)s(%(args)s, COUP, M%(id)d, W%(id)d):\n' % \
+            str_out += 'def %(name)s(%(args)s, COUP, M%(id)d):\n' % \
                 {'name': name,
                  'args': ', '.join(CallList), 
                      'id': self.offshell}            
@@ -1182,17 +1182,18 @@ class ALOHAWriterForPython(WriteALOHA):
             #Mom is in format OMX with X the number of the particle
             index = int(elem[2:])
             str_out += 'OM%d = 0.0\n' % (index)
-            if not aloha.complex_mass:
-                str_out += 'if (M%d): OM%d' % (index, index) + '=1.0/M%d**2\n' % (index) 
-            else:
-                str_out += 'if (M%d): OM%d' % (index, index) + '=1.0/(M%d+complex(0,0.5)*W%d)**2\n' % (index,index)
+            str_out += 'if (M%d): OM%d' % (index, index) + '=1.0/M%d**2\n' % (index) 
         # Returning result
         return str_out    
 
     def define_symmetry(self, new_nb):
         number = self.offshell 
         calls = self.calllist['CallList']
-        Outstring = 'return '+self.namestring+'('+','.join(calls)+',COUP,M%s,W%s)\n' \
+        if aloha.complex_mass:
+            Outstring = 'return '+self.namestring+'('+','.join(calls)+',COUP,M%s)\n' \
+                         %(number)
+        else:
+            Outstring = 'return '+self.namestring+'('+','.join(calls)+',COUP,M%s,W%s)\n' \
                          %(number,number)
         return Outstring        
 
@@ -1268,10 +1269,17 @@ class ALOHAWriterForPython(WriteALOHA):
             main = '%(spin)s%(id)d' % \
                           {'spin': self.particles[self.offshell -1],
                            'id': self.offshell}
-            call_arg = '%(args)s, %(COUP)s, M%(id)d, W%(id)d' % \
+            if aloha.complex_mass:
+                call_arg = '%(args)s, %(COUP)s, M%(id)d' % \
                     {'args': ', '.join(self.calllist['CallList']), 
                      'COUP':'COUP%d',
                      'id': self.offshell}
+            else:
+                call_arg = '%(args)s, %(COUP)s, M%(id)d, W%(id)d' % \
+                    {'args': ', '.join(self.calllist['CallList']), 
+                     'COUP':'COUP%d',
+                     'id': self.offshell}
+                    
 
         # make the first call
         line = "    %s = %s%s("+call_arg+")\n"
