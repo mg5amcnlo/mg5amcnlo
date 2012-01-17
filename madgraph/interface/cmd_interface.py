@@ -2879,6 +2879,7 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
                     return
                 aloha.complex_mass = True
                 logger.info('Activate complex mass scheme.')
+                self.exec_cmd('import model %s' % self._curr_model.get('name'))
                 self._curr_model.change_mass_to_complex_scheme()
                 if hasattr(self._curr_model, 'set_parameters_and_couplings'):
                     if hasattr(self._curr_model, 'restrict_card'):

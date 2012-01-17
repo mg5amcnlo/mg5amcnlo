@@ -945,11 +945,22 @@ class FortranUFOHelasCallWriter(UFOHelasCallWriter):
 
             if isinstance(argument, helas_objects.HelasWavefunction):
                 # Create call for wavefunction
-                call = call + "%s, %s, W(1,%d))"
-                #CALL L_4_011(W(1,%d),W(1,%d),%s,%s, %s, W(1,%d))
-                call_function = lambda wf: call % \
-                    (tuple([mother.get('number') for mother in wf.get('mothers')]) + \
-                    (','.join(wf.get_with_flow('coupling')),
+                if aloha.complex_mass:
+                    call = call + "%s, W(1,%d))"
+                    #CALL L_4_011(W(1,%d),W(1,%d),%s,%s, %s, W(1,%d))
+                    call_function = lambda wf: call % \
+                        (tuple([mother.get('number') for mother in wf.get('mothers')]) + \
+                         (','.join(wf.get_with_flow('coupling')),
+                        ((wf.get('width') == 'ZERO' or wf.get('mass') == 'ZERO') 
+                        and  wf.get('mass') or 'CMASS_%s' % wf.get('mass')),
+                                     wf.get('number')))                    
+                    
+                else:
+                    call = call + "%s, %s, W(1,%d))"
+                    #CALL L_4_011(W(1,%d),W(1,%d),%s,%s, %s, W(1,%d))
+                    call_function = lambda wf: call % \
+                        (tuple([mother.get('number') for mother in wf.get('mothers')]) + \
+                         (','.join(wf.get_with_flow('coupling')),
                                      wf.get('mass'),
                                      wf.get('width'),
                                      wf.get('number')))
@@ -1082,9 +1093,28 @@ class CPPUFOHelasCallWriter(UFOHelasCallWriter):
 
             if isinstance(argument, helas_objects.HelasWavefunction):
                 # Create call for wavefunction
-                call = call + "pars->%s, pars->%s, w[%d]);"
-                #CALL L_4_011(W(1,%d),W(1,%d),%s,%s, %s, W(1,%d))
-                call_function = lambda wf: call % \
+                if aloha.complex_mass:
+                    call = call + "pars->%s, w[%d]);"                                        
+                    #CALL L_4_011(W(1,%d),W(1,%d),%s,%s, %s, W(1,%d))
+                    call_function = lambda wf: call % \
+                    (tuple([mother.get('number')-1 for mother in wf.get('mothers')]) + \
+                    (','.join(CPPUFOHelasCallWriter.format_coupling(\
+                                     wf.get_with_flow('coupling'))),
+                                     ((wf.get('width') == 'ZERO' or wf.get('mass') == 'ZERO') 
+                                   and  wf.get('mass') or 'CMASS_%s' % wf.get('mass')),
+                                     wf.get('number')-1))
+                    call_function = lambda wf: call % \
+                                ((wf.get('number')-1,) + \
+                                 tuple([mother.get('number')-1 for mother in \
+                                        wf.get('mothers')]) + \
+                                 (','.join(wf.get_with_flow('coupling')),
+                                  ((wf.get('width') == 'ZERO' or wf.get('mass') == 'ZERO') 
+                                   and  wf.get('mass') or 'CMASS_%s' % wf.get('mass'))))               
+                
+                else:
+                    call = call + "pars->%s, pars->%s, w[%d]);"
+                    #CALL L_4_011(W(1,%d),W(1,%d),%s,%s, %s, W(1,%d))
+                    call_function = lambda wf: call % \
                     (tuple([mother.get('number')-1 for mother in wf.get('mothers')]) + \
                     (','.join(CPPUFOHelasCallWriter.format_coupling(\
                                      wf.get_with_flow('coupling'))),

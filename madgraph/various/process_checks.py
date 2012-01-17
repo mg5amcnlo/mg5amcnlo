@@ -206,7 +206,6 @@ class MatrixElementEvaluator(object):
             exec(matrix_methods[process.shell_string()], globals())
         else:
             # Define the routines (locally is enough)
-            print matrix_methods[process.shell_string()] 
             exec(matrix_methods[process.shell_string()])
 
         # Generate phase space point to use

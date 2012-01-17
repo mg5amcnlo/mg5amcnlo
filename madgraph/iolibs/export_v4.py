@@ -22,6 +22,7 @@ import os
 import re
 import shutil
 import subprocess
+import aloha
 
 import madgraph.core.base_objects as base_objects
 import madgraph.core.color_algebra as color
@@ -2663,6 +2664,9 @@ class UFO_model_to_mg4(object):
         # Write the Mass definition/ common block
         masses = set()
         widths = set()
+        if aloha.complex_mass:
+            complex_mass = set()
+            
         for particle in self.model.get('particles'):
             #find masses
             one_mass = particle.get('mass')
@@ -2673,7 +2677,8 @@ class UFO_model_to_mg4(object):
             one_width = particle.get('width')
             if one_width.lower() != 'zero':
                 widths.add(one_width)
-            
+                if aloha.complex_mass and one_mass.lower() != 'zero':
+                    complex_mass.add('CMASS_%s' % one_mass)
         
         fsock.writelines('double precision '+','.join(masses)+'\n')
         fsock.writelines('common/masses/ '+','.join(masses)+'\n\n')
@@ -2685,6 +2690,11 @@ class UFO_model_to_mg4(object):
         coupling_list = [coupl.name for coupl in self.coups_dep + self.coups_indep]       
         fsock.writelines('double complex '+', '.join(coupling_list)+'\n')
         fsock.writelines('common/couplings/ '+', '.join(coupling_list)+'\n')
+        
+        # Write complex mass for complex mass scheme (if activated)
+        if aloha.complex_mass:
+            fsock.writelines('double complex '+', '.join(complex_mass)+'\n')
+            fsock.writelines('common/couplings/ '+', '.join(complex_mass)+'\n')            
         
     def create_write_couplings(self):
         """ write the file coupl_write.inc """
@@ -2712,6 +2722,8 @@ class UFO_model_to_mg4(object):
         for particle in self.model.get('particles'):
             already_def.add(particle.get('mass').lower())
             already_def.add(particle.get('width').lower())
+            if aloha.complex_mass:
+                already_def.add('cmass_%s' % particle.get('mass').lower())
 
         is_valid = lambda name: name!='G' and name.lower() not in already_def
         
