@@ -2915,15 +2915,17 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
                     pass
             else:    
                 for i in range(0,self.nb_core):
-                    if self.html:
+                    if html:
                         self.update_status((0, self.control_thread[0], 
                                            self.total_jobs - self.control_thread[0], run_type), 
                                            level=None, force=False)
                     self.control_thread[1].acquire()
                 self.control_thread[2] = False
                 self.control_thread[1].release()
-                del self.next_update
-
+                try:
+                    del self.next_update
+                except:
+                    pass
         if not html:
             return
 

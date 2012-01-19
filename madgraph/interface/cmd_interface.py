@@ -324,7 +324,7 @@ class HelpToCmd(object):
         
     def help_check(self):
 
-        logger.info("syntax: check " + "|".join(self._check_opts) + " [param_card] process_definition")
+        logger.info("syntax: check [" + "|".join(self._check_opts) + "] [param_card] process_definition")
         logger.info("-- check a process or set of processes. Options:")
         logger.info("full: Perform all three checks described below:")
         logger.info("   permutation, gauge and lorentz_invariance.")
@@ -506,7 +506,7 @@ class CheckValidForCmd(object):
 
         if len(args) < 2:
             self.help_check()
-            raise self.InvalidCmd("\"check\" requires an argument and a process.")
+            raise self.InvalidCmd("\"check\" requires a process.")
 
         param_card = None
         if os.path.isfile(args[1]):
@@ -1308,7 +1308,6 @@ class CompleteForCmd(CheckValidForCmd):
 
     def complete_set(self, text, line, begidx, endidx):
         "Complete the set command"
-
         args = self.split_arg(line[0:begidx])
 
         # Format
@@ -1340,7 +1339,7 @@ class CompleteForCmd(CheckValidForCmd):
         
     def complete_import(self, text, line, begidx, endidx):
         "Complete the import command"
-
+        
         args=self.split_arg(line[0:begidx])
         
         # Format
@@ -1352,68 +1351,68 @@ class CompleteForCmd(CheckValidForCmd):
         elif args[1] in self._import_formats:
             mode = args[1]
         else:
+            args.insert(1, 'all')
             mode = 'all'
 
+
+        completion_categories = {}
         # restriction continuation (for UFO)
-        if mode in ['model', 'all'] and ('-' in args[-1] + text):
+        if mode in ['model', 'all'] and '-' in  text:
             # deal with - in readline splitting (different on some computer)
-            if not GNU_SPLITTING:
-                prefix = '-'.join([part for part in text.split('-')[:-1]])+'-'
-                args.append(prefix)
-                text = text.split('-')[-1]
-            #model name
-            path = args[-1][:-1] # remove the final - for the model name
+            path = '-'.join([part for part in text.split('-')[:-1]])
+            # remove the final - for the model name
             # find the different possibilities
             all_name = self.find_restrict_card(path, no_restrict=False)
             all_name += self.find_restrict_card(path, no_restrict=False,
                                         base_dir=pjoin(MG5DIR,'models'))
 
-            # select the possibility according to the current line            
-            all_name = [name.split('-')[-1] for name in  all_name ]
+            # select the possibility according to the current line           
             all_name = [name+' ' for name in  all_name if name.startswith(text)
                                                        and name.strip() != text]
-            # adapt output for python2.7 (due to different splitting)
-            if not GNU_SPLITTING:
-                all_name = [prefix + name for name in  all_name ]
+            
                 
             if all_name:
-                return all_name
+                completion_categories['Restricted model'] = all_name
 
         # Path continuation
-        if os.path.sep in (args[-1] + text) and text:
-            if mode.startswith('model'):
+        if os.path.sep in args[-1]:
+            if mode.startswith('model') or mode == 'all':
                 # Directory continuation
-                cur_path = pjoin('.',*[a for a in args \
+                try:
+                    cur_path = pjoin(*[a for a in args \
                                                    if a.endswith(os.path.sep)])
-                all_dir = self.path_completion(text, cur_path, only_dirs = True)
-                if mode == 'model_v4':
-                    return all_dir
-                new = []
-                data =   [new.__iadd__(self.find_restrict_card(name, base_dir=cur_path))
-                                                            for name in all_dir]
-                if data:
-                    return data[0]
+                except:
+                    pass
                 else:
-                    return []
-            else:
-                cur_path = pjoin('.',*[a for a in args \
-                                                   if a.endswith(os.path.sep)])
-                all_path =  self.path_completion(text, cur_path)
-                if mode == 'all':
-                    new = [] 
-                    data =   [new.__iadd__(self.find_restrict_card(name, base_dir=cur_path)) 
-                                                           for name in all_path]
+                    all_dir = self.path_completion(text, cur_path, only_dirs = True)
+                    if mode in ['model_v4','all']:
+                        completion_categories['Path Completion'] = all_dir
+                    # Only UFO model here
+                    new = []
+                    data =   [new.__iadd__(self.find_restrict_card(name, base_dir=cur_path))
+                                                                for name in all_dir]
                     if data:
-                        return data[0]
-                    else:
-                        return []
+                        completion_categories['Path Completion'] = all_dir + new
+            else:
+                try:
+                    cur_path = pjoin(*[a for a in args \
+                                                   if a.endswith(os.path.sep)])
+                except:
+                    pass
                 else:
-                    return all_path
-
-
+                    all_path =  self.path_completion(text, cur_path)
+                    if mode == 'all':
+                        new = [] 
+                        data =   [new.__iadd__(self.find_restrict_card(name, base_dir=cur_path)) 
+                                                               for name in all_path]
+                        if data:
+                            completion_categories['Path Completion'] = data[0]
+                    else:
+                        completion_categories['Path Completion'] = all_path
+                
         # Model directory name if directory is not given
-        if (mode != 'all' and len(self.split_arg(line[0:begidx])) == 2) or \
-            (mode =='all' and len(self.split_arg(line[0:begidx]))==1):
+        if (len(args) == 2):
+            is_model = True
             if mode == 'model':
                 file_cond = lambda p : os.path.exists(pjoin(MG5DIR,'models',p,'particles.py'))
                 mod_name = lambda name: name
@@ -1430,46 +1429,42 @@ class CompleteForCmd(CheckValidForCmd):
                 cur_path = pjoin('.',*[a for a in args \
                                                    if a.endswith(os.path.sep)])
                 all_path =  self.path_completion(text, cur_path)
-                return all_path
-                
-            model_list = [mod_name(name) for name in \
-                                            self.path_completion(text,
-                                            pjoin(MG5DIR,'models'),
-                                            only_dirs = True) \
-                                            if file_cond(name)]
+                completion_categories['model name'] = all_path
+                is_model = False
             
-            if mode == 'model_v4':
-                return model_list
-            else:
-                # need to update the  list with the possible restriction
-                all_name = []
-                for model_name in model_list:
-                    all_name += self.find_restrict_card(model_name, 
-                                        base_dir=pjoin(MG5DIR,'models'))
-            if mode == 'all':
-                cur_path = pjoin('.',*[a for a in args \
-                                                    if a.endswith(os.path.sep)])
-                all_path =  self.path_completion(text, cur_path)
-                return all_path + all_name 
-            else:
-                return all_name                
+            if is_model:
+                model_list = [mod_name(name) for name in \
+                                                self.path_completion(text,
+                                                pjoin(MG5DIR,'models'),
+                                                only_dirs = True) \
+                                                if file_cond(name)]
+                
+                if mode == 'model_v4':
+                    completion_categories['model name'] = model_list
+                else:
+                    # need to update the  list with the possible restriction
+                    all_name = []
+                    for model_name in model_list:
+                        all_name += self.find_restrict_card(model_name, 
+                                            base_dir=pjoin(MG5DIR,'models'))
+                if mode == 'all':
+                    cur_path = pjoin('.',*[a for a in args \
+                                                        if a.endswith(os.path.sep)])
+                    all_path =  self.path_completion(text, cur_path)
+                    completion_categories['model name'] = all_path + all_name 
+                elif mode == 'model':
+                    completion_categories['model name'] = all_name 
 
         # Options
         if mode == 'all' and len(args)>1:
-            mode = self.find_import_type(args[1])
-            opt_len = 1
-        else:
-            opt_len =2        
-        
-        
-        if len(args) > opt_len and mode.startswith('model') and args[-1][0] != '-':
-                return ['-modelname']
-            
-        if len(args) > (opt_len+1) and mode[1].startswith('model') and args[-1][0] == '-':
-           if GNU_SPLITTING:
-               return ['modelname']
-           else: 
-               return ['-modelname']
+            mode = self.find_import_type(args[2])
+   
+        if len(args) >= 3 and mode.startswith('model') and not '--modelname' in line:
+            if not text and not completion_categories:
+                return ['--modelname']
+            elif not (os.path.sep in args[-1] and line[-1] != ' '):
+                completion_categories['options'] = self.list_completion(text, ['--modelname'])
+        return self.deal_multiple_categories(completion_categories) 
         
         
             
