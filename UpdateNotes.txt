@@ -1,6 +1,6 @@
 Update notes for MadGraph 5 (in reverse time order)
 
-1.4.b9 (12/01/12): OM: New Interface to controll the madevent run.
+1.4.b10 (19/01/12): OM: New Interface to controll the madevent run.
                        This one is accessible by 
                         1) (from madevent output) ./bin/madevent
                         2) (from MG5 command line) launch [MADEVENT_PATH] -i
@@ -78,6 +78,7 @@ Update notes for MadGraph 5 (in reverse time order)
                       non-parton initial states with proton/antiproton beams
                   OM: Improve cluster support. MadEvent now supports PBS/Condor/SGE
                       Thanks to Arian Abrahantes for the SGE implementation.
+		  OM: Improve auto-completion
                   OM: Improve the parralel suite and change the release script to run
                       some of the parralel suite. This ensures more stability of the 
                       code for the future release.
