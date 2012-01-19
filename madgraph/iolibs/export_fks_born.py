@@ -256,15 +256,25 @@ class ProcessExporterFortranFKS_born(export_v4.ProcessExporterFortran):
                              matrix_element.born_matrix_element, ijglu,
                              fortran_model)
 
-        filename = 'born_conf.inc'
-        nconfigs, s_and_t_channels = self.write_configs_file(\
-            writers.FortranWriter(filename),
-            matrix_element.born_matrix_element,
-            fortran_model)
-    
-        filename = 'born_decayBW.inc'
-        self.write_decayBW_file(writers.FortranWriter(filename),
-                            s_and_t_channels)
+        file_dict= {True : '_inverse.inc', False :'.inc'}
+        for invert in [True, False]:
+
+            filename = 'born_conf' + file_dict[invert]
+            nconfigs, s_and_t_channels = self.write_configs_file(\
+                writers.FortranWriter(filename),
+                matrix_element.born_matrix_element, 
+                invert,
+                fortran_model)
+
+            filename = 'born_props' + file_dict[invert]
+            self.write_props_file(writers.FortranWriter(filename),
+                             matrix_element.born_matrix_element,
+                             fortran_model,
+                                s_and_t_channels)
+        
+            filename = 'born_decayBW' + file_dict[invert]
+            self.write_decayBW_file(writers.FortranWriter(filename),
+                                s_and_t_channels)
     
         filename = 'born_leshouche.inc'
         nflows = self.write_leshouche_file(writers.FortranWriter(filename),
@@ -281,11 +291,6 @@ class ProcessExporterFortranFKS_born(export_v4.ProcessExporterFortran):
         self.write_ngraphs_file(writers.FortranWriter(filename),
                             nconfigs)
     
-        filename = 'born_props.inc'
-        self.write_props_file(writers.FortranWriter(filename),
-                         matrix_element.born_matrix_element,
-                         fortran_model,
-                            s_and_t_channels)
         
         #write the sborn_sf.f and the b_sf_files
         filename = ['sborn_sf.f', 'sborn_sf_dum.f']
@@ -586,7 +591,6 @@ c     this subdir has no soft singularities
         (fksreal.matrix_element.get('processes')[0].shell_string()[2:], 
          fksreal.i_fks, fksreal.j_fks)
         self.fksdirs.append(subprocdir)
-        print subprocdir
     #    dirs.append(subprocdir)
         try:
             os.mkdir(subprocdir)
@@ -664,7 +668,20 @@ c     this subdir has no soft singularities
         nconfigs, s_and_t_channels = self.write_configs_file(\
             writers.FortranWriter(filename),
             real_matrix_element,
+            fksreal.j_fks == 2,
             fortran_model)
+
+
+        filename = 'bornfromreal.inc'
+        self.write_bornfromreal_file(writers.FortranWriter(filename),
+                             fksreal,
+                             fortran_model)
+    
+        filename = 'props.inc'
+        self.write_props_file(writers.FortranWriter(filename),
+                         real_matrix_element,
+                         fortran_model,
+                            s_and_t_channels)
     
         filename = 'decayBW.inc'
         self.write_decayBW_file(writers.FortranWriter(filename),
@@ -712,12 +729,6 @@ c     this subdir has no soft singularities
         filename = 'pmass.inc'
         self.write_pmass_file(writers.FortranWriter(filename),
                              real_matrix_element)
-    
-        filename = 'props.inc'
-        self.write_props_file(writers.FortranWriter(filename),
-                         real_matrix_element,
-                         fortran_model,
-                            s_and_t_channels)
 
         linkfiles = ['LesHouches.f',
                      'LesHouchesDummy.f',
@@ -789,8 +800,6 @@ c     this subdir has no soft singularities
         for file in cpfiles:
             os.system('cp '+file+' '+file+'.back')
         
-        os.system('touch bornfromreal.inc')
-        
         #import nexternal/leshouches in Source
         ln('nexternal.inc', '../../../Source', log=False)
         ln('leshouche.inc', '../../../Source', log=False)
@@ -800,12 +809,23 @@ c     this subdir has no soft singularities
         else:
             os.system('ln -s ../born.f ./born.f')
 
-        linkfiles_born = ['born_conf.inc',
-                          'born_decayBW.inc',
-                          'born_leshouche.inc',
+        file_dict= {True : '_inverse.inc', False :'.inc'}
+
+        linkfiles_born_invert = \
+                         ['born_conf',
+                          'born_decayBW',
+                          'born_props']
+
+        for file in linkfiles_born_invert:
+            os.system('ln -s ../%s ./%s' \
+                    % (file + file_dict[fksreal.j_fks == 2],
+                       file + file_dict[False]))
+
+        linkfiles_born = \
+                         ['born_leshouche.inc',
                           'born_ngraphs.inc',
-                          'born_nhel.inc',
-                          'born_props.inc']
+                          'born_nhel.inc']
+
 
         for file in linkfiles_born:
             ln('../' + file , '.')
@@ -1048,6 +1068,7 @@ C
         writer.writelines(lines)
 
 
+
     #===============================================================================
     # write_glu_ij_file
     #===============================================================================
@@ -1055,7 +1076,7 @@ C
         """Write the glu_ij.inc file to be included in the born ME when the leg that splits
         is a gluon"""
     
-        lines = ["DATA IJ_GLU/%2r/" % glu_ij]
+        lines = ["DATA GLU_IJ/%2r/" % glu_ij]
 
         # Write the file
         writer.writelines(lines)
@@ -1085,22 +1106,47 @@ C
 data mirrorproc /%s/" % bool_dict[matrix_element.get('has_mirror_process')]
         writer.writelines(content)
         return True
+
+
+    #===============================================================================
+    # write_bornfromreal_file
+    #===============================================================================
+    def write_bornfromreal_file(self, writer, fksrealproc, fortran_model):
+        """Write the bornfromreal.inc file, with informations on how to link born
+        and real diagrams"""
+
+        lines = []
+        b_confs = sorted([l['born_conf']+1 for l in fksrealproc.bornfromreal]) 
+
+        for link in fksrealproc.bornfromreal:
+            lines.append('data b_from_r(%d) / %d /' % \
+                         (link['real_conf']+1, link['born_conf']+1) )
+            lines.append('data r_from_b(%d) / %d /' % \
+                         (link['born_conf']+1, link['real_conf']+1) )
+        lines.append('integer mapb')
+        lines.append('data (mapbconf(mapb), mapb=0, %d) / %d, %s /' % \
+                     ( len(fksrealproc.bornfromreal), 
+                       len(fksrealproc.bornfromreal),
+                       ', '.join(['%d' % c for c in b_confs])))
+
+        # Write the file
+        writer.writelines(lines)
+
     
     #===============================================================================
     # write_configs_file
     #===============================================================================
-    def write_configs_file(self, writer, matrix_element, fortran_model):
+    def write_configs_file(self, writer, matrix_element, reverse_t_ch, fortran_model):
         """Write the configs.inc file for MadEvent"""
     
         # Extract number of external particles
         (nexternal, ninitial) = matrix_element.get_nexternal_ninitial()
-    
-    
         lines = []
     
         iconfig = 0
     
         s_and_t_channels = []
+
 
         model = matrix_element.get('processes')[0].get('model')
 #        new_pdg = model.get_first_non_pdg()
@@ -1125,7 +1171,7 @@ data mirrorproc /%s/" % bool_dict[matrix_element.get('has_mirror_process')]
             # Need to reorganize the topology so that we start with all
             # final state external particles and work our way inwards
             schannels, tchannels = helas_diag.get('amplitudes')[0].\
-                                         get_s_and_t_channels(ninitial)
+                                         get_s_and_t_channels(ninitial, reverse_t_ch)
     
             s_and_t_channels.append([schannels, tchannels])
     

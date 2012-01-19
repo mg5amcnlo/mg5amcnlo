@@ -27,6 +27,7 @@ import madgraph.core.color_algebra as color
 import madgraph.core.color_amp as color_amp
 import madgraph.core.diagram_generation as diagram_generation
 import madgraph.core.helas_objects as helas_objects
+import models.import_ufo as import_ufo
 import copy
 import array
 import fractions
@@ -688,21 +689,21 @@ class TestFKSCommon(unittest.TestCase):
                                     'massless': True
                                 }),\
                                 fks_common.FKSLeg({
-                                    'id': 21,
+                                    'id': 2,
                                     'number': 3,
+                                    'state': True,
+                                    'color': 3,
+                                    'spin': 2,
+                                    'massless': True
+                                }),\
+                                fks_common.FKSLeg({
+                                    'id': 21,
+                                    'number': 4,
                                     'state': True,
                                     'color': 8,
                                     'spin': 3,
                                     'massless': True,
                                     'fks': 'i'
-                                }),\
-                                fks_common.FKSLeg({
-                                    'id': 2,
-                                    'number': 4,
-                                    'state': True,
-                                    'color': 3,
-                                    'spin': 2,
-                                    'massless': True
                                 }),\
                                 fks_common.FKSLeg({
                                     'id': 21,
@@ -1333,3 +1334,434 @@ class TestFKSCommon(unittest.TestCase):
         self.assertEqual(fks_common.find_orders(amp), \
                         {'QED':1, 'QCD':3, 'WEIGHTED':5})
 
+
+#===============================================================================
+# TestLinkRBConfHEFT
+#===============================================================================
+class TestLinkRBConfHEFT(unittest.TestCase):
+    """Class to test the link_rb_conf function for various processes, using SM
+    (only processes with 3 point interactions)"""
+
+
+    def setUp(self):
+        self.base_model = import_ufo.import_model('heft')
+
+
+    def test_link_gghg_ggh(self):
+        """tests that the real emission process gg>hg and born process gg>h are
+        correctly linked"""
+
+        myleglist_r = fks_common.FKSLegList()
+        myleglist_r.append(fks_common.FKSLeg({'id':21, 'state':False}))
+        myleglist_r.append(fks_common.FKSLeg({'id':21, 'state':False}))
+        myleglist_r.append(fks_common.FKSLeg({'id':25, 'state':True}))
+        myleglist_r.append(fks_common.FKSLeg({'id':21, 'state':True}))
+        realproc = MG.Process({'legs':myleglist_r,
+                                       'model':self.base_model,
+                                       'orders':{'QCD':1, 'QED':0, 'HIG':1}})
+        realamp= diagram_generation.Amplitude(realproc)
+
+
+        myleglist_b = fks_common.FKSLegList()
+        myleglist_b.append(fks_common.FKSLeg({'id':21, 'state':False}))
+        myleglist_b.append(fks_common.FKSLeg({'id':21, 'state':False}))
+        myleglist_b.append(fks_common.FKSLeg({'id':25, 'state':True}))
+        bornproc = MG.Process({'legs':myleglist_b,
+                                       'model':self.base_model,
+                                       'orders':{'QCD':0, 'QED':0, 'HIG':1}})
+        bornamp= diagram_generation.Amplitude(bornproc)
+
+        ij_conf = [ {'i': 4, 'j':1, 'ij':1}, 
+                    {'i': 4, 'j':2, 'ij':2}]
+
+        links =[[{'born_conf':0, 'real_conf':3}],
+                [{'born_conf':0, 'real_conf':2}] ]
+
+        for conf, link in zip(ij_conf, links):
+            self.assertEqual(link, fks_common.link_rb_conf(bornamp, realamp, conf['i'], conf['j'], conf['ij']))
+
+    def test_link_gghgg_gghg(self):
+        """tests that the real emission process gg>hgg and born process gg>hg are
+        correctly linked"""
+
+        myleglist_r = fks_common.FKSLegList()
+        myleglist_r.append(fks_common.FKSLeg({'id':21, 'state':False}))
+        myleglist_r.append(fks_common.FKSLeg({'id':21, 'state':False}))
+        myleglist_r.append(fks_common.FKSLeg({'id':25, 'state':True}))
+        myleglist_r.append(fks_common.FKSLeg({'id':21, 'state':True}))
+        myleglist_r.append(fks_common.FKSLeg({'id':21, 'state':True}))
+        realproc = MG.Process({'legs':myleglist_r,
+                                       'model':self.base_model,
+                                       'orders':{'QCD':2, 'QED':0, 'HIG':1}})
+        realamp= diagram_generation.Amplitude(realproc)
+
+
+        myleglist_b = fks_common.FKSLegList()
+        myleglist_b.append(fks_common.FKSLeg({'id':21, 'state':False}))
+        myleglist_b.append(fks_common.FKSLeg({'id':21, 'state':False}))
+        myleglist_b.append(fks_common.FKSLeg({'id':25, 'state':True}))
+        myleglist_b.append(fks_common.FKSLeg({'id':21, 'state':True}))
+        bornproc = MG.Process({'legs':myleglist_b,
+                                       'model':self.base_model,
+                                       'orders':{'QCD':1, 'QED':0, 'HIG':1}})
+        bornamp= diagram_generation.Amplitude(bornproc)
+
+#        for i, diag in enumerate(bornamp.get('diagrams')):
+#            print "B",i , diag.nice_string()
+#        for i, diag in enumerate(realamp.get('diagrams')):
+#            print "R",i , diag.nice_string()
+
+
+        ij_conf = [ {'i': 4, 'j':1, 'ij':1}, 
+                    {'i': 4, 'j':2, 'ij':2}, 
+                    {'i': 5, 'j':1, 'ij':1}, 
+                    {'i': 5, 'j':2, 'ij':2}, 
+                    {'i': 5, 'j':4, 'ij':4} ]
+
+        links =[[{'born_conf':1, 'real_conf':11},
+                 {'born_conf':2, 'real_conf':10},
+                 {'born_conf':3, 'real_conf':9} ],
+                [{'born_conf':1, 'real_conf':18},
+                 {'born_conf':2, 'real_conf':5},
+                 {'born_conf':3, 'real_conf':14}],
+                [{'born_conf':1, 'real_conf':15},
+                 {'born_conf':2, 'real_conf':14},
+                 {'born_conf':3, 'real_conf':13}],
+                [{'born_conf':1, 'real_conf':19},
+                 {'born_conf':2, 'real_conf':6},
+                 {'born_conf':3, 'real_conf':10}],
+                [{'born_conf':1, 'real_conf':3},
+                 {'born_conf':2, 'real_conf':7},
+                 {'born_conf':3, 'real_conf':17}] ]
+
+        for conf, link in zip(ij_conf, links):
+            self.assertEqual(link, fks_common.link_rb_conf(bornamp, realamp, conf['i'], conf['j'], conf['ij']))
+
+
+
+#===============================================================================
+# TestLinkRBConfSM
+#===============================================================================
+class TestLinkRBConfSM(unittest.TestCase):
+    """Class to test the link_rb_conf function for various processes, using SM
+    (only processes with 3 point interactions)"""
+
+    def setUp(self):
+        self.base_model = import_ufo.import_model('sm')
+
+    def test_link_uuddg_uudd(self):
+        """tests that the real emission process uu~>dd~g and born process uu~>dd~ are
+        correctly linked"""
+
+
+        myleglist_r = MG.LegList()
+        myleglist_r.append(MG.Leg({'id':2, 'state':False}))
+        myleglist_r.append(MG.Leg({'id':-2, 'state':False}))
+        myleglist_r.append(MG.Leg({'id':1, 'state':True}))
+        myleglist_r.append(MG.Leg({'id':-1, 'state':True}))
+        myleglist_r.append(MG.Leg({'id':21, 'state':True}))
+        realproc = MG.Process({'legs':myleglist_r,
+                                       'model':self.base_model,
+                                       'orders':{'QCD':3, 'QED':0}})
+        realamp= diagram_generation.Amplitude(realproc)
+
+
+        myleglist_b = MG.LegList()
+        myleglist_b.append(MG.Leg({'id':2, 'state':False}))
+        myleglist_b.append(MG.Leg({'id':-2, 'state':False}))
+        myleglist_b.append(MG.Leg({'id':1, 'state':True}))
+        myleglist_b.append(MG.Leg({'id':-1, 'state':True}))
+        bornproc = MG.Process({'legs':myleglist_b,
+                                       'model':self.base_model,
+                                       'orders':{'QCD':2, 'QED':0}})
+        bornamp= diagram_generation.Amplitude(bornproc)
+
+        ij_conf = [ {'i': 5, 'j':1, 'ij':1}, 
+                    {'i': 5, 'j':2, 'ij':2},
+                    {'i': 5, 'j':3, 'ij':3},
+                    {'i': 5, 'j':4, 'ij':4}]
+
+        links =[[{'born_conf':0, 'real_conf':3}],
+                [{'born_conf':0, 'real_conf':4}],
+                [{'born_conf':0, 'real_conf':1}],
+                [{'born_conf':0, 'real_conf':2}] ]
+
+        for conf, link in zip(ij_conf, links):
+            self.assertEqual(link, fks_common.link_rb_conf(bornamp, realamp, conf['i'], conf['j'], conf['ij']))
+
+
+    def test_link_uuddg_uugg(self):
+        """tests that the real emission process uu~>dd~g and born process uu~>gg are
+        correctly linked"""
+
+
+        myleglist_r = MG.LegList()
+        myleglist_r.append(MG.Leg({'id':2, 'state':False}))
+        myleglist_r.append(MG.Leg({'id':-2, 'state':False}))
+        myleglist_r.append(MG.Leg({'id':1, 'state':True}))
+        myleglist_r.append(MG.Leg({'id':-1, 'state':True}))
+        myleglist_r.append(MG.Leg({'id':21, 'state':True}))
+        realproc = MG.Process({'legs':myleglist_r,
+                                       'model':self.base_model,
+                                       'orders':{'QCD':3, 'QED':0}})
+        realamp= diagram_generation.Amplitude(realproc)
+
+
+        myleglist_b = MG.LegList()
+        myleglist_b.append(MG.Leg({'id':2, 'state':False}))
+        myleglist_b.append(MG.Leg({'id':-2, 'state':False}))
+        myleglist_b.append(MG.Leg({'id':21, 'state':True}))
+        myleglist_b.append(MG.Leg({'id':21, 'state':True}))
+        bornproc = MG.Process({'legs':myleglist_b,
+                                       'model':self.base_model,
+                                       'orders':{'QCD':2, 'QED':0}})
+        bornamp= diagram_generation.Amplitude(bornproc)
+
+
+        ij_conf = [ {'i': 4, 'j':3, 'ij':3}, 
+                    {'i': 4, 'j':3, 'ij':4}]
+
+        links =[[{'born_conf':0, 'real_conf':0},
+                 {'born_conf':1, 'real_conf':4},
+                 {'born_conf':2, 'real_conf':3}],
+                [{'born_conf':0, 'real_conf':0},
+                 {'born_conf':1, 'real_conf':3},
+                 {'born_conf':2, 'real_conf':4}] ]
+
+        for conf, link in zip(ij_conf, links):
+            self.assertEqual(link, fks_common.link_rb_conf(bornamp, realamp, conf['i'], conf['j'], conf['ij']))
+
+
+    def test_link_uuuug_guug(self):
+        """tests that the real emission process uu>uug and born process gu>ug are
+        correctly linked"""
+
+
+        myleglist_r = MG.LegList()
+        myleglist_r.append(MG.Leg({'id':2, 'state':False}))
+        myleglist_r.append(MG.Leg({'id':2, 'state':False}))
+        myleglist_r.append(MG.Leg({'id':2, 'state':True}))
+        myleglist_r.append(MG.Leg({'id':2, 'state':True}))
+        myleglist_r.append(MG.Leg({'id':21, 'state':True}))
+        realproc = MG.Process({'legs':myleglist_r,
+                                       'model':self.base_model,
+                                       'orders':{'QCD':3, 'QED':0}})
+        realamp= diagram_generation.Amplitude(realproc)
+
+
+        myleglist_b = MG.LegList()
+        myleglist_b.append(MG.Leg({'id':21, 'state':False}))
+        myleglist_b.append(MG.Leg({'id':2, 'state':False}))
+        myleglist_b.append(MG.Leg({'id':2, 'state':True}))
+        myleglist_b.append(MG.Leg({'id':21, 'state':True}))
+        bornproc = MG.Process({'legs':myleglist_b,
+                                       'model':self.base_model,
+                                       'orders':{'QCD':2, 'QED':0}})
+        bornamp= diagram_generation.Amplitude(bornproc)
+
+
+        ij_conf = [ {'i': 3, 'j':1, 'ij':1}, 
+                    {'i': 4, 'j':1, 'ij':1}]
+
+        links =[[{'born_conf':0, 'real_conf':2},
+                 {'born_conf':1, 'real_conf':1},
+                 {'born_conf':2, 'real_conf':0}],
+                [{'born_conf':0, 'real_conf':5},
+                 {'born_conf':1, 'real_conf':4},
+                 {'born_conf':2, 'real_conf':3}] ]
+
+        for conf, link in zip(ij_conf, links):
+            self.assertEqual(link, fks_common.link_rb_conf(bornamp, realamp, conf['i'], conf['j'], conf['ij']))
+
+
+    def test_link_butdg_butd(self):
+        """tests that the real emission process bu>tdg and born process bu>td are
+        correctly linked"""
+
+
+        myleglist_r = MG.LegList()
+        myleglist_r.append(MG.Leg({'id':5, 'state':False}))
+        myleglist_r.append(MG.Leg({'id':2, 'state':False}))
+        myleglist_r.append(MG.Leg({'id':6, 'state':True}))
+        myleglist_r.append(MG.Leg({'id':1, 'state':True}))
+        myleglist_r.append(MG.Leg({'id':21, 'state':True}))
+        realproc = MG.Process({'legs':myleglist_r,
+                                       'model':self.base_model,
+                                       'orders':{'QCD':1, 'QED':2}})
+        realamp= diagram_generation.Amplitude(realproc)
+
+
+        myleglist_b = MG.LegList()
+        myleglist_b.append(MG.Leg({'id':5, 'state':False}))
+        myleglist_b.append(MG.Leg({'id':2, 'state':False}))
+        myleglist_b.append(MG.Leg({'id':6, 'state':True}))
+        myleglist_b.append(MG.Leg({'id':1, 'state':True}))
+        bornproc = MG.Process({'legs':myleglist_b,
+                                       'model':self.base_model,
+                                       'orders':{'QCD':0, 'QED':2}})
+        bornamp= diagram_generation.Amplitude(bornproc)
+
+
+        ij_conf = [ {'i': 5, 'j':1, 'ij':1}, 
+                    {'i': 5, 'j':2, 'ij':2}, 
+                    {'i': 5, 'j':3, 'ij':3}, 
+                    {'i': 5, 'j':4, 'ij':4}]
+
+        links =[[{'born_conf':0, 'real_conf':2}],
+                [{'born_conf':0, 'real_conf':0}],
+                [{'born_conf':0, 'real_conf':3}],
+                [{'born_conf':0, 'real_conf':1}] ]
+
+        for conf, link in zip(ij_conf, links):
+            self.assertEqual(link, fks_common.link_rb_conf(bornamp, realamp, conf['i'], conf['j'], conf['ij']))
+
+
+    def test_link_gutdb_butd(self):
+        """tests that the real emission process gu>tdb~ and born process bu>td are
+        correctly linked"""
+
+
+        myleglist_r = MG.LegList()
+        myleglist_r.append(MG.Leg({'id':21, 'state':False}))
+        myleglist_r.append(MG.Leg({'id':2, 'state':False}))
+        myleglist_r.append(MG.Leg({'id':6, 'state':True}))
+        myleglist_r.append(MG.Leg({'id':1, 'state':True}))
+        myleglist_r.append(MG.Leg({'id':-5, 'state':True}))
+        realproc = MG.Process({'legs':myleglist_r,
+                                       'model':self.base_model,
+                                       'orders':{'QCD':1, 'QED':2}})
+        realamp= diagram_generation.Amplitude(realproc)
+
+
+        myleglist_b = MG.LegList()
+        myleglist_b.append(MG.Leg({'id':5, 'state':False}))
+        myleglist_b.append(MG.Leg({'id':2, 'state':False}))
+        myleglist_b.append(MG.Leg({'id':6, 'state':True}))
+        myleglist_b.append(MG.Leg({'id':1, 'state':True}))
+        bornproc = MG.Process({'legs':myleglist_b,
+                                       'model':self.base_model,
+                                       'orders':{'QCD':0, 'QED':2}})
+        bornamp= diagram_generation.Amplitude(bornproc)
+
+        ij_conf = [ {'i': 5, 'j':1, 'ij':1}] 
+
+        links =[[{'born_conf':0, 'real_conf':3}]]
+
+        for conf, link in zip(ij_conf, links):
+            self.assertEqual(link, fks_common.link_rb_conf(bornamp, realamp, conf['i'], conf['j'], conf['ij']))
+
+
+#===============================================================================
+# TestFKSDiagramTag
+#===============================================================================
+class TestFKSDiagramTag(unittest.TestCase):
+    """Test class for the FKSDiagramTag class"""
+
+
+    def setUp(self):
+        self.base_model = import_ufo.import_model('sm')
+    
+    def test_diagram_tag_gg_ggg(self):
+        """Test the diagram tag for gg > ggg"""
+
+        myleglist = MG.LegList()
+
+        myleglist.append(MG.Leg({'id':21,
+                                           'state':False}))
+        myleglist.append(MG.Leg({'id':21,
+                                           'state':False}))
+        myleglist.append(MG.Leg({'id':21,
+                                           'state':True}))
+        myleglist.append(MG.Leg({'id':21,
+                                           'state':True}))
+        myleglist.append(MG.Leg({'id':21,
+                                           'state':True}))
+
+        myproc = MG.Process({'legs':myleglist,
+                                       'model':self.base_model})
+
+        myamplitude = diagram_generation.Amplitude(myproc)
+
+        tags = []
+        permutations = []
+        diagram_classes = []
+        for idiag, diagram in enumerate(myamplitude.get('diagrams')):
+            tag = fks_common.FKSDiagramTag(diagram)
+            try:
+                ind = tags.index(tag)
+            except:
+                diagram_classes.append([idiag + 1])
+                permutations.append([tag.get_external_numbers()])
+                tags.append(tag)
+            else:
+                diagram_classes[ind].append(idiag + 1)
+                permutations[ind].append(tag.get_external_numbers())
+
+        permutations = [[fks_common.FKSDiagramTag.reorder_permutation(p, perms[0])\
+                         for p in perms] for perms in permutations]        
+
+        # for the fks tags all diagrams should be different, i.e. no final state
+        # permutation should be done
+        goal_classes =  [[i+1] for i in range(25)]
+        goal_perms = [[[0,1,2,3,4]]] *25
+
+        for i in range(len(diagram_classes)):
+            self.assertEqual(diagram_classes[i], goal_classes[i])
+            self.assertEqual(permutations[i], goal_perms[i])
+
+    def test_diagram_tag_uu_uug(self):
+        """Test diagram tag for uu>uug"""
+
+        myleglist = MG.LegList()
+
+        myleglist.append(MG.Leg({'id':2,
+                                           'state':False}))
+        myleglist.append(MG.Leg({'id':2,
+                                           'state':False}))
+        myleglist.append(MG.Leg({'id':2,
+                                           'state':True}))
+        myleglist.append(MG.Leg({'id':2,
+                                           'state':True}))
+        myleglist.append(MG.Leg({'id':21,
+                                           'state':True}))
+
+        myproc = MG.Process({'legs':myleglist,
+                                       'model':self.base_model})
+
+        myamplitude = diagram_generation.Amplitude(myproc)
+
+        tags = []
+        permutations = []
+        diagram_classes = []
+        for idiag, diagram in enumerate(myamplitude.get('diagrams')):
+            tag = fks_common.FKSDiagramTag(diagram)
+            try:
+                ind = tags.index(tag)
+            except:
+                diagram_classes.append([idiag + 1])
+                permutations.append([tag.get_external_numbers()])
+                tags.append(tag)
+            else:
+                diagram_classes[ind].append(idiag + 1)
+                permutations[ind].append(tag.get_external_numbers())
+
+        permutations = [[fks_common.FKSDiagramTag.reorder_permutation(p, perms[0])\
+                         for p in perms] for perms in permutations]        
+
+        goal_classes =  [[i+1] for i in range(26)]
+        goal_perms = [[[0,1,2,3,4]]] *26
+
+        for i in range(len(diagram_classes)):
+            self.assertEqual(diagram_classes[i], goal_classes[i])
+            self.assertEqual(permutations[i], goal_perms[i])
+
+
+    def test_reorder_permutation(self):
+        """Test the reorder_permutation routine"""
+
+        perm1 = [2,3,4,5,1]
+        perm2 = [3,5,2,1,4]
+        goal = [3,2,4,1,0]
+
+        self.assertEqual(fks_common.FKSDiagramTag.reorder_permutation(\
+            perm1, perm2), goal)

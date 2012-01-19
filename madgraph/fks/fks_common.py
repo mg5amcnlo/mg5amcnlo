@@ -33,6 +33,144 @@ class FKSProcessError(Exception):
     pass
 
 
+class FKSDiagramTag(diagram_generation.DiagramTag): #test written
+    """modified diagram tags to be used to link born and real configurations"""
+
+    @staticmethod
+    def link_from_leg(leg, model):
+        """Returns the default end link for a leg: ((id, number), number).
+        Note that the number is not taken into account if tag comparison,
+        but is used only to extract leg permutations."""
+
+        return [((leg.get('id'), leg.get('number')), leg.get('number'))]
+
+
+def link_rb_conf(born_amp, real_amp, i, j, ij): #test written, sm and heft
+    """finds the real configurations that match the born ones, i.e.
+    for each born configuration, the real configuration that has 
+    the ij -> i j splitting.
+    i, j and ij are integers, and refer to the leg position in the real
+    process (i, j) and in the born process (ij)."""
+
+    # find diagrams with 3 point functions and use them as configurations
+    minvert = min([max([len(vert.get('legs')) for vert in \
+                        diag.get('vertices')]) for diag in \
+                        born_amp.get('diagrams')])
+
+    born_confs = []
+    real_confs = []
+
+    for k, diag in enumerate(born_amp.get('diagrams')):
+        if any([len(vert.get('legs')) > minvert for vert in
+                diag.get('vertices')]):
+            continue
+        else:
+            born_confs.append({'number' : k, 'diagram' : diag})
+
+    for k, diag in enumerate(real_amp.get('diagrams')):
+        if any([len(vert.get('legs')) > minvert for vert in
+                diag.get('vertices')]):
+            continue
+        else:
+            real_confs.append({'number' : k, 'diagram' : diag})
+
+    good_diags = []
+
+    # find the real diagrams that have i and j attached to the same vertex
+    real_confs_new = copy.deepcopy(real_confs)
+    for diag in real_confs_new:
+        #print diag['diagram'].nice_string()
+        for vert in diag['diagram'].get('vertices'):
+            vert_legs = [ l.get('number') for l in vert.get('legs')]
+            if (i in vert_legs and not j in vert_legs) or \
+               (j in vert_legs and not i in vert_legs):
+                   break
+
+            if i in vert_legs and j in vert_legs:
+                vert_legs.remove(i)
+                vert_legs.remove(j)
+                last_leg = vert_legs[0]
+                diag['diagram']['vertices'].remove(vert)
+                #print vert, last_leg
+                good_diags.append({'diagram' : diag['diagram'], 
+                                  'leg_ij': last_leg,
+                                  'number' : diag['number']})
+                break #no need to continue once the vertex is found
+
+
+    # now good_diags contains the real_confs which had the splitting, 
+    #  with the vertex corresponding to the splitting removed
+
+    # The legs in the born and real diags are ordered according to 
+    #  the same criterion. Once we removed i-j, we have to re-label the
+    #  real legs to match the born numbering.
+
+    legs =  []
+    for d in good_diags: 
+        for v in d['diagram'].get('vertices') :
+            for l in v.get('legs') :
+                if l not in legs:
+                    legs.append(copy.copy(l))
+
+    for good_diag in good_diags:
+        replaced_ij = False
+        for vert in good_diag['diagram'].get('vertices'):
+            for l in vert.get('legs'):
+                shift = 0
+                #shift the legs
+                if l.get('number') > 0 and l in legs :
+                    if l.get('number') > j:
+                        shift += 1
+                    if l.get('number') > i:
+                        shift += 1
+                    if l.get('number') >ij and ij < max(i,j):
+                        shift -= 1
+                    if l.get('number') != good_diag['leg_ij'] or replaced_ij:
+                        legs.remove(l)
+                        l['number'] -= shift
+                 #and relabel last_leg to ij
+                    if l.get('number') == good_diag['leg_ij'] and not replaced_ij:
+                        legs.remove(l)
+                        replaced_ij = True
+                        l['number'] = ij
+
+    # now create the tags
+    born_tags = [ FKSDiagramTag(d['diagram'], 
+                                born_amp.get('process').get('model')) \
+                  for d in born_confs]
+
+    real_tags = [ FKSDiagramTag(d['diagram'], 
+                                real_amp.get('process').get('model')) \
+                  for d in good_diags ]
+
+    # and compare them
+    if len(born_tags) != len(real_tags):
+        raise FKSProcessError('Cannot map born/real configurations between \
+                %s and %s: not same number of configurations: %d %d' % \
+                (born_amp.get('process').nice_string().replace('Process:',''), 
+                 real_amp.get('process').nice_string().replace('Process:',''),
+                               len(born_tags),
+                               len(real_tags)) )
+    
+    links = []
+    for ib, btag in enumerate(born_tags):
+        try:
+            ir = real_tags.index(btag)
+            links.append({'real_conf' : good_diags[ir]['number'],
+                          'born_conf' : born_confs[ib]['number']})
+            real_tags.remove(btag)
+            good_diags.pop(ir)
+        except ValueError:
+            print real_tags, i, j, ij
+            print '\n'.join( d['diagram'].nice_string() for d in good_diags)
+            raise FKSProcessError('Linking %s to %s: could not link born diagram %s' % \
+                 (born_amp.get('process').nice_string().replace('Process:',''), 
+                  real_amp.get('process').nice_string().replace('Process:',''),
+                                  born_confs[ib]['diagram'].nice_string()) )
+
+    return links
+
+
 def find_orders(amp): #test_written
     """take an amplitude as input, and returns a dictionary with the
     order of the couplings"""
@@ -45,6 +183,7 @@ def find_orders(amp): #test_written
             except KeyError:
                 orders[order] = value
     return orders
+
 
 def find_splittings(leg, model, dict, pert='QCD'): #test written
     """find the possible splittings corresponding to leg"""
@@ -137,8 +276,8 @@ def insert_legs(leglist_orig, leg, split):
     for sleg in split:            
         leglist.insert(i, sleg)
         #keep track of the number for initial state legs
-        if not sleg.get('state') and not leg.get('state'):
-            leglist[i]['number'] = leg['number']
+        #if not sleg.get('state') and not leg.get('state'):
+        leglist[i]['number'] = leg['number']
         i+= 1
         if i < firstfinal :
             i = firstfinal
@@ -339,11 +478,6 @@ def legs_to_color_link_string(leg1, leg2): #test written, all cases
                                color_algebra.f(min_index,iglu,num)], 
                                is_imaginary =True))
 
-                
-#                if not leg.get('state'):
-#                    string.coeff = string.coeff* (-1)
-#        if leg1.get('color') == 8 and leg2.get('color') == 8:
-#            string.coeff = string.coeff *(-1)
     else:
         icol =1
         if not leg1.get('state'):
@@ -381,7 +515,6 @@ def to_leg(fksleg):
          'number': fksleg.get('number'),
          'state': fksleg.get('state'),
          'from_group': fksleg.get('from_group'),
-#         'onshell': fksleg.get('onshell') 
           } )
     return leg
 
@@ -452,14 +585,14 @@ class FKSLeg(MG.Leg):
         if name == 'fks':
             if not isinstance(value, str):
                 raise self.PhysicsObjectError, \
-                        "%s is not a valid string for leg fks flag" % str(value)
+                        "%s is not a valid string for leg fks flag" \
+                                                        % str(value)
 
         if name in ['color', 'spin']:
             if not isinstance(value, int):
                 raise self.PhysicsObjectError, \
                         "%s is not a valid leg color " % \
-                                                                    str(value)
-
+                                                 str(value)
         if name == 'massless':
             if not isinstance(value, bool):
                 raise self.PhysicsObjectError, \
@@ -489,11 +622,7 @@ class FKSLeg(MG.Leg):
                   not (self.get('massless') and other.get('massless')):
                     return other.get('massless')
                 else:
-#3                    if (self.get('id') != other.get('id')):
-##                        return self.get('id') < other.get('id')
-##                    else:
-##                        return self.get('number') < other.get('number')
-                    return self.get('number') < other.get('number')
-        return True
+                   return self.get('number') < other.get('number')
+        return False
          
 

@@ -193,6 +193,9 @@ class FKSHelasProcessFromReals(object): #test written
                         FKSHelasBornProcess(proc, me_list, me_id_list, **opts))
             self.real_matrix_element = helas_objects.HelasMatrixElement(
                                     fksproc.real_amp, **opts)
+
+            for i, rb_link in enumerate(fksproc.link_rb_confs()):
+                self.born_processes[i].bornfromreal = rb_link
     
     def get(self, key):
         """the get function references to real_matrix_element"""
@@ -259,6 +262,7 @@ class FKSHelasBornProcess(object): #test written
             self.i_fks = fksbornproc.i_fks
             self.j_fks = fksbornproc.j_fks
             self.ijglu = fksbornproc.ijglu
+            self.ij_fks = fksbornproc.ij_fks
             self.is_nbody_only = fksbornproc.is_nbody_only
             self.is_to_integrate = fksbornproc.is_to_integrate
             self.orders = fks_common.find_orders(fksbornproc.amplitude)
@@ -276,6 +280,7 @@ class FKSHelasBornProcess(object): #test written
             self.color_links = fks_common.insert_color_links(col_basis,
                                 col_basis.create_color_dict_list(fksbornproc.amplitude),
                                 fksbornproc.find_color_links())
+            self.bornfromreal = {}
     def get_lh_pdg_string(self):
         """Returns the pdgs of the legs in the form "i1 i2 -> f1 f2 ...", which may
         be useful (eg. to be written in a B-LH order file"""

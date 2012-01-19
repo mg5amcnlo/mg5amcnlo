@@ -195,6 +195,10 @@ class FKSHelasProcessFromBorn(object):
             self.color_links = fks_common.insert_color_links(col_basis,
                                 col_basis.create_color_dict_list(fksproc.born_amp),
                                 fksproc.find_color_links())    
+
+            for i, rb_link in enumerate(fksproc.link_rb_confs()):
+                self.real_processes[i].bornfromreal = rb_link
+
     def get(self, key):
         """the get function references to born_matrix_element"""
         return self.born_matrix_element.get(key)
@@ -244,7 +248,7 @@ class FKSHelasRealProcess(object): #test written
     """class to generate the Helas calls for a FKSRealProcess
     contains:
     -- colors
-    -- i/j fks
+    -- i/j/ij fks, ij refers to the born leglist
     -- ijglu
     -- need_color_links
     -- fks_j_from_i
@@ -264,10 +268,12 @@ class FKSHelasRealProcess(object): #test written
             self.i_fks = fksrealproc.i_fks
             self.j_fks = fksrealproc.j_fks
             self.ijglu = fksrealproc.ijglu
+            self.ij = fksrealproc.ij
             self.need_color_links = fksrealproc.need_color_links
             self.is_to_integrate = fksrealproc.is_to_integrate
             self.is_nbody_only = fksrealproc.is_nbody_only
             self.fks_j_from_i = fksrealproc.find_fks_j_from_i()
+            self.bornfromreal = {}
        #     print "in FKSHelasRealProc  i ", self.i_fks, "   j ", self.j_fks
             
             #try:
@@ -295,7 +301,3 @@ class FKSHelasRealProcess(object): #test written
         return not self.__eq__(other)
 
 
-
-        
-        
-    

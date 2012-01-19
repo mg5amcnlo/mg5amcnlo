@@ -74,14 +74,14 @@ class FKSMultiProcessFromBorn(diagram_generation.MultiProcess): #test written
 
 class FKSRealProcess(object): 
     """contains information about a real process:
-    -- i/j fks
+    -- i/j/ij fks (ij refers to the born leglist)
     -- ijglu
     -- amplitude 
     -- is_to_integrate
     -- need_color_links
     -- leg permutation<<REMOVED!"""
     
-    def __init__(self, born_proc, leglist, ijglu, amplist, amp_id_list,
+    def __init__(self, born_proc, leglist, ij, ijglu, amplist, amp_id_list,
                  perturbed_orders = ['QCD']): #test written
         """initialize the real process based on born_proc and leglist,
         then checks if the amplitude has already been generated before in amplist,
@@ -96,6 +96,7 @@ class FKSRealProcess(object):
             if leg.get('fks') == 'j':
                 self.j_fks = leg.get('number')
         self.ijglu = ijglu
+        self.ij = ij
         self.process = copy.copy(born_proc)
         orders = copy.copy(born_proc.get('orders'))
         for order in perturbed_orders:
@@ -104,11 +105,6 @@ class FKSRealProcess(object):
                 orders['WEIGHTED'] +=1
             else: 
                 orders['WEIGHTED'] +=2
-#        for n, o in orders.items():
-#            if n != 'QCD':
-#                orders[n] = o
-#            else:
-#                orders[n] = o +1
 
         self.process.set('orders', orders)
         legs = [(leg.get('id'), leg) for leg in \
@@ -183,9 +179,11 @@ class FKSProcessFromBorn(object):
         
         if start_proc:
             if isinstance(start_proc, MG.Process):
-                self.born_proc = start_proc 
+                self.born_proc = fks_common.sort_proc(start_proc) 
                 self.born_amp = diagram_generation.Amplitude(self.born_proc)
             elif isinstance(start_proc, diagram_generation.Amplitude):
+                self.born_proc = fks_common.sort_proc(start_proc.get('process'))
+                self.born_amp = diagram_generation.Amplitude(self.born_proc)
                 self.born_amp = start_proc
                 self.born_proc = start_proc.get('process')           
             self.model = self.born_proc['model']
@@ -212,7 +210,19 @@ class FKSProcessFromBorn(object):
             self.fks_config_string = ""
 
             self.find_reals()
+
             self.find_color_links()
+
+    def link_rb_confs(self):
+        """links the configurations of the born amp with those of the real amps.
+        Uses the function defined in fks_common"""
+        links = []
+        for real in self.real_amps:
+            links.append(fks_common.link_rb_conf(self.born_amp, real.amplitude, 
+                                                 real.i_fks, real.j_fks, real.ij) )
+
+        return links
+
 
     def find_color_links(self): #test written
         """finds all the possible color links between two legs of the born.
@@ -233,10 +243,12 @@ class FKSProcessFromBorn(object):
             else:
                 ijglu = 0
             for l in list:
+                ij = self.leglist[i].get('number')
                 self.real_amps.append(FKSRealProcess(\
-                        self.born_proc, l, ijglu, amplist, amp_id_list))
+                        self.born_proc, l, ij, ijglu, amplist, amp_id_list))
         self.find_reals_to_integrate()
         self.find_real_nbodyonly()
+
 
     
     def find_reals(self):

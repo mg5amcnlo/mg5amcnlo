@@ -380,7 +380,6 @@ class ProcessExporterFortranFKS_real(export_v4.ProcessExporterFortran):
         for file in cpfiles:
             os.system('cp '+file+' '+file+'.back')
         
-        os.system('touch bornfromreal.inc')
         
         #import nexternal/leshouches in Source
         ln('nexternal.inc', '../../Source', log=False)
@@ -487,6 +486,11 @@ class ProcessExporterFortranFKS_real(export_v4.ProcessExporterFortran):
         filename = 'coloramps.inc'
         self.write_coloramps_file(writers.FortranWriter(filename),
                              matrix_element.real_matrix_element,
+                             fortran_model)
+
+        filename = 'bornfromreal.inc'
+        self.write_bornfromreal_file(writers.FortranWriter(filename),
+                             fksborn,
                              fortran_model)
     
         filename = 'configs.inc'
@@ -688,7 +692,6 @@ class ProcessExporterFortranFKS_real(export_v4.ProcessExporterFortran):
         for file in cpfiles:
             os.system('cp '+file+' '+file+'.back')
         
-        os.system('touch bornfromreal.inc')
         
         #import nexternal/leshouches in Source
         ln('nexternal.inc', '../../Source', log=False)
@@ -1258,6 +1261,31 @@ END
     
         return True
     
+
+    #===============================================================================
+    # write_bornfromreal_file
+    #===============================================================================
+    def write_bornfromreal_file(self, writer, fksbornproc, fortran_model):
+        """Write the bornfromreal.inc file, with informations on how to link born
+        and real diagrams"""
+
+        lines = []
+        b_confs = sorted([l['born_conf']+1 for l in fksbornproc.bornfromreal]) 
+
+        for link in fksbornproc.bornfromreal:
+            lines.append('data b_from_r(%d) / %d /' % \
+                         (link['real_conf']+1, link['born_conf']+1) )
+            lines.append('data r_from_b(%d) / %d /' % \
+                         (link['born_conf']+1, link['real_conf']+1) )
+        lines.append('integer mapb')
+        lines.append('data (mapbconf(mapb), mapb=0, %d) / %d, %s /' % \
+                     ( len(fksbornproc.bornfromreal), 
+                       len(fksbornproc.bornfromreal),
+                       ', '.join(['%d' % c for c in b_confs])))
+
+        # Write the file
+        writer.writelines(lines)
+
     #===============================================================================
     # write_configs_file
     #===============================================================================

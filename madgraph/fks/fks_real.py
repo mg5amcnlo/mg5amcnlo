@@ -85,6 +85,7 @@ class FKSBornProcess(object):
 
         self.i_fks = leg_i.get('number')
         self.j_fks = leg_j.get('number')
+        self.ij_fks = leg_ij.get('number')
         if leg_ij.get('spin') == 3:
             self.ijglu = leg_ij.get('number')
         else:
@@ -199,6 +200,15 @@ class FKSProcessFromReals(object):
             if self.real_amp.get('diagrams') and not self.borns:
                 self.isfinite = True
     
+    def link_rb_confs(self):
+        """links the configurations of the born amp with those of the real amps.
+        Uses the function defined in fks_common"""
+        links = []
+        for born in self.borns:
+            links.append(fks_common.link_rb_conf(born.amplitude, self.real_amp, 
+                                                 born.i_fks, born.j_fks, born.ij_fks) )
+
+        return links
             
              
                  

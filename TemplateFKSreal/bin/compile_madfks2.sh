@@ -39,12 +39,6 @@ fi
 echo ''
 echo 'Press "0" for "NO" and "1" for "YES"'
 
-echo 'Compile and run link_fks?'
-read link_fks
-if [[ $link_fks != "1" ]] ; then
-    link_fks="0"
-fi
-
 echo 'Compile and run tests?'
 read test
 if [[ $test != "1" ]] ; then
@@ -153,9 +147,6 @@ if [[ $test == "1" ]] ; then
     echo 'results from test_MC' > $Maindir/test_MC.log
 fi
 
-if [[ $link_fks == '1' ]] ; then
-    echo 'results from link_fks' > $Maindir/link_fks.log
-fi
 if [[ $gensym == '1' ]] ; then
     echo 'results from gensym' > $Maindir/gensym.log
 fi
@@ -165,7 +156,7 @@ fi
 echo 'compilation results' > $Maindir/compile_madfks.log
 
 # Source directory
-if [[ $link_fks == '1' || $gensym == '1' || $madevent_compile == '1' ]]; then
+if [[  $gensym == '1' || $madevent_compile == '1' ]]; then
     # Source
     cd Source
     echo 'compiling Source...'
@@ -196,7 +187,7 @@ cd $Maindir/SubProcesses
 echo 'continuing with the P* directories...'
 echo ''
 
-if [[ $link_fks == '1' || $gensym == '1' || $madevent_compile == '1' ]]; then
+if [[ $gensym == '1' || $madevent_compile == '1' ]]; then
     dir=`ls -d P* | tail -n1`
     if [[ -e $dir"/helicities.inc" ]]; then
 	echo 'helicities.inc found: it is recommended to MC over helicities'
@@ -223,43 +214,6 @@ for dir in $dirs ; do
 
     if [[ ($nbodyonly == "1" && "$(head -n 1 nbodyonly.fks)" == "Y") || $nbodyonly == "0" ]] ; then
 	echo $dir >> $Maindir/compile_madfks.log
-
-#
-# COMPILE AND RUN LINK_FKS
-#
-
-    if [[ $link_fks == '1' ]] ; then
-	echo $dir >> $Maindir/link_fks.log
-# This is to restore information if t-channel is inverted, i.e. fks_j=parton2
-	if [ -e 'fks_singular.o' ] ; then
-	    rm fks_singular.o
-	    rm bornfromreal.inc
-	    touch bornfromreal.inc
-	fi
-	if [ -e 'born_conf.inc.back' ] ; then
-	    cp born_conf.inc.back born_conf.inc
-	fi
-	if [ -e 'born_props.inc.back' ] ; then
-	    cp born_props.inc.back born_props.inc
-	fi
-	if [ -e 'props.inc.back' ] ; then
-	    cp props.inc.back props.inc
-	fi
-	if [ -e 'configs.inc.back' ] ; then
-	    cp  configs.inc.back configs.inc
-	fi
-	echo '     make link_fks...'
-	if [[ -e "link_fks" ]]; then
-	    rm -f link_fks
-	fi
-	make -j$j link_fks >> $Maindir/compile_madfks.log 2>&1 
-	if [[ -e "link_fks" ]]; then
-	    echo '     ...running link_fks'
-	    ./link_fks >> $Maindir/link_fks.log
-	else
-	    echo 'ERROR in compilation, see compile_madfks.log for details'
-	fi
-    fi
 
 #
 # GENERATION OF THE NLOComp LIBRARY

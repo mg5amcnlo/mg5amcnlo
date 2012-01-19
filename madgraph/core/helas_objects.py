@@ -1741,11 +1741,13 @@ class HelasAmplitude(base_objects.PhysicsObject):
             'id': self.get('interaction_id'),
             'legs': legs})
 
-    def get_s_and_t_channels(self, ninitial):
+    def get_s_and_t_channels(self, ninitial, reverse_t_ch = False):
         """Returns two lists of vertices corresponding to the s- and
         t-channels of this amplitude/diagram, ordered from the outermost
         s-channel and in/down towards the highest number initial state
-        leg."""
+        leg.
+        Reverse_t_ch allows to invert the order of the t-channels
+        needed by MadFKS."""
 
         schannels = base_objects.VertexList()
         tchannels = base_objects.VertexList()
@@ -1803,6 +1805,15 @@ class HelasAmplitude(base_objects.PhysicsObject):
                                    init_mothers)[0]
             init_mothers2 = filter(lambda wf: wf.get('number_external') == 2,
                                    init_mothers)[0]
+
+            if reverse_t_ch:
+            # for MadFKS, if j_fks=2 the t-channels are inverted starting from
+            # leg 2 until leg 1
+                init_mothers1 = filter(lambda wf: wf.get('number_external') == 2,
+                                   init_mothers)[0]
+                init_mothers2 = filter(lambda wf: wf.get('number_external') == 1,
+                                   init_mothers)[0]
+
 
             # Create vertex
             legs = base_objects.LegList()
