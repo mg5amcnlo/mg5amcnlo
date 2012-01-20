@@ -15,7 +15,6 @@ gridpack.tar.gz: gridpack.tar
 gridpack.tar: 
 	mv Events Events1
 	mkdir Events
-	cp Events1/banner_header.txt Events/
 	mkdir madevent
 	cp bin/internal/Gridpack/run.sh ./
 	cp bin/internal/Gridpack/* bin/
