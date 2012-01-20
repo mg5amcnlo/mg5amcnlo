@@ -165,6 +165,12 @@ class BasicCmd(cmd.Cmd):
             stripped = len(origline) - len(line)
             begidx = readline.get_begidx() - stripped
             endidx = readline.get_endidx() - stripped
+            
+            if ';' in line:
+                begin, line = line.rsplit(';',1)
+                begidx = begidx - len(begin) - 1
+                endidx = endidx - len(begin) - 1
+
             if begidx>0:
                 cmd, args, foo = self.parseline(line)
                 if cmd == '':

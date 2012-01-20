@@ -3764,3 +3764,43 @@ class SubProcesses(object):
             particles = re.search("/([\d,-]+)/", line)
             all_ids.append([int(p) for p in particles.group(1).split(',')])
         return all_ids
+    
+    
+#===============================================================================                                                                              
+class GridPackCmd(MadEventCmd):
+    """The command for the gridpack --Those are not suppose to be use interactively--"""
+
+    def __init__(self, me_dir = None, nb_event=0, seed=0, *completekey, **stdin):
+        """Initialize the command and directly run"""
+
+        # Initialize properly                                                                                                                                 
+        MadEventCmd.__init__(self, me_dir, *completekey, **stdin)
+
+        # Now it's time to run!                                                                                                                               
+        if me_dir and nb_event and seed:
+            self.launch(nb_event, seed)
+
+
+    def launch(self, nb_event, seed):
+        """ launch the generation for the grid """
+
+        # 1) Restore the default data                                                                                                                         
+        logger.info('generate %s events' % nb_event)
+        self.set_run_name('GridRun_%s' % seed)
+        self.update_status('restoring default data', level=None)
+        subprocess.call([pjoin(self.me_dir,'bin','internal','restore_data'), self.run_name],
+            cwd=self.me_dir)
+
+        # 2) Run the refine for the grid                                                                                                                      
+        self.update_status('Generating Events', level=None)
+        subprocess.call([pjoin(self.me_dir,'bin','refine4grid'),
+                        str(nb_event), '0', 'Madevent','1','GridRun_%s' % seed],
+                        cwd=self.me_dir)
+
+        # 3) Combine the events/pythia/...                                                                                                                    
+        self.exec_cmd('combine_events')
+        self.exec_cmd('store_events')
+        self.exec_cmd('pythia --nodefault')
+        self.exec_cmd('pgs --nodefault')
+    
+    
