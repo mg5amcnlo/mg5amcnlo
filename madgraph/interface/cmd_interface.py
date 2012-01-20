@@ -236,20 +236,20 @@ class HelpToCmd(object):
               " FILENAME")
         logger.info("-- imports file(s) in various formats")
         logger.info("")
-        logger.info("   import model MODEL[-RESTRICTION] [-modelname]:")
+        logger.info("   import model MODEL[-RESTRICTION] [--modelname]:")
         logger.info("      Import a UFO model.")
         logger.info("      MODEL should be a valid UFO model name")
         logger.info("      Model restrictions are specified by MODEL-RESTRICTION")
         logger.info("        with the file restrict_RESTRICTION.dat in the model dir.")
         logger.info("        By default, restrict_default.dat is used.")
         logger.info("        Specify model_name-full to get unrestricted model.")
-        logger.info("      -modelname keeps the original particle names for the model")
+        logger.info("      '--modelname' keeps the original particle names for the model")
         logger.info("")
-        logger.info("   import model_v4 MODEL [-modelname] :")
+        logger.info("   import model_v4 MODEL [--modelname] :")
         logger.info("      Import an MG4 model.")
         logger.info("      Model should be the name of the model")
         logger.info("      or the path to theMG4 model directory")
-        logger.info("      -modelname keeps the original particle names for the model")
+        logger.info("      '--modelname' keeps the original particle names for the model")
         logger.info("")
         logger.info("   import proc_v4 [PATH] :"  )
         logger.info("      Execute MG5 based on a proc_card.dat in MG4 format.")
@@ -572,7 +572,10 @@ class CheckValidForCmd(object):
         modelname = False
         if '-modelname' in args:
             args.remove('-modelname')
-            modelname = True    
+            modelname = True   
+        elif '--modelname' in args:
+            args.remove('--modelname')
+            modelname = True              
                 
         if not args:
             self.help_import()
@@ -1459,11 +1462,11 @@ class CompleteForCmd(CheckValidForCmd):
         if mode == 'all' and len(args)>1:
             mode = self.find_import_type(args[2])
    
-        if len(args) >= 3 and mode.startswith('model') and not '--modelname' in line:
+        if len(args) >= 3 and mode.startswith('model') and not '-modelname' in line:
             if not text and not completion_categories:
                 return ['--modelname']
             elif not (os.path.sep in args[-1] and line[-1] != ' '):
-                completion_categories['options'] = self.list_completion(text, ['--modelname'])
+                completion_categories['options'] = self.list_completion(text, ['--modelname','-modelname'])
         return self.deal_multiple_categories(completion_categories) 
         
         
