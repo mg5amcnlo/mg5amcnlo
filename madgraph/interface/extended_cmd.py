@@ -73,7 +73,7 @@ class BasicCmd(cmd.Cmd):
                 continue
             name = name.replace(' ', '_')
             valid += 1
-            out.append(opt[0]+'@@'+name+'@@')
+            out.append(opt[0].rstrip()+'@@'+name+'@@')
             # Remove duplicate
             d = {}
             for x in opt:
@@ -197,6 +197,9 @@ class BasicCmd(cmd.Cmd):
             else:
                 self.completion_prefix = ''
                 self.completion_matches = compfunc(text, line, begidx, endidx)
+        #print self.completion_matches
+        self.completion_matches = [ (l[-1] in [' ','@','='] and l or (l+' ')) for l in self.completion_matches if l]
+        
         try:
             return self.completion_matches[state]
         except IndexError, error:
@@ -938,18 +941,6 @@ class Cmd(BasicCmd):
     def list_completion(text, list, line=''):
         """Propose completions of text in list"""
 
-        rm=0
-        if text:
-            line = line[:-len(text)]
-        
-        #if line.endswith('-'):
-        #    #if line.endswith('--'):
-        #    #    rm += 2
-        #        text =  '--%s' % text 
-        #    else:
-        #        rm += 1
-        #        text =  '-%s' % text
-        
         if not text:
             completions = list
         else:
@@ -957,13 +948,8 @@ class Cmd(BasicCmd):
                             for f in list
                             if f.startswith(text)
                             ]
-        def put_space(name, rm): 
-            if name.endswith(' '): 
-                return name
-            else:
-                return '%s ' % name[rm:] 
             
-        return [put_space(name, rm) for name in completions] 
+        return completions
             
 
     @staticmethod
