@@ -78,7 +78,7 @@ Update notes for MadGraph 5 (in reverse time order)
                       non-parton initial states with proton/antiproton beams
                   OM: Improve cluster support. MadEvent now supports PBS/Condor/SGE
                       Thanks to Arian Abrahantes for the SGE implementation.
-		  OM: Improve auto-completion
+		  OM: Improve auto-completion (better output/dealing with multi line/...)
                   OM: Improve the parralel suite and change the release script to run
                       some of the parralel suite. This ensures more stability of the 
                       code for the future release.
