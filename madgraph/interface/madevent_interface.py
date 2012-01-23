@@ -3802,9 +3802,7 @@ class GridPackCmd(MadEventCmd):
         # 3) Combine the events/pythia/...                                                                                                                    
         self.exec_cmd('combine_events')
         self.exec_cmd('store_events')
-        self.exec_cmd('pythia --nodefault')
-        self.exec_cmd('pgs --nodefault')
-        
+        self.exec_cmd('pythia --no_default -f')
 
 
 
@@ -3826,7 +3824,6 @@ class GridPackCmd(MadEventCmd):
         subproc = [P for P in os.listdir(pjoin(self.me_dir,'SubProcesses')) if 
                    P.startswith('P') and os.path.isdir(pjoin(self.me_dir,'SubProcesses', P))]
         for nb_proc,subdir in enumerate(subproc):
-            print '********************************'
             subdir = subdir.strip()
             Pdir = pjoin(self.me_dir, 'SubProcesses',subdir)
             bindir = pjoin(os.path.relpath(self.dirbin, Pdir))
@@ -3844,7 +3841,6 @@ class GridPackCmd(MadEventCmd):
             proc.communicate('%s 1 F\n' % (precision))
 
             if os.path.exists(pjoin(Pdir, 'ajob1')):
-                print '#############################'
                 misc.compile(['madevent'], cwd=Pdir)
                 #
                 os.system("chmod +x %s/ajob*" % Pdir)
@@ -3855,7 +3851,6 @@ class GridPackCmd(MadEventCmd):
                     job = os.path.basename(job)
                     self.launch_job('./%s' % job, cwd=Pdir, remaining=(nb_tot-i-1), 
                              run_type='Refine number %s on %s (%s/%s)' % (self.nb_refine, subdir, nb_proc+1, len(subproc)))
-                    print Pdir, job
         self.monitor(run_type='All job submitted for refine number %s' % self.nb_refine)
         
         self.update_status("Combining runs", level='parton')
