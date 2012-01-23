@@ -200,7 +200,9 @@ class BasicCmd(cmd.Cmd):
                 self.completion_prefix = ''
                 self.completion_matches = compfunc(text, line, begidx, endidx)
         #print self.completion_matches
-        self.completion_matches = [ (l[-1] in [' ','@','=',os.path.sep] and l or (l+' ')) for l in self.completion_matches if l]
+
+        self.completion_matches = [ (l[-1] in [' ','@','=',os.path.sep] 
+                      and l or (l+' ')) for l in self.completion_matches if l]
         
         try:
             return self.completion_matches[state]
