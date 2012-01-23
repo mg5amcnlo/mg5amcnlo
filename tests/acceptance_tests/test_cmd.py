@@ -88,7 +88,7 @@ class TestCmdShell1(unittest.TestCase):
         
         self.do('generate e+ ve > V2 > e+ ve mu+ mu-')
         self.assertEqual(len(self.cmd._curr_amps[0].get('diagrams')), 8)
-
+        
     def test_draw(self):
         """ command 'draw' works """
 

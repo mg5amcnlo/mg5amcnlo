@@ -2132,9 +2132,10 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
                 # Remove events file (if present)
                 if os.path.exists(pjoin(G_path, 'events.lhe')):
                     os.remove(pjoin(G_path, 'events.lhe'))
-                # Remove results.dat 
-                if os.path.exists(pjoin(G_path, 'results.dat')):
-                    os.remove(pjoin(G_path, 'results.dat'))
+                # Remove results.dat (but not for gridpack)
+                if self.run_card['gridpack'] not in self.true:
+                    if os.path.exists(pjoin(G_path, 'results.dat')):
+                        os.remove(pjoin(G_path, 'results.dat'))
                 # Store log
                 if os.path.exists(pjoin(G_path, 'log.txt')):
                     input = pjoin(G_path, 'log.txt')
@@ -3775,7 +3776,8 @@ class GridPackCmd(MadEventCmd):
 
         # Initialize properly                                                                                                                                 
         MadEventCmd.__init__(self, me_dir, *completekey, **stdin)
-
+        self.run_mode = 0
+        self.configuration['automatic_html_opening'] = False
         # Now it's time to run!                                                                                                                               
         if me_dir and nb_event and seed:
             self.launch(nb_event, seed)
@@ -3793,14 +3795,84 @@ class GridPackCmd(MadEventCmd):
 
         # 2) Run the refine for the grid                                                                                                                      
         self.update_status('Generating Events', level=None)
-        subprocess.call([pjoin(self.me_dir,'bin','refine4grid'),
-                        str(nb_event), '0', 'Madevent','1','GridRun_%s' % seed],
-                        cwd=self.me_dir)
-
+        #subprocess.call([pjoin(self.me_dir,'bin','refine4grid'),
+        #                str(nb_event), '0', 'Madevent','1','GridRun_%s' % seed],
+        #                cwd=self.me_dir)
+        self.refine4grid(nb_event)
         # 3) Combine the events/pythia/...                                                                                                                    
         self.exec_cmd('combine_events')
         self.exec_cmd('store_events')
         self.exec_cmd('pythia --nodefault')
         self.exec_cmd('pgs --nodefault')
-    
+        
+
+
+
+
+    def refine4grid(self, nb_event):
+        """Advanced commands: launch survey for the current process """
+        self.nb_refine += 1
+        
+        precision = nb_event
+
+        # initialize / remove lhapdf mode
+        self.configure_directory()
+        self.cluster_mode = 0 # force single machine
+        
+        self.update_status('Refine results to %s' % precision, level=None)
+        logger.info("Using random number seed offset = %s" % self.random)
+        
+        self.total_jobs = 0
+        subproc = [P for P in os.listdir(pjoin(self.me_dir,'SubProcesses')) if 
+                   P.startswith('P') and os.path.isdir(pjoin(self.me_dir,'SubProcesses', P))]
+        for nb_proc,subdir in enumerate(subproc):
+            print '********************************'
+            subdir = subdir.strip()
+            Pdir = pjoin(self.me_dir, 'SubProcesses',subdir)
+            bindir = pjoin(os.path.relpath(self.dirbin, Pdir))
+                           
+            logger.info('    %s ' % subdir)
+            # clean previous run
+            for match in glob.glob(pjoin(Pdir, '*ajob*')):
+                if os.path.basename(match)[:4] in ['ajob', 'wait', 'run.', 'done']:
+                    os.remove(pjoin(Pdir, match))
+            
+            devnull = os.open(os.devnull, os.O_RDWR)
+            proc = subprocess.Popen([pjoin(bindir, 'gen_ximprove')],
+                                    stdin=subprocess.PIPE,
+                                    cwd=Pdir)
+            proc.communicate('%s 1 F\n' % (precision))
+
+            if os.path.exists(pjoin(Pdir, 'ajob1')):
+                print '#############################'
+                misc.compile(['madevent'], cwd=Pdir)
+                #
+                os.system("chmod +x %s/ajob*" % Pdir)
+                alljobs = glob.glob(pjoin(Pdir,'ajob*'))
+                nb_tot = len(alljobs)            
+                self.total_jobs += nb_tot
+                for i, job in enumerate(alljobs):
+                    job = os.path.basename(job)
+                    self.launch_job('./%s' % job, cwd=Pdir, remaining=(nb_tot-i-1), 
+                             run_type='Refine number %s on %s (%s/%s)' % (self.nb_refine, subdir, nb_proc+1, len(subproc)))
+                    print Pdir, job
+        self.monitor(run_type='All job submitted for refine number %s' % self.nb_refine)
+        
+        self.update_status("Combining runs", level='parton')
+        try:
+            os.remove(pjoin(Pdir, 'combine_runs.log'))
+        except:
+            pass
+        
+        bindir = pjoin(os.path.relpath(self.dirbin, pjoin(self.me_dir,'SubProcesses')))
+        subprocess.call([pjoin(bindir, 'combine_runs')], 
+                                          cwd=pjoin(self.me_dir,'SubProcesses'),
+                                          stdout=devnull)
+        
+        #subprocess.call([pjoin(self.dirbin, 'sumall')], 
+        #                                 cwd=pjoin(self.me_dir,'SubProcesses'),
+        #                                 stdout=devnull)
+        
+        self.update_status('finish refine', 'parton', makehtml=False)
+
     

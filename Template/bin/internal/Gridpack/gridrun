@@ -48,7 +48,7 @@ import subprocess
 
 # Check if optimize mode is (and should be) activated
 if __debug__ and not options.debug and \
-    (not os.path.exists(os.path.join(root_path,'../..', 'bin','create_release.py')) or options.web):
+    (not os.path.exists(os.path.join(root_path,'../..', 'bin','create_release.py'))):
         subprocess.call([sys.executable] + ['-O'] + sys.argv)
         sys.exit()
 

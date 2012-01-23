@@ -170,6 +170,8 @@ class BasicCmd(cmd.Cmd):
                 begin, line = line.rsplit(';',1)
                 begidx = begidx - len(begin) - 1
                 endidx = endidx - len(begin) - 1
+                if line[:begidx] == ' ' * begidx:
+                    begidx=0
 
             if begidx>0:
                 cmd, args, foo = self.parseline(line)
@@ -198,7 +200,7 @@ class BasicCmd(cmd.Cmd):
                 self.completion_prefix = ''
                 self.completion_matches = compfunc(text, line, begidx, endidx)
         #print self.completion_matches
-        self.completion_matches = [ (l[-1] in [' ','@','='] and l or (l+' ')) for l in self.completion_matches if l]
+        self.completion_matches = [ (l[-1] in [' ','@','=',os.path.sep] and l or (l+' ')) for l in self.completion_matches if l]
         
         try:
             return self.completion_matches[state]
