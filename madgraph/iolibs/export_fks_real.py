@@ -223,6 +223,7 @@ class ProcessExporterFortranFKS_real(export_v4.ProcessExporterFortran):
         nconfigs, s_and_t_channels = self.write_configs_file(\
             writers.FortranWriter(filename),
             matrix_element.real_matrix_element,
+            False,
             fortran_model)
     
         filename = 'decayBW.inc'
@@ -497,6 +498,7 @@ class ProcessExporterFortranFKS_real(export_v4.ProcessExporterFortran):
         nconfigs, s_and_t_channels = self.write_configs_file(\
             writers.FortranWriter(filename),
             matrix_element.real_matrix_element,
+            fksborn.j_fks == 20,
             fortran_model)
     
         filename = 'decayBW.inc'
@@ -569,6 +571,7 @@ class ProcessExporterFortranFKS_real(export_v4.ProcessExporterFortran):
         nconfigs, s_and_t_channels = self.write_configs_file(\
             writers.FortranWriter(filename),
             fksborn.matrix_element,
+            fksborn.j_fks == 20,
             fortran_model)
     
         filename = 'born_decayBW.inc'
@@ -1289,18 +1292,17 @@ END
     #===============================================================================
     # write_configs_file
     #===============================================================================
-    def write_configs_file(self, writer, matrix_element, fortran_model):
+    def write_configs_file(self, writer, matrix_element, reverse_t_ch, fortran_model):
         """Write the configs.inc file for MadEvent"""
     
         # Extract number of external particles
         (nexternal, ninitial) = matrix_element.get_nexternal_ninitial()
-    
-    
         lines = []
     
         iconfig = 0
     
         s_and_t_channels = []
+
 
         model = matrix_element.get('processes')[0].get('model')
 #        new_pdg = model.get_first_non_pdg()
@@ -1325,7 +1327,7 @@ END
             # Need to reorganize the topology so that we start with all
             # final state external particles and work our way inwards
             schannels, tchannels = helas_diag.get('amplitudes')[0].\
-                                         get_s_and_t_channels(ninitial)
+                                         get_s_and_t_channels(ninitial, reverse_t_ch)
     
             s_and_t_channels.append([schannels, tchannels])
     

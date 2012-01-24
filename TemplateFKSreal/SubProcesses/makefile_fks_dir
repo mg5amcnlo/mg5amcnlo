@@ -3,8 +3,6 @@ include ../../Source/make_opts
 CC    = g++
 
 LIBDIR = ../../lib/
-BINDIR = ../../bin/
-
 
 FASTJET_CONFIG = fastjet-config
 CXXFLAGS += $(shell $(FASTJET_CONFIG) --cxxflags)
@@ -13,7 +11,7 @@ FJLIBS += $(shell $(FASTJET_CONFIG) --libs --plugins ) -lstdc++
 #FJLIBS=
 
 NLOLIBS= 
-LINKLIBS =  -L../../lib/ -ldhelas -ldsample_fks -lmodel -lgeneric -lpdf $(lhapdf)
+LINKLIBS =  -L$(LIBDIR) -ldhelas -ldsample_fks -lmodel -lgeneric -lpdf $(lhapdf)
 LIBS = $(LIBDIR)libdhelas.a $(LIBDIR)libdsample_fks.a $(LIBDIR)libgeneric.a $(LIBDIR)libpdf.a $(LIBDIR)libmodel.a
 
 # Files for all executables

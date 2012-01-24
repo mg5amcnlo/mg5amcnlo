@@ -1801,12 +1801,13 @@ class HelasAmplitude(base_objects.PhysicsObject):
             # This is a t-channel leg. Start with the leg going
             # towards external particle 1, and then do external
             # particle 2
-            init_mothers1 = filter(lambda wf: wf.get('number_external') == 1,
+            if not reverse_t_ch:
+                init_mothers1 = filter(lambda wf: wf.get('number_external') == 1,
                                    init_mothers)[0]
-            init_mothers2 = filter(lambda wf: wf.get('number_external') == 2,
+                init_mothers2 = filter(lambda wf: wf.get('number_external') == 2,
                                    init_mothers)[0]
 
-            if reverse_t_ch:
+            else:
             # for MadFKS, if j_fks=2 the t-channels are inverted starting from
             # leg 2 until leg 1
                 init_mothers1 = filter(lambda wf: wf.get('number_external') == 2,
