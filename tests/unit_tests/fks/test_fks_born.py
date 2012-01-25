@@ -400,8 +400,9 @@ class TestFKSProcess(unittest.TestCase):
         my_process_definitions = MG.ProcessDefinitionList(\
             [my_process_definition])
 
-        my_multi_process = fks_born.FKSMultiProcessFromBorn(\
-            {'process_definitions':my_process_definitions})
+        amps = diagram_generation.MultiProcess(
+                {'process_definitions':my_process_definitions}).get('amplitudes')
+        my_multi_process = fks_born.FKSMultiProcessFromBorn(amps)
         
         self.assertEqual(len(my_multi_process.get('born_processes')),4)
         #check the total numbers of reals 11 11 6 16

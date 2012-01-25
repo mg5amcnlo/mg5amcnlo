@@ -901,7 +901,8 @@ class LegTest(unittest.TestCase):
         self.mydict = {'id':3,
                       'number':5,
                       'state':True,
-                      'from_group':False}
+                      'from_group':False,
+                      'onshell':None}
 
         self.myleg = base_objects.Leg(self.mydict)
 
@@ -980,7 +981,8 @@ class LegTest(unittest.TestCase):
         goal = goal + "    \'id\': 3,\n"
         goal = goal + "    \'number\': 5,\n"
         goal = goal + "    \'state\': True,\n"
-        goal = goal + "    \'from_group\': False\n}"
+        goal = goal + "    \'from_group\': False,\n"
+        goal = goal + "    \'onshell\': None\n}"
 
         self.assertEqual(goal, str(self.myleg))
 

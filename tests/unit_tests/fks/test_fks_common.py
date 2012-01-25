@@ -1495,23 +1495,23 @@ class TestLinkRBConfSM(unittest.TestCase):
         correctly linked"""
 
 
-        myleglist_r = MG.LegList()
-        myleglist_r.append(MG.Leg({'id':2, 'state':False}))
-        myleglist_r.append(MG.Leg({'id':-2, 'state':False}))
-        myleglist_r.append(MG.Leg({'id':1, 'state':True}))
-        myleglist_r.append(MG.Leg({'id':-1, 'state':True}))
-        myleglist_r.append(MG.Leg({'id':21, 'state':True}))
+        myleglist_r = fks_common.FKSLegList()
+        myleglist_r.append(fks_common.FKSLeg({'id':2, 'state':False}))
+        myleglist_r.append(fks_common.FKSLeg({'id':-2, 'state':False}))
+        myleglist_r.append(fks_common.FKSLeg({'id':1, 'state':True}))
+        myleglist_r.append(fks_common.FKSLeg({'id':-1, 'state':True}))
+        myleglist_r.append(fks_common.FKSLeg({'id':21, 'state':True}))
         realproc = MG.Process({'legs':myleglist_r,
                                        'model':self.base_model,
                                        'orders':{'QCD':3, 'QED':0}})
         realamp= diagram_generation.Amplitude(realproc)
 
 
-        myleglist_b = MG.LegList()
-        myleglist_b.append(MG.Leg({'id':2, 'state':False}))
-        myleglist_b.append(MG.Leg({'id':-2, 'state':False}))
-        myleglist_b.append(MG.Leg({'id':21, 'state':True}))
-        myleglist_b.append(MG.Leg({'id':21, 'state':True}))
+        myleglist_b = fks_common.FKSLegList()
+        myleglist_b.append(fks_common.FKSLeg({'id':2, 'state':False}))
+        myleglist_b.append(fks_common.FKSLeg({'id':-2, 'state':False}))
+        myleglist_b.append(fks_common.FKSLeg({'id':21, 'state':True}))
+        myleglist_b.append(fks_common.FKSLeg({'id':21, 'state':True}))
         bornproc = MG.Process({'legs':myleglist_b,
                                        'model':self.base_model,
                                        'orders':{'QCD':2, 'QED':0}})

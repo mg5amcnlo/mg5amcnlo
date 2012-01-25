@@ -958,6 +958,11 @@ class Model(PhysicsObject):
                     part.set('antiname', default[pdg])
                     if antipart:
                         antipart.set('antiname', default[pdg])
+
+    def get_first_non_pdg(self):
+        """Return the first positive number that is not a valid PDG code"""
+        return [c for c in range(1, len(self.get('particles')) + 1) if \
+                c not in self.get('particle_dict').keys()][0]
                 
     def write_param_card(self):
         """Write out the param_card, and return as string."""
@@ -1050,9 +1055,12 @@ class Leg(PhysicsObject):
 
         self['id'] = 0
         self['number'] = 0
-        # True = final, False = initial (boolean to save memory)
+        # state: True = final, False = initial (boolean to save memory)
         self['state'] = True
+        # from_group: Used in diagram generation
         self['from_group'] = True
+        # onshell: decaying leg (True), forbidden s-channel (False), none (None)
+        self['onshell'] = None
 
     def filter(self, name, value):
         """Filter for valid leg property values."""
@@ -1074,12 +1082,18 @@ class Leg(PhysicsObject):
                         "%s is not a valid boolean for leg flag from_group" % \
                                                                     str(value)
 
+        if name == 'onshell':
+            if not isinstance(value, bool) and value != None:
+                raise self.PhysicsObjectError, \
+                        "%s is not a valid boolean for leg flag onshell" % \
+                                                                    str(value)
+
         return True
 
     def get_sorted_keys(self):
         """Return particle property names as a nicely sorted list."""
 
-        return ['id', 'number', 'state', 'from_group']
+        return ['id', 'number', 'state', 'from_group', 'onshell']
 
     def is_fermion(self, model):
         """Returns True if the particle corresponding to the leg is a
@@ -1863,11 +1877,16 @@ class Process(PhysicsObject):
                        self.get('legs'))[0].get('id')
 
     def get_final_legs(self):
-        """Gives the pdg codes for initial state particles"""
+        """Gives the final state legs"""
 
         return filter(lambda leg: leg.get('state') == True,
                        self.get('legs'))
     
+    def get_final_ids(self):
+        """Gives the pdg codes for final state particles"""
+
+        return [l.get('id') for l in self.get_final_legs()]
+                
     def get_legs_with_decays(self):
         """Return process with all decay chains substituted in."""
 
@@ -1888,41 +1907,29 @@ class Process(PhysicsObject):
             
         return LegList(legs)
 
+    def list_for_sort(self):
+        """Output a list that can be compared to other processes as:
+        [id, sorted(initial leg ids), sorted(final leg ids),
+        sorted(decay list_for_sorts)]"""
+
+        sorted_list =  [self.get('id'),
+                        sorted(self.get_initial_ids()),
+                        sorted(self.get_final_ids())]
+        
+        if self.get('decay_chains'):
+            sorted_list.extend(sorted([d.list_for_sort() for d in \
+                                       self.get('decay_chains')]))
+
+        return sorted_list
+
     def compare_for_sort(self, other):
         """Sorting routine which allows to sort processes for
         comparison. Compare only process id and legs."""
 
-        if self['id'] != other['id']:
-            return self['id'] - other['id']
-
-        initlegs = sorted([l.get('id') for l in \
-                           filter(lambda leg: not leg.get('state'),
-                                  self['legs'])])
-        otherinitlegs = sorted([l.get('id') for l in \
-                           filter(lambda leg: not leg.get('state'),
-                                  self['legs'])])
-
-        if len(initlegs) != len(otherinitlegs):
-            return len(initlegs) - len(otherinitlegs)
-                
-        for leg, otherleg in zip(initlegs, otherinitlegs):
-            if leg != otherleg:
-                return leg - otherleg
-        
-        legs = sorted([l.get('id') for l in \
-                       filter(lambda leg: leg.get('state'),
-                              self.get_legs_with_decays())])
-        otherlegs = sorted([l.get('id') for l in \
-                       filter(lambda leg: leg.get('state'),
-                              other.get_legs_with_decays())])
-
-        if len(legs) != len(otherlegs):
-            return len(legs) - len(otherlegs)
-                
-        for leg, otherleg in zip(legs, otherlegs):
-            if leg != otherleg:
-                return leg - otherleg
-        
+        if self.list_for_sort() > other.list_for_sort():
+            return 1
+        if self.list_for_sort() < other.list_for_sort():
+            return -1
         return 0
         
     def identical_particle_factor(self):

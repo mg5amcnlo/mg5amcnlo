@@ -54,13 +54,14 @@ class FKSMultiProcessFromReals(diagram_generation.MultiProcess): #test written
                                                                 
         return super(FKSMultiProcessFromReals,self).filter(name, value)
     
-    def __init__(self, *arguments):
+    def __init__(self, amp_list, *arguments):
         """initialize the original multiprocess, then generates the amps for the 
-        borns, then geneare the born processes and the reals"""
+        borns, then generate the born processes and the reals"""
                 
         super(FKSMultiProcessFromReals, self).__init__(*arguments)
         
-        amps = self.get('amplitudes')
+#        amps = self.get('amplitudes')
+        amps = amp_list
         born_amplist = []
         born_amp_id_list = []
         for amp in amps:

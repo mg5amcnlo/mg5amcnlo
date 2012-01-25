@@ -365,8 +365,9 @@ class testFKSBornHelasObjects(unittest.TestCase):
         my_process_definitions = MG.ProcessDefinitionList(\
             [my_process_definition])
 
-        my_multi_process = fks_born.FKSMultiProcessFromBorn(\
-            {'process_definitions':my_process_definitions})
+        amps = diagram_generation.MultiProcess(
+                {'process_definitions':my_process_definitions}).get('amplitudes')
+        my_multi_process = fks_born.FKSMultiProcessFromBorn(amps)
         my_helas_mp = fks_born_helas.FKSHelasMultiProcessFromBorn(my_multi_process, False)
         
         #there should be 6 independent born_matrix_elements 

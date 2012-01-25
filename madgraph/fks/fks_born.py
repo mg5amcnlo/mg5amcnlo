@@ -58,12 +58,13 @@ class FKSMultiProcessFromBorn(diagram_generation.MultiProcess): #test written
                                                                 
         return super(FKSMultiProcessFromBorn,self).filter(name, value)
     
-    def __init__(self, *arguments):
+    def __init__(self, amp_list, *arguments):
         """initialize the original multiprocess, then generates the amps for the 
         borns, then geneare the born processes and the reals"""
                 
         super(FKSMultiProcessFromBorn, self).__init__(*arguments)   
-        amps = self.get('amplitudes')
+#        amps = self.get('amplitudes')
+        amps = amp_list
         real_amplist = []
         real_amp_id_list = []
         for amp in amps:
@@ -186,6 +187,7 @@ class FKSProcessFromBorn(object):
                 self.born_amp = diagram_generation.Amplitude(self.born_proc)
                 self.born_amp = start_proc
                 self.born_proc = start_proc.get('process')           
+
             self.model = self.born_proc['model']
 
             self.leglist = fks_common.to_fks_legs(

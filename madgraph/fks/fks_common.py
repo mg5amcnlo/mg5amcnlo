@@ -105,7 +105,7 @@ def link_rb_conf(born_amp, real_amp, i, j, ij): #test written, sm and heft
     #  the same criterion. Once we removed i-j, we have to re-label the
     #  real legs to match the born numbering.
 
-    legs =  []
+    legs = []
     for d in good_diags: 
         for v in d['diagram'].get('vertices') :
             for l in v.get('legs') :
@@ -129,7 +129,7 @@ def link_rb_conf(born_amp, real_amp, i, j, ij): #test written, sm and heft
                         legs.remove(l)
                         l['number'] -= shift
                  #and relabel last_leg to ij
-                    if l.get('number') == good_diag['leg_ij'] and not replaced_ij:
+                    if l.get('number') == good_diag['leg_ij'] and not replaced_ij and l in legs:
                         legs.remove(l)
                         replaced_ij = True
                         l['number'] = ij

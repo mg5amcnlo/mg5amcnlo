@@ -1215,13 +1215,15 @@ class DiagramGenerationTest(unittest.TestCase):
                              goal_no_photon_quark[ngluons])
 
     def test_forbidden_s_channel_uux_uuxng(self):
-        """Test the number of diagrams uu~>uu~+g with different 
-        forbidden s-channel particles.
+        """Test diagram generation with forbidden s-channel particles.
         """
 
-        goal_no_photon = [3, 14]
-        goal_no_quark = [1, 2]
+        goal_no_photon = [4, 18]
+        photon_none = [{1:[0]},{2:[0],4:[0],13:[1],17:[1]}]
+        goal_no_quark = [2, 6]
+        quark_none = [{0:[0]},{0:[0,1],1:[0,1],3:[1],5:[1]}]
         goal_no_antiquark = [2, 6]
+        antiquark_none = [{},{}]
 
         for ngluons in range(2):
 
@@ -1249,6 +1251,23 @@ class DiagramGenerationTest(unittest.TestCase):
             self.assertEqual(len(self.myamplitude.get('diagrams')),
                              goal_no_photon[ngluons])
 
+            #print self.myamplitude.nice_string()
+
+            diagrams = self.myamplitude.get('diagrams')
+            for idiag in range(len(diagrams)):
+                if idiag in photon_none[ngluons]:
+                    vertices = diagrams[idiag].get('vertices')
+                    for ivert in range(len(vertices)):
+                        if ivert in photon_none[ngluons][idiag]:
+                            self.assertEqual(False,
+                                    vertices[ivert].get('legs')[-1].get('onshell'))
+                        else:
+                            self.assertEqual(None,
+                                    vertices[ivert].get('legs')[-1].get('onshell'))
+                else:
+                    self.assertFalse(any([vert.get('legs')[-1].get('onshell') == False\
+                                          for vert in diagrams[idiag].get('vertices')]))
+
             # Test with u a > u a (+ g)
 
             myleglist = base_objects.LegList()
@@ -1275,6 +1294,24 @@ class DiagramGenerationTest(unittest.TestCase):
             self.assertEqual(len(self.myamplitude.get('diagrams')),
                              goal_no_quark[ngluons])
 
+            #print self.myamplitude.nice_string()
+
+            diagrams = self.myamplitude.get('diagrams')
+            for idiag in range(len(diagrams)):
+                if idiag in quark_none[ngluons]:
+                    vertices = diagrams[idiag].get('vertices')
+                    for ivert in range(len(vertices)):
+                        if ivert in quark_none[ngluons][idiag]:
+                            self.assertEqual(False,
+                                    vertices[ivert].get('legs')[-1].get('onshell'))
+                        else:
+                            self.assertEqual(None,
+                                    vertices[ivert].get('legs')[-1].get('onshell'))
+                else:
+                    self.assertFalse(any([vert.get('legs')[-1].get('onshell') == False\
+                                          for vert in diagrams[idiag].get('vertices')]))
+            
+
             myproc = base_objects.Process({'legs':myleglist,
                                            'model':self.mymodel,
                                            'forbidden_s_channels':[-1]})
@@ -1286,6 +1323,21 @@ class DiagramGenerationTest(unittest.TestCase):
             self.assertEqual(len(self.myamplitude.get('diagrams')),
                              goal_no_antiquark[ngluons])
 
+            diagrams = self.myamplitude.get('diagrams')
+            for idiag in range(len(diagrams)):
+                if idiag in antiquark_none[ngluons]:
+                    vertices = diagrams[idiag].get('vertices')
+                    for ivert in range(len(vertices)):
+                        if ivert in antiquark_none[ngluons][idiag]:
+                            self.assertEqual(False,
+                                    vertices[ivert].get('legs')[-1].get('onshell'))
+                        else:
+                            self.assertEqual(None,
+                                    vertices[ivert].get('legs')[-1].get('onshell'))
+                else:
+                    self.assertFalse(any([vert.get('legs')[-1].get('onshell') == False\
+                                          for vert in diagrams[idiag].get('vertices')]))
+            
 
     def test_required_s_channel_uux_uuxng(self):
         """Test the number of diagrams uu~>uu~+g with different 
@@ -2235,18 +2287,80 @@ class DecayChainAmplitudeTest(unittest.TestCase):
         self.assertEqual(len(my_decay_chain_amps.get('decay_chains')), 1)
         self.assertEqual(len(my_decay_chain_amps.get('decay_chains')[0].\
                              get('amplitudes')), 15)
-        # Check that all from_group flags are set appropriately
+        # Check that all onshell flags are set appropriately
         for amp in my_decay_chain_amps.get('amplitudes'):
             for diagram in amp.get('diagrams'):
-                self.assertTrue(not any([l.get('from_group') for l in \
-                                         sum([v.get('legs') for v in \
-                                              diagram.get('vertices')], []) \
-                                         if not l.get('state')]))
-                self.assertTrue(not any([not l.get('from_group') for l in \
-                                         sum([v.get('legs') for v in \
-                                              diagram.get('vertices')], []) \
-                                         if l.get('state')]))
+                external = set()
+                for vertex in diagram.get('vertices'):
+                    for l in vertex.get('legs'):
+                        self.assertTrue(l.get('onshell') and l.get('state') and \
+                                        not l.get('number') in external or \
+                                        not l.get('onshell') and (not l.get('state') or \
+                                        l.get('number') in external))
+                        external.add(l.get('number'))
  
+    def test_forbidden_s_channel_decay_chain(self):
+        """Test decay chains with forbidden s-channel particles.
+        """
+
+        goal_no_quark = 6
+        quark_none = {0:[0,1],1:[0,1],3:[1],5:[1]}
+
+        # Test with u a > u a (+ g)
+
+        myleglist = base_objects.LegList()
+
+        myleglist.append(base_objects.Leg({'id':1,
+                                         'state':False}))
+        myleglist.append(base_objects.Leg({'id':22,
+                                         'state':False}))
+        myleglist.append(base_objects.Leg({'id':1,
+                                         'state':True}))
+        myleglist.append(base_objects.Leg({'id':22,
+                                         'state':True}))
+        myleglist.extend([base_objects.Leg({'id':21,
+                                             'state':True})])
+
+        myproc = base_objects.Process({'legs':myleglist,
+                                       'model':self.mymodel,
+                                       'forbidden_s_channels':[1]})
+
+        myleglist = base_objects.LegList()
+        myleglist.append(base_objects.Leg({'id':1,
+                                         'state':False}))
+        myleglist.append(base_objects.Leg({'id':22,
+                                         'state':True}))
+        myleglist.append(base_objects.Leg({'id':1,
+                                         'state':True}))
+        mydecayproc = base_objects.Process({'legs':myleglist,
+                                            'model':self.mymodel})
+        myproc.set('decay_chains', base_objects.ProcessList([mydecayproc]))
+
+        myamplitude = diagram_generation.DecayChainAmplitude(myproc)
+
+        #print myamplitude.nice_string()
+
+        self.assertEqual(len(myamplitude.get('amplitudes')[0].get('diagrams')),
+                         goal_no_quark)
+
+        #print myamplitude.nice_string()
+
+        diagrams = myamplitude.get('amplitudes')[0].get('diagrams')
+        for idiag in range(len(diagrams)):
+            if idiag in quark_none:
+                vertices = diagrams[idiag].get('vertices')
+                for ivert in range(len(vertices)):
+                    if ivert in quark_none[idiag]:
+                        self.assertEqual(False,
+                                vertices[ivert].get('legs')[-1].get('onshell'))
+                    else:
+                        self.assertEqual(None,
+                                vertices[ivert].get('legs')[-1].get('onshell'))
+            else:
+                self.assertFalse(any([vert.get('legs')[-1].get('onshell') == False\
+                                      for vert in diagrams[idiag].get('vertices')]))
+            
+
 #===============================================================================
 # MultiProcessTest
 #===============================================================================
@@ -2919,7 +3033,6 @@ class MultiProcessTest(unittest.TestCase):
             #    print amplitude.get('process').nice_string()
             #print 'valid_procs = ',valid_procs
 
-
     def test_multiparticle_mirror_pp_3j(self):
         """Setting up and testing pp > 3j mirror process functionality
         """
@@ -2984,7 +3097,6 @@ class MultiProcessTest(unittest.TestCase):
                         a.get('has_mirror_process')) for a in amplitudes]
 
         self.assertEqual(legs_mirror, goal_legs_mirror)
-
 
     def test_find_maximal_non_qcd_order(self):
         """Test find_maximal_non_qcd_order for different configurations

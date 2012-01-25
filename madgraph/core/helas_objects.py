@@ -32,6 +32,8 @@ import madgraph.core.diagram_generation as diagram_generation
 import madgraph.core.color_amp as color_amp
 import madgraph.core.color_algebra as color
 
+from madgraph import MadGraph5Error
+
 #===============================================================================
 # 
 #===============================================================================
@@ -50,7 +52,12 @@ class IdentifyMETag(diagram_generation.DiagramTag):
 
     Note that we also need to check that the processes agree on
     has_mirror_process, process id, and
-    identical_particle_factor. Don't allow combining decay chains"""
+    identical_particle_factor. Don't allow combining decay chains.
+
+    We also don't want to combine processes with different possibly
+    onshell s-channel propagators (i.e., with non-zero width and
+    onshell=True or None) since we want the right propagator written
+    in the event file in the end. This is done by the vertex."""
 
     # dec_number is used to separate between decay chains.
     # This is needed since we don't want to merge different decays,
@@ -58,20 +65,23 @@ class IdentifyMETag(diagram_generation.DiagramTag):
     dec_number = 1
     
     @staticmethod
-    def create_tag(amplitude):
+    def create_tag(amplitude, identical_particle_factor = 0):
         """Create a tag which identifies identical matrix elements"""
         process = amplitude.get('process')
+        ninitial = process.get_ninitial()
         model = process.get('model')
         dc = 0
         if process.get('is_decay_chain'):
             dc = IdentifyMETag.dec_number
             IdentifyMETag.dec_number += 1
+        if not identical_particle_factor:
+            identical_particle_factor = process.identical_particle_factor()
         return [amplitude.get('has_mirror_process'),
                 process.get('id'),
                 process.get('is_decay_chain'),
-                process.identical_particle_factor(),
+                identical_particle_factor,
                 dc,
-                sorted([IdentifyMETag(d, model) for d in \
+                sorted([IdentifyMETag(d, model, ninitial) for d in \
                         amplitude.get('diagrams')])]        
         
     @staticmethod
@@ -83,23 +93,24 @@ class IdentifyMETag(diagram_generation.DiagramTag):
         part = model.get_particle(leg.get('id'))
 
         # For legs with decay chains defined, include leg id (don't combine)
-        if leg.get('from_group'): id = leg.get('id')
+        if leg.get('onshell'): id = leg.get('id')
         else: id = 0
         # For FS legs, don't care about number (but do for IS legs)
         if leg.get('state'): number = 0
         else: number = leg.get('number')
-        return [((number, id, part.get('spin'),
+        # Include also onshell, since this specifies forbidden s-channel
+        return [((number, id, part.get('spin'), leg.get('onshell'),
                   part.get('is_part'), part.get('self_antipart'),
                   part.get('mass'), part.get('width'), part.get('color')),
                  leg.get('number'))]
         
     @staticmethod
-    def vertex_id_from_vertex(vertex, last_vertex, model):
+    def vertex_id_from_vertex(vertex, last_vertex, model, ninitial):
         """Returns the info needed to identify matrix elements:
-        interaction color, lorentz, coupling, and wavefunction
-        spin, self_antipart, mass, width, color, decay and
-        is_part. Note that is_part needs to be flipped if we move the
-        final vertex around."""
+        interaction color, lorentz, coupling, and wavefunction spin,
+        self_antipart, mass, width, color, decay and is_part, plus PDG
+        code if possible onshell s-channel prop. Note that is_part
+        and PDG code needs to be flipped if we move the final vertex around."""
 
         if vertex.get('id') == 0:
             return (0,)
@@ -115,9 +126,17 @@ class IdentifyMETag(diagram_generation.DiagramTag):
             return (ret_list,)
         else:
             part = model.get_particle(vertex.get('legs')[-1].get('id'))
+            # If we have possibly onshell s-channel particles with
+            # identical properties but different PDG code, split the
+            # processes to ensure that we write the correct resonance
+            # in the event file
+            s_pdg = vertex.get_s_channel_id(model, ninitial)
+            if s_pdg and (part.get('width').lower() == 'zero' or \
+               vertex.get('legs')[-1].get('onshell') == False):
+                s_pdg = 0
             return ((part.get('spin'), part.get('color'),
                      part.get('self_antipart'),
-                     part.get('mass'), part.get('width')),
+                     part.get('mass'), part.get('width'), s_pdg),
                     ret_list)
 
     @staticmethod
@@ -189,7 +208,7 @@ class HelasWavefunction(base_objects.PhysicsObject):
         # fermionflow = 1    fermions have +-1 for flow (bosons always +1),
         #                    -1 is used only if there is a fermion flow clash
         #                    due to a Majorana particle 
-        self['state'] = 'incoming'
+        self['state'] = 'initial'
         self['leg_state'] = True
         self['mothers'] = HelasWavefunctionList()
         self['number_external'] = 0
@@ -200,8 +219,12 @@ class HelasWavefunction(base_objects.PhysicsObject):
         self['decay'] = False
         # The onshell flag is used in processes with defined decay
         # chains, to indicate that this wavefunction is decayed and
-        # should be onshell
-        self['onshell'] = False
+        # should be onshell (True), as well as for forbidden s-channels (False).
+        # Default is None
+        self['onshell'] = None
+        # conjugate_indices is a list [1,2,...] with fermion lines
+        # that need conjugates. Default is "None"
+        self['conjugate_indices'] = None
 
     # Customized constructor
     def __init__(self, *arguments):
@@ -225,6 +248,9 @@ class HelasWavefunction(base_objects.PhysicsObject):
                 self.set('number_external', leg.get('number'))
                 self.set('number', leg.get('number'))
                 self.set('state', {False: 'initial', True: 'final'}[leg.get('state')])
+                if leg.get('onshell') == False:
+                    # Denotes forbidden s-channel
+                    self.set('onshell', leg.get('onshell'))
                 self.set('leg_state', leg.get('state'))
                 # Need to set 'decay' to True for particles which will be
                 # decayed later, in order to not combine such processes
@@ -363,11 +389,23 @@ class HelasWavefunction(base_objects.PhysicsObject):
                       "%s is not a valid list of mothers for wavefunction" % \
                       str(value)
 
-        if name in ['decay', 'onshell']:
+        if name in ['decay']:
             if not isinstance(value, bool):
                 raise self.PhysicsObjectError, \
                         "%s is not a valid bool" % str(value) + \
-                        " for decay or onshell"
+                        " for decay"
+
+        if name in ['onshell']:
+            if not isinstance(value, bool) and value != None:
+                raise self.PhysicsObjectError, \
+                        "%s is not a valid bool" % str(value) + \
+                        " for onshell"
+
+        if name == 'conjugate_indices':
+            if not isinstance(value, tuple) and value != None:
+                raise self.PhysicsObjectError, \
+                        "%s is not a valid tuple" % str(value) + \
+                        " for conjugate_indices"
 
         return True
 
@@ -375,6 +413,10 @@ class HelasWavefunction(base_objects.PhysicsObject):
     def get(self, name):
         """When calling any property related to the particle,
         automatically call the corresponding property of the particle."""
+
+        # Set conjugate_indices if it's not already set
+        if name == 'conjugate_indices' and self[name] == None:
+            self['conjugate_indices'] = self.get_conjugate_index()
 
         if name in ['spin', 'mass', 'width', 'self_antipart']:
             return self['particle'].get(name)
@@ -458,6 +500,9 @@ class HelasWavefunction(base_objects.PhysicsObject):
 
     def is_boson(self):
         return not self.is_fermion()
+
+    def is_majorana(self):
+        return self.is_fermion() and self.get('self_antipart')
 
     def to_array(self):
         """Generate an array with the information needed to uniquely
@@ -812,9 +857,7 @@ class HelasWavefunction(base_objects.PhysicsObject):
         """Returns true if any of the mothers have negative
         fermionflow"""
 
-        return any([wf.get('fermionflow') < 0 for wf in \
-                    self.get('mothers')]) or \
-                    (self.get('interaction_id') and self.get('fermionflow') < 0)
+        return self.get('conjugate_indices') != ()
 
     def get_with_flow(self, name):
         """Generate the is_part and state needed for writing out
@@ -891,7 +934,7 @@ class HelasWavefunction(base_objects.PhysicsObject):
 
         # Check if we need to append a charge conjugation flag
         if self.needs_hermitian_conjugate():
-            res.append(self.get_conjugate_index())
+            res.append(self.get('conjugate_indices'))
 
         return (tuple(res), tuple(self.get('lorentz')))
 
@@ -931,32 +974,33 @@ class HelasWavefunction(base_objects.PhysicsObject):
         # Generate last vertex
         legs = base_objects.LegList()
 
-        # We use the from_group flag to indicate whether this outgoing
-        # leg corresponds to a decaying (onshell) particle or not
+        # We use the onshell flag to indicate whether this outgoing
+        # leg corresponds to a decaying (onshell) particle, forbidden
+        # s-channel, or regular
         try:
-            lastleg = wf_dict[self.get('number')]
+            lastleg = wf_dict[(self.get('number'),self.get('onshell'))]
         except KeyError:            
             lastleg = base_objects.Leg({
                 'id': self.get_pdg_code(),
                 'number': self.get('number_external'),
                 'state': self.get('leg_state'),
-                'from_group': self.get('onshell')
+                'onshell': self.get('onshell')
                 })
             if optimization != 0:
-                wf_dict[self.get('number')] = lastleg
+                wf_dict[(self.get('number'),self.get('onshell'))] = lastleg
 
         for mother in self.get('mothers'):
             try:
-                leg = wf_dict[mother.get('number')]
+                leg = wf_dict[(mother.get('number'),False)]
             except KeyError:
                 leg = base_objects.Leg({
                     'id': mother.get_pdg_code(),
                     'number': mother.get('number_external'),
                     'state': mother.get('leg_state'),
-                    'from_group': mother.get('onshell')
+                    'onshell': None
                     })
                 if optimization != 0:
-                    wf_dict[mother.get('number')] = leg
+                    wf_dict[(mother.get('number'),False)] = leg
             legs.append(leg)
 
         legs.append(lastleg)
@@ -985,18 +1029,20 @@ class HelasWavefunction(base_objects.PhysicsObject):
 
         return color_indices
 
-    def get_s_and_t_channels(self, ninitial, mother_leg, reverse_t_ch=False):
+    def get_s_and_t_channels(self, ninitial, mother_leg, reverse_t_ch = False):
         """Returns two lists of vertices corresponding to the s- and
         t-channels that can be traced from this wavefunction, ordered
         from the outermost s-channel and in/down towards the highest
         number initial state leg. mother_leg corresponds to self but with
-        correct leg number = min(final state mothers).
-        reverse_t_ch is added for MadFKS."""
+        correct leg number = min(final state mothers)."""
 
         schannels = base_objects.VertexList()
         tchannels = base_objects.VertexList()
 
         mother_leg = copy.copy(mother_leg)
+
+        (startleg, finalleg) = (1,2)
+        if reverse_t_ch: (startleg, finalleg) = (2,1)
 
         # Add vertices for all s-channel mothers
         final_mothers = filter(lambda wf: wf.get('number_external') > ninitial,
@@ -1024,10 +1070,10 @@ class HelasWavefunction(base_objects.PhysicsObject):
                     'id': mother.get_pdg_code(),
                     'number': mother.get('number_external'),
                     'state': mother.get('leg_state'),
-                    'from_group': False
+                    'onshell': mother.get('onshell')
                     }))
 
-            if init_mothers[0].get('number_external') == 1 and \
+            if init_mothers[0].get('number_external') == startleg and \
                    not init_mothers[0].get('leg_state') and \
                    ninitial > 1:
                 # If this is t-channel going towards external leg 1,
@@ -1050,7 +1096,7 @@ class HelasWavefunction(base_objects.PhysicsObject):
 
             # Add s- and t-channels from init_mother
             new_mother_leg = legs[-1]
-            if init_mothers[0].get('number_external') == 1 and \
+            if init_mothers[0].get('number_external') == startleg and \
                    not init_mothers[0].get('leg_state') and \
                    ninitial > 1:
                 # Mother of next vertex is init_mothers[0]
@@ -1059,11 +1105,12 @@ class HelasWavefunction(base_objects.PhysicsObject):
 
             mother_s, tchannels = \
                       init_mothers[0].get_s_and_t_channels(ninitial,
-                                                           new_mother_leg)
+                                                           new_mother_leg,
+                                                           reverse_t_ch)
             if ninitial == 1 or init_mothers[0].get('leg_state') == True:
                 # This vertex is s-channel
                 schannels.append(vertex)
-            elif init_mothers[0].get('number_external') == 1:
+            elif init_mothers[0].get('number_external') == startleg:
                 # If init_mothers is going towards external leg 1, add
                 # to t-channels, at end
                 tchannels.append(vertex)
@@ -1075,21 +1122,14 @@ class HelasWavefunction(base_objects.PhysicsObject):
             schannels.extend(mother_s)
 
         elif len(init_mothers) == 2:
-            # This is a t-channel leg. Start with the leg going
+            # This is a t-channel junction. Start with the leg going
             # towards external particle 1, and then do external
             # particle 2
-            if not reverse_t_ch:
-                init_mothers1 = filter(lambda wf: wf.get('number_external') == 1,
+            init_mothers1 = filter(lambda wf: wf.get('number_external') == \
+                                   startleg,
                                    init_mothers)[0]
-                init_mothers2 = filter(lambda wf: wf.get('number_external') == 2,
-                                   init_mothers)[0]
-
-            else:
-            # for MadFKS, if j_fks=2 the t-channels are inverted starting from
-            # leg 2 until leg 1
-                init_mothers1 = filter(lambda wf: wf.get('number_external') == 2,
-                                   init_mothers)[0]
-                init_mothers2 = filter(lambda wf: wf.get('number_external') == 1,
+            init_mothers2 = filter(lambda wf: wf.get('number_external') == \
+                                   finalleg,
                                    init_mothers)[0]
 
             # Create vertex
@@ -1099,7 +1139,7 @@ class HelasWavefunction(base_objects.PhysicsObject):
                     'id': mother.get_pdg_code(),
                     'number': mother.get('number_external'),
                     'state': mother.get('leg_state'),
-                    'from_group': False
+                    'onshell': mother.get('onshell')
                     }))
             legs.insert(0, mother_leg)
 
@@ -1112,7 +1152,8 @@ class HelasWavefunction(base_objects.PhysicsObject):
 
             # Add s- and t-channels going down towards leg 1
             mother_s, tchannels = \
-                      init_mothers1.get_s_and_t_channels(ninitial, legs[1],reverse_t_ch)
+                      init_mothers1.get_s_and_t_channels(ninitial, legs[1],
+                                                         reverse_t_ch)
             schannels.extend(mother_s)
 
             # Add vertex
@@ -1120,30 +1161,51 @@ class HelasWavefunction(base_objects.PhysicsObject):
 
             # Add s- and t-channels going down towards leg 2
             mother_s, mother_t = \
-                      init_mothers2.get_s_and_t_channels(ninitial, legs[-1],reverse_t_ch)
+                      init_mothers2.get_s_and_t_channels(ninitial, legs[-1],
+                                                         reverse_t_ch)
             schannels.extend(mother_s)
             tchannels.extend(mother_t)
 
+        # Sort s-channels according to number
+        schannels.sort(lambda x1,x2: x2.get('legs')[-1].get('number') - \
+                       x1.get('legs')[-1].get('number'))
 
         return schannels, tchannels
 
     def get_conjugate_index(self):
         """Return the index of the particle that should be conjugated."""
 
-        if self.needs_hermitian_conjugate():
-            fermions = [wf for wf in self.get('mothers') if \
-                        wf.is_fermion()]
-            indices = []
-            self_index = self.find_outgoing_number() - 1
-            if self.is_fermion():
-                fermions.insert(self_index, self)
-            for i in range(0,len(fermions), 2):
-                if fermions[i].get('fermionflow') < 0 or \
-                   fermions[i+1].get('fermionflow') < 0:
-                    indices.append(i/2 + 1)
-            return tuple(indices)
-        else:
+        if not any([(wf.get('fermionflow') < 0 or wf.is_majorana()) for wf in \
+                    self.get('mothers')]) and \
+                    (not self.get('interaction_id') or \
+                    self.get('fermionflow') >= 0):
             return ()
+        
+        # Pick out first sorted mothers, then fermions
+        mothers, self_index = \
+                      self.get('mothers').sort_by_pdg_codes(self.get('pdg_codes'),
+                                                            self.get_anti_pdg_code())
+        fermions = HelasWavefunctionList([wf for wf in mothers if wf.is_fermion()])
+
+        # Insert this wavefunction in list (in the right place)
+        if self.is_fermion():
+            me = copy.copy(self)
+            # Flip incoming/outgoing to make me equivalent to mother
+            # as needed by majorana_conjugates
+            me.set('state', [state for state in ['incoming', 'outgoing'] \
+                             if state != me.get('state')][0])
+            fermions.insert(self_index, me)
+
+        # Initialize indices with indices due to Majoranas with wrong order
+        indices = fermions.majorana_conjugates()
+
+        # Check for fermions with negative fermion flow
+        for i in range(0,len(fermions), 2):
+            if fermions[i].get('fermionflow') < 0 or \
+               fermions[i+1].get('fermionflow') < 0:
+                indices.append(i/2 + 1)
+
+        return tuple(sorted(indices))
 
     def get_vertex_leg_numbers(self):
         """Get a list of the number of legs in vertices in this diagram"""
@@ -1314,6 +1376,8 @@ class HelasWavefunctionList(base_objects.PhysicsObjectList):
                                        wf_number,
                                        force_flip_flow,
                                        number_to_wavefunctions)
+                # Already ran for all clashes, abort loop
+                break
 
         return wf_number
 
@@ -1380,6 +1444,40 @@ class HelasWavefunctionList(base_objects.PhysicsObjectList):
 
         return HelasWavefunctionList(sorted_mothers), my_index
 
+    def majorana_conjugates(self):
+        """Returns a list [1,2,...] of fermion lines that need
+         conjugate wfs due to wrong order of I/O Majorana particles
+         compared to interaction order (or empty list if no Majorana
+         particles).  This is crucial if the Lorentz structure depends
+         on the direction of the Majorana particles, as in MSSM with
+         goldstinos."""
+
+        if len([m for m in self if m.is_majorana()]) < 2:
+            return []
+
+        conjugates = []
+        
+        # Check if the order for Majorana fermions is correct
+        for i in range(0, len(self), 2):
+            if self[i].is_majorana() and self[i+1].is_majorana() \
+                   and self[i].get_pdg_code() != \
+                   self[i+1].get_pdg_code():
+                # Check if mother I/O order is correct (IO)
+                if self[i].get_spin_state_number() > 0 and \
+                   self[i + 1].get_spin_state_number() < 0:
+                    # Order is wrong, we need a conjugate here
+                    conjugates.append(True)
+                else:
+                    conjugates.append(False)
+            elif self[i].is_fermion():
+                # For non-Majorana case, always False
+                conjugates.append(False)
+
+        # Return list 1,2,... for which indices are needed
+        conjugates = [i+1 for (i,c) in enumerate(conjugates) if c]
+
+        return conjugates
+
     @staticmethod
     def extract_wavefunctions(mothers):
         """Recursively extract the wavefunctions from mothers of mothers"""
@@ -1417,6 +1515,9 @@ class HelasAmplitude(base_objects.PhysicsObject):
         self['fermionfactor'] = 0
         self['color_indices'] = []
         self['mothers'] = HelasWavefunctionList()
+        # conjugate_indices is a list [1,2,...] with fermion lines
+        # that need conjugates. Default is "None"
+        self['conjugate_indices'] = None
 
     # Customized constructor
     def __init__(self, *arguments):
@@ -1534,6 +1635,12 @@ class HelasAmplitude(base_objects.PhysicsObject):
                       "%s is not a valid list of mothers for amplitude" % \
                       str(value)
 
+        if name == 'conjugate_indices':
+            if not isinstance(value, tuple) and value != None:
+                raise self.PhysicsObjectError, \
+                        "%s is not a valid tuple" % str(value) + \
+                        " for conjugate_indices"
+
         return True
 
     def __str__(self):
@@ -1566,6 +1673,10 @@ class HelasAmplitude(base_objects.PhysicsObject):
 
         if name == 'fermionfactor' and not self[name]:
             self.calculate_fermionfactor()
+
+        # Set conjugate_indices if it's not already set
+        if name == 'conjugate_indices' and self[name] == None:
+            self['conjugate_indices'] = self.get_conjugate_index()
 
         return super(HelasAmplitude, self).get(name)
 
@@ -1642,8 +1753,7 @@ class HelasAmplitude(base_objects.PhysicsObject):
         """Returns true if any of the mothers have negative
         fermionflow"""
 
-        return any([wf.get('fermionflow') < 0 for wf in \
-                    self.get('mothers')])
+        return self.get('conjugate_indices') != ()
 
     def get_call_key(self):
         """Generate the (spin, state) tuples used as key for the helas call
@@ -1658,7 +1768,7 @@ class HelasAmplitude(base_objects.PhysicsObject):
 
         # Check if we need to append a charge conjugation flag
         if self.needs_hermitian_conjugate():
-            res.append(self.get_conjugate_index())
+            res.append(self.get('conjugate_indices'))
 
         return (tuple(res), tuple(self.get('lorentz')))
 
@@ -1703,9 +1813,7 @@ class HelasAmplitude(base_objects.PhysicsObject):
         for i in range(len(fermions) - 1):
             for j in range(i + 1, len(fermions)):
                 if fermions[j] < fermions[i]:
-                    tmp = fermions[i]
-                    fermions[i] = fermions[j]
-                    fermions[j] = tmp
+                    fermions[i], fermions[j] = fermions[j], fermions[i]
                     nflips = nflips + 1
 
         return (-1) ** nflips
@@ -1735,32 +1843,33 @@ class HelasAmplitude(base_objects.PhysicsObject):
         legs = base_objects.LegList()
         for mother in self.get('mothers'):
             try:
-                leg = wf_dict[mother.get('number')]
+                leg = wf_dict[(mother.get('number'),False)]
             except KeyError:
                 leg = base_objects.Leg({
                     'id': mother.get_pdg_code(),
                     'number': mother.get('number_external'),
                     'state': mother.get('leg_state'),
-                    'from_group': mother.get('onshell')
+                    'onshell': None
                     })
                 if optimization != 0:
-                    wf_dict[mother.get('number')] = leg
+                    wf_dict[(mother.get('number'),False)] = leg
             legs.append(leg)
 
         return base_objects.Vertex({
             'id': self.get('interaction_id'),
             'legs': legs})
 
-    def get_s_and_t_channels(self, ninitial, reverse_t_ch = False):
+    def get_s_and_t_channels(self, ninitial, new_pdg, reverse_t_ch = False):
         """Returns two lists of vertices corresponding to the s- and
         t-channels of this amplitude/diagram, ordered from the outermost
         s-channel and in/down towards the highest number initial state
-        leg.
-        Reverse_t_ch allows to invert the order of the t-channels
-        needed by MadFKS."""
+        leg."""
 
         schannels = base_objects.VertexList()
         tchannels = base_objects.VertexList()
+
+        (startleg, finalleg) = (1,2)
+        if reverse_t_ch: (startleg, finalleg) = (2,1)
 
         # Add vertices for all s-channel mothers
         final_mothers = filter(lambda wf: wf.get('number_external') > ninitial,
@@ -1783,14 +1892,13 @@ class HelasAmplitude(base_objects.PhysicsObject):
             # initial state
 
             # Create vertex
-            print "here"
             legs = base_objects.LegList()
             for mother in final_mothers + init_mothers:
                 legs.append(base_objects.Leg({
                     'id': mother.get_pdg_code(),
                     'number': mother.get('number_external'),
                     'state': mother.get('leg_state'),
-                    'from_group': False
+                    'onshell': mother.get('onshell')
                     }))
 
             # Renumber resulting leg according to minimum leg number
@@ -1805,28 +1913,20 @@ class HelasAmplitude(base_objects.PhysicsObject):
 
             # Add s- and t-channels from further down
             mother_s, tchannels = init_mothers[0].\
-                                  get_s_and_t_channels(ninitial, legs[-1], reverse_t_ch)
+                                  get_s_and_t_channels(ninitial, legs[-1],
+                                                       reverse_t_ch)
 
             schannels.extend(mother_s)
         else:
-            print "there"
             # This is a t-channel leg. Start with the leg going
             # towards external particle 1, and then do external
             # particle 2
-            if not reverse_t_ch:
-                init_mothers1 = filter(lambda wf: wf.get('number_external') == 1,
+            init_mothers1 = filter(lambda wf: wf.get('number_external') == \
+                                   startleg,
                                    init_mothers)[0]
-                init_mothers2 = filter(lambda wf: wf.get('number_external') == 2,
+            init_mothers2 = filter(lambda wf: wf.get('number_external') == \
+                                   finalleg,
                                    init_mothers)[0]
-
-            else:
-            # for MadFKS, if j_fks=2 the t-channels are inverted starting from
-            # leg 2 until leg 1
-                init_mothers1 = filter(lambda wf: wf.get('number_external') == 2,
-                                   init_mothers)[0]
-                init_mothers2 = filter(lambda wf: wf.get('number_external') == 1,
-                                   init_mothers)[0]
-
 
             # Create vertex
             legs = base_objects.LegList()
@@ -1835,7 +1935,7 @@ class HelasAmplitude(base_objects.PhysicsObject):
                     'id': mother.get_pdg_code(),
                     'number': mother.get('number_external'),
                     'state': mother.get('leg_state'),
-                    'from_group': False
+                    'onshell': mother.get('onshell')
                     }))
             # Renumber resulting leg according to minimum leg number
             legs[-1].set('number', min([l.get('number') for l in legs[:-1]]))
@@ -1846,7 +1946,8 @@ class HelasAmplitude(base_objects.PhysicsObject):
 
             # Add s- and t-channels going down towards leg 1
             mother_s, tchannels = \
-                      init_mothers1.get_s_and_t_channels(ninitial, legs[-2], reverse_t_ch)
+                      init_mothers1.get_s_and_t_channels(ninitial, legs[-2],
+                                                         reverse_t_ch)
 
             schannels.extend(mother_s)
 
@@ -1855,16 +1956,22 @@ class HelasAmplitude(base_objects.PhysicsObject):
 
             # Add s- and t-channels going down towards leg 2
             mother_s, mother_t = \
-                      init_mothers2.get_s_and_t_channels(ninitial, legs[-1], reverse_t_ch)
+                      init_mothers2.get_s_and_t_channels(ninitial, legs[-1],
+                                                         reverse_t_ch)
             schannels.extend(mother_s)
             tchannels.extend(mother_t)
+
+        # Sort s-channels according to number
+        schannels.sort(lambda x1,x2: x2.get('legs')[-1].get('number') - \
+                       x1.get('legs')[-1].get('number'))
 
         # Split up multiparticle vertices using fake s-channel propagators
         multischannels = [(i, v) for (i, v) in enumerate(schannels) \
                           if len(v.get('legs')) > 3]
         multitchannels = [(i, v) for (i, v) in enumerate(tchannels) \
                           if len(v.get('legs')) > 3]
-
+        
+        increase = 0
         for channel in multischannels + multitchannels:
             newschannels = []
             vertex = channel[1]
@@ -1874,10 +1981,11 @@ class HelasAmplitude(base_objects.PhysicsObject):
                 popped_legs = \
                            base_objects.LegList([vertex.get('legs').pop(0) \
                                                     for i in [0,1]])
-                popped_legs.append(base_objects.Leg({'id': 21,
+                popped_legs.append(base_objects.Leg({\
+                    'id': new_pdg,
                     'number': min([l.get('number') for l in popped_legs]),
                     'state': True,
-                    'from_group': False}))
+                    'onshell': None}))
 
                 new_vertex = base_objects.Vertex({
                     'id': vertex.get('id'),
@@ -1885,7 +1993,9 @@ class HelasAmplitude(base_objects.PhysicsObject):
 
                 # Insert the new s-channel before this vertex
                 if channel in multischannels:
-                    schannels.insert(channel[0], new_vertex)
+                    schannels.insert(channel[0]+increase, new_vertex)
+                    # Account for previous insertions
+                    increase += 1
                 else:
                     schannels.append(new_vertex)
                 legs = vertex.get('legs')
@@ -1919,9 +2029,6 @@ class HelasAmplitude(base_objects.PhysicsObject):
             legs.append(last_leg)
             vertex.set('legs', base_objects.LegList(legs))
 
-#        print "schannels, ",[ [l['number'] for l in v['legs']] for v in schannels]
-#        print "tchannels, ",[ [l['number'] for l in v['legs']] for v in tchannels]
-
         return schannels, tchannels
 
     def get_color_indices(self):
@@ -1953,17 +2060,25 @@ class HelasAmplitude(base_objects.PhysicsObject):
     def get_conjugate_index(self):
         """Return the index of the particle that should be conjugated."""
 
-        if self.needs_hermitian_conjugate():
-            fermions = [wf for wf in self.get('mothers') if \
-                        wf.is_fermion()]
-            indices = []
-            for i in range(0,len(fermions), 2):
-                if fermions[i].get('fermionflow') < 0 or \
-                   fermions[i+1].get('fermionflow') < 0:
-                    indices.append(i/2 + 1)
-            return tuple(indices)
-        else:
+        if not any([(wf.get('fermionflow') < 0 or wf.is_majorana()) for wf in \
+                    self.get('mothers')]):
             return ()
+        
+        # Pick out first sorted mothers, then fermions
+        mothers, self_index = \
+                      self.get('mothers').sort_by_pdg_codes(self.get('pdg_codes'))
+        fermions = HelasWavefunctionList([wf for wf in mothers if wf.is_fermion()])
+
+        # Initialize indices with indices due to Majoranas with wrong order
+        indices = fermions.majorana_conjugates()
+
+        # Check for fermions with negative fermion flow
+        for i in range(0,len(fermions), 2):
+            if fermions[i].get('fermionflow') < 0 or \
+               fermions[i+1].get('fermionflow') < 0:
+                indices.append(i/2 + 1)
+                
+        return tuple(sorted(indices))
 
     def get_vertex_leg_numbers(self):
         """Get a list of the number of legs in vertices in this diagram"""
@@ -3763,6 +3878,7 @@ class HelasDecayChainProcess(base_objects.PhysicsObject):
             decay_chain = dc_amplitude.get('decay_chains').pop(0)
             self['decay_chains'].append(HelasDecayChainProcess(\
                 decay_chain))
+            
 
     def combine_decay_chain_processes(self):
         """Recursive function to generate complete
@@ -3791,7 +3907,9 @@ class HelasDecayChainProcess(base_objects.PhysicsObject):
 
         # Store the result in matrix_elements
         matrix_elements = HelasMatrixElementList()
-
+        # Store matrix element tags in me_tags, for precise comparison
+        me_tags = []
+        
         # List of list of ids for the initial state legs in all decay
         # processes
         decay_is_ids = [[element.get('processes')[0].get_initial_ids()[0] \
@@ -3914,13 +4032,16 @@ class HelasDecayChainProcess(base_objects.PhysicsObject):
                                         for d in decay_dict.values()])))
 
                 matrix_element.insert_decay_chains(decay_dict)
+                me_tag = IdentifyMETag.create_tag(\
+                            matrix_element.get_base_amplitude(),
+                            matrix_element.get('identical_particle_factor'))
 
                 try:
                     # If an identical matrix element is already in the list,
                     # then simply add this process to the list of
                     # processes for that matrix element
                     other_processes = matrix_elements[\
-                    matrix_elements.index(matrix_element)].get('processes')
+                    me_tags.index(me_tag)].get('processes')
                     logger.info("Combining process with %s" % \
                       other_processes[0].nice_string().replace('Process: ', ''))
                     other_processes.extend(matrix_element.get('processes'))
@@ -3930,6 +4051,7 @@ class HelasDecayChainProcess(base_objects.PhysicsObject):
                     if matrix_element.get('processes') and \
                            matrix_element.get('diagrams'):
                         matrix_elements.append(matrix_element)
+                        me_tags.append(me_tag)
 
         return matrix_elements
 
@@ -4152,6 +4274,10 @@ class HelasMultiProcess(base_objects.PhysicsObject):
                     matrix_element.set('color_matrix',
                                        list_color_matrices[col_index])
             
+        if not matrix_elements:
+            raise MadGraph5Error, \
+                  "No matrix elements generated, check overall coupling orders"
+
         return matrix_elements
 
     @staticmethod
