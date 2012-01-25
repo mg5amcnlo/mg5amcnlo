@@ -185,9 +185,46 @@ class FKSHelasProcessFromBorn(object):
         
         if fksproc != None:
             self.real_processes = []
+            real_amps_new = []
             for proc in fksproc.real_amps:
-                self.real_processes.append(
-                        FKSHelasRealProcess(proc, me_list, me_id_list, **opts))
+                fksreal_me = FKSHelasRealProcess(proc, me_list, me_id_list, **opts)
+                try:
+                    other = self.real_processes[self.real_processes.index(fksreal_me)]
+                    other.matrix_element.get('processes').extend(\
+                            fksreal_me.matrix_element.get('processes') )
+#                    logger.info("Combining real process with %s" % \
+#                            other.matrix_element.get('processes')[0].nice_string().replace('Process: ', ''))
+                except ValueError:
+                    if fksreal_me.matrix_element.get('processes') and \
+                            fksreal_me.matrix_element.get('diagrams'):
+                        self.real_processes.append(fksreal_me)
+                        real_amps_new.append(proc)
+            fksproc.real_amps = real_amps_new
+
+################################################################################
+
+#            self.matrix_element = helas_objects.HelasMatrixElement(
+#                                    fksrealproc.amplitude, **opts)
+#
+#
+#                try:
+#                    # If an identical matrix element is already in the list,
+#                    # then simply add this process to the list of
+#                    # processes for that matrix element
+#                    other = \
+#                          matrix_elements[matrix_elements.index(matrix_element)]
+#                    other.add_process(matrix_element)
+#                    logger.info("Combining process with %s" % \
+#                      other.born_matrix_element.get('processes')[0].nice_string().replace('Process: ', ''))
+#                except ValueError:
+#                    # Otherwise, if the matrix element has any diagrams,
+#                    # add this matrix element.
+#                    if matrix_element.born_matrix_element.get('processes') and \
+#                           matrix_element.born_matrix_element.get('diagrams'):
+#                        matrix_elements.append(matrix_element)
+################################################################################
+
+
             self.born_matrix_element = helas_objects.HelasMatrixElement(
                                     fksproc.born_amp, **opts)
             col_basis = color_amp.ColorBasis()
@@ -284,11 +321,12 @@ class FKSHelasRealProcess(object): #test written
             #except ValueError:
             self.matrix_element = helas_objects.HelasMatrixElement(
                                     fksrealproc.amplitude, **opts)
-                #me_list.append(self.matrix_element)
-                #me_id_list.append(pdgs)
-                
-       #     for p in self.matrix_element.get('processes'):
-       #         print p.nice_string()
+            #generate the color for the real
+            self.matrix_element.get('color_basis').build(
+                                self.matrix_element.get('base_amplitude'))
+            self.matrix_element.set('color_matrix',
+                             color_amp.ColorMatrix(
+                                self.matrix_element.get('color_basis')))
     
     def __eq__(self, other):
         """Equality operator:

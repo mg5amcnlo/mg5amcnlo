@@ -112,7 +112,7 @@ if [[ $all_dirs != '1' ]] ; then
     read dirs
 else
     cd SubProcesses
-    dirs=`ls -d P*_[1-9]*`
+    dirs=`ls -d P*/R*`
     cd ..
 fi
 
@@ -132,7 +132,7 @@ if [[ $test == "1" ]] ; then
     echo $points $points >> $Maindir/input_ME
     echo $points $points >> $Maindir/input_MC
     echo '-1' >> $Maindir/input_Sij
-    dir=`ls -d SubProcesses/P* | tail -n1`
+    dir=`ls -d SubProcesses/P*/R* | tail -n1`
     if [[ -e $dir"/helicities.inc" ]]; then
 	echo '1' >> $Maindir/input_ME
 	echo '1' >> $Maindir/input_MC
@@ -188,7 +188,7 @@ echo 'continuing with the P* directories...'
 echo ''
 
 if [[ $gensym == '1' || $madevent_compile == '1' ]]; then
-    dir=`ls -d P* | tail -n1`
+    dir=`ls -d P*/R* | tail -n1`
     if [[ -e $dir"/helicities.inc" ]]; then
 	echo 'helicities.inc found: it is recommended to MC over helicities'
 	echo 'converting fks_singular.f and fks_singularMC.f'
@@ -326,7 +326,7 @@ for dir in $dirs ; do
     else
 	echo '     No need for this dir: doing n-body only'
     fi
-    cd ..
+    cd ../..
 done
 
 if [[ $test == "1" ]]; then

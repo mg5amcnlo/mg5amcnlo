@@ -120,7 +120,7 @@ if [[ $run_cluster == 2 ]] ; then
 	    graph=`fgrep "for i in" $job | cut -d" " -f4`
 	    args="$args""['madevent_vegas','"$dir"','"$job"','"$vegas_mint"','"$run_mode"','"$use_preset"','"$run_mode"_G"$graph"'],\n"
 	done
-	cd ..
+	cd ../..
     done
     args="$args"]
     echo -e $args > ganga_arguments.txt
@@ -149,7 +149,7 @@ if [[ $runmode == 1 ]] ; then
 		fi
             done
 	fi
-	cd ..
+	cd ../..
     done
 elif [[ $runmode == 2 ]] ; then
     echo "runmode is 2: run all fks dir's for subprocesses with soft singularity; S-functions are not set to one."
@@ -172,7 +172,7 @@ elif [[ $runmode == 2 ]] ; then
 		fi
             done
 	fi
-	cd ..
+	cd ../..
     done
 elif [[ $runmode == 3 ]] ; then
     echo "runmode is 3: run all fks dir's for all subprocesses."
@@ -193,6 +193,6 @@ elif [[ $runmode == 3 ]] ; then
    		./$job $vegas_mint $run_mode $use_preset
 	    fi
         done
-	cd ..
+	cd ../..
     done
 fi

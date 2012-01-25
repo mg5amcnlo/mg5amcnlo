@@ -1171,7 +1171,7 @@ data mirrorproc /%s/" % bool_dict[matrix_element.get('has_mirror_process')]
             # Need to reorganize the topology so that we start with all
             # final state external particles and work our way inwards
             schannels, tchannels = helas_diag.get('amplitudes')[0].\
-                                         get_s_and_t_channels(ninitial, reverse_t_ch)
+                                         get_s_and_t_channels(ninitial, 990, reverse_t_ch)
     
             s_and_t_channels.append([schannels, tchannels])
     

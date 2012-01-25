@@ -14,8 +14,8 @@ touch dirs.txt
 NTOT=0
 for dir in "$@" ; do
     let NTOT=$NTOT+`ls -d P*/$dir | wc -l`
-    ls -d P*/$dir >> dirs.txt
-    grep -H 'Final result' P*_[1-9]*/$dir/log.txt >> res.txt
+    ls -d P*/R*/$dir >> dirs.txt
+    grep -H 'Final result' P*/R*/$dir/log.txt >> res.txt
 done
 
 

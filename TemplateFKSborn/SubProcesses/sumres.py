@@ -20,25 +20,7 @@ def Mirrorprocs(p1, p2):
     """determine if the folder names p1, p2 (with the _N already taken out)
     correspond to the same process with
     mirrror initial state. Returns true/false"""
-    if p1 ==p2:
-        return False
-    p1s = p1.split('_')
-    p2s = p2.split('_')
-    if len(p1s) != len(p2s):
-        return False
-    for a1, a2 in zip(p1s, p2s):
-        if len(a1) != len(a2):
-            return False
-
-   # check that final state is the same
-    if p1s[2] != p2s[2]:
-        return False
-    else:
-        i1 = p1s[1]
-        i2 = p2s[1]
-        if i1[len(i1)/2:] + i1[:len(i1)/2] == i2 or \
-            i1[len(i1)/2+1:] + i1[:len(i1)/2+1] == i2 :
-            return True
+    return False
 
 file=open("res.txt")
 content = file.read()
@@ -60,9 +42,10 @@ for line in lines:
     if list:
         proc={}
         proc['folder'] = list[0].split('/')[0]
+        proc['real'] = list[0].split('/')[1]
         proc['subproc'] = proc['folder'][0:proc['folder'].rfind('_')]
-        proc['channel'] = list[0].split('/')[1]
-        dirs.remove(os.path.join(proc['folder'], proc['channel']))
+        proc['channel'] = list[0].split('/')[2]
+        dirs.remove(os.path.join(proc['folder'],proc['real'], proc['channel']))
         if list[3] != '[ABS]:':
             proc['result'] = float(list[3])
             proc['error'] = float(list[5])
@@ -92,7 +75,7 @@ subprocs_string=set(subprocs_string)
 
 content+='\n\nCross-section per integration channel:\n'
 for proc in processes:
-    content+='%(folder)20s %(channel)15s   %(result)10.8e    %(error)6.4e       %(err_perc)6.4f%%  \n' %  proc
+    content+='%(folder)20s %(real)20s  %(channel)15s   %(result)10.8e    %(error)6.4e       %(err_perc)6.4f%%  \n' %  proc
 
 content+='\n\nCross-section per subprocess:\n'
 #for subpr in sorted(set(subprocs)):
