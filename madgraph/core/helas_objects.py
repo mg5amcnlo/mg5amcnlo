@@ -985,12 +985,13 @@ class HelasWavefunction(base_objects.PhysicsObject):
 
         return color_indices
 
-    def get_s_and_t_channels(self, ninitial, mother_leg):
+    def get_s_and_t_channels(self, ninitial, mother_leg, reverse_t_ch=False):
         """Returns two lists of vertices corresponding to the s- and
         t-channels that can be traced from this wavefunction, ordered
         from the outermost s-channel and in/down towards the highest
         number initial state leg. mother_leg corresponds to self but with
-        correct leg number = min(final state mothers)."""
+        correct leg number = min(final state mothers).
+        reverse_t_ch is added for MadFKS."""
 
         schannels = base_objects.VertexList()
         tchannels = base_objects.VertexList()
@@ -1074,12 +1075,21 @@ class HelasWavefunction(base_objects.PhysicsObject):
             schannels.extend(mother_s)
 
         elif len(init_mothers) == 2:
-            # This is a t-channel junction. Start with the leg going
+            # This is a t-channel leg. Start with the leg going
             # towards external particle 1, and then do external
             # particle 2
-            init_mothers1 = filter(lambda wf: wf.get('number_external') == 1,
+            if not reverse_t_ch:
+                init_mothers1 = filter(lambda wf: wf.get('number_external') == 1,
                                    init_mothers)[0]
-            init_mothers2 = filter(lambda wf: wf.get('number_external') == 2,
+                init_mothers2 = filter(lambda wf: wf.get('number_external') == 2,
+                                   init_mothers)[0]
+
+            else:
+            # for MadFKS, if j_fks=2 the t-channels are inverted starting from
+            # leg 2 until leg 1
+                init_mothers1 = filter(lambda wf: wf.get('number_external') == 2,
+                                   init_mothers)[0]
+                init_mothers2 = filter(lambda wf: wf.get('number_external') == 1,
                                    init_mothers)[0]
 
             # Create vertex
@@ -1102,7 +1112,7 @@ class HelasWavefunction(base_objects.PhysicsObject):
 
             # Add s- and t-channels going down towards leg 1
             mother_s, tchannels = \
-                      init_mothers1.get_s_and_t_channels(ninitial, legs[1])
+                      init_mothers1.get_s_and_t_channels(ninitial, legs[1],reverse_t_ch)
             schannels.extend(mother_s)
 
             # Add vertex
@@ -1110,7 +1120,7 @@ class HelasWavefunction(base_objects.PhysicsObject):
 
             # Add s- and t-channels going down towards leg 2
             mother_s, mother_t = \
-                      init_mothers2.get_s_and_t_channels(ninitial, legs[-1])
+                      init_mothers2.get_s_and_t_channels(ninitial, legs[-1],reverse_t_ch)
             schannels.extend(mother_s)
             tchannels.extend(mother_t)
 
@@ -1773,6 +1783,7 @@ class HelasAmplitude(base_objects.PhysicsObject):
             # initial state
 
             # Create vertex
+            print "here"
             legs = base_objects.LegList()
             for mother in final_mothers + init_mothers:
                 legs.append(base_objects.Leg({
@@ -1794,10 +1805,11 @@ class HelasAmplitude(base_objects.PhysicsObject):
 
             # Add s- and t-channels from further down
             mother_s, tchannels = init_mothers[0].\
-                                  get_s_and_t_channels(ninitial, legs[-1])
+                                  get_s_and_t_channels(ninitial, legs[-1], reverse_t_ch)
 
             schannels.extend(mother_s)
         else:
+            print "there"
             # This is a t-channel leg. Start with the leg going
             # towards external particle 1, and then do external
             # particle 2
@@ -1834,7 +1846,7 @@ class HelasAmplitude(base_objects.PhysicsObject):
 
             # Add s- and t-channels going down towards leg 1
             mother_s, tchannels = \
-                      init_mothers1.get_s_and_t_channels(ninitial, legs[-2])
+                      init_mothers1.get_s_and_t_channels(ninitial, legs[-2], reverse_t_ch)
 
             schannels.extend(mother_s)
 
@@ -1843,7 +1855,7 @@ class HelasAmplitude(base_objects.PhysicsObject):
 
             # Add s- and t-channels going down towards leg 2
             mother_s, mother_t = \
-                      init_mothers2.get_s_and_t_channels(ninitial, legs[-1])
+                      init_mothers2.get_s_and_t_channels(ninitial, legs[-1], reverse_t_ch)
             schannels.extend(mother_s)
             tchannels.extend(mother_t)
 
@@ -1906,6 +1918,9 @@ class HelasAmplitude(base_objects.PhysicsObject):
             last_leg.set('number', nprop)
             legs.append(last_leg)
             vertex.set('legs', base_objects.LegList(legs))
+
+#        print "schannels, ",[ [l['number'] for l in v['legs']] for v in schannels]
+#        print "tchannels, ",[ [l['number'] for l in v['legs']] for v in tchannels]
 
         return schannels, tchannels
 

@@ -498,7 +498,7 @@ class ProcessExporterFortranFKS_real(export_v4.ProcessExporterFortran):
         nconfigs, s_and_t_channels = self.write_configs_file(\
             writers.FortranWriter(filename),
             matrix_element.real_matrix_element,
-            fksborn.j_fks == 20,
+            fksborn.j_fks == 2,
             fortran_model)
     
         filename = 'decayBW.inc'
@@ -571,7 +571,7 @@ class ProcessExporterFortranFKS_real(export_v4.ProcessExporterFortran):
         nconfigs, s_and_t_channels = self.write_configs_file(\
             writers.FortranWriter(filename),
             fksborn.matrix_element,
-            fksborn.j_fks == 20,
+            fksborn.j_fks == 2,
             fortran_model)
     
         filename = 'born_decayBW.inc'

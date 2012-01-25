@@ -105,8 +105,8 @@ class ParticleTest(unittest.TestCase):
                        {'prop':'name',
                         'right_list':['h', 'e+', 'e-', 'u~',
                                       'k++', 'k--', 'T', 'u+~'],
-                        'wrong_list':['', 'x ', 'e?', '{}', '9x', 'd~3', 'd+g',
-                                      'u~+', 'u~~']},
+                        'wrong_list':['', 'x ', 'e?', '{}', '$', 's/', '>', 
+                                      '[]']},
                        {'prop':'spin',
                         'right_list':[1, 2, 3, 4, 5],
                         'wrong_list':[-1, 0, 'a', 6]},
@@ -142,7 +142,7 @@ class ParticleTest(unittest.TestCase):
             for x in test['right_list']:
                 self.assert_(temp_part.set(test['prop'], x))
             for x in test['wrong_list']:
-                self.assertFalse(temp_part.set(test['prop'], x))
+                self.assertFalse(temp_part.set(test['prop'], x), '%s not allowd for %s ' %(x, test['prop']))
 
     def test_representation(self):
         """Test particle object string representation."""
