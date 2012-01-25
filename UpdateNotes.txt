@@ -1,8 +1,9 @@
 Update notes for MadGraph 5 (in reverse time order)
 
 1.3.33 (01/01/25) JA: Revisited colors for propagators in addmothers.f
-                      to ensure that propagators get the correct color
-                      also from initial state particles (thanks to
+                      to ensure that propagators in color flow
+                      violating processes get the correct color
+                      from initial state particles (thanks to
                       Michele Gabusi for forcing me to do this).
 
 1.3.32 (21/12/11) JA: Fixed a bug in the PDF reweighting routine,
