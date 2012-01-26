@@ -702,16 +702,16 @@ class TestFKSCommon(unittest.TestCase):
                                     'state': True,
                                     'color': 8,
                                     'spin': 3,
-                                    'massless': True,
-                                    'fks': 'i'
-                                }),\
+                                    'massless': True
+                                    }),\
                                 fks_common.FKSLeg({
                                     'id': 21,
                                     'number': 5,
                                     'state': True,
                                     'color': 8,
                                     'spin': 3,
-                                    'massless': True
+                                    'massless': True,
+                                    'fks': 'i'
                                 })])
         
         #split final state u
@@ -775,8 +775,6 @@ class TestFKSCommon(unittest.TestCase):
                                     'color': 8,
                                     'spin': 3,
                                     'massless': True,
-                                    'fks': 'i'
-
                                 }),\
                                 fks_common.FKSLeg({
                                     'id': 21,
@@ -784,7 +782,8 @@ class TestFKSCommon(unittest.TestCase):
                                     'state': True,
                                     'color': 8,
                                     'spin': 3,
-                                    'massless': True
+                                    'massless': True,
+                                    'fks': 'i'
                                 })])
         
         for leg, split, res in zip(legs, splittings, res_leglists):

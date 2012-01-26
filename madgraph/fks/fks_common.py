@@ -79,7 +79,6 @@ def link_rb_conf(born_amp, real_amp, i, j, ij): #test written, sm and heft
     # find the real diagrams that have i and j attached to the same vertex
     real_confs_new = copy.deepcopy(real_confs)
     for diag in real_confs_new:
-        #print diag['diagram'].nice_string()
         for vert in diag['diagram'].get('vertices'):
             vert_legs = [ l.get('number') for l in vert.get('legs')]
             if (i in vert_legs and not j in vert_legs) or \
@@ -91,7 +90,6 @@ def link_rb_conf(born_amp, real_amp, i, j, ij): #test written, sm and heft
                 vert_legs.remove(j)
                 last_leg = vert_legs[0]
                 diag['diagram']['vertices'].remove(vert)
-                #print vert, last_leg
                 good_diags.append({'diagram' : diag['diagram'], 
                                   'leg_ij': last_leg,
                                   'number' : diag['number']})
@@ -611,6 +609,11 @@ class FKSLeg(MG.Leg):
         if (self.get('state') or other.get('state')) and \
           not (self.get('state') and other.get('state')):
             return other.get('state')
+        #two final state legs with the same pdg are sorted so that
+        # i_fks is put after
+        if self.get('state') == other.get('state') and \
+           self.get('id') == other.get('id'):
+               return self.get('fks') > other.get('fks')
         
         #two final state particles are ordered by increasing color
         elif self.get('state') and other.get('state'):

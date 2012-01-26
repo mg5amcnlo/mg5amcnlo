@@ -1434,6 +1434,7 @@ class HelasWavefunctionList(base_objects.PhysicsObjectList):
 
         sorted_mothers = []
         for i, code in enumerate(pdg_codes):
+            #print i, code, mother_codes
             index = mother_codes.index(code)
             mother_codes.pop(index)
             mother = mothers.pop(index)

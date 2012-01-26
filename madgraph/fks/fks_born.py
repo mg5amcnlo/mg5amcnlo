@@ -241,7 +241,7 @@ class FKSProcessFromBorn(object):
 
         for i, list in enumerate(self.reals):
             if self.leglist[i]['massless'] and self.leglist[i]['spin'] == 3:
-                ijglu = i
+                ijglu = i+1
             else:
                 ijglu = 0
             for l in list:
@@ -285,7 +285,7 @@ class FKSProcessFromBorn(object):
                         and \
                         real_m.get_leg_j()['id'] == real_n.get_leg_i()['id']):
                         if real_m.i_fks > real_n.i_fks:
-                            self.real_amps[m].is_to_integrate = False
+                            self.real_amps[n].is_to_integrate = False
                         elif real_m.i_fks == real_n.i_fks and \
                              real_m.j_fks > real_n.j_fks:
                             self.real_amps[n].is_to_integrate = False

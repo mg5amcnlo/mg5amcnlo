@@ -26,6 +26,7 @@ import madgraph.fks.fks_common as fks_common
 import madgraph.core.base_objects as MG
 import madgraph.core.color_algebra as color
 import madgraph.core.diagram_generation as diagram_generation
+import models.import_ufo as import_ufo
 import copy
 import array
 
@@ -424,11 +425,11 @@ class TestFKSProcess(unittest.TestCase):
         amp_id_list = []
         #u g > u g
         fksproc = fks_born.FKSProcessFromBorn(self.myproc)
-        #take the first real for this process 2j 21 >2 21i 21
+        #take the first real for this process 2j 21 >2 21 21i
         leglist = fksproc.reals[0][0]
         realproc = fks_born.FKSRealProcess(fksproc.born_proc, leglist, 1,0, amplist, amp_id_list)
 
-        self.assertEqual(realproc.i_fks, 4)
+        self.assertEqual(realproc.i_fks, 5)
         self.assertEqual(realproc.j_fks, 1)
         self.assertEqual(realproc.ij, 1)
         self.assertEqual(realproc.ijglu, 0)
@@ -474,10 +475,10 @@ class TestFKSProcess(unittest.TestCase):
         amp_id_list = []
         #u g > u g
         fksproc = fks_born.FKSProcessFromBorn(self.myproc)
-        #take the first real for this process 2j 21 > 2 21i 21
+        #take the first real for this process 2j 21 > 2 21 21i
         leglist = fksproc.reals[0][0]
         realproc = fks_born.FKSRealProcess(fksproc.born_proc, leglist,1,0, amplist, amp_id_list)
-        self.assertEqual(realproc.get_leg_i(), leglist[3])
+        self.assertEqual(realproc.get_leg_i(), leglist[4])
         self.assertEqual(realproc.get_leg_j(), leglist[0])
     
     def test_generate_reals(self):
@@ -504,6 +505,26 @@ class TestFKSProcess(unittest.TestCase):
                 self.assertEqual(real.is_nbody_only, True)
             else:
                 self.assertEqual(real.is_nbody_only, False)
+
+    def test_is_to_integrate(self):
+        """tests that the is_to_integrate flag is correctly set in processes
+        with symmetric configurations"""
+        self.base_model = import_ufo.import_model('sm')
+        # born process e+ e- > t t~ g
+        myleglist = MG.LegList()
+        myleglist.append(MG.Leg({'id':-11, 'state':False}))
+        myleglist.append(MG.Leg({'id':11, 'state':False}))
+        myleglist.append(MG.Leg({'id':6, 'state':True}))
+        myleglist.append(MG.Leg({'id':-6, 'state':True}))
+        myleglist.append(MG.Leg({'id':21, 'state':True}))
+        amp = diagram_generation.Amplitude(MG.Process({'legs':myleglist,
+                                       'model':self.base_model,
+                                       'orders':{'QCD':1, 'QED':2}}))
+        ttg_fks_norem = fks_born.FKSProcessFromBorn(amp, False)
+        ttg_fks_norem.generate_reals([], [])
+        res = [{'i': real.i_fks, 'j': real.j_fks, 'to_int': real.is_to_integrate} \
+                for real in ttg_fks_norem.real_amps]
+
         
                 
         
@@ -534,12 +555,12 @@ class TestFKSProcess(unittest.TestCase):
                                          {'id' :21,
                                          'number' :4,
                                          'state' :True,
-                                         'fks' : 'i'}),
+                                         'fks' : 'n'}),
                                         fks_common.FKSLeg(
                                          {'id' :21,
                                          'number' :5,
                                          'state' :True,
-                                         'fks' : 'n'})
+                                         'fks' : 'i'})
                                         ], self.mymodel ),
                     fks_common.to_fks_legs([
                                         fks_common.FKSLeg(
@@ -594,12 +615,12 @@ class TestFKSProcess(unittest.TestCase):
                                          {'id' :21,
                                          'number' :4,
                                          'state' :True,
-                                         'fks' : 'i'}),
+                                         'fks' : 'n'}),
                                         fks_common.FKSLeg(
                                          {'id' :21,
                                          'number' :5,
                                          'state' :True,
-                                         'fks' : 'n'})
+                                         'fks' : 'i'})
                                         ], self.mymodel),
                        fks_common.to_fks_legs([#ud>dug
                                         fks_common.FKSLeg(
@@ -670,12 +691,12 @@ class TestFKSProcess(unittest.TestCase):
                                          {'id' :2,
                                          'number' :3,
                                          'state' :True,
-                                         'fks' : 'i'}),
+                                         'fks' : 'n'}),
                                         fks_common.FKSLeg(
                                          {'id' :2,
                                          'number' :4,
                                          'state' :True,
-                                         'fks' : 'n'}),
+                                         'fks' : 'i'}),
                                         fks_common.FKSLeg( 
                                          {'id' :21,
                                          'number' :5,
@@ -732,12 +753,12 @@ class TestFKSProcess(unittest.TestCase):
                                          {'id' :21,
                                          'number' :4,
                                          'state' :True,
-                                         'fks' : 'i'}),
+                                         'fks' : 'n'}),
                                         fks_common.FKSLeg( 
                                          {'id' :21,
                                          'number' :5,
                                          'state' :True,
-                                         'fks' : 'n'})
+                                         'fks' : 'i'})
                                         ], self.mymodel)
                                         ]
                                         )
