@@ -57,12 +57,12 @@ fi
 echo "Now generating $num_events events with random seed $seed and granularity $gran"
 
 
-if [[ ! -x ./madevent/bin/internal/gridrun ]]; then
+if [[ ! -x ./madevent/bin/gridrun ]]; then
     echo "Error: gridrun script not found !"
     exit
 else
     cd ./madevent
-    ./bin/internal/gridrun.py $num_events $seed
+    ./bin/gridrun $num_events $seed
 fi
 
 if [[ ! -e ./Events/unweighted_events.lhe ]]; then

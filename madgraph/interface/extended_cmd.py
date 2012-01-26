@@ -73,7 +73,7 @@ class BasicCmd(cmd.Cmd):
                 continue
             name = name.replace(' ', '_')
             valid += 1
-            out.append(opt[0]+'@@'+name+'@@')
+            out.append(opt[0].rstrip()+'@@'+name+'@@')
             # Remove duplicate
             d = {}
             for x in opt:
@@ -89,6 +89,7 @@ class BasicCmd(cmd.Cmd):
 
     def print_suggestions(self, substitution, matches, longest_match_length) :
         """print auto-completions by category"""
+        longest_match_length += len(self.completion_prefix)
         try:
             if len(matches) == 1:
                 self.stdout.write(matches[0]+' ')
@@ -108,7 +109,8 @@ class BasicCmd(cmd.Cmd):
                         continue
                     elif pos and pos % nb_column ==0:
                         self.stdout.write('\n')
-                    self.stdout.write(val + ' ' * (longest_match_length +1 -len(val)))
+                    self.stdout.write(self.completion_prefix + val + \
+                                      ' ' * (longest_match_length +1 -len(val)))
                     pos +=1
                 self.stdout.write('\n')
             else:
@@ -117,7 +119,8 @@ class BasicCmd(cmd.Cmd):
                 for i,val in enumerate(matches):
                     if i and i%nb_column ==0:
                         self.stdout.write('\n')
-                    self.stdout.write(val + ' ' * (longest_match_length +1 -len(val)))
+                    self.stdout.write(self.completion_prefix + val + \
+                                     ' ' * (longest_match_length +1 -len(val)))
                 self.stdout.write('\n')
     
             self.stdout.write(self.prompt+readline.get_line_buffer())
@@ -149,6 +152,62 @@ class BasicCmd(cmd.Cmd):
             except:
                 cr = (25, 80)
         return int(cr[1])
+    
+    def complete(self, text, state):
+        """Return the next possible completion for 'text'.
+         If a command has not been entered, then complete against command list.
+         Otherwise try to call complete_<command> to get list of completions.
+        """
+        if state == 0:
+            import readline
+            origline = readline.get_line_buffer()
+            line = origline.lstrip()
+            stripped = len(origline) - len(line)
+            begidx = readline.get_begidx() - stripped
+            endidx = readline.get_endidx() - stripped
+            
+            if ';' in line:
+                begin, line = line.rsplit(';',1)
+                begidx = begidx - len(begin) - 1
+                endidx = endidx - len(begin) - 1
+
+            if begidx>0:
+                cmd, args, foo = self.parseline(line)
+                if cmd == '':
+                    compfunc = self.completedefault
+                else:
+                    try:
+                        compfunc = getattr(self, 'complete_' + cmd)
+                    except AttributeError:
+                        compfunc = self.completedefault
+            else:
+                compfunc = self.completenames
+            # correct wrong splitting with '-'
+            if line and line[begidx-1] == '-':
+             try:    
+                Ntext = line.split()[-1]
+                self.completion_prefix = Ntext.rsplit('-',1)[0] +'-'
+                to_rm = len(self.completion_prefix)
+                Nbegidx = len(line.rsplit(None, 1)[0])
+                data = compfunc(Ntext, line, Nbegidx, endidx)
+                self.completion_matches = [p[to_rm:] for p in data 
+                                              if len(p)>to_rm]
+             except Exception, error:
+                 print error
+            else:
+                self.completion_prefix = ''
+                self.completion_matches = compfunc(text, line, begidx, endidx)
+        #print self.completion_matches
+        self.completion_matches = [ (l[-1] in [' ','@','='] and l or (l+' ')) for l in self.completion_matches if l]
+        
+        try:
+            return self.completion_matches[state]
+        except IndexError, error:
+            #if __debug__:
+            #    print '\n Completion ERROR:'
+            #    print error
+            #    print '\n'
+            return None    
 
 class Cmd(BasicCmd):
     """Extension of the cmd.Cmd command line.
@@ -416,6 +475,17 @@ class Cmd(BasicCmd):
                 out.append(data)
         return out
 
+    def correct_splitting(line):
+        """if the line finish with a '-' the code splits in a weird way
+           on GNU_SPLITTING"""
+                
+        line = line.lstrip()
+        if line[-1] in [' ','\t']:
+            return '', line, len(line),len(enidx)
+        return text, line, begidx, endidx
+        
+        
+        
      
     # Write the list of command line use in this session
     def do_history(self, line):
@@ -871,18 +941,6 @@ class Cmd(BasicCmd):
     def list_completion(text, list, line=''):
         """Propose completions of text in list"""
 
-        rm=0
-        if text:
-            line = line[:-len(text)]
-        
-        if line.endswith('-'):
-            if line.endswith('--'):
-                rm += 2
-                text =  '--%s' % text 
-            else:
-                rm += 1
-                text =  '-%s' % text
-        
         if not text:
             completions = list
         else:
@@ -890,13 +948,8 @@ class Cmd(BasicCmd):
                             for f in list
                             if f.startswith(text)
                             ]
-        def put_space(name, rm): 
-            if name.endswith(' '): 
-                return name
-            else:
-                return '%s ' % name[rm:] 
             
-        return [put_space(name, rm) for name in completions] 
+        return completions
             
 
     @staticmethod

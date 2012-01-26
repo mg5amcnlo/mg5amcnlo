@@ -248,42 +248,68 @@ class PBSCluster(Cluster):
 
         return idle, run, self.submitted - (idle+run+fail), fail
 
-
 class SGECluster(Cluster):
-   """Basic class for dealing with cluster submission"""
-   # Class written by Arian Abrahantes.
+    """Basic class for dealing with cluster submission"""
+    # Class written by Arian Abrahantes.
 
-   name = 'sge'
-   idle_tag = ['qw', 'hqw','hRqw','w']
-   running_tag = ['r','t','Rr','Rt']
+    name = 'sge'
+    idle_tag = ['qw', 'hqw','hRqw','w']
+    running_tag = ['r','t','Rr','Rt']
 
-   def submit(self, prog, argument=[], cwd=None, stdout=None, stderr=None, log=None):
-       """Submit the prog to the cluser"""
+    def def_get_path(self,location):
+        """replace string for path issues"""
+        location = os.path.realpath(location)
+        homePath = os.getenv("HOME")
+        if homePath:
+            location = location.replace(homePath,'$HOME')
+        return location
 
-       me_dir = os.path.realpath(os.path.join(cwd,prog)).rsplit('/SubProcesses',1)[0]
-       me_dir = hashlib.md5(me_dir).hexdigest()[-10:]
-       if not me_dir[0].isalpha():
-           me_dir = 'a' + me_dir[1:]
+    def submit(self, prog, argument=[], cwd=None, stdout=None, stderr=None, log=None):
+        """Submit the prog to the cluser"""
 
-       text = ""
-       if cwd is None:
-           cwd = os.getcwd()
-       else: 
+        me_dir = os.path.realpath(os.path.join(cwd,prog)).rsplit('/SubProcesses',1)[0]
+        me_dir = hashlib.md5(me_dir).hexdigest()[-10:]
+        if not me_dir[0].isalpha():
+            me_dir = 'a' + me_dir[1:]
+
+        text = ""
+        if cwd is None:
+           #cwd = os.getcwd()
+           cwd = self.def_get_path(os.getcwd())
+        else: 
            text = " cd %s;" % cwd
-       if stdout is None:
-           stdout = '/dev/null'
-       if stderr is None:
-           stderr = '/dev/null'
-       elif stderr == -2: # -2 is subprocess.STDOUT
-           stderr = stdout
-       if log is None:
-           log = '/dev/null'
+        cwd1 = self.def_get_path(cwd)
+        text = " cd %s;" % cwd1
+        if stdout is None:
+            stdout = '/dev/null'
+        else:
+            stdout = self.def_get_path(stdout)
+        if stderr is None:
+            stderr = '/dev/null'
+        elif stderr == -2: # -2 is subprocess.STDOUT
+            stderr = stdout
+        if log is None:
+            log = '/dev/null'
+        else:
+            log = self.def_get_path(log)
 
-       text += prog
-       if argument:
-           text += ' ' + ' '.join(argument)
+        text += prog
+        if argument:
+            text += ' ' + ' '.join(argument)
 
-       a = subprocess.Popen(['qsub','-o', stdout,
+        #if anything slips through argument
+        #print "!=== inteded change ",text.replace('/srv/nfs','')
+        #text = text.replace('/srv/nfs','')
+        homePath = os.getenv("HOME")
+        if homePath:
+            text = text.replace(homePath,'$HOME')
+
+        logger.debug("!=== input  %s" % text)
+        logger.debug("!=== output %s" %  stdout)
+        logger.debug("!=== error  %s" % stderr)
+        logger.debug("!=== logs   %s" % log)
+
+        a = subprocess.Popen(['qsub','-o', stdout,
                                     '-N', me_dir, 
                                     '-e', stderr,
                                     '-q', self.cluster_queue,
@@ -291,52 +317,58 @@ class SGECluster(Cluster):
                                     stderr=subprocess.STDOUT,
                                     stdin=subprocess.PIPE, cwd=cwd)
 
-       output = a.communicate(text)[0]
-       id = output.split(' ')[2]
-       self.submitted += 1
+        output = a.communicate(text)[0]
+        id = output.split(' ')[2]
+        self.submitted += 1
+        logger.debug(output)
 
-       return id
+        return id
 
-   def control_one_job(self, id):
-       """ control the status of a single job with it's cluster id """
-       cmd = 'qstat '+str(id)
-       status = subprocess.Popen([cmd], shell=True, stdout=subprocess.PIPE)
-       for line in status.stdout:
-           line = line.strip()
-           if 'Unknown' in line:
-               return 'F'
-           elif line.startswith(str(id)):
-               status = line.split()[4]
-       if status in self.idle_tag:
-           return 'I' 
-       elif status in self.running_tag:                
-           return 'R' 
-       return 'F'
+    def control_one_job(self, id):
+        """ control the status of a single job with it's cluster id """
+        #cmd = 'qstat '+str(id)
+        cmd = 'qstat '
+        status = subprocess.Popen([cmd], shell=True, stdout=subprocess.PIPE)
+        for line in status.stdout:
+            #print "!==",line
+            #line = line.strip()
+            #if 'Unknown' in line:
+            #    return 'F'
+            #elif line.startswith(str(id)):
+            #    status = line.split()[4]
+            if str(id) in line:
+                status = line.split()[4]
+                #print "!=status", status
+        if status in self.idle_tag:
+            return 'I' 
+        elif status in self.running_tag:                
+            return 'R' 
+        return 'F'
 
-   def control(self, me_dir):
-       """ control the status of a single job with it's cluster id """
-       cmd = "qstat "
-       status = subprocess.Popen([cmd], shell=True, stdout=subprocess.PIPE)
+    def control(self, me_dir):
+        """ control the status of a single job with it's cluster id """
+        cmd = "qstat "
+        status = subprocess.Popen([cmd], shell=True, stdout=subprocess.PIPE)
 
-       if me_dir.endswith('/'):
-          me_dir = me_dir[:-1]    
-       me_dir = hashlib.md5(me_dir).hexdigest()[-10:]
-       if not me_dir[0].isalpha():
-                 me_dir = 'a' + me_dir[1:]
+        if me_dir.endswith('/'):
+           me_dir = me_dir[:-1]    
+        me_dir = hashlib.md5(me_dir).hexdigest()[-10:]
+        if not me_dir[0].isalpha():
+            me_dir = 'a' + me_dir[1:]
 
-       idle, run, fail = 0, 0, 0
-       for line in status.stdout:
-           if me_dir in line:
-               status = line.split()[4]
-               if status in self.idle_tag:
-                   idle += 1
-               elif status in self.running_tag:
-                   run += 1
-               else:
-                   print line
-                   fail += 1
+        idle, run, fail = 0, 0, 0
+        for line in status.stdout:
+            if me_dir in line:
+                status = line.split()[4]
+                if status in self.idle_tag:
+                    idle += 1
+                elif status in self.running_tag:
+                    run += 1
+                else:
+                    logger.debug(line)
+                    fail += 1
 
-       return idle, run, self.submitted - (idle+run+fail), fail
+        return idle, run, self.submitted - (idle+run+fail), fail
 
 
 from_name = {'condor':CondorCluster, 'pbs': PBSCluster, 'sge': SGECluster}

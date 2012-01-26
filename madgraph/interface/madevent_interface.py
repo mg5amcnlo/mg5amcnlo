@@ -1707,7 +1707,7 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
    1) A massive s-channel particle has a width set to zero.
    2) The pdf are zero for at least one of the initial state particles.
    3) The cuts are too strong.
-   Please check/correct your param_card and your run_card.''')
+   Please check/correct your param_card and/or your run_card.''')
             
             nb_event = self.run_card['nevents']
             self.exec_cmd('refine %s' % nb_event, postcmd=False)
@@ -2123,14 +2123,6 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
         if not os.path.exists(pjoin(self.me_dir, 'HTML', run)):
             os.mkdir(pjoin(self.me_dir, 'HTML', run))    
         
-        # 1) TREAT FILE PRESENT IN SubProcesses
-        # results.html
-        #input = pjoin(self.me_dir, 'SubProcesses', 'results.html')
-        #output = pjoin(self.me_dir, 'HTML', run, 'results.html')
-        #files.mv(input, output)
-        # results.dat. The usefull information is store in the pickle -> remove
-        #os.remove(pjoin(self.me_dir, 'SubProcesses','results.dat'))
-
         # 2) Treat the files present in the P directory
         for P_path in SubProcesses.get_subP(self.me_dir):
             G_dir = [G for G in os.listdir(P_path) if G.startswith('G') and 
@@ -2149,7 +2141,7 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
                     output = pjoin(G_path, '%s_log.txt' % run)
                     files.mv(input, output) 
                 # Grid
-                for name in ['ftn25', 'ftn99']:
+                for name in ['ftn25', 'ftn99','ftn26']:
                     if os.path.exists(pjoin(G_path, name)):
                         if os.path.exists(pjoin(G_path, '%s_%s.gz'%(run,name))):
                             os.remove(pjoin(G_path, '%s_%s.gz'%(run,name)))
@@ -2176,12 +2168,7 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
                 files.mv(input, output) 
                 subprocess.call(['gzip', output], stdout=devnull, stderr=devnull, 
                                                                      cwd=O_path)
-        # The banner -- This is tag dependent
-        #if os.path.exists(pjoin(E_path, 'banner.txt')):
-        #    input = pjoin(E_path, 'banner.txt')
-        #    output = pjoin(O_path, '%s_%s_banner.txt' % (run, tag))            
-        #    files.mv(input, output)
-           
+                
         self.update_status('End Parton', level='parton', makehtml=False)
 
     ############################################################################ 
@@ -2195,14 +2182,13 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
                   % self.me_dir)
         subprocess.call(['./bin/internal/restore_data', self.run_name],
                         cwd=self.me_dir)
-        subprocess.call(['./bin/internal/store4grid', 'default'],
-                        cwd=self.me_dir)
+        self.exec_cmd('store_events')
         subprocess.call(['./bin/internal/clean'], cwd=self.me_dir)
         misc.compile(['gridpack.tar.gz'], cwd=self.me_dir)
         files.mv(pjoin(self.me_dir, 'gridpack.tar.gz'), 
                 pjoin(self.me_dir, '%s_gridpack.tar.gz' % self.run_name))
         self.update_status('gridpack created', level='gridpack')
-
+        
     ############################################################################      
     def do_pythia(self, line):
         """launch pythia"""
@@ -2915,15 +2901,17 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
                     pass
             else:    
                 for i in range(0,self.nb_core):
-                    if self.html:
+                    if html:
                         self.update_status((0, self.control_thread[0], 
                                            self.total_jobs - self.control_thread[0], run_type), 
                                            level=None, force=False)
                     self.control_thread[1].acquire()
                 self.control_thread[2] = False
                 self.control_thread[1].release()
-                del self.next_update
-
+                try:
+                    del self.next_update
+                except:
+                    pass
         if not html:
             return
 
@@ -3776,3 +3764,43 @@ class SubProcesses(object):
             particles = re.search("/([\d,-]+)/", line)
             all_ids.append([int(p) for p in particles.group(1).split(',')])
         return all_ids
+    
+    
+#===============================================================================                                                                              
+class GridPackCmd(MadEventCmd):
+    """The command for the gridpack --Those are not suppose to be use interactively--"""
+
+    def __init__(self, me_dir = None, nb_event=0, seed=0, *completekey, **stdin):
+        """Initialize the command and directly run"""
+
+        # Initialize properly                                                                                                                                 
+        MadEventCmd.__init__(self, me_dir, *completekey, **stdin)
+
+        # Now it's time to run!                                                                                                                               
+        if me_dir and nb_event and seed:
+            self.launch(nb_event, seed)
+
+
+    def launch(self, nb_event, seed):
+        """ launch the generation for the grid """
+
+        # 1) Restore the default data                                                                                                                         
+        logger.info('generate %s events' % nb_event)
+        self.set_run_name('GridRun_%s' % seed)
+        self.update_status('restoring default data', level=None)
+        subprocess.call([pjoin(self.me_dir,'bin','internal','restore_data'), self.run_name],
+            cwd=self.me_dir)
+
+        # 2) Run the refine for the grid                                                                                                                      
+        self.update_status('Generating Events', level=None)
+        subprocess.call([pjoin(self.me_dir,'bin','refine4grid'),
+                        str(nb_event), '0', 'Madevent','1','GridRun_%s' % seed],
+                        cwd=self.me_dir)
+
+        # 3) Combine the events/pythia/...                                                                                                                    
+        self.exec_cmd('combine_events')
+        self.exec_cmd('store_events')
+        self.exec_cmd('pythia --nodefault')
+        self.exec_cmd('pgs --nodefault')
+    
+    
