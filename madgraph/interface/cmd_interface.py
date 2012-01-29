@@ -1837,7 +1837,8 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
                 print self.multiparticle_string(key)
                 
         elif args[0] == 'coupling_order':
-            hierarchy = self._curr_model.get_order_hierarchy().items()
+            hierarchy = self._curr_model['order_hierarchy'].items()
+            #self._curr_model.get_order_hierarchy().items()
             def order(first, second):
                 if first[1] < second[1]:
                     return -1

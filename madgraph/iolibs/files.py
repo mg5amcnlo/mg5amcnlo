@@ -111,8 +111,11 @@ def is_uptodate(picklefile, path_list=None, min_time=1300120445):
         return False
     
     for path in path_list:
-        if os.path.getmtime(path) > pickle_date:
-            return False
+        try:
+            if os.path.getmtime(path) > pickle_date:
+                return False
+        except Exception:
+            continue
     #all pass
     return True
 
