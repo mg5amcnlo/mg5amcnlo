@@ -123,7 +123,7 @@ c-----
 c  Begin Code
 c-----
       write(*,*) 'Give npoints, max iter, and accuracy'
-      read(*,*)  npoints,itmax,acc
+      read(*,*)  npoints,itmax,acc,gridpack
 
       open (unit=26, file = 'input_app.txt', status='unknown',
      $     err=99)
