@@ -19,8 +19,8 @@ c
 c
 c     global
 c
-      integer max_np
-      common/max_np/max_np
+      integer max_np,min_iter
+      common/max_np/max_np,min_iter
 
 c
 c     local
@@ -62,6 +62,7 @@ c     If different card options set for nhel_refine and nhel_survey:
      &        ', or number events (>1), max processes per job',
      &        ', and whether to split channels (T/F)'
          read(*,*) err_goal, max_np, split_channels
+         min_iter=3
          parallel = .false.
          if (err_goal .lt. 1) then
             write(*,'(a,f8.2,a)') 'Running for accuracy of ',
@@ -79,11 +80,13 @@ c     If different card options set for nhel_refine and nhel_survey:
       else
          gen_events=.true.
          split_channels=.false.
+c        Allow all the way down to a single iteration for gridruns
+         min_iter=1
          call get_integer(npara,param,value," gevents "  ,nreq  ,2000   )
          err_goal = 1.5*nreq ! extra factor to ensure works
          call get_integer(npara,param,value," gseed "  ,iseed  ,4321   )
          call get_integer(npara,param,value," ngran "  ,ngran  , -1)
-         if (ngran.eq.-1) ngran = int(sqrt(real(nreq)))
+         if (ngran.eq.-1) ngran = 1
          write(*,*) "Running on Grid to generate ",nreq," additional events"
          write(*,*) "   with granularity equal to ",ngran
 c
@@ -229,8 +232,8 @@ c      parameter (max_np = 30)
 c
 c     global
 c
-      integer max_np
-      common/max_np/max_np
+      integer max_np,min_iter
+      common/max_np/max_np,min_iter
 c
 c     Arguments
 c
@@ -329,7 +332,7 @@ c
          write(26,20) 'rm -f $k'
 c         write(26,20) 'rm -f moffset.dat'
 
-         write(26,'(5x,a,2i8,a)') 'echo "',npoints,max_iter,
+         write(26,'(5x,a,3i8,a)') 'echo "',npoints,max_iter,min_iter,
      $        '" >& input_sg.txt' 
          write(26,'(5x,a,f8.3,a)') 'echo "',max(elimit/ysec,0.001d0),
      $        '" >> input_sg.txt'
@@ -476,8 +479,8 @@ c
 c
 c     global
 c
-      integer max_np
-      common/max_np/max_np
+      integer max_np,min_iter
+      common/max_np/max_np,min_iter
 c      integer    max_np     !now set in run_config.inc
 c      parameter (max_np = 5)  !number of channels/job
 
@@ -654,7 +657,7 @@ c
          write(26,20) 'if [[ ! -e ftn25 ]]; then'
 
 
-         write(26,'(9x,a,2i8,a)') 'echo "',npoints,max_iter,
+         write(26,'(9x,a,3i8,a)') 'echo "',npoints,max_iter,min_iter,
      $        '" >& input_sg.txt' 
 c
 c     tjs 8/7/2007-JA 8/17/11 Allow stop when have enough luminocity
@@ -677,7 +680,7 @@ c
 
          write(26,25) 'rm -f $k'
 
-         write(26,'(9x,a,2i8,a)') 'echo "',npoints,max_iter,
+         write(26,'(9x,a,3i8,a)') 'echo "',npoints,max_iter,min_iter,
      $        '" >& input_sg.txt' 
 c
 c tjs 8/7/2007-JA 8/17/11    Change to request luminocity not accuracy
@@ -740,8 +743,8 @@ c
 c
 c   global
 c
-      integer max_np
-      common/max_np/max_np
+      integer max_np,min_iter
+      common/max_np/max_np,min_iter
 c
 c     Arguments
 c
@@ -787,7 +790,7 @@ c      kl = 4321
                write(27,*) xtot*ngran/xsec(i)/goal_lum
             endif
             npoints = goal_lum * xsec(i) / xtot
-            if (npoints .lt. min_gevents_wu) npoints = min_gevents_wu
+            if (npoints .lt. ngran) npoints = ngran
             np = np+1
             if (np .gt. max_np) then
                if (fopened) then
@@ -822,8 +825,8 @@ c
             write(26,20) 'if [[ ! -e ftn25 ]]; then'
 
 
-            write(26,'(9x,a,2i8,a)') 'echo "',max(npoints,min_events),
-     $           max_iter,'" >& input_sg.txt' 
+            write(26,'(9x,a,3i8,a)') 'echo "',max(npoints,min_events),
+     $           max_iter,min_iter,'" >& input_sg.txt' 
 c
 c     tjs 8/7/2007  Allow stop when have enough events
 c
@@ -845,8 +848,8 @@ c
 
             write(26,25) 'rm -f $k'
             
-            write(26,'(9x,a,2i8,a)') 'echo "',max(npoints,min_events),
-     $           max_iter,'" >& input_sg.txt' 
+            write(26,'(9x,a,3i8,a)') 'echo "',max(npoints,min_events),
+     $           max_iter,min_iter,'" >& input_sg.txt' 
 c
 c tjs 8/7/2007    Change to request events not accuracy
 c

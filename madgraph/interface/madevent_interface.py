@@ -2163,7 +2163,7 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
         for name in ['events.lhe', 'unweighted_events.lhe']:
             if os.path.exists(pjoin(E_path, name)):
                 if os.path.exists(pjoin(O_path, '%s.gz' % name)):
-                    os.remove(pjoin(O_path, '%s.lhe.gz' % name))
+                    os.remove(pjoin(O_path, '%s.gz' % name))
                 input = pjoin(E_path, name)
                 output = pjoin(O_path, name)
                 files.mv(input, output) 
@@ -3813,12 +3813,13 @@ class GridPackCmd(MadEventCmd):
         self.exec_cmd('combine_events')
         self.exec_cmd('store_events')
         self.exec_cmd('pythia --no_default -f')
-
-
-
+        try:
+            os.remove(pjoin(self.me_dir,'RunWeb'))
+        except:
+            pass
 
     def refine4grid(self, nb_event):
-        """Advanced commands: launch survey for the current process """
+        """Special refine for gridpack run."""
         self.nb_refine += 1
         
         precision = nb_event
@@ -3845,8 +3846,10 @@ class GridPackCmd(MadEventCmd):
                     os.remove(pjoin(Pdir, match))
             
             devnull = os.open(os.devnull, os.O_RDWR)
+            logfile = pjoin(Pdir, 'gen_ximprove.log')
             proc = subprocess.Popen([pjoin(bindir, 'gen_ximprove')],
                                     stdin=subprocess.PIPE,
+                                    stdout=open(logfile,'w'),
                                     cwd=Pdir)
             proc.communicate('%s 1 F\n' % (precision))
 
