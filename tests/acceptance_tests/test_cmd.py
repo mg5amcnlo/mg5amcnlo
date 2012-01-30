@@ -255,7 +255,7 @@ class TestCmdShell2(unittest.TestCase,
                                  stdout=devnull, stderr=devnull, stdin=subprocess.PIPE,
                                  cwd=os.path.join(self.out_dir, 'temp', 'SubProcesses',
                                                   'P0_epem_epem'), shell=True)
-        proc.communicate('100 2 0.1\n')
+        proc.communicate('100 2 0.1 .false.\n')
         self.assertEqual(proc.returncode, 0)
         # Check that madevent compiles
         status = subprocess.call(['make', 'madevent'],
@@ -504,7 +504,7 @@ class TestCmdShell2(unittest.TestCase,
                                  stdout=devnull, stdin=subprocess.PIPE,
                                  cwd=os.path.join(self.out_dir, 'SubProcesses',
                                                   'P0_epem_epem'), shell=True)
-        proc.communicate('100 2 0.1\n')
+        proc.communicate('100 2 0.1 .false.\n')
         
         self.assertEqual(proc.returncode, 0)
         # Check that madevent compiles
@@ -584,7 +584,7 @@ class TestCmdShell2(unittest.TestCase,
                                  cwd=os.path.join(self.out_dir, 'SubProcesses',
                                                   'P1_udx_wp_wp_epve'),
                                  shell=True)
-        proc.communicate('100 4 0.1\n')
+        proc.communicate('100 4 0.1 .false.\n')
         
         self.assertEqual(proc.returncode, 0)
         # Check that madevent compiles
@@ -703,7 +703,7 @@ class TestCmdShell2(unittest.TestCase,
                                  stdout=devnull, stdin=subprocess.PIPE,
                                  cwd=os.path.join(self.out_dir, 'SubProcesses',
                                                   'P2_gg_qq'), shell=True)
-        proc.communicate('100 4 0.1\n')
+        proc.communicate('100 4 0.1 .false.\n')
         self.assertEqual(proc.returncode, 0)
         # Check that madevent compiles
         status = subprocess.call(['make', 'madevent'],
@@ -768,7 +768,7 @@ class TestCmdShell2(unittest.TestCase,
                                  stdout=devnull, stdin=subprocess.PIPE,
                                  cwd=os.path.join(self.out_dir, 'SubProcesses',
                                                   'P0_qq_gogo_go_qqn1_go_qqn1'), shell=True)
-        proc.communicate('100 4 0.1\n')
+        proc.communicate('100 4 0.1 .false.\n')
         self.assertEqual(proc.returncode, 0)
 
         # Check the new contents of the symfact.dat file
@@ -856,7 +856,7 @@ P1_qq_wp_wp_lvl
                                  cwd=os.path.join(self.out_dir, 'SubProcesses',
                                                   'P2_qq_wpg_wp_lvl'),
                                  shell=True)
-        proc.communicate('100 4 0.1\n')
+        proc.communicate('100 4 0.1 .false.\n')
         self.assertEqual(proc.returncode, 0)
         # Check that madevent compiles
         status = subprocess.call(['make', 'madevent'],
@@ -881,7 +881,7 @@ P1_qq_wp_wp_lvl
         self.do('add process w+ > j j')
         self.do('output %s ' % self.out_dir)
         # Check that all subprocesses have separate directories
-        directories = ['P0_wp_epve','P0_wp_mupvm','P0_wp_udx','P0_wp_csx']
+        directories = ['P0_wp_epve','P0_wp_udx']
         for d in directories:
             self.assertTrue(os.path.isdir(os.path.join(self.out_dir,
                                                        'SubProcesses',
@@ -938,7 +938,7 @@ P1_qq_wp_wp_lvl
                                  stdout=devnull, stdin=subprocess.PIPE,
                                  cwd=os.path.join(self.out_dir, 'SubProcesses',
                                                   'P0_ut_tripx_utg'), shell=True)
-        proc.communicate('100 4 0.1\n')
+        proc.communicate('100 4 0.1 .false.\n')
         self.assertEqual(proc.returncode, 0)
         
         # Check that madevent compiles
