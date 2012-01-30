@@ -83,7 +83,7 @@ c     If different card options set for nhel_refine and nhel_survey:
 c        Allow all the way down to a single iteration for gridruns
          min_iter=1
          call get_integer(npara,param,value," gevents "  ,nreq  ,2000   )
-         err_goal = 1.5*nreq ! extra factor to ensure works
+         err_goal = 1.2*nreq ! extra factor to ensure works
          call get_integer(npara,param,value," gseed "  ,iseed  ,4321   )
          call get_integer(npara,param,value," ngran "  ,ngran  , -1)
          if (ngran.eq.-1) ngran = 1

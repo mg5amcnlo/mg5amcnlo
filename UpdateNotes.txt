@@ -1,6 +1,6 @@
 Update notes for MadGraph 5 (in reverse time order)
 
-1.4.b10 (19/01/12): OM: New Interface to controll the madevent run.
+1.4.b12 (31/01/12): OM: New Interface to controll the madevent run.
                        This one is accessible by 
                         1) (from madevent output) ./bin/madevent
                         2) (from MG5 command line) launch [MADEVENT_PATH] -i
@@ -82,7 +82,13 @@ Update notes for MadGraph 5 (in reverse time order)
                   OM: Improve the parralel suite and change the release script to run
                       some of the parralel suite. This ensures more stability of the 
                       code for the future release.
-                  
+                  JA: Changed the way gridpacks work: Set granularity
+                       to 1 (so randomly select channels only if they
+                       should generate less than 1 event), but
+                       allowing channels to run down to a single
+                       iteration. This removes all old problems with
+                       the gridpacks, while giving even faster event
+                       generation.
 
                   Thanks to Johan Alwall, Sho Iwamoto for all the important 
                   testing/bug reports.
