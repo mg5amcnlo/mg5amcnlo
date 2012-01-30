@@ -1,0 +1,90 @@
+#!/usr/bin/perl -w
+
+if (-e "....//SubProcesses/procdef_mg5.dat"){
+  open (INCARD,"../../SubProcesses/procdef_mg5.dat") || die "Error reading file proc_card.dat";
+  @incard=<INCARD>;
+  close (INCARD);
+} elsif (open (INCARD,"../../Cards/proc_card.dat")){
+  @incard=<INCARD>;
+  close (INCARD);
+}
+if ($#incard > 0){
+# process
+$listpos = 0;
+until($listpos>$#incard){
+    if($incard[$listpos] =~ /^#(\s+)Begin(\s+)PROCESS/) {$ini=$listpos};
+    if($incard[$listpos] =~ /^#(\s+)End(\s+)PROCESS/)   {$end=$listpos};
+       $listpos = $listpos + 1;
+   }
+#
+      ($interaction, $junk)=split(/#/ , $incard[$ini+1]);
+      ($qcdOrder, $junk)   =split(/#/ , $incard[$ini+2]);
+      ($qedOrder, $junk)   =split(/#/ , $incard[$ini+3]);
+#model
+				  $listpos = 0;
+				  until($listpos>$#incard){
+    if($incard[$listpos] =~ /^#(\s+)Begin(\s+)MODEL/) {$ini=$listpos};
+    if($incard[$listpos] =~ /^#(\s+)End(\s+)MODEL/)   {$end=$listpos};
+       $listpos = $listpos + 1;
+   }
+#
+      ($model, $junk)   =split(/#/ , $incard[$ini+1]);
+
+			       chomp($interaction);
+			       chomp($qcdOrder);
+			       chomp($qedOrder);
+			       chomp($model);
+     }
+  else{
+      $interaction = "Unknown";
+      $qcdOrder = "";
+      $qedOrder = "";
+      $model    = "";
+  }      
+
+$extra = "";
+if ($#ARGV >= 1){
+  $extra = " at ".$ARGV[1]." level";
+}
+
+   open(PAGE,"> plots.html") || die "Error creating diagrams.html";
+   print PAGE "\<HTML\> \n";
+   print PAGE "\<HEAD\> \n";
+   print PAGE "\<TITLE\>Plots \<\/TITLE\> \n";
+   print PAGE "\<\/HEAD\> \n";
+   print PAGE "\<BODY\> \n";
+   print PAGE "<CENTER>\n";
+   print PAGE "<H1 align=center> Plots for $interaction".$extra."</H1>\n";
+   print PAGE "<p align=\"center\">";
+   print PAGE "<table border=\"1\"  cellspacing=\"1\">";
+   print PAGE "<tr  align=\"center\">";
+   print PAGE "<TD> Name </TD>";
+   print PAGE "<TD> Variable </TD>";
+   print PAGE "<TR align=center><td bgcolor=\"#00FFFF\">weigth </td> <TD> weights of the events (normally 1)</td> ";
+   print PAGE "<TR align=center><td bgcolor=\"#00FFFF\">Ht     </td> <TD> scalar sum of pt of all particles + missing Et</td> ";
+   print PAGE "<TR align=center><td bgcolor=\"#00FFFF\">pt(i)  </td> <TD> transverse momentum</td> ";
+   print PAGE "<TR align=center><td bgcolor=\"#00FFFF\">y(i)   </td> <TD> rapidity in the lab</td> ";
+   print PAGE "<TR align=center><td bgcolor=\"#00FFFF\">R(i,j) </td> <TD> distance in the (y,phi) plane</td>"; 
+   print PAGE "<TR align=center><td bgcolor=\"#00FFFF\">m(i,j) </td> <TD> invariant mass     </td> ";
+   print PAGE "<TR align=center><td bgcolor=\"#00FFFF\">cos(i,j) </td> <TD> angle between direction of i in the resframe of i+j<BR>and the direction of i+j in the labframe </td> ";
+   print PAGE "</table><BR>";
+
+   foreach $f (<./$ARGV[0]/*.jpg>) { 
+     print "$f\n";
+     if ($f =~ /DJR/) {
+       print PAGE "<font color=\"Dark Purple\">Differential jet rate (matching check plot)</font><br>\n";
+     }
+     print PAGE "\<IMG SRC=\"$f\" BORDER\=1\> \<BR\> \n";
+     $fps=substr($f,0,-3)."ps";
+     ($junk, $fname)   =split("$ARGV[0]\/" , $fps);
+     print PAGE "\<A HREF\=\"$fps\"\>Download PS $fname\</A\> \<BR\> \<BR\> \<BR\>\n"; 
+   }
+
+   
+   print PAGE "\<A HREF\=./$ARGV[0]/plots.ps>Download all plots in one postscript file\</A\> \<BR\> \<BR\> \<BR\>\n"; 
+   print PAGE "\<A HREF\=./$ARGV[0]/plots.top>Download all plots in topdrawer format\</A\> \<BR\> \<BR\> \<BR\>\n"; 
+   print PAGE "\<\/CENTER\>\n";
+   print PAGE "\<\/BODY\> \n";
+   print PAGE "\<\/HTML\> \n";
+   close(PAGE)
+

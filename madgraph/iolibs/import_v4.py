@@ -20,7 +20,7 @@ import logging
 import os
 import re
 
-from madgraph import MadGraph5Error, MG4DIR
+from madgraph import InvalidCmd, MG4DIR
 
 import madgraph.core.color_algebra as color
 import madgraph.iolibs.files as files
@@ -49,7 +49,7 @@ def import_model(model_path, mgme_dir = MG4DIR):
     
     for filepath in files_list:
         if not os.path.isfile(filepath):
-            raise MadGraph5Error,  "%s directory is not a valid v4 model" % \
+            raise InvalidCmd,  "%s directory is not a valid v4 model" % \
                                                                     (model_path)
                                                                 
     # use pickle files if defined
@@ -82,7 +82,7 @@ def find_model_path(model_path, mgme_dir):
 
     # treat simple case (model_path is a valid path/ mgme_dir doesn't exist)
     if os.path.isdir(model_path):
-        pass
+        return model_path
     elif mgme_dir and os.path.isdir(os.path.join(mgme_dir, 'models',
                                                  model_path + "_v4")):
         model_path = os.path.join(mgme_dir, 'models', model_path + "_v4")
@@ -91,7 +91,7 @@ def find_model_path(model_path, mgme_dir):
     elif not mgme_dir:
         error_text = "Path %s is not a valid pathname\n" % model_path
         error_text += "and no MG_ME installation detected in order to search in Models"
-        raise MadGraph5Error(error_text)
+        raise InvalidCmd(error_text)
 
     # Try to build the valid path
     path_possibilities = [os.path.join(mgme_dir, 'Models', model_path),
@@ -105,7 +105,7 @@ def find_model_path(model_path, mgme_dir):
             return path
     
     # No valid path found
-    raise MadGraph5Error("Path %s is not a valid pathname" % model_path)
+    raise InvalidCmd("Path %s is not a valid pathname" % model_path)
 
 #===============================================================================
 # read_particles_v4
@@ -417,8 +417,12 @@ def read_proc_card_v4(fsock):
     reader = ProcCardv4Reader(fsock)
     return reader
 
-class ParticleError(MadGraph5Error):
+class ParticleError(InvalidCmd):
     """ A class to carch the error"""
+    pass
+
+class WrongFileFormat(InvalidCmd): 
+    """A specific class error for wrong V4 proc_card"""
     pass
 
 class ProcCardv4Reader(object):
@@ -458,21 +462,21 @@ class ProcCardv4Reader(object):
             proc_card, re.MULTILINE|re.DOTALL)
 
         if not process_re:
-            raise MadGraph5Error('No valid Begin...End PROCESS tags')
+            raise WrongFileFormat('No valid Begin...End PROCESS tags')
 
         model_re = re.search(\
             r"^# Begin\s+MODEL.*?^(?P<model>.+?)(\s+|$)^# End\s+MODEL",
             proc_card, re.MULTILINE|re.DOTALL)
 
         if not model_re:
-            raise MadGraph5Error('No valid Begin...End MODEL tags')
+            raise WrongFileFormat('No valid Begin...End MODEL tags')
 
         multiparticles_re = re.search(\
             r"^# Begin\s+MULTIPARTICLES.*?^(?P<multiparticles>.*)^# End\s+MULTIPARTICLES",
             proc_card, re.MULTILINE|re.DOTALL)
 
         if not multiparticles_re:
-            raise MadGraph5Error('No valid Begin...End MULTIPARTICLES tags')
+            raise WrongFileFormat('No valid Begin...End MULTIPARTICLES tags')
 
         process_lines = process_re.group('process').split('\n')
 

@@ -73,6 +73,9 @@ def run(expression='', re_opt=0, package='./tests/unit_tests', verbosity=1):
         
     return unittest.TextTestRunner(verbosity=verbosity).run(testsuite)
 
+    #import tests
+    #print 'runned %s checks' % tests.NBTEST
+    #return out
 #===============================================================================
 # TestFinder
 #===============================================================================
@@ -375,7 +378,7 @@ if __name__ == "__main__":
     #logging.basicConfig(level=vars(logging)[options.logging])
     run(args, re_opt=options.reopt, verbosity=options.verbose, \
             package=options.path)
-
+    
 #some example
 #    run('iolibs')
 #    run('test_test_manager.py')

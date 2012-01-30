@@ -1,419 +1,131 @@
-#!/bin/bash
+#! /usr/bin/env python
+################################################################################
 #
-#  This runs survey,refine,unweight_events, one after the other
-#  
-#   First we need to get into the main directory
+# Copyright (c) 2011 The MadGraph Development team and Contributors
 #
+# This file is a part of the MadGraph 5 project, an application which 
+# automatically generates Feynman diagrams and matrix elements for arbitrary
+# high-energy processes in the Standard Model and beyond.
 #
-#  Usage: generate_events compression events parallel [name]
+# It is subject to the MadGraph license which should accompany this 
+# distribution.
 #
-#  parallel is 0 for serial, 1 for PBS, 2 for multicore
-#  name is queue name for PBS or number of cores for multicore
+# For more information, please visit: http://madgraph.phys.ucl.ac.be
 #
+################################################################################
+""" This is the main script in order to generate events in MadEvent """
 
-function error_exit {
-    if [[  -e error  ]]; then
-	date
-	cp -f error status
-	rm survey refine refine2 >& /dev/null
-	rm RunWeb
-	$dirbin/gen_crossxhtml-pl $t
-	$dirbin/gen_cardhtml-pl
-	exit
-    fi
-}
+import logging
+import logging.config
+import os
+import re
+import shutil
+import subprocess
+import sys
+import time
+root_path = os.path.split(os.path.dirname(os.path.realpath( __file__ )))[0]
+pjoin = os.path.join
+sys.path.append(pjoin(root_path,'bin','internal'))
+import madevent_interface as ME        
 
-if [[  ! -d ./bin  ]]; then
-    cd ../
-    if [[ ! -d ./bin ]]; then
-        echo "Error: it must be executed from the main, or bin directory"
-        exit
-    fi
-fi
-#
-#  Now let shell know where to find important executables
-#
-main=`pwd`
-# Strip off last directory
-mainpar=${main%/*}
-dirbin=$main/bin
-pydir=$mainpar/pythia-pgs/src
-pgsdir=$pydir
-delphesdir=$mainpar/Delphes
-ERAdir=$mainpar/ExRootAnalysis
-MAdir=$mainpar/MadAnalysis
-webbin=$dirbin
-td=$mainpar/td
-web=0
+if not (sys.version_info[0] == 2 or sys.version_info[1] > 5):
+    sys.exit('MadEvent works with python 2.6 or higher (but not python 3.X).\n\
+               Please upgrade your version of python.')
 
-echo $$ >> myprocid
 
-# For Linux
-export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:$main/lib
-# For Mac OS X
-export DYLD_LIBRARY_PATH=$DYLD_LIBRARY_PATH:$main/lib
+def set_configuration():
+    import coloring_logging
+    logging.config.fileConfig(os.path.join(root_path, 'bin', 'internal', 'me5_logging.conf'))
+    logging.root.setLevel(logging.INFO)
+    logging.getLogger('madevent').setLevel(logging.INFO)
+    logging.getLogger('madgraph').setLevel(logging.INFO)    
 
-if [[  "$1" == ""  ]]; then
-    echo 'Enter 2 for multi-core, 1 for parallel, 0 for serial run' 
-     read mode 
-else
-     mode=$1
-fi
-n=MadEvent
-if [[  $mode -gt 0 ]]; then
-   if [[  "$2" == ""  ]]; then
-     if [[  $mode -eq 1 ]]; then
-       echo 'Enter name for jobs on pbs queue'
-     elif [[  $mode -eq 2 ]]; then
-       echo 'Enter number of cores'
-     fi
-       read n
-   else
-       n=$2
-   fi
-   if [[  "$3" == ""  ]]; then
-       echo 'Enter run name'
-       read t
-   else
-       t=$3
-   fi
-else
-   if [[  "$2" == ""  ]]; then
-      echo 'Enter run name'
-      read t
-   else
-      t=$2
-   fi
-fi
-#set t = TeV2
-if [[  "$4" -ne ""  ]]; then
-    web=1
-    webbin="$MADGRAPH_BASE/MG_ME/WebBin"
-    pydir="$webbin/pythia-pgs"
-    pgsdir=$pydir
-    delphesdir="$webbin/Delphes"
-    ERAdir="$MADGRAPH_BASE/MG_ME/ExRootAnalysis"
-    MAdir="$MADGRAPH_BASE/MG_ME/MadAnalysis"
-    td="$MADGRAPH_BASE/MG_ME/td"
-    touch Online
-fi
-date
-a=`awk '/^[^#].*=.*nevents/{print $1}' Cards/run_card.dat`
-b=`awk '/^[^#].*=.*gridpack/{print $1}' Cards/run_card.dat`
-c=`awk '/^[^#].*=.*pdlabel/{print $1}' Cards/run_card.dat`
-ickkw=`awk '/^[^#].*=.*ickkw.*!/{print $1}' Cards/run_card.dat`
-if [[ $a -gt 100000 ]];then
-   echo "Warning: Attempting to generate more than 100K events"
-   echo "Limiting number to 100K. Use multi_run for larger statistics."
-   perl -p -i.bak -e "s/\d+\s*=\s*nevents/100000 = nevents/" Cards/run_card.dat
-   a=`awk '/^[^#].*=.*nevents/{print $1}' Cards/run_card.dat`
-fi
-echo Generating $a events
-if [[ $b == ".true." ]]; then
-    echo Generating GridPack $b
-fi
-#
-#  Check if run already exists. If so, store run w/ new name
-#  and remove old run before starting.
-#
 
-if [[  -e status  ]]; then
-  rm status
-fi
-if [[  -e error  ]]; then
-  rm error
-fi
-touch RunWeb
-echo "Cleaning directories" > status
-cat status
-$dirbin/gen_crossxhtml-pl $t
-$dirbin/clean
+def treat_old_argument(argument):
+    """Have the MG4 behavior for this script"""
 
-if [[ $c == "'lhapdf'" ]]; then
-    echo Using LHAPDF interface!
-    export lhapdf=true
-else
-    unset lhapdf
-fi
-# Compile everything in Source
-echo "Compiling Source" > status
-cat status
-$dirbin/gen_crossxhtml-pl $t
-$dirbin/compile_Source
-# If any compilations failed
-error_exit
+    try:
+        mode = int(argument[1])
+    except:
+        mode = int(raw_input('Enter 2 for multi-core, 1 for parallel, 0 for serial run\n'))
+    if mode == 0:
+        try:
+            name = argument[2]
+        except:
+            name = raw_input('Enter run name\n')
+    else:
+        try:
+            opt = argument[2]
+        except:
+            if mode == 1: 
+                opt = raw_input('Enter name for jobs on pbs queue\n')
+            else:
+                opt = int(raw_input('Enter number of cores\n'))
+        
+        try:
+            name = argument[3]
+        except:
+            name = raw_input('enter run name\n')
+
+    launch = ME.MadEventCmd(me_dir=root_path)
+        
+
+    if mode == 1:
+        launch.run_cmd('generate_events -f %s --cluster'
+                   %(name))            
+    elif mode ==2:
+        launch.run_cmd('generate_events -f %s --multicore --nb_core=%s'
+                   %(name, opt)) 
+    else:
+        launch.run_cmd('generate_events -f %s' % name)
     
-if [ "$ickkw" = "2" ];then
-  echo "Running with CKKW matching"
-  lpp1=`awk '/^[^#].*=.*lpp1/{print $1}' Cards/run_card.dat`
-  lpp2=`awk '/^[^#].*=.*lpp2/{print $1}' Cards/run_card.dat`
-  e1=`awk '/^[^#].*=.*ebeam1/{print $1}' Cards/run_card.dat`
-  e2=`awk '/^[^#].*=.*ebeam2/{print $1}' Cards/run_card.dat`
-  pd=`awk '/^[^#].*=.*pdlabel/{print $1}' Cards/run_card.dat`
-  lha=`awk '/^[^#].*=.*lhaid/{print $1}' Cards/run_card.dat`
-  xq=`awk '/^[^#].*=.*xqcut/{print $1}' Cards/run_card.dat`
-  
-  if [[ $lpp1 -ne 0 || $lpp2 -ne 0 ]];then
-
-  # Remove ':s from pd
-  pd=${pd#\'*}
-  pd=${pd%*\'}
-  
-  if [[ $xq -gt 2 || $xq -eq 0 ]];then
-    xq=2
-  fi
-
-  if [ "$web" = "1" ];then
-    issudfile=$webbin/lib/issudgrid-$e1-$e2-$pd-$xq.dat.gz
-    if [ "$pd" = "lhapdf" ];then
-      issudfile=$webbin/lib/issudgrid-$e1-$e2-$pd-$lha-$xq.dat.gz
-    fi
-  else
-    issudfile=lib/issudgrid-$e1-$e2-$pd-$xq.dat.gz
-    if [ "$pd" = "lhapdf" ];then
-      issudfile=lib/issudgrid-$e1-$e2-$pd-$lha-$xq.dat.gz
-    fi
-  fi
-  echo "Sudakov grid file: $issudfile"
-
-  if [[ ! -e $issudfile ]];then
-    echo "No sudakov grid file for parameter choice. Please generate a sudakov grid file and restart." > error
-    error_exit
-  else
-    rm -f lib/issudgrid.dat
-    gunzip -c $issudfile > lib/issudgrid.dat
-  fi
-  fi # if [[ $lpp1 -ne 0 || $lpp2 -ne 0 ]]
-fi
-
-touch survey
-echo "Starting jobs" > status
-cat status
-$dirbin/gen_crossxhtml-pl $t
-$dirbin/survey $mode $n $t
-error_exit
-if [[ $b != ".true." ]]; then
-   mv survey refine
-   $dirbin/gen_crossxhtml-pl $t
-   $dirbin/refine $a $mode $n 1 $t
-   error_exit
-   mv refine refine2
-   $dirbin/gen_crossxhtml-pl $t
-   $dirbin/refine $a $mode $n 1 $t
-   error_exit
-   rm -f refine2
-else
-   rm survey
-fi
-#
-#  Now collect the events
-#
-echo "Combining Events" >& status
-cat status
-$dirbin/gen_crossxhtml-pl $t
-pushd SubProcesses > /dev/null
-$dirbin/run_combine $mode
-mv events.lhe ../Events/
-mv unweighted_events.lhe ../Events/
-popd > /dev/null
-#
-#  do the banner
-#
-cd ./Events
-echo "putting the banner"
-$dirbin/put_banner events.lhe
-$dirbin/put_banner unweighted_events.lhe
-
-if [[ -e unweighted_events.lhe ]]; then
-    $dirbin/extract_banner-pl unweighted_events.lhe  banner.txt 
-fi
-
-#if [[ -e ../Cards/replace_card.dat ]];then
-#    $dirbin/replace.pl unweighted_events.lhe temp.lhe < ../Cards/replace_card.dat
-#    if [[ -e temp.lhe ]];then
-#	mv -f temp.lhe unweighted_events.lhe
-#    fi
-#fi
-
-#
-#  Create root file
-#
+    launch.run_cmd('quit')    
 
 
-if [[ (-x $ERAdir/ExRootLHEFConverter) && (-e unweighted_events.lhe) ]]; then
-    echo "Creating Root File" >& ../status
-    cat ../status
-    $dirbin/gen_crossxhtml-pl $t
-    $ERAdir/ExRootLHEFConverter unweighted_events.lhe unweighted_events.root
-fi
 
-#if ((-x $ERAdir/ExRootMain) && (-e unweighted_events.root) && (-e ../Cards/plot_card.dat)) then
-#    echo "Creating Root Plots" >& ../status
-#    $dirbin/gen_crossxhtml-pl $t
-#    mkdir $t
-#    cd $t
-#    echo "../unweighted_events.root" > events.list
-#    $dirbin/plot $ERAdir > plot.log
-#    cd ..
-#    $dirbin/plot_page-pl $t
-#endif
-if [[ (-x $MAdir/plot_events) && (-e unweighted_events.lhe) && (-e ../Cards/plot_card.dat) ]]; then
-    echo "Creating Plots" >& ../status
-    cat ../status
-    $dirbin/gen_crossxhtml-pl $t
-    mkdir $t
-    cd $t
-    echo "../unweighted_events.lhe" > events.list
-    $dirbin/plot $MAdir $td > plot.log
-    cd ..
-    $dirbin/plot_page-pl $t parton
-    mv -f plots.html ${t}_plots.html
-fi
 
-$dirbin/store $t
-$dirbin/gen_crossxhtml-pl $t
 
-# Restore the banner
-cp -f ${t}_banner.txt banner.txt
 
-if [[ $b == ".true." ]]; then
-   cd ../
-   sed -i.bak "s/\s*.false.*=.*GridRun/  .true.  =  GridRun/g" Cards/grid_card.dat
-   $dirbin/restore_data $t
-   $dirbin/store4grid default
-   $dirbin/clean
-   make gridpack.tar.gz
-   cd Events
-fi
 
-#
-#  Run Pythia and PGS on events
-#
 
-# Compile pythia if not there
-if [[ !(-x $pydir/pythia) && (-d $pydir) && (-e ../Cards/pythia_card.dat) ]]; then
-    pushd $pydir > /dev/null
-    echo "No pythia executable - running make"
-    make
-    popd > /dev/null
-fi
+################################################################################  
+##   EXECUTABLE
+################################################################################                                
+if '__main__' == __name__:
+    # Check that python version is valid
 
-if [[ (-x $pydir/pythia) && (-e ../Cards/pythia_card.dat) ]]; then
-    gunzip -c ${t}_unweighted_events.lhe.gz > unweighted_events.lhe
-    echo "Running Pythia" >& ../status
-    cat ../status
-    $dirbin/gen_crossxhtml-pl $t
-# shower and hadronize event through Pythia
-    $dirbin/run_pythia $pydir $mode  
-fi
+    set_configuration()
+    argument = sys.argv
+    try:
+        if '-h' in argument or '--help' in argument:
+            launch = ME.MadEventCmd(me_dir=root_path)
+            launch.exec_cmd('help generate_events')
+        elif len(argument) > 1 and argument[1] in ['0', '1', '2']:
+            treat_old_argument(argument)
+        else:
+            open('/tmp/mg5tmp.cmd','w').write('generate_events %s' % ' '.join(argument[1:]))
+            os.system('%s/madevent /tmp/mg5tmp.cmd' % pjoin(root_path, 'bin'))
+    except KeyboardInterrupt:
+        pass
+    except ME.MadEventAlreadyRunning, error:
+        logging.error(str(error))
+        sys.exit()
+                          
+    if os.path.exists(pjoin(root_path, 'RunWeb')):  
+        os.remove(pjoin(root_path, 'RunWeb'))      
+            
+    # reconfigure path for the web 
+    #if len(argument) == 5:
+    #    ME.pass_in_web_mode()
 
-if [[ -e pythia_events.hep ]];then
-# pythia_card.dat
-   echo "<MGPythiaCard>" >> banner.txt
-   if [[ -e ../Cards/pythia_card.dat ]]; then cat ../Cards/pythia_card.dat   >> banner.txt; fi
-   echo "</MGPythiaCard>" >> banner.txt
-fi
+             
+        
 
-if [[ (-x $pydir/hep2lhe) && (-e ../Cards/pythia_card.dat) && (-e pythia_events.hep) ]]; then
-    echo "Creating Pythia LHE File" >& ../status
-    cat ../status
-    $dirbin/gen_crossxhtml-pl $t
-    $dirbin/run_hep2lhe $pydir $mode  
-fi
-
-if [[ (-x $ERAdir/ExRootLHEFConverter) && (-e pythia_events.lhe) ]]; then
-    echo "Creating Pythia LHE Root File" >& ../status
-    cat ../status
-    $dirbin/gen_crossxhtml-pl $t
-    $ERAdir/ExRootLHEFConverter pythia_events.lhe pythia_lhe_events.root
-fi
-if [[ ickkw -ge 1 ]];then
-    echo "Create matching plots for Pythia"
-    $dirbin/create_matching_plots.sh $t
-fi
-if [[ (-x $MAdir/plot_events) && (-e pythia_events.lhe) && (-e ../Cards/plot_card.dat) ]]; then
-    echo "Creating Plots for Pythia" >& ../status
-    cat ../status
-    $dirbin/gen_crossxhtml-pl $t
-    mkdir ${t}_pythia
-    cd ${t}_pythia
-    echo "../pythia_events.lhe" > events.list
-    $dirbin/plot $MAdir $td > plot.log
-    cd ..
-fi
-
-if [[ -d ${t}_pythia ]];then
-    $dirbin/plot_page-pl ${t}_pythia Pythia
-    mv -f plots.html ${t}_plots_pythia.html
-fi
-
-# Compile pgs if not there
-if [[ !(-x $pgsdir/pgs) && (-d $pgsdir) && (-e ../Cards/pgs_card.dat) ]]; then
-    pushd $pgsdir > /dev/null
-    echo "No pgs executable - running make"
-    make
-    popd > /dev/null
-fi
-
-if [[ (-x $pgsdir/pgs) && (-e ../Cards/pgs_card.dat) ]]; then
-    echo "Running PGS" >& ../status
-    cat ../status
-    $dirbin/gen_crossxhtml-pl $t
-    # now pass the event to a detector simulator and reconstruct objects
-#    qsub -v pgsdir=$pgsdir $dirbin/run_pgs >> ../running_jobs
-    $dirbin/run_pgs $pgsdir $mode
-else
-    if [[ (-x $delphesdir/Delphes) && (-e ../Cards/delphes_card.dat) ]]; then
-	echo "Running Delphes" >& ../status
-	cat ../status
-	$dirbin/run_delphes $delphesdir $mode
-    fi
-fi
-#
-
-if [[ (-x $ERAdir/ExRootLHCOlympicsConverter) && (-e pgs_events.lhco) ]]; then
-    echo "Creating PGS Root File" >& ../status
-    cat ../status
-    $dirbin/gen_crossxhtml-pl $t
-    $ERAdir/ExRootLHCOlympicsConverter pgs_events.lhco pgs_events.root
-fi
-
-if [[ (-x $MAdir/plot_events) && (-e pgs_events.lhco) && (-e ../Cards/plot_card.dat) ]]; then
-    echo "Creating Plots for PGS" >& ../status
-    cat ../status
-    $dirbin/gen_crossxhtml-pl $t
-    mkdir ${t}_pgs
-    cd ${t}_pgs
-    echo "../pgs_events.lhco" > events.list
-    $dirbin/plot $MAdir $td > plot.log
-    cd ..
-    $dirbin/plot_page-pl ${t}_pgs PGS
-    mv -f plots.html ${t}_plots_pgs.html
-fi
-
-if [[ (-x $MAdir/plot_events) && (-e delphes_events.lhco) && (-e ../Cards/plot_card.dat) ]]; then
-    echo "Creating Plots for Delphes" >& ../status
-    cat ../status
-    $dirbin/gen_crossxhtml-pl $t
-    mkdir ${t}_delphes
-    cd ${t}_delphes
-    echo "../delphes_events.lhco" > events.list
-    $dirbin/plot $MAdir $td > plot.log
-    cd ..
-    $dirbin/plot_page-pl ${t}_delphes Delphes
-    mv -f plots.html ${t}_plots_delphes.html
-fi
-
-cd ../
-#
-#  Store Events
-#
-echo "Storing Events" >& status
-cat status
-$dirbin/gen_crossxhtml-pl $t
-$dirbin/store $t
-rm -f RunWeb
-echo " " >& status
-$dirbin/gen_crossxhtml-pl $t
-$dirbin/gen_cardhtml-pl
-date
+        
+    
+    
+    
+    
+    
+    
+    

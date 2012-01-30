@@ -25,7 +25,7 @@ logger = logging.getLogger('madgraph.files')
 #===============================================================================
 # read_from_file
 #===============================================================================
-def read_from_file(filename, myfunct, *args):
+def read_from_file(filename, myfunct, *args, **opt):
     """Open a file, apply the function myfunct (with sock as an arg) 
     on its content and return the result. Deals properly with errors and
     returns None if something goes wrong. 
@@ -38,7 +38,10 @@ def read_from_file(filename, myfunct, *args):
         finally:
             sock.close()
     except IOError, (errno, strerror):
-        logger.error("I/O error (%s): %s" % (errno, strerror))
+        if opt.has_key('print_error'):
+            if not opt['print_error']:
+                return None
+        logger.error("I/O error on file %s (%s): %s" % (filename,errno, strerror))
         return None
 
     return ret_value

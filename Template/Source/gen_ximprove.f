@@ -41,7 +41,7 @@ c
       logical parallel, gen_events
       character*20 param(maxpara),value(maxpara)
       integer npara, nreq, ngran, nhel_refine
-      integer ij, kl, iseed
+      integer ij, kl, iseed, ioffset
       logical Gridpack,gridrun
       logical split_channels
       common /to_split/split_channels
@@ -80,7 +80,7 @@ c     If different card options set for nhel_refine and nhel_survey:
          gen_events=.true.
          split_channels=.false.
          call get_integer(npara,param,value," gevents "  ,nreq  ,2000   )
-         err_goal = 1.2*nreq
+         err_goal = 1.5*nreq ! extra factor to ensure works
          call get_integer(npara,param,value," gseed "  ,iseed  ,4321   )
          call get_integer(npara,param,value," ngran "  ,ngran  , -1)
          if (ngran.eq.-1) ngran = int(sqrt(real(nreq)))
@@ -91,9 +91,12 @@ c     TJS 3/13/2008
 c     Modified to allow for more sequences
 c     iseed can be between 0 and 31328*30081
 c     before patern repeats
+c     JA 11/2/2011: Check for ioffset, as in ntuple (ranmar.f)
 c
+         call get_offset(ioffset)
+         iseed = iseed * 31300       
          ij=1802 + mod(iseed,30081)
-         kl=9373 + (iseed/31328)
+         kl=9373 + (iseed/31328) + ioffset
 c         write(*,'($a,i6,a3,i6)') 'Using random seed offsets',jconfig," : ",ioffset
 c         write(*,*) ' with seed', iseed
          do while (ij .gt. 31328)
@@ -320,7 +323,6 @@ c
 c
 c     Now write the commands
 c      
-         write(26,20) 'echo $j'
          write(26,20) 'if [[ ! -e $j ]]; then'
          write(26,25) 'mkdir $j'
          write(26,20) 'fi'
@@ -338,7 +340,7 @@ c         write(26,20) 'rm -f moffset.dat'
      &        '"  >> input_sg.txt' !Helicity 
          write(26,'(5x,3a)')'echo "',gn(io(i))(2:ip-1),
      $        '" >>input_sg.txt'
-         write(26,20) 'time ../madevent >> $k <input_sg.txt'
+         write(26,20) '../madevent >> $k <input_sg.txt'
          write(26,20) 'mv ftn26 ftn25'
 c         write(26,20) 'rm ftn26'
          write(26,20) 'cat $k >> log.txt'
@@ -391,16 +393,16 @@ c     Write ic with correct number of digits
       write(*,*) 'Opening file ',fname
       open (unit=26, file = fname, status='unknown')
       write(26,15) '#!/bin/bash'
-      write(26,15) '#PBS -q ' // PBS_QUE
-      write(26,15) '#PBS -o /dev/null'
-      write(26,15) '#PBS -e /dev/null'
+c      write(26,15) '#PBS -q ' // PBS_QUE
+c      write(26,15) '#PBS -o /dev/null'
+c      write(26,15) '#PBS -e /dev/null'
       write(26,15) 'if [[ "$PBS_O_WORKDIR" != "" ]]; then' 
       write(26,15) '    cd $PBS_O_WORKDIR'
       write(26,15) 'fi'
       write(26,15) 'k=run1_app.log'
       write(lun,15) 'script=' // fname
-      write(lun,15) 'rm -f wait.$script >& /dev/null'
-      write(lun,15) 'touch run.$script'
+c      write(lun,15) 'rm -f wait.$script >& /dev/null'
+c      write(lun,15) 'touch run.$script'
  15   format(a)
       end
 
@@ -431,7 +433,6 @@ c      write(lun,'(a)') ')'
 c
 c     Now write the commands
 c      
-c      write(lun,20) 'echo $i'
 c      write(lun,20) 'j=G$i'
 c      write(lun,20) 'if (! -e $j) then'
 c      write(lun,25) 'mkdir $j'
@@ -445,7 +446,7 @@ c      if (.false.) then
 c         write(lun,20) 'cp ../../public.sh .'
 c         write(lun,20) 'qsub -N $1$i public.sh >> ../../running_jobs'
 c      else
-c         write(lun,20) 'time ../madevent > $k <input_app.txt'
+c         write(lun,20) '../madevent > $k <input_app.txt'
 c         write(lun,20) 'rm -f ftn25 ftn99'
 c         write(lun,20) 'cp $k log.txt'
 c      endif
@@ -632,7 +633,6 @@ c            if (ijob .eq. 1)  np = ifile !Only increment once / source channel
 c
 c     Now write the commands
 c      
-         write(26,20) 'echo $j'
          write(26,20) 'if [[ ! -e $j ]]; then'
          write(26,25) 'mkdir $j'
          write(26,20) 'fi'
@@ -669,7 +669,7 @@ c
      &        ' " >> input_sg.txt' !Helicity 0=exact
          write(26,'(9x,3a)')'echo "',gn(io(np))(2:ip-1),
      $        '" >>input_sg.txt'
-         write(26,25) 'time ../madevent >> $k <input_sg.txt'
+         write(26,25) '../madevent >> $k <input_sg.txt'
          write(26,25) 'cat $k >> log.txt'
          write(26,25) 'if [[ -e ftn26 ]]; then'
          write(26,25) '     cp ftn26 ftn25'
@@ -706,7 +706,7 @@ c         write(26,20) 'qsub -N $1$j public_sg.sh >> ../../running_jobs'
          write(26,25) 'if [[ -e ftn26 ]]; then'
          write(26,25) '     cp ftn26 ftn25'
          write(26,25) 'fi'
-         write(26,25) 'time ../madevent >> $k <input_sg.txt'
+         write(26,25) '../madevent >> $k <input_sg.txt'
          write(26,25) 'cat $k >> log.txt'
          write(26,20) 'fi'
          write(26,20) 'cd ../'
@@ -799,15 +799,14 @@ c      kl = 4321
                np = 1
             endif
             ip = index(gn(i),'/')
-            write(*,*) 'Channel ',gn(i)(2:ip-1),
-     $           yerr, jpoints(i),npoints
+            write(*,*) 'Channel ',gn(i)(2:ip-1), goal_lum * xsec(i) / xtot,
+     $           npoints
 
             ip = index(gn(i),'/')
             write(26,'(2a)') 'j=',gn(i)(1:ip-1)
 c
 c           Now write the commands
 c      
-            write(26,20) 'echo $j'
             write(26,20) 'if [[ ! -e $j ]]; then'
             write(26,25) 'mkdir $j'
             write(26,20) 'fi'
@@ -824,13 +823,13 @@ c
             write(26,20) 'if [[ ! -e ftn25 ]]; then'
 
 
-            write(26,'(9x,a,2i8,a)') 'echo "',npoints,max_iter,
-     $           '" >& input_sg.txt' 
+            write(26,'(9x,a,2i8,a)') 'echo "',max(npoints,min_events),
+     $           max_iter,'" >& input_sg.txt' 
 c
 c     tjs 8/7/2007  Allow stop when have enough events
 c
             write(*,*) "Cross section",i,xsec(i),mfact(i)
-            write(26,'(9x,a,e13.5,a)') 'echo "',-goal_lum/xtot,
+            write(26,'(9x,a,e13.5,a)') 'echo "',-npoints/xsec(i),
      $        '" >> input_sg.txt'                       !Luminocity
             write(26,'(9x,a)') 'echo "2" >> input_sg.txt' !Grid Adjustment
             write(26,'(9x,a)') 'echo "1" >> input_sg.txt' !Suppression
@@ -838,7 +837,7 @@ c
      &           ' " >> input_sg.txt' !Helicity 0=exact
             write(26,'(9x,3a)')'echo "',gn(i)(2:ip-1),
      $           '" >>input_sg.txt'
-            write(26,25) 'time ../madevent >> $k <input_sg.txt'
+            write(26,25) '../madevent >> $k <input_sg.txt'
             write(26,25) 'cat $k >> log.txt'
             write(26,25) 'if [[ -e ftn26 ]]; then'
             write(26,25) '     cp ftn26 ftn25'
@@ -847,12 +846,12 @@ c
 
             write(26,25) 'rm -f $k'
             
-            write(26,'(9x,a,2i8,a)') 'echo "',npoints,max_iter,
-     $           '" >& input_sg.txt' 
+            write(26,'(9x,a,2i8,a)') 'echo "',max(npoints,min_events),
+     $           max_iter,'" >& input_sg.txt' 
 c
 c tjs 8/7/2007    Change to request events not accuracy
 c
-            write(26,'(9x,a,e13.5,a)') 'echo "',-goal_lum / xtot,
+            write(26,'(9x,a,e13.5,a)') 'echo "',-npoints / xsec(i),
      $           '" >> input_sg.txt' ! Luminocity
             write(26,'(9x,a)') 'echo "0" >> input_sg.txt'
             write(26,'(9x,a)') 'echo "1" >> input_sg.txt'
@@ -866,7 +865,7 @@ c
             write(26,25) 'if [[ -e ftn26 ]]; then'
             write(26,25) '     cp ftn26 ftn25'
             write(26,25) 'fi'
-            write(26,25) 'time ../madevent >> $k <input_sg.txt'
+            write(26,25) '../madevent >> $k <input_sg.txt'
             write(26,25) 'cat $k >> log.txt'
             write(26,20) 'fi'
             write(26,20) 'cd ../'

@@ -1,0 +1,45 @@
+ALOHA - Automatic Library of Helicity Amplitudes for Feynman diagram computation
+--------------------------------------------------------------------------------
+by O. Mattelaer, P. de Aquino, W. Link, F. Maltoni and T. Stelzer
+[http://arxiv.org/abs/1108.2041]
+
+ALOHA is the automatic generation of helicity amplitude (HELAS) routines. 
+It is necessary to have an UFO model as input. One can find more information
+on the generation of UFO models on [http://arxiv.org/abs/1108.2040]
+
+I. Require program/ INSTALLATION
+---------------------------------------------------
+ALOHA needs Python version 2.6 or 2.7.
+No compilation are needed in order to run ALOHA. 
+(i.e. you can launch ALOHA as soon as you have a valid python version)
+
+I. To run ALOHA from the shell (standalone):
+---------------------------------------------------
+1) Run ./bin/aloha UFO_PATH [-f Fortran | Python | CPP] [-o output_directory]
+
+Where UFO_PATH is the path to a UFO model directory. In the first option the 
+user can choose to use either fortran, python or C++ to run aloha, and the 
+second option stands for obtaining the output in a specific directory chosen 
+by the user.
+
+II. To run ALOHA inside Madgraph 5:
+---------------------------------------------------
+The only prerequisite for this option is to have the UFO model copied inside
+the madgraph5/models folder. Madgraph 5 will automatically use ALOHA 
+to generate the helicity routines required in each process.
+
+
+Description of the main ALOHA files 
+---------------------------------------------------
+
+* aloha_lib.py     - This module contains the code needed for the analytical 
+                     computations and for the evaluation of the representation 
+                     of the objects.
+* aloha_object.py  - This module contains the deﬁnition of all basic objects 
+                     used by ALOHA.
+* aloha_writers.py - This module contains the code that writes ALOHA functions 
+                     in different languages (currently Python, Fortran and C++)
+* create_aloha.py  - This is the main module. It contains the driver of the code 
+                     and the part needed to build  the different routines associated 
+                     with each Lorentz structure.
+

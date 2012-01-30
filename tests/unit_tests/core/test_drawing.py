@@ -785,17 +785,17 @@ class TestFeynmanDiagram(unittest.TestCase):
         opt = drawing.DrawOption({'external':1, 'horizontal':1, 'max_size':0})
         # gg>g(g>uux)g (via a T channel)  
         mix_diagram = self.store_diagram['g g > g g u u~'][18]
-        self.mix_drawing = drawing.FeynmanDiagram(mix_diagram, _model, opt)
+        self.mix_drawing = drawing.FeynmanDiagram(mix_diagram, _model, opt=opt)
 
         # gg>gg (via a T channel)
         t_diagram = self.store_diagram['g g > g g'][2]
         #t_diagram = base_objects.Diagram(self.t_diagram_dict)
-        self.t_drawing = drawing.FeynmanDiagram(t_diagram, _model, opt)
+        self.t_drawing = drawing.FeynmanDiagram(t_diagram, _model, opt=opt)
 
         # gg>gg (via a S channel)
         s_diagram = self.store_diagram['g g > g g'][1]
         #s_diagram = base_objects.Diagram(self.s_diagram_dict)
-        self.s_drawing = drawing.FeynmanDiagram(s_diagram, _model, opt)
+        self.s_drawing = drawing.FeynmanDiagram(s_diagram, _model, opt=opt)
 
     def test_load_diagram(self):
         """ Test update of a diagram to a drawing class """
@@ -1268,6 +1268,168 @@ class TestFeynmanDiagram(unittest.TestCase):
             if line.is_fermion():
                 self.assertTrue(line.start.pos_y < line.end.pos_y)           
 
+    def test_part_antipart_after_output(self):
+        """Check that the fermion flow is correct before and after output command
+        """
+        
+        # Load diagram with one fermion flow 
+        diagram = self.store_diagram['u u~ > w+ w- e+ e-'][0]
+        diagram = drawing.FeynmanDiagram(diagram, _model)
+        diagram.main()
+        
+        #select the s-channel lepton
+        line = [line for line in diagram.lineList if line.start.level in [2,3]
+                                                and line.end.level in [2,3]][0]
+        
+        self.assertEqual(line.pid, 11)
+        self.assertEqual(line.start.level, 2)
+        self.assertEqual(line.end.level, 3)
+        
+        # Do the same for after the output command:
+        # Load diagram with one fermion flow 
+        diagram = self.store_diagram['OUTPUT: u u~ > w+ w- e+ e-'][0]
+        diagram = drawing.FeynmanDiagram(diagram, _model, amplitude=True)
+        diagram.main()
+        
+        #select the s-channel lepton
+        line = [line for line in diagram.lineList if line.start.level in [2,3]
+                                                and line.end.level in [2,3]][0]
+        
+        self.assertEqual(line.pid, 11)
+        self.assertEqual(line.start.level, 2)
+        self.assertEqual(line.end.level, 3)      
+ 
+
+        #
+        # Second example (with bosons this times)
+        #
+        
+        # Load diagram with bosons 
+        diagram = self.store_diagram['w+ w- > w+ w- z z'][7]
+        diagram = drawing.FeynmanDiagram(diagram, _model)
+        #diagram.load_diagram()
+        #print diagram._debug_load_diagram()
+        #diagram.define_level()
+        #print diagram._debug_level()        
+        diagram.main()
+        
+        #select the s-channel W
+        line = [line for line in diagram.lineList if line.start.level in [2,3]
+                                                and line.end.level in [2,3]][0]        
+        
+        self.assertEqual(line.pid, 24)
+        self.assertEqual(line.start.level, 2)
+        self.assertEqual(line.end.level, 3)
+        
+        # Do the same for after the output command:
+        # Load diagram with one fermion flow 
+        diagram = self.store_diagram['OUTPUT: w+ w- > w+ w- z z'][7]
+        diagram = drawing.FeynmanDiagram(diagram, _model, amplitude=True)
+        #diagram.load_diagram()
+        #print diagram._debug_load_diagram()
+        #diagram.define_level()
+        #print diagram._debug_level() 
+        diagram.main()
+        
+        #select the s-channel lepton
+        line = [line for line in diagram.lineList if line.start.level in [2,3]
+                                                and line.end.level in [2,3]][0]
+        
+        self.assertEqual(line.pid, 24)
+        self.assertEqual(line.start.level, 2)
+        self.assertEqual(line.end.level, 3)  
+
+        #
+        # Third example example (with bosons this times)
+        #
+        
+        # Load diagram with bosons 
+        diagram = self.store_diagram['w+ w- > w+ w- z z'][9]
+        diagram = drawing.FeynmanDiagram(diagram, _model)
+        #diagram.load_diagram()
+        #print diagram._debug_load_diagram()
+        #diagram.define_level()
+        #print diagram._debug_level()        
+        diagram.main()
+        
+        #select the s-channel W
+        line = [line for line in diagram.lineList if line.start.level in [2,3]
+                                                and line.end.level in [2,3]][0]        
+        
+        self.assertEqual(line.pid, 24)
+        self.assertEqual(line.start.level, 2)
+        self.assertEqual(line.end.level, 3)
+        
+        # Do the same for after the output command:
+        # Load diagram with one fermion flow 
+        diagram = self.store_diagram['OUTPUT: w+ w- > w+ w- z z'][9]
+        diagram = drawing.FeynmanDiagram(diagram, _model, amplitude=True)
+        #diagram.load_diagram()
+        #print diagram._debug_load_diagram()
+        #diagram.define_level()
+        #print diagram._debug_level() 
+        diagram.main()
+        
+        #select the s-channel lepton
+        line = [line for line in diagram.lineList if line.start.level in [2,3]
+                                                and line.end.level in [2,3]][0]
+        
+        self.assertEqual(line.pid, 24)
+        self.assertEqual(line.start.level, 2)
+        self.assertEqual(line.end.level, 3) 
+
+        #
+        # Fourth example (with bosons this times)
+        #
+        # Load diagram with bosons 
+        diagram = self.store_diagram['w+ w- > w+ w- z z'][10]
+        diagram = drawing.FeynmanDiagram(diagram, _model)
+        #diagram.load_diagram()
+        #diagram.define_level()
+        #print diagram._debug_level()        
+        diagram.main()
+        #select the s-channel W
+        line1 = [line for line in diagram.lineList if line.start.level in [2,3]
+                                                and line.end.level in [2,3]][0]        
+        line2 = [line for line in diagram.lineList if line.start.level in [3,4]
+                                                and line.end.level in [4,3]][0] 
+        line3 = [line for line in diagram.lineList if line.start.level in [2,5]
+                                                and line.end.level in [2,5]][0] 
+        self.assertEqual(line3.pid, -24)
+        
+        self.assertEqual(line1.pid, line2.pid)
+        self.assertEqual(line1.pid, 24)
+        self.assertEqual(line1.start.level, 2)
+        self.assertEqual(line1.end.level, 3)
+        self.assertEqual(line2.start.level, 3)
+        self.assertEqual(line2.end.level, 4)        
+        # Do the same for after the output command:
+        # Load diagram with one fermion flow 
+        diagram = self.store_diagram['OUTPUT: w+ w- > w+ w- z z'][10]
+        diagram = drawing.FeynmanDiagram(diagram, _model, amplitude=True)
+
+        diagram.main()
+        
+        #select the s-channel W
+        line1 = [line for line in diagram.lineList if line.start.level in [2,3]
+                                                and line.end.level in [2,3]][0]        
+        line2 = [line for line in diagram.lineList if line.start.level in [3,4]
+                                                and line.end.level in [4,3]][0] 
+        
+        self.assertEqual(line1.pid, line2.pid)
+        self.assertEqual(line1.pid, 24)
+        self.assertEqual(line1.start.level, 2)
+        self.assertEqual(line1.end.level, 3)
+        self.assertEqual(line2.start.level, 3)
+        self.assertEqual(line2.end.level, 4)    
+
+
+
+
+
+
+    
+
     def test_diagram_equality(self):
         """Test if the diagram equalities work"""
         
@@ -1442,7 +1604,7 @@ class TestFeynmanDiagram(unittest.TestCase):
         # Standard verification + test position of external particles on border
         diagram = self.store_diagram['g g > g g g g'][93]
         opt = drawing.DrawOption({'external':1, 'max_size':0})
-        diagram = drawing.FeynmanDiagramHorizontal(diagram, _model, opt)
+        diagram = drawing.FeynmanDiagramHorizontal(diagram, _model, opt=opt)
         diagram.load_diagram()
         diagram.define_level()
         diagram.find_initial_vertex_position()
