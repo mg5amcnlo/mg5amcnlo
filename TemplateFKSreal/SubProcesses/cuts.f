@@ -131,15 +131,26 @@ c
 
 c jet cluster algorithm
       integer NN,NJET,NSUB,JET(nexternal)
+      integer NNQCD
+      double precision pplab(0:3, nexternal)
       double precision pQCD(0:3,nexternal),PJET(0:3,nexternal)
       double precision rfj,sycut,palg,fastjetdmerge
       double precision d01,d12,d23,d34
       external fastjetdmerge
       double precision ptmin(5)
-      integer njetnew
+      integer njetbak
       double precision thispt
+      double precision ymaxjet
+      double precision getrapidity
+      integer igoodjet(nexternal)
 
       integer mm
+
+
+      double precision chybst,shybst,chybstmo
+      double precision xd(1:3)
+      data (xd(i),i=1,3)/0,0,1/
+      double precision totpt
 
 C-----
 C  BEGIN CODE
@@ -192,14 +203,30 @@ c     Also make sure there's no INF or NAN
 c Put all (light) QCD partons in momentum array for jet clustering.
 c From the run_card.dat, maxjetflavor defines if b quark should
 c be considered here (via the logical variable 'is_a_jet').
+
+      chybst=cosh(ybst_til_tolab)
+      shybst=sinh(ybst_til_tolab)
+      chybstmo=chybst-1.d0
+      do i=3,nexternal
+        call boostwdir2(chybst,shybst,chybstmo,xd,
+     #                  p(0,i),pplab(0,i))
+      enddo
+
       NN=0
+      NNQCD=0
+      totpt=0d0
+      !prepare boosted momenta to be clustered by jet algo, 
+      ! if totpt is large enough
       do j=nincoming+1,nexternal
-         if (is_a_j(j) .and. p(0,j).gt.1d-8) then
-             ! do not pass 0-momenta jets
+         if (is_a_j(j)) then
             NN=NN+1
-            do i=0,3
-               pQCD(i,NN)=p(i,j)
-            enddo
+            if (pplab(0,j) .gt.1d-8) then
+             NNQCD=NNQCD+1
+             totpt = totpt + dsqrt(pplab(1,j)**2 + pplab(2,j)**2)
+             do i=0,3
+               pQCD(i,NNQCD)=pplab(i,j)
+             enddo
+            endif
          endif
       enddo
 
@@ -221,9 +248,14 @@ c$$$      goto 123
 
 
 c Define jet clustering parameters
-      palg=1.d0                 ! jet algorithm: 1.0=kt, 0.0=C/A, -1.0 = anti-kt
-      rfj=0.7d0                 ! the radius parameter
-      sycut=10d0
+      palg=1.d0               ! jet algorithm: 1.0=kt, 0.0=C/A, -1.0 = anti-kt
+      rfj=0.4d0                 ! the radius parameter
+      sycut=60d0
+      if (totpt .lt. sycut) then
+          passcuts =  .false.
+          return
+      endif
+
 
 c******************************************************************************
 c     call FASTJET to get all the jets
@@ -248,7 +280,7 @@ ccc----
 
 
 ccc----FOR FJ v > 3.0
-      call fastjetppgenkt(pQCD,NN,rfj,sycut,palg,pjet,njet)
+      call fastjetppgenkt(pQCD,NNQCD,rfj,sycut,palg,pjet,njet)
 
 
       if (NJET .ne. NN .and. NJET .ne. NN-1) then
