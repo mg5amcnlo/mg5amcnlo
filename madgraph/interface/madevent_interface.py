@@ -2040,10 +2040,6 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
                                           cwd=pjoin(self.me_dir,'SubProcesses'),
                                           stdout=devnull)
         
-        #subprocess.call([pjoin(self.dirbin, 'sumall')], 
-        #                                 cwd=pjoin(self.me_dir,'SubProcesses'),
-        #                                 stdout=devnull)
-        
         self.update_status('finish refine', 'parton', makehtml=False)
         
     ############################################################################ 
@@ -2614,12 +2610,6 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
         if hasattr(self, 'control_thread') and self.control_thread[0]:
             self.monitor(mode=2,html=False)
 
-
-
-          
-    
-
-        
         pgsdir = pjoin(self.configuration['pythia-pgs_path'], 'src')
         eradir = self.configuration['exrootanalysis_path']
         madir = self.configuration['madanalysis_path']
@@ -3864,7 +3854,8 @@ class GridPackCmd(MadEventCmd):
                     job = os.path.basename(job)
                     self.launch_job('./%s' % job, cwd=Pdir, remaining=(nb_tot-i-1), 
                              run_type='Refine number %s on %s (%s/%s)' % (self.nb_refine, subdir, nb_proc+1, len(subproc)))
-        self.monitor(run_type='All job submitted for refine number %s' % self.nb_refine)
+        self.monitor(run_type='All job submitted for refine number %s' % self.nb_refine,
+                     html=True)
         
         self.update_status("Combining runs", level='parton')
         try:
