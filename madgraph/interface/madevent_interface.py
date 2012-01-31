@@ -2163,7 +2163,7 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
         for name in ['events.lhe', 'unweighted_events.lhe']:
             if os.path.exists(pjoin(E_path, name)):
                 if os.path.exists(pjoin(O_path, '%s.gz' % name)):
-                    os.remove(pjoin(O_path, '%s.lhe.gz' % name))
+                    os.remove(pjoin(O_path, '%s.gz' % name))
                 input = pjoin(E_path, name)
                 output = pjoin(O_path, name)
                 files.mv(input, output) 
@@ -2256,7 +2256,7 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
                            cwd=pjoin(self.me_dir,'Events'))
 
         if not os.path.exists(pjoin(self.me_dir,'Events','pythia.done')):
-            logger.warning('Fail to produce pythia output. More info in \n     %s' % pythia_log)
+            logger.warning('Fail to produce pythia output. More info in \n     %s' % pythia_log.name)
             return
         else:
             os.remove(pjoin(self.me_dir,'Events','pythia.done'))
@@ -2606,7 +2606,7 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
                      pjoin(self.me_dir, 'Cards', 'pgs_card.dat'))
             logger.info('No pgs card found. Take the default one.')        
         
-        if not no_default:
+        if not (no_default or force):
             self.ask_edit_cards(['pgs'], args)
             
         self.update_status('prepare PGS run', level=None)  
@@ -2731,7 +2731,7 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
                      pjoin(self.me_dir, 'Cards', 'delphes_card.dat'))
             logger.info('No delphes card found. Take the default one.')
 
-        if not no_default:
+        if not (no_default or force):
             self.ask_edit_cards(['delphes', 'trigger'], args)
             
         self.update_status('Running Delphes', level=None)  
@@ -3024,24 +3024,33 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
     def set_run_name(self, name, tag=None, level='parton', reload_card=False):
         """define the run name, the run_tag, the banner and the results."""
         
+        # when are we force to change the tag new_run:previous run requiring changes
+        upgrade_tag = {'parton': ['parton','pythia','pgs','delphes'],
+                       'pythia': ['pythia','pgs','delphes'],
+                       'pgs': ['pgs'],
+                       'delphes':['delphes']}
+        
+        
 
         if name == self.run_name:        
             if reload_card:
                 run_card = pjoin(self.me_dir, 'Cards','run_card.dat')
                 self.run_card = self.read_run_card(run_card)
 
-            #check tag
-            if level != 'parton':
-                if tag:
-                    self.run_card['run_tag'] = tag
-                    self.run_tag = tag
-                    self.results.add_run(self.run_name, self.run_card)
-                elif getattr(self.results[self.run_name][-1], level):
-                    tag = self.get_available_tag()
-                    self.run_card['run_tag'] = tag
-                    self.run_tag = tag
-                    self.results.add_run(self.run_name, self.run_card)
-            return # Nothing to do
+            #check if we need to change the tag
+            if tag:
+                self.run_card['run_tag'] = tag
+                self.run_tag = tag
+                self.results.add_run(self.run_name, self.run_card)
+            else:
+                for tag in upgrade_tag[level]:
+                    if getattr(self.results[self.run_name][-1], tag):
+                        tag = self.get_available_tag()
+                        self.run_card['run_tag'] = tag
+                        self.run_tag = tag
+                        self.results.add_run(self.run_name, self.run_card)                        
+                        break
+            return # Nothing to do anymore
         
         # save/clean previous run
         if self.run_name:
@@ -3053,6 +3062,7 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
         run_card = pjoin(self.me_dir, 'Cards','run_card.dat')
         self.run_card = self.read_run_card(run_card)
 
+        new_tag = False
         # First call for this run -> set the banner
         self.banner = banner_mod.recover_banner(self.results, level)
         if tag:
@@ -3060,17 +3070,20 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
             new_tag = True
         elif not self.run_name in self.results and level =='parton':
             pass # No results yet, so current tag is fine
-        elif getattr(self.results[self.run_name][-1], level):
-            # LEVEL is already define in the last tag -> need to switch tag
-            tag = self.get_available_tag()
-            self.run_card['run_tag'] = tag
-            new_tag = True
-        else: 
-            # We can add the results to the current run
-            tag = self.results[self.run_name][-1]['tag']
-            self.run_card['run_tag'] = tag # ensure that run_tag is correct
-            new_tag = False
-        
+        else:
+            for tag in upgrade_tag[level]:
+                if getattr(self.results[self.run_name][-1], tag):
+                    # LEVEL is already define in the last tag -> need to switch tag
+                    tag = self.get_available_tag()
+                    self.run_card['run_tag'] = tag
+                    new_tag = True
+                    break
+            if not new_tag:
+                # We can add the results to the current run
+                tag = self.results[self.run_name][-1]['tag']
+                self.run_card['run_tag'] = tag # ensure that run_tag is correct                
+             
+                    
         if name in self.results and not new_tag:
             self.results.def_current(self.run_name)
         else:
