@@ -1276,7 +1276,8 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
     # survey options, dict from name to type, default value, and help text
     _survey_options = {'points':('int', 1000,'Number of points for first iteration'),
                        'iterations':('int', 5, 'Number of iterations'),
-                       'accuracy':('float', 0.1, 'Required accuracy')}
+                       'accuracy':('float', 0.1, 'Required accuracy'),
+                       'gridpack':('str', '.false.', 'Gridpack generation')}
     # Variables to store object information
     true = ['T','.true.',True,'true', 1, '1']
     web = False
@@ -1683,7 +1684,8 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
             # Running gridpack warmup
             gridpack_opts=[('accuracy', 0.01),
                            ('points', 2000),
-                           ('iterations',8)]
+                           ('iterations',8),
+                           ('gridpack','.true.')]
             logger.info('Generating gridpack with run name %s' % self.run_name)
             self.exec_cmd('survey  %s %s' % \
                           (self.run_name,
@@ -1872,34 +1874,40 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
         for i in range(nb_run):
             self.exec_cmd('generate_events %s_%s -f' % (main_name, i), postcmd=False)
             # Update collected value
-            nb_event += int(self.results[self.run_name]['nb_event'])  
-            self.results.add_detail('nb_event', nb_event ,run=main_name)            
-            cross = self.results[self.run_name]['cross']
-            error = self.results[self.run_name]['error'] + 1e-99
+            nb_event += int(self.results[self.run_name][-1]['nb_event'])  
+            self.results.add_detail('nb_event', nb_event , run=main_name)            
+            cross = self.results[self.run_name][-1]['cross']
+            error = self.results[self.run_name][-1]['error'] + 1e-99
             crossoversig+=cross/error**2
             inv_sq_err+=1.0/error**2
-            self.results[main_name]['cross'] = crossoversig/inv_sq_err
-            self.results[main_name]['error'] = math.sqrt(1.0/inv_sq_err) 
+            self.results[main_name][-1]['cross'] = crossoversig/inv_sq_err
+            self.results[main_name][-1]['error'] = math.sqrt(1.0/inv_sq_err) 
 
         
         self.run_name = main_name
         self.results.def_current(main_name)
         self.update_status("Merging LHE files", level='parton')
-        os.system('%(bin)s/merge.pl %(event)s/%(name)s_*_unweighted_events.lhe.gz %(event)s/%(name)s_unweighted_events.lhe.gz %(event)s/%(name)s_banner.txt' 
+        try:
+            os.mkdir(pjoin(self.me_dir,'Events', self.run_name))
+        except:
+            pass
+        os.system('%(bin)s/merge.pl %(event)s/%(name)s_*/unweighted_events.lhe.gz %(event)s/%(name)s/unweighted_events.lhe.gz %(event)s/%(name)s_banner.txt' 
                   % {'bin': self.dirbin, 'event': pjoin(self.me_dir,'Events'),
                      'name': self.run_name})
 
         eradir = self.configuration['exrootanalysis_path']
         if eradir and misc.is_executable(pjoin(eradir,'ExRootLHEFConverter')):
             self.update_status("Create Root file", level='parton')
-            os.system('gunzip %s/%s_unweighted_events.lhe.gz' % 
+            os.system('gunzip %s/%s/unweighted_events.lhe.gz' % 
                                   (pjoin(self.me_dir,'Events'), self.run_name))
-            self.create_root_file('%s_unweighted_events.lhe' % self.run_name,
-                                  '%s_unweighted_events.root' % self.run_name)
+            self.create_root_file('%s/unweighted_events.lhe' % self.run_name,
+                                  '%s/unweighted_events.root' % self.run_name)
             
         
-        self.create_plot('parton', '%s/%s_unweighted_events.lhe' %
-                         (pjoin(self.me_dir, 'Events'),self.run_name))
+        self.create_plot('parton', '%s/%s/unweighted_events.lhe' %
+                         (pjoin(self.me_dir, 'Events'),self.run_name),
+                         pjoin(self.me_dir, 'HTML',self.run_name, 'plots_parton.html')
+                         )
         
         os.system('gzip -f %s/%s_unweighted_events.lhe' % 
                                   (pjoin(self.me_dir, 'Events'), self.run_name))
@@ -1927,7 +1935,6 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
         if self.cluster_mode:
             logger.info('Creating Jobs')
 
-
         logger.info('Working on SubProcesses')
         self.total_jobs = 0
         subproc = [P for P in os.listdir(pjoin(self.me_dir,'SubProcesses')) if 
@@ -1950,7 +1957,7 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
             p = subprocess.Popen(['./gensym'], stdin=subprocess.PIPE,
                                  stdout=subprocess.PIPE, 
                                  stderr=subprocess.STDOUT, cwd=Pdir)
-            sym_input = "%(points)d %(iterations)d %(accuracy)f\n" % self.opts
+            sym_input = "%(points)d %(iterations)d %(accuracy)f %(gridpack)s\n" % self.opts
             (stdout, stderr) = p.communicate(sym_input)
             if not os.path.exists(pjoin(Pdir, 'ajob1')) or p.returncode:
                 logger.critical(stdout)
@@ -2138,7 +2145,7 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
                     output = pjoin(G_path, '%s_log.txt' % run)
                     files.mv(input, output) 
                 # Grid
-                for name in ['ftn25', 'ftn99','ftn26']:
+                for name in ['ftn26']:
                     if os.path.exists(pjoin(G_path, name)):
                         if os.path.exists(pjoin(G_path, '%s_%s.gz'%(run,name))):
                             os.remove(pjoin(G_path, '%s_%s.gz'%(run,name)))
@@ -2147,7 +2154,6 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
                         files.mv(input, output) 
                         subprocess.call(['gzip', output], stdout=devnull, 
                                         stderr=devnull, cwd=G_path)
-        
         # 3) Update the index.html
         subprocess.call(['%s/gen_cardhtml-pl' % self.dirbin],
                             cwd=pjoin(self.me_dir))
@@ -2175,15 +2181,19 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
         self.update_status('Creating gridpack', level='parton')
         args = self.split_arg(line)
         self.check_combine_events(args)
-        os.system("sed -i.bak \"s/\s*.false.*=.*GridRun/  .true.  =  GridRun/g\" %s/Cards/grid_card.dat" \
+        os.system("sed -i.bak \"s/ *.false.*=.*GridRun/  .true.  =  GridRun/g\" %s/Cards/grid_card.dat" \
                   % self.me_dir)
         subprocess.call(['./bin/internal/restore_data', self.run_name],
                         cwd=self.me_dir)
-        self.exec_cmd('store_events')
+        subprocess.call(['./bin/internal/store4grid',
+                         self.run_name, self.run_tag],
+                        cwd=self.me_dir)
         subprocess.call(['./bin/internal/clean'], cwd=self.me_dir)
         misc.compile(['gridpack.tar.gz'], cwd=self.me_dir)
         files.mv(pjoin(self.me_dir, 'gridpack.tar.gz'), 
                 pjoin(self.me_dir, '%s_gridpack.tar.gz' % self.run_name))
+        os.system("sed -i.bak \"s/\s*.true.*=.*GridRun/  .false.  =  GridRun/g\" %s/Cards/grid_card.dat" \
+                  % self.me_dir)
         self.update_status('gridpack created', level='gridpack')
         
     ############################################################################      
@@ -3251,7 +3261,7 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
                             cwd=pjoin(self.me_dir, 'Events'))
         
     ############################################################################
-    def create_plot(self, mode='parton', event_path=None):
+    def create_plot(self, mode='parton', event_path=None, output=None):
         """create the plot""" 
 
         madir = self.configuration['madanalysis_path']
@@ -3279,6 +3289,8 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
                               'plots_delphes_%s.html' % tag) 
             else:
                 raise self.InvalidCmd, 'Invalid mode %s' % mode
+
+            
             
         if not os.path.exists(event_path):
             raise self.InvalidCmd, 'Events file %s does not exits' % event_path
@@ -3777,32 +3789,38 @@ class GridPackCmd(MadEventCmd):
     def __init__(self, me_dir = None, nb_event=0, seed=0, *completekey, **stdin):
         """Initialize the command and directly run"""
 
-        # Initialize properly                                                                                                                                 
+        # Initialize properly
+        
         MadEventCmd.__init__(self, me_dir, *completekey, **stdin)
         self.run_mode = 0
         self.configuration['automatic_html_opening'] = False
-        # Now it's time to run!                                                                                                                               
+        # Now it's time to run!
         if me_dir and nb_event and seed:
             self.launch(nb_event, seed)
-
+        else:
+            raise MadGraph5Error,\
+                  'Gridpack run failed: ' + str(me_dir) + str(nb_event) + \
+                  str(seed)
 
     def launch(self, nb_event, seed):
         """ launch the generation for the grid """
 
-        # 1) Restore the default data                                                                                                                         
+        # 1) Restore the default data
         logger.info('generate %s events' % nb_event)
         self.set_run_name('GridRun_%s' % seed)
         self.update_status('restoring default data', level=None)
-        subprocess.call([pjoin(self.me_dir,'bin','internal','restore_data'), self.run_name],
+        subprocess.call([pjoin(self.me_dir,'bin','internal','restore_data'),
+                         'default'],
             cwd=self.me_dir)
 
-        # 2) Run the refine for the grid                                                                                                                      
+        # 2) Run the refine for the grid
         self.update_status('Generating Events', level=None)
         #subprocess.call([pjoin(self.me_dir,'bin','refine4grid'),
         #                str(nb_event), '0', 'Madevent','1','GridRun_%s' % seed],
         #                cwd=self.me_dir)
         self.refine4grid(nb_event)
-        # 3) Combine the events/pythia/...                                                                                                                    
+
+        # 3) Combine the events/pythia/...
         self.exec_cmd('combine_events')
         self.exec_cmd('store_events')
         self.exec_cmd('pythia --no_default -f')

@@ -420,6 +420,12 @@ class RunResults(list):
             if data['tag'] == name:
                 return data
         
+        if name is None:
+            # return last entry
+            return self[-1]
+        
+        raise Exception, '%s is not a valid tag' % name
+        
     def add(self, obj):
         """ """
         
