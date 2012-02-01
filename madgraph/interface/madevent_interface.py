@@ -1874,34 +1874,40 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
         for i in range(nb_run):
             self.exec_cmd('generate_events %s_%s -f' % (main_name, i), postcmd=False)
             # Update collected value
-            nb_event += int(self.results[self.run_name]['nb_event'])  
-            self.results.add_detail('nb_event', nb_event ,run=main_name)            
-            cross = self.results[self.run_name]['cross']
-            error = self.results[self.run_name]['error'] + 1e-99
+            nb_event += int(self.results[self.run_name][-1]['nb_event'])  
+            self.results.add_detail('nb_event', nb_event , run=main_name)            
+            cross = self.results[self.run_name][-1]['cross']
+            error = self.results[self.run_name][-1]['error'] + 1e-99
             crossoversig+=cross/error**2
             inv_sq_err+=1.0/error**2
-            self.results[main_name]['cross'] = crossoversig/inv_sq_err
-            self.results[main_name]['error'] = math.sqrt(1.0/inv_sq_err) 
+            self.results[main_name][-1]['cross'] = crossoversig/inv_sq_err
+            self.results[main_name][-1]['error'] = math.sqrt(1.0/inv_sq_err) 
 
         
         self.run_name = main_name
         self.results.def_current(main_name)
         self.update_status("Merging LHE files", level='parton')
-        os.system('%(bin)s/merge.pl %(event)s/%(name)s_*_unweighted_events.lhe.gz %(event)s/%(name)s_unweighted_events.lhe.gz %(event)s/%(name)s_banner.txt' 
+        try:
+            os.mkdir(pjoin(self.me_dir,'Events', self.run_name))
+        except:
+            pass
+        os.system('%(bin)s/merge.pl %(event)s/%(name)s_*/unweighted_events.lhe.gz %(event)s/%(name)s/unweighted_events.lhe.gz %(event)s/%(name)s_banner.txt' 
                   % {'bin': self.dirbin, 'event': pjoin(self.me_dir,'Events'),
                      'name': self.run_name})
 
         eradir = self.configuration['exrootanalysis_path']
         if eradir and misc.is_executable(pjoin(eradir,'ExRootLHEFConverter')):
             self.update_status("Create Root file", level='parton')
-            os.system('gunzip %s/%s_unweighted_events.lhe.gz' % 
+            os.system('gunzip %s/%s/unweighted_events.lhe.gz' % 
                                   (pjoin(self.me_dir,'Events'), self.run_name))
-            self.create_root_file('%s_unweighted_events.lhe' % self.run_name,
-                                  '%s_unweighted_events.root' % self.run_name)
+            self.create_root_file('%s/unweighted_events.lhe' % self.run_name,
+                                  '%s/unweighted_events.root' % self.run_name)
             
         
-        self.create_plot('parton', '%s/%s_unweighted_events.lhe' %
-                         (pjoin(self.me_dir, 'Events'),self.run_name))
+        self.create_plot('parton', '%s/%s/unweighted_events.lhe' %
+                         (pjoin(self.me_dir, 'Events'),self.run_name),
+                         pjoin(self.me_dir, 'HTML',self.run_name, 'plots_parton.html')
+                         )
         
         os.system('gzip -f %s/%s_unweighted_events.lhe' % 
                                   (pjoin(self.me_dir, 'Events'), self.run_name))
@@ -3252,7 +3258,7 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
                             cwd=pjoin(self.me_dir, 'Events'))
         
     ############################################################################
-    def create_plot(self, mode='parton', event_path=None):
+    def create_plot(self, mode='parton', event_path=None, output=None):
         """create the plot""" 
 
         madir = self.configuration['madanalysis_path']
@@ -3280,6 +3286,8 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
                               'plots_delphes_%s.html' % tag) 
             else:
                 raise self.InvalidCmd, 'Invalid mode %s' % mode
+
+            
             
         if not os.path.exists(event_path):
             raise self.InvalidCmd, 'Events file %s does not exits' % event_path
