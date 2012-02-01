@@ -360,7 +360,7 @@ class RunResults(list):
     def __init__(self, run_name, run_card, process, path):
         """initialize the object"""
         
-        self.info = {'run_name': run_name}
+        self.info = {'run_name': run_name,'me_dir':path}
         self.tags = []
         # Set the collider information
         data = process.split('>',1)[0].split()
@@ -409,6 +409,7 @@ class RunResults(list):
         """ % dico
 
         if self.web:
+            
             text = text % self.info
 
 
