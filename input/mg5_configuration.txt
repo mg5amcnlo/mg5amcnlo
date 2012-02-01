@@ -14,7 +14,9 @@
 ################################################################################
 #
 # This File contains some configuration variable for MadGraph/MadEvent
-# This File is use if the file ~/.mg5/mg5_configuration.txt is not present.
+# This File is use if the file ~/.mg5/mg5_configuration.txt is NOT present.
+# If you place this files in ~/.mg5/mg5_configuration.txt then all path should
+# be absolute.
 #
 ################################################################################
 

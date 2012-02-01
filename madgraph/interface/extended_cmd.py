@@ -21,6 +21,7 @@ import os
 import pydoc
 import signal
 import subprocess
+import sys
 import traceback
 try:
     import readline
@@ -72,14 +73,23 @@ class BasicCmd(cmd.Cmd):
                 continue
             name = name.replace(' ', '_')
             valid += 1
-            out.append(opt[0]+'@@'+name+'@@')
+            out.append(opt[0].rstrip()+'@@'+name+'@@')
+            # Remove duplicate
+            d = {}
+            for x in opt:
+                d[x] = 1    
+            opt = list(d.keys())
+            opt.sort()
             out += opt
+
+            
         if valid == 1:
             out = out[1:]
         return out
 
     def print_suggestions(self, substitution, matches, longest_match_length) :
         """print auto-completions by category"""
+        longest_match_length += len(self.completion_prefix)
         try:
             if len(matches) == 1:
                 self.stdout.write(matches[0]+' ')
@@ -95,10 +105,12 @@ class BasicCmd(cmd.Cmd):
                         category = category.replace('_',' ')
                         self.stdout.write('\n %s:\n%s\n' % (category, '=' * (len(category)+2)))
                         start = 0
+                        pos = 0
                         continue
                     elif pos and pos % nb_column ==0:
                         self.stdout.write('\n')
-                    self.stdout.write(val + ' ' * (longest_match_length +1 -len(val)))
+                    self.stdout.write(self.completion_prefix + val + \
+                                      ' ' * (longest_match_length +1 -len(val)))
                     pos +=1
                 self.stdout.write('\n')
             else:
@@ -107,7 +119,8 @@ class BasicCmd(cmd.Cmd):
                 for i,val in enumerate(matches):
                     if i and i%nb_column ==0:
                         self.stdout.write('\n')
-                    self.stdout.write(val + ' ' * (longest_match_length +1 -len(val)))
+                    self.stdout.write(self.completion_prefix + val + \
+                                     ' ' * (longest_match_length +1 -len(val)))
                 self.stdout.write('\n')
     
             self.stdout.write(self.prompt+readline.get_line_buffer())
@@ -139,6 +152,66 @@ class BasicCmd(cmd.Cmd):
             except:
                 cr = (25, 80)
         return int(cr[1])
+    
+    def complete(self, text, state):
+        """Return the next possible completion for 'text'.
+         If a command has not been entered, then complete against command list.
+         Otherwise try to call complete_<command> to get list of completions.
+        """
+        if state == 0:
+            import readline
+            origline = readline.get_line_buffer()
+            line = origline.lstrip()
+            stripped = len(origline) - len(line)
+            begidx = readline.get_begidx() - stripped
+            endidx = readline.get_endidx() - stripped
+            
+            if ';' in line:
+                begin, line = line.rsplit(';',1)
+                begidx = begidx - len(begin) - 1
+                endidx = endidx - len(begin) - 1
+                if line[:begidx] == ' ' * begidx:
+                    begidx=0
+
+            if begidx>0:
+                cmd, args, foo = self.parseline(line)
+                if cmd == '':
+                    compfunc = self.completedefault
+                else:
+                    try:
+                        compfunc = getattr(self, 'complete_' + cmd)
+                    except AttributeError:
+                        compfunc = self.completedefault
+            else:
+                compfunc = self.completenames
+            # correct wrong splitting with '-'
+            if line and line[begidx-1] == '-':
+             try:    
+                Ntext = line.split()[-1]
+                self.completion_prefix = Ntext.rsplit('-',1)[0] +'-'
+                to_rm = len(self.completion_prefix)
+                Nbegidx = len(line.rsplit(None, 1)[0])
+                data = compfunc(Ntext, line, Nbegidx, endidx)
+                self.completion_matches = [p[to_rm:] for p in data 
+                                              if len(p)>to_rm]
+             except Exception, error:
+                 print error
+            else:
+                self.completion_prefix = ''
+                self.completion_matches = compfunc(text, line, begidx, endidx)
+        #print self.completion_matches
+
+        self.completion_matches = [ (l[-1] in [' ','@','=',os.path.sep] 
+                      and l or (l+' ')) for l in self.completion_matches if l]
+        
+        try:
+            return self.completion_matches[state]
+        except IndexError, error:
+            #if __debug__:
+            #    print '\n Completion ERROR:'
+            #    print error
+            #    print '\n'
+            return None    
 
 class Cmd(BasicCmd):
     """Extension of the cmd.Cmd command line.
@@ -196,10 +269,15 @@ class Cmd(BasicCmd):
 
         # Update the history of this suite of command,
         # except for useless commands (empty history and help calls)
-        if line != "history" and \
-            not line.startswith('help') and \
-            not line.startswith('#*'):
-            self.history.append(line)
+        if ';' in line: 
+            lines = line.split(';')
+        else:
+            lines = [line]
+        for l in lines:
+            l = l.strip()
+            if not (l.startswith("history") or l.startswith('help') or \
+                                                            l.startswith('#*')):
+                self.history.append(l)
 
         # Check if we are continuing a line:
         if self.save_line:
@@ -234,7 +312,13 @@ class Cmd(BasicCmd):
         os.chdir(self.__initpos)
         # Create the debug files
         self.log = False
-        cmd.Cmd.onecmd(self, 'history %s' % self.debug_output)
+        if os.path.exists(self.debug_output):
+            os.remove(self.debug_output)
+        try:
+            cmd.Cmd.onecmd(self, 'history %s' % self.debug_output)
+        except Exception, error:
+            print error
+            
         debug_file = open(self.debug_output, 'a')
         traceback.print_exc(file=debug_file)
         # Create a nice error output
@@ -249,6 +333,13 @@ class Cmd(BasicCmd):
                                             str(error).replace('\n','\n\t'))
         error_text += self.error_debug % {'debug': self.debug_output}
         logger_stderr.critical(error_text)
+                
+        # Add options status to the debug file
+        try:
+            self.do_display('options', debug_file)
+        except Exception, error:
+            debug_file.write('Fail to write options with error %s' % error)
+        
         #stop the execution if on a non interactive mode
         if self.use_rawinput == False:
             return True 
@@ -292,11 +383,18 @@ class Cmd(BasicCmd):
         error_text += '%s : %s' % (error.__class__.__name__,
                                                 str(error).replace('\n','\n\t'))
         logger_stderr.error(error_text)
+        
+        # Add options status to the debug file
+        try:
+            self.do_display('options', debug_file)
+        except Exception, error:
+            debug_file.write('Fail to write options with error %s' % error)
         #stop the execution if on a non interactive mode                                
         if self.use_rawinput == False:
             return True
         # Remove failed command from history                                            
-        self.history.pop()
+        if self.history:
+            self.history.pop()
         return False
 
 
@@ -381,6 +479,17 @@ class Cmd(BasicCmd):
                 out.append(data)
         return out
 
+    def correct_splitting(line):
+        """if the line finish with a '-' the code splits in a weird way
+           on GNU_SPLITTING"""
+                
+        line = line.lstrip()
+        if line[-1] in [' ','\t']:
+            return '', line, len(line),len(enidx)
+        return text, line, begidx, endidx
+        
+        
+        
      
     # Write the list of command line use in this session
     def do_history(self, line):
@@ -780,7 +889,7 @@ class Cmd(BasicCmd):
             text+='\t %s \n' % option      
         print text
 
-    def do_display(self, line):
+    def do_display(self, line, output=sys.stdout):
         """Advanced commands: basic display"""
         
         args = self.split_arg(line)
@@ -791,10 +900,10 @@ class Cmd(BasicCmd):
             raise self.InvalidCmd, 'display require at least one argument'
         
         if args[0] == "options":
-            outstr = "Value of current MG5 Options:\n" 
+            outstr = "Value of current Options:\n" 
             for key, value in self.configuration.items() + self._options.items():
                 outstr += '%25s \t:\t%s\n' %(key,value)
-            print outstr
+            output.write(outstr)
             
         elif args[0] == "variable":
             outstr = "Value of Internal Variable:\n"
@@ -836,18 +945,6 @@ class Cmd(BasicCmd):
     def list_completion(text, list, line=''):
         """Propose completions of text in list"""
 
-        rm=0
-        if text:
-            line = line[:-len(text)]
-        
-        if line.endswith('-'):
-            if line.endswith('--'):
-                rm += 2
-                text =  '--%s' % text 
-            else:
-                rm += 1
-                text =  '-%s' % text
-        
         if not text:
             completions = list
         else:
@@ -855,13 +952,8 @@ class Cmd(BasicCmd):
                             for f in list
                             if f.startswith(text)
                             ]
-        def put_space(name, rm): 
-            if name.endswith(' '): 
-                return name
-            else:
-                return '%s ' % name[rm:] 
             
-        return [put_space(name, rm) for name in completions] 
+        return completions
             
 
     @staticmethod

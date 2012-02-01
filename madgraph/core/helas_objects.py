@@ -3649,10 +3649,10 @@ class HelasMatrixElement(base_objects.PhysicsObject):
         return self.generate_color_amplitudes(self['color_basis'],self['diagrams'])
 
     def get_used_lorentz(self):
-        """Return a list of (lorentz_name, conjugate, outgoing) with
+        """Return a list of (lorentz_name, conjugate_tag, outgoing) with
         all lorentz structures used by this HelasMatrixElement."""
 
-        return [(tuple(wa.get('lorentz')), tuple(wa.get_conjugate_index()),
+        return [(tuple(wa.get('lorentz')), tuple(['C%s' % w for w in wa.get_conjugate_index()]),
                  wa.find_outgoing_number()) for wa in \
                 self.get_all_wavefunctions() + self.get_all_amplitudes() \
                 if wa.get('interaction_id') != 0]

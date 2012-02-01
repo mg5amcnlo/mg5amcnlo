@@ -236,9 +236,9 @@ class TestParamWrittingWithRestrict(unittest.TestCase):
         self.assertEqual(len(checked_mass), 1)       
         
         if checked_mass[0] == 23:
-            self.assertEqual(self.writter.param_dict['MH'].expr, 'MZ')
+            self.assertEqual(self.writter.param_dict['MH'].expr, '1*MZ')
         if checked_mass[0] == 25:
-            self.assertEqual(self.writter.param_dict['MZ'].expr, 'MH')
+            self.assertEqual(self.writter.param_dict['MZ'].expr, '1*MH')
         
         
     def test_full_write(self):
@@ -253,7 +253,7 @@ class TestParamWrittingWithRestrict(unittest.TestCase):
                 'Block mass ',
                 '    6 1.720000e+02 # MT ',
                 '   15 1.777000e+00 # MTA ',
-                '   23 9.118800e+01 # set of param :MZ, MH ',
+                '   23 9.118800e+01 # set of param :1*MZ, 1*MH ',
                 '##  Not dependent paramater.',
                 '## Those values should be edited following the ',
                 '## analytical expression. MG5 ignore those values ',
@@ -292,7 +292,7 @@ class TestParamWrittingWithRestrict(unittest.TestCase):
                 '###################################',
                 '## INFORMATION FOR DECAY',
                 '###################################',
-                'DECAY  23 2.441404e+00 # set of param :WZ, WH ',
+                'DECAY  23 2.441404e+00 # set of param :1*WZ, 1*WH ',
                 'DECAY  24 3.000000e+00 # WW ',
                 '##  Not dependent paramater.',
                 '## Those values should be edited following the ',

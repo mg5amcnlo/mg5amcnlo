@@ -40,14 +40,14 @@ class ExtLauncher(object):
     
     force = False
     
-    def __init__(self, running_dir, card_dir='', timeout=None,
+    def __init__(self, cmd, running_dir, card_dir='', timeout=None,
                  **options):
         """ initialize an object """
         
         self.running_dir = running_dir
         self.card_dir = os.path.join(self.running_dir, card_dir)
         self.timeout = timeout
-        
+        self.cmd_int = cmd
         #include/overwrite options
         for key,value in options.items():
             setattr(self, key, value)
@@ -91,7 +91,7 @@ class ExtLauncher(object):
         """nice handling of question"""
      
         if not self.force:
-            return cmd.Cmd().ask(question, default, choices=choices, path_msg=path_msg,
+            return self.cmd_int.ask(question, default, choices=choices, path_msg=path_msg,
                                timeout=self.timeout, fct_timeout=self.timeout_fct)
         else:
             return str(default)
@@ -132,10 +132,10 @@ class ExtLauncher(object):
 class SALauncher(ExtLauncher):
     """ A class to launch a simple Standalone test """
     
-    def __init__(self, running_dir, timeout, **options):
+    def __init__(self, cmd_int, running_dir, timeout, **options):
         """ initialize the StandAlone Version"""
         
-        ExtLauncher.__init__(self, running_dir, './Cards', timeout, **options)
+        ExtLauncher.__init__(self, cmd_int, running_dir, './Cards', timeout, **options)
         self.cards = ['param_card.dat']
 
     
@@ -158,8 +158,7 @@ class MELauncher(ExtLauncher):
     def __init__(self, running_dir, timeout, cmd_int , unit='pb', **option):
         """ initialize the StandAlone Version"""
 
-        super(MELauncher,self).__init__(running_dir, './Cards', timeout, **option)
-        #self.executable = os.path.join('.', 'bin','generate_events')
+        ExtLauncher.__init__(self, cmd_int, running_dir, './Cards', timeout, **option)
 
         assert hasattr(self, 'cluster')
         assert hasattr(self, 'multicore')
@@ -167,7 +166,6 @@ class MELauncher(ExtLauncher):
         assert hasattr(self, 'shell')
 
         self.unit = unit
-        self.cmd_int = cmd_int
         
         if self.cluster:
             self.cluster = 1
@@ -204,13 +202,30 @@ class MELauncher(ExtLauncher):
         import madgraph.interface.madevent_interface as ME
         
         if self.shell:
-            usecmd = ME.MadEventCmdShell
+            usecmd = ME.MadEventCmdShell(me_dir=self.running_dir)
         else:
-            usecmd = ME.MadEventCmd
+            usecmd = ME.MadEventCmd(me_dir=self.running_dir)
+        
+        #Check if some configuration were overwritten by a command. If so use it    
+        set_cmd = [l for l in self.cmd_int.history if l.strip().startswith('set')]
+        for line in set_cmd:
+            try:
+                usecmd.exec_cmd(line)
+            except:
+                pass
         launch = self.cmd_int.define_child_cmd_interface(
-                     usecmd(me_dir=self.running_dir), interface=False)
+                     usecmd, interface=False)
         #launch.me_dir = self.running_dir
-        command = 'generate_events %s' % self.name
+        if self.unit == 'pb':
+            command = 'generate_events %s' % self.name
+        else:
+            warning_text = '''\
+This command will create a new param_card with the computed width. 
+This param_card makes sense only if you include all processes for
+the computation of the width.'''
+            logger.warning(warning_text)
+
+            command = 'calculate_decay_widths %s' % self.name
         if mode == "1":
             command += " --cluster"
         elif mode == "2":
@@ -252,11 +267,11 @@ class MELauncher(ExtLauncher):
 class Pythia8Launcher(ExtLauncher):
     """A class to launch Pythia8 run"""
     
-    def __init__(self, running_dir, timeout, **option):
+    def __init__(self, running_dir, timeout, cmd_int, **option):
         """ initialize launching Pythia 8"""
 
         running_dir = os.path.join(running_dir, 'examples')
-        ExtLauncher.__init__(self, running_dir, '.', timeout, **option)
+        ExtLauncher.__init__(self, cmd_int, running_dir, '.', timeout, **option)
         self.cards = []
     
     def prepare_run(self):

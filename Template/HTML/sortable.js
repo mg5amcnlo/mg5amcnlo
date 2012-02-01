@@ -2,17 +2,14 @@
 Table sorting script  by Joost de Valk, check it out at http://www.joostdevalk.nl/code/sortable-table/.
 Based on a script from http://www.kryogenix.org/code/browser/sorttable/.
 Distributed under the MIT license: http://www.kryogenix.org/code/browser/licence.html .
+Modify by the MG team for compatibility issue
 
 Copyright (c) 1997-2007 Stuart Langridge, Joost de Valk.
 
 Version 1.5.7
 */
 
-/* You can change these values */
-var image_path = "http://www.joostdevalk.nl/code/sortable-table/";
-var image_up = "arrowup.gif";
-var image_down = "arrowdown.gif";
-var image_none = "arrownone.gif";
+/* You can change these values */ 
 var europeandate = true;
 var alternate_row_colors = true;
 
@@ -30,6 +27,18 @@ function sortables_init() {
 		thisTbl = tbls[ti];
 		if (((' '+thisTbl.className+' ').indexOf("sortable") != -1) && (thisTbl.id)) {
 			ts_makeSortable(thisTbl);
+			// make it sortable according to the second column
+			if (thisTbl.tHead && thisTbl.tHead.rows.length > 0) {
+			    var firstRow = thisTbl.tHead.rows[thisTbl.tHead.rows.length-1];
+			} else {
+			    var firstRow = thisTbl.rows[0];
+			}
+
+			for (var ci=0;ci<firstRow.cells[1].childNodes.length;ci++) {
+			    if (firstRow.cells[1].childNodes[ci].tagName && firstRow.cells[1].childNodes[ci].tagName.toLowerCase() == 'a') var lnk = firstRow.cells[1].childNodes[ci];
+			}
+                        ts_resortTable(lnk, 1); //order by cross-section
+                        ts_resortTable(lnk, 1); //order by cross-section
 		}
 	}
 }
@@ -50,7 +59,7 @@ function ts_makeSortable(t) {
 		var cell = firstRow.cells[i];
 		var txt = ts_getInnerText(cell);
 		if (cell.className != "unsortable" && cell.className.indexOf("unsortable") == -1) {
-			cell.innerHTML = '<a href="#" class="sortheader" onclick="ts_resortTable(this, '+i+');return false;">'+txt+'<span class="sortarrow">&nbsp;&nbsp;<img src="'+ image_path + image_none + '" alt="&darr;"/></span></a>';
+			cell.innerHTML = '<a href="#" class="sortheader" onclick="ts_resortTable(this, '+i+');return false;">'+txt+'<span class="sortarrow"></span></a>';
 		}
 	}
 	if (alternate_row_colors) {
@@ -106,6 +115,7 @@ function ts_resortTable(lnk, clid) {
 	if (itm.match(/^\d\d[\/\.-]\d\d[\/\.-]\d\d\d{2}?$/)) sortfn = ts_sort_date;
 	if (itm.match(/^-?[£$€Û¢´]\d/)) sortfn = ts_sort_numeric;
 	if (itm.match(/^-?(\d+[,\.]?)+(E[-+][\d]+)?%?$/)) sortfn = ts_sort_numeric;
+	if (itm.match(/^-?(\d+[,\.]?\d+e[-+][\d]+)?%?$/)) sortfn = ts_sort_numeric;
 	if (itm.match(/^-?(\d+[,\.]?)+([\d]+)?%?$/)) sortfn = ts_sort_numeric;
 	SORT_COLUMN_INDEX = column;
 	var firstRow = new Array();
@@ -130,11 +140,11 @@ function ts_resortTable(lnk, clid) {
 	}
 	newRows.sort(sortfn);
 	if (span.getAttribute("sortdir") == 'down') {
-			ARROW = '&nbsp;&nbsp;<img src="'+ image_path + image_down + '" alt="&darr;"/>';
+			ARROW = '&nbsp;&nbsp;&darr;';
 			newRows.reverse();
 			span.setAttribute('sortdir','up');
 	} else {
-			ARROW = '&nbsp;&nbsp;<img src="'+ image_path + image_up + '" alt="&uarr;"/>';
+			ARROW = '&nbsp;&nbsp;&uarr;';
 			span.setAttribute('sortdir','down');
 	} 
     // We appendChild rows that already exist to the tbody, so it moves them rather than creating new ones
@@ -154,7 +164,7 @@ function ts_resortTable(lnk, clid) {
 	for (var ci=0;ci<allspans.length;ci++) {
 		if (allspans[ci].className == 'sortarrow') {
 			if (getParent(allspans[ci],"table") == getParent(lnk,"table")) { // in the same table as us?
-				allspans[ci].innerHTML = '&nbsp;&nbsp;<img src="'+ image_path + image_none + '" alt="&darr;"/>';
+				allspans[ci].innerHTML = '';
 			}
 		}
 	}		
@@ -235,7 +245,7 @@ function ts_sort_date(a,b) {
 }
 function ts_sort_numeric(a,b) {
 	var aa = ts_getInnerText(a.cells[SORT_COLUMN_INDEX]);
-	aa = clean_num(aa);
+        aa = clean_num(aa);
 	var bb = ts_getInnerText(b.cells[SORT_COLUMN_INDEX]);
 	bb = clean_num(bb);
 	return compare_numeric(aa,bb);
@@ -269,6 +279,7 @@ function ts_sort_default(a,b) {
 	}
 	return 1;
 }
+
 function addEvent(elm, evType, fn, useCapture)
 // addEvent and removeEvent
 // cross-browser event handling for IE5+,	NS6 and Mozilla
@@ -285,7 +296,7 @@ function addEvent(elm, evType, fn, useCapture)
 	}
 }
 function clean_num(str) {
-	str = str.replace(new RegExp(/[^-?0-9.]/g),"");
+	str = str.replace(new RegExp(/[^-?0-9.eE]/g),"");
 	return str;
 }
 function trim(s) {

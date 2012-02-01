@@ -56,6 +56,7 @@ try:
     import madgraph.various.gen_crossxhtml as gen_crossxhtml
     import madgraph.various.cluster as cluster
     import madgraph.various.sum_html as sum_html
+    import madgraph.various.banner as banner_mod
     import models.check_param_card as check_param_card    
     from madgraph import InvalidCmd, MadGraph5Error
     MADEVENT = False
@@ -64,6 +65,7 @@ except Exception, error:
         print error
     # import from madevent directory
     import internal.extended_cmd as cmd
+    import internal.banner as banner_mod
     import internal.misc as misc    
     from internal import InvalidCmd, MadGraph5Error
     import internal.files as files
@@ -228,11 +230,16 @@ class CmdExtended(cmd.Cmd):
                 self.results.current and 'run_name' in self.results.current and \
                 hasattr(self, 'me_dir'):
             name = self.results.current['run_name']
-            self.debug_output = pjoin(self.me_dir, '%s_debug.log' % name)
+            tag = self.results.current['tag']
+            self.debug_output = pjoin(self.me_dir, '%s_%s_debug.log' % (name,tag))
             self.results.current.debug = self.debug_output
         else:
             #Force class default
             self.debug_output = MadEventCmd.debug_output
+        if os.path.exists('ME5_debug') and not 'ME5_debug' in self.debug_output:
+            os.remove('ME5_debug')
+        if not 'ME5_debug' in self.debug_output:
+            os.system('ln -s %s ME5_debug &> /dev/null' % self.debug_output)
 
     
     def nice_user_error(self, error, line):
@@ -332,7 +339,7 @@ class HelpToCmd(object):
                                self._survey_options.items()])
         
     def help_refine(self):
-        logger.info("syntax: refine require_precision [max_channel] [run_name] [--run_options]")
+        logger.info("syntax: refine require_precision [max_channel] [--run_options]")
         logger.info("-- refine the LAST run to achieve a given precision.")
         logger.info("   require_precision: can be either the targeted number of events")
         logger.info('                      or the required relative error')
@@ -341,15 +348,23 @@ class HelpToCmd(object):
         
     def help_combine_events(self):
         """ """
-        logger.info("syntax: combine_events [run_name] [--run_options]")
+        logger.info("syntax: combine_events [--run_options]")
         logger.info("-- Combine the last run in order to write the number of events")
         logger.info("   require in the run_card.")
         self.run_options_help([])
 
-    def help_combine_events(self):
+    def help_store_events(self):
         """ """
-        logger.info("syntax: store_events [run_name] [--run_options]")
+        logger.info("syntax: store_events [--run_options]")
         logger.info("-- Write physically the events in the files.")
+        logger.info("   should be launch after \'combine_events\'")
+        self.run_options_help([])
+
+    def help_create_gridpack(self):
+        """ """
+        logger.info("syntax: create_gridpack [--run_options]")
+        logger.info("-- create the gridpack. ")
+        logger.info("   should be launch after \'store_events\'")
         self.run_options_help([])
 
     def help_import(self):
@@ -369,11 +384,11 @@ class HelpToCmd(object):
         logger.info("   -f options: answer all question by default.")
         
     def help_remove(self):
-        logger.info("syntax: remove RUN [all|parton|pythia|pgs|delphes] [-f]")
+        logger.info("syntax: remove RUN [all|parton|pythia|pgs|delphes|banner] [-f] [--tag=]")
         logger.info("-- Remove all the files linked to previous run RUN")
         logger.info("   if RUN is 'all', then all run will be cleaned.")
         logger.info("   The optional argument precise which part should be cleaned.")
-        logger.info("   By default we clean all the related files but the banner.")
+        logger.info("   By default we clean all the related files but the banners.")
         logger.info("   the optional '-f' allows to by-pass all security question")
         logger.info("   The banner can be remove only if all files are removed first.")
 
@@ -381,18 +396,21 @@ class HelpToCmd(object):
         logger.info("syntax: pythia [RUN] [--run_options]")
         logger.info("-- run pythia on RUN (current one by default)")
         self.run_options_help([('-f','answer all question by default'),
+                               ('-tag=', 'define the tag for the pythia run'),
                                ('--no_default', 'not run if pythia_card not present')])        
                 
     def help_pgs(self):
         logger.info("syntax: pgs [RUN] [--run_options]")
         logger.info("-- run pgs on RUN (current one by default)")
         self.run_options_help([('-f','answer all question by default'),
+                               ('-tag=', 'define the tag for the pgs run'),
                                ('--no_default', 'not run if pgs_card not present')]) 
 
     def help_delphes(self):
         logger.info("syntax: delphes [RUN] [--run_options]")
         logger.info("-- run delphes on RUN (current one by default)")
         self.run_options_help([('-f','answer all question by default'),
+                               ('-tag=', 'define the tag for the delphes run'),
                                ('--no_default', 'not run if delphes_card not present')]) 
        
 #===============================================================================
@@ -408,30 +426,45 @@ class CheckValidForCmd(object):
             self.help_banner_run()
             raise self.InvalidCmd('banner_run reauires at least one argument.')
         
+        tag = [a[6:] for a in args if a.startswith('--tag=')]
+        
+        
         if os.path.exists(args[0]):
             type ='banner'
             format = self.detect_card_type(args[0])
             if format != 'banner':
                 raise self.InvalidCmd('The file is not a valid banner.')
-        elif os.path.exists(pjoin(self.me_dir,'Events','%s_banner.txt' % args[0])):
-            name = args[0]
-            args[0] = pjoin(self.me_dir,'Events','%s_banner.txt')
-            type = 'run'
+        elif tag:
+            args[0] = pjoin(self.me_dir,'Events', args[0], '%s_%s_banner.txt' % \
+                                    (args[0], tag))                  
+            if not os.path.exists(args[0]):
+                raise self.InvalidCmd('No banner associates to this name and tag.')
         else:
-            raise self.InvalidCmd('No banner associates to this name.')
-            
-        run_name = [arg[7:] for arg in args if arg.startswith('--name')]
+            name = args[0]
+            type = 'run'
+            banners = glob.glob(pjoin(self.me_dir,'Events', args[0], '*_banner.txt'))
+            if not banners:
+                raise self.InvalidCmd('No banner associates to this name.')    
+            elif len(banners) == 1:
+                args[0] = banners[0]
+            else:
+                #list the tag and propose those to the user
+                tags = [os.path.basename(p)[len(args[0])+1:-11] for p in banners]
+                tag = self.ask('which tag do you want to use?', tags[0], tags)
+                args[0] = pjoin(self.me_dir,'Events', args[0], '%s_%s_banner.txt' % \
+                                    (args[0], tag))                
+                        
+        run_name = [arg[7:] for arg in args if arg.startswith('--name=')]
         if run_name:
             try:
-                os.exec_cmd('remove %s all' % run_name)
+                os.exec_cmd('remove %s all banner' % run_name)
             except:
                 pass
-            self.set_run_name(args[0], True)
+            self.set_run_name(args[0], tag=None, level='parton', reload_card=True)
         elif type == 'banner':
             self.set_run_name(self.find_available_run_name(self.me_dir))
         elif type == 'run':
-            data = glob.glob(pjoin(self.me_dir, 'Events', '%s_*' % name))
-            if len(data) > 1:
+            if os.path.exists(pjoin(self.me_dir, 'Events', name)):
                 run_name = self.find_available_run_name(self.me_dir)
                 logger.info('Run %s is not empty so will use run_name: %s' % \
                                                                (name, run_name))
@@ -439,7 +472,6 @@ class CheckValidForCmd(object):
             else:
                 self.set_run_name(name)
             
-
     def check_history(self, args):
         """check the validity of line"""
         
@@ -537,7 +569,7 @@ class CheckValidForCmd(object):
             # No run name assigned -> assigned one automaticaly 
             self.set_run_name(self.find_available_run_name(self.me_dir))
         else:
-            self.set_run_name(args[0], True)
+            self.set_run_name(args[0], None,'parton', True)
             args.pop(0)
             
         return True
@@ -634,19 +666,22 @@ class CheckValidForCmd(object):
     def check_refine(self, args):
         """check that the argument for survey are valid"""
 
-        # if last argument is not a number -> it's the run_name
+        # if last argument is not a number -> it's the run_name (Not allow anymore)
         try:
             float(args[-1])
         except ValueError:
-            self.set_run_name(args[-1])
-            del args[-1]
+            self.help_refine()
+            raise self.InvalidCmd('Not valid arguments')
         except IndexError:
             self.help_refine()
             raise self.InvalidCmd('require_precision argument is require for refine cmd')
 
     
         if not self.run_name:
-            raise self.InvalidCmd('No run_name currently define. Impossible to run refine')
+            if self.results.lastrun:
+                self.set_run_name(self.results.lastrun)
+            else:
+                raise self.InvalidCmd('No run_name currently define. Impossible to run refine')
 
         if len(args) > 2:
             self.help_refine()
@@ -663,11 +698,15 @@ class CheckValidForCmd(object):
     def check_combine_events(self, arg):
         """ Check the argument for the combine events command """
         
-        if len(arg) >1:
+        if len(arg):
             self.help_combine_events()
             raise self.InvalidCmd('Too many argument for combine_events command')
         
-        if len(arg):
+        if not self.run_name:
+            if not self.results.lastrun:
+                raise self.InvalidCmd('No run_name currently define. Impossible to run combine')
+            else:
+                self.set_run_name(self.results.lastrun)
             self.set_run_name(arg[0])
         
         return True
@@ -679,7 +718,7 @@ class CheckValidForCmd(object):
         """
         
         mode = None
-        laststep = [arg for arg in args if arg.startswith('--lastep=')]
+        laststep = [arg for arg in args if arg.startswith('--laststep=')]
         if laststep and len(laststep)==1:
             mode = laststep[0].split('=')[-1]
             if mode not in ['auto', 'pythia', 'pgs', 'delphes']:
@@ -688,15 +727,27 @@ class CheckValidForCmd(object):
         elif laststep:
             raise self.InvalidCmd('only one laststep argument is allowed')
      
+        tag = [a for a in args if a.startswith('--tag=')]
+        if tag: 
+            args.remove(tag[0])
+            tag = tag[0][6:]
+     
         if len(args) == 0 and not self.run_name:
-            self.help_pythia()
-            raise self.InvalidCmd('No run name currently define. Please add this information.')             
+            if self.results.lastrun:
+                args.insert(0, self.results.lastrun)
+            else:
+                raise self.InvalidCmd('No run name currently define. Please add this information.')             
         
         if len(args) == 1:
             if args[0] != self.run_name and\
              not os.path.exists(pjoin(self.me_dir,'Events',args[0], 'unweighted_events.lhe.gz')):
                 raise self.InvalidCmd('No events file corresponding to %s run. '% args[0])
-            self.set_run_name(args[0])
+            self.set_run_name(args[0], tag, 'pythia')
+        else:
+            if tag:
+                self.run_card['run_tag'] = tag
+            self.set_run_name(self.run_name, tag, 'pythia')
+            
 
         if  not os.path.exists(pjoin(self.me_dir,'Events',self.run_name,'unweighted_events.lhe.gz')):
             raise self.InvalidCmd('No events file corresponding to %s run. '% self.run_name)
@@ -724,19 +775,34 @@ class CheckValidForCmd(object):
     def check_remove(self, args):
         """Check that the remove command is valid"""
 
+        tmp_args = args[:]
 
-        if len(args) == 0:
+        tag = [a[6:] for a in tmp_args if a.startswith('--tag=')]
+        if tag:
+            tag = tag[0]
+            tmp_args.remove('--tag=%s' % tag)
+
+        try:
+            tmp_args.remove('-f')
+        except:
+            pass
+        else:
+            if args[0] == '-f':
+                args.pop(0)
+                args.append('-f')
+
+        if len(tmp_args) == 0:
             self.help_clean()
             raise self.InvalidCmd('clean command require the name of the run to clean')
-        elif len(args) == 1:
-            args.append('all')
+        elif len(tmp_args) == 1:
+            return tmp_args[0], tag, ['all']
         else:
-            for arg in args[1:]:
+            for arg in tmp_args[1:]:
                 if arg not in self._clean_mode and arg != '-f':
                     self.help_clean()
                     raise self.InvalidCmd('%s is not a valid options for clean command'\
                                               % arg)
-
+            return tmp_args[0], tag, tmp_args[1:]
 
     def check_plot(self, args):
         """Check the argument for the plot command
@@ -809,11 +875,19 @@ class CheckValidForCmd(object):
             error_msg = 'No pythia-pgs path correctly set.'
             error_msg += 'Please use the set command to define the path and retry.'
             error_msg += 'You can also define it in the configuration file.'
-            raise self.InvalidCmd(error_msg)  
-                  
+            raise self.InvalidCmd(error_msg)          
+        
+        tag = [a for a in arg if a.startswith('--tag=')]
+        if tag: 
+            arg.remove(tag[0])
+            tag = tag[0][6:]
+        
+        
         if len(arg) == 0 and not self.run_name:
-            self.help_pgs()
-            raise self.InvalidCmd('No run name currently define. Please add this information.')             
+            if self.results.lastrun:
+                args.insert(0, self.results.lastrun)
+            else:
+                raise self.InvalidCmd('No run name currently define. Please add this information.')             
         
         if len(arg) == 1 and self.run_name == arg[0]:
             arg.pop(0)
@@ -825,13 +899,19 @@ class CheckValidForCmd(object):
             Please specify a valid run_name''')
                               
         if len(arg) == 1:
-            self.set_run_name(arg[0])
-            if  not os.path.exists(pjoin(self.me_dir,'Events',self.run_name,'%s_pythia_events.hep.gz' % self.run_card['run_tag'])):
-                raise self.InvalidCmd('No events file corresponding to %s run. '% self.run_name)
+            prev_tag = self.set_run_name(arg[0], tag, 'pgs')
+            if  not os.path.exists(pjoin(self.me_dir,'Events',self.run_name,'%s_pythia_events.hep.gz' % prev_tag)):
+                raise self.InvalidCmd('No events file corresponding to %s run with tag %s. '% (self.run_name, prev_tag))
             else:
-                input_file = pjoin(self.me_dir,'Events', self.run_name, '%s_pythia_events.hep.gz' % self.run_card['run_tag'])
+                input_file = pjoin(self.me_dir,'Events', self.run_name, '%s_pythia_events.hep.gz' % prev_tag)
                 output_file = pjoin(self.me_dir, 'Events', 'pythia_events.hep')
-                os.system('gunzip -c %s > %s' % (input_file, output_file))
+                self.launch_job('gunzip',stdout=open(output_file,'w'), 
+                                 argument=['-c', input_file], mode=2)
+        else:
+            if tag: 
+                self.run_card['run_tag'] = tag
+            self.set_run_name(self.run_name, tag, 'pgs')
+            
 
     def check_delphes(self, arg):
         """Check the argument for pythia command
@@ -849,10 +929,18 @@ class CheckValidForCmd(object):
             error_msg += 'Please use the set command to define the path and retry.'
             error_msg += 'You can also define it in the configuration file.'
             raise self.InvalidCmd(error_msg)  
+
+        tag = [a for a in arg if a.startswith('--tag=')]
+        if tag: 
+            arg.remove(tag[0])
+            tag = tag[0][6:]
+            
                   
         if len(arg) == 0 and not self.run_name:
-            self.help_delphes()
-            raise self.InvalidCmd('No run name currently define. Please add this information.')             
+            if self.results.lastrun:
+                args.insert(0, self.results.lastrun)
+            else:
+                raise self.InvalidCmd('No run name currently define. Please add this information.')             
         
         if len(arg) == 1 and self.run_name == arg[0]:
             arg.pop(0)
@@ -864,14 +952,20 @@ class CheckValidForCmd(object):
             Please specify a valid run_name''')
                               
         if len(arg) == 1:
-            self.set_run_name(arg[0])
-            if  not os.path.exists(pjoin(self.me_dir,'Events','%s_pythia_events.hep.gz' % self.run_name)):
-                raise self.InvalidCmd('No events file corresponding to %s run. '% self.run_name)
+            prev_tag = self.set_run_name(arg[0], tag, 'delphes')
+            if  not os.path.exists(pjoin(self.me_dir,'Events',self.run_name, '%s_pythia_events.hep.gz' % prev_tag)):
+                raise self.InvalidCmd('No events file corresponding to %s run with tag %s.:%s '\
+                    % (self.run_name, prev_tag, 
+                       pjoin(self.me_dir,'Events',self.run_name, '%s_pythia_events.hep.gz' % prev_tag)))
             else:
-                input_file = pjoin(self.me_dir,'Events', '%s_pythia_events.hep.gz' % self.run_name)
+                input_file = pjoin(self.me_dir,'Events', self.run_name, '%s_pythia_events.hep.gz' % prev_tag)
                 output_file = pjoin(self.me_dir, 'Events', 'pythia_events.hep')
-                os.system('gunzip -c %s > %s' % (input_file, output_file))
-
+                self.launch_job('gunzip',stdout=open(output_file,'w'), 
+                                 argument=['-c', input_file], mode=2)
+        else:
+            if tag:
+                self.run_card['run_tag'] = tag
+            self.set_run_name(self.run_name, tag, 'delphes')               
 
     def check_display(self, args):
         """check the validity of line
@@ -913,21 +1007,44 @@ class CompleteForCmd(CheckValidForCmd):
     def complete_banner_run(self, text, line, begidx, endidx):
        "Complete the banner run command"
        try:
+  
+        
         args = self.split_arg(line[0:begidx], error=False)
-        if len(args)==1:
-            comp = self.path_completion(text,
-                                        os.path.join('.',*[a for a in args \
-                                                    if a.endswith(os.path.sep)]))
-            run_list =  glob.glob(pjoin(self.me_dir, 'Events', '*_banner.txt'))
-            run_list = [n.rsplit('/',1)[1][:-11] for n in run_list]
-            comp += self.list_completion(text, run_list)
-            return comp
+        
         if args[-1].endswith(os.path.sep):
             return self.path_completion(text,
                                         os.path.join('.',*[a for a in args \
+                                                    if a.endswith(os.path.sep)]))        
+        
+        
+        if len(args) > 1:
+            # only options are possible
+            tags = glob.glob(pjoin(self.me_dir, 'Events' , args[1],'%s_*_banner.txt' % args[1]))
+            tags = ['%s' % os.path.basename(t)[len(args[1])+1:-11] for t in tags]
+
+            if args[-1] != '--tag=':
+                tags = ['--tag=%s' % t for t in tags]
+            else:
+                return self.list_completion(text, tags)
+            return self.list_completion(text, tags +['--name=','-f'], line)
+        
+        # First argument
+        possibilites = {} 
+
+        comp = self.path_completion(text, os.path.join('.',*[a for a in args \
                                                     if a.endswith(os.path.sep)]))
+        if os.path.sep in line:
+            return comp
+        else:
+            possibilites['Path from ./'] = comp
+
+        run_list =  glob.glob(pjoin(self.me_dir, 'Events', '*','*_banner.txt'))
+        run_list = [n.rsplit('/',2)[1] for n in run_list]
+        possibilites['RUN Name'] = self.list_completion(text, run_list)
+        
+        return self.deal_multiple_categories(possibilites)
     
-        return self.list_completion(text, ['--name=','-f'], line)
+        
        except Exception, error:
            print error
     def complete_history(self, text, line, begidx, endidx):
@@ -1009,7 +1126,9 @@ class CompleteForCmd(CheckValidForCmd):
     
     complete_refine = complete_survey
     complete_combine_events = complete_survey
+    complite_store = complete_survey
     complete_generate_events = complete_survey
+    complete_create_gridpack = complete_survey
     
     def complete_generate_events(self, text, line, begidx, endidx):
         """ Complete the generate events"""
@@ -1075,11 +1194,23 @@ class CompleteForCmd(CheckValidForCmd):
         """Complete the remove command """
      
         args = self.split_arg(line[0:begidx], error=False)
-        if len(args) > 1:
-            return self.list_completion(text, self._clean_mode + ['-f'])
+        if len(args) > 1 and (text.startswith('--t')):
+            run = args[1]
+            tags = ['--tag=%s' % tag['tag'] for tag in self.results[run]]
+            return self.list_completion(text, tags)
+        elif len(args) > 1 and '--' == args[-1]:
+            run = args[1]
+            tags = ['tag=%s' % tag['tag'] for tag in self.results[run]]
+            return self.list_completion(text, tags)
+        elif len(args) > 1 and '--tag=' == args[-1]:
+            run = args[1]
+            tags = [tag['tag'] for tag in self.results[run]]
+            return self.list_completion(text, tags)
+        elif len(args) > 1:
+            return self.list_completion(text, self._clean_mode + ['-f','--tag='])
         else:
-            data = glob.glob(pjoin(self.me_dir, 'Events', '*_banner.txt'))
-            data = [n.rsplit('/',1)[1].rsplit('_',1)[0] for n in data]
+            data = glob.glob(pjoin(self.me_dir, 'Events','*','*_banner.txt'))
+            data = [n.rsplit('/',2)[1] for n in data]
             return self.list_completion(text, ['all'] + data)
          
         
@@ -1089,35 +1220,37 @@ class CompleteForCmd(CheckValidForCmd):
         args = self.split_arg(line[0:begidx], error=False)
         if len(args) == 1:
             #return valid run_name
-            data = glob.glob(pjoin(self.me_dir, 'Events', '*_unweighted_events.lhe.gz'))
-            data = [n.rsplit('/',1)[1][:-25] for n in data]
+            data = glob.glob(pjoin(self.me_dir, 'Events', '*','unweighted_events.lhe.gz'))
+            data = [n.rsplit('/',2)[1] for n in data]
             tmp1 =  self.list_completion(text, data)
             if not self.run_name:
                 return tmp1
             else:
-                tmp2 = self.list_completion(text, self._run_options + ['-f', '--no_default'], line)
+                tmp2 = self.list_completion(text, self._run_options + ['-f', 
+                                                '--no_default', '--tag='], line)
                 return tmp1 + tmp2
         else:
-            return self.list_completion(text, self._run_options + ['-f', '--no_default'], line)
+            return self.list_completion(text, self._run_options + ['-f', 
+                                                 '--no_default','--tag='], line)
 
     def complete_pgs(self,text, line, begidx, endidx):
         "Complete the pythia command"
-        
         args = self.split_arg(line[0:begidx], error=False) 
-                
         if len(args) == 1:
             #return valid run_name
-            data = glob.glob(pjoin(self.me_dir, 'Events', '*_pythia_events.hep.gz'))
-            data = [n.rsplit('/',1)[1][:-21] for n in data]
+            data = glob.glob(pjoin(self.me_dir, 'Events', '*', '*_pythia_events.hep.gz'))
+            data = [n.rsplit('/',2)[1] for n in data]
             tmp1 =  self.list_completion(text, data)
             if not self.run_name:
                 return tmp1
             else:
-                tmp2 = self.list_completion(text, self._run_options + ['-f', '--no_default'], line)
+                tmp2 = self.list_completion(text, self._run_options + ['-f', 
+                                                '--tag=' ,'--no_default'], line)
                 return tmp1 + tmp2        
         else:
-            return self.list_completion(text, self._run_options + ['-f', '--no_default'], line)
-    
+            return self.list_completion(text, self._run_options + ['-f', 
+                                                 '--tag=','--no_default'], line)
+
     complete_delphes = complete_pgs        
 
 
@@ -1201,6 +1334,8 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
       
         self.to_store = []
         self.run_name = None
+        self.run_tag = None
+        self.banner = None
 
         # Get number of initial states
         nexternal = open(pjoin(me_dir,'Source','nexternal.inc')).read()
@@ -1224,6 +1359,7 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
             process = self.process # define in find_model_name
             self.results = gen_crossxhtml.AllResults(model, process, self.me_dir)
         self.results.def_web_mode(self.web)
+
         
         self.configured = 0 # time for reading the card
         self._options = {} # for compatibility with extended_cmd
@@ -1357,10 +1493,8 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
             elif key.startswith('cluster'):
                 pass              
             elif key == 'automatic_html_opening':
-                if self.configuration[key] == 'False':
-                    self.open_crossx = False
-                else:
-                    self.open_crossx = True
+                if self.configuration[key] in ['False', 'True']:
+                    self.configuration[key] =eval(self.configuration[key])
             elif key not in ['text_editor','eps_viewer','web_browser']:
                 # Default: try to set parameter
                 try:
@@ -1385,18 +1519,21 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
             force = True
         else:
             force = False     
- 
-        # Split the banner
-        if MADEVENT:
-            import internal.splitbanner as splitbanner
-        else:
-            import madgraph.various.splitbanner as splitbanner
-            
-        splitbanner.split_banner(args[0], self.me_dir)
+             
+        banner_mod.split_banner(args[0], self.me_dir, proc_card=False)
+        
+        # Remove previous cards
+        for name in ['delphes_trigger.dat', 'delphes_card.dat',
+                     'pgs_card.dat', 'pythia_card.dat']:
+            try:
+                os.remove(pjoin(self.me_dir, 'Cards', name))
+            except:
+                pass
+        
         
         # Check if we want to modify the run
         if not force:
-            ans = self.ask('Do you want to modify this run?', 'n', ['y','n'], 
+            ans = self.ask('Do you want to modify the Cards?', 'n', ['y','n'], 
                                                            timeout=self.timeout)
             if ans == 'n':
                 force = True
@@ -1407,7 +1544,7 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
  
  
     ############################################################################
-    def do_display(self, line):
+    def do_display(self, line, output=sys.stdout):
         """Display current internal status"""
 
         args = self.split_arg(line)
@@ -1415,19 +1552,27 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
         self.check_display(args)
 
         if args[0] == 'run_name':
-            
-            
             #return valid run_name
-            data = glob.glob(pjoin(self.me_dir, 'Events', '*_banner.txt'))
-            data = [n.rsplit('/',1)[1][:-11] for n in data]
+            data = glob.glob(pjoin(self.me_dir, 'Events', '*','*_banner.txt'))
+            data = [n.rsplit('/',2)[1:] for n in data]
+            
             if data:
+                out = {}
+                for name, tag in data:
+                    tag = tag[len(name)+1:-11]
+                    if name in out:
+                        out[name].append(tag)
+                    else:
+                        out[name] = [tag]
                 print 'the runs available are:'
-                for run_name in data:
-                    print '    %s' % run_name
+                for run_name, tags in out.items():
+                    print '  run: %s' % run_name
+                    print '       tags: ', 
+                    print ', '.join(tags)
             else:
                 print 'No run detected.'
         else:
-            super(MadEventCmd, self).do_display(line)
+            super(MadEventCmd, self).do_display(line, output)
  
   
     ############################################################################
@@ -1487,6 +1632,13 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
         elif args[0] in self.configuration:
             if args[1] in ['None','True','False']:
                 self.configuration[args[0]] = eval(args[1])
+            elif args[0].endswith('path'):
+                if os.path.exists(args[1]):
+                    self.configuration[args[0]] = args[1]
+                elif os.path.exists(pjoin(self.me_dir, args[1])):
+                    self.configuration[args[0]] = pjoin(self.me_dir, args[1])
+                else:
+                    raise self.InvalidCmd('Not a valid path: keep previous value: \'%s\'' % self.configuration[args[0]])
             else:
                 self.configuration[args[0]] = args[1]             
  
@@ -1522,9 +1674,9 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
         self.ask_run_configuration(mode, force)
         if not args:
             # No run name assigned -> assigned one automaticaly 
-            self.set_run_name(self.find_available_run_name(self.me_dir))
+            self.set_run_name(self.find_available_run_name(self.me_dir), None, 'parton')
         else:
-            self.set_run_name(args[0], True)
+            self.set_run_name(args[0], None, 'parton', True)
             args.pop(0)
             
         if self.run_card['gridpack'] in self.true:        
@@ -1555,7 +1707,7 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
    1) A massive s-channel particle has a width set to zero.
    2) The pdf are zero for at least one of the initial state particles.
    3) The cuts are too strong.
-   Please check/correct your param_card and your run_card.''')
+   Please check/correct your param_card and/or your run_card.''')
             
             nb_event = self.run_card['nevents']
             self.exec_cmd('refine %s' % nb_event, postcmd=False)
@@ -1580,15 +1732,16 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
             # No run name assigned -> assigned one automaticaly 
             self.set_run_name(self.find_available_run_name(self.me_dir))
         else:
-            self.set_run_name(args[0], True)
+            self.set_run_name(args[0], reload_card=True)
             args.pop(0)
-            
+        
         # Running gridpack warmup
         opts=[('accuracy', accuracy), # default 0.01
               ('points', 1000),
               ('iterations',9)]
 
         logger.info('Calculating decay widths with run name %s' % self.run_name)
+        
         self.exec_cmd('survey  %s %s' % \
                       (self.run_name,
                        " ".join(['--' + opt + '=' + str(val) for (opt,val) \
@@ -1596,15 +1749,114 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
                       postcmd=False)
         self.exec_cmd('combine_events', postcmd=False)
         self.exec_cmd('store_events', postcmd=False)
-        # Combine decay widths into new file
-        proc = subprocess.Popen(['python',
-                                 pjoin(self.dirbin, 'collect_decay_widths.py'),
-                                 self.run_name], 
-                                cwd=self.me_dir,
-                                stdout=subprocess.PIPE)
         
-        (stdout, stderr) = proc.communicate()
+        self.collect_decay_widths()
+        self.update_status('calculate_decay_widths done', 
+                                                 level='parton', makehtml=False)   
+
     
+    ############################################################################
+    def collect_decay_widths(self):
+        """ Collect the decay widths and calculate BRs for all particles, and put 
+        in param_card form. 
+        """
+        
+        particle_dict = {} # store the results
+        run_name = self.run_name
+
+        # Looping over the Subprocesses
+        for P_path in SubProcesses.get_subP(self.me_dir):
+            ids = SubProcesses.get_subP_ids(P_path)
+            # due to grouping we need to compute the ratio factor for the 
+            # ungroup resutls (that we need here). Note that initial particles
+            # grouping are not at the same stage as final particle grouping
+            nb_output = len(ids) / (len(set([p[0] for p in ids])))
+            results = open(pjoin(P_path, run_name + '_results.dat')).read().split('\n')[0]
+            result = float(results.strip().split(' ')[0])
+            for particles in ids:
+                try:
+                    particle_dict[particles[0]].append([particles[1:], result/nb_output])
+                except KeyError:
+                    particle_dict[particles[0]] = [[particles[1:], result/nb_output]]
+
+        # Open the param_card.dat and insert the calculated decays and BRs
+        param_card_file = open(pjoin(self.me_dir, 'Cards', 'param_card.dat'))
+        param_card = param_card_file.read().split('\n')
+        param_card_file.close()
+
+        decay_lines = []
+        line_number = 0
+        # Read and remove all decays from the param_card                     
+        while line_number < len(param_card):
+            line = param_card[line_number]
+            if line.lower().startswith('decay'):
+                # Read decay if particle in particle_dict 
+                # DECAY  6   1.455100e+00                                    
+                line = param_card.pop(line_number)
+                line = line.split()
+                particle = 0
+                if int(line[1]) not in particle_dict:
+                    try: # If formatting is wrong, don't want this particle
+                        particle = int(line[1])
+                        width = float(line[2])
+                    except:
+                        particle = 0
+                # Read BRs for this decay
+                line = param_card[line_number]
+                while line.startswith('#') or line.startswith(' '):
+                    line = param_card.pop(line_number)
+                    if not particle or line.startswith('#'):
+                        line=param_card[line_number]
+                        continue
+                    #    6.668201e-01   3    5  2  -1
+                    line = line.split()
+                    try: # Remove BR if formatting is wrong
+                        partial_width = float(line[0])*width
+                        decay_products = [int(p) for p in line[2:2+int(line[1])]]
+                    except:
+                        line=param_card[line_number]
+                        continue
+                    try:
+                        particle_dict[particle].append([decay_products, partial_width])
+                    except KeyError:
+                        particle_dict[particle] = [[decay_products, partial_width]]
+                    line=param_card[line_number]
+                if particle and particle not in particle_dict:
+                    # No decays given, only total width       
+                    particle_dict[particle] = [[[], width]]
+            else: # Not decay                              
+                line_number += 1
+        # Clean out possible remaining comments at the end of the card
+        while not param_card[-1] or param_card[-1].startswith('#'):
+            param_card.pop(-1)
+
+        # Append calculated and read decays to the param_card                                   
+        param_card.append("#\n#*************************")
+        param_card.append("#      Decay widths      *")
+        param_card.append("#*************************")
+        for key in sorted(particle_dict.keys()):
+            width = sum([r for p,r in particle_dict[key]])
+            param_card.append("#\n#      PDG        Width")
+            param_card.append("DECAY  %i   %e" % (key, width))
+            if not width:
+                continue
+            if particle_dict[key][0][0]:
+                param_card.append("#  BR             NDA  ID1    ID2   ...")
+                brs = [[val[1]/width, val[0]] for val in particle_dict[key] if val[1]]
+                for val in sorted(brs, reverse=True):
+                    param_card.append("   %e   %i    %s" % (val[0], len(val[1]),
+                                           "  ".join([str(v) for v in val[1]])))
+        output_name = pjoin(self.me_dir, 'Events', run_name, "param_card.dat")
+        decay_table = open(output_name, 'w')
+        decay_table.write("\n".join(param_card) + "\n")
+        logger.info("Results written to %s" %  output_name)
+
+
+            
+
+
+
+
     ############################################################################
     def do_multi_run(self, line):
         
@@ -1788,10 +2040,6 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
                                           cwd=pjoin(self.me_dir,'SubProcesses'),
                                           stdout=devnull)
         
-        #subprocess.call([pjoin(self.dirbin, 'sumall')], 
-        #                                 cwd=pjoin(self.me_dir,'SubProcesses'),
-        #                                 stdout=devnull)
-        
         self.update_status('finish refine', 'parton', makehtml=False)
         
     ############################################################################ 
@@ -1823,15 +2071,26 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
             nb_event = pat.search(output).groups()[0]
             self.results.add_detail('nb_event', nb_event)
         
+        # Define The Banner
+        tag = self.run_card['run_tag']
+        self.banner.load_basic(self.me_dir)
+        if not os.path.exists(pjoin(self.me_dir, 'Events', self.run_name)):
+            os.mkdir(pjoin(self.me_dir, 'Events', self.run_name))
+        self.banner.write(pjoin(self.me_dir, 'Events', self.run_name, 
+                                     '%s_%s_banner.txt' % (self.run_name, tag)))
+        self.banner.add(pjoin(self.me_dir, 'Cards', 'param_card.dat'))
+        self.banner.add(pjoin(self.me_dir, 'Cards', 'run_card.dat'))
+        
+        
         subprocess.call(['%s/put_banner' % self.dirbin, 'events.lhe'],
                             cwd=pjoin(self.me_dir, 'Events'))
         subprocess.call(['%s/put_banner'% self.dirbin, 'unweighted_events.lhe'],
                             cwd=pjoin(self.me_dir, 'Events'))
         
-        if os.path.exists(pjoin(self.me_dir, 'Events', 'unweighted_events.lhe')):
-            subprocess.call(['%s/extract_banner-pl' % self.dirbin, 
-                             'unweighted_events.lhe', 'banner.txt'],
-                            cwd=pjoin(self.me_dir, 'Events'))
+        #if os.path.exists(pjoin(self.me_dir, 'Events', 'unweighted_events.lhe')):
+        #    subprocess.call(['%s/extract_banner-pl' % self.dirbin, 
+        #                     'unweighted_events.lhe', 'banner.txt'],
+        #                    cwd=pjoin(self.me_dir, 'Events'))
         
         eradir = self.configuration['exrootanalysis_path']
         madir = self.configuration['madanalysis_path']
@@ -1860,24 +2119,8 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
         if not os.path.exists(pjoin(self.me_dir, 'HTML', run)):
             os.mkdir(pjoin(self.me_dir, 'HTML', run))    
         
-        # 1) TREAT FILE PRESENT IN SubProcesses
-        # results.html
-        #input = pjoin(self.me_dir, 'SubProcesses', 'results.html')
-        #output = pjoin(self.me_dir, 'HTML', run, 'results.html')
-        #files.mv(input, output)
-        # results.dat. The usefull information is store in the pickle -> remove
-        #os.remove(pjoin(self.me_dir, 'SubProcesses','results.dat'))
-
         # 2) Treat the files present in the P directory
-        for Pdir in open(pjoin(self.me_dir, 'SubProcesses','subproc.mg')):
-            Pdir = Pdir.strip()
-            P_path = pjoin(self.me_dir, 'SubProcesses', Pdir)
-            # results.dat. 
-            #os.remove(pjoin(P_path, 'results.dat'))
-            # results.html
-            #input = pjoin(P_path, 'results.html')
-            #output = pjoin(self.me_dir, 'HTML', run, '%s_results.html' % Pdir)
-            #files.mv(input, output) 
+        for P_path in SubProcesses.get_subP(self.me_dir):
             G_dir = [G for G in os.listdir(P_path) if G.startswith('G') and 
                                                 os.path.isdir(pjoin(P_path,G))]
             for G in G_dir:
@@ -1885,16 +2128,17 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
                 # Remove events file (if present)
                 if os.path.exists(pjoin(G_path, 'events.lhe')):
                     os.remove(pjoin(G_path, 'events.lhe'))
-                # Remove results.dat 
-                if os.path.exists(pjoin(G_path, 'results.dat')):
-                    os.remove(pjoin(G_path, 'results.dat'))
+                # Remove results.dat (but not for gridpack)
+                if self.run_card['gridpack'] not in self.true:
+                    if os.path.exists(pjoin(G_path, 'results.dat')):
+                        os.remove(pjoin(G_path, 'results.dat'))
                 # Store log
                 if os.path.exists(pjoin(G_path, 'log.txt')):
                     input = pjoin(G_path, 'log.txt')
                     output = pjoin(G_path, '%s_log.txt' % run)
                     files.mv(input, output) 
                 # Grid
-                for name in ['ftn25', 'ftn99']:
+                for name in ['ftn25', 'ftn99','ftn26']:
                     if os.path.exists(pjoin(G_path, name)):
                         if os.path.exists(pjoin(G_path, '%s_%s.gz'%(run,name))):
                             os.remove(pjoin(G_path, '%s_%s.gz'%(run,name)))
@@ -1915,18 +2159,13 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
         for name in ['events.lhe', 'unweighted_events.lhe']:
             if os.path.exists(pjoin(E_path, name)):
                 if os.path.exists(pjoin(O_path, '%s.gz' % name)):
-                    os.remove(pjoin(O_path, '%s.lhe.gz' % name))
+                    os.remove(pjoin(O_path, '%s.gz' % name))
                 input = pjoin(E_path, name)
                 output = pjoin(O_path, name)
                 files.mv(input, output) 
                 subprocess.call(['gzip', output], stdout=devnull, stderr=devnull, 
                                                                      cwd=O_path)
-        # The banner -- This is tag dependent
-        if os.path.exists(pjoin(E_path, 'banner.txt')):
-            input = pjoin(E_path, 'banner.txt')
-            output = pjoin(O_path, '%s_%s_banner.txt' % (run, tag))            
-            files.mv(input, output)
-           
+                
         self.update_status('End Parton', level='parton', makehtml=False)
 
     ############################################################################ 
@@ -1934,23 +2173,23 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
         """Advanced commands: Create gridpack from present run"""
 
         self.update_status('Creating gridpack', level='parton')
+        args = self.split_arg(line)
+        self.check_combine_events(args)
         os.system("sed -i.bak \"s/\s*.false.*=.*GridRun/  .true.  =  GridRun/g\" %s/Cards/grid_card.dat" \
                   % self.me_dir)
         subprocess.call(['./bin/internal/restore_data', self.run_name],
                         cwd=self.me_dir)
-        subprocess.call(['./bin/internal/store4grid', 'default'],
-                        cwd=self.me_dir)
+        self.exec_cmd('store_events')
         subprocess.call(['./bin/internal/clean'], cwd=self.me_dir)
         misc.compile(['gridpack.tar.gz'], cwd=self.me_dir)
         files.mv(pjoin(self.me_dir, 'gridpack.tar.gz'), 
                 pjoin(self.me_dir, '%s_gridpack.tar.gz' % self.run_name))
         self.update_status('gridpack created', level='gridpack')
-
+        
     ############################################################################      
     def do_pythia(self, line):
         """launch pythia"""
         
-
         # Check argument's validity
         args = self.split_arg(line)
         if '-f' in args:
@@ -1966,24 +2205,27 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
             args.remove('--no_default')
         else:
             no_default = False
+                                    
         self.check_pythia(args)        
         # the args are modify and the last arg is always the mode
         
         self.ask_pythia_run_configuration(args[-1], force)
 
+        # Update the banner with the pythia card
+        if not self.banner:
+            self.banner = banner_mod.recover_banner(self.results, 'pythia')
                      
         # initialize / remove lhapdf mode        
         self.configure_directory()
-        
-        tag = self.run_card['run_tag']                
-        if not force:
-            if os.path.exists(pjoin(self.me_dir, 'Events', self.run_name, '%s_pythia.log' % tag)):
-                question = 'Previous run of pythia detected. Do you want to remove it?'
-                ans = self.ask(question, 'y', choices=['y','n'], timeout = 20)
-                if ans == 'n':
-                    return
+
+        #if not force:
+        #    if os.path.exists(pjoin(self.me_dir, 'Events', self.run_name, '%s_pythia.log' % tag)):
+        #        question = 'Previous run of pythia detected. Do you want to remove it?'
+        #        ans = self.ask(question, 'y', choices=['y','n'], timeout = 20)
+        #        if ans == 'n':
+        #            return
          
-        self.exec_cmd('remove %s pythia -f' % self.run_name)
+        #self.exec_cmd('remove %s pythia -f' % self.run_name)
         
         pythia_src = pjoin(self.configuration['pythia-pgs_path'],'src')
         
@@ -1994,6 +2236,7 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
             pass
         
         ## LAUNCHING PYTHIA
+        tag = self.run_tag
         
         if self.cluster_mode == 1:
             pythia_log = pjoin(self.me_dir, 'Events', self.run_name , '%s_pythia.log' % tag)
@@ -2009,7 +2252,7 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
                            cwd=pjoin(self.me_dir,'Events'))
 
         if not os.path.exists(pjoin(self.me_dir,'Events','pythia.done')):
-            logger.warning('Fail to produce pythia output')
+            logger.warning('Fail to produce pythia output. More info in \n     %s' % pythia_log.name)
             return
         else:
             os.remove(pjoin(self.me_dir,'Events','pythia.done'))
@@ -2029,13 +2272,10 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
         madir = self.configuration['madanalysis_path']
         td = self.configuration['td_path']
         
-        # Update the banner with the pythia card
-        banner_path = pjoin(self.me_dir,'Events',self.run_name, '%s_%s_banner.txt' % (self.run_name, tag))
-        banner = open(banner_path, 'a')
-        banner.writelines('\n<MGPythiaCard>\n')
-        banner.writelines(open(pjoin(self.me_dir, 'Cards','pythia_card.dat')).read())
-        banner.writelines('\n</MGPythiaCard>\n')
-        banner.close()
+        
+        self.banner.add(pjoin(self.me_dir, 'Cards','pythia_card.dat'))
+        banner_path = pjoin(self.me_dir, 'Events', self.run_name, '%s_%s_banner.txt' % (self.run_name, tag))
+        self.banner.write(banner_path)
         
         # Creating LHE file
         if misc.is_executable(pjoin(pydir, 'hep2lhe')):
@@ -2069,20 +2309,20 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
 
         if int(self.run_card['ickkw']):
             self.update_status('Create matching plots for Pythia', level='pythia')
-            subprocess.call([self.dirbin+'/create_matching_plots.sh', self.run_name],
+            subprocess.call([self.dirbin+'/create_matching_plots.sh', self.run_name, tag],
                             stdout = os.open(os.devnull, os.O_RDWR),
                             cwd=pjoin(self.me_dir,'Events'))
             #Clean output
             subprocess.call(['gzip','-f','events.tree'], 
                                                 cwd=pjoin(self.me_dir,'Events'))          
             files.mv(pjoin(self.me_dir,'Events','events.tree.gz'), 
-                     pjoin(self.me_dir,'Events',self.run_name +'_pythia_events.tree.gz'))
+                     pjoin(self.me_dir,'Events',self.run_name, tag + '_pythia_events.tree.gz'))
             subprocess.call(['gzip','-f','beforeveto.tree'], 
                                                 cwd=pjoin(self.me_dir,'Events'))
             files.mv(pjoin(self.me_dir,'Events','beforeveto.tree.gz'), 
-                     pjoin(self.me_dir,'Events',self.run_name +'_pythia_beforeveto.tree.gz'))
+                     pjoin(self.me_dir,'Events',self.run_name, tag+'_pythia_beforeveto.tree.gz'))
             files.mv(pjoin(self.me_dir,'Events','xsecs.tree'), 
-                     pjoin(self.me_dir,'Events',self.run_name +'_pythia_xsecs.tree'))            
+                     pjoin(self.me_dir,'Events',self.run_name, tag+'_pythia_xsecs.tree'))            
              
 
         # Plot for pythia
@@ -2097,30 +2337,41 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
         
         self.update_status('finish', level='pythia', makehtml=False)
         self.exec_cmd('pgs --no_default', postcmd=False, printcmd=False)
-        self.exec_cmd('delphes --no_default', postcmd=False, printcmd=False)
+        if self.configuration['delphes_path']:
+            self.exec_cmd('delphes --no_default', postcmd=False, printcmd=False)
+    
+    def get_available_tag(self):
+        """create automatically a tag"""
         
+        used_tags = [r['tag'] for r in self.results[self.run_name]]
+        i=0
+        while 1:
+            i+=1
+            if 'tag_%s' %i not in used_tags:
+                return 'tag_%s' % i
+   
+    
+    
     ################################################################################
     def do_remove(self, line):
         """Remove one/all run or only part of it"""
 
         args = self.split_arg(line)
-        self.check_remove(args)
-        if args[0] == 'all':
+        run, tag, mode = self.check_remove(args)
+        if run == 'all':
             # Check first if they are not a run with a name run.
-            if os.path.exists(pjoin(self.me_dir, 'Events', 'all_banner.txt')):
+            if os.path.exists(pjoin(self.me_dir, 'Events', 'all')):
                 logger.warning('A run with name all exists. So we will not supress all processes.')
             else:
-                for match in glob.glob(pjoin(self.me_dir, 'Events', '*_banner.txt')):
-                    run = os.path.basename(match).rsplit('_',1)[0]
+                for match in glob.glob(pjoin(self.me_dir, 'Events','*','*_banner.txt')):
+                    run = match.rsplit(os.path.sep,2)[1]
                     try:
                         self.exec_cmd('clean %s %s' % (run, ' '.join(args[1:]) ) )
                     except self.InvalidCmd, error:
                         logger.info(error)
                         pass # run already clear
                     return
-
-        run = args[0]
-
+            
         # Check that run exists
         if not os.path.exists(pjoin(self.me_dir, 'Events', run)):
             raise self.InvalidCmd('No run \'%s\' detected' % run)
@@ -2131,20 +2382,26 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
         except:
             pass # Just ensure that html never makes crash this function
 
-        # Found the file to suppress:
-        to_suppress = glob.glob(pjoin(self.me_dir, 'Events', '%s_*' % run))
-        to_suppress = [os.path.basename(f) for f in to_suppress if 'banner' not in f]
 
-        if 'all' in args:
+        # Found the file to suppress
+        
+        to_suppress = glob.glob(pjoin(self.me_dir, 'Events', run, '*'))
+        to_suppress += glob.glob(pjoin(self.me_dir, 'HTML', run, '*'))
+        # forbid the banner to be removed
+        to_suppress = [os.path.basename(f) for f in to_suppress if 'banner' not in f]
+        if tag:
+            to_suppress = [f for f in to_suppress if tag in f]
+
+        if 'all' in mode:
             pass # suppress everything
         else:
-            if 'pythia' not in args:
+            if 'pythia' not in mode:
                 to_suppress = [f for f in to_suppress if 'pythia' not in f]
-            if 'pgs' not in args:
+            if 'pgs' not in mode:
                 to_suppress = [f for f in to_suppress if 'pgs' not in f]
-            if 'delphes' not in args:
+            if 'delphes' not in mode:
                 to_suppress = [f for f in to_suppress if 'delphes' not in f]
-            if 'parton' not in args:
+            if 'parton' not in mode:
                 to_suppress = [f for f in to_suppress if 'delphes' in f 
                                                       or 'pgs' in f 
                                                       or 'pythia' in f]
@@ -2158,13 +2415,21 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
         
         if ans == 'y':
             for file2rm in to_suppress:
-                if os.path.isdir(pjoin(self.me_dir, 'Events', file2rm)):
-                    shutil.rmtree(pjoin(self.me_dir, 'Events', file2rm))
+                if os.path.exists(pjoin(self.me_dir, 'Events', run, file2rm)):
+                    try:
+                        os.remove(pjoin(self.me_dir, 'Events', run, file2rm))
+                    except:
+                        shutil.rmtree(pjoin(self.me_dir, 'Events', run, file2rm))
                 else:
-                    os.remove(pjoin(self.me_dir, 'Events', file2rm))
+                    try:
+                        os.remove(pjoin(self.me_dir, 'HTML', run, file2rm))
+                    except:
+                        shutil.rmtree(pjoin(self.me_dir, 'HTML', run, file2rm))
+
+
 
         # Remove file in SubProcess directory
-        if 'all' in args or 'channel' in args:
+        if 'all' in mode or 'channel' in mode:
             to_suppress = glob.glob(pjoin(self.me_dir, 'SubProcesses', '%s*' % run))
             to_suppress += glob.glob(pjoin(self.me_dir, 'SubProcesses', '*','%s*' % run))
             to_suppress += glob.glob(pjoin(self.me_dir, 'SubProcesses', '*','*','%s*' % run))
@@ -2180,23 +2445,35 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
                 for file2rm in to_suppress:
                     os.remove(file2rm)
 
-        if 'banner' in args[1:]:
-            to_suppress = glob.glob(pjoin(self.me_dir, 'Events', '%s_*' % run))
-            if len(to_suppress) > 1:
-                raise MadGraph5Error, '''Some output still exists for this run. 
+        if 'banner' in mode:
+            to_suppress = glob.glob(pjoin(self.me_dir, 'Events', run, '*'))
+            if tag:
+                # remove banner
+                try:
+                    os.remove(pjoin(self.me_dir, 'Events',run,'%s_%s_banner.txt' % (run,tag)))
+                except:
+                    logger.warning('fail to remove the banner')
+                # remove the run from the html output
+                if run in self.results:
+                    self.results.delete_run(run, tag)
+                    return
+            elif any(['banner' not in os.path.basename(p) for p in to_suppress]):
+                if to_suppress:
+                    raise MadGraph5Error, '''Some output still exists for this run. 
                 Please remove those output first. Do for example: 
                 remove %s all banner
                 ''' % run
-            elif len(to_suppress):
-                # remove banner
-                os.remove(to_suppress[0])
-                # remove the run from the html output
+            else:
+                shutil.rmtree(pjoin(self.me_dir, 'Events',run))
                 if run in self.results:
                     self.results.delete_run(run)
                     return
+        else:
+            logger.info('''The banner is not removed. In order to remove it run:
+    remove %s all banner %s''' % (run, tag and '--tag=%s ' % tag or '')) 
 
         # update database.
-        self.results.clean(args[1:])
+        self.results.clean(mode, run, tag)
         self.update_status('', level='all')
 
 
@@ -2227,7 +2504,8 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
                 logger.info('No valid files for partonic plot') 
                 
         if any([arg in ['all','pythia'] for arg in args]):
-            filename = pjoin(self.me_dir, 'Events','%s_pythia_events.lhe' % self.run_name)
+            filename = pjoin(self.me_dir, 'Events' ,self.run_name,
+                                          '%s_pythia_events.lhe' % self.run_tag)
             if os.path.exists(filename+'.gz'):
                 os.system('gunzip -f %s' % (filename+'.gz') )
             if  os.path.exists(filename):
@@ -2239,19 +2517,19 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
                 logger.info('No valid files for pythia plot')
                     
         if any([arg in ['all','pgs'] for arg in args]):
-            filename = pjoin(self.me_dir, 'Events','%s_pgs_events.lhco' % self.run_name)
+            filename = pjoin(self.me_dir, 'Events', self.run_name, 
+                                            '%s_pgs_events.lhco' % self.run_tag)
             if os.path.exists(filename+'.gz'):
                 os.system('gunzip -f %s' % (filename+'.gz') )
             if  os.path.exists(filename):
-                #shutil.move(filename, pjoin(self.me_dir, 'Events','pgs_events.lhco'))
                 self.create_plot('PGS')
-                #shutil.move(pjoin(self.me_dir, 'Events','pgs_events.lhco'), filename)
                 os.system('gzip -f %s' % filename)                
             else:
                 logger.info('No valid files for pgs plot')
                 
         if any([arg in ['all','delphes'] for arg in args]):
-            filename = pjoin(self.me_dir, 'Events','%s_delphes_events.lhco' % self.run_name)
+            filename = pjoin(self.me_dir, 'Events', self.run_name, 
+                                        '%s_delphes_events.lhco' % self.run_tag)
             if os.path.exists(filename+'.gz'):
                 os.system('gunzip -f %s' % (filename+'.gz') )
             if  os.path.exists(filename):
@@ -2279,14 +2557,14 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
         
         tag = self.run_card['run_tag']
         if 'pythia' in self.to_store:
-            self.update_status('Storing Pythia files of Previous run', level='pythia')
+            self.update_status('Storing Pythia files of Previous run', level='pythia', error=True)
             os.system('mv -f %(path)s/pythia_events.hep %(path)s/%(name)s/%(tag)s_pythia_events.hep' % 
                   {'name': self.run_name, 'path' : pjoin(self.me_dir,'Events'),
                    'tag':tag})
             os.system('gzip -f %s/%s_pythia_events.hep' % ( 
                                 pjoin(self.me_dir,'Events',self.run_name), tag))
             self.to_store.remove('pythia')
-            self.update_status('Done', level='pythia')
+            self.update_status('Done', level='pythia',makehtml=False,error=True)
         
         self.to_store = []
             
@@ -2296,7 +2574,6 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
         """launch pgs"""
         
         args = self.split_arg(line)
-        self.edit_one_card('pgs_card.dat', args)
         # Check argument's validity
         if '-f' in args:
             force = True
@@ -2308,9 +2585,31 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
             args.remove('--no_default')
         else:
             no_default = False
-        self.update_status('prepare PGS run', level=None)
+
+        # Check all arguments
+        # This might launch a gunzip in another thread. After the question
+        # This thread need to be wait for completion. (This allow to have the 
+        # question right away and have the computer working in the same time)
         self.check_pgs(args) 
+
+        # Check that the pgs_card exists. If not copy the default 
+        if not os.path.exists(pjoin(self.me_dir, 'Cards', 'pgs_card.dat')):
+            if no_default:
+                logger.info('No pgs_card detected, so not run pgs')
+                return 
+            
+            files.cp(pjoin(self.me_dir, 'Cards', 'pgs_card_default.dat'),
+                     pjoin(self.me_dir, 'Cards', 'pgs_card.dat'))
+            logger.info('No pgs card found. Take the default one.')        
         
+        if not (no_default or force):
+            self.ask_edit_cards(['pgs'], args)
+            
+        self.update_status('prepare PGS run', level=None)  
+        # Wait that the gunzip of the files is finished (if any)
+        if hasattr(self, 'control_thread') and self.control_thread[0]:
+            self.monitor(mode=2,html=False)
+
         pgsdir = pjoin(self.configuration['pythia-pgs_path'], 'src')
         eradir = self.configuration['exrootanalysis_path']
         madir = self.configuration['madanalysis_path']
@@ -2321,45 +2620,29 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
             logger.info('No PGS executable -- running make')
             misc.compile(cwd=pgsdir)
         
-        # Check that the pgs_card exists. If not copy the default and
-        # ask for edition of the card.
-        if not os.path.exists(pjoin(self.me_dir, 'Cards', 'pgs_card.dat')):
-            if no_default:
-                logger.info('No pgs_card detected, so not run pgs')
-                return 
+
             
-            files.cp(pjoin(self.me_dir, 'Cards', 'pgs_card_default.dat'),
-                     pjoin(self.me_dir, 'Cards', 'pgs_card.dat'))
-            logger.info('No pgs card found. Take the default one.')
+
             
-            if not force:
-                answer = self.ask('Do you want to edit this card?','n', ['y','n'],
-                              timeout=20)
-            else:
-                answer = 'n'
-                
-            if answer == 'y':
-                misc.open_file(pjoin(self.me_dir, 'Cards', 'pgs_card.dat'))
-        
-        
         self.update_status('Running PGS', level='pgs')
-        tag = self.run_card['run_tag']
-        # now pass the event to a detector simulator and reconstruct objects
         
-        # Update the banner with the pgs card
-        banner_path = pjoin(self.me_dir,'Events',self.run_name, '%s_%s_banner.txt' % (self.run_name,tag))  
-        print banner_path
-        print 
-        banner = open(banner_path, 'a')
-        banner.writelines('\n<MGPGSCard>')
-        banner.writelines(open(pjoin(self.me_dir, 'Cards','pgs_card.dat')).read())
-        banner.writelines('</MGPGSCard>\n')
-        banner.close()
+        tag = self.run_tag
+        # Update the banner with the pgs card        
+        self.banner.add(pjoin(self.me_dir, 'Cards','pgs_card.dat'))
+        banner_path = pjoin(self.me_dir, 'Events', self.run_name, '%s_%s_banner.txt' % (self.run_name, self.run_tag))
+        self.banner.write(banner_path)            
+
+        ########################################################################
+        # now pass the event to a detector simulator and reconstruct objects
+        ########################################################################
         
         # Prepare the output file with the banner
         ff = open(pjoin(self.me_dir, 'Events', 'pgs_events.lhco'), 'w')
         text = open(banner_path).read()
         text = '#%s' % text.replace('\n','\n#')
+        dico = self.results[self.run_name].get_current_info()
+        text +='\n##  Integrated weight (pb)  : %.4g' % dico['cross']
+        text +='\n##  Number of Event         : %s\n' % dico['nb_event']
         ff.writelines(text)
         ff.close()
 
@@ -2413,8 +2696,6 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
         """ run delphes and make associate root file/plot """
  
         args = self.split_arg(line)
-        self.edit_one_card('delphes_card.dat', args)
-        self.edit_one_card('trigger_card.dat', args)
         # Check argument's validity
         if '-f' in args:
             force = True
@@ -2426,10 +2707,9 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
             args.remove('--no_default')
         else:
             no_default = False
-            
+        self.check_delphes(args) 
         self.update_status('prepare delphes run', level=None)
-        self.check_pgs(args) 
-        
+                
         # Check that the delphes_card exists. If not copy the default and
         # ask for edition of the card.
         if not os.path.exists(pjoin(self.me_dir, 'Cards', 'delphes_card.dat')):
@@ -2440,41 +2720,35 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
             files.cp(pjoin(self.me_dir, 'Cards', 'delphes_card_default.dat'),
                      pjoin(self.me_dir, 'Cards', 'delphes_card.dat'))
             logger.info('No delphes card found. Take the default one.')
-            if not force:
-                answer = self.ask('Do you want to edit this card?','n', ['y','n'],
-                             timeout=20)
-            else:
-                answer = 'n'
-                
-            if answer == 'y':
-                misc.open_file(pjoin(self.me_dir, 'Cards', 'delphes_card.dat')) 
+
+        if not (no_default or force):
+            self.ask_edit_cards(['delphes', 'trigger'], args)
+            
+        self.update_status('Running Delphes', level=None)  
+        # Wait that the gunzip of the files is finished (if any)
+        if hasattr(self, 'control_thread') and self.control_thread[0]:
+            self.monitor(mode=2,html=False)        
+
+
  
         delphes_dir = self.configuration['delphes_path']
-        tag = self.run_card['run_tag']
-        self.update_status('Running Delphes', level='delphes')
+        tag = self.run_tag
+        self.banner.add(pjoin(self.me_dir, 'Cards','delphes_card.dat'))
+        self.banner.add(pjoin(self.me_dir, 'Cards','delphes_trigger.dat'))
+        self.banner.write(pjoin(self.me_dir, 'Events', self.run_name, '%s_%s_banner.txt' % (self.run_name, tag)))
         
-        # Update the banner with the pgs card
-        banner = open(pjoin(self.me_dir,'Events', self.run_name,  
-                                                    '%s_banner.txt' % tag), 'a')
-        banner.writelines('<MGDelphesCard>\n')
-        banner.writelines(open(pjoin(self.me_dir, 'Cards','delphes_card.dat')).read())
-        banner.writelines('</MGDelphesCard>\n')
-        banner.writelines('<MGDelphesTrigger>\n')
-        banner.writelines(open(pjoin(self.me_dir, 'Cards','delphes_trigger.dat')).read())
-        banner.writelines('</MGDelphesTrigger>')        
-        banner.close()
-        
-        
+        cross = self.results[self.run_name].get_current_info()['cross']
+                    
         if self.cluster_mode == 1:
             delphes_log = pjoin(self.me_dir, 'Events', self.run_name, "%s_delphes.log" % tag)
             self.cluster.launch_and_wait('../bin/internal/run_delphes', 
-                        argument= [delphes_dir, self.run_name, tag],
+                        argument= [delphes_dir, self.run_name, tag, str(cross)],
                         stdout=delphes_log, stderr=subprocess.STDOUT,
                         cwd=pjoin(self.me_dir,'Events'))
         else:
             delphes_log = open(pjoin(self.me_dir, 'Events', self.run_name, "%s_delphes.log" % tag),'w')
             subprocess.call(['../bin/internal/run_delphes', delphes_dir, 
-                                self.run_name, tag],
+                                self.run_name, tag, str(cross)],
                                 stdout= delphes_log, stderr=subprocess.STDOUT,
                                 cwd=pjoin(self.me_dir,'Events'))
                 
@@ -2503,17 +2777,21 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
         self.update_status('delphes done', level='delphes', makehtml=False)   
 
     def launch_job(self,exe, cwd=None, stdout=None, argument = [], remaining=0, 
-                    run_type='', **opt):
+                    run_type='', mode=None, **opt):
         """ """
         argument = [str(arg) for arg in argument]
+        if mode is None:
+            mode = self.cluster_mode
 
         def launch_in_thread(exe, argument, cwd, stdout, control_thread):
             """ way to launch for multicore"""
 
             start = time.time()
-            subprocess.call(['./'+exe] + argument, cwd=cwd, stdout=stdout,
+            if (cwd and os.path.exists(pjoin(cwd, exe))) or os.path.exists(exe):
+                exe = './' + exe
+            subprocess.call([exe] + argument, cwd=cwd, stdout=stdout,
                         stderr=subprocess.STDOUT, **opt)
-            logger.info('%s run in %f s' % (exe, time.time() -start))
+            #logger.info('%s run in %f s' % (exe, time.time() -start))
             
             # release the lock for allowing to launch the next job      
             while not control_thread[1].locked():
@@ -2528,7 +2806,7 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
 
         
         
-        if self.cluster_mode == 0:
+        if mode == 0:
             self.update_status((remaining, 1, 
                                 self.total_jobs - remaining -1, run_type), level=None, force=False)
             start = time.time()
@@ -2540,10 +2818,10 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
                 raise MadGraph5Error, '%s didn\'t stop properly. Stop all computation' % exe
 
 
-        elif self.cluster_mode == 1:
+        elif mode == 1:
             self.cluster.submit(exe, stdout=stdout, cwd=cwd)
 
-        elif self.cluster_mode == 2:
+        elif mode == 2:
             import thread
             if not hasattr(self, 'control_thread'):
                 self.control_thread = [0] # [used_thread]
@@ -2582,22 +2860,28 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
             return 'v4'
     
     ############################################################################
-    def monitor(self, run_type='monitor'):
+    def monitor(self, run_type='monitor', mode=None, html=True):
         """ monitor the progress of running job """
         
-        if self.cluster_mode == 1:
-            def update_status(idle, run, finish):
-                self.update_status((idle, run, finish, run_type), level=None)
+        if mode is None:
+            mode = self.cluster_mode
+        
+        if mode == 1:
+            if html:
+                update_status = lambda idle, run, finish: \
+                    self.update_status((idle, run, finish, run_type), level=None)
+            else:
+                update_status = lambda idle, run, finish: None
             self.cluster.wait(self.me_dir, update_status)            
 
-        if self.cluster_mode == 2:
+        if mode == 2:
             # Wait that all thread finish
             if not self.control_thread[2]:
 #                time.sleep(1)
                 nb = self.control_thread[0]
                 while self.control_thread[0]:
                     time.sleep(5)
-                    if nb != self.control_thread[0]:
+                    if nb != self.control_thread[0] and html:
                         self.update_status((0, self.control_thread[0], 
                                            self.total_jobs - self.control_thread[0], run_type), 
                                            level=None, force=False)
@@ -2608,26 +2892,21 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
                     pass
             else:    
                 for i in range(0,self.nb_core):
-                    self.update_status((0, self.control_thread[0], 
+                    if html:
+                        self.update_status((0, self.control_thread[0], 
                                            self.total_jobs - self.control_thread[0], run_type), 
                                            level=None, force=False)
                     self.control_thread[1].acquire()
                 self.control_thread[2] = False
                 self.control_thread[1].release()
-                del self.next_update
+                try:
+                    del self.next_update
+                except:
+                    pass
+        if not html:
+            return
 
-        #proc = subprocess.Popen([pjoin(self.dirbin, 'sumall')], 
-        #                                  cwd=pjoin(self.me_dir,'SubProcesses'),
-        #                                  stdout=subprocess.PIPE)
-        
-        #(stdout, stderr) = proc.communicate()
-        #for line in stdout.split('\n'): 
-        #    if line.startswith(' Results'):
-        #        data = line.split()
-        #        self.results.add_detail('cross', float(data[1]))
-        #        self.results.add_detail('error', float(data[2]))                
-        
-        # TEST##################################################################
+        #######################################################################
         cross, error = sum_html.make_all_html_results(self)
         self.results.add_detail('cross', cross)
         self.results.add_detail('error', error)   
@@ -2638,9 +2917,6 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
     @staticmethod
     def find_available_run_name(me_dir):
         """ find a valid run_name for the current job """
-        
-        
-        
         
         name = 'run_%02d'
         data = [int(s[4:6]) for s in os.listdir(pjoin(me_dir,'Events')) if
@@ -2664,12 +2940,12 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
         else:
             self.configured = time.time()
         self.update_status('compile directory', level=None)
-        if self.open_crossx:
+        if self.configuration['automatic_html_opening']:
             misc.open_file(os.path.join(self.me_dir, 'crossx.html'))
-            self.open_crossx = False
+            self.configuration['automatic_html_opening'] = False
+            #open only once the web page
         # Change current working directory
         self.launching_dir = os.getcwd()
-        #os.chdir(self.me_dir)
         
         # Check if we need the MSSM special treatment
         model = self.find_model_name()
@@ -2720,7 +2996,7 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
             line = line.split('=')
             if len(line) != 2:
                 continue
-            output[line[1].strip()] = line[0].strip()
+            output[line[1].strip()] = line[0].replace('\'','').strip()
         return output
 
     ############################################################################
@@ -2735,14 +3011,36 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
             return default
         
     ############################################################################
-    def set_run_name(self, name, reload_card=False):
-        """define the run name and update the results object"""
+    def set_run_name(self, name, tag=None, level='parton', reload_card=False):
+        """define the run name, the run_tag, the banner and the results."""
         
-        if name == self.run_name:
+        # when are we force to change the tag new_run:previous run requiring changes
+        upgrade_tag = {'parton': ['parton','pythia','pgs','delphes'],
+                       'pythia': ['pythia','pgs','delphes'],
+                       'pgs': ['pgs'],
+                       'delphes':['delphes']}
+        
+        
+
+        if name == self.run_name:        
             if reload_card:
                 run_card = pjoin(self.me_dir, 'Cards','run_card.dat')
                 self.run_card = self.read_run_card(run_card)
-            return # Nothing to do
+
+            #check if we need to change the tag
+            if tag:
+                self.run_card['run_tag'] = tag
+                self.run_tag = tag
+                self.results.add_run(self.run_name, self.run_card)
+            else:
+                for tag in upgrade_tag[level]:
+                    if getattr(self.results[self.run_name][-1], tag):
+                        tag = self.get_available_tag()
+                        self.run_card['run_tag'] = tag
+                        self.run_tag = tag
+                        self.results.add_run(self.run_name, self.run_card)                        
+                        break
+            return # Nothing to do anymore
         
         # save/clean previous run
         if self.run_name:
@@ -2753,12 +3051,49 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
         # Read run_card
         run_card = pjoin(self.me_dir, 'Cards','run_card.dat')
         self.run_card = self.read_run_card(run_card)
-        
-        if name in self.results:
+
+        new_tag = False
+        # First call for this run -> set the banner
+        self.banner = banner_mod.recover_banner(self.results, level)
+        if tag:
+            self.run_card['run_tag'] = tag
+            new_tag = True
+        elif not self.run_name in self.results and level =='parton':
+            pass # No results yet, so current tag is fine
+        else:
+            for tag in upgrade_tag[level]:
+                if getattr(self.results[self.run_name][-1], tag):
+                    # LEVEL is already define in the last tag -> need to switch tag
+                    tag = self.get_available_tag()
+                    self.run_card['run_tag'] = tag
+                    new_tag = True
+                    break
+            if not new_tag:
+                # We can add the results to the current run
+                tag = self.results[self.run_name][-1]['tag']
+                self.run_card['run_tag'] = tag # ensure that run_tag is correct                
+             
+                    
+        if name in self.results and not new_tag:
             self.results.def_current(self.run_name)
         else:
             self.results.add_run(self.run_name, self.run_card)
-        
+
+        self.run_tag = self.run_card['run_tag']
+
+        # Return the tag of the previous run having the required data for this
+        # tag/run to working wel.
+        if level == 'parton':
+            return
+        elif level == 'pythia':
+            return self.results[self.run_name][0]['tag']
+        else:
+            for i in range(-1,-len(self.results[self.run_name])-1,-1):
+                tagRun = self.results[self.run_name][i]
+                if tagRun.pythia:
+                    return tagRun['tag']
+            
+            
         
         
         
@@ -3125,110 +3460,160 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
         name = {'0': 'auto', '1': 'pythia', '2':'pgs', '3':'delphes'}
         options = available_mode + [name[val] for val in available_mode]
         question = """Which programs do you want to run?
-  0 / auto    : running existing card
-  1 / pythia  : Pythia 
-  2 / pgs     : Pythia + PGS\n"""
+    0 / auto    : running existing card
+    1 / pythia  : Pythia 
+    2 / pgs     : Pythia + PGS\n"""
         if '3' in available_mode:
             question += """  3 / delphes  : Pythia + Delphes.\n"""
 
-            if not force:
-                if not mode:
-                    mode = self.ask(question, '0', options, timeout=self.timeout)
-            elif not mode:
-                mode = 'auto'
-                
-            if mode.isdigit():
-                mode = name[mode]
-                
-            if mode == 'auto':
-                if os.path.exists(pjoin(self.me_dir, 'Cards', 'pgs_card.dat')):
-                    mode = 'pgs'
-                elif os.path.exists(pjoin(self.me_dir, 'Cards', 'delphes_card.dat')):
-                    mode = 'delphes'
-                else: 
-                    mode = 'pythia'
-            logger.info('Will run in mode %s' % mode)
+        if not force:
+            if not mode:
+                mode = self.ask(question, '0', options, timeout=self.timeout)
+        elif not mode:
+            mode = 'auto'
             
-            # Clean the pointless card
-            if mode == 'pgs':
-                if os.path.exists(pjoin(self.me_dir,'Cards','delphes_card.dat')):
-                    os.remove(pjoin(self.me_dir,'Cards','delphes_card.dat'))
-            if mode == 'delphes':
-                if os.path.exists(pjoin(self.me_dir,'Cards','pgs_card.dat')):
-                    os.remove(pjoin(self.me_dir,'Cards','pgs_card.dat'))                                         
-            
-            # Now that we know in which mode we are check that all the card
-            #exists (copy default if needed)
-
-            cards = ['pythia_card.dat']
-            self.add_card_to_run('pythia')
-            if mode == 'pgs':
-                self.add_card_to_run('pgs')
-                cards.append('pgs_card.dat')
-            if mode == 'delphes':
-                self.add_card_to_run('delphes')
-                cards.append('delphes_card.dat')
-
-            if force:
-                return mode
-
-            # Ask the user if he wants to edit any of the files
-            #First create the asking text
-            question = """Do you want to edit one cards (press enter to bypass editing)?
-  1 / pythia   : pythia_card.dat\n""" 
-            possible_answer = ['0','done', '1', 'pythia']
-            card = {0:'done', 1:'pythia', 9:'plot'}
-            if mode == 'pgs':
-                question += '  2 / pgs     : pgs_card.dat\n'
-                possible_answer.append(2)
-                possible_answer.append('pgs') 
-                card[2] = 'pgs'           
-            if mode == 'delphes':
-                question += '  2 / delphes : delphes_card.dat\n'
-                question += '  3 / trigger : delphes_trigger.dat\n'
-                possible_answer.append(2)
-                possible_answer.append('delphes')
-                possible_answer.append(3)
-                possible_answer.append('trigger')
-                card[2] = 'delphes'
-                card[3] = 'trigger'
-            if self.configuration['madanalysis_path']:
-                question += '  9 / plot : plot_card.dat\n'
-                possible_answer.append(9)
-                possible_answer.append('plot')
-
-            # Add the path options
-            question += '  Path to a valid card.\n'
-       
-            # Loop as long as the user is not done.
-            answer = 'no'
-            while answer != 'done':
-                answer = self.ask(question, '0', possible_answer, timeout=int(1.5*self.timeout), path_msg='enter path')
-                if answer.isdigit():
-                    answer = card[int(answer)]
-                if answer == 'done':
-                    return
-                if os.path.exists(answer):
-                    # detect which card is provide
-                    card_name = self.detect_card_type(answer)
-                    if card_name == 'unknown':
-                        card_name = self.ask('Fail to determine the type of the file. Please specify the format',
-                     ['pythia_card.dat','pgs_card.dat',
-                      'delphes_card.dat', 'delphes_trigger.dat','plot_card.dat'])
-
-                    logger.info('copy %s as %s' % (answer, card_name))
-                    files.cp(answer, pjoin(self.me_dir, 'Cards', card_name))
-                    continue
-                path = pjoin(self.me_dir,'Cards','%s_card.dat' % answer)
-                self.exec_cmd('open %s' % path)                    
+        if mode.isdigit():
+            mode = name[mode]
+             
+        if mode == 'auto':
+            if os.path.exists(pjoin(self.me_dir, 'Cards', 'pgs_card.dat')):
+                mode = 'pgs'
+            elif os.path.exists(pjoin(self.me_dir, 'Cards', 'delphes_card.dat')):
+                mode = 'delphes'
+            else: 
+                mode = 'pythia'
+        logger.info('Will run in mode %s' % mode)
+        
+        # Clean the pointless card
+        if mode == 'pgs':
+            if os.path.exists(pjoin(self.me_dir,'Cards','delphes_card.dat')):
+                os.remove(pjoin(self.me_dir,'Cards','delphes_card.dat'))
+        if mode == 'delphes':
+            if os.path.exists(pjoin(self.me_dir,'Cards','pgs_card.dat')):
+                os.remove(pjoin(self.me_dir,'Cards','pgs_card.dat'))                                         
+         
+        # Now that we know in which mode we are check that all the card
+        #exists (copy default if needed)
+        
+        cards = ['pythia_card.dat']
+        self.add_card_to_run('pythia')
+        if mode == 'pgs':
+            self.add_card_to_run('pgs')
+            cards.append('pgs_card.dat')
+        if mode == 'delphes':
+            self.add_card_to_run('delphes')
+            cards.append('delphes_card.dat')
+        
+        if force:
+            return mode
+        
+        # Ask the user if he wants to edit any of the files
+        #First create the asking text
+        question = """Do you want to edit one cards (press enter to bypass editing)?\n"""
+        question += """  1 / pythia   : pythia_card.dat\n""" 
+        possible_answer = ['0','done', '1', 'pythia']
+        card = {0:'done', 1:'pythia', 9:'plot'}
+        if mode == 'pgs':
+             question += '  2 / pgs     : pgs_card.dat\n'
+             possible_answer.append(2)
+             possible_answer.append('pgs') 
+             card[2] = 'pgs'           
+        if mode == 'delphes':
+             question += '  2 / delphes : delphes_card.dat\n'
+             question += '  3 / trigger : delphes_trigger.dat\n'
+             possible_answer.append(2)
+             possible_answer.append('delphes')
+             possible_answer.append(3)
+             possible_answer.append('trigger')
+             card[2] = 'delphes'
+             card[3] = 'trigger'
+        if self.configuration['madanalysis_path']:
+             question += '  9 / plot : plot_card.dat\n'
+             possible_answer.append(9)
+             possible_answer.append('plot')
+        
+        # Add the path options
+        question += '  Path to a valid card.\n'
+        
+        # Loop as long as the user is not done.
+        answer = 'no'
+        while answer != 'done':
+             answer = self.ask(question, '0', possible_answer, timeout=int(1.5*self.timeout), path_msg='enter path')
+             if answer.isdigit():
+                 answer = card[int(answer)]
+             if answer == 'done':
+                 return
+             if os.path.exists(answer):
+                 # detect which card is provide
+                 card_name = self.detect_card_type(answer)
+                 if card_name == 'unknown':
+                     card_name = self.ask('Fail to determine the type of the file. Please specify the format',
+                  ['pythia_card.dat','pgs_card.dat',
+                   'delphes_card.dat', 'delphes_trigger.dat','plot_card.dat'])
+        
+                 logger.info('copy %s as %s' % (answer, card_name))
+                 files.cp(answer, pjoin(self.me_dir, 'Cards', card_name))
+                 continue
+             path = pjoin(self.me_dir,'Cards','%s_card.dat' % answer)
+             self.exec_cmd('open %s' % path)                    
                  
         return mode
 
-    def edit_one_card(self, card, fct_args):
-        """ """
+    def ask_edit_cards(self, cards, fct_args):
+        """Question for cards editions (used for pgs/delphes)"""
 
         if '-f' in fct_args or '--no_default' in fct_args:
             return
+        
+        card_name = {'pgs': 'pgs_card.dat',
+                     'delphes': 'delphes_card.dat',
+                     'trigger': 'delphes_trigger.dat'
+                     }
+
+        # Ask the user if he wants to edit any of the files
+        #First create the asking text
+        question = """Do you want to edit one cards (press enter to bypass editing)?\n""" 
+        possible_answer = ['0', 'done']
+        card = {0:'done'}
+        
+        for i, mode in enumerate(cards):
+            possible_answer.append(i+1)
+            possible_answer.append(mode)
+            question += '  %s / %-9s : %s\n' % (i+1, mode, card_name[mode])
+            card[i+1] = mode
+        
+        if self.configuration['madanalysis_path']:
+             question += '  9 / %-9s : plot_card.dat\n' % 'plot'
+             possible_answer.append(9)
+             possible_answer.append('plot')
+             card[9] = 'plot'
+
+        # Add the path options
+        question += '  Path to a valid card.\n'
+        
+        # Loop as long as the user is not done.
+        answer = 'no'
+        while answer != 'done':
+             answer = self.ask(question, '0', possible_answer, timeout=int(1.5*self.timeout), path_msg='enter path')
+             if answer.isdigit():
+                 answer = card[int(answer)]
+             if answer == 'done':
+                 return
+             if os.path.exists(answer):
+                 # detect which card is provide
+                 card_name = self.detect_card_type(answer)
+                 if card_name == 'unknown':
+                     card_name = self.ask('Fail to determine the type of the file. Please specify the format',
+                  ['pgs_card.dat', 'delphes_card.dat', 'delphes_trigger.dat'])
+        
+                 logger.info('copy %s as %s' % (answer, card_name))
+                 files.cp(answer, pjoin(self.me_dir, 'Cards', card_name))
+                 continue
+             path = pjoin(self.me_dir,'Cards','%s_card.dat' % answer)
+             self.exec_cmd('open %s' % path)                    
+                 
+        return mode
+
 
         question = """Do you want to edit the %s?""" % card
         answer = self.ask(question, 'n', ['y','n'], timeout=self.timeout,path_msg='enter path')
@@ -3297,49 +3682,196 @@ class MadEventCmdShell(MadEventCmd, cmd.CmdShell):
     """The command line processor of MadGraph"""  
 
 
+
 #===============================================================================
-# GridPack
-#===============================================================================     
+# HELPING FUNCTION For Subprocesses
+#===============================================================================
+class SubProcesses(object):
+
+    name_to_pdg = {}
+
+    @classmethod
+    def clean(cls):
+        cls.name_to_pdg = {}
+    
+    @staticmethod
+    def get_subP(me_dir):
+        """return the list of Subprocesses"""
+        
+        out = []
+        for line in open(pjoin(me_dir,'SubProcesses', 'subproc.mg')):
+            if not line:
+                continue
+            name = line.strip()
+            if os.path.exists(pjoin(me_dir, 'SubProcesses', name)):
+                out.append(pjoin(me_dir, 'SubProcesses', name))
+        
+        return out
+        
+
+
+    @staticmethod
+    def get_subP_info(path):
+        """ return the list of processes with their name"""
+
+        nb_sub = 0
+        names = {}
+        old_main = ''
+
+        if not os.path.exists(os.path.join(path,'processes.dat')):
+            return make_info_html.get_subprocess_info_v4(path)
+
+        for line in open(os.path.join(path,'processes.dat')):
+            main = line[:8].strip()
+            if main == 'mirror':
+                main = old_main
+            if line[8:].strip() == 'none':
+                continue
+            else:
+                main = int(main)
+                old_main = main
+
+            sub_proccess = line[8:]
+            nb_sub += sub_proccess.count(',') + 1
+            if main in names:
+                names[main] += [sub_proccess.split(',')]
+            else:
+                names[main]= [sub_proccess.split(',')]
+
+        return names
+
+    @staticmethod
+    def get_subP_info_v4(path):
+        """ return the list of processes with their name in case without grouping """
+
+        nb_sub = 0
+        names = {'':[[]]}
+        path = os.path.join(path, 'auto_dsig.f')
+        found = 0
+        for line in open(path):
+            if line.startswith('C     Process:'):
+                found += 1
+                names[''][0].append(line[15:])
+            elif found >1:
+                break
+        return names
+
+
+    @staticmethod
+    def get_subP_ids(path):
+        """return the pdg codes of the particles present in the Subprocesses"""
+
+        all_ids = []
+        for line in open(pjoin(path, 'leshouche.inc')):
+            if not 'IDUP' in line:
+                continue
+            particles = re.search("/([\d,-]+)/", line)
+            all_ids.append([int(p) for p in particles.group(1).split(',')])
+        return all_ids
+    
+    
+#===============================================================================                                                                              
 class GridPackCmd(MadEventCmd):
     """The command for the gridpack --Those are not suppose to be use interactively--"""
-    
-    
+
     def __init__(self, me_dir = None, nb_event=0, seed=0, *completekey, **stdin):
         """Initialize the command and directly run"""
-        
-        # Initialize properly
+
+        # Initialize properly                                                                                                                                 
         MadEventCmd.__init__(self, me_dir, *completekey, **stdin)
-        
-        # Now it's time to run!
+        self.run_mode = 0
+        self.configuration['automatic_html_opening'] = False
+        # Now it's time to run!                                                                                                                               
         if me_dir and nb_event and seed:
             self.launch(nb_event, seed)
-    
+
+
     def launch(self, nb_event, seed):
         """ launch the generation for the grid """
-        
-        # 1) Restore the default data
+
+        # 1) Restore the default data                                                                                                                         
         logger.info('generate %s events' % nb_event)
         self.set_run_name('GridRun_%s' % seed)
         self.update_status('restoring default data', level=None)
-        subprocess.call([pjoin(self.me_dir,'bin','internal','restore_data'), 'default'],
-                        cwd=self.me_dir)
-        
-        # 2) Run the refine for the grid
-        self.update_status('Generating Events', level=None) 
-        ### TO EDIT ####
-        subprocess.call([pjoin(self.me_dir,'bin','internal','refine4grid'), 
-                         str(nb_event), '0', 'Madevent','1','GridRun_%s' % seed],
-                        cwd=self.me_dir)
-        
-        # 3) Combine the events/pythia/...
+        subprocess.call([pjoin(self.me_dir,'bin','internal','restore_data'), self.run_name],
+            cwd=self.me_dir)
+
+        # 2) Run the refine for the grid                                                                                                                      
+        self.update_status('Generating Events', level=None)
+        #subprocess.call([pjoin(self.me_dir,'bin','refine4grid'),
+        #                str(nb_event), '0', 'Madevent','1','GridRun_%s' % seed],
+        #                cwd=self.me_dir)
+        self.refine4grid(nb_event)
+        # 3) Combine the events/pythia/...                                                                                                                    
         self.exec_cmd('combine_events')
-        self.create_plot('parton')
-        self.exec_cmd('pythia --nodefault')
-        self.exec_cmd('pgs --nodefault')
+        self.exec_cmd('store_events')
+        self.exec_cmd('pythia --no_default -f')
+
+
+
+
+    def refine4grid(self, nb_event):
+        """Advanced commands: launch survey for the current process """
+        self.nb_refine += 1
         
+        precision = nb_event
+
+        # initialize / remove lhapdf mode
+        self.configure_directory()
+        self.cluster_mode = 0 # force single machine
         
+        self.update_status('Refine results to %s' % precision, level=None)
+        logger.info("Using random number seed offset = %s" % self.random)
         
+        self.total_jobs = 0
+        subproc = [P for P in os.listdir(pjoin(self.me_dir,'SubProcesses')) if 
+                   P.startswith('P') and os.path.isdir(pjoin(self.me_dir,'SubProcesses', P))]
+        for nb_proc,subdir in enumerate(subproc):
+            subdir = subdir.strip()
+            Pdir = pjoin(self.me_dir, 'SubProcesses',subdir)
+            bindir = pjoin(os.path.relpath(self.dirbin, Pdir))
+                           
+            logger.info('    %s ' % subdir)
+            # clean previous run
+            for match in glob.glob(pjoin(Pdir, '*ajob*')):
+                if os.path.basename(match)[:4] in ['ajob', 'wait', 'run.', 'done']:
+                    os.remove(pjoin(Pdir, match))
+            
+            devnull = os.open(os.devnull, os.O_RDWR)
+            proc = subprocess.Popen([pjoin(bindir, 'gen_ximprove')],
+                                    stdin=subprocess.PIPE,
+                                    cwd=Pdir)
+            proc.communicate('%s 1 F\n' % (precision))
+
+            if os.path.exists(pjoin(Pdir, 'ajob1')):
+                misc.compile(['madevent'], cwd=Pdir)
+                #
+                os.system("chmod +x %s/ajob*" % Pdir)
+                alljobs = glob.glob(pjoin(Pdir,'ajob*'))
+                nb_tot = len(alljobs)            
+                self.total_jobs += nb_tot
+                for i, job in enumerate(alljobs):
+                    job = os.path.basename(job)
+                    self.launch_job('./%s' % job, cwd=Pdir, remaining=(nb_tot-i-1), 
+                             run_type='Refine number %s on %s (%s/%s)' % (self.nb_refine, subdir, nb_proc+1, len(subproc)))
+        self.monitor(run_type='All job submitted for refine number %s' % self.nb_refine,
+                     html=True)
         
-    
-    
+        self.update_status("Combining runs", level='parton')
+        try:
+            os.remove(pjoin(Pdir, 'combine_runs.log'))
+        except:
+            pass
+        
+        bindir = pjoin(os.path.relpath(self.dirbin, pjoin(self.me_dir,'SubProcesses')))
+        subprocess.call([pjoin(bindir, 'combine_runs')], 
+                                          cwd=pjoin(self.me_dir,'SubProcesses'),
+                                          stdout=devnull)
+        
+        #subprocess.call([pjoin(self.dirbin, 'sumall')], 
+        #                                 cwd=pjoin(self.me_dir,'SubProcesses'),
+        #                                 stdout=devnull)
+        
+        self.update_status('finish refine', 'parton', makehtml=False)
+
     

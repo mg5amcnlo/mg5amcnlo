@@ -196,9 +196,8 @@ c            i=i-1   !This is for case w/ B.W. and optimization
      $        i,nevents,gname,nhel_refine)
       else
          open(unit=25,file='../results.dat',status='old',err=199)
-         write(*,'(a,e12.3)') 'Reading total xsection ',xtot
          read(25,*) xtot
-         write(*,'(e12.3)') xtot
+         write(*,'(a,e12.3)') 'Reading total xsection ',xtot
  199     close(25)
          if (gridpack) then
             call write_gen_grid(err_goal,dble(ngran),i,nevents,gname,

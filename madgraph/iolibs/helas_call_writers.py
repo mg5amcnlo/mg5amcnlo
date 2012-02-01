@@ -1152,18 +1152,16 @@ class FortranUFOHelasCallWriter(UFOHelasCallWriter):
 
         # Check if we need to append a charge conjugation flag
         l = [str(l) for l in argument.get('lorentz')]
-        c_flag = '' 
-        l_flag = '' 
+        flag = [] 
         if argument.needs_hermitian_conjugate():
-            c_flag = "".join(['C%d' % i for i in \
-                              argument.get_conjugate_index()])
+            flag = ['C%d' % i for i in argument.get_conjugate_index()]
         if (isinstance(argument, helas_objects.HelasWavefunction) and \
            argument.get('is_loop') or (isinstance(argument, helas_objects.HelasAmplitude) and \
            argument.get('type')=='loop')):
-            l_flag = "L"
-        routine_name = aloha_writers.combine_name(
-                                    '%s%s%s' % (l[0], c_flag, l_flag),\
-                                     l[1:], outgoing)
+            flag.append("L")
+
+        routine_name = aloha_writers.combine_name(l[0],\
+                                     l[1:], outgoing, flag)
         call = 'CALL %s' % (routine_name)
 
         # Add the wave function
@@ -1340,12 +1338,12 @@ class CPPUFOHelasCallWriter(UFOHelasCallWriter):
 
             # Check if we need to append a charge conjugation flag
             l = [str(l) for l in argument.get('lorentz')]
-            c_flag = '' 
+            flag = [] 
             if argument.needs_hermitian_conjugate():
-                c_flag = "".join(['C%d' % i for i in \
-                                  argument.get_conjugate_index()])
+                flag = ['C%d' % i for i in \
+                                            argument.get_conjugate_index()]
             routine_name = aloha_writers.combine_name(
-                                        '%s%s' % (l[0], c_flag), l[1:], outgoing)
+                                        '%s' % l[0], l[1:], outgoing, flag)
             call = '%s' % (routine_name)
 
             # Add the wave function
@@ -1515,12 +1513,11 @@ class PythonUFOHelasCallWriter(UFOHelasCallWriter):
 
             # Check if we need to append a charge conjugation flag
             l = [str(l) for l in argument.get('lorentz')]
-            c_flag = '' 
+            flag = []
             if argument.needs_hermitian_conjugate():
-                c_flag = "".join(['C%d' % i for i in \
-                                  argument.get_conjugate_index()])
+                flag = ['C%d' % i for i in argument.get_conjugate_index()]
             routine_name = aloha_writers.combine_name(
-                                        '%s%s' % (l[0], c_flag), l[1:], outgoing)
+                                        '%s' % l[0], l[1:], outgoing, flag)
 
 
             if isinstance(argument, helas_objects.HelasWavefunction):

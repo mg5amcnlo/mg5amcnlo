@@ -1532,20 +1532,26 @@ class LoopHelasMatrixElement(helas_objects.HelasMatrixElement):
                  len(hd.get_loop_UVCTamplitudes())>=1])
 
     def get_used_lorentz(self):
-        """Return a list of (lorentz_name, conjugate, outgoing) with
+        """Return a list of (lorentz_name, tags, outgoing) with
         all lorentz structures used by this LoopHelasMatrixElement."""
 
         # Loop version of the function which add to the tuple wether it is a loop 
         # structure or not so that aloha knows if it has to produce the subroutine 
         # which removes the denominator in the propagator of the wavefunction created.
-        return [(tuple(wa.get('lorentz')), tuple(wa.get_conjugate_index()),\
-                 wa.find_outgoing_number(), \
-                 False if ((isinstance(wa,helas_objects.HelasAmplitude) and \
+        output = []
+        for wa in self.get_all_wavefunctions() + self.get_all_amplitudes():
+            if wa.get('interaction_id') == 0:
+                continue
+            
+            tags = tuple(['C%s' % w for w in wa.get_conjugate_index()])
+            if not ((isinstance(wa,helas_objects.HelasAmplitude) and \
                     wa.get('type')!='loop') or \
                   (isinstance(wa,helas_objects.HelasWavefunction) and \
-                   not wa.get('is_loop'))) else True) for wa in \
-                self.get_all_wavefunctions() + self.get_all_amplitudes() \
-                if wa.get('interaction_id') != 0]
+                   not wa.get('is_loop'))): 
+                tags.append('L')
+            
+            output.append(tuple(wa.get('lorentz'), tags, wa.find_outgoing_number()))
+            return output
 
     def get_used_couplings(self):
         """Return a list with all couplings used by this

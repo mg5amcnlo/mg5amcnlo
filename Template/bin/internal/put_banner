@@ -19,12 +19,14 @@ if [[  "$1" == ""  ]]; then
 else
     c=$1
 fi
+
+
 if [[ -d Events ]]; then
     cd Events
 # Put all the info in a long banner
 # First the header
 # $B$ begin_banner $B$ !this is a tag for MadWeight. Don't edit this line
-  cat banner_header.txt >& b.txt
+  cat ../Source/banner_header.txt >& b.txt
 # $E$ begin_banner $E$ !this is a tag for MadWeight. Don't edit this line
 # Now the version information
 # grab the info first

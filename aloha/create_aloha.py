@@ -58,7 +58,8 @@ class AbstractRoutine(object):
         self.infostr = infostr
         self.symmetries = []
         self.combined = []
-        self.loop = False # Check if we need the denominator
+        #self.loop = False # Check if we need the denominator
+        self.tag = []
         
     def add_symmetry(self, outgoing):
         """ add an outgoing """
@@ -158,10 +159,10 @@ class AbstractRoutineBuilder(object):
         #                  = C_ac G_bc (-1) C_bd = C_ac G_bc C_db
         self.routine_kernel = \
              C(new_id, old_id + 1) * self.routine_kernel * C(new_id + 1, old_id)
-        self.name += 'C'
 
-        if pair:
-            self.name += str(pair)
+#        self.name += 'C'
+#        if pair:
+#            self.name += str(pair)
         self.conjg.append(pair)
 
     
@@ -170,9 +171,12 @@ class AbstractRoutineBuilder(object):
         """ define a simple output for this AbstractRoutine """
     
         infostr = str(self.lorentz_expr)        
-        return AbstractRoutine(self.expr, self.outgoing, self.spins, self.name, \
+        output = AbstractRoutine(self.expr, self.outgoing, self.spins, self.name, \
                                                                         infostr)
-        
+
+        output.tag += ['C%s' % pair for pair in self.conjg]
+        return output
+
     def change_sign_for_outcoming_fermion(self):
         """change the sign of P for outcoming fermion in order to 
         correct the mismatch convention between HELAS and FR"""
@@ -187,8 +191,7 @@ class AbstractRoutineBuilder(object):
         momentum_pattern = re.compile(r'\bP\(([\+\-\d]+),(%s)\)' % '|'.join(flip_sign))
         lorentz_expr = momentum_pattern.sub(r'P(\1,\2, -1)', self.lorentz_expr)
         return lorentz_expr
-        
-        
+                
     def compute_aloha_high_kernel(self, mode, factorize=True):
         """compute the abstract routine associate to this mode """
         
@@ -437,11 +440,12 @@ class AbstractALOHAModel(dict):
     def set(self, lorentzname, outgoing, abstract_routine, loop=False):
         """ add in the dictionary """
     
-        if loop and not abstract_routine.loop:
+        if loop and not 'L' in abstract_routine.tag:
             abstract_routine = copy.copy(abstract_routine)
-            abstract_routine.loop = True
-            abstract_routine.name += 'L'
-            
+            abstract_routine.tag.append('L')
+
+
+
         self[(lorentzname, outgoing)] = abstract_routine
     
     def compute_all(self, save=True, wanted_lorentz = []):
@@ -504,11 +508,10 @@ class AbstractALOHAModel(dict):
 
     def compute_subset(self, data):
         """ create the requested ALOHA routine. 
-        data should be a list of tuple (lorentz, conjugate, outgoing, loop)
-        if loop is not given it's suppose to be False.
-        conjugate should be a tuple with the pair number to conjugate.
-        outgoing a tuple of the requested routines."""
-
+        data should be a list of tuple (lorentz, tag, outgoing)
+        tag should be the list of special tag (like conjugation on pair)
+        to apply on the object """
+        
         # Search identical particles in the vertices in order to avoid
         #to compute identical contribution
         self.look_for_symmetries()
@@ -518,14 +521,12 @@ class AbstractALOHAModel(dict):
         request = {}
         
         #Check Loop status
-        aloha_writers.WriteALOHA.LOOP_MODE = any([len(d)==4 for d in data])
+        aloha_writers.WriteALOHA.LOOP_MODE = any(['L' in tag for l,tag,out in data])
         # Add loop attribut for those which are not defined
 
-        for i, d in enumerate(data):
-            if len(d) == 3:
-                data[i] = data[i] + (False,)
-
-        for list_l_name, conjugate, outgoing, loop in data:
+        for list_l_name, tag, outgoing in data:
+            conjugate = tuple([int(c[1:]) for c in tag if c.startswith('C')])
+            loop = ('L' in tag)
             for l_name in list_l_name:
                 try:
                     request[l_name][conjugate].append((outgoing, loop))
@@ -565,11 +566,9 @@ class AbstractALOHAModel(dict):
                                         routines_loop=outgoing_loop )
         
         # Build mutiple lorentz call
-        for list_l_name, conjugate, outgoing, loop in data:
+        for list_l_name, tag, outgoing in data:
             if len(list_l_name) >1:
-                lorentzname = list_l_name[0]
-                for c in conjugate:
-                    lorentzname += 'C%s' % c
+                lorentzname = list_l_name[0] + ''.join(tag)
                 self[(lorentzname, outgoing)].add_combine(list_l_name[1:])
                         
     def compute_aloha(self, builder, symmetry=None, routines=None, routines_loop=None):
@@ -596,7 +595,8 @@ class AbstractALOHAModel(dict):
             else:
                 wavefunction = builder.compute_routine(outgoing)
                 #Store the information
-                self.set(name, outgoing, wavefunction)
+                realname = name + ''.join(wavefunction.tag)
+                self.set(realname, outgoing, wavefunction)
         
         # Creates the Loop routines
         for outgoing in routines_loop:

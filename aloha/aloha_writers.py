@@ -23,7 +23,7 @@ class WriteALOHA:
     def __init__(self, abstract_routine, dirpath):
 
 
-        name = get_routine_name(abstract_routine.name, abstract_routine.outgoing)
+        name = get_routine_name(abstract = abstract_routine)
         if dirpath:
             self.dir_out = dirpath
             self.out_path = os.path.join(dirpath, name + self.extension)
@@ -39,7 +39,8 @@ class WriteALOHA:
         self.comment = abstract_routine.infostr
         self.offshell = abstract_routine.outgoing 
         self.symmetries = abstract_routine.symmetries
-        self.loop_routine = abstract_routine.loop
+        self.tag = abstract_routine.tag
+        self.loop_routine = 'L' in self.tag
 
         #prepare the necessary object
         self.collect_variables() # Look for the different variables
@@ -517,7 +518,7 @@ class ALOHAWriterForFortran(WriteALOHA):
         else:
             sym = None  # deactivate symetry
             
-        name = combine_name(self.abstractname, lor_names, offshell)
+        name = combine_name(self.abstractname, lor_names, offshell, self.tag)
 
                  
         # write header 
@@ -532,17 +533,19 @@ class ALOHAWriterForFortran(WriteALOHA):
             text += ' double complex TMP(%s)\n integer i' % self.type_to_size[spin]         
         
         # Define which part of the routine should be called
-        addon = ''
-        if 'C' in self.namestring:
-            short_name, addon = name.split('C',1)
-            if addon.split('_')[0].isdigit():
-                addon = 'C' +self.namestring.split('C',1)[1]
-            elif all([n.isdigit() for n in addon.split('_')[0].split('C')]):
-                addon = 'C' +self.namestring.split('C',1)[1]
-            else:
-                addon = '_%s' % self.offshell
-        else:
-            addon = '_%s' % self.offshell
+        addon = ''.join(self.tag) + '_%s' % self.offshell
+        
+#        if 'C' in self.namestring:
+#            short_name, addon = name.split('C',1)
+#            if addon.split('_')[0].isdigit():
+#                addon = 'C' +self.namestring.split('C',1)[1]
+#            elif all([n.isdigit() for n in addon.split('_')[0].split('C')]):
+#                addon = 'C' +self.namestring.split('C',1)[1]
+#            else:
+#                addon = '_%s' % self.offshell
+#        else:
+#            addon = '_%s' % self.offshell
+
         # how to call the routine
         if not offshell:
             main = 'vertex'
@@ -596,13 +599,27 @@ class ALOHAWriterForFortran(WriteALOHA):
         
         return text
     
-def get_routine_name(name,outgoing):
+def get_routine_name(name=None, outgoing=None, tag=None, abstract=None):
     """ build the name of the aloha function """
     
-    return '%s_%s' % (name, outgoing) 
+    assert (name and outgoing) or abstract
 
-def combine_name(name, other_names, outgoing):
+    if tag is None:
+        tag = abstract.tag
+
+    if name is None:
+        name = abstract.name + ''.join(tag)
+    
+    if outgoing is None:
+        outgoing = abstract.outgoing
+
+    
+    return '%s_%s' % (name, outgoing)
+
+def combine_name(name, other_names, outgoing, tag=None):
     """ build the name for combined aloha function """
+
+    
 
     # Two possible scheme FFV1C1_2_X or FFV1__FFV2C1_X
     # If they are all in FFVX scheme then use the first
@@ -610,7 +627,10 @@ def combine_name(name, other_names, outgoing):
     routine = ''
     if p.search(name):
         base, id = p.search(name).groups()
-        routine = name
+        if tag is not None:
+            routine = name + ''.join(tag)
+        else:
+            routine = name
         for s in other_names:
             try:
                 base2,id2 = p.search(s).groups()
@@ -625,18 +645,22 @@ def combine_name(name, other_names, outgoing):
     if routine:
         return routine +'_%s' % outgoing
 
-    addon = ''
-    if 'C' in name:
-        short_name, addon = name.split('C',1)
-        try:
-            addon = 'C' + str(int(addon))
-        except:
-            addon = ''
-        else:
-            name = short_name
+    if tag is not None:
+        addon = ''.join(tag)
+    else:
+        addon = ''
+        if 'C' in name:
+            short_name, addon = name.split('C',1)
+            try:
+                addon = 'C' + str(int(addon))
+            except:
+                addon = ''
+            else:
+                name = short_name
 
     return '_'.join((name,) + tuple(other_names)) + addon + '_%s' % outgoing
  
+
 class ALOHAWriterForCPP(WriteALOHA): 
     """Routines for writing out helicity amplitudes as C++ .h and .cc files."""
     
@@ -853,7 +877,7 @@ class ALOHAWriterForCPP(WriteALOHA):
     def write_combined_h(self, lor_names, offshell=None, compiler_cmd=True):
         """Return the content of the .h file linked to multiple lorentz call."""
         
-        name = combine_name(self.abstractname, lor_names, offshell)
+        name = combine_name(self.abstractname, lor_names, offshell, self.tag)
         text= ''
         if compiler_cmd:
             text = '#ifndef '+ name + '_guard\n'
@@ -905,7 +929,7 @@ class ALOHAWriterForCPP(WriteALOHA):
         if offshell is None:
             offshell = self.offshell
             
-        name = combine_name(self.abstractname, lor_names, offshell)
+        name = combine_name(self.abstractname, lor_names, offshell, self.tag)
 
         text = ''
         if compiler_cmd:
@@ -1025,7 +1049,7 @@ class ALOHAWriterForCPP(WriteALOHA):
         if offshell is None:
             offshell = self.offshell
         
-        name = combine_name(self.abstractname, lor_names, offshell)
+        name = combine_name(self.abstractname, lor_names, offshell, self.tag)
         
         h_text = self.write_combined_h(lor_names, offshell, **opt)
         cc_text = self.write_combined_cc(lor_names, offshell, sym=True, **opt)
@@ -1239,7 +1263,7 @@ class ALOHAWriterForPython(WriteALOHA):
             offshell = self.offshell  
         else:
             sym = None
-        name = combine_name(self.abstractname, lor_names, offshell)
+        name = combine_name(self.abstractname, lor_names, offshell, self.tag)
 
         # write head - momenta - body - foot
         text = ''

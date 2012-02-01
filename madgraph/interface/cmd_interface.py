@@ -239,20 +239,20 @@ class HelpToCmd(object):
               " FILENAME")
         logger.info("-- imports file(s) in various formats")
         logger.info("")
-        logger.info("   import model MODEL[-RESTRICTION] [-modelname]:")
+        logger.info("   import model MODEL[-RESTRICTION] [--modelname]:")
         logger.info("      Import a UFO model.")
         logger.info("      MODEL should be a valid UFO model name")
         logger.info("      Model restrictions are specified by MODEL-RESTRICTION")
         logger.info("        with the file restrict_RESTRICTION.dat in the model dir.")
         logger.info("        By default, restrict_default.dat is used.")
         logger.info("        Specify model_name-full to get unrestricted model.")
-        logger.info("      -modelname keeps the original particle names for the model")
+        logger.info("      '--modelname' keeps the original particle names for the model")
         logger.info("")
-        logger.info("   import model_v4 MODEL [-modelname] :")
+        logger.info("   import model_v4 MODEL [--modelname] :")
         logger.info("      Import an MG4 model.")
         logger.info("      Model should be the name of the model")
         logger.info("      or the path to theMG4 model directory")
-        logger.info("      -modelname keeps the original particle names for the model")
+        logger.info("      '--modelname' keeps the original particle names for the model")
         logger.info("")
         logger.info("   import proc_v4 [PATH] :"  )
         logger.info("      Execute MG5 based on a proc_card.dat in MG4 format.")
@@ -308,8 +308,9 @@ class HelpToCmd(object):
         logger.info("   - If mode is standalone_cpp, create a standalone C++")
         logger.info("     directory in \"path\".")
         logger.info("   - If mode is pythia8, output all files needed to generate")
-        logger.info("     the processes using Pythia 8. Directory \"path\"")
-        logger.info("     should be a Pythia 8 main directory (v. 8.150 or later).")
+        logger.info("     the processes using Pythia 8. The files are written in")
+        logger.info("     the Pythia 8 directory (default).")
+        logger.info("     NOTE: The Pythia 8 directory is set in the ./input/mg5_configuration.txt")
         logger.info("   path: The path of the process directory.")
         logger.info("     If you put '.' as path, your pwd will be used.")
         logger.info("     If you put 'auto', an automatic directory PROC_XX_n will be created.")
@@ -326,7 +327,7 @@ class HelpToCmd(object):
         
     def help_check(self):
 
-        logger.info("syntax: check " + "|".join(self._check_opts) + " [param_card] process_definition")
+        logger.info("syntax: check [" + "|".join(self._check_opts) + "] [param_card] process_definition")
         logger.info("-- check a process or set of processes. Options:")
         logger.info("full: Perform all three checks described below:")
         logger.info("   permutation, gauge and lorentz_invariance.")
@@ -382,12 +383,14 @@ class HelpToCmd(object):
     def help_set(self):
         logger.info("syntax: set %s argument" % "|".join(self._set_options))
         logger.info("-- set options for generation or output")
-        logger.info("   group_subprocesses True/False: ")
-        logger.info("     (default True) Smart grouping of subprocesses into ")
+        logger.info("   group_subprocesses True/False/Auto: ")
+        logger.info("     (default Auto) Smart grouping of subprocesses into ")
         logger.info("     directories, mirroring of initial states, and ")
         logger.info("     combination of integration channels.")
         logger.info("     Example: p p > j j j w+ gives 5 directories and 184 channels")
         logger.info("     (cf. 65 directories and 1048 channels for regular output)")
+        logger.info("     Auto means False for decay computation and True for") 
+        logger.info("     collisions.")
         logger.info("   ignore_six_quark_processes multi_part_label")
         logger.info("     (default none) ignore processes with at least 6 of any")
         logger.info("     of the quarks given in multi_part_label.")
@@ -461,9 +464,12 @@ class CheckValidForCmd(object):
         syntax: display XXXXX
         """
             
-        if len(args) < 1 or args[0] not in self._display_opts:
+        if len(args) < 1:
             self.help_display()
-            raise self.InvalidCmd
+            raise self.InvalidCmd, 'display requires an argument specifying what to display'
+        if args[0] not in self._display_opts:
+            self.help_display()
+            raise self.InvalidCmd, 'Invalid arguments for display command: %s' % args[0]
 
         if not self._curr_model:
             raise self.InvalidCmd("No model currently active, please import a model!")
@@ -503,7 +509,7 @@ class CheckValidForCmd(object):
 
         if len(args) < 2:
             self.help_check()
-            raise self.InvalidCmd("\"check\" requires an argument and a process.")
+            raise self.InvalidCmd("\"check\" requires a process.")
 
         param_card = None
         if os.path.isfile(args[1]):
@@ -569,7 +575,10 @@ class CheckValidForCmd(object):
         modelname = False
         if '-modelname' in args:
             args.remove('-modelname')
-            modelname = True    
+            modelname = True   
+        elif '--modelname' in args:
+            args.remove('--modelname')
+            modelname = True              
                 
         if not args:
             self.help_import()
@@ -664,8 +673,9 @@ This will take effect only in a NEW terminal
             path = os.path.realpath(args[0])
         else:    
             raise self.InvalidCmd, '%s is not a valid directory' % args[0]
-            
+                
         mode = self.find_output_type(path)
+        
         args[0] = mode
         args.append(path)
         # inform where we are for future command
@@ -714,7 +724,10 @@ This will take effect only in a NEW terminal
 
         if os.path.isfile(pjoin(include_path, 'Pythia.h')):
             return 'pythia8'
-        elif os.path.isdir(src_path):
+        elif not os.path.isdir(os.path.join(path, 'SubProcesses')):
+            raise self.InvalidCmd, '%s : Not a valid directory' % path
+        
+        if os.path.isdir(src_path):
             return 'standalone_cpp'
         elif os.path.isfile(pjoin(bin_path,'generate_events')):
             return 'madevent'
@@ -751,8 +764,8 @@ This will take effect only in a NEW terminal
                                   self._set_options)
 
         if args[0] in ['group_subprocesses']:
-            if args[1] not in ['False', 'True']:
-                raise self.InvalidCmd('%s needs argument False or True' % \
+            if args[1] not in ['False', 'True', 'Auto']:
+                raise self.InvalidCmd('%s needs argument False, True or Auto' % \
                                       args[0])
         if args[0] in ['ignore_six_quark_processes']:
             if args[1] not in self._multiparticles.keys():
@@ -835,12 +848,23 @@ This will take effect only in a NEW terminal
             if path == 'auto' and self._export_format in \
                      ['madevent', 'standalone', 'standalone_cpp']:
                 self.get_default_path()
-            else:
+            elif path != 'auto':
                 self._export_dir = path
+            elif path == 'auto':
+                if self.configuration['pythia8_path']:
+                    self._export_dir = self.configuration['pythia8_path']
+                else:
+                    self._export_dir = '.'
         else:
-            # No valid path
-            self.get_default_path()
-
+            if self._export_format != 'pythia8':
+                # No valid path
+                self.get_default_path()
+            else:
+                if self.configuration['pythia8_path']:
+                    self._export_dir = self.configuration['pythia8_path']
+                else:
+                    self._export_dir = '.'
+                    
         self._export_dir = os.path.realpath(self._export_dir)
 
     def get_default_path(self):
@@ -882,8 +906,8 @@ This will take effect only in a NEW terminal
             auto_path = lambda i: pjoin(self.writing_dir,
                                                name_dir(i))
         elif self._export_format == 'pythia8':
-            if self.pythia8_path:
-                self._export_dir = self.pythia8_path
+            if self.configuration['pythia8_path']:
+                self._export_dir = self.configuration['pythia8_path']
             else:
                 self._export_dir = '.'
             return
@@ -1290,7 +1314,6 @@ class CompleteForCmd(CheckValidForCmd):
 
     def complete_set(self, text, line, begidx, endidx):
         "Complete the set command"
-
         args = self.split_arg(line[0:begidx])
 
         # Format
@@ -1300,7 +1323,7 @@ class CompleteForCmd(CheckValidForCmd):
 
         if len(args) == 2:
             if args[1] in ['group_subprocesses']:
-                return self.list_completion(text, ['False', 'True'])
+                return self.list_completion(text, ['False', 'True', 'Auto'])
             
             elif args[1] in ['ignore_six_quark_processes']:
                 return self.list_completion(text, self._multiparticles.keys())
@@ -1322,7 +1345,7 @@ class CompleteForCmd(CheckValidForCmd):
         
     def complete_import(self, text, line, begidx, endidx):
         "Complete the import command"
-
+        
         args=self.split_arg(line[0:begidx])
         
         # Format
@@ -1334,68 +1357,68 @@ class CompleteForCmd(CheckValidForCmd):
         elif args[1] in self._import_formats:
             mode = args[1]
         else:
+            args.insert(1, 'all')
             mode = 'all'
 
+
+        completion_categories = {}
         # restriction continuation (for UFO)
-        if mode in ['model', 'all'] and ('-' in args[-1] + text):
+        if mode in ['model', 'all'] and '-' in  text:
             # deal with - in readline splitting (different on some computer)
-            if not GNU_SPLITTING:
-                prefix = '-'.join([part for part in text.split('-')[:-1]])+'-'
-                args.append(prefix)
-                text = text.split('-')[-1]
-            #model name
-            path = args[-1][:-1] # remove the final - for the model name
+            path = '-'.join([part for part in text.split('-')[:-1]])
+            # remove the final - for the model name
             # find the different possibilities
             all_name = self.find_restrict_card(path, no_restrict=False)
             all_name += self.find_restrict_card(path, no_restrict=False,
                                         base_dir=pjoin(MG5DIR,'models'))
 
-            # select the possibility according to the current line            
-            all_name = [name.split('-')[-1] for name in  all_name ]
+            # select the possibility according to the current line           
             all_name = [name+' ' for name in  all_name if name.startswith(text)
                                                        and name.strip() != text]
-            # adapt output for python2.7 (due to different splitting)
-            if not GNU_SPLITTING:
-                all_name = [prefix + name for name in  all_name ]
+            
                 
             if all_name:
-                return all_name
+                completion_categories['Restricted model'] = all_name
 
         # Path continuation
-        if os.path.sep in args[-1] + text and text:
-            if mode.startswith('model'):
+        if os.path.sep in args[-1]:
+            if mode.startswith('model') or mode == 'all':
                 # Directory continuation
-                cur_path = pjoin('.',*[a for a in args \
+                try:
+                    cur_path = pjoin(*[a for a in args \
                                                    if a.endswith(os.path.sep)])
-                all_dir = self.path_completion(text, cur_path, only_dirs = True)
-                if mode == 'model_v4':
-                    return all_dir
-                new = []
-                data =   [new.__iadd__(self.find_restrict_card(name, base_dir=cur_path))
-                                                            for name in all_dir]
-                if data:
-                    return data[0]
+                except:
+                    pass
                 else:
-                    return []
-            else:
-                cur_path = pjoin('.',*[a for a in args \
-                                                   if a.endswith(os.path.sep)])
-                all_path =  self.path_completion(text, cur_path)
-                if mode == 'all':
-                    new = [] 
-                    data =   [new.__iadd__(self.find_restrict_card(name, base_dir=cur_path)) 
-                                                           for name in all_path]
+                    all_dir = self.path_completion(text, cur_path, only_dirs = True)
+                    if mode in ['model_v4','all']:
+                        completion_categories['Path Completion'] = all_dir
+                    # Only UFO model here
+                    new = []
+                    data =   [new.__iadd__(self.find_restrict_card(name, base_dir=cur_path))
+                                                                for name in all_dir]
                     if data:
-                        return data[0]
-                    else:
-                        return []
+                        completion_categories['Path Completion'] = all_dir + new
+            else:
+                try:
+                    cur_path = pjoin(*[a for a in args \
+                                                   if a.endswith(os.path.sep)])
+                except:
+                    pass
                 else:
-                    return all_path
-
-
+                    all_path =  self.path_completion(text, cur_path)
+                    if mode == 'all':
+                        new = [] 
+                        data =   [new.__iadd__(self.find_restrict_card(name, base_dir=cur_path)) 
+                                                               for name in all_path]
+                        if data:
+                            completion_categories['Path Completion'] = data[0]
+                    else:
+                        completion_categories['Path Completion'] = all_path
+                
         # Model directory name if directory is not given
-        if (mode != 'all' and len(self.split_arg(line[0:begidx])) == 2) or \
-            (mode =='all' and len(self.split_arg(line[0:begidx]))==1):
+        if (len(args) == 2):
+            is_model = True
             if mode == 'model':
                 file_cond = lambda p : os.path.exists(pjoin(MG5DIR,'models',p,'particles.py'))
                 mod_name = lambda name: name
@@ -1412,46 +1435,42 @@ class CompleteForCmd(CheckValidForCmd):
                 cur_path = pjoin('.',*[a for a in args \
                                                    if a.endswith(os.path.sep)])
                 all_path =  self.path_completion(text, cur_path)
-                return all_path
-                
-            model_list = [mod_name(name) for name in \
-                                            self.path_completion(text,
-                                            pjoin(MG5DIR,'models'),
-                                            only_dirs = True) \
-                                            if file_cond(name)]
+                completion_categories['model name'] = all_path
+                is_model = False
             
-            if mode == 'model_v4':
-                return model_list
-            else:
-                # need to update the  list with the possible restriction
-                all_name = []
-                for model_name in model_list:
-                    all_name += self.find_restrict_card(model_name, 
-                                        base_dir=pjoin(MG5DIR,'models'))
-            if mode == 'all':
-                cur_path = pjoin('.',*[a for a in args \
-                                                    if a.endswith(os.path.sep)])
-                all_path =  self.path_completion(text, cur_path)
-                return all_path + all_name 
-            else:
-                return all_name                
+            if is_model:
+                model_list = [mod_name(name) for name in \
+                                                self.path_completion(text,
+                                                pjoin(MG5DIR,'models'),
+                                                only_dirs = True) \
+                                                if file_cond(name)]
+                
+                if mode == 'model_v4':
+                    completion_categories['model name'] = model_list
+                else:
+                    # need to update the  list with the possible restriction
+                    all_name = []
+                    for model_name in model_list:
+                        all_name += self.find_restrict_card(model_name, 
+                                            base_dir=pjoin(MG5DIR,'models'))
+                if mode == 'all':
+                    cur_path = pjoin('.',*[a for a in args \
+                                                        if a.endswith(os.path.sep)])
+                    all_path =  self.path_completion(text, cur_path)
+                    completion_categories['model name'] = all_path + all_name 
+                elif mode == 'model':
+                    completion_categories['model name'] = all_name 
 
         # Options
         if mode == 'all' and len(args)>1:
-            mode = self.find_import_type(args[1])
-            opt_len = 1
-        else:
-            opt_len =2        
-        
-        
-        if len(args) > opt_len and mode.startswith('model') and args[-1][0] != '-':
-                return ['-modelname']
-            
-        if len(args) > (opt_len+1) and mode[1].startswith('model') and args[-1][0] == '-':
-           if GNU_SPLITTING:
-               return ['modelname']
-           else: 
-               return ['-modelname']
+            mode = self.find_import_type(args[2])
+   
+        if len(args) >= 3 and mode.startswith('model') and not '-modelname' in line:
+            if not text and not completion_categories:
+                return ['--modelname']
+            elif not (os.path.sep in args[-1] and line[-1] != ' '):
+                completion_categories['options'] = self.list_completion(text, ['--modelname','-modelname'])
+        return self.deal_multiple_categories(completion_categories) 
         
         
             
@@ -1528,8 +1547,6 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
     _curr_exporter = None
     _done_export = False
 
-    # Configuration variable
-    pythia8_path = None
     
     def __init__(self, mgme_dir = '', *completekey, **stdin):
         """ add a tracker of the history """
@@ -1568,7 +1585,7 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
             self._cuttools_dir=str(os.path.join(self._mgme_dir,'loop_material','CutTools'))
 
         # Set defaults for options
-        self._options['group_subprocesses'] = True
+        self._options['group_subprocesses'] = 'Auto'
         self._options['ignore_six_quark_processes'] = False
         
         # Load the configuration file
@@ -1628,7 +1645,10 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
             cpu_time1 = time.time()
 
             # Generate processes
-            collect_mirror_procs = self._options['group_subprocesses']
+            if self._options['group_subprocesses'] == 'Auto':
+                    collect_mirror_procs = True
+            else:
+                collect_mirror_procs = self._options['group_subprocesses']
             ignore_six_quark_processes = \
                            self._options['ignore_six_quark_processes'] if \
                            "ignore_six_quark_processes" in self._options \
@@ -1695,7 +1715,7 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
                                              self.multiparticle_string(label))
     
     # Display
-    def do_display(self, line):
+    def do_display(self, line, output=sys.stdout):
         """Display current internal status"""
 
         args = self.split_arg(line)
@@ -1758,7 +1778,7 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
                 text += '\n'
             pydoc.pager(text)
 
-        elif args[0] == 'interactions':
+        elif args[0] == 'interactions' and len(args)==2 and args[1].isdigit():
             for arg in args[1:]:
                 if int(arg) > len(self._curr_model['interactions']):
                     raise self.InvalidCmd, 'no interaction %s in current model' % arg
@@ -1767,6 +1787,43 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
                 else:
                     print "Interactions %s has the following property:" % arg
                     print self._curr_model['interactions'][int(arg)-1]
+
+        elif args[0] == 'interactions':
+            request_part = args[1:]
+            text = ''
+            for i, inter in enumerate(self._curr_model['interactions']):
+                present_part = [part['is_part'] and part['name'] or part['antiname']
+                                 for part in inter['particles']
+                                if (part['is_part'] and  part['name'] in request_part) or
+                                   (not part['is_part'] and part['antiname'] in request_part)]
+                if len(present_part) < len(request_part):
+                    continue
+                # check that all particles are selected at least once
+                if set(present_part) != set(request_part):
+                    continue
+                # check if a particle is asked more than once
+                if len(request_part) > len(set(request_part)):
+                    for p in request_part:
+                        print p, request_part.count(p),present_part.count(p)
+                        if request_part.count(p) > present_part.count(p):
+                            continue
+                        
+                name = str(i+1) + ' : '
+                for part in inter['particles']:
+                    if part['is_part']:
+                        name += part['name']
+                    else:
+                        name += part['antiname']
+                    name += " "                   
+                text += "\nInteractions %s has the following property:\n" % name
+                text += str(self._curr_model['interactions'][i]) 
+
+                text += '\n'
+                print name
+            if text =='':
+                text += 'No matching for any interactions'
+            pydoc.pager(text)
+
 
         elif args[0] == 'parameters' and len(args) == 1:
             text = "Current model contains %i parameters\n" % \
@@ -1802,7 +1859,8 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
                 print self.multiparticle_string(key)
                 
         elif args[0] == 'coupling_order':
-            hierarchy = self._curr_model.get_order_hierarchy().items()
+            hierarchy = self._curr_model['order_hierarchy'].items()
+            #self._curr_model.get_order_hierarchy().items()
             def order(first, second):
                 if first[1] < second[1]:
                     return -1
@@ -1881,7 +1939,7 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
             pydoc.pager(outstr)            
         
         elif args[0] in  ["options", "variable"]:
-            super(MadGraphCmd, self).do_display(line)
+            super(MadGraphCmd, self).do_display(line, output)
                 
             
     def multiparticle_string(self, key):
@@ -2690,7 +2748,7 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
 
 
     
-    def set_configuration(self, config_path=None):
+    def set_configuration(self, config_path=None, test=False):
         """ assign all configuration variable from file 
             ./input/mg5_configuration.txt. assign to default if not define """
             
@@ -2698,7 +2756,8 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
                               'web_browser':None,
                               'eps_viewer':None,
                               'text_editor':None,
-                              'fortran_compiler':None}
+                              'fortran_compiler':None,
+                              'automatic_html_opening':True}
         
         if not config_path:
             try:
@@ -2726,6 +2785,9 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
                 if value.lower() == "none":
                     self.configuration[name] = None
 
+        if test:
+            return self.configuration
+
         # Treat each expected input
         # 1: Pythia8_path
         # try relative path
@@ -2733,11 +2795,11 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
             if key == 'pythia8_path':
                 pythia8_dir = pjoin(MG5DIR, self.configuration['pythia8_path'])
                 if not os.path.isfile(pjoin(pythia8_dir, 'include', 'Pythia.h')):
-                    if os.path.isfile(pjoin(self.configuration['pythia8_path'], 'include', 'Pythia.h')):
-                        pythia8_dir = self.configuration['pythia8_path']
+                    if not os.path.isfile(pjoin(self.configuration['pythia8_path'], 'include', 'Pythia.h')):
+                       self.configuration['pythia8_path'] = None
                     else:
-                        pythia8_dir = None
-                self.pythia8_path = pythia8_dir
+                        continue
+                    
             elif key.endswith('path'):
                 pass
             elif key in ['cluster_type', 'automatic_html_opening']:
@@ -2793,12 +2855,25 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
                 if hasattr(self, 'do_shell'):
                     ME = madevent_interface.MadEventCmdShell(me_dir=args[1])
                 else:
-                     ME = madevent_interface.MadEventCmdShell(me_dir=args[1])
-                stop = self.define_child_cmd_interface(ME)
+                     ME = madevent_interface.MadEventCmd(me_dir=args[1])
+                # transfer interactive configuration
+                config_line = [l for l in self.history if l.strip().startswith('set')]
+                for line in config_line:
+                    ME.exec_cmd(line)
+                stop = self.define_child_cmd_interface(ME)                
                 return stop
             
             #check if this is a cross-section
-            if len(self._generate_info.split('>')[0].strip().split())>1:
+            if not self._generate_info:
+                # This relaunch an old run -> need to check if this is a 
+                # cross-section or a width
+                info = open(pjoin(args[1],'SubProcesses','procdef_mg5.dat')).read()
+                generate_info = info.split('# Begin PROCESS',1)[1].split('\n')[1]
+                generate_info = generate_info.split('#')[0]
+            else:
+                generate_info = self._generate_info
+            
+            if len(generate_info.split('>')[0].strip().split())>1:
                 ext_program = launch_ext.MELauncher(args[1], self.timeout, self,
                                 pythia=self.configuration['pythia-pgs_path'],
                                 delphes=self.configuration['delphes_path'],
@@ -2812,8 +2887,9 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
                                 delphes=self.configuration['delphes_path'],
                                 shell = hasattr(self, 'do_shell'),
                                 **options)
+
         elif args[0] == 'pythia8':
-            ext_program = launch_ext.Pythia8Launcher(self, args[1], self.timeout,
+            ext_program = launch_ext.Pythia8Launcher( args[1], self.timeout, self,
                                                 **options)
         else:
             os.chdir(start_cwd) #ensure to go to the initial path
@@ -2933,7 +3009,10 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
                             for q in self._options[args[0]]]))
             
         elif args[0] == 'group_subprocesses':
-            self._options[args[0]] = eval(args[1])
+            if args[1] != 'Auto':
+                self._options[args[0]] = eval(args[1])
+            else:
+                self._options[args[0]] = 'Auto'
             logger.info('Set group_subprocesses to %s' % \
                         str(self._options[args[0]]))
             logger.info('Note that you need to regenerate all processes')
@@ -3004,8 +3083,14 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
             if answer != 'y':
                 raise self.InvalidCmd('Stopped by user request')
 
-        group_subprocesses = self._export_format == 'madevent' and \
-                             self._options['group_subprocesses']
+        #check if we need to group processes
+        group_subprocesses = False
+        if self._export_format == 'madevent' and \
+                                            self._options['group_subprocesses']:
+                if self._options['group_subprocesses'] is True:
+                    group_subprocesses = True
+                elif self._curr_amps[0].get_ninitial()  == 2:
+                    group_subprocesses = True
 
         if self._curr_amps.has_any_loop_process() and \
            self._export_format not in ['standalone','matrix']:
@@ -3068,10 +3153,20 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
             self._curr_amps.sort(lambda a1, a2: a2.get_number_of_diagrams() - \
                                  a1.get_number_of_diagrams())
 
+            # Check if we need to group the SubProcesses or not
+            group = True
+            if self._options['group_subprocesses'] is False:
+                group = False
+            elif self._options['group_subprocesses'] == 'Auto' and \
+                                         self._curr_amps[0].get_ninitial() == 1:
+                   group = False 
+
+
+
             cpu_time1 = time.time()
             ndiags = 0
             if not self._curr_matrix_elements.get_matrix_elements():
-                if self._options['group_subprocesses']:
+                if group:
                     cpu_time1 = time.time()
                     dc_amps = [amp for amp in self._curr_amps if isinstance(amp, \
                                         diagram_generation.DecayChainAmplitude)]

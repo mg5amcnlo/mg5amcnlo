@@ -1181,15 +1181,16 @@ class ProcessExporterFortranME(ProcessExporterFortran):
         cp(_file_path+'/__init__.py', self.dir_path+'/bin/internal/__init__.py')
         cp(_file_path+'/various/gen_crossxhtml.py', 
                                 self.dir_path+'/bin/internal/gen_crossxhtml.py')                
-        cp(_file_path+'/various/splitbanner.py', 
-                                   self.dir_path+'/bin/internal/splitbanner.py')
+        cp(_file_path+'/various/banner.py', 
+                                   self.dir_path+'/bin/internal/banner.py')
         cp(_file_path+'/various/cluster.py', 
                                        self.dir_path+'/bin/internal/cluster.py') 
         cp(_file_path+'/various/sum_html.py', 
                                        self.dir_path+'/bin/internal/sum_html.py') 
         cp(_file_path+'/interface/.mg5_logging.conf', 
                                  self.dir_path+'/bin/internal/me5_logging.conf') 
-
+        cp(_file_path+'/interface/coloring_logging.py', 
+                                 self.dir_path+'/bin/internal/coloring_logging.py') 
 
     #===========================================================================
     # export model files
@@ -1240,13 +1241,13 @@ class ProcessExporterFortranME(ProcessExporterFortran):
         cwd = os.getcwd()
         path = os.path.join(self.dir_path, 'SubProcesses')
 
+
         if not self.model:
             self.model = matrix_element.get('processes')[0].get('model')
 
 
 
         os.chdir(path)
-
         # Create the directory PN_xx_xxxxx in the specified path
         subprocdir = "P%s" % matrix_element.get('processes')[0].shell_string()
         try:
@@ -1471,13 +1472,14 @@ class ProcessExporterFortranME(ProcessExporterFortran):
 
         os.chdir(os.path.pardir)
 
-        gen_infohtml.make_info_html(self.dir_path)
-        #subprocess.call([os.path.join(old_pos, self.dir_path, 'bin', 'internal', 'gen_crossxhtml.py')],
-        #                stdout = devnull)
+        obj = gen_infohtml.make_info_html(self.dir_path)
         [mv(name, './HTML/') for name in os.listdir('.') if \
                             (name.endswith('.html') or name.endswith('.jpg')) and \
                             name != 'index.html']               
-
+        if online:
+            nb_channel = obj.rep_rule['nb_gen_diag']
+            open(pjoin('./Online'),'w').write(str(nb_channel))
+        
         # Write command history as proc_card_mg5
         if os.path.isdir('Cards'):
             output_file = os.path.join('Cards', 'proc_card_mg5.dat')
@@ -1817,7 +1819,7 @@ c           This is dummy particle used in multiparticle vertices
         if os.environ.has_key('HOME'):
             conf = os.path.join(os.environ['HOME'], '.mg5','mg5_configuration.txt')
             if os.path.exists(conf):
-                # just need to copy seed the path are absolute
+                # just need to copy since the path are absolute
                 path = writer.name
                 writer.close()
                 cp(conf, path)

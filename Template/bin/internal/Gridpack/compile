@@ -45,6 +45,10 @@ else
     unset lhapdf
 fi
 
+# Clean the previous compilation
+cd Source
+make clean
+cd -
 #
 #  Now let shell know where to find important executables
 #

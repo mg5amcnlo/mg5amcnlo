@@ -1280,11 +1280,11 @@ class TestFeynmanDiagram(unittest.TestCase):
         diagram.main()
         
         #select the s-channel lepton
-        line = [line for line in diagram.lineList if line.start.level in [2,3]
+        line = [line for line in diagram.lineList if line.begin.level in [2,3]
                                                 and line.end.level in [2,3]][0]
-        
-        self.assertEqual(line.pid, 11)
-        self.assertEqual(line.start.level, 2)
+
+        self.assertEqual(line.id, 11)
+        self.assertEqual(line.begin.level, 2)
         self.assertEqual(line.end.level, 3)
         
         # Do the same for after the output command:
@@ -1294,11 +1294,11 @@ class TestFeynmanDiagram(unittest.TestCase):
         diagram.main()
         
         #select the s-channel lepton
-        line = [line for line in diagram.lineList if line.start.level in [2,3]
+        line = [line for line in diagram.lineList if line.begin.level in [2,3]
                                                 and line.end.level in [2,3]][0]
         
-        self.assertEqual(line.pid, 11)
-        self.assertEqual(line.start.level, 2)
+        self.assertEqual(line.id, 11)
+        self.assertEqual(line.begin.level, 2)
         self.assertEqual(line.end.level, 3)      
  
 
@@ -1316,11 +1316,11 @@ class TestFeynmanDiagram(unittest.TestCase):
         diagram.main()
         
         #select the s-channel W
-        line = [line for line in diagram.lineList if line.start.level in [2,3]
+        line = [line for line in diagram.lineList if line.begin.level in [2,3]
                                                 and line.end.level in [2,3]][0]        
         
-        self.assertEqual(line.pid, 24)
-        self.assertEqual(line.start.level, 2)
+        self.assertEqual(line.id, 24)
+        self.assertEqual(line.begin.level, 2)
         self.assertEqual(line.end.level, 3)
         
         # Do the same for after the output command:
@@ -1334,11 +1334,11 @@ class TestFeynmanDiagram(unittest.TestCase):
         diagram.main()
         
         #select the s-channel lepton
-        line = [line for line in diagram.lineList if line.start.level in [2,3]
+        line = [line for line in diagram.lineList if line.begin.level in [2,3]
                                                 and line.end.level in [2,3]][0]
         
-        self.assertEqual(line.pid, 24)
-        self.assertEqual(line.start.level, 2)
+        self.assertEqual(line.id, 24)
+        self.assertEqual(line.begin.level, 2)
         self.assertEqual(line.end.level, 3)  
 
         #
@@ -1355,11 +1355,11 @@ class TestFeynmanDiagram(unittest.TestCase):
         diagram.main()
         
         #select the s-channel W
-        line = [line for line in diagram.lineList if line.start.level in [2,3]
+        line = [line for line in diagram.lineList if line.begin.level in [2,3]
                                                 and line.end.level in [2,3]][0]        
         
-        self.assertEqual(line.pid, 24)
-        self.assertEqual(line.start.level, 2)
+        self.assertEqual(line.id, 24)
+        self.assertEqual(line.begin.level, 2)
         self.assertEqual(line.end.level, 3)
         
         # Do the same for after the output command:
@@ -1373,11 +1373,11 @@ class TestFeynmanDiagram(unittest.TestCase):
         diagram.main()
         
         #select the s-channel lepton
-        line = [line for line in diagram.lineList if line.start.level in [2,3]
+        line = [line for line in diagram.lineList if line.begin.level in [2,3]
                                                 and line.end.level in [2,3]][0]
         
-        self.assertEqual(line.pid, 24)
-        self.assertEqual(line.start.level, 2)
+        self.assertEqual(line.id, 24)
+        self.assertEqual(line.begin.level, 2)
         self.assertEqual(line.end.level, 3) 
 
         #
@@ -1391,19 +1391,19 @@ class TestFeynmanDiagram(unittest.TestCase):
         #print diagram._debug_level()        
         diagram.main()
         #select the s-channel W
-        line1 = [line for line in diagram.lineList if line.start.level in [2,3]
+        line1 = [line for line in diagram.lineList if line.begin.level in [2,3]
                                                 and line.end.level in [2,3]][0]        
-        line2 = [line for line in diagram.lineList if line.start.level in [3,4]
+        line2 = [line for line in diagram.lineList if line.begin.level in [3,4]
                                                 and line.end.level in [4,3]][0] 
-        line3 = [line for line in diagram.lineList if line.start.level in [2,5]
+        line3 = [line for line in diagram.lineList if line.begin.level in [2,5]
                                                 and line.end.level in [2,5]][0] 
         self.assertEqual(line3.pid, -24)
         
-        self.assertEqual(line1.pid, line2.pid)
-        self.assertEqual(line1.pid, 24)
-        self.assertEqual(line1.start.level, 2)
+        self.assertEqual(line1.id, line2.id)
+        self.assertEqual(line1.id, 24)
+        self.assertEqual(line1.begin.level, 2)
         self.assertEqual(line1.end.level, 3)
-        self.assertEqual(line2.start.level, 3)
+        self.assertEqual(line2.begin.level, 3)
         self.assertEqual(line2.end.level, 4)        
         # Do the same for after the output command:
         # Load diagram with one fermion flow 
@@ -1413,16 +1413,16 @@ class TestFeynmanDiagram(unittest.TestCase):
         diagram.main()
         
         #select the s-channel W
-        line1 = [line for line in diagram.lineList if line.start.level in [2,3]
+        line1 = [line for line in diagram.lineList if line.begin.level in [2,3]
                                                 and line.end.level in [2,3]][0]        
-        line2 = [line for line in diagram.lineList if line.start.level in [3,4]
+        line2 = [line for line in diagram.lineList if line.begin.level in [3,4]
                                                 and line.end.level in [4,3]][0] 
         
-        self.assertEqual(line1.pid, line2.pid)
-        self.assertEqual(line1.pid, 24)
-        self.assertEqual(line1.start.level, 2)
+        self.assertEqual(line1.id, line2.id)
+        self.assertEqual(line1.id, 24)
+        self.assertEqual(line1.begin.level, 2)
         self.assertEqual(line1.end.level, 3)
-        self.assertEqual(line2.start.level, 3)
+        self.assertEqual(line2.begin.level, 3)
         self.assertEqual(line2.end.level, 4)    
 
 

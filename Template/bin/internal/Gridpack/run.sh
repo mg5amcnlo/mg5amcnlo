@@ -57,20 +57,24 @@ fi
 echo "Now generating $num_events events with random seed $seed and granularity $gran"
 
 
-if [[ ! -x ./madevent/bin/internal/gridrun ]]; then
+if [[ ! -x ./madevent/bin/gridrun ]]; then
     echo "Error: gridrun script not found !"
     exit
 else
     cd ./madevent
-    ./bin/internal/gridrun.py $num_events $seed
+    ./bin/gridrun $num_events $seed
 fi
 
-if [[ ! -e ./Events/unweighted_events.lhe ]]; then
+if [[ -e ./Events/GridRun_${seed}/unweighted_events.lhe.gz ]]; then
+	gunzip ./Events/GridRun_${seed}/unweighted_events.lhe.gz
+fi
+
+if [[ ! -e  ./Events/GridRun_${seed}/unweighted_events.lhe ]]; then
     echo "Error: event file not found !"
     exit
 else
-    echo "Moving events from madevent/Events/unweighted_events.lhe to events.lhe"
-    mv ./Events/unweighted_events.lhe ../events.lhe
+    echo "Moving events from  events.lhe"
+    mv ./Events/GridRun_${seed}/unweighted_events.lhe ../events.lhe
     cd ..
 fi
 

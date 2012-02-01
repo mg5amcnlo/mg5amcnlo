@@ -1,4 +1,5 @@
 import model mssm
+set automatic_html_opening False
 generate p p > go go
 output /tmp/MGPROCESS/
 launch -i

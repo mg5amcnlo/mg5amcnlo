@@ -89,7 +89,7 @@ class TestRestrictModel(unittest.TestCase):
         
         expected=set([('MZ','MH'), ('WZ','WH')])
         result = self.model.detect_identical_parameters()
-        result = [tuple([obj.name for obj in obj_list]) for obj_list in result]
+        result = [tuple([obj[0].name for obj in obj_list]) for obj_list in result]
         
         self.assertEqual(expected, set(result))
         
@@ -102,8 +102,8 @@ class TestRestrictModel(unittest.TestCase):
         
         
         #check that both MZ and MH are not anymore in the external_parameter
-        keeped = parameters[0][0].name
-        removed = parameters[0][1].name
+        keeped = '1*%s' % parameters[0][0][0].name
+        removed = parameters[0][1][0].name
         for dep,data in self.model['parameters'].items():
             if dep == ('external'):
                 for param in data:
@@ -244,6 +244,7 @@ class TestRestrictModel(unittest.TestCase):
         
         # make the real test
         self.model.locate_coupling()
+        print '**********************************************************'
         result = self.model.remove_interactions(['GC_6','GC_33'])
         self.assertFalse(input in self.model['interactions'])
         self.assertFalse(input2 in self.model['interactions'])
