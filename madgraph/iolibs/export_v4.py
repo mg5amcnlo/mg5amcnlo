@@ -1401,7 +1401,7 @@ class ProcessExporterFortranME(ProcessExporterFortran):
                             name != 'index.html']               
         if online:
             nb_channel = obj.rep_rule['nb_gen_diag']
-            open(pjoin('./Online'),'w').write(str(nb_channel))
+            open(os.path.join('./Online'),'w').write(str(nb_channel))
         
         # Write command history as proc_card_mg5
         if os.path.isdir('Cards'):
