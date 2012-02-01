@@ -515,12 +515,12 @@ class AbstractALOHAModel(dict):
         for list_l_name, tag, outgoing in data:
             for l_name in list_l_name:
                 try:
-                    request[l_name][conjugate].append(outgoing)
+                    request[l_name][tag].append(outgoing)
                 except:
                     try:
-                        request[l_name][conjugate] = [outgoing]
+                        request[l_name][tag] = [outgoing]
                     except:
-                        request[l_name] = {conjugate: [outgoing]}
+                        request[l_name] = {tag: [outgoing]}
                         
         # Loop on the structure to build exactly what is request
         for l_name in request:
