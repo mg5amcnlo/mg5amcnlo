@@ -339,7 +339,7 @@ class AllResults(dict):
         # 2) Create the text for the old run:
         old_run = ''
         for key in self.order:
-            old_run += self[key].get_html(self.path, self.web, running)
+            old_run += self[key].get_html(self.path, web=self.web, running=running)
         
         text_dict = {'process': self.process,
                      'model': self.model,
@@ -388,7 +388,7 @@ class RunResults(list):
         self.append(OneTagResults(run_name, run_card, path))
         
     
-    def get_html(self, output_path, *arg, **opt):
+    def get_html(self, output_path, **opt):
         """WRITE HTML OUTPUT"""
 
         try:
@@ -813,7 +813,7 @@ class OneTagResults(dict):
             # Fill the links
             local_dico['links'] = self.get_links(type)
 
-
+            print 'RUNRESULTS.WEB:',runresults.web
             # Fill the actions
             if type == 'parton':
                 if runresults.web:
