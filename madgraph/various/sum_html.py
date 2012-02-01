@@ -50,8 +50,7 @@ class OneResult(object):
             if i == 1:
                 data = [float(d) for d in line.split()]
                 self.xsec, self.xerru, self.xerrc, self.nevents, self.nw,\
-                         self.maxit, self.nunwgt, self.luminosity, \
-                         self.twgt = data
+                         self.maxit, self.nunwgt, self.luminosity = data[:8]
                 if self.mfactor > 1:
                     self.luminosity /= self.mfactor
                     #self.ysec_iter.append(self.xsec)
