@@ -1130,6 +1130,7 @@ class RestrictModel(model_reader.ModelReader):
         """ remove the interactions and particle counterterms 
         associated to couplings"""
         
+        
         mod_vertex = []
         mod_particle_ct = []
         for coup in zero_couplings:
@@ -1138,9 +1139,9 @@ class RestrictModel(model_reader.ModelReader):
                 continue
             
             # Remove the corresponding interactions.
-                        # replace the coupling appearing in the particle counterterm
+            # replace the coupling appearing in the particle counterterm
             vertices = [ vert for vert in self.coupling_pos[coup] if 
-                         isinstance(vert, base_objects.Vertex) ]
+                         isinstance(vert, base_objects.Interaction) ]
             for vertex in vertices:
                 modify = False
                 for key, coupling in vertex['couplings'].items():
@@ -1148,7 +1149,7 @@ class RestrictModel(model_reader.ModelReader):
                         modify=True
                         del vertex['couplings'][key]
                 if modify:
-                    mod.append(vertex)
+                    mod_vertex.append(vertex)
             
             # Remove the corresponding particle counterterm
             particles_ct = [ pct for pct in self.coupling_pos[coup] if 

@@ -244,7 +244,6 @@ class TestRestrictModel(unittest.TestCase):
         
         # make the real test
         self.model.locate_coupling()
-        print '**********************************************************'
         result = self.model.remove_interactions(['GC_6','GC_33'])
         self.assertFalse(input in self.model['interactions'])
         self.assertFalse(input2 in self.model['interactions'])

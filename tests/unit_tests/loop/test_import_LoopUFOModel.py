@@ -63,7 +63,7 @@ def loadLoopToyModel():
                   'pdg_code':21,
                   'propagating':True,
                   'is_part':True,
-                  'counterterm':{('QCD', ((6,),)): {0: 'C_UVWfct_G_1', -1: 'C_UVWfct_G_1_1eps'}, ('QCD', ((5,),)): {0: 'C_UVWfct_G_0', -1: 'C_UVWfct_G_0_1eps'}},
+                  'counterterm':{('QCD', ((6,),)): {0: 'UVWfct_G_1', -1: 'UVWfct_G_1_1eps'}, ('QCD', ((5,),)): {0: 'UVWfct_G_0', -1: 'UVWfct_G_0_1eps'}},
                   'self_antipart':True}))
     
     # A quark U and its antiparticle
