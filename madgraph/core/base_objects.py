@@ -1019,6 +1019,7 @@ class Model(PhysicsObject):
         # 3) Find All width fixed by the model
         #   -> Need to be fixed with a real()
         # 4) Loop through all expression and modify those accordingly
+        #    Including all parameter expression as complex
         
         to_change = {}
         mass_widths = [] # parameter which should stay real
