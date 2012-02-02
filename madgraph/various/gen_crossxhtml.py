@@ -814,7 +814,6 @@ class OneTagResults(dict):
             # Fill the links
             local_dico['links'] = self.get_links(type)
 
-            print 'RUNRESULTS.WEB:',runresults.web
             # Fill the actions
             if type == 'parton':
                 if runresults.web:

@@ -1051,6 +1051,7 @@ class SmartQuestion(BasicCmd):
         BasicCmd.preloop(self)
 
     def __init__(self,  allow_arg=[], default=None, *arg, **opt):
+        self.wrong_answer = 0 # forbids infinite loop
         self.allow_arg = [str(a) for a in allow_arg]
         self.history_header = ''
         self.default_value = str(default)
@@ -1071,7 +1072,7 @@ class SmartQuestion(BasicCmd):
     def default(self, line):
         """Default action if line is not recognized"""
 
-        if line == '' and self.default_value is not None:
+        if line.strip() == '' and self.default_value is not None:
             self.value = self.default_value
         else:
             self.value = line
@@ -1090,11 +1091,16 @@ class SmartQuestion(BasicCmd):
             else:
                 raise Exception
         except Exception:
-            print """not valid argument. Valid argument are in (%s).""" \
-                          % ','.join(self.allow_arg)
-            print 'please retry'
-            return False
-            
+            if self.wrong_answer < 100:
+                self.wrong_answer += 1
+                print """%s not valid argument. Valid argument are in (%s).""" \
+                          % (self.value,','.join(self.allow_arg))
+                print 'please retry'
+                return False
+            else:
+                self.value = self.default_value
+                return True
+                
     def cmdloop(self, intro=None):
         cmd.Cmd.cmdloop(self, intro)
         return self.value
