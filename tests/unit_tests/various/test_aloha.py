@@ -3422,8 +3422,8 @@ C
       
         # Check expr are different
         self.assertNotEqual(str(amp.expr), str(conjg_amp.expr))
-        self.assertNotEqual(amp.name, conjg_amp.name)
-        
+        self.assertEqual(amp.name, conjg_amp.name)
+        self.assertEqual(amp.tag + ['C1'], conjg_amp.tag)
         
     def test_aloha_expr_FFV2C1(self):
         """Test analytical expression for fermion clash routine"""

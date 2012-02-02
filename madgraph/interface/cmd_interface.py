@@ -1850,7 +1850,8 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
                 print self.multiparticle_string(key)
                 
         elif args[0] == 'coupling_order':
-            hierarchy = self._curr_model.get_order_hierarchy().items()
+            hierarchy = self._curr_model['order_hierarchy'].items()
+            #self._curr_model.get_order_hierarchy().items()
             def order(first, second):
                 if first[1] < second[1]:
                     return -1
@@ -3181,12 +3182,8 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
                         for me in group.get('matrix_elements'):
                             me.get('processes')[0].set('uid', uid)
                 else: # Not grouped subprocesses
-                    combine_matrix_elements = True
-                    if self._curr_amps[0].get_ninitial() == 1:
-                        combine_matrix_elements = False
                     self._curr_matrix_elements = \
-                        helas_objects.HelasMultiProcess(self._curr_amps,
-                                                        combine_matrix_elements)
+                        helas_objects.HelasMultiProcess(self._curr_amps)
                     ndiags = sum([len(me.get('diagrams')) for \
                                   me in self._curr_matrix_elements.\
                                   get_matrix_elements()])
