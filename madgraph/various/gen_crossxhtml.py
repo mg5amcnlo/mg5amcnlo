@@ -836,7 +836,7 @@ class OneTagResults(dict):
 <INPUT TYPE=HIDDEN NAME=directory VALUE="%(me_dir)s">
 <INPUT TYPE=HIDDEN NAME=whattodo VALUE="pgs">
 <INPUT TYPE=HIDDEN NAME=run VALUE="%(run_name)s">
-<INPUT TYPE=SUBMIT VALUE="Run Pythia">
+<INPUT TYPE=SUBMIT VALUE="Run Detector">
 </FORM>"""
                     else:
                         local_dico['action'] = self.command_suggestion_html('remove %s pythia --tag=%s' %\
