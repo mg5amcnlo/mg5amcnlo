@@ -1088,7 +1088,10 @@ class SmartQuestion(BasicCmd):
         try:    
             if self.value in self.allow_arg:
                 return True
-            else:
+            elif str(self.value) == 'EOF':
+                self.value = self.default_value
+                return True
+            else: 
                 raise Exception
         except Exception:
             if self.wrong_answer < 100:
