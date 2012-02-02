@@ -1396,6 +1396,8 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
                 self.web = True
                 self.cluster_mode = 1
                 self.results.def_web_mode(True)
+                if not '-f' in args:
+                    args.append('-f')
             else:
                 continue
             args.remove(arg)
