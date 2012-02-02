@@ -835,7 +835,7 @@ class OneTagResults(dict):
                         local_dico['action'] = """
 <FORM ACTION="http://%(web)s/cgi-bin/RunProcess/handle_runs-pl"  ENCTYPE="multipart/form-data" METHOD="POST">
 <INPUT TYPE=HIDDEN NAME=directory VALUE="%(me_dir)s">
-<INPUT TYPE=HIDDEN NAME=whattodo VALUE="pythia">
+<INPUT TYPE=HIDDEN NAME=whattodo VALUE="pgs">
 <INPUT TYPE=HIDDEN NAME=run VALUE="%(run_name)s">
 <INPUT TYPE=SUBMIT VALUE="Run Pythia">
 </FORM>"""
