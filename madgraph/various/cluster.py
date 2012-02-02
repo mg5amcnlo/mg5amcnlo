@@ -116,7 +116,7 @@ class CondorCluster(Cluster):
             stderr = '/dev/null'
         if log is None:
             log = '/dev/null'
-        if prog.startswith('./') and not os.path.exists(prog):
+        if not os.path.exists(prog):
             prog = os.path.join(cwd, prog)
         if argument:
             argument = 'Arguments = %s' % ' '.join(argument)
