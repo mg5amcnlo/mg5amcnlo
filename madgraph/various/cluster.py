@@ -16,6 +16,7 @@ import logging
 import hashlib
 import os
 import time
+import re
 
 logger = logging.getLogger('madgraph.cluster') 
 
@@ -75,6 +76,7 @@ class Cluster(object):
             fct(idle, run, finish)
             time.sleep(30)
         self.submitted = 0
+        self.submitted_ids = []
 
     def launch_and_wait(self, prog, argument=[], cwd=None, stdout=None, 
                                                          stderr=None, log=None):
@@ -114,10 +116,13 @@ class CondorCluster(Cluster):
             stderr = '/dev/null'
         if log is None:
             log = '/dev/null'
+        if prog.startswith('./') and not os.path.exists(prog):
+            prog = os.path.join(cwd, prog)
         if argument:
             argument = 'Arguments = %s' % ' '.join(argument)
         else:
             argument = ''
+        
 
         dico = {'prog': prog, 'cwd': cwd, 'stdout': stdout, 
                 'stderr': stderr,'log': log,'argument': argument,
@@ -129,9 +134,14 @@ class CondorCluster(Cluster):
         #Submitting job(s).
         #Logging submit event(s).
         #1 job(s) submitted to cluster 2253622.
-        pat = re.compile("submitted to cluster (\d*)",re.MULTINLINE)
-        id = pat.search(output).groups()[0]
+        pat = re.compile("submitted to cluster (\d*)",re.MULTILINE)
+        try:
+            id = pat.search(output).groups()[0]
+        except:
+            raise ClusterManagmentError, 'fail to submit to the cluster: \n%s' \
+                                                                        % output 
         self.submitted += 1
+        self.submitted_ids.append(id)
         return id
 
     def control_one_job(self, id):
@@ -142,7 +152,11 @@ class CondorCluster(Cluster):
         
     def control(self, me_dir):
         """ control the status of a single job with it's cluster id """
-        cmd = "condor_q -constraint 'CMD>=\""+str(me_dir)+"\" -format \'%-2s \\n\' \'ifThenElse(JobStatus==0,\"U\",ifThenElse(JobStatus==1,\"I\",ifThenElse(JobStatus==2,\"R\",ifThenElse(JobStatus==3,\"X\",ifThenElse(JobStatus==4,\"C\",ifThenElse(JobStatus==5,\"H\",ifThenElse(JobStatus==6,\"E\",string(JobStatus))))))))\'"
+        
+        if not self.submitted_ids:
+            return 0, 0, 0, 0
+        
+        cmd = "condor_q " + ' '.join(self.submitted_ids) + " -format \'%-2s \\n\' \'ifThenElse(JobStatus==0,\"U\",ifThenElse(JobStatus==1,\"I\",ifThenElse(JobStatus==2,\"R\",ifThenElse(JobStatus==3,\"X\",ifThenElse(JobStatus==4,\"C\",ifThenElse(JobStatus==5,\"H\",ifThenElse(JobStatus==6,\"E\",string(JobStatus))))))))\'"
         status = subprocess.Popen([cmd], shell=True, stdout=subprocess.PIPE)
 
         idle, run, fail = 0, 0, 0

@@ -339,7 +339,7 @@ class AllResults(dict):
         # 2) Create the text for the old run:
         old_run = ''
         for key in self.order:
-            old_run += self[key].get_html(self.path, self.web, running)
+            old_run += self[key].get_html(self.path, web=self.web, running=running)
         
         text_dict = {'process': self.process,
                      'model': self.model,
@@ -360,7 +360,7 @@ class RunResults(list):
     def __init__(self, run_name, run_card, process, path):
         """initialize the object"""
         
-        self.info = {'run_name': run_name}
+        self.info = {'run_name': run_name,'me_dir':path}
         self.tags = []
         # Set the collider information
         data = process.split('>',1)[0].split()
@@ -388,7 +388,7 @@ class RunResults(list):
         self.append(OneTagResults(run_name, run_card, path))
         
     
-    def get_html(self, output_path, *arg, **opt):
+    def get_html(self, output_path, **opt):
         """WRITE HTML OUTPUT"""
 
         try:
@@ -409,6 +409,7 @@ class RunResults(list):
         """ % dico
 
         if self.web:
+            
             text = text % self.info
 
 
@@ -813,7 +814,6 @@ class OneTagResults(dict):
             # Fill the links
             local_dico['links'] = self.get_links(type)
 
-
             # Fill the actions
             if type == 'parton':
                 if runresults.web:
@@ -834,9 +834,9 @@ class OneTagResults(dict):
                         local_dico['action'] = """
 <FORM ACTION="http://%(web)s/cgi-bin/RunProcess/handle_runs-pl"  ENCTYPE="multipart/form-data" METHOD="POST">
 <INPUT TYPE=HIDDEN NAME=directory VALUE="%(me_dir)s">
-<INPUT TYPE=HIDDEN NAME=whattodo VALUE="pythia">
+<INPUT TYPE=HIDDEN NAME=whattodo VALUE="pgs">
 <INPUT TYPE=HIDDEN NAME=run VALUE="%(run_name)s">
-<INPUT TYPE=SUBMIT VALUE="Run Pythia">
+<INPUT TYPE=SUBMIT VALUE="Run Detector">
 </FORM>"""
                     else:
                         local_dico['action'] = self.command_suggestion_html('remove %s pythia --tag=%s' %\

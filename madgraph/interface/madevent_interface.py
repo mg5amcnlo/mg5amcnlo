@@ -1396,6 +1396,8 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
                 self.web = True
                 self.cluster_mode = 1
                 self.results.def_web_mode(True)
+                if not '-f' in args:
+                    args.append('-f')
             else:
                 continue
             args.remove(arg)
@@ -1909,7 +1911,7 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
                          pjoin(self.me_dir, 'HTML',self.run_name, 'plots_parton.html')
                          )
         
-        os.system('gzip -f %s/%s_unweighted_events.lhe' % 
+        os.system('gzip -f %s/%s/unweighted_events.lhe' % 
                                   (pjoin(self.me_dir, 'Events'), self.run_name))
 
         self.update_status('', level='parton')
