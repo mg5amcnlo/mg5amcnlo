@@ -80,15 +80,16 @@ class LoopExporterFortran(object):
             logger.error('Could not cd to directory %s' % dirpath)
             return 0
 
-        if os.path.exists(os.path.join(self.cuttools_dir,'includects','libcts.a')):
+        if not os.path.exists(os.path.join(self.cuttools_dir,'includects','libcts.a')):
+            logger.info('Compiling CutTools')
+            misc.compile(cwd=self.cuttools_dir)
+
+        if os.path.exists(os.path.join(self.cuttools_dir,'includects','libcts.a')):            
             linkfiles = ['libcts.a', 'ddmodule.mod', 'mpmodule.mod']
             for file in linkfiles:
                 ln(os.path.join(self.cuttools_dir,'includects')+'/%s' % file)
         else:
-            logger.info('Compiling CutTools')
-            misc.compile(cwd=self.cuttools_dir)
-
-
+            raise MadGraph5Error,"CutTools could not be correctly compiled."
 
         # Return to original PWD
         os.chdir(cwd)
