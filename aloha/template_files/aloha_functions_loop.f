@@ -25,7 +25,7 @@ c output:
 c       complex fi(6)          : fermion wavefunction               |fi>
 c
       implicit none
-      double complex fi(6),chi(2)
+      double complex fi(8),chi(2)
       double precision p(0:3),sf(2),sfomeg(2),omega(2),fmass,
      &     pp,pp3,sqp0p3,sqm(0:1)
       integer nhel,nsf,ip,im,nh
@@ -168,7 +168,7 @@ c output:
 c       complex fo(6)          : fermion wavefunction               <fo|
 c
       implicit none
-      double complex fo(6),chi(2)
+      double complex fo(8),chi(2)
       double precision p(0:3),sf(2),sfomeg(2),omega(2),fmass,
      &     pp,pp3,sqp0p3,sqm(0:1)
       integer nhel,nsf,nh,ip,im
@@ -317,7 +317,7 @@ c
       implicit none
       double precision p(0:3), tmass
       integer nhel, nst
-      double complex tc(18)
+      double complex tc(20)
 
       double complex ft(6,4), ep(4), em(4), e0(4)
       double precision pt, pt2, pp, pzpt, emp, sqh, sqs
@@ -355,7 +355,7 @@ c output:
 c       complex sc(3)          : scalar wavefunction                   s
 c
       implicit none
-      double complex sc(3)
+      double complex sc(5)
       double precision p(0:3)
       integer nss
 
@@ -426,7 +426,7 @@ c
       implicit none
       double precision p(0:3), tmass
       integer nhel, nst
-      double complex tc(18)
+      double complex tc(20)
 
       double complex ft(6,4), ep(4), em(4), e0(4)
       double precision pt, pt2, pp, pzpt, emp, sqh, sqs
@@ -581,6 +581,8 @@ c construct eps0
       tc(16) = ft(4,4)
       tc(17) = ft(5,1)
       tc(18) = ft(6,1)
+      tc(19) = ft(5,1)
+      tc(20) = ft(6,1)
 
       return
       end
@@ -601,7 +603,7 @@ c output:
 c       complex vc(6)          : vector wavefunction       epsilon^mu(v)
 c
       implicit none
-      double complex vc(6)
+      double complex vc(8)
       double precision p(0:3),vmass,hel,hel0,pt,pt2,pp,pzpt,emp,sqh
       integer nhel,nsv,nsvahl
 

@@ -85,9 +85,9 @@ class LoopExporterFortran(object):
             for file in linkfiles:
                 ln(os.path.join(self.cuttools_dir,'includects')+'/%s' % file)
         else:
-            raise MadGraph5Error, \
-                    "Please compile your CutTools distribution in '%s' before generation."\
-                    %self.cuttools_dir
+            logger.info('Compiling CutTools')
+            misc.compile(cwd=self.cuttools_dir)
+
 
 
         # Return to original PWD

@@ -479,6 +479,8 @@ class MultiEpsDiagramDrawer(EpsDiagramDrawer):
         for diagram in diagramlist:
             # Check if they need to be convert in correct format
             diagram = self.convert_diagram(diagram, self.model, self.amplitude, opt)
+            if diagram==None:
+                continue
             # Write the code associate to this diagram
             self.draw_diagram(diagram)
 

@@ -568,9 +568,17 @@ class AbstractALOHAModel(dict):
         for list_l_name, conjugate, outgoing, loop in data:
             if len(list_l_name) >1:
                 lorentzname = list_l_name[0]
+                # StartValentin 30.01.2012
+                others=list(list_l_name[1:])
                 for c in conjugate:
                     lorentzname += 'C%s' % c
-                self[(lorentzname, outgoing)].add_combine(list_l_name[1:])
+                if loop:
+                    lorentzname += 'L'
+#                    for i, name in enumerate(others):
+#                       others[i]=name+'L'
+#                self[(lorentzname, outgoing)].add_combine(list_l_name[1:])
+                # EndValentin 30.01.2012
+                self[(lorentzname, outgoing)].add_combine(tuple(others))
                         
     def compute_aloha(self, builder, symmetry=None, routines=None, routines_loop=None):
         """ define all the AbstractRoutine linked to a given lorentz structure

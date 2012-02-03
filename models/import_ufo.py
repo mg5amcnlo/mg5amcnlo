@@ -479,17 +479,17 @@ class UFOMG5Converter(object):
                     self.interactions.append(interaction)
         
         # check if this interaction conserve the charge defined
-        if type=='base':
-            for charge in list(self.conservecharge): #duplicate to allow modification
-                total = 0
-                for part in interaction_info.particles:
-                    try:
-                        total += getattr(part, charge)
-                    except AttributeError:
-                        pass
-                if abs(total) > 1e-12:
-                    logger.info('The model has interaction violating the charge: %s' % charge)
-                self.conservecharge.discard(charge)
+ #       if type=='base':
+        for charge in list(self.conservecharge): #duplicate to allow modification
+            total = 0
+            for part in interaction_info.particles:
+                try:
+                    total += getattr(part, charge)
+                except AttributeError:
+                    pass
+            if abs(total) > 1e-12:
+                logger.info('The model has interaction violating the charge: %s' % charge)
+            self.conservecharge.discard(charge)
     
     _pat_T = re.compile(r'T\((?P<first>\d*),(?P<second>\d*)\)')
     _pat_id = re.compile(r'Identity\((?P<first>\d*),(?P<second>\d*)\)')
@@ -662,7 +662,6 @@ class OrganizeModelExpression:
                         
                                         
         
-        
         for coupling in self.model.all_couplings:
             # shorten expression, find dependencies, create short object
             expr = self.shorten_expr(coupling.value)
@@ -805,7 +804,7 @@ class RestrictModel(model_reader.ModelReader):
      
     def restrict_model(self, param_card):
         """apply the model restriction following param_card"""
-
+        
         # Reset particle dict to ensure synchronized particles and interactions
         self.set('particles', self.get('particles'))
 
@@ -1018,9 +1017,8 @@ class RestrictModel(model_reader.ModelReader):
                 continue
             
             # Remove the corresponding interactions.
-                        # replace the coupling appearing in the particle counterterm
             vertices = [ vert for vert in self.coupling_pos[coup] if 
-                         isinstance(vert, base_objects.Vertex) ]
+                         isinstance(vert, base_objects.Interaction) ]
             for vertex in vertices:
                 modify = False
                 for key, coupling in vertex['couplings'].items():
@@ -1028,7 +1026,7 @@ class RestrictModel(model_reader.ModelReader):
                         modify=True
                         del vertex['couplings'][key]
                 if modify:
-                    mod.append(vertex)
+                    mod_vertex.append(vertex)
             
             # Remove the corresponding particle counterterm
             particles_ct = [ pct for pct in self.coupling_pos[coup] if 

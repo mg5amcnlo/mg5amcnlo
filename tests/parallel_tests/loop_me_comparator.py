@@ -72,8 +72,7 @@ class LoopMG5Runner(me_comparator.MG5Runner):
 
         self.temp_dir_name = temp_dir
 
-    def run(self, proc_list, model, born_orders={}, perturbation_orders=[],
-                            squared_orders={}, energy=1000, PSpoints=[]):
+    def run(self, proc_list, model, energy=1000, PSpoints=[]):
         """Execute MG5 on the list of processes mentioned in proc_list, using
         the specified model and the specified orders with a given c.o.m energy
         or the given Phase-Space points if specified.
@@ -81,26 +80,16 @@ class LoopMG5Runner(me_comparator.MG5Runner):
         self.res_list = [] # ensure that to be void, and avoid pointer problem 
         self.proc_list = proc_list
         self.model = model
-        self.born_orders = born_orders
-        self.perturbation_orders = perturbation_orders
-        self.squared_orders = squared_orders
-        self.orders = (born_orders,perturbation_orders,squared_orders)
         self.energy = energy
         self.non_zero = 0 
 
         dir_name = os.path.join(self.mg5_path, self.temp_dir_name)
 
-        # Check that the perturbation orders defined is exactly ['QCD'] so far
-        if self.perturbation_orders!=['QCD']:
-            raise self.LoopMG5RunnerError, \
-                        "LoopMG5RunnerError handles only QCD perturbations."
-
         # Create a proc_card.dat in the v5 format
         proc_card_location = os.path.join(self.mg5_path, 'proc_card_%s.dat' % \
                                           self.temp_dir_name)
         proc_card_file = open(proc_card_location, 'w')
-        proc_card_file.write(self.format_mg5_proc_card(proc_list, model, 
-                             born_orders, perturbation_orders, squared_orders))
+        proc_card_file.write(self.format_mg5_proc_card(proc_list, model))
         proc_card_file.close()
 
         logging.info("proc_card.dat file for %i processes successfully created in %s" % \
@@ -143,21 +132,21 @@ class LoopMG5Runner(me_comparator.MG5Runner):
             self.res_list = [((0.0, 0.0, 0.0, 0.0, 0), [])] * len(proc_list)
             return self.res_list
 
-    def format_mg5_proc_card(self, proc_list, model, born_orders,
-                             perturbation_orders, squared_orders):
+    def format_mg5_proc_card(self, proc_list, model):
         """Create a proc_card.dat string following v5 conventions."""
 
         v5_string = "import model %s\n" % os.path.join(self.model_dir, model)
-
-        born_couplings = ' '.join(["%s=%i" % (k, v) for k, v \
+        
+        for i, (proc, born_orders, perturbation_orders, squared_orders) in \
+            enumerate(proc_list):      
+            
+            born_couplings = ' '.join(["%s=%i" % (k, v) for k, v \
                                    in born_orders.items()])
-        perturbations = ' '.join([k for k \
+            perturbations = ' '.join([k for k \
                                    in perturbation_orders])
 
-        squared_couplings = ' '.join(["%s=%i" % (k, v) for k, v \
-                                   in squared_orders.items()])
-        
-        for i, proc in enumerate(proc_list):            
+            squared_couplings = ' '.join(["%s=%i" % (k, v) for k, v \
+                                   in squared_orders.items()])      
             v5_string += 'add process ' + proc + ' ' + born_couplings + \
                          ' [' + perturbations + '] ' + squared_couplings + \
                          (' @%i\n'%i)
@@ -300,8 +289,7 @@ class LoopMG4Runner(me_comparator.MERunner):
 
         self.temp_dir_name = temp_dir
 
-    def run(self, proc_list, model, born_orders={}, perturbation_orders=[],
-                            squared_orders={}, energy=1000, PSpoints=[]):
+    def run(self, proc_list, model, energy=1000, PSpoints=[]):
         """Execute MadLoop4 on the list of processes mentioned in proc_list, using
         the specified model and the specified orders with a given c.o.m energy
         or the given Phase-Space points if specified.
@@ -310,21 +298,19 @@ class LoopMG4Runner(me_comparator.MERunner):
         self.res_list = [] # ensure that to be void, and avoid pointer problem 
         self.proc_list = proc_list
         self.model = model
-        self.born_orders = born_orders
-        self.perturbation_orders = perturbation_orders
-        self.squared_orders = squared_orders
-        self.orders = (born_orders,perturbation_orders,squared_orders)
         self.energy = energy
 
         dir_name = os.path.join(self.mg4_path, self.temp_dir_name)
 
-        # Check that the perturbation orders defined is exactly ['QCD'] so far
-        if self.perturbation_orders!=['QCD']:
-            raise self.LoopMG4RunnerError, \
-                        "%s LoopMG5RunnerError handles only QCD perturbations."
-
         # Get the ME value for each process
-        for i, proc in enumerate(proc_list):
+        for i, (proc, born_orders, perturbation_orders, squared_orders) in \
+            enumerate(proc_list):
+            self.orders = (born_orders,perturbation_orders,squared_orders)
+            # Make sure that MadLoop4 can handle this process
+            if not self.filter_process(proc, born_orders, perturbation_orders, \
+                                       squared_orders):
+                logging.info("The process %s cannot be handled by MadLoop4," % proc)
+                self.res_list.append(((0.0, 0.0, 0.0, 0.0, 0), []))          
             # Create a proc_card.dat in the MadLoop4 format
             proc_card_location = os.path.join(self.mg4_path, 'Cards', 
                                     'order.lh')
@@ -422,7 +408,9 @@ class LoopMG4Runner(me_comparator.MERunner):
                             outcoming_parts])
         replace_dict['BaseName']=proc_name
         
-        replace_dict['ModelName']=model
+        # MadLoop4 can only work with the smNLO (loop Standard Model) which was
+        # copied in a stone-fixed version called ML5_parallel_test.
+        replace_dict['ModelName']='ML5_parallel_test'
 
         replace_dict['Process']=' '+' '.join([str(particle_dictionary[inc][0]) \
                                               for inc in incoming_parts])+' -> '\
@@ -530,6 +518,46 @@ class LoopMG4Runner(me_comparator.MERunner):
         except:
             pass
 
+    def filter_process(self,proc,born_orders,perturbation_orders,squared_orders):
+        """ Returns true if the process does not violate any limitation of ML4."""
+        
+        proc_parts=proc.split()
+        if '>' in proc_parts:
+            incoming_parts=proc_parts[:proc_parts.index('>')]
+            outcoming_parts=proc_parts[proc_parts.index('>')+1:]            
+        else:
+            raise self.LoopMG4RunnerError, \
+                        "The process %s is ill-formated."%proc
+        
+        # Check that the process only considers QCD perturbations
+        if perturbation_orders!=['QCD']:
+            logging.info("Only QCD perturbations are handled by ML4.")
+            return False
+        
+        # Check that the process does not only contains gluons.
+        if set(incoming_parts+outcoming_parts)==set(['g']):
+            logging.info("The process %s only contains gluons." % proc)
+            return False
+                
+        # Check that QCD fermion number is respected (ML4 not protected agains this)
+        fermions=['d','u','c','s','b','t']
+        antifermions=[fermion+'~' for fermion in fermions]
+        if(len([1 for f in incoming_parts if f in fermions])-\
+           len([1 for f in incoming_parts if f in antifermions])+\
+           len([1 for f in outcoming_parts if f in antifermions])-\
+           len([1 for f in outcoming_parts if f in fermions]))!=0:
+             logging.info("The process %s does not conserve QCD fermion number." % proc)
+             return False
+         
+        # Check that there is no 4-gluon vertices
+        if (len([1 for f in incoming_parts+outcoming_parts if f in fermions+\
+                antifermions])+len([1 for p in incoming_parts+outcoming_parts \
+                if p=='g'])*2)>=8:
+            logging.info("The process %s most likely contains a 4-gluon vertex." % proc)
+            return False
+        
+        return True
+
     def fix_PSPoint_in_check(self, dir_name):
         """Set check_sa.f to be reading PS.input assuming a working dir dir_name"""
 
@@ -553,6 +581,513 @@ class LoopMG4Runner(me_comparator.MERunner):
         file.write(re.sub("SQRTS=1000d0", "SQRTS=%id0" % int(energy), check_sa))
         file.close()
 
+class LoopGoSamRunnerError(Exception):
+        """class for error in LoopGoSamRunner"""
+        pass
+
+class GoSamRunner(me_comparator.MERunner):
+    """Runner object for the GoSam Matrix Element generator for loop processes."""
+
+    GoSam_path = ""
+
+    name = 'GoSam v1.0'
+    type = 'GoSam'
+    compilator ='gfortran'
+    use_dred = True
+
+    def setup(self, GoSam_path, temp_dir=None):
+        """Initialization of the temporary directory"""
+
+        self.GoSam_path = os.path.abspath(GoSam_path)
+
+        if not temp_dir:
+            i=0
+            while os.path.exists(os.path.join(GoSam_path, 
+                                              "ptest_%s_%s" % (self.type, i))):
+                i += 1
+            temp_dir = "ptest_%s_%s" % (self.type, i)         
+
+        self.temp_dir_name = temp_dir
+        shutil.os.mkdir(os.path.join(self.GoSam_path, self.temp_dir_name))
+
+    def run(self, proc_list, model, energy=1000, PSpoints=[]):
+        """Execute GoSam on the list of processes mentioned in proc_list, using
+        the specified model and the specified orders with a given c.o.m energy
+        or the given Phase-Space points if specified.
+        """
+        
+        self.res_list = [] # ensure that to be void, and avoid pointer problem 
+        self.proc_list = proc_list
+        self.model = model
+        self.energy = energy
+
+        dir_name = os.path.join(self.GoSam_path, self.temp_dir_name)
+
+        # Get the ME value for each process
+        for i, (proc, born_orders, perturbation_orders, squared_orders) in \
+            enumerate(proc_list):
+            self.orders = (born_orders,perturbation_orders,squared_orders)
+            # Create the GoSam proc_card.in
+            logging.info("Running GoSam to generate template proc card. %s"%proc)
+            devnull = open(os.devnull, 'w')
+            retcode = subprocess.call(['gosam.py','--template','myproc.in'],
+                    cwd=dir_name,
+                    stdout=devnull, stderr=devnull)
+            if retcode != 0:
+                logging.info("Error while running gosam.py --template in %s" % dir_name)
+                self.res_list.append(((0.0, 0.0, 0.0, 0.0, 0), []))
+            proc_card_location = os.path.join(dir_name,'myproc.in')
+            file = open(proc_card_location, 'r')
+            order_specified, proc_card_out, proc_name = \
+                self.format_gosam_proc_card(i,proc, model, born_orders, \
+                perturbation_orders, squared_orders, file)
+            if not order_specified:
+                logging.info("Error because GoSam needs the precise order "+\
+                             +"specifications for process %s"%proc)
+                self.res_list.append(((0.0, 0.0, 0.0, 0.0, 0), []))
+            file.close()
+            proc_card_file = open(proc_card_location, 'w')
+            proc_card_file.write(proc_card_out)
+            proc_card_file.close()
+            # Run GoSam
+            proc_dir=os.path.join(dir_name, proc_name)
+            shutil.os.mkdir(proc_dir)
+            logging.info("Running GoSam for process %s"%proc)
+            devnull = open(os.devnull, 'w')
+            retcode = subprocess.call(['gosam.py','myproc.in'],
+                    cwd=dir_name,
+                    stdout=devnull, stderr=devnull)
+            devnull.close()        
+            if retcode != 0:
+                logging.info("Error while running GoSam in %s" % dir_name)
+                self.res_list.append(((0.0, 0.0, 0.0, 0.0, 0), []))
+            
+            if os.path.isfile(os.path.join(dir_name,'myproc.in')):
+                shutil.move(os.path.join(dir_name,'myproc.in'),
+                            os.path.join(proc_dir,'myproc.in'))
+            else:
+                logging.info("Could not find produced order file %s" %str(
+                              os.path.join(dir_name,'myproc.in')))
+                self.res_list.append(((0.0, 0.0, 0.0, 0.0, 0), []))
+            if 'QCD' not in born_orders.keys():
+                logging.info("For GoSam run, the born QCD order must be provided.")
+                self.res_list.append(((0.0, 0.0, 0.0, 0.0, 0), []))
+                
+            value = self.get_me_value(proc, i, energy, ([] if PSpoints==[] \
+                                        else PSpoints[i]),born_orders['QCD'])
+            self.res_list.append(value)
+                                
+        return self.res_list
+    
+    def dred_to_cdr(self,proc):
+        """ Give the fraction (in float) to be added to the dred result to 
+        match the cdr one. It is assumed that the factor aso2pi*Born is factored
+        out """
+        
+        conversion_factor=float(0.0)
+        
+        gluons = ['g']
+        fermions=['d','u','c','s','b','t']
+        antifermions=[fermion+'~' for fermion in fermions]
+        
+        proc_parts=proc.split()
+        if '>' in proc_parts:
+            incoming_parts=proc_parts[:proc_parts.index('>')]
+            outcoming_parts=proc_parts[proc_parts.index('>')+1:]            
+        else:
+            raise self.LoopGoSamRunnerError, \
+                        "The process %s is ill-formated."%proc
+                        
+        for gluon in gluons:
+            for part in incoming_parts+outcoming_parts:
+                if gluon==part:
+                    conversion_factor-=0.5
+        
+        for fermion in fermions+antifermions:
+            for part in incoming_parts+outcoming_parts:
+                if fermion==part:
+                    conversion_factor-=2.0/3.0
+        
+        return conversion_factor
+    
+    def format_gosam_proc_card(self, procID, proc, model, born_orders,\
+                               perturbation_orders, squared_orders, proc_card):
+        """Create a gosam '.in' proc card"""
+
+        order_specified=False
+
+        particle_dictionary = {'d':(1,'D'),'d~':(-1,'Dbar'),
+                               'u':(2,'U'),'u~':(-2,'Ubar'),
+                               's':(3,'S'),'s~':(-3,'Sbar'),
+                               'c':(4,'C'),'c~':(-4,'Cbar'),
+                               'b':(5,'B'),'b~':(-5,'Bbar'),
+                               't':(6,'T'),'t~':(-6,'Tbar'),
+                               'g':(21,'g'),
+                               'a':(22,'A'),
+                               'z':(23,'Z'),
+                               'w+':(24,'Wp'),'w-':(-24,'Wm'),
+                               'e+':(-11,'ep'),'e-':(11,'em'),
+                               'mu+':(-13,'mup'),'mu-':(13,'mum'),
+                               'ta+':(-15,'taup'),'ta-':(15,'taum'),
+                               've':(12,'ne'),'ve~':(-12,'nebar'),
+                               'vm':(14,'nmu'),'vm~':(-14,'nmubar'),
+                               'vt':(16,'ntau'),'vt~':(-16,'ntaubar')}
+        
+        proc_parts=proc.split()
+        if '>' in proc_parts:
+            incoming_parts=proc_parts[:proc_parts.index('>')]
+            outcoming_parts=proc_parts[proc_parts.index('>')+1:]            
+        else:
+            raise self.LoopGoSamRunnerError, \
+                        "The process %s is ill-formated."%proc
+        try:
+            proc_name = 'P'+str(procID)+'_'+''.join([particle_dictionary[p][1] \
+              for p in incoming_parts])+'_'+''.join([particle_dictionary[p][1] \
+              for p in outcoming_parts])
+        except KeyError:
+            raise self.LoopGoSamRunnerError, \
+                        "Some particles in the process %s are not recognized."%proc
+        
+        proc_card_out=""
+        for line in proc_card:
+            if line.find("# process_name=")==0:
+                proc_card_out+="process_name="+proc_name+'\n'
+            elif line.find("# process_path=")==0:
+                proc_card_out+="process_path="+proc_name+'\n'
+            elif line.find("# in=")==0:
+                proc_card_out+="in="+','.join(incoming_parts)+'\n'
+            elif line.find("# out=")==0:
+                proc_card_out+="out="+','.join(outcoming_parts)+'\n'
+            elif line.find("extensions=")==0:
+                if self.use_dred:
+                    proc_card_out+="extensions=dred,"+line[11:]+'\n'
+                else:
+                    proc_card_out+=line
+            elif line.find("# filter.lo=")==0:
+                proc_card_out+="filter.lo=lambda d: d.vertices([H], [ep], [em]) == 0\n"
+            elif line.find("# filter.nlo=")==0:
+                proc_card_out+="filter.nlo=lambda d: d.vertices([H], [ep], [em]) == 0\n"    
+            elif line.find("# model=")==0:
+                # Irrespectively of what is the user-desired model, we use the sm
+                # here for now.
+                proc_card_out+="model=sm\n"
+            elif line.find("# order=")==0:
+                # Please always put 'QCD' first in the list below
+                orders_considered=['QCD','QED']
+                gosam_born_orders=dict([(order,-1) for order in orders_considered])
+                gosam_loop_orders=dict([(order,-1) for order in orders_considered])
+                for key, value in born_orders.items():
+                    for order in orders_considered:
+                        if key==order and value!=99:
+                            gosam_born_orders[order]=value
+                            if order in perturbation_orders:
+                                gosam_loop_orders[order]=gosam_born_orders[order]+2
+                            else:
+                                gosam_loop_orders[order]=value
+                # Change of conventions as GoSam sets the squared order at the
+                # amplitude level
+                for key, value in squared_orders.items():
+                    if key=="WEIGHTED":
+                        raise self.LoopGoSamRunnerError, \
+                            "Squared order 'WEIGHTED' not supported by GoSam"
+                    for order in orders_considered:
+                        if key==order and value!=99:
+                            if order in perturbation_orders:
+                                gosam_loop_orders[order]=value/2+1
+                            else:
+                                gosam_loop_orders[order]=value/2                                
+                # Now write out the orders obtained
+                for order in orders_considered:
+                    # GoSam only accepts one order specification, so we choose
+                    # here QCD if defined and otherwise the first available
+                    if not order_specified:
+                        if gosam_born_orders[order]!=-1:   
+                            proc_card_out+="order="+', '.join([order,\
+                                            str(gosam_born_orders[order]),\
+                                            str(gosam_loop_orders[order])])+'\n'
+                            order_specified=True
+                        elif gosam_loop_orders[order]!=-1:
+                            proc_card_out+="order="+', '.join([order,\
+                                            str(gosam_loop_orders[order]),\
+                                            str(gosam_loop_orders[order])])+'\n'
+                            order_specified=True
+                    
+            elif line.find("# zero=")==0:
+                proc_card_out+="zero=wB,wT,mU,mD,mC,mS,me,mmu,"
+                proc_card_out+="VUS,CVSU,VUB,CVBU,VCD,CVDC,"
+                proc_card_out+="VCB,CVBC,VTD,CVDT,VTS,CVST"+'\n'
+                proc_card_out+="one=VUD,CVDU,VCS,CVSC,VTB,CVBT"+'\n'               
+            elif line.find("# qgraf.options=")==0:
+                proc_card_out+="qgraf.options=nosnail ,notadpole ,onshell"+'\n'
+            elif line.find("# qgraf.verbatim=")==0:
+                if 'QED' in born_orders.keys() and 'QED' in squared_orders.keys() and \
+                   born_orders['QED']==0 and squared_orders['QED']==0:
+                    # Forbid QED particles all together
+                    proc_card_out+="qgraf.verbatim=\\\n"
+                    proc_card_out+="true=iprop[ep,em,ne,nebar, 0, 0];\\n\\\n"
+                    proc_card_out+="true=iprop[mup,mum,nmu,nmubar, 0, 0];\\n\\\n"
+                    proc_card_out+="true=iprop[taup,taum,ntau,ntaubar, 0, 0];\\n\\\n"
+                    proc_card_out+="true=iprop[A,Z,H,Wp,Wm, 0, 0];\\n\\\n"
+                    proc_card_out+="true=iprop[phim,phip,chi,ghA,ghAbar, 0, 0];\\n\\\n"
+                    proc_card_out+="true=iprop[ghZ,ghZbar,ghWp,ghWpbar,ghWm, ghWmbar,0, 0];\\n\\\n"
+                elif 'QED' not in perturbation_orders:
+                    # Only forbid QED particles to be in the loop
+                    # /!\ You might not want this, i.e. for VBF pentagons for example
+                    proc_card_out+="qgraf.verbatim=\\\n"
+                    proc_card_out+="true=chord[ep,em,ne,nebar, 0, 0];\\n\\\n"
+                    proc_card_out+="true=chord[mup,mum,nmu,nmubar, 0, 0];\\n\\\n"
+                    proc_card_out+="true=chord[taup,taum,ntau,ntaubar, 0, 0];\\n\\\n"
+                    proc_card_out+="true=chord[A,Z,H,Wp,Wm, 0, 0];\\n\\\n"
+                    proc_card_out+="true=chord[phim,phip,chi,ghA,ghAbar, 0, 0];\\n\\\n"
+                    proc_card_out+="true=chord[ghZ,ghZbar,ghWp,ghWpbar,ghWm, ghWmbar,0, 0];\\n\\\n"
+                else:
+                    proc_card_out+="# No qgraf specific options\n"
+            else:
+                proc_card_out+=line
+
+        return order_specified, proc_card_out, proc_name
+
+    def get_me_value(self, proc, proc_id, energy, PSpoint=[], bornQCDorder=0):
+        """Compile and run ./NLOComp_sa, then parse the output and return the
+        result for process with id = proc_id and PSpoint if specified.
+        The bornQCDorder is an adhoc hack to get the born result correct in 
+        GoSam due to their odd order conventions."""
+
+        sys.stdout.write('.')
+        sys.stdout.flush()
+        working_dir = os.path.join(self.GoSam_path, self.temp_dir_name)
+
+         
+        shell_name = None
+        directories = glob.glob(os.path.join(working_dir,'P%i_*' % proc_id))
+        if directories and os.path.isdir(directories[0]):
+            shell_name = os.path.basename(directories[0])
+
+        # If directory doesn't exist, skip and return 0
+        if not shell_name:
+            logging.info("Directory hasn't been created for process %s" % (proc))
+            return ((0.0, 0.0, 0.0, 0.0, 0), [])
+
+        logging.info("Working on process %s in dir %s" % (proc, shell_name))
+        
+        dir_name = os.path.join(working_dir, shell_name)
+        logging.info("Making GoSam sources for process %s"%proc)
+        devnull = open(os.devnull, 'w')
+        retcode = subprocess.call(['make','source'],
+                                  cwd=dir_name,
+                                  stdout=devnull, stderr=devnull)
+        if retcode != 0:
+            logging.info("Error while making source in %s" % dir_name)
+            return ((0.0, 0.0, 0.0, 0.0, 0), [])
+        self.fix_common_file(os.path.join(dir_name,'common'))
+        logging.info("Compiling GoSam sources for process %s"%proc)
+        devnull = open(os.devnull, 'w')
+        retcode = subprocess.call(['make','compile'],
+                                  cwd=dir_name,
+                                  stdout=devnull, stderr=devnull)
+        if retcode != 0:
+            logging.info("Error while compiling source in %s" % dir_name)
+            devnull.close()
+            return ((0.0, 0.0, 0.0, 0.0, 0), [])
+        devnull.close()
+        matrix_dir_name = os.path.join(dir_name, 'matrix')
+        self.fix_output(matrix_dir_name,bornQCDorder)
+        self.write_parameters(matrix_dir_name)
+        if PSpoint==[]:
+            self.fix_energy_in_check(matrix_dir_name, energy)
+        else:
+            self.fix_PSPoint_in_check(matrix_dir_name)  
+
+        # If a PS point is specified, write out the corresponding PS.input
+        if PSpoint!=[]:
+            PSfile = open(os.path.join(matrix_dir_name, 'PS.input'), 'w')
+            PSfile.write('\n'.join([' '.join(['%.16E'%pi for pi in p]) \
+                                  for p in PSpoint]))
+            PSfile.close()
+        
+        # Run make
+        devnull = open(os.devnull, 'w')
+        retcode = subprocess.call(['make','test.exe'],
+                        cwd=matrix_dir_name,
+                        stdout=devnull, stderr=devnull)
+                        
+        if retcode != 0:
+            logging.info("Error while executing make in %s" % matrix_dir_name)
+            devnull.close()
+            return ((0.0, 0.0, 0.0, 0.0, 0), [])
+        devnull.close()
+        
+        # Run ./check
+        try:
+            output = subprocess.Popen('./test.exe',
+                        cwd=matrix_dir_name,
+                        stdout=subprocess.PIPE, stderr=subprocess.STDOUT).stdout
+            output.read()
+            output.close()
+            if os.path.exists(os.path.join(matrix_dir_name,'result.dat')):
+                return self.parse_check_output(proc,file(os.path.join(\
+                                                matrix_dir_name,'result.dat')))  
+            else:
+                logging.warning("Error while looking for file %s"%str(os.path\
+                                        .join(matrix_dir_name,'result.dat')))
+                return ((0.0, 0.0, 0.0, 0.0, 0), [])
+        except IOError:
+            logging.warning("Error while executing ./test.exe in %s" % matrix_dir_name)
+            return ((0.0, 0.0, 0.0, 0.0, 0), [])
+
+    def parse_check_output(self, proc, output):
+        """Parse the output string and return a pair where first four values are 
+        the finite, born, single and double pole of the ME and the fourth is the
+        GeV exponent and the second value is a list of 4 momenta for all particles 
+        involved."""
+
+        res_p = []
+        value = [0.0,0.0,0.0,0.0]
+        gev_pow = 0
+
+        for line in output:
+            splitline=line.split()
+            if splitline[0]=='PS':
+                res_p.append([float(s) for s in splitline[1:]])
+            elif splitline[0]=='BORN':
+                value[1]=float(splitline[1])
+            elif splitline[0]=='FIN':
+                if self.use_dred:
+                    value[0]=float(float(splitline[1])+float(self.dred_to_cdr(proc)))
+                else:
+                    value[0]=float(splitline[1])
+            elif splitline[0]=='1EPS':
+                value[2]=float(splitline[1])
+            elif splitline[0]=='2EPS':
+                value[3]=float(splitline[1])
+            elif splitline[0]=='EXP':
+                gev_pow=int(splitline[1])
+
+        return ((value[0],value[1],value[2],value[3],gev_pow), res_p)
+
+    def cleanup(self):
+        """Clean up temporary directories"""
+
+        try:
+            if os.path.isdir(os.path.join(self.mg4_path, self.temp_dir_name)):
+                shutil.rmtree(os.path.join(self.mg4_path, self.temp_dir_name))
+                logging.info("Temporary standalone directory %s successfully removed" % \
+                     self.temp_dir_name)
+        except:
+            pass
+
+    def write_parameters(self, dir_name):
+        """ Writes out the param.dat used by test.exe to define the several
+        quantities taken to the default for this test, hardcoded here."""
+
+        file = open(os.path.join(dir_name,'param.dat'), 'w')
+        file.write("mW=80.419\n")
+        file.write("mZ=91.188\n") 
+        file.write("mT=174.3\n")
+        file.write("mB=4.62\n")
+        file.write("Nf=4\n")
+        file.write("Nfgen=4\n")
+        file.write("#gs=1.2177157847767197\n")
+        file.write("alpha=0.0075467711139788835\n")       
+        file.close()        
+        
+    def fix_output(self, dir_name,bornQCDorder):
+        """Modify test.f90 from GoSam to have it output his result in a file, 
+        assuming working directory dir_name."""
+
+        file = open(os.path.join(dir_name,'test.f90'), 'r')
+        new_test=""
+        for line in file:
+            new_test+=line
+            if line.find('   implicit none')==0:
+                new_test+='!     Added from MadLoop5\n'                
+                new_test+='   integer :: k\n'
+                new_test+='!     End of MadLoop5 Addition\n'
+            elif line.find('      call samplitude(')==0:
+                new_test+='!     Added from MadLoop5\n'                
+                new_test+="      open(69, file=\"result.dat\", err=611, "
+                new_test+="action='WRITE')\n"
+                new_test+='      do k=1,4\n'
+                new_test+="        write (69,'(a2,1x,5e25.15)') 'PS',"
+                new_test+='vecs(k,1),vecs(k,2),vecs(k,3),vecs(k,4)\n'
+                new_test+='      enddo\n'
+                new_test+="      write (69,'(a3,1x,i2)') 'EXP',99\n"
+                new_test+="      write (69,'(a4,1x,1e25.15)') 'BORN',amp(0)"
+                # Unfortunately there is the need of a hardcoded hack to get 
+                # around the odd GoSam conventions for the orders.
+                new_test+="*1.2177157847767197_ki**%i\n"%(2*bornQCDorder)
+                new_test+="      write (69,'(a3,1x,1e25.15)') 'FIN',amp(1)/amp(0)\n"
+                new_test+="      write (69,'(a4,1x,1e25.15)') '1EPS',amp(2)/amp(0)\n"
+                new_test+="      write (69,'(a4,1x,1e25.15)') '2EPS',amp(3)/amp(0)\n"
+                new_test+='      goto 321\n'
+                new_test+='  611 continue\n'
+                new_test+="      stop 'Could not write out the results.'\n"
+                new_test+='  321 continue\n'
+                new_test+='      close(69)\n'
+                new_test+='!     End of MadLoop5 Addition\n'
+        file.close()
+
+        file = open(os.path.join(dir_name,'test.f90'), 'w')
+        file.write(new_test)
+        file.close()
+
+    def fix_PSPoint_in_check(self, dir_name):
+        """Set test.f90 to be reading PS.input assuming a working dir dir_name"""
+
+        file = open(os.path.join(dir_name,'test.f90'), 'r')
+        new_test=""
+        for line in file:
+            new_test+=line
+            if line.find('   implicit none')==0:
+                new_test+='!     Added from MadLoop5\n'                
+                new_test+='   integer :: i\n'
+                new_test+='!     End of MadLoop5 Addition\n'
+            elif line.find('      call ramb(')==0:
+                new_test+='!     Added from MadLoop5\n'                
+                new_test+="      open(967, file=\"PS.input\", err=976, "
+                new_test+="status='OLD', action='READ')\n"
+                new_test+='        do i=1,4\n'
+                new_test+='          read(967,*,end=978) vecs(i,1),vecs(i,2),'
+                new_test+='vecs(i,3),vecs(i,4)\n'
+                new_test+='        enddo\n'
+                new_test+='      goto 978\n'
+                new_test+='  976 continue\n'
+                new_test+="      stop 'Could not read the PS.input phase-space point.'\n"
+                new_test+='  978 continue\n'
+                new_test+='      close(967)\n'
+                new_test+='!     End of MadLoop5 Addition\n'
+        file.close()
+
+        file = open(os.path.join(dir_name,'test.f90'), 'w')
+        file.write(new_test)
+        file.close()
+
+    def fix_energy_in_check(self, dir_name, energy):
+        """Replace the hard coded collision energy in check_sa.f by the given
+        energy, assuming a working dir dir_name"""
+
+        file = open(os.path.join(dir_name,'test.f90'), 'r')
+        test = file.read()
+        file.close()
+
+        file = open(os.path.join(dir_name,'test.f90'), 'w')
+        file.write(re.sub("5.0E\+02","%i.0E+00"% int(energy), test))
+        file.close()
+
+    def fix_common_file(self, dir_name):
+        """Fix some compile-time parameters in common/config.90. It is assumed
+        that dir_name is the 'common' directory."""
+
+        file = open(os.path.join(dir_name,'config.f90'), 'r')
+        config = file.read()
+        file.close()
+        
+        # Make GoSam include the symmetry factors.
+        file = open(os.path.join(dir_name,'config.f90'), 'w')
+        file.write(re.sub("include_symmetry_factor = .false.",\
+                          "include_symmetry_factor = .true.", config))
+        file.close()
+
 class LoopMEComparator(me_comparator.MEComparator):
     """Base object to run comparison tests for loop processes. Take standard 
     MERunner objects and a list of loop proc as an input and return detailed 
@@ -561,10 +1096,12 @@ class LoopMEComparator(me_comparator.MEComparator):
     me_runners = []
     results    = []
     proc_list  = []
-
-    def run_comparison(self, proc_list, model='loop_SM_QCD', born_orders={}, 
-                       perturbation_orders=['QCD'], squared_orders={}, energy=1000):
-        """Run the codes and store results."""
+    orders     = []
+    
+    def run_comparison(self, proc_list, model='loop_SM_QCD', energy=1000):
+        """Run the codes and store results.
+        Notice that the proc list is a list of tuples formated like this:
+        (process,born_orders,perturbation_orders,squared_orders)"""
 
         if isinstance(model, basestring):
             model= [model] * len(self.me_runners)
@@ -573,12 +1110,9 @@ class LoopMEComparator(me_comparator.MEComparator):
         self.proc_list = proc_list
 
         logging.info(\
-            "Running on %i processes with order: %s, in model %s @ %i GeV" % \
-            (len(proc_list),
-             ' '.join(["%s=%i" % (k, v) for k, v in born_orders.items()])+\
-             ' ['+' '.join(perturbation_orders)+'] '+\
-             ' '.join(["%s=%i" % (k, v) for k, v in squared_orders.items()]),\
-             '/'.join([onemodel for onemodel in model]),
+            "Running on %i processes in model %s @ %i GeV" % \
+            (len(proc_list),\
+             '/'.join([onemodel for onemodel in model]),\
              energy))
 
         pass_proc = False
@@ -593,8 +1127,7 @@ class LoopMEComparator(me_comparator.MEComparator):
                 PSpoints=[PS[1] for PS in self.results[0]]
             else:
                 PSpoints=[]
-            self.results.append(runner.run(proc_list, model[i], born_orders,
-                                perturbation_orders, squared_orders, energy,
+            self.results.append(runner.run(proc_list, model[i], energy,
                                 PSpoints))
             if hasattr(runner, 'new_proc_list'):
                 pass_proc = runner.new_proc_list
@@ -635,7 +1168,8 @@ class LoopMEComparator(me_comparator.MEComparator):
                       self._fixed_string_length("Relative diff.", col_size) + \
                       "Result"
     
-            for i, proc in enumerate(self.proc_list):
+            for i, (proc, born_orders, perturbation_orders, squared_orders) \
+              in enumerate(self.proc_list):
                 list_res = [res[i][0][index] for res in self.results]
                 if max(list_res) == 0.0 and min(list_res) == 0.0:
                     diff = 0.0

@@ -47,13 +47,17 @@ if '__main__' == __name__:
         
     logging.basicConfig(level=logging.INFO)
     
-    my_proc_list = ['d d~ > u u~',
-                    'u u~ > d d~',
-                    'g g > t t~',
-                    'u d > u d',
-                    'g d > g d',
-                    'd d~ > d d~ g',
-                    'g g > u u~']
+    my_proc_list = [('u u~ > d d~',{'QCD':2,'QED':0},['QCD'],{'QCD':6,'QED':0}),
+                    ('e+ e- > d d~',{'QED':2,'QCD':0},['QCD'],{'QCD':2,'QED':4}),
+                    ('d~ d > g a',{'QED':1,'QCD':1},['QCD'],{'QCD':4,'QED':2}),
+                    ('d~ d > g z',{'QED':1,'QCD':1},['QCD'],{'QCD':4,'QED':2})]
+#                    ('d d~ > u u~',{'QCD':2},['QCD'],{'QCD':6}),
+#                    'u u~ > d d~',
+#                    'g g > t t~',
+#                    'u d > u d',
+#                    'g d > g d',
+#                    'd d~ > d d~ g',
+#                    ('g g > u u~',{'QCD':2},['QCD'],{'QCD':6})]
 #                    'd d~ > d d~ d d~',
 #                    'd d > d~ d d d',
 #                    'd g > d u u~']
@@ -67,11 +71,15 @@ if '__main__' == __name__:
     #    initial=2, final_1=2, final_2 = 1)
 
     # Set the model we are working with
-    model = 'loop_SM_QCD'
+    model = 'loop_sm'
 
     # Create a MERunner object for MadLoop 4
     ML4 = loop_me_comparator.LoopMG4Runner()
     ML4.setup('/Users/Spooner/Documents/PhD/MadFKS/ML4ParrallelTest/NLOComp')
+
+    # Create a MERunner object for GoSam
+    # GoSam = loop_me_comparator.GoSamRunner()
+    # GoSam.setup('/Users/Spooner/Documents/PhD/HEP_softs/GoSam_bis')
 
     # Create a MERunner object for MadLoop 5
     ML5 = loop_me_comparator.LoopMG5Runner()
@@ -88,9 +96,6 @@ if '__main__' == __name__:
     # Run the actual comparison
     my_comp.run_comparison(my_proc_list,
                            model=model,
-                           born_orders={'QCD':99},
-                           perturbation_orders=['QCD'],
-                           squared_orders={},
                            energy=2000)
 
     # Do some cleanup
