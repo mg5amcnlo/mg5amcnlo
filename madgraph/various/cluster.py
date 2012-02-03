@@ -106,11 +106,11 @@ class CondorCluster(Cluster):
                   Universe = vanilla
                   notification = Error
                   Initialdir = %(cwd)s
-                  %(requirements)s
+                  %(requirement)s
                   queue 1
                """
         
-        if self.cluster_queue != 'None':
+        if self.cluster_queue in ['None', None]:
             requirement = 'Requirements = %s=?=True' % self.cluster_queue
         else:
             requirement = ''
