@@ -3814,10 +3814,6 @@ class GridPackCmd(MadEventCmd):
         self.exec_cmd('combine_events')
         self.exec_cmd('store_events')
         self.exec_cmd('pythia --no_default -f')
-        try:
-            os.remove(pjoin(self.me_dir,'RunWeb'))
-        except:
-            pass
 
     def refine4grid(self, nb_event):
         """Special refine for gridpack run."""
