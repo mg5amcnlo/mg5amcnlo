@@ -167,6 +167,7 @@ c
          i=i+1
       enddo
       cur_it = i
+c     Use the last 3 iterations or cur_it-1 if cur_it-1 >= itmin but < 3
       itsum = min(max(itmin,cur_it-1),3)
       i = cur_it - itsum
       if (i .gt. 0) then
@@ -318,6 +319,7 @@ c
          i=i+1
       enddo
       cur_it = i
+c     Use the last 3 iterations or cur_it-1 if cur_it-1 >= itmin
       itsum = min(max(itmin,cur_it-1),3)
       i = cur_it - itsum
       if (i .gt. 0) then
@@ -1125,6 +1127,7 @@ c     &        dble(xbin_max-xbin_min),bwjac
          i=i+1
       enddo
       cur_it = i
+c     Use the last 3 iterations or cur_it-1 if cur_it-1 >= itmin
       itsum = min(max(itmin,cur_it-1),3)
       i = cur_it - itsum
       tmean = 0d0
@@ -1664,7 +1667,7 @@ c     Update weights in dsig (needed for subprocess group mode)
             xdum=dsig(0,0,2)
 c
 c     Add test to see if we have achieved desired accuracy 
-c     JA 8/17/2011 allow minimum itmin iterations instead of 5
+c     Allow minimum itmin iterations instead of 5
 c
             if (tsigma .gt. 0d0 .and. cur_it .gt. itmin .and. accur .gt. 0d0) then
 
@@ -1716,9 +1719,10 @@ c               write(*,*) 'Estimated events',nun, accur
                nun = neventswritten
 c               tmp1 = tmean / tsigma
 c               chi2tmp = (chi2/tmp1/tmp1-tsigma)/dble(cur_it-2)
-c     Calculate chi2 for last three events (ja 03/11)
+c     Calculate chi2 for last few iterations (ja 03/11)
                tmeant = 0d0
                tsigmat = 0d0
+c     Use the last 3 iterations or cur_it-1 if cur_it-1 >= itmin but < 3
                itsum = min(max(itmin,cur_it-1),3)
                do i=cur_it-itsum,cur_it-1
                   tmeant = tmeant+ymean(i)*ymean(i)**2/ysigma(i)**2
