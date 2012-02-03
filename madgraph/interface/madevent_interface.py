@@ -3795,6 +3795,7 @@ class GridPackCmd(MadEventCmd):
         
         MadEventCmd.__init__(self, me_dir, *completekey, **stdin)
         self.run_mode = 0
+        self.random = seed
         self.configuration['automatic_html_opening'] = False
         # Now it's time to run!
         if me_dir and nb_event and seed:
@@ -3827,17 +3828,14 @@ class GridPackCmd(MadEventCmd):
         self.exec_cmd('store_events')
         self.exec_cmd('pythia --no_default -f')
 
-
-
-
     def refine4grid(self, nb_event):
-        """Advanced commands: launch survey for the current process """
+        """Special refine for gridpack run."""
         self.nb_refine += 1
         
         precision = nb_event
 
         # initialize / remove lhapdf mode
-        self.configure_directory()
+        # self.configure_directory() # All this has been done before
         self.cluster_mode = 0 # force single machine
         
         self.update_status('Refine results to %s' % precision, level=None)
@@ -3858,13 +3856,15 @@ class GridPackCmd(MadEventCmd):
                     os.remove(pjoin(Pdir, match))
             
             devnull = os.open(os.devnull, os.O_RDWR)
+            logfile = pjoin(Pdir, 'gen_ximprove.log')
             proc = subprocess.Popen([pjoin(bindir, 'gen_ximprove')],
                                     stdin=subprocess.PIPE,
+                                    stdout=open(logfile,'w'),
                                     cwd=Pdir)
             proc.communicate('%s 1 F\n' % (precision))
 
             if os.path.exists(pjoin(Pdir, 'ajob1')):
-                misc.compile(['madevent'], cwd=Pdir)
+                # misc.compile(['madevent'], cwd=Pdir) # Done before
                 #
                 os.system("chmod +x %s/ajob*" % Pdir)
                 alljobs = glob.glob(pjoin(Pdir,'ajob*'))
