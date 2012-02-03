@@ -110,7 +110,7 @@ class CondorCluster(Cluster):
                   queue 1
                """
         
-        if self.cluster_queue in ['None', None]:
+        if self.cluster_queue not in ['None', None]:
             requirement = 'Requirements = %s=?=True' % self.cluster_queue
         else:
             requirement = ''
@@ -135,8 +135,8 @@ class CondorCluster(Cluster):
                 'stderr': stderr,'log': log,'argument': argument,
                 'requirement': requirement}
 
-        open('/tmp/submit_condor','w').write(text % dico)
-        a = subprocess.Popen(['condor_submit','/tmp/submit_condor'], stdout=subprocess.PIPE)
+        open('submit_condor','w').write(text % dico)
+        a = subprocess.Popen(['condor_submit','submit_condor'], stdout=subprocess.PIPE)
         output = a.stdout.read()
         #Submitting job(s).
         #Logging submit event(s).
