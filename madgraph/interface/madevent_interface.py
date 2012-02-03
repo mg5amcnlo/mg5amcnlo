@@ -2067,7 +2067,7 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
 
         self.update_status('Combining Events', level='parton')
         try:
-            os.remove('/tmp/combine.log')
+            os.remove(pjoin(self.me_dir,'SubProcesses', 'combine.log'))
         except:
             pass
         if self.cluster_mode == 1:
