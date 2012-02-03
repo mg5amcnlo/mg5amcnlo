@@ -1450,7 +1450,7 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
             except:
                 if self.me_dir:
                     config_file = open(os.path.relpath(
-                          os.path.join(self.dirbin, 'me5_configuration.txt')))
+                          os.path.join(self.me_dir, 'Cards', 'me5_configuration.txt')))
                     main = self.me_dir
                 elif not MADEVENT:
                     config_file = open(os.path.relpath(
@@ -1484,6 +1484,9 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
         # delphes/pythia/... path
         for key in self.configuration:
             if key.endswith('path'):
+                if self.configuration[key] in ['None', None]:
+                    self.configuration[key] = ''
+                    continue
                 path = os.path.join(self.me_dir, self.configuration[key])
                 if os.path.isdir(path):
                     self.configuration[key] = os.path.realpath(path)

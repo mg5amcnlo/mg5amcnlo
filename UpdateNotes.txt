@@ -33,6 +33,9 @@ Update notes for MadGraph 5 (in reverse time order)
                   OM: Change the path of the madevent output files. This allows 
                       to run pythia/pgs/delphes mulitple times for the same set 
                       of events (with different pythia/... parameters).
+                  OM: Madevent output is now insensitive to the relative path
+                      to pythia-pgs, delphes, ... In consequence you don't need
+		      anymore to have your directory at the same level as Template directory. 
                   OM: MadEvent checks that the param_card is coherent with the 
                       restriction used during the model generation. 
                   OM: Model restrictions will now also force opposite number to 
@@ -52,6 +55,8 @@ Update notes for MadGraph 5 (in reverse time order)
                   OM: Add the possibility to bypass the automatic opening of 
                       the web browser (via the configuration file: 
                       ./input/mg5_configuration.txt )
+                  OM: add 'save options' command to save the current configuration 
+		      in the configuration file. 
                   OM: Change the scheme of questions when running madevent and 
                       allow to specify in the command interface if you
                       want to run pythia/pgs/...

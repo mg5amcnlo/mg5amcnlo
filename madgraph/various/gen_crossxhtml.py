@@ -827,7 +827,7 @@ class OneTagResults(dict):
                 else:
                     local_dico['action'] = self.command_suggestion_html('remove %s parton --tag=%s' \
                                                                        % (self['run_name'], self['tag']))
-                    local_dico['action'] += self.command_suggestion_html('pythia')
+                    local_dico['action'] += self.command_suggestion_html('pythia %s ' % self['run_name'])
             elif type == 'pythia':
                 if self['tag'] == runresults.get_last_pythia():
                     if runresults.web:
@@ -839,9 +839,11 @@ class OneTagResults(dict):
 <INPUT TYPE=SUBMIT VALUE="Run Detector">
 </FORM>"""
                     else:
-                        local_dico['action'] = self.command_suggestion_html('remove %s pythia --tag=%s' %\
-                                                                                (self['run_name'], self['tag']))
-                        local_dico['action'] += self.command_suggestion_html('pgs or delphes')
+                        local_dico['action'] = self.command_suggestion_html(
+                                                'remove %s pythia --tag=%s' % \
+                                                (self['run_name'], self['tag']))
+                        local_dico['action'] += self.command_suggestion_html(
+                         'pgs %(1)s or delphes %(1)s' % {'1': self['run_name']})
                 else:
                     if runresults.web:
                         local_dico['action'] = ''
