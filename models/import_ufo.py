@@ -30,6 +30,7 @@ import madgraph.iolibs.misc as misc
 import madgraph.iolibs.save_load_object as save_load_object
 from madgraph.core.color_algebra import *
 
+import aloha
 import aloha.create_aloha as create_aloha
 import aloha.aloha_fct as aloha_fct
 
@@ -207,8 +208,10 @@ class UFOMG5Converter(object):
                 if len(param.lhablock.split())>1:
                     raise UFOImportError, '''LHABlock should be single word which is not the case for
     \'%s\' parameter with lhablock \'%s\'''' % (param.name, param.lhablock)
-            
-
+         
+	if hasattr(self.ufomodel, 'gauge'):    
+            self.model.set('gauge', self.ufomodel.gauge)
+	
         logger.info('load particles')
         # Check if multiple particles have the same name but different case.
         # Otherwise, we can use lowercase particle names.
@@ -271,14 +274,16 @@ class UFOMG5Converter(object):
         if particle_info.pdg_code < 0:
             return
         
-        # MG5 doesn't use ghost (use unitary gauges)
-        if particle_info.spin < 0:
-            return 
+        if (aloha.unitary_gauge and 1 in self.model['gauge']) \
+	          or (0 not in self.model['gauge']): 
+	    # MG5 doesn't use ghost (use unitary gauges)
+            if particle_info.spin < 0:
+                return 
         
-        # MG5 doesn't use goldstone boson 
-        if hasattr(particle_info, 'GoldstoneBoson'):
-            if particle_info.GoldstoneBoson:
-                return
+            # MG5 doesn't use goldstone boson 
+            if hasattr(particle_info, 'GoldstoneBoson'):
+                if particle_info.GoldstoneBoson:
+                    return
                
         # Initialize a particles
         particle = base_objects.Particle()

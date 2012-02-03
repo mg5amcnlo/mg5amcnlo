@@ -398,7 +398,11 @@ class HelpToCmd(object):
         logger.info("   fortran_compiler NAME")
         logger.info("      (default None) Force a specific fortran compiler.")
         logger.info("      If None, it tries first g77 and if not present gfortran.")
-        
+        logger.info("   gauge unitary|Feynman")        
+	logger.info("      (default unitary) choose the gauge.")
+	logger.info("   complex_mass_scheme True|False")        
+	logger.info("      (default False) Set complex mass scheme.")
+	        
 
 
 #===============================================================================
@@ -773,7 +777,11 @@ This will take effect only in a NEW terminal
             if args[1] not in ['DEBUG','INFO','WARNING','ERROR','CRITICAL']:
                 raise self.InvalidCmd('output_level needs ' + \
                                       'a valid level')       
-    
+				      
+        if args[0] in ['gauge']:
+            if args[1] not in ['unitary','Feynman']:
+                raise self.InvalidCmd('gauge needs argument unitary or Feynman.')       
+				      
     def check_open(self, args):
         """ check the validity of the line """
         
@@ -1323,7 +1331,9 @@ class CompleteForCmd(CheckValidForCmd):
                 return self.list_completion(text, ['False', 'True', 'Auto'])
             elif args[1] in ['ignore_six_quark_processes']:
                 return self.list_completion(text, self._multiparticles.keys())
-            
+            elif args[1] == 'gauge':
+	        return self.list_completion(text, ['unitary', 'Feynman'])
+	    
             elif args[1] == 'stdout_level':
                 return self.list_completion(text, ['DEBUG','INFO','WARNING','ERROR','CRITICAL'])
         
@@ -1576,6 +1586,7 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
         self._options['group_subprocesses'] = 'Auto'
         self._options['ignore_six_quark_processes'] = False
         self._options['complex_mass_scheme'] = True
+	self._options['gauge'] = 'unitary'
         
         # Load the configuration file
         self.set_configuration()
@@ -2438,6 +2449,14 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
                                                  self._curr_model.restrict_card)
                         else:
                             self._curr_model.set_parameters_and_couplings()
+		if self._options['gauge']=='unitary':
+		    if 1 not in self._curr_model.get('gauge') :
+		        logger.warning('Change the gauge to Feynman since the model does not allow unitary gauge') 
+			self.do_set('gauge Feynman')                        
+                else:
+		    if 0 not in self._curr_model.get('gauge') :
+                        logger.warning('Change the gauge to unitary since the model does not allow Feynman gauge')    
+		        self.do_set('gauge unitary')
                 
                 self._curr_fortran_model = \
                       helas_call_writers.FortranUFOHelasCallWriter(\
@@ -2715,7 +2734,9 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
     def set_configuration(self, config_path=None, test=False):
         """ assign all configuration variable from file 
             ./input/mg5_configuration.txt. assign to default if not define """
-            
+        
+	
+	    
         self.configuration = {'pythia8_path': './pythia8',
                               'web_browser':None,
                               'eps_viewer':None,
@@ -2957,7 +2978,7 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
     def do_set(self, line):
         """Set an option, which will be default for coming generations/outputs
         """
-
+	
         args = self.split_arg(line)
         
         # Check the validity of the arguments
@@ -3016,6 +3037,22 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
                 logger.info('Desactivate complex mass scheme.')
                 self.exec_cmd('import model %s' % self._curr_model.get('name'))
 
+        elif args[0] == "gauge":
+	    if args[1] == 'unitary':
+	        if 1 in self._curr_model.get('gauge'):		   
+                    aloha.unitary_gauge = True
+		else:
+		    raise self.InvalidCmd('unitary gauge is not allowed for model %s' \
+		                                     % self._curr_model.get('name'))
+	    else:
+	        if 0 in self._curr_model.get('gauge'):		   
+                    aloha.unitary_gauge = False
+		else:
+		    raise self.InvalidCmd('Feynman gauge is not allowed for model %s' \
+		                                     % self._curr_model.get('name'))
+            self._options[args[0]] = args[1]
+            logger.info('Pass to gauge %s.' % args[1]) 
+		
         elif args[0] == 'fortran_compiler':
             if args[1] != 'None':
                 logger.info('set fortran compiler to %s' % args[1])

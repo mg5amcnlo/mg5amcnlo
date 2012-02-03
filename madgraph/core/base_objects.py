@@ -671,6 +671,7 @@ class Model(PhysicsObject):
         self['coupling_orders'] = None
         self['expansion_order'] = None
         self['version_tag'] = None # position of the directory (for security)
+	self['gauge'] = [0, 1]
 
     def filter(self, name, value):
         """Filter for model property values"""
@@ -725,7 +726,11 @@ class Model(PhysicsObject):
                 raise self.PhysicsObjectError, \
                     "Object of type %s is not a string" % type(value)
 
-
+        elif name == 'gauge':
+            if not (isinstance(value, list)):
+                raise self.PhysicsObjectError, \
+                    "Object of type %s is not a list" % type(value)
+		    
         return True
 
     def get(self, name):
@@ -804,7 +809,7 @@ class Model(PhysicsObject):
         """Return process property names as a nicely sorted list."""
 
         return ['name', 'particles', 'parameters', 'interactions', 'couplings',
-                'lorentz']
+                'lorentz', 'gauge']
 
     def get_particle(self, id):
         """Return the particle corresponding to the id"""
