@@ -1625,6 +1625,9 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
                 raise self.InvalidCmd, 'run_mode should be 0, 1 or 2.'
             self.cluster_mode = int(args[1])
             self.configuration['cluster_mode'] =  self.cluster_mode
+        elif args[0] == 'cluster_type':
+            self.configuration['cluster_mode'] = args[1]
+            self.cluster = cluster.from_name[args[1]](self.configuration['cluster_queue'])
         elif args[0] == 'nb_core':
             if args[1] == 'None':
                 import multiprocessing

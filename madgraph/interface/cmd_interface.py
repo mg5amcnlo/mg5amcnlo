@@ -1344,9 +1344,9 @@ class CompleteForCmd(CheckValidForCmd):
             elif args[1] == 'fortran_compiler':
                 return self.list_completion(text, ['f77','g77','gfortran'])
             elif args[1] == 'nb_core':
-                return self.list_completion(text, range(100))
+                return self.list_completion(text, [str(i) for i in range(100)])
             elif args[1] == 'run_mode':
-                return self.list_completion(text, range(3))
+                return self.list_completion(text, [str(i) for i in range(3)])
             elif args[1] == 'cluster_type':
                 return self.list_completion(text, ['pbs', 'condor', 'sge'])
             elif args[1] == 'cluster_queue':

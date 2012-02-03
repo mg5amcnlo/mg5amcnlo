@@ -215,6 +215,9 @@ class PBSCluster(Cluster):
             
         output = a.communicate(text)[0]
         id = output.split('.')[0]
+        if not id.isdigit():
+            raise ClusterManagmentError, 'fail to submit to the cluster: \n%s' \
+                                                                        % output 
         self.submitted += 1
         return id
 
@@ -333,6 +336,9 @@ class SGECluster(Cluster):
 
         output = a.communicate(text)[0]
         id = output.split(' ')[2]
+        if not id.isdigit():
+            raise ClusterManagmentError, 'fail to submit to the cluster: \n%s' \
+                                                                        % output 
         self.submitted += 1
         logger.debug(output)
 
