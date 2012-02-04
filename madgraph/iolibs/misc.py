@@ -15,18 +15,30 @@
 
 """A set of functions performing routine administrative I/O tasks."""
 
+import logging
 import os
 import re
 import signal
 import subprocess
 import sys
 import StringIO
+import sys
 import time
 
-import madgraph
-from madgraph import MadGraph5Error
-import madgraph.iolibs.files as files
+try:
+    # Use in MadGraph
+    import madgraph
+    from madgraph import MadGraph5Error
+    import madgraph.iolibs.files as files
+except:
+    # Use in MadEvent
+    import internal as madgraph
+    from internal import MadGraph5Error
+    import internal.files as files
+    
+logger = logging.getLogger('cmdprint.ext_program')
 
+   
 #===============================================================================
 # parse_info_str
 #===============================================================================
@@ -62,7 +74,8 @@ def get_pkg_info(info_str=None):
     if info_str is None:
         info_dict = files.read_from_file(os.path.join(madgraph.__path__[0],
                                                   "VERSION"),
-                                                  parse_info_str)
+                                                  parse_info_str, 
+                                                  print_error=False)
     else:
         info_dict = parse_info_str(StringIO.StringIO(info_str))
 
@@ -80,7 +93,6 @@ def get_time_info():
                  'fill': ' ' * (26 - len(creation_time))}
 
     return time_info
-    return None
 
 #===============================================================================
 # find a executable
@@ -105,6 +117,30 @@ def which(program):
     return None
 
 #===============================================================================
+# Return Nice display for a random variable
+#===============================================================================
+def nice_representation(var, nb_space=0):
+    """ Return nice information on the current variable """
+    
+    #check which data to put:
+    info = [('type',type(var)),('str', var)]
+    if hasattr(var, 'func_doc'):
+        info.append( ('DOC', var.func_doc) )
+    if hasattr(var, '__doc__'):
+        info.append( ('DOC', var.__doc__) )
+    if hasattr(var, '__dict__'):
+        info.append( ('ATTRIBUTE', var.__dict__.keys() ))
+    
+    spaces = ' ' * nb_space
+
+    outstr=''
+    for name, value in info:
+        outstr += '%s%3s : %s\n' % (spaces,name, value)
+
+    return outstr
+
+
+#===============================================================================
 # Compiler which returns smart output error in case of trouble
 #===============================================================================
 def compile(arg=[], cwd=None, mode='fortran', **opt):
@@ -113,7 +149,7 @@ def compile(arg=[], cwd=None, mode='fortran', **opt):
     try:
         p = subprocess.Popen(['make'] + arg, stdout=subprocess.PIPE, 
                              stderr=subprocess.STDOUT, cwd=cwd, **opt)
-        p.wait()
+        (out, err) = p.communicate()
     except OSError, error:
         if cwd and not os.path.exists(cwd):
             raise OSError, 'Directory %s doesn\'t exists. Impossible to run make' % cwd
@@ -150,44 +186,198 @@ def compile(arg=[], cwd=None, mode='fortran', **opt):
         if cwd:
             error_text += 'when trying to compile %s.\n' % cwd
         error_text += 'The compilation fails with the following output message:\n'
-        error_text += ''.join(['  '+l for l in p.stdout.readlines()])+'\n'
+        error_text += '    '+out.replace('\n','\n    ')+'\n'
         error_text += 'Please try to fix this compilations issue and retry.\n'
         error_text += 'Help might be found at https://answers.launchpad.net/madgraph5.\n'
         error_text += 'If you think that this is a bug, you can report this at https://bugs.launchpad.net/madgraph5'
 
         raise MadGraph5Error, error_text
 
+
+################################################################################
+# TAIL FUNCTION
+################################################################################
+def tail(f, n, offset=None):
+    """Reads a n lines from f with an offset of offset lines.  The return
+    value is a tuple in the form ``lines``.
+    """
+    avg_line_length = 74
+    to_read = n + (offset or 0)
+
+    while 1:
+        try:
+            f.seek(-(avg_line_length * to_read), 2)
+        except IOError:
+            # woops.  apparently file is smaller than what we want
+            # to step back, go to the beginning instead
+            f.seek(0)
+        pos = f.tell()
+        lines = f.read().splitlines()
+        if len(lines) >= to_read or pos == 0:
+            return lines[-to_read:offset and -offset or None]
+        avg_line_length *= 1.3
+
+################################################################################
+# LAST LINE FUNCTION
+################################################################################
+def get_last_line(fsock):
+    """return the last line of a file"""
     
-#===============================================================================
-# Ask a question with a maximum amount of time to answer
-#===============================================================================
-class TimeOutError(Exception):
-    """Class for run-time error"""
-         
-def timed_input(question, default, timeout=None, noerror=True, fct=None):
-    """ a question with a maximal time to answer take default otherwise"""
+    return tail(fsock, 1)[0]
     
-    def handle_alarm(signum, frame): 
-            raise TimeOutError
+
+
+#
+# Global function to open supported file types
+#
+class open_file(object):
+    """ a convinient class to open a file """
+    
+    web_browser = None
+    eps_viewer = None
+    text_editor = None 
+    configured = False
+    
+    def __init__(self, filename):
+        """open a file"""
         
-    signal.signal(signal.SIGALRM, handle_alarm)
-    
-    if fct is None:
-        fct = raw_input
+        # Check that the class is correctly configure
+        if not self.configured:
+            self.configure()
         
-    if timeout:
-        signal.alarm(timeout)
-        question += '[%ss to answer] ' % (timeout)    
-    try:
-        result = fct(question)
-    except TimeOutError:
-        if noerror:
-            print '\nuse %s' % default
-            return default
+        try:
+            extension = filename.rsplit('.',1)[1]
+        except IndexError:
+            extension = ''   
+    
+    
+        # dispatch method
+        if extension in ['html','htm','php']:
+            self.open_program(self.web_browser, filename, background=True)
+        elif extension in ['ps','eps']:
+            self.open_program(self.eps_viewer, filename, background=True)
         else:
-            signal.alarm(0)
-            raise
-    finally:
-        signal.alarm(0)
-    return result
+            self.open_program(self.text_editor,filename, mac_check=False)
+            # mac_check to False avoid to use open cmd in mac
+    
+    @classmethod
+    def configure(cls, configuration=None):
+        """ configure the way to open the file """
+        
+        cls.configured = True
+        
+        # start like this is a configuration for mac
+        cls.configure_mac(configuration)
+        if sys.platform == 'darwin':
+            return # done for MAC
+        
+        # on Mac some default (eps/web) might be kept on None. This is not
+        #suitable for LINUX which doesn't have open command.
+        
+        # first for eps_viewer
+        if not cls.eps_viewer:
+           cls.eps_viewer = cls.find_valid(['gv', 'ggv', 'evince'], 'eps viewer') 
+            
+        # Second for web browser
+        if not cls.web_browser:
+            cls.web_browser = cls.find_valid(
+                                    ['firefox', 'chrome', 'safari','opera'], 
+                                    'web browser')
+
+    @classmethod
+    def configure_mac(cls, configuration=None):
+        """ configure the way to open a file for mac """
+    
+        if configuration is None:
+            configuration = {'text_editor': None,
+                             'eps_viewer':None,
+                             'web_browser':None}
+        
+        for key in configuration:
+            if key == 'text_editor':
+                # Treat text editor ONLY text base editor !!
+                if configuration[key]:
+                    program = configuration[key].split()[0]                    
+                    if not which(program):
+                        logger.warning('Specified text editor %s not valid.' % \
+                                                             configuration[key])
+                    else:
+                        # All is good
+                        cls.text_editor = configuration[key]
+                        continue
+                #Need to find a valid default
+                if os.environ.has_key('EDITOR'):
+                    cls.text_editor = os.environ['EDITOR']
+                else:
+                    cls.text_editor = cls.find_valid(
+                                        ['vi', 'emacs', 'vim', 'gedit', 'nano'],
+                                         'text editor')
+              
+            elif key == 'eps_viewer':
+                if configuration[key]:
+                    cls.eps_viewer = configuration[key]
+                    continue
+                # else keep None. For Mac this will use the open command.
+            elif key == 'web_browser':
+                if configuration[key]:
+                    cls.web_browser = configuration[key]
+                    continue
+                # else keep None. For Mac this will use the open command.
+
+    @staticmethod
+    def find_valid(possibility, program='program'):
+        """find a valid shell program in the list"""
+        
+        for p in possibility:
+            if which(p):
+                logger.warning('Using default %s \"%s\". ' % (program, p) + \
+                             'Set another one in ./input/mg5_configuration.txt')
+                return p
+        
+        logger.warning('No valid %s found. ' % program + \
+                                   'Please set in ./input/mg5_configuration.txt')
+        return None
+        
+        
+    def open_program(self, program, file_path, mac_check=True, background=False):
+      """ open a file with a given program """
+
+      if mac_check==True and sys.platform == 'darwin':
+          return self.open_mac_program(program, file_path)
+
+      arguments = program.split() # allow argument in program definition
+      arguments.append(file_path)
+
+      # Shell program only                                                                                                                                                                 
+      if program:
+          if not background:
+              subprocess.call(arguments)
+          else:
+              import thread
+              thread.start_new_thread(subprocess.call,(arguments,))
+      else:
+          logger.warning('Not able to open file %s since no program configured.' % file_path + \
+                              'Please set one in ./input/mg5_configuration.txt')
+    
+    def open_mac_program(self, program, file_path):
+      """ open a text with the text editor """
+      
+      if not program:
+          # Ask to mac manager
+          os.system('open %s' % file_path)
+      elif which(program):
+          # shell program
+          arguments = program.split() # Allow argument in program definition
+          arguments.append(file_path)
+          subprocess.call(arguments)
+      else:
+         # not shell program
+         os.system('open -a %s %s' % (program, file_path))
+
+def is_executable(path):
+    """ check if a path is executable"""
+    try: 
+        return os.access(path, os.X_OK)
+    except:
+        return False        
 

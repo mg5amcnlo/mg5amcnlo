@@ -27,6 +27,12 @@ C
       if(iabs(ipart).eq.22) ipart=7
       iporg=ipart
 
+c     This will be called for any PDG code, but we only support up to 7
+      if(iabs(ipart).gt.7)then
+         pdg2pdf=0d0
+         return 
+      endif
+
       ireuse = 0
       do i=1,2
 c     Check if result can be reused since any of last two calls

@@ -1,0 +1,374 @@
+#!/usr/bin/perl -w
+
+$server = $ENV{'SERVER_NAME'};
+  my($interaction, $model, $qcdOrder, $qedOrder);
+#
+#    Make sure we are in the main directory, not bin
+#
+  if (-d "bin") {
+#      print "We are in main directory \n";
+  }
+  else{
+#      print "Not in correct directory \n";
+      chdir("../");
+      if (-d "bin") {
+#	  print "We are in main directory \n";
+      }
+      else{
+	  print "Error gen_indexhtml-pl must be run from main or bin directory \n";
+	  exit;
+      }	  
+  }  
+#
+#  get the name of the directory
+#
+  my $fullname=qx(pwd);
+  my @temp=split /\//,$fullname;
+  my @couplings;
+#  foreach $ciccio (@temp){
+#      if( $ciccio =~ /p*__*/){
+#	  $procname=$ciccio;
+#      }
+#  chomp $procname;
+#  print $procname;
+
+#
+#	Writes out html page index.html with links to results
+#	and code.
+#
+  if (-e "SubProcesses/procdef_mg5.dat"){
+    open (INCARD,"SubProcesses/procdef_mg5.dat") || die "Error reading file procdef_mg5.dat";
+    @incard=<INCARD>;
+    close (INCARD);
+  } else {
+    open (INCARD,"Cards/proc_card.dat") || exit;
+    @incard=<INCARD>;
+    close (INCARD);
+  }
+
+# process
+$listpos = 0;
+until($listpos>$#incard){
+    if($incard[$listpos] =~ /^#(\s+)Begin(\s+)PROCESS/) {$ini=$listpos};
+    if($incard[$listpos] =~ /^#(\s+)End(\s+)PROCESS/)   {$end=$listpos};
+    $listpos = $listpos + 1;
+    }
+$listpos=$ini;
+$numcoup=0;
+while($listpos < $end){
+    if($incard[$listpos] =~ /^#/) {$listpos = $listpos + 1;
+                                   next;};
+    if($incard[$listpos] =~ ">") {$interaction=$incard[$listpos]};
+    if($incard[$listpos] =~ "=") {
+	$numcoup++;
+	$couplings[$numcoup]=$incard[$listpos];
+    }
+    if($incard[$listpos] =~ "end_coup"){$listpos = $end;}
+    $listpos = $listpos + 1;
+}
+($interaction, $junk)=split(/#/ , $interaction);
+($interaction, $junk)=split(/\@/ , $interaction);
+
+for($couppos=1;$couppos<=$numcoup;$couppos++){
+    ($couplings[$couppos], $junk)=split(/#/, $couplings[$couppos]);
+    chomp($couplings[$couppos]);
+}
+
+#model
+$listpos = 0;
+until($listpos>$#incard){
+    if($incard[$listpos] =~ /^#(\s+)Begin(\s+)MODEL/) {$ini=$listpos};
+    if($incard[$listpos] =~ /^#(\s+)End(\s+)MODEL/)   {$end=$listpos};
+    $listpos = $listpos + 1;
+    }
+#
+      ($model, $junk)   =split(/#/ , $incard[$ini+1]);
+
+   chomp($interaction);
+#   chomp($qcdOrder);
+#   chomp($qedOrder);
+   chomp($model);
+   
+
+  $htfile =  "index"."\.html"; #name the file
+  open(PAGE,"> $htfile" )|| die "Error writing $htfile"; 
+  print PAGE "\<HTML\> \n";
+  print PAGE "\<HEAD\> \n";
+  print PAGE "\<TITLE\>MadEvent Card for $interaction \<\/TITLE\> \n";
+  if (! -e "SubProcesses/done"){
+      print PAGE "<META HTTP-EQUIV=\"REFRESH\" CONTENT=\"30\" > \n";
+  }
+  if ( -e "RunWeb"){
+      print PAGE "<META HTTP-EQUIV=\"REFRESH\" CONTENT=\"30\" > \n";
+  }
+
+
+  print PAGE "<META HTTP-EQUIV=\"EXPIRES\" CONTENT=\"20\" >";
+  print PAGE "\<\/HEAD\> \n";
+
+  print PAGE "<script language=\"JavaScript\" type=\"text/JavaScript\"> \n";
+  print PAGE "<!--- \n \n";
+  print PAGE "function MM_openBrWindow(theURL,winName,features) { //v2.0 \n";
+  print PAGE "   window.open(theURL,winName,features); \n";
+  print PAGE "} \n //--> \n </script> \n";
+
+  print PAGE "<body text=\"\#000000\" bgcolor=\"\#FFFFFF\" link=\"#007BF0\" vlink=\"\#309372\"> \n";
+  print PAGE "<center> \n";
+  print PAGE "<h3> <font color=\"#008080\"> <a href=\"index.html\" target=\"_top\">MadEvent Card for $interaction</a> </font></h3> \n ";
+  
+  print PAGE "<b><font size=-1> Created: </b> ";
+  my ($created) = "Unknown";
+  if (open FILE, "CREATED") {
+      $created = <FILE>;
+      chomp $created;
+  }
+  close FILE;
+  print PAGE " $created </font> \n ";
+
+  print PAGE "<table BORDER CELLPADDING=5 WIDTH=\"80%\" BGCOLOR=\"#F0FFFF\"> \n";
+  print PAGE "<tr> \n";
+  print PAGE "<td VALIGN=\"center\" WIDTH=\"50%\" BGCOLOR=\"#F0FFFF\" > \n";
+  print PAGE "<center> \n";
+  print PAGE "<table> \n <b> \n";
+  print PAGE "<tr> <td> <b> Process:       <td><b> $interaction </tr> \n";
+  for($couppos=1;$couppos<=$numcoup;$couppos++){
+     print PAGE "<tr> <td> <td> <b> $couplings[$couppos] </tr> \n";
+  }
+  print PAGE "<tr> <td> <b> Model:         <td> <b> $model </tr> \n";
+  print PAGE "</b> \n </table> \n <center> \n";
+  print PAGE "<td VALIGN=\"TOP\" WIDTH=\"50%\" BGCOLOR=\"#F0FFFF\" > \n";
+  print PAGE "<img SRC=\"HTML/card.jpg\"  ALT=\"\" BORDER=0  align=CENTER> \n";
+  print PAGE "</center> \n";
+  print PAGE "</td> \n </tr> \n <tr> \n";
+  print PAGE "<td COLSPAN=2 ALIGN=CENTER > \n";
+  print PAGE "<table  CELLPADDING=5 WIDTH=\"100%\" BGCOLOR=\"#F0FFFF\"> \n";
+
+  print PAGE "<td align=center> <font color=\"#000000\"><font size=+1> Links  </font></font> \n";
+  print PAGE "<td align=center> <font color=\"#000000\"><font size=+1> Status </font></font> \n";  
+  print PAGE "<tr> \n";
+#
+#   Process information
+#
+  my($options) = "'toolbar=yes, location=yes, directories=no, status=no, menubar=yes, scrollbars=yes,resizeable=yes,width=600,height=525'";
+  print PAGE "<td ALIGN=center><a href=\"HTML/info.html\"> \n ";
+  print PAGE  "Process Information </a> \n";
+  print PAGE "<td ALIGN=center> ";
+  my($failed) = 0;
+  if (!-e "./SubProcesses/done") {
+      $created = " ";
+      if (open FILE, "./SubProcesses/status") {
+	  $created = <FILE>;
+	  chomp $created;
+      }
+      close FILE;
+      print PAGE "Generating Process $created </td> \n";
+  if (-e "./generating") {
+      print  PAGE "<FORM ACTION=\"/cgi-bin/NewProcess/stop_gen.cgi\" METHOD=\"POST\">";
+      print  PAGE "<INPUT TYPE=HIDDEN NAME=dir_name VALUE=\"$fullname\"> \n";
+      print  PAGE "<INPUT TYPE=SUBMIT VALUE=\"Stop Process Generation\">  \n";
+      print  PAGE "</FORM> \n";
+  }
+  }else { 
+         if (-e "SubProcesses/subproc.mg") {
+	     print PAGE "Generation Complete </td> \n";
+	 }else {
+	     print PAGE "No Diagrams Exist! </td> \n";
+             $failed = 1;
+	 }
+   }
+  print PAGE "</tr><tr> \n";
+#
+#    Download code
+#
+  if (!-e "./madevent.tar.gz") {
+      print PAGE "<td ALIGN=center>";
+      print PAGE  "Code Download </a> </td>\n";
+      print PAGE "<td ALIGN=center> Not Available </td> \n";
+  }else { 
+      print PAGE "<td ALIGN=center><a href=madevent.tar.gz>";
+      print PAGE  "Code Download </a> </td>\n";
+      print PAGE "<td ALIGN=center> Available </td> \n";
+  }
+#
+#    On-Line Event Generation
+#
+  print PAGE "</tr><tr> \n";
+
+  if ($failed == 0) {
+  my($options2) = "'toolbar=yes, location=yes, directories=no, status=yes, menubar=yes, scrollbars=yes,resizeable=yes,width=600,height=525'";
+  if (-e "Online") {
+    print PAGE "<td ALIGN=center><a href=\"http://$server/cgi-bin/RunProcess/print_run_web_form-pl\"> \n ";
+    print PAGE  "On-line Event Generation </a> \n";
+    print PAGE "<td ALIGN=center> ";
+
+    if (!-e "./RunWeb") {
+      print PAGE "Available (access restricted)</td> \n";
+    }else { 
+      print PAGE "Running </td> \n";
+    }
+  }
+  else {
+    print PAGE "<td ALIGN=center> \n ";
+    print PAGE  "On-line Event Generation\n";
+    print PAGE "<td ALIGN=center> ";
+    print PAGE "<a href=\"README\">Only available from the web</a></td> \n";
+  }     
+
+#
+#   Results and Event Data base
+# 
+  print PAGE "</tr><tr> \n";
+
+  print PAGE "<td ALIGN=center><a href=\"crossx.html\"> \n ";
+  print PAGE  "Results and Event Database </a> \n";
+  print PAGE "<td ALIGN=center> ";
+
+  $nfound = 0;
+  chdir("./HTML");
+  @files = <*>;
+  foreach $file (@files) {
+  if (-d $file) {
+    $nfound = $nfound + 1;
+  }
+  } 
+  if ($nfound == "0") {
+	  print PAGE "No runs available </td> \n";
+  }else { 
+	  print PAGE "$nfound "; 
+	  print PAGE " runs available </td> \n";
+  }
+  }
+  print PAGE "</tr> \n";
+  
+#  my @keywords =  &GetKeyInfo( $interaction, $model) ;
+#   my @keywords = {};
+  print PAGE "</table> \n";
+  print PAGE "<tr> <td align\=center colspan\=2> <font size\=-1> \n";
+#  print PAGE "Keywords: @keywords \n";
+  print PAGE "Notes:  \n";
+#  print "@keywords \n";
+  print PAGE "</font> \n </td> \n </table> \n <p> \n";
+  my($today) = `date`;
+  print PAGE "<b> Last Update: </b> $today";
+  
+  print PAGE "</center> \n </body> \n </html> \n";
+  close PAGE;
+
+sub GetKeyInfo {
+    my($process, $model)= @_;
+    
+#-------------------------------------------
+# start keyword generation
+# result is an array of keywords (@keywords)
+#-------------------------------------------
+
+#get rid of spaces
+    $process =~ s/\s+//g; 
+
+#set everything to lowercase
+    $process =~ s/(.)/\L$1/g;
+
+# divide it into initial, intermediate and final state
+    ($process, my $forbid) = split /\//, $process;
+    my @splitprocess = split />/, $process; 
+    my $k= @splitprocess;
+
+    my $in= $splitprocess[0]; 
+    my $out=$splitprocess[$k-1]; 
+
+    if ($k > 2) {
+	my $inter=$splitprocess[$k-2];
+    };
+
+    my @keywords=();
+
+## start filling the keyowords array
+
+# initial state classification (trivial)
+
+    push @keywords, "$in-collision";
+
+# final state particle content extraction
+
+    $out =~ s/(.)/$1 /gi;
+    $out =~ s/( ~)/~/gi;
+
+    $out =~ s/( \+)/\+/gi;
+    $out =~ s/( \-)/\-/gi;
+
+    $out =~ s/(t a\+)/ta\+/gi;
+    $out =~ s/(t a\-)/ta\-/gi;
+    $out =~ s/(m u\-)/mu\-/gi;
+    $out =~ s/(m u\+)/mu\+/gi;
+
+    $out =~ s/(l e)/le/gi;
+    $out =~ s/(v l e )/vle /gi;
+
+    $out =~ s/(v )/v/gi;
+
+# count the number of final-state particles
+
+    my @entries= split /\s+/, $out;
+    my $nfinal= @entries; 
+
+    print " final state particles: @entries\n";
+    push @keywords, "2->$nfinal";
+
+#loop over particles
+
+    my $njets=0;
+    my $neutrinos=0;
+    my $cleptons=0;
+    my $top=0;
+    my $bottom=0;
+    my $higgs=0;
+    my $wb=0;
+
+    foreach (@entries){
+	if (substr($_,0,1) eq "v") {
+	    $neutrinos=1;
+	};
+	if (substr($_,0,1) eq "e"  ||
+	    substr($_,0,2) eq "mu" ||
+	    substr($_,0,2) eq "ta" || 
+            substr($_,0,1) eq "l" ) {
+	    $cleptons=1;
+	};
+	if (substr($_,1,1) =~ /([udcsgj])/) {
+	    $njets=$njets+1
+	    };
+	if ($_ eq "t" || $_ eq "t~") {
+	    $top=1;
+	};
+	if ($_ eq "b" || $_ eq "b~") {
+	    $bottom=1;
+	};
+	if ($_ eq "w+" || $_ eq "w-" || $_ eq "z") {
+	    $wb=1;
+	};
+	if ($_ eq "h") {
+	    $higgs=1;
+	};
+    };
+
+    if ($njets gt 1){push @keywords, "multi-jet";};
+    if ($top)       {push @keywords, "top";};
+    if ($bottom)    {push @keywords, "bottom";};
+    if ($higgs)     {push @keywords, "higgs";};
+    if ($wb)        {push @keywords, "weak-boson";};
+    if ($neutrinos) {push @keywords, "missing-energy";};
+    if ($cleptons)  {push @keywords, "charged-lepton";};
+
+# model
+
+	push @keywords, $model;
+
+
+
+#-------------------------
+# end keyword generation
+#-------------------------
+
+# final result
+    @keywords;
+}

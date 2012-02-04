@@ -20,6 +20,13 @@ C
 
       ipart=ipdg
       if(ipart.eq.21) ipart=0
+      if(iabs(ipart).eq.22) ipart=7
+
+c     This will be called for any PDG code, but we only support up to 7
+      if(iabs(ipart).gt.7)then
+         pdg2pdf=0d0
+         return 
+      endif
 
       if(ih.eq.ihlast.and.x.eq.xlast.and.xmu.eq.xmulast)then
          pdg2pdf=pdflast(ipart);

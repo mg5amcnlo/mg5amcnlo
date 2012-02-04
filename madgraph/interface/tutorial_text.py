@@ -159,6 +159,7 @@ mg5>open ./my_mg5_cmd.dat
 """
 
 
+open_index = output
 
 open = """
 Note that in order to open some file, you might be need to use a shell command.

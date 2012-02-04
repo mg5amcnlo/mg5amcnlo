@@ -12,6 +12,7 @@
 # For more information, please visit: http://madgraph.phys.ucl.ac.be
 #
 ################################################################################
+from compiler.ast import Continue
 """ How to import a UFO model to the MG5 format """
 
 
@@ -29,8 +30,8 @@ import madgraph.iolibs.misc as misc
 import madgraph.iolibs.save_load_object as save_load_object
 from madgraph.core.color_algebra import *
 
-
 import aloha.create_aloha as create_aloha
+import aloha.aloha_fct as aloha_fct
 
 import models as ufomodels
 import models.model_reader as model_reader
@@ -40,8 +41,16 @@ logger_mod = logging.getLogger('madgraph.model')
 root_path = os.path.dirname(os.path.realpath( __file__ ))
 sys.path.append(root_path)
 
+sys.path.append(os.path.join(root_path, os.path.pardir, 'Template', 'bin', 'internal'))
+import check_param_card 
+
+
+
 class UFOImportError(MadGraph5Error):
     """ a error class for wrong import of UFO model""" 
+
+class InvalidModel(MadGraph5Error):
+    """ a class for invalid Model """
 
 def find_ufo_path(model_name):
     """ find the path to a model """
@@ -93,7 +102,12 @@ def import_model(model_name):
     
     #restrict it if needed       
     if restrict_file:
-        logger.info('Restrict model %s with file %s .' % (model_name, os.path.relpath(restrict_file)))
+        try:
+            logger.info('Restrict model %s with file %s .' % (model_name, os.path.relpath(restrict_file)))
+        except OSError:
+            # sometimes has trouble with relative path
+            logger.info('Restrict model %s with file %s .' % (model_name, restrict_file))
+            
         if logger_mod.getEffectiveLevel() > 10:
             logger.info('Run \"set stdout_level DEBUG\" before import for more information.')
             
@@ -178,12 +192,22 @@ class UFOMG5Converter(object):
         self.conservecharge = set(['charge'])
         
         self.ufomodel = model
+        self.checked_lor = set()
 
         if auto:
             self.load_model()
 
     def load_model(self):
         """load the different of the model first particles then interactions"""
+
+        # Check the validity of the model
+        # 1) check that all lhablock are single word.
+        for param in self.ufomodel.all_parameters:
+            if param.nature == "external":
+                if len(param.lhablock.split())>1:
+                    raise UFOImportError, '''LHABlock should be single word which is not the case for
+    \'%s\' parameter with lhablock \'%s\'''' % (param.name, param.lhablock)
+            
 
         logger.info('load particles')
         # Check if multiple particles have the same name but different case.
@@ -197,9 +221,13 @@ class UFOMG5Converter(object):
         for particle_info in self.ufomodel.all_particles:            
             self.add_particle(particle_info)
 
+        # Find which particles is in the 3/3bar color states (retrun {id: 3/-3})
+        color_info = self.find_color_anti_color_rep()
+
+
         logger.info('load vertices')
         for interaction_info in self.ufomodel.all_vertices:
-            self.add_interaction(interaction_info)
+            self.add_interaction(interaction_info, color_info)
         
         self.model.set('conserved_charge', self.conservecharge)
 
@@ -228,7 +256,10 @@ class UFOMG5Converter(object):
             pass
         else:
             self.model.set('expansion_order', expansion_order)
-
+        
+        #clean memory
+        del self.checked_lor
+        
         return self.model
         
     
@@ -283,7 +314,64 @@ class UFOMG5Converter(object):
         # Add the particles to the list
         self.particles.append(particle)
 
-    def add_interaction(self, interaction_info):
+
+    def find_color_anti_color_rep(self):
+        """find which color are in the 3/3bar states"""
+        # method look at the 3 3bar 8 configuration.
+        # If the color is T(3,2,1) and the interaction F1 F2 V
+        # Then set F1 to anticolor (and F2 to color)
+        # if this is T(3,1,2) set the opposite
+        output = {}
+        
+        for interaction_info in self.ufomodel.all_vertices:
+            if len(interaction_info.particles) != 3:
+                continue
+            colors = [abs(p.color) for p in interaction_info.particles]
+            if colors[:2] == [3,3]:
+                if 'T(3,2,1)' in interaction_info.color:
+                    color, anticolor, other = interaction_info.particles
+                elif 'T(3,1,2)' in interaction_info.color:
+                    anticolor, color, other = interaction_info.particles
+                else:
+                    continue
+            elif colors[1:] == [3,3]:
+                if 'T(1,2,3)' in interaction_info.color:
+                    other, anticolor, color = interaction_info.particles
+                elif 'T(1,3,2)' in interaction_info.color:
+                    other, color, anticolor = interaction_info.particles
+                else:
+                    continue                  
+               
+            elif colors.count(3) == 2:
+                if 'T(2,3,1)' in interaction_info.color:
+                    color, other, anticolor = interaction_info.particles
+                elif 'T(2,1,3)' in interaction_info.color:
+                    anticolor, other, color = interaction_info.particles
+                else:
+                    continue                 
+            else:
+                continue    
+            
+            # Check/assign for the color particle
+            if color.pdg_code in output: 
+                if output[color.pdg_code] == -3:
+                    raise InvalidModel, 'Particles %s is sometimes in the 3 and sometimes in the 3bar representations' \
+                                    % color.name
+            else:
+                output[color.pdg_code] = 3
+            
+            # Check/assign for the anticolor particle
+            if anticolor.pdg_code in output: 
+                if output[anticolor.pdg_code] == 3:
+                    raise InvalidModel, 'Particles %s is sometimes set as in the 3 and sometimes in the 3bar representations' \
+                                    % anticolor.name
+            else:
+                output[anticolor.pdg_code] = -3
+        
+        return output
+
+            
+    def add_interaction(self, interaction_info, color_info):
         """add an interaction in the MG5 model. interaction_info is the 
         UFO vertices information."""
         
@@ -297,11 +385,24 @@ class UFOMG5Converter(object):
         
         particles = base_objects.ParticleList(particles)
         
+        # Check the coherence of the Fermion Flow
+        nb_fermion = sum([p.is_fermion() and 1 or 0 for p in particles])
+        try:
+            if nb_fermion:
+                [aloha_fct.check_flow_validity(helas.structure, nb_fermion) \
+                                          for helas in interaction_info.lorentz
+                                          if helas.name not in self.checked_lor]
+                self.checked_lor.update(set([helas.name for helas in interaction_info.lorentz]))
+        except aloha_fct.WrongFermionFlow, error:
+            text = 'Fermion Flow error for interactions %s:\n %s' % \
+             (', '.join([p.name for p in interaction_info.particles]), error)
+            raise InvalidModel, text
+            
         # Import Lorentz content:
         lorentz = [helas.name for helas in interaction_info.lorentz]
         
         # Import color information:
-        colors = [self.treat_color(color_obj, interaction_info) for color_obj in \
+        colors = [self.treat_color(color_obj, interaction_info, color_info) for color_obj in \
                                     interaction_info.color]
         
         order_to_int={}
@@ -340,7 +441,7 @@ class UFOMG5Converter(object):
     _pat_T = re.compile(r'T\((?P<first>\d*),(?P<second>\d*)\)')
     _pat_id = re.compile(r'Identity\((?P<first>\d*),(?P<second>\d*)\)')
     
-    def treat_color(self, data_string, interaction_info):
+    def treat_color(self, data_string, interaction_info, color_info):
         """ convert the string to ColorString"""
         
         #original = copy.copy(data_string)
@@ -354,23 +455,49 @@ class UFOMG5Converter(object):
             if pattern:
                 particle = interaction_info.particles[int(pattern.group('first'))-1]
                 particle2 = interaction_info.particles[int(pattern.group('second'))-1]
-                if particle.color == particle2.color and particle.color in [-6, -3, 3, 6]:
+                if particle.color == particle2.color and particle.color in [-6, 6]:
                     error_msg = 'UFO model have inconsistency in the format:\n'
                     error_msg += 'interactions for  particles %s has color information %s\n'
                     error_msg += ' but both fermion are in the same representation %s'
                     raise UFOFormatError, error_msg % (', '.join([p.name for p in interaction_info.particles]),data_string, particle.color)
-
-                if particle.color == -3 :
-                    output.append(self._pat_id.sub('color.T(\g<second>,\g<first>)', term))
-                elif particle.color == 3:
-                    output.append(self._pat_id.sub('color.T(\g<first>,\g<second>)', term))
+                if particle.color == particle2.color and particle.color in [-3, 3]:
+                    if particle.pdg_code in color_info and particle2.pdg_code in color_info:
+                      if color_info[particle.pdg_code] == color_info[particle2.pdg_code]:
+                        error_msg = 'UFO model have inconsistency in the format:\n'
+                        error_msg += 'interactions for  particles %s has color information %s\n'
+                        error_msg += ' but both fermion are in the same representation %s'
+                        raise UFOFormatError, error_msg % (', '.join([p.name for p in interaction_info.particles]),data_string, particle.color)
+                    elif particle.pdg_code in color_info:
+                        color_info[particle2.pdg_code] = -particle.pdg_code
+                    elif particle2.pdg_code in color_info:
+                        color_info[particle.pdg_code] = -particle2.pdg_code
+                    else:
+                        error_msg = 'UFO model have inconsistency in the format:\n'
+                        error_msg += 'interactions for  particles %s has color information %s\n'
+                        error_msg += ' but both fermion are in the same representation %s'
+                        raise UFOFormatError, error_msg % (', '.join([p.name for p in interaction_info.particles]),data_string, particle.color)
+                
+                
+                if particle.color == 6:
+                    output.append(self._pat_id.sub('color.T6(\g<first>,\g<second>)', term))
                 elif particle.color == -6 :
                     output.append(self._pat_id.sub('color.T6(\g<second>,\g<first>)', term))
-                elif particle.color == 6:
-                    output.append(self._pat_id.sub('color.T6(\g<first>,\g<second>)', term))
                 elif particle.color == 8:
                     output.append(self._pat_id.sub('color.Tr(\g<first>,\g<second>)', term))
                     factor *= 2
+                elif particle.color in [-3,3]:
+                    if particle.pdg_code not in color_info:
+                        logger.debug('Not able to find the 3/3bar rep from the interactions for particle %s' % particle.name)
+                        color_info[particle.pdg_code] = particle.color
+                    if particle2.pdg_code not in color_info:
+                        logger.debug('Not able to find the 3/3bar rep from the interactions for particle %s' % particle2.name)
+                        color_info[particle2.pdg_code] = particle2.color                    
+                
+                
+                    if color_info[particle.pdg_code] == 3 :
+                        output.append(self._pat_id.sub('color.T(\g<second>,\g<first>)', term))
+                    elif color_info[particle.pdg_code] == -3:
+                        output.append(self._pat_id.sub('color.T(\g<first>,\g<second>)', term))
                 else:
                     raise MadGraph5Error, \
                           "Unknown use of Identity for particle with color %d" \
@@ -626,6 +753,7 @@ class RestrictModel(model_reader.ModelReader):
         """define default value"""
         self.del_coup = []
         super(RestrictModel, self).default_setup()
+        self.rule_card = check_param_card.ParamCardRule()
      
     def restrict_model(self, param_card):
         """apply the model restriction following param_card"""
@@ -683,7 +811,7 @@ class RestrictModel(model_reader.ModelReader):
                     
         return self.coupling_pos
         
-    def detect_identical_couplings(self):
+    def detect_identical_couplings(self, strict_zero=False):
         """return a list with the name of all vanishing couplings"""
         
         dict_value_coupling = {}
@@ -695,6 +823,10 @@ class RestrictModel(model_reader.ModelReader):
             if value == 0:
                 zero_coupling.append(name)
                 continue
+            elif not strict_zero and abs(value) < 1e-10:
+                return self.detect_identical_couplings(strict_zero=True)
+            elif not strict_zero and abs(value) < 1e-15:
+                zero_coupling.append(name)
             
             if value in dict_value_coupling:
                 iden_key.add(value)
@@ -738,14 +870,16 @@ class RestrictModel(model_reader.ModelReader):
             value = self['parameter_dict'][param.name]
             if value == 0:
                 continue
-            key = (param.lhablock, value) 
+            key = (param.lhablock, value)
+            mkey =  (param.lhablock, -value)
             if key in block_value_to_var:
-                block_value_to_var[key].append(param)
+                block_value_to_var[key].append((param,1))
                 mult_param.add(key)
-                #remove the duplicate parameter
-                #external_parameters.remove(param)
+            elif mkey in block_value_to_var:
+                block_value_to_var[mkey].append((param,-1))
+                mult_param.add(mkey)
             else: 
-                block_value_to_var[key] = [param]        
+                block_value_to_var[key] = [(param,1)]        
         
         output=[]  
         for key in mult_param:
@@ -780,32 +914,39 @@ class RestrictModel(model_reader.ModelReader):
         """ merge the identical parameters given in argument """
             
         logger_mod.debug('Parameters set to identical values: %s '% \
-                        ', '.join([obj.name for obj in parameters]))
+                        ', '.join(['%s*%s' % (f, obj.name) for (obj,f) in parameters]))
         
         # Extract external parameters
         external_parameters = self['parameters'][('external',)]
-        for i, obj in enumerate(parameters):
+        for i, (obj, factor) in enumerate(parameters):
             # Keeped intact the first one and store information
             if i == 0:
                 obj.info = 'set of param :' + \
-                                     ', '.join([param.name for param in parameters])
+                                     ', '.join([str(f)+'*'+param.name for (param, f) in parameters])
                 expr = obj.name
                 continue
+            # Add a Rule linked to the param_card
+            if factor ==1:
+                self.rule_card.add_identical(obj.lhablock.lower(), obj.lhacode, 
+                                                         parameters[0][0].lhacode )
+            else:
+                self.rule_card.add_opposite(obj.lhablock.lower(), obj.lhacode, 
+                                                         parameters[0][0].lhacode )
             # delete the old parameters                
             external_parameters.remove(obj)    
             # replace by the new one pointing of the first obj of the class
-            new_param = base_objects.ModelVariable(obj.name, expr, 'real')
+            new_param = base_objects.ModelVariable(obj.name, '%s*%s' %(factor, expr), 'real')
             self['parameters'][()].insert(0, new_param)
         
         # For Mass-Width, we need also to replace the mass-width in the particles
         #This allows some optimization for multi-process.
-        if parameters[0].lhablock in ['MASS','DECAY']:
-            new_name = parameters[0].name
-            if parameters[0].lhablock == 'MASS':
+        if parameters[0][0].lhablock in ['MASS','DECAY']:
+            new_name = parameters[0][0].name
+            if parameters[0][0].lhablock == 'MASS':
                 arg = 'mass'
             else:
                 arg = 'width'
-            change_name = [p.name for p in parameters[1:]]
+            change_name = [p.name for (p,f) in parameters[1:]]
             [p.set(arg, new_name) for p in self['particle_dict'].values() 
                                                        if p[arg] in change_name]
             
@@ -853,6 +994,19 @@ class RestrictModel(model_reader.ModelReader):
     def fix_parameter_values(self, zero_parameters, one_parameters):
         """ Remove all instance of the parameters in the model and replace it by 
         zero when needed."""
+
+        # Add a rule for zero/one parameter
+        external_parameters = self['parameters'][('external',)]
+        for param in external_parameters[:]:
+            value = self['parameter_dict'][param.name]
+            block = param.lhablock.lower()
+            if value == 0:
+                self.rule_card.add_zero(block, param.lhacode)
+            elif value == 1:
+                self.rule_card.add_one(block, param.lhacode)
+
+
+
 
         special_parameters = zero_parameters + one_parameters
         
@@ -921,7 +1075,10 @@ class RestrictModel(model_reader.ModelReader):
             logger_mod.debug('remove parameters: %s' % param)
             data = self['parameters'][param_info[param]['dep']]
             data.remove(param_info[param]['obj'])
-                  
+        
+ 
+        
+
                 
                 
         

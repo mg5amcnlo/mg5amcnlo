@@ -148,8 +148,8 @@ except:
 #os.remove(path.join(filepath, 'bin', 'create_release.py'))
 #os.remove(path.join(filepath, 'bin', 'setup_madevent_template.py'))
 #os.remove(path.join(filepath, 'README.developer'))
-#shutil.move(path.join(filepath, 'README.release'), path.join(filepath, 'README'))
-
+shutil.move(path.join(filepath, 'aloha','README'), path.join(filepath, 'README'))
+shutil.move(path.join(filepath, 'aloha','bin'), path.join(filepath, 'bin'))
 # 6. tar the MadGraph5_vVERSION directory.
 
 logging.info("Create the tar file " + filename)

@@ -14,6 +14,7 @@ if not sys.version_info[0] == 2 or sys.version_info[1] < 6:
 # and add it to the current PYTHONPATH
 
 root_path = os.path.split(os.path.dirname(os.path.realpath( __file__ )))[0]
+sys.path.insert(0, os.path.join(root_path, 'aloha'))
 sys.path.insert(0, root_path)
 
 
@@ -46,13 +47,13 @@ if not options.output_dir:
     print 'files will be written in path: ' + output_dir
 else:
     output_dir = options.output_dir
+    print 'files will be written in path: ' + output_dir
 if not os.path.exists(output_dir):
     os.mkdir(output_dir)
     
 import create_aloha as create_aloha
  
 #call aloha
-print output_dir
 create_aloha.AbstractALOHAModel(ufo_name, write_dir=output_dir, format=options.format)
  
 

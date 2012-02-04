@@ -45,4 +45,5 @@ class IOMiscTest(unittest.TestCase):
         mystr = "param1 : value1"
 
         self.assertRaises(IOError, misc.get_pkg_info, mystr)
+        
 

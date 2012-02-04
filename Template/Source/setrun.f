@@ -20,6 +20,11 @@ c
       double precision D
       common/to_dj/D
 c
+c     PARAM_CARD
+c
+      character*30 param_card_name
+      common/to_param_card_name/param_card_name
+c
 c     local
 c     
       integer npara
@@ -372,13 +377,13 @@ c order of alfas running = 2
 
       if(lp1.ne.0.or.lp2.ne.0) then
           write(*,*) 'A PDF is used, so alpha_s(MZ) is going to be modified'
-          call setpara('param_card.dat',.true.)
+          call setpara(param_card_name)
           asmz=G**2/(16d0*atan(1d0))
           write(*,*) 'Old value of alpha_s from param_card: ',asmz
           call pdfwrap
           write(*,*) 'New value of alpha_s from PDF ',pdlabel,':',asmz
       else
-          call setpara('param_card.dat',.true.)
+          call setpara(param_card_name)
           asmz=G**2/(16d0*atan(1d0))
           nloop=2
           pdlabel='none'
