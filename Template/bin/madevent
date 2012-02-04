@@ -146,7 +146,7 @@ except KeyboardInterrupt:
     pass
 except cmd_interface.MadEventAlreadyRunning, error:
     logging.error(str(error))
-    SystemError.exit()
+    sys.exit()
 try: 
     readline.set_history_length(100)
     if not os.path.exists(os.path.join(os.environ['HOME'], '.mg5')):

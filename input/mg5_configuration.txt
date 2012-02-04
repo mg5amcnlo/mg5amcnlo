@@ -61,7 +61,7 @@ run_mode = 0
 
 # Cluster Type [pbs|sge|condor] Use for cluster run only
 # And cluster queue
-cluster_type = pbs
+cluster_type = condor
 cluster_queue = madgraph
 
 # Nb_core to use (None = all) This is use only for multicore run

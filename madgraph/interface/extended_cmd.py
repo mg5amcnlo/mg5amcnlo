@@ -780,7 +780,6 @@ class Cmd(BasicCmd):
                     raise self.InvalidCmd("invalid path %s " % dirpath)
     
 
-
     # Quit
     def do_quit(self, line):
         """ exit the mainloop() """
