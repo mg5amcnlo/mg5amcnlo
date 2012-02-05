@@ -58,8 +58,10 @@ class LoopHelasMatrixElementTest(unittest.TestCase):
     def setUp(self):
         """load the NLO toy model"""
         
+#        self.myloopmodel = models.import_full_model(os.path.join(\
+#            _input_file_path,'LoopModelTest'))
         self.myloopmodel = models.import_full_model(os.path.join(\
-            _input_file_path,'LoopModelTest'))
+            _input_file_path,'LoopSMTest'))
 
     def check_HME_individual_diag_sanity(self,Amplitude, process,\
           mode='collective', selection=None, verbose=False, checkColor=True):
@@ -305,7 +307,7 @@ class LoopHelasMatrixElementTest(unittest.TestCase):
                     print "============"
                     if isinstance(diag,loop_base_objects.LoopUVCTDiagram):
                         print "Checking diag #",selectionStart+i," with type UVCT and interaction ids ",\
-                        [vert.get('id') for vert in diag.get('UVCTVertices')]
+                        [coupl for coupl in diag.get('UVCT_couplings')]
                     else:
                         print "Checking diag #",selectionStart+i,"with type",diag['type'],":",\
                           diag.nice_string(loopAmplitude['structure_repository'])
@@ -527,7 +529,7 @@ class LoopHelasMatrixElementTest(unittest.TestCase):
                                     if verbose:
                                         print "CT amplitude number",amp['number'],\
                                         "contributes to the following loop color basis elements",contribution_list                                                                                
-
+    
     def test_helas_diagrams_ddx_uux(self):
         """Test the generation of the helas diagrams for the process dd~>uu
         """
@@ -765,6 +767,48 @@ class LoopHelasMatrixElementTest(unittest.TestCase):
 
         # Skip the lengthy check for the equivalent NLO process
         return
+
+        myloopproc = base_objects.Process({'legs':myleglist,
+                                        'model':self.myloopmodel,
+                                        'orders':{},
+                                        'perturbation_couplings':['QCD',],
+                                        'squared_orders':{}})
+    
+        myloopamplitude = loop_diagram_generation.LoopAmplitude()
+        myloopamplitude.set('process', myloopproc)
+        myloopamplitude.generate_diagrams()
+        
+        self.check_LHME_individual_diag_sanity(myloopamplitude,myloopproc)
+        
+    def test_helas_diagrams_dxd_gz(self):
+
+        """Test the generation of all the helas diagrams for the loop process 
+           d~d > gz.
+        """
+
+        myleglist = base_objects.LegList()
+        myleglist.append(base_objects.Leg({'id':-1,
+                                         'state':False}))
+        myleglist.append(base_objects.Leg({'id':1,
+                                         'state':False}))
+        myleglist.append(base_objects.Leg({'id':21,
+                                         'state':True}))
+        myleglist.append(base_objects.Leg({'id':23,
+                                         'state':True}))
+        
+        myproc = base_objects.Process({'legs':myleglist,
+                                        'model':self.myloopmodel,
+                                        'orders':{},
+                                        'squared_orders':{}})
+    
+        myamplitude = diagram_generation.Amplitude()
+        myamplitude.set('process', myproc)
+        myamplitude.generate_diagrams()
+        
+        self.check_HME_individual_diag_sanity(myamplitude,myproc)
+
+        # Skip the lengthy check for the equivalent NLO process
+        #return
 
         myloopproc = base_objects.Process({'legs':myleglist,
                                         'model':self.myloopmodel,
