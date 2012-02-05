@@ -366,7 +366,7 @@ class UFOMG5Converter(object):
                 newParticleCountertermKey=[None,\
                   tuple([tuple([abs(part.pdg_code) for part in loop_parts]) for\
                     loop_parts in loop_particles[key[-1]]])]
-                for i, order in enumerate(self.ufomodel.all_orders):
+                for i, order in enumerate(self.ufomodel.all_orders[:-1]):
                     if key[i]==1:
                         newParticleCountertermKey[0]=order.name
                 newCouplingName='UVWfct_'+particle_info.name+'_'+str(key[-1])
