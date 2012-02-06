@@ -752,9 +752,13 @@ class OneTagResults(dict):
         nb_line = self.get_nb_line()
         # Check that cross/nb_event/error are define
         if self.pythia and not self['nb_event']:
-            self['nb_event'] = runresults[-2]['nb_event']
-            self['cross'] = runresults[-2]['cross']
-            self['error'] = runresults[-2]['error']
+            try:
+                self['nb_event'] = runresults[-2]['nb_event']
+                self['cross'] = runresults[-2]['cross']
+                self['error'] = runresults[-2]['error']
+            except:
+                pass
+                
         elif (self.pgs or self.delphes) and not self['nb_event']:
             if runresults[-2]['cross_pythia']:
                 self['cross'] = runresults[-2]['cross_pythia']
@@ -831,6 +835,7 @@ class OneTagResults(dict):
 <INPUT TYPE=HIDDEN NAME=whattodo VALUE="remove_level">
 <INPUT TYPE=HIDDEN NAME=level VALUE="all">
 <INPUT TYPE=HIDDEN NAME=tag VALUE=\"""" + self['tag'] + """\">
+<INPUT TYPE=HIDDEN NAME=run VALUE="%(run_name)s">
 <INPUT TYPE=SUBMIT VALUE="Remove run">
 </FORM>
                     
@@ -852,6 +857,7 @@ class OneTagResults(dict):
 <INPUT TYPE=HIDDEN NAME=directory VALUE="%(me_dir)s">
 <INPUT TYPE=HIDDEN NAME=whattodo VALUE="remove_level">
 <INPUT TYPE=HIDDEN NAME=level VALUE="pythia">
+<INPUT TYPE=HIDDEN NAME=run VALUE="%(run_name)s">
 <INPUT TYPE=HIDDEN NAME=tag VALUE=\"""" + self['tag'] + """\">
 <INPUT TYPE=SUBMIT VALUE="Remove pythia">
 </FORM>
@@ -882,6 +888,7 @@ class OneTagResults(dict):
 <INPUT TYPE=HIDDEN NAME=whattodo VALUE="remove_level">
 <INPUT TYPE=HIDDEN NAME=level VALUE=\"""" + str(type) + """\">
 <INPUT TYPE=HIDDEN NAME=tag VALUE=\"""" + self['tag'] + """\">
+<INPUT TYPE=HIDDEN NAME=run VALUE="%(run_name)s">
 <INPUT TYPE=SUBMIT VALUE="Remove pythia">
 </FORM>"""
                 else:
