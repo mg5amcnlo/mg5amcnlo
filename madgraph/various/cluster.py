@@ -20,8 +20,11 @@ import re
 
 logger = logging.getLogger('madgraph.cluster') 
 
-from madgraph import MadGraph5Error
-
+try:
+    from madgraph import MadGraph5Error
+except:
+    from internal import MadGraph5Error
+    
 class ClusterManagmentError(MadGraph5Error):
     pass
 

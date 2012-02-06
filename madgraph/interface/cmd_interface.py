@@ -1608,6 +1608,7 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
         self._options['ignore_six_quark_processes'] = False
         self._options['complex_mass_scheme'] = False
         self._options['gauge'] = 'unitary'
+        self._options['complex_mass_scheme'] = True
         
         # Load the configuration file
         self.set_configuration()
@@ -3091,12 +3092,14 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
             logging.getLogger('madgraph').setLevel(eval('logging.' + args[1]))
             if log:
                 logger.info('set output information to level: %s' % args[1])
+
         elif args[0] == "complex_mass_scheme":
             old = self._options[args[0]] 
             self._options[args[0]] = eval(args[1])
             if self._options[args[0]]:
                 if old:
-                    logger.info('Complex mass already activated.')
+                    if log:
+                        logger.info('Complex mass already activated.')
                     return
                 aloha.complex_mass = True
                 if log:

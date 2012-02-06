@@ -1,6 +1,6 @@
 Update notes for MadGraph 5 (in reverse time order)
 
-1.4.b13 (03/02/12): OM: New user interface for the madevent run. Type:
+1.4.0 (04/02/12): OM: New user interface for the madevent run. Type:
                       1) (from madevent output) ./bin/madevent
                       2) (from MG5 command line) launch [MADEVENT_PATH] -i
                       This interface replaces various script like refine, 
@@ -98,7 +98,7 @@ Update notes for MadGraph 5 (in reverse time order)
                   testing/bug reports.
 
 
-1.3.33 (01/01/25) JA: Revisited colors for propagators in addmothers.f
+1.3.33 (01/01/12) JA: Revisited colors for propagators in addmothers.f
                       to ensure that propagators in color flow
                       violating processes get the correct color
                       from initial state particles (thanks to
