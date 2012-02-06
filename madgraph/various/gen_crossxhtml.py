@@ -828,6 +828,14 @@ class OneTagResults(dict):
                     local_dico['action'] = """
 <FORM ACTION="http://%(web)s/cgi-bin/RunProcess/handle_runs-pl"  ENCTYPE="multipart/form-data" METHOD="POST">
 <INPUT TYPE=HIDDEN NAME=directory VALUE="%(me_dir)s">
+<INPUT TYPE=HIDDEN NAME=whattodo VALUE="remove_level">
+<INPUT TYPE=HIDDEN NAME=level VALUE="all">
+<INPUT TYPE=HIDDEN NAME=tag VALUE="%(tag)">
+<INPUT TYPE=SUBMIT VALUE="Remove run">
+</FORM>
+                    
+<FORM ACTION="http://%(web)s/cgi-bin/RunProcess/handle_runs-pl"  ENCTYPE="multipart/form-data" METHOD="POST">
+<INPUT TYPE=HIDDEN NAME=directory VALUE="%(me_dir)s">
 <INPUT TYPE=HIDDEN NAME=whattodo VALUE="pythia">
 <INPUT TYPE=HIDDEN NAME=run VALUE="%(run_name)s">
 <INPUT TYPE=SUBMIT VALUE="Run Pythia">
@@ -840,6 +848,14 @@ class OneTagResults(dict):
                 if self['tag'] == runresults.get_last_pythia():
                     if runresults.web:
                         local_dico['action'] = """
+<FORM ACTION="http://%(web)s/cgi-bin/RunProcess/handle_runs-pl"  ENCTYPE="multipart/form-data" METHOD="POST">
+<INPUT TYPE=HIDDEN NAME=directory VALUE="%(me_dir)s">
+<INPUT TYPE=HIDDEN NAME=whattodo VALUE="remove_level">
+<INPUT TYPE=HIDDEN NAME=level VALUE="pythia">
+<INPUT TYPE=HIDDEN NAME=tag VALUE="%(tag)">
+<INPUT TYPE=SUBMIT VALUE="Remove pythia">
+</FORM>
+
 <FORM ACTION="http://%(web)s/cgi-bin/RunProcess/handle_runs-pl"  ENCTYPE="multipart/form-data" METHOD="POST">
 <INPUT TYPE=HIDDEN NAME=directory VALUE="%(me_dir)s">
 <INPUT TYPE=HIDDEN NAME=whattodo VALUE="pgs">
@@ -860,7 +876,14 @@ class OneTagResults(dict):
                                                                             % (self['run_name'], self['tag']))
             else:
                 if runresults.web:
-                    local_dico['action'] = ''
+                    local_dico['action'] = """
+<FORM ACTION="http://%(web)s/cgi-bin/RunProcess/handle_runs-pl"  ENCTYPE="multipart/form-data" METHOD="POST">
+<INPUT TYPE=HIDDEN NAME=directory VALUE="%(me_dir)s">
+<INPUT TYPE=HIDDEN NAME=whattodo VALUE="remove_level">
+<INPUT TYPE=HIDDEN NAME=level VALUE=\"""" + str(type) + """\">
+<INPUT TYPE=HIDDEN NAME=tag VALUE="%(tag)">
+<INPUT TYPE=SUBMIT VALUE="Remove pythia">
+</FORM>"""
                 else:
                     local_dico['action'] = self.command_suggestion_html('remove %s %s --tag=%s' %\
                                                               (self['run_name'], type, self['tag']))
