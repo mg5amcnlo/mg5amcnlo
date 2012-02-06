@@ -1436,6 +1436,35 @@ class TestLinkRBConfHEFT(unittest.TestCase):
         for conf, link in zip(ij_conf, links):
             self.assertEqual(link, fks_common.link_rb_conf(bornamp, realamp, conf['i'], conf['j'], conf['ij']))
 
+    def test_sort_proc(self):
+        """tests that the legs of a process are correctly sorted"""
+        model = import_ufo.import_model('sm')
+
+# sorted leglist for e+ e- > u u~ g
+        myleglist_s = MG.LegList()
+        myleglist_s.append(MG.Leg({'id':-11, 'state':False}))
+        myleglist_s.append(MG.Leg({'id':11, 'state':False}))
+        myleglist_s.append(MG.Leg({'id':2, 'state':True}))
+        myleglist_s.append(MG.Leg({'id':-2, 'state':True}))
+        myleglist_s.append(MG.Leg({'id':21, 'state':True}))
+
+# unsorted leglist: e+ e- > u g u~
+        myleglist_u = MG.LegList()
+        myleglist_u.append(MG.Leg({'id':-11, 'state':False}))
+        myleglist_u.append(MG.Leg({'id':11, 'state':False}))
+        myleglist_u.append(MG.Leg({'id':2, 'state':True}))
+        myleglist_u.append(MG.Leg({'id':21, 'state':True}))
+        myleglist_u.append(MG.Leg({'id':-2, 'state':True}))
+
+# define (un)sorted process:
+        proc_s = MG.Process({'model':model, 'legs':myleglist_s,\
+                             'orders':{'QED':2, 'QCD':1}})
+        proc_u = MG.Process({'model':model, 'legs':myleglist_u,\
+                             'orders':{'QED':2, 'QCD':1}})
+        
+        res = fks_common.sort_proc(proc_u)
+
+        self.assertEqual(res, proc_s)
 
 
 #===============================================================================
@@ -1764,3 +1793,6 @@ class TestFKSDiagramTag(unittest.TestCase):
 
         self.assertEqual(fks_common.FKSDiagramTag.reorder_permutation(\
             perm1, perm2), goal)
+
+
+

@@ -185,8 +185,6 @@ class FKSProcessFromBorn(object):
             elif isinstance(start_proc, diagram_generation.Amplitude):
                 self.born_proc = fks_common.sort_proc(start_proc.get('process'))
                 self.born_amp = diagram_generation.Amplitude(self.born_proc)
-                self.born_amp = start_proc
-                self.born_proc = start_proc.get('process')           
 
             self.model = self.born_proc['model']
 

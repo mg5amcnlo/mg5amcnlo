@@ -26,6 +26,7 @@ import madgraph.fks.fks_common as fks_common
 import madgraph.core.base_objects as MG
 import madgraph.core.color_algebra as color
 import madgraph.core.diagram_generation as diagram_generation
+import models.import_ufo as import_ufo
 import copy
 import string
 
@@ -612,4 +613,46 @@ class TestFKSProcessFromReals(unittest.TestCase):
                 self.assertEqual(born.is_nbody_only, False)        
         
         
+    def test_sort_fks_proc_from_real(self):
+        """tests that two FKSProcessesFromReal with different legs order in the
+        input process/amplitude are returned as equal"""
+        model = import_ufo.import_model('sm')
 
+# sorted leglist for e+ e- > u u~ g g
+        myleglist_s = MG.LegList()
+        myleglist_s.append(MG.Leg({'id':-11, 'state':False}))
+        myleglist_s.append(MG.Leg({'id':11, 'state':False}))
+        myleglist_s.append(MG.Leg({'id':2, 'state':True}))
+        myleglist_s.append(MG.Leg({'id':-2, 'state':True}))
+        myleglist_s.append(MG.Leg({'id':21, 'state':True}))
+        myleglist_s.append(MG.Leg({'id':21, 'state':True}))
+
+# unsorted leglist: e+ e- > u g u~
+        myleglist_u = MG.LegList()
+        myleglist_u.append(MG.Leg({'id':-11, 'state':False}))
+        myleglist_u.append(MG.Leg({'id':11, 'state':False}))
+        myleglist_u.append(MG.Leg({'id':21, 'state':True}))
+        myleglist_u.append(MG.Leg({'id':2, 'state':True}))
+        myleglist_u.append(MG.Leg({'id':21, 'state':True}))
+        myleglist_u.append(MG.Leg({'id':-2, 'state':True}))
+
+# define (un)sorted processes:
+        proc_s = MG.Process({'model':model, 'legs':myleglist_s,\
+                             'orders':{'QED':2, 'QCD':1}})
+        proc_u = MG.Process({'model':model, 'legs':myleglist_u,\
+                             'orders':{'QED':2, 'QCD':1}})
+# define (un)sorted amplitudes:
+        amp_s = diagram_generation.Amplitude(proc_s)
+        amp_u = diagram_generation.Amplitude(proc_u)
+
+        fks_p_s = fks.FKSProcessFromReals(proc_s)
+        fks_p_u = fks.FKSProcessFromReals(proc_u)
+
+        self.assertEqual(fks_p_s.real_proc, fks_p_u.real_proc)
+        self.assertEqual(fks_p_s.real_amp, fks_p_u.real_amp)
+
+        fks_a_s = fks.FKSProcessFromReals(amp_s)
+        fks_a_u = fks.FKSProcessFromReals(amp_u)
+
+        self.assertEqual(fks_a_s.real_proc, fks_a_u.real_proc)
+        self.assertEqual(fks_a_s.real_amp, fks_a_u.real_amp)

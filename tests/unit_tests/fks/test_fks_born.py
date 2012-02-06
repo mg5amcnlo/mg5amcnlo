@@ -1148,3 +1148,46 @@ class TestFKSProcess(unittest.TestCase):
 
         for real, res in zip(fksproc3.reals, target3):
             self.assertEqual(real, res) 
+
+
+    def test_sort_fks_proc_from_born(self):
+        """tests that two FKSProcessesFromBorn with different legs order in the
+        input process/amplitude are returned as equal"""
+        model = import_ufo.import_model('sm')
+
+# sorted leglist for e+ e- > u u~ g
+        myleglist_s = MG.LegList()
+        myleglist_s.append(MG.Leg({'id':-11, 'state':False}))
+        myleglist_s.append(MG.Leg({'id':11, 'state':False}))
+        myleglist_s.append(MG.Leg({'id':2, 'state':True}))
+        myleglist_s.append(MG.Leg({'id':-2, 'state':True}))
+        myleglist_s.append(MG.Leg({'id':21, 'state':True}))
+
+# unsorted leglist: e+ e- > u g u~
+        myleglist_u = MG.LegList()
+        myleglist_u.append(MG.Leg({'id':-11, 'state':False}))
+        myleglist_u.append(MG.Leg({'id':11, 'state':False}))
+        myleglist_u.append(MG.Leg({'id':2, 'state':True}))
+        myleglist_u.append(MG.Leg({'id':21, 'state':True}))
+        myleglist_u.append(MG.Leg({'id':-2, 'state':True}))
+
+# define (un)sorted processes:
+        proc_s = MG.Process({'model':model, 'legs':myleglist_s,\
+                             'orders':{'QED':2, 'QCD':1}})
+        proc_u = MG.Process({'model':model, 'legs':myleglist_u,\
+                             'orders':{'QED':2, 'QCD':1}})
+# define (un)sorted amplitudes:
+        amp_s = diagram_generation.Amplitude(proc_s)
+        amp_u = diagram_generation.Amplitude(proc_u)
+
+        fks_p_s = fks_born.FKSProcessFromBorn(proc_s)
+        fks_p_u = fks_born.FKSProcessFromBorn(proc_u)
+
+        self.assertEqual(fks_p_s.born_proc, fks_p_u.born_proc)
+        self.assertEqual(fks_p_s.born_amp, fks_p_u.born_amp)
+
+        fks_a_s = fks_born.FKSProcessFromBorn(amp_s)
+        fks_a_u = fks_born.FKSProcessFromBorn(amp_u)
+
+        self.assertEqual(fks_a_s.born_proc, fks_a_u.born_proc)
+        self.assertEqual(fks_a_s.born_amp, fks_a_u.born_amp)

@@ -184,6 +184,8 @@ class FKSHelasProcessFromBorn(object):
         sets reals and color links"""
         
         if fksproc != None:
+            self.born_matrix_element = helas_objects.HelasMatrixElement(
+                                    fksproc.born_amp, **opts)
             self.real_processes = []
             real_amps_new = []
             for proc in fksproc.real_amps:
@@ -225,8 +227,6 @@ class FKSHelasProcessFromBorn(object):
 ################################################################################
 
 
-            self.born_matrix_element = helas_objects.HelasMatrixElement(
-                                    fksproc.born_amp, **opts)
             col_basis = color_amp.ColorBasis()
             col_basis.build(fksproc.born_amp)
             self.color_links = fks_common.insert_color_links(col_basis,
@@ -309,7 +309,6 @@ class FKSHelasRealProcess(object): #test written
             self.need_color_links = fksrealproc.need_color_links
             self.is_to_integrate = fksrealproc.is_to_integrate
             self.is_nbody_only = fksrealproc.is_nbody_only
-            self.fks_j_from_i = fksrealproc.find_fks_j_from_i()
             self.bornfromreal = {}
        #     print "in FKSHelasRealProc  i ", self.i_fks, "   j ", self.j_fks
             
@@ -327,6 +326,7 @@ class FKSHelasRealProcess(object): #test written
             self.matrix_element.set('color_matrix',
                              color_amp.ColorMatrix(
                                 self.matrix_element.get('color_basis')))
+            self.fks_j_from_i = fksrealproc.find_fks_j_from_i()
     
     def __eq__(self, other):
         """Equality operator:
