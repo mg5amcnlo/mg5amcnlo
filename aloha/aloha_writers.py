@@ -854,7 +854,7 @@ class ALOHAWriterForCPP(WriteALOHA):
         #calls = [self.remove_double.match(call).group('name') for call in \
         #         calls]
         number = self.offshell 
-        if aloha.mass_complex:
+        if aloha.complex_mass:
             Outstring = self.namestring+'('+','.join(calls)+',COUP,M%s,%s%s);\n' \
                          %(number, self.particles[self.offshell-1], number)
         else:
@@ -984,7 +984,7 @@ class ALOHAWriterForCPP(WriteALOHA):
                      'COUP':'COUP%d',
                      'spin': self.particles[self.offshell -1],
                      'LAST': '%s'}
-        elif aloha.mass_complex:
+        elif aloha.complex_mass:
             main = '%(spin)s%(id)d' % \
                           {'spin': self.particles[self.offshell -1],
                            'id': self.offshell}
@@ -1183,10 +1183,16 @@ class ALOHAWriterForPython(WriteALOHA):
                 {'name': name,
                  'args': ','.join(CallList+ ['COUP']) }
         else:
-            str_out += 'def %(name)s(%(args)s, COUP, M%(id)d):\n' % \
-                {'name': name,
-                 'args': ', '.join(CallList), 
-                     'id': self.offshell}            
+            if aloha.complex_mass:
+                str_out += 'def %(name)s(%(args)s, COUP, M%(id)d):\n' % \
+                    {'name': name,
+                     'args': ', '.join(CallList), 
+                     'id': self.offshell}
+            else:
+                str_out += 'def %(name)s(%(args)s, COUP, M%(id)d, W%(id)d):\n' % \
+                    {'name': name,
+                     'args': ', '.join(CallList), 
+                     'id': self.offshell}           
         return str_out     
 
     def make_declaration_list(self):

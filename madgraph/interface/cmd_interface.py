@@ -1333,7 +1333,7 @@ class CompleteForCmd(CheckValidForCmd):
 
         if len(args) == 2:
             if args[1] in ['group_subprocesses', 'complex_mass_scheme']:
-                return self.list_completion(text, ['False', 'True', 'Auto'])
+                return self.list_completion(text, ['False', 'True'])
             elif args[1] in ['ignore_six_quark_processes']:
                 return self.list_completion(text, self._multiparticles.keys())
             
