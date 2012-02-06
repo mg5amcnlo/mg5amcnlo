@@ -830,7 +830,7 @@ class OneTagResults(dict):
 <INPUT TYPE=HIDDEN NAME=directory VALUE="%(me_dir)s">
 <INPUT TYPE=HIDDEN NAME=whattodo VALUE="remove_level">
 <INPUT TYPE=HIDDEN NAME=level VALUE="all">
-<INPUT TYPE=HIDDEN NAME=tag VALUE="%(tag)">
+<INPUT TYPE=HIDDEN NAME=tag VALUE=\"""" + self['tag'] + """\">
 <INPUT TYPE=SUBMIT VALUE="Remove run">
 </FORM>
                     
@@ -852,7 +852,7 @@ class OneTagResults(dict):
 <INPUT TYPE=HIDDEN NAME=directory VALUE="%(me_dir)s">
 <INPUT TYPE=HIDDEN NAME=whattodo VALUE="remove_level">
 <INPUT TYPE=HIDDEN NAME=level VALUE="pythia">
-<INPUT TYPE=HIDDEN NAME=tag VALUE="%(tag)">
+<INPUT TYPE=HIDDEN NAME=tag VALUE=\"""" + self['tag'] + """\">
 <INPUT TYPE=SUBMIT VALUE="Remove pythia">
 </FORM>
 
@@ -881,7 +881,7 @@ class OneTagResults(dict):
 <INPUT TYPE=HIDDEN NAME=directory VALUE="%(me_dir)s">
 <INPUT TYPE=HIDDEN NAME=whattodo VALUE="remove_level">
 <INPUT TYPE=HIDDEN NAME=level VALUE=\"""" + str(type) + """\">
-<INPUT TYPE=HIDDEN NAME=tag VALUE="%(tag)">
+<INPUT TYPE=HIDDEN NAME=tag VALUE=\"""" + self['tag'] + """\">
 <INPUT TYPE=SUBMIT VALUE="Remove pythia">
 </FORM>"""
                 else:
