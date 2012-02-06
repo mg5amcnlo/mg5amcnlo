@@ -137,10 +137,16 @@ def import_full_model(model_path):
         files_list.append(filepath)
         
     # use pickle files if defined and up-to-date
-    if files.is_uptodate(os.path.join(model_path, 'model.pkl'), files_list):
+    if aloha.unitary_gauge: 
+        pickle_name = 'model.pkl'
+    else:
+        pickle_name = 'model_Feynman.pkl'
+        
+    
+    if files.is_uptodate(os.path.join(model_path, pickle_name), files_list):
         try:
             model = save_load_object.load_from_file( \
-                                          os.path.join(model_path, 'model.pkl'))
+                                          os.path.join(model_path, pickle_name))
         except Exception, error:
             logger.info('failed to load model from pickle file. Try importing UFO from File')
         else:
@@ -168,7 +174,7 @@ def import_full_model(model_path):
     model.set('functions', ufo_model.all_functions)
     
     # save in a pickle files to fasten future usage
-    save_load_object.save_to_file(os.path.join(model_path, 'model.pkl'), model) 
+    save_load_object.save_to_file(os.path.join(model_path, pickle_name), model) 
  
     #if default and os.path.exists(os.path.join(model_path, 'restrict_default.dat')):
     #    restrict_file = os.path.join(model_path, 'restrict_default.dat') 

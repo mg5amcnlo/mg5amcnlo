@@ -217,7 +217,7 @@ class AbstractRoutineBuilder(object):
             id = i + 1
             #Check if this is the outgoing particle
             if id == self.outgoing:
-                if spin == 1: 
+                if abs(spin) == 1: 
                     lorentz *= complex(0,1)
                 elif spin == 2:
                     # shift the tag if we multiply by C matrices
@@ -243,7 +243,7 @@ class AbstractRoutineBuilder(object):
                                 'The spin value %s is not supported yet' % spin)
             else:
                 # This is an incoming particle
-                if spin == 1:
+                if abs(spin) == 1:
                     lorentz *= Scalar(id)
                 elif spin == 2:
                     # shift the tag if we multiply by C matrices

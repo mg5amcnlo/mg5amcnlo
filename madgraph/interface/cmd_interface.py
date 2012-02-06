@@ -3144,6 +3144,7 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
             self._curr_cpp_model = None
             self._curr_exporter = None
             self._done_export = False
+            import_ufo._import_once = []
             if log:
                 logger.info('Pass to gauge %s.' % args[1])
                 logger.info('Note that you have to reload the model') 

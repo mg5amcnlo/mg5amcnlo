@@ -235,9 +235,9 @@ class Particle(PhysicsObject):
             if not isinstance(value, int):
                 raise self.PhysicsObjectError, \
                     "Spin %s is not an integer" % repr(value)
-            if value < 1 or value > 5:
+            if value < -5 or value > 5:
                 raise self.PhysicsObjectError, \
-                   "Spin %i is smaller than one" % value
+                   "Spin %i not valid" % value
 
         if name is 'color':
             if not isinstance(value, int):
@@ -264,7 +264,7 @@ class Particle(PhysicsObject):
             if not isinstance(value, str):
                 raise self.PhysicsObjectError, \
                     "Line type %s is not a string" % repr(value)
-            if value not in ['dashed', 'straight', 'wavy', 'curly', 'double','swavy','scurly']:
+            if value not in ['dashed', 'straight', 'wavy', 'curly', 'double','swavy','scurly','dotted']:
                 raise self.PhysicsObjectError, \
                    "Line type %s is unknown" % value
 
