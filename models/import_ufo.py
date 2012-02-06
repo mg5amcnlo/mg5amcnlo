@@ -394,8 +394,9 @@ class UFOMG5Converter(object):
                                           if helas.name not in self.checked_lor]
                 self.checked_lor.update(set([helas.name for helas in interaction_info.lorentz]))
         except aloha_fct.WrongFermionFlow, error:
-            text = 'Fermion Flow error for interactions %s:\n %s' % \
-             (', '.join([p.name for p in interaction_info.particles]), error)
+            text = 'Fermion Flow error for interactions %s: %s: %s\n %s' % \
+             (', '.join([p.name for p in interaction_info.particles]), 
+                                             helas.name, helas.structure, error)
             raise InvalidModel, text
             
         # Import Lorentz content:

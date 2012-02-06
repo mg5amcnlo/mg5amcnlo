@@ -48,7 +48,7 @@ def check_flow_validity(expression, nb_fermion):
                 if not obj.spin_ind:
                     continue
                 ind1, ind2 = obj.spin_ind
-                if isinstance(obj, (Gamma, Gamma5, Sigma)):
+                if isinstance(obj, (Gamma, Sigma)):
                     if (ind1 in range(1, nb_fermion+1) and ind1 % 2 == 1) or \
                        (ind2 in range(2, nb_fermion+1) and ind2 % 2 == 0 ):
                         raise WrongFermionFlow, 'Not coherent Incoming/outcoming fermion flow'

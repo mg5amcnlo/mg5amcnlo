@@ -437,8 +437,8 @@ class RunResults(list):
         self.append(obj)
         
     def get_last_pythia(self):
-        for i in range(1, len(self)+1,):
-            if hasattr(self[-i],'pythia'):
+        for i in range(1, len(self)+1):
+            if self[-i].pythia:
                 return self[-i]['tag']
 
     def get_current_info(self):
@@ -630,10 +630,12 @@ class OneTagResults(dict):
         # pythia_cross = cross * n_acc / n_gen
         # error_pythia = error * n_acc /n_gen + cross * sqrt(n_acc) / n_gen
         
-        n_acc = int(0.5 + pythia_cross / cross * nb_event)
-        error_pythia = error * n_acc / nb_event 
-        error_pythia += cross * math.sqrt(n_acc) / nb_event
-        
+        if cross and nb_event: 
+            n_acc = int(0.5 + pythia_cross / cross * nb_event)
+            error_pythia = error * n_acc / nb_event 
+            error_pythia += cross * math.sqrt(n_acc) / nb_event
+        else:
+            error_pythia = 0
         return error_pythia
     
     def get_links(self, level):
@@ -787,7 +789,10 @@ class OneTagResults(dict):
                         local_dico['cross_span'] = nb_line -1
                     else:
                         local_dico['cross_span'] = nb_line
-                    local_dico['nb_event'] = int(0.5+(self['nb_event'] * self['cross_pythia'] /self['cross']))
+                    if self['cross']:
+                        local_dico['nb_event'] = int(0.5+(self['nb_event'] * self['cross_pythia'] /self['cross']))
+                    else:
+                        local_dico['nb_event'] = 0
                     local_dico['cross'] = self['cross_pythia']
                     local_dico['err'] = self.get_pythia_error(self['cross'],
                            self['error'],self['cross_pythia'], self['nb_event']) 
@@ -801,7 +806,10 @@ class OneTagResults(dict):
                 template = sub_part_template_parton
                 if self.parton:           
                     local_dico['cross_span'] = nb_line - 1
-                    local_dico['nb_event'] = int(0.5+(self['nb_event'] * self['cross_pythia'] /self['cross']))
+                    if self['cross']:
+                        local_dico['nb_event'] = int(0.5+(self['nb_event'] * self['cross_pythia'] /self['cross']))
+                    else:
+                        local_dico['nb_event'] = 0
                 else:
                     local_dico['cross_span'] = nb_line
                     local_dico['nb_event'] = self['nb_event']

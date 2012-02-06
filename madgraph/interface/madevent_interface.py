@@ -1945,8 +1945,8 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
 
         logger.info('Working on SubProcesses')
         self.total_jobs = 0
-        subproc = [P for P in os.listdir(pjoin(self.me_dir,'SubProcesses')) if 
-                   P.startswith('P') and os.path.isdir(pjoin(self.me_dir,'SubProcesses', P))]
+        subproc = [l.strip for l in open(pjoin(self.me_dir,'SubProcesses', 
+                                                                 'subproc.mg'))]
         for nb_proc,subdir in enumerate(subproc):
             subdir = subdir.strip()
             Pdir = pjoin(self.me_dir, 'SubProcesses',subdir)
@@ -2011,8 +2011,8 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
         logger.info("Using random number seed offset = %s" % self.random)
         
         self.total_jobs = 0
-        subproc = [P for P in os.listdir(pjoin(self.me_dir,'SubProcesses')) if 
-                   P.startswith('P') and os.path.isdir(pjoin(self.me_dir,'SubProcesses', P))]
+        subproc = [l.strip for l in open(pjoin(self.me_dir,'SubProcesses', 
+                                                                 'subproc.mg'))]
         for nb_proc,subdir in enumerate(subproc):
             subdir = subdir.strip()
             Pdir = pjoin(self.me_dir, 'SubProcesses',subdir)
@@ -2270,7 +2270,10 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
                            cwd=pjoin(self.me_dir,'Events'))
 
         if not os.path.exists(pjoin(self.me_dir,'Events','pythia.done')):
-            logger.warning('Fail to produce pythia output. More info in \n     %s' % pythia_log.name)
+            if self.cluster_mode == 1:
+                logger.warning('Fail to produce pythia output. More info in \n     %s' % pythia_log)
+            else:
+                logger.warning('Fail to produce pythia output. More info in \n     %s' % pythia_log.name)
             return
         else:
             os.remove(pjoin(self.me_dir,'Events','pythia.done'))
