@@ -187,6 +187,7 @@ class FKSHelasProcessFromBorn(object):
             self.born_matrix_element = helas_objects.HelasMatrixElement(
                                     fksproc.born_amp, **opts)
             self.real_processes = []
+            self.orders = fksproc.born_proc.get('orders')
             real_amps_new = []
             for proc in fksproc.real_amps:
                 fksreal_me = FKSHelasRealProcess(proc, me_list, me_id_list, **opts)
@@ -235,6 +236,21 @@ class FKSHelasProcessFromBorn(object):
 
             for i, rb_link in enumerate(fksproc.link_rb_confs()):
                 self.real_processes[i].bornfromreal = rb_link
+
+
+    def get_lh_pdg_string(self):
+        """Returns the pdgs of the legs in the form "i1 i2 -> f1 f2 ...", which may
+        be useful (eg. to be written in a B-LH order file)"""
+
+        initial = ''
+        final = ''
+        for leg in self.born_matrix_element.get('processes')[0].get('legs'):
+            if leg.get('state'):
+                final += '%d ' % leg.get('id')
+            else:
+                initial += '%d ' % leg.get('id')
+        return initial + '-> ' + final
+
 
     def get(self, key):
         """the get function references to born_matrix_element"""

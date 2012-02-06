@@ -233,6 +233,9 @@ class ProcessExporterFortranFKS_born(export_v4.ProcessExporterFortran):
 ## write the files corresponding to the born process in the P* directory
         self.generate_born_fks_files(matrix_element,
                 fortran_model, me_number, path)
+
+        filename = 'OLE_order.lh'
+        self.write_lh_order(filename, matrix_element)
         
         for nfks, fksreal in enumerate(matrix_element.real_processes):
                 calls += self.generate_subprocess_directory_fks(nfks, fksreal,
@@ -307,6 +310,40 @@ class ProcessExporterFortranFKS_born(export_v4.ProcessExporterFortran):
             self.write_b_sf_fks(writers.FortranWriter(filename),
                          born_helas_process, c_link, iborn,
                          fortran_model)
+
+    #===============================================================================
+    # write_lh_order
+    #===============================================================================
+    def write_lh_order(self, filename, fksborn):
+        """Creates the OLE_order.lh file. This function should be edited according
+        to the OLP which is used. NOW FOR NJET"""
+        replace_dict = {}
+        orders = fksborn.orders 
+        replace_dict['mesq'] = 'CHsummed'
+        replace_dict['corr'] = 'QCD'
+        replace_dict['irreg'] = 'CDR'
+        replace_dict['aspow'] = orders['QCD']
+        replace_dict['aepow'] = orders['QED']
+        replace_dict['pdgs'] = fksborn.get_lh_pdg_string()
+        replace_dict['symfin'] = 'Yes'
+        content = \
+"#OLE_order written by MadGraph 5\n\
+\n\
+MatrixElementSquareType %(mesq)s\n\
+CorrectionType          %(corr)s\n\
+IRregularisation        %(irreg)s\n\
+AlphasPower             %(aspow)d\n\
+AlphaPower              %(aepow)d\n\
+NJetSymmetrizeFinal     %(symfin)s\n\
+\n\
+# process\n\
+%(pdgs)s\n\
+" % replace_dict 
+        
+        file = open(filename, 'w')
+        file.write(content)
+        file.close
+        return
 
 
     #===============================================================================
@@ -824,7 +861,8 @@ c     this subdir has no soft singularities
         linkfiles_born = \
                          ['born_leshouche.inc',
                           'born_ngraphs.inc',
-                          'born_nhel.inc']
+                          'born_nhel.inc',
+                          'OLE_order.lh']
 
 
         for file in linkfiles_born:

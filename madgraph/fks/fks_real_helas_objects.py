@@ -281,9 +281,11 @@ class FKSHelasBornProcess(object): #test written
                                 col_basis.create_color_dict_list(fksbornproc.amplitude),
                                 fksbornproc.find_color_links())
             self.bornfromreal = {}
+
+
     def get_lh_pdg_string(self):
         """Returns the pdgs of the legs in the form "i1 i2 -> f1 f2 ...", which may
-        be useful (eg. to be written in a B-LH order file"""
+        be useful (eg. to be written in a B-LH order file)"""
 
         initial = ''
         final = ''
@@ -293,8 +295,6 @@ class FKSHelasBornProcess(object): #test written
             else:
                 initial += '%d ' % leg.get('id')
         return initial + '-> ' + final
-
-
 
     
     def __eq__(self, other):

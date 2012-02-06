@@ -213,6 +213,7 @@ class FKSProcessFromBorn(object):
 
             self.find_color_links()
 
+
     def link_rb_confs(self):
         """links the configurations of the born amp with those of the real amps.
         Uses the function defined in fks_common"""
