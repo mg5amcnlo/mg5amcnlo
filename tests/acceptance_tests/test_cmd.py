@@ -116,7 +116,7 @@ class TestCmdShell1(unittest.TestCase):
                     'pythia-pgs_path': './pythia-pgs', 
                     'td_path': './td', 
                     'delphes_path': './Delphes', 
-                    'cluster_type': 'pbs', 
+                    'cluster_type': 'condor', 
                     'madanalysis_path': './MadAnalysis', 
                     'fortran_compiler': None, 
                     'exrootanalysis_path': './ExRootAnalysis', 

@@ -27,8 +27,8 @@ C
 C     GLOBAL
 C
       double precision twgt, maxwgt,swgt(maxevents)
-      integer                             lun, nw
-      common/to_unwgt/twgt, maxwgt, swgt, lun, nw
+      integer                             lun, nw, itmin
+      common/to_unwgt/twgt, maxwgt, swgt, lun, nw, itmin
       integer nzoom
       double precision  tx(1:3,maxinvar)
       common/to_xpoints/tx, nzoom
@@ -126,8 +126,8 @@ C
 C     GLOBAL
 C
       double precision twgt, maxwgt,swgt(maxevents)
-      integer                             lun, nw
-      common/to_unwgt/twgt, maxwgt, swgt, lun, nw
+      integer                             lun, nw, itmin
+      common/to_unwgt/twgt, maxwgt, swgt, lun, nw, itmin
 
 c-----
 c  Begin Code
@@ -163,8 +163,8 @@ C
 C     GLOBAL
 C
       double precision twgt, maxwgt,swgt(maxevents)
-      integer                             lun, nw
-      common/to_unwgt/twgt, maxwgt, swgt, lun, nw
+      integer                             lun, nw, itmin
+      common/to_unwgt/twgt, maxwgt, swgt, lun, nw, itmin
 
       double precision    matrix
       common/to_maxmatrix/matrix
@@ -245,8 +245,8 @@ C
 C     GLOBAL
 C
       double precision twgt, maxwgt,swgt(maxevents)
-      integer                             lun, nw
-      common/to_unwgt/twgt, maxwgt, swgt, lun, nw
+      integer                             lun, nw, itmin
+      common/to_unwgt/twgt, maxwgt, swgt, lun, nw, itmin
 
       integer                   neventswritten
       common /to_eventswritten/ neventswritten
@@ -269,7 +269,7 @@ c
 c     First scale all of the events to the total cross section
 c
       if (nw .le. 0) return
-      call sample_result(xsec,xerr)
+      call sample_result(xsec,xerr,itmin)
       if (xsec .le. 0) return   !Fix by TS 12/3/2010
       xtot=0
       call dsort(nw, swgt)
@@ -403,8 +403,8 @@ C
 C     GLOBAL
 C
       double precision twgt, maxwgt,swgt(maxevents)
-      integer                             lun, nw
-      common/to_unwgt/twgt, maxwgt, swgt, lun, nw
+      integer                             lun, nw, itmin
+      common/to_unwgt/twgt, maxwgt, swgt, lun, nw, itmin
 
       integer              IPROC 
       DOUBLE PRECISION PD(0:MAXPROC)
@@ -596,8 +596,8 @@ C
 C     GLOBAL
 C
       double precision twgt, maxwgt,swgt(maxevents)
-      integer                             lun, nw
-      common/to_unwgt/twgt, maxwgt, swgt, lun, nw
+      integer                             lun, nw, itmin
+      common/to_unwgt/twgt, maxwgt, swgt, lun, nw, itmin
 c-----
 c  Begin Code
 c-----

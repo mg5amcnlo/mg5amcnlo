@@ -1450,7 +1450,7 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
             except:
                 if self.me_dir:
                     config_file = open(os.path.relpath(
-                          os.path.join(self.dirbin, 'me5_configuration.txt')))
+                          os.path.join(self.me_dir, 'Cards', 'me5_configuration.txt')))
                     main = self.me_dir
                 elif not MADEVENT:
                     config_file = open(os.path.relpath(
@@ -1484,6 +1484,9 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
         # delphes/pythia/... path
         for key in self.configuration:
             if key.endswith('path'):
+                if self.configuration[key] in ['None', None]:
+                    self.configuration[key] = ''
+                    continue
                 path = os.path.join(self.me_dir, self.configuration[key])
                 if os.path.isdir(path):
                     self.configuration[key] = os.path.realpath(path)
@@ -1622,6 +1625,9 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
                 raise self.InvalidCmd, 'run_mode should be 0, 1 or 2.'
             self.cluster_mode = int(args[1])
             self.configuration['cluster_mode'] =  self.cluster_mode
+        elif args[0] == 'cluster_type':
+            self.configuration['cluster_mode'] = args[1]
+            self.cluster = cluster.from_name[args[1]](self.configuration['cluster_queue'])
         elif args[0] == 'nb_core':
             if args[1] == 'None':
                 import multiprocessing
@@ -1911,7 +1917,7 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
                          pjoin(self.me_dir, 'HTML',self.run_name, 'plots_parton.html')
                          )
         
-        os.system('gzip -f %s/%s_unweighted_events.lhe' % 
+        os.system('gzip -f %s/%s/unweighted_events.lhe' % 
                                   (pjoin(self.me_dir, 'Events'), self.run_name))
 
         self.update_status('', level='parton')
@@ -2061,7 +2067,7 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
 
         self.update_status('Combining Events', level='parton')
         try:
-            os.remove('/tmp/combine.log')
+            os.remove(pjoin(self.me_dir,'SubProcesses', 'combine.log'))
         except:
             pass
         if self.cluster_mode == 1:
@@ -3795,6 +3801,7 @@ class GridPackCmd(MadEventCmd):
         
         MadEventCmd.__init__(self, me_dir, *completekey, **stdin)
         self.run_mode = 0
+        self.random = seed
         self.configuration['automatic_html_opening'] = False
         # Now it's time to run!
         if me_dir and nb_event and seed:
@@ -3827,17 +3834,14 @@ class GridPackCmd(MadEventCmd):
         self.exec_cmd('store_events')
         self.exec_cmd('pythia --no_default -f')
 
-
-
-
     def refine4grid(self, nb_event):
-        """Advanced commands: launch survey for the current process """
+        """Special refine for gridpack run."""
         self.nb_refine += 1
         
         precision = nb_event
 
         # initialize / remove lhapdf mode
-        self.configure_directory()
+        # self.configure_directory() # All this has been done before
         self.cluster_mode = 0 # force single machine
         
         self.update_status('Refine results to %s' % precision, level=None)
@@ -3858,13 +3862,15 @@ class GridPackCmd(MadEventCmd):
                     os.remove(pjoin(Pdir, match))
             
             devnull = os.open(os.devnull, os.O_RDWR)
+            logfile = pjoin(Pdir, 'gen_ximprove.log')
             proc = subprocess.Popen([pjoin(bindir, 'gen_ximprove')],
                                     stdin=subprocess.PIPE,
+                                    stdout=open(logfile,'w'),
                                     cwd=Pdir)
             proc.communicate('%s 1 F\n' % (precision))
 
             if os.path.exists(pjoin(Pdir, 'ajob1')):
-                misc.compile(['madevent'], cwd=Pdir)
+                # misc.compile(['madevent'], cwd=Pdir) # Done before
                 #
                 os.system("chmod +x %s/ajob*" % Pdir)
                 alljobs = glob.glob(pjoin(Pdir,'ajob*'))
