@@ -889,7 +889,7 @@ class OneTagResults(dict):
 <INPUT TYPE=HIDDEN NAME=level VALUE=\"""" + str(type) + """\">
 <INPUT TYPE=HIDDEN NAME=tag VALUE=\"""" + self['tag'] + """\">
 <INPUT TYPE=HIDDEN NAME=run VALUE="%(run_name)s">
-<INPUT TYPE=SUBMIT VALUE="Remove pythia">
+<INPUT TYPE=SUBMIT VALUE="Remove """ + str(type) + """\">
 </FORM>"""
                 else:
                     local_dico['action'] = self.command_suggestion_html('remove %s %s --tag=%s' %\
