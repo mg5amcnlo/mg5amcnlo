@@ -580,8 +580,11 @@ class FortranHelasCallWriter(HelasCallWriter):
                     mother_letters = "W3W3"[:len(mother_letters)]
                 lor_name = lor_name[4:]
 
+            print call
             call = call + mother_letters
+            print call
             call = call + lor_name
+            print call
 
             # Check if we need to append a charge conjugation flag
             if argument.needs_hermitian_conjugate():

@@ -74,8 +74,8 @@ c-----
      &        '../../Cards/* ./Cards/'
          write(lun,15) 'cp -ra  $CONDOR_INITIAL_DIR/'//
      &        '../../lib/Pdfdata ./lib/'
-c         write(lun,15) 'cp -ra  $CONDOR_INITIAL_DIR/'//
-c     &        '../../lib/PDFsets ./lib/'
+         write(lun,15) 'ln -s  $CONDOR_INITIAL_DIR/'//
+     &        '../../lib/PDFsets ./lib/'
 c         write(lun,15) 'cd ./lib/PDFsets'
 c         write(lun,15) 'gunzip *.gz'
 c         write(lun,15) 'cd ../../'

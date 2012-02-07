@@ -46,6 +46,7 @@ import tests.unit_tests.core.test_helas_objects as test_helas_objects
 import tests.unit_tests.iolibs.test_file_writers as test_file_writers
 import tests.unit_tests.iolibs.test_helas_call_writers as \
                                             test_helas_call_writers
+import models.import_ufo as import_ufo
 
 _file_path = os.path.dirname(os.path.realpath(__file__))
 _input_file_path = os.path.join(_file_path, os.path.pardir, os.path.pardir,
@@ -57,206 +58,13 @@ class IOExportV4Test(unittest.TestCase,
                      test_file_writers.CheckFileCreate):
     """Test class for the export realfks module"""
 
-    mymodel = MG.Model()
     mymatrixelement = helas_objects.HelasMatrixElement()
-    myfortranmodel = helas_call_writers.FortranHelasCallWriter(mymodel)
     created_files = ['test'
                     ]
 
     def setUp(self):
-
-        test_file_writers.CheckFileCreate.clean_files
-        # Set up model
-
-        mypartlist = MG.ParticleList()
-        myinterlist = MG.InteractionList()
-        mypartlist.append(MG.Particle({'name':'u',
-                      'antiname':'u~',
-                      'spin':2,
-                      'color':3,
-                      'mass':'zero',
-                      'width':'zero',
-                      'texname':'u',
-                      'antitexname':'\\overline{u}',
-                      'line':'straight',
-                      'charge':2. / 3.,
-                      'pdg_code':2,
-                      'propagating':True,
-                      #'is_part': True,
-                      'self_antipart':False}))
-        mypartlist.append(MG.Particle({'name':'d',
-                      'antiname':'d~',
-                      'spin':2,
-                      'color':3,
-                      'mass':'zero',
-                      'width':'zero',
-                      'texname':'d',
-                      'antitexname':'\\overline{d}',
-                      'line':'straight',
-                      'charge':-1. / 3.,
-                      'pdg_code':1,
-                      #'is_part': True,
-                      'propagating':True,
-                      'self_antipart':False}))
-        mypartlist.append(MG.Particle({'name':'g',
-                          'antiname':'g',
-                          'spin':3,
-                          'color':8,
-                          'mass':'zero',
-                          'width':'zero',
-                          'texname':'g',
-                          'antitexname':'g',
-                          'line':'curly',
-                          'charge':0.,
-                          'pdg_code':21,
-                          'propagating':True,
-                          'is_part':True,
-                          'self_antipart':True}))
-    
-        mypartlist.append(MG.Particle({'name':'a',
-                          'antiname':'a',
-                          'spin':3,
-                          'color':1,
-                          'mass':'zero',
-                          'width':'zero',
-                          'texname':'\gamma',
-                          'antitexname':'\gamma',
-                          'line':'wavy',
-                          'charge':0.,
-                          'pdg_code':22,
-                          'propagating':True,
-                          'is_part':True,
-                          'self_antipart':True}))
-        
-        mypartlist.append(MG.Particle({'name':'t',
-                      'antiname':'t~',
-                      'spin':2,
-                      'color':3,
-                      'mass':'tmass',
-                      'width':'twidth',
-                      'texname':'t',
-                      'antitexname':'\\overline{t}',
-                      'line':'straight',
-                      'charge':2. / 3.,
-                      'pdg_code':6,
-                      'propagating':True,
-                      #'is_part': True,
-                      'self_antipart':False}))
-            
-        antiu = MG.Particle({'name':'u',
-                      'antiname':'u~',
-                      'spin':2,
-                      'color': 3,
-                      'mass':'zero',
-                      'width':'zero',
-                      'texname':'u',
-                      'antitexname':'\\overline{u}',
-                      'line':'straight',
-                      'charge':  2. / 3.,
-                      'pdg_code': 2,
-                      'propagating':True,
-                      'is_part':False,
-                      'self_antipart':False})
-      #  mypartlist.append(antiu)
-    
-        
-        antid = MG.Particle({'name':'d',
-                      'antiname':'d~',
-                      'spin':2,
-                      'color':3,
-                      'mass':'zero',
-                      'width':'zero',
-                      'texname':'d',
-                      'antitexname':'\\overline{d}',
-                      'line':'straight',
-                      'charge':-1. / 3.,
-                      'pdg_code':1,
-                      'is_part': False,
-                      'propagating':True,
-                      'self_antipart':False})
-        
-        antit = MG.Particle({'name':'t',
-                      'antiname':'t~',
-                      'spin':2,
-                      'color':3,
-                      'mass':'tmass',
-                      'width':'twidth',
-                      'texname':'t',
-                      'antitexname':'\\overline{t}',
-                      'line':'straight',
-                      'charge':2. / 3.,
-                      'pdg_code':6,
-                      'propagating':True,
-                      'is_part': False,
-                      'self_antipart':False})
-        
-            
-        myinterlist.append(MG.Interaction({\
-                          'id':1,\
-                          'particles': MG.ParticleList(\
-                                                [mypartlist[1], \
-                                                 antid, \
-                                                 mypartlist[2]]),
-                          'color': [color.ColorString([color.T(2, 0, 1)])],
-                          'lorentz':['L1'],
-                          'couplings':{(0, 0):'GQQ'},
-                          'orders':{'QCD':1}}))    
-        
-        myinterlist.append(MG.Interaction({\
-                          'id':2,\
-                          'particles': MG.ParticleList(\
-                                                [mypartlist[0], \
-                                                 antiu, \
-                                                 mypartlist[2]]),
-                          'color': [color.ColorString([color.T(2,0,1)])],
-                          'lorentz':['L1'],
-                          'couplings':{(0, 0):'GQQ'},
-                          'orders':{'QCD':1}}))
-    
-        myinterlist.append(MG.Interaction({\
-                          'id':5,\
-                          'particles': MG.ParticleList(\
-                                                [mypartlist[4], \
-                                                 antit, \
-                                                 mypartlist[2]]),
-                          'color': [color.ColorString([color.T(2, 0, 1)])],
-                          'lorentz':['L1'],
-                          'couplings':{(0, 0):'GQQ'},
-                          'orders':{'QCD':1}}))
-        
-        myinterlist.append(MG.Interaction({\
-                          'id':3,\
-                          'particles': MG.ParticleList(\
-                                                [mypartlist[2]] *3 \
-                                                 ),
-                          'color': [color.ColorString([color.f(0, 1, 2)])],
-                          'lorentz':['L1'],
-                          'couplings':{(0, 0):'GQQ'},
-                          'orders':{'QCD':1}}))
-        
-        myinterlist.append(MG.Interaction({\
-                          'id':4,\
-                          'particles': MG.ParticleList([mypartlist[1], \
-                                                 antid, \
-                                                 mypartlist[3]]
-                                                 ),
-                          'color': [color.ColorString([color.T(0,1)])],
-                          'lorentz':['L1'],
-                          'couplings':{(0, 0):'ADD'},
-                          'orders':{'QED':1}}))
-        myinterlist.append(MG.Interaction({\
-                          'id':6,\
-                          'particles': MG.ParticleList(\
-                                                [mypartlist[0], \
-                                                 antiu, \
-                                                 mypartlist[3]]),
-                          'color': [color.ColorString([color.T(0,1)])],
-                          'lorentz':['L1'],
-                          'couplings':{(0, 0):'AUU'},
-                          'orders':{'QED':1}}))
-    
-        self.mymodel.set('particles', mypartlist)
-        self.mymodel.set('interactions', myinterlist)
+        self.mymodel = import_ufo.import_model('sm')
+        self.myfortranmodel = helas_call_writers.FortranUFOHelasCallWriter(self.mymodel)
     
         myleglist = MG.LegList()
         
@@ -274,7 +82,7 @@ class IOExportV4Test(unittest.TestCase,
         
         self.myfks_me = fks_real_helas.FKSHelasProcessFromReals(self.myfks) 
 
-        self.myfortranmodel.downcase = False
+        #self.myfortranmodel.downcase = False
 
         tearDown = test_file_writers.CheckFileCreate.clean_files
 
@@ -751,12 +559,12 @@ C     ----------
         CALL OXXXXX(P(0,2),ZERO,NHEL(2),-1*IC(2),W(1,2))
         CALL OXXXXX(P(0,3),ZERO,NHEL(3),+1*IC(3),W(1,3))
         CALL IXXXXX(P(0,4),ZERO,NHEL(4),-1*IC(4),W(1,4))
-        CALL JIOL1X(W(1,1),W(1,2),GQQ,ZERO,ZERO,W(1,5))
+        CALL FFV1_3(W(1,1),W(1,2),GC_5,ZERO, ZERO, W(1,5))
 C       Amplitude(s) for diagram number 1
-        CALL IOVL1X(W(1,4),W(1,3),W(1,5),GQQ,AMP(1))
-        CALL JIOL1X(W(1,1),W(1,3),GQQ,ZERO,ZERO,W(1,6))
+        CALL FFV1_0(W(1,4),W(1,3),W(1,5),GC_5,AMP(1))
+        CALL FFV1_3(W(1,1),W(1,3),GC_5,ZERO, ZERO, W(1,6))
 C       Amplitude(s) for diagram number 2
-        CALL IOVL1X(W(1,4),W(1,2),W(1,6),GQQ,AMP(2))
+        CALL FFV1_0(W(1,4),W(1,2),W(1,6),GC_5,AMP(2))
         DO I=1,NGRAPHS
           SAVEAMP(I,HELL)=AMP(I)
         ENDDO
