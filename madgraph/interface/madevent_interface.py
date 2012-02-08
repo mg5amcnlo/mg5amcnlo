@@ -396,21 +396,21 @@ class HelpToCmd(object):
         logger.info("syntax: pythia [RUN] [--run_options]")
         logger.info("-- run pythia on RUN (current one by default)")
         self.run_options_help([('-f','answer all question by default'),
-                               ('-tag=', 'define the tag for the pythia run'),
+                               ('--tag=', 'define the tag for the pythia run'),
                                ('--no_default', 'not run if pythia_card not present')])        
                 
     def help_pgs(self):
         logger.info("syntax: pgs [RUN] [--run_options]")
         logger.info("-- run pgs on RUN (current one by default)")
         self.run_options_help([('-f','answer all question by default'),
-                               ('-tag=', 'define the tag for the pgs run'),
+                               ('--tag=', 'define the tag for the pgs run'),
                                ('--no_default', 'not run if pgs_card not present')]) 
 
     def help_delphes(self):
         logger.info("syntax: delphes [RUN] [--run_options]")
         logger.info("-- run delphes on RUN (current one by default)")
         self.run_options_help([('-f','answer all question by default'),
-                               ('-tag=', 'define the tag for the delphes run'),
+                               ('--tag=', 'define the tag for the delphes run'),
                                ('--no_default', 'not run if delphes_card not present')]) 
        
 #===============================================================================
@@ -1216,8 +1216,8 @@ class CompleteForCmd(CheckValidForCmd):
         
     def complete_pythia(self,text, line, begidx, endidx):
         "Complete the pythia command"
-        
         args = self.split_arg(line[0:begidx], error=False)
+
         if len(args) == 1:
             #return valid run_name
             data = glob.glob(pjoin(self.me_dir, 'Events', '*','unweighted_events.lhe.gz'))
@@ -1229,7 +1229,7 @@ class CompleteForCmd(CheckValidForCmd):
                 tmp2 = self.list_completion(text, self._run_options + ['-f', 
                                                 '--no_default', '--tag='], line)
                 return tmp1 + tmp2
-        else:
+        elif line[-1] != '=':
             return self.list_completion(text, self._run_options + ['-f', 
                                                  '--no_default','--tag='], line)
 

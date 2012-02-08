@@ -2985,11 +2985,11 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
                 to_write.remove(key)
             except:
                 pass
-            if '_path' in key:        
+            if '_path' in key:       
                 # special case need to update path
                 # check if absolute path
                 if value.startswith('./'):
-                    realpath = os.path.realpath(os.path.join(MG5DIR, value))
+                    value = os.path.realpath(os.path.join(MG5DIR, value))
             writer.writelines('%s = %s # %s' % (key, value, comment))
         for key in to_write:
             if key in self._options:

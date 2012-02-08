@@ -236,6 +236,7 @@ class AllResults(dict):
                     self.current.update_status()
                 else:
                     self.current.update_status(nolevel='parton')
+        self.output()
                     
     def clean(self, levels = ['all'], run=None, tag=None):
         """clean the run for the levels"""
