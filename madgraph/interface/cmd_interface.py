@@ -767,6 +767,9 @@ This will take effect only in a NEW terminal
     def check_set(self, args):
         """ check the validity of the line"""
         
+        if len(args) == 1 and args[0] == 'complex_mass_scheme':
+            args.append('True')
+        
         if len(args) < 2:
             self.help_set()
             raise self.InvalidCmd('set needs an option and an argument')
@@ -1341,7 +1344,7 @@ class CompleteForCmd(CheckValidForCmd):
 
         if len(args) == 2:
             if args[1] in ['group_subprocesses', 'complex_mass_scheme']:
-                return self.list_completion(text, ['False', 'True', 'Auto'])
+                return self.list_completion(text, ['False', 'True'])
             elif args[1] in ['ignore_six_quark_processes']:
                 return self.list_completion(text, self._multiparticles.keys())
             elif args[1] == 'gauge':
@@ -1608,7 +1611,6 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
         self._options['ignore_six_quark_processes'] = False
         self._options['complex_mass_scheme'] = False
         self._options['gauge'] = 'unitary'
-        self._options['complex_mass_scheme'] = True
         
         # Load the configuration file
         self.set_configuration()
@@ -1899,21 +1901,41 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
                 print 'No couplings information available in V4 model'
                 return
             text = ''
-            try:
-                ufomodel = ufomodels.load_model(self._curr_model.get('name'))
-            except:
-                raise self.InvalidCmd, 'no couplings %s in current model' % args[1]
-            for coup in ufomodel.all_couplings:
-                order = ', '.join(['%s=%s' %val for val in coup.order.items()])
-                text += '%s = %s\t( %s)\n' % (coup.name, coup.value, order)
+            text = "Current model contains %i couplings\n" % \
+                    sum([len(part) for part in 
+                                        self._curr_model['couplings'].values()])
+            keys = self._curr_model['couplings'].keys()
+            def key_sort(x, y):
+                if ('external',) == x:
+                    return -1
+                elif ('external',) == y:
+                    return +1
+                elif  len(x) < len(y):
+                    return -1
+                else:
+                    return 1
+            keys.sort(key_sort)
+            for key in keys:
+                item = self._curr_model['couplings'][key]
+                text += '\ncouplings type: %s\n' % str(key)
+                for value in item:
+                    if value.value is not None:
+                        text+= '        %s = %s = %s\n' % (value.name, value.expr ,value.value)
+                    else:
+                        text+= '        %s = %s\n' % (value.name, value.expr)
+
             pydoc.pager(text)
-            
+                        
         elif args[0] == 'couplings':
             if self._model_v4_path:
                 print 'No couplings information available in V4 model'
                 return
+            
             try:
                 ufomodel = ufomodels.load_model(self._curr_model.get('name'))
+                print 'Note that this is the UFO informations.'
+                print ' "display couplings" present the actual definition'
+                print 'prints the current states of mode'
                 print eval('ufomodel.couplings.%s.nice_string()'%args[1])
             except:
                 raise self.InvalidCmd, 'no couplings %s in current model' % args[1]
@@ -3104,7 +3126,6 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
                 aloha.complex_mass = True
                 if log:
                     logger.info('Activate complex mass scheme.')
-                self.exec_cmd('import model %s' % self._curr_model.get('name'))
                 self._curr_model.change_mass_to_complex_scheme()
                 if hasattr(self._curr_model, 'set_parameters_and_couplings'):
                     if hasattr(self._curr_model, 'restrict_card'):
