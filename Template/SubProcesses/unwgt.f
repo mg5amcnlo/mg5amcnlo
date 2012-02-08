@@ -240,7 +240,7 @@ c
       integer iseed, nover, nstore
       double precision scale,aqcd,aqed
       integer ievent
-      character*140 buff
+      character*300 buff
 C     
 C     GLOBAL
 C
@@ -397,7 +397,7 @@ c
       real ran1
       external ran1
 
-      character*140 buff
+      character*300 buff
 
 C     
 C     GLOBAL

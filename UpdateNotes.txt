@@ -1,9 +1,12 @@
 Update notes for MadGraph 5 (in reverse time order)
 
-1.4.1 (06/02/12)  OM: Fix the fermion flow check which was wrongly failing on some model
-                      (Thanks to Benjamin)
-                  OM: Improve run organization efficiency (which fastenize the code on cluster)
- 		      (Thanks to Johan)
+1.4.2 (08/02/12)  JA: Ensure that matching works properly with > 9 final state
+                      particles (by increasing a buffer size in event output)
+
+1.4.1 (06/02/12)  OM: Fix the fermion flow check which was wrongly failing on 
+                      some model  (Thanks to Benjamin)
+                  OM: Improve run organization efficiency (which speeds up the 
+		      code on cluster) (Thanks to Johan)
                   OM: More secure html output (Thanks to Simon)
 
 1.4.0 (04/02/12): OM: New user interface for the madevent run. Type:
