@@ -1945,8 +1945,8 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
 
         logger.info('Working on SubProcesses')
         self.total_jobs = 0
-        subproc = [P for P in os.listdir(pjoin(self.me_dir,'SubProcesses')) if 
-                   P.startswith('P') and os.path.isdir(pjoin(self.me_dir,'SubProcesses', P))]
+        subproc = [l.strip() for l in open(pjoin(self.me_dir,'SubProcesses', 
+                                                                 'subproc.mg'))]
         for nb_proc,subdir in enumerate(subproc):
             subdir = subdir.strip()
             Pdir = pjoin(self.me_dir, 'SubProcesses',subdir)
@@ -2011,8 +2011,8 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
         logger.info("Using random number seed offset = %s" % self.random)
         
         self.total_jobs = 0
-        subproc = [P for P in os.listdir(pjoin(self.me_dir,'SubProcesses')) if 
-                   P.startswith('P') and os.path.isdir(pjoin(self.me_dir,'SubProcesses', P))]
+        subproc = [l.strip() for l in open(pjoin(self.me_dir,'SubProcesses', 
+                                                                 'subproc.mg'))]
         for nb_proc,subdir in enumerate(subproc):
             subdir = subdir.strip()
             Pdir = pjoin(self.me_dir, 'SubProcesses',subdir)
@@ -2270,7 +2270,10 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
                            cwd=pjoin(self.me_dir,'Events'))
 
         if not os.path.exists(pjoin(self.me_dir,'Events','pythia.done')):
-            logger.warning('Fail to produce pythia output. More info in \n     %s' % pythia_log.name)
+            if self.cluster_mode == 1:
+                logger.warning('Fail to produce pythia output. More info in \n     %s' % pythia_log)
+            else:
+                logger.warning('Fail to produce pythia output. More info in \n     %s' % pythia_log.name)
             return
         else:
             os.remove(pjoin(self.me_dir,'Events','pythia.done'))
@@ -2384,7 +2387,7 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
                 for match in glob.glob(pjoin(self.me_dir, 'Events','*','*_banner.txt')):
                     run = match.rsplit(os.path.sep,2)[1]
                     try:
-                        self.exec_cmd('clean %s %s' % (run, ' '.join(args[1:]) ) )
+                        self.exec_cmd('remove %s %s' % (run, ' '.join(args[1:]) ) )
                     except self.InvalidCmd, error:
                         logger.info(error)
                         pass # run already clear
@@ -2409,7 +2412,11 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
         to_suppress = [os.path.basename(f) for f in to_suppress if 'banner' not in f]
         if tag:
             to_suppress = [f for f in to_suppress if tag in f]
-
+            if 'parton' in mode or 'all' in mode:
+                if os.path.exists(pjoin(self.me_dir, 'Events', run, 'events.lhe.gz')):
+                    to_suppress.append('events.lhe.gz')
+                if os.path.exists(pjoin(self.me_dir, 'Events', run, 'unweighted_events.lhe.gz')):
+                    to_suppress.append('unweighted_events.lhe.gz')
         if 'all' in mode:
             pass # suppress everything
         else:
@@ -2423,7 +2430,6 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
                 to_suppress = [f for f in to_suppress if 'delphes' in f 
                                                       or 'pgs' in f 
                                                       or 'pythia' in f]
-
         if '-f' not in args and len(to_suppress):
             question = 'Do you want to suppress the following files?\n     %s' % \
                                '\n    '.join(to_suppress)

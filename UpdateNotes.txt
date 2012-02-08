@@ -1,5 +1,11 @@
 Update notes for MadGraph 5 (in reverse time order)
 
+1.4.1 (06/02/12)  OM: Fix the fermion flow check which was wrongly failing on some model
+                      (Thanks to Benjamin)
+                  OM: Improve run organization efficiency (which fastenize the code on cluster)
+ 		      (Thanks to Johan)
+                  OM: More secure html output (Thanks to Simon)
+
 1.4.0 (04/02/12): OM: New user interface for the madevent run. Type:
                       1) (from madevent output) ./bin/madevent
                       2) (from MG5 command line) launch [MADEVENT_PATH] -i
