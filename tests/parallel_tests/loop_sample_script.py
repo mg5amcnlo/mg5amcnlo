@@ -46,23 +46,35 @@ if '__main__' == __name__:
     logging.getLogger('tutorial').setLevel(logging.ERROR)
         
     logging.basicConfig(level=logging.INFO)
+
+    my_proc_list = []
     
-    my_proc_list = [('u u~ > d d~',{'QCD':2,'QED':0},['QCD'],{'QCD':6,'QED':0}),
-                    ('e+ e- > d d~',{'QED':2,'QCD':0},['QCD'],{'QCD':2,'QED':4}),
-                    ('d~ d > g a',{'QED':1,'QCD':1},['QCD'],{'QCD':4,'QED':2}),
-                    ('d~ d > g z',{'QED':1,'QCD':1},['QCD'],{'QCD':4,'QED':2})]
-#                    ('d d~ > u u~',{'QCD':2},['QCD'],{'QCD':6}),
-#                    'u u~ > d d~',
-#                    'g g > t t~',
-#                    'u d > u d',
-#                    'g d > g d',
-#                    'd d~ > d d~ g',
-#                    ('g g > u u~',{'QCD':2},['QCD'],{'QCD':6})]
-#                    'd d~ > d d~ d d~',
-#                    'd d > d~ d d d',
-#                    'd g > d u u~']
-#                    'd d~ > u u~ g',
-    
+    # Just to check that th general setup is ok, let's try some trivial processes
+    my_proc_list.append(('u u~ > d d~',{'QCD':2,'QED':0},['QCD'],{'QCD':6,'QED':0}))
+    my_proc_list.append(('e+ e- > d d~',{'QED':2,'QCD':0},['QCD'],{'QCD':2,'QED':4}))
+    # Check of the gga R2
+    my_proc_list.append(('d~ d > g a',{'QED':1,'QCD':1},['QCD'],{'QCD':4,'QED':2}))
+    my_proc_list.append(('d~ d > g z',{'QED':1,'QCD':1},['QCD'],{'QCD':4,'QED':2}))
+    # Check of the ggh R2    
+    #my_proc_list.append(('g g > h t t~ ',{'QED':1,'QCD':2},['QCD'],{'QCD':6,'QED':2}))
+    # Check of the ggvv R2    
+    #my_proc_list.append(('d d~ > w+ w- g',{'QED':2,'QCD':1},['QCD'],{'QCD':4,'QED':4}))
+    #my_proc_list.append(('d~ d > z z g',{'QED':2,'QCD':1},['QCD'],{'QCD':4,'QED':4}))
+    #my_proc_list.append(('d~ d > z a g',{'QED':2,'QCD':1},['QCD'],{'QCD':4,'QED':4}))
+    # Check of the gggv R2 
+    #my_proc_list.append(('d~ d > z g g',{'QED':1,'QCD':2},['QCD'],{'QCD':6,'QED':2}))
+    #my_proc_list.append(('d~ d > a g g',{'QED':1,'QCD':2},['QCD'],{'QCD':6,'QED':2}))
+    # Now adding some masses to mess things around 
+    #my_proc_list.append(('g g > z t t~',{'QED':1,'QCD':2},['QCD'],{'QCD':6,'QED':2}))
+    #my_proc_list.append(('g g > a t t~',{'QED':1,'QCD':2},['QCD'],{'QCD':6,'QED':2}))    
+    # Check Complicated QCD processes
+    #my_proc_list.append(('g g > t t~',{'QED':0,'QCD':2},['QCD'],{'QCD':6,'QED':0}))
+    #my_proc_list.append(('t g > t g',{'QED':0,'QCD':2},['QCD'],{'QCD':6,'QED':0}))
+    # The ones below are a bit long
+    # my_proc_list.append(('d d~ > d d~ d d~',{'QED':0,'QCD':4},['QCD'],{'QCD':10,'QED':0}))
+    # And an hardcore one for fun
+    # my_proc_list.append(('d d~ > w+ w- t t~ g',{'QED':2,'QCD':3},['QCD'],{'QCD':8,'QED':4}))
+
     #my_proc_list = me_comparator.create_proc_list(['u', 'u~','d','d~','g'],
     #                                              initial=2, final=2)
     
@@ -78,8 +90,8 @@ if '__main__' == __name__:
     ML4.setup('/Users/Spooner/Documents/PhD/MadFKS/ML4ParrallelTest/NLOComp')
 
     # Create a MERunner object for GoSam
-    # GoSam = loop_me_comparator.GoSamRunner()
-    # GoSam.setup('/Users/Spooner/Documents/PhD/HEP_softs/GoSam_bis')
+    GoSam = loop_me_comparator.GoSamRunner()
+    GoSam.setup('/Users/Spooner/Documents/PhD/HEP_softs/GoSam_bis')
 
     # Create a MERunner object for MadLoop 5
     ML5 = loop_me_comparator.LoopMG5Runner()
@@ -91,7 +103,7 @@ if '__main__' == __name__:
 
     # Create and setup a comparator
     my_comp = loop_me_comparator.LoopMEComparator()
-    my_comp.set_me_runners(ML5, ML4)
+    my_comp.set_me_runners(ML5, ML4, GoSam)
 
     # Run the actual comparison
     my_comp.run_comparison(my_proc_list,

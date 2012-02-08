@@ -170,7 +170,7 @@ class LoopMG5Runner(me_comparator.MG5Runner):
 
         # If directory doesn't exist, skip and return 0
         if not shell_name:
-            logging.info("Directory hasn't been created for process %s" % (proc))
+            logging.info("Directory hasn't been created for process %s" %proc)
             return ((0.0, 0.0, 0.0, 0.0, 0), [])
 
         logging.info("Working on process %s in dir %s" % (proc, shell_name))
@@ -355,6 +355,7 @@ class LoopMG4Runner(me_comparator.MERunner):
                                'g':(21,'g'),
                                'a':(22,'a'),
                                'z':(23,'z'),
+                               'h':(25,'h'),
                                'w+':(24,'wp'),'w-':(-24,'wm'),
                                'e+':(-11,'ep'),'e-':(11,'em'),
                                'mu+':(-13,'mup'),'mu-':(13,'mum'),
@@ -399,7 +400,7 @@ class LoopMG4Runner(me_comparator.MERunner):
         
         for part in incoming_parts+outcoming_parts:
             if part not in particle_dictionary.keys():
-                raise self.LoopMG4RunnerError, \
+                raise Exception, \
                         "Particle %s is not recognized by MadLoop4."%part                
         
         proc_name ='P%i_'%procID+''.join([particle_dictionary[inc][1] for \
@@ -428,18 +429,22 @@ class LoopMG4Runner(me_comparator.MERunner):
         working_dir = os.path.join(self.mg4_path, self.temp_dir_name)
          
         shell_name = None
-        directories = glob.glob(os.path.join(working_dir,'P%i_*' % proc_id))
+        directories = glob.glob(os.path.join(working_dir,'P%i_*' %proc_id))
         if directories and os.path.isdir(directories[0]):
             shell_name = os.path.basename(directories[0])
 
         # If directory doesn't exist, skip and return 0
         if not shell_name:
-            logging.info("Directory hasn't been created for process %s" % (proc))
+            logging.info("Directory hasn't been created for process %s" %proc)
             return ((0.0, 0.0, 0.0, 0.0, 0), [])
 
-        logging.info("Working on process %s in dir %s" % (proc, shell_name))
+        logging.info("Working on process %s in dir %s" %(proc, shell_name))
         
         dir_name = os.path.join(working_dir, shell_name, 'SigVirt')
+        
+        if not os.path.isfile(os.path.join(dir_name,'NLOComp_sa.f')):
+            logging.info("File NLOComp_sa.f hasn't been created for process %s" %proc)
+            return ((0.0, 0.0, 0.0, 0.0, 0), [])
         
         if PSpoint==[]:
             self.fix_energy_in_check(dir_name, energy)
@@ -463,7 +468,9 @@ class LoopMG4Runner(me_comparator.MERunner):
             logging.info("Error while executing make in %s" % dir_name)
             return ((0.0, 0.0, 0.0, 0.0, 0), [])
         
-        # Run ./check
+        # Run ./check for the finite part
+        answer=[]
+        self.change_finite_single(dir_name,'first')
         try:
             output = subprocess.Popen('./NLOComp_sa',
                         cwd=dir_name,
@@ -471,7 +478,8 @@ class LoopMG4Runner(me_comparator.MERunner):
             output.read()
             output.close()
             if os.path.exists(os.path.join(dir_name,'result.dat')):
-                return self.parse_check_output(file(dir_name+'/result.dat'))  
+                buff=self.parse_check_output(file(dir_name+'/result.dat'))
+                answer=[list(buff[0]),buff[1]]
             else:
                 logging.warning("Error while looking for file %s"%str(os.path\
                                                   .join(dir_name,'result.dat')))
@@ -479,6 +487,26 @@ class LoopMG4Runner(me_comparator.MERunner):
         except IOError:
             logging.warning("Error while executing ./check in %s" % shell_name)
             return ((0.0, 0.0, 0.0, 0.0, 0), [])
+        
+        # Now ./check for the single part
+        self.change_finite_single(dir_name,'singlePole')
+        try:
+            output = subprocess.Popen('./NLOComp_sa',
+                        cwd=dir_name,
+                        stdout=subprocess.PIPE, stderr=subprocess.STDOUT).stdout
+            output.read()
+            output.close()
+            if os.path.exists(os.path.join(dir_name,'result.dat')):
+                answer[0][2]=self.parse_check_output(file(dir_name+'/result.dat'))[0][2]  
+            else:
+                logging.warning("Error while looking for file %s"%str(os.path\
+                                                  .join(dir_name,'result.dat')))
+                return ((0.0, 0.0, 0.0, 0.0, 0), [])
+        except IOError:
+            logging.warning("Error while executing ./check in %s" % shell_name)
+            return ((0.0, 0.0, 0.0, 0.0, 0), [])
+        
+        return (tuple(answer[0]),answer[1])
 
     def parse_check_output(self, output):
         """Parse the output string and return a pair where first four values are 
@@ -579,6 +607,37 @@ class LoopMG4Runner(me_comparator.MERunner):
 
         file = open(os.path.join(dir_name,'NLOComp_sa.f'), 'w')
         file.write(re.sub("SQRTS=1000d0", "SQRTS=%id0" % int(energy), check_sa))
+        file.close()
+
+    def change_finite_single(self,dir_name,mode):
+        """ Replace in HelasNLO.inc and MadLoop.param the logical controlling
+        whether to get the finite part or the single pole correct """
+        
+        file = open(os.path.join(dir_name,'MadLoop.param'), 'r')
+        MadLoopParam = file.read()
+        file.close()
+
+        file = open(os.path.join(dir_name,'MadLoop.param'), 'w')        
+        if mode=='first':
+            file.write(re.sub("###MODE###\ndefaultRun\n", "###MODE###\nsinglePSCheck\nfinite\n", MadLoopParam))
+        if mode=='singlePole':
+            file.write(re.sub("###MODE###\nsinglePSCheck\nfinite\n", "###MODE###\nsinglePSCheck\nsinglePole\n", MadLoopParam))
+        if mode=='finite':
+            file.write(re.sub("###MODE###\nsinglePSCheck\nsinglePole\n", "###MODE###\nsinglePSCheck\nfinite\n", MadLoopParam))
+        file.close()
+
+        if mode=='first':
+            return
+
+        file = open(os.path.join(dir_name,'HelasNLO.input'), 'r')
+        HelasNLO = file.read()
+        file.close()
+
+        file = open(os.path.join(dir_name,'HelasNLO.input'), 'w')
+        if mode=='finite':
+            file.write(re.sub("#finiteCT\n.false.\n", "#finiteCT\n.true.\n", HelasNLO))
+        if mode=='singlePole':
+            file.write(re.sub("#finiteCT\n.true.\n", "#finiteCT\n.false.\n", HelasNLO))
         file.close()
 
 class LoopGoSamRunnerError(Exception):
@@ -725,6 +784,7 @@ class GoSamRunner(me_comparator.MERunner):
                                'g':(21,'g'),
                                'a':(22,'A'),
                                'z':(23,'Z'),
+                               'h':(25,'h'),
                                'w+':(24,'Wp'),'w-':(-24,'Wm'),
                                'e+':(-11,'ep'),'e-':(11,'em'),
                                'mu+':(-13,'mup'),'mu-':(13,'mum'),
