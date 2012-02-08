@@ -426,8 +426,10 @@ class testFKSBornHelasObjects(unittest.TestCase):
 ##        self.assertEqual(helas_real_proc.permutation, real_proc.permutation)
         #self.assertEqual(len(me_list), 1)
         #self.assertEqual(len(me_id_list), 1)
-        self.assertEqual(helas_real_proc.matrix_element, 
-                        helas_objects.HelasMatrixElement(real_proc.amplitude))
+        target_me = helas_objects.HelasMatrixElement(real_proc.amplitude)
+        self.assertEqual(helas_real_proc.matrix_element, target_me)
+        self.assertEqual(helas_real_proc.matrix_element.get('color_matrix'), 
+                         target_me.get('color_matrix'))
         #self.assertEqual(me_list[0],
         #                helas_objects.HelasMatrixElement(real_proc.amplitude))
 ##        self.assertEqual(me_id_list[0], array.array('i',[1 ,-1, -2,2,21]))
@@ -532,7 +534,6 @@ class testFKSBornHelasObjects(unittest.TestCase):
             len(helas_born_proc1.born_matrix_element.get('processes')))
         self.assertEqual(born_1, 
             helas_born_proc1.born_matrix_element.get('processes'))
-      
       
         
         for me, r1, r2 in  zip(helas_born_proc1.real_processes, reals_1, reals_2):

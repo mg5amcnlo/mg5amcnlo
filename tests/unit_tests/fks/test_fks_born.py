@@ -446,12 +446,12 @@ class TestFKSProcess(unittest.TestCase):
                                          'state' :False,
                                          'fks' : 'n'}),
                                         fks_common.FKSLeg(
-                                         {'id' :21,
+                                         {'id' :2,
                                          'number' :3,
                                          'state' :True,
-                                         'fks' : 'i'}),
+                                         'fks' : 'n'}),
                                         fks_common.FKSLeg( 
-                                         {'id' :2,
+                                         {'id' :21,
                                          'number' :4,
                                          'state' :True,
                                          'fks' : 'n'}),
@@ -459,15 +459,31 @@ class TestFKSProcess(unittest.TestCase):
                                          {'id' :21,
                                          'number' :5,
                                          'state' :True,
-                                         'fks' : 'n'})
+                                         'fks' : 'i'})
                                         ], self.mymodel )
         
-        sorted_real_proc= copy.copy(self.myproc)
-        sorted_real_proc['legs']=  sorted_legs
-        sorted_real_proc.set('orders', {'QCD' :11, 'QED' :0 })
+
+        sorted_real_proc = MG.Process({'legs':sorted_legs, 'model':self.mymodel,
+            'orders':{'QCD':3, 'QED':0, 'WEIGHTED': 3}, 'id':1})
+        self.assertEqual(sorted_real_proc, realproc.amplitude.get('process'))
         amp = diagram_generation.Amplitude(sorted_real_proc)
-        #self.assertEqual(amplist[0],amp)
+        self.assertEqual(amp,realproc.amplitude)
+        self.assertEqual(array.array('i',[2,21,2,21,21]), realproc.pdgs)
+        self.assertEqual([3,8,3,8,8], realproc.colors)
  ##       self.assertEqual(realproc.permutation, [1,2,4,5,3])
+
+
+    def test_find_fks_j_from_i(self):
+        """tests that the find_fks_j_from_i function of a FKSRealProcess returns the
+        correct result"""
+        #u g > u g
+        fksproc = fks_born.FKSProcessFromBorn(self.myproc)
+        #take the first real for this process 2j 21 >2 21 21i
+        leglist = fksproc.reals[0][0]
+        realproc = fks_born.FKSRealProcess(fksproc.born_proc, leglist, 1,0, [], [])
+        target = {1:[], 2:[], 3:[1,2], 4:[1,2,3,5], 5:[1,2,3,4] }
+        self.assertEqual(target, realproc.find_fks_j_from_i())
+
 
     def test_fks_real_process_get_leg_i_j(self):
         """test the correct output of the FKSRealProcess.get_leg_i/j() function"""
@@ -525,8 +541,6 @@ class TestFKSProcess(unittest.TestCase):
         res = [{'i': real.i_fks, 'j': real.j_fks, 'to_int': real.is_to_integrate} \
                 for real in ttg_fks_norem.real_amps]
 
-        
-                
         
     def test_find_reals(self):
         """tests if all the real processes are found for a given born"""

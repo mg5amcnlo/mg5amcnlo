@@ -118,7 +118,8 @@ class FKSRealProcess(object):
         self.is_to_integrate = True
         self.is_nbody_only = False
 
-    def find_fks_j_from_i(self):
+
+    def find_fks_j_from_i(self): #test written
         """returns a dictionary with the entries i : [j_from_i]"""
         fks_j_from_i = {}
         dict = {}
@@ -251,7 +252,6 @@ class FKSProcessFromBorn(object):
         self.find_real_nbodyonly()
 
 
-    
     def find_reals(self):
         """finds the FKS real configurations for a given process"""
         for i in self.leglist:
@@ -261,6 +261,7 @@ class FKSProcessFromBorn(object):
             for split in self.splittings[i_i]:
                 self.reals[i_i].append(
                             fks_common.insert_legs(self.leglist, i, split))
+
 
     def find_reals_to_integrate(self): #test written
         """finds double countings in the real emission configurations, sets the 
@@ -304,6 +305,7 @@ class FKSProcessFromBorn(object):
                 if real.is_to_integrate:
                     newreal_amps.append(real)
             self.real_amps = newreal_amps
+
     
     def find_real_nbodyonly(self):
         """finds the real emission configuration that includes the nbody contribution
@@ -337,7 +339,3 @@ class FKSProcessFromBorn(object):
                   "%s \n Error, nbodyonly configuration not found" % \
                   self.born_proc.input_string()
             
-
-            
-            
-        

@@ -78,9 +78,10 @@ class IOExportV4Test(unittest.TestCase,
                                            'model':self.mymodel,
                                            'orders': {'QED': 0}})
         
-        self.myfks = fks_real.FKSProcessFromReals(myproc)
+        self.myfksmulti = fks_real.FKSMultiProcessFromReals([diagram_generation.Amplitude(myproc)])
         
-        self.myfks_me = fks_real_helas.FKSHelasProcessFromReals(self.myfks) 
+        self.myfks_me = fks_real_helas.FKSHelasMultiProcessFromReals(\
+                self.myfksmulti)['matrix_elements'][0]
 
         #self.myfortranmodel.downcase = False
 
