@@ -815,9 +815,11 @@ class GoSamRunner(me_comparator.MERunner):
             elif line.find("# process_path=")==0:
                 proc_card_out+="process_path="+proc_name+'\n'
             elif line.find("# in=")==0:
-                proc_card_out+="in="+','.join(incoming_parts)+'\n'
+                proc_card_out+="in="+','.join([particle_dictionary[p][1] for \
+                                                p in incoming_parts])+'\n'
             elif line.find("# out=")==0:
-                proc_card_out+="out="+','.join(outcoming_parts)+'\n'
+                proc_card_out+="out="+','.join([particle_dictionary[p][1] for \
+                                                p in outcoming_parts])+'\n'
             elif line.find("extensions=")==0:
                 if self.use_dred:
                     proc_card_out+="extensions=dred,"+line[11:]+'\n'
