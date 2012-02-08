@@ -417,7 +417,7 @@ class CheckValidForCmd(object):
     
         if len(args) < 2:
             self.help_add()
-            raise self.InvalidCmd('\"add\" requires two arguments')
+            raise self.InvalidCmd('\"add\" requires at least two arguments')
         
         if args[0] != 'process':
             raise self.InvalidCmd('\"add\" requires the argument \"process\"')

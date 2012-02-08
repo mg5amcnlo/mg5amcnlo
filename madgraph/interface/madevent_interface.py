@@ -3084,8 +3084,14 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
             new_tag = True
         elif not self.run_name in self.results and level =='parton':
             pass # No results yet, so current tag is fine
+        elif not self.run_name in self.results:
+            #This is only for case when you want to trick the interface
+            logger.warning('Trying to run data on unknown run.')
+            self.results.add_run(name, self.run_card)
+            self.results.update('add run %s' % name, 'all', makehtml=False)
         else:
             for tag in upgrade_tag[level]:
+                
                 if getattr(self.results[self.run_name][-1], tag):
                     # LEVEL is already define in the last tag -> need to switch tag
                     tag = self.get_available_tag()
