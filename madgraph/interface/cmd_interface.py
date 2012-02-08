@@ -763,6 +763,9 @@ This will take effect only in a NEW terminal
     def check_set(self, args):
         """ check the validity of the line"""
         
+        if len(args) == 1 and args[0] == 'complex_mass_scheme':
+            args.append('True')
+        
         if len(args) < 2:
             self.help_set()
             raise self.InvalidCmd('set needs an option and an argument')
