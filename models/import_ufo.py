@@ -12,7 +12,6 @@
 # For more information, please visit: http://madgraph.phys.ucl.ac.be
 #
 ################################################################################
-from compiler.ast import Continue
 """ How to import a UFO model to the MG5 format """
 
 
@@ -280,11 +279,12 @@ class UFOMG5Converter(object):
         if particle_info.pdg_code < 0:
             return
         
+        # MG5 doesn't use ghost (The sum over polarization has momenta term)
+        if particle_info.spin < 0:
+            return 
+        
         if (aloha.unitary_gauge and 1 in self.model['gauge']) \
 	          or (0 not in self.model['gauge']): 
-	    # MG5 doesn't use ghost (use unitary gauges)
-            if particle_info.spin < 0:
-                return 
         
             # MG5 doesn't use goldstone boson 
             if hasattr(particle_info, 'GoldstoneBoson'):
