@@ -2930,12 +2930,13 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
             else:
                 raise self.RWError('Could not load processes from file %s' % args[1])
     
-    def do_save(self, line):
+    def do_save(self, line, check=True):
         """Not in help: Save information to file"""
 
         args = self.split_arg(line)
         # Check argument validity
-        self.check_save(args)
+        if check:
+            self.check_save(args)
 
         if args[0] == 'model':
             if self._curr_model:
@@ -3405,7 +3406,7 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
         if self._export_format == 'madevent':          
             # Create configuration file [path to executable] for madevent
             filename = os.path.join(self._export_dir, 'Cards', 'me5_configuration.txt')
-            self.do_save('options %s' % filename)
+            self.do_save('options %s' % filename, check=False)
             
             logger.info('Type \"launch\" to generate events from this process, or see')
             logger.info(self._export_dir + '/README')

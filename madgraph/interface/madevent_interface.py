@@ -1728,6 +1728,34 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
             self.exec_cmd('pythia --no_default', postcmd=False, printcmd=False)
             # pythia launches pgs/delphes if needed
             self.store_result()
+            self.print_results_in_shell(self.results.current)
+            
+            
+    def print_results_in_shell(self, data):
+        """Have a nice results prints in the shell,
+        data should be of type: gen_crossxhtml.OneTagResults"""
+
+        logger.info("  === Results Summary for run: %s tag: %s ===\n" % (data['run_name'],data['tag']))
+        if self.ninitial == 1:
+            logger.info("     Width :   %.4g +- %.4g GeV" % (data['cross'], data['error']))
+        else:
+            logger.info("     Cross-section :   %.4g +- %.4g pb" % (data['cross'], data['error']))
+        logger.info("     Nb of events :  %s" % data['nb_event'] )
+        if data['cross_pythia']:
+            error = data.get_pythia_error(data['cross'], data['error'], 
+                                        data['cross_pythia'], data['nb_event'])
+            nb_event = 0
+            if data['cross']:
+                nb_event = int(0.5+(data['nb_event'] * data['cross_pythia'] /data['cross']))
+            
+            if self.ninitial == 1:
+                logger.info("     Matched Width :   %.4g +- %.4g GeV" % (data['cross_pythia'], error))
+            else:
+                logger.info("     Matched Cross-section :   %.4g +- %.4g pb" % (data['cross'], error))            
+            logger.info("     Nb of events after Matching :  %s" % nb_event)
+        logger.info(" " )
+        
+            
     
     ############################################################################      
     def do_calculate_decay_widths(self, line):
@@ -1921,6 +1949,7 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
                                   (pjoin(self.me_dir, 'Events'), self.run_name))
 
         self.update_status('', level='parton')
+        self.print_results_in_shell(self.results.current)   
         self.results.def_current(None)
             
     ############################################################################      
