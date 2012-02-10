@@ -63,6 +63,7 @@ import madgraph.interface.launch_ext_program as launch_ext
 import madgraph.interface.madevent_interface as madevent_interface
 
 import madgraph.various.process_checks as process_checks
+import madgraph.various.banner as banner_module
 
 import models as ufomodels
 import models.import_ufo as import_ufo
@@ -258,6 +259,9 @@ class HelpToCmd(object):
         logger.info("")
         logger.info("   import command PATH :")
         logger.info("      Execute the list of command in the file at PATH")
+        logger.info("")
+        logger.info("   import banner PATH  [--no_launch]:")
+        logger.info("      Rerun the exact same run define in the valid banner.")
  
     def help_install(self):
         logger.info("syntax: install " + "|".join(self._install_opts))
@@ -701,6 +705,10 @@ This will take effect only in a NEW terminal
             text = open(path).read()
             if 'Begin PROCESS' in text:
                 return 'proc_v4'
+            elif '<MGVERSION>' in text:
+                return 'banner'
+            elif '<MGVersion>' in text:
+                return 'banner'
             else:
                 return 'command'
         else:
@@ -1489,6 +1497,8 @@ class CompleteForCmd(CheckValidForCmd):
                 return ['--modelname']
             elif not (os.path.sep in args[-1] and line[-1] != ' '):
                 completion_categories['options'] = self.list_completion(text, ['--modelname','-modelname'])
+        if len(args) >= 3 and mode.startswith('banner') and not '--no_launch' in line:
+            completion_categories['options'] = self.list_completion(text, ['--no_launch'])
         return self.deal_multiple_categories(completion_categories) 
         
         
@@ -1549,7 +1559,7 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
     _save_opts = ['model', 'processes', 'options']
     _tutorial_opts = ['start', 'stop']
     _check_opts = ['full', 'permutation', 'gauge', 'lorentz_invariance']
-    _import_formats = ['model_v4', 'model', 'proc_v4', 'command']
+    _import_formats = ['model_v4', 'model', 'proc_v4', 'command', 'banner']
     _install_opts = ['pythia-pgs', 'Delphes', 'MadAnalysis', 'ExRootAnalysis']
     _v4_export_formats = ['madevent', 'standalone', 'matrix'] 
     _export_formats = _v4_export_formats + ['standalone_cpp', 'pythia8']
@@ -2465,8 +2475,31 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
                 # Execute the card
                 self.use_rawinput = False
                 self.import_command_file(args[1])
-                self.use_rawinput = True    
-        
+                self.use_rawinput = True
+                
+        elif args[0] == 'banner':
+            type = madevent_interface.MadEventCmd.detect_card_type(args[1])    
+            if type != 'banner':
+                raise self.InvalidCmd, 'The File should be a valid banner'
+            ban = banner_module.Banner(args[1])
+            # Check that this is MG5 banner
+            if 'MG5ProcCard' in ban:
+                for line in ban['MG5ProcCard'].split('\n'):
+                    if line.startswith('#') or line.startswith('<'):
+                        continue
+                    self.exec_cmd(line)
+            else:
+                raise self.InvalidCmd, 'Only MG5 banner are supported'
+            
+            if not self._done_export:
+                self.exec_cmd('output . -f')
+
+            ban.split(self._done_export[0])
+            logger.info('All Cards from the banner have been place in directory %s' % pjoin(self._done_export[0], 'Cards'))
+            if '--no_launch' not in args:
+                self.exec_cmd('launch')
+            
+            
         elif args[0] == 'proc_v4':
             
             # Remove previous imports, generations and outputs from history
