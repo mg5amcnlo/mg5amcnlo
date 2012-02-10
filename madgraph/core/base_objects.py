@@ -1059,10 +1059,14 @@ class Model(PhysicsObject):
                     else:
                         # Remove external parameter from the param_card
                         New_width = ModelVariable(width.name,
-                        '-1 * im(%s**2) / cmath.sqrt(re(%s**2))' % (mass.expr, mass.expr), 'real', mass.depend)
+                        '-1 * im(CMASS_%s**2) / %s' % (mass.name, mass.name), 'real', mass.depend)
                         self.get('parameters')[('external',)].remove(width)
-                        width = New_width
-                        self.add_param(width, (mass,))
+                        self.add_param(New_param, (mass,))
+                        self.add_param(New_width, (New_param,))
+                        mass.expr = 'cmath.sqrt(re(%s**2))' % mass.expr                
+                        to_change[mass.name] = New_param.name
+                        continue                        
+                        
                     mass.expr = 're(%s)' % mass.expr                
                 self.add_param(New_param, (mass, width))
                 to_change[mass.name] = New_param.name
