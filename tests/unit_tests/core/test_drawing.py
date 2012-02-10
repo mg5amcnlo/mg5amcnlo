@@ -1397,7 +1397,7 @@ class TestFeynmanDiagram(unittest.TestCase):
                                                 and line.end.level in [4,3]][0] 
         line3 = [line for line in diagram.lineList if line.begin.level in [2,5]
                                                 and line.end.level in [2,5]][0] 
-        self.assertEqual(line3.pid, -24)
+        self.assertEqual(line3.id, -24)
         
         self.assertEqual(line1.id, line2.id)
         self.assertEqual(line1.id, 24)
