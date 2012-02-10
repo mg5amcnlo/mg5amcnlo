@@ -3024,7 +3024,7 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
                 # check if absolute path
                 if value.startswith('./'):
                     value = os.path.realpath(os.path.join(MG5DIR, value))
-            writer.writelines('%s = %s # %s' % (key, value, comment))
+            writer.writelines('%s = %s # %s \n' % (key, value, comment))
         for key in to_write:
             if key in self._options:
                 writer.writelines('%s = %s \n' % (key,self._options[key]))
