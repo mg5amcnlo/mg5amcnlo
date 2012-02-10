@@ -3714,6 +3714,8 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
         text = open(path).read()
         if '<MGVersion>' in text:
             return 'banner'
+        if '<MGVERSION>' in text:
+            return 'banner'
         if 'CEN_max_tracker' in text:
             return 'delphes_card.dat'
         elif '#TRIGGER CARD' in text:
