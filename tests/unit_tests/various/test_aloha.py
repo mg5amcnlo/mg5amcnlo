@@ -3526,6 +3526,7 @@ class TestAlohaWriter(unittest.TestCase):
     
     def tearDown(self):
         aloha.complex_mass = False
+        aloha.unitary_gauge = True
     
     def old_test_reorder_call_listFFVV(self):
         
@@ -3815,7 +3816,6 @@ end
         self.assertEqual(len(split_routine), len(split_solution))
 
 
-
     def test_Cwriter_complex_mass_scheme(self):
         """ test that python writer works """
         
@@ -3877,6 +3877,50 @@ SSS1_1(S2,S3,COUP,M1,S1);
         split_routine = routine_c.split('\n')
         self.assertEqual(split_solution, split_routine)
         self.assertEqual(len(split_routine), len(split_solution))
+
+    def test_F77writer_feynman(self):
+        """ test that python writer works """
+        
+        aloha.unitary_gauge = False
+        solution = """ subroutine FFV1_3(F1, F2, COUP, M3, W3, V3)
+implicit none 
+double complex F1(*)
+double complex F2(*)
+double complex V3(*)
+double complex COUP
+double complex denom
+double precision M3, W3
+double precision P3(0:3)
+
+V3(5)= -F1(5)+F2(5)
+V3(6)= -F1(6)+F2(6)
+P3(0) = - dble(V3(5))
+P3(1) = - dble(V3(6))
+P3(2) = - dimag(V3(6))
+P3(3) = - dimag(V3(5))
+
+denom =1d0/(( (M3*( -M3+(0, 1)*W3))+( (P3(0)**2)-(P3(1)**2)-(P3(2)**2)-(P3(3)**2))))
+V3(1)= COUP*denom*( (0, -1)*(F2(3)*F1(1))+(0, -1)*(F2(4)*F1(2))+(0, -1)*(F2(1)*F1(3))+(0, -1)*(F2(2)*F1(4)))
+V3(2)= COUP*denom*( (0, 1)*(F2(4)*F1(1))+(0, 1)*(F2(3)*F1(2))+(0, -1)*(F2(2)*F1(3))+(0, -1)*(F2(1)*F1(4)))
+V3(3)= COUP*denom*( -(F2(4)*F1(1))+(F2(3)*F1(2))+(F2(2)*F1(3))-(F2(1)*F1(4)))
+V3(4)= COUP*denom*( (0, 1)*(F2(3)*F1(1))+(0, -1)*(F2(4)*F1(2))+(0, -1)*(F2(1)*F1(3))+(0, 1)*(F2(2)*F1(4)))
+end
+
+
+"""
+        SSS = UFOLorentz(name = 'FFV1',
+                 spins = [ 2, 2, 3 ],
+                 structure = 'Gamma(3,2,1)')        
+        builder = create_aloha.AbstractRoutineBuilder(SSS)
+        amp = builder.compute_routine(3)
+        
+        routine = amp.write(output_dir=None, language='Fortran')
+     
+        split_solution = solution.split('\n')
+        split_routine = routine.split('\n')
+        self.assertEqual(split_solution, split_routine)
+        self.assertEqual(len(split_routine), len(split_solution))
+
 
 
 
