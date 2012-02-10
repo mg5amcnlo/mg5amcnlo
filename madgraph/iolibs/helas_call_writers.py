@@ -1101,14 +1101,7 @@ class CPPUFOHelasCallWriter(UFOHelasCallWriter):
                                      ((wf.get('width') == 'ZERO' or wf.get('mass') == 'ZERO') 
                                    and  wf.get('mass') or 'CMASS_%s' % wf.get('mass')),
                                      wf.get('number')-1))
-                    call_function = lambda wf: call % \
-                                ((wf.get('number')-1,) + \
-                                 tuple([mother.get('number')-1 for mother in \
-                                        wf.get('mothers')]) + \
-                                 (','.join(wf.get_with_flow('coupling')),
-                                  ((wf.get('width') == 'ZERO' or wf.get('mass') == 'ZERO') 
-                                   and  wf.get('mass') or 'CMASS_%s' % wf.get('mass'))))               
-                
+                             
                 else:
                     call = call + "pars->%s, pars->%s, w[%d]);"
                     #CALL L_4_011(W(1,%d),W(1,%d),%s,%s, %s, W(1,%d))

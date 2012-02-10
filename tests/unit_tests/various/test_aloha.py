@@ -19,6 +19,8 @@ from __future__ import division
 import math
 import os
 import time
+
+import aloha
 import aloha.aloha_object as aloha_obj
 import aloha.aloha_lib as aloha_lib
 import aloha.create_aloha as create_aloha
@@ -3522,6 +3524,8 @@ class TestAlohaWriter(unittest.TestCase):
     """ simple unittest of the writer more test are in test_export_v4
     and test_export_pythia"""
     
+    def tearDown(self):
+        aloha.complex_mass = False
     
     def old_test_reorder_call_listFFVV(self):
         
@@ -3695,6 +3699,187 @@ def SSS1_3(S2, S3, COUP, M1, W1):
         self.assertEqual(split_solution, split_routine)
         self.assertEqual(len(split_routine), len(split_solution))
         
+
+    def test_pythonwriter_complex_mass_scheme(self):
+        """ test that python writer works """
+        
+        aloha.complex_mass = True
+        solution ="""import wavefunctions
+def SSS1_1(S2, S3, COUP, M1):
+    S1 = wavefunctions.WaveFunction(size=3)
+    S1[1] = S2[1]+S3[1]
+    S1[2] = S2[2]+S3[2]
+    P1 = [-complex(S1[1]).real, \\
+            - complex(S1[2]).real, \\
+            - complex(S1[2]).imag, \\
+            - complex(S1[1]).imag]
+    denom =1.0/(( (P1[0]**2)-(P1[1]**2)-(P1[2]**2)-(P1[3]**2)-(M1**2)))
+    S1[0]= COUP*denom*1j*(S3[0]*S2[0])
+    return S1
+    
+    
+def SSS1_2(S2, S3, COUP, M1):
+    return SSS1_1(S2,S3,COUP,M1)
+
+def SSS1_3(S2, S3, COUP, M1):
+    return SSS1_1(S2,S3,COUP,M1)
+
+"""
+        
+        SSS = UFOLorentz(name = 'SSS1',
+                 spins = [ 1, 1, 1 ],
+                 structure = '1')        
+        builder = create_aloha.AbstractRoutineBuilder(SSS)
+        amp = builder.compute_routine(1)
+        amp.add_symmetry(2)
+        amp.add_symmetry(3)
+        
+        routine = amp.write(output_dir=None, language='Python')
+        
+        split_solution = solution.split('\n')
+        split_routine = routine.split('\n')
+        self.assertEqual(split_solution, split_routine)
+        self.assertEqual(len(split_routine), len(split_solution))
+
+    def test_F77writer_complex_mass_scheme(self):
+        """ test that python writer works """
+        
+        aloha.complex_mass = True
+        solution = """ subroutine SSS1_1(S2, S3, COUP, M1, S1)
+implicit none 
+double complex S1(*)
+double complex S2(*)
+double complex S3(*)
+double complex COUP
+double complex denom
+double complex M1
+double precision P1(0:3)
+double complex Complex_M
+
+S1(2)= S2(2)+S3(2)
+S1(3)= S2(3)+S3(3)
+P1(0) = - dble(S1(2))
+P1(1) = - dble(S1(3))
+P1(2) = - dimag(S1(3))
+P1(3) = - dimag(S1(2))
+
+denom =1d0/(( (P1(0)**2)-(P1(1)**2)-(P1(2)**2)-(P1(3)**2)-(M1**2)))
+S1(1)= COUP*denom*(0, 1)*(S3(1)*S2(1))
+end
+
+
+
+ subroutine SSS1_2(S2, S3, COUP, M1, S1)
+implicit none 
+double complex S1(*)
+double complex S2(*)
+double complex S3(*)
+double complex COUP
+double complex denom
+double complex M1
+double precision P1(0:3)
+double complex Complex_M
+call SSS1_1(S2,S3,COUP,M1,S1)
+end
+
+
+
+ subroutine SSS1_3(S2, S3, COUP, M1, S1)
+implicit none 
+double complex S1(*)
+double complex S2(*)
+double complex S3(*)
+double complex COUP
+double complex denom
+double complex M1
+double precision P1(0:3)
+double complex Complex_M
+call SSS1_1(S2,S3,COUP,M1,S1)
+end
+
+
+"""
+        SSS = UFOLorentz(name = 'SSS1',
+                 spins = [ 1, 1, 1 ],
+                 structure = '1')        
+        builder = create_aloha.AbstractRoutineBuilder(SSS)
+        amp = builder.compute_routine(1)
+        amp.add_symmetry(2)
+        amp.add_symmetry(3)
+        
+        routine = amp.write(output_dir=None, language='Fortran')
+        
+        split_solution = solution.split('\n')
+        split_routine = routine.split('\n')
+        self.assertEqual(split_solution, split_routine)
+        self.assertEqual(len(split_routine), len(split_solution))
+
+
+
+    def test_Cwriter_complex_mass_scheme(self):
+        """ test that python writer works """
+        
+        aloha.complex_mass = True
+        solution_h="""#ifndef SSS1_1_guard
+#define SSS1_1_guard
+#include <complex>
+using namespace std;
+
+void SSS1_1(complex<double> S2[],complex<double> S3[],complex<double> COUP, complex M1, complex<double>S1[]);
+
+void SSS1_2(complex<double> S2[],complex<double> S3[],complex<double> COUP, complex M1, complex<double>S1[]);
+
+void SSS1_3(complex<double> S2[],complex<double> S3[],complex<double> COUP, complex M1, complex<double>S1[]);
+
+#endif
+
+"""     
+        SSS = UFOLorentz(name = 'SSS1',
+                 spins = [ 1, 1, 1 ],
+                 structure = '1')        
+        builder = create_aloha.AbstractRoutineBuilder(SSS)
+        amp = builder.compute_routine(1)
+        amp.add_symmetry(2)
+        amp.add_symmetry(3)
+        
+        routine_h, routine_c = amp.write(output_dir=None, language='CPP')
+        
+        split_solution = solution_h.split('\n')
+        split_routine = routine_h.split('\n')
+        self.assertEqual(split_solution, split_routine)
+        self.assertEqual(len(split_routine), len(split_solution))
+
+        solution_c = """#include "SSS1_1.h"
+
+void SSS1_1(complex<double> S2[],complex<double> S3[],complex<double> COUP, complex M1, complex<double>S1[]){
+complex<double> denom;
+double P1[4];
+S1[1]= S2[1]+S3[1];
+S1[2]= S2[2]+S3[2];
+P1[0] = -S1[1].real();
+P1[1] = -S1[2].real();
+P1[2] = -S1[2].imag();
+P1[3] = -S1[1].imag();
+denom =1./(( (pow(P1[0],2))-(pow(P1[1],2))-(pow(P1[2],2))-(pow(P1[3],2))-(pow(M1,2))));
+S1[0]= COUP*denom*complex<double>(0., 1.)*(S3[0]*S2[0]);
+}
+
+void SSS1_2(complex<double> S2[],complex<double> S3[],complex<double> COUP, complex M1, complex<double>S1[]){
+SSS1_1(S2,S3,COUP,M1,S1);
+}
+
+void SSS1_3(complex<double> S2[],complex<double> S3[],complex<double> COUP, complex M1, complex<double>S1[]){
+SSS1_1(S2,S3,COUP,M1,S1);
+}
+
+"""
+        split_solution = solution_c.split('\n')
+        split_routine = routine_c.split('\n')
+        self.assertEqual(split_solution, split_routine)
+        self.assertEqual(len(split_routine), len(split_solution))
+
+
+
         
     def test_python_routine_are_exec(self):
         """ check if the python routine can be call """

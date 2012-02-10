@@ -28,6 +28,7 @@ import tests.unit_tests.iolibs.test_file_writers as test_file_writers
 
 import madgraph.interface.cmd_interface as Cmd
 import madgraph.interface.launch_ext_program as launch_ext
+import madgraph.iolibs.misc as misc
 _file_path = os.path.split(os.path.dirname(os.path.realpath(__file__)))[0]
 _pickle_path =os.path.join(_file_path, 'input_files')
 
@@ -598,6 +599,25 @@ class TestCmdShell2(unittest.TestCase,
                                                     'P1_udx_wp_wp_epve',
                                                     'madevent')))
         
+    def test_complex_mass_SA(self):
+        """ Test that the complex_mass compile in fortran """
+        
+        self.do('import model sm')
+        self.do('set complex_mass_scheme')
+        self.do('generate e+ e- > e+ e-')
+        self.do('output standalone %s ' % self.out_dir)
+        misc.compile(cwd=os.path.join(self.out_dir,'SubProcesses', 'P0_epem_epem'))
+        p = subprocess.Popen(['./check'], cwd=os.path.join(self.out_dir,'SubProcesses', 'P0_epem_epem'),
+                            stdout=subprocess.PIPE)
+        #output = p.stdout.read()
+        for line in p.stdout:
+            if 'Matrix element' in line:
+                value = line.split('=')[1]
+                value = value. split('GeV')[0]
+                value = eval(value)
+                self.assertAlmostEqual(value, 1.951829785476705e-2)
+                
+                
     def test_madevent_subproc_group(self):
         """Test MadEvent output using the SubProcess group functionality"""
 
