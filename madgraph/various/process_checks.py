@@ -368,7 +368,7 @@ def run_multiprocs_no_crossings(function, multiprocess, stored_quantities,
                               multiprocess.get('is_decay_chain'),
                 'overall_orders': \
                               multiprocess.get('overall_orders')})
-            if opt:
+            if opt is not None:
                 if isinstance(opt, dict):
                     try:
                         value = opt[process.base_string()]
