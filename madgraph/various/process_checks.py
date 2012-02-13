@@ -52,6 +52,13 @@ import aloha.template_files.wavefunctions as wavefunctions
 from aloha.template_files.wavefunctions import \
      ixxxxx, oxxxxx, vxxxxx, sxxxxx, txxxxx
 
+ADDED_GLOBAL = []
+
+def clean_added_globals(to_clean):
+    for value in list(to_clean):
+        del globals()[value]
+        to_clean.remove(value)
+
 #===============================================================================
 # Logger for process_checks
 #===============================================================================
@@ -184,8 +191,12 @@ class MatrixElementEvaluator(object):
 
 
         # Define the routines to be available globally
+        previous_globals = list(globals().keys())
         for routine in aloha_routines:
             exec(routine, globals())
+        for key in globals().keys():
+            if key not in previous_globals:
+                ADDED_GLOBAL.append(key)
 
         # Add the defined Aloha routines to used_lorentz
         self.store_aloha.extend(me_used_lorentz)
@@ -203,6 +214,7 @@ class MatrixElementEvaluator(object):
         if self.reuse:
             # Define the routines (globally)
             exec(matrix_methods[process.shell_string()], globals())
+            ADDED_GLOBAL.append('Matrix_%s'  % process.shell_string())
         else:
             # Define the routines (locally is enough)
             exec(matrix_methods[process.shell_string()])
@@ -875,6 +887,7 @@ def check_lorentz(processes, param_card = None, cmass_scheme=False):
         evaluator = MatrixElementEvaluator(model, param_card, 
                                            cmass_scheme= cmass_scheme,
                                            auth_skipping = False, reuse = True)
+
         if not cmass_scheme:
             # Set all widths to zero for lorentz check
             logger.info('Set All width to zero for non complex mass scheme cheks')
