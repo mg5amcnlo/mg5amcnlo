@@ -2173,8 +2173,9 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
         pydoc.pager(text)
         # Restore diagram logger
         diag_logger.setLevel(old_level)
-
-        return
+        
+        # clean the globals created.
+        process_checks.clean_added_globals(process_checks.ADDED_GLOBAL)
     
     # Generate a new amplitude
     def do_generate(self, line):
