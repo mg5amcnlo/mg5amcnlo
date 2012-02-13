@@ -2098,22 +2098,53 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
                                                         param_card = param_card,
                                                         quick = True)
             nb_processes += len(comparisons[0])
-            
-        if args[0] in  ['gauge', 'full']:
-            gauge_result = process_checks.check_gauge(myprocdef,
-                                                      param_card = param_card,
-                                                      cmass_scheme = mass_scheme)
-            nb_processes += len(gauge_result)
-            
+
         if args[0] in ['lorentz_invariance', 'full']:
             lorentz_result = process_checks.check_lorentz(myprocdef,
                                                       param_card = param_card,
                                                       cmass_scheme = mass_scheme)
             nb_processes += len(lorentz_result)
             
+        if args[0] in  ['gauge', 'full']:
+            gauge_result = process_checks.check_gauge(myprocdef,
+                                                      param_card = param_card,
+                                                      cmass_scheme = mass_scheme)
+            nb_processes += len(gauge_result)
+
+        if args[0] in  ['gauge', 'full'] and len(self._curr_model.get('gauge')) == 2:
+            
+            gauge = str(self._options['gauge'])
+            line = " ".join(args[1:])
+            myprocdef = self.extract_process(line)
+            model_name = self._curr_model['name']
+            if gauge == 'unitarity':
+                myprocdef_unit = myprocdef
+                self.do_set('gauge Feynman', log=False)
+                self.do_import('model %s' % model_name)
+                myprocdef_feyn = self.extract_process(line)
+            else:
+                myprocdef_feyn = myprocdef
+                self.do_set('gauge unitary', log=False)
+                self.do_import('model %s' % model_name)
+                myprocdef_unit = self.extract_process(line)            
+            
+            gauge_result_no_brs = process_checks.check_unitary_feynman(
+                                                myprocdef_unit, myprocdef_feyn,
+                                                param_card = param_card,
+                                                cmass_scheme = mass_scheme)
+            
+            # restore previous settings
+            self.do_set('gauge %s' % gauge, log=False)
+            self.do_import('model %s' % model_name)
+            
+            
+            print 'len', len(gauge_result_no_brs)  
+            nb_processes += len(gauge_result_no_brs)            
+            
+            
         cpu_time2 = time.time()
 
-        logger.info("%i processes checked in %0.3f s" \
+        logger.info("%i checked performed in %0.3f s" \
                     % (nb_processes,
                       (cpu_time2 - cpu_time1)))
         if mass_scheme:
@@ -2125,6 +2156,9 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
         if gauge_result:
             text += 'Gauge results:\n'
             text += process_checks.output_gauge(gauge_result) + '\n'
+        if gauge_result_no_brs:
+            text += 'Gauge results (switching between Unitary/Feynman):\n'
+            text += process_checks.output_unitary_feynman(gauge_result_no_brs) + '\n'
 
         if lorentz_result:
             text += 'Lorentz invariance results:\n'
@@ -2496,11 +2530,15 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
                 if self._options['gauge']=='unitary':
                     if 1 not in self._curr_model.get('gauge') :
                         logger.warning('Change the gauge to Feynman since the model does not allow unitary gauge') 
-                        self.do_set('gauge Feynman', log=False)                        
+                        self.do_set('gauge Feynman', log=False)
+                        self.do_import(line)
+                        return                        
                 else:
                     if 0 not in self._curr_model.get('gauge') :
                         logger.warning('Change the gauge to unitary since the model does not allow Feynman gauge')    
                         self.do_set('gauge unitary', log= False)
+                        self.do_import(line)
+                        return 
                 
                 self._curr_fortran_model = \
                       helas_call_writers.FortranUFOHelasCallWriter(\
@@ -3148,13 +3186,13 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
                 if 1 in self._curr_model.get('gauge'):		   
                     aloha.unitary_gauge = True
                 else:
-                    raise self.InvalidCmd('unitary gauge is not allowed for model %s' \
+                    logger.warning('Note that unitary gauge is not allowed for your current model %s' \
 		                                     % self._curr_model.get('name'))
             else:
                 if 0 in self._curr_model.get('gauge'):		   
                     aloha.unitary_gauge = False
                 else:
-		          raise self.InvalidCmd('Feynman gauge is not allowed for model %s' \
+                    logger.warning('Note that Feynman gauge is not allowed for your current model %s' \
 		                                     % self._curr_model.get('name'))
             self._options[args[0]] = args[1]
             #re-init all variable

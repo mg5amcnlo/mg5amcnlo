@@ -15,9 +15,8 @@ all_lorentz = lorentz.all_lorentz
 all_parameters = parameters.all_parameters
 all_orders = coupling_orders.all_orders
 all_functions = function_library.all_functions
-gauge=[0,1]  # allowed gauge 0: feynman 1: unitary
+gauge = [0,1]
 
-
-__author__ = "N. Christensen, C. Duhr"
-__version__ = "1.3"
-__email__ = "neil@pa.msu.edu, claude.duhr@uclouvain.be"
+__author__ = "N. Christensen, C. Duhr, B. Fuks"
+__version__ = "1.4.1"
+__email__ = "Emails"
