@@ -321,6 +321,9 @@ class LoopMatrixElementEvaluator(MatrixElementEvaluator):
         
         self.mg_root=mg_root
         self.cuttools_dir=cuttools_dir
+        # Set proliferate to true if you want to keep the produced directories
+        # and eventually reuse them if possible
+        self.proliferate=True
         
     #===============================================================================
     # Helper function evaluate_matrix_element for loops
@@ -348,59 +351,76 @@ class LoopMatrixElementEvaluator(MatrixElementEvaluator):
             self.stored_quantities['matrix_elements'] = []
 
         if (auth_skipping or self.auth_skipping) and matrix_element in \
-               self.stored_quantities['matrix_elements']:
+                [el[0] for el in self.stored_quantities['matrix_elements']]:
             # Exactly the same matrix element has been tested
             logger.info("Skipping %s, " % process.nice_string() + \
                         "identical matrix element already tested" \
                         )
             return None
 
-        self.stored_quantities['matrix_elements'].append(matrix_element)
-
-        # Set proliferate to true if you want to keep the produced directories
-        proliferate=True
         # Generate phase space point to use
         if not p:
             p, w_rambo = self.get_momenta(process)
         
-        export_dir=os.path.join(self.mg_root,'TMP_DIR_FOR_THE_CHECK_CMD')
-        if os.path.isdir(export_dir):
-            if not proliferate:
-                raise InvalidCmd("The directory %s already exist. Please remove it."%str(export_dir))
-            else:
-                id=1
-                while os.path.isdir(os.path.join(self.mg_root,\
-                                    'TMP_DIR_FOR_THE_CHECK_CMD_%i'%id)):
-                    id+=1
-                export_dir=os.path.join(self.mg_root,'TMP_DIR_FOR_THE_CHECK_CMD_%i'%id)
-        
-        # I do the import here because there is some cyclyc import of export_v4
-        # otherwise
-        import madgraph.loop.loop_exporters as loop_exporters
-        from tests.parallel_tests.loop_me_comparator import LoopMG5Runner
-        FortranExporter = loop_exporters.LoopProcessExporterFortranSA(\
-                        self.mg_root, export_dir, True,\
-                        os.path.join(self.mg_root, 'loop_material'),\
-                        self.cuttools_dir)
-        FortranModel = helas_call_writers.FortranUFOHelasCallWriter(model)
-        FortranExporter.copy_v4template(modelname=model.get('name'))
-        FortranExporter.generate_subprocess_directory_v4(matrix_element, FortranModel)
-        wanted_lorentz = list(set(matrix_element.get_used_lorentz()))
-        wanted_couplings = list(set([c for l in matrix_element.get_used_couplings() \
-                                    for c in l]))
-        FortranExporter.convert_model_to_mg4(model,wanted_lorentz,wanted_couplings)
-        FortranExporter.finalize_v4_directory(helas_objects.HelasMatrixElementList([\
-                                matrix_element]),"",False,False,'gfortran')
+        if matrix_element in \
+                    [el[0] for el in self.stored_quantities['matrix_elements']]:  
+            export_dir=self.stored_quantities['matrix_elements'][\
+                [el[0] for el in self.stored_quantities['matrix_elements']\
+                 ].index(matrix_element)][1]
+        else:        
+            export_dir=os.path.join(self.mg_root,'TMP_DIR_FOR_THE_CHECK_CMD')
+            if os.path.isdir(export_dir):
+                if not self.proliferate:
+                    raise InvalidCmd("The directory %s already exist. Please remove it."%str(export_dir))
+                else:
+                    id=1
+                    while os.path.isdir(os.path.join(self.mg_root,\
+                                        'TMP_DIR_FOR_THE_CHECK_CMD_%i'%id)):
+                        id+=1
+                    export_dir=os.path.join(self.mg_root,'TMP_DIR_FOR_THE_CHECK_CMD_%i'%id)
+            
+            if self.proliferate:
+                self.stored_quantities['matrix_elements'].append(\
+                                                    (matrix_element,export_dir))
 
+            # I do the import here because there is some cyclyc import of export_v4
+            # otherwise
+            import madgraph.loop.loop_exporters as loop_exporters
+            FortranExporter = loop_exporters.LoopProcessExporterFortranSA(\
+                            self.mg_root, export_dir, True,\
+                            os.path.join(self.mg_root, 'loop_material'),\
+                            self.cuttools_dir)
+            FortranModel = helas_call_writers.FortranUFOHelasCallWriter(model)
+            FortranExporter.copy_v4template(modelname=model.get('name'))
+            FortranExporter.generate_subprocess_directory_v4(matrix_element, FortranModel)
+            wanted_lorentz = list(set(matrix_element.get_used_lorentz()))
+            wanted_couplings = list(set([c for l in matrix_element.get_used_couplings() \
+                                        for c in l]))
+            FortranExporter.convert_model_to_mg4(model,wanted_lorentz,wanted_couplings)
+            FortranExporter.finalize_v4_directory(helas_objects.HelasMatrixElementList([\
+                                    matrix_element]),"",False,False,'gfortran')
+
+        # Same comment as above for the import of LoopMG5Runner
+        from tests.parallel_tests.loop_me_comparator import LoopMG5Runner
         LoopMG5Runner.fix_PSPoint_in_check(export_dir)
         if gauge_check:
-            self.setup_ward_check(export_dir)
+            file_path, orig_file_content, new_file_content = \
+                                            self.setup_ward_check(export_dir)
+            file = open(file_path,'w')
+            file.write(new_file_content)
+            file.close()
         
         finite_m2 = LoopMG5Runner.get_me_value(process.shell_string_v4(), 0,\
                                                export_dir, p,verbose=False)[0][0]
-                                         
+        
+        # Restore the original loop_matrix.f code so that it could be reused
+        if gauge_check:
+            file = open(file_path,'w')
+            file.write(orig_file_content)
+            file.close()
+    
         # Now erase the output directory
-        if not proliferate:
+        if not self.proliferate:
             shutil.rmtree(export_dir)
         
         # Evaluate the matrix element for the momenta p
@@ -434,12 +454,14 @@ class LoopMatrixElementEvaluator(MatrixElementEvaluator):
         file = open(os.path.join(dir_name,helas_file_name), 'r')
         
         helas_calls_out=""
+        original_file=""
         gaugeVectorRegExp=re.compile(\
          r"CALL VXXXXX\(P\(0,(?P<p_id>\d+)\),(DCMPLX\()?ZERO(\))?,NHEL\(\d+\),[\+\-]1\*IC\(\d+\),W\(1,(?P<wf_id>\d+)\)\)")
         foundGauge=False
         # Now we modify the first massless gauge vector wavefunction
         for line in file:
             helas_calls_out+=line
+            original_file+=line
             if line.find("INCLUDE 'coupl.inc'")!=-1:
                 helas_calls_out+="      INTEGER WARDINT\n"
             if not foundGauge:
@@ -452,9 +474,7 @@ class LoopMatrixElementEvaluator(MatrixElementEvaluator):
                     helas_calls_out+="      ENDDO\n"
         file.close()
         
-        file = open(os.path.join(dir_name,helas_file_name),'w')
-        file.write(helas_calls_out)
-        file.close()
+        return os.path.join(dir_name,helas_file_name), original_file, helas_calls_out
 
 #===============================================================================
 # Global helper function run_multiprocs
@@ -522,6 +542,7 @@ def run_multiprocs_no_crossings(function, multiprocess, stored_quantities,
 #===============================================================================
 # Helper function check_already_checked
 #===============================================================================
+
 def check_already_checked(is_ids, fs_ids, sorted_ids, process, model,
                           id_anti_id_dict = {}):
     """Check if process already checked, if so return True, otherwise add
@@ -551,6 +572,7 @@ def check_already_checked(is_ids, fs_ids, sorted_ids, process, model,
 #===============================================================================
 # check_processes
 #===============================================================================
+
 def check_processes(processes, param_card = None, quick = [],
                     mg_root="",cuttools=""):
     """Check processes by generating them with all possible orderings
@@ -749,6 +771,13 @@ def check_process(process, evaluator, quick):
             "difference": diff,
             "passed": passed}
 
+def clean_up(mg_root):
+    """Clean-up the possible left-over outputs from 'evaluate_matrix element' of
+    the LoopMatrixEvaluator (when its argument proliferate is set to true). """
+
+    directories = glob.glob(os.path.join(mg_root, 'TMP_DIR_FOR_THE_CHECK_CMD*'))
+    for dir in directories:
+        shutil.rmtree(dir)
 
 def output_comparisons(comparison_results):
     """Present the results of a comparison in a nice list format
