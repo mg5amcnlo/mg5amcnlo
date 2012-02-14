@@ -481,8 +481,6 @@ V_GGZ = CTVertex(name = 'V_GGZ',
               couplings = {(0,0,0):C.R2_GGZup,(0,0,1):C.R2_GGZdown},
               type = 'R2')
 
-
-
 V_GGZZ = CTVertex(name = 'V_GGZZ',
               particles = [ P.G, P.G, P.Z, P.Z ],
               color = [ 'Tr(1,2)' ],
@@ -497,14 +495,6 @@ V_GGAA = CTVertex(name = 'V_GGAA',
               lorentz = [ L.R2_GGVV ],
               loop_particles = [[[P.u],[P.c],[P.t]],[[P.d],[P.s],[P.b]]],
               couplings = {(0,0,0):C.R2_GGAAup,(0,0,1):C.R2_GGAAdown},
-              type = 'R2')
-
-V_GGZA = CTVertex(name = 'V_GGZA',
-              particles = [ P.G, P.G, P.Z, P.A ],
-              color = [ 'Tr(1,2)' ],
-              lorentz = [ L.R2_GGVV ],
-              loop_particles = [[[P.u],[P.c],[P.t]],[[P.d],[P.s],[P.b]]],
-              couplings = {(0,0,0):C.R2_GGZAup,(0,0,1):C.R2_GGZAdown},
               type = 'R2')
 
 V_GGWW = CTVertex(name = 'V_GGWW',

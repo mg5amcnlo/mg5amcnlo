@@ -135,7 +135,7 @@ class LoopUFOImportTest(unittest.TestCase):
 #        self.imported_loopmodel = models.import_full_model(os.path.join(\
 #            _input_file_path,'loop_ToyModel'))
         self.imported_loopmodel = models.import_full_model(os.path.join(\
-            _input_file_path,'LoopModelTest'))
+            _input_file_path,'LoopSMTest'))
         self.imported_loopmodel.actualize_dictionaries()
         self.hardcoded_loopmodel.actualize_dictionaries()
     

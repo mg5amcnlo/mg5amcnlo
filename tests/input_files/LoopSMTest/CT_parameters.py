@@ -106,14 +106,14 @@ tMass_UV = CTParameter(name = 'tMass_UV',
 
 UV_yuk_b = CTParameter(name = 'UV_yuk_b',
                        type = 'real',
-                       value = {-1:'-(1.0/2.0)*((G**2)/(16.0*cmath.pi**2))*3.0*CF*2.0',
-                                 0:'-(1.0/2.0)*((G**2)/(16.0*cmath.pi**2))*CF*(3.0*cmath.log(MU_R**2/MB**2)+4.0)*2.0'
+                       value = {-1:'-((G**2)/(16.0*cmath.pi**2))*3.0*CF*2.0',
+                                 0:'-((G**2)/(16.0*cmath.pi**2))*3.0*CF*(3.0*cmath.log(MU_R**2/MB**2)+4.0)*2.0'
                                },
                        texname = '\delta y_b')
 
 UV_yuk_t = CTParameter(name = 'UV_yuk_t',
                        type = 'real',
-                       value = {-1:'-(1.0/2.0)*((G**2)/(16.0*cmath.pi**2))*3.0*CF*2.0',
-                                 0:'-(1.0/2.0)*((G**2)/(16.0*cmath.pi**2))*CF*(3.0*cmath.log(MU_R**2/MT**2)+4.0)*2.0'
+                       value = {-1:'-((G**2)/(16.0*cmath.pi**2))*3.0*CF*2.0',
+                                 0:'-((G**2)/(16.0*cmath.pi**2))*3.0*CF*(3.0*cmath.log(MU_R**2/MT**2)+4.0)*2.0'
                                },
                        texname = '\delta y_t')

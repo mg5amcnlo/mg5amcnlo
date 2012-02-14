@@ -457,13 +457,13 @@ VectorAUp = Parameter(name = 'VectorAUp',
               nature = 'internal',                      
               type = 'real',
               value = '(2*ee)/3.',
-              texname = 'VectorAUp')
+              texname = 'AxialAUp')
 
 VectorADown = Parameter(name = 'VectorADown',
               nature = 'internal',                        
               type = 'real',
               value = '-(ee)/3.',
-              texname = 'VectorADown')
+              texname = 'AxialAdown')
 
 VectorWmDxU = Parameter(name = 'VectorWmDxU',
               nature = 'internal',                        

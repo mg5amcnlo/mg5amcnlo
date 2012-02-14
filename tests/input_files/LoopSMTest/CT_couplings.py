@@ -221,20 +221,17 @@ R2_ccH = Coupling(name = 'R2_ccH',
 # R2 interactions non proportional to the SM
 
 # R2 for the Higgs interactions
-# EDIT VH
-# There is a factor added here to the three couplings below without proper understanding of it
-# I have not investigate too much about it though.
-# END EDIT VH
+
 R2_GGHc = Coupling(name = 'R2_GGHc',
-                value = '4.0*(-((complex(0,1)*yc)/cmath.sqrt(2)))*(1.0/2.0)*(G**2/(8.0*cmath.pi**2))*MC',
+                value = '(-((complex(0,1)*yc)/cmath.sqrt(2)))*(1.0/2.0)*(G**2/(8.0*cmath.pi**2))*MC',
                 order = {'QCD':2,'QED':1})
 
 R2_GGHb = Coupling(name = 'R2_GGHb',
-                value = '4.0*(-((complex(0,1)*yb)/cmath.sqrt(2)))*(1.0/2.0)*(G**2/(8.0*cmath.pi**2))*MB',
+                value = '(-((complex(0,1)*yb)/cmath.sqrt(2)))*(1.0/2.0)*(G**2/(8.0*cmath.pi**2))*MB',
                 order = {'QCD':2,'QED':1})
 
 R2_GGHt = Coupling(name = 'R2_GGHt',
-                value = '4.0*(-((complex(0,1)*yt)/cmath.sqrt(2)))*(1.0/2.0)*(G**2/(8.0*cmath.pi**2))*MT',
+                value = '(-((complex(0,1)*yt)/cmath.sqrt(2)))*(1.0/2.0)*(G**2/(8.0*cmath.pi**2))*MT',
                 order = {'QCD':2,'QED':1})
 
 # R2 for the weak vector bosons interaction with gluons
@@ -247,69 +244,56 @@ R2_GGZdown = Coupling(name = 'R2_GGZdown',
                     value = {0:'AxialZDown*(1.0/2.0)*(G**2/(12.0*cmath.pi**2))'},
                     order = {'QCD':2,'QED':1})
 
-# EDIT VH
-# There is a factor four added here to all the GGVV R2 couplings below without proper understanding of it
-# I have not investigate too much about it though.
-# END EDIT VH
-
-R2_GGZAup = Coupling(name = 'R2_GGZAup',
-                    value = {0:'4.0*(-VectorAUp*VectorZUp)*(1.0/2.0)*(-(complex(0,1)*G**2)/(24.0*cmath.pi**2))'},
-                    order = {'QCD':2,'QED':2})
-
-R2_GGZAdown = Coupling(name = 'R2_GGZAdown',
-                    value = {0:'4.0*(-VectorADown*VectorZDown)*(1.0/2.0)*(-(complex(0,1)*G**2)/(24.0*cmath.pi**2))'},
-                    order = {'QCD':2,'QED':2})
-
 R2_GGZZdown = Coupling(name = 'R2_GGZZdown',
-                    value = {0:'4.0*(-VectorZDown*VectorZDown-AxialZDown*AxialZDown)*(1.0/2.0)*(-(complex(0,1)*G**2)/(24.0*cmath.pi**2))'},
+                    value = {0:'(-VectorZDown*VectorZDown-AxialZDown*AxialZDown)*(1.0/2.0)*(-(complex(0,1)*G**2)/(24.0*cmath.pi**2))'},
                     order = {'QCD':2,'QED':2})
 
 R2_GGZZup = Coupling(name = 'R2_GGZZup',
-                    value = {0:'4.0*(-VectorZUp*VectorZUp-AxialZUp*AxialZUp)*(1.0/2.0)*(-(complex(0,1)*G**2)/(24.0*cmath.pi**2))'},
+                    value = {0:'(-VectorZUp*VectorZUp-AxialZUp*AxialZUp)*(1.0/2.0)*(-(complex(0,1)*G**2)/(24.0*cmath.pi**2))'},
                     order = {'QCD':2,'QED':2})
 
 R2_GGAAdown = Coupling(name = 'R2_GGAAdown',
-                    value = {0:'4.0*(-VectorADown*VectorADown)*(1.0/2.0)*(-(complex(0,1)*G**2)/(24.0*cmath.pi**2))'},
+                    value = {0:'(-VectorADown*VectorADown)*(1.0/2.0)*(-(complex(0,1)*G**2)/(24.0*cmath.pi**2))'},
                     order = {'QCD':2,'QED':2})
 
 R2_GGAAup = Coupling(name = 'R2_GGAAup',
-                    value = {0:'4.0*(-VectorAUp*VectorAUp)*(1.0/2.0)*(-(complex(0,1)*G**2)/(24.0*cmath.pi**2))'},
+                    value = {0:'(-VectorAUp*VectorAUp)*(1.0/2.0)*(-(complex(0,1)*G**2)/(24.0*cmath.pi**2))'},
                     order = {'QCD':2,'QED':2})
 
 R2_GGWWud = Coupling(name = 'R2_GGWWud',
-                    value = {0:'4.0*(CKM11*complexconjugate(CKM11))*(-VectorWmDxU*VectorWpUxD-AxialWmDxU*AxialWpUxD)*(1.0/2.0)*(-(complex(0,1)*G**2)/(24.0*cmath.pi**2))'},
+                    value = {0:'(CKM11*complexconjugate(CKM11))*(-VectorWmDxU*VectorWpUxD-AxialWmDxU*AxialWpUxD)*(1.0/2.0)*(-(complex(0,1)*G**2)/(24.0*cmath.pi**2))'},
                     order = {'QCD':2,'QED':2})
 
 R2_GGWWus = Coupling(name = 'R2_GGWWus',
-                    value = {0:'4.0*(CKM12*complexconjugate(CKM12))*(-VectorWmDxU*VectorWpUxD-AxialWmDxU*AxialWpUxD)*(1.0/2.0)*(-(complex(0,1)*G**2)/(24.0*cmath.pi**2))'},
+                    value = {0:'(CKM12*complexconjugate(CKM12))*(-VectorWmDxU*VectorWpUxD-AxialWmDxU*AxialWpUxD)*(1.0/2.0)*(-(complex(0,1)*G**2)/(24.0*cmath.pi**2))'},
                     order = {'QCD':2,'QED':2})
 
 R2_GGWWub = Coupling(name = 'R2_GGWWub',
-                    value = {0:'4.0*(CKM13*complexconjugate(CKM13))*(-VectorWmDxU*VectorWpUxD-AxialWmDxU*AxialWpUxD)*(1.0/2.0)*(-(complex(0,1)*G**2)/(24.0*cmath.pi**2))'},
+                    value = {0:'(CKM13*complexconjugate(CKM13))*(-VectorWmDxU*VectorWpUxD-AxialWmDxU*AxialWpUxD)*(1.0/2.0)*(-(complex(0,1)*G**2)/(24.0*cmath.pi**2))'},
                     order = {'QCD':2,'QED':2})
 
 R2_GGWWcd = Coupling(name = 'R2_GGWWcd',
-                    value = {0:'4.0*(CKM21*complexconjugate(CKM21))*(-VectorWmDxU*VectorWpUxD-AxialWmDxU*AxialWpUxD)*(1.0/2.0)*(-(complex(0,1)*G**2)/(24.0*cmath.pi**2))'},
+                    value = {0:'(CKM21*complexconjugate(CKM21))*(-VectorWmDxU*VectorWpUxD-AxialWmDxU*AxialWpUxD)*(1.0/2.0)*(-(complex(0,1)*G**2)/(24.0*cmath.pi**2))'},
                     order = {'QCD':2,'QED':2})
 
 R2_GGWWcs = Coupling(name = 'R2_GGWWcs',
-                    value = {0:'4.0*(CKM22*complexconjugate(CKM22))*(-VectorWmDxU*VectorWpUxD-AxialWmDxU*AxialWpUxD)*(1.0/2.0)*(-(complex(0,1)*G**2)/(24.0*cmath.pi**2))'},
+                    value = {0:'(CKM22*complexconjugate(CKM22))*(-VectorWmDxU*VectorWpUxD-AxialWmDxU*AxialWpUxD)*(1.0/2.0)*(-(complex(0,1)*G**2)/(24.0*cmath.pi**2))'},
                     order = {'QCD':2,'QED':2})
 
 R2_GGWWcb = Coupling(name = 'R2_GGWWcb',
-                    value = {0:'4.0*(CKM23*complexconjugate(CKM23))*(-VectorWmDxU*VectorWpUxD-AxialWmDxU*AxialWpUxD)*(1.0/2.0)*(-(complex(0,1)*G**2)/(24.0*cmath.pi**2))'},
+                    value = {0:'(CKM23*complexconjugate(CKM23))*(-VectorWmDxU*VectorWpUxD-AxialWmDxU*AxialWpUxD)*(1.0/2.0)*(-(complex(0,1)*G**2)/(24.0*cmath.pi**2))'},
                     order = {'QCD':2,'QED':2})
 
 R2_GGWWtd = Coupling(name = 'R2_GGWWtd',
-                    value = {0:'4.0*(CKM31*complexconjugate(CKM31))*(-VectorWmDxU*VectorWpUxD-AxialWmDxU*AxialWpUxD)*(1.0/2.0)*(-(complex(0,1)*G**2)/(24.0*cmath.pi**2))'},
+                    value = {0:'(CKM31*complexconjugate(CKM31))*(-VectorWmDxU*VectorWpUxD-AxialWmDxU*AxialWpUxD)*(1.0/2.0)*(-(complex(0,1)*G**2)/(24.0*cmath.pi**2))'},
                     order = {'QCD':2,'QED':2})
 
 R2_GGWWts = Coupling(name = 'R2_GGWWts',
-                    value = {0:'4.0*(CKM32*complexconjugate(CKM32))*(-VectorWmDxU*VectorWpUxD-AxialWmDxU*AxialWpUxD)*(1.0/2.0)*(-(complex(0,1)*G**2)/(24.0*cmath.pi**2))'},
+                    value = {0:'(CKM32*complexconjugate(CKM32))*(-VectorWmDxU*VectorWpUxD-AxialWmDxU*AxialWpUxD)*(1.0/2.0)*(-(complex(0,1)*G**2)/(24.0*cmath.pi**2))'},
                     order = {'QCD':2,'QED':2})
 
 R2_GGWWtb = Coupling(name = 'R2_GGWWtb',
-                    value = {0:'4.0*(CKM33*complexconjugate(CKM33))*(-VectorWmDxU*VectorWpUxD-AxialWmDxU*AxialWpUxD)*(1.0/2.0)*(-(complex(0,1)*G**2)/(24.0*cmath.pi**2))'},
+                    value = {0:'(CKM33*complexconjugate(CKM33))*(-VectorWmDxU*VectorWpUxD-AxialWmDxU*AxialWpUxD)*(1.0/2.0)*(-(complex(0,1)*G**2)/(24.0*cmath.pi**2))'},
                     order = {'QCD':2,'QED':2})
 
 R2_GGHHc = Coupling(name = 'R2_GGHHc',
@@ -324,20 +308,12 @@ R2_GGHHt = Coupling(name = 'R2_GGHHt',
                     value = {0:'(-yt**2/2.0)*(1.0/2.0)*((complex(0,1)*G**2)/(8.0*cmath.pi**2))'},
                     order = {'QCD':2,'QED':2})
 
-# EDIT VH
-# There is a minus sign added here to the coupling below without proper understanding of it
-# I have not investigate too much about it though.
-# END EDIT VH
 R2_GGGZvecUp = Coupling(name = 'R2_GGGZvecUp',
-                        value = {0:'complex(0,1)*VectorZUp*(-1.0/2.0)*(-G**3/(24.0*cmath.pi**2))'},
+                        value = {0:'complex(0,1)*VectorZUp*(1.0/2.0)*(-G**3/(24.0*cmath.pi**2))'},
                         order = {'QCD':3,'QED':1})
 
-# EDIT VH
-# There is a minus sign added here to the coupling below without proper understanding of it
-# I have not investigate too much about it though.
-# END EDIT VH
 R2_GGGZvecDown = Coupling(name = 'R2_GGGZvecDown',
-                        value = {0:'complex(0,1)*VectorZDown*(-1.0/2.0)*(-G**3/(24.0*cmath.pi**2))'},
+                        value = {0:'complex(0,1)*VectorZDown*(1.0/2.0)*(-G**3/(24.0*cmath.pi**2))'},
                         order = {'QCD':3,'QED':1})
 
 R2_GGGZaxialUp = Coupling(name = 'R2_GGGZaxialUp',
@@ -348,19 +324,12 @@ R2_GGGZaxialDown = Coupling(name = 'R2_GGGZaxialDown',
                         value = {0:'complex(0,1)*AxialZDown*(9.0/2.0)*(-G**3/(24.0*cmath.pi**2))'},
                         order = {'QCD':3,'QED':1})
 
-# EDIT VH
-# There is a minus signe added here to the coupling below without proper understanding of it
-# I have not investigate too much about it though.
-# END EDIT VH
 R2_GGGAvecUp = Coupling(name = 'R2_GGGAvecUp',
-                        value = {0:'complex(0,1)*VectorAUp*(-1.0/2.0)*(-G**3/(24.0*cmath.pi**2))'},
+                        value = {0:'complex(0,1)*VectorAUp*(1.0/2.0)*(-G**3/(24.0*cmath.pi**2))'},
                         order = {'QCD':3,'QED':1})
-# EDIT VH
-# There is a minus signe added here to the coupling below without proper understanding of it
-# I have not investigate too much about it though.
-# END EDIT VH
+
 R2_GGGAvecDown = Coupling(name = 'R2_GGGAvecDown',
-                        value = {0:'complex(0,1)*VectorADown*(-1.0/2.0)*(-G**3/(24.0*cmath.pi**2))'},
+                        value = {0:'complex(0,1)*VectorADown*(1.0/2.0)*(-G**3/(24.0*cmath.pi**2))'},
                         order = {'QCD':3,'QED':1})
 
 ################
@@ -433,8 +402,8 @@ UV_tMass = Coupling(name = 'UV_tMass',
 
 UV_Htt = Coupling(name = 'UV_Htt',
                  value = '-((complex(0,1)*yt)/cmath.sqrt(2))*UV_yuk_t',
-                 order = {'QED':1,'QCD':2})
+                 order = {'QED':1})
 
 UV_Hbb = Coupling(name = 'UV_Hbb',
                  value = '-((complex(0,1)*yb)/cmath.sqrt(2))*UV_yuk_b',
-                 order = {'QED':1,'QCD':2})
+                 order = {'QED':1})
