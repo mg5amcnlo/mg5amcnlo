@@ -618,7 +618,7 @@ class OneTagResults(dict):
         
         id = '%s_%s_%s_%s' % (self['run_name'],self['tag'], level, name)
         
-        return " <a  id='%(id)s' href='%(link)s' onClick=\"check_link('%(link)s.gz','%(link)s','%(id)s')\">%(name)s</a>" \
+        return " <a  id='%(id)s' href='%(link)s.gz' onClick=\"check_link('%(link)s.gz','%(link)s','%(id)s')\">%(name)s</a>" \
               % {'link': link, 'id': id, 'name':name}
     
     def double_link(self, link1, link2, name, id):
