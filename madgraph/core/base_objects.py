@@ -225,9 +225,8 @@ class Particle(PhysicsObject):
         """Filter for valid particle property values."""
 
         if name in ['name', 'antiname']:
-            # Must start with a letter, followed by letters,  digits,
-            # - and + only
-            p = re.compile('\A[a-zA-Z]+[\w]*[\-\+]*~?\Z')
+            # Forbid special character but +-~_
+            p=re.compile('''^[\w\-\+~_]+$''')
             if not p.match(value):
                 raise self.PhysicsObjectError, \
                         "%s is not a valid particle name" % value
@@ -959,6 +958,11 @@ class Model(PhysicsObject):
                     part.set('antiname', default[pdg])
                     if antipart:
                         antipart.set('antiname', default[pdg])
+
+    def get_first_non_pdg(self):
+        """Return the first positive number that is not a valid PDG code"""
+        return [c for c in range(1, len(self.get('particles')) + 1) if \
+                c not in self.get('particle_dict').keys()][0]
                 
     def write_param_card(self):
         """Write out the param_card, and return as string."""

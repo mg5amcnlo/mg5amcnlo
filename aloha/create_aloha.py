@@ -57,6 +57,8 @@ class AbstractRoutine(object):
         self.infostr = infostr
         self.symmetries = []
         self.combined = []
+        self.tag = []
+
         
     def add_symmetry(self, outgoing):
         """ add an outgoing """
@@ -151,13 +153,15 @@ class AbstractRoutineBuilder(object):
         if self.routine_kernel is None:
             self.kernel_tag = set()
             self.routine_kernel = eval(self.lorentz_expr)
-           
+        
+        # We need to compute C Gamma^T C^-1 = C_ab G_cb (-1) C_cd 
+        #                  = C_ac G_bc (-1) C_bd = C_ac G_bc C_db
         self.routine_kernel = \
              C(new_id, old_id + 1) * self.routine_kernel * C(new_id + 1, old_id)
-        self.name += 'C'
 
-        if pair:
-            self.name += str(pair)
+#        self.name += 'C'
+#        if pair:
+#            self.name += str(pair)
         self.conjg.append(pair)
 
     
@@ -166,9 +170,12 @@ class AbstractRoutineBuilder(object):
         """ define a simple output for this AbstractRoutine """
     
         infostr = str(self.lorentz_expr)        
-        return AbstractRoutine(self.expr, self.outgoing, self.spins, self.name, \
+        output = AbstractRoutine(self.expr, self.outgoing, self.spins, self.name, \
                                                                         infostr)
-        
+
+        output.tag += ['C%s' % pair for pair in self.conjg]
+        return output
+
     def change_sign_for_outcoming_fermion(self):
         """change the sign of P for outcoming fermion in order to 
         correct the mismatch convention between HELAS and FR"""
@@ -183,8 +190,7 @@ class AbstractRoutineBuilder(object):
         momentum_pattern = re.compile(r'\bP\(([\+\-\d]+),(%s)\)' % '|'.join(flip_sign))
         lorentz_expr = momentum_pattern.sub(r'P(\1,\2, -1)', self.lorentz_expr)
         return lorentz_expr
-        
-        
+                
     def compute_aloha_high_kernel(self, mode, factorize=True):
         """compute the abstract routine associate to this mode """
         
@@ -495,9 +501,9 @@ class AbstractALOHAModel(dict):
 
     def compute_subset(self, data):
         """ create the requested ALOHA routine. 
-        data should be a list of tuple (lorentz, conjugate, outgoing)
-        conjugate should be a tuple with the pair number to conjugate.
-        outgoing a tuple of the requested routines."""
+        data should be a list of tuple (lorentz, tag, outgoing)
+        tag should be the list of special tag (like conjugation on pair)
+        to apply on the object """
         
         # Search identical particles in the vertices in order to avoid
         #to compute identical contribution
@@ -506,15 +512,15 @@ class AbstractALOHAModel(dict):
         # reorganize the data (in order to use optimization for a given lorentz
         #structure
         request = {}
-        for list_l_name, conjugate, outgoing in data:
+        for list_l_name, tag, outgoing in data:
             for l_name in list_l_name:
                 try:
-                    request[l_name][conjugate].append(outgoing)
+                    request[l_name][tag].append(outgoing)
                 except:
                     try:
-                        request[l_name][conjugate] = [outgoing]
+                        request[l_name][tag] = [outgoing]
                     except:
-                        request[l_name] = {conjugate: [outgoing]}
+                        request[l_name] = {tag: [outgoing]}
                         
         # Loop on the structure to build exactly what is request
         for l_name in request:
@@ -569,7 +575,8 @@ class AbstractALOHAModel(dict):
             else:
                 wavefunction = builder.compute_routine(outgoing)
                 #Store the information
-                self.set(name, outgoing, wavefunction)
+                realname = name + ''.join(wavefunction.tag)
+                self.set(realname, outgoing, wavefunction)
 
     def compute_aloha_without_kernel(self, builder, symmetry=None, routines=None):
         """define all the AbstractRoutine linked to a given lorentz structure

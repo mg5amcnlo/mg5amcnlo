@@ -14,7 +14,7 @@
 ################################################################################
 
 """Module for calculation of symmetries between diagrams, by
-evaluating amp2 values for permutations of modementa."""
+evaluating amp2 values for permutations of momenta."""
 
 from __future__ import division
 
@@ -65,7 +65,7 @@ logger = logging.getLogger('madgraph.various.diagram_symmetry')
 
 def find_symmetry(matrix_element):
     """Find symmetries between amplitudes by comparing diagram tags
-    for all the digrams in the process. Identical diagram tags
+    for all the diagrams in the process. Identical diagram tags
     correspond to different external particle permutations of the same
     diagram.
     
@@ -308,7 +308,7 @@ class IdentifySGConfigTag(diagram_generation.DiagramTag):
                  leg.get('number'))]
         
     @staticmethod
-    def vertex_id_from_vertex(vertex, last_vertex, model):
+    def vertex_id_from_vertex(vertex, last_vertex, model, ninitial):
         """Returns the info needed to identify matrix elements:
         interaction color, lorentz, coupling, and wavefunction
         spin, self_antipart, mass, width, color, decay and

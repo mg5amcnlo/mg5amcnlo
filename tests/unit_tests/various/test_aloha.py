@@ -2670,8 +2670,74 @@ class TestSomeObjectProperty(unittest.TestCase):
             self.assertEqual(zero.get_rep(ind), 0, 'not zero %s for %s' 
                              % (zero.get_rep(ind),ind ))
                     
-        
 
+    def testConjugateOperator(self):
+        Gamma = aloha_obj.Gamma
+        Gamma5 = aloha_obj.Gamma5
+        Sigma = aloha_obj.Sigma
+        ProjM = aloha_obj.ProjM
+        ProjP = aloha_obj.ProjP
+        Identity = aloha_obj.Identity
+        Metric = aloha_obj.Metric
+        P = aloha_obj.P
+        C = aloha_obj.C    
+        
+        # Check the sign given in Denner
+        
+        def conjugate(A):
+            # contract on 1,2 return on indices 51 52
+            return C(51, 2) * A * C(52,1)
+        
+        
+        # check C * 1 * C^ -1 = 1
+        A = Identity(1,2)
+        AC = conjugate(A)
+        A2 = Identity(51,52) 
+        zero = AC - A2 
+        zero = zero.simplify().expand().simplify()
+        for ind in zero.listindices():
+            self.assertEqual(zero.get_rep(ind), 0, 'not zero %s for %s' 
+                             % (zero.get_rep(ind),ind ))        
+        
+        # check C * Gamma_mu^T * C^ -1 = - Gamma_mu
+        A = Gamma('mu',1,2)
+        AC = conjugate(A)
+        A2 = -1 * Gamma('mu',51,52) 
+        zero = AC - A2 
+        zero = zero.simplify().expand().simplify()
+        for ind in zero.listindices():
+            self.assertEqual(zero.get_rep(ind), 0, 'not zero %s for %s' 
+                             % (zero.get_rep(ind),ind ))         
+        
+        # check C * (Gamma_mu * Gamma5)^T * C^ -1 =  Gamma_mu * Gamma5
+        A = Gamma('mu',1,21) * Gamma5(21,2)
+        AC = conjugate(A)
+        A2 = Gamma('mu',51,22) * Gamma5(22,52) 
+        zero = AC - A2 
+        zero = zero.simplify().expand().simplify()
+        for ind in zero.listindices():
+            self.assertEqual(zero.get_rep(ind), 0, 'not zero %s for %s' 
+                             % (zero.get_rep(ind),ind ))           
+
+        # check goldstino interaction
+        A = -(P(-1,3)*Gamma(-1,-2,1)*Gamma(3,2,-2)) + P(3,3)*Identity(2,1)
+        AC = conjugate(A)
+        A2 = -(P(-1,3)*Gamma(-1,-2,51)*Gamma(3,52,-2)) + P(3,3)*Identity(52,51) 
+        zero = AC + A2 
+        zero = zero.simplify().expand().simplify()
+        for ind in zero.listindices():
+            self.assertEqual(zero.get_rep(ind), 0, 'not zero %s for %s' 
+                             % (zero.get_rep(ind),ind ))         
+    
+        # check goldstino interaction
+        A = -(Gamma('nu',-2,1)*Gamma('mu',2,-2)) + Metric('mu','nu') * Identity(2,1)
+        AC = conjugate(A)
+        A2 = -(Gamma('nu',-2,51)*Gamma('mu',52,-2)) + Metric('mu','nu') * Identity(52,51) 
+        zero = AC + A2 
+        zero = zero.simplify().expand().simplify()
+        for ind in zero.listindices():
+            self.assertEqual(zero.get_rep(ind), 0, 'not zero %s for %s' 
+                             % (zero.get_rep(ind),ind ))    
     
     def testemptyisFalse(self):
 
@@ -3356,8 +3422,8 @@ C
       
         # Check expr are different
         self.assertNotEqual(str(amp.expr), str(conjg_amp.expr))
-        self.assertNotEqual(amp.name, conjg_amp.name)
-        
+        self.assertEqual(amp.name, conjg_amp.name)
+        self.assertEqual(amp.tag + ['C1'], conjg_amp.tag)
         
     def test_aloha_expr_FFV2C1(self):
         """Test analytical expression for fermion clash routine"""

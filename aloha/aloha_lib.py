@@ -1715,3 +1715,9 @@ class ConstantObject(LorentzObjectRepresentation):
     
     def __str__(self):
         return str(self.value)
+    
+
+
+
+
+

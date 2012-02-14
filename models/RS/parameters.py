@@ -1,6 +1,6 @@
-# This file was automatically created by FeynRules $Revision: 457 $
+# This file was automatically created by FeynRules $Revision: 634 $
 # Mathematica version: 7.0 for Mac OS X x86 (64-bit) (November 11, 2008)
-# Date: Wed 6 Apr 2011 11:50:59
+# Date: Tue 22 Nov 2011 16:45:55
 
 
 
@@ -9,6 +9,14 @@ from object_library import all_parameters, Parameter
 
 from function_library import complexconjugate, re, im, csc, sec, acsc, asec
 
+# This is a default parameter object representing 0.
+ZERO = Parameter(name = 'ZERO',
+                 nature = 'internal',
+                 type = 'real',
+                 value = '0.0',
+                 texname = '0')
+
+# User-defined parameters.
 cabi = Parameter(name = 'cabi',
                  nature = 'external',
                  type = 'real',
@@ -76,7 +84,7 @@ ymtau = Parameter(name = 'ymtau',
 LRS = Parameter(name = 'LRS',
                 nature = 'external',
                 type = 'real',
-                value = 4000,
+                value = 3000,
                 texname = '\\text{LRS}',
                 lhablock = 'FRBlock',
                 lhacode = [ 1 ])
@@ -124,7 +132,7 @@ MB = Parameter(name = 'MB',
 MZ = Parameter(name = 'MZ',
                nature = 'external',
                type = 'real',
-               value = 91.5445065,
+               value = 91.5445,
                texname = '\\text{MZ}',
                lhablock = 'MASS',
                lhacode = [ 23 ])
@@ -148,15 +156,15 @@ MH = Parameter(name = 'MH',
 MGr = Parameter(name = 'MGr',
                 nature = 'external',
                 type = 'real',
-                value = 500,
+                value = 1000,
                 texname = '\\text{MGr}',
                 lhablock = 'MASS',
-                lhacode = [ 9000006 ])
+                lhacode = [ 39 ])
 
 WT = Parameter(name = 'WT',
                nature = 'external',
                type = 'real',
-               value = 1.50833649,
+               value = 1.5101349,
                texname = '\\text{WT}',
                lhablock = 'DECAY',
                lhacode = [ 6 ])
@@ -184,6 +192,14 @@ WH = Parameter(name = 'WH',
                texname = '\\text{WH}',
                lhablock = 'DECAY',
                lhacode = [ 25 ])
+
+WGr = Parameter(name = 'WGr',
+                nature = 'external',
+                type = 'real',
+                value = 10.6689,
+                texname = '\\text{WGr}',
+                lhablock = 'DECAY',
+                lhacode = [ 39 ])
 
 aEW = Parameter(name = 'aEW',
                 nature = 'internal',

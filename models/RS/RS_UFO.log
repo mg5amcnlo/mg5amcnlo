@@ -1,13 +1,13 @@
-# This file was automatically created by FeynRules $Revision: 457 $
+# This file was automatically created by FeynRules $Revision: 634 $
 # Mathematica version: 7.0 for Mac OS X x86 (64-bit) (November 11, 2008)
-# Date: Wed 6 Apr 2011 11:49:56
+# Date: Tue 22 Nov 2011 16:44:16
 
 
 # 
 # This is the logfile for the model RS
 
 # Authors: Priscila de Aquino
-# Model version: 2.0
+# Model version: 2.1
 # Checking the Lagrangians
    * All Lagrangians are ok.
 #
@@ -22,7 +22,6 @@
    * Assigned PDG number 9000003 to particle ghWp
    * Assigned PDG number 9000004 to particle ghWm
    * Assigned PDG number 9000005 to particle ghG
-   * Assigned PDG number 9000006 to particle y
 
 
 # Compulsory PDG codes:
@@ -66,3 +65,9 @@
 
    * 117 couplings written.
    * couplings.py written.
+#
+# Coupling order definitions
+#
+
+   * 0 couplings orders written.
+   * coupling_orders.py written.
