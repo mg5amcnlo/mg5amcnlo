@@ -36,3 +36,13 @@ web_browser = None
 # Prefered PS viewer
 # If None: try to find one available on the system
 eps_viewer = None
+
+# lhapdf-config
+# If None: try to find one available on the system
+lhapdf = lhapdf-config
+
+# fastjet-config
+# If None: try to find one available on the system
+fastjet = fastjet-config
+
+

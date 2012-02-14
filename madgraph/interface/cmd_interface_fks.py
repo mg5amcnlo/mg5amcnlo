@@ -2751,6 +2751,29 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
                     else:
                         pythia8_dir = None
                 self.pythia8_path = pythia8_dir
+
+            if key == 'lhapdf' and self.configuration[key]:
+                if os.path.isfile(self.configuration['lhapdf']) or \
+                any([os.path.isfile(os.path.join(path, self.configuration['lhapdf'])) \
+                        for path in os.environ['PATH'].split(':')]):
+                    lhapdf_config = self.configuration['lhapdf']
+                else:
+                    lhapdf_config = None
+
+                logger.info('lhapdf-config: %s' % lhapdf_config)
+                self.lhapdf_config = lhapdf_config
+
+            if key == 'fastjet' and self.configuration[key]:
+                if os.path.isfile(self.configuration['fastjet']) or \
+                any([os.path.isfile(os.path.join(path, self.configuration['fastjet'])) \
+                        for path in os.environ['PATH'].split(':')]):
+                    fastjet_config = self.configuration['fastjet']
+                else:
+                    fastjet_config = None
+
+                logger.info('fastjet-config: %s' % fastjet_config)
+                self.fastjet_config = fastjet_config
+
   
             elif key not in ['text_editor','eps_viewer','web_browser']:
                 # Default: try to set parameter
@@ -3428,19 +3451,10 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
             # actually used in the wavefunctions and amplitudes in
             # these processes
             wanted_lorentz = self._curr_matrix_elements.get_used_lorentz()
-     #       print "LORENTZ ", wanted_lorentz
             wanted_couplings = self._curr_matrix_elements.get_used_couplings()
             self._curr_exporter.convert_model_to_mg4(self._curr_model,
                                            wanted_lorentz,
                                            wanted_couplings)
-#            if self._export_format == 'fks':
-#                print "FKS DIRS",self.fks_dirs
-#                for dir in self.fks_dirs:
-#                    print dir
-#                    os.system("cp %s %s "  % (\
-#                        os.path.join(self._export_dir, "SubProcesses/coupl.inc"), \
-#                        os.path.join(self._export_dir, "subProcesses/%s" % dir)\
-#                         ) )
                          
         if self._export_format == 'standalone_cpp':
             logger.info('Export UFO model to C++ format')
@@ -3462,6 +3476,17 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
                                            self.history,
                                            not nojpeg,
                                            online)
+
+        elif self._export_format in ['fksreal', 'fksborn']:
+            ## wrtie fj_lhapdf_opts file
+            fj_lhapdf_file = open(os.path.join(self._export_dir,'Source','fj_lhapdf_opts'),'w')
+            fj_lhapdf_lines = \
+                 ['fastjet_config=%s' % self.fastjet_config,
+                  'lhapdf_config=%s' % self.lhapdf_config]
+            text = '\n'.join(fj_lhapdf_lines) + '\n'
+            fj_lhapdf_file.write(text)
+            fj_lhapdf_file.close()
+
 
         elif self._export_format == 'fksreal':
             os.system('touch %s/done' % os.path.join(self._export_dir,
