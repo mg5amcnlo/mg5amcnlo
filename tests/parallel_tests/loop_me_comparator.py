@@ -117,14 +117,14 @@ class LoopMG5Runner(me_comparator.MG5Runner):
         os.remove(proc_card_location)
         if self.non_zero:
             if PSpoints==[]:
-                self.fix_energy_in_check(dir_name, energy)
+                LoopMG5Runner.fix_energy_in_check(dir_name, energy)
             else:
-                self.fix_PSPoint_in_check(dir_name)          
+                LoopMG5Runner.fix_PSPoint_in_check(dir_name)          
 
             # Get the ME value
             for i, proc in enumerate(proc_list):
-                value = self.get_me_value(proc, i, ([] if PSpoints==[] \
-                                                    else PSpoints[i]))
+                value = LoopMG5Runner.get_me_value(proc, i, os.path.join(self.mg5_path,\
+                    self.temp_dir_name), ([] if PSpoints==[] else PSpoints[i]))
                 self.res_list.append(value)
 
             return self.res_list
@@ -154,13 +154,13 @@ class LoopMG5Runner(me_comparator.MG5Runner):
                      os.path.join(self.mg5_path, self.temp_dir_name)
         return v5_string
 
-    def get_me_value(self, proc, proc_id, PSpoint=[]):
+    @staticmethod
+    def get_me_value(proc, proc_id, working_dir, PSpoint=[], verbose=True):
         """Compile and run ./check, then parse the output and return the result
-        for process with id = proc_id and PSpoint if specified."""
-
-        sys.stdout.write('.')
-        sys.stdout.flush()
-        working_dir = os.path.join(self.mg5_path, self.temp_dir_name)
+        for process with id = proc_id and PSpoint if specified."""  
+        if verbose:
+            sys.stdout.write('.')
+            sys.stdout.flush()
          
         shell_name = None
         directories = glob.glob(os.path.join(working_dir, 'SubProcesses',
@@ -173,7 +173,7 @@ class LoopMG5Runner(me_comparator.MG5Runner):
             logging.info("Directory hasn't been created for process %s" %proc)
             return ((0.0, 0.0, 0.0, 0.0, 0), [])
 
-        logging.info("Working on process %s in dir %s" % (proc, shell_name))
+        if verbose: logging.info("Working on process %s in dir %s" % (proc, shell_name))
         
         dir_name = os.path.join(working_dir, 'SubProcesses', shell_name)
         # Run make
@@ -201,7 +201,7 @@ class LoopMG5Runner(me_comparator.MG5Runner):
             output.read()
             output.close()
             if os.path.exists(os.path.join(dir_name,'result.dat')):
-                return self.parse_check_output(file(dir_name+'/result.dat'))  
+                return LoopMG5Runner.parse_check_output(file(dir_name+'/result.dat'))  
             else:
                 logging.warning("Error while looking for file %s"%str(os.path\
                                                   .join(dir_name,'result.dat')))
@@ -210,7 +210,8 @@ class LoopMG5Runner(me_comparator.MG5Runner):
             logging.warning("Error while executing ./check in %s" % shell_name)
             return ((0.0, 0.0, 0.0, 0.0, 0), [])
 
-    def parse_check_output(self, output):
+    @staticmethod
+    def parse_check_output(output):
         """Parse the output string and return a pair where first four values are 
         the finite, born, single and double pole of the ME and the fourth is the
         GeV exponent and the second value is a list of 4 momenta for all particles 
@@ -251,7 +252,8 @@ class LoopMG5Runner(me_comparator.MG5Runner):
         except:
             pass
 
-    def fix_PSPoint_in_check(self, dir_name):
+    @staticmethod
+    def fix_PSPoint_in_check(dir_name):
         """Set check_sa.f to be reading PS.input assuming a working dir dir_name"""
 
         file = open(os.path.join(dir_name, 'SubProcesses', 'check_sa.f'), 'r')
@@ -833,6 +835,12 @@ class GoSamRunner(me_comparator.MERunner):
                 # Irrespectively of what is the user-desired model, we use the sm
                 # here for now.
                 proc_card_out+="model=sm\n"
+            elif line.find("# abbrev.level=")==0:
+                proc_card_out+="abbrev.level = diagram\n"
+            elif line.find("# abbrev.limit=")==0:
+                proc_card_out+="abbrev.limit = 500\n"
+            elif line.find("# group=")==0:
+                proc_card_out+="group = False\n"
             elif line.find("# order=")==0:
                 # Please always put 'QCD' first in the list below
                 orders_considered=['QCD','QED']

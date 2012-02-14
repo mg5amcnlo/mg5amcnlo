@@ -1974,11 +1974,15 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
         if not myprocdef:
             raise self.InvalidCmd("Empty or wrong format process, please try again.")
 
-        # Disable diagram generation logger
-        diag_logger = logging.getLogger('madgraph.diagram_generation')
-        old_level = diag_logger.getEffectiveLevel()
-        diag_logger.setLevel(logging.WARNING)
-
+        # Disable some loggers
+        loggers = [logging.getLogger('madgraph.diagram_generation'),
+                   logging.getLogger('ALOHA'),
+                   logging.getLogger('madgraph.loop_exporter'),
+                   logging.getLogger('madgraph.export_v4')]
+        old_levels = [logger.getEffectiveLevel() for logger in loggers]
+        for logger in loggers:
+            logger.setLevel(logging.WARNING)
+        
         # run the check
         cpu_time1 = time.time()
         # Run matrix element generation check on processes
@@ -1990,18 +1994,24 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
         
         if args[0] in  ['permutation', 'full']:
             comparisons = process_checks.check_processes(myprocdef,
-                                                        param_card = param_card,
-                                                        quick = True)
+                                                param_card = param_card,
+                                                quick = True,
+                                                mg_root=self._mgme_dir,
+                                                cuttools=self._cuttools_dir)
             nb_processes += len(comparisons[0])
             
         if args[0] in  ['gauge', 'full']:
             gauge_result = process_checks.check_gauge(myprocdef,
-                                                      param_card = param_card)
+                                                      param_card = param_card,
+                                                      mg_root=self._mgme_dir,
+                                                      cuttools=self._cuttools_dir)
             nb_processes += len(gauge_result)
             
         if args[0] in ['lorentz_invariance', 'full']:
             lorentz_result = process_checks.check_lorentz(myprocdef,
-                                                      param_card = param_card)
+                                                      param_card = param_card,
+                                                      mg_root=self._mgme_dir,
+                                                      cuttools=self._cuttools_dir)
             nb_processes += len(lorentz_result)
             
         cpu_time2 = time.time()
@@ -2028,7 +2038,8 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
         logger.info(text)
         pydoc.pager(text)
         # Restore diagram logger
-        diag_logger.setLevel(old_level)
+        for i, logger in enumerate(loggers):
+            logger.setLevel(old_levels[i])
 
         return
     

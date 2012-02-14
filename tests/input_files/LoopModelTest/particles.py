@@ -8,6 +8,10 @@ from object_library import all_particles, Particle
 import parameters as Param
 import CT_parameters as CTParam
 
+# ======================================================================
+# QCD particles
+# ======================================================================
+
 d = Particle(pdg_code = 1,
              name = 'd',
              antiname = 'd~',
@@ -127,32 +131,180 @@ gh = Particle(pdg_code = 666,
 
 gh__tilde__ = gh.anti()
 
+# ======================================================================
+# Other particles 
+# ======================================================================
+
+ve = Particle(pdg_code = 12,
+              name = 've',
+              antiname = 've~',
+              spin = 2,
+              color = 1,
+              mass = Param.ZERO,
+              width = Param.ZERO,
+              texname = 've',
+              antitexname = 've',
+              charge = 0,
+              LeptonNumber = 1,
+              GhostNumber = 0)
+
+ve__tilde__ = ve.anti()
+
+vm = Particle(pdg_code = 14,
+              name = 'vm',
+              antiname = 'vm~',
+              spin = 2,
+              color = 1,
+              mass = Param.ZERO,
+              width = Param.ZERO,
+              texname = 'vm',
+              antitexname = 'vm',
+              charge = 0,
+              LeptonNumber = 1,
+              GhostNumber = 0)
+
+vm__tilde__ = vm.anti()
+
+vt = Particle(pdg_code = 16,
+              name = 'vt',
+              antiname = 'vt~',
+              spin = 2,
+              color = 1,
+              mass = Param.ZERO,
+              width = Param.ZERO,
+              texname = 'vt',
+              antitexname = 'vt',
+              charge = 0,
+              LeptonNumber = 1,
+              GhostNumber = 0)
+
+vt__tilde__ = vt.anti()
+
+A = Particle(pdg_code = 22,
+             name = 'A',
+             antiname = 'A',
+             spin = 3,
+             color = 1,
+             mass = Param.ZERO,
+             width = Param.ZERO,
+             texname = 'A',
+             antitexname = 'A',
+             charge = 0,
+             LeptonNumber = 0,
+             GhostNumber = 0)
+
+Z = Particle(pdg_code = 23,
+             name = 'Z',
+             antiname = 'Z',
+             spin = 3,
+             color = 1,
+             mass = Param.MZ,
+             width = Param.WZ,
+             texname = 'Z',
+             antitexname = 'Z',
+             charge = 0,
+             LeptonNumber = 0,
+             GhostNumber = 0)
+
+W__plus__ = Particle(pdg_code = 24,
+                     name = 'W+',
+                     antiname = 'W-',
+                     spin = 3,
+                     color = 1,
+                     mass = Param.MW,
+                     width = Param.WW,
+                     texname = 'W+',
+                     antitexname = 'W+',
+                     charge = 1,
+                     LeptonNumber = 0,
+                     GhostNumber = 0)
+
+W__minus__ = W__plus__.anti()
+
+H = Particle(pdg_code = 25,
+             name = 'H',
+             antiname = 'H',
+             spin = 1,
+             color = 1,
+             mass = Param.MH,
+             width = Param.WH,
+             texname = '\\phi',
+             antitexname = '\\phi',
+             charge = 0,
+             LeptonNumber = 0,
+             GhostNumber = 0)
+
+e__minus__ = Particle(pdg_code = 11,
+                      name = 'e-',
+                      antiname = 'e+',
+                      spin = 2,
+                      color = 1,
+                      mass = Param.Me,
+                      width = Param.ZERO,
+                      texname = 'e-',
+                      antitexname = 'e-',
+                      charge = -1,
+                      LeptonNumber = 1,
+                      GhostNumber = 0)
+
+e__plus__ = e__minus__.anti()
+
+m__minus__ = Particle(pdg_code = 13,
+                      name = 'm-',
+                      antiname = 'm+',
+                      spin = 2,
+                      color = 1,
+                      mass = Param.MM,
+                      width = Param.ZERO,
+                      texname = 'm-',
+                      antitexname = 'm-',
+                      charge = -1,
+                      LeptonNumber = 1,
+                      GhostNumber = 0)
+
+m__plus__ = m__minus__.anti()
+
+tt__minus__ = Particle(pdg_code = 15,
+                       name = 'tt-',
+                       antiname = 'tt+',
+                       spin = 2,
+                       color = 1,
+                       mass = Param.MTA,
+                       width = Param.WTau,
+                       texname = 'tt-',
+                       antitexname = 'tt-',
+                       charge = -1,
+                       LeptonNumber = 1,
+                       GhostNumber = 0)
+
+tt__plus__ = tt__minus__.anti()
+
+
 # Set counterterms values
 
 Param.MT.loop_particles= [[[t,G]]]  
-Param.MT.counterterm = {(1,0):CTParam.tMass_UV.value}          
+Param.MT.counterterm = {(1,0,0):CTParam.tMass_UV.value}          
 Param.MB.loop_particles= [[[b,G]]]
-Param.MB.counterterm = {(1,0):CTParam.bMass_UV.value}
+Param.MB.counterterm = {(1,0,0):CTParam.bMass_UV.value}
 Param.G.loop_particles = [[[u],[d],[c],[s]],[[b]],[[t]],[[G]]]
-Param.G.counterterm = {(1,0):CTParam.G_UVq.value,(1,1):CTParam.G_UVb.value,(1,2):CTParam.G_UVt.value,(1,3):CTParam.G_UVg.value}
-
+Param.G.counterterm = {(1,0,0):CTParam.G_UVq.value,(1,0,1):CTParam.G_UVb.value,(1,0,2):CTParam.G_UVt.value,(1,0,3):CTParam.G_UVg.value}
 
 # Wavefunction renormalization
 
 b.loop_particles = [[[b,G]]]
-b.counterterm = {(1,0):CTParam.bWcft_UV.value}
+b.counterterm = {(1,0,0):CTParam.bWcft_UV.value}
 
 t.loop_particles = [[[t,G]]]
-t.counterterm = {(1,0):CTParam.tWcft_UV.value}
+t.counterterm = {(1,0,0):CTParam.tWcft_UV.value}
 
 G.loop_particles = [[[b]],[[t]]]
-G.counterterm = {(1,0):CTParam.GWcft_UV_b.value,(1,1):CTParam.GWcft_UV_t.value}
+G.counterterm = {(1,0,0):CTParam.GWcft_UV_b.value,(1,0,1):CTParam.GWcft_UV_t.value}
 
 Param.MB.loop_particles= [[[b,G]]]
-Param.MB.counterterm = {(1,0):CTParam.bMass_UV.value}
+Param.MB.counterterm = {(1,0,0):CTParam.bMass_UV.value}
 
 Param.MT.loop_particles= [[[t,G]]]
-Param.MT.counterterm = {(1,0):CTParam.tMass_UV.value}
+Param.MT.counterterm = {(1,0,0):CTParam.tMass_UV.value}
 
 Param.G.loop_particles = [[[u],[d],[c],[s]],[[b]],[[t]],[[G]]],
-Param.G.counterterm = {(1,0):CTParam.G_UVq.value,(1,1):CTParam.G_UVb.value,(1,2):CTParam.G_UVt.value,(1,3):CTParam.G_UVg.value},
+Param.G.counterterm = {(1,0,0):CTParam.G_UVq.value,(1,0,1):CTParam.G_UVb.value,(1,0,2):CTParam.G_UVt.value,(1,0,3):CTParam.G_UVg.value},

@@ -228,8 +228,8 @@ class LoopAmplitude(diagram_generation.Amplitude):
         # Later we will check if the order deduced from the max order appearing in the born 
         # diagrams is a better upper bound.
         # Of course, if no hierarchy is defined we directly jump to the next step.
-        if not [1 for elem in self['process']['squared_orders'].items() if \
-                elem[0].upper()!='WEIGHTED'] and hierarchy and self['process']['has_born']:
+        if (not [1 for elem in self['process']['squared_orders'].items() if \
+                elem[0].upper()!='WEIGHTED']) and hierarchy and self['process']['has_born']:
 
             min_born_wgt=self['born_diagrams'].get_min_order('WEIGHTED')
             if 'WEIGHTED' not in [key.upper() for key in self['process']['squared_orders'].keys()]:
@@ -265,16 +265,16 @@ class LoopAmplitude(diagram_generation.Amplitude):
                         else:
                             self['process']['orders'][order]=int(trgt_wgt-2*min_pert)
 
-        # Now for the remaining orders for which the user has not set squared orders neither
-        # amplitude orders, then we use the max order encountered in the born (and add 2 if
-        # this is a perturbed order). It might be that this upper bound is better than the one
-        # guessed from the hierarchy
-        for order in self['process']['model']['coupling_orders']:
-            neworder=self['born_diagrams'].get_max_order(order)
-            if order in self['process']['perturbation_couplings']:
-                neworder+=2
-            if order not in self['process']['orders'].keys() or neworder<self['process']['orders'][order]:
-                self['process']['orders'][order]=neworder
+            # Now for the remaining orders for which the user has not set squared orders neither
+            # amplitude orders, then we use the max order encountered in the born (and add 2 if
+            # this is a perturbed order). It might be that this upper bound is better than the one
+            # guessed from the hierarchy
+            for order in self['process']['model']['coupling_orders']:
+                neworder=self['born_diagrams'].get_max_order(order)
+                if order in self['process']['perturbation_couplings']:
+                    neworder+=2
+                if order not in self['process']['orders'].keys() or neworder<self['process']['orders'][order]:
+                    self['process']['orders'][order]=neworder
 
         # Finally we enforce the use of the orders specified for the born (augmented by two if perturbed) by
         # the user, no matter what was the best guess performed above.
@@ -289,6 +289,10 @@ class LoopAmplitude(diagram_generation.Amplitude):
         # Now we can generate the loop particles.
         totloopsuccessful=self.generate_loop_diagrams()
         
+        # If there is no born neither loop diagrams, return now.
+        if not self['process']['has_born'] and not self['loop_diagrams']:
+            return False
+
         # We add here the UV renormalization contribution represented
         # here as a LoopUVCTDiagram.
         # It is done before the square order selection as it is possible that
@@ -306,7 +310,7 @@ class LoopAmplitude(diagram_generation.Amplitude):
             pert_order_weights=[hierarchy[order] for order in \
                                 self['process']['perturbation_couplings']]
             self['process']['squared_orders']['WEIGHTED']=2*(\
-              self['loop_diagrams'].get_min_weighted_order(self['process']['model'])+\
+              self['loop_diagrams'].get_min_order('WEIGHTED')+\
               max(pert_order_weights)-min(pert_order_weights))
 
         if loopGenInfo: print "LoopGenInfo:: Squared orders after treatment          = ",self['process']['squared_orders']
@@ -366,6 +370,10 @@ class LoopAmplitude(diagram_generation.Amplitude):
                 tag_selected.append(diag['canonical_tag'])
         self['loop_diagrams']=loop_basis
 
+        # If there is no born neither loop diagrams after filtering, return now.
+        if not self['process']['has_born'] and not self['loop_diagrams']:
+            return False
+
         # Set the necessary UV/R2 CounterTerms for each loop diagram generated
         self.setLoopCT_vertices()
         
@@ -419,13 +427,14 @@ class LoopAmplitude(diagram_generation.Amplitude):
                     lcuttwo=base_objects.Leg({'id': part.get_anti_pdg_code(),
                                               'state': True,
                                               'loop_line': True})
-                    self['process']['legs'].append(lcutone)
+                    new_leg_list=copy.copy(self['process'].get('legs'))
+                    new_leg_list.extend([lcutone,lcuttwo])
+                    self['process'].set('legs',new_leg_list)
                     # WARNING, it is important for the tagging to notice here that lcuttwo
                     # is the last leg in the process list of legs and will therefore carry
                     # the highest 'number' attribute as required to insure that it will 
                     # never be 'propagated' to any output leg.
-                    self['process']['legs'].append(lcuttwo)
-                
+                                    
                     # We generate the diagrams now
                     loopsuccessful, lcutdiaglist = super(LoopAmplitude, self).generate_diagrams(True)
                     
