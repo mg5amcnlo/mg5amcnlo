@@ -151,12 +151,12 @@ class LoopUFOImportTest(unittest.TestCase):
         self.assertEqual(len(self.imported_loopmodel.get('interactions').\
                              get_type('base')),71)
         self.assertEqual(len(self.imported_loopmodel.get('interactions').\
-                             get_R2()),80)
+                             get_R2()),78)
         self.assertEqual(len(self.imported_loopmodel.get('interactions').\
                              get_UV()),56)
         self.assertEqual(len(self.imported_loopmodel.get('interactions').\
                              get_UVmass()),4)
-        self.assertEqual(self.imported_loopmodel.get('name'),'LoopModelTest')
+        self.assertEqual(self.imported_loopmodel.get('name'),'LoopSMTest')
         self.assertEqual(self.imported_loopmodel.get('order_hierarchy'),\
                          {'QCD':1,'QED':2})
         self.assertEqual(self.imported_loopmodel.get('coupling_orders'),\
