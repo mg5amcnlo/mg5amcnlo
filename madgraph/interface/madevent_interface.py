@@ -792,7 +792,7 @@ class CheckValidForCmd(object):
                 args.append('-f')
 
         if len(tmp_args) == 0:
-            self.help_clean()
+            self.help_remove()
             raise self.InvalidCmd('clean command require the name of the run to clean')
         elif len(tmp_args) == 1:
             return tmp_args[0], tag, ['all']
@@ -2442,10 +2442,16 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
         if tag:
             to_suppress = [f for f in to_suppress if tag in f]
             if 'parton' in mode or 'all' in mode:
-                if os.path.exists(pjoin(self.me_dir, 'Events', run, 'events.lhe.gz')):
-                    to_suppress.append('events.lhe.gz')
-                if os.path.exists(pjoin(self.me_dir, 'Events', run, 'unweighted_events.lhe.gz')):
-                    to_suppress.append('unweighted_events.lhe.gz')
+                try:
+                    if self.results[run][0]['tag'] != tag:
+                        raise Exception, 'dummy'
+                except:
+                    pass
+                else:
+                    if os.path.exists(pjoin(self.me_dir, 'Events', run, 'events.lhe.gz')):
+                        to_suppress.append('events.lhe.gz')
+                    if os.path.exists(pjoin(self.me_dir, 'Events', run, 'unweighted_events.lhe.gz')):
+                        to_suppress.append('unweighted_events.lhe.gz')
         if 'all' in mode:
             pass # suppress everything
         else:
@@ -2483,21 +2489,27 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
 
         # Remove file in SubProcess directory
         if 'all' in mode or 'channel' in mode:
-            to_suppress = glob.glob(pjoin(self.me_dir, 'SubProcesses', '%s*' % run))
-            to_suppress += glob.glob(pjoin(self.me_dir, 'SubProcesses', '*','%s*' % run))
-            to_suppress += glob.glob(pjoin(self.me_dir, 'SubProcesses', '*','*','%s*' % run))
-
-            if '-f' in args or len(to_suppress) == 0:
-                ans = 'y'
+            try:
+                if self.results[run][0]['tag'] != tag:
+                    raise Exception, 'dummy'
+            except:
+                pass
             else:
-                question = 'Do you want to suppress the following files?\n     %s' % \
+                to_suppress = glob.glob(pjoin(self.me_dir, 'SubProcesses', '%s*' % run))
+                to_suppress += glob.glob(pjoin(self.me_dir, 'SubProcesses', '*','%s*' % run))
+                to_suppress += glob.glob(pjoin(self.me_dir, 'SubProcesses', '*','*','%s*' % run))
+
+                if '-f' in args or len(to_suppress) == 0:
+                    ans = 'y'
+                else:
+                    question = 'Do you want to suppress the following files?\n     %s' % \
                                '\n    '.join(to_suppress)
-                ans = self.ask(question, 'y', choices=['y','n'], timeout = self.timeout)
+                    ans = self.ask(question, 'y', choices=['y','n'], timeout = self.timeout)
 
-            if ans == 'y':
-                for file2rm in to_suppress:
-                    os.remove(file2rm)
-
+                if ans == 'y':
+                    for file2rm in to_suppress:
+                        os.remove(file2rm)
+                        
         if 'banner' in mode:
             to_suppress = glob.glob(pjoin(self.me_dir, 'Events', run, '*'))
             if tag:
