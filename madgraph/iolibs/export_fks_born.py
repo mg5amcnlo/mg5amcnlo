@@ -314,6 +314,7 @@ class ProcessExporterFortranFKS_born(export_v4.ProcessExporterFortran):
     #===============================================================================
     # write_lh_order
     #===============================================================================
+    #test written
     def write_lh_order(self, filename, fksborn):
         """Creates the OLE_order.lh file. This function should be edited according
         to the OLP which is used. NOW FOR NJET"""
@@ -349,6 +350,7 @@ NJetSymmetrizeFinal     %(symfin)s\n\
     #===============================================================================
     # write_born_fks
     #===============================================================================
+    # test written
     def write_born_fks(self, writer, matrix_element, ijglu, fortran_model):
         """Export a matrix element to a born.f file in MadFKS format"""
         
@@ -497,6 +499,7 @@ c     this subdir has no soft singularities
     #===============================================================================
     # write_b_sf_fks
     #===============================================================================
+    #test written
     def write_b_sf_fks(self, writer, born_matrix_element, link,
                         iborn, fortran_model):
         """Create the b_sf_xxx.f file for the soft linked born in MadFKS format"""
@@ -597,8 +600,8 @@ c     this subdir has no soft singularities
     #===============================================================================
     # write_born_nhel_file
     #===============================================================================
+    #test written
     def write_born_nhel_file(self, writer, matrix_element, nflows, fortran_model, ncolor):
-        #test written
         """Write the born_nhel.inc file for MG4."""
     
         ncomb = matrix_element.get_helicity_combinations()
@@ -966,6 +969,7 @@ C
     #===============================================================================
     # write_matrix_element_fks
     #===============================================================================
+    #test written
     def write_matrix_element_fks(self, writer, matrix_element, fortran_model):
         """Export a matrix element to a matrix.f file in MG4 madevent format"""
     
@@ -1093,6 +1097,7 @@ C
     #===============================================================================
     # write_den_factor_file
     #===============================================================================
+    #test_written
     def write_den_factor_file(self, writer, matrix_element, real_matrix_element, fortran_model):
         """Write the den_factor.inc file to be included in the born ME, with identical
         particle factor as the real ME"""
@@ -1122,6 +1127,7 @@ C
     #===============================================================================
     # write_coloramps_file
     #===============================================================================
+    #test written
     def write_coloramps_file(self, writer, matrix_element, fortran_model):
         """Write the coloramps.inc file for MadEvent"""
     
@@ -1136,6 +1142,7 @@ C
     #===============================================================================
     # write_mirrorprocs
     #===============================================================================   
+    #test_written
     def write_mirrorprocs(self, writer, matrix_element):
         """writes the content of the mirrorprocs.inc file"""
         bool_dict = {True: ".true.", False: ".false."}
@@ -1150,6 +1157,7 @@ data mirrorproc /%s/" % bool_dict[matrix_element.get('has_mirror_process')]
     # write_bornfromreal_file
     #===============================================================================
     def write_bornfromreal_file(self, writer, fksrealproc, fortran_model):
+    # test written
         """Write the bornfromreal.inc file, with informations on how to link born
         and real diagrams"""
 
@@ -1174,6 +1182,7 @@ data mirrorproc /%s/" % bool_dict[matrix_element.get('has_mirror_process')]
     #===============================================================================
     # write_configs_file
     #===============================================================================
+    #test_written
     def write_configs_file(self, writer, matrix_element, reverse_t_ch, fortran_model):
         """Write the configs.inc file for MadEvent"""
     
@@ -1246,6 +1255,7 @@ data mirrorproc /%s/" % bool_dict[matrix_element.get('has_mirror_process')]
     #===============================================================================
     # write_decayBW_file
     #===============================================================================
+    #test written
     def write_decayBW_file(self, writer, s_and_t_channels):
         """Write the decayBW.inc file for MadEvent"""
 
@@ -1374,8 +1384,8 @@ data mirrorproc /%s/" % bool_dict[matrix_element.get('has_mirror_process')]
     #===============================================================================
     # write_mg_sym_file
     #===============================================================================
+    #test written
     def write_mg_sym_file(self, writer, matrix_element, fortran_model):
-        #test written
         """Write the mg.sym file for MadEvent."""
     
         lines = []
@@ -1534,8 +1544,8 @@ data mirrorproc /%s/" % bool_dict[matrix_element.get('has_mirror_process')]
         return pdf_lines[:-1]
 
 
+    #test written
     def get_color_data_lines_from_color_matrix(self, color_matrix, n=6):
-        #test written
         """Return the color matrix definition lines for the given color_matrix. Split
         rows in chunks of size n."""
     
@@ -1558,19 +1568,13 @@ data mirrorproc /%s/" % bool_dict[matrix_element.get('has_mirror_process')]
             return ret_list
 
     
-    def get_den_factor_line(self, matrix_element, real_matrix_element = None):
+    def get_den_factor_line(self, matrix_element):
         #test written
         """Return the denominator factor line for this matrix element,
         corrected with the final state symmetry factor of real_matrix_element
         (if given)"""
      
-        if real_matrix_element:  
-            return "DATA IDEN/%2r/" % \
-               (matrix_element.get_denominator_factor()/\
-               matrix_element['identical_particle_factor'] *\
-               real_matrix_element.real_matrix_element['identical_particle_factor'])
-        else:
-            return "DATA IDEN/%2r/" % \
+        return "DATA IDEN/%2r/" % \
                matrix_element.get_denominator_factor()
     
     
@@ -1634,8 +1638,8 @@ data mirrorproc /%s/" % bool_dict[matrix_element.get('has_mirror_process')]
     #===============================================================================
     # write_nexternal_file
     #===============================================================================
+    #test written
     def write_nexternal_file(self, writer, matrix_element, fortran_model):
-        #test written
         """Write the nexternal.inc file for MG4"""
     
         replace_dict = {}
@@ -1656,34 +1660,12 @@ data mirrorproc /%s/" % bool_dict[matrix_element.get('has_mirror_process')]
     
         return True
     
-    #===============================================================================
-    # write_ngraphs_file
-    #===============================================================================
-    def write_ngraphs_file(self, writer, nconfigs):
-        #test written
-        """Write the ngraphs.inc file for MG4. Needs input from
-        write_configs_file.
-        Inherits the function from the parent class"""
-    
-        return super(ProcessExporterFortranFKS_born, self \
-                     ).write_ngraphs_file(writer,nconfigs)
-    
-    #===============================================================================
-    # write_pmass_file
-    #===============================================================================
-    def write_pmass_file(self, writer, matrix_element):
-        #test written
-        """Write the pmass.inc file for MG4.
-        Inherits the function from the parent class"""
-    
-        super(ProcessExporterFortranFKS_born, self \
-                     ).write_pmass_file(writer, matrix_element)
     
     #===============================================================================
     # write_props_file
     #===============================================================================
+    #test_written
     def write_props_file(self, writer, matrix_element, fortran_model, s_and_t_channels):
-        #test_written
         """Write the props.inc file for MadEvent. Needs input from
         write_configs_file. With respect to the parent routine, it has some 
         more specific formats that allow the props.inc file to be read by the 

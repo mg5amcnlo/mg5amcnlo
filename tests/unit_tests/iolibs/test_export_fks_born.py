@@ -27,9 +27,9 @@ sys.path.append(os.path.join(root_path, os.path.pardir, os.path.pardir))
 import tests.unit_tests as unittest
 
 import madgraph.iolibs.misc as misc
-import madgraph.iolibs.export_fks_real as export_fks_real
-import madgraph.fks.fks_real as fks_real
-import madgraph.fks.fks_real_helas_objects as fks_real_helas
+import madgraph.iolibs.export_fks_born as export_fks_born
+import madgraph.fks.fks_born as fks_born
+import madgraph.fks.fks_born_helas_objects as fks_born_helas
 import madgraph.iolibs.file_writers as writers
 import madgraph.iolibs.files as files
 import madgraph.iolibs.group_subprocs as group_subprocs
@@ -52,11 +52,11 @@ _file_path = os.path.dirname(os.path.realpath(__file__))
 _input_file_path = os.path.join(_file_path, os.path.pardir, os.path.pardir,
                                 'input_files')
 #===============================================================================
-# IOImportRealFKSTest
+# IOImportV4Test
 #===============================================================================
-class IOExportRealFKSTest(unittest.TestCase,
+class IOExportBornFKSTest(unittest.TestCase,
                      test_file_writers.CheckFileCreate):
-    """Test class for the export realfks module"""
+    """Test class for the export bornfks module"""
 
     mymatrixelement = helas_objects.HelasMatrixElement()
     created_files = ['test'
@@ -69,135 +69,143 @@ class IOExportRealFKSTest(unittest.TestCase,
         myleglist = MG.LegList()
         
         myleglist.append(MG.Leg({'id':2, 'state':False}))
-        myleglist.append(MG.Leg({'id':-2, 'state':False}))
+        myleglist.append(MG.Leg({'id':21, 'state':False}))
         myleglist.append(MG.Leg({'id':2, 'state':True}))
-        myleglist.append(MG.Leg({'id':-2, 'state':True}))
         myleglist.append(MG.Leg({'id':21, 'state':True}))
     
         myproc = MG.Process({'legs':myleglist,
                                            'model':self.mymodel,
                                            'orders': {'QED': 0}})
         
-        self.myfksmulti = fks_real.FKSMultiProcessFromReals([diagram_generation.Amplitude(myproc)])
+        self.myfksmulti = fks_born.FKSMultiProcessFromBorn([diagram_generation.Amplitude(myproc)])
         
-        self.myfks_me = fks_real_helas.FKSHelasMultiProcessFromReals(\
+        self.myfks_me = fks_born_helas.FKSHelasMultiProcessFromBorn(\
                 self.myfksmulti)['matrix_elements'][0]
 
         #self.myfortranmodel.downcase = False
 
         tearDown = test_file_writers.CheckFileCreate.clean_files
 
-    def test_get_fks_conf_lines_R(self):
-        """Test that the lines corresponding to the fks confs, to be 
-        written in fks.inc"""
-        lines = \
+    def test_get_fks_conf_lines_B(self):
+        """Checks the lines corresponding to each fks confs, to be 
+        written in fks.inc
+        """
+        lines_list = [
+"""c     FKS configuration number  1
+DATA FKS_I(1) / 5 /
+DATA FKS_J(1) / 1 /
+""",
 """c     FKS configuration number  1
 DATA FKS_I(1) / 3 /
 DATA FKS_J(1) / 1 /
-c     FKS configuration number  2
-DATA FKS_I(2) / 4 /
-DATA FKS_J(2) / 2 /
-c     FKS configuration number  3
-DATA FKS_I(3) / 4 /
-DATA FKS_J(3) / 3 /
-c     FKS configuration number  4
-DATA FKS_I(4) / 5 /
-DATA FKS_J(4) / 1 /
-c     FKS configuration number  5
-DATA FKS_I(5) / 5 /
-DATA FKS_J(5) / 2 /
-c     FKS configuration number  6
-DATA FKS_I(6) / 5 /
-DATA FKS_J(6) / 3 /
-c     FKS configuration number  7
-DATA FKS_I(7) / 5 /
-DATA FKS_J(7) / 4 /
-"""
-        process_exporter = export_fks_real.ProcessExporterFortranFKS_real()
-        self.assertEqual(lines, process_exporter.get_fks_conf_lines(self.myfks_me))
+""",
+"""c     FKS configuration number  1
+DATA FKS_I(1) / 5 /
+DATA FKS_J(1) / 2 /
+""",
+"""c     FKS configuration number  1
+DATA FKS_I(1) / 3 /
+DATA FKS_J(1) / 2 /
+""",
+"""c     FKS configuration number  1
+DATA FKS_I(1) / 3 /
+DATA FKS_J(1) / 2 /
+""",
+"""c     FKS configuration number  1
+DATA FKS_I(1) / 3 /
+DATA FKS_J(1) / 2 /
+""",
+"""c     FKS configuration number  1
+DATA FKS_I(1) / 4 /
+DATA FKS_J(1) / 2 /
+""",
+"""c     FKS configuration number  1
+DATA FKS_I(1) / 5 /
+DATA FKS_J(1) / 3 /
+""",
+"""c     FKS configuration number  1
+DATA FKS_I(1) / 5 /
+DATA FKS_J(1) / 4 /
+""",
+"""c     FKS configuration number  1
+DATA FKS_I(1) / 5 /
+DATA FKS_J(1) / 4 /
+""",
+"""c     FKS configuration number  1
+DATA FKS_I(1) / 5 /
+DATA FKS_J(1) / 4 /
+"""]
+        process_exporter = export_fks_born.ProcessExporterFortranFKS_born()
+        for lines, real in zip(lines_list, self.myfks_me.real_processes):
+            self.assertEqual(lines, process_exporter.get_fks_conf_lines(real))
 
-    def test_get_fks_j_from_i_lines_R(self):
+    def test_get_fks_j_from_i_lines_B(self):
         """Test that the lines corresponding to the fks_j_from_i array, to be 
-        written in fks.inc."""
+        written in fks.inc. 
+        The real process is gg_uxug_i3_j1 (myfks_me.real_processes[1])
+        """
         lines = \
-"""DATA (FKS_J_FROM_I(3, JPOS), JPOS = 0, 1)  / 1, 1 /
-DATA (FKS_J_FROM_I(4, JPOS), JPOS = 0, 2)  / 2, 2, 3 /
+"""DATA (FKS_J_FROM_I(3, JPOS), JPOS = 0, 3)  / 3, 1, 2, 4 /
+DATA (FKS_J_FROM_I(4, JPOS), JPOS = 0, 2)  / 2, 1, 2 /
 DATA (FKS_J_FROM_I(5, JPOS), JPOS = 0, 4)  / 4, 1, 2, 3, 4 /
 """
-        process_exporter = export_fks_real.ProcessExporterFortranFKS_real()
-        self.assertEqual(lines, process_exporter.get_fks_j_from_i_lines(self.myfks_me))
+        process_exporter = export_fks_born.ProcessExporterFortranFKS_born()
+        self.assertEqual(lines, process_exporter.get_fks_j_from_i_lines(self.myfks_me.real_processes[1]))
 
 
-    def test_write_fks_inc(self):
+    def test_write_fks_inc_B(self):
         """Tests the correct writing of the fks.inc file, containing informations 
-        for all the different fks configurations"""
+        for all the different fks configurations
+        The real process is gg_uxug_i3_j1 (myfks_me.real_processes[1])
+        """
         goal = \
 """      INTEGER FKS_CONFIGS, IPOS, JPOS
-      DATA FKS_CONFIGS / 7 /
-      INTEGER FKS_I(7), FKS_J(7)
+      DATA FKS_CONFIGS / 1 /
+      INTEGER FKS_I(1), FKS_J(1)
       INTEGER FKS_J_FROM_I(NEXTERNAL, 0:NEXTERNAL)
       INTEGER PARTICLE_TYPE(NEXTERNAL), PDG_TYPE(NEXTERNAL)
 
 C     FKS configuration number  1
       DATA FKS_I(1) / 3 /
       DATA FKS_J(1) / 1 /
-C     FKS configuration number  2
-      DATA FKS_I(2) / 4 /
-      DATA FKS_J(2) / 2 /
-C     FKS configuration number  3
-      DATA FKS_I(3) / 4 /
-      DATA FKS_J(3) / 3 /
-C     FKS configuration number  4
-      DATA FKS_I(4) / 5 /
-      DATA FKS_J(4) / 1 /
-C     FKS configuration number  5
-      DATA FKS_I(5) / 5 /
-      DATA FKS_J(5) / 2 /
-C     FKS configuration number  6
-      DATA FKS_I(6) / 5 /
-      DATA FKS_J(6) / 3 /
-C     FKS configuration number  7
-      DATA FKS_I(7) / 5 /
-      DATA FKS_J(7) / 4 /
 
-      DATA (FKS_J_FROM_I(3, JPOS), JPOS = 0, 1)  / 1, 1 /
-      DATA (FKS_J_FROM_I(4, JPOS), JPOS = 0, 2)  / 2, 2, 3 /
+      DATA (FKS_J_FROM_I(3, JPOS), JPOS = 0, 3)  / 3, 1, 2, 4 /
+      DATA (FKS_J_FROM_I(4, JPOS), JPOS = 0, 2)  / 2, 1, 2 /
       DATA (FKS_J_FROM_I(5, JPOS), JPOS = 0, 4)  / 4, 1, 2, 3, 4 /
 C     
 C     Particle type:
 C     octet = 8, triplet = 3, singlet = 1
-      DATA (PARTICLE_TYPE(IPOS), IPOS=1, NEXTERNAL) / 3, -3, 3, -3, 8 /
+      DATA (PARTICLE_TYPE(IPOS), IPOS=1, NEXTERNAL) / 8, 8, -3, 3, 8 /
 
 C     
 C     Particle type according to PDG:
 C     
-      DATA (PDG_TYPE(IPOS), IPOS=1, NEXTERNAL) / 2, -2, 2, -2, 21 /
+      DATA (PDG_TYPE(IPOS), IPOS=1, NEXTERNAL) / 21, 21, -2, 2, 21 /
 
 """
 
-        process_exporter = export_fks_real.ProcessExporterFortranFKS_real()
+        process_exporter = export_fks_born.ProcessExporterFortranFKS_born()
         process_exporter.write_fks_inc(\
             writers.FortranWriter(self.give_pos('test')),
-            self.myfks_me,
+            self.myfks_me.real_processes[1],
             self.myfortranmodel)
         self.assertFileContains('test', goal)
 
 
-
-    def test_write_mirrorprocs_R(self):
+    def test_write_mirrorprocs_B(self):
         """Tests the correct writing of the mirrorprocs.inc file"""
         goal = \
 """      LOGICAL MIRRORPROC
       DATA MIRRORPROC /.FALSE./
 """
-        process_exporter = export_fks_real.ProcessExporterFortranFKS_real()
+        process_exporter = export_fks_born.ProcessExporterFortranFKS_born()
         process_exporter.write_mirrorprocs(\
             writers.FortranWriter(self.give_pos('test')),
             self.myfks_me)
         self.assertFileContains('test', goal)
 
 
-    def test_write_lh_order_R(self):
+    def test_write_lh_order_B(self):
         """tests the correct writing of the B-LH order file"""
 
         goal = \
@@ -211,18 +219,20 @@ AlphaPower              0
 NJetSymmetrizeFinal     Yes
 
 # process
-2 -2 -> 2 -2 
+2 21 -> 2 21 
 """
-        process_exporter = export_fks_real.ProcessExporterFortranFKS_real()
+        process_exporter = export_fks_born.ProcessExporterFortranFKS_born()
         process_exporter.write_lh_order(\
             self.give_pos('test'),\
-            self.myfks_me.born_processes[-1])
+            self.myfks_me)
         self.assertFileContains('test', goal)
 
 
-    def test_get_pdf_lines_mir_false_R(self):
+    def test_get_pdf_lines_mir_false_B(self):
         """tests the correct writing of the pdf lines for a non-mirror configuration,
-        i.e. with beam indices 1,2 in the usual position"""
+        i.e. with beam indices 1,2 in the usual position.
+        The real process used is uux_uxug (real_processes[5])
+        """
         lines = \
 """IF (ABS(LPP(1)) .GE. 1) THEN
 LP=SIGN(1,LPP(1))
@@ -234,16 +244,18 @@ ub2=PDG2PDF(ABS(LPP(2)),-2*LP,XBK(2),DSQRT(Q2FACT(2)))
 ENDIF
 PD(0) = 0d0
 IPROC = 0
-IPROC=IPROC+1 ! u u~ > u u~ g
+IPROC=IPROC+1 ! u u~ > u~ u g
 PD(IPROC)=PD(IPROC-1) + u1*ub2"""
-        process_exporter = export_fks_real.ProcessExporterFortranFKS_real()
+        process_exporter = export_fks_born.ProcessExporterFortranFKS_born()
         self.assertEqual(lines, 
                          process_exporter.get_pdf_lines_mir( \
-                             self.myfks_me, 2, False, False))
+                             self.myfks_me.real_processes[5].matrix_element, 2, False, False))
 
-    def test_get_pdf_lines_mir_true_R(self):
+    def test_get_pdf_lines_mir_true_B(self):
         """tests the correct writing of the pdf lines for a mirror configuration,
-        i.e. with exchanged beam indices 1,2"""
+        i.e. with exchanged beam indices 1,2.
+        The real process used is uux_uxug (real_processes[5])
+        """
         lines = \
 """IF (ABS(LPP(2)) .GE. 1) THEN
 LP=SIGN(1,LPP(2))
@@ -255,17 +267,17 @@ ub2=PDG2PDF(ABS(LPP(1)),-2*LP,XBK(1),DSQRT(Q2FACT(1)))
 ENDIF
 PD(0) = 0d0
 IPROC = 0
-IPROC=IPROC+1 ! u u~ > u u~ g
+IPROC=IPROC+1 ! u u~ > u~ u g
 PD(IPROC)=PD(IPROC-1) + u1*ub2"""
 
-        process_exporter = export_fks_real.ProcessExporterFortranFKS_real()
+        process_exporter = export_fks_born.ProcessExporterFortranFKS_born()
         self.assertEqual(lines, 
                          process_exporter.get_pdf_lines_mir( \
-                             self.myfks_me, 2, False, True))
+                             self.myfks_me.real_processes[5].matrix_element, 2, False, True))
 
-    def test_write_sborn_sf_dum_R(self):
+    def test_write_sborn_sf_dum_B(self):
         """Tests the correct writing of the sborn_sf file, containing the calls 
-        to the different color linked borns. In this case the process has no 
+        to the different color linked borns. In this case the real process has no 
         soft singularities, so a dummy function is written"""
         
         goal = \
@@ -283,17 +295,17 @@ C     this subdir has no soft singularities
       RETURN
       END
 """
-        process_exporter = export_fks_real.ProcessExporterFortranFKS_real()
+        process_exporter = export_fks_born.ProcessExporterFortranFKS_born()
 
         process_exporter.write_sborn_sf(\
             writers.FortranWriter(self.give_pos('test')),
-            self.myfks_me.born_processes[0].color_links,
+            [],
             self.myfortranmodel)
 
         #print open(self.give_pos('test')).read()
         self.assertFileContains('test', goal)
 
-    def test_write_sborn_sf_R(self):
+    def test_write_sborn_sf_B(self):
         """Tests the correct writing of the sborn_sf file, containing the calls 
         to the different color linked borns."""
         
@@ -360,22 +372,22 @@ C       b_sf_012 links partons 4 and 3
       RETURN
       END
 """
-        process_exporter = export_fks_real.ProcessExporterFortranFKS_real()
+        process_exporter = export_fks_born.ProcessExporterFortranFKS_born()
 
         process_exporter.write_sborn_sf(\
             writers.FortranWriter(self.give_pos('test')),
-            self.myfks_me.born_processes[3].color_links,
+            self.myfks_me.color_links,
             self.myfortranmodel)
 
         #print open(self.give_pos('test')).read()
         self.assertFileContains('test', goal)
 
 
-
-    def test_write_matrix_element_fks_R(self):
+    def test_write_matrix_element_fks_B(self):
         """Tests the correct writing of the matrix.f file, containing
-        the real emission matrix element."""
-        
+        the real emission matrix element.
+        The real emission process is ud_dug (real_processes[4]).
+        """
         goal = \
 """      SUBROUTINE SMATRIX(P,ANS)
 C     
@@ -389,7 +401,9 @@ C     Returns amplitude squared summed/avg over colors
 C     and helicities
 C     for the point in phase space P(0:3,NEXTERNAL)
 C     
-C     Process: u u~ > u u~ g QED=0
+C     Process: u d > d u g QCD=3 QED=0 WEIGHTED=3
+C     Process: u s > s u g QCD=3 QED=0 WEIGHTED=3
+C     Process: u c > c u g QCD=3 QED=0 WEIGHTED=3
 C     
       IMPLICIT NONE
 C     
@@ -476,17 +490,19 @@ C
 C     Returns amplitude squared summed/avg over colors
 C     for the point with external lines W(0:6,NEXTERNAL)
 C     
-C     Process: u u~ > u u~ g QED=0
+C     Process: u d > d u g QCD=3 QED=0 WEIGHTED=3
+C     Process: u s > s u g QCD=3 QED=0 WEIGHTED=3
+C     Process: u c > c u g QCD=3 QED=0 WEIGHTED=3
 C     
       IMPLICIT NONE
 C     
 C     CONSTANTS
 C     
       INTEGER    NGRAPHS
-      PARAMETER (NGRAPHS=10)
+      PARAMETER (NGRAPHS=5)
       INCLUDE 'nexternal.inc'
       INTEGER    NWAVEFUNCS, NCOLOR
-      PARAMETER (NWAVEFUNCS=13, NCOLOR=4)
+      PARAMETER (NWAVEFUNCS=11, NCOLOR=4)
       REAL*8     ZERO
       PARAMETER (ZERO=0D0)
       COMPLEX*16 IMAG1
@@ -515,60 +531,44 @@ C     COLOR DATA
 C     
       DATA DENOM(1)/1/
       DATA (CF(I,  1),I=  1,  4) /   12,    4,    4,    0/
-C     1 T(2,1) T(5,3,4)
+C     1 T(3,1) T(5,4,2)
       DATA DENOM(2)/1/
       DATA (CF(I,  2),I=  1,  4) /    4,   12,    0,    4/
-C     1 T(2,4) T(5,3,1)
+C     1 T(3,2) T(5,4,1)
       DATA DENOM(3)/1/
       DATA (CF(I,  3),I=  1,  4) /    4,    0,   12,    4/
-C     1 T(3,1) T(5,2,4)
+C     1 T(4,1) T(5,3,2)
       DATA DENOM(4)/1/
       DATA (CF(I,  4),I=  1,  4) /    0,    4,    4,   12/
-C     1 T(3,4) T(5,2,1)
+C     1 T(4,2) T(5,3,1)
 C     ----------
 C     BEGIN CODE
 C     ----------
       CALL IXXXXX(P(0,1),ZERO,NHEL(1),+1*IC(1),W(1,1))
-      CALL OXXXXX(P(0,2),ZERO,NHEL(2),-1*IC(2),W(1,2))
+      CALL IXXXXX(P(0,2),ZERO,NHEL(2),+1*IC(2),W(1,2))
       CALL OXXXXX(P(0,3),ZERO,NHEL(3),+1*IC(3),W(1,3))
-      CALL IXXXXX(P(0,4),ZERO,NHEL(4),-1*IC(4),W(1,4))
+      CALL OXXXXX(P(0,4),ZERO,NHEL(4),+1*IC(4),W(1,4))
       CALL VXXXXX(P(0,5),ZERO,NHEL(5),+1*IC(5),W(1,5))
-      CALL FFV1_3(W(1,1),W(1,2),GC_5,ZERO, ZERO, W(1,6))
-      CALL FFV1_3(W(1,4),W(1,3),GC_5,ZERO, ZERO, W(1,7))
+      CALL FFV1_3(W(1,1),W(1,4),GC_5,ZERO, ZERO, W(1,6))
+      CALL FFV1_3(W(1,2),W(1,3),GC_5,ZERO, ZERO, W(1,7))
 C     Amplitude(s) for diagram number 1
       CALL VVV1_0(W(1,6),W(1,7),W(1,5),GC_4,AMP(1))
-      CALL FFV1_1(W(1,3),W(1,5),GC_5,ZERO, ZERO, W(1,8))
+      CALL FFV1_2(W(1,2),W(1,5),GC_5,ZERO, ZERO, W(1,8))
 C     Amplitude(s) for diagram number 2
-      CALL FFV1_0(W(1,4),W(1,8),W(1,6),GC_5,AMP(2))
-      CALL FFV1_2(W(1,4),W(1,5),GC_5,ZERO, ZERO, W(1,9))
+      CALL FFV1_0(W(1,8),W(1,3),W(1,6),GC_5,AMP(2))
+      CALL FFV1_1(W(1,3),W(1,5),GC_5,ZERO, ZERO, W(1,9))
 C     Amplitude(s) for diagram number 3
-      CALL FFV1_0(W(1,9),W(1,3),W(1,6),GC_5,AMP(3))
-      CALL FFV1_3(W(1,1),W(1,3),GC_5,ZERO, ZERO, W(1,10))
-      CALL FFV1_3(W(1,4),W(1,2),GC_5,ZERO, ZERO, W(1,11))
+      CALL FFV1_0(W(1,2),W(1,9),W(1,6),GC_5,AMP(3))
+      CALL FFV1_2(W(1,1),W(1,5),GC_5,ZERO, ZERO, W(1,10))
 C     Amplitude(s) for diagram number 4
-      CALL VVV1_0(W(1,10),W(1,11),W(1,5),GC_4,AMP(4))
-      CALL FFV1_1(W(1,2),W(1,5),GC_5,ZERO, ZERO, W(1,12))
+      CALL FFV1_0(W(1,10),W(1,4),W(1,7),GC_5,AMP(4))
+      CALL FFV1_1(W(1,4),W(1,5),GC_5,ZERO, ZERO, W(1,11))
 C     Amplitude(s) for diagram number 5
-      CALL FFV1_0(W(1,4),W(1,12),W(1,10),GC_5,AMP(5))
-C     Amplitude(s) for diagram number 6
-      CALL FFV1_0(W(1,9),W(1,2),W(1,10),GC_5,AMP(6))
-      CALL FFV1_2(W(1,1),W(1,5),GC_5,ZERO, ZERO, W(1,13))
-C     Amplitude(s) for diagram number 7
-      CALL FFV1_0(W(1,13),W(1,3),W(1,11),GC_5,AMP(7))
-C     Amplitude(s) for diagram number 8
-      CALL FFV1_0(W(1,13),W(1,2),W(1,7),GC_5,AMP(8))
-C     Amplitude(s) for diagram number 9
-      CALL FFV1_0(W(1,1),W(1,8),W(1,11),GC_5,AMP(9))
-C     Amplitude(s) for diagram number 10
-      CALL FFV1_0(W(1,1),W(1,12),W(1,7),GC_5,AMP(10))
-      JAMP(1)=+1./2.*(+1./3.*AMP(2)+1./3.*AMP(3)+IMAG1*AMP(4)+AMP(6)
-     $ +AMP(9))
-      JAMP(2)=+1./2.*(+IMAG1*AMP(1)-AMP(2)-1./3.*AMP(7)-AMP(8)
-     $ -1./3.*AMP(9))
-      JAMP(3)=+1./2.*(-IMAG1*AMP(1)-AMP(3)-1./3.*AMP(5)-1./3.*AMP(6)
-     $ -AMP(10))
-      JAMP(4)=+1./2.*(-IMAG1*AMP(4)+AMP(5)+AMP(7)+1./3.*AMP(8)
-     $ +1./3.*AMP(10))
+      CALL FFV1_0(W(1,1),W(1,11),W(1,7),GC_5,AMP(5))
+      JAMP(1)=+1./2.*(+IMAG1*AMP(1)+AMP(2)+AMP(5))
+      JAMP(2)=+1./2.*(-1./3.*AMP(4)-1./3.*AMP(5))
+      JAMP(3)=+1./2.*(-1./3.*AMP(2)-1./3.*AMP(3))
+      JAMP(4)=+1./2.*(-IMAG1*AMP(1)+AMP(3)+AMP(4))
 
       MATRIX = 0.D0
       DO I = 1, NCOLOR
@@ -582,18 +582,18 @@ C     Amplitude(s) for diagram number 10
 
 """ % misc.get_pkg_info()
         
-        process_exporter = export_fks_real.ProcessExporterFortranFKS_real()
+        process_exporter = export_fks_born.ProcessExporterFortranFKS_born()
 
         process_exporter.write_matrix_element_fks(\
             writers.FortranWriter(self.give_pos('test')),
-            self.myfks_me.real_matrix_element,
+            self.myfks_me.real_processes[4].matrix_element,
             self.myfortranmodel)
 
         #print open(self.give_pos('test')).read()
         self.assertFileContains('test', goal)
         
 
-    def test_write_born_fks_no_ijglu_R(self):
+    def test_write_born_fks_no_ijglu_B(self):
         """Tests the correct writing of the born.f file, when the particle
         which splits into i and j is not a gluon."""
         
@@ -608,10 +608,9 @@ C     RETURNS AMPLITUDE SQUARED SUMMED/AVG OVER COLORS
 C     AND HELICITIES
 C     FOR THE POINT IN PHASE SPACE P1(0:3,NEXTERNAL-1)
 C     
-C     Process: u u~ > u u~ g QED=0
 C     
 C     BORN AMPLITUDE IS 
-C     Process: u u~ > u u~ QED=0
+C     Process: u g > u g QCD=2 QED=0 WEIGHTED=2
 C     
       IMPLICIT NONE
 C     
@@ -624,7 +623,7 @@ C
       INTEGER    THEL
       PARAMETER (THEL=NCOMB*NCROSS)
       INTEGER NGRAPHS
-      PARAMETER (NGRAPHS=   2)
+      PARAMETER (NGRAPHS=   3)
 C     
 C     ARGUMENTS 
 C     
@@ -698,7 +697,7 @@ C     DATA multi_channel/.true./
       DATA (NHEL(I,  14),I=1,4) / 1, 1,-1, 1/
       DATA (NHEL(I,  15),I=1,4) / 1, 1, 1,-1/
       DATA (NHEL(I,  16),I=1,4) / 1, 1, 1, 1/
-      DATA IDEN/36/
+      INCLUDE 'den_factor.inc'
       DOUBLE PRECISION HEL_FAC
       LOGICAL CALCULATEDBORN
       INTEGER GET_HEL,SKIP
@@ -809,19 +808,19 @@ C     Please visit us at https://launchpad.net/madgraph5
 C     RETURNS AMPLITUDE SQUARED SUMMED/AVG OVER COLORS
 C     FOR THE POINT WITH EXTERNAL LINES W(0:6,NEXTERNAL-1)
 
-C     Process: u u~ > u u~ QED=0
+C     Process: u g > u g QCD=2 QED=0 WEIGHTED=2
 C     
       IMPLICIT NONE
 C     
 C     CONSTANTS
 C     
       INTEGER    NGRAPHS,    NEIGEN
-      PARAMETER (NGRAPHS=   2,NEIGEN=  1)
+      PARAMETER (NGRAPHS=   3,NEIGEN=  1)
       INCLUDE 'genps.inc'
       INCLUDE 'nexternal.inc'
 C     INCLUDE 'born_maxamps.inc'
       INTEGER    NWAVEFUNCS, NCOLOR
-      PARAMETER (NWAVEFUNCS=6, NCOLOR=2)
+      PARAMETER (NWAVEFUNCS=7, NCOLOR=2)
       REAL*8     ZERO
       PARAMETER (ZERO=0D0)
 C     
@@ -856,26 +855,29 @@ C     Double Precision amp2(bmaxamps), jamp2(0:bmaxamps)
 C     
 C     COLOR DATA
 C     
-      DATA DENOM(1)/1/
-      DATA (CF(I,  1),I=  1,  2) /    9,    3/
-C     1 T(2,1) T(3,4)
-      DATA DENOM(2)/1/
-      DATA (CF(I,  2),I=  1,  2) /    3,    9/
-C     1 T(2,4) T(3,1)
+      DATA DENOM(1)/3/
+      DATA (CF(I,  1),I=  1,  2) /   16,   -2/
+C     1 T(2,4,3,1)
+      DATA DENOM(2)/3/
+      DATA (CF(I,  2),I=  1,  2) /   -2,   16/
+C     1 T(4,2,3,1)
 C     ----------
 C     BEGIN CODE
 C     ----------
       IF (.NOT. CALCULATEDBORN) THEN
         CALL IXXXXX(P(0,1),ZERO,NHEL(1),+1*IC(1),W(1,1))
-        CALL OXXXXX(P(0,2),ZERO,NHEL(2),-1*IC(2),W(1,2))
+        CALL VXXXXX(P(0,2),ZERO,NHEL(2),-1*IC(2),W(1,2))
         CALL OXXXXX(P(0,3),ZERO,NHEL(3),+1*IC(3),W(1,3))
-        CALL IXXXXX(P(0,4),ZERO,NHEL(4),-1*IC(4),W(1,4))
-        CALL FFV1_3(W(1,1),W(1,2),GC_5,ZERO, ZERO, W(1,5))
+        CALL VXXXXX(P(0,4),ZERO,NHEL(4),+1*IC(4),W(1,4))
+        CALL FFV1_2(W(1,1),W(1,2),GC_5,ZERO, ZERO, W(1,5))
 C       Amplitude(s) for diagram number 1
-        CALL FFV1_0(W(1,4),W(1,3),W(1,5),GC_5,AMP(1))
+        CALL FFV1_0(W(1,5),W(1,3),W(1,4),GC_5,AMP(1))
         CALL FFV1_3(W(1,1),W(1,3),GC_5,ZERO, ZERO, W(1,6))
 C       Amplitude(s) for diagram number 2
-        CALL FFV1_0(W(1,4),W(1,2),W(1,6),GC_5,AMP(2))
+        CALL VVV1_0(W(1,2),W(1,4),W(1,6),GC_4,AMP(2))
+        CALL FFV1_2(W(1,1),W(1,4),GC_5,ZERO, ZERO, W(1,7))
+C       Amplitude(s) for diagram number 3
+        CALL FFV1_0(W(1,7),W(1,3),W(1,2),GC_5,AMP(3))
         DO I=1,NGRAPHS
           SAVEAMP(I,HELL)=AMP(I)
         ENDDO
@@ -884,8 +886,8 @@ C       Amplitude(s) for diagram number 2
           AMP(I)=SAVEAMP(I,HELL)
         ENDDO
       ENDIF
-      JAMP(1)=+1./2.*(+1./3.*AMP(1)+AMP(2))
-      JAMP(2)=+1./2.*(-AMP(1)-1./3.*AMP(2))
+      JAMP(1)=-IMAG1*AMP(2)+AMP(3)
+      JAMP(2)=+AMP(1)+IMAG1*AMP(2)
       BORN = 0.D0
       DO I = 1, NCOLOR
         ZTEMP = (0.D0,0.D0)
@@ -896,6 +898,7 @@ C       Amplitude(s) for diagram number 2
       ENDDO
       AMP2(1)=AMP2(1)+AMP(1)*DCONJG(AMP(1))
       AMP2(2)=AMP2(2)+AMP(2)*DCONJG(AMP(2))
+      AMP2(3)=AMP2(3)+AMP(3)*DCONJG(AMP(3))
       DO I = 1, NCOLOR
         JAMP2(I)=JAMP2(I)+JAMP(I)*DCONJG(JAMP(I))
       ENDDO
@@ -905,22 +908,21 @@ C       Amplitude(s) for diagram number 2
 
 """ % misc.get_pkg_info()
         
-        process_exporter = export_fks_real.ProcessExporterFortranFKS_real()
+        process_exporter = export_fks_born.ProcessExporterFortranFKS_born()
 
         process_exporter.write_born_fks(\
             writers.FortranWriter(self.give_pos('test')),
-            copy.copy(self.myfks_me.born_processes[3]),
-            self.myfks_me,
+            self.myfks_me.born_matrix_element, 0,
             self.myfortranmodel)
 
         #print open(self.give_pos('test')).read()
         self.assertFileContains('test', goal)
 
 
-    def test_write_born_fks_ijglu_R(self):
+    def test_write_born_fks_ijglu_B(self):
         """Tests the correct writing of the born.f file, when the particle
-        which splits into i and j is a gluon."""
-        
+        which splits into i and j is a gluon.
+        """
         goal = \
 """      SUBROUTINE SBORN(P1,ANS)
 C     
@@ -932,10 +934,9 @@ C     RETURNS AMPLITUDE SQUARED SUMMED/AVG OVER COLORS
 C     AND HELICITIES
 C     FOR THE POINT IN PHASE SPACE P1(0:3,NEXTERNAL-1)
 C     
-C     Process: u u~ > u u~ g QED=0
 C     
 C     BORN AMPLITUDE IS 
-C     Process: u u~ > g g QED=0
+C     Process: u g > u g QCD=2 QED=0 WEIGHTED=2
 C     
       IMPLICIT NONE
 C     
@@ -1022,18 +1023,20 @@ C     DATA multi_channel/.true./
       DATA (NHEL(I,  14),I=1,4) / 1, 1,-1, 1/
       DATA (NHEL(I,  15),I=1,4) / 1, 1, 1,-1/
       DATA (NHEL(I,  16),I=1,4) / 1, 1, 1, 1/
-      DATA IDEN/36/
+      INCLUDE 'den_factor.inc'
       DOUBLE PRECISION HEL_FAC
       LOGICAL CALCULATEDBORN
       INTEGER GET_HEL,SKIP
       COMMON/CBORN/HEL_FAC,CALCULATEDBORN,GET_HEL,SKIP
+      INTEGER GLU_IJ
+      INCLUDE 'glu_ij.inc'
 C     ----------
 C     BEGIN CODE
 C     ----------
       NTRY=NTRY+1
       IF (NTRY.LT.2) THEN
         SKIP=1
-        DO WHILE(NHEL( 3 ,SKIP).NE.1)
+        DO WHILE(NHEL(GLU_IJ ,SKIP).NE.1)
           SKIP=SKIP+1
         ENDDO
         SKIP=SKIP-1
@@ -1078,8 +1081,8 @@ C             write (*,*) "momenta not the same in Born"
         IF (ISUM_HEL .EQ. 0 .OR. NTRY .LT. 2) THEN
           HEL_FAC=1D0
           DO IHEL=1,NCOMB
-            IF ((GOODHEL(IHEL,IPROC) .OR. NTRY .LT. 2).AND.NHEL( 3 
-     $       ,IHEL).EQ.-1) THEN
+            IF ((GOODHEL(IHEL,IPROC) .OR. NTRY .LT. 2).AND.NHEL(GLU_IJ
+     $        ,IHEL).EQ.-1) THEN
               T=BORN(P1,NHEL(1,IHEL),IHEL,JC(1),T1)
               DO JJ=1,NINCOMING
                 IF(POL(JJ).NE.1D0.AND.NHEL(JJ,IHEL).EQ.INT(SIGN(1D0
@@ -1152,7 +1155,7 @@ C     Please visit us at https://launchpad.net/madgraph5
 C     RETURNS AMPLITUDE SQUARED SUMMED/AVG OVER COLORS
 C     FOR THE POINT WITH EXTERNAL LINES W(0:6,NEXTERNAL-1)
 
-C     Process: u u~ > g g QED=0
+C     Process: u g > u g QCD=2 QED=0 WEIGHTED=2
 C     
       IMPLICIT NONE
 C     
@@ -1198,37 +1201,39 @@ C
       INTEGER GET_HEL,SKIP
       COMMON/CBORN/HEL_FAC,CALCULATEDBORN,GET_HEL,SKIP
       INCLUDE 'coupl.inc'
+      INTEGER GLU_IJ
+      INCLUDE 'glu_ij.inc'
 C     
 C     COLOR DATA
 C     
       DATA DENOM(1)/3/
       DATA (CF(I,  1),I=  1,  2) /   16,   -2/
-C     1 T(3,4,2,1)
+C     1 T(2,4,3,1)
       DATA DENOM(2)/3/
       DATA (CF(I,  2),I=  1,  2) /   -2,   16/
-C     1 T(4,3,2,1)
+C     1 T(4,2,3,1)
 C     ----------
 C     BEGIN CODE
 C     ----------
       BORN = 0D0
       BORNTILDE = (0D0,0D0)
-      BACK_HEL = NHEL( 3 )
+      BACK_HEL = NHEL(GLU_IJ)
       DO IHEL=-1,1,2
-        NHEL( 3 ) = IHEL
+        NHEL(GLU_IJ) = IHEL
         IF (.NOT. CALCULATEDBORN) THEN
           CALL IXXXXX(P(0,1),ZERO,NHEL(1),+1*IC(1),W(1,1))
-          CALL OXXXXX(P(0,2),ZERO,NHEL(2),-1*IC(2),W(1,2))
-          CALL VXXXXX(P(0,3),ZERO,NHEL(3),+1*IC(3),W(1,3))
+          CALL VXXXXX(P(0,2),ZERO,NHEL(2),-1*IC(2),W(1,2))
+          CALL OXXXXX(P(0,3),ZERO,NHEL(3),+1*IC(3),W(1,3))
           CALL VXXXXX(P(0,4),ZERO,NHEL(4),+1*IC(4),W(1,4))
-          CALL FFV1_3(W(1,1),W(1,2),GC_5,ZERO, ZERO, W(1,5))
+          CALL FFV1_2(W(1,1),W(1,2),GC_5,ZERO, ZERO, W(1,5))
 C         Amplitude(s) for diagram number 1
-          CALL VVV1_0(W(1,3),W(1,4),W(1,5),GC_4,AMP(1))
-          CALL FFV1_2(W(1,1),W(1,3),GC_5,ZERO, ZERO, W(1,6))
+          CALL FFV1_0(W(1,5),W(1,3),W(1,4),GC_5,AMP(1))
+          CALL FFV1_3(W(1,1),W(1,3),GC_5,ZERO, ZERO, W(1,6))
 C         Amplitude(s) for diagram number 2
-          CALL FFV1_0(W(1,6),W(1,2),W(1,4),GC_5,AMP(2))
+          CALL VVV1_0(W(1,2),W(1,4),W(1,6),GC_4,AMP(2))
           CALL FFV1_2(W(1,1),W(1,4),GC_5,ZERO, ZERO, W(1,7))
 C         Amplitude(s) for diagram number 3
-          CALL FFV1_0(W(1,7),W(1,2),W(1,3),GC_5,AMP(3))
+          CALL FFV1_0(W(1,7),W(1,3),W(1,2),GC_5,AMP(3))
           DO I=1,NGRAPHS
             IF(IHEL.EQ.-1)THEN
               SAVEAMP(I,HELL)=AMP(I)
@@ -1251,8 +1256,8 @@ C         Amplitude(s) for diagram number 3
             ENDIF
           ENDDO
         ENDIF
-        JAMP(1)=-IMAG1*AMP(1)+AMP(3)
-        JAMP(2)=+IMAG1*AMP(1)+AMP(2)
+        JAMP(1)=-IMAG1*AMP(2)+AMP(3)
+        JAMP(2)=+AMP(1)+IMAG1*AMP(2)
         DO I = 1, NCOLOR
           ZTEMP = (0.D0,0.D0)
           DO J = 1, NCOLOR
@@ -1276,29 +1281,28 @@ C         Amplitude(s) for diagram number 3
         ENDDO
         BORNTILDE = BORNTILDE + ZTEMP*DCONJG(JAMPH(-1,I))/DENOM(I)
       ENDDO
-      NHEL( 3 ) = BACK_HEL
+      NHEL(GLU_IJ) = BACK_HEL
       END
 
 
 
 """ % misc.get_pkg_info()
         
-        process_exporter = export_fks_real.ProcessExporterFortranFKS_real()
+        process_exporter = export_fks_born.ProcessExporterFortranFKS_born()
 
         process_exporter.write_born_fks(\
             writers.FortranWriter(self.give_pos('test')),
-            copy.copy(self.myfks_me.born_processes[2]),
-            self.myfks_me,
+            self.myfks_me.born_matrix_element, 1,
             self.myfortranmodel)
 
         #print open(self.give_pos('test')).read()
         self.assertFileContains('test', goal)
 
 
-    def test_write_b_sf_fks_R(self):
+    def test_write_b_sf_fks_B(self):
         """Tests the correct writing of a b_sf_xxx.f file, containing one color
-        linked born."""
-        
+        linked born.
+        """
         goal = \
 """      SUBROUTINE SB_SF_001(P1,ANS)
 C     
@@ -1310,10 +1314,9 @@ C     RETURNS AMPLITUDE SQUARED SUMMED/AVG OVER COLORS
 C     AND HELICITIES
 C     FOR THE POINT IN PHASE SPACE P(0:3,NEXTERNAL-1)
 C     
-C     Process: u u~ > u u~ g QED=0
 C     
 C     BORN AMPLITUDE IS 
-C     Process: u u~ > u u~ QED=0
+C     Process: u g > u g QCD=2 QED=0 WEIGHTED=2
 C     spectators: 1 2 
 
 C     
@@ -1327,7 +1330,7 @@ C
       INTEGER    THEL
       PARAMETER (THEL=NCOMB*NCROSS)
       INTEGER NGRAPHS
-      PARAMETER (NGRAPHS=   2)
+      PARAMETER (NGRAPHS=   3)
 C     
 C     ARGUMENTS 
 C     
@@ -1376,7 +1379,7 @@ C
       DATA (NHEL(I,  14),I=1,4) / 1, 1,-1, 1/
       DATA (NHEL(I,  15),I=1,4) / 1, 1, 1,-1/
       DATA (NHEL(I,  16),I=1,4) / 1, 1, 1, 1/
-      DATA IDEN/36/
+      INCLUDE 'den_factor.inc'
       DOUBLE PRECISION HEL_FAC
       LOGICAL CALCULATEDBORN
       INTEGER GET_HEL,SKIP
@@ -1442,7 +1445,7 @@ C     Please visit us at https://launchpad.net/madgraph5
 C     RETURNS AMPLITUDE SQUARED SUMMED/AVG OVER COLORS
 C     FOR THE POINT WITH EXTERNAL LINES W(0:6,NEXTERNAL-1)
 
-C     Process: u u~ > u u~ QED=0
+C     Process: u g > u g QCD=2 QED=0 WEIGHTED=2
 C     spectators: 1 2 
 
 C     
@@ -1451,10 +1454,10 @@ C
 C     CONSTANTS
 C     
       INTEGER    NGRAPHS,    NEIGEN
-      PARAMETER (NGRAPHS=   2,NEIGEN=  1)
+      PARAMETER (NGRAPHS=   3,NEIGEN=  1)
       INCLUDE 'nexternal.inc'
       INTEGER    NWAVEFUNCS, NCOLOR1, NCOLOR2
-      PARAMETER (NWAVEFUNCS=6, NCOLOR1=2, NCOLOR2=2)
+      PARAMETER (NWAVEFUNCS=7, NCOLOR1=2, NCOLOR2=2)
       REAL*8     ZERO
       PARAMETER (ZERO=0D0)
 C     
@@ -1486,25 +1489,28 @@ C
 C     
 C     COLOR DATA
 C     
-      DATA DENOM(1)/1/
-      DATA (CF(I,  1),I=  1,  2) /    9,    3/
-      DATA DENOM(2)/1/
-      DATA (CF(I,  2),I=  1,  2) /    3,    9/
+      DATA DENOM(1)/3/
+      DATA (CF(I,  1),I=  1,  2) /    6,   -2/
+      DATA DENOM(2)/3/
+      DATA (CF(I,  2),I=  1,  2) /    6,   16/
 C     ----------
 C     BEGIN CODE
 C     ----------
 
       IF (.NOT. CALCULATEDBORN) THEN
         CALL IXXXXX(P(0,1),ZERO,NHEL(1),+1*IC(1),W(1,1))
-        CALL OXXXXX(P(0,2),ZERO,NHEL(2),-1*IC(2),W(1,2))
+        CALL VXXXXX(P(0,2),ZERO,NHEL(2),-1*IC(2),W(1,2))
         CALL OXXXXX(P(0,3),ZERO,NHEL(3),+1*IC(3),W(1,3))
-        CALL IXXXXX(P(0,4),ZERO,NHEL(4),-1*IC(4),W(1,4))
-        CALL FFV1_3(W(1,1),W(1,2),GC_5,ZERO, ZERO, W(1,5))
+        CALL VXXXXX(P(0,4),ZERO,NHEL(4),+1*IC(4),W(1,4))
+        CALL FFV1_2(W(1,1),W(1,2),GC_5,ZERO, ZERO, W(1,5))
 C       Amplitude(s) for diagram number 1
-        CALL FFV1_0(W(1,4),W(1,3),W(1,5),GC_5,AMP(1))
+        CALL FFV1_0(W(1,5),W(1,3),W(1,4),GC_5,AMP(1))
         CALL FFV1_3(W(1,1),W(1,3),GC_5,ZERO, ZERO, W(1,6))
 C       Amplitude(s) for diagram number 2
-        CALL FFV1_0(W(1,4),W(1,2),W(1,6),GC_5,AMP(2))
+        CALL VVV1_0(W(1,2),W(1,4),W(1,6),GC_4,AMP(2))
+        CALL FFV1_2(W(1,1),W(1,4),GC_5,ZERO, ZERO, W(1,7))
+C       Amplitude(s) for diagram number 3
+        CALL FFV1_0(W(1,7),W(1,3),W(1,2),GC_5,AMP(3))
         DO I=1,NGRAPHS
           SAVEAMP(I,HELL)=AMP(I)
         ENDDO
@@ -1513,10 +1519,10 @@ C       Amplitude(s) for diagram number 2
           AMP(I)=SAVEAMP(I,HELL)
         ENDDO
       ENDIF
-      JAMP1(1)=+1./2.*(+1./3.*AMP(1)+AMP(2))
-      JAMP1(2)=+1./2.*(-AMP(1)-1./3.*AMP(2))
-      JAMP2(1)=+1./36.*AMP(1)-3./4.*AMP(2)+1./6.*AMP(2)
-      JAMP2(2)=+1./4.*(-1./3.*AMP(1)-1./9.*AMP(2))
+      JAMP1(1)=-IMAG1*AMP(2)+AMP(3)
+      JAMP1(2)=+AMP(1)+IMAG1*AMP(2)
+      JAMP2(1)=+1./2.*(-IMAG1*AMP(2)+AMP(3))
+      JAMP2(2)=+1./2.*(-3*AMP(1)-3*IMAG1*AMP(2))
       B_SF_001 = 0.D0
       DO I = 1, NCOLOR1
         ZTEMP = (0.D0,0.D0)
@@ -1531,21 +1537,23 @@ C       Amplitude(s) for diagram number 2
 
 """ % misc.get_pkg_info()
         
-        process_exporter = export_fks_real.ProcessExporterFortranFKS_real()
+        process_exporter = export_fks_born.ProcessExporterFortranFKS_born()
 
         process_exporter.write_b_sf_fks(\
             writers.FortranWriter(self.give_pos('test')),
-            copy.copy(self.myfks_me.born_processes[3].matrix_element),
-            self.myfks_me.born_processes[3].color_links[0], self.myfks_me, 1,
+            copy.copy(self.myfks_me.born_matrix_element),
+            self.myfks_me.color_links[0], 1,
             self.myfortranmodel)
 
         #print open(self.give_pos('test')).read()
         self.assertFileContains('test', goal)
 
     
-    def test_write_auto_dsig_fks_R(self):
+    def test_write_auto_dsig_fks_B(self):
         """test if the auto_dsig.f, containing (for MadFKS) the parton luminosity,
-        is correctly written"""
+        is correctly written
+        The real process used is uux_uxug (real_processes[5])
+        """
         goal = \
 """      DOUBLE PRECISION FUNCTION DLUM()
 C     ****************************************************            
@@ -1556,7 +1564,7 @@ C     Please visit us at https://launchpad.net/madgraph5
 C     RETURNS PARTON LUMINOSITIES FOR MADFKS                          
 C        
 C     
-C     Process: u u~ > u u~ g QED=0
+C     Process: u u~ > u~ u g QCD=3 QED=0 WEIGHTED=3
 C     
 C     ****************************************************            
 C         
@@ -1630,7 +1638,7 @@ C
         ENDIF
         PD(0) = 0D0
         IPROC = 0
-        IPROC=IPROC+1  ! u u~ > u u~ g
+        IPROC=IPROC+1  ! u u~ > u~ u g
         PD(IPROC)=PD(IPROC-1) + U1*UB2
       ELSE
         IF (ABS(LPP(1)) .GE. 1) THEN
@@ -1643,7 +1651,7 @@ C
         ENDIF
         PD(0) = 0D0
         IPROC = 0
-        IPROC=IPROC+1  ! u u~ > u u~ g
+        IPROC=IPROC+1  ! u u~ > u~ u g
         PD(IPROC)=PD(IPROC-1) + U1*UB2
       ENDIF
       DLUM = PD(IPROC) * CONV
@@ -1651,141 +1659,149 @@ C
       END
 
 """ % misc.get_pkg_info()
-        process_exporter = export_fks_real.ProcessExporterFortranFKS_real()
+        process_exporter = export_fks_born.ProcessExporterFortranFKS_born()
 
         nflows = \
             process_exporter.write_auto_dsig_fks(
                     writers.FortranWriter(self.give_pos('test')),
-                    self.myfks_me.real_matrix_element,
+                    self.myfks_me.real_processes[5].matrix_element,
                     self.myfortranmodel)  
 
         self.assertFileContains('test', goal) 
 
-    def test_write_leshouche_file_R(self):
-        """tests if the leshouche.inc file is correctly written"""
+    def test_write_leshouche_file_B(self):
+        """tests if the leshouche.inc file is correctly written.
+        The real process used is uux_uxug (real_processes[5])
+        """
         goal = \
-"""      DATA (IDUP(I,1),I=1,5)/2,-2,2,-2,21/
+"""      DATA (IDUP(I,1),I=1,5)/2,-2,-2,2,21/
       DATA (MOTHUP(1,I,  1),I=1, 5)/  0,  0,  1,  1,  1/
       DATA (MOTHUP(2,I,  1),I=1, 5)/  0,  0,  2,  2,  2/
-      DATA (ICOLUP(1,I,  1),I=1, 5)/501,  0,502,  0,503/
-      DATA (ICOLUP(2,I,  1),I=1, 5)/  0,501,  0,503,502/
-      DATA (ICOLUP(1,I,  2),I=1, 5)/503,  0,502,  0,503/
-      DATA (ICOLUP(2,I,  2),I=1, 5)/  0,501,  0,501,502/
-      DATA (ICOLUP(1,I,  3),I=1, 5)/502,  0,502,  0,503/
-      DATA (ICOLUP(2,I,  3),I=1, 5)/  0,501,  0,503,501/
-      DATA (ICOLUP(1,I,  4),I=1, 5)/503,  0,502,  0,503/
-      DATA (ICOLUP(2,I,  4),I=1, 5)/  0,501,  0,502,501/
+      DATA (ICOLUP(1,I,  1),I=1, 5)/501,  0,  0,502,503/
+      DATA (ICOLUP(2,I,  1),I=1, 5)/  0,501,503,  0,502/
+      DATA (ICOLUP(1,I,  2),I=1, 5)/503,  0,  0,502,503/
+      DATA (ICOLUP(2,I,  2),I=1, 5)/  0,501,501,  0,502/
+      DATA (ICOLUP(1,I,  3),I=1, 5)/502,  0,  0,502,503/
+      DATA (ICOLUP(2,I,  3),I=1, 5)/  0,501,503,  0,501/
+      DATA (ICOLUP(1,I,  4),I=1, 5)/503,  0,  0,502,503/
+      DATA (ICOLUP(2,I,  4),I=1, 5)/  0,501,502,  0,501/
 """    
-        process_exporter = export_fks_real.ProcessExporterFortranFKS_real()
+        process_exporter = export_fks_born.ProcessExporterFortranFKS_born()
 
         nflows = \
             process_exporter.write_leshouche_file(
                     writers.FortranWriter(self.give_pos('test')),
-                    self.myfks_me.real_matrix_element,
+                    self.myfks_me.real_processes[5].matrix_element,
                     self.myfortranmodel)  
 
         self.assertFileContains('test', goal) 
 
 
-    def test_write_born_nhel_file_R(self):
+    def test_write_born_nhel_file_B(self):
         """tests if the born_nhel.inc file is correctly written"""
         goal = \
 """      INTEGER    MAX_BHEL, MAX_BCOL
       PARAMETER (MAX_BHEL=16)
       PARAMETER(MAX_BCOL=2)
 """        
-        process_exporter = export_fks_real.ProcessExporterFortranFKS_real()
+        process_exporter = export_fks_born.ProcessExporterFortranFKS_born()
 
         calls, ncolor = \
-            process_exporter.write_matrix_element_fks(
+            process_exporter.write_born_fks(
                     writers.FortranWriter(self.give_pos('test1')),
-                    self.myfks_me.real_matrix_element,
+                    self.myfks_me.born_matrix_element,0,
                     self.myfortranmodel)    
 
         nflows = \
             process_exporter.write_leshouche_file(
                     writers.FortranWriter(self.give_pos('test2')),
-                    self.myfks_me.born_processes[0].matrix_element,
+                    self.myfks_me.born_matrix_element,
                     self.myfortranmodel)  
                 
         process_exporter.write_born_nhel_file(
                     writers.FortranWriter(self.give_pos('test')),
-                    self.myfks_me.born_processes[0].matrix_element,
+                    self.myfks_me.born_matrix_element,
                     nflows,
                     self.myfortranmodel,
                     ncolor)  
 
         self.assertFileContains('test', goal) 
 
-    def test_write_maxamps_file_R(self):
-        """tests if the maxamps.inc file is correctly written"""
+    def test_write_maxamps_file_B(self):
+        """tests if the maxamps.inc file is correctly written.
+        The real process used is uux_uxug (real_processes[5])
+        """
         goal = \
 """      INTEGER    MAXAMPS, MAXFLOW
       PARAMETER (MAXAMPS=10, MAXFLOW=4)
 """        
-        process_exporter = export_fks_real.ProcessExporterFortranFKS_real()
+        process_exporter = export_fks_born.ProcessExporterFortranFKS_born()
 
         calls, ncolor = \
             process_exporter.write_matrix_element_fks(
                     writers.FortranWriter(self.give_pos('test1')),
-                    self.myfks_me.real_matrix_element,
+                    self.myfks_me.real_processes[5].matrix_element,
                     self.myfortranmodel)    
 
         process_exporter.write_maxamps_file(
                     writers.FortranWriter(self.give_pos('test')),
-                    self.myfks_me.real_matrix_element,
+                    self.myfks_me.real_processes[5].matrix_element,
                     self.myfortranmodel,
                     ncolor)  
 
         self.assertFileContains('test', goal) 
     
-    def test_write_mg_sym_file_R(self):
-        """tests if the mg.sym file is correctly written"""
+    def test_write_mg_sym_file_B(self):
+        """tests if the mg.sym file is correctly written.
+        The real process used is uux_uxug (real_processes[5])
+        """
         goal = \
-"""      0
-"""
-        process_exporter = export_fks_real.ProcessExporterFortranFKS_real()   
+""""""
+        process_exporter = export_fks_born.ProcessExporterFortranFKS_born()   
         
         process_exporter.write_mg_sym_file(
                     writers.FortranWriter(self.give_pos('test')),
-                    self.myfks_me.real_matrix_element,
+                    self.myfks_me.real_processes[5].matrix_element,
                     self.myfortranmodel)        
 
         self.assertFileContains('test', goal) 
 
     
-    def test_write_nexternal_file_R(self):
-        """tests if the nexternal.inc file is correctly written"""
+    def test_write_nexternal_file_B(self):
+        """tests if the nexternal.inc file is correctly written.
+        The real process used is uux_uxug (real_processes[5])
+        """
         goal = \
 """      INTEGER    NEXTERNAL
       PARAMETER (NEXTERNAL=5)
       INTEGER    NINCOMING
       PARAMETER (NINCOMING=2)
 """
-        process_exporter = export_fks_real.ProcessExporterFortranFKS_real()
+        process_exporter = export_fks_born.ProcessExporterFortranFKS_born()
         
         process_exporter.write_nexternal_file(
                     writers.FortranWriter(self.give_pos('test')),
-                    self.myfks_me.real_matrix_element,
+                    self.myfks_me.real_processes[5].matrix_element,
                     self.myfortranmodel)        
 
         self.assertFileContains('test', goal)  
 
 
-    def test_write_ngraphs_file_R(self):
+    def test_write_ngraphs_file_B(self):
         """tests if the ngraphs.inc file is correctly written.
         The function called is the one of the FortranProcessExporterV4 class.
+        The real process used is uux_uxug (real_processes[5]).
         """
         goal = \
 """      INTEGER    N_MAX_CG
       PARAMETER (N_MAX_CG=10)
 """
-        process_exporter = export_fks_real.ProcessExporterFortranFKS_real()
+        process_exporter = export_fks_born.ProcessExporterFortranFKS_born()
         
         nconfigs, s_and_t_channels = \
             process_exporter.write_configs_file(
                     writers.FortranWriter(self.give_pos('test1')),
-                    self.myfks_me.real_matrix_element,
+                    self.myfks_me.real_processes[5].matrix_element,
                     False,
                     self.myfortranmodel)
         
@@ -1796,9 +1812,10 @@ C
         self.assertFileContains('test', goal)    
 
 
-    def test_write_pmass_file_R(self):
+    def test_write_pmass_file_B(self):
         """tests if the pmass.inc file is correctly written.
         The function called is the one of the FortranProcessExporterV4 class.
+        The real process used is uux_uxug (real_processes[5]).
         """
         goal = \
 """      PMASS(1)=ZERO
@@ -1807,19 +1824,19 @@ C
       PMASS(4)=ZERO
       PMASS(5)=ZERO
 """
-        process_exporter = export_fks_real.ProcessExporterFortranFKS_real()
+        process_exporter = export_fks_born.ProcessExporterFortranFKS_born()
         
         process_exporter.write_pmass_file(
                     writers.FortranWriter(self.give_pos('test')),
-                    self.myfks_me.real_matrix_element)        
+                    self.myfks_me.real_processes[5].matrix_element)        
 
         self.assertFileContains('test', goal) 
         
 
-
-    def test_write_configs_file_noinv_R(self):
+    def test_write_configs_file_noinv_B(self):
         """Tests if the configs.inc file is corretly written, 
         without the t-channel inversion.
+        The (real) process used is gg_uxug (real_processes[1]).
         """
         goal = \
 """C     Diagram 1
@@ -1831,82 +1848,118 @@ C
 C     Diagram 2
       DATA MAPCONFIG(   2)/   2/
       DATA (IFOREST(I, -1,   2),I=1,2)/  5,  3/
-      DATA SPROP(  -1,   2)/       2/
+      DATA SPROP(  -1,   2)/      -2/
       DATA (IFOREST(I, -2,   2),I=1,2)/  4, -1/
       DATA SPROP(  -2,   2)/      21/
 C     Diagram 3
       DATA MAPCONFIG(   3)/   3/
       DATA (IFOREST(I, -1,   3),I=1,2)/  5,  4/
-      DATA SPROP(  -1,   3)/      -2/
+      DATA SPROP(  -1,   3)/       2/
       DATA (IFOREST(I, -2,   3),I=1,2)/ -1,  3/
       DATA SPROP(  -2,   3)/      21/
 C     Diagram 4
       DATA MAPCONFIG(   4)/   4/
       DATA (IFOREST(I, -1,   4),I=1,2)/  1,  3/
-      DATA TPRID(  -1,   4)/      21/
+      DATA TPRID(  -1,   4)/       2/
       DATA (IFOREST(I, -2,   4),I=1,2)/ -1,  5/
-      DATA TPRID(  -2,   4)/      21/
+      DATA TPRID(  -2,   4)/       2/
       DATA (IFOREST(I, -3,   4),I=1,2)/ -2,  4/
 C     Diagram 5
       DATA MAPCONFIG(   5)/   5/
       DATA (IFOREST(I, -1,   5),I=1,2)/  1,  3/
-      DATA TPRID(  -1,   5)/      21/
+      DATA TPRID(  -1,   5)/       2/
       DATA (IFOREST(I, -2,   5),I=1,2)/ -1,  4/
-      DATA TPRID(  -2,   5)/       2/
+      DATA TPRID(  -2,   5)/      21/
       DATA (IFOREST(I, -3,   5),I=1,2)/ -2,  5/
 C     Diagram 6
       DATA MAPCONFIG(   6)/   6/
       DATA (IFOREST(I, -1,   6),I=1,2)/  5,  4/
-      DATA SPROP(  -1,   6)/      -2/
+      DATA SPROP(  -1,   6)/       2/
       DATA (IFOREST(I, -2,   6),I=1,2)/  1,  3/
-      DATA TPRID(  -2,   6)/      21/
+      DATA TPRID(  -2,   6)/       2/
       DATA (IFOREST(I, -3,   6),I=1,2)/ -2, -1/
 C     Diagram 7
       DATA MAPCONFIG(   7)/   7/
-      DATA (IFOREST(I, -1,   7),I=1,2)/  1,  5/
+      DATA (IFOREST(I, -1,   7),I=1,2)/  1,  4/
       DATA TPRID(  -1,   7)/       2/
-      DATA (IFOREST(I, -2,   7),I=1,2)/ -1,  3/
-      DATA TPRID(  -2,   7)/      21/
-      DATA (IFOREST(I, -3,   7),I=1,2)/ -2,  4/
+      DATA (IFOREST(I, -2,   7),I=1,2)/ -1,  5/
+      DATA TPRID(  -2,   7)/       2/
+      DATA (IFOREST(I, -3,   7),I=1,2)/ -2,  3/
 C     Diagram 8
       DATA MAPCONFIG(   8)/   8/
-      DATA (IFOREST(I, -1,   8),I=1,2)/  4,  3/
-      DATA SPROP(  -1,   8)/      21/
-      DATA (IFOREST(I, -2,   8),I=1,2)/  1,  5/
-      DATA TPRID(  -2,   8)/       2/
-      DATA (IFOREST(I, -3,   8),I=1,2)/ -2, -1/
+      DATA (IFOREST(I, -1,   8),I=1,2)/  1,  4/
+      DATA TPRID(  -1,   8)/       2/
+      DATA (IFOREST(I, -2,   8),I=1,2)/ -1,  3/
+      DATA TPRID(  -2,   8)/      21/
+      DATA (IFOREST(I, -3,   8),I=1,2)/ -2,  5/
 C     Diagram 9
       DATA MAPCONFIG(   9)/   9/
       DATA (IFOREST(I, -1,   9),I=1,2)/  5,  3/
-      DATA SPROP(  -1,   9)/       2/
-      DATA (IFOREST(I, -2,   9),I=1,2)/  1, -1/
-      DATA TPRID(  -2,   9)/      21/
-      DATA (IFOREST(I, -3,   9),I=1,2)/ -2,  4/
+      DATA SPROP(  -1,   9)/      -2/
+      DATA (IFOREST(I, -2,   9),I=1,2)/  1,  4/
+      DATA TPRID(  -2,   9)/       2/
+      DATA (IFOREST(I, -3,   9),I=1,2)/ -2, -1/
 C     Diagram 10
       DATA MAPCONFIG(  10)/  10/
-      DATA (IFOREST(I, -1,  10),I=1,2)/  4,  3/
-      DATA SPROP(  -1,  10)/      21/
-      DATA (IFOREST(I, -2,  10),I=1,2)/  1, -1/
+      DATA (IFOREST(I, -1,  10),I=1,2)/  1,  5/
+      DATA TPRID(  -1,  10)/      21/
+      DATA (IFOREST(I, -2,  10),I=1,2)/ -1,  4/
       DATA TPRID(  -2,  10)/       2/
-      DATA (IFOREST(I, -3,  10),I=1,2)/ -2,  5/
+      DATA (IFOREST(I, -3,  10),I=1,2)/ -2,  3/
+C     Diagram 11
+      DATA MAPCONFIG(  11)/  11/
+      DATA (IFOREST(I, -1,  11),I=1,2)/  1,  5/
+      DATA TPRID(  -1,  11)/      21/
+      DATA (IFOREST(I, -2,  11),I=1,2)/ -1,  3/
+      DATA TPRID(  -2,  11)/       2/
+      DATA (IFOREST(I, -3,  11),I=1,2)/ -2,  4/
+C     Diagram 12
+      DATA MAPCONFIG(  12)/  12/
+      DATA (IFOREST(I, -1,  12),I=1,2)/  4,  3/
+      DATA SPROP(  -1,  12)/      21/
+      DATA (IFOREST(I, -2,  12),I=1,2)/  1,  5/
+      DATA TPRID(  -2,  12)/      21/
+      DATA (IFOREST(I, -3,  12),I=1,2)/ -2, -1/
+C     Diagram 13
+      DATA MAPCONFIG(  13)/  13/
+      DATA (IFOREST(I, -1,  13),I=1,2)/  5,  4/
+      DATA SPROP(  -1,  13)/       2/
+      DATA (IFOREST(I, -2,  13),I=1,2)/  1, -1/
+      DATA TPRID(  -2,  13)/       2/
+      DATA (IFOREST(I, -3,  13),I=1,2)/ -2,  3/
+C     Diagram 14
+      DATA MAPCONFIG(  14)/  14/
+      DATA (IFOREST(I, -1,  14),I=1,2)/  5,  3/
+      DATA SPROP(  -1,  14)/      -2/
+      DATA (IFOREST(I, -2,  14),I=1,2)/  1, -1/
+      DATA TPRID(  -2,  14)/       2/
+      DATA (IFOREST(I, -3,  14),I=1,2)/ -2,  4/
+C     Diagram 15
+      DATA MAPCONFIG(  15)/  15/
+      DATA (IFOREST(I, -1,  15),I=1,2)/  4,  3/
+      DATA SPROP(  -1,  15)/      21/
+      DATA (IFOREST(I, -2,  15),I=1,2)/  1, -1/
+      DATA TPRID(  -2,  15)/      21/
+      DATA (IFOREST(I, -3,  15),I=1,2)/ -2,  5/
 C     Number of configs
-      DATA MAPCONFIG(0)/  10/
+      DATA MAPCONFIG(0)/  15/
 """
-        process_exporter = export_fks_real.ProcessExporterFortranFKS_real()
+        process_exporter = export_fks_born.ProcessExporterFortranFKS_born()
         
         nconfigs, s_and_t_channels = \
             process_exporter.write_configs_file(
                     writers.FortranWriter(self.give_pos('test')),
-                    self.myfks_me.real_matrix_element,
+                    self.myfks_me.real_processes[1].matrix_element,
                     False,
                     self.myfortranmodel)
 
         self.assertFileContains('test', goal)    
 
 
-    def test_write_configs_file_inv_R(self):
+    def test_write_configs_file_inv_B(self):
         """Tests if the configs.inc file is corretly written, 
         without the t-channel inversion.
+        The real process used is uux_uxug (real_processes[5]).
         """
         goal = \
 """C     Diagram 1
@@ -1918,41 +1971,41 @@ C     Number of configs
 C     Diagram 2
       DATA MAPCONFIG(   2)/   2/
       DATA (IFOREST(I, -1,   2),I=1,2)/  5,  3/
-      DATA SPROP(  -1,   2)/       2/
+      DATA SPROP(  -1,   2)/      -2/
       DATA (IFOREST(I, -2,   2),I=1,2)/  4, -1/
       DATA SPROP(  -2,   2)/      21/
 C     Diagram 3
       DATA MAPCONFIG(   3)/   3/
       DATA (IFOREST(I, -1,   3),I=1,2)/  5,  4/
-      DATA SPROP(  -1,   3)/      -2/
+      DATA SPROP(  -1,   3)/       2/
       DATA (IFOREST(I, -2,   3),I=1,2)/ -1,  3/
       DATA SPROP(  -2,   3)/      21/
 C     Diagram 4
       DATA MAPCONFIG(   4)/   4/
-      DATA (IFOREST(I, -1,   4),I=1,2)/  2,  4/
+      DATA (IFOREST(I, -1,   4),I=1,2)/  2,  3/
       DATA TPRID(  -1,   4)/      21/
       DATA (IFOREST(I, -2,   4),I=1,2)/ -1,  5/
       DATA TPRID(  -2,   4)/      21/
-      DATA (IFOREST(I, -3,   4),I=1,2)/ -2,  3/
+      DATA (IFOREST(I, -3,   4),I=1,2)/ -2,  4/
 C     Diagram 5
       DATA MAPCONFIG(   5)/   5/
       DATA (IFOREST(I, -1,   5),I=1,2)/  2,  5/
       DATA TPRID(  -1,   5)/       2/
-      DATA (IFOREST(I, -2,   5),I=1,2)/ -1,  4/
+      DATA (IFOREST(I, -2,   5),I=1,2)/ -1,  3/
       DATA TPRID(  -2,   5)/      21/
-      DATA (IFOREST(I, -3,   5),I=1,2)/ -2,  3/
+      DATA (IFOREST(I, -3,   5),I=1,2)/ -2,  4/
 C     Diagram 6
       DATA MAPCONFIG(   6)/   6/
-      DATA (IFOREST(I, -1,   6),I=1,2)/  5,  4/
+      DATA (IFOREST(I, -1,   6),I=1,2)/  5,  3/
       DATA SPROP(  -1,   6)/      -2/
       DATA (IFOREST(I, -2,   6),I=1,2)/  2, -1/
       DATA TPRID(  -2,   6)/      21/
-      DATA (IFOREST(I, -3,   6),I=1,2)/ -2,  3/
+      DATA (IFOREST(I, -3,   6),I=1,2)/ -2,  4/
 C     Diagram 7
       DATA MAPCONFIG(   7)/   7/
-      DATA (IFOREST(I, -1,   7),I=1,2)/  2,  4/
+      DATA (IFOREST(I, -1,   7),I=1,2)/  2,  3/
       DATA TPRID(  -1,   7)/      21/
-      DATA (IFOREST(I, -2,   7),I=1,2)/ -1,  3/
+      DATA (IFOREST(I, -2,   7),I=1,2)/ -1,  4/
       DATA TPRID(  -2,   7)/       2/
       DATA (IFOREST(I, -3,   7),I=1,2)/ -2,  5/
 C     Diagram 8
@@ -1964,9 +2017,9 @@ C     Diagram 8
       DATA (IFOREST(I, -3,   8),I=1,2)/ -2,  5/
 C     Diagram 9
       DATA MAPCONFIG(   9)/   9/
-      DATA (IFOREST(I, -1,   9),I=1,2)/  5,  3/
+      DATA (IFOREST(I, -1,   9),I=1,2)/  5,  4/
       DATA SPROP(  -1,   9)/       2/
-      DATA (IFOREST(I, -2,   9),I=1,2)/  2,  4/
+      DATA (IFOREST(I, -2,   9),I=1,2)/  2,  3/
       DATA TPRID(  -2,   9)/      21/
       DATA (IFOREST(I, -3,   9),I=1,2)/ -2, -1/
 C     Diagram 10
@@ -1979,21 +2032,22 @@ C     Diagram 10
 C     Number of configs
       DATA MAPCONFIG(0)/  10/
 """
-        process_exporter = export_fks_real.ProcessExporterFortranFKS_real()
+        process_exporter = export_fks_born.ProcessExporterFortranFKS_born()
         
         nconfigs, s_and_t_channels = \
             process_exporter.write_configs_file(
                     writers.FortranWriter(self.give_pos('test')),
-                    self.myfks_me.real_matrix_element,
+                    self.myfks_me.real_processes[5].matrix_element,
                     True,
                     self.myfortranmodel)
 
         self.assertFileContains('test', goal)    
 
 
-    def test_write_props_file_noinv_R(self):
+    def test_write_props_file_noinv_B(self):
         """Tests if the props.inc file is corretly written, 
         without the t-channel inversion.
+        The (real) process used is gg_uxug (real_processes[1]).
         """
         goal = \
 """      PMASS( -1,   1)  = ZERO
@@ -2016,68 +2070,99 @@ C     Number of configs
       POW( -2,   3) = 2
       PMASS( -1,   4)  = ZERO
       PWIDTH( -1,   4) = ZERO
-      POW( -1,   4) = 2
+      POW( -1,   4) = 1
       PMASS( -2,   4)  = ZERO
       PWIDTH( -2,   4) = ZERO
-      POW( -2,   4) = 2
+      POW( -2,   4) = 1
       PMASS( -1,   5)  = ZERO
       PWIDTH( -1,   5) = ZERO
-      POW( -1,   5) = 2
+      POW( -1,   5) = 1
       PMASS( -2,   5)  = ZERO
       PWIDTH( -2,   5) = ZERO
-      POW( -2,   5) = 1
+      POW( -2,   5) = 2
       PMASS( -1,   6)  = ZERO
       PWIDTH( -1,   6) = ZERO
       POW( -1,   6) = 1
       PMASS( -2,   6)  = ZERO
       PWIDTH( -2,   6) = ZERO
-      POW( -2,   6) = 2
+      POW( -2,   6) = 1
       PMASS( -1,   7)  = ZERO
       PWIDTH( -1,   7) = ZERO
       POW( -1,   7) = 1
       PMASS( -2,   7)  = ZERO
       PWIDTH( -2,   7) = ZERO
-      POW( -2,   7) = 2
+      POW( -2,   7) = 1
       PMASS( -1,   8)  = ZERO
       PWIDTH( -1,   8) = ZERO
-      POW( -1,   8) = 2
+      POW( -1,   8) = 1
       PMASS( -2,   8)  = ZERO
       PWIDTH( -2,   8) = ZERO
-      POW( -2,   8) = 1
+      POW( -2,   8) = 2
       PMASS( -1,   9)  = ZERO
       PWIDTH( -1,   9) = ZERO
       POW( -1,   9) = 1
       PMASS( -2,   9)  = ZERO
       PWIDTH( -2,   9) = ZERO
-      POW( -2,   9) = 2
+      POW( -2,   9) = 1
       PMASS( -1,  10)  = ZERO
       PWIDTH( -1,  10) = ZERO
       POW( -1,  10) = 2
       PMASS( -2,  10)  = ZERO
       PWIDTH( -2,  10) = ZERO
       POW( -2,  10) = 1
+      PMASS( -1,  11)  = ZERO
+      PWIDTH( -1,  11) = ZERO
+      POW( -1,  11) = 2
+      PMASS( -2,  11)  = ZERO
+      PWIDTH( -2,  11) = ZERO
+      POW( -2,  11) = 1
+      PMASS( -1,  12)  = ZERO
+      PWIDTH( -1,  12) = ZERO
+      POW( -1,  12) = 2
+      PMASS( -2,  12)  = ZERO
+      PWIDTH( -2,  12) = ZERO
+      POW( -2,  12) = 2
+      PMASS( -1,  13)  = ZERO
+      PWIDTH( -1,  13) = ZERO
+      POW( -1,  13) = 1
+      PMASS( -2,  13)  = ZERO
+      PWIDTH( -2,  13) = ZERO
+      POW( -2,  13) = 1
+      PMASS( -1,  14)  = ZERO
+      PWIDTH( -1,  14) = ZERO
+      POW( -1,  14) = 1
+      PMASS( -2,  14)  = ZERO
+      PWIDTH( -2,  14) = ZERO
+      POW( -2,  14) = 1
+      PMASS( -1,  15)  = ZERO
+      PWIDTH( -1,  15) = ZERO
+      POW( -1,  15) = 2
+      PMASS( -2,  15)  = ZERO
+      PWIDTH( -2,  15) = ZERO
+      POW( -2,  15) = 2
 """
-        process_exporter = export_fks_real.ProcessExporterFortranFKS_real()
+        process_exporter = export_fks_born.ProcessExporterFortranFKS_born()
         
         nconfigs, s_and_t_channels = \
             process_exporter.write_configs_file(
                     writers.FortranWriter(self.give_pos('test1')),
-                    self.myfks_me.real_matrix_element,
+                    self.myfks_me.real_processes[1].matrix_element,
                     False,
                     self.myfortranmodel)
         
         process_exporter.write_props_file(
                     writers.FortranWriter(self.give_pos('test')),
-                    self.myfks_me.real_matrix_element,
+                    self.myfks_me.real_processes[1].matrix_element,
                     self.myfortranmodel,
                     s_and_t_channels)        
 
         self.assertFileContains('test', goal)    
 
 
-    def test_write_props_file_inv_R(self):
+    def test_write_props_file_inv_B(self):
         """Tests if the props.inc file is corretly written, 
         with the t-channel inversion
+        The (real) process used is uux_uxug (real_processes[5]).
         """
         goal = \
 """      PMASS( -1,   1)  = ZERO
@@ -2141,56 +2226,94 @@ C     Number of configs
       PWIDTH( -2,  10) = ZERO
       POW( -2,  10) = 1
 """
-        process_exporter = export_fks_real.ProcessExporterFortranFKS_real()
+        process_exporter = export_fks_born.ProcessExporterFortranFKS_born()
         
         nconfigs, s_and_t_channels = \
             process_exporter.write_configs_file(
                     writers.FortranWriter(self.give_pos('test1')),
-                    self.myfks_me.real_matrix_element,
+                    self.myfks_me.real_processes[5].matrix_element,
                     True,
                     self.myfortranmodel)
         
         process_exporter.write_props_file(
                     writers.FortranWriter(self.give_pos('test')),
-                    self.myfks_me.real_matrix_element,
+                    self.myfks_me.real_processes[5].matrix_element,
                     self.myfortranmodel,
                     s_and_t_channels)        
 
         self.assertFileContains('test', goal)    
 
 
-    def test_write_coloramps_file_R(self):
+    def test_write_coloramps_file_B(self):
         """Tests if the coloramps.inc file is corretly written
+        The (real) process used is uux_uxug (real_processes[5]).
         """
         goal = \
 """      LOGICAL ICOLAMP(10,4)
       DATA(ICOLAMP(I,1),I=1,10)/.FALSE.,.TRUE.,.TRUE.,.TRUE.,.FALSE.
      $ ,.TRUE.,.FALSE.,.FALSE.,.TRUE.,.FALSE./
-      DATA(ICOLAMP(I,2),I=1,10)/.TRUE.,.TRUE.,.FALSE.,.FALSE.,.FALSE.
+      DATA(ICOLAMP(I,2),I=1,10)/.TRUE.,.FALSE.,.TRUE.,.FALSE.,.FALSE.
      $ ,.FALSE.,.TRUE.,.TRUE.,.TRUE.,.FALSE./
-      DATA(ICOLAMP(I,3),I=1,10)/.TRUE.,.FALSE.,.TRUE.,.FALSE.,.TRUE.
+      DATA(ICOLAMP(I,3),I=1,10)/.TRUE.,.TRUE.,.FALSE.,.FALSE.,.TRUE.
      $ ,.TRUE.,.FALSE.,.FALSE.,.FALSE.,.TRUE./
       DATA(ICOLAMP(I,4),I=1,10)/.FALSE.,.FALSE.,.FALSE.,.TRUE.,.TRUE.
      $ ,.FALSE.,.TRUE.,.TRUE.,.FALSE.,.TRUE./
 """
-        process_exporter = export_fks_real.ProcessExporterFortranFKS_real()
+        process_exporter = export_fks_born.ProcessExporterFortranFKS_born()
         
         process_exporter.write_coloramps_file(
                     writers.FortranWriter(self.give_pos('test')),
-                    self.myfks_me.real_matrix_element,
+                    self.myfks_me.real_processes[5].matrix_element,
                     self.myfortranmodel)        
 
         self.assertFileContains('test', goal)    
 
 
-    def test_write_bornfromreal_file_R(self):
+    def test_write_bornfromreal_file_B(self):
         """Tests if the bornfromreal.inc file is corretly written, for all 
-        the underlying borns of the process"""
+        the real emission processes possible for this born.
+        """
         goal = [\
+"""      DATA B_FROM_R(13) / 1 /
+      DATA R_FROM_B(1) / 13 /
+      DATA B_FROM_R(12) / 2 /
+      DATA R_FROM_B(2) / 12 /
+      DATA B_FROM_R(11) / 3 /
+      DATA R_FROM_B(3) / 11 /
+      INTEGER MAPB
+      DATA (MAPBCONF(MAPB), MAPB=0, 3) / 3, 1, 2, 3 /
+""",
 """      DATA B_FROM_R(6) / 1 /
       DATA R_FROM_B(1) / 6 /
       DATA B_FROM_R(5) / 2 /
       DATA R_FROM_B(2) / 5 /
+      DATA B_FROM_R(4) / 3 /
+      DATA R_FROM_B(3) / 4 /
+      INTEGER MAPB
+      DATA (MAPBCONF(MAPB), MAPB=0, 3) / 3, 1, 2, 3 /
+""",
+"""      DATA B_FROM_R(16) / 1 /
+      DATA R_FROM_B(1) / 16 /
+      DATA B_FROM_R(5) / 2 /
+      DATA R_FROM_B(2) / 5 /
+      DATA B_FROM_R(9) / 3 /
+      DATA R_FROM_B(3) / 9 /
+      INTEGER MAPB
+      DATA (MAPBCONF(MAPB), MAPB=0, 3) / 3, 1, 2, 3 /
+""",
+"""      DATA B_FROM_R(5) / 1 /
+      DATA R_FROM_B(1) / 5 /
+      DATA B_FROM_R(1) / 2 /
+      DATA R_FROM_B(2) / 1 /
+      DATA B_FROM_R(4) / 3 /
+      DATA R_FROM_B(3) / 4 /
+      INTEGER MAPB
+      DATA (MAPBCONF(MAPB), MAPB=0, 3) / 3, 1, 2, 3 /
+""",
+"""      DATA B_FROM_R(5) / 1 /
+      DATA R_FROM_B(1) / 5 /
+      DATA B_FROM_R(1) / 2 /
+      DATA R_FROM_B(2) / 1 /
       DATA B_FROM_R(4) / 3 /
       DATA R_FROM_B(3) / 4 /
       INTEGER MAPB
@@ -2205,59 +2328,68 @@ C     Number of configs
       INTEGER MAPB
       DATA (MAPBCONF(MAPB), MAPB=0, 3) / 3, 1, 2, 3 /
 """,
-"""      DATA B_FROM_R(1) / 1 /
-      DATA R_FROM_B(1) / 1 /
-      DATA B_FROM_R(10) / 2 /
-      DATA R_FROM_B(2) / 10 /
+"""      DATA B_FROM_R(10) / 1 /
+      DATA R_FROM_B(1) / 10 /
+      DATA B_FROM_R(1) / 2 /
+      DATA R_FROM_B(2) / 1 /
       DATA B_FROM_R(8) / 3 /
       DATA R_FROM_B(3) / 8 /
       INTEGER MAPB
       DATA (MAPBCONF(MAPB), MAPB=0, 3) / 3, 1, 2, 3 /
 """,
-"""      DATA B_FROM_R(8) / 1 /
-      DATA R_FROM_B(1) / 8 /
-      DATA B_FROM_R(7) / 2 /
-      DATA R_FROM_B(2) / 7 /
-      INTEGER MAPB
-      DATA (MAPBCONF(MAPB), MAPB=0, 2) / 2, 1, 2 /
-""",
-"""      DATA B_FROM_R(10) / 1 /
-      DATA R_FROM_B(1) / 10 /
-      DATA B_FROM_R(5) / 2 /
-      DATA R_FROM_B(2) / 5 /
-      INTEGER MAPB
-      DATA (MAPBCONF(MAPB), MAPB=0, 2) / 2, 1, 2 /
-""",
 """      DATA B_FROM_R(2) / 1 /
       DATA R_FROM_B(1) / 2 /
-      DATA B_FROM_R(9) / 2 /
-      DATA R_FROM_B(2) / 9 /
+      DATA B_FROM_R(15) / 2 /
+      DATA R_FROM_B(2) / 15 /
+      DATA B_FROM_R(10) / 3 /
+      DATA R_FROM_B(3) / 10 /
       INTEGER MAPB
-      DATA (MAPBCONF(MAPB), MAPB=0, 2) / 2, 1, 2 /
+      DATA (MAPBCONF(MAPB), MAPB=0, 3) / 3, 1, 2, 3 /
 """,
 """      DATA B_FROM_R(3) / 1 /
       DATA R_FROM_B(1) / 3 /
       DATA B_FROM_R(6) / 2 /
       DATA R_FROM_B(2) / 6 /
+      DATA B_FROM_R(14) / 3 /
+      DATA R_FROM_B(3) / 14 /
       INTEGER MAPB
-      DATA (MAPBCONF(MAPB), MAPB=0, 2) / 2, 1, 2 /
+      DATA (MAPBCONF(MAPB), MAPB=0, 3) / 3, 1, 2, 3 /
+""",
+"""      DATA B_FROM_R(1) / 1 /
+      DATA R_FROM_B(1) / 1 /
+      DATA B_FROM_R(4) / 2 /
+      DATA R_FROM_B(2) / 4 /
+      DATA B_FROM_R(5) / 3 /
+      DATA R_FROM_B(3) / 5 /
+      INTEGER MAPB
+      DATA (MAPBCONF(MAPB), MAPB=0, 3) / 3, 1, 2, 3 /
+""",
+"""      DATA B_FROM_R(2) / 1 /
+      DATA R_FROM_B(1) / 2 /
+      DATA B_FROM_R(5) / 2 /
+      DATA R_FROM_B(2) / 5 /
+      DATA B_FROM_R(9) / 3 /
+      DATA R_FROM_B(3) / 9 /
+      INTEGER MAPB
+      DATA (MAPBCONF(MAPB), MAPB=0, 3) / 3, 1, 2, 3 /
 """]
 
-        process_exporter = export_fks_real.ProcessExporterFortranFKS_real()
+        process_exporter = export_fks_born.ProcessExporterFortranFKS_born()
 
-        for i, born in enumerate(self.myfks_me.born_processes):
+        for i, real in enumerate(self.myfks_me.real_processes):
         
             process_exporter.write_bornfromreal_file(
                     writers.FortranWriter(self.give_pos('test%d' % i)),
-                    born,
+                    real,
                     self.myfortranmodel)        
 
             self.assertFileContains('test%d' % i, goal[i])    
 
 
-    def test_write_decayBW_file_R(self):
-        """Tests if the decayBW.inc file is correctly written"""
-    
+    def test_write_decayBW_file_B(self):
+        """Tests if the decayBW.inc file is correctly written.
+        The (real) process used is uux_uxug (real_processes[5]).
+        """
         goal = \
 """      DATA GFORCEBW(-1,1)/.FALSE./
       DATA GFORCEBW(-2,1)/.FALSE./
@@ -2271,12 +2403,12 @@ C     Number of configs
       DATA GFORCEBW(-1,10)/.FALSE./
 """
 
-        process_exporter = export_fks_real.ProcessExporterFortranFKS_real()
+        process_exporter = export_fks_born.ProcessExporterFortranFKS_born()
 
         nconfigs, s_and_t_channels = \
             process_exporter.write_configs_file(
                     writers.FortranWriter(self.give_pos('test1')),
-                    self.myfks_me.real_matrix_element,
+                    self.myfks_me.real_processes[5].matrix_element,
                     False,
                     self.myfortranmodel)
 
@@ -2287,61 +2419,119 @@ C     Number of configs
         self.assertFileContains('test', goal)    
 
 
-    def test_get_color_data_lines_from_color_matrix_R(self):
+    def test_get_color_data_lines_from_color_matrix_B(self):
         """tests if the color data lines are correctly extracted from a given
-        color matrix.
-        The first color link is used, for the uu~ > uu~ underlying born (born_processes[3]).
+        color matrix. 
+        The first color link is used.
         """
         
-        goal = ["DATA DENOM(1)/1/",
-                "DATA (CF(I,  1),I=  1,  2) /    9,    3/",
-                "DATA DENOM(2)/1/",
-                "DATA (CF(I,  2),I=  1,  2) /    3,    9/"]
-        process_exporter = export_fks_real.ProcessExporterFortranFKS_real()
+        goal = ["DATA DENOM(1)/3/",
+                "DATA (CF(I,  1),I=  1,  2) /    6,   -2/",
+                "DATA DENOM(2)/3/",
+                "DATA (CF(I,  2),I=  1,  2) /    6,   16/",
+                ]
+        process_exporter = export_fks_born.ProcessExporterFortranFKS_born()
 
         lines = process_exporter.get_color_data_lines_from_color_matrix(
-                    self.myfks_me.born_processes[3].color_links[0]['link_matrix'])
+                    self.myfks_me.color_links[0]['link_matrix'])
         
         for line, goalline in zip(lines, goal):
             self.assertEqual(line.upper(), goalline)        
 
-    def test_den_factor_line_w_real_R(self):
-        """Tests if the den_factor line for a color linked born (i.e. same symmetry
-        as the real matrix element) is correctly returned"""
+
+    def test_den_factor_line_B(self):
+        """Tests if the den_factor line for a given matrix element is correctly 
+        returned.
+        The (real) process used is uux_uxug (real_processes[5]).
+        """
         
         goal = "DATA IDEN/36/"
-        process_exporter = export_fks_real.ProcessExporterFortranFKS_real()
+        process_exporter = export_fks_born.ProcessExporterFortranFKS_born()
 
         self.assertEqual(goal,
                 process_exporter.get_den_factor_line(
-                            self.myfks_me.born_processes[3].matrix_element,
-                            self.myfks_me))
+                        self.myfks_me.real_processes[5].matrix_element))
 
 
-    def test_den_factor_line_wo_real_R(self):
-        """Tests if the den_factor line for a given matrix element is correctly 
-        returned"""
+    def test_write_den_factor_file_B(self):
+        """Testst the den_factor.inc file. It is included in the born ME, with identical
+        particle factor as the real ME, and it is (in principle) different for each
+        real emission ME.
+        """
+        goal = [ \
+"      DATA IDEN/192/\n",
+"      DATA IDEN/96/\n",
+"      DATA IDEN/192/\n",
+"      DATA IDEN/96/\n",
+"      DATA IDEN/96/\n",
+"      DATA IDEN/96/\n",
+"      DATA IDEN/192/\n",
+"      DATA IDEN/192/\n",
+"      DATA IDEN/192/\n",
+"      DATA IDEN/96/\n",
+"      DATA IDEN/192/\n",
+        ]
+
+        process_exporter = export_fks_born.ProcessExporterFortranFKS_born()
+
+        for i, real in enumerate(self.myfks_me.real_processes):
         
-        goal = "DATA IDEN/36/"
-        process_exporter = export_fks_real.ProcessExporterFortranFKS_real()
+            process_exporter.write_den_factor_file(
+                    writers.FortranWriter(self.give_pos('test%d' % i)),
+                    self.myfks_me.born_matrix_element, real.matrix_element,
+                    self.myfortranmodel)        
 
-        self.assertEqual(goal,
-                process_exporter.get_den_factor_line(self.myfks_me.real_matrix_element))
+            self.assertFileContains('test%d' % i, goal[i])    
 
 
-    def test_get_icolamp_lines_R(self):
+    def test_write_glu_ij_file_B(self):
+        """Testst the glu_ij.inc file. It is included in the born ME, 
+        when the born leg that splits is a gluon, with the leg number.
+        If the leg is not a gluon, ij is set to 0.
+        """
+        goal = [ \
+"      DATA GLU_IJ/ 0/\n",
+"      DATA GLU_IJ/ 0/\n",
+"      DATA GLU_IJ/ 2/\n",
+"      DATA GLU_IJ/ 2/\n",
+"      DATA GLU_IJ/ 2/\n",
+"      DATA GLU_IJ/ 2/\n",
+"      DATA GLU_IJ/ 2/\n",
+"      DATA GLU_IJ/ 0/\n",
+"      DATA GLU_IJ/ 4/\n",
+"      DATA GLU_IJ/ 4/\n",
+"      DATA GLU_IJ/ 4/\n",
+        ]
+
+        process_exporter = export_fks_born.ProcessExporterFortranFKS_born()
+
+        for i, real in enumerate(self.myfks_me.real_processes):
+        
+            process_exporter.write_glu_ij_file(
+                    writers.FortranWriter(self.give_pos('test%d' % i)),
+                    real.ijglu,
+                    self.myfortranmodel)        
+
+            self.assertFileContains('test%d' % i, goal[i])    
+
+
+    def test_get_icolamp_lines_B(self):
         """Tests if the icolamp lines for a given matrix element are correctly 
-        returned"""
-        
-        goal = ['logical icolamp(10,4)', 
-                'DATA(icolamp(i,1),i=1,10)/.false.,.true.,.true.,.true.,.false.,.true.,.false.,.false.,.true.,.false./', 
-                'DATA(icolamp(i,2),i=1,10)/.true.,.true.,.false.,.false.,.false.,.false.,.true.,.true.,.true.,.false./', 
-                'DATA(icolamp(i,3),i=1,10)/.true.,.false.,.true.,.false.,.true.,.true.,.false.,.false.,.false.,.true./', 
-                'DATA(icolamp(i,4),i=1,10)/.false.,.false.,.false.,.true.,.true.,.false.,.true.,.true.,.false.,.true./']
-        
-        process_exporter = export_fks_real.ProcessExporterFortranFKS_real()
+        returned.
+        The real process is gg_uxug_i3_j1 (myfks_me.real_processes[1])
+        """
+        goal = ['logical icolamp(18,6)',
+        'DATA(icolamp(i,1),i=1,18)/.true.,.true.,.false.,.false.,.false.,.false.,.false.,.true.,.true.,.false.,.false.,.false.,.false.,.false.,.true.,.true.,.false.,.true./',
+        'DATA(icolamp(i,2),i=1,18)/.false.,.false.,.false.,.false.,.false.,.false.,.true.,.true.,.false.,.true.,.false.,.true.,.false.,.false.,.true.,.true.,.true.,.false./',
+        'DATA(icolamp(i,3),i=1,18)/.true.,.true.,.false.,.false.,.false.,.false.,.false.,.false.,.false.,.false.,.true.,.true.,.false.,.true.,.false.,.false.,.true.,.true./',
+        'DATA(icolamp(i,4),i=1,18)/.false.,.false.,.false.,.true.,.true.,.false.,.false.,.false.,.false.,.false.,.true.,.true.,.false.,.false.,.true.,.true.,.true.,.false./',
+        'DATA(icolamp(i,5),i=1,18)/.true.,.false.,.true.,.false.,.false.,.false.,.false.,.false.,.false.,.true.,.false.,.true.,.true.,.false.,.false.,.false.,.true.,.true./',
+        'DATA(icolamp(i,6),i=1,18)/.true.,.false.,.true.,.false.,.true.,.true.,.false.,.false.,.false.,.false.,.false.,.false.,.false.,.false.,.true.,.true.,.false.,.true./']       
+       
+        process_exporter = export_fks_born.ProcessExporterFortranFKS_born()
 
         self.assertEqual(goal,
-                process_exporter.get_icolamp_lines(self.myfks_me.real_matrix_element))
+                process_exporter.get_icolamp_lines( \
+                    self.myfks_me.real_processes[1].matrix_element))
 
         
