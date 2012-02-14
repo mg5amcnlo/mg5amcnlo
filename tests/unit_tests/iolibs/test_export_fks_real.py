@@ -205,7 +205,6 @@ NJetSymmetrizeFinal     Yes
         self.assertFileContains('test', goal)
 
 
-
     def test_get_pdf_lines_mir_false(self):
         """tests the correct writing of the pdf lines for a non-mirror configuration,
         i.e. with beam indices 1,2 in the usual position"""
