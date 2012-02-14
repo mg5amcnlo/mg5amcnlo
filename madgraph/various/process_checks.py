@@ -367,6 +367,7 @@ class LoopMatrixElementEvaluator(MatrixElementEvaluator):
             export_dir=self.stored_quantities['matrix_elements'][\
                 [el[0] for el in self.stored_quantities['matrix_elements']\
                  ].index(matrix_element)][1]
+            print "REUSING ",export_dir
         else:        
             export_dir=os.path.join(self.mg_root,'TMP_DIR_FOR_THE_CHECK_CMD')
             if os.path.isdir(export_dir):
