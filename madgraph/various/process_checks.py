@@ -358,7 +358,7 @@ class LoopMatrixElementEvaluator(MatrixElementEvaluator):
         self.stored_quantities['matrix_elements'].append(matrix_element)
 
         # Set proliferate to true if you want to keep the produced directories
-        proliferate=False
+        proliferate=True
         # Generate phase space point to use
         if not p:
             p, w_rambo = self.get_momenta(process)

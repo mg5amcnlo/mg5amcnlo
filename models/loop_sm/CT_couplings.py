@@ -316,12 +316,16 @@ R2_GGHHc = Coupling(name = 'R2_GGHHc',
                     value = {0:'(-yc**2/2.0)*(1.0/2.0)*((complex(0,1)*G**2)/(8.0*cmath.pi**2))'},
                     order = {'QCD':2,'QED':2})
 
+# EDIT VH
+# There is a factor +4 added here to the two couplings below without proper understanding of it
+# I have not investigate too much about it though.
+# END EDIT VH
 R2_GGHHb = Coupling(name = 'R2_GGHHb',
-                    value = {0:'(-yb**2/2.0)*(1.0/2.0)*((complex(0,1)*G**2)/(8.0*cmath.pi**2))'},
+                    value = {0:'4.0*(-yb**2/2.0)*(1.0/2.0)*((complex(0,1)*G**2)/(8.0*cmath.pi**2))'},
                     order = {'QCD':2,'QED':2})
 
 R2_GGHHt = Coupling(name = 'R2_GGHHt',
-                    value = {0:'(-yt**2/2.0)*(1.0/2.0)*((complex(0,1)*G**2)/(8.0*cmath.pi**2))'},
+                    value = {0:'4.0*(-yt**2/2.0)*(1.0/2.0)*((complex(0,1)*G**2)/(8.0*cmath.pi**2))'},
                     order = {'QCD':2,'QED':2})
 
 # EDIT VH
