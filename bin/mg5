@@ -112,7 +112,7 @@ try:
     logging.getLogger('madgraph').setLevel(eval('logging.' + options.logging))
 except:
     pass
-import madgraph.interface.cmd_interface as cmd_interface
+import madgraph.interface.master_interface as interface
 
 # Call the cmd interface main loop
 try:
@@ -123,22 +123,21 @@ try:
         else:
             input_file = options.file
         if options.web:
-            cmd_line = cmd_interface.MadGraphCmdWeb()
+            cmd_line = interface.MasterCmdWeb()
             cmd_line.debug_output = os.path.join(os.path.dirname(input_file),'generation.log')
             cmd_line.use_rawinput = False
             cmd_line.run_cmd('import command ' + input_file)
         else:
-            cmd_line = cmd_interface.MadGraphCmdShell(mgme_dir = options.mgme_dir)
+            cmd_line = interface.MasterCmd(mgme_dir = options.mgme_dir)
             cmd_line.use_rawinput = False
             cmd_line.run_cmd('import command ' + input_file)
-
     else:
         # Interactive mode
         if options.web:
-            cmd_line = cmd_interface.MadGraphCmdWeb()
+            cmd_line = interface.MasterCmdWeb()
             cmd_line.cmdloop()
         else:
-            cmd_line = cmd_interface.MadGraphCmdShell(mgme_dir = options.mgme_dir)
+            cmd_line = interface.MasterCmd(mgme_dir = options.mgme_dir)
             cmd_line.cmdloop()
 except KeyboardInterrupt:
     print 'writting history and quit on KeyboardInterrupt' 
