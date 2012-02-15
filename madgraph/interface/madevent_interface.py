@@ -2441,17 +2441,11 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
         to_suppress = [os.path.basename(f) for f in to_suppress if 'banner' not in f]
         if tag:
             to_suppress = [f for f in to_suppress if tag in f]
-            if 'parton' in mode or 'all' in mode:
-                try:
-                    if self.results[run][0]['tag'] != tag:
-                        raise Exception, 'dummy'
-                except:
-                    pass
-                else:
-                    if os.path.exists(pjoin(self.me_dir, 'Events', run, 'events.lhe.gz')):
-                        to_suppress.append('events.lhe.gz')
-                    if os.path.exists(pjoin(self.me_dir, 'Events', run, 'unweighted_events.lhe.gz')):
-                        to_suppress.append('unweighted_events.lhe.gz')
+            if 'parton' in mode:
+                if os.path.exists(pjoin(self.me_dir, 'Events', run, 'events.lhe.gz')):
+                    to_suppress.append('events.lhe.gz')
+                if os.path.exists(pjoin(self.me_dir, 'Events', run, 'unweighted_events.lhe.gz')):
+                    to_suppress.append('unweighted_events.lhe.gz')
         if 'all' in mode:
             pass # suppress everything
         else:

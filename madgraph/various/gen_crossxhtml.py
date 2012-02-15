@@ -447,11 +447,11 @@ class RunResults(list):
         output = {}
         current = self[-1]
         # Check that cross/nb_event/error are define
-        if current.pythia and not current['nb_event']:
+        if current.pythia and not current['nb_event'] and len(self) > 1:
             output['nb_event'] = self[-2]['nb_event']
             output['cross'] = self[-2]['cross']
             output['error'] = self[-2]['error']
-        elif (current.pgs or current.delphes) and not current['nb_event']:
+        elif (current.pgs or current.delphes) and not current['nb_event'] and len(self) > 1:
             if self[-2]['cross_pythia']:
                 output['cross'] = self[-2]['cross_pythia']
                 output['nb_event'] = int(0.5+(self[-2]['nb_event'] * current['cross'] /self[-2]['cross']))                           
