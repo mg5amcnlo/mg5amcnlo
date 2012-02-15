@@ -38,8 +38,12 @@ class HelpLoop(mg_interface.HelpToCmd):
     pass
 
 class LoopInterface(CheckLoop, CompleteLoop, HelpLoop, mg_interface.MadGraphCmd):
+    
+    def do_generate(self, *args,**opt):
+        'hello'
+        print 'hello'
     pass
-
+   
 class LoopInterfaceWeb(mg_interface.CheckValidForCmdWeb, LoopInterface):
     pass
 
