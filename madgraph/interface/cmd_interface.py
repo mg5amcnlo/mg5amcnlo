@@ -703,14 +703,16 @@ This will take effect only in a NEW terminal
         # Not valid directory so maybe a file
         if os.path.isfile(path):
             text = open(path).read()
-            if 'Begin PROCESS' in text:
-                return 'proc_v4'
-            elif '<MGVERSION>' in text:
-                return 'banner'
-            elif '<MGVersion>' in text:
-                return 'banner'
-            else:
+            pat = re.compile('(Begin process|<MGVERSION>)', re.I)
+            matches = pat.findall(text)
+            if not matches:
                 return 'command'
+            elif len(matches) > 1:
+                return 'banner'
+            elif matches[0].lower() == 'begin process':
+                return 'proc_v4'
+            else:
+                return 'banner'
         else:
             return 'proc_v4'
         
@@ -2483,8 +2485,8 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
                 raise self.InvalidCmd, 'The File should be a valid banner'
             ban = banner_module.Banner(args[1])
             # Check that this is MG5 banner
-            if 'MG5ProcCard' in ban:
-                for line in ban['MG5ProcCard'].split('\n'):
+            if 'mg5proccard' in ban:
+                for line in ban['mg5proccard'].split('\n'):
                     if line.startswith('#') or line.startswith('<'):
                         continue
                     self.exec_cmd(line)
