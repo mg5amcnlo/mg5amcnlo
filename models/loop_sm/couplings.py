@@ -1,11 +1,12 @@
-# This file was automatically created by FeynRules $Revision: 634 $
-# Mathematica version: 8.0 for Mac OS X x86 (64-bit) (November 6, 2010)
-# Date: Wed 6 Jul 2011 14:07:37
+# This file was automatically created by FeynRules $Revision: 535 $
+# Mathematica version: 7.0 for Mac OS X x86 (64-bit) (November 11, 2008)
+# Date: Fri 18 Mar 2011 18:40:51
 
 
 from object_library import all_couplings, Coupling
 
 from function_library import complexconjugate, re, im, csc, sec, acsc, asec
+
 
 GC_1 = Coupling(name = 'GC_1',
                 value = '-(ee*complex(0,1))/3.',
@@ -116,7 +117,7 @@ GC_27 = Coupling(name = 'GC_27',
                  order = {'QED':2})
 
 GC_28 = Coupling(name = 'GC_28',
-                 value = '(cw*ee*complex(0,1))/(2.*sw) + (ee*complex(0,1)*sw)/(2.*cw)',
+                 value = '(cw*ee*complex(0, 1))/(2.*sw) + (ee*complex(0,1)*sw)/(2.*cw)',
                  order = {'QED':1})
 
 GC_29 = Coupling(name = 'GC_29',

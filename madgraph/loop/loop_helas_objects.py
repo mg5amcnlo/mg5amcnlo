@@ -1180,17 +1180,18 @@ class LoopHelasMatrixElement(helas_objects.HelasMatrixElement):
                         for i, coupl_key in enumerate(keys):
                             color = coupl_key[0]
                             if color in done_color.keys():
-                                amp = done_color[color]
+                                amp, loop_amp = done_color[color]
                                 amp.get('coupling').append(inter.get('couplings')[coupl_key])
                                 amp.get('lorentz').append(inter.get('lorentz')[coupl_key[1]])
+                                # Update the coupling attribute of the loop_amp
+                                loop_amp.set('coupling',loop_amp.get_couplings())
                                 continue
                             amp = helas_objects.HelasAmplitude(lastvx, model)
                             amp.set('coupling', [inter.get('couplings')[coupl_key]])
                             amp.set('lorentz', [inter.get('lorentz')[coupl_key[1]]])
                             if inter.get('color'):
                                 amp.set('inter_color', inter.get('color')[color])
-                            amp.set('color_key', color)
-                            done_color[color] = amp 
+                            amp.set('color_key', color) 
                             amp.set('mothers', mothers)
                             ###print "mothers added for amp="
                             ###for wf in mothers:
@@ -1235,6 +1236,10 @@ class LoopHelasMatrixElement(helas_objects.HelasMatrixElement):
                                                        in loop_amp.get('amplitudes')]))
                             loop_amp.set('coupling',loop_amp.get_couplings())
                             helas_diagram.get('amplitudes').append(loop_amp)
+                            # Save amp and loop_amp to the corresponding color
+                            # in order to reuse them if the vertex has other
+                            # lorentz structure linked to the same color one
+                            done_color[color] = (amp, loop_amp)
                 return wfNumber, amplitudeNumber
                 
             def process_counterterms(ct_vertices, wfNumber, amplitudeNumber):
@@ -1550,7 +1555,8 @@ class LoopHelasMatrixElement(helas_objects.HelasMatrixElement):
                    not wa.get('is_loop'))): 
                 tags.append('L')
             
-            output.append(tuple(wa.get('lorentz'), tags, wa.find_outgoing_number()))
+            output.append((tuple(wa.get('lorentz')), tags, 
+                                                     wa.find_outgoing_number()))
             return output
 
     def get_used_couplings(self):

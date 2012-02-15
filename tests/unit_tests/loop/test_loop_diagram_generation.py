@@ -37,12 +37,14 @@ import madgraph.core.diagram_generation as diagram_generation
 import madgraph.loop.loop_base_objects as loop_base_objects
 import madgraph.loop.loop_diagram_generation as loop_diagram_generation
 import madgraph.iolibs.save_load_object as save_load_object
+import models.import_ufo as models
 from madgraph import MadGraph5Error
 
 _file_path = os.path.dirname(os.path.realpath(__file__))
 _input_file_path = os.path.join(_file_path, os.path.pardir, os.path.pardir,
                                 'input_files')
-
+_model_file_path = os.path.join(_file_path, os.path.pardir, os.path.pardir,
+                                os.path.pardir,'models')
 #===============================================================================
 # Function to load a toy hardcoded Loop Model
 #===============================================================================
@@ -100,6 +102,7 @@ def loadLoopModel():
                   'width':'zero',
                   'texname':'d',
                   'antitexname':'\bar d',
+                  'line':'straight',
                   'charge':-1. / 3.,
                   'pdg_code':1,
                   'propagating':True,
@@ -835,7 +838,12 @@ class LoopDiagramGenerationTest(unittest.TestCase):
     def setUp(self):
         """Load different objects for the tests."""
         
+
+        #self.myloopmodel = models.import_full_model(os.path.join(\
+        #    _model_file_path,'loop_sm'))
+        #self.myloopmodel.actualize_dictionaries()
         self.myloopmodel = loadLoopModel()
+        
         self.mypartlist = self.myloopmodel['particles']
         self.myinterlist = self.myloopmodel['interactions']
         self.ref_dict_to0 = self.myinterlist.generate_ref_dict(['QCD','QED'])[0]
@@ -936,15 +944,19 @@ class LoopDiagramGenerationTest(unittest.TestCase):
             #  loop_base_objects.LoopWavefunctionCTDiagram)]),nDiagGoal)
 
             ### This is to plot the diagrams obtained
-            #options = draw_lib.DrawOption()
-            #filename = os.path.join('/Users/Spooner/Documents/PhD/MG5/NLO', 'diagramsVall_' + \
-            #              myloopamplitude.get('process').shell_string() + ".eps")
-            #plot = draw.MultiEpsDiagramDrawer(myloopamplitude['loop_diagrams'],
-            #                                  filename,
-            #                                  model=self.myloopmodel,
-            #                                  amplitude='',
-            #                                  legend=myloopamplitude.get('process').input_string())
-            #plot.draw(opt=options)
+            diaglist=[diag for diag in \
+              myloopamplitude.get('loop_diagrams') if not isinstance(diag,
+              loop_base_objects.LoopUVCTDiagram)]
+            diaglist=myloopamplitude.get('loop_diagrams')
+            options = draw_lib.DrawOption()
+            filename = os.path.join('/tmp/' + \
+                          myloopamplitude.get('process').shell_string() + ".eps")
+            plot = draw.MultiEpsDiagramDrawer(base_objects.DiagramList(diaglist),#myloopamplitude['loop_diagrams'],
+                                              filename,
+                                              model=self.myloopmodel,
+                                              amplitude=myloopamplitude,
+                                              legend=myloopamplitude.get('process').input_string())
+            plot.draw(opt=options)
 
             ### This is to display some informations
             #mydiag1=myloopamplitude.get('loop_diagrams')[0]
@@ -975,7 +987,8 @@ class LoopDiagramGenerationTest(unittest.TestCase):
         myleglist.append(base_objects.Leg({'id':22,
                                          'state':True}))
 
-        ordersChoices=[({},['QCD','QED'],{},37,12,4,18),
+        ordersChoices=[
+                       ({},['QCD','QED'],{},37,12,4,18),
                        ({},['QCD'],{},15,5,2,10)]
         for (bornOrders,pert,sqOrders,nDiagGoal,nR2Goal,nUVmassGoal,nUVCTGoal) in ordersChoices:
             myproc = base_objects.Process({'legs':copy.copy(myleglist),
@@ -989,15 +1002,15 @@ class LoopDiagramGenerationTest(unittest.TestCase):
             myloopamplitude.generate_diagrams()
             
             ### This is to plot the diagrams obtained
-#            options = draw_lib.DrawOption()
-#            filename = os.path.join('/Users/Spooner/Documents/PhD/MG5/NLO', 'diagramsVall_' + \
-#                          myloopamplitude.get('process').shell_string() + ".eps")
-#            plot = draw.MultiEpsDiagramDrawer(myloopamplitude['loop_diagrams'],
-#                                              filename,
-#                                              model=self.myloopmodel,
-#                                              amplitude=myloopamplitude,
-#                                              legend=myloopamplitude.get('process').input_string())
-#            plot.draw(opt=options)
+            #options = draw_lib.DrawOption()
+            #filename = os.path.join('/Users/Spooner/Documents/PhD/MG5/NLO', 'diagramsVall_' + \
+            #              myloopamplitude.get('process').shell_string() + ".eps")
+            #plot = draw.MultiEpsDiagramDrawer(myloopamplitude.get('diagrams'),
+            #                                  filename,
+            #                                  model=self.myloopmodel,
+            #                                  amplitude=myloopamplitude,
+            #                                  legend=myloopamplitude.get('process').input_string())
+            #plot.draw(opt=options)
             
             sumR2=0
             sumUV=0

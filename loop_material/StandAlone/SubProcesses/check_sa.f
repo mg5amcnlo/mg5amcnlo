@@ -153,9 +153,9 @@
       enddo
       write (69,'(a3,1x,i2)') 'EXP',-(2*nexternal-8)
       write (69,'(a4,1x,1e25.15)') 'BORN',BORNELEM
-      write (69,'(a3,1x,1e25.15)') 'FIN',MATELEM(1)
-      write (69,'(a4,1x,1e25.15)') '1EPS',MATELEM(2)
-      write (69,'(a4,1x,1e25.15)') '2EPS',MATELEM(3)
+      write (69,'(a3,1x,1e25.15)') 'FIN',MATELEM(1)/BORNELEM/AO2PI
+      write (69,'(a4,1x,1e25.15)') '1EPS',MATELEM(2)/BORNELEM/AO2PI
+      write (69,'(a4,1x,1e25.15)') '2EPS',MATELEM(3)/BORNELEM/AO2PI
       close(69)
       else
           write (*,*) "PS Point #",K," done."
@@ -301,9 +301,9 @@ c         write (*,*) e1+e2,mom
       TWOPI=8.*DATAN(1.D0)
       PO2LOG=LOG(TWOPI/4.)
       Z(2)=PO2LOG
-      DO 101 K=3,10
+      DO 101 K=3,(NEXTERNAL-NINCOMING-1)
   101 Z(K)=Z(K-1)+PO2LOG-2.*LOG(DFLOAT(K-2))
-      DO 102 K=3,10
+      DO 102 K=3,(NEXTERNAL-NINCOMING-1)
   102 Z(K)=(Z(K)-LOG(DFLOAT(K-1)))
 *
 * CHECK ON THE NUMBER OF PARTICLES

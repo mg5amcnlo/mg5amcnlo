@@ -10,14 +10,31 @@ from function_library import complexconjugate, re, im, csc, sec, acsc, asec
 # R2 vertices  #
 ################
 
+# ========= #
+# Pure QCD  #
+# ========= #
+
 RGR2 = CTParameter(name = 'RGR2',
               type = 'real',
               value = {0:'-(3.0/2.0)*G**4/(96.0*cmath.pi**2)'},
               texname = 'RGR2')
 
+# ============== #
+# Mixed QCD-QED  #
+# ============== #
+
+R2MixedFactor = CTParameter(name = 'R2MixedFactor',
+              type = 'real',
+              value = {0:'-(G**2*(1.0+lhv)*(Ncol**2-1.0))/(2.0*Ncol*16.0*cmath.pi**2)'},
+              texname = 'R2MixedFactor')
+
 ################
 # UV vertices  #
 ################
+
+# ========= #
+# Pure QCD  #
+# ========= #
 
 G_UVg = CTParameter(name = 'G_UVg',
                     type = 'real',
@@ -78,7 +95,25 @@ bMass_UV = CTParameter(name = 'bMass_UV',
 
 tMass_UV = CTParameter(name = 'tMass_UV',
                        type = 'real',
-                       value = {-1:'complex(0,1)*((G**2)/(16.0*cmath.pi**2))*(3.0*CF)*MT',
+                       value = {-1:'complex(0,1)*((G**2)/(16.0*cmath.pi**2))*3.0*CF*MT',
                                  0:'complex(0,1)*((G**2)/(16.0*cmath.pi**2))*CF*(4.0+3.0*cmath.log(MU_R**2/MT**2))*MT'
                                },
                        texname = '\delta m_t')
+
+# ============== #
+# Mixed QCD-QED  #
+# ============== #
+
+UV_yuk_b = CTParameter(name = 'UV_yuk_b',
+                       type = 'real',
+                       value = {-1:'-((G**2)/(16.0*cmath.pi**2))*3.0*CF*2.0',
+                                 0:'-((G**2)/(16.0*cmath.pi**2))*3.0*CF*(3.0*cmath.log(MU_R**2/MB**2)+4.0)*2.0'
+                               },
+                       texname = '\delta y_b')
+
+UV_yuk_t = CTParameter(name = 'UV_yuk_t',
+                       type = 'real',
+                       value = {-1:'-((G**2)/(16.0*cmath.pi**2))*3.0*CF*2.0',
+                                 0:'-((G**2)/(16.0*cmath.pi**2))*3.0*CF*(3.0*cmath.log(MU_R**2/MT**2)+4.0)*2.0'
+                               },
+                       texname = '\delta y_t')

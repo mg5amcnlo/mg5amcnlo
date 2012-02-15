@@ -27,6 +27,9 @@ import logging
 import math
 import os
 import re
+import shutil
+import glob
+import re
 
 import aloha.aloha_writers as aloha_writers
 import aloha.create_aloha as create_aloha
@@ -44,6 +47,9 @@ import madgraph.core.helas_objects as helas_objects
 import madgraph.core.diagram_generation as diagram_generation
 
 import madgraph.various.rambo as rambo
+
+import madgraph.loop.loop_diagram_generation as loop_diagram_generation
+import madgraph.loop.loop_helas_objects as loop_helas_objects
 
 from madgraph import MG5DIR, InvalidCmd
 
@@ -302,8 +308,179 @@ class MatrixElementEvaluator(object):
         return p, w_rambo
 
 #===============================================================================
+# Helper class LoopMatrixElementEvaluator
+#===============================================================================
+class LoopMatrixElementEvaluator(MatrixElementEvaluator):
+    """Class taking care of matrix element evaluation for loop processes."""
+
+    def __init__(self, mg_root=None, cuttools_dir=None, *args, **kwargs):
+        """Allow for initializing the MG5 root where the temporary fortran
+        output for checks is placed."""
+        
+        super(LoopMatrixElementEvaluator,self).__init__(*args, **kwargs)
+        
+        self.mg_root=mg_root
+        self.cuttools_dir=cuttools_dir
+        # Set proliferate to true if you want to keep the produced directories
+        # and eventually reuse them if possible
+        self.proliferate=True
+        
+    #===============================================================================
+    # Helper function evaluate_matrix_element for loops
+    #===============================================================================
+    def evaluate_matrix_element(self, matrix_element, p=None, full_model=None, 
+                                gauge_check=False, auth_skipping=None, output='m2'):
+        """Calculate the matrix element and evaluate it for a phase space point
+           Output can only be 'm2. The 'jamp' and 'amp' returned values are just
+           empty lists at this point.
+        """
+        if full_model:
+            self.full_model = full_model
+
+        process = matrix_element.get('processes')[0]
+        model = process.get('model')
+
+        # For now, only accept the process if it has a born
+        if not matrix_element.get('processes')[0]['has_born']:
+            if output == "m2":
+                return 0.0, []
+            else:
+                return {'m2': 0.0, output:[]}
+            
+        if "matrix_elements" not in self.stored_quantities:
+            self.stored_quantities['matrix_elements'] = []
+
+        if (auth_skipping or self.auth_skipping) and matrix_element in \
+                [el[0] for el in self.stored_quantities['matrix_elements']]:
+            # Exactly the same matrix element has been tested
+            logger.info("Skipping %s, " % process.nice_string() + \
+                        "identical matrix element already tested" \
+                        )
+            return None
+
+        # Generate phase space point to use
+        if not p:
+            p, w_rambo = self.get_momenta(process)
+        
+        if matrix_element in \
+                    [el[0] for el in self.stored_quantities['matrix_elements']]:  
+            export_dir=self.stored_quantities['matrix_elements'][\
+                [el[0] for el in self.stored_quantities['matrix_elements']\
+                 ].index(matrix_element)][1]
+            logger.info("Reusing generated output %s"%str(export_dir))
+        else:        
+            export_dir=os.path.join(self.mg_root,'TMP_DIR_FOR_THE_CHECK_CMD')
+            if os.path.isdir(export_dir):
+                if not self.proliferate:
+                    raise InvalidCmd("The directory %s already exist. Please remove it."%str(export_dir))
+                else:
+                    id=1
+                    while os.path.isdir(os.path.join(self.mg_root,\
+                                        'TMP_DIR_FOR_THE_CHECK_CMD_%i'%id)):
+                        id+=1
+                    export_dir=os.path.join(self.mg_root,'TMP_DIR_FOR_THE_CHECK_CMD_%i'%id)
+            
+            if self.proliferate:
+                self.stored_quantities['matrix_elements'].append(\
+                                                    (matrix_element,export_dir))
+
+            # I do the import here because there is some cyclyc import of export_v4
+            # otherwise
+            import madgraph.loop.loop_exporters as loop_exporters
+            FortranExporter = loop_exporters.LoopProcessExporterFortranSA(\
+                            self.mg_root, export_dir, True,\
+                            os.path.join(self.mg_root, 'loop_material'),\
+                            self.cuttools_dir)
+            FortranModel = helas_call_writers.FortranUFOHelasCallWriter(model)
+            FortranExporter.copy_v4template(modelname=model.get('name'))
+            FortranExporter.generate_subprocess_directory_v4(matrix_element, FortranModel)
+            wanted_lorentz = list(set(matrix_element.get_used_lorentz()))
+            wanted_couplings = list(set([c for l in matrix_element.get_used_couplings() \
+                                        for c in l]))
+            FortranExporter.convert_model_to_mg4(model,wanted_lorentz,wanted_couplings)
+            FortranExporter.finalize_v4_directory(helas_objects.HelasMatrixElementList([\
+                                    matrix_element]),"",False,False,'gfortran')
+
+        # Same comment as above for the import of LoopMG5Runner
+        from tests.parallel_tests.loop_me_comparator import LoopMG5Runner
+        LoopMG5Runner.fix_PSPoint_in_check(export_dir)
+        if gauge_check:
+            file_path, orig_file_content, new_file_content = \
+                                            self.setup_ward_check(export_dir)
+            file = open(file_path,'w')
+            file.write(new_file_content)
+            file.close()
+        
+        finite_m2 = LoopMG5Runner.get_me_value(process.shell_string_v4(), 0,\
+                                               export_dir, p,verbose=False)[0][0]
+        
+        # Restore the original loop_matrix.f code so that it could be reused
+        if gauge_check:
+            file = open(file_path,'w')
+            file.write(orig_file_content)
+            file.close()
+    
+        # Now erase the output directory
+        if not self.proliferate:
+            shutil.rmtree(export_dir)
+        
+        # Evaluate the matrix element for the momenta p
+        if output == "m2": 
+            # We do not provide details (i.e. amps and Jamps) of the computed 
+            # amplitudes, hence the []
+            return finite_m2, []
+        else:
+            return {'m2': finite_m2, output:[]}
+
+    
+    def setup_ward_check(self, working_dir):
+        """ Modify loop_matrix.f so to have one external massless gauge boson
+        polarization vector turned into its momentum. It is not a pretty and 
+        flexible solution but it works for this particular case."""
+        
+        shell_name = None
+        directories = glob.glob(os.path.join(working_dir, 'SubProcesses',
+                                  'P0_*'))
+        if directories and os.path.isdir(directories[0]):
+            shell_name = os.path.basename(directories[0])
+        
+        dir_name = os.path.join(working_dir, 'SubProcesses', shell_name)
+        
+        if os.path.isfile(os.path.join(dir_name,'helas_calls_1.f')):
+            helas_file_name='helas_calls_1.f'
+        elif os.path.isfile(os.path.join(dir_name,'loop_matrix.f')):
+            helas_file_name='loop_matrix.f'
+        else:
+            raise Exception, "No helas calls output"        
+        file = open(os.path.join(dir_name,helas_file_name), 'r')
+        
+        helas_calls_out=""
+        original_file=""
+        gaugeVectorRegExp=re.compile(\
+         r"CALL VXXXXX\(P\(0,(?P<p_id>\d+)\),(DCMPLX\()?ZERO(\))?,NHEL\(\d+\),[\+\-]1\*IC\(\d+\),W\(1,(?P<wf_id>\d+)\)\)")
+        foundGauge=False
+        # Now we modify the first massless gauge vector wavefunction
+        for line in file:
+            helas_calls_out+=line
+            original_file+=line
+            if line.find("INCLUDE 'coupl.inc'")!=-1:
+                helas_calls_out+="      INTEGER WARDINT\n"
+            if not foundGauge:
+                res=gaugeVectorRegExp.search(line)
+                if res!=None:
+                    foundGauge=True
+                    helas_calls_out+="      DO WARDINT=1,4\n"
+                    helas_calls_out+="        W(WARDINT,"+res.group('wf_id')+")="
+                    helas_calls_out+="DCMPLX(P(WARDINT-1,"+res.group('p_id')+"),0.0D0)\n"
+                    helas_calls_out+="      ENDDO\n"
+        file.close()
+        
+        return os.path.join(dir_name,helas_file_name), original_file, helas_calls_out
+
+#===============================================================================
 # Global helper function run_multiprocs
 #===============================================================================
+
 def run_multiprocs_no_crossings(function, multiprocess, stored_quantities,
                                 *args):
     """A wrapper function for running an iteration of a function over
@@ -349,6 +526,8 @@ def run_multiprocs_no_crossings(function, multiprocess, stored_quantities,
                               multiprocess.get('forbidden_s_channels'),
                 'forbidden_particles': \
                               multiprocess.get('forbidden_particles'),
+                'perturbation_couplings': \
+                              multiprocess.get('perturbation_couplings'),
                 'is_decay_chain': \
                               multiprocess.get('is_decay_chain'),
                 'overall_orders': \
@@ -364,6 +543,7 @@ def run_multiprocs_no_crossings(function, multiprocess, stored_quantities,
 #===============================================================================
 # Helper function check_already_checked
 #===============================================================================
+
 def check_already_checked(is_ids, fs_ids, sorted_ids, process, model,
                           id_anti_id_dict = {}):
     """Check if process already checked, if so return True, otherwise add
@@ -393,7 +573,9 @@ def check_already_checked(is_ids, fs_ids, sorted_ids, process, model,
 #===============================================================================
 # check_processes
 #===============================================================================
-def check_processes(processes, param_card = None, quick = []):
+
+def check_processes(processes, param_card = None, quick = [],
+                    mg_root="",cuttools=""):
     """Check processes by generating them with all possible orderings
     of particles (which means different diagram building and Helas
     calls), and comparing the resulting matrix element values."""
@@ -405,8 +587,14 @@ def check_processes(processes, param_card = None, quick = []):
         model = multiprocess.get('model')
 
         # Initialize matrix element evaluation
-        evaluator = MatrixElementEvaluator(model,
+        if multiprocess.get('perturbation_couplings')==[]:
+            evaluator = MatrixElementEvaluator(model,
                                            auth_skipping = True, reuse = False)
+        else:
+            evaluator = LoopMatrixElementEvaluator(mg_root=mg_root,
+                            cuttools_dir=cuttools, model=model, auth_skipping = True,
+                            reuse = False,)
+       
         results = run_multiprocs_no_crossings(check_process,
                                               multiprocess,
                                               evaluator,
@@ -414,6 +602,11 @@ def check_processes(processes, param_card = None, quick = []):
 
         if "used_lorentz" not in evaluator.stored_quantities:
             evaluator.stored_quantities["used_lorentz"] = []
+            
+        if multiprocess.get('perturbation_couplings')==[]:
+            # Clean temporary folders created for the running of the loop processes
+            clean_up(mg_root)
+            
         return results, evaluator.stored_quantities["used_lorentz"]
 
     elif isinstance(processes, base_objects.Process):
@@ -429,8 +622,14 @@ def check_processes(processes, param_card = None, quick = []):
     model = processes[0].get('model')
 
     # Initialize matrix element evaluation
-    evaluator = MatrixElementEvaluator(model, param_card,
+    if processes[0].get('perturbation_couplings')==[]:
+        evaluator = MatrixElementEvaluator(model, param_card,
                                        auth_skipping = True, reuse = False)
+    else:
+        evaluator = LoopMatrixElementEvaluator(mg_root=mg_root, 
+                                           cuttools_dir=cuttools, model=model,
+                                           param_card=param_card,
+                                           auth_skipping = True, reuse = False)
 
     # Keep track of tested processes, matrix elements, color and already
     # initiated Lorentz routines, to reuse as much as possible
@@ -454,8 +653,12 @@ def check_processes(processes, param_card = None, quick = []):
 
     if "used_lorentz" not in evaluator.stored_quantities:
         evaluator.stored_quantities["used_lorentz"] = []
+    
+    if processes[0].get('perturbation_couplings')==[]:
+        # Clean temporary folders created for the running of the loop processes
+        clean_up(mg_root)    
+    
     return comparison_results, evaluator.stored_quantities["used_lorentz"]
-
 
 def check_process(process, evaluator, quick):
     """Check the helas calls for a process by generating the process
@@ -486,7 +689,6 @@ def check_process(process, evaluator, quick):
     for legs in itertools.permutations(process.get('legs')):
 
         order = [l.get('number') for l in legs]
-
         if quick:
             found_leg = True
             for num in quick:
@@ -514,7 +716,10 @@ def check_process(process, evaluator, quick):
 
         # Generate the amplitude for this process
         try:
-            amplitude = diagram_generation.Amplitude(newproc)
+            if newproc.get('perturbation_couplings')==[]:
+                amplitude = diagram_generation.Amplitude(newproc)
+            else:
+                amplitude = loop_diagram_generation.LoopAmplitude(newproc)                
         except InvalidCmd:
             result=False
         else:
@@ -531,8 +736,11 @@ def check_process(process, evaluator, quick):
             p, w_rambo = evaluator.get_momenta(process)
 
         # Generate the HelasMatrixElement for the process
-        matrix_element = helas_objects.HelasMatrixElement(amplitude,
+        if not isinstance(amplitude,loop_diagram_generation.LoopAmplitude):
+            matrix_element = helas_objects.HelasMatrixElement(amplitude,
                                                           gen_color=False)
+        else:
+            matrix_element = loop_helas_objects.LoopHelasMatrixElement(amplitude)
 
         if matrix_element in process_matrix_elements:
             # Exactly the same matrix element has been tested
@@ -573,6 +781,13 @@ def check_process(process, evaluator, quick):
             "difference": diff,
             "passed": passed}
 
+def clean_up(mg_root):
+    """Clean-up the possible left-over outputs from 'evaluate_matrix element' of
+    the LoopMatrixEvaluator (when its argument proliferate is set to true). """
+
+    #directories = glob.glob(os.path.join(mg_root, 'TMP_DIR_FOR_THE_CHECK_CMD*'))
+    #for dir in directories:
+    #    shutil.rmtree(dir)
 
 def output_comparisons(comparison_results):
     """Present the results of a comparison in a nice list format
@@ -585,7 +800,7 @@ def output_comparisons(comparison_results):
         if len(proc['process'].base_string()) + 1 > proc_col_size:
             proc_col_size = len(proc['process'].base_string()) + 1
 
-    col_size = 17
+    col_size = 18
 
     pass_proc = 0
     fail_proc = 0
@@ -650,7 +865,7 @@ def fixed_string_length(mystr, length):
 #===============================================================================
 # check_gauge
 #===============================================================================
-def check_gauge(processes, param_card = None):
+def check_gauge(processes, param_card = None, mg_root="",cuttools=""):
     """Check gauge invariance of the processes by using the BRS check.
     For one of the massless external bosons (e.g. gluon or photon), 
     replace the polarization vector (epsilon_mu) with its momentum (p_mu)
@@ -664,17 +879,29 @@ def check_gauge(processes, param_card = None):
         model = multiprocess.get('model')
         
         # Initialize matrix element evaluation
-        evaluator = MatrixElementEvaluator(model, param_card,
+        if multiprocess.get('perturbation_couplings')==[]:
+            evaluator = MatrixElementEvaluator(model, param_card,
                                            auth_skipping = True, reuse = False)
+        else:
+            evaluator = LoopMatrixElementEvaluator(mg_root=mg_root, cuttools_dir=cuttools,
+                                           model=model, param_card=param_card,
+                                           auth_skipping = False, reuse = False)
 
         # Set all widths to zero for gauge check
         for particle in evaluator.full_model.get('particles'):
             if particle.get('width') != 'ZERO':
                 evaluator.full_model.get('parameter_dict')[particle.get('width')] = 0.
 
-        return run_multiprocs_no_crossings(check_gauge_process,
+
+        results = run_multiprocs_no_crossings(check_gauge_process,
                                            multiprocess,
                                            evaluator)
+        
+        if multiprocess.get('perturbation_couplings')==[]:
+            # Clean temporary folders created for the running of the loop processes
+            clean_up(mg_root)
+        
+        return results
 
     elif isinstance(processes, base_objects.Process):
         processes = base_objects.ProcessList([processes])
@@ -688,9 +915,13 @@ def check_gauge(processes, param_card = None):
     model = processes[0].get('model')
 
     # Initialize matrix element evaluation
-    evaluator = MatrixElementEvaluator(model, param_card,
+    if processes[0].get('perturbation_couplings')==[]:
+        evaluator = MatrixElementEvaluator(model, param_card,
                                        auth_skipping = True, reuse = False)
-
+    else:
+        evaluator = LoopMatrixElementEvaluator(mg_root=mg_root, cuttools_dir=cuttools,
+                                           model=model, param_card=param_card,
+                                           auth_skipping = False, reuse = False)
     comparison_results = []
 
     # For each process, make sure we have set up leg numbers:
@@ -707,6 +938,10 @@ def check_gauge(processes, param_card = None):
         result = check_gauge_process(process, evaluator)
         if result:
             comparison_results.append(result)
+
+    if processes[0].get('perturbation_couplings')==[]:
+        # Clean temporary folders created for the running of the loop processes
+        clean_up(mg_root)
             
     return comparison_results
 
@@ -738,7 +973,10 @@ def check_gauge_process(process, evaluator):
     # Generate a process with these legs
     # Generate the amplitude for this process
     try:
-        amplitude = diagram_generation.Amplitude(process)
+        if process.get('perturbation_couplings')==[]:
+            amplitude = diagram_generation.Amplitude(process)
+        else:
+            amplitude = loop_diagram_generation.LoopAmplitude(process) 
     except InvalidCmd:
         logging.info("No diagrams for %s" % \
                          process.nice_string().replace('Process', 'process'))
@@ -751,15 +989,20 @@ def check_gauge_process(process, evaluator):
         return None
 
     # Generate the HelasMatrixElement for the process
-    matrix_element = helas_objects.HelasMatrixElement(amplitude,
+    if not isinstance(amplitude,loop_diagram_generation.LoopAmplitude):
+        matrix_element = helas_objects.HelasMatrixElement(amplitude,
                                                       gen_color = False)
+    else:
+        matrix_element = loop_helas_objects.LoopHelasMatrixElement(amplitude)
+        
 
     brsvalue = evaluator.evaluate_matrix_element(matrix_element, gauge_check = True,
                                                  output='jamp')
 
-
-    matrix_element = helas_objects.HelasMatrixElement(amplitude,
-                                                      gen_color = False)    
+    if not isinstance(amplitude,loop_diagram_generation.LoopAmplitude):
+        matrix_element = helas_objects.HelasMatrixElement(amplitude,
+                                                      gen_color = False)
+          
     mvalue = evaluator.evaluate_matrix_element(matrix_element, gauge_check = False,
                                                output='jamp')
     
@@ -777,7 +1020,7 @@ def output_gauge(comparison_results, output='text'):
         if len(proc) + 1 > proc_col_size:
             proc_col_size = len(proc) + 1
 
-    col_size = 17
+    col_size = 18
 
     pass_proc = 0
     fail_proc = 0
@@ -795,13 +1038,13 @@ def output_gauge(comparison_results, output='text'):
         proc = one_comp['process']
         mvalue = one_comp['value']
         brsvalue = one_comp['brs']
-        ratio = (brsvalue['m2']/mvalue['m2'])
+        ratio = (abs(brsvalue['m2'])/abs(mvalue['m2']))
         res_str += '\n' + fixed_string_length(proc, proc_col_size) + \
                     fixed_string_length("%1.10e" % mvalue['m2'], col_size)+ \
                     fixed_string_length("%1.10e" % brsvalue['m2'], col_size)+ \
                     fixed_string_length("%1.10e" % ratio, col_size)
          
-        if ratio > 1e-12:
+        if ratio > 1e-10:
             fail_proc += 1
             proc_succeed = False
             failed_proc_list.append(proc)
@@ -813,33 +1056,36 @@ def output_gauge(comparison_results, output='text'):
 
         #check all the JAMP
         # loop over jamp
-        for k in range(len(mvalue['jamp'][0])):
-            m_sum = 0
-            brs_sum = 0
-            # loop over helicity
-            for j in range(len(mvalue['jamp'])):
-                #values for the different lorentz boost
-                m_sum += abs(mvalue['jamp'][j][k])**2
-                brs_sum += abs(brsvalue['jamp'][j][k])**2                                            
-                    
-            # Compare the different helicity  
-            if not m_sum:
-                continue
-            ratio = brs_sum / m_sum
-
-            tmp_str = '\n' + fixed_string_length('   JAMP %s'%k , proc_col_size) + \
-                   fixed_string_length("%1.10e" % m_sum, col_size) + \
-                   fixed_string_length("%1.10e" % brs_sum, col_size) + \
-                   fixed_string_length("%1.10e" % ratio, col_size)        
-                   
-            if ratio > 1e-15:
-                if not len(failed_proc_list) or failed_proc_list[-1] != proc:
-                    fail_proc += 1
-                    pass_proc -= 1
-                    failed_proc_list.append(proc)
-                res_str += tmp_str + "Failed"
-            elif not proc_succeed:
-                 res_str += tmp_str + "Passed"
+        # This is not available for loop processes where the jamp list returned
+        # is empty.
+        if len(mvalue['jamp'])!=0:
+            for k in range(len(mvalue['jamp'][0])):
+                m_sum = 0
+                brs_sum = 0
+                # loop over helicity
+                for j in range(len(mvalue['jamp'])):
+                    #values for the different lorentz boost
+                    m_sum += abs(mvalue['jamp'][j][k])**2
+                    brs_sum += abs(brsvalue['jamp'][j][k])**2                                            
+                        
+                # Compare the different helicity  
+                if not m_sum:
+                    continue
+                ratio = abs(brs_sum) / abs(m_sum)
+    
+                tmp_str = '\n' + fixed_string_length('   JAMP %s'%k , proc_col_size) + \
+                       fixed_string_length("%1.10e" % m_sum, col_size) + \
+                       fixed_string_length("%1.10e" % brs_sum, col_size) + \
+                       fixed_string_length("%1.10e" % ratio, col_size)        
+                       
+                if ratio > 1e-15:
+                    if not len(failed_proc_list) or failed_proc_list[-1] != proc:
+                        fail_proc += 1
+                        pass_proc -= 1
+                        failed_proc_list.append(proc)
+                    res_str += tmp_str + "Failed"
+                elif not proc_succeed:
+                     res_str += tmp_str + "Passed"
 
 
     res_str += "\nSummary: %i/%i passed, %i/%i failed" % \
@@ -856,7 +1102,7 @@ def output_gauge(comparison_results, output='text'):
 #===============================================================================
 # check_lorentz
 #===============================================================================
-def check_lorentz(processes, param_card = None):
+def check_lorentz(processes, param_card = None, mg_root="",cuttools=""):
     """ Check if the square matrix element (sum over helicity) is lorentz 
         invariant by boosting the momenta with different value."""
     
@@ -868,7 +1114,12 @@ def check_lorentz(processes, param_card = None):
         model = multiprocess.get('model')
         
         # Initialize matrix element evaluation
-        evaluator = MatrixElementEvaluator(model,
+        if multiprocess.get('perturbation_couplings')==[]:
+            evaluator = MatrixElementEvaluator(model,
+                                           auth_skipping = False, reuse = True)
+        else:
+            evaluator = LoopMatrixElementEvaluator(mg_root=mg_root,
+                                           cuttools_dir=cuttools, model=model,
                                            auth_skipping = False, reuse = True)
 
         # Set all widths to zero for lorentz check
@@ -876,9 +1127,16 @@ def check_lorentz(processes, param_card = None):
             if particle.get('width') != 'ZERO':
                 evaluator.full_model.get('parameter_dict')[\
                                                      particle.get('width')] = 0.
-        return run_multiprocs_no_crossings(check_lorentz_process,
+        results = run_multiprocs_no_crossings(check_lorentz_process,
                                            multiprocess,
                                            evaluator)
+        
+        if multiprocess.get('perturbation_couplings')==[]:
+            # Clean temporary folders created for the running of the loop processes
+            clean_up(mg_root)
+        
+        return results
+        
     elif isinstance(processes, base_objects.Process):
         processes = base_objects.ProcessList([processes])
     elif isinstance(processes, base_objects.ProcessList):
@@ -891,8 +1149,14 @@ def check_lorentz(processes, param_card = None):
     model = processes[0].get('model')
 
     # Initialize matrix element evaluation
-    evaluator = MatrixElementEvaluator(model, param_card,
+    if processes[0].get('perturbation_couplings')==[]:
+        evaluator = MatrixElementEvaluator(model, param_card,
                                        auth_skipping = False, reuse = True)
+    else:
+        evaluator = LoopMatrixElementEvaluator(mg_root=mg_root, 
+                                           cuttools_dir=cuttools, model=model,
+                                           param_card=param_card,
+                                           auth_skipping = False, reuse = True)
 
     comparison_results = []
 
@@ -910,7 +1174,11 @@ def check_lorentz(processes, param_card = None):
         result = check_lorentz_process(process, evaluator)
         if result:
             comparison_results.append(result)
-            
+
+    if processes[0].get('perturbation_couplings')==[]:
+        # Clean temporary folders created for the running of the loop processes
+        clean_up(mg_root)
+
     return comparison_results
 
 
@@ -930,7 +1198,10 @@ def check_lorentz_process(process, evaluator):
     # Generate a process with these legs
     # Generate the amplitude for this process
     try:
-        amplitude = diagram_generation.Amplitude(process)
+        if process.get('perturbation_couplings')==[]:
+            amplitude = diagram_generation.Amplitude(process)
+        else:
+            amplitude = loop_diagram_generation.LoopAmplitude(process)  
     except InvalidCmd:
         logging.info("No diagrams for %s" % \
                          process.nice_string().replace('Process', 'process'))
@@ -946,8 +1217,11 @@ def check_lorentz_process(process, evaluator):
     p, w_rambo = evaluator.get_momenta(process)
 
     # Generate the HelasMatrixElement for the process
-    matrix_element = helas_objects.HelasMatrixElement(amplitude,
+    if not isinstance(amplitude, loop_diagram_generation.LoopAmplitude):
+        matrix_element = helas_objects.HelasMatrixElement(amplitude,
                                                       gen_color = True)
+    else:
+        matrix_element = loop_helas_objects.LoopHelasMatrixElement(amplitude)
 
     data = evaluator.evaluate_matrix_element(matrix_element, p=p, output='jamp',
                                              auth_skipping = True)
@@ -1008,7 +1282,7 @@ def output_lorentz_inv(comparison_results, output='text'):
         if len(proc) + 1 > proc_col_size:
             proc_col_size = len(proc) + 1
 
-    col_size = 17
+    col_size = 18
 
     pass_proc = 0
     fail_proc = 0
@@ -1036,14 +1310,14 @@ def output_lorentz_inv(comparison_results, output='text'):
         
         min_val = min(values)
         max_val = max(values)
-        diff = (max_val - min_val) / max_val 
+        diff = (max_val - min_val) / abs(max_val) 
         
         res_str += '\n' + fixed_string_length(proc, proc_col_size) + \
                    fixed_string_length("%1.10e" % min_val, col_size) + \
                    fixed_string_length("%1.10e" % max_val, col_size) + \
                    fixed_string_length("%1.10e" % diff, col_size)
                    
-        if diff < 1e-8:
+        if diff < 1e-6:
             pass_proc += 1
             proc_succeed = True
             res_str += "Passed"
@@ -1055,33 +1329,36 @@ def output_lorentz_inv(comparison_results, output='text'):
 
         #check all the JAMP
         # loop over jamp
-        for k in range(len(data[0]['jamp'][0])):
-            sum = [0] * len(data)
-            # loop over helicity
-            for j in range(len(data[0]['jamp'])):
-                #values for the different lorentz boost
-                values = [abs(data[i]['jamp'][j][k])**2 for i in range(len(data))]
-                sum = [sum[i] + values[i] for i in range(len(values))]
-
-            # Compare the different lorentz boost  
-            min_val = min(sum)
-            max_val = max(sum)
-            if not max_val:
-                continue
-            diff = (max_val - min_val) / max_val 
-        
-            tmp_str = '\n' + fixed_string_length('   JAMP %s'%k , proc_col_size) + \
-                       fixed_string_length("%1.10e" % min_val, col_size) + \
-                       fixed_string_length("%1.10e" % max_val, col_size) + \
-                       fixed_string_length("%1.10e" % diff, col_size)
-                   
-            if diff > 1e-10:
-                if not len(failed_proc_list) or failed_proc_list[-1] != proc:
-                    fail_proc += 1
-                    pass_proc -= 1
-                    failed_proc_list.append(proc)
-                res_str += tmp_str + "Failed"
-            elif not proc_succeed:
+        # Keep in mind that this is not available for loop processes where the
+        # jamp list is empty
+        if len(data[0]['jamp'])!=0:
+            for k in range(len(data[0]['jamp'][0])):
+                sum = [0] * len(data)
+                # loop over helicity
+                for j in range(len(data[0]['jamp'])):
+                    #values for the different lorentz boost
+                    values = [abs(data[i]['jamp'][j][k])**2 for i in range(len(data))]
+                    sum = [sum[i] + values[i] for i in range(len(values))]
+    
+                # Compare the different lorentz boost  
+                min_val = min(sum)
+                max_val = max(sum)
+                if not max_val:
+                    continue
+                diff = (max_val - min_val) / max_val 
+            
+                tmp_str = '\n' + fixed_string_length('   JAMP %s'%k , proc_col_size) + \
+                           fixed_string_length("%1.10e" % min_val, col_size) + \
+                           fixed_string_length("%1.10e" % max_val, col_size) + \
+                           fixed_string_length("%1.10e" % diff, col_size)
+                       
+                if diff > 1e-10:
+                    if not len(failed_proc_list) or failed_proc_list[-1] != proc:
+                        fail_proc += 1
+                        pass_proc -= 1
+                        failed_proc_list.append(proc)
+                    res_str += tmp_str + "Failed"
+                elif not proc_succeed:
                  res_str += tmp_str + "Passed" 
             
             

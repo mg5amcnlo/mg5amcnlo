@@ -1423,6 +1423,9 @@ class FeynmanDiagram(object):
         rise as the number of diagram square such that the total time needed for
         this feature was consider as too (time-)expansive."""
         
+        if other==None:
+            return self.__class__==type(None)
+        
         # Check basic globals (this is done to fastenize the check
         if self.max_level != other.max_level:
             return False
@@ -1724,23 +1727,30 @@ class DiagramDrawer(object):
         # Upgrade diagram to FeynmanDiagram or FeynmanDiagramHorizontal 
         
         #following option choice type is zero for the born and negative for R2
-#        if isinstance(diagram, loop_objects.LoopDiagram) and diagram.get('type') > 0:
-#            diagram = LoopFeynmanDiagram(diagram, 
-#                                    amplitude.get('structure_repository'),
-#                                    model, 
-#                                    opt=opt)
-#        elif isinstance(diagram, loop_objects.LoopDiagram) and diagram.get('type') <0:
-#            return None 
-#        elif opt.horizontal:
-#            diagram = FeynmanDiagramHorizontal(diagram, model, opt=opt)
-#        
-        #following option choice
-        if opt.horizontal:
-            diagram = FeynmanDiagramHorizontal(diagram, model, \
-                                                   amplitude=amplitude, opt=opt)
+        if isinstance(diagram, loop_objects.LoopDiagram) and diagram.get('type') > 0:
+            diagram = LoopFeynmanDiagram(diagram, 
+                                    amplitude.get('structure_repository'),
+                                    model, 
+                                    opt=opt)
+        elif isinstance(diagram, loop_objects.LoopUVCTDiagram) or \
+             (isinstance(diagram, loop_objects.LoopDiagram) and \
+              diagram.get('type') < 0):
+            return None
         else:
-            diagram = FeynmanDiagram(diagram, model, \
+            if opt.horizontal:
+                diagram = FeynmanDiagramHorizontal(diagram, model, \
                                                    amplitude=amplitude, opt=opt)
+            else:
+                diagram = FeynmanDiagram(diagram, model, \
+                                         amplitude=amplitude, opt=opt)        
+        
+        #following option choice
+        # if opt.horizontal:
+        #    diagram = FeynmanDiagramHorizontal(diagram, model, \
+        #                                           amplitude=amplitude, opt=opt)
+        #else:
+        #    diagram = FeynmanDiagram(diagram, model, \
+        #                                           amplitude=amplitude, opt=opt)
 
         # Find the position of all vertex and all line orientation
         diagram.main()

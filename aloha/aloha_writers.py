@@ -529,23 +529,15 @@ class ALOHAWriterForFortran(WriteALOHA):
         if not offshell:
             text += ' double complex TMP\n'
         else:
-            spin = self.particles[offshell -1] 
-            text += ' double complex TMP(%s)\n integer i' % self.type_to_size[spin]         
+            spin = self.particles[offshell -1]
+            if self.LOOP_MODE:
+                text += ' double complex TMP(%s)\n integer i' % (self.type_to_size[spin]+2)
+            else:
+                text += ' double complex TMP(%s)\n integer i' % self.type_to_size[spin]                   
         
         # Define which part of the routine should be called
         addon = ''.join(self.tag) + '_%s' % self.offshell
         
-#        if 'C' in self.namestring:
-#            short_name, addon = name.split('C',1)
-#            if addon.split('_')[0].isdigit():
-#                addon = 'C' +self.namestring.split('C',1)[1]
-#            elif all([n.isdigit() for n in addon.split('_')[0].split('C')]):
-#                addon = 'C' +self.namestring.split('C',1)[1]
-#            else:
-#                addon = '_%s' % self.offshell
-#        else:
-#            addon = '_%s' % self.offshell
-
         # how to call the routine
         if not offshell:
             main = 'vertex'

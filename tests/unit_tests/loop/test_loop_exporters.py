@@ -79,7 +79,7 @@ class LoopExporterTest(unittest.TestCase):
         # the test.
         if mode=="UFO":
             self.myloopmodel = models.import_full_model(os.path.join(\
-                                                _input_file_path,'LoopModelTest'))
+                                                _input_file_path,'LoopSMTest'))
             self.fortran_model = helas_call_writers.FortranUFOHelasCallWriter(\
                                                             self.myloopmodel)
             return

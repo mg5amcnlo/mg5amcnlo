@@ -806,12 +806,14 @@ class LoopUVCTDiagram(base_objects.Diagram):
             res=res+super(LoopUVCTDiagram,self).nice_string()
         if self['UVCT_couplings']:
             res=res+'UV renorm. vertices: '
-            res=res+','.join(vert for vert in self['UVCT_couplings'])+'\n'
+            res=res+','.join(str(vert) for vert in self['UVCT_couplings'])+'\n'
         if self['UVCT_orders']:
             res=res+'UVCT orders: '
             res=res+','.join(order for order in self['UVCT_orders'].keys())+'\n'      
         if self['type']:
             res=res+'UVCT type: '+self['type']
+            
+        return res
             
 #===============================================================================
 # LoopModel

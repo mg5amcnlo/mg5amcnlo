@@ -9,3 +9,8 @@ QCD = CouplingOrder(name = 'QCD',
                     hierarchy = 1,
                     expansion_order = 99,
                     perturbative_expansion = 99)
+
+QED = CouplingOrder(name = 'QED',
+                    hierarchy = 2,
+                    expansion_order = -1,
+                    perturbative_expansion =-1)
