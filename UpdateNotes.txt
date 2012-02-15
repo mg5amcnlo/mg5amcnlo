@@ -8,6 +8,8 @@ Update notes for MadGraph 5 (in reverse time order)
                       In the definition of Particle/Anti-Particle. (Thanks Ben)
 		  OM: Fix a formatting problem in me5_configuration.txt 
                       (Bug #930101) Thanks to Arian
+		  OM: allow to run ./bin/mg5 BANNER_PATH and
+                      ./bin/mg5 PROC_CARD_V4_PATH
 		  OM: Various small fixes concerning the stability of the html 
 		      output.
 
