@@ -367,7 +367,7 @@ class LoopMatrixElementEvaluator(MatrixElementEvaluator):
             export_dir=self.stored_quantities['matrix_elements'][\
                 [el[0] for el in self.stored_quantities['matrix_elements']\
                  ].index(matrix_element)][1]
-            print "REUSING ",export_dir
+            logger.info("Reusing generated output %s"%str(export_dir))
         else:        
             export_dir=os.path.join(self.mg_root,'TMP_DIR_FOR_THE_CHECK_CMD')
             if os.path.isdir(export_dir):
@@ -602,6 +602,11 @@ def check_processes(processes, param_card = None, quick = [],
 
         if "used_lorentz" not in evaluator.stored_quantities:
             evaluator.stored_quantities["used_lorentz"] = []
+            
+        if multiprocess.get('perturbation_couplings')==[]:
+            # Clean temporary folders created for the running of the loop processes
+            clean_up(mg_root)
+            
         return results, evaluator.stored_quantities["used_lorentz"]
 
     elif isinstance(processes, base_objects.Process):
@@ -648,8 +653,12 @@ def check_processes(processes, param_card = None, quick = [],
 
     if "used_lorentz" not in evaluator.stored_quantities:
         evaluator.stored_quantities["used_lorentz"] = []
+    
+    if processes[0].get('perturbation_couplings')==[]:
+        # Clean temporary folders created for the running of the loop processes
+        clean_up(mg_root)    
+    
     return comparison_results, evaluator.stored_quantities["used_lorentz"]
-
 
 def check_process(process, evaluator, quick):
     """Check the helas calls for a process by generating the process
@@ -883,9 +892,16 @@ def check_gauge(processes, param_card = None, mg_root="",cuttools=""):
             if particle.get('width') != 'ZERO':
                 evaluator.full_model.get('parameter_dict')[particle.get('width')] = 0.
 
-        return run_multiprocs_no_crossings(check_gauge_process,
+
+        results = run_multiprocs_no_crossings(check_gauge_process,
                                            multiprocess,
                                            evaluator)
+        
+        if multiprocess.get('perturbation_couplings')==[]:
+            # Clean temporary folders created for the running of the loop processes
+            clean_up(mg_root)
+        
+        return results
 
     elif isinstance(processes, base_objects.Process):
         processes = base_objects.ProcessList([processes])
@@ -922,6 +938,10 @@ def check_gauge(processes, param_card = None, mg_root="",cuttools=""):
         result = check_gauge_process(process, evaluator)
         if result:
             comparison_results.append(result)
+
+    if processes[0].get('perturbation_couplings')==[]:
+        # Clean temporary folders created for the running of the loop processes
+        clean_up(mg_root)
             
     return comparison_results
 
@@ -1018,13 +1038,13 @@ def output_gauge(comparison_results, output='text'):
         proc = one_comp['process']
         mvalue = one_comp['value']
         brsvalue = one_comp['brs']
-        ratio = (brsvalue['m2']/mvalue['m2'])
+        ratio = (abs(brsvalue['m2'])/abs(mvalue['m2']))
         res_str += '\n' + fixed_string_length(proc, proc_col_size) + \
                     fixed_string_length("%1.10e" % mvalue['m2'], col_size)+ \
                     fixed_string_length("%1.10e" % brsvalue['m2'], col_size)+ \
                     fixed_string_length("%1.10e" % ratio, col_size)
          
-        if ratio > 1e-12:
+        if ratio > 1e-10:
             fail_proc += 1
             proc_succeed = False
             failed_proc_list.append(proc)
@@ -1051,7 +1071,7 @@ def output_gauge(comparison_results, output='text'):
                 # Compare the different helicity  
                 if not m_sum:
                     continue
-                ratio = brs_sum / m_sum
+                ratio = abs(brs_sum) / abs(m_sum)
     
                 tmp_str = '\n' + fixed_string_length('   JAMP %s'%k , proc_col_size) + \
                        fixed_string_length("%1.10e" % m_sum, col_size) + \
@@ -1107,9 +1127,16 @@ def check_lorentz(processes, param_card = None, mg_root="",cuttools=""):
             if particle.get('width') != 'ZERO':
                 evaluator.full_model.get('parameter_dict')[\
                                                      particle.get('width')] = 0.
-        return run_multiprocs_no_crossings(check_lorentz_process,
+        results = run_multiprocs_no_crossings(check_lorentz_process,
                                            multiprocess,
                                            evaluator)
+        
+        if multiprocess.get('perturbation_couplings')==[]:
+            # Clean temporary folders created for the running of the loop processes
+            clean_up(mg_root)
+        
+        return results
+        
     elif isinstance(processes, base_objects.Process):
         processes = base_objects.ProcessList([processes])
     elif isinstance(processes, base_objects.ProcessList):
@@ -1147,7 +1174,11 @@ def check_lorentz(processes, param_card = None, mg_root="",cuttools=""):
         result = check_lorentz_process(process, evaluator)
         if result:
             comparison_results.append(result)
-            
+
+    if processes[0].get('perturbation_couplings')==[]:
+        # Clean temporary folders created for the running of the loop processes
+        clean_up(mg_root)
+
     return comparison_results
 
 
@@ -1279,14 +1310,14 @@ def output_lorentz_inv(comparison_results, output='text'):
         
         min_val = min(values)
         max_val = max(values)
-        diff = (max_val - min_val) / max_val 
+        diff = (max_val - min_val) / abs(max_val) 
         
         res_str += '\n' + fixed_string_length(proc, proc_col_size) + \
                    fixed_string_length("%1.10e" % min_val, col_size) + \
                    fixed_string_length("%1.10e" % max_val, col_size) + \
                    fixed_string_length("%1.10e" % diff, col_size)
                    
-        if diff < 1e-8:
+        if diff < 1e-6:
             pass_proc += 1
             proc_succeed = True
             res_str += "Passed"

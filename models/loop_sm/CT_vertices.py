@@ -30,7 +30,7 @@ V_R23G = CTVertex(name = 'V_R23G',
 #  4-gluon R2 vertex
 #=============================================================================================
 
-# Keep in mind that Delta8(a,b) is 1/2 Tr(a,b)
+# Keep in mind that Delta8(a,b) is 2 Tr(a,b)
 
 V_R24G = CTVertex(name = 'V_R24G',
               particles = [ P.G, P.G, P.G,  P.G ],
@@ -111,7 +111,7 @@ V_R2GTT = CTVertex(name = 'V_R2GTT',
 # gg             
 V_R2GG = CTVertex(name = 'V_R2GG',
                particles = [ P.G, P.G ],
-               color = [ 'Identity(1,2)' ],
+               color = [ 'Tr(1,2)' ],
                lorentz = [ L.R2_GG_1, L.R2_GG_2, L.R2_GG_3],
                loop_particles = [ [[P.u],[P.d],[P.c],[P.s]],
                                   [[P.b]],

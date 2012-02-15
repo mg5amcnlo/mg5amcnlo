@@ -2013,10 +2013,6 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
                                                       mg_root=self._mgme_dir,
                                                       cuttools=self._cuttools_dir)
             nb_processes += len(lorentz_result)
-        
-        # Clean up the possible temporary folders created for the running of the
-        # loop processes
-        process_checks.clean_up(self._mgme_dir)
             
         cpu_time2 = time.time()
 

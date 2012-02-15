@@ -30,31 +30,31 @@ V_24 = Vertex(name = 'V_24',
               lorentz = [ L.FFV1 ],
               couplings = {(0,0):C.GC_5})
 
-V_49 = Vertex(name = 'V_4',
+V_49 = Vertex(name = 'V_49',
                particles = [ P.u__tilde__, P.u, P.G ],
                color = [ 'T(3,2,1)' ],
                lorentz = [ L.FFV1 ],
                couplings = {(0,0):C.GC_5})
 
-V_25 = Vertex(name = 'V_5',
+V_25 = Vertex(name = 'V_25',
               particles = [ P.s__tilde__, P.s, P.G ],
               color = [ 'T(3,2,1)' ],
               lorentz = [ L.FFV1 ],
               couplings = {(0,0):C.GC_5})
 
-V_50 = Vertex(name = 'V_6',
+V_50 = Vertex(name = 'V_50',
                particles = [ P.c__tilde__, P.c, P.G ],
                color = [ 'T(3,2,1)' ],
                lorentz = [ L.FFV1 ],
                couplings = {(0,0):C.GC_5})
 
-V_26 = Vertex(name = 'V_7',
+V_26 = Vertex(name = 'V_26',
               particles = [ P.b__tilde__, P.b, P.G ],
               color = [ 'T(3,2,1)' ],
               lorentz = [ L.FFV1 ],
               couplings = {(0,0):C.GC_5})
 
-V_51 = Vertex(name = 'V_8',
+V_51 = Vertex(name = 'V_51',
                particles = [ P.t__tilde__, P.t, P.G ],
                color = [ 'T(3,2,1)' ],
                lorentz = [ L.FFV1 ],

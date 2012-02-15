@@ -480,11 +480,11 @@ AxialWmDxU = Parameter(name = 'AxialWmDxU',
 VectorWpUxD = Parameter(name = 'VectorWpUxD',
               nature = 'internal',                        
               type = 'real',
-              value = '(1.0/2.0)*((ee*complexconjugate(CKM11))/(sw*cmath.sqrt(2)))',
+              value = '(1.0/2.0)*((ee)/(sw*cmath.sqrt(2)))',
               texname = 'VectorWpUxD')
 
 AxialWpUxD = Parameter(name = 'AxialWpUxD',
               nature = 'internal',                        
               type = 'real',
-              value = '-(1.0/2.0)*((ee*complexconjugate(CKM11))/(sw*cmath.sqrt(2)))',
+              value = '-(1.0/2.0)*((ee)/(sw*cmath.sqrt(2)))',
               texname = 'AxialWpUxD')
