@@ -447,11 +447,16 @@ class OLDMG5Comparator(unittest.TestCase):
     def test_mg5_sm_22(self):
         """Test a semi-complete list of sm 2->2 processes"""
         # Create a list of processes to check automatically
+        #my_proc_list = me_comparator.create_proc_list(\
+        #    ['w+', 'w-', 'a', 'z', 'h', 'g', 'u', 'u~', 'd', 'd~',
+        #    'b', 'b~', 't', 't~', 'ta+', 'ta-', 'vt', 'vt~'],
+        #    initial=2, final=2)
         my_proc_list = me_comparator.create_proc_list(\
             ['w+', 'w-', 'a', 'z', 'h', 'g', 'u', 'u~', 'd', 'd~',
             'b', 'b~', 't', 't~', 'ta+', 'ta-', 'vt', 'vt~'],
             initial=2, final=2)
-
+        #my_proc_list = ['e+ e- > e+ e-','e+ e- > e+ e- a']
+        
         # Store list of non-zero processes and results in file
         for i in range(len(my_proc_list)//500):
             print 'step %s/%s' %(i+1,len(my_proc_list)//500 )
@@ -461,6 +466,7 @@ class OLDMG5Comparator(unittest.TestCase):
                              model = "sm",
                              energy = 1000,
                              filename = "sm_22.log")   
+                             #filename = None)
 
     def test_mg5_sm_23_p1(self):
         """Test a semi-complete list of sm 2->3 processes"""

@@ -413,3 +413,63 @@ class MG5OldRunner(MG5Runner):
         self.res_list.append(values)
         return values
     
+class MG5CMSRunner(MG5Runner):
+    """Runner object for the MG5 Matrix Element generator."""
+
+    mg5_path = ""
+    name = 'v5 Ref'
+    type = 'v5_ref'
+    
+    def format_mg5_proc_card(self, proc_list, model, orders):
+        """Create a proc_card.dat string following v5 conventions."""
+
+        v5_string = "import model %s\n" % os.path.join(self.model_dir, model)
+        v5_string += "set complex_gauge_scheme True"
+
+        couplings = ' '.join(["%s=%i" % (k, v) for k, v in orders.items()])
+
+        for i, proc in enumerate(proc_list):
+            v5_string += 'add process ' + proc + ' ' + couplings + \
+                         '@%i' % i + '\n'
+        v5_string += "output %s -f\n" % \
+                     os.path.join(self.mg5_path, self.temp_dir_name)
+        v5_string += "launch -f \n"
+        return v5_string
+    
+    def run(self, proc_list, model, orders={}):
+        """Execute MG5 on the list of processes mentioned in proc_list, using
+        the specified model, the specified maximal coupling orders and a certain
+        energy for incoming particles (for decay, incoming particle is at rest).
+        """
+        self.res_list = [] # ensure that to be void, and avoid pointer problem 
+        self.proc_list = proc_list
+        self.model = model
+        self.orders = orders
+        self.non_zero = 0 
+
+        dir_name = os.path.join(self.mg5_path, self.temp_dir_name)
+
+        # Create a proc_card.dat in the v5 format
+        proc_card_location = os.path.join(self.mg5_path, 'proc_card_%s.dat' % \
+                                          self.temp_dir_name)
+        proc_card_file = open(proc_card_location, 'w')
+        proc_card_file.write(self.format_mg5_proc_card(proc_list, model, orders))
+        proc_card_file.close()
+
+        logging.info("proc_card.dat file for %i processes successfully created in %s" % \
+                     (len(proc_list), os.path.join(dir_name, 'Cards')))
+
+        # Run mg5
+        logging.info("Running MG5")
+        devnull = open(os.devnull,'w') 
+        if logging.root.level >=20:
+            subprocess.call([pjoin(self.mg5_path,'bin','mg5'), proc_card_location],
+                        stdout=devnull, stderr=devnull)
+        else:       
+            subprocess.call([pjoin(self.mg5_path,'bin','mg5'), proc_card_location])
+
+        os.remove(proc_card_location)
+
+        values = self.get_values()
+        self.res_list.append(values)
+        return values

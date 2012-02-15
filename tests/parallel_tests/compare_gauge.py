@@ -44,17 +44,24 @@ class GaugeComparator(unittest.TestCase):
                         tolerance = 1e-06):
         """ """
         
-        cms_runner = me_comparator.MG5_UFO_CMS_Runner()
-        cms_runner.setup(MG5DIR,MG5DIR)
+        cmsunit_runner = me_comparator.MG5_UFO_gauge_Runner(cms='True',gauge='unitary')
+        cmsunit_runner.setup(MG5DIR,MG5DIR)
         
-        mg5_runner = me_comparator.MG5_UFO_Runner()
-        mg5_runner.setup(MG5DIR,MG5DIR)
+        mg5unit_runner = me_comparator.MG5_UFO_gauge_Runner(cms='False',gauge='unitary')
+        mg5unit_runner.setup(MG5DIR,MG5DIR)
+
+        cmsfeynman_runner = me_comparator.MG5_UFO_gauge_Runner(cms='True',gauge='Feynman')
+        cmsfeynman_runner.setup(MG5DIR,MG5DIR)
+        
+        mg5feynman_runner = me_comparator.MG5_UFO_gauge_Runner(cms='False',gauge='Feynman')
+        mg5feynman_runner.setup(MG5DIR,MG5DIR)
 
         # ADD FOR Feynmam and CMS + Feynman
                 
         # Create and setup a comparator
-        my_comp = me_comparator.MEComparator()
-        my_comp.set_me_runners(cms_runner, mg5_runner) # can add Feynman+...
+        my_comp = me_comparator.MEComparatorGauge()
+        my_comp.set_me_runners(cmsunit_runner, cmsfeynman_runner,mg5feynman_runner,mg5unit_runner) # can add Feynman+...
+        
 
         # Run the actual comparison
         my_comp.run_comparison(my_proc_list,
@@ -401,16 +408,23 @@ class GaugeComparator(unittest.TestCase):
     def test_first_cms(self):
         """Test a semi-complete list of sm 2->2 processes"""
         # Create a list of processes to check automatically
-        my_proc_list = ['e+ e- > e+ e-', 'e+ e- > e+ e- a',
-                        'u u~ > u u~']
+        #my_proc_list = ['e+ e- > e+ e-', 'e+ e- > e+ e- a',
+        #                'u u~ > u u~','c c~ > d d~']
+        my_proc_list = me_comparator.create_proc_list(\
+            ['w+', 'w-', 'a', 'z', 'h', 'g', 'u', 'u~', 'd', 'd~',
+            'b', 'b~', 't', 't~', 'ta+', 'ta-', 'vt', 'vt~'],
+            initial=2, final=2)
 
- 
         # Store list of non-zero processes and results in file
-        self.compare_processes(my_proc_list,
-                             orders = {'QED':2, 'QCD':2},
-                             model = "sm",
+        for i in range(len(my_proc_list)//500):
+            print 'step %s/%s' %(i+1,len(my_proc_list)//500 )
+            # Store list of non-zero processes and results in file
+            self.compare_processes(my_proc_list[500*i:500*(i+1)],
+                             orders = {'QED':99, 'QCD':99},
+                             model = "sm_mw",
                              energy = 1000,
-                             filename = "sm_22.log")   
+                             filename = "sm_22.log",
+                             tolerance = 1e-3)   
 
 
     ############################################################################    
