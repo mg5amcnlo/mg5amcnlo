@@ -413,12 +413,15 @@ class MG5OldRunner(MG5Runner):
         self.res_list.append(values)
         return values
     
-class MG5CMSRunner(MG5Runner):
+class MG5gaugeRunner(MG5Runner):
     """Runner object for the MG5 Matrix Element generator."""
 
-    mg5_path = ""
-    name = 'v5 Ref'
-    type = 'v5_ref'
+    def __init__(self, cms, gauge):
+        self.cms = cms
+        self.gauge = gauge
+        self.mg5_path = ""
+        slef.name = 'MG%_%s_%s' %(self.cms, self.gauge)
+        self.type = '%s_%s' %(self.cms, self.gauge)
     
     def format_mg5_proc_card(self, proc_list, model, orders):
         """Create a proc_card.dat string following v5 conventions."""

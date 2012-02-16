@@ -45,17 +45,17 @@ class GaugeComparator(unittest.TestCase):
         """ """
         
         cmsunit_runner = me_comparator.MG5_UFO_gauge_Runner(cms='True',gauge='unitary')
-        cmsunit_runner.setup(MG5DIR,MG5DIR)
-        
+        cmsunit_runner.setup(MG5DIR, MG5DIR)
+            
         mg5unit_runner = me_comparator.MG5_UFO_gauge_Runner(cms='False',gauge='unitary')
-        mg5unit_runner.setup(MG5DIR,MG5DIR)
-
+        mg5unit_runner.setup(MG5DIR, MG5DIR)
+        
         cmsfeynman_runner = me_comparator.MG5_UFO_gauge_Runner(cms='True',gauge='Feynman')
-        cmsfeynman_runner.setup(MG5DIR,MG5DIR)
+        cmsfeynman_runner.setup(MG5DIR, MG5DIR)
         
         mg5feynman_runner = me_comparator.MG5_UFO_gauge_Runner(cms='False',gauge='Feynman')
-        mg5feynman_runner.setup(MG5DIR,MG5DIR)
-
+        mg5feynman_runner.setup(MG5DIR, MG5DIR)
+        
         # ADD FOR Feynmam and CMS + Feynman
                 
         # Create and setup a comparator
@@ -141,17 +141,8 @@ class GaugeComparator(unittest.TestCase):
                         filename = "", print_result = False,
                         tolerance = 1e-02):   
                 
-        if 'v4' in model:
-            raise Exception, 'Not implemented'
-            #old_mg5 = me_comparator.MG5OldRunner()
-            #old_mg5.setup(mg5_path)
-            #current_mg5 = me_comparator.MG5Runner()
-            #current_mg5.setup(MG5DIR, MG5DIR)
-            #current_mg5.store_proc_card = True
-        else:
-            current_mg5 = madevent_comparator.MG5Runner()
-            current_mg5.setup(MG5DIR)
-            current_mg5.store_proc_card = True
+        current_mg5 = madevent_comparator.MG5Runner()
+        current_mg5.store_proc_card = True
         
 
         # Create and setup a comparator
@@ -410,22 +401,72 @@ class GaugeComparator(unittest.TestCase):
         # Create a list of processes to check automatically
         #my_proc_list = ['e+ e- > e+ e-', 'e+ e- > e+ e- a',
         #                'u u~ > u u~','c c~ > d d~']
+        #my_proc_list = me_comparator.create_proc_list(\
+        #    ['w+', 'w-', 'a', 'z', 'h', 'g', 'u', 'u~', 'd', 'd~',
+        #    'b', 'b~', 't', 't~', 'ta+', 'ta-', 'vt', 'vt~'],
+        #    initial=2, final=2)
         my_proc_list = me_comparator.create_proc_list(\
-            ['w+', 'w-', 'a', 'z', 'h', 'g', 'u', 'u~', 'd', 'd~',
-            'b', 'b~', 't', 't~', 'ta+', 'ta-', 'vt', 'vt~'],
+            ['a', 'u', 'u~', 'd', 'd~',
+            'b', 'b~', 'ta+', 'ta-', 'vt', 'vt~'],
             initial=2, final=2)
 
         # Store list of non-zero processes and results in file
-        for i in range(len(my_proc_list)//500):
-            print 'step %s/%s' %(i+1,len(my_proc_list)//500 )
+#        for i in range(len(my_proc_list)//500):
+#            print 'step %s/%s' %(i+1,len(my_proc_list)//500 )
             # Store list of non-zero processes and results in file
-            self.compare_processes(my_proc_list[500*i:500*(i+1)],
+#            self.compare_processes(my_proc_list[500*i:500*(i+1)],
+        self.compare_processes(my_proc_list,
                              orders = {'QED':99, 'QCD':99},
                              model = "sm_mw",
                              energy = 1000,
-                             filename = "sm_22.log",
+                             filename = "sm_gauge_22.log",
+                             tolerance = 1e-3)   
+        
+    def test_first_gauge_some(self):
+        """Test a semi-complete list of sm 2->3 processes"""
+        # Create a list of processes to check automatically
+        my_proc_list = ['e+ e- > e+ e- a', 'u g > c c~ u',
+                        'a u > u u~ u','c c~ > d d~ g', 'e+ e- > u u~ d d~',
+                        'u u~ > u u~ d d~', 'c s~ > a g c s~', 
+                        'u u~ > b b~ e+ ve mu- vm~']
+        #my_proc_list = me_comparator.create_proc_list(\
+        #    ['w+', 'w-', 'a', 'z', 'h', 'g', 'u', 'u~', 'd', 'd~',
+        #    'b', 'b~', 't', 't~', 'ta+', 'ta-', 'vt', 'vt~'],
+        #    initial=2, final=2)
+
+        # Store list of non-zero processes and results in file
+#        for i in range(len(my_proc_list)//500):
+#            print 'step %s/%s' %(i+1,len(my_proc_list)//500 )
+            # Store list of non-zero processes and results in file
+#            self.compare_processes(my_proc_list[500*i:500*(i+1)],
+        self.compare_processes(my_proc_list,
+                             orders = {'QED':99, 'QCD':99},
+                             model = "sm_mw",
+                             energy = 1000,
+                             filename = "sm_gauge_23.log",
                              tolerance = 1e-3)   
 
+    def test_first_gauge_some_p2(self):
+        """Test a semi-complete list of sm 2->3 processes"""
+        # Create a list of processes to check automatically
+        my_proc_list = ['g c > c c~ c', 'g b > b b~ b', 'e+ e- > mu- vm~ mu+ vm', 
+                        'u u~ > b b~ e+ ve mu- vm~ / h']
+        #my_proc_list = me_comparator.create_proc_list(\
+        #    ['w+', 'w-', 'a', 'z', 'h', 'g', 'u', 'u~', 'd', 'd~',
+        #    'b', 'b~', 't', 't~', 'ta+', 'ta-', 'vt', 'vt~'],
+        #    initial=2, final=2)
+
+        # Store list of non-zero processes and results in file
+#        for i in range(len(my_proc_list)//500):
+#            print 'step %s/%s' %(i+1,len(my_proc_list)//500 )
+            # Store list of non-zero processes and results in file
+#            self.compare_processes(my_proc_list[500*i:500*(i+1)],
+        self.compare_processes(my_proc_list,
+                             orders = {'QED':99, 'QCD':99},
+                             model = "sm_mw",
+                             energy = 1000,
+                             filename = "sm_gauge_23_p2.log",
+                             tolerance = 1e-3)
 
     ############################################################################    
     #  EXTENSIVE TEST FOR THE SM

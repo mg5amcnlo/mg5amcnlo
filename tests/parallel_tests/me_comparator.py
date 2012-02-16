@@ -547,7 +547,7 @@ class MG5_UFO_gauge_Runner(MG5Runner):
     def format_mg5_proc_card(self, proc_list, model, orders):
         """Create a proc_card.dat string following v5 conventions."""
 
-        v5_string = 'import model sm \n'
+        v5_string = 'import model sm_mw \n'
         v5_string += 'set complex_mass_scheme %s \n' % self.cms
         v5_string += 'set gauge %s \n' % self.gauge
         v5_string += "import model %s \n" % os.path.join(self.model_dir, model)
@@ -822,7 +822,7 @@ class MEComparator(object):
             logging.info(" Done in %0.3f s" % (cpu_time2 - cpu_time1))
             logging.info(" (%i/%i with zero ME)" % \
                     (len([res for res in self.results[-1] if res[0][0] == 0.0]),
-                     len(proc_list)))
+                     len(proc_list)))         
 
     def cleanup(self):
         """Call cleanup for each MERunner."""
@@ -969,18 +969,18 @@ class MEComparatorGauge(MEComparator):
                   self._fixed_string_length("Diff both unit", col_size) + \
                   self._fixed_string_length("Diff both cms", col_size) + \
                   self._fixed_string_length("Diff both fixw", col_size) + \
-                  self._fixed_string_length("Diff four", col_size) + \
+                  self._fixed_string_length("Diff both feyn", col_size) + \
                   "Result"
 
         for i, proc in enumerate(self.proc_list):
-            list_res = [res[i][0][0] for res in self.results]
+            list_res = [res[i][0][0] for res in self.results]            
             if max(list_res) == 0.0 and min(list_res) == 0.0:
                 diff = 0.0
                 if skip_zero:
                     continue
             else:
-                diff_all = (max(list_res) - min(list_res)) / \
-                       (max(list_res) + min(list_res))
+                diff_feyn = abs(list_res[1] - list_res[2]) / \
+                       (list_res[1] + list_res[2])
                 diff_unit = abs(list_res[0] - list_res[3]) / \
                        (list_res[0] + list_res[3])
                 diff_cms = abs(list_res[0] - list_res[1]) / \
@@ -995,9 +995,9 @@ class MEComparatorGauge(MEComparator):
             res_str += self._fixed_string_length("%1.10e" % diff_unit, col_size)
             res_str += self._fixed_string_length("%1.10e" % diff_cms, col_size)
             res_str += self._fixed_string_length("%1.10e" % diff_fixw, col_size)
-            res_str += self._fixed_string_length("%1.10e" % diff_all, col_size)
+            res_str += self._fixed_string_length("%1.10e" % diff_feyn, col_size)
                         
-            if diff_all < 1e-2 and diff_cms < 1e-6 and diff_fixw < 1e-4 and \
+            if diff_feyn < 1e-2 and diff_cms < 1e-6 and diff_fixw < 1e-4 and \
                diff_unit < 1e-2:
                 pass_proc += 1
                 res_str += "Pass"
@@ -1033,8 +1033,8 @@ class MEComparatorGauge(MEComparator):
                 diff = 0.0           
                 continue
             
-            diff_all = (max(list_res) - min(list_res)) / \
-                       (max(list_res) + min(list_res))
+            diff_feyn = abs(list_res[1] - list_res[2]) / \
+                       (list_res[1] + list_res[2])
             diff_unit = abs(list_res[0] - list_res[3]) / \
                        (list_res[0] + list_res[3])
             diff_cms = abs(list_res[0] - list_res[1]) / \
@@ -1042,7 +1042,7 @@ class MEComparatorGauge(MEComparator):
             diff_fixw = abs(list_res[2] - list_res[3]) / \
                        (list_res[2] + list_res[3])
                        
-            if diff_all > 1e-2 or diff_cms > 1e-6 or diff_fixw > 1e-4 or \
+            if diff_feyn > 1e-2 or diff_cms > 1e-6 or diff_fixw > 1e-4 or \
                diff_unit > 1e-2:                
                 fail_str += proc+" "
 
