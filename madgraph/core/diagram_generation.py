@@ -311,7 +311,8 @@ class Amplitude(base_objects.PhysicsObject):
             if self['process']:
                 self.generate_diagrams()
 
-        return Amplitude.__bases__[0].get(self, name)  #return the mother routine
+        return super(Amplitude, self).get(name)
+#        return Amplitude.__bases__[0].get(self, name)  #return the mother routine
 
 
     def get_sorted_keys(self):
@@ -341,6 +342,11 @@ class Amplitude(base_objects.PhysicsObject):
     def get_ninitial(self):
         """Returns the number of initial state particles in the process."""
         return self.get('process').get_ninitial()
+
+    def has_loop_process(self):
+        """ Returns wether this amplitude has a loop process."""
+        
+        return self.get('process').get('perturbation_couplings')
 
     def generate_diagrams(self, returndiag=False):
         """Generate diagrams. Algorithm:
@@ -1002,7 +1008,7 @@ class AmplitudeList(base_objects.PhysicsObjectList):
         see if there is any which defines perturbation couplings. """
         
         for amp in self:
-            if amp.get('process').get('perturbation_couplings'):
+            if amp.has_loop_process():
                 return True
 
     def is_valid_element(self, obj):
@@ -1093,7 +1099,8 @@ class DecayChainAmplitude(Amplitude):
     def get_sorted_keys(self):
         """Return diagram property names as a nicely sorted list."""
 
-        return ['amplitudes', 'decay_chains']
+        return super(DecayChainAmplitude,self).get_sorted_keys().append(
+                                                ['amplitudes', 'decay_chains'])
 
     # Helper functions
 
@@ -1146,6 +1153,10 @@ class DecayChainAmplitude(Amplitude):
             
         # Return a list with unique ids
         return list(set(decay_ids))
+    
+    def has_loop_process(self):
+        """ Returns wether this amplitude has a loop process."""
+        return self['amplitudes'].has_any_loop_process()
     
     def get_amplitudes(self):
         """Recursive function to extract all amplitudes for this process"""
