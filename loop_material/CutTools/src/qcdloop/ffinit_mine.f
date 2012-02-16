@@ -105,25 +105,31 @@
 *	and the minimum value the logarithm accepts without complaining
 *	about arguments zero is (DOUBLE PRECISION cq DOUBLE COMPLEX)
 *
-	s = 1
-	xalogm = 1
-	do 5 i=1,10000
-	    s = s/2
-	    if ( 2*abs(s) .ne. xalogm ) goto 6
-	    xalogm = abs(s)
-    5	continue
-    6	continue
+* begin_modification by R. Pittau 
+*	s = 1
+*	xalogm = 1
+*	do 5 i=1,10000
+*	    s = s/2
+*	    if ( 2*abs(s) .ne. xalogm) goto 6
+*	    xalogm = abs(s)
+*   5	continue
+*   6	continue
+        call ffzalgm(xalogm)
 	if ( xalogm.eq.0 ) xalogm = 1d-308
+* end_modification
 	if ( lwrite ) print *,'ffini: xalogm = ',xalogm
-	s = 1
-	xclogm = abs(DCMPLX(s))
-	do 7 i=1,10000
-	    s = s/2
-	    if ( 2*abs(DCMPLX(s)) .ne. xclogm ) goto 8
-	    xclogm = abs(DCMPLX(s))
-    7	continue
-    8	continue
-	if ( xclogm.eq.0 ) xclogm = 1d-308
+* begin_modification by R. Pittau 
+*	s = 1
+*	xclogm = abs(DCMPLX(s))
+*	do 7 i=1,10000
+*	    s = s/2
+*	    if ( 2*abs(DCMPLX(s)) .ne. xclogm ) goto 8
+*	    xclogm = abs(DCMPLX(s))
+*   7	continue
+*   8	continue
+        call ffzclgm(xclogm)
+        if ( xclogm.eq.0 ) xclogm = 1d-308
+* end_modification
 	if ( lwrite ) print *,'ffini: xclogm = ',xclogm
 *
 *	These values are for Absoft, Apollo fortran (68000):
@@ -776,14 +782,16 @@
 *
 *	first try - my home directory
 C	path = '/user/gj/lib/
-	path = '/Users/ellis/QCDLoop-1.9/ff/'
+C	path = '/Users/ellis/QCDLoop-1.9/ff/'
+	path = '../src/qcdloop/'
 	fullname = path(1:index(path,' ')-1)//name
 	open(ifile,file=fullname,status='OLD',err=30)
 	return
    30	continue
 *	second try - the system directory
 C	path = '/usr/local/ff/'
-	path = '/Users/ellis/QCDLoop-1.9/ff/'
+C	path = '/Users/ellis/QCDLoop-1.9/ff/'
+	path = '../src/qcdloop/'
 	fullname = path(1:index(path,' ')-1)//name
 	open(ifile,file=fullname,status='OLD',err=40)
 	return
@@ -1276,3 +1284,33 @@ C	path = '/usr/local/ff/'
 *###] fftayl:
 	end
 
+        subroutine ffzalgm(zalogm) 
+        implicit none
+        double precision s,zalogm
+        integer i
+	s = 1
+	zalogm = 1
+	do 5 i=1,10000
+	    s = s/2
+	    if ( 2*abs(s) .eq. zalogm) then
+            else            
+             goto 6
+            endif
+	    zalogm = abs(s)
+    5	continue
+    6	continue
+        end
+
+        subroutine ffzclgm(zclogm) 
+        implicit none
+        double precision s,zclogm
+        integer i
+	s = 1
+	zclogm = abs(DCMPLX(s))
+	do 7 i=1,10000
+	    s = s/2
+	    if ( 2*abs(DCMPLX(s)) .ne. zclogm ) goto 8
+	    zclogm = abs(DCMPLX(s))
+    7	continue
+    8	continue
+        end 

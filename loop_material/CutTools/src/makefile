@@ -3,16 +3,14 @@ default: lib
 #lib: libcts.a ltcut
 lib: libcts.a 
 
-MPFUN = ddfun90.o ddmod90.o mpfun90.o mpmod90.o mpmodm90.o mpmodx90.o
+MPFUN = mpfun90.o mpmod90.o mpmodm90.o mpmodx90.o
 
 CTS = cts_type.o cts_tensors.o cts_constants.o cts_combinatorics.o \
   cts_dynamics.o cts_kinematics.o \
   cts_loopfunctions.o cts_cuttools.o \
   cts_cutroutines.o
 
-AVH =   avh_olo_hello.o avh_olo_3div.o avh_olo_3fin.o \
-  avh_olo_4div.o avh_olo_4fin.o avh_olo_b11.o \
-  avh_olo_cmplx.o avh_olo_func.o avh_olo_real.o avh_olo_cd0.o 
+AVH =   avh_olo.o avh_olo_mp.o
 
 QCDLOOP = aaxbx.o aaxcx.o aaxdx.o aaxex.o aaxinv.o aacbc.o \
           aaccc.o aacinv.o spence.o \

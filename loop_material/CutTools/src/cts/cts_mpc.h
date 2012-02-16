@@ -1,2 +1,1 @@
-type(mp_complex)&
-!type(dd_complex)&
+ type(mp_complex)&

@@ -1,1 +1,1 @@
-real(kind(1.d0))&
+ real(kind=8)&

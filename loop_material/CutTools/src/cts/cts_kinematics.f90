@@ -1,5 +1,5 @@
 !
-! nunfunc is called instead of numfuncrec, in this version,
+! numfunc is called instead of numfuncrec, in this version,
 ! only in the multiprecision routines.
 !
  module dimensions 
@@ -23,9 +23,10 @@
   implicit none                    
   include 'cts_dpr.h'
    , public :: roots,limit,musq,muscale
-  integer, public :: n_mp= 0, n_disc= 0, scaloop
-  logical, public :: mpflag
+  integer, public ::  scaloop
   logical, public :: stablen=.true.
+  include 'cts_dpr.h'
+  , public :: precstablen,n_mp= 0,n_unst= 0,n_tot= 0
   include 'cts_dpr.h'
    , public :: llimit= 0.3d0
   include 'cts_dpc.h' 
@@ -2460,11 +2461,15 @@
 !   print *,'dummy1=',dummy1,'to be compared with'
 !   print *,'dummy2=',dummy2
 !   print *,'prec  in dp_get_coefficients:',prec
+   precstablen= prec
    if (prec.gt.llimit) stablen=.false.
 !-comment
    rational=.true. 
    if (dmr.ge.0) then
-    do iteration= 1,2
+!-comment-new
+!    do iteration= 1,2
+    do iteration= 1,1
+!-comment-new
 !
 !     iteration= 2 is to get the main coefficients in a different way 
 !     in order to test the numerical accuracy of the final result
@@ -2506,7 +2511,10 @@
     enddo
    elseif (dmr.eq.-1) then
     dmr1= dmr
-    do iteration= 1,3
+!-comment-new
+!    do iteration= 1,3
+    do iteration= 1,2
+!-comment-new
 !
 !     iteration= 3 is to get the main coefficients in a different way 
 !     in order to test the numerical accuracy of the final result
@@ -2564,51 +2572,56 @@
     endif
     rat1= rat1_d+rat1_c+rat1_b+rat1_a
     call load_rat(1)
-!
-!   Second determination of R_1
-!
-    rat1_d = 0.d0
-    rat1_c = 0.d0
-    rat1_b = 0.d0
-    rat1_a = 0.d0
-    if (number_propagators.ge.1) then
-     do k= 1,nbn1(number_propagators)
-      ib= mbn1(number_propagators,k)
-      rat1_a = rat1_a-0.5d0*a_rat1(ib)*(aset(ib,4)- aset(ib,1))/qt2_2 
-     enddo
-    endif
-    if (number_propagators.ge.2) then
-     do k= 1,nbn2(number_propagators)
-      ib= mbn2(number_propagators,k)
-      rat1_b = rat1_b-0.5d0*b_rat1(ib)*(bset(ib,4)- bset(ib,1) )/qt2_2 
-      rat1_b = rat1_b+     b3_rat1(ib)*(bset3(ib,4)-bset3(ib,1))/qt2_2/12.d0 
-     enddo
-    endif
-    rat_aus = (qt2_2-qt2_1)
-    if (number_propagators.ge.3) then
-     do k= 1,nbn3(number_propagators)
-      ib= mbn3(number_propagators,k)
-      rat_aus1= (cset(ib,2)-cset(ib,1))/qt2_1
-      rat_aus2= (cset(ib,4)-cset(ib,1))/qt2_2
-      rat1_c = rat1_c-0.5d0*(rat_aus1*qt2_2-rat_aus2*qt2_1)/rat_aus 
-      rat1_c = rat1_c-c4_rat1(ib)*(rat_aus2-rat_aus1)/rat_aus/12.d0
-     enddo
-    endif
-    if (number_propagators.ge.4) then
-     do k= 1,nbn4(number_propagators)
-      ib= mbn4(number_propagators,k)
-      rat_aus1= (dset(ib,2)-dset(ib,1))/qt2_1
-      rat_aus2= (dset(ib,4)-dset(ib,1))/qt2_2
-      rat1_d  = rat1_d-(rat_aus2-rat_aus1)/rat_aus/6.d0
-     enddo
-    endif
-    rat1= rat1_d+rat1_c+rat1_b+rat1_a
-    call load_rat(2)
+!-comment-new
+!!$!
+!!$!   Second determination of R_1
+!!$!
+!!$    rat1_d = 0.d0
+!!$    rat1_c = 0.d0
+!!$    rat1_b = 0.d0
+!!$    rat1_a = 0.d0
+!!$    if (number_propagators.ge.1) then
+!!$     do k= 1,nbn1(number_propagators)
+!!$      ib= mbn1(number_propagators,k)
+!!$      rat1_a = rat1_a-0.5d0*a_rat1(ib)*(aset(ib,4)- aset(ib,1))/qt2_2 
+!!$     enddo
+!!$    endif
+!!$    if (number_propagators.ge.2) then
+!!$     do k= 1,nbn2(number_propagators)
+!!$      ib= mbn2(number_propagators,k)
+!!$      rat1_b = rat1_b-0.5d0*b_rat1(ib)*(bset(ib,4)- bset(ib,1) )/qt2_2 
+!!$      rat1_b = rat1_b+     b3_rat1(ib)*(bset3(ib,4)-bset3(ib,1))/qt2_2/12.d0 
+!!$     enddo
+!!$    endif
+!!$    rat_aus = (qt2_2-qt2_1)
+!!$    if (number_propagators.ge.3) then
+!!$     do k= 1,nbn3(number_propagators)
+!!$      ib= mbn3(number_propagators,k)
+!!$      rat_aus1= (cset(ib,2)-cset(ib,1))/qt2_1
+!!$      rat_aus2= (cset(ib,4)-cset(ib,1))/qt2_2
+!!$      rat1_c = rat1_c-0.5d0*(rat_aus1*qt2_2-rat_aus2*qt2_1)/rat_aus 
+!!$      rat1_c = rat1_c-c4_rat1(ib)*(rat_aus2-rat_aus1)/rat_aus/12.d0
+!!$     enddo
+!!$    endif
+!!$    if (number_propagators.ge.4) then
+!!$     do k= 1,nbn4(number_propagators)
+!!$      ib= mbn4(number_propagators,k)
+!!$      rat_aus1= (dset(ib,2)-dset(ib,1))/qt2_1
+!!$      rat_aus2= (dset(ib,4)-dset(ib,1))/qt2_2
+!!$      rat1_d  = rat1_d-(rat_aus2-rat_aus1)/rat_aus/6.d0
+!!$     enddo
+!!$    endif
+!!$    rat1= rat1_d+rat1_c+rat1_b+rat1_a
+!!$    call load_rat(2)
+!-comment-new
    else 
     print*,'dmr=',dmr,' not allowed' 
     stop
    endif
-   call finalize_sets
+!-comment-new
+!   call finalize_sets
+   save_rat1= rset(1) 
+!-comment-new
    qt2= qt2_0
 !  comment
 !  call compare
@@ -3023,11 +3036,15 @@
 !   aus= dummy2
 !   print *,'dummy2=',aus
 !   print *,'prec  in mp_get_coefficients:',prec
+   precstablen= prec
    if (prec.gt.llimit) stablen=.false.
 !-comment
    rational=.true.          
    if (dmr.ge.0) then
-    do iteration= 1,2
+!-comment-new
+!    do iteration= 1,2
+    do iteration= 1,1
+!-comment-new
 !
 !     iteration= 2 is to get the main coefficients in a different way 
 !     in order to test the numerical accuracy of the final result
@@ -3069,7 +3086,10 @@
     enddo
    elseif (dmr.eq.-1) then
     dmr1= dmr
-    do iteration= 1,3
+!-comment-new
+!    do iteration= 1,3
+    do iteration= 1,2
+!-comment-new
 !
 !     iteration= 3 is to get the main coefficients in a different way 
 !     in order to test the numerical accuracy of the final result
@@ -3127,51 +3147,56 @@
     endif
     mp_rat1= rat1_d+rat1_c+rat1_b+rat1_a
     call load_rat(1)
-!
-!   Second determination of R_1
-!
-    rat1_d = 0.d0
-    rat1_c = 0.d0
-    rat1_b = 0.d0
-    rat1_a = 0.d0
-    if (number_propagators.ge.1) then
-     do k= 1,nbn1(number_propagators)
-      ib= mbn1(number_propagators,k)
-      rat1_a = rat1_a-0.5d0*mp_a_rat1(ib)*(aset(ib,4)- aset(ib,1))/qt2_2 
-     enddo
-    endif
-    if (number_propagators.ge.2) then
-     do k= 1,nbn2(number_propagators)
-      ib= mbn2(number_propagators,k)
-      rat1_b = rat1_b-0.5d0*mp_b_rat1(ib)*(bset(ib,4)- bset(ib,1))/qt2_2 
-      rat1_b = rat1_b+     mp_b3_rat1(ib)*(bset3(ib,4)-bset3(ib,1))/qt2_2/12.d0 
-     enddo
-    endif
-    rat_aus = (qt2_2-qt2_1)
-    if (number_propagators.ge.3) then
-     do k= 1,nbn3(number_propagators)
-      ib= mbn3(number_propagators,k)
-      rat_aus1= (cset(ib,2)-cset(ib,1))/qt2_1
-      rat_aus2= (cset(ib,4)-cset(ib,1))/qt2_2
-      rat1_c = rat1_c-0.5d0*(rat_aus1*qt2_2-rat_aus2*qt2_1)/rat_aus 
-      rat1_c = rat1_c-mp_c4_rat1(ib)*(rat_aus2-rat_aus1)/rat_aus/12.d0
-     enddo
-    endif
-    if (number_propagators.ge.4) then
-     do k= 1,nbn4(number_propagators)
-      ib= mbn4(number_propagators,k)
-      rat_aus1= (dset(ib,2)-dset(ib,1))/qt2_1
-      rat_aus2= (dset(ib,4)-dset(ib,1))/qt2_2
-      rat1_d  = rat1_d-(rat_aus2-rat_aus1)/rat_aus/6.d0
-     enddo
-    endif
-    mp_rat1= rat1_d+rat1_c+rat1_b+rat1_a
-    call load_rat(2)
+!-comment-new
+!!$!
+!!$!   Second determination of R_1
+!!$!
+!!$    rat1_d = 0.d0
+!!$    rat1_c = 0.d0
+!!$    rat1_b = 0.d0
+!!$    rat1_a = 0.d0
+!!$    if (number_propagators.ge.1) then
+!!$     do k= 1,nbn1(number_propagators)
+!!$      ib= mbn1(number_propagators,k)
+!!$      rat1_a = rat1_a-0.5d0*mp_a_rat1(ib)*(aset(ib,4)- aset(ib,1))/qt2_2 
+!!$     enddo
+!!$    endif
+!!$    if (number_propagators.ge.2) then
+!!$     do k= 1,nbn2(number_propagators)
+!!$      ib= mbn2(number_propagators,k)
+!!$      rat1_b = rat1_b-0.5d0*mp_b_rat1(ib)*(bset(ib,4)- bset(ib,1))/qt2_2 
+!!$      rat1_b = rat1_b+     mp_b3_rat1(ib)*(bset3(ib,4)-bset3(ib,1))/qt2_2/12.d0 
+!!$     enddo
+!!$    endif
+!!$    rat_aus = (qt2_2-qt2_1)
+!!$    if (number_propagators.ge.3) then
+!!$     do k= 1,nbn3(number_propagators)
+!!$      ib= mbn3(number_propagators,k)
+!!$      rat_aus1= (cset(ib,2)-cset(ib,1))/qt2_1
+!!$      rat_aus2= (cset(ib,4)-cset(ib,1))/qt2_2
+!!$      rat1_c = rat1_c-0.5d0*(rat_aus1*qt2_2-rat_aus2*qt2_1)/rat_aus 
+!!$      rat1_c = rat1_c-mp_c4_rat1(ib)*(rat_aus2-rat_aus1)/rat_aus/12.d0
+!!$     enddo
+!!$    endif
+!!$    if (number_propagators.ge.4) then
+!!$     do k= 1,nbn4(number_propagators)
+!!$      ib= mbn4(number_propagators,k)
+!!$      rat_aus1= (dset(ib,2)-dset(ib,1))/qt2_1
+!!$      rat_aus2= (dset(ib,4)-dset(ib,1))/qt2_2
+!!$      rat1_d  = rat1_d-(rat_aus2-rat_aus1)/rat_aus/6.d0
+!!$     enddo
+!!$    endif
+!!$    mp_rat1= rat1_d+rat1_c+rat1_b+rat1_a
+!!$    call load_rat(2)
+!-comment-new
    else 
     print*,'dmr=',dmr,' not allowed' 
     stop
    endif
-   call finalize_sets
+!-comment-new
+!   call finalize_sets
+   save_mp_rat1= rset(1) 
+!-comment-new
    mpqt2= qt2_0
 !  comment
 !  call compare

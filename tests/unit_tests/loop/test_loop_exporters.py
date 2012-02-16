@@ -102,7 +102,7 @@ class LoopExporterTest(unittest.TestCase):
                         ["Generation from test_loop_exporters.py",],
                         False,False)
         proc_name='P'+loopME.get('processes')[0].shell_string()
-        files=['mpmodule.mod','ddmodule.mod','libcts.a']
+        files=['mpmodule.mod','libcts.a']
         for file in files:
             self.assertTrue(os.path.exists(os.path.join(_proc_file_path\
                                               ,'lib',file)))
@@ -121,7 +121,7 @@ class LoopExporterTest(unittest.TestCase):
                                               ,'SubProcesses',file)))    
         
         files=['CT_interface.f','check_sa.f','cts_mprec.h','loop_num.f',
-               'nexternal.inc','born_matrix.f','coupl.inc','ddmodule.mod',
+               'nexternal.inc','born_matrix.f','coupl.inc',
                'makefile','ngraphs.inc','born_matrix.ps','loop_matrix.ps',
                'cts_mpc.h','loop_matrix.f','mpmodule.mod','pmass.inc']
         for file in files:
