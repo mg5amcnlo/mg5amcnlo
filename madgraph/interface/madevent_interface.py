@@ -3430,8 +3430,9 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
                 
             if mode.isdigit():
                 mode = name[mode]
-                
+            auto = False
             if mode == 'auto':
+                auto = True
                 if not os.path.exists(pjoin(self.me_dir, 'Cards', 'pythia_card.dat')):
                     mode = 'parton'
                 elif os.path.exists(pjoin(self.me_dir, 'Cards', 'pgs_card.dat')):
@@ -3441,22 +3442,24 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
                 else: 
                     mode = 'pythia'
         logger.info('Will run in mode %s' % mode)
-            
-        # Clean the pointless card
-        if mode == 'parton':
-            if os.path.exists(pjoin(self.me_dir,'Cards','pythia_card.dat')):
-                os.remove(pjoin(self.me_dir,'Cards','pythia_card.dat'))
-            if os.path.exists(pjoin(self.me_dir,'Cards','pgs_card.dat')):
-                os.remove(pjoin(self.me_dir,'Cards','pgs_card.dat'))
-            if os.path.exists(pjoin(self.me_dir,'Cards','delphes_card.dat')):
-                os.remove(pjoin(self.me_dir,'Cards','delphes_card.dat'))
-        elif mode == 'pgs':
-            if os.path.exists(pjoin(self.me_dir,'Cards','delphes_card.dat')):
-                os.remove(pjoin(self.me_dir,'Cards','delphes_card.dat'))
-        elif mode == 'delphes':
-            if os.path.exists(pjoin(self.me_dir,'Cards','pgs_card.dat')):
-                os.remove(pjoin(self.me_dir,'Cards','pgs_card.dat'))                                         
-          
+        
+        def clean_pointless_card(mode):
+            """ Clean the pointless card """
+            if mode == 'parton':
+                if os.path.exists(pjoin(self.me_dir,'Cards','pythia_card.dat')):
+                    os.remove(pjoin(self.me_dir,'Cards','pythia_card.dat'))
+                if os.path.exists(pjoin(self.me_dir,'Cards','pgs_card.dat')):
+                    os.remove(pjoin(self.me_dir,'Cards','pgs_card.dat'))
+                if os.path.exists(pjoin(self.me_dir,'Cards','delphes_card.dat')):
+                    os.remove(pjoin(self.me_dir,'Cards','delphes_card.dat'))
+            elif mode == 'pgs':
+                if os.path.exists(pjoin(self.me_dir,'Cards','delphes_card.dat')):
+                    os.remove(pjoin(self.me_dir,'Cards','delphes_card.dat'))
+            elif mode == 'delphes':
+                if os.path.exists(pjoin(self.me_dir,'Cards','pgs_card.dat')):
+                    os.remove(pjoin(self.me_dir,'Cards','pgs_card.dat'))
+                                                             
+        clean_pointless_card(mode)
         # Now that we know in which mode we are check that all the card
         #exists (copy default if needed)
 
@@ -3531,13 +3534,15 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
                 elif card_name == 'banner':
                     banner_mod.split_banner(answer, self.me_dir, proc_card=False)
                     logger.info('Splitting the banner in it\'s component')
-                    # Re-compute the current mode
-                    mode = 'parton'
-                    for level in ['delphes','pgs','pythia']:
-                        if os.path.exists(pjoin(self.me_dir,'Cards','%s_card.dat' % level)):
-                            mode = level
-                            break
-                    
+                    if auto:
+                        # Re-compute the current mode
+                        mode = 'parton'
+                        for level in ['delphes','pgs','pythia']:
+                            if os.path.exists(pjoin(self.me_dir,'Cards','%s_card.dat' % level)):
+                                mode = level
+                                break
+                    else:
+                        clean_pointless_card(mode)
                     
                     
     ############################################################################
