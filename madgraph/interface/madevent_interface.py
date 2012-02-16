@@ -3474,39 +3474,42 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
         if force:
             return
 
-        # Ask the user if he wants to edit any of the files
-        #First create the asking text
-        question = """Do you want to edit one cards (press enter to bypass editing)?
+        def get_question(mode):
+            # Ask the user if he wants to edit any of the files
+            #First create the asking text
+            question = """Do you want to edit one cards (press enter to bypass editing)?
   1 / param   : param_card.dat (be carefull about parameter consistency, especially widths)
   2 / run     : run_card.dat\n"""
-        possible_answer = ['0','done', 1, 'param', 2, 'run']
-        if mode in ['pythia', 'pgs', 'delphes']:
-            question += '  3 / pythia  : pythia_card.dat\n'
-            possible_answer.append(3)
-            possible_answer.append('pythia')
-        if mode == 'pgs':
-            question += '  4 / pgs     : pgs_card.dat\n'
-            possible_answer.append(4)
-            possible_answer.append('pgs')            
-        elif mode == 'delphes':
-            question += '  5 / delphes : delphes_card.dat\n'
-            question += '  6 / trigger : delphes_trigger.dat\n'
-            possible_answer.append(5)
-            possible_answer.append('delphes')
-            possible_answer.append(6)
-            possible_answer.append('trigger')
-        if self.configuration['madanalysis_path']:
-            question += '  9 / plot    : plot_card.dat\n'
-            possible_answer.append(9)
-            possible_answer.append('plot')
-        card = {0:'done', 1:'param', 2:'run', 3:'pythia', 
-                  4: 'pgs', 5: 'delphes', 6:'trigger',9:'plot'}
-        # Add the path options
-        question += '  Path to a valid card.\n'
-     
+            possible_answer = ['0','done', 1, 'param', 2, 'run']
+            if mode in ['pythia', 'pgs', 'delphes']:
+                question += '  3 / pythia  : pythia_card.dat\n'
+                possible_answer.append(3)
+                possible_answer.append('pythia')
+            if mode == 'pgs':
+                question += '  4 / pgs     : pgs_card.dat\n'
+                possible_answer.append(4)
+                possible_answer.append('pgs')            
+            elif mode == 'delphes':
+                question += '  5 / delphes : delphes_card.dat\n'
+                question += '  6 / trigger : delphes_trigger.dat\n'
+                possible_answer.append(5)
+                possible_answer.append('delphes')
+                possible_answer.append(6)
+                possible_answer.append('trigger')
+            if self.configuration['madanalysis_path']:
+                question += '  9 / plot    : plot_card.dat\n'
+                possible_answer.append(9)
+                possible_answer.append('plot')
+            card = {0:'done', 1:'param', 2:'run', 3:'pythia', 
+                      4: 'pgs', 5: 'delphes', 6:'trigger',9:'plot'}
+            # Add the path options
+            question += '  Path to a valid card.\n'
+            return question, possible_answer, card
+        
         # Loop as long as the user is not done.
         answer = 'no'
         while answer != 'done':
+            question, possible_answer, card = get_question(mode)
             answer = self.ask(question, '0', possible_answer, timeout=int(1.5*self.timeout), path_msg='enter path')
             if answer.isdigit():
                 answer = card[int(answer)]
@@ -3522,10 +3525,21 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
                     card_name = self.ask('Fail to determine the type of the file. Please specify the format',
                    ['param_card.dat', 'run_card.dat','pythia_card.dat','pgs_card.dat',
                     'delphes_card.dat', 'delphes_trigger.dat','plot_card.dat'])
-
-                logger.info('copy %s as %s' % (answer, card_name))
-                files.cp(answer, pjoin(self.me_dir, 'Cards', card_name))
-
+                elif card_name != 'banner':
+                    logger.info('copy %s as %s' % (answer, card_name))
+                    files.cp(answer, pjoin(self.me_dir, 'Cards', card_name))
+                elif card_name == 'banner':
+                    banner_mod.split_banner(answer, self.me_dir, proc_card=False)
+                    logger.info('Splitting the banner in it\'s component')
+                    # Re-compute the current mode
+                    mode = 'parton'
+                    for level in ['delphes','pgs','pythia']:
+                        if os.path.exists(pjoin(self.me_dir,'Cards','%s_card.dat' % level)):
+                            mode = level
+                            break
+                    
+                    
+                    
     ############################################################################
     def ask_pythia_run_configuration(self, mode=None, force=False):
         """Ask the question when launching pythia"""
