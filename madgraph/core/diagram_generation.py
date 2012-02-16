@@ -1099,8 +1099,7 @@ class DecayChainAmplitude(Amplitude):
     def get_sorted_keys(self):
         """Return diagram property names as a nicely sorted list."""
 
-        return super(DecayChainAmplitude,self).get_sorted_keys().append(
-                                                ['amplitudes', 'decay_chains'])
+        return ['amplitudes', 'decay_chains']
 
     # Helper functions
 
