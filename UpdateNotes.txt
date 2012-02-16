@@ -12,6 +12,8 @@ Update notes for MadGraph 5 (in reverse time order)
                       ./bin/mg5 PROC_CARD_V4_PATH
 		  OM: Various small fixes concerning the stability of the html 
 		      output.
+		  OM: Changes the server to download td since cp3wks05 has an 
+		      harddisk failures.
 
 1.4.1 (06/02/12)  OM: Fix the fermion flow check which was wrongly failing on 
                       some model  (Thanks to Benjamin)
