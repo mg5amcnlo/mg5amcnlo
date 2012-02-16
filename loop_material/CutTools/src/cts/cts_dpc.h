@@ -1,1 +1,1 @@
-complex(kind(1.d0))&
+ complex(kind=8)&

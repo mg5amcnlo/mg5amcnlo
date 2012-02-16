@@ -1,9 +1,6 @@
 !---------------------------------------------------------------------
-!
 !  EXAMPLE OF MAIN PROGRAM
-!
 !---------------------------------------------------------------------
-!
       program example1
       implicit none
 !                     !----------------------------------!
@@ -18,38 +15,27 @@
 !                     ! Location mpnumerators.f90.           ! 
 !                     ! If absent put 'external dummy'       !
 !                     !--------------------------------------!
-!
 !---------------------------------------------------------------------
       integer maxden
       parameter (maxden= 10)
       complex*16 m2(0:maxden-1)
       real*8 pp(0:3,0:maxden-1)           
-!
 !---------------------------------------------------------------------
-!
 ! Auxiliary variables:
-!
 !---------------------------------------------------------------------
-!
       common/rango/rango  ! only used by the toy numerator 
       real*8 xm(1:maxden-2),p(4,maxden-2),k(0:3,maxden)           
-      real*8 rootsvalue,limitvalue,roots,muscale,thrs
-      complex*16 amp(0:2),ar1
+      real*8 rootsvalue,limitvalue,roots,muscale
+      complex*16 amp(0:2),ampcc,ampr1
       integer number_propagators
-      integer rnk,i,j,l,iter,idig,rango
-      integer scaloop
+      integer rnk,i,j,l,iter,rango
+      integer scaloop,imode
       integer npoints
-      logical stable,forcemp
-      integer n_mp,n_disc
-!
+      logical stable,discarded
 !---------------------------------------------------------------------
-!
 ! Read number of MC points, the number of propagators and the rank:
-!
-!---------------------------------------------------------------------
-! 
-      print*,'enter npoints,number_propagators,rank,scaloop,muscale,
-     &thrs'
+!--------------------------------------------------------------------- 
+      print*,'enter npoints,number_propagators,rank,scaloop,muscale'
       print*,'    '
       print*,'scaloop= 1 -> looptools 1-loop '
       print*,'scaloop= 2 -> avh 1-loop (massive with complex masses)'
@@ -57,7 +43,7 @@
       print*,'muscale (dimension of energy) is the scale' 
       print*,'for the 1-loop integrals' 
       print*,'    '
-      read*,npoints,number_propagators,rnk,scaloop,muscale,thrs
+      read*,npoints,number_propagators,rnk,scaloop,muscale
       rango= rnk                ! only used by the toy numerators 
                                 ! located in numerators.f and  
                                 ! mpnumerators.f90
@@ -66,13 +52,12 @@
          stop 'increase maxden in example1.f90'
       endif
       roots     = 50.d0         ! value of sqrt(s)
-!
+      rootsvalue= roots
+      limitvalue= 1.d-2 
+      imode     = 0
 !---------------------------------------------------------------------
-!
 ! Input momenta and masses in each denominator:
-!
 !---------------------------------------------------------------------
-!
       k(0,1)= roots/2.d0
       k(1,1)= 0.d0
       k(2,1)= 0.d0
@@ -83,61 +68,25 @@
       k(3,2)=-roots/2.d0
 !
       do i= 1,number_propagators-2
-         xm(i) = 0.d0
+         xm(i) = 1.d0
       enddo
-!
 !---------------------------------------------------------------------
+! To initialize CutTools call ctsinit(limitvalue,scaloop)
 !
-! Input variables of ctsinit (to initialize of CutTools)
-!
-!---------------------------------------------------------------------
-!
-      rootsvalue= roots  ! used as an internal scale of the OPP algorithm
-      limitvalue= 1.d-2  ! limit of precision below which 
-!                        ! the mp routines activate
-      idig      = 64     ! idig      = 64             
-!                
-!---------------------------------------------------------------------
-!
-! subroutine ctsinit(rootsvalue,limitvalue,idig,scaloop,muscale,thrs)
-!
-! Initialization of CutTools:
-!
-!
-! INPUT:  real*8  rootsvalue -> used as an internal arbitrary scale of the OPP 
-!                               algorithm. It should be of the same order 
-!                               of sqrt(s_hat). The result should not depend 
-!                               on it.
+! INPUT:
 !
 !         real*8  limitvalue -> limit of precision below which
-!                               the mp routines activate.      
-!
-!         integer idig       -> idig sets the max number of digits of 
-!                               the multi-precision routines. 
-!                               If idig = 0 the events below limitvalue 
-!                               are simply discarded.
-!                               idig= 0 should to be used when no multi 
-!                               precision version of N(q) is available.
+!                               the PS point is considered stable
+!                               by tha A=A test.      
 !
 !         integer scaloop    -> library used to compute the scalar 
 !                               1-loop functions:  
-!                               scaloop= 1 -> looptools 
+!                               scaloop= 1 -> looptools (not implemented) 
 !                               scaloop= 2 -> avh (complex masses)   
 !                               scaloop= 3 -> qcdloop.  
-!
-!         real*8  muscale    -> it is the scale for the 1-loop integrals.
-!                               It has dimension of an energy. 
-!
-!         real*8  thrs       -> it is the numerical threshold for the 
-!                               collinear/soft divergences in 
-!                               avh_olo routines (scaloop= 2)
-!                               
 ! OUTPUT: none
-!
 !---------------------------------------------------------------------
-!
-      call ctsinit(rootsvalue,limitvalue,idig,scaloop,muscale,thrs)
-!
+      call ctsinit(limitvalue,scaloop)
       do iter= 1,npoints   ! do-loop over events 
         if     (number_propagators.ge.4) then
            call rambo(0,number_propagators-2,roots,xm,p)
@@ -178,44 +127,94 @@
            enddo
         enddo
 !
-        do i= 0,number_propagators-1
-           m2(i)= 0.d0            
-        enddo
+!        do i= 0,number_propagators-1
+!           m2(i)= 0.d0            
+!        enddo
 !
-!         m2(0)= 10.1d0 
-!         m2(1)= 10.2d0 
-!         m2(2)= 10.3d0 
-!         m2(3)= 10.4d0 
-!         m2(4)= 20.5d0 
-!         m2(5)= 200.d0 
+        m2(0)= 1.d0 
+        m2(1)= 2.d0 
+        m2(2)= 3.d0 
+        m2(3)= 4.d0 
+        m2(4)= 0.d0 
+        m2(5)= 0.d0 
 !
+!comment
 !        do i= 1,number_propagators-1
 !           do l= 0,3
 !             print*,'l,i,pp(l,i)=',l,i,pp(l,i)
 !           enddo
 !        enddo
-!
-!
+!comment
 !---------------------------------------------------------------------
+! To compute the 1-loop amplitude
 !
-!      call ctsxcut(rootsvalue,muscale,number_propagators,test,mptest,
-!     &             rnk,pp,m2,amp,ar1,stable,forceamp)
-!
-! The total amplitude amp is computed:
+!      call ctsxcut(imode,rootsvalue,muscale,number_propagators,test,
+!     & mpfortest,rnk,pp,m2,amp,ampcc,ampr1,stable)
 !
 !
-! INPUT: real*8  rootsvalue         -> the arbitrary OPP scale 
+! INPUT: integer imode              -> the running mode of CutTools according
+!                                      to the following scheme:  
+!
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+!!                                                                            !
+!! imode:|  actions performed by ctsxcut:                                     !
+!!       |                                                                    !
+!!   0   | (dp_dir,dp_inv)-> dp_Atest -> stable -> (only if stable=.false.) ->!
+!!       | (mp_dir,mp_inv)-> mp_Atest -> stable                               ! 
+!!   1   | (dp_dir)       -> dp_Ntest -> stable                               !
+!!   2   | (dp_inv)       -> dp_Ntest -> stable                               !
+!!   3   | (dp_dir,dp_inv)-> dp_Atest -> stable                               !
+!!   4   | (mp_dir)       -> mp_Ntest -> stable                               ! 
+!!   5   | (mp_inv)       -> mp_Ntest -> stable                               ! 
+!!   6   | (mp_dir,mp_inv)-> mp_Atest -> stable                               !
+!!                                                                            !
+!! Legenda:                                                                   !
+!!                                                                            !
+!! dp_dir    = compute amp in double precision with normal   propagator order !
+!! dp_inv    = compute amp in double precision with reversed propagator order !
+!! mp_dir    = compute amp in multi  precision with normal   propagator order !
+!! mp_inv    = compute amp in multi  precision with reversed propagator order !
+!! dp_Atest  = perform the A=A test in double precision                       !
+!! mp_Atest  = perform the A=A test in multi  precision                       !
+!! dp_Ntest  = perform the N=N test in double precision                       !
+!! mp_Ntest  = perform the N=N test in multi  precision                       !
+!! -> stable = set stable=.true. or stable=.false.                            !
+!!             according to the outcome of the test                           !
+!!                                                                            !
+!! Tests:                                                                     !
+!!                                                                            !
+!! -The N=N test is a test on the reconstructed OPP integrand performed       !
+!!  by comparing original and reconstacted integrands at an arbirtary value   !
+!!  of the integration momentum.                                              !
+!!                                                                            ! 
+!! -The A=A test checks the 2 amplitudes obtained with dir and inv orders     !
+!!               of the propagators given in the input                        !
+!! Notes:                                                                     !
+!!                                                                            ! 
+!! a) imode= 0 is recommended, unless you really know what you are doing.     !
+!!                                                                            !
+!! b) When two determinations of amp are available, that one with more        !
+!!    accurate recounstructed numerator (coming from the N=N test) is used.   !
+!!                                                                            !
+!! c) When running in multi precision with scaloop= 3 (qcdloop), the loop     !
+!!    functions are computed in double precision only. A full multi           !
+!!    precision result can only be obtained with scaloop= 2 (OneLoop).        !
+!!                                                                            ! 
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+!
+!        real*8  rootsvalue         -> the arbitrary OPP scale 
 !                                      set event by event.
 !
-!        real*8  muscale            -> the scale for the 1-loop integrals.
+!        real*8  muscale            -> the scale for the 1-loop integrals
 !                                      set event by event.
+!                                      It has dimension of an energy. 
 !
 !        integer number_propagators -> number of propagators.
 !
 !        external test              -> name of the subroutine
 !                                      computing N(q). 
 !
-!        external mptest            -> name of the subroutine
+!        external mpfortest         -> name of the subroutine
 !                                      computing N(q) in  
 !                                      multi-precision (if absent
 !                                      put dummy).
@@ -233,62 +232,52 @@
 !                                      they can be complex. When scaloop does
 !                                      not support complex masses, only 
 !                                      the real part of m2 is used.  
-!                   
-!        logical forceamp           -> if .true. forces cuttools to run
-!                                      in multiprecision 
-!
+!   
+!               
 ! OUTPUT:  complex*16 amp(0:2)      -> Amplitude (without r2):     
-!                                      amp(0) is the finite part   
+!                                      amp(0) is the total finite part
+!                                      (INCLUDING R1!!!)   
 !                                      amp(1) is the coeff. of 1/eps   pole
 !                                      amp(2) is the coeff. of 1/eps^2 pole.
 !
-!          complex*16 ar1           -> the R_1 contribution.
+!          complex*16 ampcc         -> the Cut Constructible contribution
+!          complex*16 ampr1         -> the R1 contribution
+!                                      (NOTE that ampcc+ampr1 = amp(0))
 !
 !          logical stable           -> .false. if CutTools detects
 !                                      numerical instabilities.         
-!
 !---------------------------------------------------------------------
-!
-! HERE the total amplitude is computed by calling CutTools
-!
-!---------------------------------------------------------------------
-!
-        forcemp=.false. 
-        call ctsxcut(rootsvalue,muscale,number_propagators,test,mptest,
-     &               rnk,pp,m2,amp,ar1,stable,forcemp)
-        print*,'               '
-        print*,'  iter= ',iter
-        print*,'               '
-        print*,'               '
-        print*,' Complete Amplitude (without r2):     '
-        print*,'               '
-        print*,'               '
-        print*,' finite part           amp(0)=',amp(0)
-        print*,' coeff of 1/eps   pole amp(1)=',amp(1)
-        print*,' coeff of 1/eps^2 pole amp(2)=',amp(2)
-        print*,'                          R_1=',ar1
-        print*,'                   amp(0)+R_1=',amp(0)+ar1
-        print*,'                       stable=',stable  
-        print*,'               '
+        call ctsxcut(imode,rootsvalue,muscale,number_propagators,test,
+     &   mptest,rnk,pp,m2,amp,ampcc,ampr1,stable)
+        write(*,*)'               '
+        write(*,*)'  iter= ',iter
+        write(*,*)'               '
+        write(*,*)'               '
+        write(*,*)' Complete Amplitude (without r2):     '
+        write(*,*)'               '
+        write(*,*)'               '
+        write(*,*)' finite part           amp(0)=',amp(0)
+        write(*,*)' coeff of 1/eps   pole amp(1)=',amp(1)
+        write(*,*)' coeff of 1/eps^2 pole amp(2)=',amp(2)
+        write(*,*)'                        ampcc=',ampcc
+        write(*,*)'                           R1=',ampr1
+        write(*,*)'                       stable=',stable  
+        write(*,*)'               '
       enddo
-!
 !---------------------------------------------------------------------
-!
-! subroutine ctsstatistics(n_mp,n_disc) 
-!
-! Print out of the statistics of the run:
-!
+! To know the statistics of the run call ctsstatistics(discarded)
 !
 ! INPUT :  none
 !
-! OUTPUT:  integer n_mp   ->  n.of points evaluated in multi-precision.
+! OUTPUT:  logical discarded  -> .true. if there are discarded PS points
 !
-!          integer n_disc ->  n.of discarded points.               
+! Print out of the statistics of the run:
 !
+!          n_mp   ->  n.of points evaluated in multi-precision.
+!          n_disc ->  n.of discarded points.               
+!          n_tot  ->  n.of calls to ctsxcut               
 !---------------------------------------------------------------------
-      call ctsstatistics(n_mp,n_disc)
-      print*,'n_mp  =',n_mp   ! n.of points evaluated in mult. prec.
-      print*,'n_disc=',n_disc ! n.of discarded points
+      call ctsstatistics(discarded)
       end program example1
 
 

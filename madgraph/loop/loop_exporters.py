@@ -85,7 +85,7 @@ class LoopExporterFortran(object):
             misc.compile(cwd=self.cuttools_dir)
 
         if os.path.exists(os.path.join(self.cuttools_dir,'includects','libcts.a')):            
-            linkfiles = ['libcts.a', 'ddmodule.mod', 'mpmodule.mod']
+            linkfiles = ['libcts.a', 'mpmodule.mod']
             for file in linkfiles:
                 ln(os.path.join(self.cuttools_dir,'includects')+'/%s' % file)
         else:
@@ -170,30 +170,6 @@ class LoopProcessExporterFortranSA(export_v4.ProcessExporterFortranSA,
             self.set_compiler(compiler)
 
     #===========================================================================
-    # Make the CutTools directories for Standalone directory
-    #===========================================================================
-#    def make(self):
-#        """Run make in the DHELAS and MODEL directories, to set up
-#        everything for running standalone
-#        """
-#        
-#        super(LoopProcessExporterFortranSA, self).make()
-#        
-#        source_dir = os.path.join(self.dir_path, "Source")
-#        logger.info("Running make for CutTools")
-#        misc.compile(arg=['../../lib/libcts.a'], cwd=source_dir, mode='fortran')
-#        shutil.copy(os.path.join(self.dir_path,\
-#            'Source/CUTTOOLS/includects/libcts.a'),\
-#            os.path.join(self.dir_path,'lib/libcts.a'))
-#        # Copy here the two f90 modules for multiple-precision in CutTools.
-#        shutil.copy(os.path.join(self.dir_path,\
-#            'Source/CUTTOOLS/includects/mpmodule.mod'),\
-#            os.path.join(self.dir_path,'lib/mpmodule.mod'))
-#        shutil.copy(os.path.join(self.dir_path,\
-#            'Source/CUTTOOLS/includects/ddmodule.mod'),\
-#            os.path.join(self.dir_path,'lib/ddmodule.mod'))
-
-    #===========================================================================
     # generate_subprocess_directory_v4
     #===========================================================================
     def generate_loop_subprocess(self, matrix_element, fortran_model):
@@ -274,7 +250,7 @@ class LoopProcessExporterFortranSA(export_v4.ProcessExporterFortranSA,
         for file in linkfiles:
             ln('../%s' % file)
 
-        linkfiles = ['mpmodule.mod','ddmodule.mod']
+        linkfiles = ['mpmodule.mod']
 
         for file in linkfiles:
             ln('../../lib/%s' % file)

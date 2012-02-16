@@ -13,7 +13,7 @@ test:
 	cd testdir; cp input* ../; cp do ../; cp cdiff ../; cd ../; sh do; \
  cp out* testdir; rm out*; rm input* ; sh cdiff > testoutput; rm cdiff; rm do
 
-testmp$(EXE): $(NUMS) libcts.a example1.o
+testmp$(EXE): $(NUMS) libcts.a testmp.o
 	$(FC) $(FFLAGS) -Iincludects -o testmp$(EXE) \
  testmp.f $(NUMS) libcts.a
 
@@ -21,7 +21,7 @@ example0$(EXE): $(NUMS0) libcts.a example0.o
 	$(FC) $(FFLAGS) -Iincludects -o example0$(EXE) \
  example0.f $(NUMS0) libcts.a
 
-example1$(EXE): $(NUMS) libcts.a example1.o
+example1$(EXE): $(NUMS) libcts.a example1.o 
 	$(FC) $(FFLAGS) -Iincludects -o example1$(EXE) \
  example1.f $(NUMS) libcts.a
 
@@ -34,9 +34,5 @@ libcts.a:
 	$(FC) $(FFLAGS) -Iincludects -c $<
 
 clean:
-ifeq ($(PLATFORM),LINUX)
 	$(RM) testmp$(EXE) example0$(EXE) example1$(EXE)  *.o testoutput
-else
-	del /Q *.exe *.o
-endif
 
