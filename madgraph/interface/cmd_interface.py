@@ -2732,7 +2732,7 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
                 files.mv(MG5DIR + '/td/td_mac_intel',MG5DIR+'/td/td')
             else:
                 logger.info('Downloading TD for Linux 32 bit')
-                target = 'http://cp3wks05.fynu.ucl.ac.be/twiki/pub/Software/TopDrawer/td'
+                target = 'http://madgraph.phys.ucl.ac.be/Downloads/td'
                 subprocess.call(['wget', target], cwd=pjoin(MG5DIR,'td'))      
                 os.chmod(pjoin(MG5DIR,'td','td'), 0775)
                 if sys.maxsize > 2**32:
