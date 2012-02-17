@@ -344,12 +344,12 @@ class open_file(object):
 
       if mac_check==True and sys.platform == 'darwin':
           return self.open_mac_program(program, file_path)
-
-      arguments = program.split() # allow argument in program definition
-      arguments.append(file_path)
-
+                
       # Shell program only                                                                                                                                                                 
       if program:
+          arguments = program.split() # allow argument in program definition
+          arguments.append(file_path)
+
           if not background:
               subprocess.call(arguments)
           else:

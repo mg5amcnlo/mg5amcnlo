@@ -2788,7 +2788,9 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
             files.cp(pjoin(self.me_dir, 'Cards', 'delphes_card_default.dat'),
                      pjoin(self.me_dir, 'Cards', 'delphes_card.dat'))
             logger.info('No delphes card found. Take the default one.')
-
+        if not os.path.exists(pjoin(self.me_dir, 'Cards', 'delphes_trigger.dat')):    
+            files.cp(pjoin(self.me_dir, 'Cards', 'delphes_trigger_default.dat'),
+                     pjoin(self.me_dir, 'Cards', 'delphes_trigger.dat'))
         if not (no_default or force):
             self.ask_edit_cards(['delphes', 'trigger'], args)
             
@@ -3519,7 +3521,10 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
             if answer == 'done':
                 return
             if not os.path.exists(answer):
-                path = pjoin(self.me_dir,'Cards','%s_card.dat' % answer)
+                if answer != 'trigger':
+                    path = pjoin(self.me_dir,'Cards','%s_card.dat' % answer)
+                else:
+                    path = pjoin(self.me_dir,'Cards','delphes_trigger.dat')
                 self.exec_cmd('open %s' % path)                    
             else:
                 # detect which card is provide
@@ -3649,7 +3654,10 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
                  logger.info('copy %s as %s' % (answer, card_name))
                  files.cp(answer, pjoin(self.me_dir, 'Cards', card_name))
                  continue
-             path = pjoin(self.me_dir,'Cards','%s_card.dat' % answer)
+             if answer != 'trigger':
+                 path = pjoin(self.me_dir,'Cards','%s_card.dat' % answer)
+             else:
+                 path = pjoin(self.me_dir,'Cards','delphes_trigger.dat')
              self.exec_cmd('open %s' % path)                    
                  
         return mode
@@ -3704,7 +3712,10 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
                  logger.info('copy %s as %s' % (answer, card_name))
                  files.cp(answer, pjoin(self.me_dir, 'Cards', card_name))
                  continue
-             path = pjoin(self.me_dir,'Cards','%s_card.dat' % answer)
+             if answer != 'trigger':
+                 path = pjoin(self.me_dir,'Cards','%s_card.dat' % answer)
+             else:
+                 path = pjoin(self.me_dir,'Cards','delphes_trigger.dat')
              self.exec_cmd('open %s' % path)                    
                  
         return mode
