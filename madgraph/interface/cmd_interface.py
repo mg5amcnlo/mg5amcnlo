@@ -2094,6 +2094,7 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
 
         comparisons = []
         gauge_result = []
+        gauge_result_no_brs = []
         lorentz_result =[]
         nb_processes = 0
         
@@ -2141,8 +2142,6 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
             self.do_set('gauge %s' % gauge, log=False)
             self.do_import('model %s' % model_name)
             
-            
-            print 'len', len(gauge_result_no_brs)  
             nb_processes += len(gauge_result_no_brs)            
             
             
