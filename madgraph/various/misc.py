@@ -192,6 +192,7 @@ def compile(arg=[], cwd=None, mode='fortran', **opt):
         error_text += 'If you think that this is a bug, you can report this at https://bugs.launchpad.net/madgraph5'
 
         raise MadGraph5Error, error_text
+    return p.returncode
 
 
 ################################################################################
