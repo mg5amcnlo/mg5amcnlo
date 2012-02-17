@@ -778,7 +778,7 @@ This will take effect only in a NEW terminal
             raise self.InvalidCmd('set needs an option and an argument')
 
         if args[0] not in self._set_options:
-            if not args[0] in self._options and not args[0] in self.configuration:
+            if not args[0] in self.options and not args[0] in self.options:
                 self.help_set()
                 raise self.InvalidCmd('Possible options for set are %s' % \
                                   self._set_options)
@@ -871,8 +871,8 @@ This will take effect only in a NEW terminal
             elif path != 'auto':
                 self._export_dir = path
             elif path == 'auto':
-                if self.configuration['pythia8_path']:
-                    self._export_dir = self.configuration['pythia8_path']
+                if self.options['pythia8_path']:
+                    self._export_dir = self.options['pythia8_path']
                 else:
                     self._export_dir = '.'
         else:
@@ -880,8 +880,8 @@ This will take effect only in a NEW terminal
                 # No valid path
                 self.get_default_path()
             else:
-                if self.configuration['pythia8_path']:
-                    self._export_dir = self.configuration['pythia8_path']
+                if self.options['pythia8_path']:
+                    self._export_dir = self.options['pythia8_path']
                 else:
                     self._export_dir = '.'
                     
@@ -926,8 +926,8 @@ This will take effect only in a NEW terminal
             auto_path = lambda i: pjoin(self.writing_dir,
                                                name_dir(i))
         elif self._export_format == 'pythia8':
-            if self.configuration['pythia8_path']:
-                self._export_dir = self.configuration['pythia8_path']
+            if self.options['pythia8_path']:
+                self._export_dir = self.options['pythia8_path']
             else:
                 self._export_dir = '.'
             return
@@ -1336,7 +1336,7 @@ class CompleteForCmd(CheckValidForCmd):
 
         # Format
         if len(args) == 1:
-            opts = self._set_options + self._options.keys() + self.configuration.keys()
+            opts = self._set_options + self.options.keys() + self.options.keys()
             return self.list_completion(text, opts)
 
         if len(args) == 2:
@@ -1594,7 +1594,7 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
 
         # Variables to store state information
         self._multiparticles = {}
-        self._options = {}
+        self.options = {}
         self._generate_info = "" # store the first generated process
         self._model_v4_path = None
         self._use_lower_part_names = False
@@ -1602,11 +1602,7 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
         self._export_format = 'madevent'
         self._mgme_dir = MG4DIR
         self._comparisons = None
-    
-        # Set defaults for options
-        self._options['group_subprocesses'] = 'Auto'
-        self._options['ignore_six_quark_processes'] = False
-        
+            
         # Load the configuration file
         self.set_configuration()
 
@@ -1662,13 +1658,13 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
             cpu_time1 = time.time()
 
             # Generate processes
-            if self._options['group_subprocesses'] == 'Auto':
+            if self.options['group_subprocesses'] == 'Auto':
                     collect_mirror_procs = True
             else:
-                collect_mirror_procs = self._options['group_subprocesses']
+                collect_mirror_procs = self.options['group_subprocesses']
             ignore_six_quark_processes = \
-                           self._options['ignore_six_quark_processes'] if \
-                           "ignore_six_quark_processes" in self._options \
+                           self.options['ignore_six_quark_processes'] if \
+                           "ignore_six_quark_processes" in self.options \
                            else []
 
             myproc = diagram_generation.MultiProcess(myprocdef,
@@ -2743,13 +2739,15 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
         """ assign all configuration variable from file 
             ./input/mg5_configuration.txt. assign to default if not define """
             
-        self.configuration = {'pythia8_path': './pythia8',
+        self.options = {'pythia8_path': './pythia8',
                               'web_browser':None,
                               'eps_viewer':None,
                               'text_editor':None,
                               'fortran_compiler':None,
-                              'automatic_html_opening':True}
-        
+                              'automatic_html_opening':True,
+                              'group_subprocesses': 'Auto',
+                              'ignore_six_quark_processes': False}
+                
         if not config_path:
             try:
                 config_file = open(pjoin(os.environ['HOME'],'.mg5', 'mg5_configuration.txt'))
@@ -2772,25 +2770,25 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
             else:
                 name = name.strip()
                 value = value.strip()
-                self.configuration[name] = value
+                self.options[name] = value
                 if value.lower() == "none":
-                    self.configuration[name] = None
+                    self.options[name] = None
 
         if test:
-            return self.configuration
+            return self.options
 
         # Treat each expected input
         # 1: Pythia8_path
         # try relative path
-        for key in self.configuration:
+        for key in self.options:
             if key == 'pythia8_path':
-                if self.configuration['pythia8_path'] in ['None', None]:
-                    self.configuration['pythia8_path'] = None
+                if self.options['pythia8_path'] in ['None', None]:
+                    self.options['pythia8_path'] = None
                     continue
-                pythia8_dir = pjoin(MG5DIR, self.configuration['pythia8_path'])
+                pythia8_dir = pjoin(MG5DIR, self.options['pythia8_path'])
                 if not os.path.isfile(pjoin(pythia8_dir, 'include', 'Pythia.h')):
-                    if not os.path.isfile(pjoin(self.configuration['pythia8_path'], 'include', 'Pythia.h')):
-                       self.configuration['pythia8_path'] = None
+                    if not os.path.isfile(pjoin(self.options['pythia8_path'], 'include', 'Pythia.h')):
+                       self.options['pythia8_path'] = None
                     else:
                         continue
                     
@@ -2801,16 +2799,16 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
             elif key not in ['text_editor','eps_viewer','web_browser']:
                 # Default: try to set parameter
                 try:
-                    self.do_set("%s %s" % (key, self.configuration[key]), log=False)
+                    self.do_set("%s %s" % (key, self.options[key]), log=False)
                 except MadGraph5Error, error:
                     print error
                     logger.warning("Option %s from config file not understood" \
                                    % key)
         
         # Configure the way to open a file:
-        launch_ext.open_file.configure(self.configuration)
+        launch_ext.open_file.configure(self.options)
           
-        return self.configuration
+        return self.options
      
     def check_for_export_dir(self, filepath):
         """Check if the files is in a valid export directory and assign it to
@@ -2870,16 +2868,16 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
             
             if len(generate_info.split('>')[0].strip().split())>1:
                 ext_program = launch_ext.MELauncher(args[1], self.timeout, self,
-                                pythia=self.configuration['pythia-pgs_path'],
-                                delphes=self.configuration['delphes_path'],
+                                pythia=self.options['pythia-pgs_path'],
+                                delphes=self.options['delphes_path'],
                                 shell = hasattr(self, 'do_shell'),
                                 **options)
             else:
                 # This is a width computation
                 ext_program = launch_ext.MELauncher(args[1], self.timeout, self, 
                                 unit='GeV',
-                                pythia=self.configuration['pythia-pgs_path'],
-                                delphes=self.configuration['delphes_path'],
+                                pythia=self.options['pythia-pgs_path'],
+                                delphes=self.options['delphes_path'],
                                 shell = hasattr(self, 'do_shell'),
                                 **options)
 
@@ -2995,7 +2993,7 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
         # to ensure that all configuration information are written we 
         # keep track of all key that we need to write.
 
-        to_write = self._options.keys()[:] + self.configuration.keys()[:]
+        to_write = self.options.keys()[:]
         writer = open(path,'w')
         # Use local configuration => Need to update the path
         conf = os.path.join(MG5DIR, 'input', 'mg5_configuration.txt')
@@ -3009,10 +3007,8 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
                 writer.writelines(line)
                 continue
             key = data[0].strip()
-            if key in self._options:
-                value = str(self._options[key])
-            elif key in self.configuration:
-                value = str(self.configuration[key])
+            if key in self.options:
+                value = str(self.options[key])
             else:
                 value = data[1].strip()
             try:
@@ -3026,10 +3022,10 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
                     value = os.path.realpath(os.path.join(MG5DIR, value))
             writer.writelines('%s = %s # %s \n' % (key, value, comment))
         for key in to_write:
-            if key in self._options:
-                writer.writelines('%s = %s \n' % (key,self._options[key]))
+            if key in self.options:
+                writer.writelines('%s = %s \n' % (key,self.options[key]))
             else:
-                writer.writelines('%s = %s \n' % (key,self.configuration[key]))
+                writer.writelines('%s = %s \n' % (key,self.options[key]))
                 
         writer.close()
     
@@ -3046,9 +3042,9 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
 
         if args[0] == 'ignore_six_quark_processes':
             if args[1] == 'False':
-                self._options[args[0]] = False
+                self.options[args[0]] = False
                 return
-            self._options[args[0]] = list(set([abs(p) for p in \
+            self.options[args[0]] = list(set([abs(p) for p in \
                                       self._multiparticles[args[1]]\
                                       if self._curr_model.get_particle(p).\
                                       is_fermion() and \
@@ -3058,16 +3054,16 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
                 logger.info('Ignore processes with >= 6 quarks (%s)' % \
                         ",".join([\
                             self._curr_model.get_particle(q).get('name') \
-                            for q in self._options[args[0]]]))
+                            for q in self.options[args[0]]]))
             
         elif args[0] == 'group_subprocesses':
             if args[1] != 'Auto':
-                self._options[args[0]] = eval(args[1])
+                self.options[args[0]] = eval(args[1])
             else:
-                self._options[args[0]] = 'Auto'
+                self.options[args[0]] = 'Auto'
             if log:
                 logger.info('Set group_subprocesses to %s' % \
-                        str(self._options[args[0]]))
+                        str(self.options[args[0]]))
                 logger.info('Note that you need to regenerate all processes')
             self._curr_amps = diagram_generation.AmplitudeList()
             self._curr_matrix_elements = helas_objects.HelasMultiProcess()
@@ -3082,19 +3078,19 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
             if args[1] != 'None':
                 if log:
                     logger.info('set fortran compiler to %s' % args[1])
-                self.configuration['fortran_compiler'] = args[1]
+                self.options['fortran_compiler'] = args[1]
             else:
-                self.configuration['fortran_compiler'] = None
-        elif args[0] in self._options:
+                self.options['fortran_compiler'] = None
+        elif args[0] in self.options:
             if args[1] in  ['None','True', 'False']:
-                self._options[args[0]] = eval(args[1])
+                self.options[args[0]] = eval(args[1])
             else:
-                self._options[args[0]] = args[1] 
-        elif args[0] in self.configuration:
+                self.options[args[0]] = args[1] 
+        elif args[0] in self.options:
             if args[1] in ['None','True','False']:
-                self.configuration[args[0]] = eval(args[1])
+                self.options[args[0]] = eval(args[1])
             else:
-                self.configuration[args[0]] = args[1]             
+                self.options[args[0]] = args[1]             
 
     
     def do_open(self, line):
@@ -3141,8 +3137,8 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
         #check if we need to group processes
         group_subprocesses = False
         if self._export_format == 'madevent' and \
-                                            self._options['group_subprocesses']:
-                if self._options['group_subprocesses'] is True:
+                                            self.options['group_subprocesses']:
+                if self.options['group_subprocesses'] is True:
                     group_subprocesses = True
                 elif self._curr_amps[0].get_ninitial()  == 2:
                     group_subprocesses = True
@@ -3200,9 +3196,9 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
 
             # Check if we need to group the SubProcesses or not
             group = True
-            if self._options['group_subprocesses'] is False:
+            if self.options['group_subprocesses'] is False:
                 group = False
-            elif self._options['group_subprocesses'] == 'Auto' and \
+            elif self.options['group_subprocesses'] == 'Auto' and \
                                          self._curr_amps[0].get_ninitial() == 1:
                    group = False 
 
@@ -3432,7 +3428,7 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
                                            self.history,
                                            not nojpeg,
                                            online,
-                                           self.configuration['fortran_compiler'])
+                                           self.options['fortran_compiler'])
 
         if self._export_format in ['madevent', 'standalone', 'standalone_cpp']:
             logger.info('Output to directory ' + self._export_dir + ' done.')
