@@ -21,7 +21,7 @@ import os
 pjoin = os.path.join
 
 try:
-    import madgraph.iolibs.misc as misc
+    import madgraph.various.misc as misc
     from madgraph import MG5DIR
     MADEVENT = False
 except:

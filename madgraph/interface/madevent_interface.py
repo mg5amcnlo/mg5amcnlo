@@ -50,13 +50,14 @@ logger_stderr = logging.getLogger('madevent.stderr') # ->stderr
 try:
     # import from madgraph directory
     import madgraph.interface.extended_cmd as cmd
-    import madgraph.iolibs.misc as misc
     import madgraph.iolibs.files as files
     import madgraph.iolibs.save_load_object as save_load_object
-    import madgraph.various.gen_crossxhtml as gen_crossxhtml
-    import madgraph.various.cluster as cluster
-    import madgraph.various.sum_html as sum_html
     import madgraph.various.banner as banner_mod
+    import madgraph.various.cluster as cluster
+    import madgraph.various.gen_crossxhtml as gen_crossxhtml
+    import madgraph.various.sum_html as sum_html
+    import madgraph.various.misc as misc
+
     import models.check_param_card as check_param_card    
     from madgraph import InvalidCmd, MadGraph5Error
     MADEVENT = False

@@ -35,7 +35,7 @@ logger = logging.getLogger('cmdprint') # for stdout
 logger_stderr = logging.getLogger('fatalerror') # for stderr
 
 try:
-    import madgraph.iolibs.misc as misc
+    import madgraph.various.misc as misc
 except:
     import internal.misc as misc
 

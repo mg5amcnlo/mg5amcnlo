@@ -22,7 +22,7 @@ import os
 
 import tests.unit_tests as unittest
 
-import madgraph.iolibs.misc as misc
+import madgraph.various.misc as misc
 import madgraph.iolibs.export_v4 as export_v4
 import madgraph.iolibs.file_writers as writers
 import madgraph.iolibs.group_subprocs as group_subprocs

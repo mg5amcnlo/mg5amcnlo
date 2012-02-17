@@ -54,7 +54,6 @@ import madgraph.iolibs.file_writers as writers
 import madgraph.iolibs.files as files
 import madgraph.iolibs.group_subprocs as group_subprocs
 import madgraph.iolibs.import_v4 as import_v4
-import madgraph.iolibs.misc as misc
 import madgraph.iolibs.save_load_object as save_load_object
 
 import madgraph.interface.extended_cmd as cmd
@@ -64,6 +63,7 @@ import madgraph.interface.madevent_interface as madevent_interface
 
 import madgraph.various.process_checks as process_checks
 import madgraph.various.banner as banner_module
+import madgraph.various.misc as misc
 
 import models as ufomodels
 import models.import_ufo as import_ufo

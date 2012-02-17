@@ -26,9 +26,10 @@ from madgraph import MadGraph5Error, MG5DIR
 import madgraph.core.base_objects as base_objects
 import madgraph.core.color_algebra as color
 import madgraph.iolibs.files as files
-import madgraph.iolibs.misc as misc
 import madgraph.iolibs.save_load_object as save_load_object
 from madgraph.core.color_algebra import *
+
+import madgraph.various.misc as misc
 
 import aloha.create_aloha as create_aloha
 import aloha.aloha_fct as aloha_fct
