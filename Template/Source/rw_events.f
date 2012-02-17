@@ -21,12 +21,12 @@ c
       logical done
       double precision P(0:4,*),wgt,aqcd,aqed,scale
       integer ievent
-      character*140 buff2
+      character*300 buff2
 c
 c     Local
 c
       integer i,j,k
-      character*(256) buff
+      character*(300) buff
       double precision xdum1,xdum2
 c
 c     Global
@@ -46,10 +46,10 @@ c-----
          open (unit=lun_ban, status='scratch')
          banner_open=.true.
       endif
- 11   read(lun,'(a256)',end=99,err=99) buff
+ 11   read(lun,'(a300)',end=99,err=99) buff
       do while(index(buff,"<event") .eq. 0)
          write(lun_ban,'(a)') buff
-         read(lun,'(a256)',end=99,err=99) buff
+         read(lun,'(a300)',end=99,err=99) buff
       enddo
       read(lun,*,err=11, end=11) nexternal,ievent,wgt,scale,aqed,aqcd
       do i=1,nexternal
@@ -58,8 +58,8 @@ c-----
          ic(7,i)=xdum2
       enddo
       do while(index(buff,"</event") .eq. 0)
-         read(lun,'(a256)',end=99,err=99) buff
-         if(buff(1:1).eq.'#') buff2=buff(1:140)
+         read(lun,'(a300)',end=99,err=99) buff
+         if(buff(1:1).eq.'#') buff2=buff(1:300)
       enddo
 c      gal(1) = sqrt(4d0*pi*aqed)
 c      g      = sqrt(4d0*pi*aqcd)
@@ -93,7 +93,7 @@ c
       integer nexternal, ic(7,*)
       double precision P(0:4,*),wgt
       double precision aqcd, aqed, scale
-      character*140 buff
+      character*300 buff
 c
 c     Local
 c
@@ -133,7 +133,7 @@ c
 c
 c     Local
 c
-      character*(80) buff
+      character*(200) buff
 c
 c     Global
 c
@@ -148,8 +148,8 @@ c      write(*,*) 'Writing comments'
       if (banner_open) then
          rewind(lun_ban)
          do while (.true.) 
-            read(lun_ban,'(a79)',end=99,err=99) buff
-            write(lun,'(a79)') buff
+            read(lun_ban,'(a)',end=99,err=99) buff
+            write(lun,'(a)') buff
 c            write(*,*) buff
          enddo
  99      close(lun_ban)

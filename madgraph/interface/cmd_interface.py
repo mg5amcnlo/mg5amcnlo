@@ -63,6 +63,7 @@ import madgraph.interface.launch_ext_program as launch_ext
 import madgraph.interface.madevent_interface as madevent_interface
 
 import madgraph.various.process_checks as process_checks
+import madgraph.various.banner as banner_module
 
 import models as ufomodels
 import models.import_ufo as import_ufo
@@ -258,6 +259,9 @@ class HelpToCmd(object):
         logger.info("")
         logger.info("   import command PATH :")
         logger.info("      Execute the list of command in the file at PATH")
+        logger.info("")
+        logger.info("   import banner PATH  [--no_launch]:")
+        logger.info("      Rerun the exact same run define in the valid banner.")
  
     def help_install(self):
         logger.info("syntax: install " + "|".join(self._install_opts))
@@ -417,7 +421,7 @@ class CheckValidForCmd(object):
     
         if len(args) < 2:
             self.help_add()
-            raise self.InvalidCmd('\"add\" requires two arguments')
+            raise self.InvalidCmd('\"add\" requires at least two arguments')
         
         if args[0] != 'process':
             raise self.InvalidCmd('\"add\" requires the argument \"process\"')
@@ -699,10 +703,16 @@ This will take effect only in a NEW terminal
         # Not valid directory so maybe a file
         if os.path.isfile(path):
             text = open(path).read()
-            if 'Begin PROCESS' in text:
+            pat = re.compile('(Begin process|<MGVERSION>)', re.I)
+            matches = pat.findall(text)
+            if not matches:
+                return 'command'
+            elif len(matches) > 1:
+                return 'banner'
+            elif matches[0].lower() == 'begin process':
                 return 'proc_v4'
             else:
-                return 'command'
+                return 'banner'
         else:
             return 'proc_v4'
         
@@ -982,10 +992,8 @@ class CheckValidForCmdWeb(CheckValidForCmd):
             raise self.WebRestriction, 'import requires at least one option'
         
         if args[0] not in self._import_formats:
-            self.help_import()
-            raise self.WebRestriction, 'No implicit format on the web. Please modify your card.'
-
-        if args[0] == 'proc_v4':
+            args[:] = ['command', './Cards/proc_card_mg5.dat']
+        elif args[0] == 'proc_v4':
             args[:] = [args[0], './Cards/proc_card.dat']
         elif args[0] == 'command':
             args[:] = [args[0], './Cards/proc_card_mg5.dat']
@@ -1489,6 +1497,8 @@ class CompleteForCmd(CheckValidForCmd):
                 return ['--modelname']
             elif not (os.path.sep in args[-1] and line[-1] != ' '):
                 completion_categories['options'] = self.list_completion(text, ['--modelname','-modelname'])
+        if len(args) >= 3 and mode.startswith('banner') and not '--no_launch' in line:
+            completion_categories['options'] = self.list_completion(text, ['--no_launch'])
         return self.deal_multiple_categories(completion_categories) 
         
         
@@ -1549,7 +1559,7 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
     _save_opts = ['model', 'processes', 'options']
     _tutorial_opts = ['start', 'stop']
     _check_opts = ['full', 'permutation', 'gauge', 'lorentz_invariance']
-    _import_formats = ['model_v4', 'model', 'proc_v4', 'command']
+    _import_formats = ['model_v4', 'model', 'proc_v4', 'command', 'banner']
     _install_opts = ['pythia-pgs', 'Delphes', 'MadAnalysis', 'ExRootAnalysis']
     _v4_export_formats = ['madevent', 'standalone', 'matrix'] 
     _export_formats = _v4_export_formats + ['standalone_cpp', 'pythia8']
@@ -2465,8 +2475,31 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
                 # Execute the card
                 self.use_rawinput = False
                 self.import_command_file(args[1])
-                self.use_rawinput = True    
-        
+                self.use_rawinput = True
+                
+        elif args[0] == 'banner':
+            type = madevent_interface.MadEventCmd.detect_card_type(args[1])    
+            if type != 'banner':
+                raise self.InvalidCmd, 'The File should be a valid banner'
+            ban = banner_module.Banner(args[1])
+            # Check that this is MG5 banner
+            if 'mg5proccard' in ban:
+                for line in ban['mg5proccard'].split('\n'):
+                    if line.startswith('#') or line.startswith('<'):
+                        continue
+                    self.exec_cmd(line)
+            else:
+                raise self.InvalidCmd, 'Only MG5 banner are supported'
+            
+            if not self._done_export:
+                self.exec_cmd('output . -f')
+
+            ban.split(self._done_export[0])
+            logger.info('All Cards from the banner have been place in directory %s' % pjoin(self._done_export[0], 'Cards'))
+            if '--no_launch' not in args:
+                self.exec_cmd('launch')
+            
+            
         elif args[0] == 'proc_v4':
             
             # Remove previous imports, generations and outputs from history
@@ -2697,7 +2730,7 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
                 files.mv(MG5DIR + '/td/td_mac_intel',MG5DIR+'/td/td')
             else:
                 logger.info('Downloading TD for Linux 32 bit')
-                target = 'http://cp3wks05.fynu.ucl.ac.be/twiki/pub/Software/TopDrawer/td'
+                target = 'http://madgraph.phys.ucl.ac.be/Downloads/td'
                 subprocess.call(['wget', target], cwd=pjoin(MG5DIR,'td'))      
                 os.chmod(pjoin(MG5DIR,'td','td'), 0775)
                 if sys.maxsize > 2**32:
@@ -2930,12 +2963,13 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
             else:
                 raise self.RWError('Could not load processes from file %s' % args[1])
     
-    def do_save(self, line):
+    def do_save(self, line, check=True):
         """Not in help: Save information to file"""
 
         args = self.split_arg(line)
         # Check argument validity
-        self.check_save(args)
+        if check:
+            self.check_save(args)
 
         if args[0] == 'model':
             if self._curr_model:
@@ -2985,12 +3019,12 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
                 to_write.remove(key)
             except:
                 pass
-            if '_path' in key:        
+            if '_path' in key:       
                 # special case need to update path
                 # check if absolute path
                 if value.startswith('./'):
-                    realpath = os.path.realpath(os.path.join(MG5DIR, value))
-            writer.writelines('%s = %s # %s' % (key, value, comment))
+                    value = os.path.realpath(os.path.join(MG5DIR, value))
+            writer.writelines('%s = %s # %s \n' % (key, value, comment))
         for key in to_write:
             if key in self._options:
                 writer.writelines('%s = %s \n' % (key,self._options[key]))
@@ -3405,7 +3439,7 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
         if self._export_format == 'madevent':          
             # Create configuration file [path to executable] for madevent
             filename = os.path.join(self._export_dir, 'Cards', 'me5_configuration.txt')
-            self.do_save('options %s' % filename)
+            self.do_save('options %s' % filename, check=False)
             
             logger.info('Type \"launch\" to generate events from this process, or see')
             logger.info(self._export_dir + '/README')

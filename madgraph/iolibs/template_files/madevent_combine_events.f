@@ -48,7 +48,7 @@ c
       character*30 param_card_name
       common/to_param_card_name/param_card_name
 
-      character*140 buff
+      character*300 buff
 
       data iseed/-1/
 c-----
@@ -100,7 +100,7 @@ c
       I4 = 4
       R8 = 8
       record_length = 4*I4+maxexternal*I4*7+maxexternal*5*R8+3*R8+
-     &   140
+     &   300
 C $B$ scratch_name $B$ !this is tag for automatic modification by MW
       filename='scratch'
 C $E$ scratch_name $E$ !this is tag for automatic modification by MW
@@ -541,7 +541,7 @@ c
       double precision scale,aqcd,aqed,tmpsum
       integer ievent,iseed
       logical done,found
-      character*140 buff
+      character*300 buff
       character*300 fullname
 c
 c     Les Houches init block (for the <init> info)
