@@ -54,7 +54,6 @@ import madgraph.iolibs.file_writers as writers
 import madgraph.iolibs.files as files
 import madgraph.iolibs.group_subprocs as group_subprocs
 import madgraph.iolibs.import_v4 as import_v4
-import madgraph.iolibs.misc as misc
 import madgraph.iolibs.save_load_object as save_load_object
 
 import madgraph.interface.extended_cmd as cmd
@@ -63,6 +62,8 @@ import madgraph.interface.launch_ext_program as launch_ext
 import madgraph.interface.madevent_interface as madevent_interface
 
 import madgraph.various.process_checks as process_checks
+import madgraph.various.banner as banner_module
+import madgraph.various.misc as misc
 
 import models as ufomodels
 import models.import_ufo as import_ufo
@@ -258,6 +259,9 @@ class HelpToCmd(object):
         logger.info("")
         logger.info("   import command PATH :")
         logger.info("      Execute the list of command in the file at PATH")
+        logger.info("")
+        logger.info("   import banner PATH  [--no_launch]:")
+        logger.info("      Rerun the exact same run define in the valid banner.")
  
     def help_install(self):
         logger.info("syntax: install " + "|".join(self._install_opts))
@@ -421,7 +425,7 @@ class CheckValidForCmd(object):
     
         if len(args) < 2:
             self.help_add()
-            raise self.InvalidCmd('\"add\" requires two arguments')
+            raise self.InvalidCmd('\"add\" requires at least two arguments')
         
         if args[0] != 'process':
             raise self.InvalidCmd('\"add\" requires the argument \"process\"')
@@ -703,10 +707,16 @@ This will take effect only in a NEW terminal
         # Not valid directory so maybe a file
         if os.path.isfile(path):
             text = open(path).read()
-            if 'Begin PROCESS' in text:
+            pat = re.compile('(Begin process|<MGVERSION>)', re.I)
+            matches = pat.findall(text)
+            if not matches:
+                return 'command'
+            elif len(matches) > 1:
+                return 'banner'
+            elif matches[0].lower() == 'begin process':
                 return 'proc_v4'
             else:
-                return 'command'
+                return 'banner'
         else:
             return 'proc_v4'
         
@@ -775,7 +785,7 @@ This will take effect only in a NEW terminal
             raise self.InvalidCmd('set needs an option and an argument')
 
         if args[0] not in self._set_options:
-            if not args[0] in self._options and not args[0] in self.configuration:
+            if not args[0] in self.options and not args[0] in self.options:
                 self.help_set()
                 raise self.InvalidCmd('Possible options for set are %s' % \
                                   self._set_options)
@@ -872,8 +882,8 @@ This will take effect only in a NEW terminal
             elif path != 'auto':
                 self._export_dir = path
             elif path == 'auto':
-                if self.configuration['pythia8_path']:
-                    self._export_dir = self.configuration['pythia8_path']
+                if self.options['pythia8_path']:
+                    self._export_dir = self.options['pythia8_path']
                 else:
                     self._export_dir = '.'
         else:
@@ -881,8 +891,8 @@ This will take effect only in a NEW terminal
                 # No valid path
                 self.get_default_path()
             else:
-                if self.configuration['pythia8_path']:
-                    self._export_dir = self.configuration['pythia8_path']
+                if self.options['pythia8_path']:
+                    self._export_dir = self.options['pythia8_path']
                 else:
                     self._export_dir = '.'
                     
@@ -927,8 +937,8 @@ This will take effect only in a NEW terminal
             auto_path = lambda i: pjoin(self.writing_dir,
                                                name_dir(i))
         elif self._export_format == 'pythia8':
-            if self.configuration['pythia8_path']:
-                self._export_dir = self.configuration['pythia8_path']
+            if self.options['pythia8_path']:
+                self._export_dir = self.options['pythia8_path']
             else:
                 self._export_dir = '.'
             return
@@ -993,10 +1003,8 @@ class CheckValidForCmdWeb(CheckValidForCmd):
             raise self.WebRestriction, 'import requires at least one option'
         
         if args[0] not in self._import_formats:
-            self.help_import()
-            raise self.WebRestriction, 'No implicit format on the web. Please modify your card.'
-
-        if args[0] == 'proc_v4':
+            args[:] = ['command', './Cards/proc_card_mg5.dat']
+        elif args[0] == 'proc_v4':
             args[:] = [args[0], './Cards/proc_card.dat']
         elif args[0] == 'command':
             args[:] = [args[0], './Cards/proc_card_mg5.dat']
@@ -1339,7 +1347,7 @@ class CompleteForCmd(CheckValidForCmd):
 
         # Format
         if len(args) == 1:
-            opts = self._set_options + self._options.keys() + self.configuration.keys()
+            opts = self._set_options + self.options.keys() + self.options.keys()
             return self.list_completion(text, opts)
 
         if len(args) == 2:
@@ -1500,6 +1508,8 @@ class CompleteForCmd(CheckValidForCmd):
                 return ['--modelname']
             elif not (os.path.sep in args[-1] and line[-1] != ' '):
                 completion_categories['options'] = self.list_completion(text, ['--modelname','-modelname'])
+        if len(args) >= 3 and mode.startswith('banner') and not '--no_launch' in line:
+            completion_categories['options'] = self.list_completion(text, ['--no_launch'])
         return self.deal_multiple_categories(completion_categories) 
         
         
@@ -1560,7 +1570,7 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
     _save_opts = ['model', 'processes', 'options']
     _tutorial_opts = ['start', 'stop']
     _check_opts = ['full', 'permutation', 'gauge', 'lorentz_invariance']
-    _import_formats = ['model_v4', 'model', 'proc_v4', 'command']
+    _import_formats = ['model_v4', 'model', 'proc_v4', 'command', 'banner']
     _install_opts = ['pythia-pgs', 'Delphes', 'MadAnalysis', 'ExRootAnalysis']
     _v4_export_formats = ['madevent', 'standalone', 'matrix'] 
     _export_formats = _v4_export_formats + ['standalone_cpp', 'pythia8']
@@ -1597,7 +1607,7 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
 
         # Variables to store state information
         self._multiparticles = {}
-        self._options = {}
+        self.options = {}
         self._generate_info = "" # store the first generated process
         self._model_v4_path = None
         self._use_lower_part_names = False
@@ -1605,13 +1615,7 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
         self._export_format = 'madevent'
         self._mgme_dir = MG4DIR
         self._comparisons = None
-    
-        # Set defaults for options
-        self._options['group_subprocesses'] = 'Auto'
-        self._options['ignore_six_quark_processes'] = False
-        self._options['complex_mass_scheme'] = False
-        self._options['gauge'] = 'unitary'
-        
+
         # Load the configuration file
         self.set_configuration()
 
@@ -1667,13 +1671,13 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
             cpu_time1 = time.time()
 
             # Generate processes
-            if self._options['group_subprocesses'] == 'Auto':
+            if self.options['group_subprocesses'] == 'Auto':
                     collect_mirror_procs = True
             else:
-                collect_mirror_procs = self._options['group_subprocesses']
+                collect_mirror_procs = self.options['group_subprocesses']
             ignore_six_quark_processes = \
-                           self._options['ignore_six_quark_processes'] if \
-                           "ignore_six_quark_processes" in self._options \
+                           self.options['ignore_six_quark_processes'] if \
+                           "ignore_six_quark_processes" in self.options \
                            else []
 
             myproc = diagram_generation.MultiProcess(myprocdef,
@@ -2086,7 +2090,7 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
         # run the check
         cpu_time1 = time.time()
         # Run matrix element generation check on processes
-        mass_scheme = self._options['complex_mass_scheme']
+        mass_scheme = self.options['complex_mass_scheme']
 
         comparisons = []
         gauge_result = []
@@ -2113,7 +2117,7 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
 
         if args[0] in  ['gauge', 'full'] and len(self._curr_model.get('gauge')) == 2:
             
-            gauge = str(self._options['gauge'])
+            gauge = str(self.options['gauge'])
             line = " ".join(args[1:])
             myprocdef = self.extract_process(line)
             model_name = self._curr_model['name']
@@ -2520,7 +2524,7 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
                         logger_stderr.warning('Try to recover by running automatically `import model_v4 %s` instead.' \
                                                                       % args[1])
                     self.exec_cmd('import model_v4 %s ' % args[1], precmd=True)    
-                if self._options['complex_mass_scheme']:
+                if self.options['complex_mass_scheme']:
                     self._curr_model.change_mass_to_complex_scheme()
                     if hasattr(self._curr_model, 'set_parameters_and_couplings'):
                         if hasattr(self._curr_model, 'restrict_card'):
@@ -2528,7 +2532,7 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
                                                  self._curr_model.restrict_card)
                         else:
                             self._curr_model.set_parameters_and_couplings()
-                if self._options['gauge']=='unitary':
+                if self.options['gauge']=='unitary':
                     if 1 not in self._curr_model.get('gauge') :
                         logger.warning('Change the gauge to Feynman since the model does not allow unitary gauge') 
                         self.do_set('gauge Feynman', log=False)
@@ -2574,8 +2578,31 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
                 # Execute the card
                 self.use_rawinput = False
                 self.import_command_file(args[1])
-                self.use_rawinput = True    
-        
+                self.use_rawinput = True
+                
+        elif args[0] == 'banner':
+            type = madevent_interface.MadEventCmd.detect_card_type(args[1])    
+            if type != 'banner':
+                raise self.InvalidCmd, 'The File should be a valid banner'
+            ban = banner_module.Banner(args[1])
+            # Check that this is MG5 banner
+            if 'mg5proccard' in ban:
+                for line in ban['mg5proccard'].split('\n'):
+                    if line.startswith('#') or line.startswith('<'):
+                        continue
+                    self.exec_cmd(line)
+            else:
+                raise self.InvalidCmd, 'Only MG5 banner are supported'
+            
+            if not self._done_export:
+                self.exec_cmd('output . -f')
+
+            ban.split(self._done_export[0])
+            logger.info('All Cards from the banner have been place in directory %s' % pjoin(self._done_export[0], 'Cards'))
+            if '--no_launch' not in args:
+                self.exec_cmd('launch')
+            
+            
         elif args[0] == 'proc_v4':
             
             # Remove previous imports, generations and outputs from history
@@ -2744,7 +2771,8 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
         else:
             subprocess.call(['wget', path[args[0]], '--output-document=%s.tgz'% name], cwd=MG5DIR)
         # Untar the file
-        returncode = subprocess.call(['tar', '-xzpvf', '%s.tgz' % name], cwd=MG5DIR)
+        returncode = subprocess.call(['tar', '-xzpvf', '%s.tgz' % name], cwd=MG5DIR, 
+                                     stdout=open(os.devnull, 'w'))
         if returncode:
             raise MadGraph5Error, 'Fail to download correctly the File. Stop'
         
@@ -2781,8 +2809,12 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
                 text = text.replace('FC=g77','FC=gfortran')
                 open(path, 'w').writelines(text)            
         
-        subprocess.call(['make', 'clean'], cwd = os.path.join(MG5DIR, name))
-        status = subprocess.call(['make'], cwd = os.path.join(MG5DIR, name))
+        if logger.level <= logging.INFO: 
+            subprocess.call(['make', 'clean'], )
+            status = subprocess.call(['make'], cwd = os.path.join(MG5DIR, name))
+        else:
+            misc.compile(['clean'], mode='', cwd = os.path.join(MG5DIR, name))
+            misc.compile(mode='', cwd = os.path.join(MG5DIR, name))
         if not status:
             logger.info('compilation succeeded')
 
@@ -2806,7 +2838,7 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
                 files.mv(MG5DIR + '/td/td_mac_intel',MG5DIR+'/td/td')
             else:
                 logger.info('Downloading TD for Linux 32 bit')
-                target = 'http://cp3wks05.fynu.ucl.ac.be/twiki/pub/Software/TopDrawer/td'
+                target = 'http://madgraph.phys.ucl.ac.be/Downloads/td'
                 subprocess.call(['wget', target], cwd=pjoin(MG5DIR,'td'))      
                 os.chmod(pjoin(MG5DIR,'td','td'), 0775)
                 if sys.maxsize > 2**32:
@@ -2818,16 +2850,18 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
     def set_configuration(self, config_path=None, test=False):
         """ assign all configuration variable from file 
             ./input/mg5_configuration.txt. assign to default if not define """
-        
-	
-	    
-        self.configuration = {'pythia8_path': './pythia8',
+
+        self.options = {'pythia8_path': './pythia8',
                               'web_browser':None,
                               'eps_viewer':None,
                               'text_editor':None,
                               'fortran_compiler':None,
-                              'automatic_html_opening':True}
-        
+                              'automatic_html_opening':True,
+                              'group_subprocesses': 'Auto',
+                              'ignore_six_quark_processes': False,
+                              'complex_mass_scheme': False,
+                              'gauge':'unitary'}
+                
         if not config_path:
             try:
                 config_file = open(pjoin(os.environ['HOME'],'.mg5', 'mg5_configuration.txt'))
@@ -2850,25 +2884,25 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
             else:
                 name = name.strip()
                 value = value.strip()
-                self.configuration[name] = value
+                self.options[name] = value
                 if value.lower() == "none":
-                    self.configuration[name] = None
+                    self.options[name] = None
 
         if test:
-            return self.configuration
+            return self.options
 
         # Treat each expected input
         # 1: Pythia8_path
         # try relative path
-        for key in self.configuration:
+        for key in self.options:
             if key == 'pythia8_path':
-                if self.configuration['pythia8_path'] in ['None', None]:
-                    self.configuration['pythia8_path'] = None
+                if self.options['pythia8_path'] in ['None', None]:
+                    self.options['pythia8_path'] = None
                     continue
-                pythia8_dir = pjoin(MG5DIR, self.configuration['pythia8_path'])
+                pythia8_dir = pjoin(MG5DIR, self.options['pythia8_path'])
                 if not os.path.isfile(pjoin(pythia8_dir, 'include', 'Pythia.h')):
-                    if not os.path.isfile(pjoin(self.configuration['pythia8_path'], 'include', 'Pythia.h')):
-                       self.configuration['pythia8_path'] = None
+                    if not os.path.isfile(pjoin(self.options['pythia8_path'], 'include', 'Pythia.h')):
+                       self.options['pythia8_path'] = None
                     else:
                         continue
                     
@@ -2879,16 +2913,16 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
             elif key not in ['text_editor','eps_viewer','web_browser']:
                 # Default: try to set parameter
                 try:
-                    self.do_set("%s %s" % (key, self.configuration[key]), log=False)
+                    self.do_set("%s %s" % (key, self.options[key]), log=False)
                 except MadGraph5Error, error:
                     print error
                     logger.warning("Option %s from config file not understood" \
                                    % key)
         
         # Configure the way to open a file:
-        launch_ext.open_file.configure(self.configuration)
+        launch_ext.open_file.configure(self.options)
           
-        return self.configuration
+        return self.options
      
     def check_for_export_dir(self, filepath):
         """Check if the files is in a valid export directory and assign it to
@@ -2948,16 +2982,16 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
             
             if len(generate_info.split('>')[0].strip().split())>1:
                 ext_program = launch_ext.MELauncher(args[1], self.timeout, self,
-                                pythia=self.configuration['pythia-pgs_path'],
-                                delphes=self.configuration['delphes_path'],
+                                pythia=self.options['pythia-pgs_path'],
+                                delphes=self.options['delphes_path'],
                                 shell = hasattr(self, 'do_shell'),
                                 **options)
             else:
                 # This is a width computation
                 ext_program = launch_ext.MELauncher(args[1], self.timeout, self, 
                                 unit='GeV',
-                                pythia=self.configuration['pythia-pgs_path'],
-                                delphes=self.configuration['delphes_path'],
+                                pythia=self.options['pythia-pgs_path'],
+                                delphes=self.options['delphes_path'],
                                 shell = hasattr(self, 'do_shell'),
                                 **options)
 
@@ -3041,12 +3075,13 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
             else:
                 raise self.RWError('Could not load processes from file %s' % args[1])
     
-    def do_save(self, line):
+    def do_save(self, line, check=True):
         """Not in help: Save information to file"""
 
         args = self.split_arg(line)
         # Check argument validity
-        self.check_save(args)
+        if check:
+            self.check_save(args)
 
         if args[0] == 'model':
             if self._curr_model:
@@ -3072,7 +3107,7 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
         # to ensure that all configuration information are written we 
         # keep track of all key that we need to write.
 
-        to_write = self._options.keys()[:] + self.configuration.keys()[:]
+        to_write = self.options.keys()[:]
         writer = open(path,'w')
         # Use local configuration => Need to update the path
         conf = os.path.join(MG5DIR, 'input', 'mg5_configuration.txt')
@@ -3086,27 +3121,25 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
                 writer.writelines(line)
                 continue
             key = data[0].strip()
-            if key in self._options:
-                value = str(self._options[key])
-            elif key in self.configuration:
-                value = str(self.configuration[key])
+            if key in self.options:
+                value = str(self.options[key])
             else:
                 value = data[1].strip()
             try:
                 to_write.remove(key)
             except:
                 pass
-            if '_path' in key:        
+            if '_path' in key:       
                 # special case need to update path
                 # check if absolute path
                 if value.startswith('./'):
-                    realpath = os.path.realpath(os.path.join(MG5DIR, value))
-            writer.writelines('%s = %s # %s' % (key, value, comment))
+                    value = os.path.realpath(os.path.join(MG5DIR, value))
+            writer.writelines('%s = %s # %s \n' % (key, value, comment))
         for key in to_write:
-            if key in self._options:
-                writer.writelines('%s = %s \n' % (key,self._options[key]))
+            if key in self.options:
+                writer.writelines('%s = %s \n' % (key,self.options[key]))
             else:
-                writer.writelines('%s = %s \n' % (key,self.configuration[key]))
+                writer.writelines('%s = %s \n' % (key,self.options[key]))
                 
         writer.close()
     
@@ -3123,9 +3156,9 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
 
         if args[0] == 'ignore_six_quark_processes':
             if args[1] == 'False':
-                self._options[args[0]] = False
+                self.options[args[0]] = False
                 return
-            self._options[args[0]] = list(set([abs(p) for p in \
+            self.options[args[0]] = list(set([abs(p) for p in \
                                       self._multiparticles[args[1]]\
                                       if self._curr_model.get_particle(p).\
                                       is_fermion() and \
@@ -3135,16 +3168,16 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
                 logger.info('Ignore processes with >= 6 quarks (%s)' % \
                         ",".join([\
                             self._curr_model.get_particle(q).get('name') \
-                            for q in self._options[args[0]]]))
+                            for q in self.options[args[0]]]))
             
         elif args[0] == 'group_subprocesses':
             if args[1] != 'Auto':
-                self._options[args[0]] = eval(args[1])
+                self.options[args[0]] = eval(args[1])
             else:
-                self._options[args[0]] = 'Auto'
+                self.options[args[0]] = 'Auto'
             if log:
                 logger.info('Set group_subprocesses to %s' % \
-                        str(self._options[args[0]]))
+                        str(self.options[args[0]]))
                 logger.info('Note that you need to regenerate all processes')
             self._curr_amps = diagram_generation.AmplitudeList()
             self._curr_matrix_elements = helas_objects.HelasMultiProcess()
@@ -3156,9 +3189,9 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
                 logger.info('set output information to level: %s' % args[1])
 
         elif args[0] == "complex_mass_scheme":
-            old = self._options[args[0]] 
-            self._options[args[0]] = eval(args[1])
-            if self._options[args[0]]:
+            old = self.options[args[0]] 
+            self.options[args[0]] = eval(args[1])
+            if self.options[args[0]]:
                 if old:
                     if log:
                         logger.info('Complex mass already activated.')
@@ -3191,7 +3224,7 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
                     aloha.unitary_gauge = True
                 else:
                     aloha.unitary_gauge = False
-                self._options[args[0]] = args[1]
+                self.options[args[0]] = args[1]
                 if log: logger.info('Pass to gauge %s.' % args[1])
                 return
             
@@ -3211,7 +3244,7 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
                     able_to_mod = False
                     if log: logger.warning('Note that Feynman gauge is not allowed for your current model %s' \
 		                                     % self._curr_model.get('name'))
-            self._options[args[0]] = args[1]
+            self.options[args[0]] = args[1]
 
             #re-init all variable
             model_name = self._curr_model.get('name')
@@ -3235,19 +3268,19 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
             if args[1] != 'None':
                 if log:
                     logger.info('set fortran compiler to %s' % args[1])
-                self.configuration['fortran_compiler'] = args[1]
+                self.options['fortran_compiler'] = args[1]
             else:
-                self.configuration['fortran_compiler'] = None
-        elif args[0] in self._options:
+                self.options['fortran_compiler'] = None
+        elif args[0] in self.options:
             if args[1] in  ['None','True', 'False']:
-                self._options[args[0]] = eval(args[1])
+                self.options[args[0]] = eval(args[1])
             else:
-                self._options[args[0]] = args[1] 
-        elif args[0] in self.configuration:
+                self.options[args[0]] = args[1] 
+        elif args[0] in self.options:
             if args[1] in ['None','True','False']:
-                self.configuration[args[0]] = eval(args[1])
+                self.options[args[0]] = eval(args[1])
             else:
-                self.configuration[args[0]] = args[1]             
+                self.options[args[0]] = args[1]             
 
     def do_open(self, line):
         """Open a text file/ eps file / html file"""
@@ -3293,8 +3326,8 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
         #check if we need to group processes
         group_subprocesses = False
         if self._export_format == 'madevent' and \
-                                            self._options['group_subprocesses']:
-                if self._options['group_subprocesses'] is True:
+                                            self.options['group_subprocesses']:
+                if self.options['group_subprocesses'] is True:
                     group_subprocesses = True
                 elif self._curr_amps[0].get_ninitial()  == 2:
                     group_subprocesses = True
@@ -3303,7 +3336,7 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
         # Make a Template Copy
         if self._export_format == 'madevent':
             if group_subprocesses:
-                if not self._options['complex_mass_scheme']:
+                if not self.options['complex_mass_scheme']:
                     self._curr_exporter = export_v4.ProcessExporterFortranMEGroup(\
                                       self._mgme_dir, self._export_dir,
                                       not noclean)
@@ -3358,9 +3391,9 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
 
             # Check if we need to group the SubProcesses or not
             group = True
-            if self._options['group_subprocesses'] is False:
+            if self.options['group_subprocesses'] is False:
                 group = False
-            elif self._options['group_subprocesses'] == 'Auto' and \
+            elif self.options['group_subprocesses'] == 'Auto' and \
                                          self._curr_amps[0].get_ninitial() == 1:
                    group = False 
 
@@ -3590,14 +3623,14 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
                                            self.history,
                                            not nojpeg,
                                            online,
-                                           self.configuration['fortran_compiler'])
+                                           self.options['fortran_compiler'])
 
         if self._export_format in ['madevent', 'standalone', 'standalone_cpp']:
             logger.info('Output to directory ' + self._export_dir + ' done.')
         if self._export_format == 'madevent':          
             # Create configuration file [path to executable] for madevent
             filename = os.path.join(self._export_dir, 'Cards', 'me5_configuration.txt')
-            self.do_save('options %s' % filename)
+            self.do_save('options %s' % filename, check=False)
             
             logger.info('Type \"launch\" to generate events from this process, or see')
             logger.info(self._export_dir + '/README')

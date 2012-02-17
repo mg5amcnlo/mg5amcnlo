@@ -14,7 +14,8 @@
       integer jpart(7,-nexternal+3:2*nexternal-3),npart,ip,numproc
       double precision pb(0:4,-nexternal+3:2*nexternal-3)
       double precision rscale,aqcd,aqed,targetamp(maxflow)
-      character*140 buff
+      character*300 buff
+      character*20 cform
 
       integer isym(nexternal,99), jsym
       integer i,j,k,ida(2),ns,nres,ires,icl,ito2,idenpart,nc,ic
@@ -323,8 +324,10 @@ c
           enddo
         enddo
 
-        if(ickkw.gt.0)
-     $       write(buff,'(a1,9e15.7)') '#',(ptclus(i),i=3,min(nexternal,11))
+        if(ickkw.gt.0) then
+           write(cform,'(a4,i2,a6)') '(a1,',max(nexternal,10),'e15.7)'
+           write(buff,cform) '#',(ptclus(i),i=3,nexternal)
+         endif
         npart = nexternal+nres
 
       return

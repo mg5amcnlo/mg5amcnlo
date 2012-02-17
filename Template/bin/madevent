@@ -164,6 +164,10 @@ except:
 
 try:
     # Remove lock file
+except:
+    pass
+
+try:
     os.remove(os.path.join(root_path,os.pardir, 'RunWeb'))
 except:
     pass

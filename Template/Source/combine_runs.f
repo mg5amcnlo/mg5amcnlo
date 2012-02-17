@@ -275,7 +275,7 @@ c
       double precision P(0:4,maxexternal),xwgt
       integer n,ic(7,maxexternal),ievent
       double precision scale,aqcd,aqed
-      character*140 buff
+      character*300 buff
       logical done
 c-----
 c  Begin Code

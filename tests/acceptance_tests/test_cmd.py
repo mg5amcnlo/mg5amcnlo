@@ -20,7 +20,7 @@ import shutil
 import sys
 import logging
 
-
+pjoin = os.path.join
 
 logger = logging.getLogger('test_cmd')
 
@@ -123,7 +123,12 @@ class TestCmdShell1(unittest.TestCase):
                     'exrootanalysis_path': './ExRootAnalysis', 
                     'eps_viewer': None, 
                     'automatic_html_opening': 'True', 
-                    'pythia8_path': './pythia8'}
+                    'pythia8_path': './pythia8',
+                    'group_subprocesses': 'Auto',
+                    'ignore_six_quark_processes': False,
+                    'complex_mass_scheme': False,
+                    'gauge': 'unitary'
+                    }
 
         self.assertEqual(config, expected)
         
@@ -1121,4 +1126,17 @@ P1_qq_wp_wp_lvl
         me_groups = me_re.search(log_output)
         self.assertTrue(me_groups)
         self.assertAlmostEqual(float(me_groups.group('value')), 1.953735e-2)
+        
+    def test_import_banner_command(self):
+        """check that the import banner command works"""
+        self.do('import banner %s --no_launch' % pjoin(MG5DIR, 'tests', 'input_files', 'tt_banner.txt'))
+        
+        # check that the output exists:
+        self.assertTrue(os.path.exists(self.out_dir))
+        
+        # check that the Cards have been modified
+        run_card = open(pjoin(self.out_dir,'Cards','run_card.dat')).read()
+        self.assertTrue("'tt'     = run_tag" in run_card)
+        self.assertTrue("200       = nevents" in run_card)
+        
         

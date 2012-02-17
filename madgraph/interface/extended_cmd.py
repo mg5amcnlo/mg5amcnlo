@@ -35,7 +35,7 @@ logger = logging.getLogger('cmdprint') # for stdout
 logger_stderr = logging.getLogger('fatalerror') # for stderr
 
 try:
-    import madgraph.iolibs.misc as misc
+    import madgraph.various.misc as misc
 except:
     import internal.misc as misc
 
@@ -900,7 +900,7 @@ class Cmd(BasicCmd):
         
         if args[0] == "options":
             outstr = "Value of current Options:\n" 
-            for key, value in self.configuration.items() + self._options.items():
+            for key, value in self.options.items():
                 outstr += '%25s \t:\t%s\n' %(key,value)
             output.write(outstr)
             
