@@ -2536,7 +2536,8 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
                         return                        
                 else:
                     if 0 not in self._curr_model.get('gauge') :
-                        logger.warning('Change the gauge to unitary since the model does not allow Feynman gauge')    
+                        logger.warning('Change the gauge to unitary since the model does not allow Feynman gauge')
+                        self._curr_model = None
                         self.do_set('gauge unitary', log= False)
                         self.do_import(line)
                         return 
@@ -3183,20 +3184,37 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
                 self.exec_cmd('import model %s' % self._curr_model.get('name'))
 
         elif args[0] == "gauge":
+            
+            # Treat the case where they are no model loaded
+            if not self._curr_model:
+                if args[1] == 'unitary':
+                    aloha.unitary_gauge = True
+                else:
+                    aloha.unitary_gauge = False
+                self._options[args[0]] = args[1]
+                if log: logger.info('Pass to gauge %s.' % args[1])
+                return
+            
+            # They are a valid model
+            able_to_mod = True
             if args[1] == 'unitary':
                 if 1 in self._curr_model.get('gauge'):		   
                     aloha.unitary_gauge = True
                 else:
-                    logger.warning('Note that unitary gauge is not allowed for your current model %s' \
+                    able_to_mod = False
+                    if log: logger.warning('Note that unitary gauge is not allowed for your current model %s' \
 		                                     % self._curr_model.get('name'))
             else:
                 if 0 in self._curr_model.get('gauge'):		   
                     aloha.unitary_gauge = False
                 else:
-                    logger.warning('Note that Feynman gauge is not allowed for your current model %s' \
+                    able_to_mod = False
+                    if log: logger.warning('Note that Feynman gauge is not allowed for your current model %s' \
 		                                     % self._curr_model.get('name'))
             self._options[args[0]] = args[1]
+
             #re-init all variable
+            model_name = self._curr_model.get('name')
             self._curr_model = None
             self._curr_amps = diagram_generation.AmplitudeList()
             self._curr_matrix_elements = helas_objects.HelasMultiProcess()
@@ -3205,9 +3223,13 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
             self._curr_exporter = None
             self._done_export = False
             import_ufo._import_once = []
-            if log:
-                logger.info('Pass to gauge %s.' % args[1])
+            logger.info('Pass to gauge %s.' % args[1])
+            
+            if able_to_mod:
+                self.do_import('model %s' % model_name)
+            elif log:
                 logger.info('Note that you have to reload the model') 
+
 		
         elif args[0] == 'fortran_compiler':
             if args[1] != 'None':
