@@ -28,7 +28,7 @@ import tests.unit_tests.iolibs.test_file_writers as test_file_writers
 
 import madgraph.interface.cmd_interface as Cmd
 import madgraph.interface.launch_ext_program as launch_ext
-import madgraph.iolibs.misc as misc
+import madgraph.various.misc as misc
 _file_path = os.path.split(os.path.dirname(os.path.realpath(__file__)))[0]
 _pickle_path =os.path.join(_file_path, 'input_files')
 
