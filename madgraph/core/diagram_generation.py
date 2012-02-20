@@ -26,7 +26,7 @@ import logging
 
 import madgraph.core.base_objects as base_objects
 
-from madgraph import MadGraph5Error, InvalidCmd
+from madgraph import InvalidCmd
 logger = logging.getLogger('madgraph.diagram_generation')
 
 #===============================================================================
@@ -337,6 +337,10 @@ class Amplitude(base_objects.PhysicsObject):
     def nice_string_processes(self, indent=0):
         """Returns a nicely formatted string of the amplitude process."""
         return self.get('process').nice_string(indent)
+
+    def get_ninitial(self):
+        """Returns the number of initial state particles in the process."""
+        return self.get('process').get_ninitial()
 
     def generate_diagrams(self):
         """Generate diagrams. Algorithm:
@@ -991,7 +995,7 @@ class DecayChainAmplitude(Amplitude):
                 if not process.get('is_decay_chain'):
                     process.set('is_decay_chain',True)
                 if not process.get_ninitial() == 1:
-                    raise MadGraph5Error,\
+                    raise InvalidCmd,\
                           "Decay chain process must have exactly one" + \
                           " incoming particle"
                 self['decay_chains'].append(\
@@ -1063,6 +1067,10 @@ class DecayChainAmplitude(Amplitude):
             mystr = mystr + dec.nice_string_processes(indent + 2) + "\n"
 
         return  mystr[:-1]
+
+    def get_ninitial(self):
+        """Returns the number of initial state particles in the process."""
+        return self.get('amplitudes')[0].get('process').get_ninitial()
 
     def get_decay_ids(self):
         """Returns a set of all particle ids for which a decay is defined"""
@@ -1380,7 +1388,7 @@ class MultiProcess(base_objects.PhysicsObject):
             if len(failed_procs) == 1 and 'error' in locals():
                 raise error
             else:
-                raise MadGraph5Error, \
+                raise InvalidCmd, \
             "No amplitudes generated from process %s. Please enter a valid process" % \
                   process_definition.nice_string()
         

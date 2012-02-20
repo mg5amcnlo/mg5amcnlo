@@ -6,7 +6,7 @@ c**          C. Duhr (Louvain U.) - M. Herquet (NIKHEF)                **
 c**                                                                    **
 c************************************************************************
 
-      subroutine setpara(param_name,readlha)
+      subroutine setpara(param_name)
       implicit none
 
       character*(*) param_name
@@ -21,11 +21,9 @@ c************************************************************************
       integer npara
       character*20 param(maxpara),value(maxpara)
 
-      if(readlha) then
-         call LHA_loadcard(param_name,npara,param,value)
-         include 'param_read.inc'
-      end if
-      call coup(readlha)
+      call LHA_loadcard(param_name,npara,param,value)
+      include 'param_read.inc'
+      call coup()
 
       return
 

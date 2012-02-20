@@ -1,4 +1,4 @@
-      subroutine sample_full(ndim,ncall,itmax,dsig,ninvar,nconfigs)
+      subroutine sample_full(ndim,ncall,itmax,itmin,dsig,ninvar,nconfigs)
 c**************************************************************************
 c     Driver for sample which does complete integration
 c     This is done in double precision, and should be told the
@@ -6,7 +6,8 @@ c     number of possible phasespace choices.
 c     Arguments:
 c     ndim       Number of dimensions for integral(number or random #'s/point)
 c     ncall      Number of times to evaluate the function/iteration
-c     itmax      Number of iterations
+c     itmax      Max number of iterations
+c     itmin      Min number of iterations
 c     ninvar     Number of invarients to keep grids on (s,t,u, s',t' etc)
 c     nconfigs   Number of different pole configurations 
 c     dsig       Function to be integrated
@@ -16,7 +17,7 @@ c**************************************************************************
 c
 c Arguments
 c
-      integer ndim,ncall,itmax,ninvar,nconfigs
+      integer ndim,ncall,itmax,itmin,ninvar,nconfigs
       external         dsig
       double precision dsig
 c
@@ -24,7 +25,7 @@ c Local
 c
       double precision x(maxinvar),wgt,p(4*maxdim/3+14)
       double precision tdem, chi2, dum
-      integer ievent,kevent,nwrite,iter,nun,luntmp
+      integer ievent,kevent,nwrite,iter,nun,luntmp,itsum
       integer jmax,i,j,ipole
       integer itmax_adjust
 c
@@ -51,8 +52,8 @@ c
       common /to_accuracy/accur
 
       double precision twgt, maxwgt,swgt(maxevents)
-      integer                             lun, nw
-      common/to_unwgt/twgt, maxwgt, swgt, lun, nw
+      integer                             lun, nw, itminx
+      common/to_unwgt/twgt, maxwgt, swgt, lun, nw, itminx
 
       integer nzoom
       double precision  tx(1:3,maxinvar)
@@ -100,6 +101,7 @@ c-----
       kevent = 0
       nzoom = 0
       xzoomfact = 1d0
+      itminx = itmin
       if (nsteps .lt. 1) nsteps=1
       nwrite = itmax*ncall/nsteps
 c      open(unit=66,file='.sample_warn',status='unknown')
@@ -140,7 +142,7 @@ c
                wgt=0d0
             endif
             if (nzoom .le. 0) then
-               call sample_put_point(wgt,x(1),iter,ipole) !Store result
+               call sample_put_point(wgt,x(1),iter,ipole,itmin) !Store result
             else
                nzoom = nzoom -1
                ievent=ievent-1
@@ -165,7 +167,9 @@ c
          i=i+1
       enddo
       cur_it = i
-      i = cur_it - 3
+c     Use the last 3 iterations or cur_it-1 if cur_it-1 >= itmin but < 3
+      itsum = min(max(itmin,cur_it-1),3)
+      i = cur_it - itsum
       if (i .gt. 0) then
       tmean = 0d0
       tsigma = 0d0
@@ -183,13 +187,14 @@ c      nun = n_unwgted()
       nun = neventswritten
 
       chi2 = 0d0
-      do i = cur_it-3,cur_it-1
+      do i = cur_it-itsum,cur_it-1
          chi2 = chi2+(xmean(i)-tmean)**2/xsigma(i)**2
       enddo
       chi2 = chi2/2d0   !Since using only last 3, n-1=2
       write(*,'(a)') '-----------------------------------------------------'
       write(*,'(a)') '---------------------------'
-      write(*,'(a,e12.4)') ' Results Last 3 iters:  Integral = ',tmean
+      write(*,'(a,i3,a,e12.4)') ' Results Last ',itsum,
+     $     ' iters:  Integral = ',tmean
       write(*,'(25x,a,e12.4)') 'Std dev = ',tsigma
       write(*,'(17x,a,f12.4)') 'Chi**2 per DoF. =',chi2
       write(*,'(a)') '-----------------------------------------------------'
@@ -197,15 +202,17 @@ c      nun = n_unwgted()
 
       if (nun .lt. 0) nun=-nun   !Case when wrote maximun number allowed
       if (chi2 .gt. 1) tsigma=tsigma*sqrt(chi2)
+c     JA 02/2011 Added twgt to results.dat to allow event generation in
+c     first iteration for gridpack runs
       if (icor .eq. 0) then
-         write(66,'(3e12.5,2i9,i5,i9,e10.3)')tmean,tsigma,0.0,kevent,nw,
-     &     cur_it-1,nun, nun/max(tmean,1d-99)
+         write(66,'(3e12.5,2i9,i5,i9,e10.3,e12.5)')tmean,tsigma,0.0,
+     &     kevent, nw, cur_it-1, nun, nun/max(tmean,1d-99), twgt
       else
-         write(66,'(3e12.5,2i9,i5,i9,e10.3)')tmean,0.0,tsigma,kevent,nw,
-     &     cur_it-1,nun, nun/max(tmean,1d-99)
+         write(66,'(3e12.5,2i9,i5,i9,e10.3,e12.5)')tmean,0.0,tsigma,
+     &     kevent, nw, cur_it-1, nun, nun/max(tmean,1d-99), twgt
       endif
 c      do i=1,cur_it-1
-      do i=cur_it-3,cur_it-1
+      do i=cur_it-itsum,cur_it-1
          write(66,'(i4,4e15.5)') i,xmean(i),xsigma(i),xeff(i),xwmax(i)
       enddo
       close(66)
@@ -297,7 +304,7 @@ c
                wgt=0d0
             endif
             if (nzoom .le. 0) then
-               call sample_put_point(wgt,x(1),iter,ipole) !Store result
+               call sample_put_point(wgt,x(1),iter,ipole,itmin) !Store result
             else
                nzoom = nzoom -1
                ievent=ievent-1
@@ -314,7 +321,9 @@ c
          i=i+1
       enddo
       cur_it = i
-      i = cur_it - 3
+c     Use the last 3 iterations or cur_it-1 if cur_it-1 >= itmin
+      itsum = min(max(itmin,cur_it-1),3)
+      i = cur_it - itsum
       if (i .gt. 0) then
       tmean = 0d0
       tsigma = 0d0
@@ -334,13 +343,13 @@ c
       nun = neventswritten
 
       chi2 = 0d0
-      do i = cur_it-3,cur_it-1
+      do i = cur_it-itsum,cur_it-1
          chi2 = chi2+(xmean(i)-tmean)**2/xsigma(i)**2
       enddo
       chi2 = chi2/2d0   !Since using only last 3, n-1=2
       write(*,'(a)') '-----------------------------------------------------'
       write(*,'(a)') '---------------------------'
-      write(*,'(a,e12.4)') ' Results Last 3 iters:  Integral = ',tmean
+      write(*,'(a,i3,a,e12.4)') ' Results Last ',itsum,' iters:  Integral = ',tmean
       write(*,'(25x,a,e12.4)') 'Std dev = ',tsigma
       write(*,'(17x,a,f12.4)') 'Chi**2 per DoF. =',chi2
       write(*,'(a)') '-----------------------------------------------------'
@@ -348,15 +357,17 @@ c
 
       if (nun .lt. 0) nun=-nun   !Case when wrote maximun number allowed
       if (chi2 .gt. 1) tsigma=tsigma*sqrt(chi2)
+c     JA 02/2011 Added twgt to results.dat to allow event generation in
+c     first iteration for gridpack runs
       if (icor .eq. 0) then
-         write(66,'(3e12.5,2i9,i5,i9,e10.3)')tmean,tsigma,0.0,kevent,nw,
-     &     cur_it-1,nun, nun/max(tmean,1d-99)
+         write(66,'(3e12.5,2i9,i5,i9,e10.3,e12.5)')tmean,tsigma,0.0,
+     &     kevent, nw, cur_it-1, nun, nun/max(tmean,1d-99), twgt
       else
-         write(66,'(3e12.5,2i9,i5,i9,e10.3)')tmean,0.0,tsigma,kevent,nw,
-     &     cur_it-1,nun, nun/max(tmean,1d-99)
+         write(66,'(3e12.5,2i9,i5,i9,e10.3,e12.5)')tmean,0.0,tsigma,
+     &     kevent, nw, cur_it-1, nun, nun/max(tmean,1d-99), twgt
       endif
 c      do i=1,cur_it-1
-      do i=cur_it-3,cur_it-1
+      do i=cur_it-itsum,cur_it-1
          write(66,'(i4,4e15.5)') i,xmean(i),xsigma(i),xeff(i),xwmax(i)
       enddo
       close(66)
@@ -370,237 +381,6 @@ c      do i=1,cur_it-1
       endif      
 
       end
-
-      subroutine sample_fullx(ndim,ncall,itmax,dsig,ninvar,nconfigs)
-c**************************************************************************
-c     Driver for sample which does complete integration
-c     This is done in double precision, and should be told the
-c     number of possible phasespace choices.
-c     Arguments:
-c     ndim       Number of dimensions for integral(number or random #'s/point)
-c     ncall      Number of times to evaluate the function/iteration
-c     itmax      Number of iterations
-c     ninvar     Number of invarients to keep grids on (s,t,u, s',t' etc)
-c     nconfigs   Number of different pole configurations 
-c     dsig       Function to be integrated
-c**************************************************************************
-      implicit none
-      include 'genps.inc'
-c
-c Arguments
-c
-      integer ndim,ncall,itmax,ninvar,nconfigs
-      external         dsig
-      double precision dsig
-c
-c Local
-c
-      double precision x(maxinvar),wgt,p(4*maxdim/3+14)
-      double precision tdem, chi2
-      integer ievent,kevent,nwrite,iter,nun
-      integer jmax,i,j,ipole
-c
-c     External
-c
-      integer  n_unwgted
-      external n_unwgted
-c
-c Global
-c
-      integer                                      nsteps
-      character*40          result_file,where_file
-      common /sample_status/result_file,where_file,nsteps
-      double precision fx
-      common /to_fx/   fx
-
-      integer           mincfig, maxcfig
-      common/to_configs/mincfig, maxcfig
-
-      double precision     xmean(99),xsigma(99),xwmax(99),xeff(99)
-      common/to_iterations/xmean,    xsigma,    xwmax,    xeff
-
-      double precision    accur
-      common /to_accuracy/accur
-
-      double precision twgt, maxwgt,swgt(maxevents)
-      integer                             lun, nw
-      common/to_unwgt/twgt, maxwgt, swgt, lun, nw
-
-      integer nzoom
-      double precision  tx(1:3,maxinvar)
-      common/to_xpoints/tx, nzoom
-
-      double precision xzoomfact
-      common/to_zoom/  xzoomfact
-
-      double precision tmean, tsigma
-      integer             dim, events, itm, kn, cur_it, invar, configs
-      common /sample_common/
-     .     tmean, tsigma, dim, events, itm, kn, cur_it, invar, configs
-
-      integer              icor
-      common/to_correlated/icor
-c
-c     External
-c
-      logical pass_point
-c
-c     Data
-c
-c      data result_file,where_file,nsteps/'SAMPLE','WHERE.AMI',100/
-c      data accur/-1d0/
-c      data mincfig /1/
-c      data maxcfig /1/
-c      data twgt/-1d0/              !Dont write out events
-c      data lun/27/                 !Unit number for events
-c      data maxwgt/0d0/
-c      data nw/0/                   !Number of events written
-      
-
-c-----
-c Begin Code
-c-----
-      ievent = 0
-      kevent = 0
-      nzoom = 0
-      xzoomfact = 1d0
-      if (nsteps .lt. 1) nsteps=1
-      nwrite = itmax*ncall/nsteps
-c      open(unit=66,file='.sample_warn',status='unknown')
-c      write(66,*) 'Warnings from sample run.',itmax,ncall
-c      close(66)
-      call sample_init(ndim,ncall,itmax,ninvar,nconfigs)
-      call graph_init
-      do i=1,itmax
-         xmean(i)=0d0
-         xsigma(i)=0d0
-      enddo
-c      mincfig=1
-c      maxcfig=nconfigs
-      wgt = 0d0
-c
-c     Main Integration Loop
-c
-      iter = 1
-      do while(iter .le. itmax)
-c
-c     Get integration point
-c
-         call sample_get_config(wgt,iter,ipole)
-         if (iter .le. itmax) then
-            ievent=ievent+1
-            call x_to_f_arg(ndim,ipole,mincfig,maxcfig,ninvar,wgt,x,p)
-            if (pass_point(p)) then
-               xzoomfact = 1d0
-               fx = dsig(p,wgt,0) !Evaluate function
-               if (xzoomfact .gt. 0d0) then
-                  wgt = wgt*fx*xzoomfact
-               else
-                  wgt = -xzoomfact
-               endif
-               if (wgt .gt. 0d0) call graph_point(p,wgt) !Update graphs
-            else
-               fx =0d0
-               wgt=0d0
-            endif
-            if (nzoom .le. 0) then
-               call sample_put_point(wgt,x(1),iter,ipole) !Store result
-            else
-               nzoom = nzoom -1
-               ievent=ievent-1
-            endif
-         endif
-         if (wgt .gt. 0d0) kevent=kevent+1    
-c
-c     Write out progress/histograms
-c
-         if (kevent .ge. nwrite) then
-            nwrite = nwrite+ncall*itmax/nsteps
-            nwrite = min(nwrite,ncall*itmax)
-c            open(unit=22,file=where_file,status='old',
-c     &           access='append',err=99)
-c            write(22,'(2i15)') ievent,kevent
-c            close(22)
-            call graph_store
-         endif
- 99   enddo
-c
-c     All done
-c
-c      open(unit=66,file='.sample_warn',status='old',access='append')      
-c      write(66,*) 'Finished sample',ievent,kevent,wgt
-c      if (wgt .ne. -1) then
-c         do j=1,5
-c            jmax = min(ndim,4*j)
-c            write(66,'(4e19.12)') (x(i),i=(j-1)*4+1,jmax)
-c         enddo
-c      endif
-c      close(66)
-
-      open(unit=66,file='results.dat',status='unknown')
-      i=1
-      do while(xmean(i) .ne. 0 .and. i .lt. cur_it)
-         i=i+1
-      enddo
-      cur_it = i
-      i = cur_it - 3
-      if (i .gt. 0) then
-      tmean = 0d0
-      tsigma = 0d0
-      tdem = 0d0
-      do while (xmean(i) .ne. 0 .and. i .lt. cur_it)
-         tmean = tmean+xmean(i)*xmean(i)**2/xsigma(i)**2
-         tdem = tdem+xmean(i)**2/xsigma(i)**2
-         tsigma = tsigma + xmean(i)**2/ xsigma(i)**2
-         i=i+1
-      enddo
-c      tmean = tmean/dble(i-1)
-c      tsigma= sqrt(tsigma)/dble(i-1)
-      tmean = tmean/tsigma
-c      tsigma= sqrt(tsigma)/dble(3)
-      tsigma= tmean/sqrt(tsigma)
-      nun = n_unwgted()
-
-      chi2 = 0d0
-      do i = cur_it-3,cur_it-1
-         chi2 = chi2+(xmean(i)-tmean)**2/xsigma(i)**2
-      enddo
-      chi2 = chi2/2d0   !Since using only last 3, n-1=2
-c      tsigma = tsigma*sqrt(chi2)
-c      write(*,*) "chi2 / dof=", chi2
-      write(*,'(a)') '-----------------------------------------------------'
-      write(*,'(a)') '---------------------------'
-      write(*,'(a,e12.4)') ' Results Last 3 iters:  Integral = ',tmean
-      write(*,'(25x,a,e12.4)') 'Std dev = ',tsigma
-      write(*,'(17x,a,f12.4)') 'Chi**2 per DoF. =',chi2
-      write(*,'(a)') '-----------------------------------------------------'
-      write(*,'(a)') '---------------------------'
-
-      if (nun .lt. 0) nun=-nun   !Case when wrote maximun number allowed
-      if (chi2 .gt. 1) tsigma=tsigma*sqrt(chi2)
-      if (icor .eq. 0) then
-         write(66,'(3e12.5,2i9,i5,i9,e10.3)')tmean,tsigma,0.0,kevent,nw,
-     &     cur_it-1,nun, nun/max(tmean,1d-99)
-      else
-         write(66,'(3e12.5,2i9,i5,i9,e10.3)')tmean,0.0,tsigma,kevent,nw,
-     &     cur_it-1,nun, nun/max(tmean,1d-99)
-      endif
-c      do i=1,cur_it-1
-      do i=cur_it-3,cur_it-1
-         write(66,'(i4,4e15.5)') i,xmean(i),xsigma(i),xeff(i),xwmax(i)
-      enddo
-      close(66)
-      else
-         open(unit=66,file='results.dat',status='unknown')
-         write(66,'(3e12.5,2i9,i5,i9,e10.3)')0,0,0.0,kevent,nw,
-     &     1,0, 0
-         write(66,'(i4,4e15.5)') 1,0,0,0,0
-         close(66)
-
-      endif
-      
-      end
-
 
       subroutine sample_writehtm()
 c***********************************************************************
@@ -1336,10 +1116,10 @@ c     &        dble(xbin_max-xbin_min),bwjac
       endif
       end
 
-      subroutine sample_result(mean, sigma)
+      subroutine sample_result(mean, sigma, itmin)
       implicit none
       double precision mean, sigma
-      integer i,cur_it
+      integer i,cur_it,itmin,itsum
       double precision tsigma,tmean,tsig,tdem
 
       double precision     xmean(99),xsigma(99),xwmax(99),xeff(99)
@@ -1351,7 +1131,9 @@ c     &        dble(xbin_max-xbin_min),bwjac
          i=i+1
       enddo
       cur_it = i
-      i = cur_it - 3
+c     Use the last 3 iterations or cur_it-1 if cur_it-1 >= itmin
+      itsum = min(max(itmin,cur_it-1),3)
+      i = cur_it - itsum
       tmean = 0d0
       tsigma = 0d0
       if (i .gt. 0) then
@@ -1393,7 +1175,7 @@ c
 c
 c     Local
 c
-      integer i, j, k, knt, non_zero, nun
+      integer i, j, k, knt, non_zero, nun,itsum
       double precision vol,xnmin,xnmax,tot,xdum,tmp1,chi2tmp
       double precision rc, dr, xo, xn, x(maxinvar), dum(ng-1)
       save vol,knt
@@ -1447,8 +1229,8 @@ c
       common /to_error/reliable
 
       double precision twgt, maxwgt,swgt(maxevents)
-      integer                             lun, nw
-      common/to_unwgt/twgt, maxwgt, swgt, lun, nw
+      integer                             lun, nw, itmin
+      common/to_unwgt/twgt, maxwgt, swgt, lun, nw, itmin
 
 
       real*8             wmax                 !This is redundant
@@ -1889,9 +1671,9 @@ c     Update weights in dsig (needed for subprocess group mode)
             xdum=dsig(0,0,2)
 c
 c     Add test to see if we have achieved desired accuracy 
-c     JA 8/17/2011 allow minimum 3 iterations instead of 5
+c     Allow minimum itmin iterations
 c
-            if (tsigma .gt. 0d0 .and. cur_it .gt. 3 .and. accur .gt. 0d0) then
+            if (tsigma .gt. 0d0 .and. cur_it .gt. itmin .and. accur .gt. 0d0) then
 
                xmean = tmean/tsigma
                xchi2 = (chi2/xmean/xmean-tsigma)/dble(cur_it-2)               
@@ -1930,7 +1712,7 @@ c 122              close(22)
 c
 c New check to see if we need to keep integrating this one or not.
 c
-            if (cur_it .gt. 3 .and. accur .lt. 0d0) then  !Check luminocity
+            if (cur_it .gt. itmin .and. accur .lt. 0d0) then  !Check luminocity
 c
 c             Lets get the actual number instead 
 c             tjs 5/22/2007
@@ -1941,16 +1723,18 @@ c               write(*,*) 'Estimated events',nun, accur
                nun = neventswritten
 c               tmp1 = tmean / tsigma
 c               chi2tmp = (chi2/tmp1/tmp1-tsigma)/dble(cur_it-2)
-c     Calculate chi2 for last three events (ja 03/11)
+c     Calculate chi2 for last few iterations (ja 03/11)
                tmeant = 0d0
                tsigmat = 0d0
-               do i=cur_it-3,cur_it-1
+c     Use the last 3 iterations or cur_it-1 if cur_it-1 >= itmin but < 3
+               itsum = min(max(itmin,cur_it-1),3)
+               do i=cur_it-itsum,cur_it-1
                   tmeant = tmeant+ymean(i)*ymean(i)**2/ysigma(i)**2
                   tsigmat = tsigmat + ymean(i)**2/ ysigma(i)**2
                enddo
                tmeant = tmeant/tsigmat
                chi2tmp = 0d0
-               do i = cur_it-3,cur_it-1
+               do i = cur_it-itsum,cur_it-1
                   chi2tmp = chi2tmp+(ymean(i)-tmeant)**2/ysigma(i)**2
                enddo
                chi2tmp = chi2tmp/2d0  !Since using only last 3, n-1=2

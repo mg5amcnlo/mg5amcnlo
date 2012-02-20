@@ -32,6 +32,9 @@ logger = logging.getLogger('madgraph.ufo_parsers')
 
 # PLY lexer class
 
+class ModelError(MadGraph5Error):
+    """Appropriate Error for a wrong parsing"""
+
 class UFOExpressionParser:
     """A base class for parsers for algebraic expressions coming from UFO."""
 
@@ -182,8 +185,7 @@ class UFOExpressionParser:
 
     def p_error(self, p):
         if p:
-            logger.error("Syntax error at '%s'" % p.value)
-            raise MadGraph5Error
+            raise ModelError("Syntax error at '%s' in '%s'" % (p.value, self.f))
         else:
             logger.error("Syntax error at EOF")
         self.parsed_string = "Error"

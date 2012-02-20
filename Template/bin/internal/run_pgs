@@ -1,0 +1,26 @@
+#!/bin/bash
+#
+#  This runs pgs on the pythia_events.hep
+#
+#  Usage: run_pgs [pgsdir [para/serial [run_name]]]
+#  where pgsdir is the path to the pgs executable
+
+pgsdir=$1
+main=`pwd`
+run=$2
+
+if [ ! -e ../Cards/pgs_card.dat ]; then
+  echo "No pgs_card.dat found. Quitting..."
+  exit
+fi
+
+echo $$ >> ../myprocid
+
+export PDG_MASS_TBL=$pgsdir/mass_width_2004.mc
+
+  $pgsdir/pgs  --stdhep pythia_events.hep --nev 100000 --L0 --detector ../Cards/pgs_card.dat pgs_uncleaned_events.lhco \
+   && $pgsdir/clean_output -muon pgs_uncleaned_events.lhco pgs_events.lhco && \
+   touch pgs.done
+   
+# Remove tauola output file
+rm -f fort.45 > /dev/null

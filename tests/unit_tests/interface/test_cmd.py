@@ -12,11 +12,13 @@
 # For more information, please visit: http://madgraph.phys.ucl.ac.be
 #
 ################################################################################
+from cmd import Cmd
 """ Basic test of the command interface """
 
 import unittest
 import madgraph
 import madgraph.interface.cmd_interface as cmd
+import madgraph.interface.extended_cmd as ext_cmd
 import os
 
 
@@ -52,6 +54,26 @@ class TestValidCmd(unittest.TestCase):
         self.do(' ! cd /tmp; touch tmp_file')
         self.assertTrue(os.path.exists('/tmp/tmp_file'))
     
+    def test_help_category(self):
+        """Check that no help category are introduced by mistake.
+           If this test failes, this is due to a un-expected ':' in a command of
+           the cmd interface.
+        """
+        
+        category = set()
+        valid_command = [c for c in dir(self.cmd) if c.startswith('do_')]
+        
+        for command in valid_command:
+            obj = getattr(self.cmd,command)
+            if obj.__doc__ and ':' in obj.__doc__:
+                category.add(obj.__doc__.split(':',1)[0])
+                
+        target = set(['Not in help'])
+        self.assertEqual(target, category)
+        
+    
+    
+    
     
     def test_check_generate(self):
         """check if generate format are correctly supported"""
@@ -76,3 +98,51 @@ class TestValidCmd(unittest.TestCase):
         self.wrong(cmd.check_process_format, ' e+ > e+, (e+ > e- / z, e- > top')   
         self.wrong(cmd.check_process_format, 'e+ > ')
         self.wrong(cmd.check_process_format, 'e+ >')
+        
+    def test_output_default(self):
+        """check that if a export_dir is define before an output
+           a new one is propose"""
+           
+        cmd = self.cmd
+        cmd._export_dir = 'tmp'
+        cmd._curr_amps = 'dummy'
+        cmd._curr_model = {'name':'WHY'}
+        cmd.check_output([])
+        
+        self.assertNotEqual('tmp', cmd._export_dir)
+
+
+class TestExtendedCmd(unittest.TestCase):
+    """test the extension of cmd interface"""
+    
+    
+    def test_the_exit_from_child_cmd(self):
+        """ """
+        main = ext_cmd.Cmd()
+        child = ext_cmd.Cmd()
+        main.define_child_cmd_interface(child, interface=False)
+        self.assertEqual(main.child, child)
+        self.assertEqual(child.mother, main)        
+        
+        ret = main.do_quit('')
+        self.assertEqual(ret, None)
+        self.assertEqual(main.child, None)
+        ret = main.do_quit('')
+        self.assertEqual(ret, True)
+        
+    def test_the_exit_from_child_cmd2(self):
+        """ """
+        main = ext_cmd.Cmd()
+        child = ext_cmd.Cmd()
+        main.define_child_cmd_interface(child, interface=False)
+        self.assertEqual(main.child, child)
+        self.assertEqual(child.mother, main)        
+        
+        ret = child.do_quit('')
+        self.assertEqual(ret, True)
+        self.assertEqual(main.child, None)
+        #ret = main.do_quit('')
+        #self.assertEqual(ret, True)        
+         
+    
+

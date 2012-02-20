@@ -45,7 +45,7 @@ import madgraph.core.diagram_generation as diagram_generation
 
 import madgraph.various.rambo as rambo
 
-from madgraph import MG5DIR, MadGraph5Error, InvalidCmd
+from madgraph import MG5DIR, InvalidCmd
 
 import models.model_reader as model_reader
 import aloha.template_files.wavefunctions as wavefunctions
@@ -95,7 +95,6 @@ class MatrixElementEvaluator(object):
         """Calculate the matrix element and evaluate it for a phase space point
            output is either m2, amp, jamp
         """
-
         if full_model:
             self.full_model = full_model
 
@@ -256,7 +255,7 @@ class MatrixElementEvaluator(object):
         masses = rambo.FortranList(nfinal)
         for i in range(nfinal):
             masses[i+1] = mass[nincoming + i]
-
+        
         if nincoming == 1:
 
             # Momenta for the incoming particle
@@ -422,10 +421,10 @@ def check_processes(processes, param_card = None, quick = []):
     elif isinstance(processes, base_objects.ProcessList):
         pass
     else:
-        raise MadGraph5Error("processes is of non-supported format")
+        raise InvalidCmd("processes is of non-supported format")
 
     if not processes:
-        raise MadGraph5Error("No processes given")
+        raise InvalidCmd("No processes given")
 
     model = processes[0].get('model')
 
@@ -682,7 +681,7 @@ def check_gauge(processes, param_card = None):
     elif isinstance(processes, base_objects.ProcessList):
         pass
     else:
-        raise MadGraph5Error("processes is of non-supported format")
+        raise InvalidCmd("processes is of non-supported format")
 
     assert processes, "No processes given"
 
@@ -885,7 +884,7 @@ def check_lorentz(processes, param_card = None):
     elif isinstance(processes, base_objects.ProcessList):
         pass
     else:
-        raise MadGraph5Error("processes is of non-supported format")
+        raise InvalidCmd("processes is of non-supported format")
 
     assert processes, "No processes given"
 
