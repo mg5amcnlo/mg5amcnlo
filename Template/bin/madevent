@@ -162,12 +162,9 @@ except:
     print error
     pass
 
-try:
-    # Remove lock file
-except:
-    pass
 
 try:
+    # Remove lock file
     os.remove(os.path.join(root_path,os.pardir, 'RunWeb'))
 except:
     pass
