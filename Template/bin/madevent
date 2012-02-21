@@ -159,6 +159,10 @@ try:
     if cmd_line.history[-1] not in ['EOF','quit','exit']:
         cmd_line.results.store_result()
     # Remove lock file
+except:
+    pass
+
+try:
     os.remove(os.path.join(root_path,os.pardir, 'RunWeb'))
 except:
     pass

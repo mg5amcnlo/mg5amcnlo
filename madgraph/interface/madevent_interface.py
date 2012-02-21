@@ -396,21 +396,21 @@ class HelpToCmd(object):
         logger.info("syntax: pythia [RUN] [--run_options]")
         logger.info("-- run pythia on RUN (current one by default)")
         self.run_options_help([('-f','answer all question by default'),
-                               ('-tag=', 'define the tag for the pythia run'),
+                               ('--tag=', 'define the tag for the pythia run'),
                                ('--no_default', 'not run if pythia_card not present')])        
                 
     def help_pgs(self):
         logger.info("syntax: pgs [RUN] [--run_options]")
         logger.info("-- run pgs on RUN (current one by default)")
         self.run_options_help([('-f','answer all question by default'),
-                               ('-tag=', 'define the tag for the pgs run'),
+                               ('--tag=', 'define the tag for the pgs run'),
                                ('--no_default', 'not run if pgs_card not present')]) 
 
     def help_delphes(self):
         logger.info("syntax: delphes [RUN] [--run_options]")
         logger.info("-- run delphes on RUN (current one by default)")
         self.run_options_help([('-f','answer all question by default'),
-                               ('-tag=', 'define the tag for the delphes run'),
+                               ('--tag=', 'define the tag for the delphes run'),
                                ('--no_default', 'not run if delphes_card not present')]) 
        
 #===============================================================================
@@ -792,7 +792,7 @@ class CheckValidForCmd(object):
                 args.append('-f')
 
         if len(tmp_args) == 0:
-            self.help_clean()
+            self.help_remove()
             raise self.InvalidCmd('clean command require the name of the run to clean')
         elif len(tmp_args) == 1:
             return tmp_args[0], tag, ['all']
@@ -1216,8 +1216,8 @@ class CompleteForCmd(CheckValidForCmd):
         
     def complete_pythia(self,text, line, begidx, endidx):
         "Complete the pythia command"
-        
         args = self.split_arg(line[0:begidx], error=False)
+
         if len(args) == 1:
             #return valid run_name
             data = glob.glob(pjoin(self.me_dir, 'Events', '*','unweighted_events.lhe.gz'))
@@ -1229,7 +1229,7 @@ class CompleteForCmd(CheckValidForCmd):
                 tmp2 = self.list_completion(text, self._run_options + ['-f', 
                                                 '--no_default', '--tag='], line)
                 return tmp1 + tmp2
-        else:
+        elif line[-1] != '=':
             return self.list_completion(text, self._run_options + ['-f', 
                                                  '--no_default','--tag='], line)
 
@@ -1728,6 +1728,34 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
             self.exec_cmd('pythia --no_default', postcmd=False, printcmd=False)
             # pythia launches pgs/delphes if needed
             self.store_result()
+            self.print_results_in_shell(self.results.current)
+            
+            
+    def print_results_in_shell(self, data):
+        """Have a nice results prints in the shell,
+        data should be of type: gen_crossxhtml.OneTagResults"""
+
+        logger.info("  === Results Summary for run: %s tag: %s ===\n" % (data['run_name'],data['tag']))
+        if self.ninitial == 1:
+            logger.info("     Width :   %.4g +- %.4g GeV" % (data['cross'], data['error']))
+        else:
+            logger.info("     Cross-section :   %.4g +- %.4g pb" % (data['cross'], data['error']))
+        logger.info("     Nb of events :  %s" % data['nb_event'] )
+        if data['cross_pythia']:
+            error = data.get_pythia_error(data['cross'], data['error'], 
+                                        data['cross_pythia'], data['nb_event'])
+            nb_event = 0
+            if data['cross']:
+                nb_event = int(0.5+(data['nb_event'] * data['cross_pythia'] /data['cross']))
+            
+            if self.ninitial == 1:
+                logger.info("     Matched Width :   %.4g +- %.4g GeV" % (data['cross_pythia'], error))
+            else:
+                logger.info("     Matched Cross-section :   %.4g +- %.4g pb" % (data['cross'], error))            
+            logger.info("     Nb of events after Matching :  %s" % nb_event)
+        logger.info(" " )
+        
+            
     
     ############################################################################      
     def do_calculate_decay_widths(self, line):
@@ -1921,6 +1949,7 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
                                   (pjoin(self.me_dir, 'Events'), self.run_name))
 
         self.update_status('', level='parton')
+        self.print_results_in_shell(self.results.current)   
         self.results.def_current(None)
             
     ############################################################################      
@@ -2413,10 +2442,19 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
         if tag:
             to_suppress = [f for f in to_suppress if tag in f]
             if 'parton' in mode or 'all' in mode:
-                if os.path.exists(pjoin(self.me_dir, 'Events', run, 'events.lhe.gz')):
-                    to_suppress.append('events.lhe.gz')
-                if os.path.exists(pjoin(self.me_dir, 'Events', run, 'unweighted_events.lhe.gz')):
-                    to_suppress.append('unweighted_events.lhe.gz')
+                try:
+                    if self.results[run][0]['tag'] != tag:
+                        raise Exception, 'dummy'
+                except:
+                    pass
+                else:
+                    nb_rm = len(to_suppress)
+                    if os.path.exists(pjoin(self.me_dir, 'Events', run, 'events.lhe.gz')):
+                        to_suppress.append('events.lhe.gz')
+                    if os.path.exists(pjoin(self.me_dir, 'Events', run, 'unweighted_events.lhe.gz')):
+                        to_suppress.append('unweighted_events.lhe.gz')
+                    if nb_rm != len(to_suppress):
+                        logger.warning('Be carefull that partonic information are on the point to be removed.')
         if 'all' in mode:
             pass # suppress everything
         else:
@@ -2454,21 +2492,27 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
 
         # Remove file in SubProcess directory
         if 'all' in mode or 'channel' in mode:
-            to_suppress = glob.glob(pjoin(self.me_dir, 'SubProcesses', '%s*' % run))
-            to_suppress += glob.glob(pjoin(self.me_dir, 'SubProcesses', '*','%s*' % run))
-            to_suppress += glob.glob(pjoin(self.me_dir, 'SubProcesses', '*','*','%s*' % run))
-
-            if '-f' in args or len(to_suppress) == 0:
-                ans = 'y'
+            try:
+                if self.results[run][0]['tag'] != tag:
+                    raise Exception, 'dummy'
+            except:
+                pass
             else:
-                question = 'Do you want to suppress the following files?\n     %s' % \
+                to_suppress = glob.glob(pjoin(self.me_dir, 'SubProcesses', '%s*' % run))
+                to_suppress += glob.glob(pjoin(self.me_dir, 'SubProcesses', '*','%s*' % run))
+                to_suppress += glob.glob(pjoin(self.me_dir, 'SubProcesses', '*','*','%s*' % run))
+
+                if '-f' in args or len(to_suppress) == 0:
+                    ans = 'y'
+                else:
+                    question = 'Do you want to suppress the following files?\n     %s' % \
                                '\n    '.join(to_suppress)
-                ans = self.ask(question, 'y', choices=['y','n'], timeout = self.timeout)
+                    ans = self.ask(question, 'y', choices=['y','n'], timeout = self.timeout)
 
-            if ans == 'y':
-                for file2rm in to_suppress:
-                    os.remove(file2rm)
-
+                if ans == 'y':
+                    for file2rm in to_suppress:
+                        os.remove(file2rm)
+                        
         if 'banner' in mode:
             to_suppress = glob.glob(pjoin(self.me_dir, 'Events', run, '*'))
             if tag:
@@ -3084,8 +3128,14 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
             new_tag = True
         elif not self.run_name in self.results and level =='parton':
             pass # No results yet, so current tag is fine
+        elif not self.run_name in self.results:
+            #This is only for case when you want to trick the interface
+            logger.warning('Trying to run data on unknown run.')
+            self.results.add_run(name, self.run_card)
+            self.results.update('add run %s' % name, 'all', makehtml=False)
         else:
             for tag in upgrade_tag[level]:
+                
                 if getattr(self.results[self.run_name][-1], tag):
                     # LEVEL is already define in the last tag -> need to switch tag
                     tag = self.get_available_tag()
@@ -3380,8 +3430,9 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
                 
             if mode.isdigit():
                 mode = name[mode]
-                
+            auto = False
             if mode == 'auto':
+                auto = True
                 if not os.path.exists(pjoin(self.me_dir, 'Cards', 'pythia_card.dat')):
                     mode = 'parton'
                 elif os.path.exists(pjoin(self.me_dir, 'Cards', 'pgs_card.dat')):
@@ -3391,22 +3442,24 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
                 else: 
                     mode = 'pythia'
         logger.info('Will run in mode %s' % mode)
-            
-        # Clean the pointless card
-        if mode == 'parton':
-            if os.path.exists(pjoin(self.me_dir,'Cards','pythia_card.dat')):
-                os.remove(pjoin(self.me_dir,'Cards','pythia_card.dat'))
-            if os.path.exists(pjoin(self.me_dir,'Cards','pgs_card.dat')):
-                os.remove(pjoin(self.me_dir,'Cards','pgs_card.dat'))
-            if os.path.exists(pjoin(self.me_dir,'Cards','delphes_card.dat')):
-                os.remove(pjoin(self.me_dir,'Cards','delphes_card.dat'))
-        elif mode == 'pgs':
-            if os.path.exists(pjoin(self.me_dir,'Cards','delphes_card.dat')):
-                os.remove(pjoin(self.me_dir,'Cards','delphes_card.dat'))
-        elif mode == 'delphes':
-            if os.path.exists(pjoin(self.me_dir,'Cards','pgs_card.dat')):
-                os.remove(pjoin(self.me_dir,'Cards','pgs_card.dat'))                                         
-          
+        
+        def clean_pointless_card(mode):
+            """ Clean the pointless card """
+            if mode == 'parton':
+                if os.path.exists(pjoin(self.me_dir,'Cards','pythia_card.dat')):
+                    os.remove(pjoin(self.me_dir,'Cards','pythia_card.dat'))
+                if os.path.exists(pjoin(self.me_dir,'Cards','pgs_card.dat')):
+                    os.remove(pjoin(self.me_dir,'Cards','pgs_card.dat'))
+                if os.path.exists(pjoin(self.me_dir,'Cards','delphes_card.dat')):
+                    os.remove(pjoin(self.me_dir,'Cards','delphes_card.dat'))
+            elif mode == 'pgs':
+                if os.path.exists(pjoin(self.me_dir,'Cards','delphes_card.dat')):
+                    os.remove(pjoin(self.me_dir,'Cards','delphes_card.dat'))
+            elif mode == 'delphes':
+                if os.path.exists(pjoin(self.me_dir,'Cards','pgs_card.dat')):
+                    os.remove(pjoin(self.me_dir,'Cards','pgs_card.dat'))
+                                                             
+        clean_pointless_card(mode)
         # Now that we know in which mode we are check that all the card
         #exists (copy default if needed)
 
@@ -3424,39 +3477,42 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
         if force:
             return
 
-        # Ask the user if he wants to edit any of the files
-        #First create the asking text
-        question = """Do you want to edit one cards (press enter to bypass editing)?
+        def get_question(mode):
+            # Ask the user if he wants to edit any of the files
+            #First create the asking text
+            question = """Do you want to edit one cards (press enter to bypass editing)?
   1 / param   : param_card.dat (be carefull about parameter consistency, especially widths)
   2 / run     : run_card.dat\n"""
-        possible_answer = ['0','done', 1, 'param', 2, 'run']
-        if mode in ['pythia', 'pgs', 'delphes']:
-            question += '  3 / pythia  : pythia_card.dat\n'
-            possible_answer.append(3)
-            possible_answer.append('pythia')
-        if mode == 'pgs':
-            question += '  4 / pgs     : pgs_card.dat\n'
-            possible_answer.append(4)
-            possible_answer.append('pgs')            
-        elif mode == 'delphes':
-            question += '  5 / delphes : delphes_card.dat\n'
-            question += '  6 / trigger : delphes_trigger.dat\n'
-            possible_answer.append(5)
-            possible_answer.append('delphes')
-            possible_answer.append(6)
-            possible_answer.append('trigger')
-        if self.configuration['madanalysis_path']:
-            question += '  9 / plot    : plot_card.dat\n'
-            possible_answer.append(9)
-            possible_answer.append('plot')
-        card = {0:'done', 1:'param', 2:'run', 3:'pythia', 
-                  4: 'pgs', 5: 'delphes', 6:'trigger',9:'plot'}
-        # Add the path options
-        question += '  Path to a valid card.\n'
-     
+            possible_answer = ['0','done', 1, 'param', 2, 'run']
+            if mode in ['pythia', 'pgs', 'delphes']:
+                question += '  3 / pythia  : pythia_card.dat\n'
+                possible_answer.append(3)
+                possible_answer.append('pythia')
+            if mode == 'pgs':
+                question += '  4 / pgs     : pgs_card.dat\n'
+                possible_answer.append(4)
+                possible_answer.append('pgs')            
+            elif mode == 'delphes':
+                question += '  5 / delphes : delphes_card.dat\n'
+                question += '  6 / trigger : delphes_trigger.dat\n'
+                possible_answer.append(5)
+                possible_answer.append('delphes')
+                possible_answer.append(6)
+                possible_answer.append('trigger')
+            if self.configuration['madanalysis_path']:
+                question += '  9 / plot    : plot_card.dat\n'
+                possible_answer.append(9)
+                possible_answer.append('plot')
+            card = {0:'done', 1:'param', 2:'run', 3:'pythia', 
+                      4: 'pgs', 5: 'delphes', 6:'trigger',9:'plot'}
+            # Add the path options
+            question += '  Path to a valid card.\n'
+            return question, possible_answer, card
+        
         # Loop as long as the user is not done.
         answer = 'no'
         while answer != 'done':
+            question, possible_answer, card = get_question(mode)
             answer = self.ask(question, '0', possible_answer, timeout=int(1.5*self.timeout), path_msg='enter path')
             if answer.isdigit():
                 answer = card[int(answer)]
@@ -3472,10 +3528,23 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
                     card_name = self.ask('Fail to determine the type of the file. Please specify the format',
                    ['param_card.dat', 'run_card.dat','pythia_card.dat','pgs_card.dat',
                     'delphes_card.dat', 'delphes_trigger.dat','plot_card.dat'])
-
-                logger.info('copy %s as %s' % (answer, card_name))
-                files.cp(answer, pjoin(self.me_dir, 'Cards', card_name))
-
+                elif card_name != 'banner':
+                    logger.info('copy %s as %s' % (answer, card_name))
+                    files.cp(answer, pjoin(self.me_dir, 'Cards', card_name))
+                elif card_name == 'banner':
+                    banner_mod.split_banner(answer, self.me_dir, proc_card=False)
+                    logger.info('Splitting the banner in it\'s component')
+                    if auto:
+                        # Re-compute the current mode
+                        mode = 'parton'
+                        for level in ['delphes','pgs','pythia']:
+                            if os.path.exists(pjoin(self.me_dir,'Cards','%s_card.dat' % level)):
+                                mode = level
+                                break
+                    else:
+                        clean_pointless_card(mode)
+                    
+                    
     ############################################################################
     def ask_pythia_run_configuration(self, mode=None, force=False):
         """Ask the question when launching pythia"""
@@ -3677,25 +3746,27 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
         """
         
         text = open(path).read()
-        if '<MGVersion>' in text:
+        text = re.findall('(<MGVersion>|CEN_max_tracker|#TRIGGER CARD|parameter set name|muon eta coverage|MSTP|MSTU|Begin Minpts|gridpack|ebeam1|BLOCK|DECAY)', text, re.I)
+        text = [t.lower() for t in text]
+        if '<mgversion>' in text:
             return 'banner'
-        if 'CEN_max_tracker' in text:
+        elif 'cen_max_tracker' in text:
             return 'delphes_card.dat'
-        elif '#TRIGGER CARD' in text:
+        elif '#trigger card' in text:
             return 'delphes_trigger.dat'
         elif 'parameter set name' in text:
             return 'pgs_card.dat'
         elif 'muon eta coverage' in text:
             return 'pgs_card.dat'
-        elif 'MSTP' in text:
+        elif 'mstp' in text:
             return 'pythia_card.dat'
-        elif 'MSTU' in text:
+        elif 'mstu' in text:
             return 'pythia_param_card.dat'
-        elif 'Begin Minpts' in text:
+        elif 'begin minpts' in text:
             return 'plot_card.dat'
         elif 'gridpack' in text and 'ebeam1' in text:
             return 'run_card.dat'
-        elif 'BLOCK' in text.upper() and 'DECAY' in text.upper(): 
+        elif 'block' in text and 'decay' in text: 
             return 'param_card.dat'
         else:
             return 'unknown'
