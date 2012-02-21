@@ -347,7 +347,7 @@ class ProcessExporterFortran(object):
 
         #copy Helas Template
         cp(MG5DIR + '/aloha/template_files/Makefile_F', write_dir+'/makefile')
-        if any([len(d)==4 and d[3] for d in wanted_lorentz]):
+        if any(['L' in d[1] for d in wanted_lorentz]):
             cp(MG5DIR + '/aloha/template_files/aloha_functions_loop.f', write_dir+'/aloha_functions.f')
         else:
             cp(MG5DIR + '/aloha/template_files/aloha_functions.f', write_dir+'/aloha_functions.f')

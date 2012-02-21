@@ -43,6 +43,8 @@ import madgraph.iolibs.export_v4 as export_v4
 import madgraph.iolibs.save_load_object as save_load_object
 import madgraph.iolibs.helas_call_writers as helas_call_writers
 import models.import_ufo as models
+import aloha.create_aloha as create_aloha
+
 from madgraph import MadGraph5Error
 
 _file_path = os.path.dirname(os.path.realpath(__file__))
@@ -89,6 +91,9 @@ class LoopExporterTest(unittest.TestCase):
         LoopMatrixElement given in argument to check the correct behavior
         of the loop exporter"""
         
+        # Cleaning last process directory
+        shutil.rmtree(_proc_file_path)
+        
         self.loopExporter.copy_v4template(self.myloopmodel.get('name'))
         self.loopExporter.generate_loop_subprocess(\
                             loopME, self.fortran_model)
@@ -127,6 +132,27 @@ class LoopExporterTest(unittest.TestCase):
         for file in files:
             self.assertTrue(os.path.exists(os.path.join(_proc_file_path\
                              ,'SubProcesses',proc_name,file)))
+    
+    def test_aloha_loop_HELAS_subroutines(self):
+        """ Test that Aloha correctly processes loop HELAS subroutines. """
+        
+        aloha_model = create_aloha.AbstractALOHAModel(self.myloopmodel.get('name'))
+        target_lorentz=[(('R2_QQ_1',), (), 0), (('FFV1',), ('L',), 1)]
+        target_lorentz+=[(('FFV1',), ('L',), 0), (('VVVV3',), ('L',), 0)]
+        target_lorentz+=[(('R2_GG_1', 'R2_GG_2'), (), 0), (('R2_GG_1', 'R2_GG_3'), (), 0)]
+        target_lorentz+=[(('FFV1',), ('L',), 3), (('VVVV3',), ('L',), 1), (('VVVV4',), ('L',), 0)]
+        target_lorentz+=[(('VVV1',), (), 0), (('GHGHG',), ('L',), 0), (('VVV1',), (), 1)]
+        target_lorentz+=[(('GHGHG',), ('L',), 1),(('VVVV1',), ('L',), 0), (('VVVV1',), ('L',), 1)]
+        target_lorentz+=[(('VVV1',), ('L',), 1), (('VVV1',), ('L',), 0),(('VVV1',), ('L',), 0)]
+        target_lorentz+=[(('FFV1',), (), 2), (('FFV1',), (), 3),(('FFV1',), (), 0)]
+        target_lorentz+=[(('FFV1',), (), 1), (('VVVV4',), ('L',), 1), (('R2_GG_1',), (), 0)]
+        aloha_model.compute_subset(target_lorentz)
+        
+        for list_l_name, tag, outgoing in target_lorentz:
+            entry_tuple=(list_l_name[0]+''.join(tag),outgoing)
+            self.assertTrue(entry_tuple in aloha_model.keys())
+            AbstractRoutine=aloha_model[entry_tuple]
+            self.assertEqual(list(tag),AbstractRoutine.tag)
         
     def test_LoopProcessExporterFortranSA_ddx_uux(self):
         """Test the StandAlone output for different processes.
@@ -291,8 +317,24 @@ class LoopExporterTest(unittest.TestCase):
         myloopamplitude.set('process', myloopproc)
         myloopamplitude.generate_diagrams()
         myloopME=loop_helas_objects.LoopHelasMatrixElement(myloopamplitude)
-        self.check_output_sanity(myloopME)    
-
+        self.check_output_sanity(myloopME)
+        # Further Check that the right ALOHA subroutines are created
+        HELAS_files=['aloha_functions.f', 'FFV1_0.f', 'FFV1_1.f', 'FFV1_2.f', \
+                     'FFV1_3.f', 'FFV1L_0.f', 'FFV1L_1.f', 'FFV1L_3.f', \
+                     'GHGHG_0.f', 'GHGHG_1.f', 'GHGHG_2.f', 'GHGHG_3.f', \
+                     'GHGHGL_0.f', 'GHGHGL_1.f', 'R2_GG_1_0.f', \
+                     'R2_GG_1_R2_GG_2_0.f', 'R2_GG_1_R2_GG_3_0.f', \
+                     'R2_GG_2_0.f', 'R2_GG_3_0.f', 'R2_QQ_1_0.f', 'VVV1_0.f', \
+                     'VVV1_1.f', 'VVV1L_0.f', 'VVV1L_1.f', 'VVVV1_0.f', \
+                     'VVVV1_1.f', 'VVVV1_2.f', 'VVVV1_3.f', 'VVVV1_4.f', \
+                     'VVVV1L_0.f', 'VVVV1L_1.f', 'VVVV3_0.f', 'VVVV3_1.f', \
+                     'VVVV3_2.f', 'VVVV3_3.f', 'VVVV3_4.f', 'VVVV3L_0.f', \
+                     'VVVV3L_1.f', 'VVVV4_0.f', 'VVVV4_1.f', 'VVVV4_2.f', \
+                     'VVVV4_3.f', 'VVVV4_4.f', 'VVVV4L_0.f', 'VVVV4L_1.f']
+        for hFile in HELAS_files:
+            self.assertTrue(os.path.exists(os.path.join(_proc_file_path\
+                                              ,'Source','DHELAS',hFile)))        
+        
     def notest_LoopProcessExporterFortranSA_dg_dg(self):
         """Test the StandAlone output for different processes.
         """

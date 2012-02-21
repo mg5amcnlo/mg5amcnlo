@@ -184,7 +184,8 @@ class LoopHelasMatrixElementTest(unittest.TestCase):
                                 contribution_list.append(j)
                         if verbose:
                             print "Amplitude number",amp['number'],\
-                            "contributes to the following color basis elements",contribution_list                      
+                            "contributes to the following color basis elements",contribution_list
+        return myME
 
     def check_LHME_individual_diag_sanity(self,loopAmplitude, process,\
             mode='collective', selection=None, verbose=False, checkColor=True):
@@ -528,7 +529,8 @@ class LoopHelasMatrixElementTest(unittest.TestCase):
                                             contribution_list.append(j)
                                     if verbose:
                                         print "CT amplitude number",amp['number'],\
-                                        "contributes to the following loop color basis elements",contribution_list                                                                                
+                                        "contributes to the following loop color basis elements",contribution_list
+        return myloopME                                                                              
     
     def test_helas_diagrams_ddx_uux(self):
         """Test the generation of the helas diagrams for the process dd~>uu
@@ -686,7 +688,17 @@ class LoopHelasMatrixElementTest(unittest.TestCase):
         myloopamplitude.set('process', myloopproc)
         myloopamplitude.generate_diagrams()
         
-        self.check_LHME_individual_diag_sanity(myloopamplitude,myloopproc)
+        ME=self.check_LHME_individual_diag_sanity(myloopamplitude,myloopproc)
+        target_lorentz=[(('R2_QQ_1',), (), 0), (('FFV1',), ('L',), 1)]
+        target_lorentz+=[(('FFV1',), ('L',), 0), (('VVVV3',), ('L',), 0)]
+        target_lorentz+=[(('R2_GG_1', 'R2_GG_2'), (), 0), (('R2_GG_1', 'R2_GG_3'), (), 0)]
+        target_lorentz+=[(('FFV1',), ('L',), 3), (('VVVV3',), ('L',), 1), (('VVVV4',), ('L',), 0)]
+        target_lorentz+=[(('VVV1',), (), 0), (('GHGHG',), ('L',), 0), (('VVV1',), (), 1)]
+        target_lorentz+=[(('GHGHG',), ('L',), 1),(('VVVV1',), ('L',), 0), (('VVVV1',), ('L',), 1)]
+        target_lorentz+=[(('VVV1',), ('L',), 1), (('VVV1',), ('L',), 0),(('VVV1',), ('L',), 0)]
+        target_lorentz+=[(('FFV1',), (), 2), (('FFV1',), (), 3),(('FFV1',), (), 0)]
+        target_lorentz+=[(('FFV1',), (), 1), (('VVVV4',), ('L',), 1), (('R2_GG_1',), (), 0)]
+        self.assertEqual(set(target_lorentz),set(ME.get_used_lorentz()))
 
     def test_helas_diagrams_gd_ggd(self):
 

@@ -1548,16 +1548,16 @@ class LoopHelasMatrixElement(helas_objects.HelasMatrixElement):
             if wa.get('interaction_id') == 0:
                 continue
             
-            tags = tuple(['C%s' % w for w in wa.get_conjugate_index()])
+            tags = ['C%s' % w for w in wa.get_conjugate_index()]
             if not ((isinstance(wa,helas_objects.HelasAmplitude) and \
                     wa.get('type')!='loop') or \
                   (isinstance(wa,helas_objects.HelasWavefunction) and \
                    not wa.get('is_loop'))): 
                 tags.append('L')
             
-            output.append((tuple(wa.get('lorentz')), tags, 
+            output.append((tuple(wa.get('lorentz')), tuple(tags), 
                                                      wa.find_outgoing_number()))
-            return output
+        return output
 
     def get_used_couplings(self):
         """Return a list with all couplings used by this

@@ -48,11 +48,12 @@ if '__main__' == __name__:
     logging.basicConfig(level=logging.INFO)
 
     my_proc_list = []
-    my_proc_list.append(('g g > h t t~',{'QCD':2,'QED':1},['QCD'],{'QCD':6,'QED':2}))
-    my_proc_list.append(('g g > h h t t~',{'QCD':2,'QED':2},['QCD'],{'QCD':6,'QED':4}))
+    #my_proc_list.append(('g g > h t t~',{'QCD':2,'QED':1},['QCD'],{'QCD':6,'QED':2}))
+    #my_proc_list.append(('g g > h h t t~',{'QCD':2,'QED':2},['QCD'],{'QCD':6,'QED':4}))
     # Just to check that th general setup is ok, let's try some trivial processes
-    #my_proc_list.append(('u u~ > d d~',{'QCD':2,'QED':0},['QCD'],{'QCD':6,'QED':0}))
-    #my_proc_list.append(('e+ e- > d d~',{'QED':2,'QCD':0},['QCD'],{'QCD':2,'QED':4}))
+    my_proc_list.append(('g g > d d~',{'QCD':2,'QED':0},['QCD'],{'QCD':6,'QED':0}))    
+    my_proc_list.append(('u u~ > d d~',{'QCD':2,'QED':0},['QCD'],{'QCD':6,'QED':0}))
+    my_proc_list.append(('e+ e- > d d~',{'QED':2,'QCD':0},['QCD'],{'QCD':2,'QED':4}))
     # Check of the gga R2
     #my_proc_list.append(('d~ d > g a',{'QED':1,'QCD':1},['QCD'],{'QCD':4,'QED':2}))
     #my_proc_list.append(('d~ d > g z',{'QED':1,'QCD':1},['QCD'],{'QCD':4,'QED':2}))
@@ -91,8 +92,8 @@ if '__main__' == __name__:
     # ML4.setup('/Users/Spooner/Documents/PhD/MadFKS/ML4ParrallelTest/NLOComp')
 
     # Create a MERunner object for GoSam
-    GoSam = loop_me_comparator.GoSamRunner()
-    GoSam.setup('/Users/Spooner/Documents/PhD/HEP_softs/GoSam_bis')
+    # GoSam = loop_me_comparator.GoSamRunner()
+    # GoSam.setup('/Users/Spooner/Documents/PhD/HEP_softs/GoSam_bis')
 
     # Create a MERunner object for MadLoop 5
     ML5 = loop_me_comparator.LoopMG5Runner()

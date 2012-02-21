@@ -4216,7 +4216,7 @@ class HelasMultiProcess(base_objects.PhysicsObject):
 
         for me in self.get('matrix_elements'):
             helas_list.extend(me.get_used_lorentz())
-
+                
         return list(set(helas_list))
 
     def get_used_couplings(self):
