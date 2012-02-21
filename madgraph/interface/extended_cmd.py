@@ -829,7 +829,12 @@ class Cmd(BasicCmd):
                     continue
                 prevname = name
                 cmdname=name[3:]
-                doc = getattr(self, name).__doc__
+                try:
+                    doc = getattr(self.cmd, name).__doc__
+                except:
+                    doc = None
+                if not doc:
+                    doc = getattr(self, name).__doc__
                 if not doc:
                     tag = "Documented commands"
                 elif ':' in doc:
