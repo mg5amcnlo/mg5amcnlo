@@ -92,7 +92,8 @@ class LoopExporterTest(unittest.TestCase):
         of the loop exporter"""
         
         # Cleaning last process directory
-        shutil.rmtree(_proc_file_path)
+        if os.path.exists(_proc_file_path):
+            shutil.rmtree(_proc_file_path)
         
         self.loopExporter.copy_v4template(self.myloopmodel.get('name'))
         self.loopExporter.generate_loop_subprocess(\
