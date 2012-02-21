@@ -63,7 +63,10 @@ import madgraph.iolibs.save_load_object as save_load_object
 import madgraph.interface.extended_cmd as cmd
 import madgraph.interface.tutorial_text as tutorial_text
 import madgraph.interface.launch_ext_program as launch_ext
+import madgraph.interface.madevent_interface as madevent_interface
+
 import madgraph.various.process_checks as process_checks
+import madgraph.various.banner as banner_module
 
 import models as ufomodels
 import models.import_ufo as import_ufo

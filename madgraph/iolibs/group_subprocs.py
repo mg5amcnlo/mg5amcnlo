@@ -39,7 +39,7 @@ import madgraph.iolibs.ufo_expression_parsers as parsers
 import aloha.create_aloha as create_aloha
 
 import models.sm.write_param_card as write_param_card
-from madgraph import MadGraph5Error, MG5DIR
+from madgraph import MG5DIR
 from madgraph.iolibs.files import cp, ln, mv
 _file_path = os.path.split(os.path.dirname(os.path.realpath(__file__)))[0] + '/'
 logger = logging.getLogger('madgraph.group_subprocs')
