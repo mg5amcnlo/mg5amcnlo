@@ -12,7 +12,7 @@
 # For more information, please visit: http://madgraph.phys.ucl.ac.be
 #
 ################################################################################
-"""A user friendly command line interface to access MadGraph features.
+"""A user friendly command line interface to access MadGraph features at LO.
    Uses the cmd package for command interpretation and tab completion.
 """
 
@@ -1064,7 +1064,7 @@ class CheckValidForCmdWeb(CheckValidForCmd):
 #===============================================================================
 # CompleteForCmd
 #===============================================================================
-class CompleteForCmd(CheckValidForCmd):
+class CompleteForCmd(object):
     """ The Series of help routine for the MadGraphCmd"""
     
  
@@ -1569,9 +1569,12 @@ class CompleteForCmd(CheckValidForCmd):
 #===============================================================================
 # MadGraphCmd
 #===============================================================================
-class MadGraphCmd(CmdExtended, HelpToCmd):
+class MadGraphCmd(CmdExtended, HelpToCmd, CheckValidForCmd, CompleteForCmd):
     """The command line processor of MadGraph"""    
 
+    writing_dir = '.'
+    timeout = 0 # time authorize to answer question [0 is no time limit]
+  
     # Options and formats available
     _display_opts = ['particles', 'interactions', 'processes', 'diagrams', 
                      'diagrams_text', 'multiparticles', 'couplings', 'lorentz', 
@@ -1599,6 +1602,19 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
     _curr_cpp_model = None
     _curr_exporter = None
     _done_export = False
+
+    def preloop(self):
+        """Initializing before starting the main loop"""
+
+        self.prompt = 'mg5>'
+        
+        # By default, load the UFO Standard Model
+        logger.info("Loading default model: sm")
+        self.do_import('model sm')
+        self.history.append('import model sm')
+        
+        # preloop mother
+        CmdExtended.preloop(self)
 
     
     def __init__(self, mgme_dir = '', *completekey, **stdin):
@@ -3765,87 +3781,6 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
             else: 
                 last_action_2 = 'none'
         
-
-#===============================================================================
-# MadGraphCmd
-#===============================================================================
-class MadGraphCmdWeb(MadGraphCmd, CheckValidForCmdWeb):
-    """The command line processor of MadGraph"""
- 
-    timeout = 1 # time authorize to answer question [0 is no time limit]
-    
-    def __init__(self, *arg, **opt):
-    
-        if os.environ.has_key('_CONDOR_SCRATCH_DIR'):
-            self.writing_dir = pjoin(os.environ['_CONDOR_SCRATCH_DIR'], \
-                                                                 os.path.pardir)
-        else:
-            self.writing_dir = pjoin(os.environ['MADGRAPH_DATA'],
-                               os.environ['REMOTE_USER'])
-            
-        
-        #standard initialization
-        MadGraphCmd.__init__(self, mgme_dir = '', *arg, **opt)
-    
-    def finalize(self, nojpeg):
-        """Finalize web generation""" 
-        
-        MadGraphCmd.finalize(self, nojpeg, online = True)
-
-    # Generate a new amplitude
-    def do_generate(self, line):
-        """Generate an amplitude for a given process"""
-
-        try:
-           MadGraphCmd.do_generate(self, line)
-        except:
-            # put the stop logo on the web
-            files.cp(self._export_dir+'/HTML/stop.jpg',self._export_dir+'/HTML/card.jpg')
-            raise
-    
-    # Add a process to the existing multiprocess definition
-    def do_add(self, line):
-        """Generate an amplitude for a given process and add to
-        existing amplitudes
-        syntax:
-        """
-        try:
-           MadGraphCmd.do_add(self, line)
-        except:
-            # put the stop logo on the web
-            files.cp(self._export_dir+'/HTML/stop.jpg',self._export_dir+'/HTML/card.jpg')
-            raise
-        
-    # Use the cluster file for the configuration
-    def set_configuration(self, config_path=None):
-        
-        """Force to use the web configuration file only"""
-        config_path = pjoin(os.environ['MADGRAPH_BASE'], 'mg5_configuration.txt')
-        return MadGraphCmd.set_configuration(self, config_path=config_path)
-
-#===============================================================================
-# MadGraphCmd
-#===============================================================================
-class MadGraphCmdShell(MadGraphCmd, CompleteForCmd, CheckValidForCmd, cmd.CmdShell):
-    """The command line processor of MadGraph""" 
-    
-    writing_dir = '.'
-    timeout = 0 # time authorize to answer question [0 is no time limit]
-    
-    def preloop(self):
-        """Initializing before starting the main loop"""
-
-        self.prompt = 'mg5>'
-        
-        # By default, load the UFO Standard Model
-        logger.info("Loading default model: sm")
-        self.do_import('model sm')
-        self.history.append('import model sm')
-        
-        # preloop mother
-        cmd.CmdShell.preloop(self)
-
-
 #===============================================================================
 # Command Parser
 #=============================================================================== 
