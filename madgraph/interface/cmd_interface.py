@@ -2664,7 +2664,8 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
         else:
             subprocess.call(['wget', path[args[0]], '--output-document=%s.tgz'% name], cwd=MG5DIR)
         # Untar the file
-        returncode = subprocess.call(['tar', '-xzpvf', '%s.tgz' % name], cwd=MG5DIR)
+        returncode = subprocess.call(['tar', '-xzpvf', '%s.tgz' % name], cwd=MG5DIR, 
+                                     stdout=open(os.devnull, 'w'))
         if returncode:
             raise MadGraph5Error, 'Fail to download correctly the File. Stop'
         
@@ -2701,8 +2702,12 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
                 text = text.replace('FC=g77','FC=gfortran')
                 open(path, 'w').writelines(text)            
         
-        subprocess.call(['make', 'clean'], cwd = os.path.join(MG5DIR, name))
-        status = subprocess.call(['make'], cwd = os.path.join(MG5DIR, name))
+        if logger.level <= logging.INFO: 
+            subprocess.call(['make', 'clean'], )
+            status = subprocess.call(['make'], cwd = os.path.join(MG5DIR, name))
+        else:
+            misc.compile(['clean'], mode='', cwd = os.path.join(MG5DIR, name))
+            misc.compile(mode='', cwd = os.path.join(MG5DIR, name))
         if not status:
             logger.info('compilation succeeded')
 

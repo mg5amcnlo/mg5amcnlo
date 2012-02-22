@@ -3696,6 +3696,9 @@ def SSS1_3(S2, S3, COUP, M1, W1):
         self.assertEqual(len(split_routine), len(split_solution))
         
         
+        
+        
+        
     def test_python_routine_are_exec(self):
         """ check if the python routine can be call """
             
@@ -3721,5 +3724,5 @@ def FFV2C1_0(F1,F2,V3,COUP):
         split_routine = routine.split('\n')
         self.assertEqual(split_solution,split_routine)
         self.assertEqual(len(split_routine), len(split_solution))
-            
+                 
             

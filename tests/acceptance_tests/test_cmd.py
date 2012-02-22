@@ -122,7 +122,10 @@ class TestCmdShell1(unittest.TestCase):
                     'exrootanalysis_path': './ExRootAnalysis', 
                     'eps_viewer': None, 
                     'automatic_html_opening': 'True', 
-                    'pythia8_path': './pythia8'}
+                    'pythia8_path': './pythia8',
+                    'group_subprocesses': 'Auto',
+                    'ignore_six_quark_processes': False
+                    }
 
         self.assertEqual(config, expected)
         

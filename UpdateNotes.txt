@@ -1,50 +1,52 @@
 Update notes for MadGraph 5 (in reverse time order)
 
-1.4.3 (XX/XX/12)  OM: Performing some code refactoring
-                  OM: forbids to run 'generate events' with python 2.4
-                  OM: Add LSF to the list of supported cluster (thanks to Alexis)
+1.4.3 (XX/XX/12)  OM: Add LSF to the list of supported cluster (thanks to Alexis).
+                  OM: forbids to run 'generate events' with python 2.4.
                   OM: Include the configuration file in the .tar.gz created on 
-                      the web (thanks to Simon) 
-                  
-1.4.2 (16/02/12)  JA: Ensure that matching works properly with > 9 final state
+                      the web (thanks to Simon) .
+                  OM: make acceptance test more silent.  
+                  OM: return the correct error message when a compilation occur. 
+                  OM: some code re-factoring.
+
+1.4.2 (16/02/12) JA: Ensure that matching works properly with > 9 final state
                       particles (by increasing a buffer size in event output)
-                  OM: add a command "import banner" in order to run a full run
+                 OM: add a command "import banner" in order to run a full run
                       from a given banner.
-                  OM: Fix the Bug #921487, fixing a problem with home made model
+                 OM: Fix the Bug #921487, fixing a problem with home made model
                       In the definition of Particle/Anti-Particle. (Thanks Ben)
-                  OM: Fix a formatting problem in me5_configuration.txt 
+                 OM: Fix a formatting problem in me5_configuration.txt 
                       (Bug #930101) Thanks to Arian
-                  OM: allow to run ./bin/mg5 BANNER_PATH and
+                 OM: allow to run ./bin/mg5 BANNER_PATH and
                       ./bin/mg5 PROC_CARD_V4_PATH
-                  OM: Various small fixes concerning the stability of the html 
+                 OM: Various small fixes concerning the stability of the html 
                       output.
-                  OM: Changes the server to download td since cp3wks05 has an 
+                 OM: Changes the server to download td since cp3wks05 has an 
                       harddisk failures.
 
-1.4.1 (06/02/12)  OM: Fix the fermion flow check which was wrongly failing on 
+1.4.1 (06/02/12) OM: Fix the fermion flow check which was wrongly failing on 
                       some model  (Thanks to Benjamin)
-                  OM: Improve run organization efficiency (which speeds up the 
-		      code on cluster) (Thanks to Johan)
-                  OM: More secure html output (Thanks to Simon)
+                 OM: Improve run organization efficiency (which speeds up the 
+                      code on cluster) (Thanks to Johan)
+                 OM: More secure html output (Thanks to Simon)
 
-1.4.0 (04/02/12): OM: New user interface for the madevent run. Type:
+1.4.0 (04/02/12) OM: New user interface for the madevent run. Type:
                       1) (from madevent output) ./bin/madevent
                       2) (from MG5 command line) launch [MADEVENT_PATH] -i
                       This interface replaces various script like refine, 
                       survey, combine, run_..., rm_run, ...
                       The script generate_events still exists but now calls
                        ./bin/madevent. 
-                  OM: For MSSM model, convert param_card to SLAH1. This card is
+                 OM: For MSSM model, convert param_card to SLAH1. This card is
                       converted to SLAH2 during the MadEvent run since the UFO 
                       model uses SLAH2. This allows to use Pythia 6,
                       as well as having a coherent definition for the flavor.
-                  JA+OM: For decay width computations, the launch command in 
+                 JA+OM: For decay width computations, the launch command in 
                       addition to compute the width, creates a new param_card 
                       with the width set to the associated values, and with the 
                       Branching ratio associated (usefull for pythia). 
-                  NOTE: This param_card makes sense for future run ONLY if all 
+                 NOTE: This param_card makes sense for future run ONLY if all 
                       relevant decay are generated.
-                  EXAMPLE: (after launch bin/mg5):
+                 EXAMPLE: (after launch bin/mg5):
                        import model sm-full
                        generate t > b w+
                        define all = p b b~ l+ l- ta+ ta- vl vl~
@@ -55,41 +57,42 @@ Update notes for MadGraph 5 (in reverse time order)
                        add process h > v v, v > all all
                        output
                        launch
-                  OM: change output pythia8 syntax: If a path is specified this 
+                 OM: change output pythia8 syntax: If a path is specified this 
                       is considered as the output directory.
-                  OM: Change the path of the madevent output files. This allows 
+                 OM: Change the path of the madevent output files. This allows 
                       to run pythia/pgs/delphes mulitple times for the same set 
                       of events (with different pythia/... parameters).
-                  OM: Madevent output is now insensitive to the relative path
+                 OM: Madevent output is now insensitive to the relative path
                       to pythia-pgs, delphes, ... In consequence you don't need
-		      anymore to have your directory at the same level as Template directory. 
-                  OM: MadEvent checks that the param_card is coherent with the 
+                      anymore to have your directory at the same level as 
+                      Template directory. 
+                 OM: MadEvent checks that the param_card is coherent with the 
                       restriction used during the model generation. 
-                  OM: Model restrictions will now also force opposite number to 
+                 OM: Model restrictions will now also force opposite number to 
                       match (helpfull for constraining to rotation matrix).  
-                  OM: Change the import command. It's now allowed to omit the 
+                 OM: Change the import command. It's now allowed to omit the 
                       type of import. The type is guessed automaticaly. 
                       This is NOT allowed on the web.
-                  OM: Add a check that the fermion flow is coherent with the 
+                 OM: Add a check that the fermion flow is coherent with the 
                       Lorentz structure associates to the vertex.
-                  OM: Add a check that the color representation is coherent. 
+                 OM: Add a check that the color representation is coherent. 
                       This allow to detect/fix various problem linked
                       to some new models created by FR and SARAH.
-                  OM: Change the default fortran compiler to gfortran.
-                  OM: Add the possibility to force which fortran compiler will
+                 OM: Change the default fortran compiler to gfortran.
+                 OM: Add the possibility to force which fortran compiler will
                       be used, either via the configuration file or via the set 
                       command.
-                  OM: Add the possibility to bypass the automatic opening of 
+                 OM: Add the possibility to bypass the automatic opening of 
                       the web browser (via the configuration file: 
                       ./input/mg5_configuration.txt )
-                  OM: add 'save options' command to save the current configuration 
-		      in the configuration file. 
-                  OM: Change the scheme of questions when running madevent and 
+                 OM: add 'save options' command to save the current configuration 
+                      in the configuration file. 
+                 OM: Change the scheme of questions when running madevent and 
                       allow to specify in the command interface if you
                       want to run pythia/pgs/...
                       Allow to put the answers to the questions in the 
                       proc_card.dat.
-                  OM: Add options for the display command:
+                 OM: Add options for the display command:
                       a) display options: return the current option value. 
                         i.e. those set via the set command and/or via the 
                         configuration file
@@ -100,29 +103,29 @@ Update notes for MadGraph 5 (in reverse time order)
                       d) display couplings now returns the list of all couplings
                         with the associated expression
                       e) display interactions [PART1] [PART2] [PART3] ...
-		         display all interactions containing the particles set
+                         display all interactions containing the particles set
                          in arguments 
-                  OM: New Python script for the creation of the various html pages.
+                 OM: New Python script for the creation of the various html pages.
                       This Requires less disk access for the generation of the files.
-                  OM: Modify error treatment, especially for Invalid commands
+                 OM: Modify error treatment, especially for Invalid commands
                       and Configuration problems.
-                  JA: Ensure that we get zero cross section if we have
+                 JA: Ensure that we get zero cross section if we have
                       non-parton initial states with proton/antiproton beams
-                  OM: Improve cluster support. MadEvent now supports PBS/Condor/SGE
+                 OM: Improve cluster support. MadEvent now supports PBS/Condor/SGE
                       Thanks to Arian Abrahantes for the SGE implementation.
-		  OM: Improve auto-completion (better output/dealing with multi line/...)
-                  OM: Improve the parallel suite and change the release script to run
+                 OM: Improve auto-completion (better output/dealing with multi line/...)
+                 OM: Improve the parallel suite and change the release script to run
                       some of the parallel tests. This ensures even higher stability 
                       of the  code for the future releases.
-                  JA: Changed the way gridpacks work: Set granularity to 1
+                 JA: Changed the way gridpacks work: Set granularity to 1
                       (so randomly select channels only if they should generate 
                       less than 1 event), but allowing channels to run down to a single
                       iteration. This removes all old problems with increased
                       variance for small channels in the gridpacks, while giving 
                       even faster event generation.
 
-                  Thanks to Johan Alwall, Sho Iwamoto for all the important 
-                  testing/bug reports.
+                 Thanks to Johan Alwall, Sho Iwamoto for all the important 
+                 testing/bug reports.
 
 
 1.3.33 (01/01/12) JA: Revisited colors for propagators in addmothers.f
