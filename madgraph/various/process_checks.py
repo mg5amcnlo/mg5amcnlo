@@ -603,7 +603,7 @@ def check_processes(processes, param_card = None, quick = [],
         if "used_lorentz" not in evaluator.stored_quantities:
             evaluator.stored_quantities["used_lorentz"] = []
             
-        if multiprocess.get('perturbation_couplings')==[]:
+        if multiprocess.get('perturbation_couplings')!=[]:
             # Clean temporary folders created for the running of the loop processes
             clean_up(mg_root)
             
@@ -654,7 +654,7 @@ def check_processes(processes, param_card = None, quick = [],
     if "used_lorentz" not in evaluator.stored_quantities:
         evaluator.stored_quantities["used_lorentz"] = []
     
-    if processes[0].get('perturbation_couplings')==[]:
+    if processes[0].get('perturbation_couplings')!=[]:
         # Clean temporary folders created for the running of the loop processes
         clean_up(mg_root)    
     
@@ -785,9 +785,9 @@ def clean_up(mg_root):
     """Clean-up the possible left-over outputs from 'evaluate_matrix element' of
     the LoopMatrixEvaluator (when its argument proliferate is set to true). """
 
-    #directories = glob.glob(os.path.join(mg_root, 'TMP_DIR_FOR_THE_CHECK_CMD*'))
-    #for dir in directories:
-    #    shutil.rmtree(dir)
+    directories = glob.glob(os.path.join(mg_root, 'TMP_DIR_FOR_THE_CHECK_CMD*'))
+    for dir in directories:
+        shutil.rmtree(dir)
 
 def output_comparisons(comparison_results):
     """Present the results of a comparison in a nice list format
@@ -897,7 +897,7 @@ def check_gauge(processes, param_card = None, mg_root="",cuttools=""):
                                            multiprocess,
                                            evaluator)
         
-        if multiprocess.get('perturbation_couplings')==[]:
+        if multiprocess.get('perturbation_couplings')!=[]:
             # Clean temporary folders created for the running of the loop processes
             clean_up(mg_root)
         
@@ -939,7 +939,7 @@ def check_gauge(processes, param_card = None, mg_root="",cuttools=""):
         if result:
             comparison_results.append(result)
 
-    if processes[0].get('perturbation_couplings')==[]:
+    if processes[0].get('perturbation_couplings')!=[]:
         # Clean temporary folders created for the running of the loop processes
         clean_up(mg_root)
             
@@ -1131,7 +1131,7 @@ def check_lorentz(processes, param_card = None, mg_root="",cuttools=""):
                                            multiprocess,
                                            evaluator)
         
-        if multiprocess.get('perturbation_couplings')==[]:
+        if multiprocess.get('perturbation_couplings')!=[]:
             # Clean temporary folders created for the running of the loop processes
             clean_up(mg_root)
         
@@ -1175,7 +1175,7 @@ def check_lorentz(processes, param_card = None, mg_root="",cuttools=""):
         if result:
             comparison_results.append(result)
 
-    if processes[0].get('perturbation_couplings')==[]:
+    if processes[0].get('perturbation_couplings')!=[]:
         # Clean temporary folders created for the running of the loop processes
         clean_up(mg_root)
 

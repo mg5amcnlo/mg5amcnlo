@@ -442,8 +442,7 @@ class AbstractALOHAModel(dict):
     
         if loop and not 'L' in abstract_routine.tag:
             abstract_routine = copy.copy(abstract_routine)
-            abstract_routine.tag.append('L')
-
+            abstract_routine.tag = abstract_routine.tag + ['L']
 
 
         self[(lorentzname, outgoing)] = abstract_routine
