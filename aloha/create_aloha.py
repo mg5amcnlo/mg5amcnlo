@@ -444,7 +444,6 @@ class AbstractALOHAModel(dict):
             abstract_routine = copy.copy(abstract_routine)
             abstract_routine.tag = abstract_routine.tag + ['L']
 
-
         self[(lorentzname, outgoing)] = abstract_routine
     
     def compute_all(self, save=True, wanted_lorentz = []):
