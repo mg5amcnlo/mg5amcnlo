@@ -400,8 +400,117 @@ class SGECluster(Cluster):
 
         return idle, run, self.submitted - (idle+run+fail), fail
 
+class LSFCluster(Cluster):
+    """Basic class for dealing with cluster submission"""
+    
+    name = 'lsf'
 
-from_name = {'condor':CondorCluster, 'pbs': PBSCluster, 'sge': SGECluster}
+    def submit(self, prog, argument=[], cwd=None, stdout=None, stderr=None, log=None):
+        """Submit the """
+        
+        me_dir = os.path.realpath(os.path.join(cwd,prog)).rsplit('/SubProcesses',1)[0]
+        me_dir = hashlib.md5(me_dir).hexdigest()[-14:]
+        if not me_dir[0].isalpha():
+            me_dir = 'a' + me_dir[1:]
+        
+        text = ""
+        if cwd is None:
+            cwd = os.getcwd()
+        else: 
+            text = " cd %s;" % cwd
+        if stdout is None:
+            stdout = '/dev/null'
+        if stderr is None:
+            stderr = '/dev/null'
+        elif stderr == -2: # -2 is subprocess.STDOUT
+            stderr = stdout
+        if log is None:
+            log = '/dev/null'
+        
+        text += prog
+        if argument:
+            text += ' ' + ' '.join(argument)
+
+        a = subprocess.Popen(['bsub','-o', stdout,
+                                     '-J', me_dir, 
+                                     '-e', stderr,
+                                     '-q', self.cluster_queue],
+                                     stdout=subprocess.PIPE, 
+                                     stderr=subprocess.STDOUT,
+                                     stdin=subprocess.PIPE, cwd=cwd)
+            
+        output = a.communicate(text)[0]
+        #Job <nnnn> is submitted to default queue <normal>.
+        try:
+            id = output.split('>',1)[0].split('<')[1]
+        except:
+            raise ClusterManagmentError, 'fail to submit to the cluster: \n%s' \
+                                                                        % output 
+        if not id.isdigit():
+            raise ClusterManagmentError, 'fail to submit to the cluster: \n%s' \
+                                                                        % output 
+        self.submitted += 1
+        self.submitted_ids.append(id)
+        return id        
+        
+        
+
+    def control_one_job(self, id):
+        """ control the status of a single job with it's cluster id """
+        
+        cmd = 'bjobs '+str(id)
+        status = subprocess.Popen([cmd], shell=True, stdout=subprocess.PIPE)
+        
+        for line in status.stdout:
+            line = line.strip().upper()
+            if 'JOBID' in line:
+                continue
+            elif str(id) not in line:
+                continue
+            status = line.split()[2]
+            if status == 'RUN':
+                return 'R'
+            elif status == 'PEND':
+                return 'I'
+            elif status == 'DONE':
+                return 'F'
+            else:
+                return 'H'
+            return 'F'
+        
+    def control(self, me_dir):
+        """ control the status of a single job with it's cluster id """
+        
+        if not self.submitted_ids:
+            return 0, 0, 0, 0
+        
+        cmd = "bjobs " + ' '.join(self.submitted_ids) 
+        status = subprocess.Popen([cmd], shell=True, stdout=subprocess.PIPE)
+
+        idle, run, fail = 0, 0, 0
+        for line in status.stdout:
+            line = line.strip()
+            if 'JOBID' in line:
+                continue
+            splitline = line.split()
+            id = splitline[0]
+            if id not in self.submitted_ids:
+                continue
+            status = splitline[2]
+            if status == 'RUN':
+                run += 1
+            elif status == 'PEND':
+                idle += 1
+            elif status == 'DONE':
+                pass
+            else:
+                fail += 1
+
+        return idle, run, self.submitted - (idle+run+fail), fail
+
+
+from_name = {'condor':CondorCluster, 'pbs': PBSCluster, 'sge': SGECluster, 
+             'lsf': LSFCluster}
 
 
     

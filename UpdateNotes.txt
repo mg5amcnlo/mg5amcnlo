@@ -1,19 +1,25 @@
 Update notes for MadGraph 5 (in reverse time order)
 
+1.4.3 (XX/XX/12)  OM: Performing some code refactoring
+                  OM: forbids to run 'generate events' with python 2.4
+                  OM: Add LSF to the list of supported cluster (thanks to Alexis)
+                  OM: Include the configuration file in the .tar.gz created on 
+                      the web (thanks to Simon) 
+                  
 1.4.2 (16/02/12)  JA: Ensure that matching works properly with > 9 final state
                       particles (by increasing a buffer size in event output)
-		  OM: add a command "import banner" in order to run a full run
-		      from a given banner.
+                  OM: add a command "import banner" in order to run a full run
+                      from a given banner.
                   OM: Fix the Bug #921487, fixing a problem with home made model
                       In the definition of Particle/Anti-Particle. (Thanks Ben)
-		  OM: Fix a formatting problem in me5_configuration.txt 
+                  OM: Fix a formatting problem in me5_configuration.txt 
                       (Bug #930101) Thanks to Arian
-		  OM: allow to run ./bin/mg5 BANNER_PATH and
+                  OM: allow to run ./bin/mg5 BANNER_PATH and
                       ./bin/mg5 PROC_CARD_V4_PATH
-		  OM: Various small fixes concerning the stability of the html 
-		      output.
-		  OM: Changes the server to download td since cp3wks05 has an 
-		      harddisk failures.
+                  OM: Various small fixes concerning the stability of the html 
+                      output.
+                  OM: Changes the server to download td since cp3wks05 has an 
+                      harddisk failures.
 
 1.4.1 (06/02/12)  OM: Fix the fermion flow check which was wrongly failing on 
                       some model  (Thanks to Benjamin)

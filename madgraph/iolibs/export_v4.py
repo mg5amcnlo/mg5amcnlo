@@ -1094,7 +1094,7 @@ class ProcessExporterFortranME(ProcessExporterFortran):
                             self.dir_path+'/bin/internal/madevent_interface.py')
         cp(_file_path+'/interface/extended_cmd.py',
                                   self.dir_path+'/bin/internal/extended_cmd.py')
-        cp(_file_path+'/iolibs/misc.py', self.dir_path+'/bin/internal/misc.py')        
+        cp(_file_path+'/various/misc.py', self.dir_path+'/bin/internal/misc.py')        
         cp(_file_path+'/iolibs/files.py', self.dir_path+'/bin/internal/files.py')
         cp(_file_path+'/iolibs/save_load_object.py', 
                               self.dir_path+'/bin/internal/save_load_object.py') 
@@ -1418,10 +1418,6 @@ class ProcessExporterFortranME(ProcessExporterFortran):
             if os.path.exists('madevent.tar.gz'):
                 os.remove('madevent.tar.gz')
             misc.compile(mode='None')
-
-        if online:
-            # Touch "Online" file
-            os.system('touch %s/Online' % self.dir_path)
 
         subprocess.call([os.path.join(old_pos, self.dir_path, 'bin', 'internal', 'gen_cardhtml-pl')],
                         stdout = devnull)

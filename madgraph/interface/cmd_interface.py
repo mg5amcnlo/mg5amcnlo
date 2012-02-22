@@ -3420,6 +3420,11 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
                                             wanted_couplings)
             export_cpp.make_model_cpp(self._export_dir)
 
+        elif self._export_format == 'madevent':          
+            # Create configuration file [path to executable] for madevent
+            filename = os.path.join(self._export_dir, 'Cards', 'me5_configuration.txt')
+            self.do_save('options %s' % filename, check=False)
+
         if self._export_format in ['madevent', 'standalone']:
             
             self._curr_exporter.finalize_v4_directory( \
@@ -3432,11 +3437,8 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
 
         if self._export_format in ['madevent', 'standalone', 'standalone_cpp']:
             logger.info('Output to directory ' + self._export_dir + ' done.')
-        if self._export_format == 'madevent':          
-            # Create configuration file [path to executable] for madevent
-            filename = os.path.join(self._export_dir, 'Cards', 'me5_configuration.txt')
-            self.do_save('options %s' % filename, check=False)
-            
+
+        if self._export_format == 'madevent':              
             logger.info('Type \"launch\" to generate events from this process, or see')
             logger.info(self._export_dir + '/README')
             logger.info('Run \"open index.html\" to see more information about this process.')
@@ -3486,6 +3488,10 @@ class MadGraphCmdWeb(MadGraphCmd, CheckValidForCmdWeb):
         """Finalize web generation""" 
         
         MadGraphCmd.finalize(self, nojpeg, online = True)
+        
+        # Touch "Online" file
+        os.system('touch %s/Online' % self.dir_path)
+
 
     # Generate a new amplitude
     def do_generate(self, line):
