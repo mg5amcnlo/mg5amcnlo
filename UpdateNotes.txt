@@ -1,6 +1,9 @@
 Update notes for MadGraph 5 (in reverse time order)
 
 1.4.3 (XX/XX/12)  OM: Add LSF to the list of supported cluster (thanks to Alexis).
+                  OM: change the param_card reader for the restrict file.
+                      This allow to restrict model with 3 lha id (or more)
+                      (thanks to Eduardo Ponton).
                   OM: forbids to run 'generate events' with python 2.4.
                   OM: Include the configuration file in the .tar.gz created on 
                       the web (thanks to Simon) .

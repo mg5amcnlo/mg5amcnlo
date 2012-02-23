@@ -64,6 +64,7 @@ import madgraph.interface.madevent_interface as madevent_interface
 import madgraph.various.process_checks as process_checks
 import madgraph.various.banner as banner_module
 import madgraph.various.misc as misc
+import madgraph.various.cluster as cluster
 
 import models as ufomodels
 import models.import_ufo as import_ufo
@@ -402,7 +403,6 @@ class HelpToCmd(object):
         logger.info("   fortran_compiler NAME")
         logger.info("      (default None) Force a specific fortran compiler.")
         logger.info("      If None, it tries first g77 and if not present gfortran.")
-        
 
 
 #===============================================================================
@@ -1356,7 +1356,7 @@ class CompleteForCmd(CheckValidForCmd):
             elif args[1] == 'run_mode':
                 return self.list_completion(text, [str(i) for i in range(3)])
             elif args[1] == 'cluster_type':
-                return self.list_completion(text, ['pbs', 'condor', 'sge'])
+                return self.list_completion(text, cluster.from_name.keys())
             elif args[1] == 'cluster_queue':
                 return []
             elif args[1] == 'automatic_html_opening':
