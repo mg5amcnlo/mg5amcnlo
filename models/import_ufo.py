@@ -382,8 +382,10 @@ class UFOMG5Converter(object):
         self.incoming = [] 
         self.outcoming = []       
         for interaction_info in self.ufomodel.all_vertices:
-            # check if the interation meet requirements:
-            pdg = [p.pdg_code for p in interaction_info.particles if p.spin==2]
+            # check if the interaction meet requirements:
+            pdg = [p.pdg_code for p in interaction_info.particles if p.spin in [2,4]]
+            if len(pdg) % 2:
+                raise UFOImportError, 'Odd number of fermion in vertex: %s' % [p.pdg_code for p in interaction_info.particles]
             for i in range(0, len(pdg),2):
                 if pdg[i] == - pdg[i+1]:
                     if pdg[i] in self.outcoming:
