@@ -1729,7 +1729,8 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
             self.exec_cmd('pythia --no_default', postcmd=False, printcmd=False)
             # pythia launches pgs/delphes if needed
             self.store_result()
-            self.print_results_in_shell(self.results.current)
+        
+        self.print_results_in_shell(self.results.current)
             
             
     def print_results_in_shell(self, data):
@@ -2119,6 +2120,7 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
         # Define The Banner
         tag = self.run_card['run_tag']
         self.banner.load_basic(self.me_dir)
+        self.banner.change_seed(self.random)
         if not os.path.exists(pjoin(self.me_dir, 'Events', self.run_name)):
             os.mkdir(pjoin(self.me_dir, 'Events', self.run_name))
         self.banner.write(pjoin(self.me_dir, 'Events', self.run_name, 
@@ -3040,16 +3042,18 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
             raise MadEventError, 'Impossible to compile'
         
         # set random number
-        if os.path.exists(pjoin(self.me_dir,'SubProcesses','randinit')):
+        if self.run_card['iseed'] != '0':
+            self.random = int(self.run_card['iseed'])
+        elif os.path.exists(pjoin(self.me_dir,'SubProcesses','randinit')):
             for line in open(pjoin(self.me_dir,'SubProcesses','randinit')):
                 data = line.split('=')
                 assert len(data) ==2
                 self.random = int(data[1])
                 break
         else:
-            self.random = random.randint(1, 30107) 
-                                                   
-        if self.run_card['ickkw'] == 2:
+            self.random = random.randint(1, 30107)
+                                                               
+        if self.run_card['ickkw'] == '2':
             logger.info('Running with CKKW matching')
             self.treat_CKKW_matching()
             
@@ -3185,7 +3189,7 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
         proc = []
         for line in open(os.path.join(self.me_dir,'Cards','proc_card_mg5.dat')):
             line = line.split('#')[0]
-            line = line.split('=')[0]
+            #line = line.split('=')[0]
             if line.startswith('import') and 'model' in line:
                 model = line.split()[2]   
                 proc = []

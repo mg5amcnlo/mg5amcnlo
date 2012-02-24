@@ -1336,7 +1336,7 @@ class CompleteForCmd(CheckValidForCmd):
 
         # Format
         if len(args) == 1:
-            opts = self._set_options + self.options.keys() + self.options.keys()
+            opts = self.options.keys() 
             return self.list_completion(text, opts)
 
         if len(args) == 2:

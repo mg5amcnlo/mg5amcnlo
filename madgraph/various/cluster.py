@@ -29,6 +29,22 @@ class ClusterManagmentError(MadGraph5Error):
     pass
 
 
+class multiple_try:
+    
+    nb_try = 5
+    sleep = 1
+    
+    def __init__(self, f):
+        self.f = f
+
+    def __call__(self, *args, **opt):
+        for i in range(self.nb_try):
+            try:
+                return self.f(*args, **opt)
+            except:
+                time.sleep(self.sleep)
+                pass
+        raise
 
 class Cluster(object):
     """Basic Class for all cluster type submission"""
@@ -40,7 +56,8 @@ class Cluster(object):
         self.submitted_ids = []
         self.finish = 0
         self.cluster_queue = cluster_queue
-
+        
+    
     def submit(self, prog, argument=[], cwd=None, stdout=None, stderr=None, log=None):
         """How to make one submission. Return status id on the cluster."""
         raise NotImplemented, 'No implementation of how to submit a job to cluster \'%s\'' % self.name
@@ -98,6 +115,7 @@ class CondorCluster(Cluster):
     
     name = 'condor'
 
+    @multiple_try
     def submit(self, prog, argument=[], cwd=None, stdout=None, stderr=None, log=None):
         """Submit the """
         
@@ -153,13 +171,15 @@ class CondorCluster(Cluster):
         self.submitted += 1
         self.submitted_ids.append(id)
         return id
-
+    
+    @multiple_try
     def control_one_job(self, id):
         """ control the status of a single job with it's cluster id """
         cmd = 'condor_q '+str(id)+" -format \'%-2s \\n\' \'ifThenElse(JobStatus==0,\"U\",ifThenElse(JobStatus==1,\"I\",ifThenElse(JobStatus==2,\"R\",ifThenElse(JobStatus==3,\"X\",ifThenElse(JobStatus==4,\"C\",ifThenElse(JobStatus==5,\"H\",ifThenElse(JobStatus==6,\"E\",string(JobStatus))))))))\'"
         status = subprocess.Popen([cmd], shell=True, stdout=subprocess.PIPE)
         return status.stdout.readline().strip()
-        
+    
+    @multiple_try
     def control(self, me_dir):
         """ control the status of a single job with it's cluster id """
         
@@ -188,7 +208,7 @@ class PBSCluster(Cluster):
     idle_tag = ['Q']
     running_tag = ['T','E','R']
 
-
+    @multiple_try
     def submit(self, prog, argument=[], cwd=None, stdout=None, stderr=None, log=None):
         """Submit the prog to the cluser"""
         
@@ -231,6 +251,7 @@ class PBSCluster(Cluster):
         self.submitted += 1
         return id
 
+    @multiple_try
     def control_one_job(self, id):
         """ control the status of a single job with it's cluster id """
         cmd = 'qstat '+str(id)
@@ -249,7 +270,7 @@ class PBSCluster(Cluster):
         return 'F'
         
 
-        
+    @multiple_try    
     def control(self, me_dir):
         """ control the status of a single job with it's cluster id """
         cmd = "qstat"
@@ -291,6 +312,7 @@ class SGECluster(Cluster):
             location = location.replace(homePath,'$HOME')
         return location
 
+    @multiple_try
     def submit(self, prog, argument=[], cwd=None, stdout=None, stderr=None, log=None):
         """Submit the prog to the cluser"""
 
@@ -354,6 +376,7 @@ class SGECluster(Cluster):
 
         return id
 
+    @multiple_try
     def control_one_job(self, id):
         """ control the status of a single job with it's cluster id """
         #cmd = 'qstat '+str(id)
@@ -375,6 +398,7 @@ class SGECluster(Cluster):
             return 'R' 
         return 'F'
 
+    @multiple_try
     def control(self, me_dir):
         """ control the status of a single job with it's cluster id """
         cmd = "qstat "
@@ -405,6 +429,7 @@ class LSFCluster(Cluster):
     
     name = 'lsf'
 
+    @multiple_try
     def submit(self, prog, argument=[], cwd=None, stdout=None, stderr=None, log=None):
         """Submit the """
         
@@ -454,7 +479,7 @@ class LSFCluster(Cluster):
         return id        
         
         
-
+    @multiple_try
     def control_one_job(self, id):
         """ control the status of a single job with it's cluster id """
         
@@ -477,7 +502,8 @@ class LSFCluster(Cluster):
             else:
                 return 'H'
             return 'F'
-        
+
+    @multiple_try   
     def control(self, me_dir):
         """ control the status of a single job with it's cluster id """
         

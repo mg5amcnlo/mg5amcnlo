@@ -171,7 +171,7 @@ function check_link(url,alt, id){
     return 1==1;
 }
 </script>  
-
+%(diagram_link)s
  <h2>Process results</h2> 
  <BR>
 &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<b>s= %(cross).5g &#177 %(error).3g (%(unit)s)</b><br><br>
@@ -184,12 +184,19 @@ function check_link(url,alt, id){
     <th>Luminosity</th>
 </tr>
 %(table_lines)s
-</table></body>
+</table>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+<a href=../../index.html>Main Page</a>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<a href=../../crossx.html>Results Page</a>
+</center>
+
+</body>
 """    
     table_line_template = \
 """
 <tr><td align=right>%(P_title)s</td>
-    <td align=right><a id="%(P_link)s" href=%(P_link)s onClick="check_link('%(P_link)s','%(mod_P_link)s','%(P_link)s')"> %(cross)s </a> </td>
+    <td align=right><a id="%(P_link)s" href=%(P_link)s onClick="check_link('%(mod_P_link)s','%(P_link)s','%(P_link)s')"> %(cross)s </a> </td>
     <td align=right>  %(error)s</td>
     <td align=right>  %(events)s</td>
     <td align=right>  %(unweighted)s</td>
@@ -254,11 +261,18 @@ function check_link(url,alt, id){
                    }
             tables_line += self.table_line_template % dico
 
+        if self.name.startswith('P'):
+            title = '<h1><a href=../../SubProcesses/%(P)s/diagrams.html>%(P)s</a></h1>' \
+                                                          % {'P':self.name}
+        else:
+            title = ''
+            
         dico = {'cross': self.xsec,
                 'error': self.xerru,
                 'unit': unit,
                 'result_type': 'Cross-Section',
-                'table_lines': tables_line
+                'table_lines': tables_line,
+                'diagram_link': title
                 }
 
         html_text = self.template_file % dico
