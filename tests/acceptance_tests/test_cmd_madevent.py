@@ -26,7 +26,7 @@ logger = logging.getLogger('test_cmd')
 
 import tests.unit_tests.iolibs.test_file_writers as test_file_writers
 
-import madgraph.interface.cmd_interface as MGCmd
+import madgraph.interface.master_interface as MGCmd
 import madgraph.interface.madevent_interface as MECmd
 import madgraph.interface.launch_ext_program as launch_ext
 import madgraph.iolibs.misc as misc
@@ -52,7 +52,7 @@ class TestMECmdShell(unittest.TestCase):
         except Exception, error:
             pass
 
-        interface = MGCmd.MadGraphCmdShell()
+        interface = MGCmd.MasterCmd()
         interface.onecmd('import model %s' % model)
         if isinstance(process, str):
             interface.onecmd('generate %s' % process)

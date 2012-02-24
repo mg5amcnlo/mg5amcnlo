@@ -6,8 +6,8 @@ C**************************************************************************
 c
 c     INCLUDE
 c
-      include 'genps.inc'
       include 'nexternal.inc'
+      include 'genps.inc'
       include 'coupl.inc'
       include 'run.inc'
       include 'cuts.inc'
@@ -372,13 +372,14 @@ c Sets the lower bound for tau=x1*x2, using information on particle
 c masses and on the jet minimum pt, as entered in run_card.dat, 
 c variable ptj
       implicit none
-      double precision zero
-      parameter (zero=0.d0)
+      double precision zero,vtiny
+      parameter (zero=0.d0,vtiny=1d-8)
       include 'cuts.inc'
       include 'run.inc'
-      include 'genps.inc'
       include 'nexternal.inc'
+      include 'genps.inc'
       include 'coupl.inc'
+      include 'fks.inc'
       LOGICAL  IS_A_J(NEXTERNAL),IS_A_L(NEXTERNAL)
       LOGICAL  IS_A_B(NEXTERNAL),IS_A_A(NEXTERNAL)
       LOGICAL  IS_A_NU(NEXTERNAL),IS_HEAVY(NEXTERNAL)
@@ -392,14 +393,12 @@ c
       integer            mapconfig(0:lmaxconfigs), this_config
       common/to_mconfigs/mapconfig, this_config
 
-      double precision taumin,stot
-      integer i
-      double precision xm(-nexternal:nexternal),xmmax
+      double precision taumin,stot,taumin_s
+      integer i,d1,d2,j_fks,config_fks
+      double precision xm(-nexternal:nexternal),xm1,xm2,xmi
       integer tsign,iconfig
       double precision tau_lower_bound,tau_lower_bound_soft
       common/ctau_lower_bound/tau_lower_bound,tau_lower_bound_soft
-
-
 c
       real*8         emass(nexternal)
       common/to_mass/emass
@@ -407,25 +406,56 @@ c      double precision pmass(nexternal)
 c      include "pmass.inc"
       include "props.inc"
 c
+      open (unit=19,file="config.fks",status="old")
+      read (19,*) config_fks
+      close (19)
+      j_fks=fks_j(config_fks)
+
       if(.not.IS_A_J(NEXTERNAL))then
         write(*,*)'Fatal error in set_tau_min'
         stop
       endif
-c The following assumes that light QCD particles are at the end of the list.
-c Exclude one of them to set tau bound at the Born level
+c The following assumes that light QCD particles are at the end of the
+c list. Exclude one of them to set tau bound at the Born level This
+c sets a hard cut in the minimal shat of the Born phase-space
+c generation.
+c
+c The contribution from ptj should be treated only as a 'soft lower
+c bound' if j_fks is initial state: the real-emission i_fks parton is
+c not necessarily the softest.  Therefore, it could be that even though
+c the Born does not have enough energy to pass the cuts set by ptj, the
+c event could.
       taumin=0.d0
+      taumin_s=0.d0
       do i=nincoming+1,nexternal-1
-        if(IS_A_J(i))then
-          taumin=taumin+sqrt(ptj**2+emass(i)**2)
-        else
-          taumin=taumin+emass(i)
-        endif
-        xm(i)=emass(i)
+         if(IS_A_J(i))then
+            if (abs(emass(i)).gt.vtiny) then
+               write (*,*) 'Error in set_tau_min in setcuts.f:'
+               write (*,*) 'mass of a jet should be zero',i,emass(i)
+               stop
+            endif
+            if  (j_fks.gt.nincoming .and. j_fks.lt.nexternal) then
+               taumin=taumin+ptj
+               taumin_s=taumin_s+ptj
+            elseif (j_fks.ge.1 .and. j_fks.le.nincoming) then
+               taumin_s=taumin_s+ptj
+            elseif (j_fks.eq.nexternal) then
+               write (*,*)
+     &              'ERROR, j_fks cannot be the final parton',j_fks
+               stop
+            else
+               write (*,*) 'ERROR, j_fks not correctly defined',j_fks
+               stop
+            endif
+         else
+            taumin=taumin+emass(i)
+            taumin_s=taumin_s+emass(i)
+         endif
+         xm(i)=emass(i)
       enddo
       xm(nexternal)=emass(nexternal)
       stot = 4d0*ebeam(1)*ebeam(2)
       tau_lower_bound=taumin**2/stot
-
 
 c Also find the minimum lower bound if all internal s-channel particles
 c were on-shell
@@ -436,26 +466,50 @@ c were on-shell
      &        'set temporarily to 1 in "set_tau_min"'
          iconfig=1
       endif
-      xmmax=0d0
       do i=-1,-(nexternal-3),-1                ! All propagators
          if ( iforest(1,i,iconfig) .eq. 1 .or.
      &        iforest(1,i,iconfig) .eq. 2 ) tsign=1
          if (tsign.eq.-1) then   ! Only s-channels
-            xm(i)=max(pmass(i,iconfig),
-     &           xm(iforest(1,i,iconfig))+xm(iforest(2,i,iconfig)))
+            d1=iforest(1,i,iconfig)
+            d2=iforest(2,i,iconfig)
+c If daughter is a jet, we should treat the ptj as a mass. Except if
+c d1=nexternal, because we check the Born, so final parton should be
+c skipped.
+            if (d1.gt.0 .and. is_a_j(d1) .and. d1.ne.nexternal) then
+               xm1=ptj
+            else
+               xm1=xm(d1)
+            endif
+            if (d2.gt.0 .and. is_a_j(d2) .and. d2.ne.nexternal) then
+               xm2=ptj
+            else
+               xm2=xm(d2)
+            endif
+c On-shell mass of the intermediate resonance
+            xmi=pmass(i,iconfig)
+c Set the intermediate mass equal to the max of its actual mass and
+c the sum of the masses of the two daugters.
+            xm(i)=max(xmi,xm1+xm2)
+c Add the new mass to the bound. To avoid double counting, we should
+c subtract the daughters, because they are already included above or in
+c the previous iteration of the loop
+            taumin_s=taumin_s+xm(i)-xm1-xm2
          else
             xm(i)=0d0
          endif
-         xmmax=max(xmmax,xm(i))
       enddo
-      
-      tau_lower_bound_soft=xmmax**2/stot
+
+c For the bound, we have to square and divide by stot.
+      tau_lower_bound_soft=taumin_s**2/stot
+
+c If the lower bound found here is smaller than the hard bound,
+c simply set the soft bound equal to the hard bound.
       tau_lower_bound_soft=max(tau_lower_bound,tau_lower_bound_soft)
 
       write (*,*) 'lower bound for tau is ',
      &     tau_lower_bound,taumin,dsqrt(stot)
       write (*,*) 'soft lower bound for tau is ',
-     &     tau_lower_bound_soft,xmmax,dsqrt(stot)
+     &     tau_lower_bound_soft,taumin_s,dsqrt(stot)
 
       return
       end

@@ -4,15 +4,15 @@ c Save reweight information for aMC@NLO computations
       include 'reweight1.inc'
 
       logical doreweight
-      parameter (doreweight=.true.)
+      parameter (doreweight=.false.)
 
 c Save reweight information for NLO computations
       logical doNLOreweight
-      parameter (doNLOreweight=.true.)
+      parameter (doNLOreweight=.false.)
 
 c Check that save weights are consistent with the reference weight wgtref
       logical check_reweight
-      parameter (check_reweight=.true.)
+      parameter (check_reweight=.false.)
 
 c Controls the scale/kinematics storage:
 c  iwgtinfo=1 --> store muR and muF for both event and counterevents

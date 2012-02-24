@@ -12,7 +12,7 @@
 # For more information, please visit: http://madgraph.phys.ucl.ac.be
 #
 ################################################################################
-"""A user friendly command line interface to access MadGraph features.
+"""A user friendly command line interface to access MadGraph features at LO.
    Uses the cmd package for command interpretation and tab completion.
 """
 
@@ -45,16 +45,10 @@ import madgraph.core.base_objects as base_objects
 import madgraph.core.diagram_generation as diagram_generation
 import madgraph.core.drawing as draw_lib
 import madgraph.core.helas_objects as helas_objects
-import madgraph.fks.fks_real as fks_real
-import madgraph.fks.fks_real_helas_objects as fks_real_helas
-import madgraph.fks.fks_born as fks_born
-import madgraph.fks.fks_born_helas_objects as fks_born_helas
 
 import madgraph.iolibs.drawing_eps as draw
 import madgraph.iolibs.export_cpp as export_cpp
 import madgraph.iolibs.export_v4 as export_v4
-import madgraph.iolibs.export_fks_real as export_fks_real
-import madgraph.iolibs.export_fks_born as export_fks_born
 import madgraph.iolibs.helas_call_writers as helas_call_writers
 import madgraph.iolibs.file_writers as writers
 import madgraph.iolibs.files as files
@@ -537,21 +531,6 @@ class CheckValidForCmd(object):
         # Not called anymore see check_add
         return self.check_add(args)
     
-        
-    def check_generateFKS(self, args):
-        """check the validity of args"""
-        
-        if  not self._curr_model:
-            raise self.InvalidCmd("No model currently active, please import a model!")
-
-        if len(args) < 1:
-            self.help_generate()
-            raise self.InvalidCmd("\"generate\" requires a process.")
-
-        self.check_process_format(" ".join(args))
- 
-        return True
-    
     def check_process_format(self, process):
         """ check the validity of the string given to describe a format """
         
@@ -805,7 +784,7 @@ This will take effect only in a NEW terminal
                                   self._set_options)
 
         if args[0] in ['group_subprocesses']:
-            if args[1] not in ['False', 'True', 'Auto']:
+            if args[1] not in ['False', 'True', 'Auto', 'NLO']:
                 raise self.InvalidCmd('%s needs argument False, True or Auto' % \
                                       args[0])
         if args[0] in ['ignore_six_quark_processes']:
@@ -817,6 +796,9 @@ This will take effect only in a NEW terminal
             if args[1] not in ['DEBUG','INFO','WARNING','ERROR','CRITICAL']:
                 raise self.InvalidCmd('output_level needs ' + \
                                       'a valid level')       
+        if args[0] in ['fks_mode']:
+            if args[1] not in ['born', 'real']:
+                raise self.InvalidCmd('fks_mode needs argument real or born')       
     
     def check_open(self, args):
         """ check the validity of the line """
@@ -1064,7 +1046,7 @@ class CheckValidForCmdWeb(CheckValidForCmd):
 #===============================================================================
 # CompleteForCmd
 #===============================================================================
-class CompleteForCmd(CheckValidForCmd):
+class CompleteForCmd(object):
     """ The Series of help routine for the MadGraphCmd"""
     
  
@@ -1569,9 +1551,12 @@ class CompleteForCmd(CheckValidForCmd):
 #===============================================================================
 # MadGraphCmd
 #===============================================================================
-class MadGraphCmd(CmdExtended, HelpToCmd):
+class MadGraphCmd(CmdExtended, HelpToCmd, CheckValidForCmd, CompleteForCmd):
     """The command line processor of MadGraph"""    
 
+    writing_dir = '.'
+    timeout = 0 # time authorize to answer question [0 is no time limit]
+  
     # Options and formats available
     _display_opts = ['particles', 'interactions', 'processes', 'diagrams', 
                      'diagrams_text', 'multiparticles', 'couplings', 'lorentz', 
@@ -1582,15 +1567,14 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
     _check_opts = ['full', 'permutation', 'gauge', 'lorentz_invariance']
     _import_formats = ['model_v4', 'model', 'proc_v4', 'command', 'banner']
     _install_opts = ['pythia-pgs', 'Delphes', 'MadAnalysis', 'ExRootAnalysis']
-    _fks_export_formats = ['fksreal', 'fksborn']
-    _v4_export_formats = ['madevent', 'standalone','matrix'] +\
-                                      _fks_export_formats
-    _export_formats = _v4_export_formats + ['standalone_cpp', 'pythia8'] +\
-                                      _fks_export_formats
+    _v4_export_formats = ['madevent', 'standalone', 'matrix'] 
+    _nlo_export_formats = ['NLO']
+    _export_formats = _v4_export_formats + ['standalone_cpp', 'pythia8']
     _set_options = ['group_subprocesses',
                     'ignore_six_quark_processes',
                     'stdout_level',
-                    'fortran_compiler']
+                    'fortran_compiler',
+                    'fks_mode']
     # Variables to store object information
     _curr_model = None  #base_objects.Model()
     _curr_amps = diagram_generation.AmplitudeList()
@@ -1599,6 +1583,19 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
     _curr_cpp_model = None
     _curr_exporter = None
     _done_export = False
+
+    def preloop(self):
+        """Initializing before starting the main loop"""
+
+        self.prompt = 'mg5>'
+        
+        # By default, load the UFO Standard Model
+        logger.info("Loading default model: sm")
+        self.do_import('model sm')
+        self.history.append('import model sm')
+        
+        # preloop mother
+        CmdExtended.preloop(self)
 
     
     def __init__(self, mgme_dir = '', *completekey, **stdin):
@@ -1630,6 +1627,7 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
         # Set defaults for options
         self._options['group_subprocesses'] = 'Auto'
         self._options['ignore_six_quark_processes'] = False
+        self._options['fks_mode'] = 'real'
         
         # Load the configuration file
         self.set_configuration()
@@ -1688,6 +1686,8 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
             # Generate processes
             if self._options['group_subprocesses'] == 'Auto':
                     collect_mirror_procs = True
+            elif self._options['group_subprocesses'] == 'NLO':
+                    collect_mirror_procs = False
             else:
                 collect_mirror_procs = self._options['group_subprocesses']
             ignore_six_quark_processes = \
@@ -2123,72 +2123,6 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
         diag_logger.setLevel(old_level)
 
         return
-    
-#    def do_generateFKSFromBorn(self,line):
-#        """generate an amplitude with the FKS counterterms. Start with the born
-#        emission process"""
-#
-#        args = split_arg(line)
-#        self.check_generateFKS(args)
-#
-#        # Reset Helas matrix elements
-#        self._curr_matrix_elements = helas_objects.HelasMultiProcess()
-#        self._generate_info = line
-#        # Reset _done_export, since we have new process
-#        self._done_export = False
-#
-#        # Extract process from process definition
-#        if ',' in line:
-#            myprocdef, line = self.extract_decay_chain_process(line)
-#        else:
-#            myprocdef = self.extract_process(line)
-#
-#        cpu_time1 = time.time()
-#        # Generate processes
-#        myproc = fks_born.FKSMultiProcess(myprocdef)
-#        self._curr_amps = myproc.get('amplitudes')
-#        cpu_time2 = time.time()
-#
-#        nprocs = len(self._curr_amps)
-#        ndiags = sum([amp.get_number_of_diagrams() for \
-#                              amp in self._curr_amps])
-#        logger.info("%i processes with %i diagrams generated in %0.3f s" % \
-#                  (nprocs, ndiags, (cpu_time2 - cpu_time1)))
-#
-#    def do_generateFKSFromReals(self,line):
-#        """generate an amplitude with the FKS counterterms. Start with the reals
-#        emission process"""
-#
-#        args = split_arg(line)
-#        self.check_generateFKS(args)
-#
-#        # Reset Helas matrix elements
-#        self._curr_matrix_elements = helas_objects.HelasMultiProcess()
-#        self._generate_info = line
-#        # Reset _done_export, since we have new process
-#        self._done_export = False
-#
-#        # Extract process from process definition
-#        if ',' in line:
-#            myprocdef, line = self.extract_decay_chain_process(line)
-#        else:
-#            myprocdef = self.extract_process(line)
-#
-#        cpu_time1 = time.time()
-#        # Generate processes
-#        myproc = fks_real.FKSMultiProcessFromReals(myprocdef)
-#        self._curr_amps = myproc.get('amplitudes')
-#        cpu_time2 = time.time()
-#
-#        nprocs = len(self._curr_amps)
-#        ndiags = sum([amp.get_number_of_diagrams() for \
-#                              amp in self._curr_amps])
-#        logger.info("%i processes with %i diagrams generated in %0.3f s" % \
-#                  (nprocs, ndiags, (cpu_time2 - cpu_time1)))
-
-
-        
-        
     
     # Generate a new amplitude
     def do_generate(self, line):
@@ -2883,6 +2817,30 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
                        self.configuration['pythia8_path'] = None
                     else:
                         continue
+
+
+            if key == 'lhapdf' and self.configuration[key]:
+                if os.path.isfile(self.configuration['lhapdf']) or \
+                any([os.path.isfile(os.path.join(path, self.configuration['lhapdf'])) \
+                        for path in os.environ['PATH'].split(':')]):
+                    lhapdf_config = self.configuration['lhapdf']
+                else:
+                    lhapdf_config = None
+
+                logger.info('lhapdf-config: %s' % lhapdf_config)
+                self.lhapdf_config = lhapdf_config
+
+            if key == 'fastjet' and self.configuration[key]:
+                if os.path.isfile(self.configuration['fastjet']) or \
+                any([os.path.isfile(os.path.join(path, self.configuration['fastjet'])) \
+                        for path in os.environ['PATH'].split(':')]):
+                    fastjet_config = self.configuration['fastjet']
+                else:
+                    fastjet_config = None
+
+                logger.info('fastjet-config: %s' % fastjet_config)
+                self.fastjet_config = fastjet_config
+
                     
             elif key.endswith('path'):
                 pass
@@ -3151,10 +3109,10 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
                             for q in self._options[args[0]]]))
             
         elif args[0] == 'group_subprocesses':
-            if args[1] != 'Auto':
+            if args[1] not in ['Auto', 'NLO']:
                 self._options[args[0]] = eval(args[1])
             else:
-                self._options[args[0]] = 'Auto'
+                self._options[args[0]] = args[1]
             if log:
                 logger.info('Set group_subprocesses to %s' % \
                         str(self._options[args[0]]))
@@ -3175,6 +3133,18 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
                 self.configuration['fortran_compiler'] = args[1]
             else:
                 self.configuration['fortran_compiler'] = None
+        elif args[0] == 'fks_mode':
+            if args[1] != 'None':
+                if log:
+                    logger.info('set FKS mode to %s' % args[1])
+                logger.info('Note that you need to regenerate all processes')
+                self._options[args[0]] = args[1]
+            else:
+                self._options[args[0]] = args[1]
+            self._curr_amps = diagram_generation.AmplitudeList()
+            self._fks_multi_proc = None
+            self._curr_matrix_elements = helas_objects.HelasMultiProcess()
+
         elif args[0] in self._options:
             if args[1] in  ['None','True', 'False']:
                 self._options[args[0]] = eval(args[1])
@@ -3194,113 +3164,8 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
         # Check Argument validity and modify argument to be the real path
         self.check_open(args)
         file_path = args[0]
-        launch_ext.open_file(file_path)
-
         
-    def do_compile_fksreal(self,line):
-        """compiles the fksreal process"""
-        #check that the process has been exported in the fks format
-        if type(self._curr_exporter)!= type(export_fks_real.ProcessExporterFortranFKS_real()):
-            print type(self._curr_exporter)
-            logger.error('no FKS process exported')
-        else:
-            subprocdir = os.path.join(self._curr_exporter.dir_path, 'SubProcesses')
-            sourcedir = os.path.join(self._curr_exporter.dir_path, 'Source')
-            logfile = os.path.join(self._curr_exporter.dir_path, 'compile.log')
-            linkfile = os.path.join(self._curr_exporter.dir_path, 'link_fks.log')
-            genfile = os.path.join(self._curr_exporter.dir_path, 'gensym.log')
-
-            execs = ['madevent_vegas', 'madevent_mint', 'madevent_mintMC']
-            if os.path.exists(logfile):
-                os.system('rm -f '+ logfile)
-
-            logger.info('Compiling MadFKS')
-            compile_link = 'y' == self.timed_input('Compile and run link_fks [y/n]? ', 'n')
-            compile_tests = 'y' == self.timed_input('Compile and run soft/collinear tests [y/n]? ', 'n')
-            if compile_tests:
-                test_points = self.timed_input('Enter # of points for tests: ' , '1')
-            compile_gensym = 'y' == self.timed_input('Compile and run gensym [y/n]? ', 'n')
-            if compile_gensym:
-                cluster = self.timed_input('Enter 0 for local run, 1 for Condor: ', '0')
-                if cluster not in ['0', '1']:
-                    cluster = '0'
-            compile_me = 'y' == self.timed_input('Compile MadEvent [y/n]? ', 'n')
-            if compile_me:
-                vegas_mint = self.timed_input('0-> VEGAS, 1-> MINT, 2-> MINT MC: ', '0')
-                if  vegas_mint not in ['0', '1', '2']:
-                    vegas_mint = '0'
-            
-            if compile_link or compile_tests or compile_gensym or compile_me:
-                #compile source
-                os.chdir(sourcedir)
-                logger.info('Compiling Source...')
-                os.system('make >>' + logfile  + ' 2>&1')
-                logger.info('Source Compiled!')
-          #  if compile_link == 'y' or compile_gensym == 'y' or compile_me =='y':
-                logger.info('Compiling P* subdirs...')
-                os.chdir(subprocdir)
-            #for now always sum over helicities
-                os.system("""sed -i.hel 's/HelSum=.false./HelSum=.true./g;s/      include "helicities.inc"/chel  include "helicities.inc"/g' fks_singular.f""")
-                os.system("""sed -i.hel 's/HelSum=.false./HelSum=.true./g;s/      include "helicities.inc"/chel  include "helicities.inc"/g' reweight_events.f""")
-                
-                for dir in self._fks_directories:
-                    logger.info('Processing directory '+ dir)
-                    thisprocdir = os.path.join(subprocdir, dir)
-                    os.chdir(thisprocdir)
-
-                    integrate = open(os.path.join(thisprocdir,"integrate.fks")\
-                                     ).read().split("\n")
-                    if integrate[0].lower() == 'n':
-                        #check if the dir has to be integrated
-                        logger.info("No need to integrate this direcory, skipping...")
-                    
-                    else:    
-                        os.system('echo ' + dir + ' >> ' + logfile + ' 2>&1')
-                        os.system('echo ' + dir + ' >> ' + linkfile + ' 2>&1')
-                        os.system('echo ' + dir + ' >> ' + genfile + ' 2>&1')
-    
-                        if compile_link:
-                            logger.info('make link_fks')
-                            os.system('cp born_conf.inc.back born_conf.inc')
-                            os.system('cp born_props.inc.back born_props.inc')
-                            os.system('cp configs.inc.back configs.inc')
-                            os.system('cp props.inc.back props.inc')
-                            if os.path.exists('link_fks'):
-                                os.system('rm -f link_fks')
-                            os.system('make link_fks >> ' + logfile + ' 2>&1')
-                            if os.path.exists('link_fks'):
-                                logger.info('running link_fks')
-                                os.system('./link_fks >> ' + linkfile + ' 2>&1')
-                            else:
-                                logger.error('ERROR compiling link_fks, see compile.log for details')
-                                return
-                        
-                        if compile_tests:
-                            logger.info('make test_ME')
-                            os.system('make test_ME >' + logfile + ' 2>&1')
-                            os.system("echo -2 -2 > input_testME")
-                            os.system("echo %s %s >> input_testME" % \
-                                      (test_points, test_points))
-                            os.system("echo 0 >> input_testME")
-                            os.system("echo 0 >> input_testME")
-                            logger.info("running test_ME")
-                            os.system("./test_ME < input_testME")
-                        
-                        if compile_gensym:
-                            logger.info('make gensym')
-                            if os.path.exists('ajob1'):
-                                os.system('rm -f ajob*')
-                            if os.path.exists('mg1.cmd'):
-                                os.system('rm -f mg*.cmd')
-                            os.system('make gensym >> ' + logfile)
-                            if os.path.exists('gensym'):
-                                logger.info('running gensym ' + cluster)
-                                os.system('echo ' + cluster + ' | ./gensym >> ' + genfile + ' 2>&1')
-                        if compile_me:
-                            exe = execs[int(vegas_mint)]
-                            logger.info('make ' + exe)
-                            os.system('make ' + exe + ' >> ' + logfile)
-
+        launch_ext.open_file(file_path)
                  
     def do_output(self, line):
         """Initialize a new Template or reinitialize one"""
@@ -3359,21 +3224,6 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
                                   self._mgme_dir, self._export_dir,not noclean)
         elif self._export_format == 'standalone_cpp':
             export_cpp.setup_cpp_standalone_dir(self._export_dir, self._curr_model)
-        elif self._export_format in self._fks_export_formats:
-        #    self.do_set('group_subprocesses False')
-            if self._export_format =='fksreal':
-                logger.info("Exporting in MadFKS format, starting from real emission process")
-                self._curr_exporter = export_fks_real.ProcessExporterFortranFKS_real(\
-                                          self._mgme_dir, self._export_dir,
-                                          not noclean)
-                self._curr_exporter.copy_fkstemplate()
-    
-            elif self._export_format =='fksborn':
-                logger.info("Exporting in MadFKS format, starting from born process")
-                self._curr_exporter = export_fks_born.ProcessExporterFortranFKS_born(\
-                                          self._mgme_dir, self._export_dir,
-                                          not noclean)
-                self._curr_exporter.copy_fkstemplate()
         elif not os.path.isdir(self._export_dir):
             os.makedirs(self._export_dir)
 
@@ -3451,24 +3301,9 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
                         uid += 1 # update the identification number
                         for me in group.get('matrix_elements'):
                             me.get('processes')[0].set('uid', uid)
-                else:
-                    if self._export_format == 'fksreal':
-                        fks_multi_proc = fks_real.FKSMultiProcessFromReals(
-                                            self._curr_amps)
-                        self._curr_matrix_elements = \
-                                 fks_real_helas.FKSHelasMultiProcessFromReals(\
-                                    fks_multi_proc)
-                    elif self._export_format == 'fksborn':
-                        fks_multi_proc = fks_born.FKSMultiProcessFromBorn(
-                                            self._curr_amps)
-                        self._curr_matrix_elements = \
-                                 fks_born_helas.FKSHelasMultiProcessFromBorn(\
-                                    fks_multi_proc)
-                    else:
-                        self._curr_matrix_elements = \
-                                 helas_objects.HelasMultiProcess(\
-                                               self._curr_amps)
-
+                else: # Not grouped subprocesses
+                    self._curr_matrix_elements = \
+                        helas_objects.HelasMultiProcess(self._curr_amps)
                     ndiags = sum([len(me.get('diagrams')) for \
                                   me in self._curr_matrix_elements.\
                                   get_matrix_elements()])
@@ -3488,74 +3323,6 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
         calls = 0
 
         path = self._export_dir
-
-        if self._export_format in ['madevent', 'standalone', 'standalone_cpp',
-                                   'fksreal', 'fksborn']:
-            path = os.path.join(path, 'SubProcesses')
-
-        if self._export_format == 'fksreal':
-            #_curr_matrix_element is a FKSHelasMultiProcessFromRealObject 
-            self._fks_directories = []
-            for ime, me in \
-                enumerate(self._curr_matrix_elements.get_matrix_elements()):
-                #me is a FKSHelasProcessFromReals
-                calls = calls + \
-                        self._curr_exporter.generate_born_directories_fks(\
-                            me, self._curr_fortran_model, ime, path)
-                self._fks_directories.extend(self._curr_exporter.fksdirs)
-            card_path = os.path.join(path, os.path.pardir, 'SubProcesses', \
-                                     'procdef_mg5.dat')
-            if self._generate_info:
-                self._curr_exporter.write_procdef_mg5(card_path, #
-                                self._curr_model['name'],
-                                self._generate_info)
-                try:
-                    cmd.Cmd.onecmd(self, 'history .')
-                except:
-                    pass
-            
-        cpu_time1 = time.time()
-
-        if self._export_format == 'fksborn':
-            #_curr_matrix_element is a FKSHelasMultiProcessFromRealObject 
-            self._fks_directories = []
-            for ime, me in \
-                enumerate(self._curr_matrix_elements.get('matrix_elements')):
-                #me is a FKSHelasProcessFromReals
-                calls = calls + \
-                        self._curr_exporter.generate_real_directories_fks(\
-                            me, self._curr_fortran_model, ime, path)
-                self._fks_directories.extend(self._curr_exporter.fksdirs)
-            card_path = os.path.join(path, os.path.pardir, 'SubProcesses', \
-                                     'procdef_mg5.dat')
-            if self._generate_info:
-                self._curr_exporter.write_procdef_mg5(card_path, #
-                                self._curr_model['name'],
-                                self._generate_info)
-                try:
-                    cmd.Cmd.onecmd(self, 'history .')
-                except:
-                    pass
-            
-        cpu_time1 = time.time()
-
-
-        
-#        if self._export_format == 'fks':
-#            fksmulti = fks_born.FKSMultiProcess(self._curr_amps)
-#            
-#            card_path = os.path.join(path, os.path.pardir, 'SubProcesses', \
-#                                     'procdef_mg5.dat')
-#            if self._generate_info:
-#                self._curr_exporter.write_procdef_mg5(card_path, #
-#                                self._curr_model['name'],
-#                                self._generate_info)
-#                try:
-#                    cmd.Cmd.onecmd(self, 'history .')
-#                except:
-#                    pass
-#            
-#        cpu_time1 = time.time()
         if self._export_format in ['standalone_cpp', 'madevent', 'standalone']:
             path = pjoin(path, 'SubProcesses')
             
@@ -3687,24 +3454,23 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
         """Make the html output, write proc_card_mg5.dat and create
         madevent.tar.gz for a MadEvent directory"""
         
-        # For v4 models, copy the model/HELAS information.
-        if self._model_v4_path:
-            logger.info('Copy %s model files to directory %s' % \
-                        (os.path.basename(self._model_v4_path), self._export_dir))
-            self._curr_exporter.export_model_files(self._model_v4_path)
-            self._curr_exporter.export_helas(os.path.join(self._mgme_dir,'HELAS'))
-        elif self._export_format in ['madevent', 'standalone', 'fks', 'fksreal', 'fksborn']:
-
-            logger.info('Export UFO model to MG4 format')
-            # wanted_lorentz are the lorentz structures which are
-            # actually used in the wavefunctions and amplitudes in
-            # these processes
-            wanted_lorentz = self._curr_matrix_elements.get_used_lorentz()
-            wanted_couplings = self._curr_matrix_elements.get_used_couplings()
-            self._curr_exporter.convert_model_to_mg4(self._curr_model,
-                                           wanted_lorentz,
-                                           wanted_couplings)
-                         
+        if self._export_format in ['madevent', 'standalone', 'NLO']:
+            # For v4 models, copy the model/HELAS information.
+            if self._model_v4_path:
+                logger.info('Copy %s model files to directory %s' % \
+                            (os.path.basename(self._model_v4_path), self._export_dir))
+                self._curr_exporter.export_model_files(self._model_v4_path)
+                self._curr_exporter.export_helas(pjoin(self._mgme_dir,'HELAS'))
+            else:
+                logger.info('Export UFO model to MG4 format')
+                # wanted_lorentz are the lorentz structures which are
+                # actually used in the wavefunctions and amplitudes in
+                # these processes
+                wanted_lorentz = self._curr_matrix_elements.get_used_lorentz()
+                wanted_couplings = self._curr_matrix_elements.get_used_couplings()
+                self._curr_exporter.convert_model_to_mg4(self._curr_model,
+                                               wanted_lorentz,
+                                               wanted_couplings)
         if self._export_format == 'standalone_cpp':
             logger.info('Export UFO model to C++ format')
             # wanted_lorentz are the lorentz structures which are
@@ -3718,6 +3484,17 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
                                             wanted_couplings)
             export_cpp.make_model_cpp(self._export_dir)
 
+
+        elif self._export_format in ['NLO']:
+            ## wrtie fj_lhapdf_opts file
+            fj_lhapdf_file = open(os.path.join(self._export_dir,'Source','fj_lhapdf_opts'),'w')
+            fj_lhapdf_lines = \
+                 ['fastjet_config=%s' % self.fastjet_config,
+                  'lhapdf_config=%s' % self.lhapdf_config]
+            text = '\n'.join(fj_lhapdf_lines) + '\n'
+            fj_lhapdf_file.write(text)
+            fj_lhapdf_file.close()
+
         if self._export_format in ['madevent', 'standalone']:
             
             self._curr_exporter.finalize_v4_directory( \
@@ -3727,13 +3504,6 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
                                            not nojpeg,
                                            online,
                                            self.configuration['fortran_compiler'])
-
-        elif self._export_format == 'fksreal':
-            os.system('touch %s/done' % os.path.join(self._export_dir,
-                                                     'SubProcesses'))        
-            self._curr_exporter.finalize_fks_directory(self._export_dir, not nojpeg,
-                                                     [self.history_header] + \
-                                                     self.history)        
 
         if self._export_format in ['madevent', 'standalone', 'standalone_cpp']:
             logger.info('Output to directory ' + self._export_dir + ' done.')
@@ -3765,87 +3535,6 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
             else: 
                 last_action_2 = 'none'
         
-
-#===============================================================================
-# MadGraphCmd
-#===============================================================================
-class MadGraphCmdWeb(MadGraphCmd, CheckValidForCmdWeb):
-    """The command line processor of MadGraph"""
- 
-    timeout = 1 # time authorize to answer question [0 is no time limit]
-    
-    def __init__(self, *arg, **opt):
-    
-        if os.environ.has_key('_CONDOR_SCRATCH_DIR'):
-            self.writing_dir = pjoin(os.environ['_CONDOR_SCRATCH_DIR'], \
-                                                                 os.path.pardir)
-        else:
-            self.writing_dir = pjoin(os.environ['MADGRAPH_DATA'],
-                               os.environ['REMOTE_USER'])
-            
-        
-        #standard initialization
-        MadGraphCmd.__init__(self, mgme_dir = '', *arg, **opt)
-    
-    def finalize(self, nojpeg):
-        """Finalize web generation""" 
-        
-        MadGraphCmd.finalize(self, nojpeg, online = True)
-
-    # Generate a new amplitude
-    def do_generate(self, line):
-        """Generate an amplitude for a given process"""
-
-        try:
-           MadGraphCmd.do_generate(self, line)
-        except:
-            # put the stop logo on the web
-            files.cp(self._export_dir+'/HTML/stop.jpg',self._export_dir+'/HTML/card.jpg')
-            raise
-    
-    # Add a process to the existing multiprocess definition
-    def do_add(self, line):
-        """Generate an amplitude for a given process and add to
-        existing amplitudes
-        syntax:
-        """
-        try:
-           MadGraphCmd.do_add(self, line)
-        except:
-            # put the stop logo on the web
-            files.cp(self._export_dir+'/HTML/stop.jpg',self._export_dir+'/HTML/card.jpg')
-            raise
-        
-    # Use the cluster file for the configuration
-    def set_configuration(self, config_path=None):
-        
-        """Force to use the web configuration file only"""
-        config_path = pjoin(os.environ['MADGRAPH_BASE'], 'mg5_configuration.txt')
-        return MadGraphCmd.set_configuration(self, config_path=config_path)
-
-#===============================================================================
-# MadGraphCmd
-#===============================================================================
-class MadGraphCmdShell(MadGraphCmd, CompleteForCmd, CheckValidForCmd, cmd.CmdShell):
-    """The command line processor of MadGraph""" 
-    
-    writing_dir = '.'
-    timeout = 0 # time authorize to answer question [0 is no time limit]
-    
-    def preloop(self):
-        """Initializing before starting the main loop"""
-
-        self.prompt = 'mg5>'
-        
-        # By default, load the UFO Standard Model
-        logger.info("Loading default model: sm")
-        self.do_import('model sm')
-        self.history.append('import model sm')
-        
-        # preloop mother
-        cmd.CmdShell.preloop(self)
-
-
 #===============================================================================
 # Command Parser
 #=============================================================================== 

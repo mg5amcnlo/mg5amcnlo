@@ -148,7 +148,7 @@ c      if (icomp .gt. 3 .or. icomp .lt. 0) icomp=0
       multi_channel=.true.
       
       call setrun                !Sets up run parameters
-      call setpara('param_card.dat',.true.)   !Sets up couplings and masses
+      call setpara('param_card.dat')   !Sets up couplings and masses
       call setcuts               !Sets up cuts 
       call printout
       call run_printout

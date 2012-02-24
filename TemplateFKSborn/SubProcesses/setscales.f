@@ -123,7 +123,7 @@ c
         write(*,*) 'alpha_s=',g**2/(16d0*atan(1d0))
 c
         if(fixed_ren_scale) then
-          call setpara('param_card.dat',.false.)
+          call setpara('param_card.dat')
         endif
 c Put momenta in the common block to zero to start
         do i=0,3
@@ -160,7 +160,7 @@ c Pass momenta to couplings.f
             enddo
           enddo
         endif
-         call setpara('param_card.dat',.false.)
+         call setpara('param_card.dat')
       endif
 
 c Reset calculatedBorn, because the couplings might have been changed.

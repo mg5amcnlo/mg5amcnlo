@@ -465,13 +465,13 @@ c order of alfas running = 2
 
       if(lp1.ne.0.or.lp2.ne.0) then
           write(*,*) 'A PDF is used, so alpha_s(MZ) is going to be modified'
-          call setpara('param_card.dat',.true.)
+          call setpara('param_card.dat')
           asmz=G**2/(16d0*atan(1d0))
           write(*,*) 'Old value of alpha_s from param_card: ',asmz
           call pdfwrap
           write(*,*) 'New value of alpha_s from PDF ',pdlabel,':',asmz
       else
-          call setpara('param_card.dat',.true.)
+          call setpara('param_card.dat')
           asmz=G**2/(16d0*atan(1d0))
           nloop=2
           pdlabel='none'

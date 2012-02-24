@@ -48,7 +48,7 @@ c     models are read from Cards/param_card.dat. The secondary parameters are ca
 c     in Source/MODEL/couplings.f. The values are stored in common blocks that are listed
 c     in coupl.inc .
 
-      call setpara('param_card.dat',.true.)  !first call to setup the paramaters
+      call setpara('param_card.dat')  !first call to setup the paramaters
       include "pmass.inc"             !set up masses
 
 c---  Now use a simple multipurpose PS generator (RAMBO) just to get a 

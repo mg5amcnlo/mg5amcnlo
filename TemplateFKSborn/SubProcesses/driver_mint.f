@@ -106,7 +106,7 @@ c
       nsteps=2
       call setrun                !Sets up run parameters
 c     $B$ setpara $B$ ! this is a tag for MadWeight. Don't edit this line
-      call setpara('param_card.dat',.true.)   !Sets up couplings and masses
+      call setpara('param_card.dat')   !Sets up couplings and masses
 c     $E$ setpara $E$ ! this is a tag for MadWeight. Don't edit this line
       include 'pmass.inc'        !Sets up particle masses
       call setcuts               !Sets up cuts 
