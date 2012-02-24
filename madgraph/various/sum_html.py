@@ -196,7 +196,7 @@ function check_link(url,alt, id){
     table_line_template = \
 """
 <tr><td align=right>%(P_title)s</td>
-    <td align=right><a id="%(P_link)s" href=%(P_link)s onClick="check_link('%(mod_P_link)s','%(P_link)s','%(P_link)s')"> %(cross)s </a> </td>
+    <td align=right><a id="%(P_link)s" href=%(P_link)s onClick="check_link('%(P_link)s','%(mod_P_link)s','%(P_link)s')"> %(cross)s </a> </td>
     <td align=right>  %(error)s</td>
     <td align=right>  %(events)s</td>
     <td align=right>  %(unweighted)s</td>
