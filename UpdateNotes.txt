@@ -1,6 +1,12 @@
 Update notes for MadGraph 5 (in reverse time order)
 
-1.4.3 (XX/XX/12)  OM: Add LSF to the list of supported cluster (thanks to Alexis).
+1.4.3 (XX/XX/12)  JA: Reintroduced the possibility to completely forbid
+                      s-channel diagrams, using the $$ notation. Note that
+                      this should be used with great care, since the result
+                      is in general not gauge-invariant. It is in general
+                      better to use the $ notation, forbidding only onshell
+                      s-channel particles (the inverse of decay chains).
+                  OM: Add LSF to the list of supported cluster (thanks to Alexis).
                   OM: change the param_card reader for the restrict file.
                       This allow to restrict model with 3 lha id (or more)
                       (thanks to Eduardo Ponton).

@@ -6881,7 +6881,7 @@ CALL IOSXXX(W(1,14),W(1,2),W(1,12),MGVX350,AMP(2))""")
 
         mydecay3 = base_objects.Process({'legs':myleglist,
                                          'model':mymodel,
-                                         'forbidden_s_channels':[-1000011]})
+                                         'forbidden_onsh_s_channels':[-1000011]})
 
         me3 = helas_objects.HelasMatrixElement(\
             diagram_generation.Amplitude(mydecay3))

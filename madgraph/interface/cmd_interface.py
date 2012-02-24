@@ -2164,6 +2164,7 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
         # Now check for forbidden particles, specified using "/"
         slash = line.find("/")
         dollar = line.find("$")
+        dollar = line.find("$")
         forbidden_particles = ""
         if slash > 0:
             if dollar > slash:
@@ -2176,12 +2177,19 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
                 if len(forbidden_particles_re.groups()) > 2:
                     line = line + forbidden_particles_re.group(3)
 
-        # Now check for forbidden schannels, specified using "$"
-        forbidden_schannels_re = re.match("^(.+)\s*\$\s*(.+)\s*$", line)
+        # Now check for double forbidden schannels, specified using "$$"
+        forbidden_schannels_re = re.match("^(.+)\s*\$\s*\$\s*(.+)\s*$", line)
         forbidden_schannels = ""
         if forbidden_schannels_re:
             forbidden_schannels = forbidden_schannels_re.group(2)
             line = forbidden_schannels_re.group(1)
+
+        # Now check for forbidden schannels, specified using "$"
+        forbidden_onsh_schannels_re = re.match("^(.+)\s*\$\s*(.+)\s*$", line)
+        forbidden_onsh_schannels = ""
+        if forbidden_onsh_schannels_re:
+            forbidden_onsh_schannels = forbidden_onsh_schannels_re.group(2)
+            line = forbidden_onsh_schannels_re.group(1)
 
         # Now check for required schannels, specified using "> >"
         required_schannels_re = re.match("^(.+?)>(.+?)>(.+)$", line)
@@ -2234,8 +2242,15 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
                 raise self.InvalidCmd,\
                       "Multiparticle %s is or-multiparticle" % part_name + \
                       " which can be used only for required s-channels"
+            forbidden_onsh_schannel_ids = \
+                              self.extract_particle_ids(forbidden_onsh_schannels)
             forbidden_schannel_ids = \
                               self.extract_particle_ids(forbidden_schannels)
+            if forbidden_onsh_schannel_ids and \
+               isinstance(forbidden_onsh_schannel_ids[0], list):
+                raise self.InvalidCmd,\
+                      "Multiparticle %s is or-multiparticle" % part_name + \
+                      " which can be used only for required s-channels"
             if forbidden_schannel_ids and \
                isinstance(forbidden_schannel_ids[0], list):
                 raise self.InvalidCmd,\
@@ -2254,7 +2269,9 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
                               'id': proc_number,
                               'orders': orders,
                               'forbidden_particles': forbidden_particle_ids,
-                              'forbidden_s_channels': forbidden_schannel_ids,
+                              'forbidden_onsh_s_channels': forbidden_onsh_schannel_ids,
+                              'forbidden_s_channels': \
+                                                forbidden_schannel_ids,
                               'required_s_channels': required_schannel_ids,
                               'overall_orders': overall_orders
                               })
