@@ -6,6 +6,8 @@ Update notes for MadGraph 5 (in reverse time order)
                       is in general not gauge-invariant. It is in general
                       better to use the $ notation, forbidding only onshell
                       s-channel particles (the inverse of decay chains).
+                  JA: Automatically ensure that ptj and mmjj are below xqcut
+                      when xqcut > 0, since ptj or mmjj > xqcut ruins matching.
                   OM: Add LSF to the list of supported cluster (thanks to Alexis).
                   OM: change the param_card reader for the restrict file.
                       This allow to restrict model with 3 lha id (or more)
