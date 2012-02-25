@@ -255,6 +255,15 @@ class AbstractRoutineBuilder(object):
                     lorentz *= Spinor(spin_id, id)
                 elif spin == 3:        
                     lorentz *= Vector(id, id)
+                elif spin == 4:
+                    # shift the tag if we multiply by C matrices
+                    if (id+1) // 2 in self.conjg:
+                        spin_id = id + _conjugate_gap
+                    else:
+                        spin_id = id
+                    nb_spinor += 1
+                    lorentz *= Spinor(spin_id, id)
+
                 elif spin == 5:
                     lorentz *= Spin2(1 * _spin2_mult + id, 2 * _spin2_mult + id, id)
                 else:

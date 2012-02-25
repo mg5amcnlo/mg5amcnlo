@@ -14,8 +14,8 @@ class WriteALOHA:
     change_var_format = str
     change_number_format = str
     extension = ''
-    type_to_variable = {2:'F',3:'V',5:'T',1:'S'}
-    type_to_size = {'S':3, 'T':18, 'V':6, 'F':6}
+    type_to_variable = {1:'S', 2:'F', 3:'V', 4:'R', 5:'T'}
+    type_to_size = {'S':3, 'T':18, 'R':18, 'V':6, 'F':6}
     
     def __init__(self, abstract_routine, dirpath):
 
@@ -215,10 +215,10 @@ class WriteALOHA:
         
         
         for index, spin in enumerate(self.particles): 
-            assert(spin in ['S','F','V','T'])  
+            assert(spin in ['S','F','V','R','T'])  
       
             #compute the sign
-            if spin != 'F':
+            if spin not in ['F','R']:
                 sign = -1 * global_sign
             elif nb_fermion % 2 == 0:
                 sign = global_sign
@@ -259,6 +259,7 @@ class ALOHAWriterForFortran(WriteALOHA):
     declare_dict = {'S':'double complex S%d(*)',
                     'F':'double complex F%d(*)',
                     'V':'double complex V%d(*)',
+                    'R':'double complex R%d(*)',
                     'T':'double complex T%s(*)'}
     
     def define_header(self, name=None):
@@ -646,6 +647,7 @@ class ALOHAWriterForCPP(WriteALOHA):
     declare_dict = {'S':'double complex S%d[3]',
                     'F':'double complex F%d[6]',
                     'V':'double complex V%d[6]',
+                    'R':'double complex R%d[18]',
                     'T':'double complex T%s[18]'}
     
     def define_header(self, name=None):

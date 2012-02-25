@@ -222,7 +222,7 @@ class Vector(aloha_lib.LorentzObject):
 #===============================================================================
 # Spin3/2
 #===============================================================================
-class Spin2(aloha_lib.LorentzObject):
+class Spin3Half(aloha_lib.LorentzObject):
     """ Helas Object for a Spin2"""
     
     def __init__(self, lorentz, spin, particle, prefactor=1):
