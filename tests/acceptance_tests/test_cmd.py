@@ -93,7 +93,8 @@ class TestCmdShell1(unittest.TestCase):
         """ command 'draw' works """
 
         self.do('set group_subprocesses False')
-        self.do('load processes %s' % self.join_path(_pickle_path,'e+e-_e+e-.pkl'))
+        self.do('import model_v4 sm')
+        self.do('generate e+ e- > e+ e-')
         self.do('display diagrams .')
         self.assertTrue(os.path.exists('./diagrams_0_epem_epem.eps'))
         os.remove('./diagrams_0_epem_epem.eps')
@@ -332,7 +333,8 @@ class TestCmdShell2(unittest.TestCase,
             shutil.rmdir(self.out_dir)
 
         self.do('set group_subprocesses False')
-        self.do('load processes %s' % self.join_path(_pickle_path,'e+e-_e+e-.pkl'))
+        self.do('import model_v4 sm')
+        self.do('generate e+ e- > e+ e-')
         self.do('output standalone %s' % self.out_dir)
         self.do('set group_subprocesses True')
         self.assertTrue(os.path.exists(self.out_dir))
@@ -736,6 +738,7 @@ class TestCmdShell2(unittest.TestCase,
         self.assertTrue(os.path.exists(os.path.join(self.out_dir,
                                                     'SubProcesses',
                                                     'P0_qq_gogo_go_qqn1_go_qqn1')))
+        
         # Check the contents of the symfact.dat file
         self.assertEqual(open(os.path.join(self.out_dir,
                                            'SubProcesses',
@@ -779,18 +782,18 @@ class TestCmdShell2(unittest.TestCase,
                                            'SubProcesses',
                                            'P0_qq_gogo_go_qqn1_go_qqn1',
                                            'symfact.dat')).read(),
-                         """     1     1
-     2    -1
-     3    -1
-     4    -1
-     5     1
-     6    -5
-     7    -5
-     8    -5
-     9     1
-    10    -9
-    11    -9
-    12    -9
+                         """   1   1
+   2  -1
+   3  -1
+   4  -1
+   5   1
+   6  -5
+   7  -5
+   8  -5
+   9   1
+  10  -9
+  11  -9
+  12  -9
 """)
         
     def test_madevent_subproc_group_decay_chain(self):
