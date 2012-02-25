@@ -51,7 +51,7 @@ from madgraph import MG5DIR, InvalidCmd
 import models.model_reader as model_reader
 import aloha.template_files.wavefunctions as wavefunctions
 from aloha.template_files.wavefunctions import \
-     ixxxxx, oxxxxx, vxxxxx, sxxxxx, txxxxx
+     ixxxxx, oxxxxx, vxxxxx, sxxxxx, txxxxx, irxxxx, orxxxx
 
 #===============================================================================
 # Logger for process_checks

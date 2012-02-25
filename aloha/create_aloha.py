@@ -198,6 +198,8 @@ class AbstractRoutineBuilder(object):
         aloha_lib.USE_TAG=set()
         #multiply by the wave functions
         nb_spinor = 0
+        outgoing = self.outgoing
+        
         if not self.routine_kernel:
             AbstractRoutineBuilder.counter += 1
             logger.info('aloha creates %s routines' % self.name)
@@ -216,12 +218,12 @@ class AbstractRoutineBuilder(object):
         for (i, spin ) in enumerate(self.spins):
             id = i + 1
             #Check if this is the outgoing particle
-            if id == self.outgoing:
+            if id == outgoing:
                 if spin == 1: 
                     lorentz *= complex(0,1)
                 elif spin == 2:
-                    # shift the tag if we multiply by C matrices
-                    if (id+1) // 2 in self.conjg: 
+                    # shift and flip the tag if we multiply by C matrices
+                    if (id+1) // 2 in self.conjg:
                         id += _conjugate_gap
                     nb_spinor += 1
                     if nb_spinor %2:
@@ -230,6 +232,16 @@ class AbstractRoutineBuilder(object):
                         lorentz *= SpinorPropagator('I2', id, self.outgoing) 
                 elif spin == 3 :
                     lorentz *= VectorPropagator(id, 'I2', id)
+                elif spin == 4:
+                    # shift and flip the tag if we multiply by C matrices
+                    if (id+1) // 2 in self.conjg:
+                        id += _conjugate_gap
+                    nb_spinor += 1
+                    if nb_spinor %2:
+                        lorentz *= Spin3halfPropagator(id, 'I2', spin_id,'I3', self.outgoing)
+                    else:
+                        lorentz *= Spin3halfPropagator('I2', id, 'I3', spin_id, self.outgoing)                     
+                    
                 elif spin == 5 :
                     lorentz *= 1 # delayed evaluation (fastenize the code)
                     #if self.spin2_massless:
@@ -249,6 +261,11 @@ class AbstractRoutineBuilder(object):
                     # shift the tag if we multiply by C matrices
                     if (id+1) // 2 in self.conjg:
                         spin_id = id + _conjugate_gap
+                        if id % 2:
+                            if outgoing not in [id, id+1]:
+                                spin_id += 1
+                        elif outgoing not in [id, id-1]:
+                            spin_id -= 1
                     else:
                         spin_id = id
                     nb_spinor += 1
@@ -259,11 +276,15 @@ class AbstractRoutineBuilder(object):
                     # shift the tag if we multiply by C matrices
                     if (id+1) // 2 in self.conjg:
                         spin_id = id + _conjugate_gap
+                        if id % 2:
+                            if outgoing not in [id, id+1]:
+                                spin_id += 1
+                        elif outgoing not in [id, id-1]:
+                            spin_id -= 1
                     else:
                         spin_id = id
                     nb_spinor += 1
-                    lorentz *= Spinor(spin_id, id)
-
+                    lorentz *= Spin3Half(id, spin_id, id)
                 elif spin == 5:
                     lorentz *= Spin2(1 * _spin2_mult + id, 2 * _spin2_mult + id, id)
                 else:
@@ -271,8 +292,8 @@ class AbstractRoutineBuilder(object):
                                 'The spin value %s is not supported yet' % spin)                    
 
         # If no particle OffShell
-        if self.outgoing:
-            lorentz /= DenominatorPropagator(self.outgoing)
+        if outgoing:
+            lorentz /= DenominatorPropagator(outgoing)
             #lorentz.tag.add('OM%s' % self.outgoing )  
             #lorentz.tag.add('P%s' % self.outgoing)  
         else:
@@ -282,7 +303,7 @@ class AbstractRoutineBuilder(object):
         lorentz = lorentz.simplify()
 
         lorentz = lorentz.expand()
-        if self.outgoing and self.spins[self.outgoing-1] == 5:
+        if outgoing and self.spins[outgoing-1] == 5:
             if not self.aloha_lib:
                 AbstractRoutineBuilder.load_library()
             if self.spin2_massless:
