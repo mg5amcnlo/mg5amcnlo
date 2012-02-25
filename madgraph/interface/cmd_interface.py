@@ -753,6 +753,9 @@ This will take effect only in a NEW terminal
         
     def check_save(self, args):
         """ check the validity of the line"""
+        if len(args) == 0:
+            args.append('options')
+        
         if args[0] not in self._save_opts:
             self.help_save()
             raise self.InvalidCmd('wrong \"save\" format')
@@ -3006,51 +3009,8 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
                 raise self.InvalidCmd('No processes to save!')
         
         elif args[0] == 'options':
-            self.write_configuration(args[1])
-    
-    
-    def write_configuration(self, path):
-        """Write the configuration file"""
-        # We use the default configuration file as a template.
-        # to ensure that all configuration information are written we 
-        # keep track of all key that we need to write.
+            CmdExtended.do_save(line)
 
-        to_write = self.options.keys()[:]
-        writer = open(path,'w')
-        # Use local configuration => Need to update the path
-        conf = os.path.join(MG5DIR, 'input', 'mg5_configuration.txt')
-        for line in file(conf):
-            if '#' in line:
-                data, comment = line.split('#',1)
-            else: 
-                data, comment = line, ''
-            data = data.split('=')
-            if len(data) !=2:
-                writer.writelines(line)
-                continue
-            key = data[0].strip()
-            if key in self.options:
-                value = str(self.options[key])
-            else:
-                value = data[1].strip()
-            try:
-                to_write.remove(key)
-            except:
-                pass
-            if '_path' in key:       
-                # special case need to update path
-                # check if absolute path
-                if value.startswith('./'):
-                    value = os.path.realpath(os.path.join(MG5DIR, value))
-            writer.writelines('%s = %s # %s \n' % (key, value, comment))
-        for key in to_write:
-            if key in self.options:
-                writer.writelines('%s = %s \n' % (key,self.options[key]))
-            else:
-                writer.writelines('%s = %s \n' % (key,self.options[key]))
-                
-        writer.close()
-    
     
     # Set an option
     def do_set(self, line, log=True):

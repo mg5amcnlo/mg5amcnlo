@@ -1340,10 +1340,15 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
         self.banner = None
 
         # Get number of initial states
-        nexternal = open(pjoin(me_dir,'Source','nexternal.inc')).read()
-        found = re.search("PARAMETER\s*\(NINCOMING=(\d)\)", nexternal)
-        self.ninitial = int(found.group(1))
-        
+        try:
+            nexternal = open(pjoin(me_dir,'Source','nexternal.inc')).read()
+            found = re.search("PARAMETER\s*\(NINCOMING=(\d)\)", nexternal)
+            self.ninitial = int(found.group(1))
+        except:
+            # in gridpack this file might be remove. In that case, let suppose
+            # that ninitial is 2
+            self.ninitial = 2
+            
         # Load the configuration file
         self.set_configuration()
         self.timeout = 20
@@ -3916,6 +3921,7 @@ class GridPackCmd(MadEventCmd):
         self.exec_cmd('combine_events')
         self.exec_cmd('store_events')
         self.exec_cmd('pythia --no_default -f')
+        self.print_results_in_shell(self.results.current)
 
     def refine4grid(self, nb_event):
         """Special refine for gridpack run."""
