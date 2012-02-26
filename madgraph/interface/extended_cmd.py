@@ -833,7 +833,12 @@ class Cmd(BasicCmd):
                     continue
                 prevname = name
                 cmdname=name[3:]
-                doc = getattr(self, name).__doc__
+                try:
+                    doc = getattr(self.cmd, name).__doc__
+                except:
+                    doc = None
+                if not doc:
+                    doc = getattr(self, name).__doc__
                 if not doc:
                     tag = "Documented commands"
                 elif ':' in doc:
@@ -940,7 +945,7 @@ class Cmd(BasicCmd):
         if len(args) == 1:
             return self.list_completion(text, self._display_opts)
     
-    def do_save(self, line):
+    def do_save(self, line, check=True):
         """Save the configuration file"""
         
         args = self.split_arg(line)
@@ -960,14 +965,14 @@ class Cmd(BasicCmd):
         else:
             if hasattr(self, 'me_dir'):
                 base = pjoin(self.me_dir, 'Cards', 'me5_configuration.txt')
-                if len(args) == 0:
+                if len(args) == 0 and os.path.exists(base):
                     self.write_configuration(base, base, self.me_dir)
-            base = pjoin(MG5DIR, 'input_files', 'mg5_configuration.txt')
+            base = pjoin(MG5DIR, 'input', 'mg5_configuration.txt')
             basedir = MG5DIR
             
         if len(args) == 0:
             args.append(base)
-        self.write_configuration(args[1], base, basedir)
+        self.write_configuration(args[0], base, basedir)
     
     def check_save(self, args):
         """check that the line is compatible with save options"""
@@ -982,11 +987,7 @@ class Cmd(BasicCmd):
                 raise self.InvalidCmd, '\'%s\' is not recoginzed as first argument.' % \
                                                 args[0]
             else:
-                args.pop(0)
-        
-        if len(args) == 1:
-            if not os.path.isfile(args[0]):
-                raise self.InvalidCmd, '%s: No such file.' % args[0]            
+                args.pop(0)           
     
     def help_save(self):
         """help text for save"""
@@ -1051,8 +1052,8 @@ class Cmd(BasicCmd):
                 text += '%s = %s \n' % (key,self.options[key])
             else:
                 text += '%s = %s \n' % (key,self.options[key])
-        writter = open(filepath,'w')
-        writter.write(text)
+        writer = open(filepath,'w')
+        writer.write(text)
         writer.close()
                        
     def help_help(self):

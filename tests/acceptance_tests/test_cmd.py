@@ -26,7 +26,7 @@ logger = logging.getLogger('test_cmd')
 
 import tests.unit_tests.iolibs.test_file_writers as test_file_writers
 
-import madgraph.interface.cmd_interface as Cmd
+import madgraph.interface.master_interface as Cmd
 import madgraph.interface.launch_ext_program as launch_ext
 _file_path = os.path.split(os.path.dirname(os.path.realpath(__file__)))[0]
 _pickle_path =os.path.join(_file_path, 'input_files')
@@ -42,7 +42,7 @@ class TestCmdShell1(unittest.TestCase):
     def setUp(self):
         """ basic building of the class to test """
         
-        self.cmd = Cmd.MadGraphCmdShell()
+        self.cmd = Cmd.MasterCmd()
     
     @staticmethod
     def join_path(*path):
@@ -150,7 +150,7 @@ class TestCmdShell2(unittest.TestCase,
     def setUp(self):
         """ basic building of the class to test """
         
-        self.cmd = Cmd.MadGraphCmdShell()
+        self.cmd = Cmd.MasterCmd()
         if  MG4DIR:
             logger.debug("MG_ME dir: " + MG4DIR)
             self.out_dir = os.path.join(MG4DIR, 'AUTO_TEST_MG5')
@@ -308,7 +308,7 @@ class TestCmdShell2(unittest.TestCase,
                             self.join_path(_pickle_path,'simple_v4_proc_card.dat'),
                             os.path.join(self.out_dir,'Cards','proc_card.dat')))
     
-        self.cmd = Cmd.MadGraphCmdShell()
+        self.cmd = Cmd.MasterCmd()
         pwd = os.getcwd()
         os.chdir(self.out_dir)
         self.do('import proc_v4 %s' % os.path.join('Cards','proc_card.dat'))

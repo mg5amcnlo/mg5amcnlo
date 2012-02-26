@@ -2293,7 +2293,6 @@ c           This is dummy particle used in multiparticle vertices
         # Write out lines for symswap.inc file (used to permute the
         # external leg momenta
         lines = [ form %(i+1, s) for i,s in enumerate(symmetry) if s != 0] 
-        print pos,"\"%s\"" % form,"\"%s\"" % lines[0]
 
         # Write the file
         writer.writelines(lines)

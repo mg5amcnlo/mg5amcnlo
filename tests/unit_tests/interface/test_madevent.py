@@ -17,7 +17,7 @@ from cmd import Cmd
 
 import unittest
 import madgraph
-import madgraph.interface.cmd_interface as mgcmd
+import madgraph.interface.master_interface as mgcmd
 import madgraph.interface.extended_cmd as ext_cmd
 import madgraph.interface.madevent_interface as mecmd
 import os

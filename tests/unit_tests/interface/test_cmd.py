@@ -12,12 +12,11 @@
 # For more information, please visit: http://madgraph.phys.ucl.ac.be
 #
 ################################################################################
-from cmd import Cmd
 """ Basic test of the command interface """
 
 import unittest
 import madgraph
-import madgraph.interface.cmd_interface as cmd
+import madgraph.interface.master_interface as cmd
 import madgraph.interface.extended_cmd as ext_cmd
 import os
 
@@ -25,7 +24,7 @@ import os
 class TestValidCmd(unittest.TestCase):
     """ check if the ValidCmd works correctly """
     
-    cmd = cmd.MadGraphCmdShell()
+    cmd = cmd.MasterCmd()
     
     def wrong(self,*opt):
         self.assertRaises(madgraph.MadGraph5Error, *opt)
@@ -56,21 +55,30 @@ class TestValidCmd(unittest.TestCase):
     
     def test_help_category(self):
         """Check that no help category are introduced by mistake.
-           If this test failes, this is due to a un-expected ':' in a command of
+           If this test fails, this is due to a un-expected ':' in a command of
            the cmd interface.
         """
         
         category = set()
-        valid_command = [c for c in dir(self.cmd) if c.startswith('do_')]
-        
-        for command in valid_command:
-            obj = getattr(self.cmd,command)
-            if obj.__doc__ and ':' in obj.__doc__:
-                category.add(obj.__doc__.split(':',1)[0])
+        categories_nb = {}
+        for interface_class in cmd.MasterCmd.__mro__:
+            valid_command = [c for c in dir(interface_class) if c.startswith('do_')]
+            name = interface_class.__name__
+            if name in ['CmdExtended', 'CmdShell', 'Cmd']:
+                continue
+            for command in valid_command:
+                obj = getattr(interface_class, command)
+                if obj.__doc__ and ':' in obj.__doc__:
+                    cat = obj.__doc__.split(':',1)[0]
+                    category.add(cat)
+                    if cat in categories_nb:
+                        categories_nb[cat] += 1
+                    else:
+                        categories_nb[cat] = 1
                 
         target = set(['Not in help'])
         self.assertEqual(target, category)
-        
+        self.assertEqual(categories_nb['Not in help'], 2)
     
     
     
