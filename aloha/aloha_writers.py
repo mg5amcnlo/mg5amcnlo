@@ -59,8 +59,8 @@ class WriteALOHA:
         elif len(indices) == 2: 
             return  4 * indices[0] + indices[1] + start 
         else:
-            raise Exception, 'WRONG CONTRACTION OF LORENTZ OBJECT for routine %s' \
-                    % self.namestring                                 
+            raise Exception, 'WRONG CONTRACTION OF LORENTZ OBJECT for routine %s: %s' \
+                    % (self.namestring, indices)                                 
                                  
     def collect_variables(self):
         """Collects Momenta,Mass,Width into lists"""
@@ -173,11 +173,23 @@ class WriteALOHA:
             outgoing = self.offshell
 
         call_arg = [] #incoming argument of the routine
-        
 
-        call_arg = ['%s%d' % (spin, index +1) 
-                                 for index,spin in enumerate(self.particles)
-                                 if outgoing != index +1]
+        conjugate = [2*(int(c[1:])-1) for c in self.tag if c[0] == 'C']
+        
+        for index,spin in enumerate(self.particles):
+            if outgoing == index + 1:
+                continue
+            
+            if index in conjugate:
+                index2, spin2 = index+1, self.particles[index+1]
+                if index2 + 1 != outgoing: 
+                    call_arg.append('%s%d' % (spin2, index2 +1)) 
+                call_arg.append('%s%d' % (spin, index +1)) 
+            elif index-1 in conjugate:
+                if index == outgoing:
+                    call_arg.append('%s%d' % (spin, index +1)) 
+            else:
+                call_arg.append('%s%d' % (spin, index +1)) 
                 
         return call_arg
 
@@ -213,6 +225,15 @@ class WriteALOHA:
         else:
             global_sign = -1
         
+        flipped = [2*(int(c[1:])-1) for c in self.tag if c.startswith('C')]
+        if self.offshell % 2:
+             not_flip = self.offshell - 1
+             if not_flip in flipped:
+                 flipped.remove(not_flip)
+        else:
+             not_flip = self.offshell - 2
+             if not_flip in flipped:
+                 flipped.remove(not_flip)           
         
         for index, spin in enumerate(self.particles): 
             assert(spin in ['S','F','V','T'])  
@@ -223,10 +244,13 @@ class WriteALOHA:
             elif nb_fermion % 2 == 0:
                 sign = global_sign
                 nb_fermion += 1
+                if index in flipped:
+                    sign *= -1
             else: 
                 sign = -1 * global_sign
                 nb_fermion += 1
-            
+                if index-1 in flipped:
+                    sign *= -1
             # No need to include the outgoing particles in the definitions
             if index == self.offshell -1:
                 continue 
@@ -245,6 +269,8 @@ class WriteALOHA:
         """ make the list of declaration nedded by the header """
         
         declare_list = []
+        
+        
         for index, spin in enumerate(self.particles):
             # First define the size of the associate Object 
             declare_list.append(self.declare_dict[spin] % (index + 1) ) 
@@ -360,9 +386,23 @@ class ALOHAWriterForFortran(WriteALOHA):
             index = int(mom[1:])
             type = self.particles[index - 1]
             energy_pos = self.type_to_size[type] -1
-            sign = ''
+            sign = 1
             if self.offshell == index and type in ['V','S']:
+                sign = -1
+            if 'C%s' % ((index +1) // 2)  in self.tag: 
+                if index == self.offshell:
+                    pass
+                elif index % 2 and index -1 != self.offshell:
+                    pass
+                elif index %2 == 1 and index + 1  != self.offshell:
+                    pass
+                else:
+                    sign *= -1
+            
+            if sign == -1 :
                 sign = '-'
+            else:
+                sign = ''
                             
             str_out += '%s(0) = %s dble(%s%d(%d))\n' % (mom, sign, type, index, energy_pos)
             str_out += '%s(1) = %s dble(%s%d(%d))\n' % (mom, sign, type, index, energy_pos + 1)
@@ -731,9 +771,23 @@ class ALOHAWriterForCPP(WriteALOHA):
             
             type = self.particles[index - 1]
             energy_pos = self.type_to_size[type] - 2
-            sign = ''
+            sign = 1
             if self.offshell == index and type in ['V', 'S']:
+                sign = -1
+            if 'C%s' % ((index +1) // 2)  in self.tag: 
+                if index == self.offshell:
+                    pass
+                elif index % 2 and index -1 != self.offshell:
+                    pass
+                elif index %2 == 1 and index + 1  != self.offshell:
+                    pass
+                else:
+                    sign *= -1
+            
+            if sign == -1 :
                 sign = '-'
+            else:
+                sign = ''
                    
             str_out += '%s[0] = %s%s%d[%d].real();\n' % (mom, sign, type, index, energy_pos)
             str_out += '%s[1] = %s%s%d[%d].real();\n' % (mom, sign, type, index, energy_pos + 1)
@@ -1181,14 +1235,28 @@ class ALOHAWriterForPython(WriteALOHA):
             index = int(mom[1:])
             type = self.particles[index - 1]
             energy_pos = self.type_to_size[type] -2
-            sign = ''
+            sign = 1
             if self.offshell == index and type in ['V','S']:
-                sign = '-'
+                sign = -1
+            if 'C%s' % ((index +1) // 2)  in self.tag: 
+                if index == self.offshell:
+                    pass
+                elif index % 2 and index -1 != self.offshell:
+                    pass
+                elif index %2 == 1 and index + 1  != self.offshell:
+                    pass
+                else:
+                    sign *= -1
+            
+            if sign == -1 :
+                sign = '- '
+            else:
+                sign = ''
 
             str_out += '%s = [%scomplex(%s%d[%d]).real, \\\n' % (mom, sign, type, index, energy_pos)
-            str_out += '        %s complex(%s%d[%d]).real, \\\n' % ( sign, type, index, energy_pos + 1)
-            str_out += '        %s complex(%s%d[%d]).imag, \\\n' % ( sign, type, index, energy_pos + 1)
-            str_out += '        %s complex(%s%d[%d]).imag]\n' % ( sign, type, index, energy_pos) 
+            str_out += '         %scomplex(%s%d[%d]).real, \\\n' % ( sign, type, index, energy_pos + 1)
+            str_out += '         %scomplex(%s%d[%d]).imag, \\\n' % ( sign, type, index, energy_pos + 1)
+            str_out += '         %scomplex(%s%d[%d]).imag]\n' % ( sign, type, index, energy_pos) 
                    
         # Definition for the One Over Mass**2 terms
         for elem in overm:
@@ -1260,17 +1328,7 @@ class ALOHAWriterForPython(WriteALOHA):
         text += header
   
         # Define which part of the routine should be called
-        addon = ''
-        if 'C' in self.namestring:
-            short_name, addon = name.split('C',1)
-            if addon.split('_')[0].isdigit():
-                addon = 'C' +self.namestring.split('C',1)[1]
-            elif all([n.isdigit() for n in addon.split('_')[0].split('C')]):
-                addon = 'C' +self.namestring.split('C',1)[1]
-            else:
-                addon = '_%s' % self.offshell
-        else:
-            addon = '_%s' % self.offshell
+        addon = ''.join(self.tag) + '_%s' % self.offshell
 
         # how to call the routine
         if not offshell:
