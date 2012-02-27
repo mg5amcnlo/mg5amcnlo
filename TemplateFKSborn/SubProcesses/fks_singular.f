@@ -4459,10 +4459,14 @@ c
             call xprintout(iunit,xnum,xden)
           else
             if(ipart.ne.i_fks.and.ipart.ne.j_fks)then
-              if(xden.ne.0.d0)then
+              if(xden.gt.vtiny) then
                 xrat=abs(1-xnum/xden)
               else
-                xrat=abs(xnum)
+                if (xnum.gt.vtiny) then
+                  xrat=abs(xnum)
+                else
+                  xrat=0d0
+                endif
               endif
               if(xrat.gt.tiny .and.
      &          (pmass(ipart).eq.0d0.or.xnum/pmass(ipart).gt.vtiny))then
