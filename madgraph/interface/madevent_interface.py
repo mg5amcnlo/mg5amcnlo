@@ -2199,6 +2199,16 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
                         files.mv(input, output) 
                         subprocess.call(['gzip', output], stdout=devnull, 
                                         stderr=devnull, cwd=G_path)
+        
+        # 2) restore links in local this is require due to chrome over-security
+        if not self.web: 
+            results = pjoin(self.me_dir, 'HTML', run, 'results.html')
+            text = open(results).read()
+            text = text.replace('''if ( ! UrlExists(alt)){
+         obj.href = alt;''','''if ( ! UrlExists(alt)){
+         obj.href = url;''')
+            open(results, 'w').write(text)
+            
         # 3) Update the index.html
         subprocess.call(['%s/gen_cardhtml-pl' % self.dirbin],
                             cwd=pjoin(self.me_dir))

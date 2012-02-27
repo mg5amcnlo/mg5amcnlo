@@ -957,7 +957,12 @@ class Cmd(BasicCmd):
         if'HOME' in os.environ and os.environ['HOME']  and \
         os.path.exists(pjoin(os.environ['HOME'], '.mg5', 'mg5_configuration.txt')):
             base = pjoin(os.environ['HOME'], '.mg5', 'mg5_configuration.txt')
-            basedir = None
+            if hasattr(self, 'me_dir'):
+                basedir = self.me_dir
+            elif not MADEVENT:
+                basedir = MG5DIR
+            else:
+                basedir = os.getcwd()
         elif MADEVENT:
             # launch via ./bin/madevent
             base = pjoin(self.me_dir, 'Cards', 'me5_configuration.txt')
