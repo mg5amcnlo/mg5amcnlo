@@ -335,9 +335,9 @@ class TestFKSProcessFromReals(unittest.TestCase):
 
     myproc2 = MG.Process(dict2)
     
-    fks1 = fks.FKSProcessFromReals(myproc, False)
-    fks1_rem = fks.FKSProcessFromReals(myproc)
-    fks2 = fks.FKSProcessFromReals(myproc2, False)
+    fks1 = fks.FKSProcessFromReals(myproc, ['QCD'], False)
+    fks1_rem = fks.FKSProcessFromReals(myproc, ['QCD'])
+    fks2 = fks.FKSProcessFromReals(myproc2, ['QCD'], False)
     
         
 
@@ -502,7 +502,7 @@ class TestFKSProcessFromReals(unittest.TestCase):
         proc1 = self.myproc
         amp1 = diagram_generation.Amplitude(proc1)
         fks1 = self.fks1
-        fks2 = fks.FKSProcessFromReals(amp1, False)
+        fks2 = fks.FKSProcessFromReals(amp1, ['QCD'], False)
         
         self.assertEqual(fks1.leglist, 
                          fks_common.to_fks_legs(self.myleglist, self.mymodel))

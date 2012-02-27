@@ -57,7 +57,7 @@ class FKSMultiProcessFromBorn(diagram_generation.MultiProcess): #test written
                         "%s is not a valid list for born_processes " % str(value)                             
         return super(FKSMultiProcessFromBorn,self).filter(name, value)
     
-    def __init__(self, amp_list, *arguments):
+    def __init__(self, amp_list, pert_orders = [], *arguments):
         """Initializes the original multiprocess, then generates the amps for the 
         borns, then geneare the born processes and the reals.
         """
@@ -68,7 +68,7 @@ class FKSMultiProcessFromBorn(diagram_generation.MultiProcess): #test written
         real_amplist = []
         real_amp_id_list = []
         for amp in amps:
-            born = FKSProcessFromBorn(amp)
+            born = FKSProcessFromBorn(amp, pert_orders)
             self['born_processes'].append(born)
             born.generate_reals(real_amplist, real_amp_id_list)
 
@@ -159,7 +159,7 @@ class FKSProcessFromBorn(object):
     """The class for a FKS process. Starts from the born process and finds
     all the possible splittings."""  
     
-    def __init__(self, start_proc = None, remove_reals = True):
+    def __init__(self, start_proc = None, pert_orders = [], remove_reals = True):
         """initialization: starts either from an amplitude or a process,
         then init the needed variables.
         remove_borns tells if the borns not needed for integration will be removed
@@ -202,8 +202,8 @@ class FKSProcessFromBorn(object):
             self.born_proc['orders'] = orders
                 
             self.ndirs = 0
-            self.fks_config_string = ""
-            self.find_reals()
+            for order in pert_orders:
+                self.find_reals(order)
             self.find_color_links()
 
 
@@ -245,12 +245,12 @@ class FKSProcessFromBorn(object):
         self.find_real_nbodyonly()
 
 
-    def find_reals(self):
+    def find_reals(self, pert_order):
         """finds the FKS real configurations for a given process"""
         for i in self.leglist:
             i_i = i['number'] - 1
             self.reals.append([])
-            self.splittings[i_i] = fks_common.find_splittings(i, self.model, {})
+            self.splittings[i_i] = fks_common.find_splittings(i, self.model, {}, pert_order)
             for split in self.splittings[i_i]:
                 self.reals[i_i].append(
                             fks_common.insert_legs(self.leglist, i, split))

@@ -338,8 +338,8 @@ class testFKSRealHelasObjects(unittest.TestCase):
 
     myproc2 = MG.Process(dict2)
     
-    fks1 = fks.FKSProcessFromReals(myproc)
-    fks2 = fks.FKSProcessFromReals(myproc2)
+    fks1 = fks.FKSProcessFromReals(myproc, ['QCD'])
+    fks2 = fks.FKSProcessFromReals(myproc2, ['QCD'])
     
     
     def test_fks_helas_process_from_reals(self):

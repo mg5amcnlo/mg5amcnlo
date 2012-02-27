@@ -77,7 +77,7 @@ class IOExportBornFKSTest(unittest.TestCase,
                                            'model':self.mymodel,
                                            'orders': {'QED': 0}})
         
-        self.myfksmulti = fks_born.FKSMultiProcessFromBorn([diagram_generation.Amplitude(myproc)])
+        self.myfksmulti = fks_born.FKSMultiProcessFromBorn([diagram_generation.Amplitude(myproc)], ['QCD'])
         
         self.myfks_me = fks_born_helas.FKSHelasMultiProcessFromBorn(\
                 self.myfksmulti)['matrix_elements'][0]

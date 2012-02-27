@@ -55,7 +55,7 @@ class FKSMultiProcessFromReals(diagram_generation.MultiProcess): #test written
                                                                 
         return super(FKSMultiProcessFromReals,self).filter(name, value)
     
-    def __init__(self, amp_list, *arguments):
+    def __init__(self, amp_list, pert_orders = [], *arguments):
         """Initializes the original multiprocess, then generates the amps for the 
         borns, then generate the born processes and the reals.
         """
@@ -64,7 +64,7 @@ class FKSMultiProcessFromReals(diagram_generation.MultiProcess): #test written
         born_amplist = []
         born_amp_id_list = []
         for amp in amps:
-            real_proc = FKSProcessFromReals(amp)
+            real_proc = FKSProcessFromReals(amp, pert_orders)
             self['real_processes'].append(real_proc)
             
             
@@ -145,7 +145,7 @@ class FKSProcessFromRealsList(MG.PhysicsObjectList):
 class FKSProcessFromReals(object):
     """the class for an FKS process, starting from reals """ 
     
-    def __init__(self, start_proc = None, remove_borns = True): #test written
+    def __init__(self, start_proc = None, pert_orders = [], remove_borns = True): #test written
         """Initialization: starts either from an amplitude or a process,
         then init the needed variables.
         remove_borns tells if the borns not needed for integration will be removed
@@ -188,8 +188,9 @@ class FKSProcessFromReals(object):
             for leg in self.leglist:
                 if not leg['state']:
                     self.nincoming += 1
-            
-            self.find_borns()
+            for order in pert_orders:
+                self.find_borns(order)
+
             self.find_borns_to_integrate(remove_borns)
             self.find_born_nbodyonly()
 
@@ -207,7 +208,7 @@ class FKSProcessFromReals(object):
         return links
              
                  
-    def find_borns(self): #test written
+    def find_borns(self, pert_order): #test written
         """finds the underlying borns for a given fks real process.
         """
         dict ={}
@@ -217,7 +218,7 @@ class FKSProcessFromReals(object):
             if i.get('state'):
                 for j in self.leglist:
                     if j.get('number') != i.get('number') :
-                        ijlist = fks_common.combine_ij(i, j, self.model, dict)
+                        ijlist = fks_common.combine_ij(i, j, self.model, dict, pert_order)
                         for ij in ijlist:
                             born = FKSBornProcess(self.real_proc, i, j, ij)
                             if born.amplitude.get('diagrams'):

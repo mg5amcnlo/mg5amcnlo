@@ -78,7 +78,7 @@ class IOExportRealFKSTest(unittest.TestCase,
                                            'model':self.mymodel,
                                            'orders': {'QED': 0}})
         
-        self.myfksmulti = fks_real.FKSMultiProcessFromReals([diagram_generation.Amplitude(myproc)])
+        self.myfksmulti = fks_real.FKSMultiProcessFromReals([diagram_generation.Amplitude(myproc)], ['QCD'])
         
         self.myfks_me = fks_real_helas.FKSHelasMultiProcessFromReals(\
                 self.myfksmulti)['matrix_elements'][0]

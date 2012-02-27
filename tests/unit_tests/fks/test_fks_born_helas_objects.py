@@ -367,7 +367,7 @@ class testFKSBornHelasObjects(unittest.TestCase):
 
         amps = diagram_generation.MultiProcess(
                 {'process_definitions':my_process_definitions}).get('amplitudes')
-        my_multi_process = fks_born.FKSMultiProcessFromBorn(amps)
+        my_multi_process = fks_born.FKSMultiProcessFromBorn(amps, ['QCD'])
         my_helas_mp = fks_born_helas.FKSHelasMultiProcessFromBorn(my_multi_process, False)
         
         #there should be 6 independent born_matrix_elements 
@@ -390,11 +390,11 @@ class testFKSBornHelasObjects(unittest.TestCase):
         --matrix element
         """         
         #ug> ug
-        fks1 = fks_born.FKSProcessFromBorn(self.myproc1)
+        fks1 = fks_born.FKSProcessFromBorn(self.myproc1, ['QCD'])
         #dg> dg
-        fks2 = fks_born.FKSProcessFromBorn(self.myproc2)
+        fks2 = fks_born.FKSProcessFromBorn(self.myproc2, ['QCD'])
         #uu~> dd~
-        fks3 = fks_born.FKSProcessFromBorn(self.myproc3)
+        fks3 = fks_born.FKSProcessFromBorn(self.myproc3, ['QCD'])
  
         fksleglist = copy.copy(fks_common.to_fks_legs(self.myleglist3,
                                                       self.mymodel))
@@ -444,11 +444,11 @@ class testFKSBornHelasObjects(unittest.TestCase):
         we use the born process ug > ug"""
         
         #ug> ug
-        fks1 = fks_born.FKSProcessFromBorn(self.myproc1)
+        fks1 = fks_born.FKSProcessFromBorn(self.myproc1, ['QCD'])
         #dg> dg
-        fks2 = fks_born.FKSProcessFromBorn(self.myproc2)
+        fks2 = fks_born.FKSProcessFromBorn(self.myproc2, ['QCD'])
         #uu~> dd~
-        fks3 = fks_born.FKSProcessFromBorn(self.myproc3)
+        fks3 = fks_born.FKSProcessFromBorn(self.myproc3, ['QCD'])
         
         me_list=[]
         me_id_list=[]
@@ -501,11 +501,11 @@ class testFKSBornHelasObjects(unittest.TestCase):
         amp_id_list=[]
         
         #ug> ug
-        fks1 = fks_born.FKSProcessFromBorn(self.myproc1)
+        fks1 = fks_born.FKSProcessFromBorn(self.myproc1, ['QCD'])
         #dg> dg
-        fks2 = fks_born.FKSProcessFromBorn(self.myproc2)
+        fks2 = fks_born.FKSProcessFromBorn(self.myproc2, ['QCD'])
         #uu~> dd~
-        fks3 = fks_born.FKSProcessFromBorn(self.myproc3)
+        fks3 = fks_born.FKSProcessFromBorn(self.myproc3, ['QCD'])
         
         fks1.generate_reals(amp_list, amp_id_list)
         fks2.generate_reals(amp_list, amp_id_list)

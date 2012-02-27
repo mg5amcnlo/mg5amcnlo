@@ -88,7 +88,10 @@ class FKSInterface(CheckFKS, CompleteFKS, HelpFKS, mg_interface.MadGraphCmd):
     def do_generate(self, line):
         #find the tag about the perturbative expansion
         try:
-            nlo_pert = line[line.index('[') + 1: line.index(']')]
+            nlo_pert = [s.strip() for s in line[line.index('[') + 1: line.index(']')].split(',')]
+            if nlo_pert != ['QCD']:
+                raise MadGraph5Error, 'NLO expansion only available in QCD for now, you asked %s' \
+                        % ', '.join(nlo_pert)
             line = line[: line.find('[')] + line[line.find(']') + 1 :]
         except ValueError:
             raise MadGraph5Error, 'No perturbative expansion tag in process line %s' \
@@ -97,9 +100,9 @@ class FKSInterface(CheckFKS, CompleteFKS, HelpFKS, mg_interface.MadGraphCmd):
         self._options['group_subprocesses'] = 'NLO'
         super(FKSInterface, self).do_generate(line)
         if self._options['fks_mode'] == 'born':
-            self._fks_multi_proc = fks_born.FKSMultiProcessFromBorn(self._curr_amps)
+            self._fks_multi_proc = fks_born.FKSMultiProcessFromBorn(self._curr_amps, nlo_pert)
         elif self._options['fks_mode'] == 'real':
-            self._fks_multi_proc = fks_real.FKSMultiProcessFromReals(self._curr_amps)
+            self._fks_multi_proc = fks_real.FKSMultiProcessFromReals(self._curr_amps, nlo_pert)
         else: raise MadGraph5Error, 'Unknown FKS mode: %s' % self._options['fks_mode']
 
 
