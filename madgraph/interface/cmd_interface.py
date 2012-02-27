@@ -3191,7 +3191,9 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
             old = self.options[args[0]] 
             self.options[args[0]] = eval(args[1])
             aloha.complex_mass_scheme = eval(args[1])
-            if self.options[args[0]]:
+            if not self._curr_model:
+                pass
+            elif self.options[args[0]]:
                 if old:
                     if log:
                         logger.info('Complex mass already activated.')
