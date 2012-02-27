@@ -164,6 +164,10 @@ function UrlExists(url) {
 function check_link(url,alt, id){
     var obj = document.getElementById(id);
     if ( ! UrlExists(url)){
+        if ( ! UrlExists(alt)){
+         obj.href = url;
+         return 1==1;
+        }
        obj.href = alt;
        return 1 == 2;
     }
