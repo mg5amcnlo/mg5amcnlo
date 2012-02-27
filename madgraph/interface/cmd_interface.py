@@ -3190,6 +3190,7 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
         elif args[0] == "complex_mass_scheme":
             old = self.options[args[0]] 
             self.options[args[0]] = eval(args[1])
+            aloha.complex_mass_scheme = eval(args[1])
             if self.options[args[0]]:
                 if old:
                     if log:
