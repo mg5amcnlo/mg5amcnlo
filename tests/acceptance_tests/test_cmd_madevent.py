@@ -26,7 +26,7 @@ logger = logging.getLogger('test_cmd')
 
 import tests.unit_tests.iolibs.test_file_writers as test_file_writers
 
-import madgraph.interface.cmd_interface as MGCmd
+import madgraph.interface.master_interface as MGCmd
 import madgraph.interface.madevent_interface as MECmd
 import madgraph.interface.launch_ext_program as launch_ext
 import madgraph.iolibs.misc as misc
@@ -52,7 +52,7 @@ class TestMECmdShell(unittest.TestCase):
         except Exception, error:
             pass
 
-        interface = MGCmd.MadGraphCmdShell()
+        interface = MGCmd.MasterCmd()
         interface.onecmd('import model %s' % model)
         if isinstance(process, str):
             interface.onecmd('generate %s' % process)
@@ -93,22 +93,17 @@ class TestMECmdShell(unittest.TestCase):
         
         text = open('/tmp/MGPROCESS/Events/run_01/param_card.dat').read()
         data = text.split('DECAY  23')[1].split('DECAY',1)[0]
-        self.assertEqual("""1.492250e+00
+        self.assertEqual("""1.492240e+00
 #  BR             NDA  ID1    ID2   ...
-   2.493148e-01   2    3  -3
-   2.493148e-01   2    1  -1
-   1.944178e-01   2    4  -4
-   1.944178e-01   2    2  -2
-   5.626738e-02   2    -11  11
-   5.626738e-02   2    -13  13
+   2.493165e-01   2    3  -3
+   2.493165e-01   2    1  -1
+   1.944158e-01   2    4  -4
+   1.944158e-01   2    2  -2
+   5.626776e-02   2    -11  11
+   5.626776e-02   2    -13  13
 #
 #      PDG        Width""", data.strip())
         
-        
-        
-        
-        
-    
     def test_creating_matched_plot(self):
         """test that the creation of matched plot works"""
 
