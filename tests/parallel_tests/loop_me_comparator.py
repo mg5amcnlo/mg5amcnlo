@@ -117,9 +117,9 @@ class LoopMG5Runner(me_comparator.MG5Runner):
         os.remove(proc_card_location)
         if self.non_zero:
             if PSpoints==[]:
-                LoopMG5Runner.fix_energy_in_check(dir_name, energy)
+                self.fix_energy_in_check(dir_name, energy)
             else:
-                LoopMG5Runner.fix_PSPoint_in_check(dir_name)          
+                self.fix_PSPoint_in_check(dir_name)          
 
             # Get the ME value
             for i, proc in enumerate(proc_list):

@@ -1814,7 +1814,7 @@ class Process(PhysicsObject):
         # Decay chain processes associated with this process
         self['decay_chains'] = ProcessList()
         # Loop particles if the process is to be computed at NLO
-        self['perturbation_couplings']=[]
+        self['perturbation_couplings']=[]        
         # These orders restrict the order of the squared amplitude.
         # This dictionary possibly contains a key "WEIGHTED" which
         # gives the upper bound for the total weighted order of the

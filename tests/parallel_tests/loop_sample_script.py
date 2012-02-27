@@ -53,7 +53,7 @@ if '__main__' == __name__:
     # Just to check that th general setup is ok, let's try some trivial processes
     my_proc_list.append(('g g > d d~',{'QCD':2,'QED':0},['QCD'],{'QCD':6,'QED':0}))    
     my_proc_list.append(('u u~ > d d~',{'QCD':2,'QED':0},['QCD'],{'QCD':6,'QED':0}))
-    my_proc_list.append(('e+ e- > d d~',{'QED':2,'QCD':0},['QCD'],{'QCD':2,'QED':4}))
+    # my_proc_list.append(('e+ e- > d d~',{'QED':2,'QCD':0},['QCD'],{'QCD':2,'QED':4}))
     # Check of the gga R2
     #my_proc_list.append(('d~ d > g a',{'QED':1,'QCD':1},['QCD'],{'QCD':4,'QED':2}))
     #my_proc_list.append(('d~ d > g z',{'QED':1,'QCD':1},['QCD'],{'QCD':4,'QED':2}))
@@ -88,8 +88,8 @@ if '__main__' == __name__:
     model = 'loop_sm'
 
     # Create a MERunner object for MadLoop 4
-    # ML4 = loop_me_comparator.LoopMG4Runner()
-    # ML4.setup('/Users/Spooner/Documents/PhD/MadFKS/ML4ParrallelTest/NLOComp')
+    ML4 = loop_me_comparator.LoopMG4Runner()
+    ML4.setup('/Users/Spooner/Documents/PhD/MadFKS/ML4ParrallelTest/NLOComp')
 
     # Create a MERunner object for GoSam
     # GoSam = loop_me_comparator.GoSamRunner()
@@ -105,7 +105,7 @@ if '__main__' == __name__:
 
     # Create and setup a comparator
     my_comp = loop_me_comparator.LoopMEComparator()
-    my_comp.set_me_runners(ML5, GoSam)
+    my_comp.set_me_runners(ML5, ML4)
 
     # Run the actual comparison
     my_comp.run_comparison(my_proc_list,
