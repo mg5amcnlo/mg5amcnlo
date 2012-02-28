@@ -11,12 +11,12 @@ C
       include 'genps.inc'
       include 'maxconfigs.inc'
       include 'nexternal.inc'
-      INTEGER    ITMAX,   NCALL
+      INTEGER    ITMAX, ITMIN, NCALL
 C
 C     LOCAL
 C
-      integer i,ninvar,nconfigs,j,l,l1,l2,ndim
-      double precision dsig,tot,mean,sigma
+      integer i,ninvar,nconfigs,j,l,l1,l2,ndim,idum
+      double precision dsig,tot,mean,sigma,xdum
       integer npoints,lunsud
       double precision x,y,jac,s1,s2,xmin
       external dsig
@@ -78,8 +78,19 @@ c
      $     read(buf(l1+1:l2-1),*,err=11) ngroup
  11   print *,'Process in group number ',ngroup
 
+c     Read weight from results.dat if present, to allow event generation
+c     in first iteration for gridpacks
+      open (unit=lun+1,file='results.dat',status='unknown',err=13)
+      read (lun+1,'(a130)',err=12,end=12) buf
+      close (lun+1)
+      read(buf,'(3e12.5,2i9,i5,i9,e10.3,e12.5)',err=13) xdum,xdum,xdum,
+     $     idum,idum,idum,idum,xdum,twgt
+      goto 14
+ 12   close (lun+1)
+ 13   twgt = -2d0               !determine wgt after first iteration
+ 14   continue
       lun = 27
-      twgt = -2d0            !determine wgt after first iteration
+
       open(unit=lun,status='scratch')
       nsteps=2
       param_card_name = '%(param_card_name)s'
@@ -126,7 +137,7 @@ c
 c     Get user input
 c
       write(*,*) "getting user params"
-      call get_user_params(ncall,itmax,mincfig)
+      call get_user_params(ncall,itmax,itmin,mincfig)
       maxcfig=mincfig
       minvar(1,1) = 0              !This tells it to map things invarients
       write(*,*) 'Attempting mappinvarients',nconfigs,nexternal
@@ -144,8 +155,8 @@ c
             minvar(ndim,j) = ninvar
          endif
       enddo
-      write(*,*) "about to integrate ", ndim,ncall,itmax,ninvar,nconfigs
-      call sample_full(ndim,ncall,itmax,dsig,ninvar,nconfigs)
+      write(*,*) "about to integrate ", ndim,ncall,itmax,itmin,ninvar,nconfigs
+      call sample_full(ndim,ncall,itmax,itmin,dsig,ninvar,nconfigs)
 c
 c     Now write out events to permanent file
 c
@@ -170,7 +181,7 @@ c      write(*,*) 'Final xsec: ',xsec
 c     $B$ get_user_params $B$ ! tag for MadWeight
 c     change this routine to read the input in a file
 c
-      subroutine get_user_params(ncall,itmax,iconfig)
+      subroutine get_user_params(ncall,itmax,itmin,iconfig)
 c**********************************************************************
 c     Routine to get user specified parameters for run
 c**********************************************************************
@@ -183,7 +194,7 @@ c
 c
 c     Arguments
 c
-      integer ncall,itmax,iconfig
+      integer ncall,itmax,itmin,iconfig
 c
 c     Local
 c
@@ -206,9 +217,9 @@ c
 c-----
 c  Begin Code
 c-----
-      write(*,'(a)') 'Enter number of events and iterations: '
-      read(*,*) ncall,itmax
-      write(*,*) 'Number of events and iterations ',ncall,itmax
+      write(*,'(a)') 'Enter number of events and max and min iterations: '
+      read(*,*) ncall,itmax,itmin
+      write(*,*) 'Number of events and iterations ',ncall,itmax,itmin
       write(*,'(a)') 'Enter desired fractional accuracy: '
       read(*,*) accur
       write(*,*) 'Desired fractional accuracy: ',accur

@@ -16,10 +16,16 @@ import logging
 import hashlib
 import os
 import time
+import re
 
 logger = logging.getLogger('madgraph.cluster') 
 
-class ClusterManagmentError(Exception):
+try:
+    from madgraph import MadGraph5Error
+except:
+    from internal import MadGraph5Error
+    
+class ClusterManagmentError(MadGraph5Error):
     pass
 
 
@@ -75,6 +81,7 @@ class Cluster(object):
             fct(idle, run, finish)
             time.sleep(30)
         self.submitted = 0
+        self.submitted_ids = []
 
     def launch_and_wait(self, prog, argument=[], cwd=None, stdout=None, 
                                                          stderr=None, log=None):
@@ -102,9 +109,14 @@ class CondorCluster(Cluster):
                   Universe = vanilla
                   notification = Error
                   Initialdir = %(cwd)s
-                  Requirements = %(cluster_queue)s=?=True
+                  %(requirement)s
                   queue 1
                """
+        
+        if self.cluster_queue not in ['None', None]:
+            requirement = 'Requirements = %s=?=True' % self.cluster_queue
+        else:
+            requirement = ''
 
         if cwd is None:
             cwd = os.getcwd()
@@ -114,35 +126,47 @@ class CondorCluster(Cluster):
             stderr = '/dev/null'
         if log is None:
             log = '/dev/null'
+        if not os.path.exists(prog):
+            prog = os.path.join(cwd, prog)
         if argument:
             argument = 'Arguments = %s' % ' '.join(argument)
         else:
             argument = ''
+        
 
         dico = {'prog': prog, 'cwd': cwd, 'stdout': stdout, 
                 'stderr': stderr,'log': log,'argument': argument,
-                'cluster_queue': self.cluster_queue}
+                'requirement': requirement}
 
-        open('/tmp/submit_condor','w').write(text % dico)
-        a = subprocess.Popen(['condor_submit','/tmp/submit_condor'], stdout=subprocess.PIPE)
+        open('submit_condor','w').write(text % dico)
+        a = subprocess.Popen(['condor_submit','submit_condor'], stdout=subprocess.PIPE)
         output = a.stdout.read()
         #Submitting job(s).
         #Logging submit event(s).
         #1 job(s) submitted to cluster 2253622.
-        pat = re.compile("submitted to cluster (\d*)",re.MULTINLINE)
-        id = pat.search(output).groups()[0]
+        pat = re.compile("submitted to cluster (\d*)",re.MULTILINE)
+        try:
+            id = pat.search(output).groups()[0]
+        except:
+            raise ClusterManagmentError, 'fail to submit to the cluster: \n%s' \
+                                                                        % output 
         self.submitted += 1
+        self.submitted_ids.append(id)
         return id
 
     def control_one_job(self, id):
         """ control the status of a single job with it's cluster id """
         cmd = 'condor_q '+str(id)+" -format \'%-2s \\n\' \'ifThenElse(JobStatus==0,\"U\",ifThenElse(JobStatus==1,\"I\",ifThenElse(JobStatus==2,\"R\",ifThenElse(JobStatus==3,\"X\",ifThenElse(JobStatus==4,\"C\",ifThenElse(JobStatus==5,\"H\",ifThenElse(JobStatus==6,\"E\",string(JobStatus))))))))\'"
         status = subprocess.Popen([cmd], shell=True, stdout=subprocess.PIPE)
-        return status.stdout.readline()
+        return status.stdout.readline().strip()
         
     def control(self, me_dir):
         """ control the status of a single job with it's cluster id """
-        cmd = "condor_q -constraint 'CMD>=\""+str(me_dir)+"\" -format \'%-2s \\n\' \'ifThenElse(JobStatus==0,\"U\",ifThenElse(JobStatus==1,\"I\",ifThenElse(JobStatus==2,\"R\",ifThenElse(JobStatus==3,\"X\",ifThenElse(JobStatus==4,\"C\",ifThenElse(JobStatus==5,\"H\",ifThenElse(JobStatus==6,\"E\",string(JobStatus))))))))\'"
+        
+        if not self.submitted_ids:
+            return 0, 0, 0, 0
+        
+        cmd = "condor_q " + ' '.join(self.submitted_ids) + " -format \'%-2s \\n\' \'ifThenElse(JobStatus==0,\"U\",ifThenElse(JobStatus==1,\"I\",ifThenElse(JobStatus==2,\"R\",ifThenElse(JobStatus==3,\"X\",ifThenElse(JobStatus==4,\"C\",ifThenElse(JobStatus==5,\"H\",ifThenElse(JobStatus==6,\"E\",string(JobStatus))))))))\'"
         status = subprocess.Popen([cmd], shell=True, stdout=subprocess.PIPE)
 
         idle, run, fail = 0, 0, 0
@@ -201,6 +225,9 @@ class PBSCluster(Cluster):
             
         output = a.communicate(text)[0]
         id = output.split('.')[0]
+        if not id.isdigit():
+            raise ClusterManagmentError, 'fail to submit to the cluster: \n%s' \
+                                                                        % output 
         self.submitted += 1
         return id
 
@@ -319,6 +346,9 @@ class SGECluster(Cluster):
 
         output = a.communicate(text)[0]
         id = output.split(' ')[2]
+        if not id.isdigit():
+            raise ClusterManagmentError, 'fail to submit to the cluster: \n%s' \
+                                                                        % output 
         self.submitted += 1
         logger.debug(output)
 

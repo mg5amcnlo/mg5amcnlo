@@ -1706,9 +1706,7 @@ class ProcessExporterFortranME(ProcessExporterFortran):
         # Copy the different python file in the Template
         self.copy_python_file()
         
-        # Create configuration file [path to executable] for madevent
-        filename = os.path.join(self.dir_path,'bin','internal', 'me5_configuration.txt')
-        self.write_configuration_file(file(filename,'w'))
+
 
 
     #===========================================================================
@@ -2027,7 +2025,7 @@ class ProcessExporterFortranME(ProcessExporterFortran):
                             name != 'index.html']               
         if online:
             nb_channel = obj.rep_rule['nb_gen_diag']
-            open(pjoin('./Online'),'w').write(str(nb_channel))
+            open(os.path.join('./Online'),'w').write(str(nb_channel))
         
         # Write command history as proc_card_mg5
         if os.path.isdir('Cards'):
@@ -2358,41 +2356,6 @@ c           This is dummy particle used in multiparticle vertices
         writer.writelines(lines)
 
         return True
-    #===========================================================================
-    # write_configuration_file
-    #===========================================================================
-    def write_configuration_file(self, writer):
-        """Write the me5_configuration file for MadEvent"""
-        
-        # check if define at system level
-        if os.environ.has_key('HOME'):
-            conf = os.path.join(os.environ['HOME'], '.mg5','mg5_configuration.txt')
-            if os.path.exists(conf):
-                # just need to copy since the path are absolute
-                path = writer.name
-                writer.close()
-                cp(conf, path)
-                return
-        
-        # Use local configuration => Need to update the path
-        conf = os.path.join(MG5DIR, 'input', 'mg5_configuration.txt')
-        for line in file(conf):
-            if '_path' not in line:
-                writer.writelines(line)
-                continue
-            data = line.split('=')
-            if len(data) !=2:
-                writer.writelines(line)
-                continue        
-            # special case need to update path
-            # check if absolute path
-            data = [s.strip() for s in data]
-            if not data[1].startswith('./'):
-                writer.writelines(line)
-                continue           
-            # Is a relative path
-            realpath = os.path.realpath(os.path.join(MG5DIR,data[1]))
-            writer.writelines(data[0] + ' = ' +realpath)
                     
                     
     #===========================================================================

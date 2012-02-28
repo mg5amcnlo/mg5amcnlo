@@ -123,12 +123,12 @@ c-----
 c  Begin Code
 c-----
       write(*,*) 'Give npoints, max iter, and accuracy'
-      read(*,*)  npoints,itmax,acc
+      read(*,*)  npoints,itmax,acc,gridpack
 
       open (unit=26, file = 'input_app.txt', status='unknown',
      $     err=99)
-      write(26,*) npoints,itmax,
-     &     '     !Number of events and iterations'      
+      write(26,*) npoints,itmax,3,
+     &     '     !Number of events and max and min iterations'      
       write(26,'(f8.4,a)') acc, '    !Accuracy'
       write(26,*) ' 2       !Grid Adjustment 0=none, 2=adjust'
       write(26,*) ' 1       !Suppress Amplitude 1=yes'
