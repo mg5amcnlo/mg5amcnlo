@@ -235,7 +235,10 @@ class UFOMG5Converter(object):
                    [p.antiname.lower() for p in self.ufomodel.all_particles])):
             self.use_lower_part_names = True
 
-        for particle_info in self.ufomodel.all_particles:
+        # check which of the fermion/anti-fermion should be set as incoming
+        self.detect_incoming_fermion()
+
+        for particle_info in self.ufomodel.all_particles:            
             self.add_particle(particle_info)
 
         # Find which particles is in the 3/3bar color states (retrun {id: 3/-3})
@@ -310,9 +313,9 @@ class UFOMG5Converter(object):
         
         # MG5 have only one entry for particle and anti particles.
         #UFO has two. use the color to avoid duplictions
-        if particle_info.pdg_code < 0:
+        pdg = particle_info.pdg_code
+        if pdg in self.incoming or (pdg not in self.outcoming and pdg <0):
             return
-        
         # MG5 doesn't use ghost for tree models (use unitary gauges)
         if not self.perturbation_couplings and particle_info.spin < 0:
             return
@@ -507,7 +510,26 @@ class UFOMG5Converter(object):
         
         return output
 
-    def add_interaction(self, interaction_info, color_info, type='base', loop_particles=None):            
+    
+    def detect_incoming_fermion(self):
+        """define which fermion should be incoming
+           for that we look at F F~ X interactions
+        """
+        self.incoming = [] 
+        self.outcoming = []       
+        for interaction_info in self.ufomodel.all_vertices:
+            # check if the interation meet requirements:
+            pdg = [p.pdg_code for p in interaction_info.particles if p.spin==2]
+            for i in range(0, len(pdg),2):
+                if pdg[i] == - pdg[i+1]:
+                    if pdg[i] in self.outcoming:
+                        raise UFOImportError, 'Input output not coherent'
+                    elif not pdg[i] in self.incoming:
+                        self.incoming.append(pdg[i])
+                        self.outcoming.append(pdg[i+1])
+                     
+            
+    def add_interaction(self, interaction_info, color_info, type='base', loop_particles=None):
         """add an interaction in the MG5 model. interaction_info is the 
         UFO vertices information."""
         # Import particles content:
@@ -528,8 +550,9 @@ class UFOMG5Converter(object):
                                           if helas.name not in self.checked_lor]
                 self.checked_lor.update(set([helas.name for helas in interaction_info.lorentz]))
         except aloha_fct.WrongFermionFlow, error:
-            text = 'Fermion Flow error for interactions %s:\n %s' % \
-             (', '.join([p.name for p in interaction_info.particles]), error)
+            text = 'Fermion Flow error for interactions %s: %s: %s\n %s' % \
+             (', '.join([p.name for p in interaction_info.particles]), 
+                                             helas.name, helas.structure, error)
             raise InvalidModel, text
             
         # Import Lorentz content:

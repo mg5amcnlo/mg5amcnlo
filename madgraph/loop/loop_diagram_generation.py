@@ -302,7 +302,8 @@ class LoopAmplitude(diagram_generation.Amplitude):
         if loopGenInfo: print "LoopGenInfo:: #UVCTDiags generated                    = ",len(self['loop_UVCT_diagrams'])                        
         
         # Reset the orders to their original specification by the user
-        self['process']['orders']=user_orders
+        self['process']['orders'].clear()
+        self['process']['orders'].update(user_orders)
 
         # If there was no born, we will guess the WEIGHT squared order only now, based on the
         # minimum weighted order of the loop contributions, if it was not specified by the user
@@ -427,9 +428,7 @@ class LoopAmplitude(diagram_generation.Amplitude):
                     lcuttwo=base_objects.Leg({'id': part.get_anti_pdg_code(),
                                               'state': True,
                                               'loop_line': True})
-                    new_leg_list=copy.copy(self['process'].get('legs'))
-                    new_leg_list.extend([lcutone,lcuttwo])
-                    self['process'].set('legs',new_leg_list)
+                    self['process'].get('legs').extend([lcutone,lcuttwo])
                     # WARNING, it is important for the tagging to notice here that lcuttwo
                     # is the last leg in the process list of legs and will therefore carry
                     # the highest 'number' attribute as required to insure that it will 
@@ -439,8 +438,10 @@ class LoopAmplitude(diagram_generation.Amplitude):
                     loopsuccessful, lcutdiaglist = super(LoopAmplitude, self).generate_diagrams(True)
                     
                     # Now get rid of all the previously defined l-cut particles.
-                    self['process']['legs']=base_objects.LegList([leg for leg in self['process']['legs'] \
-                                            if not leg['loop_line']])
+                    leg_to_remove=[leg for leg in self['process']['legs'] \
+                                            if leg['loop_line']]
+                    for leg in leg_to_remove:
+                        self['process']['legs'].remove(leg)
 
                     # The correct L-cut type is specified
                     for diag in lcutdiaglist:
@@ -503,7 +504,6 @@ class LoopAmplitude(diagram_generation.Amplitude):
         
         # Generate the UVCTdiagrams (born diagrams with 'UVCT_SPECIAL'=0 order 
         # will be generated along)
-        user_born_orders = copy.copy(self['process']['orders'])
         self['process']['orders']['UVCT_SPECIAL']=1      
         
         UVCTsuccessful, UVCTdiagrams = \
@@ -526,7 +526,7 @@ class LoopAmplitude(diagram_generation.Amplitude):
 
         # Remove the additional order requirement in the born orders for this
         # process
-        self['process']['orders']=user_born_orders
+        del self['process']['orders']['UVCT_SPECIAL']
         # Remove the fake order added to the selected UVCT interactions
         del self['process']['model'].get('order_hierarchy')['UVCT_SPECIAL']
         self['process']['model'].get('coupling_orders').remove('UVCT_SPECIAL')

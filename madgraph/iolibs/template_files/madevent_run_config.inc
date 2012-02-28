@@ -38,8 +38,3 @@ c
 c
 	double precision trunc_max
         parameter (trunc_max=0.01)
-c
-c	The following are used for grid type running
-c
-      integer      min_gevents_wu
-      parameter   (min_gevents_wu=200)   !Minumum # unweighted events to generate from channel

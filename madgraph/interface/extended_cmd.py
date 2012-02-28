@@ -780,7 +780,6 @@ class Cmd(BasicCmd):
                     raise self.InvalidCmd("invalid path %s " % dirpath)
     
 
-
     # Quit
     def do_quit(self, line):
         """ exit the mainloop() """
@@ -830,7 +829,12 @@ class Cmd(BasicCmd):
                     continue
                 prevname = name
                 cmdname=name[3:]
-                doc = getattr(self, name).__doc__
+                try:
+                    doc = getattr(self.cmd, name).__doc__
+                except:
+                    doc = None
+                if not doc:
+                    doc = getattr(self, name).__doc__
                 if not doc:
                     tag = "Documented commands"
                 elif ':' in doc:
@@ -1051,6 +1055,7 @@ class SmartQuestion(BasicCmd):
         BasicCmd.preloop(self)
 
     def __init__(self,  allow_arg=[], default=None, *arg, **opt):
+        self.wrong_answer = 0 # forbids infinite loop
         self.allow_arg = [str(a) for a in allow_arg]
         self.history_header = ''
         self.default_value = str(default)
@@ -1071,7 +1076,7 @@ class SmartQuestion(BasicCmd):
     def default(self, line):
         """Default action if line is not recognized"""
 
-        if line == '' and self.default_value is not None:
+        if line.strip() == '' and self.default_value is not None:
             self.value = self.default_value
         else:
             self.value = line
@@ -1087,14 +1092,22 @@ class SmartQuestion(BasicCmd):
         try:    
             if self.value in self.allow_arg:
                 return True
-            else:
+            elif str(self.value) == 'EOF':
+                self.value = self.default_value
+                return True
+            else: 
                 raise Exception
         except Exception:
-            print """not valid argument. Valid argument are in (%s).""" \
-                          % ','.join(self.allow_arg)
-            print 'please retry'
-            return False
-            
+            if self.wrong_answer < 100:
+                self.wrong_answer += 1
+                print """%s not valid argument. Valid argument are in (%s).""" \
+                          % (self.value,','.join(self.allow_arg))
+                print 'please retry'
+                return False
+            else:
+                self.value = self.default_value
+                return True
+                
     def cmdloop(self, intro=None):
         cmd.Cmd.cmdloop(self, intro)
         return self.value

@@ -256,10 +256,6 @@ the computation of the width.'''
         line = fsock.readline()
         cross, error = line.split()[0:2]
         
-        if self.unit != 'GeV':
-            logger.info('The total cross-section is %s +- %s %s' % (cross, error, self.unit))
-        else:
-            logger.info('The width is %s +- %s GeV' % (cross, error))
         logger.info('more information in %s' 
                                  % os.path.join(self.running_dir, 'index.html'))
                 

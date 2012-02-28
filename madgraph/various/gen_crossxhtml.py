@@ -236,6 +236,7 @@ class AllResults(dict):
                     self.current.update_status()
                 else:
                     self.current.update_status(nolevel='parton')
+        self.output()
                     
     def clean(self, levels = ['all'], run=None, tag=None):
         """clean the run for the levels"""
@@ -339,7 +340,7 @@ class AllResults(dict):
         # 2) Create the text for the old run:
         old_run = ''
         for key in self.order:
-            old_run += self[key].get_html(self.path, self.web, running)
+            old_run += self[key].get_html(self.path, web=self.web, running=running)
         
         text_dict = {'process': self.process,
                      'model': self.model,
@@ -360,7 +361,7 @@ class RunResults(list):
     def __init__(self, run_name, run_card, process, path):
         """initialize the object"""
         
-        self.info = {'run_name': run_name}
+        self.info = {'run_name': run_name,'me_dir':path}
         self.tags = []
         # Set the collider information
         data = process.split('>',1)[0].split()
@@ -388,7 +389,7 @@ class RunResults(list):
         self.append(OneTagResults(run_name, run_card, path))
         
     
-    def get_html(self, output_path, *arg, **opt):
+    def get_html(self, output_path, **opt):
         """WRITE HTML OUTPUT"""
 
         try:
@@ -409,6 +410,7 @@ class RunResults(list):
         """ % dico
 
         if self.web:
+            
             text = text % self.info
 
 
@@ -420,6 +422,12 @@ class RunResults(list):
             if data['tag'] == name:
                 return data
         
+        if name is None:
+            # return last entry
+            return self[-1]
+        
+        raise Exception, '%s is not a valid tag' % name
+        
     def add(self, obj):
         """ """
         
@@ -430,8 +438,8 @@ class RunResults(list):
         self.append(obj)
         
     def get_last_pythia(self):
-        for i in range(1, len(self)+1,):
-            if hasattr(self[-i],'pythia'):
+        for i in range(1, len(self)+1):
+            if self[-i].pythia:
                 return self[-i]['tag']
 
     def get_current_info(self):
@@ -439,11 +447,11 @@ class RunResults(list):
         output = {}
         current = self[-1]
         # Check that cross/nb_event/error are define
-        if current.pythia and not current['nb_event']:
+        if current.pythia and not current['nb_event'] and len(self) > 1:
             output['nb_event'] = self[-2]['nb_event']
             output['cross'] = self[-2]['cross']
             output['error'] = self[-2]['error']
-        elif (current.pgs or current.delphes) and not current['nb_event']:
+        elif (current.pgs or current.delphes) and not current['nb_event'] and len(self) > 1:
             if self[-2]['cross_pythia']:
                 output['cross'] = self[-2]['cross_pythia']
                 output['nb_event'] = int(0.5+(self[-2]['nb_event'] * current['cross'] /self[-2]['cross']))                           
@@ -610,7 +618,7 @@ class OneTagResults(dict):
         
         id = '%s_%s_%s_%s' % (self['run_name'],self['tag'], level, name)
         
-        return " <a  id='%(id)s' href='%(link)s' onClick=\"check_link('%(link)s.gz','%(link)s','%(id)s')\">%(name)s</a>" \
+        return " <a  id='%(id)s' href='%(link)s.gz' onClick=\"check_link('%(link)s.gz','%(link)s','%(id)s')\">%(name)s</a>" \
               % {'link': link, 'id': id, 'name':name}
     
     def double_link(self, link1, link2, name, id):
@@ -623,10 +631,12 @@ class OneTagResults(dict):
         # pythia_cross = cross * n_acc / n_gen
         # error_pythia = error * n_acc /n_gen + cross * sqrt(n_acc) / n_gen
         
-        n_acc = int(0.5 + pythia_cross / cross * nb_event)
-        error_pythia = error * n_acc / nb_event 
-        error_pythia += cross * math.sqrt(n_acc) / nb_event
-        
+        if cross and nb_event: 
+            n_acc = int(0.5 + pythia_cross / cross * nb_event)
+            error_pythia = error * n_acc / nb_event 
+            error_pythia += cross * math.sqrt(n_acc) / nb_event
+        else:
+            error_pythia = 0
         return error_pythia
     
     def get_links(self, level):
@@ -743,9 +753,13 @@ class OneTagResults(dict):
         nb_line = self.get_nb_line()
         # Check that cross/nb_event/error are define
         if self.pythia and not self['nb_event']:
-            self['nb_event'] = runresults[-2]['nb_event']
-            self['cross'] = runresults[-2]['cross']
-            self['error'] = runresults[-2]['error']
+            try:
+                self['nb_event'] = runresults[-2]['nb_event']
+                self['cross'] = runresults[-2]['cross']
+                self['error'] = runresults[-2]['error']
+            except:
+                pass
+                
         elif (self.pgs or self.delphes) and not self['nb_event']:
             if runresults[-2]['cross_pythia']:
                 self['cross'] = runresults[-2]['cross_pythia']
@@ -780,7 +794,10 @@ class OneTagResults(dict):
                         local_dico['cross_span'] = nb_line -1
                     else:
                         local_dico['cross_span'] = nb_line
-                    local_dico['nb_event'] = int(0.5+(self['nb_event'] * self['cross_pythia'] /self['cross']))
+                    if self['cross']:
+                        local_dico['nb_event'] = int(0.5+(self['nb_event'] * self['cross_pythia'] /self['cross']))
+                    else:
+                        local_dico['nb_event'] = 0
                     local_dico['cross'] = self['cross_pythia']
                     local_dico['err'] = self.get_pythia_error(self['cross'],
                            self['error'],self['cross_pythia'], self['nb_event']) 
@@ -794,7 +811,10 @@ class OneTagResults(dict):
                 template = sub_part_template_parton
                 if self.parton:           
                     local_dico['cross_span'] = nb_line - 1
-                    local_dico['nb_event'] = int(0.5+(self['nb_event'] * self['cross_pythia'] /self['cross']))
+                    if self['cross']:
+                        local_dico['nb_event'] = int(0.5+(self['nb_event'] * self['cross_pythia'] /self['cross']))
+                    else:
+                        local_dico['nb_event'] = 0
                 else:
                     local_dico['cross_span'] = nb_line
                     local_dico['nb_event'] = self['nb_event']
@@ -807,11 +827,19 @@ class OneTagResults(dict):
             # Fill the links
             local_dico['links'] = self.get_links(type)
 
-
             # Fill the actions
             if type == 'parton':
                 if runresults.web:
                     local_dico['action'] = """
+<FORM ACTION="http://%(web)s/cgi-bin/RunProcess/handle_runs-pl"  ENCTYPE="multipart/form-data" METHOD="POST">
+<INPUT TYPE=HIDDEN NAME=directory VALUE="%(me_dir)s">
+<INPUT TYPE=HIDDEN NAME=whattodo VALUE="remove_level">
+<INPUT TYPE=HIDDEN NAME=level VALUE="all">
+<INPUT TYPE=HIDDEN NAME=tag VALUE=\"""" + self['tag'] + """\">
+<INPUT TYPE=HIDDEN NAME=run VALUE="%(run_name)s">
+<INPUT TYPE=SUBMIT VALUE="Remove run">
+</FORM>
+                    
 <FORM ACTION="http://%(web)s/cgi-bin/RunProcess/handle_runs-pl"  ENCTYPE="multipart/form-data" METHOD="POST">
 <INPUT TYPE=HIDDEN NAME=directory VALUE="%(me_dir)s">
 <INPUT TYPE=HIDDEN NAME=whattodo VALUE="pythia">
@@ -821,21 +849,32 @@ class OneTagResults(dict):
                 else:
                     local_dico['action'] = self.command_suggestion_html('remove %s parton --tag=%s' \
                                                                        % (self['run_name'], self['tag']))
-                    local_dico['action'] += self.command_suggestion_html('pythia')
+                    local_dico['action'] += self.command_suggestion_html('pythia %s ' % self['run_name'])
             elif type == 'pythia':
                 if self['tag'] == runresults.get_last_pythia():
                     if runresults.web:
                         local_dico['action'] = """
 <FORM ACTION="http://%(web)s/cgi-bin/RunProcess/handle_runs-pl"  ENCTYPE="multipart/form-data" METHOD="POST">
 <INPUT TYPE=HIDDEN NAME=directory VALUE="%(me_dir)s">
-<INPUT TYPE=HIDDEN NAME=whattodo VALUE="pythia">
+<INPUT TYPE=HIDDEN NAME=whattodo VALUE="remove_level">
+<INPUT TYPE=HIDDEN NAME=level VALUE="pythia">
 <INPUT TYPE=HIDDEN NAME=run VALUE="%(run_name)s">
-<INPUT TYPE=SUBMIT VALUE="Run Pythia">
+<INPUT TYPE=HIDDEN NAME=tag VALUE=\"""" + self['tag'] + """\">
+<INPUT TYPE=SUBMIT VALUE="Remove pythia">
+</FORM>
+
+<FORM ACTION="http://%(web)s/cgi-bin/RunProcess/handle_runs-pl"  ENCTYPE="multipart/form-data" METHOD="POST">
+<INPUT TYPE=HIDDEN NAME=directory VALUE="%(me_dir)s">
+<INPUT TYPE=HIDDEN NAME=whattodo VALUE="pgs">
+<INPUT TYPE=HIDDEN NAME=run VALUE="%(run_name)s">
+<INPUT TYPE=SUBMIT VALUE="Run Detector">
 </FORM>"""
                     else:
-                        local_dico['action'] = self.command_suggestion_html('remove %s pythia --tag=%s' %\
-                                                                                (self['run_name'], self['tag']))
-                        local_dico['action'] += self.command_suggestion_html('pgs or delphes')
+                        local_dico['action'] = self.command_suggestion_html(
+                                                'remove %s pythia --tag=%s' % \
+                                                (self['run_name'], self['tag']))
+                        local_dico['action'] += self.command_suggestion_html(
+                         'pgs %(1)s or delphes %(1)s' % {'1': self['run_name']})
                 else:
                     if runresults.web:
                         local_dico['action'] = ''
@@ -844,7 +883,15 @@ class OneTagResults(dict):
                                                                             % (self['run_name'], self['tag']))
             else:
                 if runresults.web:
-                    local_dico['action'] = ''
+                    local_dico['action'] = """
+<FORM ACTION="http://%(web)s/cgi-bin/RunProcess/handle_runs-pl"  ENCTYPE="multipart/form-data" METHOD="POST">
+<INPUT TYPE=HIDDEN NAME=directory VALUE="%(me_dir)s">
+<INPUT TYPE=HIDDEN NAME=whattodo VALUE="remove_level">
+<INPUT TYPE=HIDDEN NAME=level VALUE=\"""" + str(type) + """\">
+<INPUT TYPE=HIDDEN NAME=tag VALUE=\"""" + self['tag'] + """\">
+<INPUT TYPE=HIDDEN NAME=run VALUE="%(run_name)s">
+<INPUT TYPE=SUBMIT VALUE="Remove """ + str(type) + """\">
+</FORM>"""
                 else:
                     local_dico['action'] = self.command_suggestion_html('remove %s %s --tag=%s' %\
                                                               (self['run_name'], type, self['tag']))

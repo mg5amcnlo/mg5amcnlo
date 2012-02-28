@@ -41,10 +41,10 @@ class Banner(dict):
         
         #Look at the version
         if MADEVENT:
-            self['MGVERSION'] = '#%s\n' % open(pjoin(MEDIR, 'MGMEVersion.txt')).read()
+            self['mgversion'] = '#%s\n' % open(pjoin(MEDIR, 'MGMEVersion.txt')).read()
         else:
             info = misc.get_pkg_info()
-            self['MGVERSION'] = info['version']+'\n'
+            self['mgversion'] = info['version']+'\n'
             
         if banner_path:
             self.read_banner(banner_path)
@@ -56,13 +56,13 @@ class Banner(dict):
     pat_end=re.compile('</(?P<name>\w*)>')
 
     tag_to_file={'slha':'param_card.dat',
-      'MGRunCard':'run_card.dat',
-      'MGPythiaCard':'pythia_card.dat',
-      'MGPGSCard' : 'pgs_card.dat',
-      'MGDelphesCard':'delphes_card.dat',      
-      'MGDelphesTrigger':'delphes_trigger.dat',
-      'MG5ProcCard':'proc_card_mg5.dat',
-      'MGProcCard': 'proc_card.dat',
+      'mgruncard':'run_card.dat',
+      'mgpythiacard':'pythia_card.dat',
+      'mgpgscard' : 'pgs_card.dat',
+      'mgdelphescard':'delphes_card.dat',      
+      'mgdelphestrigger':'delphes_trigger.dat',
+      'mg5proccard':'proc_card_mg5.dat',
+      'mgproccard': 'proc_card.dat',
       }
     
     def read_banner(self, input_path):
@@ -74,12 +74,12 @@ class Banner(dict):
             if store:
                 text += line
             if self.pat_begin.search(line):
-                tag = self.pat_begin.search(line).group('name')
+                tag = self.pat_begin.search(line).group('name').lower()
                 if tag in self.tag_to_file:
                     store = True
                     continue
             if store and self.pat_end.search(line):
-                if tag == self.pat_end.search(line).group('name'):
+                if tag == self.pat_end.search(line).group('name').lower():
                     self[tag] = text
                     text = ''
                     store = False
@@ -105,9 +105,9 @@ class Banner(dict):
         information"""
 
         for tag, text in self.items():
-            if tag == 'MGVERSION':
+            if tag == 'mgversion':
                 continue
-            if not proc_card and tag in ['MG5ProcCard','MGProcCard']:
+            if not proc_card and tag in ['mg5proccard','mgproccard']:
                 continue
             ff = open(pjoin(me_dir, 'Cards', self.tag_to_file[tag]), 'w')
             ff.write(text)
@@ -158,7 +158,7 @@ class Banner(dict):
             else:
                 raise Exception, 'Impossible to know the type of the card'
 
-            self[tag] = open(path).read()
+            self[tag.lower()] = open(path).read()
 
 
 
@@ -191,10 +191,10 @@ def recover_banner(results_object, level):
     
     
     if level == 'pythia':
-        if 'MGPythiaCard' in banner:
-            del banner['MGPythiaCard']
+        if 'mgpythiacard' in banner:
+            del banner['mgpythiacard']
     if level in ['pythia','pgs','delphes']:
-        for tag in ['MGPGSCard', 'MGDelphesCard', 'MGDelphesTrigger']:
+        for tag in ['mgpgscard', 'mgdelphescard', 'mgdelphestrigger']:
             if tag in banner:
                 del banner[tag]
     return banner

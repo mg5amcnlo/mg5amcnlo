@@ -24,3 +24,11 @@ table td {
              border-style: solid;
              border-color: black;
 }
+
+input {
+            display: inline;
+}
+
+form {
+            display: inline;
+}

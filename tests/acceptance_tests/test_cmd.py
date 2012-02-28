@@ -20,13 +20,13 @@ import shutil
 import sys
 import logging
 
-
+pjoin = os.path.join
 
 logger = logging.getLogger('test_cmd')
 
 import tests.unit_tests.iolibs.test_file_writers as test_file_writers
 
-import madgraph.interface.cmd_interface as Cmd
+import madgraph.interface.master_interface as Cmd
 import madgraph.interface.launch_ext_program as launch_ext
 _file_path = os.path.split(os.path.dirname(os.path.realpath(__file__)))[0]
 _pickle_path =os.path.join(_file_path, 'input_files')
@@ -42,7 +42,7 @@ class TestCmdShell1(unittest.TestCase):
     def setUp(self):
         """ basic building of the class to test """
         
-        self.cmd = Cmd.MadGraphCmdShell()
+        self.cmd = Cmd.MasterCmd()
     
     @staticmethod
     def join_path(*path):
@@ -116,7 +116,7 @@ class TestCmdShell1(unittest.TestCase):
                     'pythia-pgs_path': './pythia-pgs', 
                     'td_path': './td', 
                     'delphes_path': './Delphes', 
-                    'cluster_type': 'pbs', 
+                    'cluster_type': 'condor', 
                     'madanalysis_path': './MadAnalysis', 
                     'fortran_compiler': None, 
                     'exrootanalysis_path': './ExRootAnalysis', 
@@ -146,7 +146,7 @@ class TestCmdShell2(unittest.TestCase,
     def setUp(self):
         """ basic building of the class to test """
         
-        self.cmd = Cmd.MadGraphCmdShell()
+        self.cmd = Cmd.MasterCmd()
         if  MG4DIR:
             logger.debug("MG_ME dir: " + MG4DIR)
             self.out_dir = os.path.join(MG4DIR, 'AUTO_TEST_MG5')
@@ -255,7 +255,7 @@ class TestCmdShell2(unittest.TestCase,
                                  stdout=devnull, stderr=devnull, stdin=subprocess.PIPE,
                                  cwd=os.path.join(self.out_dir, 'temp', 'SubProcesses',
                                                   'P0_epem_epem'), shell=True)
-        proc.communicate('100 2 0.1\n')
+        proc.communicate('100 2 0.1 .false.\n')
         self.assertEqual(proc.returncode, 0)
         # Check that madevent compiles
         status = subprocess.call(['make', 'madevent'],
@@ -304,7 +304,7 @@ class TestCmdShell2(unittest.TestCase,
                             self.join_path(_pickle_path,'simple_v4_proc_card.dat'),
                             os.path.join(self.out_dir,'Cards','proc_card.dat')))
     
-        self.cmd = Cmd.MadGraphCmdShell()
+        self.cmd = Cmd.MasterCmd()
         pwd = os.getcwd()
         os.chdir(self.out_dir)
         self.do('import proc_v4 %s' % os.path.join('Cards','proc_card.dat'))
@@ -504,7 +504,7 @@ class TestCmdShell2(unittest.TestCase,
                                  stdout=devnull, stdin=subprocess.PIPE,
                                  cwd=os.path.join(self.out_dir, 'SubProcesses',
                                                   'P0_epem_epem'), shell=True)
-        proc.communicate('100 2 0.1\n')
+        proc.communicate('100 2 0.1 .false.\n')
         
         self.assertEqual(proc.returncode, 0)
         # Check that madevent compiles
@@ -584,7 +584,7 @@ class TestCmdShell2(unittest.TestCase,
                                  cwd=os.path.join(self.out_dir, 'SubProcesses',
                                                   'P1_udx_wp_wp_epve'),
                                  shell=True)
-        proc.communicate('100 4 0.1\n')
+        proc.communicate('100 4 0.1 .false.\n')
         
         self.assertEqual(proc.returncode, 0)
         # Check that madevent compiles
@@ -703,7 +703,7 @@ class TestCmdShell2(unittest.TestCase,
                                  stdout=devnull, stdin=subprocess.PIPE,
                                  cwd=os.path.join(self.out_dir, 'SubProcesses',
                                                   'P2_gg_qq'), shell=True)
-        proc.communicate('100 4 0.1\n')
+        proc.communicate('100 4 0.1 .false.\n')
         self.assertEqual(proc.returncode, 0)
         # Check that madevent compiles
         status = subprocess.call(['make', 'madevent'],
@@ -768,7 +768,7 @@ class TestCmdShell2(unittest.TestCase,
                                  stdout=devnull, stdin=subprocess.PIPE,
                                  cwd=os.path.join(self.out_dir, 'SubProcesses',
                                                   'P0_qq_gogo_go_qqn1_go_qqn1'), shell=True)
-        proc.communicate('100 4 0.1\n')
+        proc.communicate('100 4 0.1 .false.\n')
         self.assertEqual(proc.returncode, 0)
 
         # Check the new contents of the symfact.dat file
@@ -856,7 +856,7 @@ P1_qq_wp_wp_lvl
                                  cwd=os.path.join(self.out_dir, 'SubProcesses',
                                                   'P2_qq_wpg_wp_lvl'),
                                  shell=True)
-        proc.communicate('100 4 0.1\n')
+        proc.communicate('100 4 0.1 .false.\n')
         self.assertEqual(proc.returncode, 0)
         # Check that madevent compiles
         status = subprocess.call(['make', 'madevent'],
@@ -881,7 +881,7 @@ P1_qq_wp_wp_lvl
         self.do('add process w+ > j j')
         self.do('output %s ' % self.out_dir)
         # Check that all subprocesses have separate directories
-        directories = ['P0_wp_epve','P0_wp_mupvm','P0_wp_udx','P0_wp_csx']
+        directories = ['P0_wp_epve','P0_wp_udx']
         for d in directories:
             self.assertTrue(os.path.isdir(os.path.join(self.out_dir,
                                                        'SubProcesses',
@@ -938,7 +938,7 @@ P1_qq_wp_wp_lvl
                                  stdout=devnull, stdin=subprocess.PIPE,
                                  cwd=os.path.join(self.out_dir, 'SubProcesses',
                                                   'P0_ut_tripx_utg'), shell=True)
-        proc.communicate('100 4 0.1\n')
+        proc.communicate('100 4 0.1 .false.\n')
         self.assertEqual(proc.returncode, 0)
         
         # Check that madevent compiles
@@ -1082,4 +1082,17 @@ P1_qq_wp_wp_lvl
         me_groups = me_re.search(log_output)
         self.assertTrue(me_groups)
         self.assertAlmostEqual(float(me_groups.group('value')), 1.953735e-2)
+        
+    def test_import_banner_command(self):
+        """check that the import banner command works"""
+        self.do('import banner %s --no_launch' % pjoin(MG5DIR, 'tests', 'input_files', 'tt_banner.txt'))
+        
+        # check that the output exists:
+        self.assertTrue(os.path.exists(self.out_dir))
+        
+        # check that the Cards have been modified
+        run_card = open(pjoin(self.out_dir,'Cards','run_card.dat')).read()
+        self.assertTrue("'tt'     = run_tag" in run_card)
+        self.assertTrue("200       = nevents" in run_card)
+        
         
