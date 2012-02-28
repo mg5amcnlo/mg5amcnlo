@@ -220,7 +220,7 @@ class WriteALOHA:
         nb_fermion =0
         
         #compute global sign
-        if not self.offshell % 2 and self.particles[self.offshell -1] == 'F': 
+        if not self.offshell % 2 and self.particles[self.offshell -1] in ['F', 'R']: 
             global_sign = 1
         else:
             global_sign = -1

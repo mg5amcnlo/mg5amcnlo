@@ -235,12 +235,14 @@ class AbstractRoutineBuilder(object):
                 elif spin == 4:
                     # shift and flip the tag if we multiply by C matrices
                     if (id+1) // 2 in self.conjg:
-                        id += _conjugate_gap
+                        spin_id = _conjugate_gap + id
+                    else:
+                        spin_id = id
                     nb_spinor += 1
                     if nb_spinor %2:
                         lorentz *= Spin3halfPropagator(id, 'I2', spin_id,'I3', self.outgoing)
                     else:
-                        lorentz *= Spin3halfPropagator('I2', id, 'I3', spin_id, self.outgoing)                     
+                        lorentz *= Spin3halfPropagator(id, 'I2', 'I3', spin_id, self.outgoing)                     
                     
                 elif spin == 5 :
                     lorentz *= 1 # delayed evaluation (fastenize the code)
