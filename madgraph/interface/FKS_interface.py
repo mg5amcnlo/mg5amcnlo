@@ -118,8 +118,6 @@ class FKSInterface(CheckFKS, CompleteFKS, HelpFKS, mg_interface.MadGraphCmd):
             self._fks_multi_proc = fks_real.FKSMultiProcessFromReals(myprocdef,
                                        collect_mirror_procs,
                                        ignore_six_quark_processes)
-            print myprocdef.keys()
-            print myprocdef['legs']
         else: raise MadGraph5Error, 'Unknown FKS mode: %s' % self._options['fks_mode']
 
 
