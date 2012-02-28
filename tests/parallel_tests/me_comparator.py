@@ -39,7 +39,7 @@ import madgraph.iolibs.template_files as template_files
 import madgraph.iolibs.misc as misc
 import madgraph.iolibs.save_load_object as save_load_object
 
-import madgraph.interface.cmd_interface as cmd_interface
+import madgraph.interface.master_interface as cmd_interface
 
 from madgraph import MadGraph5Error, MG5DIR
 
@@ -370,7 +370,7 @@ class MG5Runner(MG4Runner):
         logging.info("Running mg5")
         proc_card = open(proc_card_location, 'r').read()
         new_proc_list = []
-        cmd = cmd_interface.MadGraphCmdShell()
+        cmd = cmd_interface.MasterCmd()
         for line in proc_card.split('\n'):
             try:
                 cmd.exec_cmd(line, errorhandling=False)

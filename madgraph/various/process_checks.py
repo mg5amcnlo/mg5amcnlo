@@ -710,9 +710,20 @@ def check_process(process, evaluator, quick):
             logger.info("Testing permutation: %s" % \
                         order)
 
-        # Generate a process with these legs
-        newproc = copy.copy(process)
-        newproc.set('legs', legs)
+        newproc = base_objects.Process({'legs':legs,
+            'orders':copy.copy(process.get('orders')),
+            'model':process.get('model'),
+            'id':copy.copy(process.get('id')),
+            'uid':process.get('uid'),
+            'required_s_channels':copy.copy(process.get('required_s_channels')),
+            'forbidden_s_channels':copy.copy(process.get('forbidden_s_channels')),
+            'forbidden_particles':copy.copy(process.get('forbidden_particles')),
+            'is_decay_chain':process.get('is_decay_chain'),
+            'overall_orders':copy.copy(process.get('overall_orders')),
+            'decay_chains':process.get('decay_chains'),
+            'perturbation_couplings':copy.copy(process.get('perturbation_couplings')),
+            'squared_orders':copy.copy(process.get('squared_orders')),
+            'has_born':process.get('has_born')})
 
         # Generate the amplitude for this process
         try:
@@ -796,6 +807,12 @@ def output_comparisons(comparison_results):
     
     proc_col_size = 17
 
+    process_header = "Process ["+" ".join(comparison_results[0]['process']\
+                                 ['perturbation_couplings'])+"]"
+
+    if len(process_header) + 1 > proc_col_size:
+        proc_col_size = process_header + 1
+
     for proc in comparison_results:
         if len(proc['process'].base_string()) + 1 > proc_col_size:
             proc_col_size = len(proc['process'].base_string()) + 1
@@ -809,7 +826,7 @@ def output_comparisons(comparison_results):
     failed_proc_list = []
     no_check_proc_list = []
 
-    res_str = fixed_string_length("Process", proc_col_size) + \
+    res_str = fixed_string_length(process_header, proc_col_size) + \
               fixed_string_length("Min element", col_size) + \
               fixed_string_length("Max element", col_size) + \
               fixed_string_length("Relative diff.", col_size) + \
@@ -1007,14 +1024,21 @@ def check_gauge_process(process, evaluator):
                                                output='jamp')
     
     if mvalue and mvalue['m2']:
-        return {'process':process.base_string(),'value':mvalue,'brs':brsvalue}
+        return {'process':process,'value':mvalue,'brs':brsvalue}
 
 def output_gauge(comparison_results, output='text'):
     """Present the results of a comparison in a nice list format"""
 
     proc_col_size = 17
+    
+    process_header = "Process ["+" ".join(comparison_results[0]['process']\
+                                 ['perturbation_couplings'])+"]"
+
+    if len(process_header) + 1 > proc_col_size:
+        proc_col_size = process_header + 1
+
     for one_comp in comparison_results:
-        proc = one_comp['process']
+        proc = one_comp['process'].base_string()
         mvalue = one_comp['value']
         brsvalue = one_comp['brs']
         if len(proc) + 1 > proc_col_size:
@@ -1028,14 +1052,14 @@ def output_gauge(comparison_results, output='text'):
     failed_proc_list = []
     no_check_proc_list = []
 
-    res_str = fixed_string_length("Process", proc_col_size) + \
+    res_str = fixed_string_length(process_header, proc_col_size) + \
               fixed_string_length("matrix", col_size) + \
               fixed_string_length("BRS", col_size) + \
               fixed_string_length("ratio", col_size) + \
               "Result"
 
     for  one_comp in comparison_results:
-        proc = one_comp['process']
+        proc = one_comp['process'].base_string()
         mvalue = one_comp['value']
         brsvalue = one_comp['brs']
         ratio = (abs(brsvalue['m2'])/abs(mvalue['m2']))
@@ -1229,7 +1253,7 @@ def check_lorentz_process(process, evaluator):
     if data and data['m2']:
         results = [data]
     else:
-        return  {'process':process.base_string(), 'results':'pass'}
+        return  {'process':process, 'results':'pass'}
     
     for boost in range(1,4):
         boost_p = boost_momenta(p, boost)
@@ -1238,7 +1262,7 @@ def check_lorentz_process(process, evaluator):
                                                          output='jamp'))
         
         
-    return {'process': process.base_string(), 'results': results}
+    return {'process': process, 'results': results}
 
 
 def boost_momenta(p, boost_direction=1, beta=0.5):
@@ -1278,6 +1302,13 @@ def output_lorentz_inv(comparison_results, output='text'):
     """
 
     proc_col_size = 17
+
+    process_header = "Process ["+" ".join(comparison_results[0]['process']\
+                                 ['perturbation_couplings'])+"]"
+
+    if len(process_header) + 1 > proc_col_size:
+        proc_col_size = process_header + 1
+    
     for proc, values in comparison_results:
         if len(proc) + 1 > proc_col_size:
             proc_col_size = len(proc) + 1
@@ -1291,14 +1322,14 @@ def output_lorentz_inv(comparison_results, output='text'):
     failed_proc_list = []
     no_check_proc_list = []
 
-    res_str = fixed_string_length("Process", proc_col_size) + \
+    res_str = fixed_string_length(process_header, proc_col_size) + \
               fixed_string_length("Min element", col_size) + \
               fixed_string_length("Max element", col_size) + \
               fixed_string_length("Relative diff.", col_size) + \
               "Result"
 
     for one_comp in comparison_results:
-        proc = one_comp['process']
+        proc = one_comp['process'].base_string()
         data = one_comp['results']
         
         if data == 'pass':
