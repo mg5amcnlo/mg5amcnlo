@@ -1,5 +1,8 @@
-gfortran   = g77
-FFLAGS= -O -ffixed-line-length-132
+include ../../Source/make_opts
+FFLAGS+= -w
+
+#gfortran   = g77
+#FFLAGS= -O -ffixed-line-length-132
 #FFLAGS = -g -ffixed-line-length-132
 LIBDIR = ../../lib/
 BINDIR = ../../bin/
@@ -14,7 +17,7 @@ MW_PS= main_code.o gen_ps.o initialization.o call_TF.o permutation.o multi_chann
 
 
 $(PROG): $(PROCESS) $(MW_PS)  makefile $(LIBS) 
-	$(gfortran) $(FFLAGS) -o $(PROG) $(PROCESS) $(MW_PS) $(LINKLIBS)
+	$(FC) $(FFLAGS) -o $(PROG) $(PROCESS) $(MW_PS) $(LINKLIBS)
 
 transfer_card.inc:../../Cards/transfer_card.dat ../../Cards/MadWeight_card.dat
 	python ../../Source/MadWeight/Python/Cards.py
@@ -25,7 +28,5 @@ initialization.o: madweight_card.inc
 matrix.o:nexternal.inc coupl.inc
 call_TF.o:transfer_card.inc ../../Cards/transfer_card.dat
 
-%.o : %.f
-	$(gfortran) $(FFLAGS) -c $<
 
 

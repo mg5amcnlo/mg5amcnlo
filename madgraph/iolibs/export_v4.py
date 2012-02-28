@@ -1188,11 +1188,15 @@ class ProcessExporterFortranMW(ProcessExporterFortran):
     """Class to take care of exporting a set of matrix elements to
     MadGraph v4 - MadWeight format."""
 
-    def copy_v4template(self):
+    def copy_v4template(self, modelname):
         """Additional actions needed for setup of Template
         """
-        
-        super(ProcessExporterFortranMW, self).copy_v4template()
+
+        super(ProcessExporterFortranMW, self).copy_v4template(modelname)        
+
+        # File created from Template (Different in some child class)
+        filename = os.path.join(self.dir_path,'Source','run_config.inc')
+        self.write_run_config_file(writers.FortranWriter(filename))
 
         try:
             subprocess.call([os.path.join('bin', 'madweight')],
@@ -1200,7 +1204,7 @@ class ProcessExporterFortranMW(ProcessExporterFortran):
                             stderr = os.open(os.devnull, os.O_RDWR),
                             cwd=self.dir_path)
         except OSError:
-            # Probably standalone already called
+            # Probably madweight already called
             pass
 
     #===========================================================================
@@ -1231,10 +1235,10 @@ class ProcessExporterFortranMW(ProcessExporterFortran):
     # Create proc_card_mg5.dat for MadWeight directory
     #===========================================================================
     def finalize_v4_directory(self, matrix_elements, history, makejpg = False,
-                              online = False):
+                              online = False, compiler='g77'):
         """Finalize Standalone MG4 directory by generation proc_card_mg5.dat"""
 
-        self.set_compiler('g77')
+        self.set_compiler(compiler)
         self.make()
 
         # Write command history as proc_card_mg5
@@ -1456,20 +1460,37 @@ class ProcessExporterFortranMW(ProcessExporterFortran):
         replace_dict['proc_id'] = proc_id
         replace_dict['numproc'] = 1
 
-        # No conversion, since result of decay should be given in GeV
-        dsig_line = "pd(IPROC)*dsiguu"
+        # Set dsig_line
+        if ninitial == 1:
+            # No conversion, since result of decay should be given in GeV
+            dsig_line = "pd(IPROC)*dsiguu"
+        else:
+            # Convert result (in GeV) to pb
+            dsig_line = "pd(IPROC)*conv*dsiguu"
 
         replace_dict['dsig_line'] = dsig_line
 
         # Extract pdf lines
-        pdf_lines = self.get_pdf_lines(matrix_element, ninitial, proc_id != "")
+        pdf_vars, pdf_data, pdf_lines = \
+                  self.get_pdf_lines(matrix_element, ninitial, proc_id != "")
+        replace_dict['pdf_vars'] = pdf_vars
+        replace_dict['pdf_data'] = pdf_data
         replace_dict['pdf_lines'] = pdf_lines
 
         # Lines that differ between subprocess group and regular
         if proc_id:
             replace_dict['numproc'] = int(proc_id)
+            replace_dict['passcuts_begin'] = "" 
+            replace_dict['passcuts_end'] = "" 
+            # Set lines for subprocess group version
+            # Set define_iconfigs_lines
+            replace_dict['define_subdiag_lines'] = \
+                 """\nINTEGER SUBDIAG(MAXSPROC),IB(2)
+                 COMMON/TO_SUB_DIAG/SUBDIAG,IB"""    
         else:
-            replace_dict['define_subdiag_lines'] = ""
+            replace_dict['passcuts_begin'] = "IF (PASSCUTS(PP)) THEN"
+            replace_dict['passcuts_end'] = "ENDIF"
+            replace_dict['define_subdiag_lines'] = "" 
 
         file = open(os.path.join(_file_path, \
                           'iolibs/template_files/auto_dsig_mw.inc')).read()
@@ -1491,16 +1512,28 @@ class ProcessExporterFortranMW(ProcessExporterFortran):
 
         configs = [(i+1, d) for i,d in enumerate(matrix_element.get('diagrams'))]
         mapconfigs = [c[0] for c in configs]
+        model = matrix_element.get('processes')[0].get('model')
         return mapconfigs, self.write_configs_file_from_diagrams(writer,
                                                             [[c[1]] for c in configs],
                                                             mapconfigs,
-                                                            nexternal, ninitial,matrix_element)
+                                                            nexternal, ninitial,matrix_element, model)
+
+    #===========================================================================
+    # write_run_configs_file
+    #===========================================================================
+    def write_run_config_file(self, writer):
+        """Write the run_configs.inc file for MadWeight"""
+
+        path = os.path.join(_file_path,'iolibs','template_files','madweight_run_config.inc')
+        text = open(path).read() % {'chanperjob':'5'}
+        writer.write(text)
+        return True
 
     #===========================================================================
     # write_configs_file_from_diagrams
     #===========================================================================
     def write_configs_file_from_diagrams(self, writer, configs, mapconfigs,
-                                         nexternal, ninitial,matrix_element):
+                                         nexternal, ninitial, matrix_element, model):
         """Write the actual configs.inc file.
         
         configs is the diagrams corresponding to configs (each
@@ -1528,6 +1561,8 @@ class ProcessExporterFortranMW(ProcessExporterFortran):
 
         nconfigs = 0
 
+        new_pdg = model.get_first_non_pdg()
+
         for iconfig, helas_diags in enumerate(configs):
             if any([vert > minvert for vert in
                     [d for d in helas_diags if d][0].get_vertex_leg_numbers()]):
@@ -1544,7 +1579,7 @@ class ProcessExporterFortranMW(ProcessExporterFortran):
                     # get_s_and_t_channels gives vertices starting from
                     # final state external particles and working inwards
                     stchannels.append(h.get('amplitudes')[0].\
-                                      get_s_and_t_channels(ninitial))
+                                      get_s_and_t_channels(ninitial,new_pdg))
                 else:
                     stchannels.append((empty_verts, None))
 

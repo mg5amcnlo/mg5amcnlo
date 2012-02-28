@@ -16,7 +16,9 @@ c     particle index mapping
       integer inv_matching_type_part(3:nexternal)
       common/madgraph_order_type/matching_type_part,
      & inv_matching_type_part
-
+ 
+      character*30 param_card_name
+      common/to_param_card_name/param_card_name
 c
 c LHCO input
 c
@@ -52,6 +54,11 @@ c     set parameters of the run
 
       include 'madweight_param.inc'
 
+
+      open(unit=89,file="./param.dat")
+      read(89,*) param_name
+      param_card_name=param_name
+
       call setrun
 
       include 'madweight_card.inc'
@@ -63,18 +70,16 @@ c     set parameters of the run
       close(90)
       open(UNIT=32,FILE='vegas_value.out',STATUS='unknown')
 
-      open(unit=89,file="./param.dat")
-      read(89,*) param_name
 
       close(89)
       write(*,*) 'Parameter card: ',param_name
-      call setpara(param_name,.true.)
+      call setpara(param_name)
       write(*,*) 'number of points',nevents
 
 
        if(fixed_ren_scale) then
           G = SQRT(4d0*PI*ALPHAS(scale))
-          call setpara('param_card.dat',.false.) 
+          call setpara(param_name) 
        endif
 
 

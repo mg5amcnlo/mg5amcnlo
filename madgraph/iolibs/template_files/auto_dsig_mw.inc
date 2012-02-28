@@ -19,6 +19,8 @@ C
       include 'phasespace.inc'
       include 'nexternal.inc'
       include 'maxamps.inc'
+      DOUBLE PRECISION       CONV
+      PARAMETER (CONV=1d0)  !NO CONV (GeV^n)
       REAL*8     PI
       PARAMETER (PI=3.1415926d0)
 C  
@@ -60,10 +62,10 @@ C BEGIN CODE
 C ----------
       DSIG%(proc_id)s=0D0
 
+
+
 %(pdf_lines)s
-
-         CALL SMATRIX%(proc_id)s(PP,DSIGUU)                                              
-
+       CALL SMATRIX%(proc_id)s(PP,DSIGUU)
          IF (DSIGUU.LT.1D199) THEN
          DSIG%(proc_id)s=%(dsig_line)s
          ELSE
@@ -71,4 +73,4 @@ C ----------
              DSIGUU=0D0
              DSIG%(proc_id)s=0D0
          ENDIF
-         END
+      END
