@@ -430,7 +430,7 @@ class CheckValidForCmd(object):
         tag = [a[6:] for a in args if a.startswith('--tag=')]
         
         
-        if os.path.exists(args[0]):
+        if os.path.isfile(args[0]):
             type ='banner'
             format = self.detect_card_type(args[0])
             if format != 'banner':
@@ -3539,7 +3539,7 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
                 answer = card[int(answer)]
             if answer == 'done':
                 return
-            if not os.path.exists(answer):
+            if not os.path.isfile(answer):
                 path = pjoin(self.me_dir,'Cards','%s_card.dat' % answer)
                 self.exec_cmd('open %s' % path)                    
             else:
@@ -3659,7 +3659,7 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
                  answer = card[int(answer)]
              if answer == 'done':
                  return
-             if os.path.exists(answer):
+             if os.path.isfile(answer):
                  # detect which card is provide
                  card_name = self.detect_card_type(answer)
                  if card_name == 'unknown':
@@ -3715,7 +3715,7 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
                  answer = card[int(answer)]
              if answer == 'done':
                  return
-             if os.path.exists(answer):
+             if os.path.isfile(answer):
                  # detect which card is provide
                  card_name = self.detect_card_type(answer)
                  if card_name == 'unknown':
@@ -3749,7 +3749,7 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
         """ensure that card name is define. If not use the default one"""
         dico = {'dir': self.me_dir, 'name': name }
 
-        if not os.path.exists('%(dir)s/Cards/%(name)s_card.dat' % dico):
+        if not os.path.isfile('%(dir)s/Cards/%(name)s_card.dat' % dico):
             files.cp('%(dir)s/Cards/%(name)s_card_default.dat' % dico,
                 '%(dir)s/Cards/%(name)s_card.dat' % dico)
             
