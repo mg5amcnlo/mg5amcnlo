@@ -1,5 +1,5 @@
-GFORTRAN module version '6' created from avh_olo_mp.f90 on Mon Feb 27 17:24:31 2012
-MD5:d19bb3a6aa18a07e5a06774cec04d184 -- If you edit this, you'll get what you deserve.
+GFORTRAN module version '6' created from avh_olo_mp.f90 on Tue Feb 28 16:27:46 2012
+MD5:c2d9b0040ef11ae7b48daa2c66a357c0 -- If you edit this, you'll get what you deserve.
 
 (() () () () () () () () () () () () () () () () () () () () () () ()
 () () () ())
@@ -167,14 +167,6 @@ INTEGER 4 0 0 INTEGER ()) 0 0 () (ARRAY (INTEGER 4 0 0 INTEGER ()) 2 ((
 CONSTANT (INTEGER 4 0 0 INTEGER ()) 0 '6') (CONSTANT (INTEGER 4 0 0
 INTEGER ()) 0 '0') (CONSTANT (INTEGER 4 0 0 INTEGER ()) 0 '15')) 0 () ()
 () 0 0)
-119 'rslt' '' 'rslt' 118 ((VARIABLE OUT UNKNOWN-PROC UNKNOWN UNKNOWN 0 0
-DIMENSION DUMMY) (DERIVED 180 0 0 DERIVED ()) 0 0 () (1 0 EXPLICIT (
-CONSTANT (INTEGER 4 0 0 INTEGER ()) 0 '0') (CONSTANT (INTEGER 4 0 0
-INTEGER ()) 0 '2')) 0 () () () 0 0)
-120 'p2' '' 'p2' 118 ((VARIABLE IN UNKNOWN-PROC UNKNOWN UNKNOWN 0 0
-DUMMY) (DERIVED 180 0 0 DERIVED ()) 0 0 () () 0 () () () 0 0)
-121 'p3' '' 'p3' 118 ((VARIABLE IN UNKNOWN-PROC UNKNOWN UNKNOWN 0 0
-DUMMY) (DERIVED 180 0 0 DERIVED ()) 0 0 () () 0 () () () 0 0)
 122 'p12' '' 'p12' 118 ((VARIABLE IN UNKNOWN-PROC UNKNOWN UNKNOWN 0 0
 DUMMY) (DERIVED 180 0 0 DERIVED ()) 0 0 () () 0 () () () 0 0)
 123 'p23' '' 'p23' 118 ((VARIABLE IN UNKNOWN-PROC UNKNOWN UNKNOWN 0 0
@@ -307,6 +299,14 @@ DUMMY) (DERIVED 180 0 0 DERIVED ()) 0 0 () () 0 () () () 0 0)
 DUMMY) (DERIVED 180 0 0 DERIVED ()) 0 0 () () 0 () () () 0 0)
 58 'rmu' '' 'rmu' 51 ((VARIABLE IN UNKNOWN-PROC UNKNOWN UNKNOWN 0 0
 DUMMY) (DERIVED 181 0 0 DERIVED ()) 0 0 () () 0 () () () 0 0)
+119 'rslt' '' 'rslt' 118 ((VARIABLE OUT UNKNOWN-PROC UNKNOWN UNKNOWN 0 0
+DIMENSION DUMMY) (DERIVED 180 0 0 DERIVED ()) 0 0 () (1 0 EXPLICIT (
+CONSTANT (INTEGER 4 0 0 INTEGER ()) 0 '0') (CONSTANT (INTEGER 4 0 0
+INTEGER ()) 0 '2')) 0 () () () 0 0)
+120 'p2' '' 'p2' 118 ((VARIABLE IN UNKNOWN-PROC UNKNOWN UNKNOWN 0 0
+DUMMY) (DERIVED 180 0 0 DERIVED ()) 0 0 () () 0 () () () 0 0)
+121 'p3' '' 'p3' 118 ((VARIABLE IN UNKNOWN-PROC UNKNOWN UNKNOWN 0 0
+DUMMY) (DERIVED 180 0 0 DERIVED ()) 0 0 () () 0 () () () 0 0)
 45 'cp4' '' 'cp4' 42 ((VARIABLE IN UNKNOWN-PROC UNKNOWN UNKNOWN 0 0
 DUMMY) (DERIVED 180 0 0 DERIVED ()) 0 0 () () 0 () () () 0 0)
 46 'cp12' '' 'cp12' 42 ((VARIABLE IN UNKNOWN-PROC UNKNOWN UNKNOWN 0 0

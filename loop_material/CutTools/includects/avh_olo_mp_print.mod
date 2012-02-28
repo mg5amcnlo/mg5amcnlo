@@ -1,5 +1,5 @@
-GFORTRAN module version '6' created from avh_olo_mp.f90 on Mon Feb 27 17:24:30 2012
-MD5:54ac54f6c68a591f5c7914282fc506a2 -- If you edit this, you'll get what you deserve.
+GFORTRAN module version '6' created from avh_olo_mp.f90 on Tue Feb 28 16:27:45 2012
+MD5:f28db49090539afa87d7856e3f54db37 -- If you edit this, you'll get what you deserve.
 
 (() () () () () () () () () () () () () () () () () () () () () () ()
 () () () ())
@@ -43,14 +43,6 @@ INTEGER 4 0 0 INTEGER ()) 0 8 ()) (CONSTANT (INTEGER 4 0 0 INTEGER ()) 0
 0 0)
 10 'xx' '' 'xx' 9 ((VARIABLE IN UNKNOWN-PROC UNKNOWN UNKNOWN 0 0 DUMMY)
 (DERIVED 20 0 0 DERIVED ()) 0 0 () () 0 () () () 0 0)
-11 'rslt' '' 'rslt' 9 ((VARIABLE UNKNOWN-INTENT UNKNOWN-PROC UNKNOWN
-UNKNOWN 0 0 RESULT) (CHARACTER 1 0 0 CHARACTER ((VARIABLE (INTEGER 4 0 0
-INTEGER ()) 0 8 ()))) 0 0 () () 0 () () () 0 0)
-17 'ii' '' 'ii' 16 ((VARIABLE IN UNKNOWN-PROC UNKNOWN UNKNOWN 0 0 DUMMY)
-(INTEGER 4 0 0 INTEGER ()) 0 0 () () 0 () () () 0 0)
-18 'rslt' '' 'rslt' 16 ((VARIABLE UNKNOWN-INTENT UNKNOWN-PROC UNKNOWN
-UNKNOWN 0 0 RESULT) (CHARACTER 1 0 0 CHARACTER ((VARIABLE (INTEGER 4 0 0
-INTEGER ()) 0 15 ()))) 0 0 () () 0 () () () 0 0)
 19 'mp_complex' 'mpdefmod' 'mp_complex' 1 ((DERIVED UNKNOWN-INTENT
 UNKNOWN-PROC UNKNOWN UNKNOWN 0 0 SEQUENCE) (UNKNOWN 0 0 0 UNKNOWN ()) 0
 0 () () 0 ((21 'mpc' (REAL 4 0 0 REAL ()) (1 0 EXPLICIT (CONSTANT (
@@ -69,6 +61,14 @@ UNKNOWN-PROC UNKNOWN IMPLICIT-SAVE 0 0) (INTEGER 4 0 0 INTEGER ()) 0 0 ()
 8 'nefrmt' 'avh_olo_mp_print' 'nefrmt' 1 ((VARIABLE UNKNOWN-INTENT
 UNKNOWN-PROC UNKNOWN IMPLICIT-SAVE 0 0) (INTEGER 4 0 0 INTEGER ()) 0 0 ()
 () 0 () () () 0 0)
+11 'rslt' '' 'rslt' 9 ((VARIABLE UNKNOWN-INTENT UNKNOWN-PROC UNKNOWN
+UNKNOWN 0 0 RESULT) (CHARACTER 1 0 0 CHARACTER ((VARIABLE (INTEGER 4 0 0
+INTEGER ()) 0 8 ()))) 0 0 () () 0 () () () 0 0)
+17 'ii' '' 'ii' 16 ((VARIABLE IN UNKNOWN-PROC UNKNOWN UNKNOWN 0 0 DUMMY)
+(INTEGER 4 0 0 INTEGER ()) 0 0 () () 0 () () () 0 0)
+18 'rslt' '' 'rslt' 16 ((VARIABLE UNKNOWN-INTENT UNKNOWN-PROC UNKNOWN
+UNKNOWN 0 0 RESULT) (CHARACTER 1 0 0 CHARACTER ((VARIABLE (INTEGER 4 0 0
+INTEGER ()) 0 15 ()))) 0 0 () () 0 () () () 0 0)
 )
 
 ('init_print' 0 5)

@@ -1,5 +1,5 @@
-GFORTRAN module version '6' created from avh_olo_mp.f90 on Mon Feb 27 17:24:31 2012
-MD5:090795c436531ef311241fbf25bc0125 -- If you edit this, you'll get what you deserve.
+GFORTRAN module version '6' created from avh_olo_mp.f90 on Tue Feb 28 16:27:46 2012
+MD5:cd773d1236f6d7618a30ca53ce3e4b48 -- If you edit this, you'll get what you deserve.
 
 (() () () () () () () () () () () () () () () () () () () () () () ()
 () () () ())
@@ -80,12 +80,6 @@ MODULE-PROC DECL UNKNOWN 0 0 SUBROUTINE) (UNKNOWN 0 0 0 UNKNOWN ()) 50 0
 57 'trif3' 'avh_olo_mp_tri' 'trif3' 1 ((PROCEDURE UNKNOWN-INTENT
 MODULE-PROC DECL UNKNOWN 0 0 SUBROUTINE) (UNKNOWN 0 0 0 UNKNOWN ()) 58 0
 (59 60 61 62 63 64 65) () 0 () () () 0 0)
-33 'cm2' '' 'cm2' 30 ((VARIABLE IN UNKNOWN-PROC UNKNOWN UNKNOWN 0 0
-DUMMY) (DERIVED 66 0 0 DERIVED ()) 0 0 () () 0 () () () 0 0)
-34 'cm3' '' 'cm3' 30 ((VARIABLE IN UNKNOWN-PROC UNKNOWN UNKNOWN 0 0
-DUMMY) (DERIVED 66 0 0 DERIVED ()) 0 0 () () 0 () () () 0 0)
-35 'rmu2' '' 'rmu2' 30 ((VARIABLE IN UNKNOWN-PROC UNKNOWN UNKNOWN 0 0
-DUMMY) (DERIVED 67 0 0 DERIVED ()) 0 0 () () 0 () () () 0 0)
 24 'rslt' '' 'rslt' 23 ((VARIABLE OUT UNKNOWN-PROC UNKNOWN UNKNOWN 0 0
 DIMENSION DUMMY) (DERIVED 66 0 0 DERIVED ()) 0 0 () (1 0 EXPLICIT (
 CONSTANT (INTEGER 4 0 0 INTEGER ()) 0 '0') (CONSTANT (INTEGER 4 0 0
@@ -181,6 +175,12 @@ DUMMY) (DERIVED 66 0 0 DERIVED ()) 0 0 () () 0 () () () 0 0)
 64 'm2i' '' 'm2i' 58 ((VARIABLE IN UNKNOWN-PROC UNKNOWN UNKNOWN 0 0
 DUMMY) (DERIVED 66 0 0 DERIVED ()) 0 0 () () 0 () () () 0 0)
 65 'm3i' '' 'm3i' 58 ((VARIABLE IN UNKNOWN-PROC UNKNOWN UNKNOWN 0 0
+DUMMY) (DERIVED 66 0 0 DERIVED ()) 0 0 () () 0 () () () 0 0)
+35 'rmu2' '' 'rmu2' 30 ((VARIABLE IN UNKNOWN-PROC UNKNOWN UNKNOWN 0 0
+DUMMY) (DERIVED 67 0 0 DERIVED ()) 0 0 () () 0 () () () 0 0)
+33 'cm2' '' 'cm2' 30 ((VARIABLE IN UNKNOWN-PROC UNKNOWN UNKNOWN 0 0
+DUMMY) (DERIVED 66 0 0 DERIVED ()) 0 0 () () 0 () () () 0 0)
+34 'cm3' '' 'cm3' 30 ((VARIABLE IN UNKNOWN-PROC UNKNOWN UNKNOWN 0 0
 DUMMY) (DERIVED 66 0 0 DERIVED ()) 0 0 () () 0 () () () 0 0)
 31 'rslt' '' 'rslt' 30 ((VARIABLE OUT UNKNOWN-PROC UNKNOWN UNKNOWN 0 0
 DIMENSION DUMMY) (DERIVED 66 0 0 DERIVED ()) 0 0 () (1 0 EXPLICIT (
