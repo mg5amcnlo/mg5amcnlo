@@ -321,6 +321,7 @@ class testFKSRealHelasObjects(unittest.TestCase):
                        'forbidden_s_channels':[],
                        'forbidden_particles':[],
                        'is_decay_chain': False,
+                       'perturbation_couplings': ['QCD'],
                        'decay_chains': MG.ProcessList(),
                        'overall_orders': {}}
 
@@ -331,6 +332,7 @@ class testFKSRealHelasObjects(unittest.TestCase):
                        'forbidden_s_channels':[],
                        'forbidden_particles':[],
                        'is_decay_chain': False,
+                       'perturbation_couplings': ['QCD'],
                        'decay_chains': MG.ProcessList(),
                        'overall_orders': {}}
     
@@ -338,8 +340,8 @@ class testFKSRealHelasObjects(unittest.TestCase):
 
     myproc2 = MG.Process(dict2)
     
-    fks1 = fks.FKSProcessFromReals(myproc, ['QCD'])
-    fks2 = fks.FKSProcessFromReals(myproc2, ['QCD'])
+    fks1 = fks.FKSProcessFromReals(myproc)
+    fks2 = fks.FKSProcessFromReals(myproc2)
     
     
     def test_fks_helas_process_from_reals(self):

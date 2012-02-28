@@ -317,8 +317,10 @@ class testFKSBornHelasObjects(unittest.TestCase):
                        'forbidden_s_channels':[],
                        'forbidden_particles':[],
                        'is_decay_chain': False,
+                       'perturbation_couplings' : ['QCD'],
                        'decay_chains': MG.ProcessList(),
                        'overall_orders': {}}
+
 
     dict2 = {'legs' : myleglist2, 'orders':{'QCD':10, 'QED':0},
                        'model': mymodel,
@@ -327,6 +329,7 @@ class testFKSBornHelasObjects(unittest.TestCase):
                        'forbidden_s_channels':[],
                        'forbidden_particles':[],
                        'is_decay_chain': False,
+                       'perturbation_couplings' : ['QCD'],
                        'decay_chains': MG.ProcessList(),
                        'overall_orders': {}}
 
@@ -337,6 +340,7 @@ class testFKSBornHelasObjects(unittest.TestCase):
                        'forbidden_s_channels':[],
                        'forbidden_particles':[],
                        'is_decay_chain': False,
+                       'perturbation_couplings' : ['QCD'],
                        'decay_chains': MG.ProcessList(),
                        'overall_orders': {}}
     
@@ -360,14 +364,16 @@ class testFKSBornHelasObjects(unittest.TestCase):
         
         my_multi_leglist[0].set('state', False)
         my_multi_leglist[1].set('state', False)
-        my_process_definition = MG.ProcessDefinition({'legs':my_multi_leglist,
-                                                    'model':self.mymodel})
+        my_process_definition = MG.ProcessDefinition({ \
+                        'orders': {'WEIGHTED': 3},
+                        'legs': my_multi_leglist,
+                        'perturbation_couplings': ['QCD'],
+                        'model': self.mymodel})
         my_process_definitions = MG.ProcessDefinitionList(\
             [my_process_definition])
 
-        amps = diagram_generation.MultiProcess(
-                {'process_definitions':my_process_definitions}).get('amplitudes')
-        my_multi_process = fks_born.FKSMultiProcessFromBorn(amps, ['QCD'])
+        my_multi_process = fks_born.FKSMultiProcessFromBorn(\
+                {'process_definitions': my_process_definitions})
         my_helas_mp = fks_born_helas.FKSHelasMultiProcessFromBorn(my_multi_process, False)
         
         #there should be 6 independent born_matrix_elements 
@@ -390,11 +396,11 @@ class testFKSBornHelasObjects(unittest.TestCase):
         --matrix element
         """         
         #ug> ug
-        fks1 = fks_born.FKSProcessFromBorn(self.myproc1, ['QCD'])
+        fks1 = fks_born.FKSProcessFromBorn(self.myproc1)
         #dg> dg
-        fks2 = fks_born.FKSProcessFromBorn(self.myproc2, ['QCD'])
+        fks2 = fks_born.FKSProcessFromBorn(self.myproc2)
         #uu~> dd~
-        fks3 = fks_born.FKSProcessFromBorn(self.myproc3, ['QCD'])
+        fks3 = fks_born.FKSProcessFromBorn(self.myproc3)
  
         fksleglist = copy.copy(fks_common.to_fks_legs(self.myleglist3,
                                                       self.mymodel))
@@ -444,11 +450,11 @@ class testFKSBornHelasObjects(unittest.TestCase):
         we use the born process ug > ug"""
         
         #ug> ug
-        fks1 = fks_born.FKSProcessFromBorn(self.myproc1, ['QCD'])
+        fks1 = fks_born.FKSProcessFromBorn(self.myproc1)
         #dg> dg
-        fks2 = fks_born.FKSProcessFromBorn(self.myproc2, ['QCD'])
+        fks2 = fks_born.FKSProcessFromBorn(self.myproc2)
         #uu~> dd~
-        fks3 = fks_born.FKSProcessFromBorn(self.myproc3, ['QCD'])
+        fks3 = fks_born.FKSProcessFromBorn(self.myproc3)
         
         me_list=[]
         me_id_list=[]
@@ -501,11 +507,11 @@ class testFKSBornHelasObjects(unittest.TestCase):
         amp_id_list=[]
         
         #ug> ug
-        fks1 = fks_born.FKSProcessFromBorn(self.myproc1, ['QCD'])
+        fks1 = fks_born.FKSProcessFromBorn(self.myproc1)
         #dg> dg
-        fks2 = fks_born.FKSProcessFromBorn(self.myproc2, ['QCD'])
+        fks2 = fks_born.FKSProcessFromBorn(self.myproc2)
         #uu~> dd~
-        fks3 = fks_born.FKSProcessFromBorn(self.myproc3, ['QCD'])
+        fks3 = fks_born.FKSProcessFromBorn(self.myproc3)
         
         fks1.generate_reals(amp_list, amp_id_list)
         fks2.generate_reals(amp_list, amp_id_list)

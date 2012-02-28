@@ -2,7 +2,8 @@ try:
     import madgraph.iolibs.file_writers as writers 
 except:
     import aloha.file_writers as writers
-    
+
+
 import os
 import re 
 from numbers import Number
@@ -10,12 +11,14 @@ from numbers import Number
 class WriteALOHA: 
     """ Generic writing functions """ 
     
+    LOOP_MODE = False
     power_symbol = '**'
     change_var_format = str
     change_number_format = str
     extension = ''
     type_to_variable = {2:'F',3:'V',5:'T',1:'S'}
     type_to_size = {'S':3, 'T':18, 'V':6, 'F':6}
+    
     
     def __init__(self, abstract_routine, dirpath):
 
@@ -37,6 +40,7 @@ class WriteALOHA:
         self.offshell = abstract_routine.outgoing 
         self.symmetries = abstract_routine.symmetries
         self.tag = abstract_routine.tag
+        self.loop_routine = 'L' in self.tag
 
         #prepare the necessary object
         self.collect_variables() # Look for the different variables
@@ -310,7 +314,10 @@ class ALOHAWriterForFortran(WriteALOHA):
         if len(OverM) > 0: 
             str_out += 'double complex ' + ','.join(OverM) + '\n'
         if len(Momenta) > 0:
-            str_out += 'double precision ' + '(0:3),'.join(Momenta) + '(0:3)\n'
+            if self.loop_routine:
+                str_out += 'double complex ' + '(0:3),'.join(Momenta) + '(0:3)\n'
+            else:
+                str_out += 'double precision ' + '(0:3),'.join(Momenta) + '(0:3)\n'
 
         # Add entry for symmetry
         #str_out += '\n'
@@ -344,9 +351,13 @@ class ALOHAWriterForFortran(WriteALOHA):
             offshelltype = self.particles[self.offshell -1]
             offshell_size = self.type_to_size[offshelltype]            
             #Implement the conservation of Energy Impulsion
-            for i in range(-1,1):
+            if self.LOOP_MODE:
+                max = 3 # each component is one momentum (since it's complex)
+            else:
+                max = 1 # one componenet correspond to 2 component
+            for i in range(-1, max):
                 str_out += '%s%d(%d)= ' % (offshelltype, self.offshell, \
-                                                              offshell_size + i)
+                                                          offshell_size + i)
                 
                 pat=re.compile(r'^[-+]?(?P<spin>\w)')
                 for elem in momentum_conservation:
@@ -363,19 +374,25 @@ class ALOHAWriterForFortran(WriteALOHA):
             sign = ''
             if self.offshell == index and type in ['V','S']:
                 sign = '-'
-                            
-            str_out += '%s(0) = %s dble(%s%d(%d))\n' % (mom, sign, type, index, energy_pos)
-            str_out += '%s(1) = %s dble(%s%d(%d))\n' % (mom, sign, type, index, energy_pos + 1)
-            str_out += '%s(2) = %s dimag(%s%d(%d))\n' % (mom, sign, type, index, energy_pos + 1)
-            str_out += '%s(3) = %s dimag(%s%d(%d))\n' % (mom, sign, type, index, energy_pos)            
+
+            if self.LOOP_MODE:
+                str_out += '%s(0) = %s %s%d(%d)\n' % (mom, sign, type, index, energy_pos)
+                str_out += '%s(1) = %s %s%d(%d)\n' % (mom, sign, type, index, energy_pos + 1)
+                str_out += '%s(2) = %s %s%d(%d)\n' % (mom, sign, type, index, energy_pos + 2)
+                str_out += '%s(3) = %s %s%d(%d)\n' % (mom, sign, type, index, energy_pos + 3)            
+            else:  
+                str_out += '%s(0) = %s dble(%s%d(%d))\n' % (mom, sign, type, index, energy_pos)
+                str_out += '%s(1) = %s dble(%s%d(%d))\n' % (mom, sign, type, index, energy_pos + 1)
+                str_out += '%s(2) = %s dimag(%s%d(%d))\n' % (mom, sign, type, index, energy_pos + 1)
+                str_out += '%s(3) = %s dimag(%s%d(%d))\n' % (mom, sign, type, index, energy_pos)            
             
                    
-        # Definition for the One Over Mass**2 terms
-        for elem in overm:
-            #Mom is in format OMX with X the number of the particle
-            index = int(elem[2:])
-            str_out += 'OM%d = 0d0\n' % (index)
-            str_out += 'if (M%d .ne. 0d0) OM%d' % (index, index) + '=1d0/M%d**2\n' % (index) 
+                # Definition for the One Over Mass**2 terms
+                for elem in overm:
+                    #Mom is in format OMX with X the number of the particle
+                    index = int(elem[2:])
+                    str_out += 'OM%d = 0d0\n' % (index)
+                    str_out += 'if (M%d .ne. 0d0) OM%d' % (index, index) + '=1d0/M%d**2\n' % (index) 
         
         # Returning result
         return str_out
@@ -429,10 +446,13 @@ class ALOHAWriterForFortran(WriteALOHA):
             denominator = self.obj.denominator
             for ind in denominator.listindices():
                 denom = self.write_obj(denominator.get_rep(ind))
-            string = 'denom =' + '1d0/(' + denom + ')'
-            string = string.replace('+-', '-')
-            string = re.sub('\((?P<num>[+-]*[0-9])\+(?P<num2>[+-][0-9])[Jj]\)\.', '(\g<num>d0,\g<num2>d0)', string)
-            string = re.sub('(?P<num>[0-9])[Jj]\.', '\g<num>*(0d0,1d0)', string)
+            if self.loop_routine:
+                string = 'denom = 1d0'
+            else:
+                string = 'denom =' + '1d0/(' + denom + ')'
+                string = string.replace('+-', '-')
+                string = re.sub('\((?P<num>[+-]*[0-9])\+(?P<num2>[+-][0-9])[Jj]\)\.', '(\g<num>d0,\g<num2>d0)', string)
+                string = re.sub('(?P<num>[0-9])[Jj]\.', '\g<num>*(0d0,1d0)', string)
             OutString = OutString + string + '\n'
             for ind in numerator.listindices():
                 string = '%s(%d)= COUP*denom*' % (OffShellParticle, self.pass_to_HELAS(ind, start=1))
@@ -509,23 +529,15 @@ class ALOHAWriterForFortran(WriteALOHA):
         if not offshell:
             text += ' double complex TMP\n'
         else:
-            spin = self.particles[offshell -1] 
-            text += ' double complex TMP(%s)\n integer i' % self.type_to_size[spin]         
+            spin = self.particles[offshell -1]
+            if self.LOOP_MODE:
+                text += ' double complex TMP(%s)\n integer i' % (self.type_to_size[spin]+2)
+            else:
+                text += ' double complex TMP(%s)\n integer i' % self.type_to_size[spin]                   
         
         # Define which part of the routine should be called
         addon = ''.join(self.tag) + '_%s' % self.offshell
         
-#        if 'C' in self.namestring:
-#            short_name, addon = name.split('C',1)
-#            if addon.split('_')[0].isdigit():
-#                addon = 'C' +self.namestring.split('C',1)[1]
-#            elif all([n.isdigit() for n in addon.split('_')[0].split('C')]):
-#                addon = 'C' +self.namestring.split('C',1)[1]
-#            else:
-#                addon = '_%s' % self.offshell
-#        else:
-#            addon = '_%s' % self.offshell
-
         # how to call the routine
         if not offshell:
             main = 'vertex'
@@ -598,6 +610,7 @@ def get_routine_name(name=None, outgoing=None, tag=None, abstract=None):
 
 def combine_name(name, other_names, outgoing, tag=None):
     """ build the name for combined aloha function """
+
     
 
     # Two possible scheme FFV1C1_2_X or FFV1__FFV2C1_X

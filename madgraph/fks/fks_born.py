@@ -57,18 +57,17 @@ class FKSMultiProcessFromBorn(diagram_generation.MultiProcess): #test written
                         "%s is not a valid list for born_processes " % str(value)                             
         return super(FKSMultiProcessFromBorn,self).filter(name, value)
     
-    def __init__(self, amp_list, pert_orders = [], *arguments):
+    def __init__(self,  *arguments):
         """Initializes the original multiprocess, then generates the amps for the 
         borns, then geneare the born processes and the reals.
         """
                 
         super(FKSMultiProcessFromBorn, self).__init__(*arguments)   
-#        amps = self.get('amplitudes')
-        amps = amp_list
+        amps = self.get('amplitudes')
         real_amplist = []
         real_amp_id_list = []
         for amp in amps:
-            born = FKSProcessFromBorn(amp, pert_orders)
+            born = FKSProcessFromBorn(amp)
             self['born_processes'].append(born)
             born.generate_reals(real_amplist, real_amp_id_list)
 
@@ -159,7 +158,7 @@ class FKSProcessFromBorn(object):
     """The class for a FKS process. Starts from the born process and finds
     all the possible splittings."""  
     
-    def __init__(self, start_proc = None, pert_orders = [], remove_reals = True):
+    def __init__(self, start_proc = None, remove_reals = True):
         """initialization: starts either from an amplitude or a process,
         then init the needed variables.
         remove_borns tells if the borns not needed for integration will be removed
@@ -179,6 +178,11 @@ class FKSProcessFromBorn(object):
         self.real_amps = []
         self.remove_reals = remove_reals
         self.nincoming = 0
+        self.virt_amp = None
+
+        if not remove_reals in [True, False]:
+            raise fks_common.FKSProcessError(), \
+                    'Not valid type for remove_reals in FKSProcessFromBorn'
         
         if start_proc:
             if isinstance(start_proc, MG.Process):
@@ -187,6 +191,9 @@ class FKSProcessFromBorn(object):
             elif isinstance(start_proc, diagram_generation.Amplitude):
                 self.born_proc = fks_common.sort_proc(start_proc.get('process'))
                 self.born_amp = diagram_generation.Amplitude(self.born_proc)
+            else:
+                raise fks_common.FKSProcessError(), \
+                    'Not valid start_proc in FKSProcessFromBorn'
 
             self.model = self.born_proc['model']
             self.leglist = fks_common.to_fks_legs(
@@ -202,7 +209,7 @@ class FKSProcessFromBorn(object):
             self.born_proc['orders'] = orders
                 
             self.ndirs = 0
-            for order in pert_orders:
+            for order in self.born_proc.get('perturbation_couplings'):
                 self.find_reals(order)
             self.find_color_links()
 

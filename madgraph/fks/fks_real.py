@@ -20,6 +20,7 @@ import madgraph.core.helas_objects as helas_objects
 import madgraph.core.diagram_generation as diagram_generation
 import madgraph.core.color_amp as color_amp
 import madgraph.core.color_algebra as color_algebra
+import madgraph.loop.loop_diagram_generation as loop_diagram_generation
 import madgraph.fks.fks_common as fks_common
 import copy
 import logging
@@ -55,18 +56,31 @@ class FKSMultiProcessFromReals(diagram_generation.MultiProcess): #test written
                                                                 
         return super(FKSMultiProcessFromReals,self).filter(name, value)
     
-    def __init__(self, amp_list, pert_orders = [], *arguments):
+    def __init__(self, *arguments):
         """Initializes the original multiprocess, then generates the amps for the 
         borns, then generate the born processes and the reals.
         """
         super(FKSMultiProcessFromReals, self).__init__(*arguments)
-        amps = amp_list
+        amps = self.get('amplitudes')
         born_amplist = []
         born_amp_id_list = []
         for amp in amps:
-            real_proc = FKSProcessFromReals(amp, pert_orders)
+            real_proc = FKSProcessFromReals(amp)
             self['real_processes'].append(real_proc)
-            
+
+
+    def generate_virtuals(self):
+        """For each FKSBornProcess of all the real_proc, creates the corresponding
+        virtual amplitude"""
+
+        for real in self['real_processes']:
+            if any([ born.is_nbody_only and born.need_color_links for born in real.borns]):
+                    myproc = copy.copy(born.process)
+                    myamp = loop_diagram_generation.LoopAmplitude(myproc)
+                    if myamp.get('diagrams'):
+                        real.virt_amp = myamp
+
+
             
 class FKSBornProcess(object):
     """contains informations about a born process
@@ -145,7 +159,7 @@ class FKSProcessFromRealsList(MG.PhysicsObjectList):
 class FKSProcessFromReals(object):
     """the class for an FKS process, starting from reals """ 
     
-    def __init__(self, start_proc = None, pert_orders = [], remove_borns = True): #test written
+    def __init__(self, start_proc = None, remove_borns = True): #test written
         """Initialization: starts either from an amplitude or a process,
         then init the needed variables.
         remove_borns tells if the borns not needed for integration will be removed
@@ -168,7 +182,12 @@ class FKSProcessFromReals(object):
         self.model = None
         self.nincoming = 0
         self.isfinite = False
+        self.virt_amp = None
  
+        if not remove_borns in [True, False]:
+            raise fks_common.FKSProcessError(), \
+                    'Not valid type for remove_reals in FKSProcessFromBorn'
+
         if start_proc:
             if isinstance(start_proc, MG.Process):
                 self.real_proc = fks_common.sort_proc(start_proc) 
@@ -177,6 +196,9 @@ class FKSProcessFromReals(object):
                 self.real_proc = fks_common.sort_proc(start_proc.get('process'))
                 self.real_amp = diagram_generation.Amplitude(self.real_proc)
                 self.real_amp['has_mirror_process'] = start_proc['has_mirror_process']
+            else:
+                raise fks_common.FKSProcessError(), \
+                    'Not valid start_proc in FKSProcessFromReals'
 
             self.model = self.real_proc.get('model')   
 
@@ -188,7 +210,7 @@ class FKSProcessFromReals(object):
             for leg in self.leglist:
                 if not leg['state']:
                     self.nincoming += 1
-            for order in pert_orders:
+            for order in self.real_proc.get('perturbation_couplings'):
                 self.find_borns(order)
 
             self.find_borns_to_integrate(remove_borns)

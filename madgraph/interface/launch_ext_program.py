@@ -159,7 +159,6 @@ class MELauncher(ExtLauncher):
         """ initialize the StandAlone Version"""
 
         ExtLauncher.__init__(self, cmd_int, running_dir, './Cards', timeout, **option)
-        #self.executable = os.path.join('.', 'bin','generate_events')
 
         assert hasattr(self, 'cluster')
         assert hasattr(self, 'multicore')

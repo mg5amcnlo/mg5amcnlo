@@ -38,7 +38,6 @@ import madgraph.iolibs.ufo_expression_parsers as parsers
 import madgraph.various.diagram_symmetry as diagram_symmetry
 import madgraph.various.process_checks as process_checks
 
-
 import aloha.create_aloha as create_aloha
 import models.write_param_card as param_writer
 import models.check_param_card as check_param_card
@@ -55,12 +54,13 @@ class ProcessExporterFortran(object):
     """Class to take care of exporting a set of matrix elements to
     Fortran (v4) format."""
 
-    def __init__(self, mgme_dir = "", dir_path = "", clean = False):
+    def __init__(self, mgme_dir = "", dir_path = "", clean = False, *args, **kwargs):
         """Initiate the ProcessExporterFortran with directory information"""
         self.mgme_dir = mgme_dir
         self.dir_path = dir_path
         self.clean = clean
         self.model = None
+        super(ProcessExporterFortran,self).__init__(*args, **kwargs)
 
     #===========================================================================
     # copy the Template in a new directory.
@@ -69,7 +69,7 @@ class ProcessExporterFortran(object):
         """create the directory run_name as a copy of the MadEvent
         Template, and clean the directory
         """
-
+        
         #First copy the full template tree if dir_path doesn't exit
         if not os.path.isdir(self.dir_path):
             assert self.mgme_dir, \
@@ -347,10 +347,10 @@ class ProcessExporterFortran(object):
 
         #copy Helas Template
         cp(MG5DIR + '/aloha/template_files/Makefile_F', write_dir+'/makefile')
-        for filename in os.listdir(os.path.join(MG5DIR,'aloha','template_files')):
-            if not filename.lower().endswith('.f'):
-                continue
-            cp((MG5DIR + '/aloha/template_files/' + filename), write_dir)
+        if any(['L' in d[1] for d in wanted_lorentz]):
+            cp(MG5DIR + '/aloha/template_files/aloha_functions_loop.f', write_dir+'/aloha_functions.f')
+        else:
+            cp(MG5DIR + '/aloha/template_files/aloha_functions.f', write_dir+'/aloha_functions.f')
         create_aloha.write_aloha_file_inc(write_dir, '.f', '.o')
 
         # Make final link in the Process
@@ -552,44 +552,116 @@ class ProcessExporterFortran(object):
 
         return ret_lines
 
-    def get_JAMP_lines(self, matrix_element):
-        """Return the JAMP = sum(fermionfactor * AMP(i)) lines"""
+    #===========================================================================
+    # Returns the data statements initializing the coeffictients for the JAMP
+    # decomposition. It is used when the JAMP initialization is decided to be 
+    # done through big arrays containing the projection coefficients.
+    #===========================================================================    
+    def get_JAMP_coefs(self, color_amplitudes, color_basis=None, tag_letter="",\
+                       n=50, Nc_value=3):
+        """This functions return the lines defining the DATA statement setting
+        the coefficients building the JAMPS out of the AMPS. Split rows in
+        bunches of size n.
+        One can specify the color_basis from which the color amplitudes originates
+        so that there are commentaries telling what color structure each JAMP
+        corresponds to."""
+        
+        if(not isinstance(color_amplitudes,list) or 
+           not (color_amplitudes and isinstance(color_amplitudes[0],list))):
+                raise MadGraph5Error, "Incorrect col_amps argument passed to get_JAMP_coefs"
 
         res_list = []
+        my_cs = color.ColorString()
+        for index, coeff_list in enumerate(color_amplitudes):
+            # Create the list of the complete numerical coefficient.
+            coefs_list=[coefficient[0][0]*coefficient[0][1]*\
+                        (fractions.Fraction(Nc_value)**coefficient[0][3]) for \
+                        coefficient in coeff_list]
+            # Create the list of the numbers of the contributing amplitudes.
+            # Mutliply by -1 for those which have an imaginary coefficient.
+            ampnumbers_list=[coefficient[1]*(-1 if coefficient[0][2] else 1) \
+                              for coefficient in coeff_list]
+            # Find the common denominator.      
+            commondenom=abs(reduce(fractions.gcd, coefs_list).denominator)
+            num_list=[(coefficient*commondenom).numerator \
+                      for coefficient in coefs_list]
+            res_list.append("DATA NCONTRIBAMPS%s(%i)/%i/"%(tag_letter,\
+                                                         index+1,len(num_list)))
+            res_list.append("DATA DENOMCCOEF%s(%i)/%i/"%(tag_letter,\
+                                                         index+1,commondenom))
+            if color_basis:
+                my_cs.from_immutable(sorted(color_basis.keys())[index])
+                res_list.append("C %s" % repr(my_cs))
+            for k in xrange(0, len(num_list), n):
+                res_list.append("DATA (NUMCCOEF%s(%3r,i),i=%6r,%6r) /%s/" % \
+                    (tag_letter,index + 1, k + 1, min(k + n, len(num_list)),
+                                 ','.join(["%6r" % i for i in num_list[k:k + n]])))
+                res_list.append("DATA (AMPNUMBERS%s(%3r,i),i=%6r,%6r) /%s/" % \
+                    (tag_letter,index + 1, k + 1, min(k + n, len(num_list)),
+                                 ','.join(["%6r" % i for i in ampnumbers_list[k:k + n]])))
+                pass
+        return res_list
 
+    def get_JAMP_lines(self, col_amps, basename="JAMP(", basename2="AMP(", split=-1):
+        """Return the JAMP = sum(fermionfactor * AMP(i)) lines from col_amps 
+        defined as a matrix element or directly as a color_amplitudes dictionary"""
+
+        # Let the user call get_JAMP_lines directly from a MatrixElement or from
+        # the color amplitudes lists.
+        if(isinstance(col_amps,helas_objects.HelasMatrixElement)):
+            color_amplitudes=col_amps.get_color_amplitudes()
+        elif(isinstance(col_amps,list)):
+            if(col_amps and isinstance(col_amps[0],list)):
+                color_amplitudes=col_amps
+            else:
+                raise MadGraph5Error, "Incorrect col_amps argument passed to get_JAMP_lines"
+        else:
+            print "colamps=",col_amps.__class__.__name__
+            raise MadGraph5Error, "Incorrect col_amps argument passed to get_JAMP_lines"
+
+
+        res_list = []
         for i, coeff_list in \
-                enumerate(matrix_element.get_color_amplitudes()):
-
-            res = "JAMP(%i)=" % (i + 1)
-
-            # Optimization: if all contributions to that color basis element have
-            # the same coefficient (up to a sign), put it in front
-            list_fracs = [abs(coefficient[0][1]) for coefficient in coeff_list]
-            common_factor = False
-            diff_fracs = list(set(list_fracs))
-            if len(diff_fracs) == 1 and abs(diff_fracs[0]) != 1:
-                common_factor = True
-                global_factor = diff_fracs[0]
-                res = res + '%s(' % self.coeff(1, global_factor, False, 0)
-
-            for (coefficient, amp_number) in coeff_list:
+                enumerate(color_amplitudes):
+            # Break the JAMP definition into 'n=split' pieces to avoid having
+            # arbitrarly long lines.
+            first=True
+            n = (len(coeff_list)+1 if split<=0 else split) 
+            while coeff_list!=[]:
+                coefs=coeff_list[:n]
+                coeff_list=coeff_list[n:]
+                res = ((basename+"%i)=") % (i + 1)) + \
+                      (((basename+"%i)") % (i + 1)) if not first and split>0 else '')
+                first=False
+                # Optimization: if all contributions to that color basis element have
+                # the same coefficient (up to a sign), put it in front
+                list_fracs = [abs(coefficient[0][1]) for coefficient in coefs]
+                common_factor = False
+                diff_fracs = list(set(list_fracs))
+                if len(diff_fracs) == 1 and abs(diff_fracs[0]) != 1:
+                    common_factor = True
+                    global_factor = diff_fracs[0]
+                    res = res + '%s(' % self.coeff(1, global_factor, False, 0)
+    
+                for (coefficient, amp_number) in coefs:
+                    if common_factor:
+                        res = (res + "%s" + basename2 + "%d)") % \
+                                                   (self.coeff(coefficient[0],
+                                                   coefficient[1] / abs(coefficient[1]),
+                                                   coefficient[2],
+                                                   coefficient[3]),
+                                                   amp_number)
+                    else:
+                        res = (res + "%s" + basename2 + "%d)") % (self.coeff(coefficient[0],
+                                                   coefficient[1],
+                                                   coefficient[2],
+                                                   coefficient[3]),
+                                                   amp_number)
+    
                 if common_factor:
-                    res = res + "%sAMP(%d)" % (self.coeff(coefficient[0],
-                                               coefficient[1] / abs(coefficient[1]),
-                                               coefficient[2],
-                                               coefficient[3]),
-                                               amp_number)
-                else:
-                    res = res + "%sAMP(%d)" % (self.coeff(coefficient[0],
-                                               coefficient[1],
-                                               coefficient[2],
-                                               coefficient[3]),
-                                               amp_number)
-
-            if common_factor:
-                res = res + ')'
-
-            res_list.append(res)
+                    res = res + ')'
+    
+                res_list.append(res)
 
         return res_list
 
@@ -718,18 +790,18 @@ class ProcessExporterFortran(object):
             else:
                 return '-'
 
-        res_str = '%+i' % total_coeff.numerator
+        res_str = '%+iD0' % total_coeff.numerator
 
         if total_coeff.denominator != 1:
             # Check if total_coeff is an integer
-            res_str = res_str + './%i.' % total_coeff.denominator
+            res_str = res_str + '/%iD0' % total_coeff.denominator
 
         if is_imaginary:
             res_str = res_str + '*imag1'
 
         return res_str + '*'
 
-    def set_compiler(self, default_compiler):
+    def set_compiler(self, default_compiler, force=False):
         """Set compiler based on what's available on the system"""
         
         
@@ -865,7 +937,7 @@ class ProcessExporterFortranSA(ProcessExporterFortran):
                               online = False, compiler='g77'):
         """Finalize Standalone MG4 directory by generation proc_card_mg5.dat"""
 
-        self.set_compiler(compiler)
+        self.compiler_choice(compiler)
         self.make()
 
         # Write command history as proc_card_mg5
@@ -875,6 +947,12 @@ class ProcessExporterFortranSA(ProcessExporterFortran):
             text = ('\n'.join(history) + '\n') % misc.get_time_info()
             output_file.write(text)
             output_file.close()
+
+    def compiler_choice(self, compiler):
+        """ Different daughter classes might want different compilers.
+        So this function is meant to be overloaded if desired."""
+        
+        self.set_compiler(compiler)
 
     #===========================================================================
     # generate_subprocess_directory_v4
@@ -938,7 +1016,6 @@ class ProcessExporterFortranSA(ProcessExporterFortran):
         plot.draw()
 
         linkfiles = ['check_sa.f', 'coupl.inc', 'makefile']
-
 
         for file in linkfiles:
             ln('../%s' % file)
@@ -2954,6 +3031,12 @@ class UFO_model_to_mg4(object):
                 common/weak/ gal
 
                 """        
+        if self.model.get('expansion_order'):
+            header=header+"""double precision MU_R
+                common/rscale/ MU_R
+
+                """
+                
         fsock.writelines(header)
         
         # Write the Mass definition/ common block
@@ -2970,9 +3053,9 @@ class UFO_model_to_mg4(object):
             if one_width.lower() != 'zero':
                 widths.add(one_width)
             
-        
-        fsock.writelines('double precision '+','.join(masses)+'\n')
-        fsock.writelines('common/masses/ '+','.join(masses)+'\n\n')
+        if masses:
+            fsock.writelines('double precision '+','.join(masses)+'\n')
+            fsock.writelines('common/masses/ '+','.join(masses)+'\n\n')
         if widths:
             fsock.writelines('double precision '+','.join(widths)+'\n')
             fsock.writelines('common/widths/ '+','.join(widths)+'\n\n')
@@ -3009,7 +3092,7 @@ class UFO_model_to_mg4(object):
             already_def.add(particle.get('mass').lower())
             already_def.add(particle.get('width').lower())
 
-        is_valid = lambda name: name!='G' and name.lower() not in already_def
+        is_valid = lambda name: name!='G' and name!='MU_R' and name.lower() not in already_def
         
         real_parameters = [param.name for param in self.params_dep + 
                             self.params_indep if param.type == 'real'

@@ -43,12 +43,15 @@ from madgraph import MG4DIR, MG5DIR, MadGraph5Error
 
 import madgraph.core.base_objects as base_objects
 import madgraph.core.diagram_generation as diagram_generation
+import madgraph.loop.loop_diagram_generation as loop_diagram_generation
+import madgraph.loop.loop_base_objects as loop_base_objects
 import madgraph.core.drawing as draw_lib
 import madgraph.core.helas_objects as helas_objects
 
 import madgraph.iolibs.drawing_eps as draw
 import madgraph.iolibs.export_cpp as export_cpp
 import madgraph.iolibs.export_v4 as export_v4
+import madgraph.loop.loop_exporters as loop_exporters
 import madgraph.iolibs.helas_call_writers as helas_call_writers
 import madgraph.iolibs.file_writers as writers
 import madgraph.iolibs.files as files
@@ -1623,7 +1626,17 @@ class MadGraphCmd(CmdExtended, HelpToCmd, CheckValidForCmd, CompleteForCmd):
         self._export_format = 'madevent'
         self._mgme_dir = MG4DIR
         self._comparisons = None
-    
+
+        # Set where to look for CutTools installation.
+        # In further versions, it will be set in the same manner as _mgme_dir so that
+        # the user can chose its own CutTools distribution.
+        self._cuttools_dir=str(os.path.join(self._mgme_dir,'loop_material','CutTools'))
+        if not os.path.isdir(os.path.join(self._cuttools_dir, 'src','cts')):
+            logger.warning(('Warning: Directory %s is not a valid CutTools directory.'+\
+                           'Using default CutTools instead.') % \
+                             self._cuttools_dir)
+            self._cuttools_dir=str(os.path.join(self._mgme_dir,'loop_material','CutTools'))
+
         # Set defaults for options
         self._options['group_subprocesses'] = 'Auto'
         self._options['ignore_six_quark_processes'] = False
@@ -1669,6 +1682,8 @@ class MadGraphCmd(CmdExtended, HelpToCmd, CheckValidForCmd, CompleteForCmd):
             # Extract process from process definition
             if ',' in line:
                 myprocdef, line = self.extract_decay_chain_process(line)
+                if myprocdef.are_decays_perturbed():
+                    raise MadGraph5Error("Decay processes cannot be perturbed")
             else:
                 myprocdef = self.extract_process(line)
 
@@ -1695,11 +1710,18 @@ class MadGraphCmd(CmdExtended, HelpToCmd, CheckValidForCmd, CompleteForCmd):
                            "ignore_six_quark_processes" in self._options \
                            else []
 
-            myproc = diagram_generation.MultiProcess(myprocdef,
-                                          collect_mirror_procs =\
-                                          collect_mirror_procs,
-                                          ignore_six_quark_processes = \
-                                          ignore_six_quark_processes)
+            # Decide here wether one needs a LoopMultiProcess or a MultiProcess
+            multiprocessclass=None
+            if myprocdef['perturbation_couplings']!=[]:
+                multiprocessclass=loop_diagram_generation.LoopMultiProcess
+            else:
+                multiprocessclass=diagram_generation.MultiProcess
+
+            myproc = multiprocessclass(myprocdef,
+                                       collect_mirror_procs =\
+                                       collect_mirror_procs,
+                                       ignore_six_quark_processes = \
+                                       ignore_six_quark_processes)
 
             for amp in myproc.get('amplitudes'):
                 if amp not in self._curr_amps:
@@ -1990,8 +2012,6 @@ class MadGraphCmd(CmdExtended, HelpToCmd, CheckValidForCmd, CompleteForCmd):
                                     get('particle_dict')[part_id].get_name() \
                                     for part_id in self._multiparticles[key]]))
             
-  
-
     def do_tutorial(self, line):
         """Activate/deactivate the tutorial mode."""
 
@@ -2035,11 +2055,13 @@ class MadGraphCmd(CmdExtended, HelpToCmd, CheckValidForCmd, CompleteForCmd):
         for amp in amplitudes:
             filename = pjoin(args[0], 'diagrams_' + \
                                     amp.get('process').shell_string() + ".eps")
-            plot = draw.MultiEpsDiagramDrawer(amp['diagrams'],
+            
+            plot = draw.MultiEpsDiagramDrawer(amp.get('diagrams'),
                                           filename,
                                           model=self._curr_model,
-                                          amplitude='',
+                                          amplitude=amp,
                                           legend=amp.get('process').input_string())
+                                          
 
             logger.info("Drawing " + \
                          amp.get('process').nice_string())
@@ -2066,11 +2088,15 @@ class MadGraphCmd(CmdExtended, HelpToCmd, CheckValidForCmd, CompleteForCmd):
         if not myprocdef:
             raise self.InvalidCmd("Empty or wrong format process, please try again.")
 
-        # Disable diagram generation logger
-        diag_logger = logging.getLogger('madgraph.diagram_generation')
-        old_level = diag_logger.getEffectiveLevel()
-        diag_logger.setLevel(logging.WARNING)
-
+        # Disable some loggers
+        loggers = [logging.getLogger('madgraph.diagram_generation'),
+                   logging.getLogger('ALOHA'),
+                   logging.getLogger('madgraph.loop_exporter'),
+                   logging.getLogger('madgraph.export_v4')]
+        old_levels = [logger.getEffectiveLevel() for logger in loggers]
+        for logger in loggers:
+            logger.setLevel(logging.WARNING)
+        
         # run the check
         cpu_time1 = time.time()
         # Run matrix element generation check on processes
@@ -2082,18 +2108,24 @@ class MadGraphCmd(CmdExtended, HelpToCmd, CheckValidForCmd, CompleteForCmd):
         
         if args[0] in  ['permutation', 'full']:
             comparisons = process_checks.check_processes(myprocdef,
-                                                        param_card = param_card,
-                                                        quick = True)
+                                                param_card = param_card,
+                                                quick = True,
+                                                mg_root=self._mgme_dir,
+                                                cuttools=self._cuttools_dir)
             nb_processes += len(comparisons[0])
             
         if args[0] in  ['gauge', 'full']:
             gauge_result = process_checks.check_gauge(myprocdef,
-                                                      param_card = param_card)
+                                                      param_card = param_card,
+                                                      mg_root=self._mgme_dir,
+                                                      cuttools=self._cuttools_dir)
             nb_processes += len(gauge_result)
             
         if args[0] in ['lorentz_invariance', 'full']:
             lorentz_result = process_checks.check_lorentz(myprocdef,
-                                                      param_card = param_card)
+                                                      param_card = param_card,
+                                                      mg_root=self._mgme_dir,
+                                                      cuttools=self._cuttools_dir)
             nb_processes += len(lorentz_result)
             
         cpu_time2 = time.time()
@@ -2120,7 +2152,8 @@ class MadGraphCmd(CmdExtended, HelpToCmd, CheckValidForCmd, CompleteForCmd):
         logger.info(text)
         pydoc.pager(text)
         # Restore diagram logger
-        diag_logger.setLevel(old_level)
+        for i, logger in enumerate(loggers):
+            logger.setLevel(old_levels[i])
 
         return
     
@@ -2147,7 +2180,7 @@ class MadGraphCmd(CmdExtended, HelpToCmd, CheckValidForCmd, CompleteForCmd):
         args.insert(0, 'process')
         
         self.do_add(" ".join(args))
-    
+
     def extract_process(self, line, proc_number = 0, overall_orders = {}):
         """Extract a process definition from a string. Returns
         a ProcessDefinition."""
@@ -2160,8 +2193,8 @@ class MadGraphCmd(CmdExtended, HelpToCmd, CheckValidForCmd, CompleteForCmd):
         
 
         # Perform sanity modifications on the lines:
-        # Add a space before and after any > , $ / |
-        space_before = re.compile(r"(?P<carac>\S)(?P<tag>[/\,\\$\\>|])(?P<carac2>\S)")
+        # Add a space before and after any > , $ / | [ ]
+        space_before = re.compile(r"(?P<carac>\S)(?P<tag>[\\[\\]/\,\\$\\>|])(?P<carac2>\S)")
         line = space_before.sub(r'\g<carac> \g<tag> \g<carac2>', line)       
         
         # Use regular expressions to extract s-channel propagators,
@@ -2176,14 +2209,40 @@ class MadGraphCmd(CmdExtended, HelpToCmd, CheckValidForCmd, CompleteForCmd):
             line = proc_number_re.group(1) + \
                    proc_number_re.group(3)
 
-        # Then take coupling orders (identified by "=")
-        order_pattern = re.compile("^(.+)\s+(\w+)\s*=\s*(\d+)\s*$")
-        order_re = order_pattern.match(line)
+        # Now check for squared orders, specified after the perturbation orders.
+        # If it turns out there is no perturbation order then we will use these orders
+        # for the regular orders.
+        squared_order_pattern = re.compile("^(.+)\s+(\w+)\s*=\s*(\d+)\s*$")
+        squared_order_re = squared_order_pattern.match(line)
+        squared_orders = {}
+        while squared_order_re:
+            squared_orders[squared_order_re.group(2)] = int(squared_order_re.group(3))
+            line = squared_order_re.group(1)
+            squared_order_re = squared_order_pattern.match(line)
+
+        # Now check for perturbation orders, specified in between squared brackets
+        perturbation_couplings_pattern = re.compile("^(.+)\s*\[\s*(\w+)\s*\]\s*(.*)$")
+        perturbation_couplings_re = perturbation_couplings_pattern.match(line)
+        perturbation_couplings = ""
+        if perturbation_couplings_re:
+            perturbation_couplings = perturbation_couplings_re.group(2)
+            line = perturbation_couplings_re.group(1)+perturbation_couplings_re.group(3)
+
+        # Now if perturbation orders are defined, we will scan for the 
+        # amplitudes orders. If not we will use the squared orders above instead.
         orders = {}
-        while order_re:
-            orders[order_re.group(2)] = int(order_re.group(3))
-            line = order_re.group(1)
+        if perturbation_couplings == "":
+            for order in squared_orders:
+                orders[order]=squared_orders[order]
+            squared_orders={}
+        else:
+            # We take the coupling orders (identified by "=")
+            order_pattern = re.compile("^(.+)\s+(\w+)\s*=\s*(\d+)\s*$")
             order_re = order_pattern.match(line)
+            while order_re:
+                orders[order_re.group(2)] = int(order_re.group(3))
+                line = order_re.group(1)
+                order_re = order_pattern.match(line)
 
         if self._use_lower_part_names:
             # Particle names lowercase
@@ -2250,10 +2309,24 @@ class MadGraphCmd(CmdExtended, HelpToCmd, CheckValidForCmd, CompleteForCmd):
             else:
                 raise self.InvalidCmd, \
                       "No particle %s in model" % part_name
-
+                                                
         if filter(lambda leg: leg.get('state') == True, myleglist):
             # We have a valid process
-
+            # Extract perturbation orders
+            perturbation_couplings_list = re.split(" ",perturbation_couplings)
+            if perturbation_couplings_list==['']:
+                perturbation_couplings_list=[]
+            if perturbation_couplings_list:
+                if not isinstance(self._curr_model,loop_base_objects.LoopModel):
+                    raise MadGraph5Error,\
+                      "The current model does not allow for NLO computations."
+                else:
+                    for pert_order in perturbation_couplings_list:
+                        if pert_order not in self._curr_model['perturbation_couplings']:
+                            raise MadGraph5Error,\
+                                "Perturbation order %s is not among" % pert_order + \
+                                " the perturbation orders allowed for by the NLO model."
+                                                        
             # Now extract restrictions
             forbidden_particle_ids = \
                               self.extract_particle_ids(forbidden_particles)
@@ -2281,10 +2354,12 @@ class MadGraphCmd(CmdExtended, HelpToCmd, CheckValidForCmd, CompleteForCmd):
                               'model': self._curr_model,
                               'id': proc_number,
                               'orders': orders,
+                              'squared_orders':squared_orders,
                               'forbidden_particles': forbidden_particle_ids,
                               'forbidden_s_channels': forbidden_schannel_ids,
                               'required_s_channels': required_schannel_ids,
-                              'overall_orders': overall_orders
+                              'overall_orders': overall_orders,
+                              'perturbation_couplings': perturbation_couplings_list
                               })
       #                       'is_decay_chain': decay_process\
 
@@ -2891,7 +2966,7 @@ class MadGraphCmd(CmdExtended, HelpToCmd, CheckValidForCmd, CompleteForCmd):
         # args is now MODE PATH
         
         if args[0].startswith('standalone'):
-            ext_program = launch_ext.SALauncher(self, args[1], self.timeout,
+            ext_program = launch_ext.SALauncher(args[1], self.timeout,
                                                 **options)
         elif args[0] == 'madevent':
             if options['interactive']:
@@ -2942,9 +3017,6 @@ class MadGraphCmd(CmdExtended, HelpToCmd, CheckValidForCmd, CompleteForCmd):
         ext_program.run()
         os.chdir(start_cwd) #ensure to go to the initial path
         
-        
-        
-    
     def do_load(self, line):
         """Not in help: Load information from file"""
 
@@ -3207,9 +3279,12 @@ class MadGraphCmd(CmdExtended, HelpToCmd, CheckValidForCmd, CompleteForCmd):
                 elif self._curr_amps[0].get_ninitial()  == 2:
                     group_subprocesses = True
 
-                             
+        if self._curr_amps.has_any_loop_process() and \
+           self._export_format not in ['standalone','matrix']:
+            raise MadGraph5Error('MG5 can only export loop processes to the standalone or matrix format for now.')
+
         # Make a Template Copy
-        if self._export_format == 'madevent':
+        if self._export_format == 'madevent':                
             if group_subprocesses:
                 self._curr_exporter = export_v4.ProcessExporterFortranMEGroup(\
                                       self._mgme_dir, self._export_dir,
@@ -3220,7 +3295,16 @@ class MadGraphCmd(CmdExtended, HelpToCmd, CheckValidForCmd, CompleteForCmd):
                                       not noclean)
         
         elif self._export_format in ['standalone', 'matrix']:
-            self._curr_exporter = export_v4.ProcessExporterFortranSA(\
+            if self._curr_amps.has_any_loop_process():
+                if os.path.isdir(os.path.join(self._mgme_dir, 'loop_material')):
+                    self._curr_exporter = loop_exporters.LoopProcessExporterFortranSA(\
+                                          self._mgme_dir, self._export_dir, not noclean,\
+                                          os.path.join(self._mgme_dir, 'loop_material'),\
+                                          self._cuttools_dir)
+                else:
+                    raise MadGraph5Error('MG5 cannot find the \'loop_material\' directory in the MG/ME folder specified.')                                                           
+            else:
+                self._curr_exporter = export_v4.ProcessExporterFortranSA(\
                                   self._mgme_dir, self._export_dir,not noclean)
         elif self._export_format == 'standalone_cpp':
             export_cpp.setup_cpp_standalone_dir(self._export_dir, self._curr_model)

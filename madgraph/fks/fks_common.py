@@ -54,6 +54,7 @@ def link_rb_conf(born_amp, real_amp, i, j, ij): #test written, sm and heft
     process (i, j) and in the born process (ij).
     """
     # find diagrams with 3 point functions and use them as configurations
+
     minvert = min([max([len(vert.get('legs')) \
                         for vert in diag.get('vertices')]) \
                         for diag in born_amp.get('diagrams')])
@@ -137,6 +138,7 @@ def link_rb_conf(born_amp, real_amp, i, j, ij): #test written, sm and heft
     born_tags = [FKSDiagramTag(d['diagram'], 
                                born_amp.get('process').get('model')) \
                                for d in born_confs]
+
 
     real_tags = [FKSDiagramTag(d['diagram'], 
                                real_amp.get('process').get('model')) \

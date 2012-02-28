@@ -355,6 +355,7 @@ class TestFKSProcess(unittest.TestCase):
                        'forbidden_s_channels':[],
                        'forbidden_particles':[],
                        'is_decay_chain': False,
+                       'perturbation_couplings':['QCD'],
                        'decay_chains': MG.ProcessList(),
                        'overall_orders': {}}
 
@@ -365,6 +366,7 @@ class TestFKSProcess(unittest.TestCase):
                        'forbidden_s_channels':[],
                        'forbidden_particles':[],
                        'is_decay_chain': False,
+                       'perturbation_couplings':['QCD'],
                        'decay_chains': MG.ProcessList(),
                        'overall_orders': {}}
 
@@ -375,6 +377,7 @@ class TestFKSProcess(unittest.TestCase):
                        'forbidden_s_channels':[],
                        'forbidden_particles':[],
                        'is_decay_chain': False,
+                       'perturbation_couplings':['QCD'],
                        'decay_chains': MG.ProcessList(),
                        'overall_orders': {}}
     
@@ -396,14 +399,15 @@ class TestFKSProcess(unittest.TestCase):
         
         my_multi_leglist[0].set('state', False)
         my_multi_leglist[1].set('state', False)
-        my_process_definition = MG.ProcessDefinition({'legs':my_multi_leglist,
-                                                    'model':self.mymodel})
+        my_process_definition = MG.ProcessDefinition({\
+                        'legs': my_multi_leglist,
+                        'perturbation_couplings': ['QCD'],
+                        'model': self.mymodel})
         my_process_definitions = MG.ProcessDefinitionList(\
             [my_process_definition])
 
-        amps = diagram_generation.MultiProcess(
-                {'process_definitions':my_process_definitions}).get('amplitudes')
-        my_multi_process = fks_born.FKSMultiProcessFromBorn(amps, ['QCD'])
+        my_multi_process = fks_born.FKSMultiProcessFromBorn(\
+                {'process_definitions':my_process_definitions})
         
         self.assertEqual(len(my_multi_process.get('born_processes')),4)
         #check the total numbers of reals 11 11 6 16
@@ -424,7 +428,7 @@ class TestFKSProcess(unittest.TestCase):
         amplist = []
         amp_id_list = []
         #u g > u g
-        fksproc = fks_born.FKSProcessFromBorn(self.myproc, ['QCD'])
+        fksproc = fks_born.FKSProcessFromBorn(self.myproc)
         #take the first real for this process 2j 21 >2 21 21i
         leglist = fksproc.reals[0][0]
         realproc = fks_born.FKSRealProcess(fksproc.born_proc, leglist, 1,0, amplist, amp_id_list)
@@ -477,7 +481,7 @@ class TestFKSProcess(unittest.TestCase):
         """tests that the find_fks_j_from_i function of a FKSRealProcess returns the
         correct result"""
         #u g > u g
-        fksproc = fks_born.FKSProcessFromBorn(self.myproc, ['QCD'])
+        fksproc = fks_born.FKSProcessFromBorn(self.myproc)
         #take the first real for this process 2j 21 >2 21 21i
         leglist = fksproc.reals[0][0]
         realproc = fks_born.FKSRealProcess(fksproc.born_proc, leglist, 1,0, [], [])
@@ -490,7 +494,7 @@ class TestFKSProcess(unittest.TestCase):
         amplist = []
         amp_id_list = []
         #u g > u g
-        fksproc = fks_born.FKSProcessFromBorn(self.myproc, ['QCD'])
+        fksproc = fks_born.FKSProcessFromBorn(self.myproc)
         #take the first real for this process 2j 21 > 2 21 21i
         leglist = fksproc.reals[0][0]
         realproc = fks_born.FKSRealProcess(fksproc.born_proc, leglist,1,0, amplist, amp_id_list)
@@ -509,7 +513,7 @@ class TestFKSProcess(unittest.TestCase):
         amplist = []
         amp_id_list = []
         #process u g > u g 
-        fksproc = fks_born.FKSProcessFromBorn(self.myproc, ['QCD'])
+        fksproc = fks_born.FKSProcessFromBorn(self.myproc)
         fksproc.generate_reals(amplist, amp_id_list)
         
         #there should be 11 real processes for this born
@@ -535,8 +539,9 @@ class TestFKSProcess(unittest.TestCase):
         myleglist.append(MG.Leg({'id':21, 'state':True}))
         amp = diagram_generation.Amplitude(MG.Process({'legs':myleglist,
                                        'model':self.base_model,
+                                       'perturbation_couplings':['QCD'],
                                        'orders':{'QCD':1, 'QED':2}}))
-        ttg_fks_norem = fks_born.FKSProcessFromBorn(amp, ['QCD'], False)
+        ttg_fks_norem = fks_born.FKSProcessFromBorn(amp, False)
         ttg_fks_norem.generate_reals([], [])
         res = [{'i': real.i_fks, 'j': real.j_fks, 'to_int': real.is_to_integrate} \
                 for real in ttg_fks_norem.real_amps]
@@ -545,7 +550,7 @@ class TestFKSProcess(unittest.TestCase):
     def test_find_reals(self):
         """tests if all the real processes are found for a given born"""
         #process is u g > u g
-        fksproc = fks_born.FKSProcessFromBorn(self.myproc, ['QCD'])
+        fksproc = fks_born.FKSProcessFromBorn(self.myproc)
         target = []
         
         #leg 1 can split as u g > u g g or  g g > u u~ g 
@@ -867,7 +872,7 @@ class TestFKSProcess(unittest.TestCase):
                 self.assertEqual(fksproc.reals[i][j], target[i][j]) 
         
         #process is d d~ > u u~
-        fksproc2 = fks_born.FKSProcessFromBorn(self.myproc2, ['QCD'])
+        fksproc2 = fks_born.FKSProcessFromBorn(self.myproc2)
         target2 = []
         #leg 1 can split as d d~ > u u~ g or  g d~ > d~ u u~ 
         target2.append( [fks_common.to_fks_legs([
@@ -1045,7 +1050,7 @@ class TestFKSProcess(unittest.TestCase):
             self.assertEqual(fksproc2.reals[i], target2[i])       
     
         #d d~ > a a
-        fksproc3 = fks_born.FKSProcessFromBorn(self.myprocaa, ['QCD'])
+        fksproc3 = fks_born.FKSProcessFromBorn(self.myprocaa)
         target3 = []
         #leg 1 can split as d d~ > g a a or  g d~ > d~ a a 
         target3.append( [fks_common.to_fks_legs([
@@ -1194,14 +1199,14 @@ class TestFKSProcess(unittest.TestCase):
         amp_s = diagram_generation.Amplitude(proc_s)
         amp_u = diagram_generation.Amplitude(proc_u)
 
-        fks_p_s = fks_born.FKSProcessFromBorn(proc_s, ['QCD'])
-        fks_p_u = fks_born.FKSProcessFromBorn(proc_u, ['QCD'])
+        fks_p_s = fks_born.FKSProcessFromBorn(proc_s)
+        fks_p_u = fks_born.FKSProcessFromBorn(proc_u)
 
         self.assertEqual(fks_p_s.born_proc, fks_p_u.born_proc)
         self.assertEqual(fks_p_s.born_amp, fks_p_u.born_amp)
 
-        fks_a_s = fks_born.FKSProcessFromBorn(amp_s, ['QCD'])
-        fks_a_u = fks_born.FKSProcessFromBorn(amp_u, ['QCD'])
+        fks_a_s = fks_born.FKSProcessFromBorn(amp_s)
+        fks_a_u = fks_born.FKSProcessFromBorn(amp_u)
 
         self.assertEqual(fks_a_s.born_proc, fks_a_u.born_proc)
         self.assertEqual(fks_a_s.born_amp, fks_a_u.born_amp)

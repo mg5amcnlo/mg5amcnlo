@@ -98,11 +98,28 @@ class FKSInterface(CheckFKS, CompleteFKS, HelpFKS, mg_interface.MadGraphCmd):
                     % line
         #now generate the amplitudes as usual
         self._options['group_subprocesses'] = 'NLO'
-        super(FKSInterface, self).do_generate(line)
+        collect_mirror_procs = False
+        ignore_six_quark_processes = self._options['ignore_six_quark_processes']
+#        super(FKSInterface, self).do_generate(line)
+        if ',' in line:
+            myprocdef, line = super(FKSInterface, self).extract_decay_chain_process(line)
+            if myprocdef.are_decays_perturbed():
+                raise MadGraph5Error("Decay processes cannot be perturbed")
+        else:
+            myprocdef = super(FKSInterface, self).extract_process(line)
+
+        myprocdef['perturbation_couplings'] = ['QCD']
+
         if self._options['fks_mode'] == 'born':
-            self._fks_multi_proc = fks_born.FKSMultiProcessFromBorn(self._curr_amps, nlo_pert)
+            self._fks_multi_proc = fks_born.FKSMultiProcessFromBorn(myprocdef,
+                                       collect_mirror_procs,
+                                       ignore_six_quark_processes)
         elif self._options['fks_mode'] == 'real':
-            self._fks_multi_proc = fks_real.FKSMultiProcessFromReals(self._curr_amps, nlo_pert)
+            self._fks_multi_proc = fks_real.FKSMultiProcessFromReals(myprocdef,
+                                       collect_mirror_procs,
+                                       ignore_six_quark_processes)
+            print myprocdef.keys()
+            print myprocdef['legs']
         else: raise MadGraph5Error, 'Unknown FKS mode: %s' % self._options['fks_mode']
 
 

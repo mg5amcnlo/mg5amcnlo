@@ -66,18 +66,21 @@ class IOExportBornFKSTest(unittest.TestCase,
         self.mymodel = import_ufo.import_model('sm')
         self.myfortranmodel = helas_call_writers.FortranUFOHelasCallWriter(self.mymodel)
     
-        myleglist = MG.LegList()
+        myleglist = MG.MultiLegList()
         
-        myleglist.append(MG.Leg({'id':2, 'state':False}))
-        myleglist.append(MG.Leg({'id':21, 'state':False}))
-        myleglist.append(MG.Leg({'id':2, 'state':True}))
-        myleglist.append(MG.Leg({'id':21, 'state':True}))
+        myleglist.append(MG.MultiLeg({'ids':[2], 'state':False}))
+        myleglist.append(MG.MultiLeg({'ids':[21], 'state':False}))
+        myleglist.append(MG.MultiLeg({'ids':[2], 'state':True}))
+        myleglist.append(MG.MultiLeg({'ids':[21], 'state':True}))
     
-        myproc = MG.Process({'legs':myleglist,
-                                           'model':self.mymodel,
-                                           'orders': {'QED': 0}})
-        
-        self.myfksmulti = fks_born.FKSMultiProcessFromBorn([diagram_generation.Amplitude(myproc)], ['QCD'])
+        myproc = MG.ProcessDefinition({'legs': myleglist,
+                             'model': self.mymodel,
+                             'orders':{'QCD': 2, 'QED': 0},
+                             'perturbation_couplings': ['QCD']})
+        my_process_definitions = MG.ProcessDefinitionList([myproc])
+
+        self.myfksmulti = fks_born.FKSMultiProcessFromBorn(\
+                {'process_definitions': my_process_definitions})
         
         self.myfks_me = fks_born_helas.FKSHelasMultiProcessFromBorn(\
                 self.myfksmulti)['matrix_elements'][0]
@@ -253,7 +256,7 @@ PD(IPROC)=PD(IPROC-1) + u1*ub2"""
 
     def test_get_pdf_lines_mir_true_B(self):
         """tests the correct writing of the pdf lines for a mirror configuration,
-        i.e. with exchanged beam indices 1,2.
+        i.e. with exchanged beam indices 1,2D0
         The real process used is uux_uxug (real_processes[5])
         """
         lines = \
@@ -401,9 +404,9 @@ C     Returns amplitude squared summed/avg over colors
 C     and helicities
 C     for the point in phase space P(0:3,NEXTERNAL)
 C     
-C     Process: u d > d u g QCD=3 QED=0 WEIGHTED=3
-C     Process: u s > s u g QCD=3 QED=0 WEIGHTED=3
-C     Process: u c > c u g QCD=3 QED=0 WEIGHTED=3
+C     Process: u d > d u g WEIGHTED=3 QED=0 QCD=3 [ QCD ]
+C     Process: u s > s u g WEIGHTED=3 QED=0 QCD=3 [ QCD ]
+C     Process: u c > c u g WEIGHTED=3 QED=0 QCD=3 [ QCD ]
 C     
       IMPLICIT NONE
 C     
@@ -490,9 +493,9 @@ C
 C     Returns amplitude squared summed/avg over colors
 C     for the point with external lines W(0:6,NEXTERNAL)
 C     
-C     Process: u d > d u g QCD=3 QED=0 WEIGHTED=3
-C     Process: u s > s u g QCD=3 QED=0 WEIGHTED=3
-C     Process: u c > c u g QCD=3 QED=0 WEIGHTED=3
+C     Process: u d > d u g WEIGHTED=3 QED=0 QCD=3 [ QCD ]
+C     Process: u s > s u g WEIGHTED=3 QED=0 QCD=3 [ QCD ]
+C     Process: u c > c u g WEIGHTED=3 QED=0 QCD=3 [ QCD ]
 C     
       IMPLICIT NONE
 C     
@@ -565,10 +568,10 @@ C     Amplitude(s) for diagram number 4
       CALL FFV1_1(W(1,4),W(1,5),GC_5,ZERO, ZERO, W(1,11))
 C     Amplitude(s) for diagram number 5
       CALL FFV1_0(W(1,1),W(1,11),W(1,7),GC_5,AMP(5))
-      JAMP(1)=+1./2.*(+IMAG1*AMP(1)+AMP(2)+AMP(5))
-      JAMP(2)=+1./2.*(-1./3.*AMP(4)-1./3.*AMP(5))
-      JAMP(3)=+1./2.*(-1./3.*AMP(2)-1./3.*AMP(3))
-      JAMP(4)=+1./2.*(-IMAG1*AMP(1)+AMP(3)+AMP(4))
+      JAMP(1)=+1D0/2D0*(+IMAG1*AMP(1)+AMP(2)+AMP(5))
+      JAMP(2)=+1D0/2D0*(-1D0/3D0*AMP(4)-1D0/3D0*AMP(5))
+      JAMP(3)=+1D0/2D0*(-1D0/3D0*AMP(2)-1D0/3D0*AMP(3))
+      JAMP(4)=+1D0/2D0*(-IMAG1*AMP(1)+AMP(3)+AMP(4))
 
       MATRIX = 0.D0
       DO I = 1, NCOLOR
@@ -610,7 +613,7 @@ C     FOR THE POINT IN PHASE SPACE P1(0:3,NEXTERNAL-1)
 C     
 C     
 C     BORN AMPLITUDE IS 
-C     Process: u g > u g QCD=2 QED=0 WEIGHTED=2
+C     Process: u g > u g WEIGHTED=2 QED=0 QCD=2 [ QCD ]
 C     
       IMPLICIT NONE
 C     
@@ -808,7 +811,7 @@ C     Please visit us at https://launchpad.net/madgraph5
 C     RETURNS AMPLITUDE SQUARED SUMMED/AVG OVER COLORS
 C     FOR THE POINT WITH EXTERNAL LINES W(0:6,NEXTERNAL-1)
 
-C     Process: u g > u g QCD=2 QED=0 WEIGHTED=2
+C     Process: u g > u g WEIGHTED=2 QED=0 QCD=2 [ QCD ]
 C     
       IMPLICIT NONE
 C     
@@ -936,7 +939,7 @@ C     FOR THE POINT IN PHASE SPACE P1(0:3,NEXTERNAL-1)
 C     
 C     
 C     BORN AMPLITUDE IS 
-C     Process: u g > u g QCD=2 QED=0 WEIGHTED=2
+C     Process: u g > u g WEIGHTED=2 QED=0 QCD=2 [ QCD ]
 C     
       IMPLICIT NONE
 C     
@@ -1155,7 +1158,7 @@ C     Please visit us at https://launchpad.net/madgraph5
 C     RETURNS AMPLITUDE SQUARED SUMMED/AVG OVER COLORS
 C     FOR THE POINT WITH EXTERNAL LINES W(0:6,NEXTERNAL-1)
 
-C     Process: u g > u g QCD=2 QED=0 WEIGHTED=2
+C     Process: u g > u g WEIGHTED=2 QED=0 QCD=2 [ QCD ]
 C     
       IMPLICIT NONE
 C     
@@ -1316,7 +1319,7 @@ C     FOR THE POINT IN PHASE SPACE P(0:3,NEXTERNAL-1)
 C     
 C     
 C     BORN AMPLITUDE IS 
-C     Process: u g > u g QCD=2 QED=0 WEIGHTED=2
+C     Process: u g > u g WEIGHTED=2 QED=0 QCD=2 [ QCD ]
 C     spectators: 1 2 
 
 C     
@@ -1445,7 +1448,7 @@ C     Please visit us at https://launchpad.net/madgraph5
 C     RETURNS AMPLITUDE SQUARED SUMMED/AVG OVER COLORS
 C     FOR THE POINT WITH EXTERNAL LINES W(0:6,NEXTERNAL-1)
 
-C     Process: u g > u g QCD=2 QED=0 WEIGHTED=2
+C     Process: u g > u g WEIGHTED=2 QED=0 QCD=2 [ QCD ]
 C     spectators: 1 2 
 
 C     
@@ -1521,8 +1524,8 @@ C       Amplitude(s) for diagram number 3
       ENDIF
       JAMP1(1)=-IMAG1*AMP(2)+AMP(3)
       JAMP1(2)=+AMP(1)+IMAG1*AMP(2)
-      JAMP2(1)=+1./2.*(-IMAG1*AMP(2)+AMP(3))
-      JAMP2(2)=+1./2.*(-3*AMP(1)-3*IMAG1*AMP(2))
+      JAMP2(1)=+1D0/2D0*(-IMAG1*AMP(2)+AMP(3))
+      JAMP2(2)=+1D0/2D0*(-3D0*AMP(1)-3D0*IMAG1*AMP(2))
       B_SF_001 = 0.D0
       DO I = 1, NCOLOR1
         ZTEMP = (0.D0,0.D0)
@@ -1564,7 +1567,7 @@ C     Please visit us at https://launchpad.net/madgraph5
 C     RETURNS PARTON LUMINOSITIES FOR MADFKS                          
 C        
 C     
-C     Process: u u~ > u~ u g QCD=3 QED=0 WEIGHTED=3
+C     Process: u u~ > u~ u g WEIGHTED=3 QED=0 QCD=3 [ QCD ]
 C     
 C     ****************************************************            
 C         

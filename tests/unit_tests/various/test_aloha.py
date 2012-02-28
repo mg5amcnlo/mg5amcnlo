@@ -3053,7 +3053,7 @@ class test_aloha_creation(unittest.TestCase):
         
 
     def test_aloha_multiple_lorentz_and_symmetry(self):
-        """ check if the detection of multiple lorentz work """
+        """ check if the detection of multiple lorentz work"""
         
         VVS1 = self.Lorentz(name = 'VVS1',
                  spins = [ 3, 3, 1 ],
@@ -3062,7 +3062,8 @@ class test_aloha_creation(unittest.TestCase):
         #VVS2 = self.Lorentz(name = 'VVS2',
         #         spins = [ 3, 3, 1 ],
         #         structure = 'Metric(2,1)')
-        
+# WARNING, make sure the LOOP_MODE is False if it fails.
+#        create_aloha.LOOP_MODE = False
         abstract = create_aloha.AbstractRoutineBuilder(VVS1).compute_routine(1)
         abstract.add_symmetry(2)
         abstract.add_combine(('VVS2',))
@@ -3316,7 +3317,7 @@ def VVS1_2_2(V2, S3, COUP1,COUP2, M1, W1):
         
         helas_suite = create_aloha.AbstractALOHAModel('sm')
         requested_routines=[(('FFV1',) , (), 0), 
-                            (('FFV1','FFV2') , (1,), 0)]
+                            (('FFV1','FFV2') , ('C1',), 0)]
         
         helas_suite.compute_subset(requested_routines)
 
@@ -3375,8 +3376,8 @@ C
         
         requested_routines=[(('FFV1',) , (), 0), 
                             (('FFV1',), (), 2),
-                            (('FFV1',), (1,), 0),
-                            (('FFV2',), (1,), 3),
+                            (('FFV1',), ('C1',), 0),
+                            (('FFV2',), ('C1',), 3),
                             (('VVV1',), (), 3)]
         
         helas_suite.compute_subset(requested_routines)        
