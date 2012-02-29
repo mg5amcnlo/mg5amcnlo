@@ -3990,7 +3990,7 @@ class ProcessExporterFortranMWGroup(ProcessExporterFortranMW):
         replace_dict['call_dsig_proc_lines'] = "\n".join(call_dsig_proc_lines)
 
         file = open(os.path.join(_file_path, \
-                       'iolibs/template_files/super_auto_dsig_MW_group_v4.inc')).read()
+                       'iolibs/template_files/super_auto_dsig_mw_group_v4.inc')).read()
         file = file % replace_dict
 
         # Write the file

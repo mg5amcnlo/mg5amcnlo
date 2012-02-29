@@ -1,4 +1,4 @@
-DOUBLE PRECISION FUNCTION DSIG%(proc_id)s(PP,WGT)
+DOUBLE PRECISION FUNCTION DSIG%(proc_id)s(PP,WGT,IMODE)
 C ****************************************************
 C
 %(info_lines)s
@@ -27,6 +27,7 @@ C
 C ARGUMENTS 
 C  
       DOUBLE PRECISION PP(0:3,NEXTERNAL), WGT
+      INTEGER IMODE
 C  
 C LOCAL VARIABLES 
 C  
