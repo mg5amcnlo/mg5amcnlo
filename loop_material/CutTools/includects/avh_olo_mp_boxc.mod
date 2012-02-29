@@ -1,5 +1,5 @@
-GFORTRAN module version '6' created from avh_olo_mp.f90 on Mon Feb 27 17:24:31 2012
-MD5:910835e9cb264da54704b1bd3f245be9 -- If you edit this, you'll get what you deserve.
+GFORTRAN module version '6' created from avh_olo_mp.f90 on Tue Feb 28 16:27:46 2012
+MD5:65cf9b46db906886b112575cb5a754ed -- If you edit this, you'll get what you deserve.
 
 (() () () () () () () () () () () () () () () () () () () () () () ()
 () () () ())
@@ -28,10 +28,6 @@ INTEGER ()) 0 '4')) 0 () () () 0 0)
 DIMENSION DUMMY) (DERIVED 12 0 0 DERIVED ()) 0 0 () (1 0 EXPLICIT (
 CONSTANT (INTEGER 4 0 0 INTEGER ()) 0 '1') (CONSTANT (INTEGER 4 0 0
 INTEGER ()) 0 '6')) 0 () () () 0 0)
-5 'pp_in' '' 'pp_in' 3 ((VARIABLE INOUT UNKNOWN-PROC UNKNOWN UNKNOWN 0 0
-DIMENSION DUMMY) (DERIVED 11 0 0 DERIVED ()) 0 0 () (1 0 EXPLICIT (
-CONSTANT (INTEGER 4 0 0 INTEGER ()) 0 '1') (CONSTANT (INTEGER 4 0 0
-INTEGER ()) 0 '6')) 0 () () () 0 0)
 4 'rslt' '' 'rslt' 3 ((VARIABLE OUT UNKNOWN-PROC UNKNOWN UNKNOWN 0 0
 DIMENSION DUMMY) (DERIVED 11 0 0 DERIVED ()) 0 0 () (1 0 EXPLICIT (
 CONSTANT (INTEGER 4 0 0 INTEGER ()) 0 '0') (CONSTANT (INTEGER 4 0 0
@@ -50,6 +46,10 @@ UNKNOWN-PROC UNKNOWN UNKNOWN 0 0 SEQUENCE) (UNKNOWN 0 0 0 UNKNOWN ()) 0
 INTEGER 4 0 0 INTEGER ()) 0 '1') (CONSTANT (INTEGER 4 0 0 INTEGER ()) 0
 '283')) (UNKNOWN-FL UNKNOWN-INTENT UNKNOWN-PROC UNKNOWN UNKNOWN 0 0
 DIMENSION) UNKNOWN-ACCESS ())) PUBLIC (() () () ()) () 0 0 62613595)
+5 'pp_in' '' 'pp_in' 3 ((VARIABLE INOUT UNKNOWN-PROC UNKNOWN UNKNOWN 0 0
+DIMENSION DUMMY) (DERIVED 11 0 0 DERIVED ()) 0 0 () (1 0 EXPLICIT (
+CONSTANT (INTEGER 4 0 0 INTEGER ()) 0 '1') (CONSTANT (INTEGER 4 0 0
+INTEGER ()) 0 '6')) 0 () () () 0 0)
 )
 
 ('boxc' 0 2 'init_boxc' 0 8)
