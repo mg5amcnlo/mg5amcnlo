@@ -254,9 +254,9 @@ c$$$      write(*,*)'Using iconfig=',iconfig
          ntry=1
 
          if (iconfig_in.le.0) then
-            iconfig=mapconfig(r_from_b(mapbconf(bs)))
-            minconfig=mapconfig(r_from_b(mapbconf(bs)))
-            maxconfig=mapconfig(r_from_b(mapbconf(bs)))
+            iconfig=r_from_b(mapbconf(bs))
+            minconfig=r_from_b(mapbconf(bs))
+            maxconfig=r_from_b(mapbconf(bs))
          else
             iconfig=bs
             minconfig=iconfig
