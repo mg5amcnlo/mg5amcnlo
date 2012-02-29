@@ -22,12 +22,82 @@ sys.path.insert(0, os.path.join(root_path,'..','..'))
 
 import tests.unit_tests as unittest
 import madgraph.fks.fks_real as fks_real
+import madgraph.fks.fks_born as fks_born
 import madgraph.core.base_objects as MG
 import madgraph.core.color_algebra as color
 import madgraph.core.diagram_generation as diagram_generation
 import models.import_ufo as import_ufo
 import copy
 import string
+
+
+
+class TestGenerateLoopFKSFromBorn(unittest.TestCase):
+    """a class to test the generation of the virtual amps for a FKSMultiProcessFromReals"""
+
+    def setUp(self):
+        self.mymodel = import_ufo.import_model('loop_sm')
+    
+
+    def test_generate_virtuals_single_processB(self):
+        """checks that the virtuals are correctly generated for a single process"""
+
+        myleglist = MG.MultiLegList()
+        
+        # test process is u u~ > u u~  
+        myleglist.append(MG.MultiLeg({'ids':[2], 'state':False}))
+        myleglist.append(MG.MultiLeg({'ids':[-2], 'state':False}))
+        myleglist.append(MG.MultiLeg({'ids':[2], 'state':True}))
+        myleglist.append(MG.MultiLeg({'ids':[-2], 'state':True}))
+    
+        myproc = MG.ProcessDefinition({'legs':myleglist,
+                                           'model':self.mymodel,
+                                           'orders': {'QED': 0},
+                                           'perturbation_couplings':['QCD']})
+        
+        my_process_definitions = MG.ProcessDefinitionList([myproc])
+        
+        myfksmulti = fks_born.FKSMultiProcessFromBorn(\
+                {'process_definitions': my_process_definitions})
+
+        self.assertEqual(myfksmulti['born_processes'][0].virt_amp, None)
+        myfksmulti.generate_virtuals()
+        #there should be 4 virt_amps
+        self.assertNotEqual(myfksmulti['born_processes'][0].virt_amp, None)
+        self.assertEqual([l['id'] for l in \
+                        myfksmulti['born_processes'][0].virt_amp.get('process').get('legs')], \
+                         [2,-2,2,-2])
+
+    def test_generate_virtuals_multi_processB(self):
+        """checks that the virtuals are correctly generated for a multi process"""
+
+        p = [1, -1, 21]
+
+        my_multi_leg = MG.MultiLeg({'ids': p, 'state': True});
+
+        # Define the multiprocess
+        my_multi_leglist = MG.MultiLegList([copy.copy(leg) for leg in [my_multi_leg] * 4])
+        
+        my_multi_leglist[0].set('state', False)
+        my_multi_leglist[1].set('state', False)
+        myproc = MG.ProcessDefinition({'legs':my_multi_leglist,
+                                        'model':self.mymodel,
+                                        'orders': {'QED': 0},
+                                        'perturbation_couplings':['QCD']})
+
+        my_process_definitions = MG.ProcessDefinitionList([myproc])
+        
+        myfksmulti = fks_born.FKSMultiProcessFromBorn(\
+                {'process_definitions': my_process_definitions})
+
+        myfksmulti.generate_virtuals()
+        for born in myfksmulti['born_processes']:
+            pdgs = [l.get('id') for l in born.leglist] 
+            # if the real process has soft singularities
+            self.assertEqual([l['id'] for l in \
+                    born.virt_amp.get('process').get('legs')], pdgs)
+
+
 
 class TestGenerateLoopFKSFromReal(unittest.TestCase):
     """a class to test the generation of the virtual amps for a FKSMultiProcessFromReals"""
@@ -41,7 +111,7 @@ class TestGenerateLoopFKSFromReal(unittest.TestCase):
 
         myleglist = MG.MultiLegList()
         
-        # test process is u g > u g g 
+        # test process is u u~ > u u~ g 
         myleglist.append(MG.MultiLeg({'ids':[2], 'state':False}))
         myleglist.append(MG.MultiLeg({'ids':[-2], 'state':False}))
         myleglist.append(MG.MultiLeg({'ids':[2], 'state':True}))
@@ -65,7 +135,6 @@ class TestGenerateLoopFKSFromReal(unittest.TestCase):
         self.assertEqual([l['id'] for l in \
                         myfksmulti['real_processes'][0].virt_amp.get('process').get('legs')], \
                          [2,-2,2,-2])
-
 
     def test_generate_virtuals_multi_processR(self):
         """checks that the virtuals are correctly generated for a multi process"""

@@ -20,6 +20,7 @@ import madgraph.core.helas_objects as helas_objects
 import madgraph.core.diagram_generation as diagram_generation
 import madgraph.core.color_amp as color_amp
 import madgraph.core.color_algebra as color_algebra
+import madgraph.loop.loop_diagram_generation as loop_diagram_generation
 import madgraph.fks.fks_common as fks_common
 import madgraph.fks.fks_real as fks_real
 import copy
@@ -70,6 +71,17 @@ class FKSMultiProcessFromBorn(diagram_generation.MultiProcess): #test written
             born = FKSProcessFromBorn(amp)
             self['born_processes'].append(born)
             born.generate_reals(real_amplist, real_amp_id_list)
+
+    def generate_virtuals(self):
+        """For each process among the born_processes, creates the corresponding
+        virtual amplitude"""
+
+        for born in self['born_processes']:
+                myproc = copy.copy(born.born_proc)
+                myproc['legs'] = fks_common.to_legs(copy.copy(myproc['legs']))
+                myamp = loop_diagram_generation.LoopAmplitude(myproc)
+                if myamp.get('diagrams'):
+                    born.virt_amp = myamp
 
 
 class FKSRealProcess(object): 
