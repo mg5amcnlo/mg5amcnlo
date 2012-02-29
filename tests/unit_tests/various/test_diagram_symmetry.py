@@ -110,7 +110,7 @@ class TestDiagramSymmetry(unittest.TestCase):
             amplitudes.append(my_amplitude)
 
         subproc_group = \
-                  group_subprocs.SubProcessGroup.group_amplitudes(amplitudes)[0]
+                  group_subprocs.SubProcessGroup.group_amplitudes(amplitudes,"madevent")[0]
 
         symmetry, perms, ident_perms = diagram_symmetry.find_symmetry(\
                                                 subproc_group)
@@ -186,7 +186,7 @@ class TestDiagramSymmetry(unittest.TestCase):
 
         subproc_groups = \
                   group_subprocs.DecayChainSubProcessGroup.group_amplitudes(\
-                         amplitudes).generate_helas_decay_chain_subproc_groups()
+                         amplitudes,"madevent").generate_helas_decay_chain_subproc_groups()
         self.assertEqual(len(subproc_groups), 1)
 
         subproc_group = subproc_groups[0]

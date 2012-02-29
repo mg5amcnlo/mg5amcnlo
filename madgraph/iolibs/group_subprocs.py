@@ -116,6 +116,7 @@ class SubProcessGroup(base_objects.PhysicsObject):
         self['diagram_maps'] = {}
         self['diagrams_for_configs'] = []
         self['amplitude_map'] = {}
+        
 
     def filter(self, name, value):
         """Filter for valid property values."""
@@ -343,7 +344,7 @@ class SubProcessGroup(base_objects.PhysicsObject):
     # group_amplitudes
     #===========================================================================
     @staticmethod
-    def group_amplitudes(amplitudes):
+    def group_amplitudes(amplitudes,criteria):
         """Return a SubProcessGroupList with the amplitudes divided
         into subprocess groups"""
 
@@ -352,7 +353,7 @@ class SubProcessGroup(base_objects.PhysicsObject):
 
         logger.info("Organizing processes into subprocess groups")
 
-        process_classes = SubProcessGroup.find_process_classes(amplitudes)
+        process_classes = SubProcessGroup.find_process_classes(amplitudes,criteria)
         ret_list = SubProcessGroupList()
         process_class_numbers = sorted(list(set(process_classes.values())))
         for num in process_class_numbers:
@@ -371,7 +372,7 @@ class SubProcessGroup(base_objects.PhysicsObject):
         return ret_list
 
     @staticmethod
-    def find_process_classes(amplitudes):
+    def find_process_classes(amplitudes,criteria):
         """Find all different process classes, classified according to
         initial state and final state. For initial state, we
         differentiate fermions, antifermions, gluons, and masses. For
@@ -398,12 +399,19 @@ class SubProcessGroup(base_objects.PhysicsObject):
             # is_parts selection to distinguish between q and qbar,
             # remove p.get('spin') from fs_parts selection to combine
             # q and g into "j"
-            proc_class = [ [(p.is_fermion(), ) \
+            if (criteria=="madevent"):
+              proc_class = [ [(p.is_fermion(), ) \
                             for p in is_parts], # p.get('is_part')
                            [(p.get('mass'), p.get('spin'),
                              p.get('color') != 1) for p in \
                             is_parts + fs_parts],
                            amplitude.get('process').get('id')]
+            if (criteria=="madweight"):
+              proc_class = [ [(abs(p.get('pdg_code'))==5, abs(p.get('pdg_code'))==11, 
+                           abs(p.get('pdg_code'))==13, abs(p.get('pdg_code'))==15) for p in \
+                            fs_parts],
+                           amplitude.get('process').get('id')]
+
             try:
                 amplitude_classes[iamp] = proc_classes.index(proc_class)
             except ValueError:
@@ -594,7 +602,7 @@ class DecayChainSubProcessGroup(SubProcessGroup):
     # group_amplitudes
     #===========================================================================
     @staticmethod
-    def group_amplitudes(decay_chain_amp):
+    def group_amplitudes(decay_chain_amp, criteria):
         """Recursive function. Starting from a DecayChainAmplitude,
         return a DecayChainSubProcessGroup with the core amplitudes
         and decay chains divided into subprocess groups"""
@@ -605,7 +613,7 @@ class DecayChainSubProcessGroup(SubProcessGroup):
 
         # Determine core process groups
         core_groups = SubProcessGroup.group_amplitudes(\
-            decay_chain_amp.get('amplitudes'))
+            decay_chain_amp.get('amplitudes'),criteria)
 
         dc_subproc_group = DecayChainSubProcessGroup(\
             {'core_groups': core_groups,
@@ -614,7 +622,7 @@ class DecayChainSubProcessGroup(SubProcessGroup):
         # Recursively determine decay chain groups
         for decay_chain in decay_chain_amp.get('decay_chains'):
             dc_subproc_group.get('decay_groups').append(\
-                DecayChainSubProcessGroup.group_amplitudes(decay_chain))
+                DecayChainSubProcessGroup.group_amplitudes(decay_chain,criteria))
 
         return dc_subproc_group
 

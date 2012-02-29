@@ -28,6 +28,7 @@ mv ./bin/setup_model-pl ./temp/
 mv ./bin/Passto_g77.py ./temp/
 mv ./bin/Passto_gfortran.py ./temp/
 mv ./bin/mod_file.py ./temp/
+mv ./bin/internal ./temp/
 mv ./Cards/proc_card.dat ./temp/
 
 mv ./Source/alfas.inc ./temp/alfas.inc
@@ -61,20 +62,19 @@ mkdir Events
 mv ./temp/Pdfdata ./lib/
 mv ./temp/setup_model-pl ./bin/
 mv ./temp/Passto_g77.py ./bin/
+mv ./temp/internal ./bin/
 mv ./temp/Passto_gfortran.py ./bin/
 mv ./temp/mod_file.py ./bin/
 mv ./temp/proc_card.dat ./Cards/
 mv ./temp/makefile ./SubProcesses/
 mv ./temp/setscales.f SubProcesses/.
 mv ./temp/alfas.inc ./Source/alfas.inc
-mv ./temp/mfsource ./Source/makefile
 mv ./temp/make_opts ./Source/
 mv ./temp/PDF ./Source/
 mv ./temp/CERNLIB ./Source/
 mv ./temp/MadWeight ./Source/
 mv ./Source/MadWeight/Cards/* Cards/.
 mv ./Source/MadWeight/src/* ./SubProcesses/
-mv ./SubProcesses/makefile_source ./Source/makefile
 
 mv ./temp/alfas.inc ./Source/alfas.inc
 mv ./temp/coupl.inc ./Source/coupl.inc

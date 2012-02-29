@@ -1188,6 +1188,8 @@ class ProcessExporterFortranMW(ProcessExporterFortran):
     """Class to take care of exporting a set of matrix elements to
     MadGraph v4 - MadWeight format."""
 
+    matrix_file="matrix_standalone_v4.inc"
+
     def copy_v4template(self, modelname):
         """Additional actions needed for setup of Template
         """
@@ -1198,6 +1200,9 @@ class ProcessExporterFortranMW(ProcessExporterFortran):
         filename = os.path.join(self.dir_path,'Source','run_config.inc')
         self.write_run_config_file(writers.FortranWriter(filename))
 
+        # add the makefile in Source directory 
+        filename = os.path.join(self.dir_path,'Source','makefile')
+        self.write_source_makefile(writers.FortranWriter(filename))
         try:
             subprocess.call([os.path.join('bin', 'madweight')],
                             stdout = os.open(os.devnull, os.O_RDWR),
@@ -1253,7 +1258,7 @@ class ProcessExporterFortranMW(ProcessExporterFortran):
     # generate_subprocess_directory_v4
     #===========================================================================
     def generate_subprocess_directory_v4(self, matrix_element,
-                                         fortran_model):
+                                         fortran_model,number):
         """Generate the Pxxxxx directory for a subprocess in MG4 MadWeight format,
         including the necessary matrix.f and nexternal.inc files"""
 
@@ -1335,7 +1340,7 @@ class ProcessExporterFortranMW(ProcessExporterFortran):
                      matrix_element.get('processes')[0].nice_string())
         plot.draw()
 
-        linkfiles = ['driver.f', 'initialization.f','permutation.f','gen_ps.f','phasespace.inc', 'makefile', 'coupl.inc','madweight_param.inc', 'maxamps.inc', 'run.inc', 'setscales.f']
+        linkfiles = ['driver.f', 'initialization.f','permutation.f','gen_ps.f','phasespace.inc', 'makefile', 'coupl.inc','madweight_param.inc', 'run.inc', 'setscales.f']
 
         for file in linkfiles:
             ln('../%s' % file)
@@ -1354,7 +1359,7 @@ class ProcessExporterFortranMW(ProcessExporterFortran):
     #===========================================================================
     # write_matrix_element_v4
     #===========================================================================
-    def write_matrix_element_v4(self, writer, matrix_element, fortran_model):
+    def write_matrix_element_v4(self, writer, matrix_element, fortran_model,proc_id = "", config_map = []):
         """Export a matrix element to a matrix.f file in MG4 MadWeight format"""
 
         if not matrix_element.get('processes') or \
@@ -1377,6 +1382,9 @@ class ProcessExporterFortranMW(ProcessExporterFortran):
         # Extract process info lines
         process_lines = self.get_process_info_lines(matrix_element)
         replace_dict['process_lines'] = process_lines
+
+        # Set proc_id
+        replace_dict['proc_id'] = proc_id
 
         # Extract number of external particles
         (nexternal, ninitial) = matrix_element.get_nexternal_ninitial()
@@ -1421,13 +1429,28 @@ class ProcessExporterFortranMW(ProcessExporterFortran):
         replace_dict['jamp_lines'] = '\n'.join(jamp_lines)
 
         file = open(os.path.join(_file_path, \
-                          'iolibs/template_files/matrix_standalone_v4.inc')).read()
+                          'iolibs/template_files/%s' % self.matrix_file)).read()
         file = file % replace_dict
+
 
         # Write the file
         writer.writelines(file)
 
         return len(filter(lambda call: call.find('#') != 0, helas_calls)),ncolor
+
+    #===========================================================================
+    # write_source_makefile
+    #===========================================================================
+    def write_source_makefile(self, writer):
+        """Write the nexternal.inc file for madweight"""
+
+
+        path = os.path.join(_file_path,'iolibs','template_files','madweight_makefile_source')
+        set_of_lib = '$(LIBRARIES) $(LIBDIR)libdhelas.$(libext) $(LIBDIR)libpdf.$(libext) $(LIBDIR)libmodel.$(libext) $(LIBDIR)libcernlib.$(libext)'
+        text = open(path).read() % {'libraries': set_of_lib}
+        writer.write(text)
+
+        return True
 
     #===========================================================================
     # write_auto_dsig_file
@@ -3759,4 +3782,302 @@ class UFO_model_to_mg4(object):
                 translator.make_valid_param_card(out_path, out_path2)
             translator.convert_to_slha1(out_path)
         
+
+
+#===============================================================================
+# ProcessExporterFortranMWGroup
+#===============================================================================
+class ProcessExporterFortranMWGroup(ProcessExporterFortranMW):
+    """Class to take care of exporting a set of matrix elements to
+    MadEvent subprocess group format."""
+
+    matrix_file = "matrix_madweight_group_v4.inc"
+
+    #===========================================================================
+    # generate_subprocess_directory_v4
+    #===========================================================================
+    def generate_subprocess_directory_v4(self, subproc_group,
+                                         fortran_model,
+                                         group_number):
+        """Generate the Pn directory for a subprocess group in MadEvent,
+        including the necessary matrix_N.f files, configs.inc and various
+        other helper files"""
+
+        if not isinstance(subproc_group, group_subprocs.SubProcessGroup):
+            raise base_objects.PhysicsObject.PhysicsObjectError,\
+                  "subproc_group object not SubProcessGroup"
+
+        if not self.model:
+            self.model = subproc_group.get('matrix_elements')[0].\
+                         get('processes')[0].get('model')
+
+        cwd = os.getcwd()
+        path = os.path.join(self.dir_path, 'SubProcesses')
+
+        os.chdir(path)
+
+        pathdir = os.getcwd()
+
+        # Create the directory PN in the specified path
+        subprocdir = "P%d_%s" % (subproc_group.get('number'),
+                                 subproc_group.get('name'))
+        try:
+            os.mkdir(subprocdir)
+        except os.error as error:
+            logger.warning(error.strerror + " " + subprocdir)
+
+        try:
+            os.chdir(subprocdir)
+        except os.error:
+            logger.error('Could not cd to directory %s' % subprocdir)
+            return 0
+
+        logger.info('Creating files in directory %s' % subprocdir)
+
+        # Create the matrix.f files, auto_dsig.f files and all inc files
+        # for all subprocesses in the group
+
+        maxamps = 0
+        maxflows = 0
+        tot_calls = 0
+
+        matrix_elements = subproc_group.get('matrix_elements')
+
+        for ime, matrix_element in \
+                enumerate(matrix_elements):
+            filename = 'matrix%d.f' % (ime+1)
+            calls, ncolor = \
+               self.write_matrix_element_v4(writers.FortranWriter(filename), 
+                                                matrix_element,
+                                                fortran_model,
+                                                str(ime+1),
+                                                subproc_group.get('diagram_maps')[\
+                                                                              ime])
+
+            filename = 'auto_dsig%d.f' % (ime+1)
+            self.write_auto_dsig_file(writers.FortranWriter(filename),
+                                 matrix_element,
+                                 str(ime+1))
+
+            # Keep track of needed quantities
+            tot_calls += int(calls)
+            maxflows = max(maxflows, ncolor)
+            maxamps = max(maxamps, len(matrix_element.get('diagrams')))
+
+            # Draw diagrams
+            filename = "matrix%d.ps" % (ime+1)
+            plot = draw.MultiEpsDiagramDrawer(matrix_element.get('base_amplitude').\
+                                                                    get('diagrams'),
+                                              filename,
+                                              model = \
+                                                matrix_element.get('processes')[0].\
+                                                                       get('model'),
+                                              amplitude=True)
+            logger.info("Generating Feynman diagrams for " + \
+                         matrix_element.get('processes')[0].nice_string())
+            plot.draw()
+
+        # Extract number of external particles
+        (nexternal, ninitial) = matrix_element.get_nexternal_ninitial()
+
+        # Generate a list of diagrams corresponding to each configuration
+        # [[d1, d2, ...,dn],...] where 1,2,...,n is the subprocess number
+        # If a subprocess has no diagrams for this config, the number is 0
+
+        subproc_diagrams_for_config = subproc_group.get('diagrams_for_configs')
+
+        filename = 'auto_dsig.f'
+        self.write_super_auto_dsig_file(writers.FortranWriter(filename),
+                                   subproc_group)
+
+        filename = 'configs.inc'
+        nconfigs, s_and_t_channels = self.write_configs_file(\
+            writers.FortranWriter(filename),
+            subproc_group,
+            subproc_diagrams_for_config)
+
+        filename = 'leshouche.inc'
+        self.write_leshouche_file(writers.FortranWriter(filename),
+                                   subproc_group)
+
+        filename = 'maxamps.inc'
+        self.write_maxamps_file(writers.FortranWriter(filename),
+                           maxamps,
+                           maxflows,
+                           max([len(me.get('processes')) for me in \
+                                matrix_elements]),
+                           len(matrix_elements))
+
+        filename = 'mirrorprocs.inc'
+        self.write_mirrorprocs(writers.FortranWriter(filename),
+                          subproc_group)
+
+        filename = 'nexternal.inc'
+        self.write_nexternal_file(writers.FortranWriter(filename),
+                             nexternal, ninitial)
+
+        filename = 'pmass.inc'
+        self.write_pmass_file(writers.FortranWriter(filename),
+                         matrix_element)
+
+        filename = 'props.inc'
+        self.write_props_file(writers.FortranWriter(filename),
+                         matrix_element,
+                         s_and_t_channels)
+
+#        filename = 'processes.dat'
+#        files.write_to_file(filename,
+#                            self.write_processes_file,
+#                            subproc_group)
+
+        # Generate jpgs -> pass in make_html
+        #os.system(os.path.join('..', '..', 'bin', 'gen_jpeg-pl'))
+
+        linkfiles = ['driver.f', 'initialization.f','permutation.f','gen_ps.f','phasespace.inc', 'makefile', 'coupl.inc','madweight_param.inc', 'run.inc', 'setscales.f']
+
+        for file in linkfiles:
+            ln('../%s' % file)
+
+        ln('nexternal.inc', '../../Source', log=False)
+        ln('leshouche.inc', '../../Source', log=False)
+        ln('maxamps.inc', '../../Source', log=False)
+
+        # Return to SubProcesses dir
+        os.chdir(pathdir)
+
+        if not tot_calls:
+            tot_calls = 0
+        return tot_calls
+
+    #===========================================================================
+    # write_super_auto_dsig_file
+    #===========================================================================
+    def write_super_auto_dsig_file(self, writer, subproc_group):
+        """Write the auto_dsig.f file selecting between the subprocesses
+        in subprocess group mode"""
+
+        replace_dict = {}
+
+        # Extract version number and date from VERSION file
+        info_lines = self.get_mg5_info_lines()
+        replace_dict['info_lines'] = info_lines
+
+        matrix_elements = subproc_group.get('matrix_elements')
+
+        # Extract process info lines
+        process_lines = '\n'.join([self.get_process_info_lines(me) for me in \
+                                   matrix_elements])
+        replace_dict['process_lines'] = process_lines
+
+        nexternal, ninitial = matrix_elements[0].get_nexternal_ninitial()
+        replace_dict['nexternal'] = nexternal
+
+        replace_dict['nsprocs'] = 2*len(matrix_elements)
+
+        # Generate dsig definition line
+        dsig_def_line = "DOUBLE PRECISION " + \
+                        ",".join(["DSIG%d" % (iproc + 1) for iproc in \
+                                  range(len(matrix_elements))])
+        replace_dict["dsig_def_line"] = dsig_def_line
+
+        # Generate dsig process lines
+        call_dsig_proc_lines = []
+        for iproc in range(len(matrix_elements)):
+            call_dsig_proc_lines.append(\
+                "IF(IPROC.EQ.%(num)d) DSIGPROC=DSIG%(num)d(P1,WGT,IMODE) ! %(proc)s" % \
+                {"num": iproc + 1,
+                 "proc": matrix_elements[iproc].get('processes')[0].base_string()})
+        replace_dict['call_dsig_proc_lines'] = "\n".join(call_dsig_proc_lines)
+
+        file = open(os.path.join(_file_path, \
+                       'iolibs/template_files/super_auto_dsig_MW_group_v4.inc')).read()
+        file = file % replace_dict
+
+        # Write the file
+        writer.writelines(file)
+
+    #===========================================================================
+    # write_mirrorprocs
+    #===========================================================================
+    def write_mirrorprocs(self, writer, subproc_group):
+        """Write the mirrorprocs.inc file determining which processes have
+        IS mirror process in subprocess group mode."""
+
+        lines = []
+        bool_dict = {True: '.true.', False: '.false.'}
+        matrix_elements = subproc_group.get('matrix_elements')
+        lines.append("DATA (MIRRORPROCS(I),I=1,%d)/%s/" % \
+                     (len(matrix_elements),
+                      ",".join([bool_dict[me.get('has_mirror_process')] for \
+                                me in matrix_elements])))
+        # Write the file
+        writer.writelines(lines)
+
+    #===========================================================================
+    # write_configs_file
+    #===========================================================================
+    def write_configs_file(self, writer, subproc_group, diagrams_for_config):
+        """Write the configs.inc file with topology information for a
+        subprocess group. Use the first subprocess with a diagram for each
+        configuration."""
+
+        matrix_elements = subproc_group.get('matrix_elements')
+        model = matrix_elements[0].get('processes')[0].get('model')
+
+        diagrams = []
+        config_numbers = []
+        for iconfig, config in enumerate(diagrams_for_config):
+            # Check if any diagrams correspond to this config
+            if set(config) == set([0]):
+                continue
+            subproc_diags = []
+            for s,d in enumerate(config):
+                if d:
+                    subproc_diags.append(matrix_elements[s].\
+                                         get('diagrams')[d-1])
+                else:
+                    subproc_diags.append(None)
+            diagrams.append(subproc_diags)
+            config_numbers.append(iconfig + 1)
+
+        # Extract number of external particles
+        (nexternal, ninitial) = subproc_group.get_nexternal_ninitial()
+
+        return len(diagrams), \
+               self.write_configs_file_from_diagrams(writer, diagrams,
+                                                config_numbers,
+                                                nexternal, ninitial,
+                                                matrix_elements[0],model)
+
+    #===========================================================================
+    # write_run_configs_file
+    #===========================================================================
+    def write_run_config_file(self, writer):
+        """Write the run_configs.inc file for MadEvent"""
+
+        path = os.path.join(_file_path,'iolibs','template_files','madweight_run_config.inc') 
+        text = open(path).read() % {'chanperjob':'2'} 
+        writer.write(text)
+        return True
+
+
+    #===========================================================================
+    # write_leshouche_file
+    #===========================================================================
+    def write_leshouche_file(self, writer, subproc_group):
+        """Write the leshouche.inc file for MG4"""
+
+        all_lines = []
+
+        for iproc, matrix_element in \
+            enumerate(subproc_group.get('matrix_elements')):
+            all_lines.extend(self.get_leshouche_lines(matrix_element,
+                                                 iproc))
+
+        # Write the file
+        writer.writelines(all_lines)
+
+        return True
+
+
 

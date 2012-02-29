@@ -12,7 +12,11 @@ PROG   = comp_madweight
 LINKLIBS =  -L../../lib/ -ldhelas -lmodel -lgeneric  -lcernlib -lpdf -lblocks -ltools -lTF 
 LIBS = $(LIBDIR)libdhelas.a   $(LIBDIR)libmodel.a $(LIBDIR)libgeneric.a $(LIBDIR)libcernlib.a $(LIBDIR)libpdf.a $(LIBDIR)libblocks.a $(LIBDIR)libtools.a $(LIBDIR)libTF.a 
 
-PROCESS= driver.o auto_dsig.o matrix.o  setscales.o   d_choices.o
+PROCESS= driver.o  setscales.o   d_choices.o \
+         $(patsubst %.f,%.o,$(wildcard auto_dsig*.f)) \
+         $(patsubst %.f,%.o,$(wildcard matrix*.f))
+
+
 MW_PS= main_code.o gen_ps.o initialization.o call_TF.o permutation.o multi_channel.o
 
 

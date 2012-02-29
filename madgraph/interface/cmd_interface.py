@@ -26,6 +26,7 @@ import subprocess
 import sys
 import traceback
 import time
+import inspect
 
 #usefull shortcut
 pjoin = os.path.join
@@ -3140,7 +3141,7 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
 
         #check if we need to group processes
         group_subprocesses = False
-        if self._export_format == 'madevent' and \
+        if (self._export_format == 'madevent' or self._export_format == 'madweight') and \
                                             self._options['group_subprocesses']:
                 if self._options['group_subprocesses'] is True:
                     group_subprocesses = True
@@ -3158,12 +3159,18 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
                 self._curr_exporter = export_v4.ProcessExporterFortranME(\
                                       self._mgme_dir, self._export_dir,
                                       not noclean)
-        
+
+        elif self._export_format == 'madweight':
+            if group_subprocesses:
+                self._curr_exporter = export_v4.ProcessExporterFortranMWGroup(\
+                                      self._mgme_dir, self._export_dir,
+                                      not noclean)
+            else:
+                self._curr_exporter = export_v4.ProcessExporterFortranMW(\
+                                      self._mgme_dir, self._export_dir,
+                                      not noclean)
         elif self._export_format in ['standalone', 'matrix']:
             self._curr_exporter = export_v4.ProcessExporterFortranSA(\
-                                  self._mgme_dir, self._export_dir,not noclean)
-        elif self._export_format in ['madweight']:
-            self._curr_exporter = export_v4.ProcessExporterFortranMW(\
                                   self._mgme_dir, self._export_dir,not noclean)
         elif self._export_format == 'standalone_cpp':
             export_cpp.setup_cpp_standalone_dir(self._export_dir, self._curr_model)
@@ -3224,13 +3231,23 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
                                          diagram_generation.DecayChainAmplitude)])
                     subproc_groups = group_subprocs.SubProcessGroupList()
                     if non_dc_amps:
-                        subproc_groups.extend(\
+                        if self._export_format =='madweight':
+                          subproc_groups.extend(\
                                    group_subprocs.SubProcessGroup.group_amplitudes(\
-                                                                       non_dc_amps))
+                                                                       non_dc_amps,"madweight"))
+                        else:
+                          subproc_groups.extend(\
+                                   group_subprocs.SubProcessGroup.group_amplitudes(\
+                                                                       non_dc_amps,"madevent"))
                     for dc_amp in dc_amps:
-                        dc_subproc_group = \
+                        if self._export_format =='madweight':
+                          dc_subproc_group = \
                                  group_subprocs.DecayChainSubProcessGroup.\
-                                                           group_amplitudes(dc_amp)
+                                                           group_amplitudes(dc_amp,"madweight")
+                        else:
+                          dc_subproc_group = \
+                                 group_subprocs.DecayChainSubProcessGroup.\
+                                                           group_amplitudes(dc_amp,"madevent")
                         subproc_groups.extend(\
                                   dc_subproc_group.\
                                         generate_helas_decay_chain_subproc_groups())
@@ -3337,10 +3354,23 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
 
         # Fortran MadGraph MadWeight
         if self._export_format == 'madweight':
-            for me in matrix_elements:
-                calls = calls + \
-                        self._curr_exporter.generate_subprocess_directory_v4(\
-                            me, self._curr_fortran_model)
+            if isinstance(self._curr_matrix_elements, group_subprocs.SubProcessGroupList):
+                for (group_number, me_group) in enumerate(self._curr_matrix_elements):
+                    calls = calls + \
+                         self._curr_exporter.generate_subprocess_directory_v4(\
+                                me_group, self._curr_fortran_model,
+                                group_number)
+            else:
+                for me_number, me in \
+                   enumerate(self._curr_matrix_elements.get_matrix_elements()):
+                    calls = calls + \
+                            self._curr_exporter.generate_subprocess_directory_v4(\
+                                me, self._curr_fortran_model, me_number)
+
+#            for me in matrix_elements:
+#                calls = calls + \
+#                        self._curr_exporter.generate_subprocess_directory_v4(\
+#                            me, self._curr_fortran_model)
 
         # Fortran MadGraph Standalone
         if self._export_format == 'standalone':
