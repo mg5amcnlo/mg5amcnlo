@@ -1332,7 +1332,7 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
             raise MadEventAlreadyRunning, message
         else:
             os.system('touch %s' % pjoin(me_dir,'RunWeb'))
-            subprocess.call(['%s/gen_cardhtml-pl' % self.dirbin], cwd=me_dir)
+            subprocess.Popen([pjoin(self.dirbin, 'gen_cardhtml-pl')], cwd=me_dir)
       
         self.to_store = []
         self.run_name = None
@@ -2049,6 +2049,7 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
         self.total_jobs = 0
         subproc = [l.strip() for l in open(pjoin(self.me_dir,'SubProcesses', 
                                                                  'subproc.mg'))]
+        devnull = os.open(os.devnull, os.O_RDWR)
         for nb_proc,subdir in enumerate(subproc):
             subdir = subdir.strip()
             Pdir = pjoin(self.me_dir, 'SubProcesses',subdir)
@@ -2060,7 +2061,6 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
                 if os.path.basename(match)[:4] in ['ajob', 'wait', 'run.', 'done']:
                     os.remove(pjoin(Pdir, match))
             
-            devnull = os.open(os.devnull, os.O_RDWR)
             proc = subprocess.Popen([pjoin(bindir, 'gen_ximprove')],
                                     stdout=devnull,
                                     stdin=subprocess.PIPE,

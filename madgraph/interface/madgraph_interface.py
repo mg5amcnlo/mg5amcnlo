@@ -664,14 +664,12 @@ This will take effect only in a NEW terminal
             return self.InvalidCmd, 'Invalid Syntax: Too many argument'
         
         # search for a valid path
-        if os.path.sep in args[0] and os.path.isdir(args[0]):
-            path = args[0]
+        if os.path.isdir(args[0]):
+            path = os.path.realpath(args[0])
         elif os.path.isdir(pjoin(MG5DIR,args[0])):
             path = pjoin(MG5DIR,args[0])
         elif  MG4DIR and os.path.isdir(pjoin(MG4DIR,args[0])):
             path = pjoin(MG4DIR,args[0])
-        elif os.path.isdir(args[0]):
-            path = os.path.realpath(args[0])
         else:    
             raise self.InvalidCmd, '%s is not a valid directory' % args[0]
                 
@@ -1900,15 +1898,31 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
                 print 'No couplings information available in V4 model'
                 return
             text = ''
-            try:
-                ufomodel = ufomodels.load_model(self._curr_model.get('name'))
-            except:
-                raise self.InvalidCmd, 'no couplings %s in current model' % args[1]
-            for coup in ufomodel.all_couplings:
-                order = ', '.join(['%s=%s' %val for val in coup.order.items()])
-                text += '%s = %s\t( %s)\n' % (coup.name, coup.value, order)
+            text = "Current model contains %i couplings\n" % \
+                    sum([len(part) for part in 
+                                        self._curr_model['couplings'].values()])
+            keys = self._curr_model['couplings'].keys()
+            def key_sort(x, y):
+                if ('external',) == x:
+                    return -1
+                elif ('external',) == y:
+                    return +1
+                elif  len(x) < len(y):
+                    return -1
+                else:
+                    return 1
+            keys.sort(key_sort)
+            for key in keys:
+                item = self._curr_model['couplings'][key]
+                text += '\ncouplings type: %s\n' % str(key)
+                for value in item:
+                    if value.value is not None:
+                        text+= '        %s = %s = %s\n' % (value.name, value.expr ,value.value)
+                    else:
+                        text+= '        %s = %s\n' % (value.name, value.expr)
+
             pydoc.pager(text)
-            
+                    
         elif args[0] == 'couplings':
             if self._model_v4_path:
                 print 'No couplings information available in V4 model'
