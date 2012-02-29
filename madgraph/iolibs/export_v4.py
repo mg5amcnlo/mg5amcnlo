@@ -206,8 +206,6 @@ class ProcessExporterFortran(object):
         ln(model_path + '/coupl.inc', self.dir_path + '/Source')
         ln(model_path + '/coupl.inc', self.dir_path + '/SubProcesses')
         ln(self.dir_path + '/Source/run.inc', self.dir_path + '/SubProcesses', log=False)
-        ln(self.dir_path + '/Source/genps.inc', self.dir_path + '/SubProcesses', log=False)
-        ln(self.dir_path + '/Source/maxconfigs.inc', self.dir_path + '/SubProcesses', log=False)
         ln(self.dir_path + '/Source/maxparticles.inc', self.dir_path + '/SubProcesses', log=False)
 
     #===========================================================================
@@ -1200,9 +1198,6 @@ class ProcessExporterFortranMW(ProcessExporterFortran):
         filename = os.path.join(self.dir_path,'Source','run_config.inc')
         self.write_run_config_file(writers.FortranWriter(filename))
 
-        # add the makefile in Source directory 
-        filename = os.path.join(self.dir_path,'Source','makefile')
-        self.write_source_makefile(writers.FortranWriter(filename))
         try:
             subprocess.call([os.path.join('bin', 'madweight')],
                             stdout = os.open(os.devnull, os.O_RDWR),
@@ -1211,6 +1206,10 @@ class ProcessExporterFortranMW(ProcessExporterFortran):
         except OSError:
             # Probably madweight already called
             pass
+
+        # add the makefile in Source directory 
+        filename = os.path.join(self.dir_path,'Source','makefile')
+        self.write_source_makefile(writers.FortranWriter(filename))
 
     #===========================================================================
     # Make the Helas and Model directories for Standalone directory
@@ -1938,6 +1937,9 @@ class ProcessExporterFortranME(ProcessExporterFortran):
                      matrix_element.get('processes')[0].nice_string())
         plot.draw()
 
+        #import genps.inc and maxconfigs.inc into Subprocesses
+        ln(self.dir_path + '/Source/genps.inc', self.dir_path + '/SubProcesses', log=False)
+        ln(self.dir_path + '/Source/maxconfigs.inc', self.dir_path + '/SubProcesses', log=False)
 
         linkfiles = ['addmothers.f',
                      'cluster.f',
@@ -3053,6 +3055,10 @@ class ProcessExporterFortranMEGroup(ProcessExporterFortranME):
 
         # Generate jpgs -> pass in make_html
         #os.system(os.path.join('..', '..', 'bin', 'gen_jpeg-pl'))
+
+        #import genps.inc and maxconfigs.inc into
+        ln(self.dir_path + '/Source/genps.inc', self.dir_path + '/SubProcesses', log=False)
+        ln(self.dir_path + '/Source/maxconfigs.inc', self.dir_path + '/SubProcesses', log=False)
 
         linkfiles = ['addmothers.f',
                      'cluster.f',

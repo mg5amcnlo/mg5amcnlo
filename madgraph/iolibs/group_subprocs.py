@@ -411,7 +411,8 @@ class SubProcessGroup(base_objects.PhysicsObject):
                            abs(p.get('pdg_code'))==13, abs(p.get('pdg_code'))==15) for p in \
                             fs_parts],
                            amplitude.get('process').get('id')]
-
+              print proc_class
+              print str([ p.get('pdg_code') for p in fs_parts])
             try:
                 amplitude_classes[iamp] = proc_classes.index(proc_class)
             except ValueError:
