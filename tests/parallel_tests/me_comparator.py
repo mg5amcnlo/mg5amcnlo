@@ -982,13 +982,13 @@ class MEComparatorGauge(MEComparator):
                     continue
             else:
                 diff_feyn = abs(list_res[1] - list_res[2]) / \
-                       (list_res[1] + list_res[2])
+                       (list_res[1] + list_res[2] + 1e-99)
                 diff_unit = abs(list_res[0] - list_res[3]) / \
-                       (list_res[0] + list_res[3])
+                       (list_res[0] + list_res[3] + 1e-99)
                 diff_cms = abs(list_res[0] - list_res[1]) / \
-                       (list_res[0] + list_res[1])
+                       (list_res[0] + list_res[1] + 1e-99)
                 diff_fixw = abs(list_res[2] - list_res[3]) / \
-                       (list_res[2] + list_res[3])
+                       (list_res[2] + list_res[3] + 1e-99)
 
             res_str += '\n' + self._fixed_string_length(proc, proc_col_size)+ \
                        ''.join([self._fixed_string_length("%1.10e" % res,
@@ -1036,13 +1036,13 @@ class MEComparatorGauge(MEComparator):
                 continue
             
             diff_feyn = abs(list_res[1] - list_res[2]) / \
-                       (list_res[1] + list_res[2])
+                       (list_res[1] + list_res[2] + 1e-99)
             diff_unit = abs(list_res[0] - list_res[3]) / \
-                       (list_res[0] + list_res[3])
+                       (list_res[0] + list_res[3] + 1e-99)
             diff_cms = abs(list_res[0] - list_res[1]) / \
-                       (list_res[0] + list_res[1])
+                       (list_res[0] + list_res[1] + 1e-99)
             diff_fixw = abs(list_res[2] - list_res[3]) / \
-                       (list_res[2] + list_res[3])
+                       (list_res[2] + list_res[3] + 1e-99)
                        
             if diff_feyn > 1e-2 or diff_cms > 1e-6 or diff_fixw > 1e-4 or \
                diff_unit > 1e-2:                

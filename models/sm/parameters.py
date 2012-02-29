@@ -1,6 +1,6 @@
-# This file was automatically created by FeynRules $Revision: 634 $
+# This file was automatically created by FeynRules $Revision: 998 $
 # Mathematica version: 8.0 for Mac OS X x86 (64-bit) (November 6, 2010)
-# Date: Wed 6 Jul 2011 14:07:37
+# Date: Wed 29 Feb 2012 11:32:38
 
 
 
@@ -188,7 +188,7 @@ MTA = Parameter(name = 'MTA',
 WT = Parameter(name = 'WT',
                nature = 'external',
                type = 'real',
-               value = 150.833649,
+               value = 1.50833649,
                texname = '\\text{WT}',
                lhablock = 'DECAY',
                lhacode = [ 6 ])
@@ -196,7 +196,7 @@ WT = Parameter(name = 'WT',
 WZ = Parameter(name = 'WZ',
                nature = 'external',
                type = 'real',
-               value = 244.140351,
+               value = 2.44140351,
                texname = '\\text{WZ}',
                lhablock = 'DECAY',
                lhacode = [ 23 ])
@@ -204,7 +204,7 @@ WZ = Parameter(name = 'WZ',
 WW = Parameter(name = 'WW',
                nature = 'external',
                type = 'real',
-               value = 204.759951,
+               value = 2.04759951,
                texname = '\\text{WW}',
                lhablock = 'DECAY',
                lhacode = [ 24 ])
@@ -212,7 +212,7 @@ WW = Parameter(name = 'WW',
 WH = Parameter(name = 'WH',
                nature = 'external',
                type = 'real',
-               value = 5.75308848,
+               value = 0.00575308848,
                texname = '\\text{WH}',
                lhablock = 'DECAY',
                lhacode = [ 25 ])

@@ -423,6 +423,7 @@ def check_processes(processes, param_card = None, quick = []):
     of particles (which means different diagram building and Helas
     calls), and comparing the resulting matrix element values."""
 
+
     if isinstance(processes, base_objects.ProcessDefinition):
         # Generate a list of unique processes
         # Extract IS and FS ids
@@ -680,7 +681,7 @@ def check_gauge(processes, param_card=None, cmass_scheme=False):
     For one of the massless external bosons (e.g. gluon or photon), 
     replace the polarization vector (epsilon_mu) with its momentum (p_mu)
     """
-    
+
     if isinstance(processes, base_objects.ProcessDefinition):
         # Generate a list of unique processes
         # Extract IS and FS ids
@@ -692,6 +693,7 @@ def check_gauge(processes, param_card=None, cmass_scheme=False):
         evaluator = MatrixElementEvaluator(model, param_card, 
                                            cmass_scheme= cmass_scheme,
                                            auth_skipping= True, reuse= False,)
+        
         if not cmass_scheme:
             # Set all widths to zero for gauge check
             logger.info('Set All width to zero for non complex mass scheme cheks')
@@ -1007,7 +1009,7 @@ def check_unitary_feynman(processes_unit, processes_feynm, param_card=None, cmas
     """Check gauge invariance of the processes by flipping
        the gauge of the model
     """
-    
+
     if isinstance(processes_unit, base_objects.ProcessDefinition):
         # Generate a list of unique processes
         # Extract IS and FS ids
