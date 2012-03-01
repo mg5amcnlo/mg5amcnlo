@@ -199,6 +199,9 @@ class AbstractRoutineBuilder(object):
         #multiply by the wave functions
         nb_spinor = 0
         outgoing = self.outgoing
+        if (outgoing + 1) // 2 in self.conjg:
+            #flip the outgoing tag if in conjugate
+            outgoing = outgoing + outgoing % 2 - (outgoing +1) % 2
         
         if not self.routine_kernel:
             AbstractRoutineBuilder.counter += 1
@@ -215,21 +218,25 @@ class AbstractRoutineBuilder(object):
         else:
             lorentz = self.routine_kernel
             aloha_lib.USE_TAG = set(self.kernel_tag) 
-        for (i, spin ) in enumerate(self.spins):
+            
+            
+        for (i, spin ) in enumerate(self.spins):   
             id = i + 1
+                     
             #Check if this is the outgoing particle
             if id == outgoing:
                 if spin == 1: 
                     lorentz *= complex(0,1)
                 elif spin == 2:
                     # shift and flip the tag if we multiply by C matrices
-                    if (id+1) // 2 in self.conjg:
-                        id += _conjugate_gap
-                    nb_spinor += 1
-                    if nb_spinor %2:
-                        lorentz *= SpinorPropagator(id, 'I2', self.outgoing)
+                    if (id + 1) // 2 in self.conjg:
+                        id += _conjugate_gap + id % 2 - (id +1) % 2
+                    if id % 2:
+                        #propagator outcoming
+                        lorentz *= SpinorPropagator(id, 'I2', outgoing)
                     else:
-                        lorentz *= SpinorPropagator('I2', id, self.outgoing) 
+                        #propagator incoming
+                        lorentz *= SpinorPropagator('I2', id, outgoing) 
                 elif spin == 3 :
                     lorentz *= VectorPropagator(id, 'I2', id)
                 elif spin == 5 :
@@ -250,15 +257,9 @@ class AbstractRoutineBuilder(object):
                 elif spin == 2:
                     # shift the tag if we multiply by C matrices
                     if (id+1) // 2 in self.conjg:
-                        spin_id = id + _conjugate_gap
-                        if id % 2:
-                            if outgoing not in [id, id+1]:
-                                spin_id += 1
-                        elif outgoing not in [id, id-1]:
-                            spin_id -= 1
+                        spin_id = id + _conjugate_gap + id % 2 - (id +1) % 2
                     else:
                         spin_id = id
-                    nb_spinor += 1
                     lorentz *= Spinor(spin_id, id)
                 elif spin == 3:        
                     lorentz *= Vector(id, id)

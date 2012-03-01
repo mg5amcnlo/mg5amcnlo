@@ -34,9 +34,19 @@ class WriteALOHA:
         self.namestring = name
         self.abstractname = abstract_routine.name
         self.comment = abstract_routine.infostr
-        self.offshell = abstract_routine.outgoing 
+        self.offshell = abstract_routine.outgoing
+         
         self.symmetries = abstract_routine.symmetries
         self.tag = abstract_routine.tag
+
+        self.outgoing = self.offshell
+        if 'C%s' %((self.outgoing + 1) // 2) in self.tag:
+            #flip the outgoing tag if in conjugate
+            self.outgoing = self.outgoing + self.outgoing % 2 - (self.outgoing +1) % 2
+            
+
+
+
 
         #prepare the necessary object
         self.collect_variables() # Look for the different variables
@@ -182,12 +192,11 @@ class WriteALOHA:
             
             if index in conjugate:
                 index2, spin2 = index+1, self.particles[index+1]
-                if index2 + 1 != outgoing: 
-                    call_arg.append('%s%d' % (spin2, index2 +1)) 
-                call_arg.append('%s%d' % (spin, index +1)) 
+                call_arg.append('%s%d' % (spin2, index2 +1)) 
+                #call_arg.append('%s%d' % (spin, index +1)) 
             elif index-1 in conjugate:
-                if index == outgoing:
-                    call_arg.append('%s%d' % (spin, index +1)) 
+                index2, spin2 = index-1, self.particles[index]
+                call_arg.append('%s%d' % (spin2, index2 +1)) 
             else:
                 call_arg.append('%s%d' % (spin, index +1)) 
                 
@@ -226,14 +235,14 @@ class WriteALOHA:
             global_sign = -1
         
         flipped = [2*(int(c[1:])-1) for c in self.tag if c.startswith('C')]
-        if self.offshell % 2:
-             not_flip = self.offshell - 1
-             if not_flip in flipped:
-                 flipped.remove(not_flip)
-        else:
-             not_flip = self.offshell - 2
-             if not_flip in flipped:
-                 flipped.remove(not_flip)           
+#        if self.offshell % 2:
+#             not_flip = self.offshell - 1
+#             if not_flip in flipped:
+#                 flipped.remove(not_flip)
+#        else:
+#             not_flip = self.offshell - 2
+#             if not_flip in flipped:
+#                 flipped.remove(not_flip)           
         
         for index, spin in enumerate(self.particles): 
             assert(spin in ['S','F','V','T'])  
@@ -252,7 +261,7 @@ class WriteALOHA:
                 if index-1 in flipped:
                     sign *= -1
             # No need to include the outgoing particles in the definitions
-            if index == self.offshell -1:
+            if index == self.outgoing -1:
                 continue 
             
             # write the
@@ -320,11 +329,11 @@ class ALOHAWriterForFortran(WriteALOHA):
             if not alredy_update:
                 declare_list.append('double complex denom')
                 declare_list.append('double precision M%(id)d, W%(id)d' % 
-                                                          {'id': self.offshell})
+                                                          {'id': self.outgoing})
             call_arg = '%(args)s, COUP, M%(id)d, W%(id)d, %(spin)s%(id)d' % \
                     {'args': ', '.join(CallList), 
                      'spin': self.particles[self.offshell -1],
-                     'id': self.offshell}
+                     'id': self.outgoing}
             str_out = ' subroutine %s(%s)\n' % (name, call_arg) 
 
         # Forcing implicit None
@@ -371,7 +380,7 @@ class ALOHAWriterForFortran(WriteALOHA):
             offshell_size = self.type_to_size[offshelltype]            
             #Implement the conservation of Energy Impulsion
             for i in range(-1,1):
-                str_out += '%s%d(%d)= ' % (offshelltype, self.offshell, \
+                str_out += '%s%d(%d)= ' % (offshelltype, self.outgoing, \
                                                               offshell_size + i)
                 
                 pat=re.compile(r'^[-+]?(?P<spin>\w)')
@@ -390,11 +399,11 @@ class ALOHAWriterForFortran(WriteALOHA):
             if self.offshell == index and type in ['V','S']:
                 sign = -1
             if 'C%s' % ((index +1) // 2)  in self.tag: 
-                if index == self.offshell:
+                if index == self.outgoing:
                     pass
-                elif index % 2 and index -1 != self.offshell:
+                elif index % 2 and index -1 != self.outgoing:
                     pass
-                elif index %2 == 1 and index + 1  != self.offshell:
+                elif index % 2 == 1 and index + 1  != self.outgoing:
                     pass
                 else:
                     sign *= -1
@@ -464,7 +473,7 @@ class ALOHAWriterForFortran(WriteALOHA):
                 OutString = OutString + string + '\n'
         else:
             OffShellParticle = '%s%d' % (self.particles[self.offshell-1],\
-                                                                  self.offshell)
+                                                                  self.outgoing)
             numerator = self.obj.numerator
             denominator = self.obj.denominator
             for ind in denominator.listindices():
@@ -577,11 +586,11 @@ class ALOHAWriterForFortran(WriteALOHA):
         else:
             main = '%(spin)s%(id)d' % \
                           {'spin': self.particles[offshell -1],
-                           'id': self.offshell}
+                           'id': self.outgoing}
             call_arg = '%(args)s, %(COUP)s, M%(id)d, W%(id)d, %(LAST)s' % \
                     {'args': ', '.join(self.calllist['CallList']), 
                      'COUP':'COUP%d',
-                     'id': self.offshell,
+                     'id': self.outgoing,
                      'LAST': '%s'}
 
         # make the first call
@@ -723,8 +732,8 @@ class ALOHAWriterForCPP(WriteALOHA):
             str_out = 'void %(name)s(%(args)s, double M%(number)d, double W%(number)d, complex<double>%(out)s%(number)d[])' % \
               {'name': name,
                'args': ','.join(CallList+ ['complex<double> COUP']),
-               'out': self.particles[OffShellParticle],
-               'number': OffShellParticle + 1 
+               'out': self.particles[self.outgoing - 1],
+               'number': self.outgoing 
                }
 
         h_string = str_out + ";\n\n"
@@ -1115,7 +1124,7 @@ class ALOHAWriterForPython(WriteALOHA):
         
         WriteALOHA.__init__(self, abstract_routine, dirpath)
         self.outname = '%s%s' % (self.particles[self.offshell -1], \
-                                                               self.offshell)
+                                                               self.outgoing)
     
         
     def change_var_format(self, name): 
@@ -1192,7 +1201,7 @@ class ALOHAWriterForPython(WriteALOHA):
             str_out += 'def %(name)s(%(args)s, COUP, M%(id)d, W%(id)d):\n' % \
                 {'name': name,
                  'args': ', '.join(CallList), 
-                     'id': self.offshell}            
+                     'id': self.outgoing}            
         return str_out     
 
     def make_declaration_list(self):
@@ -1238,16 +1247,17 @@ class ALOHAWriterForPython(WriteALOHA):
             sign = 1
             if self.offshell == index and type in ['V','S']:
                 sign = -1
+
             if 'C%s' % ((index +1) // 2)  in self.tag: 
-                if index == self.offshell:
+                if index == self.outgoing:
                     pass
-                elif index % 2 and index -1 != self.offshell:
+                elif index % 2 and index -1 != self.outgoing:
                     pass
-                elif index %2 == 1 and index + 1  != self.offshell:
+                elif index %2 == 1 and index + 1  != self.outgoing:
                     pass
                 else:
                     sign *= -1
-            
+
             if sign == -1 :
                 sign = '- '
             else:
@@ -1340,11 +1350,11 @@ class ALOHAWriterForPython(WriteALOHA):
         else:
             main = '%(spin)s%(id)d' % \
                           {'spin': self.particles[self.offshell -1],
-                           'id': self.offshell}
+                           'id': self.outgoing}
             call_arg = '%(args)s, %(COUP)s, M%(id)d, W%(id)d' % \
                     {'args': ', '.join(self.calllist['CallList']), 
                      'COUP':'COUP%d',
-                     'id': self.offshell}
+                     'id': self.outgoing}
 
         # make the first call
         line = "    %s = %s%s("+call_arg+")\n"
