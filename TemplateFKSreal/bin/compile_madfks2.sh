@@ -72,10 +72,10 @@ if [[ $madevent_run != "1" ]] ; then
 fi
 
 
-echo 'FKS directories to do n-body only (with S-functions = 1)  ?'
-echo '  0 for all dirs, 1 for nbodyonly, 2 for all but nbodyonly'
+echo 'FKS directories to do n-body only (with S-functions = 1)?'
+echo '  0 for all dirs, 1 for n-body only, 2 for all but n-body only'
 read nbodyonly
-if [[ $nbodyonly != "1" || $nbodyonly != "2" ]] ; then
+if [[ $nbodyonly != "1" && $nbodyonly != "2" ]] ; then
     nbodyonly="0"
 fi
 

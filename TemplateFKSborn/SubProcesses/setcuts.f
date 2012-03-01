@@ -6,6 +6,7 @@ C**************************************************************************
 c
 c     INCLUDE
 c
+      include 'nexternal.inc'
       include 'genps.inc'
       include 'coupl.inc'
       include 'run.inc'
@@ -375,6 +376,7 @@ c variable ptj
       parameter (zero=0.d0,vtiny=1d-8)
       include 'cuts.inc'
       include 'run.inc'
+      include 'nexternal.inc'
       include 'genps.inc'
       include 'coupl.inc'
       include 'fks.inc'
