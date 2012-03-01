@@ -1,4 +1,3 @@
-      logical function pass_point(p)
 c************************************************************************
 c     This function is called from sample to see if it needs to 
 c     bother calculating the weight from all the different conficurations
@@ -251,10 +250,13 @@ c Define jet clustering parameters
       palg=1.d0               ! jet algorithm: 1.0=kt, 0.0=C/A, -1.0 = anti-kt
       rfj=0.4d0                 ! the radius parameter
       sycut=60d0
-      if (totpt .lt. sycut) then
-          passcuts =  .false.
-          return
-      endif
+
+c uncomment the following lines to apply a cut on the sum of the light
+c   jet tranverse energies       
+ccc      if (totpt .lt. sycut) then
+ccc          passcuts =  .false.
+ccc          return
+ccc      endif
 
 
 c******************************************************************************
