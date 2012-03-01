@@ -23,6 +23,8 @@ sys.path.insert(0, os.path.join(root_path,'..','..'))
 import tests.unit_tests as unittest
 import madgraph.fks.fks_real as fks_real
 import madgraph.fks.fks_born as fks_born
+import madgraph.fks.fks_real_helas_objects as fks_real_helas
+import madgraph.fks.fks_born_helas_objects as fks_born_helas
 import madgraph.core.base_objects as MG
 import madgraph.core.color_algebra as color
 import madgraph.core.diagram_generation as diagram_generation
@@ -68,6 +70,33 @@ class TestGenerateLoopFKSFromBorn(unittest.TestCase):
                         myfksmulti['born_processes'][0].virt_amp.get('process').get('legs')], \
                          [2,-2,2,-2])
 
+
+    def test_generate_virtuals_helas_matrix_elementB(self):
+        """checks that the virtuals are correctly generated for a FKShelasMatrixElement"""
+
+        myleglist = MG.MultiLegList()
+        
+        # test process is u u~ > u u~  
+        myleglist.append(MG.MultiLeg({'ids':[2], 'state':False}))
+        myleglist.append(MG.MultiLeg({'ids':[-2], 'state':False}))
+        myleglist.append(MG.MultiLeg({'ids':[2], 'state':True}))
+        myleglist.append(MG.MultiLeg({'ids':[-2], 'state':True}))
+    
+        myproc = MG.ProcessDefinition({'legs':myleglist,
+                                           'model':self.mymodel,
+                                           'orders': {'QED': 0},
+                                           'perturbation_couplings':['QCD']})
+        
+        my_process_definitions = MG.ProcessDefinitionList([myproc])
+        
+        myfksmulti = fks_born.FKSMultiProcessFromBorn(\
+                {'process_definitions': my_process_definitions})
+
+        myfksmulti.generate_virtuals()
+        myfksme = fks_born_helas.FKSHelasMultiProcessFromBorn(myfksmulti)
+        self.assertNotEqual(myfksme['matrix_elements'][0].virt_matrix_element, None)
+
+
     def test_generate_virtuals_multi_processB(self):
         """checks that the virtuals are correctly generated for a multi process"""
 
@@ -99,7 +128,7 @@ class TestGenerateLoopFKSFromBorn(unittest.TestCase):
 
 
 
-class TestGenerateLoopFKSFromReal(unittest.TestCase):
+class TestGenerateLoopFKS(unittest.TestCase):
     """a class to test the generation of the virtual amps for a FKSMultiProcessFromReals"""
 
     def setUp(self):
@@ -135,6 +164,34 @@ class TestGenerateLoopFKSFromReal(unittest.TestCase):
         self.assertEqual([l['id'] for l in \
                         myfksmulti['real_processes'][0].virt_amp.get('process').get('legs')], \
                          [2,-2,2,-2])
+
+
+    def test_generate_virtuals_helas_matrix_elementR(self):
+        """checks that the virtuals are correctly generated for a single process"""
+
+        myleglist = MG.MultiLegList()
+        
+        # test process is u u~ > u u~ g 
+        myleglist.append(MG.MultiLeg({'ids':[2], 'state':False}))
+        myleglist.append(MG.MultiLeg({'ids':[-2], 'state':False}))
+        myleglist.append(MG.MultiLeg({'ids':[2], 'state':True}))
+        myleglist.append(MG.MultiLeg({'ids':[-2], 'state':True}))
+        myleglist.append(MG.MultiLeg({'ids':[21], 'state':True}))
+    
+        myproc = MG.ProcessDefinition({'legs':myleglist,
+                                           'model':self.mymodel,
+                                           'orders': {'QED': 0},
+                                           'perturbation_couplings':['QCD']})
+        
+        my_process_definitions = MG.ProcessDefinitionList([myproc])
+        
+        myfksmulti = fks_real.FKSMultiProcessFromReals(\
+                {'process_definitions': my_process_definitions})
+
+        myfksmulti.generate_virtuals()
+        myfksme = fks_real_helas.FKSHelasMultiProcessFromReals(myfksmulti)
+        self.assertNotEqual(myfksme['matrix_elements'][0].virt_matrix_element, None)
+
 
     def test_generate_virtuals_multi_processR(self):
         """checks that the virtuals are correctly generated for a multi process"""

@@ -352,7 +352,7 @@ class testFKSBornHelasObjects(unittest.TestCase):
     myproc3.set('orders', {'QED':0})
 
 
-    def test_fks_helas_multi_process(self):
+    def test_fks_helas_multi_process_from_born(self):
         """tests the correct initialization of a FKSHelasMultiProcess, 
         given an FKSMultiProcess"""
         p = [1,2, 21]

@@ -24,6 +24,7 @@ import madgraph.core.color_amp as color_amp
 import madgraph.core.color_algebra as color_algebra
 import madgraph.fks.fks_born as fks_born
 import madgraph.fks.fks_common as fks_common
+import madgraph.loop.loop_helas_objects as loop_helas_objects
 import copy
 import logging
 import array
@@ -203,6 +204,11 @@ class FKSHelasProcessFromBorn(object):
                         self.real_processes.append(fksreal_me)
                         real_amps_new.append(proc)
             fksproc.real_amps = real_amps_new
+            if fksproc.virt_amp:
+                self.virt_matrix_element = \
+                  loop_helas_objects.LoopHelasMatrixElement(fksproc.virt_amp, **opts)
+            else: 
+                self.virt_matrix_element = None
 
 ################################################################################
 

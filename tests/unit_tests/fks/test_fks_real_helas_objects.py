@@ -343,6 +343,40 @@ class testFKSRealHelasObjects(unittest.TestCase):
     fks1 = fks.FKSProcessFromReals(myproc)
     fks2 = fks.FKSProcessFromReals(myproc2)
     
+
+    def test_fks_helas_multi_process_from_reals(self):
+        """tests the correct initialization of a FKSHelasMultiProcess, 
+        given an FKSMultiProcess"""
+        p = [1,-1, 21]
+
+        my_multi_leg = MG.MultiLeg({'ids': p, 'state': True});
+
+        # Define the multiprocess
+        my_multi_leglist = MG.MultiLegList([copy.copy(leg) for leg in [my_multi_leg] * 5])
+        
+        my_multi_leglist[0].set('state', False)
+        my_multi_leglist[1].set('state', False)
+        my_process_definition = MG.ProcessDefinition({ \
+                        'orders': {'WEIGHTED': 3},
+                        'legs': my_multi_leglist,
+                        'perturbation_couplings': ['QCD'],
+                        'model': self.mymodel})
+        my_process_definitions = MG.ProcessDefinitionList(\
+            [my_process_definition])
+
+        my_multi_process = fks.FKSMultiProcessFromReals(\
+                {'process_definitions': my_process_definitions})
+        my_helas_mp = fks_helas.FKSHelasMultiProcessFromReals(my_multi_process, False)
+        
+        #there should be 16 independent born_matrix_elements 
+        #for me in my_helas_mp.get('matrix_elements'):
+        #    print "--"
+        #    for proc in me.born_matrix_element.get('processes'):
+        #        print proc.nice_string()
+        self.assertEqual(len(my_helas_mp.get('matrix_elements')),16)
+        for me in my_helas_mp.get('matrix_elements'):
+            self.assertEqual(me.virt_matrix_element, None)
+
     
     def test_fks_helas_process_from_reals(self):
         """tests the correct initialization of a FKSHelasProcessFromReals 
@@ -361,6 +395,7 @@ class testFKSRealHelasObjects(unittest.TestCase):
         self.assertEqual(helasfks1.real_pdg_codes, self.fks1.pdg_codes)
         self.assertEqual(helasfks1.real_colors, self.fks1.colors)
         self.assertEqual(helasfks1.fks_j_from_i, self.fks1.fks_j_from_i)
+        self.assertEqual(helasfks1.virt_matrix_element, None)
         
     
     def test_fks_helas_born_process_init(self):

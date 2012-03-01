@@ -24,6 +24,7 @@ import madgraph.core.color_amp as color_amp
 import madgraph.core.color_algebra as color_algebra
 import madgraph.fks.fks_common as fks_common
 import madgraph.fks.fks_real as fks_real
+import madgraph.loop.loop_helas_objects as loop_helas_objects
 import copy
 import logging
 import array
@@ -196,6 +197,12 @@ class FKSHelasProcessFromReals(object): #test written
 
             for i, rb_link in enumerate(fksproc.link_rb_confs()):
                 self.born_processes[i].bornfromreal = rb_link
+            
+            if fksproc.virt_amp:
+                self.virt_matrix_element = \
+                  loop_helas_objects.LoopHelasMatrixElement(fksproc.virt_amp, **opts)
+            else: 
+                self.virt_matrix_element = None
     
     def get(self, key):
         """the get function references to real_matrix_element"""
