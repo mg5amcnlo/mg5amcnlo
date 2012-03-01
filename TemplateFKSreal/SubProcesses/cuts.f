@@ -1,3 +1,4 @@
+      logical function pass_point(p)
 c************************************************************************
 c     This function is called from sample to see if it needs to 
 c     bother calculating the weight from all the different conficurations

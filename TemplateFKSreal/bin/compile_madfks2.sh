@@ -71,15 +71,11 @@ if [[ $madevent_run != "1" ]] ; then
     madevent_run="0"
 fi
 
-echo 'Use NLOComp+CutTools for virtual?'
-read NLOComp
-if [[ $NLOComp != "1" ]] ; then
-    NLOComp="0"
-fi
 
-echo 'FKS directories to do n-body only (with S-functions = 1) ?'
+echo 'FKS directories to do n-body only (with S-functions = 1)  ?'
+echo '  0 for all dirs, 1 for nbodyonly, 2 for all but nbodyonly'
 read nbodyonly
-if [[ $nbodyonly != "1" ]] ; then
+if [[ $nbodyonly != "1" || $nbodyonly != "2" ]] ; then
     nbodyonly="0"
 fi
 
@@ -152,9 +148,6 @@ fi
 if [[ $gensym == '1' ]] ; then
     echo 'results from gensym' > $Maindir/gensym.log
 fi
-if [[ $NLOComp == '1' ]] ; then
-    echo 'results from NLOComp' > $Maindir/NLOComp.log
-fi
 echo 'compilation results' > $Maindir/compile_madfks.log
 
 # Source directory
@@ -167,21 +160,6 @@ if [[  $gensym == '1' || $madevent_compile == '1' ]]; then
     echo '...done'
     cd ..
 
-    if [[ $NLOComp == '1' ]] ; then
-    # CutTools
-	echo "CutTools..."
-	rm -f $libdir/mpmodule.mod
-	rm -f $libdir/libcts.a
-	if [[ ! -e $CutToolsdir/includects ]]; then
-	    echo "CutTools not compiled yet. Compiling CutTools."
-	    cd $CutToolsdir
-	    make clean >>  $Maindir/compile_madfks.log 2>&1
-	    make >>  $Maindir/compile_madfks.log 2>&1
-	    cd $Maindir
-	fi
-	cp $CutToolsdir/includects/mpmodule.mod $libdir/mpmodule.mod
-	cp $CutToolsdir/includects/libcts.a $libdir/libcts.a
-    fi
 fi
 
 cd $Maindir/SubProcesses
@@ -214,40 +192,9 @@ for dir in $dirs ; do
     cd $dir
     echo $dir
 
-    if [[ ($nbodyonly == "1" && "$(head -n 1 nbodyonly.fks)" == "Y") || $nbodyonly == "0" ]] ; then
+    if [[ ($nbodyonly == "1" && "$(head -n 1 nbodyonly.fks)" == "Y") || $nbodyonly == "0" || ($nbodyonly == "2" && "$(head -n 1 nbodyonly.fks)" == "N") ]] ; then
 	echo $dir >> $Maindir/compile_madfks.log
 
-#
-# GENERATION OF THE NLOComp LIBRARY
-#
-    if [[ $NLOComp == "1" ]] ; then
-        if [[ "$(tail -n 1 integrate.fks)" == "I" ]] ; then
-            echo $dir >> $Maindir/NLOComp.log
-            cp -f order.file $Maindir/../NLOComp/Cards/order.lh
-            here=`pwd`
-            cd $Maindir/../NLOComp
-            if [[ -e './NLO_madfks/SigVirt/lib/libNLOComp.a' ]] ; then
-                rm -f ./NLO_madfks/SigVirt/lib/libNLOComp.a
-            fi
-            echo '     generating process with NLOComp (this might take some time)...'
-            ./bin/newprocess_nlo -limited >> $Maindir/NLOComp.log
-            cd NLO_madfks/SigVirt
-            make lib >> $Maindir/NLOComp.log 2>&1
-            cd $here
-            cp -f $Maindir/../NLOComp/Cards/order_answer.lh ./contract.file
-	    cat contract.file | tee -a $Maindir/NLOComp.log | grep -i 'error'
-            cat contract.file | grep -i 'warning'
-            if [[ -e $Maindir'/../NLOComp/NLO_madfks/SigVirt/lib/libNLOComp.a' ]] ; then
-                cp -f $Maindir/../NLOComp/NLO_madfks/SigVirt/lib/libNLOComp.a .
-                cp -f $Maindir/../NLOComp/NLO_madfks/SigVirt/HelasNLO.input .
-                echo '     ...process generated'
-            else
-                echo 'ERROR: NLOComp could not generate process'
-            fi
-        else
-            echo '     No need for virtuals in this directory'
-        fi
-    fi
 
 #
 # COMPILE AND RUN TESTS
