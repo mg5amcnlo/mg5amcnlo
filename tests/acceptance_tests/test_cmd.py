@@ -26,7 +26,7 @@ logger = logging.getLogger('test_cmd')
 
 import tests.unit_tests.iolibs.test_file_writers as test_file_writers
 
-import madgraph.interface.cmd_interface as Cmd
+import madgraph.interface.master_interface as Cmd
 import madgraph.interface.launch_ext_program as launch_ext
 _file_path = os.path.split(os.path.dirname(os.path.realpath(__file__)))[0]
 _pickle_path =os.path.join(_file_path, 'input_files')
@@ -42,7 +42,7 @@ class TestCmdShell1(unittest.TestCase):
     def setUp(self):
         """ basic building of the class to test """
         
-        self.cmd = Cmd.MadGraphCmdShell()
+        self.cmd = Cmd.MasterCmd()
     
     @staticmethod
     def join_path(*path):
@@ -93,7 +93,8 @@ class TestCmdShell1(unittest.TestCase):
         """ command 'draw' works """
 
         self.do('set group_subprocesses False')
-        self.do('load processes %s' % self.join_path(_pickle_path,'e+e-_e+e-.pkl'))
+        self.do('import model_v4 sm')
+        self.do('generate e+ e- > e+ e-')
         self.do('display diagrams .')
         self.assertTrue(os.path.exists('./diagrams_0_epem_epem.eps'))
         os.remove('./diagrams_0_epem_epem.eps')
@@ -149,7 +150,7 @@ class TestCmdShell2(unittest.TestCase,
     def setUp(self):
         """ basic building of the class to test """
         
-        self.cmd = Cmd.MadGraphCmdShell()
+        self.cmd = Cmd.MasterCmd()
         if  MG4DIR:
             logger.debug("MG_ME dir: " + MG4DIR)
             self.out_dir = os.path.join(MG4DIR, 'AUTO_TEST_MG5')
@@ -307,7 +308,7 @@ class TestCmdShell2(unittest.TestCase,
                             self.join_path(_pickle_path,'simple_v4_proc_card.dat'),
                             os.path.join(self.out_dir,'Cards','proc_card.dat')))
     
-        self.cmd = Cmd.MadGraphCmdShell()
+        self.cmd = Cmd.MasterCmd()
         pwd = os.getcwd()
         os.chdir(self.out_dir)
         self.do('import proc_v4 %s' % os.path.join('Cards','proc_card.dat'))
@@ -332,7 +333,8 @@ class TestCmdShell2(unittest.TestCase,
             shutil.rmdir(self.out_dir)
 
         self.do('set group_subprocesses False')
-        self.do('load processes %s' % self.join_path(_pickle_path,'e+e-_e+e-.pkl'))
+        self.do('import model_v4 sm')
+        self.do('generate e+ e- > e+ e-')
         self.do('output standalone %s' % self.out_dir)
         self.do('set group_subprocesses True')
         self.assertTrue(os.path.exists(self.out_dir))
@@ -736,6 +738,7 @@ class TestCmdShell2(unittest.TestCase,
         self.assertTrue(os.path.exists(os.path.join(self.out_dir,
                                                     'SubProcesses',
                                                     'P0_qq_gogo_go_qqn1_go_qqn1')))
+        
         # Check the contents of the symfact.dat file
         self.assertEqual(open(os.path.join(self.out_dir,
                                            'SubProcesses',
@@ -779,18 +782,18 @@ class TestCmdShell2(unittest.TestCase,
                                            'SubProcesses',
                                            'P0_qq_gogo_go_qqn1_go_qqn1',
                                            'symfact.dat')).read(),
-                         """     1     1
-     2    -1
-     3    -1
-     4    -1
-     5     1
-     6    -5
-     7    -5
-     8    -5
-     9     1
-    10    -9
-    11    -9
-    12    -9
+                         """   1   1
+   2  -1
+   3  -1
+   4  -1
+   5   1
+   6  -5
+   7  -5
+   8  -5
+   9   1
+  10  -9
+  11  -9
+  12  -9
 """)
         
     def test_madevent_subproc_group_decay_chain(self):

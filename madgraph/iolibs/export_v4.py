@@ -18,6 +18,7 @@ import copy
 import fractions
 import glob
 import logging
+import math
 import os
 import re
 import shutil
@@ -2287,10 +2288,11 @@ c           This is dummy particle used in multiparticle vertices
         """Write the files symfact.dat for MG4 by comparing diagrams using
         the internal matrix element value functionality."""
 
-
+        pos = max(2, int(math.ceil(math.log10(len(symmetry)))))
+        form = "%"+str(pos)+"r %"+str(pos+1)+"r"
         # Write out lines for symswap.inc file (used to permute the
         # external leg momenta
-        lines = [ "%3r %3r" %(i+1, s) for i,s in enumerate(symmetry) if s != 0] 
+        lines = [ form %(i+1, s) for i,s in enumerate(symmetry) if s != 0] 
 
         # Write the file
         writer.writelines(lines)
