@@ -3800,6 +3800,52 @@ def FFV1C1_2(F2, V3, COUP, M1, W1):
         split_routine = routine.split('\n')
         self.assertEqual(split_solution, split_routine)
         self.assertEqual(len(split_routine), len(split_solution))
+
+        solution = """import wavefunctions
+def FFV1C1_1(F1, V3, COUP, M2, W2):
+    F2 = wavefunctions.WaveFunction(size=6)
+    F2[4] = F1[4]+V3[4]
+    F2[5] = F1[5]+V3[5]
+    P2 = [complex(F2[4]).real, \\
+             complex(F2[5]).real, \\
+             complex(F2[5]).imag, \\
+             complex(F2[4]).imag]
+    denom =1.0/(( (M2*( -M2+1j*W2))+( (P2[0]**2)-(P2[1]**2)-(P2[2]**2)-(P2[3]**2))))
+    F2[0]= COUP*denom*( (F1[1]*( (P2[0]*( 1j*V3[1]-V3[2]))+( (P2[1]*( -1j*V3[0]-1j*V3[3]))+( (P2[2]*( V3[0]+V3[3]))+(P2[3]*( 1j*V3[1]-V3[2]))))))+( (F1[0]*( (P2[0]*( -1j*V3[0]+1j*V3[3]))+( (P2[1]*( 1j*V3[1]+V3[2]))+( (P2[2]*( -V3[1]+1j*V3[2]))+(P2[3]*( -1j*V3[0]+1j*V3[3]))))))+(M2*( (F1[3]*( -1j*V3[1]+V3[2]))+(F1[2]*( -1j*V3[0]-1j*V3[3]))))))
+    F2[1]= COUP*denom*( (F1[1]*( (P2[0]*( -1j*V3[0]-1j*V3[3]))+( (P2[1]*( 1j*V3[1]-V3[2]))+( (P2[2]*( V3[1]+1j*V3[2]))+(P2[3]*( 1j*V3[0]+1j*V3[3]))))))+( (F1[0]*( (P2[0]*( 1j*V3[1]+V3[2]))+( (P2[1]*( -1j*V3[0]+1j*V3[3]))+( (P2[2]*( -V3[0]+V3[3]))+(P2[3]*( -1j*V3[1]-V3[2]))))))+(M2*( (F1[3]*( -1j*V3[0]+1j*V3[3]))+(F1[2]*( -1j*V3[1]-V3[2]))))))
+    F2[2]= COUP*denom*( (F1[3]*( (P2[0]*( -1j*V3[1]+V3[2]))+( (P2[1]*( 1j*V3[0]-1j*V3[3]))+( (P2[2]*( -V3[0]+V3[3]))+(P2[3]*( 1j*V3[1]-V3[2]))))))+( (F1[2]*( (P2[0]*( -1j*V3[0]-1j*V3[3]))+( (P2[1]*( 1j*V3[1]+V3[2]))+( (P2[2]*( -V3[1]+1j*V3[2]))+(P2[3]*( 1j*V3[0]+1j*V3[3]))))))+(M2*( (F1[1]*( 1j*V3[1]-V3[2]))+(F1[0]*( -1j*V3[0]+1j*V3[3]))))))
+    F2[3]= COUP*denom*( (F1[3]*( (P2[0]*( -1j*V3[0]+1j*V3[3]))+( (P2[1]*( 1j*V3[1]-V3[2]))+( (P2[2]*( V3[1]+1j*V3[2]))+(P2[3]*( -1j*V3[0]+1j*V3[3]))))))+( (F1[2]*( (P2[0]*( -1j*V3[1]-V3[2]))+( (P2[1]*( 1j*V3[0]+1j*V3[3]))+( (P2[2]*( V3[0]+V3[3]))+(P2[3]*( -1j*V3[1]-V3[2]))))))+(M2*( (F1[1]*( -1j*V3[0]-1j*V3[3]))+(F1[0]*( 1j*V3[1]+V3[2]))))))
+    return F2
+    
+    
+def FFV1C1_2_1(F1, V3, COUP1,COUP2, M2, W2):
+
+
+    F2 = FFV1C1_1(F1, V3, COUP1, M2, W2)
+    tmp = FFV2C1_1(F1, V3, COUP2, M2, W2)
+    for i in range(4):
+        F2[i] += tmp[i]
+    return F2
+
+"""
+
+
+
+        FFV = UFOLorentz(name = 'FFV1',
+                 spins = [ 2, 2, 3 ],
+                 structure = 'Gamma(3,2,1)')        
+        builder = create_aloha.AbstractRoutineBuilder(FFV) 
+        builder.apply_conjugation()
+        amp = builder.compute_routine(1)
+        amp.add_combine(['FFV2'])
+        routine = amp.write(output_dir=None, language='Python')
+
+
+        split_solution = solution.split('\n')
+        split_routine = routine.split('\n')
+        self.assertEqual(split_solution, split_routine)
+        self.assertEqual(len(split_routine), len(split_solution))
+
        
     def test_pythonwriter_4_fermion(self):
         """ test that python writer works """
