@@ -764,7 +764,7 @@ class ALOHAWriterForCPP(WriteALOHA):
             offshell_size = self.type_to_size[offshelltype]            
             #Implement the conservation of Energy Impulsion
             for i in range(-2,0):
-                str_out += '%s%d[%d]= ' % (offshelltype, self.offshell,
+                str_out += '%s%d[%d]= ' % (offshelltype, self.outgoing,
                                            offshell_size + i)
                 
                 pat=re.compile(r'^[-+]?(?P<spin>\w)')
@@ -784,11 +784,11 @@ class ALOHAWriterForCPP(WriteALOHA):
             if self.offshell == index and type in ['V', 'S']:
                 sign = -1
             if 'C%s' % ((index +1) // 2)  in self.tag: 
-                if index == self.offshell:
+                if index == self.outgoing:
                     pass
-                elif index % 2 and index -1 != self.offshell:
+                elif index % 2 and index -1 != self.outgoing:
                     pass
-                elif index %2 == 1 and index + 1  != self.offshell:
+                elif index %2 == 1 and index + 1  != self.outgoing:
                     pass
                 else:
                     sign *= -1
@@ -854,7 +854,7 @@ class ALOHAWriterForCPP(WriteALOHA):
                 string = string.replace('+-', '-')
                 OutString = OutString + string + ';\n'
         else:
-            OffShellParticle = self.particles[self.offshell-1]+'%s'%(self.offshell)
+            OffShellParticle = self.particles[self.offshell-1]+'%s'%(self.outgoing)
             numerator = self.obj.numerator
             denominator = self.obj.denominator
             for ind in denominator.listindices():
