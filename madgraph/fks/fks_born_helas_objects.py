@@ -206,7 +206,7 @@ class FKSHelasProcessFromBorn(object):
             fksproc.real_amps = real_amps_new
             if fksproc.virt_amp:
                 self.virt_matrix_element = \
-                  loop_helas_objects.LoopHelasMatrixElement(fksproc.virt_amp, **opts)
+                  loop_helas_objects.LoopHelasMatrixElement(fksproc.virt_amp)
             else: 
                 self.virt_matrix_element = None
 
@@ -263,20 +263,25 @@ class FKSHelasProcessFromBorn(object):
         return self.born_matrix_element.get(key)
     
     def get_used_lorentz(self):
-        """the get_used_lorentz function references to real_matrix_element and
-        to the borns"""
+        """the get_used_lorentz function references to born, reals
+        and virtual matrix elements"""
         lorentz_list = self.born_matrix_element.get_used_lorentz()
         for real in self.real_processes:
             lorentz_list.extend(real.matrix_element.get_used_lorentz())
+        if self.virt_matrix_element:
+            lorentz_list.extend(self.virt_matrix_element.get_used_lorentz())
+
         return list(set(lorentz_list))
     
     def get_used_couplings(self):
-        """the get_used_couplings function references to real_matrix_element and
-        to the borns"""
+        """the get_used_couplings function references to born, reals
+        and virtual matrix elements"""
         coupl_list = self.born_matrix_element.get_used_couplings()
         for real in self.real_processes:
             coupl_list.extend([c for c in\
                         real.matrix_element.get_used_couplings()])
+        if self.virt_matrix_element:
+            coupl_list.extend(self.virt_matrix_element.get_used_couplings())
         return coupl_list    
     
     def __eq__(self, other):

@@ -200,7 +200,7 @@ class FKSHelasProcessFromReals(object): #test written
             
             if fksproc.virt_amp:
                 self.virt_matrix_element = \
-                  loop_helas_objects.LoopHelasMatrixElement(fksproc.virt_amp, **opts)
+                  loop_helas_objects.LoopHelasMatrixElement(fksproc.virt_amp)
             else: 
                 self.virt_matrix_element = None
     
@@ -209,21 +209,32 @@ class FKSHelasProcessFromReals(object): #test written
         return self.real_matrix_element.get(key)
     
     def get_used_lorentz(self):
-        """the get_used_lorentz function references to real_matrix_element and
-        to the borns"""
+        """the get_used_lorentz function references to real,
+        to the borns and do the virtual matrix elements"""
         lorentz_list = self.real_matrix_element.get_used_lorentz()
         for born in self.born_processes:
             lorentz_list.extend(born.matrix_element.get_used_lorentz())
+        if self.virt_matrix_element:
+            lorentz_list.extend(self.virt_matrix_element.get_used_lorentz())
         return list(set(lorentz_list))
     
     def get_used_couplings(self):
-        """the get_used_couplings function references to real_matrix_element and
-        to the borns"""
+        """the get_used_couplings function references to real,
+        to the borns and do the virtual matrix elements"""
         coupl_list = self.real_matrix_element.get_used_couplings()
         for born in self.born_processes:
             coupl_list.extend([c for c in\
                         born.matrix_element.get_used_couplings()])
+        if self.virt_matrix_element:
+            coupl_list.extend(self.virt_matrix_element.get_used_couplings())
         return coupl_list    
+
+    def get_nexternal_ninitial(self):
+        """the get_nexternal_ninitial function references to real_matrix_element and
+        to the borns"""
+        
+        return self.real_matrix_element.get_nexternal_ninitial()
+
     
     def __eq__(self, other):
         """the equality between two FKSHelasProcesses is defined up to the 

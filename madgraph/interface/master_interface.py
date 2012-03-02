@@ -283,7 +283,7 @@ class Switcher(object):
                     'The NLO mode %s is not valid. Please chose one among: %s' \
                     % (nlo_mode, ' '.join(valid_nlo_modes))
             elif nlo_mode == 'all':
-                self.change_principal_cmd('NLO')
+                self.change_principal_cmd('FKS')
             elif nlo_mode == 'real':
                 self.change_principal_cmd('FKS')
             elif nlo_mode == 'virt':

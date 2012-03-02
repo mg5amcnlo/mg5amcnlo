@@ -118,6 +118,8 @@ class FKSInterface(CheckFKS, CompleteFKS, HelpFKS, mg_interface.MadGraphCmd):
             self._fks_multi_proc = fks_real.FKSMultiProcessFromReals(myprocdef,
                                        collect_mirror_procs,
                                        ignore_six_quark_processes)
+            # this is for testing, to be removed
+            self._fks_multi_proc.generate_virtuals()
         else: raise MadGraph5Error, 'Unknown FKS mode: %s' % self._options['fks_mode']
 
 
@@ -148,7 +150,9 @@ class FKSInterface(CheckFKS, CompleteFKS, HelpFKS, mg_interface.MadGraphCmd):
                 logger.info("Exporting in MadFKS format, starting from real emission process")
                 self._curr_exporter = export_fks_real.ProcessExporterFortranFKS_real(\
                                           self._mgme_dir, self._export_dir,
-                                          not noclean)
+                                          not noclean, 
+                                          os.path.join(self._mgme_dir, 'loop_material'),
+                                          self._cuttools_dir)
     
             if self._options['fks_mode'] == 'born':
                 logger.info("Exporting in MadFKS format, starting from born process")

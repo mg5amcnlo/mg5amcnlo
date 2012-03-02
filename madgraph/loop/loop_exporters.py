@@ -101,6 +101,7 @@ class LoopExporterFortran(object):
         """Write the cts_mprec.h and cts_mpc.h"""
 
         file = open(os.path.join(self.loop_dir, 'CutTools/src/cts/cts_mprec.h')).read()
+        print file
         writer_mprec.writelines(file)
 
         file = open(os.path.join(self.loop_dir, 'CutTools/src/cts/cts_mpc.h')).read()

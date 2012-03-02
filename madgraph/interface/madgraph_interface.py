@@ -1637,6 +1637,27 @@ class MadGraphCmd(CmdExtended, HelpToCmd, CheckValidForCmd, CompleteForCmd):
                              self._cuttools_dir)
             self._cuttools_dir=str(os.path.join(self._mgme_dir,'loop_material','CutTools'))
 
+        # Set where to look for CutTools installation.
+        # In further versions, it will be set in the same manner as _mgme_dir so that
+        # the user can chose its own CutTools distribution.
+        self._cuttools_dir=str(os.path.join(self._mgme_dir,'loop_material','CutTools'))
+        if not os.path.isdir(os.path.join(self._cuttools_dir, 'src','cts')):
+            logger.warning(('Warning: Directory %s is not a valid CutTools directory.'+\
+                           'Using default CutTools instead.') % \
+                             self._cuttools_dir)
+            self._cuttools_dir=str(os.path.join(self._mgme_dir,'loop_material','CutTools'))
+
+
+        # Set where to look for CutTools installation.
+        # In further versions, it will be set in the same manner as _mgme_dir so that
+        # the user can chose its own CutTools distribution.
+        self._cuttools_dir=str(os.path.join(self._mgme_dir,'loop_material','CutTools'))
+        if not os.path.isdir(os.path.join(self._cuttools_dir, 'src','cts')):
+            logger.warning(('Warning: Directory %s is not a valid CutTools directory.'+\
+                           'Using default CutTools instead.') % \
+                             self._cuttools_dir)
+            self._cuttools_dir=str(os.path.join(self._mgme_dir,'loop_material','CutTools'))
+
         # Set defaults for options
         self._options['group_subprocesses'] = 'Auto'
         self._options['ignore_six_quark_processes'] = False

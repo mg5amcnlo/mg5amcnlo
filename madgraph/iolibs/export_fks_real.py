@@ -34,6 +34,7 @@ import madgraph.iolibs.file_writers as writers
 import madgraph.iolibs.template_files as template_files
 import madgraph.iolibs.ufo_expression_parsers as parsers
 import madgraph.iolibs.export_v4 as export_v4
+import madgraph.loop.loop_exporters as loop_exporters
 
 import aloha.create_aloha as create_aloha
 
@@ -43,15 +44,20 @@ from madgraph.iolibs.files import cp, ln, mv
 _file_path = os.path.split(os.path.dirname(os.path.realpath(__file__)))[0] + '/'
 logger = logging.getLogger('madgraph.export_fks')
 
-class ProcessExporterFortranFKS_real(export_v4.ProcessExporterFortran):
+class ProcessExporterFortranFKS_real(#export_v4.ProcessExporterFortran, \
+                                     loop_exporters.LoopProcessExporterFortranSA):
     """Class to take care of exporting a set of matrix elements to
     Fortran FKS format."""
     
-    def __init__(self, mgme_dir = "", dir_path = "", clean = False):
+    def __init__(self, mgme_dir = "", dir_path = "", clean = False, \
+                 loop_dir = "", cts_dir = ""):
         """Initiate the ProcessExporterFortran with directory information"""
         self.mgme_dir = mgme_dir
         self.dir_path = dir_path
         self.clean = clean
+        self.loop_dir = loop_dir
+        self.cuttools_dir = cts_dir
+
 #===============================================================================
 # copy the Template in a new directory.
 #===============================================================================
@@ -101,8 +107,25 @@ class ProcessExporterFortranFKS_real(export_v4.ProcessExporterFortran):
             MG_version = misc.get_pkg_info()
             open(os.path.join(dir_path, 'SubProcesses', 'MGVersion.txt'), 'w').write(
                                                               MG_version['version'])
+
+        # We must link the CutTools to the Library folder of the active Template
+        self.link_CutTools(os.path.join(dir_path, 'lib'))
+
+        cwd = os.getcwd()
+        dirpath = os.path.join(self.dir_path, 'SubProcesses')
+        try:
+            os.chdir(dirpath)
+        except os.error:
+            logger.error('Could not cd to directory %s' % dirpath)
+            return 0
+                                       
+        # Write the cts_mpc.h and cts_mprec.h files imported from CutTools
+        self.write_mp_files(writers.FortranWriter('cts_mprec.h'),\
+                            writers.FortranWriter('cts_mpc.h'),)
+
+        # Return to original PWD
+        os.chdir(cwd)
             
-        
     #===============================================================================
     # generate_subprocess_directory_fks
     #===============================================================================
@@ -130,13 +153,22 @@ class ProcessExporterFortranFKS_real(export_v4.ProcessExporterFortran):
         self.fksdirs = []
         
         if not matrix_element.isfinite:
-        #if the matrix element has IR singularities
+        #if the matrix element has IR singularities write it
             for nfks, fksborn in enumerate(matrix_element.born_processes):
                 calls += self.generate_subprocess_directory_fks(nfks, fksborn,
                                                   matrix_element,
                                                   fortran_model,
                                                   me_number,
                                                   path)
+
+        # write the virtuals for those configurations that need them
+                if len(fksborn.color_links) > 0 and \
+                  matrix_element.virt_matrix_element:
+                    calls += self.generate_virt_directory( \
+                            matrix_element.virt_matrix_element, \
+                            fortran_model, \
+                            os.path.join(path, self.fksdirs[-1]))
+
         #otherwise
 #        else:
 #            calls += self.generate_subprocess_directory_finite(\
@@ -261,9 +293,10 @@ class ProcessExporterFortranFKS_real(export_v4.ProcessExporterFortran):
                           fortran_model)
     
         filename = 'nexternal.inc'
+        # Extract number of external particles
+        (nexternal, ninitial) = matrix_element.get_nexternal_ninitial()
         self.write_nexternal_file(writers.FortranWriter(filename),
-                             matrix_element.real_matrix_element,
-                             fortran_model)
+                             nexternal, ninitial)
     
         filename = 'ngraphs.inc'
         self.write_ngraphs_file(writers.FortranWriter(filename),
@@ -536,9 +569,10 @@ class ProcessExporterFortranFKS_real(export_v4.ProcessExporterFortran):
                           fortran_model)
     
         filename = 'nexternal.inc'
+        # Extract number of external particles
+        (nexternal, ninitial) = matrix_element.get_nexternal_ninitial()
         self.write_nexternal_file(writers.FortranWriter(filename),
-                             matrix_element.real_matrix_element,
-                             fortran_model)
+                             nexternal, ninitial)
     
         filename = 'ngraphs.inc'
         self.write_ngraphs_file(writers.FortranWriter(filename),
@@ -628,7 +662,8 @@ class ProcessExporterFortranFKS_real(export_v4.ProcessExporterFortran):
 ###    
         # Generate jpgs -> pass in make_html
         #os.system(os.path.join('..', '..', 'bin', 'gen_jpeg-pl'))
-    
+
+
         linkfiles = ['LesHouches.f',
                      'LesHouchesDummy.f',
                      'LesHouchesMadLoop.f',
@@ -720,6 +755,101 @@ class ProcessExporterFortranFKS_real(export_v4.ProcessExporterFortran):
             calls = 0
         return calls
     
+
+    def generate_virt_directory(self, loop_matrix_element, fortran_model, dir_name):
+        """writes the V**** directory inside the P**** directories specified in
+        dir_name"""
+
+        cwd = os.getcwd()
+
+        matrix_element = loop_matrix_element
+
+        # Create the directory PN_xx_xxxxx in the specified path
+        dirpath = os.path.join(dir_name, \
+                       "V%s" % matrix_element.get('processes')[0].shell_string())
+
+        try:
+            os.mkdir(dirpath)
+        except os.error as error:
+            logger.warning(error.strerror + " " + dirpath)
+
+        try:
+            os.chdir(dirpath)
+        except os.error:
+            logger.error('Could not cd to directory %s' % dirpath)
+            return 0
+
+        logger.info('Creating files in directory %s' % dirpath)
+
+        # Extract number of external particles
+        (nexternal, ninitial) = matrix_element.get_nexternal_ninitial()
+
+        calls=self.write_matrix_element_v4(None,matrix_element,fortran_model)
+        # The born matrix element, if needed
+        filename = 'born_matrix.f'
+        calls = self.write_bornmatrix(
+            writers.FortranWriter(filename),
+            matrix_element,
+            fortran_model)
+
+        filename = 'nexternal.inc'
+        self.write_nexternal_file(writers.FortranWriter(filename),
+                             (nexternal-2), ninitial)
+
+        filename = 'pmass.inc'
+        self.write_pmass_file(writers.FortranWriter(filename),
+                         matrix_element)
+
+        filename = 'ngraphs.inc'
+        self.write_ngraphs_file(writers.FortranWriter(filename),
+                           len(matrix_element.get_all_amplitudes()))
+
+        filename = "loop_matrix.ps"
+#        Not ready yet
+        writers.FortranWriter(filename).writelines("""C Post-helas generation loop-drawing is not ready yet.""")
+#        plot = draw.MultiEpsDiagramDrawer(matrix_element.get('base_amplitude').\
+#                                             get('loop_diagrams'),
+#                                          filename,
+#                                          model=matrix_element.get('processes')[0].\
+#                                             get('model'),
+#                                          amplitude='')
+#        logger.info("Generating loop Feynman diagrams for " + \
+#                     matrix_element.get('processes')[0].nice_string())
+#        plot.draw()
+
+        filename = "born_matrix.ps"
+        plot = draw.MultiEpsDiagramDrawer(matrix_element.get('base_amplitude').\
+                                             get('born_diagrams'),
+                                          filename,
+                                          model=matrix_element.get('processes')[0].\
+                                             get('model'),
+                                          amplitude='')
+        logger.info("Generating born Feynman diagrams for " + \
+                     matrix_element.get('processes')[0].nice_string())
+        plot.draw()
+
+
+        linkfiles = ['coupl.inc', 'cts_mprec.h', 'cts_mpc.h']
+
+        for file in linkfiles:
+            ln('../../%s' % file)
+
+        os.system("ln -s ../../check_sa_loop.f check_sa.f")
+        os.system("ln -s ../../makefile_loop makefile")
+
+        linkfiles = ['mpmodule.mod']
+
+        for file in linkfiles:
+            ln('../../../lib/%s' % file)
+
+        # Return to original PWD
+        os.chdir(cwd)
+
+        if not calls:
+            calls = 0
+        return calls
+
+
 
     #===============================================================================
     # write_lh_order
@@ -1580,13 +1710,10 @@ END
     # write_nexternal_file
     #===============================================================================
     #test written
-    def write_nexternal_file(self, writer, matrix_element, fortran_model):
+    def write_nexternal_file(self, writer, nexternal, ninitial):
         """Write the nexternal.inc file for MG4"""
     
         replace_dict = {}
-    
-        # Extract number of external particles
-        (nexternal, ninitial) = matrix_element.get_nexternal_ninitial()
         replace_dict['nexternal'] = nexternal
         replace_dict['ninitial'] = ninitial
     
