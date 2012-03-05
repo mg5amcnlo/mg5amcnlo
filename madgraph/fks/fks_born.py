@@ -78,6 +78,8 @@ class FKSMultiProcessFromBorn(diagram_generation.MultiProcess): #test written
 
         for born in self['born_processes']:
                 myproc = copy.copy(born.born_proc)
+                if 'WEIGHTED' in myproc['orders'].keys():
+                    del myproc['orders']['WEIGHTED']
                 myproc['legs'] = fks_common.to_legs(copy.copy(myproc['legs']))
                 myamp = loop_diagram_generation.LoopAmplitude(myproc)
                 if myamp.get('diagrams'):

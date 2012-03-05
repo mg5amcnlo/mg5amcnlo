@@ -44,8 +44,7 @@ from madgraph.iolibs.files import cp, ln, mv
 _file_path = os.path.split(os.path.dirname(os.path.realpath(__file__)))[0] + '/'
 logger = logging.getLogger('madgraph.export_fks')
 
-class ProcessExporterFortranFKS_real(#export_v4.ProcessExporterFortran, \
-                                     loop_exporters.LoopProcessExporterFortranSA):
+class ProcessExporterFortranFKS_real(loop_exporters.LoopProcessExporterFortranSA):
     """Class to take care of exporting a set of matrix elements to
     Fortran FKS format."""
     
@@ -769,8 +768,8 @@ class ProcessExporterFortranFKS_real(#export_v4.ProcessExporterFortran, \
         matrix_element = loop_matrix_element
 
         # Create the directory PN_xx_xxxxx in the specified path
-        dirpath = os.path.join(dir_name, \
-                       "V%s" % matrix_element.get('processes')[0].shell_string())
+        name = "V%s" % matrix_element.get('processes')[0].shell_string()
+        dirpath = os.path.join(dir_name, name)
 
         try:
             os.mkdir(dirpath)
@@ -783,7 +782,7 @@ class ProcessExporterFortranFKS_real(#export_v4.ProcessExporterFortran, \
             logger.error('Could not cd to directory %s' % dirpath)
             return 0
 
-        logger.info('Creating files in directory %s' % dirpath)
+        logger.info('Creating files in directory %s' % name)
 
         # Extract number of external particles
         (nexternal, ninitial) = matrix_element.get_nexternal_ninitial()
@@ -1708,28 +1707,6 @@ END
         # Write the file
         writer.writelines(file)
    
-        return True
-    
-    #===============================================================================
-    # write_nexternal_file
-    #===============================================================================
-    #test written
-    def write_nexternal_file(self, writer, nexternal, ninitial):
-        """Write the nexternal.inc file for MG4"""
-    
-        replace_dict = {}
-        replace_dict['nexternal'] = nexternal
-        replace_dict['ninitial'] = ninitial
-    
-        file = """ \
-          integer    nexternal
-          parameter (nexternal=%(nexternal)d)
-          integer    nincoming
-          parameter (nincoming=%(ninitial)d)""" % replace_dict
-    
-        # Write the file
-        writer.writelines(file)
-    
         return True
     
     

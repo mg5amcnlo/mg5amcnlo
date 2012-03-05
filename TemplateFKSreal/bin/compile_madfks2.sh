@@ -25,8 +25,6 @@ carddir=$Maindir/Cards
 
 
 c=`awk '/^[^#].*=.*pdlabel/{print $1}' Cards/run_card.dat`
-
-
 if [[ $c == "'lhapdf'" ]]; then
     echo Using LHAPDF interface!
     LHAPDF=`$lhapdf_config --libdir`

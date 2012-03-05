@@ -4,7 +4,6 @@ echo '****************************************************'
 echo 'This script compiles, tests and runs a madfks process'
 echo '****************************************************'
 
-source ../Source/fj_lhapdf_opts
 
 # find the correct directory
 if [[  ! -d ./SubProcesses  ]]; then
@@ -14,18 +13,21 @@ if [[  ! -d ./SubProcesses  ]]; then
 	exit
     fi
 fi
+
+
+source Source/fj_lhapdf_opts
 Maindir=`pwd`
 
 libdir=$Maindir/lib
 CutToolsdir=$Maindir/../CutTools
 carddir=$Maindir/Cards
-LHAPDF=`$lhapdf_config --libdir`
-LHAPDFSETS=`$lhapdf_config --pdfsets-path`
 
 
 c=`awk '/^[^#].*=.*pdlabel/{print $1}' Cards/run_card.dat`
 if [[ $c == "'lhapdf'" ]]; then
     echo Using LHAPDF interface!
+    LHAPDF=`$lhapdf_config --libdir`
+    LHAPDFSETS=`$lhapdf_config --pdfsets-path`
     export lhapdf=true
     if [ ! -f $libdir/libLHAPDF.a ]; then 
       ln -s $LHAPDF/libLHAPDF.a $libdir/libLHAPDF.a 
@@ -111,6 +113,7 @@ if [[ $all_dirs != '1' ]] ; then
 else
     cd SubProcesses
     dirs=`ls -d P*/R*`
+    born_dirs=`ls -d P0_*`
     cd ..
 fi
 
@@ -149,6 +152,7 @@ if [[ $gensym == '1' ]] ; then
     echo 'results from gensym' > $Maindir/gensym.log
 fi
 echo 'compilation results' > $Maindir/compile_madfks.log
+echo 'compilation results for madloop' > $Maindir/compile_madloop.log
 
 # Source directory
 if [[  $gensym == '1' || $madevent_compile == '1' ]]; then
@@ -187,6 +191,34 @@ fi
 #
 # TODO: NEED TO CONVERT MAKEFILES HERE
 #
+# First compile the virtuals which are in the P0*/V0* directory and linke the
+# libMadLoop.a to the R* folders whi need it
+if [[ $madevent_compile == '1' ]]; then
+echo "Compiling virtual maxtrix elements"
+    for dir in $born_dirs ; do
+        cd $dir
+        v_dirs=`ls -d V0*`
+        for vdir in $v_dirs ; do
+            cd $vdir
+            echo "Compiling MadLoop MatrixElement in " $vdir
+            make >> $Maindir/compile_madloop.log 2>&1
+            cd ..
+        done
+        r_dirs=`ls -d R_*`
+        for rdir in $r_dirs ; do
+            if [[ ("$(tail -n 1 $rdir/integrate.fks)" == "I") && $(ls -d V0_* | wc -l) != 0  ]] ; then
+                if [ -L $rdir/libMadLoop.a ] ; then 
+                  rm -f  $rdir/libMadLoop.a
+                fi
+                ln -s `pwd`/libMadLoop.a `pwd`/$rdir/
+            fi
+        done
+
+        cd ..
+    done
+fi
+
+
 
 for dir in $dirs ; do
     cd $dir
@@ -251,6 +283,11 @@ for dir in $dirs ; do
 # COMPILE MADEVENT
 #
     if [[ $madevent_compile == "1" ]] ; then
+        if [[ ("$(tail -n 1 integrate.fks)" == "I") && $(ls -d ../V0_* | wc -l) != 0  ]] ; then
+            export madloop=true
+        else
+            unset madloop
+        fi
 	echo '     make' $executable...
 	if [[ -e $executable ]]; then
 	    rm -f $executable

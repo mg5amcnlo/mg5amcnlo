@@ -53,3 +53,11 @@ else
   alfas_functions=alfas_functions
   lhapdf=
 endif
+
+# Madloop
+ifdef madloop
+  libmadloop=libMadLoop.a -lcts
+else
+  libmadloop=
+endif
+

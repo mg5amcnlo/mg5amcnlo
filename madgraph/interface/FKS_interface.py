@@ -119,8 +119,8 @@ class FKSInterface(CheckFKS, CompleteFKS, HelpFKS, mg_interface.MadGraphCmd):
                                        collect_mirror_procs,
                                        ignore_six_quark_processes)
             # this is for testing, to be removed
-            self._fks_multi_proc.generate_virtuals()
         else: raise MadGraph5Error, 'Unknown FKS mode: %s' % self._options['fks_mode']
+        self._fks_multi_proc.generate_virtuals()
 
 
     def do_output(self, line):
@@ -158,7 +158,9 @@ class FKSInterface(CheckFKS, CompleteFKS, HelpFKS, mg_interface.MadGraphCmd):
                 logger.info("Exporting in MadFKS format, starting from born process")
                 self._curr_exporter = export_fks_born.ProcessExporterFortranFKS_born(\
                                           self._mgme_dir, self._export_dir,
-                                          not noclean)
+                                          not noclean, 
+                                          os.path.join(self._mgme_dir, 'loop_material'),
+                                          self._cuttools_dir)
             
         # check if a dir with the same name already exists
         if not force and not noclean and os.path.isdir(self._export_dir)\
