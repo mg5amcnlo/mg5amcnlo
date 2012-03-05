@@ -45,7 +45,6 @@ else
 endif
 
 # Option lhapdf
-
 ifdef lhapdf
   alfas_functions=alfas_functions_lhapdf
   lhapdf=-lLHAPDF -lstdc++
@@ -53,3 +52,11 @@ else
   alfas_functions=alfas_functions
   lhapdf=
 endif
+
+# Madloop
+ifdef madloop
+  libmadloop=libMadLoop.a
+else
+  libmadloop=
+endif
+

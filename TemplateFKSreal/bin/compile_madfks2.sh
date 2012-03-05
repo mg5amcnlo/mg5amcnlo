@@ -149,6 +149,7 @@ if [[ $gensym == '1' ]] ; then
     echo 'results from gensym' > $Maindir/gensym.log
 fi
 echo 'compilation results' > $Maindir/compile_madfks.log
+echo 'compilation results for madloop' > $Maindir/compile_madloop.log
 
 # Source directory
 if [[  $gensym == '1' || $madevent_compile == '1' ]]; then
@@ -251,6 +252,21 @@ for dir in $dirs ; do
 # COMPILE MADEVENT
 #
     if [[ $madevent_compile == "1" ]] ; then
+# CHECK IF THE DIR ALSO NEEDS/HAVE VIRTUAL CORRECTIONS INSIDE
+        if [[ ("$(tail -n 1 integrate.fks)" == "I") && $(ls -d V0_* | wc -l) != 0  ]] ; then
+            export madloop=true
+            vdirs=`ls -d V0_*`
+            #compile the virtuals
+            for vdir in $vdirs ; do
+                echo "     Compiling MadLoop MatrixElement in "$vdir
+                echo "Compiling MadLoop MatrixElement in "$vdir >> $Maindir/compile_madloop.log
+                cd $vdir
+                make >>$Maindir/compile_madloop.log 2>&1
+                cd ..
+            done
+        else
+            unset madloop
+        fi
 	echo '     make' $executable...
 	if [[ -e $executable ]]; then
 	    rm -f $executable
