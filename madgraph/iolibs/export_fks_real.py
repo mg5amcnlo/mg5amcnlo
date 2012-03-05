@@ -664,9 +664,7 @@ class ProcessExporterFortranFKS_real(#export_v4.ProcessExporterFortran, \
         #os.system(os.path.join('..', '..', 'bin', 'gen_jpeg-pl'))
 
 
-        linkfiles = ['LesHouches.f',
-                     'LesHouchesDummy.f',
-                     'LesHouchesMadLoop.f',
+        linkfiles = ['LesHouchesDummy.f',
                      'MCmasses_HERWIG6.inc',
                      'MCmasses_HERWIGPP.inc',
                      'MCmasses_PYTHIA6Q.inc',
@@ -722,6 +720,12 @@ class ProcessExporterFortranFKS_real(#export_v4.ProcessExporterFortran, \
                      'vegas2.for',
                      'write_ajob.f',
                      'write_event.f']
+
+        if len(fksborn.color_links) > 0:
+            os.system('ln -s ../LesHouches.f ./LesHouches.f')
+        else:
+            os.system('ln -s ../LesHouchesDummy.f ./LesHouches.f')
+
     
         for file in linkfiles:
             ln('../' + file , '.')

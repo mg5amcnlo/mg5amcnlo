@@ -1,4 +1,4 @@
-      subroutine LesHouches(p_born,born_wgt,virt_wgt)
+      subroutine LesHouches(p,born_wgt,virt_wgt)
 c
 c Given the Born momenta, this is the Binoth-Les Houches interface
 c file that calls the OLP and returns the virtual weights. For
@@ -27,7 +27,7 @@ c
       double precision pi
       parameter (pi=3.1415926535897932385d0)
       integer procnum,i,j,dummyHel(nexternal-1)
-      double precision pvirt(0:4,nexternal-1),p_born(0:3,nexternal-1)
+      double precision p(0:3,nexternal-1)
       double precision virt_wgt,born_wgt,double,single
       double precision mu,alphaS,alphaEW,virt_wgts(3),UVnorm(2),s
       double precision virtcor,ao2pi,conversion,hel_fac,sumdot
@@ -84,36 +84,57 @@ c
       double precision qes2
       common /coupl_es/ qes2
       double precision conv
+      logical fksprefact
+      parameter (fksprefact=.true.)
+      double precision tolerance, madfks_single, madfks_double
+      parameter (tolerance = 1d-8)
+      integer nbad, nbadmax
+      parameter (nbadmax = 5)
+      data nbad / 0 /
       include "pmass.inc"
 
       do i=1, nexternal-1
           dummyHel(i)=1
       enddo
 
-      do j=1, nexternal-1
-         do i=0,3
-            pvirt(i,j)=p_born(i,j)
-         enddo
-         pvirt(4,j)=pmass(j)
-      enddo
 
       alphaS=g**2/(4d0*PI)
       ao2pi=alphaS/(2d0*Pi)
       alphaEW=dble(gal(1))**2/(4d0*PI)
-      virt_wgt= 0d0
-      double  = 0d0
-      single  = 0d0
+      call sloopmatrix(p, virt_wgts)
+      virt_wgt= virt_wgts(1)
+      single  = virt_wgts(2)
+      double  = virt_wgts(3)
       vegas_wgt=vegas_weight
 
 c Ellis-Sexton scale squared
       mu = QES2
-
-
-      if(doVirtTest.and.born_wgt.ne.0d0.and.iminmax.eq.0)then
-         virtmax=max(virtmax,virt_wgt/born_wgt/ao2pi)
-         virtmin=min(virtmin,virt_wgt/born_wgt/ao2pi)
-         virtsum=virtsum+virt_wgt/born_wgt/ao2pi
+c     check for poles cancellation      
+      if (firsttime) then
+          call getpoles(p, mu, madfks_double, madfks_single, fksprefact)
+          if (dabs(single - madfks_single).lt.tolerance .and.
+     1        dabs(double - madfks_double).lt.tolerance) then
+              write(*,*) "---- POLES CANCELLED ----"
+              firsttime = .false.
+          else
+              write(*,*) "POLES MISCANCELLATION, DIFFERENCE > ",
+     1         tolerance
+              write(*,*) " DOUBLE:"
+              write(*,*) "       MadFKS: ", madfks_double,
+     1                   "          OLP: ", double
+              write(*,*) " SINGLE:"
+              write(*,*) "       MadFKS: ",madfks_single,
+     1                   "          OLP: ",single
+              if (nbad .lt. nbadmax) then
+                  nbad = nbad + 1
+                  write(*,*) " Trying another PS point"
+              else
+                  write(*,*) " TOO MANY FAILURES, QUITTING"
+                  stop
+              endif
+          endif
       endif
+
       return
       end
 
