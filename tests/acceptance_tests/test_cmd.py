@@ -1000,6 +1000,32 @@ P1_qq_wp_wp_lvl
         """ check that we can use standard MG4 name """
         self.do('import model sm')
         self.do('generate mu+ mu- > ta+ ta-')       
+
+    def test_save_load(self):
+        """ check that we can use standard MG4 name """
+        
+        self.do('import model sm')
+        self.assertEqual(len(self.cmd._curr_model.get('particles')), 17)
+        self.assertEqual(len(self.cmd._curr_model.get('interactions')), 55)
+        self.do('save model /tmp/model.pkl')
+        self.do('import model mssm-full')
+        self.do('load model /tmp/model.pkl')
+        self.assertEqual(len(self.cmd._curr_model.get('particles')), 17)
+        self.assertEqual(len(self.cmd._curr_model.get('interactions')), 55)
+        self.do('generate mu+ mu- > ta+ ta-') 
+        self.assertEqual(len(self.cmd._curr_amps), 1)
+        nicestring = """Process: mu+ mu- > ta+ ta- WEIGHTED=4
+2 diagrams:
+1  ((1(13),2(-13)>1(22),id:18),(3(-15),4(15),1(22),id:19)) (QCD=0,QED=2,WEIGHTED=4)
+2  ((1(13),2(-13)>1(23),id:57),(3(-15),4(15),1(23),id:58)) (QCD=0,QED=2,WEIGHTED=4)"""
+        self.assertEqual(self.cmd._curr_amps[0].nice_string().split('\n'), nicestring.split('\n'))
+        self.do('save processes /tmp/model.pkl')
+        self.do('generate e+ e- > e+ e-')
+        self.do('load processes /tmp/model.pkl')
+        self.assertEqual(len(self.cmd._curr_amps), 1)
+        self.assertEqual(self.cmd._curr_amps[0].nice_string(), nicestring)
+        
+        os.remove('/tmp/model.pkl')
         
     def test_pythia8_output(self):
         """Test Pythia 8 output"""
