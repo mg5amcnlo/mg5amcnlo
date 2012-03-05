@@ -1784,8 +1784,7 @@ C
         
         process_exporter.write_nexternal_file(
                     writers.FortranWriter(self.give_pos('test')),
-                    self.myfks_me.real_processes[5].matrix_element,
-                    self.myfortranmodel)        
+                    5, 2)        
 
         self.assertFileContains('test', goal)  
 
