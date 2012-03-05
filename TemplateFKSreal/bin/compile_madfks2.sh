@@ -4,7 +4,6 @@ echo '****************************************************'
 echo 'This script compiles, tests and runs a madfks process'
 echo '****************************************************'
 
-source ../Source/fj_lhapdf_opts
 
 # find the correct directory
 if [[  ! -d ./SubProcesses  ]]; then
@@ -14,18 +13,24 @@ if [[  ! -d ./SubProcesses  ]]; then
 	exit
     fi
 fi
+
+
+source Source/fj_lhapdf_opts
+
 Maindir=`pwd`
 
 libdir=$Maindir/lib
 CutToolsdir=$Maindir/../CutTools
 carddir=$Maindir/Cards
-LHAPDF=`$lhapdf_config --libdir`
-LHAPDFSETS=`$lhapdf_config --pdfsets-path`
 
 
 c=`awk '/^[^#].*=.*pdlabel/{print $1}' Cards/run_card.dat`
+
+
 if [[ $c == "'lhapdf'" ]]; then
     echo Using LHAPDF interface!
+    LHAPDF=`$lhapdf_config --libdir`
+    LHAPDFSETS=`$lhapdf_config --pdfsets-path`
     export lhapdf=true
     if [ ! -f $libdir/libLHAPDF.a ]; then 
       ln -s $LHAPDF/libLHAPDF.a $libdir/libLHAPDF.a 
