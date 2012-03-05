@@ -36,12 +36,6 @@ C
       REAL*8 DOT
       EXTERNAL DOT
       
-C
-C     Variable for boost
-C
-      REAL*8 boosted(0:3, NEXTERNAL)
-      REAL*8 BOOST(0:3)
-      
 C-----
 C     BEGIN CODE
 C-----
@@ -93,33 +87,6 @@ c
 
       write (*,*) "Matrix element = ", MATELEM, " GeV^",-(2*nexternal-8)	
       write (*,*) "-----------------------------------------------------------------------------"
-
-	  if (.false.) then
-		boost(0) = 20d0
-		boost(1) = 10d0
-		boost(2) = 0d0
-		boost(3) = 0d0
-		do i =1, nexternal
-			call boostx(P(0,i),boost,boosted(0,i))
-		enddo
-      write (*,*)
-      write (*,*) " Phase space point:"
-      write (*,*)
-      write (*,*) "-----------------------------------------------------------------------------"
-      write (*,*)  "n        E             px             py              pz               m "
-      do i=1,nexternal
-         write (*,'(i2,1x,5e15.7)') i, boosted(0,i),boosted(1,i),boosted(2,i),boosted(3,i), 
-     .dsqrt(dabs(DOT(boosted(0,i),boosted(0,i))))
-      enddo
-      write (*,*) "-----------------------------------------------------------------------------"	  
-
-c     
-c     Now we can call the matrix element!
-c
-      CALL SMATRIX(boosted,MATELEM)
-	  write (*,*) "Matrix element = ", MATELEM, " GeV^",-(2*nexternal-8)	
-      write (*,*) "-----------------------------------------------------------------------------"
-	  endif
 
 
 cc
