@@ -19,29 +19,14 @@ BANNER  =  write_banner.o  rw_events.o ranmar.o  kin_functions.o open_file.o  rw
 
 COMBINE = combine_events.o  rw_events.o ranmar.o  kin_functions.o open_file.o rw_routines.o alfas_functions.o setrun.o
 
-# $B$ add_def $E$ !this is a tag for add library GENERIC_MW  in MadWeight compilation
 
 
 .f.o: ; $(F77) $(FFLAGS) -c $*.f
 
-# $B$ mod_all $B$ !this is a tag for modify main compilation in MadWeight compilation. Don't edit this line
 all: $(LIBDIR)libdhelas.a $(LIBDIR)libdsample.a $(LIBDIR)libdsample_fks.a $(LIBDIR)libgeneric.a $(LIBDIR)libpdf.a  $(LIBDIR)libmodel.a
-# $E$ mod_all $E$ !this is a tag for modify main compilation in MadWeight compilation. Don't edit this line
 
 scaled.dat:
 	combine_events
-
-#$(BINDIR)write_banner:  $(BANNER) 
-#	$(F77) $(FFLAGS) -o write_banner $(BANNER) $(LIBDIR)/libmodel.a $(LIBDIR)/libpdf.a 
-#	mv write_banner $(BINDIR)
-
-#$(BINDIR)scale_events: scale_events.o rw_events.o
-#	$(F77) $(FFLAGS) -o scale_events scale_events.o rw_events.o
-#	mv scale_events $(BINDIR)
-
-#$(BINDIR)select_events: select_events.o rw_events.o
-#	$(F77) $(FFLAGS) -o select_events select_events.o rw_events.o
-#	mv select_events $(BINDIR)
 
 $(BINDIR)sum_html: sum_html.o 
 	$(F77) $(FFLAGS) -o sum_html sum_html.o   
@@ -71,9 +56,7 @@ $(LIBDIR)libpdf.a: PDF
 
 $(LIBDIR)libmodel.a: MODEL
 	cd MODEL; make	
-#	mv MODEL/libmodel.a $(LIBDIR)
 
-# $B$ add_compile $E$ !this is a tag for add library in MadWeight compilation
 
 dsample.o: dsample.f genps.inc
 dsample_fks.o: dsample_fks.f genps.inc

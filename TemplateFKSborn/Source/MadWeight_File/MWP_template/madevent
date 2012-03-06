@@ -1,7 +1,0 @@
-#!/bin/bash
-rm -f ./ftn* &>/dev/null
-pos=$(pwd)
-cd ../../
-make
-cd $pos
-../../f77_madevent
