@@ -99,7 +99,7 @@ lhapdf = lhapdf-config
 
 # fastjet-config
 # If None: try to find one available on the system
-fastjet = fastjet-config
+fastjet = /Users/Spooner/Documents/PhD/HEP_softs/fastjet-2.4.2/FastJetLib/bin/fastjet-config
 
 
 

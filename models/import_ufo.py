@@ -1177,7 +1177,10 @@ class RestrictModel(model_reader.ModelReader):
                          isinstance(pct, tuple)]
             for pct in particles_ct:
                 modify = False
-                for key, coupling in pct[0]['counterterm'][pct[1]]:
+                print "pct=",pct
+                print "pct[0]['counterterm']=",pct[0]['counterterm']
+                print "pct[1]=",pct[1]
+                for key, coupling in pct[0]['counterterm'][pct[1]].items():
                     if coupling in zero_couplings:
                         modify=True
                         del pct[0]['counterterm'][pct[1]][key]
