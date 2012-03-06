@@ -1,4 +1,4 @@
-10000 10 ! points itns 
+10000  5 ! points itns 
 0 ! accuracy
 2 ! 0 fixed grid 2 adjust
 1 ! 1 suppress amp, 0 doesnt
@@ -6,5 +6,5 @@
 1 ! hel configuration numb
 'test'
 1 ! 1 to save grids
-1 ! 0 to exclude, 1 for new run, 2 to restart, 3 to reset w/ keeping grid
+3 ! 0 to exclude, 1 for new run, 2 to restart, 3 to reset w/ keeping grid
 virt0  ! all, born, real, virt
