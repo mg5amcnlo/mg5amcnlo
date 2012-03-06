@@ -97,7 +97,9 @@ c
           dummyHel(i)=1
       enddo
 
-
+c update the ren_scale for MadLoop and the couplings
+      mu_r = scale
+      call coup()
       alphaS=g**2/(4d0*PI)
       ao2pi=alphaS/(2d0*Pi)
       alphaEW=dble(gal(1))**2/(4d0*PI)
