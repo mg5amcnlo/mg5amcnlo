@@ -228,9 +228,7 @@ class ProcessExporterFortranFKS_born(loop_exporters.LoopProcessExporterFortranSA
                                                   path=os.getcwd()):
         """Generate the Pxxxxx_i directories for a subprocess in MadFKS,
         including the necessary matrix.f and various helper files"""
-        print "GENERATING FKS SUBDIRS"
         proc = matrix_element.born_matrix_element['processes'][0]
-        print proc.input_string()
         
         cwd = os.getcwd()
         try:
@@ -896,9 +894,7 @@ c     this subdir has no soft singularities
         self.write_pmass_file(writers.FortranWriter(filename),
                              real_matrix_element)
 
-        linkfiles = ['LesHouches.f',
-                     'LesHouchesDummy.f',
-                     'LesHouchesMadLoop.f',
+        linkfiles = ['LesHouchesDummy.f',
                      'MCmasses_HERWIG6.inc',
                      'MCmasses_HERWIGPP.inc',
                      'MCmasses_PYTHIA6Q.inc',
@@ -1001,8 +997,10 @@ c     this subdir has no soft singularities
             for file in self.color_link_files:
                 os.system('ln -s ../%s ./%s' % (file, file))
             os.system('ln -s ../sborn_sf.f ./sborn_sf.f')
+            os.system('ln -s ../../LesHouches.f ./LesHouches.f')
         else:
             os.system('ln -s ../sborn_sf_dum.f ./sborn_sf.f')
+            os.system('ln -s ../../LesHouchesDummy.f ./LesHouches.f')
 
 
     

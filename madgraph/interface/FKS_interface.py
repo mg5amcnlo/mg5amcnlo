@@ -172,12 +172,10 @@ class FKSInterface(CheckFKS, CompleteFKS, HelpFKS, mg_interface.MadGraphCmd):
                                                            timeout=self.timeout)
             if answer != 'y':
                 raise self.InvalidCmd('Stopped by user request')
-        # Make a Template Copy
-        elif self._export_format in self._nlo_export_formats:
-            self._curr_exporter.copy_fkstemplate()
     
-        elif not os.path.isdir(self._export_dir):
-            os.makedirs(self._export_dir)
+        # Make a Template Copy
+        if self._export_format in self._nlo_export_formats:
+            self._curr_exporter.copy_fkstemplate()
 
         # Reset _done_export, since we have new directory
         self._done_export = False

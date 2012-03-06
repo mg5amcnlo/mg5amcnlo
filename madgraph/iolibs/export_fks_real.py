@@ -349,7 +349,6 @@ class ProcessExporterFortranFKS_real(loop_exporters.LoopProcessExporterFortranSA
     
         linkfiles = ['LesHouches.f',
                      'LesHouchesDummy.f',
-                     'LesHouchesMadLoop.f',
                      'MCmasses_HERWIG6.inc',
                      'MCmasses_HERWIGPP.inc',
                      'MCmasses_PYTHIA6Q.inc',
