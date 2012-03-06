@@ -42,6 +42,18 @@ def multiple_try(nb_try=5, sleep=1):
         return deco_f_retry
     return deco_retry
 
+def check_interupt(error=KeyboardInterrupt):
+
+    def deco_interupt(f):
+        def deco_f_interupt(self, *args, **opt):
+            try:
+                f(self, *args, **opt)
+            except error:
+                self.remove(*args, **opt)
+        return deco_f_interupt
+    return deco_interupt
+
+
 class Cluster(object):
     """Basic Class for all cluster type submission"""
     name = 'mother class'
@@ -105,6 +117,11 @@ class Cluster(object):
             if not status in ['R','I']:
                 break
             time.sleep(30)
+            
+    def remove(self, *args):
+        """ """
+        logger.warning("""This cluster didn't support job removal, 
+    the jobs are still running on the cluster.""")
 
 class CondorCluster(Cluster):
     """Basic class for dealing with cluster submission"""
@@ -176,6 +193,7 @@ class CondorCluster(Cluster):
         status = subprocess.Popen([cmd], shell=True, stdout=subprocess.PIPE)
         return status.stdout.readline().strip()
     
+    @check_interupt()
     @multiple_try()
     def control(self, me_dir):
         """ control the status of a single job with it's cluster id """
@@ -197,7 +215,17 @@ class CondorCluster(Cluster):
                 fail += 1
 
         return idle, run, self.submitted - (idle+run+fail), fail
-
+    
+    @multiple_try()
+    def remove(self, *args):
+        """Clean the jobson the cluster"""
+        
+        if not self.submitted_ids:
+            return
+        cmd = "condor_rm %s" % ' '.join(self.submitted_ids)
+        
+        status = subprocess.Popen([cmd], shell=True, stdout=open(os.devnull,'w'))
+        
 class PBSCluster(Cluster):
     """Basic class for dealing with cluster submission"""
     
