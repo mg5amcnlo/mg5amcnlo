@@ -35,7 +35,8 @@ Block MW_Run
      MW_int_points        50000   # number of points in MadWeight integration
      use_cut              F       # use the cut defined in run_card.dat
      bw_cut               F       # use the BW cut 
-     nwa                  F       # do not use narrow width approximation
+     nwa                  F       # T= use narrow width approximation
+     ISR                  F       # T=boost correction based on reconstructed pTmiss
      
 #*************************************************************************
 ##                  define the different param_card's                   ##  
