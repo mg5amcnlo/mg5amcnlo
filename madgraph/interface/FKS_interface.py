@@ -194,6 +194,7 @@ class FKSInterface(CheckFKS, CompleteFKS, HelpFKS, mg_interface.MadGraphCmd):
 
 
     # Export a matrix element
+    
     def export(self, nojpeg = False, main_file_name = ""):
         """Export a generated amplitude to file"""
 
