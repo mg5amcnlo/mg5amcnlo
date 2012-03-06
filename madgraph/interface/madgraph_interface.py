@@ -2197,7 +2197,6 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
         # Now check for forbidden particles, specified using "/"
         slash = line.find("/")
         dollar = line.find("$")
-        dollar = line.find("$")
         forbidden_particles = ""
         if slash > 0:
             if dollar > slash:

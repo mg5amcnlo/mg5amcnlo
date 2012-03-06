@@ -72,7 +72,7 @@ while ( -e "matrix$imatrix.ps"){
 
     system ("/bin/bash -c \"cat matrix$imatrix.ps | sed 1,352d >> junk.ps\" ");
 
-    system "/bin/bash -c \"nice gs  \-sDEVICE\=jpeg \-sOutputFile\=card.jpg \-q \-dNOPAUSE \-dBATCH \-g180x150 junk.ps; rm -f junk.ps; cp -p card.jpg ../../card.jpg\" ";
+    system "/bin/bash -c \"nice gs  \-sDEVICE\=jpeg \-sOutputFile\=card.jpg \-q \-dNOPAUSE \-dBATCH \-g180x150 ./junk.ps; rm -f junk.ps; cp -p card.jpg ../../card.jpg\" ";
   }
   if ($imatrix eq "") {$imatrix = 0;}
   $imatrix = $imatrix + 1;

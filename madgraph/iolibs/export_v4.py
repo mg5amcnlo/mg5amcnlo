@@ -1070,9 +1070,6 @@ class ProcessExporterFortranME(ProcessExporterFortran):
         # Add the combine_events.f 
         filename = os.path.join(self.dir_path,'Source','combine_events.f')
         self.write_combine_events(writers.FortranWriter(filename))
-        # Add the write_banner.f 
-        filename = os.path.join(self.dir_path,'Source','write_banner.f')
-        self.write_write_banner(writers.FortranWriter(filename))
         # Add the symmetry.f 
         filename = os.path.join(self.dir_path,'SubProcesses','symmetry.f')
         self.write_symmetry(writers.FortranWriter(filename))
@@ -1318,7 +1315,7 @@ class ProcessExporterFortranME(ProcessExporterFortran):
         for file in linkfiles:
             ln('../' + file , '.')
 
-        #import nexternal/leshouch in Source
+        #import nexternal/leshouche in Source
         ln('nexternal.inc', '../../Source', log=False)
         ln('leshouche.inc', '../../Source', log=False)
         ln('maxamps.inc', '../../Source', log=False)
@@ -1953,24 +1950,6 @@ c           This is dummy particle used in multiparticle vertices
         else:
             text = open(path).read() % {'param_card_name':card, 
                                         'secondparam': ',.true.'} 
-        writer.write(text)
-        
-        return True
-
-    #===========================================================================
-    # write_write_banner
-    #===========================================================================
-    def write_write_banner(self, writer):
-        """Write the SubProcess/driver.f file for MG4"""
-
-        path = os.path.join(_file_path,'iolibs','template_files','madevent_write_banner.f')
-        
-        if self.model_name == 'mssm' or self.model_name.startswith('mssm-'):
-            card = 'Source/MODEL/MG5_param.dat'
-        else:
-            card = 'param_card.dat' 
-        text = open(path).read() % {'param_card_name':card} 
-
         writer.write(text)
         
         return True

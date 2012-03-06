@@ -350,6 +350,7 @@ class open_file(object):
       if program:
           arguments = program.split() # allow argument in program definition
           arguments.append(file_path)
+
           if not background:
               subprocess.call(arguments)
           else:

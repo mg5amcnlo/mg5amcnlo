@@ -2806,7 +2806,9 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
             files.cp(pjoin(self.me_dir, 'Cards', 'delphes_card_default.dat'),
                      pjoin(self.me_dir, 'Cards', 'delphes_card.dat'))
             logger.info('No delphes card found. Take the default one.')
-
+        if not os.path.exists(pjoin(self.me_dir, 'Cards', 'delphes_trigger.dat')):    
+            files.cp(pjoin(self.me_dir, 'Cards', 'delphes_trigger_default.dat'),
+                     pjoin(self.me_dir, 'Cards', 'delphes_trigger.dat'))
         if not (no_default or force):
             self.ask_edit_cards(['delphes', 'trigger'], args)
             
@@ -3416,6 +3418,21 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
         
         return True   
 
+    
+    def clean_pointless_card(self, mode):
+        """ Clean the pointless card """
+        if mode == 'parton':
+            if os.path.exists(pjoin(self.me_dir,'Cards','pythia_card.dat')):
+                os.remove(pjoin(self.me_dir,'Cards','pythia_card.dat'))
+        elif mode in ['parton', 'pythia', 'delphes']:
+            if os.path.exists(pjoin(self.me_dir,'Cards','pgs_card.dat')):
+                    os.remove(pjoin(self.me_dir,'Cards','pgs_card.dat'))
+        elif mode in ['pythia', 'pgs']:
+            if os.path.exists(pjoin(self.me_dir,'Cards','delphes_card.dat')):
+                    os.remove(pjoin(self.me_dir,'Cards','delphes_card.dat'))
+            if os.path.exists(pjoin(self.me_dir,'Cards','delphes_trigger.dat')):
+                    os.remove(pjoin(self.me_dir,'Cards','delphes_trigger.dat'))
+
 
     ############################################################################
     def ask_run_configuration(self, mode=None, force=False):
@@ -3463,24 +3480,8 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
                 else: 
                     mode = 'pythia'
         logger.info('Will run in mode %s' % mode)
-        
-        def clean_pointless_card(mode):
-            """ Clean the pointless card """
-            if mode == 'parton':
-                if os.path.exists(pjoin(self.me_dir,'Cards','pythia_card.dat')):
-                    os.remove(pjoin(self.me_dir,'Cards','pythia_card.dat'))
-                if os.path.exists(pjoin(self.me_dir,'Cards','pgs_card.dat')):
-                    os.remove(pjoin(self.me_dir,'Cards','pgs_card.dat'))
-                if os.path.exists(pjoin(self.me_dir,'Cards','delphes_card.dat')):
-                    os.remove(pjoin(self.me_dir,'Cards','delphes_card.dat'))
-            elif mode == 'pgs':
-                if os.path.exists(pjoin(self.me_dir,'Cards','delphes_card.dat')):
-                    os.remove(pjoin(self.me_dir,'Cards','delphes_card.dat'))
-            elif mode == 'delphes':
-                if os.path.exists(pjoin(self.me_dir,'Cards','pgs_card.dat')):
-                    os.remove(pjoin(self.me_dir,'Cards','pgs_card.dat'))
-                                                             
-        clean_pointless_card(mode)
+                                                                     
+        self.clean_pointless_card(mode)
         # Now that we know in which mode we are check that all the card
         #exists (copy default if needed)
 
@@ -3493,6 +3494,7 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
             cards.append('pgs_card.dat')
         elif mode == 'delphes':
             self.add_card_to_run('delphes')
+            self.add_card_to_run('trigger')
             cards.append('delphes_card.dat')
 
         if force:
@@ -3540,7 +3542,11 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
             if answer == 'done':
                 return
             if not os.path.isfile(answer):
-                path = pjoin(self.me_dir,'Cards','%s_card.dat' % answer)
+                if answer != 'trigger':
+                    path = pjoin(self.me_dir,'Cards','%s_card.dat' % answer)
+                else:
+                    path = pjoin(self.me_dir,'Cards','delphes_trigger.dat')
+                    print path
                 self.exec_cmd('open %s' % path)                    
             else:
                 # detect which card is provide
@@ -3600,14 +3606,8 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
                 mode = 'pythia'
         logger.info('Will run in mode %s' % mode)
         
-        # Clean the pointless card
-        if mode == 'pgs':
-            if os.path.exists(pjoin(self.me_dir,'Cards','delphes_card.dat')):
-                os.remove(pjoin(self.me_dir,'Cards','delphes_card.dat'))
-        if mode == 'delphes':
-            if os.path.exists(pjoin(self.me_dir,'Cards','pgs_card.dat')):
-                os.remove(pjoin(self.me_dir,'Cards','pgs_card.dat'))                                         
-         
+        self.clean_pointless_card(mode)
+                                                 
         # Now that we know in which mode we are check that all the card
         #exists (copy default if needed)
         
@@ -3618,6 +3618,7 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
             cards.append('pgs_card.dat')
         if mode == 'delphes':
             self.add_card_to_run('delphes')
+            self.add_card_to_run('trigger')
             cards.append('delphes_card.dat')
         
         if force:
@@ -3670,7 +3671,10 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
                  logger.info('copy %s as %s' % (answer, card_name))
                  files.cp(answer, pjoin(self.me_dir, 'Cards', card_name))
                  continue
-             path = pjoin(self.me_dir,'Cards','%s_card.dat' % answer)
+             if answer != 'trigger':
+                 path = pjoin(self.me_dir,'Cards','%s_card.dat' % answer)
+             else:
+                 path = pjoin(self.me_dir,'Cards','delphes_trigger.dat')
              self.exec_cmd('open %s' % path)                    
                  
         return mode
@@ -3725,7 +3729,10 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
                  logger.info('copy %s as %s' % (answer, card_name))
                  files.cp(answer, pjoin(self.me_dir, 'Cards', card_name))
                  continue
-             path = pjoin(self.me_dir,'Cards','%s_card.dat' % answer)
+             if answer != 'trigger':
+                 path = pjoin(self.me_dir,'Cards','%s_card.dat' % answer)
+             else:
+                 path = pjoin(self.me_dir,'Cards','delphes_trigger.dat')
              self.exec_cmd('open %s' % path)                    
                  
         return mode
@@ -3749,9 +3756,14 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
         """ensure that card name is define. If not use the default one"""
         dico = {'dir': self.me_dir, 'name': name }
 
-        if not os.path.isfile('%(dir)s/Cards/%(name)s_card.dat' % dico):
-            files.cp('%(dir)s/Cards/%(name)s_card_default.dat' % dico,
-                '%(dir)s/Cards/%(name)s_card.dat' % dico)
+        if name != 'trigger':
+            if not os.path.isfile('%(dir)s/Cards/%(name)s_card.dat' % dico):
+                files.cp('%(dir)s/Cards/%(name)s_card_default.dat' % dico,
+                         '%(dir)s/Cards/%(name)s_card.dat' % dico)
+        else:
+            if not os.path.isfile('%(dir)s/Cards/delphes_trigger.dat' % dico):
+                files.cp('%(dir)s/Cards/delphes_trigger_default.dat' % dico,
+                         '%(dir)s/Cards/delphes_trigger.dat' % dico) 
             
     @staticmethod
     def detect_card_type(path):
