@@ -40,13 +40,25 @@ c
       double precision dem,b,c,alpha,beta,rho,sqrts
       double precision jac_factor
       double precision sol(2)
+      double precision pboost(0:3)
+      double precision measure1,measure2,ETA
+      double precision CMS_mom(0:3,max_particles)
       integer index_sol
       real rand
 
-      integer j
+      integer j,k,MG
 c
 c     global
 c
+      double precision pxISR, pyISR
+      common /to_ISR/  pxISR, pyISR
+      integer matching_type_part(3:max_particles) !modif/link between our order by type for permutation
+      integer inv_matching_type_part(3:max_particles)
+      common/madgraph_order_type/matching_type_part,
+     & inv_matching_type_part
+      integer nexternal, num_inv
+      COMMON/to_num_inv/nexternal, num_inv
+
       double precision momenta(0:3,-max_branches:2*max_particles)  ! records the momenta of external/intermediate legs     (MG order)
       double precision mvir2(-max_branches:2*max_particles)        ! records the sq invariant masses of intermediate particles (MG order)
       common /to_diagram_kin/ momenta, mvir2
@@ -100,6 +112,7 @@ c
 
       miss_px=0d0
       miss_py=0d0
+      ETA=0.5d0*dlog(x1/x2)
 
       if((x1*x2*s).lt.(dsqrt(mvir2(r1))+dsqrt(mvir2(r2)))**2) then
       jac=-1d0
@@ -117,6 +130,23 @@ c
       momenta(1,2)=0d0
       momenta(2,2)=0d0
       momenta(3,2)=-sqrts*x2/2d0
+
+c     Here we need to boost the initial momenta in case of ISR:
+c     the momentum associated with the boost can be obtained from 
+c     the momentum of resonance r3, with 
+c         m_inv(r3)^2 =   shat
+c         pt_inv(r3)  = - pt(ISR)
+c
+c      =>  pboost = ( sqrt( pt(ISR)**2 + m_inv(r3)^2 ), -pxISR, -pyISR )
+c
+c     apply the boost to lab frame
+      pboost(0)=dsqrt( x1*x2*s + pxISR**2 + pyISR**2)*dcosh(ETA) 
+      pboost(1)=-pxISR
+      pboost(2)=-pyISR
+      pboost(3)=0d0
+
+      call boostx(momenta(0,1),pboost,momenta(0,1))
+      call boostx(momenta(0,2),pboost,momenta(0,2))
  
 c
       E3=momenta(0,p3)
@@ -338,6 +368,33 @@ c
        jac=-1d0
        endif
       jac=jac*jac_loc
+
+c
+c     also need to rescale the weight to compensate for the transformation of the 
+c     probability density under boosts:
+c
+      measure1=1d0
+       do j=3,nexternal-num_inv
+         MG=inv_matching_type_part(j)
+         measure1=measure1*dsqrt(momenta(1,MG)**2+momenta(2,MG)**2)
+       enddo
+
+      pboost(1)=-pboost(1)
+      pboost(2)=-pboost(2)
+       do j=3,nexternal -num_inv
+c         write(*,*) "p",j,momenta(0,j), momenta(1,j),momenta(2,j),momenta(3,j)
+         MG=inv_matching_type_part(j)
+         call boostx(momenta(0,MG),pboost,CMS_mom(0,MG))
+       enddo
+
+      measure2=1d0
+       do j=3,nexternal-num_inv
+         MG=inv_matching_type_part(j)
+         measure2=measure2*dsqrt(CMS_mom(1,MG)**2+CMS_mom(2,MG)**2)
+       enddo
+
+      jac=jac*measure2/measure1
+
       return
       end
 

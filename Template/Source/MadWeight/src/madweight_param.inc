@@ -35,3 +35,5 @@ c   narrow width approximation
 c
       logical NWA
       common /to_NWA/NWA
+      logical ISR
+      common /to_correct_ISR/ISR

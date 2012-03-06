@@ -375,6 +375,7 @@ C*******************************************************************************
 C
 C
       include 'nexternal.inc'
+      include "phasespace.inc"
       integer perm_id(nexternal-2)     !permutation of 1,2,...,nexternal-2      
 C
       integer i,j
@@ -395,8 +396,8 @@ C
      &j_mass,ntrk,btag,had_em,dummy1,dummy2,tag_init,type,run_number,
      &trigger
 
-      integer matching_type_part(3:nexternal) !modif/link between our order by type for permutation
-      integer inv_matching_type_part(3:nexternal)
+      integer matching_type_part(3:max_particles) !modif/link between our order by type for permutation
+      integer inv_matching_type_part(3:max_particles)
       common/madgraph_order_type/matching_type_part,
      & inv_matching_type_part
 

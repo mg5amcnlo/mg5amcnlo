@@ -12,8 +12,8 @@ C
 
 c     particle index mapping
       integer MG,j,k,i
-      integer matching_type_part(3:nexternal) !modif/link between our order by type for permutation
-      integer inv_matching_type_part(3:nexternal)
+      integer matching_type_part(3:max_particles) !modif/link between our order by type for permutation
+      integer inv_matching_type_part(3:max_particles)
       common/madgraph_order_type/matching_type_part,
      & inv_matching_type_part
  
@@ -37,10 +37,18 @@ C     info on final state particles
      +        num_ta,num_ata   !number of jet,elec,muon, undetectable
       COMMON/num_part/num_inv,num_jet,num_bjet,num_e,num_ae,
      & num_mu,num_amu,num_ta,num_ata !particle in the final state
+      integer nparticles, num_invis
+      COMMON/to_num_inv/nparticles,num_invis
 
 c     experimental event
       double precision pexp_init(0:3,nexternal)  !impulsion in original configuration
       common/to_pexp_init/pexp_init
+
+      double precision px_visible,py_visible
+      common /to_pTrec_visible/px_visible,py_visible
+
+      double precision  missPhi_EXP, missPT_EXP
+      common /to_missEXP/  missPhi_EXP, missPT_EXP
 
       character*60 param_name
 
@@ -64,7 +72,8 @@ c     set parameters of the run
       include 'madweight_card.inc'
 
 
-
+      px_visible=0d0
+      py_visible=0d0
       open(unit=90,file="./start")
       write(90,*) 'start'
       close(90)
@@ -99,6 +108,9 @@ c     set parameters for the transfer functions
       CALL RUN_PRINTOUT
 c     call graph_init
       
+      num_invis=num_inv
+      nparticles=nexternal
+
       OPEN(UNIT=24,file='./verif.lhco',status='old',err=48) ! input file
 
       read(24,*,err=48,end=48) k,run_number,trigger !line with tag 0
@@ -110,11 +122,24 @@ c     call graph_init
 
          call four_momentum_set2(eta_init(k),phi_init(k),pt_init(k),
      &         j_mass(k),pexp_init(0,MG))
+         px_visible=px_visible+pexp_init(1,MG)
+         py_visible=py_visible+pexp_init(2,MG)
          tag_init(MG)=k
       enddo
       read(24,*,err=48,end=48) k,type(k),eta_init(k), !line with type 6
      &           phi_init(k),pt_init(k),j_mass(k),ntrk(k),btag(k),
      &           had_em(k) ,dummy1(k),dummy2(k)
+      if (type(k).eq.6.and.pt_init(k).gt.1d0.and.ISR) then
+         missPhi_EXP=phi_init(k)   ! apply boot correction based on reconstructed missing pT
+         missPT_EXP=pt_init(k)
+         write(*,*) "Using reconstructed missing pT: ",missPT_EXP
+      elseif(.not. ISR .and. num_inv.eq.0) then ! apply boost correction based on visible particles
+         missPhi_EXP=0d0
+         missPT_EXP=1d-10
+      else
+         missPhi_EXP=-1d0
+         missPT_EXP=-1d0
+      endif
       read(24,*,err=47,end=47) k,type(k),eta_init(k), !line with type 7 (optional)
      &           phi_init(k),pt_init(k),j_mass(k),ntrk(k),btag(k),
      &           had_em(k) ,dummy1(k),dummy2(k)
@@ -242,6 +267,7 @@ c      local
 c
       integer I,J,temp
       character*8 variable(3)
+      integer num_inv
 c
 c      global
 c
@@ -267,6 +293,7 @@ c------
 c Begin Code
 c------
       s = 4d0*ebeam(1)*ebeam(2)
+      num_inv=0
 c
 c      define the central point
 c
@@ -274,12 +301,13 @@ c
 
       variable(1)="theta"
       variable(2)="phi"
-      variable(3)="energy"
+      variable(3)="|p|"
 c
 c      counting the number of dimensions
 c
       temp=-2 ! conservation of PT
       do i=3,nexternal
+          if (c_point(i,1,2).lt.-0.5)  num_inv=num_inv+1
         do j=1,3
           if (c_point(i,j,2).ne.zero) temp=temp+1
           write(*,*) 'exp. uncertainty on ',variable(j),'of particle',i,': ' ,c_point(i,j,2)
@@ -288,10 +316,11 @@ c
 
       if (c_point(1,1,2).eq.zero) temp=temp-1
       if (c_point(2,1,2).eq.zero) temp=temp-1
-      
+
 c      write(*,*) 'the number of dimension is ', temp
 
       Ndimens=temp
+      
 
 c      if (temp.ne.(Ndimens)) then
 c      write(*,*) 'error : Ndimens is not # widths + 1 '
@@ -345,14 +374,15 @@ c
       implicit none
       
 c      include './genps.inc'
+      include 'phasespace.inc'
       include 'maxamps.inc'
       include 'nexternal.inc'
 
       logical use_perm,perm_with_b
       common/global_run_perm/use_perm,perm_with_b
       
-      integer matching_type_part(3:nexternal) 
-      integer inv_matching_type_part(3:nexternal)
+      integer matching_type_part(3:max_particles) 
+      integer inv_matching_type_part(3:max_particles)
       common/madgraph_order_type/matching_type_part,
      & inv_matching_type_part 
  

@@ -15,9 +15,14 @@ c
 c     local
 c
       integer n_var
+      double precision Emiss_weight
 c
 c     Global
 c
+      double precision  missPhi_EXP, missPT_EXP
+      common /to_missEXP/  missPhi_EXP, missPT_EXP
+      double precision pxISR, pyISR
+      common /to_ISR/  pxISR, pyISR
       double precision              S,X1,X2,PSWGT,JAC
       common /PHASESPACE/ S,X1,X2,PSWGT,JAC
       double precision momenta(0:3,-max_branches:2*max_particles)   ! momenta of external/intermediate legs     (MG order)
@@ -38,25 +43,21 @@ c     first generate the reconstructed quantities
         return
       endif
 
+      if (missPT_EXP.ge.0d0) then  ! using reconstructed missing pT to apply the boost correction
+         call generate_miss_parton(Emiss_weight)
+         jac=jac*Emiss_weight
+      else
+         pxISR=0d0
+         pyISR=0d0
+      endif
+
 
 c     then generate the invariant mass of mapped resonances, if any
       if (num_propa(config_pos).gt.0) call generate_propa(x,n_var)
 
-c      write(*,*) "passed gen_propa"
-c      write(*,*) "momentum 3",momenta(0,3),momenta(1,3),momenta(2,3),momenta(3,3)
-c      write(*,*) "momentum 4",momenta(0,4),momenta(1,4),momenta(2,4),momenta(3,4)
-c      write(*,*) "momentum 6",momenta(0,6),momenta(1,6),momenta(2,6),momenta(3,6)
-c      write(*,*) "momentum 7",momenta(0,7),momenta(1,7),momenta(2,7),momenta(3,7)
-c      write(*,*) "mvir2 ",mvir2(-1),mvir2(-2),mvir2(-3),mvir2(-4)
-
 c     finally, solve the equations associated with the change of variables in each block
       call main_code(x,n_var)
 
-c      if (jac.gt.0d0) then
-c      write(*,*) "passed main codei, jac", jac
-c      pause
-c      endif
- 
       end
 
 
@@ -491,5 +492,66 @@ C
       pp2=momenta(1,MG_num)**2+momenta(2,MG_num)**2+momenta(3,MG_num)**2
       Breit_Wigner_for_part=(E**2-pp2-M**2)**2+M**2*W**2
       Breit_Wigner_for_part=M*W/Breit_Wigner_for_part/pi
+      return
+      end
+
+      subroutine smear_missing_reco(misspx_reco,misspy_reco,weight)
+      IMPLICIT NONE
+cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
+c                                                                          c
+c    IN THIS FILE, THE USER CAN DEFINE A SMEARING FUNCTION FOR THE         c
+c    THE RECONSTRUCTED MISSING ENERGY, AND ADJUST THE WEIGHT               c 
+c                                                                          c
+c    By default, the transfer function is a delta function                 c
+C                                                                          c
+cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
+      double precision weight
+      double precision misspx_reco, misspy_reco
+
+      weight=1d0
+      return
+      end
+
+      subroutine generate_miss_parton(weight)
+      IMPLICIT NONE
+      integer k
+      double precision weight
+      double precision misspx_reco, misspy_reco
+
+      double precision  missPhi_EXP, missPT_EXP
+      common /to_missEXP/  missPhi_EXP, missPT_EXP
+ 
+      double precision pxISR, pyISR
+      common /to_ISR/  pxISR, pyISR
+
+      double precision Etot,pztot,misspx,misspy
+      common /to_missingP/Etot,pztot,misspx,misspy
+
+      double precision px_visible,py_visible
+      common /to_pTrec_visible/px_visible,py_visible
+c     I. first define the transfer function, smear the information 
+c           (by default: TF= delta)
+
+      misspx_reco=missPT_EXP*dcos(missPhi_EXP)
+      misspy_reco=missPT_EXP*dsin(missPhi_EXP)
+
+      call smear_missing_reco(misspx_reco,misspy_reco,weight)
+
+c     II. Now define the transverse momentum associated with the ISR
+c          = -pT_miss_reco - [ sum (pT of visible particles) ] 
+c
+      pxISR =-misspx_reco -px_visible 
+      pyISR =-misspy_reco -py_visible
+c      Note that the last two equalities hold in the case (.not. ISR .and. num_inv.eq.0)
+
+c     III. Finally: the values in the variables misspx, misspy are matched 
+c          to -px(neutrinos) and -pz(neutrinos) later on in the code, so 
+c          these variables should be shifted by px_ISR and py_ISR  
+c
+c         Note that [ sum (pT of visible particles) ] = (-misspx, -misspy)
+c         in the code
+      misspx=misspx-pxISR
+      misspy=misspy-pyISR
+
       return
       end

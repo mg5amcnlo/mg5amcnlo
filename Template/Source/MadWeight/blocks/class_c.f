@@ -54,6 +54,9 @@ c
 c
 c     local
 c
+      double precision pboost(0:3), CMS_mom(0:3,max_particles)
+      double precision Ptot(0:3),PtotCMS(0:3)
+      double precision measureLAB, measureCMS
       double precision theta3,phi3,jac_temp,jac_factor
       double precision sintheta3,costheta3,sinphi3,cosphi3
       double precision rho3,Delta,jac_loc
@@ -72,7 +75,7 @@ c
       double complex solc1(4),solc2(4)
       double precision  E1, alpha,i_part1,i_part2
       double precision solr1(4),solr2(4)
-      integer j,k
+      integer j,k,MG
       logical sol(4)
       double precision p1x,p1y,p1z
 c
@@ -89,6 +92,12 @@ c
       common /PHASESPACE/ S,X1,X2,PSWGT,JAC
       double precision c_point(1:max_particles,3,2)
       common/ph_sp_init/c_point
+      integer matching_type_part(3:max_particles)
+      integer inv_matching_type_part(3:max_particles)
+      common/madgraph_order_type/matching_type_part,
+     & inv_matching_type_part
+      integer nexternal, num_inv
+      COMMON/to_num_inv/nexternal, num_inv
 c
 c     external
 c
@@ -425,7 +434,69 @@ c
        else
        write(*,*) 'warning: jac^-1 is close to zero'
        endif
+
+c
+c     Apply the boost correction
+c
+
+c     First evaluated the total momentum in the LAB frame
+      do j=0,3
+      Ptot(j)=0d0
+        do k=3,nexternal
+          Ptot(j)=Ptot(j)+momenta(j,k)
+        enddo
+      pboost(j)=Ptot(j)
+      enddo
+ 
+c     Then calculate the momenta in the CMS frame
+      pboost(1)=-pboost(1)
+      pboost(2)=-pboost(2)
+      pboost(3)=0d0
+       do j=3,nexternal
+c         write(*,*) "p",j,momenta(0,j), momenta(1,j),momenta(2,j),momenta(3,j)
+         call boostx(momenta(0,j),pboost,CMS_mom(0,j))
+       enddo
+       call boostx(Ptot,pboost,PtotCMS)
+
+c     Evaluate the initial momenta in the CMS frame
+      x1=(PtotCMS(0)+Ptot(3))/sqrts
+      x2=(PtotCMS(0)-Ptot(3))/sqrts
+
+      if (dabs(x1-0.5).gt.0.5d0.or.dabs(x2-0.5).gt.0.5d0) then
+        jac=-1d0
+        write(*,*) "Warning: x1 or x2 larger than 1"
+      endif
+
+      CMS_mom(0,1)=sqrts*x1/2d0
+      CMS_mom(1,1)=0d0
+      CMS_mom(2,1)=0d0
+      CMS_mom(3,1)=sqrts*x1/2d0
+      CMS_mom(0,2)=sqrts*x2/2d0
+      CMS_mom(1,2)=0d0
+      CMS_mom(2,2)=0d0
+      CMS_mom(3,2)=-sqrts*x2/2d0
+
+c     Evaluate the initial momenta in the LAB frame
+      pboost(1)=Ptot(1)
+      pboost(2)=Ptot(2)
+      call boostx(CMS_mom(0,1),pboost,momenta(0,1))
+      call boostx(CMS_mom(0,2),pboost,momenta(0,2))
+
+
+      measureLAB=1d0
+       do j=3,nexternal-num_inv
+         MG=inv_matching_type_part(j)
+         measureLAB=measureLAB*dsqrt(momenta(1,MG)**2+momenta(2,MG)**2)
+       enddo
+
+      measureCMS=1d0
+       do j=3,nexternal-num_inv
+         MG=inv_matching_type_part(j)
+         measureCMS=measureCMS*dsqrt(CMS_mom(1,MG)**2+CMS_mom(2,MG)**2)
+       enddo
+
       jac=jac*jac_loc/(2d0*x1*x2*s)
+      jac=jac*measureCMS/measureLAB
 
       return
       end
