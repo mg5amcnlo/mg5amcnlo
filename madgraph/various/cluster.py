@@ -36,6 +36,8 @@ def multiple_try(nb_try=5, sleep=1):
             for i in range(nb_try):
                 try:
                     return f(*args, **opt)
+                except KeyboardInterrupt:
+                    raise
                 except:
                     time.sleep(sleep)
             raise
@@ -47,9 +49,10 @@ def check_interupt(error=KeyboardInterrupt):
     def deco_interupt(f):
         def deco_f_interupt(self, *args, **opt):
             try:
-                f(self, *args, **opt)
+                return f(self, *args, **opt)
             except error:
                 self.remove(*args, **opt)
+                raise error
         return deco_f_interupt
     return deco_interupt
 
@@ -93,6 +96,7 @@ class Cluster(object):
         """ control the status of a single job with it's cluster id """
         raise NotImplemented, 'No implementation of how to control the job status to cluster \'%s\'' % self.name
 
+    @check_interupt()
     def wait(self, me_dir, fct):
         """Wait that all job are finish"""
         
@@ -108,6 +112,7 @@ class Cluster(object):
         self.submitted = 0
         self.submitted_ids = []
 
+    @check_interupt()
     def launch_and_wait(self, prog, argument=[], cwd=None, stdout=None, 
                                                          stderr=None, log=None):
         """launch one job on the cluster and wait for it"""
@@ -274,6 +279,7 @@ class PBSCluster(Cluster):
             raise ClusterManagmentError, 'fail to submit to the cluster: \n%s' \
                                                                         % output 
         self.submitted += 1
+        self.submitted_ids.append(id)
         return id
 
     @multiple_try()
@@ -320,6 +326,16 @@ class PBSCluster(Cluster):
                     fail += 1
 
         return idle, run, self.submitted - (idle+run+fail), fail
+
+    @multiple_try()
+    def remove(self, *args):
+        """Clean the jobs on the cluster"""
+        
+        if not self.submitted_ids:
+            return
+        cmd = "qdel %s" % ' '.join(self.submitted_ids)
+        status = subprocess.Popen([cmd], shell=True, stdout=open(os.devnull,'w'))
+
 
 class SGECluster(Cluster):
     """Basic class for dealing with cluster submission"""
@@ -397,6 +413,7 @@ class SGECluster(Cluster):
             raise ClusterManagmentError, 'fail to submit to the cluster: \n%s' \
                                                                         % output 
         self.submitted += 1
+        self.submitted_ids.append(id)
         logger.debug(output)
 
         return id
@@ -448,6 +465,16 @@ class SGECluster(Cluster):
                     fail += 1
 
         return idle, run, self.submitted - (idle+run+fail), fail
+    
+    
+    @multiple_try()
+    def remove(self, *args):
+        """Clean the jobs on the cluster"""
+        
+        if not self.submitted_ids:
+            return
+        cmd = "qdel %s" % ' '.join(self.submitted_ids)
+        status = subprocess.Popen([cmd], shell=True, stdout=open(os.devnull,'w'))
 
 class LSFCluster(Cluster):
     """Basic class for dealing with cluster submission"""
@@ -559,6 +586,14 @@ class LSFCluster(Cluster):
 
         return idle, run, self.submitted - (idle+run+fail), fail
 
+    @multiple_try()
+    def remove(self, *args):
+        """Clean the jobs on the cluster"""
+        
+        if not self.submitted_ids:
+            return
+        cmd = "bdel %s" % ' '.join(self.submitted_ids)
+        status = subprocess.Popen([cmd], shell=True, stdout=open(os.devnull,'w'))
 
 from_name = {'condor':CondorCluster, 'pbs': PBSCluster, 'sge': SGECluster, 
              'lsf': LSFCluster}
