@@ -2209,14 +2209,14 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
                 if len(forbidden_particles_re.groups()) > 2:
                     line = line + forbidden_particles_re.group(3)
 
-        # Now check for double forbidden schannels, specified using "$$"
+        # Now check for forbidden schannels, specified using "$$"
         forbidden_schannels_re = re.match("^(.+)\s*\$\s*\$\s*(.+)\s*$", line)
         forbidden_schannels = ""
         if forbidden_schannels_re:
             forbidden_schannels = forbidden_schannels_re.group(2)
             line = forbidden_schannels_re.group(1)
 
-        # Now check for forbidden schannels, specified using "$"
+        # Now check for forbidden onshell schannels, specified using "$"
         forbidden_onsh_schannels_re = re.match("^(.+)\s*\$\s*(.+)\s*$", line)
         forbidden_onsh_schannels = ""
         if forbidden_onsh_schannels_re:
