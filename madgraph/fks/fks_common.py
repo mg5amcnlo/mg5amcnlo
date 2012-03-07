@@ -358,6 +358,8 @@ def find_pert_particles_interactions(model, pert_order = 'QCD'): #test written
     --pert_particles : pdgs of particles taking part to interactions
     --soft_particles : pdgs of massless particles in pert_particles
     """
+    ghost_list = [-666, 666]
+    ghost_list += [ p['get_pdg_code'] for p in model.get('particles') if p.get('spin') < 0]
     qcd_inter = MG.InteractionList()
     pert_parts = []
     soft_parts = []
@@ -371,7 +373,8 @@ def find_pert_particles_interactions(model, pert_order = 'QCD'): #test written
                 # (otherwise the real emission final state will not be degenerate
                 # with the born one
             masslist.remove('zero')
-            if len(set(masslist)) == 1:
+            if len(set(masslist)) == 1 and not \
+                    any( [ p['pdg_code'] in ghost_list for p in ii['particles']]) :
                 qcd_inter.append(ii)
                 for pp in ii['particles']:
                     pert_parts.append(pp.get_pdg_code())
