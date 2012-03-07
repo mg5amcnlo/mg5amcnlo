@@ -188,7 +188,7 @@ class WriteALOHA:
         conjugate = [2*(int(c[1:])-1) for c in self.tag if c[0] == 'C']
         
         for index,spin in enumerate(self.particles):
-            if outgoing == index + 1:
+            if self.offshell == index + 1:
                 continue
             
             if index in conjugate:
@@ -196,7 +196,7 @@ class WriteALOHA:
                 call_arg.append('%s%d' % (spin2, index2 +1)) 
                 #call_arg.append('%s%d' % (spin, index +1)) 
             elif index-1 in conjugate:
-                index2, spin2 = index-1, self.particles[index]
+                index2, spin2 = index-1, self.particles[index-1]
                 call_arg.append('%s%d' % (spin2, index2 +1)) 
             else:
                 call_arg.append('%s%d' % (spin, index +1)) 

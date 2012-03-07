@@ -17,6 +17,22 @@ Update notes for MadGraph 5 (in reverse time order)
                       the web (thanks to Simon) .
                   OM: Fix a Mac specific problem for edition of Delphes card.
                       (thanks to Sho Iwamoto).
+                  OM: ALOHA modifications:
+                       - Change sign convention for Epsilon (matching FR choices)
+                       - For Fermion vertex forces that _1 always returns the  
+                         incoming fermion and _2 returns the outcoming fermion. 
+                         (This modifies conjugate routine output)
+                       - Change the order of argument for conjugate routine
+                         to expect IO order of fermion in all cases.
+                       Note that the two last modifications matches MG5 conventions
+                       and that those modifications correct bugs for interactions
+                       a) subject to conjugate routine (i.e. if the model has 
+                          majorana)                       
+                       b) containing fermion momentum dependencies in the Lorentz
+                          structure  
+                       All model included by default in MG5 (in particular sm/mssm)
+                       were not affected by those mismatch of conventions.
+                       (Thanks to Benjamin fuks) 
                   OM: make acceptance test more silent.  
                   OM: return the correct error message when a compilation occur. 
                   OM: some code re-factoring.
