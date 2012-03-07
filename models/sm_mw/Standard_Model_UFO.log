@@ -1,0 +1,77 @@
+# This file was automatically created by FeynRules $Revision: 999 $
+# Mathematica version: 7.0 for Linux x86 (64-bit) (February 18, 2009)
+# Date: Mon 30 Jan 2012 19:56:50
+
+
+# 
+# This is the logfile for the model Standard Model
+
+# Authors: N. Christensen, C. Duhr, B. Fuks
+# Model version: 1.4.1
+# Checking the Quantum numbers
+   * Electric charge defined.
+# Checking the Lagrangians
+   * All Lagrangians are ok.
+#
+# Particle definitions
+#
+
+   * No particles removed. All particles correspond to GenInt setup.
+
+# Automatically assigned PDG numbers
+   * Assigned PDG number 9000001 to particle ghA
+   * Assigned PDG number 9000002 to particle ghZ
+   * Assigned PDG number 9000003 to particle ghWp
+   * Assigned PDG number 9000004 to particle ghWm
+   * Assigned PDG number 9000005 to particle ghG
+
+
+# Compulsory PDG codes:
+   * Class SM leptons complete.
+   * Class SM neutrinos complete.
+   * Class SM quarks complete.
+   * Class SM gauge bosons complete.
+#
+# Parameter definitions
+#
+
+   * Parameter gw has no value. Default value 1 assigned.
+   * Parameter g1 has no value. Default value 1 assigned.
+
+
+# Vertices
+   * Calling FeynmanRules for 1 Lagrangians.
+   * Number of classes vertices: 93
+   * Number of flavored vertices: 163
+   * Saved vertices in InterfaceRun[ 1 ].
+   * Checked QNumber conservation.
+      - Quantum number GhostNumber conserved in all vertices.
+      - Quantum number LeptonNumber conserved in all vertices.
+      - Quantum number Q conserved in all vertices.
+      - Quantum number Y conserved in all vertices.
+   * particles.py written.
+   * parameters.py written.
+#
+# Vertex definitions
+#
+
+   * 163 vertices written.
+   * vertices.py written.
+#
+# Lorentz structure definitions
+#
+
+   * 22 lorentz structures written.
+   * lorentz.py written.
+#
+# Coupling definitions
+#
+
+   * 132 couplings written.
+   * couplings.py written.
+#
+# Coupling order definitions
+#
+
+   * 0 couplings orders written.
+   * coupling_orders.py written.

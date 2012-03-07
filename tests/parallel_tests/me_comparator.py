@@ -416,104 +416,6 @@ class MG5Runner(MG4Runner):
                      os.path.join(self.mg4_path, self.temp_dir_name)
 
         return v5_string
-
-class MG5CMSRunner(MG4Runner):
-    """Runner object for the MG5 Matrix Element generator
-       in the complex mass scheme."""
-
-    mg5_path = ""
-
-    name = 'MadGraph v5'
-    type = 'v5'
-        
-
-    def setup(self, mg5_path, mg4_path, temp_dir=None):
-        """Wrapper for the mg4 setup, also initializing the mg5 path variable"""
-
-        self.mg4_path = os.path.abspath(mg4_path)
-
-        if not temp_dir:
-            i=0
-            while os.path.exists(os.path.join(mg4_path, 
-                                              "ptest_%s_%s" % (self.type, i))):
-                i += 1
-            temp_dir = "ptest_%s_%s" % (self.type, i)         
-
-        self.temp_dir_name = temp_dir
-
-    def run(self, proc_list, model, orders={}, energy=1000):
-        """Execute MG5 on the list of processes mentioned in proc_list, using
-        the specified model, the specified maximal coupling orders and a certain
-        energy for incoming particles (for decay, incoming particle is at rest).
-        """
-        self.res_list = [] # ensure that to be void, and avoid pointer problem 
-        self.proc_list = proc_list
-        self.model = model
-        self.orders = orders
-        self.energy = energy
-        self.non_zero = 0 
-
-        dir_name = os.path.join(self.mg4_path, self.temp_dir_name)
-
-        # Create a proc_card.dat in the v5 format
-        proc_card_location = os.path.join(self.mg4_path, 'proc_card_%s.dat' % \
-                                          self.temp_dir_name)
-        proc_card_file = open(proc_card_location, 'w')
-        proc_card_file.write(self.format_mg5_proc_card(proc_list, model, orders))
-        proc_card_file.close()
-
-        logging.info("proc_card.dat file for %i processes successfully created in %s" % \
-                     (len(proc_list), os.path.join(dir_name, 'Cards')))
-
-        # Run mg5
-        logging.info("Running mg5")
-        proc_card = open(proc_card_location, 'r').read()
-        new_proc_list = []
-        cmd = cmd_interface.MadGraphCmdShell()
-        for line in proc_card.split('\n'):
-            try:
-                cmd.exec_cmd(line, errorhandling=False)
-            except MadGraph5Error:
-                pass
-            else:
-                if line.startswith('add'):
-                    self.non_zero += 1
-                    new_proc_list.append(line)
-
-        if hasattr(self, 'store_proc_card'):
-            self.new_proc_list = '\n'.join(new_proc_list)
-
-        # Remove the temporary proc_card
-        os.remove(proc_card_location)
-        if self.non_zero:
-            self.fix_energy_in_check(dir_name, energy)
-
-            # Get the ME value
-            for i, proc in enumerate(proc_list):
-                value = self.get_me_value(proc, i)
-                self.res_list.append(value)
-
-            return self.res_list
-        else:
-            self.res_list = [((0.0, 0), [])] * len(proc_list)
-            return self.res_list
-        
-        
-    def format_mg5_proc_card(self, proc_list, model, orders):
-        """Create a proc_card.dat string following v5 conventions."""
-
-        v5_string = "set complex_mass_scheme True"
-        v5_string += "import model_v4 %s\n" % os.path.join(self.model_dir, model)
-
-        couplings = ' '.join(["%s=%i" % (k, v) for k, v in orders.items()])
-
-        for i, proc in enumerate(proc_list):
-            v5_string += 'add process ' + proc + ' ' + couplings + \
-                         '@%i' % i + '\n'
-        v5_string += "output standalone %s -f\n" % \
-                     os.path.join(self.mg4_path, self.temp_dir_name)
-
-        return v5_string
     
 class MG5_UFO_Runner(MG5Runner):
     
@@ -561,13 +463,11 @@ class MG5_UFO_gauge_Runner(MG5Runner):
                          '@%i' % i + '\n'
         v5_string += "output standalone %s -f\n" % \
                      os.path.join(self.mg4_path, self.temp_dir_name)
+                     
+        v5_string += 'set complex_mass_scheme False \n'
+        v5_string += 'set gauge unitary \n'
 
         return v5_string
-
-
-
-
-
 
 class MG5OldRunner(MG5Runner):
     """ """
@@ -976,18 +876,14 @@ class MEComparatorGauge(MEComparator):
 
         for i, proc in enumerate(self.proc_list):
             list_res = [res[i][0][0] for res in self.results]            
-            if max(list_res) == 0.0 and min(list_res) == 0.0:
-                diff = 0.0
-                if skip_zero:
-                    continue
-            else:
-                diff_feyn = abs(list_res[1] - list_res[2]) / \
+            
+            diff_feyn = abs(list_res[1] - list_res[2]) / \
                        (list_res[1] + list_res[2] + 1e-99)
-                diff_unit = abs(list_res[0] - list_res[3]) / \
+            diff_unit = abs(list_res[0] - list_res[3]) / \
                        (list_res[0] + list_res[3] + 1e-99)
-                diff_cms = abs(list_res[0] - list_res[1]) / \
+            diff_cms = abs(list_res[0] - list_res[1]) / \
                        (list_res[0] + list_res[1] + 1e-99)
-                diff_fixw = abs(list_res[2] - list_res[3]) / \
+            diff_fixw = abs(list_res[2] - list_res[3]) / \
                        (list_res[2] + list_res[3] + 1e-99)
 
             res_str += '\n' + self._fixed_string_length(proc, proc_col_size)+ \
