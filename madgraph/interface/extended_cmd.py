@@ -217,7 +217,116 @@ class BasicCmd(cmd.Cmd):
             #    print '\n'
             return None    
 
-class Cmd(BasicCmd):
+class CheckCmd(object):
+    """Extension of the cmd object for only the check command"""
+
+    def check_history(self, args):
+        """check the validity of line"""
+        
+        if len(args) > 1:
+            self.help_history()
+            raise self.InvalidCmd('\"history\" command takes at most one argument')
+        
+        if not len(args):
+            return
+        
+        if args[0] =='.':
+            if not self._export_dir:
+                raise self.InvalidCmd("No default directory is defined for \'.\' option")
+        elif args[0] != 'clean':
+                dirpath = os.path.dirname(args[0])
+                if dirpath and not os.path.exists(dirpath) or \
+                       os.path.isdir(args[0]):
+                    raise self.InvalidCmd("invalid path %s " % dirpath)
+    
+    def check_save(self, args):
+        """check that the line is compatible with save options"""
+        
+        if len(args) > 2:
+            self.help_save()
+            raise self.InvalidCmd, '\'%s\' is not recoginzed as first argument.'
+        
+        if len(args) == 2:
+            if args[0] != 'options':
+                self.help_save()
+                raise self.InvalidCmd, '\'%s\' is not recoginzed as first argument.' % \
+                                                args[0]
+            else:
+                args.pop(0)           
+
+class HelpCmd(object):
+    """Extension of the cmd object for only the help command"""
+
+    def help_quit(self):
+        logger.info("syntax: quit")
+        logger.info("-- terminates the application")
+    
+    help_EOF = help_quit
+
+    def help_history(self):
+        logger.info("syntax: history [FILEPATH|clean|.] ")
+        logger.info("   If FILEPATH is \'.\' and \'output\' is done,")
+        logger.info("   Cards/proc_card_mg5.dat will be used.")
+        logger.info("   If FILEPATH is omitted, the history will be output to stdout.")
+        logger.info("   \"clean\" will remove all entries from the history.")
+        
+    def help_help(self):
+        logger.info("syntax: help")
+        logger.info("-- access to the in-line help" )
+
+    def help_save(self):
+        """help text for save"""
+        logger.info("syntax: save [options]  [FILEPATH]") 
+        logger.info("-- save options configuration to filepath.")
+        
+    def help_display(self):
+        """help for display command"""
+        logger.info("syntax: display " + "|".join(self._display_opts))
+        logger.info("-- display a the status of various internal state variables")          
+        
+class CompleteCmd(object):
+    """Extension of the cmd object for only the complete command"""
+
+    def complete_display(self,text, line, begidx, endidx):        
+        args = self.split_arg(line[0:begidx])
+        # Format
+        if len(args) == 1:
+            return self.list_completion(text, self._display_opts)
+        
+    def complete_history(self, text, line, begidx, endidx):
+        "Complete the history command"
+
+        args = self.split_arg(line[0:begidx])
+
+        # Directory continuation
+        if args[-1].endswith(os.path.sep):
+            return self.path_completion(text,
+                                        os.path.join('.',*[a for a in args \
+                                                    if a.endswith(os.path.sep)]))
+
+        if len(args) == 1:
+            return self.path_completion(text)
+
+    def complete_save(self, text, line, begidx, endidx):
+        "Complete the save command"
+
+        args = self.split_arg(line[0:begidx])
+
+        # Format
+        if len(args) == 1:
+            return self.list_completion(text, ['options'])
+
+        # Directory continuation
+        if args[-1].endswith(os.path.sep):
+            return self.path_completion(text,
+                                        pjoin('.',*[a for a in args if a.endswith(os.path.sep)]),
+                                        only_dirs = True)
+
+        # Filename if directory is not given
+        if len(args) == 2:
+            return self.path_completion(text)
+
+class Cmd(CheckCmd, HelpCmd, CompleteCmd, BasicCmd):
     """Extension of the cmd.Cmd command line.
     This extensions supports line breaking, history, comments,
     internal call to cmdline, path completion,...
@@ -739,51 +848,6 @@ class Cmd(BasicCmd):
         else:
             return self.stored_line
 
-
-    def help_history(self):
-        logger.info("syntax: history [FILEPATH|clean|.] ")
-        logger.info("   If FILEPATH is \'.\' and \'output\' is done,")
-        logger.info("   Cards/proc_card_mg5.dat will be used.")
-        logger.info("   If FILEPATH is omitted, the history will be output to stdout.")
-        logger.info("   \"clean\" will remove all entries from the history.")
-    
-    
-
-
-    def complete_history(self, text, line, begidx, endidx):
-        "Complete the history command"
-
-        args = self.split_arg(line[0:begidx])
-
-        # Directory continuation
-        if args[-1].endswith(os.path.sep):
-            return self.path_completion(text,
-                                        os.path.join('.',*[a for a in args \
-                                                    if a.endswith(os.path.sep)]))
-
-        if len(args) == 1:
-            return self.path_completion(text)
-        
-    def check_history(self, args):
-        """check the validity of line"""
-        
-        if len(args) > 1:
-            self.help_history()
-            raise self.InvalidCmd('\"history\" command takes at most one argument')
-        
-        if not len(args):
-            return
-        
-        if args[0] =='.':
-            if not self._export_dir:
-                raise self.InvalidCmd("No default directory is defined for \'.\' option")
-        elif args[0] != 'clean':
-                dirpath = os.path.dirname(args[0])
-                if dirpath and not os.path.exists(dirpath) or \
-                       os.path.isdir(args[0]):
-                    raise self.InvalidCmd("invalid path %s " % dirpath)
-    
-
     # Quit
     def do_quit(self, line):
         """ exit the mainloop() """
@@ -806,11 +870,7 @@ class Cmd(BasicCmd):
     do_EOF = do_quit
     do_exit = do_quit
 
-    def help_quit(self):
-        logger.info("syntax: quit")
-        logger.info("-- terminates the application")
-    
-    help_EOF = help_quit
+
      
     
 
@@ -932,18 +992,7 @@ class Cmd(BasicCmd):
                 outstr += misc.nice_representation(var, nb_space=4)                
             
             pydoc.pager(outstr)
-            
     
-    def help_display(self):
-        """help for display command"""
-        logger.info("syntax: display " + "|".join(self._display_opts))
-        logger.info("-- display a the status of various internal state variables")
-        
-    def complete_display(self,text, line, begidx, endidx):        
-        args = self.split_arg(line[0:begidx])
-        # Format
-        if len(args) == 1:
-            return self.list_completion(text, self._display_opts)
     
     def do_save(self, line, check=True):
         """Save the configuration file"""
@@ -978,46 +1027,7 @@ class Cmd(BasicCmd):
         if len(args) == 0:
             args.append(base)
         self.write_configuration(args[0], base, basedir)
-    
-    def check_save(self, args):
-        """check that the line is compatible with save options"""
         
-        if len(args) > 2:
-            self.help_save()
-            raise self.InvalidCmd, '\'%s\' is not recoginzed as first argument.'
-        
-        if len(args) == 2:
-            if args[0] != 'options':
-                self.help_save()
-                raise self.InvalidCmd, '\'%s\' is not recoginzed as first argument.' % \
-                                                args[0]
-            else:
-                args.pop(0)           
-    
-    def help_save(self):
-        """help text for save"""
-        logger.info("syntax: save [options]  [FILEPATH]") 
-        logger.info("-- save options configuration to filepath.")
-    
-    def complete_save(self, text, line, begidx, endidx):
-        "Complete the save command"
-
-        args = self.split_arg(line[0:begidx])
-
-        # Format
-        if len(args) == 1:
-            return self.list_completion(text, ['options'])
-
-        # Directory continuation
-        if args[-1].endswith(os.path.sep):
-            return self.path_completion(text,
-                                        pjoin('.',*[a for a in args if a.endswith(os.path.sep)]),
-                                        only_dirs = True)
-
-        # Filename if directory is not given
-        if len(args) == 2:
-            return self.path_completion(text)
-    
     def write_configuration(self, filepath, basefile, basedir):
         """Write the configuration file"""
         # We use the default configuration file as a template.
@@ -1061,9 +1071,7 @@ class Cmd(BasicCmd):
         writer.write(text)
         writer.close()
                        
-    def help_help(self):
-        logger.info("syntax: help")
-        logger.info("-- access to the in-line help" )
+
 
 
     @staticmethod
