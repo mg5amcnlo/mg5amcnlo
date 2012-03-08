@@ -1,6 +1,6 @@
 Update notes for MadGraph 5 (in reverse time order)
 
-1.4.3 (XX/XX/12)  JA: Reintroduced the possibility to completely forbid
+1.4.3 (08/03/12)  JA: Reintroduced the possibility to completely forbid
                       s-channel diagrams, using the $$ notation. Note that
                       this should be used with great care, since the result
                       is in general not gauge-invariant. It is in general
