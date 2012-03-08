@@ -405,7 +405,7 @@ class MasterCmdWeb(Switcher, MGcmd.MadGraphCmdWeb):
     def finalize(self, nojpeg):
         """Finalize web generation""" 
         
-        Switcher.finalize(self, nojpeg, online = True)
+        self.cmd.finalize(self, nojpeg, online = True)
 
     # Generate a new amplitude
     def do_generate(self, line):
