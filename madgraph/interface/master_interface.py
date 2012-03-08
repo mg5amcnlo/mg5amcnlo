@@ -359,7 +359,8 @@ class Switcher(object):
         return self.cmd.test_interface(self, *args, **opts)
 
     def set_configuration(self, *args, **opts):
-                return self.cmd.set_configuration(self, *args, **opts)
+        return self.cmd.set_configuration(self, *args, **opts)
+
 
 class MasterCmd(Switcher, MGcmd.MadGraphCmd, cmd.CmdShell):
 

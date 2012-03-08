@@ -221,7 +221,7 @@ class CmdExtended(cmd.Cmd):
 #===============================================================================
 # HelpToCmd
 #===============================================================================
-class HelpToCmd(object):
+class HelpToCmd(cmd.HelpCmd):
     """ The Series of help routine for the MadGraphCmd"""    
     
     def help_save(self):
@@ -408,7 +408,7 @@ class HelpToCmd(object):
 #===============================================================================
 # CheckValidForCmd
 #===============================================================================
-class CheckValidForCmd(object):
+class CheckValidForCmd(cmd.CheckCmd):
     """ The Series of help routine for the MadGraphCmd"""
     
     class RWError(MadGraph5Error):
@@ -1044,7 +1044,7 @@ class CheckValidForCmdWeb(CheckValidForCmd):
 #===============================================================================
 # CompleteForCmd
 #===============================================================================
-class CompleteForCmd(object):
+class CompleteForCmd(cmd.CompleteCmd):
     """ The Series of help routine for the MadGraphCmd"""
     
  
