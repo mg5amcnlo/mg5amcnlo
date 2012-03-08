@@ -38,6 +38,7 @@ pjoin = os.path.join
 import madgraph
 import madgraph.interface.extended_cmd as cmd
 import madgraph.interface.madgraph_interface as MGcmd
+import madgraph.interface.Loop_interface as LoopCmd
 
 from madgraph import MG4DIR, MG5DIR, MadGraph5Error
 
@@ -362,19 +363,20 @@ class Switcher(object):
         return self.cmd.set_configuration(self, *args, **opts)
 
 
-class MasterCmd(Switcher, MGcmd.MadGraphCmd, cmd.CmdShell):
-
+class MasterCmd(Switcher, LoopCmd.LoopInterface, cmd.CmdShell):
 
     def change_principal_cmd(self, name):
         if name == 'MadGraph':
             self.cmd = MGcmd.MadGraphCmd
+        elif name == 'Loop':
+            self.cmd = LoopCmd.LoopInterface
         else:
             raise MadGraph5Error, 'Type of interface not valid'  
         
         if __debug__:
             self.debug_link_to_command()      
         
-class MasterCmdWeb(Switcher, MGcmd.MadGraphCmdWeb):
+class MasterCmdWeb(Switcher, LoopCmd.LoopInterfaceWeb):
  
     timeout = 1 # time authorize to answer question [0 is no time limit]
     
@@ -394,8 +396,8 @@ class MasterCmdWeb(Switcher, MGcmd.MadGraphCmdWeb):
     def change_principal_cmd(self, name):
         if name == 'MadGraph':
             self.cmd = MGcmd.MadGraphCmdWeb
-#        elif name == 'Loop':
-#            self.cmd = NLOcmd.LoopInterfaceWeb
+        elif name == 'Loop':
+            self.cmd = LoopCmd.LoopInterfaceWeb
         else:
             raise MadGraph5Error, 'Type of interface not valid'  
         
