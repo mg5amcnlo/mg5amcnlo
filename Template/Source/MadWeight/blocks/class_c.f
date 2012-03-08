@@ -54,6 +54,9 @@ c
 c
 c     local
 c
+      INTEGER IDUM
+      DATA IDUM/0/
+      SAVE IDUM
       double precision pboost(0:3), CMS_mom(0:3,max_particles)
       double precision Ptot(0:3),PtotCMS(0:3)
       double precision measureLAB, measureCMS
@@ -103,11 +106,12 @@ c     external
 c
       double precision phi
       external phi
-
+      REAL XRAN1
+      EXTERNAL XRAN1
 c
 c Begin code
 c---
-
+       IDUM=0
 c
 c     energies are initialized to a negative real
 c     (= no solution status)
@@ -306,7 +310,8 @@ c            write(*,*) solr2(k)
         jac_factor=1d0
       elseif (k.eq.2) then
         jac_factor=2d0
-        call ntuple(var,0.0,1.0,max_particles)
+c        call ntuple(var,0.0,1.0,max_particles)
+        var=xran1(IDUM)
         if(var.gt.0.5) then
           E1=solr1(1)
           alpha=solr2(1)
@@ -316,7 +321,8 @@ c            write(*,*) solr2(k)
         endif
       elseif (k.eq.3) then
         jac_factor=3d0
-        call ntuple(var,0.0,1.0,max_particles)
+c        call ntuple(var,0.0,1.0,max_particles)
+        var=xran1(IDUM)
         if(var.lt.1.0/3.0) then
           E1=solr1(1)
           alpha=solr2(1)
@@ -329,7 +335,8 @@ c            write(*,*) solr2(k)
         endif
       elseif (k.eq.4) then
         jac_factor=4d0
-        call ntuple(var,0.0,1.0,max_particles)
+c        call ntuple(var,0.0,1.0,max_particles)
+        var=xran1(IDUM)
         if(var.lt.1.0/4.0) then
           E1=solr1(1)
           alpha=solr2(1)

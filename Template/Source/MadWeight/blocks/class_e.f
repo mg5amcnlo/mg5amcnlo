@@ -28,6 +28,9 @@ c      double precision jac_loc(2)
 c
 c     local
 c
+      INTEGER IDUM
+      DATA IDUM/0/
+      SAVE IDUM
       double precision E3,E4,p3x,p3y,p3z,p4x,p4y,p4z
       double precision A1,A2,A3,A4,B1,B2,B3,B4
       double precision p1z_ti,p1z_E2,p1z_p2y
@@ -51,7 +54,8 @@ c      double precision h11,h12,h22
       double precision CMS_mom(0:3,max_particles)
       integer index_sol, MG
       real rand
-
+      REAL XRAN1
+      EXTERNAL XRAN1
       integer j
 c
 c     global
@@ -72,6 +76,7 @@ c
       double precision              S,X1,X2,PSWGT,JAC
       common /PHASESPACE/ S,X1,X2,PSWGT,JAC
 
+       IDUM=0
       sqrts=dsqrt(s)
       momenta(0,p1)=-1d0
       momenta(0,p2)=-1d0
@@ -267,7 +272,8 @@ c      write(*,*) 'g00,h00',g00,h00
             sol(1)=(-b+dsqrt(rho))/2d0
             sol(2)=(-b-dsqrt(rho))/2d0
             index_sol=1
-            call ntuple(rand,0.0,1.0,p1)
+c            call ntuple(rand,0.0,1.0,p1)
+            rand=xran1(IDUM)
             if (rand.gt.0.5) index_sol=2
             p2y=sol(index_sol)
             jac_factor=2d0
@@ -344,7 +350,8 @@ c        write(*,*) 'E2',sol(1),sol(2)
      & dabs(x1s2-0.5d0).lt.0.5d0.and.dabs(x2s2-0.5d0).lt.0.5d0) then
 
             index_sol=1
-            call ntuple(rand,0.0,1.0,p1)
+c            call ntuple(rand,0.0,1.0,p1)
+            rand=xran1(IDUM)
             if (rand.gt.0.5) index_sol=2
             E2=sol(index_sol)
             jac_factor=2d0

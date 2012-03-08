@@ -28,6 +28,9 @@ c
 c
 c     local
 c
+      INTEGER IDUM
+      DATA IDUM/0/
+      SAVE IDUM
       double precision pboost(0:3), CMS_mom(0:3,max_particles)
       double precision Ptot(0:3),PtotCMS(0:3)
       double precision measureLAB, measureCMS
@@ -74,6 +77,8 @@ c
 c
 c     external
 c
+      REAL XRAN1
+      EXTERNAL XRAN1
       double precision dot
       external dot
 
@@ -376,6 +381,7 @@ c      pause
         endif
       enddo
 
+      IDUM=0
       if (k.eq.0) then 
         jac=-1d0
       return
@@ -385,7 +391,8 @@ c      pause
         jac_factor=1d0
       elseif (k.eq.2) then
         jac_factor=2d0
-        call ntuple(var,0.0,1.0,15)
+c        call ntuple(var,0.0,1.0,15)
+        var=xran1(IDUM)
         if(var.gt.0.5) then
           E1=E1real(1)
           E2=E2real(1)
@@ -395,7 +402,8 @@ c      pause
         endif
       elseif (k.eq.3) then
         jac_factor=3d0
-        call ntuple(var,0.0,1.0,max_particles)
+c        call ntuple(var,0.0,1.0,max_particles)
+        var=xran1(IDUM)
         if(var.lt.1.0/3.0) then
           E1=E1real(1)
           E2=E2real(1)
@@ -408,7 +416,8 @@ c      pause
         endif
       elseif (k.eq.4) then
         jac_factor=4d0
-        call ntuple(var,0.0,1.0,max_particles)
+c        call ntuple(var,0.0,1.0,max_particles)
+        var=xran1(IDUM)
         if(var.lt.1.0/4.0) then
           E1=E1real(1)
           E2=E2real(1)
@@ -514,7 +523,7 @@ c     First evaluated the total momentum in the LAB frame
         enddo
       pboost(j)=Ptot(j)
       enddo
- 
+
 c     Then calculate the momenta in the CMS frame
       pboost(1)=-pboost(1)
       pboost(2)=-pboost(2)
@@ -526,8 +535,8 @@ c         write(*,*) "p",j,momenta(0,j), momenta(1,j),momenta(2,j),momenta(3,j)
        call boostx(Ptot,pboost,PtotCMS)
 
 c     Evaluate the initial momenta in the CMS frame
-      x1=(PtotCMS(0)+Ptot(3))/sqrts
-      x2=(PtotCMS(0)-Ptot(3))/sqrts
+      x1=(PtotCMS(0)+PtotCMS(3))/sqrts
+      x2=(PtotCMS(0)-PtotCMS(3))/sqrts
 
       if (dabs(x1-0.5).gt.0.5d0.or.dabs(x2-0.5).gt.0.5d0) then
         jac=-1d0

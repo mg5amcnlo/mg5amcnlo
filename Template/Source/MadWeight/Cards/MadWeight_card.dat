@@ -36,7 +36,7 @@ Block MW_Run
      use_cut              F       # use the cut defined in run_card.dat
      bw_cut               F       # use the BW cut 
      nwa                  F       # T= use narrow width approximation
-     ISR                  F       # T=boost correction based on reconstructed pTmiss
+     isr                  F       # T=boost correction based on reconstructed pTmiss
      
 #*************************************************************************
 ##                  define the different param_card's                   ##  

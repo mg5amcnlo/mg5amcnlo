@@ -326,7 +326,7 @@ c          here we evaluate the scales if running
            if(.not.fixed_ren_scale) then
              call set_ren_scale(momenta(0,1),scale)
              if(scale.gt.0) G = SQRT(4d0*PI*ALPHAS(scale))
-             call setpara('param_card.dat',.false.)
+             call UPDATE_AS_PARAM()
            endif
            if(.not.fixed_fac_scale) then
              call set_fac_scale(momenta(0,1),q2fact)

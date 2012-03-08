@@ -24,6 +24,9 @@ c
 c
 c     local
 c
+      INTEGER IDUM
+      DATA IDUM/0/
+      SAVE IDUM
       double precision b,c,rho,jac_factor,dem
       double precision pt1_ti,pt1_E1,pz1_ti,pz1_E1,PT1
       double precision  phi_miss,jac_temp,invjac
@@ -47,6 +50,8 @@ c     external
 c
       double precision pt, phi,dot
       external pt,phi,dot
+      REAL XRAN1
+      EXTERNAL XRAN1
 c---
 c Begin code
 c---
@@ -133,7 +138,8 @@ c
           PT1sol(2)=PT1_ti+PT1_E1*sol(2)
           if (PT1sol(1).gt.0d0.and.PT1sol(2).gt.0d0) then
             index_sol=1
-            call ntuple(rand,0.0,1.0,p1)
+c            call ntuple(rand,0.0,1.0,p1)
+             rand=xran1(IDUM)
             if (rand.gt.0.5) index_sol=2
             momenta(0,p1)=sol(index_sol)
             PT1=PT1sol(index_sol)

@@ -24,6 +24,9 @@ c      integer parg1,parg2 !old variable
 c
 c     local
 c
+      INTEGER IDUM
+      DATA IDUM/0/
+      SAVE IDUM
       double precision b,c,rho,jac_factor,normP1new
       double precision p1_ti,p1_E1,dem,jac_temp,jac_loc
       real rand
@@ -47,6 +50,8 @@ c
       common /to_missingP/Etot,pztot,misspx,misspy
       double precision              S,X1,X2,PSWGT,JAC
       common /PHASESPACE/ S,X1,X2,PSWGT,JAC
+      REAL XRAN1
+      EXTERNAL XRAN1
 c---
 c Begin code
 c---
@@ -194,7 +199,8 @@ c      write(*,*) 'jac_factor ', jac_factor
           p1sol(2)=p1_ti+p1_E1*sol(2)
           if (p1sol(1).gt.0d0.and.p1sol(2).gt.0d0) then
             index_sol=1
-            call ntuple(rand,0.0,1.0,p1)
+c            call ntuple(rand,0.0,1.0,p1)
+             rand=xran1(IDUM)
             if (rand.gt.0.5) index_sol=2
             momenta(0,p1)=sol(index_sol)
             normP1new=p1sol(index_sol)

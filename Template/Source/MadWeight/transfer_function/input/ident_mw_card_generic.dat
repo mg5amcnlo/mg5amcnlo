@@ -19,5 +19,5 @@ MW_run          733      max_it_step3     integer    0
 MW_run          734      max_it_step4     integer    0 
 MW_run          735      max_it_step5     integer    0 
 MW_run          histo    histo            logical    .false.
-MW_run          NWA      NWA              logical    .false.
-MW_run          ISR      ISR              logical    .false.
+MW_run          nwa      nwa              logical    .false.
+MW_run          isr      isr              logical    .false.

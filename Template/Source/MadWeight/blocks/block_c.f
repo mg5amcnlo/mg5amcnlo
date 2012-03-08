@@ -22,6 +22,9 @@ c
 c
 c     local
 c
+      INTEGER IDUM
+      DATA IDUM/0/
+      SAVE IDUM
       double precision b,c,rho,jac_factor,normP1
       double precision p1_ti,p1_E1,dem,jac_loc
       double precision theta_miss, phi_miss,jac_temp
@@ -40,6 +43,8 @@ c
       common /to_missingP/Etot,pztot,misspx,misspy
       double precision              S,X1,X2,PSWGT,JAC
       common /PHASESPACE/ S,X1,X2,PSWGT,JAC
+      REAL XRAN1
+      EXTERNAL XRAN1
 c---
 c Begin code
 c---
@@ -116,7 +121,8 @@ c
           p1sol(2)=p1_ti+p1_E1*sol(2)
           if (p1sol(1).gt.0d0.and.p1sol(2).gt.0d0) then
             index_sol=1
-            call ntuple(rand,0.0,1.0,p1)
+c            call ntuple(rand,0.0,1.0,p1)
+             rand=xran1(IDUM)
 c              write(*,*) 'rand',rand
             if (rand.gt.0.5) then
               index_sol=2

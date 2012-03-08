@@ -51,7 +51,6 @@ c     first generate the reconstructed quantities
          pyISR=0d0
       endif
 
-
 c     then generate the invariant mass of mapped resonances, if any
       if (num_propa(config_pos).gt.0) call generate_propa(x,n_var)
 
@@ -492,6 +491,8 @@ C
       pp2=momenta(1,MG_num)**2+momenta(2,MG_num)**2+momenta(3,MG_num)**2
       Breit_Wigner_for_part=(E**2-pp2-M**2)**2+M**2*W**2
       Breit_Wigner_for_part=M*W/Breit_Wigner_for_part/pi
+c     Normalisation for the measure d(sqrts)  (and not ds)
+      Breit_Wigner_for_part=Breit_Wigner_for_part*2d0*E
       return
       end
 

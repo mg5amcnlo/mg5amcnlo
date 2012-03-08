@@ -29,6 +29,9 @@ c
 c
 c     local
 c
+      INTEGER IDUM
+      DATA IDUM/0/
+      SAVE IDUM
       double precision b,c,rho,jac_factor,normp1,normp2,E3
       double precision p1_ti,p1_p2,jac_temp,jac_loc,inv_jac
       double complex E1c(4), E2c(4)
@@ -54,12 +57,13 @@ c
       common /to_missingP/Etot,pztot,misspx,misspy
       double precision              S,X1,X2,PSWGT,JAC
       common /PHASESPACE/ S,X1,X2,PSWGT,JAC
+      REAL XRAN1
+      EXTERNAL XRAN1
 c---
 c Begin code
 c---
 
       jac_loc=1d0
-
 
 c----------------------------------------------
 c     generate  p1 angles
@@ -207,9 +211,6 @@ c       write(*,*) 'we have a real number'
             k=k+1 ! count the number of good sol
             normp1real(k)=dble(E1c(j))
             normp2real(k)=dble(E2c(j))
-c            write(*,*) 'sol',k
-c            write(*,*) E1real(k)
-c            write(*,*) E2real(k)
 c      pause
           endif
           endif
@@ -224,7 +225,9 @@ c      pause
         jac_factor=1d0
       elseif (k.eq.2) then
         jac_factor=2d0
-        call ntuple(rand,0.0,1.0,15)
+c        call ntuple(rand,0.0,1.0,15)
+             rand=xran1(IDUM)
+c        write(*,*) rand
         if(rand.gt.0.5) then
           normp1=normp1real(1)
           normp2=normp2real(1)
@@ -234,7 +237,8 @@ c      pause
         endif
       elseif (k.eq.3) then
         jac_factor=3d0
-        call ntuple(rand,0.0,1.0,max_particles)
+c        call ntuple(rand,0.0,1.0,max_particles)
+             rand=xran1(IDUM)
         if(rand.lt.1.0/3.0) then
           normp1=normp1real(1)
           normp2=normp2real(1)
@@ -247,7 +251,8 @@ c      pause
         endif
       elseif (k.eq.4) then
         jac_factor=4d0
-        call ntuple(rand,0.0,1.0,max_particles)
+c        call ntuple(rand,0.0,1.0,max_particles)
+             rand=xran1(IDUM)
         if(rand.lt.1.0/4.0) then
           normp1=normp1real(1)
           normp2=normp2real(1)
@@ -312,7 +317,8 @@ c
           p1sol(2)=p1_ti+p1_p2*sol(2)
           if (p1sol(1).gt.0d0.and.p1sol(2).gt.0d0) then
             index_sol=1
-            call ntuple(rand,0.0,1.0,p1)
+c            call ntuple(rand,0.0,1.0,p1)
+             rand=xran1(IDUM)
             if (rand.gt.0.5) index_sol=2
               normp2=sol(index_sol)
               normp1=p1sol(index_sol)
@@ -369,6 +375,7 @@ c      write(*,*) 'jac ', jac_loc
       jac=jac*jac_loc/dabs(inv_jac)
 
 c      write(*,*) 'jac_factor ', jac_factor
+
       return
       end
 

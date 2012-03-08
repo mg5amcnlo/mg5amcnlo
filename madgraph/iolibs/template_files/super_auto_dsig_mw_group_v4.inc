@@ -110,6 +110,7 @@ C
 C     LOCAL VARIABLES 
 C     
       DOUBLE PRECISION P1(0:3,NEXTERNAL),xdum
+      DOUBLE PRECISION PTEMP(0:3)
       INTEGER I,J,K
       INTEGER IMODE
 
@@ -124,15 +125,12 @@ C
       IB(2)=2
 
       IF(IMIRROR.EQ.2)THEN
-C       Flip momenta (rotate around x axis)
-        DO I=1,NEXTERNAL
-          P1(2,I)=-P1(2,I)
-          P1(3,I)=-P1(3,I)
+        DO I=0,3
+         PTEMP(I)=P1(I,1)
+         P1(I,1)=P1(I,2)
+         P1(I,2)=PTEMP(I)
         ENDDO
-C       Flip beam identity
-        IB(1)=2
-        IB(2)=1
-C       Flip x values (to get boost right)
+C       Flip x values 
         XDUM=XBK(1)
         XBK(1)=XBK(2)
         XBK(2)=XDUM

@@ -20,6 +20,9 @@ c
 c
 c     local
 c
+      INTEGER IDUM
+      DATA IDUM/0/
+      SAVE IDUM
       double precision jac_loc
       double precision b,c,rho,sign_root,jac_factor,dem
       double precision p1x_ti,p1x_E1,p1y_ti,p1y_E1,p1z_ti,p1z_E1
@@ -44,6 +47,8 @@ c     external
 c
       double precision pt, phi,dot
       external pt,phi,dot
+      REAL XRAN1
+      EXTERNAL XRAN1
 c---
 c Begin code
 c---
@@ -139,7 +144,8 @@ c
           jac_factor=1d0
         elseif (rho.gt.0d0.and.dsqrt(rho).lt.(-b)) then   ! 2 sol
           sign_root=1d0
-          call ntuple(rand,0.0,1.0,p1)
+c          call ntuple(rand,0.0,1.0,p1)
+           rand=xran1(IDUM)
           if (rand.gt.0.5) sign_root=-1.0d0
           momenta(0,p1)=(-b+sign_root*dsqrt(rho))/2d0
           jac_factor=2d0

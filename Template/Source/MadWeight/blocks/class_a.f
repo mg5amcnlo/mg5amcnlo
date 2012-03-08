@@ -56,10 +56,10 @@ c---
 c if pTmiss reconstructed is NOT used, 
 c the boost is defined by the pT balancing the visible particles
 c in class_h 
-      if (.not. ISR) then
-        call class_h(x,n_var,p1,p2)
-        return
-      endif
+c      if (.not. ISR) then
+c        call class_h(x,n_var,p1,p2)
+c        return
+c      endif
 
 c otherwise, boost the event based on ISR. 
 c
@@ -156,7 +156,7 @@ c     First evaluated the total momentum in the LAB frame
         enddo
       pboost(j)=Ptot(j)
       enddo
- 
+        
 c     Then calculate the momenta in the CMS frame
       pboost(1)=-pboost(1)
       pboost(2)=-pboost(2)
@@ -209,7 +209,7 @@ c     Evaluate the initial momenta in the LAB frame
 c
 c     flux factor
 c
-      jac_loc=jac_loc/(2d0*S*x1*x2)  ! flux 
+      jac_loc=jac_loc/(S**2*x1*x2)  ! flux + jac x1,x2 -> Etot, Pztot
       jac=jac*jac_loc
 
       misspx=0d0

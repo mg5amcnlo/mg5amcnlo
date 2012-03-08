@@ -20,6 +20,9 @@ c
 c
 c     local
 c
+      INTEGER IDUM
+      DATA IDUM/0/
+      SAVE IDUM
       double precision pboost(0:3), CMS_mom(0:3,max_particles)
       double precision Ptot(0:3),PtotCMS(0:3)
       double precision measureLAB, measureCMS
@@ -47,9 +50,12 @@ c
       integer nexternal, num_inv
       COMMON/to_num_inv/nexternal, num_inv
 
+      REAL XRAN1
+      EXTERNAL XRAN1
 c--------
 c Begin code 
 c--------
+      IDUM=0
       sqrts=dsqrt(s)
       if((Etot+dsqrt(misspx**2+misspy**2)).gt.sqrts) then
       jac=-1d0
@@ -125,7 +131,8 @@ c          write(*,*) 'x1,x2',x1s2,x2s2
      & dabs(x1s2-0.5d0).lt.0.5d0.and.dabs(x2s2-0.5d0).lt.0.5d0) then
            
             index_sol=1
-            call ntuple(rand,0.0,1.0,p1)
+c            call ntuple(rand,0.0,1.0,p1)
+            rand=xran1(IDUM)
             if (rand.gt.0.5) index_sol=2
 c            if (rand.gt.0.5) then
 c              jac=-1d0

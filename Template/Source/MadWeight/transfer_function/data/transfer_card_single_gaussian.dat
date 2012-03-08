@@ -1,0 +1,42 @@
+#+-----------------------------------------------------------------------+
+#|                         TRANSFER_CARD.DAT                             |
+#|                                                                       |
+#|     Author: Pierre Artoisenet (UCL-CP3)                               |
+#|             Olivier Mattelaer (UCL-CP3)                               |
+#+-----------------------------------------------------------------------+
+#|     This file is generated automaticly by MADWEIGHT                   |
+#|     card generation version: 2.0.0                                    |
+#+-----------------------------------------------------------------------+
+#|                                                                       |
+#|    To change the transfer function run ./bin/change_tf.py             |
+#|    Current parametrization :single_gaussian                           |
+#|                                                                       |
+#+-----------------------------------------------------------------------+
+
+#+-----------------------------------------------------------------------+
+#|    Parameter for particles: mu,e                                      |
+#|    Information: single gaussian with parameter depending of the energy 
+#|                                                                       |
+#+-----------------------------------------------------------------------+
+
+BLOCK TF_lepton_E
+	7	 0d0 	 #
+	8	 0d0 	 #
+	9	 0d0 	 #
+	10	 0d0 	 #
+	11	 0d0 	 #
+	12	 0.02d0  #
+#+-----------------------------------------------------------------------+
+#|    Parameter for particles: u,d,s,c,b,g                               |
+#|    Information: single gaussian with parameter depending of the energy 
+#|                                                                       |
+#+-----------------------------------------------------------------------+
+
+
+BLOCK TF_jet_E
+	1	 0d0 	 #
+	2	 0d0 	 #
+	3	 0d0 	 #
+	4	 0d0 	 #
+	5	 0d0 	 #
+	6	 0.05d0 	 #

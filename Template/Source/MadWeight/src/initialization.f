@@ -79,18 +79,13 @@ c     set parameters of the run
       close(90)
       open(UNIT=32,FILE='vegas_value.out',STATUS='unknown')
 
-
       close(89)
-      write(*,*) 'Parameter card: ',param_name
       call setpara(param_name)
-      write(*,*) 'number of points',nevents
-
 
        if(fixed_ren_scale) then
           G = SQRT(4d0*PI*ALPHAS(scale))
-          call setpara(param_name) 
+          call UPDATE_AS_PARAM() 
        endif
-
 
 c     set cuts
 c      CALL SETCUTS
