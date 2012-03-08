@@ -122,9 +122,9 @@ c
         write(*,*)' '
         write(*,*) 'alpha_s=',g**2/(16d0*atan(1d0))
 c
-        if(fixed_ren_scale) then
-          call setpara('param_card.dat')
-        endif
+cc        if(fixed_ren_scale) then
+cc          call setpara('param_card.dat')
+cc        endif
 c Put momenta in the common block to zero to start
         do i=0,3
           do j=1,max_particles
@@ -160,13 +160,14 @@ c Pass momenta to couplings.f
             enddo
           enddo
         endif
-         call setpara('param_card.dat')
+cc         call setpara('param_card.dat')
       endif
 
 c Reset calculatedBorn, because the couplings might have been changed.
 c This is needed in particular for the MC events, because there the
 c coupling should be set according to the real-emission kinematics,
 c even when computing the Born matrix elements.
+      call update_as_param()
       calculatedBorn=.false.
 
  200  format(1x,a,2(1x,d12.6),2x,f4.2)
@@ -204,9 +205,11 @@ c
       muR=muR_over_ref*mur_temp
       muR2_current=muR**2
       muR_id_str=temp_scale_id
+      mu_r = muR
 c The following is for backward compatibility. DO NOT REMOVE
       scale=muR
       g=sqrt(4d0*pi*alphas(scale))
+      call coup2()
 c
       return
       end

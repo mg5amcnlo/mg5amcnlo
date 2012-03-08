@@ -99,8 +99,11 @@ c
 
 c update the ren_scale for MadLoop and the couplings
       mu_r = scale
-      call coup()
+      call coup2()
+
       alphaS=g**2/(4d0*PI)
+      if (firsttime) write(*,*) "alpha_s value used by MadLoop: ",
+     1  alphas
       ao2pi=alphaS/(2d0*Pi)
       alphaEW=dble(gal(1))**2/(4d0*PI)
       call sloopmatrix(p, virt_wgts)
