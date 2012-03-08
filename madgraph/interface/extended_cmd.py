@@ -35,10 +35,14 @@ logger = logging.getLogger('cmdprint') # for stdout
 logger_stderr = logging.getLogger('fatalerror') # for stderr
 
 try:
-    import madgraph.iolibs.misc as misc
+    import madgraph.various.misc as misc
+    from madgraph import MG5DIR
+    MADEVENT = False
 except:
     import internal.misc as misc
+    MADEVENT = True
 
+pjoin = os.path.join
 
 class TimeOutError(Exception):
     """Class for run-time error"""
@@ -829,7 +833,12 @@ class Cmd(BasicCmd):
                     continue
                 prevname = name
                 cmdname=name[3:]
-                doc = getattr(self, name).__doc__
+                try:
+                    doc = getattr(self.cmd, name).__doc__
+                except:
+                    doc = None
+                if not doc:
+                    doc = getattr(self, name).__doc__
                 if not doc:
                     tag = "Documented commands"
                 elif ':' in doc:
@@ -900,7 +909,7 @@ class Cmd(BasicCmd):
         
         if args[0] == "options":
             outstr = "Value of current Options:\n" 
-            for key, value in self.configuration.items() + self._options.items():
+            for key, value in self.options.items():
                 outstr += '%25s \t:\t%s\n' %(key,value)
             output.write(outstr)
             
@@ -923,6 +932,7 @@ class Cmd(BasicCmd):
                 outstr += misc.nice_representation(var, nb_space=4)                
             
             pydoc.pager(outstr)
+            
     
     def help_display(self):
         """help for display command"""
@@ -934,7 +944,123 @@ class Cmd(BasicCmd):
         # Format
         if len(args) == 1:
             return self.list_completion(text, self._display_opts)
-                                        
+    
+    def do_save(self, line, check=True):
+        """Save the configuration file"""
+        
+        args = self.split_arg(line)
+        # Check argument validity
+        if check:
+            Cmd.check_save(self, args)
+            
+        # find base file for the configuration
+        if'HOME' in os.environ and os.environ['HOME']  and \
+        os.path.exists(pjoin(os.environ['HOME'], '.mg5', 'mg5_configuration.txt')):
+            base = pjoin(os.environ['HOME'], '.mg5', 'mg5_configuration.txt')
+            if hasattr(self, 'me_dir'):
+                basedir = self.me_dir
+            elif not MADEVENT:
+                basedir = MG5DIR
+            else:
+                basedir = os.getcwd()
+        elif MADEVENT:
+            # launch via ./bin/madevent
+            base = pjoin(self.me_dir, 'Cards', 'me5_configuration.txt')
+            basedir = self.me_dir
+        else:
+            if hasattr(self, 'me_dir'):
+                base = pjoin(self.me_dir, 'Cards', 'me5_configuration.txt')
+                if len(args) == 0 and os.path.exists(base):
+                    self.write_configuration(base, base, self.me_dir)
+            base = pjoin(MG5DIR, 'input', 'mg5_configuration.txt')
+            basedir = MG5DIR
+            
+        if len(args) == 0:
+            args.append(base)
+        self.write_configuration(args[0], base, basedir)
+    
+    def check_save(self, args):
+        """check that the line is compatible with save options"""
+        
+        if len(args) > 2:
+            self.help_save()
+            raise self.InvalidCmd, '\'%s\' is not recoginzed as first argument.'
+        
+        if len(args) == 2:
+            if args[0] != 'options':
+                self.help_save()
+                raise self.InvalidCmd, '\'%s\' is not recoginzed as first argument.' % \
+                                                args[0]
+            else:
+                args.pop(0)           
+    
+    def help_save(self):
+        """help text for save"""
+        logger.info("syntax: save [options]  [FILEPATH]") 
+        logger.info("-- save options configuration to filepath.")
+    
+    def complete_save(self, text, line, begidx, endidx):
+        "Complete the save command"
+
+        args = self.split_arg(line[0:begidx])
+
+        # Format
+        if len(args) == 1:
+            return self.list_completion(text, ['options'])
+
+        # Directory continuation
+        if args[-1].endswith(os.path.sep):
+            return self.path_completion(text,
+                                        pjoin('.',*[a for a in args if a.endswith(os.path.sep)]),
+                                        only_dirs = True)
+
+        # Filename if directory is not given
+        if len(args) == 2:
+            return self.path_completion(text)
+    
+    def write_configuration(self, filepath, basefile, basedir):
+        """Write the configuration file"""
+        # We use the default configuration file as a template.
+        # to ensure that all configuration information are written we 
+        # keep track of all key that we need to write.
+
+        logger.info('save configuration file to %s' % filepath)
+        to_write = self.options.keys()[:]
+        text = ""
+        # Use local configuration => Need to update the path
+        for line in file(basefile):
+            if '#' in line:
+                data, comment = line.split('#',1)
+            else: 
+                data, comment = line, ''
+            data = data.split('=')
+            if len(data) !=2:
+                text += line
+                continue
+            key = data[0].strip()
+            if key in self.options:
+                value = str(self.options[key])
+            else:
+                value = data[1].strip()
+            try:
+                to_write.remove(key)
+            except:
+                pass
+            if '_path' in key:       
+                # special case need to update path
+                # check if absolute path
+                if value.startswith('./'):
+                    value = os.path.realpath(os.path.join(basedir, value))
+            text += '%s = %s # %s \n' % (key, value, comment)
+        for key in to_write:
+            if key in self.options:
+                text += '%s = %s \n' % (key,self.options[key])
+            else:
+                text += '%s = %s \n' % (key,self.options[key])
+        writer = open(filepath,'w')
+        writer.write(text)
+        writer.close()
+                       
     def help_help(self):
         logger.info("syntax: help")
         logger.info("-- access to the in-line help" )

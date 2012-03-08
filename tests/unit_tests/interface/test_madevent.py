@@ -17,7 +17,7 @@ from cmd import Cmd
 
 import unittest
 import madgraph
-import madgraph.interface.cmd_interface as mgcmd
+import madgraph.interface.master_interface as mgcmd
 import madgraph.interface.extended_cmd as ext_cmd
 import madgraph.interface.madevent_interface as mecmd
 import os
@@ -49,7 +49,7 @@ class TestMadEventCmd(unittest.TestCase):
                          'delphes_trigger.dat')
         self.assertEqual(detect(pjoin(card_dir, 'delphes_trigger_CMS.dat')),
                          'delphes_trigger.dat')
-        self.assertEqual(detect(pjoin(card_dir, 'delphes_trigger.dat')),
+        self.assertEqual(detect(pjoin(card_dir, 'delphes_trigger_default.dat')),
                          'delphes_trigger.dat')
         # run_card
         self.assertEqual(detect(pjoin(card_dir, 'run_card.dat')),

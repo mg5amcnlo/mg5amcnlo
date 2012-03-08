@@ -94,8 +94,8 @@ def oxxxxx(p,fmass,nhel,nsf):
         pp = min(p[0],sqrt(p[1]**2 + p[2]**2 + p[3]**2 ))
         if (pp == 0.): 
             sqm = sqrt(abs(fmass)) 
-            ip = -((1+nh)/2) 
-            im = (1-nh)/2 
+            ip = -((1-nh)/2) * nhel
+            im = (1+nh)/2 * nhel
 
             fo[0] = im*sqm
             fo[1] = ip*nsf*sqm

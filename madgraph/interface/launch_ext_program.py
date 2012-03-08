@@ -24,11 +24,14 @@ import thread
 import time
 
 import madgraph.iolibs.files as files
-import madgraph.iolibs.misc as misc
 import madgraph.interface.extended_cmd as cmd
 import madgraph.interface.madevent_interface as me_cmd
+import madgraph.various.misc as misc
+
 from madgraph import MG4DIR, MG5DIR, MadGraph5Error
 from madgraph.iolibs.files import cp
+
+
 
 logger = logging.getLogger('cmdprint.ext_program')
 

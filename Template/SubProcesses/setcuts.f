@@ -112,22 +112,28 @@ c
 c     set ptj and s_min if xqcut and ktscheme = 1, to improve
 c     integration speed, and set drjj and drjl to 0.
 c
-        if(xqcut.gt.0.and.ktscheme.eq.1) then
-          if(auto_ptj_mjj.and.ptj.ge.0d0.and.ptj.lt.xqcut)then
+        if(xqcut.gt.0) then
+           if(auto_ptj_mjj.and.ptj.ge.0d0.and.ktscheme.eq.1)then
             ptj=xqcut
             write(*,*) 'Warning! ptj set to xqcut=',xqcut,
      $            ' to improve integration efficiency'
             write(*,*) 'Note that this might affect non-radiated jets,'
             write(*,*) 'e.g. from decays. Use cut_decays=F in run_card.'
+          else if(ptj.gt.xqcut)then
+            ptj=0d0
+            write(*,*) 'Warning! ptj set to 0 since xqcut > 0 and'
+            write(*,*) '         auto_ptj_mjj = F or ktscheme > 1'
           endif
-        endif
-        if(xqcut.gt.0) then
-          if(auto_ptj_mjj.and.mmjj.ge.0d0.and.mmjj.lt.xqcut)then
+          if(auto_ptj_mjj.and.mmjj.ge.0d0)then
             mmjj=xqcut
             write(*,*) 'Warning! mmjj set to xqcut=',xqcut,
      $            ' to improve integration efficiency'
             write(*,*) 'Note that this might affect non-radiated jets,'
             write(*,*) 'e.g. from decays. Use cut_decays=F in run_card.'
+          else if(mmjj.gt.xqcut)then
+            mmjj=0d0
+            write(*,*) 'Warning! mmjj set to 0 since xqcut > 0 and'
+            write(*,*) '         auto_ptj_mjj = F'
           endif
           if(drjj.gt.0d0) then
             write(*,*) 'Warning! drjj > 0 with xqcut > 0, set to 0'

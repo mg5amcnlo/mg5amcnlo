@@ -217,7 +217,7 @@ c
 c     local
 c
       integer i, j, nbw, ic, icode
-      integer ncode, nconf
+      integer ncode, nconf, nsym
       double precision dconfig
       character*10 formstr
       integer iarray(imax)
@@ -294,6 +294,7 @@ c
 c     Now write out the symmetry factors for each graph
 c
       open (unit=26, file = 'symfact.dat', status='unknown')
+      nsym=int(dlog10(dble(mapconfig(0))))+3
       do i=1,mapconfig(0)
          if (use_config(i) .gt. 0) then
 c
@@ -326,17 +327,19 @@ c                    JA 4/8/11 don't treat forced BW differently
                call enCode(icode,iarray,ibase,imax)
                if (icode .gt. 0) then
                   nconf=int(dlog10(dble(mapconfig(i))))+1
-                  write(formstr,'(a,i1,a,i1,a)') '(F',nconf+ncode+1,
-     $                 '.',ncode,',i6)'
+                  write(formstr,'(a,i1,a,i1,a,i1,a)') '(F',nconf+ncode+1,
+     $                 '.',ncode,',i',nsym,')'
                   dconfig=mapconfig(i)+icode*1d0/10**ncode
                   write(26,formstr) dconfig,use_config(i)
                else
-                  write(26,'(2i6)') mapconfig(i),use_config(i)
+                  write(formstr,'(a,i1,a)') '(2i',nsym,')'
+                  write(26,formstr) mapconfig(i),use_config(i)
                endif
                call bw_increment_array(iarray,imax,ibase,done)
             enddo
          else
-            write(26,'(2i6)') mapconfig(i), use_config(i)
+            write(formstr,'(a,i1,a)') '(2i',nsym,')'
+            write(26,formstr) mapconfig(i),use_config(i)
          endif
       enddo
       end

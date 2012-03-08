@@ -26,10 +26,10 @@ logger = logging.getLogger('test_cmd')
 
 import tests.unit_tests.iolibs.test_file_writers as test_file_writers
 
-import madgraph.interface.cmd_interface as MGCmd
+import madgraph.interface.master_interface as MGCmd
 import madgraph.interface.madevent_interface as MECmd
 import madgraph.interface.launch_ext_program as launch_ext
-import madgraph.iolibs.misc as misc
+import madgraph.various.misc as misc
 
 _file_path = os.path.split(os.path.dirname(os.path.realpath(__file__)))[0]
 _pickle_path =os.path.join(_file_path, 'input_files')
@@ -37,6 +37,10 @@ _pickle_path =os.path.join(_file_path, 'input_files')
 from madgraph import MG4DIR, MG5DIR, MadGraph5Error, InvalidCmd
 
 pjoin = os.path.join
+
+    
+    
+
 
 #===============================================================================
 # TestCmd
@@ -52,7 +56,7 @@ class TestMECmdShell(unittest.TestCase):
         except Exception, error:
             pass
 
-        interface = MGCmd.MadGraphCmdShell()
+        interface = MGCmd.MasterCmd()
         interface.onecmd('import model %s' % model)
         if isinstance(process, str):
             interface.onecmd('generate %s' % process)
@@ -228,3 +232,71 @@ class TestMEfromfile(unittest.TestCase):
         self.assertTrue('lhe' in data[0].pythia)
         self.assertTrue('log' in data[0].pythia)
         self.assertTrue('hep' in data[0].pythia)
+
+#===============================================================================
+# TestCmd
+#===============================================================================
+class TestMEfromPdirectory(unittest.TestCase):
+    """test that we can launch everything from the P directory"""
+
+    
+
+    def generate(self, process, model):
+        """Create a process"""
+
+        try:
+            shutil.rmtree('/tmp/MGPROCESS/')
+        except Exception, error:
+            pass
+
+        interface = MGCmd.MasterCmd()
+        interface.onecmd('import model %s' % model)
+        if isinstance(process, str):
+            interface.onecmd('generate %s' % process)
+        else:
+            for p in process:
+                interface.onecmd('add process %s' % p)
+        interface.onecmd('set automatic_html_opening False')
+        interface.onecmd('output madevent /tmp/MGPROCESS/ -f')
+
+    def load_result(self, run_name):
+        
+        import madgraph.iolibs.save_load_object as save_load_object
+        import madgraph.various.gen_crossxhtml as gen_crossxhtml
+        
+        result = save_load_object.load_from_file('/tmp/MGPROCESS/HTML/results.pkl')
+        return result[run_name]
+
+    def check_parton_output(self, run_name='run_01', target_event=100, cross=0, error=9e99):
+        """Check that parton output exists and reach the targert for event"""
+                
+        # check that the number of event is fine:
+        data = self.load_result(run_name)
+        self.assertEqual(int(data[0]['nb_event']), target_event)
+        self.assertTrue('lhe' in data[0].parton)
+        
+        if cross:
+            self.assertTrue(abs(cross - float(data[0]['cross']))/error < 3)
+
+
+        
+    def test_run_fromP(self):
+        """ """
+                
+        cmd = os.getcwd()
+        self.generate('p p > e+ e-', 'sm')
+        self.assertEqual(cmd, os.getcwd())
+        shutil.copy(os.path.join(_file_path, 'input_files', 'run_card_matching.dat'),
+                    '/tmp/MGPROCESS/Cards/run_card.dat')
+        os.chdir('/tmp/MGPROCESS/')
+        ff = open('cmd.cmd','w')
+        ff.write('set automatic_html_opening False\n')
+        ff.write('generate_events -f \n') 
+        ff.close()
+        devnull =open(os.devnull,'w')
+        id = subprocess.call(['./bin/madevent','cmd.cmd'],stdout=devnull,stderr=devnull)
+        self.assertEqual(id, 0)
+        
+        self.check_parton_output(cross=944.4, error=1e-2)
+        os.chdir(cmd)
+        

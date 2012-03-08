@@ -97,7 +97,6 @@ class Combine_results(list, OneResult):
         
         list.__init__(self)
         OneResult.__init__(self, name)
-        output_path = None
     
     def add_results(self, name, filepath, mfactor=1):
         """read the data in the file"""
@@ -139,40 +138,10 @@ class Combine_results(list, OneResult):
             self.ysec_iter.append(sum(value))
             self.yerr_iter.append(math.sqrt(sum(error)))
     
-        
-        
+       
     template_file = \
-"""
-<head>
-    <title>Process results</title>
-    <script type="text/javascript" src="../sortable.js"></script>
-    <link rel=stylesheet href="../mgstyle.css" type="text/css">
-</head>
-<body>
-<script type="text/javascript">
-function UrlExists(url) {
-  var http = new XMLHttpRequest();
-  http.open('HEAD', url, false);
-  try{
-     http.send()
-     }
-  catch(err){
-   return 1==2;
-  }
-  return http.status!=404;
-}
-function check_link(url,alt, id){
-    var obj = document.getElementById(id);
-    if ( ! UrlExists(url)){
-       obj.href = alt;
-       return 1 == 2;
-    }
-    obj.href = url;
-    return 1==1;
-}
-</script>  
-
- <h2>Process results</h2> 
+"""  
+%(diagram_link)s
  <BR>
 &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<b>s= %(cross).5g &#177 %(error).3g (%(unit)s)</b><br><br>
 <table class="sortable" id='tablesort'>
@@ -184,7 +153,9 @@ function check_link(url,alt, id){
     <th>Luminosity</th>
 </tr>
 %(table_lines)s
-</table></body>
+</table>
+</center>
+<br><br><br>
 """    
     table_line_template = \
 """
@@ -197,13 +168,12 @@ function check_link(url,alt, id){
 </tr>
 """
 
-    def write_html(self, output_path, run, unit):
+    def get_html(self,run, unit):
         """write html output"""
         
         # store value for global cross-section
         P_grouping = {}
 
-        self.output_path = output_path
         tables_line = ''
         for oneresult in self:
             if oneresult.name.startswith('P'):
@@ -226,8 +196,7 @@ function check_link(url,alt, id){
                                         {'P': self.name,
                                          'G': oneresult.name}
             else:
-                link = os.path.relpath(oneresult.output_path, 
-                                                   os.path.dirname(output_path))
+                link = '#%s' % oneresult.name
                 mod_link = link
             
             dico = {'P_title': title,
@@ -254,16 +223,22 @@ function check_link(url,alt, id){
                    }
             tables_line += self.table_line_template % dico
 
+        if self.name.startswith('P'):
+            title = '<dt><a  name=%(P)s href=../../SubProcesses/%(P)s/diagrams.html>%(P)s</a></dt><dd>' \
+                                                          % {'P':self.name}
+        else:
+            title = ''
+            
         dico = {'cross': self.xsec,
                 'error': self.xerru,
                 'unit': unit,
                 'result_type': 'Cross-Section',
-                'table_lines': tables_line
+                'table_lines': tables_line,
+                'diagram_link': title
                 }
 
         html_text = self.template_file % dico
-        fsock = open(output_path, 'w')
-        fsock.writelines(html_text)
+        return html_text
     
     def write_results_dat(self, output_path):
         
@@ -271,6 +246,45 @@ function check_link(url,alt, id){
                  self.nevents, self.nw, self.maxit, self.nunwgt, self.luminosity)
         
         open(output_path,'w').writelines(line)
+
+
+results_header = """
+<head>
+    <title>Process results</title>
+    <script type="text/javascript" src="../sortable.js"></script>
+    <link rel=stylesheet href="../mgstyle.css" type="text/css">
+</head>
+<body>
+<script type="text/javascript">
+function UrlExists(url) {
+  var http = new XMLHttpRequest();
+  http.open('HEAD', url, false);
+  try{
+     http.send()
+     }
+  catch(err){
+   return 1==2;
+  }
+  return http.status!=404;
+}
+function check_link(url,alt, id){
+    var obj = document.getElementById(id);
+    if ( ! UrlExists(url)){
+        if ( ! UrlExists(alt)){
+         obj.href = alt;
+         return true;
+        }
+       obj.href = alt;
+       return false;
+    }
+    obj.href = url;
+    return 1==1;
+}
+</script>
+""" 
+
+
+
 
 
 
@@ -283,6 +297,7 @@ def make_all_html_results(cmd):
     unit = cmd.results.unit
             
     all = Combine_results(run)
+    P_text = ""
     
     for Pdir in open(pjoin(cmd.me_dir, 'SubProcesses','subproc.mg')):
         Pdir = Pdir.strip()
@@ -299,12 +314,17 @@ def make_all_html_results(cmd):
                 continue
             P_comb.add_results(name, pjoin(P_path,name,'results.dat'), mfactor)
         P_comb.compute_values()
-        P_comb.write_html(pjoin(cmd.me_dir, 'HTML', run,'%s_results.html' % Pdir),
-                          run, unit)
+        P_text += P_comb.get_html(run, unit)
         P_comb.write_results_dat(pjoin(P_path, '%s_results.dat' % run))
         all.append(P_comb)
     all.compute_values()
-    all.write_html(pjoin(cmd.me_dir, 'HTML', run, 'results.html'), run, unit)
     all.write_results_dat(pjoin(cmd.me_dir,'SubProcesses', 'results.dat'))
+
+    fsock = open(pjoin(cmd.me_dir, 'HTML', run, 'results.html'),'w')
+    fsock.write(results_header)
+    fsock.write('%s <dl>' % all.get_html(run, unit))
+    fsock.write('%s </dl></body>' % P_text)
+
+
           
     return all.xsec, all.xerru
