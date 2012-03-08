@@ -3473,6 +3473,9 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
             else: 
                 last_action_2 = 'none'
                 
+
+class MadGraphCmdWeb(CheckValidForCmdWeb,MadGraphCmd):
+    """Temporary parser"""
                 
 #===============================================================================
 # Command Parser

@@ -46,6 +46,15 @@ logger = logging.getLogger('cmdprint') # -> stdout
 
 class Switcher(object):
     """ Helping class containing all the switching routine """
+
+    def __init__(self, main='MadGraph', *args, **opt):
+            
+        # define the interface
+        self.change_principal_cmd(main)
+        self.cmd.__init__(self, *args, **opt)       
+        
+
+
         
     def debug_link_to_command(self):
         """redefine all the command to call directly the appropriate child"""
@@ -349,16 +358,11 @@ class Switcher(object):
     def test_interface(self, *args, **opts):
         return self.cmd.test_interface(self, *args, **opts)
 
-
+    def set_configuration(self, *args, **opts):
+                return self.cmd.set_configuration(self, *args, **opts)
 
 class MasterCmd(Switcher, MGcmd.MadGraphCmd, cmd.CmdShell):
 
-    def __init__(self, main='MadGraph', *args, **opt):
-            
-        # define the interface
-        self.change_principal_cmd(main)
-        self.cmd.__init__(self, *args, **opt)       
-        
 
     def change_principal_cmd(self, name):
         if name == 'MadGraph':
@@ -369,7 +373,7 @@ class MasterCmd(Switcher, MGcmd.MadGraphCmd, cmd.CmdShell):
         if __debug__:
             self.debug_link_to_command()      
         
-class MasterCmdWeb(Switcher, MGcmd.MadGraphCmd):
+class MasterCmdWeb(Switcher, MGcmd.MadGraphCmdWeb):
  
     timeout = 1 # time authorize to answer question [0 is no time limit]
     
@@ -384,7 +388,7 @@ class MasterCmdWeb(Switcher, MGcmd.MadGraphCmd):
             
         
         #standard initialization
-        MasterCmd.__init__(self, mgme_dir = '', *arg, **opt)
+        Switcher.__init__(self, mgme_dir = '', *arg, **opt)
         
     def change_principal_cmd(self, name):
         if name == 'MadGraph':
