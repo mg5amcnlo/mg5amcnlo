@@ -438,3 +438,22 @@ class MasterCmdWeb(Switcher, MGcmd.MadGraphCmdWeb):
         config_path = pjoin(os.environ['MADGRAPH_BASE'], 'mg5_configuration.txt')
         return Switcher.set_configuration(self, config_path=config_path)
     
+
+    def do_save(self, line, check=True):
+        """Save information to file"""
+        
+        if check:
+            self.check_save([])
+            raise #useless but full security
+        
+        args = self.split_arg(line)
+        if args[0] != 'options':
+            Switcher.do_save(self, line,check)
+        else:
+            # put default options since 
+            # in the web the local file is not used
+            # in download the default file is more usefull
+            files.cp(pjoin(MG5DIR,'input','mg5_configuration.txt'), args[1])
+            
+
+
