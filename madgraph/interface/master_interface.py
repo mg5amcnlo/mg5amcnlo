@@ -38,6 +38,7 @@ pjoin = os.path.join
 import madgraph
 import madgraph.interface.extended_cmd as cmd
 import madgraph.interface.madgraph_interface as MGcmd
+import madgraph.iolibs.files as files
 
 from madgraph import MG4DIR, MG5DIR, MadGraph5Error
 
