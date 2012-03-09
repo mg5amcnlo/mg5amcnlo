@@ -132,7 +132,7 @@ c     call graph_init
          missPT_EXP=pt_init(k)
          write(*,*) "Using reconstructed ISR: "
          write(*,*) "px(ISR)= ", -px_visible-missPT_EXP*dcos(missPhi_EXP)
-         write(*,*) "px(ISR)= ", -py_visible-missPT_EXP*dsin(missPhi_EXP)
+         write(*,*) "py(ISR)= ", -py_visible-missPT_EXP*dsin(missPhi_EXP)
       elseif(ISR.eq.0 .and. num_inv.eq.0) then ! apply boost correction based on visible particles
          missPhi_EXP=0d0
          missPT_EXP=1d-10
