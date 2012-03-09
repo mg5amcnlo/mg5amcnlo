@@ -1487,6 +1487,7 @@ class ProcessTest(unittest.TestCase):
                        'uid':0,
                        'required_s_channels':[],
                        'forbidden_s_channels':[],
+                       'forbidden_onsh_s_channels':[],
                        'forbidden_particles':[],
                        'is_decay_chain': False,
                        'decay_chains': base_objects.ProcessList(),
@@ -1566,6 +1567,7 @@ class ProcessTest(unittest.TestCase):
         goal = goal + "    \'model\': %s,\n" % repr(self.myprocess['model'])
         goal = goal + "    \'id\': 1,\n"
         goal = goal + "    \'required_s_channels\': [],\n"
+        goal = goal + "    \'forbidden_onsh_s_channels\': [],\n"
         goal = goal + "    \'forbidden_s_channels\': [],\n"
         goal = goal + "    \'forbidden_particles\': [],\n"
         goal = goal + "    \'is_decay_chain\': False,\n"
@@ -1666,6 +1668,7 @@ class ProcessDefinitionTest(unittest.TestCase):
                        'uid':0,
                        'required_s_channels':[],
                        'forbidden_s_channels':[],
+                       'forbidden_onsh_s_channels':[],
                        'forbidden_particles':[],
                        'is_decay_chain': False,
                        'decay_chains': base_objects.ProcessList(),
@@ -1744,6 +1747,7 @@ class ProcessDefinitionTest(unittest.TestCase):
         goal = goal + "    \'model\': %s,\n" % repr(self.my_process_definition['model'])
         goal = goal + "    \'id\': %s,\n" % repr(self.my_process_definition['id'])
         goal = goal + "    \'required_s_channels\': [],\n"
+        goal = goal + "    \'forbidden_onsh_s_channels\': [],\n"
         goal = goal + "    \'forbidden_s_channels\': [],\n"
         goal = goal + "    \'forbidden_particles\': [],\n"
         goal = goal + "    \'is_decay_chain\': False,\n"

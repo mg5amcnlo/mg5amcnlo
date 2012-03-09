@@ -18,6 +18,7 @@ import copy
 import fractions
 import glob
 import logging
+import math
 import os
 import re
 import shutil
@@ -1072,9 +1073,6 @@ class ProcessExporterFortranME(ProcessExporterFortran):
         # Add the combine_events.f 
         filename = os.path.join(self.dir_path,'Source','combine_events.f')
         self.write_combine_events(writers.FortranWriter(filename))
-        # Add the write_banner.f 
-        filename = os.path.join(self.dir_path,'Source','write_banner.f')
-        self.write_write_banner(writers.FortranWriter(filename))
         # Add the symmetry.f 
         filename = os.path.join(self.dir_path,'SubProcesses','symmetry.f')
         self.write_symmetry(writers.FortranWriter(filename))
@@ -1320,7 +1318,7 @@ class ProcessExporterFortranME(ProcessExporterFortran):
         for file in linkfiles:
             ln('../' + file , '.')
 
-        #import nexternal/leshouch in Source
+        #import nexternal/leshouche in Source
         ln('nexternal.inc', '../../Source', log=False)
         ln('leshouche.inc', '../../Source', log=False)
         ln('maxamps.inc', '../../Source', log=False)
@@ -1421,10 +1419,6 @@ class ProcessExporterFortranME(ProcessExporterFortran):
             if os.path.exists('madevent.tar.gz'):
                 os.remove('madevent.tar.gz')
             misc.compile(mode='None')
-
-        if online:
-            # Touch "Online" file
-            os.system('touch %s/Online' % self.dir_path)
 
         subprocess.call([os.path.join(old_pos, self.dir_path, 'bin', 'internal', 'gen_cardhtml-pl')],
                         stdout = devnull)
@@ -1964,24 +1958,6 @@ c           This is dummy particle used in multiparticle vertices
         return True
 
     #===========================================================================
-    # write_write_banner
-    #===========================================================================
-    def write_write_banner(self, writer):
-        """Write the SubProcess/driver.f file for MG4"""
-
-        path = os.path.join(_file_path,'iolibs','template_files','madevent_write_banner.f')
-        
-        if self.model_name == 'mssm' or self.model_name.startswith('mssm-'):
-            card = 'Source/MODEL/MG5_param.dat'
-        else:
-            card = 'param_card.dat' 
-        text = open(path).read() % {'param_card_name':card} 
-
-        writer.write(text)
-        
-        return True
-
-    #===========================================================================
     # write_combine_events
     #===========================================================================
     def write_combine_events(self, writer):
@@ -2294,10 +2270,11 @@ c           This is dummy particle used in multiparticle vertices
         """Write the files symfact.dat for MG4 by comparing diagrams using
         the internal matrix element value functionality."""
 
-
+        pos = max(2, int(math.ceil(math.log10(len(symmetry)))))
+        form = "%"+str(pos)+"r %"+str(pos+1)+"r"
         # Write out lines for symswap.inc file (used to permute the
         # external leg momenta
-        lines = [ "%3r %3r" %(i+1, s) for i,s in enumerate(symmetry) if s != 0] 
+        lines = [ form %(i+1, s) for i,s in enumerate(symmetry) if s != 0] 
 
         # Write the file
         writer.writelines(lines)

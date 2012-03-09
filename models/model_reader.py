@@ -27,6 +27,7 @@ import os
 import re
 
 import madgraph.core.base_objects as base_objects
+import models.check_param_card as card_reader
 from madgraph import MadGraph5Error, MG5DIR
 
 ZERO = 0
@@ -62,10 +63,12 @@ class ModelReader(base_objects.Model):
 
         # Read in param_card
         if param_card:
+            
             # Check that param_card exists
             if not os.path.isfile(param_card):
                 raise MadGraph5Error, \
                       "No such file %s" % param_card
+            
 
             # Create a dictionary from LHA block name and code to parameter name
             parameter_dict = {}
@@ -76,70 +79,27 @@ class ModelReader(base_objects.Model):
                     dictionary = {}
                     parameter_dict[param.lhablock.lower()] = dictionary
                 dictionary[tuple(param.lhacode)] = param
-
-            # Now read parameters from the param_card
-            param_lines = open(param_card, 'r').read().split('\n')
-
-            # Define regular expressions
-            re_block = re.compile("^\s*block\s+(?P<name>\w+)")
-            re_decay = re.compile("^\s*decay\s+(?P<pid>\d+)\s+(?P<value>[\d\.e\+-]+)")
-            re_single_index = re.compile("^\s*(?P<i1>\d+)\s+(?P<value>[\d\.e\+-]+)")
-            re_double_index = re.compile(\
-                           "^\s*(?P<i1>\d+)\s+(?P<i2>\d+)\s+(?P<value>[\d\.e\+-]+)")
-            block = ""
-            # Go through lines in param_card
-            for line in param_lines:
-                if not line.strip() or line[0] == '#':
-                    continue
-                line = line.lower()
-                # Look for decays
-                decay_match = re_decay.match(line)
-                if decay_match:
-                    block = ""
-                    pid = int(decay_match.group('pid'))
-                    value = decay_match.group('value')
+                
+            param_card = card_reader.ParamCard(param_card)
+            
+            key = [k for k in param_card.keys() if not k.startswith('qnumbers ')
+                                            and not k.startswith('decay_table')]
+            
+            if set(key) != set(parameter_dict.keys()):
+                raise MadGraph5Error, '''Invalid restriction card (not same block)
+                %s != %s
+                ''' % (set(key), set(parameter_dict.keys()))
+            for block in key:
+                for id in parameter_dict[block]:
                     try:
-                        exec("locals()[\'%s\'] = %s" % \
-                             (parameter_dict['decay'][(pid,)].name,
-                              value))
-                        parameter_dict['decay'][(pid,)].value = complex(value)
-                    except KeyError:
-                        pass
-                        #logger.warning('No decay parameter found for %d' % pid)
-                    continue
-                # Look for blocks
-                block_match = re_block.match(line)
-                if block_match:
-                    block = block_match.group('name')
-                    continue
-                # Look for double indices
-                double_index_match = re_double_index.match(line)
-                if block and double_index_match:
-                    i1 = int(double_index_match.group('i1'))
-                    i2 = int(double_index_match.group('i2'))
-                    value = double_index_match.group('value')
-                    try:
-                        exec("locals()[\'%s\'] = %s" % (parameter_dict[block][(i1,i2)].name,
+                        value = param_card[block].get(id).value
+                    except:
+                        raise MadGraph5Error, '%s %s not define' % (block, id)
+                    else:
+                        exec("locals()[\'%s\'] = %s" % (parameter_dict[block][id].name,
                                           value))
-                        parameter_dict[block][(i1,i2)].value = float(value)
-                    except KeyError:
-                            logger.warning('No parameter found for block %s index %d %d' %\
-                                       (block, i1, i2))
-                    continue
-                # Look for single indices
-                single_index_match = re_single_index.match(line)
-                if block and single_index_match:
-                    i1 = int(single_index_match.group('i1'))
-                    value = single_index_match.group('value')
-                    try:
-                        exec("locals()[\'%s\'] = %s" % (parameter_dict[block][(i1,)].name,
-                                          value))
-                        parameter_dict[block][(i1,)].value = complex(value)
-                    except KeyError:
-                        if block not in  ['qnumbers','mass']:
-                            logger.warning('No parameter found for block %s index %d' %\
-                                       (block, i1))
-                    continue
+                        parameter_dict[block][id].value = float(value)
+                    
         else:
             # No param_card, use default values
             for param in external_parameters:

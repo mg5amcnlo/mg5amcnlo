@@ -95,7 +95,16 @@ class Banner(dict):
             self.add(pjoin(medir,'Cards', 'proc_card_mg5.dat'))
         else:
             self.add(pjoin(medir,'Cards', 'proc_card.dat'))
-        
+    
+    
+    def change_seed(self, seed):
+        """Change the seed value in the banner"""
+        #      0       = iseed
+        p = re.compile(r'''^\s*\d+\s*=\s*iseed''', re.M)
+        new_seed_str = "     %s       = iseed" % seed
+        self['mgruncard'] = p.sub(new_seed_str, self['mgruncard'])
+    
+    
     ############################################################################
     #  SPLIT BANNER
     ############################################################################

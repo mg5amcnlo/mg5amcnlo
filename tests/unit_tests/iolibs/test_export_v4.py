@@ -711,6 +711,20 @@ C     Number of configs
         self.assertEqual(ident_perms,
                          [[0,1,2,3]])
 
+        # Test symfact.dat
+        
+        exporter.write_symfact_file(\
+            writers.FortranWriter(self.give_pos('test')),
+            symmetry)
+        goal_symfact_dat = """ 1    1
+ 2    1
+ 3    1
+ 4    1
+ 5    1
+ 6    1
+"""
+        self.assertFileContains('test', goal_symfact_dat)
+
         # Test processes.dat
 
         files.write_to_file(self.give_pos('test'),
@@ -6881,7 +6895,7 @@ CALL IOSXXX(W(1,14),W(1,2),W(1,12),MGVX350,AMP(2))""")
 
         mydecay3 = base_objects.Process({'legs':myleglist,
                                          'model':mymodel,
-                                         'forbidden_s_channels':[-1000011]})
+                                         'forbidden_onsh_s_channels':[-1000011]})
 
         me3 = helas_objects.HelasMatrixElement(\
             diagram_generation.Amplitude(mydecay3))

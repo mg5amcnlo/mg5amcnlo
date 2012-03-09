@@ -1,8 +1,41 @@
 Update notes for MadGraph 5 (in reverse time order)
 
-1.4.3 (XX/XX/XX) OM: make acceptance test more silent.  
-                 OM: return the correct error message when a compilation occur
-                 OM: some code re-factoring
+1.4.3 (08/03/12)  JA: Reintroduced the possibility to completely forbid
+                      s-channel diagrams, using the $$ notation. Note that
+                      this should be used with great care, since the result
+                      is in general not gauge-invariant. It is in general
+                      better to use the $ notation, forbidding only onshell
+                      s-channel particles (the inverse of decay chains).
+                  JA: Automatically ensure that ptj and mmjj are below xqcut
+                      when xqcut > 0, since ptj or mmjj > xqcut ruins matching.
+                  OM: Add LSF to the list of supported cluster (thanks to Alexis).
+                  OM: change the param_card reader for the restrict file.
+                      This allow to restrict model with 3 lha id (or more)
+                      (thanks to Eduardo Ponton).
+                  OM: forbids to run 'generate events' with python 2.4.
+                  OM: Include the configuration file in the .tar.gz created on 
+                      the web (thanks to Simon) .
+                  OM: Fix a Mac specific problem for edition of Delphes card.
+                      (thanks to Sho Iwamoto).
+                  OM: ALOHA modifications:
+                       - Change sign convention for Epsilon (matching FR choices)
+                       - For Fermion vertex forces that _1 always returns the  
+                         incoming fermion and _2 returns the outcoming fermion. 
+                         (This modifies conjugate routine output)
+                       - Change the order of argument for conjugate routine
+                         to expect IO order of fermion in all cases.
+                       Note that the two last modifications matches MG5 conventions
+                       and that those modifications correct bugs for interactions
+                       a) subject to conjugate routine (i.e. if the model has 
+                          majorana)                       
+                       b) containing fermion momentum dependencies in the Lorentz
+                          structure  
+                       All model included by default in MG5 (in particular sm/mssm)
+                       were not affected by those mismatch of conventions.
+                       (Thanks to Benjamin fuks) 
+                  OM: make acceptance test more silent.  
+                  OM: return the correct error message when a compilation occur. 
+                  OM: some code re-factoring.
 
 1.4.2 (16/02/12) JA: Ensure that matching works properly with > 9 final state
                       particles (by increasing a buffer size in event output)

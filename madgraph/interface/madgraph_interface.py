@@ -12,7 +12,7 @@
 # For more information, please visit: http://madgraph.phys.ucl.ac.be
 #
 ################################################################################
-"""A user friendly command line interface to access MadGraph features.
+"""A user friendly command line interface to access MadGraph features at LO.
    Uses the cmd package for command interpretation and tab completion.
 """
 
@@ -64,6 +64,7 @@ import madgraph.interface.madevent_interface as madevent_interface
 import madgraph.various.process_checks as process_checks
 import madgraph.various.banner as banner_module
 import madgraph.various.misc as misc
+import madgraph.various.cluster as cluster
 
 import models as ufomodels
 import models.import_ufo as import_ufo
@@ -220,7 +221,7 @@ class CmdExtended(cmd.Cmd):
 #===============================================================================
 # HelpToCmd
 #===============================================================================
-class HelpToCmd(object):
+class HelpToCmd(cmd.HelpCmd):
     """ The Series of help routine for the MadGraphCmd"""    
     
     def help_save(self):
@@ -408,11 +409,10 @@ class HelpToCmd(object):
         logger.info("      (default False) Set complex mass scheme.")
 	        
 
-
 #===============================================================================
 # CheckValidForCmd
 #===============================================================================
-class CheckValidForCmd(object):
+class CheckValidForCmd(cmd.CheckCmd):
     """ The Series of help routine for the MadGraphCmd"""
     
     class RWError(MadGraph5Error):
@@ -668,14 +668,12 @@ This will take effect only in a NEW terminal
             return self.InvalidCmd, 'Invalid Syntax: Too many argument'
         
         # search for a valid path
-        if os.path.sep in args[0] and os.path.isdir(args[0]):
-            path = args[0]
+        if os.path.isdir(args[0]):
+            path = os.path.realpath(args[0])
         elif os.path.isdir(pjoin(MG5DIR,args[0])):
             path = pjoin(MG5DIR,args[0])
         elif  MG4DIR and os.path.isdir(pjoin(MG4DIR,args[0])):
             path = pjoin(MG4DIR,args[0])
-        elif os.path.isdir(args[0]):
-            path = os.path.realpath(args[0])
         else:    
             raise self.InvalidCmd, '%s is not a valid directory' % args[0]
                 
@@ -757,6 +755,9 @@ This will take effect only in a NEW terminal
         
     def check_save(self, args):
         """ check the validity of the line"""
+        if len(args) == 0:
+            args.append('options')
+        
         if args[0] not in self._save_opts:
             self.help_save()
             raise self.InvalidCmd('wrong \"save\" format')
@@ -1054,7 +1055,7 @@ class CheckValidForCmdWeb(CheckValidForCmd):
 #===============================================================================
 # CompleteForCmd
 #===============================================================================
-class CompleteForCmd(CheckValidForCmd):
+class CompleteForCmd(cmd.CompleteCmd):
     """ The Series of help routine for the MadGraphCmd"""
     
  
@@ -1347,7 +1348,7 @@ class CompleteForCmd(CheckValidForCmd):
 
         # Format
         if len(args) == 1:
-            opts = self._set_options + self.options.keys() + self.options.keys()
+            opts = self.options.keys() 
             return self.list_completion(text, opts)
 
         if len(args) == 2:
@@ -1367,7 +1368,7 @@ class CompleteForCmd(CheckValidForCmd):
             elif args[1] == 'run_mode':
                 return self.list_completion(text, [str(i) for i in range(3)])
             elif args[1] == 'cluster_type':
-                return self.list_completion(text, ['pbs', 'condor', 'sge'])
+                return self.list_completion(text, cluster.from_name.keys())
             elif args[1] == 'cluster_queue':
                 return []
             elif args[1] == 'automatic_html_opening':
@@ -1559,9 +1560,12 @@ class CompleteForCmd(CheckValidForCmd):
 #===============================================================================
 # MadGraphCmd
 #===============================================================================
-class MadGraphCmd(CmdExtended, HelpToCmd):
+class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
     """The command line processor of MadGraph"""    
 
+    writing_dir = '.'
+    timeout = 0 # time authorize to answer question [0 is no time limit]
+  
     # Options and formats available
     _display_opts = ['particles', 'interactions', 'processes', 'diagrams', 
                      'diagrams_text', 'multiparticles', 'couplings', 'lorentz', 
@@ -1588,6 +1592,19 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
     _curr_cpp_model = None
     _curr_exporter = None
     _done_export = False
+
+    def preloop(self):
+        """Initializing before starting the main loop"""
+
+        self.prompt = 'mg5>'
+        
+        # By default, load the UFO Standard Model
+        logger.info("Loading default model: sm")
+        self.do_import('model sm')
+        self.history.append('import model sm')
+        
+        # preloop mother
+        CmdExtended.preloop(self)
 
     
     def __init__(self, mgme_dir = '', *completekey, **stdin):
@@ -1929,7 +1946,7 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
                         text+= '        %s = %s\n' % (value.name, value.expr)
 
             pydoc.pager(text)
-                        
+
         elif args[0] == 'couplings':
             if self._model_v4_path:
                 print 'No couplings information available in V4 model'
@@ -2260,12 +2277,19 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
                 if len(forbidden_particles_re.groups()) > 2:
                     line = line + forbidden_particles_re.group(3)
 
-        # Now check for forbidden schannels, specified using "$"
-        forbidden_schannels_re = re.match("^(.+)\s*\$\s*(.+)\s*$", line)
+        # Now check for forbidden schannels, specified using "$$"
+        forbidden_schannels_re = re.match("^(.+)\s*\$\s*\$\s*(.+)\s*$", line)
         forbidden_schannels = ""
         if forbidden_schannels_re:
             forbidden_schannels = forbidden_schannels_re.group(2)
             line = forbidden_schannels_re.group(1)
+
+        # Now check for forbidden onshell schannels, specified using "$"
+        forbidden_onsh_schannels_re = re.match("^(.+)\s*\$\s*(.+)\s*$", line)
+        forbidden_onsh_schannels = ""
+        if forbidden_onsh_schannels_re:
+            forbidden_onsh_schannels = forbidden_onsh_schannels_re.group(2)
+            line = forbidden_onsh_schannels_re.group(1)
 
         # Now check for required schannels, specified using "> >"
         required_schannels_re = re.match("^(.+?)>(.+?)>(.+)$", line)
@@ -2318,8 +2342,15 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
                 raise self.InvalidCmd,\
                       "Multiparticle %s is or-multiparticle" % part_name + \
                       " which can be used only for required s-channels"
+            forbidden_onsh_schannel_ids = \
+                              self.extract_particle_ids(forbidden_onsh_schannels)
             forbidden_schannel_ids = \
                               self.extract_particle_ids(forbidden_schannels)
+            if forbidden_onsh_schannel_ids and \
+               isinstance(forbidden_onsh_schannel_ids[0], list):
+                raise self.InvalidCmd,\
+                      "Multiparticle %s is or-multiparticle" % part_name + \
+                      " which can be used only for required s-channels"
             if forbidden_schannel_ids and \
                isinstance(forbidden_schannel_ids[0], list):
                 raise self.InvalidCmd,\
@@ -2338,7 +2369,9 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
                               'id': proc_number,
                               'orders': orders,
                               'forbidden_particles': forbidden_particle_ids,
-                              'forbidden_s_channels': forbidden_schannel_ids,
+                              'forbidden_onsh_s_channels': forbidden_onsh_schannel_ids,
+                              'forbidden_s_channels': \
+                                                forbidden_schannel_ids,
                               'required_s_channels': required_schannel_ids,
                               'overall_orders': overall_orders
                               })
@@ -2813,7 +2846,7 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
             status = subprocess.call(['make'], cwd = os.path.join(MG5DIR, name))
         else:
             misc.compile(['clean'], mode='', cwd = os.path.join(MG5DIR, name))
-            misc.compile(mode='', cwd = os.path.join(MG5DIR, name))
+            status = misc.compile(mode='', cwd = os.path.join(MG5DIR, name))
         if not status:
             logger.info('compilation succeeded')
 
@@ -3097,51 +3130,8 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
                 raise self.InvalidCmd('No processes to save!')
         
         elif args[0] == 'options':
-            self.write_configuration(args[1])
-    
-    
-    def write_configuration(self, path):
-        """Write the configuration file"""
-        # We use the default configuration file as a template.
-        # to ensure that all configuration information are written we 
-        # keep track of all key that we need to write.
+            CmdExtended.do_save(self, line)
 
-        to_write = self.options.keys()[:]
-        writer = open(path,'w')
-        # Use local configuration => Need to update the path
-        conf = os.path.join(MG5DIR, 'input', 'mg5_configuration.txt')
-        for line in file(conf):
-            if '#' in line:
-                data, comment = line.split('#',1)
-            else: 
-                data, comment = line, ''
-            data = data.split('=')
-            if len(data) !=2:
-                writer.writelines(line)
-                continue
-            key = data[0].strip()
-            if key in self.options:
-                value = str(self.options[key])
-            else:
-                value = data[1].strip()
-            try:
-                to_write.remove(key)
-            except:
-                pass
-            if '_path' in key:       
-                # special case need to update path
-                # check if absolute path
-                if value.startswith('./'):
-                    value = os.path.realpath(os.path.join(MG5DIR, value))
-            writer.writelines('%s = %s # %s \n' % (key, value, comment))
-        for key in to_write:
-            if key in self.options:
-                writer.writelines('%s = %s \n' % (key,self.options[key]))
-            else:
-                writer.writelines('%s = %s \n' % (key,self.options[key]))
-                
-        writer.close()
-    
     
     # Set an option
     def do_set(self, line, log=True):
@@ -3615,6 +3605,11 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
                                             wanted_couplings)
             export_cpp.make_model_cpp(self._export_dir)
 
+        elif self._export_format == 'madevent':          
+            # Create configuration file [path to executable] for madevent
+            filename = os.path.join(self._export_dir, 'Cards', 'me5_configuration.txt')
+            self.do_save('options %s' % filename, check=False)
+
         if self._export_format in ['madevent', 'standalone']:
             
             self._curr_exporter.finalize_v4_directory( \
@@ -3627,11 +3622,8 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
 
         if self._export_format in ['madevent', 'standalone', 'standalone_cpp']:
             logger.info('Output to directory ' + self._export_dir + ' done.')
-        if self._export_format == 'madevent':          
-            # Create configuration file [path to executable] for madevent
-            filename = os.path.join(self._export_dir, 'Cards', 'me5_configuration.txt')
-            self.do_save('options %s' % filename, check=False)
-            
+
+        if self._export_format == 'madevent':              
             logger.info('Type \"launch\" to generate events from this process, or see')
             logger.info(self._export_dir + '/README')
             logger.info('Run \"open index.html\" to see more information about this process.')
@@ -3654,88 +3646,11 @@ class MadGraphCmd(CmdExtended, HelpToCmd):
                 last_action_2 = '%s %s' % (last_action, args[1])
             else: 
                 last_action_2 = 'none'
-        
+                
 
-#===============================================================================
-# MadGraphCmd
-#===============================================================================
-class MadGraphCmdWeb(MadGraphCmd, CheckValidForCmdWeb):
-    """The command line processor of MadGraph"""
- 
-    timeout = 1 # time authorize to answer question [0 is no time limit]
-    
-    def __init__(self, *arg, **opt):
-    
-        if os.environ.has_key('_CONDOR_SCRATCH_DIR'):
-            self.writing_dir = pjoin(os.environ['_CONDOR_SCRATCH_DIR'], \
-                                                                 os.path.pardir)
-        else:
-            self.writing_dir = pjoin(os.environ['MADGRAPH_DATA'],
-                               os.environ['REMOTE_USER'])
-            
-        
-        #standard initialization
-        MadGraphCmd.__init__(self, mgme_dir = '', *arg, **opt)
-    
-    def finalize(self, nojpeg):
-        """Finalize web generation""" 
-        
-        MadGraphCmd.finalize(self, nojpeg, online = True)
-
-    # Generate a new amplitude
-    def do_generate(self, line):
-        """Generate an amplitude for a given process"""
-
-        try:
-           MadGraphCmd.do_generate(self, line)
-        except:
-            # put the stop logo on the web
-            files.cp(self._export_dir+'/HTML/stop.jpg',self._export_dir+'/HTML/card.jpg')
-            raise
-    
-    # Add a process to the existing multiprocess definition
-    def do_add(self, line):
-        """Generate an amplitude for a given process and add to
-        existing amplitudes
-        syntax:
-        """
-        try:
-           MadGraphCmd.do_add(self, line)
-        except:
-            # put the stop logo on the web
-            files.cp(self._export_dir+'/HTML/stop.jpg',self._export_dir+'/HTML/card.jpg')
-            raise
-        
-    # Use the cluster file for the configuration
-    def set_configuration(self, config_path=None):
-        
-        """Force to use the web configuration file only"""
-        config_path = pjoin(os.environ['MADGRAPH_BASE'], 'mg5_configuration.txt')
-        return MadGraphCmd.set_configuration(self, config_path=config_path)
-
-#===============================================================================
-# MadGraphCmd
-#===============================================================================
-class MadGraphCmdShell(MadGraphCmd, CompleteForCmd, CheckValidForCmd, cmd.CmdShell):
-    """The command line processor of MadGraph""" 
-    
-    writing_dir = '.'
-    timeout = 0 # time authorize to answer question [0 is no time limit]
-    
-    def preloop(self):
-        """Initializing before starting the main loop"""
-
-        self.prompt = 'mg5>'
-        
-        # By default, load the UFO Standard Model
-        logger.info("Loading default model: sm")
-        self.do_import('model sm')
-        self.history.append('import model sm')
-        
-        # preloop mother
-        cmd.CmdShell.preloop(self)
-
-
+class MadGraphCmdWeb(CheckValidForCmdWeb,MadGraphCmd):
+    """Temporary parser"""
+                
 #===============================================================================
 # Command Parser
 #=============================================================================== 

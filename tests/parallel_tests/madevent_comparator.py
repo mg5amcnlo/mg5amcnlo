@@ -37,7 +37,7 @@ _file_path = os.path.dirname(os.path.realpath(__file__))
 
 import madgraph.iolibs.template_files as template_files
 import madgraph.iolibs.save_load_object as save_load_object
-import madgraph.interface.cmd_interface as cmd_interface
+import madgraph.interface.master_interface as cmd_interface
 
 import madgraph.various.misc as misc
 
@@ -83,7 +83,7 @@ class MadEventComparator(me_comparator.MEComparator):
         for runner in self.me_runners:
             logging.info("Cleaning code %s runner" % runner.name)
             runner.cleanup()
-    def output_result(self, filename=None, tolerance=3e-03):
+    def output_result(self, filename=None, tolerance=3e-02):
         """Output result as a nicely formated table. If filename is provided,
         write it to the file, else to the screen. Tolerance can be adjusted."""
 
@@ -462,7 +462,7 @@ class MG5Runner(MadEventRunner):
         logging.info("Running MG5")
         #proc_card = open(proc_card_location, 'r').read()
         new_proc_list = []
-        cmd = cmd_interface.MadGraphCmdShell()
+        cmd = cmd_interface.MasterCmd()
         cmd.exec_cmd('import command %s' %proc_card_location)
         #for line in proc_card.split('\n'):
         #    cmd.exec_cmd(line, errorhandling=False)
@@ -575,7 +575,6 @@ class MG5OldRunner(MG5Runner):
                         stdout=devnull, stderr=devnull)
         else:       
             subprocess.call([pjoin(self.mg5_path,'bin','mg5'), proc_card_location])
-
         os.remove(proc_card_location)
 
         values = self.get_values()

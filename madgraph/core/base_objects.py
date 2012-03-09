@@ -1633,6 +1633,7 @@ class Process(PhysicsObject):
         # allowed. This enables generating e.g. Z/gamma as s-channel
         # propagators.
         self['required_s_channels'] = []
+        self['forbidden_onsh_s_channels'] = []
         self['forbidden_s_channels'] = []
         self['forbidden_particles'] = []
         self['is_decay_chain'] = False
@@ -1676,7 +1677,7 @@ class Process(PhysicsObject):
                         raise self.PhysicsObjectError, \
                           "Not valid PDG code %d for s-channel particle" % i
 
-        if name == 'forbidden_s_channels':
+        if name in ['forbidden_onsh_s_channels', 'forbidden_s_channels']:
             if not isinstance(value, list):
                 raise self.PhysicsObjectError, \
                         "%s is not a valid list" % str(value)
@@ -1733,7 +1734,8 @@ class Process(PhysicsObject):
         """Return process property names as a nicely sorted list."""
 
         return ['legs', 'orders', 'overall_orders', 'model', 'id',
-                'required_s_channels', 'forbidden_s_channels',
+                'required_s_channels', 'forbidden_onsh_s_channels',
+                'forbidden_s_channels',
                 'forbidden_particles', 'is_decay_chain', 'decay_chains']
 
     def nice_string(self, indent=0):
@@ -1762,8 +1764,15 @@ class Process(PhysicsObject):
             prevleg = leg
 
         # Add forbidden s-channels
-        if self['forbidden_s_channels']:
+        if self['forbidden_onsh_s_channels']:
             mystr = mystr + '$ '
+            for forb_id in self['forbidden_onsh_s_channels']:
+                forbpart = self['model'].get('particle_dict')[forb_id]
+                mystr = mystr + forbpart.get_name() + ' '
+
+        # Add double forbidden s-channels
+        if self['forbidden_s_channels']:
+            mystr = mystr + '$$ '
             for forb_id in self['forbidden_s_channels']:
                 forbpart = self['model'].get('particle_dict')[forb_id]
                 mystr = mystr + forbpart.get_name() + ' '
@@ -1824,8 +1833,15 @@ class Process(PhysicsObject):
             prevleg = leg
 
         # Add forbidden s-channels
-        if self['forbidden_s_channels']:
+        if self['forbidden_onsh_s_channels']:
             mystr = mystr + '$ '
+            for forb_id in self['forbidden_onsh_s_channels']:
+                forbpart = self['model'].get('particle_dict')[forb_id]
+                mystr = mystr + forbpart.get_name() + ' '
+
+        # Add double forbidden s-channels
+        if self['forbidden_s_channels']:
+            mystr = mystr + '$$ '
             for forb_id in self['forbidden_s_channels']:
                 forbpart = self['model'].get('particle_dict')[forb_id]
                 mystr = mystr + forbpart.get_name() + ' '
@@ -2248,8 +2264,15 @@ class ProcessDefinition(Process):
             prevleg = leg
 
         # Add forbidden s-channels
-        if self['forbidden_s_channels']:
+        if self['forbidden_onsh_s_channels']:
             mystr = mystr + '$ '
+            for forb_id in self['forbidden_onsh_s_channels']:
+                forbpart = self['model'].get('particle_dict')[forb_id]
+                mystr = mystr + forbpart.get_name() + ' '
+
+        # Add double forbidden s-channels
+        if self['forbidden_s_channels']:
+            mystr = mystr + '$$ '
             for forb_id in self['forbidden_s_channels']:
                 forbpart = self['model'].get('particle_dict')[forb_id]
                 mystr = mystr + forbpart.get_name() + ' '

@@ -393,8 +393,10 @@ class UFOMG5Converter(object):
         self.incoming = [] 
         self.outcoming = []       
         for interaction_info in self.ufomodel.all_vertices:
-            # check if the interation meet requirements:
-            pdg = [p.pdg_code for p in interaction_info.particles if p.spin==2]
+            # check if the interaction meet requirements:
+            pdg = [p.pdg_code for p in interaction_info.particles if p.spin in [2,4]]
+            if len(pdg) % 2:
+                raise UFOImportError, 'Odd number of fermion in vertex: %s' % [p.pdg_code for p in interaction_info.particles]
             for i in range(0, len(pdg),2):
                 if pdg[i] == - pdg[i+1]:
                     if pdg[i] in self.outcoming:
@@ -856,10 +858,13 @@ class RestrictModel(model_reader.ModelReader):
             if value == 0:
                 zero_coupling.append(name)
                 continue
+            elif not strict_zero and abs(value) < 1e-13:
+                logger.debug('coupling with small value %s: %s treated as zero' %
+                             (name, value))
+                zero_coupling.append(name)
             elif not strict_zero and abs(value) < 1e-10:
                 return self.detect_identical_couplings(strict_zero=True)
-            elif not strict_zero and abs(value) < 1e-15:
-                zero_coupling.append(name)
+
             
             if value in dict_value_coupling:
                 iden_key.add(value)
