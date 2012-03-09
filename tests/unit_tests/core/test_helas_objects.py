@@ -1587,7 +1587,7 @@ class HelasMatrixElementTest(unittest.TestCase):
 
             myproc = base_objects.Process({'legs':myleglist,
                                            'model':self.mymodel,
-                                           'forbidden_s_channels':[22]})
+                                           'forbidden_onsh_s_channels':[22]})
 
             myamplitude = diagram_generation.Amplitude(myproc)
 
@@ -1628,7 +1628,7 @@ class HelasMatrixElementTest(unittest.TestCase):
 
             myproc = base_objects.Process({'legs':myleglist,
                                            'model':self.mymodel,
-                                           'forbidden_s_channels':[2]})
+                                           'forbidden_onsh_s_channels':[2]})
 
             myamplitude = diagram_generation.Amplitude(myproc)
 
@@ -2709,7 +2709,7 @@ class HelasDecayChainProcessTest(unittest.TestCase):
 
         myproc = base_objects.Process({'legs':myleglist,
                                        'model':self.mymodel,
-                                       'forbidden_s_channels':[2]})
+                                       'forbidden_onsh_s_channels':[2]})
 
         myleglist = base_objects.LegList()
         myleglist.append(base_objects.Leg({'id':2,
@@ -2779,7 +2779,7 @@ class HelasDecayChainProcessTest(unittest.TestCase):
                                          'state':True}))
         mydecayproc = base_objects.Process({'legs':myleglist,
                                             'model':self.mymodel,
-                                            'forbidden_s_channels':[2]})
+                                            'forbidden_onsh_s_channels':[2]})
         myproc.set('decay_chains', base_objects.ProcessList([mydecayproc]))
 
         myamplitude = diagram_generation.DecayChainAmplitude(myproc)

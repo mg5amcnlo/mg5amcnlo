@@ -49,7 +49,7 @@ class TestMadEventCmd(unittest.TestCase):
                          'delphes_trigger.dat')
         self.assertEqual(detect(pjoin(card_dir, 'delphes_trigger_CMS.dat')),
                          'delphes_trigger.dat')
-        self.assertEqual(detect(pjoin(card_dir, 'delphes_trigger.dat')),
+        self.assertEqual(detect(pjoin(card_dir, 'delphes_trigger_default.dat')),
                          'delphes_trigger.dat')
         # run_card
         self.assertEqual(detect(pjoin(card_dir, 'run_card.dat')),

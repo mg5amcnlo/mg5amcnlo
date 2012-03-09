@@ -23,7 +23,7 @@ import madgraph.core.helas_objects as helas_objects
 import madgraph.iolibs.export_v4 as export_v4
 import madgraph.iolibs.file_writers as writers
 import madgraph.iolibs.helas_call_writers as helas_call_writers
-import madgraph.iolibs.misc as misc
+import madgraph.various.misc as misc
 
 import tests.unit_tests as unittest
 import tests.unit_tests.core.test_helas_objects as test_helas_objects

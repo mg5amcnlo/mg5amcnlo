@@ -171,7 +171,7 @@ def compile(arg=[], cwd=None, mode='fortran', **opt):
         if 'makefile' not in all_file:
             raise OSError, 'no makefile present in %s' % os.path.realpath(cwd)
 
-        if mode == 'fortran' and (not which('g77') or not which('gfortran')):
+        if mode == 'fortran' and  not (which('g77') or which('gfortran')):
             error_msg = 'A fortran compilator (g77 or gfortran) is required to create this output.\n'
             error_msg += 'Please install g77 or gfortran on your computer and retry.'
             raise MadGraph5Error, error_msg
@@ -192,6 +192,7 @@ def compile(arg=[], cwd=None, mode='fortran', **opt):
         error_text += 'If you think that this is a bug, you can report this at https://bugs.launchpad.net/madgraph5'
 
         raise MadGraph5Error, error_text
+    return p.returncode
 
 
 ################################################################################
@@ -330,11 +331,11 @@ class open_file(object):
         
         for p in possibility:
             if which(p):
-                logger.warning('Using default %s \"%s\". ' % (program, p) + \
+                logger.info('Using default %s \"%s\". ' % (program, p) + \
                              'Set another one in ./input/mg5_configuration.txt')
                 return p
         
-        logger.warning('No valid %s found. ' % program + \
+        logger.info('No valid %s found. ' % program + \
                                    'Please set in ./input/mg5_configuration.txt')
         return None
         
@@ -345,11 +346,11 @@ class open_file(object):
       if mac_check==True and sys.platform == 'darwin':
           return self.open_mac_program(program, file_path)
 
-      arguments = program.split() # allow argument in program definition
-      arguments.append(file_path)
-
       # Shell program only                                                                                                                                                                 
       if program:
+          arguments = program.split() # allow argument in program definition
+          arguments.append(file_path)
+
           if not background:
               subprocess.call(arguments)
           else:

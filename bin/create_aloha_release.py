@@ -56,7 +56,7 @@ from datetime import date
 root_path = path.split(path.dirname(path.realpath( __file__ )))[0]
 sys.path.append(root_path)
 
-import madgraph.iolibs.misc as misc
+import madgraph.various.misc as misc
 import madgraph.iolibs.files as files_routines
 from madgraph import MG5DIR
 

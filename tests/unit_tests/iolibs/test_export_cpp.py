@@ -30,13 +30,15 @@ import madgraph.iolibs.export_cpp as export_cpp
 import madgraph.iolibs.file_writers as writers
 import madgraph.iolibs.helas_call_writers as helas_call_writer
 import models.import_ufo as import_ufo
-import madgraph.iolibs.misc as misc
 import madgraph.iolibs.save_load_object as save_load_object
 
 import madgraph.core.base_objects as base_objects
 import madgraph.core.color_algebra as color
 import madgraph.core.helas_objects as helas_objects
 import madgraph.core.diagram_generation as diagram_generation
+
+import madgraph.various.misc as misc
+
 from madgraph import MG5DIR
 
 import tests.unit_tests.core.test_helas_objects as test_helas_objects
