@@ -388,9 +388,9 @@ class ALOHAWriterForFortran(WriteALOHA):
             if self.LOOP_MODE:
                 max = 3 # each component is one momentum (since it's complex)
             else:
-                max = 1 # one componenet correspond to 2 component
+                max = 1 # one component correspond to 2 component
             for i in range(-1, max):
-                str_out += '%s%d(%d)= ' % (offshelltype, self.offshell, \
+                str_out += '%s%d(%d)= ' % (offshelltype, self.outgoing, \
                                                           offshell_size + i)
                 pat=re.compile(r'^[-+]?(?P<spin>\w)')
                 for elem in momentum_conservation:
@@ -419,6 +419,8 @@ class ALOHAWriterForFortran(WriteALOHA):
             
             if sign == -1 :
                 sign = '-'
+            else:
+                sign = ''
 
             if self.LOOP_MODE:
                 str_out += '%s(0) = %s %s%d(%d)\n' % (mom, sign, type, index, energy_pos)

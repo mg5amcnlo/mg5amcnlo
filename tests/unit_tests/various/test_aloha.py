@@ -3993,9 +3993,7 @@ x(0,1)*P(-1,2)*P(-1,3)*Gamma(3,2,-2)*ProjP(-2,1)')
         #            self.assertEqual(split_routine[i][j*77:(j+1)*77], split_solution[i][j*77:(j+1)*77])
         #            print split_routine[i][j*77:(j+1)*77]
             
-        
-
-
+   
 
     def test_fortranwriter_C(self):
         """ test that python writer works """
