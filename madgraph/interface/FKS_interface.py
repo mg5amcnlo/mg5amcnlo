@@ -84,29 +84,44 @@ class FKSInterface(CheckFKS, CompleteFKS, HelpFKS, mg_interface.MadGraphCmd):
 
         self._export_dir = os.path.realpath(self._export_dir)
 
+    def do_add(self, line, *args,**opt):
+        
+        args = self.split_arg(line)
+        # Check the validity of the arguments
+        self.check_add(args)
 
-    def do_generate(self, line):
-        #find the tag about the perturbative expansion
-        try:
-            nlo_pert = [s.strip() for s in line[line.index('[') + 1: line.index(']')].split(',')]
-            if nlo_pert != ['QCD']:
-                raise MadGraph5Error, 'NLO expansion only available in QCD for now, you asked %s' \
-                        % ', '.join(nlo_pert)
-            line = line[: line.find('[')] + line[line.find(']') + 1 :]
-        except ValueError:
-            raise MadGraph5Error, 'No perturbative expansion tag in process line %s' \
-                    % line
+        if args[0] != 'process': 
+            raise self.InvalidCmd("The add command can only be used with a process")
+        else:
+            line = ' '.join(args[1:])
+
+        if self._curr_model['perturbation_couplings']=={}:
+            if self._curr_model['name']=='sm':
+                mg_interface.logger.warning(\
+                  "The default sm model does not allow to generate"+
+                  " loop processes. MG5 now loads 'loop_sm' instead.")
+                mg_interface.MadGraphCmd.do_import(self,"model loop_sm")
+            else:
+                raise MadGraph5Error(
+                  "The model %s cannot generate loop processes"\
+                  %self._curr_model['name'])
+        
+        orders=self.extract_process_type(line)[2]
+        if orders!=['QCD']:
+                raise MadGraph5Error, 'FKS for reals only available in QCD for now, you asked %s' \
+                        % ', '.join(orders)
+                        
         #now generate the amplitudes as usual
         self._options['group_subprocesses'] = 'NLO'
         collect_mirror_procs = False
         ignore_six_quark_processes = self._options['ignore_six_quark_processes']
 #        super(FKSInterface, self).do_generate(line)
         if ',' in line:
-            myprocdef, line = super(FKSInterface, self).extract_decay_chain_process(line)
+            myprocdef, line = mg_interface.MadGraphCmd.extract_decay_chain_process(self,line)
             if myprocdef.are_decays_perturbed():
                 raise MadGraph5Error("Decay processes cannot be perturbed")
         else:
-            myprocdef = super(FKSInterface, self).extract_process(line)
+            myprocdef = mg_interface.MadGraphCmd.extract_process(self,line)
 
         myprocdef['perturbation_couplings'] = ['QCD']
 
@@ -119,9 +134,9 @@ class FKSInterface(CheckFKS, CompleteFKS, HelpFKS, mg_interface.MadGraphCmd):
                                        collect_mirror_procs,
                                        ignore_six_quark_processes)
             # this is for testing, to be removed
-        else: raise MadGraph5Error, 'Unknown FKS mode: %s' % self._options['fks_mode']
+        else: 
+            raise MadGraph5Error, 'Unknown FKS mode: %s' % self._options['fks_mode']
         self._fks_multi_proc.generate_virtuals()
-
 
     def do_output(self, line):
         """Initialize a new Template or reinitialize one"""

@@ -1426,7 +1426,8 @@ class ProcessTest(unittest.TestCase):
                        'decay_chains': base_objects.ProcessList(),
                        'squared_orders': {},
                        'has_born': True,
-                       'overall_orders': {}}
+                       'overall_orders': {},
+                       'NLO_mode':None}
 
         self.myprocess = base_objects.Process(self.mydict)
 
@@ -1508,7 +1509,8 @@ class ProcessTest(unittest.TestCase):
         goal = goal + "    \'is_decay_chain\': False,\n"
         goal = goal + "    \'decay_chains\': [],\n"
         goal = goal + "    \'perturbation_couplings\': [],\n"
-        goal = goal + "    \'has_born\': True\n}"
+        goal = goal + "    \'has_born\': True,\n"
+        goal = goal + "    \'NLO_mode\': None\n}"
 
         self.assertEqual(goal, str(self.myprocess))
 
@@ -1611,7 +1613,8 @@ class ProcessDefinitionTest(unittest.TestCase):
                        'decay_chains': base_objects.ProcessList(),
                        'squared_orders':{},
                        'has_born': True,
-                       'overall_orders':{}}
+                       'overall_orders':{},
+                       'NLO_mode':None}
 
         self.my_process_definition = base_objects.ProcessDefinition(self.mydict)
 
@@ -1692,7 +1695,8 @@ class ProcessDefinitionTest(unittest.TestCase):
         goal = goal + "    \'is_decay_chain\': False,\n"
         goal = goal + "    \'decay_chains\': [],\n"
         goal = goal + "    \'perturbation_couplings\': [],\n"
-        goal = goal + "    \'has_born\': True\n}"
+        goal = goal + "    \'has_born\': True,\n"
+        goal = goal + "    \'NLO_mode\': None\n}"        
         self.assertEqual(goal, str(self.my_process_definition))
 
 #===============================================================================
