@@ -35,5 +35,8 @@ c   narrow width approximation
 c
       logical NWA
       common /to_NWA/NWA
-      logical ISR
+c
+c     ISR mode
+c
+      integer ISR
       common /to_correct_ISR/ISR

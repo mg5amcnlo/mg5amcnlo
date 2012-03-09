@@ -36,7 +36,10 @@ Block MW_Run
      use_cut              F       # use the cut defined in run_card.dat
      bw_cut               F       # use the BW cut 
      nwa                  F       # T= use narrow width approximation
-     isr                  F       # T=boost correction based on reconstructed pTmiss
+     isr                  0       # isr=0 : ignore ISR effect (except if all FS particles are visible)
+                                  # isr=1 : correct kinematic based on reconstructed Pt(isr)
+                                  # isr=2 : correct kinematic based on reconstructed Pt(isr)
+                                  #         + boost the weight to the CMS frame
      
 #*************************************************************************
 ##                  define the different param_card's                   ##  

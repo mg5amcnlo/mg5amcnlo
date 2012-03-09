@@ -42,8 +42,8 @@ c
      & inv_matching_type_part
       integer nexternal, num_inv
       COMMON/to_num_inv/nexternal, num_inv
-      logical ISR
-      common /to_correct_ISR/ISR
+      integer ISR_mode
+      common /to_correct_ISR/ISR_mode
 c
 c     external
 c
@@ -192,7 +192,10 @@ c     Evaluate the initial momenta in the LAB frame
       call boostx(CMS_mom(0,1),pboost,momenta(0,1))
       call boostx(CMS_mom(0,2),pboost,momenta(0,2))
 
+c     correction from the measure to translate the weight to the CM frame
+c     ONLY if isr != 1 
 
+      if (isr_mode.ne.1) then
       measureLAB=1d0
        do j=3,nexternal-num_inv
          MG=inv_matching_type_part(j)
@@ -206,6 +209,7 @@ c     Evaluate the initial momenta in the LAB frame
        enddo
 
       jac=jac*measureCMS/measureLAB
+      endif
 c
 c     flux factor
 c

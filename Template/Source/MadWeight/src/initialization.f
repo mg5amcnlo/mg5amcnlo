@@ -55,13 +55,16 @@ c     experimental event
       double precision pmass(max_particles)
       common/to_mass/pmass
 
+      integer ISR_mode
+      common /to_correct_ISR/ISR_mode
+
       double precision alphas
       external alphas
 c
 c     set parameters of the run
 
       include 'madweight_param.inc'
-
+      ISR_mode=isr
 
       open(unit=89,file="./param.dat")
       read(89,*) param_name
@@ -124,14 +127,20 @@ c     call graph_init
       read(24,*,err=48,end=48) k,type(k),eta_init(k), !line with type 6
      &           phi_init(k),pt_init(k),j_mass(k),ntrk(k),btag(k),
      &           had_em(k) ,dummy1(k),dummy2(k)
-      if (type(k).eq.6.and.pt_init(k).gt.1d0.and.ISR) then
+      if (type(k).eq.6.and.pt_init(k).gt.1d0.and.ISR.gt.0) then
          missPhi_EXP=phi_init(k)   ! apply boot correction based on reconstructed missing pT
          missPT_EXP=pt_init(k)
-         write(*,*) "Using reconstructed missing pT: ",missPT_EXP
-      elseif(.not. ISR .and. num_inv.eq.0) then ! apply boost correction based on visible particles
+         write(*,*) "Using reconstructed ISR: "
+         write(*,*) "px(ISR)= ", -px_visible-missPT_EXP*dcos(missPhi_EXP)
+         write(*,*) "px(ISR)= ", -py_visible-missPT_EXP*dsin(missPhi_EXP)
+      elseif(ISR.eq.0 .and. num_inv.eq.0) then ! apply boost correction based on visible particles
          missPhi_EXP=0d0
          missPT_EXP=1d-10
+         write(*,*) "ISR deduced from pT(visible): "
+         write(*,*) "px(ISR)= ", -px_visible
+         write(*,*) "px(ISR)= ", -py_visible
       else
+         write(*,*) "ISR effects are ignored "
          missPhi_EXP=-1d0
          missPT_EXP=-1d0
       endif

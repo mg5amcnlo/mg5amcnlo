@@ -76,10 +76,10 @@
 #*********************************************************************
 # Minimum and maximum pt's                                           *
 #*********************************************************************
- 20  = ptj       ! minimum pt for the jets 
+  0  = ptj       ! minimum pt for the jets 
   0  = ptb       ! minimum pt for the b 
- 10  = pta       ! minimum pt for the photons 
- 10  = ptl       ! minimum pt for the charged leptons 
+  0  = pta       ! minimum pt for the photons 
+  0  = ptl       ! minimum pt for the charged leptons 
   0  = misset    ! minimum missing Et (sum of neutrino's momenta)
   0  = ptheavy   ! minimum pt for one heavy final state
  1.0 = ptonium   ! minimum pt for the quarkonium states
@@ -102,11 +102,11 @@
 #*********************************************************************
 # Maximum and minimum rapidity                                       *
 #*********************************************************************
-   5  = etaj    ! max rap for the jets 
+ 1d2  = etaj    ! max rap for the jets 
  1d2  = etab    ! max rap for the b 
- 2.5  = etaa    ! max rap for the photons 
- 2.5  = etal    ! max rap for the charged leptons 
- 0.6  = etaonium ! max rap for the quarkonium states
+ 1d2  = etaa    ! max rap for the photons 
+ 1d2  = etal    ! max rap for the charged leptons 
+ 1d2  = etaonium ! max rap for the quarkonium states
  0d0  = etajmin ! min rap for the jets
  0d0  = etabmin ! min rap for the b
  0d0  = etaamin ! min rap for the photons
@@ -114,16 +114,16 @@
 #*********************************************************************
 # Minimum and maximum DeltaR distance                                *
 #*********************************************************************
- 0.4 = drjj    ! min distance between jets 
+ 0.  = drjj    ! min distance between jets 
  0   = drbb    ! min distance between b's 
- 0.4 = drll    ! min distance between leptons 
- 0.4 = draa    ! min distance between gammas 
+ 0.  = drll    ! min distance between leptons 
+ 0.  = draa    ! min distance between gammas 
  0   = drbj    ! min distance between b and jet 
- 0.4 = draj    ! min distance between gamma and jet 
- 0.4 = drjl    ! min distance between jet and lepton 
+ 0.  = draj    ! min distance between gamma and jet 
+ 0.  = drjl    ! min distance between jet and lepton 
  0   = drab    ! min distance between gamma and b 
  0   = drbl    ! min distance between b and lepton 
- 0.4 = dral    ! min distance between gamma and lepton 
+ 0.  = dral    ! min distance between gamma and lepton 
  1d2 = drjjmax ! max distance between jets
  1d2 = drbbmax ! max distance between b's
  1d2 = drllmax ! max distance between leptons

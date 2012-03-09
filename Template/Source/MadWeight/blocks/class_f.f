@@ -73,6 +73,8 @@ c
       common /PHASESPACE/ S,X1,X2,PSWGT,JAC
       double precision c_point(1:max_particles,3,2)
       common/ph_sp_init/c_point
+      integer ISR_mode
+      common /to_correct_ISR/ISR_mode
       REAL XRAN1
       EXTERNAL XRAN1
 c---
@@ -377,10 +379,11 @@ c
        endif
       jac=jac*jac_loc
 
-c
-c     also need to rescale the weight to compensate for the transformation of the 
-c     probability density under boosts:
-c
+c     correction from the measure to translate the weight to the CM frame
+c     ONLY if isr = 2 
+
+      if (isr_mode.eq.2) then
+
       measure1=1d0
        do j=3,nexternal-num_inv
          MG=inv_matching_type_part(j)
@@ -402,6 +405,7 @@ c         write(*,*) "p",j,momenta(0,j), momenta(1,j),momenta(2,j),momenta(3,j)
        enddo
 
       jac=jac*measure2/measure1
+      endif
 
       return
       end

@@ -49,6 +49,8 @@ c
      & inv_matching_type_part
       integer nexternal, num_inv
       COMMON/to_num_inv/nexternal, num_inv
+      integer ISR_mode
+      common /to_correct_ISR/ISR_mode
 
       REAL XRAN1
       EXTERNAL XRAN1
@@ -249,7 +251,10 @@ c     Evaluate the initial momenta in the LAB frame
       call boostx(CMS_mom(0,1),pboost,momenta(0,1))
       call boostx(CMS_mom(0,2),pboost,momenta(0,2))
 
+c     correction from the measure to translate the weight to the CM frame
+c     ONLY if isr = 2 
 
+      if (isr_mode.eq.2) then
       measureLAB=1d0
        do j=3,nexternal-num_inv
          MG=inv_matching_type_part(j)
@@ -261,6 +266,9 @@ c     Evaluate the initial momenta in the LAB frame
          MG=inv_matching_type_part(j)
          measureCMS=measureCMS*dsqrt(CMS_mom(1,MG)**2+CMS_mom(2,MG)**2)
        enddo
+      jac=jac*measureCMS/measureLAB
+
+      endif
 c
 c     flux
 c
@@ -268,7 +276,6 @@ c
       jac=jac*jac_loc
 c      write(*,*) 'jac_factor', jac_factor
 
-      jac=jac*measureCMS/measureLAB
 
       return
       end

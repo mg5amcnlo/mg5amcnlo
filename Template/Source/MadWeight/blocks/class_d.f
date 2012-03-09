@@ -74,6 +74,8 @@ c
      & inv_matching_type_part
       integer nexternal, num_inv
       COMMON/to_num_inv/nexternal, num_inv
+      integer ISR_mode
+      common /to_correct_ISR/ISR_mode
 c
 c     external
 c
@@ -347,8 +349,8 @@ c
 
 c      write(*,*) 'sol ',j
 c      write(*,*) 'i_num ',i_num
-c      write(*,*) 'dble ',dble(E1c(j))
-c      write(*,*) 'imag ',i_part1
+c      write(*,*) 'dble ',dble(E1c(j)),dble(E2c(j))
+c      write(*,*) 'imag ',i_part1, i_part2
 
 
           if (dabs(dble(E1c(j))).gt.1.0D+5*dabs(i_part1).and.
@@ -523,6 +525,7 @@ c     First evaluated the total momentum in the LAB frame
         enddo
       pboost(j)=Ptot(j)
       enddo
+c      write(*,*) Ptot
 
 c     Then calculate the momenta in the CMS frame
       pboost(1)=-pboost(1)
@@ -531,8 +534,10 @@ c     Then calculate the momenta in the CMS frame
        do j=3,nexternal
 c         write(*,*) "p",j,momenta(0,j), momenta(1,j),momenta(2,j),momenta(3,j)
          call boostx(momenta(0,j),pboost,CMS_mom(0,j))
+c         write(*,*) "p",j,CMS_mom(0,j),CMS_mom(1,j),CMS_mom(2,j),CMS_mom(3,j)
        enddo
        call boostx(Ptot,pboost,PtotCMS)
+c      write(*,*) PtotCMS
 
 c     Evaluate the initial momenta in the CMS frame
       x1=(PtotCMS(0)+PtotCMS(3))/sqrts
@@ -558,20 +563,31 @@ c     Evaluate the initial momenta in the LAB frame
       call boostx(CMS_mom(0,1),pboost,momenta(0,1))
       call boostx(CMS_mom(0,2),pboost,momenta(0,2))
 
+c     correction from the measure to translate the weight to the CM frame
+c     ONLY if isr = 2 
 
+      if (isr_mode.eq.2) then
       measureLAB=1d0
        do j=3,nexternal-num_inv
          MG=inv_matching_type_part(j)
          measureLAB=measureLAB*dsqrt(momenta(1,MG)**2+momenta(2,MG)**2)
+c         write(*,*) "pCMS",MG,CMS_mom(0,MG),CMS_mom(1,MG),CMS_mom(2,MG),CMS_mom(3,MG)
+c         write(*,*) "pLAB",MG,momenta(0,MG),momenta(1,MG),momenta(2,MG),momenta(3,MG)
+c         write(*,*) ""
        enddo
+
+c      write(*,*) "mW ", dsqrt(dot(momenta(0,r1),momenta(0,r1)))
+c      write(*,*) "mW ", dsqrt(dot(momenta(0,r2),momenta(0,r2)))
+c      write(*,*) "mt ", dsqrt(dot(momenta(0,r3),momenta(0,r3)))
+c      write(*,*) "mt ", dsqrt(dot(momenta(0,r4),momenta(0,r4)))
 
       measureCMS=1d0
        do j=3,nexternal-num_inv
          MG=inv_matching_type_part(j)
          measureCMS=measureCMS*dsqrt(CMS_mom(1,MG)**2+CMS_mom(2,MG)**2)
        enddo
-
       jac=jac*measureCMS/measureLAB
+      endif
 c
 c     flux factor
 c
