@@ -136,25 +136,51 @@ class GaugeComparator(unittest.TestCase):
     def test_short_cross_gauge(self):
         """Test the cross section of a short list of sm processes"""
         # Create a list of processes to check automatically                                                                                                                             
-        my_proc_list = ['u u~ > d d~', 'u u~ > d d~ g', 'd d~ > u d~ s c~']        
+        my_proc_list = ['u u~ > d d~']        
         #my_proc_list = ['u u~ > c c~', 'e+ e- > u u~']
         # Store list of non-zero processes and results in file                                                                                                                          
         self.compare_cross_section(my_proc_list,
                              orders = {'QED':99, 'QCD':99},model = 'sm_mw',
                              filename = "short_cs_sm_gauge.log")
 
-    def test_short_cross_gauge_p2(self):
+    def test_short_gauge(self):
+        """Test a semi-complete list of sm 2->4 processes"""
+        # Create a list of processes to check automatically       
+        my_proc_list = ['e+ e- > u u~ d d~','u u~ > u u~ d d~', 'c s~ > u u~ c s~',
+             'e+ e- > ta+ ta- vta vta~']
+
+        # Store list of non-zero processes and results in file
+        self.compare_processes(my_proc_list,
+                             orders = {'QED':99, 'QCD':99},
+                             model = "sm_mw",
+                             energy = 90,
+                             filename = "sm_gauge_4_e90.log",
+                             tolerance = 1e-3)
+        
+    ############################################################################    
+    #  EXTENSIVE GAUGE TEST FOR THE SM
+    ############################################################################ 
+    def test_cross_gauge_p2(self):
         """Test the cross section of a short list of sm processes"""
         # Create a list of processes to check automatically                                                                                                                             
-        my_proc_list = ['p p > b b~ u d~ s c~', 'p p > b b~ e+ ve mu- vm~']        
+        my_proc_list = ['d d~ > u d~ s c~']        
         # Store list of non-zero processes and results in file                                                                                                                          
         self.compare_cross_section(my_proc_list,
                              orders = {'QED':99, 'QCD':99},model = 'sm_mw',
                              filename = "short_cs_sm_gauge_2.log")
         
-    ############################################################################    
-    #  EXTENSIVE GAUGE TEST FOR THE SM
-    ############################################################################ 
+        my_proc_list = ['p p > b b~ u d~ s c~']
+        # Store list of non-zero processes and results in file                                                                                                                          
+        self.compare_cross_section(my_proc_list,
+                             orders = {'QED':99, 'QCD':99},model = 'sm_mw',
+                             filename = "short_cs_sm_gauge_2-2.log")
+        
+        my_proc_list = [ 'p p > b b~ e+ ve mu- vm~']
+        # Store list of non-zero processes and results in file                                                                                                                          
+        self.compare_cross_section(my_proc_list,
+                             orders = {'QED':99, 'QCD':99},model = 'sm_mw',
+                             filename = "short_cs_sm_gauge_2-2.log")
+    
     def test_gauge_2(self):
         """Test a semi-complete list of sm 2->2 processes"""
         # Create a list of processes to check automatically
@@ -200,20 +226,6 @@ class GaugeComparator(unittest.TestCase):
                              energy = 500,
                              filename = "sm_gauge_3_e500.log",
                              tolerance = 1e-3)   
-
-    def test_gauge_4_e90(self):
-        """Test a semi-complete list of sm 2->4 processes"""
-        # Create a list of processes to check automatically       
-        my_proc_list = ['e+ e- > u u~ d d~','u u~ > u u~ d d~', 'c s~ > u u~ c s~',
-             'e+ e- > ta+ ta- vta vta~']
-
-        # Store list of non-zero processes and results in file
-        self.compare_processes(my_proc_list,
-                             orders = {'QED':99, 'QCD':99},
-                             model = "sm_mw",
-                             energy = 90,
-                             filename = "sm_gauge_4_e90.log",
-                             tolerance = 1e-3)
     
     def test_gauge_4_e500(self):
         """Test a semi-complete list of sm 2->4 processes"""

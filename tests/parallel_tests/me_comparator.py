@@ -406,7 +406,7 @@ class MG5Runner(MG4Runner):
         """Create a proc_card.dat string following v5 conventions."""
 
         v5_string = "import model_v4 %s\n" % os.path.join(self.model_dir, model)
-
+        v5_string += "set automatic_html_opening False\n"
         couplings = ' '.join(["%s=%i" % (k, v) for k, v in orders.items()])
 
         for i, proc in enumerate(proc_list):
@@ -426,7 +426,7 @@ class MG5_UFO_Runner(MG5Runner):
         """Create a proc_card.dat string following v5 conventions."""
 
         v5_string = "import model %s \n" % os.path.join(self.model_dir, model)
-
+        v5_string += "set automatic_html_opening False\n"
         couplings = ' '.join(["%s=%i" % (k, v) for k, v in orders.items()])
 
         for i, proc in enumerate(proc_list):
@@ -452,6 +452,7 @@ class MG5_UFO_gauge_Runner(MG5Runner):
         """Create a proc_card.dat string following v5 conventions."""
 
         v5_string = 'import model sm_mw \n'
+        v5_string += "set automatic_html_opening False\n"
         v5_string += 'set complex_mass_scheme %s \n' % self.cms
         v5_string += 'set gauge %s \n' % self.gauge
         v5_string += "import model %s \n" % os.path.join(self.model_dir, model)
@@ -551,7 +552,7 @@ class MG5_UFO_OldRunner(MG5OldRunner):
         """Create a proc_card.dat string following v5 conventions."""
 
         v5_string = "import model %s \n" % model
-
+        v5_string += "set automatic_html_opening False\n"
         couplings = ' '.join(["%s=%i" % (k, v) for k, v in orders.items()])
 
         for i, proc in enumerate(proc_list):
@@ -576,7 +577,7 @@ class MG5_CPP_Runner(MG5Runner):
         """Create a proc_card.dat string following v5 conventions."""
 
         v5_string = "import model %s \n" % model
-
+        v5_string += "set automatic_html_opening False\n"
         couplings = ' '.join(["%s=%i" % (k, v) for k, v in orders.items()])
 
         for i, proc in enumerate(proc_list):
