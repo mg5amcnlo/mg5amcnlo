@@ -38,6 +38,7 @@ pjoin = os.path.join
 import madgraph
 import madgraph.interface.extended_cmd as cmd
 import madgraph.interface.madgraph_interface as MGcmd
+import madgraph.iolibs.files as files
 
 from madgraph import MG4DIR, MG5DIR, MadGraph5Error
 
@@ -438,3 +439,22 @@ class MasterCmdWeb(Switcher, MGcmd.MadGraphCmdWeb):
         config_path = pjoin(os.environ['MADGRAPH_BASE'], 'mg5_configuration.txt')
         return Switcher.set_configuration(self, config_path=config_path)
     
+
+    def do_save(self, line, check=True):
+        """Save information to file"""
+        
+        if check:
+            self.check_save([])
+            raise #useless but full security
+        
+        args = self.split_arg(line)
+        if args[0] != 'options':
+            Switcher.do_save(self, line,check)
+        else:
+            # put default options since 
+            # in the web the local file is not used
+            # in download the default file is more usefull
+            files.cp(pjoin(MG5DIR,'input','mg5_configuration.txt'), args[1])
+            
+
+
