@@ -223,7 +223,7 @@ class AbstractRoutineBuilder(object):
             id = i + 1
                      
             #Check if this is the outgoing particle
-            if id == self.outgoing:
+            if id == outgoing:
                 if abs(spin) == 1: 
                     lorentz *= complex(0,1)
                 elif spin == 2:

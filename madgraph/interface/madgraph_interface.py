@@ -3192,10 +3192,6 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
                     logger.info('Activate complex mass scheme.')
                 self._curr_model.change_mass_to_complex_scheme()
                 if hasattr(self._curr_model, 'set_parameters_and_couplings'):
-                    if hasattr(self._curr_model, 'restrict_card'):
-                        self._curr_model.set_parameters_and_couplings(
-                                             self._curr_model.restrict_card)
-                    else:
                         self._curr_model.set_parameters_and_couplings()
             else:
                 if not old:

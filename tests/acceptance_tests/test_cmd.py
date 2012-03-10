@@ -1051,8 +1051,8 @@ P1_qq_wp_wp_lvl
         self.assertEqual(len(self.cmd._curr_amps), 1)
         nicestring = """Process: mu+ mu- > ta+ ta- WEIGHTED=4
 2 diagrams:
-1  ((1(13),2(-13)>1(22),id:18),(3(-15),4(15),1(22),id:19)) (QCD=0,QED=2,WEIGHTED=4)
-2  ((1(13),2(-13)>1(23),id:57),(3(-15),4(15),1(23),id:58)) (QCD=0,QED=2,WEIGHTED=4)"""
+1  ((1(13),2(-13)>1(22),id:34),(3(-15),4(15),1(22),id:35)) (QCD=0,QED=2,WEIGHTED=4)
+2  ((1(13),2(-13)>1(23),id:40),(3(-15),4(15),1(23),id:41)) (QCD=0,QED=2,WEIGHTED=4)"""
         self.assertEqual(self.cmd._curr_amps[0].nice_string().split('\n'), nicestring.split('\n'))
         self.do('save processes /tmp/model.pkl')
         self.do('generate e+ e- > e+ e-')

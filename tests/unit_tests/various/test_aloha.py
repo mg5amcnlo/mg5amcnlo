@@ -4189,10 +4189,10 @@ def SSS1_1(S2, S3, COUP, M1):
     S1 = wavefunctions.WaveFunction(size=3)
     S1[1] = S2[1]+S3[1]
     S1[2] = S2[2]+S3[2]
-    P1 = [-complex(S1[1]).real, \\
-            - complex(S1[2]).real, \\
-            - complex(S1[2]).imag, \\
-            - complex(S1[1]).imag]
+    P1 = [- complex(S1[1]).real, \\
+             - complex(S1[2]).real, \\
+             - complex(S1[2]).imag, \\
+             - complex(S1[1]).imag]
     denom =1.0/(( (P1[0]**2)-(P1[1]**2)-(P1[2]**2)-(P1[3]**2)-(M1**2)))
     S1[0]= COUP*denom*1j*(S3[0]*S2[0])
     return S1

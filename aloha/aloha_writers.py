@@ -332,12 +332,12 @@ class ALOHAWriterForFortran(WriteALOHA):
             if aloha.complex_mass:
                 call_arg = '%(args)s, COUP, M%(id)d, %(spin)s%(id)d' % \
                     {'args': ', '.join(CallList), 
-                     'spin': self.particles[self.offshell -1],
-                     'id': self.offshell}
+                     'spin': self.particles[self.outgoing -1],
+                     'id': self.outgoing}
             else:
                 call_arg = '%(args)s, COUP, M%(id)d, W%(id)d, %(spin)s%(id)d' % \
                     {'args': ', '.join(CallList), 
-                     'spin': self.particles[self.offshell -1],
+                     'spin': self.particles[self.outgoing -1],
                      'id': self.outgoing}
             str_out = ' subroutine %s(%s)\n' % (name, call_arg) 
 
@@ -751,8 +751,8 @@ class ALOHAWriterForCPP(WriteALOHA):
             str_out = 'void %(name)s(%(args)s, complex M%(number)d, complex<double>%(out)s%(number)d[])' % \
               {'name': name,
                'args': ','.join(CallList+ ['complex<double> COUP']),
-               'out': self.particles[OffShellParticle],
-               'number': OffShellParticle + 1 
+               'out': self.particles[self.outgoing - 1],
+               'number': self.outgoing
                }            
         else: 
             str_out = 'void %(name)s(%(args)s, double M%(number)d, double W%(number)d, complex<double>%(out)s%(number)d[])' % \

@@ -956,8 +956,8 @@ class UFOHELASCALLWriterComplexMass(unittest.TestCase):
     def setUp(self):
         """load the model"""
 
-        import madgraph.interface.cmd_interface as interface
-        cmd = interface.MadGraphCmdShell()
+        import madgraph.interface.master_interface as interface
+        cmd = interface.MasterCmd()
         cmd.do_load('model %s' % os.path.join(MG5DIR,'tests','input_files','sm.pkl'))
         
         self.mybasemodel = cmd._curr_model
