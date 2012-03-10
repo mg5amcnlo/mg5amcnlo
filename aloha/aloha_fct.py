@@ -91,7 +91,6 @@ def guess_routine_from_name(names):
         tags = []
         len_tag = -1
         while len(tags) != len_tag:
-            print main, tags
             len_tag = len(tags)
             for tag in allow_tag:
                 if main.endswith(tag):
@@ -101,7 +100,6 @@ def guess_routine_from_name(names):
         
         # create the correct lorentz
         lorentz = [main]
-        print lorentz, multiple
         if multiple:
             base = main
             while base[-1].isdigit():
@@ -111,6 +109,5 @@ def guess_routine_from_name(names):
         
         # add in the results
         output.append((tuple(lorentz), tuple(tags), int(offshell)))
-    print output
     return output
          

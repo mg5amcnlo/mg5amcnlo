@@ -3217,6 +3217,7 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
                 output = output[-1]
                 if not os.path.isdir(output):
                     raise self.InvalidCmd('%s is not a valid directory' % output)
+            logger.info('creating routines in directory %s ' % output)
             # build the calling list for aloha
             names = [d for d in args if not d.startswith('-')]
             wanted_lorentz = aloha_fct.guess_routine_from_name(names)
