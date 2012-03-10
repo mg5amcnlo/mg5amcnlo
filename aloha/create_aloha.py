@@ -522,6 +522,7 @@ class AbstractALOHAModel(dict):
         request = {}
         for list_l_name, tag, outgoing in data:
             for l_name in list_l_name:
+                print l_name
                 try:
                     request[l_name][tag].append(outgoing)
                 except:

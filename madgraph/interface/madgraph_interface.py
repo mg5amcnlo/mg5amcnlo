@@ -69,6 +69,9 @@ import madgraph.various.cluster as cluster
 import models as ufomodels
 import models.import_ufo as import_ufo
 
+import aloha.aloha_fct as aloha_fct
+import aloha.create_aloha as create_aloha
+
 # Special logger for the Cmd Interface
 logger = logging.getLogger('cmdprint') # -> stdout
 logger_stderr = logging.getLogger('fatalerror') # ->stderr
@@ -313,6 +316,11 @@ class HelpToCmd(cmd.HelpCmd):
         logger.info("     the processes using Pythia 8. The files are written in")
         logger.info("     the Pythia 8 directory (default).")
         logger.info("     NOTE: The Pythia 8 directory is set in the ./input/mg5_configuration.txt")
+        logger.info("   - If mode is aloha: Special syntax output:")
+        logger.info("     syntax: aloha [ROUTINE] [--options]" )
+        logger.info("     valid options for aloha output are:")
+        logger.info("      --format=Fortran|Python|Cpp : defining the output language")
+        logger.info("      --output= : defining output directory")
         logger.info("   path: The path of the process directory.")
         logger.info("     If you put '.' as path, your pwd will be used.")
         logger.info("     If you put 'auto', an automatic directory PROC_XX_n will be created.")
@@ -845,10 +853,6 @@ This will take effect only in a NEW terminal
         else:
             self._export_format = 'madevent'
 
-        if not self._curr_amps:
-            text = 'No processes generated. Please generate a process first.'
-            raise self.InvalidCmd(text)
-
         if not self._curr_model:
             text = 'No model found. Please import a model first and then retry.'
             raise self.InvalidCmd(text)
@@ -861,6 +865,18 @@ This will take effect only in a NEW terminal
             text += " Those model can be imported with mg5> import model NAME."
             logger.warning(text)
             raise self.InvalidCmd('')
+
+        if self._export_format == 'aloha':
+            return
+
+
+        if not self._curr_amps:
+            text = 'No processes generated. Please generate a process first.'
+            raise self.InvalidCmd(text)
+
+
+
+
 
         if args and args[0][0] != '-':
             # This is a path
@@ -1301,11 +1317,16 @@ class CompleteForCmd(cmd.CompleteCmd):
         forbidden_names = ['MadGraphII', 'Template', 'pythia-pgs', 'CVS',
                             'Calculators', 'MadAnalysis', 'SimpleAnalysis',
                             'mg5', 'DECAY', 'EventConverter', 'Models',
-                            'ExRootAnalysis', 'HELAS', 'Transfer_Fct']
+                            'ExRootAnalysis', 'HELAS', 'Transfer_Fct', 'aloha']
         
         #name of the run =>proposes old run name
         args = self.split_arg(line[0:begidx])
         if len(args) >= 1: 
+            if len(args) > 1 and args[1] == 'aloha':
+                try:
+                    return self.aloha_complete_output(text, line, begidx, endidx)
+                except Exception, error:
+                    print error
             # Directory continuation
             if args[-1].endswith(os.path.sep):
                 return [name for name in self.path_completion(text,
@@ -1330,6 +1351,46 @@ class CompleteForCmd(cmd.CompleteCmd):
             content += ['auto']
             return self.list_completion(text, content)
 
+    def aloha_complete_output(self, text, line, begidx, endidx):
+        "Complete the output aloha command"
+        args = self.split_arg(line[0:begidx])
+        completion_categories = {}
+        
+        forbidden_names = ['MadGraphII', 'Template', 'pythia-pgs', 'CVS',
+                            'Calculators', 'MadAnalysis', 'SimpleAnalysis',
+                            'mg5', 'DECAY', 'EventConverter', 'Models',
+                            'ExRootAnalysis', 'Transfer_Fct', 'aloha',
+                            'apidoc','vendor']
+        
+        
+        # options
+        options = ['--format=Fortran', '--format=Python','--format=Cpp','--output=']
+        options = self.list_completion(text, options)
+        if options:
+            completion_categories['options'] = options
+        
+        if args[-1] == '--output=' or args[-1].endswith(os.path.sep):
+            # Directory continuation
+            completion_categories['path'] =  [name for name in self.path_completion(text,
+                        pjoin('.',*[a for a in args if a.endswith(os.path.sep)]),
+                        only_dirs = True) if name not in forbidden_names]
+
+        else:
+            ufomodel = ufomodels.load_model(self._curr_model.get('name'))
+            wf_opt = []
+            amp_opt = []
+            opt_conjg = []
+            for lor in ufomodel.all_lorentz:
+                amp_opt.append('%s_0' % lor.name)
+                for i in range(len(lor.spins)):
+                    wf_opt.append('%s_%i' % (lor.name,i+1))
+                    if i % 2 == 0 and lor.spins[i] == 2:
+                        opt_conjg.append('%sC%i_%i' % (lor.name,i //2 +1,i+1))
+            completion_categories['amplitude routines'] = self.list_completion(text, amp_opt) 
+            completion_categories['Wavefunctions routines'] = self.list_completion(text, wf_opt)        
+            completion_categories['conjugate_routines'] = self.list_completion(text, opt_conjg)
+            
+        return self.deal_multiple_categories(completion_categories)
 
     def complete_set(self, text, line, begidx, endidx):
         "Complete the set command"
@@ -1566,7 +1627,7 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
     _import_formats = ['model_v4', 'model', 'proc_v4', 'command', 'banner']
     _install_opts = ['pythia-pgs', 'Delphes', 'MadAnalysis', 'ExRootAnalysis']
     _v4_export_formats = ['madevent', 'standalone', 'matrix'] 
-    _export_formats = _v4_export_formats + ['standalone_cpp', 'pythia8']
+    _export_formats = _v4_export_formats + ['standalone_cpp', 'pythia8', 'aloha']
     _set_options = ['group_subprocesses',
                     'ignore_six_quark_processes',
                     'stdout_level',
@@ -3134,7 +3195,43 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
             main_file_name = args[args.index('-name') + 1]
         except:
             pass
-            
+        
+        ################
+        # ALOHA OUTPUT #
+        ################
+        if self._export_format == 'aloha':
+            # catch format
+            format = [d[11:] for d in args if d.startswith('--language=')]
+            if not format:
+                format = 'Fortran'
+            else:
+                format = format[-1]
+            # catch output dir
+            output = [d for d in args if d.startswith('--output=')]
+            if not output:
+                output = import_ufo.find_ufo_path(self._curr_model['name'])
+                output = pjoin(output, format)
+                if not os.path.isdir(output):
+                    os.mkdir(output)
+            else:
+                output = output[-1]
+                if not os.path.isdir(output):
+                    raise self.InvalidCmd('%s is not a valid directory' % output)
+            # build the calling list for aloha
+            names = [d for d in args if not d.startswith('-')]
+            wanted_lorentz = aloha_fct.guess_routine_from_name(names)
+            # Create and write ALOHA Routine
+            aloha_model = create_aloha.AbstractALOHAModel(self._curr_model.get('name'))
+            if wanted_lorentz:
+                aloha_model.compute_subset(wanted_lorentz)
+            else:
+                aloha_model.compute_all(save=False)
+            aloha_model.write(output, format)
+            return
+        
+        #################
+        ## Other Output #
+        #################
         if not force and not noclean and os.path.isdir(self._export_dir)\
                and self._export_format in ['madevent', 'standalone']:
             # Don't ask if user already specified force or noclean
