@@ -138,7 +138,7 @@ c     call graph_init
          missPT_EXP=1d-10
          write(*,*) "ISR deduced from pT(visible): "
          write(*,*) "px(ISR)= ", -px_visible
-         write(*,*) "px(ISR)= ", -py_visible
+         write(*,*) "py(ISR)= ", -py_visible
       else
          write(*,*) "ISR effects are ignored "
          missPhi_EXP=-1d0
