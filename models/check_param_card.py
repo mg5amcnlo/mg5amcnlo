@@ -162,6 +162,11 @@ class Block(list):
             elif self.name == 'qnumbers':
                 self.name += ' %s' % data[2]
         return self
+    
+    def keys(self):
+        """returns the list of id define in this blocks"""
+        
+        return [p.lhacode for p in self]
 
     def __str__(self):
         """ return a str in the SLAH format """ 

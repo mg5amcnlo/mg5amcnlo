@@ -651,12 +651,10 @@ c     Constants
 c
       character*(*) plist
       parameter (plist='subproc.mg')
-      integer    maxsubprocesses
-      parameter (maxsubprocesses=999)
 c
 c     Arguments
 c
-      character*300 subname(maxsubprocesses)
+      character*300 subname(*)
       integer ns
 c-----
 c  Begin Code

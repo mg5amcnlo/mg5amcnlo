@@ -11,11 +11,10 @@ c
       parameter (rfile='results.dat')
       character*(*) symfile
       parameter (symfile='symfact.dat')
-      integer   max_amps
-      parameter (max_amps=9999)
 
       include 'run_config.inc'
       include 'maxparticles.inc'
+      include 'maxconfigs.inc'
 c
 c     global
 c
@@ -25,19 +24,19 @@ c
 c
 c     local
 c
-      double precision xsec(max_amps), xerr(max_amps)
-      double precision xerru(max_amps),xerrc(max_amps)
-      double precision xmax(max_amps), eff(max_amps)
-      double precision xlum(max_amps)
+      double precision xsec(lmaxconfigs), xerr(lmaxconfigs)
+      double precision xerru(lmaxconfigs),xerrc(lmaxconfigs)
+      double precision xmax(lmaxconfigs), eff(lmaxconfigs)
+      double precision xlum(lmaxconfigs)
       double precision ysec, yerr, yeff, ymax
       double precision tsec, terr, teff, tmax, xi
-      integer nw(max_amps), nevents(max_amps), maxit
-      integer nunwgt(max_amps)
-      character*80 fname, gname(max_amps)
+      integer nw(lmaxconfigs), nevents(lmaxconfigs), maxit
+      integer nunwgt(lmaxconfigs)
+      character*80 fname, gname(lmaxconfigs)
       integer i,j,k,l,n,ipp
       double precision xtot,errtot,err_goal
       double precision errtotu,errtotc
-      integer mfact(max_amps)
+      integer mfact(lmaxconfigs)
       logical parallel, gen_events
       character*20 param(maxpara),value(maxpara)
       integer npara, nreq, ngran, nhel_refine
@@ -225,8 +224,8 @@ c
 c     Constants
 c
       include 'run_config.inc'
-      integer   max_amps
-      parameter (max_amps=9999)
+      include 'maxconfigs.inc'
+
 c      integer    max_np
 c      parameter (max_np = 30)
 c
@@ -237,16 +236,16 @@ c
 c
 c     Arguments
 c
-      double precision xsec(max_amps), xerru(max_amps),xerrc(max_amps)
+      double precision xsec(lmaxconfigs), xerru(lmaxconfigs),xerrc(lmaxconfigs)
       double precision err_goal,xtot
-      integer mfact(max_amps),jpoints(max_amps),nhel_refine
+      integer mfact(lmaxconfigs),jpoints(lmaxconfigs),nhel_refine
       integer ng
-      character*(80) gn(max_amps)
+      character*(80) gn(lmaxconfigs)
 c
 c     Local
 c
-      integer i,j,k, io(max_amps), npoints, ip, np
-      double precision xt(max_amps),elimit
+      integer i,j,k, io(lmaxconfigs), npoints, ip, np
+      double precision xt(lmaxconfigs),elimit
       double precision yerr,ysec,rerr
       logical fopened
 c-----
@@ -474,8 +473,7 @@ c
 c     Constants
 c
       include 'run_config.inc'
-      integer   max_amps
-      parameter (max_amps=9999)
+      include 'maxconfigs.inc'
 c
 c     global
 c
@@ -487,16 +485,16 @@ c      parameter (max_np = 5)  !number of channels/job
 c
 c     Arguments
 c
-      double precision goal_lum, xlum(max_amps), xsec(max_amps),xtot
-      double precision xerr(max_amps)
-      integer jpoints(max_amps), mfact(max_amps)
+      double precision goal_lum, xlum(lmaxconfigs), xsec(lmaxconfigs),xtot
+      double precision xerr(lmaxconfigs)
+      integer jpoints(lmaxconfigs), mfact(lmaxconfigs)
       integer ng, np, nhel_refine
-      character*(80) gn(max_amps)
+      character*(80) gn(lmaxconfigs)
 c
 c     Local
 c
-      integer i,j,k,kk, io(max_amps), npoints, ip, nfiles,ifile,npfile
-      double precision xt(max_amps),elimit
+      integer i,j,k,kk, io(lmaxconfigs), npoints, ip, nfiles,ifile,npfile
+      double precision xt(lmaxconfigs+1),elimit
       double precision yerr,ysec,rerr
       logical fopened
       character*26 cjobs
@@ -738,8 +736,7 @@ c
 c     Constants
 c
       include 'run_config.inc'
-      integer   max_amps
-      parameter (max_amps=9999)
+      include 'maxconfigs.inc'
 c
 c   global
 c
@@ -748,16 +745,16 @@ c
 c
 c     Arguments
 c
-      double precision goal_lum, xlum(max_amps), xsec(max_amps),xtot
+      double precision goal_lum, xlum(lmaxconfigs), xsec(lmaxconfigs),xtot
       double precision ngran   !Granularity.... min # points from channel
-      integer jpoints(max_amps), mfact(max_amps)
+      integer jpoints(lmaxconfigs), mfact(lmaxconfigs)
       integer ng, np, nhel_refine
-      character*(80) gn(max_amps)
+      character*(80) gn(lmaxconfigs)
 c
 c     Local
 c
       integer i,j,k, npoints, ip
-      double precision xt(max_amps),elimit
+      double precision xt(lmaxconfigs),elimit
       double precision yerr,ysec,rerr
       character*72 fname
       logical fopened

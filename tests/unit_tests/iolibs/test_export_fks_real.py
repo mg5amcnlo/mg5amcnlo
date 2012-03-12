@@ -26,7 +26,7 @@ sys.path.append(os.path.join(root_path, os.path.pardir, os.path.pardir))
 
 import tests.unit_tests as unittest
 
-import madgraph.iolibs.misc as misc
+import madgraph.various.misc as misc
 import madgraph.iolibs.export_fks_real as export_fks_real
 import madgraph.fks.fks_real as fks_real
 import madgraph.fks.fks_real_helas_objects as fks_real_helas

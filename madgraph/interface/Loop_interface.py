@@ -22,7 +22,7 @@ import madgraph
 from madgraph import MG4DIR, MG5DIR, MadGraph5Error
 import madgraph.interface.madgraph_interface as mg_interface
 
-#useful shortcut
+#usefull shortcut
 pjoin = os.path.join
 
 class CheckLoop(mg_interface.CheckValidForCmd):
@@ -40,21 +40,9 @@ class HelpLoop(mg_interface.HelpToCmd):
 class LoopInterface(CheckLoop, CompleteLoop, HelpLoop, mg_interface.MadGraphCmd):
     
     def do_generate(self, *args,**opt):
-        mg_interface.MadGraphCmd.do_generate(self, *args,**opt)
-    
-    def do_add(self, *args,**opt):
-        if self._curr_model['perturbation_couplings']=={}:
-            if self._curr_model['name']=='sm':
-                mg_interface.logger.warning(\
-                  "The default sm model does not allow to generate"+
-                  " loop processes. MG5 now loads 'loop_sm' instead.")
-                mg_interface.MadGraphCmd.do_import(self,"model loop_sm")
-            else:
-                raise MadGraph5Error(
-                  "The model %s cannot generate loop processes"\
-                  %self._curr_model['name'])
-                
-        mg_interface.MadGraphCmd.do_add(self, *args,**opt)
+        'hello'
+        print 'hello'
+    pass
    
 class LoopInterfaceWeb(mg_interface.CheckValidForCmdWeb, LoopInterface):
     pass

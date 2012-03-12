@@ -1,5 +1,5 @@
-GFORTRAN module version '6' created from mpfun90.f90 on Tue Feb 28 16:27:27 2012
-MD5:26f824e27f34298b3d1daadcb28323f1 -- If you edit this, you'll get what you deserve.
+GFORTRAN module version '6' created from mpfun90.f90 on Fri Mar  9 17:35:33 2012
+MD5:d93be5b4bbbd49a2f30d73655a53496b -- If you edit this, you'll get what you deserve.
 
 (() () () () () () () () () () () () () () () () () () () () () () ()
 () () () ())
@@ -121,6 +121,8 @@ UNKNOWN IMPLICIT-SAVE 0 0 ALLOCATABLE DIMENSION) (COMPLEX 8 0 0 COMPLEX
 82 'mpuu2' 'mpfuna' 'mpuu2' 1 ((VARIABLE UNKNOWN-INTENT UNKNOWN-PROC
 UNKNOWN IMPLICIT-SAVE 0 0 ALLOCATABLE DIMENSION) (COMPLEX 8 0 0 COMPLEX
 ()) 0 0 () (1 0 DEFERRED () ()) 0 () () () 0 0)
+4 'a' '' 'a' 3 ((VARIABLE UNKNOWN-INTENT UNKNOWN-PROC UNKNOWN UNKNOWN 0
+0 DUMMY) (REAL 8 0 0 REAL ()) 0 0 () () 0 () () () 0 0)
 5 'na' '' 'na' 3 ((VARIABLE UNKNOWN-INTENT UNKNOWN-PROC UNKNOWN UNKNOWN
 0 0 DUMMY) (INTEGER 4 0 0 INTEGER ()) 0 0 () () 0 () () () 0 0)
 6 'b' '' 'b' 3 ((VARIABLE UNKNOWN-INTENT UNKNOWN-PROC UNKNOWN UNKNOWN 0
@@ -131,8 +133,6 @@ UNKNOWN IMPLICIT-SAVE 0 0 ALLOCATABLE DIMENSION) (COMPLEX 8 0 0 COMPLEX
 0 DUMMY) (REAL 8 0 0 REAL ()) 0 0 () () 0 () () () 0 0)
 9 'nc' '' 'nc' 3 ((VARIABLE UNKNOWN-INTENT UNKNOWN-PROC UNKNOWN UNKNOWN
 0 0 DUMMY) (INTEGER 4 0 0 INTEGER ()) 0 0 () () 0 () () () 0 0)
-4 'a' '' 'a' 3 ((VARIABLE UNKNOWN-INTENT UNKNOWN-PROC UNKNOWN UNKNOWN 0
-0 DUMMY) (REAL 8 0 0 REAL ()) 0 0 () () 0 () () () 0 0)
 12 'a' '' 'a' 11 ((VARIABLE UNKNOWN-INTENT UNKNOWN-PROC UNKNOWN UNKNOWN
 0 0 DUMMY) (REAL 8 0 0 REAL ()) 0 0 () () 0 () () () 0 0)
 13 'na' '' 'na' 11 ((VARIABLE UNKNOWN-INTENT UNKNOWN-PROC UNKNOWN

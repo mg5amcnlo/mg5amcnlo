@@ -551,7 +551,7 @@ class Epsilon(aloha_lib.LorentzObject):
         
         i1 , i2, i3, i4 = perm
         #formula found on wikipedia
-        return ((i2-i1) * (i3-i1) *(i4-i1) * (i3-i2) * (i4-i2) *(i4-i3))/12 
+        return -1 * ((i2-i1) * (i3-i1) *(i4-i1) * (i3-i2) * (i4-i2) *(i4-i3))/12 
    
     # DEFINE THE REPRESENTATION OF EPSILON
            

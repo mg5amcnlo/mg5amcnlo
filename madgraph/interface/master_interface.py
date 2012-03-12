@@ -48,6 +48,15 @@ logger = logging.getLogger('cmdprint') # -> stdout
 
 class Switcher(object):
     """ Helping class containing all the switching routine """
+
+    def __init__(self, main='MadGraph', *args, **opt):
+            
+        # define the interface
+        self.change_principal_cmd(main)
+        self.cmd.__init__(self, *args, **opt)       
+        
+
+
         
     _valid_nlo_modes = ['all', 'real', 'virt', 'virt^2']
         
@@ -388,6 +397,9 @@ class Switcher(object):
     def test_interface(self, *args, **opts):
         return self.cmd.test_interface(self, *args, **opts)
 
+    def set_configuration(self, *args, **opts):
+        return self.cmd.set_configuration(self, *args, **opts)
+
     @staticmethod
     def extract_process_type(line):
         """Extract from a string what is the type of the computation. This 
@@ -414,13 +426,6 @@ class Switcher(object):
             return ('tree',None,[])
 
 class MasterCmd(Switcher, LoopCmd.LoopInterface, FKSCmd.FKSInterface, cmd.CmdShell):
-
-    def __init__(self, main='MadGraph', *args, **opt):
-            
-        # define the interface
-        self.change_principal_cmd(main)
-        self.cmd.__init__(self, *args, **opt)       
-        
 
     def change_principal_cmd(self, name):
         if name == 'MadGraph':
@@ -453,7 +458,7 @@ class MasterCmdWeb(Switcher, LoopCmd.LoopInterfaceWeb):
             
         
         #standard initialization
-        MasterCmd.__init__(self, mgme_dir = '', *arg, **opt)
+        Switcher.__init__(self, mgme_dir = '', *arg, **opt)
         
     def change_principal_cmd(self, name):
         if name == 'MadGraph':
@@ -469,7 +474,7 @@ class MasterCmdWeb(Switcher, LoopCmd.LoopInterfaceWeb):
     def finalize(self, nojpeg):
         """Finalize web generation""" 
         
-        Switcher.finalize(self, nojpeg, online = True)
+        self.cmd.finalize(self, nojpeg, online = True)
 
     # Generate a new amplitude
     def do_generate(self, line):

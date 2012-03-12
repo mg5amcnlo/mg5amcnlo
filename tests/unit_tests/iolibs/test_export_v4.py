@@ -26,7 +26,7 @@ sys.path.append(os.path.join(root_path, os.path.pardir, os.path.pardir))
 
 import tests.unit_tests as unittest
 
-import madgraph.iolibs.misc as misc
+
 import madgraph.iolibs.export_v4 as export_v4
 import madgraph.iolibs.file_writers as writers
 import madgraph.iolibs.files as files
@@ -38,6 +38,7 @@ import madgraph.core.helas_objects as helas_objects
 import madgraph.core.diagram_generation as diagram_generation
 import madgraph.core.color_algebra as color
 import madgraph.various.diagram_symmetry as diagram_symmetry
+import madgraph.various.misc as misc
 import madgraph.various.process_checks as process_checks
 import madgraph.core.color_amp as color_amp
 import tests.unit_tests.core.test_helas_objects as test_helas_objects
@@ -709,6 +710,20 @@ C     Number of configs
                          [[0,1,2,3],[0,1,2,3],[0,1,2,3],[0,1,2,3],[0,1,2,3],[0,1,2,3]])
         self.assertEqual(ident_perms,
                          [[0,1,2,3]])
+
+        # Test symfact.dat
+        
+        exporter.write_symfact_file(\
+            writers.FortranWriter(self.give_pos('test')),
+            symmetry)
+        goal_symfact_dat = """ 1    1
+ 2    1
+ 3    1
+ 4    1
+ 5    1
+ 6    1
+"""
+        self.assertFileContains('test', goal_symfact_dat)
 
         # Test processes.dat
 
@@ -6880,7 +6895,7 @@ CALL IOSXXX(W(1,14),W(1,2),W(1,12),MGVX350,AMP(2))""")
 
         mydecay3 = base_objects.Process({'legs':myleglist,
                                          'model':mymodel,
-                                         'forbidden_s_channels':[-1000011]})
+                                         'forbidden_onsh_s_channels':[-1000011]})
 
         me3 = helas_objects.HelasMatrixElement(\
             diagram_generation.Amplitude(mydecay3))

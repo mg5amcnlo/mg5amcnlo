@@ -36,10 +36,11 @@ pjoin = os.path.join
 _file_path = os.path.dirname(os.path.realpath(__file__))
 
 import madgraph.iolibs.template_files as template_files
-import madgraph.iolibs.misc as misc
 import madgraph.iolibs.save_load_object as save_load_object
 
 import madgraph.interface.master_interface as cmd_interface
+import madgraph.various.misc as misc
+
 
 from madgraph import MadGraph5Error, MG5DIR
 
