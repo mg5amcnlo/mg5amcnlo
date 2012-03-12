@@ -15,7 +15,6 @@ GENERIC = $(alfas_functions).o transpole.o invarients.o hfill.o pawgraphs.o ran1
           rw_events.o rw_routines.o kin_functions.o open_file.o basecode.o setrun.o \
           run_printout.o dgauss.o readgrid.o getissud.o
 INCLUDEF= coupl.inc genps.inc hbook.inc DECAY/decay.inc psample.inc cluster.inc sudgrid.inc
-BANNER  =  write_banner.o  rw_events.o ranmar.o  kin_functions.o open_file.o  rw_routines.o alfas_functions.o
 COMBINE = combine_events.o  rw_events.o ranmar.o  kin_functions.o open_file.o rw_routines.o alfas_functions.o setrun.o
 GENSUDGRID = gensudgrid.o is-sud.o setrun_gen.o rw_routines.o open_file.o
 
@@ -25,7 +24,7 @@ LIBRARIES=$(LIBDIR)libdsample.$(libext) $(LIBDIR)libgeneric.$(libext)
 
 # Binaries
 
-BINARIES = $(BINDIR)sum_html $(BINDIR)gen_ximprove $(BINDIR)combine_events \
+BINARIES = $(BINDIR)gen_ximprove $(BINDIR)combine_events \
            $(BINDIR)gensudgrid $(BINDIR)combine_runs
 
 # Compile commands
@@ -48,8 +47,6 @@ $(LIBDIR)libcernlib.$(libext): CERNLIB
 $(LIBDIR)libmodel.$(libext): MODEL
 	cd MODEL; make	
 
-$(BINDIR)sum_html: sum_html.o 
-	$(FC) $(FFLAGS) -o $@ $^
 $(BINDIR)gen_ximprove: gen_ximprove.o ranmar.o rw_routines.o open_file.o
 	$(FC) $(FFLAGS) -o $@ $^
 $(BINDIR)combine_events: $(COMBINE) $(LIBDIR)libmodel.$(libext) $(LIBDIR)libpdf.$(libext)
@@ -64,7 +61,6 @@ $(BINDIR)combine_runs: combine_runs.o rw_events.o
 dsample.o: dsample.f genps.inc
 invarients.o: invarients.f genps.inc
 setrun.o: setrun.f nexternal.inc leshouche.inc genps.inc
-sum_html.o: sum_html.f genps.inc
 gen_ximprove.o: gen_ximprove.f run_config.inc
 combine_events.o: combine_events.f run_config.inc
 select_events.o: select_events.f run_config.inc

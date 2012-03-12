@@ -219,8 +219,8 @@ c#endif
 
             sqm(0) = dsqrt(abs(fmass)) ! possibility of negative fermion masses
             sqm(1) = sign(sqm(0),fmass) ! possibility of negative fermion masses
-            ip = -((1+nh)/2)
-            im =  (1-nh)/2
+            ip = -((1-nh)/2) * nhel
+            im =  (1+nh)/2* nhel
 
             fo(1) = im     * sqm(im)
             fo(2) = ip*nsf * sqm(im)

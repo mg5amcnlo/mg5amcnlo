@@ -54,7 +54,7 @@ from datetime import date
 root_path = path.split(path.dirname(path.realpath( __file__ )))[0]
 sys.path.append(root_path)
 
-import madgraph.iolibs.misc as misc
+import madgraph.various.misc as misc
 from madgraph import MG5DIR
 
 # Write out nice usage message if called with -h or --help
@@ -169,10 +169,10 @@ import tests.test_manager as test_manager
 #mixes the path for the tests
 import madgraph
 reload(madgraph)
-import madgraph.iolibs
-reload(madgraph.iolibs)
-import madgraph.iolibs.misc
-reload(madgraph.iolibs.misc)
+import madgraph.various
+reload(madgraph.various)
+import madgraph.various.misc
+reload(madgraph.various.misc)
 
 
 test_results = test_manager.run(package=os.path.join('tests',
