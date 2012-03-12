@@ -37,7 +37,8 @@ import aloha.aloha_fct as aloha_fct
 
 import models as ufomodels
 import models.model_reader as model_reader
-logger = logging.getLogger('models.import_ufo')
+logger = logging.getLogger('madgraph.model')
+#logger = logging.getLogger('models.import_ufo')
 logger_mod = logging.getLogger('madgraph.model')
 
 root_path = os.path.dirname(os.path.realpath( __file__ ))

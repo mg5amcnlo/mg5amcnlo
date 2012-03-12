@@ -460,7 +460,8 @@ class Amplitude(base_objects.PhysicsObject):
                     raise InvalidCmd, 'No %s conservation for this process ' % charge
                     return res, res
 
-        logger.info("Trying %s " % process.nice_string().replace('Process', 'process'))
+        if not returndiag:
+            logger.info("Trying %s " % process.nice_string().replace('Process', 'process'))
 
         # Give numbers to legs in process
         for i in range(0, len(process.get('legs'))):
@@ -629,7 +630,7 @@ class Amplitude(base_objects.PhysicsObject):
                     vertices.append(nexttolastvertex)
                     diagram.set('vertices', vertices)
 
-        if res:
+        if res and not returndiag:
             logger.info("Process has %d diagrams" % len(res))
 
         # Trim down number of legs and vertices used to save memory

@@ -36,6 +36,8 @@ sys.path.insert(0, root_path)
 pjoin = os.path.join
 
 import madgraph
+import madgraph.core.diagram_generation as diagram_generation
+import madgraph.core.helas_objects as helas_objects
 import madgraph.interface.extended_cmd as cmd
 import madgraph.interface.madgraph_interface as MGcmd
 import madgraph.interface.Loop_interface as LoopCmd
@@ -59,7 +61,14 @@ class Switcher(object):
 
         
     _valid_nlo_modes = ['all', 'real', 'virt', 'virt^2']
-        
+
+    interface_names= {'MadGraph':('mg5',MGcmd.MadGraphCmd),
+                      'Loop':('ML5',LoopCmd.LoopInterface),
+                      'FKS':('aMC@NLO',FKSCmd.FKSInterface)}
+
+    _switch_opts = [interface_names[key][0] for key in interface_names.keys()]
+    current_interface = None
+   
     def debug_link_to_command(self):
         """redefine all the command to call directly the appropriate child"""
         
@@ -198,6 +207,9 @@ class Switcher(object):
         
     def complete_add(self, *args, **opts):
         return self.cmd.complete_add(self, *args, **opts)
+
+    def complete_switch(self, *args, **opts):
+        return self.cmd.complete_switch(self, *args, **opts)
         
     def complete_check(self, *args, **opts):
         return self.cmd.complete_check(self, *args, **opts)
@@ -246,7 +258,10 @@ class Switcher(object):
         
     def complete_tutorial(self, *args, **opts):
         return self.cmd.complete_tutorial(self, *args, **opts)
-        
+
+    def do_switch(self, *args, **opts):
+        return self.cmd.do_switch(self, *args, **opts)
+      
     def do_EOF(self, *args, **opts):
         return self.cmd.do_EOF(self, *args, **opts)
         
@@ -269,8 +284,25 @@ class Switcher(object):
                     
         return self.cmd.do_add(self, line, *args, **opts)
         
-    def do_check(self, *args, **opts):
-        return self.cmd.do_check(self, *args, **opts)
+    def do_check(self, line, *args, **opts):
+
+        argss = self.split_arg(line)
+        proc_line = " ".join(argss[1:])
+        (type,nlo_mode,orders)=self.extract_process_type(proc_line)
+        if type=='NLO':
+            if not nlo_mode in self._valid_nlo_modes: raise MadGraph5Error, \
+                'The NLO mode %s is not valid. Please chose one among: %s' \
+                % (nlo_mode, ' '.join(valid_nlo_modes))
+            elif nlo_mode == 'all':
+                self.change_principal_cmd('FKS')
+            elif nlo_mode == 'real':
+                self.change_principal_cmd('FKS')
+            elif nlo_mode == 'virt' or nlo_mode == 'virt^2':
+                self.change_principal_cmd('Loop')
+        else:
+            self.change_principal_cmd('MadGraph')
+        
+        return self.cmd.do_check(self, line, *args, **opts)
         
     def do_define(self, *args, **opts):
         return self.cmd.do_define(self, *args, **opts)
@@ -298,7 +330,9 @@ class Switcher(object):
                     self.change_principal_cmd('FKS')
                 elif nlo_mode == 'virt' or nlo_mode == 'virt^2':
                     self.change_principal_cmd('Loop')
-
+            else:
+                self.change_principal_cmd('MadGraph')
+                
         return self.cmd.do_generate(self, line, *args, **opts)
         
     def do_help(self, *args, **opts):
@@ -309,9 +343,14 @@ class Switcher(object):
         
     def do_import(self, *args, **opts):
         self.cmd.do_import(self, *args, **opts)
-        if self.cmd._curr_model and self.cmd._curr_model['perturbation_couplings']!=[]:
-            self.change_principal_cmd('FKS')
-        return
+        if self._curr_model:
+            if self._curr_model['perturbation_couplings']!=[] and \
+               self.current_interface not in ['FKS','Loop']:
+                self.change_principal_cmd('FKS')
+            if self._curr_model['perturbation_couplings']==[] and \
+               self.current_interface in ['FKS','Loop']:
+                self.change_principal_cmd('MadGraph')                
+        return    
         
     def do_install(self, *args, **opts):
         self.cmd.do_install(self, *args, **opts)
@@ -427,22 +466,67 @@ class Switcher(object):
 
 class MasterCmd(Switcher, LoopCmd.LoopInterface, FKSCmd.FKSInterface, cmd.CmdShell):
 
+    def __init__(self, main='MadGraph', *args, **opt):
+            
+        # define the interface
+        if main in self.interface_names.keys():
+            self.prompt= self.interface_names[main][0]+'>'
+            self.cmd= self.interface_names[main][1]
+            self.current_interface=main
+        else:
+            raise MadGraph5Error, 'Type of interface not valid: %s' % name  
+        self.cmd.__init__(self, *args, **opt)     
+        self.current_interface = main  
+        
+    def complete_switch(self, text, line, begidx, endidx):
+        """Complete the switch command"""
+        return self.list_completion(text,self._switch_opts)
+        
+    def do_switch(self, line):
+        """ Allow to switch to any given interface from command line """
+        interface_quick_name=dict([(self.interface_names[name][0],name) for name \
+                                   in self.interface_names.keys()])
+        args = cmd.Cmd.split_arg(line)
+        if len(args)==1 and args[0] in interface_quick_name.keys():
+            self.change_principal_cmd(interface_quick_name[args[0]])
+        else:
+            raise self.InvalidCmd("Invalid switch command or non existing interface %s."\
+                            %args[0]+" Valid interfaces are %s"\
+                            %','.join(interface_quick_name.keys()))
+
     def change_principal_cmd(self, name):
-        if name == 'MadGraph':
-            self.prompt = 'mg5>'
-            self.cmd = MGcmd.MadGraphCmd
-        elif name == 'Loop':
-            self.prompt = 'ML5>'
-            self.cmd = LoopCmd.LoopInterface
-        elif name == 'FKS':
-            self.prompt = 'aMC@NLO>'
-            self.cmd = FKSCmd.FKSInterface
+
+        old_cmd=self.current_interface
+        if name in self.interface_names.keys():
+            self.prompt= self.interface_names[name][0]+'>'
+            self.cmd= self.interface_names[name][1]
+            self.current_interface=name
         else:
             raise MadGraph5Error, 'Type of interface not valid: %s' % name  
         
-        if __debug__:
-            self.debug_link_to_command()      
+        if self.current_interface!=old_cmd:
+            logger.info("Switching from interface %s to %s"\
+                        %(self.interface_names[old_cmd][0],\
+                          self.interface_names[name][0]))
+            self.cleanup()
         
+        if __debug__:
+            self.debug_link_to_command()
+
+        
+    def cleanup(self):
+        """ Refresh all the interface stored value as things like generated
+        processes and amplitudes are not to be reused in between different
+        interfaces """
+
+        # Clear history, amplitudes and matrix elements when a model is imported
+        # Remove previous imports, generations and outputs from history
+        self.clean_history(remove_bef_lb1='import')
+        # Reset amplitudes and matrix elements
+        self._done_export=False
+        self._curr_amps = diagram_generation.AmplitudeList()
+        self._curr_matrix_elements = helas_objects.HelasMultiProcess()     
+     
 class MasterCmdWeb(Switcher, LoopCmd.LoopInterfaceWeb):
  
     timeout = 1 # time authorize to answer question [0 is no time limit]

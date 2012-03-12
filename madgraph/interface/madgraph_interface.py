@@ -1568,6 +1568,7 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
     _add_opts = ['process']
     _save_opts = ['model', 'processes', 'options']
     _tutorial_opts = ['start', 'stop']
+    _switch_opts = ['mg5','aMC@NLO','ML5']
     _check_opts = ['full', 'permutation', 'gauge', 'lorentz_invariance']
     _import_formats = ['model_v4', 'model', 'proc_v4', 'command', 'banner']
     _install_opts = ['pythia-pgs', 'Delphes', 'MadAnalysis', 'ExRootAnalysis']
@@ -2089,17 +2090,15 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
         stop = time.time()
         logger.info('time to draw %s' % (stop - start)) 
     
-    # Generate a new amplitude
+    # Perform checks
     def do_check(self, line):
         """Check a given process or set of processes"""
 
         args = self.split_arg(line)
-
         # Check args validity
         param_card = self.check_check(args)
-
-        line = " ".join(args[1:])
-        myprocdef = self.extract_process(line)
+        proc_line = " ".join(args[1:])
+        myprocdef = self.extract_process(proc_line)
 
         # Check that we have something    
         if not myprocdef:
@@ -2107,6 +2106,7 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
 
         # Disable some loggers
         loggers = [logging.getLogger('madgraph.diagram_generation'),
+                   logging.getLogger('madgraph.loop_diagram_generation'),
                    logging.getLogger('ALOHA'),
                    logging.getLogger('madgraph.loop_exporter'),
                    logging.getLogger('madgraph.export_v4')]
@@ -2244,7 +2244,7 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
         perturbation_couplings = ""
         LoopOption= None
         HasBorn= True
-        valid_nlo_modes = ['all','real','virt','virt^2']
+        valid_nlo_modes = ['all','real','virt','virt^2',None]
         if perturbation_couplings_re:
             perturbation_couplings = perturbation_couplings_re.group("pertOrders")
             option=perturbation_couplings_re.group("option")
@@ -2361,13 +2361,13 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
             if perturbation_couplings_list:
                 if not isinstance(self._curr_model,loop_base_objects.LoopModel):
                     raise MadGraph5Error,\
-                      "The current model does not allow for NLO computations."
+                      "The current model does not allow for loop computations."
                 else:
                     for pert_order in perturbation_couplings_list:
                         if pert_order not in self._curr_model['perturbation_couplings']:
                             raise MadGraph5Error,\
                                 "Perturbation order %s is not among" % pert_order + \
-                                " the perturbation orders allowed for by the NLO model."
+                                " the perturbation orders allowed for by the loop model."
                                                         
             # Now extract restrictions
             forbidden_particle_ids = \
@@ -2397,7 +2397,6 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
                    isinstance(required_schannel_ids[0], list):
                 required_schannel_ids = [required_schannel_ids]
             
-
             return \
                 base_objects.ProcessDefinition({'legs': myleglist,
                               'model': self._curr_model,

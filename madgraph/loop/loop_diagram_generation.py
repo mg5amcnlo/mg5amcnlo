@@ -187,6 +187,13 @@ class LoopAmplitude(diagram_generation.Amplitude):
 
         # This is a bool controlling the verbosity of this subroutine only
         loopGenInfo=False
+        
+        old_logger_level=logger.getEffectiveLevel()
+        if loopGenInfo:
+            # Disable the basic info if using the extended one
+            logger.setLevel(logging.WARNING)
+
+        logger.info("Generating %s " % self['process'].nice_string().replace('Process', 'process'))
 
         if loopGenInfo: print "LoopGenInfo:: Loop diagram generation for process",self['process'].nice_string()
 
@@ -378,19 +385,36 @@ class LoopAmplitude(diagram_generation.Amplitude):
         # Set the necessary UV/R2 CounterTerms for each loop diagram generated
         self.setLoopCT_vertices()
         
+        nLoopDiag = 0
+        nCT={'UV':0,'R2':0}
+        for ldiag in self['loop_UVCT_diagrams']:
+            nCT[ldiag['type'][:2]]+=len(ldiag['UVCT_couplings'])
+        for ldiag in self['loop_diagrams']:
+            nLoopDiag+=1
+            nCT['UV']+=len(ldiag.get_CT(self['process']['model'],'UV'))
+            nCT['R2']+=len(ldiag.get_CT(self['process']['model'],'R2'))         
+            
+        logger.info("Generated %d loop diagrams"%nLoopDiag+\
+                    " with %d R2"%nCT['R2']+\
+                    " and %d UV counterterms"%nCT['UV'])
+        
         if loopGenInfo: print "================================================================== "
         if loopGenInfo: print "|| LoopGenInfo:: #Diags after filtering                  = ",len(self['loop_diagrams'])," ||"
         if loopGenInfo: print "================================================================== "        
         if loopGenInfo: print "LoopGenInfo:: # of different structures identified    = ",len(self['structure_repository'])
         if loopGenInfo: print "LoopGenInfo:: End of loop diagram generation."             
 
+        if loopGenInfo:
+            logger.setLevel(old_logger_level)
+
         return (bornsuccessful or totloopsuccessful)
 
     def generate_born_diagrams(self):
         """ Generates all born diagrams relevant to this NLO Process """
-            
+
         bornsuccessful, self['born_diagrams'] = \
           super(LoopAmplitude, self).generate_diagrams(True)
+        logger.info("Generated %d born diagrams" % len(self['born_diagrams']))
             
         return bornsuccessful
 
@@ -436,7 +460,7 @@ class LoopAmplitude(diagram_generation.Amplitude):
                                     
                     # We generate the diagrams now
                     loopsuccessful, lcutdiaglist = super(LoopAmplitude, self).generate_diagrams(True)
-                    
+
                     # Now get rid of all the previously defined l-cut particles.
                     leg_to_remove=[leg for leg in self['process']['legs'] \
                                             if leg['loop_line']]
