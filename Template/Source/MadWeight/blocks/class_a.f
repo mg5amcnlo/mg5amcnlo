@@ -175,6 +175,7 @@ c     Evaluate the initial momenta in the CMS frame
         jac=-1d0
         momenta(0,p1)=-1
         momenta(0,p2)=-1
+        return
       endif
 
       CMS_mom(0,1)=sqrts*x1/2d0
