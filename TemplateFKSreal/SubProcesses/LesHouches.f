@@ -107,9 +107,9 @@ c update the ren_scale for MadLoop and the couplings
       ao2pi=alphaS/(2d0*Pi)
       alphaEW=dble(gal(1))**2/(4d0*PI)
       call sloopmatrix(p, virt_wgts)
-      virt_wgt= virt_wgts(1)
-      single  = virt_wgts(2)
-      double  = virt_wgts(3)
+      virt_wgt= virt_wgts(1)/dble(ngluons)
+      single  = virt_wgts(2)/dble(ngluons)
+      double  = virt_wgts(3)/dble(ngluons)
       vegas_wgt=vegas_weight
 
 c Ellis-Sexton scale squared
