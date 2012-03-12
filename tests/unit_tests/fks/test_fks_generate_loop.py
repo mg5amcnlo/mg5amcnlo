@@ -52,22 +52,33 @@ class TestGenerateLoopFKSFromBorn(unittest.TestCase):
         myleglist.append(MG.MultiLeg({'ids':[2], 'state':True}))
         myleglist.append(MG.MultiLeg({'ids':[-2], 'state':True}))
     
-        myproc = MG.ProcessDefinition({'legs':myleglist,
+        myproc1 = MG.ProcessDefinition({'legs':myleglist,
                                            'model':self.mymodel,
                                            'orders': {'QED': 0},
-                                           'perturbation_couplings':['QCD']})
-        
-        my_process_definitions = MG.ProcessDefinitionList([myproc])
-        
-        myfksmulti = fks_born.FKSMultiProcessFromBorn(\
-                {'process_definitions': my_process_definitions})
+                                           'perturbation_couplings':['QCD'],
+                                           'NLO_mode': 'real'})
 
-        self.assertEqual(myfksmulti['born_processes'][0].virt_amp, None)
-        myfksmulti.generate_virtuals()
+        myproc2 = MG.ProcessDefinition({'legs':myleglist,
+                                           'model':self.mymodel,
+                                           'orders': {'QED': 0},
+                                           'perturbation_couplings':['QCD'],
+                                           'NLO_mode': 'all'})
+        
+        my_process_definitions1 = MG.ProcessDefinitionList([myproc1])
+        my_process_definitions2 = MG.ProcessDefinitionList([myproc2])
+        
+        # without virtuals
+        myfksmulti1 = fks_born.FKSMultiProcessFromBorn(\
+                {'process_definitions': my_process_definitions1})
+        # with wirtuals
+        myfksmulti2 = fks_born.FKSMultiProcessFromBorn(\
+                {'process_definitions': my_process_definitions2})
+
+        self.assertEqual(myfksmulti1['born_processes'][0].virt_amp, None)
         #there should be 4 virt_amps
-        self.assertNotEqual(myfksmulti['born_processes'][0].virt_amp, None)
+        self.assertNotEqual(myfksmulti2['born_processes'][0].virt_amp, None)
         self.assertEqual([l['id'] for l in \
-                        myfksmulti['born_processes'][0].virt_amp.get('process').get('legs')], \
+                        myfksmulti2['born_processes'][0].virt_amp.get('process').get('legs')], \
                          [2,-2,2,-2])
 
 
@@ -85,7 +96,8 @@ class TestGenerateLoopFKSFromBorn(unittest.TestCase):
         myproc = MG.ProcessDefinition({'legs':myleglist,
                                            'model':self.mymodel,
                                            'orders': {'QED': 0},
-                                           'perturbation_couplings':['QCD']})
+                                           'perturbation_couplings':['QCD'],
+                                           'NLO_mode': 'all'})
         
         my_process_definitions = MG.ProcessDefinitionList([myproc])
         
@@ -112,7 +124,8 @@ class TestGenerateLoopFKSFromBorn(unittest.TestCase):
         myproc = MG.ProcessDefinition({'legs':my_multi_leglist,
                                         'model':self.mymodel,
                                         'orders': {'QED': 0},
-                                        'perturbation_couplings':['QCD']})
+                                        'perturbation_couplings':['QCD'],
+                                        'NLO_mode': 'all'})
 
         my_process_definitions = MG.ProcessDefinitionList([myproc])
         
@@ -128,12 +141,54 @@ class TestGenerateLoopFKSFromBorn(unittest.TestCase):
 
 
 
-class TestGenerateLoopFKS(unittest.TestCase):
+class TestGenerateLoopFKSFromReals(unittest.TestCase):
     """a class to test the generation of the virtual amps for a FKSMultiProcessFromReals"""
 
     def setUp(self):
         self.mymodel = import_ufo.import_model('loop_sm')
     
+
+    def test_generate_virtuals_single_process_from_procdefR(self):
+        """checks that the virtuals are correctly generated for a single process, 
+        using the process attribute nlo_mode"""
+
+        myleglist = MG.MultiLegList()
+        
+        # test process is u u~ > u u~ g 
+        myleglist.append(MG.MultiLeg({'ids':[2], 'state':False}))
+        myleglist.append(MG.MultiLeg({'ids':[-2], 'state':False}))
+        myleglist.append(MG.MultiLeg({'ids':[2], 'state':True}))
+        myleglist.append(MG.MultiLeg({'ids':[-2], 'state':True}))
+        myleglist.append(MG.MultiLeg({'ids':[21], 'state':True}))
+    
+        myproc1 = MG.ProcessDefinition({'legs':myleglist,
+                                           'model':self.mymodel,
+                                           'orders': {'QED': 0},
+                                           'perturbation_couplings':['QCD'],
+                                           'NLO_mode': 'real'})
+
+        myproc2 = MG.ProcessDefinition({'legs':myleglist,
+                                           'model':self.mymodel,
+                                           'orders': {'QED': 0},
+                                           'perturbation_couplings':['QCD'],
+                                           'NLO_mode': 'all'})
+        
+        my_process_definitions1 = MG.ProcessDefinitionList([myproc1])
+        my_process_definitions2 = MG.ProcessDefinitionList([myproc2])
+        
+        myfksmulti1 = fks_real.FKSMultiProcessFromReals(\
+                {'process_definitions': my_process_definitions1})
+        myfksmulti2 = fks_real.FKSMultiProcessFromReals(\
+                {'process_definitions': my_process_definitions2})
+
+        self.assertEqual(myfksmulti1['real_processes'][0].virt_amp, None)
+      #  myfksmulti.generate_virtuals()
+        #there should be 4 virt_amps
+        self.assertNotEqual(myfksmulti2['real_processes'][0].virt_amp, None)
+        self.assertEqual([l['id'] for l in \
+                        myfksmulti2['real_processes'][0].virt_amp.get('process').get('legs')], \
+                         [2,-2,2,-2])
+
 
     def test_generate_virtuals_single_processR(self):
         """checks that the virtuals are correctly generated for a single process"""
@@ -150,15 +205,14 @@ class TestGenerateLoopFKS(unittest.TestCase):
         myproc = MG.ProcessDefinition({'legs':myleglist,
                                            'model':self.mymodel,
                                            'orders': {'QED': 0},
-                                           'perturbation_couplings':['QCD']})
+                                           'perturbation_couplings':['QCD'],
+                                           'NLO_mode': 'all'})
         
         my_process_definitions = MG.ProcessDefinitionList([myproc])
         
         myfksmulti = fks_real.FKSMultiProcessFromReals(\
                 {'process_definitions': my_process_definitions})
 
-        self.assertEqual(myfksmulti['real_processes'][0].virt_amp, None)
-        myfksmulti.generate_virtuals()
         #there should be 4 virt_amps
         self.assertNotEqual(myfksmulti['real_processes'][0].virt_amp, None)
         self.assertEqual([l['id'] for l in \
@@ -181,7 +235,8 @@ class TestGenerateLoopFKS(unittest.TestCase):
         myproc = MG.ProcessDefinition({'legs':myleglist,
                                            'model':self.mymodel,
                                            'orders': {'QED': 0},
-                                           'perturbation_couplings':['QCD']})
+                                           'perturbation_couplings':['QCD'],
+                                           'NLO_mode': 'all'})
         
         my_process_definitions = MG.ProcessDefinitionList([myproc])
         
@@ -208,7 +263,8 @@ class TestGenerateLoopFKS(unittest.TestCase):
         myproc = MG.ProcessDefinition({'legs':my_multi_leglist,
                                         'model':self.mymodel,
                                         'orders': {'QED': 0},
-                                        'perturbation_couplings':['QCD']})
+                                        'perturbation_couplings':['QCD'],
+                                        'NLO_mode': 'all'})
 
         my_process_definitions = MG.ProcessDefinitionList([myproc])
         

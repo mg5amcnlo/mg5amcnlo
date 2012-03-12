@@ -77,7 +77,8 @@ class IOExportRealFKSTest(unittest.TestCase,
         myproc = MG.ProcessDefinition({'legs': myleglist,
                              'model': self.mymodel,
                              'orders':{'QCD': 3, 'QED':0},
-                             'perturbation_couplings': ['QCD']})
+                             'perturbation_couplings': ['QCD'],
+                             'NLO_mode': 'real'})
         my_process_definitions = MG.ProcessDefinitionList([myproc])
         
         self.myfksmulti = fks_real.FKSMultiProcessFromReals(\

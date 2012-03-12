@@ -1821,6 +1821,9 @@ class Process(PhysicsObject):
         # squared amplitude.
         self['squared_orders'] = {}
         self['has_born'] = True
+        # The NLO_mode is always None for a tree-level process and can be
+        # 'all', 'real', 'virt' for a loop process.
+        self['NLO_mode'] = None
 
     def filter(self, name, value):
         """Filter for valid process property values."""
@@ -1906,6 +1909,10 @@ class Process(PhysicsObject):
                 raise self.PhysicsObjectError, \
                         "%s is not a valid ProcessList" % str(value)
 
+        if name == 'NLO_mode':
+            if value not in ['real','all','virt',None]:
+                raise self.PhysicsObjectError, \
+                        "%s is not a valid NLO_mode" % str(value)
         return True
 
     def set(self, name, value):
@@ -1931,7 +1938,7 @@ class Process(PhysicsObject):
         return ['legs', 'orders', 'overall_orders', 'squared_orders',
                 'model', 'id', 'required_s_channels', 'forbidden_s_channels',
                 'forbidden_particles', 'is_decay_chain', 'decay_chains',
-                'perturbation_couplings', 'has_born']
+                'perturbation_couplings', 'has_born', 'NLO_mode']
 
     def nice_string(self, indent=0):
         """Returns a nicely formated string about current process
@@ -1966,6 +1973,8 @@ class Process(PhysicsObject):
         # Add perturbation_couplings
         if self['perturbation_couplings']:
             mystr = mystr + '[ '
+            if self['NLO_mode']:
+                mystr = mystr + self['NLO_mode'] + ' = '
             for order in self['perturbation_couplings']:
                 mystr = mystr + order + ' '
             mystr = mystr + '] '
@@ -2494,6 +2503,15 @@ class ProcessDefinition(Process):
         if self['orders']:
             mystr = mystr + " ".join([key + '=' + repr(self['orders'][key]) \
                        for key in sorted(self['orders'])]) + ' '
+
+        # Add perturbation_couplings
+        if self['perturbation_couplings']:
+            mystr = mystr + '[ '
+            if self['NLO_mode']:
+                mystr = mystr + self['NLO_mode'] + ' = '
+            for order in self['perturbation_couplings']:
+                mystr = mystr + order + ' '
+            mystr = mystr + '] '
 
         # Remove last space
         mystr = mystr[:-1]

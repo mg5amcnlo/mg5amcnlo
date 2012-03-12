@@ -12,7 +12,7 @@
       PARAMETER (ZERO=0D0)
 
       LOGICAL READPS
-      PARAMETER (READPS = .FALSE.)
+      PARAMETER (READPS = .TRUE.)
 
       INTEGER NPSPOINTS
       PARAMETER (NPSPOINTS = 1)
@@ -100,7 +100,7 @@
 !---  In standalone mode, always use sqrt_s as the renormalization
 !     scale.
       SQRTS=dsqrt(dabs(DOT(PIN(0),PIN(0))))
-      MU_R=SQRTS
+      MU_R=91.188d0
 !---  Update the couplings with the new MU_R
       CALL COUP()
 

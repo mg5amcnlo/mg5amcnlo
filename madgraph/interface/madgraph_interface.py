@@ -2185,7 +2185,7 @@ class MadGraphCmd(CmdExtended, HelpToCmd, CheckValidForCmd, CompleteForCmd):
         # Reset amplitudes
         self._curr_amps = diagram_generation.AmplitudeList()
         # Reset Helas matrix elements
-        self._curr_matrix_elements = None
+        self._curr_matrix_elements = helas_objects.HelasMultiProcess()
         self._generate_info = line
         # Reset _done_export, since we have new process
         self._done_export = False
@@ -2242,12 +2242,30 @@ class MadGraphCmd(CmdExtended, HelpToCmd, CheckValidForCmd, CompleteForCmd):
             squared_order_re = squared_order_pattern.match(line)
 
         # Now check for perturbation orders, specified in between squared brackets
-        perturbation_couplings_pattern = re.compile("^(.+)\s*\[\s*(\w+)\s*\]\s*(.*)$")
+        perturbation_couplings_pattern = \
+          re.compile("^(?P<proc>.+)\s*\[\s*((?P<option>\w+)\s*\=)?\s*(?P<pertOrders>(\w+\s*)*)\s*\]\s*(?P<rest>.*)$")
         perturbation_couplings_re = perturbation_couplings_pattern.match(line)
         perturbation_couplings = ""
+        LoopOption= None
+        HasBorn= True
+        valid_nlo_modes = ['all','real','virt','virt^2']
         if perturbation_couplings_re:
-            perturbation_couplings = perturbation_couplings_re.group(2)
-            line = perturbation_couplings_re.group(1)+perturbation_couplings_re.group(3)
+            perturbation_couplings = perturbation_couplings_re.group("pertOrders")
+            option=perturbation_couplings_re.group("option")
+            if option!="":
+                if option in valid_nlo_modes:
+                    if option=='virt^2':
+                        LoopOption='virt'
+                        HasBorn=False
+                    else:
+                        LoopOption=option
+                else:
+                    raise self.InvalidCmd, "NLO mode %s is not valid. "%option+\
+                       "Valid modes are %s. "%str(valid_nlo_modes)
+            else:
+                LoopOption='all'
+            line = perturbation_couplings_re.group("proc")+\
+                     perturbation_couplings_re.group("rest")
 
         # Now if perturbation orders are defined, we will scan for the 
         # amplitudes orders. If not we will use the squared orders above instead.
@@ -2334,7 +2352,7 @@ class MadGraphCmd(CmdExtended, HelpToCmd, CheckValidForCmd, CompleteForCmd):
         if filter(lambda leg: leg.get('state') == True, myleglist):
             # We have a valid process
             # Extract perturbation orders
-            perturbation_couplings_list = re.split(" ",perturbation_couplings)
+            perturbation_couplings_list = perturbation_couplings.split()
             if perturbation_couplings_list==['']:
                 perturbation_couplings_list=[]
             if perturbation_couplings_list:
@@ -2380,7 +2398,9 @@ class MadGraphCmd(CmdExtended, HelpToCmd, CheckValidForCmd, CompleteForCmd):
                               'forbidden_s_channels': forbidden_schannel_ids,
                               'required_s_channels': required_schannel_ids,
                               'overall_orders': overall_orders,
-                              'perturbation_couplings': perturbation_couplings_list
+                              'perturbation_couplings': perturbation_couplings_list,
+                              'has_born':HasBorn,
+                              'NLO_mode':LoopOption
                               })
       #                       'is_decay_chain': decay_process\
 
@@ -2619,7 +2639,6 @@ class MadGraphCmd(CmdExtended, HelpToCmd, CheckValidForCmd, CompleteForCmd):
             if '--no_launch' not in args:
                 self.exec_cmd('launch')
             
-            
         elif args[0] == 'proc_v4':
             
             # Remove previous imports, generations and outputs from history
@@ -2640,7 +2659,6 @@ class MadGraphCmd(CmdExtended, HelpToCmd, CheckValidForCmd, CompleteForCmd):
  
             #convert and excecute the card
             self.import_mg4_proc_card(proc_card)
-
     
     def import_ufo_model(self, model_name):
         """ import the UFO model """

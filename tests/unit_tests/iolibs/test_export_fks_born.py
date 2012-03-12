@@ -76,7 +76,8 @@ class IOExportBornFKSTest(unittest.TestCase,
         myproc = MG.ProcessDefinition({'legs': myleglist,
                              'model': self.mymodel,
                              'orders':{'QCD': 2, 'QED': 0},
-                             'perturbation_couplings': ['QCD']})
+                             'perturbation_couplings': ['QCD'],
+                             'NLO_mode': 'real'})
         my_process_definitions = MG.ProcessDefinitionList([myproc])
 
         self.myfksmulti = fks_born.FKSMultiProcessFromBorn(\

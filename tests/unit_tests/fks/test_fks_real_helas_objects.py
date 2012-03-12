@@ -360,7 +360,8 @@ class testFKSRealHelasObjects(unittest.TestCase):
                         'orders': {'WEIGHTED': 3},
                         'legs': my_multi_leglist,
                         'perturbation_couplings': ['QCD'],
-                        'model': self.mymodel})
+                        'model': self.mymodel,
+                        'NLO_mode':'real'})
         my_process_definitions = MG.ProcessDefinitionList(\
             [my_process_definition])
 

@@ -72,6 +72,15 @@ class FKSMultiProcessFromBorn(diagram_generation.MultiProcess): #test written
             self['born_processes'].append(born)
             born.generate_reals(real_amplist, real_amp_id_list)
 
+        if self['process_definitions'][0].get('NLO_mode') == 'all':
+            logger.info('Generating virtual matrix elements')
+            self.generate_virtuals()
+        
+        elif not self['process_definitions'][0].get('NLO_mode') in ['all', 'real']:
+            raise fks_common.FKSProcessError(), \
+               "Not a valid NLO_mode for a FKSMultiProcess: %s" % \
+               self['process_definitions'][0].get('NLO_mode')
+
     def generate_virtuals(self):
         """For each process among the born_processes, creates the corresponding
         virtual amplitude"""

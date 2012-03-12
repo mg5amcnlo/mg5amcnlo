@@ -68,6 +68,14 @@ class FKSMultiProcessFromReals(diagram_generation.MultiProcess): #test written
             real_proc = FKSProcessFromReals(amp)
             self['real_processes'].append(real_proc)
 
+        if self['process_definitions'][0].get('NLO_mode') == 'all':
+            logger.info('Generating virtual matrix elements')
+            self.generate_virtuals()
+        
+        elif not self['process_definitions'][0].get('NLO_mode') in ['all', 'real']:
+            raise fks_common.FKSProcessError(), \
+               "Not a valid NLO_mode for a FKSMultiProcess: %s" % \
+               self['process_definitions'][0].get('NLO_mode')
 
     def generate_virtuals(self):
         """For each FKSBornProcess of all the real_proc, creates the corresponding
