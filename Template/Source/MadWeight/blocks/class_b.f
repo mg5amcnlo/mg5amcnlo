@@ -233,7 +233,7 @@ c     Evaluate the initial momenta in the CMS frame
 
       if (dabs(x1-0.5).gt.0.5d0.or.dabs(x2-0.5).gt.0.5d0) then
         jac=-1d0
-        write(*,*) "Warning: x1 or x2 larger than 1"
+c        write(*,*) "Warning: x1 or x2 larger than 1"
         momenta(0,1)=-1
         momenta(0,2)=-1
         return
