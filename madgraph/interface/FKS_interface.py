@@ -112,9 +112,9 @@ class FKSInterface(CheckFKS, CompleteFKS, HelpFKS, mg_interface.MadGraphCmd):
                         % ', '.join(orders)
                         
         #now generate the amplitudes as usual
-        self._options['group_subprocesses'] = 'NLO'
+        self.options['group_subprocesses'] = 'NLO'
         collect_mirror_procs = False
-        ignore_six_quark_processes = self._options['ignore_six_quark_processes']
+        ignore_six_quark_processes = self.options['ignore_six_quark_processes']
 #        super(FKSInterface, self).do_generate(line)
         if ',' in line:
             myprocdef, line = mg_interface.MadGraphCmd.extract_decay_chain_process(self,line)
@@ -125,17 +125,17 @@ class FKSInterface(CheckFKS, CompleteFKS, HelpFKS, mg_interface.MadGraphCmd):
 
         myprocdef['perturbation_couplings'] = ['QCD']
 
-        if self._options['fks_mode'] == 'born':
+        if self.options['fks_mode'] == 'born':
             self._fks_multi_proc = fks_born.FKSMultiProcessFromBorn(myprocdef,
                                        collect_mirror_procs,
                                        ignore_six_quark_processes)
-        elif self._options['fks_mode'] == 'real':
+        elif self.options['fks_mode'] == 'real':
             self._fks_multi_proc = fks_real.FKSMultiProcessFromReals(myprocdef,
                                        collect_mirror_procs,
                                        ignore_six_quark_processes)
             # this is for testing, to be removed
         else: 
-            raise MadGraph5Error, 'Unknown FKS mode: %s' % self._options['fks_mode']
+            raise MadGraph5Error, 'Unknown FKS mode: %s' % self.options['fks_mode']
 
     def do_output(self, line):
         """Initialize a new Template or reinitialize one"""
@@ -160,7 +160,7 @@ class FKSInterface(CheckFKS, CompleteFKS, HelpFKS, mg_interface.MadGraphCmd):
 
         # initialize the writer
         if self._export_format in self._nlo_export_formats:
-            if self._options['fks_mode'] == 'real':
+            if self.options['fks_mode'] == 'real':
                 logger.info("Exporting in MadFKS format, starting from real emission process")
                 self._curr_exporter = export_fks_real.ProcessExporterFortranFKS_real(\
                                           self._mgme_dir, self._export_dir,
@@ -168,7 +168,7 @@ class FKSInterface(CheckFKS, CompleteFKS, HelpFKS, mg_interface.MadGraphCmd):
                                           os.path.join(self._mgme_dir, 'loop_material'),
                                           self._cuttools_dir)
     
-            if self._options['fks_mode'] == 'born':
+            if self.options['fks_mode'] == 'born':
                 logger.info("Exporting in MadFKS format, starting from born process")
                 self._curr_exporter = export_fks_born.ProcessExporterFortranFKS_born(\
                                           self._mgme_dir, self._export_dir,
@@ -223,9 +223,9 @@ class FKSInterface(CheckFKS, CompleteFKS, HelpFKS, mg_interface.MadGraphCmd):
 
             # Check if we need to group the SubProcesses or not
             group = True
-            if self._options['group_subprocesses'] in [False, 'NLO']:
+            if self.options['group_subprocesses'] in [False, 'NLO']:
                 group = False
-            elif self._options['group_subprocesses'] == 'Auto' and \
+            elif self.options['group_subprocesses'] == 'Auto' and \
                                          self._curr_amps[0].get_ninitial() == 1:
                    group = False 
 
@@ -235,11 +235,11 @@ class FKSInterface(CheckFKS, CompleteFKS, HelpFKS, mg_interface.MadGraphCmd):
                 if group:
                     raise MadGraph5Error, "Cannot group subprocesses when exporting to NLO"
                 else:
-                    if self._options['fks_mode'] == 'real':
+                    if self.options['fks_mode'] == 'real':
                         self._curr_matrix_elements = \
                                  fks_real_helas.FKSHelasMultiProcessFromReals(\
                                     self._fks_multi_proc)
-                    elif self._options['fks_mode'] == 'born':
+                    elif self.options['fks_mode'] == 'born':
                         self._curr_matrix_elements = \
                                  fks_born_helas.FKSHelasMultiProcessFromBorn(\
                                     self._fks_multi_proc)
@@ -271,7 +271,7 @@ class FKSInterface(CheckFKS, CompleteFKS, HelpFKS, mg_interface.MadGraphCmd):
         if self._export_format in ['NLO']:
             path = os.path.join(path, 'SubProcesses')
 
-        if self._export_format == 'NLO' and self._options['fks_mode'] == 'real':
+        if self._export_format == 'NLO' and self.options['fks_mode'] == 'real':
             #_curr_matrix_element is a FKSHelasMultiProcessFromRealObject 
             self._fks_directories = []
             for ime, me in \
@@ -294,7 +294,7 @@ class FKSInterface(CheckFKS, CompleteFKS, HelpFKS, mg_interface.MadGraphCmd):
             
         cpu_time1 = time.time()
 
-        if self._export_format == 'NLO' and self._options['fks_mode'] == 'born':
+        if self._export_format == 'NLO' and self.options['fks_mode'] == 'born':
             #_curr_matrix_element is a FKSHelasMultiProcessFromBornObject 
             self._fks_directories = []
             for ime, me in \

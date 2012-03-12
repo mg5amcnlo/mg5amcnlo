@@ -54,7 +54,7 @@ class Switcher(object):
         # define the interface
         self.change_principal_cmd(main)
         self.cmd.__init__(self, *args, **opt)       
-        
+       
 
 
         

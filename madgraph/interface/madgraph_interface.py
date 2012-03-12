@@ -2905,7 +2905,8 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
                               'fortran_compiler':None,
                               'automatic_html_opening':True,
                               'group_subprocesses': 'Auto',
-                              'ignore_six_quark_processes': False}
+                              'ignore_six_quark_processes': False,
+                              'fks_mode': 'real'}
                 
         if not config_path:
             try:
