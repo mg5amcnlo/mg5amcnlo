@@ -80,7 +80,8 @@ class PhysicsObject(dict):
 
         if name not in self.keys():
             raise self.PhysicsObjectError, \
-                        "%s is not a valid property for this object" % name
+                        """%s is not a valid property for this object: %s\n
+    Valid property are %s""" % (name,self.__class__.__name__, self.keys())
 
         return True
 

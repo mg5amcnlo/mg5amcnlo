@@ -878,17 +878,23 @@ class HelasWavefunction(base_objects.PhysicsObject):
         return self.get(name)
 
     
-    def get_helas_call_dict(self):
+    def get_helas_call_dict(self, index=1):
         """ return a dictionary to be used for formatting
         HELAS call. """
+
+        if index == 1:
+            flip = 0
+        else:
+            flip = 1
         
         output = {}
         for i, mother in enumerate(self.get('mothers')):
-            nb = mother.get('number')
+            nb = mother.get('number') - flip
             output[str(i)] = nb
         #fixed argument
-        output['coup'] = ','.join(self.get_with_flow('coupling'))
-        output['out'] = self.get('number')
+        for i, coup in enumerate(self.get_with_flow('coupling')):
+            output['coup%d'%i] = coup
+        output['out'] = self.get('number') - flip
         output['M'] = self.get('mass')
         output['W'] = self.get('width')
         # optimization
@@ -2098,17 +2104,23 @@ class HelasAmplitude(base_objects.PhysicsObject):
 
         return vertex_leg_numbers
 
-    def get_helas_call_dict(self):
+    def get_helas_call_dict(self, index=1):
         """ return a dictionary to be used for formatting
         HELAS call. """
         
+        if index == 1:
+            flip = 0
+        else:
+            flip = 1
+        
         output = {}
         for i, mother in enumerate(self.get('mothers')):
-            nb = mother.get('number')
+            nb = mother.get('number') - flip 
             output[str(i)] = nb
         #fixed argument
-        output['coup'] = ','.join(self.get('coupling'))
-        output['out'] = self.get('number')
+        for i, coup in enumerate(self.get('coupling')):
+            output['coup%d'%i] = str(coup)
+        output['out'] = self.get('number') - flip
         return output
 
 
