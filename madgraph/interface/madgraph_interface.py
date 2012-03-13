@@ -2265,6 +2265,7 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
         # Now check for forbidden particles, specified using "/"
         slash = line.find("/")
         dollar = line.find("$")
+        dollar = line.find("$")
         forbidden_particles = ""
         if slash > 0:
             if dollar > slash:
@@ -2559,11 +2560,7 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
                 if self.options['complex_mass_scheme']:
                     self._curr_model.change_mass_to_complex_scheme()
                     if hasattr(self._curr_model, 'set_parameters_and_couplings'):
-                        if hasattr(self._curr_model, 'restrict_card'):
-                            self._curr_model.set_parameters_and_couplings(
-                                                 self._curr_model.restrict_card)
-                        else:
-                            self._curr_model.set_parameters_and_couplings()
+                        self._curr_model.set_parameters_and_couplings()
                 if self.options['gauge']=='unitary':
                     if 1 not in self._curr_model.get('gauge') :
                         logger.warning('Change the gauge to Feynman since the model does not allow unitary gauge') 
@@ -3642,7 +3639,6 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
                 last_action_2 = '%s %s' % (last_action, args[1])
             else: 
                 last_action_2 = 'none'
-                
 
 class MadGraphCmdWeb(CheckValidForCmdWeb,MadGraphCmd):
     """Temporary parser"""

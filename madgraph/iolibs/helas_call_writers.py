@@ -945,7 +945,7 @@ class FortranUFOHelasCallWriter(UFOHelasCallWriter):
             if isinstance(argument, helas_objects.HelasWavefunction):
                 arg['out'] = 'W(1,%(out)d)'
                 if aloha.complex_mass:
-                    arg['mass'] = "%(CM)s,"
+                    arg['mass'] = "DCMPLX(%(CM)s),"
                 else:
                     arg['mass'] = "%(M)s,%(W)s,"
             else:      
