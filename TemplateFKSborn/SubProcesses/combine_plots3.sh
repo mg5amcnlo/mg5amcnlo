@@ -24,7 +24,7 @@ f77 -o $thisdir/read40 $thisdir/read40.for
 EXENAME=$thisdir/read40
 echo -n "" > dir
 counterp=0
-for p in P*_[1-9]* ; do
+for p in P0_*/R_* ; do
     cd $thisdir
     cd $p
     rm -f MADatNLO*
