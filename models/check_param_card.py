@@ -312,9 +312,10 @@ class ParamCard(dict):
         
     def remove_param(self, block, lhacode):
         """ remove a parameter """
-        self[block].remove(lhacode)
-        if len(self[block]) == 0:
-            self.remove_block(block)
+        if self.has_param(block, lhacode):
+            self[block].remove(lhacode)
+            if len(self[block]) == 0:
+                self.remove_block(block)
     
     def has_param(self, block, lhacode):
         """check if param exists"""
@@ -875,7 +876,7 @@ def convert_to_mg5card(path, outputpath=None ):
     # Decay: Nothing to do. 
     
     # MODSEL
-    card.check_and_remove('modsel',[1], value=1)
+    card.remove_param('modsel',[1])
     
     
     # USQMIX
