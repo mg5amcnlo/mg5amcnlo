@@ -2058,6 +2058,12 @@ class Process(PhysicsObject):
         # Add perturbation orders
         if self['perturbation_couplings']:
             mystr = mystr + '[ '
+            if self['NLO_mode']:
+                mystr = mystr + self['NLO_mode']
+                if not has_born:
+                    mystr = mystr + '^2'
+                mystr = mystr + '= '
+                
             for order in self['perturbation_couplings']:
                 mystr = mystr + order + ' '
             mystr = mystr + '] '
@@ -2217,6 +2223,14 @@ class Process(PhysicsObject):
 
     # Helper functions
 
+    def are_decays_perturbed(self):
+        """ Check iteratively that the decayed processes are not perturbed """
+        
+        for procdef in self['decay_chains']:
+            if procdef['perturbation_couplings'] or procdef.are_decays_perturbed():
+                return True
+        return False
+    
     def get_ninitial(self):
         """Gives number of initial state particles"""
 
@@ -2392,13 +2406,13 @@ class ProcessDefinition(Process):
 
         return True
 
-    def are_decays_perturbed(self):
-        """ Check iteratively that the decayed processes are not perturbed """
+    def has_multiparticle_label(self):
+        """ Check that this process definition will yield a single process, as
+        each multileg only has one leg"""
         
-        for procdef in self['decay_chains']:
-            if procdef['perturbation_couplings'] or procdef.are_decays_perturbed():
-                return True
-        return False
+        for mleg in self['legs']:
+            if len(mleg['ids'])>1:
+                return false
 
     def get_sorted_keys(self):
         """Return process property names as a nicely sorted list."""

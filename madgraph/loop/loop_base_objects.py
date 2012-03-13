@@ -825,7 +825,7 @@ class LoopModel(base_objects.Model):
     
     def default_setup(self):
        super(LoopModel,self).default_setup()
-       self['perturbation_couplings'] = {}
+       self['perturbation_couplings'] = []
        # The 'coupling_orders_counterterms' has all coupling orders
        # as keys and values are tuple of the form:
        #    (loop_particles, counterterm, laurent_order)
