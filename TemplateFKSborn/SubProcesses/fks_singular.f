@@ -1,164 +1,3 @@
-      subroutine grandmother_fks(iconfig,nbranch,ns_channel,nt_channel,
-     #                           i_fks,j_fks,searchforgranny,
-     #                           fksmother,fksgrandmother,fksaunt,
-     #                           is_beta_cms,is_granny_sch,topdown)
-c
-c Given iconfig, nbranch, ns_channel, nt_channel, i_fks, j_fks and
-c searchforgranny (if .false., finds the mother and exits)
-c this routine returns
-c
-c  fksmother: the mother of i_fks and j_fks
-c  fksgrandmother: the mother of fksmother and fksaunt
-c  fksaunt: the sister of fksmother
-c  is_beta_cms: true if the 1->2 (for s-channel) or 2->2 (for t-channel)
-c    scattering which results into the mother is the partonic c.m., 
-c    false otherwise
-c  is_granny_sch: true if grandmother is an s-channel, false otherwise
-c  topdown: if true the fixed vector (p_a) in the iterative construction of
-c    t-channel scattering is p_2; if false, p_a=p_1
-c
-c For initial-state singularities, fksgrandmother and fksaunt are
-c undefined (set to zero), and fksmother=1 or 2. For final-state
-c singularities, fksmother<0; fksgrandmother<0 in all cases except when the 
-c mother is attached to parton 1 and 2, in which case fksgrandmother=1 or 2.
-c fksaunt can have either sign, being positive when it is a single particle, 
-c and negative when it is a set of particles
-c
-      implicit none
-      integer iconfig,nbranch,ns_channel,nt_channel
-      integer i_fks,j_fks
-      integer fksmother, fksgrandmother,fksaunt
-      logical searchforgranny,is_beta_cms,is_granny_sch,topdown
-
-      integer i,itmp
-
-      include "genps.inc"
-      include 'nexternal.inc'
-      integer            mapconfig(0:lmaxconfigs), this_config
-      integer iforest(2,-max_branch:-1,lmaxconfigs)
-      integer sprop(-max_branch:-1,lmaxconfigs)
-      integer tprid(-max_branch:-1,lmaxconfigs)
-
-      include "configs.inc"
-
-      topdown=.false.
-
-c This function need be called before the redefinition of ns_channel,
-c which takes place if no t-channels are present
-      if((ns_channel+nt_channel).ne.(nbranch-1))then
-        write(*,*)'Error #1 in grandmother_fks',
-     #    nbranch,ns_channel,nt_channel
-        stop
-      endif
-      if( i_fks.lt.3.or.i_fks.gt.nexternal .or.
-     #    j_fks.lt.1.or.j_fks.gt.nexternal )then
-        write(*,*)'Error #2 in grandmother_fks',i_fks,j_fks
-        stop
-      endif
-c
-      fksmother=0
-      fksgrandmother=0
-      fksaunt=0
-c Initial-state singularity
-      if(j_fks.eq.1)then
-        fksmother=1
-        if( iforest(1,-ns_channel-1,iconfig).ne.1 .or.
-     #      iforest(2,-ns_channel-1,iconfig).ne.i_fks .or.
-     #      nt_channel.eq.0 )then
-c This diagram has no singularities associated with the (i_fks,j_fks) pair
-           fksmother=0
-           return
-        endif
-c Initial-state singularity
-      elseif(j_fks.eq.2)then
-        fksmother=2
-        topdown=.true.
-        if(((iforest(1,-nbranch,iconfig).gt.0 .or.
-     &       iforest(2,-nbranch,iconfig).ne.i_fks).and.
-     &      (iforest(1,-ns_channel-1,iconfig).ne.2 .or. !This is needed, because of inverted t-channel
-     &       iforest(2,-ns_channel-1,iconfig).ne.i_fks)) .or.
-     &      nt_channel.eq.0 )then
-c This diagram has no singularities associated with the (i_fks,j_fks) pair
-           fksmother=0
-           return
-        endif
-c Final-state singularity
-      elseif(j_fks.ge.3)then
-c Mother must be an s-channel
-        do i=-1,-ns_channel,-1
-          if( (iforest(1,i,iconfig).eq.i_fks.and.
-     #         iforest(2,i,iconfig).eq.j_fks) .or.
-     #        (iforest(2,i,iconfig).eq.i_fks.and.
-     #         iforest(1,i,iconfig).eq.j_fks) )then
-            fksmother=i
-          endif
-        enddo
-        if(fksmother.eq.0)then
-c No mother found: this diagram has no singularities associated with
-c the (i_fks,j_fks) pair
-          return
-        elseif(fksmother.gt.0)then
-          write(*,*)'Error #5 in grandmother_fks',fksmother
-          stop
-        endif
-        if(.not.searchforgranny)return
-c Look for grandmother and aunt; s-channels first
-        do i=-1,-ns_channel,-1
-          if(iforest(1,i,iconfig).eq.fksmother)then
-            fksgrandmother=i
-            fksaunt=iforest(2,i,iconfig)
-          elseif(iforest(2,i,iconfig).eq.fksmother)then
-            fksgrandmother=i
-            fksaunt=iforest(1,i,iconfig)
-          endif
-        enddo
-c s-channel grandmother found
-        if(fksgrandmother.ne.0.and.fksaunt.ne.0)then
-          if(fksgrandmother.gt.0)then
-            write(*,*)'Error #6 in grandmother_fks',
-     #        fksgrandmother,fksaunt
-            stop
-          endif
-          is_granny_sch=.true.
-          is_beta_cms=(fksgrandmother.eq.-ns_channel)
-c s-channel grandmother not found; search t-channels
-        else
-          is_granny_sch=.false.
-          do i=-ns_channel-1,-nbranch,-1
-            if(iforest(2,i,iconfig).eq.fksmother)then
-              fksgrandmother=iforest(1,i,iconfig)
-              fksaunt=i
-            endif
-          enddo
-          if(fksgrandmother.eq.0.or.fksaunt.eq.0)then
-            write(*,*)'Error #7 in grandmother_fks',
-     #        fksgrandmother,fksaunt
-            stop
-          endif
-          if(fksgrandmother.le.0.or.fksaunt.eq.0)then
-            write(*,*)'Error #8 in grandmother_fks',
-     #        fksgrandmother,fksaunt
-            stop
-          endif
-          if(fksaunt.eq.-nbranch)fksaunt=2
-c Grandmother must be closer than aunt to one of the incoming partons
-          if( fksaunt.eq.2.or. (fksgrandmother.ne.1.and.
-     #          (-fksgrandmother-ns_channel).gt.int(nt_channel/2)))then
-            itmp=fksgrandmother
-            fksgrandmother=fksaunt
-            fksaunt=itmp
-            topdown=.false.
-          else
-            topdown=.true.
-          endif
-          is_beta_cms=( (fksgrandmother.eq.1) .or.
-     #                  (fksgrandmother.eq.2) )
-        endif
-      endif
-      return
-      end
-
-
       subroutine rotate_invar(pin,pout,cth,sth,cphi,sphi)
 c Given the four momentum pin, returns the four momentum pout (in the same
 c Lorentz frame) by performing a three-rotation of an angle theta 
@@ -225,74 +64,9 @@ c
       return
       end
 
-
-      subroutine phspncheck(npart,ecm,xmass,xmom)
+      subroutine phspncheck_born(ecm,xmass,xmom,pass)
 c Checks four-momentum conservation.
 c WARNING: works only in the partonic c.m. frame
-      implicit none
-      integer npart,maxmom
-      include "genps.inc"
-      real*8 ecm,xmass(-max_branch:max_particles),
-     # xmom(0:3,-max_branch:max_particles)
-      real*8 tiny,xm,xlen4,den,xsum(0:3),xsuma(0:3),xrat(0:3),ptmp(0:3)
-      parameter (tiny=5.d-3)
-      integer jflag,i,j,jj
-c
-      jflag=0
-      do i=0,3
-        xsum(i)=0.d0
-        xsuma(i)=0.d0
-        do j=3,npart
-          xsum(i)=xsum(i)+xmom(i,j)
-          xsuma(i)=xsuma(i)+abs(xmom(i,j))
-        enddo
-        if(i.eq.0)xsum(i)=xsum(i)-ecm
-        if(xsuma(i).lt.1.d0)then
-          xrat(i)=abs(xsum(i))
-        else
-          xrat(i)=abs(xsum(i))/xsuma(i)
-        endif
-        if(xrat(i).gt.tiny.and.jflag.eq.0)then
-          write(*,*)'Momentum is not conserved'
-          write(*,*)'i=',i
-          do j=1,npart
-            write(*,'(4(d14.8,1x))') (xmom(jj,j),jj=0,3)
-          enddo
-          jflag=1
-        endif
-      enddo
-      if(jflag.eq.1)then
-        write(*,'(4(d14.8,1x))') (xsum(jj),jj=0,3)
-        write(*,'(4(d14.8,1x))') (xrat(jj),jj=0,3)
-        stop
-      endif
-c
-      do j=1,npart
-        do i=0,3
-          ptmp(i)=xmom(i,j)
-        enddo
-        xm=xlen4(ptmp)
-        if(ptmp(0).ge.1.d0)then
-          den=ptmp(0)
-        else
-          den=1.d0
-        endif
-        if(abs(xm-xmass(j))/den.gt.tiny .and.
-     &       abs(xm-xmass(j)).gt.tiny)then
-          write(*,*)'Mass shell violation'
-          write(*,*)'j=',j
-          write(*,*)'mass=',xmass(j)
-          write(*,*)'mass computed=',xm
-          write(*,'(4(d14.8,1x))') (xmom(jj,j),jj=0,3)
-          stop
-        endif
-      enddo
-      return
-      end
-
-
-      subroutine phspncheck_born(ecm,xmass,xmom,pass)
-c Identical to phspncheck
       implicit none
       include 'nexternal.inc'
       real*8 ecm,xmass(nexternal-1),xmom(0:3,nexternal-1)
@@ -360,7 +134,7 @@ c works in any frame
       integer npart,maxmom
       include "genps.inc"
       real*8 ecm,xmass(-max_branch:max_particles),
-     # xmom(0:3,-max_branch:max_particles)
+     # xmom(0:3,nexternal)
       real*8 tiny,vtiny,xm,xlen4,den,ecmtmp,xsum(0:3),xsuma(0:3),
      # xrat(0:3),ptmp(0:3)
       parameter (tiny=5.d-3)
@@ -447,867 +221,16 @@ c
       end
 
 
-      subroutine get_emother_range(int_nlo,i_fks,j_fks,nbranch,
-     #                       xi_i_fks,y_ij_fks,s,m,
-     #                       xi_mother_min_evpc,xi_mother_max_evpc,
-     #                       xi_mother_min_ev,xi_mother_max_ev,
-     #                       xi_mother_min_cnt,xi_mother_max_cnt,
-     #                       got_emother_range)
-      implicit none
-      include 'genps.inc'
-      logical int_nlo,got_emother_range,test
-      integer i_fks,j_fks,nbranch,maxcnt,i
-      double precision xi_i_fks,y_ij_fks
-      double precision xi_mother_min_evpc,xi_mother_max_evpc
-      double precision xi_mother_min_ev,xi_mother_max_ev
-      double precision xi_mother_min_cnt(-2:4),xi_mother_max_cnt(-2:4)
-      double precision M(-max_branch:max_particles)
-      double precision S(-max_branch:0)
-      double precision zero,one
-      parameter (zero=0.d0)
-      parameter (one=1.d0)
-c
-      xi_mother_min_ev=3.d0
-      xi_mother_max_ev=-1.d0
-      xi_mother_min_cnt(4)=3.d0
-      xi_mother_max_cnt(4)=-1.d0
-      if(m(j_fks).eq.0.d0)then
-        maxcnt=2
-        call get_emother_j0(i_fks,j_fks,nbranch,xi_i_fks,y_ij_fks,s,m,
-     #                      xi_mother_min_ev,xi_mother_max_ev)
-        if(int_nlo)then
-          call get_emother_j0(i_fks,j_fks,nbranch,zero,y_ij_fks,s,m,
-     #                        xi_mother_min_cnt(0),xi_mother_max_cnt(0))
-          call get_emother_j0(i_fks,j_fks,nbranch,xi_i_fks,one,s,m,
-     #                        xi_mother_min_cnt(1),xi_mother_max_cnt(1))
-          call get_emother_j0(i_fks,j_fks,nbranch,zero,one,s,m,
-     #                        xi_mother_min_cnt(2),xi_mother_max_cnt(2))
-        else
-          xi_mother_min_cnt(0)=3.d0
-          xi_mother_max_cnt(0)=-1.d0
-          xi_mother_min_cnt(1)=3.d0
-          xi_mother_max_cnt(1)=-1.d0
-          xi_mother_min_cnt(2)=3.d0
-          xi_mother_max_cnt(2)=-1.d0
-        endif
-        xi_mother_min_cnt(4)=min(xi_mother_min_cnt(0),
-     #                           xi_mother_min_cnt(1),
-     #                           xi_mother_min_cnt(2))
-        xi_mother_max_cnt(4)=max(xi_mother_max_cnt(0),
-     #                           xi_mother_max_cnt(1),
-     #                           xi_mother_max_cnt(2))
-      else
-        maxcnt=0
-        call get_emother_jm(i_fks,j_fks,nbranch,xi_i_fks,y_ij_fks,s,m,
-     #                      xi_mother_min_ev,xi_mother_max_ev)
-        if(int_nlo)then
-          call get_emother_jm(i_fks,j_fks,nbranch,zero,y_ij_fks,s,m,
-     #                        xi_mother_min_cnt(0),xi_mother_max_cnt(0))
-        else
-          xi_mother_min_cnt(0)=3.d0
-          xi_mother_max_cnt(0)=-1.d0
-        endif
-        xi_mother_min_cnt(4)=xi_mother_min_cnt(0)
-        xi_mother_max_cnt(4)=xi_mother_max_cnt(0)
-      endif
-      got_emother_range=xi_mother_min_ev.ne.3.d0 .and.
-     #                  xi_mother_max_ev.ne.-1.d0
-      if(int_nlo)got_emother_range=got_emother_range .or.
-     #                  ( xi_mother_min_cnt(4).ne.3.d0 .and.
-     #                    xi_mother_max_cnt(4).ne.-1.d0 )
-      if(int_nlo)then
-        test=.true.
-c test will remain true if all cnts have the same (meaningful) minimum
-        do i=0,maxcnt
-          test=test.and.
-     #         ( xi_mother_min_cnt(i).eq.3.d0 .or.
-     #           xi_mother_min_cnt(i).eq.xi_mother_min_cnt(4) )
-        enddo
-        if(.not.test)then
-          xi_mother_min_evpc=min(xi_mother_min_ev,xi_mother_min_cnt(4))
-          xi_mother_min_cnt(4)=xi_mother_min_evpc
-        else
-          xi_mother_min_evpc=xi_mother_min_ev
-        endif
-c Now do the same for the maxima
-        test=.true.
-        do i=0,maxcnt
-          test=test.and.
-     #         ( xi_mother_max_cnt(i).eq.-1.d0 .or.
-     #           xi_mother_max_cnt(i).eq.xi_mother_max_cnt(4) )
-        enddo
-        if(.not.test)then
-          xi_mother_max_evpc=max(xi_mother_max_ev,xi_mother_max_cnt(4))
-          xi_mother_max_cnt(4)=xi_mother_max_evpc
-        else
-          xi_mother_max_evpc=xi_mother_max_ev
-        endif
-      else
-        xi_mother_min_evpc=xi_mother_min_ev
-        xi_mother_max_evpc=xi_mother_max_ev
-      endif
-      return
-      end
-
-
-      subroutine get_emother_j0(i_fks,j_fks,nbranch,xi_i_fks,y_ij_fks,s,m,
-     #                          xi_mother_min,xi_mother_max)
-      implicit none
-      include 'genps.inc'
-      include 'nexternal.inc'
-      integer i_fks,j_fks,nbranch
-      double precision xi_i_fks,y_ij_fks,xi_mother_min,xi_mother_max
-      double precision M(-max_branch:max_particles)
-      double precision S(-max_branch:0)
-      double precision xii,yij,scm,sigm2
-      integer i
-c
-      xii=xi_i_fks
-      yij=y_ij_fks
-      scm=s(-nbranch)
-      sigm2=0.d0
-      do i=3,nexternal
-        if(i.ne.i_fks.and.i.ne.j_fks)sigm2=sigm2+m(i)
-      enddo
-      sigm2=sigm2**2
-      xi_mother_min=xii
-      xi_mother_max=(2-xii**2*(1-yij)-2*sigm2/scm)/(2-xii*(1-yij))
-      return
-      end
-
-
-      subroutine get_emother_jm(i_fks,j_fks,nbranch,xi_i_fks,y_ij_fks,s,m,
-     #                          xi_mother_min,xi_mother_max)
-      implicit none
-      include 'genps.inc'
-      include 'nexternal.inc'
-      integer i_fks,j_fks,nbranch
-      double precision xi_i_fks,y_ij_fks,xi_mother_min,xi_mother_max
-      double precision M(-max_branch:max_particles)
-      double precision S(-max_branch:0)
-      double precision xii,yij,scm,sigm2,xmassj,pfact,xiamaxbar,
-     # xfact,sarg,xia1,xia2,xiamax,xiamin
-      integer i
-c
-      xii=xi_i_fks
-      yij=y_ij_fks
-      scm=s(-nbranch)
-      sigm2=0.d0
-      do i=3,nexternal
-        if(i.ne.i_fks.and.i.ne.j_fks)sigm2=sigm2+m(i)
-      enddo
-      sigm2=sigm2**2
-      xmassj=m(j_fks)
-      pfact=2-xii**2-2*(sigm2-xmassj**2)/scm
-      if(pfact.lt.0.d0)then
-        write(*,*)'Fatal error #1 in get_emother_jm'
-        write(*,*)xii,sigm2,xmassj,scm
-        stop
-      endif
-      xiamaxbar=pfact/(2-xii)
-      xfact=4-4*xii+xii**2*(1-yij**2)
-      sarg=(pfact-xii*(2-xii))**2-4*xmassj**2/scm*xfact
-      if(sarg.gt.0.d0)then
-        xia1=( (2-xii)*pfact-xii*yij*(xii**2*yij+
-     #         sign(1.d0,yij)*sqrt(sarg)) )/xfact
-        xia2=( (2-xii)*pfact-xii*yij*(xii**2*yij-
-     #         sign(1.d0,yij)*sqrt(sarg)) )/xfact
-        if(xia2.lt.xia1)then
-          write(*,*)'Fatal error #2 in get_emother_jm'
-          write(*,*)xia1,xia2
-          stop
-        endif
-      endif
-      if(sarg.le.0.d0)then
-        xiamax=xiamaxbar
-      else
-        if(yij.ge.0.d0)then
-          if(xia2.gt.xiamaxbar)then
-            xiamax=min(xiamaxbar,xia1)
-          else
-            xiamax=xiamaxbar
-          endif
-        else
-          if(xia2.lt.xiamaxbar)then
-            xiamax=xiamaxbar
-          elseif(xia2.ge.xiamaxbar.and.xia1.lt.xiamaxbar)then
-            xiamax=xia2
-          elseif(xia1.ge.xiamaxbar)then
-            xiamax=xia2
-          else
-            write(*,*)'Fatal error #3 in get_emother_jm'
-            write(*,*)xia1,xia2,xiamaxbar
-            stop
-          endif
-        endif
-        if( xmassj.eq.0.d0 .and.
-     #      ( yij.gt.0.d0.and.xiamax.ne.xia1 .or.
-     #        yij.lt.0.d0.and.xiamax.ne.xia2 ) )then
-          write(*,*)'Fatal error #4 in get_emother_jm'
-          write(*,*)xia1,xia2,xiamax,yij
-          stop
-        endif
-      endif
-      xiamin=xii+2*xmassj/sqrt(scm)
-      xi_mother_min=xiamin
-      xi_mother_max=xiamax
-      return
-      end
-
-
-      subroutine get_smother(E_i_fks,y_ij_fks,sgrandmother,xmaunt,xmassj,
-     #  smother,dsmotherody)
-      implicit none
-      double precision E_i_fks,y_ij_fks,sgrandmother,xmaunt,xmassj,
-     # smother,dsmotherody,ei,yij,xkbe2,sxkbe2,xmassk2,xmassj2,solden,
-     # solnuma,argofsqrtred,xkal2,sqxkal2,dxkal2dy0
-      double precision pi
-      parameter (pi=3.1415926535897932385d0)
-c
-      ei=E_i_fks
-      yij=y_ij_fks
-      xkbe2=sgrandmother
-      sxkbe2=sqrt(xkbe2)
-      xmassk2=xmaunt**2
-      xmassj2=xmassj**2
-c
-      solden=-(sxkbe2-ei*(1-yij))*(sxkbe2-ei*(1+yij))
-      solnuma=-( ei*(xkbe2-2*ei*sxkbe2-xmassk2)*
-     #           (sxkbe2-ei*(1-yij**2))+
-     #           xmassj2*sxkbe2*(sxkbe2-ei) )
-      argofsqrtred=xkbe2*( (xkbe2-2*ei*sxkbe2-xmassk2)**2 -
-     #      2*xmassj2*(xkbe2-2*ei*(sxkbe2-ei*(1-yij**2))-
-     #      xmassj2/2.d0+xmassk2) )
-      if(argofsqrtred.lt.0.d0)then
-        smother=-1.d0
-      else
-        smother=( solnuma+ei*yij*sqrt(argofsqrtred) )/
-     #          solden
-        xkal2=smother
-        sqxkal2=sqrt(smother)
-        dxkal2dy0=2*ei*(xkbe2-2*ei*sxkbe2-xmassk2)*yij/solden-
-     #   xkbe2*( ( (xkbe2-2*ei*sxkbe2-xmassk2)**2 -
-     #     2*xmassj2*(xkbe2-2*ei*(sxkbe2-ei*(1-yij**2))-
-     #     xmassj2/2.d0+xmassk2) )+
-     #   4*ei**2*yij**2*xmassj2 )/
-     #   ( sqrt(xkbe2*( (xkbe2-2*ei*sxkbe2-xmassk2)**2 -
-     #          2*xmassj2*(xkbe2-2*ei*(sxkbe2-ei*(1-yij**2))-
-     #          xmassj2/2.d0+xmassk2) ))*solden) +
-     #   2*ei*yij/solden*xkal2
-        dsmotherody=dxkal2dy0
-      endif
-      return
-      end
-
-
-
-      subroutine link_to_born2(itree,spropR,tpridR,iconfig,i_fks,j_fks,
-     &                        mother,nbranchin,ns_channelin,
-     &                        nt_channelin,mapbconf,bconf,biforest)
-c Given a real configuration in itree and FKS partons i_fks, j_fks and their
-c mother, returns the Born configuration corresponding to that real
-c configuration bconf, read from the include file born_conf.inc.
-c mapbconf and biforest are the mapconfig and iforest for the Born.
-c (iconfig is only used to write the error messages.)
-      implicit none
-      include 'genps.inc'      
-      include 'nexternal.inc'
-      integer itree(2,-max_branch:-1),BornFromRealTree(2,-max_branch:-1)
-      integer i_fks,j_fks,iconfig,bconf,mapbconf(0:lmaxconfigs)
-      integer biforest(2,-max_branch:-1,lmaxconfigs)
-      integer spropR(-max_branch:-1),ns_channelin,nt_channelin
-      integer tpridR(-max_branch:-1),ns_channel,nt_channel
-     
-      integer i,j,k,l,mother,nbranch,nbranchin,bbranch,surrogate
-      integer bup(-max_branch:nexternal),jb,found
-      logical done,bornfound(lmaxconfigs),firsttime
-      data firsttime/.true./
-
-      integer iforest(2,-max_branch:-1,lmaxconfigs)
-      integer sprop(-max_branch:-1,lmaxconfigs)
-      integer tprid(-max_branch:-1,lmaxconfigs)
-      integer spropBfR(-max_branch:-1)
-      integer tpridBfR(-max_branch:-1)
-      integer mapconfig(0:lmaxconfigs)
-      include 'born_conf.inc'
-
-      save bornfound
-
-      nbranch=nbranchin-1
-      surrogate=0
-
-      if (mother.eq.1) then
-         do i=-1,-nbranch,-1
-            if (itree(1,i).eq.j_fks.and.itree(2,i).eq.i_fks) then
-               surrogate=i
-               nt_channel=nt_channelin-1
-               ns_channel=ns_channelin
-               if (.not.(surrogate.lt.0))then
-                  write (*,*) 'Error in link_to_Born',itree(j_fks,i_fks)
-                  stop
-               endif
-            endif
-         enddo
-      elseif (mother.eq.2) then
-         do i=-1,-nbranch,-1
-            if (itree(1,i).eq.j_fks.and.itree(2,i).eq.i_fks) then
-               surrogate=i
-            endif
-         enddo
-         if (surrogate.eq.0) then
-            surrogate=-nbranch 
-         endif
-         nt_channel=nt_channelin-1
-         ns_channel=ns_channelin
-      else
-        surrogate=mother
-        nt_channel=nt_channelin
-        ns_channel=ns_channelin-1 
-      endif
-
-c Map the itree to the default form of born tree
-      do j=-1,-nbranch,-1
-         do i=1,2
-            if (j.gt.surrogate)then
-               if (itree(i,j).lt.surrogate) then
-                  BornFromRealTree(i,j)=itree(i,j)+1
-               elseif(itree(i,j).eq.surrogate) then
-                  BornFromRealTree(i,j)=min(i_fks,j_fks)
-               elseif(itree(i,j).gt.surrogate .and. itree(i,j).lt.0) then
-                  BornFromRealTree(i,j)=itree(i,j)
-               elseif(itree(i,j).lt.max(i_fks,j_fks) .and.
-     &                 itree(i,j).gt.0) then
-                  BornFromRealTree(i,j)=itree(i,j)
-               elseif(itree(i,j).gt.max(i_fks,j_fks)) then
-                  BornFromRealTree(i,j)=itree(i,j)-1
-               endif
-               if (-j.le.ns_channel) then
-                  spropBfR(j)=spropR(j)
-               else
-                  tpridBfR(j)=tpridR(j)
-               endif
-            elseif(j.lt.surrogate)then
-               if (itree(i,j).lt.surrogate) then
-                  BornFromRealTree(i,j+1)=itree(i,j)+1
-               elseif(itree(i,j).eq.surrogate) then
-                  BornFromRealTree(i,j+1)=min(i_fks,j_fks)
-               elseif(itree(i,j).gt.surrogate .and. itree(i,j).lt.0) then
-                  BornFromRealTree(i,j+1)=itree(i,j)
-               elseif(itree(i,j).lt.max(i_fks,j_fks) .and.
-     &                 itree(i,j).gt.0 ) then
-                  BornFromRealTree(i,j+1)=itree(i,j)
-               elseif(itree(i,j).gt.max(i_fks,j_fks)) then
-                  BornFromRealTree(i,j+1)=itree(i,j)-1
-               endif
-               if (-j-1.le.ns_channel) then
-                  spropBfR(j+1)=spropR(j)
-               else
-                  tpridBfR(j+1)=tpridR(j)
-               endif
-            endif
-         enddo
-      enddo
-
-      bbranch=nbranch-1  ! Might need to be changed for t channels
-
-c labels for the external particles should be the same between
-c the BornFromReal and the Born
-      do jb=1,nexternal-1
-         bup(jb)=jb
-      enddo
-
-c compare the default born tree with the born_conf.inc trees.
-      if (firsttime)then
-         mapbconf(0)=mapconfig(0)
-         do k=1,mapconfig(0)
-            bornfound(k)=.false.
-            mapbconf(k)=mapconfig(k)
-            do i=1,2
-               do j=-1,-bbranch,-1
-                  biforest(i,j,k) = iforest(i,j,k)
-               enddo
-            enddo
-         enddo
-         firsttime=.false.
-      endif
-      k=1
-      done=.false.
-      l=1
-      do while (.not.done)
-         do while (bornfound(k)) ! Always try a new Born
-            k=k+1
-         enddo
-         found=0
-         jb=-1
-         j=-1
-         do while (j.ge.-bbranch .and. jb .ge.-bbranch)
-            if ( (bup(BornFromRealTree(1,jb)).eq.iforest(1,j,k).and.
-     &            bup(BornFromRealTree(2,jb)).eq.iforest(2,j,k)  ).or.
-     &           (bup(BornFromRealTree(1,jb)).eq.iforest(2,j,k).and.
-     &            bup(BornFromRealTree(2,jb)).eq.iforest(1,j,k)   ))then
-               bup(jb)=j        ! jb in BornFromReal corresponds to j in Borns
-c Also check that the intermediate propagators agree
-               if (-j.le.ns_channel) then
-                  if(sprop(j,k).eq.spropBfR(jb)) then
-                     found=found+1
-                  else
-                     write (*,*) 'skip due to sprop'
-                  endif
-               else
-c For t-channel: particle vs anti-particle is ambiguous. Better use absolute ID for checking
-                  if(abs(tprid(j,k)).eq.abs(tpridBfR(jb))) then 
-                     found=found+1
-                  else
-                     write (*,*) 'skip due to tprid'
-                  endif
-               endif
-               if (found.ne.-jb) jb=-bbranch-1 ! goto next Born confi.
-               jb=jb-1          ! go to next line in BornFromRealTree
-               j=0              ! reset the line in iforest
-            endif
-            j=j-1
-         enddo
-         if (found.eq.bbranch)then
-            write (*,*) 'found Born conf',k,' for Real conf',iconfig
-            bornfound(k)=.true.
-            done=.true.
-            bconf=k
-         endif
- 132     continue
-         if (k.gt.mapconfig(0))then
-            write (*,*) 'FATAL ERROR 1 in link_to_born:'
-     &                //' no Born found for config',iconfig
-            stop
-         endif
-         k=k+1
-      enddo
-
-
-      return
-      end
-
-
-
-
-
-
-    
-
-      subroutine invert_order_iforest_REAL(nbranch,ns_channel,
-     &     nt_channel,iconfig)
-c This routine inverts the order of the t-channel (from 'top->bottom'
-c to 'bottom->top', ie now starting from particle 2) for configuration
-c iconfig in configs.inc and props.inc
-c It's assumed that the final state branch connecting to particle 2
-c is a single particle, ie with a positive id.
-c Note that this routine OVERWRITES the existing configs.inc and props.inc
-c files, which can be dangerous if this routine is
-c called more than once in successive runs.
-      implicit none
-      include 'genps.inc'
-      include "nexternal.inc"
-      integer nbranch,nt_channel,ns_channel,iconfig
-      character*76 buff,printout(1000000)
-      character*60 buff60
-      character*38 buff38
-      character*37 buff37
-      character*33 buff33
-      character*32 buff32
-      character*23 buff23
-      character*16 buff16,file
-      character*9 dummy9
-      character*13 dummy13
-      character*16 empty60
-      parameter (empty60='                ')
-      character*38 empty38
-      parameter (empty38='                                      ')
-      character*39 empty37
-      parameter (empty37='                                       ')
-      character*43 empty33
-      parameter (empty33='                                           ')
-      character*44 empty32
-      parameter (empty32='                                            ')
-      character*53 empty23
-      parameter (
-     &  empty23='                                                     ')
-      character*60 empty16
-      parameter (empty16='                        '//
-     &     '                                    ')
-      integer number1,number2,curgraph,i,l
-      integer iforest(2,-max_branch:-1,lmaxconfigs)
-      integer mapconfig(0:lmaxconfigs)
-      integer sprop(-max_branch:-1,lmaxconfigs)
-      integer tprid(-max_branch:-1,lmaxconfigs)
-      include 'configs.inc'
-      logical done
-      write(*,*) "--inverting real configs"
-
-      if (nt_channel.gt.0) then
-      open (unit=88,file='configs.inc',status='old')
-      rewind (88)
-      done=.false.
-      l=0
-      do while (.not.done)
-         read(88,'(a76)',end=192) buff
-         l=l+1
-         write(printout(l),'(a76)'),buff
-         if (buff(1:13).eq.'C     Diagram') then
-         write(*,*) "diagrem found in configs.inc"
-c found a new graph           
-            read(buff,'(a13,i4)') dummy13, curgraph
-            if ( curgraph.eq.mapconfig(iconfig) ) then
-c this is the graph we are looking for               
-               read(88,'(a33)') buff33
-               l=l+1
-               write(printout(l),'(a76)'),buff33//empty33
-c s-channels always come first -> do nothing
-               do i=1,ns_channel*2
-                  read(88,'(a76)') buff
-                  l=l+1
-                  write(printout(l),'(a76)'),buff
-               enddo
-c then the t-channel, for which we have to reverse the order
-               do i=1,nt_channel*2+1
-                  if (i.eq.1) then
-                     read(88,'(a76)') buff
-                     number1=2
-                     number2=max(iforest(1,-nbranch,iconfig),
-     &                    iforest(2,-nbranch,iconfig))
-                     write(buff(40:46),'(i3,a1,i3)') number1,',',number2
-                     l=l+1
-                     write(printout(l),'(a76)'),buff
-                  elseif (i.eq.nt_channel*2+1) then
-                     read(88,'(a60)') buff60
-                     number1=-ns_channel-(i-1)/2
-                     number2=iforest(1,-nbranch+(i-1)/2,iconfig)
-                     if (number2.eq.1) then
-                        number2=iforest(2,-nbranch+(i-1)/2,iconfig)
-                     endif
-                     write(buff60(40:46),'(i3,a1,i3)')
-     &                    number1,',',number2
-                     l=l+1
-                     write(printout(l),'(a76)'),buff60//empty60
-                  elseif(mod(i,2).eq.1) then
-                     read(88,'(a76)') buff
-                     number1=-ns_channel-(i-1)/2
-                     number2=max(iforest(1,-nbranch+(i-1)/2,iconfig),
-     &                    iforest(2,-nbranch+(i-1)/2,iconfig))
-                     if (number2.eq.1) then
-                        number2=min(iforest(1,-nbranch+(i-1)/2,iconfig),
-     &                       iforest(2,-nbranch+(i-1)/2,iconfig))
-                     endif
-                     write(buff(40:46),'(i3,a1,i3)') number1,',',number2
-                     l=l+1
-                     write(printout(l),'(a76)'),buff
-                  elseif(mod(i,2).eq.0) then
-                     read(88,'(a38)') buff38
-                     write(buff38(30:36),'(i6)')
-     &                    tprid(-nbranch+i/2,iconfig)
-                     l=l+1
-                     write(printout(l),'(a76)'),buff38//empty38
-                  endif
-               enddo
-            endif
-         endif
-      enddo
- 192  continue
-      rewind(88)
-      if (l.gt.1000000) then
-         write (*,*)
-     &        'too many lines in configs.inc for t-channel inversion'
-         stop
-      endif
-      do i=1,l
-         write(88,'(a76)') printout(i)
-      enddo
-      close(unit=88)
-      endif
-      
-
-      l=0
-c Order of t-channel propagators has changed.
-c Also rewrite props.inc
-      if (nt_channel.gt.1) then
-         done=.false.
-         open (unit=88,file='props.inc',status='old')
-         rewind(88)
-         do while (.not. done)
-            read (88,'(a76)',end=193) buff
-            l=l+1
-            write(printout(l),'(a76)'),buff
-            if (buff(1:12).eq.'      PMASS(') then
-              write(*,*)"propagator found in props.inc"
-               read (buff(17:20),'(i4)') curgraph
-               if (curgraph.eq.mapconfig(iconfig)) then
-                  l=l-1
-                  backspace(88)
-c s-channels always come first               
-                  do i=1,ns_channel*3
-                     read (88,'(a76)') buff
-                     l=l+1
-                     write(printout(l),'(a76)'),buff
-                  enddo
-c then the t-channel
-                  do i=1,nt_channel
-                     read(88,'(a37)') buff37
-                     write(buff37(13:15),'(i3)') -nbranch+i
-                     if (index(buff37,'ABS').gt.0) then
-                        l=l+1
-                        write(printout(l),'(a76)'),buff37//empty37
-                     else
-                        l=l+1
-                        write(printout(l),'(a76)'),buff37(1:32)//empty32
-                     endif
-                     read(88,'(a38)') buff38
-                     write(buff38(14:16),'(i3)') -nbranch+i
-                     if (index(buff38,'ABS').gt.0) then
-                        l=l+1
-                        write(printout(l),'(a76)'),buff38//empty38
-                     else
-                        l=l+1
-                        write(printout(l),'(a76)'),buff38(1:33)//empty33
-                     endif
-                     read(88,'(a23)') buff23
-                     write(buff23(11:13),'(i3)') -nbranch+i
-                     l=l+1
-                     write(printout(l),'(a76)'),buff23//empty23
-                  enddo
-               endif
-            endif
-         enddo
- 193     continue
-         rewind(88)
-         if (l.gt.1000000) then
-            write (*,*)
-     &           'too many lines in props.inc for t-channel inversion'
-            stop
-         endif
-         do i=1,l
-            write(88,'(a76)') printout(i)
-         enddo
-         close(unit=88)
-      endif
-
-
-      return
-      end
-
-
-      subroutine invert_order_iforest_BORN(nbranch,ns_channel,
-     &     nt_channel,iconfig)
-c This routine inverts the order of the t-channel (from 'top->bottom'
-c to 'bottom->top', ie now starting from particle 2) for Born configuration
-c borngraph in born_props.inc and born_conf.inc.
-c It's assumed that the final state branch connecting to particle 2
-c is a single particle, ie with a positive id.
-c Note that this routine OVERWRITES the existing born_conf.inc
-c and born_props.inc files, which can be dangerous if this routine is
-c called more than once in successive runs.
-      implicit none
-      include 'genps.inc'
-      include "nexternal.inc"
-      integer nbranch,nt_channel,ns_channel,iconfig
-      character*76 buff,printout(1000000)
-      character*60 buff60
-      character*38 buff38
-      character*37 buff37
-      character*33 buff33
-      character*32 buff32
-      character*23 buff23
-      character*16 buff16,file
-      character*9 dummy9
-      character*13 dummy13
-      character*16 empty60
-      parameter (empty60='                ')
-      character*38 empty38
-      parameter (empty38='                                      ')
-      character*39 empty37
-      parameter (empty37='                                       ')
-      character*43 empty33
-      parameter (empty33='                                           ')
-      character*44 empty32
-      parameter (empty32='                                            ')
-      character*53 empty23
-      parameter (
-     &  empty23='                                                     ')
-      character*60 empty16
-      parameter (empty16='                        '//
-     &     '                                    ')
-      integer number1,number2,curgraph,i,l
-      integer iforest(2,-max_branch:-1,lmaxconfigs)
-      integer mapconfig(0:lmaxconfigs)
-      integer sprop(-max_branch:-1,lmaxconfigs)
-      integer tprid(-max_branch:-1,lmaxconfigs)
-      include 'born_conf.inc'
-      logical done
-      write(*,*) "--inverting born configs"
-
-
-      if (nt_channel.gt.0) then
-      open (unit=88,file='born_conf.inc',status='old')
-      rewind (88)
-      done=.false.
-      l=0
-      do while (.not.done)
-         read(88,'(a76)',end=192) buff
-         l=l+1
-         write(printout(l),'(a76)'),buff
-         if (buff(1:13).eq.'C     Diagram') then
-         write(*,*) "diagrem found in born_conf.inc"
-c found a new graph           
-            read(buff,'(a13,i4)') dummy13, curgraph
-               if (curgraph.eq.mapconfig(iconfig)) then
-c this is the graph we are looking for               
-               read(88,'(a33)') buff33
-               l=l+1
-               write(printout(l),'(a76)'),buff33//empty33
-c s-channels always come first -> do nothing
-               do i=1,ns_channel*2
-                  read(88,'(a76)') buff
-                  l=l+1
-                  write(printout(l),'(a76)'),buff
-               enddo
-c then the t-channel, for which we have to reverse the order
-               do i=1,nt_channel*2+1
-                  if (i.eq.1) then
-                     read(88,'(a76)') buff
-                     number1=2
-                     number2=max(iforest(1,-nbranch,iconfig),
-     &                    iforest(2,-nbranch,iconfig))
-                     write(buff(40:46),'(i3,a1,i3)') number1,',',number2
-                     l=l+1
-                     write(printout(l),'(a76)'),buff
-                  elseif (i.eq.nt_channel*2+1) then
-                     read(88,'(a60)') buff60
-                     number1=-ns_channel-(i-1)/2
-                     number2=iforest(1,-nbranch+(i-1)/2,iconfig)
-                     if (number2.eq.1) then
-                        number2=iforest(2,-nbranch+(i-1)/2,iconfig)
-                     endif
-                     write(buff60(40:46),'(i3,a1,i3)')
-     &                    number1,',',number2
-                     l=l+1
-                     write(printout(l),'(a76)'),buff60//empty60
-                  elseif(mod(i,2).eq.1) then
-                     read(88,'(a76)') buff
-                     number1=-ns_channel-(i-1)/2
-                     number2=max(iforest(1,-nbranch+(i-1)/2,iconfig),
-     &                    iforest(2,-nbranch+(i-1)/2,iconfig))
-                     if (number2.eq.1) then
-                        number2=min(iforest(1,-nbranch+(i-1)/2,iconfig),
-     &                       iforest(2,-nbranch+(i-1)/2,iconfig))
-                     endif
-                     write(buff(40:46),'(i3,a1,i3)') number1,',',number2
-                     l=l+1
-                     write(printout(l),'(a76)'),buff
-                  elseif(mod(i,2).eq.0) then
-                     read(88,'(a38)') buff38
-                     write(buff38(30:36),'(i6)')
-     &                    tprid(-nbranch+i/2,iconfig)
-                     l=l+1
-                     write(printout(l),'(a76)'),buff38//empty38
-                  endif
-               enddo
-            endif
-         endif
-      enddo
- 192  continue
-      rewind(88)
-      if (l.gt.1000000) then
-         write (*,*)
-     &        'too many lines in born_conf.inc for t-channel inversion'
-         stop
-      endif
-      do i=1,l
-         write(88,'(a76)') printout(i)
-      enddo
-      close(unit=88)
-      endif
-      
-      l=0
-c Order of t-channel propagators has changed.
-c Also rewrite props.inc
-      if (nt_channel.gt.1) then
-         done=.false.
-         open (unit=88,file='born_props.inc',status='old')
-         rewind(88)
-         do while (.not. done)
-            read (88,'(a76)',end=193) buff
-            l=l+1
-            write(printout(l),'(a76)'),buff
-            if (buff(1:12).eq.'      PMASS(') then
-              write(*,*)"propagator found in born_props.inc"
-               read (buff(17:20),'(i4)') curgraph
-               if (curgraph.eq.mapconfig(iconfig)) then
-                  l=l-1
-                  backspace(88)
-c s-channels always come first               
-                  do i=1,ns_channel*3
-                     read (88,'(a76)') buff
-                     l=l+1
-                     write(printout(l),'(a76)'),buff
-                  enddo
-c then the t-channel
-                  do i=1,nt_channel
-                     read(88,'(a37)') buff37
-                     write(buff37(13:15),'(i3)') -nbranch+i
-                     if (index(buff37,'ABS').gt.0) then
-                        l=l+1
-                        write(printout(l),'(a76)'),buff37//empty37
-                     else
-                        l=l+1
-                        write(printout(l),'(a76)'),buff37(1:32)//empty32
-                     endif
-                     read(88,'(a38)') buff38
-                     write(buff38(14:16),'(i3)') -nbranch+i
-                     if (index(buff38,'ABS').gt.0) then
-                        l=l+1
-                        write(printout(l),'(a76)'),buff38//empty38
-                     else
-                        l=l+1
-                        write(printout(l),'(a76)'),buff38(1:33)//empty33
-                     endif
-                     read(88,'(a23)') buff23
-                     write(buff23(11:13),'(i3)') -nbranch+i
-                     l=l+1
-                     write(printout(l),'(a76)'),buff23//empty23
-                  enddo
-               endif
-            endif
-         enddo
- 193     continue
-         rewind(88)
-         if (l.gt.1000000) then
-            write (*,*)
-     &           'too many lines in born_props.inc '
-     &           //'for t-channel inversion'
-            stop
-         endif
-         do i=1,l
-            write(88,'(a76)') printout(i)
-         enddo
-         close(unit=88)
-      endif
-
-
-      return
-      end
-
-
-
-
-
       double precision function dsig(pp,wgt,vegaswgt)
 c Here are the subtraction terms, the Sij function, 
 c the f-damping function, and the single diagram
 c enhanced multi-channel factor included
       implicit none
       include "genps.inc"
-      include "nexternal.inc"
+      include 'nexternal.inc'
       include "fks.inc"
       include "fks_powers.inc"
       include 'coupl.inc'
-      include 'q_es.inc'
       include 'run.inc'
       include 'reweight.inc'
 
@@ -1325,7 +248,7 @@ c enhanced multi-channel factor included
      #                 deg_xi_c,deg_lxi_c,deg_xi_sc,deg_lxi_sc,
      #                 cnt_swgt,cnt_wgt,xlum_ev,xlum_c,xlum_s,xlum_sc,xsec,
      #                 bpower
-      integer i,iplot
+      integer i,j,iplot
 
       integer izero,ione,itwo,mohdr,iplot_ev,iplot_cnt,iplot_born
       integer ithree,ifour,ifill2,ifill3,ifill4
@@ -1362,11 +285,6 @@ c Multi channel stuff:
       common/to_matrix/isum_hel, multi_channel
       INTEGER MAPCONFIG(0:LMAXCONFIGS), ICONFIG
       common/to_mconfigs/mapconfig, iconfig
-
-      integer mapbconf(0:lmaxconfigs)
-      integer b_from_r(lmaxconfigs)
-      integer r_from_b(lmaxconfigs)
-      include "bornfromreal.inc"
 
       double complex wgt1(2)
       double precision p_born(0:3,nexternal-1)
@@ -1478,13 +396,8 @@ c For tests
       common/csum_of_wgts/total_wgt_sum,total_wgt_sum_max,
      &                 total_wgt_sum_min
 
-      integer imirror
-      common /cmirror/imirror
-
       double precision pmass(nexternal)
       include "pmass.inc"
-
-      imirror=1
 
       vegas_weight=vegaswgt
 
@@ -1501,22 +414,14 @@ c For tests
          fksmaxwgt=0.d0
 c Put here call to compute bpower
          call compute_bpower(p_born,bpower)
-c Check consistency with value used in reweighting
-c$$$         if( (doreweight.or.doNLOreweight) .and.
-c$$$     &        abs(bpower-wgtbpower).gt.tiny )then
-c$$$            write(*,*)'Error in dsig'
-c$$$            write(*,*)'bpower(s) are:',bpower,wgtbpower
-c$$$            stop
-c$$$         endif
          wgtbpower=bpower
          firsttime=.false.
       endif
 
       prefact=xinorm_ev/xi_i_fks_ev*
      #        1/(1-y_ij_fks_ev)
-
-      if( (.not.nocntevents) .and.
-     #    (.not.(abrv.eq.'born' .or. abrv(1:2).eq.'vi')) )then
+      if( (.not.nocntevents) .and. (.not.(abrv.eq.'born' .or.
+     &     abrv.eq.'grid' .or. abrv(1:2).eq.'vi')) )then
         prefact_cnt_ssc=xinorm_ev/min(xiimax_ev,xiScut_used)*
      #                  log(xicut_used/min(xiimax_ev,xiScut_used))*
      #                  1/(1-y_ij_fks_ev)
@@ -1581,7 +486,8 @@ c points)
         ifill4=0
       endif
 
-      if (abrv.eq.'born' .or. abrv(1:2).eq.'vi') goto 540
+      if (abrv.eq.'born' .or. abrv.eq.'grid' .or. abrv(1:2).eq.'vi')
+     &     goto 540
 c Real contribution:
 c Set the ybst_til_tolab before applying the cuts. 
       call set_cms_stuff(mohdr)
@@ -1615,6 +521,7 @@ c one of them passes the hard cuts, and they exist at all
 
 c Set the ybst_til_tolab before applying the cuts. Update below
 c for the collinear, soft and/or soft-collinear subtraction terms
+
       call set_cms_stuff(izero)
       if ( (.not.passcuts(p1_cnt(0,1,0),rwgt)) .or.
      #     nocntevents ) goto 547
@@ -1630,7 +537,8 @@ c for the collinear, soft and/or soft-collinear subtraction terms
         ifill2=1
       endif
 
-      if (abrv.eq.'born' .or. abrv(1:2).eq.'vi') goto 545
+      if (abrv.eq.'born' .or. abrv.eq.'grid' .or. abrv(1:2).eq.'vi')
+     &     goto 545
 c
 c Collinear subtraction term:
       if( y_ij_fks_ev.gt.1d0-deltaS .and.
@@ -1686,7 +594,8 @@ c Soft subtraction term:
          if(nbodyonly)s_s=1.d0
          if(s_s.gt.0.d0)then
             xlum_s = dlum()
-            if (abrv.eq.'born' .or. abrv(1:2).eq.'vi') goto 546
+            if (abrv.eq.'born' .or. abrv.eq.'grid' .or.
+     &           abrv(1:2).eq.'vi') goto 546
             if (xi_i_fks_ev .lt. xiScut_used) then
               call sreal(p1_cnt(0,1,0),zero,y_ij_fks_ev,fx_s)
               xsec=fx_s*s_s*jac_cnt(0)
@@ -1723,7 +632,8 @@ c Soft subtraction term:
          endif
       endif
 c Soft-Collinear subtraction term:
-      if (abrv.eq.'born' .or. abrv(1:2).eq.'vi') goto 547
+      if (abrv.eq.'born' .or. abrv.eq.'grid' .or. abrv(1:2).eq.'vi')
+     &     goto 547
       if (xi_i_fks_cnt(ione) .lt. xiScut_used .and.
      #    y_ij_fks_ev .gt. 1d0-deltaS .and.
      #    pmass(j_fks).eq.0.d0 )then
@@ -1802,25 +712,25 @@ c
             endif
          else
             xtot=0d0
-            if (mapbconf(0).eq.0) then
+            if (mapconfig(0).eq.0) then
                write (*,*) 'Fatal error in dsig, no Born diagrams '
-     &           ,mapbconf,'. Check bornfromreal.inc'
+     &           ,mapconfig,'. Check bornfromreal.inc'
                write (*,*) 'Is fks_singular compiled correctly?'
                stop
             endif
             if (onlyBorn) then
-               do i=1, mapbconf(0)
-                  if (multi_chan(mapbconf(i))) then
-                     xtot=xtot+amp2(mapbconf(i))
+               do i=1, mapconfig(0)
+                  if (multi_chan(mapconfig(i))) then
+                     xtot=xtot+amp2(mapconfig(i))
                   endif
                enddo
             else
-               do i=1,mapbconf(0)
-                  xtot=xtot+amp2(mapbconf(i))
+               do i=1,mapconfig(0)
+                  xtot=xtot+amp2(mapconfig(i))
                enddo
             endif
             if (xtot.ne.0d0) then
-               enhance=amp2(b_from_r(mapconfig(iconfig)))/xtot
+               enhance=amp2(mapconfig(iconfig))/xtot
                enhance=enhance*diagramsymmetryfactor
             else
                enhance=0d0
@@ -1971,7 +881,7 @@ c the f-damping function, and the single diagram
 c enhanced multi-channel factor included
       implicit none
       include "genps.inc"
-      include "nexternal.inc"
+      include 'nexternal.inc'
       include "fks.inc"
       include "fks_powers.inc"
       include "madfks_mcatnlo.inc"
@@ -2022,11 +932,6 @@ c Multi channel stuff:
       common/to_matrix/isum_hel, multi_channel
       INTEGER MAPCONFIG(0:LMAXCONFIGS), ICONFIG
       common/to_mconfigs/mapconfig, iconfig
-
-      integer mapbconf(0:lmaxconfigs)
-      integer b_from_r(lmaxconfigs)
-      integer r_from_b(lmaxconfigs)
-      include "bornfromreal.inc"
 
       double complex wgt1(2)
       double precision p_born(0:3,nexternal-1)
@@ -2144,13 +1049,6 @@ c For tests
          fksmaxwgt=0.d0
 c Put here call to compute bpower
          call compute_bpower(p_born,bpower)
-c Check consistency with value used in reweighting
-c$$$         if( (doreweight.or.doNLOreweight) .and.
-c$$$     &        abs(bpower-wgtbpower).gt.tiny )then
-c$$$            write(*,*)'Error in dsigH'
-c$$$            write(*,*)'bpower(s) are:',bpower,wgtbpower
-c$$$            stop
-c$$$         endif
          wgtbpower=bpower
          firsttime=.false.
       endif
@@ -2189,7 +1087,8 @@ c$$$         endif
         scale2_lhe=0.d0
       endif
 
-      if (abrv.eq.'born' .or. abrv(1:2).eq.'vi') then
+      if (abrv.eq.'born' .or. abrv.eq.'grid' .or.
+     &     abrv(1:2).eq.'vi') then
          write (*,*) 'No need to generate Hevents when doing: ',abrv
          stop
       endif
@@ -2304,9 +1203,9 @@ c
               call sreal(p1_cnt(0,1,1),xi_i_fks_cnt(ione),one,fx_c)
               xlum_c = dlum()
               xsec = fx_c*s_c*jac_cnt(1)*prefact_c*rwgt*(1-gfactcl)
+              if(.not.flagmc.and.MonteCarlo(1:7).eq.'PYTHIA6'
+     &           .and.ileg.ge.3.and.xi_i_fks_ev.gt.ximin)xsec=0d0
               xmcME=xmcME+xlum_c*xsec
-            if(.not.flagmc.and.MonteCarlo(1:7).eq.'PYTHIA6'
-     &         .and.ileg.ge.3.and.xi_i_fks_ev.gt.ximin)xsec=0d0
               if(doreweight)wgtwreal(3)=xsec/g**(2*wgtbpower+2.d0)
             endif
             call set_cms_stuff(itwo)
@@ -2325,8 +1224,8 @@ c
               call sreal(p1_cnt(0,1,2),zero,one,fx_sc)
               xlum_sc = dlum()
               xsec = fx_sc*s_sc*jac_cnt(2)*prefact_c*rwgt*(1-gfactcl)
-            if(.not.flagmc.and.MonteCarlo(1:7).eq.'PYTHIA6'
-     &         .and.ileg.ge.3.and.xi_i_fks_ev.gt.ximin)xsec=0d0
+              if(.not.flagmc.and.MonteCarlo(1:7).eq.'PYTHIA6'
+     &           .and.ileg.ge.3.and.xi_i_fks_ev.gt.ximin)xsec=0d0
               xmcME=xmcME-xlum_sc*xsec
               if(doreweight)wgtwreal(4)=-xsec/g**(2*wgtbpower+2.d0)
             endif
@@ -2341,6 +1240,14 @@ c
         endif
 c
         xmc_wgt=xmcMC+xmcME
+
+      else
+        if(MonteCarlo(1:7).eq.'PYTHIA6')then
+          if(pp(0,1).ne.-99d0)then
+            call set_cms_stuff(mohdr)
+            call assign_emsca(pp,xi_i_fks_ev,y_ij_fks_ev)
+          endif
+        endif
       endif
 
 c Real contribution
@@ -2403,25 +1310,25 @@ c
             endif
          else
             xtot=0d0
-            if (mapbconf(0).eq.0) then
+            if (mapconfig(0).eq.0) then
                write (*,*) 'Fatal error in dsigH, no Born diagrams '
-     &           ,mapbconf,'. Check bornfromreal.inc'
+     &           ,mapconfig,'. Check bornfromreal.inc'
                write (*,*) 'Is fks_singular compiled correctly?'
                stop
             endif
             if (onlyBorn) then
-               do i=1, mapbconf(0)
-                  if (multi_chan(mapbconf(i))) then
-                     xtot=xtot+amp2(mapbconf(i))
+               do i=1, mapconfig(0)
+                  if (multi_chan(mapconfig(i))) then
+                     xtot=xtot+amp2(mapconfig(i))
                   endif
                enddo
             else
-               do i=1,mapbconf(0)
-                  xtot=xtot+amp2(mapbconf(i))
+               do i=1,mapconfig(0)
+                  xtot=xtot+amp2(mapconfig(i))
                enddo
             endif
             if (xtot.ne.0d0) then
-               enhance=amp2(b_from_r(mapconfig(iconfig)))/xtot
+               enhance=amp2(mapconfig(iconfig))/xtot
                enhance=enhance*diagramsymmetryfactor
             else
                enhance=0d0
@@ -2497,7 +1404,6 @@ c enhanced multi-channel factor included
       include "fks_powers.inc"
       include "madfks_mcatnlo.inc"
       include 'coupl.inc'
-      include 'q_es.inc'
       include 'run.inc'
       include 'reweight.inc'
 
@@ -2551,11 +1457,6 @@ c Multi channel stuff:
       common/to_matrix/isum_hel, multi_channel
       INTEGER MAPCONFIG(0:LMAXCONFIGS), ICONFIG
       common/to_mconfigs/mapconfig, iconfig
-
-      integer mapbconf(0:lmaxconfigs)
-      integer b_from_r(lmaxconfigs)
-      integer r_from_b(lmaxconfigs)
-      include "bornfromreal.inc"
 
       double complex wgt1(2)
       double precision p_born(0:3,nexternal-1)
@@ -2711,13 +1612,6 @@ c For tests
          firsttime=.false.
 c Put here call to compute bpower
          call compute_bpower(p_born,bpower)
-c Check consistency with value used in reweighting
-c$$$         if( (doreweight.or.doNLOreweight) .and.
-c$$$     &        abs(bpower-wgtbpower).gt.tiny )then
-c$$$            write(*,*)'Error in dsigS'
-c$$$            write(*,*)'bpower(s) are:',bpower,wgtbpower
-c$$$            stop
-c$$$         endif
          wgtbpower=bpower
       endif
 
@@ -2725,7 +1619,8 @@ c$$$         endif
      #        1/(1-y_ij_fks_ev)
 
       if( (.not.nocntevents) .and.
-     #    (.not.(abrv.eq.'born' .or. abrv(1:2).eq.'vi')) )then
+     &     (.not.(abrv.eq.'born' .or. abrv.eq.'grid' .or.
+     &     abrv(1:2).eq.'vi')) )then
         prefact_cnt_ssc=xinorm_ev/min(xiimax_ev,xiScut_used)*
      #                  log(xicut_used/min(xiimax_ev,xiScut_used))*
      #                  1/(1-y_ij_fks_ev)
@@ -2817,7 +1712,8 @@ c for the collinear, soft and/or soft-collinear subtraction terms
       xmcMC=0.d0
       xmcME=0.d0
 
-      if (abrv.eq.'born' .or. abrv(1:2).eq.'vi') then
+      if (abrv.eq.'born' .or. abrv.eq.'grid' .or.
+     &     abrv(1:2).eq.'vi') then
         if(abrv(1:2).eq.'vi')then
           call set_cms_stuff(mohdr)
           call assign_emsca(pp,xi_i_fks_ev,y_ij_fks_ev)
@@ -2898,7 +1794,8 @@ c in the case of parton-level NLO computations
         ifill2=1
       endif
 
-      if (abrv.eq.'born' .or. abrv(1:2).eq.'vi') goto 545
+      if (abrv.eq.'born' .or. abrv.eq.'grid' .or. abrv(1:2).eq.'vi')
+     &     goto 545
 c
 c Collinear subtraction term:
       if( ( y_ij_fks_ev.gt.1d0-deltaS .or. 
@@ -2964,7 +1861,8 @@ c Soft subtraction term:
          if(nbodyonly)s_s=1.d0
          if(s_s.gt.0.d0)then
             xlum_s = dlum()
-            if (abrv.eq.'born' .or. abrv(1:2).eq.'vi') goto 546
+            if (abrv.eq.'born' .or. abrv.eq.'grid' .or.
+     &           abrv(1:2).eq.'vi') goto 546
             call sreal(p1_cnt(0,1,0),zero,y_ij_fks_ev,fx_s)
             xsec=fx_s*s_s*jac_cnt(0)*prefact*rwgt
             if(.not.flagmc.and.MonteCarlo(1:7).eq.'PYTHIA6'
@@ -3006,7 +1904,8 @@ c Soft subtraction term:
          endif
       endif
 c Soft-Collinear subtraction term:
-      if (abrv.eq.'born' .or. abrv(1:2).eq.'vi') goto 550
+      if (abrv.eq.'born' .or. abrv.eq.'grid' .or. abrv(1:2).eq.'vi')
+     &     goto 550
       if ( ( (xi_i_fks_cnt(ione) .lt. xiScut_used .and.
      #        y_ij_fks_ev .gt. 1d0-deltaS) .or.
      #        (gfactsf.lt.1.d0.and.gfactcl.lt.1.d0 .and.
@@ -3139,25 +2038,25 @@ c
             endif
          else
             xtot=0d0
-            if (mapbconf(0).eq.0) then
+            if (mapconfig(0).eq.0) then
                write (*,*) 'Fatal error in dsigS, no Born diagrams '
-     &           ,mapbconf,'. Check bornfromreal.inc'
+     &           ,mapconfig,'. Check bornfromreal.inc'
                write (*,*) 'Is fks_singular compiled correctly?'
                stop
             endif
             if (onlyBorn) then
-               do i=1, mapbconf(0)
-                  if (multi_chan(mapbconf(i))) then
-                     xtot=xtot+amp2(mapbconf(i))
+               do i=1, mapconfig(0)
+                  if (multi_chan(mapconfig(i))) then
+                     xtot=xtot+amp2(mapconfig(i))
                   endif
                enddo
             else
-               do i=1,mapbconf(0)
-                  xtot=xtot+amp2(mapbconf(i))
+               do i=1,mapconfig(0)
+                  xtot=xtot+amp2(mapconfig(i))
                enddo
             endif
             if (xtot.ne.0d0) then
-               enhance=amp2(b_from_r(mapconfig(iconfig)))/xtot
+               enhance=amp2(mapconfig(iconfig))/xtot
                enhance=enhance*diagramsymmetryfactor
             else
                enhance=0d0
@@ -3295,8 +2194,8 @@ c based on previous PS points (done in LesHouches.f)
       integer i_fks,j_fks
       logical Hevents
       common/SHevents/Hevents
-      double precision emsca
-      common/cemsca/emsca
+      double precision emsca,scalemax
+      common/cemsca/emsca,scalemax
 
       double precision etot
       common/cetot/etot
@@ -3310,11 +2209,8 @@ c MC shower scale
       double precision SCALUP
       common /cshowerscale/SCALUP
 
-      double precision upper_scale,up_scale
-      common/cupscale/upper_scale
-
-      double precision one
-      parameter(one=1.d0)
+      double precision upper_scale,up_scale,fff
+      common/cupscale/upper_scale,fff
 
       double precision tiny
       parameter(tiny=1.d-4)
@@ -3330,34 +2226,31 @@ c assign SCALUP for HERWIG6 and HERWIGPP
          if(Hevents)then
             SCALUP=sqrt(shat)
          else
-            if(dampMCsubt.and.abrv(1:4).ne.'born')then
+            if(dampMCsubt .and. abrv.ne.'born' .and. abrv.ne.'grid')then
                SCALUP=min( emsca,sqrt(shat) )
             else
                SCALUP=sqrt(shat)
             endif
          endif
-
 c assign SCALUP for PYTHIA     
       elseif(MonteCarlo(1:6).eq.'PYTHIA')then
          up_scale=0.d0
-         if(dampMCsubt.and.abrv(1:4).ne.'born')then
+         if(dampMCsubt .and. abrv.ne.'born' .and. abrv.ne.'grid')then
             SCALUP=emsca
-            if(abs(etot/emsca-1.d0).le.tiny)SCALUP=min( emsca,sqrt(shat) )
+            if(emsca.gt.scalemax)SCALUP=scalemax
          else
             up_scale=upper_scale
-c change here the abrv stuff??
-            if(abrv(1:4).eq.'born'.or.abrv(1:2).eq.'vi')then
+            if(abrv.eq.'born' .or. abrv.eq.'born' .or.
+     &           abrv(1:2).eq.'vi')then
                tmp=1.d0-xi_i_fks_ev
-               if(.not.Hevents.and.j_fks.le.2)tmp=1.d0
-c recall that upper_scale = x*s (up to fff rescaling); here shat = s
-c for H events and shat = sbar for S events
+               if(j_fks.le.2)tmp=1.d0
+               fff=1d0
+c recall that upper_scale = x*s (up to fff rescaling); here shat = sbar
+c for S events:
 c
-c  ISR, H events   sbar = x*s,  shat = s  , upper_scale = x*s ==> tmp = x
-c  ISR, S events   sbar = x*s,  shat = x*s, upper_scale = x*s ==> tmp = 1
-c  FSR, H events   sbar = s  ,  shat = s  , upper_scale = x*s ==> tmp = x
-c  FSR, S events   sbar = s  ,  shat = s  , upper_scale = x*s ==> tmp = x
-c check once more
-               call assign_upper_scale(one,tmp,shat,up_scale)
+c ISR, S events: sbar = x*s,  shat = x*s, upper_scale = x*s ==> tmp = 1
+c FSR, S events: sbar = s  ,  shat = s  , upper_scale = x*s ==> tmp = x
+               call assign_upper_scale(fff,tmp,shat,up_scale)
             endif
             SCALUP=up_scale
          endif
@@ -3978,7 +2871,9 @@ c q->gq splitting
 
       integer m,n
 
-      double precision softcontr,pp(0:3,nexternal),wgt,eik,xi_i_fks,y_ij_fks
+      double precision softcontr,pp(0:3,nexternal),wgt,eik,xi_i_fks
+     &     ,y_ij_fks
+      double complex wgt1(2)
       integer i,j
 
       double precision p_born(0:3,nexternal-1)
@@ -3990,9 +2885,14 @@ c q->gq splitting
       double precision zero,pmass(nexternal)
       parameter(zero=0d0)
       include "pmass.inc"
-
+c
+c Call the Born to be sure that 'CalculatedBorn' is done correctly. This
+c should always be done before calling the color-correlated Borns,
+c because of the caching of the diagrams.
+c
+      call sborn(p_born(0,1),wgt1)
+c
       softcontr=0d0
-
       do i=1,fks_j_from_i(i_fks,0)
          do j=1,i
             m=fks_j_from_i(i_fks,i)
@@ -4110,7 +3010,6 @@ c Calculate the eikonal factor
       include "genps.inc"
       include 'nexternal.inc'
       include "coupl.inc"
-      include 'q_es.inc'
       include "run.inc"
       include 'reweight.inc'
 
@@ -4459,15 +3358,15 @@ c
             call xprintout(iunit,xnum,xden)
           else
             if(ipart.ne.i_fks.and.ipart.ne.j_fks)then
-              if(xden.gt.vtiny) then
+              if(xden.ne.0.d0)then
                 xrat=abs(1-xnum/xden)
               else
-                if (xnum.gt.vtiny) then
-                  xrat=abs(xnum)
-                else
-                  xrat=0d0
-                endif
+                xrat=abs(xnum)
               endif
+              if(abs(xnum).eq.0d0.and.abs(xden).le.vtiny)xrat=0d0
+c The following line solves some problem as well, but before putting
+c it as the standard, one should think a bit about it
+c              if(abs(xnum).le.vtiny.and.abs(xden).le.vtiny)xrat=0d0
               if(xrat.gt.tiny .and.
      &          (pmass(ipart).eq.0d0.or.xnum/pmass(ipart).gt.vtiny))then
                  write(*,*)'Kinematics of counterevents'
@@ -4995,9 +3894,8 @@ c
       subroutine bornsoftvirtual(p,bsv_wgt,born_wgt)
       implicit none
       include "genps.inc"
-      include "nexternal.inc"
+      include 'nexternal.inc'
       include "coupl.inc"
-      include "q_es.inc"
       include "fks.inc"
       include "run.inc"
       include "fks_powers.inc"
@@ -5077,7 +3975,7 @@ c For the MINT folding
 
       ao2pi=g**2/(8d0*PI**2)
 
-      if (particle_type(i_fks).eq.8 .or. abrv.eq.'born') then
+      if (particle_type(i_fks).eq.8 .or. abrv.eq.'grid') then
 
 c Consistency check -- call to set_cms_stuff() must be done prior to
 c entering this function
@@ -5094,7 +3992,7 @@ c Born contribution:
          bsv_wgt=dble(wgt1(1))
          born_wgt=dble(wgt1(1))
 
-         if (abrv.eq.'born') goto 549
+         if (abrv.eq.'born' .or. abrv.eq.'grid') goto 549
          if (abrv.eq.'virt' .or. abrv.eq.'viSC' .or.
      #       abrv.eq.'viLC') goto 547
 
@@ -5191,7 +4089,7 @@ c        helicity contributions for the Q-terms of collinear limit.
  547     continue
          if (abrv.eq.'virt' .or. abrv.eq.'viSC' .or.
      #       abrv.eq.'viLC') goto 548
-
+c
 c I(reg) terms, eq 5.5 of FKS
          contr=0d0
          do i=1,fks_j_from_i(i_fks,0)
@@ -5200,6 +4098,9 @@ c I(reg) terms, eq 5.5 of FKS
                n=fks_j_from_i(i_fks,j)
                if ((m.ne.n .or. (m.eq.n .and. pmass(m).ne.ZERO)).and.
      &              n.ne.i_fks.and.m.ne.i_fks) then
+c To be sure that color-correlated Borns work well, we need to have
+c *always* a call to sborn(p_born,wgt) just before. This is okay,
+c because there is a call above in this subroutine
                   call sborn_sf(p_born,m,n,wgt)
                   if (wgt.ne.0d0) then
                      call eikonal_Ireg(p,m,n,xicut_used,eikIreg)
@@ -5256,7 +4157,7 @@ c eq.(MadFKS.C.14)
 
          if(doNLOreweight.or.doreweight)then
            wgtwnstmpmuf=0.d0
-           if(abrv.ne.'born')then
+           if(abrv.ne.'born' .and. abrv.ne.'grid')then
              if(abrv(1:2).eq.'vi')then
                wgtwnstmpmur=0.d0
              else
@@ -5386,7 +4287,7 @@ c Multiply the strong coupling by 10
       endif
 
 c Update alphaS-dependent couplings
-      call update_as_param()
+      call setpara('param_card.dat',.false.)
 
 c recompute the Born with the new couplings
       calculatedBorn=.false.
@@ -5419,7 +4320,7 @@ c         endif
 c Change couplings back and recompute the Born to make sure that 
 c nothing funny happens later on
       g=g/10d0
-      call update_as_param()
+      call setpara('param_card.dat',.false.)
       isum_hel=isum_hel_orig
       calculatedBorn=.false.
       call sborn(p_born,wgt1)
@@ -5436,7 +4337,6 @@ c nothing funny happens later on
       parameter (pi2=pi**2)
       include "nexternal.inc"
       include 'coupl.inc'
-      include 'q_es.inc'
       double precision p(0:3,nexternal),xicut_used,eikIreg
       integer m,n
 
@@ -5760,10 +4660,9 @@ c the prefactor (mu2/Q2)^ep in eq.(B.1) is expanded, and giving an
 c extra contribution to the single pole
       implicit none
       include "genps.inc"
-      include "nexternal.inc"
+      include 'nexternal.inc'
       include "fks.inc"
       include 'coupl.inc'
-      include 'q_es.inc'
       double precision p(0:3,nexternal),xmu2,double,single
       logical fksprefact
       double precision c(0:1),gamma(0:1),gammap(0:1)
@@ -5854,7 +4753,6 @@ c the factor as/(2*pi)
       include 'nexternal.inc'
       include "fks.inc"
       include 'coupl.inc'
-      include 'q_es.inc'
       double precision p(0:3,nexternal),m1l_finite_CDR,born
       double precision CF,pi,aso2pi,shat,dot,xlgq2os
       parameter (CF=4d0/3d0)
@@ -5878,7 +4776,6 @@ c the factor as/(2*pi)
       include 'nexternal.inc'
       include "fks.inc"
       include 'coupl.inc'
-      include 'q_es.inc'
       double precision p(0:3,nexternal),m1l_W_finite_CDR,born
       double precision CF,pi,aso2pi,shat,dot,xlgq2os
       parameter (CF=4d0/3d0)
@@ -5933,15 +4830,11 @@ c$$$      parameter (CA=3d0,CF=4d0/3d0,Nf=0d0)
       include 'fks_powers.inc'
       include 'fks.inc'
 
-      integer mapbconf(0:lmaxconfigs)
-      integer b_from_r(lmaxconfigs)
-      integer r_from_b(lmaxconfigs)
-      include "bornfromreal.inc"
-      integer            mapconfig(0:lmaxconfigs), this_config
+      integer mapconfig(0:lmaxconfigs), this_config
       integer iforest(2,-max_branch:-1,lmaxconfigs)
       integer sprop(-max_branch:-1,lmaxconfigs)
       integer tprid(-max_branch:-1,lmaxconfigs)
-      include "configs.inc"
+      include "born_conf.inc"
 
       double precision xicut_used
       common /cxicut_used/xicut_used
@@ -6024,7 +4917,7 @@ c Check to see if this channel needs to be included in the multi-channeling
       if (multi_channel) then
          if (onlyBorn) then
             open (unit=19,file="symfact.dat",status="old",err=12)
-            do i=1,mapbconf(0)
+            do i=1,mapconfig(0)
                read (19,*,err=23) fac1,fac2
                if (fac2.gt.0) then
                   multi_chan(fac1)=.true.
@@ -6032,7 +4925,7 @@ c Check to see if this channel needs to be included in the multi-channeling
                   multi_chan(fac1)=.false.
                endif
             enddo
-            if (multi_chan(b_from_r(iconfig))) then
+            if (multi_chan(iconfig)) then
                diagramsymmetryfactor=1d0
             else
                write (*,*) 'No need to integrate this channel'
@@ -6041,9 +4934,9 @@ c Check to see if this channel needs to be included in the multi-channeling
             close(19)
          else                   ! not onlyBorn
             open (unit=19,file="symfact.dat",status="old",err=12)
-            do i=1,mapbconf(0)
+            do i=1,mapconfig(0)
                read (19,*,err=23) fac1,fac2
-               if (fac1.eq.b_from_r(iconfig)) then
+               if (fac1.eq.iconfig) then
                   if (fac2.gt.0) then
                      write (*,*) 'diagram symmetry factor',fac2
                      diagramsymmetryfactor=dble(fac2)
@@ -6095,8 +4988,8 @@ c parametrization allows it
       
       xicut_used=xicut
       xiScut_used=xiScut
-      if( nbodyonly .or.
-     #    (abrv.eq.'born' .or. abrv(1:2).eq.'vi') )then
+      if( nbodyonly .or. (abrv.eq.'born' .or. abrv.eq.'grid' .or.
+     &     abrv(1:2).eq.'vi') )then
         xiBSVcut_used=1.d0
       else
         xiBSVcut_used=xiBSVcut
@@ -6228,15 +5121,15 @@ c THESE TESTS WORK ONLY FOR FINAL STATE SINGULARITIES
             fkssymmetryfactorBorn=1d0
             fkssymmetryfactor=0d0
             fkssymmetryfactorDeg=0d0
-            abrv='born'
+c            abrv='born'
          endif
          write (*,*) 'fks symmetry factor is ', fkssymmetryfactor
          write (*,*) 'fks symmetry factor for Born is ',
      &        fkssymmetryfactorBorn
       endif
 
-      if ((abrv.eq.'born' .or. abrv(1:2).eq.'vi') .and.
-     &     fkssymmetryfactorBorn.eq.0d0) then
+      if ((abrv.eq.'born' .or. abrv.eq.'grid' .or. abrv(1:2).eq.'vi')
+     &     .and.fkssymmetryfactorBorn.eq.0d0) then
          write (*,*) 'Not needed to run this subprocess '//
      &        'because doing only Born or virtual'
       endif
@@ -6351,10 +5244,10 @@ c************
       if (isum_hel.ne.0) then ! MC over helicities
 c First, set the goodhelr and goodhelb to their starting values
       if (firsttime) then
-         if ((mint .and. (.not.Hevents) .and. (abrv(1:2).eq.'vi'
-     &             .or. abrv.eq.'born' .or. (.not.UseSudakov))) .or.
-     &        (.not.mint .and.
-     &                    (abrv.eq.'born' .or. abrv(1:2).eq.'vi'))) then
+         if ((mint .and. (.not.Hevents) .and. (abrv(1:2).eq.'vi' .or.
+     &        abrv.eq.'born' .or. abrv.eq.'grid' .or.
+     &        (.not.UseSudakov))) .or. (.not.mint .and. (abrv.eq.'born'
+     &        .or. abrv.eq.'grid' .or. abrv(1:2).eq.'vi'))) then
 c           if computing only the Born diagrams, should not
 c           consider real emission helicities            
             chckr=.false.

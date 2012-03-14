@@ -6,8 +6,8 @@ C**************************************************************************
 c
 c     INCLUDE
 c
-      include 'nexternal.inc'
       include 'genps.inc'
+      include 'nexternal.inc'
       include 'coupl.inc'
       include 'run.inc'
       include 'cuts.inc'
@@ -78,7 +78,7 @@ c     reading parameters
       character*20 param(maxpara),value(maxpara)
       integer npara
 c
-c     setup masses for the final-state particles
+c     setup masses for the final-state particles (fills the /to_mass/ common block)
 c
       include 'pmass.inc'
 
@@ -357,11 +357,6 @@ c    count number of leptons to see if special cuts are applicable or not
            write (*,*) "Warning: cuts on the lepton will be ignored"
            xptl = 0d0
         endif
-c
-c Set minimum tau, to be used in one_tree
-      call set_tau_min()
-
-c      call write_cuts()
       RETURN
 
       END
@@ -376,10 +371,9 @@ c variable ptj
       parameter (zero=0.d0,vtiny=1d-8)
       include 'cuts.inc'
       include 'run.inc'
-      include 'nexternal.inc'
       include 'genps.inc'
+      include 'nexternal.inc'
       include 'coupl.inc'
-      include 'fks.inc'
       LOGICAL  IS_A_J(NEXTERNAL),IS_A_L(NEXTERNAL)
       LOGICAL  IS_A_B(NEXTERNAL),IS_A_A(NEXTERNAL)
       LOGICAL  IS_A_NU(NEXTERNAL),IS_HEAVY(NEXTERNAL)
@@ -388,28 +382,23 @@ c
       double precision pmass(-nexternal:0,lmaxconfigs)
       double precision pwidth(-nexternal:0,lmaxconfigs)
       integer pow(-nexternal:0,lmaxconfigs)
-      integer iforest(2,-max_branch:-1,lmaxconfigs)
-      common/to_forest/ iforest
-      integer            mapconfig(0:lmaxconfigs), this_config
-      common/to_mconfigs/mapconfig, this_config
+      integer itree(2,-max_branch:-1),iconfig
+      common /to_itree/itree,iconfig
 
-      double precision taumin,stot,taumin_s
-      integer i,d1,d2,j_fks,config_fks
+      double precision taumin,stot,taumin_s,taumin_j
+      integer i,d1,d2
       double precision xm(-nexternal:nexternal),xm1,xm2,xmi
-      integer tsign,iconfig
-      double precision tau_lower_bound,tau_lower_bound_soft
-      common/ctau_lower_bound/tau_lower_bound,tau_lower_bound_soft
+      integer tsign
+      double precision tau_Born_lower_bound,tau_lower_bound_resonance
+     &     ,tau_lower_bound
+      common/ctau_lower_bound/tau_Born_lower_bound
+     &     ,tau_lower_bound_resonance,tau_lower_bound
 c
       real*8         emass(nexternal)
       common/to_mass/emass
-c      double precision pmass(nexternal)
-c      include "pmass.inc"
-      include "props.inc"
-c
-      open (unit=19,file="config.fks",status="old")
-      read (19,*) config_fks
-      close (19)
-      j_fks=fks_j(config_fks)
+      integer i_fks,j_fks
+      common/fks_indices/i_fks,j_fks
+      include "born_props.inc"
 
       if(.not.IS_A_J(NEXTERNAL))then
         write(*,*)'Fatal error in set_tau_min'
@@ -427,6 +416,7 @@ c the Born does not have enough energy to pass the cuts set by ptj, the
 c event could.
       taumin=0.d0
       taumin_s=0.d0
+      taumin_j=0.d0
       do i=nincoming+1,nexternal-1
          if(IS_A_J(i))then
             if (abs(emass(i)).gt.vtiny) then
@@ -437,8 +427,10 @@ c event could.
             if  (j_fks.gt.nincoming .and. j_fks.lt.nexternal) then
                taumin=taumin+ptj
                taumin_s=taumin_s+ptj
+               taumin_j=taumin_j+ptj
             elseif (j_fks.ge.1 .and. j_fks.le.nincoming) then
                taumin_s=taumin_s+ptj
+               taumin_j=taumin_j+ptj
             elseif (j_fks.eq.nexternal) then
                write (*,*)
      &              'ERROR, j_fks cannot be the final parton',j_fks
@@ -450,28 +442,24 @@ c event could.
          else
             taumin=taumin+emass(i)
             taumin_s=taumin_s+emass(i)
+            taumin_j=taumin_j+emass(i)
          endif
          xm(i)=emass(i)
       enddo
       xm(nexternal)=emass(nexternal)
       stot = 4d0*ebeam(1)*ebeam(2)
-      tau_lower_bound=taumin**2/stot
+      tau_Born_lower_bound=taumin**2/stot
+      tau_lower_bound=taumin_j**2/stot
 
 c Also find the minimum lower bound if all internal s-channel particles
 c were on-shell
       tsign=-1
-      iconfig=this_config
-      if (iconfig.eq.0) then
-         write (*,*) 'Warning iconfig is still zero; '//
-     &        'set temporarily to 1 in "set_tau_min"'
-         iconfig=1
-      endif
       do i=-1,-(nexternal-3),-1                ! All propagators
-         if ( iforest(1,i,iconfig) .eq. 1 .or.
-     &        iforest(1,i,iconfig) .eq. 2 ) tsign=1
+         if ( itree(1,i) .eq. 1 .or.
+     &        itree(1,i) .eq. 2 ) tsign=1
          if (tsign.eq.-1) then   ! Only s-channels
-            d1=iforest(1,i,iconfig)
-            d2=iforest(2,i,iconfig)
+            d1=itree(1,i)
+            d2=itree(2,i)
 c If daughter is a jet, we should treat the ptj as a mass. Except if
 c d1=nexternal, because we check the Born, so final parton should be
 c skipped.
@@ -500,16 +488,22 @@ c the previous iteration of the loop
       enddo
 
 c For the bound, we have to square and divide by stot.
-      tau_lower_bound_soft=taumin_s**2/stot
+      tau_lower_bound_resonance=taumin_s**2/stot
 
 c If the lower bound found here is smaller than the hard bound,
 c simply set the soft bound equal to the hard bound.
-      tau_lower_bound_soft=max(tau_lower_bound,tau_lower_bound_soft)
+      tau_lower_bound_resonance=max(tau_lower_bound
+     &     ,tau_lower_bound_resonance)
 
-      write (*,*) 'lower bound for tau is ',
-     &     tau_lower_bound,taumin,dsqrt(stot)
-      write (*,*) 'soft lower bound for tau is ',
-     &     tau_lower_bound_soft,taumin_s,dsqrt(stot)
+      write (*,*) 'absolute lower bound for tau at the Born is',
+     &     tau_Born_lower_bound,taumin,dsqrt(stot)
+      if (j_fks.le.nincoming) then
+         write (*,*) 'lower bound for tau is',
+     &        tau_lower_bound,taumin_j,dsqrt(stot)
+      endif
+      write (*,*)
+     &     'lower bound for tau is (taking resonances into account)'
+     &     ,tau_lower_bound_resonance,taumin_s,dsqrt(stot)
 
       return
       end

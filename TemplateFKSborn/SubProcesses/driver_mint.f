@@ -38,17 +38,13 @@ cc
       include 'run.inc'
       include 'coupl.inc'
       
-      integer           mincfig, maxcfig
-      common/to_configs/mincfig, maxcfig
+      integer           iconfig
+      common/to_configs/iconfig
 
 
       double precision twgt, maxwgt,swgt(maxevents)
       integer                             lun, nw
       common/to_unwgt/twgt, maxwgt, swgt, lun, nw
-
-c--masses
-      double precision pmass(nexternal)
-      common/to_mass/  pmass
 
 c Vegas stuff
       integer ipole
@@ -105,11 +101,8 @@ c
       open(unit=lun,status='scratch')
       nsteps=2
       call setrun                !Sets up run parameters
-c     $B$ setpara $B$ ! this is a tag for MadWeight. Don't edit this line
-      call setpara('param_card.dat')   !Sets up couplings and masses
-c     $E$ setpara $E$ ! this is a tag for MadWeight. Don't edit this line
-      include 'pmass.inc'        !Sets up particle masses
-      call setcuts               !Sets up cuts 
+      call setpara('param_card.dat',.true.)   !Sets up couplings and masses
+      call setcuts               !Sets up cuts & particle masses
       call printout              !Prints out a summary of paramaters
       call run_printout          !Prints out a summary of the run settings
       nconfigs = 1
@@ -117,26 +110,26 @@ c
 c     Get user input
 c
       write(*,*) "getting user params"
-      call get_user_params(ncall,itmax,mincfig,imode,ixi_i,iphi_i,iy_ij)
-      call setfksfactor(mincfig)
-      maxcfig=mincfig
-      ipole=mincfig
-      minvar(1,1) = 0              !This tells it to map things invarients
-      write(*,*) 'Attempting mappinvarients',nconfigs,nexternal
-      call map_invarients(minvar,nconfigs,ninvar,mincfig,maxcfig,nexternal,nincoming)
-      write(*,*) "Completed mapping",nexternal
+      call get_user_params(ncall,itmax,iconfig,imode,ixi_i,iphi_i,iy_ij)
+      call setfksfactor(iconfig)
+c$$$      maxcfig=mincfig
+c$$$      ipole=mincfig
+c$$$      minvar(1,1) = 0              !This tells it to map things invarients
+c$$$      write(*,*) 'Attempting mappinvarients',nconfigs,nexternal
+c$$$      call map_invarients(minvar,nconfigs,ninvar,mincfig,maxcfig,nexternal,nincoming)
+c$$$      write(*,*) "Completed mapping",nexternal
       ndim = 3*(nexternal-2)-4
       if (abs(lpp(1)) .ge. 1) ndim=ndim+1
       if (abs(lpp(2)) .ge. 1) ndim=ndim+1
-      ninvar = ndim
-      do j=mincfig,maxcfig
-         if (abs(lpp(1)) .ge. 1 .and. abs(lpp(1)) .ge. 1) then
-            minvar(ndim-1,j)=ninvar-1
-            minvar(ndim,j) = ninvar
-         elseif (abs(lpp(1)) .ge. 1 .or. abs(lpp(1)) .ge. 1) then
-            minvar(ndim,j) = ninvar
-         endif
-      enddo
+c$$$      ninvar = ndim
+c$$$      do j=mincfig,maxcfig
+c$$$         if (abs(lpp(1)) .ge. 1 .and. abs(lpp(1)) .ge. 1) then
+c$$$            minvar(ndim-1,j)=ninvar-1
+c$$$            minvar(ndim,j) = ninvar
+c$$$         elseif (abs(lpp(1)) .ge. 1 .or. abs(lpp(1)) .ge. 1) then
+c$$$            minvar(ndim,j) = ninvar
+c$$$         endif
+c$$$      enddo
 
 c Don't proceed if muF1#muF2 (we need to work out the relevant formulae
 c at the NLO)
@@ -221,8 +214,8 @@ c From dsample_fks
       implicit none
       integer ndim,ipole
       common/tosigint/ndim,ipole
-      integer           mincfig, maxcfig
-      common/to_configs/mincfig, maxcfig
+      integer           iconfig
+      common/to_configs/iconfig
       integer i
       integer ifl
       integer fold
@@ -248,11 +241,11 @@ c
       wgt=1.d0
       fold=ifl
       if (ifl.eq.0)then
-         call x_to_f_arg(ndim,ipole,mincfig,maxcfig,ndim,wgt,x,p)
+         call generate_momenta(ndim,iconfig,wgt,x,p)
          result = w*dsig(p,wgt,w)
          sigint = result
       elseif(ifl.eq.1) then
-         call x_to_f_arg(ndim,ipole,mincfig,maxcfig,ndim,wgt,x,p)
+         call generate_momenta(ndim,iconfig,wgt,x,p)
          result = result+w*dsig(p,wgt,w)
          sigint = result
       elseif(ifl.eq.2) then
@@ -276,7 +269,7 @@ c**********************************************************************
 c
 c     Constants
 c
-      include 'nexternal.inc'
+      include 'genps.inc'
 c
 c     Arguments
 c
@@ -306,6 +299,16 @@ c
 
       logical nbodyonly
       common/cnbodyonly/nbodyonly
+      integer           iconfig
+      common/to_configs/iconfig
+c
+c To convert diagram number to configuration
+c
+      integer iforest(2,-max_branch:-1,lmaxconfigs)
+      integer sprop(-max_branch:-1,lmaxconfigs)
+      integer tprid(-max_branch:-1,lmaxconfigs)
+      integer mapconfig(0:lmaxconfigs)
+      include 'born_conf.inc'
 c
 c MINT stuff
 c
@@ -359,6 +362,12 @@ c-----
       write(*,10) 'Enter Configuration Number: '
       read(*,*) dconfig
       iconfig = int(dconfig)
+      do i=1,mapconfig(0)
+         if (iconfig.eq.mapconfig(i)) then
+            iconfig=i
+            exit
+         endif
+      enddo
       write(*,12) 'Running Configuration Number: ',iconfig
 
       write (*,'(a)') 'Enter running mode for MINT:'

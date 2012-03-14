@@ -8,7 +8,7 @@ c***********************************************************************
 c
 c     Constants
 c
-c      include '../../../Source/run_config.inc'
+c      include '../../Source/run_config.inc'
 c
 c     Arguments
 c
@@ -67,15 +67,15 @@ c-----
          write(lun,15) 'mkdir Cards'
          write(lun,15) 'mkdir SubProcesses'
          write(lun,15) 'cp -a  $CONDOR_INITIAL_DIR/'//
-     &        '../../../MGMEVersion.txt .'
+     &        '../../MGMEVersion.txt .'
          write(lun,15) '#cp -ra  $CONDOR_INITIAL_DIR/'//
-     &        '../../../Source .'
+     &        '../../Source .'
          write(lun,15) 'cp -ra  $CONDOR_INITIAL_DIR/'//
-     &        '../../../Cards/* ./Cards/'
+     &        '../../Cards/* ./Cards/'
          write(lun,15) 'cp -ra  $CONDOR_INITIAL_DIR/'//
-     &        '../../../lib/Pdfdata ./lib/'
-         write(lun,15) 'ln -s  $CONDOR_INITIAL_DIR/'//
-     &        '../../../lib/PDFsets ./lib/'
+     &        '../../lib/Pdfdata ./lib/'
+c         write(lun,15) 'cp -ra  $CONDOR_INITIAL_DIR/'//
+c     &        '../../lib/PDFsets ./lib/'
 c         write(lun,15) 'cd ./lib/PDFsets'
 c         write(lun,15) 'gunzip *.gz'
 c         write(lun,15) 'cd ../../'
@@ -191,8 +191,8 @@ c endif
          write(lun,20) 'cp ../integrate.fks .'
          write(lun,20) 'cp ../nbodyonly.fks .'
          write(lun,20) 'cp ../iproc.dat .'
-         write(lun,20) 'if [[ -e ../../../randinit ]]; then'
-         write(lun,25) 'cp ../../../randinit .'
+         write(lun,20) 'if [[ -e ../../randinit ]]; then'
+         write(lun,25) 'cp ../../randinit .'
          write(lun,20) 'fi'
          write(lun,20) 'cp ../symfact.dat .'
          write(lun,20) 'if [[ -e ../HelasNLO.input ]]; then'
@@ -206,23 +206,21 @@ c endif
          write(lun,20) 'fi'
 c madevent_vegas
          write(lun,20) "if [[ $1 == '0' ]]; then"
-         write(lun,25) 'head -n 5 ../../../madin.$2 >& input_app.txt'
+         write(lun,25) 'head -n 5 ../../madin.$2 >& input_app.txt'
          write(lun,25) 'echo $i >> input_app.txt'
-         write(lun,25) 'tail -n 4 ../../../madin.$2 >> input_app.txt'
+         write(lun,25) 'tail -n 4 ../../madin.$2 >> input_app.txt'
          write(lun,25) 'time ../madevent_vegas > log.txt <input_app.txt'
 c madevent_mint
          write(lun,20) "elif [[ $1 == '1' ]]; then"
-         write(lun,25) 'head -n 5 ../../../madinM.$2 >& input_app.txt'
+         write(lun,25) 'head -n 5 ../../madinM.$2 >& input_app.txt'
          write(lun,25) 'echo $i >> input_app.txt'
-         write(lun,25) 'tail -n 3 ../../../madinM.$2 >> input_app.txt'
+         write(lun,25) 'tail -n 3 ../../madinM.$2 >> input_app.txt'
          write(lun,25) 'time ../madevent_mint > log.txt <input_app.txt'
 c madevent_mintMC
          write(lun,20) "elif [[ $1 == '2' ]]; then"
-         write(lun,25) 'head -n 6 ../../../madinMMC_$2.2 >& '//
-     &     'input_app.txt'
+         write(lun,25) 'head -n 6 ../../madinMMC_$2.2 >& input_app.txt'
          write(lun,25) 'echo $i >> input_app.txt'
-         write(lun,25) 'tail -n 4 ../../../madinMMC_$2.2 >> '//
-     &     'input_app.txt'
+         write(lun,25) 'tail -n 4 ../../madinMMC_$2.2 >> input_app.txt'
          write(lun,25)
      &        'time ../madevent_mintMC > log.txt <input_app.txt'
 c endif
@@ -286,8 +284,8 @@ c endif
          write(lun,20) 'cp -f $CONDOR_INITIAL_DIR/config.fks .'
          write(lun,20) 'cp -f $CONDOR_INITIAL_DIR/iproc.dat .'
          write(lun,20)
-     &        'if [[ -e $CONDOR_INITIAL_DIR/../../randinit ]]; then'
-         write(lun,25) 'cp -f $CONDOR_INITIAL_DIR/../../randinit .'
+     &        'if [[ -e $CONDOR_INITIAL_DIR/../randinit ]]; then'
+         write(lun,25) 'cp -f $CONDOR_INITIAL_DIR/../randinit .'
          write(lun,20) 'fi'
          write(lun,20) 'cp -f $CONDOR_INITIAL_DIR/integrate.fks .'
          write(lun,20) 'cp -f $CONDOR_INITIAL_DIR/nbodyonly.fks .'
@@ -308,19 +306,21 @@ c endif
 c madevent_vegas
          write(lun,20) "if [[ $1 == '0' ]]; then"
          write(lun,25) 'head -n 5 $CONDOR_INITIAL_DIR/'//
-     &        '../../madin.$2 >& input_app.txt'
+     &        '../madin.$2 >& input_app.txt'
          write(lun,25) 'echo $i >> input_app.txt'
          write(lun,25) 'tail -n 4 $CONDOR_INITIAL_DIR/'//
-     &        '../../madin.$2 >> input_app.txt'
-         write(lun,25) 'time ../madevent_vegas > log.txt <input_app.txt'
+     &        '../madin.$2 >> input_app.txt'
+         write(lun,25)
+     &        'time ../madevent_vegas > log.txt <input_app.txt 2>&1'
 c madevent_mint
          write(lun,20) "elif [[ $1 == '1' ]]; then"
          write(lun,25) 'head -n 5 $CONDOR_INITIAL_DIR/'//
-     &        '../../madinM.$2 >& input_app.txt'
+     &        '../madinM.$2 >& input_app.txt'
          write(lun,25) 'echo $i >> input_app.txt'
          write(lun,25) 'tail -n 3 $CONDOR_INITIAL_DIR/'//
-     &        '../../madinM.$2 >> input_app.txt'
-         write(lun,25) 'time ../madevent_mint > log.txt <input_app.txt'
+     &        '../madinM.$2 >> input_app.txt'
+         write(lun,25)
+     &        'time ../madevent_mint > log.txt <input_app.txt 2>&1'
 c madevent_mintMC
          write(lun,20) "elif [[ $1 == '2' ]]; then"
          write(lun,20) 'if [[ $runnumber != 0 ]]; then'
@@ -330,11 +330,12 @@ c madevent_mintMC
          write(lun,25) 'echo "r=$r" >& randinit'
          write(lun,20) 'fi'
          write(lun,25) 'head -n 6 $CONDOR_INITIAL_DIR/'//
-     &        '../../madinMMC_$2.2 >& input_app.txt'
+     &        '../madinMMC_$2.2 >& input_app.txt'
          write(lun,25) 'echo $i >> input_app.txt'
          write(lun,25) 'tail -n 4 $CONDOR_INITIAL_DIR/'//
-     &        '../../madinMMC_$2.2 >> input_app.txt'
-         write(lun,25)'time ../madevent_mintMC > log.txt <input_app.txt'
+     &        '../madinMMC_$2.2 >> input_app.txt'
+         write(lun,25)
+     &        'time ../madevent_mintMC > log.txt <input_app.txt 2>&1'
 c endif
          write(lun,20) "fi"
 

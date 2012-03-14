@@ -1,12 +1,10 @@
       subroutine finalize_event(xx,res_abs,lunlhe,plotEv,putonshell)
       implicit none
       include "genps.inc"
-      integer            mapconfig(0:lmaxconfigs), this_config
-      common/to_mconfigs/mapconfig, this_config
       integer ndim,ipole
       common/tosigint/ndim,ipole
-      integer           mincfig, maxcfig
-      common/to_configs/mincfig, maxcfig
+      integer           iconfig
+      common/to_configs/iconfig
       integer itmax,ncall
       common/citmax/itmax,ncall
       logical Hevents
@@ -55,7 +53,8 @@ c Normalization to the number of requested events is done in subroutine
 c topout (madfks_plot_mint.f), so multiply here to get # of events.
       plot_wgt=evtsgn*itmax*ncall
       evnt_wgt=evtsgn*res_abs/(itmax*ncall)
-      call x_to_f_arg(ndim,ipole,mincfig,maxcfig,ndim,wgt,x,p)
+c$$$      call x_to_f_arg(ndim,ipole,mincfig,maxcfig,ndim,wgt,x,p)
+      call generate_momenta(ndim,iconfig,wgt,x,p)
       do i=1,nexternal
          do j=0,3
             pp(j,i)=p(j,i)
@@ -71,7 +70,7 @@ c
          call set_cms_stuff(0)
       endif
 
-      call add_write_info(p_born,pp,ybst_til_tolab,mincfig,Hevents,
+      call add_write_info(p_born,pp,ybst_til_tolab,iconfig,Hevents,
      &     putonshell,ndim,ipole,x,jpart,npart,pb)
 
 c Plot the events also on the fly
@@ -102,8 +101,8 @@ c From dsample_fks
       implicit none
       integer ndim,ipole
       common/tosigint/ndim,ipole
-      integer           mincfig, maxcfig
-      common/to_configs/mincfig, maxcfig
+      integer           iconfig
+      common/to_configs/iconfig
       integer i
       integer ifl
       integer fold
@@ -129,11 +128,11 @@ c
       wgt=1.d0
       fold=ifl
       if (ifl.eq.0)then
-         call x_to_f_arg(ndim,ipole,mincfig,maxcfig,ndim,wgt,x,p)
+         call generate_momenta(ndim,iconfig,wgt,x,p)
          result = w*dsigS(p,wgt,w)
          sigintS = result
       elseif(ifl.eq.1) then
-         call x_to_f_arg(ndim,ipole,mincfig,maxcfig,ndim,wgt,x,p)
+         call generate_momenta(ndim,iconfig,wgt,x,p)
          result = result+w*dsigS(p,wgt,w)
          sigintS = result
       elseif(ifl.eq.2) then
@@ -153,8 +152,8 @@ c From dsample_fks
       implicit none
       integer ndim,ipole
       common/tosigint/ndim,ipole
-      integer           mincfig, maxcfig
-      common/to_configs/mincfig, maxcfig
+      integer           iconfig
+      common/to_configs/iconfig
       integer i
       integer ifl
       integer fold
@@ -180,11 +179,11 @@ c
       wgt=1.d0
       fold=ifl
       if (ifl.eq.0)then
-         call x_to_f_arg(ndim,ipole,mincfig,maxcfig,ndim,wgt,x,p)
+         call generate_momenta(ndim,iconfig,wgt,x,p)
          result = w*dsigH(p,wgt,w)
          sigintH = result
       elseif(ifl.eq.1) then
-         call x_to_f_arg(ndim,ipole,mincfig,maxcfig,ndim,wgt,x,p)
+         call generate_momenta(ndim,iconfig,wgt,x,p)
          result = result+w*dsigH(p,wgt,w)
          sigintH = result
       elseif(ifl.eq.2) then

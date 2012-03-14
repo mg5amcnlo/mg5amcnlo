@@ -67,7 +67,7 @@ c***********************************************************************
 c
 c     Constants
 c
-      include '../../../Source/run_config.inc'
+      include '../../Source/run_config.inc'
 c
 c     Arguments
 c
@@ -123,13 +123,13 @@ c-----
          write(lun,15) 'mkdir Cards'
          write(lun,15) 'mkdir SubProcesses'
          write(lun,15) 'cp -a  $CONDOR_INITIAL_DIR/'//
-     &        '../../../MGMEVersion.txt .'
+     &        '../../MGMEVersion.txt .'
          write(lun,15) '#cp -ra  $CONDOR_INITIAL_DIR/'//
-     &        '../../../Source .'
+     &        '../../Source .'
          write(lun,15) 'cp -ra  $CONDOR_INITIAL_DIR/'//
-     &        '../../../Cards/* ./Cards/'
+     &        '../../Cards/* ./Cards/'
          write(lun,15) 'cp -ra  $CONDOR_INITIAL_DIR/'//
-     &        '../../../lib/Pdfdata ./lib/'
+     &        '../../lib/Pdfdata ./lib/'
 c         write(lun,15) 'cp -ra  $CONDOR_INITIAL_DIR/'//
 c     &        '../../lib/PDFsets ./lib/'
 c         write(lun,15) 'cd ./lib/PDFsets'

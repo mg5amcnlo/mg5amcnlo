@@ -263,17 +263,59 @@ class ProcessExporterFortranFKS_born(loop_exporters.LoopProcessExporterFortranSA
                             matrix_element.virt_matrix_element, \
                             fortran_model, \
                             os.path.join(path, borndir))
+        self.write_real_matrix_elements(matrix_element, fortran_model)
 
-
-        for nfks, fksreal in enumerate(matrix_element.real_processes):
-                calls += self.generate_subprocess_directory_fks(nfks, fksreal,
-                                                  matrix_element, borndir,
-                                                  fortran_model,
-                                                  me_number,
-                                                  path)
+        filename = 'real_me_chooser.f'
+        self.write_real_me_wrapper(writers.FortranWriter(filename), 
+                                   matrix_element, 
+                                   fortran_model)
+#        for nfks, fksreal in enumerate(matrix_element.real_processes):
+#                calls += self.generate_subprocess_directory_fks(nfks, fksreal,
+#                                                  matrix_element, borndir,
+#                                                  fortran_model,
+#                                                  me_number,
+#                                                  path)
             
         os.chdir(cwd)
         return calls
+
+    def write_real_matrix_elements(self, matrix_element, fortran_model):
+        """writes the matrix_i.f files which contain the real matrix elements""" 
+        for n, fksreal in enumerate(matrix_element.real_processes):
+            filename = 'matrix_%d.f' % (n + 1)
+            self.write_matrix_element_fks(writers.FortranWriter(filename),
+                                            fksreal.matrix_element, n + 1, 
+                                            fortran_model)
+
+    def write_real_me_wrapper(self, writer, matrix_element, fortran_model):
+        """writes the wrapper which allows to chose among the different real matrix elements"""
+
+        file = \
+"""subroutine real_matrix(p, n, wgt)
+include 'nexternal.inc'
+double precision p(0:3, nexternal)
+double precision wgt
+integer n
+"""
+        for n in range(len(matrix_element.real_processes)):
+            file += \
+"""if (n.eq.%(n)d) then
+call smatrix_%(n)d(p, wgt)
+else""" % {'n': n + 1}
+        file += \
+"""
+write(*,*) 'ERROR: invalid n in real_matrix :', n
+stop
+endif
+
+return
+end
+"""
+        # Write the file
+        writer.writelines(file)
+        return 0
+
+
 
     def generate_born_fks_files(self, matrix_element, fortran_model, me_number, path):
         """generates the files needed for the born applitude in the P* directory, which will
@@ -798,7 +840,7 @@ c     this subdir has no soft singularities
         filename = 'matrix.f'
         calls, ncolor = \
                self.write_matrix_element_fks(writers.FortranWriter(filename),
-                                            real_matrix_element,
+                                            real_matrix_element, 0,
                                             fortran_model)
 
     #write auto_dsig (for MadFKS it contains only the parton luminosities
@@ -1094,7 +1136,7 @@ C
     # write_matrix_element_fks
     #===============================================================================
     #test written
-    def write_matrix_element_fks(self, writer, matrix_element, fortran_model):
+    def write_matrix_element_fks(self, writer, matrix_element, n, fortran_model):
         """Export a matrix element to a matrix.f file in MG4 madevent format"""
     
         if not matrix_element.get('processes') or \
@@ -1108,6 +1150,7 @@ C
         writers.FortranWriter.downcase = False
     
         replace_dict = {}
+        replace_dict['N_me'] = n
     
         # Extract version number and date from VERSION file
         info_lines = self.get_mg5_info_lines()
@@ -1165,7 +1208,7 @@ C
         replace_dict['jamp_lines'] = '\n'.join(jamp_lines)
     
         file = open(os.path.join(_file_path, \
-                          'iolibs/template_files/matrix_fks.inc4')).read()
+                          'iolibs/template_files/realmatrix_fks_born.inc')).read()
 
         file = file % replace_dict
         

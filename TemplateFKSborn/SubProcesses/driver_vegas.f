@@ -9,13 +9,12 @@ C
       double precision zero
       parameter       (ZERO = 0d0)
       include 'genps.inc'
-      include 'nexternal.inc'
       INTEGER    ITMAX,   NCALL
       common/citmax/itmax,ncall
 C
 C     LOCAL
 C
-      integer i,ninvar,nconfigs,j,l,l1,l2,ndim
+      integer i,j,l,l1,l2,ndim
       double precision dsig,tot,mean,sigma
       integer npoints
       double precision x,y,jac,s1,s2,xmin
@@ -38,17 +37,13 @@ cc
       include 'run.inc'
       include 'coupl.inc'
       
-      integer           mincfig, maxcfig
-      common/to_configs/mincfig, maxcfig
+      integer           iconfig
+      common/to_configs/iconfig
 
 
       double precision twgt, maxwgt,swgt(maxevents)
       integer                             lun, nw
       common/to_unwgt/twgt, maxwgt, swgt, lun, nw
-
-c--masses
-      double precision pmass(nexternal)
-      common/to_mass/  pmass
 
 c Vegas stuff
       integer ipole
@@ -118,43 +113,24 @@ c
       open(unit=lun,status='scratch')
       nsteps=2
       call setrun                !Sets up run parameters
-c     $B$ setpara $B$ ! this is a tag for MadWeight. Don't edit this line
-      call setpara('param_card.dat')   !Sets up couplings and masses
-c     $E$ setpara $E$ ! this is a tag for MadWeight. Don't edit this line
-      include 'pmass.inc'        !Sets up particle masses
-      call setcuts               !Sets up cuts 
+      call setpara('param_card.dat',.true.)   !Sets up couplings and masses
+      call setcuts               !Sets up cuts and particle masses
       call printout              !Prints out a summary of paramaters
       call run_printout          !Prints out a summary of the run settings
-      nconfigs = 1
 c     
 c     Get user input
 c
       write(*,*) "getting user params"
-      call get_user_params(ncall,itmax,mincfig,irestart,idstring,savegrid)
+      call get_user_params(ncall,itmax,iconfig,irestart,idstring,savegrid)
       if(irestart.eq.1)then
         flat_grid=.true.
       else
         flat_grid=.false.
       endif
-      call setfksfactor(mincfig)
-      maxcfig=mincfig
-      ipole=mincfig
-      minvar(1,1) = 0              !This tells it to map things invarients
-      write(*,*) 'Attempting mappinvarients',nconfigs,nexternal
-      call map_invarients(minvar,nconfigs,ninvar,mincfig,maxcfig,nexternal,nincoming)
-      write(*,*) "Completed mapping",nexternal
+      call setfksfactor(iconfig)
       ndim = 3*(nexternal-2)-4
       if (abs(lpp(1)) .ge. 1) ndim=ndim+1
       if (abs(lpp(2)) .ge. 1) ndim=ndim+1
-      ninvar = ndim
-      do j=mincfig,maxcfig
-         if (abs(lpp(1)) .ge. 1 .and. abs(lpp(1)) .ge. 1) then
-            minvar(ndim-1,j)=ninvar-1
-            minvar(ndim,j) = ninvar
-         elseif (abs(lpp(1)) .ge. 1 .or. abs(lpp(1)) .ge. 1) then
-            minvar(ndim,j) = ninvar
-         endif
-      enddo
 
 c Don't proceed if muF1#muF2 (we need to work out the relevant formulae
 c at the NLO)
@@ -167,7 +143,7 @@ c at the NLO)
         stop
       endif
 
-      write(*,*) "about to integrate ", ndim,ncall,itmax,ninvar,nconfigs
+      write(*,*) "about to integrate ", ndim,ncall,itmax,iconfig
 
       if(doVirtTest)then
         vobmax=-1.d8
@@ -301,17 +277,17 @@ c$$$      write(*,*) 'n_mp  =',n_mp,'    n_disc=',n_disc
       function sigint(xx,peso)
 c From dsample_fks
       implicit none
+      include 'nexternal.inc'
       real*8 sigint,peso,xx(58)
       integer ione
       parameter (ione=1)
-      integer ndim,ipole
-      common/tosigint/ndim,ipole
-      integer           mincfig, maxcfig
-      common/to_configs/mincfig, maxcfig
+      integer ndim
+      common/tosigint/ndim
+      integer           iconfig
+      common/to_configs/iconfig
       integer i
       double precision wgt,dsig
-      double precision x(99),p(0:3,99)
-      common/cxvegas/x
+      double precision x(99),p(0:3,nexternal)
 c
       do i=1,99
         if(i.le.ndim)then
@@ -321,7 +297,7 @@ c
         endif
       enddo
       wgt=1.d0
-      call x_to_f_arg(ndim,ipole,mincfig,maxcfig,ndim,wgt,x,p)
+      call generate_momenta(ndim,iconfig,wgt,x,p)
       sigint = dsig(p,wgt,peso)
       return
       end
@@ -339,7 +315,7 @@ c**********************************************************************
 c
 c     Constants
 c
-      include 'nexternal.inc'
+      include 'genps.inc'
 c
 c     Arguments
 c
@@ -373,6 +349,14 @@ c
       integer nvtozero
       logical doVirtTest
       common/cvirt2test/nvtozero,doVirtTest
+c
+c To convert diagram number to configuration
+c
+      integer iforest(2,-max_branch:-1,lmaxconfigs)
+      integer sprop(-max_branch:-1,lmaxconfigs)
+      integer tprid(-max_branch:-1,lmaxconfigs)
+      integer mapconfig(0:lmaxconfigs)
+      include 'born_conf.inc'
 c
 c Vegas stuff
 c
@@ -431,6 +415,12 @@ c-----
       write(*,10) 'Enter Configuration Number: '
       read(*,*) dconfig
       iconfig = int(dconfig)
+      do i=1,mapconfig(0)
+         if (iconfig.eq.mapconfig(i)) then
+            iconfig=i
+            exit
+         endif
+      enddo
       write(*,12) 'Running Configuration Number: ',iconfig
 c
 c Enter parameters that control Vegas grids

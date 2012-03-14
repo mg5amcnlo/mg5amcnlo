@@ -390,10 +390,12 @@ c Main routine for MC counterterms
       logical lzone(nexternal),flagmc
 
       double precision emsca_bare,etot,ptresc,rrnd,ref_scale,
-     & scalemin,scalemax,wgt1,ptHW6,emscainv,emscafun
+     & scalemin,scalemax,wgt1,ptHW6,emscainv,emscafun,ptdamp
       double precision emscwgt(nexternal),emscav(nexternal)
       integer jpartner,mpartner
       logical emscasharp
+      double precision Dfuninv,CKKW_D_auxfun
+      external Dfuninv,CKKW_D_auxfun
 
       double precision shattmp,dot,xkern,xkernazi,born_red,
      & born_red_tilde
@@ -499,7 +501,7 @@ c entering this function
 
 c May remove UseSudakov from the definition below if ptHW6 (or similar
 c variable, not yet defined) will not be needed in the computation of probne
-      extra=dampMCsubt.or.AddInfoLHE.or.UseSudakov
+      extra=dampMCsubt_used.or.AddInfoLHE.or.UseSudakov
       call xiz_driver(xi_i_fks,y_ij_fks,shat,pp,ileg,
      #                xm12,xm22,tk,uk,q1q,q2q,ptHW6,extra)
       if(extra.and.ptHW6.lt.0.d0)then
@@ -510,17 +512,29 @@ c variable, not yet defined) will not be needed in the computation of probne
 
       etot=2d0*sqrt( ebeam(1)*ebeam(2) )
       emsca=etot
-      if(dampMCsubt)then
+      if(dampMCsubt_used)then
         emsca=0.d0
-        ref_scale=sqrt( (1-xi_i_fks)*shat )
-        scalemin=max(frac_low*ref_scale,scaleMClow)
-        scalemax=max(frac_upp*ref_scale,scalemin+scaleMCdelta)
-        emscasharp=(scalemax-scalemin).lt.(0.001d0*scalemax)
+        if(UseCKKW)then
+          ptdamp=di_ev_CKKW(iCKKWnlo+1)
+          scalemin=CKKWscalemin
+          scalemax=CKKWscalemax
+          emscasharp=DsharpCKKW
+        else
+          ptdamp=ptHW6
+          ref_scale=sqrt( (1-xi_i_fks)*shat )
+          scalemin=max(frac_low*ref_scale,scaleMClow)
+          scalemax=max(frac_upp*ref_scale,scalemin+scaleMCdelta)
+          emscasharp=(scalemax-scalemin).lt.(0.001d0*scalemax)
+        endif
         if(emscasharp)then
           emsca_bare=scalemax
         else
           rrnd=ran2()
-          rrnd=emscainv(rrnd,one)
+          if(UseCKKW)then
+            rrnd=Dfuninv(rrnd,alphaCKKW)
+          else
+            rrnd=emscainv(rrnd,one)
+          endif
           emsca_bare=scalemin+rrnd*(scalemax-scalemin)
         endif
       endif
@@ -915,9 +929,9 @@ c           xm22 = 0 = squared FKS-mother and FKS-sister mass
             stop
           endif
 c
-          if(dampMCsubt)then
+          if(dampMCsubt_used)then
             if(emscasharp)then
-              if(ptHW6.le.scalemax)then
+              if(ptdamp.le.scalemax)then
                 emscwgt(npartner)=1.d0
                 emscav(npartner)=emsca_bare
               else
@@ -925,12 +939,16 @@ c
                 emscav(npartner)=scalemax
               endif
             else
-              ptresc=(ptHW6-scalemin)/(scalemax-scalemin)
+              ptresc=(ptdamp-scalemin)/(scalemax-scalemin)
               if(ptresc.le.0.d0)then
                 emscwgt(npartner)=1.d0
                 emscav(npartner)=emsca_bare
               elseif(ptresc.lt.1.d0)then
-                emscwgt(npartner)=1-emscafun(ptresc,one)
+                if(UseCKKW)then
+                  emscwgt(npartner)=CKKW_D_auxfun(ptresc,alphaCKKW)
+                else
+                  emscwgt(npartner)=1-emscafun(ptresc,one)
+                endif
                 emscav(npartner)=emsca_bare
               else
                 emscwgt(npartner)=0.d0
@@ -943,7 +961,7 @@ c
 c Dead zone
           xkern=0.d0
           xkernazi=0.d0
-          if(dampMCsubt)then
+          if(dampMCsubt_used)then
             emscav(npartner)=etot
             emscwgt(npartner)=0.d0
           endif
@@ -960,7 +978,7 @@ c In the case of MC over colour flows, cflows will be passed from outside
      #                   bornbarstilde(colorflow(npartner,cflows))
         enddo
         xmcxsec(npartner) = xkern*born_red + xkernazi*born_red_tilde
-        if(dampMCsubt)
+        if(dampMCsubt_used)
      #    xmcxsec(npartner)=xmcxsec(npartner)*emscwgt(npartner)
         wgt = wgt + xmcxsec(npartner)
 c
@@ -996,7 +1014,7 @@ c
           emsca=emscav(mpartner)
         endif
       endif
-      if(dampMCsubt.and.wgt.lt.1.d-30)emsca=etot
+      if(dampMCsubt_used.and.wgt.lt.1.d-30)emsca=etot
 c Additional information for LHE
       if(AddInfoLHE)then
         fksfather_lhe=fksfather
@@ -1010,7 +1028,7 @@ c min() avoids troubles if ran2()=1
         scale1_lhe=ptHW6
       endif
 c
-      if(dampMCsubt)then
+      if(dampMCsubt_used)then
         if(emsca.lt.scalemin)then
           write(*,*)'Error in xmcsubt_HW6: emsca too small',emsca,jpartner
           if(.not.lzone(npartner))then
@@ -1733,7 +1751,7 @@ c Main routine for MC counterterms
       double precision tk,uk,q1q,q2q,E0sq(nexternal),dE0sqdx(nexternal),
      # dE0sqdc(nexternal),x,yi,yj,xij,z(nexternal),xi(nexternal),
      # xjac(nexternal),xifake(nexternal),zPY6Q,xiPY6Q,xjacPY6Q_xiztoxy,
-     # ap,Q,beta,xfact,prefact,kn,knbar,kn0,betad,betas,
+     # ap,Q,beta,xfact,prefact,kn,knbar,kn0,beta3,betad,betas,
      # gfactazi,s,gfunsoft,gfuncoll,gfunazi,bogus_probne_fun,
      # ztmp,xitmp,xjactmp,get_angle,w1,w2,z0,dz0dy,
      # p_born_npartner(0:3),p_born_fksfather(0:3),
@@ -2179,6 +2197,7 @@ c q --> g q (or qbar --> g qbar) splitting (icode=3)
 c the fks parton is the one associated with 1 - z: this is because its
 c rescaled energy is 1 - x and in the soft limit, where x --> z --> 1,
 c it has to coincide with the fraction appearing in the AP kernel.
+c The definition of z here does tend to 1 only in the massless case
               if(ileg.eq.1.or.ileg.eq.2)then
                  N_p=2
                  if(1-x.lt.tiny)then
@@ -2209,7 +2228,11 @@ c           xm22 = squared recoil mass
                   betas=1+(xm12-xm22)/s
                   z0=1-(2*xm12)/(s*betas*(betas-betad*yj))
                   dz0dy=-2*xm12*betad/(s*betas*(betas-betad*yj)**2)
-                  xkern=-(g**2/N_p)*4*vcf*(1-yj)*dz0dy*(1+(1-z0)**2)/(z0*s)
+**********************************************************************
+c change here to switch z definition
+                  xkern=(g**2/N_p)*4*vcf*(1-yj)*dz0dy*(1+(1-z0)**2)/(z0*s)
+c$$$                  xkern=0.d0
+**********************************************************************
                   xkernazi=0.d0
                 else
                   kn=veckn_ev
@@ -2275,9 +2298,14 @@ c           xm22 = squared recoil mass
                 if(1-x.lt.tiny)then
                   betad=sqrt((1-(xm12-xm22)/s)**2-(4*xm22/s))
                   betas=1+(xm12-xm22)/s
+                  beta3=sqrt(1-4*s*xm12/(s+xm12-xm22)**2)
                   z0=1-(2*xm12)/(s*betas*(betas-betad*yj))
                   dz0dy=-2*xm12*betad/(s*betas*(betas-betad*yj)**2)
-                  xkern=-(g**2/N_p)*4*vcf*(1-yj)*dz0dy*(1+z0**2)/((1-z0)*s)
+**********************************************************************
+c change here to switch z definition
+                   xkern=(g**2/N_p)*4*vcf*(1-yj)*dz0dy*(1+z0**2)/((1-z0)*s)
+c$$$                  xkern=(g**2/N_p)*8*vcf*(1-yj)*beta3/(s*(1-yj*beta3))
+**********************************************************************
                   xkernazi=0.d0
                 else
                   kn=veckn_ev
@@ -3133,7 +3161,7 @@ c Main routine for MC counterterms
       double precision tk,uk,q1q,q2q,E0sq(nexternal),dE0sqdx(nexternal),
      # dE0sqdc(nexternal),x,yi,yj,xij,z(nexternal),xi(nexternal),
      # xjac(nexternal),xifake(nexternal),zPY8,xiPY8,xjacPY8_xiztoxy,
-     # ap,Q,beta,xfact,prefact,kn,knbar,kn0,betad,betas,
+     # ap,Q,beta,xfact,prefact,kn,knbar,kn0,beta3,betad,betas,
      # gfactazi,s,gfunsoft,gfuncoll,gfunazi,bogus_probne_fun,
      # ztmp,xitmp,xjactmp,get_angle,w1,w2,z0,dz0dy,
      # p_born_npartner(0:3),p_born_fksfather(0:3),
@@ -3342,7 +3370,7 @@ c Assign xma2 and xmb2 before calling the shower variables
          if(PDG_type(m_type).eq.5)xmb2=(bmass)**2
 c PYTHIA8 seems to apply mass corrections even in the charm case,
 c so the cmass lines are included for generality, should the cmass
-c parameter in param_card.dat be different from 0 sometimes
+c parameter in param_card.dat be different from 0 sometomes
       endif
 
       ztmp=zPY8(ileg,xm12,xm22,shat,x,yi,yj,tk,uk,q1q,q2q,xma2)
@@ -3396,60 +3424,11 @@ c this formula is a convenient rewriting of equation (39) in hep-ph/0408302
      &                (sqrt(1+xi(npartner)/(4*sb))-sqrt(xi(npartner)/(4*sb)))
             endif
             if(z(npartner).gt.zplus)lzone(npartner)=.false.
-         elseif(ileg.le.4)then
-c The definition of z and its constraints for final state radiation
-c are the same as for PY6Q
-            if(ileg.eq.3)then
-               xmm2=xm12
-               xmrec2=xm22
-               ww=-q1q+q2q-tk
-            elseif(ileg.eq.4)then
-               xmm2=0d0
-               xmrec2=xm12
-               ww=-q2q+q1q-uk
-            endif
-c Recall that xm22 = 0 if ileg = 4
-            if((xmm2+ww)/s.lt.-tiny)then
-               write(*,*)'error A in xmcsubt_PY8'
-               stop
-            elseif((xmm2+ww)/s.lt.0d0)then
-               xmm2=-ww
-            endif
-            ma=sqrt(xmm2+ww)
-            maeff=sqrt(xmm2+Q0**2/4)+Q0/2
-            mbeff=maeff-Q0/2
-            mceff=Q0/2
-            en_fks=sqrt(s)*(1-x)/2.d0
-            en_mother=en_fks+sqrt(xmm2+veckn_ev**2)
-c The following constraint is deduced by imposing (p1+p2-kmother)**2=krecoil**2 and
-c isolating mother's energy. Recall that krecoil**2=xmrec2 and that kmother**2=ma**2
-            if(abs(en_mother-(s-xmrec2+ma**2)/(2*sqrt(s)))/en_mother.ge.tiny)then
-               write(*,*)'error B in xmcsubt_PY8'
-               write(*,*)en_mother,(s-xmrec2+ma**2)/(2*sqrt(s))
-               stop
-            endif
-            if(ma.le.en_mother)then
-               betaa=sqrt(1-ma**2/en_mother**2)
-            elseif(ma.le.en_mother*(1+tiny))then
-               betaa=1d0
-            else
-               write(*,*)'inconsistent betaa'
-               write(*,*)ma,en_mother
-               stop
-            endif
-            if(ma.lt.maeff)then
-               lzone(npartner)=.false.
-            else
-               lambdaabc=sqrt((ma**2-mbeff**2-mceff**2)**2-4*mbeff**2*mceff**2)
-               zplus =(1+(mbeff**2-mceff**2+betaa*lambdaabc)/ma**2)/2
-               zminus=(1+(mbeff**2-mceff**2-betaa*lambdaabc)/ma**2)/2
-               if(z(npartner).lt.zminus.or.
-     &            z(npartner).gt.zplus)lzone(npartner)=.false.
-            endif
-         else
-            write(*,*)'Unknown ileg in PY8 ',ileg
-            stop
+         elseif(ileg.eq.3)then
+         elseif(ileg.eq.4)then
          endif
+
+
 
 c Compute MC subtraction terms
         if(lzone(npartner))then
@@ -3485,8 +3464,8 @@ c           xm22 = squared recoil mass
                 w1=-q1q+q2q-tk
                 w2=-q2q+q1q-uk
                 if(1-x.lt.tiny)then
-                  xkern=0.d0
-                  xkernazi=0.d0
+c$$$                  xkern=0.d0
+c$$$                  xkernazi=0.d0
                 else
                   kn=veckn_ev
                   knbar=veckbarn_ev
@@ -3503,13 +3482,13 @@ c ileg = 4: xm12 = squared recoil mass
 c           xm22 = 0 = squared FKS-mother and FKS-sister mass
                 N_p=2
                 if(1-x.lt.tiny)then
-                  xkern=(g**2/N_p)*8*vca/s
-                  xkernazi=0.d0
+c$$$                  xkern=(g**2/N_p)*8*vca/s
+c$$$                  xkernazi=0.d0
                 elseif(1-yj.lt.tiny)then
-                  xkern=(g**2/N_p)*( 8*vca*
-     &                  (s**2*(1-(1-x)*x)-s*(1+x)*xm12+xm12**2)**2 )/
-     &                  ( s*(s-xm12)**2*(s*x-xm12)**2 )
-                  xkernazi=-(g**2/N_p)*(16*vca*s*(1-x)**2)/((s-xm12)**2)
+c$$$                  xkern=(g**2/N_p)*( 8*vca*
+c$$$     &                  (s**2*(1-(1-x)*x)-s*(1+x)*xm12+xm12**2)**2 )/
+c$$$     &                  ( s*(s-xm12)**2*(s*x-xm12)**2 )
+c$$$                  xkernazi=-(g**2/N_p)*(16*vca*s*(1-x)**2)/((s-xm12)**2)
                 else
                   beta=1-xm12/s
                   xfact=(2-(1-x)*(1-yj))/xij*beta*(1-x)*(1-yj)
@@ -3551,13 +3530,13 @@ c ileg = 4: xm12 = squared recoil mass
 c           xm22 = 0 = squared FKS-mother and FKS-sister mass
                 N_p=2
                 if(1-x.lt.tiny)then
-                  xkern=0.d0
-                  xkernazi=0.d0
+c$$$                  xkern=0.d0
+c$$$                  xkernazi=0.d0
                 elseif(1-yj.lt.tiny)then
-                  xkern=(g**2/N_p)*( 4*vtf*(1-x)*
-     &                  (s**2*(1-2*(1-x)*x)-2*s*x*xm12+xm12**2) )/
-     &                  ( (s-xm12)**2*(s*x-xm12) )
-                  xkernazi=(g**2/N_p)*(16*vtf*s*(1-x)**2)/((s-xm12)**2)
+c$$$                  xkern=(g**2/N_p)*( 4*vtf*(1-x)*
+c$$$     &                  (s**2*(1-2*(1-x)*x)-2*s*x*xm12+xm12**2) )/
+c$$$     &                  ( (s-xm12)**2*(s*x-xm12) )
+c$$$                  xkernazi=(g**2/N_p)*(16*vtf*s*(1-x)**2)/((s-xm12)**2)
                 else
                   beta=1-xm12/s
                   xfact=(2-(1-x)*(1-yj))/xij*beta*(1-x)*(1-yj)
@@ -3586,6 +3565,7 @@ c q --> g q (or qbar --> g qbar) splitting (icode=3)
 c the fks parton is the one associated with 1 - z: this is because its
 c rescaled energy is 1 - x and in the soft limit, where x --> z --> 1,
 c it has to coincide with the fraction appearing in the AP kernel.
+c The definition of z here does tend to 1 only in the massless case
               if(ileg.eq.1.or.ileg.eq.2)then
                  N_p=2
                  if(1-x.lt.tiny)then
@@ -3612,12 +3592,12 @@ c           xm22 = squared recoil mass
                 w1=-q1q+q2q-tk
                 w2=-q2q+q1q-uk
                 if(1-x.lt.tiny)then
-                  betad=sqrt((1-(xm12-xm22)/s)**2-(4*xm22/s))
-                  betas=1+(xm12-xm22)/s
-                  z0=1-(2*xm12)/(s*betas*(betas-betad*yj))
-                  dz0dy=-2*xm12*betad/(s*betas*(betas-betad*yj)**2)
-                  xkern=-(g**2/N_p)*4*vcf*(1-yj)*dz0dy*(1+(1-z0)**2)/(z0*s)
-                  xkernazi=0.d0
+c$$$                  betad=sqrt((1-(xm12-xm22)/s)**2-(4*xm22/s))
+c$$$                  betas=1+(xm12-xm22)/s
+c$$$                  z0=1-(2*xm12)/(s*betas*(betas-betad*yj))
+c$$$                  dz0dy=-2*xm12*betad/(s*betas*(betas-betad*yj)**2)
+c$$$                  xkern=(g**2/N_p)*4*vcf*(1-yj)*dz0dy*(1+(1-z0)**2)/(z0*s)
+c$$$                  xkernazi=0.d0
                 else
                   kn=veckn_ev
                   knbar=veckbarn_ev
@@ -3634,13 +3614,13 @@ c           xm22 = squared recoil mass
 c ileg = 4: xm12 = squared recoil mass
 c           xm22 = 0 = squared FKS-mother and FKS-sister mass
                 if(1-x.lt.tiny)then
-                  xkern=0.d0
-                  xkernazi=0.d0
+c$$$                  xkern=0.d0
+c$$$                  xkernazi=0.d0
                 elseif(1-yj.lt.tiny)then
-                  xkern=(g**2/N_p)*
-     &                  ( 4*vcf*(1-x)*(s**2*(1-x)**2+(s-xm12)**2) )/
-     &                  ( (s-xm12)*(s*x-xm12)**2 )
-                  xkernazi=0.d0
+c$$$                  xkern=(g**2/N_p)*
+c$$$     &                  ( 4*vcf*(1-x)*(s**2*(1-x)**2+(s-xm12)**2) )/
+c$$$     &                  ( (s-xm12)*(s*x-xm12)**2 )
+c$$$                  xkernazi=0.d0
                 else
                   beta=1-xm12/s
                   xfact=(2-(1-x)*(1-yj))/xij*beta*(1-x)*(1-yj)
@@ -3682,12 +3662,13 @@ c           xm22 = squared recoil mass
                 w1=-q1q+q2q-tk
                 w2=-q2q+q1q-uk
                 if(1-x.lt.tiny)then
-                  betad=sqrt((1-(xm12-xm22)/s)**2-(4*xm22/s))
-                  betas=1+(xm12-xm22)/s
-                  z0=1-(2*xm12)/(s*betas*(betas-betad*yj))
-                  dz0dy=-2*xm12*betad/(s*betas*(betas-betad*yj)**2)
-                  xkern=-(g**2/N_p)*4*vcf*(1-yj)*dz0dy*(1+z0**2)/((1-z0)*s)
-                  xkernazi=0.d0
+c$$$                  betad=sqrt((1-(xm12-xm22)/s)**2-(4*xm22/s))
+c$$$                  betas=1+(xm12-xm22)/s
+c$$$                  beta3=sqrt(1-4*s*xm12/(s+xm12-xm22)**2)
+c$$$                  z0=1-(2*xm12)/(s*betas*(betas-betad*yj))
+c$$$                  dz0dy=-2*xm12*betad/(s*betas*(betas-betad*yj)**2)
+c$$$                  xkern=(g**2/N_p)*4*vcf*(1-yj)*dz0dy*(1+z0**2)/((1-z0)*s)
+c$$$                  xkernazi=0.d0
                 else
                   kn=veckn_ev
                   knbar=veckbarn_ev
@@ -3710,13 +3691,13 @@ c Non-QCD branching, here taken to be squark->squark gluon
 c ileg = 4: xm12 = squared recoil mass
 c           xm22 = 0 = squared FKS-mother and FKS-sister mass
                 if(1-x.lt.tiny)then
-                  xkern=(g**2/N_p)*8*vcf/s
-                  xkernazi=0.d0
+c$$$                  xkern=(g**2/N_p)*8*vcf/s
+c$$$                  xkernazi=0.d0
                 elseif(1-yj.lt.tiny)then
-                  xkern=(g**2/N_p)*4*vcf*
-     &                  ( s**2*(1+x**2)-2*xm12*(s*(1+x)-xm12) )/
-     &                  ( s*(s-xm12)*(s*x-xm12) )
-                  xkernazi=0.d0
+c$$$                  xkern=(g**2/N_p)*4*vcf*
+c$$$     &                  ( s**2*(1+x**2)-2*xm12*(s*(1+x)-xm12) )/
+c$$$     &                  ( s*(s-xm12)*(s*x-xm12) )
+c$$$                  xkernazi=0.d0
                 else
                   beta=1-xm12/s
                   xfact=(2-(1-x)*(1-yj))/xij*beta*(1-x)*(1-yj)
@@ -4233,7 +4214,6 @@ c OUTPUTS:  ileg,xm12,xm22,xtk,xuk,xq1q,xq2q,qMC
       double precision sh,xi_i_fks,y_ij_fks,yitmp,xij
       double precision xm12,xm22,xtk,xuk,xq1q,xq2q,qMC
       double precision beta1,beta2,eps1,eps2,w1,w2,zeta1,zeta2
-      double precision en_fks,en_fks_sister,z
       integer ileg,j,i,nfinal
       logical extra
       double precision xs,xs2,xq1c,xq2c,xw1,xw2,dot
@@ -4397,9 +4377,8 @@ c since they never enter isr formulae in MC functions
                write(*,*)'no such MonteCarlo yet'
                stop
             elseif(MonteCarlo.eq.'PYTHIA8')then
-c$$$               z=zPY8(ileg,xm12,xm22,sh,x,yi,yj,xtk,xuk,xq1q,xq2q,xma2)
-c$$$               qMC=sqrt(z*(1-z)*w1)
-c$$$c do !!
+               write(*,*)'no such MonteCarlo yet'
+               stop
             endif
          endif
       elseif(ileg.eq.4)then
@@ -4429,11 +4408,8 @@ c$$$c do !!
                write(*,*)'no such MonteCarlo yet'
                stop
             elseif(MonteCarlo.eq.'PYTHIA8')then
-               en_fks=sqrt(sh)*xi_i_fks/2.d0
-               en_fks_sister=sqrt(sh)*(1-xi_i_fks-xm12/sh)/(2-xi_i_fks*(1-y_ij_fks))
-               z=en_fks_sister/(en_fks + en_fks_sister)
-               qMC=sqrt(z*(1-z)*w2)
-c check that indeed the variable cut by SCALUP be the evolution variable
+               write(*,*)'no such MonteCarlo yet'
+               stop
             endif
          endif
       else
@@ -5371,13 +5347,22 @@ c outgoing parton #3 (massive)
          if(1-x.lt.tiny)then
             betad=sqrt((1-(xm12-xm22)/s)**2-(4*xm22/s))
             betas=1+(xm12-xm22)/s
+**********************************************************************
+c change here to switch z definition
             zPY6Q=1-(2*xm12)/(s*betas*(betas-betad*yj))
+c notice that the soft limit of z is not 1
+c$$$            zPY6Q=1-(1-x)*s/(s+xm12-xm22)
+**********************************************************************
          else
             en_fks=sqrt(s)*(1-x)/2.d0
             mom_fks_sister=veckn_ev
             en_fks_sister=sqrt(mom_fks_sister**2+xm12)
             f=xm12/(s+xm12-xm22-2*sqrt(s)*(en_fks+en_fks_sister))
+**********************************************************************
+c change here to switch z definition
             zPY6Q=( en_fks_sister+en_fks*f )/( en_fks_sister+en_fks )
+c$$$            zPY6Q=en_fks_sister/(en_fks+en_fks_sister)
+**********************************************************************
          endif
 c outgoing parton #4 (massless)
       elseif(ileg.eq.4)then
@@ -5497,7 +5482,11 @@ c outgoing parton #3 (massive)
             betad=sqrt((1-(xm12-xm22)/s)**2-(4*xm22/s))
             betas=1+(xm12-xm22)/s
             beta3=sqrt(1-4*s*xm12/(s+xm12-xm22)**2)
+**********************************************************************
+c change here to switch z definition
             tmp=xm12*betad*(1-beta3*yj)/(betas-betad*yj)**2
+c$$$            tmp=s*(1-x)*beta3/2
+**********************************************************************
          else
             afun=sqrt(s)*(1-x)*(xm12-xm22+s*x)*yj
             bfun=s*( (1+x)**2*(xm12**2+(xm22-s*x)**2-
@@ -5534,8 +5523,13 @@ c
             z=zPY6Q(ileg,xm12,xm22,s,x,yi,yj,xtk,xuk,xq1q,xq2q)
             f=xm12/(s+xm12-xm22-2*sqrt(s)*(en_fks+en_fks_sister))
             fprime=2*sqrt(s)*f**2/xm12
+**********************************************************************
+c change here to switch z definition
             dzPY6Qdenfks   =( f+en_fks*fprime-z )/( en_fks_sister+en_fks )
             dzPY6Qdenfkssis=( 1+en_fks*fprime-z )/( en_fks_sister+en_fks )
+c$$$            dzPY6Qdenfks=-en_fks_sister/(en_fks + en_fks_sister)**2
+c$$$            dzPY6Qdenfkssis=en_fks/(en_fks + en_fks_sister)**2
+**********************************************************************
             dadx=sqrt(s)*yj*(xm22-xm12+s*(1-2*x))
             dady=sqrt(s)*(1-x)*(xm12-xm22+s*x)
             dbdx=2*s*(1+x)*( xm12**2+(xm22-s*x)*(xm22-s*(1+2*x))
@@ -5743,15 +5737,8 @@ c Begin of PY8 stuff
 c Returns PYTHIA energy shower variable
       implicit none
       integer ileg
-      real*8 zPY8,xm12,xm22,s,x,yi,yj,xtk,xuk,xq1q,xq2q,w1,w2,xma2,
-     &en_fks,en_fks_sister,mom_fks_sister,tiny,f,betad,betas
-
-      double precision veckn_ev,veckbarn_ev,xp0jfks
-      common/cgenps_fks/veckn_ev,veckbarn_ev,xp0jfks
-
+      real*8 zPY8,xm12,xm22,s,x,yi,yj,xtk,xuk,xq1q,xq2q,tiny,xma2
       parameter(tiny=1.d-5)
-
-
 c
       if(ileg.gt.4.or.ileg.le.0)then
          write(*,*)'error #1 in zPY8, unknown ileg ',ileg
@@ -5778,36 +5765,15 @@ c bbeta = sqrt(1-4*xma2/s/(1-x)**2), has to be real
          zPY8=x+xma2/s
 c outgoing parton #3 (massive)
       elseif(ileg.eq.3)then
-         w1=-xq1q+xq2q-xtk
-         w2=-xq2q+xq1q-xuk
          if(1-x.lt.tiny)then
-            betad=sqrt((1-(xm12-xm22)/s)**2-(4*xm22/s))
-            betas=1+(xm12-xm22)/s
-            zPY8=1-(2*xm12)/(s*betas*(betas-betad*yj))
          else
-            en_fks=sqrt(s)*(1-x)/2.d0
-            mom_fks_sister=veckn_ev
-            en_fks_sister=sqrt(mom_fks_sister**2+xm12)
-            f=xm12/(s+xm12-xm22-2*sqrt(s)*(en_fks+en_fks_sister))
-            zPY8=( en_fks_sister+en_fks*f )/( en_fks_sister+en_fks )
          endif
 c outgoing parton #4 (massless)
       elseif(ileg.eq.4)then
          if(1-x.lt.tiny)then
-            zPY8=1-s*(1-x)/(s-xm12)
          elseif(1-yj.lt.tiny)then
-            zPY8=(s*x-xm12)/(s-xm12)+(1-yj)*(1-x)**2*s*(s*x-xm12)/
-     &                                 ( 2*(s-xm12)**2 )
          else
-            en_fks=sqrt(s)*(1-x)/2.d0
-            en_fks_sister=sqrt(s)*(x-xm12/s)/(2-(1-x)*(1-yj))
-            zPY8=en_fks_sister/(en_fks + en_fks_sister)
          endif
-      endif
-
-      if(zPY8.le.0d0.or.zPY8.ge.1d0)then
-         write(*,*)'zPY8 out of range',zPY8
-         stop
       endif
 
       return
@@ -5819,13 +5785,8 @@ c outgoing parton #4 (massless)
 c Returns PYTHIA evolution shower variable
       implicit none
       integer ileg
-      real*8 xiPY8,xm12,xm22,s,x,yi,yj,xtk,xuk,xq1q,xq2q,z,zPY8,xma2,xmb2,
-     &en_fks,en_fks_sister,mom_fks_sister,xt,tiny,w1,w2,beta,betas,beta3,
-     &bbeta,betad,z0
-
-      double precision veckn_ev,veckbarn_ev,xp0jfks
-      common/cgenps_fks/veckn_ev,veckbarn_ev,xp0jfks
-
+      real*8 xiPY8,xm12,xm22,s,x,yi,yj,xtk,xuk,xq1q,xq2q,z,zPY8,
+     &xma2,xmb2,bbeta,tiny
       parameter(tiny=1.d-5)
 c
       if(ileg.gt.4.or.ileg.le.0)then
@@ -5856,37 +5817,17 @@ c bbeta = sqrt(1-4*xma2/s/(1-x)**2), has to be real
          xiPY8=(1-x-xma2/s)*(s*(1-x)/2*(1-bbeta*yi)-xma2+xmb2)
 c outgoing parton #3 (massive)
       elseif(ileg.eq.3)then
-         w1=-xq1q+xq2q-xtk
-         w2=-xq2q+xq1q-xuk
          if(1-x.lt.tiny)then
-            betad=sqrt((1-(xm12-xm22)/s)**2-(4*xm22/s))
-            betas=1+(xm12-xm22)/s
-            beta3=sqrt(1-4*s*xm12/(s+xm12-xm22)**2)
-            z0=1-(2*xm12)/(s*betas*(betas-betad*yj))
-            xiPY8=s*(1-x)*betas*(1-yj*beta3)/2*z0*(1-z0)
          else
-            z=zPY8(ileg,xm12,xm22,s,x,yi,yj,xtk,xuk,xq1q,xq2q,xma2)
-            xiPY8=z*(1-z)*w1
          endif
 c outgoing parton #4 (massless)
       elseif(ileg.eq.4)then
          if(1-x.lt.tiny)then
-            xiPY8=s*(1-x)**2*(1-yj)/2
-         elseif(1-yj.lt.tiny)then
-            xiPY8=s*(1-x)**2*(1-yj)*(s*x-xm12)**2/(2*(s-xm12)**2)
+         elseif(1-yj.le.tiny)then
          else
-            en_fks=sqrt(s)*(1-x)/2.d0
-            en_fks_sister=sqrt(s)*(x-xm12/s)/(2-(1-x)*(1-yj))
-            z=zPY8(ileg,xm12,xm22,s,x,yi,yj,xtk,xuk,xq1q,xq2q,xma2)
-            xt=2*en_fks*en_fks_sister*(1-yj)
-            xiPY8=z*(1-z)*xt
          endif
       endif
 
-      if(xiPY8.le.0d0)then
-         write(*,*)'xiPY8 out of range',xiPY8
-         stop
-      endif
       return
       end
 
@@ -5898,18 +5839,12 @@ c Returns PYTHIA jacobian |d(xi_PY8,z_PY8)/d(x,y)|
       implicit none
       integer ileg
       real*8 xjacPY8_xiztoxy,xm12,xm22,s,x,yi,yj,xtk,xuk,xq1q,xq2q,xma2,
-     &z,zPY8,en_fks,en_fks_sister,mom_fks_sister,mom_fks_sister_p,
-     &mom_fks_sister_m,xt,tiny,tmp,w1,w2,afun,bfun,cfun,signfac,beta,
-     &dzPY8denfks,dzPY8denfkssis,dxiPY8denfks,dxiPY8denfkssis,
-     &dadx,dady,dbdx,dbdy,dcdx,dcdy,denfksdx,denfksdy,denfkssisdx,
-     &denfkssisdy,dmomfkssisdx,dmomfkssisdy,dzPY8dx,dzPY8dy,dxiPY8dx,
-     &dxiPY8dy,beta3,dw1dx,dw1dy,diff_p,diff_m,vectmp,f,fprime,betad,betas,
-     &bbeta,z0
-
-      double precision veckn_ev,veckbarn_ev,xp0jfks
-      common/cgenps_fks/veckn_ev,veckbarn_ev,xp0jfks
-
-      parameter (tiny=1.d-5)
+     &z,zPY8,en_fks,en_fks_sister,mom_fks_sister,xt,tiny,tmp,w1,w2,bbeta,
+     &afun,bfun,cfun,signfac,beta,dzPY8denfks,dzPY8denfkssis,dxiPY8denfks,
+     &dxiPY8denfkssis,dadx,dady,dbdx,dbdy,dcdx,dcdy,denfksdx,denfksdy,
+     &denfkssisdx,denfkssisdy,dmomfkssisdx,dmomfkssisdy,dzPY8dx,dzPY8dy,
+     &dxiPY8dx,dxiPY8dy
+      parameter(tiny=1.d-5)
 c
       if(ileg.gt.4.or.ileg.le.0)then
          write(*,*)'error #1 in xjacPY8_xiztoxy, unknown ileg ',ileg
@@ -5938,81 +5873,13 @@ c bbeta = sqrt(1-4*xma2/s/(1-x)**2), has to be real
 c outgoing parton #3 (massive)
       elseif(ileg.eq.3)then
          if(1-x.lt.tiny)then
-            betad=sqrt((1-(xm12-xm22)/s)**2-(4*xm22/s))
-            betas=1+(xm12-xm22)/s
-            beta3=sqrt(1-4*s*xm12/(s+xm12-xm22)**2)
-            z0=1-(2*xm12)/(s*betas*(betas-betad*yj))
-            tmp=xm12*betad*(1-beta3*yj)/(betas-betad*yj)**2*z0*(1-z0)
          else
-            afun=sqrt(s)*(1-x)*(xm12-xm22+s*x)*yj
-            bfun=s*( (1+x)**2*(xm12**2+(xm22-s*x)**2-
-     &               xm12*(2*xm22+s*(1+x**2)))+
-     &               xm12*s*(1-x**2)**2*yj**2 )
-            cfun=s*(-(1+x)**2+(1-x)**2*yj**2)
-c get sign
-            mom_fks_sister_p=(afun+sqrt(bfun))/cfun
-            mom_fks_sister_m=(afun-sqrt(bfun))/cfun
-            diff_p=abs(mom_fks_sister_p-veckn_ev)
-            diff_m=abs(mom_fks_sister_m-veckn_ev)
-            vectmp=abs(veckn_ev)
-            if(vectmp.le.1d0)vectmp=1d0
-            if(min(diff_p,diff_m)/vectmp.ge.1.d-3)then
-              write(*,*)'Fatal imprecision #1 in xjacPY8_xiztoxy',
-     &              mom_fks_sister_p,mom_fks_sister_m,veckn_ev
-              stop
-            elseif(min(diff_p,diff_m)/vectmp.ge.tiny)then
-              write(*,*)'Numerical imprecision #1 in xjacPY8_xiztoxy'
-            endif
-            signfac=1.d0
-            if(diff_p.ge.diff_m)signfac=-1.d0
-            mom_fks_sister=veckn_ev
-c
-            en_fks=sqrt(s)*(1-x)/2.d0
-            en_fks_sister=sqrt(mom_fks_sister**2+xm12)
-            if(1-xm12/en_fks_sister**2.lt.-tiny)then
-               write(*,*)'unphysical configuration',sqrt(xm12),en_fks_sister
-               stop
-            elseif(1-xm12/en_fks_sister**2.lt.0d0)then
-               en_fks_sister=sqrt(xm12)
-            endif
-            beta=sqrt(1-xm12/en_fks_sister**2)
-            z=zPY8(ileg,xm12,xm22,s,x,yi,yj,xtk,xuk,xq1q,xq2q,xma2)
-            f=xm12/(s+xm12-xm22-2*sqrt(s)*(en_fks+en_fks_sister))
-            fprime=2*sqrt(s)*f**2/xm12
-            dzPY8denfks   =( f+en_fks*fprime-z )/( en_fks_sister+en_fks )
-            dzPY8denfkssis=( 1+en_fks*fprime-z )/( en_fks_sister+en_fks )
-            dadx=sqrt(s)*yj*(xm22-xm12+s*(1-2*x))
-            dady=sqrt(s)*(1-x)*(xm12-xm22+s*x)
-            dbdx=2*s*(1+x)*( xm12**2+(xm22-s*x)*(xm22-s*(1+2*x))
-     &              -xm12*(2*xm22+s*(1+x+2*(x**2)+2*(1-x)*x*(yj**2))) )
-            dbdy=2*xm12*s**2*(1-x**2)**2*yj
-            dcdx=-2*s*(1+x+(yj**2)*(1-x))
-            dcdy=2*s*(1-x)**2*yj
-            denfksdx=-sqrt(s)/2.d0
-            denfksdy=0.d0
-            dmomfkssisdx=( dadx+signfac*dbdx/(2*sqrt(bfun))-dcdx*mom_fks_sister )/cfun
-            dmomfkssisdy=( dady+signfac*dbdy/(2*sqrt(bfun))-dcdy*mom_fks_sister )/cfun
-            denfkssisdx=(mom_fks_sister/en_fks_sister)*dmomfkssisdx
-            denfkssisdy=(mom_fks_sister/en_fks_sister)*dmomfkssisdy
-            dzPY8dx=dzPY8denfkssis*denfkssisdx+dzPY8denfks*denfksdx
-            dzPY8dy=dzPY8denfkssis*denfkssisdy
-            dw1dx=sqrt(s)*(yj*mom_fks_sister-en_fks_sister+
-     &            (1-x)*(mom_fks_sister/en_fks_sister-yj)*dmomfkssisdx)
-            dw1dy=-sqrt(s)*(1-x)*(mom_fks_sister+
-     &                  (yj-mom_fks_sister/en_fks_sister)*dmomfkssisdy)
-            dxiPY8dx=dw1dx*z*(1-z)
-            dxiPY8dy=dw1dy*z*(1-z)
-            tmp=dzPY8dx*dxiPY8dy-dzPY8dy*dxiPY8dx
-
          endif
 c outgoing parton #4 (massless)
       elseif(ileg.eq.4)then
          if(1-x.lt.tiny)then
-            tmp=s**2*(1-x)**2/(2*(s-xm12))
          elseif(1-yj.le.tiny)then
-            tmp=4*s**2*(1-x)**2*(s*x-xm12)**2/(2*(s-xm12))**3
          else
-            tmp=4*s**2*(1-x)**2*(s*x-xm12)**2/(s*((x-2)*x*(yj-1)+yj+1)-2*xm12)**3
          endif
       endif
 
@@ -6235,5 +6102,81 @@ c entering this function
       up_sc=sqrt(x*sh)
       up_sc=up_sc*f
 
+      return
+      end
+c
+c
+c CKKW stuff
+c
+c
+      function CKKW_D_auxfun(x,alpha)
+c Equal to 1 at x=0, to 0 at x=1, and smooth in between
+      implicit none
+      double precision CKKW_D_auxfun,x,alpha,tmp,emscafun
+c
+      tmp=0.d0
+      if(x.le.0.d0)then
+        tmp=1.d0
+      elseif(x.gt.0.d0.and.x.le.1.d0)then
+        tmp=1-emscafun(x,alpha)
+      endif
+      CKKW_D_auxfun=tmp
+      return
+      end
+
+
+      function CKKW_D_fun(mu)
+c D function as defined in the note
+      implicit none
+      include 'genps.inc'
+      include 'nexternal.inc'
+      include 'madfks_mcatnlo.inc'
+      double precision CKKW_D_fun,mu,muresc,tmp,CKKW_D_auxfun
+      logical CKKW_theta
+c
+      tmp=1.d0
+      if(DsharpCKKW)then
+        if(CKKW_theta(mu))tmp=0.d0
+      else
+        if(mu.ge.CKKWscalemax)then
+          tmp=0.d0
+        elseif(mu.gt.CKKWscalemin)then
+          muresc=(mu-CKKWscalemin)/(CKKWscalemax-CKKWscalemin)
+          if(muresc.lt.0.d0.or.muresc.gt.1.d0)then
+            write(*,*)'Error in CKKW_D_fun',mu,muresc
+            stop
+          endif
+          tmp=CKKW_D_auxfun(muresc,alphaCKKW)
+        endif
+      endif
+      CKKW_D_fun=tmp
+      return
+      end
+
+
+      function CKKW_theta(mu)
+c theta function used with 1-D. Returns true when argument is in the hard region
+      implicit none
+      include 'genps.inc'
+      include 'nexternal.inc'
+      include 'madfks_mcatnlo.inc'
+      logical CKKW_theta,ltmp
+      double precision mu
+c
+      ltmp=mu.ge.CKKWscalemax
+      CKKW_theta=ltmp
+      return
+      end
+
+
+      function Dfuninv(x,alpha)
+c VERY FRAGILE VERY FRAGILE VERY FRAGILE VERY FRAGILE VERY FRAGILE 
+c May be extended. Right now, set equal to emscainv, since functional
+c forms involved are the same. 
+c VERY FRAGILE VERY FRAGILE VERY FRAGILE VERY FRAGILE VERY FRAGILE 
+      implicit none
+      double precision Dfuninv,x,alpha,emscainv
+c
+      Dfuninv=emscainv(x,alpha)
       return
       end
