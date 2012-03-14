@@ -99,7 +99,7 @@ c
 
 c update the ren_scale for MadLoop and the couplings
       mu_r = scale
-      call coup2()
+      call update_as_param()
 
       alphaS=g**2/(4d0*PI)
       if (firsttime) write(*,*) "alpha_s value used by MadLoop: ",

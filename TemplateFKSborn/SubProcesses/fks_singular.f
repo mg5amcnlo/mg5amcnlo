@@ -5386,7 +5386,7 @@ c Multiply the strong coupling by 10
       endif
 
 c Update alphaS-dependent couplings
-      call coup2()
+      call update_as_param()
 
 c recompute the Born with the new couplings
       calculatedBorn=.false.
@@ -5419,7 +5419,7 @@ c         endif
 c Change couplings back and recompute the Born to make sure that 
 c nothing funny happens later on
       g=g/10d0
-      call coup2()
+      call update_as_param()
       isum_hel=isum_hel_orig
       calculatedBorn=.false.
       call sborn(p_born,wgt1)

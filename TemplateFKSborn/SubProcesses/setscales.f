@@ -209,7 +209,7 @@ c
 c The following is for backward compatibility. DO NOT REMOVE
       scale=muR
       g=sqrt(4d0*pi*alphas(scale))
-      call coup2()
+      call update_as_param()
 c
       return
       end
