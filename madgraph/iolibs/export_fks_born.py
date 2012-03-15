@@ -302,10 +302,28 @@ class ProcessExporterFortranFKS_born(loop_exporters.LoopProcessExporterFortranSA
         """writes the leshouche_info.inc file which contains the LHA informations
         for all the real emission processes"""
         lines = []
+        nconfs = len(matrix_element.real_processes)
+        (nexternal, ninitial) = matrix_element.real_processes[0].matrix_element.get_nexternal_ninitial()
+
+        lines.append('integer idup_d(%d,%d,maxproc_used)' % (nconfs, nexternal))
+        lines.append('integer mothup_d(%d,%d,%d,maxproc_used)' % (nconfs, 2, nexternal))
+        lines.append('integer icolup_d(%d,%d,%d,maxflow_used)' % (nconfs, 2, nexternal))
+        lines.append('integer ilh')
+        lines.append('')
+
+        maxproc = 0
+        maxflow = 0
         for i, real in enumerate(matrix_element.real_processes):
-            lines.extend(self.get_leshouche_lines(real.matrix_element, i + 1))
-        
-        writer.writelines(lines)
+            (newlines, nprocs, nflows) = self.get_leshouche_lines(real.matrix_element, i + 1)
+            lines.extend(newlines)
+            maxproc = max(maxproc, nprocs)
+            maxflow = max(maxflow, nflows)
+
+        firstlines = ['integer maxproc_used, maxflow_used',
+                      'data maxproc_used / %d /' % maxproc,
+                      'data maxflow_used / %d /' % maxflow ]
+
+        writer.writelines(firstlines + lines)
 
 
 
@@ -1663,14 +1681,15 @@ data mirrorproc /%s/" % bool_dict[matrix_element.get('has_mirror_process')]
         lines = []
         for iproc, proc in enumerate(matrix_element.get('processes')):
             legs = proc.get_legs_with_decays()
-            lines.append("DATA (IDUP_D(%d,i,%d),i=1,%d)/%s/" % \
+            lines.append("DATA (IDUP_D(%d,ilh,%d),ilh=1,%d)/%s/" % \
                          (ime, iproc + 1, nexternal,
                           ",".join([str(l.get('id')) for l in legs])))
             for i in [1, 2]:
-                lines.append("DATA (MOTHUP_D(%d,%d,i,%3r),i=1,%2r)/%s/" % \
+                lines.append("DATA (MOTHUP_D(%d,%d,ilh,%3r),ilh=1,%2r)/%s/" % \
                          (ime, i, iproc + 1, nexternal,
                           ",".join([ "%3r" % 0 ] * ninitial + \
                                    [ "%3r" % i ] * (nexternal - ninitial))))
+
     
             # Here goes the color connections corresponding to the JAMPs
             # Only one output, for the first subproc!
@@ -1678,10 +1697,11 @@ data mirrorproc /%s/" % bool_dict[matrix_element.get('has_mirror_process')]
                 # If no color basis, just output trivial color flow
                 if not matrix_element.get('color_basis'):
                     for i in [1, 2]:
-                        lines.append("DATA (ICOLUP_D(%d,%d,i,  1),i=1,%2r)/%s/" % \
+                        lines.append("DATA (ICOLUP_D(%d,%d,ilh,  1),ilh=1,%2r)/%s/" % \
                                  (ime, i, nexternal,
                                   ",".join([ "%3r" % 0 ] * nexternal)))
                     color_flow_list = []
+                    nflows = 1
     
                 else:
                     # First build a color representation dictionnary
@@ -1697,13 +1717,17 @@ data mirrorproc /%s/" % bool_dict[matrix_element.get('has_mirror_process')]
                     # And output them properly
                     for cf_i, color_flow_dict in enumerate(color_flow_list):
                         for i in [0, 1]:
-                            lines.append("DATA (ICOLUP_D(%d,%d,i,%3r),i=1,%2r)/%s/" % \
+                            lines.append("DATA (ICOLUP_D(%d,%d,ilh,%3r),ilh=1,%2r)/%s/" % \
                                  (ime, i + 1, cf_i + 1, nexternal,
                                   ",".join(["%3r" % color_flow_dict[l.get('number')][i] \
                                             for l in legs])))
+
+                    nflow = len(color_flow_list)
+
+        nproc = len(matrix_element.get('processes'))
         lines.append('')
     
-        return lines
+        return lines, nproc, nflow
 
     
     #===============================================================================
