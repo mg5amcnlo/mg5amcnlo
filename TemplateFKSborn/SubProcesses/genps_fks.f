@@ -144,16 +144,16 @@ c saves
      &     ,ionebody,fksmass
 
       pass=.true.
-      if (firsttime) then
 c This assumes that there are first non-QCD, than massive QCD and
 c finally massless QCD particals in the process defintion
-         do i=1,nexternal
-            m(i)=pmass(i)
-         enddo
-         if (pmass(nexternal).ne.0d0) then
-            write (*,*) 'ERROR, last particle should be massless'
-            stop
-         endif
+      do i=1,nexternal
+         m(i)=pmass(i)
+      enddo
+      if (pmass(nexternal).ne.0d0) then
+         write (*,*) 'ERROR, last particle should be massless'
+         stop
+      endif
+      if (firsttime) then
          stot = 4d0*ebeam(1)*ebeam(2)
 c Make sure have enough mass for external particles
          totmassin=0d0
