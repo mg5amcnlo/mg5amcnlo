@@ -74,22 +74,21 @@ C
       common/to_mconfigs/mapconfig, iconfig
       DATA NTRY,IDUM /0,-1/
       DATA xtry, xrej /0,0/
-c      DATA warned, isum_hel/.false.,0/
-c      DATA multi_channel/.true./
       SAVE yfrac
       DATA jamp2(0) /   1/          
       DATA GOODHEL/THEL*.FALSE./
   %(helicity_lines)s
-      include 'den_factor.inc'
       double precision hel_fac
       logical calculatedBorn
       integer get_hel,skip
       common/cBorn/hel_fac,calculatedBorn,get_hel,skip
-      integer glu_ij
-      include 'glu_ij.inc'
+      integer nfksprocess
+      common/c_nfksprocess/nfksprocess
+%(den_factor_lines)s
 C ----------
 C BEGIN CODE
 C ----------
+      iden(1)=iden_values(nfksprocess)
       NTRY=NTRY+1
       if (ntry.lt.2) then
          skip=1
@@ -250,8 +249,9 @@ C
       integer get_hel,skip
       common/cBorn/hel_fac,calculatedBorn,get_hel,skip
       include "coupl.inc"
-      integer glu_ij
-      include 'glu_ij.inc'
+      integer nfksprocess
+      common/c_nfksprocess/nfksprocess
+%(ij_lines)s
 C  
 C COLOR DATA
 C  
@@ -259,6 +259,7 @@ C
 C ----------
 C BEGIN CODE
 C ----------
+      glu_ij = ij_values(nfksprocess)
       BORN = 0d0
       BORNTILDE = (0d0,0d0)
       back_hel = nhel(glu_ij)

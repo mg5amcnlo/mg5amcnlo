@@ -53,15 +53,18 @@ C
       common/to_helicity/  hel_buff
 
       DATA GOODHEL/THEL*.FALSE./
-  %(helicity_lines)s
       include 'den_factor.inc'
       double precision hel_fac
       logical calculatedBorn
       integer get_hel,skip
       common/cBorn/hel_fac,calculatedBorn,get_hel,skip
+      integer nfksprocess
+      common/c_nfksprocess/nfksprocess
+%(den_factor_lines)s
 C ----------
 C BEGIN CODE
 C ----------
+      iden(1)=iden_values(nfksprocess)
       NTRY=NTRY+1
       DO IPROC=1,NCROSS
       DO IHEL=1,NEXTERNAL-1
@@ -71,20 +74,14 @@ C ----------
          do j=1,nexternal-1
             if (savemom(j,1).ne.p1(0,j) .or. savemom(j,2).ne.p1(3,j)) then
                calculatedBorn=.false.
-C          write (*,*) "momenta not the same in Born"
+               write(*,*) 'Error in sb_sf: momenta not the same in the born'
+               stop
             endif
          enddo
       endif
       if (.not.calculatedBorn) then
-         do j=1,nexternal-1
-            savemom(j,1)=p1(0,j)
-            savemom(j,2)=p1(3,j)
-         enddo
-         do j=1,max_bhel
-            do jj=1,ngraphs
-               saveamp(jj,j)=(0d0,0d0)
-            enddo
-         enddo
+         write(*,*) 'Error in sb_sf: color_linked borns should be called only with calculatedborn = true'
+         stop
       endif
       ANS(IPROC) = 0D0
       IF (GET_HEL .EQ. 0 .OR. NTRY .LT. 2) THEN
@@ -107,7 +104,6 @@ C          write (*,*) "momenta not the same in Born"
       ENDIF
       ANS(IPROC)=ANS(IPROC)/DBLE(IDEN(IPROC))
       ENDDO
-      calculatedBorn=.true.
       END
        
        
@@ -165,10 +161,8 @@ C BEGIN CODE
 C ----------
 
       if (.not. calculatedBorn) then
-  %(helas_calls)s
-      do i=1,ngraphs
-         saveamp(i,hell)=amp(i)
-      enddo
+        write(*,*) 'Error in b_sf: color_linked borns should be called only with calculatedborn = true'
+        stop
       elseif (calculatedBorn) then
       do i=1,ngraphs
          amp(i)=saveamp(i,hell)

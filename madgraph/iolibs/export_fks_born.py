@@ -263,10 +263,18 @@ class ProcessExporterFortranFKS_born(loop_exporters.LoopProcessExporterFortranSA
                             matrix_element.virt_matrix_element, \
                             fortran_model, \
                             os.path.join(path, borndir))
+#write the infortions for the different real emission processes
         self.write_real_matrix_elements(matrix_element, fortran_model)
+        self.write_pdf_calls(matrix_element, fortran_model)
 
+#write the wrappers
         filename = 'real_me_chooser.f'
         self.write_real_me_wrapper(writers.FortranWriter(filename), 
+                                   matrix_element, 
+                                   fortran_model)
+
+        filename = 'parton_lum_chooser.f'
+        self.write_pdf_wrapper(writers.FortranWriter(filename), 
                                    matrix_element, 
                                    fortran_model)
 #        for nfks, fksreal in enumerate(matrix_element.real_processes):
@@ -281,25 +289,64 @@ class ProcessExporterFortranFKS_born(loop_exporters.LoopProcessExporterFortranSA
 
     def write_real_matrix_elements(self, matrix_element, fortran_model):
         """writes the matrix_i.f files which contain the real matrix elements""" 
+
         for n, fksreal in enumerate(matrix_element.real_processes):
             filename = 'matrix_%d.f' % (n + 1)
             self.write_matrix_element_fks(writers.FortranWriter(filename),
                                             fksreal.matrix_element, n + 1, 
                                             fortran_model)
 
+    def write_pdf_calls(self, matrix_element, fortran_model):
+        """writes the matrix_i.f files which contain the real matrix elements""" 
+        for n, fksreal in enumerate(matrix_element.real_processes):
+            filename = 'parton_lum_%d.f' % (n + 1)
+            self.write_pdf_file(writers.FortranWriter(filename),
+                                            fksreal.matrix_element, n + 1, 
+                                            fortran_model)
+
+
+    def write_pdf_wrapper(self, writer, matrix_element, fortran_model):
+        """writes the wrapper which allows to chose among the different real matrix elements"""
+
+        file = \
+"""double precision function dlum()
+double precision lum
+integer nfksprocess
+common/c_nfksprocess/nfksprocess
+"""
+        for n in range(len(matrix_element.real_processes)):
+            file += \
+"""if (nfksprocess.eq.%(n)d) then
+lum = dlum_%(n)d()
+else""" % {'n': n + 1}
+        file += \
+"""
+write(*,*) 'ERROR: invalid n in dlum :', n
+stop
+endif
+
+return lum
+end
+"""
+        # Write the file
+        writer.writelines(file)
+        return 0
+
+
     def write_real_me_wrapper(self, writer, matrix_element, fortran_model):
         """writes the wrapper which allows to chose among the different real matrix elements"""
 
         file = \
-"""subroutine real_matrix(p, n, wgt)
+"""subroutine real_matrix(p, wgt)
 include 'nexternal.inc'
 double precision p(0:3, nexternal)
 double precision wgt
-integer n
+integer nfksprocess
+common/c_nfksprocess/nfksprocess
 """
         for n in range(len(matrix_element.real_processes)):
             file += \
-"""if (n.eq.%(n)d) then
+"""if (nfksprocess.eq.%(n)d) then
 call smatrix_%(n)d(p, wgt)
 else""" % {'n': n + 1}
         file += \
@@ -322,11 +369,10 @@ end
         be needed by the P* directories"""
         pathdir = os.getcwd()
 
-        filename = ['born.f', 'born_intf.f']
-        for ijglu in [0,1]:
-            calls_born, ncolor_born = \
-            self.write_born_fks(writers.FortranWriter(filename[ijglu]),\
-                             matrix_element.born_matrix_element, ijglu,
+        filename = 'born.f'
+        calls_born, ncolor_born = \
+            self.write_born_fks(writers.FortranWriter(filename),\
+                             matrix_element,
                              fortran_model)
 
         file_dict= {True : '_inverse.inc', False :'.inc'}
@@ -372,13 +418,11 @@ end
                                                 links,
                                                 fortran_model)
         self.color_link_files = [] 
-        for i, c_link in enumerate(matrix_element.color_links):
-            iborn = i+1
-            filename = 'b_sf_%3.3d.f' % iborn                
+        for i in range(len(matrix_element.color_links)):
+            filename = 'b_sf_%3.3d.f' % (i + 1)              
             self.color_link_files.append(filename)
-            born_helas_process = copy.copy(matrix_element.born_matrix_element)
             self.write_b_sf_fks(writers.FortranWriter(filename),
-                         born_helas_process, c_link, iborn,
+                         matrix_element, i,
                          fortran_model)
 
 
@@ -517,8 +561,10 @@ NJetSymmetrizeFinal     %(symfin)s\n\
     # write_born_fks
     #===============================================================================
     # test written
-    def write_born_fks(self, writer, matrix_element, ijglu, fortran_model):
+    def write_born_fks(self, writer, fksborn, fortran_model):
         """Export a matrix element to a born.f file in MadFKS format"""
+
+        matrix_element = fksborn.born_matrix_element
         
         if not matrix_element.get('processes') or \
                not matrix_element.get('diagrams'):
@@ -584,18 +630,18 @@ NJetSymmetrizeFinal     %(symfin)s\n\
     
         # Extract JAMP lines
         jamp_lines = self.get_JAMP_lines(matrix_element)
-    
         replace_dict['jamp_lines'] = '\n'.join(jamp_lines)
-        
-        
-        if ijglu >0:
-            #if ij fks is gluon use the template with the interference for the 
-            #collinear limit
-            file = open(os.path.join(_file_path, \
+
+        # Extract glu_ij_lines
+        ij_lines = self.get_ij_lines(fksborn)
+        replace_dict['ij_lines'] = '\n'.join(ij_lines)
+
+        # Extract den_factor_lines
+        den_factor_lines = self.get_den_factor_lines(fksborn)
+        replace_dict['den_factor_lines'] = '\n'.join(den_factor_lines)
+    
+        file = open(os.path.join(_file_path, \
                           'iolibs/template_files/born_fks_tilde_from_born.inc')).read()
-        else:
-            file = open(os.path.join(_file_path, \
-                          'iolibs/template_files/born_fks_from_born.inc')).read()
         file = file % replace_dict
         
         # Write the file
@@ -666,10 +712,11 @@ c     this subdir has no soft singularities
     # write_b_sf_fks
     #===============================================================================
     #test written
-    def write_b_sf_fks(self, writer, born_matrix_element, link,
-                        iborn, fortran_model):
+    def write_b_sf_fks(self, writer, fksborn, i, fortran_model):
         """Create the b_sf_xxx.f file for the soft linked born in MadFKS format"""
-        matrix_element = born_matrix_element
+
+        matrix_element = copy.copy(fksborn.born_matrix_element)
+
         if not matrix_element.get('processes') or \
                not matrix_element.get('diagrams'):
             return 0
@@ -679,6 +726,9 @@ c     this subdir has no soft singularities
                 "writer not FortranWriter")
         # Set lowercase/uppercase Fortran code
         writers.FortranWriter.downcase = False
+
+        iborn = i + 1
+        link = fksborn.color_links[i]
     
         replace_dict = {}
         
@@ -705,6 +755,11 @@ c     this subdir has no soft singularities
         # Extract IC line
         ic_line = self.get_ic_line(matrix_element)
         replace_dict['ic_line'] = ic_line
+
+        # Extract den_factor_lines
+        den_factor_lines = self.get_den_factor_lines(fksborn)
+        replace_dict['den_factor_lines'] = '\n'.join(den_factor_lines)
+    
     
         # Extract ngraphs
         ngraphs = matrix_element.get_number_of_amplitudes()
@@ -725,10 +780,6 @@ c     this subdir has no soft singularities
                                 link['link_matrix'])
         replace_dict['color_data_lines'] = "\n".join(color_data_lines)
     
-        # Extract helas calls
-        helas_calls = fortran_model.get_matrix_element_calls(\
-                    matrix_element)
-        replace_dict['helas_calls'] = "\n".join(helas_calls)
     
         # Extract amp2 lines
         amp2_lines = self.get_amp2_lines(matrix_element)
@@ -758,7 +809,7 @@ c     this subdir has no soft singularities
         # Write the file
         writer.writelines(file)
     
-        return len(filter(lambda call: call.find('#') != 0, helas_calls)), ncolor1
+        return 0 , ncolor1
     
     
 
@@ -845,8 +896,8 @@ c     this subdir has no soft singularities
 
     #write auto_dsig (for MadFKS it contains only the parton luminosities
         filename = 'auto_dsig.f'
-        self.write_auto_dsig_fks(writers.FortranWriter(filename),
-                             real_matrix_element,
+        self.write_pdf_file(writers.FortranWriter(filename),
+                             real_matrix_element, 0,
                              fortran_model) 
 
         filename = 'den_factor.inc'
@@ -1221,7 +1272,7 @@ C
     #===============================================================================
     # write_auto_dsig_file
     #===============================================================================
-    def write_auto_dsig_fks(self, writer, matrix_element, fortran_model):
+    def write_pdf_file(self, writer, matrix_element, n, fortran_model):
         #test written
         """Write the auto_dsig.f file for MadFKS, which contains 
           pdf call information"""
@@ -1237,6 +1288,8 @@ C
                   """Need ninitial = 1 or 2 to write auto_dsig file"""
     
         replace_dict = {}
+
+        replace_dict['N_me'] = n
     
         # Extract version number and date from VERSION file
         info_lines = self.get_mg5_info_lines()
@@ -1254,12 +1307,30 @@ C
     
     
         file = open(os.path.join(_file_path, \
-                          'iolibs/template_files/auto_dsig_fks.inc')).read()
+                          'iolibs/template_files/parton_lum_n_fks.inc')).read()
         file = file % replace_dict
     
         # Write the file
         writer.writelines(file)
 
+
+    #===============================================================================
+    # get_den_factor_lines
+    #===============================================================================
+    def get_den_factor_lines(self, fks_born):
+        """returns the lines with the information on the particle number of the born 
+        that splits"""
+    
+        lines = []
+        lines.append('integer iden_values(%d)' % len(fks_born.real_processes))
+        lines.append('data iden_values /' + \
+                     ', '.join(['%d' % ( 
+                     fks_born.born_matrix_element.get_denominator_factor() / \
+                     fks_born.born_matrix_element['identical_particle_factor'] * \
+                     real.matrix_element['identical_particle_factor'] ) \
+                     for real in fks_born.real_processes]) + '/')
+
+        return lines
 
     #===============================================================================
     # write_den_factor_file
@@ -1277,6 +1348,21 @@ C
         # Write the file
         writer.writelines(lines)
 
+
+
+    #===============================================================================
+    # get_ij_lines
+    #===============================================================================
+    def get_ij_lines(self, fks_born):
+        """returns the lines with the information on the particle number of the born 
+        that splits"""
+    
+        lines = []
+        lines.append('integer ij_values(%d)' % len(fks_born.real_processes))
+        lines.append('data ij_values /' + \
+                     ', '.join(['%d' % real.ij for real in fks_born.real_processes]) + '/')
+
+        return lines
 
 
     #===============================================================================
