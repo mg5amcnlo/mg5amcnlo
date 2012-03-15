@@ -24,8 +24,9 @@ C
 C  
 C LOCAL VARIABLES 
 C  
-      INTEGER NHEL(NEXTERNAL,NCOMB),NTRY
-      REAL*8 T
+      INTEGER NHEL(NEXTERNAL,NCOMB),NTRY,T_IDENT(NCOMB)
+      REAL*8 T, P(0:3,NEXTERNAL),T_SAVE(NCOMB)
+      SAVE T_SAVE,T_IDENT
       REAL*8 MATRIX
       INTEGER IHEL,IDEN, I
       INTEGER JC(NEXTERNAL)
@@ -44,7 +45,31 @@ C ----------
       ANS = 0D0
           DO IHEL=1,NCOMB
              IF (GOODHEL(IHEL) .OR. NTRY .LT. 2) THEN
-                 T=MATRIX_%(N_me)d(P ,NHEL(1,IHEL),JC(1))            
+                IF (NTRY.LT.2) THEN
+C for the first ps-point, check for helicities that give
+C identical matrix elements
+                   T=MATRIX_%(N_me)d(P ,NHEL(1,IHEL),JC(1))            
+                   T_SAVE(IHEL)=T
+                   T_IDENT(IHEL)=-1
+                   DO I=1,IHEL-1
+                      IF (T.EQ.0D0) EXIT
+                      IF (T_SAVE(I).EQ.0D0) CYCLE
+                      IF (ABS(T/T_SAVE(I)-1D0) .LT. 1D-12) THEN
+C                         WRITE (*,*) 'FOUND IDENTICAL',T,IHEL,T_SAVE(I),I
+                         T_IDENT(IHEL) = I
+                      ENDIF
+                   ENDDO
+                ELSE
+                   IF (T_IDENT(IHEL).GT.0) THEN
+C if two helicity states are identical, dont recompute
+                      T=T_SAVE(T_IDENT(IHEL))
+                      T_SAVE(IHEL)=T
+                   ELSE
+                      T=MATRIX_%(N_me)d(P ,NHEL(1,IHEL),JC(1))            
+                      T_SAVE(IHEL)=T
+                   ENDIF
+                ENDIF
+C add to the sum of helicities
                ANS=ANS+T
                IF (T .NE. 0D0 .AND. .NOT.    GOODHEL(IHEL)) THEN
                    GOODHEL(IHEL)=.TRUE.
