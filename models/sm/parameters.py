@@ -1,6 +1,6 @@
-# This file was automatically created by FeynRules $Revision: 634 $
+# This file was automatically created by FeynRules $Revision: 998 $
 # Mathematica version: 8.0 for Mac OS X x86 (64-bit) (November 6, 2010)
-# Date: Wed 6 Jul 2011 14:07:37
+# Date: Wed 29 Feb 2012 11:32:38
 
 
 

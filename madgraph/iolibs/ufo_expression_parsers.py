@@ -237,7 +237,7 @@ class UFOExpressionParserFortran(UFOExpressionParser):
         elif p[1] == 'asec': p[0] = 'acos(1./' + p[2] + ')'
         elif p[1] == 're': p[0] = 'dble' + p[2]
         elif p[1] == 'im': p[0] = 'dimag' + p[2]
-        elif p[1] == 'cmath.sqrt' or p[1] == 'sqrt': p[0] = 'dsqrt' + p[2]
+        elif p[1] == 'cmath.sqrt' or p[1] == 'sqrt': p[0] = 'sqrt' + p[2]
         elif p[1] == 'complexconjugate': p[0] = 'conjg' + p[2]
 
     def p_expression_pi(self, p):

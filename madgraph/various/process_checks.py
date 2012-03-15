@@ -31,6 +31,7 @@ import shutil
 import glob
 import re
 
+import aloha
 import aloha.aloha_writers as aloha_writers
 import aloha.create_aloha as create_aloha
 
@@ -59,6 +60,13 @@ import aloha.template_files.wavefunctions as wavefunctions
 from aloha.template_files.wavefunctions import \
      ixxxxx, oxxxxx, vxxxxx, sxxxxx, txxxxx
 
+ADDED_GLOBAL = []
+
+def clean_added_globals(to_clean):
+    for value in list(to_clean):
+        del globals()[value]
+        to_clean.remove(value)
+
 #===============================================================================
 # Logger for process_checks
 #===============================================================================
@@ -73,7 +81,7 @@ class MatrixElementEvaluator(object):
     relevant quantities for speedup."""
 
     def __init__(self, model, param_card = None,
-                 auth_skipping = False, reuse = True):
+                 auth_skipping = False, reuse = True, cmass_scheme = False):
         """Initialize object with stored_quantities, helas_writer,
         model, etc.
         auth_skipping = True means that any identical matrix element will be
@@ -191,8 +199,12 @@ class MatrixElementEvaluator(object):
 
 
         # Define the routines to be available globally
+        previous_globals = list(globals().keys())
         for routine in aloha_routines:
             exec(routine, globals())
+        for key in globals().keys():
+            if key not in previous_globals:
+                ADDED_GLOBAL.append(key)
 
         # Add the defined Aloha routines to used_lorentz
         self.store_aloha.extend(me_used_lorentz)
@@ -210,6 +222,7 @@ class MatrixElementEvaluator(object):
         if self.reuse:
             # Define the routines (globally)
             exec(matrix_methods[process.shell_string()], globals())
+            ADDED_GLOBAL.append('Matrix_%s'  % process.shell_string())
         else:
             # Define the routines (locally is enough)
             exec(matrix_methods[process.shell_string()])
@@ -248,7 +261,9 @@ class MatrixElementEvaluator(object):
         # Find masses of particles
         mass_strings = [self.full_model.get_particle(l.get('id')).get('mass') \
                          for l in sorted_legs]
-        mass = [abs(self.full_model.get('parameter_dict')[m]) for m in mass_strings]
+        mass = [self.full_model.get('parameter_dict')[m] for m in mass_strings]
+        mass = [m.real for m in mass]
+        #mass = [math.sqrt(m.real) for m in mass]
 
         # Make sure energy is large enough for incoming and outgoing particles
         energy = max(energy, sum(mass[:nincoming]) + 200.,
@@ -483,7 +498,7 @@ class LoopMatrixElementEvaluator(MatrixElementEvaluator):
 #===============================================================================
 
 def run_multiprocs_no_crossings(function, multiprocess, stored_quantities,
-                                *args):
+                                opt=None):
     """A wrapper function for running an iteration of a function over
     a multiprocess, without having to first create a process list
     (which makes a big difference for very large multiprocesses.
@@ -533,8 +548,17 @@ def run_multiprocs_no_crossings(function, multiprocess, stored_quantities,
                               multiprocess.get('is_decay_chain'),
                 'overall_orders': \
                               multiprocess.get('overall_orders')})
-            
-            result = function(process, stored_quantities, *args)
+            if opt is not None:
+                if isinstance(opt, dict):
+                    try:
+                        value = opt[process.base_string()]
+                    except:
+                        continue
+                    result = function(process, stored_quantities, value)
+                else:
+                    result = function(process, stored_quantities, opt)
+            else:
+                result = function(process, stored_quantities)
                         
             if result:
                 results.append(result)
@@ -580,6 +604,7 @@ def check_processes(processes, param_card = None, quick = [],
     """Check processes by generating them with all possible orderings
     of particles (which means different diagram building and Helas
     calls), and comparing the resulting matrix element values."""
+
 
     if isinstance(processes, base_objects.ProcessDefinition):
         # Generate a list of unique processes
@@ -883,12 +908,12 @@ def fixed_string_length(mystr, length):
 #===============================================================================
 # check_gauge
 #===============================================================================
-def check_gauge(processes, param_card = None, mg_root="",cuttools=""):
+def check_gauge(processes, param_card = None, mg_root="",cuttools="",cmass_scheme=False):
     """Check gauge invariance of the processes by using the BRS check.
     For one of the massless external bosons (e.g. gluon or photon), 
     replace the polarization vector (epsilon_mu) with its momentum (p_mu)
     """
-    
+
     if isinstance(processes, base_objects.ProcessDefinition):
         # Generate a list of unique processes
         # Extract IS and FS ids
@@ -899,17 +924,20 @@ def check_gauge(processes, param_card = None, mg_root="",cuttools=""):
         # Initialize matrix element evaluation
         if multiprocess.get('perturbation_couplings')==[]:
             evaluator = MatrixElementEvaluator(model, param_card,
+                                           cmass_scheme= cmass_scheme,
                                            auth_skipping = True, reuse = False)
         else:
             evaluator = LoopMatrixElementEvaluator(mg_root=mg_root, cuttools_dir=cuttools,
+                                           cmass_scheme= cmass_scheme,
                                            model=model, param_card=param_card,
                                            auth_skipping = False, reuse = False)
 
-        # Set all widths to zero for gauge check
-        for particle in evaluator.full_model.get('particles'):
-            if particle.get('width') != 'ZERO':
-                evaluator.full_model.get('parameter_dict')[particle.get('width')] = 0.
-
+        if not cmass_scheme:
+            # Set all widths to zero for gauge check
+            logger.info('Set All width to zero for non complex mass scheme cheks')
+            for particle in evaluator.full_model.get('particles'):
+                if particle.get('width') != 'ZERO':
+                    evaluator.full_model.get('parameter_dict')[particle.get('width')] = 0.
 
         results = run_multiprocs_no_crossings(check_gauge_process,
                                            multiprocess,
@@ -941,6 +969,7 @@ def check_gauge(processes, param_card = None, mg_root="",cuttools=""):
                                            model=model, param_card=param_card,
                                            auth_skipping = False, reuse = False)
     comparison_results = []
+    comparison_explicit_flip = []
 
     # For each process, make sure we have set up leg numbers:
     for process in processes:
@@ -1127,7 +1156,7 @@ def output_gauge(comparison_results, output='text'):
 #===============================================================================
 # check_lorentz
 #===============================================================================
-def check_lorentz(processes, param_card = None, mg_root="",cuttools=""):
+def check_lorentz(processes, param_card = None, mg_root="",cuttools="",cmass_scheme=False):
     """ Check if the square matrix element (sum over helicity) is lorentz 
         invariant by boosting the momenta with different value."""
     
@@ -1141,16 +1170,20 @@ def check_lorentz(processes, param_card = None, mg_root="",cuttools=""):
         # Initialize matrix element evaluation
         if multiprocess.get('perturbation_couplings')==[]:
             evaluator = MatrixElementEvaluator(model,
+                                           cmass_scheme= cmass_scheme,
                                            auth_skipping = False, reuse = True)
         else:
             evaluator = LoopMatrixElementEvaluator(mg_root=mg_root,
+                                           cmass_scheme= cmass_scheme,
                                            cuttools_dir=cuttools, model=model,
                                            auth_skipping = False, reuse = True)
 
-        # Set all widths to zero for lorentz check
-        for particle in evaluator.full_model.get('particles'):
-            if particle.get('width') != 'ZERO':
-                evaluator.full_model.get('parameter_dict')[\
+        if not cmass_scheme:
+            # Set all widths to zero for lorentz check
+            logger.info('Set All width to zero for non complex mass scheme cheks')
+            for particle in evaluator.full_model.get('particles'):
+                if particle.get('width') != 'ZERO':
+                    evaluator.full_model.get('parameter_dict')[\
                                                      particle.get('width')] = 0.
         results = run_multiprocs_no_crossings(check_lorentz_process,
                                            multiprocess,
@@ -1176,11 +1209,13 @@ def check_lorentz(processes, param_card = None, mg_root="",cuttools=""):
     # Initialize matrix element evaluation
     if processes[0].get('perturbation_couplings')==[]:
         evaluator = MatrixElementEvaluator(model, param_card,
+                                       cmass_scheme= cmass_scheme,
                                        auth_skipping = False, reuse = True)
     else:
         evaluator = LoopMatrixElementEvaluator(mg_root=mg_root, 
                                            cuttools_dir=cuttools, model=model,
                                            param_card=param_card,
+                                           cmass_scheme= cmass_scheme,
                                            auth_skipping = False, reuse = True)
 
     comparison_results = []
@@ -1264,6 +1299,164 @@ def check_lorentz_process(process, evaluator):
         
         
     return {'process': process, 'results': results}
+
+
+#===============================================================================
+# check_gauge
+#===============================================================================
+def check_unitary_feynman(processes_unit, processes_feynm, param_card=None, 
+                                   mg_root="", cuttools="", cmass_scheme=False):
+    """Check gauge invariance of the processes by flipping
+       the gauge of the model
+    """
+
+    if isinstance(processes_unit, base_objects.ProcessDefinition):
+        # Generate a list of unique processes
+        # Extract IS and FS ids
+        multiprocess_unit = processes_unit
+        resutls = []
+        model = multiprocess_unit.get('model')
+        
+        # Initialize matrix element evaluation
+        aloha.unitary_gauge = True
+        if processes[0].get('perturbation_couplings')==[]:
+            evaluator = MatrixElementEvaluator(model, param_card,
+                                       cmass_scheme= cmass_scheme,
+                                       auth_skipping = False, reuse = False)
+        else:
+            evaluator = LoopMatrixElementEvaluator(mg_root=mg_root,
+                                           cmass_scheme= cmass_scheme,
+                                           cuttools_dir=cuttools, model=model,
+                                           param_card=param_card,
+                                           auth_skipping = False, reuse = False)
+
+                
+        if not cmass_scheme:
+            # Set all widths to zero for gauge check
+            logger.info('Set All width to zero for non complex mass scheme checks')
+            for particle in evaluator.full_model.get('particles'):
+                if particle.get('width') != 'ZERO':
+                    evaluator.full_model.get('parameter_dict')[particle.get('width')] = 0.
+
+        output_u = run_multiprocs_no_crossings(get_value,
+                                           multiprocess_unit,
+                                           evaluator)
+        
+        clean_added_globals(ADDED_GLOBAL)
+        
+        momentum = {}
+        for data in output_u:
+            momentum[data['process']] = data['p']
+        
+        multiprocess_feynm = processes_feynm
+        model = multiprocess_feynm.get('model')
+        
+        # Initialize matrix element evaluation
+        aloha.unitary_gauge = False
+        if processes[0].get('perturbation_couplings')==[]:
+            evaluator = MatrixElementEvaluator(model, param_card,
+                                       cmass_scheme= cmass_scheme,
+                                       auth_skipping = False, reuse = False)
+        else:
+            evaluator = LoopMatrixElementEvaluator(mg_root=mg_root,
+                                           cmass_scheme= cmass_scheme,
+                                           cuttools_dir=cuttools, model=model,
+                                           param_card=param_card,
+                                           auth_skipping = False, reuse = False)
+                
+        if not cmass_scheme:
+            # Set all widths to zero for gauge check
+            logger.info('Set All width to zero for non complex mass scheme checks')
+            for particle in evaluator.full_model.get('particles'):
+                if particle.get('width') != 'ZERO':
+                    evaluator.full_model.get('parameter_dict')[particle.get('width')] = 0.
+
+        output_f = run_multiprocs_no_crossings(get_value,
+                                           multiprocess_feynm,
+                                           evaluator, momentum)  
+        
+        output = []
+        for data in output_f:
+            local_dico = {}
+            local_dico['process'] = data['process']
+            local_dico['value_feynm'] = data['value']
+            local_dico['value_unit'] = [d['value'] for d in output_u 
+                                      if d['process'] == data['process']][0]
+            output.append(local_dico)
+        return output
+        
+#    elif isinstance(processes, base_objects.Process):
+#        processes = base_objects.ProcessList([processes])
+#    elif isinstance(processes, base_objects.ProcessList):
+#        pass
+    else:
+        raise InvalidCmd("processes is of non-supported format")
+
+    assert False
+    assert processes, "No processes given"
+
+    model = processes[0].get('model')
+
+    # Initialize matrix element evaluation
+    evaluator = MatrixElementEvaluator(model, param_card,
+                                       auth_skipping = True, reuse = False)
+
+    comparison_results = []
+    comparison_explicit_flip = []
+
+    # For each process, make sure we have set up leg numbers:
+    for process in processes:
+        # Get process result
+        result = check_gauge_process(process, evaluator)
+        if result:
+            comparison_results.append(result)
+        
+        
+            
+    return comparison_results
+
+
+def get_value(process, evaluator, p=None):
+    """Return the value/momentum for a phase space point"""
+
+    model = process.get('model')
+
+    for i, leg in enumerate(process.get('legs')):
+        leg.set('number', i+1)
+
+
+    logger.info("Checking gauge %s" % \
+                process.nice_string().replace('Process', 'process'))
+
+    legs = process.get('legs')
+    # Generate a process with these legs
+    # Generate the amplitude for this process
+    try:
+        amplitude = diagram_generation.Amplitude(process)
+    except InvalidCmd:
+        logging.info("No diagrams for %s" % \
+                         process.nice_string().replace('Process', 'process'))
+        return None    
+    
+    if not amplitude.get('diagrams'):
+        # This process has no diagrams; go to next process
+        logging.info("No diagrams for %s" % \
+                         process.nice_string().replace('Process', 'process'))
+        return None
+    
+    if not p:
+        # Generate phase space point to use
+        p, w_rambo = evaluator.get_momenta(process)
+        
+    # Generate the HelasMatrixElement for the process
+    matrix_element = helas_objects.HelasMatrixElement(amplitude,
+                                                      gen_color = False)    
+    mvalue = evaluator.evaluate_matrix_element(matrix_element, p=p,
+                                                                  output='jamp')
+    
+    if mvalue and mvalue['m2']:
+        return {'process':process.base_string(),'value':mvalue,'p':p}
+
 
 
 def boost_momenta(p, boost_direction=1, beta=0.5):
@@ -1408,3 +1601,113 @@ def output_lorentz_inv(comparison_results, output='text'):
         return res_str        
     else: 
         return fail_proc
+
+def output_unitary_feynman(comparison_results, output='text'):
+    """Present the results of a comparison in a nice list format
+        if output='fail' return the number of failed process -- for test-- 
+    """
+    
+    proc_col_size = 17
+    for data in comparison_results:
+        proc = data['process']
+        if len(proc) + 1 > proc_col_size:
+            proc_col_size = len(proc) + 1
+
+    col_size = 17
+
+    pass_proc = 0
+    fail_proc = 0
+    no_check_proc = 0
+
+    failed_proc_list = []
+    no_check_proc_list = []
+
+    res_str = fixed_string_length("Process", proc_col_size) + \
+              fixed_string_length("Unitary", col_size) + \
+              fixed_string_length("Feynman", col_size) + \
+              fixed_string_length("Relative diff.", col_size) + \
+              "Result"
+
+    for one_comp in comparison_results:
+        proc = one_comp['process']
+        data = [one_comp['value_unit'], one_comp['value_feynm']]
+        
+        
+        if data[0] == 'pass':
+            no_check_proc += 1
+            no_check_proc_list.append(proc)
+            continue
+        
+        values = [data[i]['m2'] for i in range(len(data))]
+        
+        min_val = min(values)
+        max_val = max(values)
+        diff = (max_val - min_val) / max_val 
+        
+        res_str += '\n' + fixed_string_length(proc, proc_col_size) + \
+                   fixed_string_length("%1.10e" % values[0], col_size) + \
+                   fixed_string_length("%1.10e" % values[1], col_size) + \
+                   fixed_string_length("%1.10e" % diff, col_size)
+                   
+        if diff < 1e-8:
+            pass_proc += 1
+            proc_succeed = True
+            res_str += "Passed"
+        else:
+            fail_proc += 1
+            proc_succeed = False
+            failed_proc_list.append(proc)
+            res_str += "Failed"
+
+        #check all the JAMP
+        # loop over jamp
+        for k in range(len(data[0]['jamp'][0])):
+            sum = [0, 0]
+            # loop over helicity
+            for j in range(len(data[0]['jamp'])):
+                #values for the different lorentz boost
+                values = [abs(data[i]['jamp'][j][k])**2 for i in range(len(data))]
+                sum = [sum[i] + values[i] for i in range(len(values))]
+
+            # Compare the different lorentz boost  
+            min_val = min(sum)
+            max_val = max(sum)
+            if not max_val:
+                continue
+            diff = (max_val - min_val) / max_val 
+        
+            tmp_str = '\n' + fixed_string_length('   JAMP %s'%k , proc_col_size) + \
+                       fixed_string_length("%1.10e" % sum[0], col_size) + \
+                       fixed_string_length("%1.10e" % sum[1], col_size) + \
+                       fixed_string_length("%1.10e" % diff, col_size)
+                   
+            if diff > 1e-10:
+                if not len(failed_proc_list) or failed_proc_list[-1] != proc:
+                    fail_proc += 1
+                    pass_proc -= 1
+                    failed_proc_list.append(proc)
+                res_str += tmp_str + "Failed"
+            elif not proc_succeed:
+                 res_str += tmp_str + "Passed" 
+            
+            
+        
+    res_str += "\nSummary: %i/%i passed, %i/%i failed" % \
+                (pass_proc, pass_proc + fail_proc,
+                 fail_proc, pass_proc + fail_proc)
+
+    if fail_proc != 0:
+        res_str += "\nFailed processes: %s" % ', '.join(failed_proc_list)
+    if no_check_proc:
+        res_str += "\nNot checked processes: %s" % ', '.join(no_check_proc_list)
+    
+    
+    print res_str
+    if output == 'text':
+        return res_str        
+    else: 
+        return fail_proc
+
+
+
+

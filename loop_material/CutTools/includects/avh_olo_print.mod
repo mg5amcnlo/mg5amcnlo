@@ -1,8 +1,8 @@
-GFORTRAN module version '6' created from avh_olo.f90 on Mon Feb 27 17:24:17 2012
-MD5:4a646b86f8c569c7ed74803ec79b0045 -- If you edit this, you'll get what you deserve.
+GFORTRAN module created from avh_olo.f90 on Wed Mar 14 16:14:48 2012
+If you edit this, you'll get what you deserve.
 
-(() () () () () () () () () () () () () () () () () () () () () () ()
-() () () ())
+
+(() () () () () () () () () () () () () () () () () () () () ())
 
 ()
 
@@ -12,51 +12,38 @@ MD5:4a646b86f8c569c7ed74803ec79b0045 -- If you edit this, you'll get what you de
 
 ()
 
-()
-
-(5 'init_print' 'avh_olo_print' 'init_print' 1 ((PROCEDURE
-UNKNOWN-INTENT MODULE-PROC DECL UNKNOWN 0 0 SUBROUTINE) (UNKNOWN 0 0 0
-UNKNOWN ()) 6 0 (7) () 0 () () () 0 0)
-4 'printr' 'avh_olo_print' 'printr' 1 ((PROCEDURE UNKNOWN-INTENT
-MODULE-PROC DECL UNKNOWN 0 0 FUNCTION IMPLICIT_PURE) (CHARACTER 1 0 0
-CHARACTER ((VARIABLE (INTEGER 4 0 0 INTEGER ()) 0 8 ()))) 9 0 (10) () 11
-() () () 0 0)
-3 'printc' 'avh_olo_print' 'printc' 1 ((PROCEDURE UNKNOWN-INTENT
-MODULE-PROC DECL UNKNOWN 0 0 FUNCTION) (CHARACTER 1 0 0 CHARACTER ((OP (
-INTEGER 4 0 0 INTEGER ()) 0 PLUS (OP (INTEGER 4 0 0 INTEGER ()) 0 TIMES
-(VARIABLE (INTEGER 4 0 0 INTEGER ()) 0 8 ()) (CONSTANT (INTEGER 4 0 0
-INTEGER ()) 0 '2')) (CONSTANT (INTEGER 4 0 0 INTEGER ()) 0 '3')))) 12 0
-(13) () 14 () () () 0 0)
-2 'printi' 'avh_olo_print' 'printi' 1 ((PROCEDURE UNKNOWN-INTENT
-MODULE-PROC DECL UNKNOWN 0 0 FUNCTION IMPLICIT_PURE) (CHARACTER 1 0 0
-CHARACTER ((VARIABLE (INTEGER 4 0 0 INTEGER ()) 0 15 ()))) 16 0 (17) ()
-18 () () () 0 0)
-7 'ndig' '' 'ndig' 6 ((VARIABLE IN UNKNOWN-PROC UNKNOWN UNKNOWN 0 0
-DUMMY) (INTEGER 4 0 0 INTEGER ()) 0 0 () () 0 () () () 0 0)
-13 'zz' '' 'zz' 12 ((VARIABLE IN UNKNOWN-PROC UNKNOWN UNKNOWN 0 0 DUMMY)
-(COMPLEX 8 0 0 COMPLEX ()) 0 0 () () 0 () () () 0 0)
-14 'rslt' '' 'rslt' 12 ((VARIABLE UNKNOWN-INTENT UNKNOWN-PROC UNKNOWN
-UNKNOWN 0 0 RESULT) (CHARACTER 1 0 0 CHARACTER ((OP (INTEGER 4 0 0
-INTEGER ()) 0 PLUS (OP (INTEGER 4 0 0 INTEGER ()) 0 TIMES (VARIABLE (
-INTEGER 4 0 0 INTEGER ()) 0 8 ()) (CONSTANT (INTEGER 4 0 0 INTEGER ()) 0
-'2')) (CONSTANT (INTEGER 4 0 0 INTEGER ()) 0 '3')))) 0 0 () () 0 () () ()
-0 0)
-10 'xx' '' 'xx' 9 ((VARIABLE IN UNKNOWN-PROC UNKNOWN UNKNOWN 0 0 DUMMY)
-(REAL 8 0 0 REAL ()) 0 0 () () 0 () () () 0 0)
-11 'rslt' '' 'rslt' 9 ((VARIABLE UNKNOWN-INTENT UNKNOWN-PROC UNKNOWN
-UNKNOWN 0 0 RESULT) (CHARACTER 1 0 0 CHARACTER ((VARIABLE (INTEGER 4 0 0
-INTEGER ()) 0 8 ()))) 0 0 () () 0 () () () 0 0)
-15 'ndigits' 'avh_olo_print' 'ndigits' 1 ((VARIABLE UNKNOWN-INTENT
-UNKNOWN-PROC UNKNOWN IMPLICIT-SAVE 0 0) (INTEGER 4 0 0 INTEGER ()) 0 0 ()
-() 0 () () () 0 0)
-8 'nefrmt' 'avh_olo_print' 'nefrmt' 1 ((VARIABLE UNKNOWN-INTENT
-UNKNOWN-PROC UNKNOWN IMPLICIT-SAVE 0 0) (INTEGER 4 0 0 INTEGER ()) 0 0 ()
-() 0 () () () 0 0)
-17 'ii' '' 'ii' 16 ((VARIABLE IN UNKNOWN-PROC UNKNOWN UNKNOWN 0 0 DUMMY)
-(INTEGER 4 0 0 INTEGER ()) 0 0 () () 0 () () () 0 0)
-18 'rslt' '' 'rslt' 16 ((VARIABLE UNKNOWN-INTENT UNKNOWN-PROC UNKNOWN
-UNKNOWN 0 0 RESULT) (CHARACTER 1 0 0 CHARACTER ((VARIABLE (INTEGER 4 0 0
-INTEGER ()) 0 15 ()))) 0 0 () () 0 () () () 0 0)
+(5 'init_print' 'avh_olo_print' 1 ((PROCEDURE UNKNOWN-INTENT MODULE-PROC
+DECL SUBROUTINE) (UNKNOWN 0 ()) 6 0 (7) () 0 () ())
+7 'ndig' '' 6 ((VARIABLE IN UNKNOWN-PROC UNKNOWN DUMMY) (INTEGER 4 ()) 0
+0 () () 0 () ())
+3 'printc' 'avh_olo_print' 1 ((PROCEDURE UNKNOWN-INTENT MODULE-PROC DECL
+FUNCTION) (CHARACTER 1 ((OP (INTEGER 4 ()) 0 PLUS (OP (INTEGER 4 ()) 0
+TIMES (VARIABLE (INTEGER 4 ()) 0 8 ()) (CONSTANT (INTEGER 4 ()) 0 '2'))
+(CONSTANT (INTEGER 4 ()) 0 '3')))) 9 0 (10) () 11 () ())
+8 'nefrmt' 'avh_olo_print' 1 ((VARIABLE UNKNOWN-INTENT UNKNOWN-PROC
+UNKNOWN) (INTEGER 4 ()) 0 0 () () 0 () ())
+11 'rslt' '' 9 ((VARIABLE UNKNOWN-INTENT UNKNOWN-PROC UNKNOWN RESULT) (
+CHARACTER 1 ((OP (INTEGER 4 ()) 0 PLUS (OP (INTEGER 4 ()) 0 TIMES (
+VARIABLE (INTEGER 4 ()) 0 8 ()) (CONSTANT (INTEGER 4 ()) 0 '2')) (
+CONSTANT (INTEGER 4 ()) 0 '3')))) 0 0 () () 0 () ())
+10 'zz' '' 9 ((VARIABLE IN UNKNOWN-PROC UNKNOWN DUMMY) (COMPLEX 8 ()) 0
+0 () () 0 () ())
+2 'printi' 'avh_olo_print' 1 ((PROCEDURE UNKNOWN-INTENT MODULE-PROC DECL
+FUNCTION) (CHARACTER 1 ((VARIABLE (INTEGER 4 ()) 0 12 ()))) 13 0 (14) ()
+15 () ())
+12 'ndigits' 'avh_olo_print' 1 ((VARIABLE UNKNOWN-INTENT UNKNOWN-PROC
+UNKNOWN) (INTEGER 4 ()) 0 0 () () 0 () ())
+14 'ii' '' 13 ((VARIABLE IN UNKNOWN-PROC UNKNOWN DUMMY) (INTEGER 4 ()) 0
+0 () () 0 () ())
+15 'rslt' '' 13 ((VARIABLE UNKNOWN-INTENT UNKNOWN-PROC UNKNOWN RESULT) (
+CHARACTER 1 ((VARIABLE (INTEGER 4 ()) 0 12 ()))) 0 0 () () 0 () ())
+4 'printr' 'avh_olo_print' 1 ((PROCEDURE UNKNOWN-INTENT MODULE-PROC DECL
+FUNCTION) (CHARACTER 1 ((VARIABLE (INTEGER 4 ()) 0 8 ()))) 16 0 (17) ()
+18 () ())
+18 'rslt' '' 16 ((VARIABLE UNKNOWN-INTENT UNKNOWN-PROC UNKNOWN RESULT) (
+CHARACTER 1 ((VARIABLE (INTEGER 4 ()) 0 8 ()))) 0 0 () () 0 () ())
+17 'xx' '' 16 ((VARIABLE IN UNKNOWN-PROC UNKNOWN DUMMY) (REAL 8 ()) 0 0
+() () 0 () ())
 )
 
 ('init_print' 0 5)

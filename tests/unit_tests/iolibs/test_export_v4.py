@@ -1015,22 +1015,22 @@ C     ----------
       CALL OXXXXX(P(0,2),ZERO,NHEL(2),-1*IC(2),W(1,2))
       CALL OXXXXX(P(0,3),ZERO,NHEL(3),+1*IC(3),W(1,3))
       CALL IXXXXX(P(0,4),ZERO,NHEL(4),-1*IC(4),W(1,4))
-      CALL FFV1_3(W(1,1),W(1,2),GQQ,ZERO, ZERO, W(1,5))
+      CALL FFV1_3(W(1,1),W(1,2),GQQ,ZERO,ZERO,W(1,5))
 C     Amplitude(s) for diagram number 1
       CALL FFV1_0(W(1,4),W(1,3),W(1,5),GQQ,AMP(1))
-      CALL FFV1_3(W(1,1),W(1,2),GQED,ZERO, ZERO, W(1,6))
+      CALL FFV1_3(W(1,1),W(1,2),GQED,ZERO,ZERO,W(1,6))
 C     Amplitude(s) for diagram number 2
       CALL FFV1_0(W(1,4),W(1,3),W(1,6),GQED,AMP(2))
-      CALL FFV1_2_3(W(1,1),W(1,2),GUZ1,GUZ2,MZ, WZ, W(1,7))
+      CALL FFV1_2_3(W(1,1),W(1,2),GUZ1,GUZ2,MZ,WZ,W(1,7))
 C     Amplitude(s) for diagram number 3
       CALL FFV1_2_0(W(1,4),W(1,3),W(1,7),GUZ1,GUZ2,AMP(3))
-      CALL FFV1_3(W(1,1),W(1,3),GQQ,ZERO, ZERO, W(1,8))
+      CALL FFV1_3(W(1,1),W(1,3),GQQ,ZERO,ZERO,W(1,8))
 C     Amplitude(s) for diagram number 4
       CALL FFV1_0(W(1,4),W(1,2),W(1,8),GQQ,AMP(4))
-      CALL FFV1_3(W(1,1),W(1,3),GQED,ZERO, ZERO, W(1,9))
+      CALL FFV1_3(W(1,1),W(1,3),GQED,ZERO,ZERO,W(1,9))
 C     Amplitude(s) for diagram number 5
       CALL FFV1_0(W(1,4),W(1,2),W(1,9),GQED,AMP(5))
-      CALL FFV1_2_3(W(1,1),W(1,3),GUZ1,GUZ2,MZ, WZ, W(1,10))
+      CALL FFV1_2_3(W(1,1),W(1,3),GUZ1,GUZ2,MZ,WZ,W(1,10))
 C     Amplitude(s) for diagram number 6
       CALL FFV1_2_0(W(1,4),W(1,2),W(1,10),GUZ1,GUZ2,AMP(6))
       JAMP(1)=+1D0/6D0*AMP(1)-AMP(2)-AMP(3)+1D0/2D0*AMP(4)
@@ -4832,13 +4832,13 @@ CALL VVVXXX(W(1,4),W(1,2),W(1,24),MGVX5,AMP(28))""")
 CALL VXXXXX(P(0,2),zero,NHEL(2),-1*IC(2),W(1,2))
 CALL VXXXXX(P(0,3),zero,NHEL(3),+1*IC(3),W(1,3))
 CALL VXXXXX(P(0,4),zero,NHEL(4),+1*IC(4),W(1,4))
-CALL CL1_L2_1(W(1,1),W(1,2),G1,G2,zero, zero, W(1,5))
+CALL CL1_L2_1(W(1,1),W(1,2),G1,G2,zero,zero,W(1,5))
 # Amplitude(s) for diagram number 1
 CALL CL1_L2_0(W(1,3),W(1,4),W(1,5),G1,G2,AMP(1))
-CALL CL1_L2_1(W(1,1),W(1,3),G1,G2,zero, zero, W(1,6))
+CALL CL1_L2_1(W(1,1),W(1,3),G1,G2,zero,zero,W(1,6))
 # Amplitude(s) for diagram number 2
 CALL CL1_L2_0(W(1,2),W(1,4),W(1,6),G1,G2,AMP(2))
-CALL CL1_L2_1(W(1,1),W(1,4),G1,G2,zero, zero, W(1,7))
+CALL CL1_L2_1(W(1,1),W(1,4),G1,G2,zero,zero,W(1,7))
 # Amplitude(s) for diagram number 3
 CALL CL1_L2_0(W(1,2),W(1,3),W(1,7),G1,G2,AMP(3))""".split('\n'))
 
@@ -5035,20 +5035,20 @@ CALL VXXXXX(P(0,2),MW,NHEL(2),-1*IC(2),W(1,2))
 CALL VXXXXX(P(0,3),MZ,NHEL(3),+1*IC(3),W(1,3))
 CALL IXXXXX(P(0,4),Mx1p,NHEL(4),-1*IC(4),W(1,4))
 CALL OXXXXX(P(0,5),Mx1p,NHEL(5),+1*IC(5),W(1,5))
-CALL VVV1_2(W(1,1),W(1,3),GC_214,MW, WW, W(1,6))
-CALL FFV2C1_3_2(W(1,4),W(1,2),GC_422,GC_628,Mneu1, Wneu1, W(1,7))
+CALL VVV1_2(W(1,1),W(1,3),GC_214,MW,WW,W(1,6))
+CALL FFV2C1_3_2(W(1,4),W(1,2),GC_422,GC_628,Mneu1,Wneu1,W(1,7))
 # Amplitude(s) for diagram number 1
 CALL FFV2_3_0(W(1,7),W(1,5),W(1,6),GC_422,GC_628,AMP(1))
-CALL FFV2_3_1(W(1,5),W(1,2),GC_422,GC_628,Mneu1, Wneu1, W(1,8))
+CALL FFV2_3_1(W(1,5),W(1,2),GC_422,GC_628,Mneu1,Wneu1,W(1,8))
 # Amplitude(s) for diagram number 2
 CALL FFV2C1_3_0(W(1,4),W(1,8),W(1,6),GC_422,GC_628,AMP(2))
-CALL FFV2C1_3_2(W(1,4),W(1,1),GC_422,GC_628,Mneu1, Wneu1, W(1,9))
-CALL VVV1_2(W(1,2),W(1,3),GC_214,MW, WW, W(1,10))
+CALL FFV2C1_3_2(W(1,4),W(1,1),GC_422,GC_628,Mneu1,Wneu1,W(1,9))
+CALL VVV1_2(W(1,2),W(1,3),GC_214,MW,WW,W(1,10))
 # Amplitude(s) for diagram number 3
 CALL FFV2_3_0(W(1,9),W(1,5),W(1,10),GC_422,GC_628,AMP(3))
 # Amplitude(s) for diagram number 4
 CALL FFV5_0(W(1,9),W(1,8),W(1,3),GC_418,AMP(4))
-CALL FFV2_3_1(W(1,5),W(1,1),GC_422,GC_628,Mneu1, Wneu1, W(1,11))
+CALL FFV2_3_1(W(1,5),W(1,1),GC_422,GC_628,Mneu1,Wneu1,W(1,11))
 # Amplitude(s) for diagram number 5
 CALL FFV2C1_3_0(W(1,4),W(1,11),W(1,10),GC_422,GC_628,AMP(5))
 # Amplitude(s) for diagram number 6
@@ -5206,16 +5206,16 @@ CALL IXXXXX(P(0,2),zero,NHEL(2),+1*IC(2),W(1,2))
 CALL OXXXXX(P(0,3),MT,NHEL(3),+1*IC(3),W(1,3))
 CALL OXXXXX(P(0,4),MT,NHEL(4),+1*IC(4),W(1,4))
 CALL VXXXXX(P(0,5),zero,NHEL(5),+1*IC(5),W(1,5))
-CALL FFV1_2(W(1,1),W(1,5),GG,zero, zero, W(1,6))
+CALL FFV1_2(W(1,1),W(1,5),GG,zero,zero,W(1,6))
 # Amplitude(s) for diagram number 1
 CALL FFFF1_0(W(1,2),W(1,3),W(1,6),W(1,4),GEFF,AMP(1))
-CALL FFFF1_2(W(1,1),W(1,2),W(1,3),GEFF,MT, WT, W(1,7))
+CALL FFFF1_2(W(1,1),W(1,2),W(1,3),GEFF,MT,WT,W(1,7))
 # Amplitude(s) for diagram number 2
 CALL FFV1_0(W(1,7),W(1,4),W(1,5),GG,AMP(2))
-CALL FFFF1_2(W(1,1),W(1,2),W(1,4),GEFF,MT, WT, W(1,8))
+CALL FFFF1_2(W(1,1),W(1,2),W(1,4),GEFF,MT,WT,W(1,8))
 # Amplitude(s) for diagram number 3
 CALL FFV1_0(W(1,8),W(1,3),W(1,5),GG,AMP(3))
-CALL FFFF1_1(W(1,3),W(1,1),W(1,4),GEFF,zero, zero, W(1,9))
+CALL FFFF1_1(W(1,3),W(1,1),W(1,4),GEFF,zero,zero,W(1,9))
 # Amplitude(s) for diagram number 4
 CALL FFV1_0(W(1,2),W(1,9),W(1,5),GG,AMP(4))""".split('\n')
 
@@ -5456,16 +5456,16 @@ CALL OXXXXX(P(0,2),zero,NHEL(2),-1*IC(2),W(1,2))
 CALL IXXXXX(P(0,3),MT,NHEL(3),-1*IC(3),W(1,3))
 CALL OXXXXX(P(0,4),MT,NHEL(4),+1*IC(4),W(1,4))
 CALL VXXXXX(P(0,5),zero,NHEL(5),+1*IC(5),W(1,5))
-CALL FFV1_2(W(1,1),W(1,5),GG,zero, zero, W(1,6))
+CALL FFV1_2(W(1,1),W(1,5),GG,zero,zero,W(1,6))
 # Amplitude(s) for diagram number 1
 CALL FFFF1C1C2_0(W(1,6),W(1,2),W(1,3),W(1,4),GEFF,AMP(1))
-CALL FFFF1C1C2_4(W(1,1),W(1,2),W(1,3),GEFF,MT, WT, W(1,7))
+CALL FFFF1C1C2_4(W(1,1),W(1,2),W(1,3),GEFF,MT,WT,W(1,7))
 # Amplitude(s) for diagram number 2
 CALL FFV1_0(W(1,7),W(1,4),W(1,5),GG,AMP(2))
-CALL FFFF1C1C2_3(W(1,1),W(1,2),W(1,4),GEFF,MT, WT, W(1,8))
+CALL FFFF1C1C2_3(W(1,1),W(1,2),W(1,4),GEFF,MT,WT,W(1,8))
 # Amplitude(s) for diagram number 3
 CALL FFV1C1_0(W(1,3),W(1,8),W(1,5),GG,AMP(3))
-CALL FFFF1C1C2_2(W(1,1),W(1,3),W(1,4),GEFF,zero, zero, W(1,9))
+CALL FFFF1C1C2_2(W(1,1),W(1,3),W(1,4),GEFF,zero,zero,W(1,9))
 # Amplitude(s) for diagram number 4
 CALL FFV1C1_0(W(1,9),W(1,2),W(1,5),GG,AMP(4))""".split('\n')
 
@@ -5614,7 +5614,7 @@ CALL FFS3_4_0(W(1,2),W(1,1),W(1,3),GC_108,GC_111,AMP(1))""".split('\n'))
                          """CALL VXXXXX(P(0,1),Mwp,NHEL(1),-1*IC(1),W(1,1))
 CALL IXXXXX(P(0,2),zero,NHEL(2),-1*IC(2),W(1,2))
 CALL OXXXXX(P(0,3),MT,NHEL(3),+1*IC(3),W(1,3))
-CALL FFS3_4_3(W(1,2),W(1,3),GC_108,GC_111,Mwp, Wwp, W(1,4))
+CALL FFS3_4_3(W(1,2),W(1,3),GC_108,GC_111,Mwp,Wwp,W(1,4))
 # Amplitude(s) for diagram number 1
 #""".split('\n'))
 
@@ -5629,7 +5629,7 @@ CALL FFS3_4_3(W(1,2),W(1,3),GC_108,GC_111,Mwp, Wwp, W(1,4))
 CALL IXXXXX(P(0,2),MT,NHEL(2),+1*IC(2),W(1,2))
 CALL IXXXXX(P(0,3),zero,NHEL(3),-1*IC(3),W(1,3))
 CALL OXXXXX(P(0,4),MT,NHEL(4),+1*IC(4),W(1,4))
-CALL FFS3_4_3(W(1,3),W(1,4),GC_108,GC_111,Mwp, Wwp, W(1,5))
+CALL FFS3_4_3(W(1,3),W(1,4),GC_108,GC_111,Mwp,Wwp,W(1,5))
 # Amplitude(s) for diagram number 1
 CALL FFS3_4_0(W(1,2),W(1,1),W(1,5),GC_108,GC_111,AMP(1))""".split('\n')
 
@@ -5762,7 +5762,7 @@ CALL FFS3C1_4_0(W(1,2),W(1,1),W(1,3),GC_108,GC_111,AMP(1))""".split('\n'))
                          """CALL SXXXXX(P(0,1),-1*IC(1),W(1,1))
 CALL OXXXXX(P(0,2),zero,NHEL(2),+1*IC(2),W(1,2))
 CALL IXXXXX(P(0,3),MT,NHEL(3),-1*IC(3),W(1,3))
-CALL FFS3C1_4_3(W(1,3),W(1,2),GC_108,GC_111,Msix1, Wsix1, W(1,4))
+CALL FFS3C1_4_3(W(1,3),W(1,2),GC_108,GC_111,Msix1,Wsix1,W(1,4))
 # Amplitude(s) for diagram number 1
 #""".split('\n'))
 
@@ -5777,7 +5777,7 @@ CALL FFS3C1_4_3(W(1,3),W(1,2),GC_108,GC_111,Msix1, Wsix1, W(1,4))
 CALL IXXXXX(P(0,2),MT,NHEL(2),+1*IC(2),W(1,2))
 CALL OXXXXX(P(0,3),zero,NHEL(3),+1*IC(3),W(1,3))
 CALL IXXXXX(P(0,4),MT,NHEL(4),-1*IC(4),W(1,4))
-CALL FFS3C1_4_3(W(1,4),W(1,3),GC_108,GC_111,Msix1, Wsix1, W(1,5))
+CALL FFS3C1_4_3(W(1,4),W(1,3),GC_108,GC_111,Msix1,Wsix1,W(1,5))
 # Amplitude(s) for diagram number 1
 CALL FFS3C1_4_0(W(1,2),W(1,1),W(1,5),GC_108,GC_111,AMP(1))""".split('\n')
 
@@ -8012,13 +8012,13 @@ CALL IOVXXX(W(1,3),W(1,7),W(1,2),GGI,AMP(3))""".split('\n')
 CALL VXXXXX(P(0,2),ZERO,NHEL(2),-1*IC(2),W(1,2))
 CALL IXXXXX(P(0,3),MGO,NHEL(3),-1*IC(3),W(1,3))
 CALL OXXXXX(P(0,4),MGO,NHEL(4),+1*IC(4),W(1,4))
-CALL VVV1_1(W(1,1),W(1,2),G,ZERO, ZERO, W(1,5))
+CALL VVV1_1(W(1,1),W(1,2),G,ZERO,ZERO,W(1,5))
 # Amplitude(s) for diagram number 1
 CALL FFV1_0(W(1,3),W(1,4),W(1,5),GGI,AMP(1))
-CALL FFV1_2(W(1,3),W(1,1),-GGI,MGO, WGO, W(1,6))
+CALL FFV1_2(W(1,3),W(1,1),-GGI,MGO,WGO,W(1,6))
 # Amplitude(s) for diagram number 2
 CALL FFV1_0(W(1,6),W(1,4),W(1,2),GGI,AMP(2))
-CALL FFV1_1(W(1,4),W(1,1),GGI,MGO, WGO, W(1,7))
+CALL FFV1_1(W(1,4),W(1,1),GGI,MGO,WGO,W(1,7))
 # Amplitude(s) for diagram number 3
 CALL FFV1_0(W(1,3),W(1,7),W(1,2),GGI,AMP(3))""".split('\n')
 
@@ -8218,49 +8218,49 @@ CALL OXXXXX(P(0,3),mn2,NHEL(3),+1*IC(3),W(1,3))
 CALL OXXXXX(P(0,4),mn1,NHEL(4),+1*IC(4),W(1,4))
 CALL VXXXXX(P(0,5),zmass,NHEL(5),+1*IC(5),W(1,5))
 CALL VXXXXX(P(0,6),zmass,NHEL(6),+1*IC(6),W(1,6))
-CALL FFS1_3(W(1,1),W(1,3),GELN2M,Msl2, Wsl2, W(1,7))
-CALL FFV1C1_1(W(1,4),W(1,5),GZN12,mn2, wn2, W(1,8))
-CALL FFS1C1_2(W(1,2),W(1,7),GELN1P,mn1, zero, W(1,9))
+CALL FFS1_3(W(1,1),W(1,3),GELN2M,Msl2,Wsl2,W(1,7))
+CALL FFV1C1_1(W(1,4),W(1,5),GZN12,mn2,wn2,W(1,8))
+CALL FFS1C1_2(W(1,2),W(1,7),GELN1P,mn1,zero,W(1,9))
 # Amplitude(s) for diagram number 1
 CALL FFV1_0(W(1,9),W(1,8),W(1,6),GZN12,AMP(1))
-CALL FFV1C1_1(W(1,4),W(1,6),GZN12,mn2, wn2, W(1,10))
+CALL FFV1C1_1(W(1,4),W(1,6),GZN12,mn2,wn2,W(1,10))
 # Amplitude(s) for diagram number 2
 CALL FFV1_0(W(1,9),W(1,10),W(1,5),GZN12,AMP(2))
-CALL FFS1_3(W(1,1),W(1,4),GELN1M,Msl2, Wsl2, W(1,11))
-CALL FFV1_1(W(1,3),W(1,5),GZN12,mn1, zero, W(1,12))
-CALL FFS1C1_2(W(1,2),W(1,11),GELN2P,mn2, wn2, W(1,13))
+CALL FFS1_3(W(1,1),W(1,4),GELN1M,Msl2,Wsl2,W(1,11))
+CALL FFV1_1(W(1,3),W(1,5),GZN12,mn1,zero,W(1,12))
+CALL FFS1C1_2(W(1,2),W(1,11),GELN2P,mn2,wn2,W(1,13))
 # Amplitude(s) for diagram number 3
 CALL FFV1C1_0(W(1,13),W(1,12),W(1,6),GZN12,AMP(3))
-CALL FFV1_1(W(1,3),W(1,6),GZN12,mn1, zero, W(1,14))
+CALL FFV1_1(W(1,3),W(1,6),GZN12,mn1,zero,W(1,14))
 # Amplitude(s) for diagram number 4
 CALL FFV1C1_0(W(1,13),W(1,14),W(1,5),GZN12,AMP(4))
-CALL FFS1C1_3(W(1,2),W(1,3),GELN2P,Msl2, Wsl2, W(1,15))
-CALL FFS1_2(W(1,1),W(1,15),GELN1M,mn1, zero, W(1,16))
+CALL FFS1C1_3(W(1,2),W(1,3),GELN2P,Msl2,Wsl2,W(1,15))
+CALL FFS1_2(W(1,1),W(1,15),GELN1M,mn1,zero,W(1,16))
 # Amplitude(s) for diagram number 5
 CALL FFV1_0(W(1,16),W(1,8),W(1,6),GZN12,AMP(5))
 # Amplitude(s) for diagram number 6
 CALL FFV1_0(W(1,16),W(1,10),W(1,5),GZN12,AMP(6))
-CALL FFS1C1_3(W(1,2),W(1,4),GELN1P,Msl2, Wsl2, W(1,17))
-CALL FFS1_2(W(1,1),W(1,17),GELN2M,mn2, wn2, W(1,18))
+CALL FFS1C1_3(W(1,2),W(1,4),GELN1P,Msl2,Wsl2,W(1,17))
+CALL FFS1_2(W(1,1),W(1,17),GELN2M,mn2,wn2,W(1,18))
 # Amplitude(s) for diagram number 7
 CALL FFV1C1_0(W(1,18),W(1,12),W(1,6),GZN12,AMP(7))
 # Amplitude(s) for diagram number 8
 CALL FFV1C1_0(W(1,18),W(1,14),W(1,5),GZN12,AMP(8))
-CALL FFS1_3(W(1,1),W(1,12),GELN1M,Msl2, Wsl2, W(1,19))
+CALL FFS1_3(W(1,1),W(1,12),GELN1M,Msl2,Wsl2,W(1,19))
 # Amplitude(s) for diagram number 9
 CALL FFS1C1_0(W(1,2),W(1,10),W(1,19),GELN2P,AMP(9))
-CALL FFS1_3(W(1,1),W(1,10),GELN2M,Msl2, Wsl2, W(1,20))
+CALL FFS1_3(W(1,1),W(1,10),GELN2M,Msl2,Wsl2,W(1,20))
 # Amplitude(s) for diagram number 10
 CALL FFS1C1_0(W(1,2),W(1,12),W(1,20),GELN1P,AMP(10))
-CALL FFS1_3(W(1,1),W(1,14),GELN1M,Msl2, Wsl2, W(1,21))
+CALL FFS1_3(W(1,1),W(1,14),GELN1M,Msl2,Wsl2,W(1,21))
 # Amplitude(s) for diagram number 11
 CALL FFS1C1_0(W(1,2),W(1,8),W(1,21),GELN2P,AMP(11))
-CALL FFS1_3(W(1,1),W(1,8),GELN2M,Msl2, Wsl2, W(1,22))
+CALL FFS1_3(W(1,1),W(1,8),GELN2M,Msl2,Wsl2,W(1,22))
 # Amplitude(s) for diagram number 12
 CALL FFS1C1_0(W(1,2),W(1,14),W(1,22),GELN1P,AMP(12))""".split('\n')
 
         for i in range(max(len(result), len(goal))):
-            self.assertEqual(result[i], goal[i])
+             self.assertEqual(result[i], goal[i])
 
     def test_configs_ug_ttxz(self):
         """Test configs.inc which previously failed.
@@ -9286,12 +9286,11 @@ class UFO_model_to_mg4_Test(unittest.TestCase):
         
         #  internal params
         self.assertEqual(len(mg4_model.params_dep), 1)
-        self.assertEqual(len(mg4_model.params_indep), 31)
+        self.assertEqual(len(mg4_model.params_indep), 33)
         
         # couplings
         self.assertEqual(len(mg4_model.coups_dep), 3)
-        sol= ['GC_1', 'GC_2', 'GC_3', 'GC_7', 'GC_8', 'GC_9', 'GC_10', 'GC_16', 'GC_21', 'GC_22', 'GC_23', 'GC_24', 'GC_25', 'GC_26', 'GC_27', 'GC_28', 'GC_29', 'GC_30', 'GC_31', 'GC_32', 'GC_33', 'GC_37', 'GC_38']
-        
+        sol= ['GC_1', 'GC_2', 'GC_3', 'GC_5', 'GC_6', 'GC_7', 'GC_8', 'GC_13', 'GC_14', 'GC_15', 'GC_16', 'GC_17', 'GC_18', 'GC_19', 'GC_20', 'GC_21', 'GC_22', 'GC_23', 'GC_34', 'GC_35', 'GC_36', 'GC_37', 'GC_38', 'GC_39', 'GC_40', 'GC_41', 'GC_42', 'GC_43', 'GC_44', 'GC_45', 'GC_46', 'GC_47', 'GC_48', 'GC_49', 'GC_50', 'GC_51', 'GC_52', 'GC_53', 'GC_54', 'GC_55', 'GC_56', 'GC_57', 'GC_58', 'GC_59', 'GC_60', 'GC_61', 'GC_62', 'GC_63', 'GC_64', 'GC_67', 'GC_68', 'GC_69', 'GC_72', 'GC_86', 'GC_87', 'GC_90', 'GC_91', 'GC_92', 'GC_93', 'GC_94', 'GC_101', 'GC_111', 'GC_112']
         self.assertEqual(sol, [ p.name for p in mg4_model.coups_indep])
 
         

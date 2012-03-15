@@ -215,7 +215,7 @@ class TestMatrixElementChecker(unittest.TestCase):
 
         myproc = base_objects.Process({'legs':myleglist,
                                        'model':self.base_model})
-
+        process_checks.clean_added_globals(process_checks.ADDED_GLOBAL)
         comparison = process_checks.check_processes(myproc)[0][0]
 
         self.assertFalse(comparison['passed'])

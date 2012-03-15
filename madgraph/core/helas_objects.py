@@ -27,6 +27,8 @@ import logging
 import itertools
 import math
 
+import aloha
+
 import madgraph.core.base_objects as base_objects
 import madgraph.core.diagram_generation as diagram_generation
 import madgraph.core.color_amp as color_amp
@@ -910,7 +912,38 @@ class HelasWavefunction(base_objects.PhysicsObject):
         else:
             raise self.PhysicsObjectError,\
                   "Particles of spin %d are not supported" % self.get('spin')
+    
+    def get_helas_call_dict(self, index=1):
+        """ return a dictionary to be used for formatting
+        HELAS call. """
 
+        if index == 1:
+            flip = 0
+        else:
+            flip = 1
+        
+        output = {}
+        for i, mother in enumerate(self.get('mothers')):
+            nb = mother.get('number') - flip
+            output[str(i)] = nb
+            if mother.get('is_loop'):
+                output['L%d' % i ] = 'L'
+            else:
+                output['L%d' % i ] = 'E'
+        #fixed argument
+        for i, coup in enumerate(self.get_with_flow('coupling')):
+            output['coup%d'%i] = coup
+        output['out'] = self.get('number') - flip
+        output['M'] = self.get('mass')
+        output['W'] = self.get('width')
+        # optimization
+        if aloha.complex_mass: 
+            if (self.get('width') == 'ZERO' or self.get('mass') == 'ZERO'):
+                output['CM'] = '%s' % self.get('mass') 
+            else: 
+                output['CM'] ='CMASS_%s' % self.get('mass')
+        return output
+    
     def get_spin_state_number(self):
         """Returns the number corresponding to the spin state, with a
         minus sign for incoming fermions"""
@@ -2175,6 +2208,27 @@ class HelasAmplitude(base_objects.PhysicsObject):
 
         return vertex_leg_numbers
 
+    def get_helas_call_dict(self, index=1):
+        """ return a dictionary to be used for formatting
+        HELAS call. """
+        
+        if index == 1:
+            flip = 0
+        else:
+            flip = 1
+        
+        output = {}
+        for i, mother in enumerate(self.get('mothers')):
+            nb = mother.get('number') - flip 
+            output[str(i)] = nb
+        #fixed argument
+        for i, coup in enumerate(self.get('coupling')):
+            output['coup%d'%i] = str(coup)
+        output['out'] = self.get('number') - flip
+        return output
+
+
+
     def set_coupling_color_factor(self):
         """Check if there is a mismatch between order of fermions
         w.r.t. color"""
@@ -2623,7 +2677,7 @@ class HelasMatrixElement(base_objects.PhysicsObject):
                         try:
                             wf = diagram_wavefunctions[\
                                     diagram_wavefunctions.index(wf)]
-                        except ValueError:
+                        except ValueError, error:
                             # Update wf number
                             wf_number = wf_number + 1
                             wf.set('number', wf_number)
