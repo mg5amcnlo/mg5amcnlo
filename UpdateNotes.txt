@@ -4,6 +4,8 @@ Update notes for MadGraph 5 (in reverse time order)
        		      subset (or all) of the aloha routines linked to the
                       current model
                   JA: Fixed LHAPDF functionality which was broken in v. 1.4.0
+                  JA: Allow non-equal mixing angles in mssm restrict cards
+                      (as needed for cards from some spectrum generators)
 
 1.4.3 (08/03/12)  JA: Reintroduced the possibility to completely forbid
                       s-channel diagrams, using the $$ notation. Note that
