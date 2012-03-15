@@ -273,6 +273,10 @@ class ProcessExporterFortranFKS_born(loop_exporters.LoopProcessExporterFortranSA
                                  matrix_element, 
                                  fortran_model)
 
+        filename = 'leshouche_info.inc'
+        self.write_leshouche_info_file(writers.FortranWriter(filename), 
+                                 matrix_element)
+
 
 #write the wrappers
         filename = 'real_me_chooser.f'
@@ -293,6 +297,18 @@ class ProcessExporterFortranFKS_born(loop_exporters.LoopProcessExporterFortranSA
             
         os.chdir(cwd)
         return calls
+
+    def write_leshouche_info_file(self, writer, matrix_element):
+        """writes the leshouche_info.inc file which contains the LHA informations
+        for all the real emission processes"""
+        lines = []
+        for i, real in enumerate(matrix_element.real_processes):
+            lines.extend(self.get_leshouche_lines(real.matrix_element, i + 1))
+        
+        writer.writelines(lines)
+
+
+
 
     def write_real_matrix_elements(self, matrix_element, fortran_model):
         """writes the matrix_i.f files which contain the real matrix elements""" 
@@ -1632,6 +1648,63 @@ data mirrorproc /%s/" % bool_dict[matrix_element.get('has_mirror_process')]
         for line_to_write in writer.write_line(line):
             writer.write(line_to_write)
         return True
+
+
+    #===============================================================================
+    # get_leshouche_lines
+    #===============================================================================
+    def get_leshouche_lines(self, matrix_element, ime):
+        #test written
+        """Write the leshouche.inc file for MG4"""
+    
+        # Extract number of external particles
+        (nexternal, ninitial) = matrix_element.get_nexternal_ninitial()
+    
+        lines = []
+        for iproc, proc in enumerate(matrix_element.get('processes')):
+            legs = proc.get_legs_with_decays()
+            lines.append("DATA (IDUP(%d,i,%d),i=1,%d)/%s/" % \
+                         (ime, iproc + 1, nexternal,
+                          ",".join([str(l.get('id')) for l in legs])))
+            for i in [1, 2]:
+                lines.append("DATA (MOTHUP(%d,%d,i,%3r),i=1,%2r)/%s/" % \
+                         (ime, i, iproc + 1, nexternal,
+                          ",".join([ "%3r" % 0 ] * ninitial + \
+                                   [ "%3r" % i ] * (nexternal - ninitial))))
+    
+            # Here goes the color connections corresponding to the JAMPs
+            # Only one output, for the first subproc!
+            if iproc == 0:
+                # If no color basis, just output trivial color flow
+                if not matrix_element.get('color_basis'):
+                    for i in [1, 2]:
+                        lines.append("DATA (ICOLUP(%d,%d,i,  1),i=1,%2r)/%s/" % \
+                                 (ime, i, nexternal,
+                                  ",".join([ "%3r" % 0 ] * nexternal)))
+                    color_flow_list = []
+    
+                else:
+                    # First build a color representation dictionnary
+                    repr_dict = {}
+                    for l in legs:
+                        repr_dict[l.get('number')] = \
+                            proc.get('model').get_particle(l.get('id')).get_color()\
+                            * (-1)**(1+l.get('state'))
+                    # Get the list of color flows
+                    color_flow_list = \
+                        matrix_element.get('color_basis').color_flow_decomposition(repr_dict,
+                                                                                   ninitial)
+                    # And output them properly
+                    for cf_i, color_flow_dict in enumerate(color_flow_list):
+                        for i in [0, 1]:
+                            lines.append("DATA (ICOLUP(%d,%d,i,%3r),i=1,%2r)/%s/" % \
+                                 (ime, i + 1, cf_i + 1, nexternal,
+                                  ",".join(["%3r" % color_flow_dict[l.get('number')][i] \
+                                            for l in legs])))
+        lines.append('')
+    
+        return lines
+
     
     #===============================================================================
     # write_leshouche_file
