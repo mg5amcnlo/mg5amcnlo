@@ -2240,13 +2240,13 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
           re.compile("^(?P<proc>.+)\s*\[\s*((?P<option>\w+)\s*\=)?\s*(?P<pertOrders>(\w+\s*)*)\s*\]\s*(?P<rest>.*)$")
         perturbation_couplings_re = perturbation_couplings_pattern.match(line)
         perturbation_couplings = ""
-        LoopOption= None
+        LoopOption= 'tree'
         HasBorn= True
-        valid_nlo_modes = ['all','real','virt','virt^2',None]
+        valid_nlo_modes = ['all','real','virt','virt^2','tree']
         if perturbation_couplings_re:
             perturbation_couplings = perturbation_couplings_re.group("pertOrders")
             option=perturbation_couplings_re.group("option")
-            if option!="":
+            if option:
                 if option in valid_nlo_modes:
                     if option=='virt^2':
                         LoopOption='virt'

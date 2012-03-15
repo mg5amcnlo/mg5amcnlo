@@ -84,11 +84,26 @@ class FKSInterface(CheckFKS, CompleteFKS, HelpFKS, mg_interface.MadGraphCmd):
 
         self._export_dir = os.path.realpath(self._export_dir)
 
+    def validate_model(self):
+        """ Upgrade the model sm to loop_sm if needed """
+    
+        if self._curr_model['perturbation_couplings']==[]:
+            if self._curr_model['name']=='sm':
+                logger.warning(\
+                  "The default sm model does not allow to generate"+
+                  " loop processes. MG5 now loads 'loop_sm' instead.")
+                mg_interface.MadGraphCmd.do_import(self,"model loop_sm")
+            else:
+                raise MadGraph5Error(
+                  "The model %s cannot handle loop processes"\
+                  %self._curr_model['name'])
+
     def do_add(self, line, *args,**opt):
         
         args = self.split_arg(line)
         # Check the validity of the arguments
         self.check_add(args)
+        self.validate_model()
 
         if args[0] != 'process': 
             raise self.InvalidCmd("The add command can only be used with a process")
@@ -208,8 +223,7 @@ class FKSInterface(CheckFKS, CompleteFKS, HelpFKS, mg_interface.MadGraphCmd):
         self._export_dir = None
 
 
-    # Export a matrix element
-    
+    # Export a matrix element  
     def export(self, nojpeg = False, main_file_name = ""):
         """Export a generated amplitude to file"""
 

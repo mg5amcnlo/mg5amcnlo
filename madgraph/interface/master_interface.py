@@ -60,7 +60,7 @@ class Switcher(object):
 
 
         
-    _valid_nlo_modes = ['all', 'real', 'virt', 'virt^2']
+    _valid_nlo_modes = ['all', 'real', 'virt', 'virt^2','tree']
 
     interface_names= {'MadGraph':('mg5',MGcmd.MadGraphCmd),
                       'Loop':('ML5',LoopCmd.LoopInterface),

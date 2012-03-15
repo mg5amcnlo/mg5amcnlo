@@ -31,6 +31,8 @@ import madgraph.core.helas_objects as helas_objects
 import madgraph.iolibs.export_v4 as export_v4
 import madgraph.loop.loop_exporters as loop_exporters
 import madgraph.iolibs.helas_call_writers as helas_call_writers
+import madgraph.iolibs.file_writers as writers
+
 
 # Special logger for the Cmd Interface
 logger = logging.getLogger('cmdprint')
@@ -78,6 +80,10 @@ class LoopInterface(CheckLoop, CompleteLoop, HelpLoop, mg_interface.MadGraphCmd)
 
         if self._export_format not in ['standalone','matrix']:
             raise MadGraph5Error('ML5 only support standalone and matrix  as export format.')
+
+        if not os.path.isdir(self._export_dir) and \
+           self._export_format in ['matrix']:
+            raise MadGraph5Error('Specified export directory %s does not exist.'%str(self._export_dir))
 
         if not force and not noclean and os.path.isdir(self._export_dir)\
                and self._export_format in ['standalone']:
@@ -227,7 +233,7 @@ class LoopInterface(CheckLoop, CompleteLoop, HelpLoop, mg_interface.MadGraphCmd)
                                            self.history,
                                            not nojpeg,
                                            online,
-                                           self.configuration['fortran_compiler'])
+                                           self.options['fortran_compiler'])
 
         if self._export_format in ['standalone']:
             logger.info('Output to directory ' + self._export_dir + ' done.')
