@@ -3047,7 +3047,7 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
         self.check_nb_events()
 
         # set environment variable for lhapdf.
-        if self.run_card['pdlabel'] == "'lhapdf'":
+        if self.run_card['pdlabel'] == "lhapdf":
             os.environ['lhapdf'] = 'True'
         elif 'lhapdf' in os.environ.keys():
             del os.environ['lhapdf']

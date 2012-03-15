@@ -1,8 +1,9 @@
 Update notes for MadGraph 5 (in reverse time order)
 
-1.4.4 (XX/XX/XX)  OM: addind a command: "output aloha" which allows to creates a 
+1.4.4 (XX/XX/XX)  OM: Added a command: "output aloha" which allows to creates a 
        		      subset (or all) of the aloha routines linked to the
                       current model
+                  JA: Fixed LHAPDF functionality which was broken in v. 1.4.0
 
 1.4.3 (08/03/12)  JA: Reintroduced the possibility to completely forbid
                       s-channel diagrams, using the $$ notation. Note that
