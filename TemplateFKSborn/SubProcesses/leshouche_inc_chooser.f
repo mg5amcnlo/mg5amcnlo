@@ -12,7 +12,7 @@ c leshouche.inc information
       parameter (maxflow=999)
       integer idup(nexternal,maxproc),mothup(2,nexternal,maxproc),
      &     icolup(2,nexternal,maxflow)
-      common /c_fks_inc/idup,mothup,icolup
+      common /c_leshouche_inc/idup,mothup,icolup
 c
       if (maxproc_used.gt.maxproc) then
          write (*,*) 'ERROR in leshouche_inc_chooser: increase maxproc'

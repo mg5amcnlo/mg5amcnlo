@@ -30,7 +30,10 @@ c
       implicit none
 
       include "nexternal.inc"
-      include "fks.inc"
+c      include "fks.inc"
+      integer fks_j_from_i(nexternal,0:nexternal)
+     &     ,particle_type(nexternal),pdg_type(nexternal)
+      common /c_fks_inc/fks_j_from_i,particle_typ,pdg_type
       include "fks_powers.inc"
       include "coupl.inc"
 
@@ -534,7 +537,10 @@ c
       implicit none
 
       include "nexternal.inc"
-      include "fks.inc"
+c      include "fks.inc"
+      integer fks_j_from_i(nexternal,0:nexternal)
+     &     ,particle_type(nexternal),pdg_type(nexternal)
+      common /c_fks_inc/fks_j_from_i,particle_typ,pdg_type
 
       real*8 p(0:3,nexternal),z
       integer ii_fks,jj_fks

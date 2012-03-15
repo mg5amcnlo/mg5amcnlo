@@ -127,7 +127,7 @@ c
       else
         flat_grid=.false.
       endif
-      call setfksfactor(iconfig)
+c$$$      call setfksfactor(iconfig)
       ndim = 3*(nexternal-2)-4
       if (abs(lpp(1)) .ge. 1) ndim=ndim+1
       if (abs(lpp(2)) .ge. 1) ndim=ndim+1
@@ -288,6 +288,9 @@ c From dsample_fks
       integer i
       double precision wgt,dsig
       double precision x(99),p(0:3,nexternal)
+      include 'fks_info.inc'
+      INTEGER NFKSPROCESS
+      COMMON/C_NFKSPROCESS/NFKSPROCESS
 c
       do i=1,99
         if(i.le.ndim)then
@@ -297,8 +300,16 @@ c
         endif
       enddo
       wgt=1.d0
-      call generate_momenta(ndim,iconfig,wgt,x,p)
-      sigint = dsig(p,wgt,peso)
+c
+      sigint=0d0
+      do nFKSprocess=1,fks_configs
+c THIS CAN BE OPTIMIZED
+         call fks_inc_chooser()
+         call leshouche_inc_chooser()
+         call setfksfactor(iconfig)
+         call generate_momenta(ndim,iconfig,wgt,x,p)
+         sigint = sigint+dsig(p,wgt,peso)
+      enddo
       return
       end
 

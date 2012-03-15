@@ -174,7 +174,10 @@ c by one unit, so decrease it
       implicit none
       include "nexternal.inc"
       include "born_nhel.inc"
-      include "fks.inc"
+c      include "fks.inc"
+      integer fks_j_from_i(nexternal,0:nexternal)
+     &     ,particle_type(nexternal),pdg_type(nexternal)
+      common /c_fks_inc/fks_j_from_i,particle_typ,pdg_type
       integer ipartners(0:nexternal-1),colorflow(nexternal-1,0:max_bcol)
       common /MC_info/ ipartners,colorflow
       integer i,j,ipart,iflow,ntot,ithere(1000)
@@ -376,7 +379,10 @@ c
 c Main routine for MC counterterms
       implicit none
       include "nexternal.inc"
-      include "fks.inc"
+c      include "fks.inc"
+      integer fks_j_from_i(nexternal,0:nexternal)
+     &     ,particle_type(nexternal),pdg_type(nexternal)
+      common /c_fks_inc/fks_j_from_i,particle_typ,pdg_type
       include "coupl.inc"
       include "born_nhel.inc"
       include "fks_powers.inc"
@@ -1044,7 +1050,10 @@ c
 c Main routine for MC counterterms
       implicit none
       include "nexternal.inc"
-      include "fks.inc"
+c      include "fks.inc"
+      integer fks_j_from_i(nexternal,0:nexternal)
+     &     ,particle_type(nexternal),pdg_type(nexternal)
+      common /c_fks_inc/fks_j_from_i,particle_typ,pdg_type
       include "coupl.inc"
       include "born_nhel.inc"
       include "fks_powers.inc"
@@ -1705,7 +1714,10 @@ c
 c Main routine for MC counterterms
       implicit none
       include "nexternal.inc"
-      include "fks.inc"
+c      include "fks.inc"
+      integer fks_j_from_i(nexternal,0:nexternal)
+     &     ,particle_type(nexternal),pdg_type(nexternal)
+      common /c_fks_inc/fks_j_from_i,particle_typ,pdg_type
       include "coupl.inc"
       include "born_nhel.inc"
       include "fks_powers.inc"
@@ -2457,7 +2469,10 @@ c
 c Main routine for MC counterterms
       implicit none
       include "nexternal.inc"
-      include "fks.inc"
+c      include "fks.inc"
+      integer fks_j_from_i(nexternal,0:nexternal)
+     &     ,particle_type(nexternal),pdg_type(nexternal)
+      common /c_fks_inc/fks_j_from_i,particle_typ,pdg_type
       include "coupl.inc"
       include "born_nhel.inc"
       include "fks_powers.inc"
@@ -3100,7 +3115,10 @@ c
 c Main routine for MC counterterms
       implicit none
       include "nexternal.inc"
-      include "fks.inc"
+c      include "fks.inc"
+      integer fks_j_from_i(nexternal,0:nexternal)
+     &     ,particle_type(nexternal),pdg_type(nexternal)
+      common /c_fks_inc/fks_j_from_i,particle_typ,pdg_type
       include "coupl.inc"
       include "born_nhel.inc"
       include "fks_powers.inc"

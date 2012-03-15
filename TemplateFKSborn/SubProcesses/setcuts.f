@@ -57,12 +57,12 @@ c--cuts
 c
 c     les houches accord stuff to identify neutrinos
 c
-      integer    maxflow
+      integer maxflow
       parameter (maxflow=999)
-      integer idup(nexternal,maxproc)
-      integer mothup(2,nexternal,maxproc)
-      integer icolup(2,nexternal,maxflow)
-      include 'leshouche.inc'
+      integer idup(nexternal,maxproc),mothup(2,nexternal,maxproc),
+     &     icolup(2,nexternal,maxflow)
+c      include 'leshouche.inc'
+      common /c_leshouche_inc/idup,mothup,icolup
 C
 C $B$ TO_SPECISA $B$ !this is a tag
       LOGICAL  IS_A_J(NEXTERNAL),IS_A_L(NEXTERNAL)

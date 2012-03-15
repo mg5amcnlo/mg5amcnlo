@@ -228,7 +228,10 @@ c enhanced multi-channel factor included
       implicit none
       include "genps.inc"
       include 'nexternal.inc'
-      include "fks.inc"
+c      include "fks.inc"
+      integer fks_j_from_i(nexternal,0:nexternal)
+     &     ,particle_type(nexternal),pdg_type(nexternal)
+      common /c_fks_inc/fks_j_from_i,particle_typ,pdg_type
       include "fks_powers.inc"
       include 'coupl.inc'
       include 'run.inc'
@@ -882,7 +885,10 @@ c enhanced multi-channel factor included
       implicit none
       include "genps.inc"
       include 'nexternal.inc'
-      include "fks.inc"
+c      include "fks.inc"
+      integer fks_j_from_i(nexternal,0:nexternal)
+     &     ,particle_type(nexternal),pdg_type(nexternal)
+      common /c_fks_inc/fks_j_from_i,particle_typ,pdg_type
       include "fks_powers.inc"
       include "madfks_mcatnlo.inc"
       include 'coupl.inc'
@@ -1400,7 +1406,10 @@ c enhanced multi-channel factor included
       implicit none
       include "genps.inc"
       include 'nexternal.inc'
-      include "fks.inc"
+c      include "fks.inc"
+      integer fks_j_from_i(nexternal,0:nexternal)
+     &     ,particle_type(nexternal),pdg_type(nexternal)
+      common /c_fks_inc/fks_j_from_i,particle_typ,pdg_type
       include "fks_powers.inc"
       include "madfks_mcatnlo.inc"
       include 'coupl.inc'
@@ -2866,7 +2875,10 @@ c q->gq splitting
       implicit none
 
       include "nexternal.inc"
-      include "fks.inc"
+c      include "fks.inc"
+      integer fks_j_from_i(nexternal,0:nexternal)
+     &     ,particle_type(nexternal),pdg_type(nexternal)
+      common /c_fks_inc/fks_j_from_i,particle_typ,pdg_type
       include "coupl.inc"
 
       integer m,n
@@ -3896,7 +3908,10 @@ c
       include "genps.inc"
       include 'nexternal.inc'
       include "coupl.inc"
-      include "fks.inc"
+c      include "fks.inc"
+      integer fks_j_from_i(nexternal,0:nexternal)
+     &     ,particle_type(nexternal),pdg_type(nexternal)
+      common /c_fks_inc/fks_j_from_i,particle_typ,pdg_type
       include "run.inc"
       include "fks_powers.inc"
       include 'reweight.inc'
@@ -3928,9 +3943,6 @@ c
       logical ComputePoles,fksprefact
       parameter (ComputePoles=.false.)
       parameter (fksprefact=.true.)
-
-      logical firsttime
-      data firsttime/.true./
 
       double precision beta0
       common/cbeta0/beta0
@@ -4661,7 +4673,10 @@ c extra contribution to the single pole
       implicit none
       include "genps.inc"
       include 'nexternal.inc'
-      include "fks.inc"
+c      include "fks.inc"
+      integer fks_j_from_i(nexternal,0:nexternal)
+     &     ,particle_type(nexternal),pdg_type(nexternal)
+      common /c_fks_inc/fks_j_from_i,particle_typ,pdg_type
       include 'coupl.inc'
       double precision p(0:3,nexternal),xmu2,double,single
       logical fksprefact
@@ -4751,7 +4766,10 @@ c the factor as/(2*pi)
       implicit none
       include "genps.inc"
       include 'nexternal.inc'
-      include "fks.inc"
+c      include "fks.inc"
+      integer fks_j_from_i(nexternal,0:nexternal)
+     &     ,particle_type(nexternal),pdg_type(nexternal)
+      common /c_fks_inc/fks_j_from_i,particle_typ,pdg_type
       include 'coupl.inc'
       double precision p(0:3,nexternal),m1l_finite_CDR,born
       double precision CF,pi,aso2pi,shat,dot,xlgq2os
@@ -4774,7 +4792,10 @@ c the factor as/(2*pi)
       implicit none
       include "genps.inc"
       include 'nexternal.inc'
-      include "fks.inc"
+c      include "fks.inc"
+      integer fks_j_from_i(nexternal,0:nexternal)
+     &     ,particle_type(nexternal),pdg_type(nexternal)
+      common /c_fks_inc/fks_j_from_i,particle_typ,pdg_type
       include 'coupl.inc'
       double precision p(0:3,nexternal),m1l_W_finite_CDR,born
       double precision CF,pi,aso2pi,shat,dot,xlgq2os
@@ -4828,7 +4849,10 @@ c$$$      parameter (CA=3d0,CF=4d0/3d0,Nf=0d0)
       include 'genps.inc'
       include 'nexternal.inc'
       include 'fks_powers.inc'
-      include 'fks.inc'
+c      include 'fks.inc'
+      integer fks_j_from_i(nexternal,0:nexternal)
+     &     ,particle_type(nexternal),pdg_type(nexternal)
+      common /c_fks_inc/fks_j_from_i,particle_typ,pdg_type
 
       integer mapconfig(0:lmaxconfigs), this_config
       integer iforest(2,-max_branch:-1,lmaxconfigs)
@@ -4977,10 +5001,11 @@ c parametrization allows it
       softtest=.false.
       colltest=.false.
       fold=0
-      open (unit=19,file="config.fks",status="old")
-      read (19,*) config_fks
-      close (19)
-      if (fks_j(config_fks).gt.nincoming)then
+c$$$      open (unit=19,file="config.fks",status="old")
+c$$$      read (19,*) config_fks
+c$$$      close (19)
+c$$$      if (fks_j(config_fks).gt.nincoming)then
+      if (j_fks.gt.nincoming)then
          delta_used=deltaO
       else
          delta_used=deltaI
@@ -5044,15 +5069,15 @@ c
       fkssymmetryfactorDeg=0d0
       fkssymmetryfactorBorn=0d0
 
-      i_fks=fks_i(config_fks)
-      j_fks=fks_j(config_fks)
-      if (i_fks.le.j_fks) then
-         write (*,*) 'ERROR in setfksfactor, i_fks.le.j_fks: '//
-     &        'terrible things might happen',i_fks,j_fks
-         stop
-      endif
-      i_fks_pdg=pdg_type(i_fks)
-      j_fks_pdg=pdg_type(j_fks)
+c$$$      i_fks=fks_i(config_fks)
+c$$$      j_fks=fks_j(config_fks)
+c$$$      if (i_fks.le.j_fks) then
+c$$$         write (*,*) 'ERROR in setfksfactor, i_fks.le.j_fks: '//
+c$$$     &        'terrible things might happen',i_fks,j_fks
+c$$$         stop
+c$$$      endif
+c$$$      i_fks_pdg=pdg_type(i_fks)
+c$$$      j_fks_pdg=pdg_type(j_fks)
       
       fac_i=0
       fac_j=0

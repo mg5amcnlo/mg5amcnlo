@@ -58,12 +58,12 @@ c$$$      integer isym(nexternal,200), nsym, jsym
 c$$$      include 'symswap.inc'
 
 c LesHouches info
-      integer    maxflow
+      integer maxflow
       parameter (maxflow=999)
-      integer idup(nexternal,maxproc)
-      integer mothup(2,nexternal,maxproc)
-      integer icolup(2,nexternal,maxflow)
-      include "leshouche.inc"
+      integer idup(nexternal,maxproc),mothup(2,nexternal,maxproc),
+     &     icolup(2,nexternal,maxflow)
+c      include "leshouche.inc"
+      common /c_leshouche_inc/idup,mothup,icolup
 
 c Common block to check if we are doing MC over helicities.
       integer           isum_hel
@@ -700,12 +700,12 @@ c                  whichever is closer to mass shell
       implicit none
       include "genps.inc"
       include 'nexternal.inc'
-      integer    maxflow
+      integer maxflow
       parameter (maxflow=999)
-      integer idup(nexternal,maxproc)
-      integer mothup(2,nexternal,maxproc)
-      integer icolup(2,nexternal,maxflow)
-      include 'leshouche.inc'
+      integer idup(nexternal,maxproc),mothup(2,nexternal,maxproc),
+     &     icolup(2,nexternal,maxflow)
+c      include 'leshouche.inc'
+      common /c_leshouche_inc/idup,mothup,icolup
       integer IDUP_tmp(nexternal),i
 c
       do i=1,nexternal
@@ -739,7 +739,10 @@ c
       subroutine fill_icolor_H(iflow,jpart)
       implicit none
       include "nexternal.inc"
-      include 'fks.inc'
+c      include 'fks.inc'
+      integer fks_i,fks_j,fks_j_from_i(nexternal,0:nexternal)
+     &     ,particle_type(nexternal),pdg_type(nexternal)
+      common /c_fks_inc/fks_i,fks_j,fks_j_from_i,particle_typ,pdg_type
       integer i
       integer i_fks,j_fks
       common/fks_indices/i_fks,j_fks

@@ -7,12 +7,14 @@ c fks.inc information
       integer i,j
       INTEGER NFKSPROCESS
       COMMON/C_NFKSPROCESS/NFKSPROCESS
-      integer fks_i,fks_j,fks_j_from_i(nexternal,0:nexternal)
+      integer fks_j_from_i(nexternal,0:nexternal)
      &     ,particle_type(nexternal),pdg_type(nexternal)
-      common /c_fks_inc/fks_i,fks_j,fks_j_from_i,particle_typ,pdg_type
+      common /c_fks_inc/fks_j_from_i,particle_typ,pdg_type
+      integer i_fks,j_fks
+      common/fks_indices/i_fks,j_fks
 c
-      fks_i=fks_i_D(nFKSprocess)
-      fks_j=fks_j_D(nFKSprocess)
+      i_fks=fks_i_D(nFKSprocess)
+      j_fks=fks_j_D(nFKSprocess)
       do i=1,nexternal
          if (i.eq.fks_i) then
             do j=0,fks_j_from_i_D(nFKSprocess,i,0)

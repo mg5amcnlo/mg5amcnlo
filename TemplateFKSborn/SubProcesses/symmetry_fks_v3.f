@@ -35,7 +35,10 @@ c
       integer fksconfiguration
       logical searchforgranny,is_beta_cms,is_granny_sch,topdown
       integer nbranch,ns_channel,nt_channel
-      include "fks.inc"
+c      include "fks.inc"
+      integer fks_j_from_i(nexternal,0:nexternal)
+     &     ,particle_type(nexternal),pdg_type(nexternal)
+      common /c_fks_inc/fks_j_from_i,particle_typ,pdg_type
 c
 c     Local for generating amps
 c
@@ -164,15 +167,16 @@ c
 c      write (*,*) mapconfig(0)
 
       use_config(0)=0
-c Read FKS configuration from file
-      open (unit=61,file='config.fks',status='old')
-      read(61,'(I2)',err=99,end=99) fksconfiguration
- 99   close(61)
-c Use the fks.inc include file to set i_fks and j_fks
-      i_fks=fks_i(fksconfiguration)
-      j_fks=fks_j(fksconfiguration)
-      write (*,*) 'FKS configuration number is ',fksconfiguration
-      write (*,*) 'FKS partons are: i=',i_fks,'  j=',j_fks
+c$$$c Read FKS configuration from file
+c$$$      open (unit=61,file='config.fks',status='old')
+c$$$      read(61,'(I2)',err=99,end=99) fksconfiguration
+c$$$ 99   close(61)
+c$$$c Use the fks.inc include file to set i_fks and j_fks
+c$$$      i_fks=fks_i(fksconfiguration)
+c$$$      j_fks=fks_j(fksconfiguration)
+c$$$      write (*,*) 'FKS configuration number is ',fksconfiguration
+c$$$      write (*,*) 'FKS partons are: i=',i_fks,'  j=',j_fks
+
 c
 c     Start using all (Born) configurations
 c
@@ -405,7 +409,12 @@ c
 c
 c     Process info
 c
-      include 'leshouche.inc'
+      integer maxflow
+      parameter (maxflow=999)
+      integer idup(nexternal,maxproc),mothup(2,nexternal,maxproc),
+     &     icolup(2,nexternal,maxflow)
+c      include 'leshouche.inc'
+      common /c_leshouche_inc/idup,mothup,icolup
 
       integer i_fks,j_fks
       common/fks_indices/i_fks,j_fks

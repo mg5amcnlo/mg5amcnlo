@@ -37,7 +37,10 @@ c$$$      double precision pmass(-max_branch:-1,lmaxconfigs)   !Propagotor mass
       integer r2b(lmaxconfigs),b2r(lmaxconfigs)
       logical searchforgranny,is_beta_cms,is_granny_sch,topdown,non_prop
       integer nbranch,ns_channel,nt_channel
-      include "fks.inc"
+c      include "fks.inc"
+      integer fks_j_from_i(nexternal,0:nexternal)
+     &     ,particle_type(nexternal),pdg_type(nexternal)
+      common /c_fks_inc/fks_j_from_i,particle_typ,pdg_type
       double precision fxl,limit(15),wlimit(15)
       double precision lxp(0:3,nexternal+1),xp(15,0:3,nexternal+1)
       double precision fks_Sij
