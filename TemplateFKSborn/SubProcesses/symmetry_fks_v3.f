@@ -111,6 +111,8 @@ c$$$      integer r_from_b(lmaxconfigs)
 c$$$      include 'bornfromreal.inc'
       include 'fks_powers.inc'
 
+      INTEGER NFKSPROCESS
+      COMMON/C_NFKSPROCESS/NFKSPROCESS
 
 c helicity stuff
       integer          isum_hel
@@ -150,6 +152,16 @@ c      if (icomp .gt. 3 .or. icomp .lt. 0) icomp=0
       endif
       isum_hel=0
       multi_channel=.true.
+
+
+      if (.not.onlyBorn) then
+         write (*,*) 'error in symmetry_fks_v3: onlyBorn should be true'
+         stop
+      endif
+c Just pick the first fks process
+      nFKSprocess=1
+      call fks_inc_chooser()
+      call leshouche_inc_chooser()
       
       call setrun                !Sets up run parameters
       call setpara('param_card.dat',.true.)   !Sets up couplings and masses
@@ -167,16 +179,6 @@ c
 c      write (*,*) mapconfig(0)
 
       use_config(0)=0
-c$$$c Read FKS configuration from file
-c$$$      open (unit=61,file='config.fks',status='old')
-c$$$      read(61,'(I2)',err=99,end=99) fksconfiguration
-c$$$ 99   close(61)
-c$$$c Use the fks.inc include file to set i_fks and j_fks
-c$$$      i_fks=fks_i(fksconfiguration)
-c$$$      j_fks=fks_j(fksconfiguration)
-c$$$      write (*,*) 'FKS configuration number is ',fksconfiguration
-c$$$      write (*,*) 'FKS partons are: i=',i_fks,'  j=',j_fks
-
 c
 c     Start using all (Born) configurations
 c
@@ -425,10 +427,10 @@ c------
 c Begin Code
 c-----
       check_swap=.true.
+      do i=1,nexternal
+         if (idup(i,1) .ne. idup(ic(i),1)) check_swap=.false.
+      enddo
       if (.not.onlyBorn) then
-         do i=1,nexternal
-            if (idup(i,1) .ne. idup(ic(i),1)) check_swap=.false.
-         enddo
          if (i_fks .ne. ic(i_fks)) check_swap=.false.
          if (j_fks .ne. ic(j_fks)) check_swap=.false.
       endif
