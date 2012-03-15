@@ -263,9 +263,16 @@ class ProcessExporterFortranFKS_born(loop_exporters.LoopProcessExporterFortranSA
                             matrix_element.virt_matrix_element, \
                             fortran_model, \
                             os.path.join(path, borndir))
+
 #write the infortions for the different real emission processes
         self.write_real_matrix_elements(matrix_element, fortran_model)
         self.write_pdf_calls(matrix_element, fortran_model)
+
+        filename = 'fks_info.inc'
+        self.write_fks_info_file(writers.FortranWriter(filename), 
+                                 matrix_element, 
+                                 fortran_model)
+
 
 #write the wrappers
         filename = 'real_me_chooser.f'
@@ -1105,6 +1112,72 @@ c     this subdir has no soft singularities
             calls = 0
         return calls
             
+    #===============================================================================
+    # write_fks_info_file
+    #===============================================================================
+    def write_fks_info_file(self, writer, fksborn, fortran_model): #test_written
+        """Writes the content of fks_info.inc, which lists the informations on the 
+        possible splittings of the born ME"""
+
+        replace_dict = {}
+        replace_dict['nconfs'] = len(fksborn.real_processes)
+        replace_dict['fks_i_values'] = ', '.join(['%d' % real.i_fks \
+                                                 for real in fksborn.real_processes]) 
+        replace_dict['fks_j_values'] = ', '.join(['%d' % real.j_fks \
+                                                 for real in fksborn.real_processes]) 
+
+        col_lines = []
+        pdg_lines = []
+        fks_j_from_i_lines = []
+        for i, real in enumerate(fksborn.real_processes):
+            col_lines.append( \
+                'DATA (PARTICLE_TYPE(%d, IPOS), IPOS=1, NEXTERNAL) / %s /' \
+                % (i + 1, ', '.join('%d' % col for col in real.colors) ))
+            pdg_lines.append( \
+                'DATA (PDG_TYPE(%d, IPOS), IPOS=1, NEXTERNAL) / %s /' \
+                % (i + 1, ', '.join('%d' % leg['id'] \
+                for leg in real.matrix_element.get('processes')[0]['legs']) ))
+            fks_j_from_i_lines.extend(self.get_fks_j_from_i_lines(real, i + 1))
+
+        replace_dict['col_lines'] = '\n'.join(col_lines)
+        replace_dict['pdg_lines'] = '\n'.join(pdg_lines)
+        replace_dict['fks_j_from_i_lines'] = '\n'.join(fks_j_from_i_lines)
+
+
+        content = \
+"""      INTEGER FKS_CONFIGS, IPOS, JPOS
+      DATA FKS_CONFIGS / %(nconfs)d /
+      INTEGER FKS_I(%(nconfs)d), FKS_J(%(nconfs)d)
+      INTEGER FKS_J_FROM_I(NEXTERNAL, 0:NEXTERNAL)
+      INTEGER PARTICLE_TYPE(NEXTERNAL, %(nconfs)d), PDG_TYPE(NEXTERNAL, %(nconfs)d)
+
+data fks_i / %(fks_i_values)s /
+data fks_j / %(fks_j_values)s /
+
+%(fks_j_from_i_lines)s
+
+C     
+C     Particle type:
+C     octet = 8, triplet = 3, singlet = 1
+%(col_lines)s
+
+C     
+C     Particle type according to PDG:
+C     
+%(pdg_lines)s
+
+"""   % replace_dict
+
+        if not isinstance(writer, writers.FortranWriter):
+            raise writers.FortranWriter.FortranWriterError(\
+                "writer not FortranWriter")
+        # Set lowercase/uppercase Fortran code
+        writers.FortranWriter.downcase = False
+        
+        writer.writelines(content)
+    
+        return True
+
 
     #===============================================================================
     # write_fks_inc
@@ -1167,18 +1240,19 @@ C
         return lines
 
 
-    def get_fks_j_from_i_lines(self, me): #test written
+    def get_fks_j_from_i_lines(self, me, i = 0): #test written
         """generate the lines for fks.inc describing initializating the
         fks_j_from_i array"""
-        lines = ""
+        lines = []
         if not me.isfinite:
             for ii, js in me.fks_j_from_i.items():
                 if js:
-                    lines += 'DATA (FKS_J_FROM_I(%d, JPOS), JPOS = 0, %d)  / %d, %s /\n' \
-                             % (ii, len(js), len(js), ', '.join(["%d" % j for j in js]))
+                    lines.append('DATA (FKS_J_FROM_I(%d, %d, JPOS), JPOS = 0, %d)  / %d, %s /' \
+                             % (i, ii, len(js), len(js), ', '.join(["%d" % j for j in js])))
         else:
-            lines += 'DATA (FKS_J_FROM_I(%d, JPOS), JPOS = 0, %d)  / %d, %s /\n' \
-                     % (2, 1, 1, '1')
+            lines.append('DATA (FKS_J_FROM_I(%d, JPOS), JPOS = 0, %d)  / %d, %s /' \
+                     % (2, 1, 1, '1'))
+        lines.append('')
 
         return lines
 
@@ -1678,37 +1752,8 @@ data mirrorproc /%s/" % bool_dict[matrix_element.get('has_mirror_process')]
     #===============================================================================
 
 
-    def get_fks_j_from_i_lines(self, me): #test written
-        """generate the lines for fks.inc describing initializating the
-        fks_j_from_i array"""
-        lines = ""
-        if not me.isfinite:
-            for ii, js in me.fks_j_from_i.items():
-                if js:
-                    lines += 'DATA (FKS_J_FROM_I(%d, JPOS), JPOS = 0, %d)  / %d, %s /\n' \
-                             % (ii, len(js), len(js), ', '.join(["%d" % j for j in js]))
-        else:
-            lines += 'DATA (FKS_J_FROM_I(%d, JPOS), JPOS = 0, %d)  / %d, %s /\n' \
-                     % (2, 1, 1, '1')
-
-        return lines
 
 
-
-    def get_fks_j_from_i_lines(self, me): #test written
-        """generate the lines for fks.inc describing initializating the
-        fks_j_from_i array"""
-        lines = ""
-        if not me.isfinite:
-            for ii, js in me.fks_j_from_i.items():
-                if js:
-                    lines += 'DATA (FKS_J_FROM_I(%d, JPOS), JPOS = 0, %d)  / %d, %s /\n' \
-                             % (ii, len(js), len(js), ', '.join(["%d" % j for j in js]))
-        else:
-            lines += 'DATA (FKS_J_FROM_I(%d, JPOS), JPOS = 0, %d)  / %d, %s /\n' \
-                     % (2, 1, 1, '1')
-
-        return lines
 
 
     def get_pdf_lines_mir(self, matrix_element, ninitial, subproc_group = False,\
