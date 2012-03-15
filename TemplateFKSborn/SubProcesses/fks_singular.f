@@ -2240,7 +2240,7 @@ c assign SCALUP for PYTHIA
             if(emsca.gt.scalemax)SCALUP=scalemax
          else
             up_scale=upper_scale
-            if(abrv.eq.'born' .or. abrv.eq.'born' .or.
+            if(abrv.eq.'born' .or. abrv.eq.'grid' .or.
      &           abrv(1:2).eq.'vi')then
                tmp=1.d0-xi_i_fks_ev
                if(j_fks.le.2)tmp=1.d0

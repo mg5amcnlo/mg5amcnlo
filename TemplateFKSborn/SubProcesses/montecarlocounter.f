@@ -1737,7 +1737,7 @@ c Main routine for MC counterterms
      # gfactazi,s,gfunsoft,gfuncoll,gfunazi,bogus_probne_fun,
      # ztmp,xitmp,xjactmp,get_angle,w1,w2,z0,dz0dy,
      # p_born_npartner(0:3),p_born_fksfather(0:3),
-     # Q0,ma,maeff,mbeff,mceff,betaa,lambdaabc,zminus,zplus,xmm2,
+     # Q0,ma,mbeff,mceff,betaa,lambdaabc,zminus,zplus,xmm2,
      # xmrec2,ww,massmax,massmin,delta_scale
       parameter(delta_scale=10d0)
       parameter(Q0=1d0)
@@ -2014,8 +2014,7 @@ c Recall that xm22 = 0 if ileg = 4
                xmm2=-ww
             endif
             ma=sqrt(xmm2+ww)
-            maeff=sqrt(xmm2+Q0**2/4)+Q0/2
-            mbeff=maeff-Q0/2
+            mbeff=sqrt(xmm2+Q0**2/4)
             mceff=Q0/2
             en_fks=sqrt(s)*(1-x)/2.d0
             en_mother=en_fks+sqrt(xmm2+veckn_ev**2)
@@ -2035,15 +2034,11 @@ c isolating mother's energy. Recall that krecoil**2=xmrec2 and that kmother**2=m
                write(*,*)ma,en_mother
                stop
             endif
-            if(ma.lt.maeff)then
-               lzone(npartner)=.false.
-            else
-               lambdaabc=sqrt((ma**2-mbeff**2-mceff**2)**2-4*mbeff**2*mceff**2)
-               zplus =(1+(mbeff**2-mceff**2+betaa*lambdaabc)/ma**2)/2
-               zminus=(1+(mbeff**2-mceff**2-betaa*lambdaabc)/ma**2)/2
-               if(z(npartner).lt.zminus.or.
-     &            z(npartner).gt.zplus)lzone(npartner)=.false.
-            endif
+            lambdaabc=sqrt((ma**2-mbeff**2-mceff**2)**2-4*mbeff**2*mceff**2)
+            zplus =(1+(mbeff**2-mceff**2+betaa*lambdaabc)/ma**2)/2
+            zminus=(1+(mbeff**2-mceff**2-betaa*lambdaabc)/ma**2)/2
+            if(z(npartner).lt.zminus.or.
+     &         z(npartner).gt.zplus)lzone(npartner)=.false.
          endif
 
 c Compute MC subtraction terms
@@ -3137,7 +3132,7 @@ c Main routine for MC counterterms
      # gfactazi,s,gfunsoft,gfuncoll,gfunazi,bogus_probne_fun,
      # ztmp,xitmp,xjactmp,get_angle,w1,w2,z0,dz0dy,
      # p_born_npartner(0:3),p_born_fksfather(0:3),
-     # Q0,ma,maeff,mbeff,mceff,betaa,lambdaabc,zminus,zplus,xmm2,
+     # Q0,ma,mbeff,mceff,betaa,lambdaabc,zminus,zplus,xmm2,
      # xmrec2,ww,massmax,massmin,delta_scale
       parameter(delta_scale=10d0)
       parameter(Q0=1d0)
@@ -3416,8 +3411,7 @@ c Recall that xm22 = 0 if ileg = 4
                xmm2=-ww
             endif
             ma=sqrt(xmm2+ww)
-            maeff=sqrt(xmm2+Q0**2/4)+Q0/2
-            mbeff=maeff-Q0/2
+            mbeff=sqrt(xmm2+Q0**2/4)
             mceff=Q0/2
             en_fks=sqrt(s)*(1-x)/2.d0
             en_mother=en_fks+sqrt(xmm2+veckn_ev**2)
@@ -3437,15 +3431,11 @@ c isolating mother's energy. Recall that krecoil**2=xmrec2 and that kmother**2=m
                write(*,*)ma,en_mother
                stop
             endif
-            if(ma.lt.maeff)then
-               lzone(npartner)=.false.
-            else
-               lambdaabc=sqrt((ma**2-mbeff**2-mceff**2)**2-4*mbeff**2*mceff**2)
-               zplus =(1+(mbeff**2-mceff**2+betaa*lambdaabc)/ma**2)/2
-               zminus=(1+(mbeff**2-mceff**2-betaa*lambdaabc)/ma**2)/2
-               if(z(npartner).lt.zminus.or.
-     &            z(npartner).gt.zplus)lzone(npartner)=.false.
-            endif
+            lambdaabc=sqrt((ma**2-mbeff**2-mceff**2)**2-4*mbeff**2*mceff**2)
+            zplus =(1+(mbeff**2-mceff**2+betaa*lambdaabc)/ma**2)/2
+            zminus=(1+(mbeff**2-mceff**2-betaa*lambdaabc)/ma**2)/2
+            if(z(npartner).lt.zminus.or.
+     &           z(npartner).gt.zplus)lzone(npartner)=.false.
          else
             write(*,*)'Unknown ileg in PY8 ',ileg
             stop
