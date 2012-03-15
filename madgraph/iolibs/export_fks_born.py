@@ -1147,10 +1147,10 @@ c     this subdir has no soft singularities
         fks_j_from_i_lines = []
         for i, real in enumerate(fksborn.real_processes):
             col_lines.append( \
-                'DATA (PARTICLE_TYPE(%d, IPOS), IPOS=1, NEXTERNAL) / %s /' \
+                'DATA (PARTICLE_TYPE_D(%d, IPOS), IPOS=1, NEXTERNAL) / %s /' \
                 % (i + 1, ', '.join('%d' % col for col in real.colors) ))
             pdg_lines.append( \
-                'DATA (PDG_TYPE(%d, IPOS), IPOS=1, NEXTERNAL) / %s /' \
+                'DATA (PDG_TYPE_D(%d, IPOS), IPOS=1, NEXTERNAL) / %s /' \
                 % (i + 1, ', '.join('%d' % leg['id'] \
                 for leg in real.matrix_element.get('processes')[0]['legs']) ))
             fks_j_from_i_lines.extend(self.get_fks_j_from_i_lines(real, i + 1))
@@ -1163,12 +1163,12 @@ c     this subdir has no soft singularities
         content = \
 """      INTEGER FKS_CONFIGS, IPOS, JPOS
       DATA FKS_CONFIGS / %(nconfs)d /
-      INTEGER FKS_I(%(nconfs)d), FKS_J(%(nconfs)d)
-      INTEGER FKS_J_FROM_I(NEXTERNAL, 0:NEXTERNAL)
-      INTEGER PARTICLE_TYPE(NEXTERNAL, %(nconfs)d), PDG_TYPE(NEXTERNAL, %(nconfs)d)
+      INTEGER FKS_I_D(%(nconfs)d), FKS_J_D(%(nconfs)d)
+      INTEGER FKS_J_FROM_I_D(%(nconfs)d, NEXTERNAL, 0:NEXTERNAL)
+      INTEGER PARTICLE_TYPE_D(NEXTERNAL, %(nconfs)d), PDG_TYPE_D(NEXTERNAL, %(nconfs)d)
 
-data fks_i / %(fks_i_values)s /
-data fks_j / %(fks_j_values)s /
+data fks_i_D / %(fks_i_values)s /
+data fks_j_D / %(fks_j_values)s /
 
 %(fks_j_from_i_lines)s
 
@@ -1263,10 +1263,10 @@ C
         if not me.isfinite:
             for ii, js in me.fks_j_from_i.items():
                 if js:
-                    lines.append('DATA (FKS_J_FROM_I(%d, %d, JPOS), JPOS = 0, %d)  / %d, %s /' \
+                    lines.append('DATA (FKS_J_FROM_I_D(%d, %d, JPOS), JPOS = 0, %d)  / %d, %s /' \
                              % (i, ii, len(js), len(js), ', '.join(["%d" % j for j in js])))
         else:
-            lines.append('DATA (FKS_J_FROM_I(%d, JPOS), JPOS = 0, %d)  / %d, %s /' \
+            lines.append('DATA (FKS_J_FROM_I_D(%d, JPOS), JPOS = 0, %d)  / %d, %s /' \
                      % (2, 1, 1, '1'))
         lines.append('')
 
@@ -1663,11 +1663,11 @@ data mirrorproc /%s/" % bool_dict[matrix_element.get('has_mirror_process')]
         lines = []
         for iproc, proc in enumerate(matrix_element.get('processes')):
             legs = proc.get_legs_with_decays()
-            lines.append("DATA (IDUP(%d,i,%d),i=1,%d)/%s/" % \
+            lines.append("DATA (IDUP_D(%d,i,%d),i=1,%d)/%s/" % \
                          (ime, iproc + 1, nexternal,
                           ",".join([str(l.get('id')) for l in legs])))
             for i in [1, 2]:
-                lines.append("DATA (MOTHUP(%d,%d,i,%3r),i=1,%2r)/%s/" % \
+                lines.append("DATA (MOTHUP_D(%d,%d,i,%3r),i=1,%2r)/%s/" % \
                          (ime, i, iproc + 1, nexternal,
                           ",".join([ "%3r" % 0 ] * ninitial + \
                                    [ "%3r" % i ] * (nexternal - ninitial))))
@@ -1678,7 +1678,7 @@ data mirrorproc /%s/" % bool_dict[matrix_element.get('has_mirror_process')]
                 # If no color basis, just output trivial color flow
                 if not matrix_element.get('color_basis'):
                     for i in [1, 2]:
-                        lines.append("DATA (ICOLUP(%d,%d,i,  1),i=1,%2r)/%s/" % \
+                        lines.append("DATA (ICOLUP_D(%d,%d,i,  1),i=1,%2r)/%s/" % \
                                  (ime, i, nexternal,
                                   ",".join([ "%3r" % 0 ] * nexternal)))
                     color_flow_list = []
@@ -1697,7 +1697,7 @@ data mirrorproc /%s/" % bool_dict[matrix_element.get('has_mirror_process')]
                     # And output them properly
                     for cf_i, color_flow_dict in enumerate(color_flow_list):
                         for i in [0, 1]:
-                            lines.append("DATA (ICOLUP(%d,%d,i,%3r),i=1,%2r)/%s/" % \
+                            lines.append("DATA (ICOLUP_D(%d,%d,i,%3r),i=1,%2r)/%s/" % \
                                  (ime, i + 1, cf_i + 1, nexternal,
                                   ",".join(["%3r" % color_flow_dict[l.get('number')][i] \
                                             for l in legs])))

@@ -82,13 +82,16 @@ C
       logical calculatedBorn
       integer get_hel,skip
       common/cBorn/hel_fac,calculatedBorn,get_hel,skip
+      ineger glu_ij
       integer nfksprocess
       common/c_nfksprocess/nfksprocess
 %(den_factor_lines)s
+%(ij_lines)s
 C ----------
 C BEGIN CODE
 C ----------
       iden(1)=iden_values(nfksprocess)
+      glu_ij = ij_values(nfksprocess)
       NTRY=NTRY+1
       if (ntry.lt.2) then
          skip=1
@@ -249,6 +252,7 @@ C
       integer get_hel,skip
       common/cBorn/hel_fac,calculatedBorn,get_hel,skip
       include "coupl.inc"
+      integer glu_ij
       integer nfksprocess
       common/c_nfksprocess/nfksprocess
 %(ij_lines)s
