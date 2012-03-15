@@ -291,7 +291,9 @@ class HelpToCmd(object):
         logger.info("-- set options")
         logger.info("   stdout_level DEBUG|INFO|WARNING|ERROR|CRITICAL")
         logger.info("     change the default level for printed information")
-        
+        logger.info("   timeout VALUE")
+        logger.info("      (default 20) Seconds allowed to answer questions.")
+        logger.info("      Note that pressing tab always stops the timer.")        
 
     def run_options_help(self, data):
         if data:
@@ -504,6 +506,11 @@ class CheckValidForCmd(object):
             if args[1] not in ['DEBUG','INFO','WARNING','ERROR','CRITICAL']:
                 raise self.InvalidCmd('output_level needs ' + \
                                       'a valid level')  
+                
+        if args[0] in ['timeout']:
+            if not args[1].isdigit():
+                raise self.InvalidCmd('timeout values should be a integer')   
+            
     def check_open(self, args):
         """ check the validity of the line """
         
@@ -1270,7 +1277,7 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
     _run_options = ['--cluster','--multicore','--nb_core=','--nb_core=2', '-c', '-m']
     _generate_options = ['-f', '--laststep=parton', '--laststep=pythia', '--laststep=pgs', '--laststep=delphes']
     _calculate_decay_options = ['-f', '--accuracy=0.']
-    _set_options = ['stdout_level','fortran_compiler']
+    _set_options = ['stdout_level','fortran_compiler','timeout']
     _plot_mode = ['all', 'parton','pythia','pgs','delphes','channel', 'banner']
     _clean_mode = _plot_mode
     _display_opts = ['run_name', 'options', 'variable']
@@ -1351,7 +1358,6 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
             
         # Load the configuration file
         self.set_configuration()
-        self.timeout = 20
         self.nb_refine=0
         if self.web:
             os.system('touch %s' % pjoin(self.me_dir,'Online'))
@@ -1545,8 +1551,7 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
         
         # Check if we want to modify the run
         if not force:
-            ans = self.ask('Do you want to modify the Cards?', 'n', ['y','n'], 
-                                                           timeout=self.timeout)
+            ans = self.ask('Do you want to modify the Cards?', 'n', ['y','n'])
             if ans == 'n':
                 force = True
         
@@ -1644,6 +1649,8 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
                 raise self.InvalidCmd('nb_core should be a positive number') 
             self.nb_core = int(args[1])
             self.options['nb_core'] = self.nb_core
+        elif args[0] == 'timeout':
+            self.options[args[0]] = int(args[1]) 
         elif args[0] in self.options:
             if args[1] in ['None','True','False']:
                 self.options[args[0]] = eval(args[1])
@@ -2489,7 +2496,7 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
         if '-f' not in args and len(to_suppress):
             question = 'Do you want to suppress the following files?\n     %s' % \
                                '\n    '.join(to_suppress)
-            ans = self.ask(question, 'y', choices=['y','n'], timeout = self.timeout)
+            ans = self.ask(question, 'y', choices=['y','n'])
         else:
             ans = 'y'
         
@@ -2525,7 +2532,7 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
                 else:
                     question = 'Do you want to suppress the following files?\n     %s' % \
                                '\n    '.join(to_suppress)
-                    ans = self.ask(question, 'y', choices=['y','n'], timeout = self.timeout)
+                    ans = self.ask(question, 'y', choices=['y','n'])
 
                 if ans == 'y':
                     for file2rm in to_suppress:
@@ -3462,7 +3469,7 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
 
             if not force:
                 if not mode:
-                    mode = self.ask(question, '0', options, timeout=self.timeout)
+                    mode = self.ask(question, '0', options)
             elif not mode:
                 mode = 'auto'
                 
@@ -3536,7 +3543,7 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
         answer = 'no'
         while answer != 'done':
             question, possible_answer, card = get_question(mode)
-            answer = self.ask(question, '0', possible_answer, timeout=int(1.5*self.timeout), path_msg='enter path')
+            answer = self.ask(question, '0', possible_answer, timeout=int(1.5*self.options['timeout']), path_msg='enter path')
             if answer.isdigit():
                 answer = card[int(answer)]
             if answer == 'done':
@@ -3590,7 +3597,7 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
 
         if not force:
             if not mode:
-                mode = self.ask(question, '0', options, timeout=self.timeout)
+                mode = self.ask(question, '0', options)
         elif not mode:
             mode = 'auto'
             
@@ -3655,7 +3662,7 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
         # Loop as long as the user is not done.
         answer = 'no'
         while answer != 'done':
-             answer = self.ask(question, '0', possible_answer, timeout=int(1.5*self.timeout), path_msg='enter path')
+             answer = self.ask(question, '0', possible_answer, timeout=int(1.5*self.options['timeout']), path_msg='enter path')
              if answer.isdigit():
                  answer = card[int(answer)]
              if answer == 'done':
@@ -3714,7 +3721,7 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
         # Loop as long as the user is not done.
         answer = 'no'
         while answer != 'done':
-             answer = self.ask(question, '0', possible_answer, timeout=int(1.5*self.timeout), path_msg='enter path')
+             answer = self.ask(question, '0', possible_answer, timeout=int(1.5*self.options['timeout']), path_msg='enter path')
              if answer.isdigit():
                  answer = card[int(answer)]
              if answer == 'done':
@@ -3739,7 +3746,7 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
 
 
         question = """Do you want to edit the %s?""" % card
-        answer = self.ask(question, 'n', ['y','n'], timeout=self.timeout,path_msg='enter path')
+        answer = self.ask(question, 'n', ['y','n'],path_msg='enter path')
         if answer == 'y':
             path = pjoin(self.me_dir,'Cards', card)
             self.exec_cmd('open %s' % path)

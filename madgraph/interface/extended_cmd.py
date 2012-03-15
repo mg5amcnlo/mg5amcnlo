@@ -47,6 +47,24 @@ pjoin = os.path.join
 class TimeOutError(Exception):
     """Class for run-time error"""
 
+def debug(debug_only=True):
+
+    def deco_debug(f):
+        
+        if debug_only and not __debug__:
+            return f(*args, **opt)
+        
+        def deco_f(*args, **opt):
+            try:
+                return f(*args, **opt)
+            except Exception, error:
+                print error
+                print traceback.print_exc(file=sys.stdout)
+                return
+        return deco_f
+    return deco_debug
+            
+
 #===============================================================================
 # CmdExtended
 #===============================================================================
@@ -90,7 +108,8 @@ class BasicCmd(cmd.Cmd):
         if valid == 1:
             out = out[1:]
         return out
-
+    
+    @debug()
     def print_suggestions(self, substitution, matches, longest_match_length) :
         """print auto-completions by category"""
         longest_match_length += len(self.completion_prefix)
@@ -336,7 +355,6 @@ class Cmd(CheckCmd, HelpCmd, CompleteCmd, BasicCmd):
     next_possibility = {} # command : [list of suggested command]
     history_header = ""
     
-    timeout = 1 # time authorize to answer question [0 is no time limit]
     _display_opts = ['options','variable']
     
     class InvalidCmd(Exception):
@@ -674,7 +692,6 @@ class Cmd(CheckCmd, HelpCmd, CompleteCmd, BasicCmd):
         # remove this call from history
         if self.history:
             self.history.pop()
-        self.timeout, old_time_out = 20, self.timeout
         
         # Read the lines of the file and execute them
         self.inputfile = open(filepath)
@@ -691,7 +708,6 @@ class Cmd(CheckCmd, HelpCmd, CompleteCmd, BasicCmd):
         if self.child:
             self.child.exec_cmd('quit')        
                 
-        self.timeout = old_time_out
         return
     
     def get_history_header(self):
@@ -771,7 +787,7 @@ class Cmd(CheckCmd, HelpCmd, CompleteCmd, BasicCmd):
     # Ask a question with nice options handling
     #===============================================================================    
     def ask(self, question, default, choices=[], path_msg=None, 
-            timeout = None, fct_timeout=None):
+            timeout = True, fct_timeout=None):
         """ ask a question with some pre-define possibility
             path info is
         """
@@ -780,6 +796,12 @@ class Cmd(CheckCmd, HelpCmd, CompleteCmd, BasicCmd):
             path_msg = [path_msg]
         else:
             path_msg = []
+            
+        if timeout:
+            try:
+                timeout = self.options['timeout']
+            except:
+                pass
                     
         # add choice info to the question
         if choices + path_msg:
@@ -796,16 +818,19 @@ class Cmd(CheckCmd, HelpCmd, CompleteCmd, BasicCmd):
             question = question[:-2]+']'
                 
         if path_msg:
-            fct = lambda q: raw_path_input(q, allow_arg=choices, default=default)
+            f = lambda q: raw_path_input(q, allow_arg=choices, default=default)
         else:
-            fct = lambda q: smart_input(q, allow_arg=choices, default=default)
+            f = lambda q: smart_input(q, allow_arg=choices, default=default)
 
         answer = self.check_answer_in_input_file(choices, path_msg)
         if answer is not None:
             return answer
         
-        return  Cmd.timed_input(question, default, timeout=timeout,
-                                    fct=fct, fct_timeout=fct_timeout)
+        value =   Cmd.timed_input(question, default, timeout=timeout,
+                                    fct=f, fct_timeout=fct_timeout)
+
+        self.preloop()        
+        return value
         
     def check_answer_in_input_file(self, options, path=False):
         """Questions can have answer in output file (or not)"""
@@ -1252,7 +1277,7 @@ def smart_input(input_text, allow_arg=[], default=None):
 #===============================================================================
 class OneLinePathCompletion(SmartQuestion):
     """ a class for answering a question with the path autocompletion"""
-
+    
 
     def completenames(self, text, line, begidx, endidx):
         prev_timer = signal.alarm(0) # avoid timer if any

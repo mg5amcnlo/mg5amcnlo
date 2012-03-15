@@ -20,10 +20,9 @@
 #
 ################################################################################
 
-# Pythia8 Path.
-# Define the path to the pythia8 directory.
-# relative path start from mg5 directory
-pythia8_path = ./pythia8
+# Prefered Fortran Compiler
+# If None: try to find g77 or gfortran on the system
+fortran_compiler = None
 
 # Prefered Text Editor
 #  Default: use the shell default Editor
@@ -39,10 +38,14 @@ web_browser = None
 # If None: try to find one available on the system
 eps_viewer = None
 
-# Prefered Fortran Compiler
-# If None: try to find g77 or gfortran on the system
-fortran_compiler = None
+# Time allowed to answer question (if no answer takes default value)
+# 0: No time limit
+timeout = 20
 
+# Pythia8 Path.
+# Define the path to the pythia8 directory.
+# relative path start from mg5 directory
+pythia8_path = ./pythia8
 
 ################################################################################
 #  INFO FOR MADEVENT 

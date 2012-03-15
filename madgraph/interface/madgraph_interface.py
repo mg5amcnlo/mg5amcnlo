@@ -411,7 +411,9 @@ class HelpToCmd(cmd.HelpCmd):
         logger.info("   fortran_compiler NAME")
         logger.info("      (default None) Force a specific fortran compiler.")
         logger.info("      If None, it tries first g77 and if not present gfortran.")
-
+        logger.info("   timeout VALUE")
+        logger.info("      (default 20) Seconds allowed to answer questions.")
+        logger.info("      Note that pressing tab always stops the timer.")
 
 #===============================================================================
 # CheckValidForCmd
@@ -805,6 +807,11 @@ This will take effect only in a NEW terminal
             if args[1] not in ['DEBUG','INFO','WARNING','ERROR','CRITICAL']:
                 raise self.InvalidCmd('output_level needs ' + \
                                       'a valid level')       
+
+        if args[0] in ['timeout']:
+            if not args[1].isdigit():
+                raise self.InvalidCmd('timeout values should be a integer')   
+
     
     def check_open(self, args):
         """ check the validity of the line """
@@ -1306,7 +1313,8 @@ class CompleteForCmd(cmd.CompleteCmd):
             possibility.append('ME5_debug')            
 
         return self.list_completion(text, possibility)
-       
+    
+    @cmd.debug()
     def complete_output(self, text, line, begidx, endidx,
                         possible_options = ['f', 'noclean', 'nojpeg'],
                         possible_options_full = ['-f', '-noclean', '-nojpeg']):
@@ -1339,11 +1347,8 @@ class CompleteForCmd(cmd.CompleteCmd):
                 return self.list_completion(text, possible_options_full)
             # Formats
             if len(args) == 1:
-                if any([p.startswith(text) for p in possible_format]):
-                    return [name for name in \
-                            self.list_completion(text, possible_format) + \
-                            ['.' + os.path.sep, '..' + os.path.sep, 'auto'] \
-                            if name.startswith(text)]
+                format = possible_format + ['.' + os.path.sep, '..' + os.path.sep, 'auto']
+                return self.list_completion(text, format)
 
             # directory names
             content = [name for name in self.path_completion(text, '.', only_dirs = True) \
@@ -1614,7 +1619,6 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
     """The command line processor of MadGraph"""    
 
     writing_dir = '.'
-    timeout = 0 # time authorize to answer question [0 is no time limit]
   
     # Options and formats available
     _display_opts = ['particles', 'interactions', 'processes', 'diagrams', 
@@ -2855,6 +2859,7 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
             ./input/mg5_configuration.txt. assign to default if not define """
             
         self.options = {'pythia8_path': './pythia8',
+                              'timeout': 20,
                               'web_browser':None,
                               'eps_viewer':None,
                               'text_editor':None,
@@ -2956,8 +2961,7 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
         # args is now MODE PATH
         
         if args[0].startswith('standalone'):
-            ext_program = launch_ext.SALauncher(self, args[1], self.timeout,
-                                                **options)
+            ext_program = launch_ext.SALauncher(self, args[1], **options)
         elif args[0] == 'madevent':
             if options['interactive']:
                 if hasattr(self, 'do_shell'):
@@ -2982,23 +2986,17 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
                 generate_info = self._generate_info
             
             if len(generate_info.split('>')[0].strip().split())>1:
-                ext_program = launch_ext.MELauncher(args[1], self.timeout, self,
-                                pythia=self.options['pythia-pgs_path'],
-                                delphes=self.options['delphes_path'],
+                ext_program = launch_ext.MELauncher(args[1], self,
                                 shell = hasattr(self, 'do_shell'),
                                 **options)
             else:
                 # This is a width computation
-                ext_program = launch_ext.MELauncher(args[1], self.timeout, self, 
-                                unit='GeV',
-                                pythia=self.options['pythia-pgs_path'],
-                                delphes=self.options['delphes_path'],
+                ext_program = launch_ext.MELauncher(args[1], self, unit='GeV',
                                 shell = hasattr(self, 'do_shell'),
                                 **options)
 
         elif args[0] == 'pythia8':
-            ext_program = launch_ext.Pythia8Launcher( args[1], self.timeout, self,
-                                                **options)
+            ext_program = launch_ext.Pythia8Launcher( args[1], self, **options)
         else:
             os.chdir(start_cwd) #ensure to go to the initial path
             raise self.InvalidCmd , '%s cannot be run from MG5 interface' % args[0]
@@ -3153,11 +3151,8 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
                 self.options['fortran_compiler'] = args[1]
             else:
                 self.options['fortran_compiler'] = None
-        elif args[0] in self.options:
-            if args[1] in  ['None','True', 'False']:
-                self.options[args[0]] = eval(args[1])
-            else:
-                self.options[args[0]] = args[1] 
+        elif args[0] == 'timeout':
+                self.options[args[0]] = int(args[1]) 
         elif args[0] in self.options:
             if args[1] in ['None','True','False']:
                 self.options[args[0]] = eval(args[1])
@@ -3238,8 +3233,7 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
             # Don't ask if user already specified force or noclean
             logger.info('INFO: directory %s already exists.' % self._export_dir)
             logger.info('If you continue this directory will be cleaned')
-            answer = self.ask('Do you want to continue?', 'y', ['y','n'], 
-                                                           timeout=self.timeout)
+            answer = self.ask('Do you want to continue?', 'y', ['y','n'])
             if answer != 'y':
                 raise self.InvalidCmd('Stopped by user request')
 

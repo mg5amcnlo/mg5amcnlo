@@ -3,6 +3,8 @@ Update notes for MadGraph 5 (in reverse time order)
 1.4.4 (XX/XX/XX)  OM: Added a command: "output aloha" which allows to creates a 
        		      subset (or all) of the aloha routines linked to the
                       current model
+                  OM: allow to choose the duration of the timer for the questions.
+                      (via ./input/mg5_configuration.txt)
                   JA: Fixed LHAPDF functionality which was broken in v. 1.4.0
                   JA: Allow non-equal mixing angles in mssm restrict cards
                       (as needed for cards from some spectrum generators)
