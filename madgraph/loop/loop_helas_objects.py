@@ -23,6 +23,8 @@ import logging
 import itertools
 import math
 
+import aloha
+
 import madgraph.core.base_objects as base_objects
 import madgraph.loop.loop_base_objects as loop_base_objects
 import madgraph.core.diagram_generation as diagram_generation
@@ -327,9 +329,16 @@ class LoopHelasAmplitude(helas_objects.HelasAmplitude):
         appear for cuttools (L-cut particles specified last) """
         
         masses=[]
-        for wf in self.get('wavefunctions')[2:]:
-            masses.append(wf.get('mass'))
-        masses.append(self.get('wavefunctions')[0].get('mass'))
+        if not aloha.complex_mass:
+            for wf in self.get('wavefunctions')[2:]:
+                masses.append(wf.get('mass'))
+            masses.append(self.get('wavefunctions')[0].get('mass'))
+        else:
+            for wf in self.get('wavefunctions')[2:]:
+                if (wf.get('width') == 'ZERO' or wf.get('mass') == 'ZERO'):
+                    masses.append(wf.get('mass'))
+                else: 
+                    masses.append('CMASS_%s' % wf.get('mass'))
         return masses
 
     def get_couplings(self):

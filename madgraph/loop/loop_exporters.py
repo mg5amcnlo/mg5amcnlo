@@ -23,6 +23,8 @@ import re
 import shutil
 import subprocess
 
+import aloha
+
 import madgraph.core.base_objects as base_objects
 import madgraph.core.color_algebra as color
 import madgraph.core.helas_objects as helas_objects
@@ -353,7 +355,14 @@ class LoopProcessExporterFortranSA(export_v4.ProcessExporterFortranSA,
         # Extract process info lines
         process_lines = self.get_process_info_lines(matrix_element)
         replace_dict['process_lines'] = process_lines    
-            
+        
+        # specify the format of the masses 
+        if aloha.complex_mass:
+            replace_dict['mass_format'] = 'complex*8'
+        else:
+            replace_dict['mass_format'] = 'real*8'
+        
+        
         file = file % replace_dict
         files.append(file)
         

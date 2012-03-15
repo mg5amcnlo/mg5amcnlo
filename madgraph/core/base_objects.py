@@ -2526,7 +2526,7 @@ class ProcessDefinition(Process):
         
         for mleg in self['legs']:
             if len(mleg['ids'])>1:
-                return false
+                return False
 
     def get_sorted_keys(self):
         """Return process property names as a nicely sorted list."""

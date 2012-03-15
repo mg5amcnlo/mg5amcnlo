@@ -1195,13 +1195,16 @@ class FortranUFOHelasCallWriter(UFOHelasCallWriter):
         if isinstance(argument, helas_objects.HelasWavefunction):
             if argument['is_loop']:
                 arg['out'] = 'WL(1,%(out)d)'
+                if aloha.complex_mass:
+                    arg['mass'] = "ML(%(out)d),"
+                else:
+                    arg['mass'] = "ML(%(out)d),LM,"
             else:
                 arg['out'] = 'W(1,%(out)d)'
-                
-            if aloha.complex_mass:
-                arg['mass'] = "DCMPLX(%(CM)s),"
-            else:
-                arg['mass'] = "%(M)s,%(W)s,"
+                if aloha.complex_mass:
+                    arg['mass'] = "DCMPLX(%(CM)s),"
+                else:
+                    arg['mass'] = "%(M)s,%(W)s,"
         # Standard Amplitude
         elif argument['type'] == 'base':      
             arg['mass'] = ''  

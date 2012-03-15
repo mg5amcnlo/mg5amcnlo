@@ -1,4 +1,4 @@
-GFORTRAN module created from avh_olo.f90 on Wed Mar 14 16:14:48 2012
+GFORTRAN module created from avh_olo.f90 on Thu Mar 15 16:18:22 2012
 If you edit this, you'll get what you deserve.
 
 (() () () () () () () () () () () () () () () () () () ()
@@ -21,30 +21,30 @@ SUBROUTINE) (UNKNOWN 0 ()) 13 0 (14 15 16 17 18 19 20 21 22 23 24) () 0
 DECL SUBROUTINE) (UNKNOWN 0 ()) 26 0 (27) () 0 () ())
 28 'tadp' 'avh_olo_bub' 1 ((PROCEDURE UNKNOWN-INTENT MODULE-PROC DECL
 SUBROUTINE) (UNKNOWN 0 ()) 29 0 (30 31 32 33) () 0 () ())
-27 'ndig' '' 26 ((VARIABLE IN UNKNOWN-PROC UNKNOWN DUMMY) (INTEGER 4 ())
-0 0 () () 0 () ())
-31 'mm' '' 29 ((VARIABLE IN UNKNOWN-PROC UNKNOWN DUMMY) (COMPLEX 8 ()) 0
-0 () () 0 () ())
-32 'amm' '' 29 ((VARIABLE IN UNKNOWN-PROC UNKNOWN DUMMY) (REAL 8 ()) 0 0
-() () 0 () ())
-6 'm1i' '' 3 ((VARIABLE IN UNKNOWN-PROC UNKNOWN DUMMY) (COMPLEX 8 ()) 0
-0 () () 0 () ())
-7 'm2i' '' 3 ((VARIABLE IN UNKNOWN-PROC UNKNOWN DUMMY) (COMPLEX 8 ()) 0
-0 () () 0 () ())
-4 'rslt' '' 3 ((VARIABLE OUT UNKNOWN-PROC UNKNOWN DIMENSION DUMMY) (
-COMPLEX 8 ()) 0 0 () (1 EXPLICIT (CONSTANT (INTEGER 4 ()) 0 '0') (
-CONSTANT (INTEGER 4 ()) 0 '2')) 0 () ())
 11 'rmu2' '' 3 ((VARIABLE IN UNKNOWN-PROC UNKNOWN DUMMY) (REAL 8 ()) 0 0
 () () 0 () ())
 10 'am2i' '' 3 ((VARIABLE IN UNKNOWN-PROC UNKNOWN DUMMY) (REAL 8 ()) 0 0
 () () 0 () ())
-5 'pp' '' 3 ((VARIABLE IN UNKNOWN-PROC UNKNOWN DUMMY) (COMPLEX 8 ()) 0 0
-() () 0 () ())
 9 'am1i' '' 3 ((VARIABLE IN UNKNOWN-PROC UNKNOWN DUMMY) (REAL 8 ()) 0 0
 () () 0 () ())
+6 'm1i' '' 3 ((VARIABLE IN UNKNOWN-PROC UNKNOWN DUMMY) (COMPLEX 8 ()) 0
+0 () () 0 () ())
+4 'rslt' '' 3 ((VARIABLE OUT UNKNOWN-PROC UNKNOWN DIMENSION DUMMY) (
+COMPLEX 8 ()) 0 0 () (1 EXPLICIT (CONSTANT (INTEGER 4 ()) 0 '0') (
+CONSTANT (INTEGER 4 ()) 0 '2')) 0 () ())
+7 'm2i' '' 3 ((VARIABLE IN UNKNOWN-PROC UNKNOWN DUMMY) (COMPLEX 8 ()) 0
+0 () () 0 () ())
+32 'amm' '' 29 ((VARIABLE IN UNKNOWN-PROC UNKNOWN DUMMY) (REAL 8 ()) 0 0
+() () 0 () ())
+5 'pp' '' 3 ((VARIABLE IN UNKNOWN-PROC UNKNOWN DUMMY) (COMPLEX 8 ()) 0 0
+() () 0 () ())
+27 'ndig' '' 26 ((VARIABLE IN UNKNOWN-PROC UNKNOWN DUMMY) (INTEGER 4 ())
+0 0 () () 0 () ())
 8 'app' '' 3 ((VARIABLE IN UNKNOWN-PROC UNKNOWN DUMMY) (REAL 8 ()) 0 0 ()
 () 0 () ())
 33 'rmu2' '' 29 ((VARIABLE IN UNKNOWN-PROC UNKNOWN DUMMY) (REAL 8 ()) 0
+0 () () 0 () ())
+31 'mm' '' 29 ((VARIABLE IN UNKNOWN-PROC UNKNOWN DUMMY) (COMPLEX 8 ()) 0
 0 () () 0 () ())
 21 'app' '' 13 ((VARIABLE IN UNKNOWN-PROC UNKNOWN DUMMY) (REAL 8 ()) 0 0
 () () 0 () ())

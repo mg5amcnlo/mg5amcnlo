@@ -325,7 +325,7 @@ class Switcher(object):
             if type=='NLO':
                 if not nlo_mode in self._valid_nlo_modes: raise MadGraph5Error, \
                     'The NLO mode %s is not valid. Please chose one among: %s' \
-                    % (nlo_mode, ' '.join(valid_nlo_modes))
+                    % (nlo_mode, ' '.join(self._valid_nlo_modes))
                 elif nlo_mode == 'all':
                     self.change_principal_cmd('FKS')
                 elif nlo_mode == 'real':

@@ -1581,7 +1581,7 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
     _save_opts = ['model', 'processes', 'options']
     _tutorial_opts = ['start', 'stop']
     _switch_opts = ['mg5','aMC@NLO','ML5']
-    _check_opts = ['full', 'permutation', 'gauge', 'lorentz_invariance']
+    _check_opts = ['full', 'permutation', 'gauge', 'lorentz', 'brs']
     _import_formats = ['model_v4', 'model', 'proc_v4', 'command', 'banner']
     _install_opts = ['pythia-pgs', 'Delphes', 'MadAnalysis', 'ExRootAnalysis']
     _v4_export_formats = ['madevent', 'standalone', 'matrix'] 
@@ -2157,7 +2157,7 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
                                                 cuttools=self._cuttools_dir)
             nb_processes += len(comparisons[0])
 
-        if args[0] in ['lorentz_invariance', 'full']:
+        if args[0] in ['lorentz', 'full']:
             lorentz_result = process_checks.check_lorentz(myprocdef,
                                                       param_card = param_card,
                                                       mg_root=self._mgme_dir,
