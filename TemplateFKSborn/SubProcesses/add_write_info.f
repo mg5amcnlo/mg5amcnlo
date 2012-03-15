@@ -1,19 +1,5 @@
-      subroutine addmothers(ip,jpart,pb,isym,jsym,rscale,aqcd,aqed,
-     &     buff,npart)
-      implicit none
-      include "nexternal.inc"
-      integer    maxflow
-      parameter (maxflow=999)
-      integer jpart(7,-nexternal+3:2*nexternal-3),npart,ip
-      double precision pb(0:4,-nexternal+3:2*nexternal-3)
-      double precision rscale,aqcd,aqed
-      integer isym(nexternal,99), jsym
-      character*140 buff
-      return
-      end
-
-      subroutine add_write_info(p_born,pp,ybst_til_tolab,iconfig,Hevents,
-     &     putonshell,ndim,ipole,x,jpart,npart,pb)
+      subroutine add_write_info(p_born,pp,ybst_til_tolab,iconfig,Hevents
+     &     ,putonshell,ndim,ipole,x,jpart,npart,pb)
 c Computes all the info needed to write out the events including the
 c intermediate resonances. It also boosts the events to the lab frame
       implicit none
@@ -21,19 +7,14 @@ c intermediate resonances. It also boosts the events to the lab frame
       include "nexternal.inc"
       include "born_nhel.inc"
       include "coloramps.inc"
-      integer mapbconf(0:lmaxconfigs)
-      integer b_from_r(lmaxconfigs)
-      integer r_from_b(lmaxconfigs)
-      include "bornfromreal.inc"
 
 c Arguments
       double precision p_born(0:3,nexternal-1),pp(0:3,nexternal)
       double precision ybst_til_tolab
-      integer iconfig,iconfig_save
+      integer iconfig
       logical Hevents,putonshell
       integer ndim,ipole,jpart(7,-nexternal+3:2*nexternal-3),npart
       double precision pb(0:4,-nexternal+3:2*nexternal-3)
-      save iconfig_save
 
 c Local
       integer np,i,j,iBornGraph,ida(2),size,nexpart,idum,ires,nres,ns
@@ -46,6 +27,8 @@ c Local
       data firsttime2/.true./
 
 c Combined SubProcesses (from auto_dsig() or dlum())
+      double precision xlum,dlum
+      external dlum
       integer              IPROC 
       DOUBLE PRECISION PD(0:MAXPROC)
       COMMON /SubProc/ PD, IPROC
@@ -70,9 +53,9 @@ c Masses and widths of the (internal) propagators. Read once and saved.
       double precision pwidth_tree(-nexternal:0)
       save pmass_tree,pwidth_tree
 
-c Identical particles symmetry
-      integer isym(nexternal,200), nsym, jsym
-      include 'symswap.inc'
+c$$$c Identical particles symmetry
+c$$$      integer isym(nexternal,200), nsym, jsym
+c$$$      include 'symswap.inc'
 
 c LesHouches info
       integer    maxflow
@@ -129,26 +112,30 @@ c
 c
 c Determine which Born graph was used for multi-channeling
 c
-      iBornGraph=b_from_r(mapconfig(iconfig))
+      iBornGraph=mapconfig(iconfig)
 
 c
-c Fill the itree, sprop, pmass and pwidth of this configuration
+c Fill the itree, sprop, pmass and pwidth of this configuration. Needed
+c to determine possible intermediate s-channel resonances. Note that the
+c set_itree subroutine does not properly set the t-channel info.
 c
-      if (firsttime.or.iconfig_save.ne.iconfig) then
-         iconfig_save=iconfig
-         size=nexpart-3
-         if (Hevents) then
-            call set_itree_H(iconfig,size,itree,sprop_tree,
-     &           pmass_tree,pwidth_tree)
-         else
-            call set_itree_S(iBornGraph,size,itree,sprop_tree,
-     &           pmass_tree,pwidth_tree)
-         endif
+      if (firsttime) then
+         call set_itree(iconfig,Hevents,itree,sprop_tree,pmass_tree
+     &        ,pwidth_tree)
          firsttime=.false.
       endif
 c
 c Choose a process. iproc comes set to the number of processes
 c
+c set-up Bjorken x's
+      if (Hevents) then
+         call set_cms_stuff(-100)
+      else
+         call set_cms_stuff(0)
+      endif
+c compute the PDFs (this sets 'pd' and 'iproc')
+      xlum=dlum()
+c choose the subprocess
       np = iproc
       xtarget=ran2()*pd(np)
       ip = 1
@@ -222,50 +209,62 @@ c subroutine fill_MC_mshell().
 c
       if(putonshell)then
          mfail=-1
+c fills the common block with the MC masses (special treatment of i_fks
+c and j_fks, because phase-space generation won't work in all cases).
          call put_on_MC_mshell(Hevents,jpart,xmi,xmj,xm1,xm2)
          wgt=1d0
-         call x_to_f_arg(ndim,ipole,iconfig,iconfig,ndim,wgt,x,p)
+c generate a phase-space point with the MC masses
+         call generate_momenta(ndim,iconfig,wgt,x,p)
          if(Hevents)then
             call set_cms_stuff(mohdr)
+c special treament here for i_fks and j_fks masses
             call put_on_MC_mshell_Hev(p,xmi,xmj,xm1,xm2,mfail)
+c include initial state masses
             if(j_fks.gt.nincoming.and.mfail.eq.0)
      &           call put_on_MC_mshell_in(p,xm1,xm2,mfail)
          else
+c include initial state masses
             call set_cms_stuff(izero)
             call put_on_MC_mshell_in(p1_cnt(0,1,0),xm1,xm2,mfail)
          endif
+c restore the common block for the masses to the original MG masses
          call put_on_MG_mshell()
-         if(mfail.eq.1)then
-            wgt=1d0
-            call x_to_f_arg(ndim,ipole,iconfig,iconfig,ndim,wgt,x,p)
+         if (mfail.eq.0) then 
+c all went fine and we can copy the new momenta of the old ones.
+            do i=1,nexternal
+               do j=0,3
+                  if(Hevents) then
+                     pp(j,i)=p(j,i)
+                  elseif(.not.Hevents .and. i.lt.max(i_fks,j_fks)) then
+                     p_born(j,i)=p1_cnt(j,i,0)
+                  elseif(.not.Hevents .and. i.gt.max(i_fks,j_fks)) then
+                     p_born(j,i-1)=p1_cnt(j,i,0)
+                  endif
+               enddo
+            enddo
+         elseif(mfail.eq.1)then
+c Probably not need, but just to make sure: fill the momenta common
+c blocks again by call generate momenta again.
+            call generate_momenta(ndim,iconfig,wgt,x,p)
             if(Hevents)then
               call set_cms_stuff(mohdr)
             else
               call set_cms_stuff(izero)
             endif
+c Also, set the masses that need to written in the event file to the MG
+c masses
             call write_masses_lhe_MG()
          elseif(mfail.eq.-1)then
             write(*,*)'Error in driver: mfail not set',mfail
             stop
          endif
       else
+c Use the MadGraph masses in the event file
          call write_masses_lhe_MG()
       endif
-c copy the new momenta over the old ones.
-      do i=1,nexternal
-         do j=0,3
-            if(Hevents) then
-               pp(j,i)=p(j,i)
-            elseif(.not.Hevents .and. i.lt.max(i_fks,j_fks)) then
-               p_born(j,i)=p1_cnt(j,i,0)
-            elseif(.not.Hevents .and. i.gt.max(i_fks,j_fks)) then
-               p_born(j,i-1)=p1_cnt(j,i,0)
-            endif
-         enddo
-      enddo
 
 c
-c Derive from the n-body the (n+1)-body
+c Derive the n-body from the (n+1)-body if we are doing S-events
 c
       if (.not.Hevents) then
          do i=1,nexternal-1
@@ -478,44 +477,11 @@ c
       end
 
 
-      subroutine set_itree_H(iconfig,size,itree,sprop_tree,
-     &     pmass_tree,pwidth_tree)
+      subroutine set_itree(iconfig,Hevents,itree,sprop_tree,pmass_tree
+     &     ,pwidth_tree)
       implicit none
-      integer iconfig,size
-      include "genps.inc"
-      include 'nexternal.inc'
-      include "coupl.inc"
-      double precision ZERO
-      parameter (ZERO=0d0)
-      integer itree(2,-max_branch:-1)
-      integer sprop_tree(-max_branch:-1)
-      integer iforest(2,-max_branch:-1,lmaxconfigs)
-      integer sprop(-max_branch:-1,lmaxconfigs),mapconfig(0:lmaxconfigs)
-      integer tprid(-max_branch:-1,lmaxconfigs)
-      include "configs.inc"
-      integer i,j
-      double precision pmass(-nexternal:0,lmaxconfigs)
-      double precision pwidth(-nexternal:0,lmaxconfigs)
-      integer pow(-nexternal:0,lmaxconfigs)
-      double precision pmass_tree(-nexternal:0)
-      double precision pwidth_tree(-nexternal:0)
-      include "props.inc"
-      do j=-size,-1
-         do i=1,2
-            itree(i,j)=iforest(i,j,iconfig)
-         enddo
-         sprop_tree(j)=sprop(j,iconfig)
-         pmass_tree(j)=pmass(j,iconfig)
-         pwidth_tree(j)=pwidth(j,iconfig)
-      enddo
-      return
-      end
-
-      
-      subroutine set_itree_S(iBornGraph,size,itree,sprop_tree,
-     &     pmass_tree,pwidth_tree)
-      implicit none
-      integer iBornGraph,size
+      integer iconfig
+      logical Hevents
       include "genps.inc"
       include 'nexternal.inc'
       include "coupl.inc"
@@ -527,27 +493,101 @@ c
       integer sprop(-max_branch:-1,lmaxconfigs),mapconfig(0:lmaxconfigs)
       integer tprid(-max_branch:-1,lmaxconfigs)
       include "born_conf.inc"
-      integer i,j,iBornconfig
+      integer i,j,jj
       double precision pmass(-nexternal:0,lmaxconfigs)
       double precision pwidth(-nexternal:0,lmaxconfigs)
       integer pow(-nexternal:0,lmaxconfigs)
       double precision pmass_tree(-nexternal:0)
       double precision pwidth_tree(-nexternal:0)
-      include "props.inc"
-      do i=1,mapconfig(0)
-         if(iBornGraph.eq.mapconfig(i))then
-            iBornconfig=i
-            exit
-         endif
-      enddo
-      do j=-size,-1
+      integer i_fks,j_fks
+      common/fks_indices/i_fks,j_fks
+      include "born_props.inc"
+c
+c Do not really care about t-channels: loop should just go to
+c nexternal-4, even though there is one more when there are t-channels
+c around
+      do j=-(nexternal-4),-1
          do i=1,2
-            itree(i,j)=iforest(i,j,iBornconfig)
+            itree(i,j)=iforest(i,j,iconfig)
          enddo
-         sprop_tree(j)=sprop(j,iBornconfig)
-         pmass_tree(j)=pmass(j,iBornconfig)
-         pwidth_tree(j)=pwidth(j,iBornconfig)
+         sprop_tree(j)=sprop(j,iconfig)
+         pmass_tree(j)=pmass(j,iconfig)
+         pwidth_tree(j)=pwidth(j,iconfig)
       enddo
+c
+c When we are doing H-events, we need to add --when j_fks is final
+c state-- the s-channel branching fks_mother -> j_fks + i_fks.  When
+c j_fks is initial state, we need to add a 'bogus' t-channel splitting
+c to make sure that all the loops stop properly
+c
+      if (Hevents) then
+c must re-label the external particles to get the correct daughters
+         if (i_fks.le.j_fks) then
+            write (*,*) 'ERROR: i_fks should be greater than j_fks'
+            stop
+         endif
+         do j=-(nexternal-4),-1
+            do i=1,2
+               if ( itree(i,j).ge.i_fks ) then
+                  itree(i,j)=itree(i,j)+1
+               endif
+            enddo
+         enddo
+c
+         if (j_fks.gt.nincoming) then
+c we must add an extra s-channel. Easiest is to add it all the way at
+c the beginning. Therefore, relabel everything else first. Use the
+c original ones to make sure we are doing it correctly (and not
+c accidentally overwriting something).
+            do j=-(nexternal-4),-1
+               sprop_tree(j-1)=sprop(j,iconfig)
+               pmass_tree(j-1)=pmass(j,iconfig)
+               pwidth_tree(j-1)=pwidth(j,iconfig)
+               do i=1,2
+                  itree(1,j-1)=iforest(1,j,iconfig)
+                  itree(2,j-1)=iforest(2,j,iconfig)
+c Also update the internal references
+                  if ( itree(i,j-1).lt. 0 ) then
+                     itree(i,j-1)=itree(i,j-1)-1
+                  endif
+               enddo
+            enddo
+c
+c Add the new s-channel
+c
+            itree(1,-1)=i_fks
+            itree(2,-1)=j_fks
+c This is only relevant if the j_fks mass is non-zero; fill it anyway
+c always. We can use here the j_fks label, because j_fks of Born is the
+c same as fks_mother label
+            sprop_tree(-1)=sprop(j_fks,iconfig)
+            pmass_tree(-1)=pmass(j_fks,iconfig)
+            pwidth_tree(-1)=pwidth(j_fks,iconfig)
+c
+c We have to make sure that the fks_mother (which is equal to the j_fks
+c label of the Born) is replaced by the new s-channel
+c
+            do j=-(nexternal-3),-2 ! do not include the new s-channel
+               do i=1,2
+                  if ( itree(i,j).eq. j_fks ) then
+                     itree(i,j)=-1 ! reference to the new s-channel
+                  endif
+               enddo
+            enddo
+
+         else
+c j_fks is initial state
+            jj=-nexternal-3     ! Just add it at the end
+c setting itree to 1 (or 2) makes sure that the loops over s-channel
+c propagators will exit
+            itree(1,jj)=1
+            itree(2,jj)=1
+            sprop_tree(jj)=0
+            pmass_tree(jj)=0d0
+            pwidth_tree(jj)=0d0
+         endif
+      endif
+
       return
       end
 
@@ -580,11 +620,9 @@ c
       double precision xp(0:3,-nexternal:nexternal)
       double precision tsgn
       integer i,j,iloop
-
       logical onshell
       double precision xmass
       integer ida(2),idenpart
-
       integer IDUP(nexternal)
 c
 c     External
@@ -613,7 +651,7 @@ c-----
             endif
          enddo
       enddo
-
+c
       tsgn = +1d0
       do i=-1,-iloop,-1                      !Loop over propagators
          onbw(i) = .false.
@@ -631,7 +669,6 @@ c
             onshell = ( abs(xmass-pmass(i)) .lt. bwcutoff*pwidth(i) )
             if(onshell)then
                OnBW(i) = .true.
-
 c     If mother and daughter have the same ID, remove one of them
                idenpart=0
                do j=1,2
@@ -670,9 +707,11 @@ c                  whichever is closer to mass shell
       integer icolup(2,nexternal,maxflow)
       include 'leshouche.inc'
       integer IDUP_tmp(nexternal),i
+c
       do i=1,nexternal
          IDUP_tmp(i)=IDUP(i,1)
       enddo
+c
       return
       end
 
@@ -687,10 +726,12 @@ c                  whichever is closer to mass shell
       integer icolup(2,nexternal,maxflow)
       include 'born_leshouche.inc'
       integer IDUP_tmp(nexternal),i
+c
       do i=1,nexternal-1
          IDUP_tmp(i)=IDUP(i,1)
       enddo
       IDUP_tmp(nexternal)=0
+c
       return
       end
 
@@ -706,19 +747,19 @@ c                  whichever is closer to mass shell
       external ran2
       integer jpart(7,-nexternal+3:2*nexternal-3),iflow
       integer i_part,j_part,imother,lc
-
+c
       call fill_icolor_S(iflow,jpart,lc)
-
+c
       j_part = particle_type(j_fks)
       i_part = particle_type(i_fks)
-
+c
       do i=nexternal,1,-1
          if (i.gt.max(i_fks,j_fks)) then
             jpart(4,i)=jpart(4,i-1)
             jpart(5,i)=jpart(5,i-1)
          endif
       enddo
-
+c
       imother=min(i_fks,j_fks)
 c The following works only if i_fks is always greater than j_fks.      
       if (j_fks.gt.nincoming) then
@@ -866,8 +907,7 @@ c The following works only if i_fks is always greater than j_fks.
             stop
          endif
       endif
-        
-
+c
       return
       end
 
@@ -884,7 +924,7 @@ c The following works only if i_fks is always greater than j_fks.
       integer icolup(2,nexternal,maxflow)
       include "born_leshouche.inc"
       integer jpart(7,-nexternal+3:2*nexternal-3),lc,iflow
-
+c
       lc=0
       do i=1,nexternal-1
          jpart(4,i)=ICOLUP(1,i,iflow)
@@ -892,7 +932,7 @@ c The following works only if i_fks is always greater than j_fks.
          jpart(5,i)=ICOLUP(2,i,iflow)
          lc=max(lc,jpart(5,i))
       enddo
-
+c
       return
       end
 
@@ -919,30 +959,22 @@ c
       enddo
       if (MonteCarlo.eq.'HERWIG6') then
          include "MCmasses_HERWIG6.inc"
-         do i=-5,-1
-            mcmass(i)=mcmass(-i)
-         enddo
-      elseif (MonteCarlo.eq.'HERWIGPP') then
+      elseif(MonteCarlo.eq.'HERWIGPP')then
          include "MCmasses_HERWIGPP.inc"
-         do i=-5,-1
-            mcmass(i)=mcmass(-i)
-         enddo
-      elseif (MonteCarlo.eq.'PYTHIA6Q') then
+      elseif(MonteCarlo.eq.'PYTHIA6Q')then
          include "MCmasses_PYTHIA6Q.inc"
-         do i=-5,-1
-            mcmass(i)=mcmass(-i)
-         enddo
-      elseif (MonteCarlo.eq.'PYTHIA6PT') then
-         goto 999
-      elseif (MonteCarlo.eq.'PYTHIA8') then
-         goto 999
+      elseif(MonteCarlo.eq.'PYTHIA6PT')then
+         include "MCmasses_PYTHIA6PT.inc"
+      elseif(MonteCarlo.eq.'PYTHIA8')then
+         include "MCmasses_PYTHIA8.inc"
+      else
+         write (*,*) 'Wrong MC ', MonteCarlo, ' in fill_MC_mshell'
+         stop
       endif
-
-      return
-
- 999  write (*,*) 'Wrong MonteCarlo', MonteCarlo, ' in fill_MC_mshell'
-      stop
-      
+      do i=-5,-1
+         mcmass(i)=mcmass(-i)
+      enddo
+      return      
       end
 
 
@@ -1371,8 +1403,6 @@ c
      #                      cosphi_pipj,sinphi_pipj)
       call getangles(p1R,th_p1R,costh_p1R,sinth_p1R,
      #                   phi_p1R,cosphi_p1R,sinphi_p1R)
-c$$$c The last number must be equal to one of the first two
-c$$$      print*,proji,projj,Qv*rho(p1R)*costh_p1R
       call xkin_2body(Q0,Qv,xm1,xm2,costh_p1R,E1o,p1o,E2o,p2o,ifail)
       if(ifail(1).eq.1.and.ifail(-1).eq.1)then
         mfail=1
@@ -1514,10 +1544,6 @@ c
       endif
 c
       stot=4d0*ebeam(1)*ebeam(2)
-c$$$CHECK: IT APPEARS THAT tau_ev,ycm_ev WAS NOT DEFINED IN GENPS
-c$$$WHEN J_FKS>2. THIS IMPLIES THAT ybst_til_tocm IS GARBAGE IN SUCH
-c$$$A CASE. CHECK ITS SIGN IN ANY CASE
-c$$$NOTE: IRRELEVANT HERE SINCE THIS ROUTINE IS CALLED ONLY FOR J_FKS=1,2
       chy=cosh(ybst_til_tocm)
       shy=sinh(ybst_til_tocm)
       chymo=chy-1.d0

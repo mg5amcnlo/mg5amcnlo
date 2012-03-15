@@ -4,7 +4,6 @@ echo '****************************************************'
 echo 'This script compiles, tests and runs a madfks process'
 echo '****************************************************'
 
-
 # find the correct directory
 if [[  ! -d ./SubProcesses  ]]; then
     cd ../
@@ -50,6 +49,9 @@ if [[ $test != "1" ]] ; then
 fi
 
 if [[ $test == "1" ]] ; then
+    echo 'Enter Monte Carlo to be tested:'
+    echo 'HERWIG6, HERWIGPP, PYTHIA6Q, PYTHIA6PT, or PYTHIA8?'
+    read MCname
     echo 'Enter number of points for tests'
     read points
 fi
@@ -123,7 +125,8 @@ read j
 if [[ $test == "1" ]] ; then
     echo 'Running the tests for' $points 'points'
 # input for the tests (test_ME, test_Sij & testMC)
-    echo '1' > $Maindir/input_MC
+    echo $MCname > $Maindir/input_MC
+    echo '1' >> $Maindir/input_MC
     echo '1 -0.1' >> $Maindir/input_MC
     echo '-1 -0.1' >> $Maindir/input_MC
     echo '-2 -2' > $Maindir/input_Sij
@@ -175,16 +178,14 @@ if [[ $gensym == '1' || $madevent_compile == '1' ]]; then
     dir=`ls -d P*/R* | tail -n1`
     if [[ -e $dir"/helicities.inc" ]]; then
 	echo 'helicities.inc found: it is recommended to MC over helicities'
-	echo 'converting fks_singular.f and fks_singularMC.f'
+	echo 'converting fks_singular.f'
 	sed -i.hel 's/HelSum=.true./HelSum=.false./g;s/chel  include "helicities.inc"/      include "helicities.inc"/g' fks_singular.f
-	sed -i.hel 's/HelSum=.true./HelSum=.false./g;s/chel  include "helicities.inc"/      include "helicities.inc"/g' fks_singularMC.f
-	echo "originals are backup'ed as fks_singular.f.hel and fks_singularMC.f.hel"
+	echo "original is backup'ed as fks_singular.f.hel"
     else
 	echo 'helicities.inc NOT found, can only do explicit helicity sum'
-        echo 'converting fks_singular.f and fks_singularMC.f'
+        echo 'converting fks_singular.f'
 	sed -i.hel 's/HelSum=.false./HelSum=.true./g;s/      include "helicities.inc"/chel  include "helicities.inc"/g' fks_singular.f
-	sed -i.hel 's/HelSum=.false./HelSum=.true./g;s/      include "helicities.inc"/chel  include "helicities.inc"/g' fks_singularMC.f
-	echo "originals are backup'ed as fks_singular.f.hel and fks_singularMC.f.hel"
+	echo "original is backup'ed as fks_singular.f.hel."
     fi
 fi
 
@@ -270,10 +271,16 @@ for dir in $dirs ; do
 	if [[ -e "gensym" ]]; then
 	    rm -f gensym
 	fi
+	if [[ -e "ajob1" ]]; then
+	    rm -f ajob*
+	fi
+	if [[ -e "mg1.cmd" ]]; then
+	    rm -f mg*.cmd
+	fi
 	make -j$j gensym >> $Maindir/compile_madfks.log 2>&1
 	if [[ -e "gensym" ]]; then
-	    echo '     ...running gensym for' $executable
-	    echo $run_cluster $vegas_mint | ./gensym >> $Maindir/gensym.log
+	    echo '     ...running gensym' $run_cluster
+	    echo $run_cluster | ./gensym >> $Maindir/gensym.log
 	else
 	    echo 'ERROR in compilation, see compile_madfks.log for details'
 	fi
@@ -293,8 +300,8 @@ for dir in $dirs ; do
 	    rm -f $executable
 	fi
 	make -j$j $executable >> $Maindir/compile_madfks.log 2>&1
-	if [[ -e "madevent_vegas" ]]; then
-	    echo "     madevent_vegas compiled"
+	if [[ -e $executable ]]; then
+	    echo "    " $executable "compiled"
 	else
 	    echo 'ERROR in compilation, see compile_madfks.log for details'
 	fi

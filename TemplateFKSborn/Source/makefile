@@ -7,7 +7,7 @@ PDFDIR= ./PDF/
 PROCESS= hfill.o matrix.o myamp.o 
 
 DSAMPLE = dsample.o ranmar.o 
-DSAMPLE_FKS = dsample_fks.o ranmar.o 
+DSAMPLE_FKS = ranmar.o 
 
 HBOOK = hfill.o hcurve.o hbook1.o hbook2.o
 
