@@ -998,6 +998,9 @@ c MC stuff
       integer nofpartners
       logical lzone(nexternal),flagmc
 
+      double precision emsca,scalemax
+      common/cemsca/emsca,scalemax
+
 c Stuff to be written (depending on AddInfoLHE) onto the LHE file
       integer iSorH_lhe,ifks_lhe,jfks_lhe,fksfather_lhe,ipartner_lhe
       double precision scale1_lhe,scale2_lhe
@@ -1065,6 +1068,9 @@ c Put here call to compute bpower
         prefact_c=xinorm_cnt(ione)/xi_i_fks_cnt(ione)*
      #            1/(1-y_ij_fks_ev)
       endif
+
+      emsca=0.d0
+      scalemax=0.d0
 
       ev_wgt=0.d0
       xmc_wgt=0.d0
@@ -1248,11 +1254,9 @@ c
         xmc_wgt=xmcMC+xmcME
 
       else
-        if(MonteCarlo(1:7).eq.'PYTHIA6')then
-          if(pp(0,1).ne.-99d0)then
-            call set_cms_stuff(mohdr)
-            call assign_emsca(pp,xi_i_fks_ev,y_ij_fks_ev)
-          endif
+        if(pp(0,1).ne.-99d0)then
+          call set_cms_stuff(mohdr)
+          call assign_emsca(pp,xi_i_fks_ev,y_ij_fks_ev)
         endif
       endif
 
@@ -1545,6 +1549,10 @@ c MC stuff
       double precision zhw(nexternal),xmcxsec(nexternal)
       integer nofpartners
       logical lzone(nexternal),flagmc
+      logical MCcntcalled
+
+      double precision emsca,scalemax
+      common/cemsca/emsca,scalemax
 
 c Stuff to be written (depending on AddInfoLHE) onto the LHE file
       integer iSorH_lhe,ifks_lhe,jfks_lhe,fksfather_lhe,ipartner_lhe
@@ -1666,6 +1674,9 @@ c points)
  44   continue
       iminmax=iminmax+1
 
+      emsca=0.d0
+      scalemax=0.d0
+
       ev_wgt=0.d0
       xmc_wgt=0.d0
       cnt_wgt=0.d0
@@ -1711,6 +1722,7 @@ c one of them passes the hard cuts, and they exist at all
 c
 c Set the ybst_til_tolab before applying the cuts. Update below
 c for the collinear, soft and/or soft-collinear subtraction terms
+      MCcntcalled=.false.
       call set_cms_stuff(izero)
       if ( (.not.passcuts(p1_cnt(0,1,0),rwgt)) .or.
      #      nocntevents ) goto 547
@@ -1722,13 +1734,7 @@ c for the collinear, soft and/or soft-collinear subtraction terms
       xmcME=0.d0
 
       if (abrv.eq.'born' .or. abrv.eq.'grid' .or.
-     &     abrv(1:2).eq.'vi') then
-        if(abrv(1:2).eq.'vi')then
-          call set_cms_stuff(mohdr)
-          call assign_emsca(pp,xi_i_fks_ev,y_ij_fks_ev)
-        endif
-        goto 540
-      endif
+     &    abrv(1:2).eq.'vi') goto 540
 
       call set_cms_stuff(mohdr)
       call set_alphaS(pp)
@@ -1752,6 +1758,7 @@ c for the collinear, soft and/or soft-collinear subtraction terms
       endif
       call xmcsubt(pp,xi_i_fks_ev,y_ij_fks_ev,gfactsf,gfactcl,probne,
      #             dummy,nofpartners,lzone,flagmc,zhw,xmcxsec)
+      MCcntcalled=.true.
 
       if(ileg.gt.4.or.ileg.lt.1)then
          write(*,*)'Error: unrecognized ileg in dsigS', ileg
@@ -2014,6 +2021,14 @@ c Set the ybst_til_tolab before applying the cuts.
       endif
 
  550  continue
+
+      if( (.not.MCcntcalled) .and.
+     #    abrv.ne.'born'.and. abrv.ne.'grid' )then
+        if(pp(0,1).ne.-99d0)then
+          call set_cms_stuff(mohdr)
+          call assign_emsca(pp,xi_i_fks_ev,y_ij_fks_ev)
+        endif
+      endif
 
       if(AddInfoLHE.and.UseCKKW)then
         if(scale1_lhe.eq.0.d0)scale1_lhe=scale2_lhe
