@@ -38,6 +38,7 @@ pjoin = os.path.join
 import madgraph
 import madgraph.core.diagram_generation as diagram_generation
 import madgraph.core.helas_objects as helas_objects
+import madgraph.loop.loop_base_objects as loop_base_objects
 import madgraph.interface.extended_cmd as cmd
 import madgraph.interface.madgraph_interface as MGcmd
 import madgraph.interface.Loop_interface as LoopCmd
@@ -344,11 +345,13 @@ class Switcher(object):
     def do_import(self, *args, **opts):
         self.cmd.do_import(self, *args, **opts)
         if self._curr_model:
-            if self._curr_model['perturbation_couplings']!=[] and \
+            if isinstance(self._curr_model, loop_base_objects.LoopModel) and \
+               self._curr_model['perturbation_couplings']!=[] and \
                self.current_interface not in ['FKS','Loop']:
                 self.change_principal_cmd('FKS')
-            if self._curr_model['perturbation_couplings']==[] and \
-               self.current_interface in ['FKS','Loop']:
+            if (not isinstance(self._curr_model, loop_base_objects.LoopModel) or \
+               self._curr_model['perturbation_couplings']==[]) and \
+               self.current_interface in ['Loop']:
                 self.change_principal_cmd('MadGraph')                
         return    
         
