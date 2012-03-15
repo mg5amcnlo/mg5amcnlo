@@ -788,7 +788,7 @@ This will take effect only in a NEW terminal
                                   self._set_options)
 
         if args[0] in ['group_subprocesses']:
-            if args[1] not in ['False', 'True', 'Auto', 'NLO']:
+            if args[1] not in ['False', 'True', 'Auto']:
                 raise self.InvalidCmd('%s needs argument False, True or Auto' % \
                                       args[0])
         if args[0] in ['ignore_six_quark_processes']:
@@ -1703,8 +1703,6 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
             # Generate processes
             if self.options['group_subprocesses'] == 'Auto':
                     collect_mirror_procs = True
-            elif self.options['group_subprocesses'] == 'NLO':
-                    collect_mirror_procs = False
             else:
                 collect_mirror_procs = self.options['group_subprocesses']
             ignore_six_quark_processes = \

@@ -112,7 +112,7 @@ class FKSInterface(CheckFKS, CompleteFKS, HelpFKS, mg_interface.MadGraphCmd):
                         % ', '.join(orders)
                         
         #now generate the amplitudes as usual
-        self.options['group_subprocesses'] = 'NLO'
+        self.options['group_subprocesses'] = 'False'
         collect_mirror_procs = False
         ignore_six_quark_processes = self.options['ignore_six_quark_processes']
 #        super(FKSInterface, self).do_generate(line)
@@ -158,6 +158,7 @@ class FKSInterface(CheckFKS, CompleteFKS, HelpFKS, mg_interface.MadGraphCmd):
         except:
             pass
 
+        self.options['group_subprocesses'] = False
         # initialize the writer
         if self._export_format in self._nlo_export_formats:
             if self.options['fks_mode'] == 'real':
@@ -223,7 +224,7 @@ class FKSInterface(CheckFKS, CompleteFKS, HelpFKS, mg_interface.MadGraphCmd):
 
             # Check if we need to group the SubProcesses or not
             group = True
-            if self.options['group_subprocesses'] in [False, 'NLO']:
+            if self.options['group_subprocesses'] in [False]:
                 group = False
             elif self.options['group_subprocesses'] == 'Auto' and \
                                          self._curr_amps[0].get_ninitial() == 1:
