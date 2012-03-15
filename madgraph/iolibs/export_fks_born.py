@@ -337,7 +337,7 @@ end
         """writes the wrapper which allows to chose among the different real matrix elements"""
 
         file = \
-"""subroutine real_matrix(p, wgt)
+"""subroutine smatrix(p, wgt)
 include 'nexternal.inc'
 double precision p(0:3, nexternal)
 double precision wgt
