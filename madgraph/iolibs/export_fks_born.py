@@ -208,7 +208,7 @@ class ProcessExporterFortranFKS_born(loop_exporters.LoopProcessExporterFortranSA
 ##      / " + ', '.join([ "%d" % col for col in fks_proc.colors]) + " / "
 ##    
 ##        file += "\n \n\
-##C \n\
+##C \n\/
 ##C  Particle type according to PDG: \n\
 ##C   \n\
 ##          data (PDG_type(ipos), ipos=1, nexternal) \
@@ -265,7 +265,9 @@ class ProcessExporterFortranFKS_born(loop_exporters.LoopProcessExporterFortranSA
                             os.path.join(path, borndir))
 
 #write the infortions for the different real emission processes
+
         self.write_real_matrix_elements(matrix_element, fortran_model)
+
         self.write_pdf_calls(matrix_element, fortran_model)
 
         filename = 'fks_info.inc'
@@ -288,12 +290,94 @@ class ProcessExporterFortranFKS_born(loop_exporters.LoopProcessExporterFortranSA
         self.write_pdf_wrapper(writers.FortranWriter(filename), 
                                    matrix_element, 
                                    fortran_model)
-#        for nfks, fksreal in enumerate(matrix_element.real_processes):
-#                calls += self.generate_subprocess_directory_fks(nfks, fksreal,
-#                                                  matrix_element, borndir,
-#                                                  fortran_model,
-#                                                  me_number,
-#                                                  path)
+
+        filename = 'nexternal.inc'
+        (nexternal, ninitial) = \
+                matrix_element.real_processes[0].get_nexternal_ninitial()
+        self.write_nexternal_file(writers.FortranWriter(filename),
+                             nexternal, ninitial)
+    
+        filename = 'pmass.inc'
+        self.write_pmass_file(writers.FortranWriter(filename),
+                             matrix_element.real_processes[0].matrix_element)
+
+
+
+        linkfiles = ['LesHouchesDummy.f',
+                     'LesHouches.f',
+                     'MCmasses_HERWIG6.inc',
+                     'MCmasses_HERWIGPP.inc',
+                     'MCmasses_PYTHIA6Q.inc',
+                     'add_write_info.f',
+                     'check_dip.f',
+                     'cluster.f',
+                     'cluster.inc',
+                     'coupl.inc',
+                     'cuts.f',
+                     'cuts.inc',
+                     'dbook.inc',
+                     'driver_mint.f',
+                     'driver_mintMC.f',
+                     'driver_vegas.f',
+                     'fastjetfortran_madfks.cc',
+                     'fks_Sij.f',
+                     'fks_nonsingular.f',
+                     'fks_powers.inc',
+                     'fks_singular.f',
+                     'fks_inc_chooser.f',
+                     'leshouche_inc_chooser.f',
+                     'genps.f',
+                     'genps.inc',
+                     'genps_fks.f',
+                     'initcluster.f',
+                     'ktclusdble.f',
+                     'link_fks.f',
+                     'madfks_dbook.f',
+                     'madfks_mcatnlo.inc',
+                     'madfks_plot.f',
+                     'message.inc',
+                     'mint-integrator2.f',
+                     'mint.inc',
+                     'mirror.f',
+                     'montecarlocounter.f',
+                     'myamp.f',
+                     'q_es.inc',
+                     'reweight.f',
+                     'reweight.inc',
+                     'reweight0.inc',
+                     'reweight1.inc',
+                     'reweight_events.f',
+                     'reweight_xsec.f',
+                     'run.inc',
+                     'setcuts.f',
+                     'setscales.f',
+                     'sudakov.inc',
+                     'symmetry.f',
+                     'symmetry_fks_test_MC.f',
+                     'symmetry_fks_test_ME.f',
+                     'symmetry_fks_test_Sij.f',
+                     'symmetry_fks_v3.f',
+                     'trapfpe.c',
+                     'unwgt.f',
+                     'vegas2.for',
+                     'write_ajob.f',
+                     'write_event.f']
+
+        for file in linkfiles:
+            ln('../' + file , '.')
+
+
+        #copy the makefile 
+        os.system("ln -s ../makefile_fks_dir ./makefile")
+
+        cpfiles = [ 'props.inc', 'configs.inc']
+        for file in cpfiles:
+            os.system('cp '+file+' '+file+'.back')
+        
+        #import nexternal/leshouches in Source
+        ln('nexternal.inc', '../../Source', log=False)
+        ln('leshouche.inc', '../../Source', log=False)
+
             
         os.chdir(cwd)
         return calls
@@ -303,7 +387,7 @@ class ProcessExporterFortranFKS_born(loop_exporters.LoopProcessExporterFortranSA
         for all the real emission processes"""
         lines = []
         nconfs = len(matrix_element.real_processes)
-        (nexternal, ninitial) = matrix_element.real_processes[0].matrix_element.get_nexternal_ninitial()
+        (nexternal, ninitial) = matrix_element.real_processes[0].get_nexternal_ninitial()
 
         lines.append('integer idup_d(%d,%d,maxproc_used)' % (nconfs, nexternal))
         lines.append('integer mothup_d(%d,%d,%d,maxproc_used)' % (nconfs, 2, nexternal))
@@ -351,14 +435,13 @@ class ProcessExporterFortranFKS_born(loop_exporters.LoopProcessExporterFortranSA
 
         file = \
 """double precision function dlum()
-double precision lum
 integer nfksprocess
 common/c_nfksprocess/nfksprocess
 """
         for n in range(len(matrix_element.real_processes)):
             file += \
 """if (nfksprocess.eq.%(n)d) then
-lum = dlum_%(n)d()
+call dlum_%(n)d(dlum)
 else""" % {'n': n + 1}
         file += \
 """
@@ -366,7 +449,7 @@ write(*,*) 'ERROR: invalid n in dlum :', n
 stop
 endif
 
-return lum
+return
 end
 """
         # Write the file

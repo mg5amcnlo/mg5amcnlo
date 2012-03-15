@@ -354,6 +354,10 @@ class FKSHelasRealProcess(object): #test written
                              color_amp.ColorMatrix(
                                 self.matrix_element.get('color_basis')))
             self.fks_j_from_i = fksrealproc.find_fks_j_from_i()
+
+    def get_nexternal_ninitial(self):
+        """Refers to the matrix_element function"""
+        return self.matrix_element.get_nexternal_ninitial()
     
     def __eq__(self, other):
         """Equality operator:

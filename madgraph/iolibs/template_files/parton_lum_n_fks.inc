@@ -1,4 +1,4 @@
-      DOUBLE PRECISION FUNCTION DLUM_%(N_me)d()                                
+      subroutine FUNCTION DLUM_%(N_me)d(lum)                                
 C ****************************************************                
 %(info_lines)s
 C     RETURNS PARTON LUMINOSITIES FOR MADFKS                             
@@ -19,7 +19,7 @@ C
 C                                                                     
 C ARGUMENTS                                                           
 C                                                                     
-      DOUBLE PRECISION PP(0:3,NEXTERNAL), WGT                         
+      DOUBLE PRECISION PP(0:3,NEXTERNAL), lum                         
 C                                                                     
 C LOCAL VARIABLES                                                     
 C                                                                     
@@ -55,12 +55,12 @@ C
 C ----------                                                          
 C BEGIN CODE                                                          
 C ----------                                                          
-      DLUM = 0D0                                                      
+      lum = 0D0                                                      
       if (imirror.eq.2) then
 %(pdf_lines_mirr)s
       else
 %(pdf_lines)s
       endif
-      dlum = pd(IPROC) * conv 
+      lum = pd(IPROC) * conv 
       return
       END                                                             

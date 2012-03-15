@@ -1,9 +1,9 @@
-include ../../../Source/make_opts
-include ../../../Source/fj_lhapdf_opts
+include ../../Source/make_opts
+include ../../Source/fj_lhapdf_opts
 
 CC    = g++
 
-LIBDIR = ../../../lib/
+LIBDIR = ../../lib/
 
 FASTJET_CONFIG = $(fastjet_config)
 CXXFLAGS += $(shell $(FASTJET_CONFIG) --cxxflags)

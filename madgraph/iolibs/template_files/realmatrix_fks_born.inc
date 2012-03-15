@@ -25,9 +25,9 @@ C
 C LOCAL VARIABLES 
 C  
       INTEGER NHEL(NEXTERNAL,NCOMB),NTRY,T_IDENT(NCOMB)
-      REAL*8 T, P(0:3,NEXTERNAL),T_SAVE(NCOMB)
+      REAL*8 T,T_SAVE(NCOMB)
       SAVE T_SAVE,T_IDENT
-      REAL*8 MATRIX
+      REAL*8 MATRIX_%(N_me)d
       INTEGER IHEL,IDEN, I
       INTEGER JC(NEXTERNAL)
       LOGICAL GOODHEL(NCOMB)
@@ -131,12 +131,12 @@ C ----------
 %(helas_calls)s
 %(jamp_lines)s
 
-      MATRIX = 0.D0 
+      MATRIX_%(N_me)d = 0.D0 
       DO I = 1, NCOLOR
           ZTEMP = (0.D0,0.D0)
           DO J = 1, NCOLOR
               ZTEMP = ZTEMP + CF(J,I)*JAMP(J)
           ENDDO
-          MATRIX = MATRIX+ZTEMP*DCONJG(JAMP(I))/DENOM(I)   
+          MATRIX_%(N_me)d = MATRIX_%(N_me)d+ZTEMP*DCONJG(JAMP(I))/DENOM(I)   
       ENDDO
       END
