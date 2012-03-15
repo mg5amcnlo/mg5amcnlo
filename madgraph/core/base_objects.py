@@ -1938,7 +1938,7 @@ class Process(PhysicsObject):
         self['has_born'] = True
         # The NLO_mode is always None for a tree-level process and can be
         # 'all', 'real', 'virt' for a loop process.
-        self['NLO_mode'] = None
+        self['NLO_mode'] = 'tree'
 
     def filter(self, name, value):
         """Filter for valid process property values."""
@@ -2025,7 +2025,7 @@ class Process(PhysicsObject):
                         "%s is not a valid ProcessList" % str(value)
 
         if name == 'NLO_mode':
-            if value not in ['real','all','virt',None]:
+            if value not in ['real','all','virt','tree']:
                 raise self.PhysicsObjectError, \
                         "%s is not a valid NLO_mode" % str(value)
         return True
@@ -2089,7 +2089,7 @@ class Process(PhysicsObject):
         # Add perturbation_couplings
         if self['perturbation_couplings']:
             mystr = mystr + '[ '
-            if self['NLO_mode']:
+            if self['NLO_mode']!='tree':
                 mystr = mystr + self['NLO_mode'] + ' = '
             for order in self['perturbation_couplings']:
                 mystr = mystr + order + ' '
@@ -2174,7 +2174,7 @@ class Process(PhysicsObject):
             mystr = mystr + '[ '
             if self['NLO_mode']:
                 mystr = mystr + self['NLO_mode']
-                if not has_born:
+                if not self['has_born']:
                     mystr = mystr + '^2'
                 mystr = mystr + '= '
                 

@@ -1504,7 +1504,7 @@ class ProcessTest(unittest.TestCase):
                        'squared_orders': {},
                        'has_born': True,
                        'overall_orders': {},
-                       'NLO_mode':None}
+                       'NLO_mode':'tree'}
 
         self.myprocess = base_objects.Process(self.mydict)
 
@@ -1588,7 +1588,7 @@ class ProcessTest(unittest.TestCase):
         goal = goal + "    \'decay_chains\': [],\n"
         goal = goal + "    \'perturbation_couplings\': [],\n"
         goal = goal + "    \'has_born\': True,\n"
-        goal = goal + "    \'NLO_mode\': None\n}"
+        goal = goal + "    \'NLO_mode\': 'tree'\n}"
 
         for a, b in zip(goal.split('\n'), str(self.myprocess).split('\n')):
             self.assertEqual(a,b)
@@ -1695,7 +1695,7 @@ class ProcessDefinitionTest(unittest.TestCase):
                        'squared_orders':{},
                        'has_born': True,
                        'overall_orders':{},
-                       'NLO_mode':None}
+                       'NLO_mode':'tree'}
 
         self.my_process_definition = base_objects.ProcessDefinition(self.mydict)
 
@@ -1778,7 +1778,7 @@ class ProcessDefinitionTest(unittest.TestCase):
         goal = goal + "    \'decay_chains\': [],\n"
         goal = goal + "    \'perturbation_couplings\': [],\n"
         goal = goal + "    \'has_born\': True,\n"
-        goal = goal + "    \'NLO_mode\': None\n}"        
+        goal = goal + "    \'NLO_mode\': 'tree'\n}"        
         self.assertEqual(goal, str(self.my_process_definition))
 
 #===============================================================================

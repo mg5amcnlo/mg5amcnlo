@@ -128,8 +128,10 @@ class TestCmdShell1(unittest.TestCase):
                     'group_subprocesses': 'Auto',
                     'ignore_six_quark_processes': False,
                     'complex_mass_scheme': False,
-                    'gauge': 'unitary'
-                    }
+                    'gauge': 'unitary',
+                    'lhapdf': 'lhapdf-config',  
+                    'fks_mode': 'real', 
+                    'fastjet': 'fastjet-config'}        
 
         self.assertEqual(config, expected)
         
@@ -627,7 +629,7 @@ class TestCmdShell2(unittest.TestCase,
     def test_load_feynman(self):
         """ Test that the complex_mass compile in fortran """
         
-        self.do('import model SM_Feyn')
+        self.do('import model sm')
         # check that the model is correctly loaded (has some goldstone)
         nb_goldstone = 0
         for part in self.cmd._curr_model['particles']:
@@ -635,7 +637,6 @@ class TestCmdShell2(unittest.TestCase,
                 nb_goldstone += 1
         self.assertEqual(nb_goldstone, 0)
         self.do('set gauge Feynman')
-        self.do('import model SM_Feyn')
         # check that the model is correctly loaded (has some goldstone)
         nb_goldstone = 0
         for part in self.cmd._curr_model['particles']:
