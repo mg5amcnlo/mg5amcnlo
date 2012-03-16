@@ -1254,6 +1254,28 @@ class ProcessExporterFortranMW(ProcessExporterFortran):
             output_file.close()
 
     #===========================================================================
+    # export model files
+    #=========================================================================== 
+    def export_model_files(self, model_path):
+        """export the model dependent files for V4 model"""
+        
+        super(ProcessExporterFortranMW,self).export_model_files(model_path)
+        # Add the routine update_as_param in v4 model 
+        # This is a function created in the UFO  
+        text="""
+        subroutine update_as_param()
+          call setpara('param_card.dat',.false.)
+          return
+        end
+        """
+        ff = open(os.path.join(self.dir_path, 'Source', 'MODEL', 'couplings.f'),'a')
+        ff.write(text)
+        ff.close()
+                
+                
+        self.make_model_symbolic_link()
+
+    #===========================================================================
     # generate_subprocess_directory_v4
     #===========================================================================
     def generate_subprocess_directory_v4(self, matrix_element,
