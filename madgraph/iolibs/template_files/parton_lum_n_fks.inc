@@ -51,7 +51,7 @@ C
       DATA u2,ub2,d2,db2,c2,cb2,s2,sb2,b2,bb2/10*1d0/                 
       DATA a1,g1/2*1d0/                                               
       DATA a2,g2/2*1d0/                                               
-      DATA IPROC,ICROSS/1,1/                                          
+      DATA ICROSS/1/                                          
 C ----------                                                          
 C BEGIN CODE                                                          
 C ----------                                                          
