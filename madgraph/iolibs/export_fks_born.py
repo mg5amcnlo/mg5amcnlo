@@ -435,6 +435,7 @@ class ProcessExporterFortranFKS_born(loop_exporters.LoopProcessExporterFortranSA
 
         file = \
 """double precision function dlum()
+implicit none
 integer nfksprocess
 common/c_nfksprocess/nfksprocess
 """
@@ -445,7 +446,7 @@ call dlum_%(n)d(dlum)
 else""" % {'n': n + 1}
         file += \
 """
-write(*,*) 'ERROR: invalid n in dlum :', n
+write(*,*) 'ERROR: invalid n in dlum :', nfksprocess
 stop
 endif
 
@@ -462,6 +463,7 @@ end
 
         file = \
 """subroutine smatrix(p, wgt)
+implicit none
 include 'nexternal.inc'
 double precision p(0:3, nexternal)
 double precision wgt
@@ -475,7 +477,7 @@ call smatrix_%(n)d(p, wgt)
 else""" % {'n': n + 1}
         file += \
 """
-write(*,*) 'ERROR: invalid n in real_matrix :', n
+write(*,*) 'ERROR: invalid n in real_matrix :', nfksprocess
 stop
 endif
 
@@ -1266,7 +1268,7 @@ c     this subdir has no soft singularities
       DATA FKS_CONFIGS / %(nconfs)d /
       INTEGER FKS_I_D(%(nconfs)d), FKS_J_D(%(nconfs)d)
       INTEGER FKS_J_FROM_I_D(%(nconfs)d, NEXTERNAL, 0:NEXTERNAL)
-      INTEGER PARTICLE_TYPE_D( %(nconfs)d, NEXTERNAL), PDG_TYPE_D(%(nconfs)d, NEXTERNAL)
+      INTEGER PARTICLE_TYPE_D(%(nconfs)d, NEXTERNAL), PDG_TYPE_D(%(nconfs)d, NEXTERNAL)
 
 data fks_i_D / %(fks_i_values)s /
 data fks_j_D / %(fks_j_values)s /
