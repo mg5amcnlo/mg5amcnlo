@@ -9,6 +9,7 @@ C
       double precision zero
       parameter       (ZERO = 0d0)
       include 'genps.inc'
+      include 'nexternal.inc'
       INTEGER    ITMAX,   NCALL
       common/citmax/itmax,ncall
 C
@@ -306,6 +307,7 @@ c
 c THIS CAN BE OPTIMIZED
          call fks_inc_chooser()
          call leshouche_inc_chooser()
+         call setcuts
          call setfksfactor(iconfig)
          call generate_momenta(ndim,iconfig,wgt,x,p)
          sigint = sigint+dsig(p,wgt,peso)
@@ -327,6 +329,7 @@ c
 c     Constants
 c
       include 'genps.inc'
+      include 'nexternal.inc'
 c
 c     Arguments
 c

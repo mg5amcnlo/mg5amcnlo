@@ -526,6 +526,12 @@ end
         self.write_ngraphs_file(writers.FortranWriter(filename),
                             nconfigs)
     
+
+        filename = 'coloramps.inc'
+        self.write_coloramps_file(writers.FortranWriter(filename),
+                             matrix_element.born_matrix_element,
+                             fortran_model)
+    
         
         #write the sborn_sf.f and the b_sf_files
         filename = ['sborn_sf.f', 'sborn_sf_dum.f']

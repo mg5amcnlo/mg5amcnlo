@@ -4925,39 +4925,43 @@ c Particle types (=color) of i_fks, j_fks and fks_mother
       common/cparticle_types/i_type,j_type,m_type
 
 
-c First check if we need to integrate this directory
-c The file "integrate.fks" should have been created by genint_fks
-      open(unit=19,file="integrate.fks",status="old",err=99)
-      read(19,'(a)') integrate
-      if (integrate.eq.'N') then
-         read(19,'(I2)') config_fks
-         write (*,*) 'No need to integrate this directory...'
-         write (*,*) 'Integrate directory number ',config_fks,' instead'
-         stop
-      elseif (integrate.eq.'Y') then
-         write (*,*)
-     &        'This directory should be included for symmetry reasons'
-      else
-         write (*,*) "Don't know what to do: ", integrate
-         stop
-      endif
-      close(19)
+c$$$c First check if we need to integrate this directory
+c$$$c The file "integrate.fks" should have been created by genint_fks
+c$$$      open(unit=19,file="integrate.fks",status="old",err=99)
+c$$$      read(19,'(a)') integrate
+c$$$      if (integrate.eq.'N') then
+c$$$         read(19,'(I2)') config_fks
+c$$$         write (*,*) 'No need to integrate this directory...'
+c$$$         write (*,*) 'Integrate directory number ',config_fks,' instead'
+c$$$         stop
+c$$$      elseif (integrate.eq.'Y') then
+c$$$         write (*,*)
+c$$$     &        'This directory should be included for symmetry reasons'
+c$$$      else
+c$$$         write (*,*) "Don't know what to do: ", integrate
+c$$$         stop
+c$$$      endif
+c$$$      close(19)
 c When doing nbodyonly, we should check that we need this dir or not
 c The file "nbodyonly.fks" should have been created by genint_fks
       if (nbodyonly) then
-         open(unit=19,file="nbodyonly.fks",status="old",err=99)
-         read(19,'(a)') integrate
-         if (integrate.eq.'N') then
-            write (*,*) 'No need to integrate this directory when'//
-     &           ' doing only the n-body integration'
-            stop
-         elseif (integrate.eq.'Y') then
-            write (*,*) 'This directory should be included for n-body'
-         else
-            write (*,*) "Don't know what to do: ", integrate
-            stop
-         endif
-         close(19)
+
+         write (*,*) 'nbodyonly option not implemented'
+         stop
+
+c$$$         open(unit=19,file="nbodyonly.fks",status="old",err=99)
+c$$$         read(19,'(a)') integrate
+c$$$         if (integrate.eq.'N') then
+c$$$            write (*,*) 'No need to integrate this directory when'//
+c$$$     &           ' doing only the n-body integration'
+c$$$            stop
+c$$$         elseif (integrate.eq.'Y') then
+c$$$            write (*,*) 'This directory should be included for n-body'
+c$$$         else
+c$$$            write (*,*) "Don't know what to do: ", integrate
+c$$$            stop
+c$$$         endif
+c$$$         close(19)
       endif
 
 c Check to see if this channel needs to be included in the multi-channeling
@@ -5008,8 +5012,8 @@ c Check to see if this channel needs to be included in the multi-channeling
          endif
       
       else                      ! no multi_channel
-         write (*,*) 'Setting diagram symmetry factor to 1,'//
-     &        ' because no suppression.'
+c$$$         write (*,*) 'Setting diagram symmetry factor to 1,'//
+c$$$     &        ' because no suppression.'
          diagramsymmetryfactor=1d0
       endif
  14    continue
@@ -5100,8 +5104,8 @@ c$$$         write (*,*) 'ERROR in setfksfactor, i_fks.le.j_fks: '//
 c$$$     &        'terrible things might happen',i_fks,j_fks
 c$$$         stop
 c$$$      endif
-c$$$      i_fks_pdg=pdg_type(i_fks)
-c$$$      j_fks_pdg=pdg_type(j_fks)
+      i_fks_pdg=pdg_type(i_fks)
+      j_fks_pdg=pdg_type(j_fks)
       
       fac_i=0
       fac_j=0
@@ -5172,9 +5176,9 @@ c THESE TESTS WORK ONLY FOR FINAL STATE SINGULARITIES
             fkssymmetryfactorDeg=0d0
 c            abrv='born'
          endif
-         write (*,*) 'fks symmetry factor is ', fkssymmetryfactor
-         write (*,*) 'fks symmetry factor for Born is ',
-     &        fkssymmetryfactorBorn
+c$$$         write (*,*) 'fks symmetry factor is ', fkssymmetryfactor
+c$$$         write (*,*) 'fks symmetry factor for Born is ',
+c$$$     &        fkssymmetryfactorBorn
       endif
 
       if ((abrv.eq.'born' .or. abrv.eq.'grid' .or. abrv(1:2).eq.'vi')

@@ -295,14 +295,14 @@ c
 c
 c    ERROR TRAPS 
 c
-        do i=nincoming+1,nexternal
-           if(is_a_j(i).and.etmin(i).eq.0.and.emin(i).eq.0) then
-              write (*,*) "Warning: pt or E min of a jet should in general be >0"
-           endif
-           if(is_a_a(i).and.etmin(i).eq.0.and.emin(i).eq.0) then
-              write (*,*) "Warning: pt or E min of a gamma should in general be >0"
-           endif
-        enddo
+c$$$        do i=nincoming+1,nexternal
+c$$$           if(is_a_j(i).and.etmin(i).eq.0.and.emin(i).eq.0) then
+c$$$              write (*,*) "Warning: pt or E min of a jet should in general be >0"
+c$$$           endif
+c$$$           if(is_a_a(i).and.etmin(i).eq.0.and.emin(i).eq.0) then
+c$$$              write (*,*) "Warning: pt or E min of a gamma should in general be >0"
+c$$$           endif
+c$$$        enddo
 
 c    count number of jets to see if special cuts are applicable or not
 
