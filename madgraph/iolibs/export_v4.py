@@ -1271,6 +1271,20 @@ class ProcessExporterFortranMW(ProcessExporterFortran):
         ff = open(os.path.join(self.dir_path, 'Source', 'MODEL', 'couplings.f'),'a')
         ff.write(text)
         ff.close()
+
+        # Modify setrun.f
+        text = open(os.path.join(self.dir_path,'Source','setrun.f')).read()
+        text = text.replace('call setpara(param_card_name)', 'call setpara(param_card_name, .true.)')
+        fsock = open(os.path.join(self.dir_path,'Source','setrun.f'), 'w')
+        fsock.write(text)
+        fsock.close()
+
+        # Modify initialization.f
+        text = open(os.path.join(self.dir_path,'SubProcesses','initialization.f')).read()
+        text = text.replace('call setpara(param_name)', 'call setpara(param_name, .true.)')
+        fsock = open(os.path.join(self.dir_path,'SubProcesses','initialization.f'), 'w')
+        fsock.write(text)
+        fsock.close()
                 
                 
         self.make_model_symbolic_link()
