@@ -56,10 +56,10 @@ c---
 c if pTmiss reconstructed is NOT used, 
 c the boost is defined by the pT balancing the visible particles
 c in class_h 
-c      if (.not. ISR) then
-c        call class_h(x,n_var,p1,p2)
-c        return
-c      endif
+       if (ISR.eq.3) then
+         call class_h(x,n_var,p1,p2)
+         return
+       endif
 
 c otherwise, boost the event based on ISR. 
 c

@@ -74,6 +74,8 @@ c     set parameters of the run
       include 'madweight_card.inc'
       ISR_mode=isr
 
+c     specific case of nexternal=4, num_inv=0
+      if (nexternal.eq.4.and.num_inv.eq.0) ISR_mode=3
 
       px_visible=0d0
       py_visible=0d0
@@ -324,6 +326,8 @@ c
 c      write(*,*) 'the number of dimension is ', temp
 
       Ndimens=temp
+c     very special case of two visible particles and nothing else
+      if(nexternal.eq.4.and.num_inv.eq.0) Ndimens=Ndimens+2
       
 
 c      if (temp.ne.(Ndimens)) then
