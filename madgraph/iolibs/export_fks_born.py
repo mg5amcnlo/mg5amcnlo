@@ -404,8 +404,8 @@ class ProcessExporterFortranFKS_born(loop_exporters.LoopProcessExporterFortranSA
             maxflow = max(maxflow, nflows)
 
         firstlines = ['integer maxproc_used, maxflow_used',
-                      'data maxproc_used / %d /' % maxproc,
-                      'data maxflow_used / %d /' % maxflow ]
+                      'parameter maxproc_used = %d )' % maxproc,
+                      'parameter maxflow_used = %d )' % maxflow ]
 
         writer.writelines(firstlines + lines)
 
@@ -1266,7 +1266,7 @@ c     this subdir has no soft singularities
       DATA FKS_CONFIGS / %(nconfs)d /
       INTEGER FKS_I_D(%(nconfs)d), FKS_J_D(%(nconfs)d)
       INTEGER FKS_J_FROM_I_D(%(nconfs)d, NEXTERNAL, 0:NEXTERNAL)
-      INTEGER PARTICLE_TYPE_D(NEXTERNAL, %(nconfs)d), PDG_TYPE_D(NEXTERNAL, %(nconfs)d)
+      INTEGER PARTICLE_TYPE_D( %(nconfs)d, NEXTERNAL), PDG_TYPE_D(%(nconfs)d, NEXTERNAL)
 
 data fks_i_D / %(fks_i_values)s /
 data fks_j_D / %(fks_j_values)s /

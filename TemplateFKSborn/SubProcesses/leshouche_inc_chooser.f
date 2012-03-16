@@ -16,12 +16,12 @@ c leshouche.inc information
 c
       if (maxproc_used.gt.maxproc) then
          write (*,*) 'ERROR in leshouche_inc_chooser: increase maxproc'
-     &        maxproc,maxproc_used
+     &        ,maxproc,maxproc_used
          stop
       endif
       if (maxflow_used.gt.maxflow) then
          write (*,*) 'ERROR in leshouche_inc_chooser: increase maxflow'
-     &        maxflow,maxflow_used
+     &        ,maxflow,maxflow_used
          stop
       endif
       do j=1,maxproc_used

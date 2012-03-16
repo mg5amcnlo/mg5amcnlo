@@ -82,7 +82,7 @@ C
       logical calculatedBorn
       integer get_hel,skip
       common/cBorn/hel_fac,calculatedBorn,get_hel,skip
-      ineger glu_ij
+      integer glu_ij
       integer nfksprocess
       common/c_nfksprocess/nfksprocess
 %(den_factor_lines)s
