@@ -101,7 +101,7 @@ c
       open(unit=lun,status='scratch')
       nsteps=2
       call setrun                !Sets up run parameters
-      call setpara('param_card.dat',.true.)   !Sets up couplings and masses
+      call setpara('param_card.dat')   !Sets up couplings and masses
       call setcuts               !Sets up cuts & particle masses
       call printout              !Prints out a summary of paramaters
       call run_printout          !Prints out a summary of the run settings

@@ -189,7 +189,7 @@ c-----
 
 
       call setrun                !Sets up run parameters
-      call setpara('param_card.dat',.true.)   !Sets up couplings and masses
+      call setpara('param_card.dat')   !Sets up couplings and masses
       call setcuts               !Sets up cuts 
 c
 c Read FKS configuration from file

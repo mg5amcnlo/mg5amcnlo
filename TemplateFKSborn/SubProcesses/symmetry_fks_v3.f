@@ -162,9 +162,8 @@ c Just pick the first fks process
       nFKSprocess=1
       call fks_inc_chooser()
       call leshouche_inc_chooser()
-      
       call setrun                !Sets up run parameters
-      call setpara('param_card.dat',.true.)   !Sets up couplings and masses
+      call setpara('param_card.dat')   !Sets up couplings and masses
       call setcuts               !Sets up cuts 
       call printout
       call run_printout

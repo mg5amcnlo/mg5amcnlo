@@ -17,7 +17,7 @@ LIBS = $(LIBDIR)libdhelas.a $(LIBDIR)libdsample_fks.a $(LIBDIR)libgeneric.a $(LI
 
 # Files for all executables
 FILES= $(patsubst %.f,%.o,$(wildcard parton_lum_*.f)) $(patsubst %.f,%.o,$(wildcard matrix_*.f)) \
-	 real_me_chooser.o parton_lum_chooser.o fks_inc_chooser.o leshouche_inc_chooser.o \
+	 real_me_chooser.o fks_inc_chooser.o leshouche_inc_chooser.o \
 	 genps_fks.o setcuts.o setscales.o \
          born.o sborn_sf.o $(patsubst %.f,%.o,$(wildcard b_sf_???.f)) fks_Sij.o trapfpe.o fastjetfortran_madfks.o \
          ktclusdble.o fks_singular.o montecarlocounter.o reweight_xsec.o
