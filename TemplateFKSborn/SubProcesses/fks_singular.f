@@ -133,6 +133,7 @@ c works in any frame
       implicit none
       integer npart,maxmom
       include "genps.inc"
+      include "nexternal.inc"
       real*8 ecm,xmass(-max_branch:max_particles),
      # xmom(0:3,nexternal)
       real*8 tiny,vtiny,xm,xlen4,den,ecmtmp,xsum(0:3),xsuma(0:3),
@@ -234,6 +235,7 @@ c      include "fks.inc"
       common /c_fks_inc/fks_j_from_i,particle_type,pdg_type
       include "fks_powers.inc"
       include 'coupl.inc'
+      include 'q_es.inc'
       include 'run.inc'
       include 'reweight.inc'
 
@@ -1417,6 +1419,7 @@ c      include "fks.inc"
       include "fks_powers.inc"
       include "madfks_mcatnlo.inc"
       include 'coupl.inc'
+      include 'q_es.inc'
       include 'run.inc'
       include 'reweight.inc'
 
@@ -3037,6 +3040,7 @@ c Calculate the eikonal factor
       include "genps.inc"
       include 'nexternal.inc'
       include "coupl.inc"
+      include 'q_es.inc'
       include "run.inc"
       include 'reweight.inc'
 
@@ -3923,6 +3927,7 @@ c
       include "genps.inc"
       include 'nexternal.inc'
       include "coupl.inc"
+      include 'q_es.inc'
 c      include "fks.inc"
       integer fks_j_from_i(nexternal,0:nexternal)
      &     ,particle_type(nexternal),pdg_type(nexternal)
@@ -4364,6 +4369,7 @@ c nothing funny happens later on
       parameter (pi2=pi**2)
       include "nexternal.inc"
       include 'coupl.inc'
+      include 'q_es.inc'
       double precision p(0:3,nexternal),xicut_used,eikIreg
       integer m,n
 
@@ -4693,6 +4699,7 @@ c      include "fks.inc"
      &     ,particle_type(nexternal),pdg_type(nexternal)
       common /c_fks_inc/fks_j_from_i,particle_type,pdg_type
       include 'coupl.inc'
+      include 'q_es.inc'
       double precision p(0:3,nexternal),xmu2,double,single
       logical fksprefact
       double precision c(0:1),gamma(0:1),gammap(0:1)
@@ -4786,6 +4793,7 @@ c      include "fks.inc"
      &     ,particle_type(nexternal),pdg_type(nexternal)
       common /c_fks_inc/fks_j_from_i,particle_type,pdg_type
       include 'coupl.inc'
+      include 'q_es.inc'
       double precision p(0:3,nexternal),m1l_finite_CDR,born
       double precision CF,pi,aso2pi,shat,dot,xlgq2os
       parameter (CF=4d0/3d0)
@@ -4812,6 +4820,7 @@ c      include "fks.inc"
      &     ,particle_type(nexternal),pdg_type(nexternal)
       common /c_fks_inc/fks_j_from_i,particle_type,pdg_type
       include 'coupl.inc'
+      include 'q_es.inc'
       double precision p(0:3,nexternal),m1l_W_finite_CDR,born
       double precision CF,pi,aso2pi,shat,dot,xlgq2os
       parameter (CF=4d0/3d0)
