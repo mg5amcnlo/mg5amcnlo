@@ -395,8 +395,6 @@ c     Constants
 c
       include 'genps.inc'
       include 'nexternal.inc'
-      integer    maxflow
-      parameter (maxflow=999)
 c
 c     Arguments
 c
@@ -405,9 +403,6 @@ c
 c     local
 c
       integer i
-      integer idup(nexternal,maxproc)
-      integer mothup(2,nexternal,maxproc)
-      integer icolup(2,nexternal,maxflow)
 c
 c     Process info
 c
@@ -867,7 +862,8 @@ c
 
       LOGICAL FUNCTION PASSCUTS(P,rwgt)
       real*8 rwgt
-      real*8 p(0:3,99)
+      include 'nexternal.inc'
+      real*8 p(0:3,nexternal)
       rwgt=1d0
       passcuts=.true.
       RETURN
