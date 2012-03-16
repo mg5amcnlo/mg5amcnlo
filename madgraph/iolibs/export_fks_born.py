@@ -404,8 +404,8 @@ class ProcessExporterFortranFKS_born(loop_exporters.LoopProcessExporterFortranSA
             maxflow = max(maxflow, nflows)
 
         firstlines = ['integer maxproc_used, maxflow_used',
-                      'parameter maxproc_used = %d )' % maxproc,
-                      'parameter maxflow_used = %d )' % maxflow ]
+                      'parameter (maxproc_used = %d)' % maxproc,
+                      'parameter (maxflow_used = %d)' % maxflow ]
 
         writer.writelines(firstlines + lines)
 
