@@ -526,7 +526,6 @@ c one of them passes the hard cuts, and they exist at all
 
 c Set the ybst_til_tolab before applying the cuts. Update below
 c for the collinear, soft and/or soft-collinear subtraction terms
-
       call set_cms_stuff(izero)
       if ( (.not.passcuts(p1_cnt(0,1,0),rwgt)) .or.
      #     nocntevents ) goto 547
@@ -4319,7 +4318,8 @@ c Multiply the strong coupling by 10
       endif
 
 c Update alphaS-dependent couplings
-      call setpara('param_card.dat')
+c$$$      call setpara('param_card.dat')
+      call update_as_param()
 
 c recompute the Born with the new couplings
       calculatedBorn=.false.
@@ -4352,7 +4352,8 @@ c         endif
 c Change couplings back and recompute the Born to make sure that 
 c nothing funny happens later on
       g=g/10d0
-      call setpara('param_card.dat')
+c$$$      call setpara('param_card.dat')
+      call update_as_param()
       isum_hel=isum_hel_orig
       calculatedBorn=.false.
       call sborn(p_born,wgt1)
