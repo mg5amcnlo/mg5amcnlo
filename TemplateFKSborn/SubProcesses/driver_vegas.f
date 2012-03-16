@@ -309,8 +309,10 @@ c THIS CAN BE OPTIMIZED
          call leshouche_inc_chooser()
          call setcuts
          call setfksfactor(iconfig)
+         wgt=1d0
          call generate_momenta(ndim,iconfig,wgt,x,p)
          sigint = sigint+dsig(p,wgt,peso)
+c$$$         write (*,*) nFKSprocess,sigint,dsig(p,wgt,peso)
       enddo
       return
       end
