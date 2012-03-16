@@ -114,8 +114,7 @@ if [[ $all_dirs != '1' ]] ; then
     read dirs
 else
     cd SubProcesses
-    dirs=`ls -d P*/R*`
-    born_dirs=`ls -d P0_*`
+    dirs=`ls -d P0_*`
     cd ..
 fi
 
@@ -189,37 +188,6 @@ if [[ $gensym == '1' || $madevent_compile == '1' ]]; then
     fi
 fi
 
-#
-# TODO: NEED TO CONVERT MAKEFILES HERE
-#
-# First compile the virtuals which are in the P0*/V0* directory and linke the
-# libMadLoop.a to the R* folders whi need it
-if [[ $madevent_compile == '1' ]]; then
-echo "Compiling virtual maxtrix elements"
-    for dir in $born_dirs ; do
-        cd $dir
-        v_dirs=`ls -d V0*`
-        for vdir in $v_dirs ; do
-            cd $vdir
-            echo "Compiling MadLoop MatrixElement in " $vdir
-            make >> $Maindir/compile_madloop.log 2>&1
-            cd ..
-        done
-        r_dirs=`ls -d R_*`
-        for rdir in $r_dirs ; do
-            if [[ ("$(tail -n 1 $rdir/integrate.fks)" == "I") && $(ls -d V0_* | wc -l) != 0  ]] ; then
-                if [ -L $rdir/libMadLoop.a ] ; then 
-                  rm -f  $rdir/libMadLoop.a
-                fi
-                ln -s `pwd`/libMadLoop.a `pwd`/$rdir/
-            fi
-        done
-
-        cd ..
-    done
-fi
-
-
 
 for dir in $dirs ; do
     cd $dir
@@ -290,11 +258,19 @@ for dir in $dirs ; do
 # COMPILE MADEVENT
 #
     if [[ $madevent_compile == "1" ]] ; then
-        if [[ ("$(tail -n 1 integrate.fks)" == "I") && $(ls -d ../V0_* | wc -l) != 0  ]] ; then
-            export madloop=true
+        export madloop=true
+        virt_dirs=`ls -d V0*`
+        for vdir in $virt_dirs ; do
+            echo '     make MadLoop library for the virtual ME in '$vdir...
+            cd $vdir
+            make >> $Maindir/compile_madfks.log 2>&1
+            cd ..
+        done
+        if [[ -e libMadLoop.a ]]; then
+            echo '     MadLoop library compiled'
         else
-            unset madloop
-        fi
+	    echo 'ERROR in compilation, see compile_madfks.log for details'
+	fi
 	echo '     make' $executable...
 	if [[ -e $executable ]]; then
 	    rm -f $executable
@@ -305,6 +281,7 @@ for dir in $dirs ; do
 	else
 	    echo 'ERROR in compilation, see compile_madfks.log for details'
 	fi
+        unset madloop
     fi
 
 #
@@ -319,7 +296,7 @@ for dir in $dirs ; do
     else
 	echo '     No need for this dir: doing n-body only'
     fi
-    cd ../..
+    cd ../
 done
 
 if [[ $test == "1" ]]; then
