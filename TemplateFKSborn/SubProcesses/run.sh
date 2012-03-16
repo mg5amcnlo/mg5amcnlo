@@ -24,7 +24,7 @@ r=0
 if [[ -e randinit ]]; then
     source ./randinit
 fi
-for i in P*/R* ; do
+for i in P0_* ; do
     r=`expr $r + 1`
 done
 echo "r=$r" >& randinit
@@ -114,13 +114,13 @@ fi
 
 if [[ $run_cluster == 2 ]] ; then
     args='[\n'
-    for dir in P*/R* ; do
+    for dir in P0* ; do
 	cd $dir 
 	for job in ajob* ; do
 	    graph=`fgrep "for i in" $job | cut -d" " -f4`
 	    args="$args""['madevent_vegas','"$dir"','"$job"','"$vegas_mint"','"$run_mode"','"$use_preset"','"$run_mode"_G"$graph"'],\n"
 	done
-	cd ../..
+	cd ..
     done
     args="$args"]
     echo -e $args > ganga_arguments.txt
@@ -130,7 +130,7 @@ fi
 
 if [[ $runmode == 1 ]] ; then
     echo "runmode is 1: run n-body only, i.e. 1 fks directory per subprocess -> S-functions are set to one."
-    for p in P*/R* ; do
+    for p in P0* ; do
 	cd $p
 	if [[ "$(head -n 1 nbodyonly.fks)" == "Y" ]] ; then
 	    echo "Running in" $p
@@ -149,11 +149,11 @@ if [[ $runmode == 1 ]] ; then
 		fi
             done
 	fi
-	cd ../..
+	cd ..
     done
 elif [[ $runmode == 2 ]] ; then
     echo "runmode is 2: run all fks dir's for subprocesses with soft singularity; S-functions are not set to one."
-    for p in P*/R* ; do
+    for p in P0* ; do
 	cd $p
 	if [[ "$(tail -n 1 integrate.fks)" == "I" ]] ; then
 	    echo "Running in" $p
@@ -172,11 +172,11 @@ elif [[ $runmode == 2 ]] ; then
 		fi
             done
 	fi
-	cd ../..
+	cd ..
     done
 elif [[ $runmode == 3 ]] ; then
     echo "runmode is 3: run all fks dir's for all subprocesses."
-    for p in P*/R* ; do
+    for p in P0* ; do
 	cd $p
 	echo "Running in" $p
 	chmod +x ajob*
@@ -193,6 +193,6 @@ elif [[ $runmode == 3 ]] ; then
    		./$job $vegas_mint $run_mode $use_preset
 	    fi
         done
-	cd ../..
+	cd ..
     done
 fi

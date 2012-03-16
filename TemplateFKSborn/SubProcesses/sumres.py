@@ -42,10 +42,9 @@ for line in lines:
     if list:
         proc={}
         proc['folder'] = list[0].split('/')[0]
-        proc['real'] = list[0].split('/')[1]
         proc['subproc'] = proc['folder'][0:proc['folder'].rfind('_')]
-        proc['channel'] = list[0].split('/')[2]
-        dirs.remove(os.path.join(proc['folder'],proc['real'], proc['channel']))
+        proc['channel'] = list[0].split('/')[1]
+        dirs.remove(os.path.join(proc['folder'], proc['channel']))
         if list[3] != '[ABS]:':
             proc['result'] = float(list[3])
             proc['error'] = float(list[5])
@@ -75,7 +74,7 @@ subprocs_string=set(subprocs_string)
 
 content+='\n\nCross-section per integration channel:\n'
 for proc in processes:
-    content+='%(folder)20s %(real)20s  %(channel)15s   %(result)10.8e    %(error)6.4e       %(err_perc)6.4f%%  \n' %  proc
+    content+='%(folder)20s  %(channel)15s   %(result)10.8e    %(error)6.4e       %(err_perc)6.4f%%  \n' %  proc
 
 content+='\n\nCross-section per subprocess:\n'
 #for subpr in sorted(set(subprocs)):
