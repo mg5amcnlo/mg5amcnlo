@@ -231,7 +231,7 @@ c enhanced multi-channel factor included
 c      include "fks.inc"
       integer fks_j_from_i(nexternal,0:nexternal)
      &     ,particle_type(nexternal),pdg_type(nexternal)
-      common /c_fks_inc/fks_j_from_i,particle_typ,pdg_type
+      common /c_fks_inc/fks_j_from_i,particle_type,pdg_type
       include "fks_powers.inc"
       include 'coupl.inc'
       include 'run.inc'
@@ -888,7 +888,7 @@ c enhanced multi-channel factor included
 c      include "fks.inc"
       integer fks_j_from_i(nexternal,0:nexternal)
      &     ,particle_type(nexternal),pdg_type(nexternal)
-      common /c_fks_inc/fks_j_from_i,particle_typ,pdg_type
+      common /c_fks_inc/fks_j_from_i,particle_type,pdg_type
       include "fks_powers.inc"
       include "madfks_mcatnlo.inc"
       include 'coupl.inc'
@@ -1413,7 +1413,7 @@ c enhanced multi-channel factor included
 c      include "fks.inc"
       integer fks_j_from_i(nexternal,0:nexternal)
      &     ,particle_type(nexternal),pdg_type(nexternal)
-      common /c_fks_inc/fks_j_from_i,particle_typ,pdg_type
+      common /c_fks_inc/fks_j_from_i,particle_type,pdg_type
       include "fks_powers.inc"
       include "madfks_mcatnlo.inc"
       include 'coupl.inc'
@@ -2893,7 +2893,7 @@ c q->gq splitting
 c      include "fks.inc"
       integer fks_j_from_i(nexternal,0:nexternal)
      &     ,particle_type(nexternal),pdg_type(nexternal)
-      common /c_fks_inc/fks_j_from_i,particle_typ,pdg_type
+      common /c_fks_inc/fks_j_from_i,particle_type,pdg_type
       include "coupl.inc"
 
       integer m,n
@@ -3926,7 +3926,7 @@ c
 c      include "fks.inc"
       integer fks_j_from_i(nexternal,0:nexternal)
      &     ,particle_type(nexternal),pdg_type(nexternal)
-      common /c_fks_inc/fks_j_from_i,particle_typ,pdg_type
+      common /c_fks_inc/fks_j_from_i,particle_type,pdg_type
       include "run.inc"
       include "fks_powers.inc"
       include 'reweight.inc'
@@ -4691,7 +4691,7 @@ c extra contribution to the single pole
 c      include "fks.inc"
       integer fks_j_from_i(nexternal,0:nexternal)
      &     ,particle_type(nexternal),pdg_type(nexternal)
-      common /c_fks_inc/fks_j_from_i,particle_typ,pdg_type
+      common /c_fks_inc/fks_j_from_i,particle_type,pdg_type
       include 'coupl.inc'
       double precision p(0:3,nexternal),xmu2,double,single
       logical fksprefact
@@ -4784,7 +4784,7 @@ c the factor as/(2*pi)
 c      include "fks.inc"
       integer fks_j_from_i(nexternal,0:nexternal)
      &     ,particle_type(nexternal),pdg_type(nexternal)
-      common /c_fks_inc/fks_j_from_i,particle_typ,pdg_type
+      common /c_fks_inc/fks_j_from_i,particle_type,pdg_type
       include 'coupl.inc'
       double precision p(0:3,nexternal),m1l_finite_CDR,born
       double precision CF,pi,aso2pi,shat,dot,xlgq2os
@@ -4810,7 +4810,7 @@ c the factor as/(2*pi)
 c      include "fks.inc"
       integer fks_j_from_i(nexternal,0:nexternal)
      &     ,particle_type(nexternal),pdg_type(nexternal)
-      common /c_fks_inc/fks_j_from_i,particle_typ,pdg_type
+      common /c_fks_inc/fks_j_from_i,particle_type,pdg_type
       include 'coupl.inc'
       double precision p(0:3,nexternal),m1l_W_finite_CDR,born
       double precision CF,pi,aso2pi,shat,dot,xlgq2os
@@ -4867,7 +4867,7 @@ c$$$      parameter (CA=3d0,CF=4d0/3d0,Nf=0d0)
 c      include 'fks.inc'
       integer fks_j_from_i(nexternal,0:nexternal)
      &     ,particle_type(nexternal),pdg_type(nexternal)
-      common /c_fks_inc/fks_j_from_i,particle_typ,pdg_type
+      common /c_fks_inc/fks_j_from_i,particle_type,pdg_type
 
       integer mapconfig(0:lmaxconfigs), this_config
       integer iforest(2,-max_branch:-1,lmaxconfigs)

@@ -38,7 +38,7 @@ c
 c      include "fks.inc"
       integer fks_j_from_i(nexternal,0:nexternal)
      &     ,particle_type(nexternal),pdg_type(nexternal)
-      common /c_fks_inc/fks_j_from_i,particle_typ,pdg_type
+      common /c_fks_inc/fks_j_from_i,particle_type,pdg_type
 c
 c     Local for generating amps
 c

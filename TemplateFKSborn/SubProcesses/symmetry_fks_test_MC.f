@@ -40,7 +40,7 @@ c$$$      double precision pmass(-max_branch:-1,lmaxconfigs)   !Propagotor mass
 c      include "fks.inc"
       integer fks_j_from_i(nexternal,0:nexternal)
      &     ,particle_type(nexternal),pdg_type(nexternal)
-      common /c_fks_inc/fks_j_from_i,particle_typ,pdg_type
+      common /c_fks_inc/fks_j_from_i,particle_type,pdg_type
       double precision fxl,limit(15),wlimit(15)
       double precision lxp(0:3,nexternal+1),xp(15,0:3,nexternal+1)
       double precision fks_Sij

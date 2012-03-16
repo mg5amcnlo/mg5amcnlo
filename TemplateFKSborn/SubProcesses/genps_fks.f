@@ -57,7 +57,7 @@ c
 c      include 'fks.inc'
       integer fks_j_from_i(nexternal,0:nexternal)
      &     ,particle_type(nexternal),pdg_type(nexternal)
-      common /c_fks_inc/fks_j_from_i,particle_typ,pdg_type
+      common /c_fks_inc/fks_j_from_i,particle_type,pdg_type
 c arguments
       integer ndim
       double precision jac,x(99),p(0:3,nexternal)
@@ -147,10 +147,12 @@ c saves
      &     ,ionebody,fksmass
 
       pass=.true.
-c This assumes that there are first non-QCD, than massive QCD and
-c finally massless QCD particals in the process defintion
-      do i=1,nexternal
-         m(i)=pmass(i)
+      do i=1,nexternal-1
+         if (i.lt.i_fks) then
+            m(i)=pmass(i)
+         else
+            m(i)=pmass(i+1)
+         endif
       enddo
       if (pmass(nexternal).ne.0d0) then
          write (*,*) 'ERROR, last particle should be massless'
