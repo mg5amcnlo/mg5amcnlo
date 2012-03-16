@@ -1314,21 +1314,21 @@ def check_unitary_feynman(processes_unit, processes_feynm, param_card=None,
         # Generate a list of unique processes
         # Extract IS and FS ids
         multiprocess_unit = processes_unit
-        resutls = []
+        results = []
         model = multiprocess_unit.get('model')
         
         # Initialize matrix element evaluation
         aloha.unitary_gauge = True
-        if processes[0].get('perturbation_couplings')==[]:
+        if processes_unit.get('perturbation_couplings')==[]:
             evaluator = MatrixElementEvaluator(model, param_card,
                                        cmass_scheme= cmass_scheme,
-                                       auth_skipping = False, reuse = False)
+                                       auth_skipping = False, reuse = True)
         else:
             evaluator = LoopMatrixElementEvaluator(mg_root=mg_root,
                                            cmass_scheme= cmass_scheme,
                                            cuttools_dir=cuttools, model=model,
                                            param_card=param_card,
-                                           auth_skipping = False, reuse = False)
+                                           auth_skipping = False, reuse = True)
 
                 
         if not cmass_scheme:
@@ -1353,7 +1353,7 @@ def check_unitary_feynman(processes_unit, processes_feynm, param_card=None,
         
         # Initialize matrix element evaluation
         aloha.unitary_gauge = False
-        if processes[0].get('perturbation_couplings')==[]:
+        if processes_feynm.get('perturbation_couplings')==[]:
             evaluator = MatrixElementEvaluator(model, param_card,
                                        cmass_scheme= cmass_scheme,
                                        auth_skipping = False, reuse = False)
@@ -1383,8 +1383,12 @@ def check_unitary_feynman(processes_unit, processes_feynm, param_card=None,
             local_dico['value_unit'] = [d['value'] for d in output_u 
                                       if d['process'] == data['process']][0]
             output.append(local_dico)
+
+        if processes_feynm.get('perturbation_couplings')!=[]:
+            # Clean temporary folders created for the running of the loop processes
+            clean_up(mg_root)        
+
         return output
-        
 #    elif isinstance(processes, base_objects.Process):
 #        processes = base_objects.ProcessList([processes])
 #    elif isinstance(processes, base_objects.ProcessList):
@@ -1432,7 +1436,10 @@ def get_value(process, evaluator, p=None):
     # Generate a process with these legs
     # Generate the amplitude for this process
     try:
-        amplitude = diagram_generation.Amplitude(process)
+        if process.get('perturbation_couplings')==[]:
+            amplitude = diagram_generation.Amplitude(process)
+        else:
+            amplitude = loop_diagram_generation.LoopAmplitude(process)  
     except InvalidCmd:
         logging.info("No diagrams for %s" % \
                          process.nice_string().replace('Process', 'process'))
@@ -1449,8 +1456,14 @@ def get_value(process, evaluator, p=None):
         p, w_rambo = evaluator.get_momenta(process)
         
     # Generate the HelasMatrixElement for the process
-    matrix_element = helas_objects.HelasMatrixElement(amplitude,
-                                                      gen_color = False)    
+    # Generate the HelasMatrixElement for the process
+    if not isinstance(amplitude, loop_diagram_generation.LoopAmplitude):
+        matrix_element = helas_objects.HelasMatrixElement(amplitude,
+                                                      gen_color = True)
+    else:
+        matrix_element = loop_helas_objects.LoopHelasMatrixElement(amplitude, 
+                                                              gen_color = False)    
+      
     mvalue = evaluator.evaluate_matrix_element(matrix_element, p=p,
                                                                   output='jamp')
     

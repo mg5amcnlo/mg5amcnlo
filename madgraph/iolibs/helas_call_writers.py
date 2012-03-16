@@ -1013,6 +1013,8 @@ class FortranUFOHelasCallWriter(UFOHelasCallWriter):
         amplitudes."""
         
         call = "CALL LOOP"
+       
+        
         call_key=loopamp.get_call_key()
         # Now use a unique identifier for the Loop helas-like call, base on the call key
         if call_key[1]==call_key[2]:
