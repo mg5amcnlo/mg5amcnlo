@@ -53,7 +53,6 @@ C
       common/to_helicity/  hel_buff
 
       DATA GOODHEL/THEL*.FALSE./
-      include 'den_factor.inc'
       double precision hel_fac
       logical calculatedBorn
       integer get_hel,skip
