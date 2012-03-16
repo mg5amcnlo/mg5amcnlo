@@ -1,4 +1,4 @@
-      subroutine FUNCTION DLUM_%(N_me)d(lum)                                
+      subroutine DLUM_%(N_me)d(lum)                                
 C ****************************************************                
 %(info_lines)s
 C     RETURNS PARTON LUMINOSITIES FOR MADFKS                             

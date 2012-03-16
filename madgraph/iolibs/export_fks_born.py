@@ -366,7 +366,7 @@ class ProcessExporterFortranFKS_born(loop_exporters.LoopProcessExporterFortranSA
         
         #import nexternal/leshouches in Source
         ln('nexternal.inc', '../../Source', log=False)
-        ln('leshouche.inc', '../../Source', log=False)
+        ln('leshouche_info.inc', '../../Source', log=False)
 
             
         os.chdir(cwd)

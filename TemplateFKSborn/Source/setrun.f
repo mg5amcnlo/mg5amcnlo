@@ -59,12 +59,7 @@ c
      &     xmaxup(maxpup),lprup(maxpup)
 c
       include 'nexternal.inc'
-      integer    maxflow
-      parameter (maxflow=999)
-      integer idup(nexternal,maxproc)
-      integer mothup(2,nexternal,maxproc)
-      integer icolup(2,nexternal,maxflow)
-      include 'leshouche.inc'
+      include 'leshouche_info.inc'
 c
 c
 c
@@ -492,7 +487,7 @@ C       Fill common block for Les Houches init info
         elseif(lpp(i).eq.-3) then
           idbmup(i)=-11
         elseif(lpp(i).eq.0) then
-          idbmup(i)=idup(i,1)
+          idbmup(i)=idup_d(1,i,1)
         else
           idbmup(i)=lpp(i)
         endif
