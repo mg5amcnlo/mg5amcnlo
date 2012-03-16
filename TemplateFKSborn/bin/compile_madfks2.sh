@@ -76,13 +76,6 @@ if [[ $madevent_run != "1" ]] ; then
 fi
 
 
-echo 'FKS directories to do n-body only (with S-functions = 1)?'
-echo '  0 for all dirs, 1 for n-body only, 2 for all but n-body only'
-read nbodyonly
-if [[ $nbodyonly != "1" && $nbodyonly != "2" ]] ; then
-    nbodyonly="0"
-fi
-
 if [[ $gensym == "1" || $madevent_run == "1" ]] ; then
     echo 'press: "0" for local run, "1" for Condor cluster'
     read run_cluster
@@ -192,9 +185,7 @@ fi
 for dir in $dirs ; do
     cd $dir
     echo $dir
-
-    if [[ ($nbodyonly == "1" && "$(head -n 1 nbodyonly.fks)" == "Y") || $nbodyonly == "0" || ($nbodyonly == "2" && "$(head -n 1 nbodyonly.fks)" == "N") ]] ; then
-	echo $dir >> $Maindir/compile_madfks.log
+    echo $dir >> $Maindir/compile_madfks.log
 
 
 #
@@ -292,11 +283,7 @@ for dir in $dirs ; do
 	echo 'To run, goto "./SubProcesses/" direcotry and execute "./run.sh"'
     fi
 
-
-    else
-	echo '     No need for this dir: doing n-body only'
-    fi
-    cd ../
+    cd ..
 done
 
 if [[ $test == "1" ]]; then
