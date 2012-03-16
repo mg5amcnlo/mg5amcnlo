@@ -1750,7 +1750,7 @@ c      include "fks.inc"
      # ztmp,xitmp,xjactmp,get_angle,w1,w2,z0,dz0dy,
      # p_born_npartner(0:3),p_born_fksfather(0:3),
      # Q0,ma,mbeff,mceff,betaa,lambdaabc,zminus,zplus,xmm2,
-     # xmrec2,ww,massmax,massmin,delta_scale
+     # xmrec2,www,massmax,massmin,delta_scale
       parameter(delta_scale=10d0)
       parameter(Q0=1d0)
 
@@ -2012,20 +2012,20 @@ c strictly page 354 of hep-ph/0603175
             if(ileg.eq.3)then
                xmm2=xm12
                xmrec2=xm22
-               ww=-q1q+q2q-tk
+               www=-q1q+q2q-tk
             elseif(ileg.eq.4)then
                xmm2=0d0
                xmrec2=xm12
-               ww=-q2q+q1q-uk
+               www=-q2q+q1q-uk
             endif
 c Recall that xm22 = 0 if ileg = 4
-            if((xmm2+ww)/s.lt.-tiny)then
+            if((xmm2+www)/s.lt.-tiny)then
                write(*,*)'error A in xmcsubt_PY6Q'
                stop
-            elseif((xmm2+ww)/s.lt.0d0)then
-               xmm2=-ww
+            elseif((xmm2+www)/s.lt.0d0)then
+               xmm2=-www
             endif
-            ma=sqrt(xmm2+ww)
+            ma=sqrt(xmm2+www)
             mbeff=sqrt(xmm2+Q0**2/4)
             mceff=Q0/2
             en_fks=sqrt(s)*(1-x)/2.d0
@@ -3151,7 +3151,7 @@ c      include "fks.inc"
      # ztmp,xitmp,xjactmp,get_angle,w1,w2,z0,dz0dy,
      # p_born_npartner(0:3),p_born_fksfather(0:3),
      # Q0,ma,mbeff,mceff,betaa,lambdaabc,zminus,zplus,xmm2,
-     # xmrec2,ww,massmax,massmin,delta_scale
+     # xmrec2,www,massmax,massmin,delta_scale
       parameter(delta_scale=10d0)
       parameter(Q0=1d0)
 
@@ -3348,15 +3348,15 @@ c
 c Assign xma2 and xmb2 before calling the shower variables
       xma2=0d0
       xmb2=0d0
-      if(isr)then
-         if(PDG_type(i_type).eq.4)xma2=(cmass)**2
-         if(PDG_type(m_type).eq.4)xmb2=(cmass)**2
-         if(PDG_type(i_type).eq.5)xma2=(bmass)**2
-         if(PDG_type(m_type).eq.5)xmb2=(bmass)**2
-c PYTHIA8 seems to apply mass corrections even in the charm case,
-c so the cmass lines are included for generality, should the cmass
-c parameter in param_card.dat be different from 0 sometimes
-      endif
+c$$$      if(isr)then
+c$$$         if(PDG_type(i_type).eq.4)xma2=(cmass)**2
+c$$$         if(PDG_type(m_type).eq.4)xmb2=(cmass)**2
+c$$$         if(PDG_type(i_type).eq.5)xma2=(bmass)**2
+c$$$         if(PDG_type(m_type).eq.5)xmb2=(bmass)**2
+c$$$c PYTHIA8 seems to apply mass corrections even in the charm case,
+c$$$c so the cmass lines are included for generality, should the cmass
+c$$$c parameter in param_card.dat be different from 0 sometimes
+c$$$      endif
 
       ztmp=zPY8(ileg,xm12,xm22,shat,x,yi,yj,tk,uk,q1q,q2q,xma2)
       xitmp=xiPY8(ileg,xm12,xm22,shat,x,yi,yj,tk,uk,q1q,q2q,xma2,xmb2)
@@ -3415,20 +3415,20 @@ c are the same as for PY6Q
             if(ileg.eq.3)then
                xmm2=xm12
                xmrec2=xm22
-               ww=-q1q+q2q-tk
+               www=-q1q+q2q-tk
             elseif(ileg.eq.4)then
                xmm2=0d0
                xmrec2=xm12
-               ww=-q2q+q1q-uk
+               www=-q2q+q1q-uk
             endif
 c Recall that xm22 = 0 if ileg = 4
-            if((xmm2+ww)/s.lt.-tiny)then
+            if((xmm2+www)/s.lt.-tiny)then
                write(*,*)'error A in xmcsubt_PY8'
                stop
-            elseif((xmm2+ww)/s.lt.0d0)then
-               xmm2=-ww
+            elseif((xmm2+www)/s.lt.0d0)then
+               xmm2=-www
             endif
-            ma=sqrt(xmm2+ww)
+            ma=sqrt(xmm2+www)
             mbeff=sqrt(xmm2+Q0**2/4)
             mceff=Q0/2
             en_fks=sqrt(s)*(1-x)/2.d0
