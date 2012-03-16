@@ -187,23 +187,23 @@ c madevent_mintMC
 c endif
          write(lun,20) "fi"
 
-         write(lun,20) 'cp ../config.fks .'
-         write(lun,20) 'cp ../integrate.fks .'
-         write(lun,20) 'cp ../nbodyonly.fks .'
-         write(lun,20) 'cp ../iproc.dat .'
+CMZ         write(lun,20) 'cp ../config.fks .'
+CMZ         write(lun,20) 'cp ../integrate.fks .'
+CMZ         write(lun,20) 'cp ../nbodyonly.fks .'
+CMZ         write(lun,20) 'cp ../iproc.dat .'
          write(lun,20) 'if [[ -e ../../randinit ]]; then'
          write(lun,25) 'cp ../../randinit .'
          write(lun,20) 'fi'
          write(lun,20) 'cp ../symfact.dat .'
-         write(lun,20) 'if [[ -e ../HelasNLO.input ]]; then'
-         write(lun,25) 'cp -f ../HelasNLO.input .'
-         write(lun,20) 'fi'
-         write(lun,20) 'if [[ -e ../MadLoop.param ]]; then'
-         write(lun,25) 'cp -f ../MadLoop.param .'
-         write(lun,20) 'fi'
-         write(lun,20) 'if [[ -e ../order.file ]]; then'
-         write(lun,25) 'cp -f ../order.file .'
-         write(lun,20) 'fi'
+CMZ         write(lun,20) 'if [[ -e ../HelasNLO.input ]]; then'
+CMZ         write(lun,25) 'cp -f ../HelasNLO.input .'
+CMZ         write(lun,20) 'fi'
+CMZ         write(lun,20) 'if [[ -e ../MadLoop.param ]]; then'
+CMZ         write(lun,25) 'cp -f ../MadLoop.param .'
+CMZ         write(lun,20) 'fi'
+CMZ         write(lun,20) 'if [[ -e ../order.file ]]; then'
+CMZ         write(lun,25) 'cp -f ../order.file .'
+CMZ         write(lun,20) 'fi'
 c madevent_vegas
          write(lun,20) "if [[ $1 == '0' ]]; then"
          write(lun,25) 'head -n 5 ../../madin.$2 >& input_app.txt'
@@ -281,27 +281,27 @@ c madevent_mintMC
 c endif
          write(lun,20) "fi"
 
-         write(lun,20) 'cp -f $CONDOR_INITIAL_DIR/config.fks .'
-         write(lun,20) 'cp -f $CONDOR_INITIAL_DIR/iproc.dat .'
+CMZ         write(lun,20) 'cp -f $CONDOR_INITIAL_DIR/config.fks .'
+CMZ         write(lun,20) 'cp -f $CONDOR_INITIAL_DIR/iproc.dat .'
          write(lun,20)
      &        'if [[ -e $CONDOR_INITIAL_DIR/../randinit ]]; then'
          write(lun,25) 'cp -f $CONDOR_INITIAL_DIR/../randinit .'
          write(lun,20) 'fi'
-         write(lun,20) 'cp -f $CONDOR_INITIAL_DIR/integrate.fks .'
-         write(lun,20) 'cp -f $CONDOR_INITIAL_DIR/nbodyonly.fks .'
+CMZ         write(lun,20) 'cp -f $CONDOR_INITIAL_DIR/integrate.fks .'
+CMZ         write(lun,20) 'cp -f $CONDOR_INITIAL_DIR/nbodyonly.fks .'
          write(lun,20) 'cp -f $CONDOR_INITIAL_DIR/symfact.dat .'
-         write(lun,20)
-     &        'if [[ -e $CONDOR_INITIAL_DIR/HelasNLO.input ]]; then'
-         write(lun,25) 'cp -f $CONDOR_INITIAL_DIR/HelasNLO.input .'
-         write(lun,20) 'fi'
-         write(lun,20)
-     &        'if [[ -e $CONDOR_INITIAL_DIR/MadLoop.param ]]; then'
-         write(lun,25) 'cp -f $CONDOR_INITIAL_DIR/MadLoop.param .'
-         write(lun,20) 'fi'
-         write(lun,20)
-     &        'if [[ -e $CONDOR_INITIAL_DIR/order.file ]]; then'
-         write(lun,25) 'cp -f $CONDOR_INITIAL_DIR/order.file .'
-         write(lun,20) 'fi'
+CMZ         write(lun,20)
+CMZ     &        'if [[ -e $CONDOR_INITIAL_DIR/HelasNLO.input ]]; then'
+CMZ         write(lun,25) 'cp -f $CONDOR_INITIAL_DIR/HelasNLO.input .'
+CMZ         write(lun,20) 'fi'
+CMZ         write(lun,20)
+CMZ     &        'if [[ -e $CONDOR_INITIAL_DIR/MadLoop.param ]]; then'
+CMZ         write(lun,25) 'cp -f $CONDOR_INITIAL_DIR/MadLoop.param .'
+CMZ         write(lun,20) 'fi'
+CMZ         write(lun,20)
+CMZ     &        'if [[ -e $CONDOR_INITIAL_DIR/order.file ]]; then'
+CMZ         write(lun,25) 'cp -f $CONDOR_INITIAL_DIR/order.file .'
+CMZ         write(lun,20) 'fi'
 
 c madevent_vegas
          write(lun,20) "if [[ $1 == '0' ]]; then"
