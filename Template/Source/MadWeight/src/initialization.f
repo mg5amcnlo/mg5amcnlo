@@ -64,7 +64,6 @@ c
 c     set parameters of the run
 
       include 'madweight_param.inc'
-      ISR_mode=isr
 
       open(unit=89,file="./param.dat")
       read(89,*) param_name
@@ -73,6 +72,7 @@ c     set parameters of the run
       call setrun
 
       include 'madweight_card.inc'
+      ISR_mode=isr
 
 
       px_visible=0d0
