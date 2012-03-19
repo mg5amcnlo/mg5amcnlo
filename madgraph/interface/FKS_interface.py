@@ -29,6 +29,7 @@ import madgraph.fks.fks_born as fks_born
 import madgraph.fks.fks_born_helas_objects as fks_born_helas
 import madgraph.iolibs.export_fks_real as export_fks_real
 import madgraph.iolibs.export_fks_born as export_fks_born
+import madgraph.loop.loop_base_objects as loop_base_objects
 
 #usefull shortcut
 pjoin = os.path.join
@@ -84,45 +85,39 @@ class FKSInterface(CheckFKS, CompleteFKS, HelpFKS, mg_interface.MadGraphCmd):
 
         self._export_dir = os.path.realpath(self._export_dir)
 
-    def validate_model(self):
+    def validate_model(self, loop_type):
         """ Upgrade the model sm to loop_sm if needed """
-    
-        if self._curr_model['perturbation_couplings']==[]:
-            if self._curr_model['name']=='sm':
-                logger.warning(\
-                  "The default sm model does not allow to generate"+
-                  " loop processes. MG5 now loads 'loop_sm' instead.")
-                mg_interface.MadGraphCmd.do_import(self,"model loop_sm")
+
+        if not isinstance(self._curr_model,loop_base_objects.LoopModel) or \
+           self._curr_model['perturbation_couplings']==[]:
+            if loop_type == 'real':
+                    logger.warning(\
+                      "Beware that real corrections are generated from a tree-level model.")     
             else:
-                raise MadGraph5Error(
-                  "The model %s cannot handle loop processes"\
-                  %self._curr_model['name'])
+                if self._curr_model['name']=='sm':
+                    logger.warning(\
+                      "The default sm model does not allow to generate"+
+                      " loop processes. MG5 now loads 'loop_sm' instead.")
+                    mg_interface.MadGraphCmd.do_import(self,"model loop_sm")
+                else:
+                    raise MadGraph5Error(
+                      "The model %s cannot handle loop processes"\
+                      %self._curr_model['name'])            
 
     def do_add(self, line, *args,**opt):
         
         args = self.split_arg(line)
         # Check the validity of the arguments
         self.check_add(args)
-        self.validate_model()
-
+        proc_type=self.extract_process_type(line)
+        self.validate_model(proc_type[1])
+        
         if args[0] != 'process': 
             raise self.InvalidCmd("The add command can only be used with a process")
         else:
             line = ' '.join(args[1:])
 
-        if self._curr_model['perturbation_couplings']=={}:
-            if self._curr_model['name']=='sm':
-                mg_interface.logger.warning(\
-                  "The default sm model does not allow to generate"+
-                  " loop processes. MG5 now loads 'loop_sm' instead.")
-                mg_interface.MadGraphCmd.do_import(self,"model loop_sm")
-            else:
-                raise MadGraph5Error(
-                  "The model %s cannot generate loop processes"\
-                  %self._curr_model['name'])
-        
-        orders=self.extract_process_type(line)[2]
-        if orders!=['QCD']:
+        if proc_type[2]!=['QCD']:
                 raise MadGraph5Error, 'FKS for reals only available in QCD for now, you asked %s' \
                         % ', '.join(orders)
                         
