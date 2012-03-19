@@ -689,7 +689,7 @@ class FeynmanDiagram(object):
         self.initial_vertex = [] # vertex associate to initial particles
         self.lineList = []  # List of line present in the diagram
         self.min_level = 0
-        self.max_level = 0
+        self.max_level = 1
         
         #internal parameter
         self._treated_legs = [] # List of leg, in the same order as lineList
@@ -826,7 +826,6 @@ class FeynmanDiagram(object):
         
         # Loop over the leg associate to the diagram
         for i, leg in enumerate(vertex.get('legs')):
-
             gen_id = leg.get('number')
             # Search if leg exist: two case exist corresponding if it is the 
             #line of vertex or not. Corresponding to that change mode to find
@@ -840,7 +839,7 @@ class FeynmanDiagram(object):
             else:
                 line = self.load_leg(leg)
                 if i + 1 == len(vertex.get('legs')):
-                    self._available_legs[gen_id] = len(self._treated_legs) - 1
+                    self._available_legs[gen_id] = len(self.lineList) - 1
 
             # Associate the vertex to the line at the correct place
             line.add_vertex(vertex_point)
@@ -1678,7 +1677,7 @@ class DiagramDrawer(object):
 
 
     def convert_diagram(self, diagram=None, model=None, amplitude=None, \
-                                                opt=None, loop_structures=None):
+                                                opt=None):
         """If diagram is a basic diagram (inherit from base_objects.Diagram)
         convert him to a FeynmanDiagram one. 'opt' keeps track of possible 
         option of drawing. 'amplitude' is not use for the moment. But, later,
@@ -1705,6 +1704,11 @@ class DiagramDrawer(object):
         
         if amplitude is None:
             amplitude = self.amplitude
+        
+        try:
+            loop_structure = amplitude.get('structure_repository')
+        except:
+            loop_structure = None
 
         # assign default for model and check validity (if not default)
         if model is None:
@@ -1729,7 +1733,7 @@ class DiagramDrawer(object):
         #following option choice type is zero for the born and negative for R2
         if isinstance(diagram, loop_objects.LoopDiagram) and diagram.get('type') > 0:
             diagram = LoopFeynmanDiagram(diagram, 
-                                    amplitude.get('structure_repository'),
+                                    loop_structure,
                                     model, 
                                     opt=opt)
         elif isinstance(diagram, loop_objects.LoopUVCTDiagram) or \
@@ -2029,7 +2033,6 @@ class LoopFeynmanDiagram(FeynmanDiagram):
         loop_line = [line for line in self.lineList if line.loop_line]
         # Fuse the cutted particles (the first and the last of the list)
         self.fuse_line(loop_line[0], loop_line[-1])
-        
 
     def find_vertex_at_level(self, previous_level, level):
         """Returns a list of vertex such that all those vertex are one level 

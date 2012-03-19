@@ -34,6 +34,7 @@ import madgraph.core.drawing as draw_lib
 import madgraph.iolibs.drawing_eps as draw
 import madgraph.core.base_objects as base_objects
 import madgraph.core.diagram_generation as diagram_generation
+import madgraph.core.helas_objects as helas_objects
 import madgraph.loop.loop_base_objects as loop_base_objects
 import madgraph.loop.loop_diagram_generation as loop_diagram_generation
 import madgraph.iolibs.save_load_object as save_load_object
@@ -336,6 +337,20 @@ class TestLoopDrawer(unittest.TestCase):
             diagram.define_level()
             diagram.find_initial_vertex_position()
             self.assertnozerolength(diagram)
+
+    def test_NLO_draw_all_reconstructed_gg_gg(self):
+        
+        for i in range(6,85):
+            diagram = copy.deepcopy(self.store_diagram['FULL g g > g g'][i])
+            Drawer = draw_lib.DiagramDrawer()
+            diagram = Drawer.convert_diagram(diagram, self.model) 
+            if diagram is None:
+                continue # counter term are not drawn
+            diagram.define_level()
+            diagram.find_initial_vertex_position()
+            self.assertnozerolength(diagram)
+
+
 
     def test_NLO_draw_uux_guux(self):
         for i in range(51,52):
@@ -1006,7 +1021,7 @@ if __name__ == '__main__':
     diag_content = {}
     for gen_line, pos_list in process_diag.items():
         print gen_line, ':',
-        gen_line_with_order = gen_line + ' [QCD]'
+        gen_line_with_order = gen_line + ' [virt=QCD]'
         cmd.do_generate(gen_line_with_order)
         #Look for decay chains
         amplitude = cmd._curr_amps[0]
@@ -1015,6 +1030,26 @@ if __name__ == '__main__':
         diag_content[gen_line]['structure'] = amplitude.get('structure_repository')
         for pos in pos_list:
             diag_content[gen_line][pos] = amplitude.get('diagrams')[pos]
+
+    # register the full amplitutde
+    process_diag = {}
+    process_diag['g g > g g'] = range(85)#[0, 12]
+    cmd = MasterCmd()
+    cmd.do_import('model loop_SM_QCD' )
+    # Create the diagrams
+    for gen_line, pos_list in process_diag.items():
+        print gen_line, ':',
+        gen_line_with_order = gen_line + ' [virt=QCD]'
+        cmd.do_generate(gen_line_with_order)
+        #Look for decay chains
+        matrix_elements = helas_objects.HelasMultiProcess(cmd._curr_amps)
+        matrix_element = matrix_elements.get('matrix_elements')[0]
+        diag = matrix_element.get_base_amplitude().get('diagrams')
+        diag_content['FULL %s' %gen_line] = {}
+        for pos in pos_list:
+            diag_content['FULL %s' %gen_line][pos] = diag[pos]
+
+        
 
     # Store the diagrams  
     file_test_diagram = open(os.path.join(_file_path , \

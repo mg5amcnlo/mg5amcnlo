@@ -1354,8 +1354,7 @@ class TestLinkRBConfHEFT(unittest.TestCase):
     (only processes with 3 point interactions)"""
 
 
-    def setUp(self):
-        self.base_model = import_ufo.import_model('heft')
+    base_model = import_ufo.import_model('heft')
 
 
     def test_link_gghg_ggh(self):
@@ -1486,8 +1485,7 @@ class TestLinkRBConfSM(unittest.TestCase):
     """Class to test the link_rb_conf function for various processes, using SM
     (only processes with 3 point interactions)"""
 
-    def setUp(self):
-        self.base_model = import_ufo.import_model('sm')
+    base_model = import_ufo.import_model('sm')
 
     def test_link_uuddg_uudd(self):
         """tests that the real emission process uu~>dd~g and born process uu~>dd~ are
@@ -1698,8 +1696,7 @@ class TestFKSDiagramTag(unittest.TestCase):
     """Test class for the FKSDiagramTag class"""
 
 
-    def setUp(self):
-        self.base_model = import_ufo.import_model('sm')
+    base_model = import_ufo.import_model('sm')
     
     def test_diagram_tag_gg_ggg(self):
         """Test the diagram tag for gg > ggg"""

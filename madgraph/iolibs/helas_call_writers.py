@@ -1182,7 +1182,7 @@ class FortranUFOHelasCallWriter(UFOHelasCallWriter):
         if isinstance(argument, helas_objects.HelasWavefunction):
             # Create call for wavefunction
             if argument['is_loop']:
-                call = call + "ML(%d), LW, WL(1,%d))"
+                call = call + "ML(%d), ZERO, WL(1,%d))"
             else:
                 call = call + "%s, %s, W(1,%d))"                                        
             #CALL L_4_011(W(1,%d),W(1,%d),%s,%s, %s, W(1,%d))

@@ -2362,7 +2362,7 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
             perturbation_couplings_list = perturbation_couplings.split()
             if perturbation_couplings_list==['']:
                 perturbation_couplings_list=[]
-            if perturbation_couplings_list:
+            if perturbation_couplings_list and LoopOption!='real':
                 if not isinstance(self._curr_model,loop_base_objects.LoopModel):
                     raise MadGraph5Error,\
                       "The current model does not allow for loop computations."

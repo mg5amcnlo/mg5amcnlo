@@ -54,8 +54,18 @@ class HelpLoop(mg_interface.HelpToCmd):
 
 class LoopInterface(CheckLoop, CompleteLoop, HelpLoop, mg_interface.MadGraphCmd):
     
-    def do_generate(self, *args,**opt):
-        mg_interface.MadGraphCmd.do_generate(self, *args,**opt)
+    def do_generate(self, line, *args,**opt):
+
+        # Check args validity
+        self.model_validity()    
+        # Extract process from process definition
+        if ',' in line:
+            myprocdef, line = self.extract_decay_chain_process(line)
+        else:
+            myprocdef = self.extract_process(line)
+        self.proc_validity(myprocdef)
+                
+        mg_interface.MadGraphCmd.do_generate(self, line, *args,**opt)
 
     def do_output(self, line):
         """Initialize a new Template or reinitialize one"""
