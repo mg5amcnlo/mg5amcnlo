@@ -28,6 +28,8 @@ except:
 class ClusterManagmentError(MadGraph5Error):
     pass
 
+class NotImplemented(MadGraph5Error):
+    pass
 
 def multiple_try(nb_try=5, sleep=1):
 
@@ -55,7 +57,6 @@ def check_interupt(error=KeyboardInterrupt):
                 raise error
         return deco_f_interupt
     return deco_interupt
-
 
 class Cluster(object):
     """Basic Class for all cluster type submission"""
@@ -108,7 +109,7 @@ class Cluster(object):
                 logger.info('All jobs finished')
                 break
             fct(idle, run, finish)
-            time.sleep(30)
+            time.sleep(20)
         self.submitted = 0
         self.submitted_ids = []
 
@@ -120,8 +121,9 @@ class Cluster(object):
         while 1:        
             status = self.control_one_job(id)
             if not status in ['R','I']:
+                time.sleep(20)
                 break
-            time.sleep(30)
+            time.sleep(20)
             
     def remove(self, *args):
         """ """
@@ -322,7 +324,6 @@ class PBSCluster(Cluster):
                 elif status in self.running_tag:
                     run += 1
                 else:
-                    print line
                     fail += 1
 
         return idle, run, self.submitted - (idle+run+fail), fail
@@ -465,6 +466,7 @@ class SGECluster(Cluster):
                     fail += 1
 
         return idle, run, self.submitted - (idle+run+fail), fail
+
     
     
     @multiple_try()
@@ -475,6 +477,7 @@ class SGECluster(Cluster):
             return
         cmd = "qdel %s" % ' '.join(self.submitted_ids)
         status = subprocess.Popen([cmd], shell=True, stdout=open(os.devnull,'w'))
+
 
 class LSFCluster(Cluster):
     """Basic class for dealing with cluster submission"""
@@ -595,8 +598,127 @@ class LSFCluster(Cluster):
         cmd = "bdel %s" % ' '.join(self.submitted_ids)
         status = subprocess.Popen([cmd], shell=True, stdout=open(os.devnull,'w'))
 
-from_name = {'condor':CondorCluster, 'pbs': PBSCluster, 'sge': SGECluster, 
-             'lsf': LSFCluster}
-
-
+class GECluster(Cluster):
+    """Class for dealing with cluster submission on a GE cluster"""
     
+    name = 'ge'
+    idle_tag = ['qw']
+    running_tag = ['r']
+
+    @multiple_try()
+    def submit(self, prog, argument=[], cwd=None, stdout=None, stderr=None, log=None):
+        """Submit the prog to the cluser"""
+        
+        text = ""
+        if cwd is None:
+            cwd = os.getcwd()
+        else: 
+            text = " cd %s; bash " % cwd
+        if stdout is None:
+            stdout = os.path.join(cwd, "log.%s" % prog.split('/')[-1])
+        if stderr is None:
+            stderr = os.path.join(cwd, "err.%s" % prog.split('/')[-1])
+        elif stderr == -2: # -2 is subprocess.STDOUT
+            stderr = stdout
+        if log is None:
+            log = '/dev/null'
+
+        text += prog
+        if argument:
+            text += ' ' + ' '.join(argument)
+        text += '\n'
+        tmp_submit = os.path.join(cwd, 'tmp_submit')
+        open(tmp_submit,'w').write(text)
+
+        a = subprocess.Popen(['qsub','-o', stdout,
+                                     '-e', stderr,
+                                     tmp_submit],
+                                     stdout=subprocess.PIPE, 
+                                     stderr=subprocess.STDOUT,
+                                     stdin=subprocess.PIPE, cwd=cwd)
+
+        output = a.communicate()[0]
+        #Your job 874511 ("test.sh") has been submitted
+        pat = re.compile("Your job (\d*) \(",re.MULTILINE)
+        try:
+            id = pat.search(output).groups()[0]
+        except:
+            raise ClusterManagmentError, 'fail to submit to the cluster: \n%s' \
+                                                                        % output 
+        self.submitted += 1
+        self.submitted_ids.append(id)
+        return id
+
+    @multiple_try()
+    def control_one_job(self, id):
+        """ control the status of a single job with it's cluster id """
+        cmd = 'qstat | grep '+str(id)
+        status = subprocess.Popen([cmd], shell=True, stdout=subprocess.PIPE)
+        if not status:
+            return 'F'
+        #874516 0.00000 test.sh    alwall       qw    03/04/2012 22:30:35                                    1
+        pat = re.compile("^(\d+)\s+[\d\.]+\s+[\w\d\.]+\s+[\w\d\.]+\s+(\w+)\s")
+        stat = ''
+        for line in status.stdout.read().split('\n'):
+            if not line:
+                continue
+            line = line.strip()
+            try:
+                groups = pat.search(line).groups()
+            except:
+                raise ClusterManagmentError, 'bad syntax for stat: \n\"%s\"' % line
+            if groups[0] != id: continue
+            stat = groups[1]
+        if not stat:
+            return 'F'
+        if stat in self.idle_tag:
+            return 'I' 
+        if stat in self.running_tag:                
+            return 'R' 
+        
+    @multiple_try()
+    def control(self, me_dir=None):
+        """Check the status of job associated to directory me_dir. return (idle, run, finish, fail)"""
+        if not self.submitted_ids:
+            return 0, 0, 0, 0
+        idle, run, fail = 0, 0, 0
+        ongoing = []
+        for statusflag in ['p', 'r', 'sh']:
+            cmd = 'qstat -s %s' % statusflag
+            status = subprocess.Popen([cmd], shell=True, stdout=subprocess.PIPE)
+            #874516 0.00000 test.sh    alwall       qw    03/04/2012 22:30:35                                    1
+            pat = re.compile("^(\d+)")
+            for line in status.stdout.read().split('\n'):
+                line = line.strip()
+                try:
+                    id = pat.search(line).groups()[0]
+                except:
+                    pass
+                else:
+                    if id not in self.submitted_ids:
+                        continue
+                    ongoing.append(id)
+                    if statusflag == 'p':
+                        idle += 1
+                    if statusflag == 'r':
+                        run += 1
+                    if statusflag == 'sh':
+                        fail += 1
+
+        self.submitted_ids = ongoing
+
+        return idle, run, self.submitted - idle - run - fail, fail
+
+    @multiple_try()
+    def remove(self, *args):
+        """Clean the jobs on the cluster"""
+        
+        if not self.submitted_ids:
+            return
+        cmd = "qdel %s" % ' '.join(self.submitted_ids)
+        status = subprocess.Popen([cmd], shell=True, stdout=open(os.devnull,'w'))
+
+from_name = {'condor':CondorCluster, 'pbs': PBSCluster, 'sge': SGECluster, 
+             'lsf': LSFCluster, 'ge':GECluster}
+
+

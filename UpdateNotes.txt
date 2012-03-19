@@ -10,6 +10,7 @@ Update notes for MadGraph 5 (in reverse time order)
                       (as needed for cards from some spectrum generators)
                   JA: Fixed script addmasses.py for complicated events such as
                       p p > t t~ + jets with decays of t and t~.
+                  JA: Added GE cluster to the list in cluster.py.
 
 1.4.3 (08/03/12)  JA: Reintroduced the possibility to completely forbid
                       s-channel diagrams, using the $$ notation. Note that

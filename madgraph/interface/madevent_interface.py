@@ -206,9 +206,9 @@ class CmdExtended(cmd.Cmd):
         arg = line.split()
         if  len(arg) == 0:
             return stop
-        if self.results.status.startswith('Error'):
+        if isinstance(self.results.status, str) and self.results.status.startswith('Error'):
             return stop
-        if self.results.status == 'Stop by the user':
+        if isinstance(self.results.status, str) and self.results.status == 'Stop by the user':
             self.update_status('%s Stop by the user' % arg[0], level=None, error=True)
             return stop        
         elif not self.results.status:
@@ -351,9 +351,9 @@ class HelpToCmd(object):
         
     def help_combine_events(self):
         """ """
-        logger.info("syntax: combine_events [--run_options]")
+        logger.info("syntax: combine_events [run_name] [--tag=tag_name] [--run_options]")
         logger.info("-- Combine the last run in order to write the number of events")
-        logger.info("   require in the run_card.")
+        logger.info("   asked in the run_card.")
         self.run_options_help([])
 
     def help_store_events(self):
@@ -706,16 +706,30 @@ class CheckValidForCmd(object):
     def check_combine_events(self, arg):
         """ Check the argument for the combine events command """
         
-        if len(arg):
+        tag = [a for a in arg if a.startswith('--tag=')]
+        if tag: 
+            args.remove(tag[0])
+            tag = tag[0][6:]
+        elif not self.run_tag:
+            tag = 'tag_1'
+        else:
+            tag = self.run_tag
+        self.run_tag = tag
+     
+        if len(arg) > 1:
             self.help_combine_events()
             raise self.InvalidCmd('Too many argument for combine_events command')
+        if len(arg) == 1:
+            self.run_name = arg[0]
         
         if not self.run_name:
             if not self.results.lastrun:
                 raise self.InvalidCmd('No run_name currently define. Impossible to run combine')
             else:
                 self.set_run_name(self.results.lastrun)
-            self.set_run_name(arg[0])
+
+        if not hasattr(self, "run_card") or not self.run_card:
+            self.set_run_name(self.run_name, self.run_tag, 'parton', True)
         
         return True
     
@@ -739,23 +753,28 @@ class CheckValidForCmd(object):
         if tag: 
             args.remove(tag[0])
             tag = tag[0][6:]
-     
+        elif not self.run_tag:
+            tag = 'tag_1'
+        else:
+            tag = self.run_tag
+        self.run_tag = tag
+        
         if len(args) == 0 and not self.run_name:
             if self.results.lastrun:
                 args.insert(0, self.results.lastrun)
             else:
                 raise self.InvalidCmd('No run name currently define. Please add this information.')             
         
-        if len(args) == 1:
+        if len(args) >= 1:
             if args[0] != self.run_name and\
              not os.path.exists(pjoin(self.me_dir,'Events',args[0], 'unweighted_events.lhe.gz')):
                 raise self.InvalidCmd('No events file corresponding to %s run. '% args[0])
-            self.set_run_name(args[0], tag, 'pythia')
-        else:
-            if tag:
-                self.run_card['run_tag'] = tag
-            self.set_run_name(self.run_name, tag, 'pythia')
-            
+            self.run_name = args[0]
+
+        if not hasattr(self, "run_card") or not self.run_card:
+            self.set_run_name(self.run_name, self.run_tag, 'parton', True)
+
+        self.set_run_name(self.run_name, self.run_tag, 'pythia')
 
         if  not os.path.exists(pjoin(self.me_dir,'Events',self.run_name,'unweighted_events.lhe.gz')):
             raise self.InvalidCmd('No events file corresponding to %s run. '% self.run_name)
@@ -1372,7 +1391,6 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
             process = self.process # define in find_model_name
             self.results = gen_crossxhtml.AllResults(model, process, self.me_dir)
         self.results.def_web_mode(self.web)
-
         
         self.configured = 0 # time for reading the card
         self._options = {} # for compatibility with extended_cmd
@@ -2131,7 +2149,11 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
         
         # Define The Banner
         tag = self.run_card['run_tag']
+        # Update the banner with the pythia card
+        if not self.banner:
+            self.banner = banner_mod.recover_banner(self.results, 'parton')
         self.banner.load_basic(self.me_dir)
+        if not hasattr(self, 'random'): self.random = 0
         self.banner.change_seed(self.random)
         if not os.path.exists(pjoin(self.me_dir, 'Events', self.run_name)):
             os.mkdir(pjoin(self.me_dir, 'Events', self.run_name))
@@ -2243,6 +2265,7 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
         self.update_status('Creating gridpack', level='parton')
         args = self.split_arg(line)
         self.check_combine_events(args)
+        if not self.run_tag: self.run_tag = 'tag_1'
         os.system("sed -i.bak \"s/ *.false.*=.*GridRun/  .true.  =  GridRun/g\" %s/Cards/grid_card.dat" \
                   % self.me_dir)
         subprocess.call(['./bin/internal/restore_data', self.run_name],
@@ -2298,7 +2321,7 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
         #            return
          
         #self.exec_cmd('remove %s pythia -f' % self.run_name)
-        
+
         pythia_src = pjoin(self.options['pythia-pgs_path'],'src')
         
         self.update_status('Running Pythia', 'pythia')
@@ -3553,7 +3576,6 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
                     path = pjoin(self.me_dir,'Cards','%s_card.dat' % answer)
                 else:
                     path = pjoin(self.me_dir,'Cards','delphes_trigger.dat')
-                    print path
                 self.exec_cmd('open %s' % path)                    
             else:
                 # detect which card is provide
@@ -3949,7 +3971,6 @@ class GridPackCmd(MadEventCmd):
         # 3) Combine the events/pythia/...
         self.exec_cmd('combine_events')
         self.exec_cmd('store_events')
-        self.exec_cmd('pythia --no_default -f')
         self.print_results_in_shell(self.results.current)
 
     def refine4grid(self, nb_event):
@@ -3997,7 +4018,7 @@ class GridPackCmd(MadEventCmd):
                 for i, job in enumerate(alljobs):
                     job = os.path.basename(job)
                     self.launch_job('./%s' % job, cwd=Pdir, remaining=(nb_tot-i-1), 
-                             run_type='Refine number %s on %s (%s/%s)' % (self.nb_refine, subdir, nb_proc+1, len(subproc)))
+                                 run_type='Refine number %s on %s (%s/%s)' % (self.nb_refine, subdir, nb_proc+1, len(subproc)))
         self.monitor(run_type='All job submitted for refine number %s' % self.nb_refine,
                      html=True)
         

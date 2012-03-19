@@ -279,6 +279,10 @@ class AllResults(dict):
     def add_detail(self, name, value, run=None, tag=None):
         """ add information to current run (cross/error/event)"""
         assert name in ['cross', 'error', 'nb_event', 'cross_pythia']
+
+        if not run and not self.current:
+            return
+
         if not run:
             run = self.current
         else:
