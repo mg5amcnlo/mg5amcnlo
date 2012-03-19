@@ -70,6 +70,8 @@ class Switcher(object):
     _switch_opts = [interface_names[key][0] for key in interface_names.keys()]
     current_interface = None
    
+    # Helper functions
+   
     def debug_link_to_command(self):
         """redefine all the command to call directly the appropriate child"""
         
@@ -145,6 +147,109 @@ class Switcher(object):
                     
         if not correct:
             raise Exception, 'The Cmd interface has dangerous features. Please see previous warnings and correct those.' 
+
+    @staticmethod
+    def extract_process_type(line):
+        """Extract from a string what is the type of the computation. This 
+        returns a tuple (mode, option, pert_orders) where mode can be either 'NLO' or 'tree'
+        and option 'all', 'real' or 'virt'."""
+
+        # Perform sanity modifications on the lines:
+        # Add a space before and after any > , $ / | [ ]
+        space_before = re.compile(r"(?P<carac>\S)(?P<tag>[\\[\\]/\,\\$\\>|])(?P<carac2>\S)")
+        line2 = space_before.sub(r'\g<carac> \g<tag> \g<carac2>', line)       
+        
+        # Use regular expressions to extract the loop mode (if present) and its
+        # option, specified in the line with format [ option = loop_orders ] or
+        # [ loop_orders ] which implicitly select the 'all' option.
+        loopRE = re.compile(r"^(.*)(?P<loop>\[(\s*(?P<option>\w+)\s*=)?(?P<orders>.+)\])(.*)$")
+        res=loopRE.search(line)
+        if res:
+            if res.group('option') and len(res.group('option').split())==1:
+                return ('NLO',res.group('option').split()[0],
+                                    res.group('orders').split())
+            else:
+                return ('NLO','all',res.group('orders').split())
+        else:
+            return ('tree',None,[])    
+    
+    # Wrapping functions possibly switching to new interfaces
+
+    def do_add(self, line, *args, **opts):
+        
+        argss = cmd.Cmd.split_arg(line)
+        if len(argss)>=1 and argss[0] == 'process':
+            proc_line = ' '.join(argss[1:])
+            (type,nlo_mode,orders)=self.extract_process_type(proc_line)
+            if type=='NLO':
+                if not nlo_mode in self._valid_nlo_modes: raise self.InvalidCMD( \
+                    'The NLO mode %s is not valid. Please chose one among: %s' \
+                    % (nlo_mode, ' '.join(valid_nlo_modes)))
+                elif nlo_mode == 'all':
+                    self.change_principal_cmd('FKS')
+                elif nlo_mode == 'real':
+                    self.change_principal_cmd('FKS')
+                elif nlo_mode == 'virt' or nlo_mode == 'virt^2':
+                    self.change_principal_cmd('Loop')
+                    
+        return self.cmd.do_add(self, line, *args, **opts)
+        
+    def do_check(self, line, *args, **opts):
+
+        argss = self.split_arg(line)
+        proc_line = " ".join(argss[1:])
+        (type,nlo_mode,orders)=self.extract_process_type(proc_line)
+        if type=='NLO':
+            if not nlo_mode in self._valid_nlo_modes: raise self.InvalidCMD(\
+                'The NLO mode %s is not valid. Please chose one among: %s' \
+                % (nlo_mode, ' '.join(valid_nlo_modes)))
+            elif nlo_mode == 'all':
+                self.change_principal_cmd('FKS')
+            elif nlo_mode == 'real':
+                self.change_principal_cmd('FKS')
+            elif nlo_mode == 'virt' or nlo_mode == 'virt^2':
+                self.change_principal_cmd('Loop')
+        else:
+            self.change_principal_cmd('MadGraph')
+        
+        return self.cmd.do_check(self, line, *args, **opts)
+
+    def do_generate(self, line, *args, **opts):
+
+        argss = cmd.Cmd.split_arg(line)
+        # Make sure to switch to the right interface.
+        if len(argss)>=1:            
+            proc_line = ' '.join(argss[1:])
+            (type,nlo_mode,orders)=self.extract_process_type(proc_line)
+            if type=='NLO':
+                if not nlo_mode in self._valid_nlo_modes: raise self.InvalidCmd( \
+                    'The NLO mode %s is not valid. Please chose one among: %s' \
+                    % (nlo_mode, ' '.join(self._valid_nlo_modes)))
+                elif nlo_mode == 'all':
+                    self.change_principal_cmd('FKS')
+                elif nlo_mode == 'real':
+                    self.change_principal_cmd('FKS')
+                elif nlo_mode == 'virt' or nlo_mode == 'virt^2':
+                    self.change_principal_cmd('Loop')
+            else:
+                self.change_principal_cmd('MadGraph')
+                
+        return self.cmd.do_generate(self, line, *args, **opts)
+
+    def do_import(self, *args, **opts):
+        self.cmd.do_import(self, *args, **opts)
+        if self._curr_model:
+            if isinstance(self._curr_model, loop_base_objects.LoopModel) and \
+               self._curr_model['perturbation_couplings']!=[] and \
+               self.current_interface not in ['FKS','Loop']:
+                self.change_principal_cmd('FKS')
+            if (not isinstance(self._curr_model, loop_base_objects.LoopModel) or \
+               self._curr_model['perturbation_couplings']==[]) and \
+               self.current_interface in ['Loop']:
+                self.change_principal_cmd('MadGraph')                
+        return
+
+    # Dummy functions, not triggering any switch of interfaces
             
     def export(self, *args, **opts):
         return self.cmd.export(self, *args, **opts)
@@ -266,45 +371,6 @@ class Switcher(object):
     def do_EOF(self, *args, **opts):
         return self.cmd.do_EOF(self, *args, **opts)
         
-    def do_add(self, line, *args, **opts):
-        
-        argss = cmd.Cmd.split_arg(line)
-        if len(argss)>=1 and argss[0] == 'process':
-            proc_line = ' '.join(argss[1:])
-            (type,nlo_mode,orders)=self.extract_process_type(proc_line)
-            if type=='NLO':
-                if not nlo_mode in self._valid_nlo_modes: raise MadGraph5Error, \
-                    'The NLO mode %s is not valid. Please chose one among: %s' \
-                    % (nlo_mode, ' '.join(valid_nlo_modes))
-                elif nlo_mode == 'all':
-                    self.change_principal_cmd('FKS')
-                elif nlo_mode == 'real':
-                    self.change_principal_cmd('FKS')
-                elif nlo_mode == 'virt' or nlo_mode == 'virt^2':
-                    self.change_principal_cmd('Loop')
-                    
-        return self.cmd.do_add(self, line, *args, **opts)
-        
-    def do_check(self, line, *args, **opts):
-
-        argss = self.split_arg(line)
-        proc_line = " ".join(argss[1:])
-        (type,nlo_mode,orders)=self.extract_process_type(proc_line)
-        if type=='NLO':
-            if not nlo_mode in self._valid_nlo_modes: raise MadGraph5Error, \
-                'The NLO mode %s is not valid. Please chose one among: %s' \
-                % (nlo_mode, ' '.join(valid_nlo_modes))
-            elif nlo_mode == 'all':
-                self.change_principal_cmd('FKS')
-            elif nlo_mode == 'real':
-                self.change_principal_cmd('FKS')
-            elif nlo_mode == 'virt' or nlo_mode == 'virt^2':
-                self.change_principal_cmd('Loop')
-        else:
-            self.change_principal_cmd('MadGraph')
-        
-        return self.cmd.do_check(self, line, *args, **opts)
-        
     def do_define(self, *args, **opts):
         return self.cmd.do_define(self, *args, **opts)
         
@@ -314,46 +380,11 @@ class Switcher(object):
     def do_exit(self, *args, **opts):
         return self.cmd.do_exit(self, *args, **opts)
         
-    def do_generate(self, line, *args, **opts):
-
-        argss = cmd.Cmd.split_arg(line)
-        # Make sure to switch to the right interface.
-        if len(argss)>=1:            
-            proc_line = ' '.join(argss[1:])
-            (type,nlo_mode,orders)=self.extract_process_type(proc_line)
-            if type=='NLO':
-                if not nlo_mode in self._valid_nlo_modes: raise MadGraph5Error, \
-                    'The NLO mode %s is not valid. Please chose one among: %s' \
-                    % (nlo_mode, ' '.join(valid_nlo_modes))
-                elif nlo_mode == 'all':
-                    self.change_principal_cmd('FKS')
-                elif nlo_mode == 'real':
-                    self.change_principal_cmd('FKS')
-                elif nlo_mode == 'virt' or nlo_mode == 'virt^2':
-                    self.change_principal_cmd('Loop')
-            else:
-                self.change_principal_cmd('MadGraph')
-                
-        return self.cmd.do_generate(self, line, *args, **opts)
-        
     def do_help(self, *args, **opts):
         return self.cmd.do_help(self, *args, **opts)
         
     def do_history(self, *args, **opts):
-        return self.cmd.do_history(self, *args, **opts)
-        
-    def do_import(self, *args, **opts):
-        self.cmd.do_import(self, *args, **opts)
-        if self._curr_model:
-            if isinstance(self._curr_model, loop_base_objects.LoopModel) and \
-               self._curr_model['perturbation_couplings']!=[] and \
-               self.current_interface not in ['FKS','Loop']:
-                self.change_principal_cmd('FKS')
-            if (not isinstance(self._curr_model, loop_base_objects.LoopModel) or \
-               self._curr_model['perturbation_couplings']==[]) and \
-               self.current_interface in ['Loop']:
-                self.change_principal_cmd('MadGraph')                
-        return    
+        return self.cmd.do_history(self, *args, **opts) 
         
     def do_install(self, *args, **opts):
         self.cmd.do_install(self, *args, **opts)
@@ -441,31 +472,6 @@ class Switcher(object):
 
     def set_configuration(self, *args, **opts):
         return self.cmd.set_configuration(self, *args, **opts)
-
-    @staticmethod
-    def extract_process_type(line):
-        """Extract from a string what is the type of the computation. This 
-        returns a tuple (mode, option, pert_orders) where mode can be either 'NLO' or 'tree'
-        and option 'all', 'real' or 'virt'."""
-
-        # Perform sanity modifications on the lines:
-        # Add a space before and after any > , $ / | [ ]
-        space_before = re.compile(r"(?P<carac>\S)(?P<tag>[\\[\\]/\,\\$\\>|])(?P<carac2>\S)")
-        line2 = space_before.sub(r'\g<carac> \g<tag> \g<carac2>', line)       
-        
-        # Use regular expressions to extract the loop mode (if present) and its
-        # option, specified in the line with format [ option = loop_orders ] or
-        # [ loop_orders ] which implicitly select the 'all' option.
-        loopRE = re.compile(r"^(.*)(?P<loop>\[(\s*(?P<option>\w+)\s*=)?(?P<orders>.+)\])(.*)$")
-        res=loopRE.search(line)
-        if res:
-            if res.group('option') and len(res.group('option').split())==1:
-                return ('NLO',res.group('option').split()[0],
-                                    res.group('orders').split())
-            else:
-                return ('NLO','all',res.group('orders').split())
-        else:
-            return ('tree',None,[])
 
 class MasterCmd(Switcher, LoopCmd.LoopInterface, FKSCmd.FKSInterface, cmd.CmdShell):
 

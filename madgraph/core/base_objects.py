@@ -1916,6 +1916,12 @@ class Process(PhysicsObject):
                         "%s is not a valid NLO_mode" % str(value)
         return True
 
+    def has_multiparticle_label(self):
+        """ A process, not being a ProcessDefinition never carries multiple
+        particles labels"""
+        
+        return False
+
     def set(self, name, value):
         """Special set for forbidden particles - set to abs value."""
 
@@ -2412,7 +2418,9 @@ class ProcessDefinition(Process):
         
         for mleg in self['legs']:
             if len(mleg['ids'])>1:
-                return false
+                return True
+        
+        return False
 
     def get_sorted_keys(self):
         """Return process property names as a nicely sorted list."""
