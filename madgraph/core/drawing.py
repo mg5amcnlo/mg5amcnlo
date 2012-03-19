@@ -92,6 +92,8 @@ class FeynmanLine(object):
         assert isinstance(vertex, VertexPoint), 'The begin point should be a ' + \
                  'Vertex_Point object'
 
+        assert vertex is not self.end
+
         self.begin = vertex
         vertex.add_line(self)
         return
@@ -101,6 +103,8 @@ class FeynmanLine(object):
 
         assert isinstance(vertex, VertexPoint), 'The end point should be a ' + \
                  'Vertex_Point object'
+
+        assert vertex is not self.begin
                  
         self.end = vertex
         vertex.add_line(self)
@@ -725,7 +729,6 @@ class FeynmanDiagram(object):
 
         for vertex in self.diagram.get('vertices'):
             self.load_vertex(vertex)
-
         # The last vertex is particular
         last_vertex = self.vertexList[-1]
 
@@ -756,14 +759,14 @@ class FeynmanDiagram(object):
                     if line.end:
                         line.inverse_begin_end()
                     line.def_end_point(vertex_point)
-
+        
         if len(self.initial_vertex) == 2:
             if self.initial_vertex[0].lines[0].number == 2:
                 self.initial_vertex.reverse()
         else:
             # Remove wrongly define T-channel
             self.remove_t_channel()
-
+        
         return
 
     def find_leg_id(self, leg, equal=0, end=0):
@@ -1037,7 +1040,7 @@ class FeynmanDiagram(object):
             # Initial state are wrongly consider as outgoing-> solve:
             self.initial_vertex[0].lines[0].inverse_part_antipart()
             self.initial_vertex[1].lines[0].inverse_part_antipart()
-            # Associate position to T-vertex       
+            # Associate position to T-vertex  
             t_vertex = self.find_vertex_position_tchannel()
             # Associatie position to level 2 and following (auto-recursive fct)
             self.find_vertex_position_at_level(t_vertex, 2)
@@ -1356,6 +1359,7 @@ class FeynmanDiagram(object):
                          vertex.get_uid())
             text += 'line: ' + ','.join([str(self.lineList.index(line)) \
                                                 for line in vertex.lines]) + '\n'
+        text += '%s' % [(l.number,) for l in self.lineList if l.state==False]
         return text
 
 
@@ -1757,6 +1761,7 @@ class DiagramDrawer(object):
         #                                           amplitude=amplitude, opt=opt)
 
         # Find the position of all vertex and all line orientation
+            
         diagram.main()
 
         # Store-return information
@@ -2132,17 +2137,28 @@ class LoopFeynmanDiagram(FeynmanDiagram):
             This move from left to right the external particles linked to the 
             loop. 
         """
+                          
+        #if not any([True for l in self.lineList if l.loop_line and l.state == False]):
+            
+        #    return False
 
         left_side = 0
         right_side = 0
         side_weight = 0 # if side is positive need to switch
+        nb_T_channel = 0
+
         
         binding_side = {}
         # Count the number of T-channel propagator
         for vertex in self.diagram.get('vertices'):
+            nb_T_channel += len([line for line in vertex.get('legs') if line.get('loop_line') 
+                            and line.get('state') == False])
+            
+            
             nb_Tloop = len([line for line in vertex.get('legs') if line.get('loop_line') 
                             and line.get('state')])
-            
+
+
             line = vertex['legs'][-1]
             if nb_Tloop % 2:
                 continue
@@ -2158,6 +2174,10 @@ class LoopFeynmanDiagram(FeynmanDiagram):
                 if binding_side.has_key(line.get('number')):
                     pass
                 binding_side[line.get('number')] = left_direction
+        
+
+        if not nb_T_channel:
+            return False
         
         # See the depth of each side 
         for pdg, list_struct_id, vertex_id in self.diagram['tag']:
@@ -2192,7 +2212,7 @@ class LoopFeynmanDiagram(FeynmanDiagram):
                 line.state = not line.state
  
     
-    def remove_T_channel(self):
+    def remove_t_channel(self):
         """Remove T-channel information"""
         for vertex in self.diagram.get('vertices'):
             legs = vertex['legs'][-1]
