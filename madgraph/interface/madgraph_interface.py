@@ -917,7 +917,13 @@ This will take effect only in a NEW terminal
                     if 'TemplateVersion.txt' in self._export_dir:
                         return
         
-        if self._export_format.startswith('madevent'):            
+
+        if self._export_format == 'NLO':            
+            name_dir = lambda i: 'PROCNLO_%s_%s' % \
+                                    (self._curr_model['name'], i)
+            auto_path = lambda i: pjoin(self.writing_dir,
+                                               name_dir(i))
+        elif self._export_format.startswith('madevent'):            
             name_dir = lambda i: 'PROC_%s_%s' % \
                                     (self._curr_model['name'], i)
             auto_path = lambda i: pjoin(self.writing_dir,

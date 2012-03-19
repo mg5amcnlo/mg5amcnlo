@@ -62,7 +62,14 @@ class FKSMultiProcessFromBorn(diagram_generation.MultiProcess): #test written
         """Initializes the original multiprocess, then generates the amps for the 
         borns, then geneare the born processes and the reals.
         """
-                
+
+        #swhich the other loggers off
+        loggers_off = [logging.getLogger('madgraph.diagram_generation'), 
+                       logging.getLogger('madgraph.loop_diagram_generation')]
+        old_levels = [logg.getEffectiveLevel() for logg in loggers_off]
+        for logg in loggers_off:
+            logg.setLevel(logging.WARNING)
+
         super(FKSMultiProcessFromBorn, self).__init__(*arguments)   
         amps = self.get('amplitudes')
         real_amplist = []
@@ -73,13 +80,32 @@ class FKSMultiProcessFromBorn(diagram_generation.MultiProcess): #test written
             born.generate_reals(real_amplist, real_amp_id_list)
 
         if self['process_definitions'][0].get('NLO_mode') == 'all':
-            logger.info('Generating virtual matrix elements')
+            logger.info('Generating virtual matrix elements:')
             self.generate_virtuals()
         
         elif not self['process_definitions'][0].get('NLO_mode') in ['all', 'real']:
             raise fks_common.FKSProcessError(), \
                "Not a valid NLO_mode for a FKSMultiProcess: %s" % \
                self['process_definitions'][0].get('NLO_mode')
+
+
+        # now get the total number of diagrams
+        n_diag_born = sum([len(real.amplitude.get('diagrams')) \
+                           for born in self['born_processes'] \
+                           for real in born.real_amps])
+        n_diag_real = sum([len(born.born_amp.get('diagrams')) \
+                           for born in self['born_processes']])
+        n_diag_virt = sum([len(born.virt_amp.get('diagrams')) \
+                           for born in self['born_processes'] \
+                           if born.virt_amp])
+
+        logger.info(('Generated %d subprocesses with %d real emission diagrams, ' + \
+                    '%d born diagrams and %d virtual diagrams') % \
+                            (len(self['born_processes']), n_diag_real, n_diag_born, n_diag_virt))
+
+        for i, logg in enumerate(loggers_off):
+            logg.setLevel(old_levels[i])
+
 
     def generate_virtuals(self):
         """For each process among the born_processes, creates the corresponding
@@ -90,6 +116,8 @@ class FKSMultiProcessFromBorn(diagram_generation.MultiProcess): #test written
                 if 'WEIGHTED' in myproc['orders'].keys():
                     del myproc['orders']['WEIGHTED']
                 myproc['legs'] = fks_common.to_legs(copy.copy(myproc['legs']))
+                logger.info('Generating virtual matrix element for process%s' \
+                        % myproc.nice_string().replace('Process', ''))
                 myamp = loop_diagram_generation.LoopAmplitude(myproc)
                 if myamp.get('diagrams'):
                     born.virt_amp = myamp
@@ -217,6 +245,9 @@ class FKSProcessFromBorn(object):
             else:
                 raise fks_common.FKSProcessError(), \
                     'Not valid start_proc in FKSProcessFromBorn'
+
+            logger.info("Generating FKS-subtracted matrix elements for born process%s" \
+                % self.born_proc.nice_string().replace('Process', '')) 
 
             self.model = self.born_proc['model']
             self.leglist = fks_common.to_fks_legs(
