@@ -137,7 +137,7 @@ c entering this function
       endif
       
       if (firsttime) then
-         firsttime=.false.
+c         firsttime=.false.
          do k = 1,nexternal
            do l = 1,nexternal
              ijskip(k,l) = 0

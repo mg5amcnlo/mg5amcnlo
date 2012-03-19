@@ -62,151 +62,34 @@ class IOExportBornFKSTest(unittest.TestCase,
     created_files = ['test'
                     ]
 
-    def setUp(self):
-        self.mymodel = import_ufo.import_model('sm')
-        self.myfortranmodel = helas_call_writers.FortranUFOHelasCallWriter(self.mymodel)
-    
-        myleglist = MG.MultiLegList()
-        
-        myleglist.append(MG.MultiLeg({'ids':[2], 'state':False}))
-        myleglist.append(MG.MultiLeg({'ids':[21], 'state':False}))
-        myleglist.append(MG.MultiLeg({'ids':[2], 'state':True}))
-        myleglist.append(MG.MultiLeg({'ids':[21], 'state':True}))
-    
-        myproc = MG.ProcessDefinition({'legs': myleglist,
-                             'model': self.mymodel,
-                             'orders':{'QCD': 2, 'QED': 0},
-                             'perturbation_couplings': ['QCD'],
-                             'NLO_mode': 'real'})
-        my_process_definitions = MG.ProcessDefinitionList([myproc])
+    mymodel = import_ufo.import_model('sm')
+    myfortranmodel = helas_call_writers.FortranUFOHelasCallWriter(mymodel)
 
-        self.myfksmulti = fks_born.FKSMultiProcessFromBorn(\
-                {'process_definitions': my_process_definitions})
-        
-        self.myfks_me = fks_born_helas.FKSHelasMultiProcessFromBorn(\
-                self.myfksmulti)['matrix_elements'][0]
+    myleglist = MG.MultiLegList()
+
+# we test g g > t t~
+    myleglist.append(MG.MultiLeg({'ids':[21], 'state':False}))
+    myleglist.append(MG.MultiLeg({'ids':[21], 'state':False}))
+    myleglist.append(MG.MultiLeg({'ids':[6], 'state':True}))
+    myleglist.append(MG.MultiLeg({'ids':[-6], 'state':True}))
+
+    myproc = MG.ProcessDefinition({'legs': myleglist,
+                         'model': mymodel,
+                         'orders':{'QCD': 2, 'QED': 0},
+                         'perturbation_couplings': ['QCD'],
+                         'NLO_mode': 'real'})
+    my_process_definitions = MG.ProcessDefinitionList([myproc])
+
+    myfksmulti = fks_born.FKSMultiProcessFromBorn(\
+            {'process_definitions': my_process_definitions})
+    
+    myfks_me = fks_born_helas.FKSHelasMultiProcessFromBorn(\
+            myfksmulti)['matrix_elements'][0]
+
+    def setUp(self):
 
         #self.myfortranmodel.downcase = False
-
         tearDown = test_file_writers.CheckFileCreate.clean_files
-
-    def test_get_fks_conf_lines_B(self):
-        """Checks the lines corresponding to each fks confs, to be 
-        written in fks.inc
-        """
-        lines_list = [
-"""c     FKS configuration number  1
-DATA FKS_I(1) / 5 /
-DATA FKS_J(1) / 1 /
-""",
-"""c     FKS configuration number  1
-DATA FKS_I(1) / 3 /
-DATA FKS_J(1) / 1 /
-""",
-"""c     FKS configuration number  1
-DATA FKS_I(1) / 5 /
-DATA FKS_J(1) / 2 /
-""",
-"""c     FKS configuration number  1
-DATA FKS_I(1) / 3 /
-DATA FKS_J(1) / 2 /
-""",
-"""c     FKS configuration number  1
-DATA FKS_I(1) / 3 /
-DATA FKS_J(1) / 2 /
-""",
-"""c     FKS configuration number  1
-DATA FKS_I(1) / 3 /
-DATA FKS_J(1) / 2 /
-""",
-"""c     FKS configuration number  1
-DATA FKS_I(1) / 4 /
-DATA FKS_J(1) / 2 /
-""",
-"""c     FKS configuration number  1
-DATA FKS_I(1) / 5 /
-DATA FKS_J(1) / 3 /
-""",
-"""c     FKS configuration number  1
-DATA FKS_I(1) / 5 /
-DATA FKS_J(1) / 4 /
-""",
-"""c     FKS configuration number  1
-DATA FKS_I(1) / 5 /
-DATA FKS_J(1) / 4 /
-""",
-"""c     FKS configuration number  1
-DATA FKS_I(1) / 5 /
-DATA FKS_J(1) / 4 /
-"""]
-        process_exporter = export_fks_born.ProcessExporterFortranFKS_born()
-        for lines, real in zip(lines_list, self.myfks_me.real_processes):
-            self.assertEqual(lines, process_exporter.get_fks_conf_lines(real))
-
-    def test_get_fks_j_from_i_lines_B(self):
-        """Test that the lines corresponding to the fks_j_from_i array, to be 
-        written in fks.inc. 
-        The real process is gg_uxug_i3_j1 (myfks_me.real_processes[1])
-        """
-        lines = \
-"""DATA (FKS_J_FROM_I(3, JPOS), JPOS = 0, 3)  / 3, 1, 2, 4 /
-DATA (FKS_J_FROM_I(4, JPOS), JPOS = 0, 2)  / 2, 1, 2 /
-DATA (FKS_J_FROM_I(5, JPOS), JPOS = 0, 4)  / 4, 1, 2, 3, 4 /
-"""
-        process_exporter = export_fks_born.ProcessExporterFortranFKS_born()
-        self.assertEqual(lines, process_exporter.get_fks_j_from_i_lines(self.myfks_me.real_processes[1]))
-
-
-    def test_write_fks_inc_B(self):
-        """Tests the correct writing of the fks.inc file, containing informations 
-        for all the different fks configurations
-        The real process is gg_uxug_i3_j1 (myfks_me.real_processes[1])
-        """
-        goal = \
-"""      INTEGER FKS_CONFIGS, IPOS, JPOS
-      DATA FKS_CONFIGS / 1 /
-      INTEGER FKS_I(1), FKS_J(1)
-      INTEGER FKS_J_FROM_I(NEXTERNAL, 0:NEXTERNAL)
-      INTEGER PARTICLE_TYPE(NEXTERNAL), PDG_TYPE(NEXTERNAL)
-
-C     FKS configuration number  1
-      DATA FKS_I(1) / 3 /
-      DATA FKS_J(1) / 1 /
-
-      DATA (FKS_J_FROM_I(3, JPOS), JPOS = 0, 3)  / 3, 1, 2, 4 /
-      DATA (FKS_J_FROM_I(4, JPOS), JPOS = 0, 2)  / 2, 1, 2 /
-      DATA (FKS_J_FROM_I(5, JPOS), JPOS = 0, 4)  / 4, 1, 2, 3, 4 /
-C     
-C     Particle type:
-C     octet = 8, triplet = 3, singlet = 1
-      DATA (PARTICLE_TYPE(IPOS), IPOS=1, NEXTERNAL) / 8, 8, -3, 3, 8 /
-
-C     
-C     Particle type according to PDG:
-C     
-      DATA (PDG_TYPE(IPOS), IPOS=1, NEXTERNAL) / 21, 21, -2, 2, 21 /
-
-"""
-
-        process_exporter = export_fks_born.ProcessExporterFortranFKS_born()
-        process_exporter.write_fks_inc(\
-            writers.FortranWriter(self.give_pos('test')),
-            self.myfks_me.real_processes[1],
-            self.myfortranmodel)
-        self.assertFileContains('test', goal)
-
-
-    def test_write_mirrorprocs_B(self):
-        """Tests the correct writing of the mirrorprocs.inc file"""
-        goal = \
-"""      LOGICAL MIRRORPROC
-      DATA MIRRORPROC /.FALSE./
-"""
-        process_exporter = export_fks_born.ProcessExporterFortranFKS_born()
-        process_exporter.write_mirrorprocs(\
-            writers.FortranWriter(self.give_pos('test')),
-            self.myfks_me)
-        self.assertFileContains('test', goal)
 
 
     def test_write_lh_order_B(self):
@@ -223,13 +106,510 @@ AlphaPower              0
 NJetSymmetrizeFinal     Yes
 
 # process
-2 21 -> 2 21 
+21 21 -> 6 -6 
 """
         process_exporter = export_fks_born.ProcessExporterFortranFKS_born()
         process_exporter.write_lh_order(\
             self.give_pos('test'),\
             self.myfks_me)
         self.assertFileContains('test', goal)
+
+
+    def test_write_real_me_wrapper_B(self):
+        """tests the correct writing of the real_me_chooser file, 
+        that chooses among the different real emissions"""
+
+        goal = \
+"""      SUBROUTINE SMATRIX(P, WGT)
+      IMPLICIT NONE
+      INCLUDE 'nexternal.inc'
+      DOUBLE PRECISION P(0:3, NEXTERNAL)
+      DOUBLE PRECISION WGT
+      INTEGER NFKSPROCESS
+      COMMON/C_NFKSPROCESS/NFKSPROCESS
+      IF (NFKSPROCESS.EQ.1) THEN
+        CALL SMATRIX_1(P, WGT)
+      ELSEIF (NFKSPROCESS.EQ.2) THEN
+        CALL SMATRIX_2(P, WGT)
+      ELSEIF (NFKSPROCESS.EQ.3) THEN
+        CALL SMATRIX_3(P, WGT)
+      ELSEIF (NFKSPROCESS.EQ.4) THEN
+        CALL SMATRIX_4(P, WGT)
+      ELSEIF (NFKSPROCESS.EQ.5) THEN
+        CALL SMATRIX_5(P, WGT)
+      ELSEIF (NFKSPROCESS.EQ.6) THEN
+        CALL SMATRIX_6(P, WGT)
+      ELSEIF (NFKSPROCESS.EQ.7) THEN
+        CALL SMATRIX_7(P, WGT)
+      ELSEIF (NFKSPROCESS.EQ.8) THEN
+        CALL SMATRIX_8(P, WGT)
+      ELSE
+        WRITE(*,*) 'ERROR: invalid n in real_matrix :', NFKSPROCESS
+        STOP
+      ENDIF
+
+      RETURN
+      END
+
+"""
+        process_exporter = export_fks_born.ProcessExporterFortranFKS_born()
+        process_exporter.write_real_me_wrapper(\
+            writers.FortranWriter(self.give_pos('test')),
+            self.myfks_me,
+            self.myfortranmodel)
+        self.assertFileContains('test', goal)
+
+
+    def test_write_pdf_wrapper_B(self):
+        """tests the correct writing of the parton_lum_chooser file, 
+        that chooses thepdfs for the different real emissions"""
+
+        goal = \
+"""      DOUBLE PRECISION FUNCTION DLUM()
+      IMPLICIT NONE
+      INTEGER NFKSPROCESS
+      COMMON/C_NFKSPROCESS/NFKSPROCESS
+      IF (NFKSPROCESS.EQ.1) THEN
+        CALL DLUM_1(DLUM)
+      ELSEIF (NFKSPROCESS.EQ.2) THEN
+        CALL DLUM_2(DLUM)
+      ELSEIF (NFKSPROCESS.EQ.3) THEN
+        CALL DLUM_3(DLUM)
+      ELSEIF (NFKSPROCESS.EQ.4) THEN
+        CALL DLUM_4(DLUM)
+      ELSEIF (NFKSPROCESS.EQ.5) THEN
+        CALL DLUM_5(DLUM)
+      ELSEIF (NFKSPROCESS.EQ.6) THEN
+        CALL DLUM_6(DLUM)
+      ELSEIF (NFKSPROCESS.EQ.7) THEN
+        CALL DLUM_7(DLUM)
+      ELSEIF (NFKSPROCESS.EQ.8) THEN
+        CALL DLUM_8(DLUM)
+      ELSE
+        WRITE(*,*) 'ERROR: invalid n in dlum :', NFKSPROCESS
+        STOP
+      ENDIF
+
+      RETURN
+      END
+
+"""
+        process_exporter = export_fks_born.ProcessExporterFortranFKS_born()
+        process_exporter.write_pdf_wrapper(\
+            writers.FortranWriter(self.give_pos('test')),
+            self.myfks_me,
+            self.myfortranmodel)
+        self.assertFileContains('test', goal)
+
+
+    def test_write_leshouche_info_file_B(self):
+        """tests the correct writing of fks_info.inc file, containing the 
+        relevant informations for all the splittings"""
+
+        goal = \
+"""      INTEGER MAXPROC_USED, MAXFLOW_USED
+      PARAMETER (MAXPROC_USED = 4)
+      PARAMETER (MAXFLOW_USED = 6)
+      INTEGER IDUP_D(8,5,MAXPROC_USED)
+      INTEGER MOTHUP_D(8,2,5,MAXPROC_USED)
+      INTEGER ICOLUP_D(8,2,5,MAXFLOW_USED)
+      INTEGER ILH
+
+      DATA (IDUP_D(1,ILH,1),ILH=1,5)/21,21,6,-6,21/
+      DATA (MOTHUP_D(1,1,ILH,  1),ILH=1, 5)/  0,  0,  1,  1,  1/
+      DATA (MOTHUP_D(1,2,ILH,  1),ILH=1, 5)/  0,  0,  2,  2,  2/
+      DATA (ICOLUP_D(1,1,ILH,  1),ILH=1, 5)/501,502,501,  0,504/
+      DATA (ICOLUP_D(1,2,ILH,  1),ILH=1, 5)/502,503,  0,504,503/
+      DATA (ICOLUP_D(1,1,ILH,  2),ILH=1, 5)/501,504,501,  0,504/
+      DATA (ICOLUP_D(1,2,ILH,  2),ILH=1, 5)/502,503,  0,503,502/
+      DATA (ICOLUP_D(1,1,ILH,  3),ILH=1, 5)/503,501,501,  0,504/
+      DATA (ICOLUP_D(1,2,ILH,  3),ILH=1, 5)/502,503,  0,504,502/
+      DATA (ICOLUP_D(1,1,ILH,  4),ILH=1, 5)/504,501,501,  0,504/
+      DATA (ICOLUP_D(1,2,ILH,  4),ILH=1, 5)/502,503,  0,502,503/
+      DATA (ICOLUP_D(1,1,ILH,  5),ILH=1, 5)/504,502,501,  0,504/
+      DATA (ICOLUP_D(1,2,ILH,  5),ILH=1, 5)/502,503,  0,503,501/
+      DATA (ICOLUP_D(1,1,ILH,  6),ILH=1, 5)/503,504,501,  0,504/
+      DATA (ICOLUP_D(1,2,ILH,  6),ILH=1, 5)/502,503,  0,502,501/
+
+      DATA (IDUP_D(2,ILH,1),ILH=1,5)/-1,21,6,-6,-1/
+      DATA (MOTHUP_D(2,1,ILH,  1),ILH=1, 5)/  0,  0,  1,  1,  1/
+      DATA (MOTHUP_D(2,2,ILH,  1),ILH=1, 5)/  0,  0,  2,  2,  2/
+      DATA (ICOLUP_D(2,1,ILH,  1),ILH=1, 5)/  0,502,502,  0,  0/
+      DATA (ICOLUP_D(2,2,ILH,  1),ILH=1, 5)/501,503,  0,501,503/
+      DATA (ICOLUP_D(2,1,ILH,  2),ILH=1, 5)/  0,502,502,  0,  0/
+      DATA (ICOLUP_D(2,2,ILH,  2),ILH=1, 5)/501,503,  0,503,501/
+      DATA (ICOLUP_D(2,1,ILH,  3),ILH=1, 5)/  0,501,502,  0,  0/
+      DATA (ICOLUP_D(2,2,ILH,  3),ILH=1, 5)/501,503,  0,503,502/
+      DATA (ICOLUP_D(2,1,ILH,  4),ILH=1, 5)/  0,501,502,  0,  0/
+      DATA (ICOLUP_D(2,2,ILH,  4),ILH=1, 5)/501,503,  0,502,503/
+      DATA (IDUP_D(2,ILH,2),ILH=1,5)/-3,21,6,-6,-3/
+      DATA (MOTHUP_D(2,1,ILH,  2),ILH=1, 5)/  0,  0,  1,  1,  1/
+      DATA (MOTHUP_D(2,2,ILH,  2),ILH=1, 5)/  0,  0,  2,  2,  2/
+      DATA (IDUP_D(2,ILH,3),ILH=1,5)/-2,21,6,-6,-2/
+      DATA (MOTHUP_D(2,1,ILH,  3),ILH=1, 5)/  0,  0,  1,  1,  1/
+      DATA (MOTHUP_D(2,2,ILH,  3),ILH=1, 5)/  0,  0,  2,  2,  2/
+      DATA (IDUP_D(2,ILH,4),ILH=1,5)/-4,21,6,-6,-4/
+      DATA (MOTHUP_D(2,1,ILH,  4),ILH=1, 5)/  0,  0,  1,  1,  1/
+      DATA (MOTHUP_D(2,2,ILH,  4),ILH=1, 5)/  0,  0,  2,  2,  2/
+
+      DATA (IDUP_D(3,ILH,1),ILH=1,5)/1,21,6,-6,1/
+      DATA (MOTHUP_D(3,1,ILH,  1),ILH=1, 5)/  0,  0,  1,  1,  1/
+      DATA (MOTHUP_D(3,2,ILH,  1),ILH=1, 5)/  0,  0,  2,  2,  2/
+      DATA (ICOLUP_D(3,1,ILH,  1),ILH=1, 5)/503,501,501,  0,502/
+      DATA (ICOLUP_D(3,2,ILH,  1),ILH=1, 5)/  0,503,  0,502,  0/
+      DATA (ICOLUP_D(3,1,ILH,  2),ILH=1, 5)/502,501,501,  0,502/
+      DATA (ICOLUP_D(3,2,ILH,  2),ILH=1, 5)/  0,503,  0,503,  0/
+      DATA (ICOLUP_D(3,1,ILH,  3),ILH=1, 5)/503,502,501,  0,502/
+      DATA (ICOLUP_D(3,2,ILH,  3),ILH=1, 5)/  0,503,  0,501,  0/
+      DATA (ICOLUP_D(3,1,ILH,  4),ILH=1, 5)/501,502,501,  0,502/
+      DATA (ICOLUP_D(3,2,ILH,  4),ILH=1, 5)/  0,503,  0,503,  0/
+      DATA (IDUP_D(3,ILH,2),ILH=1,5)/3,21,6,-6,3/
+      DATA (MOTHUP_D(3,1,ILH,  2),ILH=1, 5)/  0,  0,  1,  1,  1/
+      DATA (MOTHUP_D(3,2,ILH,  2),ILH=1, 5)/  0,  0,  2,  2,  2/
+      DATA (IDUP_D(3,ILH,3),ILH=1,5)/2,21,6,-6,2/
+      DATA (MOTHUP_D(3,1,ILH,  3),ILH=1, 5)/  0,  0,  1,  1,  1/
+      DATA (MOTHUP_D(3,2,ILH,  3),ILH=1, 5)/  0,  0,  2,  2,  2/
+      DATA (IDUP_D(3,ILH,4),ILH=1,5)/4,21,6,-6,4/
+      DATA (MOTHUP_D(3,1,ILH,  4),ILH=1, 5)/  0,  0,  1,  1,  1/
+      DATA (MOTHUP_D(3,2,ILH,  4),ILH=1, 5)/  0,  0,  2,  2,  2/
+
+      DATA (IDUP_D(4,ILH,1),ILH=1,5)/21,21,6,-6,21/
+      DATA (MOTHUP_D(4,1,ILH,  1),ILH=1, 5)/  0,  0,  1,  1,  1/
+      DATA (MOTHUP_D(4,2,ILH,  1),ILH=1, 5)/  0,  0,  2,  2,  2/
+      DATA (ICOLUP_D(4,1,ILH,  1),ILH=1, 5)/501,502,501,  0,504/
+      DATA (ICOLUP_D(4,2,ILH,  1),ILH=1, 5)/502,503,  0,504,503/
+      DATA (ICOLUP_D(4,1,ILH,  2),ILH=1, 5)/501,504,501,  0,504/
+      DATA (ICOLUP_D(4,2,ILH,  2),ILH=1, 5)/502,503,  0,503,502/
+      DATA (ICOLUP_D(4,1,ILH,  3),ILH=1, 5)/503,501,501,  0,504/
+      DATA (ICOLUP_D(4,2,ILH,  3),ILH=1, 5)/502,503,  0,504,502/
+      DATA (ICOLUP_D(4,1,ILH,  4),ILH=1, 5)/504,501,501,  0,504/
+      DATA (ICOLUP_D(4,2,ILH,  4),ILH=1, 5)/502,503,  0,502,503/
+      DATA (ICOLUP_D(4,1,ILH,  5),ILH=1, 5)/504,502,501,  0,504/
+      DATA (ICOLUP_D(4,2,ILH,  5),ILH=1, 5)/502,503,  0,503,501/
+      DATA (ICOLUP_D(4,1,ILH,  6),ILH=1, 5)/503,504,501,  0,504/
+      DATA (ICOLUP_D(4,2,ILH,  6),ILH=1, 5)/502,503,  0,502,501/
+
+      DATA (IDUP_D(5,ILH,1),ILH=1,5)/21,-1,6,-6,-1/
+      DATA (MOTHUP_D(5,1,ILH,  1),ILH=1, 5)/  0,  0,  1,  1,  1/
+      DATA (MOTHUP_D(5,2,ILH,  1),ILH=1, 5)/  0,  0,  2,  2,  2/
+      DATA (ICOLUP_D(5,1,ILH,  1),ILH=1, 5)/501,  0,502,  0,  0/
+      DATA (ICOLUP_D(5,2,ILH,  1),ILH=1, 5)/503,501,  0,503,502/
+      DATA (ICOLUP_D(5,1,ILH,  2),ILH=1, 5)/501,  0,502,  0,  0/
+      DATA (ICOLUP_D(5,2,ILH,  2),ILH=1, 5)/503,501,  0,502,503/
+      DATA (ICOLUP_D(5,1,ILH,  3),ILH=1, 5)/502,  0,502,  0,  0/
+      DATA (ICOLUP_D(5,2,ILH,  3),ILH=1, 5)/503,501,  0,503,501/
+      DATA (ICOLUP_D(5,1,ILH,  4),ILH=1, 5)/502,  0,502,  0,  0/
+      DATA (ICOLUP_D(5,2,ILH,  4),ILH=1, 5)/503,501,  0,501,503/
+      DATA (IDUP_D(5,ILH,2),ILH=1,5)/21,-3,6,-6,-3/
+      DATA (MOTHUP_D(5,1,ILH,  2),ILH=1, 5)/  0,  0,  1,  1,  1/
+      DATA (MOTHUP_D(5,2,ILH,  2),ILH=1, 5)/  0,  0,  2,  2,  2/
+      DATA (IDUP_D(5,ILH,3),ILH=1,5)/21,-2,6,-6,-2/
+      DATA (MOTHUP_D(5,1,ILH,  3),ILH=1, 5)/  0,  0,  1,  1,  1/
+      DATA (MOTHUP_D(5,2,ILH,  3),ILH=1, 5)/  0,  0,  2,  2,  2/
+      DATA (IDUP_D(5,ILH,4),ILH=1,5)/21,-4,6,-6,-4/
+      DATA (MOTHUP_D(5,1,ILH,  4),ILH=1, 5)/  0,  0,  1,  1,  1/
+      DATA (MOTHUP_D(5,2,ILH,  4),ILH=1, 5)/  0,  0,  2,  2,  2/
+
+      DATA (IDUP_D(6,ILH,1),ILH=1,5)/21,1,6,-6,1/
+      DATA (MOTHUP_D(6,1,ILH,  1),ILH=1, 5)/  0,  0,  1,  1,  1/
+      DATA (MOTHUP_D(6,2,ILH,  1),ILH=1, 5)/  0,  0,  2,  2,  2/
+      DATA (ICOLUP_D(6,1,ILH,  1),ILH=1, 5)/501,503,501,  0,502/
+      DATA (ICOLUP_D(6,2,ILH,  1),ILH=1, 5)/503,  0,  0,502,  0/
+      DATA (ICOLUP_D(6,1,ILH,  2),ILH=1, 5)/501,502,501,  0,502/
+      DATA (ICOLUP_D(6,2,ILH,  2),ILH=1, 5)/503,  0,  0,503,  0/
+      DATA (ICOLUP_D(6,1,ILH,  3),ILH=1, 5)/502,503,501,  0,502/
+      DATA (ICOLUP_D(6,2,ILH,  3),ILH=1, 5)/503,  0,  0,501,  0/
+      DATA (ICOLUP_D(6,1,ILH,  4),ILH=1, 5)/502,501,501,  0,502/
+      DATA (ICOLUP_D(6,2,ILH,  4),ILH=1, 5)/503,  0,  0,503,  0/
+      DATA (IDUP_D(6,ILH,2),ILH=1,5)/21,3,6,-6,3/
+      DATA (MOTHUP_D(6,1,ILH,  2),ILH=1, 5)/  0,  0,  1,  1,  1/
+      DATA (MOTHUP_D(6,2,ILH,  2),ILH=1, 5)/  0,  0,  2,  2,  2/
+      DATA (IDUP_D(6,ILH,3),ILH=1,5)/21,2,6,-6,2/
+      DATA (MOTHUP_D(6,1,ILH,  3),ILH=1, 5)/  0,  0,  1,  1,  1/
+      DATA (MOTHUP_D(6,2,ILH,  3),ILH=1, 5)/  0,  0,  2,  2,  2/
+      DATA (IDUP_D(6,ILH,4),ILH=1,5)/21,4,6,-6,4/
+      DATA (MOTHUP_D(6,1,ILH,  4),ILH=1, 5)/  0,  0,  1,  1,  1/
+      DATA (MOTHUP_D(6,2,ILH,  4),ILH=1, 5)/  0,  0,  2,  2,  2/
+
+      DATA (IDUP_D(7,ILH,1),ILH=1,5)/21,21,6,-6,21/
+      DATA (MOTHUP_D(7,1,ILH,  1),ILH=1, 5)/  0,  0,  1,  1,  1/
+      DATA (MOTHUP_D(7,2,ILH,  1),ILH=1, 5)/  0,  0,  2,  2,  2/
+      DATA (ICOLUP_D(7,1,ILH,  1),ILH=1, 5)/501,502,501,  0,504/
+      DATA (ICOLUP_D(7,2,ILH,  1),ILH=1, 5)/502,503,  0,504,503/
+      DATA (ICOLUP_D(7,1,ILH,  2),ILH=1, 5)/501,504,501,  0,504/
+      DATA (ICOLUP_D(7,2,ILH,  2),ILH=1, 5)/502,503,  0,503,502/
+      DATA (ICOLUP_D(7,1,ILH,  3),ILH=1, 5)/503,501,501,  0,504/
+      DATA (ICOLUP_D(7,2,ILH,  3),ILH=1, 5)/502,503,  0,504,502/
+      DATA (ICOLUP_D(7,1,ILH,  4),ILH=1, 5)/504,501,501,  0,504/
+      DATA (ICOLUP_D(7,2,ILH,  4),ILH=1, 5)/502,503,  0,502,503/
+      DATA (ICOLUP_D(7,1,ILH,  5),ILH=1, 5)/504,502,501,  0,504/
+      DATA (ICOLUP_D(7,2,ILH,  5),ILH=1, 5)/502,503,  0,503,501/
+      DATA (ICOLUP_D(7,1,ILH,  6),ILH=1, 5)/503,504,501,  0,504/
+      DATA (ICOLUP_D(7,2,ILH,  6),ILH=1, 5)/502,503,  0,502,501/
+
+      DATA (IDUP_D(8,ILH,1),ILH=1,5)/21,21,6,-6,21/
+      DATA (MOTHUP_D(8,1,ILH,  1),ILH=1, 5)/  0,  0,  1,  1,  1/
+      DATA (MOTHUP_D(8,2,ILH,  1),ILH=1, 5)/  0,  0,  2,  2,  2/
+      DATA (ICOLUP_D(8,1,ILH,  1),ILH=1, 5)/501,502,501,  0,504/
+      DATA (ICOLUP_D(8,2,ILH,  1),ILH=1, 5)/502,503,  0,504,503/
+      DATA (ICOLUP_D(8,1,ILH,  2),ILH=1, 5)/501,504,501,  0,504/
+      DATA (ICOLUP_D(8,2,ILH,  2),ILH=1, 5)/502,503,  0,503,502/
+      DATA (ICOLUP_D(8,1,ILH,  3),ILH=1, 5)/503,501,501,  0,504/
+      DATA (ICOLUP_D(8,2,ILH,  3),ILH=1, 5)/502,503,  0,504,502/
+      DATA (ICOLUP_D(8,1,ILH,  4),ILH=1, 5)/504,501,501,  0,504/
+      DATA (ICOLUP_D(8,2,ILH,  4),ILH=1, 5)/502,503,  0,502,503/
+      DATA (ICOLUP_D(8,1,ILH,  5),ILH=1, 5)/504,502,501,  0,504/
+      DATA (ICOLUP_D(8,2,ILH,  5),ILH=1, 5)/502,503,  0,503,501/
+      DATA (ICOLUP_D(8,1,ILH,  6),ILH=1, 5)/503,504,501,  0,504/
+      DATA (ICOLUP_D(8,2,ILH,  6),ILH=1, 5)/502,503,  0,502,501/
+
+"""
+        process_exporter = export_fks_born.ProcessExporterFortranFKS_born()
+        process_exporter.write_leshouche_info_file(\
+            writers.FortranWriter(self.give_pos('test')),
+            self.myfks_me,
+            self.myfortranmodel)
+        self.assertFileContains('test', goal)
+
+
+    def test_write_fks_info_file_B(self):
+        """tests the correct writing of fks_info.inc file, containing the 
+        relevant informations for all the splittings"""
+
+        goal = \
+"""      INTEGER FKS_CONFIGS, IPOS, JPOS
+      DATA FKS_CONFIGS / 8 /
+      INTEGER FKS_I_D(8), FKS_J_D(8)
+      INTEGER FKS_J_FROM_I_D(8, NEXTERNAL, 0:NEXTERNAL)
+      INTEGER PARTICLE_TYPE_D(8, NEXTERNAL), PDG_TYPE_D(8, NEXTERNAL)
+
+      DATA FKS_I_D / 5, 5, 5, 5, 5, 5, 5, 5 /
+      DATA FKS_J_D / 1, 1, 1, 2, 2, 2, 3, 4 /
+
+      DATA (FKS_J_FROM_I_D(1, 5, JPOS), JPOS = 0, 4)  / 4, 1, 2, 3, 4 /
+
+      DATA (FKS_J_FROM_I_D(2, 5, JPOS), JPOS = 0, 2)  / 2, 1, 2 /
+
+      DATA (FKS_J_FROM_I_D(3, 5, JPOS), JPOS = 0, 2)  / 2, 1, 2 /
+
+      DATA (FKS_J_FROM_I_D(4, 5, JPOS), JPOS = 0, 4)  / 4, 1, 2, 3, 4 /
+
+      DATA (FKS_J_FROM_I_D(5, 5, JPOS), JPOS = 0, 2)  / 2, 1, 2 /
+
+      DATA (FKS_J_FROM_I_D(6, 5, JPOS), JPOS = 0, 2)  / 2, 1, 2 /
+
+      DATA (FKS_J_FROM_I_D(7, 5, JPOS), JPOS = 0, 4)  / 4, 1, 2, 3, 4 /
+
+      DATA (FKS_J_FROM_I_D(8, 5, JPOS), JPOS = 0, 4)  / 4, 1, 2, 3, 4 /
+
+
+C     
+C     Particle type:
+C     octet = 8, triplet = 3, singlet = 1
+      DATA (PARTICLE_TYPE_D(1, IPOS), IPOS=1, NEXTERNAL) / 8, 8, 3, 
+     $ -3, 8 /
+      DATA (PARTICLE_TYPE_D(2, IPOS), IPOS=1, NEXTERNAL) / -3, 8, 3, 
+     $ -3, -3 /
+      DATA (PARTICLE_TYPE_D(3, IPOS), IPOS=1, NEXTERNAL) / 3, 8, 3, 
+     $ -3, 3 /
+      DATA (PARTICLE_TYPE_D(4, IPOS), IPOS=1, NEXTERNAL) / 8, 8, 3, 
+     $ -3, 8 /
+      DATA (PARTICLE_TYPE_D(5, IPOS), IPOS=1, NEXTERNAL) / 8, -3, 3, 
+     $ -3, -3 /
+      DATA (PARTICLE_TYPE_D(6, IPOS), IPOS=1, NEXTERNAL) / 8, 3, 3, 
+     $ -3, 3 /
+      DATA (PARTICLE_TYPE_D(7, IPOS), IPOS=1, NEXTERNAL) / 8, 8, 3, 
+     $ -3, 8 /
+      DATA (PARTICLE_TYPE_D(8, IPOS), IPOS=1, NEXTERNAL) / 8, 8, 3, 
+     $ -3, 8 /
+
+C     
+C     Particle type according to PDG:
+C     
+      DATA (PDG_TYPE_D(1, IPOS), IPOS=1, NEXTERNAL) / 21, 21, 6, 
+     $ -6, 21 /
+      DATA (PDG_TYPE_D(2, IPOS), IPOS=1, NEXTERNAL) / -1, 21, 6, -6, 
+     $ -1 /
+      DATA (PDG_TYPE_D(3, IPOS), IPOS=1, NEXTERNAL) / 1, 21, 6, -6, 1 /
+      DATA (PDG_TYPE_D(4, IPOS), IPOS=1, NEXTERNAL) / 21, 21, 6, 
+     $ -6, 21 /
+      DATA (PDG_TYPE_D(5, IPOS), IPOS=1, NEXTERNAL) / 21, -1, 6, -6, 
+     $ -1 /
+      DATA (PDG_TYPE_D(6, IPOS), IPOS=1, NEXTERNAL) / 21, 1, 6, -6, 1 /
+      DATA (PDG_TYPE_D(7, IPOS), IPOS=1, NEXTERNAL) / 21, 21, 6, 
+     $ -6, 21 /
+      DATA (PDG_TYPE_D(8, IPOS), IPOS=1, NEXTERNAL) / 21, 21, 6, 
+     $ -6, 21 /
+
+
+"""
+        process_exporter = export_fks_born.ProcessExporterFortranFKS_born()
+        process_exporter.write_fks_info_file(\
+            writers.FortranWriter(self.give_pos('test')),
+            self.myfks_me,
+            self.myfortranmodel)
+        self.assertFileContains('test', goal)
+
+
+    def test_write_sborn_sf_B(self):
+        """Tests the correct writing of the sborn_sf file, containing the calls 
+        to the different color linked borns."""
+        
+        goal = \
+"""      SUBROUTINE SBORN_SF(P_BORN,M,N,WGT)
+      IMPLICIT NONE
+      INCLUDE 'nexternal.inc'
+      DOUBLE PRECISION P_BORN(0:3,NEXTERNAL-1),WGT
+      DOUBLE COMPLEX WGT1(2)
+      INTEGER M,N
+
+C     b_sf_001 links partons 1 and 2 
+      IF (M.EQ.1 .AND. N.EQ.2) THEN
+        CALL SB_SF_001(P_BORN,WGT)
+
+C       b_sf_002 links partons 1 and 3 
+      ELSEIF (M.EQ.1 .AND. N.EQ.3) THEN
+        CALL SB_SF_002(P_BORN,WGT)
+
+C       b_sf_003 links partons 1 and 4 
+      ELSEIF (M.EQ.1 .AND. N.EQ.4) THEN
+        CALL SB_SF_003(P_BORN,WGT)
+
+C       b_sf_004 links partons 2 and 1 
+      ELSEIF (M.EQ.2 .AND. N.EQ.1) THEN
+        CALL SB_SF_004(P_BORN,WGT)
+
+C       b_sf_005 links partons 2 and 3 
+      ELSEIF (M.EQ.2 .AND. N.EQ.3) THEN
+        CALL SB_SF_005(P_BORN,WGT)
+
+C       b_sf_006 links partons 2 and 4 
+      ELSEIF (M.EQ.2 .AND. N.EQ.4) THEN
+        CALL SB_SF_006(P_BORN,WGT)
+
+C       b_sf_007 links partons 3 and 1 
+      ELSEIF (M.EQ.3 .AND. N.EQ.1) THEN
+        CALL SB_SF_007(P_BORN,WGT)
+
+C       b_sf_008 links partons 3 and 2 
+      ELSEIF (M.EQ.3 .AND. N.EQ.2) THEN
+        CALL SB_SF_008(P_BORN,WGT)
+
+C       b_sf_009 links partons 3 and 3 
+      ELSEIF (M.EQ.3 .AND. N.EQ.3) THEN
+        CALL SB_SF_009(P_BORN,WGT)
+
+C       b_sf_010 links partons 3 and 4 
+      ELSEIF (M.EQ.3 .AND. N.EQ.4) THEN
+        CALL SB_SF_010(P_BORN,WGT)
+
+C       b_sf_011 links partons 4 and 1 
+      ELSEIF (M.EQ.4 .AND. N.EQ.1) THEN
+        CALL SB_SF_011(P_BORN,WGT)
+
+C       b_sf_012 links partons 4 and 2 
+      ELSEIF (M.EQ.4 .AND. N.EQ.2) THEN
+        CALL SB_SF_012(P_BORN,WGT)
+
+C       b_sf_013 links partons 4 and 3 
+      ELSEIF (M.EQ.4 .AND. N.EQ.3) THEN
+        CALL SB_SF_013(P_BORN,WGT)
+
+C       b_sf_014 links partons 4 and 4 
+      ELSEIF (M.EQ.4 .AND. N.EQ.4) THEN
+        CALL SB_SF_014(P_BORN,WGT)
+
+      ELSE
+        WGT = 0D0
+      ENDIF
+
+      RETURN
+      END
+"""
+        process_exporter = export_fks_born.ProcessExporterFortranFKS_born()
+
+        process_exporter.write_sborn_sf(\
+            writers.FortranWriter(self.give_pos('test')),
+            self.myfks_me.color_links,
+            self.myfortranmodel)
+
+        #print open(self.give_pos('test')).read()
+        self.assertFileContains('test', goal)
+
+
+    def test_write_leshouche_file_B(self):
+        """tests if the leshouche.inc file is correctly written for the born process
+        """
+        goal = \
+"""      DATA (IDUP(I,1),I=1,4)/21,21,6,-6/
+      DATA (MOTHUP(1,I,  1),I=1, 4)/  0,  0,  1,  1/
+      DATA (MOTHUP(2,I,  1),I=1, 4)/  0,  0,  2,  2/
+      DATA (ICOLUP(1,I,  1),I=1, 4)/501,502,501,  0/
+      DATA (ICOLUP(2,I,  1),I=1, 4)/502,503,  0,503/
+      DATA (ICOLUP(1,I,  2),I=1, 4)/503,501,501,  0/
+      DATA (ICOLUP(2,I,  2),I=1, 4)/502,503,  0,502/
+"""    
+        process_exporter = export_fks_born.ProcessExporterFortranFKS_born()
+
+        nflows = \
+            process_exporter.write_leshouche_file(
+                    writers.FortranWriter(self.give_pos('test')),
+                    self.myfks_me.born_matrix_element,
+                    self.myfortranmodel)  
+
+        self.assertFileContains('test', goal) 
+
+
+    def test_write_nexternal_file_B(self):
+        """tests if the nexternal.inc file is correctly written.
+        The real process used is uux_uxug (real_processes[5])
+        """
+        goal = \
+"""      INTEGER    NEXTERNAL
+      PARAMETER (NEXTERNAL=5)
+      INTEGER    NINCOMING
+      PARAMETER (NINCOMING=2)
+"""
+        process_exporter = export_fks_born.ProcessExporterFortranFKS_born()
+        
+        process_exporter.write_nexternal_file(
+                    writers.FortranWriter(self.give_pos('test')),
+                    5, 2)        
+
+        self.assertFileContains('test', goal)  
+
+
+    def test_write_pmass_file_B(self):
+        """tests if the pmass.inc file is correctly written.
+        The function called is the one of the FortranProcessExporterV4 class.
+        """
+        goal = \
+"""      PMASS(1)=ZERO
+      PMASS(2)=ZERO
+      PMASS(3)=ABS(MT)
+      PMASS(4)=ABS(MT)
+      PMASS(5)=ZERO
+"""
+        process_exporter = export_fks_born.ProcessExporterFortranFKS_born()
+        
+        process_exporter.write_pmass_file(
+                    writers.FortranWriter(self.give_pos('test')),
+                    self.myfks_me.real_processes[0].matrix_element)        
+
+        self.assertFileContains('test', goal) 
+
+
+    def test_get_fks_j_from_i_lines_B(self):
+        """Test that the lines corresponding to the fks_j_from_i array, to be 
+        written in fks.inc. 
+        """
+        lines = ['DATA (FKS_J_FROM_I_D(2, 5, JPOS), JPOS = 0, 2)  / 2, 1, 2 /','']
+
+        process_exporter = export_fks_born.ProcessExporterFortranFKS_born()
+        self.assertEqual(lines, process_exporter.get_fks_j_from_i_lines(self.myfks_me.real_processes[1], 2))
+###############GOOD ABOVE
+
+
 
 
     def test_get_pdf_lines_mir_false_B(self):
@@ -309,82 +689,6 @@ C     this subdir has no soft singularities
         #print open(self.give_pos('test')).read()
         self.assertFileContains('test', goal)
 
-    def test_write_sborn_sf_B(self):
-        """Tests the correct writing of the sborn_sf file, containing the calls 
-        to the different color linked borns."""
-        
-        goal = \
-"""      SUBROUTINE SBORN_SF(P_BORN,M,N,WGT)
-      IMPLICIT NONE
-      INCLUDE 'nexternal.inc'
-      DOUBLE PRECISION P_BORN(0:3,NEXTERNAL-1),WGT
-      DOUBLE COMPLEX WGT1(2)
-      INTEGER M,N
-
-C     b_sf_001 links partons 1 and 2 
-      IF (M.EQ.1 .AND. N.EQ.2) THEN
-        CALL SB_SF_001(P_BORN,WGT)
-
-C       b_sf_002 links partons 1 and 3 
-      ELSEIF (M.EQ.1 .AND. N.EQ.3) THEN
-        CALL SB_SF_002(P_BORN,WGT)
-
-C       b_sf_003 links partons 1 and 4 
-      ELSEIF (M.EQ.1 .AND. N.EQ.4) THEN
-        CALL SB_SF_003(P_BORN,WGT)
-
-C       b_sf_004 links partons 2 and 1 
-      ELSEIF (M.EQ.2 .AND. N.EQ.1) THEN
-        CALL SB_SF_004(P_BORN,WGT)
-
-C       b_sf_005 links partons 2 and 3 
-      ELSEIF (M.EQ.2 .AND. N.EQ.3) THEN
-        CALL SB_SF_005(P_BORN,WGT)
-
-C       b_sf_006 links partons 2 and 4 
-      ELSEIF (M.EQ.2 .AND. N.EQ.4) THEN
-        CALL SB_SF_006(P_BORN,WGT)
-
-C       b_sf_007 links partons 3 and 1 
-      ELSEIF (M.EQ.3 .AND. N.EQ.1) THEN
-        CALL SB_SF_007(P_BORN,WGT)
-
-C       b_sf_008 links partons 3 and 2 
-      ELSEIF (M.EQ.3 .AND. N.EQ.2) THEN
-        CALL SB_SF_008(P_BORN,WGT)
-
-C       b_sf_009 links partons 3 and 4 
-      ELSEIF (M.EQ.3 .AND. N.EQ.4) THEN
-        CALL SB_SF_009(P_BORN,WGT)
-
-C       b_sf_010 links partons 4 and 1 
-      ELSEIF (M.EQ.4 .AND. N.EQ.1) THEN
-        CALL SB_SF_010(P_BORN,WGT)
-
-C       b_sf_011 links partons 4 and 2 
-      ELSEIF (M.EQ.4 .AND. N.EQ.2) THEN
-        CALL SB_SF_011(P_BORN,WGT)
-
-C       b_sf_012 links partons 4 and 3 
-      ELSEIF (M.EQ.4 .AND. N.EQ.3) THEN
-        CALL SB_SF_012(P_BORN,WGT)
-
-      ELSE
-        WGT = 0D0
-      ENDIF
-
-      RETURN
-      END
-"""
-        process_exporter = export_fks_born.ProcessExporterFortranFKS_born()
-
-        process_exporter.write_sborn_sf(\
-            writers.FortranWriter(self.give_pos('test')),
-            self.myfks_me.color_links,
-            self.myfortranmodel)
-
-        #print open(self.give_pos('test')).read()
-        self.assertFileContains('test', goal)
 
 
     def test_write_matrix_element_fks_B(self):
@@ -1673,33 +1977,6 @@ C
 
         self.assertFileContains('test', goal) 
 
-    def test_write_leshouche_file_B(self):
-        """tests if the leshouche.inc file is correctly written.
-        The real process used is uux_uxug (real_processes[5])
-        """
-        goal = \
-"""      DATA (IDUP(I,1),I=1,5)/2,-2,-2,2,21/
-      DATA (MOTHUP(1,I,  1),I=1, 5)/  0,  0,  1,  1,  1/
-      DATA (MOTHUP(2,I,  1),I=1, 5)/  0,  0,  2,  2,  2/
-      DATA (ICOLUP(1,I,  1),I=1, 5)/501,  0,  0,502,503/
-      DATA (ICOLUP(2,I,  1),I=1, 5)/  0,501,503,  0,502/
-      DATA (ICOLUP(1,I,  2),I=1, 5)/503,  0,  0,502,503/
-      DATA (ICOLUP(2,I,  2),I=1, 5)/  0,501,501,  0,502/
-      DATA (ICOLUP(1,I,  3),I=1, 5)/502,  0,  0,502,503/
-      DATA (ICOLUP(2,I,  3),I=1, 5)/  0,501,503,  0,501/
-      DATA (ICOLUP(1,I,  4),I=1, 5)/503,  0,  0,502,503/
-      DATA (ICOLUP(2,I,  4),I=1, 5)/  0,501,502,  0,501/
-"""    
-        process_exporter = export_fks_born.ProcessExporterFortranFKS_born()
-
-        nflows = \
-            process_exporter.write_leshouche_file(
-                    writers.FortranWriter(self.give_pos('test')),
-                    self.myfks_me.real_processes[5].matrix_element,
-                    self.myfortranmodel)  
-
-        self.assertFileContains('test', goal) 
-
 
     def test_write_born_nhel_file_B(self):
         """tests if the born_nhel.inc file is correctly written"""
@@ -1771,23 +2048,6 @@ C
         self.assertFileContains('test', goal) 
 
     
-    def test_write_nexternal_file_B(self):
-        """tests if the nexternal.inc file is correctly written.
-        The real process used is uux_uxug (real_processes[5])
-        """
-        goal = \
-"""      INTEGER    NEXTERNAL
-      PARAMETER (NEXTERNAL=5)
-      INTEGER    NINCOMING
-      PARAMETER (NINCOMING=2)
-"""
-        process_exporter = export_fks_born.ProcessExporterFortranFKS_born()
-        
-        process_exporter.write_nexternal_file(
-                    writers.FortranWriter(self.give_pos('test')),
-                    5, 2)        
-
-        self.assertFileContains('test', goal)  
 
 
     def test_write_ngraphs_file_B(self):
@@ -1813,27 +2073,6 @@ C
                     nconfigs)        
 
         self.assertFileContains('test', goal)    
-
-
-    def test_write_pmass_file_B(self):
-        """tests if the pmass.inc file is correctly written.
-        The function called is the one of the FortranProcessExporterV4 class.
-        The real process used is uux_uxug (real_processes[5]).
-        """
-        goal = \
-"""      PMASS(1)=ZERO
-      PMASS(2)=ZERO
-      PMASS(3)=ZERO
-      PMASS(4)=ZERO
-      PMASS(5)=ZERO
-"""
-        process_exporter = export_fks_born.ProcessExporterFortranFKS_born()
-        
-        process_exporter.write_pmass_file(
-                    writers.FortranWriter(self.give_pos('test')),
-                    self.myfks_me.real_processes[5].matrix_element)        
-
-        self.assertFileContains('test', goal) 
         
 
     def test_write_configs_file_noinv_B(self):

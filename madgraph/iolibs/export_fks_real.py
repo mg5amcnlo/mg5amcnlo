@@ -126,9 +126,9 @@ class ProcessExporterFortranFKS_real(loop_exporters.LoopProcessExporterFortranSA
         os.chdir(cwd)
             
     #===============================================================================
-    # generate_subprocess_directory_fks
+    # generate_directories_fks
     #===============================================================================
-    def generate_born_directories_fks(self, matrix_element,
+    def generate_directories_fks(self, matrix_element,
                                                   fortran_model,
                                                   me_number,
                                                   path=os.getcwd()):

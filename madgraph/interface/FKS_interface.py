@@ -278,7 +278,7 @@ class FKSInterface(CheckFKS, CompleteFKS, HelpFKS, mg_interface.MadGraphCmd):
                 enumerate(self._curr_matrix_elements.get_matrix_elements()):
                 #me is a FKSHelasProcessFromReals
                 calls = calls + \
-                        self._curr_exporter.generate_born_directories_fks(\
+                        self._curr_exporter.generate_directories_fks(\
                             me, self._curr_fortran_model, ime, path)
                 self._fks_directories.extend(self._curr_exporter.fksdirs)
             card_path = os.path.join(path, os.path.pardir, 'SubProcesses', \
@@ -301,7 +301,7 @@ class FKSInterface(CheckFKS, CompleteFKS, HelpFKS, mg_interface.MadGraphCmd):
                 enumerate(self._curr_matrix_elements.get('matrix_elements')):
                 #me is a FKSHelasProcessFromReals
                 calls = calls + \
-                        self._curr_exporter.generate_real_directories_fks(\
+                        self._curr_exporter.generate_directories_fks(\
                             me, self._curr_fortran_model, ime, path)
                 self._fks_directories.extend(self._curr_exporter.fksdirs)
             card_path = os.path.join(path, os.path.pardir, 'SubProcesses', \

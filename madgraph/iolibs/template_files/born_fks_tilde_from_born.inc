@@ -93,13 +93,11 @@ C ----------
       iden(1)=iden_values(nfksprocess)
       glu_ij = ij_values(nfksprocess)
       NTRY=NTRY+1
-      if (ntry.lt.2) then
-         skip=1
-         do while(nhel(glu_ij ,skip).ne.1)
-            skip=skip+1
-         enddo
-         skip=skip-1
-      endif
+      skip=1
+      do while(nhel(glu_ij ,skip).ne.1)
+      skip=skip+1
+      enddo
+      skip=skip-1
       DO IPROC=1,NCROSS
       DO IHEL=1,NEXTERNAL-1
          JC(IHEL) = +1
@@ -136,10 +134,10 @@ C          write (*,*) "momenta not the same in Born"
       ANS(IPROC) = 0D0
       ANS(IPROC+1) = 0D0
       write(hel_buff(1),'(16i5)') (0,i=1,nexternal-1)
-      IF (ISUM_HEL .EQ. 0 .OR. NTRY .LT. 2) THEN
+      IF (ISUM_HEL .EQ. 0 .OR. NTRY .LT. 100) THEN
              hel_fac=1d0
           DO IHEL=1,NCOMB
-             IF ((GOODHEL(IHEL,IPROC) .OR. NTRY .LT. 2).and.nhel(glu_ij ,ihel).eq.-1) THEN
+             IF ((GOODHEL(IHEL,IPROC) .OR. NTRY .LT. 100).and.nhel(glu_ij ,ihel).eq.-1) THEN
                  T=BORN(P1,NHEL(1,IHEL),IHEL,JC(1),T1)            
                DO JJ=1,nincoming
                  IF(POL(JJ).NE.1d0.AND.NHEL(JJ,IHEL).EQ.INT(SIGN(1d0,POL(JJ)))) THEN

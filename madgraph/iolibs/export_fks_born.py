@@ -57,6 +57,8 @@ class ProcessExporterFortranFKS_born(loop_exporters.LoopProcessExporterFortranSA
         self.loop_dir = loop_dir
         self.cuttools_dir = cts_dir
 
+
+
 #===============================================================================
 # copy the Template in a new directory.
 #===============================================================================
@@ -101,7 +103,6 @@ class ProcessExporterFortranFKS_born(loop_exporters.LoopProcessExporterFortranSA
                 except Exception, why:
                     raise MadGraph5Error('Failed to clean correctly %s: \n %s' \
                                                 % (os.path.basename(dir_path),why))
-            
             #Write version info
             MG_version = misc.get_pkg_info()
             open(os.path.join(dir_path, 'SubProcesses', 'MGVersion.txt'), 'w').write(
@@ -124,6 +125,7 @@ class ProcessExporterFortranFKS_born(loop_exporters.LoopProcessExporterFortranSA
 
         # Return to original PWD
         os.chdir(cwd)
+
             
     #===============================================================================
     # write a procdef_mg5 (an equivalent of the MG4 proc_card.dat)
@@ -137,7 +139,6 @@ class ProcessExporterFortranFKS_born(loop_exporters.LoopProcessExporterFortranSA
         process_text = ''
         coupling = ''
         new_process_content = []
-        
         
         # First find the coupling and suppress the coupling from process_str
         #But first ensure that coupling are define whithout spaces:
@@ -166,66 +167,11 @@ class ProcessExporterFortranFKS_born(loop_exporters.LoopProcessExporterFortranSA
         ff.close()
         
         
-##    #===============================================================================
-##    # write fks.inc file in SubProcesses, to be copied in the various FKS dirs    
-##    #===============================================================================
-##    def fks_inc_content(self,fks_proc):
-##        """composes the content of the fks_inc file"""
-##        
-##        replace_dict = {'fksconfigs': fks_proc.ndirs}
-##        
-##        file = "\
-##          integer fks_configs, ipos, jpos \n \
-##          data fks_configs /  %(fksconfigs)d  / \n \
-##          integer fks_i( %(fksconfigs)d ), fks_j( %(fksconfigs)d ) \n\
-##    \n \
-##          integer fks_ipos(0:nexternal) \n\
-##          integer fks_j_from_i(nexternal, 0:nexternal) \n\
-##          integer particle_type(nexternal), PDG_type(nexternal) \n\
-##          """ % replace_dict +\
-##          fks_proc.fks_config_string
-##    
-##        file += "\n \n \
-##          data (fks_ipos(ipos),ipos=0,  %d  ) " % len(fks_proc.fks_ipos)
-##        file +="\
-##      / %d,  " % len(fks_proc.fks_ipos) + \
-##         ', '.join([ "%d" % pdg for pdg in fks_proc.fks_ipos]) + " / "
-##        
-##        file += "\n\n"
-##        
-##        for i in fks_proc.fks_j_from_i.keys():
-##            file += " data (fks_j_from_i( %d, jpos), jpos=0, %d) " %\
-##          (i, len(fks_proc.fks_j_from_i[i]) )
-##            file +="\
-##      / %d,  " % len(fks_proc.fks_j_from_i[i]) + \
-##         ', '.join([ "%d" % ii for ii in fks_proc.fks_j_from_i[i]]) + " / \n"
-##          
-##        file += "\n\
-##C \n\
-##C  Particle type: \n\
-##C   octet = 8, triplet = 3, singlet = 1 \n\
-##          data (particle_type(ipos), ipos=1, nexternal) \
-##      / " + ', '.join([ "%d" % col for col in fks_proc.colors]) + " / "
-##    
-##        file += "\n \n\
-##C \n\/
-##C  Particle type according to PDG: \n\
-##C   \n\
-##          data (PDG_type(ipos), ipos=1, nexternal) \
-##      / " + ', '.join([ "%d" % pdg for pdg in fks_proc.pdg_codes]) + " / "
-##    
-##        return file
-    
-        
-        
-        
     #===============================================================================
-    # generate_subprocess_directory_fks
+    # generate_directories_fks
     #===============================================================================
-    def generate_real_directories_fks(self, matrix_element,
-                                                  fortran_model,
-                                                  me_number,
-                                                  path=os.getcwd()):
+    def generate_directories_fks(self, matrix_element, fortran_model, me_number,
+                                 path=os.getcwd()):
         """Generate the Pxxxxx_i directories for a subprocess in MadFKS,
         including the necessary matrix.f and various helper files"""
         proc = matrix_element.born_matrix_element['processes'][0]
@@ -242,14 +188,13 @@ class ProcessExporterFortranFKS_born(loop_exporters.LoopProcessExporterFortranSA
         
         calls = 0
         
-##    #write fks.inc in SubProcesses, it willbe copied later in the subdirs
-##        fks_inc = self.fks_inc_content(this_fks_process)
         self.fksdirs = []
         #first make and cd the direcrory corresponding to the born process:
         borndir = "P%s" % \
         (matrix_element.get('processes')[0].shell_string())
         os.mkdir(borndir)
         os.chdir(borndir)
+        logger.info('Writing files in %s' % borndir)
 
 ## write the files corresponding to the born process in the P* directory
         self.generate_born_fks_files(matrix_element,
@@ -277,8 +222,8 @@ class ProcessExporterFortranFKS_born(loop_exporters.LoopProcessExporterFortranSA
 
         filename = 'leshouche_info.inc'
         self.write_leshouche_info_file(writers.FortranWriter(filename), 
-                                 matrix_element)
-
+                                 matrix_element,
+                                 fortran_model)
 
 #write the wrappers
         filename = 'real_me_chooser.f'
@@ -300,8 +245,6 @@ class ProcessExporterFortranFKS_born(loop_exporters.LoopProcessExporterFortranSA
         filename = 'pmass.inc'
         self.write_pmass_file(writers.FortranWriter(filename),
                              matrix_element.real_processes[0].matrix_element)
-
-
 
         linkfiles = ['LesHouchesDummy.f',
                      'LesHouches.f',
@@ -372,7 +315,8 @@ class ProcessExporterFortranFKS_born(loop_exporters.LoopProcessExporterFortranSA
         os.chdir(cwd)
         return calls
 
-    def write_leshouche_info_file(self, writer, matrix_element):
+
+    def write_leshouche_info_file(self, writer, matrix_element, fortran_model):
         """writes the leshouche_info.inc file which contains the LHA informations
         for all the real emission processes"""
         lines = []
@@ -398,26 +342,6 @@ class ProcessExporterFortranFKS_born(loop_exporters.LoopProcessExporterFortranSA
                       'parameter (maxflow_used = %d)' % maxflow ]
 
         writer.writelines(firstlines + lines)
-
-
-
-
-    def write_real_matrix_elements(self, matrix_element, fortran_model):
-        """writes the matrix_i.f files which contain the real matrix elements""" 
-
-        for n, fksreal in enumerate(matrix_element.real_processes):
-            filename = 'matrix_%d.f' % (n + 1)
-            self.write_matrix_element_fks(writers.FortranWriter(filename),
-                                            fksreal.matrix_element, n + 1, 
-                                            fortran_model)
-
-    def write_pdf_calls(self, matrix_element, fortran_model):
-        """writes the matrix_i.f files which contain the real matrix elements""" 
-        for n, fksreal in enumerate(matrix_element.real_processes):
-            filename = 'parton_lum_%d.f' % (n + 1)
-            self.write_pdf_file(writers.FortranWriter(filename),
-                                            fksreal.matrix_element, n + 1, 
-                                            fortran_model)
 
 
     def write_pdf_wrapper(self, writer, matrix_element, fortran_model):
@@ -479,6 +403,23 @@ end
         return 0
 
 
+    def write_real_matrix_elements(self, matrix_element, fortran_model):
+        """writes the matrix_i.f files which contain the real matrix elements""" 
+
+        for n, fksreal in enumerate(matrix_element.real_processes):
+            filename = 'matrix_%d.f' % (n + 1)
+            self.write_matrix_element_fks(writers.FortranWriter(filename),
+                                            fksreal.matrix_element, n + 1, 
+                                            fortran_model)
+
+    def write_pdf_calls(self, matrix_element, fortran_model):
+        """writes the matrix_i.f files which contain the real matrix elements""" 
+        for n, fksreal in enumerate(matrix_element.real_processes):
+            filename = 'parton_lum_%d.f' % (n + 1)
+            self.write_pdf_file(writers.FortranWriter(filename),
+                                            fksreal.matrix_element, n + 1, 
+                                            fortran_model)
+
 
     def generate_born_fks_files(self, matrix_element, fortran_model, me_number, path):
         """generates the files needed for the born applitude in the P* directory, which will
@@ -491,25 +432,22 @@ end
                              matrix_element,
                              fortran_model)
 
-        file_dict= {True : '_inverse.inc', False :'.inc'}
-        for invert in [True, False]:
 
-            filename = 'born_conf' + file_dict[invert]
-            nconfigs, s_and_t_channels = self.write_configs_file(\
-                writers.FortranWriter(filename),
-                matrix_element.born_matrix_element, 
-                invert,
-                fortran_model)
+        filename = 'born_conf.inc'
+        nconfigs, s_and_t_channels = self.write_configs_file(\
+            writers.FortranWriter(filename),
+            matrix_element.born_matrix_element, 
+            fortran_model)
 
-            filename = 'born_props' + file_dict[invert]
-            self.write_props_file(writers.FortranWriter(filename),
-                             matrix_element.born_matrix_element,
-                             fortran_model,
-                                s_and_t_channels)
-        
-            filename = 'born_decayBW' + file_dict[invert]
-            self.write_decayBW_file(writers.FortranWriter(filename),
-                                s_and_t_channels)
+        filename = 'born_props.inc'
+        self.write_props_file(writers.FortranWriter(filename),
+                         matrix_element.born_matrix_element,
+                         fortran_model,
+                            s_and_t_channels)
+    
+        filename = 'born_decayBW.inc'
+        self.write_decayBW_file(writers.FortranWriter(filename),
+                            s_and_t_channels)
     
         filename = 'born_leshouche.inc'
         nflows = self.write_leshouche_file(writers.FortranWriter(filename),
@@ -525,13 +463,11 @@ end
         filename = 'born_ngraphs.inc'
         self.write_ngraphs_file(writers.FortranWriter(filename),
                             nconfigs)
-    
 
         filename = 'coloramps.inc'
         self.write_coloramps_file(writers.FortranWriter(filename),
                              matrix_element.born_matrix_element,
                              fortran_model)
-    
         
         #write the sborn_sf.f and the b_sf_files
         filename = ['sborn_sf.f', 'sborn_sf_dum.f']
@@ -619,7 +555,6 @@ end
         logger.info("Generating born Feynman diagrams for " + \
                      matrix_element.get('processes')[0].nice_string())
         plot.draw()
-
 
         linkfiles = ['coupl.inc', 'cts_mprec.h', 'cts_mpc.h']
 
@@ -771,6 +706,7 @@ NJetSymmetrizeFinal     %(symfin)s\n\
     
         return len(filter(lambda call: call.find('#') != 0, helas_calls)), ncolor
 
+
     #===============================================================================
     # write_born_sf_fks
     #===============================================================================
@@ -829,6 +765,7 @@ c     this subdir has no soft singularities
         # Write the end of the file
        
         writer.writelines(file)
+
     
     #===============================================================================
     # write_b_sf_fks
@@ -864,7 +801,6 @@ c     this subdir has no soft singularities
         process_lines = self.get_process_info_lines(matrix_element)
         replace_dict['process_lines'] = process_lines + \
             "\nc spectators: %d %d \n" % tuple(link['link'])
-        
     
         # Extract ncomb
         ncomb = matrix_element.get_helicity_combinations()
@@ -881,7 +817,6 @@ c     this subdir has no soft singularities
         # Extract den_factor_lines
         den_factor_lines = self.get_den_factor_lines(fksborn)
         replace_dict['den_factor_lines'] = '\n'.join(den_factor_lines)
-    
     
         # Extract ngraphs
         ngraphs = matrix_element.get_number_of_amplitudes()
@@ -902,7 +837,6 @@ c     this subdir has no soft singularities
                                 link['link_matrix'])
         replace_dict['color_data_lines'] = "\n".join(color_data_lines)
     
-    
         # Extract amp2 lines
         amp2_lines = self.get_amp2_lines(matrix_element)
         replace_dict['amp2_lines'] = '\n'.join(amp2_lines)
@@ -915,7 +849,6 @@ c     this subdir has no soft singularities
             new_jamp_lines.append(line)
         replace_dict['jamp1_lines'] = '\n'.join(new_jamp_lines)
     
-        
         matrix_element.set('color_basis', link['link_basis'] )
         jamp_lines = self.get_JAMP_lines(matrix_element)
         new_jamp_lines = []
@@ -934,8 +867,6 @@ c     this subdir has no soft singularities
         return 0 , ncolor1
     
     
-
-
     #===============================================================================
     # write_born_nhel_file
     #===============================================================================
@@ -953,278 +884,6 @@ c     this subdir has no soft singularities
     
         return True
     
-
-    
-    def generate_subprocess_directory_fks(self, nfks, fksreal, matrix_element,
-                            born_dir, fortran_model, me_number, path=os.getcwd()):   
-        """Generate the Pxxxxx_i directory for a subprocess in MadFKS,
-        including the necessary matrix.f and various helper files
-        matrix_element is the real emission ME, the information on the 
-        reduced process are contained in fksreal
-        matrix element is a FKSHelasProcessFromBorn"""      
-    
-        pathdir = os.getcwd()
-    
-        # Create the directory PN_xx_xxxxx in the specified path
-        subprocdir = "R_%s_i%d_j%d" % \
-        (fksreal.matrix_element.get('processes')[0].shell_string()[2:], 
-         fksreal.i_fks, fksreal.j_fks)
-        self.fksdirs.append(subprocdir)
-    #    dirs.append(subprocdir)
-        try:
-            os.mkdir(subprocdir)
-        except os.error as error:
-            logger.warning(error.strerror + " " + subprocdir)
-    
-        try:
-            os.chdir(subprocdir)
-        except os.error:
-            logger.error('Could not cd to directory %s' % subprocdir)
-            return 0
-    
-        logger.info('Creating files in directory %s' % subprocdir)
-        calls = 0
-
-
-        #write the config.fks file, containing only nfks (+1)
-        os.system("echo %d > config.fks" % 1 )
-        
-        bool_dict = {True : 'Y', False : 'N'}
-        bool_dict1 = {True : 'I', False : 'E'}
-        
-        # write nbodyonly.fks
-        os.system('echo %s > nbodyonly.fks' % \
-                  bool_dict[fksreal.is_nbody_only])
-        
-        # write integrate.fks
-        os.system('echo %s > integrate.fks' % \
-                  bool_dict[fksreal.is_to_integrate])
-        os.system('echo %s >> integrate.fks' % \
-                  bool_dict1[fksreal.need_color_links])
-
-        filename = 'fks.inc'
-        self.write_fks_inc(writers.FortranWriter(filename),
-                                            fksreal,
-                                            fortran_model)
-
-
-        # Create the matrix.f file, file and all inc files (as for v4)
-        real_matrix_element = fksreal.matrix_element
-        filename = 'matrix.f'
-        calls, ncolor = \
-               self.write_matrix_element_fks(writers.FortranWriter(filename),
-                                            real_matrix_element, 0,
-                                            fortran_model)
-
-    #write auto_dsig (for MadFKS it contains only the parton luminosities
-        filename = 'auto_dsig.f'
-        self.write_pdf_file(writers.FortranWriter(filename),
-                             real_matrix_element, 0,
-                             fortran_model) 
-
-        filename = 'den_factor.inc'
-        self.write_den_factor_file(writers.FortranWriter(filename),
-                             matrix_element.born_matrix_element,
-                             real_matrix_element, 
-                             fortran_model)
-
-        filename = 'glu_ij.inc'
-        self.write_glu_ij_file(writers.FortranWriter(filename),
-                            fksreal.ijglu, 
-                            fortran_model)
-
-        filename = 'mirrorprocs.inc'
-        self.write_mirrorprocs(writers.FortranWriter(filename),
-                                            real_matrix_element)
-        
-
-        filename = 'coloramps.inc'
-        self.write_coloramps_file(writers.FortranWriter(filename),
-                             real_matrix_element,
-                             fortran_model)
-    
-        filename = 'configs.inc'
-        nconfigs, s_and_t_channels = self.write_configs_file(\
-            writers.FortranWriter(filename),
-            real_matrix_element,
-            fksreal.j_fks == 2,
-            fortran_model)
-
-
-        filename = 'bornfromreal.inc'
-        self.write_bornfromreal_file(writers.FortranWriter(filename),
-                             fksreal,
-                             fortran_model)
-    
-        filename = 'props.inc'
-        self.write_props_file(writers.FortranWriter(filename),
-                         real_matrix_element,
-                         fortran_model,
-                            s_and_t_channels)
-    
-        filename = 'decayBW.inc'
-        self.write_decayBW_file(writers.FortranWriter(filename),
-                            s_and_t_channels)
-    
-        filename = 'dname.mg'
-        self.write_dname_file(writers.FortranWriter(filename),
-                         real_matrix_element,
-                         fortran_model)
-    
-        filename = 'iproc.dat'
-        self.write_iproc_file(writers.FortranWriter(filename),
-                         me_number)
-    
-        filename = 'leshouche.inc'
-        self.write_leshouche_file(writers.FortranWriter(filename),
-                             real_matrix_element,
-                             fortran_model)
-    
-        filename = 'maxamps.inc'
-        self.write_maxamps_file(writers.FortranWriter(filename),
-                           real_matrix_element,
-                           fortran_model,
-                           ncolor)
-    
-        filename = 'mg.sym'
-        self.write_mg_sym_file(writers.FortranWriter(filename),
-                          real_matrix_element,
-                          fortran_model)
-    
-        filename = 'ncombs.inc'
-        self.write_ncombs_file(writers.FortranWriter(filename),
-                          real_matrix_element,
-                          fortran_model)
-    
-        filename = 'nexternal.inc'
-        (nexternal, ninitial) = real_matrix_element.get_nexternal_ninitial()
-        self.write_nexternal_file(writers.FortranWriter(filename),
-                             nexternal, ninitial)
-    
-        filename = 'ngraphs.inc'
-        self.write_ngraphs_file(writers.FortranWriter(filename),
-                            nconfigs)
-    
-        filename = 'pmass.inc'
-        self.write_pmass_file(writers.FortranWriter(filename),
-                             real_matrix_element)
-
-        linkfiles = ['LesHouchesDummy.f',
-                     'MCmasses_HERWIG6.inc',
-                     'MCmasses_HERWIGPP.inc',
-                     'MCmasses_PYTHIA6Q.inc',
-                     'add_write_info.f',
-                     'check_dip.f',
-                     'cluster.f',
-                     'cluster.inc',
-                     'coupl.inc',
-                     'cuts.f',
-                     'cuts.inc',
-                     'dbook.inc',
-                     'driver_mint.f',
-                     'driver_mintMC.f',
-                     'driver_vegas.f',
-                     'fastjetfortran_madfks.cc',
-                     'fks_Sij.f',
-                     'fks_nonsingular.f',
-                     'fks_powers.inc',
-                     'fks_singular.f',
-                     'genps.f',
-                     'genps.inc',
-                     'genps_fks.f',
-                     'initcluster.f',
-                     'ktclusdble.f',
-                     'link_fks.f',
-                     'madfks_dbook.f',
-                     'madfks_mcatnlo.inc',
-                     'madfks_plot.f',
-                     'message.inc',
-                     'mint-integrator2.f',
-                     'mint.inc',
-                     'montecarlocounter.f',
-                     'myamp.f',
-                     'q_es.inc',
-                     'reweight.f',
-                     'reweight.inc',
-                     'reweight0.inc',
-                     'reweight1.inc',
-                     'reweight_events.f',
-                     'reweight_xsec.f',
-                     'run.inc',
-                     'setcuts.f',
-                     'setscales.f',
-                     'sudakov.inc',
-                     'symmetry.f',
-                     'symmetry_fks_test_MC.f',
-                     'symmetry_fks_test_ME.f',
-                     'symmetry_fks_test_Sij.f',
-                     'symmetry_fks_v3.f',
-                     'trapfpe.c',
-                     'unwgt.f',
-                     'vegas2.for',
-                     'write_ajob.f',
-                     'write_event.f']
-
-        for file in linkfiles:
-            ln('../../' + file , '.')
-
-
-        #copy the makefile 
-        os.system("ln -s ../../makefile_fks_dir ./makefile")
-
-        cpfiles = [ 'props.inc', 'configs.inc']
-        for file in cpfiles:
-            os.system('cp '+file+' '+file+'.back')
-        
-        #import nexternal/leshouches in Source
-        ln('nexternal.inc', '../../../Source', log=False)
-        ln('leshouche.inc', '../../../Source', log=False)
-
-        if fksreal.ijglu > 0:
-            os.system('ln -s ../born_intf.f ./born.f')
-        else:
-            os.system('ln -s ../born.f ./born.f')
-
-        file_dict= {True : '_inverse.inc', False :'.inc'}
-
-        linkfiles_born_invert = \
-                         ['born_conf',
-                          'born_decayBW',
-                          'born_props']
-
-        for file in linkfiles_born_invert:
-            os.system('ln -s ../%s ./%s' \
-                    % (file + file_dict[fksreal.j_fks == 2],
-                       file + file_dict[False]))
-
-        linkfiles_born = \
-                         ['born_leshouche.inc',
-                          'born_ngraphs.inc',
-                          'born_nhel.inc',
-                          'OLE_order.lh']
-
-
-        for file in linkfiles_born:
-            ln('../' + file , '.')
-
-        if fksreal.need_color_links:
-            for file in self.color_link_files:
-                os.system('ln -s ../%s ./%s' % (file, file))
-            os.system('ln -s ../sborn_sf.f ./sborn_sf.f')
-            os.system('ln -s ../../LesHouches.f ./LesHouches.f')
-        else:
-            os.system('ln -s ../sborn_sf_dum.f ./sborn_sf.f')
-            os.system('ln -s ../../LesHouchesDummy.f ./LesHouches.f')
-
-
-    
-
-        # Return to original dir
-        os.chdir(pathdir)
-    
-        if not calls:
-            calls = 0
-        return calls
             
     #===============================================================================
     # write_fks_info_file
@@ -1256,7 +915,6 @@ c     this subdir has no soft singularities
         replace_dict['col_lines'] = '\n'.join(col_lines)
         replace_dict['pdg_lines'] = '\n'.join(pdg_lines)
         replace_dict['fks_j_from_i_lines'] = '\n'.join(fks_j_from_i_lines)
-
 
         content = \
 """      INTEGER FKS_CONFIGS, IPOS, JPOS
@@ -1291,84 +949,6 @@ C
         writer.writelines(content)
     
         return True
-
-
-    #===============================================================================
-    # write_fks_inc
-    #===============================================================================
-    def write_fks_inc(self, writer, me, fortran_model): #test_written
-        """Writes the content of fks.inc, which lists the various fks configs
-        of a FKSHelasProcessFromReal, plus some extra additional ifos"""
-
-        replace_dict = {}
-        replace_dict['nconfs'] = 1
-        replace_dict['confs_lines'] = self.get_fks_conf_lines(me)
-        replace_dict['fks_j_from_i_lines'] = self.get_fks_j_from_i_lines(me)
-        replace_dict['pdg_string'] = ", ".join("%d" % leg['id'] \
-                for leg in me.matrix_element.get('processes')[0]['legs'])
-        replace_dict['col_string'] = ", ".join("%d" % col for col in me.colors)
-
-        content = \
-"""      INTEGER FKS_CONFIGS, IPOS, JPOS
-      DATA FKS_CONFIGS / %(nconfs)d /
-      INTEGER FKS_I(%(nconfs)d), FKS_J(%(nconfs)d)
-      INTEGER FKS_J_FROM_I(NEXTERNAL, 0:NEXTERNAL)
-      INTEGER PARTICLE_TYPE(NEXTERNAL), PDG_TYPE(NEXTERNAL)
-
-%(confs_lines)s
-%(fks_j_from_i_lines)sC     
-C     Particle type:
-C     octet = 8, triplet = 3, singlet = 1
-      DATA (PARTICLE_TYPE(IPOS), IPOS=1, NEXTERNAL) / %(col_string)s /
-
-C     
-C     Particle type according to PDG:
-C     
-      DATA (PDG_TYPE(IPOS), IPOS=1, NEXTERNAL) / %(pdg_string)s /
-"""   % replace_dict
-
-        if not isinstance(writer, writers.FortranWriter):
-            raise writers.FortranWriter.FortranWriterError(\
-                "writer not FortranWriter")
-        # Set lowercase/uppercase Fortran code
-        writers.FortranWriter.downcase = False
-        
-        writer.writelines(content)
-    
-        return True
-
-    def get_fks_conf_lines(self, me): #test written
-        """generate the lines for fks.inc describing the various fks configs"""
-        n = 0
-        lines = ""
-        if not me.isfinite:
-            n += 1
-            lines += 'c     FKS configuration number  %d\n' % n \
-                   + 'DATA FKS_I(%d) / %d /\n' % (n, me.i_fks)\
-                   + 'DATA FKS_J(%d) / %d /\n' % (n, me.j_fks)
-        else:
-            lines += 'c     FKS configuration number  %d\n' % 1 \
-                   + 'DATA FKS_I(%d) / %d /\n' % (1,2)\
-                   + 'DATA FKS_J(%d) / %d /\n' % (1,1)
-
-        return lines
-
-
-    def get_fks_j_from_i_lines(self, me, i = 0): #test written
-        """generate the lines for fks.inc describing initializating the
-        fks_j_from_i array"""
-        lines = []
-        if not me.isfinite:
-            for ii, js in me.fks_j_from_i.items():
-                if js:
-                    lines.append('DATA (FKS_J_FROM_I_D(%d, %d, JPOS), JPOS = 0, %d)  / %d, %s /' \
-                             % (i, ii, len(js), len(js), ', '.join(["%d" % j for j in js])))
-        else:
-            lines.append('DATA (FKS_J_FROM_I_D(%d, JPOS), JPOS = 0, %d)  / %d, %s /' \
-                     % (2, 1, 1, '1'))
-        lines.append('')
-
-        return lines
 
  
     #===============================================================================
@@ -1458,7 +1038,7 @@ C
 
 
     #===============================================================================
-    # write_auto_dsig_file
+    # write_pdf_file
     #===============================================================================
     def write_pdf_file(self, writer, matrix_element, n, fortran_model):
         #test written
@@ -1493,7 +1073,6 @@ C
         pdf_lines_mirr = self.get_pdf_lines_mir(matrix_element, ninitial, False, True)
         replace_dict['pdf_lines_mirr'] = pdf_lines_mirr
     
-    
         file = open(os.path.join(_file_path, \
                           'iolibs/template_files/parton_lum_n_fks.inc')).read()
         file = file % replace_dict
@@ -1501,24 +1080,6 @@ C
         # Write the file
         writer.writelines(file)
 
-
-    #===============================================================================
-    # get_den_factor_lines
-    #===============================================================================
-    def get_den_factor_lines(self, fks_born):
-        """returns the lines with the information on the particle number of the born 
-        that splits"""
-    
-        lines = []
-        lines.append('integer iden_values(%d)' % len(fks_born.real_processes))
-        lines.append('data iden_values /' + \
-                     ', '.join(['%d' % ( 
-                     fks_born.born_matrix_element.get_denominator_factor() / \
-                     fks_born.born_matrix_element['identical_particle_factor'] * \
-                     real.matrix_element['identical_particle_factor'] ) \
-                     for real in fks_born.real_processes]) + '/')
-
-        return lines
 
     #===============================================================================
     # write_den_factor_file
@@ -1537,22 +1098,6 @@ C
         writer.writelines(lines)
 
 
-
-    #===============================================================================
-    # get_ij_lines
-    #===============================================================================
-    def get_ij_lines(self, fks_born):
-        """returns the lines with the information on the particle number of the born 
-        that splits"""
-    
-        lines = []
-        lines.append('integer ij_values(%d)' % len(fks_born.real_processes))
-        lines.append('data ij_values /' + \
-                     ', '.join(['%d' % real.ij for real in fks_born.real_processes]) + '/')
-
-        return lines
-
-
     #===============================================================================
     # write_glu_ij_file
     #===============================================================================
@@ -1564,6 +1109,7 @@ C
 
         # Write the file
         writer.writelines(lines)
+
 
     #===============================================================================
     # write_coloramps_file
@@ -1581,240 +1127,10 @@ C
 
 
     #===============================================================================
-    # write_mirrorprocs
-    #===============================================================================   
-    #test_written
-    def write_mirrorprocs(self, writer, matrix_element):
-        """writes the content of the mirrorprocs.inc file"""
-        bool_dict = {True: ".true.", False: ".false."}
-        content = \
-"logical mirrorproc \n\
-data mirrorproc /%s/" % bool_dict[matrix_element.get('has_mirror_process')]
-        writer.writelines(content)
-        return True
-
-
-    #===============================================================================
-    # write_bornfromreal_file
-    #===============================================================================
-    def write_bornfromreal_file(self, writer, fksrealproc, fortran_model):
-    # test written
-        """Write the bornfromreal.inc file, with informations on how to link born
-        and real diagrams"""
-
-        lines = []
-        b_confs = sorted([l['born_conf']+1 for l in fksrealproc.bornfromreal]) 
-
-        for link in fksrealproc.bornfromreal:
-            lines.append('data b_from_r(%d) / %d /' % \
-                         (link['real_conf']+1, link['born_conf']+1) )
-            lines.append('data r_from_b(%d) / %d /' % \
-                         (link['born_conf']+1, link['real_conf']+1) )
-        lines.append('integer mapb')
-        lines.append('data (mapbconf(mapb), mapb=0, %d) / %d, %s /' % \
-                     ( len(fksrealproc.bornfromreal), 
-                       len(fksrealproc.bornfromreal),
-                       ', '.join(['%d' % c for c in b_confs])))
-
-        # Write the file
-        writer.writelines(lines)
-
-    
-    #===============================================================================
-    # write_configs_file
-    #===============================================================================
-    #test_written
-    def write_configs_file(self, writer, matrix_element, reverse_t_ch, fortran_model):
-        """Write the configs.inc file for MadEvent"""
-    
-        # Extract number of external particles
-        (nexternal, ninitial) = matrix_element.get_nexternal_ninitial()
-        lines = []
-    
-        iconfig = 0
-    
-        s_and_t_channels = []
-
-
-        model = matrix_element.get('processes')[0].get('model')
-#        new_pdg = model.get_first_non_pdg()
-    
-        base_diagrams = matrix_element.get('base_amplitude').get('diagrams')
-        minvert = min([max([len(vert.get('legs')) for vert in \
-                            diag.get('vertices')]) for diag in base_diagrams])
-    
-        for idiag, diag in enumerate(base_diagrams):
-            if any([len(vert.get('legs')) > minvert for vert in
-                    diag.get('vertices')]):
-                # Only 3-vertices allowed in configs.inc
-                continue
-            iconfig = iconfig + 1
-            helas_diag = matrix_element.get('diagrams')[idiag]
-            lines.append("# Diagram %d" % \
-                         (helas_diag.get('number')))
-            # Correspondance between the config and the amplitudes
-            lines.append("data mapconfig(%4d)/%4d/" % (iconfig,
-                                                     helas_diag.get('number')))
-    
-            # Need to reorganize the topology so that we start with all
-            # final state external particles and work our way inwards
-            schannels, tchannels = helas_diag.get('amplitudes')[0].\
-                                         get_s_and_t_channels(ninitial, 990, reverse_t_ch)
-    
-            s_and_t_channels.append([schannels, tchannels])
-    
-            # Write out propagators for s-channel and t-channel vertices
-            allchannels = schannels
-            if len(tchannels) > 1:
-                # Write out tchannels only if there are any non-trivial ones
-                allchannels = schannels + tchannels
-    
-            for vert in allchannels:
-                daughters = [leg.get('number') for leg in vert.get('legs')[:-1]]
-                last_leg = vert.get('legs')[-1]
-                lines.append("data (iforest(i,%3d,%4d),i=1,%d)/%s/" % \
-                             (last_leg.get('number'), iconfig, len(daughters),
-                              ",".join(["%3d" % d for d in daughters])))
-                if vert in schannels:
-                    lines.append("data sprop(%4d,%4d)/%8d/" % \
-                                 (last_leg.get('number'), iconfig,
-                                  last_leg.get('id')))
-                elif vert in tchannels[:-1]:
-                    lines.append("data tprid(%4d,%4d)/%8d/" % \
-                                 (last_leg.get('number'), iconfig,
-                                  abs(last_leg.get('id'))))
-    
-        # Write out number of configs
-        lines.append("# Number of configs")
-        lines.append("data mapconfig(0)/%4d/" % iconfig)
-    
-        # Write the file
-        writer.writelines(lines)
-    
-        return iconfig, s_and_t_channels
-    
-    #===============================================================================
-    # write_decayBW_file
-    #===============================================================================
-    #test written
-    def write_decayBW_file(self, writer, s_and_t_channels):
-        """Write the decayBW.inc file for MadEvent"""
-
-        lines = []
-
-        booldict = {False: ".false.", True: ".false."}
-        ####Changed by MZ 2011-11-23!!!!
-
-        for iconf, config in enumerate(s_and_t_channels):
-            schannels = config[0]
-            for vertex in schannels:
-                # For the resulting leg, pick out whether it comes from
-                # decay or not, as given by the from_group flag
-                leg = vertex.get('legs')[-1]
-                lines.append("data gForceBW(%d,%d)/%s/" % \
-                             (leg.get('number'), iconf + 1,
-                              booldict[leg.get('from_group')]))
-
-        # Write the file
-        writer.writelines(lines)
-
-        return True
-    
-    #===============================================================================
-    # write_dname_file
-    #===============================================================================
-    def write_dname_file(self, writer, matrix_element, fortran_model):
-        """Write the dname.mg file for MG4"""
-    
-        line = "DIRNAME=P%s" % \
-               matrix_element.get('processes')[0].shell_string()
-    
-        # Write the file
-        writer.write(line + "\n")
-    
-        return True
-    
-    #===============================================================================
-    # write_iproc_file
-    #===============================================================================
-    def write_iproc_file(self, writer, me_number):
-        """Write the iproc.dat file for MG4"""
-    
-        line = "%d" % (me_number + 1)
-    
-        # Write the file
-        for line_to_write in writer.write_line(line):
-            writer.write(line_to_write)
-        return True
-
-
-    #===============================================================================
-    # get_leshouche_lines
-    #===============================================================================
-    def get_leshouche_lines(self, matrix_element, ime):
-        #test written
-        """Write the leshouche.inc file for MG4"""
-    
-        # Extract number of external particles
-        (nexternal, ninitial) = matrix_element.get_nexternal_ninitial()
-    
-        lines = []
-        for iproc, proc in enumerate(matrix_element.get('processes')):
-            legs = proc.get_legs_with_decays()
-            lines.append("DATA (IDUP_D(%d,ilh,%d),ilh=1,%d)/%s/" % \
-                         (ime, iproc + 1, nexternal,
-                          ",".join([str(l.get('id')) for l in legs])))
-            for i in [1, 2]:
-                lines.append("DATA (MOTHUP_D(%d,%d,ilh,%3r),ilh=1,%2r)/%s/" % \
-                         (ime, i, iproc + 1, nexternal,
-                          ",".join([ "%3r" % 0 ] * ninitial + \
-                                   [ "%3r" % i ] * (nexternal - ninitial))))
-
-    
-            # Here goes the color connections corresponding to the JAMPs
-            # Only one output, for the first subproc!
-            if iproc == 0:
-                # If no color basis, just output trivial color flow
-                if not matrix_element.get('color_basis'):
-                    for i in [1, 2]:
-                        lines.append("DATA (ICOLUP_D(%d,%d,ilh,  1),ilh=1,%2r)/%s/" % \
-                                 (ime, i, nexternal,
-                                  ",".join([ "%3r" % 0 ] * nexternal)))
-                    color_flow_list = []
-                    nflows = 1
-    
-                else:
-                    # First build a color representation dictionnary
-                    repr_dict = {}
-                    for l in legs:
-                        repr_dict[l.get('number')] = \
-                            proc.get('model').get_particle(l.get('id')).get_color()\
-                            * (-1)**(1+l.get('state'))
-                    # Get the list of color flows
-                    color_flow_list = \
-                        matrix_element.get('color_basis').color_flow_decomposition(repr_dict,
-                                                                                   ninitial)
-                    # And output them properly
-                    for cf_i, color_flow_dict in enumerate(color_flow_list):
-                        for i in [0, 1]:
-                            lines.append("DATA (ICOLUP_D(%d,%d,ilh,%3r),ilh=1,%2r)/%s/" % \
-                                 (ime, i + 1, cf_i + 1, nexternal,
-                                  ",".join(["%3r" % color_flow_dict[l.get('number')][i] \
-                                            for l in legs])))
-
-                    nflow = len(color_flow_list)
-
-        nproc = len(matrix_element.get('processes'))
-        lines.append('')
-    
-        return lines, nproc, nflow
-
-    
-    #===============================================================================
     # write_leshouche_file
     #===============================================================================
+    #test written
     def write_leshouche_file(self, writer, matrix_element, fortran_model):
-        #test written
         """Write the leshouche.inc file for MG4"""
     
         # Extract number of external particles
@@ -1866,71 +1182,258 @@ data mirrorproc /%s/" % bool_dict[matrix_element.get('has_mirror_process')]
         writer.writelines(lines)
     
         return len(color_flow_list)
-    
 
 
     #===============================================================================
-    # write_maxamps_file
+    # write_configs_file
     #===============================================================================
-    def write_maxamps_file(self, writer, matrix_element, fortran_model, ncolor):
-        #test written
-        """Write the maxamps.inc file for MG4."""
+    #test_written
+    def write_configs_file(self, writer, matrix_element, fortran_model):
+        """Write the configs.inc file for MadEvent"""
     
-        file = "       integer    maxamps, maxflow\n"
-        file = file + "parameter (maxamps=%d, maxflow=%d)" % \
-               (len(matrix_element.get_all_amplitudes()), ncolor)
-    
-        # Write the file
-        writer.writelines(file)
-    
-        return True
-    
-    #===============================================================================
-    # write_mg_sym_file
-    #===============================================================================
-    #test written
-    def write_mg_sym_file(self, writer, matrix_element, fortran_model):
-        """Write the mg.sym file for MadEvent."""
-    
+        # Extract number of external particles
+        (nexternal, ninitial) = matrix_element.get_nexternal_ninitial()
         lines = []
     
-        # Extract process with all decays included
-        final_legs = filter(lambda leg: leg.get('state') == True,
-                       matrix_element.get('processes')[0].get_legs_with_decays())
+        iconfig = 0
     
-        ninitial = len(filter(lambda leg: leg.get('state') == False,
-                              matrix_element.get('processes')[0].get('legs')))
-    
-        identical_indices = {}
-    
-        # Extract identical particle info
-        for i, leg in enumerate(final_legs):
-            if leg.get('id') in identical_indices:
-                identical_indices[leg.get('id')].append(\
-                                    i + ninitial + 1)
-            else:
-                identical_indices[leg.get('id')] = [i + ninitial + 1]
-    
-        # Remove keys which have only one particle
-        for key in identical_indices.keys():
-            if len(identical_indices[key]) < 2:
-                del identical_indices[key]
-                
-        # Write mg.sym file
-        lines.append(str(len(identical_indices.keys())))
-        for key in identical_indices.keys():
-            lines.append(str(len(identical_indices[key])))
-            for number in identical_indices[key]:
-                lines.append(str(number))
+        s_and_t_channels = []
 
 
+        model = matrix_element.get('processes')[0].get('model')
+#        new_pdg = model.get_first_non_pdg()
+    
+        base_diagrams = matrix_element.get('base_amplitude').get('diagrams')
+        minvert = min([max([len(vert.get('legs')) for vert in \
+                            diag.get('vertices')]) for diag in base_diagrams])
+    
+        for idiag, diag in enumerate(base_diagrams):
+            if any([len(vert.get('legs')) > minvert for vert in
+                    diag.get('vertices')]):
+                # Only 3-vertices allowed in configs.inc
+                continue
+            iconfig = iconfig + 1
+            helas_diag = matrix_element.get('diagrams')[idiag]
+            lines.append("# Diagram %d" % \
+                         (helas_diag.get('number')))
+            # Correspondance between the config and the amplitudes
+            lines.append("data mapconfig(%4d)/%4d/" % (iconfig,
+                                                     helas_diag.get('number')))
+    
+            # Need to reorganize the topology so that we start with all
+            # final state external particles and work our way inwards
+            schannels, tchannels = helas_diag.get('amplitudes')[0].\
+                                         get_s_and_t_channels(ninitial, 990)
+    
+            s_and_t_channels.append([schannels, tchannels])
+    
+            # Write out propagators for s-channel and t-channel vertices
+            allchannels = schannels
+            if len(tchannels) > 1:
+                # Write out tchannels only if there are any non-trivial ones
+                allchannels = schannels + tchannels
+    
+            for vert in allchannels:
+                daughters = [leg.get('number') for leg in vert.get('legs')[:-1]]
+                last_leg = vert.get('legs')[-1]
+                lines.append("data (iforest(i,%3d,%4d),i=1,%d)/%s/" % \
+                             (last_leg.get('number'), iconfig, len(daughters),
+                              ",".join(["%3d" % d for d in daughters])))
+                if vert in schannels:
+                    lines.append("data sprop(%4d,%4d)/%8d/" % \
+                                 (last_leg.get('number'), iconfig,
+                                  last_leg.get('id')))
+                elif vert in tchannels[:-1]:
+                    lines.append("data tprid(%4d,%4d)/%8d/" % \
+                                 (last_leg.get('number'), iconfig,
+                                  abs(last_leg.get('id'))))
+    
+        # Write out number of configs
+        lines.append("# Number of configs")
+        lines.append("data mapconfig(0)/%4d/" % iconfig)
+    
+        # Write the file
+        writer.writelines(lines)
+    
+        return iconfig, s_and_t_channels
+
+    
+    #===============================================================================
+    # write_decayBW_file
+    #===============================================================================
+    #test written
+    def write_decayBW_file(self, writer, s_and_t_channels):
+        """Write the decayBW.inc file for MadEvent"""
+
+        lines = []
+
+        booldict = {False: ".false.", True: ".false."}
+        ####Changed by MZ 2011-11-23!!!!
+
+        for iconf, config in enumerate(s_and_t_channels):
+            schannels = config[0]
+            for vertex in schannels:
+                # For the resulting leg, pick out whether it comes from
+                # decay or not, as given by the from_group flag
+                leg = vertex.get('legs')[-1]
+                lines.append("data gForceBW(%d,%d)/%s/" % \
+                             (leg.get('number'), iconf + 1,
+                              booldict[leg.get('from_group')]))
+
+        # Write the file
+        writer.writelines(lines)
+
+        return True
+
+    
+    #===============================================================================
+    # write_dname_file
+    #===============================================================================
+    def write_dname_file(self, writer, matrix_element, fortran_model):
+        """Write the dname.mg file for MG4"""
+    
+        line = "DIRNAME=P%s" % \
+               matrix_element.get('processes')[0].shell_string()
+    
+        # Write the file
+        writer.write(line + "\n")
+    
+        return True
+
+    
+    #===============================================================================
+    # write_iproc_file
+    #===============================================================================
+    def write_iproc_file(self, writer, me_number):
+        """Write the iproc.dat file for MG4"""
+    
+        line = "%d" % (me_number + 1)
+    
+        # Write the file
+        for line_to_write in writer.write_line(line):
+            writer.write(line_to_write)
+        return True
+
+    
     #===============================================================================
     # Helper functions
     #===============================================================================
 
 
+    #===============================================================================
+    # get_fks_j_from_i_lines
+    #===============================================================================
+
+    def get_fks_j_from_i_lines(self, me, i = 0): #test written
+        """generate the lines for fks.inc describing initializating the
+        fks_j_from_i array"""
+        lines = []
+        if not me.isfinite:
+            for ii, js in me.fks_j_from_i.items():
+                if js:
+                    lines.append('DATA (FKS_J_FROM_I_D(%d, %d, JPOS), JPOS = 0, %d)  / %d, %s /' \
+                             % (i, ii, len(js), len(js), ', '.join(["%d" % j for j in js])))
+        else:
+            lines.append('DATA (FKS_J_FROM_I_D(%d, JPOS), JPOS = 0, %d)  / %d, %s /' \
+                     % (2, 1, 1, '1'))
+        lines.append('')
+
+        return lines
 
 
+    #===============================================================================
+    # get_leshouche_lines
+    #===============================================================================
+    def get_leshouche_lines(self, matrix_element, ime):
+        #test written
+        """Write the leshouche.inc file for MG4"""
+    
+        # Extract number of external particles
+        (nexternal, ninitial) = matrix_element.get_nexternal_ninitial()
+    
+        lines = []
+        for iproc, proc in enumerate(matrix_element.get('processes')):
+            legs = proc.get_legs_with_decays()
+            lines.append("DATA (IDUP_D(%d,ilh,%d),ilh=1,%d)/%s/" % \
+                         (ime, iproc + 1, nexternal,
+                          ",".join([str(l.get('id')) for l in legs])))
+            for i in [1, 2]:
+                lines.append("DATA (MOTHUP_D(%d,%d,ilh,%3r),ilh=1,%2r)/%s/" % \
+                         (ime, i, iproc + 1, nexternal,
+                          ",".join([ "%3r" % 0 ] * ninitial + \
+                                   [ "%3r" % i ] * (nexternal - ninitial))))
+    
+            # Here goes the color connections corresponding to the JAMPs
+            # Only one output, for the first subproc!
+            if iproc == 0:
+                # If no color basis, just output trivial color flow
+                if not matrix_element.get('color_basis'):
+                    for i in [1, 2]:
+                        lines.append("DATA (ICOLUP_D(%d,%d,ilh,  1),ilh=1,%2r)/%s/" % \
+                                 (ime, i, nexternal,
+                                  ",".join([ "%3r" % 0 ] * nexternal)))
+                    color_flow_list = []
+                    nflows = 1
+    
+                else:
+                    # First build a color representation dictionnary
+                    repr_dict = {}
+                    for l in legs:
+                        repr_dict[l.get('number')] = \
+                            proc.get('model').get_particle(l.get('id')).get_color()\
+                            * (-1)**(1+l.get('state'))
+                    # Get the list of color flows
+                    color_flow_list = \
+                        matrix_element.get('color_basis').color_flow_decomposition(repr_dict,
+                                                                                   ninitial)
+                    # And output them properly
+                    for cf_i, color_flow_dict in enumerate(color_flow_list):
+                        for i in [0, 1]:
+                            lines.append("DATA (ICOLUP_D(%d,%d,ilh,%3r),ilh=1,%2r)/%s/" % \
+                                 (ime, i + 1, cf_i + 1, nexternal,
+                                  ",".join(["%3r" % color_flow_dict[l.get('number')][i] \
+                                            for l in legs])))
+
+                    nflow = len(color_flow_list)
+
+        nproc = len(matrix_element.get('processes'))
+        lines.append('')
+    
+        return lines, nproc, nflow
+
+
+    #===============================================================================
+    # get_den_factor_lines
+    #===============================================================================
+    def get_den_factor_lines(self, fks_born):
+        """returns the lines with the information on the particle number of the born 
+        that splits"""
+    
+        lines = []
+        lines.append('integer iden_values(%d)' % len(fks_born.real_processes))
+        lines.append('data iden_values /' + \
+                     ', '.join(['%d' % ( 
+                     fks_born.born_matrix_element.get_denominator_factor() / \
+                     fks_born.born_matrix_element['identical_particle_factor'] * \
+                     real.matrix_element['identical_particle_factor'] ) \
+                     for real in fks_born.real_processes]) + '/')
+
+        return lines
+
+
+    #===============================================================================
+    # get_ij_lines
+    #===============================================================================
+    def get_ij_lines(self, fks_born):
+        """returns the lines with the information on the particle number of the born 
+        that splits"""
+    
+        lines = []
+        lines.append('integer ij_values(%d)' % len(fks_born.real_processes))
+        lines.append('data ij_values /' + \
+                     ', '.join(['%d' % real.ij for real in fks_born.real_processes]) + '/')
+
+        return lines
 
 
     def get_pdf_lines_mir(self, matrix_element, ninitial, subproc_group = False,\
@@ -2044,7 +1547,6 @@ data mirrorproc /%s/" % bool_dict[matrix_element.get('has_mirror_process')]
 
     
     def get_den_factor_line(self, matrix_element):
-        #test written
         """Return the denominator factor line for this matrix element,
         corrected with the final state symmetry factor of real_matrix_element
         (if given)"""
@@ -2083,9 +1585,6 @@ data mirrorproc /%s/" % bool_dict[matrix_element.get('has_mirror_process')]
                                  ','.join(["%s" % booldict[i] for i in \
                                            bool_list])))
         return ret_list
-    
-
-    
         # Write the file
         writer.writelines(lines)
     
