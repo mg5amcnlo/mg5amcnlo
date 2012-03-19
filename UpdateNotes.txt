@@ -8,6 +8,8 @@ Update notes for MadGraph 5 (in reverse time order)
                   JA: Fixed LHAPDF functionality which was broken in v. 1.4.0
                   JA: Allow non-equal mixing angles in mssm restrict cards
                       (as needed for cards from some spectrum generators)
+                  JA: Fixed script addmasses.py for complicated events such as
+                      p p > t t~ + jets with decays of t and t~.
 
 1.4.3 (08/03/12)  JA: Reintroduced the possibility to completely forbid
                       s-channel diagrams, using the $$ notation. Note that
