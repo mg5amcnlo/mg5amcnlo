@@ -248,6 +248,19 @@ class LoopInterface(CheckLoop, CompleteLoop, HelpLoop, mg_interface.MadGraphCmd)
         if self._export_format in ['standalone']:
             logger.info('Output to directory ' + self._export_dir + ' done.')
 
+    def do_launch(self, line, *args,**opt):
+        """ Check that the type of launch is fine before proceeding with the
+        mother function. """
+                
+        argss = self.split_arg(line)
+        # check argument validity and normalise argument
+        (options, argss) = mg_interface._launch_parser.parse_args(argss)
+        self.check_launch(argss, options)
+        
+        if not argss[0].startswith('standalone'):
+            raise self.InvalidCmd('ML5 can only launch standalone runs.')
+        return mg_interface.MadGraphCmd.do_launch(self, line, *args,**opt)
+
     def do_check(self, line, *args,**opt):
         """Check a given process or set of processes"""
 
@@ -338,33 +351,33 @@ class LoopInterface(CheckLoop, CompleteLoop, HelpLoop, mg_interface.MadGraphCmd)
 
         if isinstance(proc, base_objects.ProcessDefinition):
             if proc.has_multiparticle_label():
-                raise MadGraph5Error,\
+                raise self.InvalidCmd(
                   "When running ML5 standalone, multiparticle labels cannot be"+\
-                  " employed. Please use the FKS5 interface instead."
+                  " employed. Please use the FKS5 interface instead.")
         
         if proc['decay_chains']:
-            raise MadGraph5Error,\
-                  "ML5 cannot yet decay a core process including loop corrections."
+            raise self.InvalidCmd(
+                  "ML5 cannot yet decay a core process including loop corrections.")
         
         if proc.are_decays_perturbed():
-            raise MadGraph5Error,\
+            raise self.InvalidCmd(
                   "The processes defining the decay of the core process cannot"+\
-                  " include loop corrections."
+                  " include loop corrections.")
         
         if not proc['perturbation_couplings']:
-            raise MadGraph5Error,\
-                "Please perform tree-level generations within default MG5 interface."
+            raise self.InvalidCmd(
+                "Please perform tree-level generations within default MG5 interface.")
         
         if proc['perturbation_couplings'] and not \
            isinstance(self._curr_model,loop_base_objects.LoopModel):
-            raise MadGraph5Error,\
-                "The current model does not allow for loop computations."
+            raise self.InvalidCmd(
+                "The current model does not allow for loop computations.")
         else:
             for pert_order in proc['perturbation_couplings']:
                 if pert_order not in self._curr_model['perturbation_couplings']:
-                    raise MadGraph5Error,\
+                    raise self.InvalidCmd(
                         "Perturbation order %s is not among" % pert_order + \
-                        " the perturbation orders allowed for by the loop model."
+                        " the perturbation orders allowed for by the loop model.")
 
     def model_validity(self):
         """ Upgrade the model sm to loop_sm if needed """
@@ -376,7 +389,7 @@ class LoopInterface(CheckLoop, CompleteLoop, HelpLoop, mg_interface.MadGraphCmd)
                   " loop processes. MG5 now loads 'loop_sm' instead.")
                 mg_interface.MadGraphCmd.do_import(self,"model loop_sm")
             else:
-                raise MadGraph5Error(
+                raise self.InvalidCmd(
                   "The model %s cannot handle loop processes"\
                   %self._curr_model['name'])
    

@@ -3024,7 +3024,7 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
         # args is now MODE PATH
         
         if args[0].startswith('standalone'):
-            ext_program = launch_ext.SALauncher(args[1], self.timeout,
+            ext_program = launch_ext.SALauncher(self, args[1], self.timeout,
                                                 **options)
         elif args[0] == 'madevent':
             if options['interactive']:
