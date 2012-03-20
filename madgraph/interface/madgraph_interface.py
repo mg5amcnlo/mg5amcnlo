@@ -486,6 +486,8 @@ class CheckValidForCmd(cmd.CheckCmd):
 # if asked for diagram and doing FKS, raise an error
         elif args[0] == 'diagrams' and self._fks_multi_proc:
             raise self.InvalidCmd("A NLO process has been generated: please use real_diagrams, born_diagrams or virt_diagrams")
+        elif args[0] == 'processes' and self._fks_multi_proc:
+            raise self.InvalidCmd("A NLO process has been generated: please use real_processes, born_processes or virt_processes")
         if args[0] == 'checks' and not self._comparisons:
             raise self.InvalidCmd("No check results to display.")
         

@@ -115,7 +115,8 @@ class HelpFKS(mg_interface.HelpToCmd):
     pass
 
 class FKSInterface(CheckFKS, CompleteFKS, HelpFKS, mg_interface.MadGraphCmd):
-    _fks_display_opts = ['real_diagrams', 'born_diagrams', 'virt_diagrams']
+    _fks_display_opts = ['real_diagrams', 'born_diagrams', 'virt_diagrams', 
+                         'real_processes', 'born_processes', 'virt_processes']
     
     def do_display(self, line, output=sys.stdout):
         super(FKSInterface, self).do_display(line, output)
@@ -133,6 +134,22 @@ class FKSInterface(CheckFKS, CompleteFKS, HelpFKS, mg_interface.MadGraphCmd):
                 raise self.InvalidCmd('No virtuals have been generated')
             else:
                 self.draw(' '.join(args[1:]))
+                # set _curr_amps back to empty
+                self._curr_amps = diagram_generation.AmplitudeList()
+
+
+        get_procs_dict = {'real_processes': self._fks_multi_proc.get_real_amplitudes,
+                          'born_processes': self._fks_multi_proc.get_born_amplitudes,
+                          'virt_processes': self._fks_multi_proc.get_virt_amplitudes}
+        if args[0] in get_procs_dict.keys():
+            get_amps = get_procs_dict[args[0]]
+            self._curr_amps = get_amps()
+            #check that if one requests the virt diagrams, there are virt_amplitudes
+            if args[0] == 'virt_processes' and len(self._curr_amps) == 0:
+                raise self.InvalidCmd('No virtuals have been generated')
+            else:
+                for amp in self._curr_amps:
+                    print amp.nice_string_processes()
                 # set _curr_amps back to empty
                 self._curr_amps = diagram_generation.AmplitudeList()
     
