@@ -994,20 +994,20 @@ CALL VXXXXX(P(0,2),MW,NHEL(2),-1*IC(2),W(1,2))
 CALL VXXXXX(P(0,3),ZERO,NHEL(3),+1*IC(3),W(1,3))
 CALL VXXXXX(P(0,4),MW,NHEL(4),+1*IC(4),W(1,4))
 CALL VXXXXX(P(0,5),MZ,NHEL(5),+1*IC(5),W(1,5))
-CALL VVV1_3(W(1,1),W(1,2),GC_25,CMASS_MW,W(1,6))
-CALL VVV1_2(W(1,3),W(1,4),GC_25,CMASS_MW,W(1,7))
+CALL VVV1_3(W(1,1),W(1,2),GC_25,DCMPLX(CMASS_MW),W(1,6))
+CALL VVV1_2(W(1,3),W(1,4),GC_25,DCMPLX(CMASS_MW),W(1,7))
 # Amplitude(s) for diagram number 1
 CALL VVV1_0(W(1,6),W(1,7),W(1,5),GC_7,AMP(1))
-CALL VVV1_1(W(1,4),W(1,5),GC_7,CMASS_MW,W(1,8))
+CALL VVV1_1(W(1,4),W(1,5),GC_7,DCMPLX(CMASS_MW),W(1,8))
 # Amplitude(s) for diagram number 2
 CALL VVV1_0(W(1,3),W(1,6),W(1,8),GC_25,AMP(2))
 # Amplitude(s) for diagram number 3
 CALL VVVV5_0(W(1,3),W(1,6),W(1,4),W(1,5),GC_26,AMP(3))
-CALL VVV1_2(W(1,1),W(1,4),GC_25,CMASS_MW,W(1,9))
-CALL VVV1_3(W(1,3),W(1,2),GC_25,CMASS_MW,W(1,10))
+CALL VVV1_2(W(1,1),W(1,4),GC_25,DCMPLX(CMASS_MW),W(1,9))
+CALL VVV1_3(W(1,3),W(1,2),GC_25,DCMPLX(CMASS_MW),W(1,10))
 # Amplitude(s) for diagram number 4
 CALL VVV1_0(W(1,10),W(1,9),W(1,5),GC_7,AMP(4))
-CALL VVV1_2(W(1,2),W(1,5),GC_7,CMASS_MW,W(1,11))
+CALL VVV1_2(W(1,2),W(1,5),GC_7,DCMPLX(CMASS_MW),W(1,11))
 # Amplitude(s) for diagram number 5
 CALL VVV1_0(W(1,3),W(1,11),W(1,9),GC_25,AMP(5))
 # Amplitude(s) for diagram number 6
@@ -1016,16 +1016,16 @@ CALL VVVV5_0(W(1,3),W(1,2),W(1,9),W(1,5),GC_26,AMP(6))
 CALL VVV1_0(W(1,1),W(1,10),W(1,8),GC_25,AMP(7))
 # Amplitude(s) for diagram number 8
 CALL VVV1_0(W(1,1),W(1,11),W(1,7),GC_25,AMP(8))
-CALL VVVV2_4(W(1,1),W(1,3),W(1,2),GC_27,CMASS_MW,W(1,12))
+CALL VVVV2_4(W(1,1),W(1,3),W(1,2),GC_27,DCMPLX(CMASS_MW),W(1,12))
 # Amplitude(s) for diagram number 9
 CALL VVV1_0(W(1,12),W(1,4),W(1,5),GC_7,AMP(9))
-CALL VVVV5_3(W(1,1),W(1,2),W(1,5),GC_26,CMASS_MW,W(1,13))
+CALL VVVV5_3(W(1,1),W(1,2),W(1,5),GC_26,DCMPLX(CMASS_MW),W(1,13))
 # Amplitude(s) for diagram number 10
 CALL VVV1_0(W(1,3),W(1,13),W(1,4),GC_25,AMP(10))
-CALL VVVV2_3(W(1,1),W(1,3),W(1,4),GC_27,CMASS_MW,W(1,14))
+CALL VVVV2_3(W(1,1),W(1,3),W(1,4),GC_27,DCMPLX(CMASS_MW),W(1,14))
 # Amplitude(s) for diagram number 11
 CALL VVV1_0(W(1,2),W(1,14),W(1,5),GC_7,AMP(11))
-CALL VVVV5_2(W(1,1),W(1,4),W(1,5),GC_26,CMASS_MW,W(1,15))
+CALL VVVV5_2(W(1,1),W(1,4),W(1,5),GC_26,DCMPLX(CMASS_MW),W(1,15))
 # Amplitude(s) for diagram number 12
 CALL VVV1_0(W(1,3),W(1,2),W(1,15),GC_25,AMP(12))"""
                 

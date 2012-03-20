@@ -158,6 +158,7 @@ class ModelReader(base_objects.Model):
         # Now calculate derived parameters
         for param in derived_parameters:
             try:
+                print "%s = %s" % (param.name, param.expr)
                 exec("locals()[\'%s\'] = %s" % (param.name, param.expr))
             except Exception as error:
                 msg = 'Unable to evaluate %s: raise error: %s' % (param.expr, error)
