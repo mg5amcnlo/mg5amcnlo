@@ -888,6 +888,10 @@ This will take effect only in a NEW terminal
         if args and args[0][0] != '-':
             # This is a path
             path = args.pop(0)
+            forbiden_chars = ['>','<',';','&']
+            for char in forbiden_chars:
+                if char in path:
+                    raise self.invalidCmd('%s is not allowed in the output path' % char)
             # Check for special directory treatment
             if path == 'auto' and self._export_format in \
                      ['madevent', 'standalone', 'standalone_cpp']:
