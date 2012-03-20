@@ -18,6 +18,7 @@
 
 import os
 import logging
+import sys
 import time
 
 import madgraph
@@ -30,6 +31,7 @@ import madgraph.fks.fks_born_helas_objects as fks_born_helas
 import madgraph.iolibs.export_fks_real as export_fks_real
 import madgraph.iolibs.export_fks_born as export_fks_born
 import madgraph.loop.loop_base_objects as loop_base_objects
+import madgraph.core.diagram_generation as diagram_generation
 
 #usefull shortcut
 pjoin = os.path.join
@@ -41,18 +43,7 @@ logger_tuto = logging.getLogger('tutorial') # -> stdout include instruction in
                                             #order to learn MG5
 
 class CheckFKS(mg_interface.CheckValidForCmd):
-    pass
 
-class CheckFKSWeb(mg_interface.CheckValidForCmdWeb, CheckFKS):
-    pass
-
-class CompleteFKS(mg_interface.CompleteForCmd):
-    pass
-
-class HelpFKS(mg_interface.HelpToCmd):
-    pass
-
-class FKSInterface(CheckFKS, CompleteFKS, HelpFKS, mg_interface.MadGraphCmd):
 
     def check_output(self, args):
         """ check the validity of the line"""
@@ -85,6 +76,7 @@ class FKSInterface(CheckFKS, CompleteFKS, HelpFKS, mg_interface.MadGraphCmd):
 
         self._export_dir = os.path.realpath(self._export_dir)
 
+
     def validate_model(self, loop_type):
         """ Upgrade the model sm to loop_sm if needed """
 
@@ -103,6 +95,47 @@ class FKSInterface(CheckFKS, CompleteFKS, HelpFKS, mg_interface.MadGraphCmd):
                     raise MadGraph5Error(
                       "The model %s cannot handle loop processes"\
                       %self._curr_model['name'])            
+    pass
+
+class CheckFKSWeb(mg_interface.CheckValidForCmdWeb, CheckFKS):
+    pass
+
+class CompleteFKS(mg_interface.CompleteForCmd):
+    
+    def complete_display(self, text, line, begidx, endidx):
+        "Complete the display command"
+        args = self.split_arg(line[0:begidx])
+        # Format
+        if len(args) == 1:
+            return self.list_completion(text, self._display_opts + self._fks_display_opts)
+        else:
+            return super(CompleteFKS, self).complete_display(self, text, line, begidx, endidx)
+
+class HelpFKS(mg_interface.HelpToCmd):
+    pass
+
+class FKSInterface(CheckFKS, CompleteFKS, HelpFKS, mg_interface.MadGraphCmd):
+    _fks_display_opts = ['real_diagrams', 'born_diagrams', 'virt_diagrams']
+    
+    def do_display(self, line, output=sys.stdout):
+        super(FKSInterface, self).do_display(line, output)
+        # if we arrive here it means that a _fks_display_opts has been chosen
+        args = self.split_arg(line)
+
+        get_diags_dict = {'real_diagrams': self._fks_multi_proc.get_real_amplitudes,
+                          'born_diagrams': self._fks_multi_proc.get_born_amplitudes,
+                          'virt_diagrams': self._fks_multi_proc.get_virt_amplitudes}
+        if args[0] in get_diags_dict.keys():
+            get_amps = get_diags_dict[args[0]]
+            self._curr_amps = get_amps()
+            #check that if one requests the virt diagrams, there are virt_amplitudes
+            if args[0] == 'virt_diagrams' and len(self._curr_amps) == 0:
+                raise self.InvalidCmd('No virtuals have been generated')
+            else:
+                self.draw(' '.join(args[1:]))
+                # set _curr_amps back to empty
+                self._curr_amps = diagram_generation.AmplitudeList()
+    
 
     def do_add(self, line, *args,**opt):
         

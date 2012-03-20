@@ -88,16 +88,13 @@ class FKSMultiProcessFromBorn(diagram_generation.MultiProcess): #test written
                "Not a valid NLO_mode for a FKSMultiProcess: %s" % \
                self['process_definitions'][0].get('NLO_mode')
 
-
         # now get the total number of diagrams
-        n_diag_born = sum([len(real.amplitude.get('diagrams')) \
-                           for born in self['born_processes'] \
-                           for real in born.real_amps])
-        n_diag_real = sum([len(born.born_amp.get('diagrams')) \
-                           for born in self['born_processes']])
-        n_diag_virt = sum([len(born.virt_amp.get('diagrams')) \
-                           for born in self['born_processes'] \
-                           if born.virt_amp])
+        n_diag_born = sum([len(amp.get('diagrams')) 
+                 for amp in self.get_born_amplitudes()])
+        n_diag_real = sum([len(amp.get('diagrams')) 
+                 for amp in self.get_real_amplitudes()])
+        n_diag_virt = sum([len(amp.get('diagrams')) 
+                 for amp in self.get_virt_amplitudes()])
 
         logger.info(('Generated %d subprocesses with %d real emission diagrams, ' + \
                     '%d born diagrams and %d virtual diagrams') % \
@@ -105,6 +102,23 @@ class FKSMultiProcessFromBorn(diagram_generation.MultiProcess): #test written
 
         for i, logg in enumerate(loggers_off):
             logg.setLevel(old_levels[i])
+
+
+    def get_born_amplitudes(self):
+        """return an amplitudelist with the born amplitudes"""
+        return diagram_generation.AmplitudeList([born.born_amp \
+                for born in self['born_processes']])
+
+    def get_virt_amplitudes(self):
+        """return an amplitudelist with the virt amplitudes"""
+        return diagram_generation.AmplitudeList([born.virt_amp \
+                for born in self['born_processes'] if born.virt_amp])
+
+    def get_real_amplitudes(self):
+        """return an amplitudelist with the real amplitudes"""
+        return diagram_generation.AmplitudeList([real.amplitude \
+                           for born in self['born_processes'] \
+                           for real in born.real_amps])
 
 
     def generate_virtuals(self):

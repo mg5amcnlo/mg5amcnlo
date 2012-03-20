@@ -471,15 +471,21 @@ class CheckValidForCmd(cmd.CheckCmd):
         if len(args) < 1:
             self.help_display()
             raise self.InvalidCmd, 'display requires an argument specifying what to display'
-        if args[0] not in self._display_opts:
+        if args[0] not in self._display_opts + self._fks_display_opts:
             self.help_display()
             raise self.InvalidCmd, 'Invalid arguments for display command: %s' % args[0]
 
         if not self._curr_model:
             raise self.InvalidCmd("No model currently active, please import a model!")
 
-        if args[0] in ['processes', 'diagrams'] and not self._curr_amps:
-            raise self.InvalidCmd("No process generated, please generate a process!")
+# check that either _curr_amps or _fks_multi_proc exists
+        if ((args[0] in ['processes', 'diagrams'] and not self._curr_amps) or \
+            (args[0] in self._fks_display_opts and not self._fks_multi_proc) ) and \
+             not self._fks_multi_proc:
+           raise self.InvalidCmd("No process generated, please generate a process!")
+# if asked for diagram and doing FKS, raise an error
+        elif args[0] == 'diagrams' and self._fks_multi_proc:
+            raise self.InvalidCmd("A NLO process has been generated: please use real_diagrams, born_diagrams or virt_diagrams")
         if args[0] == 'checks' and not self._comparisons:
             raise self.InvalidCmd("No check results to display.")
         
