@@ -719,17 +719,15 @@ class CheckValidForCmd(object):
         if len(arg) > 1:
             self.help_combine_events()
             raise self.InvalidCmd('Too many argument for combine_events command')
+        
         if len(arg) == 1:
-            self.run_name = arg[0]
+            self.set_run_name(arg[0], self.run_tag, 'parton', True)
         
         if not self.run_name:
             if not self.results.lastrun:
                 raise self.InvalidCmd('No run_name currently define. Impossible to run combine')
             else:
                 self.set_run_name(self.results.lastrun)
-
-        if not hasattr(self, "run_card") or not self.run_card:
-            self.set_run_name(self.run_name, self.run_tag, 'parton', True)
         
         return True
     
@@ -753,11 +751,6 @@ class CheckValidForCmd(object):
         if tag: 
             args.remove(tag[0])
             tag = tag[0][6:]
-        elif not self.run_tag:
-            tag = 'tag_1'
-        else:
-            tag = self.run_tag
-        self.run_tag = tag
         
         if len(args) == 0 and not self.run_name:
             if self.results.lastrun:
@@ -769,12 +762,11 @@ class CheckValidForCmd(object):
             if args[0] != self.run_name and\
              not os.path.exists(pjoin(self.me_dir,'Events',args[0], 'unweighted_events.lhe.gz')):
                 raise self.InvalidCmd('No events file corresponding to %s run. '% args[0])
-            self.run_name = args[0]
-
-        if not hasattr(self, "run_card") or not self.run_card:
-            self.set_run_name(self.run_name, self.run_tag, 'parton', True)
-
-        self.set_run_name(self.run_name, self.run_tag, 'pythia')
+            self.set_run_name(args[0], tag, 'pythia')
+        else:
+            if tag:
+                self.run_card['run_tag'] = tag
+            self.set_run_name(self.run_name, tag, 'pythia')
 
         if  not os.path.exists(pjoin(self.me_dir,'Events',self.run_name,'unweighted_events.lhe.gz')):
             raise self.InvalidCmd('No events file corresponding to %s run. '% self.run_name)

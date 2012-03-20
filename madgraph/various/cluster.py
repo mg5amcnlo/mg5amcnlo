@@ -106,10 +106,11 @@ class Cluster(object):
             if fail:
                 raise ClusterManagmentError('Some Jobs are in a Hold/... state. Please try to investigate or contact the IT team')
             if idle + run == 0:
+                time.sleep(20) #security to ensure that the file are really written on the disk
                 logger.info('All jobs finished')
                 break
             fct(idle, run, finish)
-            time.sleep(20)
+            time.sleep(30)
         self.submitted = 0
         self.submitted_ids = []
 
@@ -121,9 +122,9 @@ class Cluster(object):
         while 1:        
             status = self.control_one_job(id)
             if not status in ['R','I']:
-                time.sleep(20)
+                time.sleep(20) #security to ensure that the file are really written on the disk
                 break
-            time.sleep(20)
+            time.sleep(30)
             
     def remove(self, *args):
         """ """

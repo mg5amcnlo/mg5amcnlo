@@ -53,7 +53,7 @@ def debug(debug_only=True):
     def deco_debug(f):
         
         if debug_only and not __debug__:
-            return f(*args, **opt)
+            return f
         
         def deco_f(*args, **opt):
             try:
