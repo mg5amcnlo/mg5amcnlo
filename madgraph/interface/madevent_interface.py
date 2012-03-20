@@ -3258,13 +3258,13 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
 
         
         nb_event = int(self.run_card['nevents'])
-        if nb_event > 100000:
-            logger.warning("Attempting to generate more than 100K events")
-            logger.warning("Limiting number to 100K. Use multi_run for larger statistics.")
+        if nb_event > 1000000:
+            logger.warning("Attempting to generate more than 1M events")
+            logger.warning("Limiting number to 1M. Use multi_run for larger statistics.")
             path = pjoin(self.me_dir, 'Cards', 'run_card.dat')
-            os.system(r"""perl -p -i.bak -e "s/\d+\s*=\s*nevents/100000 = nevents/" %s""" \
+            os.system(r"""perl -p -i.bak -e "s/\d+\s*=\s*nevents/1000000 = nevents/" %s""" \
                                                                          % path)
-            self.run_card['nevents'] = 100000
+            self.run_card['nevents'] = 1000000
 
         return
 

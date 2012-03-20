@@ -11,6 +11,10 @@ Update notes for MadGraph 5 (in reverse time order)
                   JA: Fixed script addmasses.py for complicated events such as
                       p p > t t~ + jets with decays of t and t~.
                   JA: Added GE cluster to the list in cluster.py.
+		  JA: Allow up to 1M events in a single run. Note that the 
+                      unweighting (combine events) step gets quite slow with
+                      so many events. Also note that if Pythia is run, still
+                      maximum 50k events is recommended in a single run.
 
 1.4.3 (08/03/12)  JA: Reintroduced the possibility to completely forbid
                       s-channel diagrams, using the $$ notation. Note that
