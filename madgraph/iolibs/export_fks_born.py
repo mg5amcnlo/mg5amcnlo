@@ -1081,35 +1081,6 @@ C
         writer.writelines(file)
 
 
-    #===============================================================================
-    # write_den_factor_file
-    #===============================================================================
-    #test_written
-    def write_den_factor_file(self, writer, matrix_element, real_matrix_element, fortran_model):
-        """Write the den_factor.inc file to be included in the born ME, with identical
-        particle factor as the real ME"""
-    
-        lines = ["DATA IDEN/%2r/" % \
-               (matrix_element.get_denominator_factor()/\
-               matrix_element['identical_particle_factor'] *\
-               real_matrix_element['identical_particle_factor'])]
-
-        # Write the file
-        writer.writelines(lines)
-
-
-    #===============================================================================
-    # write_glu_ij_file
-    #===============================================================================
-    def write_glu_ij_file(self, writer, glu_ij, fortran_model):
-        """Write the glu_ij.inc file to be included in the born ME when the leg that splits
-        is a gluon"""
-    
-        lines = ["DATA GLU_IJ/%2r/" % glu_ij]
-
-        # Write the file
-        writer.writelines(lines)
-
 
     #===============================================================================
     # write_coloramps_file
@@ -1406,12 +1377,12 @@ C
     # get_den_factor_lines
     #===============================================================================
     def get_den_factor_lines(self, fks_born):
-        """returns the lines with the information on the particle number of the born 
-        that splits"""
+        """returns the lines with the information on the denominator keeping care
+        of the identical particle factors in the various real emissions"""
     
         lines = []
-        lines.append('integer iden_values(%d)' % len(fks_born.real_processes))
-        lines.append('data iden_values /' + \
+        lines.append('INTEGER IDEN_VALUES(%d)' % len(fks_born.real_processes))
+        lines.append('DATA IDEN_VALUES /' + \
                      ', '.join(['%d' % ( 
                      fks_born.born_matrix_element.get_denominator_factor() / \
                      fks_born.born_matrix_element['identical_particle_factor'] * \
@@ -1429,8 +1400,8 @@ C
         that splits"""
     
         lines = []
-        lines.append('integer ij_values(%d)' % len(fks_born.real_processes))
-        lines.append('data ij_values /' + \
+        lines.append('INTEGER IJ_VALUES(%d)' % len(fks_born.real_processes))
+        lines.append('DATA IJ_VALUES /' + \
                      ', '.join(['%d' % real.ij for real in fks_born.real_processes]) + '/')
 
         return lines
@@ -1544,15 +1515,6 @@ C
                                      ','.join(["%5r" % i for i in num_list[k:k + n]])))
 
             return ret_list
-
-    
-    def get_den_factor_line(self, matrix_element):
-        """Return the denominator factor line for this matrix element,
-        corrected with the final state symmetry factor of real_matrix_element
-        (if given)"""
-     
-        return "DATA IDEN/%2r/" % \
-               matrix_element.get_denominator_factor()
     
     
     def get_icolamp_lines(self, matrix_element): 
