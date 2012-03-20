@@ -2774,11 +2774,11 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
         # Load that path
         logger.info('Downloading %s' % path[args[0]])
         if sys.platform == "darwin":
-            subprocess.call(['curl', path[args[0]], '-o%s.tgz' % name], cwd=MG5DIR)
+            misc.call(['curl', path[args[0]], '-o%s.tgz' % name], cwd=MG5DIR)
         else:
-            subprocess.call(['wget', path[args[0]], '--output-document=%s.tgz'% name], cwd=MG5DIR)
+            misc.call(['wget', path[args[0]], '--output-document=%s.tgz'% name], cwd=MG5DIR)
         # Untar the file
-        returncode = subprocess.call(['tar', '-xzpvf', '%s.tgz' % name], cwd=MG5DIR, 
+        returncode = misc.call(['tar', '-xzpvf', '%s.tgz' % name], cwd=MG5DIR, 
                                      stdout=open(os.devnull, 'w'))
         if returncode:
             raise MadGraph5Error, 'Fail to download correctly the File. Stop'
@@ -2817,8 +2817,8 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
                 open(path, 'w').writelines(text)            
         
         if logger.level <= logging.INFO: 
-            subprocess.call(['make', 'clean'], )
-            status = subprocess.call(['make'], cwd = os.path.join(MG5DIR, name))
+            misc.call(['make', 'clean'], )
+            status = misc.call(['make'], cwd = os.path.join(MG5DIR, name))
         else:
             misc.compile(['clean'], mode='', cwd = os.path.join(MG5DIR, name))
             status = misc.compile(mode='', cwd = os.path.join(MG5DIR, name))
@@ -2838,15 +2838,15 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
             if sys.platform == "darwin":
                 logger.info('Downloading TD for Mac')
                 target = 'http://theory.fnal.gov/people/parke/TD/td_mac_intel.tar.gz'
-                subprocess.call(['curl', target, '-otd.tgz'], 
+                misc.call(['curl', target, '-otd.tgz'], 
                                                   cwd=pjoin(MG5DIR,'td'))      
-                subprocess.call(['tar', '-xzpvf', 'td.tgz'], 
+                misc.call(['tar', '-xzpvf', 'td.tgz'], 
                                                   cwd=pjoin(MG5DIR,'td'))
                 files.mv(MG5DIR + '/td/td_mac_intel',MG5DIR+'/td/td')
             else:
                 logger.info('Downloading TD for Linux 32 bit')
                 target = 'http://madgraph.phys.ucl.ac.be/Downloads/td'
-                subprocess.call(['wget', target], cwd=pjoin(MG5DIR,'td'))      
+                misc.call(['wget', target], cwd=pjoin(MG5DIR,'td'))      
                 os.chmod(pjoin(MG5DIR,'td','td'), 0775)
                 if sys.maxsize > 2**32:
                     logger.warning('''td program (needed by MadAnalysis) is not compile for 64 bit computer

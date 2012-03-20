@@ -1358,7 +1358,7 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
             raise MadEventAlreadyRunning, message
         else:
             os.system('touch %s' % pjoin(me_dir,'RunWeb'))
-            subprocess.Popen([pjoin(self.dirbin, 'gen_cardhtml-pl')], cwd=me_dir)
+            misc.Popen([pjoin(self.dirbin, 'gen_cardhtml-pl')], cwd=me_dir)
       
         self.to_store = []
         self.run_name = None
@@ -2023,7 +2023,7 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
                 raise MadEventError, 'Error make gensym not successful'
 
             # Launch gensym
-            p = subprocess.Popen(['./gensym'], stdin=subprocess.PIPE,
+            p = misc.Popen(['./gensym'], stdin=subprocess.PIPE,
                                  stdout=subprocess.PIPE, 
                                  stderr=subprocess.STDOUT, cwd=Pdir)
             sym_input = "%(points)d %(iterations)d %(accuracy)f %(gridpack)s\n" % self.opts
@@ -2086,7 +2086,7 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
                 if os.path.basename(match)[:4] in ['ajob', 'wait', 'run.', 'done']:
                     os.remove(pjoin(Pdir, match))
             
-            proc = subprocess.Popen([pjoin(bindir, 'gen_ximprove')],
+            proc = misc.Popen([pjoin(bindir, 'gen_ximprove')],
                                     stdout=devnull,
                                     stdin=subprocess.PIPE,
                                     cwd=Pdir)
@@ -2112,7 +2112,7 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
             pass
         
         bindir = pjoin(os.path.relpath(self.dirbin, pjoin(self.me_dir,'SubProcesses')))
-        subprocess.call([pjoin(bindir, 'combine_runs')], 
+        misc.call([pjoin(bindir, 'combine_runs')], 
                                           cwd=pjoin(self.me_dir,'SubProcesses'),
                                           stdout=devnull)
         
@@ -2136,7 +2136,7 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
                                         cwd=pjoin(self.me_dir,'SubProcesses'),
                                         stdout=pjoin(self.me_dir,'SubProcesses', 'combine.log'))
         else:
-            out = subprocess.call(['../bin/internal/run_combine'],
+            out = misc.call(['../bin/internal/run_combine'],
                          cwd=pjoin(self.me_dir,'SubProcesses'), 
                          stdout=open(pjoin(self.me_dir,'SubProcesses','combine.log'),'w'))
             
@@ -2163,13 +2163,13 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
         self.banner.add(pjoin(self.me_dir, 'Cards', 'run_card.dat'))
         
         
-        subprocess.call(['%s/put_banner' % self.dirbin, 'events.lhe'],
+        misc.call(['%s/put_banner' % self.dirbin, 'events.lhe'],
                             cwd=pjoin(self.me_dir, 'Events'))
-        subprocess.call(['%s/put_banner'% self.dirbin, 'unweighted_events.lhe'],
+        misc.call(['%s/put_banner'% self.dirbin, 'unweighted_events.lhe'],
                             cwd=pjoin(self.me_dir, 'Events'))
         
         #if os.path.exists(pjoin(self.me_dir, 'Events', 'unweighted_events.lhe')):
-        #    subprocess.call(['%s/extract_banner-pl' % self.dirbin, 
+        #    misc.call(['%s/extract_banner-pl' % self.dirbin, 
         #                     'unweighted_events.lhe', 'banner.txt'],
         #                    cwd=pjoin(self.me_dir, 'Events'))
         
@@ -2226,7 +2226,7 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
                         input = pjoin(G_path, name)
                         output = pjoin(G_path, '%s_%s' % (run,name))
                         files.mv(input, output) 
-                        subprocess.call(['gzip', output], stdout=devnull, 
+                        misc.call(['gzip', output], stdout=devnull, 
                                         stderr=devnull, cwd=G_path)
         
         # 2) restore links in local this is require due to chrome over-security
@@ -2239,7 +2239,7 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
             open(results, 'w').write(text)
             
         # 3) Update the index.html
-        subprocess.call(['%s/gen_cardhtml-pl' % self.dirbin],
+        misc.call(['%s/gen_cardhtml-pl' % self.dirbin],
                             cwd=pjoin(self.me_dir))
         
         # 4) Move the Files present in Events directory
@@ -2253,7 +2253,7 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
                 input = pjoin(E_path, name)
                 output = pjoin(O_path, name)
                 files.mv(input, output) 
-                subprocess.call(['gzip', output], stdout=devnull, stderr=devnull, 
+                misc.call(['gzip', output], stdout=devnull, stderr=devnull, 
                                                                      cwd=O_path)
                 
         self.update_status('End Parton', level='parton', makehtml=False)
@@ -2268,12 +2268,12 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
         if not self.run_tag: self.run_tag = 'tag_1'
         os.system("sed -i.bak \"s/ *.false.*=.*GridRun/  .true.  =  GridRun/g\" %s/Cards/grid_card.dat" \
                   % self.me_dir)
-        subprocess.call(['./bin/internal/restore_data', self.run_name],
+        misc.call(['./bin/internal/restore_data', self.run_name],
                         cwd=self.me_dir)
-        subprocess.call(['./bin/internal/store4grid',
+        misc.call(['./bin/internal/store4grid',
                          self.run_name, self.run_tag],
                         cwd=self.me_dir)
-        subprocess.call(['./bin/internal/clean'], cwd=self.me_dir)
+        misc.call(['./bin/internal/clean'], cwd=self.me_dir)
         misc.compile(['gridpack.tar.gz'], cwd=self.me_dir)
         files.mv(pjoin(self.me_dir, 'gridpack.tar.gz'), 
                 pjoin(self.me_dir, '%s_gridpack.tar.gz' % self.run_name))
@@ -2341,7 +2341,7 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
                         cwd=pjoin(self.me_dir,'Events'))
         else:
             pythia_log = open(pjoin(self.me_dir, 'Events',  self.run_name , '%s_pythia.log' % tag), 'w')
-            subprocess.call(['../bin/internal/run_pythia', pythia_src],
+            misc.call(['../bin/internal/run_pythia', pythia_src],
                            stdout=pythia_log,
                            stderr=subprocess.STDOUT,
                            cwd=pjoin(self.me_dir,'Events'))
@@ -2393,13 +2393,13 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
                                          argument= [pydir],
                                         cwd=pjoin(self.me_dir,'Events'))
             else:
-                subprocess.call([self.dirbin+'/run_hep2lhe', pydir],
+                misc.call([self.dirbin+'/run_hep2lhe', pydir],
                              cwd=pjoin(self.me_dir,'Events'))
                 
             # Creating ROOT file
             if eradir and misc.is_executable(pjoin(eradir, 'ExRootLHEFConverter')):
                 self.update_status('Creating Pythia LHE Root File', level='pythia')
-                subprocess.call([eradir+'/ExRootLHEFConverter', 
+                misc.call([eradir+'/ExRootLHEFConverter', 
                              'pythia_events.lhe', 
                              pjoin(self.run_name, '%s_pythia_lhe_events.root' % tag)],
                             cwd=pjoin(self.me_dir,'Events')) 
@@ -2407,15 +2407,15 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
 
         if int(self.run_card['ickkw']):
             self.update_status('Create matching plots for Pythia', level='pythia')
-            subprocess.call([self.dirbin+'/create_matching_plots.sh', self.run_name, tag],
+            misc.call([self.dirbin+'/create_matching_plots.sh', self.run_name, tag],
                             stdout = os.open(os.devnull, os.O_RDWR),
                             cwd=pjoin(self.me_dir,'Events'))
             #Clean output
-            subprocess.call(['gzip','-f','events.tree'], 
+            misc.call(['gzip','-f','events.tree'], 
                                                 cwd=pjoin(self.me_dir,'Events'))          
             files.mv(pjoin(self.me_dir,'Events','events.tree.gz'), 
                      pjoin(self.me_dir,'Events',self.run_name, tag + '_pythia_events.tree.gz'))
-            subprocess.call(['gzip','-f','beforeveto.tree'], 
+            misc.call(['gzip','-f','beforeveto.tree'], 
                                                 cwd=pjoin(self.me_dir,'Events'))
             files.mv(pjoin(self.me_dir,'Events','beforeveto.tree.gz'), 
                      pjoin(self.me_dir,'Events',self.run_name, tag+'_pythia_beforeveto.tree.gz'))
@@ -2773,7 +2773,7 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
                             stdout=pgs_log, stderr=subprocess.STDOUT)
         else:
             pgs_log = open(pjoin(self.me_dir, 'Events', self.run_name,"%s_pgs.log" % tag),'w')
-            subprocess.call([self.dirbin+'/run_pgs', pgsdir], stdout= pgs_log,
+            misc.call([self.dirbin+'/run_pgs', pgsdir], stdout= pgs_log,
                                                stderr=subprocess.STDOUT,
                                                cwd=pjoin(self.me_dir, 'Events')) 
         
@@ -2784,14 +2784,14 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
             os.remove(pjoin(self.me_dir, 'Events', 'pgs.done'))
             
         if os.path.getsize(banner_path) == os.path.getsize(pjoin(self.me_dir, 'Events','pgs_events.lhco')):
-            subprocess.call(['cat pgs_uncleaned_events.lhco >>  pgs_events.lhco'], 
+            misc.call(['cat pgs_uncleaned_events.lhco >>  pgs_events.lhco'], 
                             cwd=pjoin(self.me_dir, 'Events'))
             os.remove(pjoin(self.me_dir, 'Events', 'pgs_uncleaned_events.lhco '))
 
         # Creating Root file
         if eradir and misc.is_executable(pjoin(eradir, 'ExRootLHCOlympicsConverter')):
             self.update_status('Creating PGS Root File', level='pgs')
-            subprocess.call([eradir+'/ExRootLHCOlympicsConverter', 
+            misc.call([eradir+'/ExRootLHCOlympicsConverter', 
                              'pgs_events.lhco',pjoin('%s/%s_pgs_events.root' % (self.run_name, tag))],
                             cwd=pjoin(self.me_dir, 'Events')) 
         
@@ -2800,7 +2800,7 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
             self.create_plot('PGS')
             files.mv(pjoin(self.me_dir, 'Events', 'pgs_events.lhco'), 
                     pjoin(self.me_dir, 'Events', self.run_name, '%s_pgs_events.lhco' % tag))
-            subprocess.call(['gzip','-f', pjoin(self.me_dir, 'Events', 
+            misc.call(['gzip','-f', pjoin(self.me_dir, 'Events', 
                                                 self.run_name, '%s_pgs_events.lhco' % tag)])
 
 
@@ -2865,7 +2865,7 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
                         cwd=pjoin(self.me_dir,'Events'))
         else:
             delphes_log = open(pjoin(self.me_dir, 'Events', self.run_name, "%s_delphes.log" % tag),'w')
-            subprocess.call(['../bin/internal/run_delphes', delphes_dir, 
+            misc.call(['../bin/internal/run_delphes', delphes_dir, 
                                 self.run_name, tag, str(cross)],
                                 stdout= delphes_log, stderr=subprocess.STDOUT,
                                 cwd=pjoin(self.me_dir,'Events'))
@@ -2888,7 +2888,7 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
         self.create_plot('Delphes')
 
         if os.path.exists(pjoin(self.me_dir, 'Events', self.run_name,  '%s_delphes_events.lhco' % tag)):
-            subprocess.call(['gzip','-f', pjoin(self.me_dir, 'Events', self.run_name, '%s_delphes_events.lhco' % tag)])
+            misc.call(['gzip','-f', pjoin(self.me_dir, 'Events', self.run_name, '%s_delphes_events.lhco' % tag)])
 
 
         
@@ -2907,7 +2907,7 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
             start = time.time()
             if (cwd and os.path.exists(pjoin(cwd, exe))) or os.path.exists(exe):
                 exe = './' + exe
-            subprocess.call([exe] + argument, cwd=cwd, stdout=stdout,
+            misc.call([exe] + argument, cwd=cwd, stdout=stdout,
                         stderr=subprocess.STDOUT, **opt)
             #logger.info('%s run in %f s' % (exe, time.time() -start))
             
@@ -2929,7 +2929,7 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
                                 self.total_jobs - remaining -1, run_type), level=None, force=False)
             start = time.time()
             #os.system('cd %s; ./%s' % (cwd,exe))
-            status = subprocess.call(['./'+exe] + argument, cwd=cwd, 
+            status = misc.call(['./'+exe] + argument, cwd=cwd, 
                                                            stdout=stdout, **opt)
             logger.info('%s run in %f s' % (exe, time.time() -start))
             if status:
@@ -3083,7 +3083,7 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
             del os.environ['lhapdf']
         
         # Compile
-        out = subprocess.call([pjoin(self.dirbin, 'compile_Source')],
+        out = misc.call([pjoin(self.dirbin, 'compile_Source')],
                               cwd = self.me_dir)
         if out:
             raise MadEventError, 'Impossible to compile'
@@ -3300,7 +3300,7 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
         except Exception, error:         
             pass
         try:
-            subprocess.call(['./bin/internal/gen_cardhtml-pl'], cwd=self.me_dir,
+            misc.call(['./bin/internal/gen_cardhtml-pl'], cwd=self.me_dir,
                         stdout=devnull, stderr=devnull)
         except:
             pass
@@ -3373,7 +3373,7 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
         self.update_status('Creating root files', level='parton')
 
         eradir = self.options['exrootanalysis_path']
-        subprocess.call(['%s/ExRootLHEFConverter' % eradir, 
+        misc.call(['%s/ExRootLHEFConverter' % eradir, 
                              input, output],
                             cwd=pjoin(self.me_dir, 'Events'))
         
@@ -3420,7 +3420,7 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
             os.makedirs(plot_dir) 
         
         files.ln(pjoin(self.me_dir, 'Cards','plot_card.dat'), plot_dir, 'ma_card.dat')
-        proc = subprocess.Popen([os.path.join(madir, 'plot_events')],
+        proc = misc.Popen([os.path.join(madir, 'plot_events')],
                             stdout = open(pjoin(plot_dir, 'plot.log'),'w'),
                             stderr = subprocess.STDOUT,
                             stdin=subprocess.PIPE,
@@ -3428,12 +3428,12 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
         proc.communicate('%s\n' % event_path)
         del proc
         #proc.wait()
-        subprocess.call(['%s/plot' % self.dirbin, madir, td],
+        misc.call(['%s/plot' % self.dirbin, madir, td],
                             stdout = open(pjoin(plot_dir, 'plot.log'),'a'),
                             stderr = subprocess.STDOUT,
                             cwd=plot_dir)
     
-        subprocess.call(['%s/plot_page-pl' % self.dirbin, 
+        misc.call(['%s/plot_page-pl' % self.dirbin, 
                                 os.path.basename(plot_dir),
                                 mode],
                             stdout = open(pjoin(plot_dir, 'plot.log'),'a'),
@@ -3957,13 +3957,13 @@ class GridPackCmd(MadEventCmd):
         logger.info('generate %s events' % nb_event)
         self.set_run_name('GridRun_%s' % seed)
         self.update_status('restoring default data', level=None)
-        subprocess.call([pjoin(self.me_dir,'bin','internal','restore_data'),
+        misc.call([pjoin(self.me_dir,'bin','internal','restore_data'),
                          'default'],
             cwd=self.me_dir)
 
         # 2) Run the refine for the grid
         self.update_status('Generating Events', level=None)
-        #subprocess.call([pjoin(self.me_dir,'bin','refine4grid'),
+        #misc.call([pjoin(self.me_dir,'bin','refine4grid'),
         #                str(nb_event), '0', 'Madevent','1','GridRun_%s' % seed],
         #                cwd=self.me_dir)
         self.refine4grid(nb_event)
@@ -4002,7 +4002,7 @@ class GridPackCmd(MadEventCmd):
             
             devnull = os.open(os.devnull, os.O_RDWR)
             logfile = pjoin(Pdir, 'gen_ximprove.log')
-            proc = subprocess.Popen([pjoin(bindir, 'gen_ximprove')],
+            proc = misc.Popen([pjoin(bindir, 'gen_ximprove')],
                                     stdin=subprocess.PIPE,
                                     stdout=open(logfile,'w'),
                                     cwd=Pdir)
@@ -4029,11 +4029,11 @@ class GridPackCmd(MadEventCmd):
             pass
         
         bindir = pjoin(os.path.relpath(self.dirbin, pjoin(self.me_dir,'SubProcesses')))
-        subprocess.call([pjoin(bindir, 'combine_runs')], 
+        misc.call([pjoin(bindir, 'combine_runs')], 
                                           cwd=pjoin(self.me_dir,'SubProcesses'),
                                           stdout=devnull)
         
-        #subprocess.call([pjoin(self.dirbin, 'sumall')], 
+        #misc.call([pjoin(self.dirbin, 'sumall')], 
         #                                 cwd=pjoin(self.me_dir,'SubProcesses'),
         #                                 stdout=devnull)
         

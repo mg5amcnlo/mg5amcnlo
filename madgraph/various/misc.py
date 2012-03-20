@@ -37,7 +37,7 @@ except:
     import internal.files as files
     
 logger = logging.getLogger('cmdprint.ext_program')
-
+pjoin = os.path.join
    
 #===============================================================================
 # parse_info_str
@@ -193,6 +193,50 @@ def compile(arg=[], cwd=None, mode='fortran', **opt):
 
         raise MadGraph5Error, error_text
     return p.returncode
+
+# Control
+def check_system_error(value=1):
+    def deco_check(f):
+        def deco_f(arg, *args, **opt):
+            try:
+                return f(arg, *args, **opt)
+            except OSError, error:
+                if isinstance(arg, list):
+                    prog =  arg[0]
+                else:
+                    prog = arg[0]
+                
+                # Permission denied
+                if error.errno == 13:     
+                    if os.path.exists(prog):
+                        os.system('chmod +x %s' % prog)
+                    elif 'cwd' in opt and opt['cwd'] and \
+                                       os.path.isfile(pjoin(opt['cwd'],arg[0])):
+                        os.system('chmod +x %s' % pjoin(opt['cwd'],arg[0]))
+                    return f(arg, *args, **opt)
+                # NO such file or directory
+                elif error.errno == 2:
+                    # raise a more meaningfull error message
+                    raise Exception, '%s fails with no such file or directory' \
+                                                                           % arg            
+                else:
+                    raise
+        return deco_f
+    return deco_check
+
+
+@check_system_error()
+def call(arg, *args, **opt):
+    """nice way to call an external program with nice error treatment"""
+    return subprocess.call(arg, *args, **opt)
+
+@check_system_error()
+def Popen(arg, *args, **opt):
+    """nice way to call an external program with nice error treatment"""
+    return subprocess.Popen(arg, *args, **opt)
+
+                
+
 
 
 ################################################################################
