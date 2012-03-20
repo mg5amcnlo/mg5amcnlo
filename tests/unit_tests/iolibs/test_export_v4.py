@@ -9285,8 +9285,8 @@ class UFO_model_to_mg4_Test(unittest.TestCase):
         self.assertEqual(expected, solution)
         
         #  internal params
-        self.assertEqual(len(mg4_model.params_dep), 1)
-        self.assertEqual(len(mg4_model.params_indep), 31)
+        self.assertEqual(len(mg4_model.params_dep), 2)
+        self.assertEqual(len(mg4_model.params_indep), 29)
         
         # couplings
         self.assertEqual(len(mg4_model.coups_dep), 3)
@@ -9296,11 +9296,12 @@ class UFO_model_to_mg4_Test(unittest.TestCase):
 
         
         # MG4 use G and not aS as it basic object for alphas related computation
-        #Pass G in the  independant list
-        self.assertTrue('G' not in [p.name for p in mg4_model.params_dep])
-        self.assertTrue('G' in [p.name for p in mg4_model.params_indep])
-        self.assertTrue('sqrt__aS' not in [p.name for p in mg4_model.params_dep])
-        self.assertTrue('sqrt__aS' in [p.name for p in mg4_model.params_indep])
+        # G is out of any list!
+        self.assertFalse('G' in [p.name for p in mg4_model.params_dep])
+        self.assertFalse('G' in [p.name for p in mg4_model.params_indep])
+        # check that sqrt__aS is correctly set
+        self.assertTrue('sqrt__aS' in [p.name for p in mg4_model.params_dep])
+        self.assertTrue('sqrt__aS' not in [p.name for p in mg4_model.params_indep])
         
         
     def test_case_sensitive(self):

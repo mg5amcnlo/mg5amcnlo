@@ -5,6 +5,7 @@ Update notes for MadGraph 5 (in reverse time order)
                       current model
                   OM: allow to choose the duration of the timer for the questions.
                       (via ./input/mg5_configuration.txt)
+                  OM: Allow UFO model where G is not defined.
                   JA: Fixed LHAPDF functionality which was broken in v. 1.4.0
                   JA: Allow non-equal mixing angles in mssm restrict cards
                       (as needed for cards from some spectrum generators)
@@ -16,7 +17,7 @@ Update notes for MadGraph 5 (in reverse time order)
                       so many events. Also note that if Pythia is run, still
                       maximum 50k events is recommended in a single run.
                   OM: Fix problem linked to filesystem which makes new files
-                      non executables by default.
+                      non executables by default. (bug #958616)
 
 1.4.3 (08/03/12)  JA: Reintroduced the possibility to completely forbid
                       s-channel diagrams, using the $$ notation. Note that
