@@ -8,6 +8,7 @@ c****************************************************************
 c
 c     Constants
 c
+      include 'maxparticles.inc'
       include 'run_config.inc'
       integer    maxsubprocesses
       parameter (maxsubprocesses=999)
@@ -261,6 +262,7 @@ c
       include 'maxparticles.inc'
       integer    maxexternal     !Max number external momenta
       parameter (maxexternal=2*max_particles-3)
+      include 'run_config.inc'
 c     
 c     Arguments
 c
@@ -276,6 +278,7 @@ c
       integer n,ic(7,maxexternal),ievent
       double precision scale,aqcd,aqed
       character*300 buff
+      character*(s_bufflen) buff2
       logical done
 c-----
 c  Begin Code
@@ -289,10 +292,10 @@ c-----
       do while (.not. done .and. nw < 999999)
          done = .true.
          call read_event(35,P,xwgt,n,ic,ievent,scale,
-     $        aqcd,aqed,buff,done)
+     $        aqcd,aqed,buff,buff2,done)
          if (.not. done) then
             call write_event(lunw,P,wgt,n,ic,ievent,scale,
-     $           aqcd,aqed,buff)
+     $           aqcd,aqed,buff,buff2)
             nw=nw+1
          endif
       enddo

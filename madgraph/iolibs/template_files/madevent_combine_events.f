@@ -6,6 +6,7 @@ c****************************************************************
 c
 c     Constants
 c
+      include 'maxparticles.inc'
       include 'run_config.inc'
       integer    maxsubprocesses
       parameter (maxsubprocesses=9999)
@@ -13,7 +14,6 @@ c
       parameter (cmax_events=500000)
       integer    sfnum
       parameter (sfnum=17)   !Unit number for scratch file
-      include 'maxparticles.inc'
       integer    maxexternal
       parameter (maxexternal=2*max_particles-3)
 c     
@@ -49,7 +49,8 @@ c
       common/to_param_card_name/param_card_name
 
       character*300 buff
-
+      character*(s_bufflen) buff2
+      data buff2/''/
       data iseed/-1/
 c-----
 c  Begin Code
@@ -101,6 +102,7 @@ c
       R8 = 8
       record_length = 4*I4+maxexternal*I4*7+maxexternal*5*R8+3*R8+
      &   300
+      if (use_syst) record_length=record_length+s_bufflen
 C $B$ scratch_name $B$ !this is tag for automatic modification by MW
       filename='scratch'
 C $E$ scratch_name $E$ !this is tag for automatic modification by MW
@@ -142,11 +144,18 @@ C $E$ output_file1 $E$ !this is tag for automatic modification by MW
       open(unit=15,file=filename,status='unknown',err=98)
       call writebanner(15,kevent,sum,maxwgt,xerr)
       do i=1,kevent
-         read(sfnum,rec=iarray(i)) wgt,n,
-     &        ((ic(m,j),j=1,maxexternal),m=1,7),ievent,
-     &        ((p(m,j),m=0,4),j=1,maxexternal),scale,aqcd,aqed,
-     &     buff
-         call write_event(15,P,wgt,n,ic,ievent,scale,aqcd,aqed,buff)
+         if(use_syst) then
+            read(sfnum,rec=iarray(i)) wgt,n,
+     &           ((ic(m,j),j=1,maxexternal),m=1,7),ievent,
+     &           ((p(m,j),m=0,4),j=1,maxexternal),scale,aqcd,aqed,
+     &           buff,buff2
+         else
+            read(sfnum,rec=iarray(i)) wgt,n,
+     &           ((ic(m,j),j=1,maxexternal),m=1,7),ievent,
+     &           ((p(m,j),m=0,4),j=1,maxexternal),scale,aqcd,aqed,
+     &           buff
+         endif
+         call write_event(15,P,wgt,n,ic,ievent,scale,aqcd,aqed,buff,buff2)
       enddo
       close(15)
 c
@@ -206,7 +215,7 @@ c            write(*,*) min_goal,goal_wgt,max_goal
          write(*,*) 'Found ',nunwgt,' events writing first ',nreq
       endif
       write(*,*) 'Unweighting selected ',nreq, ' events.'
-      write(*,'(a,f5.2,a)') 'Truncated ',xtrunc*100./sum, '%% of cross section'
+      write(*,'(a,f5.2,a)') 'Truncated ',xtrunc*100./sum, '% of cross section'
 
 C $B$ output_file2 $B$ !this is tag for automatic modification by MW
       filename='../Events/unweighted_events.lhe'
@@ -542,6 +551,7 @@ c
       integer ievent,iseed
       logical done,found
       character*300 buff
+      character*(s_bufflen) buff2
       character*300 fullname
 c
 c     Les Houches init block (for the <init> info)
@@ -590,7 +600,7 @@ c
 c     Now loop through events
 c
       do while (.not. done)
-         call read_event(15,P,wgt,n,ic,ievent,scale,aqcd,aqed,buff,done)
+         call read_event(15,P,wgt,n,ic,ievent,scale,aqcd,aqed,buff,buff2,done)
          if (.not. done) then
             revent = revent+1
             wgt = wgt*nj*gsfact                 !symmetry factor * grid factor
@@ -598,9 +608,16 @@ c
             if (wgt .ge. goal_wgt*xran1(iseed)) then
                kevent=kevent+1
                if (wgt .lt. goal_wgt) wgt = goal_wgt
-               write(sfnum,rec=kevent) wgt,n,
+               if (use_syst) then
+                  write(sfnum,rec=kevent) wgt,n,
+     &                 ((ic(i,j),j=1,maxexternal),i=1,7),ievent,
+     &                 ((p(i,j),i=0,4),j=1,maxexternal),scale,aqcd,aqed,
+     $                 buff,buff2
+               else
+                  write(sfnum,rec=kevent) wgt,n,
      &              ((ic(i,j),j=1,maxexternal),i=1,7),ievent,
      &              ((p(i,j),i=0,4),j=1,maxexternal),scale,aqcd,aqed,buff
+               endif
                sum=sum+wgt
                found=.false.
                do i=1,nprup

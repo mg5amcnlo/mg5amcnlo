@@ -222,8 +222,7 @@ c     Constants
 c
       include 'genps.inc'
       include 'nexternal.inc'
-      double precision trunc_max
-      parameter       (trunc_max = 0.01)  !Maximum % cross section to truncate
+      include 'run_config.inc'
 c
 c     Arguments
 c
@@ -241,6 +240,7 @@ c
       double precision scale,aqcd,aqed
       integer ievent
       character*300 buff
+      character*(s_bufflen) buff2
 C     
 C     GLOBAL
 C
@@ -296,7 +296,8 @@ c
       done = .false. 
       do i=1,nw
          if (.not. done) then
-            call read_event(lun,P,wgt,n,ic,ievent,scale,aqcd,aqed,buff,done)
+            call read_event(lun,P,wgt,n,ic,ievent,scale,aqcd,aqed,buff,
+     $           buff2,done)
          else
             wgt = 0d0
          endif
@@ -325,7 +326,8 @@ c      endif
       nover = 0
       do j=1,nw
          if (.not. done) then
-            call read_event(lun,P,wgt,n,ic,ievent,scale,aqcd,aqed,buff,done)
+            call read_event(lun,P,wgt,n,ic,ievent,scale,aqcd,aqed,buff,
+     $           buff2,done)
          else
             write(*,*) 'Error done early',j,nw
          endif
@@ -338,7 +340,8 @@ c      endif
             endif
             xtot = xtot + wgt
             i=i+1
-            call write_Event(lunw,p,wgt,n,ic,ngroup,scale,aqcd,aqed,buff)
+            call write_Event(lunw,p,wgt,n,ic,ngroup,scale,aqcd,aqed,
+     $           buff,buff2)
          endif
       enddo
       write(*,*) 'Found ',nw,' events.'
@@ -368,6 +371,8 @@ c
       include 'message.inc'
       include 'cluster.inc'
       include 'run.inc'
+      include 'run_config.inc'
+
 c
 c     Arguments
 c
@@ -376,7 +381,7 @@ c
 c
 c     Local
 c
-      integer i,j,k
+      integer i,j,k,iini,ifin
       double precision sum_wgt,sum_wgt2, xtarget,targetamp(maxflow)
       integer ip, np, ic, nc, jpart(7,-nexternal+3:2*nexternal-3)
       integer ida(2),ito(-nexternal+3:nexternal),ns,nres,ires,icloop
@@ -398,7 +403,8 @@ c
       external ran1
 
       character*300 buff
-
+      character*(s_bufflen) buff2
+      character*20 cfmt
 C     
 C     GLOBAL
 C
@@ -422,6 +428,14 @@ C
       integer ngroup
       common/to_group/ngroup
 
+c     Common block for systematics variations
+      DOUBLE PRECISION s_scale, s_qfact(2),s_x(2)
+      INTEGER n_qcd,n_alpsem
+      DOUBLE PRECISION s_qalps(nexternal-2)
+      INTEGER n_pdfrw(2),i_pdgpdf(nexternal-2,2)
+      DOUBLE PRECISION s_xpdf(nexternal-2,2),s_qpdf(nexternal-2,2)
+      COMMON/TO_SYST/n_qcd,n_alpsem,n_pdfrw,i_pdgpdf,
+     $               s_scale,s_qfact,s_x,s_qalps,s_xpdf,s_qpdf
 c
 c     Data
 c
@@ -568,12 +582,57 @@ c      write(*,*) 'Writing event'
         write(*,*)' write_leshouche: SCALUP to: ',sscale
       endif
       
-      
+c     Write out buffer for systematics studies
+      ifin=1
+      buff2(1:1) = ' '
+      if(use_syst)then
+c         print *,'Systematics:'
+c         print *,'s_scale,s_qfact,s_x: ',s_scale,s_qfact,s_x
+c         print *,'n_qcd,n_alpsem: ',n_qcd,n_alpsem
+c         print *,'s_qalps: ',(s_qalps(I),I=1,n_alpsem) 
+c         print *,'n_pdfrw: ',n_pdfrw
+c         print *,'i_pdgpdf: ',((i_pdgpdf(i,j),i=1,n_pdfrw(j)),j=1,2)
+c         print *,'s_xpdf: ',((s_xpdf(i,j),i=1,n_pdfrw(j)),j=1,2)
+c         print *,'s_qpdf: ',((s_qpdf(i,j),i=1,n_pdfrw(j)),j=1,2)
+         buff2(1:1) = '#'
+         iini=2
+         ifin=1+5*15
+         write(buff2(iini:ifin), '(5E15.8)') s_scale,s_qfact,s_x
+         iini=1+ifin
+         ifin=ifin+2*3
+         write(buff2(iini:ifin), '(2I3)') n_qcd,n_alpsem
+         if(n_alpsem.gt.0)then
+            iini=1+ifin
+            ifin=ifin+n_alpsem*15
+            write(cfmt,'(a,I1,a)') '(',n_alpsem,'E15.8)'
+            write(buff2(iini:ifin), cfmt) (s_qalps(I),I=1,n_alpsem) 
+         endif
+         iini=1+ifin
+         ifin=ifin+2*3
+         write(buff2(iini:ifin), '(2I3)') n_pdfrw
+         if(n_pdfrw(1)+n_pdfrw(2).gt.0)then
+            iini=1+ifin
+            ifin=ifin+(n_pdfrw(1)+n_pdfrw(2))*(9+2*15)
+            if(2*(n_pdfrw(1)+n_pdfrw(2)).lt.10)then
+               write(cfmt,'(a,I1,a,I1,a)') '(',n_pdfrw(1)+n_pdfrw(2),'I9,',
+     $              2*(n_pdfrw(1)+n_pdfrw(2)),'E15.8)'
+            else
+               write(cfmt,'(a,I1,a,I2,a)') '(',n_pdfrw(1)+n_pdfrw(2),'I9,',
+     $              2*(n_pdfrw(1)+n_pdfrw(2)),'E15.8)'
+            endif
+            write(buff2(iini:ifin), cfmt) ((i_pdgpdf(i,j),i=1,n_pdfrw(j)),j=1,2),
+     $           ((s_xpdf(i,j),i=1,n_pdfrw(j)),j=1,2),
+     $           ((s_qpdf(i,j),i=1,n_pdfrw(j)),j=1,2)
+         endif
+c         print *,'systematics buffer:'
+c         write(*,'(a)') buff2(1:ifin)
+c         print *,'max and actual length: ',s_bufflen,ifin
+      endif
       call write_event(lun,pb(0,1),wgt,npart,jpart(1,1),ngroup,
-     &   sscale,aaqcd,aaqed,buff)
+     &   sscale,aaqcd,aaqed,buff,buff2(1:ifin))
       if(btest(mlevel,1))
      &   call write_event(6,pb(0,1),wgt,npart,jpart(1,1),ngroup,
-     &   sscale,aaqcd,aaqed,buff)
+     &   sscale,aaqcd,aaqed,buff,buff2(1:ifin))
 
       end
       

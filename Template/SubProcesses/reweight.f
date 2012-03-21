@@ -379,6 +379,7 @@ c**************************************************
       include 'cluster.inc'
       include 'run.inc'
       include 'coupl.inc'
+      include 'run_config.inc'
 C   
 C   ARGUMENTS 
 C   
@@ -388,6 +389,15 @@ C   global variables
 C     Present process number
       INTEGER IMIRROR,IPROC
       COMMON/TO_MIRROR/IMIRROR, IPROC
+
+C     Common block for systematics variations
+      DOUBLE PRECISION s_scale, s_qfact(2),s_x(2)
+      INTEGER n_qcd,n_alpsem
+      DOUBLE PRECISION s_qalps(nexternal-2)
+      INTEGER n_pdfrw(2),i_pdgpdf(nexternal-2,2)
+      DOUBLE PRECISION s_xpdf(nexternal-2,2),s_qpdf(nexternal-2,2)
+      COMMON/TO_SYST/n_qcd,n_alpsem,n_pdfrw,i_pdgpdf,
+     $               s_scale,s_qfact,s_x,s_qalps,s_xpdf,s_qpdf
 
 C   local variables
       integer i, j, idi, idj
@@ -692,6 +702,19 @@ c     Check that factorization scale is >= 2 GeV
 
       if (btest(mlevel,3))
      $     write(*,*) 'Set fact scales to ',sqrt(q2fact(1)),sqrt(q2fact(2))
+
+c
+c     Store information for systematics studies
+c
+      if(use_syst)then
+         s_scale=scale
+         n_alpsem=0
+         do i=1,2
+            s_qfact(i)=sqrt(q2bck(i))
+            s_x(i)=xbk(i)
+            n_pdfrw(i)=0
+         enddo
+      endif
       return
       end
       
@@ -710,12 +733,13 @@ c**************************************************
       include 'cluster.inc'
       include 'run.inc'
       include 'coupl.inc'
+      include 'run_config.inc'
 C   
 C   ARGUMENTS 
 C   
       DOUBLE PRECISION P(0:3,NEXTERNAL)
 
-C   global variables
+C
 C   global variables
 C     Present process number
       INTEGER IMIRROR,IPROC
@@ -726,9 +750,21 @@ C     Present process number
       INTEGER SUBDIAG(MAXSPROC),IB(2)
       COMMON/TO_SUB_DIAG/SUBDIAG,IB
       data IB/1,2/
+C     Common block for systematics variations
+      DOUBLE PRECISION s_scale, s_qfact(2),s_x(2)
+      INTEGER n_qcd,n_alpsem
+      DOUBLE PRECISION s_qalps(nexternal-2)
+      INTEGER n_pdfrw(2),i_pdgpdf(nexternal-2,2)
+      DOUBLE PRECISION s_xpdf(nexternal-2,2),s_qpdf(nexternal-2,2)
+      COMMON/TO_SYST/n_qcd,n_alpsem,n_pdfrw,i_pdgpdf,
+     $               s_scale,s_qfact,s_x,s_qalps,s_xpdf,s_qpdf
 c     q2bck holds the central q2fact scales
       real*8 q2bck(2)
       common /to_q2bck/q2bck
+      integer idup(nexternal,maxproc,maxsproc)
+      integer mothup(2,nexternal)
+      integer icolup(2,nexternal,maxflow,maxsproc)
+      include 'leshouche.inc'
 
 C   local variables
       integer i, j, idi, idj
@@ -788,6 +824,17 @@ c   Since we use pdf reweighting, need to know particle identities
       if (btest(mlevel,1)) then
          write(*,*) 'Set process number ',iprocset
       endif
+c     Set incoming particle identities
+      ipdgcl(1,igraphs(1),iproc)=idup(1,iprocset,iproc)
+      ipdgcl(2,igraphs(1),iproc)=idup(2,iprocset,iproc)
+      if (btest(mlevel,2)) then
+         write(*,*) 'Set particle identities: ',
+     $        1,ipdgcl(1,igraphs(1),iproc),
+     $        ' and ',
+     $        2,ipdgcl(2,igraphs(1),iproc)
+
+      endif
+      
 
 c   Preparing graph particle information (ipart, needed to keep track of
 c   external particle clustering scales)
@@ -864,6 +911,11 @@ c     and not for the last clustering (use non-fixed ren. scale for these)
      $       ipdgcl(1,igraphs(1),iproc),ipart,.false.)) then
 c       alpha_s weight
               rewgt=rewgt*alphas(alpsfact*sqrt(q2now))/asref
+c     Store information for systematics studies
+              if(use_syst)then
+                 n_alpsem=n_alpsem+1
+                 s_qalps(n_alpsem)=sqrt(q2now)
+              endif
               if (btest(mlevel,3)) then
                  write(*,*)' reweight vertex: ',ipdgcl(imocl(n),igraphs(1),iproc),
      $                ipdgcl(idacl(n,1),igraphs(1),iproc),ipdgcl(idacl(n,2),igraphs(1),iproc)
@@ -1000,6 +1052,17 @@ c                    if non-radiating vertex or last 2->2
                         if (btest(mlevel,3))
      $                       write(*,*)' set pt2pdf for ',imocl(n),
      $                          ' to: ',sqrt(pt2pdf(imocl(n)))
+c     Store information for systematics studies (initial)
+                        if(use_syst)then
+                           n_pdfrw(j)=n_pdfrw(j)+1
+                           i_pdgpdf(n_pdfrw(j),j)=ipdgcl(idacl(n,i),igraphs(1),iproc)
+                           if (zcl(n).gt.0d0.and.zcl(n).lt.1d0) then
+                              s_xpdf(n_pdfrw(j),j)=xnow(j)/zcl(n)
+                           else
+                              s_xpdf(n_pdfrw(j),j)=xnow(j) 
+                           endif
+                           s_qpdf(n_pdfrw(j),j)=sqrt(q2now)
+                        endif
                      else if(pt2pdf(idacl(n,i)).lt.q2now
      $                       .and.isjet(ipdgcl(idacl(n,i),igraphs(1),iproc))) then
                         pdfj1=pdg2pdf(abs(lpp(IB(j))),ipdgcl(idacl(n,i),
@@ -1017,6 +1080,17 @@ c                          Scale too low for heavy quark
                            return
                         endif
                         rewgt=rewgt*pdfj1/pdfj2
+c     Store information for systematics studies
+                        if(use_syst)then
+                           n_pdfrw(j)=n_pdfrw(j)+1
+                           i_pdgpdf(n_pdfrw(j),j)=ipdgcl(idacl(n,i),igraphs(1),iproc)
+                           if (zcl(n).gt.0d0.and.zcl(n).lt.1d0) then
+                              s_xpdf(n_pdfrw(j),j)=xnow(j)/zcl(n)
+                           else
+                              s_xpdf(n_pdfrw(j),j)=xnow(j) 
+                           endif
+                           s_qpdf(n_pdfrw(j),j)=sqrt(q2now)
+                        endif
                         if (btest(mlevel,3)) then
                            write(*,*)' reweight ',n,i,ipdgcl(idacl(n,i),igraphs(1),iproc),' by pdfs: '
                            write(*,*)'     x, ptprev, ptnew: ',xnow(j),

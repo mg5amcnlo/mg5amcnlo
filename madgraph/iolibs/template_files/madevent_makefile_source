@@ -63,8 +63,10 @@ invarients.o: invarients.f genps.inc
 setrun.o: setrun.f nexternal.inc leshouche.inc genps.inc
 gen_ximprove.o: gen_ximprove.f run_config.inc
 combine_events.o: combine_events.f run_config.inc
+combine_runs.o: combine_runs.f run_config.inc
 select_events.o: select_events.f run_config.inc
-setrun.o: setrun.f nexternal.inc leshouche.inc
+setrun.o: setrun.f nexternal.inc leshouche.inc run_config.inc
+rw_events.o: rw_events.f run_config.inc
 
 clean:
 	$(RM) *.o $(LIBRARIES) $(BINARIES)
