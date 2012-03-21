@@ -41,16 +41,38 @@ logger = logging.getLogger('cmdprint')
 pjoin = os.path.join
 
 class CheckLoop(mg_interface.CheckValidForCmd):
-    pass
+
+    def check_display(self, args):
+        """ Check the arguments of the display diagrams command in the context
+        of the Loop interface."""
+        
+        mg_interface.MadGraphCmd.check_display(self,args)
+        
+        if args[0]=='diagrams' and len(args)>=3 and args[1] not in ['born','loop']:
+            raise self.InvalidCmd("Can only display born or loop diagrams, not %s."%args[1])
 
 class CheckLoopWeb(mg_interface.CheckValidForCmdWeb, CheckLoop):
     pass
 
 class CompleteLoop(mg_interface.CompleteForCmd):
-    pass
+    
+    def complete_display(self, text, line, begidx, endidx):
+        "Complete the display command in the context of the Loop interface"
+
+        args = self.split_arg(line[0:begidx])
+
+        if len(args) == 2 and args[1] == 'diagrams':
+            return self.list_completion(text, ['born', 'loop'])
+        else:
+            return mg_interface.MadGraphCmd.complete_display(self, text, line,
+                                                                 begidx, endidx)
 
 class HelpLoop(mg_interface.HelpToCmd):
-    pass
+
+    def help_display(self):   
+        mg_interface.MadGraphCmd.help_display(self)
+        logger.info("   In ML5, after display diagrams, the user can add the option")
+        logger.info("   \"born\" or \"loop\" to display only the corresponding diagrams.")
 
 class LoopInterface(CheckLoop, CompleteLoop, HelpLoop, mg_interface.MadGraphCmd):
     
@@ -66,26 +88,6 @@ class LoopInterface(CheckLoop, CompleteLoop, HelpLoop, mg_interface.MadGraphCmd)
         self.proc_validity(myprocdef)
                 
         mg_interface.MadGraphCmd.do_generate(self, line, *args,**opt)
-
-    def complete_display(self, text, line, begidx, endidx):
-        "Complete the display command in the context of the Loop interface"
-
-        args = self.split_arg(line[0:begidx])
-
-        if len(args) == 2 and args[1] == 'diagrams':
-            return self.list_completion(text, ['born', 'loop'])
-        else:
-            return mg_interface.MadGraphCmd.complete_display(self, text, line,
-                                                                 begidx, endidx)
-
-    def check_display(self, args):
-        """ Check the arguments of the display diagrams command in the context
-        of the Loop interface."""
-        
-        mg_interface.MadGraphCmd.check_display(self,args)
-        
-        if args[0]=='diagrams' and len(args)>=3 and args[1] not in ['born','loop']:
-            raise self.InvalidCmd("Can only display born or loop diagrams, not %s."%args[1])
     
     def do_display(self,line, *argss, **opt):
         """ Display born or loop diagrams, otherwise refer to the default display
