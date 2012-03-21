@@ -221,10 +221,6 @@ R2_ccH = Coupling(name = 'R2_ccH',
 # R2 interactions non proportional to the SM
 
 # R2 for the Higgs interactions
-# EDIT VH
-# There is a factor added here to the three couplings below without proper understanding of it
-# I have not investigate too much about it though.
-# END EDIT VH
 R2_GGHc = Coupling(name = 'R2_GGHc',
                 value = '4.0*(-((complex(0,1)*yc)/cmath.sqrt(2)))*(1.0/2.0)*(G**2/(8.0*cmath.pi**2))*MC',
                 order = {'QCD':2,'QED':1})

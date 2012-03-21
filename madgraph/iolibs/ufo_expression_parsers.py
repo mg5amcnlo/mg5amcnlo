@@ -59,7 +59,7 @@ class UFOExpressionParser:
     tokens = (
         'POWER', 'CSC', 'SEC', 'ACSC', 'ASEC',
         'SQRT', 'CONJ', 'RE', 'IM', 'PI', 'COMPLEX', 'FUNCTION',
-        'VARIABLE', 'NUMBER'
+        'VARIABLE', 'NUMBER','COND','REGLOG'
         )
     literals = "=+-*/(),"
 
@@ -76,6 +76,12 @@ class UFOExpressionParser:
         return t
     def t_ASEC(self, t):
         r'(?<!\w)asec(?=\()'
+        return t
+    def t_REGLOG(self, t):
+        r'(?<!\w)reglog(?=\()'
+        return t
+    def t_COND(self, t):
+        r'(?<!\w)cond(?=\()'
         return t
     def t_SQRT(self, t):
         r'cmath\.sqrt'
@@ -130,6 +136,8 @@ class UFOExpressionParser:
         ('left','*','/'),
         ('right','UMINUS'),
         ('left','POWER'),
+        ('right','COND'),
+        ('right','REGLOG'),
         ('right','CSC'),
         ('right','SEC'),
         ('right','ACSC'),
@@ -218,6 +226,10 @@ class UFOExpressionParserFortran(UFOExpressionParser):
         except:
             p[0] = p[1] + "**" + p[3]
 
+    def p_expression_cond(self, p):
+        "expression :  COND '(' expression ',' expression ',' expression ')'"
+        p[0] = 'COND('+p[3]+','+p[5]+','+p[7]+')'
+
     def p_expression_complex(self, p):
         "expression : COMPLEX '(' expression ',' expression ')'"
         p[0] = '(' + p[3] + ',' + p[5] + ')'
@@ -230,7 +242,8 @@ class UFOExpressionParserFortran(UFOExpressionParser):
                       | RE group
                       | IM group
                       | SQRT group
-                      | CONJ group'''
+                      | CONJ group
+                      | REGLOG group'''
         if p[1] == 'csc': p[0] = '1d0/cos' + p[2]
         elif p[1] == 'sec': p[0] = '1d0/sin' + p[2]
         elif p[1] == 'acsc': p[0] = 'asin(1./' + p[2] + ')'
@@ -239,6 +252,7 @@ class UFOExpressionParserFortran(UFOExpressionParser):
         elif p[1] == 'im': p[0] = 'dimag' + p[2]
         elif p[1] == 'cmath.sqrt' or p[1] == 'sqrt': p[0] = 'dsqrt' + p[2]
         elif p[1] == 'complexconjugate': p[0] = 'conjg' + p[2]
+        elif p[1] == 'reglog': p[0] = 'reglog' + p[2]
 
     def p_expression_pi(self, p):
         '''expression : PI'''
@@ -262,6 +276,10 @@ class UFOExpressionParserCPP(UFOExpressionParser):
         "expression : VARIABLE"
         p[0] = p[1]
 
+    def p_expression_cond(self, p):
+        "expression :  COND '(' expression ',' expression ',' expression ')'"
+        p[0] = 'COND('+p[3]+','+p[5]+','+p[7]+')'
+
     def p_expression_power(self, p):
         'expression : expression POWER expression'
         p1=p[1]
@@ -284,7 +302,8 @@ class UFOExpressionParserCPP(UFOExpressionParser):
                       | RE group
                       | IM group
                       | SQRT group
-                      | CONJ group'''
+                      | CONJ group
+                      | REGLOG group '''
         if p[1] == 'csc': p[0] = '1./cos' + p[2]
         elif p[1] == 'sec': p[0] = '1./sin' + p[2]
         elif p[1] == 'acsc': p[0] = 'asin(1./' + p[2] + ')'
@@ -293,6 +312,7 @@ class UFOExpressionParserCPP(UFOExpressionParser):
         elif p[1] == 'im': p[0] = 'imag' + p[2]
         elif p[1] == 'cmath.sqrt' or p[1] == 'sqrt': p[0] = 'sqrt' + p[2]
         elif p[1] == 'complexconjugate': p[0] = 'conj' + p[2]
+        elif p[1] == 'reglog': p[0] = 'reglog' + p[2]
 
     def p_expression_pi(self, p):
         '''expression : PI'''

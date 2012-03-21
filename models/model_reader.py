@@ -146,13 +146,7 @@ class ModelReader(loop_base_objects.LoopModel):
         couplings = sum(self['couplings'].values(), [])
         # Now calculate all couplings
         for coup in couplings:
-            try:
-                exec("locals()[\'%s\'] = %s" % (coup.name, coup.expr))
-            except ZeroDivisionError or ValueError:
-                # This typically comes from the log(mu_r/mp) from the R2
-                # couplings which must be eliminated if mp=0
-                exec("locals()[\'%s\'] = 0.0" % coup.name)
-                
+            exec("locals()[\'%s\'] = %s" % (coup.name, coup.expr))
             coup.value = complex(eval(coup.name))
             if not eval(coup.name) and eval(coup.name) != 0:
                 logger.warning("%s has no expression: %s" % (coup.name,
