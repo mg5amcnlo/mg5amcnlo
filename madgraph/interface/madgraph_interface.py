@@ -471,15 +471,23 @@ class CheckValidForCmd(cmd.CheckCmd):
         if len(args) < 1:
             self.help_display()
             raise self.InvalidCmd, 'display requires an argument specifying what to display'
-        if args[0] not in self._display_opts:
+        if args[0] not in self._display_opts + self._fks_display_opts:
             self.help_display()
             raise self.InvalidCmd, 'Invalid arguments for display command: %s' % args[0]
 
         if not self._curr_model:
             raise self.InvalidCmd("No model currently active, please import a model!")
 
-        if args[0] in ['processes', 'diagrams'] and not self._curr_amps:
-            raise self.InvalidCmd("No process generated, please generate a process!")
+# check that either _curr_amps or _fks_multi_proc exists
+        if ((args[0] in ['processes', 'diagrams'] and not self._curr_amps) or \
+            (args[0] in self._fks_display_opts and not self._fks_multi_proc) ) and \
+             not self._fks_multi_proc:
+           raise self.InvalidCmd("No process generated, please generate a process!")
+# if asked for diagram and doing FKS, raise an error
+        elif args[0] == 'diagrams' and self._fks_multi_proc:
+            raise self.InvalidCmd("A NLO process has been generated: please use real_diagrams, born_diagrams or virt_diagrams")
+        elif args[0] == 'processes' and self._fks_multi_proc:
+            raise self.InvalidCmd("A NLO process has been generated: please use real_processes, born_processes or virt_processes")
         if args[0] == 'checks' and not self._comparisons:
             raise self.InvalidCmd("No check results to display.")
         
@@ -788,7 +796,7 @@ This will take effect only in a NEW terminal
                                   self._set_options)
 
         if args[0] in ['group_subprocesses']:
-            if args[1] not in ['False', 'True', 'Auto', 'NLO']:
+            if args[1] not in ['False', 'True', 'Auto']:
                 raise self.InvalidCmd('%s needs argument False, True or Auto' % \
                                       args[0])
         if args[0] in ['ignore_six_quark_processes']:
@@ -917,7 +925,13 @@ This will take effect only in a NEW terminal
                     if 'TemplateVersion.txt' in self._export_dir:
                         return
         
-        if self._export_format.startswith('madevent'):            
+
+        if self._export_format == 'NLO':            
+            name_dir = lambda i: 'PROCNLO_%s_%s' % \
+                                    (self._curr_model['name'], i)
+            auto_path = lambda i: pjoin(self.writing_dir,
+                                               name_dir(i))
+        elif self._export_format.startswith('madevent'):            
             name_dir = lambda i: 'PROC_%s_%s' % \
                                     (self._curr_model['name'], i)
             auto_path = lambda i: pjoin(self.writing_dir,
@@ -1703,8 +1717,6 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
             # Generate processes
             if self.options['group_subprocesses'] == 'Auto':
                     collect_mirror_procs = True
-            elif self.options['group_subprocesses'] == 'NLO':
-                    collect_mirror_procs = False
             else:
                 collect_mirror_procs = self.options['group_subprocesses']
             ignore_six_quark_processes = \
@@ -2046,7 +2058,7 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
                        "please run from a" + \
                        "\n\t         valid MG_ME directory.")
 
-    def draw(self, line):
+    def draw(self, line,selection='all'):
         """ draw the Feynman diagram for the given process """
 
         args = self.split_arg(line)
@@ -2074,7 +2086,15 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
             filename = pjoin(args[0], 'diagrams_' + \
                                     amp.get('process').shell_string() + ".eps")
             
-            plot = draw.MultiEpsDiagramDrawer(amp.get('diagrams'),
+            if selection=='all':
+                diags=amp.get('diagrams')
+            elif selection=='born':
+                diags=amp.get('born_diagrams')
+            elif selection=='loop':
+                diags=base_objects.DiagramList([d for d in 
+                        amp.get('loop_diagrams') if d.get('type')>0])
+
+            plot = draw.MultiEpsDiagramDrawer(diags,
                                           filename,
                                           model=self._curr_model,
                                           amplitude=amp,

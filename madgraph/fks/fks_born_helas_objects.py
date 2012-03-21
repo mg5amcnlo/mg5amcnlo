@@ -37,9 +37,19 @@ class FKSHelasMultiProcessFromBorn(helas_objects.HelasMultiProcess):
     
     def __init__(self, fksmulti, gen_color =True, decay_ids =[]):
         """Initialization from a FKSMultiProcess"""
+
+        #swhich the other loggers off
+        loggers_off = [logging.getLogger('madgraph.diagram_generation') ]
+        old_levels = [logg.getEffectiveLevel() for logg in loggers_off]
+        for logg in loggers_off:
+            logg.setLevel(logging.WARNING)
+
         self['matrix_elements'] = self.generate_matrix_elements_fks(
                                 fksmulti['born_processes'], 
                                 gen_color, decay_ids)
+
+        for i, logg in enumerate(loggers_off):
+            logg.setLevel(old_levels[i])
         
     def get_used_lorentz(self):
         """Return a list of (lorentz_name, conjugate, outgoing) with

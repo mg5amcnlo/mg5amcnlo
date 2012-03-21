@@ -67,6 +67,42 @@ class LoopInterface(CheckLoop, CompleteLoop, HelpLoop, mg_interface.MadGraphCmd)
                 
         mg_interface.MadGraphCmd.do_generate(self, line, *args,**opt)
 
+    def complete_display(self, text, line, begidx, endidx):
+        "Complete the display command in the context of the Loop interface"
+
+        args = self.split_arg(line[0:begidx])
+
+        if len(args) == 2 and args[1] == 'diagrams':
+            return self.list_completion(text, ['born', 'loop'])
+        else:
+            return mg_interface.MadGraphCmd.complete_display(self, text, line,
+                                                                 begidx, endidx)
+
+    def check_display(self, args):
+        """ Check the arguments of the display diagrams command in the context
+        of the Loop interface."""
+        
+        mg_interface.MadGraphCmd.check_display(self,args)
+        
+        if args[0]=='diagrams' and len(args)>=3 and args[1] not in ['born','loop']:
+            raise self.InvalidCmd("Can only display born or loop diagrams, not %s."%args[1])
+    
+    def do_display(self,line, *argss, **opt):
+        """ Display born or loop diagrams, otherwise refer to the default display
+        command """
+        
+        args = self.split_arg(line)
+        #check the validity of the arguments
+        self.check_display(args)
+        
+        if args[0]=='diagrams':
+            if len(args)>=2 and args[1] in ['loop','born']:
+                self.draw(' '.join(args[2:]),args[1])
+            else:
+                self.draw(' '.join(args[1:]),'all')
+        else:
+            mg_interface.MadGraphCmd.do_display(self,line,*argss,**opt)
+
     def do_output(self, line):
         """Initialize a new Template or reinitialize one"""
 

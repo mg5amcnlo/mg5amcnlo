@@ -216,6 +216,14 @@ class TestLoopDrawer(unittest.TestCase):
 #        diagram.load_diagram()
         self.assertTrue(diagram.need_to_flip())
         
+        ### Triangle
+        diagram = copy.deepcopy(self.store_diagram['FULL g g > g g'][202])
+        
+        diagram = draw_lib.LoopFeynmanDiagram(diagram, structure, self.model)
+#        diagram.load_diagram()
+        self.assertFalse(diagram.need_to_flip())        
+        
+        
     def test_level_with_flipping_box(self):
         
         diagram = copy.deepcopy(self.store_diagram['g g > g g'][17])
@@ -339,15 +347,13 @@ class TestLoopDrawer(unittest.TestCase):
             self.assertnozerolength(diagram)
 
     def test_NLO_draw_all_reconstructed_gg_gg(self):
-        
-        for i in range(6,85):
+               
+        for i in range(200,230):
             diagram = copy.deepcopy(self.store_diagram['FULL g g > g g'][i])
             Drawer = draw_lib.DiagramDrawer()
             diagram = Drawer.convert_diagram(diagram, self.model) 
             if diagram is None:
                 continue # counter term are not drawn
-            diagram.define_level()
-            diagram.find_initial_vertex_position()
             self.assertnozerolength(diagram)
 
 
@@ -1033,7 +1039,7 @@ if __name__ == '__main__':
 
     # register the full amplitutde
     process_diag = {}
-    process_diag['g g > g g'] = range(85)#[0, 12]
+    process_diag['g g > g g'] = range(200,230)#[0, 12]
     cmd = MasterCmd()
     cmd.do_import('model loop_SM_QCD' )
     # Create the diagrams

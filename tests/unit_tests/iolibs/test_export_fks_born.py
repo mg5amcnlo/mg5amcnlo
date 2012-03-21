@@ -62,29 +62,30 @@ class IOExportBornFKSTest(unittest.TestCase,
     created_files = ['test'
                     ]
 
-    def setUp(self):
-        self.mymodel = import_ufo.import_model('sm')
-        self.myfortranmodel = helas_call_writers.FortranUFOHelasCallWriter(self.mymodel)
-    
-        myleglist = MG.MultiLegList()
-        
-        myleglist.append(MG.MultiLeg({'ids':[2], 'state':False}))
-        myleglist.append(MG.MultiLeg({'ids':[21], 'state':False}))
-        myleglist.append(MG.MultiLeg({'ids':[2], 'state':True}))
-        myleglist.append(MG.MultiLeg({'ids':[21], 'state':True}))
-    
-        myproc = MG.ProcessDefinition({'legs': myleglist,
-                             'model': self.mymodel,
-                             'orders':{'QCD': 2, 'QED': 0},
-                             'perturbation_couplings': ['QCD'],
-                             'NLO_mode': 'real'})
-        my_process_definitions = MG.ProcessDefinitionList([myproc])
+    mymodel = import_ufo.import_model('sm')
+    myfortranmodel = helas_call_writers.FortranUFOHelasCallWriter(mymodel)
 
-        self.myfksmulti = fks_born.FKSMultiProcessFromBorn(\
-                {'process_definitions': my_process_definitions})
-        
-        self.myfks_me = fks_born_helas.FKSHelasMultiProcessFromBorn(\
-                self.myfksmulti)['matrix_elements'][0]
+    myleglist = MG.MultiLegList()
+    
+    myleglist.append(MG.MultiLeg({'ids':[2], 'state':False}))
+    myleglist.append(MG.MultiLeg({'ids':[21], 'state':False}))
+    myleglist.append(MG.MultiLeg({'ids':[2], 'state':True}))
+    myleglist.append(MG.MultiLeg({'ids':[21], 'state':True}))
+
+    myproc = MG.ProcessDefinition({'legs': myleglist,
+                         'model': mymodel,
+                         'orders':{'QCD': 2, 'QED': 0},
+                         'perturbation_couplings': ['QCD'],
+                         'NLO_mode': 'real'})
+    my_process_definitions = MG.ProcessDefinitionList([myproc])
+
+    myfksmulti = fks_born.FKSMultiProcessFromBorn(\
+            {'process_definitions': my_process_definitions})
+    
+    myfks_me = fks_born_helas.FKSHelasMultiProcessFromBorn(\
+            myfksmulti)['matrix_elements'][0]
+
+    def setUp(self):
 
         #self.myfortranmodel.downcase = False
 
