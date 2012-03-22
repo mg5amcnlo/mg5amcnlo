@@ -182,6 +182,7 @@ class BasicCmd(cmd.Cmd):
          If a command has not been entered, then complete against command list.
          Otherwise try to call complete_<command> to get list of completions.
         """
+                
         if state == 0:
             import readline
             origline = readline.get_line_buffer()
@@ -208,8 +209,18 @@ class BasicCmd(cmd.Cmd):
                         compfunc = self.completedefault
             else:
                 compfunc = self.completenames
+                
+            # correct wrong splittion with '\ '
+            if line and begidx > 2 and line[begidx-2:begidx] == '\ ':
+                Ntext = line.split(os.path.sep)[-1]
+                self.completion_prefix = Ntext.rsplit('\ ', 1)[0] + '\ '
+                to_rm = len(self.completion_prefix) - 1
+                Nbegidx = len(line.rsplit(os.path.sep, 1)[0]) + 1
+                data = compfunc(Ntext.replace('\ ', ' '), line, Nbegidx, endidx)
+                self.completion_matches = [p[to_rm:] for p in data 
+                                              if len(p)>to_rm]                
             # correct wrong splitting with '-'
-            if line and line[begidx-1] == '-':
+            elif line and line[begidx-1] == '-':
              try:    
                 Ntext = line.split()[-1]
                 self.completion_prefix = Ntext.rsplit('-',1)[0] +'-'
@@ -264,12 +275,12 @@ class CheckCmd(object):
         
         if len(args) > 2:
             self.help_save()
-            raise self.InvalidCmd, '\'%s\' is not recoginzed as first argument.'
+            raise self.InvalidCmd, 'too many arguments for save command.'
         
         if len(args) == 2:
             if args[0] != 'options':
                 self.help_save()
-                raise self.InvalidCmd, '\'%s\' is not recoginzed as first argument.' % \
+                raise self.InvalidCmd, '\'%s\' is not recognized as first argument.' % \
                                                 args[0]
             else:
                 args.pop(0)           
@@ -606,7 +617,9 @@ class Cmd(CheckCmd, HelpCmd, CompleteCmd, BasicCmd):
             if data[-1] == '\\':
                 tmp += data[:-1]+' '
             elif tmp:
-                out.append(tmp+data)
+                tmp += data
+                tmp = os.path.expanduser(os.path.expandvars(tmp))
+                out.append(tmp)
             else:
                 out.append(data)
         return out
@@ -1119,10 +1132,12 @@ class Cmd(CheckCmd, HelpCmd, CompleteCmd, BasicCmd):
     def path_completion(text, base_dir = None, only_dirs = False, 
                                                                  relative=True):
         """Propose completions of text to compose a valid path"""
-        
+
         if base_dir is None:
             base_dir = os.getcwd()
-            
+
+        base_dir = os.path.expanduser(os.path.expandvars(base_dir))
+        
         prefix, text = os.path.split(text)
         base_dir = os.path.join(base_dir, prefix)
         if prefix:
@@ -1154,7 +1169,8 @@ class Cmd(CheckCmd, HelpCmd, CompleteCmd, BasicCmd):
         if relative:
             completion += [prefix + f for f in ['.'+os.path.sep, '..'+os.path.sep] if \
                        f.startswith(text) and not prefix.startswith('.')]
-
+        
+        completion = [a.replace(' ','\ ') for a in completion]
         return completion
     
 
