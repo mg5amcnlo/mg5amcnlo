@@ -1,4 +1,4 @@
-      subroutine read_event(lun,P,wgt,nexternal,ic,ievent,scale,aqcd,aqed,buff,buff2,done)
+      subroutine read_event(lun,P,wgt,nexternal,ic,ievent,sscale,aqcd,aqed,buff,buff2,done)
 c********************************************************************
 c     Reads one event from data file #lun
 c     ic(*,1) = Particle ID
@@ -11,6 +11,7 @@ c     ic(*,7) = Helicity
 c********************************************************************
       implicit none
       include 'maxparticles.inc'
+      include 'run.inc'
       include 'run_config.inc'
       double precision pi
       parameter (pi = 3.1415926d0)
@@ -20,7 +21,7 @@ c
       integer lun
       integer nexternal, ic(7,*)
       logical done
-      double precision P(0:4,*),wgt,aqcd,aqed,scale
+      double precision P(0:4,*),wgt,aqcd,aqed,sscale
       integer ievent
       character*(*) buff
       character*(*) buff2
@@ -53,7 +54,7 @@ c-----
          write(lun_ban,'(a)') buftmp
          read(lun,'(a300)',end=99,err=99) buftmp
       enddo
-      read(lun,*,err=11, end=11) nexternal,ievent,wgt,scale,aqed,aqcd
+      read(lun,*,err=11, end=11) nexternal,ievent,wgt,sscale,aqed,aqcd
       do i=1,nexternal
          read(lun,*,err=99,end=99) ic(1,i),ic(6,i),(ic(j,i),j=2,5),
      $     (p(j,i),j=1,3),p(0,i),p(4,i),xdum1,xdum2

@@ -1199,9 +1199,13 @@ class ProcessExporterFortranME(ProcessExporterFortran):
                              matrix_element)
 
         filename = 'configs.inc'
-        mapconfigs, s_and_t_channels = self.write_configs_file(\
+        mapconfigs, (s_and_t_channels, nqcd_list) = self.write_configs_file(\
             writers.FortranWriter(filename),
             matrix_element)
+
+        filename = 'config_nqcd.inc'
+        self.write_config_nqcd_file(writers.FortranWriter(filename),
+                               nqcd_list)
 
         filename = 'config_subproc_map.inc'
         self.write_config_subproc_map_file(writers.FortranWriter(filename),
@@ -1629,7 +1633,7 @@ class ProcessExporterFortranME(ProcessExporterFortran):
         return True
 
     #===========================================================================
-    # write_coloramps_file
+    # write_colors_file
     #===========================================================================
     def write_colors_file(self, writer, matrix_elements):
         """Write the get_color.f file for MadEvent, which returns color
@@ -1682,6 +1686,22 @@ c           This is dummy particle used in multiparticle vertices
         end
         """
         
+        # Write the file
+        writer.writelines(lines)
+
+        return True
+
+    #===========================================================================
+    # write_config_nqcd_file
+    #===========================================================================
+    def write_config_nqcd_file(self, writer, nqcd_list):
+        """Write the config_nqcd.inc with the number of QCD couplings
+        for each config"""
+
+        lines = []
+        for iconf, n in enumerate(nqcd_list):
+            lines.append("data nqcd(%d)/%d/" % (iconf+1, n))
+
         # Write the file
         writer.writelines(lines)
 
@@ -1782,6 +1802,8 @@ c           This is dummy particle used in multiparticle vertices
 
         s_and_t_channels = []
 
+        nqcd_list = []
+
         minvert = min([max([d for d in config if d][0].get_vertex_leg_numbers()) \
                        for config in configs])
 
@@ -1840,6 +1862,19 @@ c           This is dummy particle used in multiparticle vertices
             # Correspondance between the config and the diagram = amp2
             lines.append("data mapconfig(%d)/%d/" % (nconfigs,
                                                      mapconfigs[iconfig]))
+            # Number of QCD couplings in this diagram
+            nqcd = 0
+            for h in helas_diags:
+                if h:
+                    try:
+                        nqcd = h.calculate_orders()['QCD']
+                    except KeyError:
+                        logger.warning("No QCD order found in diagram")
+                    break
+                else:
+                    continue
+
+            nqcd_list.append(nqcd)
 
             for verts in allchannels:
                 if verts in schannels:
@@ -1878,7 +1913,7 @@ c           This is dummy particle used in multiparticle vertices
         # Write the file
         writer.writelines(lines)
 
-        return s_and_t_channels
+        return s_and_t_channels, nqcd_list
 
     #===========================================================================
     # write_config_subproc_map_file
@@ -2431,10 +2466,14 @@ class ProcessExporterFortranMEGroup(ProcessExporterFortranME):
                                            subproc_diagrams_for_config)
 
         filename = 'configs.inc'
-        nconfigs, s_and_t_channels = self.write_configs_file(\
+        nconfigs, (s_and_t_channels, nqcd_list) = self.write_configs_file(\
             writers.FortranWriter(filename),
             subproc_group,
             subproc_diagrams_for_config)
+
+        filename = 'config_nqcd.inc'
+        self.write_config_nqcd_file(writers.FortranWriter(filename),
+                                    nqcd_list)
 
         filename = 'decayBW.inc'
         self.write_decayBW_file(writers.FortranWriter(filename),
@@ -2530,7 +2569,7 @@ class ProcessExporterFortranMEGroup(ProcessExporterFortranME):
                      'run.inc',
                      'maxconfigs.inc',
                      'maxparticles.inc',
-                     'run_config.inc'
+                     'run_config.inc',
                      'setcuts.f',
                      'setscales.f',
                      'sudakov.inc',

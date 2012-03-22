@@ -12,8 +12,8 @@ c
       character*(*) symfile
       parameter (symfile='symfact.dat')
 
-      include 'run_config.inc'
       include 'maxparticles.inc'
+      include 'run_config.inc'
       include 'maxconfigs.inc'
 c
 c     global
@@ -223,6 +223,7 @@ c*****************************************************************************
 c
 c     Constants
 c
+      include 'maxparticles.inc'
       include 'run_config.inc'
       include 'maxconfigs.inc'
 
@@ -368,6 +369,7 @@ c***********************************************************************
 c
 c     Constants
 c
+      include 'maxparticles.inc'
       include 'run_config.inc'
 c
 c     Arguments
@@ -472,6 +474,7 @@ c*****************************************************************************
 c
 c     Constants
 c
+      include 'maxparticles.inc'
       include 'run_config.inc'
       include 'maxconfigs.inc'
 c
@@ -735,6 +738,7 @@ c*****************************************************************************
 c
 c     Constants
 c
+      include 'maxparticles.inc'
       include 'run_config.inc'
       include 'maxconfigs.inc'
 c

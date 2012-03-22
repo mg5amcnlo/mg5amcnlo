@@ -8,6 +8,7 @@ c     Constants
 c
       include 'maxparticles.inc'
       include 'run_config.inc'
+      include 'run.inc'
       integer    maxsubprocesses
       parameter (maxsubprocesses=9999)
       integer    cmax_events
@@ -35,7 +36,7 @@ c
       double precision wgt,maxwgt
       double precision p(0:4,maxexternal)
       integer ic(7,maxexternal),n
-      double precision scale,aqcd,aqed
+      double precision sscale,aqcd,aqed
       character*20 param(maxpara),value(maxpara)
       integer npara,nunwgt
       double precision xtrunc, min_goal,max_goal
@@ -147,15 +148,15 @@ C $E$ output_file1 $E$ !this is tag for automatic modification by MW
          if(use_syst) then
             read(sfnum,rec=iarray(i)) wgt,n,
      &           ((ic(m,j),j=1,maxexternal),m=1,7),ievent,
-     &           ((p(m,j),m=0,4),j=1,maxexternal),scale,aqcd,aqed,
+     &           ((p(m,j),m=0,4),j=1,maxexternal),sscale,aqcd,aqed,
      &           buff,buff2
          else
             read(sfnum,rec=iarray(i)) wgt,n,
      &           ((ic(m,j),j=1,maxexternal),m=1,7),ievent,
-     &           ((p(m,j),m=0,4),j=1,maxexternal),scale,aqcd,aqed,
+     &           ((p(m,j),m=0,4),j=1,maxexternal),sscale,aqcd,aqed,
      &           buff
          endif
-         call write_event(15,P,wgt,n,ic,ievent,scale,aqcd,aqed,buff,buff2)
+         call write_event(15,P,wgt,n,ic,ievent,sscale,aqcd,aqed,buff,buff2)
       enddo
       close(15)
 c
@@ -176,7 +177,7 @@ c
          do i=1,kevent
             read(sfnum,rec=iarray(i)) wgt,n,
      &           ((ic(m,j),j=1,maxexternal),m=1,7),ievent,
-     &           ((p(m,j),m=0,4),j=1,maxexternal),scale,aqcd,aqed,
+     &           ((p(m,j),m=0,4),j=1,maxexternal),sscale,aqcd,aqed,
      &        buff
             if (wgt .gt. goal_wgt*xran1(iseed)) then
                keep(i) = .true.
@@ -215,7 +216,7 @@ c            write(*,*) min_goal,goal_wgt,max_goal
          write(*,*) 'Found ',nunwgt,' events writing first ',nreq
       endif
       write(*,*) 'Unweighting selected ',nreq, ' events.'
-      write(*,'(a,f5.2,a)') 'Truncated ',xtrunc*100./sum, '% of cross section'
+      write(*,'(a,f5.2,a)') 'Truncated ',xtrunc*100./sum, '%% of cross section'
 
 C $B$ output_file2 $B$ !this is tag for automatic modification by MW
       filename='../Events/unweighted_events.lhe'
@@ -228,9 +229,9 @@ C $E$ output_file2 $E$ !this is tag for automatic modification by MW
          if (keep(i) .and. ntry .lt. nreq) then
             read(sfnum,rec=iarray(i)) wgt,n,
      &           ((ic(m,j),j=1,maxexternal),m=1,7),ievent,
-     &           ((p(m,j),m=0,4),j=1,maxexternal),scale,aqcd,aqed,
+     &           ((p(m,j),m=0,4),j=1,maxexternal),sscale,aqcd,aqed,
      $        buff
-            call write_event(15,P,xsec/nreq,n,ic,ievent,scale,aqcd,aqed,buff)
+            call write_event(15,P,xsec/nreq,n,ic,ievent,sscale,aqcd,aqed,buff)
             ntry=ntry+1
          endif
       enddo
@@ -531,6 +532,7 @@ c
       integer    maxexternal
       parameter (maxexternal=2*max_particles-3)
       include 'run_config.inc'
+      include 'run.inc'
       integer    max_read
       parameter (max_read = 2000000)
 c
@@ -547,7 +549,7 @@ c
       double precision gsfact
       real xwgt(max_read),xtot
       integer i,j,k,m, ic(7,maxexternal),n
-      double precision scale,aqcd,aqed,tmpsum
+      double precision sscale,aqcd,aqed,tmpsum
       integer ievent,iseed
       logical done,found
       character*300 buff
@@ -600,7 +602,7 @@ c
 c     Now loop through events
 c
       do while (.not. done)
-         call read_event(15,P,wgt,n,ic,ievent,scale,aqcd,aqed,buff,buff2,done)
+         call read_event(15,P,wgt,n,ic,ievent,sscale,aqcd,aqed,buff,buff2,done)
          if (.not. done) then
             revent = revent+1
             wgt = wgt*nj*gsfact                 !symmetry factor * grid factor
@@ -611,12 +613,12 @@ c
                if (use_syst) then
                   write(sfnum,rec=kevent) wgt,n,
      &                 ((ic(i,j),j=1,maxexternal),i=1,7),ievent,
-     &                 ((p(i,j),i=0,4),j=1,maxexternal),scale,aqcd,aqed,
+     &                 ((p(i,j),i=0,4),j=1,maxexternal),sscale,aqcd,aqed,
      $                 buff,buff2
                else
                   write(sfnum,rec=kevent) wgt,n,
      &              ((ic(i,j),j=1,maxexternal),i=1,7),ievent,
-     &              ((p(i,j),i=0,4),j=1,maxexternal),scale,aqcd,aqed,buff
+     &              ((p(i,j),i=0,4),j=1,maxexternal),sscale,aqcd,aqed,buff
                endif
                sum=sum+wgt
                found=.false.

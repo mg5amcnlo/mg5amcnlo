@@ -90,6 +90,12 @@ c*********************************************************************
 c Automatically set ptj and mjj = xqcut (if xqcut > 0)
 c*********************************************************************
 
+      call  get_logical (npara,param,value,"use_syst",use_syst,.false.)
+
+c*********************************************************************
+c Automatically set ptj and mjj = xqcut (if xqcut > 0)
+c*********************************************************************
+
       call  get_logical (npara,param,value,"auto_ptj_mjj",auto_ptj_mjj,.true.)
 
 c*********************************************************************

@@ -327,7 +327,7 @@ c
         if(ickkw.gt.0) then
            write(cform,'(a4,i2,a6)') '(a1,',max(nexternal,10),'e15.7)'
            write(buff,cform) '#',(ptclus(i),i=3,nexternal)
-         endif
+        endif
         npart = nexternal+nres
 
       return

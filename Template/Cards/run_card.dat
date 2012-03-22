@@ -66,6 +66,14 @@
  F        = chcluster        ! cluster only according to channel diag
  T        = pdfwgt           ! for ickkw=1, perform pdf reweighting
 #*********************************************************************
+#
+#**********************************************************
+# Store info for systematics studies
+#**********************************************************
+   F  = use_syst      ! Enable systematics studies
+#**********************************************************
+#
+#**********************************************************
 # Automatic ptj and mjj cuts if xqcut > 0
 # (turn off for VBF and single top processes)
 #**********************************************************

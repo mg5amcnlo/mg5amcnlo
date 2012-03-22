@@ -552,8 +552,8 @@ c     output:
 c            true if tree structure identified
 c**************************************************************************
       implicit none
-      include 'run.inc'
       include 'genps.inc'
+      include 'run.inc'
       include 'nexternal.inc'
       include 'maxamps.inc'
       include 'cluster.inc'

@@ -39,10 +39,7 @@ c
 	double precision trunc_max
         parameter (trunc_max=0.01)
 
-c     Parameter for whether or not to include information for
-c     systematics variations
-        logical use_syst
-        parameter (use_syst=.false.)
+c     Parameter for string buffer length for systematics variations info
         integer s_bufflen
         parameter (s_bufflen=max(300,1+4*3+(max_particles-1)*9+
      $                               (4+(max_particles-1)*3)*15))

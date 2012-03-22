@@ -8,6 +8,7 @@ c**************************************************
       include 'maxamps.inc'
       include 'cluster.inc'
       include 'sudakov.inc'
+      include 'maxparticles.inc'
       include 'run.inc'
       integer i
       double precision q0, val, add, add2
@@ -390,15 +391,6 @@ C     Present process number
       INTEGER IMIRROR,IPROC
       COMMON/TO_MIRROR/IMIRROR, IPROC
 
-C     Common block for systematics variations
-      DOUBLE PRECISION s_scale, s_qfact(2),s_x(2)
-      INTEGER n_qcd,n_alpsem
-      DOUBLE PRECISION s_qalps(nexternal-2)
-      INTEGER n_pdfrw(2),i_pdgpdf(nexternal-2,2)
-      DOUBLE PRECISION s_xpdf(nexternal-2,2),s_qpdf(nexternal-2,2)
-      COMMON/TO_SYST/n_qcd,n_alpsem,n_pdfrw,i_pdgpdf,
-     $               s_scale,s_qfact,s_x,s_qalps,s_xpdf,s_qpdf
-
 C   local variables
       integer i, j, idi, idj
       real*8 PI
@@ -422,6 +414,8 @@ c     q2bck holds the central q2fact scales
       logical failed,first
       data first/.true./
       data nwarning/0/
+      integer nqcd(lmaxconfigs)
+      include 'config_nqcd.inc'
 
       logical isqcd,isjet,isparton,cluster
       double precision alphas
@@ -708,6 +702,7 @@ c     Store information for systematics studies
 c
       if(use_syst)then
          s_scale=scale
+         n_qcd=nqcd(igraphs(1))
          n_alpsem=0
          do i=1,2
             s_qfact(i)=sqrt(q2bck(i))
@@ -750,14 +745,6 @@ C     Present process number
       INTEGER SUBDIAG(MAXSPROC),IB(2)
       COMMON/TO_SUB_DIAG/SUBDIAG,IB
       data IB/1,2/
-C     Common block for systematics variations
-      DOUBLE PRECISION s_scale, s_qfact(2),s_x(2)
-      INTEGER n_qcd,n_alpsem
-      DOUBLE PRECISION s_qalps(nexternal-2)
-      INTEGER n_pdfrw(2),i_pdgpdf(nexternal-2,2)
-      DOUBLE PRECISION s_xpdf(nexternal-2,2),s_qpdf(nexternal-2,2)
-      COMMON/TO_SYST/n_qcd,n_alpsem,n_pdfrw,i_pdgpdf,
-     $               s_scale,s_qfact,s_x,s_qalps,s_xpdf,s_qpdf
 c     q2bck holds the central q2fact scales
       real*8 q2bck(2)
       common /to_q2bck/q2bck

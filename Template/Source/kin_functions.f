@@ -108,6 +108,7 @@ c
 c
 c     Global
 c
+      include 'maxparticles.inc'
       include 'run.inc'
 c-----
 c  Begin Code
@@ -133,6 +134,7 @@ c
 c
 c     Global
 c
+      include 'maxparticles.inc'
       include 'run.inc'
 c-----
 c  Begin Code
@@ -229,6 +231,7 @@ c
 c     Local
 c
 
+      include 'maxparticles.inc'
       include 'run.inc'
 
       double precision pt1,pt2,ptm1,ptm2,eta1,eta2,phi1,phi2,p1a,p2a,costh,sumdot
@@ -323,6 +326,7 @@ c
 c     Local
 c
 
+      include 'maxparticles.inc'
       include 'run.inc'
 
       double precision pt1,pt2,ptm1,eta1,eta2,phi1,phi2,p1a,p2a,costh
@@ -375,6 +379,7 @@ c
 c     Local
 c
       double precision pm1
+      include 'maxparticles.inc'
       include 'run.inc'
 
 c-----

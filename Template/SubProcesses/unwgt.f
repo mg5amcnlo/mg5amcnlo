@@ -428,14 +428,6 @@ C
       integer ngroup
       common/to_group/ngroup
 
-c     Common block for systematics variations
-      DOUBLE PRECISION s_scale, s_qfact(2),s_x(2)
-      INTEGER n_qcd,n_alpsem
-      DOUBLE PRECISION s_qalps(nexternal-2)
-      INTEGER n_pdfrw(2),i_pdgpdf(nexternal-2,2)
-      DOUBLE PRECISION s_xpdf(nexternal-2,2),s_qpdf(nexternal-2,2)
-      COMMON/TO_SYST/n_qcd,n_alpsem,n_pdfrw,i_pdgpdf,
-     $               s_scale,s_qfact,s_x,s_qalps,s_xpdf,s_qpdf
 c
 c     Data
 c
