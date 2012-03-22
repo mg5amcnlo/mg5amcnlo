@@ -458,7 +458,7 @@ class Cmd(CheckCmd, HelpCmd, CompleteCmd, BasicCmd):
         if os.path.exists(self.debug_output):
             os.remove(self.debug_output)
         try:
-            cmd.Cmd.onecmd(self, 'history %s' % self.debug_output)
+            cmd.Cmd.onecmd(self, 'history %s' % self.debug_output.replace(' ', '\ '))
         except Exception, error:
             print error
             
