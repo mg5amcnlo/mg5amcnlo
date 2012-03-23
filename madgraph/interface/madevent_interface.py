@@ -3412,28 +3412,31 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
             os.makedirs(plot_dir) 
         
         files.ln(pjoin(self.me_dir, 'Cards','plot_card.dat'), plot_dir, 'ma_card.dat')
-        proc = misc.Popen([os.path.join(madir, 'plot_events')],
+        try:
+            proc = misc.Popen([os.path.join(madir, 'plot_events')],
                             stdout = open(pjoin(plot_dir, 'plot.log'),'w'),
                             stderr = subprocess.STDOUT,
                             stdin=subprocess.PIPE,
                             cwd=plot_dir)
-        proc.communicate('%s\n' % event_path)
-        del proc
-        #proc.wait()
-        misc.call(['%s/plot' % self.dirbin, madir, td],
+            proc.communicate('%s\n' % event_path)
+            del proc
+            #proc.wait()
+            misc.call(['%s/plot' % self.dirbin, madir, td],
                             stdout = open(pjoin(plot_dir, 'plot.log'),'a'),
                             stderr = subprocess.STDOUT,
                             cwd=plot_dir)
     
-        misc.call(['%s/plot_page-pl' % self.dirbin, 
+            misc.call(['%s/plot_page-pl' % self.dirbin, 
                                 os.path.basename(plot_dir),
                                 mode],
                             stdout = open(pjoin(plot_dir, 'plot.log'),'a'),
                             stderr = subprocess.STDOUT,
                             cwd=pjoin(self.me_dir, 'HTML', self.run_name))
-       
-        shutil.move(pjoin(self.me_dir, 'HTML',self.run_name ,'plots.html'),
+            shutil.move(pjoin(self.me_dir, 'HTML',self.run_name ,'plots.html'),
                                                                          output)
+
+        except OSError, error:
+            logger.error('fail to create plot: %s. Please check that MadAnalysis is correctly installed.' % error)
         
         self.update_status('End Plots for %s level' % mode, level = mode.lower(),
                                                                  makehtml=False)

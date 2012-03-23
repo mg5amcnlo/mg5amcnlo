@@ -2808,7 +2808,9 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
         # Compile the file
         # Check for F77 compiler
         if 'FC' not in os.environ or not os.environ['FC']:
-            if misc.which('gfortran'):
+            if self.options['fortran_compiler']:
+                compiler = self.options['fortran_compiler']
+            elif misc.which('gfortran'):
                  compiler = 'gfortran'
             elif misc.which('g77'):
                 compiler = 'g77'
@@ -2819,7 +2821,11 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
                 text = open(path).read()
                 text = text.replace('FC=g77','FC=gfortran')
                 open(path, 'w').writelines(text)            
-        
+            elif compiler == 'gfortran' and args[0] == 'MadAnalysis':
+                path = os.path.join(MG5DIR, 'MadAnalysis', 'makefile')
+                text = open(path).read()
+                text = text.replace('F77 = g77','F77 = gfortran')
+                open(path, 'w').writelines(text)            
         if logger.level <= logging.INFO: 
             misc.call(['make', 'clean'], )
             status = misc.call(['make'], cwd = os.path.join(MG5DIR, name))
@@ -2828,6 +2834,8 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
             status = misc.compile(mode='', cwd = os.path.join(MG5DIR, name))
         if not status:
             logger.info('compilation succeeded')
+        else:
+            logger.warning('Error detected during the compilation. Please check the compilation error and run make manually.')
 
 
         # Special treatment for TD program (require by MadAnalysis)
@@ -3101,7 +3109,7 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
                 raise self.InvalidCmd('No processes to save!')
         
         elif args[0] == 'options':
-            CmdExtended.do_save(self, line, check)
+            CmdExtended.do_save(self, line)
 
     
     # Set an option
