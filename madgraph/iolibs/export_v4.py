@@ -2977,6 +2977,10 @@ class UFO_model_to_mg4(object):
         # the makefile
         self.create_makeinc()
         self.create_param_write()
+
+        # The model functions
+        self.create_model_functions_inc()
+        self.create_model_functions_def()
         
         # The param_card.dat        
         self.create_param_card()
@@ -3223,7 +3227,7 @@ class UFO_model_to_mg4(object):
           double precision PI
           parameter  (PI=3.141592653589793d0)
       
-      
+          include 'model_functions.inc'
           include 'input.inc'
           include 'coupl.inc'
                         """ % nb_file)
@@ -3233,12 +3237,45 @@ class UFO_model_to_mg4(object):
                                           self.p_to_f.parse(coupling.expr)))
         fsock.writelines('end')
 
+    def create_model_functions_inc(self):
+        """ Create model_functions.inc which contains the various declarations
+        of auxiliary functions which might be used in the couplings expressions"""
+        
+        fsock = self.open('model_functions.inc', format='fortran')
+        fsock.writelines("""real*8 cond
+          real*8 reglog""")
+
+    def create_model_functions_def(self):
+        """ Create model_functions.f which contains the various definitions
+        of auxiliary functions which might be used in the couplings expressions"""
+
+        fsock = self.open('model_functions.f', format='fortran')
+        fsock.writelines("""real*8 function cond(condition,truecase,falsecase)
+          implicit none
+          real*8 condition,truecase,falsecase
+          if(condition.eq.0.0d0) then
+             cond=truecase
+          else
+             cond=falsecase
+          endif
+          end
+          
+          real*8 function reglog(arg)
+          implicit none
+          real*8 arg
+          if(arg.eq.0.0d0) then
+             reglog=0.0d0
+          else
+             reglog=log(arg)
+          endif
+          end""")
 
     def create_makeinc(self):
         """create makeinc.inc containing the file to compile """
         
         fsock = self.open('makeinc.inc', comment='#')
-        text = 'MODEL = couplings.o lha_read.o printout.o rw_para.o '
+        text = 'MODEL = couplings.o lha_read.o printout.o rw_para.o'
+        text += ' model_functions.o '
         
         nb_coup_indep = 1 + len(self.coups_dep) // 25 
         nb_coup_dep = 1 + len(self.coups_indep) // 25

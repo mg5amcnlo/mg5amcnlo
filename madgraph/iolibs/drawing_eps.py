@@ -482,7 +482,7 @@ class MultiEpsDiagramDrawer(EpsDiagramDrawer):
         self.text += ' 260         50  moveto\n'
         self.text += ' (Diagrams made by MadGraph5) show\n'       
         # Loop on all diagram
-        for diagram in diagramlist:
+        for i,diagram in enumerate(diagramlist):
             # Check if they need to be convert in correct format
             diagram = self.convert_diagram(diagram, self.model, self.amplitude, opt)
             if diagram==None:

@@ -223,17 +223,16 @@ class LoopProcessExporterFortranSA(export_v4.ProcessExporterFortranSA,
                            len(matrix_element.get_all_amplitudes()))
 
         filename = "loop_matrix.ps"
-#        Not ready yet
         writers.FortranWriter(filename).writelines("""C Post-helas generation loop-drawing is not ready yet.""")
-#        plot = draw.MultiEpsDiagramDrawer(matrix_element.get('base_amplitude').\
-#                                             get('loop_diagrams'),
-#                                          filename,
-#                                          model=matrix_element.get('processes')[0].\
-#                                             get('model'),
-#                                          amplitude='')
-#        logger.info("Generating loop Feynman diagrams for " + \
-#                     matrix_element.get('processes')[0].nice_string())
-#        plot.draw()
+        plot = draw.MultiEpsDiagramDrawer(matrix_element.get('base_amplitude').\
+                                             get('loop_diagrams'),
+                                          filename,
+                                          model=matrix_element.get('processes')[0].\
+                                             get('model'),
+                                          amplitude='')
+        logger.info("Generating loop Feynman diagrams for " + \
+                     matrix_element.get('processes')[0].nice_string())
+        plot.draw()
 
         filename = "born_matrix.ps"
         plot = draw.MultiEpsDiagramDrawer(matrix_element.get('base_amplitude').\

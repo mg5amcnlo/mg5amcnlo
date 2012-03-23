@@ -62,30 +62,31 @@ class IOExportRealFKSTest(unittest.TestCase,
     created_files = ['test'
                     ]
 
+    mymodel = import_ufo.import_model('sm')
+    myfortranmodel = helas_call_writers.FortranUFOHelasCallWriter(mymodel)
+
+    myleglist = MG.MultiLegList()
+    
+    myleglist.append(MG.MultiLeg({'ids':[2], 'state':False}))
+    myleglist.append(MG.MultiLeg({'ids':[-2], 'state':False}))
+    myleglist.append(MG.MultiLeg({'ids':[2], 'state':True}))
+    myleglist.append(MG.MultiLeg({'ids':[-2], 'state':True}))
+    myleglist.append(MG.MultiLeg({'ids':[21], 'state':True}))
+
+    myproc = MG.ProcessDefinition({'legs': myleglist,
+                         'model': mymodel,
+                         'orders':{'QCD': 3, 'QED':0},
+                         'perturbation_couplings': ['QCD'],
+                         'NLO_mode': 'real'})
+    my_process_definitions = MG.ProcessDefinitionList([myproc])
+    
+    myfksmulti = fks_real.FKSMultiProcessFromReals(\
+            {'process_definitions': my_process_definitions})
+    
+    myfks_me = fks_real_helas.FKSHelasMultiProcessFromReals(\
+            myfksmulti)['matrix_elements'][0]
+
     def setUp(self):
-        self.mymodel = import_ufo.import_model('sm')
-        self.myfortranmodel = helas_call_writers.FortranUFOHelasCallWriter(self.mymodel)
-    
-        myleglist = MG.MultiLegList()
-        
-        myleglist.append(MG.MultiLeg({'ids':[2], 'state':False}))
-        myleglist.append(MG.MultiLeg({'ids':[-2], 'state':False}))
-        myleglist.append(MG.MultiLeg({'ids':[2], 'state':True}))
-        myleglist.append(MG.MultiLeg({'ids':[-2], 'state':True}))
-        myleglist.append(MG.MultiLeg({'ids':[21], 'state':True}))
-    
-        myproc = MG.ProcessDefinition({'legs': myleglist,
-                             'model': self.mymodel,
-                             'orders':{'QCD': 3, 'QED':0},
-                             'perturbation_couplings': ['QCD'],
-                             'NLO_mode': 'real'})
-        my_process_definitions = MG.ProcessDefinitionList([myproc])
-        
-        self.myfksmulti = fks_real.FKSMultiProcessFromReals(\
-                {'process_definitions': my_process_definitions})
-        
-        self.myfks_me = fks_real_helas.FKSHelasMultiProcessFromReals(\
-                self.myfksmulti)['matrix_elements'][0]
 
         #self.myfortranmodel.downcase = False
 

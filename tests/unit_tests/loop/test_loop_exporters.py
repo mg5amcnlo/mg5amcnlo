@@ -175,7 +175,7 @@ class LoopExporterTest(unittest.TestCase):
                                         'forbidden_particles':[],
                                         'perturbation_couplings':['QCD',],
                                         'squared_orders':{}})
-    
+        
         myloopamplitude = loop_diagram_generation.LoopAmplitude()
         myloopamplitude.set('process', myloopproc)
         myloopamplitude.generate_diagrams()
@@ -442,7 +442,7 @@ class LoopExporterTest(unittest.TestCase):
                                         'forbidden_particles':[3,4,5,6],
                                         'perturbation_couplings':['QCD',],
                                         'squared_orders':{}})
-    
+        
         myloopamplitude = loop_diagram_generation.LoopAmplitude()
         myloopamplitude.set('process', myloopproc)
         myloopamplitude.generate_diagrams()

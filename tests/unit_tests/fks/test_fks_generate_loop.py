@@ -37,8 +37,7 @@ import string
 class TestGenerateLoopFKSFromBorn(unittest.TestCase):
     """a class to test the generation of the virtual amps for a FKSMultiProcessFromReals"""
 
-    def setUp(self):
-        self.mymodel = import_ufo.import_model('loop_sm')
+    mymodel = import_ufo.import_model('loop_sm')
     
 
     def test_generate_virtuals_single_processB(self):
@@ -109,43 +108,10 @@ class TestGenerateLoopFKSFromBorn(unittest.TestCase):
         self.assertNotEqual(myfksme['matrix_elements'][0].virt_matrix_element, None)
 
 
-    def test_generate_virtuals_multi_processB(self):
-        """checks that the virtuals are correctly generated for a multi process"""
-
-        p = [1, -1, 21]
-
-        my_multi_leg = MG.MultiLeg({'ids': p, 'state': True});
-
-        # Define the multiprocess
-        my_multi_leglist = MG.MultiLegList([copy.copy(leg) for leg in [my_multi_leg] * 4])
-        
-        my_multi_leglist[0].set('state', False)
-        my_multi_leglist[1].set('state', False)
-        myproc = MG.ProcessDefinition({'legs':my_multi_leglist,
-                                        'model':self.mymodel,
-                                        'orders': {'QED': 0},
-                                        'perturbation_couplings':['QCD'],
-                                        'NLO_mode': 'all'})
-
-        my_process_definitions = MG.ProcessDefinitionList([myproc])
-        
-        myfksmulti = fks_born.FKSMultiProcessFromBorn(\
-                {'process_definitions': my_process_definitions})
-
-        myfksmulti.generate_virtuals()
-        for born in myfksmulti['born_processes']:
-            pdgs = [l.get('id') for l in born.leglist] 
-            # if the real process has soft singularities
-            self.assertEqual([l['id'] for l in \
-                    born.virt_amp.get('process').get('legs')], pdgs)
-
-
-
 class TestGenerateLoopFKSFromReals(unittest.TestCase):
     """a class to test the generation of the virtual amps for a FKSMultiProcessFromReals"""
 
-    def setUp(self):
-        self.mymodel = import_ufo.import_model('loop_sm')
+    mymodel = import_ufo.import_model('loop_sm')
     
 
     def test_generate_virtuals_single_process_from_procdefR(self):
@@ -248,36 +214,3 @@ class TestGenerateLoopFKSFromReals(unittest.TestCase):
         self.assertNotEqual(myfksme['matrix_elements'][0].virt_matrix_element, None)
 
 
-    def test_generate_virtuals_multi_processR(self):
-        """checks that the virtuals are correctly generated for a multi process"""
-
-        p = [1, -1, 21]
-
-        my_multi_leg = MG.MultiLeg({'ids': p, 'state': True});
-
-        # Define the multiprocess
-        my_multi_leglist = MG.MultiLegList([copy.copy(leg) for leg in [my_multi_leg] * 5])
-        
-        my_multi_leglist[0].set('state', False)
-        my_multi_leglist[1].set('state', False)
-        myproc = MG.ProcessDefinition({'legs':my_multi_leglist,
-                                        'model':self.mymodel,
-                                        'orders': {'QED': 0},
-                                        'perturbation_couplings':['QCD'],
-                                        'NLO_mode': 'all'})
-
-        my_process_definitions = MG.ProcessDefinitionList([myproc])
-        
-        myfksmulti = fks_real.FKSMultiProcessFromReals(\
-                {'process_definitions': my_process_definitions})
-
-        myfksmulti.generate_virtuals()
-        for real in myfksmulti['real_processes']:
-            pdgs = [l.get('id') for l in real.leglist] 
-            # if the real process has soft singularities
-            if 21 in pdgs[3:]:
-                self.assertEqual([l['id'] for l in \
-                    real.virt_amp.get('process').get('legs')], \
-                    pdgs[:-1])
-            else:
-                self.assertEqual(real.virt_amp, None)
