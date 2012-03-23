@@ -60,6 +60,15 @@ class FKSMultiProcessFromReals(diagram_generation.MultiProcess): #test written
         """Initializes the original multiprocess, then generates the amps for the 
         borns, then generate the born processes and the reals.
         """
+
+
+        #swhich the other loggers off
+        loggers_off = [logging.getLogger('madgraph.diagram_generation'), 
+                       logging.getLogger('madgraph.loop_diagram_generation')]
+        old_levels = [logg.getEffectiveLevel() for logg in loggers_off]
+        for logg in loggers_off:
+            logg.setLevel(logging.WARNING)
+
         super(FKSMultiProcessFromReals, self).__init__(*arguments)
         amps = self.get('amplitudes')
         born_amplist = []
@@ -69,13 +78,45 @@ class FKSMultiProcessFromReals(diagram_generation.MultiProcess): #test written
             self['real_processes'].append(real_proc)
 
         if self['process_definitions'][0].get('NLO_mode') == 'all':
-            logger.info('Generating virtual matrix elements')
+            logger.info('Generating virtual matrix elements:')
             self.generate_virtuals()
-        
         elif not self['process_definitions'][0].get('NLO_mode') in ['all', 'real']:
             raise fks_common.FKSProcessError(), \
                "Not a valid NLO_mode for a FKSMultiProcess: %s" % \
                self['process_definitions'][0].get('NLO_mode')
+        
+        # now get the total number of diagrams
+        n_diag_born = sum([len(amp.get('diagrams')) 
+                 for amp in self.get_born_amplitudes()])
+        n_diag_real = sum([len(amp.get('diagrams')) 
+                 for amp in self.get_real_amplitudes()])
+        n_diag_virt = sum([len(amp.get('diagrams')) 
+                 for amp in self.get_virt_amplitudes()])
+
+        logger.info(('Generated %d subprocesses with %d real emission diagrams, ' + \
+                    '%d born diagrams and %d virtual diagrams') % \
+                            (len(self['real_processes']), n_diag_real, n_diag_born, n_diag_virt))
+
+        for i, logg in enumerate(loggers_off):
+            logg.setLevel(old_levels[i])
+
+
+    def get_born_amplitudes(self):
+        """return an amplitudelist with the born amplitudes"""
+        return diagram_generation.AmplitudeList([born.amplitude \
+                for real in self['real_processes'] \
+                for born in real.borns])
+
+    def get_virt_amplitudes(self):
+        """return an amplitudelist with the virt amplitudes"""
+        return diagram_generation.AmplitudeList([real.virt_amp \
+                for real in self['real_processes'] if real.virt_amp])
+
+    def get_real_amplitudes(self):
+        """return an amplitudelist with the real amplitudes"""
+        return diagram_generation.AmplitudeList([real.real_amp \
+                           for real in self['real_processes']])
+            
 
     def generate_virtuals(self):
         """For each FKSBornProcess of all the real_proc, creates the corresponding
@@ -83,10 +124,12 @@ class FKSMultiProcessFromReals(diagram_generation.MultiProcess): #test written
 
         for real in self['real_processes']:
             if any([ born.is_nbody_only and born.need_color_links for born in real.borns]):
-                    myproc = copy.copy(born.process)
-                    myamp = loop_diagram_generation.LoopAmplitude(myproc)
-                    if myamp.get('diagrams'):
-                        real.virt_amp = myamp
+                myproc = copy.copy(born.process)
+                logger.info('Generating virtual matrix element for process%s' \
+                    % myproc.nice_string().replace('Process', ''))
+                myamp = loop_diagram_generation.LoopAmplitude(myproc)
+                if myamp.get('diagrams'):
+                    real.virt_amp = myamp
 
 
             
@@ -207,6 +250,10 @@ class FKSProcessFromReals(object):
             else:
                 raise fks_common.FKSProcessError(), \
                     'Not valid start_proc in FKSProcessFromReals'
+            
+            logger.info("Generating FKS-subtracted matrix elements for real-emission process%s" \
+                % self.real_proc.nice_string().replace('Process', '')) 
+
 
             self.model = self.real_proc.get('model')   
 

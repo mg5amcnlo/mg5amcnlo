@@ -18,6 +18,7 @@
 
 import os
 import logging
+import sys
 import time
 
 import madgraph
@@ -29,6 +30,8 @@ import madgraph.fks.fks_born as fks_born
 import madgraph.fks.fks_born_helas_objects as fks_born_helas
 import madgraph.iolibs.export_fks_real as export_fks_real
 import madgraph.iolibs.export_fks_born as export_fks_born
+import madgraph.loop.loop_base_objects as loop_base_objects
+import madgraph.core.diagram_generation as diagram_generation
 
 #usefull shortcut
 pjoin = os.path.join
@@ -40,18 +43,18 @@ logger_tuto = logging.getLogger('tutorial') # -> stdout include instruction in
                                             #order to learn MG5
 
 class CheckFKS(mg_interface.CheckValidForCmd):
-    pass
 
-class CheckFKSWeb(mg_interface.CheckValidForCmdWeb, CheckFKS):
-    pass
 
-class CompleteFKS(mg_interface.CompleteForCmd):
-    pass
+    def check_display(self, args):
+        """ Check the arguments of the display diagrams command in the context
+        of the Loop interface."""
+        
+        mg_interface.MadGraphCmd.check_display(self,args)
+        
+        if args[0] in ['diagrams', 'processes'] and len(args)>=3 \
+                and args[1] not in ['born','loop','virt','real']:
+            raise self.InvalidCmd("Can only display born, loop (virt) or real diagrams, not %s."%args[1])
 
-class HelpFKS(mg_interface.HelpToCmd):
-    pass
-
-class FKSInterface(CheckFKS, CompleteFKS, HelpFKS, mg_interface.MadGraphCmd):
 
     def check_output(self, args):
         """ check the validity of the line"""
@@ -84,35 +87,118 @@ class FKSInterface(CheckFKS, CompleteFKS, HelpFKS, mg_interface.MadGraphCmd):
 
         self._export_dir = os.path.realpath(self._export_dir)
 
+
+    def validate_model(self, loop_type):
+        """ Upgrade the model sm to loop_sm if needed """
+
+        if not isinstance(self._curr_model,loop_base_objects.LoopModel) or \
+           self._curr_model['perturbation_couplings']==[]:
+            if loop_type == 'real':
+                    logger.warning(\
+                      "Beware that real corrections are generated from a tree-level model.")     
+            else:
+                if self._curr_model['name']=='sm':
+                    logger.warning(\
+                      "The default sm model does not allow to generate"+
+                      " loop processes. MG5 now loads 'loop_sm' instead.")
+                    mg_interface.MadGraphCmd.do_import(self,"model loop_sm")
+                else:
+                    raise MadGraph5Error(
+                      "The model %s cannot handle loop processes"\
+                      %self._curr_model['name'])            
+    pass
+
+class CheckFKSWeb(mg_interface.CheckValidForCmdWeb, CheckFKS):
+    pass
+
+class CompleteFKS(mg_interface.CompleteForCmd):
+    
+    def complete_display(self, text, line, begidx, endidx):
+        "Complete the display command in the context of the FKS interface"
+
+        args = self.split_arg(line[0:begidx])
+
+        if len(args) == 2 and args[1] in ['diagrams', 'processes']:
+            return self.list_completion(text, ['born', 'loop', 'virt', 'real'])
+        else:
+            return mg_interface.MadGraphCmd.complete_display(self, text, line,
+                                                                 begidx, endidx)
+
+class HelpFKS(mg_interface.HelpToCmd):
+
+    def help_display(self):   
+        mg_interface.MadGraphCmd.help_display(self)
+        logger.info("   In aMC@NLO5, after display diagrams, the user can add the option")
+        logger.info("   \"born\", \"virt\" or \"real\" to display only the corresponding diagrams.")
+
+class FKSInterface(CheckFKS, CompleteFKS, HelpFKS, mg_interface.MadGraphCmd):
+    _fks_display_opts = ['real_diagrams', 'born_diagrams', 'virt_diagrams', 
+                         'real_processes', 'born_processes', 'virt_processes']
+    
+    def do_display(self, line, output=sys.stdout):
+        # if we arrive here it means that a _fks_display_opts has been chosen
+        args = self.split_arg(line)
+        #check the validity of the arguments
+        self.check_display(args)
+
+        if args[0] in ['diagrams', 'processes']:
+            get_amps_dict = {'real': self._fks_multi_proc.get_real_amplitudes,
+                             'born': self._fks_multi_proc.get_born_amplitudes,
+                             'loop': self._fks_multi_proc.get_virt_amplitudes,
+                             'virt': self._fks_multi_proc.get_virt_amplitudes}
+        if args[0] == 'diagrams':
+            if len(args)>=2 and args[1] in get_amps_dict.keys():
+                get_amps = get_amps_dict[args[1]]
+                self._curr_amps = get_amps()
+                #check that if one requests the virt diagrams, there are virt_amplitudes
+                if args[1] in ['virt', 'loop'] and len(self._curr_amps) == 0:
+                    raise self.InvalidCmd('No virtuals have been generated')
+                self.draw(' '.join(args[2:]))
+            else:
+                self._curr_amps = get_amps_dict['born']() + get_amps_dict['real']() + \
+                                  get_amps_dict['virt']()
+                self.draw(' '.join(args[1:]))
+            # set _curr_amps back to empty
+            self._curr_amps = diagram_generation.AmplitudeList()
+                
+        elif args[0] == 'processes':
+            if len(args)>=2 and args[1] in get_amps_dict.keys():
+                get_amps = get_amps_dict[args[1]]
+                self._curr_amps = get_amps()
+                #check that if one requests the virt diagrams, there are virt_amplitudes
+                if args[1] in ['virt', 'loop'] and len(self._curr_amps) == 0:
+                    raise self.InvalidCmd('No virtuals have been generated')
+                print '\n'.join(amp.nice_string_processes() for amp in self._curr_amps)
+            else:
+                self._curr_amps = get_amps_dict['born']() + get_amps_dict['real']() + \
+                                  get_amps_dict['virt']()
+                print '\n'.join(amp.nice_string_processes() for amp in self._curr_amps)
+            # set _curr_amps back to empty
+            self._curr_amps = diagram_generation.AmplitudeList()
+
+        else:
+            mg_interface.MadGraphCmd.do_display(self,line,output)
+
+
     def do_add(self, line, *args,**opt):
         
         args = self.split_arg(line)
         # Check the validity of the arguments
         self.check_add(args)
-
+        proc_type=self.extract_process_type(line)
+        self.validate_model(proc_type[1])
+        
         if args[0] != 'process': 
             raise self.InvalidCmd("The add command can only be used with a process")
         else:
             line = ' '.join(args[1:])
 
-        if self._curr_model['perturbation_couplings']=={}:
-            if self._curr_model['name']=='sm':
-                mg_interface.logger.warning(\
-                  "The default sm model does not allow to generate"+
-                  " loop processes. MG5 now loads 'loop_sm' instead.")
-                mg_interface.MadGraphCmd.do_import(self,"model loop_sm")
-            else:
-                raise MadGraph5Error(
-                  "The model %s cannot generate loop processes"\
-                  %self._curr_model['name'])
-        
-        orders=self.extract_process_type(line)[2]
-        if orders!=['QCD']:
+        if proc_type[2]!=['QCD']:
                 raise MadGraph5Error, 'FKS for reals only available in QCD for now, you asked %s' \
                         % ', '.join(orders)
                         
         #now generate the amplitudes as usual
-        self.options['group_subprocesses'] = 'NLO'
+        self.options['group_subprocesses'] = 'False'
         collect_mirror_procs = False
         ignore_six_quark_processes = self.options['ignore_six_quark_processes']
 #        super(FKSInterface, self).do_generate(line)
@@ -158,6 +244,7 @@ class FKSInterface(CheckFKS, CompleteFKS, HelpFKS, mg_interface.MadGraphCmd):
         except:
             pass
 
+        self.options['group_subprocesses'] = False
         # initialize the writer
         if self._export_format in self._nlo_export_formats:
             if self.options['fks_mode'] == 'real':
@@ -207,8 +294,7 @@ class FKSInterface(CheckFKS, CompleteFKS, HelpFKS, mg_interface.MadGraphCmd):
         self._export_dir = None
 
 
-    # Export a matrix element
-    
+    # Export a matrix element  
     def export(self, nojpeg = False, main_file_name = ""):
         """Export a generated amplitude to file"""
 
@@ -223,7 +309,7 @@ class FKSInterface(CheckFKS, CompleteFKS, HelpFKS, mg_interface.MadGraphCmd):
 
             # Check if we need to group the SubProcesses or not
             group = True
-            if self.options['group_subprocesses'] in [False, 'NLO']:
+            if self.options['group_subprocesses'] in [False]:
                 group = False
             elif self.options['group_subprocesses'] == 'Auto' and \
                                          self._curr_amps[0].get_ninitial() == 1:
