@@ -3230,7 +3230,7 @@ class UFO_model_to_mg4(object):
         of auxiliary functions which might be used in the couplings expressions"""
 
         fsock = self.open('model_functions.f', format='fortran')
-        fsock.writelines("""real*8 function cond(condition,truecase,falsecase)
+        fsock.writelines("""double complex function cond(condition,truecase,falsecase)
           implicit none
           double complex condition,truecase,falsecase
           if(condition.eq.(0.0d0,0.0d0)) then

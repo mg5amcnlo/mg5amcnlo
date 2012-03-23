@@ -632,7 +632,7 @@ V_UVbMass = CTVertex(name = 'V_UVbMass',
                type = 'UVmass') 
 
 # t~t         
-V_UVbMass = CTVertex(name = 'V_UVtMass',
+V_UVtMass = CTVertex(name = 'V_UVtMass',
                particles = [ P.t__tilde__, P.t ],
                color = [ 'Identity(1,2)' ],
                lorentz = [ L.R2_QQ_2 ],
