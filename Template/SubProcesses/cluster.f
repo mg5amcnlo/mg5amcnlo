@@ -354,6 +354,8 @@ C $E$ IFOREST $E$ !this is a tag for MadWeight
       integer mothup(2,nexternal)
       integer icolup(2,nexternal,maxflow,maxsproc)
       include 'leshouche.inc'
+      integer nqcd(lmaxconfigs)
+      include 'config_nqcd.inc'
       
       logical filgrp
       external filgrp
@@ -371,6 +373,12 @@ C $E$ IFOREST $E$ !this is a tag for MadWeight
          enddo
       enddo
       do i=start_config,end_config
+         if(nqcd(this_config).ne.nqcd(i)) then
+            if(btest(mlevel,3))
+     $           write(*,*) 'Skipping config ',i,' since nqcd: ',
+     $           nqcd(this_config),nqcd(i)
+            cycle
+         endif
          heavyrad(i)=.false.
 c         write (*,*) ' at graph ',i
          do j=1,nexternal
@@ -383,7 +391,8 @@ c         write (*,*) ' at graph ',i
             enddo
          enddo
          inpids=nexternal
-c         print *,'Inserting graph ',i
+         if(btest(mlevel,3))
+     $        write(*,*) 'Inserting graph ',i
  10      if (filgrp(i,inpids,ipids)) goto 10
          if(btest(mlevel,4).and.heavyrad(i)) then
             write(*,*)' set heavyrad of ',i,' to T'
