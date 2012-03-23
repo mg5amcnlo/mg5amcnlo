@@ -30,6 +30,7 @@ import re
 import shutil
 import glob
 import re
+import subprocess
 
 import aloha.aloha_writers as aloha_writers
 import aloha.create_aloha as create_aloha
@@ -390,7 +391,7 @@ class LoopMatrixElementEvaluator(MatrixElementEvaluator):
             import madgraph.loop.loop_exporters as loop_exporters
             FortranExporter = loop_exporters.LoopProcessExporterFortranSA(\
                             self.mg_root, export_dir, True,\
-                            os.path.join(self.mg_root, 'loop_material'),\
+                            os.path.join(self.mg_root, 'Template/loop_material'),\
                             self.cuttools_dir)
             FortranModel = helas_call_writers.FortranUFOHelasCallWriter(model)
             FortranExporter.copy_v4template(modelname=model.get('name'))
@@ -402,9 +403,7 @@ class LoopMatrixElementEvaluator(MatrixElementEvaluator):
             FortranExporter.finalize_v4_directory(helas_objects.HelasMatrixElementList([\
                                     matrix_element]),"",False,False,'gfortran')
 
-        # Same comment as above for the import of LoopMG5Runner
-        from tests.parallel_tests.loop_me_comparator import LoopMG5Runner
-        LoopMG5Runner.fix_PSPoint_in_check(export_dir)
+        self.fix_PSPoint_in_check(export_dir)
         if gauge_check:
             file_path, orig_file_content, new_file_content = \
                                             self.setup_ward_check(export_dir)
@@ -412,7 +411,7 @@ class LoopMatrixElementEvaluator(MatrixElementEvaluator):
             file.write(new_file_content)
             file.close()
         
-        finite_m2 = LoopMG5Runner.get_me_value(process.shell_string_v4(), 0,\
+        finite_m2 = self.get_me_value(process.shell_string_v4(), 0,\
                                                export_dir, p,verbose=False)[0][0]
         
         # Restore the original loop_matrix.f code so that it could be reused
@@ -433,6 +432,98 @@ class LoopMatrixElementEvaluator(MatrixElementEvaluator):
         else:
             return {'m2': finite_m2, output:[]}
 
+    def fix_PSPoint_in_check(self,dir_name):
+        """Set check_sa.f to be reading PS.input assuming a working dir dir_name"""
+
+        file = open(os.path.join(dir_name, 'SubProcesses', 'check_sa.f'), 'r')
+        check_sa = file.read()
+        file.close()
+
+        file = open(os.path.join(dir_name, 'SubProcesses', 'check_sa.f'), 'w')
+        file.write(re.sub("READPS = .FALSE.", "READPS = .TRUE.", check_sa))
+        file.close()
+
+    def get_me_value(self, proc, proc_id, working_dir, PSpoint=[], verbose=True):
+        """Compile and run ./check, then parse the output and return the result
+        for process with id = proc_id and PSpoint if specified."""  
+        if verbose:
+            sys.stdout.write('.')
+            sys.stdout.flush()
+         
+        shell_name = None
+        directories = glob.glob(os.path.join(working_dir, 'SubProcesses',
+                                  'P%i_*' % proc_id))
+        if directories and os.path.isdir(directories[0]):
+            shell_name = os.path.basename(directories[0])
+
+        # If directory doesn't exist, skip and return 0
+        if not shell_name:
+            logging.info("Directory hasn't been created for process %s" %proc)
+            return ((0.0, 0.0, 0.0, 0.0, 0), [])
+
+        if verbose: logging.info("Working on process %s in dir %s" % (proc, shell_name))
+        
+        dir_name = os.path.join(working_dir, 'SubProcesses', shell_name)
+        # Run make
+        devnull = open(os.devnull, 'w')
+        retcode = subprocess.call('make',
+                        cwd=dir_name,
+                        stdout=devnull, stderr=devnull)
+                        
+        if retcode != 0:
+            logging.info("Error while executing make in %s" % shell_name)
+            return ((0.0, 0.0, 0.0, 0.0, 0), [])
+
+        # If a PS point is specified, write out the corresponding PS.input
+        if PSpoint:
+            PSfile = open(os.path.join(dir_name, 'PS.input'), 'w')
+            PSfile.write('\n'.join([' '.join(['%.16E'%pi for pi in p]) \
+                                  for p in PSpoint]))
+            PSfile.close()
+        
+        # Run ./check
+        try:
+            output = subprocess.Popen('./check',
+                        cwd=dir_name,
+                        stdout=subprocess.PIPE, stderr=subprocess.STDOUT).stdout
+            output.read()
+            output.close()
+            if os.path.exists(os.path.join(dir_name,'result.dat')):
+                return self.parse_check_output(file(dir_name+'/result.dat'))  
+            else:
+                logging.warning("Error while looking for file %s"%str(os.path\
+                                                  .join(dir_name,'result.dat')))
+                return ((0.0, 0.0, 0.0, 0.0, 0), [])
+        except IOError:
+            logging.warning("Error while executing ./check in %s" % shell_name)
+            return ((0.0, 0.0, 0.0, 0.0, 0), [])
+
+    def parse_check_output(self,output):
+        """Parse the output string and return a pair where first four values are 
+        the finite, born, single and double pole of the ME and the fourth is the
+        GeV exponent and the second value is a list of 4 momenta for all particles 
+        involved."""
+
+        res_p = []
+        value = [0.0,0.0,0.0,0.0]
+        gev_pow = 0
+
+        for line in output:
+            splitline=line.split()
+            if splitline[0]=='PS':
+                res_p.append([float(s) for s in splitline[1:]])
+            elif splitline[0]=='BORN':
+                value[1]=float(splitline[1])
+            elif splitline[0]=='FIN':
+                value[0]=float(splitline[1])
+            elif splitline[0]=='1EPS':
+                value[2]=float(splitline[1])
+            elif splitline[0]=='2EPS':
+                value[3]=float(splitline[1])
+            elif splitline[0]=='EXP':
+                gev_pow=int(splitline[1])
+
+        return ((value[0],value[1],value[2],value[3],gev_pow), res_p)
     
     def setup_ward_check(self, working_dir):
         """ Modify loop_matrix.f so to have one external massless gauge boson

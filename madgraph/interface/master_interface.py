@@ -72,6 +72,13 @@ class Switcher(object):
    
     # Helper functions
    
+    def setup(self, *args, **opts):
+        """ Function to initialize the interface when switched to it. It is not
+        the same as __init__ as this latter functions would call its mother
+        from madgraph_interface and this is only desirable for the first
+        initialization when launching MG5 """
+        return self.cmd.setup(self, *args, **opts)
+   
     def debug_link_to_command(self):
         """redefine all the command to call directly the appropriate child"""
         
@@ -147,6 +154,8 @@ class Switcher(object):
                     
         if not correct:
             raise Exception, 'The Cmd interface has dangerous features. Please see previous warnings and correct those.' 
+
+    
 
     @staticmethod
     def extract_process_type(line):
@@ -517,24 +526,11 @@ class MasterCmd(Switcher, LoopCmd.LoopInterface, FKSCmd.FKSInterface, cmd.CmdShe
             logger.info("Switching from interface %s to %s"\
                         %(self.interface_names[old_cmd][0],\
                           self.interface_names[name][0]))
-            self.cleanup()
+            # Setup the interface
+            self.cmd.setup(self)
         
         if __debug__:
-            self.debug_link_to_command()
-
-        
-    def cleanup(self):
-        """ Refresh all the interface stored value as things like generated
-        processes and amplitudes are not to be reused in between different
-        interfaces """
-
-        # Clear history, amplitudes and matrix elements when a model is imported
-        # Remove previous imports, generations and outputs from history
-        self.clean_history(remove_bef_lb1='import')
-        # Reset amplitudes and matrix elements
-        self._done_export=False
-        self._curr_amps = diagram_generation.AmplitudeList()
-        self._curr_matrix_elements = helas_objects.HelasMultiProcess()     
+            self.debug_link_to_command() 
      
 class MasterCmdWeb(Switcher, LoopCmd.LoopInterfaceWeb):
  

@@ -76,6 +76,36 @@ class HelpLoop(mg_interface.HelpToCmd):
 
 class LoopInterface(CheckLoop, CompleteLoop, HelpLoop, mg_interface.MadGraphCmd):
     
+    def __init__(self, mgme_dir = '', *completekey, **stdin):
+        """ Special init tasks for the Loop Interface """
+
+        mg_interface.MadGraphCmd.__init__(self, mgme_dir = '', *completekey, **stdin)
+        self.setup()
+    
+    def setup(self):
+        """ Special tasks when switching to this interface """
+
+        # Refresh all the interface stored value as things like generated
+        # processes and amplitudes are not to be reused in between different
+        # interfaces
+        # Clear history, amplitudes and matrix elements when a model is imported
+        # Remove previous imports, generations and outputs from history
+        self.clean_history(remove_bef_lb1='import')
+        # Reset amplitudes and matrix elements
+        self._done_export=False
+        self._curr_amps = diagram_generation.AmplitudeList()
+        self._curr_matrix_elements = helas_objects.HelasMultiProcess()
+        
+        # Set where to look for CutTools installation.
+        # In further versions, it will be set in the same manner as _mgme_dir so that
+        # the user can chose its own CutTools distribution.
+        self._cuttools_dir=str(os.path.join(self._mgme_dir,'vendor','CutTools'))
+        if not os.path.isdir(os.path.join(self._cuttools_dir, 'src','cts')):
+            logger.warning(('Warning: Directory %s is not a valid CutTools directory.'+\
+                           'Using default CutTools instead.') % \
+                             self._cuttools_dir)
+            self._cuttools_dir=str(os.path.join(self._mgme_dir,'vendor','CutTools'))
+    
     def do_generate(self, line, *args,**opt):
 
         # Check args validity
@@ -143,10 +173,10 @@ class LoopInterface(CheckLoop, CompleteLoop, HelpLoop, mg_interface.MadGraphCmd)
             if answer != 'y':
                 raise self.InvalidCmd('Stopped by user request')
 
-        if os.path.isdir(os.path.join(self._mgme_dir, 'loop_material')):
+        if os.path.isdir(os.path.join(self._mgme_dir, 'Template/loop_material')):
             self._curr_exporter = loop_exporters.LoopProcessExporterFortranSA(\
                                         self._mgme_dir, self._export_dir, not noclean,\
-                                        os.path.join(self._mgme_dir, 'loop_material'),\
+                                        os.path.join(self._mgme_dir, 'Template/loop_material'),\
                                         self._cuttools_dir)
         else:
             raise MadGraph5Error('MG5 cannot find the \'loop_material\' directory'+\

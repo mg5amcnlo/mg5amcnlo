@@ -64,6 +64,7 @@ class LoopExporterFortran(object):
     def __init__(self, loop_dir = "", cuttools_dir = "", *args, **kwargs):
         """Initiate the LoopExporterFortran with directory information on where
         to find all the loop-related source files, like CutTools"""
+
         self.loop_dir = loop_dir
         self.cuttools_dir = cuttools_dir
         super(LoopExporterFortran,self).__init__(*args, **kwargs)
@@ -100,10 +101,10 @@ class LoopExporterFortran(object):
     def write_mp_files(self, writer_mprec, writer_mpc):
         """Write the cts_mprec.h and cts_mpc.h"""
 
-        file = open(os.path.join(self.loop_dir, 'CutTools/src/cts/cts_mprec.h')).read()
+        file = open(os.path.join(self.cuttools_dir, 'src/cts/cts_mprec.h')).read()
         writer_mprec.writelines(file)
 
-        file = open(os.path.join(self.loop_dir, 'CutTools/src/cts/cts_mpc.h')).read()
+        file = open(os.path.join(self.cuttools_dir, 'src/cts/cts_mpc.h')).read()
         file = file.replace('&','')
         writer_mpc.writelines(file)
 
