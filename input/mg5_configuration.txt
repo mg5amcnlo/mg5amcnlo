@@ -62,7 +62,7 @@ automatic_html_opening = True
 # 0: single machine/ 1: cluster / 2: multicore
 run_mode = 0
 
-# Cluster Type [pbs|sge|condor] Use for cluster run only
+# Cluster Type [pbs|sge|condor|lsf|ge] Use for cluster run only
 # And cluster queue
 cluster_type = condor
 cluster_queue = madgraph

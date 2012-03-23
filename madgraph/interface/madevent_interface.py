@@ -1377,6 +1377,7 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
         # load the current status of the directory
         if os.path.exists(pjoin(self.me_dir,'HTML','results.pkl')):
             self.results = save_load_object.load_from_file(pjoin(self.me_dir,'HTML','results.pkl'))
+            self.results.path = self.me_dir # allowed to move the directory after some launch
             self.results.resetall()
         else:
             model = self.find_model_name()
