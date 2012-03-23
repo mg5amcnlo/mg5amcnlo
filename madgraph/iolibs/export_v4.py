@@ -79,7 +79,7 @@ class ProcessExporterFortran(object):
                      "No valid MG_ME path given for MG4 run directory creation."
             logger.info('initialize a new directory: %s' % \
                         os.path.basename(self.dir_path))
-            shutil.copytree(os.path.join(self.mgme_dir, 'Template'),
+            shutil.copytree(os.path.join(self.mgme_dir, 'Template/LO'),
                             self.dir_path, True)
             # Duplicate run_card and plot_card
             for card in ['run_card', 'plot_card']:
@@ -824,7 +824,7 @@ class ProcessExporterFortran(object):
         self.replace_make_opt_compiler(compiler)
         # Replace also for Template but not for cluster
         if not os.environ.has_key('MADGRAPH_DATA'):
-            self.replace_make_opt_compiler(compiler, os.path.join(MG5DIR, 'Template'))
+            self.replace_make_opt_compiler(compiler, os.path.join(MG5DIR, 'Template/LO'))
 
     def replace_make_opt_compiler(self, compiler, root_dir = ""):
         """Set FC=compiler in Source/make_opts"""
@@ -852,14 +852,13 @@ class ProcessExporterFortranSA(ProcessExporterFortran):
         """Additional actions needed for setup of Template
         """
 
-        
         #First copy the full template tree if dir_path doesn't exit
         if os.path.isdir(self.dir_path):
             return
         
         logger.info('initialize a new standalone directory: %s' % \
                         os.path.basename(self.dir_path))
-        temp_dir = os.path.join(self.mgme_dir, 'Template')
+        temp_dir = os.path.join(self.mgme_dir, 'Template/LO')
         
         
         # Create the directory structure
@@ -3242,27 +3241,27 @@ class UFO_model_to_mg4(object):
         of auxiliary functions which might be used in the couplings expressions"""
         
         fsock = self.open('model_functions.inc', format='fortran')
-        fsock.writelines("""real*8 cond
-          real*8 reglog""")
+        fsock.writelines("""double complex cond
+          double complex reglog""")
 
     def create_model_functions_def(self):
         """ Create model_functions.f which contains the various definitions
         of auxiliary functions which might be used in the couplings expressions"""
 
         fsock = self.open('model_functions.f', format='fortran')
-        fsock.writelines("""real*8 function cond(condition,truecase,falsecase)
+        fsock.writelines("""double complex function cond(condition,truecase,falsecase)
           implicit none
-          real*8 condition,truecase,falsecase
-          if(condition.eq.0.0d0) then
+          double complex condition,truecase,falsecase
+          if(condition.eq.(0.0d0,0.0d0)) then
              cond=truecase
           else
              cond=falsecase
           endif
           end
           
-          real*8 function reglog(arg)
+          double complex function reglog(arg)
           implicit none
-          real*8 arg
+          double complex arg
           if(arg.eq.0.0d0) then
              reglog=0.0d0
           else

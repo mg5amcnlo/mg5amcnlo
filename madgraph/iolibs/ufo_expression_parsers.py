@@ -228,7 +228,7 @@ class UFOExpressionParserFortran(UFOExpressionParser):
 
     def p_expression_cond(self, p):
         "expression :  COND '(' expression ',' expression ',' expression ')'"
-        p[0] = 'COND('+p[3]+','+p[5]+','+p[7]+')'
+        p[0] = 'COND(DCMPLX('+p[3]+'),DCMPLX('+p[5]+'),DCMPLX('+p[7]+'))'
 
     def p_expression_complex(self, p):
         "expression : COMPLEX '(' expression ',' expression ')'"
@@ -252,7 +252,7 @@ class UFOExpressionParserFortran(UFOExpressionParser):
         elif p[1] == 'im': p[0] = 'dimag' + p[2]
         elif p[1] == 'cmath.sqrt' or p[1] == 'sqrt': p[0] = 'sqrt' + p[2]
         elif p[1] == 'complexconjugate': p[0] = 'conjg' + p[2]
-        elif p[1] == 'reglog': p[0] = 'reglog' + p[2]
+        elif p[1] == 'reglog': p[0] = 'reglog(DCMPLX' + p[2] +')'
 
     def p_expression_pi(self, p):
         '''expression : PI'''

@@ -34,7 +34,7 @@ class TestMadEventCmd(unittest.TestCase):
     def test_card_type_recognition(self):
         """Check that the different card are recognize correctly"""
 
-        card_dir= pjoin(root_path,'..','Template', 'Cards')
+        card_dir= pjoin(root_path,'..','Template/LO', 'Cards')
 
         detect = mecmd.MadEventCmd.detect_card_type
 
