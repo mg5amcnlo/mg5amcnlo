@@ -45,6 +45,17 @@ logger_tuto = logging.getLogger('tutorial') # -> stdout include instruction in
 class CheckFKS(mg_interface.CheckValidForCmd):
 
 
+    def check_display(self, args):
+        """ Check the arguments of the display diagrams command in the context
+        of the Loop interface."""
+        
+        mg_interface.MadGraphCmd.check_display(self,args)
+        
+        if args[0] in ['diagrams', 'processes'] and len(args)>=3 \
+                and args[1] not in ['born','loop','virt','real']:
+            raise self.InvalidCmd("Can only display born, loop (virt) or real diagrams, not %s."%args[1])
+
+
     def check_output(self, args):
         """ check the validity of the line"""
           
@@ -103,56 +114,71 @@ class CheckFKSWeb(mg_interface.CheckValidForCmdWeb, CheckFKS):
 class CompleteFKS(mg_interface.CompleteForCmd):
     
     def complete_display(self, text, line, begidx, endidx):
-        "Complete the display command"
+        "Complete the display command in the context of the FKS interface"
+
         args = self.split_arg(line[0:begidx])
-        # Format
-        if len(args) == 1:
-            return self.list_completion(text, self._display_opts + self._fks_display_opts)
+
+        if len(args) == 2 and args[1] in ['diagrams', 'processes']:
+            return self.list_completion(text, ['born', 'loop', 'virt', 'real'])
         else:
-            return super(CompleteFKS, self).complete_display(self, text, line, begidx, endidx)
+            return mg_interface.MadGraphCmd.complete_display(self, text, line,
+                                                                 begidx, endidx)
 
 class HelpFKS(mg_interface.HelpToCmd):
-    pass
+
+    def help_display(self):   
+        mg_interface.MadGraphCmd.help_display(self)
+        logger.info("   In aMC@NLO5, after display diagrams, the user can add the option")
+        logger.info("   \"born\", \"virt\" or \"real\" to display only the corresponding diagrams.")
 
 class FKSInterface(CheckFKS, CompleteFKS, HelpFKS, mg_interface.MadGraphCmd):
     _fks_display_opts = ['real_diagrams', 'born_diagrams', 'virt_diagrams', 
                          'real_processes', 'born_processes', 'virt_processes']
     
     def do_display(self, line, output=sys.stdout):
-        super(FKSInterface, self).do_display(line, output)
         # if we arrive here it means that a _fks_display_opts has been chosen
         args = self.split_arg(line)
+        #check the validity of the arguments
+        self.check_display(args)
 
-        get_diags_dict = {'real_diagrams': self._fks_multi_proc.get_real_amplitudes,
-                          'born_diagrams': self._fks_multi_proc.get_born_amplitudes,
-                          'virt_diagrams': self._fks_multi_proc.get_virt_amplitudes}
-        if args[0] in get_diags_dict.keys():
-            get_amps = get_diags_dict[args[0]]
-            self._curr_amps = get_amps()
-            #check that if one requests the virt diagrams, there are virt_amplitudes
-            if args[0] == 'virt_diagrams' and len(self._curr_amps) == 0:
-                raise self.InvalidCmd('No virtuals have been generated')
+        if args[0] in ['diagrams', 'processes']:
+            get_amps_dict = {'real': self._fks_multi_proc.get_real_amplitudes,
+                             'born': self._fks_multi_proc.get_born_amplitudes,
+                             'loop': self._fks_multi_proc.get_virt_amplitudes,
+                             'virt': self._fks_multi_proc.get_virt_amplitudes}
+        if args[0] == 'diagrams':
+            if len(args)>=2 and args[1] in get_amps_dict.keys():
+                get_amps = get_amps_dict[args[1]]
+                self._curr_amps = get_amps()
+                #check that if one requests the virt diagrams, there are virt_amplitudes
+                if args[1] in ['virt', 'loop'] and len(self._curr_amps) == 0:
+                    raise self.InvalidCmd('No virtuals have been generated')
+                self.draw(' '.join(args[2:]))
             else:
+                self._curr_amps = get_amps_dict['born']() + get_amps_dict['real']() + \
+                                  get_amps_dict['virt']()
                 self.draw(' '.join(args[1:]))
-                # set _curr_amps back to empty
-                self._curr_amps = diagram_generation.AmplitudeList()
-
-
-        get_procs_dict = {'real_processes': self._fks_multi_proc.get_real_amplitudes,
-                          'born_processes': self._fks_multi_proc.get_born_amplitudes,
-                          'virt_processes': self._fks_multi_proc.get_virt_amplitudes}
-        if args[0] in get_procs_dict.keys():
-            get_amps = get_procs_dict[args[0]]
-            self._curr_amps = get_amps()
-            #check that if one requests the virt diagrams, there are virt_amplitudes
-            if args[0] == 'virt_processes' and len(self._curr_amps) == 0:
-                raise self.InvalidCmd('No virtuals have been generated')
+            # set _curr_amps back to empty
+            self._curr_amps = diagram_generation.AmplitudeList()
+                
+        elif args[0] == 'processes':
+            if len(args)>=2 and args[1] in get_amps_dict.keys():
+                get_amps = get_amps_dict[args[1]]
+                self._curr_amps = get_amps()
+                #check that if one requests the virt diagrams, there are virt_amplitudes
+                if args[1] in ['virt', 'loop'] and len(self._curr_amps) == 0:
+                    raise self.InvalidCmd('No virtuals have been generated')
+                print '\n'.join(amp.nice_string_processes() for amp in self._curr_amps)
             else:
-                for amp in self._curr_amps:
-                    print amp.nice_string_processes()
-                # set _curr_amps back to empty
-                self._curr_amps = diagram_generation.AmplitudeList()
-    
+                self._curr_amps = get_amps_dict['born']() + get_amps_dict['real']() + \
+                                  get_amps_dict['virt']()
+                print '\n'.join(amp.nice_string_processes() for amp in self._curr_amps)
+            # set _curr_amps back to empty
+            self._curr_amps = diagram_generation.AmplitudeList()
+
+        else:
+            mg_interface.MadGraphCmd.do_display(self,line,output)
+
 
     def do_add(self, line, *args,**opt):
         
