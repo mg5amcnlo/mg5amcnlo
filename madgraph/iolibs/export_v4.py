@@ -3222,8 +3222,8 @@ class UFO_model_to_mg4(object):
         of auxiliary functions which might be used in the couplings expressions"""
         
         fsock = self.open('model_functions.inc', format='fortran')
-        fsock.writelines("""real*8 cond
-          real*8 reglog""")
+        fsock.writelines("""double complex cond
+          double complex reglog""")
 
     def create_model_functions_def(self):
         """ Create model_functions.f which contains the various definitions
@@ -3232,17 +3232,17 @@ class UFO_model_to_mg4(object):
         fsock = self.open('model_functions.f', format='fortran')
         fsock.writelines("""real*8 function cond(condition,truecase,falsecase)
           implicit none
-          real*8 condition,truecase,falsecase
-          if(condition.eq.0.0d0) then
+          double complex condition,truecase,falsecase
+          if(condition.eq.(0.0d0,0.0d0)) then
              cond=truecase
           else
              cond=falsecase
           endif
           end
           
-          real*8 function reglog(arg)
+          double complex function reglog(arg)
           implicit none
-          real*8 arg
+          double complex arg
           if(arg.eq.0.0d0) then
              reglog=0.0d0
           else
