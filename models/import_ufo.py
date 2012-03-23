@@ -389,7 +389,9 @@ class UFOMG5Converter(object):
             for i in range(0, len(pdg),2):
                 if pdg[i] == - pdg[i+1]:
                     if pdg[i] in self.outcoming:
-                        raise InvalidModel, 'Input output not coherent'
+                        raise InvalidModel, '%s has not coherent incoming/outcoming status between interactions' %\
+                            [p for p in interaction_info.particles if p.spin in [2,4]][i].name
+                            
                     elif not pdg[i] in self.incoming:
                         self.incoming.append(pdg[i])
                         self.outcoming.append(pdg[i+1])
