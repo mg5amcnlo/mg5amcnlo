@@ -1,0 +1,25 @@
+#!/usr/bin/perl
+
+if ($#ARGV == -1) {
+    open whom,"whoami | ";
+    $name = <whom>;
+    chomp $name;
+    print "You must specify job (or user) name to delete (eg qholdjob $name) \n";
+    close (whom);
+}
+else {
+    if (open jobline,"/usr/local/bin/qstat | grep $ARGV[0] |"){
+	$i = 0;
+	while ($line = <jobline>){
+	    $i++;
+	    chomp $line;
+	    ($jobid,$back) = split(/\./,$line);
+	    system("/usr/local/bin/qhold $jobid");
+	}
+	close (jobline);
+	print "Holding $i jobs \n";
+    }
+    else {
+	print "Error executing qstat \n";
+    }
+}

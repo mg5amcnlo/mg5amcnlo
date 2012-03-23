@@ -1,0 +1,295 @@
+#       interactions_sm_v1.0.dat
+#
+#       File which contains allowed interactions. Must be named
+#       interactions.dat and reside in the current directory for MadGraph
+#       to see it.
+#
+#       3-particle vertices are entered as follows:
+#
+#       particle1 particle2  particle3 coupling_name model (QCD,QFD,QED,BRS)
+#
+#       Note: The ordering of particles is very important.
+#       For FFV interactions, must use particles, not anti_particles.
+#
+
+#
+# QCD interactions
+#
+
+d d g GG QCD
+u u g GG QCD
+s s g GG QCD
+c c g GG QCD
+b b g GG QCD
+t t g GG QCD
+
+g g g G  QCD
+
+g g g g G G QCD QCD
+
+#
+# QCDR2 interactions
+#
+
+d d g GGR R2QCD ^R
+u u g GGR R2QCD ^R
+s s g GGR R2QCD ^R
+c c g GGR R2QCD ^R
+b b g GGR R2QCD ^R
+t t g GGR R2QCD ^R
+
+g g g G  R2QCD ^R
+
+g g g g G G R2QCD QCD ^R
+
+
+#
+# QCDR2 propagator correction interactions
+#
+
+d d* g PGG R2pQCD ^Rp
+u u* g PGG R2pQCD ^Rp 
+s s* g PGG R2pQCD ^Rp
+c c* g PGG R2pQCD ^Rp
+b b* g PGG R2pQCD ^Rp
+t t* g PGG R2pQCD ^Rp
+
+d* d g PGG R2pQCD ^Rp
+u* u g PGG R2pQCD ^Rp
+s* s g PGG R2pQCD ^Rp
+c* c g PGG R2pQCD ^Rp
+b* b g PGG R2pQCD ^Rp
+t* t g PGG R2pQCD ^Rp
+
+d d g* PGG R2pQCD ^Rp
+u u g* PGG R2pQCD ^Rp
+s s g* PGG R2pQCD ^Rp
+c c g* PGG R2pQCD ^Rp
+b b g* PGG R2pQCD ^Rp
+t t g* PGG R2pQCD ^Rp
+
+g g g* G R2pQCD ^Rp
+
+#
+# QED interactions
+#
+
+d d a GAD QED
+u u a GAU QED
+s s a GAD QED
+c c a GAU QED
+b b a GAD QED
+t t a GAU QED
+
+#
+# QEDR2 interactions
+#
+
+d d a GADR R2QED ^R
+u u a GAUR R2QED ^R
+s s a GADR R2QED ^R
+c c a GAUR R2QED ^R
+b b a GADR R2QED ^R
+t t a GAUR R2QED ^R
+
+#
+# QEDR2 propagator correction interactions
+#
+
+d* d a PGAD R2pQED ^Rp
+u* u a PGAU R2pQED ^Rp
+s* s a PGAD R2pQED ^Rp
+c* c a PGAU R2pQED ^Rp
+b* b a PGAD R2pQED ^Rp
+t* t a PGAU R2pQED ^Rp
+
+d* d z PGZD R2pQED ^Rp
+u* u z PGZU R2pQED ^Rp
+s* s z PGZD R2pQED ^Rp
+c* c z PGZU R2pQED ^Rp
+b* b z PGZD R2pQED ^Rp
+t* t z PGZU R2pQED ^Rp
+
+d d* a PGAD R2pQED ^Rp
+u u* a PGAU R2pQED ^Rp
+s s* a PGAD R2pQED ^Rp
+c c* a PGAU R2pQED ^Rp
+b b* a PGAD R2pQED ^Rp
+t t* a PGAU R2pQED ^Rp
+
+d d* z PGZD R2pQED ^Rp
+u u* z PGZU R2pQED ^Rp
+s s* z PGZD R2pQED ^Rp
+c c* z PGZU R2pQED ^Rp
+b b* z PGZD R2pQED ^Rp
+t t* z PGZU R2pQED ^Rp
+
+
+e-  e-  a GAL QED
+mu- mu- a GAL QED
+ta- ta- a GAL QED
+
+#
+## QED* interactions
+#
+
+d* d* a GAD QED*
+u* u* a GAU QED*
+s* s* a GAD QED*
+c* c* a GAU QED*
+b* b* a GAD QED*
+t* t* a GAU QED*
+
+d* d* z GZD QED*
+u* u* z GZU QED*
+s* s* z GZD QED*
+c* c* z GZU QED*
+b* b* z GZD QED*
+t* t* z GZU QED*
+
+#
+# QFD Interactions
+#
+
+# MMV (q*q*g)
+
+d* d* g GG QCD*
+u* u* g GG QCD*
+s* s* g GG QCD*
+c* c* g GG QCD*
+b* b* g GG QCD*
+t* t* g GG QCD*
+ 
+# FMV (qq*g)
+
+d d* g* GG QCD*
+u u* g* GG QCD*
+s s* g* GG QCD*
+c c* g* GG QCD*
+b b* g* GG QCD* 
+t t* g* GG QCD*
+
+# MFV (q*qg)
+
+d* d g* GG QCD*
+u* u g* GG QCD*
+s* s g* GG QCD*
+c* c g* GG QCD*
+b* b g* GG QCD*
+t* t g* GG QCD*
+
+#CCV
+
+gh gh g G QCD*
+
+# VBB
+
+g g* g* G QCD*
+
+# VVBB
+
+g g g* g* G G QCD QCD*
+
+# FFV (qqZ)
+
+d d z GZD QED
+u u z GZU QED
+s s z GZD QED
+c c z GZU QED
+b b z GZD QED
+t t z GZU QED
+
+# FFVR2 (qqZ)
+d d z GZDR R2QED ^R
+u u z GZUR R2QED ^R
+s s z GZDR R2QED ^R
+c c z GZUR R2QED ^R
+b b z GZDR R2QED ^R
+t t z GZUR R2QED ^R
+
+# FFV (llZ)
+e-  e-  z GZL QED
+mu- mu- z GZL QED
+ta- ta- z GZL QED
+ve  ve  z GZN QED
+vm  vm  z GZN QED
+vt  vt  z GZN QED
+
+# FFV (qq'W) - diagonal CKM
+d u w- GWF QED
+s c w- GWF QED
+b t w- GWF QED
+u d w+ GWF QED
+c s w+ GWF QED
+t b w+ GWF QED
+
+# FFV (qq'W) Loop - diagonal CKM
+d* u* w- GWF QED*
+s* c* w- GWF QED*
+b* t* w- GWF QED*
+u* d* w+ GWF QED*
+c* s* w+ GWF QED*
+t* b* w+ GWF QED*
+
+# FFV (qq'W) Loop R2 - diagonal CKM
+d u w- GWFR R2QED
+s c w- GWFR R2QED
+b t w- GWFR R2QED
+u d w+ GWFR R2QED
+c s w+ GWFR R2QED
+t b w+ GWFR R2QED
+
+# FFV (qq'W) Loop R2p - diagonal CKM
+d* u w- PGWF R2pQED ^Rp
+s* c w- PGWF R2pQED ^Rp
+b* t w- PGWF R2pQED ^Rp
+u* d w+ PGWF R2pQED ^Rp
+c* s w+ PGWF R2pQED ^Rp
+t* b w+ PGWF R2pQED ^Rp
+
+d u* w- PGWF R2pQED ^Rp
+s c* w- PGWF R2pQED ^Rp
+b t* w- PGWF R2pQED ^Rp
+u d* w+ PGWF R2pQED ^Rp
+c s* w+ PGWF R2pQED ^Rp
+t b* w+ PGWF R2pQED ^Rp
+
+# FFV (ll'W)
+ve  e-  w+ GWF QED
+vm  mu- w+ GWF QED
+vt  ta- w+ GWF QED
+e-  ve  w- GWF QED
+mu- vm  w- GWF QED
+ta- vt  w- GWF QED
+
+# FFS (Yukawa)
+ta- ta- h GHTAU QED
+b   b   h GHBOT QED
+t   t   h GHTOP QED
+
+
+#
+# Boson 3-,4-pt
+#
+
+#   VVV
+w- w+ a  GWWA  QED
+w- w+ z  GWWZ  QED
+
+#   VVS
+w- w+ h  GWWH  QED
+z  z  h  GZZH  QED
+
+
+#   SSS
+h  h  h  GHHH  QED
+
+#   VVVV
+w- a  w+ a  GWWA  GWWA  QED QED
+w- z  w+ a  GWWZ  GWWA  QED QED
+w- z  w+ z  GWWZ  GWWZ  QED QED
+w- w+ w- w+ GWWZ  GWWA  QED QED
+
+#   VVSS
+w- w+ h  h  GWWHH GWWHH QED QED
+z  z  h  h  GZZHH GZZHH QED QED

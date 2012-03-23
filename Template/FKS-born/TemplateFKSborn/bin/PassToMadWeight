@@ -1,0 +1,18 @@
+#!/bin/csh  -f 
+#
+#  First get to main level directory for this process
+#
+echo "Setting up the Template to work with the MadWeight version of MadGraphII"
+if ( ! -d ./bin ) then
+    cd ../
+    if (! -d ./bin) then
+	echo "Error: madweight must be executed from the main, or bin directory"
+	exit
+    endif
+endif
+
+if ( ! -d ./Source/DHELAS ) then
+    mkdir ./Source/DHELAS
+endif
+
+./Source/MadWeight_File/Python/expand_MadWeight.py
