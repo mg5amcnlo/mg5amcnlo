@@ -2300,6 +2300,10 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
                 orders[order_re.group(2)] = int(order_re.group(3))
                 line = order_re.group(1)
                 order_re = order_pattern.match(line)
+        # if the squared orders are defined but not the orders, assume orders=sq_orders
+        if not orders and squared_orders:
+            for order in squared_orders:
+                orders[order]=squared_orders[order]
 
         if self._use_lower_part_names:
             # Particle names lowercase
