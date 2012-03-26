@@ -1688,11 +1688,15 @@ class ProcessExporterFortranMW(ProcessExporterFortran):
                     width = 'zero'
                     pow_part = 0
                 else:
-                    particle = particle_dict[last_leg.get('id')]
-                    # Get mass
-                    mass = particle.get('mass')
-                    # Get width
-                    width = particle.get('width')
+                    if (last_leg.get('id')!=7):
+                      particle = particle_dict[last_leg.get('id')]
+                      # Get mass
+                      mass = particle.get('mass')
+                      # Get width
+                      width = particle.get('width')
+                    else : # fake propagator used in multiparticle vertices
+                      mass= 'zero'
+                      width= 'zero'
 
                 line=line+"   "+mass+"  "+width+"   "
 
