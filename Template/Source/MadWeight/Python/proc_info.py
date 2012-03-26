@@ -126,7 +126,7 @@ class Decay_info:
             if decay_item[leg].mother==0 and topo[leg]['channel']=='S':
                 particles_from_HI.append(leg)
             elif topo[leg]['channel']=='S':
-                if topo[decay_item[leg].mother]=='T' or decay_item[decay_item[leg].mother].pid[0]==21:
+                if topo[decay_item[leg].mother]['channel']=='T' or decay_item[decay_item[leg].mother].pid[0]==21:
                    particles_from_HI.append(leg)
 
         print particles_from_HI
