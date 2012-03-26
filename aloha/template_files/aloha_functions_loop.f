@@ -1103,7 +1103,7 @@ c momentum q, so it is not implemented yet.
       
       COMPLEX*16 Q(0:3)
       COMPLEX*16 RES
-      REAL*8 M
+      COMPLEX*16 M
       COMPLEX*16 AMPS(12) 
 
       RES=(0.D0,0.D0)
@@ -1115,7 +1115,7 @@ c momentum q, so it is not implemented yet.
      &    (Q(1)-(0.0d0,1.0d0)*Q(2))*AMPS(6)+
      &    (Q(1)+(0.0d0,1.0d0)*Q(2))*AMPS(7)+
      &    (Q(0)-Q(3))*AMPS(8)
-      IF (M.NE.0.D0) THEN
+      IF (M.NE.(0.D0,0.D0)) THEN
         RES=RES-M*(AMPS(9)+AMPS(10)+AMPS(11)+AMPS(12))
       ENDIF
 

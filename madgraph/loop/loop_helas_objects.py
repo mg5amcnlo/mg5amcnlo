@@ -339,6 +339,11 @@ class LoopHelasAmplitude(helas_objects.HelasAmplitude):
                     masses.append(wf.get('mass'))
                 else: 
                     masses.append('CMASS_%s' % wf.get('mass'))
+            wf_final = self.get('wavefunctions')[0]
+            if (wf_final.get('width') == 'ZERO' or wf_final.get('mass') == 'ZERO'):
+                masses.append(wf_final.get('mass'))
+            else: 
+                masses.append('CMASS_%s' % wf_final.get('mass'))
         return masses
 
     def get_couplings(self):
@@ -349,6 +354,32 @@ class LoopHelasAmplitude(helas_objects.HelasAmplitude):
         return (sum([wf.get('coupling') for wf in self.get('wavefunctions') if \
              wf.get('coupling')!=['none']],[])\
              +sum([amp.get('coupling') for amp in self.get('amplitudes')],[]))
+
+    def get_helas_call_dict(self):
+        """ return a dictionary to be used for formatting
+        HELAS call. """
+        
+        output = {}
+        output['numLoopLines']='_%d'%(len(self.get('wavefunctions'))-1)
+        if len(self.get('mothers'))!=len(self.get('coupling')):
+            output['numMotherWfs']='_%d'%len(self.get('mothers'))
+        else:
+            output['numMotherWfs']=''            
+        for i, pairing in enumerate(self.get('pairing')):
+            output["Pairing%d"%i]=pairing
+        output['numCouplings']='_%d'%len(self.get('coupling'))
+        output['numeratorNumber']=self.get('number')
+        output['ampNumber']=self.get('amplitudes')[0].get('number')
+        for i , wf in enumerate(self.get('mothers')):
+            output["MotherID%d"%(i+1)]=wf.get('number')
+            output["MotherStatus%d"%(i+1)]=wf.get_momentum_place()
+        for i , mass in enumerate(self.get_masses()):
+            output["LoopMass%d"%(i+1)]=mass
+        for i , coupling in enumerate(self.get('coupling')):
+            output["LoopCoupling%d"%(i+1)]=coupling
+        output["LoopRank"]=self.get_rank()
+        output["LoopSymmetryFactor"]=self.get('loopsymmetryfactor')
+        return output
 
     def get_call_key(self):
         """ The helas call to a loop is simple and only depends on the number

@@ -228,7 +228,7 @@ class EpsDiagramDrawer(draw.DiagramDrawer):
     def draw_dotted(self, line):
         """ADD the EPS code for this ghost line."""
         #add the code in the correct format
-        self.text += self.line_format(line.start.pos_x, line.start.pos_y,
+        self.text += self.line_format(line.begin.pos_x, line.begin.pos_y,
                          line.end.pos_x, line.end.pos_y, 'Fghost')
              
     def draw_double(self, line, type='r'):

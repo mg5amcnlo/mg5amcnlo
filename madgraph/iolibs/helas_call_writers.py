@@ -1012,49 +1012,24 @@ class FortranUFOHelasCallWriter(UFOHelasCallWriter):
         """ Routine for automatic generation of a call to CutTools for loop
         amplitudes."""
         
-        call = "CALL LOOP"
-       
-        
-        call_key=loopamp.get_call_key()
-        # Now use a unique identifier for the Loop helas-like call, base on the call key
-        if call_key[1]==call_key[2]:
-            call = call + "_%d_%d" % (call_key[1],call_key[3])
-        else:
-            call = call + "_%d_%d_%d" % (call_key[1],call_key[2],call_key[3])
-        call = call +"(%d,"
+        call = "CALL LOOP%(numLoopLines)s"
         if (len(loopamp.get('pairing')) != len(loopamp.get('mothers'))):
-            # Possible non trivial pairing, we must specify it.
-            call = call + "%d,"*len(loopamp.get('pairing'))
-        call = call + "W(1,%d),%d,"*len(loopamp.get('mothers'))
-        call = call + "%s,"*(len(loopamp.get('wavefunctions'))-1)
-        call = call + "%s,"*(len(loopamp.get('coupling')))
-        call = call + "%d,%d,"
-        call = call + "AMPL(1,%d),GOODAMP(%d,H))" 
-        
-        if (len(loopamp.get('pairing')) != len(loopamp.get('mothers'))):        
-            call_function = lambda amp: call % (\
-                              (amp.get('number'),)+\
-                              tuple(amp.get('pairing'))+\
-                              tuple(sum([[wf.get('number'),wf.get_momentum_place()] \
-                                         for wf in amp.get('mothers')],[]))+\
-                              tuple(amp.get_masses())+\
-                              tuple(amp.get('coupling'))+\
-                              (amp.get_rank(),)+\
-                              (amp.get('loopsymmetryfactor'),)+\
-                              (amp.get('amplitudes')[0].get('number'),)+\
-                              (amp.get('amplitudes')[0].get('number'),))
+            call += "%(numMotherWfs)s%(numCouplings)s(%(numeratorNumber)d,"
+            for i in range(len(loopamp.get('pairing'))):
+                call = call + "%(Pairing{0})d,".format(i)
         else:
-            call_function = lambda amp: call % (\
-                              (amp.get('number'),)+\
-                              tuple(sum([[wf.get('number'),wf.get_momentum_place()] \
-                                         for wf in amp.get('mothers')],[]))+\
-                              tuple(amp.get_masses())+\
-                              tuple(amp.get('coupling'))+\
-                              (amp.get_rank(),)+\
-                              (amp.get('loopsymmetryfactor'),)+\
-                              (amp.get('amplitudes')[0].get('number'),)+\
-                              (amp.get('amplitudes')[0].get('number'),))
+            call += "%(numCouplings)s(%(numeratorNumber)d,"            
+        for i in range(len(loopamp.get('mothers'))):
+            call = call + "W(1,%(MotherID{0})d),%(MotherStatus{0})d,".format(i+1)
+        for i in range(len(loopamp.get('wavefunctions'))-1):
+            call = call + "DCMPLX(%(LoopMass{0})s),".format(i+1)
+        for i in range(len(loopamp.get('coupling'))):
+            call = call + "%(LoopCoupling{0})s,".format(i+1)
+        call = call + "%(LoopRank)d,"
+        call = call + "%(LoopSymmetryFactor)d,"
+        call = call + "AMPL(1,%(ampNumber)d),GOODAMP(%(ampNumber)d,H))"
         
+        call_function = lambda amp: call % amp.get_helas_call_dict()
         self.add_amplitude(loopamp.get_call_key(), call_function)
         return
 
@@ -1200,7 +1175,7 @@ class FortranUFOHelasCallWriter(UFOHelasCallWriter):
                 if aloha.complex_mass:
                     arg['mass'] = "ML(%(out)d),"
                 else:
-                    arg['mass'] = "ML(%(out)d),LM,"
+                    arg['mass'] = "ML(%(out)d),ZERO,"
             else:
                 arg['out'] = 'W(1,%(out)d)'
                 if aloha.complex_mass:
@@ -1214,18 +1189,18 @@ class FortranUFOHelasCallWriter(UFOHelasCallWriter):
         # Loop Amplitude
         elif argument['type'] == 'loop':
             arg['mass'] = ''
-            arg['out'] = 'BUFF(I))'
+            arg['out'] = 'BUFF(I)'
         # UV Counterterm (and other)
         else:
             arg['mass'] = ''
             ampl = "AMPL({0},%(out)d)".format(argument.get_epsilon_order()+1)
-            arg['out'] = '%s)' % ampl
+            arg['out'] = '%s' % ampl
             if isinstance(argument,loop_helas_objects.LoopHelasUVCTAmplitude)\
                    and argument.get_UVCT_couplings()!='1.0d0':
                  # add a second line to take into account the multiplicative factor                 
                  call += "\n %(second_line)s "
-                 arg['second_line'] = ampl+"="+ampl+"*(%(uvct)s)"
-        
+                 arg['second_line'] = ampl+"="+ampl+"*(%(uvct)s)"           
+
         # ALL ARGUMENT FORMATTED ###############################################
         # Store the result.
         call = call % arg

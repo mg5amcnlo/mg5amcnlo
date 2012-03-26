@@ -318,6 +318,7 @@ class LoopProcessExporterFortranSA(export_v4.ProcessExporterFortranSA,
         
         replace_dict = {}
         
+        replace_dict['mass_format']="complex*16"
         replace_dict['nexternal']=(matrix_element.get_nexternal_ninitial()[0]-2)
         loop_helas_calls=fortran_model.get_loop_amplitude_helas_calls(matrix_element)
         replace_dict['maxlcouplings']=matrix_element.find_max_loop_coupling()
@@ -357,11 +358,8 @@ class LoopProcessExporterFortranSA(export_v4.ProcessExporterFortranSA,
         replace_dict['process_lines'] = process_lines    
         
         # specify the format of the masses 
-        if aloha.complex_mass:
-            replace_dict['mass_format'] = 'complex*8'
-        else:
-            replace_dict['mass_format'] = 'real*8'
-        
+        replace_dict['mass_format'] = 'complex*16'
+        replace_dict['mass_translation'] = 'M2L(I)'           
         
         file = file % replace_dict
         files.append(file)
@@ -378,6 +376,8 @@ class LoopProcessExporterFortranSA(export_v4.ProcessExporterFortranSA,
             replace_dict=copy.copy(replace_dict_orig)
             # Add to this dictionary all other attribute common to all
             # HELAS-like loop subroutines.
+                    # specify the format of the masses 
+            replace_dict['mass_format'] = 'complex*16'
             replace_dict['maxlcouplings']=matrix_element.find_max_loop_coupling()
             replace_dict['nloopline']=callkey[0]
             wfsargs="".join([("W%d, MP%d, "%(i,i)) for i in range(1,callkey[1]+1)])

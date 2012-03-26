@@ -2221,9 +2221,16 @@ class HelasAmplitude(base_objects.PhysicsObject):
         for i, mother in enumerate(self.get('mothers')):
             nb = mother.get('number') - flip 
             output[str(i)] = nb
+            # Set what are the loop wavefunctions (WL*) and the non loop ones (WE*)
+            # in the argument
+            if mother.get('is_loop'):
+                output['L%d' % i ] = 'L'
+            else:
+                output['L%d' % i ] = 'E'
         #fixed argument
         for i, coup in enumerate(self.get('coupling')):
             output['coup%d'%i] = str(coup)
+
         output['out'] = self.get('number') - flip
         return output
 
