@@ -350,7 +350,7 @@ class ALOHAWriterForFortran(WriteALOHA):
             str_out += 'double precision ' + '(0:3),'.join(Momenta) + '(0:3)\n'
 
         # Define the contracted variable
-        if self.contracted and name == None:
+        if self.contracted:
             lstring = []
             for tag in self.contracted['order']:
                 name, obj, nb = self.contracted[tag]
@@ -760,7 +760,7 @@ class ALOHAWriterForCPP(WriteALOHA):
 
         h_string = str_out + ";\n\n"
         cc_string = str_out + "{\n"
-        if self.contracted and name == None:
+        if self.contracted:
             lstring = []
             for tag in self.contracted['order']:
                 name, obj, nb = self.contracted[tag]
