@@ -350,9 +350,10 @@ class ALOHAWriterForFortran(WriteALOHA):
             str_out += 'double precision ' + '(0:3),'.join(Momenta) + '(0:3)\n'
 
         # Define the contracted variable
-        if self.contracted:
+        if self.contracted and name == None:
             lstring = []
-            for name, obj, nb in self.contracted.values():
+            for tag in self.contracted['order']:
+                name, obj, nb = self.contracted[tag]
                 lstring.append('double complex %s' % name)
             lstring.append('')
             str_out += '\n'.join(lstring)
@@ -479,7 +480,8 @@ class ALOHAWriterForFortran(WriteALOHA):
         
         if self.contracted:
             string = ''
-            for name, obj, nb in self.contracted.values():
+            for tag in self.contracted['order']:
+                name, obj, nb = self.contracted[tag]
                 string += '%s = %s ! used %s times\n' % (name, self.write_obj(obj),nb)
             string = string.replace('+-', '-')
             OutString += string
@@ -758,6 +760,14 @@ class ALOHAWriterForCPP(WriteALOHA):
 
         h_string = str_out + ";\n\n"
         cc_string = str_out + "{\n"
+        if self.contracted and name == None:
+            lstring = []
+            for tag in self.contracted['order']:
+                name, obj, nb = self.contracted[tag]
+                lstring.append('complex<double> %s;\n' % name)
+            lstring.append('')
+            str_out += '\n'.join(lstring)
+
 
         return {'h_header': h_string, 'cc_header': cc_string}
             
@@ -868,6 +878,14 @@ class ALOHAWriterForCPP(WriteALOHA):
     def define_expression(self):
         """Write the helicity amplitude in C++ format"""
         OutString = '' 
+
+        if self.contracted:        
+            string = ''
+            for tag in self.contracted['order']:
+                name, obj, nb = self.contracted[tag]
+                string += '%s = %s ! used %s times\n' % (name, self.write_obj(obj),nb)
+            string = string.replace('+-', '-')
+        
         if not self.offshell:
             for ind in self.obj.listindices():
                 string = 'vertex = COUP*' + self.write_obj(self.obj.get_rep(ind))
@@ -1182,7 +1200,8 @@ class ALOHAWriterForPython(WriteALOHA):
 
         if self.contracted:
             string = ''
-            for name, obj, nb in self.contracted.values():
+            for tag in self.contracted['order']:
+                name, obj, nb = self.contracted[tag]
                 string += '%s = %s # used %s times\n' % (name, self.write_obj(obj),nb)
             string = string.replace('+-', '-')
             OutString += string

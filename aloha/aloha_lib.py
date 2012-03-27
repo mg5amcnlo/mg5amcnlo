@@ -429,6 +429,7 @@ class AddVariable(list):
                 contracted[str(self)][2] += 1
                 return contracted[str(self)][0]
             except:
+                contracted['order'].append(str(self))
                 contracted[str(self)] = [Variable(1,'Contracted%s' % len(contracted)), self, 1] 
                 return contracted[str(self)][0]
             return self

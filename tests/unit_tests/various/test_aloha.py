@@ -2899,7 +2899,7 @@ class test_aloha_creation(unittest.TestCase):
                  spins = [ 3, 3, 3 ],
                  structure = 'P(-1,1)*Epsilon(3,1,2,-2)*P(-1,1)*P(-2,2)-Epsilon(3,1,2,-2)*P(-1,2)*P(-1,2)*P(-2,1)-Epsilon(3,2,-1,-2)*P(1,1)*P(-1,2)*P(-2,1)+Epsilon(3,1,-1,-2)*P(2,2)*P(-1,2)*P(-2,1)')
     
-        abstract_ZP = create_aloha.AbstractRoutineBuilder(ZPZZ).compute_routine(0)
+        abstract_ZP = create_aloha.AbstractRoutineBuilder(ZPZZ).compute_routine(0, factorize=False)
         expr = abstract_ZP.expr
 
         V2_1, V2_2, V2_3, V2_4  = 1, 2, 3, 4
@@ -2963,7 +2963,7 @@ class test_aloha_creation(unittest.TestCase):
                  spins = [2, 2, 5],
         structure="Metric(1003,2003)*ProjP(1,2)+Metric(1003,2003)*ProjM(1,2)"
         )
-        abstract_FFT = create_aloha.AbstractRoutineBuilder(FFT2).compute_routine(3)
+        abstract_FFT = create_aloha.AbstractRoutineBuilder(FFT2).compute_routine(3, factorize=False)
         expr = abstract_FFT.expr
         
         Metric = aloha_obj.Metric
@@ -3007,9 +3007,9 @@ class test_aloha_creation(unittest.TestCase):
                  structure = 'Gamma(3,1,2)')
         
         
-        abstract_M = create_aloha.AbstractRoutineBuilder(FFV_M).compute_routine(3)       
-        abstract_P = create_aloha.AbstractRoutineBuilder(FFV_P).compute_routine(3)       
-        abstract = create_aloha.AbstractRoutineBuilder(FFV).compute_routine(3)
+        abstract_M = create_aloha.AbstractRoutineBuilder(FFV_M).compute_routine(3, factorize=False)       
+        abstract_P = create_aloha.AbstractRoutineBuilder(FFV_P).compute_routine(3, factorize=False)       
+        abstract = create_aloha.AbstractRoutineBuilder(FFV).compute_routine(3, factorize=False)
         
         zero = abstract_M.expr.numerator + abstract_P.expr.numerator - \
                             abstract.expr.numerator
@@ -3037,7 +3037,7 @@ class test_aloha_creation(unittest.TestCase):
                 spins = [ 2, 2, 3 ],
                 structure = 'Gamma(3,1,\'s1\')*ProjM(\'s1\',2) + 2*Gamma(3,1,\'s1\')*ProjP(\'s1\',2)')
 
-        abstract_6 = create_aloha.AbstractRoutineBuilder(FFV_6).compute_routine(3)
+        abstract_6 = create_aloha.AbstractRoutineBuilder(FFV_6).compute_routine(3, factorize=False)
          
         zero = abstract_6.expr.numerator - abstract_M.expr.numerator - \
                                                     2* abstract_P.expr.numerator   
@@ -3477,7 +3477,7 @@ C
         V3_1, V3_2, V3_3, V3_4 = 8,9,10,11
         # For V4:
         cImag = complex(0,1)
-        
+
         ufo_value = eval(str(amp.expr.get_rep([0])))
     
         #v4_value = ( (F2_1*F1_3+F2_2*F1_4)*V3_1 \
