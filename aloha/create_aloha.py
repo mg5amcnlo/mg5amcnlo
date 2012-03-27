@@ -58,6 +58,7 @@ class AbstractRoutine(object):
         self.symmetries = []
         self.combined = []
         self.tag = []
+        self.contracted = {}
 
         
     def add_symmetry(self, outgoing):
@@ -109,12 +110,13 @@ class AbstractRoutineBuilder(object):
         self.lorentz_expr = lorentz.structure        
         self.routine_kernel = None
         self.spin2_massless = False
+        self.contracted = {}
         
     
     def compute_routine(self, mode, factorize=True):
         """compute the expression and return it"""
         self.outgoing = mode
-        self.expr = self.compute_aloha_high_kernel(mode, factorize)
+        self.expr, self.contracted = self.compute_aloha_high_kernel(mode, factorize)
         return self.define_simple_output()
     
     def define_all_conjugate_builder(self, pair_list):
@@ -165,14 +167,13 @@ class AbstractRoutineBuilder(object):
         self.conjg.append(pair)
 
     
-    
     def define_simple_output(self):
         """ define a simple output for this AbstractRoutine """
     
         infostr = str(self.lorentz_expr)        
         output = AbstractRoutine(self.expr, self.outgoing, self.spins, self.name, \
                                                                         infostr)
-
+        output.contracted = self.contracted
         output.tag += ['C%s' % pair for pair in self.conjg]
         return output
 
@@ -292,10 +293,11 @@ class AbstractRoutineBuilder(object):
             aloha_lib.USE_TAG.add('P%d' % id)       
         
         lorentz = lorentz.simplify()
+        contracted = {}
         if factorize:
-            lorentz = lorentz.factorize()
+            lorentz = lorentz.factorize(contracted)
         lorentz.tag = set(aloha_lib.USE_TAG)
-        return lorentz         
+        return lorentz, contracted         
                         
     def define_lorentz_expr(self, lorentz_expr):
         """Define the expression"""

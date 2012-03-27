@@ -106,11 +106,11 @@ class FracVariable(object):
         else:
             return self
     
-    def factorize(self):
+    def factorize(self, contracted=None):
         """made the factorization"""
         if hasattr(self.numerator, 'vartype'):
-            self.numerator = self.numerator.factorize()
-        self.denominator = self.denominator.factorize()
+            self.numerator = self.numerator.factorize(contracted)
+        self.denominator = self.denominator.factorize(None)
         return self
         
     
@@ -413,7 +413,7 @@ class AddVariable(list):
         
         return max, maxvar
     
-    def factorize(self):
+    def factorize(self, contracted=None):
         """ try to factorize as much as possible the expression """
 
         #import aloha 
@@ -423,7 +423,16 @@ class AddVariable(list):
         if max <= 1:
             #no factorization possible
             #aloha.depth -=1
+            if contracted is None:
+                return self
+            try:
+                contracted[str(self)][2] += 1
+                return contracted[str(self)][0]
+            except:
+                contracted[str(self)] = [Variable(1,'Contracted%s' % len(contracted)), self, 1] 
+                return contracted[str(self)][0]
             return self
+        
         else:
             # split in MAXVAR * NEWADD + CONSTANT
             #print " " * 4 * aloha.depth + "start fact", self
@@ -462,7 +471,7 @@ class AddVariable(list):
                 cur_len = 0
             if cur_len > 1:
                 try:
-                    newadd = newadd.factorize()
+                    newadd = newadd.factorize(contracted)
                 except Exception, error:
                     raise
                     #raise Exception('fail to factorize: %s' % error)
@@ -491,7 +500,7 @@ class AddVariable(list):
                 newadd = newadd[0] 
                         
             if constant:
-                constant = constant.factorize()
+                constant = constant.factorize(contracted)
                 #aloha.depth -=1
                 # ' ' * 4 * aloha.depth + 'return', AddVariable([newadd, constant])
                 return AddVariable([newadd, constant])
@@ -536,7 +545,7 @@ class MultVariable(list):
             return self.prefactor * self[0]
         return self           
     
-    def factorize(self):
+    def factorize(self, contracted=None):
         """Try to factorize this (nothing to do)"""
         return self
     
@@ -717,7 +726,7 @@ class Variable(object):
         """Return a more basic representation of this variable."""
         return self
     
-    def factorize(self):
+    def factorize(self, contracted=None):
         """ try to factorize this"""
         return self
     
@@ -1556,11 +1565,11 @@ class LorentzObjectRepresentation(dict):
     __rtruediv__ = __div__
     __rdiv__ = __div__     
 
-    def factorize(self):
+    def factorize(self, contracted=None):
         """Try to factorize each component"""
         for ind, fact in self.items(): 
             if fact:
-                self.set_rep(ind, fact.factorize())
+                self.set_rep(ind, fact.factorize(contracted))
         return self
 
     def simplify(self):

@@ -3469,7 +3469,7 @@ C
                  structure = 'Gamma(3,2,\'s1\')*ProjM(\'s1\',1)')
         builder = create_aloha.AbstractRoutineBuilder(FFV)
         conjg_builder= builder.define_conjugate_builder()
-        amp = conjg_builder.compute_routine(0)
+        amp = conjg_builder.compute_routine(0, factorize=False)
 
         self.assertEqual(amp.expr.nb_spin, 0)
         F1_1, F1_2, F1_3, F1_4 = 1,2,3,4
@@ -3477,7 +3477,7 @@ C
         V3_1, V3_2, V3_3, V3_4 = 8,9,10,11
         # For V4:
         cImag = complex(0,1)
-
+        
         ufo_value = eval(str(amp.expr.get_rep([0])))
     
         #v4_value = ( (F2_1*F1_3+F2_2*F1_4)*V3_1 \
@@ -3498,7 +3498,7 @@ C
                  structure = 'Gamma(3,2,\'s1\')*ProjP(\'s1\',1)')
         builder = create_aloha.AbstractRoutineBuilder(FFV)
         conjg_builder= builder.define_conjugate_builder()
-        amp = conjg_builder.compute_routine(0)
+        amp = conjg_builder.compute_routine(0, factorize=False)
         
         ufo_value = eval(str(amp.expr.get_rep([0])))
         self.assertNotEqual(complex(0,1)*ufo_value, v4_value)

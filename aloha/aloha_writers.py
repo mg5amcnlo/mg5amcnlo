@@ -39,6 +39,7 @@ class WriteALOHA:
          
         self.symmetries = abstract_routine.symmetries
         self.tag = abstract_routine.tag
+        self.contracted = abstract_routine.contracted
 
         self.outgoing = self.offshell
         if 'C%s' %((self.outgoing + 1) // 2) in self.tag:
@@ -348,6 +349,15 @@ class ALOHAWriterForFortran(WriteALOHA):
         if len(Momenta) > 0:
             str_out += 'double precision ' + '(0:3),'.join(Momenta) + '(0:3)\n'
 
+        # Define the contracted variable
+        if self.contracted:
+            lstring = []
+            for name, obj, nb in self.contracted.values():
+                lstring.append('double complex %s' % name)
+            lstring.append('')
+            str_out += '\n'.join(lstring)
+
+
         # Add entry for symmetry
         #str_out += '\n'
         #for elem in self.symmetries:
@@ -448,6 +458,7 @@ class ALOHAWriterForFortran(WriteALOHA):
                 return int(x) == x
             except TypeError:
                 return False
+            
 
         if isinteger(number):
             out = str(int(number))
@@ -465,6 +476,14 @@ class ALOHAWriterForFortran(WriteALOHA):
     
     def define_expression(self):
         OutString = ''
+        
+        if self.contracted:
+            string = ''
+            for name, obj, nb in self.contracted.values():
+                string += '%s = %s ! used %s times\n' % (name, self.write_obj(obj),nb)
+            string = string.replace('+-', '-')
+            OutString += string
+            
         if not self.offshell:
             for ind in self.obj.listindices():
                 string = 'Vertex = COUP*' + self.write_obj(self.obj.get_rep(ind))
@@ -1158,8 +1177,16 @@ class ALOHAWriterForPython(WriteALOHA):
     
     def define_expression(self):
         """Define the functions in a 100% way """
-        
+
         OutString = ''
+
+        if self.contracted:
+            string = ''
+            for name, obj, nb in self.contracted.values():
+                string += '%s = %s # used %s times\n' % (name, self.write_obj(obj),nb)
+            string = string.replace('+-', '-')
+            OutString += string
+        
         if not self.offshell:
             for ind in self.obj.listindices():
                 string = 'vertex = COUP*' + self.write_obj(self.obj.get_rep(ind))
