@@ -294,8 +294,8 @@ class AbstractRoutineBuilder(object):
         
         lorentz = lorentz.simplify()
         contracted = {'order': []}
-        #if factorize:
-        #    lorentz = lorentz.factorize(contracted)
+        if factorize:
+            lorentz = lorentz.factorize(contracted)
         lorentz.tag = set(aloha_lib.USE_TAG)
         return lorentz, contracted         
                         
