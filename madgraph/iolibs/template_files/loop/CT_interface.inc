@@ -127,7 +127,7 @@ C LOOPLIB SET WHAT LIBRARY CT USES
 C 1 -> LOOPTOOLS
 C 2 -> AVH
 C 3 -> QCDLOOP
-      LOOPLIB=2
+      LOOPLIB=%(loop_lib)d
 C -------------------------------	  
 
       CALL CTSINIT(THRS,LOOPLIB)

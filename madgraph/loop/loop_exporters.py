@@ -361,6 +361,12 @@ class LoopProcessExporterFortranSA(export_v4.ProcessExporterFortranSA,
         replace_dict['mass_format'] = 'complex*16'
         replace_dict['mass_translation'] = 'M2L(I)'           
         
+        # specify what
+        if aloha.complex_mass:
+            replace_dict['loop_lib'] = 3
+        else:
+            replace_dict['loop_lib'] = 2           
+        
         file = file % replace_dict
         files.append(file)
         
