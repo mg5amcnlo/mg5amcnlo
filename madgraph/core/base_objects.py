@@ -1473,7 +1473,20 @@ class Diagram(PhysicsObject):
         this diagram"""
 
         return [len(v.get('legs')) for v in self.get('vertices')]
+
+    def get_num_configs(self, model, ninitial):
+        """Return the maximum number of configs from this diagram,
+        given by 2^(number of non-zero width s-channel propagators)"""
+
+        s_channels = [v.get_s_channel_id(model,ninitial) for v in \
+                              self.get('vertices')[:-1]]
+        num_props = len([i for i in s_channels if i != 0 and \
+                         model.get_particle(i).get('width').lower() != 'zero'])
         
+        if num_props <= 1:
+            return 1
+        else:
+            return 2**num_props
 #===============================================================================
 # DiagramList
 #===============================================================================
