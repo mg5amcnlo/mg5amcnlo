@@ -1908,6 +1908,15 @@ C     Number of configs
       DATA MAPCONFIG(0)/8/
 """)
 
+        # Test maxconfigs.inc
+        writer = writers.FortranWriter(self.give_pos('test'))
+        exporter.write_maxconfigs_file(writer, subproc_groups)
+        writer.close()
+        self.assertFileContains('test',
+                                """      INTEGER LMAXCONFIGS
+      PARAMETER(LMAXCONFIGS=32)
+""")
+
         # Test config_subproc_map.inc
 
         exporter.write_config_subproc_map_file(\
@@ -7205,6 +7214,15 @@ C     Number of configs
                                 "MAXPROC, MAXSPROC\n" + \
                                 "      PARAMETER (MAXAMPS=8, MAXFLOW=1)\n" + \
                                 "      PARAMETER (MAXPROC=1, MAXSPROC=1)\n")
+        # Test maxconfigs.inc
+        writer = writers.FortranWriter(self.give_pos('test'))
+        exporter.write_maxconfigs_file(writer, matrix_elements)
+        writer.close()
+        self.assertFileContains('test',
+                                """      INTEGER LMAXCONFIGS
+      PARAMETER(LMAXCONFIGS=72)
+""")
+
         # Test mg.sym
         writer = writers.FortranWriter(self.give_pos('test'))
         exporter.write_mg_sym_file(writer, me)
@@ -8533,6 +8551,15 @@ C     Number of configs
       DATA MAPCONFIG(0)/10/
 """)
         
+        # Test maxconfigs.inc
+        writer = writers.FortranWriter(self.give_pos('test'))
+        exporter.write_maxconfigs_file(writer, [me])
+        writer.close()
+        self.assertFileContains('test',
+                                """      INTEGER LMAXCONFIGS
+      PARAMETER(LMAXCONFIGS=10)
+""")
+
     def test_configs_4f_decay(self):
         """Test configs.inc for 4f decay process that failed in v. 1.3.27
         """
