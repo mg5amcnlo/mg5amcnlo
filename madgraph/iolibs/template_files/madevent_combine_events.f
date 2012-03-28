@@ -67,6 +67,7 @@ c
       else
          call get_integer(npara,param,value," nevents "  ,nreq  ,10000   )
       endif
+      call get_logical(npara,param,value," use_syst ",use_syst,.false.)
 
 c   Get information for the <init> block
       param_card_name = '%(param_card_name)s'
@@ -227,11 +228,18 @@ C $E$ output_file2 $E$ !this is tag for automatic modification by MW
       ntry = 0
       do i=1,kevent
          if (keep(i) .and. ntry .lt. nreq) then
-            read(sfnum,rec=iarray(i)) wgt,n,
-     &           ((ic(m,j),j=1,maxexternal),m=1,7),ievent,
-     &           ((p(m,j),m=0,4),j=1,maxexternal),sscale,aqcd,aqed,
-     $        buff
-            call write_event(15,P,xsec/nreq,n,ic,ievent,sscale,aqcd,aqed,buff)
+            if (use_syst) then
+               read(sfnum,rec=iarray(i)) wgt,n,
+     &              ((ic(m,j),j=1,maxexternal),m=1,7),ievent,
+     &              ((p(m,j),m=0,4),j=1,maxexternal),sscale,aqcd,aqed,
+     $              buff, buff2
+            else
+               read(sfnum,rec=iarray(i)) wgt,n,
+     &              ((ic(m,j),j=1,maxexternal),m=1,7),ievent,
+     &              ((p(m,j),m=0,4),j=1,maxexternal),sscale,aqcd,aqed, buff
+            endif
+            call write_event(15,P,xsec/nreq,n,ic,ievent,sscale,aqcd,aqed,
+     $           buff,buff2)
             ntry=ntry+1
          endif
       enddo

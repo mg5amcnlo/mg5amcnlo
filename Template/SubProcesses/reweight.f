@@ -424,7 +424,7 @@ c     q2bck holds the central q2fact scales
       setclscales=.true.
 
       if(ickkw.le.0.and.xqcut.le.0d0.and.q2fact(1).gt.0.and.scale.gt.0)
-     $     goto 100
+     $     return
 
 c   
 c   Cluster the configuration
@@ -701,7 +701,6 @@ c     Check that factorization scale is >= 2 GeV
 c
 c     Store information for systematics studies
 c
- 100  continue
 
       if(use_syst)then
          s_scale=scale

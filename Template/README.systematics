@@ -3,6 +3,11 @@ Description of variables stored for systematics studies
 =======================================================
 By: Johan Alwall, 28/3/2012
 
+-------------------------------------------------------------------
+Turn on systematics info with the flag use_syst in the run_card.dat
+Note that systematics only works with matching (ickkw set to 1)
+-------------------------------------------------------------------
+
 Parameters that can be varied after-the-fact (without need to rerun
 Pythia+detector simulation):
 
