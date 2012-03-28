@@ -4,7 +4,7 @@ Update notes for MadGraph 5 (in reverse time order)
                       This can be turned with the use_syst parameter in
                       run_card.dat. Please read more in 
                       Template/README.systematics
-                      Note that the Pythia/PGS package v. 
+                      Note that the Pythia/PGS package v. 2.2 is needed.
 
 1.4.3 (08/03/12)  JA: Reintroduced the possibility to completely forbid
                       s-channel diagrams, using the $$ notation. Note that
