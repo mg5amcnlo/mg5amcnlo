@@ -1,5 +1,11 @@
 Update notes for MadGraph 5 (in reverse time order)
 
+1.6.beta (28/03/12)  JA: Store parameters needed for systematics studies.
+                      This can be turned with the use_syst parameter in
+                      run_card.dat. Please read more in 
+                      Template/README.systematics
+                      Note that the Pythia/PGS package v. 
+
 1.4.3 (08/03/12)  JA: Reintroduced the possibility to completely forbid
                       s-channel diagrams, using the $$ notation. Note that
                       this should be used with great care, since the result
