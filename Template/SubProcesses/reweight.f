@@ -423,7 +423,8 @@ c     q2bck holds the central q2fact scales
 
       setclscales=.true.
 
-      if(ickkw.le.0.and.xqcut.le.0d0.and.q2fact(1).gt.0.and.scale.gt.0) return
+      if(ickkw.le.0.and.xqcut.le.0d0.and.q2fact(1).gt.0.and.scale.gt.0)
+     $     goto 100
 
 c   
 c   Cluster the configuration
@@ -700,15 +701,16 @@ c     Check that factorization scale is >= 2 GeV
 c
 c     Store information for systematics studies
 c
+ 100  continue
+
       if(use_syst)then
          s_scale=scale
          n_qcd=nqcd(igraphs(1))
          n_alpsem=0
          do i=1,2
-            s_qfact(i)=sqrt(q2bck(i))
-            s_x(i)=xbk(i)
             n_pdfrw(i)=0
          enddo
+         s_rwfact=1d0
       endif
       return
       end
@@ -786,7 +788,7 @@ c     ipart gives external particle number chain
       rewgt=1.0d0
       clustered=.false.
 
-      if(ickkw.le.0) return
+      if(ickkw.le.0) goto 100
 
 c   Set mimimum kt scale, depending on highest mult or not
       if(hmult.or.ickkw.eq.1)then
@@ -822,6 +824,15 @@ c     Set incoming particle identities
 
       endif
       
+c     Store pdf information for systematics studies (initial)
+      if(use_syst)then
+         do j=1,2
+            n_pdfrw(j)=1
+            i_pdgpdf(1,j)=ipdgcl(j,igraphs(1),iproc)
+            s_xpdf(1,j)=xbk(ib(j))
+            s_qpdf(1,j)=sqrt(q2fact(j))
+         enddo
+      endif
 
 c   Preparing graph particle information (ipart, needed to keep track of
 c   external particle clustering scales)
@@ -1039,17 +1050,6 @@ c                    if non-radiating vertex or last 2->2
                         if (btest(mlevel,3))
      $                       write(*,*)' set pt2pdf for ',imocl(n),
      $                          ' to: ',sqrt(pt2pdf(imocl(n)))
-c     Store information for systematics studies (initial)
-                        if(use_syst)then
-                           n_pdfrw(j)=n_pdfrw(j)+1
-                           i_pdgpdf(n_pdfrw(j),j)=ipdgcl(idacl(n,i),igraphs(1),iproc)
-                           if (zcl(n).gt.0d0.and.zcl(n).lt.1d0) then
-                              s_xpdf(n_pdfrw(j),j)=xnow(j)/zcl(n)
-                           else
-                              s_xpdf(n_pdfrw(j),j)=xnow(j) 
-                           endif
-                           s_qpdf(n_pdfrw(j),j)=sqrt(q2now)
-                        endif
                      else if(pt2pdf(idacl(n,i)).lt.q2now
      $                       .and.isjet(ipdgcl(idacl(n,i),igraphs(1),iproc))) then
                         pdfj1=pdg2pdf(abs(lpp(IB(j))),ipdgcl(idacl(n,i),
@@ -1152,6 +1152,22 @@ c           fs sudakov weight
       if (btest(mlevel,3)) then
         write(*,*)'} ->  w = ',rewgt
       endif
+
+ 100  continue
+
+c     Set reweight factor for systematics studies
+      if(use_syst)then
+         s_rwfact = rewgt
+c     Need to multiply by: initial PDF, alpha_s^n_qcd to get
+c     factor in front of matrix element
+         do i=1,2
+            s_rwfact=s_rwfact*pdg2pdf(abs(lpp(IB(i))),
+     $           i_pdgpdf(1,i)*sign(1,lpp(IB(j))),
+     $           s_xpdf(1,i),s_qpdf(1,i))
+         enddo
+         s_rwfact=s_rwfact*asref**n_qcd
+      endif
+
       return
       end
       

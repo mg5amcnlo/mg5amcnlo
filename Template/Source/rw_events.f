@@ -11,7 +11,6 @@ c     ic(*,7) = Helicity
 c********************************************************************
       implicit none
       include 'maxparticles.inc'
-      include 'run.inc'
       include 'run_config.inc'
       double precision pi
       parameter (pi = 3.1415926d0)
@@ -63,11 +62,14 @@ c-----
       
 c     Clustering scales
       read(lun,'(a)',end=99,err=99) buff
-      if(buff(1:1).ne.'#') buff=''
+      if(buff(1:1).ne.'#') then
+         backspace(lun)
+         buff=''
+      endif
 c     Systematics info
-      if (use_syst)then
-         read(lun,'(a)',end=99,err=99) buff2
-      else
+      read(lun,'(a)',end=99,err=99) buff2
+      if(buff2(1:1).ne.'#') then
+         backspace(lun)
          buff2=''
       endif
       return

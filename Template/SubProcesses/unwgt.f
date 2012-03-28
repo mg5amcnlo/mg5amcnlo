@@ -579,7 +579,7 @@ c     Write out buffer for systematics studies
       buff2(1:1) = ' '
       if(use_syst)then
 c         print *,'Systematics:'
-c         print *,'s_scale,s_qfact,s_x: ',s_scale,s_qfact,s_x
+c         print *,'s_scale: ',s_scale
 c         print *,'n_qcd,n_alpsem: ',n_qcd,n_alpsem
 c         print *,'s_qalps: ',(s_qalps(I),I=1,n_alpsem) 
 c         print *,'n_pdfrw: ',n_pdfrw
@@ -588,8 +588,8 @@ c         print *,'s_xpdf: ',((s_xpdf(i,j),i=1,n_pdfrw(j)),j=1,2)
 c         print *,'s_qpdf: ',((s_qpdf(i,j),i=1,n_pdfrw(j)),j=1,2)
          buff2(1:1) = '#'
          iini=2
-         ifin=1+5*15
-         write(buff2(iini:ifin), '(5E15.8)') s_scale,s_qfact,s_x
+         ifin=1+1*15
+         write(buff2(iini:ifin), '(1E15.8)') s_scale
          iini=1+ifin
          ifin=ifin+2*3
          write(buff2(iini:ifin), '(2I3)') n_qcd,n_alpsem
@@ -616,6 +616,9 @@ c         print *,'s_qpdf: ',((s_qpdf(i,j),i=1,n_pdfrw(j)),j=1,2)
      $           ((s_xpdf(i,j),i=1,n_pdfrw(j)),j=1,2),
      $           ((s_qpdf(i,j),i=1,n_pdfrw(j)),j=1,2)
          endif
+         iini=1+ifin
+         ifin=ifin+15
+         write(buff2(iini:ifin), '(E15.8)') s_rwfact
 c         print *,'systematics buffer:'
 c         write(*,'(a)') buff2(1:ifin)
 c         print *,'max and actual length: ',s_bufflen,ifin

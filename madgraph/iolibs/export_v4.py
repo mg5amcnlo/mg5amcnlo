@@ -1869,7 +1869,7 @@ c           This is dummy particle used in multiparticle vertices
                     try:
                         nqcd = h.calculate_orders()['QCD']
                     except KeyError:
-                        logger.warning("No QCD order found in diagram")
+                        pass
                     break
                 else:
                     continue
