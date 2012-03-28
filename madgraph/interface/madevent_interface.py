@@ -1463,7 +1463,8 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
                               'automatic_html_opening':True,
                               'run_mode':0,
                               'cluster_queue':'madgraph',
-                              'nb_core':None}
+                              'nb_core':None,
+                              'timeout':20}
         
         if os.environ.has_key('MADGRAPH_BASE'):
             config_file = open(os.path.join(os.environ['MADGRAPH_BASE'],'mg5_configuration.txt'))

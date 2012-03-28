@@ -1185,7 +1185,7 @@ class CompleteForCmd(cmd.CompleteCmd):
             return self.list_completion(text, self._display_opts)
 
         if len(args) == 2 and args[1] == 'checks':
-            return self.list_completion(text, 'failed')
+            return self.list_completion(text, ['failed'])
 
         if len(args) == 2 and args[1] == 'particles':
             return self.model_completion(text, line[begidx:])
