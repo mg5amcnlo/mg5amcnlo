@@ -49,3 +49,20 @@ pythia_card.dat and pgs_card.dat are present in the Cards/ directory.
 If this is the case, Pythia and PGS will automatically be run by
 generate_events, or, for an existing run, use bin/run_pythia and
 bin/run_pgs.
+
+
+Running in cluster or multicore mode:
+-------------------------------------
+
+In order to automatically run in cluster or multicore mode, please set
+the flag run_mode in the Cards/me5_configuration.txt file (or in the
+input/mg5_configuration.txt file before you generate your process):
+
+# Default Running mode 
+# 0: single machine/ 1: cluster / 2: multicore
+run_mode = 0
+
+You can also specify the cluster type (for cluster mode) or your
+preferred number of CPUs (for multicore mode - note that by default,
+the maximum number of cores is used) by setting cluster_type and
+nb_core.

@@ -236,7 +236,7 @@ class AbstractRoutineBuilder(object):
                         lorentz *= SpinorPropagator(id, 'I2', outgoing)
                     else:
                         #propagator incoming
-                        lorentz *= SpinorPropagator('I2', id, outgoing) 
+                        lorentz *= SpinorPropagator('I2', id, outgoing)
                 elif spin == 3 :
                     lorentz *= VectorPropagator(id, 'I2', id)
                 elif spin == 5 :

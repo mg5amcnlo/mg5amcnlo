@@ -43,13 +43,12 @@ class ExtLauncher(object):
     
     force = False
     
-    def __init__(self, cmd, running_dir, card_dir='', timeout=None,
+    def __init__(self, cmd, running_dir, card_dir='', 
                  **options):
         """ initialize an object """
         
         self.running_dir = running_dir
         self.card_dir = os.path.join(self.running_dir, card_dir)
-        self.timeout = timeout
         self.cmd_int = cmd
         #include/overwrite options
         for key,value in options.items():
@@ -87,15 +86,13 @@ class ExtLauncher(object):
         if timeout:
             # avoid to always wait a given time for the next answer
             self.force = True
-        else:
-            self.timeout = None # answer at least one question so wait...
    
     def ask(self, question, default, choices=[], path_msg=None):
         """nice handling of question"""
      
         if not self.force:
-            return self.cmd_int.ask(question, default, choices=choices, path_msg=path_msg,
-                               timeout=self.timeout, fct_timeout=self.timeout_fct)
+            return self.cmd_int.ask(question, default, choices=choices, 
+                                path_msg=path_msg, fct_timeout=self.timeout_fct)
         else:
             return str(default)
          
@@ -135,10 +132,10 @@ class ExtLauncher(object):
 class SALauncher(ExtLauncher):
     """ A class to launch a simple Standalone test """
     
-    def __init__(self, cmd_int, running_dir, timeout, **options):
+    def __init__(self, cmd_int, running_dir, **options):
         """ initialize the StandAlone Version"""
         
-        ExtLauncher.__init__(self, cmd_int, running_dir, './Cards', timeout, **options)
+        ExtLauncher.__init__(self, cmd_int, running_dir, './Cards', **options)
         self.cards = ['param_card.dat']
 
     
@@ -158,11 +155,13 @@ class SALauncher(ExtLauncher):
 class MELauncher(ExtLauncher):
     """A class to launch MadEvent run"""
     
-    def __init__(self, running_dir, timeout, cmd_int , unit='pb', **option):
+    def __init__(self, running_dir, cmd_int , unit='pb', **option):
         """ initialize the StandAlone Version"""
 
-        ExtLauncher.__init__(self, cmd_int, running_dir, './Cards', timeout, **option)
+        ExtLauncher.__init__(self, cmd_int, running_dir, './Cards', **option)
         #self.executable = os.path.join('.', 'bin','generate_events')
+        self.pythia = cmd_int.options['pythia-pgs_path']
+        self.delphes = cmd_int.options['delphes_path'],
 
         assert hasattr(self, 'cluster')
         assert hasattr(self, 'multicore')
@@ -267,11 +266,11 @@ the computation of the width.'''
 class Pythia8Launcher(ExtLauncher):
     """A class to launch Pythia8 run"""
     
-    def __init__(self, running_dir, timeout, cmd_int, **option):
+    def __init__(self, running_dir, cmd_int, **option):
         """ initialize launching Pythia 8"""
 
         running_dir = os.path.join(running_dir, 'examples')
-        ExtLauncher.__init__(self, cmd_int, running_dir, '.', timeout, **option)
+        ExtLauncher.__init__(self, cmd_int, running_dir, '.', **option)
         self.cards = []
     
     def prepare_run(self):

@@ -125,6 +125,7 @@ class TestCmdShell1(unittest.TestCase):
                     'automatic_html_opening': 'True', 
                     'pythia8_path': './pythia8',
                     'group_subprocesses': 'Auto',
+                    'timeout': '20',
                     'ignore_six_quark_processes': False
                     }
 

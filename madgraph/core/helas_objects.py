@@ -3387,7 +3387,13 @@ class HelasMatrixElement(base_objects.PhysicsObject):
         """Get number of diagrams, which is always more than number of
         configs"""
 
-        return len(self.get('diagrams'))    
+        model = self.get('processes')[0].\
+                get('model')
+        
+        next, nini = self.get_nexternal_ninitial()
+
+        return sum([d.get_num_configs(model, nini) for d in \
+                    self.get('base_amplitude').get('diagrams')])
 
     def get_number_of_wavefunctions(self):
         """Gives the total number of wavefunctions for this ME"""
