@@ -38,6 +38,7 @@ pjoin = os.path.join
 import madgraph
 import madgraph.interface.extended_cmd as cmd
 import madgraph.interface.madgraph_interface as MGcmd
+import madgraph.iolibs.files as files
 
 from madgraph import MG4DIR, MG5DIR, MadGraph5Error
 
@@ -46,6 +47,15 @@ logger = logging.getLogger('cmdprint') # -> stdout
 
 class Switcher(object):
     """ Helping class containing all the switching routine """
+
+    def __init__(self, main='MadGraph', *args, **opt):
+            
+        # define the interface
+        self.change_principal_cmd(main)
+        self.cmd.__init__(self, *args, **opt)       
+        
+
+
         
     def debug_link_to_command(self):
         """redefine all the command to call directly the appropriate child"""
@@ -349,16 +359,12 @@ class Switcher(object):
     def test_interface(self, *args, **opts):
         return self.cmd.test_interface(self, *args, **opts)
 
+    def set_configuration(self, *args, **opts):
+        return self.cmd.set_configuration(self, *args, **opts)
 
 
 class MasterCmd(Switcher, MGcmd.MadGraphCmd, cmd.CmdShell):
 
-    def __init__(self, main='MadGraph', *args, **opt):
-            
-        # define the interface
-        self.change_principal_cmd(main)
-        self.cmd.__init__(self, *args, **opt)       
-        
 
     def change_principal_cmd(self, name):
         if name == 'MadGraph':
@@ -369,10 +375,8 @@ class MasterCmd(Switcher, MGcmd.MadGraphCmd, cmd.CmdShell):
         if __debug__:
             self.debug_link_to_command()      
         
-class MasterCmdWeb(Switcher, MGcmd.MadGraphCmd):
- 
-    timeout = 1 # time authorize to answer question [0 is no time limit]
-    
+class MasterCmdWeb(Switcher, MGcmd.MadGraphCmdWeb):
+   
     def __init__(self, *arg, **opt):
     
         if os.environ.has_key('_CONDOR_SCRATCH_DIR'):
@@ -384,7 +388,9 @@ class MasterCmdWeb(Switcher, MGcmd.MadGraphCmd):
             
         
         #standard initialization
-        MasterCmd.__init__(self, mgme_dir = '', *arg, **opt)
+        Switcher.__init__(self, mgme_dir = '', *arg, **opt)
+        
+        self.options['timeout'] = 1 # time authorize to answer question [0 is no time limit]
         
     def change_principal_cmd(self, name):
         if name == 'MadGraph':
@@ -400,7 +406,7 @@ class MasterCmdWeb(Switcher, MGcmd.MadGraphCmd):
     def finalize(self, nojpeg):
         """Finalize web generation""" 
         
-        Switcher.finalize(self, nojpeg, online = True)
+        self.cmd.finalize(self, nojpeg, online = True)
 
     # Generate a new amplitude
     def do_generate(self, line):
@@ -433,3 +439,22 @@ class MasterCmdWeb(Switcher, MGcmd.MadGraphCmd):
         config_path = pjoin(os.environ['MADGRAPH_BASE'], 'mg5_configuration.txt')
         return Switcher.set_configuration(self, config_path=config_path)
     
+
+    def do_save(self, line, check=True):
+        """Save information to file"""
+        
+        if check:
+            self.check_save([])
+            raise #useless but full security
+        
+        args = self.split_arg(line)
+        if args[0] != 'options':
+            Switcher.do_save(self, line,check)
+        else:
+            # put default options since 
+            # in the web the local file is not used
+            # in download the default file is more usefull
+            files.cp(pjoin(MG5DIR,'input','mg5_configuration.txt'), args[1])
+            
+
+

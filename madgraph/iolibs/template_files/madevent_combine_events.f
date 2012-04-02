@@ -10,7 +10,7 @@ c
       integer    maxsubprocesses
       parameter (maxsubprocesses=9999)
       integer    cmax_events
-      parameter (cmax_events=500000)
+      parameter (cmax_events=5000000)
       integer    sfnum
       parameter (sfnum=17)   !Unit number for scratch file
       include 'maxparticles.inc'
@@ -651,12 +651,10 @@ c     Constants
 c
       character*(*) plist
       parameter (plist='subproc.mg')
-      integer    maxsubprocesses
-      parameter (maxsubprocesses=999)
 c
 c     Arguments
 c
-      character*300 subname(maxsubprocesses)
+      character*300 subname(*)
       integer ns
 c-----
 c  Begin Code

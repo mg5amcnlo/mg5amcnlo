@@ -17,6 +17,7 @@ class WriteALOHA:
     type_to_variable = {1:'S', 2:'F', 3:'V', 4:'R', 5:'T'}
     type_to_size = {'S':3, 'T':18, 'R':18, 'V':6, 'F':6}
     
+            
     def __init__(self, abstract_routine, dirpath):
 
 
@@ -110,7 +111,7 @@ class WriteALOHA:
         
     def write_obj(self, obj):
         """Calls the appropriate writing routine"""
-
+        
         try:
             vartype = obj.vartype
         except:
@@ -1120,7 +1121,17 @@ class ALOHAWriterForPython(WriteALOHA):
         self.outname = '%s%s' % (self.particles[self.outgoing -1], \
                                                                self.outgoing)
     
-        
+    @staticmethod
+    def change_number_format(obj):
+        if obj.real == 0 and obj.imag:
+            if int(obj.imag) == obj.imag: 
+                return '%ij' % obj.imag
+            else:
+                return '%sj' % str(obj.imag)
+        else: 
+            return str(obj)
+    
+    
     def change_var_format(self, name): 
         """Formatting the variable name to Python format
         start to count at zero"""

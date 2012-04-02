@@ -114,7 +114,7 @@ status_template = """
                     %(pgs_card)s
                     %(delphes_card)s
         </TD>
-        <TD nowrap ROWSPAN=2> <A HREF="./HTML/%(run_name)s/results.html">%(cross).4g <font face=symbol>&#177</font> %(error).4g (%(unit)s)</A> </TD> 
+        <TD nowrap ROWSPAN=2> %(results)s </TD> 
         %(status)s
  </TR>
  <tr></tr>
@@ -279,6 +279,10 @@ class AllResults(dict):
     def add_detail(self, name, value, run=None, tag=None):
         """ add information to current run (cross/error/event)"""
         assert name in ['cross', 'error', 'nb_event', 'cross_pythia']
+
+        if not run and not self.current:
+            return
+
         if not run:
             run = self.current
         else:
@@ -311,6 +315,11 @@ class AllResults(dict):
                             'tag_name': self.current['tag'],
                             'unit': self[self.current['run_name']].info['unit']}
 
+            if exists(pjoin(self.path, 'HTML',self.current['run_name'], 
+                        'results.html')):
+                status_dict['results'] = """<A HREF="./HTML/%(run_name)s/results.html">%(cross).4g <font face=symbol>&#177</font> %(error).4g (%(unit)s)</A>""" % status_dict
+            else:
+                status_dict['results'] = "No results yet"
             if exists(pjoin(self.path, 'Cards', 'plot_card.dat')):
                 status_dict['plot_card'] = """ <a href="./Cards/plot_card.dat">plot_card</a><BR>"""
             else:
@@ -765,7 +774,7 @@ class OneTagResults(dict):
                 pass
                 
         elif (self.pgs or self.delphes) and not self['nb_event']:
-            if runresults[-2]['cross_pythia']:
+            if runresults[-2]['cross_pythia'] and runresults[-2]['cross']:
                 self['cross'] = runresults[-2]['cross_pythia']
                 self['nb_event'] = int(0.5+(runresults[-2]['nb_event'] * self['cross'] /runresults[-2]['cross']))                           
                 self['error'] = self.get_pythia_error(runresults[-2]['cross'], 

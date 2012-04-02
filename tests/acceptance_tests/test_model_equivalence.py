@@ -326,7 +326,7 @@ class TestModelCreation(unittest.TestCase, CheckFileCreate):
                 #    else:
                 #        solutions[variable].append(singlevalue)
         
-        self.assertEqual(nb_value, 72)
+        self.assertEqual(nb_value, 71)
         
         
 
@@ -337,7 +337,7 @@ class TestModelCreation(unittest.TestCase, CheckFileCreate):
         alreadydefine = []
         for line in self.ReturnFile('intparam_definition.inc'):
             if 'ENDIF' in line:
-                self.assertEqual(len(alreadydefine), 30)
+                self.assertEqual(len(alreadydefine), 29)
             if '=' not in line:
                 continue
             new_def = line.split('=')[0].lstrip()
@@ -346,7 +346,7 @@ class TestModelCreation(unittest.TestCase, CheckFileCreate):
             alreadydefine.append(new_def)
         alreadydefine = [name.lower() for name in alreadydefine]
         alreadydefine.sort()
-        solution = ['aew ', 'ckm22 ', 'complexi ', 'cw ', 'cw__exp__2 ', 'ee ', 'ee__exp__2 ', 'g ', 'g1 ', 'g__exp__2 ', 'gal(1) ', 'gal(2) ', 'gw ', 'gw__exp__2 ', 'lam ', 'mh__exp__2 ', 'muh ', 'mw ', 'mw__exp__2 ', 'mz__exp__2 ', 'mz__exp__4 ', 'sqrt__2 ', 'sqrt__aew ', 'sqrt__as ', 'sqrt__sw2 ', 'sw ', 'sw2 ', 'sw__exp__2 ', 'v ', 'v__exp__2 ', 'yb ', 'yt ', 'ytau ']
+        solution = ['aew ', 'as ', 'ckm22 ', 'complexi ', 'cw ', 'cw__exp__2 ', 'ee ', 'ee__exp__2 ','g ', 'g1 ', 'g__exp__2 ', 'gal(1) ', 'gal(2) ', 'gw ', 'gw__exp__2 ', 'lam ', 'mh__exp__2 ', 'muh ', 'mw ', 'mw__exp__2 ', 'mz__exp__2 ', 'mz__exp__4 ', 'sqrt__2 ', 'sqrt__aew ', 'sqrt__as ', 'sqrt__sw2 ', 'sw ', 'sw2 ', 'sw__exp__2 ', 'v ', 'v__exp__2 ', 'yb ', 'yt ', 'ytau ']
         self.assertEqual(alreadydefine, solution)
         
 

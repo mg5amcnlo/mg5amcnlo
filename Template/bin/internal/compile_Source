@@ -14,7 +14,7 @@
 
 if [[ -d Source ]]; then
     cd Source
-    for i in ../bin/internal/sum_html ../bin/internal/gen_ximprove all ../bin/internal/combine_events ../bin/internal/combine_runs ../bin/internal/sumall; do
+    for i in ../bin/internal/gen_ximprove all ../bin/internal/combine_events ../bin/internal/combine_runs; do
 	make $i > /dev/null
 	if [[ $? -ne 0 ]];then
 	    # Make didn't exit successfully
