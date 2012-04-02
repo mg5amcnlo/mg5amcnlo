@@ -8,6 +8,7 @@ C     CONSTANTS
 C
       double precision zero
       parameter       (ZERO = 0d0)
+      include 'nexternal.inc'
       include 'genps.inc'
       INTEGER    ITMAX,   NCALL
 
@@ -406,6 +407,7 @@ c**********************************************************************
 c
 c     Constants
 c
+      include 'nexternal.inc'
       include 'genps.inc'
 c
 c     Arguments

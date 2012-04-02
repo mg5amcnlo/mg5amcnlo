@@ -294,6 +294,7 @@ class ProcessExporterFortranFKS_born(loop_exporters.LoopProcessExporterFortranSA
                      'unwgt.f',
                      'vegas2.for',
                      'write_ajob.f',
+                     'handling_lhe_events.f',
                      'write_event.f']
 
         for file in linkfiles:

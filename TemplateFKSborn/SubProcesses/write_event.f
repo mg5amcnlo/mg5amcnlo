@@ -1,5 +1,6 @@
       subroutine finalize_event(xx,res_abs,lunlhe,plotEv,putonshell)
       implicit none
+      include 'nexternal.inc'
       include "genps.inc"
       integer ndim,ipole
       common/tosigint/ndim,ipole
