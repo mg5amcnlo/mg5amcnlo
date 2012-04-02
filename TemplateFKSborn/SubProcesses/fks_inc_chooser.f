@@ -16,10 +16,14 @@ c
       i_fks=fks_i_D(nFKSprocess)
       j_fks=fks_j_D(nFKSprocess)
       do i=1,nexternal
-         if (i.eq.i_fks) then
+         if (fks_j_from_i_D(nFKSprocess,i,0).ge.0 .and.
+     &        fks_j_from_i_D(nFKSprocess,i,0).le.nexternal) then
             do j=0,fks_j_from_i_D(nFKSprocess,i,0)
                fks_j_from_i(i,j)=fks_j_from_i_D(nFKSprocess,i,j)
             enddo
+         else
+            write (*,*) 'ERROR in fks_inc_chooser'
+            stop
          endif
          particle_type(i)=particle_type_D(nFKSprocess,i)
          pdg_type(i)=pdg_type_D(nFKSprocess,i)

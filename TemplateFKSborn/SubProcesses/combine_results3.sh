@@ -13,7 +13,8 @@ touch res.txt
 touch dirs.txt
 NTOT=0
 for dir in "$@" ; do
-    let NTOT=$NTOT+`ls -d P*/R*/$dir | wc -l`
+    N=`ls -d P*/$dir | wc -l`
+    NTOT=`expr $NTOT + $N`
     ls -d P0*/$dir >> dirs.txt
     grep -H 'Final result' P0*/$dir/log.txt >> res.txt
 done

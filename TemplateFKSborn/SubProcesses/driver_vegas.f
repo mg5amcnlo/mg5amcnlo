@@ -287,11 +287,27 @@ c From dsample_fks
       integer           iconfig
       common/to_configs/iconfig
       integer i
-      double precision wgt,dsig
+      double precision wgt,dsig,ran2,rnd
+      external ran2
       double precision x(99),p(0:3,nexternal)
       include 'fks_info.inc'
       INTEGER NFKSPROCESS
       COMMON/C_NFKSPROCESS/NFKSPROCESS
+      character*4 abrv
+      common /to_abrv/ abrv
+      logical nbodyonly
+      common/cnbodyonly/nbodyonly
+      integer fks_j_from_i(nexternal,0:nexternal)
+     &     ,particle_type(nexternal),pdg_type(nexternal)
+      common /c_fks_inc/fks_j_from_i,particle_type,pdg_type
+      integer i_fks,j_fks
+      common/fks_indices/i_fks,j_fks
+      logical sum,firsttime
+      parameter (sum=.true.)
+      data firsttime /.true./
+      integer nFKSprocessBorn
+      save nFKSprocessBorn
+
 c
       do i=1,99
         if(i.le.ndim)then
@@ -300,26 +316,77 @@ c
           x(i)=0.d0
         endif
       enddo
-      wgt=1.d0
-c
       sigint=0d0
-      do nFKSprocess=1,fks_configs
+
+c Find the nFKSprocess for which we compute the Born-like contributions
+      if (firsttime) then
+         firsttime=.false.
+         nFKSprocess=fks_configs
+         do while (particle_type(i_fks).ne.8)
+            call fks_inc_chooser()
+            write (*,*) i_fks,particle_type(i_fks)
+            nFKSprocess=nFKSprocess-1
+            if (nFKSprocess.eq.0) then
+               write (*,*) 'ERROR in sigint'
+               stop
+            endif
+         enddo
+         nFKSprocessBorn=nFKSprocess
+      endif
+         
+c
+c Compute the Born-like contributions with nbodyonly=.true.
 c THIS CAN BE OPTIMIZED
+c
+      nFKSprocess=nFKSprocessBorn
+      abrv='bsv '
+      nbodyonly=.true.
+      call fks_inc_chooser()
+      call leshouche_inc_chooser()
+      call setcuts
+      call setfksfactor(iconfig)
+      wgt=1d0
+      call generate_momenta(ndim,iconfig,wgt,x,p)
+
+      sigint = sigint+dsig(p,wgt,peso)
+
+      nbodyonly=.false.
+
+c
+c Compute the subtracted real-emission corrections either as an explicit
+c sum or a Monte Carlo sum.
+c      
+      if (sum) then
+c THIS CAN BE OPTIMIZED
+         abrv='nbsv'
+         do nFKSprocess=1,fks_configs
+            call fks_inc_chooser()
+            call leshouche_inc_chooser()
+            call setcuts
+            call setfksfactor(iconfig)
+            wgt=1d0
+            call generate_momenta(ndim,iconfig,wgt,x,p)
+            sigint = sigint+dsig(p,wgt,peso)
+         enddo
+      else ! Monte Carlo over nFKSprocess
+         rnd=ran2()
+         nFKSprocess=0
+         do while (nFKSprocess.lt.rnd*fks_configs)
+            nFKSprocess=nFKSprocess+1
+         enddo
+c THIS CAN BE OPTIMIZED
+         abrv='nbsv'
          call fks_inc_chooser()
          call leshouche_inc_chooser()
          call setcuts
          call setfksfactor(iconfig)
          wgt=1d0
          call generate_momenta(ndim,iconfig,wgt,x,p)
-         sigint = sigint+dsig(p,wgt,peso)
-c$$$         write (*,*) nFKSprocess,sigint,dsig(p,wgt,peso)
-      enddo
+         sigint = sigint+dsig(p,wgt,peso)*fks_configs
+      endif
       return
       end
 
-     
-c     $B$ get_user_params $B$ ! tag for MadWeight
-c     change this routine to read the input in a file
 c
       subroutine get_user_params(ncall,itmax,iconfig,
      #                           irestart,idstring,savegrid)
@@ -466,10 +533,10 @@ c
       endif
       abrv=abrvinput(1:4)
 c Options are way too many: make sure we understand all of them
-      if(abrv.ne.'all '.and.abrv.ne.'born'.and.abrv.ne.'real'.and.
-     #   abrv.ne.'virt'.and.abrv.ne.'novi'.and.abrv.ne.'grid'.and.
-     #   abrv.ne.'viSC'.and.abrv.ne.'viLC'.and.abrv.ne.'novA'.and.
-     #   abrv.ne.'novB'.and.abrv.ne.'viSA'.and.abrv.ne.'viSB')then
+      if ( abrv.ne.'all '.and.abrv.ne.'born'.and.abrv.ne.'real'.and.
+     &     abrv.ne.'virt'.and.abrv.ne.'novi'.and.abrv.ne.'grid'.and.
+     &     abrv.ne.'viSC'.and.abrv.ne.'viLC'.and.abrv.ne.'novA'.and.
+     &     abrv.ne.'novB'.and.abrv.ne.'viSA'.and.abrv.ne.'viSB') then
         write(*,*)'Error in input: abrv is:',abrv
         stop
       endif
@@ -514,6 +581,4 @@ c         enddo
  10   format( a)
  12   format( a,i4)
       end
-c     $E$ get_user_params $E$ ! tag for MadWeight
-c     change this routine to read the input in a file
 c

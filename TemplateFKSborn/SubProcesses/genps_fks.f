@@ -203,15 +203,6 @@ c Set one_body to true if it's a 2->1 process at the Born (i.e. 2->2 for the n+1
             write(*,*)'Error #1 in genps_fks.f',nexternal,nincoming
             stop
          endif
-c$$$c Read FKS configuration from file
-c$$$         open (unit=61,file='config.fks',status='old')
-c$$$         read(61,'(I2)',err=99,end=99) fksconfiguration
-c$$$ 99      close(61)
-c$$$c Use the fks.inc include file to set i_fks and j_fks
-c$$$         i_fks=fks_i(fksconfiguration)
-c$$$         j_fks=fks_j(fksconfiguration)
-c$$$         write (*,*) 'FKS configuration number is ',fksconfiguration
-c$$$         write (*,*) 'FKS partons are: i=',i_fks,'  j=',j_fks
          firsttime=.false.
 c Set the minimal tau = x1*x2. Need to know j_fks already here
          call set_tau_min()

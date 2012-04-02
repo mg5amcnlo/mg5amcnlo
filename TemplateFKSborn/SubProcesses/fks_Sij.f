@@ -155,6 +155,9 @@ c         firsttime=.false.
                if(particle_type(kk).ne.8.or.particle_type(ll).ne.8)then
                  write(*,*)'Error #1 in fks_Sij',kk,ll,
      #             particle_type(kk),particle_type(ll)
+                 do k=1,nexternal
+                    write (*,*) k,(ijskip(k,l),l=1,nexternal)
+                 enddo
                  stop
                endif
             else

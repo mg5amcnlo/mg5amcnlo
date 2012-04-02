@@ -250,8 +250,9 @@ class FKSHelasProcessFromBorn(object):
                                 col_basis.create_color_dict_list(fksproc.born_amp),
                                 fksproc.find_color_links())    
 
-            for i, rb_link in enumerate(fksproc.link_rb_confs()):
-                self.real_processes[i].bornfromreal = rb_link
+# Don't need to link Born to real diagrams anymore for FKS from Born processes
+#            for i, rb_link in enumerate(fksproc.link_rb_confs()):
+#                self.real_processes[i].bornfromreal = rb_link
 
 
     def get_lh_pdg_string(self):

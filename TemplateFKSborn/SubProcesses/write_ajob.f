@@ -209,20 +209,29 @@ c madevent_vegas
          write(lun,25) 'head -n 5 ../../madin.$2 >& input_app.txt'
          write(lun,25) 'echo $i >> input_app.txt'
          write(lun,25) 'tail -n 4 ../../madin.$2 >> input_app.txt'
+         write(lun,25) 'T="$(date +%s)"'
          write(lun,25) 'time ../madevent_vegas > log.txt <input_app.txt'
+         write(lun,25) 'T="$(($(date +%s)-T))"'
+         write(lun,25) 'echo "Time in seconds: ${T}" >>log.txt'
 c madevent_mint
          write(lun,20) "elif [[ $1 == '1' ]]; then"
          write(lun,25) 'head -n 5 ../../madinM.$2 >& input_app.txt'
          write(lun,25) 'echo $i >> input_app.txt'
          write(lun,25) 'tail -n 3 ../../madinM.$2 >> input_app.txt'
+         write(lun,25) 'T="$(date +%s)"'
          write(lun,25) 'time ../madevent_mint > log.txt <input_app.txt'
+         write(lun,25) 'T="$(($(date +%s)-T))"'
+         write(lun,25) 'echo "Time in seconds: ${T}" >>log.txt'
 c madevent_mintMC
          write(lun,20) "elif [[ $1 == '2' ]]; then"
          write(lun,25) 'head -n 6 ../../madinMMC_$2.2 >& input_app.txt'
          write(lun,25) 'echo $i >> input_app.txt'
          write(lun,25) 'tail -n 4 ../../madinMMC_$2.2 >> input_app.txt'
+         write(lun,25) 'T="$(date +%s)"'
          write(lun,25)
      &        'time ../madevent_mintMC > log.txt <input_app.txt'
+         write(lun,25) 'T="$(($(date +%s)-T))"'
+         write(lun,25) 'echo "Time in seconds: ${T}" >>log.txt'
 c endif
          write(lun,20) "fi"
          write(lun,20) 'cd ../'
@@ -310,8 +319,11 @@ c madevent_vegas
          write(lun,25) 'echo $i >> input_app.txt'
          write(lun,25) 'tail -n 4 $CONDOR_INITIAL_DIR/'//
      &        '../madin.$2 >> input_app.txt'
+         write(lun,25) 'T="$(date +%s)"'
          write(lun,25)
      &        'time ../madevent_vegas > log.txt <input_app.txt 2>&1'
+         write(lun,25) 'T="$(($(date +%s)-T))"'
+         write(lun,25) 'echo "Time in seconds: ${T}" >>log.txt'
 c madevent_mint
          write(lun,20) "elif [[ $1 == '1' ]]; then"
          write(lun,25) 'head -n 5 $CONDOR_INITIAL_DIR/'//
@@ -319,8 +331,11 @@ c madevent_mint
          write(lun,25) 'echo $i >> input_app.txt'
          write(lun,25) 'tail -n 3 $CONDOR_INITIAL_DIR/'//
      &        '../madinM.$2 >> input_app.txt'
+         write(lun,25) 'T="$(date +%s)"'
          write(lun,25)
      &        'time ../madevent_mint > log.txt <input_app.txt 2>&1'
+         write(lun,25) 'T="$(($(date +%s)-T))"'
+         write(lun,25) 'echo "Time in seconds: ${T}" >>log.txt'
 c madevent_mintMC
          write(lun,20) "elif [[ $1 == '2' ]]; then"
          write(lun,20) 'if [[ $runnumber != 0 ]]; then'
@@ -334,8 +349,11 @@ c madevent_mintMC
          write(lun,25) 'echo $i >> input_app.txt'
          write(lun,25) 'tail -n 4 $CONDOR_INITIAL_DIR/'//
      &        '../madinMMC_$2.2 >> input_app.txt'
+         write(lun,25) 'T="$(date +%s)"'
          write(lun,25)
      &        'time ../madevent_mintMC > log.txt <input_app.txt 2>&1'
+         write(lun,25) 'T="$(($(date +%s)-T))"'
+         write(lun,25) 'echo "Time in seconds: ${T}" >>log.txt'
 c endif
          write(lun,20) "fi"
 

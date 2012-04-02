@@ -425,8 +425,9 @@ c Put here call to compute bpower
 
       prefact=xinorm_ev/xi_i_fks_ev*
      #        1/(1-y_ij_fks_ev)
-      if( (.not.nocntevents) .and. (.not.(abrv.eq.'born' .or.
-     &     abrv.eq.'grid' .or. abrv(1:2).eq.'vi')) )then
+      if( (.not.nocntevents) .and. (.not.(abrv.eq.'born' .or. abrv.eq
+     &     .'grid' .or. abrv(1:2).eq.'vi' .or. abrv(1:3).eq.'bsv'))
+     &     )then
         prefact_cnt_ssc=xinorm_ev/min(xiimax_ev,xiScut_used)*
      #                  log(xicut_used/min(xiimax_ev,xiScut_used))*
      #                  1/(1-y_ij_fks_ev)
@@ -491,8 +492,8 @@ c points)
         ifill4=0
       endif
 
-      if (abrv.eq.'born' .or. abrv.eq.'grid' .or. abrv(1:2).eq.'vi')
-     &     goto 540
+      if (abrv.eq.'born' .or. abrv.eq.'grid' .or. abrv(1:2).eq.'vi' .or.
+     &     abrv(1:3).eq.'bsv')goto 540
 c Real contribution:
 c Set the ybst_til_tolab before applying the cuts. 
       call set_cms_stuff(mohdr)
@@ -541,8 +542,8 @@ c for the collinear, soft and/or soft-collinear subtraction terms
         ifill2=1
       endif
 
-      if (abrv.eq.'born' .or. abrv.eq.'grid' .or. abrv(1:2).eq.'vi')
-     &     goto 545
+      if (abrv.eq.'born' .or. abrv.eq.'grid' .or. abrv(1:2).eq.'vi' .or.
+     &     abrv(1:3).eq.'bsv')goto 545
 c
 c Collinear subtraction term:
       if( y_ij_fks_ev.gt.1d0-deltaS .and.
@@ -599,7 +600,7 @@ c Soft subtraction term:
          if(s_s.gt.0.d0)then
             xlum_s = dlum()
             if (abrv.eq.'born' .or. abrv.eq.'grid' .or.
-     &           abrv(1:2).eq.'vi') goto 546
+     &           abrv(1:2).eq.'vi' .or. abrv(1:3).eq.'bsv') goto 546
             if (xi_i_fks_ev .lt. xiScut_used) then
               call sreal(p1_cnt(0,1,0),zero,y_ij_fks_ev,fx_s)
               xsec=fx_s*s_s*jac_cnt(0)
@@ -611,7 +612,7 @@ c Soft subtraction term:
      #                      g**(2*wgtbpower+2.d0)
             endif
  546        continue
-            if (abrv.eq.'real') goto 548
+            if (abrv.eq.'real' .or. abrv.eq.'nbsv') goto 548
             if (xi_i_fks_ev .lt. xiBSVcut_used) then
               xsec=s_s*jac_cnt(0)*xinorm_ev/
      #             (min(xiimax_ev,xiBSVcut_used)*shat/(16*pi**2))*
@@ -636,8 +637,8 @@ c Soft subtraction term:
          endif
       endif
 c Soft-Collinear subtraction term:
-      if (abrv.eq.'born' .or. abrv.eq.'grid' .or. abrv(1:2).eq.'vi')
-     &     goto 547
+      if (abrv.eq.'born' .or. abrv.eq.'grid' .or. abrv(1:2).eq.'vi' .or.
+     &     abrv(1:3).eq.'bsv')goto 547
       if (xi_i_fks_cnt(ione) .lt. xiScut_used .and.
      #    y_ij_fks_ev .gt. 1d0-deltaS .and.
      #    pmass(j_fks).eq.0.d0 )then
@@ -4947,8 +4948,8 @@ c When doing nbodyonly, we should check that we need this dir or not
 c The file "nbodyonly.fks" should have been created by genint_fks
       if (nbodyonly) then
 
-         write (*,*) 'nbodyonly option not implemented'
-         stop
+c$$$         write (*,*) 'nbodyonly option not implemented'
+c$$$         stop
 
 c$$$         open(unit=19,file="nbodyonly.fks",status="old",err=99)
 c$$$         read(19,'(a)') integrate
@@ -5158,10 +5159,10 @@ c THESE TESTS WORK ONLY FOR FINAL STATE SINGULARITIES
          fkssymmetryfactor=dble(ngluons)
          fkssymmetryfactorDeg=dble(ngluons)
          fkssymmetryfactorBorn=dble(ngluons)
-         write (*,*) 'nbodyonly: fks symmetry factor has been put to ',
-     &        fkssymmetryfactor
-         write (*,*) 'nbodyonly, fks symmetry factor for Born has'//
-     &        ' been put to ', fkssymmetryfactorBorn
+c$$$         write (*,*) 'nbodyonly: fks symmetry factor has been put to ',
+c$$$     &        fkssymmetryfactor
+c$$$         write (*,*) 'nbodyonly, fks symmetry factor for Born has'//
+c$$$     &        ' been put to ', fkssymmetryfactorBorn
       else
          fkssymmetryfactor=dble(fac_i*fac_j)
          fkssymmetryfactorDeg=dble(fac_i*fac_j)
