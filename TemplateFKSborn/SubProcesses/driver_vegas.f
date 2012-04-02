@@ -322,10 +322,11 @@ c Find the nFKSprocess for which we compute the Born-like contributions
       if (firsttime) then
          firsttime=.false.
          nFKSprocess=fks_configs
+         call fks_inc_chooser()
          do while (particle_type(i_fks).ne.8)
-            call fks_inc_chooser()
             write (*,*) i_fks,particle_type(i_fks)
             nFKSprocess=nFKSprocess-1
+            call fks_inc_chooser()
             if (nFKSprocess.eq.0) then
                write (*,*) 'ERROR in sigint'
                stop

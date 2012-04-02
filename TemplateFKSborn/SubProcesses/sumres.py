@@ -60,7 +60,7 @@ if dirs:
     print "%d jobs did not terminate correctly " % len(dirs)
     print '\n'.join(dirs)
 
-processes.sort(key = lambda proc: -proc['result'])
+processes.sort(key = lambda proc: -proc['error'])
 
 correct = len(processes) == nexpected
 print "Found %d correctly terminated jobs " %len(processes) 
