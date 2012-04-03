@@ -78,7 +78,7 @@ class ProcessExporterFortranFKS_born(loop_exporters.LoopProcessExporterFortranSA
                       "No valid MG_ME path given for MG4 run directory creation."
             logger.info('initialize a new directory: %s' % \
                         os.path.basename(dir_path))
-            shutil.copytree(os.path.join(mgme_dir, 'TemplateFKSborn'), dir_path, True)
+            shutil.copytree(os.path.join(mgme_dir, 'Template', 'FKS-born'), dir_path, True)
         elif not os.path.isfile(os.path.join(dir_path, 'TemplateVersion.txt')):
             if not mgme_dir:
                 raise MadGraph5Error, \

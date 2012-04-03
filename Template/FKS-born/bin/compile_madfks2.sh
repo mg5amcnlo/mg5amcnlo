@@ -4,6 +4,7 @@ echo '****************************************************'
 echo 'This script compiles, tests and runs a madfks process'
 echo '****************************************************'
 
+
 # find the correct directory
 if [[  ! -d ./SubProcesses  ]]; then
     cd ../

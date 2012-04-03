@@ -148,7 +148,7 @@ class LoopMG5Runner(me_comparator.MG5Runner):
             squared_couplings = ' '.join(["%s=%i" % (k, v) for k, v \
                                    in squared_orders.items()])      
             v5_string += 'add process ' + proc + ' ' + born_couplings + \
-                         ' [' + perturbations + '] ' + squared_couplings + \
+                         ' [virt=' + perturbations + '] ' + squared_couplings + \
                          (' @%i\n'%i)
         v5_string += "output standalone %s -f\n" % \
                      os.path.join(self.mg5_path, self.temp_dir_name)
@@ -311,7 +311,7 @@ class LoopMG4Runner(me_comparator.MERunner):
             # Make sure that MadLoop4 can handle this process
             if not self.filter_process(proc, born_orders, perturbation_orders, \
                                        squared_orders):
-                logging.info("The process %s cannot be handled by MadLoop4," % proc)
+                logging.warning("The process %s cannot be handled by MadLoop4," % proc)
                 self.res_list.append(((0.0, 0.0, 0.0, 0.0, 0), []))          
             # Create a proc_card.dat in the MadLoop4 format
             proc_card_location = os.path.join(self.mg4_path, 'Cards', 
@@ -583,8 +583,9 @@ class LoopMG4Runner(me_comparator.MERunner):
         if (len([1 for f in incoming_parts+outcoming_parts if f in fermions+\
                 antifermions])+len([1 for p in incoming_parts+outcoming_parts \
                 if p=='g'])*2)>=8:
-            logging.info("The process %s most likely contains a 4-gluon vertex." % proc)
-            return False
+            logging.warning("The process %s most likely contains a 4-gluon vertex." % proc)
+            # Still, maybe the user want to check the single pole
+            return True
         
         return True
 

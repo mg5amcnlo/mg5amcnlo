@@ -48,11 +48,12 @@ if '__main__' == __name__:
     logging.basicConfig(level=logging.INFO)
 
     my_proc_list = []
+    my_proc_list.append(('g g > t t~',{'QCD':2,'QED':0},['QCD'],{'QCD':6,'QED':0}))    
     #my_proc_list.append(('g g > h t t~',{'QCD':2,'QED':1},['QCD'],{'QCD':6,'QED':2}))
     #my_proc_list.append(('g g > h h t t~',{'QCD':2,'QED':2},['QCD'],{'QCD':6,'QED':4}))
     # Just to check that th general setup is ok, let's try some trivial processes
-    my_proc_list.append(('g g > d d~',{'QCD':2,'QED':0},['QCD'],{'QCD':6,'QED':0}))    
-    my_proc_list.append(('u u~ > d d~',{'QCD':2,'QED':0},['QCD'],{'QCD':6,'QED':0}))
+    # my_proc_list.append(('g g > d d~',{'QCD':2,'QED':0},['QCD'],{'QCD':6,'QED':0}))    
+    # my_proc_list.append(('u u~ > d d~',{'QCD':2,'QED':0},['QCD'],{'QCD':6,'QED':0}))
     # my_proc_list.append(('e+ e- > d d~',{'QED':2,'QCD':0},['QCD'],{'QCD':2,'QED':4}))
     # Check of the gga R2
     #my_proc_list.append(('d~ d > g a',{'QED':1,'QCD':1},['QCD'],{'QCD':4,'QED':2}))
@@ -85,7 +86,7 @@ if '__main__' == __name__:
     #    initial=2, final_1=2, final_2 = 1)
 
     # Set the model we are working with
-    model = 'loop_sm'
+    model = 'loop_sm-full'
 
     # Create a MERunner object for MadLoop 4
     ML4 = loop_me_comparator.LoopMG4Runner()
@@ -105,7 +106,7 @@ if '__main__' == __name__:
 
     # Create and setup a comparator
     my_comp = loop_me_comparator.LoopMEComparator()
-    my_comp.set_me_runners(ML5, ML4)
+    my_comp.set_me_runners(ML5)
 
     # Run the actual comparison
     my_comp.run_comparison(my_proc_list,

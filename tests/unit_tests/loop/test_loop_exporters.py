@@ -53,9 +53,9 @@ _input_file_path = os.path.join(_file_path, os.path.pardir, os.path.pardir,
 _mgme_file_path = os.path.join(_file_path, os.path.pardir, os.path.pardir,
                                 os.path.pardir)
 _loop_file_path = os.path.join(_file_path, os.path.pardir, os.path.pardir,
-                                os.path.pardir, 'loop_material')
+                                os.path.pardir, 'Template','loop_material')
 _cuttools_file_path = os.path.join(_file_path, os.path.pardir, os.path.pardir,
-                                os.path.pardir, 'loop_material','CutTools')
+                                os.path.pardir, 'vendor','CutTools')
 _proc_file_path = os.path.join(_file_path, 'test_proc')
 
 

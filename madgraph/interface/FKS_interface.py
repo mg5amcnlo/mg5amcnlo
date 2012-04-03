@@ -32,6 +32,7 @@ import madgraph.iolibs.export_fks_real as export_fks_real
 import madgraph.iolibs.export_fks_born as export_fks_born
 import madgraph.loop.loop_base_objects as loop_base_objects
 import madgraph.core.diagram_generation as diagram_generation
+import madgraph.core.helas_objects as helas_objects
 
 #usefull shortcut
 pjoin = os.path.join
@@ -134,6 +135,36 @@ class HelpFKS(mg_interface.HelpToCmd):
 class FKSInterface(CheckFKS, CompleteFKS, HelpFKS, mg_interface.MadGraphCmd):
     _fks_display_opts = ['real_diagrams', 'born_diagrams', 'virt_diagrams', 
                          'real_processes', 'born_processes', 'virt_processes']
+
+    def __init__(self, mgme_dir = '', *completekey, **stdin):
+        """ Special init tasks for the Loop Interface """
+
+        mg_interface.MadGraphCmd.__init__(self, mgme_dir = '', *completekey, **stdin)
+        self.setup()
+    
+    def setup(self):
+        """ Special tasks when switching to this interface """
+
+        # Refresh all the interface stored value as things like generated
+        # processes and amplitudes are not to be reused in between different
+        # interfaces
+        # Clear history, amplitudes and matrix elements when a model is imported
+        # Remove previous imports, generations and outputs from history
+        self.clean_history(remove_bef_lb1='import')
+        # Reset amplitudes and matrix elements
+        self._done_export=False
+        self._curr_amps = diagram_generation.AmplitudeList()
+        self._curr_matrix_elements = helas_objects.HelasMultiProcess()
+        
+        # Set where to look for CutTools installation.
+        # In further versions, it will be set in the same manner as _mgme_dir so that
+        # the user can chose its own CutTools distribution.
+        self._cuttools_dir=str(os.path.join(self._mgme_dir,'vendor','CutTools'))
+        if not os.path.isdir(os.path.join(self._cuttools_dir, 'src','cts')):
+            logger.warning(('Warning: Directory %s is not a valid CutTools directory.'+\
+                           'Using default CutTools instead.') % \
+                             self._cuttools_dir)
+            self._cuttools_dir=str(os.path.join(self._mgme_dir,'vendor','CutTools'))
     
     def do_display(self, line, output=sys.stdout):
         # if we arrive here it means that a _fks_display_opts has been chosen
@@ -185,18 +216,15 @@ class FKSInterface(CheckFKS, CompleteFKS, HelpFKS, mg_interface.MadGraphCmd):
         args = self.split_arg(line)
         # Check the validity of the arguments
         self.check_add(args)
-        proc_type=self.extract_process_type(line)
-        self.validate_model(proc_type[1])
-        
+
         if args[0] != 'process': 
             raise self.InvalidCmd("The add command can only be used with a process")
         else:
             line = ' '.join(args[1:])
+            
+        proc_type=self.extract_process_type(line)
+        self.validate_model(proc_type[1])
 
-        if proc_type[2]!=['QCD']:
-                raise MadGraph5Error, 'FKS for reals only available in QCD for now, you asked %s' \
-                        % ', '.join(orders)
-                        
         #now generate the amplitudes as usual
         self.options['group_subprocesses'] = 'False'
         collect_mirror_procs = False
@@ -209,7 +237,9 @@ class FKSInterface(CheckFKS, CompleteFKS, HelpFKS, mg_interface.MadGraphCmd):
         else:
             myprocdef = mg_interface.MadGraphCmd.extract_process(self,line)
 
-        myprocdef['perturbation_couplings'] = ['QCD']
+        if myprocdef['perturbation_couplings']!=['QCD']:
+                raise self.InvalidCmd("FKS for reals only available in QCD for now, you asked %s" \
+                        % ', '.join(myprocdef['perturbation_couplings']))
 
         if self.options['fks_mode'] == 'born':
             self._fks_multi_proc = fks_born.FKSMultiProcessFromBorn(myprocdef,

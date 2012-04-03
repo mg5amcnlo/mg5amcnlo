@@ -1614,7 +1614,7 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
         """ add a tracker of the history """
 
         CmdExtended.__init__(self, *completekey, **stdin)
-        
+     
         # Set MG/ME directory path
         if mgme_dir:
             if os.path.isdir(pjoin(mgme_dir, 'Template')):
@@ -1636,16 +1636,6 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
         self._mgme_dir = MG4DIR
         self._comparisons = None
 
-        # Set where to look for CutTools installation.
-        # In further versions, it will be set in the same manner as _mgme_dir so that
-        # the user can chose its own CutTools distribution.
-        self._cuttools_dir=str(os.path.join(self._mgme_dir,'loop_material','CutTools'))
-        if not os.path.isdir(os.path.join(self._cuttools_dir, 'src','cts')):
-            logger.warning(('Warning: Directory %s is not a valid CutTools directory.'+\
-                           'Using default CutTools instead.') % \
-                             self._cuttools_dir)
-            self._cuttools_dir=str(os.path.join(self._mgme_dir,'loop_material','CutTools'))
-
         # Set defaults for options
         self.options['group_subprocesses'] = 'Auto'
         self.options['ignore_six_quark_processes'] = False
@@ -1654,6 +1644,20 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
         # Load the configuration file
         self.set_configuration()
 
+    def setup(self):
+        """ Actions to carry when switching to this interface """
+        
+        # Refresh all the interface stored value as things like generated
+        # processes and amplitudes are not to be reused in between different
+        # interfaces
+        # Clear history, amplitudes and matrix elements when a model is imported
+        # Remove previous imports, generations and outputs from history
+        self.clean_history(remove_bef_lb1='import')
+        # Reset amplitudes and matrix elements
+        self._done_export=False
+        self._curr_amps = diagram_generation.AmplitudeList()
+        self._curr_matrix_elements = helas_objects.HelasMultiProcess()    
+    
     def do_quit(self, line):
         """Do quit"""
 
@@ -2136,26 +2140,31 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
         lorentz_result =[]
         nb_processes = 0
         
+        if "_cuttools_dir" in dir(self):
+            CT_dir = self._cuttools_dir
+        else:
+            CT_dir =""
+        
         if args[0] in  ['permutation', 'full']:
             comparisons = process_checks.check_processes(myprocdef,
                                                 param_card = param_card,
                                                 quick = True,
                                                 mg_root=self._mgme_dir,
-                                                cuttools=self._cuttools_dir)
+                                                cuttools=CT_dir)
             nb_processes += len(comparisons[0])
             
         if args[0] in  ['gauge', 'full']:
             gauge_result = process_checks.check_gauge(myprocdef,
                                                       param_card = param_card,
                                                       mg_root=self._mgme_dir,
-                                                      cuttools=self._cuttools_dir)
+                                                      cuttools=CT_dir)
             nb_processes += len(gauge_result)
             
         if args[0] in ['lorentz_invariance', 'full']:
             lorentz_result = process_checks.check_lorentz(myprocdef,
                                                       param_card = param_card,
                                                       mg_root=self._mgme_dir,
-                                                      cuttools=self._cuttools_dir)
+                                                      cuttools=CT_dir)
             nb_processes += len(lorentz_result)
             
         cpu_time2 = time.time()
@@ -2291,6 +2300,10 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
                 orders[order_re.group(2)] = int(order_re.group(3))
                 line = order_re.group(1)
                 order_re = order_pattern.match(line)
+        # if the squared orders are defined but not the orders, assume orders=sq_orders
+        if not orders and squared_orders:
+            for order in squared_orders:
+                orders[order]=squared_orders[order]
 
         if self._use_lower_part_names:
             # Particle names lowercase
@@ -2373,23 +2386,23 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
                 perturbation_couplings_list=[]
             if perturbation_couplings_list and LoopOption!='real':
                 if not isinstance(self._curr_model,loop_base_objects.LoopModel):
-                    raise MadGraph5Error,\
-                      "The current model does not allow for loop computations."
+                    raise self.InvalidCmd(\
+                      "The current model does not allow for loop computations.")
                 else:
                     for pert_order in perturbation_couplings_list:
                         if pert_order not in self._curr_model['perturbation_couplings']:
-                            raise MadGraph5Error,\
+                            raise self.InvalidCmd(\
                                 "Perturbation order %s is not among" % pert_order + \
-                                " the perturbation orders allowed for by the loop model."
+                                " the perturbation orders allowed for by the loop model.")
                                                         
             # Now extract restrictions
             forbidden_particle_ids = \
                               self.extract_particle_ids(forbidden_particles)
             if forbidden_particle_ids and \
                isinstance(forbidden_particle_ids[0], list):
-                raise self.InvalidCmd,\
+                raise self.InvalidCmd(\
                       "Multiparticle %s is or-multiparticle" % part_name + \
-                      " which can be used only for required s-channels"
+                      " which can be used only for required s-channels")
             forbidden_onsh_schannel_ids = \
                               self.extract_particle_ids(forbidden_onsh_schannels)
             forbidden_schannel_ids = \
@@ -3300,10 +3313,6 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
                 elif self._curr_amps[0].get_ninitial()  == 2:
                     group_subprocesses = True
 
-        if self._curr_amps.has_any_loop_process() and \
-           self._export_format not in ['standalone','matrix']:
-            raise MadGraph5Error('MG5 can only export loop processes to the standalone or matrix format for now.')
-
         # Make a Template Copy
         if self._export_format == 'madevent':                
             if group_subprocesses:
@@ -3316,16 +3325,7 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
                                       not noclean)
         
         elif self._export_format in ['standalone', 'matrix']:
-            if self._curr_amps.has_any_loop_process():
-                if os.path.isdir(os.path.join(self._mgme_dir, 'loop_material')):
-                    self._curr_exporter = loop_exporters.LoopProcessExporterFortranSA(\
-                                          self._mgme_dir, self._export_dir, not noclean,\
-                                          os.path.join(self._mgme_dir, 'loop_material'),\
-                                          self._cuttools_dir)
-                else:
-                    raise MadGraph5Error('MG5 cannot find the \'loop_material\' directory in the MG/ME folder specified.')                                                           
-            else:
-                self._curr_exporter = export_v4.ProcessExporterFortranSA(\
+            self._curr_exporter = export_v4.ProcessExporterFortranSA(\
                                   self._mgme_dir, self._export_dir,not noclean)
         elif self._export_format == 'standalone_cpp':
             export_cpp.setup_cpp_standalone_dir(self._export_dir, self._curr_model)
