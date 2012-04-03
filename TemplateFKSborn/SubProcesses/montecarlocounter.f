@@ -1748,11 +1748,10 @@ c      include "fks.inc"
      # ap,Q,beta,xfact,prefact,kn,knbar,kn0,betad,betas,
      # gfactazi,s,gfunsoft,gfuncoll,gfunazi,bogus_probne_fun,
      # ztmp,xitmp,xjactmp,get_angle,w1,w2,z0,dz0dy,
-     # p_born_npartner(0:3),p_born_fksfather(0:3),
-     # Q0,ma,mbeff,mceff,betaa,lambdaabc,zminus,zplus,xmm2,
+     # p_born_partner(0:3),p_born_fksfather(0:3),
+     # ma,mbeff,mceff,betaa,lambdaabc,zminus,zplus,xmm2,
      # xmrec2,www,massmax,massmin,delta_scale
       parameter(delta_scale=10d0)
-      parameter(Q0=1d0)
 
       double precision veckn_ev,veckbarn_ev,xp0jfks
       common/cgenps_fks/veckn_ev,veckbarn_ev,xp0jfks
@@ -1960,26 +1959,26 @@ c Compute deadzones:
          mstj50=2
          mstp67=2
          if(mstp67.eq.2)then
-            if(ileg.le.2.and.npartner.gt.2)then
+            if(ileg.le.2.and.ipartners(npartner).gt.2)then
                do i=0,3
-                  p_born_npartner(i)=p_born(i,npartner)
+                  p_born_partner(i)=p_born(i,ipartners(npartner))
                   p_born_fksfather(i)=p_born(i,fksfather)
                enddo
-               theta2_cc=get_angle(p_born_npartner,p_born_fksfather)
+               theta2_cc=get_angle(p_born_partner,p_born_fksfather)
                theta2_cc=theta2_cc**2
                theta2=4.d0*xi(npartner)/(s*(1-z(npartner)))
                if(theta2.ge.theta2_cc)lzone(npartner)=.false.
             endif
          endif
          if(mstj50.eq.2)then
-            if(ileg.eq.3.and.npartner.le.2)then
-               continue
-            elseif(ileg.eq.4.and.npartner.le.2)then
+c This is ok for massless ileg=4. For ileg=3 even the
+c authors of Pythia don't know 
+            if(ileg.gt.2.and.ipartners(npartner).le.2)then
                do i=0,3
-                  p_born_npartner(i)=p_born(i,npartner)
+                  p_born_partner(i)=p_born(i,ipartners(npartner))
                   p_born_fksfather(i)=p_born(i,fksfather)
                enddo
-               theta2_cc=get_angle(p_born_npartner,p_born_fksfather)
+               theta2_cc=get_angle(p_born_partner,p_born_fksfather)
                theta2_cc=theta2_cc**2
                en_fks=sqrt(s)*(1-x)/2.d0
                en_mother=en_fks/(1-z(npartner))
@@ -2026,8 +2025,8 @@ c Recall that xm22 = 0 if ileg = 4
                xmm2=-www
             endif
             ma=sqrt(xmm2+www)
-            mbeff=sqrt(xmm2+Q0**2/4)
-            mceff=Q0/2
+            mbeff=sqrt(xmm2)
+            mceff=0d0
             en_fks=sqrt(s)*(1-x)/2.d0
             en_mother=en_fks+sqrt(xmm2+veckn_ev**2)
 c The following constraint is deduced by imposing (p1+p2-kmother)**2=krecoil**2 and
@@ -2186,6 +2185,7 @@ c q --> g q (or qbar --> g qbar) splitting (icode=3)
 c the fks parton is the one associated with 1 - z: this is because its
 c rescaled energy is 1 - x and in the soft limit, where x --> z --> 1,
 c it has to coincide with the fraction appearing in the AP kernel.
+c The definition of z here does tend to 1 only in the massless case
               if(ileg.eq.1.or.ileg.eq.2)then
                  N_p=2
                  if(1-x.lt.tiny)then
@@ -2503,7 +2503,7 @@ c      include "fks.inc"
      # beta,xfact,prefact,kn,knbar,kn0,beta3,betad,betas,
      # gfactazi,s,gfunsoft,gfuncoll,gfunazi,bogus_probne_fun,
      # ztmp,xitmp,xjactmp,get_angle,w1,w2,
-     # p_born_npartner(0:3),p_born_fksfather(0:3)
+     # p_born_partner(0:3),p_born_fksfather(0:3)
 
       double precision veckn_ev,veckbarn_ev,xp0jfks
       common/cgenps_fks/veckn_ev,veckbarn_ev,xp0jfks
@@ -3149,11 +3149,10 @@ c      include "fks.inc"
      # ap,Q,beta,xfact,prefact,kn,knbar,kn0,betad,betas,
      # gfactazi,s,gfunsoft,gfuncoll,gfunazi,bogus_probne_fun,
      # ztmp,xitmp,xjactmp,get_angle,w1,w2,z0,dz0dy,
-     # p_born_npartner(0:3),p_born_fksfather(0:3),
-     # Q0,ma,mbeff,mceff,betaa,lambdaabc,zminus,zplus,xmm2,
+     # p_born_partner(0:3),p_born_fksfather(0:3),
+     # ma,mbeff,mceff,betaa,lambdaabc,zminus,zplus,xmm2,
      # xmrec2,www,massmax,massmin,delta_scale
       parameter(delta_scale=10d0)
-      parameter(Q0=1d0)
 
       double precision veckn_ev,veckbarn_ev,xp0jfks
       common/cgenps_fks/veckn_ev,veckbarn_ev,xp0jfks
@@ -3429,8 +3428,8 @@ c Recall that xm22 = 0 if ileg = 4
                xmm2=-www
             endif
             ma=sqrt(xmm2+www)
-            mbeff=sqrt(xmm2+Q0**2/4)
-            mceff=Q0/2
+            mbeff=sqrt(xmm2)
+            mceff=0d0
             en_fks=sqrt(s)*(1-x)/2.d0
             en_mother=en_fks+sqrt(xmm2+veckn_ev**2)
 c The following constraint is deduced by imposing (p1+p2-kmother)**2=krecoil**2 and
@@ -3594,6 +3593,7 @@ c q --> g q (or qbar --> g qbar) splitting (icode=3)
 c the fks parton is the one associated with 1 - z: this is because its
 c rescaled energy is 1 - x and in the soft limit, where x --> z --> 1,
 c it has to coincide with the fraction appearing in the AP kernel.
+c The definition of z here does tend to 1 only in the massless case
               if(ileg.eq.1.or.ileg.eq.2)then
                  N_p=2
                  if(1-x.lt.tiny)then

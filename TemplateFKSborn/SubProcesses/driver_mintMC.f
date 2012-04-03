@@ -53,8 +53,8 @@ c Vegas stuff
       integer ipole
       common/tosigint/ndim,ipole
 
-      real*8 sigintH,sigintS,resA,errA,resS,errS,chi2a
-      external sigintH,sigintS
+      real*8 sigintH,sigintS,sigintF,resA,errA,resS,errS,chi2a
+      external sigintH,sigintS,sigintF
 
       integer irestart
       character * 70 idstring
@@ -85,16 +85,18 @@ c For MINT:
       include "mint.inc"
       real * 8 xgrid(0:nintervals,ndimmax),xint,ymax(nintervals,ndimmax)
       real * 8 x(ndimmax)
-      integer imode,ixi_i,iphi_i,iy_ij
+      integer ixi_i,iphi_i,iy_ij
       integer ifold(ndimmax) 
       common /cifold/ifold
       integer ifold_energy,ifold_phi,ifold_yij
       common /cifoldnumbers/ifold_energy,ifold_phi,ifold_yij
       logical putonshell
+      integer imode
       logical unwgt
       double precision evtsgn
       common /c_unwgt/evtsgn,unwgt
 
+      logical SHsep
       logical Hevents
       common/SHevents/Hevents
       character*10 dum
@@ -128,26 +130,11 @@ c     Get user input
 c
       write(*,*) "getting user params"
       call get_user_params(ncall,itmax,iconfig,imode,
-     &     ixi_i,iphi_i,iy_ij)
+     &     ixi_i,iphi_i,iy_ij,SHsep)
       call setfksfactor(iconfig)
-c$$$      maxcfig=mincfig
-c$$$      ipole=mincfig
-c$$$      minvar(1,1) = 0              !This tells it to map things invarients
-c$$$      write(*,*) 'Attempting mappinvarients',nconfigs,nexternal
-c$$$      call map_invarients(minvar,nconfigs,ninvar,mincfig,maxcfig,nexternal,nincoming)
-c$$$      write(*,*) "Completed mapping",nexternal
       ndim = 3*(nexternal-2)-4
       if (abs(lpp(1)) .ge. 1) ndim=ndim+1
       if (abs(lpp(2)) .ge. 1) ndim=ndim+1
-c$$$      ninvar = ndim
-c$$$      do j=mincfig,maxcfig
-c$$$         if (abs(lpp(1)) .ge. 1 .and. abs(lpp(1)) .ge. 1) then
-c$$$            minvar(ndim-1,j)=ninvar-1
-c$$$            minvar(ndim,j) = ninvar
-c$$$         elseif (abs(lpp(1)) .ge. 1 .or. abs(lpp(1)) .ge. 1) then
-c$$$            minvar(ndim,j) = ninvar
-c$$$         endif
-c$$$      enddo
 
 c Don't proceed if muF1#muF2 (we need to work out the relevant formulae
 c at the NLO)
@@ -200,8 +187,11 @@ c
          endif
 c
          write (*,*) 'imode is ',imode
-         if (Hevents) then
+         if (Hevents.and.SHsep) then
             call mint(sigintH,ndim,ncall,itmax,imode,
+     &           xgrid,xint,ymax,resA,errA,resS,errS)
+         elseif(.not.SHsep) then
+            call mint(sigintF,ndim,ncall,itmax,imode,
      &           xgrid,xint,ymax,resA,errA,resS,errS)
          else
             call mint(sigintS,ndim,ncall,itmax,imode,
@@ -260,8 +250,11 @@ c Prepare the MINT folding
          ifold(ifold_yij)=iy_ij
          
          write (*,*) 'imode is ',imode
-         if (Hevents) then
+         if (Hevents.and.SHsep) then
             call mint(sigintH,ndim,ncall,itmax,imode,
+     &           xgrid,xint,ymax,resA,errA,resS,errS)
+         elseif (.not.SHsep) then
+            call mint(sigintF,ndim,ncall,itmax,imode,
      &           xgrid,xint,ymax,resA,errA,resS,errS)
          else
             call mint(sigintS,ndim,ncall,itmax,imode,
@@ -329,7 +322,7 @@ c to restore grids:
          close(58)
 
          write (*,*) 'imode is ',imode
-         if (Hevents) then
+         if (Hevents.and.SHsep) then
             imode=0 
             call gen(sigintH,ndim,xgrid,ymax,imode,x) 
             imode=1 
@@ -339,6 +332,16 @@ c to restore grids:
             enddo 
             imode=3 
             call gen(sigintH,ndim,xgrid,ymax,imode,x) 
+         elseif (.not.SHsep) then
+            imode=0 
+            call gen(sigintF,ndim,xgrid,ymax,imode,x) 
+            imode=1 
+            do j=1,ncall
+               call gen(sigintF,ndim,xgrid,ymax,imode,x) 
+               call finalize_event(x,res_abs,lunlhe,plotEv,putonshell)
+            enddo 
+            imode=3 
+            call gen(sigintF,ndim,xgrid,ymax,imode,x) 
          else
             imode=0 
             call gen(sigintS,ndim,xgrid,ymax,imode,x) 
@@ -399,7 +402,7 @@ c to restore grids:
       end
 
       subroutine get_user_params(ncall,itmax,iconfig,
-     &     imode,ixi_i,iphi_i,iy_ij)
+     &     imode,ixi_i,iphi_i,iy_ij,SHsep)
 c**********************************************************************
 c     Routine to get user specified parameters for run
 c**********************************************************************
@@ -456,6 +459,7 @@ c alazi and beazi are the parameters that control gfunazi
       double precision alazi,beazi
       common/cgfunazi/alazi,beazi
       
+      logical SHsep
       logical Hevents
       common/SHevents/Hevents
 c
@@ -492,9 +496,15 @@ c-----
       if (i.eq.0) then
          Hevents=.true.
          write (*,*) 'Doing the H-events'
-      else
+         SHsep=.true.
+      elseif (i.eq.1) then
          Hevents=.false.
          write (*,*) 'Doing the S-events'
+         SHsep=.true.
+      elseif (i.eq.2) then
+         Hevents=.true.
+         write (*,*) 'Doing the S and H events together'
+         SHsep=.false.
       endif
 
 c These should be ignored (but kept for 'historical reasons')      

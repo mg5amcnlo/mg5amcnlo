@@ -11,10 +11,11 @@
       logical Hevents
       common/SHevents/Hevents
       integer i,j,lunlhe
-      real*8 xx(ndim),res_abs,plot_wgt,evnt_wgt
+      include 'mint.inc'
+      real*8 xx(ndimmax),res_abs,plot_wgt,evnt_wgt
       logical plotEv, putonshell
       double precision wgt,unwgtfun
-      double precision x(99),p(0:3,99),pp(0:3,nexternal)
+      double precision x(99),p(0:3,nexternal)
       integer jpart(7,-nexternal+3:2*nexternal-3)
       double precision pb(0:4,-nexternal+3:2*nexternal-3)
       logical unwgt
@@ -45,7 +46,7 @@
         if(i.le.ndim)then
           x(i)=xx(i)
         else
-          x(i)=0.d0
+          x(i)=-9d99
         endif
       enddo
       
@@ -54,14 +55,7 @@ c Normalization to the number of requested events is done in subroutine
 c topout (madfks_plot_mint.f), so multiply here to get # of events.
       plot_wgt=evtsgn*itmax*ncall
       evnt_wgt=evtsgn*res_abs/(itmax*ncall)
-c$$$      call x_to_f_arg(ndim,ipole,mincfig,maxcfig,ndim,wgt,x,p)
       call generate_momenta(ndim,iconfig,wgt,x,p)
-      do i=1,nexternal
-         do j=0,3
-            pp(j,i)=p(j,i)
-         enddo
-      enddo
-
 c
 c Get all the info we need for writing the events.
 c      
@@ -71,13 +65,15 @@ c
          call set_cms_stuff(0)
       endif
 
-      call add_write_info(p_born,pp,ybst_til_tolab,iconfig,Hevents,
+      call set_shower_scale()
+
+      call add_write_info(p_born,p,ybst_til_tolab,iconfig,Hevents,
      &     putonshell,ndim,ipole,x,jpart,npart,pb)
 
 c Plot the events also on the fly
       if(plotEv) then
          if (Hevents) then
-            call outfun(pp,ybst_til_tolab,plot_wgt,iplot_ev)
+            call outfun(p,ybst_til_tolab,plot_wgt,iplot_ev)
          else
             call outfun(p1_cnt(0,1,0),ybst_til_tolab,plot_wgt,iplot_cnt)
          endif
@@ -97,7 +93,7 @@ c Write-out the events
       end
 
 
-      function sigintS(xx,w,ifl)
+      function sigintF(xx,w,ifl,f_abs)
 c From dsample_fks
       implicit none
       integer ndim,ipole
@@ -108,11 +104,82 @@ c From dsample_fks
       integer ifl
       integer fold
       common /cfl/fold
-      real*8 sigintS,xx(ndim),w
+      include 'mint.inc'
+      real*8 sigintF,xx(ndimmax),w
       integer ione
       parameter (ione=1)
-      double precision wgt,dsigS
-      double precision x(99),p(0:3,99)
+      double precision wgt,dsigS,dsigH,f_abs
+      include 'nexternal.inc'
+      double precision x(99),p(0:3,nexternal)
+      logical unwgt
+      double precision evtsgn
+      common /c_unwgt/evtsgn,unwgt
+      logical Hevents
+      common/SHevents/Hevents
+      double precision result,result1,result2,ran2
+      external ran2
+      save result1,result2
+c
+      do i=1,99
+         if (i.le.ndim) then
+            x(i)=xx(i)
+         else
+            x(i)=-9d99
+         endif
+      enddo
+      wgt=1.d0
+      fold=ifl
+      if (ifl.eq.0)then
+         call generate_momenta(ndim,iconfig,wgt,x,p)
+         call dsigF(p,wgt,w,dsigS,dsigH)
+         result1= w*dsigS
+         result2= w*dsigH
+         sigintF= result1+result2
+         f_abs = abs(result1)+abs(result2)
+      elseif(ifl.eq.1) then
+         call generate_momenta(ndim,iconfig,wgt,x,p)
+         call dsigF(p,wgt,w,dsigS,dsigH)
+         result1= result1+w*dsigS
+         result2= result2+w*dsigH
+         sigintF= result1+result2
+         f_abs  = abs(result1)+abs(result2)
+      elseif(ifl.eq.2) then
+         sigintF = result1+result2
+         f_abs = abs(result1)+abs(result2)
+c Determine if we need to write S or H events according to their
+c relative weights
+         if (f_abs.gt.0d0) then
+            if (ran2().le.abs(result1)/f_abs) then
+               Hevents=.false.
+               evtsgn=sign(1d0,result1)
+            else
+               Hevents=.true.
+               evtsgn=sign(1d0,result2)
+            endif
+         endif
+      endif
+      return
+      end
+
+     
+      function sigintS(xx,w,ifl,f_abs)
+c From dsample_fks
+      implicit none
+      integer ndim,ipole
+      common/tosigint/ndim,ipole
+      integer           iconfig
+      common/to_configs/iconfig
+      integer i
+      integer ifl
+      integer fold
+      common /cfl/fold
+      include 'mint.inc'
+      real*8 sigintS,xx(ndimmax),w
+      integer ione
+      parameter (ione=1)
+      double precision wgt,dsigS,f_abs
+      include 'nexternal.inc'
+      double precision x(99),p(0:3,nexternal)
       logical unwgt
       double precision evtsgn
       common /c_unwgt/evtsgn,unwgt
@@ -123,7 +190,7 @@ c
         if(i.le.ndim)then
           x(i)=xx(i)
         else
-          x(i)=0.d0
+          x(i)=-9d99
         endif
       enddo
       wgt=1.d0
@@ -132,23 +199,22 @@ c
          call generate_momenta(ndim,iconfig,wgt,x,p)
          result = w*dsigS(p,wgt,w)
          sigintS = result
+         f_abs=abs(sigintS)
       elseif(ifl.eq.1) then
          call generate_momenta(ndim,iconfig,wgt,x,p)
          result = result+w*dsigS(p,wgt,w)
          sigintS = result
+         f_abs=abs(sigintS)
       elseif(ifl.eq.2) then
-         if (unwgt) then
-            evtsgn=sign(1d0,result)
-            sigintS = abs(result)
-         else
-            sigintS = result
-         endif
+         sigintS = result
+         f_abs=abs(sigintS)
+         evtsgn=sign(1d0,result)
       endif
       return
       end
 
      
-      function sigintH(xx,w,ifl)
+      function sigintH(xx,w,ifl,f_abs)
 c From dsample_fks
       implicit none
       integer ndim,ipole
@@ -159,11 +225,13 @@ c From dsample_fks
       integer ifl
       integer fold
       common /cfl/fold
-      real*8 sigintH,xx(ndim),w
+      include 'mint.inc'
+      real*8 sigintH,xx(ndimmax),w
       integer ione
       parameter (ione=1)
-      double precision wgt,dsigH
-      double precision x(99),p(0:3,99)
+      double precision wgt,dsigH,f_abs
+      include 'nexternal.inc'
+      double precision x(99),p(0:3,nexternal)
       logical unwgt
       double precision evtsgn
       common /c_unwgt/evtsgn,unwgt
@@ -174,7 +242,7 @@ c
         if(i.le.ndim)then
           x(i)=xx(i)
         else
-          x(i)=0.d0
+          x(i)=-9d99
         endif
       enddo
       wgt=1.d0
@@ -183,17 +251,16 @@ c
          call generate_momenta(ndim,iconfig,wgt,x,p)
          result = w*dsigH(p,wgt,w)
          sigintH = result
+         f_abs=abs(sigintH)
       elseif(ifl.eq.1) then
          call generate_momenta(ndim,iconfig,wgt,x,p)
          result = result+w*dsigH(p,wgt,w)
          sigintH = result
+         f_abs=abs(sigintH)
       elseif(ifl.eq.2) then
-         if (unwgt) then
-            evtsgn=sign(1d0,result)
-            sigintH = abs(result)
-         else
-            sigintH = result
-         endif
+         sigintH = result
+         f_abs=abs(sigintH)
+         evtsgn=sign(1d0,result)
       endif
       return
       end

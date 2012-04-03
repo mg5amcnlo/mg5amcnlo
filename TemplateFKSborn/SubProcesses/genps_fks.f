@@ -154,10 +154,6 @@ c saves
             m(i)=pmass(i+1)
          endif
       enddo
-      if (pmass(nexternal).ne.0d0) then
-         write (*,*) 'ERROR, last particle should be massless'
-         stop
-      endif
       if (firsttime) then
          stot = 4d0*ebeam(1)*ebeam(2)
 c Make sure have enough mass for external particles
@@ -380,15 +376,22 @@ c
 c Put the Born momenta in the xp momenta, making sure that the mapping
 c is correct; put i_fks momenta equal to zero.
       do i=1,nexternal
-         do j=0,3
-            if(i.lt.i_fks) then
+         if(i.lt.i_fks) then
+            do j=0,3
                xp(j,i)=p_born(j,i)
-            elseif(i.eq.i_fks) then
+            enddo
+            m(i)=m_born(i)
+         elseif(i.eq.i_fks) then
+            do j=0,3
                xp(j,i)=0d0
-            elseif(i.ge.i_fks) then
+            enddo
+            m(i)=0d0
+         elseif(i.ge.i_fks) then
+            do j=0,3
                xp(j,i)=p_born(j,i-1)
-            endif
-         enddo
+            enddo
+            m(i)=m_born(i-1)
+         endif
       enddo
 c
 c set-up phi_i_fks

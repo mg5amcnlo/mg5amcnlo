@@ -209,7 +209,7 @@ c Prepare the MINT folding
       end
 
 
-      function sigint(xx,w,ifl)
+      function sigint(xx,w,ifl,f_abs)
 c From dsample_fks
       implicit none
       integer ndim,ipole
@@ -223,8 +223,9 @@ c From dsample_fks
       real*8 sigint,xx(ndim),w
       integer ione
       parameter (ione=1)
-      double precision wgt,dsig
-      double precision x(99),p(0:3,99)
+      double precision wgt,dsig,f_abs
+      include 'nexternal.inc'
+      double precision x(99),p(0:3,nexternal)
       logical unwgt
       double precision evtsgn
       common /c_unwgt/evtsgn,unwgt
@@ -244,17 +245,16 @@ c
          call generate_momenta(ndim,iconfig,wgt,x,p)
          result = w*dsig(p,wgt,w)
          sigint = result
+         f_abs = abs(result)
       elseif(ifl.eq.1) then
          call generate_momenta(ndim,iconfig,wgt,x,p)
          result = result+w*dsig(p,wgt,w)
          sigint = result
+         f_abs = abs(result)
       elseif(ifl.eq.2) then
-         if (unwgt) then
-            evtsgn = sign(1d0,result)
-            sigint = abs(result)
-         else
-            sigint = result
-         endif
+         sigint = result
+         f_abs = abs(result)
+         evtsgn = sign(1d0,result)
       endif
       return
       end

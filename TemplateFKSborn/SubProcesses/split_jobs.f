@@ -6,9 +6,10 @@
       character*40 filename(maxjobs),dir(maxjobs),cor(maxjobs),
      &     n_filename
       integer ijob,i,j,nevts(maxjobs),max_nevts_S,max_nevts_H,
-     &     max_nevts_V,max_nevts_B,max_S,max_H,max_V,max_B,yes,
-     &     ldir(maxjobs),lcor(maxjobs),n_nevts,n_sjob(maxjobs),
-     &     n_ijob,n_ijob_H,n_ijob_S,n_ijob_V,n_ijob_B,tmp
+     $     max_nevts_V,max_nevts_F,max_nevts_B,max_S,max_H,max_V,max_F
+     $     ,max_B,yes,ldir(maxjobs),lcor(maxjobs),n_nevts
+     $     ,n_sjob(maxjobs),n_ijob,n_ijob_H,n_ijob_S,n_ijob_V,n_ijob_F
+     $     ,n_ijob_B,tmp
       double precision num1(maxjobs),n_num1
       logical done
       data done /.false./
@@ -31,6 +32,7 @@
       max_nevts_S=0
       max_nevts_H=0
       max_nevts_V=0
+      max_nevts_F=0
       max_nevts_B=0
 
       i=0
@@ -54,6 +56,8 @@
             max_nevts_S=max(max_nevts_S,nevts(i))
          elseif (cor(i)(2:2).eq.'V') then
             max_nevts_V=max(max_nevts_V,nevts(i))
+         elseif (cor(i)(2:2).eq.'F') then
+            max_nevts_F=max(max_nevts_F,nevts(i))
          elseif (cor(i)(2:2).eq.'B') then
             max_nevts_B=max(max_nevts_B,nevts(i))
          else
@@ -64,25 +68,31 @@
 
       if (max_nevts_H.ne.0) then
          write (*,*) 'Max H-events per channel found is ',max_nevts_H
-         max_H=max_nevts_H/10
+         max_H=max_nevts_H/20
          if(max_H.lt.100) max_H=100
          write (*,*) 'max number of events in splitted jobs is: ',max_H
       endif
       if (max_nevts_S.ne.0) then
          write (*,*) 'Max S-events per channel found is ',max_nevts_S
-         max_S=max_nevts_S/10
+         max_S=max_nevts_S/20
          if(max_S.lt.100) max_S=100
          write (*,*) 'max number of events in splitted jobs is: ',max_S
       endif
       if (max_nevts_V.ne.0) then
          write (*,*) 'Max V-events per channel found is ',max_nevts_V
-         max_V=max_nevts_V/50
+         max_V=max_nevts_V/20
          if(max_V.lt.100) max_V=100
          write (*,*) 'max number of events in splitted jobs is: ',max_V
       endif
+      if (max_nevts_F.ne.0) then
+         write (*,*) 'Max F-events per channel found is ',max_nevts_F
+         max_F=max_nevts_F/20
+         if(max_F.lt.100) max_F=100
+         write (*,*) 'max number of events in splitted jobs is: ',max_F
+      endif
       if (max_nevts_B.ne.0) then
          write (*,*) 'Max B-events per channel found is ',max_nevts_B
-         max_B=max_nevts_B/10
+         max_B=max_nevts_B/20
          if(max_B.lt.100) max_B=100
          write (*,*) max_B
          write (*,*) 'max number of events in splitted jobs is: ',max_B
@@ -114,6 +124,14 @@
          read (*,*) max_V
          write (*,*) max_V
       endif
+      if (max_nevts_F.ne.0) then
+         write (*,*) 'found F-events'
+         write (*,*) 'Max F-events per channel found is ',max_nevts_F
+         write (*,*) 'Give new maximum if you want to split jobs '
+         write (*,*) '(max number of splitted jobs is 99)'
+         read (*,*) max_F
+         write (*,*) max_F
+      endif
       if (max_nevts_B.ne.0) then
          write (*,*) 'found B-events'
          write (*,*) 'Max B-events per channel found is ',max_nevts_B
@@ -127,6 +145,7 @@
       n_ijob_H=0
       n_ijob_S=0
       n_ijob_V=0
+      n_ijob_F=0
       n_ijob_B=0
       do i=1,ijob
          if (cor(i)(2:2).eq.'H'.and.max_H.ne.0)then
@@ -150,6 +169,13 @@
             n_sjob(i)=1
             n_ijob_V=n_ijob_V+1
          endif
+         if (cor(i)(2:2).eq.'F'.and.max_F.ne.0)then
+            n_sjob(i)=nevts(i)/max_F +1
+            n_ijob_F=n_ijob_F+n_sjob(i)
+         elseif(cor(i)(2:2).eq.'F'.and.max_F.eq.0)then
+            n_sjob(i)=1
+            n_ijob_F=n_ijob_F+1
+         endif
          if (cor(i)(2:2).eq.'B'.and.max_B.ne.0)then
             n_sjob(i)=nevts(i)/max_B +1
             n_ijob_B=n_ijob_B+n_sjob(i)
@@ -158,11 +184,12 @@
             n_ijob_B=n_ijob_B+1
          endif
       enddo
-      n_ijob=n_ijob_H+n_ijob_S+n_ijob_V+n_ijob_B
+      n_ijob=n_ijob_H+n_ijob_S+n_ijob_V+n_ijob_F+n_ijob_B
       write (*,*) 'This will give:'
       if(n_ijob_H.gt.0) write (*,*) '  ',n_ijob_H,' H-events jobs'
       if(n_ijob_S.gt.0) write (*,*) '  ',n_ijob_S,' S-events jobs'
       if(n_ijob_V.gt.0) write (*,*) '  ',n_ijob_V,' V-events jobs'
+      if(n_ijob_F.gt.0) write (*,*) '  ',n_ijob_F,' F-events jobs'
       if(n_ijob_B.gt.0) write (*,*) '  ',n_ijob_B,' B-events jobs'
       write (*,*) 'Is this acceptable? ("0" for no, "1" for yes)'
       read (*,*) yes

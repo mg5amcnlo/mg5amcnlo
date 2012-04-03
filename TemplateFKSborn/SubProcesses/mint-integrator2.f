@@ -60,8 +60,8 @@ c others: same as 1 (for now)
       common/cifold/ifold
       integer nhits(1:nintervals,ndimmax)
       real * 8 rand(ndimmax)
-      real * 8 dx(ndimmax),f,f_sgn,vtot_abs,etot_abs,vtot_sgn,etot_sgn,
-     &     prod,f1
+      real * 8 dx(ndimmax),f_abs,f_sgn,vtot_abs,etot_abs,vtot_sgn
+     &     ,etot_sgn,prod,f1
       integer kdim,kint,kpoint,nit,ncalls,ibin,iret,nintcurr,ifirst
       real * 8 ran3
       external ran3,fun
@@ -152,7 +152,7 @@ c$$$            ncell(kdim)=nintervals/ifold(kdim)*ran3(even))+1
                rand(kdim)=ran3(even)
             endif
          enddo
-         f=0
+         f_abs=0
          f_sgn=0
          ifirst=0
  1       continue
@@ -168,27 +168,23 @@ c$$$            ncell(kdim)=nintervals/ifold(kdim)*ran3(even))+1
          enddo
 c contribution to integral
          if(imode.eq.0) then
-            f1=fun(x,vol,ifirst)
-            f=abs(f1)+f
-            f_sgn=f1+f_sgn
+            f_sgn=f_sgn+fun(x,vol,ifirst,f1)
+            f_abs=f_abs+f1
          else
 c this accumulated value will not be used
-            f1=fun(x,vol,ifirst)
-            f=abs(f1)+f
-            f_sgn=f1+f_sgn
+            f_sgn=f_sgn+fun(x,vol,ifirst,f1)
+            f_abs=f_abs+f1
             ifirst=1
             call nextlexi(ndim,ifold,kfold,iret)
             if(iret.eq.0) goto 1
 c closing call: accumulated value with correct sign
-            f1=fun(x,vol,2)
-            f=abs(f1)
-            f_sgn=f1
+            f_sgn=fun(x,vol,2,f_abs)
          endif
 c
          if(imode.eq.0) then
 c accumulate the function in xacc(icell(kdim),kdim) to adjust the grid later
             do kdim=1,ndim
-               xacc(icell(kdim),kdim)=xacc(icell(kdim),kdim)+f
+               xacc(icell(kdim),kdim)=xacc(icell(kdim),kdim)+f_abs
             enddo
          else
 c update the upper bounding envelope
@@ -196,7 +192,7 @@ c update the upper bounding envelope
             do kdim=1,ndim
                prod=prod*ymax(ncell(kdim),kdim)
             enddo
-            prod=(f/prod)
+            prod=(f_abs/prod)
             if(prod.gt.1) then
 c This guarantees a 10% increase of the upper bound in this cell
                prod=1+0.1d0/ndim
@@ -206,8 +202,8 @@ c This guarantees a 10% increase of the upper bound in this cell
                enddo
             endif
          endif
-         vtot_abs=vtot_abs+f/ncalls
-         etot_abs=etot_abs+f**2/ncalls
+         vtot_abs=vtot_abs+f_abs/ncalls
+         etot_abs=etot_abs+f_abs**2/ncalls
          vtot_sgn=vtot_sgn+f_sgn/ncalls
          etot_sgn=etot_abs
       enddo
@@ -247,9 +243,11 @@ c integrands
             err_abs=etot_abs
             err_sgn=err_abs
          endif
-         ans_abs=(ans_abs/err_abs+vtot_abs/etot_abs)/(1/err_abs+1/etot_abs)
+         ans_abs=(ans_abs/err_abs+vtot_abs/etot_abs)/
+     &        (1/err_abs+1/etot_abs)
          err_abs=1/sqrt(1/err_abs**2+1/etot_abs**2)
-         ans_sgn=(ans_sgn/err_sgn+vtot_sgn/etot_sgn)/(1/err_sgn+1/etot_sgn)
+         ans_sgn=(ans_sgn/err_sgn+vtot_sgn/etot_sgn)/
+     &        (1/err_sgn+1/etot_sgn)
          err_sgn=err_abs
       endif
 c Also improve stats in plots
@@ -404,7 +402,7 @@ c imode=3 store generation efficiency in x(1)
       integer icell(ndimmax),ncell(ndimmax)
       integer ifold(ndimmax),kfold(ndimmax)
       common/cifold/ifold
-      real * 8 r,f,ubound,vol,ran3,xmmm(nintervals,ndimmax)
+      real * 8 r,f_sgn,f_abs,f1,ubound,vol,ran3,xmmm(nintervals,ndimmax)
       real * 8 rand(ndimmax)
       external fun,ran3
       integer icalls,mcalls,kdim,kint,nintcurr,iret,ifirst
@@ -454,7 +452,8 @@ c imode=3 store generation efficiency in x(1)
       do kdim=1,ndim
          kfold(kdim)=1
       enddo
-      f=0
+      f_sgn=0
+      f_abs=0
       ifirst=0
  5    continue
       vol=1
@@ -465,25 +464,26 @@ c imode=3 store generation efficiency in x(1)
          vol=vol*dx(kdim)*nintervals/ifold(kdim)
          x(kdim)=xgrid(icell(kdim)-1,kdim)+rand(kdim)*dx(kdim)
       enddo
-      f=f+fun(x,vol,ifirst)
+      f_sgn=f_sgn+fun(x,vol,ifirst,f1)
+      f_abs=f_abs+f1
       ifirst=1
       call nextlexi(ndim,ifold,kfold,iret)
       if(iret.eq.0) goto 5
 c get final value (x and vol not used in this call)
-      f=fun(x,vol,2)
+      f_sgn=fun(x,vol,2,f_abs)
       call increasecnt('another call to the function',imode)
-      if (f.eq.0d0) call increasecnt('failed generation cuts',imode)
-      if(f.lt.0) then
+      if (f_abs.eq.0d0) call increasecnt('failed generation cuts',imode)
+      if(f_abs.lt.0) then
          write(*,*) 'gen: non positive function'
          stop
       endif
-      if(f.gt.ubound) then
+      if(f_abs.gt.ubound) then
          call increasecnt
      &        ('upper bound failure in inclusive cross section',imode)
       endif
       ubound=ubound*ran3(.false.)
       icalls=icalls+1
-      if(ubound.gt.f) then
+      if(ubound.gt.f_abs) then
          call increasecnt
      &        ('vetoed calls in inclusive cross section',imode)
          goto 10
@@ -548,7 +548,7 @@ c long for this subroutine to work properly
 
       double precision function ran3(even)
       implicit none
-      double precision ran2,ran3,get_ran
+      double precision ran2,get_ran
       logical even
       external get_ran
       if (even) then
@@ -578,7 +578,7 @@ c Recompute the number of calls. Uses the algorithm from VEGAS
 
       double precision function get_ran()
       implicit none
-      double precision get_ran,ran2,dng
+      double precision ran2,dng
       external ran2
       logical firsttime
       data firsttime/.true./
