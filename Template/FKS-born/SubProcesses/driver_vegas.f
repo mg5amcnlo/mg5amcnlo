@@ -303,7 +303,7 @@ c From dsample_fks
       integer i_fks,j_fks
       common/fks_indices/i_fks,j_fks
       logical sum,firsttime
-      parameter (sum=.true.)
+      parameter (sum=.false.)
       data firsttime /.true./
       integer nFKSprocessBorn
       save nFKSprocessBorn
