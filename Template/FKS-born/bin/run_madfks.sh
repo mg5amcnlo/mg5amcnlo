@@ -75,7 +75,7 @@ vegas_mint="2"
 
 cd SubProcesses
 
-for dir in P*_[1-9]* ; do
+for dir in P*_* ; do
     cd $dir
     echo $dir
     if [[ -e madevent_mintMC ]]; then

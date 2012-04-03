@@ -116,9 +116,27 @@ c From dsample_fks
       common /c_unwgt/evtsgn,unwgt
       logical Hevents
       common/SHevents/Hevents
-      double precision result,result1,result2,ran2
+      double precision result,result1,result2,ran2,rnd
       external ran2
-      save result1,result2
+      double precision sigintF_save,f_abs_save
+      save sigintF_save,f_abs_save
+      include 'fks_info.inc'
+      INTEGER NFKSPROCESS
+      COMMON/C_NFKSPROCESS/NFKSPROCESS
+      character*4 abrv
+      common /to_abrv/ abrv
+      logical nbodyonly
+      common/cnbodyonly/nbodyonly
+      integer fks_j_from_i(nexternal,0:nexternal)
+     &     ,particle_type(nexternal),pdg_type(nexternal)
+      common /c_fks_inc/fks_j_from_i,particle_type,pdg_type
+      integer i_fks,j_fks
+      common/fks_indices/i_fks,j_fks
+      logical sum,firsttime
+      parameter (sum=.false.)
+      data firsttime /.true./
+      integer nFKSprocessBorn
+      save nFKSprocessBorn
 c
       do i=1,99
          if (i.le.ndim) then
@@ -127,25 +145,95 @@ c
             x(i)=-9d99
          endif
       enddo
-      wgt=1.d0
+
+c Find the nFKSprocess for which we compute the Born-like contributions
+      if (firsttime) then
+         firsttime=.false.
+         nFKSprocess=fks_configs
+         call fks_inc_chooser()
+         do while (particle_type(i_fks).ne.8)
+            write (*,*) i_fks,particle_type(i_fks)
+            nFKSprocess=nFKSprocess-1
+            call fks_inc_chooser()
+            if (nFKSprocess.eq.0) then
+               write (*,*) 'ERROR in sigint'
+               stop
+            endif
+         enddo
+         nFKSprocessBorn=nFKSprocess
+      endif
+
+      sigintF=0d0
+      f_abs=0d0
       fold=ifl
       if (ifl.eq.0)then
+c
+c Compute the Born-like contributions with nbodyonly=.true.
+c THIS CAN BE OPTIMIZED
+c     
+         nFKSprocess=nFKSprocessBorn
+         abrv='bsv '
+         nbodyonly=.true.
+         call fks_inc_chooser()
+         call leshouche_inc_chooser()
+         call setcuts
+         call setfksfactor(iconfig)
+         wgt=1d0
          call generate_momenta(ndim,iconfig,wgt,x,p)
          call dsigF(p,wgt,w,dsigS,dsigH)
          result1= w*dsigS
          result2= w*dsigH
-         sigintF= result1+result2
-         f_abs = abs(result1)+abs(result2)
+         sigintF= sigintF+result1+result2
+         f_abs = f_abs+abs(result1)+abs(result2)
+         nbodyonly=.false.
+c
+c Compute the subtracted real-emission corrections either as an explicit
+c sum or a Monte Carlo sum.
+c      
+         if (sum) then
+c THIS CAN BE OPTIMIZED
+            abrv='nbsv'
+            do nFKSprocess=1,fks_configs
+               call fks_inc_chooser()
+               call leshouche_inc_chooser()
+               call setcuts
+               call setfksfactor(iconfig)
+               wgt=1d0
+               call generate_momenta(ndim,iconfig,wgt,x,p)
+               call dsigF(p,wgt,w,dsigS,dsigH)
+               result1= w*dsigS
+               result2= w*dsigH
+               sigintF= sigintF+result1+result2
+               f_abs = f_abs+abs(result1)+abs(result2)
+            enddo
+         else                   ! Monte Carlo over nFKSprocess
+            rnd=ran2()
+            nFKSprocess=0
+            do while (nFKSprocess.lt.rnd*fks_configs)
+               nFKSprocess=nFKSprocess+1
+            enddo
+c THIS CAN BE OPTIMIZED
+            abrv='nbsv'
+            call fks_inc_chooser()
+            call leshouche_inc_chooser()
+            call setcuts
+            call setfksfactor(iconfig)
+            wgt=1d0
+            call generate_momenta(ndim,iconfig,wgt,x,p)
+            call dsigF(p,wgt,w,dsigS,dsigH)
+            result1= w*dsigS
+            result2= w*dsigH
+            sigintF= sigintF+(result1+result2)*fks_configs
+            f_abs = f_abs+(abs(result1)+abs(result2))*fks_configs
+         endif
+         sigintF_save=sigintF
+         f_abs_save=f_abs
       elseif(ifl.eq.1) then
-         call generate_momenta(ndim,iconfig,wgt,x,p)
-         call dsigF(p,wgt,w,dsigS,dsigH)
-         result1= result1+w*dsigS
-         result2= result2+w*dsigH
-         sigintF= result1+result2
-         f_abs  = abs(result1)+abs(result2)
+         write (*,*) 'Folding not implemented'
+         stop
       elseif(ifl.eq.2) then
-         sigintF = result1+result2
-         f_abs = abs(result1)+abs(result2)
+         sigintF = sigintF_save
+         f_abs = f_abs_save
 c Determine if we need to write S or H events according to their
 c relative weights
          if (f_abs.gt.0d0) then

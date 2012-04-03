@@ -131,7 +131,7 @@ c
       write(*,*) "getting user params"
       call get_user_params(ncall,itmax,iconfig,imode,
      &     ixi_i,iphi_i,iy_ij,SHsep)
-      call setfksfactor(iconfig)
+c$$$      call setfksfactor(iconfig)
       ndim = 3*(nexternal-2)-4
       if (abs(lpp(1)) .ge. 1) ndim=ndim+1
       if (abs(lpp(2)) .ge. 1) ndim=ndim+1
