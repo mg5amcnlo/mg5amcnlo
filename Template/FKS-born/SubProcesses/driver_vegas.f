@@ -90,11 +90,6 @@ c For tests of virtuals
      &                 total_wgt_sum_min
 
       integer n_mp, n_disc
-c     $B$ new_def $E$  this is a tag for MadWeigth, Don't edit this line
-
-c      double precision xsec,xerr
-c      integer ncols,ncolflow(maxamps),ncolalt(maxamps),ic
-c      common/to_colstats/ncols,ncolflow,ncolalt,ic
 C-----
 C  BEGIN CODE
 C-----  
@@ -122,7 +117,8 @@ c
 c     Get user input
 c
       write(*,*) "getting user params"
-      call get_user_params(ncall,itmax,iconfig,irestart,idstring,savegrid)
+      call get_user_params(ncall,itmax,iconfig,irestart,idstring
+     &     ,savegrid)
       if(irestart.eq.1)then
         flat_grid=.true.
       else
@@ -307,7 +303,7 @@ c From dsample_fks
       data firsttime /.true./
       integer nFKSprocessBorn
       save nFKSprocessBorn
-      double precision vol
+      double precision vol,sigintR
 
 c
       do i=1,99
@@ -334,6 +330,8 @@ c Find the nFKSprocess for which we compute the Born-like contributions
             endif
          enddo
          nFKSprocessBorn=nFKSprocess
+         write (*,*) 'Total number of FKS directories is', fks_configs
+         write (*,*) 'For the Born we use nFKSprocess  #', nFKSprocess
       endif
          
 c
@@ -371,26 +369,22 @@ c THIS CAN BE OPTIMIZED
             sigint = sigint+dsig(p,wgt,peso)
          enddo
       else ! Monte Carlo over nFKSprocess
-c$$$         rnd=xx(ndim+1)
          call get_MC_integer(fks_configs,nFKSprocess,vol)
-c$$$         rnd=ran2()
-c$$$         nFKSprocess=0
-c$$$         do while (nFKSprocess.lt.rnd*fks_configs)
-c$$$            nFKSprocess=nFKSprocess+1
-c$$$         enddo
 c THIS CAN BE OPTIMIZED
          abrv='nbsv'
          call fks_inc_chooser()
          call leshouche_inc_chooser()
          call setcuts
          call setfksfactor(iconfig)
-         wgt=1d0
+c     The variable 'vol' is the size of the cell for the MC over
+c     nFKSprocess. Need to divide by it here to correctly take into
+c     account this Jacobian
+         wgt=1d0/vol
          call generate_momenta(ndim,iconfig,wgt,x,p)
-         sigint = sigint+
-     &        dsig(p,wgt,peso*fks_configs/vol)*fks_configs/vol
+         sigintR = dsig(p,wgt,peso)
+         call fill_MC_integer(nFKSprocess,abs(sigintR)*peso*vol)
+         sigint = sigint+ sigintR
       endif
-      call fill_MC_integer(nFKSprocess,abs(sigint)*peso)
-
       return
       end
 
@@ -575,15 +569,6 @@ c
          write(*,*) 'Using dconfig=',jconfig
          call DeCode(jconfig,lbw(1),3,nexternal)
          write(*,*) 'BW Setting ', (lbw(j),j=1,nexternal-2)
-c         do i=nexternal-3,0,-1
-c            if (jconfig .ge. 2**i) then
-c               lbw(i+1)=1
-c               jconfig=jconfig-2**i
-c            else
-c               lbw(i+1)=0
-c            endif 
-c            write(*,*) i+1, lbw(i+1)
-c         enddo
       endif
  10   format( a)
  12   format( a,i4)
@@ -599,7 +584,7 @@ c
       logical firsttime
       data firsttime/.true./
       integer nintervals,maxintervals,fks_configs
-      parameter (maxintervals=1000)
+      parameter (maxintervals=200)
       integer ncall(0:maxintervals)
       double precision grid(0:maxintervals),acc(0:maxintervals)
       common/integration_integer/grid,acc,ncall,nintervals
@@ -621,7 +606,7 @@ c
          write (*,*) 'ERROR in get_MC_integer',iint,nintervals,grid
          stop
       endif
-      vol=(grid(iint)-grid(iint-1))*nintervals
+      vol=(grid(iint)-grid(iint-1))
       ncall(iint)=ncall(iint)+1
       return
       end
@@ -631,7 +616,7 @@ c
       integer iint
       double precision f_abs
       integer nintervals,maxintervals
-      parameter (maxintervals=1000)
+      parameter (maxintervals=200)
       integer ncall(0:maxintervals)
       double precision grid(0:maxintervals),acc(0:maxintervals)
       common/integration_integer/grid,acc,ncall,nintervals
@@ -646,13 +631,16 @@ c
       parameter ( tiny=1d-3 )
       character*101 buff
       integer nintervals,maxintervals
-      parameter (maxintervals=1000)
+      parameter (maxintervals=200)
       integer ncall(0:maxintervals)
       double precision grid(0:maxintervals),acc(0:maxintervals)
       common/integration_integer/grid,acc,ncall,nintervals
-c      write (*,*) ncall
-c      write (*,*) acc
-c      write (*,*) grid
+c
+c      write (*,*) (ncall(i),i=1,nintervals)
+c      write (*,*) (acc(i)/ncall(i),i=1,nintervals)
+c      write (*,*) (grid(i),i=1,nintervals)
+c
+c Give a nice printout of the grids used for the current iteration
       do i=1,101
          buff(i:i)=' '
       enddo
@@ -661,11 +649,11 @@ c      write (*,*) grid
          write (buff(ib:ib),'(i1)') mod(i,10)
       enddo
       write (*,*) 'nFKSprocess ',buff
-
+c
 c Compute the accumulated cross section
       do i=1,nintervals
          if(ncall(i).ne.0) then
-            acc(i)=acc(i-1)+acc(i)
+            acc(i)=acc(i-1)+acc(i)/ncall(i)
          else
             acc(i)=acc(i-1)
          endif
@@ -674,34 +662,22 @@ c Define the new grids
       do i=0,nintervals
          grid(i)=acc(i)/acc(nintervals)
       enddo
-
-c Check that we have a reasonable result and update the accumulated
-c results if need be
+c
+c Make sure that a grid cell is at least of size 'tiny'
       do i=1,nintervals
          if (grid(i).le.(grid(i-1)+tiny)) then
-c$$$            write (*,*) 'Accumulated results for nFKSprocess '/
-c$$$     &           /' need adaptation #1:'
-c$$$            write (*,*) grid(i),grid(i-1),' become'
             grid(i)=grid(i-1)+tiny
-c$$$            write (*,*) grid(i),grid(i-1)
          endif
       enddo
-c it could happen that the change above yielded grid() values greater
-c than 1; should be fixed once more.
       grid(nintervals)=1d0
       do i=1,nintervals
          if (grid(nintervals-i).ge.(grid(nintervals-i+1)-tiny)) then
-c$$$            write (*,*) 'Accumulated results for nFKSprocess '/
-c$$$     &           /'need adaptation #2:'
-c$$$            write (*,*) grid(nintervals-i),grid(nintervals-i+1)
-c$$$     &           ,' become'
             grid(nintervals-i)=1d0-dble(i)*tiny
-c$$$            write (*,*) grid(nintervals-i),grid(nintervals-i+1)
          else
             exit
          endif
       enddo
-
+c
 c Reset the accumalated results because we start new iteration.
       do i=0,nintervals
          acc(i)=0d0

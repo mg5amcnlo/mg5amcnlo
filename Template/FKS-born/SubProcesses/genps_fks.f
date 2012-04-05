@@ -20,6 +20,11 @@ c      integer mapconfig(0:lmaxconfigs)
       parameter (zero=0d0)
       integer itree(2,-max_branch:-1),iconf
       common /to_itree/itree,iconf
+      double precision p1_cnt(0:3,nexternal,-2:2)
+      double precision wgt_cnt(-2:2)
+      double precision pswgt_cnt(-2:2)
+      double precision jac_cnt(-2:2)
+      common/counterevnts/p1_cnt,wgt_cnt,pswgt_cnt,jac_cnt
       include 'coupl.inc'
       include 'born_props.inc'
 c      
@@ -36,6 +41,12 @@ c
       enddo
 c
       call generate_momenta_conf(ndim,jac,x,itree,qmass,qwidth,p)
+c If the input weight 'wgt' to this subroutine was not equal to one,
+c make sure we update all the (counter-event) jacobians and return also
+c the updated wgt (i.e. the jacobian for the event)
+      do i=-2,2
+         jac_cnt(i)=jac_cnt(i)*wgt
+      enddo
       wgt=wgt*jac
 c
       return
