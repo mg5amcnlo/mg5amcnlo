@@ -164,13 +164,13 @@ c at the NLO)
       total_wgt_sum_min=0d0
 
       if(savegrid)then
-        call integrate(initplot,sigint,idstring,itmax,irestart,ndim,ncall,
-     #                 res,err,chi2a,savegrid)
-        usexinteg=.false.
+         call integrate(initplot,sigint,idstring,itmax,irestart,ndim
+     &        ,ncall,res,err,chi2a,savegrid)
+         usexinteg=.false.
       else
-        call initplot
-        call xinteg(sigint,ndim,itmax,ncall,res,err)
-        usexinteg=.true.
+         call initplot
+         call xinteg(sigint,ndim,itmax,ncall,res,err)
+         usexinteg=.true.
       endif
 
       write (*,*) ''
@@ -339,7 +339,6 @@ c Compute the Born-like contributions with nbodyonly=.true.
 c THIS CAN BE OPTIMIZED
 c
       nFKSprocess=nFKSprocessBorn
-      abrv='bsv '
       nbodyonly=.true.
       call fks_inc_chooser()
       call leshouche_inc_chooser()
@@ -347,18 +346,17 @@ c
       call setfksfactor(iconfig)
       wgt=1d0
       call generate_momenta(ndim,iconfig,wgt,x,p)
-
       sigint = sigint+dsig(p,wgt,peso)
-
-      nbodyonly=.false.
 
 c
 c Compute the subtracted real-emission corrections either as an explicit
 c sum or a Monte Carlo sum.
 c      
+      if (abrv.eq.'born' .or. abrv.eq.'grid' .or.
+     &     abrv(1:2).eq.'vi') return
+      nbodyonly=.false.
       if (sum) then
 c THIS CAN BE OPTIMIZED
-         abrv='nbsv'
          do nFKSprocess=1,fks_configs
             call fks_inc_chooser()
             call leshouche_inc_chooser()
@@ -371,7 +369,6 @@ c THIS CAN BE OPTIMIZED
       else ! Monte Carlo over nFKSprocess
          call get_MC_integer(fks_configs,nFKSprocess,vol)
 c THIS CAN BE OPTIMIZED
-         abrv='nbsv'
          call fks_inc_chooser()
          call leshouche_inc_chooser()
          call setcuts
@@ -588,15 +585,33 @@ c
       integer ncall(0:maxintervals)
       double precision grid(0:maxintervals),acc(0:maxintervals)
       common/integration_integer/grid,acc,ncall,nintervals
+      logical            flat_grid
+      common/to_readgrid/flat_grid                !Tells if grid read from file
       if (firsttime) then
          firsttime=.false.
          nintervals=fks_configs
+         if (flat_grid) then
+            do i=0,nintervals
+               grid(i)=dble(i)/nintervals
+            enddo
+         else
+            open(unit=52,file='grid.MC_integer',status='old',err=999)
+            read(52,*) (grid(i),i=0,nintervals)
+            close(52)
+            goto 998
+ 999        write (*,*) 'WARNING: File "grid.MC_integer" not found.'/
+     &           /' Using flat grid to start.'
+            do i=0,nintervals
+               grid(i)=dble(i)/nintervals
+            enddo
+ 998        continue
+         endif
          do i=0,nintervals
-            grid(i)=dble(i)/nintervals
             acc(i)=0d0
             ncall(i)=0
          enddo
       endif
+
       rnd=ran2()
       iint=0
       do while (rnd .gt. grid(iint))
@@ -651,13 +666,23 @@ c Give a nice printout of the grids used for the current iteration
       write (*,*) 'nFKSprocess ',buff
 c
 c Compute the accumulated cross section
+      ncall(0)=0
       do i=1,nintervals
          if(ncall(i).ne.0) then
             acc(i)=acc(i-1)+acc(i)/ncall(i)
+            ncall(0)=ncall(0)+ncall(i)
          else
             acc(i)=acc(i-1)
          endif
       enddo
+      if (ncall(0).le.max(nintervals,10)) then
+c Don't update grids if there were too few PS points.
+         do i=0,nintervals
+            acc(i)=0d0
+            ncall(i)=0
+         enddo
+         return
+      endif
 c Define the new grids
       do i=0,nintervals
          grid(i)=acc(i)/acc(nintervals)
@@ -677,6 +702,10 @@ c Make sure that a grid cell is at least of size 'tiny'
             exit
          endif
       enddo
+c Write grid to a file
+      open(unit=52,file='grid.MC_integer',status='unknown',err=999)
+      write(52,*) (grid(i),i=0,nintervals)
+      close(52)
 c
 c Reset the accumalated results because we start new iteration.
       do i=0,nintervals
@@ -684,4 +713,6 @@ c Reset the accumalated results because we start new iteration.
          ncall(i)=0
       enddo
       return
+ 999  write (*,*) 'Cannot open "grid.MC_integer" file'
+      stop
       end

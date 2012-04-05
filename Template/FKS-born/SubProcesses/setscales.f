@@ -403,7 +403,7 @@ c a scale to be used as a reference for renormalization scale
       double precision tmp,pt,et,dot
       external pt,et,dot
       integer i,itype
-      parameter (itype=1)
+      parameter (itype=2)
       character*80 temp_scale_id
       common/ctemp_scale_id/temp_scale_id
 c

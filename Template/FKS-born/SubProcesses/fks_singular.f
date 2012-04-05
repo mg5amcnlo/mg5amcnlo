@@ -426,7 +426,7 @@ c Put here call to compute bpower
       prefact=xinorm_ev/xi_i_fks_ev*
      #        1/(1-y_ij_fks_ev)
       if( (.not.nocntevents) .and. (.not.(abrv.eq.'born' .or. abrv.eq
-     &     .'grid' .or. abrv(1:2).eq.'vi' .or. abrv(1:3).eq.'bsv'))
+     &     .'grid' .or. abrv(1:2).eq.'vi' .or. nbodyonly))
      &     )then
         prefact_cnt_ssc=xinorm_ev/min(xiimax_ev,xiScut_used)*
      #                  log(xicut_used/min(xiimax_ev,xiScut_used))*
@@ -493,7 +493,7 @@ c points)
       endif
 
       if (abrv.eq.'born' .or. abrv.eq.'grid' .or. abrv(1:2).eq.'vi' .or.
-     &     abrv(1:3).eq.'bsv')goto 540
+     &     nbodyonly)goto 540
 c Real contribution:
 c Set the ybst_til_tolab before applying the cuts. 
       call set_cms_stuff(mohdr)
@@ -543,7 +543,7 @@ c for the collinear, soft and/or soft-collinear subtraction terms
       endif
 
       if (abrv.eq.'born' .or. abrv.eq.'grid' .or. abrv(1:2).eq.'vi' .or.
-     &     abrv(1:3).eq.'bsv')goto 545
+     &     nbodyonly)goto 545
 c
 c Collinear subtraction term:
       if( y_ij_fks_ev.gt.1d0-deltaS .and.
@@ -600,7 +600,7 @@ c Soft subtraction term:
          if(s_s.gt.0.d0)then
             xlum_s = dlum()
             if (abrv.eq.'born' .or. abrv.eq.'grid' .or.
-     &           abrv(1:2).eq.'vi' .or. abrv(1:3).eq.'bsv') goto 546
+     &           abrv(1:2).eq.'vi' .or. nbodyonly) goto 546
             if (xi_i_fks_ev .lt. xiScut_used) then
               call sreal(p1_cnt(0,1,0),zero,y_ij_fks_ev,fx_s)
               xsec=fx_s*s_s*jac_cnt(0)
@@ -612,7 +612,7 @@ c Soft subtraction term:
      #                      g**(2*wgtbpower+2.d0)
             endif
  546        continue
-            if (abrv.eq.'real' .or. abrv.eq.'nbsv') goto 548
+            if (abrv.eq.'real' .or. .not.nbodyonly) goto 548
             if (xi_i_fks_ev .lt. xiBSVcut_used) then
               xsec=s_s*jac_cnt(0)*xinorm_ev/
      #             (min(xiimax_ev,xiBSVcut_used)*shat/(16*pi**2))*
@@ -638,7 +638,7 @@ c Soft subtraction term:
       endif
 c Soft-Collinear subtraction term:
       if (abrv.eq.'born' .or. abrv.eq.'grid' .or. abrv(1:2).eq.'vi' .or.
-     &     abrv(1:3).eq.'bsv')goto 547
+     &     nbodyonly)goto 547
       if (xi_i_fks_cnt(ione) .lt. xiScut_used .and.
      #    y_ij_fks_ev .gt. 1d0-deltaS .and.
      #    pmass(j_fks).eq.0.d0 )then
@@ -2451,7 +2451,7 @@ c Put here call to compute bpower
 
 
       if( (.not.nocntevents) .and. (.not.(abrv.eq.'born' .or. abrv.eq
-     &     .'grid' .or. abrv(1:2).eq.'vi' .or. abrv(1:3).eq.'bsv'))
+     &     .'grid' .or. abrv(1:2).eq.'vi' .or. nbodyonly))
      &     )then
         prefact_cnt_ssc=xinorm_ev/min(xiimax_ev,xiScut_used)*
      #                  log(xicut_used/min(xiimax_ev,xiScut_used))*
@@ -2544,7 +2544,7 @@ c for the collinear, soft and/or soft-collinear subtraction terms
       HxmcME=0.d0
 
       if (abrv.eq.'born' .or. abrv.eq.'grid' .or.
-     &     abrv(1:2).eq.'vi' .or. abrv(1:3).eq.'bsv') goto 540
+     &     abrv(1:2).eq.'vi' .or. nbodyonly) goto 540
 
       call set_cms_stuff(mohdr)
       call set_alphaS(pp)
@@ -2595,7 +2595,7 @@ c in the case of parton-level NLO computations
       call set_alphaS(p1_cnt(0,1,0))
 
       if (abrv.eq.'born' .or. abrv.eq.'grid' .or. abrv(1:2).eq.'vi' .or.
-     &     abrv(1:3).eq.'bsv')goto 545
+     &     nbodyonly)goto 545
 c
 c Collinear subtraction term:
       if( ( y_ij_fks_ev.gt.1d0-deltaS .or. 
@@ -2639,7 +2639,7 @@ c Soft subtraction term:
          if(s_s.gt.0.d0)then
             xlum_s = dlum()
             if (abrv.eq.'born' .or. abrv.eq.'grid' .or.
-     &           abrv(1:2).eq.'vi' .or. abrv(1:3).eq.'bsv') goto 546
+     &           abrv(1:2).eq.'vi' .or. nbodyonly) goto 546
             call sreal(p1_cnt(0,1,0),zero,y_ij_fks_ev,fx_s)
             xsec=fx_s*s_s*jac_cnt(0)*prefact*rwgt
             if(.not.flagmc.and.MonteCarlo(1:7).eq.'PYTHIA6'
@@ -2654,7 +2654,7 @@ c Soft subtraction term:
               cnt_swgt_s=cnt_swgt_s-cnt_s*prefact_cnt_ssc*rwgt
             endif
  546        continue
-            if (abrv.eq.'real' .or. abrv.eq.'nbsv') goto 548
+            if (abrv.eq.'real' .or. .not.nbodyonly) goto 548
             if (xi_i_fks_ev .lt. xiBSVcut_used) then
               xsec=s_s*jac_cnt(0)*xinorm_ev/
      #             (min(xiimax_ev,xiBSVcut_used)*shat/(16*pi**2))*
@@ -2669,7 +2669,7 @@ c Soft subtraction term:
       endif
 c Soft-Collinear subtraction term:
       if (abrv.eq.'born' .or. abrv.eq.'grid' .or. abrv(1:2).eq.'vi' .or.
-     &     abrv(1:3).eq.'bsv')goto 547
+     &     nbodyonly)goto 547
       if ( ( (xi_i_fks_cnt(ione) .lt. xiScut_used .and.
      #        y_ij_fks_ev .gt. 1d0-deltaS) .or.
      #        (gfactsf.lt.1.d0.and.gfactcl.lt.1.d0 .and.
@@ -2723,7 +2723,7 @@ c Real contribution
 c
 c Set the ybst_til_tolab before applying the cuts. 
       if (abrv.eq.'born' .or. abrv.eq.'grid' .or. abrv(1:2).eq.'vi' .or.
-     &     abrv(1:3).eq.'bsv')goto 550
+     &     nbodyonly)goto 550
       call set_cms_stuff(mohdr)
       if (passcuts(pp,rwgt)) then
         call set_alphaS(pp)
@@ -5731,7 +5731,7 @@ c$$$         write (*,*) 'Setting diagram symmetry factor to 1,'//
 c$$$     &        ' because no suppression.'
          diagramsymmetryfactor=1d0
       endif
- 14    continue
+ 14   continue
 
 c Set xexternal to true to use the x's from external vegas in the
 c x_to_f_arg subroutine
@@ -5889,7 +5889,6 @@ c$$$     &        ' been put to ', fkssymmetryfactorBorn
             fkssymmetryfactorBorn=1d0
             fkssymmetryfactor=0d0
             fkssymmetryfactorDeg=0d0
-c            abrv='born'
          endif
 c$$$         write (*,*) 'fks symmetry factor is ', fkssymmetryfactor
 c$$$         write (*,*) 'fks symmetry factor for Born is ',
@@ -5900,6 +5899,7 @@ c$$$     &        fkssymmetryfactorBorn
      &     .and.fkssymmetryfactorBorn.eq.0d0) then
          write (*,*) 'Not needed to run this subprocess '//
      &        'because doing only Born or virtual'
+         stop
       endif
 
 c Set color types of i_fks, j_fks and fks_mother.

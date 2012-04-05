@@ -159,8 +159,12 @@ c madevent_vegas or madevent_mint
          write(lun,30) 'if [[ -e ../$3\_G$i ]]; then'
          write(lun,35) "if [[ $1 == '0' ]]; then"
          write(lun,40) 'cp -f ../$3\_G$i/*.sv1 .'
+         write(lun,40)
+     &        'cp -f ../$3\_G$i/grid.MC_integer . >/dev/null 2>&1'
          write(lun,35) "elif [[ $1 == '1' ]]; then"
          write(lun,40) 'cp -f ../$3\_G$i/mint_grids .'
+         write(lun,40)
+     &        'cp -f ../$3\_G$i/grid.MC_integer . >/dev/null 2>&1'
          write(lun,35) "fi"
          write(lun,30) 'else'
          write(lun,35) 'echo "Cannot find direcotry ../$3\_G$i/"'//
@@ -178,6 +182,8 @@ c madevent_mintMC
          write(lun,25) 'if [[ "$3" != "" ]]; then'
          write(lun,30) 'if [[ -e ../G$3$i ]]; then'
          write(lun,35) 'cp -f ../G$3$i/mint_grids ./preset_mint_grids'
+         write(lun,35)
+     &        'cp -f ../$3\_G$i/grid.MC_integer . >/dev/null 2>&1'
          write(lun,30) 'else'
          write(lun,35) 'echo "Cannot find direcotry ../G$3$i/"'//
      &        ' > log.txt'
@@ -254,8 +260,12 @@ c madevent_vegas or madevent_mint
          write(lun,30) 'if [[ -e $CONDOR_INITIAL_DIR/$3\_G$i ]]; then'
          write(lun,35) "if [[ $1 == '0' ]]; then"
          write(lun,40) 'cp -f $CONDOR_INITIAL_DIR/$3\_G$i/*.sv1 .'
+         write(lun,40) 'cp -f $CONDOR_INITIAL_DIR/$3\_G$i/'/
+     &        /'grid.MC_integer . >/dev/null 2>&1'
          write(lun,35) "elif [[ $1 == '1' ]]; then"
          write(lun,40) 'cp -f $CONDOR_INITIAL_DIR/$3\_G$i/mint_grids .'
+         write(lun,40) 'cp -f $CONDOR_INITIAL_DIR/$3\_G$i/'/
+     &        /'grid.MC_integer . >/dev/null 2>&1'
          write(lun,35) "fi"
          write(lun,30) 'else'
          write(lun,35) 'echo "Cannot find direcotry ../$3\_G$i/"'//
@@ -278,6 +288,8 @@ c madevent_mintMC
          write(lun,35) 'if [[ -e $CONDOR_INITIAL_DIR/G$3$i ]]; then'
          write(lun,40) 'cp -f $CONDOR_INITIAL_DIR/G$3$i/mint_grids '//
      &        './preset_mint_grids'
+         write(lun,40) 'cp -f $CONDOR_INITIAL_DIR/$3\_G$i/'/
+     &        /'grid.MC_integer . >/dev/null 2>&1'
          write(lun,35) 'else'
          write(lun,40) 'echo "Cannot find direcotry ../G$3$i/"'//
      &        ' > log.txt'

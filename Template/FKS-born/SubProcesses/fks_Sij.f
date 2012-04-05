@@ -436,8 +436,8 @@ c
         beta2=sqrt(1-(xm2/E2)**2)
         tmp=(1-dot(p1,p2)/(E1*E2))/(beta1*beta2)
         if((abs(tmp)-1.d0).gt.tiny)then
-          write(*,*)'Error in get_cms_costh_fks',tmp
-          stop
+          write(*,*)'Warning in get_cms_costh_fks',tmp
+          tmp=sign(1.d0,tmp)
         elseif( (abs(tmp)-1.d0).le.tiny .and.
      #          (abs(tmp)-1.d0).ge.0.d0 )then
           tmp=sign(1.d0,tmp)

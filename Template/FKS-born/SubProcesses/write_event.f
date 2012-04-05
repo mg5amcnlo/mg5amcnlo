@@ -172,7 +172,6 @@ c Compute the Born-like contributions with nbodyonly=.true.
 c THIS CAN BE OPTIMIZED
 c     
          nFKSprocess=nFKSprocessBorn
-         abrv='bsv '
          nbodyonly=.true.
          call fks_inc_chooser()
          call leshouche_inc_chooser()
@@ -185,14 +184,15 @@ c
          result2= w*dsigH
          sigintF= sigintF+result1+result2
          f_abs = f_abs+abs(result1)+abs(result2)
-         nbodyonly=.false.
 c
 c Compute the subtracted real-emission corrections either as an explicit
 c sum or a Monte Carlo sum.
 c      
+         if (abrv.eq.'born' .or. abrv.eq.'grid' .or.
+     &        abrv(1:2).eq.'vi') return
+         nbodyonly=.false.
          if (sum) then
 c THIS CAN BE OPTIMIZED
-            abrv='nbsv'
             do nFKSprocess=1,fks_configs
                call fks_inc_chooser()
                call leshouche_inc_chooser()
@@ -213,7 +213,6 @@ c THIS CAN BE OPTIMIZED
                nFKSprocess=nFKSprocess+1
             enddo
 c THIS CAN BE OPTIMIZED
-            abrv='nbsv'
             call fks_inc_chooser()
             call leshouche_inc_chooser()
             call setcuts
