@@ -2669,7 +2669,7 @@ c Soft subtraction term:
       endif
 c Soft-Collinear subtraction term:
       if (abrv.eq.'born' .or. abrv.eq.'grid' .or. abrv(1:2).eq.'vi' .or.
-     &     abrv(1:3).eq.'bsv')goto 550
+     &     abrv(1:3).eq.'bsv')goto 547
       if ( ( (xi_i_fks_cnt(ione) .lt. xiScut_used .and.
      #        y_ij_fks_ev .gt. 1d0-deltaS) .or.
      #        (gfactsf.lt.1.d0.and.gfactcl.lt.1.d0 .and.
@@ -2722,6 +2722,8 @@ c Soft-Collinear subtraction term:
 c Real contribution
 c
 c Set the ybst_til_tolab before applying the cuts. 
+      if (abrv.eq.'born' .or. abrv.eq.'grid' .or. abrv(1:2).eq.'vi' .or.
+     &     abrv(1:3).eq.'bsv')goto 550
       call set_cms_stuff(mohdr)
       if (passcuts(pp,rwgt)) then
         call set_alphaS(pp)

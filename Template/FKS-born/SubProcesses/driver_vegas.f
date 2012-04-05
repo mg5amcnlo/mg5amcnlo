@@ -307,6 +307,7 @@ c From dsample_fks
       data firsttime /.true./
       integer nFKSprocessBorn
       save nFKSprocessBorn
+      double precision vol
 
 c
       do i=1,99
@@ -370,11 +371,13 @@ c THIS CAN BE OPTIMIZED
             sigint = sigint+dsig(p,wgt,peso)
          enddo
       else ! Monte Carlo over nFKSprocess
-         rnd=ran2()
-         nFKSprocess=0
-         do while (nFKSprocess.lt.rnd*fks_configs)
-            nFKSprocess=nFKSprocess+1
-         enddo
+c$$$         rnd=xx(ndim+1)
+         call get_MC_integer(fks_configs,nFKSprocess,vol)
+c$$$         rnd=ran2()
+c$$$         nFKSprocess=0
+c$$$         do while (nFKSprocess.lt.rnd*fks_configs)
+c$$$            nFKSprocess=nFKSprocess+1
+c$$$         enddo
 c THIS CAN BE OPTIMIZED
          abrv='nbsv'
          call fks_inc_chooser()
@@ -383,8 +386,11 @@ c THIS CAN BE OPTIMIZED
          call setfksfactor(iconfig)
          wgt=1d0
          call generate_momenta(ndim,iconfig,wgt,x,p)
-         sigint = sigint+dsig(p,wgt,peso)*fks_configs
+         sigint = sigint+
+     &        dsig(p,wgt,peso*fks_configs/vol)*fks_configs/vol
       endif
+      call fill_MC_integer(nFKSprocess,abs(sigint)*peso)
+
       return
       end
 
@@ -583,3 +589,123 @@ c         enddo
  12   format( a,i4)
       end
 c
+
+
+      subroutine get_MC_integer(fks_configs,iint,vol)
+      implicit none
+      integer iint,i
+      double precision ran2,rnd,vol
+      external ran2
+      logical firsttime
+      data firsttime/.true./
+      integer nintervals,maxintervals,fks_configs
+      parameter (maxintervals=1000)
+      integer ncall(0:maxintervals)
+      double precision grid(0:maxintervals),acc(0:maxintervals)
+      common/integration_integer/grid,acc,ncall,nintervals
+      if (firsttime) then
+         firsttime=.false.
+         nintervals=fks_configs
+         do i=0,nintervals
+            grid(i)=dble(i)/nintervals
+            acc(i)=0d0
+            ncall(i)=0
+         enddo
+      endif
+      rnd=ran2()
+      iint=0
+      do while (rnd .gt. grid(iint))
+         iint=iint+1
+      enddo
+      if (iint.eq.0 .or. iint.gt.nintervals) then
+         write (*,*) 'ERROR in get_MC_integer',iint,nintervals,grid
+         stop
+      endif
+      vol=(grid(iint)-grid(iint-1))*nintervals
+      ncall(iint)=ncall(iint)+1
+      return
+      end
+
+      subroutine fill_MC_integer(iint,f_abs)
+      implicit none
+      integer iint
+      double precision f_abs
+      integer nintervals,maxintervals
+      parameter (maxintervals=1000)
+      integer ncall(0:maxintervals)
+      double precision grid(0:maxintervals),acc(0:maxintervals)
+      common/integration_integer/grid,acc,ncall,nintervals
+      acc(iint)=acc(iint)+f_abs
+      return
+      end
+
+      subroutine regrid_MC_integer
+      implicit none
+      integer i,ib
+      double precision tiny
+      parameter ( tiny=1d-3 )
+      character*101 buff
+      integer nintervals,maxintervals
+      parameter (maxintervals=1000)
+      integer ncall(0:maxintervals)
+      double precision grid(0:maxintervals),acc(0:maxintervals)
+      common/integration_integer/grid,acc,ncall,nintervals
+c      write (*,*) ncall
+c      write (*,*) acc
+c      write (*,*) grid
+      do i=1,101
+         buff(i:i)=' '
+      enddo
+      do i=0,nintervals
+         ib=1+int(grid(i)*100)
+         write (buff(ib:ib),'(i1)') mod(i,10)
+      enddo
+      write (*,*) 'nFKSprocess ',buff
+
+c Compute the accumulated cross section
+      do i=1,nintervals
+         if(ncall(i).ne.0) then
+            acc(i)=acc(i-1)+acc(i)
+         else
+            acc(i)=acc(i-1)
+         endif
+      enddo
+c Define the new grids
+      do i=0,nintervals
+         grid(i)=acc(i)/acc(nintervals)
+      enddo
+
+c Check that we have a reasonable result and update the accumulated
+c results if need be
+      do i=1,nintervals
+         if (grid(i).le.(grid(i-1)+tiny)) then
+c$$$            write (*,*) 'Accumulated results for nFKSprocess '/
+c$$$     &           /' need adaptation #1:'
+c$$$            write (*,*) grid(i),grid(i-1),' become'
+            grid(i)=grid(i-1)+tiny
+c$$$            write (*,*) grid(i),grid(i-1)
+         endif
+      enddo
+c it could happen that the change above yielded grid() values greater
+c than 1; should be fixed once more.
+      grid(nintervals)=1d0
+      do i=1,nintervals
+         if (grid(nintervals-i).ge.(grid(nintervals-i+1)-tiny)) then
+c$$$            write (*,*) 'Accumulated results for nFKSprocess '/
+c$$$     &           /'need adaptation #2:'
+c$$$            write (*,*) grid(nintervals-i),grid(nintervals-i+1)
+c$$$     &           ,' become'
+            grid(nintervals-i)=1d0-dble(i)*tiny
+c$$$            write (*,*) grid(nintervals-i),grid(nintervals-i+1)
+         else
+            exit
+         endif
+      enddo
+
+c Reset the accumalated results because we start new iteration.
+      do i=0,nintervals
+         acc(i)=0d0
+         ncall(i)=0
+      enddo
+      return
+      end

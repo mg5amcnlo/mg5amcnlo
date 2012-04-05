@@ -654,6 +654,8 @@ c
         if(nprn.eq.0)go to 21
         tsi=dsqrt(tsi)
         write(6,201)it,ti,tsi,avgi,sd,chi2a
+cRF: also update the grids for the integer sum
+        call regrid_MC_integer
         if(nprn.ge.0)go to 21
         do 20 j=1,ndim
  20     write(6,202) j,(xi(i,j),di(i,j),d(i,j),i=1,nd)
@@ -725,7 +727,11 @@ c
           chi2a=sd*(schi/swgt-avgi*avgi)/(it-.999)
           sd=dsqrt(one/sd)
         endif
-        if(nprn.ne.0) write(6,201)it,0.d0,0.d0,avgi,sd,chi2a
+        if(nprn.ne.0)then
+           write(6,201)it,0.d0,0.d0,avgi,sd,chi2a
+cRF: also update the grids for the integer sum
+           call regrid_MC_integer
+        endif
         return
         end
 
