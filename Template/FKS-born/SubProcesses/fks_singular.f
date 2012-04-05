@@ -295,10 +295,8 @@ c Multi channel stuff:
       double precision p_born(0:3,nexternal-1)
       common/pborn/p_born
 
-      double precision hel_fac
       logical calculatedBorn
-      integer get_hel,skip
-      common/cBorn/hel_fac,calculatedBorn,get_hel,skip
+      common/ccalculatedBorn/calculatedBorn
 
       double precision ev_enh,enhance,rwgt,unwgtfun
       logical firsttime,passcuts
@@ -945,10 +943,8 @@ c Multi channel stuff:
       double precision p_born(0:3,nexternal-1)
       common/pborn/p_born
 
-      double precision hel_fac
       logical calculatedBorn
-      integer get_hel,skip
-      common/cBorn/hel_fac,calculatedBorn,get_hel,skip
+      common/ccalculatedBorn/calculatedBorn
 
       double precision enhance,rwgt,unwgtfun
       logical firsttime,passcuts
@@ -1478,10 +1474,8 @@ c Multi channel stuff:
       double precision p_born(0:3,nexternal-1)
       common/pborn/p_born
 
-      double precision hel_fac
       logical calculatedBorn
-      integer get_hel,skip
-      common/cBorn/hel_fac,calculatedBorn,get_hel,skip
+      common/ccalculatedBorn/calculatedBorn
 
       double precision ev_enh,enhance,rwgt,unwgtfun
       logical firsttime,passcuts
@@ -2284,10 +2278,8 @@ c Multi channel stuff:
       double precision p_born(0:3,nexternal-1)
       common/pborn/p_born
 
-      double precision hel_fac
       logical calculatedBorn
-      integer get_hel,skip
-      common/cBorn/hel_fac,calculatedBorn,get_hel,skip
+      common/ccalculatedBorn/calculatedBorn
 
       double precision ev_enh,enhance,rwgt,unwgtfun
       logical firsttime,passcuts
@@ -3132,10 +3124,8 @@ C
 
       double precision p_born_rot(0:3,nexternal-1)
 
-      double precision hel_fac
       logical calculatedBorn
-      integer get_hel,skip
-      common/cBorn/hel_fac,calculatedBorn,get_hel,skip
+      common/ccalculatedBorn/calculatedBorn
 
       integer i,imother_fks
       double precision t,z,ap,E_j_fks,E_i_fks,Q,cphi_mother,
@@ -3251,10 +3241,8 @@ C
       double complex xij_aor
       common/cxij_aor/xij_aor
 
-      double precision hel_fac
       logical calculatedBorn
-      integer get_hel,skip
-      common/cBorn/hel_fac,calculatedBorn,get_hel,skip
+      common/ccalculatedBorn/calculatedBorn
 
 c Particle types (=color) of i_fks, j_fks and fks_mother
       integer i_type,j_type,m_type
@@ -4680,10 +4668,8 @@ c      include "fks.inc"
       double precision beta0
       common/cbeta0/beta0
 
-      double precision hel_fac
       logical calculatedBorn
-      integer get_hel,skip
-      common/cBorn/hel_fac,calculatedBorn,get_hel,skip
+      common/ccalculatedBorn/calculatedBorn
 
 c For tests of virtuals
       double precision vobmax,vobmin
@@ -5003,10 +4989,8 @@ c            stop
       integer i_fks,j_fks
       common/fks_indices/i_fks,j_fks
 
-      double precision hel_fac
       logical calculatedBorn
-      integer get_hel,skip
-      common/cBorn/hel_fac,calculatedBorn,get_hel,skip
+      common/ccalculatedBorn/calculatedBorn
 
       double precision tiny
       parameter (tiny=1d-6)
@@ -5962,10 +5946,12 @@ c Set matrices used by MC counterterms
       include "madfks_mcatnlo.inc"
       integer NHEL(nexternal,max_bhel*2),IHEL
 chel  include "helicities.inc"
+      include 'nFKSconfigs.inc'
       double precision hel_fac
+      integer get_hel,skip(fks_configs)
+      common/cBorn/hel_fac,get_hel,skip
       logical calculatedBorn
-      integer get_hel,skip
-      common/cBorn/hel_fac,calculatedBorn,get_hel,skip
+      common/ccalculatedBorn/calculatedBorn
       integer hel_wgt,hel_wgt_born,hel_wgt_real
       integer nhelreal(nexternal,4),goodhelreal(4)
       integer nhelrealall(nexternal,max_bhel*2)
@@ -6022,7 +6008,9 @@ c           consider real emission helicities
          else
             chckr=.true.
          endif
-         skip=1
+         do i=1,fks_configs
+            skip(i)=1
+         enddo
 c read from file if possible
          open(unit=65,file='goodhel.dat',status='old',err=532)
          all_set=.true.

@@ -120,7 +120,7 @@ c From dsample_fks
       external ran2
       double precision sigintF_save,f_abs_save
       save sigintF_save,f_abs_save
-      include 'fks_info.inc'
+      include 'nFKSconfigs.inc'
       INTEGER NFKSPROCESS
       COMMON/C_NFKSPROCESS/NFKSPROCESS
       character*4 abrv

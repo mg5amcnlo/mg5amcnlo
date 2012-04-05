@@ -20,7 +20,7 @@ c      Include 'born_maxamps.inc'
       INTEGER                 NCOMB,     NCROSS         
       PARAMETER (             NCOMB=  %(ncomb)d, NCROSS=  1)
       INTEGER    THEL
-      PARAMETER (THEL=NCOMB*NCROSS)
+      PARAMETER (THEL=NCOMB*NCROSS*%(nconfs)d)
       INTEGER NGRAPHS
       PARAMETER (NGRAPHS=   %(ngraphs)d)
 C  
@@ -32,20 +32,20 @@ C
 C LOCAL VARIABLES 
 C  
       REAL*8 P(0:3,NEXTERNAL-1)
-      INTEGER NHEL(NEXTERNAL-1,NCOMB),NTRY
+      INTEGER NHEL(NEXTERNAL-1,NCOMB),NTRY(%(nconfs)d)
       COMPLEX*16 T,T1
       REAL*8 BORN
       REAL*8 ZERO
       PARAMETER(ZERO=0d0)
       INTEGER IHEL,IDEN(NCROSS),IC(NEXTERNAL-1,NCROSS)
       INTEGER IPROC,JC(NEXTERNAL-1), I,L,K
-      LOGICAL GOODHEL(NCOMB,NCROSS)
+      LOGICAL GOODHEL(NCOMB,NCROSS,%(nconfs)d)
       INTEGER NGOOD,igood(ncomb),jhel
       data ngood /0/
       save igood,jhel
       REAL*8 hwgt
       REAL*8 xtot, xtry, xrej, xr, yfrac(0:ncomb)
-      INTEGER idum, j, jj
+      INTEGER j, jj
       LOGICAL warned
       REAL     xran1
       EXTERNAL xran1
@@ -72,16 +72,17 @@ C
       common/to_matrix/isum_hel, multi_channel
       INTEGER MAPCONFIG(0:LMAXCONFIGS), ICONFIG
       common/to_mconfigs/mapconfig, iconfig
-      DATA NTRY,IDUM /0,-1/
+      DATA NTRY /%(nconfs)d*0/
       DATA xtry, xrej /0,0/
       SAVE yfrac
       DATA jamp2(0) /   1/          
       DATA GOODHEL/THEL*.FALSE./
   %(helicity_lines)s
       double precision hel_fac
+      integer get_hel,skip(%(nconfs)d)
+      common/cBorn/hel_fac,get_hel,skip
       logical calculatedBorn
-      integer get_hel,skip
-      common/cBorn/hel_fac,calculatedBorn,get_hel,skip
+      common/ccalculatedBorn/calculatedBorn
       integer glu_ij
       integer nfksprocess
       common/c_nfksprocess/nfksprocess
@@ -92,12 +93,14 @@ C BEGIN CODE
 C ----------
       iden(1)=iden_values(nfksprocess)
       glu_ij = ij_values(nfksprocess)
-      NTRY=NTRY+1
-      skip=1
-      do while(nhel(glu_ij ,skip).ne.1)
-      skip=skip+1
-      enddo
-      skip=skip-1
+      NTRY(nFKSprocess)=NTRY(nFKSprocess)+1
+      if (NTRY(nFKSprocess).lt.2) then
+         skip(nFKSprocess)=1			 
+         do while(nhel(glu_ij ,skip(nFKSprocess)).ne.1)
+         skip(nFKSprocess)=skip(nFKSprocess)+1
+         enddo
+         skip(nFKSprocess)=skip(nFKSprocess)-1
+      endif
       DO IPROC=1,NCROSS
       DO IHEL=1,NEXTERNAL-1
          JC(IHEL) = +1
@@ -134,10 +137,10 @@ C          write (*,*) "momenta not the same in Born"
       ANS(IPROC) = 0D0
       ANS(IPROC+1) = 0D0
       write(hel_buff(1),'(16i5)') (0,i=1,nexternal-1)
-      IF (ISUM_HEL .EQ. 0 .OR. NTRY .LT. 100) THEN
+      IF (ISUM_HEL .EQ. 0 .OR. NTRY(nFKSprocess) .LT. 2) THEN
              hel_fac=1d0
           DO IHEL=1,NCOMB
-             IF ((GOODHEL(IHEL,IPROC) .OR. NTRY .LT. 100).and.nhel(glu_ij ,ihel).eq.-1) THEN
+             IF ((GOODHEL(IHEL,IPROC,nFKSprocess) .OR. NTRY(nFKSprocess) .LT. 2).and.nhel(glu_ij ,ihel).eq.-1) THEN
                  T=BORN(P1,NHEL(1,IHEL),IHEL,JC(1),T1)            
                DO JJ=1,nincoming
                  IF(POL(JJ).NE.1d0.AND.NHEL(JJ,IHEL).EQ.INT(SIGN(1d0,POL(JJ)))) THEN
@@ -150,8 +153,8 @@ C          write (*,*) "momenta not the same in Born"
                ENDDO
                ANS(IPROC)=ANS(IPROC)+T
                ANS(IPROC+1)=ANS(IPROC+1)+T1
-               IF ( (T .NE. 0D0 .OR. T1 .NE. 0d0) .AND. .NOT. GOODHEL(IHEL,IPROC)) THEN
-                   GOODHEL(IHEL,IPROC)=.TRUE.
+               IF ( (T .NE. 0D0 .OR. T1 .NE. 0d0) .AND. .NOT. GOODHEL(IHEL,IPROC,nFKSprocess)) THEN
+                   GOODHEL(IHEL,IPROC,nFKSprocess)=.TRUE.
                    NGOOD = NGOOD +1
                    IGOOD(NGOOD) = IHEL
                ENDIF
@@ -171,7 +174,7 @@ C          write (*,*) "momenta not the same in Born"
               else
                  ihel=get_hel
               endif
-              IF(GOODHEL(IHEL,IPROC)) THEN
+              IF(GOODHEL(IHEL,IPROC,nFKSprocess)) THEN
               T=BORN(P1,NHEL(1,IHEL),IHEL,JC(1),T1)            
               DO JJ=1,nincoming
                 IF(POL(JJ).NE.1d0.AND. NHEL(JJ,IHEL).EQ.INT(SIGN(1d0,POL(JJ)))) THEN
@@ -188,7 +191,7 @@ C          write (*,*) "momenta not the same in Born"
           ENDDO
           IF (ISUM_HEL .EQ. 1) THEN
               WRITE(HEL_BUFF(1),'(16i5)')(NHEL(i,IHEL),i=1,nexternal-1)
-              WRITE(HEL_BUFF(2),'(16i5)')(NHEL(i,IHEL+SKIP),i=1,nexternal-1)
+              WRITE(HEL_BUFF(2),'(16i5)')(NHEL(i,IHEL+SKIP(nFKSprocess)),i=1,nexternal-1)
           ENDIF
       ENDIF
       ANS(IPROC)=ANS(IPROC)/DBLE(IDEN(IPROC))
@@ -246,9 +249,10 @@ C
       double complex saveamp(ngraphs,max_bhel)
       common/to_saveamp/saveamp
       double precision hel_fac
+      integer get_hel,skip(%(nconfs)d)
+      common/cBorn/hel_fac,get_hel,skip
       logical calculatedBorn
-      integer get_hel,skip
-      common/cBorn/hel_fac,calculatedBorn,get_hel,skip
+      common/ccalculatedBorn/calculatedBorn
       include "coupl.inc"
       integer glu_ij
       integer nfksprocess
@@ -273,7 +277,7 @@ C ----------
          if(ihel.eq.-1)then
             saveamp(i,hell)=amp(i)
          elseif(ihel.eq.1)then
-            saveamp(i,hell+skip)=amp(i)
+            saveamp(i,hell+skip(nFKSprocess))=amp(i)
          else
             write(*,*) "ERROR #1 in born.f"
             stop
@@ -284,7 +288,7 @@ C ----------
          if(ihel.eq.-1)then
             amp(i)=saveamp(i,hell)
          elseif(ihel.eq.1)then
-            amp(i)=saveamp(i,hell+skip)
+            amp(i)=saveamp(i,hell+skip(nFKSprocess))
          else
             write(*,*) "ERROR #1 in born.f"
             stop

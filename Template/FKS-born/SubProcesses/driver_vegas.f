@@ -286,7 +286,7 @@ c From dsample_fks
       double precision wgt,dsig,ran2,rnd
       external ran2
       double precision x(99),p(0:3,nexternal)
-      include 'fks_info.inc'
+      include 'nFKSconfigs.inc'
       INTEGER NFKSPROCESS
       COMMON/C_NFKSPROCESS/NFKSPROCESS
       character*4 abrv

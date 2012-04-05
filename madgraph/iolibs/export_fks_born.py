@@ -215,6 +215,11 @@ class ProcessExporterFortranFKS_born(loop_exporters.LoopProcessExporterFortranSA
 
         self.write_pdf_calls(matrix_element, fortran_model)
 
+        filename = 'nFKSconfigs.inc'
+        self.write_nfksconfigs_file(writers.FortranWriter(filename), 
+                                    matrix_element, 
+                                    fortran_model)
+
         filename = 'fks_info.inc'
         self.write_fks_info_file(writers.FortranWriter(filename), 
                                  matrix_element, 
@@ -304,10 +309,6 @@ class ProcessExporterFortranFKS_born(loop_exporters.LoopProcessExporterFortranSA
         #copy the makefile 
         os.system("ln -s ../makefile_fks_dir ./makefile")
 
-        cpfiles = [ 'props.inc', 'configs.inc']
-        for file in cpfiles:
-            os.system('cp '+file+' '+file+'.back')
-        
         #import nexternal/leshouches in Source
         ln('nexternal.inc', '../../Source', log=False)
         ln('leshouche_info.inc', '../../Source', log=False)
@@ -698,6 +699,9 @@ NJetSymmetrizeFinal     %(symfin)s\n\
         den_factor_lines = self.get_den_factor_lines(fksborn)
         replace_dict['den_factor_lines'] = '\n'.join(den_factor_lines)
     
+        # Extract the number of FKS process
+        replace_dict['nconfs'] = len(fksborn.real_processes)
+
         file = open(os.path.join(_file_path, \
                           'iolibs/template_files/born_fks_tilde_from_born.inc')).read()
         file = file % replace_dict
@@ -858,6 +862,10 @@ c     this subdir has no soft singularities
             new_jamp_lines.append(line)
         replace_dict['jamp2_lines'] = '\n'.join(new_jamp_lines)
     
+    
+        # Extract the number of FKS process
+        replace_dict['nconfs'] = len(fksborn.real_processes)
+
         file = open(os.path.join(_file_path, \
                           'iolibs/template_files/b_sf_xxx_fks_from_born.inc')).read()
         file = file % replace_dict
@@ -885,6 +893,22 @@ c     this subdir has no soft singularities
     
         return True
     
+    #===============================================================================
+    # write_fks_info_file
+    #===============================================================================
+    def write_nfksconfigs_file(self, writer, fksborn, fortran_model):
+        """Writes the content of nFKSconfigs.inc, which just gives the
+        total FKS dirs as a parameter"""
+        replace_dict = {}
+        replace_dict['nconfs'] = len(fksborn.real_processes)
+        content = \
+"""      INTEGER FKS_CONFIGS
+      PARAMETER (FKS_CONFIGS=%(nconfs)d)
+      
+"""   % replace_dict
+
+        writer.writelines(content)
+
             
     #===============================================================================
     # write_fks_info_file
@@ -918,8 +942,7 @@ c     this subdir has no soft singularities
         replace_dict['fks_j_from_i_lines'] = '\n'.join(fks_j_from_i_lines)
 
         content = \
-"""      INTEGER FKS_CONFIGS, IPOS, JPOS
-      DATA FKS_CONFIGS / %(nconfs)d /
+"""      INTEGER IPOS, JPOS
       INTEGER FKS_I_D(%(nconfs)d), FKS_J_D(%(nconfs)d)
       INTEGER FKS_J_FROM_I_D(%(nconfs)d, NEXTERNAL, 0:NEXTERNAL)
       INTEGER PARTICLE_TYPE_D(%(nconfs)d, NEXTERNAL), PDG_TYPE_D(%(nconfs)d, NEXTERNAL)

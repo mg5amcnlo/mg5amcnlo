@@ -81,10 +81,8 @@ c
       common/to_amps/  amp2,       jamp2
       include 'coupl.inc'
 
-      double precision hel_fac
       logical calculatedBorn
-      integer get_hel,skip
-      common/cBorn/hel_fac,calculatedBorn,get_hel,skip
+      common/ccalculatedBorn/calculatedBorn
 
       integer i_fks,j_fks
       common/fks_indices/i_fks,j_fks

@@ -73,10 +73,8 @@ c put momenta in common block for couplings.f
       data firsttime/.true./
 
 c After recomputing alphaS, be sure to set 'calculatedBorn' to false
-      double precision hel_fac
       logical calculatedBorn
-      integer get_hel,skip
-      common/cBorn/hel_fac,calculatedBorn,get_hel,skip
+      common/ccalculatedBorn/calculatedBorn
 c
       if (firsttime) then
         firsttime=.false.

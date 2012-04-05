@@ -72,10 +72,8 @@ c
       common/to_amps/  amp2,       jamp2
       include 'coupl.inc'
 
-      double precision hel_fac
       logical calculatedBorn
-      integer get_hel,skip
-      common/cBorn/hel_fac,calculatedBorn,get_hel,skip
+      common/ccalculatedBorn/calculatedBorn
 
 
       double precision p1_cnt(0:3,nexternal,-2:2)

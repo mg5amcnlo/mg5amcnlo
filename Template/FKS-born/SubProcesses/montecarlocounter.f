@@ -3928,10 +3928,8 @@ c the same method
       double precision cthbe,sthbe,cphibe,sphibe
       common/cbeangles/cthbe,sthbe,cphibe,sphibe
 
-      double precision hel_fac
       logical calculatedBorn
-      integer get_hel,skip
-      common/cBorn/hel_fac,calculatedBorn,get_hel,skip
+      common/ccalculatedBorn/calculatedBorn
 
 c Particle types (=color) of i_fks, j_fks and fks_mother
       integer i_type,j_type,m_type
@@ -3963,6 +3961,7 @@ c might flip when rotating the momenta.
                p_born_rot(2,i)=p_born(2,i)
                p_born_rot(3,i)=-p_born(3,i)
             enddo
+            calculatedBorn=.false.
             call sborn(p_born_rot,wgt1)
             calculatedBorn=.false.
          else

@@ -18,7 +18,7 @@ C
       INTEGER                 NCOMB,     NCROSS         
       PARAMETER (             NCOMB=  %(ncomb)d, NCROSS=  1)
       INTEGER    THEL
-      PARAMETER (THEL=NCOMB*NCROSS)
+      PARAMETER (THEL=NCOMB*NCROSS*%(nconfs)d)
       INTEGER NGRAPHS
       PARAMETER (NGRAPHS=   %(ngraphs)d)
 C  
@@ -29,15 +29,15 @@ C
 C LOCAL VARIABLES 
 C  
       REAL*8 P(0:3,NEXTERNAL-1)
-      INTEGER NHEL(NEXTERNAL-1,NCOMB),NTRY
+      INTEGER NHEL(NEXTERNAL-1,NCOMB),NTRY(%(nconfs)d)
       REAL*8 T
       REAL*8 B_SF_%(iborn)3.3d
       REAL*8 ZERO
       PARAMETER(ZERO=0d0)
       INTEGER IHEL,IDEN(NCROSS),IC(NEXTERNAL-1,NCROSS)
       INTEGER IPROC,JC(NEXTERNAL-1), I,L,K
-      LOGICAL GOODHEL(NCOMB,NCROSS)
-      DATA NTRY/0/
+      LOGICAL GOODHEL(NCOMB,NCROSS,%(nconfs)d)
+      DATA NTRY /%(nconfs)d*0/
       INTEGER NGOOD,igood(ncomb),jhel
       data ngood /0/
       save igood,jhel
@@ -54,9 +54,10 @@ C
 
       DATA GOODHEL/THEL*.FALSE./
       double precision hel_fac
+      integer get_hel,skip(%(nconfs)d)
+      common/cBorn/hel_fac,get_hel,skip
       logical calculatedBorn
-      integer get_hel,skip
-      common/cBorn/hel_fac,calculatedBorn,get_hel,skip
+      common/ccalculatedBorn/calculatedBorn
       integer nfksprocess
       common/c_nfksprocess/nfksprocess
 %(den_factor_lines)s
@@ -64,7 +65,7 @@ C ----------
 C BEGIN CODE
 C ----------
       iden(1)=iden_values(nfksprocess)
-      NTRY=NTRY+1
+      NTRY(nfksprocess)=NTRY(nfksprocess)+1
       DO IPROC=1,NCROSS
       DO IHEL=1,NEXTERNAL-1
          JC(IHEL) = +1
@@ -83,13 +84,13 @@ C ----------
          stop
       endif
       ANS(IPROC) = 0D0
-      IF (GET_HEL .EQ. 0 .OR. NTRY .LT. 2) THEN
+      IF (GET_HEL .EQ. 0 .OR. NTRY(nFKSprocess) .LT. 2) THEN
           DO IHEL=1,NCOMB
-             IF (GOODHEL(IHEL,IPROC) .OR. NTRY .LT. 2) THEN
+             IF (GOODHEL(IHEL,IPROC,nFKSprocess) .OR. NTRY(nFKSprocess) .LT. 2) THEN
                  T=B_SF_%(iborn)3.3d(P1,NHEL(1,IHEL),IHEL,JC(1))              
                ANS(IPROC)=ANS(IPROC)+T
-               IF (T .NE. 0D0 .AND. .NOT. GOODHEL(IHEL,IPROC)) THEN
-                   GOODHEL(IHEL,IPROC)=.TRUE.
+               IF (T .NE. 0D0 .AND. .NOT. GOODHEL(IHEL,IPROC,nFKSprocess)) THEN
+                   GOODHEL(IHEL,IPROC,nFKSprocess)=.TRUE.
                    NGOOD = NGOOD +1
                    IGOOD(NGOOD) = IHEL
                ENDIF
@@ -147,9 +148,10 @@ C
       double complex saveamp(ngraphs,max_bhel)
       common/to_saveamp/saveamp
       double precision hel_fac
+      integer get_hel,skip(%(nconfs)d)
+      common/cBorn/hel_fac,get_hel,skip
       logical calculatedBorn
-      integer get_hel,skip
-      common/cBorn/hel_fac,calculatedBorn,get_hel,skip
+      common/ccalculatedBorn/calculatedBorn
       include "coupl.inc"
 C  
 C COLOR DATA
