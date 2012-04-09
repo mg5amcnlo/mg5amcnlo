@@ -68,7 +68,7 @@ def find_ufo_path(model_name):
 
     return model_path
 
-def import_model(model_name):
+def import_model(model_name, decay=False):
     """ a practical and efficient way to import a model"""
     
     # check if this is a valid path or if this include restriction file       
@@ -96,7 +96,7 @@ def import_model(model_name):
             restrict_file = None
     
     #import the FULL model
-    model = import_full_model(model_path) 
+    model = import_full_model(model_path, decay) 
     # restore the model name
     if restrict_name:
         model["name"] += '-' + restrict_name 
@@ -114,12 +114,12 @@ def import_model(model_name):
             
         # Modify the mother class of the object in order to allow restriction
         model = RestrictModel(model)
-        model.restrict_model(restrict_file)
+        model.restrict_model(restrict_file, rm_parameter=not decay)
         
     return model
 
 _import_once = []
-def import_full_model(model_path):
+def import_full_model(model_path, decay=False):
     """ a practical and efficient way to import one of those models 
         (no restriction file use)"""
 
@@ -159,7 +159,7 @@ def import_full_model(model_path):
     
     if model_path[-1] == '/': model_path = model_path[:-1] #avoid empty name
     model.set('name', os.path.split(model_path)[-1])
-    model.set('version_tag', os.path.realpath(model_path) + str(misc.get_pkg_info()))
+    model.set('version_tag', os.path.realpath(model_path) +'##'+ str(misc.get_pkg_info()))
 
     # Load the Parameter/Coupling in a convinient format.
     parameters, couplings = OrganizeModelExpression(ufo_model).main()
@@ -167,6 +167,19 @@ def import_full_model(model_path):
     model.set('couplings', couplings)
     model.set('functions', ufo_model.all_functions)
     
+    # Optional UFO part: decay_width information
+    if decay and hasattr(ufo_model, 'all_decays') and ufo_model.all_decays:
+        for ufo_part in ufo_model.all_particles:
+            name =  ufo_part.name
+            if ufo2mg5_converter.use_lower_part_names:
+               name = name.lower() 
+            p = model['particles'].find_name(name)
+            if hasattr(ufo_part, 'partial_widths'):
+                p.partial_widths = ufo_part.partial_widths
+            elif p:
+                p.partial_widths = {}
+            # might be None for ghost
+            
     # save in a pickle files to fasten future usage
     save_load_object.save_to_file(os.path.join(model_path, 'model.pkl'), model) 
  
@@ -305,7 +318,7 @@ class UFOMG5Converter(object):
                     particle.set(key, str(value))
                 else:
                     particle.set(key, value)
-            elif key.lower() not in ('ghostnumber','selfconjugate','goldstoneboson'):
+            elif key.lower() not in ('ghostnumber','selfconjugate','goldstoneboson','partial_widths'):
                 # add charge -we will check later if those are conserve 
                 self.conservecharge.add(key)
                 particle.set(key,value, force=True)
@@ -784,10 +797,15 @@ class RestrictModel(model_reader.ModelReader):
         self.del_coup = []
         super(RestrictModel, self).default_setup()
         self.rule_card = check_param_card.ParamCardRule()
+        self.restrict_card = None
      
-    def restrict_model(self, param_card):
-        """apply the model restriction following param_card"""
+    def restrict_model(self, param_card, rm_parameter=True):
+        """apply the model restriction following param_card.
+        fix_parameter defines if the Zero/one parameter are removed or not from
+        the model.
+        """
 
+        self.restrict_card = param_card
         # Reset particle dict to ensure synchronized particles and interactions
         self.set('particles', self.get('particles'))
 
@@ -811,7 +829,7 @@ class RestrictModel(model_reader.ModelReader):
                 
         # deal with parameters
         parameters = self.detect_special_parameters()
-        self.fix_parameter_values(*parameters)
+        self.fix_parameter_values(*parameters, simplify=rm_parameter)
         
         # deal with identical parameters
         iden_parameters = self.detect_identical_parameters()
@@ -1024,7 +1042,7 @@ class RestrictModel(model_reader.ModelReader):
                     data.remove(coupling)
                             
         
-    def fix_parameter_values(self, zero_parameters, one_parameters):
+    def fix_parameter_values(self, zero_parameters, one_parameters, simplify=True):
         """ Remove all instance of the parameters in the model and replace it by 
         zero when needed."""
 
@@ -1037,9 +1055,6 @@ class RestrictModel(model_reader.ModelReader):
                 self.rule_card.add_zero(block, param.lhacode)
             elif value == 1:
                 self.rule_card.add_one(block, param.lhacode)
-
-
-
 
         special_parameters = zero_parameters + one_parameters
         
@@ -1055,21 +1070,26 @@ class RestrictModel(model_reader.ModelReader):
             if particle['width'] in zero_parameters:
                 particle['width'] = 'ZERO'            
 
-        # check if the parameters is still usefull:
-        re_str = '|'.join(special_parameters)
-        re_pat = re.compile(r'''\b(%s)\b''' % re_str)
-        used = set()
-        # check in coupling
-        for name, coupling_list in self['couplings'].items():
-            for coupling in coupling_list:
-                for use in  re_pat.findall(coupling.expr):
-                    used.add(use)  
+        if simplify:
+            # check if the parameters is still usefull:
+            re_str = '|'.join(special_parameters)
+            re_pat = re.compile(r'''\b(%s)\b''' % re_str)
+            used = set()
+            # check in coupling
+            for name, coupling_list in self['couplings'].items():
+                for coupling in coupling_list:
+                    for use in  re_pat.findall(coupling.expr):
+                        used.add(use)
+        else:
+            print zero_parameters, one_parameters
+            used = set([i for i in special_parameters if i])
+        print used 
+             
         
         # simplify the regular expression
         re_str = '|'.join([param for param in special_parameters 
-                                                          if param not in used])
-        re_pat = re.compile(r'''\b(%s)\b''' % re_str)
-        
+                                                      if param not in used])
+        re_pat = re.compile(r'''\b(%s)\b''' % re_str)            
         param_info = {}
         # check in parameters
         for dep, param_list in self['parameters'].items():
@@ -1077,7 +1097,7 @@ class RestrictModel(model_reader.ModelReader):
                 # update information concerning zero/one parameters
                 if parameter.name in special_parameters:
                     param_info[parameter.name]= {'dep': dep, 'tag': tag, 
-                                                               'obj': parameter}
+                                                           'obj': parameter}
                     continue
                                     
                 # Bypass all external parameter
@@ -1085,11 +1105,16 @@ class RestrictModel(model_reader.ModelReader):
                     continue
 
                 # check the presence of zero/one parameter
-                for use in  re_pat.findall(parameter.expr):
-                    used.add(use)
-
+                if simplify:
+                    for use in  re_pat.findall(parameter.expr):
+                        used.add(use)
+        print used
         # modify the object for those which are still used
         for param in used:
+            if not param:
+                continue
+            print param
+            print param_info
             data = self['parameters'][param_info[param]['dep']]
             data.remove(param_info[param]['obj'])
             tag = param_info[param]['tag']

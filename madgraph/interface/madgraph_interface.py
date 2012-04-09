@@ -2321,7 +2321,7 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
                           " which can be used only for required s-channels"
                 mylegids.extend(self._multiparticles[part_name])
             else:
-                mypart = self._curr_model['particles'].find_name(part_name)
+                mypart = self._curr_model['particles'].get_copy(part_name)
                 if mypart:
                     mylegids.append(mypart.get_pdg_code())
 
@@ -2391,7 +2391,7 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
         all_ids = []
         ids=[]
         for part_name in args:
-            mypart = self._curr_model['particles'].find_name(part_name)
+            mypart = self._curr_model['particles'].get_copy(part_name)
             if mypart:
                 ids.append([mypart.get_pdg_code()])
             elif part_name in self._multiparticles:

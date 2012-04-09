@@ -381,6 +381,24 @@ class ParticleList(PhysicsObjectList):
         """Test if object obj is a valid Particle for the list."""
         return isinstance(obj, Particle)
                     
+    def get_copy(self, name):
+        """Try to find a particle with the given name. Check both name
+        and antiname. If a match is found, return the a copy of the 
+        corresponding particle (first one in the list), with the 
+        is_part flag set accordingly. None otherwise."""
+        
+        part = self.find_name(name)
+        if not part:
+            return None
+        part = copy.copy(part)     
+          
+        if part.get('name') == name:
+            part.set('is_part', True)
+            return part
+        elif part.get('antiname') == name:
+            part.set('is_part', False)
+            return part
+        return None
 
     def find_name(self, name):
         """Try to find a particle with the given name. Check both name
@@ -391,13 +409,10 @@ class ParticleList(PhysicsObjectList):
         assert isinstance(name, str), "%s is not a valid string" % str(name) 
 
         for part in self:
-            mypart = copy.copy(part)
             if part.get('name') == name:
-                mypart.set('is_part', True)
-                return mypart
+                return part
             elif part.get('antiname') == name:
-                mypart.set('is_part', False)
-                return mypart
+                return part
 
         return None
 

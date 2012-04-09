@@ -60,7 +60,7 @@ class ModelReader(base_objects.Model):
 
         # Extract external parameters
         external_parameters = self['parameters'][('external',)]
-
+        
         # Read in param_card
         if param_card:
             
@@ -162,3 +162,5 @@ class ModelReader(base_objects.Model):
 
         self.set('coupling_dict', dict([(coup.name, coup.value) \
                                         for coup in couplings]))
+        
+        return locals()

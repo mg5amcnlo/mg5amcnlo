@@ -1106,6 +1106,11 @@ class Cmd(CheckCmd, HelpCmd, CompleteCmd, BasicCmd):
                 text += '%s = %s \n' % (key,self.options[key])
             else:
                 text += '%s = %s \n' % (key,self.options[key])
+        
+        if not MADEVENT:
+            text += """\n# MG5 MAIN DIRECTORY\n"""
+            text += "mg5_path = %s\n" % MG5DIR         
+        
         writer = open(filepath,'w')
         writer.write(text)
         writer.close()
