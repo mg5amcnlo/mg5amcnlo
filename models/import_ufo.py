@@ -1081,9 +1081,7 @@ class RestrictModel(model_reader.ModelReader):
                     for use in  re_pat.findall(coupling.expr):
                         used.add(use)
         else:
-            print zero_parameters, one_parameters
             used = set([i for i in special_parameters if i])
-        print used 
              
         
         # simplify the regular expression
@@ -1108,13 +1106,10 @@ class RestrictModel(model_reader.ModelReader):
                 if simplify:
                     for use in  re_pat.findall(parameter.expr):
                         used.add(use)
-        print used
         # modify the object for those which are still used
         for param in used:
             if not param:
                 continue
-            print param
-            print param_info
             data = self['parameters'][param_info[param]['dep']]
             data.remove(param_info[param]['obj'])
             tag = param_info[param]['tag']

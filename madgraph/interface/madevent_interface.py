@@ -715,7 +715,6 @@ class CheckValidForCmd(object):
         """
         
         # Check that MG5 directory is present .
-        print self.options
         if MADEVENT and not self.options['mg5_path']:
             raise self.InvalidCmd, '''The automatic computations of widths requires that MG5 is installed on the system.
             You can install it and set his path in ./Cards/me5_configuration.txt'''
@@ -738,7 +737,8 @@ class CheckValidForCmd(object):
         if '-modelname' in open(pjoin(self.me_dir,'Cards','proc_card_mg5.dat')).read():
             model.pass_particles_name_in_mg_default()        
         model = model_reader.ModelReader(model)
-        particles_name = [p.get('name') for p in model.get('particles')]
+        particles_name = dict([(p.get('name'), p.get('pdg_code'))
+                                               for p in model.get('particles')])
         
         output = {'model': model, 'model':model, 'force': False, 'output': None, 
                   'input':None, 'particles': set()}
@@ -759,7 +759,9 @@ class CheckValidForCmd(object):
                 output['input'] = arg
             elif arg in particles_name:
                 # should be a particles
-                output['particles'].add(arg)
+                output['particles'].add(particles_name[arg])
+            elif int(arg) in particles_name.values():
+                output['particles'].add(eval(arg))
             else:
                 self.help_compute_widths()
                 raise self.InvalidCmd, '%s is not a valid argument for compute_widths' % arg
@@ -1782,6 +1784,9 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
         # Check argument's validity
         force, mode = self.check_generate_events(args)
         self.ask_run_configuration(mode, force)
+        #check that the param_card doesn't have a auto for the width
+        self.check_param_card(pjoin(self.me_dir,'Cards','param_card.dat'))
+        
         if not args:
             # No run name assigned -> assigned one automaticaly 
             self.set_run_name(self.find_available_run_name(self.me_dir), None, 'parton')
@@ -2275,9 +2280,9 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
         
         # find UFO particles linked to the require names. 
         decay_info = {}        
-        for name in args['particles']:
-            particle = model['particles'].find_name(name)
-            decay_info[particle.get('pdg_code')] = []
+        for pid in args['particles']:
+            particle = model.get_particle(pid)
+            decay_info[pid] = []
             for mode, expr in particle.partial_widths.items():
                 decay_to = [p.get('pdg_code') for p in mode]
                 value = eval(expr,{'cmath':cmath},data)
@@ -3682,7 +3687,9 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
                     path = pjoin(self.me_dir,'Cards','%s_card.dat' % answer)
                 else:
                     path = pjoin(self.me_dir,'Cards','delphes_trigger.dat')
-                self.exec_cmd('open %s' % path)                    
+                self.exec_cmd('open %s' % path)
+                if answer == 'param':
+                    self.check_param_card(path)                                    
             else:
                 # detect which card is provide
                 card_name = self.detect_card_type(answer)
@@ -3693,6 +3700,8 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
                 elif card_name != 'banner':
                     logger.info('copy %s as %s' % (answer, card_name))
                     files.cp(answer, pjoin(self.me_dir, 'Cards', card_name))
+                    if card_name == 'param_card.dat':
+                        self.check_param_card(pjoin(self.me_dir, 'Cards', card_name))                        
                 elif card_name == 'banner':
                     banner_mod.split_banner(answer, self.me_dir, proc_card=False)
                     logger.info('Splitting the banner in it\'s component')
@@ -3705,8 +3714,8 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
                                 break
                     else:
                         clean_pointless_card(mode)
-                    
-                    
+                    self.check_param_card(pjoin(self.me_dir, 'Cards', 'param_card.dat')) 
+
     ############################################################################
     def ask_pythia_run_configuration(self, mode=None, force=False):
         """Ask the question when launching pythia"""
@@ -3940,6 +3949,16 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
         else:
             return 'unknown'
 
+    def check_param_card(self, path):
+        """Check that all the width are define in the param_card.
+        If some width are set on 'Auto', call the computation tools."""
+        
+        pattern = re.compile(r'''decay\s+(\+?\-?\d+)\s+auto''',re.I)
+        text = open(path).read()
+        pdg = pattern.findall(text)
+        if pdg:
+            logger.info('Computing the width set on auto in the param_card.dat')
+            self.do_compute_widths('%s %s' % (' '.join(pdg), path))
 
 #===============================================================================
 # MadEventCmd

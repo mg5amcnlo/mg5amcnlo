@@ -96,6 +96,8 @@ class ModelReader(base_objects.Model):
                     except:
                         raise MadGraph5Error, '%s %s not define' % (block, id)
                     else:
+                        if isinstance(value, str) and value.lower() == 'auto':
+                            value = '0.0' 
                         exec("locals()[\'%s\'] = %s" % (parameter_dict[block][id].name,
                                           value))
                         parameter_dict[block][id].value = float(value)

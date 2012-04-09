@@ -139,6 +139,9 @@ def cp(path1, path2, log=True):
     except IOError, why:
         if log:
             logger.warning(why)
+    except shutil.Error:
+        # idetical file
+        pass
         
     
 def mv(path1, path2):
