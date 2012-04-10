@@ -1,0 +1,32 @@
+#*********************************************************************
+#                       MadGraph/MadEvent                            *
+#                  http://madgraph.hep.uiuc.edu                      *
+#                                                                    *
+#                        grid_card.dat                               *
+#                                                                    *
+#  This file is used to set the parameters of the run.               *
+#                                                                    *
+#  Some notation/conventions:                                        *
+#                                                                    *
+#   Lines starting with a '# ' are info or comments                  *
+#                                                                    *
+#   mind the format:   value    = variable     ! comment             *
+#*********************************************************************
+#
+#*******************                                                 
+# Running parameters
+#*******************                                                 
+#
+#*********************************************************************
+#  Tell if this is a grid run or not, false during warm-up on the    *
+#  cluster, automatically set to true after warm-up and the gridpack *
+#  is ready. The user should not change this.                        *
+#*********************************************************************
+  .false.   = GridRun   !True = Runs in the grid mode
+#*********************************************************************
+# Number of events and rnd seed                                      *
+#*********************************************************************
+  2500       = gevents ! Number of unweighted events requested 
+     1       = gseed   ! rnd seed
+    -1       = ngran   ! Granularity (minimum # events per channel)
+#*********************************************************************

@@ -3406,7 +3406,8 @@ class ProcessExporterFortranMEGroupComplexMass(ProcessExporterFortranMEGroup):
         #copy Helas Template
         cp(MG5DIR + '/aloha/template_files/Makefile_F', write_dir+'/makefile')
         for filename in os.listdir(os.path.join(MG5DIR,'aloha','template_files')):
-            if not filename.lower().endswith('.f'):
+            if not filename.lower().endswith('.f') and \
+              not filename.lower()=='loop_aloha_functions.f':
                 continue
             cp((MG5DIR + '/aloha/template_files/' + filename), write_dir)
         create_aloha.write_aloha_file_inc(write_dir, '.f', '.o')

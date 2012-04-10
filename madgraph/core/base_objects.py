@@ -1682,6 +1682,10 @@ class Vertex(PhysicsObject):
             # identity vertex or t-channel particle
             return 0
 
+        if leg.get('loop_line'):
+            # Loop lines never count as s-channel
+            return 0
+
         # Check if the particle number is <= ninitial
         # In that case it comes from initial and we should switch direction
         if leg.get('number') > ninitial:

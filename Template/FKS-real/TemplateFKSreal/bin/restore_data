@@ -1,0 +1,64 @@
+#!/bin/bash
+#
+#   Routine to copy all of the necessary results.dat files
+#   into the appropriate location so gen_grid_jobs has necessary
+#   information
+#
+#  
+#   First we need to get into the main directory
+#
+if [[  ! -d ./bin  ]]; then
+    cd ../
+    if [[ ! -d ./bin ]]; then
+	echo "Error: store must be executed from the main, or bin directory"
+	exit
+    fi
+fi
+if [[ ! -d SubProcesses ]]; then
+    echo "Error: SubProcesses directory not found"
+    exit
+fi
+cd SubProcesses
+if [[  "$1" == ""  ]]; then
+    echo 'Enter you must specify a name to store files under. (eg restore_data TeV)'     
+    exit
+fi
+
+
+if [[  "$1" == ""  ]]; then
+    echo 'Enter you must specify a name to store files under. (eg restore_data TeV)'     
+    exit
+fi
+
+
+cp  $1_results.dat results.dat  >& /dev/null
+for i in `cat subproc.mg` ; do
+    cd $i
+    echo $i
+    rm -f ftn25 ftn26 >& /dev/null
+    cp $1_results.dat results.dat  >& /dev/null
+    for k in G* ; do
+	if [[ ! -d $k ]]; then
+	    continue
+	fi
+	cd $k
+	for j in $1_results.dat ; do
+	    if [[ -e $j ]] ; then
+		cp  $j results.dat
+	    fi
+	done
+	for j in $1_ftn26.gz ; do
+	    if [[ -e $j ]]; then
+		rm -f ftn26 >& /dev/null
+		rm -f $1_ftn26 >& /dev/null
+		gunzip $j
+		cp $1_ftn26 ftn26
+		gzip $1_ftn26
+	    fi
+	done
+	cd ../
+    done
+    cd ../
+done
+
+

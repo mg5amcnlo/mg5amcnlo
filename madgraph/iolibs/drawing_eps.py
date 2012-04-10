@@ -224,15 +224,9 @@ class EpsDiagramDrawer(draw.DiagramDrawer):
         """ADD the EPS code for this neutralino line."""
         self.draw_wavy(line, type='r')
         self.draw_straight(line)  
-        
-    def draw_dotted(self, line):
-        """ADD the EPS code for this ghost line."""
-        #add the code in the correct format
-        self.text += self.line_format(line.begin.pos_x, line.begin.pos_y,
-                         line.end.pos_x, line.end.pos_y, 'Fghost')
              
     def draw_double(self, line, type='r'):
-        """ADD the EPS code for this neutralino line."""   
+        """ADD the EPS code for this neutralino line."""
         
         
         length = math.sqrt((line.end.pos_y - line.begin.pos_y)**2 + (line.end.pos_x - line.begin.pos_x) **2)

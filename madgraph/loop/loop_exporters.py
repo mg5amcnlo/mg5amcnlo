@@ -224,16 +224,16 @@ class LoopProcessExporterFortranSA(export_v4.ProcessExporterFortranSA,
                            len(matrix_element.get_all_amplitudes()))
 
         filename = "loop_matrix.ps"
-        writers.FortranWriter(filename).writelines("""C Post-helas generation loop-drawing is not ready yet.""")
-        plot = draw.MultiEpsDiagramDrawer(matrix_element.get('base_amplitude').\
-                                             get('loop_diagrams'),
-                                          filename,
-                                          model=matrix_element.get('processes')[0].\
-                                             get('model'),
-                                          amplitude='')
-        logger.info("Generating loop Feynman diagrams for " + \
-                     matrix_element.get('processes')[0].nice_string())
-        plot.draw()
+#        writers.FortranWriter(filename).writelines("""C Post-helas generation loop-drawing is not ready yet.""")
+#        plot = draw.MultiEpsDiagramDrawer(matrix_element.get('base_amplitude').\
+#                                             get('loop_diagrams'),
+#                                          filename,
+#                                          model=matrix_element.get('processes')[0].\
+#                                             get('model'),
+#                                          amplitude='')
+#        logger.info("Generating loop Feynman diagrams for " + \
+#                     matrix_element.get('processes')[0].nice_string())
+#        plot.draw()
 
         filename = "born_matrix.ps"
         plot = draw.MultiEpsDiagramDrawer(matrix_element.get('base_amplitude').\
@@ -361,9 +361,10 @@ class LoopProcessExporterFortranSA(export_v4.ProcessExporterFortranSA,
         replace_dict['mass_format'] = 'complex*16'
         replace_dict['mass_translation'] = 'M2L(I)'           
         
-        # specify what
+        # specify what scalar loop library must be used.
+        # For now we use AVH for both CMS and nonCMS outputs.
         if aloha.complex_mass:
-            replace_dict['loop_lib'] = 3
+            replace_dict['loop_lib'] = 2
         else:
             replace_dict['loop_lib'] = 2           
         
