@@ -2266,13 +2266,13 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
         perturbation_couplings = ""
         LoopOption= 'tree'
         HasBorn= True
-        valid_nlo_modes = ['all','real','virt','virt^2','tree']
+        valid_nlo_modes = ['all','real','virt','virtsqr','tree']
         if perturbation_couplings_re:
             perturbation_couplings = perturbation_couplings_re.group("pertOrders")
             option=perturbation_couplings_re.group("option")
             if option:
                 if option in valid_nlo_modes:
-                    if option=='virt^2':
+                    if option=='virtsqr':
                         LoopOption='virt'
                         HasBorn=False
                     else:

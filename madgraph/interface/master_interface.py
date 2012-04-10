@@ -61,7 +61,7 @@ class Switcher(object):
 
 
         
-    _valid_nlo_modes = ['all', 'real', 'virt', 'virt^2','tree']
+    _valid_nlo_modes = ['all', 'real', 'virt', 'virtsqr','tree']
 
     interface_names= {'MadGraph':('mg5',MGcmd.MadGraphCmd),
                       'Loop':('ML5',LoopCmd.LoopInterface),
@@ -198,7 +198,7 @@ class Switcher(object):
                     self.change_principal_cmd('FKS')
                 elif nlo_mode == 'real':
                     self.change_principal_cmd('FKS')
-                elif nlo_mode == 'virt' or nlo_mode == 'virt^2':
+                elif nlo_mode == 'virt' or nlo_mode == 'virtsqr':
                     self.change_principal_cmd('Loop')
                     
         return self.cmd.do_add(self, line, *args, **opts)
@@ -216,7 +216,7 @@ class Switcher(object):
                 self.change_principal_cmd('FKS')
             elif nlo_mode == 'real':
                 self.change_principal_cmd('FKS')
-            elif nlo_mode == 'virt' or nlo_mode == 'virt^2':
+            elif nlo_mode == 'virt' or nlo_mode == 'virtsqr':
                 self.change_principal_cmd('Loop')
         else:
             self.change_principal_cmd('MadGraph')
@@ -238,7 +238,7 @@ class Switcher(object):
                     self.change_principal_cmd('FKS')
                 elif nlo_mode == 'real':
                     self.change_principal_cmd('FKS')
-                elif nlo_mode == 'virt' or nlo_mode == 'virt^2':
+                elif nlo_mode == 'virt' or nlo_mode == 'virtsqr':
                     self.change_principal_cmd('Loop')
             else:
                 self.change_principal_cmd('MadGraph')

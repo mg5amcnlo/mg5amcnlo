@@ -48,6 +48,10 @@ class CheckLoop(mg_interface.CheckValidForCmd):
         
         mg_interface.MadGraphCmd.check_display(self,args)
         
+        if all([not amp['process']['has_born'] for amp in self._curr_amps]):
+            if args[0]=='diagrams' and len(args)>=2 and args[1]=='born':
+                raise self.InvalidCmd("Processes generated do not have born diagrams.")
+        
         if args[0]=='diagrams' and len(args)>=3 and args[1] not in ['born','loop']:
             raise self.InvalidCmd("Can only display born or loop diagrams, not %s."%args[1])
 
