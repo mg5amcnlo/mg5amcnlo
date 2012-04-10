@@ -128,7 +128,7 @@ class LoopExporterTest(unittest.TestCase):
         
         files=['CT_interface.f','check_sa.f','cts_mprec.h','loop_num.f',
                'nexternal.inc','born_matrix.f','coupl.inc',
-               'makefile','ngraphs.inc','born_matrix.ps','loop_matrix.ps',
+               'makefile','ngraphs.inc','born_matrix.ps',
                'cts_mpc.h','loop_matrix.f','mpmodule.mod','pmass.inc']
         for file in files:
             self.assertTrue(os.path.exists(os.path.join(_proc_file_path\
