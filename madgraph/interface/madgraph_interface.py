@@ -1896,7 +1896,6 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
                 # check if a particle is asked more than once
                 if len(request_part) > len(set(request_part)):
                     for p in request_part:
-                        print p, request_part.count(p),present_part.count(p)
                         if request_part.count(p) > present_part.count(p):
                             continue
                         

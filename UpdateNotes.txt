@@ -1,7 +1,11 @@
 Update notes for MadGraph 5 (in reverse time order)
 
+1.4.5 (11/04/12)  OM: correct pointless bug #975647 (SLAH convention problem) 
+                      Thanks to Sho Iwamoto
+                  OM: Improve cluster support (more secure and complete version)
+                  
 1.4.4 (29/03/12)  OM: Added a command: "output aloha" which allows to creates a 
-       		      subset (or all) of the aloha routines linked to the
+                      subset (or all) of the aloha routines linked to the
                       current model
                   OM: allow to choose the duration of the timer for the questions.
                       (via ./input/mg5_configuration.txt)

@@ -31,7 +31,7 @@ class ClusterManagmentError(MadGraph5Error):
 class NotImplemented(MadGraph5Error):
     pass
 
-def multiple_try(nb_try=5, sleep=1):
+def multiple_try(nb_try=5, sleep=20):
 
     def deco_retry(f):
         def deco_f_retry(*args, **opt):
@@ -41,7 +41,7 @@ def multiple_try(nb_try=5, sleep=1):
                 except KeyboardInterrupt:
                     raise
                 except:
-                    time.sleep(sleep)
+                    time.sleep(sleep * nb_try)
             raise
         return deco_f_retry
     return deco_retry
@@ -215,11 +215,11 @@ class CondorCluster(Cluster):
         idle, run, fail = 0, 0, 0
         for line in status.stdout:
             status = line.strip()
-            if status == 'I':
+            if status in ['I','U']:
                 idle += 1
             elif status == 'R':
                 run += 1
-            else:
+            elif status != 'C':
                 fail += 1
 
         return idle, run, self.submitted - (idle+run+fail), fail
@@ -240,6 +240,7 @@ class PBSCluster(Cluster):
     name = 'pbs'
     idle_tag = ['Q']
     running_tag = ['T','E','R']
+    complete_tag = ['C']
 
     @multiple_try()
     def submit(self, prog, argument=[], cwd=None, stdout=None, stderr=None, log=None):
@@ -324,6 +325,8 @@ class PBSCluster(Cluster):
                     idle += 1
                 elif status in self.running_tag:
                     run += 1
+                elif status in self.complete_tag:
+                    continue
                 else:
                     fail += 1
 
