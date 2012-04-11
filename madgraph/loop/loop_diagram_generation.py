@@ -381,20 +381,17 @@ class LoopAmplitude(diagram_generation.Amplitude):
             # Then make sure that the particle running in the loop for all diagrams belong to the set above.
             # Also make sure that there is at least one coupling order building the loop which is in the list
             # of the perturbed order.
-            valid_diag=False
-            if (diag.get_loop_line_types()-set(allowedpart))==set() and \
-              sum([loop_orders[order] for order in pert_loop_order])>=2:
-                valid_diag=True
-            elif not warned:
-                logger.warning("Some loop diagrams contributing to this process"+\
-                  " are discarded because they are not pure "+\
-                  '+'.join(self['process']['perturbation_couplings'])+\
-                  " perturbation. Make sure you did not want to include them.")
-                warned=True
-            # Additional filter ad-hoc for QCD to get rid of the loop non
-            # contributing because of color factors.
-            if valid_diag and 'QCD' in loop_orders.keys() and loop_orders['QCD']==1:
-                valid_diag=True
+            valid_diag=True
+            if (diag.get_loop_line_types()-set(allowedpart))!=set():
+                valid_diag=False
+                if not warned:
+                    logger.warning("Some loop diagrams contributing to this process"+\
+                      " are discarded because they are not pure "+\
+                      '+'.join(self['process']['perturbation_couplings'])+\
+                      " perturbation. Make sure you did not want to include them.")
+                    warned=True
+            if sum([loop_orders[order] for order in pert_loop_order])<2:
+                valid_diag=False
             if valid_diag:
                 newloopselection.append(diag)
 
