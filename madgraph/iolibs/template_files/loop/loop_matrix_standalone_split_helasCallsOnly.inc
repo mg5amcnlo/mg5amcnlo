@@ -95,8 +95,6 @@ C
       PARAMETER (NCOLORLOOP=%(ncolorloop)d, NCOLORBORN=%(ncolorborn)d)
 	  INTEGER    NCOMB
       PARAMETER (NCOMB=%(ncomb)d)
-	  INTEGER    NCOMBAMP
-      PARAMETER (NCOMBAMP=NCOMB*NLOOPAMPS)
       REAL*8     ZERO
       PARAMETER (ZERO=0D0)
       COMPLEX*16 IMAG1
@@ -124,17 +122,25 @@ C
       COMPLEX*16 AMPL(3,NLOOPAMPS), AMP(NBORNAMPS)
       COMPLEX*16 W(20,NWAVEFUNCS)
 	  LOGICAL GOODAMP(NLOOPAMPS,NCOMB)	
-	  DATA ((GOODAMP(I,J),I=1,NLOOPAMPS),J=1,NCOMB) / NCOMBAMP*.TRUE. /
 	  common/SPLIT/W,AMPL,AMP,GOODAMP
 C  
 C COLOR DATA
-C  
+C
 %(born_jamps_coefs)s	  
 %(loop_jamps_coefs)s
 %(color_data_lines)s
 C ----------
 C BEGIN CODE
 C ----------
+
+IF (NTRY.eq.1) THEN
+DO I=1,NLOOPAMPS
+  DO J=1,NCOMB
+    GOODAMP(I,J)=.TRUE.
+  ENDDO
+ENDDO
+ENDIF
+
 DO K=1, 3
   DO I=1, NLOOPAMPS
     AMPL(K,I)=(0.D0,0.D0)

@@ -132,11 +132,13 @@ C ----------
 C BEGIN CODE
 C ----------
 
-DO I=1,NLOOPAMPS
-  DO J=1,NCOMB
-    GOODAMP(I,J)=.TRUE.
+IF (NTRY.eq.1) then
+  DO I=1,NLOOPAMPS
+    DO J=1,NCOMB
+      GOODAMP(I,J)=.TRUE.
+    ENDDO
   ENDDO
-ENDDO
+ENDIF
 
 DO K=1, 3
   DO I=1, NLOOPAMPS
