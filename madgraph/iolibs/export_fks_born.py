@@ -280,6 +280,7 @@ class ProcessExporterFortranFKS_born(loop_exporters.LoopProcessExporterFortranSA
                      'madfks_mcatnlo.inc',
                      'madfks_plot.f',
                      'mint-integrator2.f',
+                     'MC_integer.f',
                      'mint.inc',
                      'montecarlocounter.f',
                      'q_es.inc',

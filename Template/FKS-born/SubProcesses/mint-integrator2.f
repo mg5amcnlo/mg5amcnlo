@@ -212,6 +212,7 @@ c iteration is finished; now rearrange the grid
          do kdim=1,ndim
             call regrid(xacc(0,kdim),xgrid(0,kdim),
      #           nhits(1,kdim),nintervals,nit)
+            call regrid_MC_integer
          enddo
       endif
 c the abs is to avoid tiny negative values

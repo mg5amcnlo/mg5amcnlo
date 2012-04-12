@@ -137,6 +137,7 @@ c From dsample_fks
       data firsttime /.true./
       integer nFKSprocessBorn
       save nFKSprocessBorn
+      double precision vol,sigintR
 c
       do i=1,99
          if (i.le.ndim) then
@@ -161,6 +162,8 @@ c Find the nFKSprocess for which we compute the Born-like contributions
             endif
          enddo
          nFKSprocessBorn=nFKSprocess
+         write (*,*) 'Total number of FKS directories is', fks_configs
+         write (*,*) 'For the Born we use nFKSprocess  #', nFKSprocess
       endif
 
       sigintF=0d0
@@ -207,19 +210,17 @@ c THIS CAN BE OPTIMIZED
                f_abs = f_abs+abs(result1)+abs(result2)
             enddo
          else                   ! Monte Carlo over nFKSprocess
-            rnd=ran2()
-            nFKSprocess=0
-            do while (nFKSprocess.lt.rnd*fks_configs)
-               nFKSprocess=nFKSprocess+1
-            enddo
+            call get_MC_integer(fks_configs,nFKSprocess,vol)
 c THIS CAN BE OPTIMIZED
             call fks_inc_chooser()
             call leshouche_inc_chooser()
             call setcuts
             call setfksfactor(iconfig)
-            wgt=1d0
+            wgt=1d0/vol
             call generate_momenta(ndim,iconfig,wgt,x,p)
             call dsigF(p,wgt,w,dsigS,dsigH)
+            sigintR = abs(w*dsigS)+abs(w*dsigH)
+            call fill_MC_integer(nFKSprocess,abs(sigintR)*vol)
             result1= w*dsigS
             result2= w*dsigH
             sigintF= sigintF+(result1+result2)*fks_configs

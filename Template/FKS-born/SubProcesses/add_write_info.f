@@ -740,9 +740,9 @@ c
       implicit none
       include "nexternal.inc"
 c      include 'fks.inc'
-      integer fks_i,fks_j,fks_j_from_i(nexternal,0:nexternal)
+      integer fks_j_from_i(nexternal,0:nexternal)
      &     ,particle_type(nexternal),pdg_type(nexternal)
-      common /c_fks_inc/fks_i,fks_j,fks_j_from_i,particle_type,pdg_type
+      common /c_fks_inc/fks_j_from_i,particle_type,pdg_type
       integer i
       integer i_fks,j_fks
       common/fks_indices/i_fks,j_fks
@@ -1185,15 +1185,14 @@ c
 
       subroutine put_on_MC_mshell_in(p,xm1,xm2,mfail)
       implicit none
-      double precision p(0:3,99),xm1,xm2
+      include 'nexternal.inc'
+      double precision p(0:3,nexternal),xm1,xm2
       integer mfail
       double precision xm1_r,xm2_r
 
       double precision ybst_til_tolab,ybst_til_tocm,sqrtshat,shat
       common/parton_cms_stuff/ybst_til_tolab,ybst_til_tocm,
      #                        sqrtshat,shat
-
-      include 'nexternal.inc'
       double precision xmcmass(nexternal)
       common/cxmcmass/xmcmass
 c
