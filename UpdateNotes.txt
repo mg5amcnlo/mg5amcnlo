@@ -1,6 +1,6 @@
 Update notes for MadGraph 5 (in reverse time order)
 
-1.4.5 (11/04/12)  OM: correct pointless bug #975647 (SLAH convention problem) 
+1.4.5 (11/04/12)  OM: correct a minor bug #975647 (SLAH convention problem) 
                       Thanks to Sho Iwamoto
                   OM: Improve cluster support (more secure and complete version)
                   

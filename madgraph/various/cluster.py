@@ -41,7 +41,7 @@ def multiple_try(nb_try=5, sleep=20):
                 except KeyboardInterrupt:
                     raise
                 except:
-                    time.sleep(sleep * nb_try)
+                    time.sleep(sleep * (i+1))
             raise
         return deco_f_retry
     return deco_retry
