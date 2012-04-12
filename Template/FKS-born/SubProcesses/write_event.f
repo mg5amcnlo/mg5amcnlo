@@ -172,12 +172,12 @@ c Find the nFKSprocess for which we compute the Born-like contributions
       if (ifl.eq.0)then
 c
 c Compute the Born-like contributions with nbodyonly=.true.
-c THIS CAN BE OPTIMIZED
 c     
          nFKSprocess=nFKSprocessBorn
          nbodyonly=.true.
          call fks_inc_chooser()
          call leshouche_inc_chooser()
+c THIS CAN BE OPTIMIZED
          call setcuts
          call setfksfactor(iconfig)
          wgt=1d0
@@ -191,40 +191,41 @@ c
 c Compute the subtracted real-emission corrections either as an explicit
 c sum or a Monte Carlo sum.
 c      
-         if (abrv.eq.'born' .or. abrv.eq.'grid' .or.
-     &        abrv(1:2).eq.'vi') return
-         nbodyonly=.false.
-         if (sum) then
+         if (.not.( abrv.eq.'born' .or. abrv.eq.'grid' .or.
+     &        abrv(1:2).eq.'vi') ) then
+            nbodyonly=.false.
+            if (sum) then
+               do nFKSprocess=1,fks_configs
+                  call fks_inc_chooser()
+                  call leshouche_inc_chooser()
 c THIS CAN BE OPTIMIZED
-            do nFKSprocess=1,fks_configs
+                  call setcuts
+                  call setfksfactor(iconfig)
+                  wgt=1d0
+                  call generate_momenta(ndim,iconfig,wgt,x,p)
+                  call dsigF(p,wgt,w,dsigS,dsigH)
+                  result1= w*dsigS
+                  result2= w*dsigH
+                  sigintF= sigintF+result1+result2
+                  f_abs = f_abs+abs(result1)+abs(result2)
+               enddo
+            else                ! Monte Carlo over nFKSprocess
+               call get_MC_integer(fks_configs,nFKSprocess,vol)
                call fks_inc_chooser()
                call leshouche_inc_chooser()
+c THIS CAN BE OPTIMIZED
                call setcuts
                call setfksfactor(iconfig)
-               wgt=1d0
+               wgt=1d0/vol
                call generate_momenta(ndim,iconfig,wgt,x,p)
                call dsigF(p,wgt,w,dsigS,dsigH)
+               sigintR = abs(dsigS)+abs(dsigH)
+               call fill_MC_integer(nFKSprocess,abs(sigintR)*vol*w)
                result1= w*dsigS
                result2= w*dsigH
                sigintF= sigintF+result1+result2
                f_abs = f_abs+abs(result1)+abs(result2)
-            enddo
-         else                   ! Monte Carlo over nFKSprocess
-            call get_MC_integer(fks_configs,nFKSprocess,vol)
-c THIS CAN BE OPTIMIZED
-            call fks_inc_chooser()
-            call leshouche_inc_chooser()
-            call setcuts
-            call setfksfactor(iconfig)
-            wgt=1d0/vol
-            call generate_momenta(ndim,iconfig,wgt,x,p)
-            call dsigF(p,wgt,w,dsigS,dsigH)
-            sigintR = abs(w*dsigS)+abs(w*dsigH)
-            call fill_MC_integer(nFKSprocess,abs(sigintR)*vol)
-            result1= w*dsigS
-            result2= w*dsigH
-            sigintF= sigintF+(result1+result2)*fks_configs
-            f_abs = f_abs+(abs(result1)+abs(result2))*fks_configs
+            endif
          endif
          sigintF_save=sigintF
          f_abs_save=f_abs
