@@ -5622,47 +5622,7 @@ c      include 'fks.inc'
 c Particle types (=color) of i_fks, j_fks and fks_mother
       integer i_type,j_type,m_type
       common/cparticle_types/i_type,j_type,m_type
-
-
-c$$$c First check if we need to integrate this directory
-c$$$c The file "integrate.fks" should have been created by genint_fks
-c$$$      open(unit=19,file="integrate.fks",status="old",err=99)
-c$$$      read(19,'(a)') integrate
-c$$$      if (integrate.eq.'N') then
-c$$$         read(19,'(I2)') config_fks
-c$$$         write (*,*) 'No need to integrate this directory...'
-c$$$         write (*,*) 'Integrate directory number ',config_fks,' instead'
-c$$$         stop
-c$$$      elseif (integrate.eq.'Y') then
-c$$$         write (*,*)
-c$$$     &        'This directory should be included for symmetry reasons'
-c$$$      else
-c$$$         write (*,*) "Don't know what to do: ", integrate
-c$$$         stop
-c$$$      endif
-c$$$      close(19)
-c When doing nbodyonly, we should check that we need this dir or not
-c The file "nbodyonly.fks" should have been created by genint_fks
-      if (nbodyonly) then
-
-c$$$         write (*,*) 'nbodyonly option not implemented'
-c$$$         stop
-
-c$$$         open(unit=19,file="nbodyonly.fks",status="old",err=99)
-c$$$         read(19,'(a)') integrate
-c$$$         if (integrate.eq.'N') then
-c$$$            write (*,*) 'No need to integrate this directory when'//
-c$$$     &           ' doing only the n-body integration'
-c$$$            stop
-c$$$         elseif (integrate.eq.'Y') then
-c$$$            write (*,*) 'This directory should be included for n-body'
-c$$$         else
-c$$$            write (*,*) "Don't know what to do: ", integrate
-c$$$            stop
-c$$$         endif
-c$$$         close(19)
-      endif
-
+c
 c Check to see if this channel needs to be included in the multi-channeling
       diagramsymmetryfactor=0d0
       if (multi_channel) then
@@ -5728,10 +5688,7 @@ c parametrization allows it
       softtest=.false.
       colltest=.false.
       fold=0
-c$$$      open (unit=19,file="config.fks",status="old")
-c$$$      read (19,*) config_fks
-c$$$      close (19)
-c$$$      if (fks_j(config_fks).gt.nincoming)then
+
       if (j_fks.gt.nincoming)then
          delta_used=deltaO
       else
@@ -5796,13 +5753,6 @@ c
       fkssymmetryfactorDeg=0d0
       fkssymmetryfactorBorn=0d0
 
-c$$$      i_fks=fks_i(config_fks)
-c$$$      j_fks=fks_j(config_fks)
-c$$$      if (i_fks.le.j_fks) then
-c$$$         write (*,*) 'ERROR in setfksfactor, i_fks.le.j_fks: '//
-c$$$     &        'terrible things might happen',i_fks,j_fks
-c$$$         stop
-c$$$      endif
       i_fks_pdg=pdg_type(i_fks)
       j_fks_pdg=pdg_type(j_fks)
       
@@ -5856,10 +5806,6 @@ c THESE TESTS WORK ONLY FOR FINAL STATE SINGULARITIES
          fkssymmetryfactor=dble(ngluons)
          fkssymmetryfactorDeg=dble(ngluons)
          fkssymmetryfactorBorn=dble(ngluons)
-c$$$         write (*,*) 'nbodyonly: fks symmetry factor has been put to ',
-c$$$     &        fkssymmetryfactor
-c$$$         write (*,*) 'nbodyonly, fks symmetry factor for Born has'//
-c$$$     &        ' been put to ', fkssymmetryfactorBorn
       else
          fkssymmetryfactor=dble(fac_i*fac_j)
          fkssymmetryfactorDeg=dble(fac_i*fac_j)
@@ -5874,9 +5820,6 @@ c$$$     &        ' been put to ', fkssymmetryfactorBorn
             fkssymmetryfactor=0d0
             fkssymmetryfactorDeg=0d0
          endif
-c$$$         write (*,*) 'fks symmetry factor is ', fkssymmetryfactor
-c$$$         write (*,*) 'fks symmetry factor for Born is ',
-c$$$     &        fkssymmetryfactorBorn
       endif
 
       if ((abrv.eq.'born' .or. abrv.eq.'grid' .or. abrv(1:2).eq.'vi')

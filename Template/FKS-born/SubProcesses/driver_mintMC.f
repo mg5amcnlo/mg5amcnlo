@@ -81,6 +81,10 @@ c For tests
      &                 total_wgt_sum_min
       common/csum_of_wgts/total_wgt_sum,total_wgt_sum_max,
      &                 total_wgt_sum_min
+
+      logical            flat_grid
+      common/to_readgrid/flat_grid                !Tells if grid read from file
+
 c For MINT:
       include "mint.inc"
       real * 8 xgrid(0:nintervals,ndimmax),xint,ymax(nintervals,ndimmax)
@@ -131,6 +135,11 @@ c
       write(*,*) "getting user params"
       call get_user_params(ncall,itmax,iconfig,imode,
      &     ixi_i,iphi_i,iy_ij,SHsep)
+      if(imode.eq.0)then
+        flat_grid=.true.
+      else
+        flat_grid=.false.
+      endif
 c$$$      call setfksfactor(iconfig)
       ndim = 3*(nexternal-2)-4
       if (abs(lpp(1)) .ge. 1) ndim=ndim+1
