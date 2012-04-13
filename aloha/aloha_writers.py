@@ -2,8 +2,9 @@ try:
     import madgraph.iolibs.file_writers as writers 
 except:
     import aloha.file_writers as writers
-
-
+    
+import aloha
+    
 import os
 import re 
 from numbers import Number
@@ -18,7 +19,8 @@ class WriteALOHA:
     extension = ''
     type_to_variable = {2:'F',3:'V',5:'T',1:'S'}
     type_to_size = {'S':3, 'T':18, 'V':6, 'F':6}
-    
+
+
     def __init__(self, abstract_routine, dirpath):
 
 
@@ -238,14 +240,7 @@ class WriteALOHA:
             global_sign = -1
         
         flipped = [2*(int(c[1:])-1) for c in self.tag if c.startswith('C')]
-#        if self.offshell % 2:
-#             not_flip = self.offshell - 1
-#             if not_flip in flipped:
-#                 flipped.remove(not_flip)
-#        else:
-#             not_flip = self.offshell - 2
-#             if not_flip in flipped:
-#                 flipped.remove(not_flip)           
+         
         
         for index, spin in enumerate(self.particles): 
             assert(spin in ['S','F','V','T'])  
@@ -331,11 +326,21 @@ class ALOHAWriterForFortran(WriteALOHA):
         else:
             if not alredy_update:
                 declare_list.append('double complex denom')
-                declare_list.append('double precision M%(id)d, W%(id)d' % 
+                if aloha.complex_mass:
+                    declare_list.append('double complex M%(id)d' % 
                                                           {'id': self.outgoing})
-            call_arg = '%(args)s, COUP, M%(id)d, W%(id)d, %(spin)s%(id)d' % \
+                else:
+                    declare_list.append('double precision M%(id)d, W%(id)d' % 
+                                                          {'id': self.outgoing})
+            if aloha.complex_mass:
+                call_arg = '%(args)s, COUP, M%(id)d, %(spin)s%(id)d' % \
                     {'args': ', '.join(CallList), 
-                     'spin': self.particles[self.offshell -1],
+                     'spin': self.particles[self.outgoing -1],
+                     'id': self.outgoing}
+            else:
+                call_arg = '%(args)s, COUP, M%(id)d, W%(id)d, %(spin)s%(id)d' % \
+                    {'args': ', '.join(CallList), 
+                     'spin': self.particles[self.outgoing -1],
                      'id': self.outgoing}
             str_out = ' subroutine %s(%s)\n' % (name, call_arg) 
 
@@ -352,6 +357,8 @@ class ALOHAWriterForFortran(WriteALOHA):
                 str_out += 'double complex ' + '(0:3),'.join(Momenta) + '(0:3)\n'
             else:
                 str_out += 'double precision ' + '(0:3),'.join(Momenta) + '(0:3)\n'
+        if self.offshell and aloha.complex_mass:
+            str_out += 'double complex Complex_M\n'
 
         # Add entry for symmetry
         #str_out += '\n'
@@ -433,7 +440,6 @@ class ALOHAWriterForFortran(WriteALOHA):
                 str_out += '%s(2) = %s dimag(%s%d(%d))\n' % (mom, sign, type, index, energy_pos + 1)
                 str_out += '%s(3) = %s dimag(%s%d(%d))\n' % (mom, sign, type, index, energy_pos)            
             
-                   
                 # Definition for the One Over Mass**2 terms
                 for elem in overm:
                     #Mom is in format OMX with X the number of the particle
@@ -513,8 +519,12 @@ class ALOHAWriterForFortran(WriteALOHA):
     def define_symmetry(self, new_nb):
         number = self.offshell 
         calls = self.calllist['CallList']
-                                                                
-        Outstring = 'call '+self.namestring+'('+','.join(calls)+',COUP,M%s,W%s,%s%s)\n' \
+        
+        if aloha.complex_mass:
+            Outstring = 'call '+self.namestring+'('+','.join(calls)+',COUP,M%s,%s%s)\n' \
+                         %(number,self.particles[number-1],number)
+        else:                                                      
+            Outstring = 'call '+self.namestring+'('+','.join(calls)+',COUP,M%s,W%s,%s%s)\n' \
                          %(number,number,self.particles[number-1],number)
         return Outstring
     
@@ -597,7 +607,14 @@ class ALOHAWriterForFortran(WriteALOHA):
             main = '%(spin)s%(id)d' % \
                           {'spin': self.particles[offshell -1],
                            'id': self.outgoing}
-            call_arg = '%(args)s, %(COUP)s, M%(id)d, W%(id)d, %(LAST)s' % \
+            if aloha.complex_mass:
+                call_arg = '%(args)s, %(COUP)s, M%(id)d, %(LAST)s' % \
+                    {'args': ', '.join(self.calllist['CallList']), 
+                     'COUP':'COUP%d',
+                     'id': self.outgoing,
+                     'LAST': '%s'}
+            else:
+                    call_arg = '%(args)s, %(COUP)s, M%(id)d, W%(id)d, %(LAST)s' % \
                     {'args': ', '.join(self.calllist['CallList']), 
                      'COUP':'COUP%d',
                      'id': self.outgoing,
@@ -739,6 +756,13 @@ class ALOHAWriterForCPP(WriteALOHA):
             str_out = 'void %(name)s(%(args)s, complex<double>& vertex)' % \
                {'name': name,
                 'args': ','.join(CallList + ['complex<double> COUP'])}
+        elif aloha.complex_mass:
+            str_out = 'void %(name)s(%(args)s, complex M%(number)d, complex<double>%(out)s%(number)d[])' % \
+              {'name': name,
+               'args': ','.join(CallList+ ['complex<double> COUP']),
+               'out': self.particles[self.outgoing - 1],
+               'number': self.outgoing
+               }            
         else: 
             str_out = 'void %(name)s(%(args)s, double M%(number)d, double W%(number)d, complex<double>%(out)s%(number)d[])' % \
               {'name': name,
@@ -894,7 +918,11 @@ class ALOHAWriterForCPP(WriteALOHA):
         #calls = [self.remove_double.match(call).group('name') for call in \
         #         calls]
         number = self.offshell 
-        Outstring = self.namestring+'('+','.join(calls)+',COUP,M%s,W%s,%s%s);\n' \
+        if aloha.complex_mass:
+            Outstring = self.namestring+'('+','.join(calls)+',COUP,M%s,%s%s);\n' \
+                         %(number, self.particles[self.offshell-1], number)
+        else:
+            Outstring = self.namestring+'('+','.join(calls)+',COUP,M%s,W%s,%s%s);\n' \
                          %(number,number,self.particles[self.offshell-1],number)
         return Outstring
     
@@ -1020,6 +1048,15 @@ class ALOHAWriterForCPP(WriteALOHA):
                      'COUP':'COUP%d',
                      'spin': self.particles[self.offshell -1],
                      'LAST': '%s'}
+        elif aloha.complex_mass:
+            main = '%(spin)s%(id)d' % \
+                          {'spin': self.particles[self.offshell -1],
+                           'id': self.offshell}
+            call_arg = '%(args)s, %(COUP)s, M%(id)d, %(LAST)s' % \
+                    {'args': ', '.join(self.calllist['CallList']), 
+                     'COUP':'COUP%d',
+                     'id': self.offshell,
+                     'LAST': '%s'}            
         else:
             main = '%(spin)s%(id)d' % \
                           {'spin': self.particles[self.offshell -1],
@@ -1178,6 +1215,7 @@ class ALOHAWriterForPython(WriteALOHA):
         else:
             OffShellParticle = '%s%d' % (self.particles[self.offshell-1],\
                                                                   self.offshell)
+
             numerator = self.obj.numerator
             denominator = self.obj.denominator
             for ind in denominator.listindices():
@@ -1219,10 +1257,16 @@ class ALOHAWriterForPython(WriteALOHA):
                 {'name': name,
                  'args': ','.join(CallList+ ['COUP']) }
         else:
-            str_out += 'def %(name)s(%(args)s, COUP, M%(id)d, W%(id)d):\n' % \
-                {'name': name,
-                 'args': ', '.join(CallList), 
-                     'id': self.outgoing}            
+            if aloha.complex_mass:
+                str_out += 'def %(name)s(%(args)s, COUP, M%(id)d):\n' % \
+                    {'name': name,
+                     'args': ', '.join(CallList), 
+                     'id': self.outgoing}
+            else:
+                str_out += 'def %(name)s(%(args)s, COUP, M%(id)d, W%(id)d):\n' % \
+                    {'name': name,
+                     'args': ', '.join(CallList), 
+                     'id': self.outgoing}           
         return str_out     
 
     def make_declaration_list(self):
@@ -1295,14 +1339,17 @@ class ALOHAWriterForPython(WriteALOHA):
             index = int(elem[2:])
             str_out += 'OM%d = 0.0\n' % (index)
             str_out += 'if (M%d): OM%d' % (index, index) + '=1.0/M%d**2\n' % (index) 
-        
         # Returning result
         return str_out    
 
     def define_symmetry(self, new_nb):
         number = self.offshell 
         calls = self.calllist['CallList']
-        Outstring = 'return '+self.namestring+'('+','.join(calls)+',COUP,M%s,W%s)\n' \
+        if aloha.complex_mass:
+            Outstring = 'return '+self.namestring+'('+','.join(calls)+',COUP,M%s)\n' \
+                         %(number)
+        else:
+            Outstring = 'return '+self.namestring+'('+','.join(calls)+',COUP,M%s,W%s)\n' \
                          %(number,number)
         return Outstring        
 
@@ -1345,10 +1392,6 @@ class ALOHAWriterForPython(WriteALOHA):
 
         # write head - momenta - body - foot
         text = ''
-        #if mode == 'mg5':
-        #    text = 'import aloha.template_files.wavefunctions as wavefunctions\n'
-        #else:
-        #    text = 'import wavefunctions\n'
                     
                  
         # write header 
@@ -1372,10 +1415,17 @@ class ALOHAWriterForPython(WriteALOHA):
             main = '%(spin)s%(id)d' % \
                           {'spin': self.particles[self.offshell -1],
                            'id': self.outgoing}
-            call_arg = '%(args)s, %(COUP)s, M%(id)d, W%(id)d' % \
+            if aloha.complex_mass:
+                call_arg = '%(args)s, %(COUP)s, M%(id)d' % \
                     {'args': ', '.join(self.calllist['CallList']), 
                      'COUP':'COUP%d',
                      'id': self.outgoing}
+            else:
+                call_arg = '%(args)s, %(COUP)s, M%(id)d, W%(id)d' % \
+                    {'args': ', '.join(self.calllist['CallList']), 
+                     'COUP':'COUP%d',
+                     'id': self.outgoing}
+                    
 
         # make the first call
         line = "    %s = %s%s("+call_arg+")\n"

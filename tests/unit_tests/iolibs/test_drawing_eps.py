@@ -207,8 +207,8 @@ if __name__ == '__main__':
     process_diag['w+ w- > w+ w- z z'] = [7,9,10]
     process_diag['OUTPUT: w+ w- > w+ w- z z'] = [7,9,10]
     
-    from madgraph.interface.cmd_interface import MadGraphCmdShell
-    cmd = MadGraphCmdShell()
+    from madgraph.interface.master_interface import MasterCmdS
+    cmd = MasterCmd()
     cmd.exec_cmd('import model %s/models/sm' % root_path)
     #cmd.do_import('model_v4 ' + os.path.join(_file_path, \
     #                                    '../input_files/v4_sm_particles.dat'))

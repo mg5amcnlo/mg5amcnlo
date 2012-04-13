@@ -220,13 +220,12 @@ class AbstractRoutineBuilder(object):
             lorentz = self.routine_kernel
             aloha_lib.USE_TAG = set(self.kernel_tag) 
             
-            
         for (i, spin ) in enumerate(self.spins):   
             id = i + 1
                      
             #Check if this is the outgoing particle
             if id == outgoing:
-                if spin == 1: 
+                if abs(spin) == 1: 
                     lorentz *= complex(0,1)
                 elif spin == 2:
                     # shift and flip the tag if we multiply by C matrices
@@ -253,7 +252,7 @@ class AbstractRoutineBuilder(object):
                                 'The spin value %s is not supported yet' % spin)
             else:
                 # This is an incoming particle
-                if spin == 1:
+                if abs(spin) == 1:
                     lorentz *= Scalar(id)
                 elif spin == 2:
                     # shift the tag if we multiply by C matrices

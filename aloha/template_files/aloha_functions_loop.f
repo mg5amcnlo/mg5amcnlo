@@ -1103,7 +1103,7 @@ c momentum q, so it is not implemented yet.
       
       COMPLEX*16 Q(0:3)
       COMPLEX*16 RES
-      REAL*8 M
+      COMPLEX*16 M
       COMPLEX*16 AMPS(12) 
 
       RES=(0.D0,0.D0)
@@ -1115,7 +1115,7 @@ c momentum q, so it is not implemented yet.
      &    (Q(1)-(0.0d0,1.0d0)*Q(2))*AMPS(6)+
      &    (Q(1)+(0.0d0,1.0d0)*Q(2))*AMPS(7)+
      &    (Q(0)-Q(3))*AMPS(8)
-      IF (M.NE.0.D0) THEN
+      IF (M.NE.(0.D0,0.D0)) THEN
         RES=RES-M*(AMPS(9)+AMPS(10)+AMPS(11)+AMPS(12))
       ENDIF
 
@@ -1144,7 +1144,7 @@ c momentum q, so it is not implemented yet.
       COMPLEX*16 Q(0:3)
       INTEGER CFIG,J
       LOGICAL SCD
-      REAL*8 M
+      COMPLEX*16 M
       COMPLEX*16 W(20)
 
       IF (CFIG.EQ.1) THEN
@@ -1198,7 +1198,7 @@ C     REVERSE THE MOMENTUM IN THE WF FOR THE SECOND L-CUT SPINORS
       COMPLEX*16 Q(0:3)
       INTEGER CFIG
       LOGICAL SCD
-      REAL*8 M
+      COMPLEX*16 M
       COMPLEX*16 W(20)
 
       W(1)=(0.d0,0.d0)
@@ -1299,7 +1299,7 @@ C     REVERSE THE MOMENTUM IN THE WF FOR THE SECOND L-CUT SPINORS
       COMPLEX*16 Q(0:3)
       INTEGER CFIG
       LOGICAL SCD
-      REAL*8 M
+      COMPLEX*16 M
       COMPLEX*16 W(20)
 
       IF (CFIG.EQ.1) THEN
@@ -1350,7 +1350,7 @@ C     REVERSE THE MOMENTUM IN THE WF FOR THE SECOND L-CUT SPINORS
       COMPLEX*16 Q(0:3)
       INTEGER CFIG
       LOGICAL SCD      
-      REAL*8 M
+      COMPLEX*16 M
       COMPLEX*16 W(20)
 
       IF (M.NE.0.D0) THEN
@@ -1387,7 +1387,7 @@ C     REVERSE THE MOMENTUM IN THE WF FOR THE SECOND L-CUT VECTORS
       SUBROUTINE LCUT_S(Q,M,CFIG,SCD,W)
 
       COMPLEX*16 Q(0:3)
-      REAL*8 M
+      COMPLEX*16 M
       INTEGER CFIG
       LOGICAL SCD      
       COMPLEX*16 W(20)

@@ -405,7 +405,27 @@ class MG5Runner(MG4Runner):
         """Create a proc_card.dat string following v5 conventions."""
 
         v5_string = "import model_v4 %s\n" % os.path.join(self.model_dir, model)
+        v5_string += "set automatic_html_opening False\n"
+        couplings = ' '.join(["%s=%i" % (k, v) for k, v in orders.items()])
 
+        for i, proc in enumerate(proc_list):
+            v5_string += 'add process ' + proc + ' ' + couplings + \
+                         '@%i' % i + '\n'
+        v5_string += "output standalone %s -f\n" % \
+                     os.path.join(self.mg4_path, self.temp_dir_name)
+
+        return v5_string
+    
+class MG5_UFO_Runner(MG5Runner):
+    
+    name = 'UFO-ALOHA-MG5'
+    type = 'ufo'
+    
+    def format_mg5_proc_card(self, proc_list, model, orders):
+        """Create a proc_card.dat string following v5 conventions."""
+
+        v5_string = "import model %s \n" % os.path.join(self.model_dir, model)
+        v5_string += "set automatic_html_opening False\n"
         couplings = ' '.join(["%s=%i" % (k, v) for k, v in orders.items()])
 
         for i, proc in enumerate(proc_list):
@@ -416,15 +436,25 @@ class MG5Runner(MG4Runner):
 
         return v5_string
 
-class MG5_UFO_Runner(MG5Runner):
+class MG5_UFO_gauge_Runner(MG5Runner):
     
-    name = 'UFO-ALOHA-MG5'
-    type = 'ufo'
+    #name = 'MG5_gauge'
+    #type = 'ufo_cms'
+    
+    def __init__(self, cms, gauge):
+        self.cms = cms
+        self.gauge = gauge
+        self.type =  '%s_%s' %(self.cms, self.gauge)
+        self.name =  'MG5_%s_%s' %(self.cms, self.gauge)
     
     def format_mg5_proc_card(self, proc_list, model, orders):
         """Create a proc_card.dat string following v5 conventions."""
 
-        v5_string = "import model %s \n" % os.path.join(self.model_dir, model)
+        v5_string = 'import model sm_mw \n'
+        v5_string += "set automatic_html_opening False\n"
+        v5_string += 'set complex_mass_scheme %s \n' % self.cms
+        v5_string += 'set gauge %s \n' % self.gauge
+        v5_string += "import model %s \n" % os.path.join(self.model_dir, model)
 
         couplings = ' '.join(["%s=%i" % (k, v) for k, v in orders.items()])
 
@@ -433,6 +463,9 @@ class MG5_UFO_Runner(MG5Runner):
                          '@%i' % i + '\n'
         v5_string += "output standalone %s -f\n" % \
                      os.path.join(self.mg4_path, self.temp_dir_name)
+                     
+        v5_string += 'set complex_mass_scheme False \n'
+        v5_string += 'set gauge unitary \n'
 
         return v5_string
 
@@ -518,7 +551,7 @@ class MG5_UFO_OldRunner(MG5OldRunner):
         """Create a proc_card.dat string following v5 conventions."""
 
         v5_string = "import model %s \n" % model
-
+        v5_string += "set automatic_html_opening False\n"
         couplings = ' '.join(["%s=%i" % (k, v) for k, v in orders.items()])
 
         for i, proc in enumerate(proc_list):
@@ -543,7 +576,7 @@ class MG5_CPP_Runner(MG5Runner):
         """Create a proc_card.dat string following v5 conventions."""
 
         v5_string = "import model %s \n" % model
-
+        v5_string += "set automatic_html_opening False\n"
         couplings = ' '.join(["%s=%i" % (k, v) for k, v in orders.items()])
 
         for i, proc in enumerate(proc_list):
@@ -692,7 +725,7 @@ class MEComparator(object):
             logging.info(" Done in %0.3f s" % (cpu_time2 - cpu_time1))
             logging.info(" (%i/%i with zero ME)" % \
                     (len([res for res in self.results[-1] if res[0][0] == 0.0]),
-                     len(proc_list)))
+                     len(proc_list)))         
 
     def cleanup(self):
         """Call cleanup for each MERunner."""
@@ -811,6 +844,109 @@ class MEComparator(object):
 
         test_object.assertEqual(fail_str, "Failed for processes:")
 
+class MEComparatorGauge(MEComparator):
+    """Base object to run comparison tests. Take standard MERunner objects and
+    a list of proc as an input and return detailed comparison tables in various
+    formats."""
+    
+    def output_result(self, filename=None, tolerance=3e-06, skip_zero=True):
+        """Output result as a nicely formated table. If filename is provided,
+        write it to the file, else to the screen. Tolerance can be adjusted."""
+
+        proc_col_size = 18
+
+        for proc in self.proc_list:
+            if len(proc) + 1 > proc_col_size:
+                proc_col_size = len(proc) + 1
+        
+        col_size = 18
+
+        pass_proc = 0
+        fail_proc = 0
+
+        failed_proc_list = []
+
+        res_str = "\n" + self._fixed_string_length("Process", proc_col_size) + \
+                ''.join([self._fixed_string_length(runner.name, col_size) for \
+                           runner in self.me_runners]) + \
+                  self._fixed_string_length("Diff both unit", col_size) + \
+                  self._fixed_string_length("Diff both cms", col_size) + \
+                  self._fixed_string_length("Diff both fixw", col_size) + \
+                  self._fixed_string_length("Diff both feyn", col_size) + \
+                  "Result"
+
+        for i, proc in enumerate(self.proc_list):
+            list_res = [res[i][0][0] for res in self.results]            
+            
+            diff_feyn = abs(list_res[1] - list_res[2]) / \
+                       (list_res[1] + list_res[2] + 1e-99)
+            diff_unit = abs(list_res[0] - list_res[3]) / \
+                       (list_res[0] + list_res[3] + 1e-99)
+            diff_cms = abs(list_res[0] - list_res[1]) / \
+                       (list_res[0] + list_res[1] + 1e-99)
+            diff_fixw = abs(list_res[2] - list_res[3]) / \
+                       (list_res[2] + list_res[3] + 1e-99)
+
+            res_str += '\n' + self._fixed_string_length(proc, proc_col_size)+ \
+                       ''.join([self._fixed_string_length("%1.10e" % res,
+                                               col_size) for res in list_res])
+
+            res_str += self._fixed_string_length("%1.10e" % diff_unit, col_size)
+            res_str += self._fixed_string_length("%1.10e" % diff_cms, col_size)
+            res_str += self._fixed_string_length("%1.10e" % diff_fixw, col_size)
+            res_str += self._fixed_string_length("%1.10e" % diff_feyn, col_size)
+                        
+            if diff_feyn < 1e-2 and diff_cms < 1e-6 and diff_fixw < 1e-4 and \
+               diff_unit < 1e-2:
+                pass_proc += 1
+                res_str += "Pass"
+            else:
+                fail_proc += 1
+                failed_proc_list.append(proc)
+                res_str += "Fail"
+
+        res_str += "\nSummary: %i/%i passed, %i/%i failed" % \
+                    (pass_proc, pass_proc + fail_proc,
+                     fail_proc, pass_proc + fail_proc)
+
+        if fail_proc != 0:
+            res_str += "\nFailed processes: %s" % ', '.join(failed_proc_list)
+
+        logging.info(res_str)
+
+        if filename:
+            file = open(filename, 'w')
+            file.write(res_str)
+            file.write(str(failed_proc_list))
+            file.close()
+
+    def assert_processes(self, test_object, tolerance = 1e-06):
+        """Run assert to check that all processes passed comparison""" 
+
+        col_size = 17
+        fail_proc = 0
+        fail_str = ""
+        for i, proc in enumerate(self.proc_list):
+            list_res = [res[i][0][0] for res in self.results]
+            if max(list_res) == 0.0 and min(list_res) == 0.0:
+                diff = 0.0           
+                continue
+            
+            diff_feyn = abs(list_res[1] - list_res[2]) / \
+                       (list_res[1] + list_res[2] + 1e-99)
+            diff_unit = abs(list_res[0] - list_res[3]) / \
+                       (list_res[0] + list_res[3] + 1e-99)
+            diff_cms = abs(list_res[0] - list_res[1]) / \
+                       (list_res[0] + list_res[1] + 1e-99)
+            diff_fixw = abs(list_res[2] - list_res[3]) / \
+                       (list_res[2] + list_res[3] + 1e-99)
+                       
+            if diff_feyn > 1e-2 or diff_cms > 1e-6 or diff_fixw > 1e-4 or \
+               diff_unit > 1e-2:                
+                fail_str += proc+" "
+
+        test_object.assertEqual(fail_str, "")    
+    
 def create_proc_list(part_list, initial=2, final=2, charge_conservation=True):
     """Helper function to automatically create process lists starting from 
     a particle list."""

@@ -23,6 +23,8 @@ import re
 import shutil
 import subprocess
 
+import aloha
+
 import madgraph.core.base_objects as base_objects
 import madgraph.core.color_algebra as color
 import madgraph.core.helas_objects as helas_objects
@@ -316,6 +318,7 @@ class LoopProcessExporterFortranSA(export_v4.ProcessExporterFortranSA,
         
         replace_dict = {}
         
+        replace_dict['mass_format']="complex*16"
         replace_dict['nexternal']=(matrix_element.get_nexternal_ninitial()[0]-2)
         loop_helas_calls=fortran_model.get_loop_amplitude_helas_calls(matrix_element)
         replace_dict['maxlcouplings']=matrix_element.find_max_loop_coupling()
@@ -353,7 +356,18 @@ class LoopProcessExporterFortranSA(export_v4.ProcessExporterFortranSA,
         # Extract process info lines
         process_lines = self.get_process_info_lines(matrix_element)
         replace_dict['process_lines'] = process_lines    
-            
+        
+        # specify the format of the masses 
+        replace_dict['mass_format'] = 'complex*16'
+        replace_dict['mass_translation'] = 'M2L(I)'           
+        
+        # specify what scalar loop library must be used.
+        # For now we use AVH for both CMS and nonCMS outputs.
+        if aloha.complex_mass:
+            replace_dict['loop_lib'] = 2
+        else:
+            replace_dict['loop_lib'] = 2           
+        
         file = file % replace_dict
         files.append(file)
         
@@ -369,6 +383,8 @@ class LoopProcessExporterFortranSA(export_v4.ProcessExporterFortranSA,
             replace_dict=copy.copy(replace_dict_orig)
             # Add to this dictionary all other attribute common to all
             # HELAS-like loop subroutines.
+                    # specify the format of the masses 
+            replace_dict['mass_format'] = 'complex*16'
             replace_dict['maxlcouplings']=matrix_element.find_max_loop_coupling()
             replace_dict['nloopline']=callkey[0]
             wfsargs="".join([("W%d, MP%d, "%(i,i)) for i in range(1,callkey[1]+1)])
