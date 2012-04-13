@@ -1426,7 +1426,9 @@ class LoopHelasMatrixElement(helas_objects.HelasMatrixElement):
             for amp in borndiag.get('amplitudes'):
                 amp.set('number',ampnumber)
                 ampnumber=ampnumber+1
-        ampnumber=1
+        # We want first the CT amplitudes and only then the loop ones.
+        CT_ampnumber=1
+        loop_ampnumber=self.get_number_of_CT_amplitudes()+1
         # Now the loop ones
         for loopdiag in self.get_loop_diagrams():
             for wf in loopdiag.get('wavefunctions'):
@@ -1438,19 +1440,19 @@ class LoopHelasMatrixElement(helas_objects.HelasMatrixElement):
                     loopwf.set('number',loopwfnumber)
                     loopwfnumber=loopwfnumber+1
                 for amp in loopamp['amplitudes']:
-                    amp.set('number',ampnumber)
-                    ampnumber=ampnumber+1
+                    amp.set('number',loop_ampnumber)
+                    loop_ampnumber=loop_ampnumber+1
             for ctamp in loopdiag.get_ct_amplitudes():
-                    ctamp.set('number',ampnumber)
-                    ampnumber=ampnumber+1
+                    ctamp.set('number',CT_ampnumber)
+                    CT_ampnumber=CT_ampnumber+1
         # Finally the loopUVCT ones
         for loopUVCTdiag in self.get_loop_UVCT_diagrams():
             for wf in loopUVCTdiag.get('wavefunctions'):
                 wf.set('number',wfnumber)
                 wfnumber=wfnumber+1
             for amp in loopUVCTdiag.get('amplitudes'):
-                amp.set('number',ampnumber)
-                ampnumber=ampnumber+1            
+                amp.set('number',CT_ampnumber)
+                CT_ampnumber=CT_ampnumber+1            
     
     def get_number_of_wavefunctions(self):
         """Gives the total number of wavefunctions for this ME, including the
@@ -1481,6 +1483,12 @@ class LoopHelasMatrixElement(helas_objects.HelasMatrixElement):
         ones."""
 
         return len(self.get_all_amplitudes())
+
+    def get_number_of_CT_amplitudes(self):
+        """Gives the total number of CT amplitudes for this ME. (i.e the amplitudes
+        which are not LoopHelasAmplitudes nor within them.)"""
+
+        return sum([len(d.get_ct_amplitudes()) for d in self.get('diagrams')])
 
     def get_number_of_external_amplitudes(self):
         """Gives the total number of amplitudes for this ME, excluding those

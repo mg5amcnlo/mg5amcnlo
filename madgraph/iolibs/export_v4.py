@@ -616,7 +616,6 @@ class ProcessExporterFortran(object):
             else:
                 raise MadGraph5Error, "Incorrect col_amps argument passed to get_JAMP_lines"
         else:
-            print "colamps=",col_amps.__class__.__name__
             raise MadGraph5Error, "Incorrect col_amps argument passed to get_JAMP_lines"
 
 

@@ -51,6 +51,18 @@ class CheckLoop(mg_interface.CheckValidForCmd):
         if args[0]=='diagrams' and len(args)>=3 and args[1] not in ['born','loop']:
             raise self.InvalidCmd("Can only display born or loop diagrams, not %s."%args[1])
 
+    def check_output(self, args):
+        """ Check the arguments of the output command in the context
+        of the Loop interface."""
+        
+        mg_interface.MadGraphCmd.check_output(self,args)
+        
+        if args and args[0] in ['matrix','standalone']:
+            self._export_format = args.pop(0)
+        else:
+            self._export_format = 'standalone'
+
+
 class CheckLoopWeb(mg_interface.CheckValidForCmdWeb, CheckLoop):
     pass
 
@@ -95,7 +107,8 @@ class LoopInterface(CheckLoop, CompleteLoop, HelpLoop, mg_interface.MadGraphCmd)
         self._done_export=False
         self._curr_amps = diagram_generation.AmplitudeList()
         self._curr_matrix_elements = helas_objects.HelasMultiProcess()
-        
+        self._v4_export_formats = []
+        self._export_formats = [ 'matrix', 'standalone' ]
         # Set where to look for CutTools installation.
         # In further versions, it will be set in the same manner as _mgme_dir so that
         # the user can chose its own CutTools distribution.
@@ -157,11 +170,11 @@ class LoopInterface(CheckLoop, CompleteLoop, HelpLoop, mg_interface.MadGraphCmd)
             pass
 
         if self._export_format not in ['standalone','matrix']:
-            raise MadGraph5Error('ML5 only support standalone and matrix  as export format.')
+            raise self.InvalidCmd('ML5 only support standalone and matrix as export format.')
 
         if not os.path.isdir(self._export_dir) and \
            self._export_format in ['matrix']:
-            raise MadGraph5Error('Specified export directory %s does not exist.'%str(self._export_dir))
+            raise self.InvalidCmd('Specified export directory %s does not exist.'%str(self._export_dir))
 
         if not force and not noclean and os.path.isdir(self._export_dir)\
                and self._export_format in ['standalone']:
@@ -174,10 +187,21 @@ class LoopInterface(CheckLoop, CompleteLoop, HelpLoop, mg_interface.MadGraphCmd)
                 raise self.InvalidCmd('Stopped by user request')
 
         if os.path.isdir(os.path.join(self._mgme_dir, 'Template/loop_material')):
-            self._curr_exporter = loop_exporters.LoopProcessExporterFortranSA(\
-                                        self._mgme_dir, self._export_dir, not noclean,\
-                                        os.path.join(self._mgme_dir, 'Template/loop_material'),\
-                                        self._cuttools_dir)
+            ExporterClass=None
+            if not self.options['loop_optimized_output']:
+                ExporterClass=loop_exporters.LoopProcessExporterFortranSA
+            else:
+                if all([amp['process']['has_born'] for amp in self._curr_amps]):
+                    ExporterClass=loop_exporters.LoopProcessOptimizedExporterFortranSA
+                else:
+                    logger.warning('ML5 can only exploit the optimized output for '+\
+                                   ' processes with born diagrams. The optimization '+\
+                                   ' is therefore turned off for this output.')
+                    ExporterClass=loop_exporters.LoopProcessExporterFortranSA
+            self._curr_exporter = ExporterClass(\
+                  self._mgme_dir, self._export_dir, not noclean,\
+                  os.path.join(self._mgme_dir, 'Template/loop_material'),\
+                  self._cuttools_dir)                    
         else:
             raise MadGraph5Error('MG5 cannot find the \'loop_material\' directory'+\
                                  ' in %s'%str(self._mgme_dir))                                                           

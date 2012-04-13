@@ -406,7 +406,13 @@ class HelpToCmd(cmd.HelpCmd):
         logger.info("   fortran_compiler NAME")
         logger.info("      (default None) Force a specific fortran compiler.")
         logger.info("      If None, it tries first g77 and if not present gfortran.")
-
+        logger.info("   fks_mode real/born")
+        logger.info("      (default real) Build the real-emission contributions")
+        logger.info("      from the real or born topologies.")
+        logger.info("   loop_optimized_output True/Flase")
+        logger.info("      Abandon the JAMP structure in order to bring considerable")
+        logger.info("      improvement in running time.")
+        
 
 #===============================================================================
 # CheckValidForCmd
@@ -804,6 +810,10 @@ This will take effect only in a NEW terminal
         if args[0] in ['fks_mode']:
             if args[1] not in ['born', 'real']:
                 raise self.InvalidCmd('fks_mode needs argument real or born')       
+
+        if args[0] in ['loop_optimized_output']:
+            if args[1] not in ['True', 'False']:
+                raise self.InvalidCmd('loop_optimized_output needs argument True or False') 
     
     def check_open(self, args):
         """ check the validity of the line """
@@ -1357,6 +1367,12 @@ class CompleteForCmd(cmd.CompleteCmd):
             if args[1] in ['group_subprocesses']:
                 return self.list_completion(text, ['False', 'True', 'Auto'])
             
+            elif args[1] in ['fks_mode']:
+                return self.list_completion(text, ['None', 'born', 'real'])
+
+            elif args[1] in ['loop_optimized_output']:
+                return self.list_completion(text, ['True', 'False'])
+            
             elif args[1] in ['ignore_six_quark_processes']:
                 return self.list_completion(text, self._multiparticles.keys())
             
@@ -1580,13 +1596,12 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
     _import_formats = ['model_v4', 'model', 'proc_v4', 'command', 'banner']
     _install_opts = ['pythia-pgs', 'Delphes', 'MadAnalysis', 'ExRootAnalysis']
     _v4_export_formats = ['madevent', 'standalone', 'matrix'] 
-    _nlo_export_formats = ['NLO']
     _export_formats = _v4_export_formats + ['standalone_cpp', 'pythia8']
     _set_options = ['group_subprocesses',
                     'ignore_six_quark_processes',
                     'stdout_level',
                     'fortran_compiler',
-                    'fks_mode']
+                    'fks_mode','loop_optimized_output']
     # Variables to store object information
     _curr_model = None  #base_objects.Model()
     _curr_amps = diagram_generation.AmplitudeList()
@@ -1640,6 +1655,7 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
         self.options['group_subprocesses'] = 'Auto'
         self.options['ignore_six_quark_processes'] = False
         self.options['fks_mode'] = 'real'
+        self.options['loop_optimized_output'] = False
         
         # Load the configuration file
         self.set_configuration()
@@ -1657,6 +1673,9 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
         self._done_export=False
         self._curr_amps = diagram_generation.AmplitudeList()
         self._curr_matrix_elements = helas_objects.HelasMultiProcess()    
+        
+        self._v4_export_formats = ['madevent', 'standalone', 'matrix'] 
+        self._export_formats = self._v4_export_formats + ['standalone_cpp', 'pythia8']
     
     def do_quit(self, line):
         """Do quit"""
@@ -2931,7 +2950,8 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
                               'automatic_html_opening':True,
                               'group_subprocesses': 'Auto',
                               'ignore_six_quark_processes': False,
-                              'fks_mode': 'real'}
+                              'fks_mode': 'real',
+                              'loop_optimized_output':False}
                 
         if not config_path:
             try:
@@ -3255,7 +3275,9 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
             self._curr_amps = diagram_generation.AmplitudeList()
             self._fks_multi_proc = None
             self._curr_matrix_elements = helas_objects.HelasMultiProcess()
-
+        elif args[0] == 'loop_optimized_output':
+            self._curr_matrix_elements = helas_objects.HelasMultiProcess()
+            self.options[args[0]] = eval(args[1])
         elif args[0] in self.options:
             if args[1] in ['None','True','False']:
                 self.options[args[0]] = eval(args[1])

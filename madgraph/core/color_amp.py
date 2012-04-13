@@ -64,7 +64,6 @@ class ColorBasis(dict):
         for i, vertex in enumerate(diagram.get('vertices')):
             min_index, res_dict = self.add_vertex(vertex, diagram, model,
                             repl_dict, res_dict, min_index)
-            
 
         # Return an empty list if all entries are empty
         if all([cs == color_algebra.ColorString() \
