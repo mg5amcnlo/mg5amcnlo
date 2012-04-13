@@ -38,14 +38,12 @@ C
       INTEGER IPROC,JC(NEXTERNAL-1), I,L,K
       LOGICAL GOODHEL(NCOMB,NCROSS,%(nconfs)d)
       DATA NTRY /%(nconfs)d*0/
-      INTEGER NGOOD,igood(ncomb),jhel
-      data ngood /0/
+      INTEGER NGOOD(%(nconfs)d),igood(ncomb,%(nconfs)d),jhel
+      data ngood /%(nconfs)d*0/
       save igood,jhel
       REAL*8 hwgt
       integer j,jj
       include "born_nhel.inc"
-      double complex saveamp(ngraphs,max_bhel)
-      common/to_saveamp/saveamp
       double precision savemom(nexternal-1,2)
       common/to_savemom/savemom
 
@@ -91,13 +89,13 @@ C ----------
                ANS(IPROC)=ANS(IPROC)+T
                IF (T .NE. 0D0 .AND. .NOT. GOODHEL(IHEL,IPROC,nFKSprocess)) THEN
                    GOODHEL(IHEL,IPROC,nFKSprocess)=.TRUE.
-                   NGOOD = NGOOD +1
-                   IGOOD(NGOOD) = IHEL
+                   NGOOD(nFKSprocess) = NGOOD(nFKSprocess) +1
+                   IGOOD(NGOOD(nFKSprocess),nFKSprocess) = IHEL
                ENDIF
              ENDIF
           ENDDO
       ELSE              !RANDOM HELICITY
-              HWGT = REAL(NGOOD)
+              HWGT = REAL(NGOOD(nFKSprocess))
               ihel=get_hel
               T=B_SF_%(iborn)3.3d(P1,NHEL(1,IHEL),IHEL,JC(1))              
               ANS(IPROC)=ANS(IPROC)+T*HWGT
@@ -147,9 +145,6 @@ C
       include "born_nhel.inc"
       double complex saveamp(ngraphs,max_bhel)
       common/to_saveamp/saveamp
-      double precision hel_fac
-      integer get_hel,skip(%(nconfs)d)
-      common/cBorn/hel_fac,get_hel,skip
       logical calculatedBorn
       common/ccalculatedBorn/calculatedBorn
       include "coupl.inc"

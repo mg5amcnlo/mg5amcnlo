@@ -3162,6 +3162,7 @@ c might flip when rotating the momenta.
           call trp_rotate_invar(p_born(0,i),p_born_rot(0,i),
      #                          cthbe,sthbe,cphibe,sphibe)
         enddo
+        CalculatedBorn=.false.
         call sborn(p_born_rot,wgt1)
         CalculatedBorn=.false.
       else
@@ -3285,6 +3286,7 @@ c might flip when rotating the momenta.
           p_born_rot(2,i)=p_born(2,i)
           p_born_rot(3,i)=-p_born(3,i)
         enddo
+        CalculatedBorn=.false.
         call sborn(p_born_rot,wgt1)
         CalculatedBorn=.false.
       else

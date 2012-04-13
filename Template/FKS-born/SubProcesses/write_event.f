@@ -316,29 +316,26 @@ c relative weights
                if (ran2().le.abs(result1)/f_abs) then
                   Hevents=.false.
                   evtsgn=sign(1d0,result1)
+                  j=1
                else
                   Hevents=.true.
                   evtsgn=sign(1d0,result2)
+                  j=2
                endif
                if (sum.eq.2) then
-                  if (Hevents) then
-                     j=2
-                  else
-                     j=1
-                  endif
                   f_tot=result(0,j)
                   do i=1,proc_map(nFKSproc_m,0)
                      f_tot=f_tot+result(proc_map(nFKSproc_m,i),j)
                   enddo
                   rnd=ran2()
+                  i=1
                   res=abs(result(0,j))+
      &                 abs(result(proc_map(nFKSproc_m,1),j))
-                  i=1
                   do while (res.le.rnd*f_tot)
                      i=i+1
-                     res=res+abs(result(proc_map(nFKSproc_m,1),i))
+                     res=res+abs(result(proc_map(nFKSproc_m,i),j))
                   enddo
-                  nFKSprocess=proc_map(nFKSproc_m,1)
+                  nFKSprocess=proc_map(nFKSproc_m,i)
                   call fks_inc_chooser()
                   call leshouche_inc_chooser()
 c THIS CAN BE OPTIMIZED

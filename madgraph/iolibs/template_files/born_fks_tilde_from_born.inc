@@ -40,8 +40,8 @@ C
       INTEGER IHEL,IDEN(NCROSS),IC(NEXTERNAL-1,NCROSS)
       INTEGER IPROC,JC(NEXTERNAL-1), I,L,K
       LOGICAL GOODHEL(NCOMB,NCROSS,%(nconfs)d)
-      INTEGER NGOOD,igood(ncomb),jhel
-      data ngood /0/
+      INTEGER NGOOD(%(nconfs)d),igood(ncomb,%(nconfs)d),jhel
+      data ngood /%(nconfs)d*0/
       save igood,jhel
       REAL*8 hwgt
       REAL*8 xtot, xtry, xrej, xr, yfrac(0:ncomb)
@@ -119,7 +119,8 @@ C ----------
          do j=1,nexternal-1
             if (savemom(j,1).ne.p1(0,j) .or. savemom(j,2).ne.p1(3,j)) then
                calculatedBorn=.false.
-C          write (*,*) "momenta not the same in Born"
+               write (*,*) "momenta not the same in Born"
+	       stop
             endif
          enddo
       endif
@@ -155,21 +156,21 @@ C          write (*,*) "momenta not the same in Born"
                ANS(IPROC+1)=ANS(IPROC+1)+T1
                IF ( (T .NE. 0D0 .OR. T1 .NE. 0d0) .AND. .NOT. GOODHEL(IHEL,IPROC,nFKSprocess)) THEN
                    GOODHEL(IHEL,IPROC,nFKSprocess)=.TRUE.
-                   NGOOD = NGOOD +1
-                   IGOOD(NGOOD) = IHEL
+                   NGOOD(nFKSprocess) = NGOOD(nFKSprocess) +1
+                   IGOOD(NGOOD(nFKSprocess),nFKSprocess) = IHEL
                ENDIF
              ENDIF
           ENDDO
           JHEL = 1
-          ISUM_HEL=MIN(ISUM_HEL,NGOOD)
+          ISUM_HEL=MIN(ISUM_HEL,NGOOD(nFKSprocess))
       ELSE              !RANDOM HELICITY
           DO J=1,ISUM_HEL
-              HWGT = REAL(NGOOD)/REAL(ISUM_HEL)
+              HWGT = REAL(NGOOD(nFKSprocess))/REAL(ISUM_HEL)
               hel_fac=HWGT
               if (get_hel.eq.0) then
               JHEL=JHEL+1
-              IF (JHEL .GT. NGOOD) JHEL=1
-                 IHEL = IGOOD(JHEL)
+              IF (JHEL .GT. NGOOD(nFKSprocess)) JHEL=1
+                 IHEL = IGOOD(JHEL,nFKSprocess)
                  get_hel=ihel
               else
                  ihel=get_hel
