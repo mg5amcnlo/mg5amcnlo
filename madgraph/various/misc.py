@@ -261,6 +261,7 @@ def tail(f, n, offset=None):
         if len(lines) >= to_read or pos == 0:
             return lines[-to_read:offset and -offset or None]
         avg_line_length *= 1.3
+        avg_line_length = int(avg_line_length)
 
 ################################################################################
 # LAST LINE FUNCTION

@@ -2313,10 +2313,29 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
         # Find the matched cross-section
         if int(self.run_card['ickkw']):    
             pythia_log = open(pjoin(self.me_dir,'Events', self.run_name, '%s_pythia.log' % tag))
-            cs_info = misc.get_last_line(pythia_log)
-            # line should be of type: Cross section (pb):    1840.20000000006 
-            cs_info = cs_info.split(':')[1]
-            self.results.add_detail('cross_pythia', cs_info)
+            tail = 21
+            lasttail = 0
+            cs_info = None
+            pythiare = re.compile("^\s*I\s+0 All included subprocesses\s+I\s+(?P<generated>\d+)\s+(?P<tried>\d+)\s+I\s+(?P<xsec>[\d\.DdEe\-+]+)\s+I")
+            while True:
+                lines = misc.tail(pythia_log, tail, lasttail)
+                if len(lines) == 0: break
+                groups = pythiare.search("\n".join(lines))
+                if not groups:
+                    # We didn't find the line - try higher up in file
+                    lasttail += tail
+                    continue
+                try:
+                    cs_info = float(groups['xsec'])
+                except:
+                    # xsec is not float - this should not happen
+                    cs_info = None
+                break
+                # line should be of type: Cross section (pb):    1840.20000000006 
+            if cs_info:
+                self.results.add_detail('cross_pythia', cs_info)
+            else:
+                self.results.add_detail('cross_pythia', 0)
         
         pydir = pjoin(self.options['pythia-pgs_path'], 'src')
         eradir = self.options['exrootanalysis_path']
