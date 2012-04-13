@@ -1722,14 +1722,13 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
             self.exec_cmd('refine %s' % nb_event, postcmd=False)
             self.exec_cmd('refine %s' % nb_event, postcmd=False)
             self.exec_cmd('combine_events', postcmd=False)
+            self.print_results_in_shell(self.results.current)
             self.create_plot('parton')
             self.exec_cmd('store_events', postcmd=False)
             self.exec_cmd('pythia --no_default', postcmd=False, printcmd=False)
             # pythia launches pgs/delphes if needed
             self.store_result()
         
-        self.print_results_in_shell(self.results.current)
-            
             
     def print_results_in_shell(self, data):
         """Have a nice results prints in the shell,
@@ -1741,18 +1740,16 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
         else:
             logger.info("     Cross-section :   %.4g +- %.4g pb" % (data['cross'], data['error']))
         logger.info("     Nb of events :  %s" % data['nb_event'] )
-        if data['cross_pythia']:
+        if data['cross_pythia'] and data['nb_event_pythia']:
             error = data.get_pythia_error(data['cross'], data['error'], 
-                                        data['cross_pythia'], data['nb_event'])
-            nb_event = 0
-            if data['cross']:
-                nb_event = int(0.5+(data['nb_event'] * data['cross_pythia'] /data['cross']))
-            
+                                          data['cross_pythia'], 
+                                          data['nb_event'], 
+                                          data['nb_event_pythia'])
             if self.ninitial == 1:
                 logger.info("     Matched Width :   %.4g +- %.4g GeV" % (data['cross_pythia'], error))
             else:
-                logger.info("     Matched Cross-section :   %.4g +- %.4g pb" % (data['cross'], error))            
-            logger.info("     Nb of events after Matching :  %s" % nb_event)
+                logger.info("     Matched Cross-section :   %.4g +- %.4g pb" % (data['cross_pythia'], error))            
+            logger.info("     Nb of events after Matching :  %s" % data['nb_event_pythia'])
         logger.info(" " )
         
             
@@ -2316,7 +2313,7 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
             tail = 21
             lasttail = 0
             cs_info = None
-            pythiare = re.compile("^\s*I\s+0 All included subprocesses\s+I\s+(?P<generated>\d+)\s+(?P<tried>\d+)\s+I\s+(?P<xsec>[\d\.DdEe\-+]+)\s+I")
+            pythiare = re.compile("\s*I\s+0 All included subprocesses\s+I\s+(?P<generated>\d+)\s+(?P<tried>\d+)\s+I\s+(?P<xsec>[\d\.D\-+]+)\s+I")
             while True:
                 lines = misc.tail(pythia_log, tail, lasttail)
                 if len(lines) == 0: break
@@ -2326,16 +2323,22 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
                     lasttail += tail
                     continue
                 try:
-                    cs_info = float(groups['xsec'])
+                    cs_info = float(groups.group('xsec').replace('D','E'))
+                    # Pythia cross section in mb, we want pb
+                    cs_info = cs_info * 1e9
+                    nb_info = int(groups.group('generated'))
                 except:
                     # xsec is not float - this should not happen
                     cs_info = None
+                    nb_info = None
                 break
                 # line should be of type: Cross section (pb):    1840.20000000006 
             if cs_info:
                 self.results.add_detail('cross_pythia', cs_info)
+                self.results.add_detail('nb_event_pythia', nb_info)
             else:
                 self.results.add_detail('cross_pythia', 0)
+                self.results.add_detail('nb_event_pythia', 0)
         
         pydir = pjoin(self.options['pythia-pgs_path'], 'src')
         eradir = self.options['exrootanalysis_path']
@@ -2409,6 +2412,8 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
         self.exec_cmd('pgs --no_default', postcmd=False, printcmd=False)
         if self.options['delphes_path']:
             self.exec_cmd('delphes --no_default', postcmd=False, printcmd=False)
+
+        self.print_results_in_shell(self.results.current)
     
     def get_available_tag(self):
         """create automatically a tag"""
