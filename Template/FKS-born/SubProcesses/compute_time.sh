@@ -3,7 +3,7 @@
 
 time=0
 njobs=0
-for pdir in P0*_* ; do
+for pdir in P*_* ; do
     for dir in $pdir/$@ ; do
 	x1=`grep 'Time in seconds' $dir/log.txt`
 	time=`expr $time + ${x1##* }`
