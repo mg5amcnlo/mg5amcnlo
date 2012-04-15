@@ -883,7 +883,7 @@ class CheckValidForCmd(object):
         
         if len(arg) == 0 and not self.run_name:
             if self.results.lastrun:
-                args.insert(0, self.results.lastrun)
+                arg.insert(0, self.results.lastrun)
             else:
                 raise self.InvalidCmd('No run name currently define. Please add this information.')             
         
@@ -1741,7 +1741,7 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
             logger.info("     Cross-section :   %.4g +- %.4g pb" % (data['cross'], data['error']))
         logger.info("     Nb of events :  %s" % data['nb_event'] )
         if data['cross_pythia'] and data['nb_event_pythia']:
-            error = data.get_pythia_error(data['cross'], data['error'], 
+            error = data.get_pythia_error(data['error'], 
                                           data['cross_pythia'], 
                                           data['nb_event'], 
                                           data['nb_event_pythia'])
@@ -2261,9 +2261,9 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
             no_default = False
                                     
         self.check_pythia(args)        
-        # the args are modify and the last arg is always the mode
-        
-        self.ask_pythia_run_configuration(args[-1])
+        # the args are modify and the last arg is always the mode 
+        if not no_default:
+            self.ask_pythia_run_configuration(args[-1])
 
         # Update the banner with the pythia card
         if not self.banner:
@@ -2308,37 +2308,29 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
         self.to_store.append('pythia')
         
         # Find the matched cross-section
-        if int(self.run_card['ickkw']):    
-            pythia_log = open(pjoin(self.me_dir,'Events', self.run_name, '%s_pythia.log' % tag))
-            tail = 21
-            lasttail = 0
-            cs_info = None
-            pythiare = re.compile("\s*I\s+0 All included subprocesses\s+I\s+(?P<generated>\d+)\s+(?P<tried>\d+)\s+I\s+(?P<xsec>[\d\.D\-+]+)\s+I")
-            while True:
-                lines = misc.tail(pythia_log, tail, lasttail)
-                if len(lines) == 0: break
-                groups = pythiare.search("\n".join(lines))
-                if not groups:
-                    # We didn't find the line - try higher up in file
-                    lasttail += tail
+        if int(self.run_card['ickkw']):
+            # read the line from the bottom of the file
+            pythia_log = misc.BackRead(pjoin(self.me_dir,'Events', self.run_name, 
+                                                         '%s_pythia.log' % tag))
+            pythiare = re.compile("\s*I\s+0 All included subprocesses\s+I\s+(?P<generated>\d+)\s+(?P<tried>\d+)\s+I\s+(?P<xsec>[\d\.D\-+]+)\s+I")            
+            for line in pythia_log:
+                info = pythiare.search(line)
+                if not info:
                     continue
                 try:
-                    cs_info = float(groups.group('xsec').replace('D','E'))
                     # Pythia cross section in mb, we want pb
-                    cs_info = cs_info * 1e9
-                    nb_info = int(groups.group('generated'))
-                except:
+                    cs_info = float(info.group('xsec').replace('D','E')) *1e9
+                    nb_info = int(info.group('generated'))
+                except ValueError:
                     # xsec is not float - this should not happen
-                    cs_info = None
-                    nb_info = None
-                break
-                # line should be of type: Cross section (pb):    1840.20000000006 
-            if cs_info:
-                self.results.add_detail('cross_pythia', cs_info)
-                self.results.add_detail('nb_event_pythia', nb_info)
-            else:
-                self.results.add_detail('cross_pythia', 0)
-                self.results.add_detail('nb_event_pythia', 0)
+                    self.results.add_detail('cross_pythia', 0)
+                    self.results.add_detail('nb_event_pythia', 0)
+                else:
+                    self.results.add_detail('cross_pythia', cs_info)
+                    self.results.add_detail('nb_event_pythia', nb_info)
+                break                 
+
+            pythia_log.close()
         
         pydir = pjoin(self.options['pythia-pgs_path'], 'src')
         eradir = self.options['exrootanalysis_path']

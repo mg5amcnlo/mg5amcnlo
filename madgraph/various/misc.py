@@ -271,6 +271,66 @@ def get_last_line(fsock):
     
     return tail(fsock, 1)[0]
     
+class BackRead(file):
+    """read a file returning the lines in reverse order for each call of readline()
+This actually just reads blocks (4096 bytes by default) of data from the end of
+the file and returns last line in an internal buffer."""
+
+
+    def readline(self):
+        """ readline in a backward way """
+        
+        while len(self.data) == 1 and ((self.blkcount * self.blksize) < self.size):
+          self.blkcount = self.blkcount + 1
+          line = self.data[0]
+          try:
+            self.seek(-self.blksize * self.blkcount, 2) # read from end of file
+            self.data = (self.read(self.blksize) + line).split('\n')
+          except IOError:  # can't seek before the beginning of the file
+            self.seek(0)
+            self.data = string.split(self.read(self.size - (self.blksize * (self.blkcount-1))) + line, '\n')
+    
+        if len(self.data) == 0:
+          return ""
+    
+        line = self.data.pop()
+        return line + '\n'
+
+    def __init__(self, filepos, blksize=4096):
+        """initialize the internal structures"""
+
+        # get the file size
+        self.size = os.stat(filepos)[6]
+        # how big of a block to read from the file...
+        self.blksize = blksize
+        # how many blocks we've read
+        self.blkcount = 1
+        file.__init__(self, filepos, 'rb')
+        # if the file is smaller than the blocksize, read a block,
+        # otherwise, read the whole thing...
+        if self.size > self.blksize:
+          self.seek(-self.blksize * self.blkcount, 2) # read from end of file
+        self.data = self.read(self.blksize).split('\n')
+        # strip the last item if it's empty...  a byproduct of the last line having
+        # a newline at the end of it
+        if not self.data[-1]:
+          self.data.pop()
+        
+    def next(self):
+        line = self.readline()
+        if line:
+            return line
+        else:
+            raise StopIteration
+        
+    def close(self):
+        """ close correctly file """
+        try:
+            self.close()
+        except:
+           pass
+
+
 
 
 #

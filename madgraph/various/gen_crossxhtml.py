@@ -470,10 +470,9 @@ class RunResults(list):
         elif (current.pgs or current.delphes) and not current['nb_event'] and len(self) > 1:
             if self[-2]['cross_pythia'] and self[-2]['nb_event_pythia']:
                 output['cross'] = self[-2]['cross_pythia']
-                output['nb_event'] = int(0.5+(self[-2]['nb_event'] * current['cross'] /self[-2]['cross']))                           
-                output['error'] = current.get_pythia_error(self[-2]['cross'], 
-                       self[-2]['error'], current['cross'], current['nb_event'],
-                       current['nb_event'])
+                output['nb_event'] = self[-2]['nb_event_pythia']
+                output['error'] = current.get_pythia_error( self[-2]['error'], 
+                      current['cross'], current['nb_event'], output['nb_event'])
             else:
                 output['nb_event'] = self[-2]['nb_event']
                 output['cross'] = self[-2]['cross']
@@ -644,7 +643,7 @@ class OneTagResults(dict):
          return " <a  id='%(id)s' href='%(link1)s' onClick=\"check_link('%(link1)s','%(link2)s','%(id)s')\">%(name)s</a>" \
               % {'link1': link1, 'link2':link2, 'id': id, 'name':name}       
     
-    def get_pythia_error(self, cross, error, pythia_cross, nb_event, n_acc):
+    def get_pythia_error(self, error, pythia_cross, nb_event, n_acc):
         """Compute the error associated to pythia."""
         # error_pythia = max(error * n_acc /n_gen, pythia_cross / sqrt(n_acc))
         
@@ -781,12 +780,11 @@ class OneTagResults(dict):
         elif (self.pgs or self.delphes) and not self['nb_event']:
             if runresults[-2]['cross_pythia'] and runresults[-2]['cross']:
                 self['cross'] = runresults[-2]['cross_pythia']
-                self['nb_event'] = int(0.5+(runresults[-2]['nb_event'] * self['cross'] /runresults[-2]['cross']))                           
-                self['error'] = self.get_pythia_error(runresults[-2]['cross'], 
-                                                      runresults[-2]['error'], 
-                                                      self['cross'], 
-                                                      self['nb_event'],
-                                                      self['nb_event'])
+                self['error'] = self.get_pythia_error(runresults[-2]['error'], 
+                                                      runresults[-2]['cross_pythia'], 
+                                                      runresults[-2]['nb_event'],
+                                                      runresults[-2]['nb_event_pythia'])
+                self['nb_event'] = runresults[-2]['nb_event_pythia']                           
             else:
                 self['nb_event'] = runresults[-2]['nb_event']
                 self['cross'] = runresults[-2]['cross']
@@ -820,9 +818,9 @@ class OneTagResults(dict):
                     else:
                         local_dico['nb_event'] = 0
                     local_dico['cross'] = self['cross_pythia']
-                    local_dico['err'] = self.get_pythia_error(self['cross'],
-                           self['error'],self['cross_pythia'], self['nb_event'],
-                           self['nb_event_pythia']) 
+                    local_dico['err'] = self.get_pythia_error(self['error'],
+                                         self['cross_pythia'], self['nb_event'], 
+                                         self['nb_event_pythia']) 
                 else:
                     local_dico['cross_span'] = nb_line
                     local_dico['cross'] = self['cross']
@@ -841,9 +839,9 @@ class OneTagResults(dict):
                     local_dico['cross_span'] = nb_line
                     local_dico['nb_event'] = self['nb_event']
                 local_dico['cross'] = self['cross_pythia']
-                local_dico['err'] = self.get_pythia_error(self['cross'],
-                           self['error'],self['cross_pythia'], self['nb_event'],
-                           self['nb_event_pythia'])
+                local_dico['err'] = self.get_pythia_error(self['error'],
+                                         self['cross_pythia'], self['nb_event'],
+                                         self['nb_event_pythia'])
             else:
                template = sub_part_template_pgs             
             
