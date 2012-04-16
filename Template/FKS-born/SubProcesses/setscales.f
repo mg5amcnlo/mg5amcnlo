@@ -281,6 +281,10 @@ c
       muF22_current=muF(2)**2
       muF1_id_str=temp_scale_id
       muF2_id_str=temp_scale_id2
+      if(muF(1).le.0.d0.or.muF(2).le.0.d0)then
+        write(*,*)'Error in set_fac_scale: muF(*)=',muF(1),muF(2)
+        stop
+      endif
 c The following is for backward compatibility. DO NOT REMOVE
       q2fact(1)=muF12_current
       q2fact(2)=muF22_current
@@ -352,6 +356,10 @@ c
       QES=QES_over_ref*QES_temp
       QES2_current=QES**2
       QES_id_str=temp_scale_id
+      if(QES.le.0.d0)then
+        write(*,*)'Error in set_QES_scale: QES=',QES
+        stop
+      endif
 c The following is for backward compatibility. DO NOT REMOVE
       QES2=QES2_current
 c
@@ -398,7 +406,7 @@ c a scale to be used as a reference for renormalization scale
       include 'genps.inc'
       include 'nexternal.inc'
       double precision scale_global_reference,pp(0:3,nexternal)
-      double precision tmp,pt,et,dot
+      double precision tmp,pt,et,dot,xm2
       external pt,et,dot
       integer i,itype
       parameter (itype=2)
@@ -415,7 +423,9 @@ c Sum of transverse energies
       elseif(itype.eq.2)then
 c Sum of transverse masses
         do i=nincoming+1,nexternal
-          tmp=tmp+sqrt(pt(pp(0,i))**2+dot(pp(0,i),pp(0,i)))
+          xm2=dot(pp(0,i),pp(0,i))
+          if(xm2.le.0.d0)xm2=0.d0
+          tmp=tmp+sqrt(pt(pp(0,i))**2+xm2)
         enddo
         temp_scale_id='sum_i mT(i), i=final state'
       else
