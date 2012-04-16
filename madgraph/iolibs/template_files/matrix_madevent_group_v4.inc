@@ -117,7 +117,7 @@ C ----------
                GOODHEL(I,IMIRROR)=.TRUE.
                NGOOD(IMIRROR) = NGOOD(IMIRROR) +1
                IGOOD(NGOOD(IMIRROR),IMIRROR) = I
-               PRINT *,'Added good helicity ',I,TS(I)*NCOMB/ANS
+               PRINT *,'Added good helicity ',I,TS(I)*NCOMB/ANS,' in event ',NTRY(IMIRROR)
             ENDIF
          ENDDO
       ENDIF

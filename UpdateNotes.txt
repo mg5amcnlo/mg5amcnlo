@@ -3,6 +3,8 @@ Update notes for MadGraph 5 (in reverse time order)
 1.4.5 (11/04/12)  OM: correct a minor bug #975647 (SLAH convention problem) 
                       Thanks to Sho Iwamoto
                   OM: Improve cluster support (more secure and complete version)
+                  JA: Increased the number of events tested for non-zero helicity
+                      configurations (needed for goldstino processes).
                   
 1.4.4 (29/03/12)  OM: Added a command: "output aloha" which allows to creates a 
                       subset (or all) of the aloha routines linked to the
