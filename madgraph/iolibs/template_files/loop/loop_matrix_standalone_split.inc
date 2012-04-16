@@ -95,8 +95,6 @@ C
       PARAMETER (NCOLORLOOP=%(ncolorloop)d, NCOLORBORN=%(ncolorborn)d)
 	  INTEGER    NCOMB
       PARAMETER (NCOMB=%(ncomb)d)
-	  INTEGER    NCOMBAMP
-      PARAMETER (NCOMBAMP=NCOMB*NLOOPAMPS)
       REAL*8     ZERO
       PARAMETER (ZERO=0D0)
       COMPLEX*16 IMAG1
@@ -123,7 +121,6 @@ C
       COMPLEX*16 AMPL(3,NLOOPAMPS), AMP(NBORNAMPS)
       COMPLEX*16 W(20,NWAVEFUNCS)
 	  LOGICAL GOODAMP(NLOOPAMPS,NCOMB)	
-	  DATA ((GOODAMP(I,J),I=1,NLOOPAMPS),J=1,NCOMB) / NCOMBAMP*.TRUE. /
 	  common/SPLITHELAS/W,AMPL,AMP,GOODAMP
 	  COMPLEX*16 JAMPL(3,NCOLORLOOP), JAMPB(NCOLORBORN)
 	  common/SPLITJAMP/JAMPL,JAMPB
@@ -134,6 +131,15 @@ C
 C ----------
 C BEGIN CODE
 C ----------
+
+IF (NTRY.eq.1) then
+  DO I=1,NLOOPAMPS
+    DO J=1,NCOMB
+      GOODAMP(I,J)=.TRUE.
+    ENDDO
+  ENDDO
+ENDIF
+
 DO K=1, 3
   DO I=1, NLOOPAMPS
     AMPL(K,I)=(0.D0,0.D0)
@@ -153,22 +159,7 @@ ENDDO
       RES(1) = 0.D0
       RES(2) = 0.D0
       RES(3) = 0.D0
-      DO K = 1, 3
-          DO I = 1, NCOLORLOOP
-              ZTEMP = (0.D0,0.D0)		  
-              DO J = 1, NCOLORBORN
-                  ZTEMP = ZTEMP + CF(J,I)*JAMPB(J)
-              ENDDO
-              RES(K) = RES(K)+DBLE(ZTEMP*DCONJG(JAMPL(K,I))/DENOM(I)) 
-          ENDDO
-		  DO J = 1, NCOLORBORN
-              ZTEMP = (0.D0,0.D0)
-              DO I = 1, NCOLORLOOP
-                  ZTEMP = ZTEMP + CF(J,I)*JAMPL(K,I)/DENOM(I)
-              ENDDO
-              RES(K) = RES(K)+DBLE(ZTEMP*DCONJG(JAMPB(J)))
-          ENDDO
-      ENDDO
+%(squaring)s
 
 	  IF (NTRY.LT.2) THEN
 	  DO I=1, NLOOPAMPS
