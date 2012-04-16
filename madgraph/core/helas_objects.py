@@ -913,9 +913,12 @@ class HelasWavefunction(base_objects.PhysicsObject):
             raise self.PhysicsObjectError,\
                   "Particles of spin %d are not supported" % self.get('spin')
     
-    def get_helas_call_dict(self, index=1):
+    def get_helas_call_dict(self, index=1, OptimizedOutput=False):
         """ return a dictionary to be used for formatting
-        HELAS call. """
+        HELAS call. The argument index sets the flipping while optimized output
+        simply allow for using W instead of WE for the external wf arguments of
+        the loop wavefunction.For the optimized output, the 'L<i>' entry of the
+        formatting dictionnary differs."""
 
         if index == 1:
             flip = 0
@@ -926,10 +929,17 @@ class HelasWavefunction(base_objects.PhysicsObject):
         for i, mother in enumerate(self.get('mothers')):
             nb = mother.get('number') - flip
             output[str(i)] = nb
-            if mother.get('is_loop'):
-                output['L%d' % i ] = 'L'
+            if not OptimizedOutput:
+                if mother.get('is_loop'):
+                    output['L%d' % i ] = 'L'
+                else:
+                    output['L%d' % i ] = 'E'
             else:
-                output['L%d' % i ] = 'E'
+                if mother.get('is_loop'):
+                    output['L%d' % i ] = 'L(1,%d)'%nb
+                else:
+                    output['L%d' % i ] = '(1,WE(%d),H)'%nb
+                    
         #fixed argument
         for i, coup in enumerate(self.get_with_flow('coupling')):
             output['coup%d'%i] = coup
@@ -2208,9 +2218,10 @@ class HelasAmplitude(base_objects.PhysicsObject):
 
         return vertex_leg_numbers
 
-    def get_helas_call_dict(self, index=1):
+    def get_helas_call_dict(self, index=1,OptimizedOutput=False):
         """ return a dictionary to be used for formatting
-        HELAS call. """
+        HELAS call. For the optimized output, the 'L<i>' entry of the
+        formatting dictionnary differs."""
         
         if index == 1:
             flip = 0
@@ -2223,10 +2234,17 @@ class HelasAmplitude(base_objects.PhysicsObject):
             output[str(i)] = nb
             # Set what are the loop wavefunctions (WL*) and the non loop ones (WE*)
             # in the argument
-            if mother.get('is_loop'):
-                output['L%d' % i ] = 'L'
+            if not OptimizedOutput:
+                if mother.get('is_loop'):
+                    output['L%d' % i ] = 'L'
+                else:
+                    output['L%d' % i ] = 'E'
             else:
-                output['L%d' % i ] = 'E'
+                if mother.get('is_loop'):
+                    output['L%d' % i ] = 'L(1,%d)'%nb
+                else:
+                    output['L%d' % i ] = '(1,WE(%d),H)'%nb
+                
         #fixed argument
         for i, coup in enumerate(self.get('coupling')):
             output['coup%d'%i] = str(coup)

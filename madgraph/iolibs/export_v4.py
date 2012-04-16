@@ -388,7 +388,7 @@ class ProcessExporterFortran(object):
                          for process in matrix_element.get('processes')])
 
 
-    def get_helicity_lines(self, matrix_element):
+    def get_helicity_lines(self, matrix_element,array_name='NHEL'):
         """Return the Helicity matrix definition lines for this matrix element"""
 
         helicity_line_list = []
@@ -398,7 +398,7 @@ class ProcessExporterFortran(object):
             int_list = [i, len(helicities)]
             int_list.extend(helicities)
             helicity_line_list.append(\
-                ("DATA (NHEL(I,%4r),I=1,%d) /" + \
+                ("DATA ("+array_name+"(I,%4r),I=1,%d) /" + \
                  ",".join(['%2r'] * len(helicities)) + "/") % tuple(int_list))
 
         return "\n".join(helicity_line_list)

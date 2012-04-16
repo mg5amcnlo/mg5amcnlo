@@ -787,7 +787,8 @@ This will take effect only in a NEW terminal
     def check_set(self, args):
         """ check the validity of the line"""
         
-        if len(args) == 1 and args[0] == 'complex_mass_scheme':
+        if len(args) == 1 and args[0] in ['complex_mass_scheme',\
+                                          'loop_optimized_output']:
             args.append('True')
         
         if len(args) < 2:
@@ -1375,13 +1376,12 @@ class CompleteForCmd(cmd.CompleteCmd):
             return self.list_completion(text, opts)
 
         if len(args) == 2:
-            if args[1] in ['group_subprocesses', 'complex_mass_scheme']:
+            if args[1] in ['group_subprocesses', 'complex_mass_scheme',\
+                           'loop_optimized_output']:
                 return self.list_completion(text, ['False', 'True'])
             
             elif args[1] in ['fks_mode']:
                 return self.list_completion(text, ['None', 'born', 'real'])
-
-            elif args[1] in ['loop_optimized_output']:
 
             elif args[1] in ['ignore_six_quark_processes']:
                 return self.list_completion(text, self._multiparticles.keys())

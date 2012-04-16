@@ -153,13 +153,13 @@ class LoopHelasUVCTAmplitude(helas_objects.HelasAmplitude):
                                     'UVCT_orders': self['UVCT_orders'], \
                                     'type': self['type']})
         
-    def get_helas_call_dict(self, index=1):
+    def get_helas_call_dict(self, index=1, OptimizedOutput=False):
         """ return a dictionary to be used for formatting
         HELAS call. """
         
         
         out = helas_objects.HelasAmplitude.get_helas_call_dict(self, 
-                                                                    index=index)
+                index=index,OptimizedOutput=OptimizedOutput)
         out['uvct'] = self.get_UVCT_couplings()
         return out
 
@@ -355,7 +355,7 @@ class LoopHelasAmplitude(helas_objects.HelasAmplitude):
              wf.get('coupling')!=['none']],[])\
              +sum([amp.get('coupling') for amp in self.get('amplitudes')],[]))
 
-    def get_helas_call_dict(self):
+    def get_helas_call_dict(self,OptimizedOutput=False):
         """ return a dictionary to be used for formatting
         HELAS call. """
         
@@ -1538,7 +1538,8 @@ class LoopHelasMatrixElement(helas_objects.HelasMatrixElement):
         """Gives the total number of CT amplitudes for this ME. (i.e the amplitudes
         which are not LoopHelasAmplitudes nor within them.)"""
 
-        return sum([len(d.get_ct_amplitudes()) for d in self.get('diagrams')])
+        return sum([len(d.get_ct_amplitudes()) for d in (self.get_loop_diagrams()+
+                    self.get_loop_UVCT_diagrams())])
 
     def get_number_of_external_amplitudes(self):
         """Gives the total number of amplitudes for this ME, excluding those
