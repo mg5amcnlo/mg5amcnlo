@@ -132,11 +132,13 @@ C ----------
 C BEGIN CODE
 C ----------
 
-DO I=1,NLOOPAMPS
-  DO J=1,NCOMB
-    GOODAMP(I,J)=.TRUE.
+IF (NTRY.eq.1) then
+  DO I=1,NLOOPAMPS
+    DO J=1,NCOMB
+      GOODAMP(I,J)=.TRUE.
+    ENDDO
   ENDDO
-ENDDO
+ENDIF
 
 DO K=1, 3
   DO I=1, NLOOPAMPS
@@ -157,22 +159,7 @@ ENDDO
       RES(1) = 0.D0
       RES(2) = 0.D0
       RES(3) = 0.D0
-      DO K = 1, 3
-          DO I = 1, NCOLORLOOP
-              ZTEMP = (0.D0,0.D0)		  
-              DO J = 1, NCOLORBORN
-                  ZTEMP = ZTEMP + CF(J,I)*JAMPB(J)
-              ENDDO
-              RES(K) = RES(K)+DBLE(ZTEMP*DCONJG(JAMPL(K,I))/DENOM(I)) 
-          ENDDO
-		  DO J = 1, NCOLORBORN
-              ZTEMP = (0.D0,0.D0)
-              DO I = 1, NCOLORLOOP
-                  ZTEMP = ZTEMP + CF(J,I)*JAMPL(K,I)/DENOM(I)
-              ENDDO
-              RES(K) = RES(K)+DBLE(ZTEMP*DCONJG(JAMPB(J)))
-          ENDDO
-      ENDDO
+%(squaring)s
 
 	  IF (NTRY.LT.2) THEN
 	  DO I=1, NLOOPAMPS

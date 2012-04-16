@@ -130,6 +130,7 @@ class LoopExporterTest(unittest.TestCase):
                'nexternal.inc','born_matrix.f','coupl.inc',
                'makefile','ngraphs.inc','born_matrix.ps',
                'cts_mpc.h','loop_matrix.f','mpmodule.mod','pmass.inc']
+#        files.append('loop_matrix.ps')
         for file in files:
             self.assertTrue(os.path.exists(os.path.join(_proc_file_path\
                              ,'SubProcesses',proc_name,file)))

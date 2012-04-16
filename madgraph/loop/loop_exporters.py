@@ -205,12 +205,17 @@ class LoopProcessExporterFortranSA(export_v4.ProcessExporterFortranSA,
         (nexternal, ninitial) = matrix_element.get_nexternal_ninitial()
 
         calls=self.write_matrix_element_v4(None,matrix_element,fortran_model)
-        # The born matrix element, if needed
-        filename = 'born_matrix.f'
-        calls = self.write_bornmatrix(
-            writers.FortranWriter(filename),
-            matrix_element,
-            fortran_model)
+
+        # We assume here that all processes must share the same property of 
+        # having a born or not, which must be true anyway since these are two
+        # definite different classes of processes which can never be treated on
+        # the same footing.
+        if matrix_element.get('processes')[0].get('has_born'):
+            filename = 'born_matrix.f'
+            calls = self.write_bornmatrix(
+                writers.FortranWriter(filename),
+                matrix_element,
+                fortran_model)
 
         filename = 'nexternal.inc'
         self.write_nexternal_file(writers.FortranWriter(filename),
@@ -236,20 +241,26 @@ class LoopProcessExporterFortranSA(export_v4.ProcessExporterFortranSA,
 #                     matrix_element.get('processes')[0].nice_string())
 #        plot.draw()
 
-        filename = "born_matrix.ps"
-        plot = draw.MultiEpsDiagramDrawer(matrix_element.get('base_amplitude').\
-                                             get('born_diagrams'),
-                                          filename,
-                                          model=matrix_element.get('processes')[0].\
-                                             get('model'),
-                                          amplitude='')
-        logger.info("Generating born Feynman diagrams for " + \
-                     matrix_element.get('processes')[0].nice_string())
-        plot.draw()
+        if matrix_element.get('processes')[0].get('has_born'):   
+            filename = "born_matrix.ps"
+            plot = draw.MultiEpsDiagramDrawer(matrix_element.get('base_amplitude').\
+                                                 get('born_diagrams'),
+                                              filename,
+                                              model=matrix_element.get('processes')[0].\
+                                                 get('model'),
+                                              amplitude='')
+            logger.info("Generating born Feynman diagrams for " + \
+                         matrix_element.get('processes')[0].nice_string())
+            plot.draw()
 
+        if not matrix_element.get('processes')[0].get('has_born'):
+            # There is a specific check_sa.f for loop induced processes
+            shutil.copy(os.path.join(self.loop_dir,'StandAlone','Subprocesses',
+                                     'check_sa_loop_induced.f'),
+                        os.path.join(self.dir_path, 'Subprocesses','check_sa.f'))
+            
         linkfiles = ['check_sa.f', 'coupl.inc', 'makefile', \
                      'cts_mprec.h', 'cts_mpc.h']
-
         for file in linkfiles:
             ln('../%s' % file)
 
@@ -454,8 +465,7 @@ class LoopProcessExporterFortranSA(export_v4.ProcessExporterFortranSA,
                        (len(matrix_element.get_all_amplitudes())>1000))
         # If splitting is necessary, one has two choices to treat color:
         # A: splitColor=False
-        #       The color info is kept together in a big array initialized
-        #       through data statements in include files
+        #       The color info is kept together in loop_matrix.f
         # B: splitColor=True
         #       The JAMP initialization is done as for the born, but they are
         #       split in different jamp_calls_#.f subroutines. 
@@ -653,6 +663,38 @@ class LoopProcessExporterFortranSA(export_v4.ProcessExporterFortranSA,
         helas_calls = fortran_model.get_matrix_element_calls(\
                                                             matrix_element) 
                        
+        # The summing is performed differently depending on wether
+        # the process is loop induced or not
+        if matrix_element.get('processes')[0].get('has_born'):
+            replace_dict['squaring']="""
+          DO K = 1, 3
+              DO I = 1, NCOLORLOOP
+                  ZTEMP = (0.D0,0.D0)          
+                  DO J = 1, NCOLORBORN
+                      ZTEMP = ZTEMP + CF(J,I)*JAMPB(J)
+                  ENDDO
+                  RES(K) = RES(K)+DBLE(ZTEMP*DCONJG(JAMPL(K,I))/DENOM(I)) 
+              ENDDO
+              DO J = 1, NCOLORBORN
+                  ZTEMP = (0.D0,0.D0)
+                  DO I = 1, NCOLORLOOP
+                      ZTEMP = ZTEMP + CF(J,I)*JAMPL(K,I)/DENOM(I)
+                  ENDDO
+                  RES(K) = RES(K)+DBLE(ZTEMP*DCONJG(JAMPB(J)))
+              ENDDO
+          ENDDO
+            """
+        else:
+            replace_dict['squaring']="""
+              DO I = 1, NCOLORLOOP
+                  ZTEMP = (0.D0,0.D0)          
+                  DO J = 1, NCOLORBORN
+                      ZTEMP = ZTEMP + CF(J,I)*JAMPL(1,J)
+                  ENDDO
+                  RES(1) = RES(1)+DBLE(ZTEMP*DCONJG(JAMPL(1,I))/DENOM(I)) 
+              ENDDO
+            """       
+
         if not needSplitting:
             file = open(os.path.join(_file_path, \
                 'iolibs/template_files/loop/loop_matrix_standalone.inc')).read()
@@ -678,13 +720,6 @@ class LoopProcessExporterFortranSA(export_v4.ProcessExporterFortranSA,
         
         if not matrix_element.get('processes') or \
                not matrix_element.get('diagrams'):
-            return 0
-        
-        # We assume here that all processes must share the same property of 
-        # having a born or not, which must be true anyway since these are two
-        # definite different classes of processes which can never be treated on
-        # the same footing.
-        if not matrix_element.get('processes')[0].get('has_born'):
             return 0
         
         if not isinstance(writer, writers.FortranWriter):
@@ -1137,16 +1172,15 @@ class LoopProcessOptimizedExporterFortranSA(LoopProcessExporterFortranSA):
                                                             matrix_element)
         born_ct_helas_calls = fortran_model.get_born_ct_helas_calls(\
                                                             matrix_element)
-
         file = open(os.path.join(self.template_dir,\
                         'loop_matrix_standalone.inc')).read()
         
         # Decide here wether we need to split the loop_matrix.f file or not.
         if (not noSplit and (len(matrix_element.get_all_amplitudes())>2000)):
             file=split_HELASCALLS(file,born_ct_helas_calls,\
-                                  'born_ct_helas_calls','HELAS_CALLS_AMPB')
+                                  'born_ct_helas_calls','helas_calls_ampb')
             file=split_HELASCALLS(file,loop_amp_helas_calls,\
-                                  'loop_helas_calls','HELAS_CALLS_AMPL')
+                                  'loop_helas_calls','helas_calls_ampl')
         else:
             replace_dict['born_ct_helas_calls']='\n'.join(born_ct_helas_calls)
             replace_dict['loop_helas_calls']='\n'.join(loop_amp_helas_calls)
