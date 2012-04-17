@@ -95,8 +95,8 @@ c For tests of virtuals
       common /to_plot/wgt2
       integer nevents
       character*10 MonteCarlo
-      integer lunlhe
-      parameter (lunlhe=98)
+      integer lunlhe,lunlhe2
+      parameter (lunlhe=98,lunlhe2=83)
       integer IDBMUP(2),PDFGUP(2),PDFSUP(2),IDWTUP,NPRUP,LPRUP
       double precision EBMUP(2),XSECUP,XERRUP,XMAXUP
       character*10 dum
@@ -193,6 +193,11 @@ c at the NLO)
          stop
       endif
 
+      if (.not. fixed_order) then
+         open(unit=lunlhe2,file='events_NLO.lhe',status='unknown')
+      endif
+
+      call fill_MC_mshell()
       res=0d0
       err=0d0
       max_wgt=0d0
@@ -204,12 +209,12 @@ c at the NLO)
                event_wgt=sigint(x,wgt)
             else
                event_wgt=sigintF(x,wgt,0,f_abs)
-c$$$            if (unweight) then
-c$$$               write (*,*) 'unweighting option not yet implemented'
-c$$$               stop
-c$$$            else
-c$$$               call finalize_event(x,res_abs,lunlhe,plotEv,putonshell)
-c$$$            endif
+               event_wgt=sigintF(x,wgt,2,f_abs)
+c$$$               if (unweight) then
+c$$$                  write (*,*) 'unweighting option not yet implemented'
+c$$$               endif
+               call finalize_event(x,abs(event_wgt),lunlhe2,plotEv
+     &              ,putonshell)
             endif
             www=event_wgt/wgt2
             if (abs(www).gt.50d0) write (*,*) 'large weight found',
@@ -221,7 +226,8 @@ c$$$            elseif(www.lt.-49.5d0) then
 c$$$               www=-49.5d0
 c$$$            endif
 c$$$            call mfill(9,www,1d0)
-            max_wgt=max(max_wgt,abs(www))
+c$$$            call mfill(10,www,1d0)
+            max_wgt=max(max_wgt,abs(event_wgt))
             res=res+event_wgt
             err=err+event_wgt**2
          enddo
@@ -230,6 +236,8 @@ c$$$            call mfill(9,www,1d0)
       err=sqrt(err)
 
       close (lunlhe)
+      close (lunlhe2)
+
 
       write (*,*) ''
       write (*,*) 'max_wgt=',max_wgt
@@ -664,10 +672,10 @@ c THIS CAN BE OPTIMIZED
 c Determine if we need to write S or H events according to their
 c relative weights
          if (f_abs.gt.0d0) then
-            if (sum.eq.0) then
+            if (sum.eq.1) then
                write (*,*) 'event generation for "sum"'/
      $              /' not yet implemented',sum
-            elseif (sum.eq.1 .or. sum.eq.2) then
+            elseif (sum.eq.0 .or. sum.eq.2) then
                result1=result(0,1)+result(nFKSprocess,1)
                result2=result(0,2)+result(nFKSprocess,2)
                if (ran2().le.abs(result1)/f_abs) then
@@ -689,12 +697,12 @@ c relative weights
                   i=1
                   res=abs(result(0,j))+
      &                 abs(result(proc_map(nFKSproc_m,1),j))
-                  do while (res.le.rnd*f_tot)
+                  do while (res.lt.rnd*f_tot)
                      i=i+1
                      res=res+abs(result(proc_map(nFKSproc_m,i),j))
                   enddo
                   nFKSprocess=proc_map(nFKSproc_m,i)
-                 call fks_inc_chooser()
+                  call fks_inc_chooser()
                   call leshouche_inc_chooser()
 c THIS CAN BE OPTIMIZED
                   call setcuts

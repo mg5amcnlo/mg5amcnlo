@@ -156,7 +156,6 @@ c parameters
 c saves
       save m,stot,totmassin,totmass,ns_channel,nt_channel,one_body
      &     ,ionebody,fksmass
-
       pass=.true.
       do i=1,nexternal-1
          if (i.lt.i_fks) then

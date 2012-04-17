@@ -1,4 +1,4 @@
-      subroutine finalize_event(xx,res_abs,lunlhe,plotEv,putonshell)
+      subroutine finalize_event(xx,weight,lunlhe,plotEv,putonshell)
       implicit none
       include 'nexternal.inc'
       include "genps.inc"
@@ -12,7 +12,7 @@
       common/SHevents/Hevents
       integer i,j,lunlhe
       include 'mint.inc'
-      real*8 xx(ndimmax),res_abs,plot_wgt,evnt_wgt
+      real*8 xx(ndimmax),weight,plot_wgt,evnt_wgt
       logical plotEv, putonshell
       double precision wgt,unwgtfun
       double precision x(99),p(0:3,nexternal)
@@ -56,8 +56,8 @@
       wgt=1d0
 c Normalization to the number of requested events is done in subroutine
 c topout (madfks_plot.f), so multiply here to get # of events.
-      plot_wgt=evtsgn*itmax*ncall
-      evnt_wgt=evtsgn*res_abs/(itmax*ncall)
+      evnt_wgt=evtsgn*weight
+      plot_wgt=evnt_wgt*itmax*ncall
       call generate_momenta(ndim,iconfig,wgt,x,p)
 c
 c Get all the info we need for writing the events.

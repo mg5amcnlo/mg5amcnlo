@@ -941,11 +941,6 @@ c
 
 
 
-
-
-
-
-
       subroutine fill_MC_mshell()
       implicit none
       integer i

@@ -85,6 +85,7 @@ c For tests
       logical            flat_grid
       common/to_readgrid/flat_grid                !Tells if grid read from file
 
+      double precision weight
 c For MINT:
       include "mint.inc"
       real * 8 xgrid(0:nintervals,ndimmax),xint,ymax(nintervals,ndimmax)
@@ -330,6 +331,8 @@ c to restore grids:
      &        res_abs
          close(58)
 
+         weight=res_abs/(itmax*ncall)
+
          write (*,*) 'imode is ',imode
          if (Hevents.and.SHsep) then
             imode=0 
@@ -337,7 +340,7 @@ c to restore grids:
             imode=1 
             do j=1,ncall
                call gen(sigintH,ndim,xgrid,ymax,imode,x) 
-               call finalize_event(x,res_abs,lunlhe,plotEv,putonshell)
+               call finalize_event(x,weight,lunlhe,plotEv,putonshell)
             enddo 
             imode=3 
             call gen(sigintH,ndim,xgrid,ymax,imode,x) 
@@ -347,7 +350,7 @@ c to restore grids:
             imode=1 
             do j=1,ncall
                call gen(sigintF,ndim,xgrid,ymax,imode,x) 
-               call finalize_event(x,res_abs,lunlhe,plotEv,putonshell)
+               call finalize_event(x,weight,lunlhe,plotEv,putonshell)
             enddo 
             imode=3 
             call gen(sigintF,ndim,xgrid,ymax,imode,x) 
@@ -357,7 +360,7 @@ c to restore grids:
             imode=1 
             do j=1,ncall
                call gen(sigintS,ndim,xgrid,ymax,imode,x) 
-               call finalize_event(x,res_abs,lunlhe,plotEv,putonshell)
+               call finalize_event(x,weight,lunlhe,plotEv,putonshell)
             enddo 
             imode=3 
             call gen(sigintS,ndim,xgrid,ymax,imode,x) 

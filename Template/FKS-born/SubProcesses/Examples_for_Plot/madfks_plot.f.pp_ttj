@@ -23,15 +23,16 @@ c resets histograms
 c
       do i=1,2
         kk=(i-1)*50
-        call bookup(kk+1,'total rate        '//cc(i),1.0d0,0.5d0,5.5d0)
-        call bookup(kk+2,'t rapidity        '//cc(i),0.2d0,-5d0,5d0)
-        call bookup(kk+3,'tx rapidity       '//cc(i),0.2d0,-5d0,5d0)
-        call bookup(kk+4,'t-tx pair rapidity'//cc(i),0.1d0,-3d0,3d0)
-        call bookup(kk+5,'m t-tx            '//cc(i),10d0,0d0,1000d0)
-        call bookup(kk+6,'pt t              '//cc(i),4d0,0d0,400d0)
-        call bookup(kk+7,'pt tx             '//cc(i),4d0,0d0,400d0)
-        call bookup(kk+8,'pt t-tx           '//cc(i),2d0,0d0,200d0)
-        call bookup(kk+9,'weights           '//cc(i),1d0,-50d0,50d0)
+        call bookup(kk+ 1,'total rate        '//cc(i),1.0d0,0.5d0,5.5d0)
+        call bookup(kk+ 2,'t rapidity        '//cc(i),0.2d0,-5d0,5d0)
+        call bookup(kk+ 3,'tx rapidity       '//cc(i),0.2d0,-5d0,5d0)
+        call bookup(kk+ 4,'t-tx pair rapidity'//cc(i),0.1d0,-3d0,3d0)
+        call bookup(kk+ 5,'m t-tx            '//cc(i),10d0,0d0,1000d0)
+        call bookup(kk+ 6,'pt t              '//cc(i),4d0,0d0,400d0)
+        call bookup(kk+ 7,'pt tx             '//cc(i),4d0,0d0,400d0)
+        call bookup(kk+ 8,'pt t-tx           '//cc(i),2d0,0d0,200d0)
+        call bookup(kk+ 9,'weights           '//cc(i),1d0,-50d0,50d0)
+        call bookup(kk+10,'weights           '//cc(i),0.1d0,-5d0,5d0)
       enddo
       return
       end
@@ -67,15 +68,16 @@ c
       enddo
       do i=1,2
         kk=(i-1)*50
-        call multitop(kk+1,3,2,'total rate        ',ytit,'LIN')
-        call multitop(kk+2,3,2,'t rapidity        ',ytit,'LOG')
-        call multitop(kk+3,3,2,'tx rapidity       ',ytit,'LOG')
-        call multitop(kk+4,3,2,'t-tx pair rapidity',ytit,'LOG')
-        call multitop(kk+5,3,2,'m t-tx            ',ytit,'LOG')
-        call multitop(kk+6,3,2,'pt t              ',ytit,'LOG')
-        call multitop(kk+7,3,2,'pt tx             ',ytit,'LOG')
-        call multitop(kk+8,3,2,'pt t-tx           ',ytit,'LOG')
-        call multitop(kk+9,3,2,'weights           ',ytit,'LOG')
+        call multitop(kk+ 1,3,2,'total rate        ',ytit,'LIN')
+        call multitop(kk+ 2,3,2,'t rapidity        ',ytit,'LOG')
+        call multitop(kk+ 3,3,2,'tx rapidity       ',ytit,'LOG')
+        call multitop(kk+ 4,3,2,'t-tx pair rapidity',ytit,'LOG')
+        call multitop(kk+ 5,3,2,'m t-tx            ',ytit,'LOG')
+        call multitop(kk+ 6,3,2,'pt t              ',ytit,'LOG')
+        call multitop(kk+ 7,3,2,'pt tx             ',ytit,'LOG')
+        call multitop(kk+ 8,3,2,'pt t-tx           ',ytit,'LOG')
+        call multitop(kk+ 9,3,2,'weights           ',ytit,'LOG')
+        call multitop(kk+10,3,2,'weights           ',ytit,'LOG')
 c$$$        call mtop(kk+1,'total rate',ytit,'LIN')
       enddo
       return                
