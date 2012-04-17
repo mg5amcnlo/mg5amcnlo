@@ -266,6 +266,7 @@ class ProcessExporterFortranFKS_born(loop_exporters.LoopProcessExporterFortranSA
                      'driver_mint.f',
                      'driver_mintMC.f',
                      'driver_vegas.f',
+                     'driver_reweight.f',
                      'fastjetfortran_madfks.cc',
                      'fks_Sij.f',
                      'fks_powers.inc',

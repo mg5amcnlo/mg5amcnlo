@@ -26,13 +26,16 @@ FILES= $(patsubst %.f,%.o,$(wildcard parton_lum_*.f)) $(patsubst %.f,%.o,$(wildc
 RUN= $(FILES) cuts.o add_write_info.o LesHouches.o madfks_dbook.o madfks_plot.o MC_integer.o
 
 # Files for vegas
-VEGAS= $(RUN) driver_vegas.o vegas2.o
+VEGAS= $(RUN) driver_vegas.o vegas2.o handling_lhe_events.o
 
 # Files for mint
 MINT= $(RUN) mint-integrator2.o driver_mint.o
 
 # Files for mintMC
 MINTMC= $(RUN) mint-integrator2.o driver_mintMC.o write_event.o handling_lhe_events.o
+
+# Files for Born reweighting
+BORN_REWEIGHT= $(RUN) driver_reweight.o handling_lhe_events.o write_event.o
 
 # Files for tests
 TEST= $(FILES) LesHouchesDummy.o cuts.o
@@ -86,3 +89,6 @@ madevent_mint: $(MINT)  makefile $(LIBS)
 
 madevent_mintMC: $(MINTMC)  makefile $(LIBS)
 	$(F77) $(FFLAGS) -o madevent_mintMC $(MINTMC) $(LINKLIBS) $(FJLIBS)
+
+madevent_reweight: $(BORN_REWEIGHT)  makefile $(LIBS)
+	$(F77) $(FFLAGS) -o madevent_reweight $(BORN_REWEIGHT) $(LINKLIBS) $(FJLIBS)

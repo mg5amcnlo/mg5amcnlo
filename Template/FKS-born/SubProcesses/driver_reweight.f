@@ -18,7 +18,7 @@ C
       integer i,j,l,l1,l2,ndim
       double precision dsig,tot,mean,sigma
       integer npoints
-      double precision x,y,jac,s1,s2,xmin
+      double precision y,jac,s1,s2,xmin
       external dsig
       character*130 buf
 c
@@ -89,6 +89,22 @@ c For tests of virtuals
       common/csum_of_wgts/total_wgt_sum,total_wgt_sum_max,
      &                 total_wgt_sum_min
 
+      logical fixed_order
+      double precision wgt2,wgt1,x(99),event_wgt,f_abs,sigintF,wgt
+     &     ,max_wgt,www
+      common /to_plot/wgt2
+      integer nevents
+      character*10 MonteCarlo
+      integer lunlhe
+      parameter (lunlhe=98)
+      integer IDBMUP(2),PDFGUP(2),PDFSUP(2),IDWTUP,NPRUP,LPRUP
+      double precision EBMUP(2),XSECUP,XERRUP,XMAXUP
+      character*10 dum
+      logical plotEv,plotKin
+      common/cEvKinplot/plotEv,plotKin
+      logical putonshell
+      parameter (putonshell=.true.)
+
       integer n_mp, n_disc
 C-----
 C  BEGIN CODE
@@ -118,7 +134,7 @@ c     Get user input
 c
       write(*,*) "getting user params"
       call get_user_params(ncall,itmax,iconfig,irestart,idstring
-     &     ,savegrid)
+     &     ,savegrid,fixed_order)
       if(irestart.eq.1)then
         flat_grid=.true.
       else
@@ -163,17 +179,60 @@ c at the NLO)
       total_wgt_sum_max=0d0
       total_wgt_sum_min=0d0
 
-      if(savegrid)then
-         call integrate(initplot,sigint,idstring,itmax,irestart,ndim
-     &        ,ncall,res,err,chi2a,savegrid)
-         usexinteg=.false.
-      else
-         call initplot
-         call xinteg(sigint,ndim,itmax,ncall,res,err)
-         usexinteg=.true.
+      call addfil(dum)
+      call initplot
+
+      open (unit=lunlhe,file='events.lhe',status='old')
+      call read_lhef_header(lunlhe,nevents,MonteCarlo)
+      call read_lhef_init(lunlhe, IDBMUP,EBMUP,PDFGUP,PDFSUP,IDWTUP
+     &     ,NPRUP,XSECUP,XERRUP,XMAXUP,LPRUP)
+      wgt2=XSECUP/dble(nevents)
+
+      if (nevents.lt.ncall*itmax) then
+         write (*,*) 'Not enough Born events in event file'
+         stop
       endif
 
+      res=0d0
+      err=0d0
+      max_wgt=0d0
+      do i=1,itmax
+         do j=1,ncall
+            call get_random_numbers(lunlhe,x,wgt1)
+            wgt=wgt2/wgt1
+            if (fixed_order) then
+               event_wgt=sigint(x,wgt)
+            else
+               event_wgt=sigintF(x,wgt,0,f_abs)
+c$$$            if (unweight) then
+c$$$               write (*,*) 'unweighting option not yet implemented'
+c$$$               stop
+c$$$            else
+c$$$               call finalize_event(x,res_abs,lunlhe,plotEv,putonshell)
+c$$$            endif
+            endif
+            www=event_wgt/wgt2
+            if (abs(www).gt.50d0) write (*,*) 'large weight found',
+     &           www,' xi_i:',x(5)**2,' y_ij:',-2*x(6)**2+1
+
+c$$$            if (www.gt.49.5d0) then
+c$$$               www=49.5d0
+c$$$            elseif(www.lt.-49.5d0) then
+c$$$               www=-49.5d0
+c$$$            endif
+c$$$            call mfill(9,www,1d0)
+            max_wgt=max(max_wgt,abs(www))
+            res=res+event_wgt
+            err=err+event_wgt**2
+         enddo
+         call regrid_MC_integer
+      enddo
+      err=sqrt(err)
+
+      close (lunlhe)
+
       write (*,*) ''
+      write (*,*) 'max_wgt=',max_wgt
       write (*,*) '----------------------------------------------------'
       write(*,*)'Final result:',res,'+/-',err
       write(*,*)'Maximum weight found:',fksmaxwgt
@@ -261,8 +320,6 @@ c Uncomment for getting CutTools statistics
 c$$$      call ctsstatistics(n_mp,n_disc)
 c$$$      write(*,*) 'n_mp  =',n_mp,'    n_disc=',n_disc
 
-
-      if(savegrid)call initplot
       call mclear
       open(unit=99,file='MADatNLO.top',status='unknown')
       call topout
@@ -304,13 +361,17 @@ c From dsample_fks
       integer nFKSprocessBorn
       save nFKSprocessBorn
       double precision vol,sigintR
+
+      double precision wgt1,wgt2
+      save wgt2
+      integer lunlhe
 c
       do i=1,99
-        if(i.le.ndim)then
-         x(i)=xx(i)
-        else
-          x(i)=0.d0
-        endif
+         if(i.le.ndim)then
+            x(i)=xx(i)
+         else
+            x(i)=0.d0
+         endif
       enddo
 
       sigint=0d0
@@ -344,9 +405,9 @@ c
       call leshouche_inc_chooser()
       call setcuts
       call setfksfactor(iconfig)
-      wgt=1d0
+      wgt=peso
       call generate_momenta(ndim,iconfig,wgt,x,p)
-      sigint = sigint+dsig(p,wgt,peso)
+      sigint = sigint+dsig(p,wgt,1d0)
 c
 c Compute the subtracted real-emission corrections either as an explicit
 c sum or a Monte Carlo sum.
@@ -361,9 +422,9 @@ c THIS CAN BE OPTIMIZED
             call leshouche_inc_chooser()
             call setcuts
             call setfksfactor(iconfig)
-            wgt=1d0
+            wgt=peso
             call generate_momenta(ndim,iconfig,wgt,x,p)
-            sigint = sigint+dsig(p,wgt,peso)
+            sigint = sigint+dsig(p,wgt,1d0)
          enddo
       else ! Monte Carlo over nFKSprocess
          call get_MC_integer(fks_configs,nFKSprocess,vol)
@@ -375,18 +436,282 @@ c THIS CAN BE OPTIMIZED
 c     The variable 'vol' is the size of the cell for the MC over
 c     nFKSprocess. Need to divide by it here to correctly take into
 c     account this Jacobian
-         wgt=1d0/vol
+         wgt=peso/vol
          call generate_momenta(ndim,iconfig,wgt,x,p)
-         sigintR = dsig(p,wgt,peso)
-         call fill_MC_integer(nFKSprocess,abs(sigintR)*peso*vol)
+         sigintR = dsig(p,wgt,1d0)
+         call fill_MC_integer(nFKSprocess,abs(sigintR)*vol)
          sigint = sigint+ sigintR
       endif
       return
       end
 
+
+      function sigintF(xx,w,ifl,f_abs)
+c From dsample_fks
+      implicit none
+      integer ndim,ipole
+      common/tosigint/ndim,ipole
+      integer           iconfig
+      common/to_configs/iconfig
+      integer i,j
+      integer ifl
+      integer fold
+      common /cfl/fold
+      include 'mint.inc'
+      real*8 sigintF,xx(ndimmax),w
+      integer ione
+      parameter (ione=1)
+      double precision wgt,dsigS,dsigH,f_abs,f(2)
+      include 'nexternal.inc'
+      logical unwgt
+      double precision evtsgn
+      common /c_unwgt/evtsgn,unwgt
+      logical Hevents
+      common/SHevents/Hevents
+      double precision result1,result2,ran2,rnd
+      external ran2
+      double precision p(0:3,nexternal)
+      double precision sigintF_save,f_abs_save
+      save sigintF_save,f_abs_save
+      double precision x(99),sigintF_without_w,f_abs_without_w
+      common /c_sigint/ x,sigintF_without_w,f_abs_without_w
+      include 'nFKSconfigs.inc'
+      double precision result(0:fks_configs,2)
+      INTEGER NFKSPROCESS
+      COMMON/C_NFKSPROCESS/NFKSPROCESS
+      character*4 abrv
+      common /to_abrv/ abrv
+      logical nbodyonly
+      common/cnbodyonly/nbodyonly
+      integer fks_j_from_i(nexternal,0:nexternal)
+     &     ,particle_type(nexternal),pdg_type(nexternal)
+      common /c_fks_inc/fks_j_from_i,particle_type,pdg_type
+      integer i_fks,j_fks
+      common/fks_indices/i_fks,j_fks
+      logical firsttime
+      integer sum
+      parameter (sum=0)
+      data firsttime /.true./
+      integer nFKSprocessBorn
+      save nFKSprocessBorn
+      double precision vol,sigintR,res,f_tot
+      integer proc_map(fks_configs,0:fks_configs),tot_proc
+     $     ,i_fks_proc(fks_configs),j_fks_proc(fks_configs)
+     $     ,nFKSproc_m
+      logical found
+c
+      do i=1,99
+         if (i.le.ndim) then
+            x(i)=xx(i)
+         else
+            x(i)=-9d99
+         endif
+      enddo
+
+c Find the nFKSprocess for which we compute the Born-like contributions
+      if (firsttime) then
+         firsttime=.false.
+         nFKSprocess=fks_configs
+         call fks_inc_chooser()
+         do while (particle_type(i_fks).ne.8)
+            write (*,*) i_fks,particle_type(i_fks)
+            nFKSprocess=nFKSprocess-1
+            call fks_inc_chooser()
+            if (nFKSprocess.eq.0) then
+               write (*,*) 'ERROR in sigint'
+               stop
+            endif
+         enddo
+         nFKSprocessBorn=nFKSprocess
+         write (*,*) 'Total number of FKS directories is', fks_configs
+         write (*,*) 'For the Born we use nFKSprocess  #', nFKSprocess
+c For sum over identical FKS pairs, need to find the identical structures
+         if (sum.eq.2) then
+            tot_proc=0
+            do i=1,fks_configs
+               proc_map(i,0)=0
+               i_fks_proc(i)=0
+               j_fks_proc(i)=0
+            enddo
+            do nFKSprocess=1,fks_configs
+               call fks_inc_chooser()
+               found=.false.
+               i=1
+               do while ( i.le.tot_proc )
+                  if (i_fks.eq.i_fks_proc(i)
+     &              .and. j_fks.eq.j_fks_proc(i) ) then
+                     exit
+                  endif
+                  i=i+1
+               enddo
+               proc_map(i,0)=proc_map(i,0)+1
+               proc_map(i,proc_map(i,0))=nFKSprocess
+               if (i.gt.tot_proc) then
+                  tot_proc=tot_proc+1
+                  i_fks_proc(tot_proc)=i_fks
+                  j_fks_proc(tot_proc)=j_fks
+               endif
+            enddo
+            write (*,*) 'FKS process map:'
+            do i=1,tot_proc
+               write (*,*) i,'-->',proc_map(i,0),':',
+     &              (proc_map(i,j),j=1,proc_map(i,0))
+            enddo
+         endif
+      endif
+
+      f(1)=0d0
+      f(2)=0d0
+      fold=ifl
+      if (ifl.eq.0)then
+c
+c Compute the Born-like contributions with nbodyonly=.true.
+c     
+         nFKSprocess=nFKSprocessBorn
+         nbodyonly=.true.
+         call fks_inc_chooser()
+         call leshouche_inc_chooser()
+c THIS CAN BE OPTIMIZED
+         call setcuts
+         call setfksfactor(iconfig)
+         wgt=w
+         call generate_momenta(ndim,iconfig,wgt,x,p)
+         call dsigF(p,wgt,1d0,dsigS,dsigH)
+         result(0,1)= dsigS
+         result(0,2)= dsigH
+         f(1) = f(1)+result(0,1)
+         f(2) = f(2)+result(0,2)
+c
+c Compute the subtracted real-emission corrections either as an explicit
+c sum or a Monte Carlo sum.
+c      
+         do i=1,fks_configs
+            result(i,1)=0d0
+            result(i,2)=0d0
+         enddo
+         if (.not.( abrv.eq.'born' .or. abrv.eq.'grid' .or.
+     &        abrv(1:2).eq.'vi') ) then
+            nbodyonly=.false.
+            if (sum.eq.1) then
+               do nFKSprocess=1,fks_configs
+                  call fks_inc_chooser()
+                  call leshouche_inc_chooser()
+c THIS CAN BE OPTIMIZED
+                  call setcuts
+                  call setfksfactor(iconfig)
+                  wgt=w
+                  call generate_momenta(ndim,iconfig,wgt,x,p)
+                  call dsigF(p,wgt,1d0,dsigS,dsigH)
+                  result(nFKSprocess,1)= dsigS
+                  result(nFKSprocess,2)= dsigH
+                  f(1) = f(1)+result(nFKSprocess,1)
+                  f(2) = f(2)+result(nFKSprocess,2)
+               enddo
+            elseif(sum.eq.0) then    ! Monte Carlo over nFKSprocess
+               call get_MC_integer(fks_configs,nFKSprocess,vol)
+               call fks_inc_chooser()
+               call leshouche_inc_chooser()
+c THIS CAN BE OPTIMIZED
+               call setcuts
+               call setfksfactor(iconfig)
+               wgt=w/vol
+               call generate_momenta(ndim,iconfig,wgt,x,p)
+               call dsigF(p,wgt,1d0,dsigS,dsigH)
+               sigintR = (abs(dsigS)+abs(dsigH))*vol
+               call fill_MC_integer(nFKSprocess,sigintR)
+               result(nFKSprocess,1)= dsigS
+               result(nFKSprocess,2)= dsigH
+               f(1) = f(1)+result(nFKSprocess,1)
+               f(2) = f(2)+result(nFKSprocess,2)
+            elseif(sum.eq.2) then    ! MC over i_fks/j_fks pairs
+               call get_MC_integer(tot_proc,nFKSproc_m,vol)
+               do i=1,proc_map(nFKSproc_m,0)
+                  nFKSprocess=proc_map(nFKSproc_m,i)
+                  call fks_inc_chooser()
+                  call leshouche_inc_chooser()
+c THIS CAN BE OPTIMIZED
+                  call setcuts
+                  call setfksfactor(iconfig)
+                  wgt=w/vol
+                  call generate_momenta(ndim,iconfig,wgt,x,p)
+                  call dsigF(p,wgt,1d0,dsigS,dsigH)
+                  result(nFKSprocess,1)= dsigS
+                  result(nFKSprocess,2)= dsigH
+                  f(1) = f(1)+result(nFKSprocess,1)
+                  f(2) = f(2)+result(nFKSprocess,2)
+               enddo
+               sigintR=0d0
+               do i=1,proc_map(nFKSproc_m,0)
+                  sigintR=sigintR+
+     &               (abs(result(proc_map(nFKSproc_m,i),1))+
+     &                abs(result(proc_map(nFKSproc_m,i),2)))*vol
+               enddo
+               call fill_MC_integer(nFKSproc_m,sigintR)
+            endif
+         endif
+         sigintF=f(1)+f(2)
+         sigintF_save=sigintF
+         f_abs=abs(f(1))+abs(f(2))
+         f_abs_save=f_abs
+      elseif(ifl.eq.1) then
+         write (*,*) 'Folding not implemented'
+         stop
+      elseif(ifl.eq.2) then
+         sigintF = sigintF_save
+         sigintF_without_w=sigintF/w
+         f_abs = f_abs_save
+         f_abs_without_w=f_abs/w
+c Determine if we need to write S or H events according to their
+c relative weights
+         if (f_abs.gt.0d0) then
+            if (sum.eq.0) then
+               write (*,*) 'event generation for "sum"'/
+     $              /' not yet implemented',sum
+            elseif (sum.eq.1 .or. sum.eq.2) then
+               result1=result(0,1)+result(nFKSprocess,1)
+               result2=result(0,2)+result(nFKSprocess,2)
+               if (ran2().le.abs(result1)/f_abs) then
+                  Hevents=.false.
+                  evtsgn=sign(1d0,result1)
+                  j=1
+               else
+                  Hevents=.true.
+                  evtsgn=sign(1d0,result2)
+                  j=2
+               endif
+               if (sum.eq.2 .and. .not.( abrv.eq.'born' .or. abrv.eq
+     &              .'grid' .or.abrv(1:2).eq.'vi') ) then
+                  f_tot=result(0,j)
+                  do i=1,proc_map(nFKSproc_m,0)
+                     f_tot=f_tot+result(proc_map(nFKSproc_m,i),j)
+                  enddo
+                  rnd=ran2()
+                  i=1
+                  res=abs(result(0,j))+
+     &                 abs(result(proc_map(nFKSproc_m,1),j))
+                  do while (res.le.rnd*f_tot)
+                     i=i+1
+                     res=res+abs(result(proc_map(nFKSproc_m,i),j))
+                  enddo
+                  nFKSprocess=proc_map(nFKSproc_m,i)
+                 call fks_inc_chooser()
+                  call leshouche_inc_chooser()
+c THIS CAN BE OPTIMIZED
+                  call setcuts
+                  call setfksfactor(iconfig)
+               endif
+            endif
+         endif
+      endif
+      return
+      end
+
+     
+
+
 c
       subroutine get_user_params(ncall,itmax,iconfig,
-     #                           irestart,idstring,savegrid)
+     #                           irestart,idstring,savegrid,fixed_order)
 c**********************************************************************
 c     Routine to get user specified parameters for run
 c**********************************************************************
@@ -399,7 +724,7 @@ c
 c
 c     Arguments
 c
-      integer ncall,itmax,iconfig, jconfig
+      integer ncall,itmax,iconfig
 c
 c     Local
 c
@@ -451,6 +776,22 @@ c
       logical unwgt
       double precision evtsgn
       common /c_unwgt/evtsgn,unwgt
+c
+c MC counterterm stuff
+c
+c alsf and besf are the parameters that control gfunsoft
+      double precision alsf,besf
+      common/cgfunsfp/alsf,besf
+c alazi and beazi are the parameters that control gfunazi
+      double precision alazi,beazi
+      common/cgfunazi/alazi,beazi
+      character*10 MonteCarlo
+      common/cMonteCarloType/MonteCarlo
+c Set plotKin=.true. to plot H and S event kinematics (integration steps)
+c Set plotEv=.true. to use events for plotting (unweighting phase)
+      logical plotEv,plotKin
+      common/cEvKinplot/plotEv,plotKin
+      logical fixed_order
 
 c-----
 c  Begin Code
@@ -458,19 +799,32 @@ c-----
       doVirtTest=.true.
       mint=.false.
       unwgt=.false.
+      usexinteg=.false.
+      plotEV=.false.
+      plotKin=.true.
+      use_cut=2
+      irestart=1
       write(*,'(a)') 'Enter number of events and iterations: '
       read(*,*) ncall,itmax
       write(*,*) 'Number of events and iterations ',ncall,itmax
-      write(*,'(a)') 'Enter desired fractional accuracy: '
-      read(*,*) accur
-      write(*,*) 'Desired fractional accuracy: ',accur
-
-      write(*,'(a)') 'Enter 0 for fixed, 2 for adjustable grid: '
-      read(*,*) use_cut
-      if (use_cut .lt. 0 .or. use_cut .gt. 2) then
-         write(*,*) 'Bad choice, using 2',use_cut
-         use_cut = 2
+      write (*,*) 'Fixed order "1" or matching to parton shower "0"?'
+      read(*,*) i
+      if (i .eq. 0) then
+         fixed_order = .false.
+         write(*,*) 'Fixed order'
+      else
+         multi_channel = .false.
+         write(*,*) 'Matching to parton shower'
       endif
+      
+      write(*,*)'Enter alpha, beta for G_soft'
+      write(*,*)'  Enter alpha<0 to set G_soft=1 (no ME soft)'
+      read(*,*)alsf,besf
+      write (*,*) 'for G_soft: alpha=',alsf,', beta=',besf 
+      write(*,*)'Enter alpha, beta for G_azi'
+      write(*,*)'  Enter alpha>0 to set G_azi=0 (no azi corr)'
+      read(*,*)alazi,beazi
+      write (*,*) 'for G_azi: alpha=',alazi,', beta=',beazi
 
       write(*,10) 'Suppress amplitude (0 no, 1 yes)? '
       read(*,*) i
@@ -502,12 +856,7 @@ c-----
          endif
       enddo
       write(*,12) 'Running Configuration Number: ',iconfig
-c
-c Enter parameters that control Vegas grids
-c
-      write(*,*)'enter id string for this run'
-      read(*,*) idstring
-      runstr=idstring
+
       write(*,*)'enter 1 if you want restart files'
       read (*,*) itmp
       if(itmp.eq.1) then
@@ -515,8 +864,18 @@ c
       else
          savegrid = .false.
       endif
-      write(*,*)'enter 0 to exclude, 1 for new run, 2 to restart'
-      read(5,*)irestart
+
+      write (*,'(a)') 'Monte Carlo for showering. Possible options are'
+      write (*,'(a)') 'HERWIG6, HERWIGPP, PYTHIA6Q, PYTHIA6PT, PYTHIA8'
+      read (*,*) MonteCarlo
+      write (*,*) MonteCarlo
+
+      if(MonteCarlo.ne.'HERWIG6' .and.MonteCarlo.ne.'HERWIGPP' .and.
+     #   MonteCarlo.ne.'PYTHIA6Q'.and.MonteCarlo.ne.'PYTHIA6PT'.and.
+     #   MonteCarlo.ne.'PYTHIA8')then
+        write(*,*)'Take it easy. This MC is not implemented'
+        stop
+      endif
 
       abrvinput='     '
       write (*,*) "'all ', 'born', 'real', 'virt', 'novi' or 'grid'?"
@@ -524,7 +883,8 @@ c
       write (*,*) " a pure n-body integration (no S functions)"
       read(5,*) abrvinput
       if(abrvinput(5:5).eq.'0')then
-        nbodyonly=.true.
+         write (*,*) 'This is not supported'
+         stop
       else
         nbodyonly=.false.
       endif
@@ -555,18 +915,49 @@ c
 c
 c     Here I want to set up with B.W. we map and which we don't
 c
-      dconfig = dconfig-iconfig
-      if (dconfig .eq. 0) then
-         write(*,*) 'Not subdividing B.W.'
-         lbw(0)=0
-      else
-         lbw(0)=1
-         jconfig=dconfig*1000.1
-         write(*,*) 'Using dconfig=',jconfig
-         call DeCode(jconfig,lbw(1),3,nexternal)
-         write(*,*) 'BW Setting ', (lbw(j),j=1,nexternal-2)
-      endif
+c$$$      dconfig = dconfig-iconfig
+c$$$      if (dconfig .eq. 0) then
+c$$$         write(*,*) 'Not subdividing B.W.'
+c$$$         lbw(0)=0
+c$$$      else
+c$$$         lbw(0)=1
+c$$$         jconfig=dconfig*1000.1
+c$$$         write(*,*) 'Using dconfig=',jconfig
+c$$$         call DeCode(jconfig,lbw(1),3,nexternal)
+c$$$         write(*,*) 'BW Setting ', (lbw(j),j=1,nexternal-2)
+c$$$      endif
  10   format( a)
  12   format( a,i4)
       end
 c
+
+
+c Dummy subroutine (normally used with vegas when resuming plots)
+      subroutine resume()
+      end
+
+
+
+      subroutine get_random_numbers(lunlhe,x,wgt)
+      implicit none
+      double precision x(99),wgt,wgt_abs
+      character*20 buff
+      integer lunlhe,ndim,i
+      read(lunlhe,'(a)') buff
+      if (buff(1:10).ne.'  <event>') then
+         write (*,*) 'not a new event #1'
+         stop
+      endif
+      read (lunlhe,*) ndim,wgt,wgt_abs
+      if (wgt.ne.wgt_abs) then
+         write (*,*) 'weights not equal'
+         stop
+      endif
+      read(lunlhe,*)(x(i),i=1,ndim)
+      read(lunlhe,'(a)') buff
+      if (buff(1:11).ne.'  </event>') then
+         write (*,*) 'not a new event #2'
+         stop
+      endif
+      return
+      end
