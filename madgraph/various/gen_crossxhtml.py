@@ -414,6 +414,13 @@ class RunResults(list):
         except:
             self.web = False
 
+        # check if more than one parton output
+        parton = [r for r in self if r.parton]
+        # clean wrong previous run link
+        if len(parton)>1:
+            for p in parton[:-1]:
+                p.parton = []
+
         dico = self.info
         dico['run_span'] = sum([tag.get_nb_line() for tag in self], 1) -1
         dico['tag_data'] = '\n'.join([tag.get_html(self) for tag in self])

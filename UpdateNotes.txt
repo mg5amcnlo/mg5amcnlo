@@ -5,6 +5,9 @@ Update notes for MadGraph 5 (in reverse time order)
                   OM: Improve cluster support (more secure and complete version)
                   JA: Increased the number of events tested for non-zero helicity
                       configurations (needed for goldstino processes).
+                  OM: Add a command to remove the file RunWeb which were not always
+                      deleted correctly
+ 
                   
 1.4.4 (29/03/12)  OM: Added a command: "output aloha" which allows to creates a 
                       subset (or all) of the aloha routines linked to the
