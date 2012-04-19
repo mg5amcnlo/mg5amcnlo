@@ -1910,8 +1910,13 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
             crossoversig+=cross/error**2
             inv_sq_err+=1.0/error**2
             self.results[main_name][-1]['cross'] = crossoversig/inv_sq_err
-            self.results[main_name][-1]['error'] = math.sqrt(1.0/inv_sq_err) 
-
+            self.results[main_name][-1]['error'] = math.sqrt(1.0/inv_sq_err)
+            print self.run_card
+            if self.run_card['iseed'] != 0:
+                seed = self.random + 1
+                text = open(pjoin(self.me_dir, 'Cards','run_card.dat')).read()
+                (t,n) = re.subn(r'\s\d+\s*= iseed','   %s       = iseed' % seed,text)
+                open(pjoin(self.me_dir, 'Cards','run_card.dat'),'w').write(t)
         
         self.run_name = main_name
         self.results.def_current(main_name)
@@ -3383,7 +3388,10 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
             
             
         if not os.path.exists(event_path):
-            raise self.InvalidCmd, 'Events file %s does not exits' % event_path
+            if os.path.exists(event_path+'.gz'):
+                os.system('gzip -f %s.gz ' % event_path)
+            else:
+                raise self.InvalidCmd, 'Events file %s does not exits' % event_path
         
         self.update_status('Creating Plots for %s level' % mode, level = mode.lower())
                

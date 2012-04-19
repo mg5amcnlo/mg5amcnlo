@@ -118,6 +118,12 @@ class Cluster(object):
     def launch_and_wait(self, prog, argument=[], cwd=None, stdout=None, 
                                                          stderr=None, log=None):
         """launch one job on the cluster and wait for it"""
+        
+        special_output = False # tag for concatanate the error with the output.
+        if stderr == -2 and stdout: 
+            #We are suppose to send the output to stdout
+            special_output = True
+            stderr = stdout + '.err'
         id = self.submit(prog, argument, cwd, stdout, stderr, log)
         while 1:        
             status = self.control_one_job(id)
@@ -125,7 +131,25 @@ class Cluster(object):
                 time.sleep(20) #security to ensure that the file are really written on the disk
                 break
             time.sleep(30)
-            
+        
+        if special_output:
+            # combine the stdout and the stderr
+            #wait up to 50 s to see if those files exists
+            for i in range(5):
+                if os.path.exists(stdout):
+                    if not os.path.exists(stderr):
+                        time.sleep(5)
+                    if os.path.exists(stderr):
+                        err_text = open(stderr).read()
+                        if not err_text:
+                            return
+                        logger.warning(err_txt)                        
+                        text = open(stdout).read()
+                        open(stdout,'w').write(text + err_txt)
+                    else:
+                        return
+                time.sleep(10)
+                        
     def remove(self, *args):
         """ """
         logger.warning("""This cluster didn't support job removal, 
