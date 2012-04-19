@@ -861,7 +861,6 @@ class LoopProcessOptimizedExporterFortranSA(LoopProcessExporterFortranSA):
 
         return (ColorMatrixNumOutput,ColorMatrixDenomOutput)
 
-
     def write_matrix_element_v4(self, writer, matrix_element, fortran_model,
                                 proc_id = "", config_map = []):
         """ Writes loop_matrix.f, CT_interface.f and loop_num.f only but with
@@ -900,7 +899,6 @@ class LoopProcessOptimizedExporterFortranSA(LoopProcessExporterFortranSA):
                                     matrix_element,OptimizedFortranModel)
         
             return calls                
-
 
     def write_loop_num(self, writer, matrix_element,fortran_model):
         """ Create the file containing the core subroutine called by CutTools
@@ -1131,10 +1129,6 @@ class LoopProcessOptimizedExporterFortranSA(LoopProcessExporterFortranSA):
         ncomb = matrix_element.get_helicity_combinations()
         replace_dict['ncomb'] = ncomb
 
-        # Extract helicity lines
-        helicity_lines = self.get_helicity_lines(matrix_element,array_name='HELC')
-        replace_dict['helicity_lines'] = helicity_lines
-
         # Extract nloopamps
         nloopamps = matrix_element.get_number_of_loop_amplitudes()
         replace_dict['nloopamps'] = nloopamps
@@ -1166,6 +1160,13 @@ class LoopProcessOptimizedExporterFortranSA(LoopProcessExporterFortranSA):
         for ColorLine in CMDenom:
             CMWriter.write(' '.join(['%d'%C for C in ColorLine])+'\n')
         CMWriter.close()
+        
+        # Write out the helicity configurations
+        HelConfigs=matrix_element.get_helicity_matrix()
+        HelConfigWriter=open('HelConfigs.dat','w')
+        for HelConfig in HelConfigs:
+            HelConfigWriter.write(' '.join(['%d'%H for H in HelConfig])+'\n')
+        HelConfigWriter.close()
         
         # Extract helas calls
         loop_amp_helas_calls = fortran_model.get_loop_amp_helas_calls(\
