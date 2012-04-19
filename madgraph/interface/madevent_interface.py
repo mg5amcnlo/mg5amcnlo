@@ -1741,14 +1741,10 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
             logger.info("     Cross-section :   %.4g +- %.4g pb" % (data['cross'], data['error']))
         logger.info("     Nb of events :  %s" % data['nb_event'] )
         if data['cross_pythia'] and data['nb_event_pythia']:
-            error = data.get_pythia_error(data['error'], 
-                                          data['cross_pythia'], 
-                                          data['nb_event'], 
-                                          data['nb_event_pythia'])
             if self.ninitial == 1:
-                logger.info("     Matched Width :   %.4g +- %.4g GeV" % (data['cross_pythia'], error))
+                logger.info("     Matched Width :   %.4g +- %.4g GeV" % (data['cross_pythia'], data['error_pythia']))
             else:
-                logger.info("     Matched Cross-section :   %.4g +- %.4g pb" % (data['cross_pythia'], error))            
+                logger.info("     Matched Cross-section :   %.4g +- %.4g pb" % (data['cross_pythia'], data['error_pythia']))            
             logger.info("     Nb of events after Matching :  %s" % data['nb_event_pythia'])
         logger.info(" " )
         
@@ -2319,15 +2315,22 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
                     continue
                 try:
                     # Pythia cross section in mb, we want pb
-                    cs_info = float(info.group('xsec').replace('D','E')) *1e9
-                    nb_info = int(info.group('generated'))
+                    sigma_m = float(info.group('xsec').replace('D','E')) *1e9
+                    Nacc = int(info.group('generated'))
+                    Ntry = int(info.group('tried'))
                 except ValueError:
                     # xsec is not float - this should not happen
                     self.results.add_detail('cross_pythia', 0)
                     self.results.add_detail('nb_event_pythia', 0)
+                    self.results.add_detail('error_pythia', 0)
                 else:
-                    self.results.add_detail('cross_pythia', cs_info)
-                    self.results.add_detail('nb_event_pythia', nb_info)
+                    self.results.add_detail('cross_pythia', sigma_m)
+                    self.results.add_detail('nb_event_pythia', Nacc)
+                    #compute pythia error
+                    error = self.results[self.run_name].return_tag(self.run_tag)['error']                    
+                    error_m = math.sqrt((error * Nacc/Ntry)**2 + sigma_m**2 *(1-Nacc/Ntry)/Nacc)
+                    # works both for fixed number of generated events and fixed accepted events
+                    self.results.add_detail('error_pythia', error_m)
                 break                 
 
             pythia_log.close()
