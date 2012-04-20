@@ -9,11 +9,11 @@ Update notes for MadGraph 5 (in reverse time order)
                       configurations (needed for goldstino processes).
                   OM: Add a command to remove the file RunWeb which were not always
                       deleted correctly
-                  OM+JA: Correct the way the events/error are calculated for matched
-                      cross-sections. 
+                  OM+JA: Correct the display of number of events and error for Pythia 
+                     in the html files.
                   OM: Changed the way the stdout/stderr are treated on the cluster
                       since some cluster cann't support to have the same output file
-		      for both. (thanks abhishek)
+                      for both. (thanks abhishek)
 
 1.4.4 (29/03/12)  OM: Added a command: "output aloha" which allows to creates a 
                       subset (or all) of the aloha routines linked to the

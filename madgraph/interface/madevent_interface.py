@@ -741,6 +741,20 @@ class CheckValidForCmd(object):
         elif laststep:
             raise self.InvalidCmd('only one laststep argument is allowed')
      
+        # If not pythia-pgs path
+        if not self.options['pythia-pgs_path']:
+            logger.info('Retry to read configuration file to find pythia-pgs path')
+            self.set_configuration()
+            
+        if not self.options['pythia-pgs_path'] or not \
+            os.path.exists(pjoin(self.options['pythia-pgs_path'],'src')):
+            error_msg = 'No pythia-pgs path correctly set.'
+            error_msg += 'Please use the set command to define the path and retry.'
+            error_msg += 'You can also define it in the configuration file.'
+            raise self.InvalidCmd(error_msg)
+     
+     
+     
         tag = [a for a in args if a.startswith('--tag=')]
         if tag: 
             args.remove(tag[0])
@@ -769,19 +783,6 @@ class CheckValidForCmd(object):
         input_file = pjoin(self.me_dir,'Events',self.run_name, 'unweighted_events.lhe')
         output_file = pjoin(self.me_dir, 'Events', 'unweighted_events.lhe')
         os.system('gunzip -c %s > %s' % (input_file, output_file))
-            
-
-        # If not pythia-pgs path
-        if not self.options['pythia-pgs_path']:
-            logger.info('Retry to read configuration file to find pythia-pgs path')
-            self.set_configuration()
-            
-        if not self.options['pythia-pgs_path'] or not \
-            os.path.exists(pjoin(self.options['pythia-pgs_path'],'src')):
-            error_msg = 'No pythia-pgs path correctly set.'
-            error_msg += 'Please use the set command to define the path and retry.'
-            error_msg += 'You can also define it in the configuration file.'
-            raise self.InvalidCmd(error_msg)
         
         args.append(mode)
     
@@ -1911,7 +1912,6 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
             inv_sq_err+=1.0/error**2
             self.results[main_name][-1]['cross'] = crossoversig/inv_sq_err
             self.results[main_name][-1]['error'] = math.sqrt(1.0/inv_sq_err)
-            print self.run_card
             if self.run_card['iseed'] != 0:
                 seed = self.random + 1
                 text = open(pjoin(self.me_dir, 'Cards','run_card.dat')).read()

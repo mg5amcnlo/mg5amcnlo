@@ -2819,14 +2819,16 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
                 path = os.path.join(MG5DIR, 'pythia-pgs', 'src', 'make_opts')
                 text = open(path).read()
                 text = text.replace('FC=g77','FC=gfortran')
-                open(path, 'w').writelines(text)            
+                open(path, 'w').writelines(text)    
             elif compiler == 'gfortran' and args[0] == 'MadAnalysis':
                 path = os.path.join(MG5DIR, 'MadAnalysis', 'makefile')
                 text = open(path).read()
-                text = text.replace('F77 = g77','F77 = gfortran')
-                open(path, 'w').writelines(text)            
-        if logger.level <= logging.INFO: 
-            misc.call(['make', 'clean'], )
+                text = text.replace('FC=g77','FC=gfortran')
+                open(path, 'w').writelines(text)
+                            
+        if logger.level <= logging.INFO:
+            devnull = open(os.devnull,'w') 
+            misc.call(['make', 'clean'], stdout=devnull, stderr=-2)
             status = misc.call(['make'], cwd = os.path.join(MG5DIR, name))
         else:
             misc.compile(['clean'], mode='', cwd = os.path.join(MG5DIR, name))
