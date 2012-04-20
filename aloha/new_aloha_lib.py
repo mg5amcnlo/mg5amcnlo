@@ -86,465 +86,6 @@ class Computation(object):
 KERNEL = Computation()
 CUMUL, NB_CUMUL = 0 ,0
 
-class AddVariable(array):
-    pass
-
-#===============================================================================
-# MultVariable
-#===============================================================================
-class MultVariable(array):
-    """ A list of Variable with multiplication as operator between themselves.
-    """
-
-    add_class = AddVariable # define the class for addition of MultClass
-    vartype = 2 # for istance check optimization
-    
-    def __init__(self, type, old=[], power=[], prefactor=1):
-        """ initialization of the object with default value """
-        
-        array.__init__(self, type, old)
-        self.power = array('i', power)
-        self.prefactor = prefactor
-        
-    def copy(self):
-        """ return a copy """
-        return self.__class__(self, self.prefactor)
-        
-    def simplify(self):
-        """ simplify the product"""
-        
-        #Ask to Simplify each term
-        self[:] = [fact.simplify() for fact in self]
-        
-        return self           
-    
-    def factorize(self):
-        """Try to factorize this (nothing to do)"""
-        return self
-         
-    #Defining rule of Multiplication    
-    def __mul__(self, obj):
-        """Define the multiplication with different object"""
-        
-        if not hasattr(obj, 'vartype'): # should be a number
-            self.prefactor *= obj
-            #return self.__class__(self, self.prefactor * obj)
-        elif not obj.vartype: # obj is a Variable
-            return NotImplemented # Use the one of Variable
-        
-        elif obj.vartype == 2: # obj is a MultVariable
-            new = self.__class__(self, self.prefactor)
-            for fact in obj:
-                new.append(fact)
-            new.prefactor *= obj.prefactor
-            return new  
-                
-        elif obj.vartype == 1: # obj is an AddVariable
-            new = self.add_class(obj, obj.prefactor)
-            new[:] = [data.__mul__(self) for data in new]
-            return new
-
-        else: 
-            #look at  obj * self
-            return NotImplemented
-                
-                
-    def __add__(self, obj):
-        """ define the adition with different object"""
-        
-        if not obj:
-            return self
-        #DECOMENT FOR SPIN2 PROPAGATOR COMPUTATION
-        elif isinstance(obj, Number):
-            obj = ConstantObject(obj)
-            self.add_class()
-            new = self.add_class()
-            new.append(obj)
-            new.append(self.__class__(self, self.prefactor))
-            return new                      
-        elif obj.vartype == 2: # obj is MultVariable
-            new = self.add_class()
-            new.append(self.__class__(self, self.prefactor))
-            new.append(self.__class__(obj, obj.prefactor))
-            return new
-        else:
-            #call the implementation of addition implemented in obj
-            return NotImplemented
-               
-    def __sub__(self, obj):
-        return self + (-1) * obj
-    
-    def __neg__(self):
-        return (-1) * self
-    
-    def __rsub__(self, obj):
-        return (-1) * self + obj
-    
-    def __div__(self, obj):
-        """ define the division """
-        if not hasattr(obj, 'vartype'):
-            factor = 1 / obj 
-            return factor * self
-        else:
-            return FracVariable(1 * self, 1 * obj)
-        
-    def __rdiv__(self, obj):
-        """Deal division in a inverse way"""
-        
-        new = self.__class__(self, self.prefactor)
-        if not hasattr(obj, 'vartype'):
-            return FracVariable(obj, new)
-        else:
-            return NotImplemented
-        
-    __radd__ = __add__
-    __iadd__ = __add__
-    __rmul__ = __mul__    
-    __truediv__ = __div__
-    __rtruediv__ = __rdiv__
-       
-
-    def append(self, id):
-        """ add a newVariable in the Multiplication list and look for her power
-        """
-
-        try:
-            pos = self.find(id)
-        except:
-            array.append(self, id)
-            self.power.append(1)
-        else:
-            self.power[pos] += 1
-        
-    def __eq__(self, obj):
-        """Define When two MultVariable are identical"""
-        
-        try:    
-            if obj.vartype !=2 or len(self) != len(obj):
-                return False
-        except:
-            return False
-        else:
-            l1=[(var.variable, var.power) for var in self]
-            for var in obj:
-                if not (var.variable, var.power) in l1:
-                    return False
-            return True
-    
-    def __ne__(self, obj):
-        """ Define when two Multvariable are not identical"""
-        return not self.__eq__(obj)
-                    
-    def __str__(self):
-        """ String representation """
-        
-        text = ''
-        if self.prefactor != 1:
-            text += str(self.prefactor) + ' * '
-        text += '( '
-        text += ' * '.join([str(item) for item in self])
-        text += ' )'
-        return text
-
-    __rep__ = __str__
-
-
-
-
-#===============================================================================
-# Variable
-#===============================================================================
-class Variable(object):
-    """This is the standard object for all the variable linked to expression.
-    """
-    
-    mult_class = MultVariable # Which class for multiplication with Variable
-    #add_class = AddVariable #which class for addition with Variable
-    vartype = 0 # optimization for instance class recognition
-    contract_first = 0 # Optimization for the order of the contracting object
-                       #object defining contract first to 1 are the starting point
-                       #of a chain of contraction following indices.
-    
-    def __new__(cls, name):
-        """Check if the argument is already define"""
-
-        if name in KERNEL.name2obj:
-            return KERNEL.name2obj[name]
-        else:
-            return object.__new__(cls, name)
-    
-    class VariableError(Exception):
-        """class for error in Variable object"""
-        pass
-    
-    def __init__(self, name):
-        """ [prefactor] * Variable ** [power]"""
-        
-        if self.__dict__:
-            return
-        self.name = name
-        self.id = KERNEL.add(name, self)
-        
-    def simplify(self):
-        """Define How to simplify this object."""
-        return self
-    
-    def expand(self):
-        """Return a more basic representation of this variable."""
-        return self
-    
-    def factorize(self):
-        """ try to factorize this"""
-        return self
-    
-    # Define basic operation (multiplication, addition, soustraction)    
-    def __mul__(self, obj):
-        """ How to multiply object together 
-            product of Variable -> MultVariable    
-        """
-        
-        if not hasattr(obj, 'vartype'): # obj is a number
-            if not obj:
-                return 0
-            out = self.mult_class(prefactor=obj)
-            out.append(self.id)
-            return out
-        
-        elif not obj.vartype: # obj is a Variable
-            new = self.mult_class('I')
-            new.append(self.id)
-            new.append(obj.id)
-            return new
-
-        elif obj.vartype == 2: #obj is a MultVariable
-            obj.append(self.id)
-            return obj
-                
-        elif obj.vartype == 1: # obj is a AddVariable
-            new = AddVariable()
-            
-            for term in obj:
-                new += self * term
-            return new 
-        else:
-            #apply obj * self
-            return NotImplemented
-    
-    def __pow__(self,power):
-        """define power"""
-        copy = self.copy()
-        copy.power = self.power * power
-        return copy
-
-    def __add__(self, obj):
-        """ How to make an addition
-            Addition of Variable -> AddVariable
-        """
-        
-        if not obj:
-            return self
-        
-        try: 
-            type = obj.vartype
-        except: #float
-            new = self.add_class()
-            new.append(self.copy())
-            new.append(ConstantObject(obj))
-            return new
-            
-        
-        if not type: # obj is a Variable
-            new = self.add_class()
-            new.append(self.copy())
-            new.append(obj.copy())
-            return new
-        
-        elif type == 2: # obj is a MultVariable
-            new = self.add_class()
-            new.append(self.copy())
-            new.append(self.mult_class(obj, obj.prefactor))
-            return new           
-        
-        elif type == 1: # obj is an AddVariable
-            new = self.add_class(obj, obj.prefactor)
-            new.append(self.copy())
-            return new
-        else:
-            # apply obj + self
-            return NotImplemented
-       
-    def __sub__(self, obj):
-        return self + -1 * obj
-
-    def __rsub__(self, obj):
-        return (-1) * self + obj
-
-    def __div__(self, obj):
-        """ define the division """
-
-        if not hasattr(obj, 'vartype'):
-            factor = 1 / obj 
-            return factor * self
-        else:
-            return FracVariable(1 * self, 1 * obj)
-        
-    def __rdiv__(self, obj):
-        """Deal division in a inverse way"""
-        
-        new = self.copy()
-        if not hasattr(obj, 'vartype'):
-            return FracVariable(obj, new)
-        else:
-            return NotImplemented  
-        
-    __radd__ = __add__
-    __iadd__ = __add__
-    __rmul__ = __mul__    
-    __truediv__ = __div__
-    __rtruediv__ = __rdiv__
-        
-    def __eq__(self, obj):
-        """ identical if the variable is the same """
-        if hasattr(obj,'vartype'):
-            return not obj.vartype and self.variable == obj.variable
-        else:
-            return False
-        
-    def __str__(self):
-        return self.name
-   
-    __repr__ = __str__
-
-
-
-
-
-
-
-
-
-
-
-#===============================================================================
-# FracVariable
-#=============================================================================== 
-class FracVariable(object):
-    """A representation of a fraction. This object simply have 
-           - a numerator (self.numerator)
-           - a denominator (self.denominator)  
-    The numerator/denominator can be of any type of Object.
-    
-    All call function simply retranslate the call on the numerator/denominator
-    """
-    
-    # In order to fastenize type
-    vartype = 3
-    
-    def __init__(self, numerator, denominator, *opt):
-        """ initialize the frac variable """
-        
-        self.numerator = numerator
-        self.denominator = denominator
-        #if  isinstance(self.numerator, Number):
-        #    self.tag = self.denominator.tag
-        #else:
-        #    self.tag = self.numerator.tag.union(self.denominator.tag)
-    
-    def copy(self):
-        """return a copy of the frac variable"""
-        num = self.numerator.copy()
-        den = self.denominator.copy()
-        return FracVariable(num,den)
-    
-        
-        
-    def simplify(self):
-        """apply rule of simplification"""
-        
-        if not isinstance(self.numerator, Number):
-            self.numerator = self.numerator.simplify()
-        self.denominator = self.denominator.simplify()
-        
-        if isinstance(self.denominator, ConstantObject):
-            self.numerator /= self.denominator.constant_term
-            return self.numerator
-        else:
-            return self
-    
-    def factorize(self):
-        """made the factorization"""
-        if hasattr(self.numerator, 'vartype'):
-            self.numerator = self.numerator.factorize()
-        self.denominator = self.denominator.factorize()
-        return self
-        
-    
-    def expand(self):
-        """Expand the content information"""
-        
-        if isinstance(self.numerator, Number):
-            return FracVariable(self.numerator, self.denominator.expand())
-        return FracVariable(self.numerator.expand(), self.denominator.expand())
-
-    def __eq__(self, obj):
-        """Define the Equality of two Object"""
-        
-        return (self.numerator == obj.numerator) and \
-                                        (self.denominator == obj.denominator)
-    
-    def __mul__(self, obj):
-        """multiply by an object"""
-        
-        if isinstance(obj, FracVariable):
-            return FracVariable(self.numerator * obj.numerator, \
-                                 self.denominator * obj.denominator)
-        else:
-            return FracVariable(self.numerator * obj, self.denominator)
-    
-    __rmul__ = __mul__    
-    
-    def __div__(self, obj):
-        """Deal with division"""
-        # Multiply the denominator by one to ensure that the new object didn't 
-        #have a pointer through the old one
-        return FracVariable(self.numerator * 1, self.denominator * obj)
-    
-
-        
-    __truediv__ = __div__
-    
-    def __add__(self, obj):
-        """We don't need to deal with addition-substraction on this type of Object"""
-        if isinstance(obj, Number):
-            if obj:
-                self.numerator += obj * self.denominator
-            return self
-        assert(obj.vartype == 3)
-        
-        if self.denominator != obj.denominator:
-            return NotImplemented('The Denominator should be the Same')
-        else:
-            new = FracVariable(self.numerator + obj.numerator, self.denominator)
-            return new
-     
-    def __str__(self):
-        if self.vartype == 4: #isinstance(self.numerator, LorentzObjectRepresentation):
-            text = 'number of lorentz index :' + str(len(self.numerator.lorentz_ind)) + '\n'
-            text += str(self.numerator.lorentz_ind)
-            text += 'number of spin index :' + str(len(self.numerator.spin_ind)) + '\n'
-            #text += 'other info ' + str(self.numerator.tag) + '\n'
-            for ind in self.numerator.listindices():
-                ind = tuple(ind)
-                text += str(ind) + ' --> '
-                if self.numerator.get_rep(ind) == 0:
-                    text += '0\n'
-                else:
-                    text += '[ ' + str(self.numerator.get_rep(ind)) + ' ] / [ ' + \
-                                        str(self.denominator.get_rep([0])) + ']\n'
-            return text
-        else:
-            return '%s / %s' % (self.numerator, self.denominator)    
-    
 #===============================================================================
 # AddVariable
 #===============================================================================        
@@ -644,14 +185,12 @@ class AddVariable(list):
         if not hasattr(obj, 'vartype'): #  obj is a number
             if not obj:
                 return 0
-            new = self.__class__([], self.prefactor)
-            new[:] = [obj * term for term in self]
-            return new
+            self.prefactor *= obj
+            return self
         
         elif obj.vartype == 1: # obj is an AddVariable
-            new = AddVariable()
-            for term in self:
-                new += term * obj
+            new = self.__class__(prefactor=self.prefactor*obj.prefactor)
+            new[:] = [ i.copy()*j.copy() for i in self for j in obj]
             return new
         else:
             #force the program to look at obj + self
@@ -669,25 +208,10 @@ class AddVariable(list):
             new = AddVariable(self, self.prefactor)
             new.append(obj)
             return new 
-        elif not obj.vartype: # obj is a Variable
-            new = AddVariable(self, self.prefactor)
-            obj = obj.copy()
-            new.append(obj)
-            return new
-        
-        elif obj.vartype == 2: # obj is a MultVariable
-            new = AddVariable(self, self.prefactor)
-            obj = obj.__class__(obj, obj.prefactor)
-            new.append(obj)
-            return new     
-           
-        elif obj.vartype == 1: # obj is a AddVariable
-            new = AddVariable(list.__add__(self, obj)) 
-            return new
         else:
-            #force to look at obj + self
-            return NotImplemented
-
+            self.append(obj)
+            return self
+            
     def __div__(self, obj):
         """ Implement division"""
         
@@ -721,10 +245,10 @@ class AddVariable(list):
     def __rsub__(self, obj):
         return (-1) * self + obj   
                 
-    def append(self, obj):
-        """ add a newVariable in the Multiplication list """
-        if obj.prefactor:
-            list.append(self, obj)
+    #def append(self, obj):
+    #    """ add a newVariable in the Multiplication list """
+    #    if obj.prefactor:
+    #        list.append(self, obj)
             
     def __eq__(self, obj):
         """Define The Equality"""
@@ -867,6 +391,476 @@ class AddVariable(list):
                 #aloha.depth -=1
                 #print ' ' * 4 * aloha.depth + 'return:', newadd
                 return newadd
+
+
+
+#===============================================================================
+# MultVariable
+#===============================================================================
+class MultVariable(array):
+    """ A list of Variable with multiplication as operator between themselves.
+    """
+
+    add_class = AddVariable # define the class for addition of MultClass
+    vartype = 2 # for istance check optimization
+    
+    def __new__(cls, old=[], *args, **kwargs):
+        return array.__new__(cls, 'I', old)
+    
+    def __init__(self, old=[], power=[], prefactor=1):
+        """ initialization of the object with default value """
+        
+        array.__init__(self, 'I', old)
+        self.power = array('i', power)
+        self.prefactor = prefactor
+        
+    def copy(self):
+        """ return a copy """      
+        return self.__class__(self, self.power, self.prefactor)
+        
+    def simplify(self):
+        """ simplify the product"""
+        
+        #Ask to Simplify each term
+        self[:] = [fact.simplify() for fact in self]
+        
+        return self           
+    
+    def factorize(self):
+        """Try to factorize this (nothing to do)"""
+        return self
+         
+    #Defining rule of Multiplication    
+    def __mul__(self, obj):
+        """Define the multiplication with different object"""
+        
+        if not hasattr(obj, 'vartype'): # should be a number
+            self.prefactor *= obj
+            #return self.__class__(self, self.prefactor * obj)
+        elif not obj.vartype: # obj is a Variable
+            self.append(obj.id)
+            return self
+        
+        elif obj.vartype == 2: # obj is a MultVariable
+            
+            for (fact, power) in zip(obj, obj.power):
+                self.append(fact, power)
+            self.prefactor *= obj.prefactor
+            return self  
+                
+        elif obj.vartype == 1: # obj is an AddVariable
+            
+            
+            for i, term in enumerate(obj):
+                obj[i] *= self
+            return obj
+
+        else: 
+            #look at  obj * self
+            return NotImplemented
+                
+                
+    def __add__(self, obj):
+        """ define the adition with different object"""
+        
+        if not obj:
+            return self
+        #DECOMENT FOR SPIN2 PROPAGATOR COMPUTATION
+        elif isinstance(obj, Number):
+            obj = ConstantObject(obj)
+            self.add_class()
+            new = self.add_class()
+            new.append(obj)
+            new.append(self.__class__(self, self.prefactor))
+            return new                      
+        elif obj.vartype == 2: # obj is MultVariable
+            new = self.add_class()
+            new.append(self)
+            new.append(obj)
+            return new
+        else:
+            #call the implementation of addition implemented in obj
+            return NotImplemented
+               
+    def __sub__(self, obj):
+        return self + (-1) * obj
+    
+    def __neg__(self):
+        return (-1) * self
+    
+    def __rsub__(self, obj):
+        return (-1) * self + obj
+    
+    def __div__(self, obj):
+        """ define the division """
+        if not hasattr(obj, 'vartype'):
+            factor = 1 / obj 
+            return factor * self
+        else:
+            return FracVariable(1 * self, 1 * obj)
+        
+    def __rdiv__(self, obj):
+        """Deal division in a inverse way"""
+        
+        new = self.__class__(self, self.prefactor)
+        if not hasattr(obj, 'vartype'):
+            return FracVariable(obj, new)
+        else:
+            return NotImplemented
+        
+    __radd__ = __add__
+    __iadd__ = __add__
+    __rmul__ = __mul__    
+    __truediv__ = __div__
+    __rtruediv__ = __rdiv__
+       
+
+    def append(self, id, power=1):
+        """ add a newVariable in the Multiplication list and look for her power
+        """
+
+        try:
+            pos = self.index(id)
+        except:
+            array.append(self, id)
+            self.power.append(power)
+        else:
+            self.power[pos] += power
+        
+    def __eq__(self, obj):
+        """Define When two MultVariable are identical"""
+        
+        try:    
+            if obj.vartype !=2 or len(self) != len(obj):
+                return False
+        except:
+            return False
+        else:
+            l1=[(var.variable, var.power) for var in self]
+            for var in obj:
+                if not (var.variable, var.power) in l1:
+                    return False
+            return True
+    
+    def __ne__(self, obj):
+        """ Define when two Multvariable are not identical"""
+        return not self.__eq__(obj)
+                    
+    def __str__(self):
+        """ String representation """
+        
+        t = ['#%s**%s' %(n,p) if p!=1 else '#%s' % n for n,p in zip(self, self.power)]  
+        text = '(%s)' % (' * '.join(t))        
+        return text
+        
+    __rep__ = __str__
+
+
+
+
+#===============================================================================
+# Variable
+#===============================================================================
+class Variable(str):
+    """This is the standard object for all the variable linked to expression.
+    """
+    
+    mult_class = MultVariable # Which class for multiplication with Variable
+    add_class = AddVariable #which class for addition with Variable
+    vartype = 0 # optimization for instance class recognition
+    contract_first = 0 # Optimization for the order of the contracting object
+                       #object defining contract first to 1 are the starting point
+                       #of a chain of contraction following indices.
+    
+    def __new__(cls, name):
+        if name in KERNEL.name2obj:
+            return KERNEL.name2obj[name]
+        else:
+            return str.__new__(cls, name)       
+        
+#    def __new__(cls, name):
+#        """Check if the argument is already define"""
+#
+#        if name in KERNEL.name2obj:
+#            return KERNEL.name2obj[name]
+#        else:
+#            return object.__new__(cls, name)
+#    
+    class VariableError(Exception):
+        """class for error in Variable object"""
+        pass
+    
+    def __init__(self, name):
+        """Variable"""
+        
+        if self.__dict__:
+            return
+        self.id = KERNEL.add(name, self)
+    
+    def copy(self):
+        return self
+        
+    def simplify(self):
+        """Define How to simplify this object."""
+        return self
+    
+    def expand(self):
+        """Return a more basic representation of this variable."""
+        return self
+    
+    def factorize(self):
+        """ try to factorize this"""
+        return self
+    
+    # Define basic operation (multiplication, addition, soustraction)    
+    def __mul__(self, obj):
+        """ How to multiply object together 
+            product of Variable -> MultVariable    
+        """
+        
+        if not hasattr(obj, 'vartype'): # obj is a number
+            if not obj:
+                return 0
+            out = self.mult_class(prefactor=obj)
+            out.append(self.id)
+            return out
+        
+        elif not obj.vartype: # obj is a Variable
+            new = self.mult_class()
+            new.append(self.id)
+            new.append(obj.id)
+            return new
+
+        elif obj.vartype == 2: #obj is a MultVariable
+            obj.append(self.id)
+            return obj
+                
+        elif obj.vartype == 1: # obj is a AddVariable
+            new = AddVariable()
+            for term in obj:
+                new += self * term
+            return new 
+        else:
+            #apply obj * self
+            return NotImplemented
+    
+    def __pow__(self,power):
+        """define power"""
+        new = self.mult_class()
+        new.append(self.id)
+        new.power[0] = power
+        return new
+
+    def __add__(self, obj):
+        """ How to make an addition
+            Addition of Variable -> AddVariable
+        """
+        
+        if not obj:
+            return self
+        
+        try: 
+            type = obj.vartype
+        except: #float    
+            new = self.add_class()
+            new.append(self)
+            new.append(ConstantObject(obj))
+            return new
+            
+        
+        if not type: # obj is a Variable
+            new = self.add_class()
+            new.append(self)
+            new.append(obj)
+            return new
+        
+        elif type == 2: # obj is a MultVariable
+            new = self.add_class()
+            new.append(self)
+            new.append(obj)
+            return new           
+        
+        elif type == 1: # obj is an AddVariable
+            return NotImplemented
+            #new = self.add_class(obj, obj.prefactor)
+            #new.append(self.copy())
+            #return new
+        else:
+            # apply obj + self
+            return NotImplemented
+       
+    def __sub__(self, obj):
+        return self + -1 * obj
+
+    def __rsub__(self, obj):
+        return (-1) * self + obj
+
+    def __div__(self, obj):
+        """ define the division """
+
+        if not hasattr(obj, 'vartype'):
+            factor = 1 / obj 
+            return factor * self
+        else:
+            return FracVariable(1 * self, 1 * obj)
+        
+    def __rdiv__(self, obj):
+        """Deal division in a inverse way"""
+        
+        new = self.copy()
+        if not hasattr(obj, 'vartype'):
+            return FracVariable(obj, new)
+        else:
+            return NotImplemented  
+        
+    __radd__ = __add__
+    __iadd__ = __add__
+    __rmul__ = __mul__    
+    __truediv__ = __div__
+    __rtruediv__ = __rdiv__
+        
+    def __eq__(self, obj):
+        """ identical if the variable is the same """
+        if hasattr(obj,'vartype'):
+            return not obj.vartype and self.variable == obj.variable
+        else:
+            return False
+        
+    def __repr__(self):
+        return 'Variable(%s)' % str.__repr__(self)
+   
+
+
+
+
+
+
+
+
+
+
+
+#===============================================================================
+# FracVariable
+#=============================================================================== 
+class FracVariable(object):
+    """A representation of a fraction. This object simply have 
+           - a numerator (self.numerator)
+           - a denominator (self.denominator)  
+    The numerator/denominator can be of any type of Object.
+    
+    All call function simply retranslate the call on the numerator/denominator
+    """
+    
+    # In order to fastenize type
+    vartype = 3
+    
+    def __init__(self, numerator, denominator, *opt):
+        """ initialize the frac variable """
+        
+        self.numerator = numerator
+        self.denominator = denominator
+        #if  isinstance(self.numerator, Number):
+        #    self.tag = self.denominator.tag
+        #else:
+        #    self.tag = self.numerator.tag.union(self.denominator.tag)
+    
+    def copy(self):
+        """return a copy of the frac variable"""
+        num = self.numerator.copy()
+        den = self.denominator.copy()
+        return FracVariable(num,den)
+    
+        
+        
+    def simplify(self):
+        """apply rule of simplification"""
+        
+        if not isinstance(self.numerator, Number):
+            self.numerator = self.numerator.simplify()
+        self.denominator = self.denominator.simplify()
+        
+        if isinstance(self.denominator, ConstantObject):
+            self.numerator /= self.denominator.constant_term
+            return self.numerator
+        else:
+            return self
+    
+    def factorize(self):
+        """made the factorization"""
+        if hasattr(self.numerator, 'vartype'):
+            self.numerator = self.numerator.factorize()
+        self.denominator = self.denominator.factorize()
+        return self
+        
+    
+    def expand(self):
+        """Expand the content information"""
+        
+        if isinstance(self.numerator, Number):
+            return FracVariable(self.numerator, self.denominator.expand())
+        return FracVariable(self.numerator.expand(), self.denominator.expand())
+
+    def __eq__(self, obj):
+        """Define the Equality of two Object"""
+        
+        return (self.numerator == obj.numerator) and \
+                                        (self.denominator == obj.denominator)
+    
+    def __mul__(self, obj):
+        """multiply by an object"""
+        
+        if isinstance(obj, FracVariable):
+            return FracVariable(self.numerator * obj.numerator, \
+                                 self.denominator * obj.denominator)
+        else:
+            return FracVariable(self.numerator * obj, self.denominator)
+    
+    __rmul__ = __mul__    
+    
+    def __div__(self, obj):
+        """Deal with division"""
+        # Multiply the denominator by one to ensure that the new object didn't 
+        #have a pointer through the old one
+        return FracVariable(self.numerator * 1, self.denominator * obj)
+    
+
+        
+    __truediv__ = __div__
+    
+    def __add__(self, obj):
+        """We don't need to deal with addition-substraction on this type of Object"""
+        if isinstance(obj, Number):
+            if obj:
+                self.numerator += obj * self.denominator
+            return self
+        assert(obj.vartype == 3)
+        
+        if self.denominator != obj.denominator:
+            return NotImplemented('The Denominator should be the Same')
+        else:
+            new = FracVariable(self.numerator + obj.numerator, self.denominator)
+            return new
+     
+    def __str__(self):
+        if self.vartype == 4: #isinstance(self.numerator, LorentzObjectRepresentation):
+            text = 'number of lorentz index :' + str(len(self.numerator.lorentz_ind)) + '\n'
+            text += str(self.numerator.lorentz_ind)
+            text += 'number of spin index :' + str(len(self.numerator.spin_ind)) + '\n'
+            #text += 'other info ' + str(self.numerator.tag) + '\n'
+            for ind in self.numerator.listindices():
+                ind = tuple(ind)
+                text += str(ind) + ' --> '
+                if self.numerator.get_rep(ind) == 0:
+                    text += '0\n'
+                else:
+                    text += '[ ' + str(self.numerator.get_rep(ind)) + ' ] / [ ' + \
+                                        str(self.denominator.get_rep([0])) + ']\n'
+            return text
+        else:
+            return '%s / %s' % (self.numerator, self.denominator)    
+    
+
         
 
 
@@ -1742,9 +1736,18 @@ class ConstantObject(LorentzObjectRepresentation):
 if '__main__' == __name__:
     import time
     def create():
-        a = Variable('x')
-        for i in range(20000):
-#            Variable('x')
-            a = a * Variable(str(i))
+        
+        K = 3
+        prod = 1
+        for i in range(K):
+#            prod *= Variable('x')
+#        print prod
+#        return
+                        
+            sum_1, sum_2 = 0, 0
+            for j in xrange(K):
+                sum_1 += Variable('x'+str(i))
+                sum_2 += Variable('x'+str(i)) **2
+            prod *= sum_1 * sum_2
     import cProfile
     cProfile.run('create()')
