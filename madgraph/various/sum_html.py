@@ -20,7 +20,10 @@ import logging
 logger = logging.getLogger('madevent.stdout') # -> stdout
 
 pjoin = os.path.join
-
+try:
+    import madgraph.various.cluster as cluster
+except:
+    import internal.cluster as cluster
 
 class OneResult(object):
     
@@ -41,6 +44,7 @@ class OneResult(object):
         self.yerr_iter = []
         return
     
+    @cluster.multiple_try(nb_try=4,sleep=5)
     def read_results(self, filepath):
         """read results.dat and fullfill information"""
         
