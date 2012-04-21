@@ -1731,14 +1731,13 @@ if '__main__' == __name__:
     import time
     def create():
         a = Variable(variable='x')
-        K = 4
+        K = 20
         prod = 1
-        for i in xrange(K):
-            
+        if 1:     
             sum_1, sum_2 = 0, 0
             for j in xrange(K):
-                sum_1 += Variable(variable=str(i))
-                sum_2 += Variable(variable=str(i)) **2
+                sum_1 += Variable(variable=str(j))
+                sum_2 += Variable(variable=str(j**2)) **2
             prod *= sum_1 * sum_2    
     
     import cProfile

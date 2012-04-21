@@ -190,7 +190,7 @@ class AddVariable(list):
         
         elif obj.vartype == 1: # obj is an AddVariable
             new = self.__class__(prefactor=self.prefactor*obj.prefactor)
-            new[:] = [ i.copy()*j.copy() for i in self for j in obj]
+            new[:] = [ array.__add__(i,j) for i in self for j in obj]
             return new
         else:
             #force the program to look at obj + self
@@ -405,18 +405,17 @@ class MultVariable(array):
     vartype = 2 # for istance check optimization
     
     def __new__(cls, old=[], *args, **kwargs):
-        return array.__new__(cls, 'I', old)
+        return array.__new__(cls, 'i', old)
     
-    def __init__(self, old=[], power=[], prefactor=1):
+    def __init__(self, old=[], prefactor=1):
         """ initialization of the object with default value """
         
-        array.__init__(self, 'I', old)
-        self.power = array('i', power)
+        array.__init__(self, 'i', old)
         self.prefactor = prefactor
         
     def copy(self):
         """ return a copy """      
-        return self.__class__(self, self.power, self.prefactor)
+        return self.__class__(self, self.prefactor)
         
     def simplify(self):
         """ simplify the product"""
@@ -443,8 +442,7 @@ class MultVariable(array):
         
         elif obj.vartype == 2: # obj is a MultVariable
             
-            for (fact, power) in zip(obj, obj.power):
-                self.append(fact, power)
+            array.__iadd__(self,obj)
             self.prefactor *= obj.prefactor
             return self  
                 
@@ -513,38 +511,25 @@ class MultVariable(array):
     __rmul__ = __mul__    
     __truediv__ = __div__
     __rtruediv__ = __rdiv__
-       
-
-    def append(self, id, power=1):
-        """ add a newVariable in the Multiplication list and look for her power
-        """
-
-        try:
-            pos = self.index(id)
-        except:
-            array.append(self, id)
-            self.power.append(power)
-        else:
-            self.power[pos] += power
-        
-    def __eq__(self, obj):
-        """Define When two MultVariable are identical"""
-        
-        try:    
-            if obj.vartype !=2 or len(self) != len(obj):
-                return False
-        except:
-            return False
-        else:
-            l1=[(var.variable, var.power) for var in self]
-            for var in obj:
-                if not (var.variable, var.power) in l1:
-                    return False
-            return True
+               
+#    def __eq__(self, obj):
+#        """Define When two MultVariable are identical"""
+#        
+#        try:    
+#            if obj.vartype !=2 or len(self) != len(obj):
+#                return False
+#        except:
+#            return False
+#        else:
+#            l1=[(var.variable, var.power) for var in self]
+#            for var in obj:
+#                if not (var.variable, var.power) in l1:
+#                    return False
+#            return True
     
-    def __ne__(self, obj):
-        """ Define when two Multvariable are not identical"""
-        return not self.__eq__(obj)
+#    def __ne__(self, obj):
+#        """ Define when two Multvariable are not identical"""
+#        return not self.__eq__(obj)
                     
     def __str__(self):
         """ String representation """
@@ -561,7 +546,7 @@ class MultVariable(array):
 #===============================================================================
 # Variable
 #===============================================================================
-class Variable(str):
+class Variable(array):
     """This is the standard object for all the variable linked to expression.
     """
     
@@ -576,15 +561,7 @@ class Variable(str):
         if name in KERNEL.name2obj:
             return KERNEL.name2obj[name]
         else:
-            return str.__new__(cls, name)       
-        
-#    def __new__(cls, name):
-#        """Check if the argument is already define"""
-#
-#        if name in KERNEL.name2obj:
-#            return KERNEL.name2obj[name]
-#        else:
-#            return object.__new__(cls, name)
+            return array.__new__(cls,'i', [])       
 #    
     class VariableError(Exception):
         """class for error in Variable object"""
@@ -592,10 +569,11 @@ class Variable(str):
     
     def __init__(self, name):
         """Variable"""
-        
-        if self.__dict__:
+        if self:
             return
         self.id = KERNEL.add(name, self)
+        self.name = name
+        self.append(self.id)
     
     def copy(self):
         return self
@@ -646,10 +624,7 @@ class Variable(str):
     
     def __pow__(self,power):
         """define power"""
-        new = self.mult_class()
-        new.append(self.id)
-        new.power[0] = power
-        return new
+        return self.mult_class([self.id] * power)
 
     def __add__(self, obj):
         """ How to make an addition
@@ -727,7 +702,7 @@ class Variable(str):
             return False
         
     def __repr__(self):
-        return 'Variable(%s)' % str.__repr__(self)
+        return 'Variable(%s)' % self.name
    
 
 
@@ -1737,17 +1712,17 @@ if '__main__' == __name__:
     import time
     def create():
         
-        K = 3
+        K = 2000
         prod = 1
-        for i in range(K):
+#        for i in range(K):
 #            prod *= Variable('x')
-#        print prod
 #        return
-                        
+        if 1:                    
             sum_1, sum_2 = 0, 0
             for j in xrange(K):
-                sum_1 += Variable('x'+str(i))
-                sum_2 += Variable('x'+str(i)) **2
+                sum_1 += Variable('x'+str(j))
+                sum_2 += Variable('x'+str(j**2)) **2
             prod *= sum_1 * sum_2
+
     import cProfile
     cProfile.run('create()')
