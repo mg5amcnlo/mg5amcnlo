@@ -522,12 +522,12 @@ c
 c All counterevent have the same final-state kinematics. Check that
 c one of them passes the hard cuts, and they exist at all
  540  continue
-
 c Set the ybst_til_tolab before applying the cuts. Update below
 c for the collinear, soft and/or soft-collinear subtraction terms
       call set_cms_stuff(izero)
       if ( (.not.passcuts(p1_cnt(0,1,0),rwgt)) .or.
      #     nocntevents ) goto 547
+
       call set_alphaS(p1_cnt(0,1,0))
       if(doNLOreweight)then
         wgtqes2(2)=QES2
@@ -4972,7 +4972,6 @@ c            stop
       implicit none
       include "nexternal.inc"
       include "coupl.inc"
-      include 'reweight.inc'
 
       double precision p_born(0:3,nexternal-1)
       double precision bpower,born_wgt
@@ -5012,7 +5011,6 @@ c Multiply the strong coupling by 10
       endif
 
 c Update alphaS-dependent couplings
-c$$$      call setpara('param_card.dat')
       call update_as_param()
 
 c recompute the Born with the new couplings
@@ -5033,20 +5031,11 @@ c Compute bpower
 c set it to the integer exactly
          bpower=dble(nint(bpower))
          write(*,*)'bpower is', bpower
-
-c Check consistency with value used in reweighting
-c         if( (doreweight.or.doNLOreweight) .and.
-c     &        abs(bpower-wgtbpower).gt.tiny )then
-c            write(*,*)'Error in compute_bpower'
-c            write(*,*)'bpower(s) are:',bpower,wgtbpower
-c            stop
-c         endif
       endif
 
 c Change couplings back and recompute the Born to make sure that 
 c nothing funny happens later on
       g=g/10d0
-c$$$      call setpara('param_card.dat')
       call update_as_param()
       isum_hel=isum_hel_orig
       calculatedBorn=.false.

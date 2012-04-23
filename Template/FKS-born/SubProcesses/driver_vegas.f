@@ -306,11 +306,22 @@ c From dsample_fks
       double precision vol,sigintR
 c
       do i=1,99
-        if(i.le.ndim)then
-         x(i)=xx(i)
-        else
-          x(i)=0.d0
-        endif
+         if (abrv.eq.'grid'.or.abrv.eq.'born'.or.abrv(1:2).eq.'vi')
+     &        then
+            if(i.le.ndim-3)then
+               x(i)=xx(i)
+            elseif(i.le.ndim) then
+               x(i)=ran2()      ! Choose them flat when not including real-emision
+            else
+               x(i)=0.d0
+            endif
+         else
+            if(i.le.ndim)then
+               x(i)=xx(i)
+            else
+               x(i)=0.d0
+            endif
+         endif
       enddo
 
       sigint=0d0

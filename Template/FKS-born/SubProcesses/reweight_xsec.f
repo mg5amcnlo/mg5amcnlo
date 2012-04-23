@@ -189,6 +189,9 @@ c should not be used if wgtkin(0,1,*)=-99
       iwgtnumpartn=0
       jwgtinfo=0
       mexternal=0
+      wgtNLO11=0d0
+      wgtNLO12=0d0
+      wgtNLO20=0d0
       return
       end
 
@@ -212,6 +215,7 @@ c with the reference weight
      #                 xmuF2_over_ref,xQES_over_ref
       integer kwgtinfo
       double precision rwgt,xsec,xlum,dlum,xlgmuf,xlgmur,alphas
+      double precision xsec11,xsec12,xsec20
       double precision QES2_local
       double precision save_murrat,save_muf1rat,save_muf2rat,save_qesrat
       double precision tiny,pi
@@ -235,9 +239,13 @@ c
       if(kwgtinfo.ne.4) wgtbpower=rwgtbpower
 c
       xsec=0.d0
+      xsec11=0.d0
+      xsec12=0.d0
+      xsec20=0.d0
       call set_cms_stuff(mohdr)
       if( (kwgtinfo.eq.1.and.wgtmuR2(1).ne.0.d0) .or.
-     #    ((kwgtinfo.eq.3.or.kwgtinfo.eq.4).and.passcuts(wgtkin(0,1,1),rwgt)) )then
+     #    ((kwgtinfo.eq.3.or.kwgtinfo.eq.4).and.
+     #     passcuts(wgtkin(0,1,1),rwgt)) )then
         if(kwgtinfo.eq.1)then
           scale=muR_over_ref*sqrt(wgtmuR2(1))
           g=sqrt(4d0*pi*alphas(scale))
@@ -262,13 +270,14 @@ c Should cause the code to crash if used
           endif
         else
           xlum = dlum()
-          xsec=xsec+xlum*wgtwreal(1)*g**(2*wgtbpower+2.d0)
+          xsec11=xsec11+xlum*wgtwreal(1)*g**(2*wgtbpower+2.d0)
         endif
       endif
 c
       call set_cms_stuff(izero)
       if( (kwgtinfo.eq.1.and.wgtmuR2(2).ne.0.d0) .or.
-     #    ((kwgtinfo.eq.3.or.kwgtinfo.eq.4).and.passcuts(wgtkin(0,1,2),rwgt)) )then
+     #    ((kwgtinfo.eq.3.or.kwgtinfo.eq.4).and.
+     #     passcuts(wgtkin(0,1,2),rwgt)) )then
         if(kwgtinfo.eq.1)then
           scale=muR_over_ref*sqrt(wgtmuR2(2))
           g=sqrt(4d0*pi*alphas(scale))
@@ -327,16 +336,17 @@ c Should cause the code to crash if used
             endif
           else
             xlum = dlum()
-            xsec=xsec+xlum*( wgtwreal(k)+wgtwdeg(k)+
-     #                       wgtwdegmuf(k)*xlgmuf )*
+            xsec12=xsec12+xlum*( wgtwreal(k)+wgtwdeg(k)+
+     #                           wgtwdegmuf(k)*xlgmuf )*
      #                g**(2*wgtbpower+2.d0)
             if(k.eq.2)then
               if(wgtbpower.gt.0)then
-                xsec=xsec+xlum*wgtwborn(k)*g**(2*wgtbpower)
+                xsec20=xsec20+xlum*wgtwborn(k)*g**(2*wgtbpower)
               else
-                xsec=xsec+xlum*wgtwborn(k)
+                xsec20=xsec20+xlum*wgtwborn(k)
               endif
-              xsec=xsec+xlum*( wgtwns(k)+
+              xsec12=xsec12+xsec20
+              xsec12=xsec12+xlum*( wgtwns(k)+
      #                         wgtwnsmuf(k)*xlgmuf+
      #                         wgtwnsmur(k)*xlgmur )*
      #                  g**(2*wgtbpower+2.d0)
@@ -350,6 +360,10 @@ c
       muF2_over_ref=save_muf2rat
       QES_over_ref=save_qesrat
 c
+      wgtNLO11=xsec11
+      wgtNLO12=xsec12
+      wgtNLO20=xsec20
+      xsec=xsec11+xsec12
       compute_rwgt_wgt_NLO=xsec
 c
       return
@@ -398,7 +412,8 @@ c
       xsec=0.d0
       call set_cms_stuff(izero)
       if( ((kwgtinfo.eq.1.or.kwgtinfo.eq.2).and.wgtmuR2(1).ne.0.d0) .or.
-     #    ((kwgtinfo.eq.3.or.kwgtinfo.eq.4).and.passcuts(wgtkin(0,1,2),rwgt).and.
+     #    ((kwgtinfo.eq.3.or.kwgtinfo.eq.4).and.
+     #     passcuts(wgtkin(0,1,2),rwgt).and.
      #     wgtkin(0,1,1).gt.0.d0) )then
         if(kwgtinfo.eq.1.or.kwgtinfo.eq.2)then
           scale=muR_over_ref*sqrt(wgtmuR2(1))
@@ -467,7 +482,8 @@ c Should cause the code to crash if used
 c
       call set_cms_stuff(mohdr)
       if( ((kwgtinfo.eq.1.or.kwgtinfo.eq.2).and.wgtmuR2(1).ne.0.d0) .or.
-     #    ((kwgtinfo.eq.3.or.kwgtinfo.eq.4).and.passcuts(wgtkin(0,1,1),rwgt)) )then
+     #    ((kwgtinfo.eq.3.or.kwgtinfo.eq.4).and.
+     #     passcuts(wgtkin(0,1,1),rwgt)) )then
         if(kwgtinfo.eq.1.or.kwgtinfo.eq.2)then
           scale=muR_over_ref*sqrt(wgtmuR2(1))
           g=sqrt(4d0*pi*alphas(scale))
@@ -553,7 +569,8 @@ c
 
       if( (kwgtinfo.eq.1.and.wgtmuR2(1).ne.0.d0) .or.
      #    (kwgtinfo.eq.2.and.wgtkin(0,1,1).gt.0.d0) .or.
-     #    ((kwgtinfo.eq.3.or.kwgtinfo.eq.4).and.passcuts(wgtkin(0,1,2),rwgt).and.
+     #    ((kwgtinfo.eq.3.or.kwgtinfo.eq.4).and.
+     #     passcuts(wgtkin(0,1,2),rwgt).and.
      #     wgtkin(0,1,1).gt.0.d0) )then
         if(kwgtinfo.eq.1)then
           scale=muR_over_ref*sqrt(wgtmuR2(1))
@@ -589,7 +606,8 @@ c
       call set_cms_stuff(izero)
 
       if( ((kwgtinfo.eq.1.or.kwgtinfo.eq.2).and.wgtmuR2(2).ne.0.d0) .or.
-     #    ((kwgtinfo.eq.3.or.kwgtinfo.eq.4).and.passcuts(wgtkin(0,1,2),rwgt)) )then
+     #    ((kwgtinfo.eq.3.or.kwgtinfo.eq.4).and.
+     #     passcuts(wgtkin(0,1,2),rwgt)) )then
         if(kwgtinfo.eq.1.or.kwgtinfo.eq.2)then
           scale=muR_over_ref*sqrt(wgtmuR2(2))
           g=sqrt(4d0*pi*alphas(scale))

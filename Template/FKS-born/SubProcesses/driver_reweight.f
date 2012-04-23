@@ -226,17 +226,24 @@ c at the NLO)
      &              ,putonshell)
             endif
             www=event_wgt/wgt2
-            if (abs(www).gt.50d0) write (*,*) 'large weight found',
-     &           www,' xi_i:',x(5)**2,' y_ij:',-2*x(6)**2+1
+            
+            write (*,*) 'BBBB weight',i,j,event_wgt,wgt2,www
 
-c$$$            if (www.gt.49.5d0) then
-c$$$               www=49.5d0
-c$$$            elseif(www.lt.-49.5d0) then
-c$$$               www=-49.5d0
-c$$$            endif
-c$$$            call mfill(9,www,1d0)
-c$$$            call mfill(10,www,1d0)
-            if (abs(www).gt.max_wgt) max_wgt=max_wgt*1.1d0
+            if (abs(www).gt.20d0) then
+               write (*,*) 'large weight found', www,' xi_i:',x(5)**2
+     &              ,' y_ij:',-2*x(6)**2+1
+c               call regrid_MC_integer
+c               stop
+            endif
+
+            if (www.gt.49.5d0) then
+               www=49.5d0
+            elseif(www.lt.-49.5d0) then
+               www=-49.5d0
+            endif
+            call mfill(2,www,1d0)
+            call mfill(3,www,1d0)
+            if (abs(event_wgt/wgt2).gt.max_wgt) max_wgt=max_wgt*1.1d0
             res=res+event_wgt
             res_abs=res_abs+f_abs
             err=err+event_wgt**2
@@ -271,24 +278,23 @@ c               XWGTUP=sign(res_abs/dble(itmax*ncall),XWGTUP)
          rewind(lunlhe3)
          open(unit=lunlhe4,file='unweighted_events_NLO.lhe',status
      &        ='unknown')
+         call write_header_init(lunlhe4,ifound,res,res_abs,err)
          do i=1,ifound
             call read_lhef_event(lunlhe3,
      &           NUP,IDPRUP,XWGTUP,SCALUP,AQEDUP,AQCDUP,
      &           IDUP,ISTUP,MOTHUP,ICOLUP,PUP,VTIMUP,SPINUP,buff)
-            rnd=ran2()
-            if (abs(XWGTUP).gt.rnd*max_wgt) then
-               XWGTUP=sign(res_abs/dble(ifound),XWGTUP)
-               ifound=ifound+1
-               call write_lhef_event(lunlhe4,
-     &              NUP,IDPRUP,XWGTUP,SCALUP,AQEDUP,AQCDUP,
-     &              IDUP,ISTUP,MOTHUP,ICOLUP,PUP,VTIMUP,SPINUP,buff)
-            endif
+            XWGTUP=sign(res_abs/dble(ifound),XWGTUP)
+            call write_lhef_event(lunlhe4,
+     &           NUP,IDPRUP,XWGTUP,SCALUP,AQEDUP,AQCDUP,
+     &           IDUP,ISTUP,MOTHUP,ICOLUP,PUP,VTIMUP,SPINUP,buff)
          enddo
          close (lunlhe3)
+         write (lunlhe4,'(a)') "</LesHouchesEvents>"
          close (lunlhe4)
       endif
       close (lunlhe2)
 
+      write (*,*) 'number of events',ifound
 
       write (*,*) ''
       write (*,*) '----------------------------------------------------'
@@ -441,7 +447,6 @@ c Find the nFKSprocess for which we compute the Born-like contributions
          nFKSprocess=fks_configs
          call fks_inc_chooser()
          do while (particle_type(i_fks).ne.8)
-            write (*,*) i_fks,particle_type(i_fks)
             nFKSprocess=nFKSprocess-1
             call fks_inc_chooser()
             if (nFKSprocess.eq.0) then
@@ -549,7 +554,7 @@ c From dsample_fks
       common/fks_indices/i_fks,j_fks
       logical firsttime
       integer sum
-      parameter (sum=0)
+      parameter (sum=1)
       data firsttime /.true./
       integer nFKSprocessBorn
       save nFKSprocessBorn
@@ -558,7 +563,12 @@ c From dsample_fks
      $     ,i_fks_proc(fks_configs),j_fks_proc(fks_configs)
      $     ,nFKSproc_m
       logical found
+      double precision ev_wgt_ratio, born_wgt_ratio
+      common /weigths_ev_born/ev_wgt_ratio, born_wgt_ratio
 c
+      ev_wgt_ratio=0.d0
+      born_wgt_ratio=0.d0
+
       do i=1,99
          if (i.le.ndim) then
             x(i)=xx(i)
@@ -648,10 +658,20 @@ c
             result(i,1)=0d0
             result(i,2)=0d0
          enddo
+
          if (.not.( abrv.eq.'born' .or. abrv.eq.'grid' .or.
      &        abrv(1:2).eq.'vi') ) then
             nbodyonly=.false.
             if (sum.eq.1) then
+
+               do i=1,100
+                  
+               x(ndim)=ran2()
+               x(ndim-1)=ran2()
+               x(ndim-2)=ran2()
+
+
+
                do nFKSprocess=1,fks_configs
                   call fks_inc_chooser()
                   call leshouche_inc_chooser()
@@ -663,9 +683,23 @@ c THIS CAN BE OPTIMIZED
                   call dsigF(p,wgt,1d0,dsigS,dsigH)
                   result(nFKSprocess,1)= dsigS
                   result(nFKSprocess,2)= dsigH
-                  f(1) = f(1)+result(nFKSprocess,1)
-                  f(2) = f(2)+result(nFKSprocess,2)
+c$$$                  f(1) = f(1)+result(nFKSprocess,1)
+c$$$                  f(2) = f(2)+result(nFKSprocess,2)
+
+c$$$               f(1) = f(1)+abs(result(nFKSprocess,1))
+c$$$               f(2) = f(2)+abs(result(nFKSprocess,2))
+               f(1) = f(1)+abs(result(nFKSprocess,1)/100d0)
+               f(2) = f(2)+abs(result(nFKSprocess,2)/100d0)
+
                enddo
+               nFKSprocess=5
+
+c$$$               write (*,'(i3,5(x,e9.3),x,i3)')i,f(1),f(2)
+c$$$     &              ,ev_wgt_ratio,born_wgt_ratio,ev_wgt_ratio
+c$$$     &              /born_wgt_ratio,nFKSprocess
+               enddo
+
+
             elseif(sum.eq.0) then    ! Monte Carlo over nFKSprocess
                call get_MC_integer(fks_configs,nFKSprocess,vol)
                call fks_inc_chooser()
@@ -709,9 +743,21 @@ c THIS CAN BE OPTIMIZED
             endif
          endif
          sigintF=f(1)+f(2)
-         sigintF_save=sigintF
          f_abs=abs(f(1))+abs(f(2))
+
+         
+c$$$         write (*,*)'BBBBBBBB'
+         if (born_wgt_ratio.eq.0d0) then
+            sigintF=0d0
+            f_abs=0d0
+c$$$         elseif (ev_wgt_ratio/born_wgt_ratio.gt.5d0) then
+c$$$            sigintF=0d0
+c$$$            f_abs=0d0
+         endif
+
+         sigintF_save=sigintF
          f_abs_save=f_abs
+
       elseif(ifl.eq.1) then
          write (*,*) 'Folding not implemented'
          stop
@@ -724,8 +770,8 @@ c Determine if we need to write S or H events according to their
 c relative weights
          if (f_abs.gt.0d0) then
             if (sum.eq.1) then
-               write (*,*) 'event generation for "sum"'/
-     $              /' not yet implemented',sum
+c$$$               write (*,*) 'event generation for "sum"'/
+c$$$     $              /' not yet implemented',sum
             elseif (sum.eq.0 .or. sum.eq.2) then
                result1=result(0,1)+result(nFKSprocess,1)
                result2=result(0,2)+result(nFKSprocess,2)
@@ -866,13 +912,13 @@ c-----
       write(*,'(a)') 'Enter number of events and iterations: '
       read(*,*) ncall,itmax
       write(*,*) 'Number of events and iterations ',ncall,itmax
-      write (*,*) 'Fixed order "1" or matching to parton shower "0"?'
+      write (*,*) 'Fixed order "0" or matching to parton shower "1"?'
       read(*,*) i
       if (i .eq. 0) then
-         fixed_order = .false.
+         fixed_order = .true.
          write(*,*) 'Fixed order'
       else
-         multi_channel = .false.
+         fixed_order = .false.
          write(*,*) 'Matching to parton shower'
       endif
       

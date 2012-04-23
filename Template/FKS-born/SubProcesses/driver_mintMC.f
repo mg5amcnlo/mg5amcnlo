@@ -320,10 +320,15 @@ c to restore grids:
          read (12,*) resS,errS
          close (12)
 
+         open(unit=58,file='res_1',status='old')
+         read(58,'(a)')string
+         read(string(index(string,':')+1:index(string,'+/-')-1),*) res_abs
+         close(58)
+   
          if(plotEv)open(unit=99,file='hard-events.top',status='unknown')
          open(unit=lunlhe,file='events.lhe',status='unknown')
 
-         call write_header_init(lunlhe,ncall,resS,errS)
+         call write_header_init(lunlhe,ncall,resS,res_abs,errS)
          if(plotEv)call initplot
          open(unit=58,file='res_1',status='old')
          read(58,'(a)')string
@@ -679,39 +684,36 @@ c From dsample_fks
       integer sum
       parameter (sum=2)
       data firsttime /.true./
-      integer nFKSprocessBorn
-      save nFKSprocessBorn
+      logical foundB(2)
+      integer nFKSprocessBorn(2)
+      save nFKSprocessBorn,foundB
       double precision vol,sigintR,res,f_tot
       integer proc_map(fks_configs,0:fks_configs),tot_proc
      $     ,i_fks_proc(fks_configs),j_fks_proc(fks_configs)
-     $     ,nFKSproc_m
+     $     ,nFKSproc_m,nFKSprocess_all
       logical found
 c
-      do i=1,99
-         if (i.le.ndim) then
-            x(i)=xx(i)
-         else
-            x(i)=-9d99
-         endif
-      enddo
-
 c Find the nFKSprocess for which we compute the Born-like contributions
       if (firsttime) then
          firsttime=.false.
-         nFKSprocess=fks_configs
-         call fks_inc_chooser()
-         do while (particle_type(i_fks).ne.8)
-            write (*,*) i_fks,particle_type(i_fks)
-            nFKSprocess=nFKSprocess-1
+         foundB(1)=.false.
+         foundB(2)=.false.
+         do nFKSprocess=1,fks_configs
             call fks_inc_chooser()
-            if (nFKSprocess.eq.0) then
-               write (*,*) 'ERROR in sigint'
-               stop
+            write (*,*) nFKSprocess,particle_type(i_fks),j_fks
+            if (particle_type(i_fks).eq.8) then
+               if (j_fks.le.nincoming) then
+                  foundB(1)=.true.
+                  nFKSprocessBorn(1)=nFKSprocess
+               else
+                  foundB(2)=.true.
+                  nFKSprocessBorn(2)=nFKSprocess
+               endif
             endif
          enddo
-         nFKSprocessBorn=nFKSprocess
          write (*,*) 'Total number of FKS directories is', fks_configs
-         write (*,*) 'For the Born we use nFKSprocess  #', nFKSprocess
+         write (*,*) 'For the Born we use nFKSprocesses  #',
+     &        nFKSprocessBorn
 c For sum over identical FKS pairs, need to find the identical structures
          if (sum.eq.2) then
             tot_proc=0
@@ -750,11 +752,62 @@ c For sum over identical FKS pairs, need to find the identical structures
       f(1)=0d0
       f(2)=0d0
       fold=ifl
+      do i=0,fks_configs
+         result(i,1)=0d0
+         result(i,2)=0d0
+      enddo
+      dsigS=0d0
+      dsigH=0d0
+
       if (ifl.eq.0)then
+         do i=1,99
+            if (abrv.eq.'grid'.or.abrv.eq.'born'.or.abrv(1:2).eq.'vi')
+     &           then
+               if(i.le.ndim-3)then
+                  x(i)=xx(i)
+               elseif(i.le.ndim) then
+                  x(i)=ran2()   ! Choose them flat when not including real-emision
+               else
+                  x(i)=0.d0
+               endif
+            else
+               if(i.le.ndim)then
+                  x(i)=xx(i)
+               else
+                  x(i)=0.d0
+               endif
+            endif
+         enddo
 c
 c Compute the Born-like contributions with nbodyonly=.true.
 c     
-         nFKSprocess=nFKSprocessBorn
+         if (sum.eq.0) then
+            call get_MC_integer(fks_configs,nFKSprocess,vol)
+            nFKSprocess_all=nFKSprocess
+         elseif (sum.eq.2) then
+            call get_MC_integer(tot_proc,nFKSproc_m,vol)
+            nFKSprocess=proc_map(nFKSproc_m,1) ! just pick the first, because 
+                                               ! j_fks is fixed for all of them
+         endif
+         call fks_inc_chooser()
+         if (j_fks.le.nincoming) then
+            if (.not.foundB(1)) then
+               write(*,*) 'Trying to generate Born momenta with '/
+     &              /'initial state j_fks, but there is no '/
+     &              /'configuration with i_fks a gluon and j_fks '/
+     &              /'initial state'
+               stop
+            endif
+            nFKSprocess=nFKSprocessBorn(1)
+         else
+            if (.not.foundB(2)) then
+               write(*,*) 'Trying to generate Born momenta with '/
+     &              /'final state j_fks, but there is no configuration'/
+     &              /' with i_fks a gluon and j_fks final state'
+               stop
+            endif
+            nFKSprocess=nFKSprocessBorn(2)
+         endif
          nbodyonly=.true.
          call fks_inc_chooser()
          call leshouche_inc_chooser()
@@ -772,30 +825,29 @@ c
 c Compute the subtracted real-emission corrections either as an explicit
 c sum or a Monte Carlo sum.
 c      
-         do i=1,fks_configs
-            result(i,1)=0d0
-            result(i,2)=0d0
-         enddo
          if (.not.( abrv.eq.'born' .or. abrv.eq.'grid' .or.
      &        abrv(1:2).eq.'vi') ) then
             nbodyonly=.false.
             if (sum.eq.1) then
-               do nFKSprocess=1,fks_configs
-                  call fks_inc_chooser()
-                  call leshouche_inc_chooser()
-c THIS CAN BE OPTIMIZED
-                  call setcuts
-                  call setfksfactor(iconfig)
-                  wgt=1d0
-                  call generate_momenta(ndim,iconfig,wgt,x,p)
-                  call dsigF(p,wgt,w,dsigS,dsigH)
-                  result(nFKSprocess,1)= w*dsigS
-                  result(nFKSprocess,2)= w*dsigH
-                  f(1) = f(1)+result(nFKSprocess,1)
-                  f(2) = f(2)+result(nFKSprocess,2)
-               enddo
-            elseif(sum.eq.0) then    ! Monte Carlo over nFKSprocess
-               call get_MC_integer(fks_configs,nFKSprocess,vol)
+               write (*,*)
+     &              'This option # 1322 has not been implemented'
+               stop
+c$$$               do nFKSprocess=1,fks_configs
+c$$$                  call fks_inc_chooser()
+c$$$                  call leshouche_inc_chooser()
+c$$$c THIS CAN BE OPTIMIZED
+c$$$                  call setcuts
+c$$$                  call setfksfactor(iconfig)
+c$$$                  wgt=1d0
+c$$$                  call generate_momenta(ndim,iconfig,wgt,x,p)
+c$$$                  call dsigF(p,wgt,w,dsigS,dsigH)
+c$$$                  result(nFKSprocess,1)= w*dsigS
+c$$$                  result(nFKSprocess,2)= w*dsigH
+c$$$                  f(1) = f(1)+result(nFKSprocess,1)
+c$$$                  f(2) = f(2)+result(nFKSprocess,2)
+c$$$               enddo
+            elseif(sum.eq.0) then ! Monte Carlo over nFKSprocess
+               nFKSprocess=nFKSprocess_all
                call fks_inc_chooser()
                call leshouche_inc_chooser()
 c THIS CAN BE OPTIMIZED
@@ -810,8 +862,7 @@ c THIS CAN BE OPTIMIZED
                result(nFKSprocess,2)= w*dsigH
                f(1) = f(1)+result(nFKSprocess,1)
                f(2) = f(2)+result(nFKSprocess,2)
-            elseif(sum.eq.2) then    ! MC over i_fks/j_fks pairs
-               call get_MC_integer(tot_proc,nFKSproc_m,vol)
+            elseif(sum.eq.2) then ! MC over i_fks/j_fks pairs
                do i=1,proc_map(nFKSproc_m,0)
                   nFKSprocess=proc_map(nFKSproc_m,i)
                   call fks_inc_chooser()
@@ -830,15 +881,15 @@ c THIS CAN BE OPTIMIZED
                sigintR=0d0
                do i=1,proc_map(nFKSproc_m,0)
                   sigintR=sigintR+
-     &               (abs(result(proc_map(nFKSproc_m,i),1))+
-     &                abs(result(proc_map(nFKSproc_m,i),2)))*vol
+     &                 (abs(result(proc_map(nFKSproc_m,i),1))+
+     &                 abs(result(proc_map(nFKSproc_m,i),2)))*vol
                enddo
                call fill_MC_integer(nFKSproc_m,sigintR)
             endif
          endif
          sigintF=f(1)+f(2)
-         sigintF_save=sigintF
          f_abs=abs(f(1))+abs(f(2))
+         sigintF_save=sigintF
          f_abs_save=f_abs
       elseif(ifl.eq.1) then
          write (*,*) 'Folding not implemented'
@@ -881,7 +932,7 @@ c relative weights
                      res=res+abs(result(proc_map(nFKSproc_m,i),j))
                   enddo
                   nFKSprocess=proc_map(nFKSproc_m,i)
-                 call fks_inc_chooser()
+                  call fks_inc_chooser()
                   call leshouche_inc_chooser()
 c THIS CAN BE OPTIMIZED
                   call setcuts
@@ -917,6 +968,9 @@ c From dsample_fks
       common /c_unwgt/evtsgn,unwgt
       double precision result
       save result
+c
+      write (*,*) 'Generation of S-events no longer supported'
+      stop
 c
       do i=1,99
         if(i.le.ndim)then
@@ -969,6 +1023,9 @@ c From dsample_fks
       common /c_unwgt/evtsgn,unwgt
       double precision result
       save result
+c
+      write (*,*) 'Generation of H-events no longer supported'
+      stop
 c
       do i=1,99
         if(i.le.ndim)then

@@ -100,7 +100,7 @@ c  Write-out the events
       return
       end
 
-      subroutine write_header_init(lunlhe,nevents,res,err)
+      subroutine write_header_init(lunlhe,nevents,res,res_abs,err)
       implicit none
       integer lunlhe,nevents
       double precision res,err,res_abs
@@ -120,10 +120,10 @@ c Les Houches init block (for the <init> info)
      &     xmaxup(maxpup),lprup(maxpup)
 
 
-      open(unit=58,file='res_1',status='old')
-      read(58,'(a)')string
-      read(string(index(string,':')+1:index(string,'+/-')-1),*) res_abs
-      close(58)
+c      open(unit=58,file='res_1',status='old')
+c      read(58,'(a)')string
+c      read(string(index(string,':')+1:index(string,'+/-')-1),*) res_abs
+c      close(58)
 
 c get info on beam and PDFs
       call setrun
