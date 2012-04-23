@@ -218,8 +218,9 @@ c iteration is finished; now rearrange the grid
 c the abs is to avoid tiny negative values
       etot_abs=sqrt(abs(etot_abs-vtot_abs**2)/ncalls)
       etot_sgn=sqrt(abs(etot_sgn-vtot_sgn**2)/ncalls)
-      write(*,*) '|int|=',vtot_abs,etot_abs
-      write(*,*) ' int =',vtot_sgn,etot_sgn
+      write(*,*) '|int|=',vtot_abs,' +/- ',etot_abs,
+     &     ' (',etot_abs/vtot_abs*100d0,'%)'
+      write(*,*) ' int =',vtot_sgn,' +/- ',etot_sgn
       if(nit.eq.1) then
          ans_abs=vtot_abs
          err_abs=etot_abs
@@ -249,7 +250,7 @@ c integrands
          err_abs=1/sqrt(1/err_abs**2+1/etot_abs**2)
          ans_sgn=(ans_sgn/err_sgn+vtot_sgn/etot_sgn)/
      &        (1/err_sgn+1/etot_sgn)
-         err_sgn=err_abs
+         err_sgn=1/sqrt(1/err_sgn**2+1/etot_sgn**2)
       endif
 c Also improve stats in plots
       call accum
