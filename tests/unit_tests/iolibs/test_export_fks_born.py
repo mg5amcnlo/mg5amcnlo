@@ -377,8 +377,7 @@ NJetSymmetrizeFinal     Yes
         relevant informations for all the splittings"""
 
         goal = \
-"""      INTEGER FKS_CONFIGS, IPOS, JPOS
-      DATA FKS_CONFIGS / 8 /
+"""      INTEGER IPOS, JPOS
       INTEGER FKS_I_D(8), FKS_J_D(8)
       INTEGER FKS_J_FROM_I_D(8, NEXTERNAL, 0:NEXTERNAL)
       INTEGER PARTICLE_TYPE_D(8, NEXTERNAL), PDG_TYPE_D(8, NEXTERNAL)
@@ -755,14 +754,14 @@ C
 C     
 C     LOCAL VARIABLES 
 C     
-      INTEGER NHEL(NEXTERNAL,NCOMB),NTRY,T_IDENT(NCOMB)
+      INTEGER NHEL(NEXTERNAL,NCOMB),NTRY(8),T_IDENT(NCOMB)
       REAL*8 T,T_SAVE(NCOMB)
       SAVE T_SAVE,T_IDENT
       REAL*8 MATRIX_1
       INTEGER IHEL,IDEN, I
       INTEGER JC(NEXTERNAL)
       LOGICAL GOODHEL(NCOMB)
-      DATA NTRY/0/
+      DATA NTRY/8*0/
       DATA GOODHEL/NCOMB*.FALSE./
       DATA (NHEL(I,   1),I=1,5) /-1,-1,-1,-1,-1/
       DATA (NHEL(I,   2),I=1,5) /-1,-1,-1,-1, 1/
@@ -1027,7 +1026,7 @@ C     Include 'born_maxamps.inc'
       INTEGER                 NCOMB,     NCROSS
       PARAMETER (             NCOMB=  16, NCROSS=  1)
       INTEGER    THEL
-      PARAMETER (THEL=NCOMB*NCROSS)
+      PARAMETER (THEL=NCOMB*NCROSS*8)
       INTEGER NGRAPHS
       PARAMETER (NGRAPHS=   3)
 C     
@@ -1039,20 +1038,20 @@ C
 C     LOCAL VARIABLES 
 C     
       REAL*8 P(0:3,NEXTERNAL-1)
-      INTEGER NHEL(NEXTERNAL-1,NCOMB),NTRY
+      INTEGER NHEL(NEXTERNAL-1,NCOMB),NTRY(8)
       COMPLEX*16 T,T1
       REAL*8 BORN
       REAL*8 ZERO
       PARAMETER(ZERO=0D0)
       INTEGER IHEL,IDEN(NCROSS),IC(NEXTERNAL-1,NCROSS)
       INTEGER IPROC,JC(NEXTERNAL-1), I,L,K
-      LOGICAL GOODHEL(NCOMB,NCROSS)
-      INTEGER NGOOD,IGOOD(NCOMB),JHEL
-      DATA NGOOD /0/
+      LOGICAL GOODHEL(NCOMB,NCROSS,8)
+      INTEGER NGOOD(8),IGOOD(NCOMB,8),JHEL
+      DATA NGOOD /8*0/
       SAVE IGOOD,JHEL
       REAL*8 HWGT
       REAL*8 XTOT, XTRY, XREJ, XR, YFRAC(0:NCOMB)
-      INTEGER IDUM, J, JJ
+      INTEGER J, JJ
       LOGICAL WARNED
       REAL     XRAN1
       EXTERNAL XRAN1
@@ -1079,7 +1078,7 @@ C
       COMMON/TO_MATRIX/ISUM_HEL, MULTI_CHANNEL
       INTEGER MAPCONFIG(0:LMAXCONFIGS), ICONFIG
       COMMON/TO_MCONFIGS/MAPCONFIG, ICONFIG
-      DATA NTRY,IDUM /0,-1/
+      DATA NTRY /8*0/
       DATA XTRY, XREJ /0,0/
       SAVE YFRAC
       DATA JAMP2(0) /   1/
@@ -1101,9 +1100,10 @@ C
       DATA (NHEL(I,  15),I=1,4) / 1, 1, 1,-1/
       DATA (NHEL(I,  16),I=1,4) / 1, 1, 1, 1/
       DOUBLE PRECISION HEL_FAC
+      INTEGER GET_HEL,SKIP(8)
+      COMMON/CBORN/HEL_FAC,GET_HEL,SKIP
       LOGICAL CALCULATEDBORN
-      INTEGER GET_HEL,SKIP
-      COMMON/CBORN/HEL_FAC,CALCULATEDBORN,GET_HEL,SKIP
+      COMMON/CCALCULATEDBORN/CALCULATEDBORN
       INTEGER GLU_IJ
       INTEGER NFKSPROCESS
       COMMON/C_NFKSPROCESS/NFKSPROCESS
@@ -1116,12 +1116,14 @@ C     BEGIN CODE
 C     ----------
       IDEN(1)=IDEN_VALUES(NFKSPROCESS)
       GLU_IJ = IJ_VALUES(NFKSPROCESS)
-      NTRY=NTRY+1
-      SKIP=1
-      DO WHILE(NHEL(GLU_IJ ,SKIP).NE.1)
-        SKIP=SKIP+1
-      ENDDO
-      SKIP=SKIP-1
+      NTRY(NFKSPROCESS)=NTRY(NFKSPROCESS)+1
+      IF (NTRY(NFKSPROCESS).LT.2) THEN
+        SKIP(NFKSPROCESS)=1
+        DO WHILE(NHEL(GLU_IJ ,SKIP(NFKSPROCESS)).NE.1)
+          SKIP(NFKSPROCESS)=SKIP(NFKSPROCESS)+1
+        ENDDO
+        SKIP(NFKSPROCESS)=SKIP(NFKSPROCESS)-1
+      ENDIF
       DO IPROC=1,NCROSS
         DO IHEL=1,NEXTERNAL-1
           JC(IHEL) = +1
@@ -1141,7 +1143,8 @@ C     ----------
             IF (SAVEMOM(J,1).NE.P1(0,J) .OR. SAVEMOM(J,2).NE.P1(3
      $       ,J)) THEN
               CALCULATEDBORN=.FALSE.
-C             write (*,*) "momenta not the same in Born"
+              WRITE (*,*) 'momenta not the same in Born'
+              STOP
             ENDIF
           ENDDO
         ENDIF
@@ -1159,11 +1162,11 @@ C             write (*,*) "momenta not the same in Born"
         ANS(IPROC) = 0D0
         ANS(IPROC+1) = 0D0
         WRITE(HEL_BUFF(1),'(16i5)') (0,I=1,NEXTERNAL-1)
-        IF (ISUM_HEL .EQ. 0 .OR. NTRY .LT. 100) THEN
+        IF (ISUM_HEL .EQ. 0 .OR. NTRY(NFKSPROCESS) .LT. 2) THEN
           HEL_FAC=1D0
           DO IHEL=1,NCOMB
-            IF ((GOODHEL(IHEL,IPROC) .OR. NTRY .LT. 100).AND.NHEL(GLU_I
-     $       J ,IHEL).EQ.-1) THEN
+            IF ((GOODHEL(IHEL,IPROC,NFKSPROCESS) .OR. NTRY(NFKSPROCESS
+     $       ) .LT. 2).AND.NHEL(GLU_IJ ,IHEL).EQ.-1) THEN
               T=BORN(P1,NHEL(1,IHEL),IHEL,JC(1),T1)
               DO JJ=1,NINCOMING
                 IF(POL(JJ).NE.1D0.AND.NHEL(JJ,IHEL).EQ.INT(SIGN(1D0
@@ -1178,28 +1181,28 @@ C             write (*,*) "momenta not the same in Born"
               ANS(IPROC)=ANS(IPROC)+T
               ANS(IPROC+1)=ANS(IPROC+1)+T1
               IF ( (T .NE. 0D0 .OR. T1 .NE. 0D0) .AND. .NOT. GOODHEL(IH
-     $         EL,IPROC)) THEN
-                GOODHEL(IHEL,IPROC)=.TRUE.
-                NGOOD = NGOOD +1
-                IGOOD(NGOOD) = IHEL
+     $         EL,IPROC,NFKSPROCESS)) THEN
+                GOODHEL(IHEL,IPROC,NFKSPROCESS)=.TRUE.
+                NGOOD(NFKSPROCESS) = NGOOD(NFKSPROCESS) +1
+                IGOOD(NGOOD(NFKSPROCESS),NFKSPROCESS) = IHEL
               ENDIF
             ENDIF
           ENDDO
           JHEL = 1
-          ISUM_HEL=MIN(ISUM_HEL,NGOOD)
+          ISUM_HEL=MIN(ISUM_HEL,NGOOD(NFKSPROCESS))
         ELSE  !RANDOM HELICITY
           DO J=1,ISUM_HEL
-            HWGT = REAL(NGOOD)/REAL(ISUM_HEL)
+            HWGT = REAL(NGOOD(NFKSPROCESS))/REAL(ISUM_HEL)
             HEL_FAC=HWGT
             IF (GET_HEL.EQ.0) THEN
               JHEL=JHEL+1
-              IF (JHEL .GT. NGOOD) JHEL=1
-              IHEL = IGOOD(JHEL)
+              IF (JHEL .GT. NGOOD(NFKSPROCESS)) JHEL=1
+              IHEL = IGOOD(JHEL,NFKSPROCESS)
               GET_HEL=IHEL
             ELSE
               IHEL=GET_HEL
             ENDIF
-            IF(GOODHEL(IHEL,IPROC)) THEN
+            IF(GOODHEL(IHEL,IPROC,NFKSPROCESS)) THEN
               T=BORN(P1,NHEL(1,IHEL),IHEL,JC(1),T1)
               DO JJ=1,NINCOMING
                 IF(POL(JJ).NE.1D0.AND. NHEL(JJ,IHEL).EQ.INT(SIGN(1D0
@@ -1217,8 +1220,8 @@ C             write (*,*) "momenta not the same in Born"
           ENDDO
           IF (ISUM_HEL .EQ. 1) THEN
             WRITE(HEL_BUFF(1),'(16i5)')(NHEL(I,IHEL),I=1,NEXTERNAL-1)
-            WRITE(HEL_BUFF(2),'(16i5)')(NHEL(I,IHEL+SKIP),I=1
-     $       ,NEXTERNAL-1)
+            WRITE(HEL_BUFF(2),'(16i5)')(NHEL(I,IHEL+SKIP(NFKSPROCESS))
+     $       ,I=1,NEXTERNAL-1)
           ENDIF
         ENDIF
         ANS(IPROC)=ANS(IPROC)/DBLE(IDEN(IPROC))
@@ -1278,9 +1281,10 @@ C
       DOUBLE COMPLEX SAVEAMP(NGRAPHS,MAX_BHEL)
       COMMON/TO_SAVEAMP/SAVEAMP
       DOUBLE PRECISION HEL_FAC
+      INTEGER GET_HEL,SKIP(8)
+      COMMON/CBORN/HEL_FAC,GET_HEL,SKIP
       LOGICAL CALCULATEDBORN
-      INTEGER GET_HEL,SKIP
-      COMMON/CBORN/HEL_FAC,CALCULATEDBORN,GET_HEL,SKIP
+      COMMON/CCALCULATEDBORN/CALCULATEDBORN
       INCLUDE 'coupl.inc'
       INTEGER GLU_IJ
       INTEGER NFKSPROCESS
@@ -1323,7 +1327,7 @@ C         Amplitude(s) for diagram number 3
             IF(IHEL.EQ.-1)THEN
               SAVEAMP(I,HELL)=AMP(I)
             ELSEIF(IHEL.EQ.1)THEN
-              SAVEAMP(I,HELL+SKIP)=AMP(I)
+              SAVEAMP(I,HELL+SKIP(NFKSPROCESS))=AMP(I)
             ELSE
               WRITE(*,*) 'ERROR #1 in born.f'
               STOP
@@ -1334,7 +1338,7 @@ C         Amplitude(s) for diagram number 3
             IF(IHEL.EQ.-1)THEN
               AMP(I)=SAVEAMP(I,HELL)
             ELSEIF(IHEL.EQ.1)THEN
-              AMP(I)=SAVEAMP(I,HELL+SKIP)
+              AMP(I)=SAVEAMP(I,HELL+SKIP(NFKSPROCESS))
             ELSE
               WRITE(*,*) 'ERROR #1 in born.f'
               STOP
@@ -1371,7 +1375,7 @@ C         Amplitude(s) for diagram number 3
 
 
 
-""" % misc.get_pkg_info()
+"""  % misc.get_pkg_info()
 
         process_exporter = export_fks_born.ProcessExporterFortranFKS_born()
 
@@ -1413,7 +1417,7 @@ C
       INTEGER                 NCOMB,     NCROSS
       PARAMETER (             NCOMB=  16, NCROSS=  1)
       INTEGER    THEL
-      PARAMETER (THEL=NCOMB*NCROSS)
+      PARAMETER (THEL=NCOMB*NCROSS*8)
       INTEGER NGRAPHS
       PARAMETER (NGRAPHS=   3)
 C     
@@ -1424,23 +1428,21 @@ C
 C     LOCAL VARIABLES 
 C     
       REAL*8 P(0:3,NEXTERNAL-1)
-      INTEGER NHEL(NEXTERNAL-1,NCOMB),NTRY
+      INTEGER NHEL(NEXTERNAL-1,NCOMB),NTRY(8)
       REAL*8 T
       REAL*8 B_SF_001
       REAL*8 ZERO
       PARAMETER(ZERO=0D0)
       INTEGER IHEL,IDEN(NCROSS),IC(NEXTERNAL-1,NCROSS)
       INTEGER IPROC,JC(NEXTERNAL-1), I,L,K
-      LOGICAL GOODHEL(NCOMB,NCROSS)
-      DATA NTRY/0/
-      INTEGER NGOOD,IGOOD(NCOMB),JHEL
-      DATA NGOOD /0/
+      LOGICAL GOODHEL(NCOMB,NCROSS,8)
+      DATA NTRY /8*0/
+      INTEGER NGOOD(8),IGOOD(NCOMB,8),JHEL
+      DATA NGOOD /8*0/
       SAVE IGOOD,JHEL
       REAL*8 HWGT
       INTEGER J,JJ
       INCLUDE 'born_nhel.inc'
-      DOUBLE COMPLEX SAVEAMP(NGRAPHS,MAX_BHEL)
-      COMMON/TO_SAVEAMP/SAVEAMP
       DOUBLE PRECISION SAVEMOM(NEXTERNAL-1,2)
       COMMON/TO_SAVEMOM/SAVEMOM
 
@@ -1449,9 +1451,10 @@ C
 
       DATA GOODHEL/THEL*.FALSE./
       DOUBLE PRECISION HEL_FAC
+      INTEGER GET_HEL,SKIP(8)
+      COMMON/CBORN/HEL_FAC,GET_HEL,SKIP
       LOGICAL CALCULATEDBORN
-      INTEGER GET_HEL,SKIP
-      COMMON/CBORN/HEL_FAC,CALCULATEDBORN,GET_HEL,SKIP
+      COMMON/CCALCULATEDBORN/CALCULATEDBORN
       INTEGER NFKSPROCESS
       COMMON/C_NFKSPROCESS/NFKSPROCESS
       INTEGER IDEN_VALUES(8)
@@ -1460,7 +1463,7 @@ C     ----------
 C     BEGIN CODE
 C     ----------
       IDEN(1)=IDEN_VALUES(NFKSPROCESS)
-      NTRY=NTRY+1
+      NTRY(NFKSPROCESS)=NTRY(NFKSPROCESS)+1
       DO IPROC=1,NCROSS
         DO IHEL=1,NEXTERNAL-1
           JC(IHEL) = +1
@@ -1482,20 +1485,22 @@ C     ----------
           STOP
         ENDIF
         ANS(IPROC) = 0D0
-        IF (GET_HEL .EQ. 0 .OR. NTRY .LT. 2) THEN
+        IF (GET_HEL .EQ. 0 .OR. NTRY(NFKSPROCESS) .LT. 2) THEN
           DO IHEL=1,NCOMB
-            IF (GOODHEL(IHEL,IPROC) .OR. NTRY .LT. 2) THEN
+            IF (GOODHEL(IHEL,IPROC,NFKSPROCESS) .OR. NTRY(NFKSPROCESS
+     $       ) .LT. 2) THEN
               T=B_SF_001(P1,NHEL(1,IHEL),IHEL,JC(1))
               ANS(IPROC)=ANS(IPROC)+T
-              IF (T .NE. 0D0 .AND. .NOT. GOODHEL(IHEL,IPROC)) THEN
-                GOODHEL(IHEL,IPROC)=.TRUE.
-                NGOOD = NGOOD +1
-                IGOOD(NGOOD) = IHEL
+              IF (T .NE. 0D0 .AND. .NOT. GOODHEL(IHEL,IPROC,NFKSPROCESS
+     $         )) THEN
+                GOODHEL(IHEL,IPROC,NFKSPROCESS)=.TRUE.
+                NGOOD(NFKSPROCESS) = NGOOD(NFKSPROCESS) +1
+                IGOOD(NGOOD(NFKSPROCESS),NFKSPROCESS) = IHEL
               ENDIF
             ENDIF
           ENDDO
         ELSE  !RANDOM HELICITY
-          HWGT = REAL(NGOOD)
+          HWGT = REAL(NGOOD(NFKSPROCESS))
           IHEL=GET_HEL
           T=B_SF_001(P1,NHEL(1,IHEL),IHEL,JC(1))
           ANS(IPROC)=ANS(IPROC)+T*HWGT
@@ -1549,10 +1554,8 @@ C
       INCLUDE 'born_nhel.inc'
       DOUBLE COMPLEX SAVEAMP(NGRAPHS,MAX_BHEL)
       COMMON/TO_SAVEAMP/SAVEAMP
-      DOUBLE PRECISION HEL_FAC
       LOGICAL CALCULATEDBORN
-      INTEGER GET_HEL,SKIP
-      COMMON/CBORN/HEL_FAC,CALCULATEDBORN,GET_HEL,SKIP
+      COMMON/CCALCULATEDBORN/CALCULATEDBORN
       INCLUDE 'coupl.inc'
 C     
 C     COLOR DATA

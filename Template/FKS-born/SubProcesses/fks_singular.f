@@ -2436,12 +2436,6 @@ c Put here call to compute bpower
       prefact=xinorm_ev/xi_i_fks_ev*
      #        1/(1-y_ij_fks_ev)
 
-      if(pmass(j_fks).eq.0.d0)then
-        prefact_c=xinorm_cnt(ione)/xi_i_fks_cnt(ione)*
-     #            1/(1-y_ij_fks_ev)
-      endif
-
-
       if( (.not.nocntevents) .and. (.not.(abrv.eq.'born' .or. abrv.eq
      &     .'grid' .or. abrv(1:2).eq.'vi' .or. nbodyonly))
      &     )then

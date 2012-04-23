@@ -50,7 +50,7 @@ c Vegas stuff
       integer ipole
       common/tosigint/ndim,ipole
 
-      real*8 sigint,res,err,chi2a
+      real*8 sigint,res,err,chi2a,res_abs
       external sigint
 
       integer irestart
@@ -95,15 +95,26 @@ c For tests of virtuals
       common /to_plot/wgt2
       integer nevents
       character*10 MonteCarlo
-      integer lunlhe,lunlhe2
-      parameter (lunlhe=98,lunlhe2=83)
+      integer lunlhe,lunlhe2,lunlhe3,lunlhe4
+      parameter (lunlhe=98,lunlhe2=83,lunlhe3=84,lunlhe4=85)
       integer IDBMUP(2),PDFGUP(2),PDFSUP(2),IDWTUP,NPRUP,LPRUP
       double precision EBMUP(2),XSECUP,XERRUP,XMAXUP
       character*10 dum
       logical plotEv,plotKin
       common/cEvKinplot/plotEv,plotKin
-      logical putonshell
-      parameter (putonshell=.true.)
+      logical putonshell,unwgt
+      parameter (putonshell=.true.,unwgt=.true.)
+
+      double precision ran2,rnd
+      external ran2
+      integer ifound
+      INTEGER MAXNUP
+      PARAMETER (MAXNUP=500)
+      INTEGER NUP,IDPRUP,IDUP(MAXNUP),ISTUP(MAXNUP),
+     # MOTHUP(2,MAXNUP),ICOLUP(2,MAXNUP)
+      DOUBLE PRECISION XWGTUP,SCALUP,AQEDUP,AQCDUP,
+     # PUP(5,MAXNUP),VTIMUP(MAXNUP),SPINUP(MAXNUP)
+      character*140 buff
 
       integer n_mp, n_disc
 C-----
@@ -199,8 +210,9 @@ c at the NLO)
 
       call fill_MC_mshell()
       res=0d0
+      res_abs=0d0
       err=0d0
-      max_wgt=0d0
+      max_wgt=1d0
       do i=1,itmax
          do j=1,ncall
             call get_random_numbers(lunlhe,x,wgt1)
@@ -210,9 +222,6 @@ c at the NLO)
             else
                event_wgt=sigintF(x,wgt,0,f_abs)
                event_wgt=sigintF(x,wgt,2,f_abs)
-c$$$               if (unweight) then
-c$$$                  write (*,*) 'unweighting option not yet implemented'
-c$$$               endif
                call finalize_event(x,abs(event_wgt),lunlhe2,plotEv
      &              ,putonshell)
             endif
@@ -227,22 +236,64 @@ c$$$               www=-49.5d0
 c$$$            endif
 c$$$            call mfill(9,www,1d0)
 c$$$            call mfill(10,www,1d0)
-            max_wgt=max(max_wgt,abs(event_wgt))
+            if (abs(www).gt.max_wgt) max_wgt=max_wgt*1.1d0
             res=res+event_wgt
+            res_abs=res_abs+f_abs
             err=err+event_wgt**2
          enddo
          call regrid_MC_integer
       enddo
+c$$$      max_wgt=20d0
+      max_wgt=max_wgt*wgt2
+      write (*,*) 'max_wgt=',max_wgt,max_wgt/wgt2
       err=sqrt(err)
 
       close (lunlhe)
+      if (unwgt) then
+         rewind(lunlhe2)
+         open(unit=lunlhe3,status='unknown')
+         ifound=0
+         do i=1,itmax*ncall
+            call read_lhef_event(lunlhe2,
+     &           NUP,IDPRUP,XWGTUP,SCALUP,AQEDUP,AQCDUP,
+     &           IDUP,ISTUP,MOTHUP,ICOLUP,PUP,VTIMUP,SPINUP,buff)
+            rnd=ran2()
+            if (abs(XWGTUP).gt.rnd*max_wgt) then
+c               XWGTUP=sign(res_abs/dble(itmax*ncall),XWGTUP)
+               ifound=ifound+1
+               call write_lhef_event(lunlhe3,
+     &              NUP,IDPRUP,XWGTUP,SCALUP,AQEDUP,AQCDUP,
+     &              IDUP,ISTUP,MOTHUP,ICOLUP,PUP,VTIMUP,SPINUP,buff)
+            endif
+         enddo
+         write (*,*) 'unweighting efficiency',
+     &        dble(ifound)/dble(itmax*ncall)
+         rewind(lunlhe3)
+         open(unit=lunlhe4,file='unweighted_events_NLO.lhe',status
+     &        ='unknown')
+         do i=1,ifound
+            call read_lhef_event(lunlhe3,
+     &           NUP,IDPRUP,XWGTUP,SCALUP,AQEDUP,AQCDUP,
+     &           IDUP,ISTUP,MOTHUP,ICOLUP,PUP,VTIMUP,SPINUP,buff)
+            rnd=ran2()
+            if (abs(XWGTUP).gt.rnd*max_wgt) then
+               XWGTUP=sign(res_abs/dble(ifound),XWGTUP)
+               ifound=ifound+1
+               call write_lhef_event(lunlhe4,
+     &              NUP,IDPRUP,XWGTUP,SCALUP,AQEDUP,AQCDUP,
+     &              IDUP,ISTUP,MOTHUP,ICOLUP,PUP,VTIMUP,SPINUP,buff)
+            endif
+         enddo
+         close (lunlhe3)
+         close (lunlhe4)
+      endif
       close (lunlhe2)
 
 
       write (*,*) ''
-      write (*,*) 'max_wgt=',max_wgt
       write (*,*) '----------------------------------------------------'
       write(*,*)'Final result:',res,'+/-',err
+      write(*,*)'Final result ABS:',res_abs,'+/-',err
       write(*,*)'Maximum weight found:',fksmaxwgt
       write(*,*)'Found for:',xisave,ysave
       write (*,*) '----------------------------------------------------'
