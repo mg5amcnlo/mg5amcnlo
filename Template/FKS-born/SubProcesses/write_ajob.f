@@ -74,6 +74,8 @@ c-----
      &        '../../Cards/* ./Cards/'
          write(lun,15) 'cp -ra  $CONDOR_INITIAL_DIR/'//
      &        '../../lib/Pdfdata ./lib/'
+         write(lun,15) 'ln -s  $CONDOR_INITIAL_DIR/'//
+     &        '../../lib/PDFsets ./lib/'
 c         write(lun,15) 'cp -ra  $CONDOR_INITIAL_DIR/'//
 c     &        '../../lib/PDFsets ./lib/'
 c         write(lun,15) 'cd ./lib/PDFsets'
