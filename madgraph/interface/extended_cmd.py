@@ -843,7 +843,6 @@ class Cmd(CheckCmd, HelpCmd, CompleteCmd, BasicCmd):
         value =   Cmd.timed_input(question, default, timeout=timeout,
                                     fct=f, fct_timeout=fct_timeout)
 
-        self.preloop()        
         return value
         
     def check_answer_in_input_file(self, options, path=False):

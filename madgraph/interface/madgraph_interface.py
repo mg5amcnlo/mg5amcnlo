@@ -24,6 +24,7 @@ import pydoc
 import re
 import subprocess
 import sys
+import shutil
 import traceback
 import time
 
@@ -3249,6 +3250,8 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
             answer = self.ask('Do you want to continue?', 'y', ['y','n'])
             if answer != 'y':
                 raise self.InvalidCmd('Stopped by user request')
+            else:
+                shutil.rmtree(self._export_dir)
 
         #check if we need to group processes
         group_subprocesses = False
