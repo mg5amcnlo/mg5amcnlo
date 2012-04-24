@@ -39,7 +39,8 @@ try:
     from madgraph import MG5DIR
     MADEVENT = False
 except Exception, error:
-    print error
+    if __debug__:
+        print error
     import internal.misc as misc
     MADEVENT = True
 
