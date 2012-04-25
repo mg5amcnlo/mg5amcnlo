@@ -50,7 +50,8 @@ LINK= $(TEST) link_fks.o
 INTEGRATE= genint_fks.o
 
 # Files for event reweighting to get e.g. scale and PDF uncertainties
-RWGFILES=reweight_xsec_events.o handling_lhe_events.o reweight_xsec.o auto_dsig.o setscales.o cuts.o fastjetfortran_madfks.o reweight_xsec_events_pdf_dummy.o
+RWGFILES=reweight_xsec_events.o handling_lhe_events.o reweight_xsec.o $(patsubst %.f,%.o,$(wildcard parton_lum_*.f)) \
+	setscales.o cuts.o fastjetfortran_madfks.o
 
 %.o : %.f
 	$(F77) $(FFLAGS) -c $<
@@ -92,3 +93,6 @@ madevent_mintMC: $(MINTMC)  makefile $(LIBS)
 
 madevent_reweight: $(BORN_REWEIGHT)  makefile $(LIBS)
 	$(F77) $(FFLAGS) -o madevent_reweight $(BORN_REWEIGHT) $(LINKLIBS) $(FJLIBS)
+
+reweight_xsec_events: $(RWGFILES)
+	$(F77) $(FFLAGS) -o reweight_xsec_events $(RWGFILES) $(LINKLIBS) $(FJLIBS)

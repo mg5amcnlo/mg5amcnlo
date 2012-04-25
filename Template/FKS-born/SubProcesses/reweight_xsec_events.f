@@ -6,6 +6,7 @@ c information on the maximum and minimum weights due to scale
 c and PDF variations
 c Compile with makefile_rwgt
       implicit none
+      include "nexternal.inc"
       include "genps.inc"
       include "reweight.inc"
       integer maxevt,ifile,ofile,i,isave,imu,ipdf

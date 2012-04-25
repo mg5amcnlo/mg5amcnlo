@@ -16,9 +16,27 @@ if [[  ! -d ./SubProcesses  ]]; then
 	exit
     fi
 fi
+
+source Source/fj_lhapdf_opts
+Maindir=`pwd`
+libdir=$Maindir/lib
+c=`awk '/^[^#].*=.*pdlabel/{print $1}' Cards/run_card.dat`
+if [[ $c == "'lhapdf'" ]]; then
+    echo Using LHAPDF interface!
+    LHAPDF=`$lhapdf_config --libdir`
+    LHAPDFSETS=`$lhapdf_config --pdfsets-path`
+    export lhapdf=true
+    if [ ! -f $libdir/libLHAPDF.a ]; then 
+      ln -s $LHAPDF/libLHAPDF.a $libdir/libLHAPDF.a 
+    fi
+    if [ ! -d $libdir/PDFsets ]; then 
+      ln -s $LHAPDFSETS $libdir/. 
+    fi
+else
+    unset lhapdf
+fi
+
 cd SubProcesses
-
-
 
 if [[ $run_cluster == "" ]] ; then
     echo "Local run (0) or cluster running (1)?"
@@ -88,7 +106,7 @@ if [[ $run_cluster == 1 ]] ; then
     chmod +x reweight_xsec_events.cluster
 fi
 
-for p in P*_[1-9]* ; do
+for p in P* ; do
     cd $p
     echo "Running in" $p
     make reweight_xsec_events >/dev/null

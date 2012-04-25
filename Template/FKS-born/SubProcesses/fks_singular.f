@@ -878,1331 +878,1331 @@ c based on previous PS points (done in LesHouches.f)
       end
 
 
-      double precision function dsigH(pp,wgt,vegaswgt)
-c Here are the subtraction terms, the Sij function, 
-c the f-damping function, and the single diagram
-c enhanced multi-channel factor included
-      implicit none
-      include "genps.inc"
-      include 'nexternal.inc'
-c      include "fks.inc"
-      integer fks_j_from_i(nexternal,0:nexternal)
-     &     ,particle_type(nexternal),pdg_type(nexternal)
-      common /c_fks_inc/fks_j_from_i,particle_type,pdg_type
-      include "fks_powers.inc"
-      include "madfks_mcatnlo.inc"
-      include 'coupl.inc'
-      include 'run.inc'
-      include 'reweight.inc'
-
-      double precision pp(0:3,nexternal),wgt,vegaswgt
-
-      double precision fks_Sij,fks_Hij,f_damp,dot,dlum
-      external fks_Sij,fks_Hij,f_damp,dot,dlum
-
-      double precision prefact,ev_wgt,xmc_wgt,plot_wgt,x,
-     # ffact,s_ev,fx_ev,gfactsf,gfactcl,xmcMC,xmcME,xmc,totH_wgt,
-     # xtot,xlum_ev,xlum_mc,xlum_mc_save,dummy,fx_c,fx_s,
-     # fx_sc,s_c,s_s,s_sc,xlum_c,xlum_s,xlum_sc,prefact_c,
-     # bpower
-      double precision probne,sevmc,get_ptrel,xlum_mc_fact,xsec
-      integer i,ifill1,ifill2,ifill3,ifill4
-
-      integer mohdr,iplot_ev
-      parameter (mohdr=-100)
-      parameter (iplot_ev=11)
-
-      double precision ybst_til_tolab,ybst_til_tocm,sqrtshat,shat
-      common/parton_cms_stuff/ybst_til_tolab,ybst_til_tocm,
-     #                        sqrtshat,shat
-
-      double precision p1_cnt(0:3,nexternal,-2:2)
-      double precision wgt_cnt(-2:2)
-      double precision pswgt_cnt(-2:2)
-      double precision jac_cnt(-2:2)
-      common/counterevnts/p1_cnt,wgt_cnt,pswgt_cnt,jac_cnt
-
-      integer izero,ione,itwo,ithree,ifour
-      parameter (izero=0)
-      parameter (ione=1)
-      parameter (itwo=2)
-      parameter (ithree=3)
-      parameter (ifour=4)
-
-c Multi channel stuff:
-      Double Precision amp2(maxamps), jamp2(0:maxamps)
-      common/to_amps/  amp2,       jamp2
-
-      integer          isum_hel
-      logical                    multi_channel
-      common/to_matrix/isum_hel, multi_channel
-      INTEGER MAPCONFIG(0:LMAXCONFIGS), ICONFIG
-      common/to_mconfigs/mapconfig, iconfig
-
-      double complex wgt1(2)
-      double precision p_born(0:3,nexternal-1)
-      common/pborn/p_born
-
-      logical calculatedBorn
-      common/ccalculatedBorn/calculatedBorn
-
-      double precision enhance,rwgt,unwgtfun
-      logical firsttime,passcuts
-      data firsttime /.true./
-      integer inoborn_ev,inoborn_cnt
-      double precision xnoborn_ev,xnoborn_cnt
-
-c FKS stuff:
-      integer i_fks,j_fks
-      common/fks_indices/i_fks,j_fks
-
-      double precision xi_i_fks_ev,y_ij_fks_ev
-      double precision p_i_fks_ev(0:3),p_i_fks_cnt(0:3,-2:2)
-      common/fksvariables/xi_i_fks_ev,y_ij_fks_ev,p_i_fks_ev,p_i_fks_cnt
-
-      double precision xi_i_fks_cnt(-2:2)
-      common /cxiifkscnt/xi_i_fks_cnt
-
-      double precision xinorm_ev
-      common /cxinormev/xinorm_ev
-      double precision xinorm_cnt(-2:2)
-      common /cxinormcnt/xinorm_cnt
-
-      double precision zero,one
-      parameter (zero=0d0,one=1d0)
-      double precision tiny
-      parameter (tiny=1d-6)
-
-      double precision fkssymmetryfactor,fkssymmetryfactorBorn,
-     &     fkssymmetryfactorDeg
-      integer ngluons,nquarks(-6:6)
-      common/numberofparticles/fkssymmetryfactor,fkssymmetryfactorBorn,
-     &                         fkssymmetryfactorDeg,ngluons,nquarks
-      integer diagramsymmetryfactor
-      common /dsymfactor/diagramsymmetryfactor
-
-      logical multi_chan(lmaxconfigs)
-      common /to_multi_chan/multi_chan
-
-      character*4 abrv
-      common /to_abrv/ abrv
-
-      double precision vegas_weight
-      common/cvegas_weight/vegas_weight
-
-      double precision zhw_used
-c MC stuff
-      double precision zhw(nexternal),xmcxsec(nexternal)
-      integer nofpartners
-      logical lzone(nexternal),flagmc
-
-      double precision emsca,scalemax
-      common/cemsca/emsca,scalemax
-
-c Stuff to be written (depending on AddInfoLHE) onto the LHE file
-      integer iSorH_lhe,ifks_lhe,jfks_lhe,fksfather_lhe,ipartner_lhe
-      double precision scale1_lhe,scale2_lhe
-      common/cto_LHE1/iSorH_lhe,ifks_lhe,jfks_lhe,
-     #                fksfather_lhe,ipartner_lhe
-      common/cto_LHE2/scale1_lhe,scale2_lhe
-
-c CKWW scale, from cuts.f
-      double precision scale_CKKW
-      common/cscale_CKKW/scale_CKKW
-
-c For the MINT folding
-      integer fold
-      common /cfl/fold
-
-      logical unwgt
-      double precision evtsgn
-      common /c_unwgt/evtsgn,unwgt
-
-c For plots
-      logical plotEv,plotKin
-      common/cEvKinplot/plotEv,plotKin
-
-c For tests
-      real*8 fksmaxwgt,xisave,ysave
-      common/cfksmaxwgt/fksmaxwgt,xisave,ysave
-
-      integer itotalpoints
-      common/ctotalpoints/itotalpoints
-
-      character*10 MonteCarlo
-      common/cMonteCarloType/MonteCarlo
-
-      integer ileg
-      common/cileg/ileg
-
-      double precision ximin
-      parameter(ximin=0.05d0)
-
-      double precision pmass(nexternal)
-      include "pmass.inc"
-
-      vegas_weight=vegaswgt
-
-      if (fold.eq.0) then
-         call get_helicity(i_fks,j_fks)
-         calculatedBorn=.false.
-      endif
-
-      if (firsttime)then
-         inoborn_ev=0
-         xnoborn_ev=0.d0
-         inoborn_cnt=0
-         xnoborn_cnt=0.d0
-         fksmaxwgt=0.d0
-c Put here call to compute bpower
-         call compute_bpower(p_born,bpower)
-         wgtbpower=bpower
-         firsttime=.false.
-      endif
-
-      prefact=xinorm_ev/xi_i_fks_ev*
-     #        1/(1-y_ij_fks_ev)
-      if(pmass(j_fks).eq.0.d0)then
-        prefact_c=xinorm_cnt(ione)/xi_i_fks_cnt(ione)*
-     #            1/(1-y_ij_fks_ev)
-      endif
-
-      emsca=0.d0
-      scalemax=0.d0
-
-      ev_wgt=0.d0
-      xmc_wgt=0.d0
-      plot_wgt=0.d0
-
-      if(doreweight)then
-        if(.not.AddInfoLHE)then
-          write(*,*)'Error in dsigH'
-          write(*,*)'  AddInfoLHE must be true when unweighting'
-          stop
-        endif
-        call reweight_settozero(.true.)
-        ifill1=0
-        ifill2=0
-        ifill3=0
-        ifill4=0
-      endif
-
-      if(AddInfoLHE)then
-        iSorH_lhe=2
-        ifks_lhe=i_fks
-        jfks_lhe=j_fks
-        fksfather_lhe=0
-        ipartner_lhe=0
-        scale1_lhe=0.d0
-        scale2_lhe=0.d0
-      endif
-
-      if (abrv.eq.'born' .or. abrv.eq.'grid' .or.
-     &     abrv(1:2).eq.'vi') then
-         write (*,*) 'No need to generate Hevents when doing: ',abrv
-         stop
-      endif
-
-      probne=1.d0
-c MC counterterms. Cuts should be with the Born-type momenta. Rest is
-c with the event momenta.
-      call set_cms_stuff(izero)
-      if (passcuts(p1_cnt(0,1,0),rwgt)) then
-        gfactsf=1.d0
-        gfactcl=1.d0
-        sevmc=1.d0
-        xmcMC=0.d0
-        xmcME=0.d0
-        call set_cms_stuff(mohdr)
-        call set_alphaS(pp)
-        if(doreweight)then
-          wgtmuR2(1)=muR2_current/muR_over_ref**2
-          wgtmuF12(1)=muF12_current/muF1_over_ref**2
-          wgtmuF22(1)=muF22_current/muF2_over_ref**2
-          call reweight_fillkin(pp,ione)
-          ifill1=1
-          call reweight_fillkin(pp,itwo)
-          ifill2=1
-        endif
-        if(UseSfun)then
-           x = abs(2d0*dot(pp(0,i_fks),pp(0,j_fks))/shat)
-           ffact = f_damp(x)
-           sevmc = fks_Sij(pp,i_fks,j_fks,xi_i_fks_ev,y_ij_fks_ev)
-           sevmc = sevmc*ffact
-        else
-           x = abs(2d0*dot(pp(0,i_fks),pp(0,j_fks))/shat)
-           ffact = f_damp(x)
-           sevmc = fks_Hij(pp,i_fks,j_fks)
-           sevmc = sevmc*ffact
-        endif
-        call xmcsubt(pp,xi_i_fks_ev,y_ij_fks_ev,gfactsf,gfactcl,probne,
-     #               dummy,nofpartners,lzone,flagmc,zhw,xmcxsec)
-
-        if(ileg.gt.4.or.ileg.lt.1)then
-           write(*,*)'Error: unrecognized ileg in dsigH', ileg
-           stop
-        endif
-
-        if(sevmc.gt.0.d0.and.flagmc)then
-          if(doreweight)then
-            iwgtnumpartn=nofpartners
-            xsec=-sevmc*wgt*prefact*rwgt
-          endif
-          xlum_mc_save=-1.d8
-          do i=1,nofpartners
-            if(lzone(i))then
-              zhw_used=zhw(i)
-              call get_mc_lum(j_fks,zhw_used,xi_i_fks_ev,
-     #                        xlum_mc_save,xlum_mc,xlum_mc_fact)
-              xmcMC=xmcMC+xmcxsec(i)*xlum_mc
-              if(doreweight)then
-                wgtwmcxsec(i)=xsec*xlum_mc_fact*xmcxsec(i)/
-     #                        g**(2*wgtbpower+2.d0)
-                wgtmcxbj(1,i)=xbk(1)
-                wgtmcxbj(2,i)=xbk(2)
-              endif
-            endif
-          enddo
-          xmcMC=-xmcMC*sevmc*wgt*prefact*rwgt
-        endif
-c
-        if( (.not.flagmc).and.gfactsf.eq.1.d0 .and.
-     #      xi_i_fks_ev.lt.0.02d0 .and. particle_type(i_fks).eq.8)then
-          write(*,*)'Error in dsigH: will diverge'
-          stop
-        endif
-c
-        if(gfactsf.lt.1.d0.and.probne.gt.0.d0)then
-          call set_cms_stuff(izero)
-          call set_alphaS(p1_cnt(0,1,0))
-          if(doreweight)then
-            wgtxbj(1,2)=xbk(1)
-            wgtxbj(2,2)=xbk(2)
-            wgtmuR2(2)=muR2_current/muR_over_ref**2
-            wgtmuF12(2)=muF12_current/muF1_over_ref**2
-            wgtmuF22(2)=muF22_current/muF2_over_ref**2
-            if(ifill2.ne.1)then
-              write(*,*)'Error #1[wg] in dsigH',ifill2
-              stop
-            endif
-          endif
-          s_s = fks_Sij(p1_cnt(0,1,0),i_fks,j_fks,zero,y_ij_fks_ev)
-          if(s_s.gt.0.d0)then
-            call sreal(p1_cnt(0,1,0),zero,y_ij_fks_ev,fx_s)
-            xlum_s = dlum()
-            xsec = fx_s*s_s*jac_cnt(0)*prefact*rwgt
-            if(.not.flagmc.and.MonteCarlo(1:7).eq.'PYTHIA6'
-     &         .and.ileg.ge.3.and.xi_i_fks_ev.gt.ximin)xsec=0d0
-            xmcME=xlum_s*xsec
-            if(doreweight)wgtwreal(2)=xsec/g**(2*wgtbpower+2.d0)
-          endif
-          if(gfactcl.lt.1.d0.and.pmass(j_fks).eq.0.d0)then
-            call set_cms_stuff(ione)
-            if(doreweight)then
-              wgtxbj(1,3)=xbk(1)
-              wgtxbj(2,3)=xbk(2)
-              call reweight_fillkin(pp,ithree)
-              ifill3=1
-            endif
-            s_c = fks_Sij(p1_cnt(0,1,1),i_fks,j_fks,xi_i_fks_cnt(ione),one)
-            if(s_c.gt.0.d0)then
-              if(abs(s_c-1.d0).gt.1.d-6.and.j_fks.le.nincoming)then
-                write(*,*)'Wrong S function in dsigH[c]',s_c
-                stop
-              endif
-              call sreal(p1_cnt(0,1,1),xi_i_fks_cnt(ione),one,fx_c)
-              xlum_c = dlum()
-              xsec = fx_c*s_c*jac_cnt(1)*prefact_c*rwgt*(1-gfactcl)
-              if(.not.flagmc.and.MonteCarlo(1:7).eq.'PYTHIA6'
-     &           .and.ileg.ge.3.and.xi_i_fks_ev.gt.ximin)xsec=0d0
-              xmcME=xmcME+xlum_c*xsec
-              if(doreweight)wgtwreal(3)=xsec/g**(2*wgtbpower+2.d0)
-            endif
-            call set_cms_stuff(itwo)
-            if(doreweight)then
-              wgtxbj(1,4)=xbk(1)
-              wgtxbj(2,4)=xbk(2)
-              call reweight_fillkin(pp,ifour)
-              ifill4=1
-            endif
-            s_sc = fks_Sij(p1_cnt(0,1,2),i_fks,j_fks,zero,one)
-            if(s_sc.gt.0.d0)then
-              if(abs(s_sc-1.d0).gt.1.d-6.and.j_fks.le.nincoming)then
-                write(*,*)'Wrong S function in dsigH[sc]',s_sc
-                stop
-              endif
-              call sreal(p1_cnt(0,1,2),zero,one,fx_sc)
-              xlum_sc = dlum()
-              xsec = fx_sc*s_sc*jac_cnt(2)*prefact_c*rwgt*(1-gfactcl)
-              if(.not.flagmc.and.MonteCarlo(1:7).eq.'PYTHIA6'
-     &           .and.ileg.ge.3.and.xi_i_fks_ev.gt.ximin)xsec=0d0
-              xmcME=xmcME-xlum_sc*xsec
-              if(doreweight)wgtwreal(4)=-xsec/g**(2*wgtbpower+2.d0)
-            endif
-          endif
-          xmcME=-xmcME*(1-gfactsf)*probne
-          if(doreweight)then
-            xsec=(1-gfactsf)*probne
-            wgtwreal(2)=-wgtwreal(2)*xsec
-            wgtwreal(3)=-wgtwreal(3)*xsec
-            wgtwreal(4)=-wgtwreal(4)*xsec
-          endif
-        endif
-c
-        xmc_wgt=xmcMC+xmcME
-
-      else
-        if(pp(0,1).ne.-99d0)then
-          call set_cms_stuff(mohdr)
-          call assign_emsca(pp,xi_i_fks_ev,y_ij_fks_ev)
-        endif
-      endif
-
-c Real contribution
-c
-c Set the ybst_til_tolab before applying the cuts. 
-      call set_cms_stuff(mohdr)
-      if(doreweight)then
-        wgtxbj(1,1)=xbk(1)
-        wgtxbj(2,1)=xbk(2)
-      endif
-      if (passcuts(pp,rwgt).and.probne.gt.0.d0) then
-        call set_alphaS(pp)
-        x = abs(2d0*dot(pp(0,i_fks),pp(0,j_fks))/shat)
-        ffact = f_damp(x)
-        s_ev = fks_Sij(pp,i_fks,j_fks,xi_i_fks_ev,y_ij_fks_ev)
-        if(s_ev.gt.0.d0)then
-          call sreal(pp,xi_i_fks_ev,y_ij_fks_ev,fx_ev)
-          xlum_ev = dlum()
-          xsec = fx_ev*s_ev*ffact*wgt*prefact*rwgt*probne
-          ev_wgt = xlum_ev*xsec
-          if(doreweight)then
-            if(ifill1.eq.0)then
-              wgtmuR2(1)=muR2_current/muR_over_ref**2
-              wgtmuF12(1)=muF12_current/muF1_over_ref**2
-              wgtmuF22(1)=muF22_current/muF2_over_ref**2
-              call reweight_fillkin(pp,ione)
-              ifill1=1
-            endif
-            wgtwreal(1)=xsec/g**(2*wgtbpower+2.d0)
-          endif
-        endif
-        if(AddInfoLHE)scale2_lhe=get_ptrel(pp,i_fks,j_fks)
-      endif
-
-      if(AddInfoLHE.and.UseCKKW)then
-        if(scale1_lhe.eq.0.d0)scale1_lhe=scale2_lhe
-        scale2_lhe=scale_CKKW
-      endif
-
-      totH_wgt = ev_wgt+xmc_wgt
-c
-c Enhance the one channel for multi-channel integration
-c
-      enhance=1.d0
-      if (totH_wgt.ne.0d0 .and. multi_channel) then
-         if (xmc.eq.0d0) CalculatedBorn=.false.
-         if (.not.calculatedBorn .and. p_born(0,1).gt.0d0)then
-            call sborn(p_born,wgt1)
-         elseif(p_born(0,1).lt.0d0)then
-            enhance=0d0
-         endif
-
-         if (enhance.eq.0d0)then
-            xnoborn_cnt=xnoborn_cnt+1.d0
-            if(log10(xnoborn_cnt).gt.inoborn_cnt)then
-               write (*,*) 
-     #           'Function dsigH: no Born momenta more than 10**',
-     #           inoborn_cnt,'times'
-               inoborn_cnt=inoborn_cnt+1
-            endif
-         else
-            xtot=0d0
-            if (mapconfig(0).eq.0) then
-               write (*,*) 'Fatal error in dsigH, no Born diagrams '
-     &           ,mapconfig,'. Check bornfromreal.inc'
-               write (*,*) 'Is fks_singular compiled correctly?'
-               stop
-            endif
-            if (onlyBorn) then
-               do i=1, mapconfig(0)
-                  if (multi_chan(mapconfig(i))) then
-                     xtot=xtot+amp2(mapconfig(i))
-                  endif
-               enddo
-            else
-               do i=1,mapconfig(0)
-                  xtot=xtot+amp2(mapconfig(i))
-               enddo
-            endif
-            if (xtot.ne.0d0) then
-               enhance=amp2(mapconfig(iconfig))/xtot
-               enhance=enhance*diagramsymmetryfactor
-            else
-               enhance=0d0
-            endif
-         endif
-      endif
-
-      totH_wgt = totH_wgt * enhance
-
-      dsigH = totH_wgt*fkssymmetryfactor
-      call unweight_function(p_born,unwgtfun)
-      dsigH=dsigH*unwgtfun
-
-      if(doreweight)then
-        if(ifill2.eq.0.and.(ifill3.ne.0.or.ifill4.ne.0))then
-          write(*,*)'Error #2[wg] in dsigH',ifill2,ifill3,ifill4
-          stop
-        endif
-        wgtref = dsigH
-        xsec = enhance*unwgtfun*fkssymmetryfactor
-        do i=1,4
-          wgtwreal(i)=wgtwreal(i) * xsec
-        enddo
-        do i=1,iwgtnumpartn
-          wgtwmcxsec(i)=wgtwmcxsec(i) * xsec
-        enddo
-        call reweight_fill_extra()
-        if(check_reweight.and.doreweight)
-     #    call check_rwgt_wgt("Hev")
-c Example of reweighted cross section (scale changed)
-c           dsigH_new=compute_rwgt_wgt_Hev(new_muR_fact,new_muF1_fact,
-c     #                                    new_muF2_fact,new_QES_fact,
-c     #                                    iwgtinfo)
-      endif      
-
-      if (dsigH.ne.dsigH) then
-         write (*,*) 'ERROR, ',dsigH,
-     &        ' found for dsigH, setting dsigH to 0 for this event'
-         dsigH=0
-      endif
-
-c$$$      if(dsigH.ne.0.d0)
-c$$$     #  call set_shower_scale(pp,i_fks,j_fks,xi_i_fks_ev,y_ij_fks_ev)
-
-      if (dsigH.ne.0d0) itotalpoints=itotalpoints+1
-
-c For tests
-      if(abs(dsigH).gt.fksmaxwgt)then
-        fksmaxwgt=abs(dsigH)
-        xisave=xi_i_fks_ev
-        ysave=y_ij_fks_ev
-      endif
-
-c Plot observables for event
-      if (.not.unwgt) then
-         plot_wgt=totH_wgt*fkssymmetryfactor*vegaswgt 
-         if( abs(plot_wgt).gt.1.d-20.and.pp(0,1).ne.-99d0. and.
-     &       (plotEv.or.plotKin) )
-     &      call outfun(pp,ybst_til_tolab,plot_wgt,iplot_ev)
-      endif
-      return
-      end
-
-
-      double precision function dsigS(pp,wgt,vegaswgt)
-c Here are the subtraction terms, the Sij function, 
-c the f-damping function, and the single diagram
-c enhanced multi-channel factor included
-      implicit none
-      include "genps.inc"
-      include 'nexternal.inc'
-c      include "fks.inc"
-      integer fks_j_from_i(nexternal,0:nexternal)
-     &     ,particle_type(nexternal),pdg_type(nexternal)
-      common /c_fks_inc/fks_j_from_i,particle_type,pdg_type
-      include "fks_powers.inc"
-      include "madfks_mcatnlo.inc"
-      include 'coupl.inc'
-      include 'q_es.inc'
-      include 'run.inc'
-      include 'reweight.inc'
-
-      double precision pp(0:3,nexternal),wgt,vegaswgt
-
-      double precision fks_Sij,fks_Hij,f_damp,dot,dlum
-      external fks_Sij,fks_Hij,f_damp,dot,dlum
-
-      double precision x,xtot,s_ev,s_c,s_s,s_sc,ffact,fx_c,
-     #                 fx_s,fx_sc,xmc_wgt,cnt_wgt_c,cnt_wgt_s,cnt_wgt_sc,
-     #                 bsv_wgt,plot_wgt,cnt_swgt_s,cnt_swgt_sc,cnt_sc,cnt_s,
-     #                 prefact_cnt_ssc,prefact_cnt_ssc_c,prefact_coll,
-     #                 prefact_coll_c,born_wgt,prefact_deg,prefact,prefact_c,
-     #                 prefact_deg_sxi,prefact_deg_slxi,deg_wgt,deg_swgt,
-     #                 deg_xi_c,deg_lxi_c,deg_xi_sc,deg_lxi_sc,
-     #                 cnt_swgt,cnt_wgt,gfactsf,gfactcl,xmcMC,xmcME,
-     #                 xlum_c,xlum_s,xlum_sc,xlum_mc,xlum_mc_save,
-     #                 dummy,ev_wgt,fx_ev,probne,sevmc,xlum_ev,get_ptrel,
-     #                 xlum_mc_fact,xnormsv,xsec,bpower
-      integer i,j
-
-      integer izero,ione,itwo,mohdr,iplot_ev,iplot_cnt,iplot_born
-      integer ithree,ifour,ifill1,ifill2,ifill3,ifill4
-      parameter (izero=0)
-      parameter (ione=1)
-      parameter (itwo=2)
-      parameter (ithree=3)
-      parameter (ifour=4)
-      parameter (mohdr=-100)
-      parameter (iplot_ev=11)
-      parameter (iplot_cnt=12)
-      parameter (iplot_born=20)
-
-      double precision ybst_til_tolab,ybst_til_tocm,sqrtshat,shat
-      common/parton_cms_stuff/ybst_til_tolab,ybst_til_tocm,
-     #                        sqrtshat,shat
-
-      double precision shattmp
-      double precision pi
-      parameter (pi=3.1415926535897932385d0)
-
-      logical nocntevents
-      common/cnocntevents/nocntevents
-
-c Multi channel stuff:
-      Double Precision amp2(maxamps), jamp2(0:maxamps)
-      common/to_amps/  amp2,       jamp2
-
-      integer          isum_hel
-      logical                    multi_channel
-      common/to_matrix/isum_hel, multi_channel
-      INTEGER MAPCONFIG(0:LMAXCONFIGS), ICONFIG
-      common/to_mconfigs/mapconfig, iconfig
-
-      double complex wgt1(2)
-      double precision p_born(0:3,nexternal-1)
-      common/pborn/p_born
-
-      logical calculatedBorn
-      common/ccalculatedBorn/calculatedBorn
-
-      double precision ev_enh,enhance,rwgt,unwgtfun
-      logical firsttime,passcuts
-      data firsttime /.true./
-      integer inoborn_ev,inoborn_cnt
-      double precision xnoborn_ev,xnoborn_cnt
-
-c FKS stuff:
-      integer i_fks,j_fks
-      common/fks_indices/i_fks,j_fks
-
-      double precision xi_i_fks_ev,y_ij_fks_ev
-      double precision p_i_fks_ev(0:3),p_i_fks_cnt(0:3,-2:2)
-      common/fksvariables/xi_i_fks_ev,y_ij_fks_ev,p_i_fks_ev,p_i_fks_cnt
-
-      double precision xi_i_fks_cnt(-2:2)
-      common /cxiifkscnt/xi_i_fks_cnt
-
-      double precision xiimax_ev
-      common /cxiimaxev/xiimax_ev
-      double precision xiimax_cnt(-2:2)
-      common /cxiimaxcnt/xiimax_cnt
-
-      double precision xinorm_ev
-      common /cxinormev/xinorm_ev
-      double precision xinorm_cnt(-2:2)
-      common /cxinormcnt/xinorm_cnt
-
-      double precision p1_cnt(0:3,nexternal,-2:2)
-      double precision wgt_cnt(-2:2)
-      double precision pswgt_cnt(-2:2)
-      double precision jac_cnt(-2:2)
-      common/counterevnts/p1_cnt,wgt_cnt,pswgt_cnt,jac_cnt
-
-      double precision zero,one
-      parameter (zero=0d0,one=1d0)
-      double precision tiny
-      parameter (tiny=1d-6)
-
-      double precision xicut_used
-      common /cxicut_used/xicut_used
-      double precision delta_used
-      common /cdelta_used/delta_used
-      double precision xiScut_used,xiBSVcut_used
-      common /cxiScut_used/xiScut_used,xiBSVcut_used
-      double precision fkssymmetryfactor,fkssymmetryfactorBorn,
-     &     fkssymmetryfactorDeg
-      integer ngluons,nquarks(-6:6)
-      common/numberofparticles/fkssymmetryfactor,fkssymmetryfactorBorn,
-     &                         fkssymmetryfactorDeg,ngluons,nquarks
-      integer diagramsymmetryfactor
-      common /dsymfactor/diagramsymmetryfactor
-
-      logical multi_chan(lmaxconfigs)
-      common /to_multi_chan/multi_chan
-
-      logical nbody
-      common/cnbody/nbody
-
-      character*4 abrv
-      common /to_abrv/ abrv
-
-      double precision vegas_weight
-      common/cvegas_weight/vegas_weight
-
-      double precision zhw_used
-c MC stuff
-      double precision zhw(nexternal),xmcxsec(nexternal)
-      integer nofpartners
-      logical lzone(nexternal),flagmc
-      logical MCcntcalled
-
-      double precision emsca,scalemax
-      common/cemsca/emsca,scalemax
-
-c Stuff to be written (depending on AddInfoLHE) onto the LHE file
-      integer iSorH_lhe,ifks_lhe,jfks_lhe,fksfather_lhe,ipartner_lhe
-      double precision scale1_lhe,scale2_lhe
-      common/cto_LHE1/iSorH_lhe,ifks_lhe,jfks_lhe,
-     #                fksfather_lhe,ipartner_lhe
-      common/cto_LHE2/scale1_lhe,scale2_lhe
-
-c CKWW scale, from cuts.f
-      double precision scale_CKKW
-      common/cscale_CKKW/scale_CKKW
-
-c For the MINT folding
-      integer fold
-      common /cfl/fold
-
-      logical unwgt
-      double precision evtsgn
-      common /c_unwgt/evtsgn,unwgt
-
-c For plots
-      logical plotEv,plotKin
-      common/cEvKinplot/plotEv,plotKin
-
-c For tests
-      real*8 fksmaxwgt,xisave,ysave
-      common/cfksmaxwgt/fksmaxwgt,xisave,ysave
-      integer icou_calls,icou_kinev,icou_sev,icou_meev,icou_kincnt,
-     #  icou_scnt,icou_mecnt
-      common/counters/icou_calls,icou_kinev,icou_sev,icou_meev,
-     #                           icou_kincnt,icou_scnt,icou_mecnt
-      integer itotalpoints
-      common/ctotalpoints/itotalpoints
-
-      logical ExceptPSpoint
-      integer iminmax
-      common/cExceptPSpoint/iminmax,ExceptPSpoint
-
-
-      double precision central_wgt_saved
-      save central_wgt_saved
-
-      double precision dsigS_max,dsigS_min
-      double precision total_wgt_sum,total_wgt_sum_max,
-     &                 total_wgt_sum_min
-      common/csum_of_wgts/total_wgt_sum,total_wgt_sum_max,
-     &                 total_wgt_sum_min
-
-      character*10 MonteCarlo
-      common/cMonteCarloType/MonteCarlo
-
-      integer ileg
-      common/cileg/ileg
-
-      double precision ximin
-      parameter(ximin=0.05d0)
-
-      double precision pmass(nexternal)
-      include "pmass.inc"
-
-      vegas_weight=vegaswgt
-
-      if (fold.eq.0) then
-         calculatedBorn=.false.
-         call get_helicity(i_fks,j_fks)
-      endif
-
-      if (firsttime)then
-         inoborn_ev=0
-         xnoborn_ev=0.d0
-         inoborn_cnt=0
-         xnoborn_cnt=0.d0
-         fksmaxwgt=0.d0
-         firsttime=.false.
-c Put here call to compute bpower
-         call compute_bpower(p_born,bpower)
-         wgtbpower=bpower
-      endif
-
-      prefact=xinorm_ev/xi_i_fks_ev*
-     #        1/(1-y_ij_fks_ev)
-
-      if( (.not.nocntevents) .and.
-     &     (.not.(abrv.eq.'born' .or. abrv.eq.'grid' .or.
-     &     abrv(1:2).eq.'vi')) )then
-        prefact_cnt_ssc=xinorm_ev/min(xiimax_ev,xiScut_used)*
-     #                  log(xicut_used/min(xiimax_ev,xiScut_used))*
-     #                  1/(1-y_ij_fks_ev)
-        if(pmass(j_fks).eq.0.d0)then
-          prefact_c=xinorm_cnt(ione)/xi_i_fks_cnt(ione)*
-     #              1/(1-y_ij_fks_ev)
-          prefact_cnt_ssc_c=xinorm_cnt(ione)/min(xiimax_cnt(ione),xiScut_used)*
-     #                      log(xicut_used/min(xiimax_cnt(ione),xiScut_used))*
-     #                      1/(1-y_ij_fks_ev)
-          prefact_coll=xinorm_cnt(ione)/xi_i_fks_cnt(ione)*
-     #                 log(delta_used/deltaS)/deltaS
-          prefact_coll_c=xinorm_cnt(ione)/min(xiimax_cnt(ione),xiScut_used)*
-     #                   log(xicut_used/min(xiimax_cnt(ione),xiScut_used))*
-     #                   log(delta_used/deltaS)/deltaS
-          prefact_deg=xinorm_cnt(ione)/xi_i_fks_cnt(ione)*
-     #                1/deltaS
-          prefact_deg_sxi=xinorm_cnt(ione)/min(xiimax_cnt(ione),xiScut_used)*
-     #                    log(xicut_used/min(xiimax_cnt(ione),xiScut_used))*
-     #                    1/deltaS
-          prefact_deg_slxi=xinorm_cnt(ione)/min(xiimax_cnt(ione),xiScut_used)*
-     #                     ( log(xicut_used)**2 -
-     #                       log(min(xiimax_cnt(ione),xiScut_used))**2 )*
-     #                     1/(2.d0*deltaS)
-        endif
-      endif
-
-c If there was an exceptional phase-space point found for the 
-c virtual corrections, at the end of this subroutine, goto 44
-c and compute also the "possible" minimal and maximal weight
-c these points could have gotton (based upon previous PS
-c points)
-      ExceptPSpoint=.false.
-      iminmax=-1
- 44   continue
-      iminmax=iminmax+1
-
-      emsca=0.d0
-      scalemax=0.d0
-
-      ev_wgt=0.d0
-      xmc_wgt=0.d0
-      cnt_wgt=0.d0
-      cnt_wgt_s=0.d0
-      cnt_wgt_c=0.d0
-      cnt_wgt_sc=0.d0
-      bsv_wgt=0.d0
-      born_wgt=0.d0
-      cnt_swgt=0.d0
-      cnt_swgt_s=0.d0
-      cnt_swgt_sc=0.d0
-      deg_wgt=0.d0
-      deg_swgt=0.d0
-      plot_wgt=0.d0
-c
-      if(doreweight)then
-        if(.not.AddInfoLHE)then
-          write(*,*)'Error in dsigS'
-          write(*,*)'  AddInfoLHE must be true when unweighting'
-          stop
-        endif
-        call reweight_settozero(.true.)
-        ifill1=0
-        ifill2=0
-        ifill3=0
-        ifill4=0
-      endif
-c
-      if(AddInfoLHE)then
-        iSorH_lhe=1
-        ifks_lhe=i_fks
-        jfks_lhe=j_fks
-        fksfather_lhe=0
-        ipartner_lhe=0
-        scale1_lhe=0.d0
-        scale2_lhe=0.d0
-      endif
-c
-      probne=1.d0
-c
-c All counterevent have the same final-state kinematics. Check that
-c one of them passes the hard cuts, and they exist at all
-c
-c Set the ybst_til_tolab before applying the cuts. Update below
-c for the collinear, soft and/or soft-collinear subtraction terms
-      MCcntcalled=.false.
-      call set_cms_stuff(izero)
-      if ( (.not.passcuts(p1_cnt(0,1,0),rwgt)) .or.
-     #      nocntevents ) goto 547
-
-      gfactsf=1.d0
-      gfactcl=1.d0
-      sevmc=1.d0
-      xmcMC=0.d0
-      xmcME=0.d0
-
-      if (abrv.eq.'born' .or. abrv.eq.'grid' .or.
-     &    abrv(1:2).eq.'vi') goto 540
-
-      call set_cms_stuff(mohdr)
-      call set_alphaS(pp)
-      if(doreweight)then
-        wgtmuR2(1)=muR2_current/muR_over_ref**2
-        wgtmuF12(1)=muF12_current/muF1_over_ref**2
-        wgtmuF22(1)=muF22_current/muF2_over_ref**2
-        call reweight_fillkin(pp,ione)
-        ifill1=1
-      endif
-      if(UseSfun)then
-         x = abs(2d0*dot(pp(0,i_fks),pp(0,j_fks))/shat)
-         ffact = f_damp(x)
-         sevmc = fks_Sij(pp,i_fks,j_fks,xi_i_fks_ev,y_ij_fks_ev)
-         sevmc = sevmc*ffact
-      else
-         x = abs(2d0*dot(pp(0,i_fks),pp(0,j_fks))/shat)
-         ffact = f_damp(x)
-         sevmc = fks_Hij(pp,i_fks,j_fks)
-         sevmc = sevmc*ffact
-      endif
-      call xmcsubt(pp,xi_i_fks_ev,y_ij_fks_ev,gfactsf,gfactcl,probne,
-     #             dummy,nofpartners,lzone,flagmc,zhw,xmcxsec)
-      MCcntcalled=.true.
-
-      if(ileg.gt.4.or.ileg.lt.1)then
-         write(*,*)'Error: unrecognized ileg in dsigS', ileg
-         stop
-      endif
-
-      if(sevmc.gt.0.d0.and.flagmc)then
-        if(doreweight)then
-          iwgtnumpartn=nofpartners
-          xsec=sevmc*wgt*prefact*rwgt
-        endif
-        xlum_mc_save=-1.d8
-        do i=1,nofpartners
-          if(lzone(i))then
-            zhw_used=zhw(i)
-            call get_mc_lum(j_fks,zhw_used,xi_i_fks_ev,
-     #                      xlum_mc_save,xlum_mc,xlum_mc_fact)
-            xmcMC=xmcMC+xmcxsec(i)*xlum_mc
-            if(doreweight)then
-              wgtwmcxsec(i)=xsec*xlum_mc_fact*xmcxsec(i)/
-     #                      g**(2*wgtbpower+2.d0)
-              wgtmcxbj(1,i)=xbk(1)
-              wgtmcxbj(2,i)=xbk(2)
-            endif
-          endif
-        enddo
-        xmcMC=xmcMC*sevmc*wgt*prefact*rwgt
-      endif
-c
-      if( (.not.flagmc).and.gfactsf.eq.1.d0 .and.
-     #   xi_i_fks_ev.lt.0.02d0  .and. particle_type(i_fks).eq.8)then
-        write(*,*)'Error in dsigS: will diverge'
-        stop
-      endif
-
- 540  continue
-
-c Set scales for all counterevents, using soft kinematics as done
-c in the case of parton-level NLO computations
-      call set_alphaS(p1_cnt(0,1,0))
-      if(doreweight)then
-        wgtqes2(2)=QES2
-        wgtqes2(3)=QES2
-        wgtqes2(4)=QES2
-        wgtmuR2(2)=muR2_current/muR_over_ref**2
-        wgtmuF12(2)=muF12_current/muF1_over_ref**2
-        wgtmuF22(2)=muF22_current/muF2_over_ref**2
-        call reweight_fillkin(pp,itwo)
-        ifill2=1
-      endif
-
-      if (abrv.eq.'born' .or. abrv.eq.'grid' .or. abrv(1:2).eq.'vi')
-     &     goto 545
-c
-c Collinear subtraction term:
-      if( ( y_ij_fks_ev.gt.1d0-deltaS .or. 
-     #     (gfactsf.lt.1.d0.and.gfactcl.lt.1.d0 .and.
-     #      probne.gt.0.d0) ) .and.
-     #    pmass(j_fks).eq.0.d0 )then
-         call set_cms_stuff(ione)
-         if(doreweight)then
-           wgtxbj(1,3)=xbk(1)
-           wgtxbj(2,3)=xbk(2)
-           call reweight_fillkin(pp,ithree)
-           ifill3=1
-         endif
-         s_c = fks_Sij(p1_cnt(0,1,1),i_fks,j_fks,xi_i_fks_cnt(ione),one)
-         if(s_c.gt.0.d0)then
-            if(abs(s_c-1.d0).gt.1.d-6.and.j_fks.le.nincoming)then
-               write(*,*)'Wrong S function in dsigS[c]',s_c
-               stop
-            endif
-            call sreal(p1_cnt(0,1,1),xi_i_fks_cnt(ione),one,fx_c)
-            xlum_c = dlum()
-            xsec = fx_c*s_c*jac_cnt(1)*prefact_c*rwgt*(1-gfactcl)
-            if(.not.flagmc.and.MonteCarlo(1:7).eq.'PYTHIA6'
-     &         .and.ileg.ge.3.and.xi_i_fks_ev.gt.ximin)xsec=0d0
-            xmcME=xmcME+xlum_c*xsec
-            if(doreweight)wgtwreal(3)=xsec*(1-gfactsf)*probne/
-     #                                g**(2*wgtbpower+2.d0)
-            if( y_ij_fks_ev.gt.1d0-deltaS )then
-               xsec = fx_c*s_c*jac_cnt(1)*(prefact_c+prefact_coll)*rwgt
-               cnt_wgt_c=cnt_wgt_c-xlum_c*xsec
-               call sreal_deg(p1_cnt(0,1,1),xi_i_fks_cnt(ione),one,
-     #                        deg_xi_c,deg_lxi_c)
-               deg_wgt=deg_wgt+( deg_xi_c+deg_lxi_c*log(xi_i_fks_cnt(ione)) )*
-     #                         jac_cnt(1)*prefact_deg*rwgt/(shat/(32*pi**2))*
-     #                         xlum_c
-               if(doreweight)then
-                 wgtwreal(3)=wgtwreal(3)-xsec/g**(2*wgtbpower+2.d0)
-                 wgtwdeg(3)=
-     #              ( wgtdegrem_xi+wgtdegrem_lxi*log(xi_i_fks_cnt(ione)) )*
-     #                      jac_cnt(1)*prefact_deg*rwgt/(shat/(32*pi**2))/
-     #              g**(2*wgtbpower+2.d0)
-                 wgtwdegmuf(3)=wgtdegrem_muF *
-     #                      jac_cnt(1)*prefact_deg*rwgt/(shat/(32*pi**2))/
-     #              g**(2*wgtbpower+2.d0)
-               endif
-            endif
-         endif
-      endif
-c Soft subtraction term:
- 545  continue
-      if ( xi_i_fks_ev .lt. max(xiScut_used,xiBSVcut_used) .or.
-     &     (gfactsf.lt.1.d0.and.probne.gt.0.d0) ) then
-         call set_cms_stuff(izero)
-         if(doreweight)then
-           wgtxbj(1,2)=xbk(1)
-           wgtxbj(2,2)=xbk(2)
-           if(ifill2.ne.1)then
-             write(*,*)'Error #1[wg] in dsigS',ifill2
-             stop
-           endif
-         endif
-         s_s = fks_Sij(p1_cnt(0,1,0),i_fks,j_fks,zero,y_ij_fks_ev)
-         if(nbody)s_s=1.d0
-         if(s_s.gt.0.d0)then
-            xlum_s = dlum()
-            if (abrv.eq.'born' .or. abrv.eq.'grid' .or.
-     &           abrv(1:2).eq.'vi') goto 546
-            call sreal(p1_cnt(0,1,0),zero,y_ij_fks_ev,fx_s)
-            xsec=fx_s*s_s*jac_cnt(0)*prefact*rwgt
-            if(.not.flagmc.and.MonteCarlo(1:7).eq.'PYTHIA6'
-     &         .and.ileg.ge.3.and.xi_i_fks_ev.gt.ximin)xsec=0d0
-            xmcME=xmcME+xlum_s*xsec
-            if(doreweight)wgtwreal(2)=xsec*(1-gfactsf)*probne/
-     #                                g**(2*wgtbpower+2.d0)
-            if (xi_i_fks_ev .lt. xiScut_used) then
-              xsec=fx_s*s_s*jac_cnt(0)
-              cnt_s=xlum_s*xsec
-              cnt_wgt_s=cnt_wgt_s-cnt_s*prefact*rwgt
-              cnt_swgt_s=cnt_swgt_s-cnt_s*prefact_cnt_ssc*rwgt
-              if(doreweight)wgtwreal(2)=wgtwreal(2)-
-     #                        xsec*(prefact+prefact_cnt_ssc)*rwgt/
-     #                        g**(2*wgtbpower+2.d0)
-            endif
- 546        continue
-            if (abrv.eq.'real') goto 548
-            if (xi_i_fks_ev .lt. xiBSVcut_used) then
-              xsec=s_s*jac_cnt(0)*xinorm_ev/
-     #             (min(xiimax_ev,xiBSVcut_used)*shat/(16*pi**2))*
-     #             rwgt
-              xnormsv=xlum_s*xsec
-              call bornsoftvirtual(p1_cnt(0,1,0),bsv_wgt,born_wgt)
-              if(doreweight)then
-                if(wgtbpower.gt.0)then
-                  wgtwborn(2)=born_wgt*xsec/g**(2*wgtbpower)
-                else
-                  wgtwborn(2)=born_wgt*xsec
-                endif
-                wgtwns(2)=wgtnstmp*xsec/g**(2*wgtbpower+2.d0)
-                wgtwnsmuf(2)=wgtwnstmpmuf*xsec/g**(2*wgtbpower+2.d0)
-                wgtwnsmur(2)=wgtwnstmpmur*xsec/g**(2*wgtbpower+2.d0)
-              endif
-              bsv_wgt=bsv_wgt*xnormsv
-              born_wgt=born_wgt*xnormsv
-            endif
- 548        continue
-         endif
-      endif
-c Soft-Collinear subtraction term:
-      if (abrv.eq.'born' .or. abrv.eq.'grid' .or. abrv(1:2).eq.'vi')
-     &     goto 550
-      if ( ( (xi_i_fks_cnt(ione) .lt. xiScut_used .and.
-     #        y_ij_fks_ev .gt. 1d0-deltaS) .or.
-     #        (gfactsf.lt.1.d0.and.gfactcl.lt.1.d0 .and.
-     #         probne.gt.0.d0) ) .and.
-     #        pmass(j_fks).eq.0.d0 )then
-         call set_cms_stuff(itwo)
-         if(doreweight)then
-           wgtxbj(1,4)=xbk(1)
-           wgtxbj(2,4)=xbk(2)
-           call reweight_fillkin(pp,ifour)
-           ifill4=1
-         endif
-         s_sc = fks_Sij(p1_cnt(0,1,2),i_fks,j_fks,zero,one)
-         if(s_sc.gt.0.d0)then
-            if(abs(s_sc-1.d0).gt.1.d-6.and.j_fks.le.nincoming)then
-              write(*,*)'Wrong S function in dsigS[sc]',s_sc
-              stop
-            endif
-            call sreal(p1_cnt(0,1,2),zero,one,fx_sc)
-            xlum_sc = dlum()
-            xsec = fx_sc*s_sc*jac_cnt(2)*prefact_c*rwgt*(1-gfactcl)
-            if(.not.flagmc.and.MonteCarlo(1:7).eq.'PYTHIA6'
-     &         .and.ileg.ge.3.and.xi_i_fks_ev.gt.ximin)xsec=0d0
-            xmcME=xmcME-xlum_sc*xsec
-            if(doreweight)wgtwreal(4)=-xsec*(1-gfactsf)*probne/
-     #                                g**(2*wgtbpower+2.d0)
-            if(xi_i_fks_cnt(ione) .lt. xiScut_used .and.
-     #          y_ij_fks_ev .gt. 1d0-deltaS)then
-              xsec=fx_sc*s_sc*jac_cnt(2)
-              cnt_sc=xlum_sc*xsec
-              cnt_wgt_sc=cnt_wgt_sc+cnt_sc*(prefact_c+prefact_coll)*rwgt
-              cnt_swgt_sc=cnt_swgt_sc+
-     &             cnt_sc*(prefact_cnt_ssc_c+prefact_coll_c)*rwgt
-              call sreal_deg(p1_cnt(0,1,2),zero,one,
-     #                       deg_xi_sc,deg_lxi_sc)
-              deg_wgt=deg_wgt-
-     #                    ( deg_xi_sc+deg_lxi_sc*log(xi_i_fks_cnt(ione)) )*
-     #                    jac_cnt(2)*prefact_deg*rwgt/(shat/(32*pi**2))*
-     #                    xlum_sc
-              deg_swgt=deg_swgt-( deg_xi_sc*prefact_deg_sxi +
-     #                       deg_lxi_sc*prefact_deg_slxi )*
-     #                       jac_cnt(2)*rwgt/(shat/(32*pi**2))*
-     #                       xlum_sc
-              if(doreweight)then
-                wgtwreal(4)=wgtwreal(4)+
-     #                    xsec*(prefact_c+prefact_coll+
-     #                          prefact_cnt_ssc_c+prefact_coll_c)*rwgt/
-     #                    g**(2*wgtbpower+2.d0)
-                wgtwdeg(4)=(
-     # -( wgtdegrem_xi+wgtdegrem_lxi*log(xi_i_fks_cnt(ione)) )*prefact_deg
-     # -( wgtdegrem_xi*prefact_deg_sxi+wgtdegrem_lxi*prefact_deg_slxi ) )*
-     #                     jac_cnt(2)*rwgt/(shat/(32*pi**2))/
-     #              g**(2*wgtbpower+2.d0)
-                wgtwdegmuf(4)=
-     #          -wgtdegrem_muF*( prefact_deg+prefact_deg_sxi )*
-     #                     jac_cnt(2)*rwgt/(shat/(32*pi**2))/
-     #              g**(2*wgtbpower+2.d0)
-              endif
-            endif
-         endif
-      endif
-      xmcME=xmcME*(1-gfactsf)*probne
-      xmc_wgt=xmc_wgt+xmcMC+xmcME
-
- 547  continue
-
-c Real contribution
-c
-c Set the ybst_til_tolab before applying the cuts. 
-      call set_cms_stuff(mohdr)
-      if(doreweight)then
-        wgtxbj(1,1)=xbk(1)
-        wgtxbj(2,1)=xbk(2)
-      endif
-      if (passcuts(pp,rwgt).and.probne.lt.1.d0) then
-        call set_alphaS(pp)
-        x = abs(2d0*dot(pp(0,i_fks),pp(0,j_fks))/shat)
-        ffact = f_damp(x)
-        s_ev = fks_Sij(pp,i_fks,j_fks,xi_i_fks_ev,y_ij_fks_ev)
-        if(s_ev.gt.0.d0)then
-          call sreal(pp,xi_i_fks_ev,y_ij_fks_ev,fx_ev)
-          xlum_ev = dlum()
-          xsec = fx_ev*s_ev*ffact*wgt*prefact*rwgt*(1-probne)
-          ev_wgt = xlum_ev*xsec
-          if(doreweight)then
-            if(ifill1.eq.0)then
-              wgtmuR2(1)=muR2_current/muR_over_ref**2
-              wgtmuF12(1)=muF12_current/muF1_over_ref**2
-              wgtmuF22(1)=muF22_current/muF2_over_ref**2
-              call reweight_fillkin(pp,ione)
-              ifill1=1
-            endif
-            wgtwreal(1)=xsec/g**(2*wgtbpower+2.d0)
-          endif
-        endif
-        if(AddInfoLHE)scale2_lhe=get_ptrel(pp,i_fks,j_fks)
-      endif
-
- 550  continue
-
-      if( (.not.MCcntcalled) .and.
-     #    abrv.ne.'born'.and. abrv.ne.'grid' )then
-        if(pp(0,1).ne.-99d0)then
-          call set_cms_stuff(mohdr)
-          call assign_emsca(pp,xi_i_fks_ev,y_ij_fks_ev)
-        endif
-      endif
-
-      if(AddInfoLHE.and.UseCKKW)then
-        if(scale1_lhe.eq.0.d0)scale1_lhe=scale2_lhe
-        scale2_lhe=scale_CKKW
-      endif
-
-c
-c Enhance the one channel for multi-channel integration
-c
-      enhance=1.d0
-      if ((xmc_wgt.ne.0d0.or.cnt_wgt_c.ne.0d0.or.cnt_wgt_s.ne.0d0.or.
-     &     cnt_wgt_sc.ne.0d0.or.bsv_wgt.ne.0d0.or.deg_wgt.ne.0d0.or.
-     &     deg_swgt.ne.0d0.or.cnt_swgt_s.ne.0d0.or.cnt_swgt_sc.ne.0d0.or.
-     &     ev_wgt.ne.0d0) .and. multi_channel) then
-         if (bsv_wgt.eq.0d0.and.deg_wgt.eq.0d0.and.deg_swgt.eq.0d0.and.
-     &       cnt_wgt_c.eq.0d0 ) CalculatedBorn=.false.
-
-         if (.not.calculatedBorn .and. p_born(0,1).gt.0d0)then
-            call sborn(p_born,wgt1)
-         elseif(p_born(0,1).lt.0d0)then
-            enhance=0d0
-         endif
-
-         if (enhance.eq.0d0)then
-            xnoborn_cnt=xnoborn_cnt+1.d0
-            if(log10(xnoborn_cnt).gt.inoborn_cnt)then
-               write (*,*) 
-     #           'Function dsigS: no Born momenta more than 10**',
-     #           inoborn_cnt,'times'
-               inoborn_cnt=inoborn_cnt+1
-            endif
-         else
-            xtot=0d0
-            if (mapconfig(0).eq.0) then
-               write (*,*) 'Fatal error in dsigS, no Born diagrams '
-     &           ,mapconfig,'. Check bornfromreal.inc'
-               write (*,*) 'Is fks_singular compiled correctly?'
-               stop
-            endif
-            if (onlyBorn) then
-               do i=1, mapconfig(0)
-                  if (multi_chan(mapconfig(i))) then
-                     xtot=xtot+amp2(mapconfig(i))
-                  endif
-               enddo
-            else
-               do i=1,mapconfig(0)
-                  xtot=xtot+amp2(mapconfig(i))
-               enddo
-            endif
-            if (xtot.ne.0d0) then
-               enhance=amp2(mapconfig(iconfig))/xtot
-               enhance=enhance*diagramsymmetryfactor
-            else
-               enhance=0d0
-            endif
-         endif
-      endif
-
-      cnt_wgt = cnt_wgt_c + cnt_wgt_s + cnt_wgt_sc
-      cnt_swgt = cnt_swgt_s + cnt_swgt_sc
-
-      ev_wgt = ev_wgt * enhance
-      xmc_wgt = xmc_wgt * enhance
-      cnt_wgt = cnt_wgt * enhance
-      cnt_swgt = cnt_swgt * enhance
-      bsv_wgt = bsv_wgt * enhance
-      born_wgt = born_wgt * enhance
-      deg_wgt = deg_wgt * enhance
-      deg_swgt = deg_swgt * enhance
-
-      if(iminmax.eq.0) then
-         dsigS = (ev_wgt+xmc_wgt+cnt_wgt)*fkssymmetryfactor +
-     &        cnt_swgt*fkssymmetryfactor +
-     &        bsv_wgt*fkssymmetryfactorBorn +
-     &        deg_wgt*fkssymmetryfactorDeg +
-     &        deg_swgt*fkssymmetryfactorDeg
-
-         if (dsigS.ne.dsigS) then
-            write (*,*) 'ERROR, ',dsigS,
-     &           ' found for dsigS, setting dsigS to 0 for this event'
-            dsigS=0
-         endif
-
-         call unweight_function(p_born,unwgtfun)
-         dsigS=dsigS*unwgtfun
-
-         if(doreweight)then
-           if(ifill2.eq.0.and.(ifill3.ne.0.or.ifill4.ne.0))then
-             write(*,*)'Error #2[wg] in dsigS',ifill2,ifill3,ifill4
-             stop
-           endif
-           wgtref = dsigS
-           xsec = enhance*unwgtfun
-           do i=1,4
-             wgtwreal(i)=wgtwreal(i) * xsec*fkssymmetryfactor
-             wgtwdeg(i)=wgtwdeg(i) * xsec*fkssymmetryfactorDeg
-             wgtwdegmuf(i)=wgtwdegmuf(i) * xsec*fkssymmetryfactorDeg
-             if(i.eq.2)then
-               wgtwborn(i)=wgtwborn(i) * xsec*fkssymmetryfactorBorn
-               wgtwns(i)=wgtwns(i) * xsec*fkssymmetryfactorBorn
-               wgtwnsmuf(i)=wgtwnsmuf(i) * xsec*fkssymmetryfactorBorn
-               wgtwnsmur(i)=wgtwnsmur(i) * xsec*fkssymmetryfactorBorn
-             endif
-           enddo
-           do i=1,iwgtnumpartn
-             wgtwmcxsec(i)=wgtwmcxsec(i) * xsec*fkssymmetryfactor
-           enddo
-           call reweight_fill_extra()
-           if(check_reweight.and.doreweight)
-     #       call check_rwgt_wgt("Sev")
-c Example of reweighted cross section (scale changed)
-c           dsigS_new=compute_rwgt_wgt_Sev(new_muR_fact,new_muF1_fact,
-c     #                                    new_muF2_fact,new_QES_fact,
-c     #                                    iwgtinfo)
-         endif      
-
-         total_wgt_sum=total_wgt_sum+dsigS*vegaswgt
-         central_wgt_saved=dsigS
-
-c$$$         if(dsigS.ne.0.d0)
-c$$$     &        call set_shower_scale(p1_cnt(0,1,0),i_fks,j_fks,
-c$$$     &        xi_i_fks_ev,y_ij_fks_ev)
-
-         if (dsigS.ne.0d0) itotalpoints=itotalpoints+1
-
-c For tests
-         if(abs(dsigS).gt.fksmaxwgt)then
-            fksmaxwgt=abs(dsigS)
-            xisave=xi_i_fks_ev
-            ysave=y_ij_fks_ev
-         endif
-c Plot observables for counterevents and Born
-         if (.not.unwgt) then
-            plot_wgt=( (ev_wgt+xmc_wgt+cnt_wgt)*fkssymmetryfactor +
-     &           cnt_swgt*fkssymmetryfactor +
-     &           bsv_wgt*fkssymmetryfactorBorn +
-     &           deg_wgt*fkssymmetryfactorDeg +
-     &           deg_swgt*fkssymmetryfactorDeg )*vegaswgt
-            if( abs(plot_wgt).gt.1.d-20.and.p1_cnt(0,1,0).ne.-99d0 .and.
-     &           (plotEv.or.plotKin) )
-     &           call outfun(p1_cnt(0,1,0),ybst_til_tolab,plot_wgt,iplot_cnt)
-         endif
-
-      elseif (iminmax.eq.1 .and. ExceptPSpoint) then
-c for except PS points, this is the maximal approx for the virtual         
-         call unweight_function(p_born,unwgtfun)
-         dsigS_max = ((ev_wgt+xmc_wgt+cnt_wgt)*fkssymmetryfactor +
-     &        cnt_swgt*fkssymmetryfactor +
-     &        bsv_wgt*fkssymmetryfactorBorn +
-     &        deg_wgt*fkssymmetryfactorDeg +
-     &        deg_swgt*fkssymmetryfactorDeg)*unwgtfun
-         total_wgt_sum_max=total_wgt_sum_max+
-     &        ((dsigS_max - central_wgt_saved)*vegaswgt)**2
-
-      elseif (iminmax.eq.2 .and. ExceptPSpoint) then
-c for except PS points, this is the minimal approx for the virtual         
-         call unweight_function(p_born,unwgtfun)
-         dsigS_min = ((ev_wgt+cnt_wgt)*fkssymmetryfactor +
-     &        cnt_swgt*fkssymmetryfactor +
-     &        bsv_wgt*fkssymmetryfactorBorn +
-     &        deg_wgt*fkssymmetryfactorDeg +
-     &        deg_swgt*fkssymmetryfactorDeg)*unwgtfun
-         total_wgt_sum_min=total_wgt_sum_min+
-     &        ((central_wgt_saved - dsigS_min)*vegaswgt)**2
-      else
-         write (*,*) 'Error #12 in dsig',iminmax
-         stop
-      endif
-
-c If exceptional PS point found, go back to beginning recompute
-c the weight for this PS point using an approximation
-c based on previous PS points (done in LesHouches.f)
-      if (ExceptPSpoint .and. iminmax.le.1) goto 44
-
-      return
-      end
+c$$$      double precision function dsigH(pp,wgt,vegaswgt)
+c$$$c Here are the subtraction terms, the Sij function, 
+c$$$c the f-damping function, and the single diagram
+c$$$c enhanced multi-channel factor included
+c$$$      implicit none
+c$$$      include "genps.inc"
+c$$$      include 'nexternal.inc'
+c$$$c      include "fks.inc"
+c$$$      integer fks_j_from_i(nexternal,0:nexternal)
+c$$$     &     ,particle_type(nexternal),pdg_type(nexternal)
+c$$$      common /c_fks_inc/fks_j_from_i,particle_type,pdg_type
+c$$$      include "fks_powers.inc"
+c$$$      include "madfks_mcatnlo.inc"
+c$$$      include 'coupl.inc'
+c$$$      include 'run.inc'
+c$$$      include 'reweight.inc'
+c$$$
+c$$$      double precision pp(0:3,nexternal),wgt,vegaswgt
+c$$$
+c$$$      double precision fks_Sij,fks_Hij,f_damp,dot,dlum
+c$$$      external fks_Sij,fks_Hij,f_damp,dot,dlum
+c$$$
+c$$$      double precision prefact,ev_wgt,xmc_wgt,plot_wgt,x,
+c$$$     # ffact,s_ev,fx_ev,gfactsf,gfactcl,xmcMC,xmcME,xmc,totH_wgt,
+c$$$     # xtot,xlum_ev,xlum_mc,xlum_mc_save,dummy,fx_c,fx_s,
+c$$$     # fx_sc,s_c,s_s,s_sc,xlum_c,xlum_s,xlum_sc,prefact_c,
+c$$$     # bpower
+c$$$      double precision probne,sevmc,get_ptrel,xlum_mc_fact,xsec
+c$$$      integer i,ifill1,ifill2,ifill3,ifill4
+c$$$
+c$$$      integer mohdr,iplot_ev
+c$$$      parameter (mohdr=-100)
+c$$$      parameter (iplot_ev=11)
+c$$$
+c$$$      double precision ybst_til_tolab,ybst_til_tocm,sqrtshat,shat
+c$$$      common/parton_cms_stuff/ybst_til_tolab,ybst_til_tocm,
+c$$$     #                        sqrtshat,shat
+c$$$
+c$$$      double precision p1_cnt(0:3,nexternal,-2:2)
+c$$$      double precision wgt_cnt(-2:2)
+c$$$      double precision pswgt_cnt(-2:2)
+c$$$      double precision jac_cnt(-2:2)
+c$$$      common/counterevnts/p1_cnt,wgt_cnt,pswgt_cnt,jac_cnt
+c$$$
+c$$$      integer izero,ione,itwo,ithree,ifour
+c$$$      parameter (izero=0)
+c$$$      parameter (ione=1)
+c$$$      parameter (itwo=2)
+c$$$      parameter (ithree=3)
+c$$$      parameter (ifour=4)
+c$$$
+c$$$c Multi channel stuff:
+c$$$      Double Precision amp2(maxamps), jamp2(0:maxamps)
+c$$$      common/to_amps/  amp2,       jamp2
+c$$$
+c$$$      integer          isum_hel
+c$$$      logical                    multi_channel
+c$$$      common/to_matrix/isum_hel, multi_channel
+c$$$      INTEGER MAPCONFIG(0:LMAXCONFIGS), ICONFIG
+c$$$      common/to_mconfigs/mapconfig, iconfig
+c$$$
+c$$$      double complex wgt1(2)
+c$$$      double precision p_born(0:3,nexternal-1)
+c$$$      common/pborn/p_born
+c$$$
+c$$$      logical calculatedBorn
+c$$$      common/ccalculatedBorn/calculatedBorn
+c$$$
+c$$$      double precision enhance,rwgt,unwgtfun
+c$$$      logical firsttime,passcuts
+c$$$      data firsttime /.true./
+c$$$      integer inoborn_ev,inoborn_cnt
+c$$$      double precision xnoborn_ev,xnoborn_cnt
+c$$$
+c$$$c FKS stuff:
+c$$$      integer i_fks,j_fks
+c$$$      common/fks_indices/i_fks,j_fks
+c$$$
+c$$$      double precision xi_i_fks_ev,y_ij_fks_ev
+c$$$      double precision p_i_fks_ev(0:3),p_i_fks_cnt(0:3,-2:2)
+c$$$      common/fksvariables/xi_i_fks_ev,y_ij_fks_ev,p_i_fks_ev,p_i_fks_cnt
+c$$$
+c$$$      double precision xi_i_fks_cnt(-2:2)
+c$$$      common /cxiifkscnt/xi_i_fks_cnt
+c$$$
+c$$$      double precision xinorm_ev
+c$$$      common /cxinormev/xinorm_ev
+c$$$      double precision xinorm_cnt(-2:2)
+c$$$      common /cxinormcnt/xinorm_cnt
+c$$$
+c$$$      double precision zero,one
+c$$$      parameter (zero=0d0,one=1d0)
+c$$$      double precision tiny
+c$$$      parameter (tiny=1d-6)
+c$$$
+c$$$      double precision fkssymmetryfactor,fkssymmetryfactorBorn,
+c$$$     &     fkssymmetryfactorDeg
+c$$$      integer ngluons,nquarks(-6:6)
+c$$$      common/numberofparticles/fkssymmetryfactor,fkssymmetryfactorBorn,
+c$$$     &                         fkssymmetryfactorDeg,ngluons,nquarks
+c$$$      integer diagramsymmetryfactor
+c$$$      common /dsymfactor/diagramsymmetryfactor
+c$$$
+c$$$      logical multi_chan(lmaxconfigs)
+c$$$      common /to_multi_chan/multi_chan
+c$$$
+c$$$      character*4 abrv
+c$$$      common /to_abrv/ abrv
+c$$$
+c$$$      double precision vegas_weight
+c$$$      common/cvegas_weight/vegas_weight
+c$$$
+c$$$      double precision zhw_used
+c$$$c MC stuff
+c$$$      double precision zhw(nexternal),xmcxsec(nexternal)
+c$$$      integer nofpartners
+c$$$      logical lzone(nexternal),flagmc
+c$$$
+c$$$      double precision emsca,scalemax
+c$$$      common/cemsca/emsca,scalemax
+c$$$
+c$$$c Stuff to be written (depending on AddInfoLHE) onto the LHE file
+c$$$      integer iSorH_lhe,ifks_lhe,jfks_lhe,fksfather_lhe,ipartner_lhe
+c$$$      double precision scale1_lhe,scale2_lhe
+c$$$      common/cto_LHE1/iSorH_lhe,ifks_lhe,jfks_lhe,
+c$$$     #                fksfather_lhe,ipartner_lhe
+c$$$      common/cto_LHE2/scale1_lhe,scale2_lhe
+c$$$
+c$$$c CKWW scale, from cuts.f
+c$$$      double precision scale_CKKW
+c$$$      common/cscale_CKKW/scale_CKKW
+c$$$
+c$$$c For the MINT folding
+c$$$      integer fold
+c$$$      common /cfl/fold
+c$$$
+c$$$      logical unwgt
+c$$$      double precision evtsgn
+c$$$      common /c_unwgt/evtsgn,unwgt
+c$$$
+c$$$c For plots
+c$$$      logical plotEv,plotKin
+c$$$      common/cEvKinplot/plotEv,plotKin
+c$$$
+c$$$c For tests
+c$$$      real*8 fksmaxwgt,xisave,ysave
+c$$$      common/cfksmaxwgt/fksmaxwgt,xisave,ysave
+c$$$
+c$$$      integer itotalpoints
+c$$$      common/ctotalpoints/itotalpoints
+c$$$
+c$$$      character*10 MonteCarlo
+c$$$      common/cMonteCarloType/MonteCarlo
+c$$$
+c$$$      integer ileg
+c$$$      common/cileg/ileg
+c$$$
+c$$$      double precision ximin
+c$$$      parameter(ximin=0.05d0)
+c$$$
+c$$$      double precision pmass(nexternal)
+c$$$      include "pmass.inc"
+c$$$
+c$$$      vegas_weight=vegaswgt
+c$$$
+c$$$      if (fold.eq.0) then
+c$$$         call get_helicity(i_fks,j_fks)
+c$$$         calculatedBorn=.false.
+c$$$      endif
+c$$$
+c$$$      if (firsttime)then
+c$$$         inoborn_ev=0
+c$$$         xnoborn_ev=0.d0
+c$$$         inoborn_cnt=0
+c$$$         xnoborn_cnt=0.d0
+c$$$         fksmaxwgt=0.d0
+c$$$c Put here call to compute bpower
+c$$$         call compute_bpower(p_born,bpower)
+c$$$         wgtbpower=bpower
+c$$$         firsttime=.false.
+c$$$      endif
+c$$$
+c$$$      prefact=xinorm_ev/xi_i_fks_ev*
+c$$$     #        1/(1-y_ij_fks_ev)
+c$$$      if(pmass(j_fks).eq.0.d0)then
+c$$$        prefact_c=xinorm_cnt(ione)/xi_i_fks_cnt(ione)*
+c$$$     #            1/(1-y_ij_fks_ev)
+c$$$      endif
+c$$$
+c$$$      emsca=0.d0
+c$$$      scalemax=0.d0
+c$$$
+c$$$      ev_wgt=0.d0
+c$$$      xmc_wgt=0.d0
+c$$$      plot_wgt=0.d0
+c$$$
+c$$$      if(doreweight)then
+c$$$        if(.not.AddInfoLHE)then
+c$$$          write(*,*)'Error in dsigH'
+c$$$          write(*,*)'  AddInfoLHE must be true when unweighting'
+c$$$          stop
+c$$$        endif
+c$$$        call reweight_settozero(.true.)
+c$$$        ifill1=0
+c$$$        ifill2=0
+c$$$        ifill3=0
+c$$$        ifill4=0
+c$$$      endif
+c$$$
+c$$$      if(AddInfoLHE)then
+c$$$        iSorH_lhe=2
+c$$$        ifks_lhe=i_fks
+c$$$        jfks_lhe=j_fks
+c$$$        fksfather_lhe=0
+c$$$        ipartner_lhe=0
+c$$$        scale1_lhe=0.d0
+c$$$        scale2_lhe=0.d0
+c$$$      endif
+c$$$
+c$$$      if (abrv.eq.'born' .or. abrv.eq.'grid' .or.
+c$$$     &     abrv(1:2).eq.'vi') then
+c$$$         write (*,*) 'No need to generate Hevents when doing: ',abrv
+c$$$         stop
+c$$$      endif
+c$$$
+c$$$      probne=1.d0
+c$$$c MC counterterms. Cuts should be with the Born-type momenta. Rest is
+c$$$c with the event momenta.
+c$$$      call set_cms_stuff(izero)
+c$$$      if (passcuts(p1_cnt(0,1,0),rwgt)) then
+c$$$        gfactsf=1.d0
+c$$$        gfactcl=1.d0
+c$$$        sevmc=1.d0
+c$$$        xmcMC=0.d0
+c$$$        xmcME=0.d0
+c$$$        call set_cms_stuff(mohdr)
+c$$$        call set_alphaS(pp)
+c$$$        if(doreweight)then
+c$$$          wgtmuR2(1)=muR2_current/muR_over_ref**2
+c$$$          wgtmuF12(1)=muF12_current/muF1_over_ref**2
+c$$$          wgtmuF22(1)=muF22_current/muF2_over_ref**2
+c$$$          call reweight_fillkin(pp,ione)
+c$$$          ifill1=1
+c$$$          call reweight_fillkin(pp,itwo)
+c$$$          ifill2=1
+c$$$        endif
+c$$$        if(UseSfun)then
+c$$$           x = abs(2d0*dot(pp(0,i_fks),pp(0,j_fks))/shat)
+c$$$           ffact = f_damp(x)
+c$$$           sevmc = fks_Sij(pp,i_fks,j_fks,xi_i_fks_ev,y_ij_fks_ev)
+c$$$           sevmc = sevmc*ffact
+c$$$        else
+c$$$           x = abs(2d0*dot(pp(0,i_fks),pp(0,j_fks))/shat)
+c$$$           ffact = f_damp(x)
+c$$$           sevmc = fks_Hij(pp,i_fks,j_fks)
+c$$$           sevmc = sevmc*ffact
+c$$$        endif
+c$$$        call xmcsubt(pp,xi_i_fks_ev,y_ij_fks_ev,gfactsf,gfactcl,probne,
+c$$$     #               dummy,nofpartners,lzone,flagmc,zhw,xmcxsec)
+c$$$
+c$$$        if(ileg.gt.4.or.ileg.lt.1)then
+c$$$           write(*,*)'Error: unrecognized ileg in dsigH', ileg
+c$$$           stop
+c$$$        endif
+c$$$
+c$$$        if(sevmc.gt.0.d0.and.flagmc)then
+c$$$          if(doreweight)then
+c$$$            iwgtnumpartn=nofpartners
+c$$$            xsec=-sevmc*wgt*prefact*rwgt
+c$$$          endif
+c$$$          xlum_mc_save=-1.d8
+c$$$          do i=1,nofpartners
+c$$$            if(lzone(i))then
+c$$$              zhw_used=zhw(i)
+c$$$              call get_mc_lum(j_fks,zhw_used,xi_i_fks_ev,
+c$$$     #                        xlum_mc_save,xlum_mc,xlum_mc_fact)
+c$$$              xmcMC=xmcMC+xmcxsec(i)*xlum_mc
+c$$$              if(doreweight)then
+c$$$                wgtwmcxsec(i)=xsec*xlum_mc_fact*xmcxsec(i)/
+c$$$     #                        g**(2*wgtbpower+2.d0)
+c$$$                wgtmcxbj(1,i)=xbk(1)
+c$$$                wgtmcxbj(2,i)=xbk(2)
+c$$$              endif
+c$$$            endif
+c$$$          enddo
+c$$$          xmcMC=-xmcMC*sevmc*wgt*prefact*rwgt
+c$$$        endif
+c$$$c
+c$$$        if( (.not.flagmc).and.gfactsf.eq.1.d0 .and.
+c$$$     #      xi_i_fks_ev.lt.0.02d0 .and. particle_type(i_fks).eq.8)then
+c$$$          write(*,*)'Error in dsigH: will diverge'
+c$$$          stop
+c$$$        endif
+c$$$c
+c$$$        if(gfactsf.lt.1.d0.and.probne.gt.0.d0)then
+c$$$          call set_cms_stuff(izero)
+c$$$          call set_alphaS(p1_cnt(0,1,0))
+c$$$          if(doreweight)then
+c$$$            wgtxbj(1,2)=xbk(1)
+c$$$            wgtxbj(2,2)=xbk(2)
+c$$$            wgtmuR2(2)=muR2_current/muR_over_ref**2
+c$$$            wgtmuF12(2)=muF12_current/muF1_over_ref**2
+c$$$            wgtmuF22(2)=muF22_current/muF2_over_ref**2
+c$$$            if(ifill2.ne.1)then
+c$$$              write(*,*)'Error #1[wg] in dsigH',ifill2
+c$$$              stop
+c$$$            endif
+c$$$          endif
+c$$$          s_s = fks_Sij(p1_cnt(0,1,0),i_fks,j_fks,zero,y_ij_fks_ev)
+c$$$          if(s_s.gt.0.d0)then
+c$$$            call sreal(p1_cnt(0,1,0),zero,y_ij_fks_ev,fx_s)
+c$$$            xlum_s = dlum()
+c$$$            xsec = fx_s*s_s*jac_cnt(0)*prefact*rwgt
+c$$$            if(.not.flagmc.and.MonteCarlo(1:7).eq.'PYTHIA6'
+c$$$     &         .and.ileg.ge.3.and.xi_i_fks_ev.gt.ximin)xsec=0d0
+c$$$            xmcME=xlum_s*xsec
+c$$$            if(doreweight)wgtwreal(2)=xsec/g**(2*wgtbpower+2.d0)
+c$$$          endif
+c$$$          if(gfactcl.lt.1.d0.and.pmass(j_fks).eq.0.d0)then
+c$$$            call set_cms_stuff(ione)
+c$$$            if(doreweight)then
+c$$$              wgtxbj(1,3)=xbk(1)
+c$$$              wgtxbj(2,3)=xbk(2)
+c$$$              call reweight_fillkin(pp,ithree)
+c$$$              ifill3=1
+c$$$            endif
+c$$$            s_c = fks_Sij(p1_cnt(0,1,1),i_fks,j_fks,xi_i_fks_cnt(ione),one)
+c$$$            if(s_c.gt.0.d0)then
+c$$$              if(abs(s_c-1.d0).gt.1.d-6.and.j_fks.le.nincoming)then
+c$$$                write(*,*)'Wrong S function in dsigH[c]',s_c
+c$$$                stop
+c$$$              endif
+c$$$              call sreal(p1_cnt(0,1,1),xi_i_fks_cnt(ione),one,fx_c)
+c$$$              xlum_c = dlum()
+c$$$              xsec = fx_c*s_c*jac_cnt(1)*prefact_c*rwgt*(1-gfactcl)
+c$$$              if(.not.flagmc.and.MonteCarlo(1:7).eq.'PYTHIA6'
+c$$$     &           .and.ileg.ge.3.and.xi_i_fks_ev.gt.ximin)xsec=0d0
+c$$$              xmcME=xmcME+xlum_c*xsec
+c$$$              if(doreweight)wgtwreal(3)=xsec/g**(2*wgtbpower+2.d0)
+c$$$            endif
+c$$$            call set_cms_stuff(itwo)
+c$$$            if(doreweight)then
+c$$$              wgtxbj(1,4)=xbk(1)
+c$$$              wgtxbj(2,4)=xbk(2)
+c$$$              call reweight_fillkin(pp,ifour)
+c$$$              ifill4=1
+c$$$            endif
+c$$$            s_sc = fks_Sij(p1_cnt(0,1,2),i_fks,j_fks,zero,one)
+c$$$            if(s_sc.gt.0.d0)then
+c$$$              if(abs(s_sc-1.d0).gt.1.d-6.and.j_fks.le.nincoming)then
+c$$$                write(*,*)'Wrong S function in dsigH[sc]',s_sc
+c$$$                stop
+c$$$              endif
+c$$$              call sreal(p1_cnt(0,1,2),zero,one,fx_sc)
+c$$$              xlum_sc = dlum()
+c$$$              xsec = fx_sc*s_sc*jac_cnt(2)*prefact_c*rwgt*(1-gfactcl)
+c$$$              if(.not.flagmc.and.MonteCarlo(1:7).eq.'PYTHIA6'
+c$$$     &           .and.ileg.ge.3.and.xi_i_fks_ev.gt.ximin)xsec=0d0
+c$$$              xmcME=xmcME-xlum_sc*xsec
+c$$$              if(doreweight)wgtwreal(4)=-xsec/g**(2*wgtbpower+2.d0)
+c$$$            endif
+c$$$          endif
+c$$$          xmcME=-xmcME*(1-gfactsf)*probne
+c$$$          if(doreweight)then
+c$$$            xsec=(1-gfactsf)*probne
+c$$$            wgtwreal(2)=-wgtwreal(2)*xsec
+c$$$            wgtwreal(3)=-wgtwreal(3)*xsec
+c$$$            wgtwreal(4)=-wgtwreal(4)*xsec
+c$$$          endif
+c$$$        endif
+c$$$c
+c$$$        xmc_wgt=xmcMC+xmcME
+c$$$
+c$$$      else
+c$$$        if(pp(0,1).ne.-99d0)then
+c$$$          call set_cms_stuff(mohdr)
+c$$$          call assign_emsca(pp,xi_i_fks_ev,y_ij_fks_ev)
+c$$$        endif
+c$$$      endif
+c$$$
+c$$$c Real contribution
+c$$$c
+c$$$c Set the ybst_til_tolab before applying the cuts. 
+c$$$      call set_cms_stuff(mohdr)
+c$$$      if(doreweight)then
+c$$$        wgtxbj(1,1)=xbk(1)
+c$$$        wgtxbj(2,1)=xbk(2)
+c$$$      endif
+c$$$      if (passcuts(pp,rwgt).and.probne.gt.0.d0) then
+c$$$        call set_alphaS(pp)
+c$$$        x = abs(2d0*dot(pp(0,i_fks),pp(0,j_fks))/shat)
+c$$$        ffact = f_damp(x)
+c$$$        s_ev = fks_Sij(pp,i_fks,j_fks,xi_i_fks_ev,y_ij_fks_ev)
+c$$$        if(s_ev.gt.0.d0)then
+c$$$          call sreal(pp,xi_i_fks_ev,y_ij_fks_ev,fx_ev)
+c$$$          xlum_ev = dlum()
+c$$$          xsec = fx_ev*s_ev*ffact*wgt*prefact*rwgt*probne
+c$$$          ev_wgt = xlum_ev*xsec
+c$$$          if(doreweight)then
+c$$$            if(ifill1.eq.0)then
+c$$$              wgtmuR2(1)=muR2_current/muR_over_ref**2
+c$$$              wgtmuF12(1)=muF12_current/muF1_over_ref**2
+c$$$              wgtmuF22(1)=muF22_current/muF2_over_ref**2
+c$$$              call reweight_fillkin(pp,ione)
+c$$$              ifill1=1
+c$$$            endif
+c$$$            wgtwreal(1)=xsec/g**(2*wgtbpower+2.d0)
+c$$$          endif
+c$$$        endif
+c$$$        if(AddInfoLHE)scale2_lhe=get_ptrel(pp,i_fks,j_fks)
+c$$$      endif
+c$$$
+c$$$      if(AddInfoLHE.and.UseCKKW)then
+c$$$        if(scale1_lhe.eq.0.d0)scale1_lhe=scale2_lhe
+c$$$        scale2_lhe=scale_CKKW
+c$$$      endif
+c$$$
+c$$$      totH_wgt = ev_wgt+xmc_wgt
+c$$$c
+c$$$c Enhance the one channel for multi-channel integration
+c$$$c
+c$$$      enhance=1.d0
+c$$$      if (totH_wgt.ne.0d0 .and. multi_channel) then
+c$$$         if (xmc.eq.0d0) CalculatedBorn=.false.
+c$$$         if (.not.calculatedBorn .and. p_born(0,1).gt.0d0)then
+c$$$            call sborn(p_born,wgt1)
+c$$$         elseif(p_born(0,1).lt.0d0)then
+c$$$            enhance=0d0
+c$$$         endif
+c$$$
+c$$$         if (enhance.eq.0d0)then
+c$$$            xnoborn_cnt=xnoborn_cnt+1.d0
+c$$$            if(log10(xnoborn_cnt).gt.inoborn_cnt)then
+c$$$               write (*,*) 
+c$$$     #           'Function dsigH: no Born momenta more than 10**',
+c$$$     #           inoborn_cnt,'times'
+c$$$               inoborn_cnt=inoborn_cnt+1
+c$$$            endif
+c$$$         else
+c$$$            xtot=0d0
+c$$$            if (mapconfig(0).eq.0) then
+c$$$               write (*,*) 'Fatal error in dsigH, no Born diagrams '
+c$$$     &           ,mapconfig,'. Check bornfromreal.inc'
+c$$$               write (*,*) 'Is fks_singular compiled correctly?'
+c$$$               stop
+c$$$            endif
+c$$$            if (onlyBorn) then
+c$$$               do i=1, mapconfig(0)
+c$$$                  if (multi_chan(mapconfig(i))) then
+c$$$                     xtot=xtot+amp2(mapconfig(i))
+c$$$                  endif
+c$$$               enddo
+c$$$            else
+c$$$               do i=1,mapconfig(0)
+c$$$                  xtot=xtot+amp2(mapconfig(i))
+c$$$               enddo
+c$$$            endif
+c$$$            if (xtot.ne.0d0) then
+c$$$               enhance=amp2(mapconfig(iconfig))/xtot
+c$$$               enhance=enhance*diagramsymmetryfactor
+c$$$            else
+c$$$               enhance=0d0
+c$$$            endif
+c$$$         endif
+c$$$      endif
+c$$$
+c$$$      totH_wgt = totH_wgt * enhance
+c$$$
+c$$$      dsigH = totH_wgt*fkssymmetryfactor
+c$$$      call unweight_function(p_born,unwgtfun)
+c$$$      dsigH=dsigH*unwgtfun
+c$$$
+c$$$      if(doreweight)then
+c$$$        if(ifill2.eq.0.and.(ifill3.ne.0.or.ifill4.ne.0))then
+c$$$          write(*,*)'Error #2[wg] in dsigH',ifill2,ifill3,ifill4
+c$$$          stop
+c$$$        endif
+c$$$        wgtref = dsigH
+c$$$        xsec = enhance*unwgtfun*fkssymmetryfactor
+c$$$        do i=1,4
+c$$$          wgtwreal(i)=wgtwreal(i) * xsec
+c$$$        enddo
+c$$$        do i=1,iwgtnumpartn
+c$$$          wgtwmcxsec(i)=wgtwmcxsec(i) * xsec
+c$$$        enddo
+c$$$        call reweight_fill_extra()
+c$$$        if(check_reweight.and.doreweight)
+c$$$     #    call check_rwgt_wgt("Hev")
+c$$$c Example of reweighted cross section (scale changed)
+c$$$c           dsigH_new=compute_rwgt_wgt_Hev(new_muR_fact,new_muF1_fact,
+c$$$c     #                                    new_muF2_fact,new_QES_fact,
+c$$$c     #                                    iwgtinfo)
+c$$$      endif      
+c$$$
+c$$$      if (dsigH.ne.dsigH) then
+c$$$         write (*,*) 'ERROR, ',dsigH,
+c$$$     &        ' found for dsigH, setting dsigH to 0 for this event'
+c$$$         dsigH=0
+c$$$      endif
+c$$$
+c$$$c$$$      if(dsigH.ne.0.d0)
+c$$$c$$$     #  call set_shower_scale(pp,i_fks,j_fks,xi_i_fks_ev,y_ij_fks_ev)
+c$$$
+c$$$      if (dsigH.ne.0d0) itotalpoints=itotalpoints+1
+c$$$
+c$$$c For tests
+c$$$      if(abs(dsigH).gt.fksmaxwgt)then
+c$$$        fksmaxwgt=abs(dsigH)
+c$$$        xisave=xi_i_fks_ev
+c$$$        ysave=y_ij_fks_ev
+c$$$      endif
+c$$$
+c$$$c Plot observables for event
+c$$$      if (.not.unwgt) then
+c$$$         plot_wgt=totH_wgt*fkssymmetryfactor*vegaswgt 
+c$$$         if( abs(plot_wgt).gt.1.d-20.and.pp(0,1).ne.-99d0. and.
+c$$$     &       (plotEv.or.plotKin) )
+c$$$     &      call outfun(pp,ybst_til_tolab,plot_wgt,iplot_ev)
+c$$$      endif
+c$$$      return
+c$$$      end
+c$$$
+c$$$
+c$$$      double precision function dsigS(pp,wgt,vegaswgt)
+c$$$c Here are the subtraction terms, the Sij function, 
+c$$$c the f-damping function, and the single diagram
+c$$$c enhanced multi-channel factor included
+c$$$      implicit none
+c$$$      include "genps.inc"
+c$$$      include 'nexternal.inc'
+c$$$c      include "fks.inc"
+c$$$      integer fks_j_from_i(nexternal,0:nexternal)
+c$$$     &     ,particle_type(nexternal),pdg_type(nexternal)
+c$$$      common /c_fks_inc/fks_j_from_i,particle_type,pdg_type
+c$$$      include "fks_powers.inc"
+c$$$      include "madfks_mcatnlo.inc"
+c$$$      include 'coupl.inc'
+c$$$      include 'q_es.inc'
+c$$$      include 'run.inc'
+c$$$      include 'reweight.inc'
+c$$$
+c$$$      double precision pp(0:3,nexternal),wgt,vegaswgt
+c$$$
+c$$$      double precision fks_Sij,fks_Hij,f_damp,dot,dlum
+c$$$      external fks_Sij,fks_Hij,f_damp,dot,dlum
+c$$$
+c$$$      double precision x,xtot,s_ev,s_c,s_s,s_sc,ffact,fx_c,
+c$$$     #                 fx_s,fx_sc,xmc_wgt,cnt_wgt_c,cnt_wgt_s,cnt_wgt_sc,
+c$$$     #                 bsv_wgt,plot_wgt,cnt_swgt_s,cnt_swgt_sc,cnt_sc,cnt_s,
+c$$$     #                 prefact_cnt_ssc,prefact_cnt_ssc_c,prefact_coll,
+c$$$     #                 prefact_coll_c,born_wgt,prefact_deg,prefact,prefact_c,
+c$$$     #                 prefact_deg_sxi,prefact_deg_slxi,deg_wgt,deg_swgt,
+c$$$     #                 deg_xi_c,deg_lxi_c,deg_xi_sc,deg_lxi_sc,
+c$$$     #                 cnt_swgt,cnt_wgt,gfactsf,gfactcl,xmcMC,xmcME,
+c$$$     #                 xlum_c,xlum_s,xlum_sc,xlum_mc,xlum_mc_save,
+c$$$     #                 dummy,ev_wgt,fx_ev,probne,sevmc,xlum_ev,get_ptrel,
+c$$$     #                 xlum_mc_fact,xnormsv,xsec,bpower
+c$$$      integer i,j
+c$$$
+c$$$      integer izero,ione,itwo,mohdr,iplot_ev,iplot_cnt,iplot_born
+c$$$      integer ithree,ifour,ifill1,ifill2,ifill3,ifill4
+c$$$      parameter (izero=0)
+c$$$      parameter (ione=1)
+c$$$      parameter (itwo=2)
+c$$$      parameter (ithree=3)
+c$$$      parameter (ifour=4)
+c$$$      parameter (mohdr=-100)
+c$$$      parameter (iplot_ev=11)
+c$$$      parameter (iplot_cnt=12)
+c$$$      parameter (iplot_born=20)
+c$$$
+c$$$      double precision ybst_til_tolab,ybst_til_tocm,sqrtshat,shat
+c$$$      common/parton_cms_stuff/ybst_til_tolab,ybst_til_tocm,
+c$$$     #                        sqrtshat,shat
+c$$$
+c$$$      double precision shattmp
+c$$$      double precision pi
+c$$$      parameter (pi=3.1415926535897932385d0)
+c$$$
+c$$$      logical nocntevents
+c$$$      common/cnocntevents/nocntevents
+c$$$
+c$$$c Multi channel stuff:
+c$$$      Double Precision amp2(maxamps), jamp2(0:maxamps)
+c$$$      common/to_amps/  amp2,       jamp2
+c$$$
+c$$$      integer          isum_hel
+c$$$      logical                    multi_channel
+c$$$      common/to_matrix/isum_hel, multi_channel
+c$$$      INTEGER MAPCONFIG(0:LMAXCONFIGS), ICONFIG
+c$$$      common/to_mconfigs/mapconfig, iconfig
+c$$$
+c$$$      double complex wgt1(2)
+c$$$      double precision p_born(0:3,nexternal-1)
+c$$$      common/pborn/p_born
+c$$$
+c$$$      logical calculatedBorn
+c$$$      common/ccalculatedBorn/calculatedBorn
+c$$$
+c$$$      double precision ev_enh,enhance,rwgt,unwgtfun
+c$$$      logical firsttime,passcuts
+c$$$      data firsttime /.true./
+c$$$      integer inoborn_ev,inoborn_cnt
+c$$$      double precision xnoborn_ev,xnoborn_cnt
+c$$$
+c$$$c FKS stuff:
+c$$$      integer i_fks,j_fks
+c$$$      common/fks_indices/i_fks,j_fks
+c$$$
+c$$$      double precision xi_i_fks_ev,y_ij_fks_ev
+c$$$      double precision p_i_fks_ev(0:3),p_i_fks_cnt(0:3,-2:2)
+c$$$      common/fksvariables/xi_i_fks_ev,y_ij_fks_ev,p_i_fks_ev,p_i_fks_cnt
+c$$$
+c$$$      double precision xi_i_fks_cnt(-2:2)
+c$$$      common /cxiifkscnt/xi_i_fks_cnt
+c$$$
+c$$$      double precision xiimax_ev
+c$$$      common /cxiimaxev/xiimax_ev
+c$$$      double precision xiimax_cnt(-2:2)
+c$$$      common /cxiimaxcnt/xiimax_cnt
+c$$$
+c$$$      double precision xinorm_ev
+c$$$      common /cxinormev/xinorm_ev
+c$$$      double precision xinorm_cnt(-2:2)
+c$$$      common /cxinormcnt/xinorm_cnt
+c$$$
+c$$$      double precision p1_cnt(0:3,nexternal,-2:2)
+c$$$      double precision wgt_cnt(-2:2)
+c$$$      double precision pswgt_cnt(-2:2)
+c$$$      double precision jac_cnt(-2:2)
+c$$$      common/counterevnts/p1_cnt,wgt_cnt,pswgt_cnt,jac_cnt
+c$$$
+c$$$      double precision zero,one
+c$$$      parameter (zero=0d0,one=1d0)
+c$$$      double precision tiny
+c$$$      parameter (tiny=1d-6)
+c$$$
+c$$$      double precision xicut_used
+c$$$      common /cxicut_used/xicut_used
+c$$$      double precision delta_used
+c$$$      common /cdelta_used/delta_used
+c$$$      double precision xiScut_used,xiBSVcut_used
+c$$$      common /cxiScut_used/xiScut_used,xiBSVcut_used
+c$$$      double precision fkssymmetryfactor,fkssymmetryfactorBorn,
+c$$$     &     fkssymmetryfactorDeg
+c$$$      integer ngluons,nquarks(-6:6)
+c$$$      common/numberofparticles/fkssymmetryfactor,fkssymmetryfactorBorn,
+c$$$     &                         fkssymmetryfactorDeg,ngluons,nquarks
+c$$$      integer diagramsymmetryfactor
+c$$$      common /dsymfactor/diagramsymmetryfactor
+c$$$
+c$$$      logical multi_chan(lmaxconfigs)
+c$$$      common /to_multi_chan/multi_chan
+c$$$
+c$$$      logical nbody
+c$$$      common/cnbody/nbody
+c$$$
+c$$$      character*4 abrv
+c$$$      common /to_abrv/ abrv
+c$$$
+c$$$      double precision vegas_weight
+c$$$      common/cvegas_weight/vegas_weight
+c$$$
+c$$$      double precision zhw_used
+c$$$c MC stuff
+c$$$      double precision zhw(nexternal),xmcxsec(nexternal)
+c$$$      integer nofpartners
+c$$$      logical lzone(nexternal),flagmc
+c$$$      logical MCcntcalled
+c$$$
+c$$$      double precision emsca,scalemax
+c$$$      common/cemsca/emsca,scalemax
+c$$$
+c$$$c Stuff to be written (depending on AddInfoLHE) onto the LHE file
+c$$$      integer iSorH_lhe,ifks_lhe,jfks_lhe,fksfather_lhe,ipartner_lhe
+c$$$      double precision scale1_lhe,scale2_lhe
+c$$$      common/cto_LHE1/iSorH_lhe,ifks_lhe,jfks_lhe,
+c$$$     #                fksfather_lhe,ipartner_lhe
+c$$$      common/cto_LHE2/scale1_lhe,scale2_lhe
+c$$$
+c$$$c CKWW scale, from cuts.f
+c$$$      double precision scale_CKKW
+c$$$      common/cscale_CKKW/scale_CKKW
+c$$$
+c$$$c For the MINT folding
+c$$$      integer fold
+c$$$      common /cfl/fold
+c$$$
+c$$$      logical unwgt
+c$$$      double precision evtsgn
+c$$$      common /c_unwgt/evtsgn,unwgt
+c$$$
+c$$$c For plots
+c$$$      logical plotEv,plotKin
+c$$$      common/cEvKinplot/plotEv,plotKin
+c$$$
+c$$$c For tests
+c$$$      real*8 fksmaxwgt,xisave,ysave
+c$$$      common/cfksmaxwgt/fksmaxwgt,xisave,ysave
+c$$$      integer icou_calls,icou_kinev,icou_sev,icou_meev,icou_kincnt,
+c$$$     #  icou_scnt,icou_mecnt
+c$$$      common/counters/icou_calls,icou_kinev,icou_sev,icou_meev,
+c$$$     #                           icou_kincnt,icou_scnt,icou_mecnt
+c$$$      integer itotalpoints
+c$$$      common/ctotalpoints/itotalpoints
+c$$$
+c$$$      logical ExceptPSpoint
+c$$$      integer iminmax
+c$$$      common/cExceptPSpoint/iminmax,ExceptPSpoint
+c$$$
+c$$$
+c$$$      double precision central_wgt_saved
+c$$$      save central_wgt_saved
+c$$$
+c$$$      double precision dsigS_max,dsigS_min
+c$$$      double precision total_wgt_sum,total_wgt_sum_max,
+c$$$     &                 total_wgt_sum_min
+c$$$      common/csum_of_wgts/total_wgt_sum,total_wgt_sum_max,
+c$$$     &                 total_wgt_sum_min
+c$$$
+c$$$      character*10 MonteCarlo
+c$$$      common/cMonteCarloType/MonteCarlo
+c$$$
+c$$$      integer ileg
+c$$$      common/cileg/ileg
+c$$$
+c$$$      double precision ximin
+c$$$      parameter(ximin=0.05d0)
+c$$$
+c$$$      double precision pmass(nexternal)
+c$$$      include "pmass.inc"
+c$$$
+c$$$      vegas_weight=vegaswgt
+c$$$
+c$$$      if (fold.eq.0) then
+c$$$         calculatedBorn=.false.
+c$$$         call get_helicity(i_fks,j_fks)
+c$$$      endif
+c$$$
+c$$$      if (firsttime)then
+c$$$         inoborn_ev=0
+c$$$         xnoborn_ev=0.d0
+c$$$         inoborn_cnt=0
+c$$$         xnoborn_cnt=0.d0
+c$$$         fksmaxwgt=0.d0
+c$$$         firsttime=.false.
+c$$$c Put here call to compute bpower
+c$$$         call compute_bpower(p_born,bpower)
+c$$$         wgtbpower=bpower
+c$$$      endif
+c$$$
+c$$$      prefact=xinorm_ev/xi_i_fks_ev*
+c$$$     #        1/(1-y_ij_fks_ev)
+c$$$
+c$$$      if( (.not.nocntevents) .and.
+c$$$     &     (.not.(abrv.eq.'born' .or. abrv.eq.'grid' .or.
+c$$$     &     abrv(1:2).eq.'vi')) )then
+c$$$        prefact_cnt_ssc=xinorm_ev/min(xiimax_ev,xiScut_used)*
+c$$$     #                  log(xicut_used/min(xiimax_ev,xiScut_used))*
+c$$$     #                  1/(1-y_ij_fks_ev)
+c$$$        if(pmass(j_fks).eq.0.d0)then
+c$$$          prefact_c=xinorm_cnt(ione)/xi_i_fks_cnt(ione)*
+c$$$     #              1/(1-y_ij_fks_ev)
+c$$$          prefact_cnt_ssc_c=xinorm_cnt(ione)/min(xiimax_cnt(ione),xiScut_used)*
+c$$$     #                      log(xicut_used/min(xiimax_cnt(ione),xiScut_used))*
+c$$$     #                      1/(1-y_ij_fks_ev)
+c$$$          prefact_coll=xinorm_cnt(ione)/xi_i_fks_cnt(ione)*
+c$$$     #                 log(delta_used/deltaS)/deltaS
+c$$$          prefact_coll_c=xinorm_cnt(ione)/min(xiimax_cnt(ione),xiScut_used)*
+c$$$     #                   log(xicut_used/min(xiimax_cnt(ione),xiScut_used))*
+c$$$     #                   log(delta_used/deltaS)/deltaS
+c$$$          prefact_deg=xinorm_cnt(ione)/xi_i_fks_cnt(ione)*
+c$$$     #                1/deltaS
+c$$$          prefact_deg_sxi=xinorm_cnt(ione)/min(xiimax_cnt(ione),xiScut_used)*
+c$$$     #                    log(xicut_used/min(xiimax_cnt(ione),xiScut_used))*
+c$$$     #                    1/deltaS
+c$$$          prefact_deg_slxi=xinorm_cnt(ione)/min(xiimax_cnt(ione),xiScut_used)*
+c$$$     #                     ( log(xicut_used)**2 -
+c$$$     #                       log(min(xiimax_cnt(ione),xiScut_used))**2 )*
+c$$$     #                     1/(2.d0*deltaS)
+c$$$        endif
+c$$$      endif
+c$$$
+c$$$c If there was an exceptional phase-space point found for the 
+c$$$c virtual corrections, at the end of this subroutine, goto 44
+c$$$c and compute also the "possible" minimal and maximal weight
+c$$$c these points could have gotton (based upon previous PS
+c$$$c points)
+c$$$      ExceptPSpoint=.false.
+c$$$      iminmax=-1
+c$$$ 44   continue
+c$$$      iminmax=iminmax+1
+c$$$
+c$$$      emsca=0.d0
+c$$$      scalemax=0.d0
+c$$$
+c$$$      ev_wgt=0.d0
+c$$$      xmc_wgt=0.d0
+c$$$      cnt_wgt=0.d0
+c$$$      cnt_wgt_s=0.d0
+c$$$      cnt_wgt_c=0.d0
+c$$$      cnt_wgt_sc=0.d0
+c$$$      bsv_wgt=0.d0
+c$$$      born_wgt=0.d0
+c$$$      cnt_swgt=0.d0
+c$$$      cnt_swgt_s=0.d0
+c$$$      cnt_swgt_sc=0.d0
+c$$$      deg_wgt=0.d0
+c$$$      deg_swgt=0.d0
+c$$$      plot_wgt=0.d0
+c$$$c
+c$$$      if(doreweight)then
+c$$$        if(.not.AddInfoLHE)then
+c$$$          write(*,*)'Error in dsigS'
+c$$$          write(*,*)'  AddInfoLHE must be true when unweighting'
+c$$$          stop
+c$$$        endif
+c$$$        call reweight_settozero(.true.)
+c$$$        ifill1=0
+c$$$        ifill2=0
+c$$$        ifill3=0
+c$$$        ifill4=0
+c$$$      endif
+c$$$c
+c$$$      if(AddInfoLHE)then
+c$$$        iSorH_lhe=1
+c$$$        ifks_lhe=i_fks
+c$$$        jfks_lhe=j_fks
+c$$$        fksfather_lhe=0
+c$$$        ipartner_lhe=0
+c$$$        scale1_lhe=0.d0
+c$$$        scale2_lhe=0.d0
+c$$$      endif
+c$$$c
+c$$$      probne=1.d0
+c$$$c
+c$$$c All counterevent have the same final-state kinematics. Check that
+c$$$c one of them passes the hard cuts, and they exist at all
+c$$$c
+c$$$c Set the ybst_til_tolab before applying the cuts. Update below
+c$$$c for the collinear, soft and/or soft-collinear subtraction terms
+c$$$      MCcntcalled=.false.
+c$$$      call set_cms_stuff(izero)
+c$$$      if ( (.not.passcuts(p1_cnt(0,1,0),rwgt)) .or.
+c$$$     #      nocntevents ) goto 547
+c$$$
+c$$$      gfactsf=1.d0
+c$$$      gfactcl=1.d0
+c$$$      sevmc=1.d0
+c$$$      xmcMC=0.d0
+c$$$      xmcME=0.d0
+c$$$
+c$$$      if (abrv.eq.'born' .or. abrv.eq.'grid' .or.
+c$$$     &    abrv(1:2).eq.'vi') goto 540
+c$$$
+c$$$      call set_cms_stuff(mohdr)
+c$$$      call set_alphaS(pp)
+c$$$      if(doreweight)then
+c$$$        wgtmuR2(1)=muR2_current/muR_over_ref**2
+c$$$        wgtmuF12(1)=muF12_current/muF1_over_ref**2
+c$$$        wgtmuF22(1)=muF22_current/muF2_over_ref**2
+c$$$        call reweight_fillkin(pp,ione)
+c$$$        ifill1=1
+c$$$      endif
+c$$$      if(UseSfun)then
+c$$$         x = abs(2d0*dot(pp(0,i_fks),pp(0,j_fks))/shat)
+c$$$         ffact = f_damp(x)
+c$$$         sevmc = fks_Sij(pp,i_fks,j_fks,xi_i_fks_ev,y_ij_fks_ev)
+c$$$         sevmc = sevmc*ffact
+c$$$      else
+c$$$         x = abs(2d0*dot(pp(0,i_fks),pp(0,j_fks))/shat)
+c$$$         ffact = f_damp(x)
+c$$$         sevmc = fks_Hij(pp,i_fks,j_fks)
+c$$$         sevmc = sevmc*ffact
+c$$$      endif
+c$$$      call xmcsubt(pp,xi_i_fks_ev,y_ij_fks_ev,gfactsf,gfactcl,probne,
+c$$$     #             dummy,nofpartners,lzone,flagmc,zhw,xmcxsec)
+c$$$      MCcntcalled=.true.
+c$$$
+c$$$      if(ileg.gt.4.or.ileg.lt.1)then
+c$$$         write(*,*)'Error: unrecognized ileg in dsigS', ileg
+c$$$         stop
+c$$$      endif
+c$$$
+c$$$      if(sevmc.gt.0.d0.and.flagmc)then
+c$$$        if(doreweight)then
+c$$$          iwgtnumpartn=nofpartners
+c$$$          xsec=sevmc*wgt*prefact*rwgt
+c$$$        endif
+c$$$        xlum_mc_save=-1.d8
+c$$$        do i=1,nofpartners
+c$$$          if(lzone(i))then
+c$$$            zhw_used=zhw(i)
+c$$$            call get_mc_lum(j_fks,zhw_used,xi_i_fks_ev,
+c$$$     #                      xlum_mc_save,xlum_mc,xlum_mc_fact)
+c$$$            xmcMC=xmcMC+xmcxsec(i)*xlum_mc
+c$$$            if(doreweight)then
+c$$$              wgtwmcxsec(i)=xsec*xlum_mc_fact*xmcxsec(i)/
+c$$$     #                      g**(2*wgtbpower+2.d0)
+c$$$              wgtmcxbj(1,i)=xbk(1)
+c$$$              wgtmcxbj(2,i)=xbk(2)
+c$$$            endif
+c$$$          endif
+c$$$        enddo
+c$$$        xmcMC=xmcMC*sevmc*wgt*prefact*rwgt
+c$$$      endif
+c$$$c
+c$$$      if( (.not.flagmc).and.gfactsf.eq.1.d0 .and.
+c$$$     #   xi_i_fks_ev.lt.0.02d0  .and. particle_type(i_fks).eq.8)then
+c$$$        write(*,*)'Error in dsigS: will diverge'
+c$$$        stop
+c$$$      endif
+c$$$
+c$$$ 540  continue
+c$$$
+c$$$c Set scales for all counterevents, using soft kinematics as done
+c$$$c in the case of parton-level NLO computations
+c$$$      call set_alphaS(p1_cnt(0,1,0))
+c$$$      if(doreweight)then
+c$$$        wgtqes2(2)=QES2
+c$$$        wgtqes2(3)=QES2
+c$$$        wgtqes2(4)=QES2
+c$$$        wgtmuR2(2)=muR2_current/muR_over_ref**2
+c$$$        wgtmuF12(2)=muF12_current/muF1_over_ref**2
+c$$$        wgtmuF22(2)=muF22_current/muF2_over_ref**2
+c$$$        call reweight_fillkin(pp,itwo)
+c$$$        ifill2=1
+c$$$      endif
+c$$$
+c$$$      if (abrv.eq.'born' .or. abrv.eq.'grid' .or. abrv(1:2).eq.'vi')
+c$$$     &     goto 545
+c$$$c
+c$$$c Collinear subtraction term:
+c$$$      if( ( y_ij_fks_ev.gt.1d0-deltaS .or. 
+c$$$     #     (gfactsf.lt.1.d0.and.gfactcl.lt.1.d0 .and.
+c$$$     #      probne.gt.0.d0) ) .and.
+c$$$     #    pmass(j_fks).eq.0.d0 )then
+c$$$         call set_cms_stuff(ione)
+c$$$         if(doreweight)then
+c$$$           wgtxbj(1,3)=xbk(1)
+c$$$           wgtxbj(2,3)=xbk(2)
+c$$$           call reweight_fillkin(pp,ithree)
+c$$$           ifill3=1
+c$$$         endif
+c$$$         s_c = fks_Sij(p1_cnt(0,1,1),i_fks,j_fks,xi_i_fks_cnt(ione),one)
+c$$$         if(s_c.gt.0.d0)then
+c$$$            if(abs(s_c-1.d0).gt.1.d-6.and.j_fks.le.nincoming)then
+c$$$               write(*,*)'Wrong S function in dsigS[c]',s_c
+c$$$               stop
+c$$$            endif
+c$$$            call sreal(p1_cnt(0,1,1),xi_i_fks_cnt(ione),one,fx_c)
+c$$$            xlum_c = dlum()
+c$$$            xsec = fx_c*s_c*jac_cnt(1)*prefact_c*rwgt*(1-gfactcl)
+c$$$            if(.not.flagmc.and.MonteCarlo(1:7).eq.'PYTHIA6'
+c$$$     &         .and.ileg.ge.3.and.xi_i_fks_ev.gt.ximin)xsec=0d0
+c$$$            xmcME=xmcME+xlum_c*xsec
+c$$$            if(doreweight)wgtwreal(3)=xsec*(1-gfactsf)*probne/
+c$$$     #                                g**(2*wgtbpower+2.d0)
+c$$$            if( y_ij_fks_ev.gt.1d0-deltaS )then
+c$$$               xsec = fx_c*s_c*jac_cnt(1)*(prefact_c+prefact_coll)*rwgt
+c$$$               cnt_wgt_c=cnt_wgt_c-xlum_c*xsec
+c$$$               call sreal_deg(p1_cnt(0,1,1),xi_i_fks_cnt(ione),one,
+c$$$     #                        deg_xi_c,deg_lxi_c)
+c$$$               deg_wgt=deg_wgt+( deg_xi_c+deg_lxi_c*log(xi_i_fks_cnt(ione)) )*
+c$$$     #                         jac_cnt(1)*prefact_deg*rwgt/(shat/(32*pi**2))*
+c$$$     #                         xlum_c
+c$$$               if(doreweight)then
+c$$$                 wgtwreal(3)=wgtwreal(3)-xsec/g**(2*wgtbpower+2.d0)
+c$$$                 wgtwdeg(3)=
+c$$$     #              ( wgtdegrem_xi+wgtdegrem_lxi*log(xi_i_fks_cnt(ione)) )*
+c$$$     #                      jac_cnt(1)*prefact_deg*rwgt/(shat/(32*pi**2))/
+c$$$     #              g**(2*wgtbpower+2.d0)
+c$$$                 wgtwdegmuf(3)=wgtdegrem_muF *
+c$$$     #                      jac_cnt(1)*prefact_deg*rwgt/(shat/(32*pi**2))/
+c$$$     #              g**(2*wgtbpower+2.d0)
+c$$$               endif
+c$$$            endif
+c$$$         endif
+c$$$      endif
+c$$$c Soft subtraction term:
+c$$$ 545  continue
+c$$$      if ( xi_i_fks_ev .lt. max(xiScut_used,xiBSVcut_used) .or.
+c$$$     &     (gfactsf.lt.1.d0.and.probne.gt.0.d0) ) then
+c$$$         call set_cms_stuff(izero)
+c$$$         if(doreweight)then
+c$$$           wgtxbj(1,2)=xbk(1)
+c$$$           wgtxbj(2,2)=xbk(2)
+c$$$           if(ifill2.ne.1)then
+c$$$             write(*,*)'Error #1[wg] in dsigS',ifill2
+c$$$             stop
+c$$$           endif
+c$$$         endif
+c$$$         s_s = fks_Sij(p1_cnt(0,1,0),i_fks,j_fks,zero,y_ij_fks_ev)
+c$$$         if(nbody)s_s=1.d0
+c$$$         if(s_s.gt.0.d0)then
+c$$$            xlum_s = dlum()
+c$$$            if (abrv.eq.'born' .or. abrv.eq.'grid' .or.
+c$$$     &           abrv(1:2).eq.'vi') goto 546
+c$$$            call sreal(p1_cnt(0,1,0),zero,y_ij_fks_ev,fx_s)
+c$$$            xsec=fx_s*s_s*jac_cnt(0)*prefact*rwgt
+c$$$            if(.not.flagmc.and.MonteCarlo(1:7).eq.'PYTHIA6'
+c$$$     &         .and.ileg.ge.3.and.xi_i_fks_ev.gt.ximin)xsec=0d0
+c$$$            xmcME=xmcME+xlum_s*xsec
+c$$$            if(doreweight)wgtwreal(2)=xsec*(1-gfactsf)*probne/
+c$$$     #                                g**(2*wgtbpower+2.d0)
+c$$$            if (xi_i_fks_ev .lt. xiScut_used) then
+c$$$              xsec=fx_s*s_s*jac_cnt(0)
+c$$$              cnt_s=xlum_s*xsec
+c$$$              cnt_wgt_s=cnt_wgt_s-cnt_s*prefact*rwgt
+c$$$              cnt_swgt_s=cnt_swgt_s-cnt_s*prefact_cnt_ssc*rwgt
+c$$$              if(doreweight)wgtwreal(2)=wgtwreal(2)-
+c$$$     #                        xsec*(prefact+prefact_cnt_ssc)*rwgt/
+c$$$     #                        g**(2*wgtbpower+2.d0)
+c$$$            endif
+c$$$ 546        continue
+c$$$            if (abrv.eq.'real') goto 548
+c$$$            if (xi_i_fks_ev .lt. xiBSVcut_used) then
+c$$$              xsec=s_s*jac_cnt(0)*xinorm_ev/
+c$$$     #             (min(xiimax_ev,xiBSVcut_used)*shat/(16*pi**2))*
+c$$$     #             rwgt
+c$$$              xnormsv=xlum_s*xsec
+c$$$              call bornsoftvirtual(p1_cnt(0,1,0),bsv_wgt,born_wgt)
+c$$$              if(doreweight)then
+c$$$                if(wgtbpower.gt.0)then
+c$$$                  wgtwborn(2)=born_wgt*xsec/g**(2*wgtbpower)
+c$$$                else
+c$$$                  wgtwborn(2)=born_wgt*xsec
+c$$$                endif
+c$$$                wgtwns(2)=wgtnstmp*xsec/g**(2*wgtbpower+2.d0)
+c$$$                wgtwnsmuf(2)=wgtwnstmpmuf*xsec/g**(2*wgtbpower+2.d0)
+c$$$                wgtwnsmur(2)=wgtwnstmpmur*xsec/g**(2*wgtbpower+2.d0)
+c$$$              endif
+c$$$              bsv_wgt=bsv_wgt*xnormsv
+c$$$              born_wgt=born_wgt*xnormsv
+c$$$            endif
+c$$$ 548        continue
+c$$$         endif
+c$$$      endif
+c$$$c Soft-Collinear subtraction term:
+c$$$      if (abrv.eq.'born' .or. abrv.eq.'grid' .or. abrv(1:2).eq.'vi')
+c$$$     &     goto 550
+c$$$      if ( ( (xi_i_fks_cnt(ione) .lt. xiScut_used .and.
+c$$$     #        y_ij_fks_ev .gt. 1d0-deltaS) .or.
+c$$$     #        (gfactsf.lt.1.d0.and.gfactcl.lt.1.d0 .and.
+c$$$     #         probne.gt.0.d0) ) .and.
+c$$$     #        pmass(j_fks).eq.0.d0 )then
+c$$$         call set_cms_stuff(itwo)
+c$$$         if(doreweight)then
+c$$$           wgtxbj(1,4)=xbk(1)
+c$$$           wgtxbj(2,4)=xbk(2)
+c$$$           call reweight_fillkin(pp,ifour)
+c$$$           ifill4=1
+c$$$         endif
+c$$$         s_sc = fks_Sij(p1_cnt(0,1,2),i_fks,j_fks,zero,one)
+c$$$         if(s_sc.gt.0.d0)then
+c$$$            if(abs(s_sc-1.d0).gt.1.d-6.and.j_fks.le.nincoming)then
+c$$$              write(*,*)'Wrong S function in dsigS[sc]',s_sc
+c$$$              stop
+c$$$            endif
+c$$$            call sreal(p1_cnt(0,1,2),zero,one,fx_sc)
+c$$$            xlum_sc = dlum()
+c$$$            xsec = fx_sc*s_sc*jac_cnt(2)*prefact_c*rwgt*(1-gfactcl)
+c$$$            if(.not.flagmc.and.MonteCarlo(1:7).eq.'PYTHIA6'
+c$$$     &         .and.ileg.ge.3.and.xi_i_fks_ev.gt.ximin)xsec=0d0
+c$$$            xmcME=xmcME-xlum_sc*xsec
+c$$$            if(doreweight)wgtwreal(4)=-xsec*(1-gfactsf)*probne/
+c$$$     #                                g**(2*wgtbpower+2.d0)
+c$$$            if(xi_i_fks_cnt(ione) .lt. xiScut_used .and.
+c$$$     #          y_ij_fks_ev .gt. 1d0-deltaS)then
+c$$$              xsec=fx_sc*s_sc*jac_cnt(2)
+c$$$              cnt_sc=xlum_sc*xsec
+c$$$              cnt_wgt_sc=cnt_wgt_sc+cnt_sc*(prefact_c+prefact_coll)*rwgt
+c$$$              cnt_swgt_sc=cnt_swgt_sc+
+c$$$     &             cnt_sc*(prefact_cnt_ssc_c+prefact_coll_c)*rwgt
+c$$$              call sreal_deg(p1_cnt(0,1,2),zero,one,
+c$$$     #                       deg_xi_sc,deg_lxi_sc)
+c$$$              deg_wgt=deg_wgt-
+c$$$     #                    ( deg_xi_sc+deg_lxi_sc*log(xi_i_fks_cnt(ione)) )*
+c$$$     #                    jac_cnt(2)*prefact_deg*rwgt/(shat/(32*pi**2))*
+c$$$     #                    xlum_sc
+c$$$              deg_swgt=deg_swgt-( deg_xi_sc*prefact_deg_sxi +
+c$$$     #                       deg_lxi_sc*prefact_deg_slxi )*
+c$$$     #                       jac_cnt(2)*rwgt/(shat/(32*pi**2))*
+c$$$     #                       xlum_sc
+c$$$              if(doreweight)then
+c$$$                wgtwreal(4)=wgtwreal(4)+
+c$$$     #                    xsec*(prefact_c+prefact_coll+
+c$$$     #                          prefact_cnt_ssc_c+prefact_coll_c)*rwgt/
+c$$$     #                    g**(2*wgtbpower+2.d0)
+c$$$                wgtwdeg(4)=(
+c$$$     # -( wgtdegrem_xi+wgtdegrem_lxi*log(xi_i_fks_cnt(ione)) )*prefact_deg
+c$$$     # -( wgtdegrem_xi*prefact_deg_sxi+wgtdegrem_lxi*prefact_deg_slxi ) )*
+c$$$     #                     jac_cnt(2)*rwgt/(shat/(32*pi**2))/
+c$$$     #              g**(2*wgtbpower+2.d0)
+c$$$                wgtwdegmuf(4)=
+c$$$     #          -wgtdegrem_muF*( prefact_deg+prefact_deg_sxi )*
+c$$$     #                     jac_cnt(2)*rwgt/(shat/(32*pi**2))/
+c$$$     #              g**(2*wgtbpower+2.d0)
+c$$$              endif
+c$$$            endif
+c$$$         endif
+c$$$      endif
+c$$$      xmcME=xmcME*(1-gfactsf)*probne
+c$$$      xmc_wgt=xmc_wgt+xmcMC+xmcME
+c$$$
+c$$$ 547  continue
+c$$$
+c$$$c Real contribution
+c$$$c
+c$$$c Set the ybst_til_tolab before applying the cuts. 
+c$$$      call set_cms_stuff(mohdr)
+c$$$      if(doreweight)then
+c$$$        wgtxbj(1,1)=xbk(1)
+c$$$        wgtxbj(2,1)=xbk(2)
+c$$$      endif
+c$$$      if (passcuts(pp,rwgt).and.probne.lt.1.d0) then
+c$$$        call set_alphaS(pp)
+c$$$        x = abs(2d0*dot(pp(0,i_fks),pp(0,j_fks))/shat)
+c$$$        ffact = f_damp(x)
+c$$$        s_ev = fks_Sij(pp,i_fks,j_fks,xi_i_fks_ev,y_ij_fks_ev)
+c$$$        if(s_ev.gt.0.d0)then
+c$$$          call sreal(pp,xi_i_fks_ev,y_ij_fks_ev,fx_ev)
+c$$$          xlum_ev = dlum()
+c$$$          xsec = fx_ev*s_ev*ffact*wgt*prefact*rwgt*(1-probne)
+c$$$          ev_wgt = xlum_ev*xsec
+c$$$          if(doreweight)then
+c$$$            if(ifill1.eq.0)then
+c$$$              wgtmuR2(1)=muR2_current/muR_over_ref**2
+c$$$              wgtmuF12(1)=muF12_current/muF1_over_ref**2
+c$$$              wgtmuF22(1)=muF22_current/muF2_over_ref**2
+c$$$              call reweight_fillkin(pp,ione)
+c$$$              ifill1=1
+c$$$            endif
+c$$$            wgtwreal(1)=xsec/g**(2*wgtbpower+2.d0)
+c$$$          endif
+c$$$        endif
+c$$$        if(AddInfoLHE)scale2_lhe=get_ptrel(pp,i_fks,j_fks)
+c$$$      endif
+c$$$
+c$$$ 550  continue
+c$$$
+c$$$      if( (.not.MCcntcalled) .and.
+c$$$     #    abrv.ne.'born'.and. abrv.ne.'grid' )then
+c$$$        if(pp(0,1).ne.-99d0)then
+c$$$          call set_cms_stuff(mohdr)
+c$$$          call assign_emsca(pp,xi_i_fks_ev,y_ij_fks_ev)
+c$$$        endif
+c$$$      endif
+c$$$
+c$$$      if(AddInfoLHE.and.UseCKKW)then
+c$$$        if(scale1_lhe.eq.0.d0)scale1_lhe=scale2_lhe
+c$$$        scale2_lhe=scale_CKKW
+c$$$      endif
+c$$$
+c$$$c
+c$$$c Enhance the one channel for multi-channel integration
+c$$$c
+c$$$      enhance=1.d0
+c$$$      if ((xmc_wgt.ne.0d0.or.cnt_wgt_c.ne.0d0.or.cnt_wgt_s.ne.0d0.or.
+c$$$     &     cnt_wgt_sc.ne.0d0.or.bsv_wgt.ne.0d0.or.deg_wgt.ne.0d0.or.
+c$$$     &     deg_swgt.ne.0d0.or.cnt_swgt_s.ne.0d0.or.cnt_swgt_sc.ne.0d0.or.
+c$$$     &     ev_wgt.ne.0d0) .and. multi_channel) then
+c$$$         if (bsv_wgt.eq.0d0.and.deg_wgt.eq.0d0.and.deg_swgt.eq.0d0.and.
+c$$$     &       cnt_wgt_c.eq.0d0 ) CalculatedBorn=.false.
+c$$$
+c$$$         if (.not.calculatedBorn .and. p_born(0,1).gt.0d0)then
+c$$$            call sborn(p_born,wgt1)
+c$$$         elseif(p_born(0,1).lt.0d0)then
+c$$$            enhance=0d0
+c$$$         endif
+c$$$
+c$$$         if (enhance.eq.0d0)then
+c$$$            xnoborn_cnt=xnoborn_cnt+1.d0
+c$$$            if(log10(xnoborn_cnt).gt.inoborn_cnt)then
+c$$$               write (*,*) 
+c$$$     #           'Function dsigS: no Born momenta more than 10**',
+c$$$     #           inoborn_cnt,'times'
+c$$$               inoborn_cnt=inoborn_cnt+1
+c$$$            endif
+c$$$         else
+c$$$            xtot=0d0
+c$$$            if (mapconfig(0).eq.0) then
+c$$$               write (*,*) 'Fatal error in dsigS, no Born diagrams '
+c$$$     &           ,mapconfig,'. Check bornfromreal.inc'
+c$$$               write (*,*) 'Is fks_singular compiled correctly?'
+c$$$               stop
+c$$$            endif
+c$$$            if (onlyBorn) then
+c$$$               do i=1, mapconfig(0)
+c$$$                  if (multi_chan(mapconfig(i))) then
+c$$$                     xtot=xtot+amp2(mapconfig(i))
+c$$$                  endif
+c$$$               enddo
+c$$$            else
+c$$$               do i=1,mapconfig(0)
+c$$$                  xtot=xtot+amp2(mapconfig(i))
+c$$$               enddo
+c$$$            endif
+c$$$            if (xtot.ne.0d0) then
+c$$$               enhance=amp2(mapconfig(iconfig))/xtot
+c$$$               enhance=enhance*diagramsymmetryfactor
+c$$$            else
+c$$$               enhance=0d0
+c$$$            endif
+c$$$         endif
+c$$$      endif
+c$$$
+c$$$      cnt_wgt = cnt_wgt_c + cnt_wgt_s + cnt_wgt_sc
+c$$$      cnt_swgt = cnt_swgt_s + cnt_swgt_sc
+c$$$
+c$$$      ev_wgt = ev_wgt * enhance
+c$$$      xmc_wgt = xmc_wgt * enhance
+c$$$      cnt_wgt = cnt_wgt * enhance
+c$$$      cnt_swgt = cnt_swgt * enhance
+c$$$      bsv_wgt = bsv_wgt * enhance
+c$$$      born_wgt = born_wgt * enhance
+c$$$      deg_wgt = deg_wgt * enhance
+c$$$      deg_swgt = deg_swgt * enhance
+c$$$
+c$$$      if(iminmax.eq.0) then
+c$$$         dsigS = (ev_wgt+xmc_wgt+cnt_wgt)*fkssymmetryfactor +
+c$$$     &        cnt_swgt*fkssymmetryfactor +
+c$$$     &        bsv_wgt*fkssymmetryfactorBorn +
+c$$$     &        deg_wgt*fkssymmetryfactorDeg +
+c$$$     &        deg_swgt*fkssymmetryfactorDeg
+c$$$
+c$$$         if (dsigS.ne.dsigS) then
+c$$$            write (*,*) 'ERROR, ',dsigS,
+c$$$     &           ' found for dsigS, setting dsigS to 0 for this event'
+c$$$            dsigS=0
+c$$$         endif
+c$$$
+c$$$         call unweight_function(p_born,unwgtfun)
+c$$$         dsigS=dsigS*unwgtfun
+c$$$
+c$$$         if(doreweight)then
+c$$$           if(ifill2.eq.0.and.(ifill3.ne.0.or.ifill4.ne.0))then
+c$$$             write(*,*)'Error #2[wg] in dsigS',ifill2,ifill3,ifill4
+c$$$             stop
+c$$$           endif
+c$$$           wgtref = dsigS
+c$$$           xsec = enhance*unwgtfun
+c$$$           do i=1,4
+c$$$             wgtwreal(i)=wgtwreal(i) * xsec*fkssymmetryfactor
+c$$$             wgtwdeg(i)=wgtwdeg(i) * xsec*fkssymmetryfactorDeg
+c$$$             wgtwdegmuf(i)=wgtwdegmuf(i) * xsec*fkssymmetryfactorDeg
+c$$$             if(i.eq.2)then
+c$$$               wgtwborn(i)=wgtwborn(i) * xsec*fkssymmetryfactorBorn
+c$$$               wgtwns(i)=wgtwns(i) * xsec*fkssymmetryfactorBorn
+c$$$               wgtwnsmuf(i)=wgtwnsmuf(i) * xsec*fkssymmetryfactorBorn
+c$$$               wgtwnsmur(i)=wgtwnsmur(i) * xsec*fkssymmetryfactorBorn
+c$$$             endif
+c$$$           enddo
+c$$$           do i=1,iwgtnumpartn
+c$$$             wgtwmcxsec(i)=wgtwmcxsec(i) * xsec*fkssymmetryfactor
+c$$$           enddo
+c$$$           call reweight_fill_extra()
+c$$$           if(check_reweight.and.doreweight)
+c$$$     #       call check_rwgt_wgt("Sev")
+c$$$c Example of reweighted cross section (scale changed)
+c$$$c           dsigS_new=compute_rwgt_wgt_Sev(new_muR_fact,new_muF1_fact,
+c$$$c     #                                    new_muF2_fact,new_QES_fact,
+c$$$c     #                                    iwgtinfo)
+c$$$         endif      
+c$$$
+c$$$         total_wgt_sum=total_wgt_sum+dsigS*vegaswgt
+c$$$         central_wgt_saved=dsigS
+c$$$
+c$$$c$$$         if(dsigS.ne.0.d0)
+c$$$c$$$     &        call set_shower_scale(p1_cnt(0,1,0),i_fks,j_fks,
+c$$$c$$$     &        xi_i_fks_ev,y_ij_fks_ev)
+c$$$
+c$$$         if (dsigS.ne.0d0) itotalpoints=itotalpoints+1
+c$$$
+c$$$c For tests
+c$$$         if(abs(dsigS).gt.fksmaxwgt)then
+c$$$            fksmaxwgt=abs(dsigS)
+c$$$            xisave=xi_i_fks_ev
+c$$$            ysave=y_ij_fks_ev
+c$$$         endif
+c$$$c Plot observables for counterevents and Born
+c$$$         if (.not.unwgt) then
+c$$$            plot_wgt=( (ev_wgt+xmc_wgt+cnt_wgt)*fkssymmetryfactor +
+c$$$     &           cnt_swgt*fkssymmetryfactor +
+c$$$     &           bsv_wgt*fkssymmetryfactorBorn +
+c$$$     &           deg_wgt*fkssymmetryfactorDeg +
+c$$$     &           deg_swgt*fkssymmetryfactorDeg )*vegaswgt
+c$$$            if( abs(plot_wgt).gt.1.d-20.and.p1_cnt(0,1,0).ne.-99d0 .and.
+c$$$     &           (plotEv.or.plotKin) )
+c$$$     &           call outfun(p1_cnt(0,1,0),ybst_til_tolab,plot_wgt,iplot_cnt)
+c$$$         endif
+c$$$
+c$$$      elseif (iminmax.eq.1 .and. ExceptPSpoint) then
+c$$$c for except PS points, this is the maximal approx for the virtual         
+c$$$         call unweight_function(p_born,unwgtfun)
+c$$$         dsigS_max = ((ev_wgt+xmc_wgt+cnt_wgt)*fkssymmetryfactor +
+c$$$     &        cnt_swgt*fkssymmetryfactor +
+c$$$     &        bsv_wgt*fkssymmetryfactorBorn +
+c$$$     &        deg_wgt*fkssymmetryfactorDeg +
+c$$$     &        deg_swgt*fkssymmetryfactorDeg)*unwgtfun
+c$$$         total_wgt_sum_max=total_wgt_sum_max+
+c$$$     &        ((dsigS_max - central_wgt_saved)*vegaswgt)**2
+c$$$
+c$$$      elseif (iminmax.eq.2 .and. ExceptPSpoint) then
+c$$$c for except PS points, this is the minimal approx for the virtual         
+c$$$         call unweight_function(p_born,unwgtfun)
+c$$$         dsigS_min = ((ev_wgt+cnt_wgt)*fkssymmetryfactor +
+c$$$     &        cnt_swgt*fkssymmetryfactor +
+c$$$     &        bsv_wgt*fkssymmetryfactorBorn +
+c$$$     &        deg_wgt*fkssymmetryfactorDeg +
+c$$$     &        deg_swgt*fkssymmetryfactorDeg)*unwgtfun
+c$$$         total_wgt_sum_min=total_wgt_sum_min+
+c$$$     &        ((central_wgt_saved - dsigS_min)*vegaswgt)**2
+c$$$      else
+c$$$         write (*,*) 'Error #12 in dsig',iminmax
+c$$$         stop
+c$$$      endif
+c$$$
+c$$$c If exceptional PS point found, go back to beginning recompute
+c$$$c the weight for this PS point using an approximation
+c$$$c based on previous PS points (done in LesHouches.f)
+c$$$      if (ExceptPSpoint .and. iminmax.le.1) goto 44
+c$$$
+c$$$      return
+c$$$      end
 
 
 
@@ -2363,8 +2363,9 @@ c MC stuff
       common/cemsca/emsca,scalemax
 
 c Stuff to be written (depending on AddInfoLHE) onto the LHE file
-      integer iSorH_lhe,ifks_lhe,jfks_lhe,fksfather_lhe,ipartner_lhe
-      double precision scale1_lhe,scale2_lhe
+      integer iSorH_lhe,ifks_lhe(fks_configs) ,jfks_lhe(fks_configs)
+     &     ,fksfather_lhe(fks_configs) ,ipartner_lhe(fks_configs)
+      double precision scale1_lhe(fks_configs),scale2_lhe(fks_configs)
       common/cto_LHE1/iSorH_lhe,ifks_lhe,jfks_lhe,
      #                fksfather_lhe,ipartner_lhe
       common/cto_LHE2/scale1_lhe,scale2_lhe
@@ -2524,13 +2525,13 @@ c
         if (nbody) ifill2S_Born=0
       endif
       if(AddInfoLHE)then
-        iSorH_lhe=1+2
-        ifks_lhe=i_fks
-        jfks_lhe=j_fks
-        fksfather_lhe=0
-        ipartner_lhe=0
-        scale1_lhe=0.d0
-        scale2_lhe=0.d0
+c$$$        iSorH_lhe=1+2 ! filled elsewhere
+        ifks_lhe(nFKSprocess)=i_fks
+        jfks_lhe(nFKSprocess)=j_fks
+        fksfather_lhe(nFKSprocess)=0
+        ipartner_lhe(nFKSprocess)=0
+        scale1_lhe(nFKSprocess)=0.d0
+        scale2_lhe(nFKSprocess)=0.d0
       endif
 c
       probne=1.d0
@@ -2962,7 +2963,7 @@ c Set the ybst_til_tolab before applying the cuts.
      &            xsec/g**(2*wgtbpower+2.d0)*(1-probne)
           endif
         endif
-        if(AddInfoLHE)scale2_lhe=get_ptrel(pp,i_fks,j_fks)
+        if(AddInfoLHE)scale2_lhe(nFKSprocess)=get_ptrel(pp,i_fks,j_fks)
       endif
 
  550  continue
@@ -2976,8 +2977,9 @@ c Set the ybst_til_tolab before applying the cuts.
       endif
 
       if(AddInfoLHE.and.UseCKKW)then
-        if(scale1_lhe.eq.0.d0)scale1_lhe=scale2_lhe
-        scale2_lhe=scale_CKKW
+         if(scale1_lhe(nFKSprocess).eq.0.d0)
+     &        scale1_lhe(nFKSprocess)=scale2_lhe(nFKSprocess)
+         scale2_lhe(nFKSprocess)=scale_CKKW
       endif
 
 c

@@ -181,9 +181,12 @@ c get info on beam and PDFs
      # MOTHUP(2,MAXNUP),ICOLUP(2,MAXNUP)
       DOUBLE PRECISION XWGTUP,AQEDUP,AQCDUP,
      # PUP(5,MAXNUP),VTIMUP(MAXNUP),SPINUP(MAXNUP)
-
-      integer iSorH_lhe,ifks_lhe,jfks_lhe,fksfather_lhe,ipartner_lhe
-      double precision scale1_lhe,scale2_lhe
+      include 'nFKSconfigs.inc'
+      INTEGER NFKSPROCESS
+      COMMON/C_NFKSPROCESS/NFKSPROCESS
+      integer iSorH_lhe,ifks_lhe(fks_configs) ,jfks_lhe(fks_configs)
+     &     ,fksfather_lhe(fks_configs) ,ipartner_lhe(fks_configs)
+      double precision scale1_lhe(fks_configs),scale2_lhe(fks_configs)
       common/cto_LHE1/iSorH_lhe,ifks_lhe,jfks_lhe,
      #                fksfather_lhe,ipartner_lhe
       common/cto_LHE2/scale1_lhe,scale2_lhe
@@ -195,11 +198,11 @@ c
 
       if(AddInfoLHE)then
         if(.not.doreweight)then
-          write(buff,200)'#',iSorH_lhe,ifks_lhe,jfks_lhe,
-     #                       fksfather_lhe,ipartner_lhe,
-     #                       scale1_lhe,scale2_lhe,
-     #                       izero,izero,izero,
-     #                       zero,zero,zero,zero,zero
+           write(buff,200)'#',iSorH_lhe,ifks_lhe(nFKSprocess)
+     &          ,jfks_lhe(nFKSprocess),fksfather_lhe(nFKSprocess)
+     &          ,ipartner_lhe(nFKSprocess),scale1_lhe(nFKSprocess)
+     &          ,scale2_lhe(nFKSprocess),izero,izero,izero,zero,zero
+     &          ,zero,zero,zero
         else
           if(iwgtinfo.lt.1.or.iwgtinfo.gt.4)then
             write(*,*)'Error in write_events_lhe'
@@ -207,11 +210,11 @@ c
             write(*,*)doreweight,iwgtinfo
             stop
           endif
-          write(buff,200)'#',iSorH_lhe,ifks_lhe,jfks_lhe,
-     #                       fksfather_lhe,ipartner_lhe,
-     #                       scale1_lhe,scale2_lhe,
-     #                       iwgtinfo,nexternal,iwgtnumpartn,
-     #                       zero,zero,zero,zero,zero
+          write(buff,200)'#',iSorH_lhe,ifks_lhe(nFKSprocess)
+     &         ,jfks_lhe(nFKSprocess),fksfather_lhe(nFKSprocess)
+     &         ,ipartner_lhe(nFKSprocess),scale1_lhe(nFKSprocess)
+     &         ,scale2_lhe(nFKSprocess),iwgtinfo,nexternal,iwgtnumpartn
+     &         ,zero,zero,zero,zero,zero
         endif
       else
         buff=' '

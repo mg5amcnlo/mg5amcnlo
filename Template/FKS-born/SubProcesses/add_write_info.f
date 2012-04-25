@@ -8,6 +8,7 @@ c intermediate resonances. It also boosts the events to the lab frame
       include "born_nhel.inc"
       include "coloramps.inc"
       include "reweight0.inc"
+      include "nFKSconfigs.inc"
 
 c Arguments
       double precision p_born(0:3,nexternal-1),pp(0:3,nexternal)
@@ -106,13 +107,20 @@ c cFKSprocess
       COMMON/C_NFKSPROCESS/NFKSPROCESS
       integer save_nFKSprocess
 
+      integer iSorH_lhe,ifks_lhe(fks_configs) ,jfks_lhe(fks_configs)
+     &     ,fksfather_lhe(fks_configs) ,ipartner_lhe(fks_configs)
+      common/cto_LHE1/iSorH_lhe,ifks_lhe,jfks_lhe,
+     #                fksfather_lhe,ipartner_lhe
+
 c
-c Set the number of external particles
+c Set the number of external particles and overwrite the iSorH_lhe value
 c
       if (Hevents) then
          nexpart=nexternal
+         iSorH_lhe=2
       else
          nexpart=nexternal-1
+         iSorH_lhe=1
       endif
 c
 c Determine which Born graph was used for multi-channeling

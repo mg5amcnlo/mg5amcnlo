@@ -446,8 +446,12 @@ c      include "fks.inc"
       logical extra
 
 c Stuff to be written (depending on AddInfoLHE) onto the LHE file
-      integer iSorH_lhe,ifks_lhe,jfks_lhe,fksfather_lhe,ipartner_lhe
-      double precision scale1_lhe,scale2_lhe
+      include 'nFKSconfigs.inc'
+      INTEGER NFKSPROCESS
+      COMMON/C_NFKSPROCESS/NFKSPROCESS
+      integer iSorH_lhe,ifks_lhe(fks_configs) ,jfks_lhe(fks_configs)
+     &     ,fksfather_lhe(fks_configs) ,ipartner_lhe(fks_configs)
+      double precision scale1_lhe(fks_configs),scale2_lhe(fks_configs)
       common/cto_LHE1/iSorH_lhe,ifks_lhe,jfks_lhe,
      #                fksfather_lhe,ipartner_lhe
       common/cto_LHE2/scale1_lhe,scale2_lhe
@@ -1005,15 +1009,15 @@ c
       if(dampMCsubt.and.wgt.lt.1.d-30)emsca=etot
 c Additional information for LHE
       if(AddInfoLHE)then
-        fksfather_lhe=fksfather
+        fksfather_lhe(nFKSprocess)=fksfather
         if(jpartner.ne.0)then
-          ipartner_lhe=jpartner
+          ipartner_lhe(nFKSprocess)=jpartner
         else
 c min() avoids troubles if ran2()=1
-          ipartner_lhe=min( int(ran2()*ipartners(0))+1,ipartners(0) )
-          ipartner_lhe=ipartners(ipartner_lhe)
+          ipartner_lhe(nFKSprocess)=min( int(ran2()*ipartners(0))+1,ipartners(0) )
+          ipartner_lhe(nFKSprocess)=ipartners(ipartner_lhe(nFKSprocess))
         endif
-        scale1_lhe=ptHW6
+        scale1_lhe(nFKSprocess)=ptHW6
       endif
 c
       if(dampMCsubt)then
@@ -1118,8 +1122,12 @@ c      include "fks.inc"
       logical extra
 
 c Stuff to be written (depending on AddInfoLHE) onto the LHE file
-      integer iSorH_lhe,ifks_lhe,jfks_lhe,fksfather_lhe,ipartner_lhe
-      double precision scale1_lhe,scale2_lhe
+      include 'nFKSconfigs.inc'
+      INTEGER NFKSPROCESS
+      COMMON/C_NFKSPROCESS/NFKSPROCESS
+      integer iSorH_lhe,ifks_lhe(fks_configs) ,jfks_lhe(fks_configs)
+     &     ,fksfather_lhe(fks_configs) ,ipartner_lhe(fks_configs)
+      double precision scale1_lhe(fks_configs),scale2_lhe(fks_configs)
       common/cto_LHE1/iSorH_lhe,ifks_lhe,jfks_lhe,
      #                fksfather_lhe,ipartner_lhe
       common/cto_LHE2/scale1_lhe,scale2_lhe
@@ -1670,15 +1678,15 @@ c
       if(dampMCsubt.and.wgt.lt.1.d-30)emsca=etot
 c Additional information for LHE
       if(AddInfoLHE)then
-        fksfather_lhe=fksfather
+        fksfather_lhe(nFKSprocess)=fksfather
         if(jpartner.ne.0)then
-          ipartner_lhe=jpartner
+          ipartner_lhe(nFKSprocess)=jpartner
         else
 c min() avoids troubles if ran2()=1
-          ipartner_lhe=min( int(ran2()*ipartners(0))+1,ipartners(0) )
-          ipartner_lhe=ipartners(ipartner_lhe)
+          ipartner_lhe(nFKSprocess)=min( int(ran2()*ipartners(0))+1,ipartners(0) )
+          ipartner_lhe(nFKSprocess)=ipartners(ipartner_lhe(nFKSprocess))
         endif
-        scale1_lhe=ptHWPP
+        scale1_lhe(nFKSprocess)=ptHWPP
       endif
 c
       if(dampMCsubt)then
@@ -1786,8 +1794,12 @@ c      include "fks.inc"
       logical extra
 
 c Stuff to be written (depending on AddInfoLHE) onto the LHE file
-      integer iSorH_lhe,ifks_lhe,jfks_lhe,fksfather_lhe,ipartner_lhe
-      double precision scale1_lhe,scale2_lhe
+      include 'nFKSconfigs.inc'
+      INTEGER NFKSPROCESS
+      COMMON/C_NFKSPROCESS/NFKSPROCESS
+      integer iSorH_lhe,ifks_lhe(fks_configs) ,jfks_lhe(fks_configs)
+     &     ,fksfather_lhe(fks_configs) ,ipartner_lhe(fks_configs)
+      double precision scale1_lhe(fks_configs),scale2_lhe(fks_configs)
       common/cto_LHE1/iSorH_lhe,ifks_lhe,jfks_lhe,
      #                fksfather_lhe,ipartner_lhe
       common/cto_LHE2/scale1_lhe,scale2_lhe
@@ -2424,15 +2436,15 @@ c
       if(dampMCsubt.and.wgt.lt.1.d-30)emsca=etot
 c Additional information for LHE
       if(AddInfoLHE)then
-        fksfather_lhe=fksfather
+        fksfather_lhe(nFKSprocess)=fksfather
         if(jpartner.ne.0)then
-          ipartner_lhe=jpartner
+          ipartner_lhe(nFKSprocess)=jpartner
         else
 c min() avoids troubles if ran2()=1
-          ipartner_lhe=min( int(ran2()*ipartners(0))+1,ipartners(0) )
-          ipartner_lhe=ipartners(ipartner_lhe)
+          ipartner_lhe(nFKSprocess)=min( int(ran2()*ipartners(0))+1,ipartners(0) )
+          ipartner_lhe(nFKSprocess)=ipartners(ipartner_lhe(nFKSprocess))
         endif
-        scale1_lhe=tPY6Q
+        scale1_lhe(nFKSprocess)=tPY6Q
       endif
 c
       if(dampMCsubt)then
@@ -2538,8 +2550,12 @@ c      include "fks.inc"
       logical extra
 
 c Stuff to be written (depending on AddInfoLHE) onto the LHE file
-      integer iSorH_lhe,ifks_lhe,jfks_lhe,fksfather_lhe,ipartner_lhe
-      double precision scale1_lhe,scale2_lhe
+      include 'nFKSconfigs.inc'
+      INTEGER NFKSPROCESS
+      COMMON/C_NFKSPROCESS/NFKSPROCESS
+      integer iSorH_lhe,ifks_lhe(fks_configs) ,jfks_lhe(fks_configs)
+     &     ,fksfather_lhe(fks_configs) ,ipartner_lhe(fks_configs)
+      double precision scale1_lhe(fks_configs),scale2_lhe(fks_configs)
       common/cto_LHE1/iSorH_lhe,ifks_lhe,jfks_lhe,
      #                fksfather_lhe,ipartner_lhe
       common/cto_LHE2/scale1_lhe,scale2_lhe
@@ -3071,15 +3087,15 @@ c
       if(dampMCsubt.and.wgt.lt.1.d-30)emsca=etot
 c Additional information for LHE
       if(AddInfoLHE)then
-        fksfather_lhe=fksfather
+        fksfather_lhe(nFKSprocess)=fksfather
         if(jpartner.ne.0)then
-          ipartner_lhe=jpartner
+          ipartner_lhe(nFKSprocess)=jpartner
         else
 c min() avoids troubles if ran2()=1
-          ipartner_lhe=min( int(ran2()*ipartners(0))+1,ipartners(0) )
-          ipartner_lhe=ipartners(ipartner_lhe)
+          ipartner_lhe(nFKSprocess)=min( int(ran2()*ipartners(0))+1,ipartners(0) )
+          ipartner_lhe(nFKSprocess)=ipartners(ipartner_lhe(nFKSprocess))
         endif
-        scale1_lhe=ptPY6PT
+        scale1_lhe(nFKSprocess)=ptPY6PT
       endif
 c
       if(dampMCsubt)then
@@ -3187,8 +3203,12 @@ c      include "fks.inc"
       logical extra
 
 c Stuff to be written (depending on AddInfoLHE) onto the LHE file
-      integer iSorH_lhe,ifks_lhe,jfks_lhe,fksfather_lhe,ipartner_lhe
-      double precision scale1_lhe,scale2_lhe
+      include 'nFKSconfigs.inc'
+      INTEGER NFKSPROCESS
+      COMMON/C_NFKSPROCESS/NFKSPROCESS
+      integer iSorH_lhe,ifks_lhe(fks_configs) ,jfks_lhe(fks_configs)
+     &     ,fksfather_lhe(fks_configs) ,ipartner_lhe(fks_configs)
+      double precision scale1_lhe(fks_configs),scale2_lhe(fks_configs)
       common/cto_LHE1/iSorH_lhe,ifks_lhe,jfks_lhe,
      #                fksfather_lhe,ipartner_lhe
       common/cto_LHE2/scale1_lhe,scale2_lhe
@@ -3834,15 +3854,15 @@ c
       if(dampMCsubt.and.wgt.lt.1.d-30)emsca=etot
 c Additional information for LHE
       if(AddInfoLHE)then
-        fksfather_lhe=fksfather
+        fksfather_lhe(nFKSprocess)=fksfather
         if(jpartner.ne.0)then
-          ipartner_lhe=jpartner
+          ipartner_lhe(nFKSprocess)=jpartner
         else
 c min() avoids troubles if ran2()=1
-          ipartner_lhe=min( int(ran2()*ipartners(0))+1,ipartners(0) )
-          ipartner_lhe=ipartners(ipartner_lhe)
+          ipartner_lhe(nFKSprocess)=min( int(ran2()*ipartners(0))+1,ipartners(0) )
+          ipartner_lhe(nFKSprocess)=ipartners(ipartner_lhe(nFKSprocess))
         endif
-        scale1_lhe=ptPY8
+        scale1_lhe(nFKSprocess)=ptPY8
       endif
 c
       if(dampMCsubt)then
