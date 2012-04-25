@@ -170,12 +170,12 @@ c-----
             endif
             nbw=nbw+1
             if (pwidth(i,iconfig) .gt. 0d0) then
-               if (lbw(nbw) .eq. 1) then
+               if (lbw(nbw) .eq. 1 .or. gForceBW(i,iconfig).eq.1) then
                   write(*,*) 'Requiring BW ',i,nbw
-               elseif(lbw(nbw) .eq. 2) then
+               elseif(lbw(nbw) .eq. 2 .or. gForceBW(i,iconfig).eq.2) then
                   write(*,*) 'Excluding BW ',i,nbw
                else
-                  write(*,*) 'No cut BW ',i,nbw
+                  write(*,*) 'No cut on BW ',i,nbw
                endif
             endif
          enddo
@@ -318,6 +318,7 @@ c
 
       integer gForceBW(-max_branch:-1,lmaxconfigs)  ! Forced BW
       include 'decayBW.inc'
+
 c
 c     Global
 c
@@ -390,7 +391,9 @@ c     Reset variables
       enddo
 c     Find non-zero process number
       do iproc=1,maxsproc
-         if(sprop(iproc,-1,iconfig).gt.0) goto 10
+         if(sprop(iproc,-1,iconfig).ne.0) then
+            goto 10
+         endif
       enddo
  10   continue
 c     If no non-zero sprop, set iproc to 1
@@ -445,7 +448,7 @@ c            write(*,*) 'iconfig,i',iconfig,i
 c            write(*,*) pwidth(i,iconfig),pmass(i,iconfig)
             if (pwidth(i,iconfig) .gt. 0 ) then
                nbw=nbw+1
-c              JA 6/8/2011 Set xe(i) for resonances
+c              JA 6/8/2011 Set xm(i) for resonances
                if (lbw(nbw).eq.1) then
                   xm(i) = max(xm(i), pmass(i,iconfig)-5d0*pwidth(i,iconfig))
                else if (gforcebw(i,iconfig).eq.1) then
@@ -453,37 +456,30 @@ c              JA 6/8/2011 Set xe(i) for resonances
                endif
             endif
             xe(i)=max(xe(i),xm(i))
-            if (pwidth(i,iconfig) .gt. 0 .and. lbw(nbw) .le. 1) then         !B.W.
+c           Check conditions for BW
+            if(pwidth(i,iconfig).ne.0.and.
+     $           (pmass(i,iconfig).ge.xm(i).and.iden_part(i).eq.0.and.
+     $           pmass(i,iconfig).lt.sqrt(stot) .and. lbw(nbw).ne.2.and.
+     $           gForceBW(i,iconfig).ne.2 .or.
+     $           lbw(nbw).eq.1))  then         !B.W.
 c               nbw = nbw +1
 
                if (i .eq. -(nexternal-(nincoming+1))) then  !This is s-hat
                   j = 3*(nexternal-2)-4+1    !set i to ndim+1
-c-----
+c-----s
 c tjs 11/2008 if require BW then force even if worried about energy
 c JA 8/2011 don't use BW if mass is > CM energy
 c----
-                  if(pmass(i,iconfig).ge.xm(i).and.iden_part(i).eq.0.and.
-     $                 pmass(i,iconfig).lt.sqrt(stot)
-     $                 .or. lbw(nbw).eq.1) then
-                     write(*,*) 'Setting PDF BW',j,nbw,pmass(i,iconfig)
-                     spole(j)=pmass(i,iconfig)*pmass(i,iconfig)/stot
-                     swidth(j) = pwidth(i,iconfig)*pmass(i,iconfig)/stot
-                     xm(i) = pmass(i,iconfig)
-                  endif
+                  write(*,*) 'Setting PDF BW',j,nbw,pmass(i,iconfig)
+                  spole(j)=pmass(i,iconfig)*pmass(i,iconfig)/stot
+                  swidth(j) = pwidth(i,iconfig)*pmass(i,iconfig)/stot
+                  xm(i) = pmass(i,iconfig)
                   continue
-               else if(iden_part(i).eq.0 .or. lbw(nbw).eq.1) then
+               else
                   write(*,*) 'Setting BW',i,nbw,pmass(i,iconfig)
                   spole(-i)=pmass(i,iconfig)*pmass(i,iconfig)/stot
                   swidth(-i) = pwidth(i,iconfig)*pmass(i,iconfig)/stot
                   xm(i) = pmass(i,iconfig)
-               endif
-c     JA 4/1/2011 Set grid in case there is no BW (radiation process)
-               if (swidth(-i) .eq. 0d0 .and.
-     $              i.ne.-(nexternal-(nincoming+1)))then
-                  a=pmass(i,iconfig)**2/stot
-                  xo = min(xm(i)**2/stot, 1-1d-8)
-                  if (xo.eq.0d0) xo=1d0/stot
-                  call setgrid(-i,xo,a,1)
                endif
             else                                  !1/x^pow
               a=pmass(i,iconfig)**2/stot
