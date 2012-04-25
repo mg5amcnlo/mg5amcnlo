@@ -4,15 +4,15 @@ c Save reweight information for aMC@NLO computations
       include 'reweight1.inc'
 
       logical doreweight
-      parameter (doreweight=.false.)
+      parameter (doreweight=.true.)
 
 c Save reweight information for NLO computations
       logical doNLOreweight
-      parameter (doNLOreweight=.false.)
+      parameter (doNLOreweight=.true.)
 
 c Check that save weights are consistent with the reference weight wgtref
       logical check_reweight
-      parameter (check_reweight=.false.)
+      parameter (check_reweight=.true.)
 
 c Controls the scale/kinematics storage:
 c  iwgtinfo=1 --> store muR and muF for both event and counterevents
@@ -33,11 +33,10 @@ c Temporary quantities relevant to degenerate terms
       common/cwgtaux1/wgtdegrem_xi,wgtdegrem_lxi,wgtdegrem_muF
 
 c Temporary quantities relevant to n-body terms
-      double precision wgtnstmp,wgtwnstmpmuf,wgtwnstmpmur
-      common/cwgtaux2/wgtnstmp,wgtwnstmpmuf,wgtwnstmpmur
+      double precision wgtnstmp,wgtwnstmpmuf,wgtwnstmpmur,wgtref_nbody
+      common/cwgtaux2/wgtnstmp,wgtwnstmpmuf,wgtwnstmpmur,wgtref_nbody
 
 c Temporary weights for pure-NLO computations: event, counterevents+Born, 
 c and Born, with the same conventions as in fks_singular
       double precision wgtNLO11,wgtNLO12,wgtNLO20
       common/cwgtaux3/wgtNLO11,wgtNLO12,wgtNLO20
-

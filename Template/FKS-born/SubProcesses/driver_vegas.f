@@ -287,12 +287,14 @@ c From dsample_fks
       external ran2
       double precision x(99),p(0:3,nexternal)
       include 'nFKSconfigs.inc'
+      include 'reweight_all.inc'
+      integer nfksprocess_all
       INTEGER NFKSPROCESS
       COMMON/C_NFKSPROCESS/NFKSPROCESS
       character*4 abrv
       common /to_abrv/ abrv
-      logical nbodyonly
-      common/cnbodyonly/nbodyonly
+      logical nbody
+      common/cnbody/nbody
       integer fks_j_from_i(nexternal,0:nexternal)
      &     ,particle_type(nexternal),pdg_type(nexternal)
       common /c_fks_inc/fks_j_from_i,particle_type,pdg_type
@@ -301,8 +303,9 @@ c From dsample_fks
       logical sum,firsttime
       parameter (sum=.false.)
       data firsttime /.true./
-      integer nFKSprocessBorn
-      save nFKSprocessBorn
+      logical foundB(2)
+      integer nFKSprocessBorn(2)
+      save nFKSprocessBorn,foundB
       double precision vol,sigintR
 c
       do i=1,99
@@ -329,28 +332,54 @@ c
 c Find the nFKSprocess for which we compute the Born-like contributions
       if (firsttime) then
          firsttime=.false.
-         nFKSprocess=fks_configs
-         call fks_inc_chooser()
-         do while (particle_type(i_fks).ne.8)
-            write (*,*) i_fks,particle_type(i_fks)
-            nFKSprocess=nFKSprocess-1
+         foundB(1)=.false.
+         foundB(2)=.false.
+         do nFKSprocess=1,fks_configs
             call fks_inc_chooser()
-            if (nFKSprocess.eq.0) then
-               write (*,*) 'ERROR in sigint'
-               stop
+            write (*,*) nFKSprocess,particle_type(i_fks),j_fks
+            if (particle_type(i_fks).eq.8) then
+               if (j_fks.le.nincoming) then
+                  foundB(1)=.true.
+                  nFKSprocessBorn(1)=nFKSprocess
+               else
+                  foundB(2)=.true.
+                  nFKSprocessBorn(2)=nFKSprocess
+               endif
             endif
          enddo
-         nFKSprocessBorn=nFKSprocess
          write (*,*) 'Total number of FKS directories is', fks_configs
-         write (*,*) 'For the Born we use nFKSprocess  #', nFKSprocess
+         write (*,*) 'For the Born we use nFKSprocesses  #',
+     &        nFKSprocessBorn
       endif
          
 c
-c Compute the Born-like contributions with nbodyonly=.true.
+c Compute the Born-like contributions with nbody=.true.
 c THIS CAN BE OPTIMIZED
 c
-      nFKSprocess=nFKSprocessBorn
-      nbodyonly=.true.
+      call get_MC_integer(fks_configs,nFKSprocess,vol)
+      nFKSprocess_all=nFKSprocess
+      call fks_inc_chooser()
+      if (j_fks.le.nincoming) then
+         if (.not.foundB(1)) then
+            write(*,*) 'Trying to generate Born momenta with '/
+     &           /'initial state j_fks, but there is no '/
+     &           /'configuration with i_fks a gluon and j_fks '/
+     &           /'initial state'
+            stop
+         endif
+         nFKSprocess=nFKSprocessBorn(1)
+      else
+         if (.not.foundB(2)) then
+            write(*,*) 'Trying to generate Born momenta with '/
+     &           /'final state j_fks, but there is no configuration'/
+     &           /' with i_fks a gluon and j_fks final state'
+            stop
+         endif
+         nFKSprocess=nFKSprocessBorn(2)
+      endif
+      nbody=.true.
+      nFKSprocess_used=nFKSprocess
+      nFKSprocess_used_Born=nFKSprocess
       call fks_inc_chooser()
       call leshouche_inc_chooser()
       call setcuts
@@ -364,10 +393,11 @@ c sum or a Monte Carlo sum.
 c      
       if (abrv.eq.'born' .or. abrv.eq.'grid' .or.
      &     abrv(1:2).eq.'vi') return
-      nbodyonly=.false.
+      nbody=.false.
       if (sum) then
 c THIS CAN BE OPTIMIZED
          do nFKSprocess=1,fks_configs
+            nFKSprocess_used=nFKSprocess
             call fks_inc_chooser()
             call leshouche_inc_chooser()
             call setcuts
@@ -377,7 +407,8 @@ c THIS CAN BE OPTIMIZED
             sigint = sigint+dsig(p,wgt,peso)
          enddo
       else ! Monte Carlo over nFKSprocess
-         call get_MC_integer(fks_configs,nFKSprocess,vol)
+         nFKSprocess=nFKSprocess_all
+         nFKSprocess_used=nFKSprocess
 c THIS CAN BE OPTIMIZED
          call fks_inc_chooser()
          call leshouche_inc_chooser()
@@ -434,8 +465,8 @@ c
       character*4 abrv
       common /to_abrv/ abrv
 
-      logical nbodyonly
-      common/cnbodyonly/nbodyonly
+      logical nbody
+      common/cnbody/nbody
 
       integer nvtozero
       logical doVirtTest
@@ -535,9 +566,9 @@ c
       write (*,*) " a pure n-body integration (no S functions)"
       read(5,*) abrvinput
       if(abrvinput(5:5).eq.'0')then
-        nbodyonly=.true.
+        nbody=.true.
       else
-        nbodyonly=.false.
+        nbody=.false.
       endif
       abrv=abrvinput(1:4)
 c Options are way too many: make sure we understand all of them
@@ -548,14 +579,14 @@ c Options are way too many: make sure we understand all of them
         write(*,*)'Error in input: abrv is:',abrv
         stop
       endif
-      if(nbodyonly.and.abrv.ne.'born'.and.abrv(1:2).ne.'vi'
+      if(nbody.and.abrv.ne.'born'.and.abrv(1:2).ne.'vi'
      &     .and. abrv.ne.'grid')then
         write(*,*)'Error in driver: inconsistent input',abrvinput
         stop
       endif
 
       write (*,*) "doing the ",abrv," of this channel"
-      if(nbodyonly)then
+      if(nbody)then
         write (*,*) "integration Born/virtual with Sfunction=1"
       else
         write (*,*) "Normal integration (Sfunction != 1)"

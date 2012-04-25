@@ -193,7 +193,8 @@ c
             write(ifile,442)wgtwmcxsecE(i),
      #                      wgtmcxbjE(1,i),wgtmcxbjE(2,i)
           enddo
-          if(jwgtinfo.eq.4) write(ifile,'(1x,d14.8)') wgtbpower
+          if(jwgtinfo.eq.4) write(ifile,'(1x,d14.8,1x,i4,1x,i4)')
+     &         wgtbpower,nFKSprocess_used,nFKSprocess_used_born
           write(ifile,'(a)')
      # '  </rwgt>'
         elseif(jwgtinfo.eq.8)then
@@ -297,7 +298,8 @@ c
             read(ifile,442)wgtwmcxsecE(i),
      #                     wgtmcxbjE(1,i),wgtmcxbjE(2,i)
           enddo
-          if(jwgtinfo.eq.4) read(ifile,'(1x,d14.8)') wgtbpower
+          if(jwgtinfo.eq.4) read(ifile,'(1x,d14.8,1x,i4,1x,i4)')
+     &         wgtbpower,nFKSprocess_used,nFKSprocess_used_born
           read(ifile,'(a)')string
         elseif(jwgtinfo.eq.8)then
           read(ifile,'(a)')string
@@ -411,7 +413,8 @@ c
             read(ifile,442)wgtwmcxsecE(i),
      #                     wgtmcxbjE(1,i),wgtmcxbjE(2,i)
           enddo
-          if(jwgtinfo.eq.4) read(ifile,'(1x,d14.8)') wgtbpower
+          if(jwgtinfo.eq.4) read(ifile,'(1x,d14.8,1x,i4,1x,i4)')
+     &         wgtbpower,nFKSprocess_used,nFKSprocess_used_born
           read(ifile,'(a)')string
         elseif(jwgtinfo.eq.8)then
           read(ifile,'(a)')string

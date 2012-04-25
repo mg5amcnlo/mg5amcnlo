@@ -413,8 +413,8 @@ c From dsample_fks
       COMMON/C_NFKSPROCESS/NFKSPROCESS
       character*4 abrv
       common /to_abrv/ abrv
-      logical nbodyonly
-      common/cnbodyonly/nbodyonly
+      logical nbody
+      common/cnbody/nbody
       integer fks_j_from_i(nexternal,0:nexternal)
      &     ,particle_type(nexternal),pdg_type(nexternal)
       common /c_fks_inc/fks_j_from_i,particle_type,pdg_type
@@ -460,11 +460,11 @@ c Find the nFKSprocess for which we compute the Born-like contributions
       endif
          
 c
-c Compute the Born-like contributions with nbodyonly=.true.
+c Compute the Born-like contributions with nbody=.true.
 c THIS CAN BE OPTIMIZED
 c
       nFKSprocess=nFKSprocessBorn
-      nbodyonly=.true.
+      nbody=.true.
       call fks_inc_chooser()
       call leshouche_inc_chooser()
       call setcuts
@@ -478,7 +478,7 @@ c sum or a Monte Carlo sum.
 c      
       if (abrv.eq.'born' .or. abrv.eq.'grid' .or.
      &     abrv(1:2).eq.'vi') return
-      nbodyonly=.false.
+      nbody=.false.
       if (sum) then
 c THIS CAN BE OPTIMIZED
          do nFKSprocess=1,fks_configs
@@ -545,8 +545,8 @@ c From dsample_fks
       COMMON/C_NFKSPROCESS/NFKSPROCESS
       character*4 abrv
       common /to_abrv/ abrv
-      logical nbodyonly
-      common/cnbodyonly/nbodyonly
+      logical nbody
+      common/cnbody/nbody
       integer fks_j_from_i(nexternal,0:nexternal)
      &     ,particle_type(nexternal),pdg_type(nexternal)
       common /c_fks_inc/fks_j_from_i,particle_type,pdg_type
@@ -634,10 +634,10 @@ c For sum over identical FKS pairs, need to find the identical structures
       fold=ifl
       if (ifl.eq.0)then
 c
-c Compute the Born-like contributions with nbodyonly=.true.
+c Compute the Born-like contributions with nbody=.true.
 c     
          nFKSprocess=nFKSprocessBorn
-         nbodyonly=.true.
+         nbody=.true.
          call fks_inc_chooser()
          call leshouche_inc_chooser()
 c THIS CAN BE OPTIMIZED
@@ -661,7 +661,7 @@ c
 
          if (.not.( abrv.eq.'born' .or. abrv.eq.'grid' .or.
      &        abrv(1:2).eq.'vi') ) then
-            nbodyonly=.false.
+            nbody=.false.
             if (sum.eq.1) then
 
                do i=1,100
@@ -853,8 +853,8 @@ c
       character*4 abrv
       common /to_abrv/ abrv
 
-      logical nbodyonly
-      common/cnbodyonly/nbodyonly
+      logical nbody
+      common/cnbody/nbody
 
       integer nvtozero
       logical doVirtTest
@@ -991,7 +991,7 @@ c-----
          write (*,*) 'This is not supported'
          stop
       else
-        nbodyonly=.false.
+        nbody=.false.
       endif
       abrv=abrvinput(1:4)
 c Options are way too many: make sure we understand all of them
@@ -1002,14 +1002,14 @@ c Options are way too many: make sure we understand all of them
         write(*,*)'Error in input: abrv is:',abrv
         stop
       endif
-      if(nbodyonly.and.abrv.ne.'born'.and.abrv(1:2).ne.'vi'
+      if(nbody.and.abrv.ne.'born'.and.abrv(1:2).ne.'vi'
      &     .and. abrv.ne.'grid')then
         write(*,*)'Error in driver: inconsistent input',abrvinput
         stop
       endif
 
       write (*,*) "doing the ",abrv," of this channel"
-      if(nbodyonly)then
+      if(nbody)then
         write (*,*) "integration Born/virtual with Sfunction=1"
       else
         write (*,*) "Normal integration (Sfunction != 1)"

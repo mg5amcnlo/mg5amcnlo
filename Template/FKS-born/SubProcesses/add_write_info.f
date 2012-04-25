@@ -7,6 +7,7 @@ c intermediate resonances. It also boosts the events to the lab frame
       include "nexternal.inc"
       include "born_nhel.inc"
       include "coloramps.inc"
+      include "reweight0.inc"
 
 c Arguments
       double precision p_born(0:3,nexternal-1),pp(0:3,nexternal)
@@ -100,6 +101,10 @@ c For shifting QCD partons from zero to their mass-shell
       integer mohdr,izero
       parameter (mohdr=-100)
       parameter (izero=0)
+c cFKSprocess
+      INTEGER NFKSPROCESS
+      COMMON/C_NFKSPROCESS/NFKSPROCESS
+      integer save_nFKSprocess
 
 c
 c Set the number of external particles
@@ -128,10 +133,13 @@ c
 c Choose a process. iproc comes set to the number of processes
 c
 c set-up Bjorken x's
+      save_nFKSprocess=nFKSprocess
       if (Hevents) then
          call set_cms_stuff(-100)
+         nFKSprocess=nFKSprocess_used
       else
          call set_cms_stuff(0)
+         nFKSprocess=nFKSprocess_used_born
       endif
 c compute the PDFs (this sets 'pd' and 'iproc')
       xlum=dlum()
@@ -142,6 +150,7 @@ c choose the subprocess
       do while (pd(ip) .lt. xtarget .and. ip .lt. np)
          ip=ip+1
       enddo
+      nFKSprocess=save_nFKSprocess
 c
 c Fill jpart particle info for the final state particles of
 c the (n+1)-body events. Color is done below.

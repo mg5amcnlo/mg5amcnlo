@@ -356,8 +356,8 @@ c FKS stuff:
       character*4 abrv
       common /to_abrv/ abrv
 
-      logical nbodyonly
-      common/cnbodyonly/nbodyonly
+      logical nbody
+      common/cnbody/nbody
 
       double precision vegas_weight
       common/cvegas_weight/vegas_weight
@@ -424,7 +424,7 @@ c Put here call to compute bpower
       prefact=xinorm_ev/xi_i_fks_ev*
      #        1/(1-y_ij_fks_ev)
       if( (.not.nocntevents) .and. (.not.(abrv.eq.'born' .or. abrv.eq
-     &     .'grid' .or. abrv(1:2).eq.'vi' .or. nbodyonly))
+     &     .'grid' .or. abrv(1:2).eq.'vi' .or. nbody))
      &     )then
         prefact_cnt_ssc=xinorm_ev/min(xiimax_ev,xiScut_used)*
      #                  log(xicut_used/min(xiimax_ev,xiScut_used))*
@@ -484,14 +484,14 @@ c points)
       iplot=-3
 
       if(doNLOreweight)then
-        call reweight_settozero()
+        call reweight_settozero(.true.)
         ifill2=0
         ifill3=0
         ifill4=0
       endif
 
       if (abrv.eq.'born' .or. abrv.eq.'grid' .or. abrv(1:2).eq.'vi' .or.
-     &     nbodyonly)goto 540
+     &     nbody)goto 540
 c Real contribution:
 c Set the ybst_til_tolab before applying the cuts. 
       call set_cms_stuff(mohdr)
@@ -541,7 +541,7 @@ c for the collinear, soft and/or soft-collinear subtraction terms
       endif
 
       if (abrv.eq.'born' .or. abrv.eq.'grid' .or. abrv(1:2).eq.'vi' .or.
-     &     nbodyonly)goto 545
+     &     nbody)goto 545
 c
 c Collinear subtraction term:
       if( y_ij_fks_ev.gt.1d0-deltaS .and.
@@ -594,11 +594,11 @@ c Soft subtraction term:
            endif
          endif
          s_s = fks_Sij(p1_cnt(0,1,0),i_fks,j_fks,zero,y_ij_fks_ev)
-         if(nbodyonly)s_s=1.d0
+         if(nbody)s_s=1.d0
          if(s_s.gt.0.d0)then
             xlum_s = dlum()
             if (abrv.eq.'born' .or. abrv.eq.'grid' .or.
-     &           abrv(1:2).eq.'vi' .or. nbodyonly) goto 546
+     &           abrv(1:2).eq.'vi' .or. nbody) goto 546
             if (xi_i_fks_ev .lt. xiScut_used) then
               call sreal(p1_cnt(0,1,0),zero,y_ij_fks_ev,fx_s)
               xsec=fx_s*s_s*jac_cnt(0)
@@ -610,7 +610,7 @@ c Soft subtraction term:
      #                      g**(2*wgtbpower+2.d0)
             endif
  546        continue
-            if (abrv.eq.'real' .or. .not.nbodyonly) goto 548
+            if (abrv.eq.'real' .or. .not.nbody) goto 548
             if (xi_i_fks_ev .lt. xiBSVcut_used) then
               xsec=s_s*jac_cnt(0)*xinorm_ev/
      #             (min(xiimax_ev,xiBSVcut_used)*shat/(16*pi**2))*
@@ -636,7 +636,7 @@ c Soft subtraction term:
       endif
 c Soft-Collinear subtraction term:
       if (abrv.eq.'born' .or. abrv.eq.'grid' .or. abrv(1:2).eq.'vi' .or.
-     &     nbodyonly)goto 547
+     &     nbody)goto 547
       if (xi_i_fks_cnt(ione) .lt. xiScut_used .and.
      #    y_ij_fks_ev .gt. 1d0-deltaS .and.
      #    pmass(j_fks).eq.0.d0 )then
@@ -1080,7 +1080,7 @@ c Put here call to compute bpower
           write(*,*)'  AddInfoLHE must be true when unweighting'
           stop
         endif
-        call reweight_settozero()
+        call reweight_settozero(.true.)
         ifill1=0
         ifill2=0
         ifill3=0
@@ -1532,8 +1532,8 @@ c FKS stuff:
       logical multi_chan(lmaxconfigs)
       common /to_multi_chan/multi_chan
 
-      logical nbodyonly
-      common/cnbodyonly/nbodyonly
+      logical nbody
+      common/cnbody/nbody
 
       character*4 abrv
       common /to_abrv/ abrv
@@ -1695,7 +1695,7 @@ c
           write(*,*)'  AddInfoLHE must be true when unweighting'
           stop
         endif
-        call reweight_settozero()
+        call reweight_settozero(.true.)
         ifill1=0
         ifill2=0
         ifill3=0
@@ -1871,7 +1871,7 @@ c Soft subtraction term:
            endif
          endif
          s_s = fks_Sij(p1_cnt(0,1,0),i_fks,j_fks,zero,y_ij_fks_ev)
-         if(nbodyonly)s_s=1.d0
+         if(nbody)s_s=1.d0
          if(s_s.gt.0.d0)then
             xlum_s = dlum()
             if (abrv.eq.'born' .or. abrv.eq.'grid' .or.
@@ -2221,7 +2221,11 @@ c      include "fks.inc"
       include "madfks_mcatnlo.inc"
       include 'coupl.inc'
       include 'run.inc'
-      include 'reweight.inc'
+      include 'q_es.inc'
+      include 'nFKSconfigs.inc'
+      include 'reweight_all.inc'
+      INTEGER NFKSPROCESS
+      COMMON/C_NFKSPROCESS/NFKSPROCESS
 
       double precision pp(0:3,nexternal),wgt,vegaswgt
 
@@ -2242,7 +2246,10 @@ c      include "fks.inc"
       integer i,j
 
       integer izero,ione,itwo,mohdr,iplot_ev,iplot_cnt,iplot_born
-      integer ithree,ifour,ifill1,ifill2,ifill3,ifill4
+      integer ithree,ifour
+      integer ifill1H,ifill2H,ifill3H,ifill4H,ifill1S,ifill2S,ifill3S
+     &     ,ifill4S,ifill2S_born
+      save ifill2S_born
       parameter (izero=0)
       parameter (ione=1)
       parameter (itwo=2)
@@ -2336,8 +2343,8 @@ c FKS stuff:
       logical multi_chan(lmaxconfigs)
       common /to_multi_chan/multi_chan
 
-      logical nbodyonly
-      common/cnbodyonly/nbodyonly
+      logical nbody
+      common/cnbody/nbody
 
       character*4 abrv
       common /to_abrv/ abrv
@@ -2437,7 +2444,7 @@ c Put here call to compute bpower
      #        1/(1-y_ij_fks_ev)
 
       if( (.not.nocntevents) .and. (.not.(abrv.eq.'born' .or. abrv.eq
-     &     .'grid' .or. abrv(1:2).eq.'vi' .or. nbodyonly))
+     &     .'grid' .or. abrv(1:2).eq.'vi' .or. nbody))
      &     )then
         prefact_cnt_ssc=xinorm_ev/min(xiimax_ev,xiScut_used)*
      #                  log(xicut_used/min(xiimax_ev,xiScut_used))*
@@ -2497,6 +2504,25 @@ c
       Hxmc_wgt=0.d0
 
 c
+      if(doreweight)then
+        if(.not.AddInfoLHE)then
+          write(*,*)'Error in dsigF'
+          write(*,*)'  AddInfoLHE must be true when unweighting'
+          stop
+        endif
+        if (nbody) call reweight_settozero()
+        call reweight_settozero_all(nFKSprocess*2,nbody)
+        call reweight_settozero_all(nFKSprocess*2-1,nbody)
+        ifill1H=0
+        ifill2H=0
+        ifill3H=0
+        ifill4H=0
+        ifill1S=0
+        ifill2S=0
+        ifill3S=0
+        ifill4S=0
+        if (nbody) ifill2S_Born=0
+      endif
       if(AddInfoLHE)then
         iSorH_lhe=1+2
         ifks_lhe=i_fks
@@ -2514,6 +2540,7 @@ c one of them passes the hard cuts, and they exist at all
 c
 c Set the ybst_til_tolab before applying the cuts. Update below
 c for the collinear, soft and/or soft-collinear subtraction terms
+
       MCcntcalled=.false.
       call set_cms_stuff(izero)
       if ( (.not.passcuts(p1_cnt(0,1,0),rwgt)) .or.
@@ -2530,10 +2557,24 @@ c for the collinear, soft and/or soft-collinear subtraction terms
       HxmcME=0.d0
 
       if (abrv.eq.'born' .or. abrv.eq.'grid' .or.
-     &     abrv(1:2).eq.'vi' .or. nbodyonly) goto 540
+     &     abrv(1:2).eq.'vi' .or. nbody) goto 540
 
       call set_cms_stuff(mohdr)
       call set_alphaS(pp)
+      if(doreweight)then
+         wgtmuR2_all(1,nFKSprocess*2)=muR2_current/muR_over_ref**2
+         wgtmuF12_all(1,nFKSprocess*2)=muF12_current/muF1_over_ref**2
+         wgtmuF22_all(1,nFKSprocess*2)=muF22_current/muF2_over_ref**2
+         call reweight_fillkin_all(pp,ione,nFKSprocess*2)
+         ifill1H=1
+         call reweight_fillkin_all(pp,itwo,nFKSprocess*2)
+         ifill2H=1
+         wgtmuR2_all(1,nFKSprocess*2-1)=muR2_current/muR_over_ref**2
+         wgtmuF12_all(1,nFKSprocess*2-1)=muF12_current/muF1_over_ref**2
+         wgtmuF22_all(1,nFKSprocess*2-1)=muF22_current/muF2_over_ref**2
+         call reweight_fillkin_all(pp,ione,nFKSprocess*2-1)
+         ifill1S=1
+      endif
       if(UseSfun)then
          x = abs(2d0*dot(pp(0,i_fks),pp(0,j_fks))/shat)
          ffact = f_damp(x)
@@ -2555,6 +2596,11 @@ c for the collinear, soft and/or soft-collinear subtraction terms
       endif
 
       if(sevmc.gt.0.d0.and.flagmc)then
+         if(doreweight)then
+            iwgtnumpartn_all(nFKSprocess*2)=nofpartners
+            iwgtnumpartn_all(nFKSprocess*2-1)=nofpartners
+            xsec=sevmc*wgt*prefact*rwgt
+         endif
         xlum_mc_save=-1.d8
         do i=1,nofpartners
           if(lzone(i))then
@@ -2562,6 +2608,16 @@ c for the collinear, soft and/or soft-collinear subtraction terms
             call get_mc_lum(j_fks,zhw_used,xi_i_fks_ev,
      #                      xlum_mc_save,xlum_mc,xlum_mc_fact)
             xmcMC=xmcMC+xmcxsec(i)*xlum_mc
+            if(doreweight)then
+               wgtwmcxsec_all(i,nFKSprocess*2)=-xsec*xlum_mc_fact
+     &              *xmcxsec(i)/g**(2*wgtbpower+2.d0)
+               wgtmcxbj_all(1,i,nFKSprocess*2)=xbk(1)
+               wgtmcxbj_all(2,i,nFKSprocess*2)=xbk(2)
+               wgtwmcxsec_all(i,nFKSprocess*2-1)=xsec*xlum_mc_fact
+     &              *xmcxsec(i)/g**(2*wgtbpower+2.d0)
+               wgtmcxbj_all(1,i,nFKSprocess*2-1)=xbk(1)
+               wgtmcxbj_all(2,i,nFKSprocess*2-1)=xbk(2)
+            endif
           endif
         enddo
         SxmcMC=xmcMC*sevmc*wgt*prefact*rwgt
@@ -2579,9 +2635,30 @@ c
 c Set scales for all counterevents, using soft kinematics as done
 c in the case of parton-level NLO computations
       call set_alphaS(p1_cnt(0,1,0))
+      if(doreweight)then
+         if (nbody) then
+            wgtqes2_all(2,0)=QES2
+            wgtqes2_all(3,0)=QES2
+            wgtqes2_all(4,0)=QES2
+            wgtmuR2_all(2,0)=muR2_current/muR_over_ref**2
+            wgtmuF12_all(2,0)=muF12_current/muF1_over_ref**2
+            wgtmuF22_all(2,0)=muF22_current/muF2_over_ref**2
+            call reweight_fillkin_all(pp,itwo,0)
+            ifill2S_born=1
+         else
+            wgtqes2_all(2,nFKSprocess*2-1)=QES2
+            wgtqes2_all(3,nFKSprocess*2-1)=QES2
+            wgtqes2_all(4,nFKSprocess*2-1)=QES2
+            wgtmuR2_all(2,nFKSprocess*2-1)=muR2_current/muR_over_ref**2
+            wgtmuF12_all(2,nFKSprocess*2-1)=muF12_current/muF1_over_ref**2
+            wgtmuF22_all(2,nFKSprocess*2-1)=muF22_current/muF2_over_ref**2
+            call reweight_fillkin_all(pp,itwo,nFKSprocess*2-1)
+            ifill2S=1
+         endif
+      endif
 
       if (abrv.eq.'born' .or. abrv.eq.'grid' .or. abrv(1:2).eq.'vi' .or.
-     &     nbodyonly)goto 545
+     &     nbody)goto 545
 c
 c Collinear subtraction term:
       if( ( y_ij_fks_ev.gt.1d0-deltaS .or. 
@@ -2589,6 +2666,21 @@ c Collinear subtraction term:
      #      probne.gt.0.d0) ) .and.
      #    pmass(j_fks).eq.0.d0 )then
          call set_cms_stuff(ione)
+
+         if(doreweight)then
+            if(gfactsf.lt.1.d0.and.probne.gt.0.d0.and.gfactcl.lt.1.d0
+     &           .and.pmass(j_fks).eq.0.d0)then
+               wgtxbj_all(1,3,nFKSprocess*2)=xbk(1)
+               wgtxbj_all(2,3,nFKSprocess*2)=xbk(2)
+               call reweight_fillkin_all(pp,ithree,nFKSprocess*2)
+               ifill3H=1
+            endif
+           wgtxbj_all(1,3,nFKSprocess*2-1)=xbk(1)
+           wgtxbj_all(2,3,nFKSprocess*2-1)=xbk(2)
+           call reweight_fillkin_all(pp,ithree,nFKSprocess*2-1)
+           ifill3S=1
+         endif
+
          s_c = fks_Sij(p1_cnt(0,1,1),i_fks,j_fks,xi_i_fks_cnt(ione),one)
          if(s_c.gt.0.d0)then
             if(abs(s_c-1.d0).gt.1.d-6.and.j_fks.le.nincoming)then
@@ -2601,6 +2693,17 @@ c Collinear subtraction term:
             if(.not.flagmc.and.MonteCarlo(1:7).eq.'PYTHIA6'
      &         .and.ileg.ge.3.and.xi_i_fks_ev.gt.ximin)xsec=0d0
             SxmcME=SxmcME+xlum_c*xsec
+
+            if(doreweight) then
+               if(gfactsf.lt.1.d0.and.probne.gt.0.d0.and.gfactcl.lt.1.d0
+     &              .and.pmass(j_fks).eq.0.d0)
+     &              wgtwreal_all(3,nFKSprocess*2)=
+     &              xsec/g**(2*wgtbpower+2.d0)
+               wgtwreal_all(3,nFKSprocess*2-1)=xsec*(1-gfactsf)*probne/
+     &              g**(2*wgtbpower+2.d0)
+            endif
+
+
             if ((gfactsf.lt.1.d0.and.gfactcl.lt.1.d0 .and.
      &           probne.gt.0.d0) .and. pmass(j_fks).eq.0.d0)
      &           HxmcME=HxmcME+xlum_c*xsec
@@ -2612,6 +2715,17 @@ c Collinear subtraction term:
                deg_wgt=deg_wgt+( deg_xi_c+deg_lxi_c*log(xi_i_fks_cnt(ione)) )*
      #                         jac_cnt(1)*prefact_deg*rwgt/(shat/(32*pi**2))*
      #                         xlum_c
+               if(doreweight)then
+                  wgtwreal_all(3,nFKSprocess*2-1)=wgtwreal_all(3
+     &                 ,nFKSprocess*2-1)-xsec/g**(2*wgtbpower+2.d0)
+                  wgtwdeg_all(3,nFKSprocess*2-1)=( wgtdegrem_xi+
+     &                 wgtdegrem_lxi*log(xi_i_fks_cnt(ione)) )*
+     &                 jac_cnt(1)*prefact_deg*rwgt/(shat/(32*pi**2))/
+     &                 g**(2*wgtbpower+2.d0)
+                  wgtwdegmuf_all(3,nFKSprocess*2-1)=wgtdegrem_muF *
+     &                 jac_cnt(1)*prefact_deg*rwgt/(shat/(32*pi**2))/
+     &                 g**(2*wgtbpower+2.d0)
+               endif
             endif
          endif
       endif
@@ -2620,33 +2734,82 @@ c Soft subtraction term:
       if ( xi_i_fks_ev .lt. max(xiScut_used,xiBSVcut_used) .or.
      &     (gfactsf.lt.1.d0.and.probne.gt.0.d0) ) then
          call set_cms_stuff(izero)
+         if(doreweight)then
+            if(gfactsf.lt.1.d0.and.probne.gt.0.d0)then
+               wgtxbj_all(1,2,nFKSprocess*2)=xbk(1)
+               wgtxbj_all(2,2,nFKSprocess*2)=xbk(2)
+               wgtmuR2_all(2,nFKSprocess*2)=muR2_current/muR_over_ref**2
+               wgtmuF12_all(2,nFKSprocess*2)=muF12_current/muF1_over_ref**2
+               wgtmuF22_all(2,nFKSprocess*2)=muF22_current/muF2_over_ref**2
+               if(ifill2H.ne.1)then
+                  write(*,*)'Error #1a[wg] in dsigF',ifill2H
+                  stop
+               endif
+            endif
+            if (nbody) then
+               wgtxbj_all(1,2,0)=xbk(1)
+               wgtxbj_all(2,2,0)=xbk(2)
+               if(ifill2S_born.ne.1)then
+                  write(*,*)'Error #1b[wg] in dsigF',ifill2S
+                  stop
+               endif
+            else
+               wgtxbj_all(1,2,nFKSprocess*2-1)=xbk(1)
+               wgtxbj_all(2,2,nFKSprocess*2-1)=xbk(2)
+               if(ifill2S.ne.1)then
+                  write(*,*)'Error #1c[wg] in dsigF',ifill2S
+                  stop
+               endif
+            endif
+         endif
+
          s_s = fks_Sij(p1_cnt(0,1,0),i_fks,j_fks,zero,y_ij_fks_ev)
-         if(nbodyonly)s_s=1.d0
+         if(nbody)s_s=1.d0
          if(s_s.gt.0.d0)then
             xlum_s = dlum()
             if (abrv.eq.'born' .or. abrv.eq.'grid' .or.
-     &           abrv(1:2).eq.'vi' .or. nbodyonly) goto 546
+     &           abrv(1:2).eq.'vi' .or. nbody) goto 546
             call sreal(p1_cnt(0,1,0),zero,y_ij_fks_ev,fx_s)
             xsec=fx_s*s_s*jac_cnt(0)*prefact*rwgt
             if(.not.flagmc.and.MonteCarlo(1:7).eq.'PYTHIA6'
      &         .and.ileg.ge.3.and.xi_i_fks_ev.gt.ximin)xsec=0d0
             SxmcME=SxmcME+xlum_s*xsec
-            if (gfactsf.lt.1.d0.and.probne.gt.0.d0)
-     &           HxmcME=HxmcME+xlum_s*xsec
+            if(doreweight)then
+               wgtwreal_all(2,nFKSprocess*2-1)=xsec*(1-gfactsf)*probne/
+     &              g**(2*wgtbpower+2.d0)
+             endif
+            if (gfactsf.lt.1.d0.and.probne.gt.0.d0) then
+               HxmcME=HxmcME+xlum_s*xsec
+               if(doreweight)wgtwreal_all(2,nFKSprocess*2)=
+     &              xsec/g**(2*wgtbpower+2.d0)
+            endif
             if (xi_i_fks_ev .lt. xiScut_used) then
               xsec=fx_s*s_s*jac_cnt(0)
               cnt_s=xlum_s*xsec
               cnt_wgt_s=cnt_wgt_s-cnt_s*prefact*rwgt
               cnt_swgt_s=cnt_swgt_s-cnt_s*prefact_cnt_ssc*rwgt
+              if(doreweight)wgtwreal_all(2,nFKSprocess*2-1)
+     &             =wgtwreal_all(2,nFKSprocess*2-1)-xsec*(prefact
+     &             +prefact_cnt_ssc)*rwgt/g**(2*wgtbpower+2.d0)
             endif
  546        continue
-            if (abrv.eq.'real' .or. .not.nbodyonly) goto 548
+            if (abrv.eq.'real' .or. .not.nbody) goto 548
             if (xi_i_fks_ev .lt. xiBSVcut_used) then
               xsec=s_s*jac_cnt(0)*xinorm_ev/
      #             (min(xiimax_ev,xiBSVcut_used)*shat/(16*pi**2))*
      #             rwgt
               xnormsv=xlum_s*xsec
               call bornsoftvirtual(p1_cnt(0,1,0),bsv_wgt,born_wgt)
+              if(doreweight)then
+                 if(wgtbpower.gt.0)then
+                    wgtwborn_all=born_wgt*xsec/g**(2 *wgtbpower)
+                 else
+                    wgtwborn_all=born_wgt*xsec
+                 endif
+                 wgtwns_all=wgtnstmp*xsec/g**(2*wgtbpower+2.d0)
+                 wgtwnsmuf_all=wgtwnstmpmuf*xsec/g**(2*wgtbpower+2.d0)
+                 wgtwnsmur_all=wgtwnstmpmur*xsec/g**(2*wgtbpower+2.d0)
+              endif
               bsv_wgt=bsv_wgt*xnormsv
               born_wgt=born_wgt*xnormsv
             endif
@@ -2655,13 +2818,26 @@ c Soft subtraction term:
       endif
 c Soft-Collinear subtraction term:
       if (abrv.eq.'born' .or. abrv.eq.'grid' .or. abrv(1:2).eq.'vi' .or.
-     &     nbodyonly)goto 547
+     &     nbody)goto 547
       if ( ( (xi_i_fks_cnt(ione) .lt. xiScut_used .and.
      #        y_ij_fks_ev .gt. 1d0-deltaS) .or.
      #        (gfactsf.lt.1.d0.and.gfactcl.lt.1.d0 .and.
      #         probne.gt.0.d0) ) .and.
      #        pmass(j_fks).eq.0.d0 )then
          call set_cms_stuff(itwo)
+         if(doreweight)then
+            if ((gfactsf.lt.1.d0.and.gfactcl.lt.1.d0 .and.
+     &           probne.gt.0.d0) .and. pmass(j_fks).eq.0.d0) then
+               wgtxbj_all(1,4,nFKSprocess*2)=xbk(1)
+               wgtxbj_all(2,4,nFKSprocess*2)=xbk(2)
+               call reweight_fillkin_all(pp,ifour,nFKSprocess*2)
+               ifill4H=1
+            endif
+            wgtxbj_all(1,4,nFKSprocess*2-1)=xbk(1)
+            wgtxbj_all(2,4,nFKSprocess*2-1)=xbk(2)
+            call reweight_fillkin_all(pp,ifour,nFKSprocess*2-1)
+            ifill4S=1
+         endif
          s_sc = fks_Sij(p1_cnt(0,1,2),i_fks,j_fks,zero,one)
          if(s_sc.gt.0.d0)then
             if(abs(s_sc-1.d0).gt.1.d-6.and.j_fks.le.nincoming)then
@@ -2674,9 +2850,17 @@ c Soft-Collinear subtraction term:
             if(.not.flagmc.and.MonteCarlo(1:7).eq.'PYTHIA6'
      &         .and.ileg.ge.3.and.xi_i_fks_ev.gt.ximin)xsec=0d0
             SxmcME=SxmcME-xlum_sc*xsec
+            if(doreweight)then
+               wgtwreal_all(4,nFKSprocess*2-1)=-xsec*(1-gfactsf)*probne/
+     &              g**(2*wgtbpower+2.d0)
+            endif
             if ((gfactsf.lt.1.d0.and.gfactcl.lt.1.d0 .and.
-     &           probne.gt.0.d0) .and. pmass(j_fks).eq.0.d0)
-     &           HxmcME=HxmcME-xlum_sc*xsec
+     &           probne.gt.0.d0) .and. pmass(j_fks).eq.0.d0)then
+               HxmcME=HxmcME-xlum_sc*xsec
+               if(doreweight)wgtwreal_all(4,nFKSprocess*2)=
+     &              -xsec/g**(2*wgtbpower+2.d0)
+            endif
+
             if(xi_i_fks_cnt(ione) .lt. xiScut_used .and.
      #          y_ij_fks_ev .gt. 1d0-deltaS)then
               xsec=fx_sc*s_sc*jac_cnt(2)
@@ -2694,11 +2878,34 @@ c Soft-Collinear subtraction term:
      #                       deg_lxi_sc*prefact_deg_slxi )*
      #                       jac_cnt(2)*rwgt/(shat/(32*pi**2))*
      #                       xlum_sc
+              if(doreweight)then
+                 wgtwreal_all(4,nFKSprocess*2-1)=wgtwreal_all(4
+     &                ,nFKSprocess*2-1)+xsec*(prefact_c+prefact_coll
+     &                +prefact_cnt_ssc_c+prefact_coll_c)*rwgt/g**(2
+     &                *wgtbpower+2.d0)
+                 wgtwdeg_all(4,nFKSprocess*2-1)=(-( wgtdegrem_xi
+     &                +wgtdegrem_lxi*log(xi_i_fks_cnt(ione)) )
+     &                *prefact_deg -( wgtdegrem_xi*prefact_deg_sxi
+     &                +wgtdegrem_lxi*prefact_deg_slxi ) )* jac_cnt(2)
+     &                *rwgt/(shat/(32*pi**2))/ g**(2*wgtbpower+2.d0)
+                 wgtwdegmuf_all(4,nFKSprocess*2-1)= -wgtdegrem_muF*(
+     &                prefact_deg+prefact_deg_sxi )* jac_cnt(2)*rwgt
+     &                /(shat/(32*pi**2))/ g**(2*wgtbpower+2.d0)
+              endif
             endif
          endif
       endif
       SxmcME=SxmcME*(1-gfactsf)*probne
       HxmcME=-HxmcME*(1-gfactsf)*probne
+      if(doreweight)then
+         xsec=(1-gfactsf)*probne
+         wgtwreal_all(2,nFKSprocess*2)=
+     &        -wgtwreal_all(2,nFKSprocess*2)*xsec
+         wgtwreal_all(3,nFKSprocess*2)=
+     &        -wgtwreal_all(3,nFKSprocess*2)*xsec
+         wgtwreal_all(4,nFKSprocess*2)=
+     &        -wgtwreal_all(4,nFKSprocess*2)*xsec
+      endif
 
       Sxmc_wgt=Sxmc_wgt+SxmcMC+SxmcME
       Hxmc_wgt=Hxmc_wgt+HxmcMC+HxmcME
@@ -2709,8 +2916,14 @@ c Real contribution
 c
 c Set the ybst_til_tolab before applying the cuts. 
       if (abrv.eq.'born' .or. abrv.eq.'grid' .or. abrv(1:2).eq.'vi' .or.
-     &     nbodyonly)goto 550
+     &     nbody)goto 550
       call set_cms_stuff(mohdr)
+      if(doreweight)then
+         wgtxbj_all(1,1,nFKSprocess*2)=xbk(1)
+         wgtxbj_all(2,1,nFKSprocess*2)=xbk(2)
+         wgtxbj_all(1,1,nFKSprocess*2-1)=xbk(1)
+         wgtxbj_all(2,1,nFKSprocess*2-1)=xbk(2)
+      endif
       if (passcuts(pp,rwgt)) then
         call set_alphaS(pp)
         x = abs(2d0*dot(pp(0,i_fks),pp(0,j_fks))/shat)
@@ -2719,8 +2932,35 @@ c Set the ybst_til_tolab before applying the cuts.
         if(s_ev.gt.0.d0)then
           call sreal(pp,xi_i_fks_ev,y_ij_fks_ev,fx_ev)
           xlum_ev = dlum()
-          Sev_wgt = xlum_ev*fx_ev*s_ev*ffact*wgt*prefact*rwgt*(1-probne)
-          Hev_wgt = xlum_ev*fx_ev*s_ev*ffact*wgt*prefact*rwgt*probne
+          xsec = fx_ev*s_ev*ffact*wgt*prefact*rwgt
+          Sev_wgt = xlum_ev*xsec*(1-probne)
+          Hev_wgt = xlum_ev*xsec*probne
+          if(doreweight)then
+             if(ifill1H.eq.0)then
+                wgtmuR2_all(1,nFKSprocess*2)=
+     &               muR2_current/muR_over_ref**2
+                wgtmuF12_all(1,nFKSprocess*2)=
+     &               muF12_current/muF1_over_ref**2
+                wgtmuF22_all(1,nFKSprocess*2)=
+     &               muF22_current/muF2_over_ref**2
+                call reweight_fillkin_all(pp,ione,nFKSprocess*2)
+                ifill1H=1
+             endif
+             wgtwreal_all(1,nFKSprocess*2)=
+     &            xsec/g**(2*wgtbpower+2.d0)*probne
+             if(ifill1S.eq.0)then
+                wgtmuR2_all(1,nFKSprocess*2-1)=
+     &               muR2_current/muR_over_ref**2
+                wgtmuF12_all(1,nFKSprocess*2-1)=
+     &               muF12_current/muF1_over_ref**2
+                wgtmuF22_all(1,nFKSprocess*2-1)=
+     &               muF22_current/muF2_over_ref**2
+                call reweight_fillkin_all(pp,ione,nFKSprocess*2-1)
+                ifill1S=1
+             endif
+             wgtwreal_all(1,nFKSprocess*2-1)=
+     &            xsec/g**(2*wgtbpower+2.d0)*(1-probne)
+          endif
         endif
         if(AddInfoLHE)scale2_lhe=get_ptrel(pp,i_fks,j_fks)
       endif
@@ -2761,14 +3001,14 @@ c
             xnoborn_cnt=xnoborn_cnt+1.d0
             if(log10(xnoborn_cnt).gt.inoborn_cnt)then
                write (*,*) 
-     #           'Function dsigS: no Born momenta more than 10**',
+     #           'Function dsigF: no Born momenta more than 10**',
      #           inoborn_cnt,'times'
                inoborn_cnt=inoborn_cnt+1
             endif
          else
             xtot=0d0
             if (mapconfig(0).eq.0) then
-               write (*,*) 'Fatal error in dsigS, no Born diagrams '
+               write (*,*) 'Fatal error in dsigF, no Born diagrams '
      &           ,mapconfig,'. Check bornfromreal.inc'
                write (*,*) 'Is fks_singular compiled correctly?'
                stop
@@ -2816,15 +3056,89 @@ c
      &        deg_wgt*fkssymmetryfactorDeg +
      &        deg_swgt*fkssymmetryfactorDeg
 
+         call unweight_function(p_born,unwgtfun)
+         dsigS=dsigS*unwgtfun
+
          if (dsigS.ne.dsigS) then
             write (*,*) 'ERROR, ',dsigS,
      &           ' found for dsigS, setting dsigS to 0 for this event'
             dsigS=0
          endif
+         
+         if(doreweight)then
+            if(ifill2S.eq.0.and.(ifill3S.ne.0.or.ifill4S.ne.0))then
+               write(*,*)'Error #2[wg] in dsigF S',ifill2S ,ifill3S
+     &              ,ifill4S
+               stop
+            endif
+            if ((nbody.and.ifill2S_born.eq.1).or.
+     &           (.not.nbody.and.ifill2S.eq.0.and.ifill2S_born.eq.1))
+     &           then
+c
+c Copy the values for the nbody configuration over the nFKSprocess*2-1
+c
+c In some rare cases with massive j_fks the counterevents need to be
+c skipped, while the Born momenta are there. So, we need to fill the
+c common blocks accordingly.
+c
+               wgtqes2_all(2,nFKSprocess*2-1)=wgtqes2_all(2,0)
+               wgtqes2_all(3,nFKSprocess*2-1)=wgtqes2_all(3,0)
+               wgtqes2_all(4,nFKSprocess*2-1)=wgtqes2_all(4,0)
+               wgtmuR2_all(2,nFKSprocess*2-1)=wgtmuR2_all(2,0)
+               wgtmuF12_all(2,nFKSprocess*2-1)=wgtmuF12_all(2,0)
+               wgtmuF22_all(2,nFKSprocess*2-1)=wgtmuF22_all(2,0)
+               do i=1,nexternal
+                  do j=0,3
+                     if (i.lt.nexternal) then
+                        wgtkin_all(j,i,2,nFKSprocess*2-1)=p_born(j,i)
+                     else
+                        wgtkin_all(j,i,2,nFKSprocess*2-1)=0d0
+                     endif
+                  enddo
+               enddo
+               wgtxbj_all(1,2,nFKSprocess*2-1)=wgtxbj_all(1,2,0)
+               wgtxbj_all(2,2,nFKSprocess*2-1)=wgtxbj_all(2,2,0)
+            endif
 
-         call unweight_function(p_born,unwgtfun)
-         dsigS=dsigS*unwgtfun
-
+            if (nbody) then
+               wgtref_nbody = dsigS
+               wgtref_all(nFKSprocess*2-1) = dsigS
+            else 
+               wgtref_all(nFKSprocess*2-1) = wgtref_nbody+dsigS
+            endif
+            xsec = enhance*unwgtfun
+            do i=1,4
+               if (.not.nbody) then
+                  wgtwreal_all(i,nFKSprocess*2-1)=wgtwreal_all(i
+     &                 ,nFKSprocess*2-1) * xsec*fkssymmetryfactor
+                  wgtwdeg_all(i,nFKSprocess*2-1)=wgtwdeg_all(i
+     &                 ,nFKSprocess*2-1) * xsec*fkssymmetryfactorDeg
+                  wgtwdegmuf_all(i,nFKSprocess*2-1)=wgtwdegmuf_all(i
+     &                 ,nFKSprocess*2-1) * xsec*fkssymmetryfactorDeg
+               endif
+            enddo
+            if (nbody) then
+               wgtwborn_all=wgtwborn_all * xsec*fkssymmetryfactorBorn
+               wgtwns_all=wgtwns_all * xsec*fkssymmetryfactorBorn
+               wgtwnsmuf_all=wgtwnsmuf_all * xsec*fkssymmetryfactorBorn
+               wgtwnsmur_all=wgtwnsmur_all * xsec*fkssymmetryfactorBorn
+            endif
+            if (.not.nbody) then
+               do i=1,iwgtnumpartn_all(nFKSprocess*2-1)
+                  wgtwmcxsec_all(i,nFKSprocess*2-1)=wgtwmcxsec_all(i
+     &                 ,nFKSprocess*2-1) * xsec*fkssymmetryfactor
+               enddo
+            endif
+            if(check_reweight.and.doreweight) then
+               call fill_reweight0inc(nFKSprocess*2-1)
+               call check_rwgt_wgt("Sev")
+               call reweight_settozero()
+            endif
+c Example of reweighted cross section (scale changed)
+c           dsigS_new=compute_rwgt_wgt_Sev(new_muR_fact,new_muF1_fact,
+c     &                                    new_muF2_fact,new_QES_fact,
+c     &                                    iwgtinfo)
+         endif      
 
          total_wgt_sum=total_wgt_sum+dsigS*vegaswgt
          central_wgt_saved=dsigS
@@ -2858,6 +3172,66 @@ c Plot observables for counterevents and Born
      &           ' found for dsigH, setting dsigH to 0 for this event'
             dsigH=0
          endif
+
+         if (nbody.and.dsigH.ne.0d0) then
+            write (*,*) 'When doing nbody, contribution '/
+     &           /'from H-events should be zero',dsigH
+            stop
+         endif
+
+         if(doreweight)then
+            if(ifill2H.eq.0.and.(ifill3H.ne.0.or.ifill4H.ne.0))then
+               write(*,*)'Error #2[wg] in dsigF H',ifill2H,ifill3H
+     &              ,ifill4H
+               stop
+            endif
+            if (.not.nbody) then
+               wgtref_all(nFKSprocess*2) = dsigH
+               xsec = enhance*unwgtfun*fkssymmetryfactor
+               do i=1,4
+                  wgtwreal_all(i,nFKSprocess*2)=wgtwreal_all(i
+     &                 ,nFKSprocess*2) * xsec
+               enddo
+               do i=1,iwgtnumpartn_all(nFKSprocess*2)
+                  wgtwmcxsec_all(i,nFKSprocess*2)=wgtwmcxsec_all(i
+     &                 ,nFKSprocess*2) * xsec
+               enddo
+               if(check_reweight.and.doreweight) then
+                  call fill_reweight0inc(nFKSprocess*2)
+                  wgtwborn(2)=0d0
+                  wgtwns(2)=0d0
+                  wgtwnsmuf(2)=0d0
+                  wgtwnsmur(2)=0d0
+                  call check_rwgt_wgt("Hev")
+                  call reweight_settozero(nbody)
+               endif
+            else
+               if (wgtref_all(nFKSprocess*2).ne.0d0) then
+                  write (*,*) 'wgtref not zero',
+     &                 wgtref_all(nFKSprocess*2)
+                  stop
+               endif
+               do i=1,4
+                  if (wgtwreal_all(i,nFKSprocess*2).ne.0d0) then
+                     write (*,*) 'wgtwreal not zero',i,
+     &                    wgtwreal_all(i,nFKSprocess*2)
+                     stop
+                  endif
+               enddo
+               do i=1,iwgtnumpartn_all(nFKSprocess*2)
+                  if (wgtwmcxsec_all(i,nFKSprocess*2).ne.0d0) then
+                     write (*,*) 'wgtwmcxsec not zero',i,
+     &                    wgtwmcxsec_all(i,nFKSprocess*2)
+                     stop
+                  endif
+               enddo
+            endif
+c Example of reweighted cross section (scale changed)
+c           dsigH_new=compute_rwgt_wgt_Hev(new_muR_fact,new_muF1_fact,
+c     &                                    new_muF2_fact,new_QES_fact,
+c     &                                    iwgtinfo)
+         endif      
+
 
          if (dsigH.ne.0d0) itotalpoints=itotalpoints+1
 
@@ -5530,8 +5904,8 @@ c$$$      m1l_W_finite_CDR=m1l_W_finite_CDR*born
       implicit none
 
       double precision CA,CF,Nf,PI
-      parameter (CA=3d0,CF=4d0/3d0,Nf=5d0)
-c$$$      parameter (CA=3d0,CF=4d0/3d0,Nf=4d0)
+c$$$      parameter (CA=3d0,CF=4d0/3d0,Nf=5d0)
+      parameter (CA=3d0,CF=4d0/3d0,Nf=4d0)
 C SET NF=0 WHEN NOT CONSIDERING G->QQ SPLITTINGS. FOR TESTS ONLY
 c$$$      parameter (CA=3d0,CF=4d0/3d0,Nf=0d0)
       parameter (pi=3.1415926535897932385d0)
@@ -5598,8 +5972,8 @@ c      include 'fks.inc'
       character*4 abrv
       common /to_abrv/ abrv
 
-      logical nbodyonly
-      common/cnbodyonly/nbodyonly
+      logical nbody
+      common/cnbody/nbody
 
       integer fold
       common /cfl/fold
@@ -5682,7 +6056,7 @@ c parametrization allows it
       
       xicut_used=xicut
       xiScut_used=xiScut
-      if( nbodyonly .or. (abrv.eq.'born' .or. abrv.eq.'grid' .or.
+      if( nbody .or. (abrv.eq.'born' .or. abrv.eq.'grid' .or.
      &     abrv(1:2).eq.'vi') )then
         xiBSVcut_used=1.d0
       else
@@ -5781,7 +6155,7 @@ c THESE TESTS WORK ONLY FOR FINAL STATE SINGULARITIES
          if (pdg_type(i).eq.21) ngluons=ngluons+1
       enddo
 
-      if (nbodyonly.and.i_fks_pdg.eq.21) then
+      if (nbody.and.i_fks_pdg.eq.21) then
          if (ngluons.le.0) then
             write (*,*)
      &           'ERROR, number of gluons should be larger than 1',

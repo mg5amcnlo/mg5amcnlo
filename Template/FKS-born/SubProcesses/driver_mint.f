@@ -297,8 +297,8 @@ c
       character*4 abrv
       common /to_abrv/ abrv
 
-      logical nbodyonly
-      common/cnbodyonly/nbodyonly
+      logical nbody
+      common/cnbody/nbody
       integer           iconfig
       common/to_configs/iconfig
 c
@@ -386,19 +386,19 @@ c-----
       write (*,*) " a pure n-body integration (no S functions)"
       read(5,*) abrvinput
       if(abrvinput(5:5).eq.'0')then
-        nbodyonly=.true.
+        nbody=.true.
       else
-        nbodyonly=.false.
+        nbody=.false.
       endif
       abrv=abrvinput(1:4)
-      if(nbodyonly.and.abrv.ne.'born'.and.abrv(1:2).ne.'vi'
+      if(nbody.and.abrv.ne.'born'.and.abrv(1:2).ne.'vi'
      &     .and. abrv.ne.'grid')then
         write(*,*)'Error in driver: inconsistent input',abrvinput
         stop
       endif
 
       write (*,*) "doing the ",abrv," of this channel"
-      if(nbodyonly)then
+      if(nbody)then
         write (*,*) "integration Born/virtual with Sfunction=1"
       else
         write (*,*) "Normal integration (Sfunction != 1)"

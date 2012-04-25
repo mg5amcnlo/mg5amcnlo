@@ -456,8 +456,8 @@ c
       character*4 abrv
       common /to_abrv/ abrv
 
-      logical nbodyonly
-      common/cnbodyonly/nbodyonly
+      logical nbody
+      common/cnbody/nbody
 c
 c To convert diagram number to configuration
 c
@@ -594,19 +594,19 @@ c These should be ignored (but kept for 'historical reasons')
       write (*,*) " a pure n-body integration (no S functions)"
       read(*,*) abrvinput
       if(abrvinput(5:5).eq.'0')then
-        nbodyonly=.true.
+        nbody=.true.
       else
-        nbodyonly=.false.
+        nbody=.false.
       endif
       abrv=abrvinput(1:4)
-      if(nbodyonly.and.abrv.ne.'born'.and.abrv(1:2).ne.'vi'
+      if(nbody.and.abrv.ne.'born'.and.abrv(1:2).ne.'vi'
      &     .and. abrv.ne.'grid')then
         write(*,*)'Error in driver: inconsistent input',abrvinput
         stop
       endif
 
       write (*,*) "doing the ",abrv," of this channel"
-      if(nbodyonly)then
+      if(nbody)then
         write (*,*) "integration Born/virtual with Sfunction=1"
       else
         write (*,*) "Normal integration (Sfunction != 1)"
@@ -653,7 +653,7 @@ c From dsample_fks
       real*8 sigintF,xx(ndimmax),w
       integer ione
       parameter (ione=1)
-      double precision wgt,dsigS,dsigH,f_abs,f(2)
+      double precision wgt,dsigS,dsigH,f_abs
       include 'nexternal.inc'
       logical unwgt
       double precision evtsgn
@@ -668,13 +668,15 @@ c From dsample_fks
       double precision x(99),sigintF_without_w,f_abs_without_w
       common /c_sigint/ x,sigintF_without_w,f_abs_without_w
       include 'nFKSconfigs.inc'
-      double precision result(0:fks_configs,2)
+      include 'reweight_all.inc'
+      double precision f(2),result(0:fks_configs,2)
+      save f,result
       INTEGER NFKSPROCESS
       COMMON/C_NFKSPROCESS/NFKSPROCESS
       character*4 abrv
       common /to_abrv/ abrv
-      logical nbodyonly
-      common/cnbodyonly/nbodyonly
+      logical nbody
+      common/cnbody/nbody
       integer fks_j_from_i(nexternal,0:nexternal)
      &     ,particle_type(nexternal),pdg_type(nexternal)
       common /c_fks_inc/fks_j_from_i,particle_type,pdg_type
@@ -682,7 +684,7 @@ c From dsample_fks
       common/fks_indices/i_fks,j_fks
       logical firsttime
       integer sum
-      parameter (sum=2)
+      parameter (sum=0)
       data firsttime /.true./
       logical foundB(2)
       integer nFKSprocessBorn(2)
@@ -700,7 +702,6 @@ c Find the nFKSprocess for which we compute the Born-like contributions
          foundB(2)=.false.
          do nFKSprocess=1,fks_configs
             call fks_inc_chooser()
-            write (*,*) nFKSprocess,particle_type(i_fks),j_fks
             if (particle_type(i_fks).eq.8) then
                if (j_fks.le.nincoming) then
                   foundB(1)=.true.
@@ -709,6 +710,11 @@ c Find the nFKSprocess for which we compute the Born-like contributions
                   foundB(2)=.true.
                   nFKSprocessBorn(2)=nFKSprocess
                endif
+            endif
+            if (doreweight) then
+               call reweight_settozero()
+               call reweight_settozero_all(nFKSprocess*2,.true.)
+               call reweight_settozero_all(nFKSprocess*2-1,.true.)
             endif
          enddo
          write (*,*) 'Total number of FKS directories is', fks_configs
@@ -749,15 +755,17 @@ c For sum over identical FKS pairs, need to find the identical structures
          endif
       endif
 
-      f(1)=0d0
-      f(2)=0d0
       fold=ifl
-      do i=0,fks_configs
-         result(i,1)=0d0
-         result(i,2)=0d0
-      enddo
-      dsigS=0d0
-      dsigH=0d0
+      if (ifl.eq.0) then
+         f(1)=0d0
+         f(2)=0d0
+         do i=0,fks_configs
+            result(i,1)=0d0
+            result(i,2)=0d0
+         enddo
+         dsigS=0d0
+         dsigH=0d0
+      endif
 
       if (ifl.eq.0)then
          do i=1,99
@@ -779,7 +787,7 @@ c For sum over identical FKS pairs, need to find the identical structures
             endif
          enddo
 c
-c Compute the Born-like contributions with nbodyonly=.true.
+c Compute the Born-like contributions with nbody=.true.
 c     
          if (sum.eq.0) then
             call get_MC_integer(fks_configs,nFKSprocess,vol)
@@ -808,7 +816,9 @@ c
             endif
             nFKSprocess=nFKSprocessBorn(2)
          endif
-         nbodyonly=.true.
+         nbody=.true.
+         nFKSprocess_used=nFKSprocess
+         nFKSprocess_used_Born=nFKSprocess
          call fks_inc_chooser()
          call leshouche_inc_chooser()
 c THIS CAN BE OPTIMIZED
@@ -827,7 +837,7 @@ c sum or a Monte Carlo sum.
 c      
          if (.not.( abrv.eq.'born' .or. abrv.eq.'grid' .or.
      &        abrv(1:2).eq.'vi') ) then
-            nbodyonly=.false.
+            nbody=.false.
             if (sum.eq.1) then
                write (*,*)
      &              'This option # 1322 has not been implemented'
@@ -848,6 +858,7 @@ c$$$                  f(2) = f(2)+result(nFKSprocess,2)
 c$$$               enddo
             elseif(sum.eq.0) then ! Monte Carlo over nFKSprocess
                nFKSprocess=nFKSprocess_all
+               nFKSprocess_used=nFKSprocess
                call fks_inc_chooser()
                call leshouche_inc_chooser()
 c THIS CAN BE OPTIMIZED
@@ -865,6 +876,7 @@ c THIS CAN BE OPTIMIZED
             elseif(sum.eq.2) then ! MC over i_fks/j_fks pairs
                do i=1,proc_map(nFKSproc_m,0)
                   nFKSprocess=proc_map(nFKSproc_m,i)
+                  nFKSprocess_used=nFKSprocess
                   call fks_inc_chooser()
                   call leshouche_inc_chooser()
 c THIS CAN BE OPTIMIZED
@@ -902,26 +914,27 @@ c THIS CAN BE OPTIMIZED
 c Determine if we need to write S or H events according to their
 c relative weights
          if (f_abs.gt.0d0) then
-            if (sum.eq.0) then
+            if (sum.eq.1) then
                write (*,*) 'event generation for "sum"'/
      $              /' not yet implemented',sum
-            elseif (sum.eq.1 .or. sum.eq.2) then
-               result1=result(0,1)+result(nFKSprocess,1)
-               result2=result(0,2)+result(nFKSprocess,2)
-               if (ran2().le.abs(result1)/f_abs) then
+               stop
+            elseif (sum.eq.0 .or. sum.eq.2) then
+               if (ran2().le.abs(f(1))/f_abs) then
                   Hevents=.false.
-                  evtsgn=sign(1d0,result1)
+                  evtsgn=sign(1d0,f(1))
                   j=1
                else
                   Hevents=.true.
-                  evtsgn=sign(1d0,result2)
+                  evtsgn=sign(1d0,f(2))
                   j=2
                endif
                if (sum.eq.2 .and. .not.( abrv.eq.'born' .or. abrv.eq
      &              .'grid' .or.abrv(1:2).eq.'vi') ) then
-                  f_tot=result(0,j)
+c Pick one of the nFKSprocess contributing to the given nFKSproc_m
+c according to their (absolute value of the) relative weight.
+                  f_tot=abs(result(0,j))
                   do i=1,proc_map(nFKSproc_m,0)
-                     f_tot=f_tot+result(proc_map(nFKSproc_m,i),j)
+                     f_tot=f_tot+abs(result(proc_map(nFKSproc_m,i),j))
                   enddo
                   rnd=ran2()
                   i=1
@@ -932,12 +945,25 @@ c relative weights
                      res=res+abs(result(proc_map(nFKSproc_m,i),j))
                   enddo
                   nFKSprocess=proc_map(nFKSproc_m,i)
+                  nFKSprocess_used=nFKSprocess
                   call fks_inc_chooser()
                   call leshouche_inc_chooser()
 c THIS CAN BE OPTIMIZED
                   call setcuts
                   call setfksfactor(iconfig)
                endif
+            endif
+            if(doreweight) then
+               if (Hevents) then
+                  call fill_reweight0inc(nFKSprocess*2)
+                  wgtwborn(2)=0d0
+                  wgtwns(2)=0d0
+                  wgtwnsmuf(2)=0d0
+                  wgtwnsmur(2)=0d0
+               else
+                  call fill_reweight0inc(nFKSprocess*2-1)
+               endif
+               call reweight_fill_extra()
             endif
          endif
       endif

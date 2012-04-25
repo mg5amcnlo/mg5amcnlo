@@ -74,8 +74,12 @@ c Cross sections at different scales and PDFs
 c Power of alpha_s in the Born (only used if jwgtinfo.eq.4)
       double precision wgtbpower
       common/cwgtbpower/wgtbpower
+
 c This variable is only used in reweight_xsec.f and only if jwgtinfo.ne.4
 c If jwgtinfo.eq.4 the value in the common block is used
       double precision rwgtbpower
       parameter (rwgtbpower=3.d0)
 
+c nFKSprocess used for the nbody and the .not.nbody
+      integer nFKSprocess_used,nFKSprocess_used_Born
+      common /c_nFKSproc_file/ nFKSprocess_used,nFKSprocess_used_Born

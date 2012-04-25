@@ -118,8 +118,8 @@ c     2 soft-collinear
       common /cxiimaxev/xiimax_ev
       double precision xiimax_cnt(-2:2)
       common /cxiimaxcnt/xiimax_cnt
-      logical nbodyonly
-      common/cnbodyonly/nbodyonly
+      logical nbody
+      common/cnbody/nbody
       double precision xinorm_ev
       common /cxinormev/xinorm_ev
       double precision xinorm_cnt(-2:2)
@@ -541,8 +541,8 @@ c j_fks
          icountevts=icountevts+1
       endif
 
-      if( (icountevts.le.2.and.m_j_fks.eq.0.d0.and.(.not.nbodyonly)).or.
-     &    (icountevts.eq.0.and.m_j_fks.eq.0.d0.and.nbodyonly) .or.
+      if( (icountevts.le.2.and.m_j_fks.eq.0.d0.and.(.not.nbody)).or.
+     &    (icountevts.eq.0.and.m_j_fks.eq.0.d0.and.nbody) .or.
      &    (icountevts.eq.0.and.m_j_fks.ne.0.d0) )then
          goto 111
       elseif(icountevts.eq.5) then

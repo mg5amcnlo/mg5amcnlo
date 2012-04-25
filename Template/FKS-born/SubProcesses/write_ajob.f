@@ -285,7 +285,7 @@ c madevent_mintMC
          write(lun,25) 'cp -f $CONDOR_INITIAL_DIR/$j/* .'
          write(lun,25) 'if [[ "$3" != "" ]]; then'
          write(lun,30) 'if [[ "$3" == "H" ||"$3" == "S" ||'//
-     &        ' "$3" == "V" || "$3" == "B" ]]; then'
+     &        ' "$3" == "V" || "$3" == "B" || "$3" == "F" ]]; then'
 
          write(lun,35) 'if [[ -e $CONDOR_INITIAL_DIR/G$3$i ]]; then'
          write(lun,40) 'cp -f $CONDOR_INITIAL_DIR/G$3$i/mint_grids '//

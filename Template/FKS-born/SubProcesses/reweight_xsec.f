@@ -42,6 +42,47 @@ c
       end
 
 
+      subroutine reweight_fillkin_all(pp,itype,iFKS)
+c Fills four-momenta common blocks, according to itype
+      implicit none
+      include "genps.inc"
+      include "nexternal.inc"
+      include "nFKSconfigs.inc"
+      include "reweight_all.inc"
+
+      double precision pp(0:3,nexternal)
+      integer itype,iFKS
+
+      double precision p1_cnt(0:3,nexternal,-2:2)
+      double precision wgt_cnt(-2:2)
+      double precision pswgt_cnt(-2:2)
+      double precision jac_cnt(-2:2)
+      common/counterevnts/p1_cnt,wgt_cnt,pswgt_cnt,jac_cnt
+
+      integer i,j,icnt,ione
+      parameter (ione=1)
+c
+      if(itype.eq.1)then
+        do i=1,nexternal
+          do j=0,3
+            wgtkin_all(j,i,ione,iFKS)=pp(j,i)
+          enddo
+        enddo
+      elseif(itype.ge.2.and.itype.le.4)then
+        icnt=2-itype
+        do i=1,nexternal
+          do j=0,3
+            wgtkin_all(j,i,itype,iFKS)=p1_cnt(j,i,icnt)
+          enddo
+        enddo
+      else
+        write(*,*)'Error in reweight_fillkin: itype=',itype
+        stop
+      endif
+      return
+      end
+
+
       subroutine reweight_replkin_cnt()
 c Fills wgtkin(*,*,2) with the content of wgtkin(*,*,3) or wgtkin(*,*,4).
 c This is needed since only wgtkin(*,*,0) is used in the computations of
@@ -146,7 +187,7 @@ c Set all reweight variables equal to zero
       include "genps.inc"
       include "nexternal.inc"
       include "reweight.inc"
-
+      logical all
       integer i,j,k
 c
       wgtref=0.d0
@@ -169,10 +210,10 @@ c should not be used if wgtkin(0,1,*)=-99
         wgtwdeg(k)=0.d0
         wgtwdegmuf(k)=0.d0
         if(k.eq.2)then
-          wgtwborn(k)=0.d0
-          wgtwns(k)=0.d0
-          wgtwnsmuf(k)=0.d0
-          wgtwnsmur(k)=0.d0
+           wgtwborn(k)=0.d0
+           wgtwns(k)=0.d0
+           wgtwnsmuf(k)=0.d0
+           wgtwnsmur(k)=0.d0
         endif
       enddo
       wgtdegrem_xi=0.d0
@@ -192,6 +233,211 @@ c should not be used if wgtkin(0,1,*)=-99
       wgtNLO11=0d0
       wgtNLO12=0d0
       wgtNLO20=0d0
+      return
+      end
+
+
+      subroutine reweight_settozero_all(iFKS,all)
+c Set all reweight variables equal to zero
+      implicit none
+      include "genps.inc"
+      include "nexternal.inc"
+      include "nFKSconfigs.inc"
+      include "reweight_all.inc"
+      logical all
+      integer i,j,k,iFKS
+c
+      wgtref_all(iFKS)=0.d0
+      do k=1,4
+         wgtqes2_all(k,iFKS)=0.d0
+         wgtxbj_all(1,k,iFKS)=0.d0
+         wgtxbj_all(2,k,iFKS)=0.d0
+         do i=1,nexternal
+            do j=0,3
+               wgtkin_all(j,i,k,iFKS)=0.d0
+            enddo
+         enddo
+c Special value, consistent with genps_fks. The kinematic configuration
+c should not be used if wgtkin(0,1,*)=-99
+         wgtkin_all(0,1,k,iFKS)=-99.d0
+         wgtmuR2_all(k,iFKS)=0.d0
+         wgtmuF12_all(k,iFKS)=0.d0
+         wgtmuF22_all(k,iFKS)=0.d0
+         wgtwreal_all(k,iFKS)=0.d0
+         wgtwdeg_all(k,iFKS)=0.d0
+         wgtwdegmuf_all(k,iFKS)=0.d0
+      enddo
+      wgtdegrem_xi=0.d0
+      wgtdegrem_lxi=0.d0
+      wgtdegrem_muF=0.d0
+      if (all) then
+         wgtwborn_all=0.d0
+         wgtwns_all=0.d0
+         wgtwnsmuf_all=0.d0
+         wgtwnsmur_all=0.d0
+         wgtnstmp=0.d0
+         wgtwnstmpmuf=0.d0
+         wgtwnstmpmur=0.d0
+         wgtref_nbody=0.d0
+         do i=1,nexternal
+            do j=0,3
+               wgtkin_all(j,i,k,0)=0.d0
+            enddo
+         enddo
+         do k=1,4
+            wgtkin_all(0,1,k,0)=-99.d0
+            wgtmuR2_all(k,0)=0.d0
+            wgtmuF12_all(k,0)=0.d0
+            wgtmuF22_all(k,0)=0.d0
+            wgtqes2_all(k,0)=0.d0
+         enddo
+      endif
+      do k=1,nexternal
+         wgtwmcxsec_all(k,iFKS)=0.d0
+         wgtmcxbj_all(1,k,iFKS)=0.d0
+         wgtmcxbj_all(2,k,iFKS)=0.d0
+      enddo
+      iwgtnumpartn_all(iFKS)=0
+      jwgtinfo=0
+      mexternal=0
+      wgtNLO11=0d0
+      wgtNLO12=0d0
+      wgtNLO20=0d0
+      return
+      end
+      
+
+      subroutine fill_reweight0inc(iFKS)
+c Set all reweight variables equal to zero
+      implicit none
+      include "genps.inc"
+      include "nexternal.inc"
+      include "nFKSconfigs.inc"
+      include "reweight_all.inc"
+      integer i,j,k,iFKS
+      logical debug
+      parameter (debug=.false.)
+c
+      if (debug) write (*,*) 'wgtref',iFKS,wgtref,wgtref_all(iFKS)
+      call reweight_overwrite(wgtref,wgtref_all(iFKS),0)
+      do k=1,4
+         if (debug) write (*,*) 'wgtqes2',k,iFKS,wgtqes2(k)
+     &        ,wgtqes2_all(k,iFKS)
+         call reweight_overwrite(wgtqes2(k),wgtqes2_all(k,iFKS),0)
+         if (debug) write (*,*) 'wgtxbj1',k,iFKS,wgtxbj(1,k)
+     &        ,wgtxbj_all(1,k,iFKS)
+         call reweight_overwrite(wgtxbj(1,k),wgtxbj_all(1,k,iFKS),0)
+         if (debug) write (*,*) 'wgtxbj2',k,iFKS,wgtxbj(2,k)
+     &        ,wgtxbj_all(2,k,iFKS)
+         call reweight_overwrite(wgtxbj(2,k),wgtxbj_all(2,k,iFKS),0)
+        do i=1,nexternal
+          do j=0,3
+             if (i.eq.1.and.j.eq.0) then
+                if (debug) write (*,*) 'wgtkin',j,i,k,iFKS,wgtkin(j,i,k)
+     &               ,wgtkin_all(j,i,k,iFKS)
+                call reweight_overwrite
+     &               (wgtkin(j,i,k),wgtkin_all(j,i,k,iFKS),1)
+             else
+                if (debug) write (*,*) 'wgtkin',j,i,k,iFKS,wgtkin(j,i,k)
+     &               ,wgtkin_all(j,i,k,iFKS)
+                call reweight_overwrite
+     &               (wgtkin(j,i,k),wgtkin_all(j,i,k,iFKS),0)
+             endif
+          enddo
+        enddo
+        if (debug) write (*,*) 'wgtmuR2',k,iFKS,wgtmuR2(k),wgtmuR2_all(k
+     &       ,iFKS)
+        call reweight_overwrite(wgtmuR2(k),wgtmuR2_all(k,iFKS),0)
+        if (debug) write (*,*) 'wgtmuF12',k,iFKS,wgtmuF12(k)
+     &       ,wgtmuF12_all(k,iFKS)
+        call reweight_overwrite(wgtmuF12(k),wgtmuF12_all(k,iFKS),0)
+        if (debug) write (*,*) 'wgtmuF22',k,iFKS,wgtmuF22(k)
+     &       ,wgtmuF22_all(k,iFKS)
+        call reweight_overwrite(wgtmuF22(k),wgtmuF22_all(k,iFKS),0)
+        if (debug) write (*,*) 'wgtwreal',k,iFKS,wgtwreal(k)
+     &       ,wgtwreal_all(k,iFKS)
+        call reweight_overwrite(wgtwreal(k),wgtwreal_all(k,iFKS),0)
+        if (debug) write (*,*) 'wgtwdeg',k,iFKS,wgtwdeg(k),wgtwdeg_all(k
+     &       ,iFKS)
+        call reweight_overwrite(wgtwdeg(k),wgtwdeg_all(k,iFKS),0)
+        if (debug) write (*,*) 'wgtwdegmuF',k,iFKS,wgtwdegmuf(k)
+     &       ,wgtwdegmuf_all(k,iFKS)
+        call reweight_overwrite(wgtwdegmuf(k),wgtwdegmuf_all(k,iFKS),0)
+        if(k.eq.2)then
+           if (debug) write (*,*) 'wgtwborn',k,wgtwborn(k),wgtwborn_all
+           call reweight_overwrite(wgtwborn(k),wgtwborn_all,0)
+           if (debug) write (*,*) 'wgtwns',k,wgtwns(k),wgtwns_all
+           call reweight_overwrite(wgtwns(k),wgtwns_all,0)
+           if (debug) write (*,*) 'wgtwnsmuf',k,wgtwnsmuf(k)
+     &          ,wgtwnsmuf_all
+           call reweight_overwrite(wgtwnsmuf(k),wgtwnsmuf_all,0)
+           if (debug) write (*,*) 'wgtwnsmur',k,wgtwnsmur(k)
+     &          ,wgtwnsmur_all
+          call reweight_overwrite(wgtwnsmur(k),wgtwnsmur_all,0)
+        endif
+      enddo
+      do k=1,nexternal
+         if (debug) write (*,*) 'wgtwmcxsec',k,iFKS,wgtwmcxsec(k)
+     &        ,wgtwmcxsec_all(k,iFKS)
+        call reweight_overwrite(wgtwmcxsec(k),wgtwmcxsec_all(k,iFKS),0)
+        if (debug) write (*,*) 'wgtwmcxbj1',k,iFKS,wgtmcxbj(1,k)
+     &       ,wgtmcxbj_all(1,k,iFKS)
+        call reweight_overwrite(wgtmcxbj(1,k),wgtmcxbj_all(1,k,iFKS),0)
+        if (debug) write (*,*) 'wgtwmcxbj2',k,iFKS,wgtmcxbj(2,k)
+     &       ,wgtmcxbj_all(2,k,iFKS)
+        call reweight_overwrite(wgtmcxbj(2,k),wgtmcxbj_all(2,k,iFKS),0)
+      enddo
+      if (debug) write (*,*) 'iwgtnumpartn',iFKS,iwgtnumpartn
+     &     ,iwgtnumpartn_all(iFKS)
+      call reweight_overwrite_int(iwgtnumpartn,iwgtnumpartn_all(iFKS))
+      return
+      end
+
+      subroutine reweight_overwrite_int(a,b)
+      implicit none
+      integer a,b
+      if (a.eq.0) then
+         a=b
+      elseif (a.ne.b) then
+         write (*,*) 'Error #1 in reweight_overwrite_int',a,b
+         stop
+      endif
+      return
+      end
+
+
+      subroutine reweight_overwrite(a,b,i)
+c     i=0: overwrite 'a' by 'b' if 'a' is zero
+c     i=1: overwrite 'a' by 'b' if 'a' is equal to -99
+c     i=2: overwrite 'a' by 'b'
+      implicit none
+      integer i
+      double precision a,b
+      double precision vtiny
+      parameter (vtiny=1d-10)
+      if (i.eq.0) then
+         if (a.eq.0d0) then
+            a=b
+         elseif (abs((a-b)/a).gt.vtiny) then
+            write (*,*) 'Error #1 in reweight_overwrite',a,b
+            stop
+         endif
+      elseif (i.eq.1) then
+         if (a.eq.-99d0) then
+            a=b
+         elseif (a.eq.0d0) then
+            write (*,*) 'Error #2 in reweight_overwrite',a,b
+            stop
+         elseif (abs((a-b)/a).gt.vtiny) then
+            write (*,*) 'Error #3 in reweight_overwrite',a,b
+            stop
+         endif
+      elseif (i.eq.2) then
+         a=b
+      else
+         write (*,*) 'Error #4 in reweight_overwrite',i,a,b
+         stop
+      endif
       return
       end
 
@@ -225,11 +471,15 @@ c with the reference weight
       integer k,izero,mohdr
       parameter (izero=0)
       parameter (mohdr=-100)
+      INTEGER NFKSPROCESS
+      COMMON/C_NFKSPROCESS/NFKSPROCESS
+      integer save_nFKSprocess
 c
       save_murrat=muR_over_ref
       save_muf1rat=muF1_over_ref
       save_muf2rat=muF2_over_ref
       save_qesrat=QES_over_ref
+      save_nFKSprocess=nFKSprocess
 c
       muR_over_ref=xmuR_over_ref 
       muF1_over_ref=xmuF1_over_ref
@@ -269,6 +519,7 @@ c Should cause the code to crash if used
             stop
           endif
         else
+          nFKSprocess=nFKSprocess_used
           xlum = dlum()
           xsec11=xsec11+xlum*wgtwreal(1)*g**(2*wgtbpower+2.d0)
         endif
@@ -335,11 +586,14 @@ c Should cause the code to crash if used
               stop
             endif
           else
+            nFKSprocess=nFKSprocess_used
             xlum = dlum()
             xsec12=xsec12+xlum*( wgtwreal(k)+wgtwdeg(k)+
      #                           wgtwdegmuf(k)*xlgmuf )*
      #                g**(2*wgtbpower+2.d0)
             if(k.eq.2)then
+               nFKSprocess=nFKSprocess_used_born
+               xlum = dlum()
               if(wgtbpower.gt.0)then
                 xsec20=xsec20+xlum*wgtwborn(k)*g**(2*wgtbpower)
               else
@@ -359,6 +613,7 @@ c
       muF1_over_ref=save_muf1rat
       muF2_over_ref=save_muf2rat
       QES_over_ref=save_qesrat
+      nFKSprocess=save_nFKSprocess
 c
       wgtNLO11=xsec11
       wgtNLO12=xsec12
@@ -396,11 +651,16 @@ c with the reference weight
       integer i,k,izero,mohdr
       parameter (izero=0)
       parameter (mohdr=-100)
+
+      INTEGER NFKSPROCESS
+      COMMON/C_NFKSPROCESS/NFKSPROCESS
+      integer save_nFKSprocess
 c
       save_murrat=muR_over_ref
       save_muf1rat=muF1_over_ref
       save_muf2rat=muF2_over_ref
       save_qesrat=QES_over_ref
+      save_nFKSprocess=nFKSprocess
 c
       muR_over_ref=xmuR_over_ref 
       muF1_over_ref=xmuF1_over_ref
@@ -440,6 +700,7 @@ c Should cause the code to crash if used
               stop
             endif
           else
+            nFKSprocess=nFKSprocess_used
             xlum = dlum()
             xsec=xsec+xlum*wgtwmcxsec(i)*g**(2*wgtbpower+2.d0)
           endif
@@ -474,6 +735,7 @@ c Should cause the code to crash if used
               stop
             endif
           else
+            nFKSprocess=nFKSprocess_used
             xlum = dlum()
             xsec=xsec+xlum*wgtwreal(k)*g**(2*wgtbpower+2.d0)
           endif
@@ -507,6 +769,7 @@ c Should cause the code to crash if used
             stop
           endif
         else
+          nFKSprocess=nFKSprocess_used
           xlum = dlum()
           xsec=xsec+xlum*wgtwreal(1)*g**(2*wgtbpower+2.d0)
         endif
@@ -516,6 +779,7 @@ c
       muF1_over_ref=save_muf1rat
       muF2_over_ref=save_muf2rat
       QES_over_ref=save_qesrat
+      nFKSprocess=save_nFKSprocess
 c
       compute_rwgt_wgt_Hev=xsec
 c
@@ -551,11 +815,15 @@ c with the reference weight
       integer i,k,izero,mohdr
       parameter (izero=0)
       parameter (mohdr=-100)
+      INTEGER NFKSPROCESS
+      COMMON/C_NFKSPROCESS/NFKSPROCESS
+      integer save_nFKSprocess
 c
       save_murrat=muR_over_ref
       save_muf1rat=muF1_over_ref
       save_muf2rat=muF2_over_ref
       save_qesrat=QES_over_ref
+      save_nFKSprocess=nFKSprocess
 c
       muR_over_ref=xmuR_over_ref 
       muF1_over_ref=xmuF1_over_ref
@@ -597,6 +865,7 @@ c Should cause the code to crash if used
               stop
             endif
           else
+            nFKSprocess=nFKSprocess_used
             xlum = dlum()
             xsec=xsec+xlum*wgtwmcxsec(i)*g**(2*wgtbpower+2.d0)
           endif
@@ -665,11 +934,14 @@ c Should cause the code to crash if used
               stop
             endif
           else
+            nFKSprocess=nFKSprocess_used
             xlum = dlum()
             xsec=xsec+xlum*( wgtwreal(k)+wgtwdeg(k)+
      #                       wgtwdegmuf(k)*xlgmuf )*
      #                g**(2*wgtbpower+2.d0)
             if(k.eq.2)then
+              nFKSprocess=nFKSprocess_used_Born
+              xlum = dlum()
               if(wgtbpower.gt.0)then
                 xsec=xsec+xlum*wgtwborn(k)*g**(2*wgtbpower)
               else
@@ -712,6 +984,7 @@ c Should cause the code to crash if used
             stop
           endif
         else
+          nFKSprocess=nFKSprocess_used
           xlum = dlum()
           xsec=xsec+xlum*wgtwreal(1)*g**(2*wgtbpower+2.d0)
         endif
@@ -721,6 +994,7 @@ c
       muF1_over_ref=save_muf1rat
       muF2_over_ref=save_muf2rat
       QES_over_ref=save_qesrat
+      nFKSprocess=save_nFKSprocess
 c
       compute_rwgt_wgt_Sev=xsec
 c
