@@ -138,8 +138,8 @@ class HelasCallWriter(base_objects.PhysicsObject):
                     res.append("DO I=1,1")
                 elif lcutpart.get('spin')==2:
                     res.append("DO I=1,12")
-                    res.append("IF (I.GT.8.AND.ML(1).EQ.0.D0) THEN")
-                    res.append("BUFF(I)=(0.D0,0.D0)")                    
+                    res.append("IF (I.GT.8.AND.ML(1).EQ.ZERO) THEN")
+                    res.append("BUFF(I)=(ZERO,ZERO)")                    
                     res.append("ELSE")
                 elif lcutpart.get('spin')==3:
                     res.append("DO I=1,4")
@@ -1251,9 +1251,10 @@ class FortranUFOHelasCallWriterOptimized(FortranUFOHelasCallWriter):
 
         return res
 
-    def get_born_ct_helas_calls(self, matrix_element):
+    def get_born_ct_helas_calls(self, matrix_element, include_CT=True):
         """Return a list of strings, corresponding to the Helas calls
-        for building the non-loop wavefunctions, the born and CT amps only."""
+        for building the non-loop wavefunctions, the born and CT (only if
+        include_CT=True) only"""
 
         assert isinstance(matrix_element, loop_helas_objects.LoopHelasMatrixElement), \
                   "%s not valid argument for get_born_ct_helas_calls" % \
@@ -1272,11 +1273,14 @@ class FortranUFOHelasCallWriterOptimized(FortranUFOHelasCallWriter):
         for diagram in matrix_element.get_loop_diagrams():
             res.extend([ self.get_wavefunction_call(wf) for \
                          wf in diagram.get('wavefunctions') ])
-            if diagram.get_ct_amplitudes():
+            if diagram.get_ct_amplitudes() and include_CT:
                 res.append("# Counter-term amplitude(s) for loop diagram number %d" % \
                            diagram.get('number'))
                 for amplitude in diagram.get_ct_amplitudes():
                     res.append(self.get_amplitude_call(amplitude))
+        
+        if not include_CT:
+            return res
         
         for diagram in matrix_element.get_loop_UVCT_diagrams():
             res.extend([ self.get_wavefunction_call(wf) for \
@@ -1353,9 +1357,11 @@ class FortranUFOHelasCallWriterOptimized(FortranUFOHelasCallWriter):
         for i in range(len(loopamp.get('mothers'))):
             call = call + "%(MotherID{0})d,%(MotherStatus{0})d,".format(i+1)
         for i in range(len(loopamp.get('wavefunctions'))-1):
-            call = call + "DCMPLX(%(LoopMass{0})s),".format(i+1)
+            call = call + \
+            "DCMPLX(%(LoopMass{0})s),CMPLX(_MP_%(LoopMass{0})s,KIND=16),".format(i+1)
         for i in range(len(loopamp.get('coupling'))):
-            call = call + "%(LoopCoupling{0})s,".format(i+1)
+            call = call + \
+                   "%(LoopCoupling{0})s,_MP_%(LoopCoupling{0})s,".format(i+1)
         call = call + "%(LoopRank)d,"
         call = call + "%(LoopSymmetryFactor)d,"
         call = call + "%(ampNumber)d,AMPL(1,%(ampNumber)d),S(%(ampNumber)d))"

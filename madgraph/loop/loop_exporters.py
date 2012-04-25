@@ -874,20 +874,67 @@ class LoopProcessOptimizedExporterFortranSA(LoopProcessExporterFortranSA):
         OptimizedFortranModel=\
           helas_call_writers.FortranUFOHelasCallWriterOptimized(\
           fortran_model.get('model'))
-     
+
+        # Initialize a general replacement dictionary with entries common to 
+        # many files generated here.
+        self.general_replace_dict={}
+        # Extract version number and date from VERSION file
+        info_lines = self.get_mg5_info_lines()
+        self.general_replace_dict['info_lines'] = info_lines
+        # Extract process info lines
+        process_lines = self.get_process_info_lines(matrix_element)
+        self.general_replace_dict['process_lines'] = process_lines
+        # Extract number of external particles
+        (nexternal, ninitial) = matrix_element.get_nexternal_ninitial()
+        self.general_replace_dict['nexternal'] = nexternal-2
+        # Extract ncomb
+        ncomb = matrix_element.get_helicity_combinations()
+        self.general_replace_dict['ncomb'] = ncomb
+        # Extract nloopamps
+        nloopamps = matrix_element.get_number_of_loop_amplitudes()
+        self.general_replace_dict['nloopamps'] = nloopamps
+        # Extract nbornamps
+        nbornamps = matrix_element.get_number_of_born_amplitudes()
+        self.general_replace_dict['nbornamps'] = nbornamps
+        # Extract nctamps
+        nctamps = matrix_element.get_number_of_CT_amplitudes()
+        self.general_replace_dict['nctamps'] = nctamps
+        # Extract nwavefuncs
+        nwavefuncs = matrix_element.get_number_of_external_wavefunctions()
+        self.general_replace_dict['nwavefuncs'] = nwavefuncs
+        # Extract max number of couplings
+        self.general_replace_dict['maxlcouplings']=\
+           matrix_element.find_max_loop_coupling()
+        # Set format of the double precision
+        self.general_replace_dict['real_dp_format']='real*8'
+        self.general_replace_dict['real_mp_format']='real*16'
+        # Set format of the complex
+        self.general_replace_dict['complex_dp_format']='complex*16'
+        self.general_replace_dict['complex_mp_format']='complex*32'
+        # Set format of the masses
+        self.general_replace_dict['mass_dp_format'] = \
+                          self.general_replace_dict['complex_dp_format']
+        self.general_replace_dict['mass_mp_format'] = \
+                          self.general_replace_dict['complex_mp_format']
+        
         if writer:
-            file1 = self.write_loop_num(None,matrix_element,OptimizedFortranModel)
-            file2 = self.write_CT_interface(None,matrix_element)
-            calls, file3 = self.write_loopmatrix(None,matrix_element,OptimizedFortranModel)               
-            file = "\n".join([file1,file2,file3])
+            files=[]
+            files.append(self.write_loop_num(None,matrix_element,\
+                                                         OptimizedFortranModel))
+            files.append(self.write_CT_interface(None,matrix_element))
+            calls, loop_matrix = self.write_loopmatrix(None,matrix_element,\
+                                                          OptimizedFortranModel)
+            files.append(loop_matrix)
+            files.append(write_born_amps_and_wfs(None,matrix_element,\
+                                                        OptimizedFortranModel))
+            file = "\n".join(files)
             writer.writelines(file)
             return calls
         
         else:
-            
+                        
             filename = 'loop_matrix.f'
-            calls = self.write_loopmatrix(
-                                          writers.FortranWriter(filename),
+            calls = self.write_loopmatrix(writers.FortranWriter(filename),
                                           matrix_element,
                                           OptimizedFortranModel)             
             filename = 'CT_interface.f'
@@ -897,7 +944,11 @@ class LoopProcessOptimizedExporterFortranSA(LoopProcessExporterFortranSA):
             filename = 'loop_num.f'
             self.write_loop_num(writers.FortranWriter(filename),\
                                     matrix_element,OptimizedFortranModel)
-        
+            
+            filename = 'mp_born_amps_and_wfs.f'
+            self.write_born_amps_and_wfs(writers.FortranWriter(filename),\
+                                         matrix_element,OptimizedFortranModel)
+
             return calls                
 
     def write_loop_num(self, writer, matrix_element,fortran_model):
@@ -913,28 +964,23 @@ class LoopProcessOptimizedExporterFortranSA(LoopProcessExporterFortranSA):
         
         file = open(os.path.join(self.template_dir,'loop_num.inc')).read()
         
-        replace_dict = {}
+        replace_dict = copy.copy(self.general_replace_dict)
         
-        # Extract nloopamps
-        nloopamps = matrix_element.get_number_of_loop_amplitudes()
-        replace_dict['nloopamps'] = nloopamps
-        # Extract nbornamps
-        nbornamps = matrix_element.get_number_of_born_amplitudes()
-        replace_dict['nbornamps'] = nbornamps
-        # Extract ncomb
-        ncomb = matrix_element.get_helicity_combinations()
-        replace_dict['ncomb'] = ncomb
-        # Extract nwavefuncs
-        nwavefuncs = matrix_element.get_number_of_external_wavefunctions()
-        replace_dict['nwavefuncs'] = nwavefuncs
-        # specify the format of the masses 
-        replace_dict['mass_format'] = 'complex*16'
-        
-        replace_dict['nexternal']=(matrix_element.get_nexternal_ninitial()[0]-2)
         loop_helas_calls=fortran_model.get_loop_amplitude_helas_calls(matrix_element)
         replace_dict['maxlcouplings']=matrix_element.find_max_loop_coupling()
         replace_dict['loop_helas_calls'] = "\n".join(loop_helas_calls)
-
+        
+        # Now stuff for the multiple precision numerator function
+        (nexternal,ninitial)=matrix_element.get_nexternal_ninitial()
+        replace_dict['n_initial']=ninitial
+        # The last momenta is fixed by the others and the last two particles
+        # are the L-cut ones, so -3.
+        mass_list=matrix_element.get_external_masses()[:-3]
+        replace_dict['force_onshell']='\n'.join([\
+         'P(3,%(i)d)=SQRT(P(0,%(i)d)**2-P(1,%(i)d)**2-P(2,%(i)d)**2-%(m)s**2)'%\
+         {'i':i+1,'m':m} for i, m in enumerate(mass_list)])
+        replace_dict['mp_loop_helas_calls'] = "\n".join(loop_helas_calls)
+        
         file=file%replace_dict
         
         if writer:
@@ -947,43 +993,12 @@ class LoopProcessOptimizedExporterFortranSA(LoopProcessExporterFortranSA):
         the loop HELAS-like calls along with the general interfacing subroutine. """
 
         files=[]
-
-        # Fill here what's common to all files read here.             
-        replace_dict_orig={}
-
-        # Extract the number of external legs
-        replace_dict_orig['nexternal']=\
-          (matrix_element.get_nexternal_ninitial()[0]-2)
-
-        # Extract nloopamps
-        nloopamps = matrix_element.get_number_of_loop_amplitudes()
-        replace_dict_orig['nloopamps'] = nloopamps
-        # Extract nbornamps
-        nbornamps = matrix_element.get_number_of_born_amplitudes()
-        replace_dict_orig['nbornamps'] = nbornamps
-        # Extract ncomb
-        ncomb = matrix_element.get_helicity_combinations()
-        replace_dict_orig['ncomb'] = ncomb
-        # Extract nwavefuncs
-        nwavefuncs = matrix_element.get_number_of_external_wavefunctions()
-        replace_dict_orig['nwavefuncs'] = nwavefuncs
-        # Extract max number of couplings
-        replace_dict_orig['maxlcouplings']=matrix_element.find_max_loop_coupling()
-
-        # specify the format of the masses 
-        replace_dict_orig['mass_format'] = 'complex*16'
+        
+        replace_dict_orig=copy.copy(self.general_replace_dict)
 
         # First write CT_interface which interfaces MG5 with CutTools.
         replace_dict=copy.copy(replace_dict_orig)
-        file = open(os.path.join(self.template_dir,'CT_interface.inc')).read()
-        
-        # Extract version number and date from VERSION file
-        info_lines = self.get_mg5_info_lines()
-        replace_dict['info_lines'] = info_lines
-
-        # Extract process info lines
-        process_lines = self.get_process_info_lines(matrix_element)
-        replace_dict['process_lines'] = process_lines    
+        file = open(os.path.join(self.template_dir,'CT_interface.inc')).read()  
 
         replace_dict['mass_translation'] = 'M2L(I)'           
         
@@ -1013,18 +1028,22 @@ class LoopProcessOptimizedExporterFortranSA(LoopProcessExporterFortranSA):
             wfsargs="".join([("W%d, MP%d, "%(i,i)) for i in range(1,callkey[1]+1)])
             replace_dict['ncplsargs']=callkey[2]
             replace_dict['wfsargs']=wfsargs
-            margs="".join([("M"+str(i)+", ") for i in range(1,callkey[0]+1)])
+            margs="".join(["M%d,MP_M%d, "%(i,i) for i in range(1,callkey[0]+1)])
             replace_dict['margs']=margs
-            cplsargs="".join([("C"+str(i)+", ") for i in range(1,callkey[2]+1)])
+            cplsargs="".join(["C%d,MP_C%d, "%(i,i) for i in range(1,callkey[2]+1)])
             replace_dict['cplsargs']=cplsargs
             wfsargsdecl="".join([("W%d, "%i) for i in range(1,callkey[1]+1)])[:-2]
             replace_dict['wfsargsdecl']=wfsargsdecl
             momposdecl="".join([("MP%d, "%i) for i in range(1,callkey[1]+1)])[:-2]
             replace_dict['momposdecl']=momposdecl
-            margsdecl="".join([("M"+str(i)+", ") for i in range(1,callkey[0]+1)])[:-2]
+            margsdecl="".join(["M%d, "%i for i in range(1,callkey[0]+1)])[:-2]
             replace_dict['margsdecl']=margsdecl
-            cplsdecl="".join([("C"+str(i)+", ") for i in range(1,callkey[2]+1)])[:-2]
+            mp_margsdecl="".join(["MP_M%d, "%i for i in range(1,callkey[0]+1)])[:-2]
+            replace_dict['mp_margsdecl']=mp_margsdecl
+            cplsdecl="".join(["C%d, "%i for i in range(1,callkey[2]+1)])[:-2]
             replace_dict['cplsdecl']=cplsdecl
+            mp_cplsdecl="".join(["MP_C%d, "%i for i in range(1,callkey[2]+1)])[:-2]
+            replace_dict['mp_cplsdecl']=mp_cplsdecl
             weset="\n".join([("WE("+str(i)+")=W"+str(i)) for \
                              i in range(1,callkey[1]+1)])
             replace_dict['weset']=weset
@@ -1032,15 +1051,18 @@ class LoopProcessOptimizedExporterFortranSA(LoopProcessExporterFortranSA):
                              i in range(1,callkey[1]+1)])
             replace_dict['momposset']=momposset
             msetlines=["M2L(1)=M%d**2"%(callkey[0]),]
-            mset="\n".join(msetlines+[("M2L("+str(i)+")=M"+str(i-1)+"**2") for \
+            mset="\n".join(msetlines+["M2L(%d)=M%d**2"%(i,i-1) for \
                              i in range(2,callkey[0]+1)])
             replace_dict['mset']=mset
-            cplset="\n".join([("LC("+str(i)+")=C"+str(i)) for \
-                             i in range(1,callkey[2]+1)])
+            cplset="\n".join(["\n".join(["LC(%d)=C%d"%(i,i),\
+                                         "MP_LC(%d)=MP_C%d"%(i,i)])\
+                              for i in range(1,callkey[2]+1)])
             replace_dict['cplset']=cplset            
-            mset2lines=["ML(1)=M%d"%(callkey[0]),"ML(2)=M%d"%(callkey[0])]
-            mset2="\n".join(mset2lines+[("ML("+str(i)+")=M"+str(i-2)) for \
-                             i in range(3,callkey[0]+2)])
+            mset2lines=["ML(1)=M%d"%(callkey[0]),"ML(2)=M%d"%(callkey[0]),
+                  "MP_ML(1)=MP_M%d"%(callkey[0]),"MP_ML(2)=MP_M%d"%(callkey[0])]
+            mset2="\n".join(mset2lines+["\n".join(["ML(%d)=M%d"%(i,i-2),
+                                               "MP_ML(%d)=MP_M%d"%(i,i-2)]) for \
+                                        i in range(3,callkey[0]+2)])
             replace_dict['mset2']=mset2           
             replace_dict['nwfsargs'] = callkey[1]
             if callkey[0]==callkey[1]:
@@ -1066,84 +1088,53 @@ class LoopProcessOptimizedExporterFortranSA(LoopProcessExporterFortranSA):
         else:
             return file
         
-    def write_loopmatrix(self, writer, matrix_element, fortran_model, noSplit=False):
+    
+    # Helper function to split HELAS CALLS in dedicated subroutines placed
+    # in different files.
+    def split_HELASCALLS(writer, replace_dict, template_name, masterfile, \
+                         helas_calls, entry_name, bunch_name,n_helas=2000):
+        """ Finish the code generation with splitting.         
+        Split the helas calls in the argument helas_calls into bunches of 
+        size n_helas and place them in dedicated subroutine with name 
+        <bunch_name>_i. Also setup the corresponding calls to these subroutine 
+        in the replace_dict dictionary under the entry entry_name. """
+        helascalls_replace_dict=copy.copy(replace_dict)
+        helascalls_replace_dict['bunch_name']=bunch_name
+        helascalls_files=[]
+        for i, k in enumerate(range(0, len(helas_calls), n_helas)):
+            helascalls_replace_dict['bunch_number']=i+1                
+            helascalls_replace_dict['helas_calls']=\
+                                           '\n'.join(helas_calls[k:k + n_helas])
+            new_helascalls_file = open(os.path.join(self.template_dir,\
+                                            template_name)).read()
+            new_helascalls_file = new_helascalls_file % helascalls_replace_dict
+            helascalls_files.append(new_helascalls_file)
+        # Setup the call to these HELASCALLS subroutines in loop_matrix.f
+        helascalls_calls = [ "CALL %s_%d(P,NHEL,H,IC)"%(bunch_name,a+1) \
+                            for a in range(len(helascalls_files))]
+        replace_dict[entry_name]='\n'.join(helascalls_calls)
+        if writer:
+            for i, helascalls_file in enumerate(helascalls_files):
+                filename = '%s_%d.f'%(bunch_name,i+1)
+                writers.FortranWriter(filename).writelines(helascalls_file)
+        else:
+                masterfile='\n'.join([masterfile,]+helascalls_files)                
+
+        return masterfile
+    
+    def write_loopmatrix(self, writer, matrix_element, fortran_model, \
+                         noSplit=False):
         """Create the loop_matrix.f file."""
         
         if not matrix_element.get('processes') or \
                not matrix_element.get('diagrams'):
             return 0
         
-        # Helper function to split HELAS CALLS in dedicated subroutines placed
-        # in different files.
-        def split_HELASCALLS(masterfile, helas_calls, entry_name, bunch_name \
-                            ,n_helas=2000):
-            """ Finish the loop_matrix.f generation with splitting.         
-            Split the helas calls in the argument helas_calls into bunches of 
-            size n_helas and place them in dedicated subroutine with name 
-            <bunch_name>_i. Also setup the corresponding calls to these subroutine 
-            in the replace_dict dictionary under the entry entry_name. """
-            helascalls_replace_dict={}
-            for key in ['nloopamps','nbornamps','nexternal','nwavefuncs','ncomb']:
-                helascalls_replace_dict[key]=replace_dict[key]
-            helascalls_replace_dict['bunch_name']=bunch_name
-            helascalls_files=[]
-            for i, k in enumerate(range(0, len(helas_calls), n_helas)):
-                helascalls_replace_dict['bunch_number']=i+1                
-                helascalls_replace_dict['helas_calls']='\n'.join(helas_calls[k:k + n_helas])
-                new_helascalls_file = open(os.path.join(self.template_dir,\
-                                                'helas_calls_split.inc')).read()
-                new_helascalls_file = new_helascalls_file % helascalls_replace_dict
-                helascalls_files.append(new_helascalls_file)
-            # Setup the call to these HELASCALLS subroutines in loop_matrix.f
-            helascalls_calls = [ "CALL %s_%d(P,NHEL,H,IC)"%(bunch_name,a+1) \
-                                for a in range(len(helascalls_files))]
-            replace_dict[entry_name]='\n'.join(helascalls_calls)
-            if writer:
-                for i, helascalls_file in enumerate(helascalls_files):
-                    filename = '%s_%d.f'%(bunch_name,i+1)
-                    writers.FortranWriter(filename).writelines(helascalls_file)
-            else:
-                    masterfile='\n'.join([masterfile,]+helascalls_files)                
-
-            return masterfile
-        
         # Set lowercase/uppercase Fortran code
         
         writers.FortranWriter.downcase = False
 
-        replace_dict = {}
-
-        # Extract version number and date from VERSION file
-        info_lines = self.get_mg5_info_lines()
-        replace_dict['info_lines'] = info_lines
-
-        # Extract process info lines
-        process_lines = self.get_process_info_lines(matrix_element)
-        replace_dict['process_lines'] = process_lines
-
-        # Extract number of external particles
-        (nexternal, ninitial) = matrix_element.get_nexternal_ninitial()
-        replace_dict['nexternal'] = nexternal-2
-
-        # Extract ncomb
-        ncomb = matrix_element.get_helicity_combinations()
-        replace_dict['ncomb'] = ncomb
-
-        # Extract nloopamps
-        nloopamps = matrix_element.get_number_of_loop_amplitudes()
-        replace_dict['nloopamps'] = nloopamps
-
-        # Extract nbornamps
-        nbornamps = matrix_element.get_number_of_born_amplitudes()
-        replace_dict['nbornamps'] = nbornamps
-
-        # Extract nctamps
-        nctamps = matrix_element.get_number_of_CT_amplitudes()
-        replace_dict['nctamps'] = nctamps
-
-        # Extract nwavefuncs
-        nwavefuncs = matrix_element.get_number_of_external_wavefunctions()
-        replace_dict['nwavefuncs'] = nwavefuncs
+        replace_dict = copy.copy(self.general_replace_dict)
 
         # Extract overall denominator
         # Averaging initial state color, spin, and identical FS particles
@@ -1178,10 +1169,12 @@ class LoopProcessOptimizedExporterFortranSA(LoopProcessExporterFortranSA):
         
         # Decide here wether we need to split the loop_matrix.f file or not.
         if (not noSplit and (len(matrix_element.get_all_amplitudes())>2000)):
-            file=split_HELASCALLS(file,born_ct_helas_calls,\
-                                  'born_ct_helas_calls','helas_calls_ampb')
-            file=split_HELASCALLS(file,loop_amp_helas_calls,\
-                                  'loop_helas_calls','helas_calls_ampl')
+            file=self.split_HELASCALLS(writer,replace_dict,\
+                            'helas_calls_split.inc',file,born_ct_helas_calls,\
+                            'born_ct_helas_calls','helas_calls_ampb')
+            file=self.split_HELASCALLS(writer,replace_dict,\
+                    'helas_calls_split.inc',writerfile,loop_amp_helas_calls,\
+                    'loop_helas_calls','helas_calls_ampl')
         else:
             replace_dict['born_ct_helas_calls']='\n'.join(born_ct_helas_calls)
             replace_dict['loop_helas_calls']='\n'.join(loop_amp_helas_calls)
@@ -1196,4 +1189,39 @@ class LoopProcessOptimizedExporterFortranSA(LoopProcessExporterFortranSA):
             # Return it to be written along with the others
             return len(filter(lambda call: call.find('CALL LOOP') != 0, \
                               loop_amp_helas_calls)), file
-                  
+
+    def write_born_amps_and_wfs(self, writer, matrix_element, fortran_model,\
+                                noSplit=False): 
+        """ Writes out the code for the subroutine MP_BORN_AMPS_AND_WFS which 
+        computes just the external wavefunction and born amplitudes in 
+        multiple precision. """
+
+        if not matrix_element.get('processes') or \
+               not matrix_element.get('diagrams'):
+            return 0
+        
+        replace_dict = copy.copy(self.general_replace_dict)
+
+        # Extract helas calls
+        born_amps_and_wfs_calls = fortran_model.get_born_ct_helas_calls(\
+                                               matrix_element, include_CT=False)
+
+        file = open(os.path.join(self.template_dir,\
+                        'mp_born_amps_and_wfs.inc')).read()   
+        # Decide here wether we need to split the loop_matrix.f file or not.
+        if (not noSplit and (len(matrix_element.get_all_amplitudes())>2000)):
+            file=self.split_HELASCALLS(writer,replace_dict,\
+                            'mp_helas_calls_split.inc',file,\
+                            born_amps_and_wfs_calls,'born_amps_and_wfs_calls',\
+                            'mp_helas_calls')
+        else:
+            replace_dict['born_amps_and_wfs_calls']=\
+                                            '\n'.join(born_amps_and_wfs_calls)
+        
+        file = file % replace_dict
+        if writer:
+            # Write the file
+            writer.writelines(file)  
+        else:
+            # Return it to be written along with the others
+            return file

@@ -252,11 +252,69 @@ class UFOExpressionParserFortran(UFOExpressionParser):
         elif p[1] == 'im': p[0] = 'dimag' + p[2]
         elif p[1] == 'cmath.sqrt' or p[1] == 'sqrt': p[0] = 'sqrt' + p[2]
         elif p[1] == 'complexconjugate': p[0] = 'conjg' + p[2]
-        elif p[1] == 'reglog': p[0] = 'reglog(DCMPLX' + p[2] +')'
+        elif p[1] == 'reglog': p[0] = 'reglog(DCMPLX(' + p[2] +')'
 
     def p_expression_pi(self, p):
         '''expression : PI'''
         p[0] = 'pi'
+
+class UFOExpressionParserMPFortran(UFOExpressionParserFortran):
+    """A parser for UFO algebraic expressions, outputting
+    Fortran-style code for quadruple precision computation."""
+
+    # The following parser expressions need to be defined for each
+    # output language/framework
+
+    def p_expression_number(self, p):
+        "expression : NUMBER"
+        p[0] = '%e_16' % float(p[1])
+
+    def p_expression_variable(self, p):
+        """expression : VARIABLE. All the multiple_precision variables are 
+        defined with the prefix _MP_"""
+        p[0] = ('_mp_'+p[1]).lower()
+
+    def p_expression_power(self, p):
+        'expression : expression POWER expression'
+        try:
+            p3 = float(p[3].replace('_16','i'))
+            # Chebck if exponent is an integer
+            if p3 == int(p3):
+                p3 = str(int(p3))
+                p[0] = p[1] + "**" + p3
+            else:
+                p[0] = p[1] + "**" + p[3]
+        except:
+            p[0] = p[1] + "**" + p[3]
+
+    def p_expression_cond(self, p):
+        "expression :  COND '(' expression ',' expression ',' expression ')'"
+        p[0] = 'MP_COND(CMPLX('+p[3]+',KIND=16),CMPLX('+p[5]+\
+                                          ',KIND=16),CMPLX('+p[7]+',KIND=16))'
+
+    def p_expression_func(self, p):
+        '''expression : CSC group
+                      | SEC group
+                      | ACSC group
+                      | ASEC group
+                      | RE group
+                      | IM group
+                      | SQRT group
+                      | CONJ group
+                      | REGLOG group'''
+        if p[1] == 'csc': p[0] = '1e0_16/cos' + p[2]
+        elif p[1] == 'sec': p[0] = '1e0_16/sin' + p[2]
+        elif p[1] == 'acsc': p[0] = 'asin(1e0_16/' + p[2] + ')'
+        elif p[1] == 'asec': p[0] = 'acos(1e0_16/' + p[2] + ')'
+        elif p[1] == 're': p[0] = 'real' + p[2]
+        elif p[1] == 'im': p[0] = 'imag' + p[2]
+        elif p[1] == 'cmath.sqrt' or p[1] == 'sqrt': p[0] = 'sqrt' + p[2]
+        elif p[1] == 'complexconjugate': p[0] = 'conjg' + p[2]
+        elif p[1] == 'reglog': p[0] = 'mp_reglog(CMPLX(' + p[2] +',KIND=16)'
+
+    def p_expression_pi(self, p):
+        '''expression : PI'''
+        p[0] = 'MP_pi'
 
 class UFOExpressionParserCPP(UFOExpressionParser):
     """A parser for UFO algebraic expressions, outputting

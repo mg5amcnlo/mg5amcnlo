@@ -178,7 +178,8 @@ class LoopInterface(CheckLoop, CompleteLoop, HelpLoop, mg_interface.MadGraphCmd)
 
         if not os.path.isdir(self._export_dir) and \
            self._export_format in ['matrix']:
-            raise self.InvalidCmd('Specified export directory %s does not exist.'%str(self._export_dir))
+            raise self.InvalidCmd('Specified export directory %s does not exist.'\
+                                                         %str(self._export_dir))
 
         if not force and not noclean and os.path.isdir(self._export_dir)\
                and self._export_format in ['standalone']:
@@ -205,7 +206,9 @@ class LoopInterface(CheckLoop, CompleteLoop, HelpLoop, mg_interface.MadGraphCmd)
             self._curr_exporter = ExporterClass(\
                   self._mgme_dir, self._export_dir, not noclean,\
                   os.path.join(self._mgme_dir, 'Template/loop_material'),\
-                  self._cuttools_dir)
+                  self._cuttools_dir,\
+                  complex_mass_scheme=self.options['complex_mass_scheme'],\
+                  mp=True)
         else:
             raise MadGraph5Error('MG5 cannot find the \'loop_material\' directory'+\
                                  ' in %s'%str(self._mgme_dir))                                                           

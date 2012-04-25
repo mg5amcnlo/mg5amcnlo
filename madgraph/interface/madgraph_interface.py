@@ -3525,7 +3525,8 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
         
         elif self._export_format in ['standalone', 'matrix']:
             self._curr_exporter = export_v4.ProcessExporterFortranSA(\
-                                  self._mgme_dir, self._export_dir,not noclean)
+              self._mgme_dir, self._export_dir,not noclean, \
+              complex_mass_scheme=self.options['complex_mass_scheme'])
         elif self._export_format == 'standalone_cpp':
             export_cpp.setup_cpp_standalone_dir(self._export_dir, self._curr_model)
         elif not os.path.isdir(self._export_dir):

@@ -3638,6 +3638,22 @@ class HelasMatrixElement(base_objects.PhysicsObject):
                          filter(lambda wf: wf.get('leg_state') == False,
                                 external_wfs)])))
 
+    def get_external_masses(self):
+        """Gives the list of the strings corresponding to the masses of the
+        external particles."""
+
+        mass_list=[]
+        external_wfs = sorted(filter(lambda wf: wf.get('leg_state') != \
+                              'intermediate', self.get_all_wavefunctions()),\
+                              key=lambda w: w['number_external'])
+        external_number=1
+        for wf in external_wfs:
+            if wf.get('number_external')==external_number:
+                external_number=external_number+1
+                mass_list.append(wf.get('particle').get('mass'))
+        
+        return mass_list
+        
     def get_helicity_combinations(self):
         """Gives the number of helicity combinations for external
         wavefunctions"""
