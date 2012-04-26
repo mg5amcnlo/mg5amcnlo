@@ -495,6 +495,7 @@ c
       if(pp(0,1).le.0.d0)then
 c Unphysical kinematics: set matrix elements equal to zero
         wgt=0.d0
+        flagmc=.false.
         return
       endif
 
@@ -1171,6 +1172,7 @@ c
       if(pp(0,1).le.0.d0)then
 c Unphysical kinematics: set matrix elements equal to zero
         wgt=0.d0
+        flagmc=.false.
         return
       endif
 
@@ -1850,6 +1852,7 @@ c
       if(pp(0,1).le.0.d0)then
 c Unphysical kinematics: set matrix elements equal to zero
         wgt=0.d0
+        flagmc=.false.
         return
       endif
 
@@ -2603,6 +2606,7 @@ c
       if(pp(0,1).le.0.d0)then
 c Unphysical kinematics: set matrix elements equal to zero
         wgt=0.d0
+        flagmc=.false.
         return
       endif
 
@@ -3260,6 +3264,7 @@ c
       if(pp(0,1).le.0.d0)then
 c Unphysical kinematics: set matrix elements equal to zero
         wgt=0.d0
+        flagmc=.false.
         return
       endif
 
