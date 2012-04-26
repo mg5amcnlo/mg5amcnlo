@@ -123,7 +123,7 @@ class LoopProcessExporterFortranSA(export_v4.ProcessExporterFortranSA,
 
     # Init function to initialize both mother classes, depending on the nature
     # of the argument given
-    def __init__(self, *args, **kwargs):
+    def __init__(self, *args, **kwargs):    
        super(LoopProcessExporterFortranSA, self).__init__(*args, **kwargs)          
 
     def copy_v4template(self, modelname):
@@ -258,7 +258,20 @@ class LoopProcessExporterFortranSA(export_v4.ProcessExporterFortranSA,
             shutil.copy(os.path.join(self.loop_dir,'StandAlone','Subprocesses',
                                      'check_sa_loop_induced.f'),
                         os.path.join(self.dir_path, 'Subprocesses','check_sa.f'))
-            
+
+        self.link_files_from_Subprocesses()
+        
+        # Return to original PWD
+        os.chdir(cwd)
+
+        if not calls:
+            calls = 0
+        return calls
+
+    def link_files_from_Subprocesses(self):
+        """ To link required files from the Subprocesses directory to the
+        different P* ones"""
+        
         linkfiles = ['check_sa.f', 'coupl.inc', 'makefile', \
                      'cts_mprec.h', 'cts_mpc.h']
         for file in linkfiles:
@@ -268,13 +281,6 @@ class LoopProcessExporterFortranSA(export_v4.ProcessExporterFortranSA,
 
         for file in linkfiles:
             ln('../../lib/%s' % file)
-
-        # Return to original PWD
-        os.chdir(cwd)
-
-        if not calls:
-            calls = 0
-        return calls
 
     def write_matrix_element_v4(self, writer, matrix_element, fortran_model,
                                 proc_id = "", config_map = []):
@@ -753,6 +759,36 @@ class LoopProcessOptimizedExporterFortranSA(LoopProcessExporterFortranSA):
     template_dir=os.path.join(_file_path,\
                       'iolibs/template_files/loop_optimized')
 
+    def turn_to_mp_calls(self, helas_calls_list):
+        # Prepend 'MP_' to all the helas calls in helas_calls_list.
+        # Might look like a brutal unsafe implementation, but it is not as 
+        # these calls are built from the properties of the HELAS objects and
+        # wether they are evaluated in double or quad precision is none of 
+        # their business but only relevant to the output algorithm.
+        subRe=re.compile(r"(?P<toSub>^.*[CALL|call]\s+)")
+        
+        def replaceWith(match_obj):
+            return match_obj.group('toSub')+'MP_'
+        
+        for i, helas_call in enumerate(helas_calls_list):
+            helas_calls_list[i]=subRe.sub(replaceWith,helas_call)
+
+    def link_files_from_Subprocesses(self):
+        """ Links the additional model files for multiples precision """
+        
+        LoopProcessExporterFortranSA.link_files_from_Subprocesses(self)
+        linkfiles = ['mp_coupl.inc', 'mp_coupl_same_name.inc']
+        for file in linkfiles:
+            ln('../%s' % file)       
+
+    def make_model_symbolic_link(self):
+        """ Add the linking of the additional model files for multiple precision
+        """
+        LoopProcessExporterFortranSA.make_model_symbolic_link(self)
+        model_path = self.dir_path + '/Source/MODEL/'
+        ln(model_path + '/mp_coupl.inc', self.dir_path + '/SubProcesses')
+        ln(model_path + '/mp_coupl_same_name.inc', self.dir_path + '/SubProcesses')
+    
     def cat_coeff(self, ff_number, frac, is_imaginary, Nc_power, Nc_value=3):
         """Concatenate the coefficient information to reduce it to 
         (fraction, is_imaginary) """
@@ -977,8 +1013,10 @@ class LoopProcessOptimizedExporterFortranSA(LoopProcessExporterFortranSA):
         # are the L-cut ones, so -3.
         mass_list=matrix_element.get_external_masses()[:-3]
         replace_dict['force_onshell']='\n'.join([\
-         'P(3,%(i)d)=SQRT(P(0,%(i)d)**2-P(1,%(i)d)**2-P(2,%(i)d)**2-%(m)s**2)'%\
+        'P(3,%(i)d)=SIGN(SQRT(P(0,%(i)d)**2-P(1,%(i)d)**2-P(2,%(i)d)**2-%(m)s**2),P(3,%(i)d))'%\
          {'i':i+1,'m':m} for i, m in enumerate(mass_list)])
+        # Prepend MP_ to all helas calls.
+        self.turn_to_mp_calls(loop_helas_calls)
         replace_dict['mp_loop_helas_calls'] = "\n".join(loop_helas_calls)
         
         file=file%replace_dict
@@ -1091,7 +1129,7 @@ class LoopProcessOptimizedExporterFortranSA(LoopProcessExporterFortranSA):
     
     # Helper function to split HELAS CALLS in dedicated subroutines placed
     # in different files.
-    def split_HELASCALLS(writer, replace_dict, template_name, masterfile, \
+    def split_HELASCALLS(self, writer, replace_dict, template_name, masterfile, \
                          helas_calls, entry_name, bunch_name,n_helas=2000):
         """ Finish the code generation with splitting.         
         Split the helas calls in the argument helas_calls into bunches of 
@@ -1173,7 +1211,7 @@ class LoopProcessOptimizedExporterFortranSA(LoopProcessExporterFortranSA):
                             'helas_calls_split.inc',file,born_ct_helas_calls,\
                             'born_ct_helas_calls','helas_calls_ampb')
             file=self.split_HELASCALLS(writer,replace_dict,\
-                    'helas_calls_split.inc',writerfile,loop_amp_helas_calls,\
+                    'helas_calls_split.inc',file,loop_amp_helas_calls,\
                     'loop_helas_calls','helas_calls_ampl')
         else:
             replace_dict['born_ct_helas_calls']='\n'.join(born_ct_helas_calls)
@@ -1205,6 +1243,10 @@ class LoopProcessOptimizedExporterFortranSA(LoopProcessExporterFortranSA):
         # Extract helas calls
         born_amps_and_wfs_calls = fortran_model.get_born_ct_helas_calls(\
                                                matrix_element, include_CT=False)
+        
+        # Turn these HELAS calls to the multiple-precision version of the HELAS
+        # subroutines.
+        self.turn_to_mp_calls(born_amps_and_wfs_calls)
 
         file = open(os.path.join(self.template_dir,\
                         'mp_born_amps_and_wfs.inc')).read()   

@@ -27,6 +27,7 @@ import time
 
 root_path = os.path.split(os.path.dirname(os.path.realpath( __file__ )))[0]
 sys.path.append(root_path)
+import aloha
 from aloha.aloha_object import *
 import aloha.aloha_writers as aloha_writers
 import aloha.aloha_lib as aloha_lib
@@ -84,6 +85,17 @@ class AbstractRoutine(object):
                              writer.write_combined(grouped, mode=mode, **opt))])
             else:
                 text += writer.write_combined(grouped, mode=mode, **opt)
+        
+        if language == "Fortran" and aloha.quad_precision:
+            writer = getattr(aloha_writers, 'ALOHAWriterFor%s_QP' % language)(self, output_dir)
+            text += writer.write(mode=mode, **opt)
+            for grouped in self.combined:
+                if isinstance(text, tuple):
+                    text = tuple([old.__add__(new)  for old, new in zip(text, 
+                             writer.write_combined(grouped, mode=mode, **opt))])
+                else:
+                    text += writer.write_combined(grouped, mode=mode, **opt)            
+                    
         return text
 
 class AbstractRoutineBuilder(object):

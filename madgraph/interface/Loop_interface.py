@@ -205,10 +205,10 @@ class LoopInterface(CheckLoop, CompleteLoop, HelpLoop, mg_interface.MadGraphCmd)
                     ExporterClass=loop_exporters.LoopProcessExporterFortranSA
             self._curr_exporter = ExporterClass(\
                   self._mgme_dir, self._export_dir, not noclean,\
-                  os.path.join(self._mgme_dir, 'Template/loop_material'),\
-                  self._cuttools_dir,\
                   complex_mass_scheme=self.options['complex_mass_scheme'],\
-                  mp=True)
+                  mp=True,\
+                  loop_dir=os.path.join(self._mgme_dir, 'Template/loop_material'),\
+                  cuttools_dir=self._cuttools_dir)
         else:
             raise MadGraph5Error('MG5 cannot find the \'loop_material\' directory'+\
                                  ' in %s'%str(self._mgme_dir))                                                           

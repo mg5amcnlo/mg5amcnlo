@@ -152,6 +152,105 @@ c
       return
       end
 
+      subroutine mp_ixxxxx(p, fmass, nhel, nsf ,fi)
+c
+c This subroutine computes a fermion wavefunction with the flowing-IN
+c fermion number, in QUADRUPLE PRECISIOn
+c
+c input:
+c       real    p(0:3)         : four-momentum of fermion
+c       real    fmass          : mass          of fermion
+c       integer nhel = -1 or 1 : helicity      of fermion
+c       integer nsf  = -1 or 1 : +1 for particle, -1 for anti-particle
+c
+c output:
+c       complex fi(6)          : fermion wavefunction               |fi>
+c
+      implicit none
+      complex*32 fi(8),chi(2)
+      real*16 p(0:3),sf(2),sfomeg(2),omega(2),fmass,
+     &     pp,pp3,sqp0p3,sqm(0:1)
+      integer nhel,nsf,ip,im,nh
+
+      real*16 rZero, rHalf, rTwo
+      parameter( rZero = 0.0e0_16, rHalf = 0.5e0_16, rTwo = 2.0e0_16 )
+c     Convention for loop computations
+      fi(5) = cmplx(p(0),0.D0,KIND=16)*nsf
+      fi(6) = cmplx(p(1),0.D0,KIND=16)*nsf
+      fi(7) = cmplx(p(2),0.D0,KIND=16)*nsf
+      fi(8) = cmplx(p(3),0.D0,KIND=16)*nsf
+
+      nh = nhel*nsf
+
+      if ( fmass.ne.rZero ) then
+
+         pp = min(p(0),sqrt(p(1)**2+p(2)**2+p(3)**2))
+
+         if ( pp.eq.rZero ) then
+
+            sqm(0) = sqrt(abs(fmass)) ! possibility of negative fermion masses
+            sqm(1) = sign(sqm(0),fmass) ! possibility of negative fermion masses
+            ip = (1+nh)/2
+            im = (1-nh)/2
+
+            fi(1) = ip     * sqm(ip)
+            fi(2) = im*nsf * sqm(ip)
+            fi(3) = ip*nsf * sqm(im)
+            fi(4) = im     * sqm(im)
+
+         else
+
+            sf(1) = REAL(1+nsf+(1-nsf)*nh,KIND=16)*rHalf
+            sf(2) = REAL(1+nsf-(1-nsf)*nh,KIND=16)*rHalf
+            omega(1) = sqrt(p(0)+pp)
+            omega(2) = fmass/omega(1)
+            ip = (3+nh)/2
+            im = (3-nh)/2
+            sfomeg(1) = sf(1)*omega(ip)
+            sfomeg(2) = sf(2)*omega(im)
+            pp3 = max(pp+p(3),rZero)
+            chi(1) = cmplx( sqrt(pp3*rHalf/pp), KIND=16 )
+            if ( pp3.eq.rZero ) then
+               chi(2) = cmplx(-nh ,KIND=16)
+            else
+               chi(2) = cmplx( nh*p(1) , p(2),KIND=16)/sqrt(rTwo*pp*pp3)
+            endif
+
+            fi(1) = sfomeg(1)*chi(im)
+            fi(2) = sfomeg(1)*chi(ip)
+            fi(3) = sfomeg(2)*chi(im)
+            fi(4) = sfomeg(2)*chi(ip)
+
+         endif
+
+      else
+
+         if(p(1).eq.0d0.and.p(2).eq.0d0.and.p(3).lt.0d0) then
+            sqp0p3 = 0d0
+         else
+            sqp0p3 = sqrt(max(p(0)+p(3),rZero))*nsf
+         end if
+         chi(1) = cmplx( sqp0p3 ,KIND=16)
+         if ( sqp0p3.eq.rZero ) then
+            chi(2) = cmplx(-nhel ,KIND=16)*sqrt(rTwo*p(0))
+         else
+            chi(2) = cmplx( nh*p(1), p(2) ,KIND=16)/sqp0p3
+         endif
+         if ( nh.eq.1 ) then
+            fi(1) = cmplx( rZero ,KIND=16)
+            fi(2) = cmplx( rZero ,KIND=16)
+            fi(3) = chi(1)
+            fi(4) = chi(2)
+         else
+            fi(1) = chi(2)
+            fi(2) = chi(1)
+            fi(3) = cmplx( rZero ,KIND=16)
+            fi(4) = cmplx( rZero ,KIND=16)
+         endif
+      endif
+c
+      return
+      end
 
       subroutine oxxxxx(p,fmass,nhel,nsf , fo)
 c
@@ -298,6 +397,111 @@ c
       return
       end
 
+      subroutine mp_oxxxxx(p,fmass,nhel,nsf , fo)
+c
+c This subroutine computes a fermion wavefunction with the flowing-OUT
+c fermion number in quadruple precision.
+c
+c input:
+c       real    p(0:3)         : four-momentum of fermion
+c       real    fmass          : mass          of fermion
+c       integer nhel = -1 or 1 : helicity      of fermion
+c       integer nsf  = -1 or 1 : +1 for particle, -1 for anti-particle
+c
+c output:
+c       complex fo(6)          : fermion wavefunction               <fo|
+c
+      implicit none
+      complex*32 fo(8),chi(2)
+      real*16 p(0:3),sf(2),sfomeg(2),omega(2),fmass,
+     &     pp,pp3,sqp0p3,sqm(0:1)
+      integer nhel,nsf,nh,ip,im
+
+      real*16 rZero, rHalf, rTwo
+      parameter( rZero = 0.0e0_16, rHalf = 0.5e0_16, rTwo = 2.0e0_16 )
+
+c     Convention for loop computations
+      fo(5) = cmplx(p(0),0.D0,KIND=16)*nsf
+      fo(6) = cmplx(p(1),0.D0,KIND=16)*nsf
+      fo(7) = cmplx(p(2),0.D0,KIND=16)*nsf
+      fo(8) = cmplx(p(3),0.D0,KIND=16)*nsf
+
+
+      nh = nhel*nsf
+
+      if ( fmass.ne.rZero ) then
+
+         pp = min(p(0),sqrt(p(1)**2+p(2)**2+p(3)**2))
+
+         if ( pp.eq.rZero ) then
+
+            sqm(0) = sqrt(abs(fmass)) ! possibility of negative fermion masses
+            sqm(1) = sign(sqm(0),fmass) ! possibility of negative fermion masses
+            ip = -((1+nh)/2)
+            im =  (1-nh)/2
+
+            fo(1) = im     * sqm(im)
+            fo(2) = ip*nsf * sqm(im)
+            fo(3) = im*nsf * sqm(-ip)
+            fo(4) = ip     * sqm(-ip)
+
+         else
+
+            pp = min(p(0),sqrt(p(1)**2+p(2)**2+p(3)**2))
+            sf(1) = real(1+nsf+(1-nsf)*nh,KIND=16)*rHalf
+            sf(2) = real(1+nsf-(1-nsf)*nh,KIND=16)*rHalf
+            omega(1) = sqrt(p(0)+pp)
+            omega(2) = fmass/omega(1)
+            ip = (3+nh)/2
+            im = (3-nh)/2
+            sfomeg(1) = sf(1)*omega(ip)
+            sfomeg(2) = sf(2)*omega(im)
+            pp3 = max(pp+p(3),rZero)
+            chi(1) = cmplx( sqrt(pp3*rHalf/pp) ,KIND=16)
+            if ( pp3.eq.rZero ) then
+               chi(2) = cmplx(-nh ,KIND=16)
+            else
+               chi(2) = cmplx( nh*p(1) , -p(2) , KIND=16)/
+     & sqrt(rTwo*pp*pp3)
+            endif
+
+            fo(1) = sfomeg(2)*chi(im)
+            fo(2) = sfomeg(2)*chi(ip)
+            fo(3) = sfomeg(1)*chi(im)
+            fo(4) = sfomeg(1)*chi(ip)
+
+         endif
+
+      else
+
+         if(p(1).eq.0d0.and.p(2).eq.0d0.and.p(3).lt.0d0) then
+            sqp0p3 = 0d0
+         else
+            sqp0p3 = sqrt(max(p(0)+p(3),rZero))*nsf
+         end if
+         chi(1) = cmplx( sqp0p3 ,KIND=16)
+         if ( sqp0p3.eq.rZero ) then
+            chi(2) = cmplx(-nhel , KIND=16)*sqrt(rTwo*p(0))
+         else
+            chi(2) = cmplx( nh*p(1), -p(2) , KIND=16)/sqp0p3
+         endif
+         if ( nh.eq.1 ) then
+            fo(1) = chi(1)
+            fo(2) = chi(2)
+            fo(3) = cmplx( rZero , KIND=16)
+            fo(4) = cmplx( rZero , KIND=16)
+         else
+            fo(1) = cmplx( rZero , KIND=16)
+            fo(2) = cmplx( rZero , KIND=16)
+            fo(3) = chi(2)
+            fo(4) = chi(1)
+         endif
+
+      endif
+c
+      return
+      end
+
       subroutine pxxxxx(p,tmass,nhel,nst , tc)
 
 c    CP3 2009.NOV
@@ -339,6 +543,51 @@ c     Convention for loop computations
       tc(18) = dcmplx(p(1),0.D0)*nst
       tc(19) = dcmplx(p(2),0.D0)*nst
       tc(20) = dcmplx(p(3),0.D0)*nst
+
+      return
+      end
+
+      subroutine mp_pxxxxx(p,tmass,nhel,nst , tc)
+
+c    CP3 2009.NOV
+
+c This subroutine computes a PSEUDOR wavefunction.
+c
+c input:
+c       real    p(0:3)         : four-momentum of tensor boson
+c       real    tmass          : mass          of tensor boson
+c       integer nhel           : helicity      of tensor boson
+c                = -2,-1,0,1,2 : (0 is forbidden if tmass=0.0)
+c       integer nst  = -1 or 1 : +1 for final, -1 for initial
+c
+c output:
+c       complex tc(18)         : PSEUDOR  wavefunction    epsilon^mu^nu(t)
+c
+      implicit none
+      real*16 p(0:3), tmass
+      integer nhel, nst
+      complex*32 tc(20)
+
+      complex*32 ft(6,4), ep(4), em(4), e0(4)
+      real*16 pt, pt2, pp, pzpt, emp, sqh, sqs
+      integer i, j
+
+      real*16 rZero, rHalf, rOne, rTwo
+      parameter( rZero = 0.0e0_16, rHalf = 0.5e0_16 )
+      parameter( rOne = 1.0e0_16, rTwo = 2.0e0_16 )
+
+
+      tc(1)=NHEL
+
+c     Convention for trees
+c      tc(17) = dcmplx(p(0),p(3))*nst
+c      tc(18) = dcmplx(p(1),p(2))*nst
+
+c     Convention for loop computations
+      tc(17) = cmplx(p(0),0.0e0_16,KIND=16)*nst
+      tc(18) = cmplx(p(1),0.0e0_16,KIND=16)*nst
+      tc(19) = cmplx(p(2),0.0e0_16,KIND=16)*nst
+      tc(20) = cmplx(p(3),0.0e0_16,KIND=16)*nst
 
       return
       end
@@ -405,6 +654,73 @@ c     Convention for loop computations
       sc(3) = dcmplx(p(1),0.D0)*nss
       sc(4) = dcmplx(p(2),0.D0)*nss
       sc(5) = dcmplx(p(3),0.D0)*nss
+c
+      return
+      end
+
+      subroutine mp_sxxxxx(p,nss , sc)
+c
+c This subroutine computes a complex SCALAR wavefunction.
+c in quadrupole precision.
+c
+c input:
+c       real    p(0:3)         : four-momentum of scalar boson
+c       integer nss  = -1 or 1 : +1 for final, -1 for initial
+c
+c output:
+c       complex sc(3)          : scalar wavefunction                   s
+c
+      implicit none
+      complex*32 sc(5)
+      real*16 p(0:3)
+      integer nss
+
+      real*16 rOne
+      parameter( rOne = 1.0e0_16 )
+
+c#ifdef HELAS_CHECK
+c      double precision p2
+c      double precision epsi
+c      parameter( epsi = 2.0d-5 )
+c      double precision rZero
+c      parameter( rZero = 0.0d0 )
+c      integer stdo
+c      parameter( stdo = 6 )
+c#endif
+c
+c#ifdef HELAS_CHECK
+c      if ( abs(p(0))+abs(p(1))+abs(p(2))+abs(p(3)).eq.rZero ) then
+c         write(stdo,*)
+c     &        ' helas-error : p(0:3) in sxxxxx is zero momentum'
+c      endif
+c      if ( p(0).le.rZero ) then
+c         write(stdo,*)
+c     &        ' helas-error : p(0:3) in sxxxxx has non-positive energy'
+c         write(stdo,*)
+c     &        '             : p(0) = ',p(0)
+c      endif
+c      p2 = p(0)**2-(p(1)**2+p(2)**2+p(3)**2)
+c      if ( p2.lt.-p(0)**2*epsi ) then
+c         write(stdo,*) ' helas-error : p(0:3) in sxxxxx is spacelike'
+c         write(stdo,*) '             : p**2 = ',p2
+c      endif
+c      if ( abs(nss).ne.1 ) then
+c         write(stdo,*) ' helas-error : nss in sxxxxx is not -1,1'
+c         write(stdo,*) '             : nss = ',nss
+c      endif
+c#endif
+
+      sc(1) = cmplx( rOne , KIND=16)
+
+c     Convention for trees
+c      sc(2) = dcmplx(p(0),p(3))*nss
+c      sc(3) = dcmplx(p(1),p(2))*nss
+
+c     Convention for loop computations
+      sc(2) = cmplx(p(0),0.0e0_16, KIND=16)*nss
+      sc(3) = cmplx(p(1),0.0e0_16, KIND=16)*nss
+      sc(4) = cmplx(p(2),0.0e0_16, KIND=16)*nss
+      sc(5) = cmplx(p(3),0.0e0_16, KIND=16)*nss
 c
       return
       end
@@ -588,6 +904,184 @@ c construct eps0
       end
 
 
+      subroutine mp_txxxxx(p,tmass,nhel,nst , tc)
+c
+c This subroutine computes a TENSOR wavefunction.
+c
+c input:
+c       real    p(0:3)         : four-momentum of tensor boson
+c       real    tmass          : mass          of tensor boson
+c       integer nhel           : helicity      of tensor boson
+c                = -2,-1,0,1,2 : (0 is forbidden if tmass=0.0)
+c       integer nst  = -1 or 1 : +1 for final, -1 for initial
+c
+c output:
+c       complex tc(18)         : tensor wavefunction    epsilon^mu^nu(t)
+c
+      implicit none
+      real*16 p(0:3), tmass
+      integer nhel, nst
+      complex*32 tc(20)
+
+      complex*32 ft(6,4), ep(4), em(4), e0(4)
+      real*16 pt, pt2, pp, pzpt, emp, sqh, sqs
+      integer i, j
+
+      real*16 rZero, rHalf, rOne, rTwo
+      parameter( rZero = 0.0e0_16, rHalf = 0.5e0_16 )
+      parameter( rOne = 1.0e0_16, rTwo = 2.0e0_16 )
+
+      integer stdo
+      parameter( stdo = 6 )
+
+      sqh = sqrt(rHalf)
+      sqs = sqrt(rHalf/3.0e0_16)
+
+      pt2 = p(1)**2 + p(2)**2
+      pp = min(p(0),sqrt(pt2+p(3)**2))
+      pt = min(pp,sqrt(pt2))
+
+c     Convention for trees
+c      ft(5,1) = dcmplx(p(0),p(3))*nst
+c      ft(6,1) = dcmplx(p(1),p(2))*nst
+
+c     Convention for loop computations
+      ft(5,1) = cmplx(p(0),0.0e0_16)*nst
+      ft(6,1) = cmplx(p(1),0.0e0_16)*nst
+      ft(7,1) = cmplx(p(2),0.0e0_16)*nst
+      ft(8,1) = cmplx(p(3),0.0e0_16)*nst
+
+      if ( nhel.ge.0 ) then
+c construct eps+
+         if ( pp.eq.rZero ) then
+            ep(1) = cmplx( rZero ,KIND=16)
+            ep(2) = cmplx( -sqh ,KIND=16)
+            ep(3) = cmplx( rZero , nst*sqh ,KIND=16)
+            ep(4) = cmplx( rZero ,KIND=16)
+         else
+            ep(1) = cmplx( rZero ,KIND=16)
+            ep(4) = cmplx( pt/pp*sqh ,KIND=16)
+            if ( pt.ne.rZero ) then
+               pzpt = p(3)/(pp*pt)*sqh
+               ep(2) = cmplx( -p(1)*pzpt , -nst*p(2)/pt*sqh ,KIND=16)
+               ep(3) = cmplx( -p(2)*pzpt ,  nst*p(1)/pt*sqh ,KIND=16)
+            else
+               ep(2) = cmplx( -sqh ,KIND=16)
+               ep(3) = cmplx( rZero , nst*sign(sqh,p(3)) ,KIND=16)
+            endif
+         endif
+      end if
+
+      if ( nhel.le.0 ) then
+c construct eps-
+         if ( pp.eq.rZero ) then
+            em(1) = cmplx( rZero ,KIND=16)
+            em(2) = cmplx( sqh ,KIND=16)
+            em(3) = cmplx( rZero , nst*sqh ,KIND=16)
+            em(4) = cmplx( rZero ,KIND=16)
+         else
+            em(1) = cmplx( rZero ,KIND=16)
+            em(4) = cmplx( -pt/pp*sqh ,KIND=16)
+            if ( pt.ne.rZero ) then
+               pzpt = -p(3)/(pp*pt)*sqh
+               em(2) = cmplx( -p(1)*pzpt , -nst*p(2)/pt*sqh ,KIND=16)
+               em(3) = cmplx( -p(2)*pzpt ,  nst*p(1)/pt*sqh ,KIND=16)
+            else
+               em(2) = cmplx( sqh ,KIND=16)
+               em(3) = cmplx( rZero , nst*sign(sqh,p(3)) ,KIND=16)
+            endif
+         endif
+      end if
+
+      if ( abs(nhel).le.1 ) then
+c construct eps0
+         if ( pp.eq.rZero ) then
+            e0(1) = cmplx( rZero ,KIND=16)
+            e0(2) = cmplx( rZero ,KIND=16)
+            e0(3) = cmplx( rZero ,KIND=16)
+            e0(4) = cmplx( rOne ,KIND=16)
+         else
+            emp = p(0)/(tmass*pp)
+            e0(1) = cmplx( pp/tmass ,KIND=16)
+            e0(4) = cmplx( p(3)*emp ,KIND=16)
+            if ( pt.ne.rZero ) then
+               e0(2) = cmplx( p(1)*emp ,KIND=16)
+               e0(3) = cmplx( p(2)*emp ,KIND=16)
+            else
+               e0(2) = cmplx( rZero ,KIND=16)
+               e0(3) = cmplx( rZero ,KIND=16)
+            endif
+         end if
+      end if
+
+      if ( nhel.eq.2 ) then
+         do j = 1,4
+            do i = 1,4
+               ft(i,j) = ep(i)*ep(j)
+            end do
+         end do
+      else if ( nhel.eq.-2 ) then
+         do j = 1,4
+            do i = 1,4
+               ft(i,j) = em(i)*em(j)
+            end do
+         end do
+      else if (tmass.eq.0) then
+         do j = 1,4
+            do i = 1,4
+               ft(i,j) = 0
+            end do
+         end do
+      else if (tmass.ne.0) then
+        if  ( nhel.eq.1 ) then
+           do j = 1,4
+              do i = 1,4
+                 ft(i,j) = sqh*( ep(i)*e0(j) + e0(i)*ep(j) )
+              end do
+           end do
+        else if ( nhel.eq.0 ) then
+           do j = 1,4
+              do i = 1,4
+                 ft(i,j) = sqs*( ep(i)*em(j) + em(i)*ep(j)
+     &                                + rTwo*e0(i)*e0(j) )
+              end do
+           end do
+        else if ( nhel.eq.-1 ) then
+           do j = 1,4
+              do i = 1,4
+                 ft(i,j) = sqh*( em(i)*e0(j) + e0(i)*em(j) )
+              end do
+           end do
+        else
+           write(stdo,*) 'invalid helicity in TXXXXX'
+           stop
+        end if
+      end if
+
+      tc(1) = ft(1,1)
+      tc(2) = ft(1,2)
+      tc(3) = ft(1,3)
+      tc(4) = ft(1,4)
+      tc(5) = ft(2,1)
+      tc(6) = ft(2,2)
+      tc(7) = ft(2,3)
+      tc(8) = ft(2,4)
+      tc(9) = ft(3,1)
+      tc(10) = ft(3,2)
+      tc(11) = ft(3,3)
+      tc(12) = ft(3,4)
+      tc(13) = ft(4,1)
+      tc(14) = ft(4,2)
+      tc(15) = ft(4,3)
+      tc(16) = ft(4,4)
+      tc(17) = ft(5,1)
+      tc(18) = ft(6,1)
+      tc(19) = ft(5,1)
+      tc(20) = ft(6,1)
+
+      return
+      end
+
       subroutine vxxxxx(p,vmass,nhel,nsv , vc)
 c
 c This subroutine computes a VECTOR wavefunction.
@@ -739,6 +1233,91 @@ c
       return
       end
 
+      subroutine mp_vxxxxx(p,vmass,nhel,nsv , vc)
+c
+c This subroutine computes a VECTOR wavefunction in quadruple precision.
+c
+c input:
+c       real    p(0:3)         : four-momentum of vector boson
+c       real    vmass          : mass          of vector boson
+c       integer nhel = -1, 0, 1: helicity      of vector boson
+c                                (0 is forbidden if vmass=0.0)
+c       integer nsv  = -1 or 1 : +1 for final, -1 for initial
+c
+c output:
+c       complex vc(6)          : vector wavefunction       epsilon^mu(v)
+c
+      implicit none
+      complex*32 vc(8)
+      real*16 p(0:3),vmass,hel,hel0,pt,pt2,pp,pzpt,emp,sqh
+      integer nhel,nsv,nsvahl
+
+      real*16 rZero, rHalf, rOne, rTwo
+      parameter( rZero = 0.0e0_16, rHalf = 0.5e0_16 )
+      parameter( rOne = 1.0e0_16, rTwo = 2.0e0_16 )
+
+      sqh = sqrt(rHalf)
+      hel = real(nhel,KIND=16)
+      nsvahl = nsv*abs(hel)
+      pt2 = p(1)**2+p(2)**2
+      pp = min(p(0),sqrt(pt2+p(3)**2))
+      pt = min(pp,sqrt(pt2))
+
+c     Convention for loop computations
+      vc(5) = cmplx(p(0),0.e0_16, KIND=16)*nsv
+      vc(6) = cmplx(p(1),0.e0_16, KIND=16)*nsv
+      vc(7) = cmplx(p(2),0.e0_16, KIND=16)*nsv
+      vc(8) = cmplx(p(3),0.e0_16, KIND=16)*nsv
+
+      if ( vmass.ne.rZero ) then
+
+         hel0 = rOne-abs(hel)
+
+         if ( pp.eq.rZero ) then
+
+            vc(1) = cmplx( rZero , KIND=16)
+            vc(2) = cmplx(-hel*sqh , KIND=16)
+            vc(3) = cmplx( rZero , nsvahl*sqh , KIND=16)
+            vc(4) = cmplx( hel0 , KIND=16)
+
+         else
+
+            emp = p(0)/(vmass*pp)
+            vc(1) = cmplx( hel0*pp/vmass , KIND=16)
+            vc(4) = cmplx( hel0*p(3)*emp+hel*pt/pp*sqh , KIND=16 )
+            if ( pt.ne.rZero ) then
+               pzpt = p(3)/(pp*pt)*sqh*hel
+               vc(2) = cmplx( hel0*p(1)*emp-p(1)*pzpt ,
+     &                         -nsvahl*p(2)/pt*sqh       , KIND=16)
+               vc(3) = cmplx( hel0*p(2)*emp-p(2)*pzpt ,
+     &                          nsvahl*p(1)/pt*sqh       , KIND=16)
+            else
+               vc(2) = cmplx( -hel*sqh , KIND=16)
+               vc(3) = cmplx( rZero , nsvahl*sign(sqh,p(3)) , KIND=16)
+            endif
+
+         endif
+
+      else
+
+         pp = p(0)
+         pt = sqrt(p(1)**2+p(2)**2)
+         vc(1) = cmplx( rZero , KIND=16)
+         vc(4) = cmplx( hel*pt/pp*sqh , KIND=16)
+         if ( pt.ne.rZero ) then
+            pzpt = p(3)/(pp*pt)*sqh*hel
+            vc(2) = cmplx( -p(1)*pzpt , -nsv*p(2)/pt*sqh , KIND=16)
+            vc(3) = cmplx( -p(2)*pzpt ,  nsv*p(1)/pt*sqh , KIND=16)
+         else
+            vc(2) = cmplx( -hel*sqh , KIND=16)
+            vc(3) = cmplx( rZero , nsv*sign(sqh,p(3)), KIND=16 )
+         endif
+
+      endif
+c
+      return
+      end
+
       subroutine boostx(p,q , pboost)
 c
 c This subroutine performs the Lorentz boost of a four-momentum.  The
@@ -759,12 +1338,6 @@ c
       double precision rZero
       parameter( rZero = 0.0d0 )
 
-c#ifdef HELAS_CHECK
-c      integer stdo
-c      parameter( stdo = 6 )
-c      double precision pp
-c#endif
-c
       qq = q(1)**2+q(2)**2+q(3)**2
 
 c#ifdef HELAS_CHECK
@@ -1052,7 +1625,7 @@ C LOOP related universal subroutines
 C###############################################################################
 
 C===============================================================================
-C Subroutines to close the lorentz traces of loops 
+C Subroutines to close the lorentz traces of loops, OBSOLETE NOW 
 C===============================================================================
 
       SUBROUTINE CLOSE_V(Q,M,AMPS,RES)
@@ -1060,8 +1633,9 @@ C===============================================================================
       COMPLEX*16 Q(0:3)
       COMPLEX*16 RES
       COMPLEX*16 AMPS(4)
+      COMPLEX*16 M
 
-      IF (M.NE.0.D0) THEN
+      IF (M.NE.(0.D0,0.0D0)) THEN
         STOP 'Massive vector L-cut particle not supported'
       ENDIF
       RES=AMPS(1)-AMPS(2)-AMPS(3)-AMPS(4)
@@ -1098,7 +1672,6 @@ c momentum q, so it is not implemented yet.
 
       END
 
-
       SUBROUTINE CLOSE_F(Q,M,AMPS,RES)      
       
       COMPLEX*16 Q(0:3)
@@ -1131,8 +1704,57 @@ c momentum q, so it is not implemented yet.
       
       END
 
+c     // QUAD PREC VERSIONS OF THE ABOVE //
+
+      SUBROUTINE MP_CLOSE_V(Q,M,AMPS,RES)
+      
+      COMPLEX*32 Q(0:3)
+      COMPLEX*32 RES
+      COMPLEX*32 AMPS(4)
+      COMPLEX*32 M
+
+      IF (M.NE.(0.0e0_16,0.0e0_16)) THEN
+        STOP 'Massive vector L-cut particle not supported'
+      ENDIF
+      RES=AMPS(1)-AMPS(2)-AMPS(3)-AMPS(4)
+
+      END
+
+      SUBROUTINE MP_CLOSE_F(Q,M,AMPS,RES)      
+      
+      COMPLEX*32 Q(0:3)
+      COMPLEX*32 RES
+      COMPLEX*32 M
+      COMPLEX*32 AMPS(12) 
+
+      RES=(0.0e0_16,0.0e0_16)
+      RES=(Q(0)-Q(3))*AMPS(1)+
+     &    (-Q(1)+(0.0e0_16,1.0e0_16)*Q(2))*AMPS(2)+
+     &    (-Q(1)-(0.0e0_16,1.0e0_16)*Q(2))*AMPS(3)+
+     &    (Q(0)+Q(3))*AMPS(4)+
+     &    (Q(0)+Q(3))*AMPS(5)+
+     &    (Q(1)-(0.0e0_16,1.0e0_16)*Q(2))*AMPS(6)+
+     &    (Q(1)+(0.0e0_16,1.0e0_16)*Q(2))*AMPS(7)+
+     &    (Q(0)-Q(3))*AMPS(8)
+      IF (M.NE.(0.0e0_16,0.0e0_16)) THEN
+        RES=RES-M*(AMPS(9)+AMPS(10)+AMPS(11)+AMPS(12))
+      ENDIF
+
+      END
+
+      SUBROUTINE MP_CLOSE_S(Q,AMP,RES)
+
+      COMPLEX*32 Q(0:3)
+      COMPLEX*32 RES
+      COMPLEX*32 AMP
+
+      RES=(1.0e0_16,0.0e0_16)*AMP
+      
+      END
+
 C===============================================================================
-C Subroutines to create the external wavefunctions of the L-cut particles
+C Subroutines to create the external wavefunctions of the L-cut particles 
+C                                 SOON OBSOLETE
 C===============================================================================
 
 c This subroutine is to recreate the fermion propagator with 4 helicities
@@ -1294,6 +1916,111 @@ C     REVERSE THE MOMENTUM IN THE WF FOR THE SECOND L-CUT SPINORS
 
       END
 
+      SUBROUTINE MP_LCUT_F(Q,M,CFIG,SCD,W)
+
+      COMPLEX*32 Q(0:3)
+      INTEGER CFIG
+      LOGICAL SCD
+      COMPLEX*32 M
+      COMPLEX*32 W(20)
+      COMPLEX*32 IZERO
+      PARAMETER (IZERO=(0.0e0_16,0.0e0_16))
+      COMPLEX*32 IONE
+      PARAMETER (IONE=(1.0e0_16,0.0e0_16))
+
+      W(1)=IZERO
+      W(2)=IZERO
+      W(3)=IZERO
+      W(4)=IZERO
+
+      IF (CFIG.eq.1) then
+        IF (SCD) then
+          W(3)=IONE
+        ELSE
+          W(1)=IONE
+        ENDIF
+      ELSEIF (CFIG.eq.2) then
+        IF (SCD) then
+          W(4)=IONE
+        ELSE
+          W(1)=IONE
+        ENDIF
+      ELSEIF (CFIG.eq.3) then
+        IF (SCD) then
+          W(3)=IONE
+        ELSE
+          W(2)=IONE
+        ENDIF  
+      ELSEIF (CFIG.eq.4) then
+        IF (SCD) then
+          W(4)=IONE
+        ELSE
+          W(2)=IONE
+        ENDIF
+      ELSEIF (CFIG.eq.5) then
+        IF (SCD) then
+          W(1)=IONE
+        ELSE
+          W(3)=IONE
+        ENDIF
+      ELSEIF (CFIG.eq.6) then
+        IF (SCD) then
+          W(2)=IONE
+        ELSE
+          W(3)=IONE
+        ENDIF
+      ELSEIF (CFIG.eq.7) then
+        IF (SCD) then
+          W(1)=IONE
+        ELSE
+          W(4)=IONE
+        ENDIF
+      ELSEIF (CFIG.eq.8) then
+        IF (SCD) then
+          W(2)=IONE
+        ELSE
+          W(4)=IONE
+        ENDIF
+      ELSEIF (CFIG.eq.9) then
+        IF (SCD) then
+          W(1)=IONE
+        ELSE
+          W(1)=IONE
+        ENDIF
+      ELSEIF (CFIG.eq.10) then
+        IF (SCD) then
+          W(2)=IONE
+        ELSE
+          W(2)=IONE
+        ENDIF
+      ELSEIF (CFIG.eq.11) then
+        IF (SCD) then
+          W(3)=IONE
+        ELSE
+          W(3)=IONE
+        ENDIF
+      ELSEIF (CFIG.eq.12) then
+        IF (SCD) then
+          W(4)=IONE
+        ELSE
+          W(4)=IONE
+        ENDIF
+      ENDIF
+C     REVERSE THE MOMENTUM IN THE WF FOR THE SECOND L-CUT SPINORS      
+      IF (SCD) THEN
+        W(5)=-Q(0)
+        W(6)=-Q(1)
+        W(7)=-Q(2)
+        W(8)=-Q(3)
+      ELSE
+        W(5)=Q(0)
+        W(6)=Q(1)
+        W(7)=Q(2)
+        W(8)=Q(3)
+      ENDIF
+
+      END
+
       SUBROUTINE LCUT_CF(Q,M,CFIG,SCD,W)
 
       COMPLEX*16 Q(0:3)
@@ -1384,6 +2111,50 @@ C     REVERSE THE MOMENTUM IN THE WF FOR THE SECOND L-CUT VECTORS
 
       END
 
+      SUBROUTINE MP_LCUT_V(Q,M,CFIG,SCD,W)
+
+      COMPLEX*32 Q(0:3)
+      INTEGER CFIG
+      LOGICAL SCD      
+      COMPLEX*32 M
+      COMPLEX*32 W(20)
+      COMPLEX*32 IZERO
+      PARAMETER (IZERO=(0.0e0_16,0.0e0_16))
+      COMPLEX*32 IONE
+      PARAMETER (IONE=(1.0e0_16,0.0e0_16))
+
+
+      IF (M.NE.IZERO) THEN
+        STOP 'Massive vector L-cut particle not supported'
+      ENDIF
+      W(1)=IZERO
+      W(2)=IZERO
+      W(3)=IZERO
+      W(4)=IZERO
+      IF (CFIG.EQ.1) THEN
+        W(1)=IONE
+      ELSEIF (CFIG.EQ.2) THEN
+        W(2)=IONE
+      ELSEIF (CFIG.EQ.3) THEN
+        W(3)=IONE
+      ELSEIF (CFIG.EQ.4) THEN
+        W(4)=IONE
+      ENDIF
+C     REVERSE THE MOMENTUM IN THE WF FOR THE SECOND L-CUT VECTORS      
+      IF (SCD) THEN
+        W(5)=-Q(0)
+        W(6)=-Q(1)
+        W(7)=-Q(2)
+        W(8)=-Q(3)
+      ELSE
+        W(5)=Q(0)
+        W(6)=Q(1)
+        W(7)=Q(2)
+        W(8)=Q(3)
+      ENDIF
+
+      END
+
       SUBROUTINE LCUT_S(Q,M,CFIG,SCD,W)
 
       COMPLEX*16 Q(0:3)
@@ -1393,6 +2164,33 @@ C     REVERSE THE MOMENTUM IN THE WF FOR THE SECOND L-CUT VECTORS
       COMPLEX*16 W(20)
 
       W(1)=(1.D0,0.D0)
+
+C     REVERSE THE MOMENTUM IN THE WF FOR THE SECOND SCALAR      
+      IF (SCD) THEN
+        W(2)=-Q(0)
+        W(3)=-Q(1)
+        W(4)=-Q(2)
+        W(5)=-Q(3)
+      ELSE
+        W(2)=Q(0)
+        W(3)=Q(1)
+        W(4)=Q(2)
+        W(5)=Q(3)
+      ENDIF
+
+      END
+
+      SUBROUTINE MP_LCUT_S(Q,M,CFIG,SCD,W)
+
+      COMPLEX*32 Q(0:3)
+      COMPLEX*32 M
+      INTEGER CFIG
+      LOGICAL SCD      
+      COMPLEX*32 W(20)
+      COMPLEX*32 IONE
+      PARAMETER (IONE=(1.0e0_16,0.0e0_16))
+
+      W(1)=IONE
 
 C     REVERSE THE MOMENTUM IN THE WF FOR THE SECOND SCALAR      
       IF (SCD) THEN

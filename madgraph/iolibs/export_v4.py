@@ -344,6 +344,7 @@ class ProcessExporterFortran(object):
         model_builder.build(wanted_couplings)
 
         # Create and write ALOHA Routine
+        print " I got aloha.quad_precision=",aloha.quad_precision
         aloha_model = create_aloha.AbstractALOHAModel(model.get('name'))
         if wanted_lorentz:
             aloha_model.compute_subset(wanted_lorentz)
@@ -2849,17 +2850,17 @@ class UFO_model_to_mg4(object):
         self.params_indep = [] # (name, expression, type)
         self.params_ext = []   # external parameter
         self.p_to_f = parsers.UFOExpressionParserFortran()
-        
+                
         # MP stuff below
         self.mp = mp
-        self.mp_complex_format = 'complex*16'
-        self.mp_real_format = 'real*8'
+        self.mp_complex_format = 'complex*32'
+        self.mp_real_format = 'real*16'
         # Warning, it is crucial none of the couplings/parameters of the model
         # starts with this prefix. I should add a check for this.
         # If you change it, it should be changed accordingly in the subroutine
         # generate_loop_amplitude_call of HelasCallWriter and also in 
         # the UFOExpressionParserMPFortran.
-        self.mp_prefix = '_MP_'
+        self.mp_prefix = 'MP__'
         self.mp_p_to_f = parsers.UFOExpressionParserMPFortran()
     
     def pass_parameter_to_case_insensitive(self):
@@ -3059,7 +3060,7 @@ class UFO_model_to_mg4(object):
                     common/MP_strong/ %(mp_prefix)sG
                      
                     %(complex_mp_format)s %(mp_prefix)sgal(2)
-                    common/MP_weak/ %(mp_prefix)sgal(2)
+                    common/MP_weak/ %(mp_prefix)sgal
     
                     """        
             if self.model.get('expansion_order'):
@@ -3200,6 +3201,8 @@ class UFO_model_to_mg4(object):
                             self.params_indep if param.type == 'complex' and
                             is_valid(param.name)]
 
+        fsock.writelines('double complex '+','.join(complex_parameters)+'\n')
+        fsock.writelines('common/params_C/ '+','.join(complex_parameters)+'\n\n')
         if self.mp:
             mp_fsock.writelines(self.mp_complex_format+' '+','.join([\
                             self.mp_prefix+p for p in complex_parameters])+'\n')
@@ -3240,9 +3243,9 @@ class UFO_model_to_mg4(object):
         fsock.writelines(""" gal(1) = 1d0
                              gal(2) = 1d0
                          """)
-        fsock.writelines(""" _mp_gal(1) = 1e0_16
-                             _mp_gal(2) = 1e0_16
-                         """)
+        fsock.writelines(""" %(mp_prefix)sgal(1) = 1e0_16
+                             %(mp_prefix)sgal(2) = 1e0_16
+                         """%{'mp_prefix':self.mp_prefix})
     
     def create_couplings(self):
         """ create couplings.f and all couplingsX.f """
@@ -3276,11 +3279,10 @@ class UFO_model_to_mg4(object):
                             logical READLHA
                             parameter  (PI=3.141592653589793d0)""")
         if self.mp:
-            fsock.writelines("""%s MP_PI
-                                parameter (MP_PI=3.1415926535897932384626433832795e0_16))
+            fsock.writelines("""%s MP__PI
+                                parameter (MP__PI=3.1415926535897932384626433832795e0_16)
                                 include \'mp_input.inc\'
                                 include \'mp_coupl.inc\'
-
                         """%self.mp_real_format) 
         fsock.writelines("""include \'input.inc\'
                             include \'coupl.inc\'
@@ -3308,11 +3310,10 @@ class UFO_model_to_mg4(object):
                             logical READLHA
                             parameter  (PI=3.141592653589793d0)""")
         if self.mp:
-            fsock.writelines("""%s MP_PI
-                                parameter (MP_PI=3.1415926535897932384626433832795e0_16))
+            fsock.writelines("""%s MP__PI
+                                parameter (MP__PI=3.1415926535897932384626433832795e0_16)
                                 include \'mp_input.inc\'
                                 include \'mp_coupl.inc\'
-
                         """%self.mp_real_format)                
         fsock.writelines("""include \'input.inc\'
                             include \'coupl.inc\'
@@ -3341,11 +3342,10 @@ class UFO_model_to_mg4(object):
           double precision PI
           parameter  (PI=3.141592653589793d0)"""% nb_file)
         if self.mp:
-            fsock.writelines("""%s MP_PI
-                                parameter (MP_PI=3.1415926535897932384626433832795e0_16))
+            fsock.writelines("""%s MP__PI
+                                parameter (MP__PI=3.1415926535897932384626433832795e0_16)
                                 include \'mp_input.inc\'
                                 include \'mp_coupl.inc\'
-
                         """%self.mp_real_format) 
         fsock.writelines("""include 'input.inc'
           include 'coupl.inc'
@@ -3402,9 +3402,9 @@ class UFO_model_to_mg4(object):
               implicit none
               %(complex_mp_format)s condition,truecase,falsecase
               if(condition.eq.(0.0e0_16,0.0e0_16)) then
-                 cond=truecase
+                 mp_cond=truecase
               else
-                 cond=falsecase
+                 mp_cond=falsecase
               endif
               end
               
@@ -3412,11 +3412,11 @@ class UFO_model_to_mg4(object):
               implicit none
               %(complex_mp_format)s arg
               if(arg.eq.(0.0e0_16,0.0e0_16)) then
-                 reglog=(0.0e0_16,0.0e0_16)
+                 mp_reglog=(0.0e0_16,0.0e0_16)
               else
-                 reglog=log(arg)
+                 mp_reglog=log(arg)
               endif
-              end""")            
+              end"""%{'complex_mp_format':self.mp_complex_format})            
 
     def create_makeinc(self):
         """create makeinc.inc containing the file to compile """
@@ -3488,7 +3488,7 @@ class UFO_model_to_mg4(object):
                 % {'name': parameter.name,
                    'value': self.p_to_f.parse(str(parameter.value.real))}
             if self.mp:
-                template=template+"\n (mp_prefix)s%(name)s=%(name)s" % \
+                template=template+"\n %(mp_prefix)s%(name)s=%(name)s" % \
                               {'mp_prefix':self.mp_prefix,'name':parameter.name}    
             return template        
     

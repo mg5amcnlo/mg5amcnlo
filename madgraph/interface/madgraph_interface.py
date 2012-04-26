@@ -3448,6 +3448,7 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
             self._fks_multi_proc = None
             self._curr_matrix_elements = helas_objects.HelasMultiProcess()
         elif args[0] == 'loop_optimized_output':
+            aloha.quad_precision = eval(args[1])
             self._curr_matrix_elements = helas_objects.HelasMultiProcess()
             self.options[args[0]] = eval(args[1])
         elif args[0] in self.options:

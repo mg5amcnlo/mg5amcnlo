@@ -3109,14 +3109,14 @@ class test_aloha_creation(unittest.TestCase):
 
         goal =""" subroutine VVS1_1(V2, S3, COUP, M1, W1, V1)
 implicit none 
-double complex V1(*)
-double complex V2(*)
-double complex S3(*)
-double complex COUP
-double complex denom
-double precision M1, W1
-double complex OM1
-double precision P1(0:3)
+COMPLEX*16 V1(*)
+COMPLEX*16 V2(*)
+COMPLEX*16 S3(*)
+COMPLEX*16 COUP
+COMPLEX*16 denom
+real*8 M1, W1
+COMPLEX*16 OM1
+real*8 P1(0:3)
 
 V1(5)= V2(5)+S3(2)
 V1(6)= V2(6)+S3(3)
@@ -3138,29 +3138,29 @@ end
 
  subroutine VVS1_2(V2, S3, COUP, M1, W1, V1)
 implicit none 
-double complex V1(*)
-double complex V2(*)
-double complex S3(*)
-double complex COUP
-double complex denom
-double precision M1, W1
-double complex OM1
-double precision P1(0:3)
+COMPLEX*16 V1(*)
+COMPLEX*16 V2(*)
+COMPLEX*16 S3(*)
+COMPLEX*16 COUP
+COMPLEX*16 denom
+real*8 M1, W1
+COMPLEX*16 OM1
+real*8 P1(0:3)
 call VVS1_1(V2,S3,COUP,M1,W1,V1)
 end
 
 
  subroutine VVS1_2_1(V2, S3, COUP1,COUP2, M1, W1, V1)
 implicit none 
-double complex V1(*)
-double complex V2(*)
-double complex S3(*)
-double complex COUP1,COUP2
-double complex denom
-double precision M1, W1
-double complex OM1
-double precision P1(0:3)
- double complex TMP(6)
+COMPLEX*16 V1(*)
+COMPLEX*16 V2(*)
+COMPLEX*16 S3(*)
+COMPLEX*16 COUP1,COUP2
+COMPLEX*16 denom
+real*8 M1, W1
+COMPLEX*16 OM1
+real*8 P1(0:3)
+ COMPLEX*16 TMP(6)
  integer i
 
  CALL VVS1_1(V2, S3, COUP1, M1, W1, V1)
@@ -3172,15 +3172,15 @@ end
 
  subroutine VVS1_2_2(V2, S3, COUP1,COUP2, M1, W1, V1)
 implicit none 
-double complex V1(*)
-double complex V2(*)
-double complex S3(*)
-double complex COUP1,COUP2
-double complex denom
-double precision M1, W1
-double complex OM1
-double precision P1(0:3)
- double complex TMP(6)
+COMPLEX*16 V1(*)
+COMPLEX*16 V2(*)
+COMPLEX*16 S3(*)
+COMPLEX*16 COUP1,COUP2
+COMPLEX*16 denom
+real*8 M1, W1
+COMPLEX*16 OM1
+real*8 P1(0:3)
+ COMPLEX*16 TMP(6)
  integer i
 
  CALL VVS1_1(V2, S3, COUP1, M1, W1, V1)
@@ -3384,12 +3384,12 @@ def VVS1_2_2(V2, S3, COUP1,COUP2, M1, W1):
 C     
       SUBROUTINE FFV1C1_2_0(F2,F1,V3,COUP1,COUP2,VERTEX)
       IMPLICIT NONE
-      DOUBLE COMPLEX F1(*)
-      DOUBLE COMPLEX F2(*)
-      DOUBLE COMPLEX V3(*)
-      DOUBLE COMPLEX COUP1,COUP2
-      DOUBLE COMPLEX VERTEX
-      DOUBLE COMPLEX TMP
+      COMPLEX*16 F1(*)
+      COMPLEX*16 F2(*)
+      COMPLEX*16 V3(*)
+      COMPLEX*16 COUP1,COUP2
+      COMPLEX*16 VERTEX
+      COMPLEX*16 TMP
 
 
       CALL FFV1C1_0(F2, F1, V3, COUP1, VERTEX)
@@ -4005,13 +4005,13 @@ x(0,1)*P(-1,2)*P(-1,3)*Gamma(3,2,-2)*ProjP(-2,1)')
 
         solution = """ subroutine FFV1C1_1(F1, V3, COUP, M2, W2, F2)
 implicit none 
-double complex F1(*)
-double complex F2(*)
-double complex V3(*)
-double complex COUP
-double complex denom
-double precision M2, W2
-double precision P2(0:3)
+COMPLEX*16 F1(*)
+COMPLEX*16 F2(*)
+COMPLEX*16 V3(*)
+COMPLEX*16 COUP
+COMPLEX*16 denom
+real*8 M2, W2
+real*8 P2(0:3)
 
 F2(5)= F1(5)+V3(5)
 F2(6)= F1(6)+V3(6)
@@ -4044,13 +4044,13 @@ end
 
         solution=""" subroutine FFV1C1_2(F2, V3, COUP, M1, W1, F1)
 implicit none 
-double complex F1(*)
-double complex F2(*)
-double complex V3(*)
-double complex COUP
-double complex denom
-double precision M1, W1
-double precision P1(0:3)
+COMPLEX*16 F1(*)
+COMPLEX*16 F2(*)
+COMPLEX*16 V3(*)
+COMPLEX*16 COUP
+COMPLEX*16 denom
+real*8 M1, W1
+real*8 P1(0:3)
 
 F1(5)= F2(5)-V3(5)
 F1(6)= F2(6)-V3(6)
@@ -4226,14 +4226,14 @@ def SSS1_3(S2, S3, COUP, M1):
         aloha.complex_mass = True
         solution = """ subroutine SSS1_1(S2, S3, COUP, M1, S1)
 implicit none 
-double complex S1(*)
-double complex S2(*)
-double complex S3(*)
-double complex COUP
-double complex denom
-double complex M1
-double precision P1(0:3)
-double complex Complex_M
+COMPLEX*16 S1(*)
+COMPLEX*16 S2(*)
+COMPLEX*16 S3(*)
+COMPLEX*16 COUP
+COMPLEX*16 denom
+COMPLEX*16 M1
+real*8 P1(0:3)
+COMPLEX*16 Complex_M
 
 S1(2)= S2(2)+S3(2)
 S1(3)= S2(3)+S3(3)
@@ -4250,14 +4250,14 @@ end
 
  subroutine SSS1_2(S2, S3, COUP, M1, S1)
 implicit none 
-double complex S1(*)
-double complex S2(*)
-double complex S3(*)
-double complex COUP
-double complex denom
-double complex M1
-double precision P1(0:3)
-double complex Complex_M
+COMPLEX*16 S1(*)
+COMPLEX*16 S2(*)
+COMPLEX*16 S3(*)
+COMPLEX*16 COUP
+COMPLEX*16 denom
+COMPLEX*16 M1
+real*8 P1(0:3)
+COMPLEX*16 Complex_M
 call SSS1_1(S2,S3,COUP,M1,S1)
 end
 
@@ -4265,14 +4265,14 @@ end
 
  subroutine SSS1_3(S2, S3, COUP, M1, S1)
 implicit none 
-double complex S1(*)
-double complex S2(*)
-double complex S3(*)
-double complex COUP
-double complex denom
-double complex M1
-double precision P1(0:3)
-double complex Complex_M
+COMPLEX*16 S1(*)
+COMPLEX*16 S2(*)
+COMPLEX*16 S3(*)
+COMPLEX*16 COUP
+COMPLEX*16 denom
+COMPLEX*16 M1
+real*8 P1(0:3)
+COMPLEX*16 Complex_M
 call SSS1_1(S2,S3,COUP,M1,S1)
 end
 
@@ -4362,13 +4362,13 @@ SSS1_1(S2,S3,COUP,M1,S1);
         aloha.unitary_gauge = False
         solution = """ subroutine FFV1_3(F1, F2, COUP, M3, W3, V3)
 implicit none 
-double complex F1(*)
-double complex F2(*)
-double complex V3(*)
-double complex COUP
-double complex denom
-double precision M3, W3
-double precision P3(0:3)
+COMPLEX*16 F1(*)
+COMPLEX*16 F2(*)
+COMPLEX*16 V3(*)
+COMPLEX*16 COUP
+COMPLEX*16 denom
+real*8 M3, W3
+real*8 P3(0:3)
 
 V3(5)= -F1(5)+F2(5)
 V3(6)= -F1(6)+F2(6)

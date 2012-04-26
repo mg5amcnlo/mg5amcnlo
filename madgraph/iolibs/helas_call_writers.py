@@ -1358,10 +1358,10 @@ class FortranUFOHelasCallWriterOptimized(FortranUFOHelasCallWriter):
             call = call + "%(MotherID{0})d,%(MotherStatus{0})d,".format(i+1)
         for i in range(len(loopamp.get('wavefunctions'))-1):
             call = call + \
-            "DCMPLX(%(LoopMass{0})s),CMPLX(_MP_%(LoopMass{0})s,KIND=16),".format(i+1)
+            "DCMPLX(%(LoopMass{0})s),CMPLX(MP__%(LoopMass{0})s,KIND=16),".format(i+1)
         for i in range(len(loopamp.get('coupling'))):
             call = call + \
-                   "%(LoopCoupling{0})s,_MP_%(LoopCoupling{0})s,".format(i+1)
+                   "%(LoopCoupling{0})s,MP__%(LoopCoupling{0})s,".format(i+1)
         call = call + "%(LoopRank)d,"
         call = call + "%(LoopSymmetryFactor)d,"
         call = call + "%(ampNumber)d,AMPL(1,%(ampNumber)d),S(%(ampNumber)d))"
