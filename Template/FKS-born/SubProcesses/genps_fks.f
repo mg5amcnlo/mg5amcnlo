@@ -211,7 +211,7 @@ c Set one_body to true if it's a 2->1 process at the Born (i.e. 2->2 for the n+1
          endif
          firsttime=.false.
       endif                     ! firsttime
-c Set the minimal tau = x1*x2. Need to know j_fks already here
+c Set the minimal tau = x1*x2.
       call set_tau_min()
 c
       xjac0=1d0

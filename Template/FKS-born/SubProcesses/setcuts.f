@@ -375,6 +375,7 @@ c variable ptj
       include 'nexternal.inc'
       include 'coupl.inc'
       include 'nFKSconfigs.inc'
+      include "fks_info.inc"
       LOGICAL  IS_A_J(NEXTERNAL),IS_A_L(NEXTERNAL)
       LOGICAL  IS_A_B(NEXTERNAL),IS_A_A(NEXTERNAL)
       LOGICAL  IS_A_NU(NEXTERNAL),IS_HEAVY(NEXTERNAL)
@@ -392,7 +393,7 @@ c
       save  taumin,taumin_s,taumin_j,stot
       integer i,d1,d2,iFKS
       double precision xm(-nexternal:nexternal),xm1,xm2,xmi
-      integer tsign
+      integer tsign,j_fks
       double precision tau_Born_lower_bound,tau_lower_bound_resonance
      &     ,tau_lower_bound
       common/ctau_lower_bound/tau_Born_lower_bound
@@ -400,8 +401,6 @@ c
 c
       real*8         emass(nexternal)
       common/to_mass/emass
-      integer i_fks,j_fks
-      common/fks_indices/i_fks,j_fks
       logical firsttime
       data firsttime /.true./
       include "born_props.inc"
@@ -423,6 +422,7 @@ c event could.
       if (firsttime) then
          firsttime=.false.
          do iFKS=1,fks_configs
+            j_fks=FKS_J_D(iFKS)
             taumin(iFKS)=0.d0
             taumin_s(iFKS)=0.d0
             taumin_j(iFKS)=0.d0

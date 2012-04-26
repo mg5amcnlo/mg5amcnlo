@@ -111,9 +111,14 @@ c Don't update grids if there were too few PS points.
          return
       endif
 c Define the new grids
-      do i=0,nintervals
-         grid(i)=acc(i)/acc(nintervals)
-      enddo
+      if (acc(nintervals).ne.0d0) then
+         do i=0,nintervals
+            grid(i)=acc(i)/acc(nintervals)
+         enddo
+      else
+c Don't change grids if there was no contribution
+         continue
+      endif
 c
 c Make sure that a grid cell is at least of size 'tiny'
       do i=1,nintervals

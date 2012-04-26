@@ -487,7 +487,6 @@ c points)
         ifill3=0
         ifill4=0
       endif
-
       if (abrv.eq.'born' .or. abrv.eq.'grid' .or. abrv(1:2).eq.'vi' .or.
      &     nbody)goto 540
 c Real contribution:
@@ -5896,8 +5895,8 @@ c$$$      m1l_W_finite_CDR=m1l_W_finite_CDR*born
       implicit none
 
       double precision CA,CF,Nf,PI
-c$$$      parameter (CA=3d0,CF=4d0/3d0,Nf=5d0)
-      parameter (CA=3d0,CF=4d0/3d0,Nf=4d0)
+      parameter (CA=3d0,CF=4d0/3d0,Nf=5d0)
+c$$$      parameter (CA=3d0,CF=4d0/3d0,Nf=4d0)
 C SET NF=0 WHEN NOT CONSIDERING G->QQ SPLITTINGS. FOR TESTS ONLY
 c$$$      parameter (CA=3d0,CF=4d0/3d0,Nf=0d0)
       parameter (pi=3.1415926535897932385d0)
@@ -6166,7 +6165,6 @@ c THESE TESTS WORK ONLY FOR FINAL STATE SINGULARITIES
             fkssymmetryfactorBorn=0d0
          endif
          if (abrv.eq.'grid') then
-            write (*,*) 'Setting grids using Born'
             fkssymmetryfactorBorn=1d0
             fkssymmetryfactor=0d0
             fkssymmetryfactorDeg=0d0
