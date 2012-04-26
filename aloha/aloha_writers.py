@@ -597,8 +597,7 @@ class ALOHAWriterForFortran(WriteALOHA):
         else:
             sym = None  # deactivate symetry
             
-        name = combine_name(self.abstractname, lor_names, offshell, self.tag)
-
+        name = combine_name(self.abstractname, lor_names, offshell, self.tag,self.csize==32)
                  
         # write header 
         header = self.define_header(name=name)
@@ -704,10 +703,8 @@ def get_routine_name(name=None, outgoing=None, tag=None, abstract=None):
     return ALOHAWriterForFortran.get_routine_name(name, outgoing, tag, abstract)
 
 
-def combine_name(name, other_names, outgoing, tag=None):
+def combine_name(name, other_names, outgoing, tag=None,mp=False):
     """ build the name for combined aloha function """
-
-    
 
     # Two possible scheme FFV1C1_2_X or FFV1__FFV2C1_X
     # If they are all in FFVX scheme then use the first
@@ -731,8 +728,11 @@ def combine_name(name, other_names, outgoing, tag=None):
             else:
                 routine += '_%s' % id2
     if routine:
-        return routine +'_%s' % outgoing
-
+        if mp:
+            return 'mp_%s_%s' % (routine, outgoing)
+        else:
+            return routine +'_%s' % outgoing
+            
     if tag is not None:
         addon = ''.join(tag)
     else:
@@ -745,8 +745,10 @@ def combine_name(name, other_names, outgoing, tag=None):
                 addon = ''
             else:
                 name = short_name
-
-    return '_'.join((name,) + tuple(other_names)) + addon + '_%s' % outgoing
+    if mp:
+        return 'mp_%s' % '_'.join((name,) + tuple(other_names)) + addon + '_%s' % outgoing
+    else:
+        return '_'.join((name,) + tuple(other_names)) + addon + '_%s' % outgoing
  
 
 class ALOHAWriterForCPP(WriteALOHA): 
