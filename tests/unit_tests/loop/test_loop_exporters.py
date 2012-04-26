@@ -69,7 +69,8 @@ class LoopExporterTest(unittest.TestCase):
     fortran_model= helas_call_writers.FortranUFOHelasCallWriter()
     loopExporter = loop_exporters.LoopProcessExporterFortranSA(\
                                   _mgme_file_path, _proc_file_path,
-                                  False, _loop_file_path,_cuttools_file_path)
+                                  False, False, False, _loop_file_path,
+                                  _cuttools_file_path)
     def setUp(self):
         """load the NLO toy model"""
         self.loadModel("UFO")

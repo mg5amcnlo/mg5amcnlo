@@ -344,7 +344,6 @@ class ProcessExporterFortran(object):
         model_builder.build(wanted_couplings)
 
         # Create and write ALOHA Routine
-        print " I got aloha.quad_precision=",aloha.quad_precision
         aloha_model = create_aloha.AbstractALOHAModel(model.get('name'))
         if wanted_lorentz:
             aloha_model.compute_subset(wanted_lorentz)
@@ -3243,9 +3242,10 @@ class UFO_model_to_mg4(object):
         fsock.writelines(""" gal(1) = 1d0
                              gal(2) = 1d0
                          """)
-        fsock.writelines(""" %(mp_prefix)sgal(1) = 1e0_16
-                             %(mp_prefix)sgal(2) = 1e0_16
-                         """%{'mp_prefix':self.mp_prefix})
+        if self.mp:
+            fsock.writelines(""" %(mp_prefix)sgal(1) = 1e0_16
+                                 %(mp_prefix)sgal(2) = 1e0_16
+                             """%{'mp_prefix':self.mp_prefix})
     
     def create_couplings(self):
         """ create couplings.f and all couplingsX.f """
