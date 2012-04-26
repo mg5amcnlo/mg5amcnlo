@@ -49,9 +49,11 @@ endif
 ifdef lhapdf
   alfas_functions=alfas_functions_lhapdf
   lhapdf=-lLHAPDF -lstdc++
+  reweight_xsec_events_pdf_dummy=
 else
   alfas_functions=alfas_functions
   lhapdf=
+  reweight_xsec_events_pdf_dummy=reweight_xsec_events_pdf_dummy.o
 endif
 
 # Madloop

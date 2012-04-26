@@ -11,19 +11,23 @@ FJLIBS += $(shell $(FASTJET_CONFIG) --libs --plugins ) -lstdc++
 #FJLIBS += $(shell $(FASTJET_CONFIG) --libs --plugins )
 #FJLIBS=
 
-NLOLIBS=$(libmadloop) 
-LINKLIBS =  -L$(LIBDIR) -ldhelas -ldsample_fks -lmodel -lgeneric -lpdf $(lhapdf)
-LIBS = $(LIBDIR)libdhelas.a $(LIBDIR)libdsample_fks.a $(LIBDIR)libgeneric.a $(LIBDIR)libpdf.a $(LIBDIR)libmodel.a
+NLOLIBS=$(libmadloop)
+LINKLIBS = -L$(LIBDIR) -ldhelas -ldsample_fks -lmodel -lgeneric -lpdf $(lhapdf)
+LIBS = $(LIBDIR)libdhelas.a $(LIBDIR)libdsample_fks.a		\
+	$(LIBDIR)libgeneric.a $(LIBDIR)libpdf.a $(LIBDIR)libmodel.a
 
 # Files for all executables
-FILES= $(patsubst %.f,%.o,$(wildcard parton_lum_*.f)) $(patsubst %.f,%.o,$(wildcard matrix_*.f)) \
-	 real_me_chooser.o fks_inc_chooser.o leshouche_inc_chooser.o \
-	 genps_fks.o setcuts.o setscales.o \
-         born.o sborn_sf.o $(patsubst %.f,%.o,$(wildcard b_sf_???.f)) fks_Sij.o trapfpe.o fastjetfortran_madfks.o \
-         ktclusdble.o fks_singular.o montecarlocounter.o reweight_xsec.o
+FILES= $(patsubst %.f,%.o,$(wildcard parton_lum_*.f)) $(patsubst	\
+	 %.f,%.o,$(wildcard matrix_*.f)) real_me_chooser.o		\
+	 fks_inc_chooser.o leshouche_inc_chooser.o genps_fks.o		\
+	 setcuts.o setscales.o born.o sborn_sf.o $(patsubst		\
+	 %.f,%.o,$(wildcard b_sf_???.f)) fks_Sij.o trapfpe.o		\
+	 fastjetfortran_madfks.o ktclusdble.o fks_singular.o		\
+	 montecarlocounter.o reweight_xsec.o
 
 # Files needed for vegas, mint & mintMC
-RUN= $(FILES) cuts.o add_write_info.o LesHouches.o madfks_dbook.o madfks_plot.o MC_integer.o
+RUN= $(FILES) cuts.o add_write_info.o LesHouches.o madfks_dbook.o	\
+	madfks_plot.o MC_integer.o
 
 # Files for vegas
 VEGAS= $(RUN) driver_vegas.o vegas2.o handling_lhe_events.o
@@ -32,10 +36,12 @@ VEGAS= $(RUN) driver_vegas.o vegas2.o handling_lhe_events.o
 MINT= $(RUN) mint-integrator2.o driver_mint.o
 
 # Files for mintMC
-MINTMC= $(RUN) mint-integrator2.o driver_mintMC.o write_event.o handling_lhe_events.o
+MINTMC= $(RUN) mint-integrator2.o driver_mintMC.o write_event.o	\
+	handling_lhe_events.o
 
 # Files for Born reweighting
-BORN_REWEIGHT= $(RUN) driver_reweight.o handling_lhe_events.o write_event.o
+BORN_REWEIGHT= $(RUN) driver_reweight.o handling_lhe_events.o	\
+	write_event.o
 
 # Files for tests
 TEST= $(FILES) LesHouchesDummy.o cuts.o
@@ -50,8 +56,10 @@ LINK= $(TEST) link_fks.o
 INTEGRATE= genint_fks.o
 
 # Files for event reweighting to get e.g. scale and PDF uncertainties
-RWGFILES=reweight_xsec_events.o handling_lhe_events.o reweight_xsec.o $(patsubst %.f,%.o,$(wildcard parton_lum_*.f)) \
-	setscales.o cuts.o fastjetfortran_madfks.o
+RWGFILES=reweight_xsec_events.o handling_lhe_events.o reweight_xsec.o	\
+	$(patsubst %.f,%.o,$(wildcard parton_lum_*.f)) setscales.o	\
+	cuts.o fastjetfortran_madfks.o					\
+	$(reweight_xsec_events_pdf_dummy)
 
 %.o : %.f
 	$(F77) $(FFLAGS) -c $<
