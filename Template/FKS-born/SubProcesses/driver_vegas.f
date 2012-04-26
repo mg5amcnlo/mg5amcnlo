@@ -307,6 +307,8 @@ c From dsample_fks
       integer nFKSprocessBorn(2)
       save nFKSprocessBorn,foundB
       double precision vol,sigintR
+      integer itotalpoints
+      common/ctotalpoints/itotalpoints
 c
       do i=1,99
          if (abrv.eq.'grid'.or.abrv.eq.'born'.or.abrv(1:2).eq.'vi')
@@ -392,37 +394,39 @@ c Compute the subtracted real-emission corrections either as an explicit
 c sum or a Monte Carlo sum.
 c      
       if (abrv.eq.'born' .or. abrv.eq.'grid' .or.
-     &     abrv(1:2).eq.'vi') return
-      nbody=.false.
-      if (sum) then
+     &     abrv(1:2).eq.'vi') then
+         nbody=.false.
+         if (sum) then
 c THIS CAN BE OPTIMIZED
-         do nFKSprocess=1,fks_configs
+            do nFKSprocess=1,fks_configs
+               nFKSprocess_used=nFKSprocess
+               call fks_inc_chooser()
+               call leshouche_inc_chooser()
+               call setcuts
+               call setfksfactor(iconfig)
+               wgt=1d0
+               call generate_momenta(ndim,iconfig,wgt,x,p)
+               sigint = sigint+dsig(p,wgt,peso)
+            enddo
+         else                   ! Monte Carlo over nFKSprocess
+            nFKSprocess=nFKSprocess_all
             nFKSprocess_used=nFKSprocess
+c THIS CAN BE OPTIMIZED
             call fks_inc_chooser()
             call leshouche_inc_chooser()
             call setcuts
             call setfksfactor(iconfig)
-            wgt=1d0
-            call generate_momenta(ndim,iconfig,wgt,x,p)
-            sigint = sigint+dsig(p,wgt,peso)
-         enddo
-      else ! Monte Carlo over nFKSprocess
-         nFKSprocess=nFKSprocess_all
-         nFKSprocess_used=nFKSprocess
-c THIS CAN BE OPTIMIZED
-         call fks_inc_chooser()
-         call leshouche_inc_chooser()
-         call setcuts
-         call setfksfactor(iconfig)
 c     The variable 'vol' is the size of the cell for the MC over
 c     nFKSprocess. Need to divide by it here to correctly take into
 c     account this Jacobian
-         wgt=1d0/vol
-         call generate_momenta(ndim,iconfig,wgt,x,p)
-         sigintR = dsig(p,wgt,peso)
-         call fill_MC_integer(nFKSprocess,abs(sigintR)*peso*vol)
-         sigint = sigint+ sigintR
+            wgt=1d0/vol
+            call generate_momenta(ndim,iconfig,wgt,x,p)
+            sigintR = dsig(p,wgt,peso)
+            call fill_MC_integer(nFKSprocess,abs(sigintR)*peso*vol)
+            sigint = sigint+ sigintR
+         endif
       endif
+      if (sigint.ne.0d0)itotalpoints=itotalpoints+1
       return
       end
 

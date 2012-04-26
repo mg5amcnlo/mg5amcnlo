@@ -383,8 +383,6 @@ c For tests
      #  icou_scnt,icou_mecnt
       common/counters/icou_calls,icou_kinev,icou_sev,icou_meev,
      #                           icou_kincnt,icou_scnt,icou_mecnt
-      integer itotalpoints
-      common/ctotalpoints/itotalpoints
 
       logical ExceptPSpoint
       integer iminmax
@@ -804,7 +802,6 @@ c For tests
             xisave=xi_i_fks_ev
             ysave=y_ij_fks_ev
          endif
-         if (dsig.ne.0d0) itotalpoints=itotalpoints+1
          icou_calls=icou_calls+1
          if(pp(0,1).gt.0.d0)icou_kinev=icou_kinev+1
          if(s_ev.gt.0.d0)icou_sev=icou_sev+1
@@ -2393,8 +2390,6 @@ c For tests
      #  icou_scnt,icou_mecnt
       common/counters/icou_calls,icou_kinev,icou_sev,icou_meev,
      #                           icou_kincnt,icou_scnt,icou_mecnt
-      integer itotalpoints
-      common/ctotalpoints/itotalpoints
 
       logical ExceptPSpoint
       integer iminmax
@@ -3145,8 +3140,6 @@ c     &                                    iwgtinfo)
          total_wgt_sum=total_wgt_sum+dsigS*vegaswgt
          central_wgt_saved=dsigS
 
-         if (dsigS.ne.0d0) itotalpoints=itotalpoints+1
-
 c For tests
          if(abs(dsigS).gt.fksmaxwgt)then
             fksmaxwgt=abs(dsigS)
@@ -3233,9 +3226,6 @@ c           dsigH_new=compute_rwgt_wgt_Hev(new_muR_fact,new_muF1_fact,
 c     &                                    new_muF2_fact,new_QES_fact,
 c     &                                    iwgtinfo)
          endif      
-
-
-         if (dsigH.ne.0d0) itotalpoints=itotalpoints+1
 
 c For tests
          if(abs(dsigH).gt.fksmaxwgt)then

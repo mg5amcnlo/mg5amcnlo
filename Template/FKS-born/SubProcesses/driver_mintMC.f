@@ -684,7 +684,7 @@ c From dsample_fks
       common/fks_indices/i_fks,j_fks
       logical firsttime
       integer sum
-      parameter (sum=0)
+      parameter (sum=2)
       data firsttime /.true./
       logical foundB(2)
       integer nFKSprocessBorn(2)
@@ -694,6 +694,8 @@ c From dsample_fks
      $     ,i_fks_proc(fks_configs),j_fks_proc(fks_configs)
      $     ,nFKSproc_m,nFKSprocess_all
       logical found
+      integer itotalpoints
+      common/ctotalpoints/itotalpoints
 c
 c Find the nFKSprocess for which we compute the Born-like contributions
       if (firsttime) then
@@ -903,6 +905,7 @@ c THIS CAN BE OPTIMIZED
          f_abs=abs(f(1))+abs(f(2))
          sigintF_save=sigintF
          f_abs_save=f_abs
+         if (f_abs.ne.0d0) itotalpoints=itotalpoints+1
       elseif(ifl.eq.1) then
          write (*,*) 'Folding not implemented'
          stop
