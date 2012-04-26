@@ -935,17 +935,18 @@ c relative weights
      &              .'grid' .or.abrv(1:2).eq.'vi') ) then
 c Pick one of the nFKSprocess contributing to the given nFKSproc_m
 c according to their (absolute value of the) relative weight.
-                  f_tot=abs(result(0,j))
+                  f_tot=0d0
                   do i=1,proc_map(nFKSproc_m,0)
-                     f_tot=f_tot+abs(result(proc_map(nFKSproc_m,i),j))
+                    f_tot=f_tot+
+     &                 abs(result(0,j)+result(proc_map(nFKSproc_m,i),j))
                   enddo
                   rnd=ran2()
                   i=1
-                  res=abs(result(0,j))+
-     &                 abs(result(proc_map(nFKSproc_m,1),j))
+                  res=abs(result(0,j)+result(proc_map(nFKSproc_m,1),j))
                   do while (res.le.rnd*f_tot)
                      i=i+1
-                     res=res+abs(result(proc_map(nFKSproc_m,i),j))
+                    res=res+
+     &                 abs(result(0,j)+result(proc_map(nFKSproc_m,i),j))
                   enddo
                   nFKSprocess=proc_map(nFKSproc_m,i)
                   nFKSprocess_used=nFKSprocess

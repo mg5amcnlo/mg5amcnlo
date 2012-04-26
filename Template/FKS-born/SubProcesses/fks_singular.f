@@ -2964,11 +2964,11 @@ c Set the ybst_til_tolab before applying the cuts.
  550  continue
 
       if( (.not.MCcntcalled) .and.
-     &    abrv.ne.'born'.and. abrv.ne.'grid' )then
-        if(pp(0,1).ne.-99d0)then
-          call set_cms_stuff(mohdr)
-          call assign_emsca(pp,xi_i_fks_ev,y_ij_fks_ev)
-        endif
+     &     abrv.ne.'born'.and. abrv.ne.'grid' )then
+         if(pp(0,1).ne.-99d0)then
+            call set_cms_stuff(mohdr)
+            call assign_emsca(pp,xi_i_fks_ev,y_ij_fks_ev)
+         endif
       endif
 
       if(AddInfoLHE.and.UseCKKW)then
