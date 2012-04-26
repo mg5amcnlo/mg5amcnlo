@@ -393,8 +393,8 @@ c
 c Compute the subtracted real-emission corrections either as an explicit
 c sum or a Monte Carlo sum.
 c      
-      if (abrv.eq.'born' .or. abrv.eq.'grid' .or.
-     &     abrv(1:2).eq.'vi') then
+      if (abrv.ne.'born' .and. abrv.ne.'grid' .and.
+     &     abrv(1:2).ne.'vi') then
          nbody=.false.
          if (sum) then
 c THIS CAN BE OPTIMIZED

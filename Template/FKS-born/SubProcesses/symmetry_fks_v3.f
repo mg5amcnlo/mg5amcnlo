@@ -114,6 +114,9 @@ c$$$      include 'bornfromreal.inc'
       INTEGER NFKSPROCESS
       COMMON/C_NFKSPROCESS/NFKSPROCESS
 
+      logical calculatedBorn
+      common/ccalculatedBorn/calculatedBorn
+
 c helicity stuff
       integer          isum_hel
       logical                    multi_channel
@@ -215,6 +218,7 @@ c Set-up helicities
 c
 c     Get and save base amplitudes
 c
+      calculatedBorn=.false.
       if (onlyBorn) then
          call sborn(p_born,wgt1)
       else
@@ -311,6 +315,7 @@ c
             write(*,*) '         ', (icb(i,1),i=1,nexternal-1)
             nsym=nsym+1
 
+            calculatedBorn=.false.
             if (onlyBorn) then
                call sborn(p_born,wgt1)
             else
