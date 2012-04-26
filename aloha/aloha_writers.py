@@ -647,6 +647,8 @@ class ALOHAWriterForFortran(WriteALOHA):
         
         # make the other call
         for i,lor in enumerate(lor_names):
+            if self.csize == 32:
+                lor = 'mp_' + lor            
             text += line % (lor, addon, i+2, 'TMP')
             if not offshell:
                 text += ' vertex = vertex + tmp\n'
