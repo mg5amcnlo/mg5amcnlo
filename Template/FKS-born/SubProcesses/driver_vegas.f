@@ -338,7 +338,6 @@ c Find the nFKSprocess for which we compute the Born-like contributions
          foundB(2)=.false.
          do nFKSprocess=1,fks_configs
             call fks_inc_chooser()
-            write (*,*) nFKSprocess,particle_type(i_fks),j_fks
             if (particle_type(i_fks).eq.8) then
                if (j_fks.le.nincoming) then
                   foundB(1)=.true.
