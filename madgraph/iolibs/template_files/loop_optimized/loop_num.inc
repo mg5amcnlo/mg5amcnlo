@@ -243,7 +243,7 @@ C
 C  
 C GLOBAL VARIABLES
 C 
-      include 'mp_coupl.inc'
+      include 'mp_coupl_same_name.inc'
 
       %(force_onshell)s
 
@@ -309,4 +309,29 @@ C BEGIN CODE
 C ----------
       RES=(0E0_16,0E0_16)
       %(mp_loop_helas_calls)s
+      END
+
+      SUBROUTINE MPLOOPNUM_DUMMY(Q,RES)
+C  
+C ARGUMENTS 
+C  
+      INCLUDE 'cts_mprec.h'
+      INCLUDE 'cts_mpc.h'                                             , INTENT(IN), DIMENSION(0:3) :: Q
+      INCLUDE 'cts_mpc.h'                                             , INTENT(OUT) :: RES
+C  
+C LOCAL VARIABLES 
+C
+      COMPLEX*16 DRES
+      COMPLEX*16 DQ(0:3)
+      INTEGER I
+C ----------
+C BEGIN CODE
+C ----------
+      DO I=0,3
+        DQ(I) = Q(I)
+      ENDDO
+
+      CALL LOOPNUM(DQ,DRES)
+      RES=DRES
+
       END

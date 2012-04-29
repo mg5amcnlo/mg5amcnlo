@@ -370,21 +370,21 @@ class LoopProcessExporterFortranSA(export_v4.ProcessExporterFortranSA,
         file = open(os.path.join(_file_path, \
                  'iolibs/template_files/loop/CT_interface.inc')).read()
         
+        replace_dict['mass_translation'] = 'M2L(I)'
+        # specify what scalar loop library must be used.
+        # For now we use AVH for both CMS and nonCMS outputs.
+        if aloha.complex_mass:
+            replace_dict['loop_lib'] = 2
+        else:
+            replace_dict['loop_lib'] = 2  
+        
         # Extract version number and date from VERSION file
         info_lines = self.get_mg5_info_lines()
         replace_dict['info_lines'] = info_lines
 
         # Extract process info lines
         process_lines = self.get_process_info_lines(matrix_element)
-        replace_dict['process_lines'] = process_lines    
-                
-        # specify what scalar loop library must be used.
-        # For now we use AVH for both CMS and nonCMS outputs.
-        replace_dict['mass_translation'] = 'M2L(I)'
-        if aloha.complex_mass:
-            replace_dict['loop_lib'] = 2
-        else:
-            replace_dict['loop_lib'] = 2
+        replace_dict['process_lines'] = process_lines
         
         file = file % replace_dict
         files.append(file)
@@ -765,19 +765,43 @@ class LoopProcessOptimizedExporterFortranSA(LoopProcessExporterFortranSA):
         # these calls are built from the properties of the HELAS objects and
         # wether they are evaluated in double or quad precision is none of 
         # their business but only relevant to the output algorithm.
-        subRe=re.compile(r"(?P<toSub>^.*[CALL|call]\s+)")
+        # Also the cast to complex masses DCMPLX(*) must be replaced by
+        # CMPLX(*,KIND=16)
+        MP=re.compile(r"(?P<toSub>^.*CALL\s+)",re.IGNORECASE)
         
         def replaceWith(match_obj):
             return match_obj.group('toSub')+'MP_'
+
+        DCMPLX=re.compile(r"DCMPLX\((?P<toSub>([^\)]*))\)",re.IGNORECASE)
         
         for i, helas_call in enumerate(helas_calls_list):
-            helas_calls_list[i]=subRe.sub(replaceWith,helas_call)
+            new_helas_call=MP.sub(replaceWith,helas_call)
+            helas_calls_list[i]=DCMPLX.sub(r"CMPLX(\g<toSub>,KIND=16)",\
+                                                                 new_helas_call)
+
+    def copy_v4template(self, modelname,*args, **opts):
+        """Additional actions for the optimized output needed for setup of 
+        Template
+        """
+        LoopProcessExporterFortranSA.copy_v4template(self, modelname,\
+                                                                 *args, **opts)
+        # We add here the user-friendly MadLoop option setter.
+        cpfiles= ["SubProcesses/MadLoopParamReader.f",
+                  "SubProcesses/MadLoopParams.dat",
+                  "SubProcesses/MadLoopParams.inc"]
+        
+        for file in cpfiles:
+            shutil.copy(os.path.join(self.loop_dir,'StandAlone/', file),
+                        os.path.join(self.dir_path, file))
 
     def link_files_from_Subprocesses(self):
         """ Links the additional model files for multiples precision """
         
         LoopProcessExporterFortranSA.link_files_from_Subprocesses(self)
-        linkfiles = ['mp_coupl.inc', 'mp_coupl_same_name.inc']
+        linkfiles = ['mp_coupl.inc', 'mp_coupl_same_name.inc',
+                     'MadLoopParamReader.f','MadLoopParams.dat',
+                     'MadLoopParams.inc']
+        
         for file in linkfiles:
             ln('../%s' % file)       
 
@@ -1038,15 +1062,6 @@ class LoopProcessOptimizedExporterFortranSA(LoopProcessExporterFortranSA):
         replace_dict=copy.copy(replace_dict_orig)
         file = open(os.path.join(self.template_dir,'CT_interface.inc')).read()  
 
-        replace_dict['mass_translation'] = 'M2L(I)'           
-        
-        # specify what scalar loop library must be used.
-        # For now we use AVH for both CMS and nonCMS outputs.
-        if aloha.complex_mass:
-            replace_dict['loop_lib'] = 2
-        else:
-            replace_dict['loop_lib'] = 2
-        
         file = file % replace_dict
         files.append(file)
         

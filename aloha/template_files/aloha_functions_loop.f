@@ -175,10 +175,10 @@ c
       real*16 rZero, rHalf, rTwo
       parameter( rZero = 0.0e0_16, rHalf = 0.5e0_16, rTwo = 2.0e0_16 )
 c     Convention for loop computations
-      fi(5) = cmplx(p(0),0.D0,KIND=16)*nsf
-      fi(6) = cmplx(p(1),0.D0,KIND=16)*nsf
-      fi(7) = cmplx(p(2),0.D0,KIND=16)*nsf
-      fi(8) = cmplx(p(3),0.D0,KIND=16)*nsf
+      fi(5) = cmplx(p(0),rZero,KIND=16)*nsf
+      fi(6) = cmplx(p(1),rZero,KIND=16)*nsf
+      fi(7) = cmplx(p(2),rZero,KIND=16)*nsf
+      fi(8) = cmplx(p(3),rZero,KIND=16)*nsf
 
       nh = nhel*nsf
 
@@ -421,10 +421,10 @@ c
       parameter( rZero = 0.0e0_16, rHalf = 0.5e0_16, rTwo = 2.0e0_16 )
 
 c     Convention for loop computations
-      fo(5) = cmplx(p(0),0.D0,KIND=16)*nsf
-      fo(6) = cmplx(p(1),0.D0,KIND=16)*nsf
-      fo(7) = cmplx(p(2),0.D0,KIND=16)*nsf
-      fo(8) = cmplx(p(3),0.D0,KIND=16)*nsf
+      fo(5) = cmplx(p(0),rZero,KIND=16)*nsf
+      fo(6) = cmplx(p(1),rZero,KIND=16)*nsf
+      fo(7) = cmplx(p(2),rZero,KIND=16)*nsf
+      fo(8) = cmplx(p(3),rZero,KIND=16)*nsf
 
 
       nh = nhel*nsf
@@ -677,38 +677,6 @@ c
 
       real*16 rOne
       parameter( rOne = 1.0e0_16 )
-
-c#ifdef HELAS_CHECK
-c      double precision p2
-c      double precision epsi
-c      parameter( epsi = 2.0d-5 )
-c      double precision rZero
-c      parameter( rZero = 0.0d0 )
-c      integer stdo
-c      parameter( stdo = 6 )
-c#endif
-c
-c#ifdef HELAS_CHECK
-c      if ( abs(p(0))+abs(p(1))+abs(p(2))+abs(p(3)).eq.rZero ) then
-c         write(stdo,*)
-c     &        ' helas-error : p(0:3) in sxxxxx is zero momentum'
-c      endif
-c      if ( p(0).le.rZero ) then
-c         write(stdo,*)
-c     &        ' helas-error : p(0:3) in sxxxxx has non-positive energy'
-c         write(stdo,*)
-c     &        '             : p(0) = ',p(0)
-c      endif
-c      p2 = p(0)**2-(p(1)**2+p(2)**2+p(3)**2)
-c      if ( p2.lt.-p(0)**2*epsi ) then
-c         write(stdo,*) ' helas-error : p(0:3) in sxxxxx is spacelike'
-c         write(stdo,*) '             : p**2 = ',p2
-c      endif
-c      if ( abs(nss).ne.1 ) then
-c         write(stdo,*) ' helas-error : nss in sxxxxx is not -1,1'
-c         write(stdo,*) '             : nss = ',nss
-c      endif
-c#endif
 
       sc(1) = cmplx( rOne , KIND=16)
 

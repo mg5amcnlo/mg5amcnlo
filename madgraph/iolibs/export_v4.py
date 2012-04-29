@@ -3488,8 +3488,11 @@ class UFO_model_to_mg4(object):
                 % {'name': parameter.name,
                    'value': self.p_to_f.parse(str(parameter.value.real))}
             if self.mp:
-                template=template+"\n %(mp_prefix)s%(name)s=%(name)s" % \
-                              {'mp_prefix':self.mp_prefix,'name':parameter.name}    
+                template = template+ \
+                ("\n call MP_LHA_get_real(npara,param,value,'%(name)s',"+
+                 "%(mp_prefix)s%(name)s,%(value)s)") \
+                % {'name': parameter.name,'mp_prefix': self.mp_prefix,
+                   'value': self.mp_p_to_f.parse(str(parameter.value.real))}    
             return template        
     
         fsock = self.open('param_read.inc', format='fortran')

@@ -7,6 +7,7 @@ LIBS =  $(LIBDIR)libcts.$(libext) $(LIBDIR)libdhelas.$(libext) $(LIBDIR)libmodel
 PROCESS= check_sa.o loop_matrix.o \
 		 $(patsubst %.f,%.o,$(wildcard born_matrix.f)) \
 		 loop_num.o CT_interface.o \
+		 $(patsubst %.f,%.o,$(wildcard MadLoopParamReader.f)) \
 		 $(patsubst %.f,%.o,$(wildcard helas_calls*.f)) \
 		 $(patsubst %.f,%.o,$(wildcard jamp?_calls_*.f)) \
 		 $(patsubst %.f,%.o,$(wildcard mp_born_amps_and_wfs.f)) \
