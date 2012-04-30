@@ -22,6 +22,8 @@
 !     
 !---  the include file with the values of the parameters and masses      
       INCLUDE "coupl.inc"
+!---  Include the file below to act on MP__MU_R too
+!      INCLUDE "mp_coupl.inc"
 !---  integer nexternal ! number particles (incoming+outgoing) in the me 
       INCLUDE "nexternal.inc" 
 !---  particle masses
@@ -101,6 +103,9 @@
 !     scale.
       SQRTS=dsqrt(dabs(DOT(PIN(0),PIN(0))))
       MU_R=91.188d0
+!---  If on optimized output, also update the value below
+c      MP__MU_R=91.188e0_16      
+
 !---  Update the couplings with the new MU_R
       CALL COUP()
 
