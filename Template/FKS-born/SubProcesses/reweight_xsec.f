@@ -1012,7 +1012,7 @@ c
       double precision compute_rwgt_wgt_NLO,compute_rwgt_wgt_Hev,
      #                 compute_rwgt_wgt_Sev
       double precision wgtnew,tiny
-      parameter (tiny=1.d-4)
+      parameter (tiny=1.d-3)
 c
       if(idstring.eq."NLO")then
         wgtnew=compute_rwgt_wgt_NLO(muR_over_ref,muF1_over_ref,

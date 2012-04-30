@@ -111,6 +111,7 @@ c$$$      integer r_from_b(lmaxconfigs)
 c$$$      include 'bornfromreal.inc'
       include 'fks_powers.inc'
 
+      include 'nFKSconfigs.inc'
       INTEGER NFKSPROCESS
       COMMON/C_NFKSPROCESS/NFKSPROCESS
 
@@ -161,9 +162,11 @@ c      if (icomp .gt. 3 .or. icomp .lt. 0) icomp=0
          write (*,*) 'error in symmetry_fks_v3: onlyBorn should be true'
          stop
       endif
-c Just pick the first fks process
-      nFKSprocess=1
-      call fks_inc_chooser()
+c Pick a process that is BORN+1GLUON (where the gluon is i_fks).
+      do nFKSprocess=1,fks_configs
+         call fks_inc_chooser()
+         if (j_fks.gt.nincoming.and.particle_type(i_fks).eq.8) exit
+      enddo
       call leshouche_inc_chooser()
       call setrun                !Sets up run parameters
       call setpara('param_card.dat')   !Sets up couplings and masses
@@ -427,6 +430,7 @@ c Begin Code
 c-----
       check_swap=.true.
       do i=1,nexternal
+         if (onlyBorn.and.i.eq.nexternal) cycle
          if (idup(i,1) .ne. idup(ic(i),1)) check_swap=.false.
       enddo
       if (.not.onlyBorn) then
