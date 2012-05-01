@@ -14,7 +14,7 @@
 ################################################################################
 ##   Diagram of Class
 ##
-##    Variable <--- aloha_lib.ScalarVariable 
+##    Variable <--- aloha_lib.Variable 
 ##               |
 ##               +- LorentzObject <--- Gamma
 ##                                  |
@@ -35,28 +35,38 @@ import aloha.aloha_lib as aloha_lib
 #===============================================================================
 # P (Momenta)
 #===============================================================================
-class P(aloha_lib.LorentzObject):
+class L_P(aloha_lib.LorentzObject):
     """ Helas Object for an Impulsion """
     
     contract_first = 1
     
-    def __init__(self, lorentz1, particle, prefactor=1):
-        
+    def __init__(self, name, lorentz1, particle):
         self.particle = particle
-        aloha_lib.LorentzObject.__init__(self, [lorentz1], [], prefactor,\
-                                                               ['P%s'%particle])
+        aloha_lib.LorentzObject.__init__(self, name,[lorentz1], [],['P%s'%particle])
     
-        
     def create_representation(self):
-        self.sub0 = aloha_lib.ScalarVariable('P%s_0' % self.particle)
-        self.sub1 = aloha_lib.ScalarVariable('P%s_1' % self.particle)
-        self.sub2 = aloha_lib.ScalarVariable('P%s_2' % self.particle)
-        self.sub3 = aloha_lib.ScalarVariable('P%s_3' % self.particle)
+        self.sub0 = aloha_lib.Variable('P%s_0' % self.particle)
+        self.sub1 = aloha_lib.Variable('P%s_1' % self.particle)
+        self.sub2 = aloha_lib.Variable('P%s_2' % self.particle)
+        self.sub3 = aloha_lib.Variable('P%s_3' % self.particle)
 
         self.representation= aloha_lib.LorentzObjectRepresentation(
                                     {(0,): self.sub0, (1,): self.sub1, \
                                      (2,): self.sub2, (3,): self.sub3},                              
                                     self.lorentz_ind, [])
+
+
+class P(aloha_lib.FactoryLorentz):
+    """ Helas Object for an Impulsion """
+    
+    object_class = L_P
+    
+    #def __init__(self, lorentz1, particle):
+    @classmethod
+    def get_unique_name(self, lorentz1, particle):
+        return '_P^%s_%s' % (particle, lorentz1)
+
+
 
 #===============================================================================
 # Pslash
@@ -80,10 +90,10 @@ class PSlash(aloha_lib.LorentzObject):
     
     def create_representation(self):
         """create representation"""
-        p0 = aloha_lib.ScalarVariable('P%s_0' % self.particle)
-        p1 = aloha_lib.ScalarVariable('P%s_1' % self.particle)
-        p2 = aloha_lib.ScalarVariable('P%s_2' % self.particle)
-        p3 = aloha_lib.ScalarVariable('P%s_3' % self.particle)    
+        p0 = aloha_lib.Variable('P%s_0' % self.particle)
+        p1 = aloha_lib.Variable('P%s_1' % self.particle)
+        p2 = aloha_lib.Variable('P%s_2' % self.particle)
+        p3 = aloha_lib.Variable('P%s_3' % self.particle)    
     
     
         gamma = {
@@ -99,125 +109,166 @@ class PSlash(aloha_lib.LorentzObject):
 #===============================================================================
 # Mass
 #===============================================================================
-class Mass(aloha_lib.LorentzObject):
+class L_Mass(aloha_lib.LorentzObject):
     """ Helas Object for a Mass"""
+       
     
-    def __init__(self, particle, prefactor=1):
-        
+    def __init__(self, name, particle):
         self.particle = particle
-        aloha_lib.LorentzObject.__init__(self, [], [], prefactor=prefactor)
-    
-        
+        aloha_lib.LorentzObject.__init__(self, name,[], [])
+            
     def create_representation(self):
-        mass = aloha_lib.ScalarVariable('M%s' % self.particle)
+        mass = aloha_lib.Variable('M%s' % self.particle)
 
         self.representation = aloha_lib.LorentzObjectRepresentation(
                                 mass, self.lorentz_ind, self.spin_ind)
+
+class Mass(aloha_lib.FactoryLorentz):
+
+    object_class = L_Mass
+    
+    @classmethod
+    def get_unique_name(self, particle):
+        return '_M%s' % particle
 
 #===============================================================================
 # OverMass2
 #===============================================================================
-class OverMass2(aloha_lib.LorentzObject):
+class L_OverMass2(aloha_lib.LorentzObject):
     """ Helas Object for 1/M**2 """
-    
-    def __init__(self, particle, prefactor=1):
-        
+      
+    def __init__(self, name, particle):
         self.particle = particle
-        
-        tag= ['OM%s' % particle]
-        aloha_lib.LorentzObject.__init__(self, [], [], prefactor,tag)
+        aloha_lib.LorentzObject.__init__(self, name, [], [], tags=['OM%s' % particle])
     
-        
     def create_representation(self):
-        mass = aloha_lib.ScalarVariable('OM%s' % self.particle)
+        mass = aloha_lib.Variable('OM%s' % self.particle)
 
         self.representation = aloha_lib.LorentzObjectRepresentation(
                                 mass, self.lorentz_ind, self.spin_ind)
 
+class OverMass2(aloha_lib.FactoryLorentz):
+    
+    object_class = L_OverMass2
+    
+    @classmethod
+    def get_unique_name(self, particle):
+        return '_OM2_%s' % particle
+
 #===============================================================================
 # Width
 #===============================================================================
-class Width(aloha_lib.LorentzObject):
+class L_Width(aloha_lib.LorentzObject):
     """ Helas Object for an Impulsion """
+ 
     
-    def __init__(self, particle, prefactor=1):
-
+    def __init__(self, name, particle):
+        if self:
+            return
         self.particle = particle
-        aloha_lib.LorentzObject.__init__(self, [], [], prefactor=prefactor)
+        aloha_lib.LorentzObject.__init__(self, name, [], [])
         
     def create_representation(self):
-        width = aloha_lib.ScalarVariable('W%s' % self.particle)
+        width = aloha_lib.Variable('W%s' % self.particle)
 
         self.representation= aloha_lib.LorentzObjectRepresentation(
                             width, self.lorentz_ind, self.spin_ind)
-        
+
+class Width(aloha_lib.FactoryLorentz):
+    
+    object_class = L_Width
+    
+    @classmethod
+    def get_unique_name(self, particle):
+        return '_W%s' % particle
 #===============================================================================
 # Scalar
 #===============================================================================
-class Scalar(aloha_lib.LorentzObject):
+class L_Scalar(aloha_lib.LorentzObject):
     """ Helas Object for a Spinor"""
+       
     
-    def __init__(self, particle, prefactor=1):
-        
+    def __init__(self, name, particle):
         self.particle = particle
-        aloha_lib.LorentzObject.__init__(self, [], [], prefactor=prefactor)
+        aloha_lib.LorentzObject.__init__(self, name, [], [])
     
+
         
     def create_representation(self):
-        rep = aloha_lib.ScalarVariable('S%s_1' % self.particle)
+        rep = aloha_lib.Variable('S%s_1' % self.particle)
         self.representation= aloha_lib.LorentzObjectRepresentation(        
                                                                     rep, [], [])        
-        
-        
+
+class Scalar(aloha_lib.FactoryLorentz):
+    
+    object_class = L_Scalar
+    
+    @classmethod   
+    def get_unique_name(self,particle):
+        return '_S%s' % particle       
 #===============================================================================
 # Spinor
 #===============================================================================
-class Spinor(aloha_lib.LorentzObject):
+class L_Spinor(aloha_lib.LorentzObject):
     """ Helas Object for a Spinor"""
     
     contract_first = 1
-    
-    def __init__(self, spin1, particle, prefactor=1):
         
+    def __init__(self, name, spin1, particle, prefactor=1):        
         self.particle = particle
-        aloha_lib.LorentzObject.__init__(self, [], [spin1], prefactor=prefactor)
-    
-        
+        aloha_lib.LorentzObject.__init__(self, name,[], [spin1])
+       
     def create_representation(self):
-        self.sub0 = aloha_lib.ScalarVariable('F%s_1' % self.particle)
-        self.sub1 = aloha_lib.ScalarVariable('F%s_2' % self.particle)
-        self.sub2 = aloha_lib.ScalarVariable('F%s_3' % self.particle)
-        self.sub3 = aloha_lib.ScalarVariable('F%s_4' % self.particle)
+        self.sub0 = aloha_lib.Variable('F%s_1' % self.particle)
+        self.sub1 = aloha_lib.Variable('F%s_2' % self.particle)
+        self.sub2 = aloha_lib.Variable('F%s_3' % self.particle)
+        self.sub3 = aloha_lib.Variable('F%s_4' % self.particle)
 
         self.representation= aloha_lib.LorentzObjectRepresentation(
                                     {(0,): self.sub0, (1,): self.sub1, \
                                      (2,): self.sub2, (3,): self.sub3},         
                                     [],self.spin_ind)
 
+class Spinor(aloha_lib.FactoryLorentz):
+    """ Helas Object for a Spinor"""
+
+    object_class = L_Spinor
+    
+    @classmethod
+    def get_unique_name(self,spin1, particle):  
+        return '_F%s_%s' % (particle,spin1)
+
 #===============================================================================
 # Vector
 #===============================================================================
-class Vector(aloha_lib.LorentzObject):
+class L_Vector(aloha_lib.LorentzObject):
     """ Helas Object for a Vector"""
     
     contract_first = 1
     
-    def __init__(self, lorentz, particle, prefactor=1):
+    def __init__(self, name, lorentz, particle):
         
         self.particle = particle
-        aloha_lib.LorentzObject.__init__(self, [lorentz], [], prefactor=prefactor)
-    
-        
+        aloha_lib.LorentzObject.__init__(self, name, [lorentz], [])
+           
     def create_representation(self):
-        self.sub0 = aloha_lib.ScalarVariable('V%s_1' % self.particle)
-        self.sub1 = aloha_lib.ScalarVariable('V%s_2' % self.particle)
-        self.sub2 = aloha_lib.ScalarVariable('V%s_3' % self.particle)
-        self.sub3 = aloha_lib.ScalarVariable('V%s_4' % self.particle)
+        self.sub0 = aloha_lib.Variable('V%s_1' % self.particle)
+        self.sub1 = aloha_lib.Variable('V%s_2' % self.particle)
+        self.sub2 = aloha_lib.Variable('V%s_3' % self.particle)
+        self.sub3 = aloha_lib.Variable('V%s_4' % self.particle)
 
         self.representation= aloha_lib.LorentzObjectRepresentation( 
                                     {(0,): self.sub0, (1,): self.sub1, \
                                      (2,): self.sub2, (3,): self.sub3},  
                                     self.lorentz_ind, [])
+
+class Vector(aloha_lib.FactoryLorentz):
+    
+    object_class = L_Vector
+    
+    @classmethod
+    def get_unique_name(self, lor, particle):
+        return '_V%s_%s' % (particle, lor)    
 
 #===============================================================================
 # Spin3/2
@@ -234,25 +285,25 @@ class Spin2(aloha_lib.LorentzObject):
     
     def create_representation(self):
 
-        self.sub00 = aloha_lib.ScalarVariable('R%s_1' % self.particle)
-        self.sub01 = aloha_lib.ScalarVariable('R%s_2' % self.particle)
-        self.sub02 = aloha_lib.ScalarVariable('R%s_3' % self.particle)
-        self.sub03 = aloha_lib.ScalarVariable('R%s_4' % self.particle)
+        self.sub00 = aloha_lib.Variable('R%s_1' % self.particle)
+        self.sub01 = aloha_lib.Variable('R%s_2' % self.particle)
+        self.sub02 = aloha_lib.Variable('R%s_3' % self.particle)
+        self.sub03 = aloha_lib.Variable('R%s_4' % self.particle)
 
-        self.sub10 = aloha_lib.ScalarVariable('R%s_5' % self.particle)
-        self.sub11 = aloha_lib.ScalarVariable('R%s_6' % self.particle)
-        self.sub12 = aloha_lib.ScalarVariable('R%s_7' % self.particle)
-        self.sub13 = aloha_lib.ScalarVariable('R%s_8' % self.particle)
+        self.sub10 = aloha_lib.Variable('R%s_5' % self.particle)
+        self.sub11 = aloha_lib.Variable('R%s_6' % self.particle)
+        self.sub12 = aloha_lib.Variable('R%s_7' % self.particle)
+        self.sub13 = aloha_lib.Variable('R%s_8' % self.particle)
     
-        self.sub20 = aloha_lib.ScalarVariable('R%s_9' % self.particle)
-        self.sub21 = aloha_lib.ScalarVariable('R%s_10' % self.particle)
-        self.sub22 = aloha_lib.ScalarVariable('R%s_11' % self.particle)
-        self.sub23 = aloha_lib.ScalarVariable('R%s_12' % self.particle)
+        self.sub20 = aloha_lib.Variable('R%s_9' % self.particle)
+        self.sub21 = aloha_lib.Variable('R%s_10' % self.particle)
+        self.sub22 = aloha_lib.Variable('R%s_11' % self.particle)
+        self.sub23 = aloha_lib.Variable('R%s_12' % self.particle)
     
-        self.sub30 = aloha_lib.ScalarVariable('R%s_13' % self.particle)
-        self.sub31 = aloha_lib.ScalarVariable('R%s_14' % self.particle)
-        self.sub32 = aloha_lib.ScalarVariable('R%s_15' % self.particle)
-        self.sub33 = aloha_lib.ScalarVariable('R%s_16' % self.particle)
+        self.sub30 = aloha_lib.Variable('R%s_13' % self.particle)
+        self.sub31 = aloha_lib.Variable('R%s_14' % self.particle)
+        self.sub32 = aloha_lib.Variable('R%s_15' % self.particle)
+        self.sub33 = aloha_lib.Variable('R%s_16' % self.particle)
         
         rep = {(0,0): self.sub00, (0,1): self.sub01, (0,2): self.sub02, (0,3): self.sub03,
                (1,0): self.sub10, (1,1): self.sub11, (1,2): self.sub12, (1,3): self.sub13,
@@ -267,39 +318,36 @@ class Spin2(aloha_lib.LorentzObject):
 #===============================================================================
 # Spin2
 #===============================================================================
-class Spin2(aloha_lib.LorentzObject):
+class L_Spin2(aloha_lib.LorentzObject):
     """ Helas Object for a Spin2"""
     
-    def __init__(self, lorentz1, lorentz2, particle, prefactor=1):
+        
+    def __init__(self, name, lorentz1, lorentz2, particle):
         
         self.particle = particle
-        if lorentz2 < lorentz1:
-            lorentz1, lorentz2 = lorentz2, lorentz1
-            
-        aloha_lib.LorentzObject.__init__(self, [lorentz1, lorentz2], [], \
-                                 prefactor=prefactor)
+        aloha_lib.LorentzObject.__init__(self, name, [lorentz1, lorentz2], [])
     
     def create_representation(self):
 
-        self.sub00 = aloha_lib.ScalarVariable('T%s_1' % self.particle)
-        self.sub01 = aloha_lib.ScalarVariable('T%s_2' % self.particle)
-        self.sub02 = aloha_lib.ScalarVariable('T%s_3' % self.particle)
-        self.sub03 = aloha_lib.ScalarVariable('T%s_4' % self.particle)
+        self.sub00 = aloha_lib.Variable('T%s_1' % self.particle)
+        self.sub01 = aloha_lib.Variable('T%s_2' % self.particle)
+        self.sub02 = aloha_lib.Variable('T%s_3' % self.particle)
+        self.sub03 = aloha_lib.Variable('T%s_4' % self.particle)
 
-        self.sub10 = aloha_lib.ScalarVariable('T%s_5' % self.particle)
-        self.sub11 = aloha_lib.ScalarVariable('T%s_6' % self.particle)
-        self.sub12 = aloha_lib.ScalarVariable('T%s_7' % self.particle)
-        self.sub13 = aloha_lib.ScalarVariable('T%s_8' % self.particle)
+        self.sub10 = aloha_lib.Variable('T%s_5' % self.particle)
+        self.sub11 = aloha_lib.Variable('T%s_6' % self.particle)
+        self.sub12 = aloha_lib.Variable('T%s_7' % self.particle)
+        self.sub13 = aloha_lib.Variable('T%s_8' % self.particle)
 	
-        self.sub20 = aloha_lib.ScalarVariable('T%s_9' % self.particle)
-        self.sub21 = aloha_lib.ScalarVariable('T%s_10' % self.particle)
-        self.sub22 = aloha_lib.ScalarVariable('T%s_11' % self.particle)
-        self.sub23 = aloha_lib.ScalarVariable('T%s_12' % self.particle)
+        self.sub20 = aloha_lib.Variable('T%s_9' % self.particle)
+        self.sub21 = aloha_lib.Variable('T%s_10' % self.particle)
+        self.sub22 = aloha_lib.Variable('T%s_11' % self.particle)
+        self.sub23 = aloha_lib.Variable('T%s_12' % self.particle)
 	
-        self.sub30 = aloha_lib.ScalarVariable('T%s_13' % self.particle)
-        self.sub31 = aloha_lib.ScalarVariable('T%s_14' % self.particle)
-        self.sub32 = aloha_lib.ScalarVariable('T%s_15' % self.particle)
-        self.sub33 = aloha_lib.ScalarVariable('T%s_16' % self.particle)
+        self.sub30 = aloha_lib.Variable('T%s_13' % self.particle)
+        self.sub31 = aloha_lib.Variable('T%s_14' % self.particle)
+        self.sub32 = aloha_lib.Variable('T%s_15' % self.particle)
+        self.sub33 = aloha_lib.Variable('T%s_16' % self.particle)
         
         rep = {(0,0): self.sub00, (0,1): self.sub01, (0,2): self.sub02, (0,3): self.sub03,
                (1,0): self.sub10, (1,1): self.sub11, (1,2): self.sub12, (1,3): self.sub13,
@@ -310,10 +358,18 @@ class Spin2(aloha_lib.LorentzObject):
         self.representation= aloha_lib.LorentzObjectRepresentation( rep, \
                                     self.lorentz_ind, [])
 
+class Spin2(aloha_lib.FactoryLorentz):
+    
+    object_class = L_Spin2
+
+    @classmethod
+    def get_unique_name(self, lor1, lor2, part):
+        return 'Spin2^%s_%s_%s' % (part, lor1, lor2)
+
 #===============================================================================
 # Gamma
 #===============================================================================
-class Gamma(aloha_lib.LorentzObject):
+class L_Gamma(aloha_lib.LorentzObject):
     """ Gamma Matrices """
     
     #gamma0 = [[0, 0, 1, 0], [0, 0, 0, 1], [1, 0, 0, 0], [0, 1, 0, 0]]
@@ -345,18 +401,22 @@ class Gamma(aloha_lib.LorentzObject):
              (3, 3, 0): 0, (3, 3, 1): 1, (3, 3, 2): 0, (3, 3, 3): 0
              }
 
-
-
-
-
-    def __init__(self, lorentz, spin1, spin2, prefactor=1):
-        aloha_lib.LorentzObject.__init__(self,[lorentz], [spin1, spin2], \
-                                                            prefactor=prefactor)
-    
+    def __init__(self, name, lorentz, spin1, spin2):
+        aloha_lib.LorentzObject.__init__(self,name,[lorentz], [spin1, spin2])
+            
     def create_representation(self):
                 
         self.representation = aloha_lib.LorentzObjectRepresentation(self.gamma,
                                 self.lorentz_ind,self.spin_ind)
+
+class Gamma(aloha_lib.FactoryLorentz):
+    
+    object_class = L_Gamma
+    
+    @classmethod
+    def get_unique_name(self, lor, spin1, spin2):
+        return 'Gamma^%s_%s_%s' % (lor, spin1, spin2)
+        
         
 #===============================================================================
 # Sigma
@@ -491,7 +551,7 @@ class Gamma5(aloha_lib.LorentzObject):
 #===============================================================================
 # Conjugate Matrices
 #===============================================================================
-class C(aloha_lib.LorentzObject):
+class L_C(aloha_lib.LorentzObject):
     
     #[0, -1, 0, 0] [1,0,0,0] [0,0,0,1],[0,0,-1,0]
     
@@ -500,18 +560,37 @@ class C(aloha_lib.LorentzObject):
               (2,0): 0, (2,1): 0, (2,2): 0, (2,3): 1,\
               (3,0): 0, (3,1): 0, (3,2): -1, (3,3): 0} 
     
-    def __init__(self, spin1, spin2, prefactor=1):
-        #antisymmetric
-        if spin1 < spin2:
-            aloha_lib.LorentzObject.__init__(self,[], [spin1, spin2], prefactor)
-        else:
-            aloha_lib.LorentzObject.__init__(self,[], [spin2, spin1], -1*prefactor)
+    def __init__(self, name, spin_list):
+
+        # spin_list is automatically ordered. The sign for the symmetrization
+        # is set in the Factory routine       
+        aloha_lib.LorentzObject.__init__(self, name, [], spin_list)
+
 
     def create_representation(self):
         self.representation = aloha_lib.LorentzObjectRepresentation(self.Cmetrix,
                                              self.lorentz_ind,self.spin_ind) 
     
+class C(aloha_lib.FactoryLorentz):
+    
+    object_class = L_C
+    
+    def __new__(cls, spin1, spin2):
+        
+       spin_list = [spin1, spin2]
+       spin_list.sort()
+       sign = give_sign_perm(spin_list, [spin1, spin2])
+       name = cls.get_unique_name(spin_list)
+       if sign == 1:
+           return aloha_lib.FactoryVar.__new__(cls, name, cls.object_class, spin_list)
+       else:
+           out = aloha_lib.FactoryVar.__new__(cls, name, cls.object_class, spin_list)
+           out.prefactor = -1
+           return out
 
+    @classmethod
+    def get_unique_name(cls, spin_list):
+        return "C_%s_%s" % tuple(spin_list)
 
 #===============================================================================
 # EPSILON  
@@ -596,7 +675,7 @@ class Epsilon(aloha_lib.LorentzObject):
 #===============================================================================
 # Metric
 #===============================================================================
-class Metric(aloha_lib.LorentzObject):
+class L_Metric(aloha_lib.LorentzObject):
     
     metric = {(0,0): 1, (0,1): 0, (0,2): 0, (0,3): 0,\
               (1,0): 0, (1,1): -1, (1,2): 0, (1,3): 0,\
@@ -605,62 +684,56 @@ class Metric(aloha_lib.LorentzObject):
     
     
     #[[1, 0, 0,0], [0, -1, 0, 0], [0, 0, -1, 0], [0, 0, 0, -1]]
-    
-    def __init__(self, lorentz1, lorentz2, prefactor=1):
-        if lorentz1 < lorentz2:
-            aloha_lib.LorentzObject.__init__(self,[lorentz1, lorentz2], [], prefactor)
-        else:
-            aloha_lib.LorentzObject.__init__(self,[lorentz2, lorentz1], [], prefactor)
-    
+        
+    def __init__(self, name, lorentz1, lorentz2):
+        aloha_lib.LorentzObject.__init__(self,name,[lorentz1, lorentz2], [])
+            
     def create_representation(self):
         
         self.representation = aloha_lib.LorentzObjectRepresentation(self.metric,
                                              self.lorentz_ind,self.spin_ind)     
 
-    def expand(self):
-        """Expand the content information. We overload the basic rules in order
-        to avoid the computation of Metric(1,2) * Metric(1,2) = 4"""
-
-        if self.power == 2: 
-            return aloha_lib.ConstantObject(4)
-        else:
-            try:
-                return self.prefactor * self.representation
-            except:
-                self.create_representation()
-                return self.prefactor * self.representation  
-            
-    def simplify(self):
-        """Return the Denominator in a abstract way"""
-        
-        if self.power == 2:
-            return aloha_lib.ConstantObject(4)
-        else:
-            return self
+class Metric(aloha_lib.FactoryLorentz):
          
-           
+    object_class = L_Metric
     
+    @classmethod
+    def get_unique_name(cls,l1,l2):
+        if l1<l2:
+            return '_ETA_%s_%s' % (l1,l2)
+        else:
+            return '_ETA_%s_%s' % (l2,l1)
 #===============================================================================
 # Identity
 #===============================================================================
-class Identity(aloha_lib.LorentzObject):
+class L_Identity(aloha_lib.LorentzObject):
     
     #identity = [[1, 0, 0,0], [0, 1, 0, 0], [0, 0, 1, 0], [0, 0, 0, 1]]
     identity = {(0,0): 1, (0,1): 0, (0,2): 0, (0,3): 0,\
               (1,0): 0, (1,1): 1, (1,2): 0, (1,3): 0,\
               (2,0): 0, (2,1): 0, (2,2): 1, (2,3): 0,\
               (3,0): 0, (3,1): 0, (3,2): 0, (3,3): 1}
+
     
-    def __init__(self, spin1, spin2, prefactor=1):
-        if spin1 < spin2:
-            aloha_lib.LorentzObject.__init__(self,[],[spin1, spin2], prefactor)
-        else:
-            aloha_lib.LorentzObject.__init__(self,[],[spin2, spin1], prefactor)
+    def __init__(self, name, spin1, spin2):
+        aloha_lib.LorentzObject.__init__(self, name, [],[spin1, spin2])
             
     def create_representation(self):
         
         self.representation = aloha_lib.LorentzObjectRepresentation(self.identity,
                                              self.lorentz_ind,self.spin_ind)
+
+class Identity(aloha_lib.FactoryLorentz):
+    
+    object_class = L_Identity
+
+    @classmethod
+    def get_unique_name(self, spin1, spin2):
+        if spin1 < spin2:
+            return 'Id_%s_%s' % (spin1, spin2)
+        else: 
+            return 'Id_%s_%s' % (spin2, spin1)
+        
 ##===============================================================================
 ## IdentityL  (Commented since not use)
 ##===============================================================================
@@ -682,7 +755,7 @@ class Identity(aloha_lib.LorentzObject):
 #===============================================================================
 # ProjM 
 #===============================================================================    
-class ProjM(aloha_lib.LorentzObject):
+class L_ProjM(aloha_lib.LorentzObject):
     """ A object for (1-gamma5)/2 """
     
     #projm = [[1, 0, 0, 0], [0, 1, 0, 0], [0, 0, 0, 0], [0, 0, 0, 0]]
@@ -690,25 +763,33 @@ class ProjM(aloha_lib.LorentzObject):
               (1,0): 0, (1,1): 1, (1,2): 0, (1,3): 0,\
               (2,0): 0, (2,1): 0, (2,2): 0, (2,3): 0,\
               (3,0): 0, (3,1): 0, (3,2): 0, (3,3): 0}
-    
-    def __init__(self,spin1, spin2, prefactor=1):
+                
+    def __init__(self,name, spin1, spin2):
         """Initialize the object"""
         if spin1 < spin2:
-            aloha_lib.LorentzObject.__init__(self,[], [spin1, spin2], prefactor)
+            aloha_lib.LorentzObject.__init__(self, name, [], [spin1, spin2])
         else:
-            aloha_lib.LorentzObject.__init__(self,[], [spin2, spin1], prefactor) 
-        
-          
+            aloha_lib.LorentzObject.__init__(self, name, [], [spin2, spin1]) 
+    
     def create_representation(self):
         
         self.representation = aloha_lib.LorentzObjectRepresentation(self.projm,
                                              self.lorentz_ind,self.spin_ind)    
 
-
+class ProjM(aloha_lib.FactoryLorentz):
+    
+    object_class = L_ProjM
+    
+    @classmethod
+    def get_unique_name(self, spin1, spin2):
+        if spin1 < spin2:
+            return 'PROJM_%s_%s' % (spin1, spin2)
+        else:
+            return 'PROJM_%s_%s' % (spin2, spin1)
 #===============================================================================
 # ProjP 
 #===============================================================================    
-class ProjP(aloha_lib.LorentzObject):
+class L_ProjP(aloha_lib.LorentzObject):
     """A object for (1+gamma5)/2 """
     
     #projp = [[0, 0, 0, 0], [0, 0, 0, 0], [0, 0, 1, 0], [0, 0, 0, 1]]
@@ -717,12 +798,12 @@ class ProjP(aloha_lib.LorentzObject):
               (2,0): 0, (2,1): 0, (2,2): 1, (2,3): 0,\
               (3,0): 0, (3,1): 0, (3,2): 0, (3,3): 1}
     
-    def __init__(self,spin1, spin2, prefactor=1):
+    def __init__(self,name, spin1, spin2):
         """Initialize the object"""
         if spin1 < spin2:
-            aloha_lib.LorentzObject.__init__(self,[], [spin1, spin2], prefactor)
+            aloha_lib.LorentzObject.__init__(self, name, [], [spin1, spin2])
         else:
-            aloha_lib.LorentzObject.__init__(self,[], [spin2, spin1], prefactor) 
+            aloha_lib.LorentzObject.__init__(self, name, [], [spin2, spin1]) 
         
           
     def create_representation(self):
@@ -730,18 +811,37 @@ class ProjP(aloha_lib.LorentzObject):
         self.representation = aloha_lib.LorentzObjectRepresentation(self.projp,
                                             self.lorentz_ind, self.spin_ind)    
 
+class ProjP(aloha_lib.FactoryLorentz):
+    
+    object_class = L_ProjP
+    
+    @classmethod
+    def get_unique_name(self, spin1, spin2):
+        if spin1 < spin2:
+            return 'PROJP_%s_%s' % (spin1, spin2)
+        else:
+            return 'PROJP_%s_%s' % (spin2, spin1)
+
 #===============================================================================
 # Denominator Propagator 
 #===============================================================================    
 class DenominatorPropagator(aloha_lib.LorentzObject):
     """The Denominator of the Propagator"""
     
-    def __init__(self, particle, prefactor=1):
-        """Initialize the object"""
-        
+    def __new__(cls, particle):
+    
+        name = 'DenomP%s' % particle
+        return  aloha_lib.Variable.__new__(cls, name)    
+    
+    def __init__(self, particle):
+        if self:
+            return
         self.particle = particle
-        tag=['P%s' % particle]
-        aloha_lib.LorentzObject.__init__(self, [], [], prefactor, tag)
+        aloha_lib.LorentzObject.__init__(self, [], [])
+    
+    def get_unique_name(self,*args):
+        return 'DenomP%s' % self.particle
+    
     
     def simplify(self):
         """Return the Denominator in a abstract way"""
@@ -758,7 +858,6 @@ class DenominatorPropagator(aloha_lib.LorentzObject):
         
         object = self.simplify()
         self.representation = object.expand()
-
 
                 
 #===============================================================================
