@@ -3,6 +3,9 @@ Update notes for MadGraph 5 (in reverse time order)
 1.4.6 (XX/04/12)  JA: Improved integration grid setting in myamp.f giving better 
                       generation efficiency for certain processes with offshell
                       massive s-channel propagators (in particular p p > w+ w- a j).
+                      JA: Ensure assignment of colors to intermediate propagators
+                      works also in fermion flow- and color flow-violating 
+                      RPV processes (thanks to Brock Tweedie to find this).
 
 1.4.5 (11/04/12)  OM: Change the seed automatically in multi_run. (Even if the seed
                       was set to a non automatic value in the card.)
