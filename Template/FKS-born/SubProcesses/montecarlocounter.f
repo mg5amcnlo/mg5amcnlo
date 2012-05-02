@@ -1023,12 +1023,9 @@ c min() avoids troubles if ran2()=1
 c
       if(dampMCsubt)then
         if(emsca.lt.scalemin)then
-          write(*,*)'Error in xmcsubt_HW6: emsca too small',emsca,jpartner
-          if(.not.lzone(npartner))then
-            write(*,*)'because configuration in dead zone '
-          else 
-            stop
-          endif
+          write(*,*)'Error in xmcsubt_HW6: emsca too small',
+     #      emsca,jpartner,lzone(jpartner)
+          stop
         endif
       endif
 c
@@ -1045,9 +1042,6 @@ c$$$      wgt=wgt*probne
 c
       return
       end
-
-
-
 
 
       subroutine xmcsubt_HWPP(pp,xi_i_fks,y_ij_fks,gfactsf,gfactcl,probne,
@@ -1693,12 +1687,9 @@ c min() avoids troubles if ran2()=1
 c
       if(dampMCsubt)then
         if(emsca.lt.scalemin)then
-          write(*,*)'Error in xmcsubt_HWPP: emsca too small',emsca,jpartner
-          if(.not.lzone(npartner))then
-            write(*,*)'because configuration in dead zone '
-          else 
-            stop
-          endif
+          write(*,*)'Error in xmcsubt_HWPP: emsca too small',
+     #      emsca,jpartner,lzone(jpartner)
+          stop
         endif
       endif
 c
@@ -1715,8 +1706,6 @@ c$$$      wgt=wgt*probne
 c
       return
       end
-
-
 
 
       subroutine xmcsubt_PY6Q(pp,xi_i_fks,y_ij_fks,gfactsf,gfactcl,probne,
@@ -2452,12 +2441,9 @@ c min() avoids troubles if ran2()=1
 c
       if(dampMCsubt)then
         if(emsca.lt.scalemin)then
-          write(*,*)'Error in xmcsubt_PY6Q: emsca too small',emsca,jpartner
-          if(.not.lzone(npartner))then
-            write(*,*)'because configuration in dead zone '
-          else 
-            stop
-          endif
+          write(*,*)'Error in xmcsubt_PY6Q: emsca too small',
+     #      emsca,jpartner,lzone(jpartner)
+          stop
         endif
       endif
 c
@@ -2474,9 +2460,6 @@ c$$$      wgt=wgt*probne
 c
       return
       end
-
-
-
 
 
       subroutine xmcsubt_PY6PT(pp,xi_i_fks,y_ij_fks,gfactsf,gfactcl,probne,
@@ -3104,12 +3087,9 @@ c min() avoids troubles if ran2()=1
 c
       if(dampMCsubt)then
         if(emsca.lt.scalemin)then
-          write(*,*)'Error in xmcsubt_PY6PT: emsca too small',emsca,jpartner
-          if(.not.lzone(npartner))then
-            write(*,*)'because configuration in dead zone '
-          else 
-            stop
-          endif
+          write(*,*)'Error in xmcsubt_PY6PT: emsca too small',
+     #      emsca,jpartner,lzone(jpartner)
+          stop
         endif
       endif
 c
@@ -3872,12 +3852,9 @@ c min() avoids troubles if ran2()=1
 c
       if(dampMCsubt)then
         if(emsca.lt.scalemin)then
-          write(*,*)'Error in xmcsubt_PY8: emsca too small',emsca,jpartner
-          if(.not.lzone(npartner))then
-            write(*,*)'because configuration in dead zone '
-          else 
-            stop
-          endif
+          write(*,*)'Error in xmcsubt_PY8: emsca too small',
+     #      emsca,jpartner,lzone(jpartner)
+          stop
         endif
       endif
 c
