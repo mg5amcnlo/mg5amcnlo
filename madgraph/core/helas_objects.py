@@ -27,6 +27,8 @@ import logging
 import itertools
 import math
 
+import aloha
+
 import madgraph.core.base_objects as base_objects
 import madgraph.core.diagram_generation as diagram_generation
 import madgraph.core.color_amp as color_amp
@@ -114,8 +116,8 @@ class IdentifyMETag(diagram_generation.DiagramTag):
         code if possible onshell s-channel prop. Note that is_part
         and PDG code needs to be flipped if we move the final vertex around."""
 
-        if vertex.get('id') == 0:
-            return (0,)
+        if vertex.get('id') in [0,-1]:
+            return (vertex.get('id'),)
 
         inter = model.get_interaction(vertex.get('id'))
         coup_keys = sorted(inter.get('couplings').keys())
@@ -910,7 +912,48 @@ class HelasWavefunction(base_objects.PhysicsObject):
         else:
             raise self.PhysicsObjectError,\
                   "Particles of spin %d are not supported" % self.get('spin')
+    
+    def get_helas_call_dict(self, index=1, OptimizedOutput=False):
+        """ return a dictionary to be used for formatting
+        HELAS call. The argument index sets the flipping while optimized output
+        simply allow for using W instead of WE for the external wf arguments of
+        the loop wavefunction.For the optimized output, the 'L<i>' entry of the
+        formatting dictionnary differs."""
 
+        if index == 1:
+            flip = 0
+        else:
+            flip = 1
+        
+        output = {}
+        for i, mother in enumerate(self.get('mothers')):
+            nb = mother.get('number') - flip
+            output[str(i)] = nb
+            if not OptimizedOutput:
+                if mother.get('is_loop'):
+                    output['L%d' % i ] = 'L'
+                else:
+                    output['L%d' % i ] = 'E'
+            else:
+                if mother.get('is_loop'):
+                    output['L%d' % i ] = 'L(1,%d)'%nb
+                else:
+                    output['L%d' % i ] = '(1,WE(%d),H)'%nb
+                    
+        #fixed argument
+        for i, coup in enumerate(self.get_with_flow('coupling')):
+            output['coup%d'%i] = coup
+        output['out'] = self.get('number') - flip
+        output['M'] = self.get('mass')
+        output['W'] = self.get('width')
+        # optimization
+        if aloha.complex_mass: 
+            if (self.get('width') == 'ZERO' or self.get('mass') == 'ZERO'):
+                output['CM'] = '%s' % self.get('mass') 
+            else: 
+                output['CM'] ='CMASS_%s' % self.get('mass')
+        return output
+    
     def get_spin_state_number(self):
         """Returns the number corresponding to the spin state, with a
         minus sign for incoming fermions"""
@@ -2132,7 +2175,7 @@ class HelasAmplitude(base_objects.PhysicsObject):
             color_indices.extend(mother.get_color_indices())
 
         # Add this amp's color index
-        if self.get('interaction_id'):
+        if self.get('interaction_id') not in [0,-1]:
             color_indices.append(self.get('color_key'))
 
         return color_indices
@@ -2174,6 +2217,42 @@ class HelasAmplitude(base_objects.PhysicsObject):
             vertex_leg_numbers.extend(mother.get_vertex_leg_numbers())
 
         return vertex_leg_numbers
+
+    def get_helas_call_dict(self, index=1,OptimizedOutput=False):
+        """ return a dictionary to be used for formatting
+        HELAS call. For the optimized output, the 'L<i>' entry of the
+        formatting dictionnary differs."""
+        
+        if index == 1:
+            flip = 0
+        else:
+            flip = 1
+        
+        output = {}
+        for i, mother in enumerate(self.get('mothers')):
+            nb = mother.get('number') - flip 
+            output[str(i)] = nb
+            # Set what are the loop wavefunctions (WL*) and the non loop ones (WE*)
+            # in the argument
+            if not OptimizedOutput:
+                if mother.get('is_loop'):
+                    output['L%d' % i ] = 'L'
+                else:
+                    output['L%d' % i ] = 'E'
+            else:
+                if mother.get('is_loop'):
+                    output['L%d' % i ] = 'L(1,%d)'%nb
+                else:
+                    output['L%d' % i ] = '(1,WE(%d),H)'%nb
+                
+        #fixed argument
+        for i, coup in enumerate(self.get('coupling')):
+            output['coup%d'%i] = str(coup)
+
+        output['out'] = self.get('number') - flip
+        return output
+
+
 
     def set_coupling_color_factor(self):
         """Check if there is a mismatch between order of fermions
@@ -2623,7 +2702,7 @@ class HelasMatrixElement(base_objects.PhysicsObject):
                         try:
                             wf = diagram_wavefunctions[\
                                     diagram_wavefunctions.index(wf)]
-                        except ValueError:
+                        except ValueError, error:
                             # Update wf number
                             wf_number = wf_number + 1
                             wf.set('number', wf_number)
@@ -3559,6 +3638,22 @@ class HelasMatrixElement(base_objects.PhysicsObject):
                          filter(lambda wf: wf.get('leg_state') == False,
                                 external_wfs)])))
 
+    def get_external_masses(self):
+        """Gives the list of the strings corresponding to the masses of the
+        external particles."""
+
+        mass_list=[]
+        external_wfs = sorted(filter(lambda wf: wf.get('leg_state') != \
+                              'intermediate', self.get_all_wavefunctions()),\
+                              key=lambda w: w['number_external'])
+        external_number=1
+        for wf in external_wfs:
+            if wf.get('number_external')==external_number:
+                external_number=external_number+1
+                mass_list.append(wf.get('particle').get('mass'))
+        
+        return mass_list
+        
     def get_helicity_combinations(self):
         """Gives the number of helicity combinations for external
         wavefunctions"""
@@ -3671,7 +3766,7 @@ class HelasMatrixElement(base_objects.PhysicsObject):
         return [(tuple(wa.get('lorentz')), tuple(['C%s' % w for w in wa.get_conjugate_index()]),
                  wa.find_outgoing_number()) for wa in \
                 self.get_all_wavefunctions() + self.get_all_amplitudes() \
-                if wa.get('interaction_id') != 0]
+                if wa.get('interaction_id') not in [0,-1]]
         
     def get_used_couplings(self):
         """Return a list with all couplings used by this
@@ -3679,7 +3774,7 @@ class HelasMatrixElement(base_objects.PhysicsObject):
 
         return [wa.get('coupling') for wa in \
                 self.get_all_wavefunctions() + self.get_all_amplitudes() \
-                if wa.get('interaction_id') != 0]
+                if wa.get('interaction_id') not in [0,-1]]
 
     def get_mirror_processes(self):
         """Return a list of processes with initial states interchanged

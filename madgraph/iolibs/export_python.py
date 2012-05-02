@@ -23,6 +23,7 @@ import os
 import re
 import shutil
 import subprocess
+import aloha
 
 import madgraph.core.color_algebra as color
 import madgraph.core.helas_objects as helas_objects
@@ -345,7 +346,15 @@ class ProcessExporterPython(object):
         matrix element"""
 
         # Get all masses and widths used
-        parameters = [wf.get('mass') for wf in \
+        if aloha.complex_mass:
+            parameters = [(wf.get('mass') == 'ZERO' or wf.get('width')=='ZERO') 
+                          and wf.get('mass') or 'CMASS_%s' % wf.get('mass') 
+                          for wf in \
+                          matrix_element.get_all_wavefunctions()]
+            parameters += [wf.get('mass') for wf in \
+                      matrix_element.get_all_wavefunctions()]
+        else:
+            parameters = [wf.get('mass') for wf in \
                       matrix_element.get_all_wavefunctions()]
         parameters += [wf.get('width') for wf in \
                        matrix_element.get_all_wavefunctions()]

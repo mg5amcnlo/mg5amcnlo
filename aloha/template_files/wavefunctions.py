@@ -21,6 +21,8 @@ class WaveFunction(list):
 
 def ixxxxx(p,fmass,nhel,nsf):
     """Defines an inflow fermion."""
+
+    fmass = fmass.real
     
     fi = WaveFunction(2)
     
@@ -83,6 +85,8 @@ def ixxxxx(p,fmass,nhel,nsf):
 def oxxxxx(p,fmass,nhel,nsf):
     """ initialize an outgoing fermion"""
     
+    fmass = fmass.real
+
     fo = WaveFunction(2)
          
     fo[4] = complex(p[0]*nsf,p[3]*nsf)
@@ -143,6 +147,8 @@ def oxxxxx(p,fmass,nhel,nsf):
 
 def vxxxxx(p,vmass,nhel,nsv):
     """ initialize a vector wavefunction. nhel=4 is for checking BRST"""
+
+    vmass = vmass.real
     
     vc = WaveFunction(3)
     
@@ -227,6 +233,8 @@ def sxxxxx(p,nss):
 
 def txxxxx(p, tmass, nhel, nst):
     """ initialize a tensor wavefunction"""
+
+    tmass = tmass.real
     
     tc = WaveFunction(5)
     

@@ -27,6 +27,7 @@ import time
 
 root_path = os.path.split(os.path.dirname(os.path.realpath( __file__ )))[0]
 sys.path.append(root_path)
+import aloha
 from aloha.aloha_object import *
 import aloha.aloha_writers as aloha_writers
 import aloha.aloha_lib as aloha_lib
@@ -84,6 +85,17 @@ class AbstractRoutine(object):
                              writer.write_combined(grouped, mode=mode, **opt))])
             else:
                 text += writer.write_combined(grouped, mode=mode, **opt)
+        
+        if language == "Fortran" and aloha.quad_precision:
+            writer = getattr(aloha_writers, 'ALOHAWriterFor%s_QP' % language)(self, output_dir)
+            text += writer.write(mode=mode, **opt)
+            for grouped in self.combined:
+                if isinstance(text, tuple):
+                    text = tuple([old.__add__(new)  for old, new in zip(text, 
+                             writer.write_combined(grouped, mode=mode, **opt))])
+                else:
+                    text += writer.write_combined(grouped, mode=mode, **opt)            
+                    
         return text
 
 class AbstractRoutineBuilder(object):
@@ -220,13 +232,12 @@ class AbstractRoutineBuilder(object):
             lorentz = self.routine_kernel
             aloha_lib.USE_TAG = set(self.kernel_tag) 
             
-            
         for (i, spin ) in enumerate(self.spins):   
             id = i + 1
                      
             #Check if this is the outgoing particle
             if id == outgoing:
-                if spin == 1: 
+                if abs(spin) == 1: 
                     lorentz *= complex(0,1)
                 elif spin == 2:
                     # shift and flip the tag if we multiply by C matrices
@@ -253,7 +264,7 @@ class AbstractRoutineBuilder(object):
                                 'The spin value %s is not supported yet' % spin)
             else:
                 # This is an incoming particle
-                if spin == 1:
+                if abs(spin) == 1:
                     lorentz *= Scalar(id)
                 elif spin == 2:
                     # shift the tag if we multiply by C matrices

@@ -305,7 +305,8 @@ c
       enddo
       if (.not.found) then
          write (*,*) "Warning: parameter ",name," not found"
-         write (*,*) "         setting it to default value ",def_value_num
+         write (*,*) "         setting it to default value ",
+     &def_value_num
          var=def_value_num
       endif
       return
@@ -313,6 +314,61 @@ c
       end
 c
 
+
+      subroutine MP_LHA_get_real(npara,param,value,name,var,
+     &def_value_num)
+c----------------------------------------------------------------------------------
+c     finds the parameter named "name" in param and associate to "value" in value
+c----------------------------------------------------------------------------------
+      implicit none
+
+c
+c     parameters
+c
+      integer maxpara
+      parameter (maxpara=1000)
+c
+c     arguments
+c
+      integer npara
+      character*20 param(maxpara),value(maxpara)
+      character*(*)  name
+      real*16 var,def_value_num
+      character*20 c_param,c_name,ctemp
+      character*19 def_value
+c
+c     local
+c
+      logical found
+      integer i
+c
+c     start
+c
+      i=1
+      found=.false.
+      do while(.not.found.and.i.le.npara)
+         ctemp=param(i)
+         call LHA_firststring(c_param,ctemp)
+         ctemp=name
+         call LHA_firststring(c_name,ctemp)
+         call LHA_case_trap(c_name)
+         call LHA_case_trap(c_param)
+         found = (c_param .eq. c_name)
+         if (found) then
+             read(value(i),*) var
+         end if
+         i=i+1
+      enddo
+      if (.not.found) then
+         write (*,*) "Warning: parameter ",name," not found"
+         write (*,*) "         setting it to default value ",
+     &def_value_num
+         var=def_value_num
+      endif
+      return
+
+      end
+c
 
 
 

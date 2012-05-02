@@ -13,7 +13,7 @@ C ARGUMENTS
 C  
       COMPLEX*16 %(wfsargsdecl)s
 	  INTEGER %(momposdecl)s	  
-      REAL*8 %(margsdecl)s
+      %(mass_format)s %(margsdecl)s
       COMPLEX*16 %(cplsdecl)s	  
       COMPLEX*16 RES(3)
 	  INTEGER LID, RANK, LSYMFACT
@@ -22,7 +22,7 @@ C
 C LOCAL VARIABLES 
 C
       REAL*8 PL(0:3,NLOOPLINE)
-      REAL*8 M2L(NLOOPLINE)
+      %(mass_format)s M2L(NLOOPLINE)
 	  INTEGER MOMPOS(%(nwfsargs)d)	  
 	  INTEGER I, J
 C
@@ -30,7 +30,7 @@ C GLOBAL VARIABLES
 C
       COMPLEX*16 WE(20,NEXTERNAL)
 	  COMPLEX*16 LC(MAXLCOUPLINGS)	  
-      REAL*8 ML(NEXTERNAL+1)
+      %(mass_format)s ML(NEXTERNAL+2)
 	  INTEGER ID, SYMFACT
 	  COMMON/LOOP/WE,LC,ML,ID,SYMFACT
 C ----------
