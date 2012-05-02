@@ -433,7 +433,7 @@ class LoopProcessExporterFortranSA(export_v4.ProcessExporterFortranSA,
             replace_dict['cplset']=cplset            
             mset2lines=["ML(1)=M%d"%(callkey[0]),"ML(2)=M%d"%(callkey[0])]
             mset2="\n".join(mset2lines+[("ML("+str(i)+")=M"+str(i-2)) for \
-                             i in range(3,callkey[0]+2)])
+                             i in range(3,callkey[0]+3)])
             replace_dict['mset2']=mset2           
             replace_dict['nwfsargs'] = callkey[1]
             if callkey[0]==callkey[1]:
@@ -666,8 +666,7 @@ class LoopProcessExporterFortranSA(export_v4.ProcessExporterFortranSA,
         replace_dict['color_data_lines'] = "\n".join(color_data_lines)
 
         # Extract helas calls
-        helas_calls = fortran_model.get_matrix_element_calls(\
-                                                            matrix_element) 
+        helas_calls = fortran_model.get_matrix_element_calls(matrix_element)
                        
         # The summing is performed differently depending on wether
         # the process is loop induced or not
@@ -1115,7 +1114,7 @@ class LoopProcessOptimizedExporterFortranSA(LoopProcessExporterFortranSA):
                   "MP_ML(1)=MP_M%d"%(callkey[0]),"MP_ML(2)=MP_M%d"%(callkey[0])]
             mset2="\n".join(mset2lines+["\n".join(["ML(%d)=M%d"%(i,i-2),
                                                "MP_ML(%d)=MP_M%d"%(i,i-2)]) for \
-                                        i in range(3,callkey[0]+2)])
+                                        i in range(3,callkey[0]+3)])
             replace_dict['mset2']=mset2           
             replace_dict['nwfsargs'] = callkey[1]
             if callkey[0]==callkey[1]:
@@ -1221,7 +1220,7 @@ class LoopProcessOptimizedExporterFortranSA(LoopProcessExporterFortranSA):
                         'loop_matrix_standalone.inc')).read()
         
         # Decide here wether we need to split the loop_matrix.f file or not.
-        if (not noSplit and (len(matrix_element.get_all_amplitudes())>2000)):
+        if (not noSplit and (len(matrix_element.get_all_amplitudes())>1000)):
             file=self.split_HELASCALLS(writer,replace_dict,\
                             'helas_calls_split.inc',file,born_ct_helas_calls,\
                             'born_ct_helas_calls','helas_calls_ampb')

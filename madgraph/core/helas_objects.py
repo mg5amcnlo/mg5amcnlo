@@ -116,8 +116,8 @@ class IdentifyMETag(diagram_generation.DiagramTag):
         code if possible onshell s-channel prop. Note that is_part
         and PDG code needs to be flipped if we move the final vertex around."""
 
-        if vertex.get('id') == 0:
-            return (0,)
+        if vertex.get('id') in [0,-1]:
+            return (vertex.get('id'),)
 
         inter = model.get_interaction(vertex.get('id'))
         coup_keys = sorted(inter.get('couplings').keys())
@@ -2175,7 +2175,7 @@ class HelasAmplitude(base_objects.PhysicsObject):
             color_indices.extend(mother.get_color_indices())
 
         # Add this amp's color index
-        if self.get('interaction_id'):
+        if self.get('interaction_id') not in [0,-1]:
             color_indices.append(self.get('color_key'))
 
         return color_indices
@@ -3766,7 +3766,7 @@ class HelasMatrixElement(base_objects.PhysicsObject):
         return [(tuple(wa.get('lorentz')), tuple(['C%s' % w for w in wa.get_conjugate_index()]),
                  wa.find_outgoing_number()) for wa in \
                 self.get_all_wavefunctions() + self.get_all_amplitudes() \
-                if wa.get('interaction_id') != 0]
+                if wa.get('interaction_id') not in [0,-1]]
         
     def get_used_couplings(self):
         """Return a list with all couplings used by this
@@ -3774,7 +3774,7 @@ class HelasMatrixElement(base_objects.PhysicsObject):
 
         return [wa.get('coupling') for wa in \
                 self.get_all_wavefunctions() + self.get_all_amplitudes() \
-                if wa.get('interaction_id') != 0]
+                if wa.get('interaction_id') not in [0,-1]]
 
     def get_mirror_processes(self):
         """Return a list of processes with initial states interchanged

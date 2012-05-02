@@ -460,12 +460,18 @@ class ALOHAWriterForFortran(WriteALOHA):
                 str_out += '%s(2) = %s dimag(%s%d(%d))\n' % (mom, sign, type, index, energy_pos + 1)
                 str_out += '%s(3) = %s dimag(%s%d(%d))\n' % (mom, sign, type, index, energy_pos)            
             
-                # Definition for the One Over Mass**2 terms
-                for elem in overm:
-                    #Mom is in format OMX with X the number of the particle
-                    index = int(elem[2:])
-                    str_out += 'OM%d = 0%s\n' % (index, self.ext)
-                    str_out += 'if (M%d .ne. 0%s) OM%d' % (index, self.ext, index) + '=1%s/M%d**2\n' % (self.ext, index) 
+            # Definition for the One Over Mass**2 terms
+            for elem in overm:
+                #Mom is in format OMX with X the number of the particle
+                index = int(elem[2:])
+                str_out += 'OM%d = (0%s,0%s)\n' % (index, self.ext,self.ext)
+                if aloha.complex_mass:
+                    str_out += 'if (M%d .ne. (0%s,0%s)) OM%d' % \
+                      (index, self.ext, self.ext, index) +\
+                      '=1%s/M%d**2\n' % (self.ext, index) 
+                else:
+                    str_out += 'if (M%d .ne. 0%s) OM%d' % (index, self.ext, index) +\
+                            '=(1%s,0%s)/M%d**2\n' % (self.ext, self.ext, index)
         
         # Returning result
         return str_out

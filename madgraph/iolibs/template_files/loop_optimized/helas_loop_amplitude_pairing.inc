@@ -42,11 +42,11 @@ C
       COMMON/LOOP/WE,ID,SYMFACT, AMPLNUM
 
 	  %(complex_dp_format)s LC(MAXLCOUPLINGS)	  
-      %(mass_dp_format)s ML(NEXTERNAL+1)	
+      %(mass_dp_format)s ML(NEXTERNAL+2)	
       COMMON/DP_LOOP/LC,ML
 
 	  %(complex_mp_format)s MP_LC(MAXLCOUPLINGS)
-	  %(mass_mp_format)s MP_ML(NEXTERNAL+1)
+	  %(mass_mp_format)s MP_ML(NEXTERNAL+2)
       COMMON/MP_LOOP/MP_LC,MP_ML
 
       %(complex_dp_format)s AMP(NBORNAMPS,NCOMB)

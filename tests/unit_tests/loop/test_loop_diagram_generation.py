@@ -1416,6 +1416,7 @@ class LoopDiagramFDStructTest(unittest.TestCase):
         l235 = base_objects.Leg({'id':21,'number':2,'loop_line':False}) 
         l24 = base_objects.Leg({'id':21,'number':2,'loop_line':False})
         l28 = base_objects.Leg({'id':21,'number':2,'loop_line':True})
+        l128 = base_objects.Leg({'id':21,'number':1,'loop_line':True})
         l19 = base_objects.Leg({'id':21,'number':1,'loop_line':True})
 
         vx19 = base_objects.Vertex({'legs':base_objects.LegList([l1, l9, l19]), 'id': 1})
@@ -1444,8 +1445,9 @@ class LoopDiagramFDStructTest(unittest.TestCase):
 
         goal_tag=[[21, [0], 1], [21, [1], 1]]
         vx28_tag=base_objects.Vertex({'legs':base_objects.LegList([l235, l8, l28]), 'id': 1})
-        vx129_tag=base_objects.Vertex({'legs':base_objects.LegList([l1, l28, l9]), 'id': 1})
-        goal_vertices=base_objects.VertexList([vx28_tag,vx129_tag])
+        vx129_tag=base_objects.Vertex({'legs':base_objects.LegList([l1, l28, l128]), 'id': 1})
+        closing_vx=base_objects.Vertex({'legs':base_objects.LegList([l128, l9]), 'id': -1})
+        goal_vertices=base_objects.VertexList([vx28_tag,vx129_tag,closing_vx])
         myBubbleDiag.tag(myStructRep,8,9,self.myproc)
         self.assertEqual(myBubbleDiag.get('canonical_tag'), goal_tag)
         self.assertEqual(myBubbleDiag.get('vertices'), goal_vertices)
@@ -1477,6 +1479,7 @@ class LoopDiagramFDStructTest(unittest.TestCase):
         l68 = base_objects.Leg({'id':-1,'number':6,'loop_line':True}) 
         l56 = base_objects.Leg({'id':-1,'number':5,'loop_line':True})
         l34 = base_objects.Leg({'id':21,'number':3,'loop_line':False})
+        l617 = base_objects.Leg({'id':1,'number':1,'loop_line':True})
 
         vx17 = base_objects.Vertex({'legs':base_objects.LegList([l1, l7, l17]), 'id': 3})
         vx12 = base_objects.Vertex({'legs':base_objects.LegList([l17, l2, l12]), 'id': 3})
@@ -1500,6 +1503,7 @@ class LoopDiagramFDStructTest(unittest.TestCase):
         vx12_tag=base_objects.Vertex({'legs':base_objects.LegList([l2, l17, l12]), 'id': 3})
         vx13_tag=base_objects.Vertex({'legs':base_objects.LegList([l34, l12, l17]), 'id': 3})
         vx15_tag=base_objects.Vertex({'legs':base_objects.LegList([l5, l17, l17]), 'id': 3})
-        vx168_tag=base_objects.Vertex({'legs':base_objects.LegList([l6, l17, l8]), 'id': 3})        
-        goal_vertices=base_objects.VertexList([vx17_tag,vx12_tag,vx13_tag,vx15_tag,vx168_tag])
+        vx168_tag=base_objects.Vertex({'legs':base_objects.LegList([l6, l17, l617]), 'id': 3})  
+        closing_vx=base_objects.Vertex({'legs':base_objects.LegList([l617, l8]), 'id': -1})              
+        goal_vertices=base_objects.VertexList([vx17_tag,vx12_tag,vx13_tag,vx15_tag,vx168_tag,closing_vx])
         self.assertEqual(myPentaDiag1.get('vertices'), goal_vertices)

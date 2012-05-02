@@ -1593,7 +1593,147 @@ C LOOP related universal subroutines
 C###############################################################################
 
 C===============================================================================
-C Subroutines to close the lorentz traces of loops, OBSOLETE NOW 
+C Subroutines to create the external wavefunctions of the L-cut particles 
+C===============================================================================
+
+      SUBROUTINE LCUT_F(Q,CFIG,W)
+
+      COMPLEX*16 Q(0:3)
+      INTEGER CFIG
+      COMPLEX*16 W(20)
+      
+      CALL LCUT_V(Q,CFIG,W)
+      END
+
+      SUBROUTINE LCUT_V(Q,CFIG,W)
+
+      COMPLEX*16 Q(0:3)
+      INTEGER CFIG
+      COMPLEX*16 W(20)
+      
+      W(1)=(0.d0,0.d0)
+      W(2)=(0.d0,0.d0)
+      W(3)=(0.d0,0.d0)
+      W(4)=(0.d0,0.d0)
+      W(CFIG)=(1.d0,0.d0)
+      
+      W(5)=Q(0)
+      W(6)=Q(1)
+      W(7)=Q(2)
+      W(8)=Q(3)
+
+      END
+
+      SUBROUTINE LCUT_S(Q,CFIG,W)
+
+      COMPLEX*16 Q(0:3)
+      INTEGER CFIG
+      COMPLEX*16 W(20)
+
+      W(1)=(1.D0,0.D0)
+
+      W(2)=Q(0)
+      W(3)=Q(1)
+      W(4)=Q(2)
+      W(5)=Q(3)
+
+      END
+
+      SUBROUTINE MP_LCUT_F(Q,CFIG,W)
+
+      COMPLEX*32 Q(0:3)
+      INTEGER CFIG
+      COMPLEX*32 W(20)
+      
+      CALL MP_LCUT_V(Q,CFIG,W)
+      END
+
+      SUBROUTINE MP_LCUT_V(Q,CFIG,W)
+
+      COMPLEX*32 Q(0:3)
+      INTEGER CFIG
+      COMPLEX*32 W(20)
+      COMPLEX*32 IONE, IZERO
+      PARAMETER (IONE=(1.0e0_16,0.0e0_16))
+      PARAMETER (IZERO=(0.0e0_16,0.0e0_16))      
+      
+      W(1)=IZERO
+      W(2)=IZERO
+      W(3)=IZERO
+      W(4)=IZERO
+      W(CFIG)=IONE
+
+      W(5)=Q(0)
+      W(6)=Q(1)
+      W(7)=Q(2)
+      W(8)=Q(3)
+
+      END
+
+      SUBROUTINE MP_LCUT_S(Q,CFIG,W)
+
+      COMPLEX*32 Q(0:3)
+      INTEGER CFIG
+      COMPLEX*32 W(20)
+      COMPLEX*32 IONE
+      PARAMETER (IONE=(1.0e0_16,0.0e0_16))
+
+      W(1)=IONE
+
+      W(2)=Q(0)
+      W(3)=Q(1)
+      W(4)=Q(2)
+      W(5)=Q(3)
+
+      END
+
+C===============================================================================
+C Subroutines to close the lorentz traces of loops, 
+C===============================================================================
+
+      SUBROUTINE CLOSE_4(AMPS,RES)
+      
+      COMPLEX*16 RES
+      COMPLEX*16 AMPS(4)
+
+      RES=AMPS(1)+AMPS(2)+AMPS(3)+AMPS(4)
+
+      END
+
+      SUBROUTINE CLOSE_1(AMPS,RES)
+      
+      COMPLEX*16 RES
+      COMPLEX*16 AMPS
+
+c     Need to check for the reason of this - sign.
+c     Only for QCD-Ghost like particles?
+      RES=-AMPS
+
+      END
+
+      SUBROUTINE MP_CLOSE_4(AMPS,RES)
+      
+      COMPLEX*32 RES
+      COMPLEX*32 AMPS(4)
+
+      RES=AMPS(1)+AMPS(2)+AMPS(3)+AMPS(4)
+
+      END
+
+      SUBROUTINE MP_CLOSE_1(AMPS,RES)
+      
+      COMPLEX*32 RES
+      COMPLEX*32 AMPS
+
+c     Need to check for the reason of this - sign.
+c     Only for QCD-Ghost like particles?
+      RES=-AMPS
+
+      END
+
+C===============================================================================
+C OLD Subroutines to close the lorentz traces of loops, 
+c                           OBSOLETE 
 C===============================================================================
 
       SUBROUTINE CLOSE_V(Q,M,AMPS,RES)
@@ -1721,8 +1861,8 @@ c     // QUAD PREC VERSIONS OF THE ABOVE //
       END
 
 C===============================================================================
-C Subroutines to create the external wavefunctions of the L-cut particles 
-C                                 SOON OBSOLETE
+C OLD Subroutines to create the external wavefunctions of the L-cut particles 
+C                                 OBSOLETE
 C===============================================================================
 
 c This subroutine is to recreate the fermion propagator with 4 helicities
@@ -1783,7 +1923,7 @@ C     REVERSE THE MOMENTUM IN THE WF FOR THE SECOND L-CUT SPINORS
 
       END
 
-      SUBROUTINE LCUT_F(Q,M,CFIG,SCD,W)
+      SUBROUTINE OLD_LCUT_F(Q,M,CFIG,SCD,W)
 
       COMPLEX*16 Q(0:3)
       INTEGER CFIG
@@ -1884,7 +2024,7 @@ C     REVERSE THE MOMENTUM IN THE WF FOR THE SECOND L-CUT SPINORS
 
       END
 
-      SUBROUTINE MP_LCUT_F(Q,M,CFIG,SCD,W)
+      SUBROUTINE OLD_MP_LCUT_F(Q,M,CFIG,SCD,W)
 
       COMPLEX*32 Q(0:3)
       INTEGER CFIG
@@ -1989,7 +2129,7 @@ C     REVERSE THE MOMENTUM IN THE WF FOR THE SECOND L-CUT SPINORS
 
       END
 
-      SUBROUTINE LCUT_CF(Q,M,CFIG,SCD,W)
+      SUBROUTINE OLD_LCUT_CF(Q,M,CFIG,SCD,W)
 
       COMPLEX*16 Q(0:3)
       INTEGER CFIG
@@ -2040,7 +2180,7 @@ C     REVERSE THE MOMENTUM IN THE WF FOR THE SECOND L-CUT SPINORS
 
       END
 
-      SUBROUTINE LCUT_V(Q,M,CFIG,SCD,W)
+      SUBROUTINE OLD_LCUT_V(Q,M,CFIG,SCD,W)
 
       COMPLEX*16 Q(0:3)
       INTEGER CFIG
@@ -2079,7 +2219,7 @@ C     REVERSE THE MOMENTUM IN THE WF FOR THE SECOND L-CUT VECTORS
 
       END
 
-      SUBROUTINE MP_LCUT_V(Q,M,CFIG,SCD,W)
+      SUBROUTINE OLD_MP_LCUT_V(Q,M,CFIG,SCD,W)
 
       COMPLEX*32 Q(0:3)
       INTEGER CFIG
@@ -2123,7 +2263,7 @@ C     REVERSE THE MOMENTUM IN THE WF FOR THE SECOND L-CUT VECTORS
 
       END
 
-      SUBROUTINE LCUT_S(Q,M,CFIG,SCD,W)
+      SUBROUTINE OLD_LCUT_S(Q,M,CFIG,SCD,W)
 
       COMPLEX*16 Q(0:3)
       COMPLEX*16 M
@@ -2148,7 +2288,7 @@ C     REVERSE THE MOMENTUM IN THE WF FOR THE SECOND SCALAR
 
       END
 
-      SUBROUTINE MP_LCUT_S(Q,M,CFIG,SCD,W)
+      SUBROUTINE OLD_MP_LCUT_S(Q,M,CFIG,SCD,W)
 
       COMPLEX*32 Q(0:3)
       COMPLEX*32 M
@@ -2177,8 +2317,33 @@ C     REVERSE THE MOMENTUM IN THE WF FOR THE SECOND SCALAR
 
 C===============================================================================
 C Complex-momentum version of the subroutine to create on-shell
-C wavefunctions of particles with different spins.
+C wavefunctions of particles with different spins. OBSOLETE
 C===============================================================================
+   
+C     The subroutine with charge conjugation are not yet implemented
+c     Obsolete by now too
+
+      subroutine oclxxx(p,ffmass,nhel,nsf,fo)
+
+      implicit none
+      double complex fo(8),p(0:3)
+      double precision ffmass
+      integer nhel,nsf
+
+      CALL olxxxx(p,ffmass,nhel,nsf,fo)
+
+      end
+
+      subroutine iclxxx(p,ffmass,nhel,nsf,fi)
+
+      implicit none
+      double complex fi(8),p(0:3)
+      double precision ffmass
+      integer nhel,nsf
+
+      CALL ilxxxx(p,ffmass,nhel,nsf,fi)
+
+      end
 
       subroutine ilxxxx(p,ffmass,nhel,nsf,fi)
 c
@@ -2428,29 +2593,4 @@ c         end if
       endif
 c
       return
-      end
-
-   
-C     The subroutine with charge conjugation are not yet implemented
-
-      subroutine oclxxx(p,ffmass,nhel,nsf,fo)
-
-      implicit none
-      double complex fo(8),p(0:3)
-      double precision ffmass
-      integer nhel,nsf
-
-      CALL olxxxx(p,ffmass,nhel,nsf,fo)
-
-      end
-
-      subroutine iclxxx(p,ffmass,nhel,nsf,fi)
-
-      implicit none
-      double complex fi(8),p(0:3)
-      double precision ffmass
-      integer nhel,nsf
-
-      CALL ilxxxx(p,ffmass,nhel,nsf,fi)
-
       end

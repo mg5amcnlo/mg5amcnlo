@@ -1791,7 +1791,7 @@ class Diagram(PhysicsObject):
         coupling_orders = dict([(c, 0) for c in model.get('coupling_orders')])
         weight = 0
         for vertex in self['vertices']:
-            if vertex.get('id') == 0: continue
+            if vertex.get('id') in [0,-1]: continue
             couplings = model.get('interaction_dict')[vertex.get('id')].\
                         get('orders')
             for coupling in couplings:

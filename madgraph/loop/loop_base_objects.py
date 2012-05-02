@@ -450,121 +450,124 @@ class LoopDiagram(base_objects.Diagram):
                 break
 
         # To make sure we found the next loop vertex
-        if nextLoopLeg:
-            # The FDStructureIDList can be empty in case of an identity vertex. 
-            # We need to skip the vertex construction and the tag actualization
-            # in that case
-            if FDStructureIDList and vertFoundID!=0:
-                # We now have constructed all the FDStructures attached at this
-                # vertex of the loop and we have identified the two loop legs. 
-                # So we can add the corresponding vertex to loopVertexList
-                    
-                # Create the list of legs from the FDStructures
-                myleglist=base_objects.LegList([copy.copy(\
-                            structRep[FDindex]['binding_leg']) for FDindex in \
-                            FDStructureIDList])
-                    
-                # Add The original loop leg we started from. We either take it 
-                # from starting leg (at the first call of process_next_loop_leg)
-                # or from the output leg of the latest Leg we added to 
-                # loopVertexList. Also, the tag is updated here using the same 
-                # rule.
-                if loopVertexList:
-                    self['tag'].append([copy.copy(\
-                      loopVertexList[-1]['legs'][-1]),\
-                      sorted(FDStructureIDList),vertFoundID])
-                    myleglist.append(loopVertexList[-1]['legs'][-1])
-                else:
-                    self['tag'].append([copy.copy(currLeg),\
-                                         sorted(FDStructureIDList),vertFoundID])
-                    myleglist.append(copy.copy(currLeg))
-                
-                # Now depending we reached the last loop vertex or not, we will 
-                # create a current (with ref_dict_to1) or an amplitude 
-                # (with ref_dict_to0).
-                # WARNING: This is very important here that the endLeg has the 
-                # maximal attribute 'number' among all other legs, because this 
-                # guarantees that its number is NOT propagated and that as soon 
-                # as we reach this number, we reached the EXTERNAL outter leg 
-                # which set the end of the tagging algorithm.
-                if nextLoopLeg.same(endLeg):
-                    # This last vertex building the loop is an amplitude and we
-                    # use the endLeg as the last leg
-                    myleglist.append(copy.copy(nextLoopLeg))                    
-                    # Define easy access point
-                    ref_dict_to0 = process['model'].get('ref_dict_to0')
-                    # Now we make sure we can combine those legs together 
-                    # (not strictly necessary here, just a check)
-                    key=tuple(sorted([leg.get('id') for leg in myleglist]))
-                    if ref_dict_to0.has_key(key):
-                        for interaction in ref_dict_to0[key]:
-                            # Find the interaction with the right ID
-                            if interaction==vertFoundID:
-                                # Now we can add the corresponding amplitude
-                                # vertex
-                                loopVertexList.append(base_objects.Vertex(\
-                                           {'legs':myleglist,'id':vertFoundID}))
-                                break
-                    else:
-                        raise self.PhysicsObjectError, \
-                        "An amplitude vertex from the original L-cut diagram"+\
-                        " could not be found when reconstructing the "+\
-                        "loop vertices."
-                else:
-                    # Define easy access points
-                    ref_dict_to1 = process['model'].get('ref_dict_to1')
-                    # Now we make sure we can combine those legs together (and 
-                    # obtain the output particle ID)
-                    key=tuple(sorted([leg.get('id') for leg in myleglist]))
-                    if ref_dict_to1.has_key(key):
-                        for interaction in ref_dict_to1[key]:
-                            # Find the interaction with the right ID
-                            if interaction[1]==vertFoundID:
-                                # Create the output Leg and add it to the 
-                                # existing list 
-                                #1) id is like defined by ref_dict_to1
-                                legid = interaction[0]
-                                # 2) number is the minimum of leg numbers 
-                                #    involved in the combination
-                                number = min([leg.get('number') for leg in\
-                                               myleglist])
-                                # 3) state is final, unless there is exactly 
-                                #    one initial state particle involved in the
-                                #    combination -> t-channel
-                                if len(filter(lambda leg: leg.get('state') == \
-                                              False, myleglist)) == 1:
-                                    state = False
-                                else:
-                                    state = True
-                                myleglist.append(base_objects.Leg(\
-                                                        {'number': number,\
-                                                         'id': legid,\
-                                                         'state': state,
-                                                         'loop_line': True}))
-                                # Now we can add the corresponding vertex
-                                loopVertexList.append(base_objects.Vertex(\
-                                           {'legs':myleglist,'id':vertFoundID}))
-                                break
-                    else:
-                        raise self.PhysicsObjectError, \
-                        "An interaction from the original L-cut diagram could"+\
-                        " not be found when reconstructing the loop vertices."
-
-            if nextLoopLeg.same(endLeg):
-                # Returns true since we reached the end loop leg. 
-                # Again, it is very important that this end loop leg has the 
-                # maximal number (see comment above)
-                return True
-            else:
-                # This is where the recursion happens. We have not reached the 
-                # end loop leg yet, so we iterate the procedure.
-                return self.process_next_loop_leg(structRep, vertPos, legPos, \
-                            nextLoopLeg, endLeg, loopVertexList, process)
-
-        else:
+        if not nextLoopLeg:
             # Returns False in case of a malformed diagram where it has been 
             # impossible to find the loop leg looked for.
             return False
+
+        # The FDStructureIDList can be empty in case of an identity vertex. 
+        # We need to skip the vertex construction and the tag actualization
+        # in that case
+        if FDStructureIDList and vertFoundID not in [0,-1]:
+            # We now have constructed all the FDStructures attached at this
+            # vertex of the loop and we have identified the two loop legs. 
+            # So we can add the corresponding vertex to loopVertexList
+                
+            # Create the list of legs from the FDStructures
+            myleglist=base_objects.LegList([copy.copy(\
+                        structRep[FDindex]['binding_leg']) for FDindex in \
+                        FDStructureIDList])
+                
+            # Add The original loop leg we started from. We either take it 
+            # from starting leg (at the first call of process_next_loop_leg)
+            # or from the output leg of the latest Leg we added to 
+            # loopVertexList. Also, the tag is updated here using the same 
+            # rule.
+            if loopVertexList:
+                self['tag'].append([copy.copy(\
+                  loopVertexList[-1]['legs'][-1]),\
+                  sorted(FDStructureIDList),vertFoundID])
+                myleglist.append(loopVertexList[-1]['legs'][-1])
+            else:
+                self['tag'].append([copy.copy(currLeg),\
+                                     sorted(FDStructureIDList),vertFoundID])
+                myleglist.append(copy.copy(currLeg))
+            
+            # Now depending we reached the last loop vertex or not, we will 
+            # create a current (with ref_dict_to1) or a wavefunction plus 
+            # a trivial two-point amplitude with interaction id=-1 which
+            # plays the role of a conventional amplitude. This allow for
+            # having only wavefunctions in the loop and therefore compute
+            # the loop lorentz trace easily.
+            # WARNING: This is very important here that the endLeg has the 
+            # maximal attribute 'number' among all other legs, because this 
+            # guarantees that its number is NOT propagated and that as soon 
+            # as we reach this number, we reached the EXTERNAL outter leg 
+            # which set the end of the tagging algorithm.
+            # Define easy access point
+            ref_dict_to1 = process['model'].get('ref_dict_to1')
+            # Now we make sure we can combine those legs together (and 
+            # obtain the output particle ID)
+            key=tuple(sorted([leg.get('id') for leg in myleglist]))
+            if ref_dict_to1.has_key(key):
+                for interaction in ref_dict_to1[key]:
+                    # Find the interaction with the right ID
+                    if interaction[1]==vertFoundID:
+                        # Create the output Leg and add it to the 
+                        # existing list 
+                        #1) id is like defined by ref_dict_to1
+                        legid = interaction[0]
+                        # 2) number is the minimum of leg numbers 
+                        #    involved in the combination
+                        number = min([leg.get('number') for leg in\
+                                       myleglist])
+                        # 3) state is final, unless there is exactly 
+                        #    one initial state particle involved in the
+                        #    combination -> t-channel
+                        if len(myleglist)>1 and len(filter(lambda leg: \
+                                leg.get('state') == False, myleglist)) == 1:
+                            state = False
+                        else:
+                            state = True
+                        myleglist.append(base_objects.Leg(\
+                                                {'number': number,\
+                                                 'id': legid,\
+                                                 'state': state,
+                                                 'loop_line': True}))
+                        # Now we can add the corresponding vertex
+                        loopVertexList.append(base_objects.Vertex(\
+                                   {'legs':myleglist,'id':vertFoundID}))
+                        break
+            else:
+                raise self.PhysicsObjectError, \
+                "An interaction from the original L-cut diagram could"+\
+                " not be found when reconstructing the loop vertices."
+
+        if nextLoopLeg.same(endLeg):
+            # Now we can add the corresponding 'fake' amplitude vertex
+            # with flagged id = -1
+            if isinstance(endLeg,int):
+                number=endLeg
+            else:
+                number=engLeg['number']
+            # If last vertex was dummy, then recuperate the original leg
+            if vertFoundID not in [0,-1]:
+                starting_Leg=copy.copy(myleglist[-1])
+                legid=process['model'].get_particle(myleglist[-1]['id']).\
+                                                    get_anti_pdg_code()
+                state=myleglist[-1].get('state')
+            else:
+                starting_Leg=copy.copy(currLeg)
+                legid=process['model'].get_particle(currLeg['id']).\
+                                                    get_anti_pdg_code()
+                state=currLeg.get('state')
+
+            loopVertexList.append(base_objects.Vertex(\
+                {'legs':base_objects.LegList([starting_Leg,\
+                 base_objects.Leg({'number': number,
+                                   'id': legid,
+                                    'state': state,
+                                    'loop_line': True})]),
+                 'id':-1}))
+            # Returns true since we reached the end loop leg. 
+            # Again, it is very important that this end loop leg has the 
+            # maximal number (see comment above)
+            return True
+        else:
+            # This is where the recursion happens. We have not reached the 
+            # end loop leg yet, so we iterate the procedure.
+            return self.process_next_loop_leg(structRep, vertPos, legPos, \
+                        nextLoopLeg, endLeg, loopVertexList, process)
 
     def construct_FDStructure(self, fromVert, fromPos, currLeg, FDStruct):
         """ Construct iteratively a Feynman Diagram structure attached to a Loop, 
@@ -789,7 +792,7 @@ class LoopDiagram(base_objects.Diagram):
         loop_orders = {}
         for vertex in self['vertices']:
             # We do not count the identity vertex
-            if vertex['id']!=0 and len([1 for leg in vertex['legs'] if \
+            if vertex['id'] not in [0,-1] and len([1 for leg in vertex['legs'] if \
                                                           leg['loop_line']])==2:
                 vertex_orders = model.get_interaction(vertex['id'])['orders']
                 for order in vertex_orders.keys():

@@ -72,21 +72,23 @@ class LoopColorBasis(color_amp.ColorBasis):
             raise ColorBasis.ColorBasisError, \
               'LoopColorBasis is used with an amplitude which is not a LoopAmplitude'
         
-        lcut_numbers=(len(amplitude['process']['legs'])+1,\
-                          len(amplitude['process']['legs'])+2)
-        
         for diagram in amplitude.get('loop_diagrams'):
             colorize_dict = self.colorize(diagram,
-                                          amplitude.get('process').get('model'))
+                                        amplitude.get('process').get('model'))
             if diagram['type']>0:
+
                 lcut_charge=\
                   amplitude['process']['model']['particle_dict'][\
                             diagram['type']].get('color')
                 # We close here the color loop for loop diagrams (R2 have
                 # negative 'type') by adding a delta in the two color indices of
-                # loop_leg_numbers.
+                # loop_leg_numbers. The first one if simply the total number of
+                # legs plus one and the second is obtained from the dummy 
+                # vertex with id=-1.
+                lcut_numbers=(len(amplitude['process']['legs'])+1,\
+                                            len(amplitude['process']['legs'])+2)
                 self.closeColorLoop(colorize_dict,lcut_charge,lcut_numbers)
-                
+
             list_color_dict.append(colorize_dict)
             
         # Now let's treat the UVCT diagrams as well

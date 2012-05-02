@@ -322,18 +322,17 @@ class LoopExporterTest(unittest.TestCase):
         myloopME=loop_helas_objects.LoopHelasMatrixElement(myloopamplitude)
         self.check_output_sanity(myloopME)
         # Further Check that the right ALOHA subroutines are created
-        HELAS_files=['aloha_functions.f', 'FFV1_0.f', 'FFV1_1.f', 'FFV1_2.f', \
-                     'FFV1_3.f', 'FFV1L_0.f', 'FFV1L_1.f', 'FFV1L_3.f', \
-                     'GHGHG_0.f', 'GHGHG_1.f', 'GHGHG_2.f', 'GHGHG_3.f', \
-                     'GHGHGL_0.f', 'GHGHGL_1.f', 'R2_GG_1_0.f', \
-                     'R2_GG_1_R2_GG_2_0.f', 'R2_GG_1_R2_GG_3_0.f', \
-                     'R2_GG_2_0.f', 'R2_GG_3_0.f', 'R2_QQ_1_0.f', 'VVV1_0.f', \
-                     'VVV1_1.f', 'VVV1L_0.f', 'VVV1L_1.f', 'VVVV1_0.f', \
-                     'VVVV1_1.f', 'VVVV1_2.f', 'VVVV1_3.f', 'VVVV1_4.f', \
-                     'VVVV1L_0.f', 'VVVV1L_1.f', 'VVVV3_0.f', 'VVVV3_1.f', \
-                     'VVVV3_2.f', 'VVVV3_3.f', 'VVVV3_4.f', 'VVVV3L_0.f', \
-                     'VVVV3L_1.f', 'VVVV4_0.f', 'VVVV4_1.f', 'VVVV4_2.f', \
-                     'VVVV4_3.f', 'VVVV4_4.f', 'VVVV4L_0.f', 'VVVV4L_1.f']
+        HELAS_files=['FFV1L_1.f', 'FFV1L_3.f', 'FFV1_0.f', 'FFV1_1.f', 
+                     'FFV1_2.f', 'FFV1_3.f', 'GHGHGL_1.f', 'GHGHG_0.f', 
+                     'GHGHG_1.f', 'GHGHG_2.f', 'GHGHG_3.f', 'R2_GG_1_0.f',
+                     'R2_GG_1_R2_GG_2_0.f', 'R2_GG_1_R2_GG_3_0.f', 
+                     'R2_GG_2_0.f', 'R2_GG_3_0.f', 'R2_QQ_1_0.f', 'VVV1L_1.f', 
+                     'VVV1_0.f', 'VVV1_1.f', 'VVVV1L_1.f', 'VVVV1_0.f', 
+                     'VVVV1_1.f', 'VVVV1_2.f', 'VVVV1_3.f', 'VVVV1_4.f', 
+                     'VVVV3L_1.f', 'VVVV3_0.f', 'VVVV3_1.f', 'VVVV3_2.f', 
+                     'VVVV3_3.f', 'VVVV3_4.f', 'VVVV4L_1.f', 'VVVV4_0.f',
+                     'VVVV4_1.f', 'VVVV4_2.f', 'VVVV4_3.f', 'VVVV4_4.f', 
+                     'aloha_functions.f']
         for hFile in HELAS_files:
             self.assertTrue(os.path.exists(os.path.join(_proc_file_path\
                                               ,'Source','DHELAS',hFile)))        
