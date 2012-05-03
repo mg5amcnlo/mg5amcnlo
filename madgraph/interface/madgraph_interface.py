@@ -1374,7 +1374,7 @@ class CompleteForCmd(cmd.CompleteCmd):
         
         
         # options
-        options = ['--format=Fortran', '--format=Python','--format=Cpp','--output=']
+        options = ['--format=Fortran', '--format=Python','--format=CPP','--output=']
         options = self.list_completion(text, options)
         if options:
             completion_categories['options'] = options
@@ -3210,7 +3210,7 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
         ################
         if self._export_format == 'aloha':
             # catch format
-            format = [d[11:] for d in args if d.startswith('--language=')]
+            format = [d[9:] for d in args if d.startswith('--format=')]
             if not format:
                 format = 'Fortran'
             else:
