@@ -544,18 +544,31 @@ class Amplitude(base_objects.PhysicsObject):
                 # Add diagrams only if not already in res
                 res.extend([diag for diag in res_diags if diag not in res])
 
-        # Select the diagrams where no forbidden s-channel propagators
-        # are present.
+        # Remove all diagrams with a "double" forbidden s-channel propagator
+        # is present.
         # Note that we shouldn't look at the last vertex in each
         # diagram, since that is the n->0 vertex
         if process.get('forbidden_s_channels'):
+            ninitial = len(filter(lambda leg: leg.get('state') == False,
+                                  process.get('legs')))
+            res = base_objects.DiagramList(\
+                filter(lambda diagram: \
+                       not any([vertex.get_s_channel_id(\
+                           process.get('model'), ninitial) \
+                                in process.get('forbidden_s_channels')
+                                for vertex in diagram.get('vertices')[:-1]]),
+                       res))
+
+        # Mark forbidden (onshell) s-channel propagators, to forbid onshell
+        # generation.
+        if process.get('forbidden_onsh_s_channels'):
             ninitial = len(filter(lambda leg: leg.get('state') == False,
                               process.get('legs')))
             verts = base_objects.VertexList(sum([[vertex for vertex \
                                                   in diagram.get('vertices')[:-1]
                                            if vertex.get_s_channel_id(\
                                                process.get('model'), ninitial) \
-                                           in process.get('forbidden_s_channels')] \
+                                           in process.get('forbidden_onsh_s_channels')] \
                                                for diagram in res], []))
             for vert in verts:
                 # Use onshell = False to indicate that this s-channel is forbidden
@@ -1306,6 +1319,8 @@ class MultiProcess(base_objects.PhysicsObject):
                               'orders': process_definition.get('orders'),
                               'required_s_channels': \
                                  process_definition.get('required_s_channels'),
+                              'forbidden_onsh_s_channels': \
+                                 process_definition.get('forbidden_onsh_s_channels'),
                               'forbidden_s_channels': \
                                  process_definition.get('forbidden_s_channels'),
                               'forbidden_particles': \
@@ -1339,6 +1354,7 @@ class MultiProcess(base_objects.PhysicsObject):
                 # Check for successful crossings, unless we have specified
                 # properties that break crossing symmetry
                 if not process.get('required_s_channels') and \
+                   not process.get('forbidden_onsh_s_channels') and \
                    not process.get('forbidden_s_channels') and \
                    not process.get('is_decay_chain'):
                     try:
@@ -1517,6 +1533,8 @@ class MultiProcess(base_objects.PhysicsObject):
                               'orders': coupling_orders_now,
                               'required_s_channels': \
                                  process_definition.get('required_s_channels'),
+                              'forbidden_onsh_s_channels': \
+                                 process_definition.get('forbidden_onsh_s_channels'),
                               'forbidden_s_channels': \
                                  process_definition.get('forbidden_s_channels'),
                               'forbidden_particles': \

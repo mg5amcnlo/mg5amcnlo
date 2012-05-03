@@ -3,9 +3,9 @@ import logging
 BLACK, RED, GREEN, YELLOW, BLUE, MAGENTA, CYAN, WHITE = range(8)
 
 COLORS = {
-    'WARNING'  : RED,
+    'WARNING'  : BLUE,
     'INFO'     : BLACK,
-    'DEBUG'    : BLUE,
+    'DEBUG'    : GREEN,
     'CRITICAL' : RED,
     'ERROR'    : RED,
     'RED'      : RED,

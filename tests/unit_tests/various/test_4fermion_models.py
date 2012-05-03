@@ -15,8 +15,9 @@
 """Unit tests for four-fermion models."""
 from __future__ import division
 
-import math
 import copy
+import logging
+import math
 import os
 import sys
 import time
@@ -33,6 +34,9 @@ import models.import_ufo as import_ufo
 import models.model_reader as model_reader
 
 _file_path = os.path.split(os.path.dirname(os.path.realpath(__file__)))[0]
+
+# Special logger
+logger = logging.getLogger('tests.unit_tests')
 
 #===============================================================================
 # Models4FermionTest
@@ -203,11 +207,11 @@ class TestTchannelModels(Models4FermionTest):
     
     def test_uu_to_tt_tch(self):
         """Test the process u u > t t between t-channel and 4fermion vertex"""
-        print 'test_uu_to_tt_tch bypassed'
+        logger.info('test_uu_to_tt_tch bypassed')
         #self.uu_to_ttng_test(0)
 
     def test_uu_to_ttg_tch(self):
         """Test the process u u > t t g between t-channel and 4fermion vertex"""
-        print 'test_uu_to_ttg_tch bypassed'
+        logger.info('test_uu_to_ttg_tch bypassed')
     #    self.uu_to_ttng_test(1)
         

@@ -17,7 +17,7 @@
 
 import tests.unit_tests as unittest
 
-import madgraph.iolibs.misc as misc
+import madgraph.various.misc as misc
 
 #===============================================================================
 # IOMiscTest

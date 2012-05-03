@@ -37,7 +37,7 @@ except:
     import internal.files as files
     
 logger = logging.getLogger('cmdprint.ext_program')
-
+pjoin = os.path.join
    
 #===============================================================================
 # parse_info_str
@@ -171,7 +171,7 @@ def compile(arg=[], cwd=None, mode='fortran', **opt):
         if 'makefile' not in all_file:
             raise OSError, 'no makefile present in %s' % os.path.realpath(cwd)
 
-        if mode == 'fortran' and (not which('g77') or not which('gfortran')):
+        if mode == 'fortran' and  not (which('g77') or which('gfortran')):
             error_msg = 'A fortran compilator (g77 or gfortran) is required to create this output.\n'
             error_msg += 'Please install g77 or gfortran on your computer and retry.'
             raise MadGraph5Error, error_msg
@@ -192,6 +192,51 @@ def compile(arg=[], cwd=None, mode='fortran', **opt):
         error_text += 'If you think that this is a bug, you can report this at https://bugs.launchpad.net/madgraph5'
 
         raise MadGraph5Error, error_text
+    return p.returncode
+
+# Control
+def check_system_error(value=1):
+    def deco_check(f):
+        def deco_f(arg, *args, **opt):
+            try:
+                return f(arg, *args, **opt)
+            except OSError, error:
+                if isinstance(arg, list):
+                    prog =  arg[0]
+                else:
+                    prog = arg[0]
+                
+                # Permission denied
+                if error.errno == 13:     
+                    if os.path.exists(prog):
+                        os.system('chmod +x %s' % prog)
+                    elif 'cwd' in opt and opt['cwd'] and \
+                                       os.path.isfile(pjoin(opt['cwd'],arg[0])):
+                        os.system('chmod +x %s' % pjoin(opt['cwd'],arg[0]))
+                    return f(arg, *args, **opt)
+                # NO such file or directory
+                elif error.errno == 2:
+                    # raise a more meaningfull error message
+                    raise Exception, '%s fails with no such file or directory' \
+                                                                           % arg            
+                else:
+                    raise
+        return deco_f
+    return deco_check
+
+
+@check_system_error()
+def call(arg, *args, **opt):
+    """nice way to call an external program with nice error treatment"""
+    return subprocess.call(arg, *args, **opt)
+
+@check_system_error()
+def Popen(arg, *args, **opt):
+    """nice way to call an external program with nice error treatment"""
+    return subprocess.Popen(arg, *args, **opt)
+
+                
+
 
 
 ################################################################################
@@ -216,6 +261,7 @@ def tail(f, n, offset=None):
         if len(lines) >= to_read or pos == 0:
             return lines[-to_read:offset and -offset or None]
         avg_line_length *= 1.3
+        avg_line_length = int(avg_line_length)
 
 ################################################################################
 # LAST LINE FUNCTION
@@ -225,6 +271,66 @@ def get_last_line(fsock):
     
     return tail(fsock, 1)[0]
     
+class BackRead(file):
+    """read a file returning the lines in reverse order for each call of readline()
+This actually just reads blocks (4096 bytes by default) of data from the end of
+the file and returns last line in an internal buffer."""
+
+
+    def readline(self):
+        """ readline in a backward way """
+        
+        while len(self.data) == 1 and ((self.blkcount * self.blksize) < self.size):
+          self.blkcount = self.blkcount + 1
+          line = self.data[0]
+          try:
+            self.seek(-self.blksize * self.blkcount, 2) # read from end of file
+            self.data = (self.read(self.blksize) + line).split('\n')
+          except IOError:  # can't seek before the beginning of the file
+            self.seek(0)
+            self.data = string.split(self.read(self.size - (self.blksize * (self.blkcount-1))) + line, '\n')
+    
+        if len(self.data) == 0:
+          return ""
+    
+        line = self.data.pop()
+        return line + '\n'
+
+    def __init__(self, filepos, blksize=4096):
+        """initialize the internal structures"""
+
+        # get the file size
+        self.size = os.stat(filepos)[6]
+        # how big of a block to read from the file...
+        self.blksize = blksize
+        # how many blocks we've read
+        self.blkcount = 1
+        file.__init__(self, filepos, 'rb')
+        # if the file is smaller than the blocksize, read a block,
+        # otherwise, read the whole thing...
+        if self.size > self.blksize:
+          self.seek(-self.blksize * self.blkcount, 2) # read from end of file
+        self.data = self.read(self.blksize).split('\n')
+        # strip the last item if it's empty...  a byproduct of the last line having
+        # a newline at the end of it
+        if not self.data[-1]:
+          self.data.pop()
+        
+    def next(self):
+        line = self.readline()
+        if line:
+            return line
+        else:
+            raise StopIteration
+        
+    def close(self):
+        """ close correctly file """
+        try:
+            self.close()
+        except:
+           pass
+
+
 
 
 #
@@ -330,11 +436,11 @@ class open_file(object):
         
         for p in possibility:
             if which(p):
-                logger.warning('Using default %s \"%s\". ' % (program, p) + \
+                logger.info('Using default %s \"%s\". ' % (program, p) + \
                              'Set another one in ./input/mg5_configuration.txt')
                 return p
         
-        logger.warning('No valid %s found. ' % program + \
+        logger.info('No valid %s found. ' % program + \
                                    'Please set in ./input/mg5_configuration.txt')
         return None
         
@@ -344,7 +450,7 @@ class open_file(object):
 
       if mac_check==True and sys.platform == 'darwin':
           return self.open_mac_program(program, file_path)
-                
+
       # Shell program only                                                                                                                                                                 
       if program:
           arguments = program.split() # allow argument in program definition

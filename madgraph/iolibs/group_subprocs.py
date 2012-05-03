@@ -31,10 +31,11 @@ import madgraph.core.diagram_generation as diagram_generation
 import madgraph.core.helas_objects as helas_objects
 import madgraph.iolibs.drawing_eps as draw
 import madgraph.iolibs.files as files
-import madgraph.iolibs.misc as misc
 import madgraph.iolibs.file_writers as writers
 import madgraph.iolibs.template_files as template_files
 import madgraph.iolibs.ufo_expression_parsers as parsers
+
+import madgraph.various.misc as misc
 
 import aloha.create_aloha as create_aloha
 
@@ -258,7 +259,13 @@ class SubProcessGroup(base_objects.PhysicsObject):
     def get_num_configs(self):
         """Get number of configs for this group"""
 
-        return len(self.get('mapping_diagrams'))
+        model = self.get('matrix_elements')[0].get('processes')[0].\
+                get('model')
+        
+        next, nini = self.get_nexternal_ninitial()
+        
+        return sum([md.get_num_configs(model, nini) for md in 
+                    self.get('mapping_diagrams')])
 
     def find_mapping_diagrams(self):
         """Find all unique diagrams for all processes in this

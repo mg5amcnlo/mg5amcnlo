@@ -35,13 +35,36 @@ logger = logging.getLogger('cmdprint') # for stdout
 logger_stderr = logging.getLogger('fatalerror') # for stderr
 
 try:
-    import madgraph.iolibs.misc as misc
-except:
+    import madgraph.various.misc as misc
+    from madgraph import MG5DIR
+    MADEVENT = False
+except Exception, error:
+    print error
     import internal.misc as misc
+    MADEVENT = True
 
+pjoin = os.path.join
 
 class TimeOutError(Exception):
     """Class for run-time error"""
+
+def debug(debug_only=True):
+
+    def deco_debug(f):
+        
+        if debug_only and not __debug__:
+            return f
+        
+        def deco_f(*args, **opt):
+            try:
+                return f(*args, **opt)
+            except Exception, error:
+                print error
+                print traceback.print_exc(file=sys.stdout)
+                return
+        return deco_f
+    return deco_debug
+            
 
 #===============================================================================
 # CmdExtended
@@ -86,7 +109,8 @@ class BasicCmd(cmd.Cmd):
         if valid == 1:
             out = out[1:]
         return out
-
+    
+    @debug()
     def print_suggestions(self, substitution, matches, longest_match_length) :
         """print auto-completions by category"""
         longest_match_length += len(self.completion_prefix)
@@ -158,6 +182,7 @@ class BasicCmd(cmd.Cmd):
          If a command has not been entered, then complete against command list.
          Otherwise try to call complete_<command> to get list of completions.
         """
+                
         if state == 0:
             import readline
             origline = readline.get_line_buffer()
@@ -184,8 +209,18 @@ class BasicCmd(cmd.Cmd):
                         compfunc = self.completedefault
             else:
                 compfunc = self.completenames
+                
+            # correct wrong splittion with '\ '
+            if line and begidx > 2 and line[begidx-2:begidx] == '\ ':
+                Ntext = line.split(os.path.sep)[-1]
+                self.completion_prefix = Ntext.rsplit('\ ', 1)[0] + '\ '
+                to_rm = len(self.completion_prefix) - 1
+                Nbegidx = len(line.rsplit(os.path.sep, 1)[0]) + 1
+                data = compfunc(Ntext.replace('\ ', ' '), line, Nbegidx, endidx)
+                self.completion_matches = [p[to_rm:] for p in data 
+                                              if len(p)>to_rm]                
             # correct wrong splitting with '-'
-            if line and line[begidx-1] == '-':
+            elif line and line[begidx-1] == '-':
              try:    
                 Ntext = line.split()[-1]
                 self.completion_prefix = Ntext.rsplit('-',1)[0] +'-'
@@ -213,7 +248,116 @@ class BasicCmd(cmd.Cmd):
             #    print '\n'
             return None    
 
-class Cmd(BasicCmd):
+class CheckCmd(object):
+    """Extension of the cmd object for only the check command"""
+
+    def check_history(self, args):
+        """check the validity of line"""
+        
+        if len(args) > 1:
+            self.help_history()
+            raise self.InvalidCmd('\"history\" command takes at most one argument')
+        
+        if not len(args):
+            return
+        
+        if args[0] =='.':
+            if not self._export_dir:
+                raise self.InvalidCmd("No default directory is defined for \'.\' option")
+        elif args[0] != 'clean':
+                dirpath = os.path.dirname(args[0])
+                if dirpath and not os.path.exists(dirpath) or \
+                       os.path.isdir(args[0]):
+                    raise self.InvalidCmd("invalid path %s " % dirpath)
+    
+    def check_save(self, args):
+        """check that the line is compatible with save options"""
+        
+        if len(args) > 2:
+            self.help_save()
+            raise self.InvalidCmd, 'too many arguments for save command.'
+        
+        if len(args) == 2:
+            if args[0] != 'options':
+                self.help_save()
+                raise self.InvalidCmd, '\'%s\' is not recognized as first argument.' % \
+                                                args[0]
+            else:
+                args.pop(0)           
+
+class HelpCmd(object):
+    """Extension of the cmd object for only the help command"""
+
+    def help_quit(self):
+        logger.info("syntax: quit")
+        logger.info("-- terminates the application")
+    
+    help_EOF = help_quit
+
+    def help_history(self):
+        logger.info("syntax: history [FILEPATH|clean|.] ")
+        logger.info("   If FILEPATH is \'.\' and \'output\' is done,")
+        logger.info("   Cards/proc_card_mg5.dat will be used.")
+        logger.info("   If FILEPATH is omitted, the history will be output to stdout.")
+        logger.info("   \"clean\" will remove all entries from the history.")
+        
+    def help_help(self):
+        logger.info("syntax: help")
+        logger.info("-- access to the in-line help" )
+
+    def help_save(self):
+        """help text for save"""
+        logger.info("syntax: save [options]  [FILEPATH]") 
+        logger.info("-- save options configuration to filepath.")
+        
+    def help_display(self):
+        """help for display command"""
+        logger.info("syntax: display " + "|".join(self._display_opts))
+        logger.info("-- display a the status of various internal state variables")          
+        
+class CompleteCmd(object):
+    """Extension of the cmd object for only the complete command"""
+
+    def complete_display(self,text, line, begidx, endidx):        
+        args = self.split_arg(line[0:begidx])
+        # Format
+        if len(args) == 1:
+            return self.list_completion(text, self._display_opts)
+        
+    def complete_history(self, text, line, begidx, endidx):
+        "Complete the history command"
+
+        args = self.split_arg(line[0:begidx])
+
+        # Directory continuation
+        if args[-1].endswith(os.path.sep):
+            return self.path_completion(text,
+                                        os.path.join('.',*[a for a in args \
+                                                    if a.endswith(os.path.sep)]))
+
+        if len(args) == 1:
+            return self.path_completion(text)
+
+    def complete_save(self, text, line, begidx, endidx):
+        "Complete the save command"
+
+        args = self.split_arg(line[0:begidx])
+
+        # Format
+        if len(args) == 1:
+            return self.list_completion(text, ['options'])
+
+        # Directory continuation
+        if args[-1].endswith(os.path.sep):
+            return self.path_completion(text,
+                                        pjoin('.',*[a for a in args if a.endswith(os.path.sep)]),
+                                        only_dirs = True)
+
+        # Filename if directory is not given
+        if len(args) == 2:
+            return self.path_completion(text)
+
+class Cmd(CheckCmd, HelpCmd, CompleteCmd, BasicCmd):
     """Extension of the cmd.Cmd command line.
     This extensions supports line breaking, history, comments,
     internal call to cmdline, path completion,...
@@ -223,7 +367,6 @@ class Cmd(BasicCmd):
     next_possibility = {} # command : [list of suggested command]
     history_header = ""
     
-    timeout = 1 # time authorize to answer question [0 is no time limit]
     _display_opts = ['options','variable']
     
     class InvalidCmd(Exception):
@@ -315,7 +458,7 @@ class Cmd(BasicCmd):
         if os.path.exists(self.debug_output):
             os.remove(self.debug_output)
         try:
-            cmd.Cmd.onecmd(self, 'history %s' % self.debug_output)
+            cmd.Cmd.onecmd(self, 'history %s' % self.debug_output.replace(' ', '\ '))
         except Exception, error:
             print error
             
@@ -474,7 +617,9 @@ class Cmd(BasicCmd):
             if data[-1] == '\\':
                 tmp += data[:-1]+' '
             elif tmp:
-                out.append(tmp+data)
+                tmp += data
+                tmp = os.path.expanduser(os.path.expandvars(tmp))
+                out.append(tmp)
             else:
                 out.append(data)
         return out
@@ -561,7 +706,6 @@ class Cmd(BasicCmd):
         # remove this call from history
         if self.history:
             self.history.pop()
-        self.timeout, old_time_out = 20, self.timeout
         
         # Read the lines of the file and execute them
         self.inputfile = open(filepath)
@@ -578,7 +722,6 @@ class Cmd(BasicCmd):
         if self.child:
             self.child.exec_cmd('quit')        
                 
-        self.timeout = old_time_out
         return
     
     def get_history_header(self):
@@ -658,7 +801,7 @@ class Cmd(BasicCmd):
     # Ask a question with nice options handling
     #===============================================================================    
     def ask(self, question, default, choices=[], path_msg=None, 
-            timeout = None, fct_timeout=None):
+            timeout = True, fct_timeout=None):
         """ ask a question with some pre-define possibility
             path info is
         """
@@ -667,6 +810,12 @@ class Cmd(BasicCmd):
             path_msg = [path_msg]
         else:
             path_msg = []
+            
+        if timeout:
+            try:
+                timeout = self.options['timeout']
+            except:
+                pass
                     
         # add choice info to the question
         if choices + path_msg:
@@ -683,16 +832,19 @@ class Cmd(BasicCmd):
             question = question[:-2]+']'
                 
         if path_msg:
-            fct = lambda q: raw_path_input(q, allow_arg=choices, default=default)
+            f = lambda q: raw_path_input(q, allow_arg=choices, default=default)
         else:
-            fct = lambda q: smart_input(q, allow_arg=choices, default=default)
+            f = lambda q: smart_input(q, allow_arg=choices, default=default)
 
         answer = self.check_answer_in_input_file(choices, path_msg)
         if answer is not None:
             return answer
         
-        return  Cmd.timed_input(question, default, timeout=timeout,
-                                    fct=fct, fct_timeout=fct_timeout)
+        value =   Cmd.timed_input(question, default, timeout=timeout,
+                                    fct=f, fct_timeout=fct_timeout)
+
+        self.preloop()        
+        return value
         
     def check_answer_in_input_file(self, options, path=False):
         """Questions can have answer in output file (or not)"""
@@ -735,51 +887,6 @@ class Cmd(BasicCmd):
         else:
             return self.stored_line
 
-
-    def help_history(self):
-        logger.info("syntax: history [FILEPATH|clean|.] ")
-        logger.info("   If FILEPATH is \'.\' and \'output\' is done,")
-        logger.info("   Cards/proc_card_mg5.dat will be used.")
-        logger.info("   If FILEPATH is omitted, the history will be output to stdout.")
-        logger.info("   \"clean\" will remove all entries from the history.")
-    
-    
-
-
-    def complete_history(self, text, line, begidx, endidx):
-        "Complete the history command"
-
-        args = self.split_arg(line[0:begidx])
-
-        # Directory continuation
-        if args[-1].endswith(os.path.sep):
-            return self.path_completion(text,
-                                        os.path.join('.',*[a for a in args \
-                                                    if a.endswith(os.path.sep)]))
-
-        if len(args) == 1:
-            return self.path_completion(text)
-        
-    def check_history(self, args):
-        """check the validity of line"""
-        
-        if len(args) > 1:
-            self.help_history()
-            raise self.InvalidCmd('\"history\" command takes at most one argument')
-        
-        if not len(args):
-            return
-        
-        if args[0] =='.':
-            if not self._export_dir:
-                raise self.InvalidCmd("No default directory is defined for \'.\' option")
-        elif args[0] != 'clean':
-                dirpath = os.path.dirname(args[0])
-                if dirpath and not os.path.exists(dirpath) or \
-                       os.path.isdir(args[0]):
-                    raise self.InvalidCmd("invalid path %s " % dirpath)
-    
-
     # Quit
     def do_quit(self, line):
         """ exit the mainloop() """
@@ -802,11 +909,7 @@ class Cmd(BasicCmd):
     do_EOF = do_quit
     do_exit = do_quit
 
-    def help_quit(self):
-        logger.info("syntax: quit")
-        logger.info("-- terminates the application")
-    
-    help_EOF = help_quit
+
      
     
 
@@ -829,7 +932,12 @@ class Cmd(BasicCmd):
                     continue
                 prevname = name
                 cmdname=name[3:]
-                doc = getattr(self, name).__doc__
+                try:
+                    doc = getattr(self.cmd, name).__doc__
+                except:
+                    doc = None
+                if not doc:
+                    doc = getattr(self, name).__doc__
                 if not doc:
                     tag = "Documented commands"
                 elif ':' in doc:
@@ -900,7 +1008,7 @@ class Cmd(BasicCmd):
         
         if args[0] == "options":
             outstr = "Value of current Options:\n" 
-            for key, value in self.configuration.items() + self._options.items():
+            for key, value in self.options.items():
                 outstr += '%25s \t:\t%s\n' %(key,value)
             output.write(outstr)
             
@@ -924,20 +1032,85 @@ class Cmd(BasicCmd):
             
             pydoc.pager(outstr)
     
-    def help_display(self):
-        """help for display command"""
-        logger.info("syntax: display " + "|".join(self._display_opts))
-        logger.info("-- display a the status of various internal state variables")
+    
+    def do_save(self, line, check=True):
+        """Save the configuration file"""
         
-    def complete_display(self,text, line, begidx, endidx):        
-        args = self.split_arg(line[0:begidx])
-        # Format
-        if len(args) == 1:
-            return self.list_completion(text, self._display_opts)
-                                        
-    def help_help(self):
-        logger.info("syntax: help")
-        logger.info("-- access to the in-line help" )
+        args = self.split_arg(line)
+        # Check argument validity
+        if check:
+            Cmd.check_save(self, args)
+            
+        # find base file for the configuration
+        if'HOME' in os.environ and os.environ['HOME']  and \
+        os.path.exists(pjoin(os.environ['HOME'], '.mg5', 'mg5_configuration.txt')):
+            base = pjoin(os.environ['HOME'], '.mg5', 'mg5_configuration.txt')
+            if hasattr(self, 'me_dir'):
+                basedir = self.me_dir
+            elif not MADEVENT:
+                basedir = MG5DIR
+            else:
+                basedir = os.getcwd()
+        elif MADEVENT:
+            # launch via ./bin/madevent
+            base = pjoin(self.me_dir, 'Cards', 'me5_configuration.txt')
+            basedir = self.me_dir
+        else:
+            if hasattr(self, 'me_dir'):
+                base = pjoin(self.me_dir, 'Cards', 'me5_configuration.txt')
+                if len(args) == 0 and os.path.exists(base):
+                    self.write_configuration(base, base, self.me_dir)
+            base = pjoin(MG5DIR, 'input', 'mg5_configuration.txt')
+            basedir = MG5DIR
+            
+        if len(args) == 0:
+            args.append(base)
+        self.write_configuration(args[0], base, basedir)
+        
+    def write_configuration(self, filepath, basefile, basedir):
+        """Write the configuration file"""
+        # We use the default configuration file as a template.
+        # to ensure that all configuration information are written we 
+        # keep track of all key that we need to write.
+
+        logger.info('save configuration file to %s' % filepath)
+        to_write = self.options.keys()[:]
+        text = ""
+        # Use local configuration => Need to update the path
+        for line in file(basefile):
+            if '#' in line:
+                data, comment = line.split('#',1)
+            else: 
+                data, comment = line, ''
+            data = data.split('=')
+            if len(data) !=2:
+                text += line
+                continue
+            key = data[0].strip()
+            if key in self.options:
+                value = str(self.options[key])
+            else:
+                value = data[1].strip()
+            try:
+                to_write.remove(key)
+            except:
+                pass
+            if '_path' in key:       
+                # special case need to update path
+                # check if absolute path
+                if value.startswith('./'):
+                    value = os.path.realpath(os.path.join(basedir, value))
+            text += '%s = %s # %s \n' % (key, value, comment)
+        for key in to_write:
+            if key in self.options:
+                text += '%s = %s \n' % (key,self.options[key])
+            else:
+                text += '%s = %s \n' % (key,self.options[key])
+        writer = open(filepath,'w')
+        writer.write(text)
+        writer.close()
+                       
+
 
 
     @staticmethod
@@ -959,10 +1132,12 @@ class Cmd(BasicCmd):
     def path_completion(text, base_dir = None, only_dirs = False, 
                                                                  relative=True):
         """Propose completions of text to compose a valid path"""
-        
+
         if base_dir is None:
             base_dir = os.getcwd()
-            
+
+        base_dir = os.path.expanduser(os.path.expandvars(base_dir))
+        
         prefix, text = os.path.split(text)
         base_dir = os.path.join(base_dir, prefix)
         if prefix:
@@ -994,7 +1169,8 @@ class Cmd(BasicCmd):
         if relative:
             completion += [prefix + f for f in ['.'+os.path.sep, '..'+os.path.sep] if \
                        f.startswith(text) and not prefix.startswith('.')]
-
+        
+        completion = [a.replace(' ','\ ') for a in completion]
         return completion
     
 
@@ -1118,7 +1294,7 @@ def smart_input(input_text, allow_arg=[], default=None):
 #===============================================================================
 class OneLinePathCompletion(SmartQuestion):
     """ a class for answering a question with the path autocompletion"""
-
+    
 
     def completenames(self, text, line, begidx, endidx):
         prev_timer = signal.alarm(0) # avoid timer if any

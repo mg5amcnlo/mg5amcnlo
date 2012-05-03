@@ -18,6 +18,7 @@ import copy
 import fractions
 import glob
 import logging
+import math
 import os
 import re
 import shutil
@@ -30,13 +31,14 @@ import madgraph.core.helas_objects as helas_objects
 import madgraph.iolibs.drawing_eps as draw
 import madgraph.iolibs.files as files
 import madgraph.iolibs.group_subprocs as group_subprocs
-import madgraph.iolibs.misc as misc
 import madgraph.iolibs.file_writers as writers
 import madgraph.iolibs.gen_infohtml as gen_infohtml
 import madgraph.iolibs.template_files as template_files
 import madgraph.iolibs.ufo_expression_parsers as parsers
 import madgraph.various.diagram_symmetry as diagram_symmetry
+import madgraph.various.misc as misc
 import madgraph.various.process_checks as process_checks
+
 
 
 import aloha.create_aloha as create_aloha
@@ -1756,9 +1758,6 @@ class ProcessExporterFortranME(ProcessExporterFortran):
         # Add the combine_events.f 
         filename = os.path.join(self.dir_path,'Source','combine_events.f')
         self.write_combine_events(writers.FortranWriter(filename))
-        # Add the write_banner.f 
-        filename = os.path.join(self.dir_path,'Source','write_banner.f')
-        self.write_write_banner(writers.FortranWriter(filename))
         # Add the symmetry.f 
         filename = os.path.join(self.dir_path,'SubProcesses','symmetry.f')
         self.write_symmetry(writers.FortranWriter(filename))
@@ -1781,7 +1780,7 @@ class ProcessExporterFortranME(ProcessExporterFortran):
                             self.dir_path+'/bin/internal/madevent_interface.py')
         cp(_file_path+'/interface/extended_cmd.py',
                                   self.dir_path+'/bin/internal/extended_cmd.py')
-        cp(_file_path+'/iolibs/misc.py', self.dir_path+'/bin/internal/misc.py')        
+        cp(_file_path+'/various/misc.py', self.dir_path+'/bin/internal/misc.py')        
         cp(_file_path+'/iolibs/files.py', self.dir_path+'/bin/internal/files.py')
         cp(_file_path+'/iolibs/save_load_object.py', 
                               self.dir_path+'/bin/internal/save_load_object.py') 
@@ -2007,7 +2006,7 @@ class ProcessExporterFortranME(ProcessExporterFortran):
         for file in linkfiles:
             ln('../' + file , '.')
 
-        #import nexternal/leshouch in Source
+        #import nexternal/leshouche in Source
         ln('nexternal.inc', '../../Source', log=False)
         ln('leshouche.inc', '../../Source', log=False)
         ln('maxamps.inc', '../../Source', log=False)
@@ -2072,7 +2071,12 @@ class ProcessExporterFortranME(ProcessExporterFortran):
             logger.info("Generate jpeg diagrams")
             for Pdir in P_dir_list:
                 os.chdir(Pdir)
-                subprocess.call([os.path.join(old_pos, self.dir_path, 'bin', 'internal', 'gen_jpeg-pl')],
+                try:
+                    subprocess.call([os.path.join(old_pos, self.dir_path, 'bin', 'internal', 'gen_jpeg-pl')],
+                                stdout = devnull)
+                except:
+                    os.system('chmod +x %s ' % os.path.join(old_pos, self.dir_path, 'bin', 'internal', '*'))
+                    subprocess.call([os.path.join(old_pos, self.dir_path, 'bin', 'internal', 'gen_jpeg-pl')],
                                 stdout = devnull)
                 os.chdir(os.path.pardir)
 
@@ -2108,10 +2112,6 @@ class ProcessExporterFortranME(ProcessExporterFortran):
             if os.path.exists('madevent.tar.gz'):
                 os.remove('madevent.tar.gz')
             misc.compile(mode='None')
-
-        if online:
-            # Touch "Online" file
-            os.system('touch %s/Online' % self.dir_path)
 
         subprocess.call([os.path.join(old_pos, self.dir_path, 'bin', 'internal', 'gen_cardhtml-pl')],
                         stdout = devnull)
@@ -2651,24 +2651,6 @@ c           This is dummy particle used in multiparticle vertices
         return True
 
     #===========================================================================
-    # write_write_banner
-    #===========================================================================
-    def write_write_banner(self, writer):
-        """Write the SubProcess/driver.f file for MG4"""
-
-        path = os.path.join(_file_path,'iolibs','template_files','madevent_write_banner.f')
-        
-        if self.model_name == 'mssm' or self.model_name.startswith('mssm-'):
-            card = 'Source/MODEL/MG5_param.dat'
-        else:
-            card = 'param_card.dat' 
-        text = open(path).read() % {'param_card_name':card} 
-
-        writer.write(text)
-        
-        return True
-
-    #===========================================================================
     # write_combine_events
     #===========================================================================
     def write_combine_events(self, writer):
@@ -2853,10 +2835,11 @@ c           This is dummy particle used in multiparticle vertices
         """Write the files symfact.dat for MG4 by comparing diagrams using
         the internal matrix element value functionality."""
 
-
+        pos = max(2, int(math.ceil(math.log10(len(symmetry)))))
+        form = "%"+str(pos)+"r %"+str(pos+1)+"r"
         # Write out lines for symswap.inc file (used to permute the
         # external leg momenta
-        lines = [ "%3r %3r" %(i+1, s) for i,s in enumerate(symmetry) if s != 0] 
+        lines = [ form %(i+1, s) for i,s in enumerate(symmetry) if s != 0] 
 
         # Write the file
         writer.writelines(lines)
@@ -3432,11 +3415,14 @@ class UFO_model_to_mg4(object):
                 
         # MG4 use G and not aS as it basic object for alphas related computation
         #Pass G in the  independant list
-        index = self.params_dep.index('G')
-        self.params_indep.insert(0, self.params_dep.pop(index))
-        index = self.params_dep.index('sqrt__aS')
-        self.params_indep.insert(0, self.params_dep.pop(index))
-        
+        if 'G' in self.params_dep:
+            index = self.params_dep.index('G')
+            G = self.params_dep.pop(index)
+        #    G.expr = '2*cmath.sqrt(as*pi)'
+        #    self.params_indep.insert(0, self.params_dep.pop(index))
+        # No need to add it if not defined   
+            
+            
     def build(self, wanted_couplings = [], full=True):
         """modify the couplings to fit with MG4 convention and creates all the 
         different files"""
@@ -3576,7 +3562,7 @@ class UFO_model_to_mg4(object):
             already_def.add(particle.get('mass').lower())
             already_def.add(particle.get('width').lower())
 
-        is_valid = lambda name: name!='G' and name.lower() not in already_def
+        is_valid = lambda name: name !='G' and name.lower() not in already_def
         
         real_parameters = [param.name for param in self.params_dep + 
                             self.params_indep if param.type == 'real'
@@ -3606,7 +3592,7 @@ class UFO_model_to_mg4(object):
         fsock.write_comments(\
                 "Parameters that should not be recomputed event by event.\n")
         fsock.writelines("if(readlha) then\n")
-        
+        fsock.writelines("G = 2 * DSQRT(AS*PI) ! for the first init\n")
         for param in self.params_indep:
             if param.name == 'ZERO':
                 continue
@@ -3616,6 +3602,7 @@ class UFO_model_to_mg4(object):
         fsock.writelines('endif')
         
         fsock.write_comments('\nParameters that should be recomputed at an event by even basis.\n')
+        fsock.writelines("aS = G**2/4/pi\n")
         for param in self.params_dep:
             fsock.writelines("%s = %s\n" % (param.name,
                                             self.p_to_f.parse(param.expr)))

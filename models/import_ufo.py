@@ -26,16 +26,17 @@ from madgraph import MadGraph5Error, MG5DIR
 import madgraph.core.base_objects as base_objects
 import madgraph.core.color_algebra as color
 import madgraph.iolibs.files as files
-import madgraph.iolibs.misc as misc
 import madgraph.iolibs.save_load_object as save_load_object
 from madgraph.core.color_algebra import *
+
+import madgraph.various.misc as misc
 
 import aloha.create_aloha as create_aloha
 import aloha.aloha_fct as aloha_fct
 
 import models as ufomodels
 import models.model_reader as model_reader
-logger = logging.getLogger('models.import_ufo')
+logger = logging.getLogger('madgraph.model')
 logger_mod = logging.getLogger('madgraph.model')
 
 root_path = os.path.dirname(os.path.realpath( __file__ ))
@@ -205,7 +206,7 @@ class UFOMG5Converter(object):
         for param in self.ufomodel.all_parameters:
             if param.nature == "external":
                 if len(param.lhablock.split())>1:
-                    raise UFOImportError, '''LHABlock should be single word which is not the case for
+                    raise InvalidModel, '''LHABlock should be single word which is not the case for
     \'%s\' parameter with lhablock \'%s\'''' % (param.name, param.lhablock)
             
 
@@ -381,12 +382,16 @@ class UFOMG5Converter(object):
         self.incoming = [] 
         self.outcoming = []       
         for interaction_info in self.ufomodel.all_vertices:
-            # check if the interation meet requirements:
-            pdg = [p.pdg_code for p in interaction_info.particles if p.spin==2]
+            # check if the interaction meet requirements:
+            pdg = [p.pdg_code for p in interaction_info.particles if p.spin in [2,4]]
+            if len(pdg) % 2:
+                raise InvalidModel, 'Odd number of fermion in vertex: %s' % [p.pdg_code for p in interaction_info.particles]
             for i in range(0, len(pdg),2):
                 if pdg[i] == - pdg[i+1]:
                     if pdg[i] in self.outcoming:
-                        raise UFOImportError, 'Input output not coherent'
+                        raise InvalidModel, '%s has not coherent incoming/outcoming status between interactions' %\
+                            [p for p in interaction_info.particles if p.spin in [2,4]][i].name
+                            
                     elif not pdg[i] in self.incoming:
                         self.incoming.append(pdg[i])
                         self.outcoming.append(pdg[i+1])
@@ -434,6 +439,10 @@ class UFOMG5Converter(object):
                 couplings = [couplings]
             for coupling in couplings:
                 order = tuple(coupling.order.items())
+                if '1' in order:
+                    raise InvalidModel, '''Some couplings have \'1\' order. 
+                    This is not allowed in MG. 
+                    Please defines an additional coupling to your model''' 
                 if order in order_to_int:
                     order_to_int[order].get('couplings')[key] = coupling.name
                 else:
@@ -621,13 +630,12 @@ class OrganizeModelExpression:
         
         if coupling.name in self.all_expr.keys():
             return
-        
         self.all_expr[coupling.value] = coupling
         try:
             self.coupling[coupling.depend].append(coupling)
         except:
             self.coupling[coupling.depend] = [coupling]            
-                
+        
                 
 
     def analyze_couplings(self):
@@ -845,10 +853,13 @@ class RestrictModel(model_reader.ModelReader):
             if value == 0:
                 zero_coupling.append(name)
                 continue
+            elif not strict_zero and abs(value) < 1e-13:
+                logger.debug('coupling with small value %s: %s treated as zero' %
+                             (name, value))
+                zero_coupling.append(name)
             elif not strict_zero and abs(value) < 1e-10:
                 return self.detect_identical_couplings(strict_zero=True)
-            elif not strict_zero and abs(value) < 1e-15:
-                zero_coupling.append(name)
+
             
             if value in dict_value_coupling:
                 iden_key.add(value)

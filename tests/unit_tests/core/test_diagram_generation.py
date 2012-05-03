@@ -1214,8 +1214,8 @@ class DiagramGenerationTest(unittest.TestCase):
             self.assertEqual(len(self.myamplitude.get('diagrams')),
                              goal_no_photon_quark[ngluons])
 
-    def test_forbidden_s_channel_uux_uuxng(self):
-        """Test diagram generation with forbidden s-channel particles.
+    def test_forbidden_onshell_s_channel_uux_uuxng(self):
+        """Test diagram generation with forbidden onshell s-channel particles.
         """
 
         goal_no_photon = [4, 18]
@@ -1242,7 +1242,7 @@ class DiagramGenerationTest(unittest.TestCase):
 
             myproc = base_objects.Process({'legs':myleglist,
                                            'model':self.mymodel,
-                                           'forbidden_s_channels':[22]})
+                                           'forbidden_onsh_s_channels':[22]})
 
             self.myamplitude.set('process', myproc)
 
@@ -1285,7 +1285,7 @@ class DiagramGenerationTest(unittest.TestCase):
 
             myproc = base_objects.Process({'legs':myleglist,
                                            'model':self.mymodel,
-                                           'forbidden_s_channels':[1]})
+                                           'forbidden_onsh_s_channels':[1]})
 
             self.myamplitude.set('process', myproc)
 
@@ -1314,7 +1314,7 @@ class DiagramGenerationTest(unittest.TestCase):
 
             myproc = base_objects.Process({'legs':myleglist,
                                            'model':self.mymodel,
-                                           'forbidden_s_channels':[-1]})
+                                           'forbidden_onsh_s_channels':[-1]})
 
             self.myamplitude.set('process', myproc)
 
@@ -1338,6 +1338,77 @@ class DiagramGenerationTest(unittest.TestCase):
                     self.assertFalse(any([vert.get('legs')[-1].get('onshell') == False\
                                           for vert in diagrams[idiag].get('vertices')]))
             
+    def test_forbidden_s_channel_uux_uuxng(self):
+        """Test diagram generation with forbidden s-channel particles.
+        """
+
+        goal_no_photon = [3, 14]
+        goal_no_quark = [1, 2]
+        goal_no_antiquark = [2, 6]
+
+        for ngluons in range(2):
+
+            myleglist = base_objects.LegList()
+
+            myleglist.append(base_objects.Leg({'id':-1,
+                                             'state':False}))
+            myleglist.append(base_objects.Leg({'id':1,
+                                             'state':False}))
+            myleglist.append(base_objects.Leg({'id':-1,
+                                             'state':True}))
+            myleglist.append(base_objects.Leg({'id':1,
+                                             'state':True}))
+            myleglist.extend([base_objects.Leg({'id':21,
+                                                 'state':True})] * ngluons)
+
+            myproc = base_objects.Process({'legs':myleglist,
+                                           'model':self.mymodel,
+                                           'forbidden_s_channels':[22]})
+
+            self.myamplitude.set('process', myproc)
+
+            self.myamplitude.generate_diagrams()
+
+            self.assertEqual(len(self.myamplitude.get('diagrams')),
+                             goal_no_photon[ngluons])
+
+            # Test with u a > u a (+ g)
+
+            myleglist = base_objects.LegList()
+
+            myleglist.append(base_objects.Leg({'id':1,
+                                             'state':False}))
+            myleglist.append(base_objects.Leg({'id':22,
+                                             'state':False}))
+            myleglist.append(base_objects.Leg({'id':1,
+                                             'state':True}))
+            myleglist.append(base_objects.Leg({'id':22,
+                                             'state':True}))
+            myleglist.extend([base_objects.Leg({'id':21,
+                                                 'state':True})] * ngluons)
+
+            myproc = base_objects.Process({'legs':myleglist,
+                                           'model':self.mymodel,
+                                           'forbidden_s_channels':[1]})
+
+            self.myamplitude.set('process', myproc)
+
+            self.myamplitude.generate_diagrams()
+
+            self.assertEqual(len(self.myamplitude.get('diagrams')),
+                             goal_no_quark[ngluons])
+
+            myproc = base_objects.Process({'legs':myleglist,
+                                           'model':self.mymodel,
+                                           'forbidden_s_channels':[-1]})
+
+            self.myamplitude.set('process', myproc)
+
+            self.myamplitude.generate_diagrams()
+
+            self.assertEqual(len(self.myamplitude.get('diagrams')),
+                             goal_no_antiquark[ngluons])
+
 
     def test_required_s_channel_uux_uuxng(self):
         """Test the number of diagrams uu~>uu~+g with different 
@@ -2323,7 +2394,7 @@ class DecayChainAmplitudeTest(unittest.TestCase):
 
         myproc = base_objects.Process({'legs':myleglist,
                                        'model':self.mymodel,
-                                       'forbidden_s_channels':[1]})
+                                       'forbidden_onsh_s_channels':[1]})
 
         myleglist = base_objects.LegList()
         myleglist.append(base_objects.Leg({'id':1,

@@ -25,13 +25,11 @@ from madgraph import InvalidCmd, MG4DIR
 import madgraph.core.color_algebra as color
 import madgraph.iolibs.files as files
 import madgraph.iolibs.save_load_object as save_load_object
-import madgraph.iolibs.misc as misc
+
+import madgraph.various.misc as misc
 
 from madgraph.core.base_objects import Particle, ParticleList
 from madgraph.core.base_objects import Interaction, InteractionList
-
-
-
 
 logger = logging.getLogger('madgraph.import_v4')
 

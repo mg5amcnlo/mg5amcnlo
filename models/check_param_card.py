@@ -162,6 +162,11 @@ class Block(list):
             elif self.name == 'qnumbers':
                 self.name += ' %s' % data[2]
         return self
+    
+    def keys(self):
+        """returns the list of id define in this blocks"""
+        
+        return [p.lhacode for p in self]
 
     def __str__(self):
         """ return a str in the SLAH format """ 
@@ -307,9 +312,10 @@ class ParamCard(dict):
         
     def remove_param(self, block, lhacode):
         """ remove a parameter """
-        self[block].remove(lhacode)
-        if len(self[block]) == 0:
-            self.remove_block(block)
+        if self.has_param(block, lhacode):
+            self[block].remove(lhacode)
+            if len(self[block]) == 0:
+                self.remove_block(block)
     
     def has_param(self, block, lhacode):
         """check if param exists"""
@@ -870,7 +876,7 @@ def convert_to_mg5card(path, outputpath=None ):
     # Decay: Nothing to do. 
     
     # MODSEL
-    card.check_and_remove('modsel',[1], value=1)
+    card.remove_param('modsel',[1])
     
     
     # USQMIX

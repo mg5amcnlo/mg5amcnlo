@@ -34,7 +34,6 @@ import aloha.create_aloha as create_aloha
 import madgraph.iolibs.export_python as export_python
 import madgraph.iolibs.helas_call_writers as helas_call_writers
 import models.import_ufo as import_ufo
-import madgraph.iolibs.misc as misc
 import madgraph.iolibs.save_load_object as save_load_object
 
 import madgraph.core.base_objects as base_objects
@@ -44,6 +43,8 @@ import madgraph.core.helas_objects as helas_objects
 import madgraph.core.diagram_generation as diagram_generation
 
 import madgraph.various.rambo as rambo
+import madgraph.various.misc as misc
+
 
 from madgraph import MG5DIR, InvalidCmd
 
