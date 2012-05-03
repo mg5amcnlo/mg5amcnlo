@@ -458,6 +458,8 @@ class Blob_solution(Level_generation):
             step2+=1
             if block.chgt_var!=chgt_var:
                 continue
+            if block not in self.step:
+                continue
             #print 'find one'
             #step 1 succeed
         #step2:find the area where we have freedom

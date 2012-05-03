@@ -184,7 +184,7 @@ class TestMEfromfile(unittest.TestCase):
         
         devnull =open(os.devnull,'w')
         if not os.path.exists(pjoin(_file_path, os.path.pardir, 'pythia-pgs')):
-            p = subprocess.POPEN([pjoin(_file_path, os.path.pardir,'bin','mg5')],
+            p = subprocess.Popen([pjoin(_file_path, os.path.pardir,'bin','mg5')],
                              stdin=subprocess.PIPE,
                              stdout=devnull,stderr=devnull)
             out = p.communicate('install pythia-pgs')
