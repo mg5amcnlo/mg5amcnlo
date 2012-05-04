@@ -913,12 +913,34 @@ class HelasWavefunction(base_objects.PhysicsObject):
             raise self.PhysicsObjectError,\
                   "Particles of spin %d are not supported" % self.get('spin')
     
+    def get_external_helas_call_dict(self):
+        """ Returns a dictionary for formatting this external wavefunction
+        helas call """
+        
+        if self['mothers']:
+            raise MadGraph5Error, "This function should be called only for"+\
+                                                    " external wavefunctions."
+        return_dict = {}
+        if self.get('is_loop'):
+            return_dict['conjugate'] = ('C' if self.needs_hermitian_conjugate() \
+                                                                        else '')
+            return_dict['lcutspinletter'] = self.get_lcutspinletter()
+        return_dict['number'] = self.get('number')
+        return_dict['number_external'] = self.get('number_external')
+        return_dict['mass'] = self.get('mass')
+        if self.is_boson():
+            return_dict['state_id'] = (-1) ** (self.get('state') == 'initial')
+        else:
+            return_dict['state_id'] = -(-1) ** self.get_with_flow('is_part')
+        return_dict['number_external'] = self.get('number_external')
+        
+        return return_dict
+
     def get_helas_call_dict(self, index=1, OptimizedOutput=False):
         """ return a dictionary to be used for formatting
         HELAS call. The argument index sets the flipping while optimized output
         simply allow for using W instead of WE for the external wf arguments of
-        the loop wavefunction.For the optimized output, the 'L<i>' entry of the
-        formatting dictionnary differs."""
+        the loop wavefunction."""
 
         if index == 1:
             flip = 0
@@ -929,16 +951,10 @@ class HelasWavefunction(base_objects.PhysicsObject):
         for i, mother in enumerate(self.get('mothers')):
             nb = mother.get('number') - flip
             output[str(i)] = nb
-            if not OptimizedOutput:
-                if mother.get('is_loop'):
-                    output['L%d' % i ] = 'L'
-                else:
-                    output['L%d' % i ] = 'E'
+            if mother.get('is_loop'):
+                output['L%d' % i ] = 'L(1,%d)'%nb
             else:
-                if mother.get('is_loop'):
-                    output['L%d' % i ] = 'L(1,%d)'%nb
-                else:
-                    output['L%d' % i ] = '(1,WE(%d),H)'%nb
+                output['L%d' % i ] = '(1,WE(%d),H)'%nb
                     
         #fixed argument
         for i, coup in enumerate(self.get_with_flow('coupling')):
@@ -2220,8 +2236,7 @@ class HelasAmplitude(base_objects.PhysicsObject):
 
     def get_helas_call_dict(self, index=1,OptimizedOutput=False):
         """ return a dictionary to be used for formatting
-        HELAS call. For the optimized output, the 'L<i>' entry of the
-        formatting dictionnary differs."""
+        HELAS call."""
         
         if index == 1:
             flip = 0
@@ -2232,18 +2247,10 @@ class HelasAmplitude(base_objects.PhysicsObject):
         for i, mother in enumerate(self.get('mothers')):
             nb = mother.get('number') - flip 
             output[str(i)] = nb
-            # Set what are the loop wavefunctions (WL*) and the non loop ones (WE*)
-            # in the argument
-            if not OptimizedOutput:
-                if mother.get('is_loop'):
-                    output['L%d' % i ] = 'L'
-                else:
-                    output['L%d' % i ] = 'E'
+            if mother.get('is_loop'):
+                output['L%d' % i ] = 'L(1,%d)'%nb
             else:
-                if mother.get('is_loop'):
-                    output['L%d' % i ] = 'L(1,%d)'%nb
-                else:
-                    output['L%d' % i ] = '(1,WE(%d),H)'%nb
+                output['L%d' % i ] = '(1,WE(%d),H)'%nb
                 
         #fixed argument
         for i, coup in enumerate(self.get('coupling')):

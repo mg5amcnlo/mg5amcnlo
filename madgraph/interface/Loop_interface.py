@@ -32,7 +32,7 @@ import madgraph.iolibs.export_v4 as export_v4
 import madgraph.loop.loop_exporters as loop_exporters
 import madgraph.iolibs.helas_call_writers as helas_call_writers
 import madgraph.iolibs.file_writers as writers
-
+import aloha
 
 # Special logger for the Cmd Interface
 logger = logging.getLogger('cmdprint')
@@ -173,6 +173,11 @@ class LoopInterface(CheckLoop, CompleteLoop, HelpLoop, mg_interface.MadGraphCmd)
         except:
             pass
 
+        # Whatever the format we always output the quadruple precision routines
+        # to allow for curing possible unstable points.
+        aloha_original_quad_mode = aloha.quad_precision
+        aloha.quad_precision = True
+
         if self._export_format not in ['standalone','matrix']:
             raise self.InvalidCmd('ML5 only support standalone and matrix as export format.')
 
@@ -230,6 +235,9 @@ class LoopInterface(CheckLoop, CompleteLoop, HelpLoop, mg_interface.MadGraphCmd)
 
         # Reset _export_dir, so we don't overwrite by mistake later
         self._export_dir = None
+
+        # Put aloha back in its original mode.
+        aloha.quad_precision = aloha_original_quad_mode
 
     # Export a matrix element
     
