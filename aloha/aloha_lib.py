@@ -28,6 +28,8 @@
 ##
 ##    FracVariable (vartype:3)
 ##
+##    MultContainer (vartype:6)
+##
 ################################################################################
 from __future__ import division
 from array import array
@@ -321,7 +323,7 @@ class AddVariable(list):
                     newadd.append(term)
         newadd = newadd.factorize()
         
-        # optimize the prefactor
+        # optimize the prefactor 
         if isinstance(newadd, AddVariable):        
             countprefact = defaultdict(int)
             nbplus, nbminus = 0,0
@@ -355,6 +357,8 @@ class AddVariable(list):
 
 class MultContainer(list):
     
+    vartype = 6
+    
     def __init__(self,*args):
         self.prefactor =1
         list.__init__(self, *args)
@@ -362,7 +366,7 @@ class MultContainer(list):
     def __str__(self):
         """ String representation """
         if self.prefactor !=1:
-            text = '(%s)' % (' * '.join([str(t) for t in self]))
+            text = '(%s * %s)' % (self.prefactor, ' * '.join([str(t) for t in self]))
         else:
             text = '(%s)' % (' * '.join([str(t) for t in self]))
         return text
@@ -1072,13 +1076,6 @@ class IndicesIterator:
         else:
             self.data = True
             return [0]
-
-class prefactor_number(Fraction):
-    
-    def __new__(self, num, denom=1):
-        
-        try:
-            return Frac
 
       
 if '__main__' ==__name__:

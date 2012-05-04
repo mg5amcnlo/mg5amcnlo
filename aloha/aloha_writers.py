@@ -6,6 +6,13 @@ except:
 import os
 import re 
 from numbers import Number
+from collections import defaultdict
+# fast way to deal with string
+from cStringIO import StringIO
+# Look at http://www.skymind.com/~ocrow/python_string/ 
+# For knowing how to deal with long strings efficiently.
+
+
 
 class WriteALOHA: 
     """ Generic writing functions """ 
@@ -20,7 +27,6 @@ class WriteALOHA:
             
     def __init__(self, abstract_routine, dirpath):
 
-
         name = get_routine_name(abstract = abstract_routine)
         if dirpath:
             self.dir_out = dirpath
@@ -29,35 +35,18 @@ class WriteALOHA:
             self.out_path = None
             self.dir_out = None
 
-        self.obj = abstract_routine.expr
+        self.routine = abstract_routine
+        self.name = name
         self.particles =  [self.type_to_variable[spin] for spin in \
                           abstract_routine.spins]
-        self.namestring = name
-        self.abstractname = abstract_routine.name
-        self.comment = abstract_routine.infostr
-        self.offshell = abstract_routine.outgoing
-         
-        self.symmetries = abstract_routine.symmetries
-        self.tag = abstract_routine.tag
-        self.contracted = abstract_routine.contracted
-
-        self.outgoing = self.offshell
+        
+        self.offshell = abstract_routine.outgoing # position id of the outgoing        
+        self.outgoing = self.offshell             # expected position for the outgoing
         if 'C%s' %((self.outgoing + 1) // 2) in self.tag:
             #flip the outgoing tag if in conjugate
             self.outgoing = self.outgoing + self.outgoing % 2 - (self.outgoing +1) % 2
             
-
-
-
-
-        #prepare the necessary object
-        self.collect_variables() # Look for the different variables
-        self.make_all_lists()    # Compute the expression for the call ordering
-                                 #the definition of objects,..
-                                 
-                                 
-                                 
-                                 
+                                       
     def pass_to_HELAS(self, indices, start=0):
         """find the Fortran HELAS position for the list of index""" 
         
@@ -74,24 +63,6 @@ class WriteALOHA:
             raise Exception, 'WRONG CONTRACTION OF LORENTZ OBJECT for routine %s: %s' \
                     % (self.namestring, indices)                                 
                                  
-    def collect_variables(self):
-        """Collects Momenta,Mass,Width into lists"""
-         
-        MomentaList = set()
-        OverMList = set()
-        for elem in self.obj.tag:
-            if elem.startswith('P'):
-                MomentaList.add(elem)
-            elif elem.startswith('O'):
-                OverMList.add(elem) 
-
-        MomentaList = list(MomentaList)
-        OverMList = list(OverMList)
-        
-        self.collected = {'momenta':MomentaList, 'om':OverMList}
-        
-        return self.collected
-
     def define_header(self): 
         """ Prototype for language specific header""" 
         pass
@@ -110,7 +81,7 @@ class WriteALOHA:
         text = 'output(%s)' % indices
         return text                 
         
-    def write_obj(self, obj):
+    def write_obj(self, obj, prefactor=True):
         """Calls the appropriate writing routine"""
         
         try:
@@ -118,53 +89,89 @@ class WriteALOHA:
         except:
             return self.change_number_format(obj)
 
-        if vartype == 2 : # MultVariable
-            return self.write_obj_Mult(obj)
-        elif not vartype: # Variable
-            return self.write_obj_Var(obj)
-        elif vartype == 1 : # AddVariable
-            return self.write_obj_Add(obj)
-        elif vartype == 5: # ConstantObject
-            return self.change_number_format(obj.value)
+        # The order is from the most current one to the les probable one
+        if vartype == 1 : # AddVariable
+            return self.write_obj_Add(obj, prefactor)
+        elif vartype == 2 : # MultVariable
+            return self.write_MultVariable(obj, prefactor)
+        elif vartype == 6 : # MultContainer
+            return self.write_MultContainer(obj, prefactor) 
+        elif vartype == 0 : # MultContainer
+            return self.write_variable(obj, prefactor)               
         else: 
             raise Exception('Warning unknown object: %s' % obj.vartype)
 
-    def write_obj_Mult(self, obj):
-        """Turn a multvariable into a string""" 
-        mult_list = [self.write_obj(factor) for factor in obj] 
-        text = '(' 
-        if obj.prefactor != 1:
-            if obj.prefactor != -1:
-                text = self.change_number_format(obj.prefactor) + '*' + text 
-            else:
-                text = '-' + text
-        return text + '*'.join(mult_list) + ')'
-    
-    def write_obj_Add(self, obj):
-        """Turns addvariable into a string"""
-        mult_list = [self.write_obj(factor) for factor in obj]
-        prefactor = ''
-        if obj.prefactor == 1:
-            prefactor = ''
-        elif obj.prefactor == -1:
-            prefactor = '-'
-        else:
-            prefactor = '%s*' % self.change_number_format(obj.prefactor)
-
-        return '(%s %s)' % (prefactor, '+'.join(mult_list))
-
+    def write_MultVariable(self, obj, prefactor=True):
+        """Turn a multvariable into a string"""
         
-    def write_obj_Var(self, obj):
-        text = ''
-        if obj.prefactor != 1:
-            if obj.prefactor != -1: 
-                text = self.change_number_format(obj.prefactor) + '*' + text
+        mult_list = [self.write_variable_id(id) for id in obj]
+        data = {'factors': '*'.join(mult_list)}
+        if prefactor and obj.prefactor != 1:
+            if obj.prefactor != -1:
+                text = '%(prefactor)s * %(factors)s'
+                data['prefactor'] = self.change_number_format(self.prefactor)
             else:
-                text = '-' + text
-        text += self.change_var_format(obj.variable)
-        if obj.power != 1:
-            text = text + self.power_symbol + str(obj.power)
-        return text
+                text = '-%(factors)s'
+        else:
+            text = '%(factors)s'
+        return text % data
+
+    def write_MultContainer(self, obj, prefactor=True):
+        """Turn a multvariable into a string"""
+        
+        mult_list = [self.write_obj(id) for id in obj]
+        data = {'factors': '*'.join(mult_list)}
+        if prefactor and obj.prefactor != 1:
+            if obj.prefactor != -1:
+                text = '%(prefactor)s * %(factors)s'
+                data['prefactor'] = self.change_number_format(self.prefactor)
+            else:
+                text = '-%(factors)s'
+        else:
+            text = '%(factors)s'
+        return text % data
+         
+    
+    def write_obj_Add(self, obj, prefactor=True):
+        """Turns addvariable into a string"""
+
+        data = defaultdict(list)
+        number = []
+        [data[p.prefactor].append(p) if hasattr(p, 'prefactor') else number.append(p)
+             for p in self]
+
+        file_str = StringIO()
+        
+        if prefactor and self.prefactor != 1:
+            file_str = StringIO(self.change_number_format(self.prefactor))
+            file_str.write('*(')
+        
+        for value, obj_list in data.items():
+            add= '+'
+            if value not in  [-1,1]:
+                file_str.write(self.change_number_format(value))
+                file_str.write('*(')
+            elif value == -1:
+                add = '-' 
+                file_str.write('-')
+            else:
+                file_str.write('+')
+                
+            file_str.write(add.join([self.write_obj(obj, prefactor=False) 
+                                                          for obj in obj_list]))
+            if value not in [1,-1]:
+                file_str.write(')')
+                
+        if prefactor and self.prefactor != 1:
+             file_str.write(')')
+                
+    def write_variable(self, obj):
+        return self.change_var_format(obj.variable)
+    
+    def write_variable_id(self, id):
+        
+        obj = aloha_lib.KERNEL.objs[id]
+        return self.write_variable(obj)   
 
     def make_all_lists(self):
         """ Make all the list for call ordering, conservation impulsion, 
