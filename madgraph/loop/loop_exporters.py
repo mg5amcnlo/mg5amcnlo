@@ -464,9 +464,6 @@ class LoopProcessExporterFortranSA(export_v4.ProcessExporterFortranSA,
         # Extract nloopamps
         nloopamps = matrix_element.get_number_of_loop_amplitudes()
         self.general_replace_dict['nloopamps'] = nloopamps
-        # Extract nbornamps
-        nbornamps = matrix_element.get_number_of_born_amplitudes()
-        self.general_replace_dict['nbornamps'] = nbornamps
         # Extract nctamps
         nctamps = matrix_element.get_number_of_CT_amplitudes()
         self.general_replace_dict['nctamps'] = nctamps
@@ -487,7 +484,29 @@ class LoopProcessExporterFortranSA(export_v4.ProcessExporterFortranSA,
                           self.general_replace_dict['complex_dp_format']
         self.general_replace_dict['mass_mp_format'] = \
                           self.general_replace_dict['complex_mp_format']
-        
+        # These placeholders help to have as many common templates for the
+        # output of the loop induced processes and those with a born 
+        # contribution.
+        if matrix_element.get('processes')[0].get('has_born'):
+            # Extract nbornamps
+            nbornamps = matrix_element.get_number_of_born_amplitudes()
+            self.general_replace_dict['nbornamps'] = nbornamps
+            self.general_replace_dict['ncomb_helas_objs'] = ',ncomb'
+            self.general_replace_dict['dp_born_amps_decl'] = \
+              self.general_replace_dict['complex_dp_format']+" AMP(NBORNAMPS,NCOMB)"+\
+              "\n common/AMPS/AMP"
+            self.general_replace_dict['mp_born_amps_decl'] = \
+              self.general_replace_dict['complex_mp_format']+" AMP(NBORNAMPS,NCOMB)"+\
+              "\n common/MP_AMPS/AMP"
+            self.general_replace_dict['nbornamps_decl'] = \
+              """INTEGER NBORNAMPS
+                 PARAMETER (NBORNAMPS=%d)"""%nbornamps
+        else:
+            self.general_replace_dict['ncomb_helas_objs'] = ''  
+            self.general_replace_dict['dp_born_amps_decl'] = ''
+            self.general_replace_dict['mp_born_amps_decl'] = ''
+            self.general_replace_dict['nbornamps_decl'] = ''
+
         if writer:
             files=[]
             files.append(self.write_loop_num(None,matrix_element,\
@@ -573,11 +592,9 @@ class LoopProcessExporterFortranSA(export_v4.ProcessExporterFortranSA,
         the loop HELAS-like calls along with the general interfacing subroutine. """
 
         files=[]
-        
-        replace_dict_orig=copy.copy(self.general_replace_dict)
 
         # First write CT_interface which interfaces MG5 with CutTools.
-        replace_dict=copy.copy(replace_dict_orig)
+        replace_dict=copy.copy(self.general_replace_dict)
         file = open(os.path.join(self.template_dir,'CT_interface.inc')).read()  
 
         file = file % replace_dict
@@ -592,7 +609,7 @@ class LoopProcessExporterFortranSA(export_v4.ProcessExporterFortranSA,
                     CallKeys.append(lamp.get_call_key()[1:])
                 
         for callkey in CallKeys:
-            replace_dict=copy.copy(replace_dict_orig)
+            replace_dict=copy.copy(self.general_replace_dict)
             # Add to this dictionary all other attribute common to all
             # HELAS-like loop subroutines.
             replace_dict['nloopline']=callkey[0]
@@ -637,18 +654,28 @@ class LoopProcessExporterFortranSA(export_v4.ProcessExporterFortranSA,
             replace_dict['mset2']=mset2           
             replace_dict['nwfsargs'] = callkey[1]
             if callkey[0]==callkey[1]:
-                file = open(os.path.join(self.template_dir,\
-                                             'helas_loop_amplitude.inc')).read()                
+                replace_dict['nwfsargs_header'] = ""
+                replace_dict['pairingargs']=""
+                replace_dict['pairingdecl']=""
+                pairingset="""DO I=1,NLOOPLINE
+                                PAIRING(I)=1
+                              ENDDO
+                           """
+                replace_dict['pairingset']=pairingset               
             else:
-                file = open(os.path.join(self.template_dir,\
-                                     'helas_loop_amplitude_pairing.inc')).read() 
-                pairingargs="".join([("P"+str(i)+", ") for i in range(1,callkey[0]+1)])
+                replace_dict['nwfsargs_header'] = '_%d'%callkey[1]
+                pairingargs="".join([("P"+str(i)+", ") for i in \
+                                                         range(1,callkey[0]+1)])
                 replace_dict['pairingargs']=pairingargs
-                pairingdecl="".join([("P"+str(i)+", ") for i in range(1,callkey[0]+1)])[:-2]
+                pairingdecl="integer "+"".join([("P"+str(i)+", ") for i in \
+                                                    range(1,callkey[0]+1)])[:-2]
                 replace_dict['pairingdecl']=pairingdecl
                 pairingset="\n".join([("PAIRING("+str(i)+")=P"+str(i)) for \
                              i in range(1,callkey[0]+1)])
                 replace_dict['pairingset']=pairingset
+            
+            file = open(os.path.join(self.template_dir,\
+                                             'helas_loop_amplitude.inc')).read()
             file = file % replace_dict
             files.append(file)   
         

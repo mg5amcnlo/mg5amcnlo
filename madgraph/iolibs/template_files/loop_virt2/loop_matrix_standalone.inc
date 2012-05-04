@@ -38,7 +38,7 @@ C GLOBAL
 C
       %(complex_dp_format)s AMPL(3,NLOOPAMPS)
 	  LOGICAL S(NLOOPAMPS)
-	  common/SPLITHELAS/AMPL,S
+	  common/AMPL/AMPL,S
 C ----------
 C BEGIN CODE
 C ----------
@@ -72,8 +72,8 @@ C CONSTANTS
 C
       CHARACTER*64 paramFileName
       PARAMETER ( paramFileName='MadLoopParams.dat')
-      INTEGER    NLOOPAMPS, NCTAMPS
-      PARAMETER (NLOOPAMPS=%(nloopamps)d, NCTAMPS=%(nctamps)d) 
+      INTEGER    NLOOPAMPS, NBORNAMPS, NCTAMPS
+      PARAMETER (NLOOPAMPS=%(nloopamps)d, NBORNAMPS=%(nbornamps)d, NCTAMPS=%(nctamps)d) 
       INTEGER    NEXTERNAL
       PARAMETER (NEXTERNAL=%(nexternal)d)
       INTEGER    NWAVEFUNCS
@@ -150,14 +150,16 @@ C
 	  DATA USERHEL/-1/
 	  common/USERCHOICE/USERHEL
 
+      %(complex_dp_format)s AMP(NBORNAMPS,NCOMB)
 	  %(complex_dp_format)s W(20,NWAVEFUNCS,NCOMB)
 	  INTEGER VALIDH
+	  common/AMPS/AMP
 	  common/WFCTS/W  
 	  common/VALIDH/VALIDH
 
       %(complex_dp_format)s AMPL(3,NLOOPAMPS)
 	  LOGICAL S(NLOOPAMPS)
-	  common/SPLITHELAS/AMPL,S
+	  common/AMPL/AMPL,S
 
 	  INTEGER CF_D(NLOOPAMPS,NBORNAMPS)
 	  INTEGER CF_N(NLOOPAMPS,NBORNAMPS)

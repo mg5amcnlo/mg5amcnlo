@@ -38,7 +38,7 @@ C GLOBAL
 C
       %(complex_dp_format)s AMPL(3,NLOOPAMPS)
 	  LOGICAL S(NLOOPAMPS)
-	  common/SPLITHELAS/AMPL,S
+	  common/AMPL/AMPL,S
 C ----------
 C BEGIN CODE
 C ----------
@@ -159,7 +159,7 @@ C
 
       %(complex_dp_format)s AMPL(3,NLOOPAMPS)
 	  LOGICAL S(NLOOPAMPS)
-	  common/SPLITHELAS/AMPL,S
+	  common/AMPL/AMPL,S
 
 	  INTEGER CF_D(NLOOPAMPS,NBORNAMPS)
 	  INTEGER CF_N(NLOOPAMPS,NBORNAMPS)

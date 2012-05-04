@@ -4,8 +4,7 @@ C
 C  
 C CONSTANTS
 C  
-      INTEGER    NBORNAMPS
-      PARAMETER (NBORNAMPS=%(nbornamps)d) 
+      %(nbornamps_decl)s
       INTEGER    NEXTERNAL
       PARAMETER (NEXTERNAL=%(nexternal)d)
       INTEGER    NWAVEFUNCS
@@ -27,9 +26,9 @@ C GLOBAL VARIABLES
 C  
       include 'mp_coupl_same_name.inc'
 
-      %(complex_mp_format)s AMP(NBORNAMPS,NCOMB)
-	  %(complex_mp_format)s W(20,NWAVEFUNCS,NCOMB)
-	  common/MP_OPTIMIZATION/W,AMP
+	  %(mp_born_amps_decl)s
+	  %(complex_mp_format)s W(20,NWAVEFUNCS%(ncomb_helas_objs)s)
+	  common/MP_WFCTS/W  
 C
 C ----------
 C BEGIN CODE

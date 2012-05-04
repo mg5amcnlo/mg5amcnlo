@@ -10,9 +10,10 @@ C
       IMPLICIT NONE
 C  
 C CONSTANTS
-C  
-      INTEGER    NBORNAMPS, NLOOPAMPS
-      PARAMETER (NBORNAMPS=%(nbornamps)d, NLOOPAMPS=%(nloopamps)d) 
+C     
+      %(nbornamps_decl)s
+      INTEGER    NLOOPAMPS
+      PARAMETER (NLOOPAMPS=%(nloopamps)d) 
       INTEGER    NEXTERNAL
       PARAMETER (NEXTERNAL=%(nexternal)d)
       INTEGER    NWAVEFUNCS
@@ -51,9 +52,9 @@ C
 	  INTEGER HELPICKED
 	  common/HELCHOICE/HELPICKED
 
-      %(complex_mp_format)s AMP(NBORNAMPS,NCOMB)
-	  %(complex_mp_format)s W(20,NWAVEFUNCS,NCOMB)
-	  common/MP_WFS/W,AMP
+	  %(mp_born_amps_decl)s
+	  %(complex_mp_format)s W(20,NWAVEFUNCS%(ncomb_helas_objs)s)
+	  common/MP_WFS/W
 
 	  INTEGER HELC(NEXTERNAL,NCOMB)
 	  common/HELCONFIGS/HELC

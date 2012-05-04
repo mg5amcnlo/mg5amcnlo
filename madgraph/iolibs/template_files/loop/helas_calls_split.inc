@@ -4,8 +4,9 @@ C
 C  
 C CONSTANTS
 C  
-      INTEGER    NLOOPAMPS, NBORNAMPS
-      PARAMETER (NLOOPAMPS=%(nloopamps)d, NBORNAMPS=%(nbornamps)d) 
+      INTEGER    NLOOPAMPS
+      PARAMETER (NLOOPAMPS=%(nloopamps)d)
+	  %(nbornamps_decl)s
       INTEGER    NEXTERNAL
       PARAMETER (NEXTERNAL=%(nexternal)d)
       INTEGER    NWAVEFUNCS
@@ -31,14 +32,13 @@ C GLOBAL VARIABLES
 C  
       include 'coupl.inc'
 	  include 'mp_coupl.inc'
-      %(complex_dp_format)s AMP(NBORNAMPS,NCOMB)
-	  %(complex_dp_format)s W(20,NWAVEFUNCS,NCOMB)
-	  INTEGER VALIDH
-	  common/OPTIMIZATION/W,AMP,VALIDH
+      %(dp_born_amps_decl)s
+	  %(complex_dp_format)s W(20,NWAVEFUNCS%(ncomb_helas_objs)s)
+	  common/WFCTS/W  
 
 	  LOGICAL S(NLOOPAMPS)
       %(complex_dp_format)s AMPL(3,NLOOPAMPS)
-	  common/SPLITHELAS/AMPL,S
+	  common/AMPL/AMPL,S
 C
 C ----------
 C BEGIN CODE

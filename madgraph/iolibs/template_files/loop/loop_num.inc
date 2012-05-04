@@ -8,8 +8,9 @@ C
       PARAMETER (NCOMB=%(ncomb)d)
 	  INTEGER    NEXTERNAL
       PARAMETER (NEXTERNAL=%(nexternal)d)
-      INTEGER    NBORNAMPS, NLOOPAMPS
-      PARAMETER (NBORNAMPS=%(nbornamps)d, NLOOPAMPS=%(nloopamps)d)
+	  %(nbornamps_decl)s
+      INTEGER    NLOOPAMPS
+      PARAMETER (NLOOPAMPS=%(nloopamps)d)
 	  INTEGER    NWAVEFUNCS
       PARAMETER (NWAVEFUNCS=%(nwavefuncs)d)
 	  INTEGER    MAXLCOUPLINGS
@@ -47,10 +48,9 @@ C
 	  INTEGER CF_N(NLOOPAMPS,NBORNAMPS)
 	  common/CF/CF_D,CF_N
 
-      %(complex_dp_format)s AMP(NBORNAMPS,NCOMB)
-	  %(complex_dp_format)s W(20,NWAVEFUNCS,NCOMB)
-	  INTEGER VALIDH
-	  common/OPTIMIZATION/W,AMP,VALIDH
+	  %(dp_born_amps_decl)s
+	  %(complex_dp_format)s W(20,NWAVEFUNCS%(ncomb_helas_objs)s)
+	  common/WFCTS/W  
 
 	  INTEGER HELPICKED
 	  common/HELCHOICE/HELPICKED
@@ -85,8 +85,9 @@ C
 	  PARAMETER (ZERO=0.D0)
 	  INTEGER    NWAVEFUNCS
       PARAMETER (NWAVEFUNCS=%(nwavefuncs)d)
-      INTEGER    NLOOPAMPS, NBORNAMPS
-      PARAMETER (NLOOPAMPS=%(nloopamps)d, NBORNAMPS=%(nbornamps)d)
+	  %(nbornamps_decl)s
+      INTEGER    NLOOPAMPS
+      PARAMETER (NLOOPAMPS=%(nloopamps)d)
 	  INTEGER    NCOMB
       PARAMETER (NCOMB=%(ncomb)d)
 C  
@@ -112,10 +113,9 @@ C
       INTEGER ID, SYMFACT,AMPLNUM
       COMMON/LOOP/WE,ID,SYMFACT,AMPLNUM
 
-      %(complex_dp_format)s AMP(NBORNAMPS,NCOMB)
-	  %(complex_dp_format)s W(20,NWAVEFUNCS,NCOMB)
-	  INTEGER VALIDH
-	  common/OPTIMIZATION/W,AMP,VALIDH
+	  %(dp_born_amps_decl)s	  
+	  %(complex_dp_format)s W(20,NWAVEFUNCS%(ncomb_helas_objs)s)
+	  common/WFCTS/W  
 
 C ----------
 C BEGIN CODE
@@ -135,8 +135,9 @@ C
       PARAMETER (NCOMB=%(ncomb)d)
 	  INTEGER    NEXTERNAL
       PARAMETER (NEXTERNAL=%(nexternal)d)
-      INTEGER    NBORNAMPS, NLOOPAMPS
-      PARAMETER (NBORNAMPS=%(nbornamps)d, NLOOPAMPS=%(nloopamps)d)
+	  %(nbornamps_decl)s	  
+      INTEGER    NLOOPAMPS
+      PARAMETER (NLOOPAMPS=%(nloopamps)d)
 	  INTEGER    NWAVEFUNCS
       PARAMETER (NWAVEFUNCS=%(nwavefuncs)d)
 	  INTEGER    MAXLCOUPLINGS
@@ -183,9 +184,9 @@ C
 	  INTEGER CF_N(NLOOPAMPS,NBORNAMPS)
 	  common/CF/CF_D,CF_N
 
-      %(complex_mp_format)s AMP(NBORNAMPS,NCOMB)
-	  %(complex_mp_format)s W(20,NWAVEFUNCS,NCOMB)
-	  common/MP_WFS/W,AMP	
+	  %(mp_born_amps_decl)s	  
+	  %(complex_mp_format)s W(20,NWAVEFUNCS%(ncomb_helas_objs)s)
+	  common/MP_WFS/W	
 
 	  INTEGER HELPICKED
 	  common/HELCHOICE/HELPICKED
@@ -274,8 +275,9 @@ C
 	  PARAMETER (ZERO=0E0_16)
 	  INTEGER    NWAVEFUNCS
       PARAMETER (NWAVEFUNCS=%(nwavefuncs)d)
-      INTEGER    NLOOPAMPS, NBORNAMPS
-      PARAMETER (NLOOPAMPS=%(nloopamps)d, NBORNAMPS=%(nbornamps)d)
+	  %(nbornamps_decl)s	  
+      INTEGER    NLOOPAMPS
+      PARAMETER (NLOOPAMPS=%(nloopamps)d)
 	  INTEGER    NCOMB
       PARAMETER (NCOMB=%(ncomb)d)
 C  
@@ -301,9 +303,9 @@ C
       INTEGER ID, SYMFACT,AMPLNUM
       COMMON/LOOP/WE,ID,SYMFACT,AMPLNUM
 
-      %(complex_mp_format)s AMP(NBORNAMPS,NCOMB)
-	  %(complex_mp_format)s W(20,NWAVEFUNCS,NCOMB)
-	  common/MP_WFS/W,AMP
+	  %(mp_born_amps_decl)s	  
+	  %(complex_mp_format)s W(20,NWAVEFUNCS%(ncomb_helas_objs)s)
+	  common/MP_WFS/W
 C ----------
 C BEGIN CODE
 C ----------
