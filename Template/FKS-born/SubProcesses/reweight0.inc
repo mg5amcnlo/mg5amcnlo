@@ -12,6 +12,10 @@ c Reference weight and Ellis-Sexton scales
       double precision wgtref,wgtqes2(4)
       common/cwgt0/wgtref,wgtqes2
 
+c Reference weights for parton level NLO (event, counterevent, Born)
+      double precision wgtrefNLO11,wgtrefNLO12,wgtrefNLO20
+      common/cwgt0NLO/wgtrefNLO11,wgtrefNLO12,wgtrefNLO20
+
 c Bjorken x's
       double precision wgtxbj(2,4)
       common/cwgt1/wgtxbj
@@ -70,6 +74,13 @@ c Cross sections at different scales and PDFs
       double precision wgtxsecmu(maxscales,maxscales),
      #                 wgtxsecPDF(0:maxPDFs)
       common/cwgxsec2/wgtxsecmu,wgtxsecPDF
+
+c Cross sections at different scales and PDFs, for NLO computations
+c The first entry is relevant to event (1), counterevents (2), and Born (3),
+c and corresponds to iplot=11, 12, and 20 respectively
+      double precision wgtNLOxsecmu(3,maxscales,maxscales),
+     #                 wgtNLOxsecPDF(3,0:maxPDFs)
+      common/cwgxsec3/wgtNLOxsecmu,wgtNLOxsecPDF
 
 c Power of alpha_s in the Born (only used if jwgtinfo.eq.4)
       double precision wgtbpower

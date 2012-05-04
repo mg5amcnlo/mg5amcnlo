@@ -1044,3 +1044,127 @@ c
 c
       return
       end
+
+
+      subroutine fill_rwgt_NLOplot()
+      implicit none
+      include "genps.inc"
+      include 'coupl.inc'
+      include 'run.inc'
+      include "reweight.inc"
+      include "reweightNLO.inc"
+      integer izero
+      parameter (izero=0)
+      integer kr,kf,n
+      double precision pr_muR_over_ref,pr_muF1_over_ref,
+     # pr_muF2_over_ref,dummy,compute_rwgt_wgt_NLO
+c
+      dummy=compute_rwgt_wgt_NLO(ymuR_over_ref,ymuF1_over_ref,
+     #                           ymuF2_over_ref,yQES_over_ref,
+     #                           iwgtinfo)
+      wgtrefNLO11=wgtNLO11
+      wgtrefNLO12=wgtNLO12
+      wgtrefNLO20=wgtNLO20
+c
+      if(doNLOscaleunc)then
+        do kr=1,numscales
+          do kf=1,numscales
+            pr_muR_over_ref=ymuR_over_ref*yfactR(kr)
+            pr_muF1_over_ref=ymuF1_over_ref*yfactF(kf)
+            pr_muF2_over_ref=pr_muF1_over_ref
+            dummy=compute_rwgt_wgt_NLO(pr_muR_over_ref,pr_muF1_over_ref,
+     #                                 pr_muF2_over_ref,yQES_over_ref,
+     #                                 iwgtinfo)
+            wgtNLOxsecmu(1,kr,kf)=wgtNLO11
+            wgtNLOxsecmu(2,kr,kf)=wgtNLO12
+            wgtNLOxsecmu(3,kr,kf)=wgtNLO20
+          enddo
+        enddo
+      endif
+c
+      if(doNLOPDFunc)then
+        do n=0,numPDFs-1
+          call InitPDF(n)
+          dummy=compute_rwgt_wgt_NLO(ymuR_over_ref,ymuF1_over_ref,
+     #                               ymuF2_over_ref,yQES_over_ref,
+     #                               iwgtinfo)
+          wgtNLOxsecPDF(1,n)=wgtNLO11
+          wgtNLOxsecPDF(2,n)=wgtNLO12
+          wgtNLOxsecPDF(3,n)=wgtNLO20
+        enddo
+c Restore default PDFs
+        call InitPDF(izero)
+      endif
+c
+      return
+      end
+
+
+      subroutine setup_fill_rwgt_NLOplot()
+      implicit none
+      include "genps.inc"
+      include 'coupl.inc'
+      include 'run.inc'
+      include "reweight.inc"
+      include "reweightNLO.inc"
+      integer i,itmp,nsets,npairs
+      double precision delta
+c
+      if( (doNLOscaleunc.or.doNLOPDFunc).and.
+     #    (.not.doNLOreweight) )then
+        write(*,*)'Error #0 in setup_fill_rwgt_NLOplot'
+        write(*,*)' NLO weights are not being saved:'
+        write(*,*)' set doNLOreweight=.true.'
+        stop
+      endif
+c
+      yQES_over_ref=QES_over_ref
+      ymuR_over_ref=muR_over_ref
+      ymuF1_over_ref=muF1_over_ref
+      ymuF2_over_ref=muF2_over_ref
+c
+      if(.not.doNLOscaleunc)goto 111
+      numscales=numscales_init
+      if(numscales.gt.maxscales)then
+        write(*,*)'Error #1 in setup_fill_rwgt_NLOplot'
+        write(*,*)' Increase maxscales in reweight0.inc'
+        stop
+      endif
+      yfactF(1)=yfactF0
+      yfactF(2)=yfactFlow
+      delta=(yfactFupp-yfactFlow)/dfloat(numscales-2)
+      do i=3,numscales
+        yfactF(i)=yfactF(i-1)+delta
+      enddo
+      yfactR(1)=yfactR0
+      yfactR(2)=yfactRlow
+      delta=(yfactRupp-yfactRlow)/dfloat(numscales-2)
+      do i=3,numscales
+        yfactR(i)=yfactR(i-1)+delta
+      enddo
+c
+ 111  continue
+      if(.not.doNLOPDFunc)goto 222
+      idpdf(0)=idefPDF
+      idpdf(1)=ifirstPDF
+      itmp=ilastPDF
+      nsets=itmp-idpdf(1)+1
+      if(mod(nsets,2).ne.0)then
+        write(*,*)'The number of error sets must be even',nsets
+        stop
+      else
+        npairs=nsets/2
+      endif
+      do i=2,nsets
+        idpdf(i)=idpdf(1)+i-1
+      enddo
+      if(nsets.gt.maxPDFs)then
+        write(*,*)'Error #2 in setup_fill_rwgt_NLOplot'
+        write(*,*)' Increase maxPDFs in reweight0.inc'
+        stop
+      endif
+      numPDFs=nsets+1
+c
+ 222  continue
+      return
+      end

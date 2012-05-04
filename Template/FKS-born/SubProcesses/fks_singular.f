@@ -238,6 +238,7 @@ c      include "fks.inc"
       include 'q_es.inc'
       include 'run.inc'
       include 'reweight.inc'
+      include 'reweightNLO.inc'
 
       double precision pp(0:3,nexternal),wgt,vegaswgt
 
@@ -789,6 +790,7 @@ c
            call reweight_fill_extra()
            if(check_reweight.and.doNLOreweight)
      #       call check_rwgt_wgt("NLO")
+           if(doNLOscaleunc.or.doNLOPDFunc)call fill_rwgt_NLOplot()
 c Example of reweighted cross section (scale changed)
 c           dsig_new=compute_rwgt_wgt_NLO(new_muR_fact,new_muF1_fact,
 c     #                                   new_muF2_fact,new_QES_fact,
@@ -5926,12 +5928,17 @@ c      include 'fks.inc'
       integer fks_j_from_i(nexternal,0:nexternal)
      &     ,particle_type(nexternal),pdg_type(nexternal)
       common /c_fks_inc/fks_j_from_i,particle_type,pdg_type
+      include 'reweight0.inc'
+      include 'reweightNLO.inc'
 
       integer mapconfig(0:lmaxconfigs), this_config
       integer iforest(2,-max_branch:-1,lmaxconfigs)
       integer sprop(-max_branch:-1,lmaxconfigs)
       integer tprid(-max_branch:-1,lmaxconfigs)
       include "born_conf.inc"
+
+      logical firsttime
+      data firsttime/.true./
 
       double precision xicut_used
       common /cxicut_used/xicut_used
@@ -6215,6 +6222,12 @@ c Set color types of i_fks, j_fks and fks_mother.
 
 c Set matrices used by MC counterterms
       call set_mc_matrices
+
+c Setup for parton-level NLO reweighting
+      if(firsttime.and.(doNLOscaleunc.or.doNLOPDFunc)) then
+         call setup_fill_rwgt_NLOplot()
+         firsttime=.false.
+      endif
 
       return
 

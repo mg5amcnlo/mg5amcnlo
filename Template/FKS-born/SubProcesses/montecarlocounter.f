@@ -5094,7 +5094,7 @@ c outgoing parton #4 (massless)
         stop
       endif
 
-      if(zHWPP.le.0d0.or.zHWPP.ge.1d0)then
+      if(zHWPP.lt.0d0.or.zHWPP.gt.1d0)then
          write(*,*)'zHWPP out of range',zHWPP
          stop
       endif
@@ -5402,7 +5402,7 @@ c outgoing parton #4 (massless)
          endif
       endif
 
-      if(zPY6Q.le.0d0.or.zPY6Q.ge.1d0)then
+      if(zPY6Q.lt.0d0.or.zPY6Q.gt.1d0)then
          write(*,*)'zPY6Q out of range',zPY6Q
          stop
       endif
@@ -5460,7 +5460,7 @@ c outgoing parton #4 (massless)
          endif
       endif
 
-      if(xiPY6Q.le.0d0)then
+      if(xiPY6Q.lt.0d0)then
          write(*,*)'xiPY6Q out of range',xiPY6Q
          stop
       endif
@@ -5814,7 +5814,7 @@ c outgoing parton #4 (massless)
          endif
       endif
 
-      if(zPY8.le.0d0.or.zPY8.ge.1d0)then
+      if(zPY8.lt.0d0.or.zPY8.gt.1d0)then
          write(*,*)'zPY8 out of range',zPY8
          stop
       endif
@@ -5892,7 +5892,7 @@ c outgoing parton #4 (massless)
          endif
       endif
 
-      if(xiPY8.le.0d0)then
+      if(xiPY8.lt.0d0)then
          write(*,*)'xiPY8 out of range',xiPY8
          stop
       endif
