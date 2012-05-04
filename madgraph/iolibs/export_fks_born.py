@@ -288,6 +288,7 @@ class ProcessExporterFortranFKS_born(loop_exporters.LoopProcessExporterFortranSA
                      'reweight.inc',
                      'reweight0.inc',
                      'reweight1.inc',
+                     'reweightNLO.inc',
                      'reweight_all.inc',
                      'reweight_events.f',
                      'reweight_xsec.f',
