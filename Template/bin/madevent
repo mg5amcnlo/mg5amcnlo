@@ -33,18 +33,44 @@ root_path = os.path.dirname(os.path.realpath( __file__ ))
 sys.path.insert(0, root_path)
 
 
+
+class MyOptParser(optparse.OptionParser):
+    
+    class InvalidOption(Exception): pass
+
+    def error(self, msg=''):
+        raise MyOptParser.InvalidOption(msg)
+
+
+
+
 # Write out nice usage message if called with -h or --help
 usage = "usage: %prog [options] [FILE] "
-parser = optparse.OptionParser(usage=usage)
+parser = MyOptParser(usage=usage)
 parser.add_option("-l", "--logging", default='INFO',
                   help="logging level (DEBUG|INFO|WARNING|ERROR|CRITICAL) [%default]")
-parser.add_option("-f", "--file", default='',
-                    help="Use script file FILE")
 parser.add_option("","--web", action="store_true", default=False, dest='web', \
                  help='force to be in secure mode')
 parser.add_option("","--debug", action="store_true", default=False, dest='debug', \
                  help='force to launch debug mode')
-(options, args) = parser.parse_args()
+parser_error = ''
+done = False
+for i in range(len(sys.argv)-1):
+    try:
+        (options, args) = parser.parse_args(sys.argv[1:len(sys.argv)-i])
+        done = True
+    except MyOptParser.InvalidOption, error:
+        pass 
+    else:
+        args += sys.argv[len(sys.argv)-i:]
+if not done:
+    # raise correct error:
+    try:
+        (options, args) = parser.parse_args()
+    except MyOptParser.InvalidOption, error:
+        print error
+        sys.exit(2)  
+
 if len(args) == 0:
     args = ''
 
@@ -115,25 +141,33 @@ import internal.madevent_interface as cmd_interface
 
 # Call the cmd interface main loop
 try:
-    if options.file or args:
+    if (args and os.path.exists(args[0])):
         # They are an input file 
-        if args:
-            input_file = args[0]
-        else:
-            input_file = options.file
+        input_file = args[0]
         if options.web:
             cmd_line = cmd_interface.MadEventCmd()
             cmd_line.debug_output = os.path.join(os.path.dirname(input_file),'generation.log')
             cmd_line.use_rawinput = False
             cmd_line.run_cmd('import command ' + input_file)
-            cmd_line.run_cmd('quit')
-            sys.exit()
+            cmd_line.run_cmd('quit')      
         else:
             cmd_line = cmd_interface.MadEventCmdShell()
             cmd_line.use_rawinput = False
             cmd_line.run_cmd('import command ' + input_file)
             cmd_line.run_cmd('quit')
-            sys.exit()
+    elif args:
+        # a single command is provided
+        cmd_line = cmd_interface.MadEventCmd()
+        if not hasattr(cmd_line, 'do_%s' % args[0]):
+            if parser_error:
+                print parser_error
+                print 'and %s  can not be interpreted as a valid command.' % args[0]
+            else:
+                print 'ERROR: %s  not a valid command. Please retry' % args[0]
+        else:
+            cmd_line.use_rawinput = False    
+            cmd_line.run_cmd(' '.join(args))
+            cmd_line.run_cmd('quit')
     else:
         # Interactive mode
         if options.web:
