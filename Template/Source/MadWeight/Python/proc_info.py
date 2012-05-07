@@ -116,6 +116,11 @@ class Decay_info:
                 if topo[leg]['daughters'][0]>0:particles_from_HI.append(topo[leg]['daughters'][0]) 
                 if topo[leg]['daughters'][1]>0:particles_from_HI.append(topo[leg]['daughters'][1]) 
                 continue 
+
+            # consider T-channel here
+            if topo[leg]['channel']=='T':
+                if topo[leg]['daughters'][0]>0:particles_from_HI.append(topo[leg]['daughters'][0])
+                if topo[leg]['daughters'][1]>0:particles_from_HI.append(topo[leg]['daughters'][1])
             # I also need to check if we have A(virtual) > A(real) + B
             if decay_item[leg].pid[0]==decay_item[leg].des[0].pid[0] or decay_item[leg].pid[0]==decay_item[leg].des[1].pid[0]:
                 decay_item[leg].des[0].mother=0
