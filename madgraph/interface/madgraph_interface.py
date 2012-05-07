@@ -895,7 +895,7 @@ This will take effect only in a NEW terminal
                     raise self.invalidCmd('%s is not allowed in the output path' % char)
             # Check for special directory treatment
             if path == 'auto' and self._export_format in \
-                     ['madevent', 'standalone', 'standalone_cpp']:
+                     ['madevent', 'madweight', 'standalone', 'standalone_cpp']:
                 self.get_default_path()
             elif path != 'auto':
                 self._export_dir = path
@@ -1636,8 +1636,6 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
     _import_formats = ['model_v4', 'model', 'proc_v4', 'command', 'banner']
     _install_opts = ['pythia-pgs', 'Delphes', 'MadAnalysis', 'ExRootAnalysis']
     _v4_export_formats = ['madevent', 'standalone', 'matrix', 'madweight'] 
-    _export_formats = _v4_export_formats + ['standalone_cpp', 'pythia8', 'aloha']
-    _v4_export_formats = ['madevent', 'standalone', 'matrix'] 
     _export_formats = _v4_export_formats + ['standalone_cpp', 'pythia8', 'aloha']
     _set_options = ['group_subprocesses',
                     'ignore_six_quark_processes',
