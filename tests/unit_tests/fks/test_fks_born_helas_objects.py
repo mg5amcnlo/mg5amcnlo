@@ -421,25 +421,15 @@ class testFKSBornHelasObjects(unittest.TestCase):
         fksleglist[3]['fks']='j'
         fksleglist[4]['fks']='i'
         
-        real_proc = fks_born.FKSRealProcess(fks3.born_proc, fksleglist,\
-                                            4,0,amplist, amp_id_list)
+        real_proc = fks_born.FKSRealProcess(fks3.born_proc, fksleglist, 4, 0)
+        real_proc.generate_real_amplitude()
         helas_real_proc = fks_born_helas.FKSHelasRealProcess(real_proc, me_list, me_id_list)
-        self.assertEqual(helas_real_proc.i_fks, 5)
-        self.assertEqual(helas_real_proc.j_fks, 4)
-        self.assertEqual(helas_real_proc.ij, 4)
-        self.assertEqual(helas_real_proc.ijglu, 0)
-##        self.assertEqual(len(helas_real_proc.permutation), 5)
-##        self.assertEqual(helas_real_proc.permutation, [1, 2, 4, 3, 5 ])
-##        self.assertEqual(helas_real_proc.permutation, real_proc.permutation)
-        #self.assertEqual(len(me_list), 1)
-        #self.assertEqual(len(me_id_list), 1)
+        self.assertEqual(helas_real_proc.fks_infos,
+                [{'i':5, 'j':4, 'ij':4, 'ij_glu':0, 'need_color_links': True}])
         target_me = helas_objects.HelasMatrixElement(real_proc.amplitude)
         self.assertEqual(helas_real_proc.matrix_element, target_me)
         self.assertEqual(helas_real_proc.matrix_element.get('color_matrix'), 
                          target_me.get('color_matrix'))
-        #self.assertEqual(me_list[0],
-        #                helas_objects.HelasMatrixElement(real_proc.amplitude))
-##        self.assertEqual(me_id_list[0], array.array('i',[1 ,-1, -2,2,21]))
         
         
     def test_fks_helas_process_from_born_init(self):
@@ -463,12 +453,8 @@ class testFKSBornHelasObjects(unittest.TestCase):
         me_id_list3=[]
         res_me_list=[]
         res_me_id_list=[]
-        amp_list=[]
-        amp_id_list=[]
-        amp_list3=[]
-        amp_id_list3=[]
-        fks1.generate_reals(amp_list, amp_id_list)
-        fks3.generate_reals(amp_list3, amp_id_list3)
+        fks1.generate_reals()
+        fks3.generate_reals()
 
 
         helas_born_proc = fks_born_helas.FKSHelasProcessFromBorn(
@@ -504,8 +490,6 @@ class testFKSBornHelasObjects(unittest.TestCase):
         me_id_list=[]
         res_me_list=[]
         res_me_id_list=[]
-        amp_list=[]
-        amp_id_list=[]
         
         #ug> ug
         fks1 = fks_born.FKSProcessFromBorn(self.myproc1)
@@ -514,8 +498,8 @@ class testFKSBornHelasObjects(unittest.TestCase):
         #uu~> dd~
         fks3 = fks_born.FKSProcessFromBorn(self.myproc3)
         
-        fks1.generate_reals(amp_list, amp_id_list)
-        fks2.generate_reals(amp_list, amp_id_list)
+        fks1.generate_reals()
+        fks2.generate_reals()
         helas_born_proc1 = copy.deepcopy(fks_born_helas.FKSHelasProcessFromBorn(
                                     fks1, me_list, me_id_list))
         helas_born_proc2 = copy.deepcopy(fks_born_helas.FKSHelasProcessFromBorn(

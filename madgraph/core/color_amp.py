@@ -184,6 +184,7 @@ class ColorBasis(dict):
                 continue
             
             # Build the new element
+            assert type(col_str) == color_algebra.ColorString 
             mod_col_str = col_str.create_copy()
 
             # Replace summed (negative) internal indices

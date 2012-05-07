@@ -586,6 +586,8 @@ class ColorString(list):
         of coeff, is_imaginary and Nc_power"""
 
         if init_list:
+            for obj in init_list:
+                assert type(obj) != array.array
             self.extend(init_list)
         self.coeff = coeff
         self.is_imaginary = is_imaginary
@@ -729,6 +731,7 @@ class ColorString(list):
 
         res = ColorString()
         for col_obj in self:
+            assert type(col_obj) != array.array
             res.append(col_obj.create_copy())
         res.coeff = self.coeff
         res.is_imaginary = self.is_imaginary

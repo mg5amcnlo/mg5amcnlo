@@ -339,23 +339,10 @@ class FKSHelasRealProcess(object): #test written
         if fksrealproc != None:
             self.isfinite = False
             self.colors = fksrealproc.colors
- ##           self.permutation= fksrealproc.permutation
-            self.i_fks = fksrealproc.i_fks
-            self.j_fks = fksrealproc.j_fks
-            self.ijglu = fksrealproc.ijglu
-            self.ij = fksrealproc.ij
-            self.need_color_links = fksrealproc.need_color_links
+            self.fks_infos = fksrealproc.fks_infos
+            print self.fks_infos
             self.is_to_integrate = fksrealproc.is_to_integrate
-            self.is_nbody_only = fksrealproc.is_nbody_only
-            self.bornfromreal = {}
-       #     print "in FKSHelasRealProc  i ", self.i_fks, "   j ", self.j_fks
-            
-            #try:
-            #    matrix_element = copy.copy(me_list[me_id_list.index(pdgs)])
-            #    matrix_element.set('processes', 
-            #                       copy.copy(matrix_element.get('processes')))
-            #    self.matrix_element = matrix_element
-            #except ValueError:
+
             self.matrix_element = helas_objects.HelasMatrixElement(
                                     fksrealproc.amplitude, **opts)
             #generate the color for the real

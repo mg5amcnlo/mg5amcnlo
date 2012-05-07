@@ -83,8 +83,8 @@ class IOExportBornFKSTest(unittest.TestCase,
     myfksmulti = fks_born.FKSMultiProcessFromBorn(\
             {'process_definitions': my_process_definitions})
     
-    myfks_me = fks_born_helas.FKSHelasMultiProcessFromBorn(\
-            myfksmulti)['matrix_elements'][0]
+#    myfks_me = fks_born_helas.FKSHelasMultiProcessFromBorn(\
+#           myfksmulti)['matrix_elements'][0]
 
     def setUp(self):
 

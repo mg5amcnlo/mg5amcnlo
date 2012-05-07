@@ -72,12 +72,10 @@ class FKSMultiProcessFromBorn(diagram_generation.MultiProcess): #test written
 
         super(FKSMultiProcessFromBorn, self).__init__(*arguments)   
         amps = self.get('amplitudes')
-        real_amplist = []
-        real_amp_id_list = []
         for amp in amps:
             born = FKSProcessFromBorn(amp)
             self['born_processes'].append(born)
-            born.generate_reals(real_amplist, real_amp_id_list)
+            born.generate_reals()
 
         if self['process_definitions'][0].get('NLO_mode') == 'all':
             logger.info('Generating virtual matrix elements:')
@@ -139,31 +137,33 @@ class FKSMultiProcessFromBorn(diagram_generation.MultiProcess): #test written
 
 class FKSRealProcess(object): 
     """Contains information about a real process:
-    -- i/j/ij fks (ij refers to the born leglist)
-    -- ijglu
+    -- fks_infos (list containing the possible fks configs for a given process
     -- amplitude 
     -- is_to_integrate
-    -- need_color_links
     -- leg permutation<<REMOVED!.
     """
     
-    def __init__(self, born_proc, leglist, ij, ijglu, amplist, amp_id_list,
+    def __init__(self, born_proc, leglist, ij, ijglu,
                  perturbed_orders = ['QCD']): #test written
-        """Initializes the real process based on born_proc and leglist,
-        then checks if the amplitude has already been generated before in amplist,
-        if not it generates the amplitude and appends to amplist.
-        amp_id_list contains the arrays of the pdg codes of the amplitudes in amplist.
+        """Initializes the real process based on born_proc and leglist.
+        Stores the fks informations into the list of dictionaries fks_infos
         """      
+        self.fks_infos = []
+
         for leg in leglist:
             if leg.get('fks') == 'i':
-                self.i_fks = leg.get('number')
-                self.need_color_links = leg.get('massless') \
+                i_fks = leg.get('number')
+                need_color_links = leg.get('massless') \
                         and leg.get('spin') == 3 \
                         and leg.get('color') == 8
             if leg.get('fks') == 'j':
-                self.j_fks = leg.get('number')
-        self.ijglu = ijglu
-        self.ij = ij
+                j_fks = leg.get('number')
+        self.fks_infos.append({'i' : i_fks, 
+                               'j' : j_fks, 
+                               'ij' : ij, 
+                               'ij_glu': ijglu, 
+                               'need_color_links' : need_color_links})
+
         self.process = copy.copy(born_proc)
         orders = copy.copy(born_proc.get('orders'))
         for order in perturbed_orders:
@@ -174,14 +174,19 @@ class FKSRealProcess(object):
                 orders['WEIGHTED'] +=2
 
         self.process.set('orders', orders)
+
         legs = [(leg.get('id'), leg) for leg in leglist]
-        pdgs = array.array('i',[s[0] for s in legs]) 
-        self.process.set('legs', MG.LegList(leglist))
-        self.amplitude = diagram_generation.Amplitude(self.process)
-        self.pdgs = pdgs
+        self.pdgs = array.array('i',[s[0] for s in legs]) 
         self.colors = [leg['color'] for leg in leglist]
+        self.process.set('legs', MG.LegList(leglist))
+        self.amplitude = diagram_generation.Amplitude()
         self.is_to_integrate = True
         self.is_nbody_only = False
+
+
+    def generate_real_amplitude(self):
+        """generates the real emission amplitude starting from self.process"""
+        self.amplitude = diagram_generation.Amplitude(self.process)
 
 
     def find_fks_j_from_i(self): #test written
@@ -203,12 +208,20 @@ class FKSRealProcess(object):
 
         
     def get_leg_i(self): #test written
-        """Returns leg corresponding to i_fks."""
-        return self.process.get('legs')[self.i_fks - 1]
+        """Returns leg corresponding to i fks.
+        An error is raised if the fks_infos list has more than one entry"""
+        if len(self.fks_infos) > 1:
+            raise fks_common.FKSProcessError(), \
+                    'get_leg_i should only be called before combining processes'
+        return self.process.get('legs')[self.fks_infos[0]['i'] - 1]
 
     def get_leg_j(self): #test written
-        """Returns leg corresponding to j_fks."""
-        return self.process.get('legs')[self.j_fks - 1]
+        """Returns leg corresponding to j fks.
+        An error is raised if the fks_infos list has more than one entry"""
+        if len(self.fks_infos) > 1:
+            raise fks_common.FKSProcessError(), \
+                    'get_leg_j should only be called before combining processes'
+        return self.process.get('legs')[self.fks_infos[0]['j'] - 1]
 
 
 class FKSProcessFromBornList(MG.PhysicsObjectList):
@@ -282,15 +295,6 @@ class FKSProcessFromBorn(object):
             self.find_color_links()
 
 
-    def link_rb_confs(self):
-        """lLinks the configurations of the born amp with those of the real amps.
-        Uses the function defined in fks_common.
-        """
-        links = [fks_common.link_rb_conf(self.born_amp, real.amplitude, 
-                                         real.i_fks, real.j_fks, real.ij) \
-                            for real in self.real_amps]
-        return links
-
 
     def find_color_links(self): #test written
         """Finds all the possible color links between two legs of the born.
@@ -299,12 +303,36 @@ class FKSProcessFromBorn(object):
         self.color_links = fks_common.find_color_links(self.leglist)
         return self.color_links
 
+
+    def generate_real_amplitudes(self):
+        """generates the real amplitudes for all the real emission processes"""
+        for amp in self.real_amps:
+            amp.generate_real_amplitude()
+
+
+    def combine_real_amplitudes(self):
+        """combines real emission processes if the pdgs are the same, combining the lists 
+        of fks_infos"""
+        pdgs = []
+        real_amps = []
+        old_real_amps = copy.deepcopy(self.real_amps)
+        for amp in old_real_amps:
+            try:
+                real_amps[pdgs.index(amp.pdgs)].fks_infos.extend(amp.fks_infos)
+            except ValueError:
+                real_amps.append(amp)
+                pdgs.append(amp.pdgs)
+
+        self.real_amps = real_amps
+
+
         
-    def generate_reals(self, amplist, amp_id_list): #test written
-        """For all the possible splittings, creates an FKSRealProcess, keeping
-        track of all the already generated processes through amplist and amp_id_list
+    def generate_reals(self, combine=True): #test written
+        """For all the possible splittings, creates an FKSRealProcess.
         It removes double counted configorations from the ones to integrates and
         sets the one which includes the bosn (is_nbody_only).
+        if combine is true, FKS_real_processes having the same pdgs (i.e. real amplitude)
+        are combined together
         """
 
         for i, list in enumerate(self.reals):
@@ -315,9 +343,12 @@ class FKSProcessFromBorn(object):
             for l in list:
                 ij = self.leglist[i].get('number')
                 self.real_amps.append(FKSRealProcess( \
-                        self.born_proc, l, ij, ijglu, amplist, amp_id_list))
+                        self.born_proc, l, ij, ijglu))
         self.find_reals_to_integrate()
-        self.find_real_nbodyonly()
+        if combine:
+            self.combine_real_amplitudes()
+        self.generate_real_amplitudes()
+#        self.find_real_nbodyonly()
 
 
     def find_reals(self, pert_order):
@@ -344,8 +375,15 @@ class FKSProcessFromBorn(object):
             for n in range(m + 1, ninit):
                 real_m = self.real_amps[m]
                 real_n = self.real_amps[n]
-                if real_m.j_fks > self.nincoming and \
-                   real_n.j_fks > self.nincoming:
+                if len(real_m.fks_infos) > 1 or len(real_m.fks_infos) > 1:
+                    raise fks_common.FKSProcessError(), \
+                    'find_reals_to_integrate should only be called before combining processes'
+
+                i_m = real_m.fks_infos[0]['i']
+                j_m = real_m.fks_infos[0]['j']
+                i_n = real_n.fks_infos[0]['i']
+                j_n = real_n.fks_infos[0]['j']
+                if j_m > self.nincoming and j_n > self.nincoming:
                     if (real_m.get_leg_i()['id'] == real_n.get_leg_i()['id'] \
                         and \
                         real_m.get_leg_j()['id'] == real_n.get_leg_j()['id']) \
@@ -353,18 +391,16 @@ class FKSProcessFromBorn(object):
                        (real_m.get_leg_i()['id'] == real_n.get_leg_j()['id'] \
                         and \
                         real_m.get_leg_j()['id'] == real_n.get_leg_i()['id']):
-                        if real_m.i_fks > real_n.i_fks:
+                        if i_m > i_n:
                             self.real_amps[n].is_to_integrate = False
-                        elif real_m.i_fks == real_n.i_fks and \
-                             real_m.j_fks > real_n.j_fks:
+                        elif i_m == i_n and j_m > j_n:
                             self.real_amps[n].is_to_integrate = False
                         else:
                             self.real_amps[m].is_to_integrate = False
-                elif real_m.j_fks <= self.nincoming and \
-                     real_n.j_fks == real_m.j_fks:
+                elif j_m <= self.nincoming and j_n == j_m:
                     if real_m.get_leg_i()['id'] == real_n.get_leg_i()['id'] and \
                        real_m.get_leg_j()['id'] == real_n.get_leg_j()['id']:
-                        if real_m.i_fks > real_n.i_fks:
+                        if i_m > i_n:
                             self.real_amps[n].is_to_integrate = False
                         else:
                             self.real_amps[m].is_to_integrate = False
@@ -376,37 +412,3 @@ class FKSProcessFromBorn(object):
             self.real_amps = newreal_amps
 
     
-    def find_real_nbodyonly(self):
-        """Finds the real emission configuration that includes the nbody contribution
-        in the virt0 and born0 running mode. By convention it is the real emission 
-        that has the born legs + 1 extra particle (gluon if pert==QCD) and for
-        which i/j_fks are the largest.
-        """
-        imax = 0
-        jmax = 0
-        chosen = - 1
-        for n, real in enumerate(self.real_amps):
-            equal_legs = 0
-            born_pdgs = copy.copy(self.pdg_codes)
-            real_pdgs = list(copy.copy(real.pdgs))
-            
-            if born_pdgs[:self.nincoming] == real_pdgs[:self.nincoming]: 
-                #same initial state:
-                same_parts = True
-                for p in born_pdgs:
-                    try:
-                        real_pdgs.remove(p)
-                    except:
-                        same_parts = False
-                        break
-                if same_parts and real.i_fks >= imax and real.j_fks >= jmax and \
-                        real.is_to_integrate:
-                    chosen = n
-        
-        if chosen >= 0:
-            self.real_amps[chosen].is_nbody_only = True
-        else:
-            raise fks_common.FKSProcessError, \
-                  "%s \n Error, nbodyonly configuration not found" % \
-                  self.born_proc.input_string()
-            
