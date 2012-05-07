@@ -64,7 +64,7 @@ def find_ufo_path(model_name):
     elif os.path.isdir(model_name):
         model_path = model_name
     else:
-        raise InvalidModel("Path %s is not a valid pathname" % model_name)
+        raise UFOImportError("Path %s is not a valid pathname" % model_name)
 
     return model_path
 

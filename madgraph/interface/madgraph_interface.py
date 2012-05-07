@@ -24,6 +24,7 @@ import pydoc
 import re
 import subprocess
 import sys
+import shutil
 import traceback
 import time
 
@@ -1185,7 +1186,7 @@ class CompleteForCmd(cmd.CompleteCmd):
             return self.list_completion(text, self._display_opts)
 
         if len(args) == 2 and args[1] == 'checks':
-            return self.list_completion(text, 'failed')
+            return self.list_completion(text, ['failed'])
 
         if len(args) == 2 and args[1] == 'particles':
             return self.model_completion(text, line[begidx:])
@@ -1373,7 +1374,7 @@ class CompleteForCmd(cmd.CompleteCmd):
         
         
         # options
-        options = ['--format=Fortran', '--format=Python','--format=Cpp','--output=']
+        options = ['--format=Fortran', '--format=Python','--format=CPP','--output=']
         options = self.list_completion(text, options)
         if options:
             completion_categories['options'] = options
@@ -1896,7 +1897,6 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
                 # check if a particle is asked more than once
                 if len(request_part) > len(set(request_part)):
                     for p in request_part:
-                        print p, request_part.count(p),present_part.count(p)
                         if request_part.count(p) > present_part.count(p):
                             continue
                         
@@ -2820,14 +2820,16 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
                 path = os.path.join(MG5DIR, 'pythia-pgs', 'src', 'make_opts')
                 text = open(path).read()
                 text = text.replace('FC=g77','FC=gfortran')
-                open(path, 'w').writelines(text)            
+                open(path, 'w').writelines(text)    
             elif compiler == 'gfortran' and args[0] == 'MadAnalysis':
                 path = os.path.join(MG5DIR, 'MadAnalysis', 'makefile')
                 text = open(path).read()
-                text = text.replace('F77 = g77','F77 = gfortran')
-                open(path, 'w').writelines(text)            
-        if logger.level <= logging.INFO: 
-            misc.call(['make', 'clean'], )
+                text = text.replace('FC=g77','FC=gfortran')
+                open(path, 'w').writelines(text)
+                            
+        if logger.level <= logging.INFO:
+            devnull = open(os.devnull,'w') 
+            misc.call(['make', 'clean'], stdout=devnull, stderr=-2)
             status = misc.call(['make'], cwd = os.path.join(MG5DIR, name))
         else:
             misc.compile(['clean'], mode='', cwd = os.path.join(MG5DIR, name))
@@ -3208,7 +3210,7 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
         ################
         if self._export_format == 'aloha':
             # catch format
-            format = [d[11:] for d in args if d.startswith('--language=')]
+            format = [d[9:] for d in args if d.startswith('--format=')]
             if not format:
                 format = 'Fortran'
             else:
@@ -3248,6 +3250,8 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
             answer = self.ask('Do you want to continue?', 'y', ['y','n'])
             if answer != 'y':
                 raise self.InvalidCmd('Stopped by user request')
+            else:
+                shutil.rmtree(self._export_dir)
 
         #check if we need to group processes
         group_subprocesses = False

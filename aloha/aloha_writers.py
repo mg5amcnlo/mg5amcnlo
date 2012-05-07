@@ -42,7 +42,7 @@ class WriteALOHA:
         
         self.offshell = abstract_routine.outgoing # position id of the outgoing        
         self.outgoing = self.offshell             # expected position for the outgoing
-        if 'C%s' %((self.outgoing + 1) // 2) in self.tag:
+        if 'C%s' %((self.outgoing + 1) // 2) in self.routine.tag:
             #flip the outgoing tag if in conjugate
             self.outgoing = self.outgoing + self.outgoing % 2 - (self.outgoing +1) % 2
             
@@ -61,7 +61,7 @@ class WriteALOHA:
             return  4 * indices[0] + indices[1] + start 
         else:
             raise Exception, 'WRONG CONTRACTION OF LORENTZ OBJECT for routine %s: %s' \
-                    % (self.namestring, indices)                                 
+                    % (self.routine.name, indices)                                 
                                  
     def define_header(self): 
         """ Prototype for language specific header""" 
@@ -193,7 +193,7 @@ class WriteALOHA:
 
         call_arg = [] #incoming argument of the routine
 
-        conjugate = [2*(int(c[1:])-1) for c in self.tag if c[0] == 'C']
+        conjugate = [2*(int(c[1:])-1) for c in self.routine.tag if c[0] == 'C']
         
         for index,spin in enumerate(self.particles):
             if self.offshell == index + 1:
@@ -243,7 +243,7 @@ class WriteALOHA:
         else:
             global_sign = -1
         
-        flipped = [2*(int(c[1:])-1) for c in self.tag if c.startswith('C')]
+        flipped = [2*(int(c[1:])-1) for c in self.routine.tag if c.startswith('C')]
 #        if self.offshell % 2:
 #             not_flip = self.offshell - 1
 #             if not_flip in flipped:
@@ -312,7 +312,7 @@ class ALOHAWriterForFortran(WriteALOHA):
         """
         
         if not name:
-            name = self.namestring
+            name = self.routine.name
              
         Momenta = self.collected['momenta']
         OverM = self.collected['om']
@@ -417,7 +417,7 @@ class ALOHAWriterForFortran(WriteALOHA):
             sign = 1
             if self.offshell == index and type in ['V','S']:
                 sign = -1
-            if 'C%s' % ((index +1) // 2)  in self.tag: 
+            if 'C%s' % ((index +1) // 2)  in self.routine.tag: 
                 if index == self.outgoing:
                     pass
                 elif index % 2 and index -1 != self.outgoing:
@@ -525,7 +525,7 @@ class ALOHAWriterForFortran(WriteALOHA):
         number = self.offshell 
         calls = self.calllist['CallList']
                                                                 
-        Outstring = 'call '+self.namestring+'('+','.join(calls)+',COUP,M%s,W%s,%s%s)\n' \
+        Outstring = 'call '+self.routine.name+'('+','.join(calls)+',COUP,M%s,W%s,%s%s)\n' \
                          %(number,number,self.particles[number-1],number)
         return Outstring
     
@@ -543,7 +543,7 @@ class ALOHAWriterForFortran(WriteALOHA):
         sym_text = []
         for elem in self.symmetries: 
             symmetryhead = self.define_header().replace( \
-                             self.namestring,self.namestring[0:-1]+'%s' %(elem))
+                             self.routine.name,self.routine.name[0:-1]+'%s' %(elem))
             symmetrybody = self.define_symmetry(elem)
             
             sym_text.append(symmetryhead + symmetrybody + self.define_foot())
@@ -576,7 +576,7 @@ class ALOHAWriterForFortran(WriteALOHA):
         else:
             sym = None  # deactivate symetry
             
-        name = combine_name(self.abstractname, lor_names, offshell, self.tag)
+        name = combine_name(self.abstractname, lor_names, offshell, self.routine.tag)
 
                  
         # write header 
@@ -591,14 +591,14 @@ class ALOHAWriterForFortran(WriteALOHA):
             text += ' double complex TMP(%s)\n integer i' % self.type_to_size[spin]         
         
         # Define which part of the routine should be called
-        addon = ''.join(self.tag) + '_%s' % self.offshell
+        addon = ''.join(self.routine.tag) + '_%s' % self.offshell
         
-#        if 'C' in self.namestring:
+#        if 'C' in self.routine.name:
 #            short_name, addon = name.split('C',1)
 #            if addon.split('_')[0].isdigit():
-#                addon = 'C' +self.namestring.split('C',1)[1]
+#                addon = 'C' +self.routine.name.split('C',1)[1]
 #            elif all([n.isdigit() for n in addon.split('_')[0].split('C')]):
-#                addon = 'C' +self.namestring.split('C',1)[1]
+#                addon = 'C' +self.routine.name.split('C',1)[1]
 #            else:
 #                addon = '_%s' % self.offshell
 #        else:
@@ -624,7 +624,7 @@ class ALOHAWriterForFortran(WriteALOHA):
 
         # make the first call
         line = " CALL %s%s("+call_arg+")\n"
-        text += '\n\n' + line % (self.namestring, '', 1, main)
+        text += '\n\n' + line % (self.routine.name, '', 1, main)
         
         # make the other call
         for i,lor in enumerate(lor_names):
@@ -734,7 +734,7 @@ class ALOHAWriterForCPP(WriteALOHA):
         """
         
         if name is None:
-            name = self.namestring
+            name = self.routine.name
             
         #Width = self.collected['width']
         #Mass = self.collected['mass']
@@ -820,7 +820,7 @@ class ALOHAWriterForCPP(WriteALOHA):
             sign = 1
             if self.offshell == index and type in ['V', 'S']:
                 sign = -1
-            if 'C%s' % ((index +1) // 2)  in self.tag: 
+            if 'C%s' % ((index +1) // 2)  in self.routine.tag: 
                 if index == self.outgoing:
                     pass
                 elif index % 2 and index -1 != self.outgoing:
@@ -928,7 +928,7 @@ class ALOHAWriterForCPP(WriteALOHA):
         #calls = [self.remove_double.match(call).group('name') for call in \
         #         calls]
         number = self.offshell 
-        Outstring = self.namestring+'('+','.join(calls)+',COUP,M%s,W%s,%s%s);\n' \
+        Outstring = self.routine.name+'('+','.join(calls)+',COUP,M%s,W%s,%s%s);\n' \
                          %(number,number,self.particles[self.offshell-1],number)
         return Outstring
     
@@ -942,8 +942,8 @@ class ALOHAWriterForCPP(WriteALOHA):
 
         h_string = ''
         if compiler_cmd:
-            h_string = '#ifndef '+ self.namestring + '_guard\n'
-            h_string += '#define ' + self.namestring + '_guard\n'
+            h_string = '#ifndef '+ self.routine.name + '_guard\n'
+            h_string += '#define ' + self.routine.name + '_guard\n'
             h_string += '#include <complex>\n'
             h_string += 'using namespace std;\n\n'
 
@@ -953,7 +953,7 @@ class ALOHAWriterForCPP(WriteALOHA):
 
         for elem in self.symmetries: 
             symmetryhead = h_header.replace( \
-                             self.namestring,self.namestring[0:-1]+'%s' %(elem))
+                             self.routine.name,self.routine.name[0:-1]+'%s' %(elem))
             h_string += symmetryhead
 
         if compiler_cmd:
@@ -964,7 +964,7 @@ class ALOHAWriterForCPP(WriteALOHA):
     def write_combined_h(self, lor_names, offshell=None, compiler_cmd=True):
         """Return the content of the .h file linked to multiple lorentz call."""
         
-        name = combine_name(self.abstractname, lor_names, offshell, self.tag)
+        name = combine_name(self.abstractname, lor_names, offshell, self.routine.tag)
         text= ''
         if compiler_cmd:
             text = '#ifndef '+ name + '_guard\n'
@@ -992,7 +992,7 @@ class ALOHAWriterForCPP(WriteALOHA):
 
         cc_string = ''
         if compiler_cmd:
-            cc_string = '#include \"%s.h\"\n\n' % self.namestring
+            cc_string = '#include \"%s.h\"\n\n' % self.routine.name
         cc_header = header['cc_header']
         cc_string += cc_header
         cc_string += self.define_momenta()
@@ -1001,7 +1001,7 @@ class ALOHAWriterForCPP(WriteALOHA):
 
         for elem in self.symmetries: 
             symmetryhead = cc_header.replace( \
-                             self.namestring,self.namestring[0:-1]+'%s' %(elem))
+                             self.routine.name,self.routine.name[0:-1]+'%s' %(elem))
             symmetrybody = self.define_symmetry(elem)
             cc_string += symmetryhead
             cc_string += symmetrybody
@@ -1016,7 +1016,7 @@ class ALOHAWriterForCPP(WriteALOHA):
         if offshell is None:
             offshell = self.offshell
             
-        name = combine_name(self.abstractname, lor_names, offshell, self.tag)
+        name = combine_name(self.abstractname, lor_names, offshell, self.routine.tag)
 
         text = ''
         if compiler_cmd:
@@ -1035,12 +1035,12 @@ class ALOHAWriterForCPP(WriteALOHA):
 
         # Define which part of the routine should be called
         addon = ''
-        if 'C' in self.namestring:
+        if 'C' in self.routine.name:
             short_name, addon = name.split('C',1)
             if addon.split('_')[0].isdigit():
-                addon = 'C' +self.namestring.split('C',1)[1]
+                addon = 'C' +self.routine.name.split('C',1)[1]
             elif all([n.isdigit() for n in addon.split('_')[0].split('C')]):
-                addon = 'C' +self.namestring.split('C',1)[1]
+                addon = 'C' +self.routine.name.split('C',1)[1]
             else:
                 addon = '_%s' % self.offshell
         else:
@@ -1066,7 +1066,7 @@ class ALOHAWriterForCPP(WriteALOHA):
 
         # make the first call
         line = "%s%s("+call_arg+");\n"
-        text += '\n\n' + line % (self.namestring, '', 1, main)
+        text += '\n\n' + line % (self.routine.name, '', 1, main)
         
         # make the other call
         for i,lor in enumerate(lor_names):
@@ -1136,7 +1136,7 @@ class ALOHAWriterForCPP(WriteALOHA):
         if offshell is None:
             offshell = self.offshell
         
-        name = combine_name(self.abstractname, lor_names, offshell, self.tag)
+        name = combine_name(self.abstractname, lor_names, offshell, self.routine.tag)
         
         h_text = self.write_combined_h(lor_names, offshell, **opt)
         cc_text = self.write_combined_cc(lor_names, offshell, sym=True, **opt)
@@ -1248,7 +1248,7 @@ class ALOHAWriterForPython(WriteALOHA):
             - definition of variable
         """
         if name is None:
-            name = self.namestring
+            name = self.routine.name
            
         Momenta = self.collected['momenta']
         OverM = self.collected['om']
@@ -1312,7 +1312,7 @@ class ALOHAWriterForPython(WriteALOHA):
             if self.offshell == index and type in ['V','S']:
                 sign = -1
 
-            if 'C%s' % ((index +1) // 2)  in self.tag: 
+            if 'C%s' % ((index +1) // 2)  in self.routine.tag: 
                 if index == self.outgoing:
                     pass
                 elif index % 2 and index -1 != self.outgoing:
@@ -1345,7 +1345,7 @@ class ALOHAWriterForPython(WriteALOHA):
     def define_symmetry(self, new_nb):
         number = self.offshell 
         calls = self.calllist['CallList']
-        Outstring = 'return '+self.namestring+'('+','.join(calls)+',COUP,M%s,W%s)\n' \
+        Outstring = 'return '+self.routine.name+'('+','.join(calls)+',COUP,M%s,W%s)\n' \
                          %(number,number)
         return Outstring        
 
@@ -1366,7 +1366,7 @@ class ALOHAWriterForPython(WriteALOHA):
         
         for elem in self.symmetries:
             text +='\n' + self.define_header().replace( \
-                             self.namestring,self.namestring[0:-1]+'%s' %(elem))
+                             self.routine.name,self.routine.name[0:-1]+'%s' %(elem))
             text += '    ' +self.define_symmetry(elem)
             
             
@@ -1384,7 +1384,7 @@ class ALOHAWriterForPython(WriteALOHA):
             offshell = self.offshell  
         else:
             sym = None
-        name = combine_name(self.abstractname, lor_names, offshell, self.tag)
+        name = combine_name(self.abstractname, lor_names, offshell, self.routine.tag)
 
         # write head - momenta - body - foot
         text = ''
@@ -1402,7 +1402,7 @@ class ALOHAWriterForPython(WriteALOHA):
         text += header
   
         # Define which part of the routine should be called
-        addon = ''.join(self.tag) + '_%s' % self.offshell
+        addon = ''.join(self.routine.tag) + '_%s' % self.offshell
 
         # how to call the routine
         if not offshell:
@@ -1422,7 +1422,7 @@ class ALOHAWriterForPython(WriteALOHA):
 
         # make the first call
         line = "    %s = %s%s("+call_arg+")\n"
-        text += '\n\n' + line % (main, self.namestring, '', 1)
+        text += '\n\n' + line % (main, self.routine.name, '', 1)
         
         # make the other call
         for i,name in enumerate(lor_names):

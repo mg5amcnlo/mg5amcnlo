@@ -11,6 +11,7 @@
 #
 ################################################################################
 from aloha.aloha_object import *
+import aloha.aloha_lib as aloha_lib
 import cmath
 
 class WrongFermionFlow(Exception):
@@ -33,7 +34,7 @@ def check_flow_validity(expression, nb_fermion):
     #expr is now a valid AddVariable object if they are a sum or
     if expr.vartype != 1: # not AddVariable 
         expr = [expr] # put in a list to allow comparison
-    
+
     for term in expr:
         if term.vartype == 0: # Single object
             if not term.spin_ind in [[1,2], [2,1]]:
@@ -45,6 +46,7 @@ def check_flow_validity(expression, nb_fermion):
         elif term.vartype == 2: # product of object
             link, rlink = {}, {}
             for obj in term:
+                obj = aloha_lib.KERNEL.objs[obj]
                 if not obj.spin_ind:
                     continue
                 ind1, ind2 = obj.spin_ind

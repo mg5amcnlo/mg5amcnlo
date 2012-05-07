@@ -108,9 +108,11 @@ class CmdExtended(cmd.Cmd):
     InvalidCmd = InvalidCmd
     ConfigurationError = MadGraph5Error
 
-    
     def __init__(self, *arg, **opt):
         """Init history and line continuation"""
+        
+        # Tag allowing/forbiding question
+        self.force = False
         
         # If possible, build an info line with current version number 
         # and date, from the VERSION text file
@@ -196,7 +198,10 @@ class CmdExtended(cmd.Cmd):
     
     def postcmd(self, stop, line):
         """ Update the status of  the run for finishing interactive command """
-                        
+        
+        # relaxing the tag forbidding question
+        self.force = False
+        
         if not self.use_rawinput:
             return stop
         
@@ -247,7 +252,7 @@ class CmdExtended(cmd.Cmd):
         """If a ME run is currently running add a link in the html output"""
 
         self.add_error_log_in_html()
-        cmd.Cmd.nice_user_error(self, error, line)
+        cmd.Cmd.nice_user_error(self, error, line)            
         
     def nice_config_error(self, error, line):
         """If a ME run is currently running add a link in the html output"""
@@ -527,7 +532,7 @@ class CheckValidForCmd(object):
         if not self.me_dir:
             if not os.path.isfile(args[0]):
                 self.help_open()
-                raise self.InvalidCmd('No MadEvent path defined. Impossible to associate this name to a file')
+                raise self.InvalidCmd('No MadEvent path defined. Unable to associate this name to a file')
             else:
                 return True
             
@@ -585,11 +590,7 @@ class CheckValidForCmd(object):
     def check_generate_events(self, args):
         """check that the argument for generate_events are valid"""
         
-        force = False
         run = None
-        if '-f' in args:
-            force = True
-            args.remove('-f')
         if args and args[-1].startswith('--laststep='):
             run = args[-1].split('=')[-1]
             if run not in ['auto','parton', 'pythia', 'pgs', 'delphes']:
@@ -607,19 +608,16 @@ class CheckValidForCmd(object):
             self.help_generate_events()
             raise self.InvalidCmd('Too many argument for generate_events command: %s' % cmd)
                     
-        return force, run
+        return run
 
     def check_calculate_decay_widths(self, args):
         """check that the argument for calculate_decay_widths are valid"""
         
         if self.ninitial != 1:
             raise self.InvalidCmd('Can only calculate decay widths for decay processes A > B C ...')
-        force = False
+
         accuracy = 0.01
         run = None
-        if '-f' in args:
-            force = True
-            args.remove('-f')
         if args and args[-1].startswith('--accuracy='):
             try:
                 accuracy = float(args[-1].split('=')[-1])
@@ -630,18 +628,14 @@ class CheckValidForCmd(object):
             self.help_calculate_decay_widths()
             raise self.InvalidCmd('Too many argument for calculate_decay_widths command: %s' % cmd)
                     
-        return force, accuracy
+        return accuracy
 
 
 
     def check_multi_run(self, args):
         """check that the argument for survey are valid"""
 
-        force = False
         run = None
-        if '-f' in args:
-            force = True
-            args.remove('-f')
         
         if not len(args):
             self.help_multi_run()
@@ -669,7 +663,7 @@ class CheckValidForCmd(object):
         self.check_survey(args, cmd='multi_run')
         args.insert(0, int(nb_run))
         
-        return force, run
+        return run
 
     def check_refine(self, args):
         """check that the argument for survey are valid"""
@@ -689,7 +683,7 @@ class CheckValidForCmd(object):
             if self.results.lastrun:
                 self.set_run_name(self.results.lastrun)
             else:
-                raise self.InvalidCmd('No run_name currently define. Impossible to run refine')
+                raise self.InvalidCmd('No run_name currently define. Unable to run refine')
 
         if len(args) > 2:
             self.help_refine()
@@ -725,7 +719,7 @@ class CheckValidForCmd(object):
         
         if not self.run_name:
             if not self.results.lastrun:
-                raise self.InvalidCmd('No run_name currently define. Impossible to run combine')
+                raise self.InvalidCmd('No run_name currently define. Unable to run combine')
             else:
                 self.set_run_name(self.results.lastrun)
         
@@ -746,6 +740,20 @@ class CheckValidForCmd(object):
                 raise self.InvalidCmd('invalid %s argument'% args[-1])     
         elif laststep:
             raise self.InvalidCmd('only one laststep argument is allowed')
+     
+        # If not pythia-pgs path
+        if not self.options['pythia-pgs_path']:
+            logger.info('Retry to read configuration file to find pythia-pgs path')
+            self.set_configuration()
+            
+        if not self.options['pythia-pgs_path'] or not \
+            os.path.exists(pjoin(self.options['pythia-pgs_path'],'src')):
+            error_msg = 'No pythia-pgs path correctly set.'
+            error_msg += 'Please use the set command to define the path and retry.'
+            error_msg += 'You can also define it in the configuration file.'
+            raise self.InvalidCmd(error_msg)
+     
+     
      
         tag = [a for a in args if a.startswith('--tag=')]
         if tag: 
@@ -775,19 +783,6 @@ class CheckValidForCmd(object):
         input_file = pjoin(self.me_dir,'Events',self.run_name, 'unweighted_events.lhe')
         output_file = pjoin(self.me_dir, 'Events', 'unweighted_events.lhe')
         os.system('gunzip -c %s > %s' % (input_file, output_file))
-            
-
-        # If not pythia-pgs path
-        if not self.options['pythia-pgs_path']:
-            logger.info('Retry to read configuration file to find pythia-pgs path')
-            self.set_configuration()
-            
-        if not self.options['pythia-pgs_path'] or not \
-            os.path.exists(pjoin(self.options['pythia-pgs_path'],'src')):
-            error_msg = 'No pythia-pgs path correctly set.'
-            error_msg += 'Please use the set command to define the path and retry.'
-            error_msg += 'You can also define it in the configuration file.'
-            raise self.InvalidCmd(error_msg)
         
         args.append(mode)
     
@@ -801,14 +796,6 @@ class CheckValidForCmd(object):
             tag = tag[0]
             tmp_args.remove('--tag=%s' % tag)
 
-        try:
-            tmp_args.remove('-f')
-        except:
-            pass
-        else:
-            if args[0] == '-f':
-                args.pop(0)
-                args.append('-f')
 
         if len(tmp_args) == 0:
             self.help_remove()
@@ -817,7 +804,7 @@ class CheckValidForCmd(object):
             return tmp_args[0], tag, ['all']
         else:
             for arg in tmp_args[1:]:
-                if arg not in self._clean_mode and arg != '-f':
+                if arg not in self._clean_mode:
                     self.help_clean()
                     raise self.InvalidCmd('%s is not a valid options for clean command'\
                                               % arg)
@@ -855,10 +842,6 @@ class CheckValidForCmd(object):
             args.append('all')
             return
 
-        force = False
-        if '-f' in args:
-            args.remove('-f')
-            force = True
         
         if args[0] not in self._plot_mode:
             self.set_run_name(args[0], level='plot')
@@ -873,9 +856,6 @@ class CheckValidForCmd(object):
             if arg not in self._plot_mode and arg != self.run_name:
                  self.help_plot()
                  raise self.InvalidCmd('unknown options %s' % arg)        
-    
-        if force:
-            args.append('-f')
     
     
     def check_pgs(self, arg):
@@ -904,7 +884,7 @@ class CheckValidForCmd(object):
         
         if len(arg) == 0 and not self.run_name:
             if self.results.lastrun:
-                args.insert(0, self.results.lastrun)
+                arg.insert(0, self.results.lastrun)
             else:
                 raise self.InvalidCmd('No run name currently define. Please add this information.')             
         
@@ -1344,9 +1324,9 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
         # Check that the directory is not currently running
         if os.path.exists(pjoin(me_dir,'RunWeb')): 
             message = '''Another instance of madevent is currently running.
-            Please wait that all instance of madevent are closed. If this message
-            is an error in itself, you can suppress the files: 
-            %s.''' % pjoin(me_dir,'RunWeb')
+            Please wait that all instance of madevent are closed. If no
+            instance is running, you can delete the file
+            %s and try again.''' % pjoin(me_dir,'RunWeb')
             raise MadEventAlreadyRunning, message
         else:
             os.system('touch %s' % pjoin(me_dir,'RunWeb'))
@@ -1377,8 +1357,7 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
         # load the current status of the directory
         if os.path.exists(pjoin(self.me_dir,'HTML','results.pkl')):
             self.results = save_load_object.load_from_file(pjoin(self.me_dir,'HTML','results.pkl'))
-            self.results.path = self.me_dir # allowed to move the directory after some launch
-            self.results.resetall()
+            self.results.resetall(self.me_dir)
         else:
             model = self.find_model_name()
             process = self.process # define in find_model_name
@@ -1402,7 +1381,7 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
             elif arg == '-m':
                 self.cluster_mode = 2
             elif arg == '-f':
-                continue
+                self.force = True
             elif not arg.startswith('--'):
                 if error:
                     raise self.InvalidCmd('%s argument cannot start with - symbol' % arg)
@@ -1419,8 +1398,7 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
                 self.web = True
                 self.cluster_mode = 1
                 self.results.def_web_mode(True)
-                if not '-f' in args:
-                    args.append('-f')
+                self.force = True
             else:
                 continue
             args.remove(arg)
@@ -1544,11 +1522,7 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
         
         args = self.split_arg(line)
         #check the validity of the arguments
-        self.check_banner_run(args)
-        if '-f' in args:
-            force = True
-        else:
-            force = False     
+        self.check_banner_run(args)    
              
         banner_mod.split_banner(args[0], self.me_dir, proc_card=False)
         
@@ -1562,13 +1536,13 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
         
         
         # Check if we want to modify the run
-        if not force:
+        if not self.force:
             ans = self.ask('Do you want to modify the Cards?', 'n', ['y','n'])
             if ans == 'n':
-                force = True
+                self.force = True
         
         # Call Generate events
-        self.exec_cmd('generate_events %s %s' % (self.run_name, force and '-f' or ''))
+        self.exec_cmd('generate_events %s %s' % (self.run_name, self.force and '-f' or ''))
  
  
  
@@ -1704,8 +1678,8 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
         
         args = self.split_arg(line)
         # Check argument's validity
-        force, mode = self.check_generate_events(args)
-        self.ask_run_configuration(mode, force)
+        mode = self.check_generate_events(args)
+        self.ask_run_configuration(mode)
         if not args:
             # No run name assigned -> assigned one automaticaly 
             self.set_run_name(self.find_available_run_name(self.me_dir), None, 'parton')
@@ -1748,14 +1722,13 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
             self.exec_cmd('refine %s' % nb_event, postcmd=False)
             self.exec_cmd('refine %s' % nb_event, postcmd=False)
             self.exec_cmd('combine_events', postcmd=False)
+            self.print_results_in_shell(self.results.current)
             self.create_plot('parton')
             self.exec_cmd('store_events', postcmd=False)
             self.exec_cmd('pythia --no_default', postcmd=False, printcmd=False)
             # pythia launches pgs/delphes if needed
             self.store_result()
         
-        self.print_results_in_shell(self.results.current)
-            
             
     def print_results_in_shell(self, data):
         """Have a nice results prints in the shell,
@@ -1767,18 +1740,12 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
         else:
             logger.info("     Cross-section :   %.4g +- %.4g pb" % (data['cross'], data['error']))
         logger.info("     Nb of events :  %s" % data['nb_event'] )
-        if data['cross_pythia']:
-            error = data.get_pythia_error(data['cross'], data['error'], 
-                                        data['cross_pythia'], data['nb_event'])
-            nb_event = 0
-            if data['cross']:
-                nb_event = int(0.5+(data['nb_event'] * data['cross_pythia'] /data['cross']))
-            
+        if data['cross_pythia'] and data['nb_event_pythia']:
             if self.ninitial == 1:
-                logger.info("     Matched Width :   %.4g +- %.4g GeV" % (data['cross_pythia'], error))
+                logger.info("     Matched Width :   %.4g +- %.4g GeV" % (data['cross_pythia'], data['error_pythia']))
             else:
-                logger.info("     Matched Cross-section :   %.4g +- %.4g pb" % (data['cross'], error))            
-            logger.info("     Nb of events after Matching :  %s" % nb_event)
+                logger.info("     Matched Cross-section :   %.4g +- %.4g pb" % (data['cross_pythia'], data['error_pythia']))            
+            logger.info("     Nb of events after Matching :  %s" % data['nb_event_pythia'])
         logger.info(" " )
         
             
@@ -1790,8 +1757,8 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
         
         args = self.split_arg(line)
         # Check argument's validity
-        force, accuracy = self.check_calculate_decay_widths(args)
-        self.ask_run_configuration('parton', force)
+        accuracy = self.check_calculate_decay_widths(args)
+        self.ask_run_configuration('parton')
         if not args:
             # No run name assigned -> assigned one automaticaly 
             self.set_run_name(self.find_available_run_name(self.me_dir))
@@ -1926,8 +1893,8 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
         
         args = self.split_arg(line)
         # Check argument's validity
-        force, mode = self.check_multi_run(args)
-        self.ask_run_configuration(mode, force)
+        mode = self.check_multi_run(args)
+        self.ask_run_configuration(mode)
         main_name = self.run_name
         nb_run = args.pop(0)
         crossoversig = 0
@@ -1943,8 +1910,12 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
             crossoversig+=cross/error**2
             inv_sq_err+=1.0/error**2
             self.results[main_name][-1]['cross'] = crossoversig/inv_sq_err
-            self.results[main_name][-1]['error'] = math.sqrt(1.0/inv_sq_err) 
-
+            self.results[main_name][-1]['error'] = math.sqrt(1.0/inv_sq_err)
+            if self.run_card['iseed'] != 0:
+                seed = self.random + 1
+                text = open(pjoin(self.me_dir, 'Cards','run_card.dat')).read()
+                (t,n) = re.subn(r'\s\d+\s*= iseed','   %s       = iseed' % seed,text)
+                open(pjoin(self.me_dir, 'Cards','run_card.dat'),'w').write(t)
         
         self.run_name = main_name
         self.results.def_current(main_name)
@@ -2281,24 +2252,18 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
         
         # Check argument's validity
         args = self.split_arg(line)
-        if '-f' in args:
-            force = True
-            args.remove('-f')
-        else:
-            force = False
         if '--no_default' in args:
             if not os.path.exists(pjoin(self.me_dir, 'Cards', 'pythia_card.dat')):
                 return
-            force = True
             no_default = True
             args.remove('--no_default')
         else:
             no_default = False
                                     
         self.check_pythia(args)        
-        # the args are modify and the last arg is always the mode
-        
-        self.ask_pythia_run_configuration(args[-1], force)
+        # the args are modify and the last arg is always the mode 
+        if not no_default:
+            self.ask_pythia_run_configuration(args[-1])
 
         # Update the banner with the pythia card
         if not self.banner:
@@ -2306,15 +2271,6 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
                      
         # initialize / remove lhapdf mode        
         self.configure_directory()
-
-        #if not force:
-        #    if os.path.exists(pjoin(self.me_dir, 'Events', self.run_name, '%s_pythia.log' % tag)):
-        #        question = 'Previous run of pythia detected. Do you want to remove it?'
-        #        ans = self.ask(question, 'y', choices=['y','n'], timeout = 20)
-        #        if ans == 'n':
-        #            return
-         
-        #self.exec_cmd('remove %s pythia -f' % self.run_name)
 
         pythia_src = pjoin(self.options['pythia-pgs_path'],'src')
         
@@ -2352,12 +2308,36 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
         self.to_store.append('pythia')
         
         # Find the matched cross-section
-        if int(self.run_card['ickkw']):    
-            pythia_log = open(pjoin(self.me_dir,'Events', self.run_name, '%s_pythia.log' % tag))
-            cs_info = misc.get_last_line(pythia_log)
-            # line should be of type: Cross section (pb):    1840.20000000006 
-            cs_info = cs_info.split(':')[1]
-            self.results.add_detail('cross_pythia', cs_info)
+        if int(self.run_card['ickkw']):
+            # read the line from the bottom of the file
+            pythia_log = misc.BackRead(pjoin(self.me_dir,'Events', self.run_name, 
+                                                         '%s_pythia.log' % tag))
+            pythiare = re.compile("\s*I\s+0 All included subprocesses\s+I\s+(?P<generated>\d+)\s+(?P<tried>\d+)\s+I\s+(?P<xsec>[\d\.D\-+]+)\s+I")            
+            for line in pythia_log:
+                info = pythiare.search(line)
+                if not info:
+                    continue
+                try:
+                    # Pythia cross section in mb, we want pb
+                    sigma_m = float(info.group('xsec').replace('D','E')) *1e9
+                    Nacc = int(info.group('generated'))
+                    Ntry = int(info.group('tried'))
+                except ValueError:
+                    # xsec is not float - this should not happen
+                    self.results.add_detail('cross_pythia', 0)
+                    self.results.add_detail('nb_event_pythia', 0)
+                    self.results.add_detail('error_pythia', 0)
+                else:
+                    self.results.add_detail('cross_pythia', sigma_m)
+                    self.results.add_detail('nb_event_pythia', Nacc)
+                    #compute pythia error
+                    error = self.results[self.run_name].return_tag(self.run_tag)['error']                    
+                    error_m = math.sqrt((error * Nacc/Ntry)**2 + sigma_m**2 *(1-Nacc/Ntry)/Nacc)
+                    # works both for fixed number of generated events and fixed accepted events
+                    self.results.add_detail('error_pythia', error_m)
+                break                 
+
+            pythia_log.close()
         
         pydir = pjoin(self.options['pythia-pgs_path'], 'src')
         eradir = self.options['exrootanalysis_path']
@@ -2431,6 +2411,8 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
         self.exec_cmd('pgs --no_default', postcmd=False, printcmd=False)
         if self.options['delphes_path']:
             self.exec_cmd('delphes --no_default', postcmd=False, printcmd=False)
+
+        self.print_results_in_shell(self.results.current)
     
     def get_available_tag(self):
         """create automatically a tag"""
@@ -2475,14 +2457,14 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
             pass # Just ensure that html never makes crash this function
 
 
-        # Found the file to suppress
+        # Found the file to delete
         
-        to_suppress = glob.glob(pjoin(self.me_dir, 'Events', run, '*'))
-        to_suppress += glob.glob(pjoin(self.me_dir, 'HTML', run, '*'))
+        to_delete = glob.glob(pjoin(self.me_dir, 'Events', run, '*'))
+        to_delete += glob.glob(pjoin(self.me_dir, 'HTML', run, '*'))
         # forbid the banner to be removed
-        to_suppress = [os.path.basename(f) for f in to_suppress if 'banner' not in f]
+        to_delete = [os.path.basename(f) for f in to_delete if 'banner' not in f]
         if tag:
-            to_suppress = [f for f in to_suppress if tag in f]
+            to_delete = [f for f in to_delete if tag in f]
             if 'parton' in mode or 'all' in mode:
                 try:
                     if self.results[run][0]['tag'] != tag:
@@ -2490,35 +2472,35 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
                 except:
                     pass
                 else:
-                    nb_rm = len(to_suppress)
+                    nb_rm = len(to_delete)
                     if os.path.exists(pjoin(self.me_dir, 'Events', run, 'events.lhe.gz')):
-                        to_suppress.append('events.lhe.gz')
+                        to_delete.append('events.lhe.gz')
                     if os.path.exists(pjoin(self.me_dir, 'Events', run, 'unweighted_events.lhe.gz')):
-                        to_suppress.append('unweighted_events.lhe.gz')
-                    if nb_rm != len(to_suppress):
+                        to_delete.append('unweighted_events.lhe.gz')
+                    if nb_rm != len(to_delete):
                         logger.warning('Be carefull that partonic information are on the point to be removed.')
         if 'all' in mode:
-            pass # suppress everything
+            pass # delete everything
         else:
             if 'pythia' not in mode:
-                to_suppress = [f for f in to_suppress if 'pythia' not in f]
+                to_delete = [f for f in to_delete if 'pythia' not in f]
             if 'pgs' not in mode:
-                to_suppress = [f for f in to_suppress if 'pgs' not in f]
+                to_delete = [f for f in to_delete if 'pgs' not in f]
             if 'delphes' not in mode:
-                to_suppress = [f for f in to_suppress if 'delphes' not in f]
+                to_delete = [f for f in to_delete if 'delphes' not in f]
             if 'parton' not in mode:
-                to_suppress = [f for f in to_suppress if 'delphes' in f 
+                to_delete = [f for f in to_delete if 'delphes' in f 
                                                       or 'pgs' in f 
                                                       or 'pythia' in f]
-        if '-f' not in args and len(to_suppress):
-            question = 'Do you want to suppress the following files?\n     %s' % \
-                               '\n    '.join(to_suppress)
+        if not self.force and len(to_delete):
+            question = 'Do you want to delete the following files?\n     %s' % \
+                               '\n    '.join(to_delete)
             ans = self.ask(question, 'y', choices=['y','n'])
         else:
             ans = 'y'
         
         if ans == 'y':
-            for file2rm in to_suppress:
+            for file2rm in to_delete:
                 if os.path.exists(pjoin(self.me_dir, 'Events', run, file2rm)):
                     try:
                         os.remove(pjoin(self.me_dir, 'Events', run, file2rm))
@@ -2540,23 +2522,23 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
             except:
                 pass
             else:
-                to_suppress = glob.glob(pjoin(self.me_dir, 'SubProcesses', '%s*' % run))
-                to_suppress += glob.glob(pjoin(self.me_dir, 'SubProcesses', '*','%s*' % run))
-                to_suppress += glob.glob(pjoin(self.me_dir, 'SubProcesses', '*','*','%s*' % run))
+                to_delete = glob.glob(pjoin(self.me_dir, 'SubProcesses', '%s*' % run))
+                to_delete += glob.glob(pjoin(self.me_dir, 'SubProcesses', '*','%s*' % run))
+                to_delete += glob.glob(pjoin(self.me_dir, 'SubProcesses', '*','*','%s*' % run))
 
-                if '-f' in args or len(to_suppress) == 0:
+                if self.force or len(to_delete) == 0:
                     ans = 'y'
                 else:
-                    question = 'Do you want to suppress the following files?\n     %s' % \
-                               '\n    '.join(to_suppress)
+                    question = 'Do you want to delete the following files?\n     %s' % \
+                               '\n    '.join(to_delete)
                     ans = self.ask(question, 'y', choices=['y','n'])
 
                 if ans == 'y':
-                    for file2rm in to_suppress:
+                    for file2rm in to_delete:
                         os.remove(file2rm)
                         
         if 'banner' in mode:
-            to_suppress = glob.glob(pjoin(self.me_dir, 'Events', run, '*'))
+            to_delete = glob.glob(pjoin(self.me_dir, 'Events', run, '*'))
             if tag:
                 # remove banner
                 try:
@@ -2567,8 +2549,8 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
                 if run in self.results:
                     self.results.delete_run(run, tag)
                     return
-            elif any(['banner' not in os.path.basename(p) for p in to_suppress]):
-                if to_suppress:
+            elif any(['banner' not in os.path.basename(p) for p in to_delete]):
+                if to_delete:
                     raise MadGraph5Error, '''Some output still exists for this run. 
                 Please remove those output first. Do for example: 
                 remove %s all banner
@@ -2685,11 +2667,6 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
         
         args = self.split_arg(line)
         # Check argument's validity
-        if '-f' in args:
-            force = True
-            args.remove('-f')
-        else:
-            force = False
         if '--no_default' in args:
             no_default = True
             args.remove('--no_default')
@@ -2712,7 +2689,7 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
                      pjoin(self.me_dir, 'Cards', 'pgs_card.dat'))
             logger.info('No pgs card found. Take the default one.')        
         
-        if not (no_default or force):
+        if not (no_default or self.force):
             self.ask_edit_cards(['pgs'], args)
             
         self.update_status('prepare PGS run', level=None)  
@@ -2807,11 +2784,6 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
  
         args = self.split_arg(line)
         # Check argument's validity
-        if '-f' in args:
-            force = True
-            args.remove('-f')
-        else:
-            force = False
         if '--no_default' in args:
             no_default = True
             args.remove('--no_default')
@@ -2833,7 +2805,7 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
         if not os.path.exists(pjoin(self.me_dir, 'Cards', 'delphes_trigger.dat')):    
             files.cp(pjoin(self.me_dir, 'Cards', 'delphes_trigger_default.dat'),
                      pjoin(self.me_dir, 'Cards', 'delphes_trigger.dat'))
-        if not (no_default or force):
+        if not (no_default or self.force):
             self.ask_edit_cards(['delphes', 'trigger'], args)
             
         self.update_status('Running Delphes', level=None)  
@@ -2984,8 +2956,19 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
                     self.update_status((idle, run, finish, run_type), level=None)
             else:
                 update_status = lambda idle, run, finish: None
-            self.cluster.wait(self.me_dir, update_status)            
-
+            try:    
+                self.cluster.wait(self.me_dir, update_status)            
+            except Exception, error:
+                logger.info(error)
+                if not self.force:
+                    ans = self.ask('Cluster Error detected. Do you want to clean the queue?',
+                             default = 'y', answers=['y','n'])
+                else:
+                    ans = 'y'
+                if ans:
+                    self.cluster.remove()
+                raise
+                    
         if mode == 2:
             # Wait that all thread finish
             if not self.control_thread[2]:
@@ -3080,7 +3063,7 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
         out = misc.call([pjoin(self.dirbin, 'compile_Source')],
                               cwd = self.me_dir)
         if out:
-            raise MadEventError, 'Impossible to compile'
+            raise MadEventError, 'Unable to compile'
         
         # set random number
         if self.run_card['iseed'] != '0':
@@ -3404,7 +3387,10 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
             
             
         if not os.path.exists(event_path):
-            raise self.InvalidCmd, 'Events file %s does not exits' % event_path
+            if os.path.exists(event_path+'.gz'):
+                os.system('gzip -f %s.gz ' % event_path)
+            else:
+                raise self.InvalidCmd, 'Events file %s does not exits' % event_path
         
         self.update_status('Creating Plots for %s level' % mode, level = mode.lower())
                
@@ -3462,7 +3448,7 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
 
 
     ############################################################################
-    def ask_run_configuration(self, mode=None, force=False):
+    def ask_run_configuration(self, mode=None):
         """Ask the question when launching generate_events/multi_run"""
         
         available_mode = ['0', '1']
@@ -3487,7 +3473,7 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
             if '4' in available_mode:
                 question += """  4 / delphes :  MadEvent + Pythia + Delphes.\n"""
 
-            if not force:
+            if not self.force:
                 if not mode:
                     mode = self.ask(question, '0', options)
             elif not mode:
@@ -3524,7 +3510,7 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
             self.add_card_to_run('trigger')
             cards.append('delphes_card.dat')
 
-        if force:
+        if self.force:
             return
 
         def get_question(mode):
@@ -3599,7 +3585,7 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
                     
                     
     ############################################################################
-    def ask_pythia_run_configuration(self, mode=None, force=False):
+    def ask_pythia_run_configuration(self, mode=None):
         """Ask the question when launching pythia"""
         
         available_mode = ['0', '1', '2']
@@ -3614,7 +3600,7 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
         if '3' in available_mode:
             question += """  3 / delphes  : Pythia + Delphes.\n"""
 
-        if not force:
+        if not self.force:
             if not mode:
                 mode = self.ask(question, '0', options)
         elif not mode:
@@ -3647,7 +3633,7 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
             self.add_card_to_run('trigger')
             cards.append('delphes_card.dat')
         
-        if force:
+        if self.force:
             return mode
         
         # Ask the user if he wants to edit any of the files
@@ -3708,7 +3694,7 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
     def ask_edit_cards(self, cards, fct_args):
         """Question for cards editions (used for pgs/delphes)"""
 
-        if '-f' in fct_args or '--no_default' in fct_args:
+        if self.force or '--no_default' in fct_args:
             return
         
         card_name = {'pgs': 'pgs_card.dat',
