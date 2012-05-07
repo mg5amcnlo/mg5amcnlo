@@ -654,7 +654,7 @@ class MG_diagram(diagram_class.MG_diagram):
             if unaligned.has_key(peak):
                 unaligned[peak] += 1
             else:
-                if isinstance(peak, str) == str or peak.external:
+                if isinstance(peak, str) or peak.external:
                     unaligned[peak] = 1
                 elif isinstance(peak.MG, str):
                     pass
