@@ -122,7 +122,6 @@ class LoopProcessExporterFortranSA(export_v4.ProcessExporterFortranSA,
        Fortran format."""
        
     template_dir=os.path.join(_file_path,'iolibs/template_files/loop')
-    template_dir_virt2=os.path.join(_file_path,'iolibs/template_files/loop_virt2')
     
     # Init function to initialize both mother classes, depending on the nature
     # of the argument given
@@ -484,6 +483,13 @@ class LoopProcessExporterFortranSA(export_v4.ProcessExporterFortranSA,
                           self.general_replace_dict['complex_dp_format']
         self.general_replace_dict['mass_mp_format'] = \
                           self.general_replace_dict['complex_mp_format']
+        # Color matrix size
+        # For loop induced processes it is NLOOPAMPSxNLOOPAMPS and otherwise
+        # it is NLOOPAMPSxNBORNAMPS
+        if matrix_element.get('processes')[0].get('has_born'):
+            self.general_replace_dict['color_matrix_size'] = 'nbornamps'
+        else:
+            self.general_replace_dict['color_matrix_size'] = 'nloopamps'
         # These placeholders help to have as many common templates for the
         # output of the loop induced processes and those with a born 
         # contribution.
@@ -565,8 +571,25 @@ class LoopProcessExporterFortranSA(export_v4.ProcessExporterFortranSA,
         
         loop_helas_calls=fortran_model.get_loop_amplitude_helas_calls(matrix_element)
         replace_dict['maxlcouplings']=matrix_element.find_max_loop_coupling()
-        replace_dict['loop_helas_calls'] = "\n".join(loop_helas_calls)
-        
+        replace_dict['loop_helas_calls'] = "\n".join(loop_helas_calls) 
+       
+        # The squaring is only necessary for the processes with born where the 
+        # sum over helicities is done before sending the numerator to CT.
+        dp_squaring_lines=['DO I=1,NBORNAMPS',
+            'CFTOT=DCMPLX(CF_N(AMPLNUM,I)/DBLE(ABS(CF_D(AMPLNUM,I))),0.0d0)',
+            'IF(CF_D(AMPLNUM,I).LT.0) CFTOT=CFTOT*IMAG1',
+            'RES=RES+CFTOT*BUFF*DCONJG(AMP(I,H))','ENDDO']
+        mp_squaring_lines=['DO I=1,NBORNAMPS',
+'CFTOT=CMPLX(CF_N(AMPLNUM,I)/(1.0E0_16*ABS(CF_D(AMPLNUM,I))),0.0E0_16,KIND=16)',
+            'IF(CF_D(AMPLNUM,I).LT.0) CFTOT=CFTOT*IMAG1',
+            'QPRES=QPRES+CFTOT*BUFF*CONJG(AMP(I,H))','ENDDO']
+        if matrix_element.get('processes')[0].get('has_born'):
+            replace_dict['dp_squaring']='\n'.join(dp_squaring_lines)
+            replace_dict['mp_squaring']='\n'.join(mp_squaring_lines)
+        else:
+            replace_dict['dp_squaring']='RES=BUFF'
+            replace_dict['mp_squaring']='QPRES=BUFF'                       
+       
         # Now stuff for the multiple precision numerator function
         (nexternal,ninitial)=matrix_element.get_nexternal_ninitial()
         replace_dict['n_initial']=ninitial
@@ -595,6 +618,16 @@ class LoopProcessExporterFortranSA(export_v4.ProcessExporterFortranSA,
 
         # First write CT_interface which interfaces MG5 with CutTools.
         replace_dict=copy.copy(self.general_replace_dict)
+        
+        # We finalize CT result differently wether we used the built-in 
+        # squaring against the born.
+        if matrix_element.get('processes')[0].get('has_born'):
+            replace_dict['finalize_CT']='\n'.join([\
+         'RES(%d)=NORMALIZATION*2.0d0*DBLE(RES(%d))'%(i,i) for i in range(1,4)])
+        else:
+            replace_dict['finalize_CT']='\n'.join([\
+                     'RES(%d)=NORMALIZATION*RES(%d)'%(i,i) for i in range(1,4)])
+        
         file = open(os.path.join(self.template_dir,'CT_interface.inc')).read()  
 
         file = file % replace_dict
@@ -612,6 +645,10 @@ class LoopProcessExporterFortranSA(export_v4.ProcessExporterFortranSA,
             replace_dict=copy.copy(self.general_replace_dict)
             # Add to this dictionary all other attribute common to all
             # HELAS-like loop subroutines.
+            if matrix_element.get('processes')[0].get('has_born'):
+                replace_dict['validh_or_nothing']=',validh'
+            else:
+                replace_dict['validh_or_nothing']=''                
             replace_dict['nloopline']=callkey[0]
             wfsargs="".join([("W%d, MP%d, "%(i,i)) for i in range(1,callkey[1]+1)])
             replace_dict['ncplsargs']=callkey[2]
@@ -736,8 +773,59 @@ class LoopProcessExporterFortranSA(export_v4.ProcessExporterFortranSA,
         # Extract overall denominator
         # Averaging initial state color, spin, and identical FS particles
         den_factor_line = self.get_den_factor_line(matrix_element)
-        replace_dict['den_factor_line'] = den_factor_line
+        replace_dict['den_factor_line'] = den_factor_line                  
 
+        # These entries are specific for the output for loop-induced processes
+        # Also sets here the details of the squaring of the loop ampltiudes
+        # with the born or the loop ones.
+        if not matrix_element.get('processes')[0].get('has_born'):
+            replace_dict['set_reference']='\n'.join(['! ===',
+              '!  Please specify below the reference value you want to use for'+\
+              ' comparisons.','ref=LSCALE**(-2*NEXTERNAL+8)','! ==='])
+            replace_dict['loop_induced_setup'] = '\n'.join([
+                             'DUMMY=HELPICKED','HELPICKED=H','MP_DONE=.FALSE.'])
+            replace_dict['loop_induced_finalize'] = \
+            """HELPICKED=DUMMY
+               DO I=NCTAMPS+1,NLOOPAMPS
+               IF((CTMODERUN.NE.-1).AND..NOT.CHECKPHASE.AND.(.NOT.S(I))) THEN
+                 WRITE(*,*) '##W03 WARNING Contribution ',I
+                 WRITE(*,*) ' is unstable for helicity ',H
+               ENDIF
+               IF(.NOT.ISZERO(ABS(AMPL(2,I))+ABS(AMPL(3,I)),REF,-1,H)) THEN
+                 WRITE(*,*) '##W04 WARNING Contribution ',I
+                 WRITE(*,*) ' for helicity ',H,' has a contribution to the poles'
+               ENDIF
+               ENDDO"""
+            replace_dict['loop_helas_calls']=""
+            replace_dict['nctamps_or_nloopamps']='nloopamps'
+            replace_dict['nbornamps_or_nloopamps']='nloopamps'
+            replace_dict['squaring']=\
+                    'ANS(1)=ANS(1)+DBLE(CFTOT*AMPL(1,I)*DCONJG(AMPL(1,J)))'        
+        else:
+            replace_dict['set_reference']='call smatrix(p,ref)'
+            replace_dict['loop_induced_helas_calls'] = ""
+            replace_dict['loop_induced_finalize'] = ""
+            replace_dict['loop_induced_setup'] = ""
+            replace_dict['nctamps_or_nloopamps']='nctamps'
+            replace_dict['nbornamps_or_nloopamps']='nbornamps'
+            replace_dict['squaring']='\n'.join(['DO K=1,3',
+                   'ANS(K)=ANS(K)+2.0d0*DBLE(CFTOT*AMPL(K,I)*DCONJG(AMP(J,H)))',
+                                                                       'ENDDO'])
+
+        # Actualize results from the loops computed. Only necessary for
+        # processes with a born.
+        actualize_ans=[]
+        if matrix_element.get('processes')[0].get('has_born'):
+            actualize_ans.append("DO I=NCTAMPS+1,NLOOPAMPS")
+            actualize_ans.extend("ANS(%d)=ANS(%d)+AMPL(%d,I)"%(i,i,i) for i \
+                                                                  in range(1,4)) 
+            actualize_ans.append(\
+               "IF((CTMODERUN.NE.-1).AND..NOT.CHECKPHASE.AND.(.NOT.S(I))) THEN")
+            actualize_ans.append(\
+                   "WRITE(*,*) '##W03 WARNING Contribution ',I,' is unstable.'")            
+            actualize_ans.extend(["ENDIF","ENDDO"])            
+        replace_dict['actualize_ans']='\n'.join(actualize_ans)
+        
         # Write out the color matrix
         (CMNum,CMDenom) = self.get_color_matrix(matrix_element)
         CMWriter=open('ColorNumFactors.dat','w')
@@ -762,8 +850,14 @@ class LoopProcessExporterFortranSA(export_v4.ProcessExporterFortranSA,
         born_ct_helas_calls = fortran_model.get_born_ct_helas_calls(\
                                                             matrix_element)
         file = open(os.path.join(self.template_dir,\
+        
                         'loop_matrix_standalone.inc')).read()
         
+        if matrix_element.get('processes')[0].get('has_born'):
+            toBeRepaced='loop_helas_calls'
+        else:
+            toBeRepaced='loop_induced_helas_calls'            
+
         # Decide here wether we need to split the loop_matrix.f file or not.
         if (not noSplit and (len(matrix_element.get_all_amplitudes())>1000)):
             file=self.split_HELASCALLS(writer,replace_dict,\
@@ -771,10 +865,10 @@ class LoopProcessExporterFortranSA(export_v4.ProcessExporterFortranSA,
                             'born_ct_helas_calls','helas_calls_ampb')
             file=self.split_HELASCALLS(writer,replace_dict,\
                     'helas_calls_split.inc',file,loop_amp_helas_calls,\
-                    'loop_helas_calls','helas_calls_ampl')
+                    toBeRepaced,'helas_calls_ampl')
         else:
             replace_dict['born_ct_helas_calls']='\n'.join(born_ct_helas_calls)
-            replace_dict['loop_helas_calls']='\n'.join(loop_amp_helas_calls)
+            replace_dict[toBeRepaced]='\n'.join(loop_amp_helas_calls)
         
         file = file % replace_dict
         if writer:
@@ -877,7 +971,8 @@ class LoopProcessOptimizedExporterFortranSA(LoopProcessExporterFortranSA):
               ' work with a UFO Fortran model'
         OptimizedFortranModel=\
           helas_call_writers.FortranUFOHelasCallWriterOptimized(\
-          fortran_model.get('model'))
+          fortran_model.get('model'),
+          hel_sum=matrix_element.get('processes')[0].get('has_born'))
 
         # Below we could write the optimized output, but for now, we just call
         # the mother.

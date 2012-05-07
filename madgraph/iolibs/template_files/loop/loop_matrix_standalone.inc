@@ -72,8 +72,9 @@ C CONSTANTS
 C
       CHARACTER*64 paramFileName
       PARAMETER ( paramFileName='MadLoopParams.dat')
-      INTEGER    NLOOPAMPS, NBORNAMPS, NCTAMPS
-      PARAMETER (NLOOPAMPS=%(nloopamps)d, NBORNAMPS=%(nbornamps)d, NCTAMPS=%(nctamps)d) 
+	  %(nbornamps_decl)s
+      INTEGER    NLOOPAMPS, NCTAMPS
+      PARAMETER (NLOOPAMPS=%(nloopamps)d, NCTAMPS=%(nctamps)d) 
       INTEGER    NEXTERNAL
       PARAMETER (NEXTERNAL=%(nexternal)d)
       INTEGER    NWAVEFUNCS
@@ -94,7 +95,7 @@ C
 C  
 C LOCAL VARIABLES 
 C  
-      INTEGER I,J,K,H
+      INTEGER I,J,K,H,DUMMY
 c RESCT STORES THE RESULT OBTAINED FROM ANY OF THE 7 POSSIBLE CT MODES.
 	  %(real_dp_format)s RESCT(3,0:6)
       INTEGER NHEL(NEXTERNAL), IC(NEXTERNAL)
@@ -150,10 +151,9 @@ C
 	  DATA USERHEL/-1/
 	  common/USERCHOICE/USERHEL
 
-      %(complex_dp_format)s AMP(NBORNAMPS,NCOMB)
-	  %(complex_dp_format)s W(20,NWAVEFUNCS,NCOMB)
+      %(dp_born_amps_decl)s	  
+	  %(complex_dp_format)s W(20,NWAVEFUNCS%(ncomb_helas_objs)s)
 	  INTEGER VALIDH
-	  common/AMPS/AMP
 	  common/WFCTS/W  
 	  common/VALIDH/VALIDH
 
@@ -161,8 +161,8 @@ C
 	  LOGICAL S(NLOOPAMPS)
 	  common/AMPL/AMPL,S
 
-	  INTEGER CF_D(NLOOPAMPS,NBORNAMPS)
-	  INTEGER CF_N(NLOOPAMPS,NBORNAMPS)
+	  INTEGER CF_D(NLOOPAMPS,%(color_matrix_size)s)
+	  INTEGER CF_N(NLOOPAMPS,%(color_matrix_size)s)
 	  common/CF/CF_D,CF_N
 
 	  INTEGER HELC(NEXTERNAL,NCOMB)
@@ -205,7 +205,7 @@ OPEN(1, FILE="HelFilter.dat", err=102, status='OLD',           action='READ')
 CLOSE(1)
 OPEN(1, FILE="ColorNumFactors.dat", err=104, status='OLD',           action='READ')
   DO I=1,NLOOPAMPS
-    READ(1,*,END=105) (CF_N(I,J),J=1,NBORNAMPS)
+    READ(1,*,END=105) (CF_N(I,J),J=1,%(color_matrix_size)s)
   ENDDO
   GOTO 105
 104  CONTINUE
@@ -214,7 +214,7 @@ OPEN(1, FILE="ColorNumFactors.dat", err=104, status='OLD',           action='REA
 CLOSE(1)
 OPEN(1, FILE="ColorDenomFactors.dat", err=106, status='OLD',           action='READ')
   DO I=1,NLOOPAMPS
-    READ(1,*,END=107) (CF_D(I,J),J=1,NBORNAMPS)
+    READ(1,*,END=107) (CF_D(I,J),J=1,%(color_matrix_size)s)
   ENDDO
   GOTO 107
 106  CONTINUE
@@ -233,6 +233,8 @@ CLOSE(1)
 ENDIF
 
 LSCALE=DSQRT((P(0,1)+P(0,2))**2-(P(1,1)+P(1,2))**2-(P(2,1)+P(2,2))**2-(P(3,1)+P(3,2))**2)
+
+%(set_reference)s
 
 NTRY=NTRY+1
 CHECKPHASE=(NTRY.LE.CHECKCYCLE).AND.(((.NOT.FOUNDLOOPFILTER).AND.USELOOPFILTER).OR.(.NOT.FOUNDHELFILTER))
@@ -262,7 +264,6 @@ FOUNDLOOPFILTER=.TRUE.
 ENDIF
 
 IF(CHECKPHASE) THEN
-  CALL SMATRIX(P,REF)
   HELPICKED=1
   CTMODE=CTMODEINIT
 ELSE
@@ -298,14 +299,15 @@ DO H=1,NCOMB
   DO I=1,NEXTERNAL
     NHEL(I)=HELC(I,H)
   ENDDO
-%(born_ct_helas_calls)s
-  DO I=1,NCTAMPS
-    DO J=1,NBORNAMPS
+  %(loop_induced_setup)s
+  %(born_ct_helas_calls)s
+  %(loop_induced_helas_calls)s
+  %(loop_induced_finalize)s
+  DO I=1,%(nctamps_or_nloopamps)s
+    DO J=1,%(nbornamps_or_nloopamps)s
 	  CFTOT=DCMPLX(CF_N(I,J)/DBLE(ABS(CF_D(I,J))),0.0d0)
       IF(CF_D(I,J).LT.0) CFTOT=CFTOT*IMAG1
-	  DO K=1,3
-	    ANS(K)=ANS(K)+2.0d0*DBLE(CFTOT*AMPL(K,I)*DCONJG(AMP(J,H)))
-	  ENDDO
+	  %(squaring)s
     ENDDO
   ENDDO
   ENDIF
@@ -313,14 +315,7 @@ ENDDO
 
 %(loop_helas_calls)s
 
-DO I=NCTAMPS+1,NLOOPAMPS
-  ANS(1)=ANS(1)+AMPL(1,I)
-  ANS(2)=ANS(2)+AMPL(2,I)
-  ANS(3)=ANS(3)+AMPL(3,I)
-  IF((CTMODERUN.NE.-1).AND..NOT.CHECKPHASE.AND.(.NOT.S(I))) THEN
-    WRITE(*,*) '##W03 WARNING Contribution ',I,' is unstable.'
-  ENDIF
-ENDDO
+%(actualize_ans)s
 
 IF (CHECKPHASE) THEN
   IF((USERHEL.EQ.-1).OR.(USERHEL.EQ.HELPICKED)) THEN

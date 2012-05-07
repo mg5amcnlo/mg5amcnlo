@@ -1151,7 +1151,8 @@ class FortranUFOHelasCallWriter(UFOHelasCallWriter):
             flag = ['C%d' % i for i in \
                                   argument.get_conjugate_index()]
         if (isinstance(argument, helas_objects.HelasWavefunction) and \
-           argument.get('is_loop') or (isinstance(argument, helas_objects.HelasAmplitude) and \
+           argument.get('is_loop') or \
+           (isinstance(argument, helas_objects.HelasAmplitude) and \
            argument.get('type')=='loop')):
             flag.append("L")
 
@@ -1219,7 +1220,7 @@ class FortranUFOHelasCallWriter(UFOHelasCallWriter):
         call = call % arg
         # Now we have a line correctly formatted
         call_function = lambda wf: call % wf.get_helas_call_dict(\
-                                                           OptimizedOutput=False)
+          OptimizedOutput=False, specifyHel=self.hel_sum)
 
         # Add the constructed function to wavefunction or amplitude dictionary
         if isinstance(argument, helas_objects.HelasWavefunction):

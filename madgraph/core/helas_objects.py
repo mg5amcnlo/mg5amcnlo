@@ -936,7 +936,8 @@ class HelasWavefunction(base_objects.PhysicsObject):
         
         return return_dict
 
-    def get_helas_call_dict(self, index=1, OptimizedOutput=False):
+    def get_helas_call_dict(self, index=1, OptimizedOutput=False,
+                                                               specifyHel=True):
         """ return a dictionary to be used for formatting
         HELAS call. The argument index sets the flipping while optimized output
         simply allow for using W instead of WE for the external wf arguments of
@@ -954,7 +955,10 @@ class HelasWavefunction(base_objects.PhysicsObject):
             if mother.get('is_loop'):
                 output['L%d' % i ] = 'L(1,%d)'%nb
             else:
-                output['L%d' % i ] = '(1,WE(%d),H)'%nb
+                if specifyHel:
+                    output['L%d' % i ] = '(1,WE(%d),H)'%nb
+                else:
+                    output['L%d' % i ] = '(1,WE(%d))'%nb                    
                     
         #fixed argument
         for i, coup in enumerate(self.get_with_flow('coupling')):
@@ -2234,7 +2238,7 @@ class HelasAmplitude(base_objects.PhysicsObject):
 
         return vertex_leg_numbers
 
-    def get_helas_call_dict(self, index=1,OptimizedOutput=False):
+    def get_helas_call_dict(self,index=1,OptimizedOutput=False,specifyHel=True):
         """ return a dictionary to be used for formatting
         HELAS call."""
         
@@ -2250,7 +2254,10 @@ class HelasAmplitude(base_objects.PhysicsObject):
             if mother.get('is_loop'):
                 output['L%d' % i ] = 'L(1,%d)'%nb
             else:
-                output['L%d' % i ] = '(1,WE(%d),H)'%nb
+                if specifyHel:
+                    output['L%d' % i ] = '(1,WE(%d),H)'%nb
+                else:
+                    output['L%d' % i ] = '(1,WE(%d))'%nb                    
                 
         #fixed argument
         for i, coup in enumerate(self.get('coupling')):

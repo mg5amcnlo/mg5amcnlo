@@ -70,7 +70,7 @@ C ----------
         DO J=1,NLOOPLINE
 		  PL(I,J)=0.D0
           DO K=TEMP,(TEMP+PAIRING(J)-1)
-            PL(I,J)=PL(I,J)+SIGN(1,MOMPOS(K))*DBLE(W(ABS(MOMPOS(K))+I,WE(K),VALIDH))
+            PL(I,J)=PL(I,J)+SIGN(1,MOMPOS(K))*DBLE(W(ABS(MOMPOS(K))+I,WE(K)%(validh_or_nothing)s))
           ENDDO
           TEMP=TEMP+PAIRING(J)
         ENDDO
