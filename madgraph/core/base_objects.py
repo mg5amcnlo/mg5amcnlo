@@ -1996,7 +1996,11 @@ class Process(PhysicsObject):
         tmp = [(k,v) for (k,v) in expansion_orders.items() if 0 < v < 99]
         for (k,v) in tmp:  
             if k in orders:
-                orders[k] = min(orders[k], v)
+                if v < orders[k]:
+                    logger.warning('''The coupling order (%s=%s) specified is larger than the one allowed 
+             by the model builder. The maximal value allowed is %s. 
+             We set the %s order to this value''' % (k,orders[k],v,k))
+                    orders[k] = v
             else:
                 orders[k] = v
 
