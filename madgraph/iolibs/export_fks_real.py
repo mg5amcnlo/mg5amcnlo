@@ -49,6 +49,7 @@ class ProcessExporterFortranFKS_real(loop_exporters.LoopProcessExporterFortranSA
     Fortran FKS format."""
     
     def __init__(self, mgme_dir = "", dir_path = "", clean = False, \
+                 complex_mass_scheme = False, mp = False, \
                  loop_dir = "", cts_dir = ""):
         """Initiate the ProcessExporterFortran with directory information"""
         self.mgme_dir = mgme_dir
@@ -56,8 +57,8 @@ class ProcessExporterFortranFKS_real(loop_exporters.LoopProcessExporterFortranSA
         self.clean = clean
         self.loop_dir = loop_dir
         self.cuttools_dir = cts_dir
-        self.complex_mass_scheme = False
-        self.mp = False
+        self.complex_mass_scheme = complex_mass_scheme
+        self.mp = mp
 
 #===============================================================================
 # copy the Template in a new directory.
