@@ -56,6 +56,8 @@ class ProcessExporterFortranFKS_real(loop_exporters.LoopProcessExporterFortranSA
         self.clean = clean
         self.loop_dir = loop_dir
         self.cuttools_dir = cts_dir
+        self.complex_mass_scheme = False
+        self.mp = False
 
 #===============================================================================
 # copy the Template in a new directory.

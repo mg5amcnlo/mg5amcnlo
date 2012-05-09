@@ -1666,7 +1666,7 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
         # Set defaults for options
         self.options['group_subprocesses'] = 'Auto'
         self.options['ignore_six_quark_processes'] = False
-        self.options['fks_mode'] = 'real'
+        self.options['fks_mode'] = 'born'
         self.options['loop_optimized_output'] = False
         
         # Load the configuration file
@@ -3047,7 +3047,7 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
                               'automatic_html_opening':True,
                               'group_subprocesses': 'Auto',
                               'ignore_six_quark_processes': False,
-                              'fks_mode': 'real',
+                              'fks_mode': 'born',
                               'loop_optimized_output':False,
                               'complex_mass_scheme': False,
                               'gauge':'unitary'}

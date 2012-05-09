@@ -60,10 +60,7 @@ class CheckFKS(mg_interface.CheckValidForCmd):
     def check_output(self, args):
         """ check the validity of the line"""
           
-        if args and args[0] in self._nlo_export_formats:
-            self._export_format = args.pop(0)
-        else:
-            self._export_format = 'NLO'
+        self._export_format = 'NLO'
 
         if not self._fks_multi_proc:
             text = 'No processes generated. Please generate a process first.'
@@ -77,8 +74,7 @@ class CheckFKS(mg_interface.CheckValidForCmd):
             # This is a path
             path = args.pop(0)
             # Check for special directory treatment
-            if path == 'auto' and self._export_format in \
-                     self._nlo_export_formats:
+            if path == 'auto':
                 self.get_default_path()
             elif path != 'auto':
                 self._export_dir = path
@@ -278,7 +274,7 @@ class FKSInterface(CheckFKS, CompleteFKS, HelpFKS, mg_interface.MadGraphCmd):
 
         self.options['group_subprocesses'] = False
         # initialize the writer
-        if self._export_format in self._nlo_export_formats:
+        if self._export_format in ['NLO']:
             if self.options['fks_mode'] == 'real':
                 logger.info("Exporting in MadFKS format, starting from real emission process")
                 self._curr_exporter = export_fks_real.ProcessExporterFortranFKS_real(\
@@ -297,7 +293,7 @@ class FKSInterface(CheckFKS, CompleteFKS, HelpFKS, mg_interface.MadGraphCmd):
             
         # check if a dir with the same name already exists
         if not force and not noclean and os.path.isdir(self._export_dir)\
-               and self._export_format in self._nlo_export_formats:
+               and self._export_format in ['NLO']:
             # Don't ask if user already specified force or noclean
             logger.info('INFO: directory %s already exists.' % self._export_dir)
             logger.info('If you continue this directory will be cleaned')
@@ -307,7 +303,7 @@ class FKSInterface(CheckFKS, CompleteFKS, HelpFKS, mg_interface.MadGraphCmd):
                 raise self.InvalidCmd('Stopped by user request')
     
         # Make a Template Copy
-        if self._export_format in self._nlo_export_formats:
+        if self._export_format in ['NLO']:
             self._curr_exporter.copy_fkstemplate()
 
         # Reset _done_export, since we have new directory
